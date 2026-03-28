@@ -1,0 +1,123 @@
+import { useNavigate } from 'react-router-dom'
+import { Clock, AlertTriangle, ArrowRight, Trash2 } from 'lucide-react'
+import { daysUntil } from '@/lib/utils'
+import { cn } from '@/lib/utils'
+import type { Project } from '@/types'
+
+const STEP_LABELS = ['Upload DCE', 'Analyse IA', 'Candidature', 'Mémoire', 'Export']
+
+const STATUS_CONFIG: Record<string, { label: string; cls: string; accent: string }> = {
+  brouillon: { label: 'Brouillon', cls: 'pill-muted',   accent: '#64748B' },
+  en_cours:  { label: 'En cours',  cls: 'pill-cyan',    accent: '#0EA5E9' },
+  soumis:    { label: 'Soumis',    cls: 'pill-warning', accent: '#F59E0B' },
+  gagné:     { label: 'Gagné',     cls: 'pill-success', accent: '#10B981' },
+  perdu:     { label: 'Perdu',     cls: 'pill-danger',  accent: '#EF4444' },
+}
+
+interface Props {
+  project: Project
+  onDelete?: (id: string, name: string) => void
+}
+
+export function AOCard({ project, onDelete }: Props) {
+  const navigate = useNavigate()
+  const days = project.deadline ? daysUntil(project.deadline) : null
+  const isUrgent = days !== null && days <= 7
+  const progress = ((project.current_step - 1) / 4) * 100
+  const status = STATUS_CONFIG[project.status] ?? STATUS_CONFIG.brouillon
+  const accentColor = isUrgent ? '#EF4444' : status.accent
+
+  return (
+    <div
+      className="glass-card p-5 cursor-pointer flex flex-col gap-4 relative overflow-hidden"
+      style={isUrgent ? { borderColor: 'rgba(239,68,68,0.30)' } : undefined}
+      onClick={() => navigate(`/projects/${project.id}`)}
+    >
+      {/* Accent top-line */}
+      <div
+        className="absolute top-0 left-0 right-0 h-[2px] opacity-80"
+        style={{ background: `linear-gradient(90deg, ${accentColor}, transparent)` }}
+      />
+
+      {/* Corner glow */}
+      <div
+        className="absolute -top-6 -right-6 w-24 h-24 rounded-full opacity-[0.07] blur-2xl pointer-events-none"
+        style={{ background: accentColor }}
+      />
+
+      {/* Header */}
+      <div className="flex items-start justify-between gap-2 relative">
+        <h3 className="font-semibold text-ds-text text-sm leading-snug line-clamp-2 flex-1">
+          {project.name}
+        </h3>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className={cn('pill', status.cls)}>{status.label}</span>
+          {onDelete && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onDelete(project.id, project.name) }}
+              className="p-1 rounded text-ds-text-3 transition-colors hover:text-red-400"
+              style={{ lineHeight: 0 }}
+              title="Supprimer cet AO"
+            >
+              <Trash2 size={13} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Maître d'ouvrage */}
+      {project.maitre_ouvrage && (
+        <p className="text-xs text-ds-text-2 -mt-2 truncate relative">{project.maitre_ouvrage}</p>
+      )}
+
+      {/* Progress */}
+      <div className="relative">
+        <div className="flex justify-between text-xs mb-1.5">
+          <span className="text-ds-text-3">{STEP_LABELS[project.current_step - 1]}</span>
+          <span
+            className="text-ds-text-2 font-medium"
+            style={{ fontFamily: '"JetBrains Mono", monospace' }}
+          >
+            {Math.round(progress)}%
+          </span>
+        </div>
+        <div className="progress-track h-1.5">
+          <div className="progress-bar-gradient h-full" style={{ width: `${progress}%` }} />
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between relative">
+        {project.deadline ? (
+          <div
+            className={cn(
+              'flex items-center gap-1.5 text-xs',
+              isUrgent ? 'font-medium' : 'text-ds-text-3',
+            )}
+            style={isUrgent ? { color: '#EF4444' } : undefined}
+          >
+            {isUrgent ? <AlertTriangle size={11} /> : <Clock size={11} />}
+            {days === 0
+              ? "Deadline aujourd'hui !"
+              : days !== null && days < 0
+                ? 'Dépassée'
+                : `J-${days}`}
+          </div>
+        ) : (
+          <span />
+        )}
+
+        <button
+          className="flex items-center gap-1 text-xs font-medium transition-colors"
+          style={{ color: '#0EA5E9' }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = '#7DD3FC')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = '#0EA5E9')}
+          onClick={(e) => { e.stopPropagation(); navigate(`/projects/${project.id}`) }}
+        >
+          Continuer
+          <ArrowRight size={12} />
+        </button>
+      </div>
+    </div>
+  )
+}

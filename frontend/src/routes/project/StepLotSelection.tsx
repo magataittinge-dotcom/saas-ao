@@ -1,0 +1,424 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Layers, CheckCircle2, AlertCircle, Zap, Plus, X, ShieldCheck, AlertTriangle, HelpCircle, Users } from 'lucide-react'
+import axios from 'axios'
+import { api } from '@/services/api'
+import { AnalysisProgress } from '@/components/project/AnalysisProgress'
+import type { Project, LotOption } from '@/types'
+import { cn } from '@/lib/utils'
+
+interface Props { project: Project }
+
+// ─── Confidence badge ─────────────────────────────────────────────────────────
+
+function ConfidenceBadge({ confidence }: { confidence?: number }) {
+  if (confidence === undefined) return null
+  if (confidence >= 80) {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
+        style={{ background: 'rgba(16,185,129,0.12)', color: '#10B981', border: '1px solid rgba(16,185,129,0.25)' }}>
+        <ShieldCheck size={10} />
+        Détection fiable
+      </span>
+    )
+  }
+  if (confidence >= 50) {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
+        style={{ background: 'rgba(245,158,11,0.12)', color: '#F59E0B', border: '1px solid rgba(245,158,11,0.25)' }}>
+        <AlertTriangle size={10} />
+        À vérifier
+      </span>
+    )
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
+      style={{ background: 'rgba(239,68,68,0.12)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.25)' }}>
+      <HelpCircle size={10} />
+      Incertain
+    </span>
+  )
+}
+
+// ─── Sources indicator ────────────────────────────────────────────────────────
+
+const SOURCE_LABELS: Record<string, string> = {
+  excel:    'DPGF',
+  rc_text:  'RC',
+  filename: 'Fichier',
+}
+
+function SourcesIndicator({ sources }: { sources?: string[] }) {
+  if (!sources || sources.length <= 1) return null
+  const labels = sources.map(s => SOURCE_LABELS[s] ?? s)
+  return (
+    <span className="inline-flex items-center gap-1 text-xs"
+      style={{ color: '#64748B' }}>
+      <Users size={10} />
+      Confirmé par {sources.length} sources ({labels.join(', ')})
+    </span>
+  )
+}
+
+// ─── Lot card ─────────────────────────────────────────────────────────────────
+
+interface LotCardProps {
+  lot: LotOption & { _manual?: boolean }
+  selected: boolean
+  onSelect: () => void
+  onDelete?: () => void
+  icon?: React.ReactNode
+}
+
+function LotCard({ lot, selected, onSelect, onDelete, icon }: LotCardProps) {
+  return (
+    <div className="group relative">
+      <button
+        type="button"
+        onClick={onSelect}
+        className={cn(
+          'w-full flex items-start gap-3 p-4 rounded-xl border text-left transition-all duration-150',
+          selected
+            ? 'border-ds-cyan'
+            : 'border-white/10 hover:border-white/20 hover:bg-white/[0.02]',
+        )}
+        style={selected ? { borderColor: '#0EA5E9', background: 'rgba(14,165,233,0.08)' } : undefined}
+      >
+        {/* Radio indicator */}
+        <div
+          className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all"
+          style={
+            selected
+              ? { borderColor: '#0EA5E9', background: '#0EA5E9' }
+              : { borderColor: 'rgba(255,255,255,0.25)' }
+          }
+        >
+          {selected && <div className="w-2 h-2 rounded-full bg-white" />}
+        </div>
+
+        {icon && <span className="shrink-0 mt-0.5" style={{ color: selected ? '#0EA5E9' : '#64748B' }}>{icon}</span>}
+
+        <div className="flex-1 min-w-0 space-y-1.5">
+          <span className={cn('text-sm font-medium block', selected ? 'text-ds-text' : 'text-ds-text-2')}>
+            {lot.nom}
+          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <ConfidenceBadge confidence={lot.confidence} />
+            <SourcesIndicator sources={lot.sources} />
+            {/* AMÉLIORATION 7: tranches badge */}
+            {lot.tranches && lot.tranches.length > 0 && (
+              <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
+                title={lot.tranches.join('\n')}
+                style={{ background: 'rgba(139,92,246,0.12)', color: '#A78BFA', border: '1px solid rgba(139,92,246,0.25)', cursor: 'help' }}>
+                {lot.tranches.length} tranche{lot.tranches.length > 1 ? 's' : ''}
+              </span>
+            )}
+            {lot._manual && (
+              <span className="text-xs px-1.5 py-0.5 rounded"
+                style={{ background: 'rgba(99,102,241,0.12)', color: '#818CF8', border: '1px solid rgba(99,102,241,0.25)' }}>
+                Ajouté manuellement
+              </span>
+            )}
+          </div>
+        </div>
+      </button>
+
+      {/* Delete button — visible on hover */}
+      {onDelete && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onDelete() }}
+          className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+          style={{ background: 'rgba(239,68,68,0.15)', color: '#EF4444' }}
+          title="Supprimer ce lot"
+        >
+          <X size={12} />
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ─── Manual lot form ──────────────────────────────────────────────────────────
+
+interface AddLotFormProps {
+  onAdd: (lot: LotOption & { _manual: true }) => void
+  onCancel: () => void
+}
+
+function AddLotForm({ onAdd, onCancel }: AddLotFormProps) {
+  const [num, setNum] = useState('')
+  const [label, setLabel] = useState('')
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const n = parseInt(num, 10)
+    if (!n || n < 1 || n > 30) return
+    const id = `lot${n}`
+    const nom = label.trim() ? `Lot ${n} — ${label.trim()}` : `Lot ${n}`
+    onAdd({ id, nom, confidence: undefined, sources: [], _manual: true })
+    setNum('')
+    setLabel('')
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="flex items-end gap-2 p-3 rounded-xl border"
+      style={{ background: 'rgba(99,102,241,0.05)', borderColor: 'rgba(99,102,241,0.20)' }}
+    >
+      <div className="flex flex-col gap-1">
+        <label className="text-xs text-ds-text-2">N° lot</label>
+        <input
+          type="number"
+          min={1}
+          max={30}
+          placeholder="1"
+          value={num}
+          onChange={(e) => setNum(e.target.value)}
+          className="w-16 text-sm rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 text-ds-text"
+          style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}
+          required
+        />
+      </div>
+      <div className="flex flex-col gap-1 flex-1">
+        <label className="text-xs text-ds-text-2">Intitulé (optionnel)</label>
+        <input
+          type="text"
+          placeholder="ex : Gros œuvre"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          maxLength={60}
+          className="text-sm rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 text-ds-text"
+          style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}
+        />
+      </div>
+      <button
+        type="submit"
+        disabled={!num}
+        className="btn-primary px-3 py-1.5 text-sm shrink-0"
+      >
+        Ajouter
+      </button>
+      <button
+        type="button"
+        onClick={onCancel}
+        className="px-3 py-1.5 text-sm shrink-0 text-ds-text-2 hover:text-ds-text transition-colors"
+      >
+        Annuler
+      </button>
+    </form>
+  )
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
+export default function StepLotSelection({ project }: Props) {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+
+  // AMÉLIORATION 3: separate error lots (password-protected Excel)
+  const allDetected = project.lots_detectes ?? []
+  const errorLots = allDetected.filter(l => l.sources?.includes('error'))
+  const [lots, setLots] = useState<(LotOption & { _manual?: boolean })[]>(
+    allDetected.filter(l => l.id !== '!!')
+  )
+  const [selectedId, setSelectedId] = useState<string>(
+    project.selected_lot ?? (lots.length === 1 ? lots[0].id : 'all')
+  )
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [analysisError, setAnalysisError] = useState<string | null>(null)
+  const [isAnalyzing, setIsAnalyzing] = useState(false)
+  const [isSuccess, setIsSuccess] = useState(false)
+
+  const hasMultiLots = lots.length >= 2
+  const highConfidenceCount = lots.filter(l => (l.confidence ?? 0) >= 80).length
+  const selectedName = lots.find(l => l.id === selectedId)?.nom ?? null
+
+  const handleDelete = (lotId: string) => {
+    setLots(prev => prev.filter(l => l.id !== lotId))
+    if (selectedId === lotId) setSelectedId('all')
+  }
+
+  const handleAddLot = (lot: LotOption & { _manual: true }) => {
+    setLots(prev => {
+      if (prev.some(l => l.id === lot.id)) return prev
+      return [...prev, lot]
+    })
+    setSelectedId(lot.id)
+    setShowAddForm(false)
+  }
+
+  const { mutateAsync: selectLot } = useMutation({
+    mutationFn: (payload: { lot_id: string | null; lot_name: string | null }) =>
+      api.post(`/projects/${project.id}/lots/select`, payload),
+  })
+
+  const handleLaunch = async () => {
+    setAnalysisError(null)
+    try {
+      await selectLot({
+        lot_id: selectedId === 'all' ? null : selectedId,
+        lot_name: selectedId === 'all' ? null : selectedName,
+      })
+      queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
+
+      setIsAnalyzing(true)
+      await api.post(`/projects/${project.id}/analyze`, {}, { timeout: 300_000 })
+
+      queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
+      setIsSuccess(true)
+    } catch (err) {
+      setIsAnalyzing(false)
+      setIsSuccess(false)
+      const msg = axios.isAxiosError(err)
+        ? (err.response?.data?.detail ?? "Erreur lors de l'analyse")
+        : "Erreur lors de l'analyse"
+      setAnalysisError(typeof msg === 'string' ? msg : JSON.stringify(msg))
+    }
+  }
+
+  return (
+    <>
+      <AnalysisProgress
+        isAnalyzing={isAnalyzing}
+        isSuccess={isSuccess}
+        onComplete={() => navigate(`/projects/${project.id}/analysis`)}
+      />
+
+      <div className="glass-card p-6 space-y-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-ds-text">Étape 2 — Sélection du lot</h2>
+            <p className="text-sm text-ds-text-2 mt-1">
+              {hasMultiLots
+                ? 'Plusieurs lots ont été détectés. Sélectionnez le lot pour lequel vous répondez.'
+                : lots.length === 1
+                  ? 'Un seul lot a été détecté. Confirmez ou ajoutez des lots manuellement.'
+                  : "Cet appel d'offres semble être mono-lot. Vous pouvez passer cette étape ou ajouter les lots manuellement."}
+            </p>
+          </div>
+
+          {/* High-confidence counter */}
+          {lots.length > 0 && (
+            <div
+              className="shrink-0 text-xs font-medium px-3 py-1.5 rounded-full"
+              style={{ background: 'rgba(14,165,233,0.10)', color: '#38BDF8', border: '1px solid rgba(14,165,233,0.20)' }}
+            >
+              {highConfidenceCount}/{lots.length} fiable{highConfidenceCount > 1 ? 's' : ''}
+            </div>
+          )}
+        </div>
+
+        {/* AMÉLIORATION 3: password-protected Excel warning */}
+        {errorLots.length > 0 && (
+          <div className="flex items-start gap-3 p-3 rounded-lg"
+            style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)' }}>
+            <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: '#F59E0B' }} />
+            <div>
+              <p className="text-sm font-medium" style={{ color: '#F59E0B' }}>Fichier(s) Excel protégé(s) par mot de passe</p>
+              {errorLots.map(l => (
+                <p key={l.id} className="text-xs mt-0.5" style={{ color: '#FCD34D' }}>{l.nom}</p>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Lot list */}
+        {lots.length > 0 ? (
+          <div className="space-y-2">
+            {/* All lots option */}
+            <LotCard
+              lot={{ id: 'all', nom: "Tous les lots — Analyser l'ensemble du DCE" }}
+              selected={selectedId === 'all'}
+              onSelect={() => setSelectedId('all')}
+              icon={<Layers size={18} />}
+            />
+            {lots.map((lot) => (
+              <LotCard
+                key={lot.id}
+                lot={lot}
+                selected={selectedId === lot.id}
+                onSelect={() => setSelectedId(lot.id)}
+                onDelete={() => handleDelete(lot.id)}
+              />
+            ))}
+          </div>
+        ) : (
+          /* No lots detected */
+          <div
+            className="flex items-center gap-3 p-4 rounded-xl border"
+            style={{ background: 'rgba(14,165,233,0.06)', borderColor: 'rgba(14,165,233,0.20)' }}
+          >
+            <Layers size={20} style={{ color: '#0EA5E9' }} />
+            <div>
+              <p className="text-sm font-medium text-ds-text">Marché unique (pas de lots)</p>
+              <p className="text-xs text-ds-text-2 mt-0.5">
+                L'IA analysera l'intégralité du DCE sans filtre par lot.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Add lot manually */}
+        {showAddForm ? (
+          <AddLotForm onAdd={handleAddLot} onCancel={() => setShowAddForm(false)} />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowAddForm(true)}
+            className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed text-sm transition-all duration-150 hover:bg-white/[0.02]"
+            style={{ borderColor: 'rgba(0,212,170,0.30)', color: '#00D4AA' }}
+          >
+            <Plus size={16} />
+            Ajouter un lot manuellement
+          </button>
+        )}
+
+        {/* Selected lot recap */}
+        {selectedId !== 'all' && selectedName && (
+          <div
+            className="flex items-center gap-2 p-3 rounded-lg text-sm"
+            style={{ background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.20)' }}
+          >
+            <CheckCircle2 size={15} style={{ color: '#00D4AA' }} />
+            <span style={{ color: '#00D4AA' }}>
+              Lot sélectionné : <strong>{selectedName}</strong>
+            </span>
+          </div>
+        )}
+
+        {/* Error */}
+        {analysisError && (
+          <div
+            className="flex items-start gap-2 p-3 rounded-lg text-sm"
+            style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.25)', color: '#F87171' }}
+          >
+            <AlertCircle size={16} className="shrink-0 mt-0.5" />
+            <span>{analysisError}</span>
+          </div>
+        )}
+
+        {/* CTA */}
+        <div className="flex justify-between items-center pt-2">
+          <button
+            type="button"
+            onClick={() => navigate(`/projects/${project.id}/upload`)}
+            className="text-sm text-ds-text-2 hover:text-ds-text transition-colors"
+          >
+            ← Retour
+          </button>
+          <button
+            onClick={handleLaunch}
+            disabled={isAnalyzing || isSuccess}
+            className="btn-primary flex items-center gap-2 px-6 py-2.5"
+          >
+            <Zap size={16} />
+            Lancer l&apos;analyse IA →
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
