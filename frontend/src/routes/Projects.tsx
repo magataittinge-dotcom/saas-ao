@@ -30,8 +30,15 @@ export default function Projects() {
           onCancel={() => setDeleteTarget(null)}
         />
       )}
-      <div className="flex items-center justify-between">
-        <h1 className="text-ds-text">Mes appels d&apos;offres</h1>
+      <div className="flex items-end justify-between">
+        <div>
+          <h1 className="text-ds-text">Mes appels d&apos;offres</h1>
+          <p className="text-sm mt-1" style={{ color: '#64748B' }}>
+            {projects.length === 0
+              ? 'Aucun projet pour le moment'
+              : `${projects.length} projet${projects.length > 1 ? 's' : ''} · ${projects.filter(p => p.status === 'en_cours' || p.status === 'brouillon').length} en cours`}
+          </p>
+        </div>
         <button
           onClick={() => navigate('/projects/new')}
           className="btn-primary flex items-center gap-2"

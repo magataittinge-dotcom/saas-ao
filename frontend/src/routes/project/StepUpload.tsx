@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Upload, FileText, Trash2, AlertCircle, Layers } from 'lucide-react'
+import { Upload, FileText, FileSpreadsheet, File, Trash2, AlertCircle, Layers, CloudUpload } from 'lucide-react'
 import axios from 'axios'
 import { api } from '@/services/api'
 import { uploadService } from '@/services/upload'
@@ -27,6 +27,14 @@ const TYPE_COLORS: Record<ProjectDocumentType, string> = {
   acte_engagement: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
   plan:            'bg-teal-500/15 text-teal-400 border-teal-500/25',
   autre:           'bg-white/5 text-ds-text-2 border-white/10',
+}
+
+function FileIcon({ filename }: { filename: string }) {
+  const ext = filename.split('.').pop()?.toLowerCase() ?? ''
+  if (ext === 'pdf') return <FileText size={17} className="shrink-0" style={{ color: '#F87171' }} />
+  if (ext === 'docx' || ext === 'doc') return <FileText size={17} className="shrink-0" style={{ color: '#60A5FA' }} />
+  if (ext === 'xlsx' || ext === 'xls' || ext === 'ods') return <FileSpreadsheet size={17} className="shrink-0" style={{ color: '#34D399' }} />
+  return <File size={17} className="shrink-0" style={{ color: '#94A3B8' }} />
 }
 
 function formatSize(bytes?: number): string {
@@ -208,25 +216,72 @@ export default function StepUpload({ project }: Props) {
         <div
           {...getRootProps()}
           className={cn(
-            'border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all duration-200',
-            isDragActive
-              ? 'border-ds-cyan bg-sky-500/5'
-              : 'border-white/10 hover:border-ds-cyan/40 hover:bg-white/[0.02]',
+            'rounded-xl p-10 text-center cursor-pointer transition-all duration-200',
+            isDragActive ? 'dropzone-active' : '',
           )}
+          style={{
+            border: isDragActive
+              ? '2px dashed rgba(14,165,233,0.60)'
+              : '2px dashed rgba(14,165,233,0.18)',
+            background: isDragActive
+              ? 'rgba(14,165,233,0.06)'
+              : 'rgba(14,165,233,0.02)',
+            ...(isDragActive ? {} : {
+              transition: 'border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease',
+            }),
+          }}
+          onMouseEnter={(e) => {
+            if (!isDragActive) {
+              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(14,165,233,0.35)'
+              ;(e.currentTarget as HTMLElement).style.background = 'rgba(14,165,233,0.04)'
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (!isDragActive) {
+              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(14,165,233,0.18)'
+              ;(e.currentTarget as HTMLElement).style.background = 'rgba(14,165,233,0.02)'
+            }
+          }}
         >
           <input {...getInputProps()} />
-          <Upload size={36} className="mx-auto mb-3 text-ds-text-3" />
-          <p className="text-sm font-medium text-ds-text">
+
+          {/* Upload icon with glow */}
+          <div className="flex justify-center mb-4">
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center"
+              style={{
+                background: isDragActive ? 'rgba(14,165,233,0.18)' : 'rgba(14,165,233,0.08)',
+                border: '1px solid rgba(14,165,233,0.20)',
+                boxShadow: isDragActive ? '0 0 24px rgba(14,165,233,0.25)' : 'none',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              {isDragActive
+                ? <CloudUpload size={26} style={{ color: '#0EA5E9' }} />
+                : <Upload size={24} style={{ color: '#64748B' }} />
+              }
+            </div>
+          </div>
+
+          <p
+            className="text-sm font-semibold mb-1"
+            style={{
+              color: isDragActive ? '#7DD3FC' : '#CBD5E1',
+              fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
+            }}
+          >
             {isDragActive ? 'Déposez les fichiers ici...' : 'Glissez-déposez vos fichiers DCE ici'}
           </p>
-          <p className="text-xs text-ds-text-3 mt-1">PDF, DOCX, XLSX, ODS, ZIP — 2 Go max par fichier</p>
-          <p className="text-xs mt-1" style={{ color: '#38BDF8' }}>
-            Le type de document est détecté automatiquement selon le nom du fichier
+          <p className="text-xs mb-1" style={{ color: '#475569' }}>
+            PDF, DOCX, XLSX, ODS, ZIP — 2 Go max par fichier
+          </p>
+          <p className="text-xs mb-4" style={{ color: '#38BDF8' }}>
+            Type de document détecté automatiquement selon le nom du fichier
           </p>
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); open() }}
-            className="btn-primary mt-4 px-5 py-2"
+            className="btn-primary px-5 py-2"
           >
             Parcourir les fichiers
           </button>
@@ -264,7 +319,7 @@ export default function StepUpload({ project }: Props) {
                 className="flex items-center gap-3 p-3 rounded-lg border transition-all duration-150 hover:bg-white/[0.03]"
                 style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.07)' }}
               >
-                <FileText size={18} className="shrink-0" style={{ color: '#0EA5E9' }} />
+                <FileIcon filename={doc.file_name} />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-ds-text truncate">{doc.file_name}</p>
                   {doc.file_size && (

@@ -30,42 +30,76 @@ export default function Header() {
     <header
       className="h-14 flex items-center justify-between px-6 shrink-0"
       style={{
-        background: 'rgba(8,11,18,0.80)',
-        backdropFilter: 'blur(16px)',
+        background: 'rgba(8,11,18,0.85)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
         borderBottom: '1px solid rgba(14,165,233,0.08)',
+        boxShadow: '0 1px 0 rgba(14,165,233,0.04)',
       }}
     >
       {/* Breadcrumb */}
       <div className="flex items-center gap-2">
-        <span className="text-xs text-ds-text-3 font-medium">Synorix</span>
+        <span
+          className="text-xs font-medium"
+          style={{ color: '#334155', fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}
+        >
+          Synorix
+        </span>
         {label && (
           <>
-            <span className="text-ds-text-3 text-xs">/</span>
-            <span className="text-xs font-semibold text-ds-text">{label}</span>
+            <span className="text-xs" style={{ color: '#1E293B' }}>/</span>
+            <span
+              className="text-xs font-semibold"
+              style={{ color: '#94A3B8', fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}
+            >
+              {label}
+            </span>
           </>
         )}
       </div>
 
       {/* Right actions */}
-      <div className="flex items-center gap-3">
-        <button className="relative p-2 text-ds-text-2 hover:text-ds-text rounded-lg hover:bg-white/5 transition-colors">
-          <Bell size={17} />
+      <div className="flex items-center gap-2.5">
+        {/* Notifications */}
+        <button
+          className="relative p-2 rounded-lg transition-all duration-200"
+          style={{ color: '#475569' }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = '#94A3B8'
+            e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = '#475569'
+            e.currentTarget.style.background = 'transparent'
+          }}
+          title="Notifications"
+        >
+          <Bell size={16} />
           <span
             className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full"
             style={{ background: '#0EA5E9', boxShadow: '0 0 6px rgba(14,165,233,0.8)' }}
           />
         </button>
 
-        <div className="flex items-center gap-2.5">
+        {/* Separator */}
+        <div className="w-px h-5" style={{ background: 'rgba(14,165,233,0.10)' }} />
+
+        {/* User */}
+        <div className="flex items-center gap-2.5 cursor-default">
           <div className="avatar-ring">
             <div
               className="avatar-inner text-white font-semibold"
-              style={{ width: '1.875rem', height: '1.875rem', fontSize: '0.75rem' }}
+              style={{ width: '1.875rem', height: '1.875rem', fontSize: '0.7rem' }}
             >
               {initials}
             </div>
           </div>
-          <span className="text-sm font-medium text-ds-text hidden sm:block">{user?.name}</span>
+          <span
+            className="text-sm font-medium hidden sm:block"
+            style={{ color: '#94A3B8', fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}
+          >
+            {user?.name}
+          </span>
         </div>
       </div>
     </header>

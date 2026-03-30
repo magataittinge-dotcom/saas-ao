@@ -313,11 +313,13 @@ export default function StepAnalysis({ project }: Props) {
                         </td>
                         <td>
                           <span
-                            className="text-xs rounded-full px-2 py-0.5"
+                            className="text-xs rounded-full px-2 py-0.5 border"
                             style={
                               item.priority === 'obligatoire'
-                                ? { background: 'rgba(239,68,68,0.12)', color: '#F87171' }
-                                : { background: 'rgba(255,255,255,0.06)', color: '#64748B' }
+                                ? { background: 'rgba(239,68,68,0.12)', color: '#F87171', borderColor: 'rgba(239,68,68,0.25)' }
+                                : item.priority === 'souhaitée' || item.priority === 'souhaite' || item.priority === 'recommandé'
+                                ? { background: 'rgba(245,158,11,0.12)', color: '#FCD34D', borderColor: 'rgba(245,158,11,0.25)' }
+                                : { background: 'rgba(255,255,255,0.06)', color: '#64748B', borderColor: 'rgba(255,255,255,0.08)' }
                             }
                           >
                             {item.priority}

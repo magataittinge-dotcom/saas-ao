@@ -29,7 +29,7 @@ export function AOCard({ project, onDelete }: Props) {
 
   return (
     <div
-      className="glass-card p-5 cursor-pointer flex flex-col gap-4 relative overflow-hidden"
+      className="glass-card p-5 cursor-pointer flex flex-col gap-4 relative overflow-hidden hover:-translate-y-0.5"
       style={isUrgent ? { borderColor: 'rgba(239,68,68,0.30)' } : undefined}
       onClick={() => navigate(`/projects/${project.id}`)}
     >
@@ -69,6 +69,18 @@ export function AOCard({ project, onDelete }: Props) {
       {project.maitre_ouvrage && (
         <p className="text-xs text-ds-text-2 -mt-2 truncate relative">{project.maitre_ouvrage}</p>
       )}
+
+      {/* Metadata: date + lot */}
+      <div className="flex items-center gap-3 text-xs -mt-2 relative" style={{ color: '#475569' }}>
+        <span>
+          {new Date(project.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
+        </span>
+        {project.selected_lot_name && (
+          <span className="truncate" style={{ color: '#7DD3FC' }}>
+            {project.selected_lot_name}
+          </span>
+        )}
+      </div>
 
       {/* Progress */}
       <div className="relative">

@@ -16,8 +16,8 @@ function ConfidenceBadge({ confidence }: { confidence?: number }) {
   if (confidence === undefined) return null
   if (confidence >= 80) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
-        style={{ background: 'rgba(16,185,129,0.12)', color: '#10B981', border: '1px solid rgba(16,185,129,0.25)' }}>
+      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full transition-all duration-200"
+        style={{ background: 'rgba(16,185,129,0.12)', color: '#10B981', border: '1px solid rgba(16,185,129,0.25)', boxShadow: '0 0 8px rgba(16,185,129,0.20)' }}>
         <ShieldCheck size={10} />
         Détection fiable
       </span>
@@ -25,16 +25,16 @@ function ConfidenceBadge({ confidence }: { confidence?: number }) {
   }
   if (confidence >= 50) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
-        style={{ background: 'rgba(245,158,11,0.12)', color: '#F59E0B', border: '1px solid rgba(245,158,11,0.25)' }}>
+      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full transition-all duration-200"
+        style={{ background: 'rgba(245,158,11,0.12)', color: '#F59E0B', border: '1px solid rgba(245,158,11,0.25)', boxShadow: '0 0 8px rgba(245,158,11,0.18)' }}>
         <AlertTriangle size={10} />
         À vérifier
       </span>
     )
   }
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
-      style={{ background: 'rgba(239,68,68,0.12)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.25)' }}>
+    <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full transition-all duration-200"
+      style={{ background: 'rgba(239,68,68,0.12)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.25)', boxShadow: '0 0 8px rgba(239,68,68,0.18)' }}>
       <HelpCircle size={10} />
       Incertain
     </span>
@@ -78,7 +78,7 @@ function LotCard({ lot, selected, onSelect, onDelete, icon }: LotCardProps) {
         type="button"
         onClick={onSelect}
         className={cn(
-          'w-full flex items-start gap-3 p-4 rounded-xl border text-left transition-all duration-150',
+          'w-full flex items-start gap-3 p-4 rounded-xl border text-left transition-all duration-200',
           selected
             ? 'border-ds-cyan'
             : 'border-white/10 hover:border-white/20 hover:bg-white/[0.02]',
@@ -129,7 +129,7 @@ function LotCard({ lot, selected, onSelect, onDelete, icon }: LotCardProps) {
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onDelete() }}
-          className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200"
           style={{ background: 'rgba(239,68,68,0.15)', color: '#EF4444' }}
           title="Supprimer ce lot"
         >
@@ -368,7 +368,7 @@ export default function StepLotSelection({ project }: Props) {
           <button
             type="button"
             onClick={() => setShowAddForm(true)}
-            className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed text-sm transition-all duration-150 hover:bg-white/[0.02]"
+            className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed text-sm transition-all duration-200 hover:bg-white/[0.02]"
             style={{ borderColor: 'rgba(0,212,170,0.30)', color: '#00D4AA' }}
           >
             <Plus size={16} />

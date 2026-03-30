@@ -79,7 +79,9 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick }: 
                 style={
                   isCompleted
                     ? { background: 'linear-gradient(90deg, #10B981, #0EA5E9)' }
-                    : { background: 'rgba(255,255,255,0.08)' }
+                    : isActive
+                    ? { background: 'linear-gradient(90deg, rgba(14,165,233,0.40), rgba(255,255,255,0.06))' }
+                    : { background: 'rgba(255,255,255,0.06)' }
                 }
               />
             )}

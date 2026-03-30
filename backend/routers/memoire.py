@@ -1,5 +1,6 @@
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -14,6 +15,7 @@ from models.memoire_config import MemoireConfig
 from schemas.memoire import MemoireGenerateRequest, MemoireUpdateRequest, MemoireResponse
 from routers.auth import get_auth_user
 from services.ai.memoire_generator import MemoireGenerator
+from services.docx_exporter import build_memoire_docx
 
 router = APIRouter()
 
@@ -101,6 +103,34 @@ async def generate_memoire(
     db.commit()
     db.refresh(memoire)
     return memoire
+
+
+@router.get("/{project_id}/memoire/export-docx")
+def export_memoire_docx(
+    project_id: str,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    project = _get_project_or_404(project_id, user.organization_id, db)
+    memoire = db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project_id).first()
+    if not memoire:
+        raise HTTPException(status_code=404, detail="Mémoire non généré")
+
+    org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+    org_name = org.name if org else "Entreprise"
+
+    docx_bytes = build_memoire_docx(
+        content_json=memoire.content_json,
+        project_name=project.name,
+        org_name=org_name,
+    )
+
+    filename = f"Memoire_Technique_{project.name.replace(' ', '_')}.docx"
+    return Response(
+        content=docx_bytes,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.patch("/{project_id}/memoire", response_model=MemoireResponse)

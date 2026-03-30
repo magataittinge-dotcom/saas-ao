@@ -66,13 +66,14 @@ export default function Dashboard() {
       )}
 
       {/* Header */}
-      <div className="flex items-end justify-between">
+      <div className="flex items-end justify-between animate-fade-in">
         <div>
-          <h1 className="text-ds-text flex items-center gap-2">
-            Bonjour, {firstName}
-            <span className="animate-wave">👋</span>
+          <h1 className="text-ds-text" style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>
+            Bonjour, <span className="text-gradient">{firstName}</span>
           </h1>
-          <p className="text-ds-text-2 mt-1">Voici l&apos;état de vos appels d&apos;offres</p>
+          <p className="text-sm mt-1" style={{ color: '#64748B' }}>
+            Voici l&apos;état de vos appels d&apos;offres
+          </p>
         </div>
         <button
           onClick={() => navigate('/projects/new')}
@@ -84,15 +85,21 @@ export default function Dashboard() {
       </div>
 
       {/* Stats */}
-      <StatsBar stats={stats ?? defaultStats} />
+      <div className="animate-fade-in-delay-1">
+        <StatsBar stats={stats ?? defaultStats} />
+      </div>
 
       {/* Alerts */}
-      <AlertCard alerts={[]} />
+      <div className="animate-fade-in-delay-2">
+        <AlertCard alerts={[]} />
+      </div>
 
       {/* AO en cours */}
-      <div>
+      <div className="animate-fade-in-delay-3">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-ds-text">AO en cours</h2>
+          <h2 className="text-ds-text" style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>
+            AO en cours
+          </h2>
           {activeProjects.length > 0 && (
             <button
               onClick={() => navigate('/projects')}
@@ -109,17 +116,28 @@ export default function Dashboard() {
         {activeProjects.length === 0 ? (
           <div
             className="glass-card p-16 flex flex-col items-center gap-5 text-center"
-            style={{ borderStyle: 'dashed', borderColor: 'rgba(14,165,233,0.15)' }}
+            style={{ borderStyle: 'dashed', borderColor: 'rgba(14,165,233,0.18)' }}
           >
             <div
               className="w-14 h-14 rounded-2xl flex items-center justify-center"
-              style={{ background: 'rgba(14,165,233,0.10)' }}
+              style={{
+                background: 'rgba(14,165,233,0.08)',
+                border: '1px solid rgba(14,165,233,0.15)',
+                boxShadow: '0 0 24px rgba(14,165,233,0.08)',
+              }}
             >
-              <Plus size={28} style={{ color: '#0EA5E9' }} />
+              <Plus size={26} style={{ color: '#0EA5E9' }} />
             </div>
             <div>
-              <p className="text-ds-text font-semibold mb-1">Aucun appel d&apos;offres en cours</p>
-              <p className="text-ds-text-2 text-xs">Créez votre premier AO pour commencer à utiliser l&apos;IA</p>
+              <p
+                className="font-semibold mb-1"
+                style={{ color: '#E2E8F0', fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}
+              >
+                Aucun appel d&apos;offres en cours
+              </p>
+              <p className="text-xs" style={{ color: '#475569' }}>
+                Créez votre premier AO pour commencer à utiliser l&apos;IA
+              </p>
             </div>
             <button onClick={() => navigate('/projects/new')} className="btn-primary flex items-center gap-2">
               <Plus size={15} />
@@ -129,7 +147,11 @@ export default function Dashboard() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {activeProjects.map((project, i) => (
-              <div key={project.id} className="animate-fade-in" style={{ animationDelay: `${i * 0.06}s` }}>
+              <div
+                key={project.id}
+                className="animate-fade-in"
+                style={{ animationDelay: `${0.30 + i * 0.07}s` }}
+              >
                 <AOCard project={project} onDelete={(id, name) => setDeleteTarget({ id, name })} />
               </div>
             ))}

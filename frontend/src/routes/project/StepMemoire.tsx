@@ -121,63 +121,15 @@ function FullscreenEditor({
   )
 }
 
-// ─── Word export ──────────────────────────────────────────────────────────────
+// ─── Word export (backend) ────────────────────────────────────────────────────
 
-async function exportToWord(content: MemoireContent, projectName: string) {
-  const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType } = await import('docx')
-  const mkHeading = (text: string, level: (typeof HeadingLevel)[keyof typeof HeadingLevel]) =>
-    new Paragraph({ text, heading: level, spacing: { before: 400, after: 200 } })
-  const mkText = (text: string) =>
-    text.split('\n').filter(Boolean).map((line) => {
-      const clean = line.replace(/\*\*(.*?)\*\*/g, '$1').replace(/^- /, '• ')
-      return new Paragraph({ children: [new TextRun({ text: clean, size: 22 })], spacing: { after: 120 } })
-    })
-  const a = content.partie_a as Record<string, string>
-  const b = content.partie_b as Record<string, string>
-  const c = content.partie_c as Record<string, string>
-  const doc = new Document({
-    sections: [{
-      children: [
-        new Paragraph({
-          children: [new TextRun({ text: projectName.toUpperCase(), bold: true, size: 32 })],
-          heading: HeadingLevel.TITLE, alignment: AlignmentType.CENTER, spacing: { after: 400 },
-        }),
-        new Paragraph({
-          children: [new TextRun({ text: 'MÉMOIRE TECHNIQUE', bold: true, size: 28 })],
-          alignment: AlignmentType.CENTER, spacing: { after: 800 },
-        }),
-        mkHeading('PRÉAMBULE', HeadingLevel.HEADING_1), ...mkText(content.preambule ?? ''),
-        mkHeading('PARTIE A — PRÉSENTATION GÉNÉRALE', HeadingLevel.HEADING_1),
-        ...[
-          ['1. Implantation géographique', 'implantation'], ['2. Historique', 'historique'],
-          ['3. Engagement qualitatif', 'engagement_qualitatif'], ['4. Nos activités', 'activites'],
-          ['5. Organigramme', 'organigramme'], ["6. Rôles et missions de l'équipe", 'roles_missions'],
-          ['7. Moyens informatiques', 'moyens_informatiques'], ['8. Véhicules', 'vehicules'],
-          ['9. Matériel', 'materiel'], ['10. Références chantiers', 'references'], ['11. Fournisseurs', 'fournisseurs'],
-        ].flatMap(([title, key]) => a?.[key] ? [mkHeading(title, HeadingLevel.HEADING_2), ...mkText(a[key])] : []),
-        mkHeading('PARTIE B — PRÉSENTATION DE LA PRESTATION', HeadingLevel.HEADING_1),
-        ...[
-          ['1. Démarrage du chantier', 'demarrage'], ['2. Interlocuteur dédié', 'interlocuteur'],
-          ['3. Qualité des ouvrages', 'qualite_ouvrages'], ['4. Respect du planning', 'respect_planning'],
-          ['5. Dispositions relatives à la sécurité', 'securite'], ['6. Traitement des déchets', 'dechets'],
-          ['7. Environnement', 'environnement'],
-        ].flatMap(([title, key]) => b?.[key] ? [mkHeading(title, HeadingLevel.HEADING_2), ...mkText(b[key])] : []),
-        mkHeading('PARTIE C — MÉTHODOLOGIE MISE EN ŒUVRE', HeadingLevel.HEADING_1),
-        ...[
-          ['1. Méthodologie détaillée', 'methodologie'], ['2. Effectifs dédiés au chantier', 'effectifs'],
-          ['3. Matériels dédiés', 'materiels'], ['4. Hygiène et sécurité', 'hygiene_securite'],
-          ['5. Mesures environnementales', 'mesures_environnementales'],
-          ['6. Garantie de parfait achèvement (GPA)', 'gpa'], ['7. Délai de travaux', 'delai'],
-        ].flatMap(([title, key]) => c?.[key] ? [mkHeading(title, HeadingLevel.HEADING_2), ...mkText(c[key])] : []),
-      ],
-    }],
-  })
-  const blob = await Packer.toBlob(doc)
-  const url = URL.createObjectURL(blob)
-  const a2 = document.createElement('a')
-  a2.href = url
-  a2.download = `Memoire_Technique_${projectName.replace(/\s+/g, '_')}.docx`
-  a2.click()
+async function exportToWord(projectId: string, projectName: string) {
+  const response = await api.get(`/projects/${projectId}/memoire/export-docx`, { responseType: 'blob' })
+  const url = URL.createObjectURL(response.data)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `Memoire_Technique_${projectName.replace(/\s+/g, '_')}.docx`
+  a.click()
   URL.revokeObjectURL(url)
 }
 
@@ -299,7 +251,7 @@ export default function StepMemoire({ project }: Props) {
               <button
                 onClick={() => {
                   setIsExporting(true)
-                  exportToWord(displayContent!, project.name).finally(() => setIsExporting(false))
+                  exportToWord(project.id, project.name).finally(() => setIsExporting(false))
                 }}
                 disabled={isExporting}
                 className="btn-glass flex items-center gap-1.5 text-sm py-1.5 px-3"

@@ -46,7 +46,11 @@ export default function Sidebar() {
 
   return (
     <aside
-      style={{ background: '#0B0F17', borderRight: '1px solid rgba(14,165,233,0.08)' }}
+      style={{
+        background: 'linear-gradient(180deg, #0A0E1A 0%, #080B12 100%)',
+        borderRight: '1px solid rgba(14,165,233,0.10)',
+        boxShadow: 'inset -1px 0 0 rgba(14,165,233,0.04)',
+      }}
       className={cn(
         'flex flex-col shrink-0 transition-all duration-300 ease-smooth',
         sidebarCollapsed ? 'w-16' : 'w-[220px]',
@@ -58,14 +62,20 @@ export default function Sidebar() {
         style={{ borderBottom: '1px solid rgba(14,165,233,0.08)' }}
       >
         {!sidebarCollapsed && (
-          <div className="flex items-center gap-2 overflow-hidden pl-1">
+          <div className="flex items-center gap-2.5 overflow-hidden pl-1">
             <div
               className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-              style={{ background: 'linear-gradient(135deg, #0EA5E9, #00D4AA)' }}
+              style={{
+                background: 'linear-gradient(135deg, #0EA5E9, #00D4AA)',
+                boxShadow: '0 0 14px rgba(14,165,233,0.40)',
+              }}
             >
-              <Sparkles size={14} className="text-white" />
+              <Sparkles size={13} className="text-white" />
             </div>
-            <span className="text-gradient font-bold text-lg tracking-tight whitespace-nowrap">
+            <span
+              className="text-gradient font-bold text-[17px] tracking-tight whitespace-nowrap"
+              style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}
+            >
               SYNORIX
             </span>
           </div>
@@ -73,9 +83,12 @@ export default function Sidebar() {
         {sidebarCollapsed && (
           <div
             className="mx-auto w-7 h-7 rounded-lg flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #0EA5E9, #00D4AA)' }}
+            style={{
+              background: 'linear-gradient(135deg, #0EA5E9, #00D4AA)',
+              boxShadow: '0 0 14px rgba(14,165,233,0.40)',
+            }}
           >
-            <Sparkles size={14} className="text-white" />
+            <Sparkles size={13} className="text-white" />
           </div>
         )}
         {!sidebarCollapsed && (

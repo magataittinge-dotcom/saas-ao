@@ -1,8 +1,9 @@
+import { type ReactNode } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Briefcase, Calendar, User } from 'lucide-react'
 import { useCreateProject } from '@/hooks/useProject'
 
 const schema = z.object({
@@ -12,6 +13,28 @@ const schema = z.object({
 })
 
 type FormData = z.infer<typeof schema>
+
+function FieldGroup({ label, hint, error, children }: {
+  label: string
+  hint?: string
+  error?: string
+  children: ReactNode
+}) {
+  return (
+    <div className="space-y-1.5">
+      <label className="flex items-center justify-between text-sm font-medium text-ds-text">
+        <span>{label}</span>
+        {hint && <span className="text-xs font-normal text-ds-text-3">{hint}</span>}
+      </label>
+      {children}
+      {error && (
+        <p className="text-xs flex items-center gap-1" style={{ color: '#F87171' }}>
+          {error}
+        </p>
+      )}
+    </div>
+  )
+}
 
 export default function NewProject() {
   const navigate = useNavigate()
@@ -33,66 +56,116 @@ export default function NewProject() {
   }
 
   return (
-    <div className="max-w-xl mx-auto animate-fade-in">
+    <div className="max-w-lg mx-auto animate-fade-in">
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center gap-1.5 text-sm text-ds-text-2 hover:text-ds-text mb-6 transition-colors"
+        className="flex items-center gap-1.5 text-sm text-ds-text-3 hover:text-ds-text mb-6 transition-all duration-200"
       >
-        <ArrowLeft size={16} />
+        <ArrowLeft size={15} />
         Retour
       </button>
 
-      <div className="glass-card p-8">
-        <h1 className="text-ds-text mb-2">Nouvel appel d&apos;offres</h1>
-        <p className="text-ds-text-2 text-sm mb-8">
-          Seulement quelques informations pour commencer. Vous pourrez tout compléter ensuite.
-        </p>
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-          <div>
-            <label className="block text-sm font-medium text-ds-text mb-1.5">
-              Nom du projet <span className="text-ds-danger">*</span>
-            </label>
-            <input
-              {...register('name')}
-              className="input-dark"
-              placeholder="Ex: Construction 42 logements — Charleville"
-            />
-            {errors.name && <p className="text-ds-danger text-xs mt-1">{errors.name.message}</p>}
+      <div
+        className="glass-card overflow-hidden"
+        style={{ boxShadow: '0 0 60px rgba(14,165,233,0.06), 0 24px 48px rgba(0,0,0,0.40)' }}
+      >
+        {/* Card header */}
+        <div
+          className="px-8 pt-8 pb-6"
+          style={{ borderBottom: '1px solid rgba(14,165,233,0.08)' }}
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+              style={{
+                background: 'linear-gradient(135deg, rgba(14,165,233,0.15), rgba(0,212,170,0.10))',
+                border: '1px solid rgba(14,165,233,0.20)',
+              }}
+            >
+              <Briefcase size={18} style={{ color: '#0EA5E9' }} />
+            </div>
+            <div>
+              <h1 className="text-ds-text leading-tight">Nouvel appel d&apos;offres</h1>
+              <p className="text-xs text-ds-text-3 mt-0.5">Remplissez les informations de base pour démarrer</p>
+            </div>
           </div>
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-ds-text mb-1.5">
-              Maître d&apos;ouvrage
-              <span className="text-ds-text-3 font-normal ml-1">(optionnel)</span>
-            </label>
-            <input
-              {...register('maitre_ouvrage')}
-              className="input-dark"
-              placeholder="Ex: Commune de Charleville-Mézières"
-            />
-          </div>
+        {/* Form */}
+        <div className="px-8 py-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            <FieldGroup
+              label="Nom du projet *"
+              error={errors.name?.message}
+            >
+              <input
+                {...register('name')}
+                className="input-dark"
+                placeholder="Ex : Construction 42 logements — Charleville"
+                autoFocus
+              />
+            </FieldGroup>
 
-          <div>
-            <label className="block text-sm font-medium text-ds-text mb-1.5">
-              Date limite de réponse
-              <span className="text-ds-text-3 font-normal ml-1">(optionnel)</span>
-            </label>
-            <input
-              {...register('deadline')}
-              type="date"
-              className="input-dark"
-            />
-          </div>
+            <FieldGroup
+              label="Maître d'ouvrage"
+              hint="optionnel"
+            >
+              <div className="relative">
+                <User
+                  size={14}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{ color: '#475569' }}
+                />
+                <input
+                  {...register('maitre_ouvrage')}
+                  className="input-dark pl-9"
+                  placeholder="Ex : Commune de Charleville-Mézières"
+                />
+              </div>
+            </FieldGroup>
 
-          <button
-            type="submit"
-            disabled={isPending}
-            className="btn-primary w-full py-3 mt-2"
-          >
-            {isPending ? 'Création...' : 'Créer le projet →'}
-          </button>
-        </form>
+            <FieldGroup
+              label="Date limite de réponse"
+              hint="optionnel"
+            >
+              <div className="relative">
+                <Calendar
+                  size={14}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+                  style={{ color: '#475569' }}
+                />
+                <input
+                  {...register('deadline')}
+                  type="date"
+                  className="input-dark pl-9"
+                />
+              </div>
+            </FieldGroup>
+
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={isPending}
+                className="btn-primary w-full py-3 flex items-center justify-center gap-2"
+              >
+                {isPending ? (
+                  <>
+                    <span
+                      className="w-4 h-4 rounded-full border-2 border-transparent animate-spin"
+                      style={{ borderTopColor: 'rgba(255,255,255,0.8)' }}
+                    />
+                    Création en cours…
+                  </>
+                ) : (
+                  'Créer le projet →'
+                )}
+              </button>
+              <p className="text-xs text-center text-ds-text-3 mt-3">
+                Vous pourrez uploader les documents DCE à l&apos;étape suivante
+              </p>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   )

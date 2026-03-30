@@ -192,44 +192,77 @@ function PdfViewer({ fullUrl, fileName, targetPage = 1, searchText, onClose }: {
       })
 
       const normalizedFull = fullText.toLowerCase().replace(/\s+/g, ' ')
-
-      const searchShort = normalizedSearch.substring(0, 50)
-      const matchIndex = normalizedFull.indexOf(searchShort)
-
-      if (matchIndex === -1) return
-
-      const matchEnd = matchIndex + Math.min(normalizedSearch.length, normalizedFull.length - matchIndex)
+      const containerRect = textLayer.getBoundingClientRect()
       const matchedRects: DOMRect[] = []
 
-      spanMap.forEach(({ start, end, span }) => {
-        if (start < matchEnd && end > matchIndex) {
-          const rect = span.getBoundingClientRect()
-          const containerRect = textLayer.getBoundingClientRect()
-
-          const highlight = document.createElement('div')
-          highlight.className = 'synorix-highlight'
-          highlight.style.cssText = `
-            position: absolute;
-            left: ${rect.left - containerRect.left - 2}px;
-            top: ${rect.top - containerRect.top - 1}px;
-            width: ${rect.width + 4}px;
-            height: ${rect.height + 2}px;
-            background: rgba(14, 165, 233, 0.25);
-            border: 1px solid rgba(14, 165, 233, 0.5);
-            border-radius: 2px;
-            pointer-events: none;
-            z-index: 1;
-            animation: highlightPulse 2s ease-in-out 3;
-          `
-          textLayer.appendChild(highlight)
-          matchedRects.push(rect)
+      // ── Découpage en segments ~45 chars (même logique que le backend) ──────
+      const splitIntoSegments = (text: string, targetLen = 45, minLen = 15): string[] => {
+        const segments: string[] = []
+        let remaining = text
+        while (remaining.length > 0) {
+          if (remaining.length <= targetLen) {
+            if (remaining.length >= minLen) segments.push(remaining)
+            break
+          }
+          let cut = remaining.lastIndexOf(' ', targetLen)
+          if (cut < minLen) cut = targetLen
+          const segment = remaining.slice(0, cut).trim()
+          if (segment.length >= minLen) segments.push(segment)
+          remaining = remaining.slice(cut).trim()
         }
-      })
+        return segments
+      }
+
+      const highlightRange = (matchIndex: number, matchEnd: number) => {
+        spanMap.forEach(({ start, end, span }) => {
+          if (start < matchEnd && end > matchIndex) {
+            const rect = span.getBoundingClientRect()
+            const el = document.createElement('div')
+            el.className = 'synorix-highlight'
+            el.style.cssText = `
+              position: absolute;
+              left: ${rect.left - containerRect.left - 2}px;
+              top: ${rect.top - containerRect.top - 1}px;
+              width: ${rect.width + 4}px;
+              height: ${rect.height + 2}px;
+              background: rgba(14, 165, 233, 0.25);
+              border: 1px solid rgba(14, 165, 233, 0.5);
+              border-radius: 2px;
+              pointer-events: none;
+              z-index: 1;
+              animation: highlightPulse 2s ease-in-out 3;
+            `
+            textLayer.appendChild(el)
+            matchedRects.push(rect)
+          }
+        })
+      }
+
+      // Chercher chaque segment et surligner les spans couverts
+      const segments = splitIntoSegments(normalizedSearch)
+      let anyMatch = false
+      for (const segment of segments) {
+        const idx = normalizedFull.indexOf(segment)
+        if (idx !== -1) {
+          highlightRange(idx, idx + segment.length)
+          anyMatch = true
+        }
+      }
+
+      // Fallback : première occurrence des 50 premiers chars si aucun segment ne matche
+      if (!anyMatch) {
+        const searchShort = normalizedSearch.substring(0, 50)
+        const matchIndex = normalizedFull.indexOf(searchShort)
+        if (matchIndex !== -1) {
+          const matchEnd = matchIndex + Math.min(normalizedSearch.length, normalizedFull.length - matchIndex)
+          highlightRange(matchIndex, matchEnd)
+        }
+      }
 
       if (matchedRects.length > 0 && containerRef.current) {
         const firstRect = matchedRects[0]
-        const containerRect = containerRef.current.getBoundingClientRect()
-        const scrollTo = containerRef.current.scrollTop + (firstRect.top - containerRect.top) - 200
+        const containerRect2 = containerRef.current.getBoundingClientRect()
+        const scrollTo = containerRef.current.scrollTop + (firstRect.top - containerRect2.top) - 200
         containerRef.current.scrollTo({ top: scrollTo, behavior: 'smooth' })
       }
     }, 500)

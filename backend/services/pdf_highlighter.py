@@ -51,23 +51,41 @@ class PdfHighlighter:
             # Nettoyer le texte de recherche
             clean_search = search_text.strip()
 
-            # Stratégie : chercher par morceaux et accumuler tous les rects
-            all_rects = []
+            # Découper le texte en segments de ~45 chars, coupés aux espaces
+            def split_into_segments(text: str, target_len: int = 45, min_len: int = 15) -> list[str]:
+                segments = []
+                remaining = text
+                while remaining:
+                    if len(remaining) <= target_len:
+                        if len(remaining) >= min_len:
+                            segments.append(remaining)
+                        break
+                    # Couper au dernier espace avant target_len
+                    cut = remaining.rfind(" ", min_len, target_len + 1)
+                    if cut == -1:
+                        cut = target_len
+                    segment = remaining[:cut].strip()
+                    if len(segment) >= min_len:
+                        segments.append(segment)
+                    remaining = remaining[cut:].strip()
+                return segments
 
-            search_lengths = [200, 150, 100, 80, 60, 40]
-            for length in search_lengths:
-                portion = clean_search[:length]
-                rects = page.search_for(portion, quads=False)
-                if rects:
-                    all_rects.extend(rects)
-                    # Chercher aussi la suite du texte pour couvrir toute la phrase
-                    if len(clean_search) > length:
-                        remaining = clean_search[length:length + 100]
-                        if remaining.strip():
-                            more_rects = page.search_for(remaining[:60], quads=False)
-                            if more_rects:
-                                all_rects.extend(more_rects)
-                    break
+            # Dédupliquer les rectangles (tolérance 2pt)
+            def dedup_rects(rects: list) -> list:
+                unique = []
+                for r in rects:
+                    if not any(abs(r.x0 - u.x0) < 2 and abs(r.y0 - u.y0) < 2 for u in unique):
+                        unique.append(r)
+                return unique
+
+            # Stratégie principale : chercher chaque segment individuellement
+            all_rects = []
+            segments = split_into_segments(clean_search)
+            for segment in segments:
+                rects = page.search_for(segment, quads=False)
+                all_rects.extend(rects)
+
+            all_rects = dedup_rects(all_rects)
 
             # Si rien trouvé, chercher par mots-clés
             if not all_rects:
@@ -85,9 +103,12 @@ class PdfHighlighter:
                     if i == page_idx:
                         continue
                     p = doc[i]
-                    rects = p.search_for(clean_search[:60], quads=False)
-                    if rects:
-                        all_rects.extend(rects)
+                    page_rects = []
+                    for segment in segments:
+                        page_rects.extend(p.search_for(segment, quads=False))
+                    page_rects = dedup_rects(page_rects)
+                    if page_rects:
+                        all_rects.extend(page_rects)
                         page = p
                         page_idx = i
                         break
