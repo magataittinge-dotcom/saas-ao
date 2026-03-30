@@ -12,7 +12,7 @@ class RegisterRequest(BaseModel):
     name: str
     organization_name: str
     siret: str
-    plan: str = "pro"
+    plan: str = "free"
 
 
 class TokenResponse(BaseModel):

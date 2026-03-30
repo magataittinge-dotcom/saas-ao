@@ -26,6 +26,7 @@ export const uploadService = {
     projectId: string,
     file: File,
     type: ProjectDocumentType,
+    onUploadProgress?: (progress: { loaded: number; total: number }) => void,
   ): Promise<ProjectDocument | { documents: ProjectDocument[]; extracted_count: number; warnings?: string[] }> => {
     const formData = new FormData()
     formData.append('file', file)
@@ -34,7 +35,12 @@ export const uploadService = {
     const { data } = await api.post<ProjectDocument | { documents: ProjectDocument[]; extracted_count: number; warnings?: string[] }>(
       `/projects/${projectId}/documents`,
       formData,
-      { headers: { 'Content-Type': 'multipart/form-data' } },
+      {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: onUploadProgress
+          ? (e) => onUploadProgress({ loaded: e.loaded ?? 0, total: e.total ?? file.size })
+          : undefined,
+      },
     )
     return data
   },

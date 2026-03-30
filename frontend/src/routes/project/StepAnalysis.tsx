@@ -6,6 +6,7 @@ import {
   AlertTriangle, CreditCard, Shield, Eye, GitBranch, Truck, CheckCircle2, Filter,
 } from 'lucide-react'
 import { api } from '@/services/api'
+import LoadingProgress from '@/components/common/LoadingProgress'
 import type { Project, ComplianceItem, ComplianceCategory, CritereJugement, InfosMarche, ProjectDocument } from '@/types'
 import { useCompleteStep } from '@/hooks/useProject'
 
@@ -159,20 +160,52 @@ export default function StepAnalysis({ project }: Props) {
     })
   }
 
-  const LoadingCard = ({ message, sub }: { message: string; sub?: string }) => (
+  // Poll analysis progress when items are empty
+  const { data: analysisProgress } = useQuery({
+    queryKey: ['analysis-progress', project.id],
+    queryFn: async () => {
+      try {
+        const { data } = await api.get<{
+          total_docs: number
+          analyzed_docs: number
+          current_doc_name: string
+          status: string
+        }>(`/projects/${project.id}/analysis-progress`)
+        return data
+      } catch {
+        return null
+      }
+    },
+    enabled: !isLoading && items.length === 0,
+    refetchInterval: 2000,
+  })
+
+  const analysisPercent = analysisProgress
+    ? analysisProgress.total_docs > 0
+      ? (analysisProgress.analyzed_docs / analysisProgress.total_docs) * 100
+      : 10
+    : 15 // Fallback when endpoint isn't available
+
+  if (isLoading) return (
     <div className="glass-card p-12 flex flex-col items-center gap-3">
-      <Loader2 size={32} className="animate-spin" style={{ color: '#0EA5E9' }} />
-      <p className="text-ds-text font-medium">{message}</p>
-      {sub && <p className="text-sm text-ds-text-2">{sub}</p>}
+      <Loader2 size={32} className="animate-spin" style={{ color: '#3B82F6' }} />
+      <p className="text-ds-text font-medium">Chargement de l&apos;analyse...</p>
     </div>
   )
 
-  if (isLoading) return <LoadingCard message="Chargement de l'analyse..." />
   if (items.length === 0) return (
-    <LoadingCard
-      message="Analyse IA en cours..."
-      sub="L'IA lit vos documents et extrait toutes les informations"
-    />
+    <div className="glass-card p-12">
+      <LoadingProgress
+        progress={analysisPercent}
+        label="Analyse IA en cours..."
+        sublabel={
+          analysisProgress
+            ? `Document ${analysisProgress.analyzed_docs}/${analysisProgress.total_docs} — ${analysisProgress.current_doc_name}`
+            : "L'IA lit vos documents et extrait toutes les informations"
+        }
+        variant="analysis"
+      />
+    </div>
   )
 
   // ── Lot filter computation ───────────────────────────────────────────────
@@ -236,7 +269,7 @@ export default function StepAnalysis({ project }: Props) {
           <div className="text-right">
             <div
               className="text-2xl font-bold"
-              style={{ fontFamily: '"JetBrains Mono", monospace', color: '#0EA5E9' }}
+              style={{ fontFamily: '"JetBrains Mono", monospace', color: '#3B82F6' }}
             >
               {items.length}
             </div>
@@ -264,7 +297,7 @@ export default function StepAnalysis({ project }: Props) {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Rechercher une exigence extraite..."
-            className="input-dark pl-9"
+            className="glass-input w-full py-2.5 text-sm pl-9"
           />
         </div>
 
@@ -279,7 +312,7 @@ export default function StepAnalysis({ project }: Props) {
               <h3 className="text-xs font-semibold text-ds-text-3 uppercase tracking-wide mb-2">
                 {CATEGORY_LABELS[cat as ComplianceCategory]} ({catItems.length})
               </h3>
-              <div className="overflow-x-auto rounded-lg" style={{ border: '1px solid rgba(14,165,233,0.10)' }}>
+              <div className="overflow-x-auto rounded-lg" style={{ border: '1px solid rgba(59,130,246,0.10)' }}>
                 <table className="table-dark">
                   <thead>
                     <tr>
@@ -302,7 +335,7 @@ export default function StepAnalysis({ project }: Props) {
                             </p>
                           )}
                           {item.suggestion_ia && (
-                            <p className="text-xs mt-1 italic" style={{ color: '#38BDF8' }}>
+                            <p className="text-xs mt-1 italic" style={{ color: '#60A5FA' }}>
                               💡 {item.suggestion_ia}
                             </p>
                           )}
@@ -348,7 +381,7 @@ export default function StepAnalysis({ project }: Props) {
         {/* ── Bouton validation ─────────────────────────────────────── */}
         <div
           className="flex items-center justify-between pt-4 mt-2"
-          style={{ borderTop: '1px solid rgba(14,165,233,0.10)' }}
+          style={{ borderTop: '1px solid rgba(59,130,246,0.10)' }}
         >
           <p className="text-sm text-ds-text-2">
             {isStepAlreadyDone
@@ -361,7 +394,7 @@ export default function StepAnalysis({ project }: Props) {
             className="btn-primary flex items-center gap-2 px-6 py-2.5"
             style={
               isStepAlreadyDone
-                ? { background: 'linear-gradient(135deg, #10B981, #0EA5E9)' }
+                ? { background: 'linear-gradient(135deg, #10B981, #3B82F6)' }
                 : undefined
             }
           >
@@ -407,7 +440,7 @@ function FilterPill({ label, active, onClick }: { label: string; active: boolean
       className="px-3 py-1 rounded-full text-xs font-medium transition-all duration-150"
       style={
         active
-          ? { background: 'rgba(14,165,233,0.20)', color: '#7DD3FC', border: '1px solid rgba(14,165,233,0.35)' }
+          ? { background: 'rgba(59,130,246,0.20)', color: '#93C5FD', border: '1px solid rgba(59,130,246,0.35)' }
           : { background: 'rgba(255,255,255,0.05)', color: '#64748B', border: '1px solid rgba(255,255,255,0.08)' }
       }
     >
@@ -442,7 +475,7 @@ function InfosMarcheCard({ infos }: { infos: InfosMarche }) {
       <div className="grid grid-cols-2 gap-3">
         {fields.map(({ icon: Icon, label, value }) => (
           <div key={label} className="flex items-start gap-2">
-            <Icon size={14} className="mt-0.5 shrink-0" style={{ color: '#0EA5E9' }} />
+            <Icon size={14} className="mt-0.5 shrink-0" style={{ color: '#3B82F6' }} />
             <div>
               <p className="text-xs text-ds-text-3">{label}</p>
               <p className="text-sm text-ds-text font-medium">{value}</p>
@@ -480,14 +513,14 @@ function ConditionsFinancieresCard({ infos }: { infos: InfosMarche }) {
   return (
     <div className="glass-card p-5">
       <div className="flex items-center gap-2 mb-3">
-        <CreditCard size={16} style={{ color: '#00D4AA' }} />
+        <CreditCard size={16} style={{ color: '#60A5FA' }} />
         <h2 className="text-xs font-semibold text-ds-text-3 uppercase tracking-widest">
           Conditions financières
         </h2>
       </div>
       <div className="grid grid-cols-2 gap-3">
         {rows.map(({ label, value }) => (
-          <div key={label} className="rounded-lg p-3" style={{ background: 'rgba(0,212,170,0.06)', border: '1px solid rgba(0,212,170,0.12)' }}>
+          <div key={label} className="rounded-lg p-3" style={{ background: 'rgba(96,165,250,0.06)', border: '1px solid rgba(96,165,250,0.12)' }}>
             <p className="text-xs text-ds-text-3 mb-0.5">{label}</p>
             <p className="text-sm text-ds-text font-medium">{value}</p>
           </div>
@@ -512,12 +545,12 @@ function ConditionsExecutionCard({ infos }: { infos: InfosMarche }) {
 
         {infos.visite_site && (
           <InfoRow
-            icon={<Eye size={14} style={{ color: '#0EA5E9' }} />}
+            icon={<Eye size={14} style={{ color: '#3B82F6' }} />}
             label="Visite de site"
             value={infos.visite_site.obligatoire ? 'Obligatoire' : 'Facultative'}
             detail={infos.visite_site.details ?? undefined}
-            accent={infos.visite_site.obligatoire ? 'rgba(239,68,68,0.10)' : 'rgba(14,165,233,0.08)'}
-            accentBorder={infos.visite_site.obligatoire ? 'rgba(239,68,68,0.20)' : 'rgba(14,165,233,0.15)'}
+            accent={infos.visite_site.obligatoire ? 'rgba(239,68,68,0.10)' : 'rgba(59,130,246,0.08)'}
+            accentBorder={infos.visite_site.obligatoire ? 'rgba(239,68,68,0.20)' : 'rgba(59,130,246,0.15)'}
           />
         )}
 
@@ -591,7 +624,7 @@ function InfoRow({
 // ─── Critères de Jugement Card ─────────────────────────────────────────────────
 
 const CRITERE_COLORS = [
-  { bar: '#0EA5E9', text: '#38BDF8', bg: 'rgba(14,165,233,0.10)'  },
+  { bar: '#3B82F6', text: '#60A5FA', bg: 'rgba(59,130,246,0.10)'  },
   { bar: '#10B981', text: '#34D399', bg: 'rgba(16,185,129,0.10)'  },
   { bar: '#8B5CF6', text: '#A78BFA', bg: 'rgba(139,92,246,0.10)'  },
   { bar: '#F59E0B', text: '#FCD34D', bg: 'rgba(245,158,11,0.10)'  },
@@ -621,18 +654,18 @@ function LotFilterBanner({
   return (
     <div
       className="rounded-xl p-4 space-y-3"
-      style={{ background: 'rgba(14,165,233,0.06)', border: '1px solid rgba(14,165,233,0.20)' }}
+      style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.20)' }}
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Filter size={15} style={{ color: '#38BDF8' }} />
-          <p className="text-sm font-medium" style={{ color: '#38BDF8' }}>
+          <Filter size={15} style={{ color: '#60A5FA' }} />
+          <p className="text-sm font-medium" style={{ color: '#60A5FA' }}>
             Analyse ciblée sur le {lotLabel}
           </p>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-xs text-ds-text-2">
-            <span className="font-semibold" style={{ color: '#38BDF8' }}>{included.length}</span>
+            <span className="font-semibold" style={{ color: '#60A5FA' }}>{included.length}</span>
             <span className="text-ds-text-3"> / {total} documents analysés</span>
           </span>
           {total > 0 && (

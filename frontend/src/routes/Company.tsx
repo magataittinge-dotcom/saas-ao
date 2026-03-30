@@ -45,7 +45,7 @@ export default function Company() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
-        <Building size={24} style={{ color: '#0EA5E9' }} />
+        <Building size={24} style={{ color: '#3B82F6' }} />
         <div>
           <h1 className="text-2xl font-bold text-ds-text">Mon Entreprise</h1>
           <p className="text-sm text-ds-text-2">Ces informations seront utilisées dans vos mémoires techniques</p>
@@ -61,7 +61,7 @@ export default function Company() {
         <div className="w-full progress-track rounded-full h-2">
           <div
             className="h-2 rounded-full transition-all"
-            style={{ width: `${completionPct}%`, background: 'linear-gradient(90deg, #0EA5E9, #00D4AA)' }}
+            style={{ width: `${completionPct}%`, background: 'linear-gradient(90deg, #3B82F6, #60A5FA)' }}
           />
         </div>
         {completionPct < 80 && (
@@ -80,7 +80,7 @@ export default function Company() {
               <textarea
                 {...register(key as keyof Organization)}
                 rows={4}
-                className="input-dark w-full"
+                className="glass-input w-full py-2.5 text-sm w-full"
                 style={{ resize: 'vertical' }}
               />
             </div>
@@ -89,7 +89,7 @@ export default function Company() {
               <label className="block text-sm font-medium text-ds-text mb-1">{label}</label>
               <input
                 {...register(key as keyof Organization)}
-                className="input-dark w-full"
+                className="glass-input w-full py-2.5 text-sm w-full"
               />
             </div>
           ),

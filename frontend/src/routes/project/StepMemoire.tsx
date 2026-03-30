@@ -8,8 +8,12 @@ import {
 import ReactMarkdown from 'react-markdown'
 import axios from 'axios'
 import { api } from '@/services/api'
+import { useAuthStore } from '@/stores/authStore'
 import { AnalysisProgress, MEMOIRE_STAGES } from '@/components/project/AnalysisProgress'
+import LoadingProgress from '@/components/common/LoadingProgress'
+import SubscriptionWall from '@/components/common/SubscriptionWall'
 import type { Project, MemoireTechnique, MemoireContent } from '@/types'
+
 
 // ─── Build flat Markdown ───────────────────────────────────────────────────────
 
@@ -84,7 +88,7 @@ function FullscreenEditor({
       {/* Toolbar */}
       <div
         className="flex items-center justify-between px-6 py-3 shrink-0"
-        style={{ borderBottom: '1px solid rgba(14,165,233,0.12)', background: 'rgba(15,23,42,0.80)', backdropFilter: 'blur(16px)' }}
+        style={{ borderBottom: '1px solid rgba(59,130,246,0.12)', background: 'rgba(15,23,42,0.80)', backdropFilter: 'blur(16px)' }}
       >
         <p className="text-sm font-medium text-ds-text">
           Édition du mémoire — format Markdown
@@ -114,7 +118,7 @@ function FullscreenEditor({
         value={raw}
         onChange={(e) => setRaw(e.target.value)}
         className="flex-1 px-8 py-6 text-sm leading-relaxed resize-none focus:outline-none font-mono"
-        style={{ background: '#080B12', color: '#E2E8F0', caretColor: '#0EA5E9' }}
+        style={{ background: '#080B12', color: '#E2E8F0', caretColor: '#3B82F6' }}
         spellCheck={false}
       />
     </div>
@@ -140,6 +144,8 @@ interface Props { project: Project }
 export default function StepMemoire({ project }: Props) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { organization } = useAuthStore()
+  const [showPaywall, setShowPaywall] = useState(false)
   const [variables, setVariables] = useState({ nb_ouvriers: '', delai: '', particularites: '' })
   const [showForm, setShowForm] = useState(false)
   const [showEditor, setShowEditor] = useState(false)
@@ -208,22 +214,70 @@ export default function StepMemoire({ project }: Props) {
   if (isLoading) {
     return (
       <div className="glass-card p-12 flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-transparent animate-spin" style={{ borderTopColor: '#0EA5E9' }} />
+        <div className="w-8 h-8 rounded-full border-2 border-transparent animate-spin" style={{ borderTopColor: '#3B82F6' }} />
       </div>
     )
   }
 
   const hasMemoire = !!memoire
 
+  // Poll generation progress while generating
+  const { data: genProgressData } = useQuery({
+    queryKey: ['memoire-progress', project.id],
+    queryFn: async () => {
+      try {
+        const { data } = await api.get<{
+          completed_sections: number
+          total_sections: number
+          current_section: string
+          status: string
+        }>(`/projects/${project.id}/memoire/progress`)
+        return data
+      } catch {
+        return null
+      }
+    },
+    enabled: isGenerating && !genSuccess,
+    refetchInterval: 2000,
+  })
+
+  const memoirePercent = genSuccess
+    ? 100
+    : genProgressData
+      ? genProgressData.total_sections > 0
+        ? (genProgressData.completed_sections / genProgressData.total_sections) * 100
+        : 15
+      : undefined // No endpoint available, fall back to AnalysisProgress
+
   return (
     <>
-      <AnalysisProgress
-        isAnalyzing={isGenerating}
-        isSuccess={genSuccess}
-        onComplete={() => { setGenSuccess(false) }}
-        stages={MEMOIRE_STAGES}
-        subtitle="Claude Opus rédige votre mémoire technique (~2-3 min)..."
-      />
+      <SubscriptionWall open={showPaywall} onClose={() => setShowPaywall(false)} feature="memoire" />
+
+      {/* Show LoadingProgress if we have real progress data, otherwise AnalysisProgress */}
+      {memoirePercent !== undefined && (isGenerating || genSuccess) ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm" style={{ background: 'rgba(8,11,18,0.75)' }}>
+          <div className="glass-card p-10">
+            <LoadingProgress
+              progress={memoirePercent}
+              label={genSuccess ? 'Mémoire généré !' : 'Génération en cours...'}
+              sublabel={
+                genProgressData
+                  ? `Section ${genProgressData.completed_sections}/${genProgressData.total_sections} — ${genProgressData.current_section}`
+                  : 'Claude Opus rédige votre mémoire technique (~2-3 min)...'
+              }
+              variant="generation"
+            />
+          </div>
+        </div>
+      ) : (
+        <AnalysisProgress
+          isAnalyzing={isGenerating}
+          isSuccess={genSuccess}
+          onComplete={() => { setGenSuccess(false) }}
+          stages={MEMOIRE_STAGES}
+          subtitle="Claude Opus rédige votre mémoire technique (~2-3 min)..."
+        />
+      )}
 
       {showEditor && displayContent && (
         <FullscreenEditor
@@ -282,7 +336,7 @@ export default function StepMemoire({ project }: Props) {
         {(!hasMemoire || showForm) && (
           <div
             className="space-y-5 rounded-xl p-5"
-            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(14,165,233,0.12)' }}
+            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(59,130,246,0.12)' }}
           >
             {hasMemoire && (
               <p className="text-sm font-medium" style={{ color: '#FCD34D' }}>
@@ -296,7 +350,7 @@ export default function StepMemoire({ project }: Props) {
                   type="number"
                   value={variables.nb_ouvriers}
                   onChange={(e) => setVariables((v) => ({ ...v, nb_ouvriers: e.target.value }))}
-                  className="input-dark"
+                  className="glass-input w-full py-2.5 text-sm"
                   placeholder="Ex: 4"
                 />
               </div>
@@ -306,7 +360,7 @@ export default function StepMemoire({ project }: Props) {
                   type="text"
                   value={variables.delai}
                   onChange={(e) => setVariables((v) => ({ ...v, delai: e.target.value }))}
-                  className="input-dark"
+                  className="glass-input w-full py-2.5 text-sm"
                   placeholder="Ex: 3 mois"
                 />
               </div>
@@ -320,7 +374,7 @@ export default function StepMemoire({ project }: Props) {
                 value={variables.particularites}
                 onChange={(e) => setVariables((v) => ({ ...v, particularites: e.target.value }))}
                 rows={3}
-                className="input-dark resize-none"
+                className="glass-input w-full py-2.5 text-sm resize-none"
                 placeholder="Éléments spécifiques à mentionner dans le mémoire..."
               />
             </div>
@@ -333,7 +387,11 @@ export default function StepMemoire({ project }: Props) {
               </p>
             )}
             <button
-              onClick={() => { setGenError(null); generate() }}
+              onClick={() => {
+                const plan = organization?.plan ?? 'free'
+                if (plan === 'free') { setShowPaywall(true); return }
+                setGenError(null); generate()
+              }}
               disabled={isGenerating}
               className="btn-primary flex items-center gap-2 py-3 px-6"
             >
@@ -392,14 +450,14 @@ function DocumentView({ content, project }: { content: MemoireContent; project: 
   return (
     <div
       className="max-h-[75vh] overflow-y-auto rounded-xl"
-      style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(14,165,233,0.08)' }}
+      style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(59,130,246,0.08)' }}
     >
       <div className="max-w-3xl mx-auto py-8 px-6 space-y-8">
 
         {/* Cover */}
         <div
           className="text-center pb-6"
-          style={{ borderBottom: '1px solid rgba(14,165,233,0.12)' }}
+          style={{ borderBottom: '1px solid rgba(59,130,246,0.12)' }}
         >
           <p className="text-xs uppercase tracking-widest text-ds-text-3 mb-2 font-mono">Mémoire Technique</p>
           <h1 className="text-2xl font-bold text-ds-text">{project.name}</h1>
@@ -445,7 +503,7 @@ function PartHeading({ children }: { children: React.ReactNode }) {
   return (
     <h2
       className="text-sm font-bold text-ds-text uppercase tracking-wide pb-2"
-      style={{ borderBottom: '2px solid #0EA5E9' }}
+      style={{ borderBottom: '2px solid #3B82F6' }}
     >
       {children}
     </h2>

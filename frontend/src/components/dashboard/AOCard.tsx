@@ -8,7 +8,7 @@ const STEP_LABELS = ['Upload DCE', 'Analyse IA', 'Candidature', 'Mémoire', 'Exp
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string; accent: string }> = {
   brouillon: { label: 'Brouillon', cls: 'pill-muted',   accent: '#64748B' },
-  en_cours:  { label: 'En cours',  cls: 'pill-cyan',    accent: '#0EA5E9' },
+  en_cours:  { label: 'En cours',  cls: 'pill-cyan',    accent: '#3B82F6' },
   soumis:    { label: 'Soumis',    cls: 'pill-warning', accent: '#F59E0B' },
   gagné:     { label: 'Gagné',     cls: 'pill-success', accent: '#10B981' },
   perdu:     { label: 'Perdu',     cls: 'pill-danger',  accent: '#EF4444' },
@@ -29,20 +29,26 @@ export function AOCard({ project, onDelete }: Props) {
 
   return (
     <div
-      className="glass-card p-5 cursor-pointer flex flex-col gap-4 relative overflow-hidden hover:-translate-y-0.5"
-      style={isUrgent ? { borderColor: 'rgba(239,68,68,0.30)' } : undefined}
+      className="glass-card p-5 cursor-pointer flex flex-col gap-4 relative overflow-hidden"
+      style={{
+        borderColor: isUrgent ? 'rgba(240,68,56,0.25)' : undefined,
+      }}
       onClick={() => navigate(`/projects/${project.id}`)}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor = isUrgent ? 'rgba(240,68,56,0.35)' : 'rgba(59,130,246,0.15)'
+        e.currentTarget.style.transform = 'translateY(-2px)'
+        e.currentTarget.style.boxShadow = `14px 17px 40px 4px rgba(0,0,0,0.28), 0 0 24px ${isUrgent ? 'rgba(240,68,56,0.08)' : 'rgba(59,130,246,0.06)'}`
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = isUrgent ? 'rgba(240,68,56,0.25)' : ''
+        e.currentTarget.style.transform = 'translateY(0)'
+        e.currentTarget.style.boxShadow = ''
+      }}
     >
       {/* Accent top-line */}
       <div
         className="absolute top-0 left-0 right-0 h-[2px] opacity-80"
         style={{ background: `linear-gradient(90deg, ${accentColor}, transparent)` }}
-      />
-
-      {/* Corner glow */}
-      <div
-        className="absolute -top-6 -right-6 w-24 h-24 rounded-full opacity-[0.07] blur-2xl pointer-events-none"
-        style={{ background: accentColor }}
       />
 
       {/* Header */}
@@ -76,7 +82,7 @@ export function AOCard({ project, onDelete }: Props) {
           {new Date(project.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
         </span>
         {project.selected_lot_name && (
-          <span className="truncate" style={{ color: '#7DD3FC' }}>
+          <span className="truncate" style={{ color: '#93C5FD' }}>
             {project.selected_lot_name}
           </span>
         )}
@@ -121,9 +127,9 @@ export function AOCard({ project, onDelete }: Props) {
 
         <button
           className="flex items-center gap-1 text-xs font-medium transition-colors"
-          style={{ color: '#0EA5E9' }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = '#7DD3FC')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = '#0EA5E9')}
+          style={{ color: '#3B82F6' }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = '#93C5FD')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = '#3B82F6')}
           onClick={(e) => { e.stopPropagation(); navigate(`/projects/${project.id}`) }}
         >
           Continuer

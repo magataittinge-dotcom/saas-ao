@@ -1,9 +1,10 @@
-import { type ReactNode } from 'react'
+import { type ReactNode, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Briefcase, Calendar, User } from 'lucide-react'
+import axios from 'axios'
+import { ArrowLeft, Briefcase, Calendar, User, AlertCircle } from 'lucide-react'
 import { useCreateProject } from '@/hooks/useProject'
 
 const schema = z.object({
@@ -39,12 +40,14 @@ function FieldGroup({ label, hint, error, children }: {
 export default function NewProject() {
   const navigate = useNavigate()
   const { mutate: createProject, isPending } = useCreateProject()
+  const [apiError, setApiError] = useState<string | null>(null)
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
   })
 
   const onSubmit = (data: FormData) => {
+    setApiError(null)
     const payload = {
       name: data.name,
       ...(data.maitre_ouvrage?.trim() && { maitre_ouvrage: data.maitre_ouvrage.trim() }),
@@ -52,6 +55,12 @@ export default function NewProject() {
     }
     createProject(payload, {
       onSuccess: (project) => navigate(`/projects/${project.id}/upload`),
+      onError: (err) => {
+        const msg = axios.isAxiosError(err)
+          ? (err.response?.data?.detail ?? err.message)
+          : 'Erreur lors de la création du projet'
+        setApiError(typeof msg === 'string' ? msg : JSON.stringify(msg))
+      },
     })
   }
 
@@ -67,22 +76,22 @@ export default function NewProject() {
 
       <div
         className="glass-card overflow-hidden"
-        style={{ boxShadow: '0 0 60px rgba(14,165,233,0.06), 0 24px 48px rgba(0,0,0,0.40)' }}
+        style={{ boxShadow: '0 0 60px rgba(59,130,246,0.06), 0 24px 48px rgba(0,0,0,0.40)' }}
       >
         {/* Card header */}
         <div
           className="px-8 pt-8 pb-6"
-          style={{ borderBottom: '1px solid rgba(14,165,233,0.08)' }}
+          style={{ borderBottom: '1px solid rgba(59,130,246,0.08)' }}
         >
           <div className="flex items-center gap-3 mb-3">
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
               style={{
-                background: 'linear-gradient(135deg, rgba(14,165,233,0.15), rgba(0,212,170,0.10))',
-                border: '1px solid rgba(14,165,233,0.20)',
+                background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(96,165,250,0.10))',
+                border: '1px solid rgba(59,130,246,0.20)',
               }}
             >
-              <Briefcase size={18} style={{ color: '#0EA5E9' }} />
+              <Briefcase size={18} style={{ color: '#3B82F6' }} />
             </div>
             <div>
               <h1 className="text-ds-text leading-tight">Nouvel appel d&apos;offres</h1>
@@ -100,7 +109,7 @@ export default function NewProject() {
             >
               <input
                 {...register('name')}
-                className="input-dark"
+                className="glass-input w-full py-2.5 text-sm"
                 placeholder="Ex : Construction 42 logements — Charleville"
                 autoFocus
               />
@@ -118,7 +127,7 @@ export default function NewProject() {
                 />
                 <input
                   {...register('maitre_ouvrage')}
-                  className="input-dark pl-9"
+                  className="glass-input w-full py-2.5 text-sm pl-9"
                   placeholder="Ex : Commune de Charleville-Mézières"
                 />
               </div>
@@ -137,10 +146,20 @@ export default function NewProject() {
                 <input
                   {...register('deadline')}
                   type="date"
-                  className="input-dark pl-9"
+                  className="glass-input w-full py-2.5 text-sm pl-9"
                 />
               </div>
             </FieldGroup>
+
+            {apiError && (
+              <div
+                className="flex items-start gap-2 p-3 rounded-lg text-sm"
+                style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.25)', color: '#F87171' }}
+              >
+                <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                <span>{apiError}</span>
+              </div>
+            )}
 
             <div className="pt-2">
               <button

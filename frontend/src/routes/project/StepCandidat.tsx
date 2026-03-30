@@ -58,9 +58,9 @@ function ChecklistRow({ item }: { item: ChecklistItem }) {
         <button
           className="flex items-center gap-1.5 text-xs font-medium rounded-md px-2.5 py-1 transition-all duration-200 hover:opacity-80"
           style={{
-            color: '#38BDF8',
-            border: '1px solid rgba(14,165,233,0.25)',
-            background: 'rgba(14,165,233,0.08)',
+            color: '#60A5FA',
+            border: '1px solid rgba(59,130,246,0.25)',
+            background: 'rgba(59,130,246,0.08)',
           }}
         >
           <Upload size={12} />
@@ -108,7 +108,7 @@ export default function StepCandidat({ project }: Props) {
             <div className="text-right shrink-0 ml-4">
               <div
                 className="text-2xl font-bold leading-none"
-                style={{ fontFamily: '"JetBrains Mono", monospace', color: allOk ? '#10B981' : '#0EA5E9' }}
+                style={{ fontFamily: '"JetBrains Mono", monospace', color: allOk ? '#10B981' : '#3B82F6' }}
               >
                 {present}<span className="text-sm text-ds-text-3 font-normal">/{total}</span>
               </div>
@@ -129,9 +129,9 @@ export default function StepCandidat({ project }: Props) {
                 style={{
                   width: `${pct}%`,
                   background: allOk
-                    ? 'linear-gradient(90deg, #10B981, #0EA5E9)'
+                    ? 'linear-gradient(90deg, #10B981, #3B82F6)'
                     : pct >= 60
-                    ? 'linear-gradient(90deg, #0EA5E9, #3B82F6)'
+                    ? 'linear-gradient(90deg, #3B82F6, #60A5FA)'
                     : 'linear-gradient(90deg, #F59E0B, #EF4444)',
                 }}
               />
@@ -208,7 +208,7 @@ export default function StepCandidat({ project }: Props) {
         </div>
       )}
 
-      <div className="flex justify-end pt-2" style={{ borderTop: '1px solid rgba(14,165,233,0.08)' }}>
+      <div className="flex justify-end pt-2" style={{ borderTop: '1px solid rgba(59,130,246,0.08)' }}>
         {isAlreadyDone ? (
           <div className="flex items-center gap-3">
             <div

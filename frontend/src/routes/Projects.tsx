@@ -52,19 +52,19 @@ export default function Projects() {
         <div className="flex justify-center py-16">
           <div
             className="w-8 h-8 rounded-full border-2 border-transparent animate-spin"
-            style={{ borderTopColor: '#0EA5E9' }}
+            style={{ borderTopColor: '#3B82F6' }}
           />
         </div>
       ) : projects.length === 0 ? (
         <div
           className="glass-card p-16 flex flex-col items-center gap-5 text-center"
-          style={{ borderStyle: 'dashed', borderColor: 'rgba(14,165,233,0.15)' }}
+          style={{ borderStyle: 'dashed', borderColor: 'rgba(59,130,246,0.15)' }}
         >
           <div
             className="w-14 h-14 rounded-2xl flex items-center justify-center"
-            style={{ background: 'rgba(14,165,233,0.10)' }}
+            style={{ background: 'rgba(59,130,246,0.10)' }}
           >
-            <Plus size={28} style={{ color: '#0EA5E9' }} />
+            <Plus size={28} style={{ color: '#3B82F6' }} />
           </div>
           <div>
             <p className="text-ds-text font-semibold mb-1">Aucun appel d&apos;offres pour l&apos;instant</p>

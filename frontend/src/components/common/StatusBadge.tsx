@@ -7,7 +7,7 @@ const variantStyles: Record<BadgeVariant, React.CSSProperties> = {
   success: { background: 'rgba(16,185,129,0.12)', color: '#34D399',  border: '1px solid rgba(16,185,129,0.25)' },
   warning: { background: 'rgba(245,158,11,0.12)', color: '#FCD34D',  border: '1px solid rgba(245,158,11,0.25)' },
   danger:  { background: 'rgba(239,68,68,0.12)',  color: '#F87171',  border: '1px solid rgba(239,68,68,0.25)'  },
-  info:    { background: 'rgba(14,165,233,0.12)', color: '#7DD3FC',  border: '1px solid rgba(14,165,233,0.25)' },
+  info:    { background: 'rgba(59,130,246,0.12)', color: '#93C5FD',  border: '1px solid rgba(59,130,246,0.25)' },
   neutral: { background: 'rgba(255,255,255,0.06)',color: '#64748B',  border: '1px solid rgba(255,255,255,0.10)'},
 }
 

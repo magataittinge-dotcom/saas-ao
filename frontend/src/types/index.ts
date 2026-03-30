@@ -19,7 +19,7 @@ export interface AuthTokens {
 
 // ─── Organization ─────────────────────────────────────────────────────────────
 
-export type PlanType = 'pro' | 'business'
+export type PlanType = 'pro' | 'business' | 'starter' | 'enterprise' | 'free'
 
 export interface Organization {
   id: string

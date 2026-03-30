@@ -50,9 +50,9 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick }: 
                     ? { background: '#10B981', borderColor: '#10B981', color: '#fff', boxShadow: '0 0 12px rgba(16,185,129,0.4)' }
                     : isActive && isCompleted
                     // Active step that's already been completed: show cyan with check
-                    ? { background: 'linear-gradient(135deg, #0EA5E9, #3B82F6)', borderColor: '#0EA5E9', color: '#fff', boxShadow: '0 0 16px rgba(14,165,233,0.50)' }
+                    ? { background: 'linear-gradient(135deg, #3B82F6, #60A5FA)', borderColor: '#3B82F6', color: '#fff', boxShadow: '0 0 16px rgba(59,130,246,0.50)' }
                     : isActive
-                    ? { background: 'linear-gradient(135deg, #0EA5E9, #3B82F6)', borderColor: '#0EA5E9', color: '#fff', boxShadow: '0 0 16px rgba(14,165,233,0.50)' }
+                    ? { background: 'linear-gradient(135deg, #3B82F6, #60A5FA)', borderColor: '#3B82F6', color: '#fff', boxShadow: '0 0 16px rgba(59,130,246,0.50)' }
                     : { background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.12)', color: '#475569' }
                 }
               >
@@ -63,7 +63,7 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick }: 
               <span
                 className="text-xs whitespace-nowrap font-medium transition-colors"
                 style={
-                  isActive    ? { color: '#38BDF8' }
+                  isActive    ? { color: '#60A5FA' }
                   : isCompleted ? { color: '#34D399' }
                   : { color: '#475569' }
                 }
@@ -78,9 +78,9 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick }: 
                 className="flex-1 h-0.5 mx-2 mt-[-1.25rem] rounded-full transition-all duration-500"
                 style={
                   isCompleted
-                    ? { background: 'linear-gradient(90deg, #10B981, #0EA5E9)' }
+                    ? { background: 'linear-gradient(90deg, #10B981, #3B82F6)' }
                     : isActive
-                    ? { background: 'linear-gradient(90deg, rgba(14,165,233,0.40), rgba(255,255,255,0.06))' }
+                    ? { background: 'linear-gradient(90deg, rgba(59,130,246,0.40), rgba(255,255,255,0.06))' }
                     : { background: 'rgba(255,255,255,0.06)' }
                 }
               />

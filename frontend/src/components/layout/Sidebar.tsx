@@ -1,201 +1,145 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { NavLink } from 'react-router-dom'
 import {
-  LayoutDashboard,
-  FolderOpen,
-  Archive,
-  Building2,
-  Building,
-  FileText,
-  Users,
-  Settings,
-  Plus,
-  LogOut,
-  ChevronLeft,
-  ChevronRight,
-  Sparkles,
+  LayoutDashboard, FolderOpen, Building2, Archive, Users, CreditCard, LogOut,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
-import { useUIStore } from '@/stores/uiStore'
 import { useLogout } from '@/hooks/useAuth'
 import { cn } from '@/lib/utils'
 
 const navItems = [
-  { to: '/dashboard',     icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/projects',      icon: FolderOpen,      label: 'Mes AO' },
-  { to: '/vault',         icon: Archive,         label: 'Coffre-fort' },
-  { to: '/references',    icon: Building2,       label: 'Références' },
-  { to: '/memoire-config',icon: FileText,        label: 'Mémoire Technique' },
-  { to: '/company',       icon: Building,        label: 'Mon Entreprise' },
-  { to: '/team',          icon: Users,           label: 'Équipe' },
-  { to: '/settings',      icon: Settings,        label: 'Paramètres' },
+  { to: '/dashboard',  icon: LayoutDashboard, label: 'Tableau de bord' },
+  { to: '/projects',   icon: FolderOpen,      label: 'Projets' },
+  { to: '/references', icon: Building2,       label: 'Références' },
+  { to: '/vault',      icon: Archive,         label: 'Coffre-fort' },
+  { to: '/team',       icon: Users,           label: 'Équipe' },
+  { to: '/billing',    icon: CreditCard,      label: 'Facturation' },
 ]
 
-const PLAN_LABELS: Record<string, string> = {
-  free: 'Gratuit', starter: 'Starter', pro: 'Pro', enterprise: 'Enterprise',
-}
-
 export default function Sidebar() {
-  const navigate = useNavigate()
+  const [expanded, setExpanded] = useState(false)
   const logout = useLogout()
-  const { user, organization } = useAuthStore()
-  const { sidebarCollapsed, toggleSidebar } = useUIStore()
+  const { organization } = useAuthStore()
 
-  const initials = user?.name
-    ? user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
-    : 'U'
+  const usedAO = 3
+  const maxAO = 15
+  const planLabel = organization?.plan === 'enterprise' ? 'Enterprise'
+    : organization?.plan === 'starter' ? 'Starter' : 'Pro'
 
   return (
     <aside
-      style={{
-        background: 'linear-gradient(180deg, #0A0E1A 0%, #080B12 100%)',
-        borderRight: '1px solid rgba(14,165,233,0.10)',
-        boxShadow: 'inset -1px 0 0 rgba(14,165,233,0.04)',
-      }}
+      onMouseEnter={() => setExpanded(true)}
+      onMouseLeave={() => setExpanded(false)}
       className={cn(
-        'flex flex-col shrink-0 transition-all duration-300 ease-smooth',
-        sidebarCollapsed ? 'w-16' : 'w-[220px]',
+        'glass-sidebar flex flex-col shrink-0 transition-all duration-300 ease-in-out relative z-20',
+        expanded ? 'w-[260px]' : 'w-[72px]',
       )}
     >
       {/* ── Logo ─────────────────────────────────── */}
-      <div
-        className="h-16 flex items-center justify-between px-3 shrink-0"
-        style={{ borderBottom: '1px solid rgba(14,165,233,0.08)' }}
-      >
-        {!sidebarCollapsed && (
-          <div className="flex items-center gap-2.5 overflow-hidden pl-1">
-            <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
-              style={{
-                background: 'linear-gradient(135deg, #0EA5E9, #00D4AA)',
-                boxShadow: '0 0 14px rgba(14,165,233,0.40)',
-              }}
-            >
-              <Sparkles size={13} className="text-white" />
-            </div>
-            <span
-              className="text-gradient font-bold text-[17px] tracking-tight whitespace-nowrap"
-              style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}
-            >
-              SYNORIX
-            </span>
+      <div className="h-16 flex items-center shrink-0 overflow-hidden"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className={cn('flex items-center gap-2.5 transition-all duration-300', expanded ? 'px-4' : 'px-0 justify-center w-full')}>
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+            style={{ background: 'linear-gradient(135deg, #3B82F6, #60A5FA)', boxShadow: '0 0 25px rgba(59,130,246,0.5)' }}>
+            <span className="text-white font-black text-base" style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>S</span>
           </div>
-        )}
-        {sidebarCollapsed && (
-          <div
-            className="mx-auto w-7 h-7 rounded-lg flex items-center justify-center"
+          <span className="font-black text-xl tracking-tight whitespace-nowrap"
             style={{
-              background: 'linear-gradient(135deg, #0EA5E9, #00D4AA)',
-              boxShadow: '0 0 14px rgba(14,165,233,0.40)',
-            }}
-          >
-            <Sparkles size={13} className="text-white" />
-          </div>
-        )}
-        {!sidebarCollapsed && (
-          <button
-            onClick={toggleSidebar}
-            className="p-1.5 rounded-md text-ds-text-3 hover:text-ds-text hover:bg-white/5 transition-colors shrink-0"
-          >
-            <ChevronLeft size={15} />
-          </button>
-        )}
+              background: 'linear-gradient(135deg, #60A5FA, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text', fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
+              opacity: expanded ? 1 : 0, transition: 'opacity 0.2s ease 0.15s', width: expanded ? 'auto' : 0, overflow: 'hidden',
+            }}>
+            Synorix
+          </span>
+        </div>
       </div>
 
-      {/* ── CTA Nouvel AO ─────────────────────────── */}
-      <div className="px-2.5 pt-4 pb-2">
-        {sidebarCollapsed ? (
-          <div className="relative group">
-            <button
-              onClick={() => navigate('/projects/new')}
-              className="w-full flex items-center justify-center p-2 btn-primary rounded-xl"
-            >
-              <Plus size={17} />
-            </button>
-            <Tooltip label="Nouvel AO" />
-          </div>
-        ) : (
-          <button
-            onClick={() => navigate('/projects/new')}
-            className="btn-primary w-full flex items-center justify-center gap-2 py-2.5"
-          >
-            <Plus size={15} />
-            <span>Nouvel AO</span>
-          </button>
-        )}
-      </div>
+      {/* ── Nav label ──────────────────────────── */}
+      {expanded && (
+        <div className="px-4 pt-4 pb-1">
+          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Menu</span>
+        </div>
+      )}
 
-      {/* ── Nav ───────────────────────────────────── */}
-      <nav className="flex-1 py-2 px-2 space-y-0.5 overflow-y-auto overflow-x-hidden">
+      {/* ── Nav items ──────────────────────────── */}
+      <nav className="flex-1 py-2 px-3 space-y-1 overflow-y-auto overflow-x-hidden">
         {navItems.map(({ to, icon: Icon, label }) => (
           <div key={to} className="relative group">
-            <NavLink
-              to={to}
-              className={({ isActive }) =>
-                cn('nav-item', sidebarCollapsed && 'justify-center px-0', isActive && 'active')
-              }
+            <NavLink to={to}
+              className={() => cn('glass-nav', !expanded && 'justify-center px-0')}
+              style={({ isActive }) => isActive ? { background: 'rgba(59,130,246,0.12)', color: '#60A5FA' } : undefined}
+              onMouseEnter={(e) => {
+                if (e.currentTarget.getAttribute('aria-current') !== 'page') {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
+                  e.currentTarget.style.color = 'var(--text-secondary)'
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (e.currentTarget.getAttribute('aria-current') !== 'page') {
+                  e.currentTarget.style.background = 'transparent'
+                  e.currentTarget.style.color = ''
+                }
+              }}
             >
-              <Icon size={17} className="shrink-0" />
-              {!sidebarCollapsed && <span className="truncate">{label}</span>}
+              {({ isActive }) => (
+                <>
+                  {isActive && (
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 rounded-l-full"
+                      style={{ height: '60%', background: '#3B82F6', boxShadow: '0 0 10px rgba(59,130,246,0.6)' }} />
+                  )}
+                  <Icon size={18} className="shrink-0" style={{ color: isActive ? '#3B82F6' : undefined }} />
+                  {expanded && (
+                    <span className="truncate" style={{ opacity: expanded ? 1 : 0, transition: 'opacity 0.2s ease 0.15s' }}>{label}</span>
+                  )}
+                </>
+              )}
             </NavLink>
-            {sidebarCollapsed && <Tooltip label={label} />}
+            {!expanded && <Tooltip label={label} />}
           </div>
         ))}
       </nav>
 
-      {/* ── Toggle (collapsed) ───────────────────── */}
-      {sidebarCollapsed && (
-        <div className="px-2 pb-2">
-          <button
-            onClick={toggleSidebar}
-            className="w-full flex items-center justify-center p-1.5 text-ds-text-3 hover:text-ds-text hover:bg-white/5 rounded-md transition-colors"
-          >
-            <ChevronRight size={15} />
-          </button>
-        </div>
-      )}
+      <div className="mx-3" style={{ height: '1px', background: 'rgba(255,255,255,0.06)' }} />
 
-      {/* ── Divider ──────────────────────────────── */}
-      <div className="divider mx-3" />
-
-      {/* ── Profile ──────────────────────────────── */}
-      <div className={cn('px-3 py-3', sidebarCollapsed && 'px-1.5')}>
-        {!sidebarCollapsed ? (
-          <div className="flex items-center gap-2.5">
-            <div className="avatar-ring shrink-0">
-              <div className="avatar-inner w-7 h-7 text-xs text-white">{initials}</div>
+      {/* ── Plan card (Horizon sidebar card style) ── */}
+      <div className={cn('px-3 py-3', !expanded && 'flex justify-center')}>
+        {expanded ? (
+          <div className="rounded-[20px] p-4 text-center relative overflow-hidden"
+            style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(96,165,250,0.08))', border: '1px solid rgba(59,130,246,0.2)' }}>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-2"
+              style={{ background: 'linear-gradient(135deg, #3B82F6, #60A5FA)', boxShadow: '0 4px 12px rgba(59,130,246,0.4)' }}>
+              <span className="text-sm font-bold text-white">{planLabel[0]}</span>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-ds-text truncate">{user?.name}</p>
-              <span className="pill pill-cyan text-[10px] px-1.5 py-0 inline-flex">
-                {PLAN_LABELS[organization?.plan ?? ''] ?? organization?.plan ?? 'Free'}
-              </span>
+            <span className="text-xs font-semibold block" style={{ color: 'var(--text-primary)' }}>Plan {planLabel}</span>
+            <div className="flex items-center justify-between mt-2.5 text-xs" style={{ color: 'var(--text-muted)' }}>
+              <span>{usedAO} AO</span><span>{maxAO} max</span>
+            </div>
+            <div className="h-1.5 rounded-full overflow-hidden mt-1" style={{ background: 'rgba(255,255,255,0.08)' }}>
+              <div className="h-full rounded-full" style={{ width: `${Math.min((usedAO / maxAO) * 100, 100)}%`, background: 'linear-gradient(90deg, #3B82F6, #60A5FA)' }} />
             </div>
           </div>
         ) : (
-          <div className="flex justify-center relative group">
-            <div className="avatar-ring">
-              <div className="avatar-inner w-7 h-7 text-xs text-white">{initials}</div>
+          <div className="relative group">
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold"
+              style={{ color: '#60A5FA', background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.18)' }}>
+              {planLabel[0]}
             </div>
-            <Tooltip label={user?.name ?? ''} />
+            <Tooltip label={`Plan ${planLabel} — ${usedAO}/${maxAO} AO`} />
           </div>
         )}
       </div>
 
-      {/* ── Logout ───────────────────────────────── */}
+      {/* ── Logout ─────────────────────────────── */}
       <div className="relative group">
-        <button
-          onClick={logout}
-          className={cn(
-            'w-full flex items-center gap-2 px-4 py-3 text-xs text-ds-text-3 hover:text-ds-text',
-            'transition-colors hover:bg-white/[0.03]',
-            sidebarCollapsed && 'justify-center px-2',
-          )}
-          style={{ borderTop: '1px solid rgba(14,165,233,0.08)' }}
-        >
-          <LogOut size={14} className="shrink-0" />
-          {!sidebarCollapsed && 'Déconnexion'}
+        <button onClick={logout}
+          className={cn('w-full flex items-center gap-2 py-3 text-xs font-medium transition-all duration-200', expanded ? 'px-4' : 'justify-center px-2')}
+          style={{ borderTop: '1px solid rgba(255,255,255,0.06)', color: 'var(--text-muted)' }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)' }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent' }}>
+          <LogOut size={15} className="shrink-0" />
+          {expanded && <span style={{ opacity: expanded ? 1 : 0, transition: 'opacity 0.2s ease 0.15s' }}>Déconnexion</span>}
         </button>
-        {sidebarCollapsed && <Tooltip label="Déconnexion" />}
+        {!expanded && <Tooltip label="Déconnexion" />}
       </div>
     </aside>
   )
@@ -203,12 +147,9 @@ export default function Sidebar() {
 
 function Tooltip({ label }: { label: string }) {
   return (
-    <div
-      className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 px-2.5 py-1.5 text-ds-text text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50"
-      style={{ background: '#0F172A', border: '1px solid rgba(14,165,233,0.15)', boxShadow: '0 4px 16px rgba(0,0,0,0.5)' }}
-    >
+    <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 px-2.5 py-1.5 text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50"
+      style={{ color: 'var(--text-primary)', background: '#111C44', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', boxShadow: '14px 17px 40px 4px rgba(0,0,0,0.25)' }}>
       {label}
-      <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent" style={{ borderRightColor: 'rgba(14,165,233,0.15)' }} />
     </div>
   )
 }

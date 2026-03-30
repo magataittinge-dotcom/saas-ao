@@ -4,7 +4,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Layers, CheckCircle2, AlertCircle, Zap, Plus, X, ShieldCheck, AlertTriangle, HelpCircle, Users } from 'lucide-react'
 import axios from 'axios'
 import { api } from '@/services/api'
+import { useAuthStore } from '@/stores/authStore'
 import { AnalysisProgress } from '@/components/project/AnalysisProgress'
+import SubscriptionWall from '@/components/common/SubscriptionWall'
 import type { Project, LotOption } from '@/types'
 import { cn } from '@/lib/utils'
 
@@ -83,21 +85,21 @@ function LotCard({ lot, selected, onSelect, onDelete, icon }: LotCardProps) {
             ? 'border-ds-cyan'
             : 'border-white/10 hover:border-white/20 hover:bg-white/[0.02]',
         )}
-        style={selected ? { borderColor: '#0EA5E9', background: 'rgba(14,165,233,0.08)' } : undefined}
+        style={selected ? { borderColor: '#3B82F6', background: 'rgba(59,130,246,0.08)' } : undefined}
       >
         {/* Radio indicator */}
         <div
           className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all"
           style={
             selected
-              ? { borderColor: '#0EA5E9', background: '#0EA5E9' }
+              ? { borderColor: '#3B82F6', background: '#3B82F6' }
               : { borderColor: 'rgba(255,255,255,0.25)' }
           }
         >
           {selected && <div className="w-2 h-2 rounded-full bg-white" />}
         </div>
 
-        {icon && <span className="shrink-0 mt-0.5" style={{ color: selected ? '#0EA5E9' : '#64748B' }}>{icon}</span>}
+        {icon && <span className="shrink-0 mt-0.5" style={{ color: selected ? '#3B82F6' : '#64748B' }}>{icon}</span>}
 
         <div className="flex-1 min-w-0 space-y-1.5">
           <span className={cn('text-sm font-medium block', selected ? 'text-ds-text' : 'text-ds-text-2')}>
@@ -217,6 +219,8 @@ function AddLotForm({ onAdd, onCancel }: AddLotFormProps) {
 export default function StepLotSelection({ project }: Props) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { organization } = useAuthStore()
+  const [showPaywall, setShowPaywall] = useState(false)
 
   // AMÉLIORATION 3: separate error lots (password-protected Excel)
   const allDetected = project.lots_detectes ?? []
@@ -256,6 +260,11 @@ export default function StepLotSelection({ project }: Props) {
   })
 
   const handleLaunch = async () => {
+    const plan = organization?.plan ?? 'free'
+    if (plan === 'free') {
+      setShowPaywall(true)
+      return
+    }
     setAnalysisError(null)
     try {
       await selectLot({
@@ -281,6 +290,8 @@ export default function StepLotSelection({ project }: Props) {
 
   return (
     <>
+      <SubscriptionWall open={showPaywall} onClose={() => setShowPaywall(false)} feature="analysis" />
+
       <AnalysisProgress
         isAnalyzing={isAnalyzing}
         isSuccess={isSuccess}
@@ -304,7 +315,7 @@ export default function StepLotSelection({ project }: Props) {
           {lots.length > 0 && (
             <div
               className="shrink-0 text-xs font-medium px-3 py-1.5 rounded-full"
-              style={{ background: 'rgba(14,165,233,0.10)', color: '#38BDF8', border: '1px solid rgba(14,165,233,0.20)' }}
+              style={{ background: 'rgba(59,130,246,0.10)', color: '#60A5FA', border: '1px solid rgba(59,130,246,0.20)' }}
             >
               {highConfidenceCount}/{lots.length} fiable{highConfidenceCount > 1 ? 's' : ''}
             </div>
@@ -349,9 +360,9 @@ export default function StepLotSelection({ project }: Props) {
           /* No lots detected */
           <div
             className="flex items-center gap-3 p-4 rounded-xl border"
-            style={{ background: 'rgba(14,165,233,0.06)', borderColor: 'rgba(14,165,233,0.20)' }}
+            style={{ background: 'rgba(59,130,246,0.06)', borderColor: 'rgba(59,130,246,0.20)' }}
           >
-            <Layers size={20} style={{ color: '#0EA5E9' }} />
+            <Layers size={20} style={{ color: '#3B82F6' }} />
             <div>
               <p className="text-sm font-medium text-ds-text">Marché unique (pas de lots)</p>
               <p className="text-xs text-ds-text-2 mt-0.5">
@@ -369,7 +380,7 @@ export default function StepLotSelection({ project }: Props) {
             type="button"
             onClick={() => setShowAddForm(true)}
             className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed text-sm transition-all duration-200 hover:bg-white/[0.02]"
-            style={{ borderColor: 'rgba(0,212,170,0.30)', color: '#00D4AA' }}
+            style={{ borderColor: 'rgba(96,165,250,0.30)', color: '#60A5FA' }}
           >
             <Plus size={16} />
             Ajouter un lot manuellement
@@ -380,10 +391,10 @@ export default function StepLotSelection({ project }: Props) {
         {selectedId !== 'all' && selectedName && (
           <div
             className="flex items-center gap-2 p-3 rounded-lg text-sm"
-            style={{ background: 'rgba(0,212,170,0.08)', border: '1px solid rgba(0,212,170,0.20)' }}
+            style={{ background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.20)' }}
           >
-            <CheckCircle2 size={15} style={{ color: '#00D4AA' }} />
-            <span style={{ color: '#00D4AA' }}>
+            <CheckCircle2 size={15} style={{ color: '#60A5FA' }} />
+            <span style={{ color: '#60A5FA' }}>
               Lot sélectionné : <strong>{selectedName}</strong>
             </span>
           </div>

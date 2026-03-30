@@ -81,7 +81,7 @@ export default function DeleteConfirmModal({ title, message, confirmText = 'SUPP
             onChange={(e) => setInputValue(e.target.value.toUpperCase())}
             placeholder={confirmText}
             disabled={isDeleting}
-            className="input-dark w-full text-sm"
+            className="glass-input w-full py-2.5 text-sm w-full text-sm"
             style={{
               borderColor: canDelete ? 'rgba(239,68,68,0.40)' : undefined,
             }}

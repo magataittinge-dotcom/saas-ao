@@ -6,6 +6,7 @@ import { Upload, FileText, FileSpreadsheet, File, Trash2, AlertCircle, Layers, C
 import axios from 'axios'
 import { api } from '@/services/api'
 import { uploadService } from '@/services/upload'
+import LoadingProgress from '@/components/common/LoadingProgress'
 import type { Project, ProjectDocument, ProjectDocumentType } from '@/types'
 import { cn } from '@/lib/utils'
 
@@ -25,7 +26,7 @@ const TYPE_COLORS: Record<ProjectDocumentType, string> = {
   ccap:            'bg-indigo-500/15 text-indigo-400 border-indigo-500/25',
   dpgf:            'bg-amber-500/15 text-amber-400 border-amber-500/25',
   acte_engagement: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
-  plan:            'bg-teal-500/15 text-teal-400 border-teal-500/25',
+  plan:            'bg-blue-400/15 text-blue-300 border-blue-400/25',
   autre:           'bg-white/5 text-ds-text-2 border-white/10',
 }
 
@@ -60,7 +61,7 @@ export default function StepUpload({ project }: Props) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [uploading, setUploading] = useState<Record<string, boolean>>({})
-  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; fileName: string } | null>(null)
+  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; fileName: string; byteProgress: number } | null>(null)
   const [uploadErrors, setUploadErrors] = useState<string[]>([])
   const [uploadWarnings, setUploadWarnings] = useState<string[]>([])  // AMÉLIORATION 9
   const [nextError, setNextError] = useState<string | null>(null)
@@ -99,17 +100,28 @@ export default function StepUpload({ project }: Props) {
       if (acceptedFiles.length === 0) return
       setUploadErrors([])
       setUploadWarnings([])
-      setUploadProgress({ current: 0, total: acceptedFiles.length, fileName: '' })
+      setUploadProgress({ current: 0, total: acceptedFiles.length, fileName: '', byteProgress: 0 })
 
       const errors: string[] = []
       const warnings: string[] = []
       for (let i = 0; i < acceptedFiles.length; i++) {
         const file = acceptedFiles[i]
-        setUploadProgress({ current: i + 1, total: acceptedFiles.length, fileName: file.name })
+        setUploadProgress({ current: i, total: acceptedFiles.length, fileName: file.name, byteProgress: 0 })
         setUploading((prev) => ({ ...prev, [file.name]: true }))
         try {
           const detectedType = detectDocType(file.name)
-          const result = await uploadService.uploadProjectDocument(project.id, file, detectedType)
+          const result = await uploadService.uploadProjectDocument(
+            project.id, file, detectedType,
+            ({ loaded, total }) => {
+              const overallPct = ((i + (total > 0 ? loaded / total : 0)) / acceptedFiles.length) * 100
+              setUploadProgress({
+                current: i + 1,
+                total: acceptedFiles.length,
+                fileName: file.name,
+                byteProgress: Math.min(overallPct, 100),
+              })
+            },
+          )
           // AMÉLIORATION 9: collect ZIP extraction warnings
           if (result && typeof result === 'object' && 'warnings' in result) {
             const w = (result as { warnings?: string[] }).warnings
@@ -181,25 +193,13 @@ export default function StepUpload({ project }: Props) {
 
       {uploadProgress && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(8,11,18,0.85)', backdropFilter: 'blur(4px)' }}>
-          <div className="glass-card p-8 flex flex-col items-center gap-4 max-w-sm">
-            <div className="relative w-28 h-28">
-              <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(14,165,233,0.15)" strokeWidth="6" />
-                <circle cx="50" cy="50" r="42" fill="none" stroke="#0EA5E9" strokeWidth="6" strokeLinecap="round"
-                  strokeDasharray={`${(uploadProgress.current / uploadProgress.total) * 264} 264`}
-                  style={{ transition: 'stroke-dasharray 0.5s ease', filter: 'drop-shadow(0 0 6px rgba(14,165,233,0.4))' }}
-                />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-xl font-bold" style={{ color: '#0EA5E9', fontFamily: '"JetBrains Mono", monospace' }}>
-                  {Math.round((uploadProgress.current / uploadProgress.total) * 100)}%
-                </span>
-              </div>
-            </div>
-            <div className="text-center">
-              <p className="text-ds-text font-medium">Upload {uploadProgress.current}/{uploadProgress.total} fichiers...</p>
-              <p className="text-sm text-ds-text-2 mt-1 truncate max-w-xs">{uploadProgress.fileName}</p>
-            </div>
+          <div className="glass-card p-8 max-w-sm">
+            <LoadingProgress
+              progress={uploadProgress.byteProgress}
+              label={`Upload ${uploadProgress.current}/${uploadProgress.total} fichiers...`}
+              sublabel={`${uploadProgress.fileName} — ${formatSize(0)} / ${formatSize(0)}`}
+              variant="upload"
+            />
           </div>
         </div>
       )}
@@ -221,25 +221,28 @@ export default function StepUpload({ project }: Props) {
           )}
           style={{
             border: isDragActive
-              ? '2px dashed rgba(14,165,233,0.60)'
-              : '2px dashed rgba(14,165,233,0.18)',
+              ? '2px dashed rgba(59,130,246,0.60)'
+              : '2px dashed rgba(59,130,246,0.30)',
             background: isDragActive
-              ? 'rgba(14,165,233,0.06)'
-              : 'rgba(14,165,233,0.02)',
-            ...(isDragActive ? {} : {
-              transition: 'border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease',
-            }),
+              ? 'rgba(59,130,246,0.06)'
+              : 'rgba(59,130,246,0.02)',
+            boxShadow: isDragActive
+              ? '0 0 40px rgba(59,130,246,0.15), inset 0 0 30px rgba(59,130,246,0.05)'
+              : 'none',
+            transition: 'border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease',
           }}
           onMouseEnter={(e) => {
             if (!isDragActive) {
-              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(14,165,233,0.35)'
-              ;(e.currentTarget as HTMLElement).style.background = 'rgba(14,165,233,0.04)'
+              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(59,130,246,0.50)'
+              ;(e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.04)'
+              ;(e.currentTarget as HTMLElement).style.boxShadow = '0 0 40px rgba(59,130,246,0.1)'
             }
           }}
           onMouseLeave={(e) => {
             if (!isDragActive) {
-              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(14,165,233,0.18)'
-              ;(e.currentTarget as HTMLElement).style.background = 'rgba(14,165,233,0.02)'
+              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(59,130,246,0.30)'
+              ;(e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.02)'
+              ;(e.currentTarget as HTMLElement).style.boxShadow = 'none'
             }
           }}
         >
@@ -248,17 +251,19 @@ export default function StepUpload({ project }: Props) {
           {/* Upload icon with glow */}
           <div className="flex justify-center mb-4">
             <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center"
+              className="w-16 h-16 rounded-2xl flex items-center justify-center"
               style={{
-                background: isDragActive ? 'rgba(14,165,233,0.18)' : 'rgba(14,165,233,0.08)',
-                border: '1px solid rgba(14,165,233,0.20)',
-                boxShadow: isDragActive ? '0 0 24px rgba(14,165,233,0.25)' : 'none',
+                background: isDragActive ? 'rgba(59,130,246,0.18)' : 'rgba(59,130,246,0.08)',
+                border: '1px solid rgba(59,130,246,0.20)',
+                boxShadow: isDragActive
+                  ? '0 0 30px rgba(59,130,246,0.30)'
+                  : '0 4px 12px rgba(59,130,246,0.10)',
                 transition: 'all 0.2s ease',
               }}
             >
               {isDragActive
-                ? <CloudUpload size={26} style={{ color: '#0EA5E9' }} />
-                : <Upload size={24} style={{ color: '#64748B' }} />
+                ? <CloudUpload size={28} style={{ color: '#3B82F6' }} />
+                : <Upload size={26} style={{ color: '#60A5FA' }} />
               }
             </div>
           </div>
@@ -266,7 +271,7 @@ export default function StepUpload({ project }: Props) {
           <p
             className="text-sm font-semibold mb-1"
             style={{
-              color: isDragActive ? '#7DD3FC' : '#CBD5E1',
+              color: isDragActive ? '#93C5FD' : '#CBD5E1',
               fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
             }}
           >
@@ -275,7 +280,7 @@ export default function StepUpload({ project }: Props) {
           <p className="text-xs mb-1" style={{ color: '#475569' }}>
             PDF, DOCX, XLSX, ODS, ZIP — 2 Go max par fichier
           </p>
-          <p className="text-xs mb-4" style={{ color: '#38BDF8' }}>
+          <p className="text-xs mb-4" style={{ color: '#60A5FA' }}>
             Type de document détecté automatiquement selon le nom du fichier
           </p>
           <button

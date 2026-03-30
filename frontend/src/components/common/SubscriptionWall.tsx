@@ -1,0 +1,197 @@
+import { useNavigate } from 'react-router-dom'
+import { X, Sparkles, Zap, Crown, Check } from 'lucide-react'
+
+interface Props {
+  open: boolean
+  onClose: () => void
+  feature?: 'analysis' | 'memoire'
+}
+
+const PLANS = [
+  {
+    id: 'pro',
+    name: 'Pro',
+    price: '249',
+    icon: Zap,
+    color: '#3B82F6',
+    colorLight: '#60A5FA',
+    bg: 'rgba(59,130,246,0.08)',
+    border: 'rgba(59,130,246,0.25)',
+    gradient: 'linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%)',
+    features: [
+      'Analyse IA illimitée (Claude Sonnet)',
+      'Compliance matrix automatique',
+      'Checklist candidature',
+      'Génération mémoire technique (Claude Opus)',
+      'Export Word (.docx)',
+      'Coffre-fort documentaire',
+      '5 projets simultanés',
+    ],
+  },
+  {
+    id: 'business',
+    name: 'Business',
+    price: '399',
+    icon: Crown,
+    color: '#A78BFA',
+    colorLight: '#C4B5FD',
+    bg: 'rgba(139,92,246,0.08)',
+    border: 'rgba(139,92,246,0.25)',
+    gradient: 'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)',
+    popular: true,
+    features: [
+      'Tout le plan Pro, plus :',
+      'Projets illimités',
+      'Templates de mémoire personnalisés',
+      'Multi-utilisateurs (5 comptes)',
+      'Scoring IA des offres',
+      'Support prioritaire',
+      'Historique complet des AO',
+    ],
+  },
+] as const
+
+const FEATURE_LABELS: Record<string, string> = {
+  analysis: "L'analyse IA de votre DCE",
+  memoire: 'La génération du mémoire technique',
+}
+
+export default function SubscriptionWall({ open, onClose, feature = 'analysis' }: Props) {
+  const navigate = useNavigate()
+
+  if (!open) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0"
+        style={{ background: 'rgba(8,11,18,0.80)', backdropFilter: 'blur(8px)' }}
+        onClick={onClose}
+      />
+
+      {/* Modal */}
+      <div
+        className="relative w-full max-w-2xl animate-fade-in"
+        style={{
+          background: 'rgba(17,28,68,0.95)',
+          backdropFilter: 'blur(32px) saturate(200%)',
+          border: '1px solid rgba(59,130,246,0.15)',
+          borderRadius: '24px',
+          boxShadow: '0 0 80px rgba(59,130,246,0.08), 0 24px 60px rgba(0,0,0,0.50)',
+        }}
+      >
+        {/* Close */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 p-1.5 rounded-lg transition-colors hover:bg-white/5"
+          style={{ color: '#64748B' }}
+        >
+          <X size={18} />
+        </button>
+
+        {/* Header */}
+        <div className="text-center px-8 pt-8 pb-2">
+          <div
+            className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+            style={{
+              background: 'linear-gradient(135deg, rgba(59,130,246,0.20), rgba(139,92,246,0.15))',
+              border: '1px solid rgba(59,130,246,0.25)',
+              boxShadow: '0 0 30px rgba(59,130,246,0.15)',
+            }}
+          >
+            <Sparkles size={24} style={{ color: '#60A5FA' }} />
+          </div>
+          <h2 className="text-xl font-bold text-ds-text">
+            Passez au niveau supérieur
+          </h2>
+          <p className="text-sm text-ds-text-2 mt-2 max-w-md mx-auto">
+            {FEATURE_LABELS[feature] ?? 'Cette fonctionnalité'} nécessite un abonnement actif.
+            Choisissez le plan adapté à votre activité.
+          </p>
+        </div>
+
+        {/* Plans */}
+        <div className="grid grid-cols-2 gap-4 px-8 py-6">
+          {PLANS.map((plan) => {
+            const Icon = plan.icon
+            return (
+              <div
+                key={plan.id}
+                className="relative flex flex-col rounded-2xl p-5 transition-all duration-300 hover:scale-[1.02]"
+                style={{
+                  background: plan.bg,
+                  border: `1px solid ${plan.border}`,
+                  boxShadow: `0 0 24px ${plan.bg}`,
+                }}
+              >
+                {'popular' in plan && plan.popular && (
+                  <span
+                    className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-xs font-semibold px-3 py-0.5 rounded-full"
+                    style={{
+                      background: plan.gradient,
+                      color: '#fff',
+                      boxShadow: `0 0 12px rgba(139,92,246,0.40)`,
+                    }}
+                  >
+                    Populaire
+                  </span>
+                )}
+
+                <div className="flex items-center gap-2 mb-3">
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center"
+                    style={{ background: `${plan.color}20`, border: `1px solid ${plan.color}40` }}
+                  >
+                    <Icon size={16} style={{ color: plan.color }} />
+                  </div>
+                  <span className="text-sm font-semibold" style={{ color: plan.colorLight }}>
+                    {plan.name}
+                  </span>
+                </div>
+
+                <div className="mb-4">
+                  <span className="text-3xl font-bold text-white">{plan.price}€</span>
+                  <span className="text-sm text-ds-text-3">/mois HT</span>
+                </div>
+
+                <ul className="space-y-2 mb-5 flex-1">
+                  {plan.features.map((feat, i) => (
+                    <li key={i} className="flex items-start gap-2 text-xs">
+                      <Check size={12} className="shrink-0 mt-0.5" style={{ color: plan.color }} />
+                      <span className="text-ds-text-2">{feat}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  onClick={() => { onClose(); navigate('/facturation') }}
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
+                  style={{
+                    background: plan.gradient,
+                    color: '#fff',
+                    border: 'none',
+                    boxShadow: `0 4px 16px ${plan.color}30`,
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.1)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+                  onMouseLeave={(e) => { e.currentTarget.style.filter = ''; e.currentTarget.style.transform = '' }}
+                >
+                  Choisir {plan.name}
+                </button>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Footer */}
+        <div
+          className="text-center px-8 pb-6"
+        >
+          <p className="text-xs text-ds-text-3">
+            Annulation possible à tout moment. Facturation mensuelle sans engagement.
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}

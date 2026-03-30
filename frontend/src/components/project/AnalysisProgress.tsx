@@ -88,8 +88,8 @@ export function AnalysisProgress({
         className="flex flex-col items-center gap-6 min-w-72 p-10 rounded-2xl"
         style={{
           background: 'rgba(15,23,42,0.95)',
-          border: '1px solid rgba(14,165,233,0.20)',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(14,165,233,0.10)',
+          border: '1px solid rgba(59,130,246,0.20)',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(59,130,246,0.10)',
         }}
       >
         {/* Radial progress */}
@@ -101,21 +101,21 @@ export function AnalysisProgress({
               cy="100"
               r={RADIUS}
               fill="none"
-              stroke={showCheck ? '#00D4AA' : '#0EA5E9'}
+              stroke={showCheck ? '#60A5FA' : '#3B82F6'}
               strokeWidth="10"
               strokeLinecap="round"
               strokeDasharray={CIRCUMFERENCE}
               strokeDashoffset={offset}
-              style={{ transition: 'stroke-dashoffset 0.4s ease, stroke 0.3s ease', filter: `drop-shadow(0 0 8px ${showCheck ? '#00D4AA' : '#0EA5E9'})` }}
+              style={{ transition: 'stroke-dashoffset 0.4s ease, stroke 0.3s ease', filter: `drop-shadow(0 0 8px ${showCheck ? '#60A5FA' : '#3B82F6'})` }}
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
             {showCheck ? (
               <div
                 className="flex items-center justify-center w-16 h-16 rounded-full"
-                style={{ background: 'rgba(0,212,170,0.15)' }}
+                style={{ background: 'rgba(96,165,250,0.15)' }}
               >
-                <Check size={36} style={{ color: '#00D4AA' }} strokeWidth={2.5} />
+                <Check size={36} style={{ color: '#60A5FA' }} strokeWidth={2.5} />
               </div>
             ) : (
               <span

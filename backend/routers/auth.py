@@ -71,7 +71,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
     org = Organization(
         name=payload.organization_name,
         siret=payload.siret,
-        plan=payload.plan if payload.plan in ("pro", "business") else "pro",
+        plan=payload.plan if payload.plan in ("free", "pro", "business") else "free",
     )
     db.add(org)
     try:

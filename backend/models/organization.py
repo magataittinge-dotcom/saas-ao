@@ -25,7 +25,7 @@ class Organization(Base):
     fournisseurs = Column(Text, nullable=True)
 
     # Billing
-    plan = Column(SAEnum("pro", "business", name="plan_type"), nullable=False, default="pro")
+    plan = Column(SAEnum("free", "pro", "business", name="plan_type"), nullable=False, default="free")
     stripe_customer_id = Column(String(255), nullable=True)
     stripe_subscription_id = Column(String(255), nullable=True)
 

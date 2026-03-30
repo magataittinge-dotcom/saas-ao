@@ -20,7 +20,7 @@ export default function References() {
     <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Building2 size={24} style={{ color: '#0EA5E9' }} />
+          <Building2 size={24} style={{ color: '#3B82F6' }} />
           <div>
             <h1 className="text-2xl font-bold text-ds-text">Références Chantiers</h1>
             <p className="text-sm text-ds-text-2">{references.length} références</p>
@@ -56,7 +56,7 @@ export default function References() {
             ) : (
               references.map((ref) => (
                 <tr key={ref.id} className="transition-colors" style={{ cursor: 'pointer' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(14,165,233,0.05)')}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(59,130,246,0.05)')}
                   onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                 >
                   <td className="px-4 py-3 text-ds-text-2">{ref.annee}</td>

@@ -15,6 +15,7 @@ import Company from '@/routes/Company'
 import MemoireConfig from '@/routes/MemoireConfig'
 import Team from '@/routes/Team'
 import Settings from '@/routes/Settings'
+import Billing from '@/routes/Billing'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -68,6 +69,7 @@ export default function App() {
           <Route path="/company" element={<Company />} />
           <Route path="/team" element={<Team />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/billing" element={<Billing />} />
         </Route>
 
         {/* Fallback */}

@@ -77,8 +77,8 @@ function NonPdfModal({ fullUrl, fileName, targetPage, searchText, onClose }: {
         className="rounded-xl p-8 max-w-lg w-full mx-4 text-center space-y-5"
         style={{
           background: '#0D1117',
-          border: '1px solid rgba(14,165,233,0.15)',
-          boxShadow: '0 25px 60px rgba(0,0,0,0.5), 0 0 40px rgba(14,165,233,0.08)'
+          border: '1px solid rgba(59,130,246,0.15)',
+          boxShadow: '0 25px 60px rgba(0,0,0,0.5), 0 0 40px rgba(59,130,246,0.08)'
         }}
       >
         <div className="flex justify-end">
@@ -89,9 +89,9 @@ function NonPdfModal({ fullUrl, fileName, targetPage, searchText, onClose }: {
 
         <div
           className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto"
-          style={{ background: 'rgba(14,165,233,0.10)', border: '1px solid rgba(14,165,233,0.20)' }}
+          style={{ background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.20)' }}
         >
-          <FileText size={32} style={{ color: '#0EA5E9' }} />
+          <FileText size={32} style={{ color: '#3B82F6' }} />
         </div>
 
         <div>
@@ -104,7 +104,7 @@ function NonPdfModal({ fullUrl, fileName, targetPage, searchText, onClose }: {
         {(targetPage || searchText) && (
           <div
             className="rounded-lg p-3 text-left space-y-1"
-            style={{ background: 'rgba(14,165,233,0.06)', border: '1px solid rgba(14,165,233,0.12)' }}
+            style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.12)' }}
           >
             {targetPage && (
               <p className="text-xs text-ds-text-2">
@@ -225,8 +225,8 @@ function PdfViewer({ fullUrl, fileName, targetPage = 1, searchText, onClose }: {
               top: ${rect.top - containerRect.top - 1}px;
               width: ${rect.width + 4}px;
               height: ${rect.height + 2}px;
-              background: rgba(14, 165, 233, 0.25);
-              border: 1px solid rgba(14, 165, 233, 0.5);
+              background: rgba(59, 130, 246, 0.25);
+              border: 1px solid rgba(59, 130, 246, 0.5);
               border-radius: 2px;
               pointer-events: none;
               z-index: 1;
@@ -276,8 +276,8 @@ function PdfViewer({ fullUrl, fileName, targetPage = 1, searchText, onClose }: {
     >
       <style>{`
         @keyframes highlightPulse {
-          0%, 100% { background: rgba(14, 165, 233, 0.25); }
-          50% { background: rgba(14, 165, 233, 0.45); }
+          0%, 100% { background: rgba(59, 130, 246, 0.25); }
+          50% { background: rgba(59, 130, 246, 0.45); }
         }
       `}</style>
 
@@ -287,21 +287,21 @@ function PdfViewer({ fullUrl, fileName, targetPage = 1, searchText, onClose }: {
           width: '85vw',
           height: '90vh',
           background: '#0D1117',
-          border: '1px solid rgba(14,165,233,0.15)',
-          boxShadow: '0 25px 60px rgba(0,0,0,0.5), 0 0 40px rgba(14,165,233,0.08)'
+          border: '1px solid rgba(59,130,246,0.15)',
+          boxShadow: '0 25px 60px rgba(0,0,0,0.5), 0 0 40px rgba(59,130,246,0.08)'
         }}
       >
         {/* Header */}
         <div
           className="flex items-center justify-between px-5 py-3 shrink-0"
-          style={{ borderBottom: '1px solid rgba(14,165,233,0.10)', background: 'rgba(14,165,233,0.03)' }}
+          style={{ borderBottom: '1px solid rgba(59,130,246,0.10)', background: 'rgba(59,130,246,0.03)' }}
         >
           <div className="flex items-center gap-3">
             <div className="text-sm font-medium text-ds-text truncate max-w-md">{fileName}</div>
             {searchText && (
               <div
                 className="text-xs px-2 py-0.5 rounded-full"
-                style={{ background: 'rgba(14,165,233,0.15)', color: '#7DD3FC', border: '1px solid rgba(14,165,233,0.25)' }}
+                style={{ background: 'rgba(59,130,246,0.15)', color: '#93C5FD', border: '1px solid rgba(59,130,246,0.25)' }}
               >
                 Passage surligné
               </div>
@@ -347,7 +347,7 @@ function PdfViewer({ fullUrl, fileName, targetPage = 1, searchText, onClose }: {
         <div ref={containerRef} className="flex-1 overflow-auto flex justify-center p-6" style={{ background: '#0A0E14' }}>
           {!isLoaded && (
             <div className="flex flex-col items-center justify-center gap-3">
-              <Loader2 size={28} className="animate-spin" style={{ color: '#0EA5E9' }} />
+              <Loader2 size={28} className="animate-spin" style={{ color: '#3B82F6' }} />
               <p className="text-sm text-ds-text-2">Chargement du document...</p>
             </div>
           )}

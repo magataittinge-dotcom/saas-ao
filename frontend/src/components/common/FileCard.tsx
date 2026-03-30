@@ -29,9 +29,9 @@ export function FileCard({ document, onDelete }: Props) {
       <div className="flex items-center gap-3 min-w-0">
         <div
           className="p-2 rounded-md shrink-0"
-          style={{ background: 'rgba(14,165,233,0.10)' }}
+          style={{ background: 'rgba(59,130,246,0.10)' }}
         >
-          <FileText size={18} style={{ color: '#0EA5E9' }} />
+          <FileText size={18} style={{ color: '#3B82F6' }} />
         </div>
         <div className="min-w-0">
           <p className="text-sm font-medium text-ds-text truncate">
