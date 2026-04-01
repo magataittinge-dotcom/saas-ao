@@ -18,7 +18,7 @@ const navItems = [
 
 export default function Sidebar() {
   const [expanded, setExpanded] = useState(false)
-  const logout = useLogout()
+  const handleLogout = useLogout()
   const { organization } = useAuthStore()
 
   const usedAO = 3
@@ -131,7 +131,7 @@ export default function Sidebar() {
 
       {/* ── Logout ─────────────────────────────── */}
       <div className="relative group">
-        <button onClick={logout}
+        <button onClick={handleLogout}
           className={cn('w-full flex items-center gap-2 py-3 text-xs font-medium transition-all duration-200', expanded ? 'px-4' : 'justify-center px-2')}
           style={{ borderTop: '1px solid rgba(255,255,255,0.06)', color: 'var(--text-muted)' }}
           onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)' }}

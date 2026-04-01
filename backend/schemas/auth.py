@@ -1,20 +1,8 @@
 from pydantic import BaseModel, EmailStr
+from typing import Optional
 
 
-class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str
-
-
-class RegisterRequest(BaseModel):
-    email: EmailStr
-    password: str
-    name: str
-    organization_name: str
-    siret: str
+class SyncRequest(BaseModel):
+    organization_name: Optional[str] = None
+    siret: Optional[str] = None
     plan: str = "free"
-
-
-class TokenResponse(BaseModel):
-    access_token: str
-    token_type: str = "bearer"

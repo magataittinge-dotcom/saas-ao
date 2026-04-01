@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     AWS_S3_BUCKET: str = ""
     AWS_REGION: str = "eu-west-3"
 
+    # Clerk
+    CLERK_SECRET_KEY: str = ""
+    CLERK_JWKS_URL: str = ""
+
     # Stripe
     STRIPE_SECRET_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""

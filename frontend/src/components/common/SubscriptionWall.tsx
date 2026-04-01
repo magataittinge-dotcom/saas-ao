@@ -1,5 +1,6 @@
-import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import { X, Sparkles, Zap, Crown, Check } from 'lucide-react'
+import { api } from '@/services/api'
 
 interface Props {
   open: boolean
@@ -57,7 +58,17 @@ const FEATURE_LABELS: Record<string, string> = {
 }
 
 export default function SubscriptionWall({ open, onClose, feature = 'analysis' }: Props) {
-  const navigate = useNavigate()
+  const [loading, setLoading] = useState<string | null>(null)
+
+  const handleSubscribe = async (planId: string) => {
+    setLoading(planId)
+    try {
+      const { data } = await api.post('/stripe/create-checkout-session', { plan: planId })
+      window.location.href = data.url
+    } catch {
+      setLoading(null)
+    }
+  }
 
   if (!open) return null
 
@@ -165,8 +176,9 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis' }
                 </ul>
 
                 <button
-                  onClick={() => { onClose(); navigate('/facturation') }}
-                  className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all duration-200"
+                  onClick={() => handleSubscribe(plan.id)}
+                  disabled={loading === plan.id}
+                  className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2"
                   style={{
                     background: plan.gradient,
                     color: '#fff',
@@ -176,7 +188,11 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis' }
                   onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.1)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
                   onMouseLeave={(e) => { e.currentTarget.style.filter = ''; e.currentTarget.style.transform = '' }}
                 >
-                  Choisir {plan.name}
+                  {loading === plan.id ? (
+                    <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  ) : (
+                    `Choisir ${plan.name}`
+                  )}
                 </button>
               </div>
             )

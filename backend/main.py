@@ -20,6 +20,7 @@ from routers import (
     memoire_config,
     export,
     dashboard,
+    stripe_billing,
 )
 from routers.file_serve import router as file_serve_router
 
@@ -66,6 +67,7 @@ app.include_router(memoire.router, prefix="/api/projects", tags=["memoire"])
 app.include_router(memoire_config.router, prefix="/api/memoire-config", tags=["memoire-config"])
 app.include_router(export.router, prefix="/api/projects", tags=["export"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
+app.include_router(stripe_billing.router, prefix="/api/stripe", tags=["stripe"])
 app.include_router(file_serve_router, prefix="/api/files", tags=["files"])
 
 

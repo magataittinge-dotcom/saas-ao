@@ -1,287 +1,54 @@
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { Link } from 'react-router-dom'
-import { Sparkles, User, Building2, Hash, Mail, Lock, AlertCircle, CheckCircle2 } from 'lucide-react'
-import axios from 'axios'
-import { forwardRef } from 'react'
-import { useRegister } from '@/hooks/useAuth'
-
-const schema = z.object({
-  name: z.string().min(2, 'Nom requis'),
-  email: z.string().email('Email invalide'),
-  password: z.string().min(8, 'Minimum 8 caractères'),
-  organization_name: z.string().min(2, "Nom d'entreprise requis"),
-  siret: z.string().length(14, 'SIRET doit contenir 14 chiffres').regex(/^\d+$/, 'SIRET invalide'),
-  plan: z.enum(['pro', 'business']),
-})
-
-type FormData = z.infer<typeof schema>
-
-const PLANS = [
-  {
-    id: 'pro' as const,
-    price: '249€',
-    label: 'Pro',
-    desc: '1–2 utilisateurs · AO illimités',
-    features: ['Analyse DCE complète', 'Mémoire technique IA', 'Coffre-fort documentaire'],
-  },
-  {
-    id: 'business' as const,
-    price: '399€',
-    label: 'Business',
-    desc: '5+ utilisateurs · Tout inclus',
-    features: ['Tout le plan Pro', 'Multi-utilisateurs', 'Support prioritaire'],
-  },
-]
-
-const InputField = forwardRef<
-  HTMLInputElement,
-  React.InputHTMLAttributes<HTMLInputElement> & {
-    icon: React.ElementType
-    label: string
-    error?: string
-  }
->(({ icon: Icon, label, error, ...props }, ref) => {
-  return (
-    <div>
-      <label className="block text-sm font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
-        {label}
-      </label>
-      <div className="relative">
-        <Icon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--text-muted)' }} />
-        <input ref={ref} {...props} className="glass-input pl-9 w-full py-2.5 text-sm" />
-      </div>
-      {error && (
-        <p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: '#F87171' }}>
-          <AlertCircle size={11} />{error}
-        </p>
-      )}
-    </div>
-  )
-})
+import { SignUp } from '@clerk/clerk-react'
+import { Sparkles } from 'lucide-react'
 
 export default function Register() {
-  const { mutate: register, isPending, error, isError } = useRegister()
-
-  const errorMessage = isError && axios.isAxiosError(error)
-    ? (error.response?.data?.detail ?? 'Une erreur est survenue. Vérifiez vos informations.')
-    : 'Une erreur est survenue. Vérifiez vos informations.'
-
-  const {
-    register: field,
-    handleSubmit,
-    watch,
-    setValue,
-    formState: { errors },
-  } = useForm<FormData>({
-    resolver: zodResolver(schema),
-    defaultValues: { plan: 'pro' },
-  })
-
-  const selectedPlan = watch('plan')
-
   return (
-    <div
-      className="min-h-screen flex items-center justify-center p-4 py-10"
-      style={{ background: '#080B12' }}
-    >
+    <div className="min-h-screen flex items-center justify-center p-4 py-10" style={{ background: '#080B12' }}>
       {/* Ambient glow */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div
-          className="absolute -top-40 -right-40 w-96 h-96 rounded-full blur-3xl opacity-20"
-          style={{ background: 'radial-gradient(circle, #3B82F6 0%, transparent 70%)' }}
-        />
-        <div
-          className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full blur-3xl opacity-15"
-          style={{ background: 'radial-gradient(circle, #60A5FA 0%, transparent 70%)' }}
-        />
+        <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full blur-3xl opacity-20"
+          style={{ background: 'radial-gradient(circle, #3B82F6 0%, transparent 70%)' }} />
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 rounded-full blur-3xl opacity-15"
+          style={{ background: 'radial-gradient(circle, #60A5FA 0%, transparent 70%)' }} />
       </div>
 
-      <div className="relative w-full max-w-lg animate-fade-in">
+      <div className="relative w-full max-w-lg animate-fade-in flex flex-col items-center">
         {/* Logo */}
         <div className="flex items-center justify-center gap-2.5 mb-8">
-          <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #3B82F6, #60A5FA)', boxShadow: '0 0 20px rgba(59,130,246,0.40)' }}
-          >
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+            style={{ background: 'linear-gradient(135deg, #3B82F6, #60A5FA)', boxShadow: '0 0 20px rgba(59,130,246,0.40)' }}>
             <Sparkles size={17} className="text-white" />
           </div>
-          <span
-            className="text-2xl font-bold tracking-tight text-gradient"
-            style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}
-          >
+          <span className="text-2xl font-bold tracking-tight"
+            style={{ background: 'linear-gradient(135deg, #60A5FA, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>
             SYNORIX
           </span>
         </div>
 
-        {/* Glow behind card */}
-        <div
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none -z-10"
-          style={{
-            background: 'radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)',
-            filter: 'blur(80px)',
-            width: '500px',
-            height: '500px',
+        {/* Clerk SignUp */}
+        <SignUp
+          routing="path"
+          path="/register"
+          signInUrl="/login"
+          appearance={{
+            elements: {
+              rootBox: 'w-full',
+              card: 'bg-transparent shadow-none border-0',
+              headerTitle: 'text-white',
+              headerSubtitle: 'text-gray-400',
+              socialButtonsBlockButton: 'border-white/10 text-white hover:bg-white/5',
+              formFieldLabel: 'text-gray-400',
+              formFieldInput: 'bg-white/5 border-white/10 text-white placeholder:text-gray-500',
+              formButtonPrimary: 'bg-blue-500 hover:bg-blue-600',
+              footerActionLink: 'text-blue-400 hover:text-blue-300',
+              identityPreview: 'bg-white/5 border-white/10',
+              identityPreviewText: 'text-white',
+              identityPreviewEditButton: 'text-blue-400',
+              formFieldAction: 'text-blue-400',
+              alert: 'bg-red-500/10 border-red-500/20 text-red-400',
+            },
           }}
         />
-
-        {/* Card — Glass Auth */}
-        <div className="glass-auth p-8">
-          <div className="mb-7 text-center">
-            <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)', fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>
-              Créer mon compte
-            </h1>
-            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
-              Commencez à répondre aux AO 10× plus vite
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit((data) => register(data))} className="space-y-4">
-            <InputField
-              {...field('name')}
-              icon={User}
-              label="Votre nom"
-              placeholder="Mohammed Dupont"
-              error={errors.name?.message}
-            />
-
-            <InputField
-              {...field('organization_name')}
-              icon={Building2}
-              label="Nom de l'entreprise"
-              placeholder="Car Iso Facade SARL"
-              error={errors.organization_name?.message}
-            />
-
-            <InputField
-              {...field('siret')}
-              icon={Hash}
-              label="SIRET"
-              placeholder="12345678901234"
-              maxLength={14}
-              error={errors.siret?.message}
-            />
-
-            <div className="grid grid-cols-2 gap-4">
-              <InputField
-                {...field('email')}
-                icon={Mail}
-                label="Email"
-                type="email"
-                placeholder="vous@entreprise.fr"
-                autoComplete="email"
-                error={errors.email?.message}
-              />
-              <InputField
-                {...field('password')}
-                icon={Lock}
-                label="Mot de passe"
-                type="password"
-                placeholder="Min. 8 caractères"
-                autoComplete="new-password"
-                error={errors.password?.message}
-              />
-            </div>
-
-            {/* Plan selection */}
-            <div>
-              <label
-                className="block text-sm font-medium mb-2"
-                style={{ color: 'var(--text-secondary)' }}
-              >
-                Votre plan
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                {PLANS.map((plan) => {
-                  const isSelected = selectedPlan === plan.id
-                  return (
-                    <button
-                      key={plan.id}
-                      type="button"
-                      onClick={() => setValue('plan', plan.id)}
-                      className="text-left rounded-xl p-4 transition-all duration-200"
-                      style={{
-                        background: isSelected ? 'rgba(59,130,246,0.10)' : 'rgba(255,255,255,0.03)',
-                        border: isSelected
-                          ? '1px solid rgba(59,130,246,0.35)'
-                          : '1px solid rgba(255,255,255,0.07)',
-                        boxShadow: isSelected ? '0 0 20px rgba(59,130,246,0.10)' : 'none',
-                      }}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span
-                          className="text-sm font-semibold"
-                          style={{ color: isSelected ? '#93C5FD' : 'var(--text-tertiary)' }}
-                        >
-                          {plan.label}
-                        </span>
-                        {isSelected && (
-                          <CheckCircle2 size={14} style={{ color: '#3B82F6' }} />
-                        )}
-                      </div>
-                      <p
-                        className="text-xl font-bold mb-1"
-                        style={{ color: isSelected ? 'var(--text-primary)' : 'var(--text-tertiary)' }}
-                      >
-                        {plan.price}
-                        <span className="text-xs font-normal ml-1" style={{ color: '#475569' }}>/mois HT</span>
-                      </p>
-                      <p className="text-xs mb-2" style={{ color: 'var(--text-muted)' }}>{plan.desc}</p>
-                      <ul className="space-y-1">
-                        {plan.features.map((f) => (
-                          <li key={f} className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-tertiary)' }}>
-                            <span style={{ color: '#60A5FA' }}>✓</span> {f}
-                          </li>
-                        ))}
-                      </ul>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* API error */}
-            {isError && (
-              <div
-                className="flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm"
-                style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.20)', color: '#F87171' }}
-              >
-                <AlertCircle size={14} className="shrink-0" />
-                {errorMessage}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              disabled={isPending}
-              className="btn-primary w-full py-3 text-sm font-semibold mt-2"
-              style={{ borderRadius: '12px', boxShadow: '0 4px 15px rgba(59,130,246,0.4)' }}
-            >
-              {isPending ? (
-                <span className="flex items-center justify-center gap-2">
-                  <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                  Création du compte...
-                </span>
-              ) : (
-                'Créer mon compte'
-              )}
-            </button>
-          </form>
-
-          <p className="text-center text-sm mt-6" style={{ color: 'var(--text-muted)' }}>
-            Déjà un compte ?{' '}
-            <Link
-              to="/login"
-              className="font-medium transition-colors"
-              style={{ color: '#3B82F6' }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = '#93C5FD')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = '#3B82F6')}
-            >
-              Se connecter
-            </Link>
-          </p>
-        </div>
 
         <p className="text-center text-xs mt-6" style={{ color: 'var(--text-muted)' }}>
           Synorix · Réponses aux AO BTP automatisées par IA

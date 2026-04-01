@@ -4,17 +4,13 @@ export type UserRole = 'admin' | 'member'
 
 export interface User {
   id: string
+  clerk_id?: string
   email: string
   name: string
   phone?: string
   role: UserRole
   organization_id: string
   created_at: string
-}
-
-export interface AuthTokens {
-  access_token: string
-  token_type: 'bearer'
 }
 
 // ─── Organization ─────────────────────────────────────────────────────────────

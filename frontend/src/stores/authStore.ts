@@ -5,10 +5,8 @@ import type { User, Organization } from '@/types'
 interface AuthState {
   user: User | null
   organization: Organization | null
-  accessToken: string | null
-  isAuthenticated: boolean
 
-  setAuth: (user: User, organization: Organization, token: string) => void
+  setAuth: (user: User, organization: Organization) => void
   setOrganization: (organization: Organization) => void
   logout: () => void
 }
@@ -18,24 +16,20 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       organization: null,
-      accessToken: null,
-      isAuthenticated: false,
 
-      setAuth: (user, organization, token) =>
-        set({ user, organization, accessToken: token, isAuthenticated: true }),
+      setAuth: (user, organization) =>
+        set({ user, organization }),
 
       setOrganization: (organization) => set({ organization }),
 
       logout: () =>
-        set({ user: null, organization: null, accessToken: null, isAuthenticated: false }),
+        set({ user: null, organization: null }),
     }),
     {
       name: 'auth-storage',
       partialize: (state) => ({
         user: state.user,
         organization: state.organization,
-        accessToken: state.accessToken,
-        isAuthenticated: state.isAuthenticated,
       }),
     },
   ),
