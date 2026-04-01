@@ -31,7 +31,10 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AppRoutes() {
-  useSyncUser()
+  const clerkReady = useSyncUser()
+
+  // Don't render any routes until Clerk is loaded and token provider is set
+  if (!clerkReady) return null
 
   return (
     <Routes>

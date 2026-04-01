@@ -309,6 +309,9 @@ async def _create_project_document(
         content_type or None,
     )
     extracted_text, page_count = processor.extract(content, filename)
+    # PostgreSQL rejects NUL (0x00) in text columns — strip them
+    if extracted_text:
+        extracted_text = extracted_text.replace("\x00", "")
 
     doc_type = _detect_doc_type(filename, form_type)
     doc = ProjectDocument(
@@ -444,6 +447,7 @@ async def _extract_zip_members(
                 existing_names.add(base.lower().strip())
                 _log.info(f"ZIP extrait: {base} → type={doc.type}")
             except Exception as e:
+                db.rollback()
                 warnings.append(f"{base} : erreur lors de l'import ({e})")
                 _log.error(f"ZIP: erreur création doc pour {raw_name}: {e}")
 

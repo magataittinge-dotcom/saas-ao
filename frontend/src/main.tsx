@@ -23,7 +23,7 @@ const queryClient = new QueryClient({
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ClerkProvider publishableKey={CLERK_KEY}>
+    <ClerkProvider publishableKey={CLERK_KEY} afterSignInUrl="/dashboard" afterSignUpUrl="/dashboard">
       <QueryClientProvider client={queryClient}>
         <App />
       </QueryClientProvider>

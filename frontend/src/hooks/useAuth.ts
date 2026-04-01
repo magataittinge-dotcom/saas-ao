@@ -5,30 +5,37 @@ import { useAuthStore } from '@/stores/authStore'
 import { authService } from '@/services/auth'
 import { setClerkTokenProvider } from '@/services/api'
 
-/**
- * Syncs the Clerk session with our backend.
- * Call once near the root (inside BrowserRouter).
- */
-export function useSyncUser() {
-  const { isSignedIn, getToken } = useAuth()
-  const { setAuth } = useAuthStore()
+export function useSyncUser(): boolean {
+  const { isSignedIn, isLoaded, getToken } = useAuth()
+  const { setAuth, user } = useAuthStore()
 
-  // Register the token provider for axios interceptor
+  // Register token provider synchronously
+  setClerkTokenProvider(() => getToken())
+
   useEffect(() => {
-    setClerkTokenProvider(() => getToken())
-  }, [getToken])
+    console.log('[useSyncUser] isLoaded:', isLoaded, 'isSignedIn:', isSignedIn, 'user:', !!user)
+  }, [isLoaded, isSignedIn, user])
 
-  // When signed in, fetch backend user + org
   useEffect(() => {
-    if (!isSignedIn) return
+    if (!isLoaded || !isSignedIn) return
+    if (user) return
 
-    authService.me().then(({ user, organization }) => {
-      setAuth(user, organization)
-    }).catch(() => {
-      // First login — backend will auto-create the user via get_auth_user
-      // If /me fails, it means the sync happened but we need to retry
-    })
-  }, [isSignedIn, setAuth])
+    console.log('[useSyncUser] Fetching /api/auth/me...')
+    authService.me()
+      .then(({ user, organization }) => {
+        console.log('[useSyncUser] OK:', user.email, organization.plan)
+        setAuth(user, organization)
+      })
+      .catch((err) => {
+        console.error('[useSyncUser] FAILED:', {
+          status: err?.response?.status,
+          data: err?.response?.data,
+          message: err?.message,
+        })
+      })
+  }, [isLoaded, isSignedIn, user, setAuth])
+
+  return isLoaded
 }
 
 export function useLogout() {

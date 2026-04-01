@@ -1,6 +1,9 @@
 import axios from 'axios'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+// In dev, Vite proxies /api → http://localhost:8000 (see vite.config.ts)
+// In prod, VITE_API_URL points to the real backend
+const isProd = import.meta.env.PROD
+const API_URL = isProd ? (import.meta.env.VITE_API_URL || '') : ''
 
 export const api = axios.create({
   baseURL: `${API_URL}/api`,
@@ -9,7 +12,7 @@ export const api = axios.create({
   },
 })
 
-// Token provider — set by ClerkTokenSync component at the root
+// Token provider — set synchronously by useSyncUser before any route renders
 let _getToken: (() => Promise<string | null>) | null = null
 
 export function setClerkTokenProvider(fn: () => Promise<string | null>) {
@@ -19,21 +22,20 @@ export function setClerkTokenProvider(fn: () => Promise<string | null>) {
 // Attach Clerk JWT to every request
 api.interceptors.request.use(async (config) => {
   if (_getToken) {
-    const token = await _getToken()
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
+    try {
+      const token = await Promise.race([
+        _getToken(),
+        new Promise<null>((r) => setTimeout(() => r(null), 3000)),
+      ])
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`
+        console.log('[api]', config.method?.toUpperCase(), config.url, '| token OK')
+      } else {
+        console.warn('[api]', config.method?.toUpperCase(), config.url, '| NO TOKEN (timeout)')
+      }
+    } catch (err) {
+      console.error('[api] getToken error:', err)
     }
   }
   return config
 })
-
-// Handle 401 — redirect to login
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401 && window.location.pathname !== '/login') {
-      window.location.replace('/login')
-    }
-    return Promise.reject(error)
-  },
-)

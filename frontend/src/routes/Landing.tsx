@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '@clerk/clerk-react'
 import {
   Sparkles, Upload, Brain, FileDown, Check, ArrowRight,
   FileText, Layers, ShieldCheck, BookOpen,
@@ -137,7 +138,15 @@ const PLANS = [
 // ─── Landing ──────────────────────────────────────────────────────────────────
 
 export default function Landing() {
+  const { isSignedIn, isLoaded } = useAuth()
+  const navigate = useNavigate()
   const featuresRef = useRef<HTMLElement>(null)
+
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [isLoaded, isSignedIn, navigate])
 
   const scrollToFeatures = () => {
     featuresRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -332,14 +341,14 @@ export default function Landing() {
             </button>
 
             <Link
-              to="/register"
+              to={isSignedIn ? '/dashboard' : '/login'}
               className="ml-4 inline-flex items-center gap-1.5 text-sm font-semibold text-white no-underline rounded-full px-6 py-2 transition-all hover:brightness-110 hover:-translate-y-px"
               style={{
                 background: 'linear-gradient(135deg, #3B82F6, #06B6D4)',
                 fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
               }}
             >
-              Commencer
+              {isSignedIn ? 'Dashboard' : 'Commencer'}
             </Link>
           </div>
         </div>
@@ -405,7 +414,7 @@ export default function Landing() {
           {/* CTAs */}
           <div className="flex gap-4 justify-center flex-wrap mb-8">
             <Link
-              to="/register"
+              to={isSignedIn ? '/dashboard' : '/register'}
               className="inline-flex items-center gap-2 font-bold text-white no-underline transition-all hover:scale-105 hover:-translate-y-0.5"
               style={{
                 background: 'linear-gradient(135deg, #3B82F6, #06B6D4)',
@@ -416,7 +425,7 @@ export default function Landing() {
                 boxShadow: '0 0 32px rgba(59,130,246,0.25)',
               }}
             >
-              Commencer gratuitement <ArrowRight size={16} />
+              {isSignedIn ? 'Accéder au dashboard' : 'Commencer gratuitement'} <ArrowRight size={16} />
             </Link>
             <button
               onClick={scrollToFeatures}
@@ -734,7 +743,7 @@ export default function Landing() {
 
                   {/* CTA */}
                   <Link
-                    to="/register"
+                    to={isSignedIn ? '/dashboard' : '/register'}
                     className="block text-center no-underline font-semibold text-sm rounded-xl py-3 mb-6 transition-all hover:brightness-110 hover:-translate-y-px"
                     style={{
                       fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
@@ -816,7 +825,7 @@ export default function Landing() {
               Rejoignez les entreprises BTP qui répondent plus vite et mieux grâce à l&apos;IA.
             </p>
             <Link
-              to="/register"
+              to={isSignedIn ? '/dashboard' : '/register'}
               className="relative inline-flex items-center gap-2 font-bold text-white no-underline rounded-xl transition-all hover:brightness-110 hover:-translate-y-0.5 cta-glow-pulse"
               style={{
                 background: 'linear-gradient(135deg, #3B82F6, #06B6D4)',
@@ -960,16 +969,16 @@ export default function Landing() {
             </p>
             <div className="flex gap-4">
               <Link
-                to="/login"
+                to={isSignedIn ? '/dashboard' : '/login'}
                 className="text-xs no-underline transition-colors"
                 style={{ color: '#475569' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#94A3B8')}
                 onMouseLeave={(e) => (e.currentTarget.style.color = '#475569')}
               >
-                Connexion
+                {isSignedIn ? 'Dashboard' : 'Connexion'}
               </Link>
               <Link
-                to="/register"
+                to={isSignedIn ? '/dashboard' : '/register'}
                 className="text-xs no-underline transition-colors"
                 style={{ color: '#475569' }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = '#94A3B8')}
