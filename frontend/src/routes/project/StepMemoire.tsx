@@ -211,17 +211,7 @@ export default function StepMemoire({ project }: Props) {
     saveEdits(parsed)
   }
 
-  if (isLoading) {
-    return (
-      <div className="glass-card p-12 flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-transparent animate-spin" style={{ borderTopColor: '#3B82F6' }} />
-      </div>
-    )
-  }
-
-  const hasMemoire = !!memoire
-
-  // Poll generation progress while generating
+  // Poll generation progress while generating (must be before any early return)
   const { data: genProgressData } = useQuery({
     queryKey: ['memoire-progress', project.id],
     queryFn: async () => {
@@ -249,6 +239,16 @@ export default function StepMemoire({ project }: Props) {
         : 15
       : undefined // No endpoint available, fall back to AnalysisProgress
 
+  if (isLoading) {
+    return (
+      <div className="glass-card p-12 flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-transparent animate-spin" style={{ borderTopColor: '#3B82F6' }} />
+      </div>
+    )
+  }
+
+  const hasMemoire = !!memoire
+
   return (
     <>
       <SubscriptionWall open={showPaywall} onClose={() => setShowPaywall(false)} feature="memoire" />
@@ -256,17 +256,27 @@ export default function StepMemoire({ project }: Props) {
       {/* Show LoadingProgress if we have real progress data, otherwise AnalysisProgress */}
       {memoirePercent !== undefined && (isGenerating || genSuccess) ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm" style={{ background: 'rgba(8,11,18,0.75)' }}>
-          <div className="glass-card p-10">
+          <div className="glass-card p-10 flex flex-col items-center gap-4">
             <LoadingProgress
               progress={memoirePercent}
               label={genSuccess ? 'Mémoire généré !' : 'Génération en cours...'}
               sublabel={
-                genProgressData
-                  ? `Section ${genProgressData.completed_sections}/${genProgressData.total_sections} — ${genProgressData.current_section}`
-                  : 'Claude Opus rédige votre mémoire technique (~2-3 min)...'
+                genSuccess
+                  ? undefined
+                  : genProgressData
+                    ? `Section ${genProgressData.completed_sections}/${genProgressData.total_sections} — ${genProgressData.current_section}`
+                    : 'Synorix IA rédige votre mémoire technique (~2-3 min)...'
               }
               variant="generation"
             />
+            {genSuccess && (
+              <button
+                onClick={() => setGenSuccess(false)}
+                className="btn-primary px-6 py-2.5 flex items-center gap-2"
+              >
+                Voir le mémoire →
+              </button>
+            )}
           </div>
         </div>
       ) : (
@@ -275,7 +285,7 @@ export default function StepMemoire({ project }: Props) {
           isSuccess={genSuccess}
           onComplete={() => { setGenSuccess(false) }}
           stages={MEMOIRE_STAGES}
-          subtitle="Claude Opus rédige votre mémoire technique (~2-3 min)..."
+          subtitle="Synorix IA rédige votre mémoire technique (~2-3 min)..."
         />
       )}
 

@@ -45,10 +45,7 @@ function ChecklistRow({ item }: { item: ChecklistItem }) {
       <div className="flex items-center gap-3">
         {cfg.icon}
         <div>
-          <p className="text-sm font-medium text-ds-text">{item.document_type_required}</p>
-          {item.details && (
-            <p className="text-xs text-ds-text-2 mt-0.5">{item.details}</p>
-          )}
+          <p className="text-sm font-medium text-ds-text">{item.details || item.document_type_required}</p>
           {item.source_in_rc && (
             <p className="text-xs text-ds-text-3 mt-0.5">Requis : {item.source_in_rc}</p>
           )}

@@ -71,7 +71,11 @@ export default function StepAnalysis({ project }: Props) {
     const doc = matchedDoc || projectDocs[0]
     if (!doc) return
 
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+    // In dev, use relative URL (goes through Vite proxy → backend)
+    // In prod, use VITE_API_URL or empty string
+    const baseUrl = import.meta.env.PROD
+      ? (import.meta.env.VITE_API_URL || '')
+      : ''
 
     // Utiliser le PDF converti s'il existe, sinon le fichier original
     const fileUrlToUse = doc.pdf_preview_url || doc.file_url
@@ -186,6 +190,24 @@ export default function StepAnalysis({ project }: Props) {
       : 10
     : 15 // Fallback when endpoint isn't available
 
+  // ── Lot filter computation (must be before any early return) ────────────
+  const lotFilterInfo = useMemo(() => {
+    if (!project.selected_lot || project.selected_lot === 'all') return null
+    const lotNum = project.selected_lot.replace(/^lot/i, '').replace(/^0+/, '') || '0'
+    const isIncluded = (doc: typeof projectDocs[0]) => {
+      const tags = doc.related_lots
+      if (!tags) return true
+      if (tags.includes('all')) return true
+      if (tags.every(t => t === 'info')) return false
+      return tags.some(t => t !== 'info' && (t.replace(/^0+/, '') || '0') === lotNum)
+    }
+    return {
+      included: projectDocs.filter(isIncluded),
+      excluded: projectDocs.filter(d => !isIncluded(d)),
+      lotLabel: project.selected_lot_name || `Lot ${lotNum}`,
+    }
+  }, [projectDocs, project.selected_lot, project.selected_lot_name])
+
   if (isLoading) return (
     <div className="glass-card p-12 flex flex-col items-center gap-3">
       <Loader2 size={32} className="animate-spin" style={{ color: '#3B82F6' }} />
@@ -207,24 +229,6 @@ export default function StepAnalysis({ project }: Props) {
       />
     </div>
   )
-
-  // ── Lot filter computation ───────────────────────────────────────────────
-  const lotFilterInfo = useMemo(() => {
-    if (!project.selected_lot || project.selected_lot === 'all') return null
-    const lotNum = project.selected_lot.replace(/^lot/i, '').replace(/^0+/, '') || '0'
-    const isIncluded = (doc: typeof projectDocs[0]) => {
-      const tags = doc.related_lots
-      if (!tags) return true
-      if (tags.includes('all')) return true
-      if (tags.every(t => t === 'info')) return false
-      return tags.some(t => t !== 'info' && (t.replace(/^0+/, '') || '0') === lotNum)
-    }
-    return {
-      included: projectDocs.filter(isIncluded),
-      excluded: projectDocs.filter(d => !isIncluded(d)),
-      lotLabel: project.selected_lot_name || `Lot ${lotNum}`,
-    }
-  }, [projectDocs, project.selected_lot, project.selected_lot_name])
 
   return (
     <div className="space-y-4">

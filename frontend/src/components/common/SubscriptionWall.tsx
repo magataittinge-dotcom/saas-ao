@@ -20,10 +20,10 @@ const PLANS = [
     border: 'rgba(59,130,246,0.25)',
     gradient: 'linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%)',
     features: [
-      'Analyse IA illimitée (Claude Sonnet)',
+      'Analyse IA illimitée',
       'Compliance matrix automatique',
       'Checklist candidature',
-      'Génération mémoire technique (Claude Opus)',
+      'Génération mémoire technique IA',
       'Export Word (.docx)',
       'Coffre-fort documentaire',
       '5 projets simultanés',

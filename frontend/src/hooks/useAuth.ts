@@ -18,22 +18,15 @@ export function useSyncUser(): boolean {
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return
-    if (user) return
 
-    console.log('[useSyncUser] Fetching /api/auth/me...')
     authService.me()
-      .then(({ user, organization }) => {
-        console.log('[useSyncUser] OK:', user.email, organization.plan)
-        setAuth(user, organization)
+      .then(({ user: u, organization: org }) => {
+        setAuth(u, org)
       })
       .catch((err) => {
-        console.error('[useSyncUser] FAILED:', {
-          status: err?.response?.status,
-          data: err?.response?.data,
-          message: err?.message,
-        })
+        console.error('[useSyncUser] FAILED:', err?.response?.status, err?.message)
       })
-  }, [isLoaded, isSignedIn, user, setAuth])
+  }, [isLoaded, isSignedIn, setAuth])
 
   return isLoaded
 }

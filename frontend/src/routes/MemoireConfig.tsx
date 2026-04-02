@@ -155,7 +155,7 @@ function ImportProgress({ isImporting }: { isImporting: boolean }) {
         <div className="text-center space-y-1">
           <p className="text-base font-semibold text-ds-text">
             {progress < 20 ? 'Lecture du document...' :
-             progress < 60 ? 'Analyse par Claude Sonnet...' :
+             progress < 60 ? 'Analyse par Synorix IA...' :
              progress < 90 ? 'Extraction des informations...' :
              'Finalisation...'}
           </p>
@@ -236,7 +236,7 @@ function ImportDialog({ onClose, onImported }: ImportDialogProps) {
           <div className="px-6 py-5 space-y-4">
             <p className="text-sm text-ds-text-2">
               Uploadez un mémoire technique existant (.docx ou .pdf).
-              Claude Sonnet extraira automatiquement toutes les informations et pré-remplira le formulaire.
+              Synorix IA extraira automatiquement toutes les informations et pré-remplira le formulaire.
             </p>
 
             {/* Drop zone */}

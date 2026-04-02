@@ -57,13 +57,15 @@ def _detect_doc_type(filename: str, form_type: str) -> str:
         return r'(?<![a-z0-9])' + t + r'(?![a-z0-9])'
 
     # ── RC — Règlement de Consultation ────────────────────────────────────────
+    # Note: 'rdc' removed — it matches "rez-de-chaussée" in plan filenames
     is_rc = bool(re.search(
-        r'reglement|r[eè]gl[\._\s]?consul|' + tok('rdc') + r'|' + tok('rc') + r'|'
+        r'reglement|r[eè]gl[\._\s]?consul|' + tok('rc') + r'|'
         r'reglement.{0,4}consultation',
         norm
     ))
     is_annexe = bool(re.search(r'annexe|nommage|cadre|liste|modele', norm))
-    if is_rc and not is_annexe:
+    is_plan = bool(re.search(r'plan|arch|coupe|facade|niveau|rez.{0,4}de.{0,4}chaussee|zoom|etage|r\+\d', norm))
+    if is_rc and not is_annexe and not is_plan:
         return 'rc'
 
     # ── CCAP — Cahier des Clauses Administratives ──────────────────────────────
@@ -289,6 +291,34 @@ async def upload_project_document(
     return ProjectDocumentResponse.model_validate(doc)
 
 
+def _extract_text_background(doc_id: str, content: bytes, filename: str) -> None:
+    """Background task: extract text from document and update DB."""
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
+    try:
+        from database import SessionLocal
+
+        extracted_text, page_count = processor.extract(content, filename)
+        # PostgreSQL rejects NUL (0x00) in text columns — strip them
+        if extracted_text:
+            extracted_text = extracted_text.replace("\x00", "")
+
+        db = SessionLocal()
+        try:
+            doc = db.query(ProjectDocument).filter(ProjectDocument.id == doc_id).first()
+            if doc:
+                if extracted_text is not None:
+                    doc.extracted_text = extracted_text
+                if page_count is not None:
+                    doc.page_count = page_count
+                db.commit()
+                _log.info(f"Text extraction done for {filename} (doc {doc_id}): {len(extracted_text or '')} chars, {page_count} pages")
+        finally:
+            db.close()
+    except Exception as e:
+        _log.error(f"Background text extraction failed for {filename}: {e}")
+
+
 async def _create_project_document(
     content: bytes,
     filename: str,
@@ -298,7 +328,7 @@ async def _create_project_document(
     background_tasks: BackgroundTasks,
     db: Session,
 ) -> ProjectDocument:
-    """Upload one file, persist to DB, schedule PDF conversion. Returns the new doc."""
+    """Upload one file, persist to DB, schedule text extraction + PDF conversion in background."""
     import logging as _logging
     _log = _logging.getLogger(__name__)
 
@@ -308,12 +338,26 @@ async def _create_project_document(
         f"projects/{project_id}/dce",
         content_type or None,
     )
-    extracted_text, page_count = processor.extract(content, filename)
-    # PostgreSQL rejects NUL (0x00) in text columns — strip them
-    if extracted_text:
-        extracted_text = extracted_text.replace("\x00", "")
 
     doc_type = _detect_doc_type(filename, form_type)
+
+    # Key document types needed for lot detection — extract text synchronously
+    # if file is small enough (< 5MB). Large files (plans, scans) stay async.
+    _KEY_DOC_TYPES = {'rc', 'ccap', 'cctp', 'dpgf', 'acte_engagement'}
+    _SYNC_EXTRACT_MAX = 5 * 1024 * 1024  # 5 MB
+
+    extracted_text = None
+    page_count = None
+    if doc_type in _KEY_DOC_TYPES and len(content) < _SYNC_EXTRACT_MAX:
+        try:
+            extracted_text, page_count = processor.extract(content, filename)
+            if extracted_text:
+                extracted_text = extracted_text.replace("\x00", "")
+        except Exception as e:
+            _log.warning(f"Sync extraction failed for {filename}, will retry in background: {e}")
+            extracted_text = None
+            page_count = None
+
     doc = ProjectDocument(
         project_id=project_id,
         type=doc_type,
@@ -327,6 +371,10 @@ async def _create_project_document(
     db.add(doc)
     db.commit()
     db.refresh(doc)
+
+    # If text wasn't extracted synchronously, schedule background extraction
+    if extracted_text is None:
+        background_tasks.add_task(_extract_text_background, doc.id, content, filename)
 
     try:
         if PdfConverter.can_convert(filename):

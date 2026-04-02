@@ -17,7 +17,7 @@ const DEFAULT_STAGES: ProgressStage[] = [
 export const MEMOIRE_STAGES: ProgressStage[] = [
   { upTo: 5,  message: 'Lecture des documents DCE...', msPerStep: 300 },
   { upTo: 15, message: 'Analyse du contexte projet...', msPerStep: 800 },
-  { upTo: 70, message: 'Rédaction par Claude Opus...', msPerStep: 1800 },
+  { upTo: 70, message: 'Rédaction par Synorix IA...', msPerStep: 1800 },
   { upTo: 90, message: 'Structuration des sections...', msPerStep: 2200 },
   { upTo: 99, message: 'Finalisation du mémoire...', msPerStep: 6000 },
 ]

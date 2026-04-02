@@ -46,8 +46,7 @@ class DCEAnalyzer:
         key = settings.ANTHROPIC_API_KEY
         self._demo_mode = not key or key == _PLACEHOLDER_KEY or key.startswith("sk-ant-placeholder")
         if not self._demo_mode:
-            # Client SYNCHRONE — plus fiable que async pour les longues requêtes
-            self.client = anthropic.Anthropic(
+            self.client = anthropic.AsyncAnthropic(
                 api_key=key,
                 timeout=300.0,
             )
@@ -66,15 +65,15 @@ class DCEAnalyzer:
 
         print(f"[DCE Analyzer] Envoi à Claude: {len(dce_text)} chars, max_tokens=12000")
 
-        # Appel synchrone dans un thread séparé pour ne pas bloquer l'event loop
+        _call_kwargs = dict(
+            model="claude-sonnet-4-20250514",
+            max_tokens=12000,
+            system=DCE_ANALYSIS_SYSTEM,
+            messages=[{"role": "user", "content": f"Voici les documents DCE à analyser :\n\n{dce_text}"}],
+        )
+
         try:
-            message = await asyncio.to_thread(
-                self.client.messages.create,
-                model="claude-sonnet-4-20250514",
-                max_tokens=12000,
-                system=DCE_ANALYSIS_SYSTEM,
-                messages=[{"role": "user", "content": f"Voici les documents DCE à analyser :\n\n{dce_text}"}],
-            )
+            message = await self.client.messages.create(**_call_kwargs)
         except anthropic.AuthenticationError:
             self._demo_mode = True
             return {
@@ -83,17 +82,10 @@ class DCEAnalyzer:
                 "infos_marche": _DEMO_INFOS_MARCHE,
             }
         except (anthropic.APITimeoutError, anthropic.APIConnectionError) as e:
-            # Retry une fois
             logger.warning(f"Premier essai échoué, retry: {e}")
             try:
-                await asyncio.sleep(3)
-                message = await asyncio.to_thread(
-                    self.client.messages.create,
-                    model="claude-sonnet-4-20250514",
-                    max_tokens=12000,
-                    system=DCE_ANALYSIS_SYSTEM,
-                    messages=[{"role": "user", "content": f"Voici les documents DCE à analyser :\n\n{dce_text}"}],
-                )
+                await asyncio.sleep(5)
+                message = await self.client.messages.create(**_call_kwargs)
             except Exception as e2:
                 raise Exception(f"Échec après retry. Erreur: {str(e2)}")
         except anthropic.APIStatusError as e:

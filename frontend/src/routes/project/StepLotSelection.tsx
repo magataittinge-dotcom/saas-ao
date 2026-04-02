@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Layers, CheckCircle2, AlertCircle, Zap, Plus, X, ShieldCheck, AlertTriangle, HelpCircle, Users } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Layers, CheckCircle2, AlertCircle, Zap, Plus, X, ShieldCheck, AlertTriangle, HelpCircle, Users, Loader2 } from 'lucide-react'
 import axios from 'axios'
 import { api } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
@@ -222,14 +222,28 @@ export default function StepLotSelection({ project }: Props) {
   const { organization } = useAuthStore()
   const [showPaywall, setShowPaywall] = useState(false)
 
-  // AMÉLIORATION 3: separate error lots (password-protected Excel)
-  const allDetected = project.lots_detectes ?? []
+  // Fetch lots via the detection endpoint (triggers detection if not cached)
+  const { data: lotsData, isLoading: lotsLoading } = useQuery({
+    queryKey: ['projects', project.id, 'lots'],
+    queryFn: async () => {
+      const { data } = await api.get<{ lots: LotOption[]; count: number }>(`/projects/${project.id}/lots`)
+      return data
+    },
+  })
+
+  const allDetected = lotsData?.lots ?? project.lots_detectes ?? []
   const errorLots = allDetected.filter(l => l.sources?.includes('error'))
-  const [lots, setLots] = useState<(LotOption & { _manual?: boolean })[]>(
-    allDetected.filter(l => l.id !== '!!')
-  )
+  const [lots, setLots] = useState<(LotOption & { _manual?: boolean })[]>([])
+  const [lotsInitialized, setLotsInitialized] = useState(false)
+
+  // Sync lots state once detection completes
+  if (!lotsInitialized && !lotsLoading && allDetected.length > 0) {
+    setLots(allDetected.filter(l => l.id !== '!!'))
+    setLotsInitialized(true)
+  }
+
   const [selectedId, setSelectedId] = useState<string>(
-    project.selected_lot ?? (lots.length === 1 ? lots[0].id : 'all')
+    project.selected_lot ?? 'all'
   )
   const [showAddForm, setShowAddForm] = useState(false)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
@@ -299,6 +313,13 @@ export default function StepLotSelection({ project }: Props) {
       />
 
       <div className="glass-card p-6 space-y-6">
+        {lotsLoading && (
+          <div className="flex items-center gap-3 p-4 rounded-xl" style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.20)' }}>
+            <Loader2 size={18} className="animate-spin" style={{ color: '#3B82F6' }} />
+            <span className="text-sm" style={{ color: '#60A5FA' }}>Détection des lots en cours…</span>
+          </div>
+        )}
+
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-lg font-semibold text-ds-text">Étape 2 — Sélection du lot</h2>

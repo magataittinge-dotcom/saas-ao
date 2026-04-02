@@ -86,7 +86,7 @@ const STEPS = [
     num: '02',
     icon: Brain,
     title: "L'IA analyse et extrait",
-    desc: "Claude Opus lit l'intégralité du dossier, détecte les lots, extrait les exigences et bâtit la matrice de conformité.",
+    desc: "Synorix IA lit l'intégralité du dossier, détecte les lots, extrait les exigences et bâtit la matrice de conformité.",
   },
   {
     num: '03',

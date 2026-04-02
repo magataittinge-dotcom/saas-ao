@@ -2,22 +2,18 @@ import { useState } from 'react'
 import { AlertTriangle, Loader2, X } from 'lucide-react'
 
 interface Props {
-  title: string
-  message: string
+  title?: string
+  message?: string
   confirmText?: string
-  projectName: string
+  projectName?: string
   onConfirm: () => Promise<void> | void
   onCancel: () => void
 }
 
-export default function DeleteConfirmModal({ title, message, confirmText = 'SUPPRIMER', projectName, onConfirm, onCancel }: Props) {
-  const [inputValue, setInputValue] = useState('')
+export default function DeleteConfirmModal({ title = 'Supprimer cet appel d\'offres ?', message = 'Cette action est irréversible.', onConfirm, onCancel }: Props) {
   const [isDeleting, setIsDeleting] = useState(false)
 
-  const canDelete = inputValue === confirmText
-
   const handleConfirm = async () => {
-    if (!canDelete) return
     setIsDeleting(true)
     try {
       await onConfirm()
@@ -33,11 +29,11 @@ export default function DeleteConfirmModal({ title, message, confirmText = 'SUPP
       onClick={(e) => { if (e.target === e.currentTarget && !isDeleting) onCancel() }}
     >
       <div
-        className="rounded-xl p-6 max-w-md w-full mx-4 space-y-4"
+        className="rounded-xl p-6 max-w-sm w-full mx-4 space-y-4"
         style={{
           background: '#0D1117',
           border: '1px solid rgba(239,68,68,0.20)',
-          boxShadow: '0 25px 60px rgba(0,0,0,0.5), 0 0 40px rgba(239,68,68,0.08)'
+          boxShadow: '0 25px 60px rgba(0,0,0,0.5), 0 0 40px rgba(239,68,68,0.08)',
         }}
       >
         {/* Header */}
@@ -49,7 +45,10 @@ export default function DeleteConfirmModal({ title, message, confirmText = 'SUPP
             >
               <AlertTriangle size={20} style={{ color: '#F87171' }} />
             </div>
-            <h3 className="text-lg font-semibold text-ds-text">{title}</h3>
+            <div>
+              <h3 className="text-base font-semibold text-ds-text">{title}</h3>
+              <p className="text-xs text-ds-text-3 mt-0.5">{message}</p>
+            </div>
           </div>
           <button
             onClick={onCancel}
@@ -58,36 +57,6 @@ export default function DeleteConfirmModal({ title, message, confirmText = 'SUPP
           >
             <X size={18} />
           </button>
-        </div>
-
-        {/* Message */}
-        <div>
-          <p className="text-sm text-ds-text-2">{message}</p>
-          <div
-            className="mt-3 rounded-lg px-3 py-2"
-            style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.12)' }}
-          >
-            <p className="text-sm font-medium" style={{ color: '#F87171' }}>{projectName}</p>
-          </div>
-        </div>
-
-        {/* Confirmation input */}
-        <div>
-          <p className="text-xs text-ds-text-3 mb-2">
-            Tapez <span className="font-bold text-red-400">{confirmText}</span> pour confirmer :
-          </p>
-          <input
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value.toUpperCase())}
-            placeholder={confirmText}
-            disabled={isDeleting}
-            className="glass-input w-full py-2.5 text-sm w-full text-sm"
-            style={{
-              borderColor: canDelete ? 'rgba(239,68,68,0.40)' : undefined,
-            }}
-            autoFocus
-            onKeyDown={(e) => { if (e.key === 'Enter' && canDelete) handleConfirm() }}
-          />
         </div>
 
         {/* Actions */}
@@ -102,18 +71,14 @@ export default function DeleteConfirmModal({ title, message, confirmText = 'SUPP
           </button>
           <button
             onClick={handleConfirm}
-            disabled={!canDelete || isDeleting}
+            disabled={isDeleting}
             className="flex-1 px-4 py-2.5 rounded-lg text-sm font-medium text-white transition-all flex items-center justify-center gap-2"
-            style={{
-              background: canDelete ? 'rgba(239,68,68,0.80)' : 'rgba(239,68,68,0.20)',
-              cursor: canDelete ? 'pointer' : 'not-allowed',
-              opacity: canDelete ? 1 : 0.5,
-            }}
+            style={{ background: 'rgba(239,68,68,0.80)' }}
           >
             {isDeleting ? (
               <><Loader2 size={14} className="animate-spin" /> Suppression...</>
             ) : (
-              <><AlertTriangle size={14} /> Supprimer définitivement</>
+              'Supprimer'
             )}
           </button>
         </div>
