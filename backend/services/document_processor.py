@@ -1,90 +1,79 @@
 import io
-import signal
+import logging
 from typing import Tuple, Optional
 
-
-class _Timeout(Exception):
-    pass
-
-
-def _timeout_handler(signum, frame):
-    raise _Timeout()
+logger = logging.getLogger(__name__)
 
 
 class DocumentProcessor:
     """Extract text from PDF, DOCX, and XLSX files."""
 
-    # Skip text extraction for PDFs larger than 2MB (plans, scans)
-    MAX_PDF_SIZE_FOR_EXTRACTION = 2 * 1024 * 1024
-    # Max seconds for any single extraction
-    EXTRACTION_TIMEOUT = 10
+    def extract(
+        self,
+        content: bytes,
+        filename: str,
+        max_pages: Optional[int] = None,
+    ) -> Tuple[str, Optional[int]]:
+        """Return (extracted_text, page_count).
 
-    def extract(self, content: bytes, filename: str) -> Tuple[Optional[str], Optional[int]]:
-        """Return (extracted_text, page_count)."""
+        max_pages: if set, only extract text from the first N pages (PDF only).
+        Always returns a string (never None) — empty string on failure.
+        """
         lower = filename.lower()
-        try:
-            # Set a timeout so extraction never blocks the server
-            old_handler = signal.signal(signal.SIGALRM, _timeout_handler)
-            signal.alarm(self.EXTRACTION_TIMEOUT)
-            try:
-                result = self._do_extract(content, lower)
-            finally:
-                signal.alarm(0)
-                signal.signal(signal.SIGALRM, old_handler)
-            return result
-        except _Timeout:
-            return None, None
-        except Exception:
-            return None, None
 
-    def _do_extract(self, content: bytes, lower: str) -> Tuple[Optional[str], Optional[int]]:
+        # Non-extractible file types → empty string immediately
+        if not any(lower.endswith(ext) for ext in (".pdf", ".docx", ".xlsx", ".xls", ".txt", ".ods")):
+            return "", None
+
+        try:
+            return self._do_extract(content, lower, max_pages)
+        except Exception as e:
+            logger.warning(f"Extraction failed for {filename}: {e}")
+            return "", None
+
+    def _do_extract(
+        self, content: bytes, lower: str, max_pages: Optional[int]
+    ) -> Tuple[str, Optional[int]]:
         if lower.endswith(".pdf"):
-            if len(content) > self.MAX_PDF_SIZE_FOR_EXTRACTION:
-                return self._extract_pdf_metadata_only(content)
-            return self._extract_pdf(content)
+            return self._extract_pdf(content, max_pages)
         elif lower.endswith(".docx"):
             return self._extract_docx(content)
-        elif lower.endswith(".xlsx"):
+        elif lower.endswith((".xlsx", ".xls", ".ods")):
             return self._extract_xlsx(content)
         elif lower.endswith(".txt"):
             return self._extract_txt(content)
-        else:
-            return None, None
+        return "", None
 
-    def _extract_pdf_metadata_only(self, content: bytes) -> Tuple[Optional[str], Optional[int]]:
-        """For large PDFs (plans), just get page count."""
-        import PyPDF2
-        try:
-            reader = PyPDF2.PdfReader(io.BytesIO(content))
-            return None, len(reader.pages)
-        except Exception:
-            return None, None
+    def _extract_pdf(
+        self, content: bytes, max_pages: Optional[int] = None
+    ) -> Tuple[str, Optional[int]]:
+        import fitz  # PyMuPDF — 5-10x faster than PyPDF2
 
-    def _extract_pdf(self, content: bytes) -> Tuple[Optional[str], Optional[int]]:
-        import PyPDF2
-
-        reader = PyPDF2.PdfReader(io.BytesIO(content))
-        pages = []
-        for page in reader.pages:
-            text = page.extract_text()
+        doc = fitz.open(stream=content, filetype="pdf")
+        total_pages = len(doc)
+        limit = max_pages if max_pages else total_pages
+        texts = []
+        for i in range(min(limit, total_pages)):
+            text = doc[i].get_text()
             if text:
-                pages.append(text)
-        return "\n\n".join(pages), len(reader.pages)
+                texts.append(text)
+        doc.close()
+        return "\n\n".join(texts), total_pages
 
-    def _extract_docx(self, content: bytes) -> Tuple[Optional[str], Optional[int]]:
+    def _extract_docx(self, content: bytes) -> Tuple[str, Optional[int]]:
         from docx import Document
 
         doc = Document(io.BytesIO(content))
         paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
         return "\n".join(paragraphs), None
 
-    def _extract_txt(self, content: bytes) -> Tuple[Optional[str], Optional[int]]:
+    def _extract_txt(self, content: bytes) -> Tuple[str, Optional[int]]:
         try:
             return content.decode("utf-8", errors="replace"), None
         except Exception:
-            return None, None
+            return "", None
 
-    def _extract_xlsx(self, content: bytes) -> Tuple[Optional[str], Optional[int]]:
+    def _extract_xlsx(self, content: bytes) -> Tuple[str, Optional[int]]:
         import openpyxl
 
         wb = openpyxl.load_workbook(io.BytesIO(content), read_only=True)

@@ -23,9 +23,7 @@ export default function Projects() {
     <div className="space-y-6 animate-fade-in">
       {deleteTarget && (
         <DeleteConfirmModal
-          title="Supprimer l'appel d'offres"
-          message="Cette action est irréversible. Tous les documents, l'analyse IA, la checklist et le mémoire technique associés seront définitivement supprimés."
-          projectName={deleteTarget.name}
+          title="Supprimer cet appel d'offres ?"
           onConfirm={() => handleDelete(deleteTarget.id)}
           onCancel={() => setDeleteTarget(null)}
         />

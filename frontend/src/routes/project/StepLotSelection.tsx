@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Layers, CheckCircle2, AlertCircle, Zap, Plus, X, ShieldCheck, AlertTriangle, HelpCircle, Users, Loader2 } from 'lucide-react'
@@ -7,6 +8,7 @@ import { api } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
 import { AnalysisProgress } from '@/components/project/AnalysisProgress'
 import SubscriptionWall from '@/components/common/SubscriptionWall'
+import LoadingProgress from '@/components/common/LoadingProgress'
 import type { Project, LotOption } from '@/types'
 import { cn } from '@/lib/utils'
 
@@ -221,15 +223,158 @@ export default function StepLotSelection({ project }: Props) {
   const queryClient = useQueryClient()
   const { organization } = useAuthStore()
   const [showPaywall, setShowPaywall] = useState(false)
+  const [processingDetail, setProcessingDetail] = useState('')
+  const [waitingForExtraction, setWaitingForExtraction] = useState(false)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // Fetch lots via the detection endpoint (triggers detection if not cached)
-  const { data: lotsData, isLoading: lotsLoading } = useQuery({
-    queryKey: ['projects', project.id, 'lots'],
+  // Check if backend is still extracting text before attempting lot detection
+  const { data: procStatus } = useQuery({
+    queryKey: ['processing-status', project.id],
     queryFn: async () => {
-      const { data } = await api.get<{ lots: LotOption[]; count: number }>(`/projects/${project.id}/lots`)
+      const { data } = await api.get<{ status: string; progress: number; detail: string }>(
+        `/projects/${project.id}/processing-status`
+      )
       return data
     },
   })
+
+  const isBackendBusy = procStatus?.status === 'extracting_text' || procStatus?.status === 'extracting_zip'
+
+  // Poll while backend is still processing
+  useEffect(() => {
+    if (!isBackendBusy) {
+      if (waitingForExtraction) {
+        setWaitingForExtraction(false)
+        // Refetch lots now that extraction is done
+        queryClient.invalidateQueries({ queryKey: ['projects', project.id, 'lots'] })
+      }
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
+      return
+    }
+    setWaitingForExtraction(true)
+    setProcessingDetail(procStatus?.detail ?? '')
+    if (!pollRef.current) {
+      pollRef.current = setInterval(async () => {
+        try {
+          const { data } = await api.get<{ status: string; progress: number; detail: string }>(
+            `/projects/${project.id}/processing-status`
+          )
+          setProcessingDetail(data.detail)
+          if (data.status === 'ready' || data.status === 'error') {
+            queryClient.invalidateQueries({ queryKey: ['processing-status', project.id] })
+          }
+        } catch { /* ignore */ }
+      }, 2000)
+    }
+    return () => {
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
+    }
+  }, [isBackendBusy, waitingForExtraction, procStatus, project.id, queryClient])
+
+  // ─── Lot detection with real progress ────────────────────────────────────────
+  const [detectPhase, setDetectPhase] = useState<'idle' | 'detecting' | 'done'>('idle')
+  const [detectPct, setDetectPct] = useState(0)
+  const [detectLabel, setDetectLabel] = useState('Détection des lots en cours...')
+  const detectPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const detectCrawlRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const detectDisplayRef = useRef(0) // tracks displayed value for crawl logic
+  const detectDoneRef = useRef(false) // permanent guard — once done, never re-trigger
+
+  // Fetch lots — fires immediately on mount, triggers detection on backend cache miss
+  const { data: lotsData, isLoading: lotsLoading } = useQuery({
+    queryKey: ['projects', project.id, 'lots'],
+    queryFn: async () => {
+      const { data } = await api.get<{ lots?: LotOption[]; count?: number; cached?: boolean; status?: string; progress?: number; detail?: string }>(`/projects/${project.id}/lots`)
+      // Backend returned "detecting_lots" → start polling
+      if (data.status === 'detecting_lots') {
+        // Use ref (not state) to avoid stale closure re-triggering after done
+        if (!detectDoneRef.current && !detectPollRef.current) {
+          setDetectPhase('detecting')
+          setDetectPct(0)
+          detectDisplayRef.current = 0
+          setDetectLabel(data.detail || 'Détection des lots en cours...')
+          startDetectCrawl()
+          startDetectPoll()
+        }
+        return null // no lots yet
+      }
+      // Got cached or freshly computed lots
+      // Refresh project data for stepper — use exact:true to avoid invalidating THIS query
+      queryClient.invalidateQueries({ queryKey: ['projects', project.id], exact: true })
+      return data as { lots: LotOption[]; count: number }
+    },
+    // No enabled gate — fire immediately. Backend handles "still extracting" gracefully.
+  })
+
+  // Slow crawl: +0.3%/200ms while waiting for first real backend value
+  function startDetectCrawl() {
+    if (detectCrawlRef.current) return
+    detectCrawlRef.current = setInterval(() => {
+      detectDisplayRef.current = Math.min(detectDisplayRef.current + 0.3, 20) // cap at 20% before real data
+      setDetectPct(detectDisplayRef.current)
+    }, 200)
+  }
+
+  function stopDetectCrawl() {
+    if (detectCrawlRef.current) { clearInterval(detectCrawlRef.current); detectCrawlRef.current = null }
+  }
+
+  function startDetectPoll() {
+    if (detectPollRef.current) return
+    detectPollRef.current = setInterval(async () => {
+      // Permanent guard — once done, never process another tick
+      if (detectDoneRef.current) return
+
+      try {
+        const { data } = await api.get<{ status: string; progress: number; detail: string }>(
+          `/projects/${project.id}/processing-status`
+        )
+
+        if (detectDoneRef.current) return // re-check after await
+
+        if (data.status === 'detecting_lots') {
+          if (data.progress > detectDisplayRef.current) {
+            stopDetectCrawl()
+            detectDisplayRef.current = data.progress
+            setDetectPct(data.progress)
+          }
+          if (data.detail) setDetectLabel(data.detail)
+        } else if (data.status === 'ready' || data.status === 'error') {
+          // Mark done FIRST — prevents any re-trigger
+          detectDoneRef.current = true
+
+          // Stop ALL intervals BEFORE changing any state
+          stopDetectCrawl()
+          if (detectPollRef.current) { clearInterval(detectPollRef.current); detectPollRef.current = null }
+
+          if (data.status === 'error') {
+            setDetectPhase('idle')
+            setDetectPct(0)
+            return
+          }
+
+          // Show 100% briefly, then fetch lots
+          setDetectPct(100)
+          const { data: lotsResult } = await api.get<{ lots: LotOption[]; count: number }>(`/projects/${project.id}/lots`)
+          const count = lotsResult?.lots?.filter((l: LotOption) => l.id !== '!!')?.length ?? 0
+          setDetectLabel(count > 0 ? `${count} lot${count > 1 ? 's' : ''} détecté${count > 1 ? 's' : ''} !` : 'Marché unique détecté')
+          setDetectPhase('done')
+          queryClient.invalidateQueries({ queryKey: ['projects', project.id, 'lots'] })
+
+          // Dismiss after 1.2s — doneRef stays true, overlay never comes back
+          setTimeout(() => { setDetectPhase('idle'); setDetectPct(0) }, 1200)
+        }
+      } catch { /* ignore */ }
+    }, 1000)
+  }
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (detectPollRef.current) { clearInterval(detectPollRef.current); detectPollRef.current = null }
+      if (detectCrawlRef.current) { clearInterval(detectCrawlRef.current); detectCrawlRef.current = null }
+    }
+  }, [])
 
   const allDetected = lotsData?.lots ?? project.lots_detectes ?? []
   const errorLots = allDetected.filter(l => l.sources?.includes('error'))
@@ -249,6 +394,8 @@ export default function StepLotSelection({ project }: Props) {
   const [analysisError, setAnalysisError] = useState<string | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
+  const [preparation, setPreparation] = useState<{ extracted: number; total: number } | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
 
   const hasMultiLots = lots.length >= 2
   const highConfidenceCount = lots.filter(l => (l.confidence ?? 0) >= 80).length
@@ -273,6 +420,14 @@ export default function StepLotSelection({ project }: Props) {
       api.post(`/projects/${project.id}/lots/select`, payload),
   })
 
+  const handleCancel = () => {
+    abortRef.current?.abort()
+    setIsAnalyzing(false)
+    setIsSuccess(false)
+    setPreparation(null)
+    setAnalysisError("Analyse annulée.")
+  }
+
   const handleLaunch = async () => {
     const plan = organization?.plan ?? 'free'
     if (plan === 'free') {
@@ -280,6 +435,11 @@ export default function StepLotSelection({ project }: Props) {
       return
     }
     setAnalysisError(null)
+
+    // Create abort controller for this analysis run
+    const abort = new AbortController()
+    abortRef.current = abort
+
     try {
       await selectLot({
         lot_id: selectedId === 'all' ? null : selectedId,
@@ -287,14 +447,40 @@ export default function StepLotSelection({ project }: Props) {
       })
       queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
 
+      // Show overlay immediately
       setIsAnalyzing(true)
-      await api.post(`/projects/${project.id}/analyze`, {}, { timeout: 300_000 })
 
+      // ── Wait for ALL documents to have extracted_text (phase 2) ──────
+      let ready = false
+      while (!ready) {
+        if (abort.signal.aborted) return
+        const { data } = await api.get<{ total: number; extracted: number; ready: boolean }>(
+          `/projects/${project.id}/extraction-status`,
+        )
+        setPreparation({ extracted: data.extracted, total: data.total })
+        if (data.ready) {
+          ready = true
+        } else {
+          await new Promise((r) => setTimeout(r, 2000))
+        }
+      }
+      if (abort.signal.aborted) return
+      // Clear preparation state — switch overlay to analysis animation
+      setPreparation(null)
+
+      await api.post(`/projects/${project.id}/analyze`, {}, {
+        timeout: 420_000,
+        signal: abort.signal,
+      })
+
+      if (abort.signal.aborted) return
       queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
       setIsSuccess(true)
     } catch (err) {
+      if (abort.signal.aborted) return  // cancelled — already handled
       setIsAnalyzing(false)
       setIsSuccess(false)
+      setPreparation(null)
       const msg = axios.isAxiosError(err)
         ? (err.response?.data?.detail ?? "Erreur lors de l'analyse")
         : "Erreur lors de l'analyse"
@@ -310,13 +496,38 @@ export default function StepLotSelection({ project }: Props) {
         isAnalyzing={isAnalyzing}
         isSuccess={isSuccess}
         onComplete={() => navigate(`/projects/${project.id}/analysis`)}
+        onCancel={handleCancel}
+        preparation={preparation}
       />
 
+      {/* Lot detection progress overlay */}
+      {detectPhase !== 'idle' && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(6,9,15,0.95)', backdropFilter: 'blur(4px)' }}>
+          <div className="glass-card p-8 max-w-sm">
+            <LoadingProgress
+              progress={Math.round(detectPct)}
+              label={detectLabel}
+              variant="upload"
+            />
+          </div>
+        </div>,
+        document.body,
+      )}
+
       <div className="glass-card p-6 space-y-6">
-        {lotsLoading && (
+        {isBackendBusy && (
           <div className="flex items-center gap-3 p-4 rounded-xl" style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.20)' }}>
             <Loader2 size={18} className="animate-spin" style={{ color: '#3B82F6' }} />
-            <span className="text-sm" style={{ color: '#60A5FA' }}>Détection des lots en cours…</span>
+            <div>
+              <span className="text-sm block" style={{ color: '#60A5FA' }}>
+                Extraction des documents en cours...
+              </span>
+              {processingDetail && (
+                <span className="text-xs block mt-0.5" style={{ color: '#8B95A9', fontFamily: '"DM Sans", system-ui, sans-serif' }}>
+                  {processingDetail}
+                </span>
+              )}
+            </div>
           </div>
         )}
 
@@ -377,8 +588,22 @@ export default function StepLotSelection({ project }: Props) {
               />
             ))}
           </div>
+        ) : !lotsInitialized && (lotsLoading || detectPhase === 'detecting' || isBackendBusy) ? (
+          /* Still loading / detecting — don't show "Marché unique" yet */
+          <div
+            className="flex items-center gap-3 p-4 rounded-xl border"
+            style={{ background: 'rgba(59,130,246,0.06)', borderColor: 'rgba(59,130,246,0.20)' }}
+          >
+            <Loader2 size={20} className="animate-spin" style={{ color: '#3B82F6' }} />
+            <div>
+              <p className="text-sm font-medium text-ds-text">Détection des lots en cours...</p>
+              <p className="text-xs text-ds-text-2 mt-0.5">
+                Analyse des documents du DCE.
+              </p>
+            </div>
+          </div>
         ) : (
-          /* No lots detected */
+          /* Detection done, genuinely no lots found */
           <div
             className="flex items-center gap-3 p-4 rounded-xl border"
             style={{ background: 'rgba(59,130,246,0.06)', borderColor: 'rgba(59,130,246,0.20)' }}

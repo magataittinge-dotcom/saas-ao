@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import logging
 from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException
@@ -55,44 +56,88 @@ async def trigger_analysis(
     else:
         logger.info(f"Analyse projet {project_id}: envoi de {docs_sent}/{docs_total} documents à Claude")
 
-    # ── Combine extracted text — prioritise RC and CCTP ───────────────────────
-    PRIORITY = {"rc": 0, "ccap": 1, "cctp": 2, "acte_engagement": 3, "dpgf": 4, "plan": 5, "autre": 6}
-    docs_sorted = sorted(docs, key=lambda d: PRIORITY.get(d.type, 5))
+    # ── Deduplicate by content hash ────────────────────────────────────────
+    seen_hashes: set[str] = set()
+    deduped_docs = []
+    for doc in docs:
+        if not doc.extracted_text:
+            continue
+        h = hashlib.md5(doc.extracted_text.encode()).hexdigest()
+        if h in seen_hashes:
+            print(f"[Analysis] Doublon détecté : {doc.file_name} (hash={h[:8]}), skip", flush=True)
+            continue
+        seen_hashes.add(h)
+        deduped_docs.append(doc)
 
-    dpgf_sheet_text: str = ""   # targeted DPGF sheet text (PARTIE 3)
+    # ── Separate documents by type for 2-pass analysis ───────────────────────
+    # Pass 1: RC + CCAP + AE ONLY (no "autre" — they bloat the context)
+    # Pass 2: CCTP + DPGF ONLY
+    PASS1_CAPS = {"rc": 50_000, "ccap": 30_000, "acte_engagement": 10_000}
+    PASS2_CAPS = {"cctp": 30_000, "dpgf": 10_000}
 
-    parts = []
-    for doc in docs_sorted:
-        # ── DPGF with lot selected: try extracting the matching sheet only ────
-        if doc.type == "dpgf" and lot_num_norm:
+    pass1_parts: list[str] = []
+    pass2_parts: list[str] = []
+    dpgf_sheet_text: str = ""
+
+    for doc in deduped_docs:
+        doc_type = doc.type or "autre"
+        text = doc.extracted_text or ""
+        if not text or text.startswith("[document volumineux"):
+            continue
+
+        # Skip types not in either pass (plan, autre, etc.)
+        if doc_type not in PASS1_CAPS and doc_type not in PASS2_CAPS:
+            continue
+
+        # DPGF with lot: extract matching sheet only
+        if doc_type == "dpgf" and lot_num_norm:
             sheet_text = _get_dpgf_sheet_text(doc, lot_num_norm)
             if sheet_text:
                 dpgf_sheet_text = sheet_text
+                cap = PASS2_CAPS["dpgf"]
                 label = f"DPGF — {doc.file_name} (onglet Lot {lot_num_norm})"
-                parts.append(f"=== {label} ===\n{sheet_text}")
-                continue   # skip full extracted_text for this doc
+                pass2_parts.append(f"=== {label} ===\n{sheet_text[:cap]}")
+                continue
 
-        if doc.extracted_text:
-            label = doc.type.upper() if doc.type != "autre" else "DOCUMENT"
-            parts.append(f"=== {label} — {doc.file_name} ===\n{doc.extracted_text}")
+        label = doc_type.upper()
+        if doc_type in PASS1_CAPS:
+            cap = PASS1_CAPS[doc_type]
+            entry = f"=== {label} — {doc.file_name} ===\n{text[:cap]}"
+            pass1_parts.append(entry)
+        elif doc_type in PASS2_CAPS:
+            cap = PASS2_CAPS[doc_type]
+            entry = f"=== {label} — {doc.file_name} ===\n{text[:cap]}"
+            pass2_parts.append(entry)
 
-    if not parts:
+    if not pass1_parts and not pass2_parts:
         raise HTTPException(
             status_code=400,
             detail="Aucun texte extrait des documents. Assurez-vous d'uploader des PDF ou DOCX lisibles.",
         )
 
-    combined_text = "\n\n".join(parts)
+    pass1_text = "\n\n".join(pass1_parts)
+    pass2_text = "\n\n".join(pass2_parts) if pass2_parts else None
+
+    p1_tokens = len(pass1_text) // 4
+    p2_tokens = (len(pass2_text) // 4) if pass2_text else 0
+    print(
+        f"[Analysis] 2-pass: "
+        f"passe1={len(pass1_text):,} chars (~{p1_tokens:,} tokens, {len(pass1_parts)} docs), "
+        f"passe2={len(pass2_text):,} chars (~{p2_tokens:,} tokens, {len(pass2_parts)} docs)"
+        if pass2_text else
+        f"[Analysis] 2-pass: "
+        f"passe1={len(pass1_text):,} chars (~{p1_tokens:,} tokens, {len(pass1_parts)} docs), "
+        f"passe2=skip (pas de CCTP/DPGF)",
+        flush=True,
+    )
 
     # ── Build lot context header ──────────────────────────────────────────────
     lot_header = ""
     if lot_label:
         lot_header = (
             f"IMPORTANT : Cette analyse concerne spécifiquement le {lot_label}. "
-            f"Concentre-toi UNIQUEMENT sur les exigences, obligations et prescriptions techniques "
-            f"relatives à ce lot. Ignore les informations relatives aux autres lots. "
-            f"Les documents fournis ({docs_sent} sur {docs_total} du DCE) ont été filtrés "
-            f"pour ne contenir que les pièces pertinentes pour ce lot.\n\n"
+            f"Concentre-toi UNIQUEMENT sur les exigences relatives à ce lot. "
+            f"Ignore les informations relatives aux autres lots.\n\n"
         )
         if dpgf_sheet_text:
             lot_header += (
@@ -104,17 +149,21 @@ async def trigger_analysis(
     project.status = "en_cours"
     db.commit()
 
-    # Run AI analysis (synchronous — waits for Claude response)
+    # Run 2-pass AI analysis — each pass <60s, total <3min with retries
     analyzer = DCEAnalyzer()
     try:
         analysis = await asyncio.wait_for(
-            analyzer.extract_full_analysis(lot_header + combined_text),
-            timeout=280.0
+            analyzer.extract_full_analysis_multi_pass(
+                pass1_text=pass1_text,
+                pass2_text=pass2_text,
+                lot_header=lot_header,
+            ),
+            timeout=480.0,  # 8 min total (2 passes × 3 retries × ~60s + overhead)
         )
     except asyncio.TimeoutError:
         project.current_step = 2
         db.commit()
-        raise HTTPException(status_code=504, detail="L'analyse a pris trop de temps. Essayez avec moins de documents ou des fichiers moins volumineux.")
+        raise HTTPException(status_code=504, detail="L'analyse a pris trop de temps. Réessayez.")
     except Exception as e:
         project.current_step = 2
         db.commit()
@@ -123,6 +172,8 @@ async def trigger_analysis(
     requirements = analysis.get("requirements", [])
     criteres_jugement = analysis.get("criteres_jugement", [])
     infos_marche = analysis.get("infos_marche", {})
+    partial_analysis = analysis.get("partial_analysis", False)
+    low_requirement_count = analysis.get("low_requirement_count", False)
 
     if not requirements:
         project.current_step = 2
@@ -191,6 +242,8 @@ async def trigger_analysis(
         "demo_mode": analyzer.is_demo,
         "docs_sent": docs_sent,
         "docs_total": docs_total,
+        **({"partial_analysis": True} if partial_analysis else {}),
+        **({"low_requirement_count": True} if low_requirement_count else {}),
     }
 
 

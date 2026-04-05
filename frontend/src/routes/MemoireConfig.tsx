@@ -579,7 +579,7 @@ export default function MemoireConfig() {
         {/* ENTREPRISE */}
         <Section section={SECTIONS[0]} data={form} isOpen={openSections.has('entreprise')} onToggle={() => toggleSection('entreprise')}>
           <Field label={FIELD_LABELS.nom_entreprise}>
-            <input type="text" className="glass-input w-full py-2.5 text-sm" placeholder="Ex: CAR-ISO FACADE"
+            <input type="text" className="glass-input w-full py-2.5 text-sm" placeholder="Ex: SARL DUPONT BTP"
               value={form.nom_entreprise ?? ''} onChange={(e) => set('nom_entreprise', e.target.value)} />
           </Field>
           <div className="grid grid-cols-2 gap-4">

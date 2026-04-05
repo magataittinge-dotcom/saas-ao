@@ -31,6 +31,9 @@ class ProjectResponse(BaseModel):
     lots_detectes: Optional[List[Any]] = None
     selected_lot: Optional[str] = None
     selected_lot_name: Optional[str] = None
+    processing_status: Optional[str] = None
+    processing_progress: Optional[int] = 0
+    processing_detail: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

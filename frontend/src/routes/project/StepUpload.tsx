@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { useDropzone } from 'react-dropzone'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -9,6 +10,8 @@ import { uploadService } from '@/services/upload'
 import LoadingProgress from '@/components/common/LoadingProgress'
 import type { Project, ProjectDocument, ProjectDocumentType } from '@/types'
 import { cn } from '@/lib/utils'
+
+type Phase = 'idle' | 'uploading' | 'processing' | 'done'
 
 function detectDocType(filename: string): ProjectDocumentType {
   const lower = filename.toLowerCase()
@@ -61,11 +64,22 @@ export default function StepUpload({ project }: Props) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [uploading, setUploading] = useState<Record<string, boolean>>({})
-  const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number; fileName: string; byteProgress: number } | null>(null)
+
+  // ─── Simple progress state ─────────────────────────────────────────────────
+  const [phase, setPhase] = useState<Phase>('idle')
+  const [displayPct, setDisplayPct] = useState(0)
+  const [label, setLabel] = useState('')
+  const [sublabel, setSublabel] = useState('')
   const [uploadErrors, setUploadErrors] = useState<string[]>([])
-  const [uploadWarnings, setUploadWarnings] = useState<string[]>([])  // AMÉLIORATION 9
+  const [uploadWarnings, setUploadWarnings] = useState<string[]>([])
   const [nextError, setNextError] = useState<string | null>(null)
   const [isNavigating, setIsNavigating] = useState(false)
+
+  // Interval refs for cleanup
+  const animRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const safetyRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const doneRef = useRef(false) // permanent guard — once done, never re-trigger
 
   const { data: documents = [] } = useQuery({
     queryKey: ['project-documents', project.id],
@@ -80,49 +94,149 @@ export default function StepUpload({ project }: Props) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['project-documents', project.id] }),
   })
 
-  const { mutate: detectLots } = useMutation({
-    mutationFn: () => api.get(`/projects/${project.id}/lots`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
-      navigate(`/projects/${project.id}/lots`)
-    },
-    onError: (err) => {
-      setIsNavigating(false)
-      const msg = axios.isAxiosError(err)
-        ? (err.response?.data?.detail ?? 'Erreur lors de la détection des lots')
-        : 'Erreur lors de la détection des lots'
-      setNextError(typeof msg === 'string' ? msg : JSON.stringify(msg))
-    },
-  })
+  // ─── Cleanup on unmount ────────────────────────────────────────────────────
+  useEffect(() => {
+    return () => {
+      if (animRef.current) clearInterval(animRef.current)
+      if (pollRef.current) clearInterval(pollRef.current)
+      if (safetyRef.current) clearTimeout(safetyRef.current)
+    }
+  }, [])
 
+  // ─── Start simulated progress + polling (called when 100% bytes sent) ────────
+  const speedRef = useRef(0.15)
+  const processingStartedRef = useRef(false)
+
+  const startProcessing = useCallback(() => {
+    // Idempotent guard — onUploadProgress fires multiple times at 100%
+    if (processingStartedRef.current || doneRef.current) return
+    processingStartedRef.current = true
+
+    setPhase('processing')
+    setDisplayPct(30)
+    setLabel("Extraction de l'archive...")
+    setSublabel('')
+    speedRef.current = 0.15 // start slow
+
+    // 1) Animation: smooth crawl from 30% to 95%
+    //    Slow phase (ZIP): +0.15/200ms ≈ 0.75%/s → reaches ~50% after 25s
+    //    Fast phase (text): +0.3/200ms ≈ 1.5%/s → accelerates once backend starts extracting
+    if (animRef.current) clearInterval(animRef.current)
+    animRef.current = setInterval(() => {
+      setDisplayPct(prev => Math.min(prev + speedRef.current, 95))
+    }, 200)
+
+    // 2) Polling: check backend every 2s, use REAL progress when available
+    if (pollRef.current) clearInterval(pollRef.current)
+    pollRef.current = setInterval(async () => {
+      // Permanent guard — once done, never process another poll tick
+      if (doneRef.current) return
+
+      try {
+        const { data } = await api.get<{ status: string; progress: number; detail: string }>(
+          `/projects/${project.id}/processing-status`
+        )
+
+        if (doneRef.current) return // re-check after await
+
+        // Backend started text extraction with real progress → stop crawl, use real values
+        if (data.status === 'extracting_text' && data.progress > 0) {
+          if (animRef.current) { clearInterval(animRef.current); animRef.current = null }
+          const realPct = 30 + (data.progress / 100) * 65
+          setDisplayPct(realPct)
+          setLabel('Extraction des documents...')
+          if (data.detail) setSublabel(data.detail)
+        } else if (data.status === 'extracting_text') {
+          setLabel('Extraction des documents...')
+        } else if (data.status === 'extracting_zip') {
+          setLabel("Extraction de l'archive...")
+        }
+
+        if (data.status === 'ready' || data.status === 'error') {
+          // Mark done FIRST — prevents any re-trigger
+          doneRef.current = true
+
+          // Stop ALL intervals BEFORE changing any state
+          if (animRef.current) { clearInterval(animRef.current); animRef.current = null }
+          if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
+          if (safetyRef.current) { clearTimeout(safetyRef.current); safetyRef.current = null }
+
+          // Show 100%
+          setDisplayPct(100)
+          setLabel('Traitement terminé !')
+          setSublabel('')
+          setPhase('done')
+
+          if (data.status === 'error') {
+            setUploadErrors(prev => [...prev, 'Erreur lors du traitement des documents.'])
+          }
+
+          queryClient.invalidateQueries({ queryKey: ['project-documents', project.id] })
+
+          // Dismiss after 1s — phase goes idle but doneRef stays true
+          setTimeout(() => {
+            setPhase('idle')
+            setDisplayPct(0)
+          }, 1000)
+        }
+      } catch {
+        // ignore poll errors
+      }
+    }, 2000)
+
+    // 3) Safety timeout: 10 minutes max
+    safetyRef.current = setTimeout(() => {
+      if (doneRef.current) return
+      doneRef.current = true
+      if (animRef.current) { clearInterval(animRef.current); animRef.current = null }
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
+      setDisplayPct(100)
+      setLabel('Traitement terminé !')
+      setPhase('done')
+      queryClient.invalidateQueries({ queryKey: ['project-documents', project.id] })
+      setTimeout(() => { setPhase('idle'); setDisplayPct(0) }, 1000)
+    }, 600_000)
+  }, [project.id, queryClient])
+
+  // ─── File drop handler ─────────────────────────────────────────────────────
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
       if (acceptedFiles.length === 0) return
       setUploadErrors([])
       setUploadWarnings([])
-      setUploadProgress({ current: 0, total: acceptedFiles.length, fileName: '', byteProgress: 0 })
+      setPhase('uploading')
+      setDisplayPct(0)
+      setLabel('Upload des fichiers...')
+      setSublabel('')
+      processingStartedRef.current = false // reset guard for new upload
+      doneRef.current = false // allow new processing cycle
 
       const errors: string[] = []
       const warnings: string[] = []
+      let hasZip = false
+
       for (let i = 0; i < acceptedFiles.length; i++) {
         const file = acceptedFiles[i]
-        setUploadProgress({ current: i, total: acceptedFiles.length, fileName: file.name, byteProgress: 0 })
         setUploading((prev) => ({ ...prev, [file.name]: true }))
+        if (file.name.toLowerCase().endsWith('.zip')) hasZip = true
         try {
           const detectedType = detectDocType(file.name)
           const result = await uploadService.uploadProjectDocument(
             project.id, file, detectedType,
             ({ loaded, total }) => {
-              const overallPct = ((i + (total > 0 ? loaded / total : 0)) / acceptedFiles.length) * 100
-              setUploadProgress({
-                current: i + 1,
-                total: acceptedFiles.length,
-                fileName: file.name,
-                byteProgress: Math.min(overallPct, 100),
-              })
+              const filePct = total > 0 ? loaded / total : 0
+              const overallPct = ((i + filePct) / acceptedFiles.length) * 100
+              const mapped = Math.round(Math.min(overallPct, 100) * 0.3)
+              setDisplayPct(mapped)
+              setSublabel(`${Math.round(overallPct)}% envoyé`)
+
+              // Bytes fully sent → start processing simulation immediately
+              // Don't wait for server response (ZIP extraction takes 20-30s)
+              if (hasZip && loaded >= total && total > 0) {
+                startProcessing()
+              }
             },
           )
-          // AMÉLIORATION 9: collect ZIP extraction warnings
           if (result && typeof result === 'object' && 'warnings' in result) {
             const w = (result as { warnings?: string[] }).warnings
             if (w && w.length > 0) warnings.push(...w)
@@ -138,21 +252,34 @@ export default function StepUpload({ project }: Props) {
         }
       }
 
-      setUploadProgress(null)
-      if (errors.length > 0) setUploadErrors(errors)
+      // Server responded — processing already started from onUploadProgress
+      if (errors.length > 0) {
+        setUploadErrors(errors)
+        // Stop processing if it was started
+        if (animRef.current) { clearInterval(animRef.current); animRef.current = null }
+        if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
+        if (safetyRef.current) { clearTimeout(safetyRef.current); safetyRef.current = null }
+        processingStartedRef.current = false
+        setPhase('idle')
+        setDisplayPct(0)
+      } else if (!hasZip) {
+        setPhase('idle')
+        setDisplayPct(0)
+      }
+      // If hasZip + no errors: processing was already started, do nothing
+
       if (warnings.length > 0) setUploadWarnings(warnings)
     },
-    [project.id, queryClient],
+    [project.id, queryClient, startProcessing],
   )
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,
     onDropRejected: (files) => {
       const msgs = files.map((f) => {
-        // AMÉLIORATION 4: friendly message for .rar / .7z
         const name = f.file.name.toLowerCase()
         if (name.endsWith('.rar') || name.endsWith('.7z')) {
-          return `${f.file.name} : Les fichiers .rar et .7z ne sont pas supportés. Veuillez convertir votre archive en .zip avant de l'uploader. Vous pouvez utiliser 7-Zip (gratuit) ou simplement extraire les fichiers et les re-zipper.`
+          return `${f.file.name} : Les fichiers .rar et .7z ne sont pas supportés. Veuillez convertir votre archive en .zip.`
         }
         return `${f.file.name} : ${f.errors.map((e) => e.message).join(', ')}`
       })
@@ -165,7 +292,6 @@ export default function StepUpload({ project }: Props) {
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
       'application/vnd.ms-excel':                                                ['.xls'],
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':       ['.xlsx'],
-      // AMÉLIORATION 1: .ods (LibreOffice Calc)
       'application/vnd.oasis.opendocument.spreadsheet': ['.ods'],
       'application/zip':              ['.zip'],
       'application/x-zip-compressed': ['.zip'],
@@ -181,27 +307,29 @@ export default function StepUpload({ project }: Props) {
 
   const hasDocuments = documents.length > 0
   const anyUploading = Object.values(uploading).some(Boolean)
+  const isProcessing = phase !== 'idle'
+  const showOverlay = phase === 'uploading' || phase === 'processing' || phase === 'done'
 
   const handleNext = () => {
     setNextError(null)
     setIsNavigating(true)
-    detectLots()
+    navigate(`/projects/${project.id}/lots`)
   }
 
   return (
     <>
-
-      {uploadProgress && (
+      {showOverlay && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(8,11,18,0.85)', backdropFilter: 'blur(4px)' }}>
           <div className="glass-card p-8 max-w-sm">
             <LoadingProgress
-              progress={uploadProgress.byteProgress}
-              label={`Upload ${uploadProgress.current}/${uploadProgress.total} fichiers...`}
-              sublabel={`${uploadProgress.fileName} — ${formatSize(0)} / ${formatSize(0)}`}
+              progress={Math.round(displayPct)}
+              label={label}
+              sublabel={sublabel}
               variant="upload"
             />
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       <div className="glass-card p-6 space-y-6">
@@ -248,7 +376,6 @@ export default function StepUpload({ project }: Props) {
         >
           <input {...getInputProps()} />
 
-          {/* Upload icon with glow */}
           <div className="flex justify-center mb-4">
             <div
               className="w-16 h-16 rounded-2xl flex items-center justify-center"
@@ -302,7 +429,7 @@ export default function StepUpload({ project }: Props) {
           </div>
         )}
 
-        {/* ZIP extraction warnings (AMÉLIORATION 9) */}
+        {/* ZIP extraction warnings */}
         {uploadWarnings.length > 0 && (
           <div className="rounded-lg p-3" style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)' }}>
             <p className="text-sm font-medium mb-1" style={{ color: '#F59E0B' }}>Certains fichiers n'ont pas pu être extraits :</p>
@@ -351,8 +478,8 @@ export default function StepUpload({ project }: Props) {
                     color: '#E2E8F0',
                   }}
                 >
-                  {DOC_TYPES.map(({ value, label }) => (
-                    <option key={value} value={value}>{label}</option>
+                  {DOC_TYPES.map(({ value, label: l }) => (
+                    <option key={value} value={value}>{l}</option>
                   ))}
                 </select>
 
@@ -382,20 +509,11 @@ export default function StepUpload({ project }: Props) {
         <div className="flex justify-end pt-2">
           <button
             onClick={handleNext}
-            disabled={!hasDocuments || anyUploading || isNavigating}
+            disabled={!hasDocuments || anyUploading || isProcessing || isNavigating}
             className="btn-primary flex items-center gap-2 px-6 py-2.5"
           >
-            {isNavigating ? (
-              <>
-                <div className="w-4 h-4 rounded-full border-2 border-transparent animate-spin" style={{ borderTopColor: '#fff' }} />
-                Détection des lots...
-              </>
-            ) : (
-              <>
-                <Layers size={16} />
-                Continuer →
-              </>
-            )}
+            <Layers size={16} />
+            Continuer →
           </button>
         </div>
       </div>

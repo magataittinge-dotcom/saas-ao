@@ -20,7 +20,7 @@ export type PlanType = 'pro' | 'business' | 'starter' | 'enterprise' | 'free'
 export interface Organization {
   id: string
   name: string
-  siret: string
+  siret?: string
   address?: string
   logo_url?: string
   presentation?: string
@@ -175,6 +175,9 @@ export interface Project {
   lots_detectes?: LotOption[]
   selected_lot?: string
   selected_lot_name?: string
+  processing_status?: string
+  processing_progress?: number
+  processing_detail?: string
   created_at: string
   updated_at: string
 }

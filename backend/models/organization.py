@@ -10,7 +10,7 @@ class Organization(Base):
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String(255), nullable=False)
-    siret = Column(String(14), nullable=False, unique=True)
+    siret = Column(String(14), nullable=True, unique=True)
     address = Column(Text, nullable=True)
     logo_url = Column(String(500), nullable=True)
 

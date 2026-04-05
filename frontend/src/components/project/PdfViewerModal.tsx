@@ -259,11 +259,12 @@ function PdfViewer({ fullUrl, fileName, targetPage = 1, searchText, onClose }: {
         }
       }
 
-      if (matchedRects.length > 0 && containerRef.current) {
-        const firstRect = matchedRects[0]
-        const containerRect2 = containerRef.current.getBoundingClientRect()
-        const scrollTo = containerRef.current.scrollTop + (firstRect.top - containerRect2.top) - 200
-        containerRef.current.scrollTo({ top: scrollTo, behavior: 'smooth' })
+      // Scroll to first highlight after render
+      const firstHighlight = textLayer.querySelector('.synorix-highlight')
+      if (firstHighlight) {
+        setTimeout(() => {
+          firstHighlight.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }, 100)
       }
     }, 500)
   }, [searchText])

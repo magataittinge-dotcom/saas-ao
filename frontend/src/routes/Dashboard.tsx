@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Plus, FolderOpen, ArrowRight, ArrowUpRight, ArrowDownRight,
+  Plus, FolderOpen, ArrowRight,
   Clock, ChevronRight, Brain, BarChart3, Shield, Target,
   TrendingUp,
 } from 'lucide-react'
@@ -58,14 +58,14 @@ const card: React.CSSProperties = {
 const deepShadow = '0 2px 4px rgba(0,0,0,0.25), 0 8px 24px rgba(0,0,0,0.20), 0 0 0 1px rgba(255,255,255,0.02)'
 const deepShadowHover = '0 4px 8px rgba(0,0,0,0.30), 0 12px 32px rgba(0,0,0,0.25), 0 0 20px rgba(59,130,246,0.05), 0 0 0 1px rgba(255,255,255,0.04)'
 
-/* ── Demo fallback ───────────────────────────────────────────── */
-const DEMO: DashboardStats = {
-  projects_en_cours: 7,
-  projects_soumis_ce_mois: 3,
-  projects_gagnes: 5,
-  taux_succes: 94,
-  documents_expires: 1,
-  documents_expirant_bientot: 5,
+/* ── Empty fallback (real zeros) ─────────────────────────────── */
+const EMPTY_STATS: DashboardStats = {
+  projects_en_cours: 0,
+  projects_soumis_ce_mois: 0,
+  projects_gagnes: 0,
+  taux_succes: 0,
+  documents_expires: 0,
+  documents_expirant_bientot: 0,
 }
 
 /* ── CountUp ─────────────────────────────────────────────────── */
@@ -99,20 +99,12 @@ function useLiveClock() {
 
 /* ── Stat cards config ───────────────────────────────────────── */
 const STATS = [
-  { key: 'projects_en_cours' as keyof DashboardStats, label: 'AO en cours', icon: BarChart3, dot: T.accent, trend: '+2', up: true, suffix: '', demo: 7 },
-  { key: 'taux_succes' as keyof DashboardStats, label: 'Taux conformité', icon: Shield, dot: T.green, trend: '+5.2%', up: true, suffix: '%', demo: 94 },
-  { key: 'projects_gagnes' as keyof DashboardStats, label: 'AO gagnés', icon: Target, dot: T.cyan, trend: '+1', up: true, suffix: '', demo: 5 },
-  { key: 'projects_soumis_ce_mois' as keyof DashboardStats, label: 'CA en cours', icon: TrendingUp, dot: T.amber, trend: '-', up: false, suffix: 'k', demo: 842, isAmount: true },
+  { key: 'projects_en_cours' as keyof DashboardStats, label: 'AO en cours', icon: BarChart3, dot: T.accent, suffix: '' },
+  { key: 'taux_succes' as keyof DashboardStats, label: 'Taux conformité', icon: Shield, dot: T.green, suffix: '%' },
+  { key: 'projects_gagnes' as keyof DashboardStats, label: 'AO gagnés', icon: Target, dot: T.cyan, suffix: '' },
+  { key: 'projects_soumis_ce_mois' as keyof DashboardStats, label: 'Soumis ce mois', icon: TrendingUp, dot: T.amber, suffix: '' },
 ]
 
-/* ── Activity data ───────────────────────────────────────────── */
-const ACTIVITY = [
-  { label: 'Mémoire technique généré',  time: 'Il y a 2h', color: T.accent, badge: 'Mémoire',  bg: T.accentBg },
-  { label: 'Analyse IA terminée',       time: 'Il y a 5h', color: T.green,  badge: 'Analyse',  bg: T.greenBg },
-  { label: '3 documents uploadés',      time: 'Hier',      color: T.cyan,   badge: 'Upload',   bg: T.cyanBg },
-  { label: 'Nouveau projet créé',       time: 'Il y a 2j', color: T.amber,  badge: 'Nouveau',  bg: T.amberBg },
-  { label: 'AO soumis avec succès',     time: 'Il y a 3j', color: T.green,  badge: 'Soumis',   bg: T.greenBg },
-]
 
 /* ── Format helpers ──────────────────────────────────────────── */
 function fmtDate(d: Date) {
@@ -125,22 +117,17 @@ function fmtTime(d: Date) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   INSIGHTS PANEL
+   INSIGHTS PANEL — shows real stats or empty state
    ═══════════════════════════════════════════════════════════════ */
-function InsightsPanel() {
-  const cx = 56, cy = 56, r = 42
-  const C = 2 * Math.PI * r
-  const slices = [
-    { label: 'Gagnés', pct: 0.67, color: T.accent },
-    { label: 'En cours', pct: 0.21, color: T.cyan },
-    { label: 'Perdus', pct: 0.12, color: T.red },
-  ]
-  let off = 0
+function InsightsPanel({ stats }: { stats: DashboardStats }) {
+  const total = stats.projects_en_cours + stats.projects_gagnes + stats.projects_soumis_ce_mois
+  const hasData = total > 0
 
   const bars = [
-    { label: 'AO déposés',     pct: 75, color: T.accent },
-    { label: 'Taux de succès', pct: 67, color: T.green },
-    { label: 'Conformité',     pct: 94, color: T.cyan },
+    { label: 'En cours',        value: stats.projects_en_cours,        color: T.accent },
+    { label: 'Soumis ce mois',  value: stats.projects_soumis_ce_mois,  color: T.cyan },
+    { label: 'Gagnés',          value: stats.projects_gagnes,           color: T.green },
+    { label: 'Conformité',      value: stats.taux_succes,               color: T.amber, suffix: '%', max: 100 },
   ]
 
   return (
@@ -158,63 +145,42 @@ function InsightsPanel() {
         </span>
       </div>
 
-      {/* Donut */}
-      <div className="flex flex-col items-center" style={{ marginBottom: 22, position: 'relative' }}>
-        <div style={{
-          position: 'absolute', top: '50%', left: '50%',
-          width: 160, height: 160,
-          background: 'radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%)',
-          transform: 'translate(-50%, -50%)',
-          pointerEvents: 'none',
-        }} />
-        <svg width="112" height="112" viewBox="0 0 112 112" style={{ position: 'relative', zIndex: 1 }}>
-          {slices.map((s, i) => {
-            const dash = C * s.pct
-            const o = off
-            off += dash
+      {!hasData ? (
+        <div style={{ textAlign: 'center', padding: '24px 0' }}>
+          <p style={{ fontSize: 13, color: T.t3, fontFamily: F.ui }}>
+            Aucune donnée pour le moment
+          </p>
+          <p style={{ fontSize: 11, color: T.t3, fontFamily: F.ui, marginTop: 4 }}>
+            Créez votre premier AO pour voir vos statistiques
+          </p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {bars.map((b) => {
+            const max = b.max ?? Math.max(total, 1)
+            const pct = Math.min(Math.round((b.value / max) * 100), 100)
             return (
-              <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={s.color}
-                strokeWidth="7" strokeLinecap="round"
-                strokeDasharray={`${dash - 3} ${C - dash + 3}`}
-                strokeDashoffset={-o + C * 0.25}
-                style={{ transition: 'stroke-dashoffset 0.8s ease', filter: `drop-shadow(0 0 4px ${s.color}40)` }} />
+              <div key={b.label}>
+                <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
+                  <span style={{ fontSize: 12, color: T.t2, fontFamily: F.ui }}>{b.label}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: T.t1, fontFamily: F.display }}>
+                    {b.value}{b.suffix ?? ''}
+                  </span>
+                </div>
+                <div style={{ height: 4, borderRadius: 99, background: 'rgba(255,255,255,0.04)' }}>
+                  <div style={{
+                    height: 4, borderRadius: 99,
+                    background: `linear-gradient(90deg, ${b.color}, ${b.color}AA)`,
+                    width: `${pct}%`,
+                    transition: 'width 0.8s cubic-bezier(0.16,1,0.3,1)',
+                    boxShadow: `0 0 8px ${b.color}25`,
+                  }} />
+                </div>
+              </div>
             )
           })}
-          <text x={cx} y={cy - 2} textAnchor="middle" fill={T.t1}
-            fontSize="26" fontWeight="600" fontFamily={F.display}>67%</text>
-          <text x={cx} y={cy + 13} textAnchor="middle" fill={T.t3}
-            fontSize="10" fontFamily={F.ui}>succès</text>
-        </svg>
-        <div className="flex gap-4" style={{ marginTop: 12, position: 'relative', zIndex: 1 }}>
-          {slices.map((s) => (
-            <div key={s.label} className="flex items-center gap-1.5" style={{ fontSize: 11 }}>
-              <div style={{ width: 6, height: 6, borderRadius: 99, background: s.color, boxShadow: `0 0 6px ${s.color}50` }} />
-              <span style={{ color: T.t2, fontFamily: F.ui }}>{s.label}</span>
-            </div>
-          ))}
         </div>
-      </div>
-
-      {/* Progress bars */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        {bars.map((b) => (
-          <div key={b.label}>
-            <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
-              <span style={{ fontSize: 12, color: T.t2, fontFamily: F.ui }}>{b.label}</span>
-              <span style={{ fontSize: 12, fontWeight: 600, color: T.t1, fontFamily: F.display }}>{b.pct}%</span>
-            </div>
-            <div style={{ height: 4, borderRadius: 99, background: 'rgba(255,255,255,0.04)' }}>
-              <div style={{
-                height: 4, borderRadius: 99,
-                background: `linear-gradient(90deg, ${b.color}, ${b.color}AA)`,
-                width: `${b.pct}%`,
-                transition: 'width 0.8s cubic-bezier(0.16,1,0.3,1)',
-                boxShadow: `0 0 8px ${b.color}25`,
-              }} />
-            </div>
-          </div>
-        ))}
-      </div>
+      )}
     </div>
   )
 }
@@ -245,7 +211,7 @@ export default function Dashboard() {
     queryFn: async () => { const { data } = await api.get<DashboardStats>('/dashboard/stats'); return data },
   })
 
-  const s = stats ?? DEMO
+  const s = stats ?? EMPTY_STATS
   const active = projects.filter((p) => p.status === 'en_cours' || p.status === 'brouillon')
   const activeCount = useCountUp(active.length)
   const firstName = user?.name?.split(' ')[0] ?? 'vous'
@@ -306,9 +272,7 @@ export default function Dashboard() {
 
         {deleteTarget && (
           <DeleteConfirmModal
-            title="Supprimer l'appel d'offres"
-            message="Cette action est irréversible. Tous les documents, l'analyse IA, la checklist et le mémoire technique associés seront définitivement supprimés."
-            projectName={deleteTarget.name}
+            title="Supprimer cet appel d'offres ?"
             onConfirm={() => handleDelete(deleteTarget.id)}
             onCancel={() => setDeleteTarget(null)}
           />
@@ -477,7 +441,7 @@ export default function Dashboard() {
                     <CompactStat
                       key={cfg.key}
                       cfg={cfg}
-                      value={cfg.isAmount ? 842 : (s[cfg.key] ?? cfg.demo)}
+                      value={s[cfg.key] ?? 0}
                       delay={0.14 + i * 0.06}
                       isLast={i === STATS.length - 1}
                     />
@@ -614,7 +578,7 @@ export default function Dashboard() {
                 e.currentTarget.style.transform = 'none'
               }}
             >
-              <InsightsPanel />
+              <InsightsPanel stats={s} />
             </div>
 
             {/* ── Activity ────────────────────────────── */}
@@ -644,43 +608,42 @@ export default function Dashboard() {
               }}>
                 Activité récente
               </span>
-              {ACTIVITY.map((a, i) => (
-                <div
-                  key={i}
-                  className="flex items-start gap-3"
-                  style={{
-                    padding: '9px 8px',
-                    borderRadius: 8,
-                    borderBottom: i < ACTIVITY.length - 1 ? `1px solid ${T.brd}` : 'none',
-                    cursor: 'default',
-                    transition: 'all 0.2s ease',
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(59,130,246,0.03)' }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
-                >
-                  <div style={{
-                    width: 6, height: 6, borderRadius: 99, flexShrink: 0,
-                    background: a.color, marginTop: 7,
-                    boxShadow: `0 0 6px ${a.color}40`,
-                  }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ fontSize: 13, fontWeight: 450, color: T.t1, fontFamily: F.ui, display: 'block' }}>
-                      {a.label}
-                    </span>
-                    <div className="flex items-center gap-2" style={{ marginTop: 4 }}>
-                      <span style={{ fontSize: 11, color: T.t3, fontFamily: F.ui }}>{a.time}</span>
-                      <span style={{
-                        fontSize: 10, fontWeight: 500, color: a.color,
-                        background: a.bg, padding: '1px 8px',
-                        borderRadius: 99, fontFamily: F.ui,
-                        border: `1px solid ${a.color}18`,
-                      }}>
-                        {a.badge}
+              {projects.length === 0 ? (
+                <p style={{ fontSize: 13, color: T.t3, fontFamily: F.ui, padding: '16px 0', textAlign: 'center' }}>
+                  Aucune activité
+                </p>
+              ) : (
+                projects.slice(0, 5).map((p, i) => (
+                  <div
+                    key={p.id}
+                    className="flex items-start gap-3"
+                    style={{
+                      padding: '9px 8px',
+                      borderRadius: 8,
+                      borderBottom: i < Math.min(projects.length, 5) - 1 ? `1px solid ${T.brd}` : 'none',
+                      cursor: 'default',
+                      transition: 'all 0.2s ease',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(59,130,246,0.03)' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+                  >
+                    <div style={{
+                      width: 6, height: 6, borderRadius: 99, flexShrink: 0,
+                      background: p.status === 'en_cours' ? T.accent : p.status === 'brouillon' ? T.amber : T.green,
+                      marginTop: 7,
+                      boxShadow: `0 0 6px ${T.accent}40`,
+                    }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ fontSize: 13, fontWeight: 450, color: T.t1, fontFamily: F.ui, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {p.name}
+                      </span>
+                      <span style={{ fontSize: 11, color: T.t3, fontFamily: F.ui, marginTop: 2, display: 'block' }}>
+                        {p.status === 'en_cours' ? 'En cours' : p.status === 'brouillon' ? 'Brouillon' : p.status === 'soumis' ? 'Soumis' : p.status}
                       </span>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
 
             {/* ── Quick Actions ────────────────────────── */}
@@ -748,9 +711,7 @@ function CompactStat({ cfg, value, delay, isLast = false }: {
   cfg: typeof STATS[number]; value: number; delay: number; isLast?: boolean
 }) {
   const count = useCountUp(value)
-  const display = cfg.isAmount ? `${count}k` : `${count}${cfg.suffix}`
-  const TrendIcon = cfg.up ? ArrowUpRight : ArrowDownRight
-  const trendColor = cfg.up ? T.green : T.red
+  const display = `${count}${cfg.suffix}`
   const Icon = cfg.icon
 
   return (
@@ -791,28 +752,8 @@ function CompactStat({ cfg, value, delay, isLast = false }: {
       <div style={{
         fontSize: 28, fontWeight: 600, lineHeight: 1,
         letterSpacing: '-0.025em', color: T.t1, fontFamily: F.display,
-        marginBottom: 10,
       }}>
         {display}
-      </div>
-
-      {/* Trend */}
-      <div className="flex items-center gap-1">
-        {cfg.trend !== '-' ? (
-          <>
-            <TrendIcon size={12} strokeWidth={2} style={{ color: trendColor }} />
-            <span style={{ fontSize: 11, fontWeight: 500, color: trendColor, fontFamily: F.ui }}>
-              {cfg.trend}
-            </span>
-            <span style={{ fontSize: 10, color: T.t3, fontFamily: F.ui, marginLeft: 3 }}>
-              vs mois dernier
-            </span>
-          </>
-        ) : (
-          <span style={{ fontSize: 10, color: T.t3, fontFamily: F.ui }}>
-            —
-          </span>
-        )}
       </div>
     </div>
   )

@@ -1,4 +1,6 @@
 import json
+import asyncio
+import time
 import anthropic
 from json_repair import repair_json
 from config import get_settings
@@ -48,22 +50,32 @@ class MemoireImporter:
     MODEL = "claude-sonnet-4-20250514"
 
     def __init__(self):
-        self.client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+        # Synchronous client — more reliable for long-running calls
+        self.client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
 
     async def extract(self, text: str) -> dict:
         prompt = _IMPORT_PROMPT_TEMPLATE + text[:60_000]
+        return await asyncio.to_thread(self._sync_call, prompt)
 
-        chunks = []
-        async with self.client.messages.stream(
+    def _sync_call(self, prompt: str) -> dict:
+        """Synchronous streaming Claude call — runs in a thread."""
+        t0 = time.monotonic()
+        print(f"[Memoire Importer] Streaming à Claude: {len(prompt)} chars", flush=True)
+
+        collected = ""
+        with self.client.messages.stream(
             model=self.MODEL,
             max_tokens=4000,
+            temperature=0,
             system=IMPORT_SYSTEM,
             messages=[{"role": "user", "content": prompt}],
         ) as stream:
-            async for chunk in stream.text_stream:
-                chunks.append(chunk)
+            for text in stream.text_stream:
+                collected += text
 
-        raw = "".join(chunks).strip()
+        elapsed = time.monotonic() - t0
+        raw = collected.strip()
+        print(f"[TIMING] Memoire Import streaming: {elapsed:.1f}s, {len(raw)} chars", flush=True)
 
         start = raw.find("{")
         if start == -1:

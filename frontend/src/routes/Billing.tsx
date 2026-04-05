@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
-  CreditCard, ArrowRight, Download, Sparkles, Check, Zap, Crown, ExternalLink, CheckCircle2,
+  CreditCard, ArrowRight, Download, Sparkles, Check, Zap, Crown, ExternalLink, CheckCircle2, Loader2,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { api } from '@/services/api'
+import type { Organization } from '@/types'
 
 const PLANS = [
   {
@@ -19,7 +20,7 @@ const PLANS = [
     gradient: 'linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%)',
     features: [
       'Analyse IA illimitée',
-      'Compliance matrix automatique',
+      'Matrice de conformité automatique',
       'Checklist candidature',
       'Génération mémoire technique IA',
       'Export Word (.docx)',
@@ -57,25 +58,73 @@ const PLAN_BADGES: Record<string, { label: string; color: string; bg: string; bo
 }
 
 export default function Billing() {
-  const { organization } = useAuthStore()
+  const { organization, setOrganization } = useAuthStore()
   const plan = organization?.plan ?? 'free'
   const badge = PLAN_BADGES[plan] ?? PLAN_BADGES.free
   const isPaid = plan === 'pro' || plan === 'business'
 
   const [searchParams, setSearchParams] = useSearchParams()
   const [showSuccess, setShowSuccess] = useState(false)
+  const [successPlan, setSuccessPlan] = useState<string | null>(null)
+  const [verifying, setVerifying] = useState(false)
   const [loading, setLoading] = useState<string | null>(null)
   const [portalLoading, setPortalLoading] = useState(false)
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pollCountRef = useRef(0)
 
-  // Show success banner after Stripe redirect
+  // After Stripe redirect: verify session and poll until plan is updated
   useEffect(() => {
-    if (searchParams.get('success') === 'true') {
-      setShowSuccess(true)
-      setSearchParams({}, { replace: true })
-      const timer = setTimeout(() => setShowSuccess(false), 8000)
-      return () => clearTimeout(timer)
+    const isSuccess = searchParams.get('success') === 'true'
+    const sessionId = searchParams.get('session_id')
+
+    if (!isSuccess || !sessionId) return
+
+    // Clean URL immediately
+    setSearchParams({}, { replace: true })
+    setVerifying(true)
+    pollCountRef.current = 0
+
+    const verify = async () => {
+      try {
+        const { data } = await api.get<{ plan: string; updated: boolean }>(
+          `/stripe/verify-session?session_id=${sessionId}`
+        )
+        if (data.updated && data.plan !== 'free') {
+          // Plan updated — stop polling, update store
+          if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
+          setVerifying(false)
+          setSuccessPlan(data.plan)
+          setShowSuccess(true)
+          // Update organization in Zustand store so sidebar badge updates immediately
+          if (organization) {
+            setOrganization({ ...organization, plan: data.plan as Organization['plan'] })
+          }
+          setTimeout(() => setShowSuccess(false), 8000)
+          return
+        }
+      } catch { /* ignore, will retry */ }
+
+      pollCountRef.current++
+      // Stop after 15 attempts (30s at 2s interval)
+      if (pollCountRef.current >= 15) {
+        if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
+        setVerifying(false)
+        // Show success anyway — Stripe payment went through, webhook will catch up
+        setShowSuccess(true)
+        setTimeout(() => setShowSuccess(false), 8000)
+      }
     }
-  }, [searchParams, setSearchParams])
+
+    // First attempt immediately
+    verify()
+    // Then poll every 2s
+    pollRef.current = setInterval(verify, 2000)
+
+    return () => {
+      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // Run once on mount only
 
   const handleSubscribe = async (planId: string) => {
     setLoading(planId)
@@ -113,8 +162,25 @@ export default function Billing() {
         </div>
       </div>
 
+      {/* Verifying payment spinner */}
+      {verifying && (
+        <div
+          className="flex items-center gap-3 px-5 py-4 rounded-2xl animate-fade-in"
+          style={{
+            background: 'rgba(59,130,246,0.08)',
+            border: '1px solid rgba(59,130,246,0.25)',
+          }}
+        >
+          <Loader2 size={20} className="animate-spin" style={{ color: '#60A5FA' }} />
+          <div>
+            <p className="text-sm font-semibold" style={{ color: '#60A5FA' }}>Vérification du paiement...</p>
+            <p className="text-xs text-ds-text-3 mt-0.5">Confirmation en cours, veuillez patienter.</p>
+          </div>
+        </div>
+      )}
+
       {/* Success banner */}
-      {showSuccess && (
+      {showSuccess && !verifying && (
         <div
           className="flex items-center gap-3 px-5 py-4 rounded-2xl animate-fade-in"
           style={{
@@ -124,8 +190,14 @@ export default function Billing() {
         >
           <CheckCircle2 size={20} style={{ color: '#34D399' }} />
           <div>
-            <p className="text-sm font-semibold" style={{ color: '#34D399' }}>Paiement réussi !</p>
-            <p className="text-xs text-ds-text-3 mt-0.5">Votre abonnement est maintenant actif. Rechargez la page si le plan ne s'affiche pas encore.</p>
+            <p className="text-sm font-semibold" style={{ color: '#34D399' }}>
+              Paiement réussi !
+            </p>
+            <p className="text-xs text-ds-text-3 mt-0.5">
+              {successPlan
+                ? `Votre plan ${successPlan === 'pro' ? 'Pro' : 'Business'} est maintenant actif.`
+                : 'Votre abonnement est maintenant actif.'}
+            </p>
           </div>
         </div>
       )}

@@ -657,54 +657,36 @@ def _merge_detections(*source_lists: List[LotDetection]) -> List[LotDetection]:
 
 # ─── Main entry point ─────────────────────────────────────────────────────────
 
-def detect_all_lots(documents, uploads_root: Optional[Path] = None) -> List[Dict]:
+def detect_all_lots(
+    documents,
+    uploads_root: Optional[Path] = None,
+    on_progress: Optional[Any] = None,
+) -> List[Dict]:
     """
     Analyse ALL document sources and return merged lot detections.
 
-    Improvements applied:
-    - AMÉLIORATION 1: .ods files supported
-    - AMÉLIORATION 3: password-protected Excel → error entry
-    - AMÉLIORATION 5: scan 'autre' docs + annexe-named files
-    - AMÉLIORATION 6: alpha/alphanumeric lot IDs (Lot A, Lot 1A)
-    - AMÉLIORATION 7: tranches detected in spreadsheets
-    - AMÉLIORATION 8: PDF scan limited to 30 pages
-    - AMÉLIORATION 10: best-label merge
+    on_progress(pct, detail) is called at each step to report progress.
     """
-    excel_dets: List[LotDetection] = []
-    text_dets: List[LotDetection] = []
-    filenames: List[str] = []
+    def _report(pct: int, detail: str) -> None:
+        if on_progress:
+            try:
+                on_progress(pct, detail)
+            except Exception:
+                pass
 
+    # ── Step 1: Scan filenames (5%) ─────────────────────────────────────────
+    _report(5, "Scan des noms de fichiers...")
+    filenames: List[str] = [doc.file_name for doc in documents]
+    filename_dets = _detect_lots_from_filenames(filenames)
+
+    # ── Step 2: Analyse RC / CCAP / DOCX text (10%) ──────────────────────────
+    _report(10, "Analyse du règlement de consultation...")
+    text_dets: List[LotDetection] = []
     for doc in documents:
-        filenames.append(doc.file_name)
         fname_lower = doc.file_name.lower()
         doc_type = getattr(doc, 'type', 'autre') or 'autre'
 
-        # ── Spreadsheets: .xls / .xlsx / .ods ─────────────────────────────────
-        if fname_lower.endswith((".xls", ".xlsx", ".ods")):
-            # Filename-based detection for DPGF-per-lot (e.g. lot01.xlsx)
-            fname_m = _LOT_FNAME.search(doc.file_name)
-            if fname_m:
-                raw_id = fname_m.group(1)
-                lot_id = _lot_id_from_raw(raw_id)
-                if lot_id:
-                    excel_dets.append(LotDetection(
-                        id=lot_id, nom=f"Lot {raw_id}", confidence=75, sources=["excel"],
-                    ))
-
-            if uploads_root and doc.file_url:
-                rel = doc.file_url.removeprefix("/uploads/")
-                excel_path = uploads_root / rel
-                raw = detect_lots_from_excel(str(excel_path))
-                for d in raw:
-                    excel_dets.append(LotDetection(
-                        id=d["id"], nom=d["nom"],
-                        confidence=d.get("confidence", 70),
-                        sources=d.get("sources", ["excel"]),
-                        tranches=d.get("tranches", []),
-                    ))
-
-        # ── DOCX: extract with python-docx (paragraphs + tables) ──────────────
-        elif fname_lower.endswith(".docx"):
+        if fname_lower.endswith(".docx"):
             text_to_scan = ""
             if uploads_root and doc.file_url:
                 rel = doc.file_url.removeprefix("/uploads/")
@@ -717,36 +699,80 @@ def detect_all_lots(documents, uploads_root: Optional[Path] = None) -> List[Dict
                 dets = _detect_lots_from_rc_text(text_to_scan, doc_type)
                 text_dets.extend(dets)
 
-        # ── PDF: limit to 30 pages for lot detection (AMÉLIORATION 8) ─────────
-        elif fname_lower.endswith(".pdf"):
-            # Check if this file warrants scanning:
-            # RC, CCAP, or 'autre'/'annexe' files  (AMÉLIORATION 5)
-            should_scan = (
-                doc_type in ("rc", "ccap")
-                or _ANNEXE_FNAME.search(doc.file_name)
-                or doc_type == "autre"
-            )
-            if should_scan:
-                # Prefer fast page-limited extraction from disk
-                if uploads_root and doc.file_url:
-                    rel = doc.file_url.removeprefix("/uploads/")
-                    pdf_path = uploads_root / rel
-                    if pdf_path.exists():
-                        text_to_scan = _extract_pdf_text_limited(pdf_path, max_pages=30)
-                        if text_to_scan:
-                            dets = _detect_lots_from_rc_text(text_to_scan, doc_type)
-                            text_dets.extend(dets)
-                            continue
-                # Fallback to pre-extracted text
-                if doc.extracted_text:
-                    dets = _detect_lots_from_rc_text(doc.extracted_text, doc_type)
-                    text_dets.extend(dets)
+    # ── Step 3: Analyse spreadsheets / DPGF (20%) ────────────────────────────
+    _report(20, "Analyse des DPGF...")
+    excel_dets: List[LotDetection] = []
+    for doc in documents:
+        fname_lower = doc.file_name.lower()
+        if not fname_lower.endswith((".xls", ".xlsx", ".ods")):
+            continue
+        fname_m = _LOT_FNAME.search(doc.file_name)
+        if fname_m:
+            raw_id = fname_m.group(1)
+            lot_id = _lot_id_from_raw(raw_id)
+            if lot_id:
+                excel_dets.append(LotDetection(
+                    id=lot_id, nom=f"Lot {raw_id}", confidence=75, sources=["excel"],
+                ))
+        if uploads_root and doc.file_url:
+            rel = doc.file_url.removeprefix("/uploads/")
+            excel_path = uploads_root / rel
+            raw = detect_lots_from_excel(str(excel_path))
+            for d in raw:
+                excel_dets.append(LotDetection(
+                    id=d["id"], nom=d["nom"],
+                    confidence=d.get("confidence", 70),
+                    sources=d.get("sources", ["excel"]),
+                    tranches=d.get("tranches", []),
+                ))
 
-    filename_dets = _detect_lots_from_filenames(filenames)
+    # ── Step 4: Scan PDF content (25% → 90%) ───────────────────────────────────
+    # Use already-extracted text (from upload phase) — no need to re-read PDFs.
+    # Only re-read from disk for key docs (RC, CCAP) that have placeholder text.
+    _report(25, "Scan du contenu des documents...")
+    pdfs_to_scan = []
+    for doc in documents:
+        fname_lower = doc.file_name.lower()
+        if not fname_lower.endswith(".pdf"):
+            continue
+        doc_type = getattr(doc, 'type', 'autre') or 'autre'
+        should_scan = (
+            doc_type in ("rc", "ccap")
+            or _ANNEXE_FNAME.search(doc.file_name)
+            or doc_type == "autre"
+        )
+        if should_scan:
+            pdfs_to_scan.append(doc)
 
+    total_pdfs = len(pdfs_to_scan)
+    for idx, doc in enumerate(pdfs_to_scan):
+        if total_pdfs <= 10 or idx % 3 == 0 or idx == total_pdfs - 1:
+            pct = 25 + int((idx / max(total_pdfs, 1)) * 65)
+            _report(pct, f"Scan du contenu... {idx + 1}/{total_pdfs} documents")
+
+        doc_type = getattr(doc, 'type', 'autre') or 'autre'
+        text_to_scan = doc.extracted_text or ""
+
+        # Placeholder text = no useful content, skip unless key doc
+        is_placeholder = text_to_scan.startswith("[document volumineux")
+        if is_placeholder and doc_type in ("rc", "ccap"):
+            # Key doc with placeholder — re-read from disk (first 10 pages only)
+            if uploads_root and doc.file_url:
+                rel = doc.file_url.removeprefix("/uploads/")
+                pdf_path = uploads_root / rel
+                if pdf_path.exists():
+                    text_to_scan = _extract_pdf_text_limited(pdf_path, max_pages=10)
+        elif is_placeholder:
+            continue  # Skip non-key large PDFs entirely
+
+        if text_to_scan and not text_to_scan.startswith("[document volumineux"):
+            dets = _detect_lots_from_rc_text(text_to_scan, doc_type)
+            text_dets.extend(dets)
+
+    # ── Step 5: Consolidation (95%) ───────────────────────────────────────────
+    _report(95, "Consolidation des lots...")
     merged = _merge_detections(excel_dets, text_dets, filename_dets)
 
-    # Drop synthetic "lot_sheet_*" IDs when real numbered lots exist
     real_lots = [d for d in merged if not d.id.startswith("lot_sheet_")]
     if real_lots:
         merged = real_lots
@@ -759,5 +785,5 @@ def detect_all_lots(documents, uploads_root: Optional[Path] = None) -> List[Dict
 class LotDetector:
     """Detect construction lots from DCE documents."""
 
-    def detect(self, docs, uploads_root: Optional[Path] = None) -> List[Dict]:
-        return detect_all_lots(docs, uploads_root)
+    def detect(self, docs, uploads_root: Optional[Path] = None, on_progress: Optional[Any] = None) -> List[Dict]:
+        return detect_all_lots(docs, uploads_root, on_progress=on_progress)

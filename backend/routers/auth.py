@@ -79,7 +79,7 @@ def _sync_clerk_user(clerk_user_id: str, db: Session) -> User:
     # 4. Fully new user — create org + user
     org = Organization(
         name=name,
-        siret="00000000000000",
+        siret=None,
         plan="free",
     )
     db.add(org)

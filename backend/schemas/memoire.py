@@ -8,6 +8,11 @@ class MemoireGenerateRequest(BaseModel):
     delai: Optional[str] = None
     interlocuteur_id: Optional[str] = None
     particularites: Optional[str] = None
+    chef_chantier_nom: Optional[str] = None
+    chef_chantier_qualification: Optional[str] = None
+    conducteur_travaux_nom: Optional[str] = None
+    conducteur_travaux_qualification: Optional[str] = None
+    materiel_specifique: Optional[str] = None
 
 
 class MemoireUpdateRequest(BaseModel):

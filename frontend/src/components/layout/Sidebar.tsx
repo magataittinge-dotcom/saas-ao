@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, FolderOpen, FileStack, Building2, Archive, Users, CreditCard, LogOut,
+  Sparkles, Zap, Crown, ArrowRight,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useLogout } from '@/hooks/useAuth'
@@ -17,15 +18,34 @@ const navItems = [
   { to: '/billing',    icon: CreditCard,      label: 'Facturation' },
 ]
 
+const PLAN_CONFIG: Record<string, { label: string; icon: typeof Sparkles; color: string; colorLight: string; bg: string; border: string; gradient: string; maxAO: number | null }> = {
+  free: {
+    label: 'Gratuit', icon: Sparkles, color: '#64748B', colorLight: '#94A3B8',
+    bg: 'rgba(100,116,139,0.10)', border: 'rgba(100,116,139,0.20)', gradient: 'linear-gradient(135deg, #64748B, #94A3B8)',
+    maxAO: 1,
+  },
+  pro: {
+    label: 'Pro', icon: Zap, color: '#3B82F6', colorLight: '#60A5FA',
+    bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.22)', gradient: 'linear-gradient(135deg, #3B82F6, #60A5FA)',
+    maxAO: 15,
+  },
+  business: {
+    label: 'Business', icon: Crown, color: '#8B5CF6', colorLight: '#A78BFA',
+    bg: 'rgba(139,92,246,0.12)', border: 'rgba(139,92,246,0.22)', gradient: 'linear-gradient(135deg, #7C3AED, #A78BFA)',
+    maxAO: null, // unlimited
+  },
+}
+
 export default function Sidebar() {
   const [expanded, setExpanded] = useState(false)
   const handleLogout = useLogout()
+  const navigate = useNavigate()
   const { organization } = useAuthStore()
 
-  const usedAO = 3
-  const maxAO = 15
-  const planLabel = organization?.plan === 'enterprise' ? 'Enterprise'
-    : organization?.plan === 'starter' ? 'Starter' : 'Pro'
+  const planKey = (organization?.plan || 'free') as string
+  const cfg = PLAN_CONFIG[planKey] ?? PLAN_CONFIG.free
+  const PlanIcon = cfg.icon
+  const maxAO = cfg.maxAO
 
   return (
     <aside
@@ -102,30 +122,40 @@ export default function Sidebar() {
 
       <div className="mx-3" style={{ height: '1px', background: 'rgba(255,255,255,0.06)' }} />
 
-      {/* ── Plan card (Horizon sidebar card style) ── */}
+      {/* ── Plan card ── */}
       <div className={cn('px-3 py-3', !expanded && 'flex justify-center')}>
         {expanded ? (
           <div className="rounded-[20px] p-4 text-center relative overflow-hidden"
-            style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(96,165,250,0.08))', border: '1px solid rgba(59,130,246,0.2)' }}>
+            style={{ background: cfg.bg, border: `1px solid ${cfg.border}` }}>
             <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-2"
-              style={{ background: 'linear-gradient(135deg, #3B82F6, #60A5FA)', boxShadow: '0 4px 12px rgba(59,130,246,0.4)' }}>
-              <span className="text-sm font-bold text-white">{planLabel[0]}</span>
+              style={{ background: cfg.gradient, boxShadow: `0 4px 12px ${cfg.color}40` }}>
+              <PlanIcon size={18} className="text-white" />
             </div>
-            <span className="text-xs font-semibold block" style={{ color: 'var(--text-primary)' }}>Plan {planLabel}</span>
-            <div className="flex items-center justify-between mt-2.5 text-xs" style={{ color: 'var(--text-muted)' }}>
-              <span>{usedAO} AO</span><span>{maxAO} max</span>
-            </div>
-            <div className="h-1.5 rounded-full overflow-hidden mt-1" style={{ background: 'rgba(255,255,255,0.08)' }}>
-              <div className="h-full rounded-full" style={{ width: `${Math.min((usedAO / maxAO) * 100, 100)}%`, background: 'linear-gradient(90deg, #3B82F6, #60A5FA)' }} />
-            </div>
+            <span className="text-xs font-semibold block" style={{ color: cfg.colorLight }}>Plan {cfg.label}</span>
+            <span className="text-[10px] mt-1 block" style={{ color: 'var(--text-muted)' }}>
+              {maxAO === null ? 'AO illimités' : `${maxAO} AO / mois`}
+            </span>
+
+            {/* Upgrade CTA for free plan */}
+            {planKey === 'free' && (
+              <button
+                onClick={() => navigate('/billing')}
+                className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200"
+                style={{ background: 'linear-gradient(135deg, #3B82F6, #60A5FA)', color: '#fff', boxShadow: '0 4px 12px rgba(59,130,246,0.3)' }}
+                onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.1)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
+                onMouseLeave={(e) => { e.currentTarget.style.filter = ''; e.currentTarget.style.transform = '' }}
+              >
+                Passer à Pro <ArrowRight size={13} />
+              </button>
+            )}
           </div>
         ) : (
           <div className="relative group">
-            <div className="w-9 h-9 rounded-lg flex items-center justify-center text-xs font-bold"
-              style={{ color: '#60A5FA', background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.18)' }}>
-              {planLabel[0]}
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center"
+              style={{ color: cfg.colorLight, background: cfg.bg, border: `1px solid ${cfg.border}` }}>
+              <PlanIcon size={16} />
             </div>
-            <Tooltip label={`Plan ${planLabel} — ${usedAO}/${maxAO} AO`} />
+            <Tooltip label={`Plan ${cfg.label} — ${maxAO === null ? '∞' : maxAO} AO/mois`} />
           </div>
         )}
       </div>

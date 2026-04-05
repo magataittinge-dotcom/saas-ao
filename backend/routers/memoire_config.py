@@ -65,6 +65,49 @@ def update_memoire_config(
     return config
 
 
+_PROFILE_FIELDS = [
+    "nom_entreprise", "date_creation", "gerant_nom", "gerant_titre",
+    "zone_intervention", "historique", "activites", "chiffre_affaires",
+    "organigramme_description", "postes_cles", "moyens_informatiques",
+    "vehicules", "materiel", "demarche_qualite", "procedure_demarrage",
+    "gestion_securite", "traitement_dechets", "mesures_environnementales",
+]
+
+
+@router.get("/stats")
+def get_memoire_config_stats(
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """Lightweight profile completion stats for StepMemoire display."""
+    config = db.query(MemoireConfig).filter(
+        MemoireConfig.organization_id == user.organization_id
+    ).first()
+    if not config:
+        return {"filled": 0, "total": 18, "nom_entreprise": None}
+
+    filled = 0
+    for f in _PROFILE_FIELDS:
+        val = getattr(config, f, None)
+        if val is None or val == "" or val == []:
+            continue
+        # For JSON arrays, check if any entry has actual content
+        if isinstance(val, list):
+            if any(
+                any(v for v in item.values() if v) if isinstance(item, dict) else item
+                for item in val
+            ):
+                filled += 1
+        else:
+            filled += 1
+
+    return {
+        "filled": filled,
+        "total": 18,
+        "nom_entreprise": config.nom_entreprise or None,
+    }
+
+
 @router.post("/import")
 async def import_memoire(
     file: UploadFile = File(...),

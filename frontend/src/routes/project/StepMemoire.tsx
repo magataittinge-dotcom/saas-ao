@@ -1,19 +1,28 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import {
   Sparkles, Save, RotateCcw, CheckCircle2, ChevronDown, ChevronUp,
-  Pencil, X, Download,
+  Pencil, X, Download, Building2, BarChart3, Settings2,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import axios from 'axios'
 import { api } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
-import { AnalysisProgress, MEMOIRE_STAGES } from '@/components/project/AnalysisProgress'
-import LoadingProgress from '@/components/common/LoadingProgress'
+import { AnalysisProgress } from '@/components/project/AnalysisProgress'
 import SubscriptionWall from '@/components/common/SubscriptionWall'
-import type { Project, MemoireTechnique, MemoireContent } from '@/types'
+import type { Project, MemoireTechnique, MemoireContent, CritereJugement } from '@/types'
 
+// ─── Memoire generation stages ────────────────────────────────────────────────
+
+const MEMOIRE_STAGES = [
+  { upTo: 5,  message: 'Analyse des critères de jugement...', msPerStep: 400 },
+  { upTo: 20, message: 'Lecture du profil entreprise...', msPerStep: 600 },
+  { upTo: 50, message: 'Rédaction de la présentation...', msPerStep: 1400 },
+  { upTo: 75, message: 'Rédaction de la méthodologie...', msPerStep: 1800 },
+  { upTo: 90, message: 'Rédaction des moyens et planning...', msPerStep: 2200 },
+  { upTo: 99, message: 'Finalisation du mémoire...', msPerStep: 5000 },
+]
 
 // ─── Build flat Markdown ───────────────────────────────────────────────────────
 
@@ -85,7 +94,6 @@ function FullscreenEditor({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col" style={{ background: '#080B12' }}>
-      {/* Toolbar */}
       <div
         className="flex items-center justify-between px-6 py-3 shrink-0"
         style={{ borderBottom: '1px solid rgba(59,130,246,0.12)', background: 'rgba(15,23,42,0.80)', backdropFilter: 'blur(16px)' }}
@@ -105,15 +113,11 @@ function FullscreenEditor({
               <><Save size={14} />{isSaving ? 'Sauvegarde...' : 'Sauvegarder'}</>
             )}
           </button>
-          <button
-            onClick={onClose}
-            className="btn-glass flex items-center gap-1.5 text-sm py-2 px-3"
-          >
+          <button onClick={onClose} className="btn-glass flex items-center gap-1.5 text-sm py-2 px-3">
             <X size={14} /> Fermer
           </button>
         </div>
       </div>
-      {/* Editor */}
       <textarea
         value={raw}
         onChange={(e) => setRaw(e.target.value)}
@@ -125,7 +129,7 @@ function FullscreenEditor({
   )
 }
 
-// ─── Word export (backend) ────────────────────────────────────────────────────
+// ─── Word export ──────────────────────────────────────────────────────────────
 
 async function exportToWord(projectId: string, projectName: string) {
   const response = await api.get(`/projects/${projectId}/memoire/export-docx`, { responseType: 'blob' })
@@ -137,7 +141,183 @@ async function exportToWord(projectId: string, projectName: string) {
   URL.revokeObjectURL(url)
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── Profile summary card ────────────────────────────────────────────────────
+
+function ProfileSummary({ stats }: { stats: { filled: number; total: number; nom_entreprise: string | null } | null }) {
+  if (!stats) return null
+  const pct = stats.total > 0 ? Math.round((stats.filled / stats.total) * 100) : 0
+  const isComplete = stats.filled >= 14
+
+  const MISSING_LABELS: Record<string, string> = {
+    nom_entreprise: 'nom entreprise', historique: 'historique', activites: 'activités',
+    postes_cles: 'équipe clé', chiffre_affaires: 'chiffre d\'affaires', materiel: 'matériel',
+    vehicules: 'véhicules', moyens_informatiques: 'moyens informatiques',
+    demarche_qualite: 'démarche qualité', gestion_securite: 'sécurité',
+    mesures_environnementales: 'environnement', traitement_dechets: 'déchets',
+  }
+
+  return (
+    <div
+      className="rounded-2xl p-5"
+      style={{ background: 'rgba(12,17,30,0.55)', backdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,0.06)' }}
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5"
+          style={{ background: isComplete ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)' }}
+        >
+          <Building2 size={18} style={{ color: isComplete ? '#10B981' : '#F59E0B' }} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2.5">
+            <h3 className="text-sm font-semibold" style={{ fontFamily: 'Outfit, sans-serif', color: '#E8ECF4' }}>
+              Profil de votre entreprise
+            </h3>
+            {isComplete && (
+              <span
+                className="text-[11px] font-medium px-2 py-0.5 rounded-full"
+                style={{ background: 'rgba(16,185,129,0.12)', color: '#34D399', border: '1px solid rgba(16,185,129,0.25)' }}
+              >
+                Complet
+              </span>
+            )}
+          </div>
+
+          {isComplete ? (
+            <div className="flex items-center gap-3 mt-2">
+              <span className="text-sm" style={{ fontFamily: 'DM Sans, sans-serif', color: '#8B95A9' }}>
+                {stats.nom_entreprise || 'Entreprise'}
+              </span>
+              <Link to="/memoire-config" className="text-xs hover:underline" style={{ color: '#60A5FA' }}>
+                Modifier →
+              </Link>
+            </div>
+          ) : (
+            <>
+              {/* Progress bar */}
+              <div className="mt-3 flex items-center gap-3">
+                <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                  <div
+                    className="h-full rounded-full transition-all duration-500"
+                    style={{ width: `${pct}%`, background: pct < 30 ? '#F59E0B' : pct < 70 ? '#3B82F6' : '#10B981' }}
+                  />
+                </div>
+                <span className="text-xs font-medium shrink-0" style={{ color: '#8B95A9' }}>
+                  {stats.filled}/{stats.total}
+                </span>
+              </div>
+
+              <p className="text-xs mt-2.5" style={{ fontFamily: 'DM Sans, sans-serif', color: '#8B95A9' }}>
+                Complétez votre profil pour un mémoire personnalisé avec vos vraies informations (nom, équipe, références, matériel...)
+              </p>
+
+              {stats.filled < 10 && (
+                <p className="text-[11px] mt-1.5" style={{ color: '#64748B' }}>
+                  Il manque : {Object.values(MISSING_LABELS).slice(0, 6 - Math.min(stats.filled, 5)).join(', ')}...
+                </p>
+              )}
+
+              <Link
+                to="/memoire-config"
+                className="inline-flex items-center gap-1.5 text-xs font-medium mt-3 px-3.5 py-1.5 rounded-lg transition-colors hover:bg-blue-500/20"
+                style={{ color: '#60A5FA', border: '1px solid rgba(59,130,246,0.30)' }}
+              >
+                Compléter le profil →
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Critères display ─────────────────────────────────────────────────────────
+
+function CriteresCard({ criteres }: { criteres: CritereJugement[] }) {
+  if (!criteres?.length) return null
+  return (
+    <div
+      className="rounded-2xl p-5 space-y-3"
+      style={{ background: 'rgba(12,17,30,0.55)', backdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,0.06)' }}
+    >
+      <div className="flex items-center gap-2.5">
+        <div
+          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+          style={{ background: 'rgba(99,102,241,0.12)' }}
+        >
+          <BarChart3 size={18} style={{ color: '#818CF8' }} />
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold" style={{ fontFamily: 'Outfit, sans-serif', color: '#E8ECF4' }}>
+            Critères de jugement détectés
+          </h3>
+          <p className="text-[11px] mt-0.5" style={{ fontFamily: 'DM Sans, sans-serif', color: '#8B95A9' }}>
+            Le mémoire sera optimisé pour maximiser votre note sur ces critères
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {criteres.map((c) => (
+          <div key={c.nom} className="space-y-1">
+            <span
+              className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg"
+              style={{ background: 'rgba(99,102,241,0.12)', color: '#A78BFA' }}
+            >
+              {c.nom} — {c.poids}%
+            </span>
+            {c.sous_criteres?.length > 0 && (
+              <div className="flex flex-wrap gap-1 pl-2">
+                {c.sous_criteres.map((sc) => (
+                  <span key={sc.nom} className="text-[11px] px-1.5 py-0.5 rounded" style={{ background: 'rgba(255,255,255,0.05)', color: '#94A3B8' }}>
+                    {sc.nom} {sc.poids}%
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Structure preview ────────────────────────────────────────────────────────
+
+function StructurePreview() {
+  const [open, setOpen] = useState(false)
+  return (
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{ border: '1px solid rgba(255,255,255,0.08)' }}
+    >
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-4 py-3 text-sm text-left"
+        style={{ background: 'rgba(255,255,255,0.03)' }}
+      >
+        <span className="flex items-center gap-2 text-ds-text-2">
+          <Settings2 size={14} />
+          Structure du mémoire généré
+        </span>
+        {open ? <ChevronUp size={14} className="text-ds-text-3" /> : <ChevronDown size={14} className="text-ds-text-3" />}
+      </button>
+      {open && (
+        <div className="px-4 py-3 text-xs space-y-2" style={{ background: 'rgba(255,255,255,0.015)', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <p className="font-medium text-ds-text">Préambule</p>
+          <p className="font-medium text-ds-text mt-2">Partie A — Présentation générale</p>
+          <p className="text-ds-text-3 pl-3">Implantation, historique, activités, organigramme, équipe, moyens, références, fournisseurs</p>
+          <p className="font-medium text-ds-text mt-2">Partie B — Présentation de la prestation</p>
+          <p className="text-ds-text-3 pl-3">Démarrage, interlocuteur dédié, qualité, planning, sécurité, déchets, environnement</p>
+          <p className="font-medium text-ds-text mt-2">Partie C — Méthodologie mise en œuvre</p>
+          <p className="text-ds-text-3 pl-3">Méthodologie détaillée, effectifs, matériels, hygiène/sécurité, environnement, GPA, délais</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Main component ──────────────────────────────────────────────────────────
 
 interface Props { project: Project }
 
@@ -146,7 +326,16 @@ export default function StepMemoire({ project }: Props) {
   const queryClient = useQueryClient()
   const { organization } = useAuthStore()
   const [showPaywall, setShowPaywall] = useState(false)
-  const [variables, setVariables] = useState({ nb_ouvriers: '', delai: '', particularites: '' })
+  const [variables, setVariables] = useState({
+    nb_ouvriers: '',
+    delai: '',
+    chef_chantier_nom: '',
+    chef_chantier_qualification: '',
+    conducteur_travaux_nom: '',
+    conducteur_travaux_qualification: '',
+    materiel_specifique: '',
+    particularites: '',
+  })
   const [showForm, setShowForm] = useState(false)
   const [showEditor, setShowEditor] = useState(false)
   const [editedContent, setEditedContent] = useState<MemoireContent | null>(null)
@@ -154,7 +343,9 @@ export default function StepMemoire({ project }: Props) {
   const [genSuccess, setGenSuccess] = useState(false)
   const [genError, setGenError] = useState<string | null>(null)
   const [isExporting, setIsExporting] = useState(false)
+  const abortRef = useRef<AbortController | null>(null)
 
+  // Fetch existing mémoire
   const { data: memoire, isLoading } = useQuery({
     queryKey: ['memoire', project.id],
     queryFn: async () => {
@@ -169,15 +360,30 @@ export default function StepMemoire({ project }: Props) {
     retry: false,
   })
 
+  // Fetch profile stats
+  const { data: profileStats } = useQuery({
+    queryKey: ['memoire-config-stats'],
+    queryFn: async () => {
+      const { data } = await api.get<{ filled: number; total: number; nom_entreprise: string | null }>('/memoire-config/stats')
+      return data
+    },
+  })
+
   const displayContent: MemoireContent | null = editedContent ?? memoire?.content_json ?? null
+  const criteres = project.criteres_jugement ?? []
 
   const { mutate: generate, isPending: isGenerating } = useMutation({
     mutationFn: () =>
       api.post<MemoireTechnique>(`/projects/${project.id}/memoire/generate`, {
-        nb_ouvriers:   variables.nb_ouvriers ? parseInt(variables.nb_ouvriers) : undefined,
-        delai:         variables.delai || undefined,
-        particularites:variables.particularites || undefined,
-      }),
+        nb_ouvriers: variables.nb_ouvriers ? parseInt(variables.nb_ouvriers) : undefined,
+        delai: variables.delai || undefined,
+        chef_chantier_nom: variables.chef_chantier_nom || undefined,
+        chef_chantier_qualification: variables.chef_chantier_qualification || undefined,
+        conducteur_travaux_nom: variables.conducteur_travaux_nom || undefined,
+        conducteur_travaux_qualification: variables.conducteur_travaux_qualification || undefined,
+        materiel_specifique: variables.materiel_specifique || undefined,
+        particularites: variables.particularites || undefined,
+      }, { timeout: 600_000 }),
     onSuccess: (res) => {
       setGenError(null)
       setEditedContent(null)
@@ -187,6 +393,7 @@ export default function StepMemoire({ project }: Props) {
       setShowForm(false)
     },
     onError: (err) => {
+      if (abortRef.current?.signal.aborted) return
       setGenSuccess(false)
       const msg = axios.isAxiosError(err)
         ? (err.response?.data?.detail ?? 'Erreur lors de la génération')
@@ -211,33 +418,10 @@ export default function StepMemoire({ project }: Props) {
     saveEdits(parsed)
   }
 
-  // Poll generation progress while generating (must be before any early return)
-  const { data: genProgressData } = useQuery({
-    queryKey: ['memoire-progress', project.id],
-    queryFn: async () => {
-      try {
-        const { data } = await api.get<{
-          completed_sections: number
-          total_sections: number
-          current_section: string
-          status: string
-        }>(`/projects/${project.id}/memoire/progress`)
-        return data
-      } catch {
-        return null
-      }
-    },
-    enabled: isGenerating && !genSuccess,
-    refetchInterval: 2000,
-  })
-
-  const memoirePercent = genSuccess
-    ? 100
-    : genProgressData
-      ? genProgressData.total_sections > 0
-        ? (genProgressData.completed_sections / genProgressData.total_sections) * 100
-        : 15
-      : undefined // No endpoint available, fall back to AnalysisProgress
+  const handleCancel = () => {
+    abortRef.current?.abort()
+    setGenError('Génération annulée.')
+  }
 
   if (isLoading) {
     return (
@@ -253,41 +437,15 @@ export default function StepMemoire({ project }: Props) {
     <>
       <SubscriptionWall open={showPaywall} onClose={() => setShowPaywall(false)} feature="memoire" />
 
-      {/* Show LoadingProgress if we have real progress data, otherwise AnalysisProgress */}
-      {memoirePercent !== undefined && (isGenerating || genSuccess) ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm" style={{ background: 'rgba(8,11,18,0.75)' }}>
-          <div className="glass-card p-10 flex flex-col items-center gap-4">
-            <LoadingProgress
-              progress={memoirePercent}
-              label={genSuccess ? 'Mémoire généré !' : 'Génération en cours...'}
-              sublabel={
-                genSuccess
-                  ? undefined
-                  : genProgressData
-                    ? `Section ${genProgressData.completed_sections}/${genProgressData.total_sections} — ${genProgressData.current_section}`
-                    : 'Synorix IA rédige votre mémoire technique (~2-3 min)...'
-              }
-              variant="generation"
-            />
-            {genSuccess && (
-              <button
-                onClick={() => setGenSuccess(false)}
-                className="btn-primary px-6 py-2.5 flex items-center gap-2"
-              >
-                Voir le mémoire →
-              </button>
-            )}
-          </div>
-        </div>
-      ) : (
-        <AnalysisProgress
-          isAnalyzing={isGenerating}
-          isSuccess={genSuccess}
-          onComplete={() => { setGenSuccess(false) }}
-          stages={MEMOIRE_STAGES}
-          subtitle="Synorix IA rédige votre mémoire technique (~2-3 min)..."
-        />
-      )}
+      {/* Generation overlay */}
+      <AnalysisProgress
+        isAnalyzing={isGenerating}
+        isSuccess={genSuccess}
+        onComplete={() => setGenSuccess(false)}
+        onCancel={handleCancel}
+        stages={MEMOIRE_STAGES}
+        subtitle="Synorix IA rédige votre mémoire technique..."
+      />
 
       {showEditor && displayContent && (
         <FullscreenEditor
@@ -299,7 +457,7 @@ export default function StepMemoire({ project }: Props) {
         />
       )}
 
-      <div className="glass-card p-6 space-y-6">
+      <div className="glass-card p-6 space-y-5">
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -307,7 +465,7 @@ export default function StepMemoire({ project }: Props) {
             <p className="text-sm text-ds-text-2 mt-1">
               {hasMemoire
                 ? `v${memoire.version} — généré le ${new Date(memoire.generated_at).toLocaleDateString('fr-FR')}`
-                : 'Générez un mémoire technique complet (~20 pages) adapté à votre projet.'}
+                : 'Générez un mémoire technique complet adapté à votre projet et optimisé pour les critères de jugement.'}
             </p>
           </div>
           {hasMemoire && (
@@ -323,19 +481,11 @@ export default function StepMemoire({ project }: Props) {
                 <Download size={14} />
                 {isExporting ? 'Export...' : 'Exporter Word'}
               </button>
-              <button
-                onClick={() => setShowEditor(true)}
-                className="btn-glass flex items-center gap-1.5 text-sm py-1.5 px-3"
-              >
-                <Pencil size={14} />
-                Modifier
+              <button onClick={() => setShowEditor(true)} className="btn-glass flex items-center gap-1.5 text-sm py-1.5 px-3">
+                <Pencil size={14} /> Modifier
               </button>
-              <button
-                onClick={() => setShowForm((v) => !v)}
-                className="btn-glass flex items-center gap-1.5 text-sm py-1.5 px-3"
-              >
-                <RotateCcw size={14} />
-                Regénérer
+              <button onClick={() => setShowForm((v) => !v)} className="btn-glass flex items-center gap-1.5 text-sm py-1.5 px-3">
+                <RotateCcw size={14} /> Regénérer
                 {showForm ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
               </button>
             </div>
@@ -344,50 +494,143 @@ export default function StepMemoire({ project }: Props) {
 
         {/* Generation form */}
         {(!hasMemoire || showForm) && (
-          <div
-            className="space-y-5 rounded-xl p-5"
-            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(59,130,246,0.12)' }}
-          >
-            {hasMemoire && (
-              <p className="text-sm font-medium" style={{ color: '#FCD34D' }}>
-                ⚠️ La regénération remplacera le mémoire actuel.
-              </p>
-            )}
-            <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-4">
+            {/* 1. Critères de jugement (context from DCE) */}
+            <CriteresCard criteres={criteres} />
+
+            {/* 2. Profile summary */}
+            <ProfileSummary stats={profileStats ?? null} />
+
+            {/* 3. Chantier-specific form */}
+            <div
+              className="rounded-2xl p-5 space-y-5"
+              style={{ background: 'rgba(12,17,30,0.55)', backdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,0.06)' }}
+            >
               <div>
-                <label className="block text-sm font-medium text-ds-text mb-1.5">Nombre d&apos;ouvriers dédiés</label>
-                <input
-                  type="number"
-                  value={variables.nb_ouvriers}
-                  onChange={(e) => setVariables((v) => ({ ...v, nb_ouvriers: e.target.value }))}
-                  className="glass-input w-full py-2.5 text-sm"
-                  placeholder="Ex: 4"
+                <h3 className="text-sm font-semibold" style={{ fontFamily: 'Outfit, sans-serif', color: '#E8ECF4' }}>
+                  Informations spécifiques à ce chantier
+                </h3>
+                <p className="text-[11px] mt-1" style={{ fontFamily: 'DM Sans, sans-serif', color: '#8B95A9' }}>
+                  Ces informations seront intégrées dans le mémoire pour ce projet
+                </p>
+              </div>
+
+              {hasMemoire && (
+                <p className="text-sm font-medium" style={{ color: '#FCD34D' }}>
+                  La regénération remplacera le mémoire actuel.
+                </p>
+              )}
+
+              {/* Row 1: Ouvriers + Délai */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-ds-text mb-1.5">
+                    Nombre d&apos;ouvriers dédiés <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={variables.nb_ouvriers}
+                    onChange={(e) => setVariables((v) => ({ ...v, nb_ouvriers: e.target.value }))}
+                    className="glass-input w-full py-2.5 text-sm"
+                    placeholder="Ex: 4"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-ds-text mb-1.5">
+                    Délai estimé <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={variables.delai}
+                    onChange={(e) => setVariables((v) => ({ ...v, delai: e.target.value }))}
+                    className="glass-input w-full py-2.5 text-sm"
+                    placeholder="Ex: 3 mois"
+                  />
+                </div>
+              </div>
+
+              {/* Row 2: Chef de chantier */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-ds-text mb-1.5">Chef de chantier — nom</label>
+                  <input
+                    type="text"
+                    value={variables.chef_chantier_nom}
+                    onChange={(e) => setVariables((v) => ({ ...v, chef_chantier_nom: e.target.value }))}
+                    className="glass-input w-full py-2.5 text-sm"
+                    placeholder="Ex: Jean Dupont"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-ds-text mb-1.5">Qualification</label>
+                  <input
+                    type="text"
+                    value={variables.chef_chantier_qualification}
+                    onChange={(e) => setVariables((v) => ({ ...v, chef_chantier_qualification: e.target.value }))}
+                    className="glass-input w-full py-2.5 text-sm"
+                    placeholder="Ex: 15 ans d'expérience, CACES R482"
+                  />
+                </div>
+              </div>
+
+              {/* Row 3: Conducteur de travaux */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-ds-text mb-1.5">Conducteur de travaux — nom</label>
+                  <input
+                    type="text"
+                    value={variables.conducteur_travaux_nom}
+                    onChange={(e) => setVariables((v) => ({ ...v, conducteur_travaux_nom: e.target.value }))}
+                    className="glass-input w-full py-2.5 text-sm"
+                    placeholder="Ex: Marie Martin"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-ds-text mb-1.5">Qualification</label>
+                  <input
+                    type="text"
+                    value={variables.conducteur_travaux_qualification}
+                    onChange={(e) => setVariables((v) => ({ ...v, conducteur_travaux_qualification: e.target.value }))}
+                    className="glass-input w-full py-2.5 text-sm"
+                    placeholder="Ex: Ingénieur BTP, 10 ans ITE/ravalement"
+                  />
+                </div>
+              </div>
+
+              {/* Row 4: Matériel spécifique */}
+              <div>
+                <label className="block text-sm font-medium text-ds-text mb-1.5">
+                  Matériel spécifique au chantier
+                </label>
+                <textarea
+                  value={variables.materiel_specifique}
+                  onChange={(e) => setVariables((v) => ({ ...v, materiel_specifique: e.target.value }))}
+                  rows={2}
+                  className="glass-input w-full py-2.5 text-sm resize-none"
+                  placeholder="Ex: échafaudage tubulaire R200, nacelle articulée 20m, benne 15m³..."
                 />
               </div>
+
+              {/* Row 5: Contraintes */}
               <div>
-                <label className="block text-sm font-medium text-ds-text mb-1.5">Délai estimé</label>
-                <input
-                  type="text"
-                  value={variables.delai}
-                  onChange={(e) => setVariables((v) => ({ ...v, delai: e.target.value }))}
-                  className="glass-input w-full py-2.5 text-sm"
-                  placeholder="Ex: 3 mois"
+                <label className="block text-sm font-medium text-ds-text mb-1.5">
+                  Contraintes particulières
+                  <span className="text-ds-text-3 font-normal ml-1">(optionnel)</span>
+                </label>
+                <textarea
+                  value={variables.particularites}
+                  onChange={(e) => setVariables((v) => ({ ...v, particularites: e.target.value }))}
+                  rows={2}
+                  className="glass-input w-full py-2.5 text-sm resize-none"
+                  placeholder="Ex: site occupé, horaires restreints 8h-17h, accès limité rue piétonne..."
                 />
               </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-ds-text mb-1.5">
-                Particularités techniques
-                <span className="text-ds-text-3 font-normal ml-1">(optionnel)</span>
-              </label>
-              <textarea
-                value={variables.particularites}
-                onChange={(e) => setVariables((v) => ({ ...v, particularites: e.target.value }))}
-                rows={3}
-                className="glass-input w-full py-2.5 text-sm resize-none"
-                placeholder="Éléments spécifiques à mentionner dans le mémoire..."
-              />
-            </div>
+
+            {/* 4. Structure preview */}
+            <StructurePreview />
+
+            {/* Error */}
             {genError && (
               <p
                 className="text-sm rounded-lg px-3 py-2"
@@ -396,14 +639,17 @@ export default function StepMemoire({ project }: Props) {
                 {genError}
               </p>
             )}
+
+            {/* 5. Generate button */}
             <button
               onClick={() => {
                 const plan = organization?.plan ?? 'free'
                 if (plan === 'free') { setShowPaywall(true); return }
-                setGenError(null); generate()
+                setGenError(null)
+                generate()
               }}
-              disabled={isGenerating}
-              className="btn-primary flex items-center gap-2 py-3 px-6"
+              disabled={isGenerating || !variables.nb_ouvriers || !variables.delai}
+              className="btn-primary flex items-center gap-2 py-3 px-6 disabled:opacity-40"
             >
               <Sparkles size={18} />
               {hasMemoire ? 'Regénérer le mémoire' : 'Générer le mémoire technique'}
@@ -463,46 +709,23 @@ function DocumentView({ content, project }: { content: MemoireContent; project: 
       style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(59,130,246,0.08)' }}
     >
       <div className="max-w-3xl mx-auto py-8 px-6 space-y-8">
-
-        {/* Cover */}
-        <div
-          className="text-center pb-6"
-          style={{ borderBottom: '1px solid rgba(59,130,246,0.12)' }}
-        >
+        <div className="text-center pb-6" style={{ borderBottom: '1px solid rgba(59,130,246,0.12)' }}>
           <p className="text-xs uppercase tracking-widest text-ds-text-3 mb-2 font-mono">Mémoire Technique</p>
           <h1 className="text-2xl font-bold text-ds-text">{project.name}</h1>
-          {project.maitre_ouvrage && (
-            <p className="text-sm text-ds-text-2 mt-1">{project.maitre_ouvrage}</p>
-          )}
+          {project.maitre_ouvrage && <p className="text-sm text-ds-text-2 mt-1">{project.maitre_ouvrage}</p>}
         </div>
-
-        {/* Préambule */}
-        <DocSection title="PRÉAMBULE" level="part">
-          <MdContent text={content.preambule ?? ''} />
-        </DocSection>
-
-        {/* Partie A */}
+        <DocSection title="PRÉAMBULE" level="part"><MdContent text={content.preambule ?? ''} /></DocSection>
         <div className="space-y-6">
           <PartHeading>PARTIE A — PRÉSENTATION GÉNÉRALE</PartHeading>
-          {partAItems.map(([key, label]) =>
-            a?.[key] ? <DocSection key={key} title={label} level="section"><MdContent text={a[key]} /></DocSection> : null
-          )}
+          {partAItems.map(([key, label]) => a?.[key] ? <DocSection key={key} title={label} level="section"><MdContent text={a[key]} /></DocSection> : null)}
         </div>
-
-        {/* Partie B */}
         <div className="space-y-6">
           <PartHeading>PARTIE B — PRÉSENTATION DE LA PRESTATION</PartHeading>
-          {partBItems.map(([key, label]) =>
-            b?.[key] ? <DocSection key={key} title={label} level="section"><MdContent text={b[key]} /></DocSection> : null
-          )}
+          {partBItems.map(([key, label]) => b?.[key] ? <DocSection key={key} title={label} level="section"><MdContent text={b[key]} /></DocSection> : null)}
         </div>
-
-        {/* Partie C */}
         <div className="space-y-6">
           <PartHeading>PARTIE C — MÉTHODOLOGIE MISE EN ŒUVRE</PartHeading>
-          {partCItems.map(([key, label]) =>
-            c?.[key] ? <DocSection key={key} title={label} level="section"><MdContent text={c[key]} /></DocSection> : null
-          )}
+          {partCItems.map(([key, label]) => c?.[key] ? <DocSection key={key} title={label} level="section"><MdContent text={c[key]} /></DocSection> : null)}
         </div>
       </div>
     </div>
@@ -511,10 +734,7 @@ function DocumentView({ content, project }: { content: MemoireContent; project: 
 
 function PartHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h2
-      className="text-sm font-bold text-ds-text uppercase tracking-wide pb-2"
-      style={{ borderBottom: '2px solid #3B82F6' }}
-    >
+    <h2 className="text-sm font-bold text-ds-text uppercase tracking-wide pb-2" style={{ borderBottom: '2px solid #3B82F6' }}>
       {children}
     </h2>
   )
@@ -523,11 +743,7 @@ function PartHeading({ children }: { children: React.ReactNode }) {
 function DocSection({ title, level, children }: { title: string; level: 'part' | 'section'; children: React.ReactNode }) {
   return (
     <div>
-      {level === 'part' ? (
-        <PartHeading>{title}</PartHeading>
-      ) : (
-        <h3 className="text-sm font-semibold text-ds-text mb-2">{title}</h3>
-      )}
+      {level === 'part' ? <PartHeading>{title}</PartHeading> : <h3 className="text-sm font-semibold text-ds-text mb-2">{title}</h3>}
       {children}
     </div>
   )
@@ -535,11 +751,7 @@ function DocSection({ title, level, children }: { title: string; level: 'part' |
 
 function MdContent({ text }: { text: string }) {
   return (
-    <div className="prose prose-sm prose-invert max-w-none
-      prose-headings:text-ds-text prose-headings:font-semibold
-      prose-strong:text-white prose-strong:font-semibold
-      prose-p:text-slate-300 prose-p:leading-relaxed
-      prose-li:text-slate-300 prose-ul:text-slate-300">
+    <div className="prose prose-sm prose-invert max-w-none prose-headings:text-ds-text prose-headings:font-semibold prose-strong:text-white prose-strong:font-semibold prose-p:text-slate-300 prose-p:leading-relaxed prose-li:text-slate-300 prose-ul:text-slate-300">
       <ReactMarkdown>{text}</ReactMarkdown>
     </div>
   )

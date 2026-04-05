@@ -1,9 +1,10 @@
 import json
 import asyncio
+import time
 import anthropic
 from json_repair import repair_json
 from config import get_settings
-from .prompts import DCE_ANALYSIS_SYSTEM
+from .prompts import DCE_ANALYSIS_SYSTEM, DCE_PASS1_SYSTEM, DCE_PASS2_SYSTEM
 import logging
 
 logger = logging.getLogger(__name__)
@@ -40,60 +41,183 @@ _DEMO_REQUIREMENTS = [
     },
 ]
 
+_DEMO_RESULT = {
+    "requirements": _DEMO_REQUIREMENTS,
+    "criteres_jugement": _DEMO_CRITERES,
+    "infos_marche": _DEMO_INFOS_MARCHE,
+}
+
 
 class DCEAnalyzer:
     def __init__(self):
         key = settings.ANTHROPIC_API_KEY
         self._demo_mode = not key or key == _PLACEHOLDER_KEY or key.startswith("sk-ant-placeholder")
         if not self._demo_mode:
-            self.client = anthropic.AsyncAnthropic(
+            self.client = anthropic.Anthropic(
                 api_key=key,
                 timeout=300.0,
             )
 
+    # ── Public API — 2-pass analysis ─────────────────────────────────────────
+
+    async def extract_full_analysis_multi_pass(
+        self,
+        pass1_text: str,
+        pass2_text: str | None,
+        lot_header: str = "",
+    ) -> dict:
+        """Two-pass analysis: admin docs (RC+CCAP) then technical docs (CCTP+DPGF).
+        Each call is <30K chars → response <60s → no WSL2 timeout."""
+        if self._demo_mode:
+            return _DEMO_RESULT
+
+        # ── Pass 1: RC + CCAP (administrative) ──────────────────────────────
+        prompt1 = lot_header + pass1_text if lot_header else pass1_text
+        prompt1 = self._guard_tokens(prompt1, "passe1-admin")
+        result1 = await asyncio.to_thread(
+            self._sync_call, prompt1, DCE_PASS1_SYSTEM, "passe1-admin"
+        )
+
+        # ── Pass 2: CCTP + DPGF (technical) ─────────────────────────────────
+        result2 = {"requirements": []}
+        if pass2_text:
+            prompt2 = lot_header + pass2_text if lot_header else pass2_text
+            prompt2 = self._guard_tokens(prompt2, "passe2-technique")
+            result2 = await asyncio.to_thread(
+                self._sync_call, prompt2, DCE_PASS2_SYSTEM, "passe2-technique"
+            )
+
+        # ── Merge results ────────────────────────────────────────────────────
+        reqs = result1.get("requirements", []) + result2.get("requirements", [])
+        partial = result1.get("partial_analysis") or result2.get("partial_analysis")
+
+        if len(reqs) < 15 and len(reqs) > 0:
+            logger.warning(f"Seulement {len(reqs)} exigences au total (attendu 40-80+)")
+            print(f"[DCE Analyzer] ⚠ Faible nombre d'exigences total: {len(reqs)}", flush=True)
+
+        p1_count = len(result1.get("requirements", []))
+        p2_count = len(result2.get("requirements", []))
+        print(
+            f"[DCE Analyzer] TOTAL: {len(reqs)} exigences "
+            f"(passe1: {p1_count}, passe2: {p2_count})",
+            flush=True,
+        )
+
+        output = {
+            "requirements": reqs,
+            "criteres_jugement": result1.get("criteres_jugement", []),
+            "infos_marche": result1.get("infos_marche", {}),
+        }
+        if partial:
+            output["partial_analysis"] = True
+        if len(reqs) < 15 and len(reqs) > 0:
+            output["low_requirement_count"] = True
+
+        return output
+
+    # ── Legacy single-pass (kept for compatibility) ──────────────────────────
+
     async def extract_full_analysis(self, dce_text: str) -> dict:
         if self._demo_mode:
-            return {
-                "requirements": _DEMO_REQUIREMENTS,
-                "criteres_jugement": _DEMO_CRITERES,
-                "infos_marche": _DEMO_INFOS_MARCHE,
-            }
+            return _DEMO_RESULT
 
         max_chars = 60_000
         if len(dce_text) > max_chars:
             dce_text = dce_text[:max_chars] + "\n\n[Document tronqué pour analyse]"
 
-        print(f"[DCE Analyzer] Envoi à Claude: {len(dce_text)} chars, max_tokens=12000")
-
-        _call_kwargs = dict(
-            model="claude-sonnet-4-20250514",
-            max_tokens=12000,
-            system=DCE_ANALYSIS_SYSTEM,
-            messages=[{"role": "user", "content": f"Voici les documents DCE à analyser :\n\n{dce_text}"}],
+        print(f"[DCE Analyzer] Envoi à Claude (single-pass): {len(dce_text)} chars", flush=True)
+        return await asyncio.to_thread(
+            self._sync_call, dce_text, DCE_ANALYSIS_SYSTEM, "single-pass"
         )
 
-        try:
-            message = await self.client.messages.create(**_call_kwargs)
-        except anthropic.AuthenticationError:
-            self._demo_mode = True
-            return {
-                "requirements": _DEMO_REQUIREMENTS,
-                "criteres_jugement": _DEMO_CRITERES,
-                "infos_marche": _DEMO_INFOS_MARCHE,
-            }
-        except (anthropic.APITimeoutError, anthropic.APIConnectionError) as e:
-            logger.warning(f"Premier essai échoué, retry: {e}")
+    # ── Token guard ────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _guard_tokens(text: str, label: str, max_tokens: int = 150_000) -> str:
+        """Log estimated tokens and truncate if over limit."""
+        est = len(text) // 4
+        print(f"[DCE Analyzer] {label}: ~{est:,} tokens estimés ({len(text):,} chars)", flush=True)
+        max_chars = max_tokens * 4
+        if len(text) > max_chars:
+            logger.warning(f"[{label}] Texte trop long ({est:,} tokens), troncature à {max_tokens:,} tokens")
+            print(f"[DCE Analyzer] ⚠ {label}: troncature {len(text):,} → {max_chars:,} chars", flush=True)
+            text = text[:max_chars] + "\n\n[Document tronqué pour respecter la limite de tokens]"
+        return text
+
+    # ── Core sync call with retries ──────────────────────────────────────────
+
+    def _sync_call(self, dce_text: str, system_prompt: str, label: str = "") -> dict:
+        """Synchronous streaming Claude call with 3 retries — runs in a thread.
+
+        Streaming keeps TCP alive (bytes every ~100ms), avoiding WSL2 NAT timeout.
+        """
+        user_content = f"Voici les documents DCE à analyser :\n\n{dce_text}"
+        last_error = None
+
+        for attempt in range(1, 4):
+            t0 = time.monotonic()
             try:
-                await asyncio.sleep(5)
-                message = await self.client.messages.create(**_call_kwargs)
-            except Exception as e2:
-                raise Exception(f"Échec après retry. Erreur: {str(e2)}")
-        except anthropic.APIStatusError as e:
-            raise Exception(f"Erreur API Claude (status {e.status_code}): {e.message}")
+                print(f"[DCE Analyzer] [{label}] Tentative {attempt}/3 (streaming)...", flush=True)
+                collected = ""
 
-        raw = message.content[0].text.strip()
-        print(f"[DCE Analyzer] Réponse reçue: {len(raw)} chars")
+                with self.client.messages.stream(
+                    model="claude-sonnet-4-20250514",
+                    max_tokens=8000,
+                    temperature=0,
+                    system=system_prompt,
+                    messages=[{"role": "user", "content": user_content}],
+                ) as stream:
+                    for text in stream.text_stream:
+                        collected += text
 
+                final_message = stream.get_final_message()
+                elapsed = time.monotonic() - t0
+                stop_reason = final_message.stop_reason
+                print(f"[TIMING] [{label}] Streaming: {elapsed:.1f}s (attempt {attempt})", flush=True)
+                break
+
+            except anthropic.AuthenticationError:
+                self._demo_mode = True
+                return _DEMO_RESULT
+            except (anthropic.APITimeoutError, anthropic.APIConnectionError) as e:
+                elapsed = time.monotonic() - t0
+                print(f"[DCE Analyzer] [{label}] Tentative {attempt} échouée après {elapsed:.1f}s: {e}", flush=True)
+                last_error = e
+                if attempt < 3:
+                    time.sleep(3)
+            except anthropic.APIStatusError as e:
+                if e.status_code in (429, 500, 502, 503, 529) and attempt < 3:
+                    elapsed = time.monotonic() - t0
+                    print(f"[DCE Analyzer] [{label}] Tentative {attempt} status {e.status_code} après {elapsed:.1f}s, retry...", flush=True)
+                    last_error = e
+                    time.sleep(5)
+                else:
+                    raise Exception(f"Erreur API Claude (status {e.status_code}): {e.message}")
+        else:
+            raise Exception(f"[{label}] Échec après 3 tentatives. Dernière erreur: {last_error}")
+
+        # Check stop_reason for truncated responses
+        partial = False
+        if stop_reason == "max_tokens":
+            logger.warning(f"[{label}] Réponse tronquée (max_tokens atteint)")
+            print(f"[DCE Analyzer] [{label}] ⚠ TRONQUÉ — stop_reason=max_tokens", flush=True)
+            partial = True
+
+        raw = collected.strip()
+        print(f"[DCE Analyzer] [{label}] Réponse: {len(raw)} chars, stop_reason={stop_reason}", flush=True)
+
+        result = self._parse_json(raw)
+
+        reqs = result.get("requirements", [])
+        print(f"[DCE Analyzer] [{label}] {len(reqs)} exigences extraites", flush=True)
+
+        if partial:
+            result["partial_analysis"] = True
+
+        return result
+
+    def _parse_json(self, raw: str) -> dict:
+        """Extract JSON object from Claude's response, with repair fallback."""
         start = raw.find("{")
         if start == -1:
             return {"requirements": [], "criteres_jugement": [], "infos_marche": {}}
@@ -109,14 +233,7 @@ class DCEAnalyzer:
             except Exception:
                 return {"requirements": [], "criteres_jugement": [], "infos_marche": {}}
 
-        reqs = result.get("requirements", [])
-        print(f"[DCE Analyzer] {len(reqs)} exigences extraites")
-
-        return {
-            "requirements": reqs,
-            "criteres_jugement": result.get("criteres_jugement", []),
-            "infos_marche": result.get("infos_marche", {}),
-        }
+        return result
 
     @property
     def is_demo(self) -> bool:

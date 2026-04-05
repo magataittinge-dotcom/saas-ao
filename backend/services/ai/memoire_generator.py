@@ -1,4 +1,6 @@
 import json
+import asyncio
+import time
 import anthropic
 from json_repair import repair_json
 from config import get_settings
@@ -6,10 +8,12 @@ from .prompts import MEMOIRE_GENERATION_SYSTEM
 
 settings = get_settings()
 
+_DETAIL_INSTRUCTION = "Génère un mémoire technique COMPLET et DÉTAILLÉ de 20 à 25 pages. Chaque section doit être exhaustive."
+
 
 class MemoireGenerator:
     def __init__(self):
-        self.client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+        self.client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
 
     MODEL = "claude-opus-4-5"
 
@@ -19,18 +23,18 @@ class MemoireGenerator:
         memoire_config,         # MemoireConfig ORM object or None
         project_name: str,
         maitre_ouvrage: str,
+        selected_lot_name: str,  # e.g. "Lot 05 — Revêtement de Façade + ITE"
         all_docs: list,         # list of ProjectDocument objects
         compliance_items: list, # list of ComplianceItem objects
         references: list,       # list of Reference objects
         variables: dict,
-        criteres_jugement: list | None = None,  # from project.criteres_jugement
+        criteres_jugement: list | None = None,
+        reference_template_text: str | None = None,  # text from imported mémoire
     ) -> dict:
         """Generate a complete mémoire technique using Claude Opus."""
 
         # ── 1. Company profile ────────────────────────────────────────────────
-        # Merge Organization fields with richer MemoireConfig if available
         cfg = memoire_config
-
         company_block = {
             "nom": (cfg.nom_entreprise if cfg and cfg.nom_entreprise else organization.name),
             "siret": organization.siret,
@@ -120,7 +124,6 @@ class MemoireGenerator:
                 lines.append(f"- {c['nom']} : {c['poids']}%")
                 for sc in c.get("sous_criteres", []):
                     lines.append(f"    • {sc['nom']} : {sc['poids']}%")
-            # Identify highest-weighted technical sub-criterion
             tech = next((c for c in criteres_jugement if c["poids"] >= 40 and c.get("sous_criteres")), None)
             if tech:
                 top_sc = max(tech["sous_criteres"], key=lambda x: x["poids"], default=None)
@@ -128,10 +131,12 @@ class MemoireGenerator:
                     lines.append(f"\n⚡ INSISTE PARTICULIÈREMENT sur '{top_sc['nom']}' ({top_sc['poids']}%) — c'est le sous-critère le mieux pondéré.")
             criteres_block = "\n".join(lines)
 
-        # ── 6. Build prompt ───────────────────────────────────────────────────
+        # ── 6. Build prompt ────────────────────────────────────────────────────
         prompt = (
             f"MARCHÉ : {project_name}\n"
-            f"MAÎTRE D'OUVRAGE : {maitre_ouvrage or 'Non renseigné'}\n\n"
+            f"MAÎTRE D'OUVRAGE : {maitre_ouvrage or 'Non renseigné'}\n"
+            f"TYPE DE LOT : {selected_lot_name or 'Non renseigné'}\n\n"
+            f"CONSIGNE LONGUEUR : {_DETAIL_INSTRUCTION}\n\n"
             f"━━━ VARIABLES CHANTIER ━━━\n"
             f"{json.dumps(variables, ensure_ascii=False, indent=2)}\n\n"
             + (f"━━━ CRITÈRES DE JUGEMENT ━━━\n{criteres_block}\n\n" if criteres_block else "")
@@ -143,20 +148,76 @@ class MemoireGenerator:
             + f"━━━ DOCUMENTS DCE ━━━\n{dce_text}"
         )
 
-        # ── 6. Stream from Opus ───────────────────────────────────────────────
-        chunks = []
-        async with self.client.messages.stream(
-            model=self.MODEL,
-            max_tokens=16000,
-            system=MEMOIRE_GENERATION_SYSTEM,
-            messages=[{"role": "user", "content": prompt}],
-        ) as stream:
-            async for text in stream.text_stream:
-                chunks.append(text)
+        # ── 8. Reference template (style guide from imported mémoire) ────────
+        if reference_template_text:
+            prompt += (
+                f"\n\n━━━ MÉMOIRE DE RÉFÉRENCE (style et structure à reproduire) ━━━\n"
+                f"Voici un extrait d'un mémoire technique précédent de l'entreprise. "
+                f"Adapte le style, le ton, le niveau de détail et la structure à cet exemple. "
+                f"Ne copie PAS le contenu — adapte uniquement le style.\n\n"
+                f"{reference_template_text[:10_000]}"
+            )
 
-        raw = "".join(chunks).strip()
+        # ── 9. Call Opus via sync client in thread ────────────────────────────
+        return await asyncio.to_thread(self._sync_call, prompt)
 
-        # ── 7. Parse JSON ─────────────────────────────────────────────────────
+    def _sync_call(self, prompt: str) -> dict:
+        """Synchronous streaming Claude call — runs in a thread.
+
+        Streaming keeps the TCP connection alive (bytes every ~100ms),
+        avoiding WSL2 NAT timeout at ~185s for long Opus generations.
+        """
+        last_error = None
+        for attempt in range(1, 4):
+            t0 = time.monotonic()
+            try:
+                print(f"[Memoire Generator] Tentative {attempt}/3 — streaming Opus ({len(prompt)} chars)", flush=True)
+                collected = ""
+
+                with self.client.messages.stream(
+                    model=self.MODEL,
+                    max_tokens=16000,
+                    temperature=0,
+                    system=MEMOIRE_GENERATION_SYSTEM,
+                    messages=[{"role": "user", "content": prompt}],
+                ) as stream:
+                    for text in stream.text_stream:
+                        collected += text
+
+                final_message = stream.get_final_message()
+                elapsed = time.monotonic() - t0
+                stop_reason = final_message.stop_reason
+                print(
+                    f"[TIMING] Memoire streaming: {elapsed:.1f}s, {len(collected)} chars, "
+                    f"stop_reason={stop_reason}",
+                    flush=True,
+                )
+
+                if stop_reason == "max_tokens":
+                    print("[Memoire Generator] ⚠ TRONQUÉ — stop_reason=max_tokens", flush=True)
+
+                raw = collected.strip()
+                break
+
+            except anthropic.AuthenticationError:
+                raise
+            except (anthropic.APIConnectionError, anthropic.APITimeoutError) as e:
+                elapsed = time.monotonic() - t0
+                print(f"[Memoire Generator] Tentative {attempt} échouée après {elapsed:.1f}s: {e}", flush=True)
+                last_error = e
+                if attempt < 3:
+                    time.sleep(3)
+            except anthropic.APIStatusError as e:
+                if e.status_code in (429, 500, 502, 503, 529) and attempt < 3:
+                    print(f"[Memoire Generator] Tentative {attempt} status {e.status_code}, retry...", flush=True)
+                    last_error = e
+                    time.sleep(5)
+                else:
+                    raise
+        else:
+            raise Exception(f"Échec après 3 tentatives. Dernière erreur: {last_error}")
+
+        # ── Parse JSON ────────────────────────────────────────────────────────
         start = raw.find("{")
         if start == -1:
             raise ValueError(f"Claude n'a pas retourné de JSON valide. Début : {raw[:200]}")

@@ -80,8 +80,9 @@ def create_checkout_session(
         payment_method_types=["card"],
         mode="subscription",
         line_items=[{"price": price_id, "quantity": 1}],
-        success_url=f"{settings.FRONTEND_URL}/billing?success=true",
+        success_url=f"{settings.FRONTEND_URL}/billing?success=true&session_id={{CHECKOUT_SESSION_ID}}",
         cancel_url=f"{settings.FRONTEND_URL}/billing?canceled=true",
+        client_reference_id=org.id,
         metadata={"organization_id": org.id, "plan": payload.plan},
     )
 
@@ -102,6 +103,57 @@ def create_portal_session(
         return_url=f"{settings.FRONTEND_URL}/billing",
     )
     return {"url": session.url}
+
+
+@router.get("/verify-session")
+def verify_session(
+    session_id: str,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Verify a Stripe Checkout session and update the org plan if paid.
+    Used as a fallback when webhooks can't reach the server (local dev).
+    """
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+    except stripe.error.InvalidRequestError:
+        raise HTTPException(status_code=404, detail="Session Stripe introuvable")
+
+    if session.payment_status != "paid":
+        return {"plan": "free", "updated": False}
+
+    # Determine plan from session metadata or by matching product
+    plan = session.metadata.get("plan") if session.metadata else None
+
+    if not plan and session.subscription:
+        try:
+            sub = stripe.Subscription.retrieve(session.subscription)
+            if sub.get("items") and sub["items"]["data"]:
+                product_id = sub["items"]["data"][0]["price"]["product"]
+                for plan_name, pid in PRODUCTS.items():
+                    if pid == product_id:
+                        plan = plan_name
+                        break
+        except Exception:
+            pass
+
+    if not plan:
+        return {"plan": "free", "updated": False}
+
+    org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Organisation introuvable")
+
+    # Update org
+    org.plan = plan
+    if session.customer:
+        org.stripe_customer_id = session.customer
+    if session.subscription:
+        org.stripe_subscription_id = session.subscription
+    db.commit()
+
+    return {"plan": plan, "updated": True}
 
 
 @router.post("/webhook")

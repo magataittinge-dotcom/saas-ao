@@ -27,6 +27,9 @@ class Project(Base):
     lots_detectes = Column(JSON, nullable=True)        # [{id, nom}] cached lot list
     selected_lot = Column(String(50), nullable=True)   # "lot1"
     selected_lot_name = Column(String(255), nullable=True)  # "Lot 1 — Gros œuvre"
+    processing_status = Column(Text, nullable=True)   # uploading|extracting_text|detecting_lots|ready|error
+    processing_progress = Column(Integer, default=0)
+    processing_detail = Column(Text, nullable=True)   # "45/93 documents traités"
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

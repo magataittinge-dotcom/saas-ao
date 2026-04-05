@@ -6,18 +6,20 @@ import { authService } from '@/services/auth'
 import { setClerkTokenProvider } from '@/services/api'
 
 export function useSyncUser(): boolean {
-  const { isSignedIn, isLoaded, getToken } = useAuth()
-  const { setAuth, user } = useAuthStore()
+  const { isSignedIn, isLoaded, getToken, userId } = useAuth()
+  const { setAuth, user, logout } = useAuthStore()
 
   // Register token provider synchronously
   setClerkTokenProvider(() => getToken())
 
   useEffect(() => {
-    console.log('[useSyncUser] isLoaded:', isLoaded, 'isSignedIn:', isSignedIn, 'user:', !!user)
-  }, [isLoaded, isSignedIn, user])
+    if (!isLoaded) return
 
-  useEffect(() => {
-    if (!isLoaded || !isSignedIn) return
+    // User signed out or switched accounts → clear stale persisted state
+    if (!isSignedIn) return
+    if (user && userId && user.clerk_id !== userId) {
+      logout() // clear stale org/plan from different account
+    }
 
     authService.me()
       .then(({ user: u, organization: org }) => {
@@ -26,7 +28,8 @@ export function useSyncUser(): boolean {
       .catch((err) => {
         console.error('[useSyncUser] FAILED:', err?.response?.status, err?.message)
       })
-  }, [isLoaded, isSignedIn, setAuth])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, isSignedIn, userId])
 
   return isLoaded
 }
