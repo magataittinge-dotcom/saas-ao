@@ -5,10 +5,102 @@ import anthropic
 from json_repair import repair_json
 from config import get_settings
 from .prompts import DCE_ANALYSIS_SYSTEM, DCE_PASS1_SYSTEM, DCE_PASS2_SYSTEM
+from services.skill_loader import load_skill, load_skill_section
 import logging
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
+
+# ── Mapping lot keywords → DTU section headers in normes-dtu-btp ────────────
+_DTU_SECTION_KEYWORDS: list[tuple[list[str], str]] = [
+    (["façade", "facade", "ravalement", "bardage", "enduit ext"],
+     "Façades / Ravalement"),
+    (["ite", "isolation ext", "isolation thermique"],
+     "Isolation thermique / ITE"),
+    (["gros œuvre", "gros oeuvre", "maçonnerie", "maconnerie", "béton", "beton", "fondation", "structure"],
+     "Gros œuvre / Maçonnerie"),
+    (["peinture", "revêtement", "revetement", "sol souple", "papier peint", "enduit int", "carrelage"],
+     "Peinture / Revêtements"),
+    (["électricité", "electricite", "electricité", "electrique", "électrique", "courant", "cfo", "cfa"],
+     "Électricité"),
+    (["vrd", "voirie", "assainissement", "réseaux divers", "enrobé", "enrobe", "terrassement"],
+     "VRD"),
+    (["plomberie", "sanitaire"],
+     "Plomberie / Sanitaire"),
+    (["chauffage", "cvc", "ventilation", "climatisation"],
+     "Chauffage / Climatisation"),
+    (["étanchéité", "etancheite", "couverture", "toiture", "terrasse"],
+     "Couverture"),
+    (["menuiserie", "fenêtre", "fenetre", "porte ext", "baie", "volet", "fermeture"],
+     "Menuiserie / Fermeture"),
+    (["charpente", "bois", "ossature bois"],
+     "Charpente / Structure bois"),
+    (["plâtrerie", "platrerie", "cloison", "placo", "plâtre", "platre"],
+     "Plâtrerie / Cloisons"),
+]
+
+# Skills always loaded for DCE analysis
+_ALWAYS_LOAD_DCE = ["analyse-dce-expert", "reglementation-marches-publics", "pieges-dce-detecteur"]
+
+
+def _build_dce_skills(selected_lot_name: str | None = None) -> tuple[str, list[str]]:
+    """Build DCE skills supplement per-call, loading only relevant DTU sections.
+
+    Returns (combined_text, list_of_skill_names_loaded).
+    """
+    skills_loaded: list[str] = []
+    parts: list[str] = []
+
+    # Always load core skills
+    for name in _ALWAYS_LOAD_DCE:
+        content = load_skill(name)
+        if content:
+            parts.append(f"━━━ RÉFÉRENTIEL : {name} ━━━\n{content}")
+            skills_loaded.append(name)
+
+    # Conditionally load normes-dtu-btp sections matching the lot
+    if selected_lot_name:
+        lot_lower = selected_lot_name.lower()
+        dtu_sections: list[str] = []
+        matched_names: list[str] = []
+        seen: set[str] = set()
+        for keywords, section_header in _DTU_SECTION_KEYWORDS:
+            if section_header in seen:
+                continue
+            if any(kw in lot_lower for kw in keywords):
+                section = load_skill_section("normes-dtu-btp", section_header)
+                if section:
+                    dtu_sections.append(section)
+                    matched_names.append(section_header)
+                    seen.add(section_header)
+
+        # Always include transversal regulations when loading partial DTU
+        transversal = load_skill_section("normes-dtu-btp", "Réglementation transversale")
+        if transversal:
+            dtu_sections.append(transversal)
+
+        if dtu_sections:
+            dtu_text = "\n\n".join(dtu_sections)
+            parts.append(f"━━━ RÉFÉRENTIEL : normes-dtu-btp (sections pertinentes) ━━━\n{dtu_text}")
+            skills_loaded.append(f"normes-dtu-btp[{', '.join(matched_names)}]")
+        else:
+            # No match found → load full DTU as fallback
+            content = load_skill("normes-dtu-btp")
+            if content:
+                parts.append(f"━━━ RÉFÉRENTIEL : normes-dtu-btp ━━━\n{content}")
+                skills_loaded.append("normes-dtu-btp")
+    else:
+        # No lot specified → load full DTU
+        content = load_skill("normes-dtu-btp")
+        if content:
+            parts.append(f"━━━ RÉFÉRENTIEL : normes-dtu-btp ━━━\n{content}")
+            skills_loaded.append("normes-dtu-btp")
+
+    combined = "\n\n".join(parts)
+    total_chars = len(combined)
+    logger.info(f"Skills chargés : {skills_loaded} — {total_chars:,} chars")
+    print(f"[DCE Analyzer] Skills chargés : {skills_loaded} — {total_chars:,} chars", flush=True)
+    return combined, skills_loaded
 
 _PLACEHOLDER_KEY = "sk-ant-placeholder"
 
@@ -65,18 +157,27 @@ class DCEAnalyzer:
         pass1_text: str,
         pass2_text: str | None,
         lot_header: str = "",
+        selected_lot_name: str | None = None,
+        on_pass1_done: callable = None,
     ) -> dict:
         """Two-pass analysis: admin docs (RC+CCAP) then technical docs (CCTP+DPGF).
         Each call is <30K chars → response <60s → no WSL2 timeout."""
         if self._demo_mode:
             return _DEMO_RESULT
 
+        # Build skills supplement once for both passes (context-aware)
+        skills_ref, _ = _build_dce_skills(selected_lot_name)
+
         # ── Pass 1: RC + CCAP (administrative) ──────────────────────────────
         prompt1 = lot_header + pass1_text if lot_header else pass1_text
         prompt1 = self._guard_tokens(prompt1, "passe1-admin")
         result1 = await asyncio.to_thread(
-            self._sync_call, prompt1, DCE_PASS1_SYSTEM, "passe1-admin"
+            self._sync_call, prompt1, DCE_PASS1_SYSTEM, "passe1-admin", skills_ref
         )
+
+        # Notify caller that pass 1 is done (for progress tracking)
+        if on_pass1_done:
+            on_pass1_done()
 
         # ── Pass 2: CCTP + DPGF (technical) ─────────────────────────────────
         result2 = {"requirements": []}
@@ -84,7 +185,7 @@ class DCEAnalyzer:
             prompt2 = lot_header + pass2_text if lot_header else pass2_text
             prompt2 = self._guard_tokens(prompt2, "passe2-technique")
             result2 = await asyncio.to_thread(
-                self._sync_call, prompt2, DCE_PASS2_SYSTEM, "passe2-technique"
+                self._sync_call, prompt2, DCE_PASS2_SYSTEM, "passe2-technique", skills_ref
             )
 
         # ── Merge results ────────────────────────────────────────────────────
@@ -125,9 +226,10 @@ class DCEAnalyzer:
         if len(dce_text) > max_chars:
             dce_text = dce_text[:max_chars] + "\n\n[Document tronqué pour analyse]"
 
+        skills_ref, _ = _build_dce_skills()  # no lot → full DTU
         print(f"[DCE Analyzer] Envoi à Claude (single-pass): {len(dce_text)} chars", flush=True)
         return await asyncio.to_thread(
-            self._sync_call, dce_text, DCE_ANALYSIS_SYSTEM, "single-pass"
+            self._sync_call, dce_text, DCE_ANALYSIS_SYSTEM, "single-pass", skills_ref
         )
 
     # ── Token guard ────────────────────────────────────────────────────────
@@ -146,12 +248,20 @@ class DCEAnalyzer:
 
     # ── Core sync call with retries ──────────────────────────────────────────
 
-    def _sync_call(self, dce_text: str, system_prompt: str, label: str = "") -> dict:
+    def _sync_call(self, dce_text: str, system_prompt: str, label: str = "", skills_ref: str = "") -> dict:
         """Synchronous streaming Claude call with 3 retries — runs in a thread.
 
         Streaming keeps TCP alive (bytes every ~100ms), avoiding WSL2 NAT timeout.
         """
         user_content = f"Voici les documents DCE à analyser :\n\n{dce_text}"
+        if skills_ref:
+            user_content += (
+                f"\n\n━━━ RÉFÉRENTIELS COMPLÉMENTAIRES (expertise BTP) ━━━\n"
+                f"Utilise ces référentiels pour enrichir ton analyse — "
+                f"ils contiennent les normes DTU exactes, la réglementation marchés publics 2026, "
+                f"et les bonnes pratiques d'extraction d'exigences DCE.\n\n"
+                f"{skills_ref}"
+            )
         last_error = None
 
         for attempt in range(1, 4):

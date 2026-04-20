@@ -136,14 +136,14 @@ function ImportProgress({ isImporting }: { isImporting: boolean }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div
         className="rounded-2xl shadow-2xl p-10 flex flex-col items-center gap-5 min-w-64"
-        style={{ background: 'rgba(15,23,42,0.95)', border: '1px solid rgba(100,116,139,0.2)' }}
+        style={{ background: '#FFFFFF', border: '1px solid rgba(100,116,139,0.2)' }}
       >
         <div className="relative w-40 h-40">
           <svg className="w-full h-full -rotate-90" viewBox="0 0 160 160">
             <circle cx="80" cy="80" r={RADIUS} fill="none" stroke="rgba(100,116,139,0.2)" strokeWidth="10" />
             <circle
               cx="80" cy="80" r={RADIUS} fill="none"
-              stroke="#3B82F6" strokeWidth="10" strokeLinecap="round"
+              stroke="#0EA5E9" strokeWidth="10" strokeLinecap="round"
               strokeDasharray={CIRC} strokeDashoffset={offset}
               style={{ transition: 'stroke-dashoffset 0.35s ease' }}
             />
@@ -216,7 +216,7 @@ function ImportDialog({ onClose, onImported }: ImportDialogProps) {
       <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm">
         <div
           className="rounded-2xl shadow-2xl w-full max-w-md mx-4"
-          style={{ background: 'rgba(15,23,42,0.97)', border: '1px solid rgba(100,116,139,0.2)' }}
+          style={{ background: '#FFFFFF', border: '1px solid rgba(100,116,139,0.2)' }}
         >
           {/* Header */}
           <div
@@ -224,7 +224,7 @@ function ImportDialog({ onClose, onImported }: ImportDialogProps) {
             style={{ borderBottom: '1px solid rgba(100,116,139,0.15)' }}
           >
             <div className="flex items-center gap-2">
-              <Sparkles size={18} style={{ color: '#3B82F6' }} />
+              <Sparkles size={18} style={{ color: '#0EA5E9' }} />
               <h2 className="font-semibold text-ds-text">Importer un mémoire existant</h2>
             </div>
             <button onClick={onClose} className="text-ds-text-2 hover:text-ds-text transition-colors">
@@ -255,15 +255,15 @@ function ImportDialog({ onClose, onImported }: ImportDialogProps) {
               )}
               style={{
                 borderColor: dragOver
-                  ? '#3B82F6'
+                  ? '#0EA5E9'
                   : file
-                  ? '#60A5FA'
+                  ? '#10B981'
                   : 'rgba(100,116,139,0.35)',
                 background: dragOver
-                  ? 'rgba(59,130,246,0.08)'
+                  ? 'rgba(14,165,233,0.08)'
                   : file
-                  ? 'rgba(96,165,250,0.08)'
-                  : 'rgba(15,23,42,0.4)',
+                  ? 'rgba(0,212,170,0.08)'
+                  : '#F8FAFC',
               }}
             >
               <input
@@ -275,8 +275,8 @@ function ImportDialog({ onClose, onImported }: ImportDialogProps) {
               />
               {file ? (
                 <div className="flex flex-col items-center gap-2">
-                  <CheckCircle2 size={28} style={{ color: '#60A5FA' }} />
-                  <p className="text-sm font-medium" style={{ color: '#60A5FA' }}>{file.name}</p>
+                  <CheckCircle2 size={28} style={{ color: '#059669' }} />
+                  <p className="text-sm font-medium" style={{ color: '#059669' }}>{file.name}</p>
                   <p className="text-xs text-ds-text-3">{(file.size / 1024).toFixed(0)} Ko</p>
                 </div>
               ) : (
@@ -349,18 +349,18 @@ function Section({
       <button
         onClick={onToggle}
         className="w-full flex items-center justify-between px-5 py-4 transition-colors text-left"
-        style={{ background: 'rgba(15,23,42,0.6)' }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(15,23,42,0.8)')}
-        onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(15,23,42,0.6)')}
+        style={{ background: '#F1F5F9' }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = '#F1F5F9')}
+        onMouseLeave={(e) => (e.currentTarget.style.background = '#F1F5F9')}
       >
         <div className="flex items-center gap-3">
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center"
             style={{
-              background: complete ? 'rgba(96,165,250,0.15)' : 'rgba(59,130,246,0.15)',
+              background: complete ? 'rgba(0,212,170,0.15)' : 'rgba(14,165,233,0.15)',
             }}
           >
-            <Icon size={16} style={{ color: complete ? '#60A5FA' : '#3B82F6' }} />
+            <Icon size={16} style={{ color: complete ? '#10B981' : '#0EA5E9' }} />
           </div>
           <span className="font-medium text-ds-text">{section.label}</span>
         </div>
@@ -369,7 +369,7 @@ function Section({
             className="text-xs font-medium px-2 py-0.5 rounded-full"
             style={
               complete
-                ? { background: 'rgba(96,165,250,0.15)', color: '#60A5FA' }
+                ? { background: 'rgba(0,212,170,0.15)', color: '#059669' }
                 : filled > 0
                 ? { background: 'rgba(245,158,11,0.15)', color: '#F59E0B' }
                 : { background: 'rgba(100,116,139,0.15)', color: '#64748B' }
@@ -388,7 +388,7 @@ function Section({
         <div
           className="px-5 pb-5 pt-2 space-y-4"
           style={{
-            background: 'rgba(15,23,42,0.4)',
+            background: '#F8FAFC',
             borderTop: '1px solid rgba(100,116,139,0.15)',
           }}
         >
@@ -399,10 +399,13 @@ function Section({
   )
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, optional, children }: { label: string; optional?: boolean; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-ds-text-2 mb-1">{label}</label>
+      <label className="flex items-center justify-between text-sm font-medium text-ds-text-2 mb-1">
+        <span>{label}</span>
+        {optional && <span className="text-xs font-normal text-ds-text-3">optionnel</span>}
+      </label>
       {children}
     </div>
   )
@@ -477,7 +480,7 @@ export default function MemoireConfig() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 rounded-full border-2 border-transparent animate-spin" style={{ borderTopColor: '#3B82F6' }} />
+        <div className="w-8 h-8 rounded-full border-2 border-transparent animate-spin" style={{ borderTopColor: '#0EA5E9' }} />
       </div>
     )
   }
@@ -508,7 +511,7 @@ export default function MemoireConfig() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
-          <FileText size={24} style={{ color: '#3B82F6' }} className="shrink-0" />
+          <FileText size={24} style={{ color: '#0EA5E9' }} className="shrink-0" />
           <div>
             <h1 className="text-2xl font-bold text-ds-text">Mémoire Technique</h1>
             <p className="text-sm text-ds-text-2">
@@ -530,17 +533,17 @@ export default function MemoireConfig() {
         <div
           className="flex items-center justify-between rounded-xl px-4 py-3"
           style={{
-            background: 'rgba(96,165,250,0.1)',
-            border: '1px solid rgba(96,165,250,0.3)',
+            background: 'rgba(0,212,170,0.1)',
+            border: '1px solid rgba(0,212,170,0.3)',
           }}
         >
           <div className="flex items-center gap-2">
-            <CheckCircle2 size={18} style={{ color: '#60A5FA' }} />
-            <p className="text-sm font-medium" style={{ color: '#60A5FA' }}>
+            <CheckCircle2 size={18} style={{ color: '#059669' }} />
+            <p className="text-sm font-medium" style={{ color: '#059669' }}>
               {importBanner.count}/18 champs pré-remplis par l'IA — vérifiez et complétez avant de sauvegarder
             </p>
           </div>
-          <button onClick={() => setImportBanner(null)} style={{ color: '#60A5FA' }} className="opacity-70 hover:opacity-100 transition-opacity">
+          <button onClick={() => setImportBanner(null)} style={{ color: '#059669' }} className="opacity-70 hover:opacity-100 transition-opacity">
             <X size={16} />
           </button>
         </div>
@@ -561,13 +564,13 @@ export default function MemoireConfig() {
             style={{
               width: `${pct}%`,
               background: pct === 100
-                ? '#60A5FA'
-                : `linear-gradient(to right, #3B82F6, ${pct > 60 ? '#60A5FA' : '#F97316'})`,
+                ? '#10B981'
+                : `linear-gradient(to right, #0EA5E9, ${pct > 60 ? '#10B981' : '#F97316'})`,
             }}
           />
         </div>
         {pct === 100 && (
-          <p className="text-xs font-medium mt-2 flex items-center gap-1" style={{ color: '#60A5FA' }}>
+          <p className="text-xs font-medium mt-2 flex items-center gap-1" style={{ color: '#059669' }}>
             <CheckCircle2 size={13} /> Profil mémoire complet — la génération sera optimale
           </p>
         )}
@@ -583,7 +586,7 @@ export default function MemoireConfig() {
               value={form.nom_entreprise ?? ''} onChange={(e) => set('nom_entreprise', e.target.value)} />
           </Field>
           <div className="grid grid-cols-2 gap-4">
-            <Field label={FIELD_LABELS.date_creation}>
+            <Field label={FIELD_LABELS.date_creation} optional>
               <input type="text" className="glass-input w-full py-2.5 text-sm" placeholder="Ex: 2005"
                 value={form.date_creation ?? ''} onChange={(e) => set('date_creation', e.target.value)} />
             </Field>
@@ -593,16 +596,16 @@ export default function MemoireConfig() {
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Field label={FIELD_LABELS.gerant_titre}>
+            <Field label={FIELD_LABELS.gerant_titre} optional>
               <input type="text" className="glass-input w-full py-2.5 text-sm" placeholder="Gérant, PDG, Directeur..."
                 value={form.gerant_titre ?? ''} onChange={(e) => set('gerant_titre', e.target.value)} />
             </Field>
-            <Field label={FIELD_LABELS.zone_intervention}>
+            <Field label={FIELD_LABELS.zone_intervention} optional>
               <input type="text" className="glass-input w-full py-2.5 text-sm" placeholder="Ex: Île-de-France, PACA..."
                 value={form.zone_intervention ?? ''} onChange={(e) => set('zone_intervention', e.target.value)} />
             </Field>
           </div>
-          <Field label={FIELD_LABELS.historique}>
+          <Field label={FIELD_LABELS.historique} optional>
             <textarea className="glass-input w-full py-2.5 text-sm" rows={4} placeholder="Fondée en 2005, notre entreprise..."
               style={{ resize: 'vertical' }}
               value={form.historique ?? ''} onChange={(e) => set('historique', e.target.value)} />
@@ -613,7 +616,7 @@ export default function MemoireConfig() {
               value={form.activites ?? ''} onChange={(e) => set('activites', e.target.value)} />
           </Field>
 
-          <Field label={FIELD_LABELS.chiffre_affaires}>
+          <Field label={FIELD_LABELS.chiffre_affaires} optional>
             <div className="space-y-2">
               {ca.map((entry, i) => (
                 <div key={i} className="flex gap-2 items-center">
@@ -631,7 +634,7 @@ export default function MemoireConfig() {
               ))}
               <button onClick={() => set('chiffre_affaires', [...ca, { annee: '', montant: '' }])}
                 className="flex items-center gap-1.5 text-xs font-medium mt-1 transition-colors"
-                style={{ color: '#3B82F6' }}
+                style={{ color: '#0EA5E9' }}
                 onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.8')}
                 onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
               >
@@ -643,12 +646,12 @@ export default function MemoireConfig() {
 
         {/* ÉQUIPE */}
         <Section section={SECTIONS[1]} data={form} isOpen={openSections.has('equipe')} onToggle={() => toggleSection('equipe')}>
-          <Field label={FIELD_LABELS.organigramme_description}>
+          <Field label={FIELD_LABELS.organigramme_description} optional>
             <textarea className="glass-input w-full py-2.5 text-sm" rows={3} placeholder="1 gérant + 2 conducteurs de travaux + 8 ouvriers..."
               style={{ resize: 'vertical' }}
               value={form.organigramme_description ?? ''} onChange={(e) => set('organigramme_description', e.target.value)} />
           </Field>
-          <Field label={FIELD_LABELS.postes_cles}>
+          <Field label={FIELD_LABELS.postes_cles} optional>
             <div className="space-y-3">
               {postes.map((poste, i) => (
                 <div
@@ -681,7 +684,7 @@ export default function MemoireConfig() {
               ))}
               <button onClick={() => set('postes_cles', [...postes, { poste: '', nom: '', role: '' }])}
                 className="flex items-center gap-1.5 text-xs font-medium transition-colors"
-                style={{ color: '#3B82F6' }}
+                style={{ color: '#0EA5E9' }}
                 onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.8')}
                 onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
               >
@@ -694,7 +697,7 @@ export default function MemoireConfig() {
         {/* MOYENS */}
         <Section section={SECTIONS[2]} data={form} isOpen={openSections.has('moyens')} onToggle={() => toggleSection('moyens')}>
           {(['moyens_informatiques', 'vehicules', 'materiel'] as const).map((field) => (
-            <Field key={field} label={FIELD_LABELS[field]}>
+            <Field key={field} label={FIELD_LABELS[field]} optional>
               <textarea className="glass-input w-full py-2.5 text-sm" rows={3}
                 style={{ resize: 'vertical' }}
                 placeholder={
@@ -711,7 +714,7 @@ export default function MemoireConfig() {
         {/* MÉTHODOLOGIE */}
         <Section section={SECTIONS[3]} data={form} isOpen={openSections.has('methodologie')} onToggle={() => toggleSection('methodologie')}>
           {(['demarche_qualite', 'procedure_demarrage', 'gestion_securite', 'traitement_dechets', 'mesures_environnementales'] as const).map((field) => (
-            <Field key={field} label={FIELD_LABELS[field]}>
+            <Field key={field} label={FIELD_LABELS[field]} optional>
               <textarea className="glass-input w-full py-2.5 text-sm" rows={4}
                 style={{ resize: 'vertical' }}
                 placeholder={
@@ -729,7 +732,7 @@ export default function MemoireConfig() {
 
         {/* FOURNISSEURS */}
         <Section section={SECTIONS[4]} data={form} isOpen={openSections.has('fournisseurs')} onToggle={() => toggleSection('fournisseurs')}>
-          <Field label={FIELD_LABELS.fournisseurs_principaux}>
+          <Field label={FIELD_LABELS.fournisseurs_principaux} optional>
             <textarea className="glass-input w-full py-2.5 text-sm" rows={4}
               style={{ resize: 'vertical' }}
               placeholder="Lafarge Holcim (béton), Point P (matériaux), Kiloutou (location matériel)..."
@@ -759,7 +762,7 @@ export default function MemoireConfig() {
             className="btn-primary flex items-center gap-2 font-semibold py-2.5 px-6 disabled:opacity-60"
           >
             {saveSuccess ? (
-              <><CheckCircle2 size={16} style={{ color: '#60A5FA' }} />Sauvegardé</>
+              <><CheckCircle2 size={16} style={{ color: '#059669' }} />Sauvegardé</>
             ) : (
               <><Save size={16} />{isSaving ? 'Sauvegarde...' : 'Sauvegarder'}</>
             )}

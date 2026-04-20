@@ -4,7 +4,9 @@ import unicodedata
 import io as _io
 import threading
 from typing import List, Optional, Any
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, UploadFile, File, Form
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
@@ -19,11 +21,13 @@ from services.document_processor import DocumentProcessor
 from services.pdf_converter import PdfConverter
 from services.lot_detector import LotDetector
 from services.document_tagger import assign_document_lots
+from services import pipeline_tracker
 from pathlib import Path as FilePath
 
 UPLOADS_ROOT = FilePath(__file__).parent.parent / "uploads"
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 storage = FileStorage()
 processor = DocumentProcessor()
 lot_detector = LotDetector()
@@ -282,7 +286,9 @@ def _convert_to_pdf_background(doc_id: str, file_url: str, filename: str) -> Non
 
 
 @router.post("/{project_id}/documents")
+@limiter.limit("10/minute")
 async def upload_project_document(
+    request: Request,
     project_id: str,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
@@ -297,7 +303,17 @@ async def upload_project_document(
 
     _get_project_or_404(project_id, user.organization_id, db)
 
+    # ── Upload validation ────────────────────────────────────────────────────
+    _ALLOWED_EXTENSIONS = {".pdf", ".docx", ".doc", ".xlsx", ".xls", ".zip", ".png", ".jpg", ".jpeg"}
+    _MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50 MB
+    filename = (file.filename or "").lower()
+    ext = filename[filename.rfind("."):] if "." in filename else ""
+    if ext not in _ALLOWED_EXTENSIONS:
+        raise HTTPException(status_code=400, detail=f"Type de fichier non autorisé : {ext}")
+
     content = await file.read()
+    if len(content) > _MAX_UPLOAD_SIZE:
+        raise HTTPException(status_code=413, detail="Fichier trop volumineux (max 50 Mo)")
     print(f"[TIMING] file.read(): {_time.monotonic()-_t0:.2f}s ({len(content)/1024/1024:.1f} MB)", flush=True)
 
     # ── ZIP handling ──────────────────────────────────────────────────────────
@@ -1007,10 +1023,38 @@ def get_processing_status(
     db: Session = Depends(get_db),
 ):
     project = _get_project_or_404(project_id, user.organization_id, db)
+
+    # Try structured tracker first (analysis / memoire pipelines)
+    tracked = pipeline_tracker.get_status(project_id)
+    if tracked:
+        return tracked
+
+    # Fallback to legacy DB fields (upload / extraction phases)
+    db_status = project.processing_status or "ready"
+    db_progress = project.processing_progress or 0
+    db_detail = project.processing_detail or ""
+
+    # Map legacy DB status to structured format
+    step_map = {
+        "uploading":        ("Upload des fichiers", 5),
+        "extracting_zip":   ("Extraction de l'archive", 15),
+        "extracting_text":  ("Extraction des documents", 10 + int(db_progress * 0.15)),
+        "detecting_lots":   ("Détection des lots", 30),
+        "ready":            ("Prêt", 0),
+        "error":            ("Erreur", 0),
+    }
+    label, pct = step_map.get(db_status, (db_status, 0))
+
     return {
-        "status": project.processing_status or "ready",
-        "progress": project.processing_progress or 0,
-        "detail": project.processing_detail or "",
+        "status": db_status,
+        "progress": pct,
+        "current_step": label,
+        "steps": [],
+        "estimated_remaining_s": 0,
+        "started_at": None,
+        "elapsed_s": 0,
+        "pipeline_type": "legacy",
+        "detail": db_detail,
     }
 
 

@@ -29,7 +29,6 @@ api.interceptors.request.use(async (config) => {
       ])
       if (token) {
         config.headers.Authorization = `Bearer ${token}`
-        console.log('[api]', config.method?.toUpperCase(), config.url, '| token OK')
       } else {
         console.warn('[api]', config.method?.toUpperCase(), config.url, '| NO TOKEN (timeout)')
       }

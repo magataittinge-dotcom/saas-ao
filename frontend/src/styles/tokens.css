@@ -1,141 +1,137 @@
 /* ═══════════════════════════════════════════════════════════════
    SYNORIX DESIGN TOKENS
-   Fusion Horizon UI + Glassmorphism Admin
-   Palette: #080B12 bg · #111C44 cards · #3B82F6/#60A5FA accent
+   Light Mode — Clean White Admin
+   Palette: #FFFFFF bg · Cyan #0EA5E9 · Emerald #10B981 · Violet #8B5CF6
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  /* ── Glass effect (Glassmorphism Admin) ─────────────────────── */
-  --glass-opacity: 0.04;
-  --glass-blur: 16px;
-  --glass-border-opacity: 0.08;
-  --glass-saturate: 150%;
-  --glass-hover-opacity: 0.07;
-  --glass-hover-border: 0.15;
+  /* ── Card style ───────────────────────────────────────────── */
+  --glass-opacity: 1;
+  --glass-blur: 0px;
+  --glass-border-opacity: 1;
+  --glass-saturate: 100%;
+  --glass-hover-opacity: 1;
+  --glass-hover-border: 1;
 
-  /* ── Shadows (Horizon UI adapted for dark) ─────────────────── */
-  --shadow-card: 0px 4px 6px rgba(0,0,0,0.25), 0px 10px 40px rgba(0,0,0,0.15);
-  --shadow-card-hover: 0px 8px 20px rgba(0,0,0,0.3), 0px 0px 30px rgba(59,130,246,0.06);
-  --shadow-horizon: 14px 17px 40px 4px rgba(0,0,0,0.20);
-  --shadow-horizon-hover: 14px 17px 40px 4px rgba(0,0,0,0.28), 0 0 24px rgba(59,130,246,0.06);
+  /* ── Shadows ──────────────────────────────────────────────────── */
+  --shadow-card: 0px 1px 3px rgba(0,0,0,0.06), 0px 1px 2px rgba(0,0,0,0.04);
+  --shadow-card-hover: 0px 4px 12px rgba(0,0,0,0.08), 0px 0px 0px 1px rgba(14,165,233,0.12);
+  --shadow-horizon: 0px 1px 3px rgba(0,0,0,0.06), 0px 1px 2px rgba(0,0,0,0.04);
+  --shadow-horizon-hover: 0px 4px 12px rgba(0,0,0,0.08), 0 0 0 1px rgba(14,165,233,0.12);
 
   /* ── Card backgrounds ──────────────────────────────────────── */
-  --card-navy: #111C44;
-  --card-navy-alt: #0B1437;
+  --card-navy: #FFFFFF;
+  --card-navy-alt: #F8FAFC;
 
-  /* ── Text hierarchy (Glassmorphism Admin) ───────────────────── */
-  --text-primary: rgba(255,255,255,0.92);
-  --text-secondary: rgba(255,255,255,0.65);
-  --text-tertiary: rgba(255,255,255,0.45);
-  --text-muted: rgba(255,255,255,0.30);
+  /* ── Text hierarchy ────────────────────────────────────────── */
+  --text-primary: #0F172A;
+  --text-secondary: #64748B;
+  --text-tertiary: #94A3B8;
+  --text-muted: #CBD5E1;
 
-  /* ── Border radius (Horizon UI) ────────────────────────────── */
-  --radius-card: 20px;
+  /* ── Border radius ─────────────────────────────────────────── */
+  --radius-card: 16px;
   --radius-lg: 16px;
   --radius-md: 12px;
   --radius-sm: 8px;
 
   /* ── Accent palette ────────────────────────────────────────── */
-  --accent-blue: #3B82F6;
-  --accent-blue-light: #60A5FA;
-  --accent-cyan: #06B6D4;
+  --accent-cyan: #0EA5E9;
+  --accent-cyan-light: #38BDF8;
+  --accent-teal: #10B981;
+  --accent-violet: #8B5CF6;
   --accent-green: #10B981;
   --accent-amber: #F59E0B;
   --accent-red: #EF4444;
 
-  /* ── Background gradients (Glassmorphism Admin body style) ── */
-  --bg-gradient-1: radial-gradient(ellipse 80% 80% at 20% 80%, rgba(59,130,246,0.08) 0%, transparent 50%);
-  --bg-gradient-2: radial-gradient(ellipse 60% 60% at 80% 20%, rgba(6,182,212,0.06) 0%, transparent 50%);
-  --bg-gradient-3: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(59,130,246,0.03) 0%, transparent 60%);
+  /* ── Background gradients (very subtle on light) ──────────── */
+  --bg-gradient-1: radial-gradient(ellipse 80% 80% at 20% 80%, rgba(14,165,233,0.03) 0%, transparent 50%);
+  --bg-gradient-2: radial-gradient(ellipse 60% 60% at 80% 20%, rgba(16,185,129,0.02) 0%, transparent 50%);
+  --bg-gradient-3: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(139,92,246,0.01) 0%, transparent 60%);
 }
 
-/* ── Glass Card — base ───────────────────────────────────────── */
+/* ── Glass Card — now solid white card ──────────────────────── */
 .glass-card {
-  background: rgba(255,255,255, var(--glass-opacity));
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  border: 1px solid rgba(255,255,255, var(--glass-border-opacity));
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .glass-card:hover {
-  background: rgba(255,255,255, var(--glass-hover-opacity));
-  border-color: rgba(59,130,246, var(--glass-hover-border));
+  border-color: #CBD5E1;
   box-shadow: var(--shadow-card-hover);
 }
 
 /* ── Glass Stat card ─────────────────────────────────────────── */
 .glass-stat {
-  background: rgba(255,255,255, var(--glass-opacity));
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  border: 1px solid rgba(255,255,255, var(--glass-border-opacity));
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-horizon);
   overflow: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .glass-stat:hover {
-  background: rgba(255,255,255, var(--glass-hover-opacity));
-  border-color: rgba(59,130,246, var(--glass-hover-border));
+  border-color: #CBD5E1;
   box-shadow: var(--shadow-horizon-hover);
-  transform: translateY(-2px);
+  transform: translateY(-1px);
 }
 
-/* ── Glass Sidebar ───────────────────────────────────────────── */
+/* ── Glass Sidebar — white with right border ─────────────────── */
 .glass-sidebar {
-  background: rgba(255,255,255, 0.02);
-  backdrop-filter: blur(20px) saturate(var(--glass-saturate));
-  -webkit-backdrop-filter: blur(20px) saturate(var(--glass-saturate));
-  border-right: 1px solid rgba(255,255,255, var(--glass-border-opacity));
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #FFFFFF;
+  border-right: 1px solid #E2E8F0;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ── Glass Header ────────────────────────────────────────────── */
+/* Mobile: full-width sidebar overlay */
+@media (max-width: 767px) {
+  .glass-sidebar {
+    background: #FFFFFF;
+    width: 260px;
+    box-shadow: 8px 0 32px rgba(0,0,0,0.08);
+  }
+}
+
+/* ── Glass Header — white with bottom border ─────────────────── */
 .glass-header {
-  background: rgba(8,11,18,0.75);
-  backdrop-filter: blur(24px) saturate(var(--glass-saturate));
-  -webkit-backdrop-filter: blur(24px) saturate(var(--glass-saturate));
-  border-bottom: 1px solid rgba(255,255,255, var(--glass-border-opacity));
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #FFFFFF;
+  border-bottom: 1px solid #E2E8F0;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ── Glass Input ─────────────────────────────────────────────── */
+/* ── Glass Input — light input ──────────────────────────────── */
 .glass-input {
-  background: rgba(255,255,255, var(--glass-opacity));
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  border: 1px solid rgba(255,255,255, var(--glass-border-opacity));
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
   border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #0F172A;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .glass-input:focus {
-  background: rgba(255,255,255, var(--glass-hover-opacity));
-  border-color: rgba(59,130,246, 0.4);
+  background: #FFFFFF;
+  border-color: #0EA5E9;
   outline: none;
-  box-shadow: 0 0 0 3px rgba(59,130,246, 0.1);
+  box-shadow: 0 0 0 3px rgba(14,165,233, 0.12);
 }
 
 /* ── Glass Button ────────────────────────────────────────────── */
 .glass-btn {
-  background: rgba(255,255,255, var(--glass-opacity));
-  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
-  border: 1px solid rgba(255,255,255, var(--glass-border-opacity));
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .glass-btn:hover {
-  background: rgba(255,255,255, 0.10);
-  border-color: rgba(255,255,255, 0.15);
+  background: #E2E8F0;
+  border-color: #CBD5E1;
 }
 
-/* ── Nav item (Horizon UI + Glass) ───────────────────────────── */
+/* ── Nav item (Light) ───────────────────────────────────────── */
 .glass-nav {
   display: flex;
   align-items: center;
@@ -144,23 +140,23 @@
   border-radius: var(--radius-sm);
   font-size: 0.875rem;
   font-weight: 500;
-  color: var(--text-tertiary);
+  color: #64748B;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   cursor: pointer;
 }
 
 .glass-nav:hover {
-  background: rgba(255,255,255,0.05);
-  color: var(--text-secondary);
+  background: #F1F5F9;
+  color: #0F172A;
 }
 
 .glass-nav.active {
-  background: rgba(59,130,246,0.12);
-  color: #60A5FA;
+  background: rgba(14,165,233,0.10);
+  color: #0EA5E9;
 }
 
-/* ── Badge (Horizon UI style) ────────────────────────────────── */
+/* ── Badge ────────────────────────────────────────────────────── */
 .glass-badge {
   display: inline-flex;
   align-items: center;
@@ -172,13 +168,11 @@
   transition: all 0.2s ease;
 }
 
-/* ── Auth Glass (Glassmorphism Admin strong preset) ──────────── */
+/* ── Auth Glass (light modal) ───────────────────────────────── */
 .glass-auth {
-  background: rgba(255,255,255, 0.06);
-  backdrop-filter: blur(32px) saturate(200%);
-  -webkit-backdrop-filter: blur(32px) saturate(200%);
-  border: 1px solid rgba(255,255,255, 0.12);
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
   border-radius: 24px;
-  box-shadow: 0px 20px 50px rgba(0,0,0,0.4), 0 0 80px rgba(59,130,246,0.06);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0px 20px 50px rgba(0,0,0,0.08), 0 0 0 1px rgba(14,165,233,0.06);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }

@@ -2,7 +2,9 @@ import asyncio
 import hashlib
 import logging
 from pathlib import Path
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -18,6 +20,7 @@ from services.ai.checklist_matcher import ChecklistMatcher
 from services.document_tagger import (
     get_documents_for_lot, extract_excel_sheet_for_lot, _normalize_lot_num,
 )
+from services import pipeline_tracker
 from typing import List
 
 logger = logging.getLogger(__name__)
@@ -25,10 +28,13 @@ logger = logging.getLogger(__name__)
 UPLOADS_ROOT = Path(__file__).parent.parent / "uploads"
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post("/{project_id}/analyze")
+@limiter.limit("5/minute")
 async def trigger_analysis(
+    request: Request,
     project_id: str,
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
@@ -149,25 +155,46 @@ async def trigger_analysis(
     project.status = "en_cours"
     db.commit()
 
+    # ── Pipeline tracking: mark upload+extraction+lots as already done ────────
+    pipeline_tracker.start_pipeline(project_id, "analysis")
+    pipeline_tracker.start_step(project_id, "upload")
+    pipeline_tracker.complete_step(project_id, "upload")
+    pipeline_tracker.start_step(project_id, "extraction")
+    pipeline_tracker.complete_step(project_id, "extraction")
+    pipeline_tracker.start_step(project_id, "detecting_lots")
+    pipeline_tracker.complete_step(project_id, "detecting_lots")
+
     # Run 2-pass AI analysis — each pass <60s, total <3min with retries
     analyzer = DCEAnalyzer()
     try:
+        # ── Passe 1 ──────────────────────────────────────────────────────────
+        pipeline_tracker.start_step(project_id, "analyzing_pass1")
         analysis = await asyncio.wait_for(
             analyzer.extract_full_analysis_multi_pass(
                 pass1_text=pass1_text,
                 pass2_text=pass2_text,
                 lot_header=lot_header,
+                selected_lot_name=lot_label,
+                on_pass1_done=lambda: (
+                    pipeline_tracker.complete_step(project_id, "analyzing_pass1"),
+                    pipeline_tracker.start_step(project_id, "analyzing_pass2"),
+                ),
             ),
             timeout=480.0,  # 8 min total (2 passes × 3 retries × ~60s + overhead)
         )
+        pipeline_tracker.complete_step(project_id, "analyzing_pass2")
+        pipeline_tracker.start_step(project_id, "finalizing")
     except asyncio.TimeoutError:
+        pipeline_tracker.fail_pipeline(project_id, "Timeout")
         project.current_step = 2
         db.commit()
         raise HTTPException(status_code=504, detail="L'analyse a pris trop de temps. Réessayez.")
     except Exception as e:
+        pipeline_tracker.fail_pipeline(project_id, str(e))
         project.current_step = 2
         db.commit()
-        raise HTTPException(status_code=500, detail=f"Erreur lors de l'analyse IA : {str(e)}")
+        logger.error(f"Erreur analyse IA projet {project_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Erreur lors de l'analyse IA. Veuillez réessayer.")
 
     requirements = analysis.get("requirements", [])
     criteres_jugement = analysis.get("criteres_jugement", [])
@@ -233,6 +260,8 @@ async def trigger_analysis(
             db.commit()
         except Exception:
             pass  # Checklist failure is non-blocking
+
+    pipeline_tracker.complete_pipeline(project_id)
 
     return {
         "status": "done",

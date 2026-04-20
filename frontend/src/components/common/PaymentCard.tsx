@@ -42,7 +42,7 @@ function CardLogo({ type }: { type: string }) {
     )
   }
   return (
-    <div className="w-8 h-5 rounded" style={{ background: 'rgba(255,255,255,0.20)' }} />
+    <div className="w-8 h-5 rounded" style={{ background: '#94A3B8' }} />
   )
 }
 
@@ -61,7 +61,7 @@ export default function PaymentCard({
         borderRadius: '20px',
         background: CARD_GRADIENTS[cardType] ?? CARD_GRADIENTS.default,
         perspective: '1000px',
-        boxShadow: '14px 17px 40px 4px rgba(0,0,0,0.30), 0 0 20px rgba(59,130,246,0.1)',
+        boxShadow: '14px 17px 40px 4px rgba(0,0,0,0.30), 0 0 20px rgba(14,165,233,0.1)',
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'perspective(800px) rotateY(2deg) scale(1.01)'
@@ -74,7 +74,7 @@ export default function PaymentCard({
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 50%, rgba(255,255,255,0.05) 100%)',
+          background: 'linear-gradient(135deg, #CBD5E1 0%, transparent 50%, #F1F5F9 100%)',
         }}
       />
       {/* Animated shine */}
@@ -84,7 +84,7 @@ export default function PaymentCard({
         <div
           className="absolute -inset-full"
           style={{
-            background: 'linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.05) 50%, transparent 60%)',
+            background: 'linear-gradient(135deg, transparent 40%, #F1F5F9 50%, transparent 60%)',
             animation: 'card-shine 6s ease-in-out infinite',
           }}
         />
@@ -113,11 +113,10 @@ export default function PaymentCard({
 
       {/* Card number */}
       <div
-        className="absolute left-6 text-white/90 text-lg font-medium"
+        className="absolute left-6 text-white/90 text-lg font-medium font-mono"
         style={{
           bottom: 68,
           letterSpacing: '0.25em',
-          fontFamily: '"JetBrains Mono", monospace',
         }}
       >
         •••• •••• •••• {lastFour}
@@ -126,7 +125,7 @@ export default function PaymentCard({
       {/* Holder name */}
       <div
         className="absolute bottom-5 left-6 text-sm uppercase text-white/70 tracking-wider"
-        style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}
+        style={{ fontFamily: '"Inter", system-ui, sans-serif' }}
       >
         {holderName}
       </div>
@@ -135,8 +134,7 @@ export default function PaymentCard({
       <div className="absolute bottom-5 right-6">
         <div className="text-[10px] uppercase text-white/40 mb-0.5">Expires</div>
         <div
-          className="text-sm text-white/80 font-medium"
-          style={{ fontFamily: '"JetBrains Mono", monospace' }}
+          className="text-sm text-white/80 font-medium font-mono"
         >
           {expiryDate}
         </div>

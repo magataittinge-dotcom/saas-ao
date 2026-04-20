@@ -1,14 +1,24 @@
-from typing import List
+import logging
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import Optional
 
 from database import get_db
 from models.user import User
 from models.team_member import TeamMember
+from models.organization import Organization
+from models.project import Project, ProjectDocument
+from models.reference import Reference
+from models.document import Document
+from models.memoire import MemoireTechnique
+from models.memoire_config import MemoireConfig
+from models.memoire_template import MemoireTemplate
+from models.compliance_item import ComplianceItem
+from models.checklist_item import ChecklistItem
 from routers.auth import get_auth_user
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -49,6 +59,46 @@ def create_team_member(
     db.commit()
     db.refresh(member)
     return member
+
+
+@router.delete("/me", status_code=200)
+def delete_my_account(
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """RGPD droit à l'oubli — supprime le compte utilisateur et TOUTES ses données."""
+    org_id = user.organization_id
+
+    # Count what we're deleting for audit log
+    project_ids = [p.id for p in db.query(Project.id).filter(Project.organization_id == org_id).all()]
+
+    # Delete project-related data
+    if project_ids:
+        db.query(ComplianceItem).filter(ComplianceItem.project_id.in_(project_ids)).delete(synchronize_session=False)
+        db.query(ChecklistItem).filter(ChecklistItem.project_id.in_(project_ids)).delete(synchronize_session=False)
+        db.query(MemoireTechnique).filter(MemoireTechnique.project_id.in_(project_ids)).delete(synchronize_session=False)
+        db.query(ProjectDocument).filter(ProjectDocument.project_id.in_(project_ids)).delete(synchronize_session=False)
+        db.query(Project).filter(Project.id.in_(project_ids)).delete(synchronize_session=False)
+
+    # Delete organization-level data
+    db.query(MemoireConfig).filter(MemoireConfig.organization_id == org_id).delete(synchronize_session=False)
+    db.query(MemoireTemplate).filter(MemoireTemplate.organization_id == org_id).delete(synchronize_session=False)
+    db.query(Reference).filter(Reference.organization_id == org_id).delete(synchronize_session=False)
+    db.query(Document).filter(Document.organization_id == org_id).delete(synchronize_session=False)
+    db.query(TeamMember).filter(TeamMember.organization_id == org_id).delete(synchronize_session=False)
+
+    # Delete other users in the same org
+    db.query(User).filter(User.organization_id == org_id, User.id != user.id).delete(synchronize_session=False)
+
+    # Delete requesting user
+    db.delete(user)
+
+    # Delete organization
+    db.query(Organization).filter(Organization.id == org_id).delete(synchronize_session=False)
+
+    db.commit()
+    logger.info(f"RGPD: compte supprimé — user={user.email}, org={org_id}, projets={len(project_ids)}")
+    return {"deleted": True, "projects_deleted": len(project_ids)}
 
 
 @router.delete("/team/{member_id}", status_code=204)

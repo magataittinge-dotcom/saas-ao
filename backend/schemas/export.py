@@ -28,6 +28,16 @@ class ChecklistExportItem(BaseModel):
     status: str
     details: Optional[str] = None
     linked_document_name: Optional[str] = None
+    linked_document_id: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class ProjectDocumentExportItem(BaseModel):
+    id: str
+    file_name: str
+    type: str
+    pdf_preview_url: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -44,6 +54,11 @@ class DpgfExportInfo(BaseModel):
     file_id: str
 
 
+class DpgfRemplieInfo(BaseModel):
+    file_name: Optional[str] = None
+    verification: Optional[dict] = None
+
+
 class ExportDetail(BaseModel):
     # Summary counts
     compliance_total: int
@@ -56,5 +71,7 @@ class ExportDetail(BaseModel):
     # Detailed items
     compliance_items: list[ComplianceExportItem]
     checklist_items: list[ChecklistExportItem]
+    project_documents: list[ProjectDocumentExportItem] = []
     memoire_info: Optional[MemoireExportInfo] = None
     dpgf_info: Optional[DpgfExportInfo] = None
+    dpgf_remplie: Optional[DpgfRemplieInfo] = None

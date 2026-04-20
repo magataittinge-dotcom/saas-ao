@@ -36,7 +36,7 @@ export default function Project() {
       <div className="flex items-center justify-center h-64">
         <div
           className="w-8 h-8 rounded-full border-2 border-transparent animate-spin"
-          style={{ borderTopColor: '#3B82F6' }}
+          style={{ borderTopColor: '#0EA5E9' }}
         />
       </div>
     )
@@ -66,7 +66,7 @@ export default function Project() {
           'sticky top-0 z-20 glass-card p-5 mb-6 transition-all duration-200',
           stepperStuck && 'rounded-none -mx-6 px-12',
         )}
-        style={stepperStuck ? { background: 'rgba(8,11,18,0.92)', backdropFilter: 'blur(20px)' } : undefined}
+        style={stepperStuck ? { background: '#FFFFFF', borderBottom: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' } : undefined}
       >
         <StepProgress
           currentStep={project.current_step}

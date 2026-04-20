@@ -130,7 +130,9 @@ async def import_memoire(
         importer = MemoireImporter()
         extracted = await importer.extract(text)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erreur lors de l'extraction IA : {str(e)}")
+        import logging as _logging
+        _logging.getLogger(__name__).error(f"Erreur extraction mémoire import: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Erreur lors de l'extraction du mémoire. Veuillez réessayer.")
 
     # Count non-null fields
     fields_count = sum(1 for v in extracted.values() if v is not None and v != "" and v != [])

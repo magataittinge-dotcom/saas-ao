@@ -4,9 +4,9 @@ import { useAuthStore } from '@/stores/authStore'
 import PaymentCard from '@/components/common/PaymentCard'
 
 const PLAN_LABELS: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  pro:      { label: 'Pro',      color: '#60A5FA', bg: 'rgba(59,130,246,0.12)',  border: 'rgba(59,130,246,0.30)' },
-  business: { label: 'Business', color: '#93C5FD', bg: 'rgba(96,165,250,0.12)',   border: 'rgba(96,165,250,0.30)' },
-  free:     { label: 'Gratuit',  color: '#94A3B8', bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.12)' },
+  pro:      { label: 'Pro',      color: '#059669', bg: 'rgba(14,165,233,0.12)',  border: 'rgba(14,165,233,0.30)' },
+  business: { label: 'Business', color: '#0284C7', bg: 'rgba(0,212,170,0.12)',   border: 'rgba(0,212,170,0.30)' },
+  free:     { label: 'Gratuit',  color: '#94A3B8', bg: '#E2E8F0', border: '#CBD5E1' },
 }
 
 function SectionCard({ icon, title, children }: {
@@ -18,11 +18,11 @@ function SectionCard({ icon, title, children }: {
     <div className="glass-card overflow-hidden">
       <div
         className="flex items-center gap-3 px-6 py-4"
-        style={{ borderBottom: '1px solid rgba(59,130,246,0.08)', background: 'rgba(59,130,246,0.02)' }}
+        style={{ borderBottom: '1px solid rgba(14,165,233,0.08)', background: 'rgba(14,165,233,0.02)' }}
       >
         <div
           className="w-8 h-8 rounded-lg flex items-center justify-center"
-          style={{ background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.18)' }}
+          style={{ background: 'rgba(14,165,233,0.10)', border: '1px solid rgba(14,165,233,0.18)' }}
         >
           {icon}
         </div>
@@ -35,7 +35,7 @@ function SectionCard({ icon, title, children }: {
 
 function InfoRow({ label, value }: { label: string; value?: ReactNode }) {
   return (
-    <div className="flex items-center justify-between py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+    <div className="flex items-center justify-between py-2.5" style={{ borderBottom: '1px solid #F1F5F9' }}>
       <span className="text-sm text-ds-text-2">{label}</span>
       <span className="text-sm font-medium text-ds-text">{value ?? <span className="text-ds-text-3 italic">—</span>}</span>
     </div>
@@ -56,9 +56,9 @@ export default function Settings() {
       <div className="flex items-center gap-3">
         <div
           className="w-10 h-10 rounded-xl flex items-center justify-center"
-          style={{ background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.18)' }}
+          style={{ background: 'rgba(14,165,233,0.10)', border: '1px solid rgba(14,165,233,0.18)' }}
         >
-          <SettingsIcon size={18} style={{ color: '#3B82F6' }} />
+          <SettingsIcon size={18} className="text-ds-blue" />
         </div>
         <div>
           <h1 className="text-ds-text leading-tight">Paramètres</h1>
@@ -67,7 +67,7 @@ export default function Settings() {
       </div>
 
       {/* ── Profil ─────────────────────────────────────────────────────── */}
-      <SectionCard icon={<User size={15} style={{ color: '#3B82F6' }} />} title="Mon profil">
+      <SectionCard icon={<User size={15} className="text-ds-blue" />} title="Mon profil">
         <div className="divide-y" style={{ borderColor: 'transparent' }}>
           <InfoRow label="Nom complet"  value={user?.name} />
           <InfoRow label="Adresse email" value={user?.email} />
@@ -75,8 +75,8 @@ export default function Settings() {
             label="Rôle"
             value={
               <span
-                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium"
-                style={{ background: 'rgba(59,130,246,0.10)', color: '#93C5FD', border: '1px solid rgba(59,130,246,0.20)' }}
+                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium text-ds-blue-light"
+                style={{ background: 'rgba(14,165,233,0.10)', border: '1px solid rgba(14,165,233,0.20)' }}
               >
                 <Shield size={10} />
                 {user?.role ?? 'admin'}
@@ -87,7 +87,7 @@ export default function Settings() {
       </SectionCard>
 
       {/* ── Entreprise ──────────────────────────────────────────────────── */}
-      <SectionCard icon={<Building2 size={15} style={{ color: '#60A5FA' }} />} title="Entreprise">
+      <SectionCard icon={<Building2 size={15} className="text-ds-teal" />} title="Entreprise">
         <div className="divide-y" style={{ borderColor: 'transparent' }}>
           <InfoRow label="Raison sociale"   value={organization?.name} />
           <InfoRow label="SIRET"            value={(organization as any)?.siret} />
@@ -98,10 +98,7 @@ export default function Settings() {
           Complétez votre profil entreprise depuis la section{' '}
           <a
             href="/profile"
-            className="transition-colors duration-200"
-            style={{ color: '#3B82F6' }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = '#93C5FD')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = '#3B82F6')}
+            className="text-ds-blue hover:text-ds-blue-light transition-colors duration-200"
           >
             Profil entreprise
           </a>
@@ -109,7 +106,7 @@ export default function Settings() {
       </SectionCard>
 
       {/* ── Abonnement ──────────────────────────────────────────────────── */}
-      <SectionCard icon={<CreditCard size={15} style={{ color: '#A78BFA' }} />} title="Abonnement">
+      <SectionCard icon={<CreditCard size={15} className="text-ds-purple" />} title="Abonnement">
         <div className="flex items-center justify-between mb-5">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -142,7 +139,7 @@ export default function Settings() {
             href="/billing"
             className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 no-underline"
             style={{
-              background: 'linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%)',
+              background: 'linear-gradient(135deg, #0EA5E9 0%, #10B981 100%)',
               color: '#fff',
               border: 'none',
               cursor: 'pointer',
@@ -158,12 +155,12 @@ export default function Settings() {
             href="/billing"
             className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm text-ds-text-2 transition-all duration-200 hover:text-ds-text no-underline"
             style={{
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.08)',
+              background: 'rgba(248,250,252,1)',
+              border: '1px solid #E2E8F0',
               cursor: 'pointer',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
+            onMouseEnter={(e) => (e.currentTarget.style.background = '#F1F5F9')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(248,250,252,1)')}
           >
             <span>Historique de facturation</span>
             <ChevronRight size={16} />

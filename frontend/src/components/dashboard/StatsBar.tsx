@@ -10,25 +10,25 @@ const ITEMS = [
     key: 'projects_en_cours' as keyof DashboardStats,
     label: 'AO en cours',
     icon: FolderOpen,
-    iconBg: 'linear-gradient(135deg, #3B82F6 0%, #3B82F6 100%)',
-    iconGlow: 'rgba(59,130,246,0.35)',
-    accentColor: '#3B82F6',
+    iconBg: 'linear-gradient(135deg, #0EA5E9 0%, #0EA5E9 100%)',
+    iconGlow: 'rgba(14,165,233,0.35)',
+    accentColor: '#0EA5E9',
     suffix: '',
   },
   {
     key: 'projects_soumis_ce_mois' as keyof DashboardStats,
     label: 'Soumis ce mois',
     icon: Send,
-    iconBg: 'linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%)',
-    iconGlow: 'rgba(96,165,250,0.35)',
-    accentColor: '#60A5FA',
+    iconBg: 'linear-gradient(135deg, #10B981 0%, #0EA5E9 100%)',
+    iconGlow: 'rgba(0,212,170,0.35)',
+    accentColor: '#10B981',
     suffix: '',
   },
   {
     key: 'projects_gagnes' as keyof DashboardStats,
     label: 'Marchés gagnés',
     icon: Trophy,
-    iconBg: 'linear-gradient(135deg, #10B981 0%, #60A5FA 100%)',
+    iconBg: 'linear-gradient(135deg, #10B981 0%, #10B981 100%)',
     iconGlow: 'rgba(16,185,129,0.35)',
     accentColor: '#10B981',
     suffix: '',
@@ -80,8 +80,8 @@ export function StatsBar({ stats }: Props) {
               {/* Value */}
               <div className="text-right">
                 <p
-                  className="text-2xl font-bold leading-none text-white"
-                  style={{ fontFamily: '"JetBrains Mono", monospace', letterSpacing: '-0.02em' }}
+                  className="text-2xl font-bold leading-none text-white font-mono"
+                  style={{ letterSpacing: '-0.02em' }}
                 >
                   {value}{suffix}
                 </p>

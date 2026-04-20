@@ -1,14 +1,17 @@
 import { useState, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
-  Loader2, ExternalLink, Search, Building2, Calendar, MapPin, Euro, Clock,
-  AlertTriangle, CreditCard, Shield, Eye, GitBranch, Truck, CheckCircle2, Filter,
+  Loader2, Search, Calendar, MapPin, Clock,
+  CheckCircle2, Sparkles, Info, Shield,
 } from 'lucide-react'
 import { api } from '@/services/api'
 import LoadingProgress from '@/components/common/LoadingProgress'
-import type { Project, ComplianceItem, ComplianceCategory, CritereJugement, InfosMarche, ProjectDocument } from '@/types'
+import type { Project, ComplianceItem, ComplianceCategory, ProjectDocument } from '@/types'
 import { useCompleteStep } from '@/hooks/useProject'
+
+const F = "'DM Sans', sans-serif"
 
 const CATEGORY_LABELS: Record<ComplianceCategory, string> = {
   candidature:       'Candidature',
@@ -71,13 +74,10 @@ export default function StepAnalysis({ project }: Props) {
     const doc = matchedDoc || projectDocs[0]
     if (!doc) return
 
-    // In dev, use relative URL (goes through Vite proxy → backend)
-    // In prod, use VITE_API_URL or empty string
     const baseUrl = import.meta.env.PROD
       ? (import.meta.env.VITE_API_URL || '')
       : ''
 
-    // Utiliser le PDF converti s'il existe, sinon le fichier original
     const fileUrlToUse = doc.pdf_preview_url || doc.file_url
 
     let relativePath = fileUrlToUse
@@ -88,7 +88,6 @@ export default function StepAnalysis({ project }: Props) {
       return
     }
 
-    // Encoder chaque segment du path séparément pour préserver les /
     const viewUrl = `${baseUrl}/api/files/view/${relativePath.split('/').map(s => encodeURIComponent(s)).join('/')}`
     const params = new URLSearchParams()
 
@@ -102,10 +101,8 @@ export default function StepAnalysis({ project }: Props) {
     const queryString = params.toString()
     const isPdf = fileUrlToUse.toLowerCase().endsWith('.pdf')
 
-    // URL finale : /api/files/view/path?page=X&highlight=texte#page=X
     let finalUrl = queryString ? `${viewUrl}?${queryString}` : viewUrl
 
-    // Ajouter #page=X pour que le navigateur scroll à la bonne page
     if (isPdf && item.source_page) {
       finalUrl += `#page=${item.source_page}`
     }
@@ -188,9 +185,9 @@ export default function StepAnalysis({ project }: Props) {
     ? analysisProgress.total_docs > 0
       ? (analysisProgress.analyzed_docs / analysisProgress.total_docs) * 100
       : 10
-    : 15 // Fallback when endpoint isn't available
+    : 15
 
-  // ── Lot filter computation (must be before any early return) ────────────
+  // ── Lot filter computation ────────────────────────────────────
   const lotFilterInfo = useMemo(() => {
     if (!project.selected_lot || project.selected_lot === 'all') return null
     const lotNum = project.selected_lot.replace(/^lot/i, '').replace(/^0+/, '') || '0'
@@ -208,15 +205,46 @@ export default function StepAnalysis({ project }: Props) {
     }
   }, [projectDocs, project.selected_lot, project.selected_lot_name])
 
+  // ── Derived data for redesigned layout ────────────────────────
+  const prixPct = useMemo(() => {
+    const c = project.criteres_jugement?.find(cr => cr.nom.toLowerCase().includes('prix'))
+    return c?.poids ?? 0
+  }, [project.criteres_jugement])
+
+  const techPct = useMemo(() => {
+    if (!project.criteres_jugement) return 0
+    return project.criteres_jugement
+      .filter(c => !c.nom.toLowerCase().includes('prix'))
+      .reduce((sum, c) => sum + c.poids, 0)
+  }, [project.criteres_jugement])
+
+  const obligatoireCount = useMemo(
+    () => items.filter(i => i.priority === 'obligatoire').length,
+    [items],
+  )
+
+  const [showLotDetails, setShowLotDetails] = useState(false)
+  const lotTotal = lotFilterInfo ? lotFilterInfo.included.length + lotFilterInfo.excluded.length : 0
+
+  // ── Loading states ────────────────────────────────────────────
+
   if (isLoading) return (
-    <div className="glass-card p-12 flex flex-col items-center gap-3">
-      <Loader2 size={32} className="animate-spin" style={{ color: '#3B82F6' }} />
-      <p className="text-ds-text font-medium">Chargement de l&apos;analyse...</p>
+    <div
+      className="bg-white rounded-xl p-12 flex flex-col items-center gap-3"
+      style={{ border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+    >
+      <Loader2 size={32} className="animate-spin" style={{ color: '#0EA5E9' }} />
+      <p className="font-medium" style={{ color: '#0F172A', fontFamily: F }}>
+        Chargement de l&apos;analyse...
+      </p>
     </div>
   )
 
   if (items.length === 0) return (
-    <div className="glass-card p-12">
+    <div
+      className="bg-white rounded-xl p-12"
+      style={{ border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+    >
       <LoadingProgress
         progress={analysisPercent}
         label="Analyse IA en cours..."
@@ -230,551 +258,456 @@ export default function StepAnalysis({ project }: Props) {
     </div>
   )
 
-  return (
-    <div className="space-y-4">
+  // ── Bottom bar (portalled) ────────────────────────────────────
 
-      {/* ── Bandeau filtre lot ───────────────────────────────────── */}
-      {lotFilterInfo && (
-        <LotFilterBanner
-          lotLabel={lotFilterInfo.lotLabel}
-          included={lotFilterInfo.included}
-          excluded={lotFilterInfo.excluded}
-        />
-      )}
-
-      {/* ── Infos marché ─────────────────────────────────────────── */}
-      {project.infos_marche && <InfosMarcheCard infos={project.infos_marche} />}
-
-      {/* ── Conditions financières ────────────────────────────────── */}
-      {project.infos_marche && hasFinancialInfo(project.infos_marche) && (
-        <ConditionsFinancieresCard infos={project.infos_marche} />
-      )}
-
-      {/* ── Conditions d'exécution ─────────────────────────────────── */}
-      {project.infos_marche && hasExecutionInfo(project.infos_marche) && (
-        <ConditionsExecutionCard infos={project.infos_marche} />
-      )}
-
-      {/* ── Critères de jugement ──────────────────────────────────── */}
-      {project.criteres_jugement && project.criteres_jugement.length > 0 && (
-        <CriteresJugementCard criteres={project.criteres_jugement} />
-      )}
-
-      {/* ── Rapport d'exigences extrait ───────────────────────────── */}
-      <div className="glass-card p-6 space-y-5">
-
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-ds-text">Rapport d&apos;analyse DCE</h2>
-            <p className="text-sm text-ds-text-2 mt-1">
-              {items.length} informations extraites du dossier
-            </p>
-          </div>
-          <div className="text-right">
-            <div
-              className="text-2xl font-bold"
-              style={{ fontFamily: '"JetBrains Mono", monospace', color: '#3B82F6' }}
-            >
-              {items.length}
-            </div>
-            <div className="text-xs text-ds-text-3">exigences</div>
-          </div>
-        </div>
-
-        {/* Filter pills */}
-        <div className="flex flex-wrap gap-2">
-          <FilterPill label={`Tout (${items.length})`} active={activeFilter === 'all'} onClick={() => setActiveFilter('all')} />
-          {CATEGORY_ORDER.filter((cat) => counts[cat]).map((cat) => (
-            <FilterPill
-              key={cat}
-              label={`${CATEGORY_LABELS[cat]} (${counts[cat]})`}
-              active={activeFilter === cat}
-              onClick={() => setActiveFilter(cat)}
-            />
-          ))}
-        </div>
-
-        {/* Search */}
-        <div className="relative">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-ds-text-3" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Rechercher une exigence extraite..."
-            className="glass-input w-full py-2.5 text-sm pl-9"
-          />
-        </div>
-
-        {filtered.length === 0 && (
-          <p className="text-center text-sm text-ds-text-3 py-8">Aucune exigence trouvée</p>
-        )}
-
-        {/* Table — information, not checklist (no statut column) */}
-        <div className="space-y-6">
-          {Object.entries(grouped).map(([cat, catItems]) => (
-            <div key={cat}>
-              <h3 className="text-xs font-semibold text-ds-text-3 uppercase tracking-wide mb-2">
-                {CATEGORY_LABELS[cat as ComplianceCategory]} ({catItems.length})
-              </h3>
-              <div className="overflow-x-auto rounded-lg" style={{ border: '1px solid rgba(59,130,246,0.10)' }}>
-                <table className="table-dark">
-                  <thead>
-                    <tr>
-                      <th className="w-8">#</th>
-                      <th>Exigence extraite du DCE</th>
-                      <th className="w-28">Source</th>
-                      <th className="w-24">Priorité</th>
-                      <th className="w-8" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {catItems.map((item, index) => (
-                      <tr key={item.id}>
-                        <td className="text-ds-text-3 text-xs">{index + 1}</td>
-                        <td className="pr-4">
-                          <p className="text-ds-text">{item.exigence_text}</p>
-                          {item.source_excerpt && (
-                            <p className="text-xs text-ds-text-3 mt-0.5 italic truncate max-w-md">
-                              «{item.source_excerpt}»
-                            </p>
-                          )}
-                          {item.suggestion_ia && (
-                            <p className="text-xs mt-1 italic" style={{ color: '#60A5FA' }}>
-                              💡 {item.suggestion_ia}
-                            </p>
-                          )}
-                        </td>
-                        <td className="text-xs text-ds-text-2">
-                          {item.source_document}
-                          {item.source_page && ` p.${item.source_page}`}
-                        </td>
-                        <td>
-                          <span
-                            className="text-xs rounded-full px-2 py-0.5 border"
-                            style={
-                              item.priority === 'obligatoire'
-                                ? { background: 'rgba(239,68,68,0.12)', color: '#F87171', borderColor: 'rgba(239,68,68,0.25)' }
-                                : item.priority === 'souhaitée' || item.priority === 'souhaite' || item.priority === 'recommandé'
-                                ? { background: 'rgba(245,158,11,0.12)', color: '#FCD34D', borderColor: 'rgba(245,158,11,0.25)' }
-                                : { background: 'rgba(255,255,255,0.06)', color: '#64748B', borderColor: 'rgba(255,255,255,0.08)' }
-                            }
-                          >
-                            {item.priority}
-                          </span>
-                        </td>
-                        <td>
-                          {(item.source_page || item.source_document) && (
-                            <button
-                              onClick={() => openSourceDocument(item)}
-                              className="p-1 text-ds-text-3 hover:text-ds-cyan transition-colors"
-                              title={`Voir dans ${item.source_document || 'le document'}${item.source_page ? ` p.${item.source_page}` : ''}`}
-                            >
-                              <ExternalLink size={14} />
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* ── Bouton validation ─────────────────────────────────────── */}
-        <div
-          className="flex items-center justify-between pt-4 mt-2"
-          style={{ borderTop: '1px solid rgba(59,130,246,0.10)' }}
-        >
-          <p className="text-sm text-ds-text-2">
-            {isStepAlreadyDone
-              ? 'Analyse déjà validée — vous pouvez passer à la candidature'
-              : 'Prenez connaissance des exigences avant de passer à la candidature'}
-          </p>
-          <button
-            onClick={handleValidate}
-            disabled={isValidating}
-            className="btn-primary flex items-center gap-2 px-6 py-2.5"
-            style={
-              isStepAlreadyDone
-                ? { background: 'linear-gradient(135deg, #10B981, #3B82F6)' }
-                : undefined
-            }
-          >
-            {isStepAlreadyDone
-              ? <><CheckCircle2 size={16} /> Passer à la candidature</>
-              : isValidating
-              ? <><Loader2 size={16} className="animate-spin" /> Validation...</>
-              : <><CheckCircle2 size={16} /> J&apos;ai pris connaissance de l&apos;analyse ✓</>
-            }
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function hasFinancialInfo(infos: InfosMarche): boolean {
-  return !!(
-    infos.conditions_paiement ||
-    infos.penalites_retard ||
-    infos.retenue_garantie_pct != null ||
-    infos.validite_offres_jours != null
-  )
-}
-
-function hasExecutionInfo(infos: InfosMarche): boolean {
-  return !!(
-    infos.visite_site ||
-    infos.variantes_autorisees != null ||
-    infos.conditions_sous_traitance ||
-    (infos.assurances_specifiques && infos.assurances_specifiques.length > 0)
-  )
-}
-
-// ─── Filter Pill ──────────────────────────────────────────────────────────────
-
-function FilterPill({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="px-3 py-1 rounded-full text-xs font-medium transition-all duration-150"
-      style={
-        active
-          ? { background: 'rgba(59,130,246,0.20)', color: '#93C5FD', border: '1px solid rgba(59,130,246,0.35)' }
-          : { background: 'rgba(255,255,255,0.05)', color: '#64748B', border: '1px solid rgba(255,255,255,0.08)' }
-      }
-    >
-      {label}
-    </button>
-  )
-}
-
-// ─── Infos Marché Card ────────────────────────────────────────────────────────
-
-function InfosMarcheCard({ infos }: { infos: InfosMarche }) {
-  const fields = [
-    { icon: Building2,     label: "Maître d'ouvrage",       value: infos.maitre_ouvrage },
-    { icon: Building2,     label: "Maître d'œuvre",         value: infos.maitre_oeuvre },
-    { icon: MapPin,        label: 'Lots',                   value: infos.lots?.join(', ') },
-    { icon: Clock,         label: 'Durée du marché',        value: infos.duree_marche },
-    { icon: Euro,          label: 'Montant estimé',         value: infos.montant_estime },
-    { icon: Calendar,      label: 'Date limite de réponse', value: infos.date_limite_reponse },
-    { icon: AlertTriangle, label: 'Procédure',              value: infos.type_procedure },
-  ].filter((f) => f.value)
-
-  if (fields.length === 0) return null
-
-  return (
-    <div className="glass-card p-5">
-      <h2 className="text-xs font-semibold text-ds-text-3 uppercase tracking-widest mb-3">
-        Informations du marché
-      </h2>
-      {infos.objet && (
-        <p className="text-base font-semibold text-ds-text mb-3">{infos.objet}</p>
-      )}
-      <div className="grid grid-cols-2 gap-3">
-        {fields.map(({ icon: Icon, label, value }) => (
-          <div key={label} className="flex items-start gap-2">
-            <Icon size={14} className="mt-0.5 shrink-0" style={{ color: '#3B82F6' }} />
-            <div>
-              <p className="text-xs text-ds-text-3">{label}</p>
-              <p className="text-sm text-ds-text font-medium">{value}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ─── Conditions Financières Card ──────────────────────────────────────────────
-
-function ConditionsFinancieresCard({ infos }: { infos: InfosMarche }) {
-  const rows: { label: string; value: string }[] = []
-
-  if (infos.conditions_paiement) {
-    const cp = infos.conditions_paiement
-    if (cp.delai_jours != null) rows.push({ label: 'Délai de paiement', value: `${cp.delai_jours} jours` })
-    if (cp.avance_pct != null) rows.push({ label: 'Avance forfaitaire', value: `${cp.avance_pct}%` })
-    if (cp.acomptes) rows.push({ label: 'Acomptes', value: cp.acomptes })
-  }
-  if (infos.penalites_retard) rows.push({ label: 'Pénalités de retard', value: infos.penalites_retard })
-  if (infos.retenue_garantie_pct != null) {
-    let v = `${infos.retenue_garantie_pct}%`
-    if (infos.caution_remplacante) v += ' (remplacement par caution autorisé)'
-    rows.push({ label: 'Retenue de garantie', value: v })
-  }
-  if (infos.validite_offres_jours != null) {
-    rows.push({ label: 'Validité des offres', value: `${infos.validite_offres_jours} jours` })
-  }
-
-  if (rows.length === 0) return null
-
-  return (
-    <div className="glass-card p-5">
-      <div className="flex items-center gap-2 mb-3">
-        <CreditCard size={16} style={{ color: '#60A5FA' }} />
-        <h2 className="text-xs font-semibold text-ds-text-3 uppercase tracking-widest">
-          Conditions financières
-        </h2>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        {rows.map(({ label, value }) => (
-          <div key={label} className="rounded-lg p-3" style={{ background: 'rgba(96,165,250,0.06)', border: '1px solid rgba(96,165,250,0.12)' }}>
-            <p className="text-xs text-ds-text-3 mb-0.5">{label}</p>
-            <p className="text-sm text-ds-text font-medium">{value}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ─── Conditions d'Exécution Card ──────────────────────────────────────────────
-
-function ConditionsExecutionCard({ infos }: { infos: InfosMarche }) {
-  return (
-    <div className="glass-card p-5">
-      <div className="flex items-center gap-2 mb-3">
-        <Shield size={16} style={{ color: '#F59E0B' }} />
-        <h2 className="text-xs font-semibold text-ds-text-3 uppercase tracking-widest">
-          Conditions d&apos;exécution
-        </h2>
-      </div>
-      <div className="space-y-3">
-
-        {infos.visite_site && (
-          <InfoRow
-            icon={<Eye size={14} style={{ color: '#3B82F6' }} />}
-            label="Visite de site"
-            value={infos.visite_site.obligatoire ? 'Obligatoire' : 'Facultative'}
-            detail={infos.visite_site.details ?? undefined}
-            accent={infos.visite_site.obligatoire ? 'rgba(239,68,68,0.10)' : 'rgba(59,130,246,0.08)'}
-            accentBorder={infos.visite_site.obligatoire ? 'rgba(239,68,68,0.20)' : 'rgba(59,130,246,0.15)'}
-          />
-        )}
-
-        {infos.variantes_autorisees != null && (
-          <InfoRow
-            icon={<GitBranch size={14} style={{ color: '#8B5CF6' }} />}
-            label="Variantes"
-            value={infos.variantes_autorisees ? 'Autorisées' : 'Non autorisées'}
-            accent={infos.variantes_autorisees ? 'rgba(16,185,129,0.08)' : 'rgba(255,255,255,0.04)'}
-            accentBorder={infos.variantes_autorisees ? 'rgba(16,185,129,0.18)' : 'rgba(255,255,255,0.08)'}
-          />
-        )}
-
-        {infos.conditions_sous_traitance && (
-          <InfoRow
-            icon={<Truck size={14} style={{ color: '#F59E0B' }} />}
-            label="Sous-traitance"
-            value={infos.conditions_sous_traitance}
-          />
-        )}
-
-        {infos.assurances_specifiques && infos.assurances_specifiques.length > 0 && (
-          <div className="rounded-lg p-3" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
-            <div className="flex items-center gap-1.5 mb-2">
-              <Shield size={13} style={{ color: '#F59E0B' }} />
-              <p className="text-xs text-ds-text-3">Assurances spécifiques requises</p>
-            </div>
-            <ul className="space-y-1">
-              {infos.assurances_specifiques.map((a, i) => (
-                <li key={i} className="text-sm text-ds-text flex items-start gap-2">
-                  <span style={{ color: '#F59E0B', marginTop: 2 }}>•</span>
-                  {a}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-function InfoRow({
-  icon, label, value, detail, accent, accentBorder,
-}: {
-  icon: React.ReactNode
-  label: string
-  value: string
-  detail?: string
-  accent?: string
-  accentBorder?: string
-}) {
-  return (
+  const bottomBar = (
     <div
-      className="rounded-lg p-3"
+      className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-3 gap-4"
       style={{
-        background: accent ?? 'rgba(255,255,255,0.03)',
-        border: `1px solid ${accentBorder ?? 'rgba(255,255,255,0.08)'}`,
+        background: 'rgba(255,255,255,0.85)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        borderTop: '1px solid #F1F5F9',
       }}
     >
-      <div className="flex items-center gap-2 mb-0.5">
-        {icon}
-        <p className="text-xs text-ds-text-3">{label}</p>
-      </div>
-      <p className="text-sm text-ds-text font-medium">{value}</p>
-      {detail && <p className="text-xs text-ds-text-2 mt-0.5">{detail}</p>}
-    </div>
-  )
-}
-
-// ─── Critères de Jugement Card ─────────────────────────────────────────────────
-
-const CRITERE_COLORS = [
-  { bar: '#3B82F6', text: '#60A5FA', bg: 'rgba(59,130,246,0.10)'  },
-  { bar: '#10B981', text: '#34D399', bg: 'rgba(16,185,129,0.10)'  },
-  { bar: '#8B5CF6', text: '#A78BFA', bg: 'rgba(139,92,246,0.10)'  },
-  { bar: '#F59E0B', text: '#FCD34D', bg: 'rgba(245,158,11,0.10)'  },
-]
-
-function getCritereColor(nom: string, index: number) {
-  const lower = nom.toLowerCase()
-  if (lower.includes('prix'))                                      return CRITERE_COLORS[0]
-  if (lower.includes('valeur') || lower.includes('technique'))     return CRITERE_COLORS[1]
-  return CRITERE_COLORS[index % CRITERE_COLORS.length]
-}
-
-// ─── Lot Filter Banner (PARTIE 5) ─────────────────────────────────────────────
-
-function LotFilterBanner({
-  lotLabel,
-  included,
-  excluded,
-}: {
-  lotLabel: string
-  included: ProjectDocument[]
-  excluded: ProjectDocument[]
-}) {
-  const [expanded, setExpanded] = useState(false)
-  const total = included.length + excluded.length
-
-  return (
-    <div
-      className="rounded-xl p-4 space-y-3"
-      style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.20)' }}
-    >
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Filter size={15} style={{ color: '#60A5FA' }} />
-          <p className="text-sm font-medium" style={{ color: '#60A5FA' }}>
-            Analyse ciblée sur le {lotLabel}
+      <div className="flex items-center gap-3 min-w-0">
+        <CheckCircle2 size={20} className="shrink-0" style={{ color: '#0EA5E9' }} />
+        <div className="min-w-0">
+          <p className="text-sm font-semibold truncate" style={{ color: '#0F172A', fontFamily: F }}>
+            Analyse complétée — {items.length} exigences identifiées
+          </p>
+          <p className="text-sm truncate" style={{ color: '#64748B', fontFamily: F }}>
+            {obligatoireCount > 0
+              ? `L'IA a identifié ${obligatoireCount} clauses obligatoires parmi ${items.length} exigences`
+              : `${items.length} exigences extraites du dossier`}
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-ds-text-2">
-            <span className="font-semibold" style={{ color: '#60A5FA' }}>{included.length}</span>
-            <span className="text-ds-text-3"> / {total} documents analysés</span>
+      </div>
+
+      <div className="flex items-center gap-3 shrink-0">
+        <button
+          className="px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors hover:bg-slate-50"
+          style={{ border: '1px solid #E2E8F0', color: '#475569', fontFamily: F }}
+        >
+          Générer Rapport PDF
+        </button>
+        <button
+          onClick={handleValidate}
+          disabled={isValidating}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition-colors"
+          style={{
+            background: isStepAlreadyDone
+              ? 'linear-gradient(135deg, #10B981, #0EA5E9)'
+              : '#0EA5E9',
+            fontFamily: F,
+          }}
+        >
+          {isValidating
+            ? <><Loader2 size={16} className="animate-spin" /> Validation...</>
+            : isStepAlreadyDone
+            ? <><CheckCircle2 size={16} /> Passer à la candidature</>
+            : <><Sparkles size={16} /> Étape Suivante : Candidature</>}
+        </button>
+      </div>
+    </div>
+  )
+
+  const infos = project.infos_marche
+
+  // ── Main render ───────────────────────────────────────────────
+
+  return (
+    <div className="space-y-4 pb-20" style={{ fontFamily: F }}>
+
+      {/* ── LIGNE 1 : Title + AI badge | Doc count ──────────────── */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <h1 className="text-xl font-bold" style={{ color: '#0F172A' }}>
+            Analyse du Dossier
+          </h1>
+          <span
+            className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold"
+            style={{ background: '#DCFCE7', color: '#16A34A' }}
+          >
+            <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#16A34A' }} />
+            AI ACTIVE
           </span>
-          {total > 0 && (
-            <button
-              onClick={() => setExpanded(!expanded)}
-              className="text-xs text-ds-text-3 hover:text-ds-text transition-colors"
-            >
-              {expanded ? 'Masquer' : 'Détails'}
-            </button>
+        </div>
+
+        <div className="flex items-center gap-2 text-xs" style={{ color: '#64748B' }}>
+          {lotFilterInfo ? (
+            <>
+              <span>
+                <span className="font-semibold" style={{ color: '#0284C7' }}>{lotFilterInfo.included.length}</span>
+                /{lotTotal} docs analysés
+              </span>
+              <button
+                onClick={() => setShowLotDetails(v => !v)}
+                className="font-medium hover:underline"
+                style={{ color: '#0EA5E9' }}
+              >
+                {showLotDetails ? 'Masquer' : 'Détails'}
+              </button>
+            </>
+          ) : (
+            <span className="font-medium">{items.length} exigences</span>
           )}
         </div>
       </div>
 
-      {expanded && (
-        <div className="space-y-1.5 pt-1">
-          {included.map((doc) => (
-            <div key={doc.id} className="flex items-center gap-2">
-              <span
-                className="w-2 h-2 rounded-full shrink-0"
-                style={{ background: '#10B981' }}
-              />
-              <span className="text-xs text-ds-text truncate">{doc.file_name}</span>
-              <span className="text-xs text-ds-text-3 ml-auto shrink-0">
-                {doc.related_lots?.includes('all') ? 'tous lots' : `lot ${(doc.related_lots ?? []).filter(t => t !== 'info').join(', ')}`}
-              </span>
-            </div>
+      {/* ── Lot details (expanded inline) ───────────────────────── */}
+      {showLotDetails && lotFilterInfo && (
+        <div
+          className="rounded-lg px-4 py-2.5 flex flex-wrap gap-x-4 gap-y-1 text-xs -mt-2"
+          style={{ background: '#F0F9FF', border: '1px solid #BAE6FD' }}
+        >
+          {lotFilterInfo.included.map(doc => (
+            <span key={doc.id} className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#10B981' }} />
+              <span style={{ color: '#334155' }}>{doc.file_name}</span>
+            </span>
           ))}
-          {excluded.map((doc) => (
-            <div key={doc.id} className="flex items-center gap-2 opacity-50">
-              <span
-                className="w-2 h-2 rounded-full shrink-0"
-                style={{ background: '#475569' }}
-              />
-              <span className="text-xs text-ds-text-2 truncate">{doc.file_name}</span>
-              <span className="text-xs text-ds-text-3 ml-auto shrink-0">Non inclus</span>
-            </div>
+          {lotFilterInfo.excluded.map(doc => (
+            <span key={doc.id} className="flex items-center gap-1.5 opacity-40">
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#94A3B8' }} />
+              <span style={{ color: '#64748B' }}>{doc.file_name}</span>
+            </span>
           ))}
         </div>
       )}
+
+      {/* ── CARTE RÉCAP ─────────────────────────────────────────── */}
+      {infos && (
+        <div
+          className="bg-white rounded-xl p-5"
+          style={{ border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+        >
+          {/* ROW 1 : Objet du marché */}
+          {infos.objet && (
+            <p className="text-base font-semibold mb-3" style={{ color: '#1E293B' }}>
+              {infos.objet}
+            </p>
+          )}
+
+          {/* ROW 2 : Client/Architecte/Lot à gauche — Critères à droite */}
+          <div className="flex items-start justify-between gap-6">
+            <div className="flex items-center gap-6">
+              <div>
+                <p className="text-xs font-medium uppercase mb-0.5" style={{ color: '#94A3B8' }}>Client</p>
+                <p className="text-sm font-medium" style={{ color: '#0F172A' }}>{infos.maitre_ouvrage || '—'}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase mb-0.5" style={{ color: '#94A3B8' }}>Architecte</p>
+                <p className="text-sm font-medium" style={{ color: '#0F172A' }}>{infos.maitre_oeuvre || '—'}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium uppercase mb-0.5" style={{ color: '#94A3B8' }}>Lot</p>
+                <p className="text-sm font-medium" style={{ color: '#0F172A' }}>{project.selected_lot_name || infos.lots?.join(', ') || '—'}</p>
+              </div>
+            </div>
+
+            {(prixPct > 0 || techPct > 0) && (
+              <div className="flex items-center gap-4 shrink-0">
+                {prixPct > 0 && (
+                  <div
+                    className="rounded-lg px-3 py-2"
+                    style={{ background: '#FFFFFF', border: '1px solid #F1F5F9' }}
+                  >
+                    <p className="text-xs mb-0.5" style={{ color: '#64748B' }}>Critère prix</p>
+                    <p className="text-lg font-bold leading-none" style={{ color: '#F87171' }}>{prixPct}%</p>
+                    <div className="mt-1.5 rounded-full overflow-hidden" style={{ width: 60, height: 4, background: '#FEE2E2' }}>
+                      <div className="h-full rounded-full" style={{ width: `${prixPct}%`, background: '#F87171' }} />
+                    </div>
+                  </div>
+                )}
+                {techPct > 0 && (
+                  <div
+                    className="rounded-lg px-3 py-2"
+                    style={{ background: '#FFFFFF', border: '1px solid #F1F5F9' }}
+                  >
+                    <p className="text-xs mb-0.5" style={{ color: '#64748B' }}>Critère technique</p>
+                    <p className="text-lg font-bold leading-none" style={{ color: '#0EA5E9' }}>{techPct}%</p>
+                    <div className="mt-1.5 rounded-full overflow-hidden" style={{ width: 60, height: 4, background: '#E0F2FE' }}>
+                      <div className="h-full rounded-full" style={{ width: `${techPct}%`, background: '#0EA5E9' }} />
+                    </div>
+                  </div>
+                )}
+                {/* Conseil IA tooltip */}
+                <div className="relative group">
+                  <Info size={15} className="cursor-help" style={{ color: '#0EA5E9' }} />
+                  <div
+                    className="absolute right-0 top-full mt-1.5 z-10 bg-white rounded-lg p-3 w-56 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all pointer-events-none"
+                    style={{ border: '1px solid #E2E8F0', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                  >
+                    <p className="text-xs italic" style={{ color: '#64748B' }}>
+                      Soignez le mémoire technique ! Points de vigilance identifiés.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── BARRE INFOS SECONDAIRES ─────────────────────────────── */}
+      {infos && (infos.date_limite_reponse || infos.type_procedure || infos.visite_site || infos.duree_marche || infos.penalites_retard || infos.retenue_garantie_pct != null) && (() => {
+        const isUrgent = (() => {
+          if (!infos.date_limite_reponse) return false
+          try {
+            const d = new Date(infos.date_limite_reponse)
+            return !isNaN(d.getTime()) && (d.getTime() - Date.now()) / 86400000 < 15
+          } catch { return false }
+        })()
+
+        const infoItems: React.ReactNode[] = []
+
+        if (infos.date_limite_reponse) {
+          infoItems.push(
+            <div key="deadline" className="flex items-start gap-2">
+              <Calendar size={14} className="shrink-0 mt-0.5" style={{ color: isUrgent ? '#EF4444' : '#64748B' }} />
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#64748B' }}>Date limite de réponse</p>
+                <p className="text-sm" style={{ color: isUrgent ? '#EF4444' : '#334155' }}>{infos.date_limite_reponse}</p>
+              </div>
+            </div>,
+          )
+        }
+
+        if (infos.type_procedure) {
+          infoItems.push(
+            <div key="procedure" className="flex items-start gap-2">
+              <Info size={14} className="shrink-0 mt-0.5" style={{ color: '#64748B' }} />
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#64748B' }}>Procédure</p>
+                <p className="text-sm" style={{ color: '#334155' }}>{infos.type_procedure}</p>
+              </div>
+            </div>,
+          )
+        }
+
+        if (infos.visite_site) {
+          infoItems.push(
+            <div key="visite" className="flex items-start gap-2">
+              <MapPin size={14} className="shrink-0 mt-0.5" style={{ color: infos.visite_site.obligatoire ? '#EF4444' : '#64748B' }} />
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#64748B' }}>
+                  Visite {infos.visite_site.obligatoire ? 'obligatoire' : 'facultative'}
+                </p>
+                <p className="text-sm" style={{ color: infos.visite_site.obligatoire ? '#EF4444' : '#334155' }}>
+                  {infos.visite_site.details || (infos.visite_site.obligatoire ? 'Obligatoire' : 'Facultative')}
+                </p>
+              </div>
+            </div>,
+          )
+        }
+
+        if (infos.duree_marche) {
+          infoItems.push(
+            <div key="duree" className="flex items-start gap-2">
+              <Clock size={14} className="shrink-0 mt-0.5" style={{ color: '#64748B' }} />
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#64748B' }}>Durée du marché</p>
+                <p className="text-sm" style={{ color: '#334155' }}>{infos.duree_marche}</p>
+              </div>
+            </div>,
+          )
+        }
+
+        if (infos.penalites_retard) {
+          infoItems.push(
+            <div key="penalites" className="flex items-start gap-2">
+              <Shield size={14} className="shrink-0 mt-0.5" style={{ color: '#D97706' }} />
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#64748B' }}>Pénalités de retard</p>
+                <p className="text-sm" style={{ color: '#334155' }}>{infos.penalites_retard}</p>
+              </div>
+            </div>,
+          )
+        }
+
+        if (infos.retenue_garantie_pct != null) {
+          infoItems.push(
+            <div key="retenue" className="flex items-start gap-2">
+              <Shield size={14} className="shrink-0 mt-0.5" style={{ color: '#64748B' }} />
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#64748B' }}>Retenue de garantie</p>
+                <p className="text-sm" style={{ color: '#334155' }}>{infos.retenue_garantie_pct}%</p>
+              </div>
+            </div>,
+          )
+        }
+
+        return (
+          <div
+            className="rounded-lg px-5 py-3 flex flex-wrap items-start gap-x-6 gap-y-2"
+            style={{ background: '#F8FAFC', border: '1px solid #F1F5F9' }}
+          >
+            {infoItems.map((item, i) => (
+              <div key={i} className="flex items-start gap-x-6">
+                {item}
+                {i < infoItems.length - 1 && (
+                  <div className="w-px self-stretch ml-6" style={{ background: '#CBD5E1', minHeight: 24 }} />
+                )}
+              </div>
+            ))}
+          </div>
+        )
+      })()}
+
+      {/* ── SEARCH BAR ──────────────────────────────────────────── */}
+      <div className="relative">
+        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: '#94A3B8' }} />
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Rechercher une clause ou une exigence..."
+          className="w-full pl-10 pr-10 py-2.5 text-sm rounded-lg outline-none"
+          style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', color: '#0F172A', fontFamily: F }}
+        />
+        <Sparkles size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2" style={{ color: '#0EA5E9' }} />
+      </div>
+
+      {/* ── ONGLETS ─────────────────────────────────────────────── */}
+      <div className="flex items-center gap-6 pb-px" style={{ borderBottom: '1px solid #E2E8F0' }}>
+        <TabButton
+          label={`Tout (${items.length})`}
+          active={activeFilter === 'all'}
+          onClick={() => setActiveFilter('all')}
+        />
+        {CATEGORY_ORDER.filter(cat => counts[cat]).map(cat => (
+          <TabButton
+            key={cat}
+            label={`${CATEGORY_LABELS[cat]} (${counts[cat]})`}
+            active={activeFilter === cat}
+            onClick={() => setActiveFilter(cat)}
+          />
+        ))}
+      </div>
+
+      {/* ── Exigences ───────────────────────────────────────────── */}
+      {filtered.length === 0 ? (
+        <p className="text-center text-sm py-12" style={{ color: '#94A3B8', fontFamily: F }}>
+          Aucune exigence trouvée
+        </p>
+      ) : (
+        <div className={activeFilter === 'all' ? 'grid grid-cols-1 lg:grid-cols-2 gap-5' : 'space-y-5'}>
+          {Object.entries(grouped).map(([cat, catItems]) => (
+            <ExigenceColumn
+              key={cat}
+              category={cat as ComplianceCategory}
+              items={catItems}
+              onOpenSource={openSourceDocument}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* ── Sticky bottom bar ───────────────────────────────────── */}
+      {createPortal(bottomBar, document.body)}
     </div>
   )
 }
 
+// ═════════════════════════════════════════════════════════════════════════════
+//  Helper Components
+// ═════════════════════════════════════════════════════════════════════════════
 
-function CriteresJugementCard({ criteres }: { criteres: CritereJugement[] }) {
-  const topTech = criteres
-    .filter((c) => !c.nom.toLowerCase().includes('prix'))
-    .sort((a, b) => b.poids - a.poids)[0]
-
+function TabButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
-    <div className="glass-card p-5">
-      <h2 className="text-xs font-semibold text-ds-text-3 uppercase tracking-widest mb-3">
-        Critères de jugement des offres
-      </h2>
-
-      {topTech && topTech.poids >= 40 && (
-        <div
-          className="mb-4 flex items-start gap-2 rounded-lg px-3 py-2"
-          style={{ background: 'rgba(245,158,11,0.10)', border: '1px solid rgba(245,158,11,0.25)' }}
-        >
-          <AlertTriangle size={15} className="mt-0.5 shrink-0" style={{ color: '#F59E0B' }} />
-          <p className="text-sm" style={{ color: '#FCD34D' }}>
-            <span className="font-semibold">{topTech.nom}</span> compte pour{' '}
-            <span className="font-semibold">{topTech.poids}%</span> — soignez particulièrement votre mémoire technique !
-          </p>
-        </div>
+    <button
+      onClick={onClick}
+      className={`pb-3 text-sm transition-colors relative whitespace-nowrap ${active ? 'font-semibold' : 'font-medium'}`}
+      style={{ color: active ? '#0EA5E9' : '#64748B', fontFamily: F }}
+    >
+      {label}
+      {active && (
+        <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full" style={{ background: '#0EA5E9' }} />
       )}
+    </button>
+  )
+}
 
-      <div className="space-y-3">
-        {criteres.map((critere, i) => {
-          const color = getCritereColor(critere.nom, i)
-          return (
-            <div key={critere.nom}>
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-sm font-medium text-ds-text">{critere.nom}</span>
-                <span className="text-sm font-bold" style={{ color: color.text, fontFamily: '"JetBrains Mono", monospace' }}>
-                  {critere.poids}%
-                </span>
-              </div>
-              <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
-                <div
-                  className="h-full rounded-full transition-all duration-700"
-                  style={{ width: `${critere.poids}%`, background: color.bar, boxShadow: `0 0 8px ${color.bar}55` }}
-                />
-              </div>
-              {critere.sous_criteres && critere.sous_criteres.length > 0 && (
-                <div className="mt-2 ml-4 space-y-1.5">
-                  {critere.sous_criteres.map((sc) => (
-                    <div key={sc.nom}>
-                      <div className="flex items-center justify-between mb-0.5">
-                        <span className="text-xs text-ds-text-2">{sc.nom}</span>
-                        <span className="text-xs font-medium text-ds-text-2" style={{ fontFamily: '"JetBrains Mono", monospace' }}>
-                          {sc.poids}%
-                        </span>
-                      </div>
-                      <div className="h-1 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
-                        <div className="h-full rounded-full" style={{ width: `${sc.poids}%`, background: color.bar, opacity: 0.6 }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+// ─── Exigence Column ─────────────────────────────────────────────────────────
+
+function ExigenceColumn({
+  category,
+  items,
+  onOpenSource,
+}: {
+  category: ComplianceCategory
+  items: ComplianceItem[]
+  onOpenSource: (item: ComplianceItem) => void
+}) {
+  return (
+    <div
+      className="bg-white rounded-xl p-5"
+      style={{ border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+    >
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-base font-bold" style={{ color: '#0F172A', fontFamily: F }}>
+          {CATEGORY_LABELS[category]} ({items.length})
+        </h3>
+        <span className="text-xs font-medium" style={{ color: '#0EA5E9' }}>
+          Voir tout
+        </span>
+      </div>
+
+      <div>
+        {items.map((item, idx) => (
+          <div
+            key={item.id}
+            className="flex items-start gap-3 py-3"
+            style={idx < items.length - 1 ? { borderBottom: '1px solid #F8FAFC' } : undefined}
+          >
+            <span className="w-1.5 h-1.5 rounded-full shrink-0 mt-2" style={{ background: '#0EA5E9' }} />
+
+            <div className="flex-1 min-w-0">
+              <p className="text-sm leading-relaxed" style={{ color: '#334155' }}>
+                {item.exigence_text}
+              </p>
+              {item.source_excerpt && (
+                <p className="text-xs mt-0.5 italic truncate" style={{ color: '#94A3B8' }}>
+                  «{item.source_excerpt}»
+                </p>
+              )}
+              {item.suggestion_ia && (
+                <p className="text-xs mt-0.5 italic" style={{ color: '#0284C7' }}>
+                  💡 {item.suggestion_ia}
+                </p>
               )}
             </div>
-          )
-        })}
+
+            <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+              {item.source_document && (
+                <button
+                  onClick={() => onOpenSource(item)}
+                  className="px-2 py-0.5 rounded-md text-xs font-medium transition-opacity hover:opacity-70"
+                  style={{ background: '#F0F9FF', color: '#0284C7' }}
+                  title={`Voir dans ${item.source_document}${item.source_page ? ` p.${item.source_page}` : ''}`}
+                >
+                  {item.source_document}
+                  {item.source_page ? ` p.${item.source_page}` : ''}
+                </button>
+              )}
+              {item.priority === 'obligatoire' ? (
+                <span
+                  className="px-2 py-0.5 rounded-md text-xs font-medium"
+                  style={{ background: '#FEF2F2', color: '#EF4444' }}
+                >
+                  Obligatoire
+                </span>
+              ) : (
+                <span
+                  className="px-2 py-0.5 rounded-md text-xs font-medium"
+                  style={{ background: '#FFFBEB', color: '#D97706' }}
+                >
+                  Souhaitée
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )

@@ -5,10 +5,96 @@ import anthropic
 from json_repair import repair_json
 from config import get_settings
 from .prompts import MEMOIRE_GENERATION_SYSTEM
+from services.skill_loader import load_skill, load_skills_bundle, load_skill_reference
+import logging
 
+logger = logging.getLogger(__name__)
 settings = get_settings()
 
 _DETAIL_INSTRUCTION = "Génère un mémoire technique COMPLET et DÉTAILLÉ de 20 à 25 pages. Chaque section doit être exhaustive."
+
+# Skills always loaded for mémoire generation
+_ALWAYS_LOAD_MEMOIRE = ["memoire-technique-expert", "scoring-offres-expert", "redaction-gagnante-btp"]
+
+
+def _build_memoire_skills(has_references: bool) -> tuple[str, list[str]]:
+    """Build mémoire skills supplement per-call.
+
+    Only loads references-intelligentes when the enterprise has references.
+    Returns (combined_text, list_of_skill_names_loaded).
+    """
+    skill_names = list(_ALWAYS_LOAD_MEMOIRE)
+    if has_references:
+        skill_names.append("references-intelligentes")
+
+    combined = load_skills_bundle(skill_names)
+    total_chars = len(combined)
+    logger.info(f"Skills chargés : {skill_names} — {total_chars:,} chars")
+    print(f"[Memoire Generator] Skills chargés : {skill_names} — {total_chars:,} chars", flush=True)
+    return combined, skill_names
+
+# ── Mapping corps de métier → fichier référence méthodologie ──────────────
+_METHODOLOGY_SKILL = "methodologie-par-corps-de-metier"
+
+_CORPS_METIER_KEYWORDS: list[tuple[list[str], str]] = [
+    (["façade", "facade", "ite", "ravalement", "bardage", "enduit ext", "isolation ext"],
+     "01-facades-ite-ravalement.md"),
+    (["gros œuvre", "gros oeuvre", "maçonnerie", "maconnerie", "béton", "beton", "fondation", "structure"],
+     "02-gros-oeuvre-maconnerie.md"),
+    (["peinture", "revêtement", "revetement", "sol souple", "papier peint", "enduit int"],
+     "03-peinture-revetements.md"),
+    (["électricité", "electricite", "electricité", "electrique", "électrique", "courant", "cfo", "cfa"],
+     "04-electricite.md"),
+    (["vrd", "voirie", "assainissement", "réseaux divers", "enrobé", "enrobe", "terrassement"],
+     "05-vrd.md"),
+    (["plomberie", "cvc", "chauffage", "ventilation", "climatisation", "sanitaire", "ecs"],
+     "06-plomberie-cvc.md"),
+    (["étanchéité", "etancheite", "couverture", "toiture", "terrasse", "charpente"],
+     "07-etancheite-couverture.md"),
+    (["menuiserie", "fenêtre", "fenetre", "porte ext", "baie", "volet", "fermeture"],
+     "08-menuiseries-exterieures.md"),
+]
+
+
+def _load_methodology_reference(selected_lot_name: str | None) -> str:
+    """Load the BTP methodology reference matching the lot's corps de métier.
+
+    Returns the combined text of the matching reference file + the transversal
+    data (autocontrôles, conditions météo, sécurité). Returns empty string if
+    no match or files not found.
+    """
+    if not selected_lot_name:
+        return ""
+
+    lot_lower = selected_lot_name.lower()
+
+    # Find matching reference file
+    matched_file: str | None = None
+    for keywords, filename in _CORPS_METIER_KEYWORDS:
+        if any(kw in lot_lower for kw in keywords):
+            matched_file = filename
+            break
+
+    if not matched_file:
+        return ""
+
+    parts: list[str] = []
+
+    # Load specific corps de métier reference via skill_loader
+    content = load_skill_reference(_METHODOLOGY_SKILL, matched_file)
+    if content:
+        parts.append(content)
+
+    # Load transversal data (autocontrôles, météo, sécurité, déchets)
+    transversal = load_skill_reference(_METHODOLOGY_SKILL, "00-transversal.md")
+    if transversal:
+        parts.append(transversal)
+
+    if not parts:
+        return ""
+
+    print(f"[Memoire Generator] Référentiel méthodologie chargé: {matched_file} + 00-transversal.md", flush=True)
+    return "\n\n".join(parts)
 
 
 class MemoireGenerator:
@@ -86,14 +172,14 @@ class MemoireGenerator:
             for r in references[:35]
         ]
 
-        # ── 3. DCE text (priority: RC then CCTP) ───────────────────────────────
-        PRIORITY = {"rc": 0, "cctp": 1, "acte_engagement": 2, "dpgf": 3, "plan": 4, "autre": 5}
+        # ── 3. DCE text (priority: CCTP first — critical for méthodologie) ─────
+        PRIORITY = {"cctp": 0, "rc": 1, "acte_engagement": 2, "dpgf": 3, "plan": 4, "autre": 5}
         docs_sorted = sorted(all_docs, key=lambda d: PRIORITY.get(d.type, 5))
 
         dce_parts = []
         total_chars = 0
-        MAX_DCE_CHARS = 40_000
-        MAX_PER_DOC = {"rc": 16_000, "cctp": 18_000}
+        MAX_DCE_CHARS = 90_000
+        MAX_PER_DOC = {"rc": 8_000, "cctp": 55_000}
 
         for doc in docs_sorted:
             if not doc.extracted_text:
@@ -112,7 +198,7 @@ class MemoireGenerator:
         # ── 4. Compliance summary ─────────────────────────────────────────────
         compliance_lines = [
             f"- [{item.category.upper()}] {item.exigence_text}"
-            for item in compliance_items[:40]
+            for item in compliance_items[:80]
         ]
         compliance_summary = "\n".join(compliance_lines)
 
@@ -147,6 +233,28 @@ class MemoireGenerator:
             + (f"━━━ EXIGENCES DCE (compliance matrix) ━━━\n{compliance_summary}\n\n" if compliance_summary else "")
             + f"━━━ DOCUMENTS DCE ━━━\n{dce_text}"
         )
+
+        # ── 7b. Methodology reference (BTP corps de métier) ──────────────────
+        methodology_ref = _load_methodology_reference(selected_lot_name)
+        if methodology_ref:
+            prompt += (
+                f"\n\n━━━ RÉFÉRENTIEL MÉTHODOLOGIE BTP (corps de métier détecté depuis le lot) ━━━\n"
+                f"Utilise ce référentiel technique comme base pour rédiger la PARTIE C (méthodologie). "
+                f"Il contient les normes DTU exactes, les tolérances, les étapes détaillées, "
+                f"les autocontrôles et les erreurs fréquentes du corps de métier. "
+                f"ADAPTE ce contenu au CCTP spécifique du marché — ne recopie pas tel quel.\n\n"
+                f"{methodology_ref}"
+            )
+
+        # ── 7c. Mémoire expertise skills (scoring, rédaction) ────────────────
+        memoire_skills, _ = _build_memoire_skills(has_references=len(references) > 0)
+        if memoire_skills:
+            prompt += (
+                f"\n\n━━━ RÉFÉRENTIELS COMPLÉMENTAIRES (expertise mémoire BTP) ━━━\n"
+                f"Expertise complémentaire sur la notation des offres et les techniques "
+                f"de rédaction gagnantes. Utilise ces conseils pour maximiser la note.\n\n"
+                f"{memoire_skills}"
+            )
 
         # ── 8. Reference template (style guide from imported mémoire) ────────
         if reference_template_text:

@@ -12,24 +12,24 @@ export interface ToastData {
 const VARIANT_CONFIG: Record<ToastVariant, { icon: typeof CheckCircle2; color: string; bg: string; border: string; barColor: string }> = {
   success: {
     icon: CheckCircle2,
-    color: '#34D399',
+    color: '#059669',
     bg: 'rgba(16,185,129,0.08)',
     border: 'rgba(16,185,129,0.20)',
     barColor: '#10B981',
   },
   error: {
     icon: XCircle,
-    color: '#F87171',
+    color: '#DC2626',
     bg: 'rgba(239,68,68,0.08)',
     border: 'rgba(239,68,68,0.20)',
     barColor: '#EF4444',
   },
   info: {
     icon: Info,
-    color: '#60A5FA',
-    bg: 'rgba(59,130,246,0.08)',
-    border: 'rgba(59,130,246,0.20)',
-    barColor: '#3B82F6',
+    color: '#059669',
+    bg: 'rgba(14,165,233,0.08)',
+    border: 'rgba(14,165,233,0.20)',
+    barColor: '#0EA5E9',
   },
   warning: {
     icon: AlertTriangle,
@@ -82,7 +82,7 @@ function ToastItem({ toast, onRemove }: { toast: ToastData; onRemove: (id: strin
         </button>
       </div>
       {/* Progress bar */}
-      <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: 'rgba(255,255,255,0.05)' }}>
+      <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: '#F1F5F9' }}>
         <div
           className="h-full"
           style={{

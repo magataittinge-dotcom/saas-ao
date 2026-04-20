@@ -30,8 +30,8 @@ export function AlertCard({ alerts }: Props) {
             className="flex items-center gap-2 text-sm py-1.5 px-3 rounded-md"
             style={
               alert.severity === 'red'
-                ? { background: 'rgba(239,68,68,0.10)', color: '#F87171', border: '1px solid rgba(239,68,68,0.20)' }
-                : { background: 'rgba(245,158,11,0.10)', color: '#FCD34D', border: '1px solid rgba(245,158,11,0.20)' }
+                ? { background: 'rgba(239,68,68,0.10)', color: '#DC2626', border: '1px solid rgba(239,68,68,0.20)' }
+                : { background: 'rgba(245,158,11,0.10)', color: '#D97706', border: '1px solid rgba(245,158,11,0.20)' }
             }
           >
             {alert.severity === 'red' ? <AlertTriangle size={14} /> : <Clock size={14} />}

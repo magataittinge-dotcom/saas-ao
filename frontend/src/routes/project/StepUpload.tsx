@@ -1,15 +1,21 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useDropzone } from 'react-dropzone'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Upload, FileText, FileSpreadsheet, File, Trash2, AlertCircle, Layers, CloudUpload } from 'lucide-react'
+import {
+  FileText, FileSpreadsheet, File, Trash2, AlertCircle,
+  CloudUpload, CheckCircle2, ChevronRight, FileArchive,
+} from 'lucide-react'
 import axios from 'axios'
 import { api } from '@/services/api'
 import { uploadService } from '@/services/upload'
 import LoadingProgress from '@/components/common/LoadingProgress'
 import type { Project, ProjectDocument, ProjectDocumentType } from '@/types'
 import { cn } from '@/lib/utils'
+import { AiTipsBlock, type TipData } from '@/components/common/AiTip'
+
+const F = "'DM Sans', sans-serif"
 
 type Phase = 'idle' | 'uploading' | 'processing' | 'done'
 
@@ -23,22 +29,23 @@ function detectDocType(filename: string): ProjectDocumentType {
   return 'autre'
 }
 
-const TYPE_COLORS: Record<ProjectDocumentType, string> = {
-  rc:              'bg-sky-500/15 text-sky-400 border-sky-500/25',
-  cctp:            'bg-violet-500/15 text-violet-400 border-violet-500/25',
-  ccap:            'bg-indigo-500/15 text-indigo-400 border-indigo-500/25',
-  dpgf:            'bg-amber-500/15 text-amber-400 border-amber-500/25',
-  acte_engagement: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/25',
-  plan:            'bg-blue-400/15 text-blue-300 border-blue-400/25',
-  autre:           'bg-white/5 text-ds-text-2 border-white/10',
+const TYPE_BADGE: Record<ProjectDocumentType, { color: string; bg: string; border: string }> = {
+  rc:              { color: '#0EA5E9', bg: 'rgba(14,165,233,0.10)', border: 'rgba(14,165,233,0.20)' },
+  cctp:           { color: '#8B5CF6', bg: 'rgba(139,92,246,0.10)', border: 'rgba(139,92,246,0.20)' },
+  ccap:           { color: '#0EA5E9', bg: '#0EA5E9', border: '#0EA5E9' },  // filled cyan
+  dpgf:           { color: '#F59E0B', bg: 'rgba(245,158,11,0.10)', border: 'rgba(245,158,11,0.20)' },
+  acte_engagement: { color: '#10B981', bg: 'rgba(16,185,129,0.10)', border: 'rgba(16,185,129,0.20)' },
+  plan:           { color: '#64748B', bg: '#F1F5F9', border: '#E2E8F0' },
+  autre:          { color: '#94A3B8', bg: 'transparent', border: 'transparent' },
 }
 
 function FileIcon({ filename }: { filename: string }) {
   const ext = filename.split('.').pop()?.toLowerCase() ?? ''
-  if (ext === 'pdf') return <FileText size={17} className="shrink-0" style={{ color: '#F87171' }} />
-  if (ext === 'docx' || ext === 'doc') return <FileText size={17} className="shrink-0" style={{ color: '#60A5FA' }} />
-  if (ext === 'xlsx' || ext === 'xls' || ext === 'ods') return <FileSpreadsheet size={17} className="shrink-0" style={{ color: '#34D399' }} />
-  return <File size={17} className="shrink-0" style={{ color: '#94A3B8' }} />
+  if (ext === 'pdf') return <FileText size={18} className="shrink-0" style={{ color: '#EF4444' }} />
+  if (ext === 'docx' || ext === 'doc') return <FileText size={18} className="shrink-0" style={{ color: '#3B82F6' }} />
+  if (ext === 'xlsx' || ext === 'xls' || ext === 'ods') return <FileSpreadsheet size={18} className="shrink-0" style={{ color: '#10B981' }} />
+  if (ext === 'zip') return <FileArchive size={18} className="shrink-0" style={{ color: '#8B5CF6' }} />
+  return <File size={18} className="shrink-0" style={{ color: '#94A3B8' }} />
 }
 
 function formatSize(bytes?: number): string {
@@ -79,7 +86,9 @@ export default function StepUpload({ project }: Props) {
   const animRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const safetyRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const doneRef = useRef(false) // permanent guard — once done, never re-trigger
+  const doneRef = useRef(false)
+
+  const [dismissedTips, setDismissedTips] = useState<Set<string>>(new Set())
 
   const { data: documents = [] } = useQuery({
     queryKey: ['project-documents', project.id],
@@ -88,6 +97,16 @@ export default function StepUpload({ project }: Props) {
       return data
     },
   })
+
+  const uploadTips = useMemo<TipData[]>(() => {
+    const tips: TipData[] = []
+    const totalSize = documents.reduce((s, d) => s + (d.file_size || 0), 0)
+    if (totalSize > 500 * 1024 * 1024) {
+      tips.push({ id: 'upload-large', variant: 'warning', text: 'Les fichiers volumineux peuvent prendre quelques minutes a traiter.' })
+    }
+    tips.push({ id: 'upload-zip', variant: 'info', text: 'Astuce : uploadez le ZIP complet du DCE pour une detection automatique de tous les documents et lots.' })
+    return tips
+  }, [documents])
 
   const { mutate: deleteDoc } = useMutation({
     mutationFn: (docId: string) => api.delete(`/projects/${project.id}/documents/${docId}`),
@@ -103,12 +122,11 @@ export default function StepUpload({ project }: Props) {
     }
   }, [])
 
-  // ─── Start simulated progress + polling (called when 100% bytes sent) ────────
+  // ─── Start simulated progress + polling ────────────────────────────────────
   const speedRef = useRef(0.15)
   const processingStartedRef = useRef(false)
 
   const startProcessing = useCallback(() => {
-    // Idempotent guard — onUploadProgress fires multiple times at 100%
     if (processingStartedRef.current || doneRef.current) return
     processingStartedRef.current = true
 
@@ -116,30 +134,22 @@ export default function StepUpload({ project }: Props) {
     setDisplayPct(30)
     setLabel("Extraction de l'archive...")
     setSublabel('')
-    speedRef.current = 0.15 // start slow
+    speedRef.current = 0.15
 
-    // 1) Animation: smooth crawl from 30% to 95%
-    //    Slow phase (ZIP): +0.15/200ms ≈ 0.75%/s → reaches ~50% after 25s
-    //    Fast phase (text): +0.3/200ms ≈ 1.5%/s → accelerates once backend starts extracting
     if (animRef.current) clearInterval(animRef.current)
     animRef.current = setInterval(() => {
       setDisplayPct(prev => Math.min(prev + speedRef.current, 95))
     }, 200)
 
-    // 2) Polling: check backend every 2s, use REAL progress when available
     if (pollRef.current) clearInterval(pollRef.current)
     pollRef.current = setInterval(async () => {
-      // Permanent guard — once done, never process another poll tick
       if (doneRef.current) return
-
       try {
         const { data } = await api.get<{ status: string; progress: number; detail: string }>(
           `/projects/${project.id}/processing-status`
         )
+        if (doneRef.current) return
 
-        if (doneRef.current) return // re-check after await
-
-        // Backend started text extraction with real progress → stop crawl, use real values
         if (data.status === 'extracting_text' && data.progress > 0) {
           if (animRef.current) { clearInterval(animRef.current); animRef.current = null }
           const realPct = 30 + (data.progress / 100) * 65
@@ -153,15 +163,11 @@ export default function StepUpload({ project }: Props) {
         }
 
         if (data.status === 'ready' || data.status === 'error') {
-          // Mark done FIRST — prevents any re-trigger
           doneRef.current = true
-
-          // Stop ALL intervals BEFORE changing any state
           if (animRef.current) { clearInterval(animRef.current); animRef.current = null }
           if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
           if (safetyRef.current) { clearTimeout(safetyRef.current); safetyRef.current = null }
 
-          // Show 100%
           setDisplayPct(100)
           setLabel('Traitement terminé !')
           setSublabel('')
@@ -170,21 +176,12 @@ export default function StepUpload({ project }: Props) {
           if (data.status === 'error') {
             setUploadErrors(prev => [...prev, 'Erreur lors du traitement des documents.'])
           }
-
           queryClient.invalidateQueries({ queryKey: ['project-documents', project.id] })
-
-          // Dismiss after 1s — phase goes idle but doneRef stays true
-          setTimeout(() => {
-            setPhase('idle')
-            setDisplayPct(0)
-          }, 1000)
+          setTimeout(() => { setPhase('idle'); setDisplayPct(0) }, 1000)
         }
-      } catch {
-        // ignore poll errors
-      }
+      } catch { /* ignore poll errors */ }
     }, 2000)
 
-    // 3) Safety timeout: 10 minutes max
     safetyRef.current = setTimeout(() => {
       if (doneRef.current) return
       doneRef.current = true
@@ -208,8 +205,8 @@ export default function StepUpload({ project }: Props) {
       setDisplayPct(0)
       setLabel('Upload des fichiers...')
       setSublabel('')
-      processingStartedRef.current = false // reset guard for new upload
-      doneRef.current = false // allow new processing cycle
+      processingStartedRef.current = false
+      doneRef.current = false
 
       const errors: string[] = []
       const warnings: string[] = []
@@ -229,9 +226,6 @@ export default function StepUpload({ project }: Props) {
               const mapped = Math.round(Math.min(overallPct, 100) * 0.3)
               setDisplayPct(mapped)
               setSublabel(`${Math.round(overallPct)}% envoyé`)
-
-              // Bytes fully sent → start processing simulation immediately
-              // Don't wait for server response (ZIP extraction takes 20-30s)
               if (hasZip && loaded >= total && total > 0) {
                 startProcessing()
               }
@@ -252,10 +246,8 @@ export default function StepUpload({ project }: Props) {
         }
       }
 
-      // Server responded — processing already started from onUploadProgress
       if (errors.length > 0) {
         setUploadErrors(errors)
-        // Stop processing if it was started
         if (animRef.current) { clearInterval(animRef.current); animRef.current = null }
         if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
         if (safetyRef.current) { clearTimeout(safetyRef.current); safetyRef.current = null }
@@ -266,7 +258,6 @@ export default function StepUpload({ project }: Props) {
         setPhase('idle')
         setDisplayPct(0)
       }
-      // If hasZip + no errors: processing was already started, do nothing
 
       if (warnings.length > 0) setUploadWarnings(warnings)
     },
@@ -316,11 +307,15 @@ export default function StepUpload({ project }: Props) {
     navigate(`/projects/${project.id}/lots`)
   }
 
+  /* ════════════════════════════════════════════════════════════════
+     JSX
+     ════════════════════════════════════════════════════════════════ */
   return (
     <>
+      {/* Upload overlay */}
       {showOverlay && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(8,11,18,0.85)', backdropFilter: 'blur(4px)' }}>
-          <div className="glass-card p-8 max-w-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(15,23,42,0.60)', backdropFilter: 'blur(4px)' }}>
+          <div className="rounded-2xl p-8 max-w-sm w-full mx-4" style={{ background: '#FFFFFF', border: '1px solid #F1F5F9', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
             <LoadingProgress
               progress={Math.round(displayPct)}
               label={label}
@@ -332,45 +327,34 @@ export default function StepUpload({ project }: Props) {
         document.body,
       )}
 
-      <div className="glass-card p-6 space-y-6">
-        <div>
-          <h2 className="text-lg font-semibold text-ds-text">Étape 1 — Upload des documents DCE</h2>
-          <p className="text-sm text-ds-text-2 mt-1">
-            Uploadez les fichiers du Dossier de Consultation des Entreprises (PDF, DOCX, XLSX).
-          </p>
-        </div>
+      <div style={{ fontFamily: F }}>
 
-        {/* Dropzone */}
+        {/* ── AiTips ──────────────────────────────────────── */}
+        <AiTipsBlock tips={uploadTips} dismissed={dismissedTips} onDismiss={(id) => setDismissedTips((s) => new Set(s).add(id))} />
+
+        {/* ── DROPZONE ────────────────────────────────────── */}
         <div
           {...getRootProps()}
           className={cn(
-            'rounded-xl p-10 text-center cursor-pointer transition-all duration-200',
-            isDragActive ? 'dropzone-active' : '',
+            'rounded-2xl text-center cursor-pointer transition-all duration-200 mt-4',
+            isDragActive ? 'ring-2 ring-[#0EA5E9]' : '',
           )}
           style={{
-            border: isDragActive
-              ? '2px dashed rgba(59,130,246,0.60)'
-              : '2px dashed rgba(59,130,246,0.30)',
-            background: isDragActive
-              ? 'rgba(59,130,246,0.06)'
-              : 'rgba(59,130,246,0.02)',
-            boxShadow: isDragActive
-              ? '0 0 40px rgba(59,130,246,0.15), inset 0 0 30px rgba(59,130,246,0.05)'
-              : 'none',
-            transition: 'border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease',
+            border: '2px dashed',
+            borderColor: isDragActive ? '#0EA5E9' : '#E2E8F0',
+            background: isDragActive ? 'rgba(14,165,233,0.04)' : '#FFFFFF',
+            padding: '48px 24px',
           }}
           onMouseEnter={(e) => {
             if (!isDragActive) {
-              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(59,130,246,0.50)'
-              ;(e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.04)'
-              ;(e.currentTarget as HTMLElement).style.boxShadow = '0 0 40px rgba(59,130,246,0.1)'
+              e.currentTarget.style.borderColor = '#CBD5E1'
+              e.currentTarget.style.background = '#FAFBFC'
             }
           }}
           onMouseLeave={(e) => {
             if (!isDragActive) {
-              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(59,130,246,0.30)'
-              ;(e.currentTarget as HTMLElement).style.background = 'rgba(59,130,246,0.02)'
-              ;(e.currentTarget as HTMLElement).style.boxShadow = 'none'
+              e.currentTarget.style.borderColor = '#E2E8F0'
+              e.currentTarget.style.background = '#FFFFFF'
             }
           }}
         >
@@ -378,143 +362,221 @@ export default function StepUpload({ project }: Props) {
 
           <div className="flex justify-center mb-4">
             <div
-              className="w-16 h-16 rounded-2xl flex items-center justify-center"
-              style={{
-                background: isDragActive ? 'rgba(59,130,246,0.18)' : 'rgba(59,130,246,0.08)',
-                border: '1px solid rgba(59,130,246,0.20)',
-                boxShadow: isDragActive
-                  ? '0 0 30px rgba(59,130,246,0.30)'
-                  : '0 4px 12px rgba(59,130,246,0.10)',
-                transition: 'all 0.2s ease',
-              }}
+              className="w-14 h-14 rounded-2xl flex items-center justify-center"
+              style={{ background: isDragActive ? 'rgba(14,165,233,0.12)' : 'rgba(14,165,233,0.08)' }}
             >
-              {isDragActive
-                ? <CloudUpload size={28} style={{ color: '#3B82F6' }} />
-                : <Upload size={26} style={{ color: '#60A5FA' }} />
-              }
+              <CloudUpload size={28} style={{ color: '#0EA5E9' }} />
             </div>
           </div>
 
-          <p
-            className="text-sm font-semibold mb-1"
-            style={{
-              color: isDragActive ? '#93C5FD' : '#CBD5E1',
-              fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
-            }}
-          >
-            {isDragActive ? 'Déposez les fichiers ici...' : 'Glissez-déposez vos fichiers DCE ici'}
+          <p className="text-lg font-semibold mb-1" style={{ color: '#0F172A' }}>
+            {isDragActive ? 'Déposez les fichiers ici...' : 'Glissez vos fichiers DCE ici'}
           </p>
-          <p className="text-xs mb-1" style={{ color: '#475569' }}>
-            PDF, DOCX, XLSX, ODS, ZIP — 2 Go max par fichier
+          <p className="text-sm mb-5" style={{ color: '#94A3B8' }}>
+            Analysez automatiquement vos pièces écrites grâce à l&apos;IA
           </p>
-          <p className="text-xs mb-4" style={{ color: '#60A5FA' }}>
-            Type de document détecté automatiquement selon le nom du fichier
-          </p>
+
+          {/* Separator */}
+          <div className="flex items-center gap-4 max-w-xs mx-auto mb-5">
+            <div className="flex-1 h-px" style={{ background: '#E2E8F0' }} />
+            <span className="text-xs font-semibold uppercase" style={{ color: '#CBD5E1' }}>ou</span>
+            <div className="flex-1 h-px" style={{ background: '#E2E8F0' }} />
+          </div>
+
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); open() }}
-            className="btn-primary px-5 py-2"
+            className="px-6 py-2.5 rounded-lg text-sm font-semibold text-white transition-colors"
+            style={{ background: '#0EA5E9' }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#0284C7' }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = '#0EA5E9' }}
           >
             Parcourir les fichiers
           </button>
+
+          <p className="text-xs mt-4" style={{ color: '#CBD5E1' }}>
+            Formats acceptés : .pdf .docx .xlsx .ods .zip — jusqu&apos;à 2 Go
+          </p>
         </div>
 
-        {/* Upload errors */}
+        {/* ── Upload errors ───────────────────────────────── */}
         {uploadErrors.length > 0 && (
-          <div className="rounded-lg p-3" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.20)' }}>
-            <p className="text-sm font-medium text-red-400 mb-1">Erreurs lors de l'upload :</p>
+          <div className="rounded-xl p-4 mt-4" style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)' }}>
+            <p className="text-sm font-semibold mb-1" style={{ color: '#EF4444' }}>Erreurs lors de l&apos;upload :</p>
             {uploadErrors.map((err, i) => (
-              <p key={i} className="text-xs text-red-300">• {err}</p>
+              <p key={i} className="text-xs" style={{ color: '#EF4444' }}>• {err}</p>
             ))}
           </div>
         )}
 
-        {/* ZIP extraction warnings */}
+        {/* ── ZIP warnings ────────────────────────────────── */}
         {uploadWarnings.length > 0 && (
-          <div className="rounded-lg p-3" style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)' }}>
-            <p className="text-sm font-medium mb-1" style={{ color: '#F59E0B' }}>Certains fichiers n'ont pas pu être extraits :</p>
+          <div className="rounded-xl p-4 mt-4" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)' }}>
+            <p className="text-sm font-semibold mb-1" style={{ color: '#F59E0B' }}>Certains fichiers n&apos;ont pas pu être extraits :</p>
             {uploadWarnings.map((w, i) => (
-              <p key={i} className="text-xs" style={{ color: '#FCD34D' }}>• {w}</p>
+              <p key={i} className="text-xs" style={{ color: '#D97706' }}>• {w}</p>
             ))}
           </div>
         )}
 
-        {/* Uploaded files */}
+        {/* ── FILES TABLE ─────────────────────────────────── */}
         {hasDocuments && (
-          <div className="space-y-2">
-            <h3 className="text-sm font-medium text-ds-text-2">
-              Fichiers uploadés ({documents.length})
-            </h3>
-            {documents.map((doc) => (
-              <div
-                key={doc.id}
-                className="flex items-center gap-3 p-3 rounded-lg border transition-all duration-150 hover:bg-white/[0.03]"
-                style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.07)' }}
-              >
-                <FileIcon filename={doc.file_name} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-ds-text truncate">{doc.file_name}</p>
-                  {doc.file_size && (
-                    <p className="text-xs text-ds-text-3">{formatSize(doc.file_size)}</p>
-                  )}
-                </div>
-
+          <div className="mt-6">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <h3 className="text-[15px] font-semibold" style={{ color: '#0F172A' }}>Fichiers importés</h3>
                 <span
-                  className={cn(
-                    'text-xs font-medium px-2 py-0.5 rounded-full border shrink-0',
-                    TYPE_COLORS[doc.type as ProjectDocumentType] ?? TYPE_COLORS.autre,
-                  )}
+                  className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                  style={{ color: '#64748B', background: '#F1F5F9' }}
                 >
-                  {DOC_TYPES.find((t) => t.value === doc.type)?.label.split(' — ')[0] ?? 'Autre'}
+                  {documents.length}
                 </span>
-
-                <select
-                  value={doc.type}
-                  onChange={(e) => updateDocType(doc.id, e.target.value as ProjectDocumentType)}
-                  className="text-xs rounded-md px-2 py-1 focus:outline-none focus:ring-1 text-ds-text"
-                  style={{
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.10)',
-                    color: '#E2E8F0',
-                  }}
-                >
-                  {DOC_TYPES.map(({ value, label: l }) => (
-                    <option key={value} value={value}>{l}</option>
-                  ))}
-                </select>
-
-                <button
-                  onClick={() => deleteDoc(doc.id)}
-                  className="p-1 text-ds-text-3 hover:text-ds-danger transition-colors"
-                >
-                  <Trash2 size={14} />
-                </button>
               </div>
-            ))}
+              {documents.length > 1 && (
+                <button
+                  onClick={() => documents.forEach((d) => deleteDoc(d.id))}
+                  className="text-xs font-medium transition-colors"
+                  style={{ color: '#EF4444' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = '#DC2626' }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = '#EF4444' }}
+                >
+                  Tout supprimer
+                </button>
+              )}
+            </div>
+
+            <div
+              className="rounded-xl overflow-hidden"
+              style={{ background: '#FFFFFF', border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+            >
+              {/* Table header */}
+              <div
+                className="hidden sm:grid items-center gap-3 px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wider"
+                style={{
+                  color: '#94A3B8',
+                  borderBottom: '1px solid #F1F5F9',
+                  gridTemplateColumns: '2fr 80px 130px 40px',
+                }}
+              >
+                <span>Nom du fichier</span>
+                <span>Taille</span>
+                <span>Type détecté</span>
+                <span />
+              </div>
+
+              {documents.map((doc, i) => {
+                const badge = TYPE_BADGE[doc.type as ProjectDocumentType] ?? TYPE_BADGE.autre
+                const isFilled = doc.type === 'ccap' || doc.type === 'rc'
+
+                return (
+                  <div
+                    key={doc.id}
+                    className="grid items-center gap-3 px-5 py-3 transition-colors"
+                    style={{
+                      borderBottom: i < documents.length - 1 ? '1px solid #F8FAFC' : 'none',
+                      gridTemplateColumns: '2fr 80px 130px 40px',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#FAFBFC' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+                  >
+                    {/* Filename */}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <FileIcon filename={doc.file_name} />
+                      <span className="text-sm truncate" style={{ color: '#0F172A' }}>{doc.file_name}</span>
+                    </div>
+
+                    {/* Size */}
+                    <span className="text-sm" style={{ color: '#94A3B8' }}>
+                      {formatSize(doc.file_size)}
+                    </span>
+
+                    {/* Type badge — clickable select */}
+                    <div className="relative">
+                      <select
+                        value={doc.type}
+                        onChange={(e) => updateDocType(doc.id, e.target.value as ProjectDocumentType)}
+                        className="appearance-none text-[11px] font-semibold rounded-full pl-2.5 pr-6 py-1 cursor-pointer outline-none"
+                        style={{
+                          color: isFilled ? '#FFFFFF' : badge.color,
+                          background: isFilled ? badge.bg : badge.bg,
+                          border: `1px solid ${isFilled ? 'transparent' : badge.border}`,
+                        }}
+                      >
+                        {DOC_TYPES.map(({ value, label: l }) => (
+                          <option key={value} value={value}>{l.split(' — ')[0]}</option>
+                        ))}
+                      </select>
+                      <ChevronRight size={10} className="absolute right-2 top-1/2 -translate-y-1/2 rotate-90 pointer-events-none" style={{ color: isFilled ? '#FFFFFF' : badge.color }} />
+                    </div>
+
+                    {/* Delete */}
+                    <button
+                      onClick={() => deleteDoc(doc.id)}
+                      className="p-1.5 rounded-md transition-colors"
+                      style={{ color: '#CBD5E1' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = '#EF4444'; e.currentTarget.style.background = 'rgba(239,68,68,0.06)' }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = '#CBD5E1'; e.currentTarget.style.background = 'transparent' }}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )}
 
-        {/* Error */}
+        {/* ── Error ───────────────────────────────────────── */}
         {nextError && (
           <div
-            className="flex items-start gap-2 p-3 rounded-lg text-sm"
-            style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.25)', color: '#F87171' }}
+            className="flex items-start gap-2 p-4 rounded-xl text-sm mt-4"
+            style={{ color: '#EF4444', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)' }}
           >
             <AlertCircle size={16} className="shrink-0 mt-0.5" />
             <span>{nextError}</span>
           </div>
         )}
 
-        {/* CTA */}
-        <div className="flex justify-end pt-2">
-          <button
-            onClick={handleNext}
-            disabled={!hasDocuments || anyUploading || isProcessing || isNavigating}
-            className="btn-primary flex items-center gap-2 px-6 py-2.5"
-          >
-            <Layers size={16} />
-            Continuer →
-          </button>
+        {/* ── BOTTOM BAR ──────────────────────────────────── */}
+        <div
+          className="sticky bottom-0 mt-6 -mx-3 sm:-mx-4 px-5 py-3.5 flex items-center justify-between"
+          style={{
+            background: 'rgba(255,255,255,0.90)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            borderTop: '1px solid #F1F5F9',
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={16} style={{ color: hasDocuments ? '#10B981' : '#CBD5E1' }} />
+            <span className="text-sm" style={{ color: hasDocuments ? '#64748B' : '#CBD5E1' }}>
+              {hasDocuments
+                ? "Tous les fichiers ont été vérifiés pour l'intégrité."
+                : 'Importez des fichiers pour continuer.'
+              }
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate(-1)}
+              className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              style={{ color: '#64748B', border: '1px solid #E2E8F0' }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#CBD5E1'; e.currentTarget.style.color = '#0F172A' }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.color = '#64748B' }}
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleNext}
+              disabled={!hasDocuments || anyUploading || isProcessing || isNavigating}
+              className="px-5 py-2 rounded-lg text-sm font-semibold text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ background: '#0EA5E9' }}
+              onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.background = '#0284C7' }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = '#0EA5E9' }}
+            >
+              Suivant &gt;
+            </button>
+          </div>
         </div>
       </div>
     </>

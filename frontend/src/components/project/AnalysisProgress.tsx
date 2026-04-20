@@ -126,15 +126,15 @@ export function AnalysisProgress({
       style={{
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
         zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'rgba(8,11,18,0.85)', backdropFilter: 'blur(4px)',
+        background: 'rgba(8,11,18,0.85)', backdropFilter: 'none',
       }}
     >
       <div
         className="flex flex-col items-center gap-6 min-w-72 p-10 rounded-2xl"
         style={{
-          background: 'rgba(15,23,42,0.95)',
-          border: '1px solid rgba(59,130,246,0.20)',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(59,130,246,0.10)',
+          background: '#FFFFFF',
+          border: '1px solid rgba(14,165,233,0.20)',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(14,165,233,0.10)',
         }}
       >
         {/* Radial progress */}
@@ -146,26 +146,25 @@ export function AnalysisProgress({
               cy="100"
               r={RADIUS}
               fill="none"
-              stroke={showCheck ? '#60A5FA' : '#3B82F6'}
+              stroke={showCheck ? '#10B981' : '#0EA5E9'}
               strokeWidth="10"
               strokeLinecap="round"
               strokeDasharray={CIRCUMFERENCE}
               strokeDashoffset={offset}
-              style={{ transition: 'stroke-dashoffset 0.4s ease, stroke 0.3s ease', filter: `drop-shadow(0 0 8px ${showCheck ? '#60A5FA' : '#3B82F6'})` }}
+              style={{ transition: 'stroke-dashoffset 0.4s ease, stroke 0.3s ease', filter: `drop-shadow(0 0 8px ${showCheck ? '#10B981' : '#0EA5E9'})` }}
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
             {showCheck ? (
               <div
                 className="flex items-center justify-center w-16 h-16 rounded-full"
-                style={{ background: 'rgba(96,165,250,0.15)' }}
+                style={{ background: 'rgba(0,212,170,0.15)' }}
               >
-                <Check size={36} style={{ color: '#60A5FA' }} strokeWidth={2.5} />
+                <Check size={36} className="text-ds-teal" strokeWidth={2.5} />
               </div>
             ) : (
               <span
-                className="text-4xl font-bold"
-                style={{ fontFamily: '"JetBrains Mono", monospace', color: '#E2E8F0' }}
+                className="text-4xl font-bold font-mono text-ds-text"
               >
                 {progress}%
               </span>

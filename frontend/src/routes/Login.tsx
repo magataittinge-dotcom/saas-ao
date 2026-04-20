@@ -3,92 +3,73 @@ import { Sparkles } from 'lucide-react'
 
 const clerkAppearance = {
   variables: {
-    colorPrimary: '#3B82F6',
-    colorBackground: 'rgba(12,17,30,0.7)',
-    colorText: '#E8ECF4',
-    colorTextSecondary: '#8B95A9',
-    colorInputBackground: 'rgba(255,255,255,0.04)',
-    colorInputText: '#E8ECF4',
+    colorPrimary: '#0EA5E9',
+    colorBackground: '#FFFFFF',
+    colorText: '#0F172A',
+    colorTextSecondary: '#64748B',
+    colorInputBackground: '#F8FAFC',
+    colorInputText: '#0F172A',
     borderRadius: '12px',
   },
   elements: {
     rootBox: 'w-full',
     card: {
-      backgroundColor: 'rgba(12,17,30,0.55)',
-      backdropFilter: 'blur(24px)',
-      border: '1px solid rgba(255,255,255,0.06)',
+      backgroundColor: '#FFFFFF',
+      border: '1px solid #E2E8F0',
       borderRadius: '20px',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+      boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
     },
-    headerTitle: { color: '#E8ECF4', fontFamily: 'Outfit, system-ui, sans-serif' },
-    headerSubtitle: { color: '#8B95A9' },
+    headerTitle: { color: '#0F172A', fontFamily: 'Plus Jakarta Sans, system-ui, sans-serif' },
+    headerSubtitle: { color: '#64748B' },
     socialButtonsBlockButton: {
-      backgroundColor: 'rgba(255,255,255,0.04)',
-      border: '1px solid rgba(255,255,255,0.06)',
-      color: '#E8ECF4',
+      backgroundColor: '#F8FAFC',
+      border: '1px solid #E2E8F0',
+      color: '#0F172A',
     },
-    formFieldLabel: { color: '#8B95A9' },
+    formFieldLabel: { color: '#64748B' },
     formFieldInput: {
-      backgroundColor: 'rgba(255,255,255,0.04)',
-      border: '1px solid rgba(255,255,255,0.06)',
-      color: '#E8ECF4',
+      backgroundColor: '#F8FAFC',
+      border: '1px solid #E2E8F0',
+      color: '#0F172A',
     },
     formButtonPrimary: {
-      background: 'linear-gradient(135deg, #3B82F6, #22D3EE)',
+      background: '#0EA5E9',
       fontWeight: '500',
       borderRadius: '12px',
     },
-    footerActionLink: { color: '#3B82F6' },
+    footerActionLink: { color: '#0EA5E9' },
     footer: { backgroundColor: 'transparent' },
     footerAction: { backgroundColor: 'transparent' },
-    dividerLine: { backgroundColor: 'rgba(255,255,255,0.06)' },
-    dividerText: { color: '#556177' },
-    identityPreview: { backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' },
-    identityPreviewText: { color: '#E8ECF4' },
-    identityPreviewEditButton: { color: '#3B82F6' },
-    formFieldAction: { color: '#3B82F6' },
-    alert: { backgroundColor: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)', color: '#F87171' },
+    dividerLine: { backgroundColor: '#E2E8F0' },
+    dividerText: { color: '#94A3B8' },
+    identityPreview: { backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0' },
+    identityPreviewText: { color: '#0F172A' },
+    identityPreviewEditButton: { color: '#0EA5E9' },
+    formFieldAction: { color: '#0EA5E9' },
+    alert: { backgroundColor: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)', color: '#DC2626' },
   },
 } as const
 
 export default function Login() {
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#06090F' }}>
-      {/* Ambient orbs */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute -top-40 left-1/4 w-[600px] h-[600px] rounded-full blur-3xl opacity-[0.18]"
-          style={{ background: 'radial-gradient(circle, #3B82F6 0%, transparent 70%)' }} />
-        <div className="absolute -bottom-40 right-1/4 w-[500px] h-[500px] rounded-full blur-3xl opacity-[0.12]"
-          style={{ background: 'radial-gradient(circle, #06B6D4 0%, transparent 70%)' }} />
-        <div className="absolute top-1/3 right-1/3 w-[350px] h-[350px] rounded-full blur-3xl opacity-[0.08]"
-          style={{ background: 'radial-gradient(circle, #8B5CF6 0%, transparent 70%)' }} />
-      </div>
-
-      {/* Glow behind form */}
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%)' }} />
-
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#F8FAFC' }}>
       {/* Single centered container — fixed width matching Clerk form */}
       <div className="relative w-full flex flex-col items-center animate-fade-in" style={{ maxWidth: '420px' }}>
         {/* Logo + tagline */}
         <div className="flex flex-col items-center gap-3 mb-8">
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
-            style={{
-              background: 'linear-gradient(135deg, #3B82F6, #60A5FA)',
-              boxShadow: '0 0 40px rgba(59,130,246,0.45), 0 0 80px rgba(59,130,246,0.15)',
-            }}>
+            style={{ background: 'linear-gradient(135deg, #0EA5E9, #10B981)' }}>
             <Sparkles size={24} className="text-white" />
           </div>
           <span className="text-3xl font-extrabold tracking-tight"
             style={{
-              background: 'linear-gradient(135deg, #60A5FA, #22D3EE)',
+              background: 'linear-gradient(135deg, #0EA5E9, #10B981)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-              fontFamily: 'Outfit, system-ui, sans-serif',
+              fontFamily: 'Plus Jakarta Sans, system-ui, sans-serif',
             }}>
             SYNORIX
           </span>
-          <p className="text-sm text-center"
-            style={{ color: '#8B95A9', fontFamily: '"DM Sans", system-ui, sans-serif' }}>
+          <p className="text-sm text-center font-sans" style={{ color: '#64748B' }}>
             Répondez aux appels d'offres BTP 10× plus vite grâce à l'IA
           </p>
         </div>
@@ -101,8 +82,7 @@ export default function Login() {
           appearance={clerkAppearance}
         />
 
-        <p className="text-center text-xs mt-6"
-          style={{ color: '#556177', fontFamily: '"DM Sans", system-ui, sans-serif' }}>
+        <p className="text-center text-xs mt-6 font-sans" style={{ color: '#94A3B8' }}>
           Synorix · Réponses aux AO BTP automatisées par IA
         </p>
       </div>

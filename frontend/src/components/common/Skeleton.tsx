@@ -5,7 +5,7 @@ function Skeleton({ className, style }: { className?: string; style?: CSSPropert
   return (
     <div
       className={cn('rounded-lg skeleton-shimmer', className)}
-      style={{ background: 'rgba(255,255,255,0.04)', ...style }}
+      style={{ background: '#F1F5F9', ...style }}
     />
   )
 }
@@ -39,7 +39,7 @@ export function SkeletonCard({ className }: { className?: string }) {
       className={cn('rounded-2xl p-6 skeleton-shimmer', className)}
       style={{
         background: '#0C1222',
-        border: '1px solid rgba(255,255,255,0.06)',
+        border: '1px solid #E2E8F0',
       }}
     >
       <div className="space-y-4">

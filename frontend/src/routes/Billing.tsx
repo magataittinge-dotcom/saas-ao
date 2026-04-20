@@ -13,11 +13,11 @@ const PLANS = [
     name: 'Pro',
     price: '249',
     icon: Zap,
-    color: '#3B82F6',
-    colorLight: '#60A5FA',
-    bg: 'rgba(59,130,246,0.08)',
-    border: 'rgba(59,130,246,0.25)',
-    gradient: 'linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%)',
+    color: '#0EA5E9',
+    colorLight: '#10B981',
+    bg: 'rgba(14,165,233,0.08)',
+    border: 'rgba(14,165,233,0.25)',
+    gradient: 'linear-gradient(135deg, #0EA5E9 0%, #10B981 100%)',
     features: [
       'Analyse IA illimitée',
       'Matrice de conformité automatique',
@@ -33,7 +33,7 @@ const PLANS = [
     name: 'Business',
     price: '399',
     icon: Crown,
-    color: '#A78BFA',
+    color: '#7C3AED',
     colorLight: '#C4B5FD',
     bg: 'rgba(139,92,246,0.08)',
     border: 'rgba(139,92,246,0.25)',
@@ -52,9 +52,9 @@ const PLANS = [
 ] as const
 
 const PLAN_BADGES: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  pro:      { label: 'Pro',      color: '#60A5FA', bg: 'rgba(59,130,246,0.12)',  border: 'rgba(59,130,246,0.30)' },
+  pro:      { label: 'Pro',      color: '#059669', bg: 'rgba(14,165,233,0.12)',  border: 'rgba(14,165,233,0.30)' },
   business: { label: 'Business', color: '#C4B5FD', bg: 'rgba(139,92,246,0.12)', border: 'rgba(139,92,246,0.30)' },
-  free:     { label: 'Gratuit',  color: '#94A3B8', bg: 'rgba(255,255,255,0.06)', border: 'rgba(255,255,255,0.12)' },
+  free:     { label: 'Gratuit',  color: '#94A3B8', bg: '#E2E8F0', border: '#CBD5E1' },
 }
 
 export default function Billing() {
@@ -152,9 +152,9 @@ export default function Billing() {
       <div className="flex items-center gap-3">
         <div
           className="w-10 h-10 rounded-xl flex items-center justify-center"
-          style={{ background: 'rgba(59,130,246,0.10)', border: '1px solid rgba(59,130,246,0.18)' }}
+          style={{ background: 'rgba(14,165,233,0.10)', border: '1px solid rgba(14,165,233,0.18)' }}
         >
-          <CreditCard size={18} style={{ color: '#3B82F6' }} />
+          <CreditCard size={18} className="text-ds-blue" />
         </div>
         <div>
           <h1 className="text-ds-text leading-tight">Facturation</h1>
@@ -167,13 +167,13 @@ export default function Billing() {
         <div
           className="flex items-center gap-3 px-5 py-4 rounded-2xl animate-fade-in"
           style={{
-            background: 'rgba(59,130,246,0.08)',
-            border: '1px solid rgba(59,130,246,0.25)',
+            background: 'rgba(14,165,233,0.08)',
+            border: '1px solid rgba(14,165,233,0.25)',
           }}
         >
-          <Loader2 size={20} className="animate-spin" style={{ color: '#60A5FA' }} />
+          <Loader2 size={20} className="animate-spin text-ds-teal" />
           <div>
-            <p className="text-sm font-semibold" style={{ color: '#60A5FA' }}>Vérification du paiement...</p>
+            <p className="text-sm font-semibold text-ds-teal">Vérification du paiement...</p>
             <p className="text-xs text-ds-text-3 mt-0.5">Confirmation en cours, veuillez patienter.</p>
           </div>
         </div>
@@ -188,9 +188,9 @@ export default function Billing() {
             border: '1px solid rgba(16,185,129,0.25)',
           }}
         >
-          <CheckCircle2 size={20} style={{ color: '#34D399' }} />
+          <CheckCircle2 size={20} className="text-ds-success-light" />
           <div>
-            <p className="text-sm font-semibold" style={{ color: '#34D399' }}>
+            <p className="text-sm font-semibold text-ds-success-light">
               Paiement réussi !
             </p>
             <p className="text-xs text-ds-text-3 mt-0.5">
@@ -206,9 +206,9 @@ export default function Billing() {
       <div className="glass-card overflow-hidden">
         <div
           className="flex items-center gap-3 px-6 py-4"
-          style={{ borderBottom: '1px solid rgba(59,130,246,0.08)', background: 'rgba(59,130,246,0.02)' }}
+          style={{ borderBottom: '1px solid rgba(14,165,233,0.08)', background: 'rgba(14,165,233,0.02)' }}
         >
-          <Sparkles size={15} style={{ color: '#3B82F6' }} />
+          <Sparkles size={15} className="text-ds-blue" />
           <h2 className="text-sm font-semibold text-ds-text">Mon abonnement</h2>
         </div>
         <div className="px-6 py-5">
@@ -240,17 +240,17 @@ export default function Billing() {
                 disabled={portalLoading}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
                 style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.08)',
+                  background: '#F1F5F9',
+                  border: '1px solid #E2E8F0',
                   color: '#94A3B8',
                   cursor: 'pointer',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.06)'
+                  e.currentTarget.style.background = '#E2E8F0'
                   e.currentTarget.style.color = '#E2E8F0'
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+                  e.currentTarget.style.background = '#F1F5F9'
                   e.currentTarget.style.color = '#94A3B8'
                 }}
               >
@@ -271,9 +271,9 @@ export default function Billing() {
         <div className="glass-card overflow-hidden">
           <div
             className="flex items-center gap-3 px-6 py-4"
-            style={{ borderBottom: '1px solid rgba(59,130,246,0.08)', background: 'rgba(59,130,246,0.02)' }}
+            style={{ borderBottom: '1px solid rgba(14,165,233,0.08)', background: 'rgba(14,165,233,0.02)' }}
           >
-            <Sparkles size={15} style={{ color: '#60A5FA' }} />
+            <Sparkles size={15} className="text-ds-teal" />
             <h2 className="text-sm font-semibold text-ds-text">Choisir un plan</h2>
           </div>
           <div className="grid grid-cols-2 gap-4 px-6 py-6">
@@ -364,9 +364,9 @@ export default function Billing() {
       <div className="glass-card overflow-hidden">
         <div
           className="flex items-center gap-3 px-6 py-4"
-          style={{ borderBottom: '1px solid rgba(59,130,246,0.08)', background: 'rgba(59,130,246,0.02)' }}
+          style={{ borderBottom: '1px solid rgba(14,165,233,0.08)', background: 'rgba(14,165,233,0.02)' }}
         >
-          <Download size={15} style={{ color: '#A78BFA' }} />
+          <Download size={15} className="text-ds-purple" />
           <h2 className="text-sm font-semibold text-ds-text">Historique de facturation</h2>
         </div>
         <div className="px-6 py-5">

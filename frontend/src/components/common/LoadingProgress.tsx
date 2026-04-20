@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Check } from 'lucide-react'
 
 const VARIANT_COLORS = {
-  upload:     { stroke: '#3B82F6', glow: 'rgba(59,130,246,0.4)',  text: '#3B82F6' },
+  upload:     { stroke: '#0EA5E9', glow: 'rgba(14,165,233,0.4)',  text: '#0EA5E9' },
   analysis:   { stroke: '#06B6D4', glow: 'rgba(6,182,212,0.4)',   text: '#06B6D4' },
   generation: { stroke: '#14B8A6', glow: 'rgba(20,184,166,0.4)',  text: '#14B8A6' },
 }
@@ -39,7 +39,7 @@ export default function LoadingProgress({
             id: i,
             x: Math.cos((i * 30 * Math.PI) / 180) * 55,
             y: Math.sin((i * 30 * Math.PI) / 180) * 55,
-            color: ['#3B82F6', '#60A5FA', '#10B981', '#06B6D4'][i % 4],
+            color: ['#0EA5E9', '#10B981', '#10B981', '#06B6D4'][i % 4],
           })),
         )
         setTimeout(() => setParticles([]), 900)
@@ -60,7 +60,7 @@ export default function LoadingProgress({
           <circle
             cx="80" cy="80" r={RADIUS}
             fill="none"
-            stroke="rgba(255,255,255,0.06)"
+            stroke="#E2E8F0"
             strokeWidth="8"
           />
           <circle
@@ -88,12 +88,12 @@ export default function LoadingProgress({
                 animation: 'scale-in 0.3s ease forwards',
               }}
             >
-              <Check size={32} style={{ color: '#10B981' }} strokeWidth={2.5} />
+              <Check size={32} className="text-ds-success" strokeWidth={2.5} />
             </div>
           ) : (
             <span
-              className="text-2xl font-bold"
-              style={{ fontFamily: '"JetBrains Mono", monospace', color: colors.text }}
+              className="text-2xl font-bold font-mono"
+              style={{ color: colors.text }}
             >
               {Math.round(clamped)}%
             </span>

@@ -30,6 +30,9 @@ class Project(Base):
     processing_status = Column(Text, nullable=True)   # uploading|extracting_text|detecting_lots|ready|error
     processing_progress = Column(Integer, default=0)
     processing_detail = Column(Text, nullable=True)   # "45/93 documents traités"
+    dpgf_remplie_url = Column(String(500), nullable=True)       # file URL of filled DPGF
+    dpgf_remplie_name = Column(String(255), nullable=True)      # original filename
+    dpgf_remplie_check = Column(JSON, nullable=True)            # verification result JSON
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

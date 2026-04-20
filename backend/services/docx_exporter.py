@@ -12,6 +12,8 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
+_MAP_PLACEHOLDER_RE = re.compile(r"\[📍.*?(?:carte|localisation|Google Maps).*?\]", re.IGNORECASE | re.DOTALL)
+
 
 # ─── Couleurs ──────────────────────────────────────────────────────────────────
 _BLUE_H1  = RGBColor(0x1E, 0x40, 0xAF)
@@ -197,11 +199,15 @@ def _h2(doc: Document, text: str):
     p.paragraph_format.space_after  = Pt(4)
 
 
-def _body(doc: Document, text: str):
+def _body(doc: Document, text: str, *, skip_map_placeholder: bool = False):
     """Ajoute le texte ligne par ligne — gère les puces et le gras **...**."""
     for line in text.split("\n"):
         stripped = line.rstrip()
         if not stripped:
+            continue
+
+        # Skip the map placeholder line — it will be replaced by the actual image
+        if skip_map_placeholder and _MAP_PLACEHOLDER_RE.search(stripped):
             continue
 
         is_bullet = bool(re.match(r"^[-*]\s+", stripped))
@@ -222,13 +228,45 @@ def _body(doc: Document, text: str):
             r.font.color.rgb = _GREY_TXT
 
 
-def _add_part(doc: Document, title: str, part: dict[str, Any], sections: list[tuple[str, str]]):
+def _add_map_image(doc: Document, map_image: bytes, caption: str):
+    """Insert a map PNG image with a caption below it."""
+    img_stream = io.BytesIO(map_image)
+    p_img = doc.add_paragraph()
+    p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = p_img.add_run()
+    run.add_picture(img_stream, width=Cm(15))
+    p_img.paragraph_format.space_before = Pt(8)
+    p_img.paragraph_format.space_after = Pt(4)
+
+    p_cap = doc.add_paragraph()
+    p_cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    r_cap = p_cap.add_run(caption)
+    r_cap.font.name = "Calibri"
+    r_cap.font.size = Pt(9)
+    r_cap.font.italic = True
+    r_cap.font.color.rgb = _GREY_META
+    p_cap.paragraph_format.space_after = Pt(12)
+
+
+def _add_part(
+    doc: Document,
+    title: str,
+    part: dict[str, Any],
+    sections: list[tuple[str, str]],
+    *,
+    map_image: bytes | None = None,
+    map_caption: str | None = None,
+):
     _h1(doc, title)
     for key, label in sections:
         text = (part or {}).get(key, "")
         if text and text.strip():
             _h2(doc, label)
-            _body(doc, text)
+            if key == "implantation" and map_image:
+                _body(doc, text, skip_map_placeholder=True)
+                _add_map_image(doc, map_image, map_caption or "")
+            else:
+                _body(doc, text)
 
 
 # ─── Point d'entrée public ─────────────────────────────────────────────────────
@@ -237,6 +275,9 @@ def build_memoire_docx(
     content_json: dict[str, Any],
     project_name: str,
     org_name: str,
+    *,
+    map_image: bytes | None = None,
+    map_caption: str | None = None,
 ) -> bytes:
     """Retourne les bytes du .docx prêt à être streamé en réponse HTTP."""
     doc = _setup_doc(org_name)
@@ -247,7 +288,7 @@ def build_memoire_docx(
         _h1(doc, "PRÉAMBULE")
         _body(doc, preambule)
 
-    _add_part(doc, "PARTIE A — PRÉSENTATION GÉNÉRALE",       content_json.get("partie_a", {}), _PART_A)
+    _add_part(doc, "PARTIE A — PRÉSENTATION GÉNÉRALE",       content_json.get("partie_a", {}), _PART_A, map_image=map_image, map_caption=map_caption)
     _add_part(doc, "PARTIE B — PRÉSENTATION DE LA PRESTATION", content_json.get("partie_b", {}), _PART_B)
     _add_part(doc, "PARTIE C — MÉTHODOLOGIE MISE EN ŒUVRE",   content_json.get("partie_c", {}), _PART_C)
 

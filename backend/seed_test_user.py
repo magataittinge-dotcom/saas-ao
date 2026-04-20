@@ -1,7 +1,9 @@
 """
 Seed script: insert a test user directly into the database.
 Run from backend/: python seed_test_user.py
+Override defaults with env vars: SEED_EMAIL, SEED_PASSWORD, SEED_NAME, SEED_ORG
 """
+import os
 import uuid
 from datetime import datetime
 
@@ -12,10 +14,10 @@ from models import Organization, User
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # ── Test user config ────────────────────────────────
-EMAIL    = "test@test.fr"
-PASSWORD = "Test1234!"
-NAME     = "Mohamed Test"
-ORG_NAME = "OZDEM TEST"
+EMAIL    = os.environ.get("SEED_EMAIL", "test@test.fr")
+PASSWORD = os.environ.get("SEED_PASSWORD", "Test1234!")
+NAME     = os.environ.get("SEED_NAME", "Mohamed Test")
+ORG_NAME = os.environ.get("SEED_ORG", "OZDEM TEST")
 SIRET    = "12345678901234"
 PLAN     = "pro"
 

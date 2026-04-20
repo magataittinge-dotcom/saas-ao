@@ -1,5 +1,8 @@
+import logging
 import stripe
 from fastapi import APIRouter, Depends, HTTPException, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
@@ -9,7 +12,9 @@ from models.user import User
 from models.organization import Organization
 from routers.auth import get_auth_user
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 settings = get_settings()
 stripe.api_key = settings.STRIPE_SECRET_KEY
 
@@ -157,20 +162,26 @@ def verify_session(
 
 
 @router.post("/webhook")
+@limiter.limit("100/minute")
 async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature", "")
 
-    # If webhook secret is configured, verify signature
     if settings.STRIPE_WEBHOOK_SECRET:
         try:
             event = stripe.Webhook.construct_event(payload, sig_header, settings.STRIPE_WEBHOOK_SECRET)
         except stripe.error.SignatureVerificationError:
+            logger.warning(f"Webhook signature invalide depuis {request.client.host}")
             raise HTTPException(status_code=400, detail="Signature webhook invalide")
-    else:
-        # Dev mode — parse without signature verification
+    elif settings.DEBUG:
+        # Dev mode only — parse without signature verification
         import json
+        logger.warning("Webhook sans vérification de signature (mode DEBUG)")
         event = stripe.Event.construct_from(json.loads(payload), stripe.api_key)
+    else:
+        # Prod without webhook secret → reject
+        logger.error("STRIPE_WEBHOOK_SECRET non configuré en production")
+        raise HTTPException(status_code=500, detail="Configuration webhook manquante")
 
     event_type = event["type"]
 

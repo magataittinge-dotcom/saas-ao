@@ -1,9 +1,20 @@
 import mimetypes
 from pathlib import Path
-from urllib.parse import unquote
-from fastapi import APIRouter, HTTPException, Query
+from urllib.parse import quote, unquote
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
+from sqlalchemy.orm import Session
+from database import get_db
+from models.user import User
+from routers.auth import get_auth_user
 from services.pdf_highlighter import PdfHighlighter
+
+
+def _content_disposition(filename: str, disposition: str = "inline") -> str:
+    """Build a Content-Disposition header safe for accented filenames (RFC 5987)."""
+    ascii_name = filename.encode("ascii", errors="replace").decode("ascii")
+    utf8_name = quote(filename, safe="")
+    return f'{disposition}; filename="{ascii_name}"; filename*=UTF-8\'\'{utf8_name}'
 
 router = APIRouter()
 
@@ -15,6 +26,8 @@ async def view_file(
     file_path: str,
     page: int = Query(None, description="Numéro de page à afficher"),
     highlight: str = Query(None, description="Texte à surligner dans le PDF"),
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
 ):
     """Serve a file inline. Si c'est un PDF avec highlight, surligne le passage en jaune."""
     file_path = unquote(file_path)
@@ -45,7 +58,7 @@ async def view_file(
                 path=str(highlighted_path),
                 media_type="application/pdf",
                 headers={
-                    "Content-Disposition": f"inline; filename=\"{full_path.name}\"",
+                    "Content-Disposition": _content_disposition(full_path.name),
                     "Cache-Control": "no-cache",
                 },
             )
@@ -53,5 +66,5 @@ async def view_file(
     return FileResponse(
         path=str(full_path),
         media_type=content_type,
-        headers={"Content-Disposition": f"inline; filename=\"{full_path.name}\""},
+        headers={"Content-Disposition": _content_disposition(full_path.name)},
     )

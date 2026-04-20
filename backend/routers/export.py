@@ -1,7 +1,13 @@
 import io
+import re
+import unicodedata
 import zipfile
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse
+from datetime import datetime
+from pathlib import Path as FilePath
+from urllib.parse import quote
+import mimetypes
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi.responses import StreamingResponse, FileResponse
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -10,8 +16,12 @@ from models.project import Project, ProjectDocument
 from models.compliance_item import ComplianceItem
 from models.checklist_item import ChecklistItem
 from models.memoire import MemoireTechnique
-from schemas.export import ExportSummary, ExportDetail, ComplianceExportItem, ChecklistExportItem, MemoireExportInfo, DpgfExportInfo
+from schemas.export import ExportSummary, ExportDetail, ComplianceExportItem, ChecklistExportItem, MemoireExportInfo, DpgfExportInfo, ProjectDocumentExportItem
 from routers.auth import get_auth_user
+from services.file_storage import FileStorage
+from services.dpgf_checker import check_dpgf
+
+UPLOADS_ROOT = FilePath(__file__).parent.parent / "uploads"
 
 router = APIRouter()
 
@@ -54,6 +64,7 @@ def get_export_detail(
             status=item.status,
             details=item.details,
             linked_document_name=doc_name,
+            linked_document_id=item.linked_document_id,
         ))
 
     # Mémoire info
@@ -82,6 +93,26 @@ def get_export_detail(
     if dpgf_doc:
         dpgf_info = DpgfExportInfo(file_name=dpgf_doc.file_name, file_id=dpgf_doc.id)
 
+    # DPGF remplie info
+    project = _get_project_or_404(project_id, user.organization_id, db)
+    dpgf_remplie = None
+    if project.dpgf_remplie_url:
+        dpgf_remplie = {
+            "file_name": project.dpgf_remplie_name,
+            "verification": project.dpgf_remplie_check or {},
+        }
+
+    # Project documents list for preview
+    project_docs_export = [
+        ProjectDocumentExportItem(
+            id=d.id,
+            file_name=d.file_name,
+            type=d.type or "autre",
+            pdf_preview_url=d.pdf_preview_url,
+        )
+        for d in project_docs
+    ]
+
     return ExportDetail(
         compliance_total=len(compliance_items),
         compliance_covered=sum(1 for i in compliance_items if i.status == "couvert"),
@@ -91,8 +122,10 @@ def get_export_detail(
         has_dpgf=dpgf_doc is not None,
         compliance_items=[ComplianceExportItem.model_validate(i) for i in compliance_items],
         checklist_items=checklist_export,
+        project_documents=project_docs_export,
         memoire_info=memoire_info,
         dpgf_info=dpgf_info,
+        dpgf_remplie=dpgf_remplie,
     )
 
 
@@ -139,10 +172,12 @@ def export_docx(
     docx_bytes = build_memoire_docx(memoire.content_json, project.name, org_name)
 
     filename = f"Memoire_Technique_{project.name.replace(' ', '_')}.docx"
+    ascii_name = filename.encode("ascii", errors="replace").decode("ascii")
+    utf8_name = quote(filename, safe="")
     return StreamingResponse(
         io.BytesIO(docx_bytes),
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{utf8_name}"},
     )
 
 
@@ -156,29 +191,322 @@ def export_zip(
 
     memoire = db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project_id).first()
     from models.organization import Organization
+    from models.document import Document
     org = db.query(Organization).filter(Organization.id == user.organization_id).first()
-
     org_name = org.name if org else "Entreprise"
 
-    from services.docx_exporter import build_memoire_docx
+    project_docs = db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).all()
+    checklist_items = db.query(ChecklistItem).filter(ChecklistItem.project_id == project_id).all()
+
+    # Collect coffre-fort documents linked via checklist
+    linked_doc_ids = {ci.linked_document_id for ci in checklist_items if ci.linked_document_id}
+    vault_docs = (
+        db.query(Document).filter(Document.id.in_(linked_doc_ids)).all()
+        if linked_doc_ids else []
+    )
+    vault_by_id = {d.id: d for d in vault_docs}
+
+    # ── Build root folder name ────────────────────────────────────────────────
+    lot_suffix = ""
+    if project.selected_lot_name:
+        lot_suffix = "_" + _sanitize(project.selected_lot_name)
+    date_str = datetime.utcnow().strftime("%Y%m%d")
+    root = f"{_sanitize(project.name)}{lot_suffix}_{date_str}"
+
+    # ── Classify documents ────────────────────────────────────────────────────
+    #
+    # Vault document types → subfolder mapping
+    CANDIDATURE_TYPES = {
+        "urssaf", "kbis", "decennale", "rc_civile", "qualibat",
+        "pro_btp", "cibtp", "fiscal", "dc1", "dc2",
+        "caces", "amiante_ss4", "declaration_honneur", "pouvoir",
+        "organigramme_doc", "chiffre_affaires", "effectifs",
+    }
+    OFFRE_TYPES = {"rib"}  # RIB goes with the offer
+    #
+    # Project document types → subfolder mapping
+    PROJECT_DOC_OFFRE = {"dpgf", "acte_engagement"}
+    PROJECT_DOC_TECHNIQUE = {"cctp"}
+    PROJECT_DOC_CANDIDATURE = {"rc", "ccap"}
+
     buf = io.BytesIO()
+    seen_names: dict[str, int] = {}  # track duplicates per folder
+
+    from services.docx_exporter import build_memoire_docx
+
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+
+        # ── 01_Candidature: vault documents linked by checklist ───────────
+        for ci in checklist_items:
+            doc = vault_by_id.get(ci.linked_document_id) if ci.linked_document_id else None
+            if not doc:
+                continue
+            doc_type = doc.type or "autre"
+            if doc_type in CANDIDATURE_TYPES or doc_type == "autre":
+                folder = f"{root}/01_Candidature"
+            elif doc_type in OFFRE_TYPES:
+                folder = f"{root}/02_Offre"
+            else:
+                folder = f"{root}/04_Annexes"
+            _add_file_to_zip(zf, doc.file_url, doc.file_name, folder, seen_names)
+
+        # ── 02_Offre: mémoire technique + DPGF + AE from project docs ────
         if memoire:
             docx_bytes = build_memoire_docx(memoire.content_json, project.name, org_name)
-            zf.writestr(f"Memoire_Technique_{project.name.replace(' ', '_')}.docx", docx_bytes)
+            zf.writestr(
+                f"{root}/02_Offre/Memoire_technique.docx",
+                docx_bytes,
+            )
 
-        zf.writestr(
-            "README.txt",
-            f"Dossier AO : {project.name}\nGénéré par Synorix\n",
-        )
+        for doc in project_docs:
+            doc_type = doc.type or "autre"
+            if doc_type in PROJECT_DOC_OFFRE:
+                _add_file_to_zip(zf, doc.file_url, doc.file_name, f"{root}/02_Offre", seen_names)
+            elif doc_type in PROJECT_DOC_TECHNIQUE:
+                _add_file_to_zip(zf, doc.file_url, doc.file_name, f"{root}/03_Technique", seen_names)
+            elif doc_type in PROJECT_DOC_CANDIDATURE:
+                _add_file_to_zip(zf, doc.file_url, doc.file_name, f"{root}/01_Candidature", seen_names)
+
+        # ── 02_Offre: filled DPGF if uploaded ─────────────────────────────
+        if project.dpgf_remplie_url and project.dpgf_remplie_name:
+            _add_file_to_zip(
+                zf, project.dpgf_remplie_url,
+                f"DPGF_remplie_{project.dpgf_remplie_name}",
+                f"{root}/02_Offre", seen_names,
+            )
+
+        # ── Ensure all 4 folders exist (even if empty) ────────────────────
+        for sub in ("01_Candidature", "02_Offre", "03_Technique", "04_Annexes"):
+            folder_path = f"{root}/{sub}/"
+            if folder_path not in {info.filename for info in zf.filelist}:
+                zf.writestr(folder_path, "")
 
     buf.seek(0)
-    filename = f"Dossier_AO_{project.name.replace(' ', '_')}.zip"
+    zip_filename = f"{root}.zip"
+    ascii_zip = zip_filename.encode("ascii", errors="replace").decode("ascii")
+    utf8_zip = quote(zip_filename, safe="")
     return StreamingResponse(
         buf,
         media_type="application/zip",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": f"attachment; filename=\"{ascii_zip}\"; filename*=UTF-8''{utf8_zip}"},
     )
+
+
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+def _sanitize(name: str) -> str:
+    """Normalize filename: remove accents, replace spaces/special chars with underscores."""
+    # Decompose unicode and strip accents
+    nfkd = unicodedata.normalize("NFKD", name)
+    ascii_str = nfkd.encode("ascii", "ignore").decode("ascii")
+    # Replace non-alphanumeric (except dot, hyphen) with underscore
+    clean = re.sub(r"[^a-zA-Z0-9.\-]", "_", ascii_str)
+    # Collapse multiple underscores
+    clean = re.sub(r"_+", "_", clean).strip("_")
+    return clean or "document"
+
+
+def _add_file_to_zip(
+    zf: zipfile.ZipFile,
+    file_url: str,
+    original_name: str,
+    folder: str,
+    seen_names: dict[str, int],
+) -> None:
+    """Read a file from local storage and add it to the ZIP under folder/."""
+    if not file_url:
+        return
+
+    # Resolve local file path
+    if file_url.startswith("/uploads/"):
+        rel = file_url.removeprefix("/uploads/")
+        file_path = UPLOADS_ROOT / rel
+    else:
+        # S3 URL or unknown — skip (future: download from S3)
+        return
+
+    if not file_path.exists():
+        return
+
+    # Sanitize filename, preserve extension
+    ext = file_path.suffix  # e.g. ".pdf"
+    stem = _sanitize(FilePath(original_name).stem)
+    clean_name = f"{stem}{ext}"
+
+    # Handle duplicates within the same folder
+    key = f"{folder}/{clean_name}"
+    if key in seen_names:
+        seen_names[key] += 1
+        clean_name = f"{stem}_{seen_names[key]}{ext}"
+    else:
+        seen_names[key] = 1
+
+    zf.write(file_path, f"{folder}/{clean_name}")
+
+
+# ── Document download ────────────────────────────────────────────────────────
+
+@router.get("/{project_id}/documents/{doc_id}/download")
+def download_document(
+    project_id: str,
+    doc_id: str,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """Download a project document (original file)."""
+    _get_project_or_404(project_id, user.organization_id, db)
+    doc = db.query(ProjectDocument).filter(
+        ProjectDocument.id == doc_id,
+        ProjectDocument.project_id == project_id,
+    ).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document introuvable")
+
+    file_path = _resolve_local_path(doc.file_url)
+    if not file_path or not file_path.exists():
+        raise HTTPException(status_code=404, detail="Fichier introuvable sur le serveur")
+
+    media_type = mimetypes.guess_type(doc.file_name)[0] or "application/octet-stream"
+    return FileResponse(
+        path=str(file_path),
+        media_type=media_type,
+        filename=doc.file_name,
+    )
+
+
+@router.get("/{project_id}/documents/{doc_id}/preview")
+def preview_document(
+    project_id: str,
+    doc_id: str,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """Preview a project document inline (Content-Disposition: inline)."""
+    _get_project_or_404(project_id, user.organization_id, db)
+    doc = db.query(ProjectDocument).filter(
+        ProjectDocument.id == doc_id,
+        ProjectDocument.project_id == project_id,
+    ).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document introuvable")
+
+    # Prefer PDF preview if available
+    preview_url = doc.pdf_preview_url or doc.file_url
+    file_path = _resolve_local_path(preview_url)
+    if not file_path or not file_path.exists():
+        # Fallback to original file
+        file_path = _resolve_local_path(doc.file_url)
+    if not file_path or not file_path.exists():
+        raise HTTPException(status_code=404, detail="Fichier introuvable sur le serveur")
+
+    media_type = mimetypes.guess_type(str(file_path))[0] or "application/octet-stream"
+    return FileResponse(
+        path=str(file_path),
+        media_type=media_type,
+        headers={"Content-Disposition": f"inline; filename=\"{doc.file_name.encode('ascii', errors='replace').decode('ascii')}\"; filename*=UTF-8''{quote(doc.file_name, safe='')}"},
+    )
+
+
+# ── DPGF filled upload + verification ───────────────────────────────────────
+
+_DPGF_EXTENSIONS = {".xlsx", ".xlsm", ".xls", ".ods", ".pdf"}
+_storage = FileStorage()
+
+
+@router.post("/{project_id}/dpgf-upload")
+async def upload_filled_dpgf(
+    project_id: str,
+    file: UploadFile = File(...),
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """Upload a filled DPGF and run automatic verification."""
+    project = _get_project_or_404(project_id, user.organization_id, db)
+
+    # Validate extension
+    ext = FilePath(file.filename or "").suffix.lower()
+    if ext not in _DPGF_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Format non supporté ({ext}). Formats acceptés : {', '.join(_DPGF_EXTENSIONS)}",
+        )
+
+    content = await file.read()
+    if len(content) > 50 * 1024 * 1024:  # 50 MB
+        raise HTTPException(status_code=400, detail="Fichier trop volumineux (max 50 Mo)")
+
+    # Store file
+    file_url = await _storage.upload(
+        content, file.filename or f"dpgf_remplie{ext}",
+        prefix=f"projects/{project_id}/dpgf_remplie",
+        content_type=file.content_type,
+    )
+
+    # Run verification
+    local_path = _resolve_local_path(file_url)
+    verification = {"valid": True, "warnings": [], "total_ht": None, "nb_lignes": 0, "nb_lignes_remplies": 0, "nb_lignes_vides": 0}
+    if local_path and local_path.exists():
+        verification = check_dpgf(local_path)
+
+    # Save to project
+    project.dpgf_remplie_url = file_url
+    project.dpgf_remplie_name = file.filename
+    project.dpgf_remplie_check = verification
+    db.commit()
+
+    return {
+        "file_name": file.filename,
+        "file_url": file_url,
+        "verification": verification,
+    }
+
+
+@router.get("/{project_id}/dpgf-check")
+def get_dpgf_check(
+    project_id: str,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """Get the latest DPGF verification result."""
+    project = _get_project_or_404(project_id, user.organization_id, db)
+    if not project.dpgf_remplie_url:
+        raise HTTPException(status_code=404, detail="Aucune DPGF remplie uploadée")
+    return {
+        "file_name": project.dpgf_remplie_name,
+        "verification": project.dpgf_remplie_check or {},
+    }
+
+
+@router.get("/{project_id}/dpgf-remplie/download")
+def download_filled_dpgf(
+    project_id: str,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """Download the filled DPGF file."""
+    project = _get_project_or_404(project_id, user.organization_id, db)
+    if not project.dpgf_remplie_url:
+        raise HTTPException(status_code=404, detail="Aucune DPGF remplie uploadée")
+
+    file_path = _resolve_local_path(project.dpgf_remplie_url)
+    if not file_path or not file_path.exists():
+        raise HTTPException(status_code=404, detail="Fichier introuvable sur le serveur")
+
+    filename = project.dpgf_remplie_name or "DPGF_remplie"
+    media_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+    return FileResponse(
+        path=str(file_path),
+        media_type=media_type,
+        filename=filename,
+    )
+
+
+def _resolve_local_path(file_url: str) -> FilePath | None:
+    """Resolve a /uploads/... URL to a local file path."""
+    if not file_url or not file_url.startswith("/uploads/"):
+        return None
+    rel = file_url.removeprefix("/uploads/")
+    return UPLOADS_ROOT / rel
 
 
 def _get_project_or_404(project_id: str, org_id: str, db: Session) -> Project:

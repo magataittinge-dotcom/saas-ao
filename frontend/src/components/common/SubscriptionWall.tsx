@@ -15,11 +15,11 @@ const PLANS = [
     name: 'Pro',
     price: '249',
     icon: Zap,
-    color: '#3B82F6',
-    colorLight: '#60A5FA',
-    bg: 'rgba(59,130,246,0.08)',
-    border: 'rgba(59,130,246,0.25)',
-    gradient: 'linear-gradient(135deg, #3B82F6 0%, #60A5FA 100%)',
+    color: '#0EA5E9',
+    colorLight: '#10B981',
+    bg: 'rgba(14,165,233,0.08)',
+    border: 'rgba(14,165,233,0.25)',
+    gradient: 'linear-gradient(135deg, #0EA5E9 0%, #10B981 100%)',
     features: [
       'Analyse IA illimitée',
       'Matrice de conformité automatique',
@@ -35,7 +35,7 @@ const PLANS = [
     name: 'Business',
     price: '399',
     icon: Crown,
-    color: '#A78BFA',
+    color: '#7C3AED',
     colorLight: '#C4B5FD',
     bg: 'rgba(139,92,246,0.08)',
     border: 'rgba(139,92,246,0.25)',
@@ -98,7 +98,7 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis' }
           right: 0,
           bottom: 0,
           background: 'rgba(6,9,15,0.90)',
-          backdropFilter: 'blur(8px)',
+          backdropFilter: 'none',
         }}
         onClick={onClose}
       />
@@ -109,17 +109,16 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis' }
         style={{
           background: 'rgba(17,28,68,0.95)',
           backdropFilter: 'blur(32px) saturate(200%)',
-          border: '1px solid rgba(59,130,246,0.15)',
+          border: '1px solid rgba(14,165,233,0.15)',
           borderRadius: '24px',
-          boxShadow: '0 0 80px rgba(59,130,246,0.08), 0 24px 60px rgba(0,0,0,0.50)',
+          boxShadow: '0 0 80px rgba(14,165,233,0.08), 0 24px 60px rgba(0,0,0,0.10)',
           maxHeight: '95vh',
         }}
       >
         {/* Close */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-lg transition-colors hover:bg-white/5 z-10"
-          style={{ color: '#64748B' }}
+          className="absolute top-4 right-4 p-1.5 rounded-lg transition-colors hover:bg-[#F1F5F9] z-10 text-ds-text-2"
         >
           <X size={18} />
         </button>
@@ -129,12 +128,12 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis' }
           <div
             className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3"
             style={{
-              background: 'linear-gradient(135deg, rgba(59,130,246,0.20), rgba(139,92,246,0.15))',
-              border: '1px solid rgba(59,130,246,0.25)',
-              boxShadow: '0 0 30px rgba(59,130,246,0.15)',
+              background: 'linear-gradient(135deg, rgba(14,165,233,0.20), rgba(139,92,246,0.15))',
+              border: '1px solid rgba(14,165,233,0.25)',
+              boxShadow: '0 0 30px rgba(14,165,233,0.15)',
             }}
           >
-            <Sparkles size={22} style={{ color: '#60A5FA' }} />
+            <Sparkles size={22} className="text-ds-teal" />
           </div>
           <h2 className="text-lg font-bold text-ds-text">
             Passez au niveau supérieur

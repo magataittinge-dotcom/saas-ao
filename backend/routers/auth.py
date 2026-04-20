@@ -1,15 +1,19 @@
+import logging
 import uuid
 import jwt
 import httpx
 from jwt import PyJWKClient
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
+from starlette.requests import Request as StarletteRequest
 
 from database import get_db
 from config import get_settings
 from models.user import User
 from models.organization import Organization
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 settings = get_settings()
@@ -38,9 +42,11 @@ def _decode_clerk_token(token: str) -> dict:
         )
         return payload
     except jwt.ExpiredSignatureError:
+        logger.warning("Auth failed: token expiré")
         raise HTTPException(status_code=401, detail="Token expiré")
     except jwt.InvalidTokenError as e:
-        raise HTTPException(status_code=401, detail=f"Token invalide: {e}")
+        logger.warning(f"Auth failed: token invalide — {type(e).__name__}")
+        raise HTTPException(status_code=401, detail="Token invalide")
 
 
 def _fetch_clerk_user(clerk_user_id: str) -> dict:

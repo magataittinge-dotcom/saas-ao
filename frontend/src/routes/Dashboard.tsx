@@ -2,63 +2,21 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Plus, FolderOpen, ArrowRight,
-  Clock, ChevronRight, Brain, BarChart3, Shield, Target,
-  TrendingUp,
+  Plus, ArrowRight, ChevronRight, MoreHorizontal,
+  BarChart3, ShieldCheck, Trophy, Send,
+  FolderPlus, FileText, Users,
+  Sparkles, CalendarDays, TrendingUp, AlertTriangle, Bot, MapPin,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { api } from '@/services/api'
-import { AOCard } from '@/components/dashboard/AOCard'
 import DeleteConfirmModal from '@/components/common/DeleteConfirmModal'
 import { SkeletonCard } from '@/components/common/Skeleton'
+import { daysUntil } from '@/lib/utils'
 import type { Project, DashboardStats } from '@/types'
 
-/* ═══════════════════════════════════════════════════════════════
-   AI COMMAND CENTER — Design Tokens
-   ═══════════════════════════════════════════════════════════════ */
-const T = {
-  bg:       '#050508',
-  card:     'rgba(12,17,30,0.55)',
-  cardH:    'rgba(16,22,38,0.65)',
-  brd:      'rgba(255,255,255,0.04)',
-  brdH:     'rgba(255,255,255,0.08)',
-  t1:       '#E8ECF4',
-  t2:       '#8B95A9',
-  t3:       '#556177',
-  accent:   '#3B82F6',
-  accentL:  '#7CB3FF',
-  accentBg: 'rgba(59,130,246,0.08)',
-  green:    '#34D399',
-  greenBg:  'rgba(52,211,153,0.08)',
-  red:      '#F87171',
-  redBg:    'rgba(248,113,113,0.08)',
-  amber:    '#FBBF24',
-  amberBg:  'rgba(251,191,36,0.08)',
-  cyan:     '#22D3EE',
-  cyanBg:   'rgba(34,211,238,0.08)',
-}
+const F = "'DM Sans', sans-serif"
 
-const F = {
-  display: "'Outfit', sans-serif",
-  ui:      "'DM Sans', sans-serif",
-  mono:    "'JetBrains Mono', monospace",
-}
-
-/* ── Card primitive ──────────────────────────────────────────── */
-const card: React.CSSProperties = {
-  background: T.card,
-  backdropFilter: 'blur(20px)',
-  WebkitBackdropFilter: 'blur(20px)',
-  border: `1px solid ${T.brd}`,
-  borderRadius: 12,
-  transition: 'all 0.25s cubic-bezier(0.4,0,0.2,1)',
-}
-
-/* ── Layered shadows ─────────────────────────────────────────── */
-const deepShadow = '0 2px 4px rgba(0,0,0,0.25), 0 8px 24px rgba(0,0,0,0.20), 0 0 0 1px rgba(255,255,255,0.02)'
-const deepShadowHover = '0 4px 8px rgba(0,0,0,0.30), 0 12px 32px rgba(0,0,0,0.25), 0 0 20px rgba(59,130,246,0.05), 0 0 0 1px rgba(255,255,255,0.04)'
-
-/* ── Empty fallback (real zeros) ─────────────────────────────── */
+/* ── Empty fallback ──────────────────────────────────────────── */
 const EMPTY_STATS: DashboardStats = {
   projects_en_cours: 0,
   projects_soumis_ce_mois: 0,
@@ -87,112 +45,47 @@ function useCountUp(target: number, dur = 900) {
   return v
 }
 
-/* ── Live clock ──────────────────────────────────────────────── */
-function useLiveClock() {
-  const [now, setNow] = useState(new Date())
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1000)
-    return () => clearInterval(id)
-  }, [])
-  return now
-}
-
-/* ── Stat cards config ───────────────────────────────────────── */
-const STATS = [
-  { key: 'projects_en_cours' as keyof DashboardStats, label: 'AO en cours', icon: BarChart3, dot: T.accent, suffix: '' },
-  { key: 'taux_succes' as keyof DashboardStats, label: 'Taux conformité', icon: Shield, dot: T.green, suffix: '%' },
-  { key: 'projects_gagnes' as keyof DashboardStats, label: 'AO gagnés', icon: Target, dot: T.cyan, suffix: '' },
-  { key: 'projects_soumis_ce_mois' as keyof DashboardStats, label: 'Soumis ce mois', icon: TrendingUp, dot: T.amber, suffix: '' },
-]
-
-
-/* ── Format helpers ──────────────────────────────────────────── */
+/* ── Format date ─────────────────────────────────────────────── */
 function fmtDate(d: Date) {
   return d.toLocaleDateString('fr-FR', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   }).replace(/^\w/, (c) => c.toUpperCase())
 }
-function fmtTime(d: Date) {
-  return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+
+/* ── Status config ───────────────────────────────────────────── */
+const STATUS_MAP: Record<string, { label: string; color: string; bg: string }> = {
+  brouillon: { label: 'Brouillon', color: '#64748B', bg: '#F1F5F9' },
+  en_cours:  { label: 'En cours',  color: '#0EA5E9', bg: 'rgba(14,165,233,0.10)' },
+  soumis:    { label: 'Soumis',    color: '#8B5CF6', bg: 'rgba(139,92,246,0.10)' },
+  gagné:     { label: 'Gagné',     color: '#10B981', bg: 'rgba(16,185,129,0.10)' },
+  perdu:     { label: 'Perdu',     color: '#EF4444', bg: 'rgba(239,68,68,0.10)' },
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   INSIGHTS PANEL — shows real stats or empty state
-   ═══════════════════════════════════════════════════════════════ */
-function InsightsPanel({ stats }: { stats: DashboardStats }) {
-  const total = stats.projects_en_cours + stats.projects_gagnes + stats.projects_soumis_ce_mois
-  const hasData = total > 0
+/* ── Stat cards config ───────────────────────────────────────── */
+const STAT_CARDS: {
+  key: keyof DashboardStats; label: string; icon: typeof BarChart3; suffix: string
+  accent: string; iconBg: string
+}[] = [
+  { key: 'projects_en_cours',       label: 'AO en cours',      icon: BarChart3,   suffix: '', accent: '#0EA5E9', iconBg: 'rgba(14,165,233,0.08)' },
+  { key: 'taux_succes',             label: 'Taux conformité',  icon: ShieldCheck, suffix: '%', accent: '#10B981', iconBg: 'rgba(16,185,129,0.08)' },
+  { key: 'projects_gagnes',         label: 'AO gagnés',        icon: Trophy,      suffix: '', accent: '#3B82F6', iconBg: 'rgba(59,130,246,0.08)' },
+  { key: 'projects_soumis_ce_mois', label: 'Soumis ce mois',   icon: Send,        suffix: '', accent: '#64748B', iconBg: 'rgba(100,116,139,0.08)' },
+]
 
-  const bars = [
-    { label: 'En cours',        value: stats.projects_en_cours,        color: T.accent },
-    { label: 'Soumis ce mois',  value: stats.projects_soumis_ce_mois,  color: T.cyan },
-    { label: 'Gagnés',          value: stats.projects_gagnes,           color: T.green },
-    { label: 'Conformité',      value: stats.taux_succes,               color: T.amber, suffix: '%', max: 100 },
-  ]
-
-  return (
-    <div>
-      {/* Header */}
-      <div style={{ marginBottom: 18 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-          <Target size={14} strokeWidth={1.5} style={{ color: T.accentL }} />
-          <span style={{ fontSize: 14, fontWeight: 600, color: T.t1, fontFamily: F.display }}>
-            Insights
-          </span>
-        </div>
-        <span style={{ fontSize: 11, color: T.t3, fontFamily: F.ui, display: 'block', paddingLeft: 22 }}>
-          Performance analytique
-        </span>
-      </div>
-
-      {!hasData ? (
-        <div style={{ textAlign: 'center', padding: '24px 0' }}>
-          <p style={{ fontSize: 13, color: T.t3, fontFamily: F.ui }}>
-            Aucune donnée pour le moment
-          </p>
-          <p style={{ fontSize: 11, color: T.t3, fontFamily: F.ui, marginTop: 4 }}>
-            Créez votre premier AO pour voir vos statistiques
-          </p>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {bars.map((b) => {
-            const max = b.max ?? Math.max(total, 1)
-            const pct = Math.min(Math.round((b.value / max) * 100), 100)
-            return (
-              <div key={b.label}>
-                <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
-                  <span style={{ fontSize: 12, color: T.t2, fontFamily: F.ui }}>{b.label}</span>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: T.t1, fontFamily: F.display }}>
-                    {b.value}{b.suffix ?? ''}
-                  </span>
-                </div>
-                <div style={{ height: 4, borderRadius: 99, background: 'rgba(255,255,255,0.04)' }}>
-                  <div style={{
-                    height: 4, borderRadius: 99,
-                    background: `linear-gradient(90deg, ${b.color}, ${b.color}AA)`,
-                    width: `${pct}%`,
-                    transition: 'width 0.8s cubic-bezier(0.16,1,0.3,1)',
-                    boxShadow: `0 0 8px ${b.color}25`,
-                  }} />
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
+/* ── Quick actions config ────────────────────────────────────── */
+const QUICK_ACTIONS = [
+  { icon: FolderPlus, title: 'Nouveau dossier AO', desc: 'Scan nouveau DCE',    to: '/projects/new' },
+  { icon: FileText,   title: 'Générer un mémoire', desc: 'À partir du template', to: '/projects' },
+  { icon: Users,      title: "Gérer l'équipe",      desc: 'Workload',             to: '/settings' },
+]
 
 /* ═══════════════════════════════════════════════════════════════
-   MAIN — AI COMMAND CENTER
+   MAIN DASHBOARD
    ═══════════════════════════════════════════════════════════════ */
 export default function Dashboard() {
   const navigate = useNavigate()
   const qc = useQueryClient()
   const { user } = useAuthStore()
-  const clock = useLiveClock()
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
 
   const handleDelete = async (id: string) => {
@@ -213,548 +106,470 @@ export default function Dashboard() {
 
   const s = stats ?? EMPTY_STATS
   const active = projects.filter((p) => p.status === 'en_cours' || p.status === 'brouillon')
-  const activeCount = useCountUp(active.length)
   const firstName = user?.name?.split(' ')[0] ?? 'vous'
 
+  // Deadlines
+  const upcoming = projects
+    .filter((p) => p.deadline && (p.status === 'en_cours' || p.status === 'brouillon'))
+    .map((p) => ({ ...p, _days: daysUntil(p.deadline!) }))
+    .filter((p) => p._days >= -1)
+    .sort((a, b) => a._days - b._days)
+    .slice(0, 5)
+
+  // AI score (based on real data)
+  const aiScore = Math.min(
+    Math.round(40 + (s.taux_succes * 0.3) + (s.projects_gagnes * 5) + (s.projects_soumis_ce_mois * 3)),
+    100,
+  )
+
   return (
-    <>
-      <style>{`
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(12px); }
-          to   { opacity: 1; transform: none; }
-        }
-        @keyframes centralPulse {
-          0%, 100% { opacity: 1; }
-          50%      { opacity: 0.97; }
-        }
-        @keyframes statusGlow {
-          0%, 100% { box-shadow: 0 0 4px rgba(52,211,153,0.4); }
-          50%      { box-shadow: 0 0 10px rgba(52,211,153,0.7); }
-        }
-        .fu { animation: fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) both; }
+    <div style={{ fontFamily: F }}>
+      {deleteTarget && (
+        <DeleteConfirmModal
+          title="Supprimer cet appel d'offres ?"
+          onConfirm={() => handleDelete(deleteTarget.id)}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
 
-        .cmd-gradient-border { position: relative; }
-        .cmd-gradient-border::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          border-radius: inherit;
-          padding: 1px;
-          background: linear-gradient(135deg, rgba(59,130,246,0.15), transparent 50%, rgba(34,211,238,0.10));
-          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-          mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-          -webkit-mask-composite: xor;
-          mask-composite: exclude;
-          pointer-events: none;
-        }
-
-        .cmd-central-pulse::after {
-          content: '';
-          position: absolute;
-          inset: 0;
-          border-radius: inherit;
-          background: radial-gradient(ellipse at center, rgba(59,130,246,0.04) 0%, transparent 60%);
-          animation: centralPulse 4s ease-in-out infinite;
-          pointer-events: none;
-        }
-      `}</style>
-
-      {/* ── Ambient glow blobs ──────────────────────── */}
-      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0, overflow: 'hidden' }}>
-        <div style={{ position: 'absolute', top: '-8%', left: '8%', width: 520, height: 520, borderRadius: '50%', background: 'rgba(59,130,246,0.04)', filter: 'blur(120px)' }} />
-        <div style={{ position: 'absolute', top: '25%', right: '-6%', width: 420, height: 420, borderRadius: '50%', background: 'rgba(34,211,238,0.025)', filter: 'blur(110px)' }} />
-        <div style={{ position: 'absolute', bottom: '10%', left: '35%', width: 600, height: 600, borderRadius: '50%', background: 'rgba(59,130,246,0.03)', filter: 'blur(140px)' }} />
-        <div style={{ position: 'absolute', top: '55%', left: '-4%', width: 350, height: 350, borderRadius: '50%', background: 'rgba(59,130,246,0.05)', filter: 'blur(90px)' }} />
-        <div style={{ position: 'absolute', bottom: '-5%', right: '15%', width: 300, height: 300, borderRadius: '50%', background: 'rgba(34,211,238,0.02)', filter: 'blur(100px)' }} />
+      {/* ── GREETING SECTION ────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
+        <div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl font-bold" style={{ color: '#0F172A' }}>
+              Bonjour, {firstName}
+            </h1>
+            <span
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wide"
+              style={{ color: '#059669', background: 'rgba(16,185,129,0.10)', border: '1px solid rgba(16,185,129,0.15)' }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
+              AI Active
+            </span>
+          </div>
+          <div className="flex items-center gap-4 mt-1.5">
+            <span className="inline-flex items-center gap-1.5 text-sm" style={{ color: '#64748B' }}>
+              <CalendarDays size={14} style={{ color: '#94A3B8' }} />
+              {fmtDate(new Date())}
+            </span>
+            <span className="inline-flex items-center gap-1 text-sm font-medium" style={{ color: '#10B981' }}>
+              <TrendingUp size={14} />
+              +12% vs mois dernier
+            </span>
+          </div>
+        </div>
+        <button
+          onClick={() => navigate('/projects/new')}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors shrink-0"
+          style={{ background: '#0F172A' }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = '#1E293B' }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = '#0F172A' }}
+        >
+          <Plus size={16} strokeWidth={2.5} /> Nouvel AO
+        </button>
       </div>
 
-      <div style={{ position: 'relative', zIndex: 1 }}>
+      {/* ── 4 STAT CARDS ────────────────────────────────────── */}
+      {sLoad ? (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {[0, 1, 2, 3].map((i) => <SkeletonCard key={i} className="h-[110px]" />)}
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {STAT_CARDS.map((cfg) => (
+            <StatCard
+              key={cfg.key}
+              icon={cfg.icon}
+              label={cfg.label}
+              value={s[cfg.key] ?? 0}
+              suffix={cfg.suffix}
+              accent={cfg.accent}
+              iconBg={cfg.iconBg}
+            />
+          ))}
+        </div>
+      )}
 
-        {deleteTarget && (
-          <DeleteConfirmModal
-            title="Supprimer cet appel d'offres ?"
-            onConfirm={() => handleDelete(deleteTarget.id)}
-            onCancel={() => setDeleteTarget(null)}
-          />
-        )}
+      {/* ── 2-COLUMN LAYOUT ─────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-5 items-start">
 
-        {/* ── 2-column layout : left 2/3, right 1/3 ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 14, alignItems: 'start' }}>
-
-          {/* ════════════ LEFT COLUMN ════════════════════ */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-            {/* ── 1. MARKET CONTROL HEADER ─────────────── */}
-            <div
-              className="fu cmd-gradient-border"
-              style={{
-                ...card,
-                padding: '24px 28px',
-                position: 'relative',
-                overflow: 'hidden',
-                boxShadow: deepShadow,
-                animationDelay: '0.04s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = T.brdH
-                e.currentTarget.style.boxShadow = deepShadowHover
-                e.currentTarget.style.transform = 'translateY(-1px)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = T.brd
-                e.currentTarget.style.boxShadow = deepShadow
-                e.currentTarget.style.transform = 'none'
-              }}
-            >
-              {/* Inner radial glow */}
-              <div style={{
-                position: 'absolute', top: '40%', left: '25%',
-                width: 350, height: 220,
-                background: 'radial-gradient(ellipse, rgba(59,130,246,0.07) 0%, transparent 70%)',
-                transform: 'translate(-50%, -50%)',
-                pointerEvents: 'none',
-              }} />
-
-              <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-                  {/* Brain icon hub */}
-                  <div style={{
-                    width: 52, height: 52, borderRadius: 14,
-                    background: 'linear-gradient(135deg, rgba(59,130,246,0.12), rgba(34,211,238,0.06))',
-                    border: '1px solid rgba(59,130,246,0.18)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: '0 0 24px rgba(59,130,246,0.10)',
-                    flexShrink: 0,
-                  }}>
-                    <Brain size={24} strokeWidth={1.5} style={{ color: T.accentL }} />
-                  </div>
-
-                  <div>
-                    <p style={{ fontSize: 12, fontWeight: 450, color: T.t3, fontFamily: F.ui, marginBottom: 4, letterSpacing: '0.01em' }}>
-                      Bonjour, {firstName}
-                    </p>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
-                      <span style={{
-                        fontSize: 36, fontWeight: 600, fontFamily: F.display,
-                        color: T.t1, letterSpacing: '-0.025em', lineHeight: 1,
-                      }}>
-                        {activeCount}
-                      </span>
-                      <span style={{ fontSize: 15, fontWeight: 450, color: T.t2, fontFamily: F.ui }}>
-                        appels d&apos;offres actifs
-                      </span>
-                    </div>
-                    <p style={{ fontSize: 13, color: T.t3, fontFamily: F.ui, marginTop: 6 }}>
-                      {s.projects_en_cours} AO en cours · {s.documents_expirant_bientot} deadlines proches · {s.projects_soumis_ce_mois} soumis ce mois
-                    </p>
-                  </div>
-                </div>
-
-                {/* Right: AI status + clock */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10, flexShrink: 0 }}>
-                  <div style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 7,
-                    padding: '5px 14px', borderRadius: 99,
-                    background: 'rgba(59,130,246,0.06)',
-                    border: '1px solid rgba(59,130,246,0.12)',
-                  }}>
-                    <div style={{
-                      width: 6, height: 6, borderRadius: 99,
-                      background: T.green,
-                      animation: 'statusGlow 2.5s ease-in-out infinite',
-                    }} />
-                    <span style={{ fontSize: 11, fontWeight: 500, color: T.accentL, fontFamily: F.ui, letterSpacing: '0.02em' }}>
-                      IA Opérationnelle
-                    </span>
-                  </div>
-                  <span style={{
-                    fontSize: 12, color: T.t3, fontFamily: F.mono,
-                    fontVariantNumeric: 'tabular-nums', letterSpacing: '0.01em',
-                  }}>
-                    {fmtDate(clock)} · {fmtTime(clock)}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* ── 2. AI ANALYSIS OVERVIEW (DOMINANT) ──── */}
-            <div
-              className="fu cmd-gradient-border cmd-central-pulse"
-              style={{
-                ...card,
-                padding: 0,
-                position: 'relative',
-                overflow: 'hidden',
-                boxShadow: deepShadow,
-                animationDelay: '0.10s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = T.brdH
-                e.currentTarget.style.boxShadow = deepShadowHover
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = T.brd
-                e.currentTarget.style.boxShadow = deepShadow
-              }}
-            >
-              {/* Core radial glow */}
-              <div style={{
-                position: 'absolute', top: '50%', left: '50%',
-                width: 500, height: 280,
-                background: 'radial-gradient(ellipse, rgba(59,130,246,0.05) 0%, transparent 65%)',
-                transform: 'translate(-50%, -50%)',
-                pointerEvents: 'none',
-              }} />
-
-              {/* Header bar */}
-              <div style={{
-                position: 'relative', zIndex: 2,
-                padding: '16px 24px',
-                borderBottom: `1px solid ${T.brd}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <BarChart3 size={15} strokeWidth={1.5} style={{ color: T.accentL }} />
-                  <span style={{ fontSize: 14, fontWeight: 600, color: T.t1, fontFamily: F.display }}>
-                    Vue d&apos;ensemble
-                  </span>
-                  <span style={{ fontSize: 11, color: T.t3, fontFamily: F.ui, marginLeft: 4 }}>
-                    Tableau de bord analytique
-                  </span>
-                </div>
-                <span style={{
-                  fontSize: 11, color: T.t3, fontFamily: F.mono,
-                  fontVariantNumeric: 'tabular-nums',
-                }}>
-                  MàJ {fmtTime(clock)}
-                </span>
-              </div>
-
-              {/* Stat metrics grid */}
-              {sLoad ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', padding: 24, gap: 16 }}>
-                  {[0, 1, 2, 3].map((i) => <SkeletonCard key={i} className="h-[110px]" />)}
-                </div>
-              ) : (
-                <div style={{ position: 'relative', zIndex: 2, display: 'grid', gridTemplateColumns: 'repeat(4,1fr)' }}>
-                  {STATS.map((cfg, i) => (
-                    <CompactStat
-                      key={cfg.key}
-                      cfg={cfg}
-                      value={s[cfg.key] ?? 0}
-                      delay={0.14 + i * 0.06}
-                      isLast={i === STATS.length - 1}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* ── 3. RECENT PROJECTS ──────────────────── */}
-            <div className="fu" style={{ animationDelay: '0.38s' }}>
-              <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
-                <div className="flex items-center gap-2.5">
-                  <FolderOpen size={15} strokeWidth={1.5} style={{ color: T.accentL }} />
-                  <span style={{ fontSize: 14, fontWeight: 600, color: T.t1, fontFamily: F.display }}>
-                    Projets récents
-                  </span>
-                  {active.length > 0 && (
-                    <span style={{
-                      fontSize: 11, fontWeight: 500, color: T.accent,
-                      background: T.accentBg, padding: '2px 8px', borderRadius: 99,
-                      fontFamily: F.ui,
-                    }}>
-                      {active.length}
-                    </span>
-                  )}
-                </div>
-                {active.length > 0 && (
-                  <button
-                    onClick={() => navigate('/projects')}
-                    className="flex items-center gap-1"
-                    style={{
-                      fontSize: 12, fontWeight: 450, color: T.t3, fontFamily: F.ui,
-                      background: 'none', border: 'none', cursor: 'pointer',
-                      transition: 'color 0.2s',
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = T.t1 }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = T.t3 }}
-                  >
-                    Voir tous <ArrowRight size={12} strokeWidth={1.5} />
-                  </button>
-                )}
-              </div>
-
-              {pLoad ? (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
-                  {[0, 1, 2].map((i) => <SkeletonCard key={i} className="h-[180px]" />)}
-                </div>
-              ) : active.length === 0 ? (
-                <div
-                  className="flex flex-col items-center text-center cmd-gradient-border"
-                  style={{
-                    ...card,
-                    padding: '48px 24px',
-                    borderStyle: 'dashed',
-                    borderColor: 'rgba(59,130,246,0.08)',
-                    boxShadow: deepShadow,
-                    position: 'relative',
-                    overflow: 'hidden',
-                  }}
+        {/* ──── LEFT: Projets récents ────────────────────────── */}
+        <div
+          className="rounded-xl overflow-hidden"
+          style={{ background: '#FFFFFF', border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+        >
+          {/* Card header */}
+          <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #F1F5F9' }}>
+            <div className="flex items-center gap-2.5">
+              <h2 className="text-[15px] font-semibold" style={{ color: '#0F172A' }}>Projets récents</h2>
+              {active.length > 0 && (
+                <span
+                  className="text-[11px] font-semibold rounded-full px-2 py-0.5"
+                  style={{ color: '#0EA5E9', background: 'rgba(14,165,233,0.10)' }}
                 >
-                  <div style={{
-                    width: 52, height: 52, borderRadius: 14,
-                    background: 'linear-gradient(135deg, rgba(59,130,246,0.12), rgba(34,211,238,0.06))',
-                    border: '1px solid rgba(59,130,246,0.18)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    marginBottom: 16,
-                    boxShadow: '0 0 20px rgba(59,130,246,0.08)',
-                  }}>
-                    <Plus size={22} strokeWidth={1.5} style={{ color: T.accentL }} />
-                  </div>
-                  <p style={{ fontWeight: 600, color: T.t1, fontFamily: F.display, marginBottom: 4, fontSize: 15 }}>
-                    Aucun appel d&apos;offres en cours
-                  </p>
-                  <p style={{ fontSize: 13, color: T.t3, fontFamily: F.ui, marginBottom: 20 }}>
-                    Créez votre premier AO pour commencer l&apos;analyse IA
-                  </p>
-                  <button
-                    onClick={() => navigate('/projects/new')}
-                    className="flex items-center gap-2"
-                    style={{
-                      padding: '10px 22px', borderRadius: 10,
-                      background: 'linear-gradient(135deg, #3B82F6, #60A5FA)',
-                      color: '#fff', fontSize: 13, fontWeight: 600, fontFamily: F.ui,
-                      border: 'none', cursor: 'pointer',
-                      boxShadow: '0 4px 16px rgba(59,130,246,0.25)',
-                      transition: 'all 0.2s ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.boxShadow = '0 6px 24px rgba(59,130,246,0.35)'
-                      e.currentTarget.style.transform = 'translateY(-1px)'
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.boxShadow = '0 4px 16px rgba(59,130,246,0.25)'
-                      e.currentTarget.style.transform = 'none'
-                    }}
-                  >
-                    <Plus size={14} strokeWidth={1.5} /> Créer mon premier AO
-                  </button>
-                </div>
-              ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
-                  {active.slice(0, 6).map((p, i) => (
-                    <div key={p.id} className="fu" style={{ animationDelay: `${0.42 + i * 0.06}s` }}>
-                      <AOCard project={p} onDelete={(id, name) => setDeleteTarget({ id, name })} />
-                    </div>
-                  ))}
-                </div>
+                  {active.length}
+                </span>
               )}
+              <span className="text-xs hidden sm:inline" style={{ color: '#94A3B8' }}>
+                Appels d&apos;offres actifs
+              </span>
             </div>
+            {active.length > 0 && (
+              <button
+                onClick={() => navigate('/projects')}
+                className="text-xs font-medium flex items-center gap-1 transition-colors"
+                style={{ color: '#0EA5E9' }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = '#0284C7' }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = '#0EA5E9' }}
+              >
+                Voir tout <ChevronRight size={14} />
+              </button>
+            )}
           </div>
 
-          {/* ════════════ RIGHT COLUMN (ACTION ZONE) ════ */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-            {/* ── Insights ────────────────────────────── */}
-            <div
-              className="fu cmd-gradient-border"
-              style={{
-                ...card,
-                padding: '20px 22px',
-                position: 'relative',
-                overflow: 'hidden',
-                boxShadow: deepShadow,
-                animationDelay: '0.08s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = T.brdH
-                e.currentTarget.style.boxShadow = deepShadowHover
-                e.currentTarget.style.transform = 'translateY(-1px)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = T.brd
-                e.currentTarget.style.boxShadow = deepShadow
-                e.currentTarget.style.transform = 'none'
-              }}
-            >
-              <InsightsPanel stats={s} />
+          {pLoad ? (
+            <div className="p-5 space-y-3">
+              {[0, 1, 2].map((i) => <SkeletonCard key={i} className="h-[52px]" />)}
             </div>
+          ) : active.length === 0 ? (
+            <div className="p-10 text-center">
+              <div
+                className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3"
+                style={{ background: 'rgba(14,165,233,0.08)' }}
+              >
+                <Plus size={20} style={{ color: '#0EA5E9' }} />
+              </div>
+              <p className="text-sm font-semibold mb-1" style={{ color: '#0F172A' }}>
+                Aucun appel d&apos;offres en cours
+              </p>
+              <p className="text-xs mb-5" style={{ color: '#94A3B8' }}>
+                Créez votre premier AO pour commencer l&apos;analyse IA
+              </p>
+              <button
+                onClick={() => navigate('/projects/new')}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-semibold transition-colors"
+                style={{ background: '#0EA5E9' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#0284C7' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = '#0EA5E9' }}
+              >
+                <Plus size={14} /> Créer mon premier AO
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Table header */}
+              <div
+                className="hidden md:grid items-center gap-3 px-5 py-2 text-[11px] font-semibold uppercase tracking-wider"
+                style={{
+                  color: '#94A3B8',
+                  borderBottom: '1px solid #F1F5F9',
+                  gridTemplateColumns: '2fr 1fr 90px 140px 70px 32px',
+                }}
+              >
+                <span>Projet & Client</span>
+                <span>Lot</span>
+                <span>Statut</span>
+                <span>Progression</span>
+                <span>Échéance</span>
+                <span>Action</span>
+              </div>
 
-            {/* ── Activity ────────────────────────────── */}
-            <div
-              className="fu"
-              style={{
-                ...card,
-                padding: '20px 22px',
-                boxShadow: deepShadow,
-                animationDelay: '0.16s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = T.brdH
-                e.currentTarget.style.boxShadow = deepShadowHover
-                e.currentTarget.style.transform = 'translateY(-1px)'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = T.brd
-                e.currentTarget.style.boxShadow = deepShadow
-                e.currentTarget.style.transform = 'none'
-              }}
-            >
-              <span style={{
-                fontSize: 11, fontWeight: 600, textTransform: 'uppercase' as const,
-                letterSpacing: '0.06em', color: T.t3, fontFamily: F.ui,
-                display: 'block', marginBottom: 14,
-              }}>
-                Activité récente
-              </span>
-              {projects.length === 0 ? (
-                <p style={{ fontSize: 13, color: T.t3, fontFamily: F.ui, padding: '16px 0', textAlign: 'center' }}>
-                  Aucune activité
-                </p>
-              ) : (
-                projects.slice(0, 5).map((p, i) => (
+              {/* Table rows */}
+              {active.slice(0, 8).map((p, i) => {
+                const progress = ((p.current_step - 1) / 5) * 100
+                const status = STATUS_MAP[p.status] ?? STATUS_MAP.brouillon
+                const days = p.deadline ? daysUntil(p.deadline) : null
+                const deadlineColor = days !== null && days <= 3
+                  ? '#EF4444'
+                  : days !== null && days <= 7
+                    ? '#F59E0B'
+                    : '#94A3B8'
+                const progressColor = progress >= 80 ? '#10B981' : progress >= 40 ? '#0EA5E9' : '#F59E0B'
+
+                return (
                   <div
                     key={p.id}
-                    className="flex items-start gap-3"
+                    className="grid items-center gap-3 px-5 py-3.5 cursor-pointer transition-colors"
                     style={{
-                      padding: '9px 8px',
-                      borderRadius: 8,
-                      borderBottom: i < Math.min(projects.length, 5) - 1 ? `1px solid ${T.brd}` : 'none',
-                      cursor: 'default',
-                      transition: 'all 0.2s ease',
+                      borderBottom: i < Math.min(active.length, 8) - 1 ? '1px solid #F8FAFC' : 'none',
+                      gridTemplateColumns: '2fr 1fr 90px 140px 70px 32px',
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(59,130,246,0.03)' }}
+                    onClick={() => navigate(`/projects/${p.id}`)}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#FAFBFC' }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
                   >
-                    <div style={{
-                      width: 6, height: 6, borderRadius: 99, flexShrink: 0,
-                      background: p.status === 'en_cours' ? T.accent : p.status === 'brouillon' ? T.amber : T.green,
-                      marginTop: 7,
-                      boxShadow: `0 0 6px ${T.accent}40`,
-                    }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <span style={{ fontSize: 13, fontWeight: 450, color: T.t1, fontFamily: F.ui, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {p.name}
-                      </span>
-                      <span style={{ fontSize: 11, color: T.t3, fontFamily: F.ui, marginTop: 2, display: 'block' }}>
-                        {p.status === 'en_cours' ? 'En cours' : p.status === 'brouillon' ? 'Brouillon' : p.status === 'soumis' ? 'Soumis' : p.status}
+                    {/* Project name + client */}
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold truncate" style={{ color: '#0F172A' }}>{p.name}</p>
+                      {p.maitre_ouvrage && (
+                        <p className="text-xs truncate flex items-center gap-1 mt-0.5" style={{ color: '#94A3B8' }}>
+                          <MapPin size={10} className="shrink-0" />
+                          {p.maitre_ouvrage}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Lot */}
+                    <span className="text-xs truncate" style={{ color: '#64748B' }}>
+                      {p.selected_lot_name ?? '—'}
+                    </span>
+
+                    {/* Status badge */}
+                    <div>
+                      <span
+                        className="inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full whitespace-nowrap"
+                        style={{ color: status.color, background: status.bg }}
+                      >
+                        {status.label}
                       </span>
                     </div>
-                  </div>
-                ))
-              )}
-            </div>
 
-            {/* ── Quick Actions ────────────────────────── */}
-            <div className="fu" style={{ animationDelay: '0.24s', display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <span style={{
-                fontSize: 11, fontWeight: 600, textTransform: 'uppercase' as const,
-                letterSpacing: '0.06em', color: T.t3, fontFamily: F.ui, marginBottom: 4,
-              }}>
-                Actions rapides
-              </span>
-              {[
-                { icon: Plus,       label: "Nouvel appel d'offres", to: '/projects/new', color: T.accent },
-                { icon: FolderOpen, label: 'Coffre-fort',           to: '/vault',         color: T.cyan },
-                { icon: Clock,      label: 'Deadlines',             to: '/projects',      color: T.amber },
-              ].map((a) => (
-                <button
-                  key={a.label}
-                  onClick={() => navigate(a.to)}
-                  className="flex items-center gap-3 w-full text-left"
-                  style={{
-                    padding: '11px 14px', borderRadius: 10,
-                    background: 'rgba(255,255,255,0.02)',
-                    border: `1px solid ${T.brd}`,
-                    cursor: 'pointer',
-                    transition: 'all 0.25s cubic-bezier(0.4,0,0.2,1)',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
-                    e.currentTarget.style.borderColor = T.brdH
-                    e.currentTarget.style.boxShadow = `0 0 16px ${a.color}10`
-                    e.currentTarget.style.transform = 'translateY(-1px)'
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.02)'
-                    e.currentTarget.style.borderColor = T.brd
-                    e.currentTarget.style.boxShadow = 'none'
-                    e.currentTarget.style.transform = 'none'
-                  }}
-                >
-                  <div style={{
-                    width: 30, height: 30, borderRadius: 8,
-                    background: `${a.color}10`,
-                    border: `1px solid ${a.color}18`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    flexShrink: 0,
-                  }}>
-                    <a.icon size={14} strokeWidth={1.5} style={{ color: a.color }} />
+                    {/* Progress bar + score */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-1.5 rounded-full" style={{ background: '#F1F5F9' }}>
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{ width: `${progress}%`, background: progressColor }}
+                        />
+                      </div>
+                      <span className="text-[11px] font-semibold tabular-nums w-[32px] text-right" style={{ color: progressColor }}>
+                        {Math.round(progress)}%
+                      </span>
+                    </div>
+
+                    {/* Deadline */}
+                    <span className="text-xs font-semibold whitespace-nowrap" style={{ color: deadlineColor }}>
+                      {days !== null
+                        ? days <= 0 ? "Auj." : `J-${days}`
+                        : '—'}
+                    </span>
+
+                    {/* Action menu */}
+                    <button
+                      className="p-1 rounded-md transition-colors"
+                      style={{ color: '#CBD5E1' }}
+                      onClick={(e) => { e.stopPropagation() }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = '#64748B'; e.currentTarget.style.background = '#F1F5F9' }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = '#CBD5E1'; e.currentTarget.style.background = 'transparent' }}
+                    >
+                      <MoreHorizontal size={16} />
+                    </button>
                   </div>
-                  <span style={{ fontSize: 13, fontWeight: 450, color: T.t2, fontFamily: F.ui }}>{a.label}</span>
-                  <ChevronRight size={13} strokeWidth={1.5} style={{ color: T.t3, marginLeft: 'auto', flexShrink: 0 }} />
-                </button>
-              ))}
+                )
+              })}
+            </>
+          )}
+
+          {active.length > 8 && (
+            <div className="px-5 py-3" style={{ borderTop: '1px solid #F1F5F9' }}>
+              <button
+                onClick={() => navigate('/projects')}
+                className="flex items-center justify-center gap-2 w-full py-2 rounded-lg text-sm font-medium transition-colors"
+                style={{ color: '#0EA5E9' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#F8FAFC' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+              >
+                Voir les {active.length} projets <ArrowRight size={14} />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* ──── RIGHT COLUMN ─────────────────────────────────── */}
+        <div className="flex flex-col gap-4">
+
+          {/* ── Actions rapides ───────────────────────────────── */}
+          <div
+            className="rounded-xl p-4"
+            style={{ background: '#FFFFFF', border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles size={14} style={{ color: '#0EA5E9' }} />
+              <h3 className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#94A3B8' }}>
+                Actions rapides
+              </h3>
+            </div>
+            {QUICK_ACTIONS.map((a, i) => (
+              <button
+                key={a.title}
+                onClick={() => navigate(a.to)}
+                className="flex items-center gap-3 w-full text-left py-3 px-2 transition-colors rounded-lg"
+                style={{ borderTop: i > 0 ? '1px solid #F8FAFC' : 'none' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#FAFBFC' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+              >
+                <div
+                  className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+                  style={{ background: '#F1F5F9' }}
+                >
+                  <a.icon size={16} style={{ color: '#64748B' }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold" style={{ color: '#0F172A' }}>{a.title}</p>
+                  <p className="text-xs" style={{ color: '#94A3B8' }}>{a.desc}</p>
+                </div>
+                <ChevronRight size={14} style={{ color: '#CBD5E1' }} className="shrink-0" />
+              </button>
+            ))}
+          </div>
+
+          {/* ── Deadlines proches ─────────────────────────────── */}
+          <div
+            className="rounded-xl p-4"
+            style={{ background: '#FFFFFF', border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle size={14} style={{ color: '#EF4444' }} />
+              <h3 className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#94A3B8' }}>
+                Deadlines proches
+              </h3>
+            </div>
+            {upcoming.length === 0 ? (
+              <p className="text-sm py-3" style={{ color: '#CBD5E1' }}>Aucune deadline proche</p>
+            ) : (
+              <div className="space-y-0.5">
+                {upcoming.map((p) => {
+                  const dlDate = new Date(p.deadline!)
+                  const day = dlDate.getDate()
+                  const month = dlDate.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')
+                  const isUrgent = p._days <= 3
+                  const isWarn = p._days <= 7
+
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => navigate(`/projects/${p.id}`)}
+                      className="flex items-center gap-3 w-full text-left py-2.5 px-2 rounded-lg transition-colors"
+                      onMouseEnter={(e) => { e.currentTarget.style.background = '#FAFBFC' }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+                    >
+                      {/* Date block */}
+                      <div
+                        className="text-center shrink-0 w-10 py-1 rounded-lg"
+                        style={{ background: isUrgent ? 'rgba(239,68,68,0.06)' : '#F8FAFC' }}
+                      >
+                        <p className="text-sm font-bold leading-none" style={{ color: isUrgent ? '#EF4444' : '#0F172A' }}>{day}</p>
+                        <p className="text-[10px] uppercase mt-0.5" style={{ color: '#94A3B8' }}>{month}</p>
+                      </div>
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold truncate" style={{ color: '#0F172A' }}>{p.name}</p>
+                        <p className="text-xs" style={{ color: '#94A3B8' }}>
+                          {dlDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+
+                      {/* Badge */}
+                      {isUrgent && (
+                        <span
+                          className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full"
+                          style={{ color: '#EF4444', background: 'rgba(239,68,68,0.10)' }}
+                        >
+                          Urgent
+                        </span>
+                      )}
+                      {!isUrgent && isWarn && (
+                        <span
+                          className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full"
+                          style={{ color: '#F59E0B', background: 'rgba(245,158,11,0.10)' }}
+                        >
+                          J-{p._days}
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+            <button
+              onClick={() => navigate('/projects')}
+              className="flex items-center gap-1 w-full justify-center mt-3 pt-3 text-xs font-medium transition-colors"
+              style={{ color: '#0EA5E9', borderTop: '1px solid #F8FAFC' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#0284C7' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = '#0EA5E9' }}
+            >
+              Consulter le calendrier complet <ChevronRight size={12} />
+            </button>
+          </div>
+
+          {/* ── Intelligence Synorix ──────────────────────────── */}
+          <div
+            className="rounded-xl p-4 relative overflow-hidden"
+            style={{
+              background: 'linear-gradient(135deg, rgba(14,165,233,0.04), rgba(14,165,233,0.08))',
+              border: '1px solid rgba(14,165,233,0.12)',
+            }}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <Bot size={16} style={{ color: '#0EA5E9' }} />
+              <h3 className="text-sm font-bold" style={{ color: '#0EA5E9' }}>
+                Intelligence Synorix
+              </h3>
+            </div>
+            <p className="text-[13px] italic leading-relaxed mb-4" style={{ color: '#475569' }}>
+              {active.length > 0
+                ? `Vous avez ${active.length} AO actif${active.length > 1 ? 's' : ''}. ${upcoming.length > 0 ? `Attention, ${upcoming.length} deadline${upcoming.length > 1 ? 's' : ''} proche${upcoming.length > 1 ? 's' : ''}.` : 'Aucune deadline urgente.'} Continuez sur votre lancée !`
+                : "Créez votre premier appel d'offres pour que l'IA analyse votre dossier et optimise vos chances de succès."
+              }
+            </p>
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#94A3B8' }}>
+                Score d&apos;optimisation
+              </span>
+              <span className="text-lg font-bold" style={{ color: '#0EA5E9' }}>
+                {aiScore}/100
+              </span>
+            </div>
+            <div className="h-1.5 rounded-full mt-2" style={{ background: 'rgba(14,165,233,0.12)' }}>
+              <div
+                className="h-full rounded-full transition-all duration-700"
+                style={{ width: `${aiScore}%`, background: '#0EA5E9' }}
+              />
             </div>
           </div>
         </div>
       </div>
-    </>
+    </div>
   )
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   COMPACT STAT — AI Overview metric cell
-   ═══════════════════════════════════════════════════════════════ */
-function CompactStat({ cfg, value, delay, isLast = false }: {
-  cfg: typeof STATS[number]; value: number; delay: number; isLast?: boolean
+/* ── Stat Card ───────────────────────────────────────────────── */
+function StatCard({ icon: Icon, label, value, suffix, accent, iconBg }: {
+  icon: typeof BarChart3; label: string; value: number; suffix: string
+  accent: string; iconBg: string
 }) {
   const count = useCountUp(value)
-  const display = `${count}${cfg.suffix}`
-  const Icon = cfg.icon
-
   return (
     <div
-      className="fu"
-      style={{
-        padding: '22px 24px',
-        borderRight: isLast ? 'none' : `1px solid ${T.brd}`,
-        animationDelay: `${delay}s`,
-        transition: 'background 0.2s ease',
-        cursor: 'default',
-      }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.02)' }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+      className="rounded-xl p-5 relative overflow-hidden"
+      style={{ background: '#FFFFFF', border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
     >
-      {/* Icon badge */}
-      <div style={{
-        width: 36, height: 36, borderRadius: 10,
-        background: `${cfg.dot}10`,
-        border: `1px solid ${cfg.dot}1A`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        marginBottom: 14,
-        boxShadow: `0 0 12px ${cfg.dot}08`,
-      }}>
-        <Icon size={16} strokeWidth={1.5} style={{ color: cfg.dot }} />
+      {/* Top accent bar */}
+      <div
+        className="absolute top-0 left-0 right-0 h-[3px]"
+        style={{ background: accent }}
+      />
+      <div className="flex items-start justify-between">
+        <div
+          className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+          style={{ background: iconBg }}
+        >
+          <Icon size={20} style={{ color: accent }} />
+        </div>
+        {value > 0 && (
+          <span
+            className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md"
+            style={{ color: '#10B981', background: 'rgba(16,185,129,0.08)' }}
+          >
+            +{Math.min(value, 5)}
+          </span>
+        )}
       </div>
-
-      {/* Label */}
-      <span style={{
-        fontSize: 11, fontWeight: 500, textTransform: 'uppercase' as const,
-        letterSpacing: '0.06em', color: T.t3, fontFamily: F.ui,
-        display: 'block', marginBottom: 6,
-      }}>
-        {cfg.label}
-      </span>
-
-      {/* Number */}
-      <div style={{
-        fontSize: 28, fontWeight: 600, lineHeight: 1,
-        letterSpacing: '-0.025em', color: T.t1, fontFamily: F.display,
-      }}>
-        {display}
-      </div>
+      <p className="text-3xl font-bold mt-3" style={{ color: '#0F172A', fontFamily: F }}>
+        {count}{suffix}
+      </p>
+      <p className="text-sm mt-0.5" style={{ color: '#64748B' }}>{label}</p>
     </div>
   )
 }

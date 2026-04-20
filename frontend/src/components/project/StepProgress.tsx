@@ -47,13 +47,12 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick }: 
                 className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all duration-300"
                 style={
                   isCompleted && !isActive
-                    ? { background: '#10B981', borderColor: '#10B981', color: '#fff', boxShadow: '0 0 12px rgba(16,185,129,0.4)' }
+                    ? { background: '#10B981', borderColor: '#10B981', color: '#fff' }
                     : isActive && isCompleted
-                    // Active step that's already been completed: show cyan with check
-                    ? { background: 'linear-gradient(135deg, #3B82F6, #60A5FA)', borderColor: '#3B82F6', color: '#fff', boxShadow: '0 0 16px rgba(59,130,246,0.50)' }
+                    ? { background: '#0EA5E9', borderColor: '#0EA5E9', color: '#fff' }
                     : isActive
-                    ? { background: 'linear-gradient(135deg, #3B82F6, #60A5FA)', borderColor: '#3B82F6', color: '#fff', boxShadow: '0 0 16px rgba(59,130,246,0.50)' }
-                    : { background: 'rgba(255,255,255,0.04)', borderColor: 'rgba(255,255,255,0.12)', color: '#475569' }
+                    ? { background: '#0EA5E9', borderColor: '#0EA5E9', color: '#fff' }
+                    : { background: '#F1F5F9', borderColor: '#CBD5E1', color: '#475569' }
                 }
               >
                 {isCompleted ? <Check size={15} strokeWidth={2.5} /> : step.number}
@@ -63,9 +62,9 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick }: 
               <span
                 className="text-xs whitespace-nowrap font-medium transition-colors"
                 style={
-                  isActive    ? { color: '#60A5FA' }
-                  : isCompleted ? { color: '#34D399' }
-                  : { color: '#475569' }
+                  isActive    ? { color: '#0EA5E9' }
+                  : isCompleted ? { color: '#059669' }
+                  : { color: '#94A3B8' }
                 }
               >
                 {step.label}
@@ -78,10 +77,10 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick }: 
                 className="flex-1 h-0.5 mx-2 mt-[-1.25rem] rounded-full transition-all duration-500"
                 style={
                   isCompleted
-                    ? { background: 'linear-gradient(90deg, #10B981, #3B82F6)' }
+                    ? { background: 'linear-gradient(90deg, #10B981, #0EA5E9)' }
                     : isActive
-                    ? { background: 'linear-gradient(90deg, rgba(59,130,246,0.40), rgba(255,255,255,0.06))' }
-                    : { background: 'rgba(255,255,255,0.06)' }
+                    ? { background: 'linear-gradient(90deg, rgba(14,165,233,0.40), #E2E8F0)' }
+                    : { background: '#E2E8F0' }
                 }
               />
             )}

@@ -8,7 +8,7 @@ const STEP_LABELS = ['Upload DCE', 'Analyse IA', 'Candidature', 'Mémoire', 'Exp
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string; accent: string }> = {
   brouillon: { label: 'Brouillon', cls: 'pill-muted',   accent: '#64748B' },
-  en_cours:  { label: 'En cours',  cls: 'pill-cyan',    accent: '#3B82F6' },
+  en_cours:  { label: 'En cours',  cls: 'pill-cyan',    accent: '#0EA5E9' },
   soumis:    { label: 'Soumis',    cls: 'pill-warning', accent: '#F59E0B' },
   gagné:     { label: 'Gagné',     cls: 'pill-success', accent: '#10B981' },
   perdu:     { label: 'Perdu',     cls: 'pill-danger',  accent: '#EF4444' },
@@ -35,9 +35,9 @@ export function AOCard({ project, onDelete }: Props) {
       }}
       onClick={() => navigate(`/projects/${project.id}`)}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = isUrgent ? 'rgba(240,68,56,0.35)' : 'rgba(59,130,246,0.15)'
+        e.currentTarget.style.borderColor = isUrgent ? 'rgba(240,68,56,0.35)' : 'rgba(14,165,233,0.15)'
         e.currentTarget.style.transform = 'translateY(-2px)'
-        e.currentTarget.style.boxShadow = `14px 17px 40px 4px rgba(0,0,0,0.28), 0 0 24px ${isUrgent ? 'rgba(240,68,56,0.08)' : 'rgba(59,130,246,0.06)'}`
+        e.currentTarget.style.boxShadow = `0 4px 12px rgba(0,0,0,0.08), 0 0 0 1px ${isUrgent ? 'rgba(240,68,56,0.15)' : 'rgba(14,165,233,0.10)'}`
       }}
       onMouseLeave={(e) => {
         e.currentTarget.style.borderColor = isUrgent ? 'rgba(240,68,56,0.25)' : ''
@@ -82,7 +82,7 @@ export function AOCard({ project, onDelete }: Props) {
           {new Date(project.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
         </span>
         {project.selected_lot_name && (
-          <span className="truncate" style={{ color: '#93C5FD' }}>
+          <span className="truncate" style={{ color: '#0284C7' }}>
             {project.selected_lot_name}
           </span>
         )}
@@ -127,9 +127,9 @@ export function AOCard({ project, onDelete }: Props) {
 
         <button
           className="flex items-center gap-1 text-xs font-medium transition-colors"
-          style={{ color: '#3B82F6' }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = '#93C5FD')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = '#3B82F6')}
+          style={{ color: '#0EA5E9' }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = '#0284C7')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = '#0EA5E9')}
           onClick={(e) => { e.stopPropagation(); navigate(`/projects/${project.id}`) }}
         >
           Continuer

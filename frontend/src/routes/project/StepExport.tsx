@@ -1,13 +1,18 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
   FileDown, Archive, CheckCircle2, XCircle, Loader2,
-  ChevronDown, ChevronUp, AlertTriangle, FileText, Upload,
-  ExternalLink, BarChart3, ClipboardList, BookOpen, FileSpreadsheet,
+  ChevronDown, ChevronRight, AlertTriangle, Upload,
+  ExternalLink, FileSpreadsheet,
+  Download, ClipboardCheck, BookOpen, Grid3X3, Mail,
 } from 'lucide-react'
 import { api } from '@/services/api'
 import type { Project } from '@/types'
+import DocumentViewer, { type ViewableDocument } from '@/components/project/DocumentViewer'
+
+const F = "'DM Sans', sans-serif"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -25,6 +30,14 @@ interface ChecklistExportItem {
   status: string
   details: string | null
   linked_document_name: string | null
+  linked_document_id: string | null
+}
+
+interface ProjectDocumentExportItem {
+  id: string
+  file_name: string
+  type: string
+  pdf_preview_url: string | null
 }
 
 interface MemoireExportInfo {
@@ -39,6 +52,20 @@ interface DpgfExportInfo {
   file_id: string
 }
 
+interface DpgfVerification {
+  valid: boolean
+  warnings: string[]
+  total_ht: number | null
+  nb_lignes: number
+  nb_lignes_remplies: number
+  nb_lignes_vides: number
+}
+
+interface DpgfRemplieInfo {
+  file_name: string | null
+  verification: DpgfVerification | null
+}
+
 interface ExportDetail {
   compliance_total: number
   compliance_covered: number
@@ -48,8 +75,10 @@ interface ExportDetail {
   has_dpgf: boolean
   compliance_items: ComplianceExportItem[]
   checklist_items: ChecklistExportItem[]
+  project_documents: ProjectDocumentExportItem[]
   memoire_info: MemoireExportInfo | null
   dpgf_info: DpgfExportInfo | null
+  dpgf_remplie: DpgfRemplieInfo | null
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -79,72 +108,92 @@ function StatusIcon({ status }: { status: string }) {
   return <Icon size={15} className="shrink-0" style={{ color: cfg.color }} />
 }
 
-// ─── Glass card wrapper ─────────────────────────────────────────────────────
+// ─── Summary Card ──────────────────────────────────────────────────────────
 
-function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+function SummaryCard({
+  icon: Icon, label, value, sublabel, ok,
+}: {
+  icon: typeof CheckCircle2
+  label: string
+  value: string
+  sublabel: string
+  ok: boolean
+}) {
   return (
     <div
-      className={`rounded-2xl ${className}`}
-      style={{ background: 'rgba(12,17,30,0.55)', backdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,0.06)' }}
+      className="bg-white rounded-xl p-5 text-center"
+      style={{ border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
     >
-      {children}
+      <div className="flex items-center justify-center mb-3">
+        <div
+          className="w-11 h-11 rounded-xl flex items-center justify-center"
+          style={{ background: '#F0F9FF' }}
+        >
+          <Icon size={20} style={{ color: '#0EA5E9' }} />
+        </div>
+      </div>
+      <span
+        className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-0.5 rounded-full"
+        style={ok
+          ? { background: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0' }
+          : { background: '#FFFBEB', color: '#D97706', border: '1px solid #FDE68A' }
+        }
+      >
+        {ok ? (
+          <><CheckCircle2 size={10} /> Vérifié</>
+        ) : (
+          <><AlertTriangle size={10} /> Attention</>
+        )}
+      </span>
+      <p className="text-2xl font-bold mt-2" style={{ color: '#0F172A', fontFamily: F }}>
+        {value}
+      </p>
+      <p className="text-xs mt-1" style={{ color: '#64748B' }}>{label}</p>
+      <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>{sublabel}</p>
     </div>
   )
 }
 
-// ─── Expandable section ─────────────────────────────────────────────────────
+// ─── Accordion Section ─────────────────────────────────────────────────────
 
-function SummaryRow({
-  icon: Icon, iconColor, label, ok, detail, expanded, onToggle, children,
+function AccordionSection({
+  title, ok, expanded, onToggle, children,
 }: {
-  icon: typeof CheckCircle2
-  iconColor: string
-  label: string
+  title: string
   ok: boolean
-  detail: string
   expanded: boolean
   onToggle: () => void
   children?: React.ReactNode
 }) {
   return (
-    <GlassCard>
+    <div
+      className="bg-white rounded-xl overflow-hidden"
+      style={{ border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+    >
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-4 text-left"
+        className="w-full flex items-center justify-between px-5 py-3.5 text-left transition-colors hover:bg-slate-50"
       >
-        <div className="flex items-center gap-3">
-          <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: ok ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)' }}
-          >
-            <Icon size={18} style={{ color: iconColor }} />
-          </div>
-          <div>
-            <span className="text-sm font-semibold" style={{ fontFamily: 'Outfit, sans-serif', color: '#E8ECF4' }}>
-              {label}
-            </span>
-            <p className="text-[11px] mt-0.5" style={{ fontFamily: 'DM Sans, sans-serif', color: '#8B95A9' }}>
-              {detail}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
           {ok
-            ? <CheckCircle2 size={18} style={{ color: '#10B981' }} />
-            : <XCircle size={18} style={{ color: '#EF4444' }} />
+            ? <CheckCircle2 size={16} style={{ color: '#10B981' }} />
+            : <AlertTriangle size={16} style={{ color: '#F59E0B' }} />
           }
-          {expanded
-            ? <ChevronUp size={16} className="text-ds-text-3" />
-            : <ChevronDown size={16} className="text-ds-text-3" />
-          }
+          <span className="text-sm font-semibold" style={{ color: '#0F172A', fontFamily: F }}>
+            {title}
+          </span>
         </div>
+        {expanded
+          ? <ChevronDown size={16} style={{ color: '#94A3B8' }} />
+          : <ChevronRight size={16} style={{ color: '#94A3B8' }} />
+        }
       </button>
       {expanded && children && (
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <div style={{ borderTop: '1px solid #F1F5F9' }}>
           {children}
         </div>
       )}
-    </GlassCard>
+    </div>
   )
 }
 
@@ -156,8 +205,10 @@ export default function StepExport({ project }: Props) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [expanded, setExpanded] = useState<string | null>(null)
-  const [isDragging, setIsDragging] = useState(false)
-  const [uploading, setUploading] = useState(false)
+  const [dpgfUploading, setDpgfUploading] = useState(false)
+  const [dpgfDragging, setDpgfDragging] = useState(false)
+  const [dpgfError, setDpgfError] = useState<string | null>(null)
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null)
 
   const toggle = (key: string) => setExpanded((prev) => (prev === key ? null : key))
 
@@ -193,39 +244,70 @@ export default function StepExport({ project }: Props) {
     },
   })
 
-  // ── Upload candidature docs ───────────────────────────────────────────────
-  const handleFiles = useCallback(async (files: FileList | File[]) => {
-    if (!files.length) return
-    setUploading(true)
+  // ── DPGF download ────────────────────────────────────────────────────────
+  const handleDownloadDpgf = useCallback(async () => {
+    if (!detail?.dpgf_info) return
+    const response = await api.get(
+      `/projects/${project.id}/documents/${detail.dpgf_info.file_id}/download`,
+      { responseType: 'blob' },
+    )
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = detail.dpgf_info.file_name
+    a.click()
+    URL.revokeObjectURL(url)
+  }, [project.id, detail?.dpgf_info])
+
+  // ── DPGF filled upload ───────────────────────────────────────────────────
+  const handleDpgfUpload = useCallback(async (file: File) => {
+    setDpgfUploading(true)
+    setDpgfError(null)
     try {
-      for (const file of Array.from(files)) {
-        const fd = new FormData()
-        fd.append('file', file)
-        fd.append('type', 'candidature')
-        await api.post(`/projects/${project.id}/documents/upload`, fd)
-      }
+      const fd = new FormData()
+      fd.append('file', file)
+      await api.post(`/projects/${project.id}/dpgf-upload`, fd)
       queryClient.invalidateQueries({ queryKey: ['export-detail', project.id] })
+    } catch {
+      setDpgfError("Erreur lors de l'upload de la DPGF")
     } finally {
-      setUploading(false)
+      setDpgfUploading(false)
     }
   }, [project.id, queryClient])
 
-  const onDrop = useCallback((e: React.DragEvent) => {
+  const onDpgfDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
-    setIsDragging(false)
-    handleFiles(e.dataTransfer.files)
-  }, [handleFiles])
+    setDpgfDragging(false)
+    const file = e.dataTransfer.files[0]
+    if (file) handleDpgfUpload(file)
+  }, [handleDpgfUpload])
+
+  // ── Viewable documents for the DocumentViewer ────────────────────────────
+  const viewableDocs: ViewableDocument[] = useMemo(() => {
+    if (!detail) return []
+    return detail.project_documents.map((d) => ({
+      id: d.id,
+      name: d.file_name,
+      source: 'project' as const,
+    }))
+  }, [detail])
 
   // ── Loading state ─────────────────────────────────────────────────────────
   if (isLoading || !detail) {
     return (
-      <div className="glass-card p-12 flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-transparent animate-spin" style={{ borderTopColor: '#3B82F6' }} />
+      <div
+        className="bg-white rounded-xl p-12 flex flex-col items-center gap-3"
+        style={{ border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+      >
+        <Loader2 size={32} className="animate-spin" style={{ color: '#0EA5E9' }} />
+        <p className="font-medium" style={{ color: '#0F172A', fontFamily: F }}>
+          Chargement de la vérification...
+        </p>
       </div>
     )
   }
 
-  // ── Group compliance by category ──────────────────────────────────────────
+  // ── Computed values ───────────────────────────────────────────────────────
   const complianceByCategory: Record<string, ComplianceExportItem[]> = {}
   for (const item of detail.compliance_items) {
     const cat = item.category || 'offre'
@@ -233,264 +315,426 @@ export default function StepExport({ project }: Props) {
     complianceByCategory[cat].push(item)
   }
 
+  const complianceOk = detail.compliance_total > 0 && detail.compliance_covered === detail.compliance_total
+  const checklistOk = detail.checklist_total > 0 && detail.checklist_present === detail.checklist_total
+  const memoireOk = detail.has_memoire
+  const dpgfOk = detail.has_dpgf && (detail.dpgf_remplie?.verification?.valid ?? false)
+
+  const alertCount =
+    (complianceOk ? 0 : 1) +
+    (checklistOk ? 0 : 1) +
+    (memoireOk ? 0 : 1) +
+    (dpgfOk ? 0 : 1)
+
+  const dpgfLignes = detail.dpgf_remplie?.verification?.nb_lignes ?? 0
+
+  // ── Bottom bar ──────────────────────────────────────────────────────────
+  const bottomBar = (
+    <div
+      className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-center px-6 py-3 gap-3"
+      style={{
+        background: 'rgba(255,255,255,0.85)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        borderTop: '1px solid #F1F5F9',
+      }}
+    >
+      <button
+        onClick={() => exportZip()}
+        disabled={isExportingZip}
+        className="flex items-center gap-2 px-8 py-3 rounded-xl text-base font-bold text-white transition-colors hover:opacity-90 disabled:opacity-40"
+        style={{ background: '#0EA5E9', boxShadow: '0 2px 8px rgba(14,165,233,0.30)', fontFamily: F }}
+      >
+        {isExportingZip ? <Loader2 size={18} className="animate-spin" /> : <Archive size={18} />}
+        Télécharger le dossier ZIP
+      </button>
+    </div>
+  )
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="glass-card p-6">
-        <h2 className="text-lg font-semibold text-ds-text" style={{ fontFamily: 'Outfit, sans-serif' }}>
-          Étape 6 — Vérification Finale &amp; Export
-        </h2>
-        <p className="text-sm mt-1" style={{ fontFamily: 'DM Sans, sans-serif', color: '#8B95A9' }}>
-          Vérifiez votre dossier avant soumission. Cliquez sur chaque section pour voir le détail.
+    <div className="space-y-6 pb-24" style={{ fontFamily: F }}>
+
+      {/* ── Centered title ──────────────────────────────────────── */}
+      <div className="text-center">
+        <h1 className="text-2xl font-bold" style={{ color: '#0F172A' }}>
+          Vérification finale &amp; Export
+        </h1>
+        <p className="text-sm mt-2" style={{ color: '#64748B' }}>
+          Votre dossier de réponse est complet et prêt pour la signature électronique.
         </p>
       </div>
 
-      {/* 1. Matrice de conformité */}
-      <SummaryRow
-        icon={BarChart3}
-        iconColor={detail.compliance_covered === detail.compliance_total ? '#10B981' : '#EF4444'}
-        label="Matrice de conformité"
-        ok={detail.compliance_total > 0 && detail.compliance_covered === detail.compliance_total}
-        detail={`${detail.compliance_covered}/${detail.compliance_total} exigences couvertes`}
-        expanded={expanded === 'compliance'}
-        onToggle={() => toggle('compliance')}
-      >
-        <div className="p-4 space-y-4 max-h-[400px] overflow-y-auto">
-          {Object.entries(complianceByCategory).map(([cat, items]) => {
-            const covered = items.filter((i) => i.status === 'couvert').length
-            return (
-              <div key={cat}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#8B95A9' }}>
-                    {CATEGORY_LABELS[cat] || cat}
-                  </span>
-                  <span className="text-[11px] font-medium" style={{ color: covered === items.length ? '#10B981' : '#F59E0B' }}>
-                    {covered}/{items.length}
-                  </span>
-                </div>
-                <div className="space-y-1">
-                  {items.map((item) => (
-                    <div key={item.id} className="flex items-start gap-2 py-1.5 px-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                      <StatusIcon status={item.status} />
-                      <span className="text-xs leading-relaxed" style={{ color: '#C8CED8' }}>
-                        {item.exigence_text}
-                      </span>
-                      {item.priority === 'obligatoire' && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded shrink-0 ml-auto" style={{ background: 'rgba(239,68,68,0.12)', color: '#F87171' }}>
-                          Obligatoire
-                        </span>
+      {/* ── 4 Summary Cards ─────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <SummaryCard
+          icon={ClipboardCheck}
+          label="Conformité candidature"
+          value={detail.compliance_total > 0 ? `${Math.round((detail.compliance_covered / detail.compliance_total) * 100)}/100` : '--'}
+          sublabel="Score de pertinence IA"
+          ok={complianceOk}
+        />
+        <SummaryCard
+          icon={BookOpen}
+          label="Mémoire technique"
+          value={memoireOk ? 'PRÊT' : '--'}
+          sublabel={detail.memoire_info ? `${detail.memoire_info.estimated_pages} pages générées` : 'Non généré'}
+          ok={memoireOk}
+        />
+        <SummaryCard
+          icon={Grid3X3}
+          label="DPGF"
+          value={dpgfOk ? 'COMPLET' : detail.has_dpgf ? 'PARTIEL' : '--'}
+          sublabel={dpgfLignes > 0 ? `${dpgfLignes} lignes vérifiées` : 'Aucune DPGF'}
+          ok={dpgfOk}
+        />
+        <SummaryCard
+          icon={AlertTriangle}
+          label="Alertes restantes"
+          value={String(alertCount)}
+          sublabel={alertCount > 0 ? 'Vérification manuelle requise' : 'Aucune alerte'}
+          ok={alertCount === 0}
+        />
+      </div>
+
+      {/* ── Détails des points de contrôle ──────────────────────── */}
+      <div>
+        <div className="flex items-center gap-2 mb-4">
+          <CheckCircle2 size={18} style={{ color: '#0EA5E9' }} />
+          <h2 className="text-base font-semibold" style={{ color: '#0F172A', fontFamily: F }}>
+            Détails des points de contrôle
+          </h2>
+        </div>
+
+        <div className="space-y-3">
+
+          {/* 1. Pièces Administratives */}
+          <AccordionSection
+            title={`Pièces Administratives (${detail.checklist_present}/${detail.checklist_total})`}
+            ok={checklistOk}
+            expanded={expanded === 'checklist'}
+            onToggle={() => toggle('checklist')}
+          >
+            <div className="p-4 space-y-1 max-h-[400px] overflow-y-auto">
+              {detail.checklist_items.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-slate-50 transition-colors"
+                >
+                  <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                    <StatusIcon status={item.status} />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium" style={{ color: '#1E293B' }}>
+                        {item.document_type_required}
+                      </p>
+                      {item.linked_document_name && (
+                        <p className="text-xs truncate" style={{ color: '#64748B' }}>
+                          {item.linked_document_name}
+                        </p>
                       )}
                     </div>
-                  ))}
-                </div>
-              </div>
-            )
-          })}
-          {detail.compliance_items.length === 0 && (
-            <p className="text-xs text-center py-4" style={{ color: '#64748B' }}>Aucune exigence extraite</p>
-          )}
-        </div>
-      </SummaryRow>
-
-      {/* 2. Documents candidature */}
-      <SummaryRow
-        icon={ClipboardList}
-        iconColor={detail.checklist_present === detail.checklist_total && detail.checklist_total > 0 ? '#10B981' : '#EF4444'}
-        label="Documents candidature"
-        ok={detail.checklist_total > 0 && detail.checklist_present === detail.checklist_total}
-        detail={`${detail.checklist_present}/${detail.checklist_total} documents présents`}
-        expanded={expanded === 'checklist'}
-        onToggle={() => toggle('checklist')}
-      >
-        <div className="p-4 space-y-2 max-h-[400px] overflow-y-auto">
-          {detail.checklist_items.map((item) => (
-            <div
-              key={item.id}
-              className="flex items-center justify-between py-2 px-3 rounded-lg"
-              style={{ background: 'rgba(255,255,255,0.02)' }}
-            >
-              <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                <StatusIcon status={item.status} />
-                <div className="min-w-0">
-                  <p className="text-xs font-medium truncate" style={{ color: '#E8ECF4' }}>
-                    {item.document_type_required}
-                  </p>
-                  {item.linked_document_name && (
-                    <p className="text-[11px] truncate" style={{ color: '#64748B' }}>
-                      {item.linked_document_name}
-                    </p>
+                  </div>
+                  {item.status !== 'present' && (
+                    <span className="text-xs font-medium shrink-0 cursor-pointer" style={{ color: '#0EA5E9' }}>
+                      À corriger
+                    </span>
                   )}
                 </div>
-              </div>
-              <span
-                className="text-[10px] font-medium px-2 py-0.5 rounded-full shrink-0"
-                style={
-                  item.status === 'present'
-                    ? { background: 'rgba(16,185,129,0.12)', color: '#34D399' }
-                    : { background: 'rgba(239,68,68,0.12)', color: '#F87171' }
-                }
-              >
-                {item.status === 'present' ? 'Présent' : item.status === 'expire' ? 'Expiré' : 'Manquant'}
-              </span>
+              ))}
+              {detail.checklist_items.length === 0 && (
+                <p className="text-xs text-center py-4" style={{ color: '#94A3B8' }}>Aucun document requis détecté</p>
+              )}
             </div>
-          ))}
-          {detail.checklist_items.length === 0 && (
-            <p className="text-xs text-center py-4" style={{ color: '#64748B' }}>Aucun document requis détecté</p>
-          )}
-        </div>
-      </SummaryRow>
+          </AccordionSection>
 
-      {/* 3. Mémoire technique */}
-      <SummaryRow
-        icon={BookOpen}
-        iconColor={detail.has_memoire ? '#10B981' : '#EF4444'}
-        label="Mémoire technique"
-        ok={detail.has_memoire}
-        detail={detail.has_memoire ? 'Généré' : 'Non généré'}
-        expanded={expanded === 'memoire'}
-        onToggle={() => toggle('memoire')}
-      >
-        <div className="p-4">
-          {detail.memoire_info ? (
-            <div className="space-y-3">
-              <div className="grid grid-cols-3 gap-3">
-                <div className="text-center py-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)' }}>
-                  <p className="text-lg font-bold" style={{ color: '#60A5FA' }}>{detail.memoire_info.estimated_pages}</p>
-                  <p className="text-[11px]" style={{ color: '#8B95A9' }}>pages estimées</p>
-                </div>
-                <div className="text-center py-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)' }}>
-                  <p className="text-lg font-bold" style={{ color: '#60A5FA' }}>{detail.memoire_info.sections_count}</p>
-                  <p className="text-[11px]" style={{ color: '#8B95A9' }}>sections</p>
-                </div>
-                <div className="text-center py-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)' }}>
-                  <p className="text-lg font-bold" style={{ color: '#60A5FA' }}>v{detail.memoire_info.version}</p>
-                  <p className="text-[11px]" style={{ color: '#8B95A9' }}>version</p>
-                </div>
-              </div>
-              <p className="text-[11px]" style={{ color: '#64748B' }}>
-                Généré le {new Date(detail.memoire_info.generated_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-              </p>
-              <button
-                onClick={() => navigate(`/projects/${project.id}/memoire`)}
-                className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors hover:bg-blue-500/20"
-                style={{ color: '#60A5FA', border: '1px solid rgba(59,130,246,0.30)' }}
-              >
-                <ExternalLink size={13} /> Voir / Modifier le mémoire
-              </button>
-            </div>
-          ) : (
-            <div className="text-center py-4">
-              <p className="text-xs" style={{ color: '#64748B' }}>Le mémoire technique n'a pas encore été généré.</p>
-              <button
-                onClick={() => navigate(`/projects/${project.id}/memoire`)}
-                className="mt-2 text-xs font-medium px-3 py-1.5 rounded-lg"
-                style={{ color: '#60A5FA', border: '1px solid rgba(59,130,246,0.30)' }}
-              >
-                Aller à l'étape Mémoire →
-              </button>
-            </div>
-          )}
-        </div>
-      </SummaryRow>
-
-      {/* 4. DPGF */}
-      <SummaryRow
-        icon={FileSpreadsheet}
-        iconColor={detail.has_dpgf ? '#10B981' : '#F59E0B'}
-        label="DPGF"
-        ok={detail.has_dpgf}
-        detail={detail.has_dpgf ? 'Présente' : 'Manquante'}
-        expanded={expanded === 'dpgf'}
-        onToggle={() => toggle('dpgf')}
-      >
-        <div className="p-4">
-          {detail.dpgf_info ? (
-            <div className="flex items-center gap-3">
-              <FileText size={16} style={{ color: '#64748B' }} />
-              <span className="text-xs" style={{ color: '#C8CED8' }}>{detail.dpgf_info.file_name}</span>
-            </div>
-          ) : (
-            <p className="text-xs" style={{ color: '#64748B' }}>
-              Aucun fichier DPGF détecté dans les documents du projet.
-            </p>
-          )}
-        </div>
-      </SummaryRow>
-
-      {/* 5. Upload candidature docs */}
-      <GlassCard className="p-5">
-        <div className="flex items-center gap-2.5 mb-3">
-          <div
-            className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-            style={{ background: 'rgba(59,130,246,0.12)' }}
+          {/* 2. Mémoire Technique & Offre */}
+          <AccordionSection
+            title="Mémoire Technique &amp; Offre"
+            ok={memoireOk}
+            expanded={expanded === 'memoire'}
+            onToggle={() => toggle('memoire')}
           >
-            <Upload size={18} style={{ color: '#60A5FA' }} />
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold" style={{ fontFamily: 'Outfit, sans-serif', color: '#E8ECF4' }}>
-              Documents de candidature
-            </h3>
-            <p className="text-[11px] mt-0.5" style={{ fontFamily: 'DM Sans, sans-serif', color: '#8B95A9' }}>
-              Déposez vos attestations, certificats et documents administratifs
-            </p>
-          </div>
-        </div>
-        <div
-          className="relative rounded-xl p-6 text-center transition-all"
-          style={{
-            border: `2px dashed ${isDragging ? 'rgba(59,130,246,0.60)' : 'rgba(255,255,255,0.10)'}`,
-            background: isDragging ? 'rgba(59,130,246,0.06)' : 'rgba(255,255,255,0.02)',
-          }}
-          onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
-          onDragLeave={() => setIsDragging(false)}
-          onDrop={onDrop}
-        >
-          {uploading ? (
-            <Loader2 size={24} className="mx-auto animate-spin" style={{ color: '#60A5FA' }} />
-          ) : (
-            <>
-              <Upload size={24} className="mx-auto mb-2" style={{ color: '#475569' }} />
-              <p className="text-xs" style={{ color: '#8B95A9' }}>
-                Glissez-déposez vos fichiers ici ou{' '}
-                <label className="cursor-pointer font-medium" style={{ color: '#60A5FA' }}>
-                  parcourir
-                  <input
-                    type="file"
-                    multiple
-                    accept=".pdf,.docx,.doc,.jpg,.jpeg,.png"
-                    className="hidden"
-                    onChange={(e) => e.target.files && handleFiles(e.target.files)}
-                  />
-                </label>
-              </p>
-              <p className="text-[10px] mt-1" style={{ color: '#475569' }}>
-                PDF, DOCX, JPG, PNG
-              </p>
-            </>
-          )}
-        </div>
-      </GlassCard>
+            <div className="p-4">
+              {detail.memoire_info ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2.5 py-2.5 px-3 rounded-lg hover:bg-slate-50 transition-colors">
+                    <CheckCircle2 size={15} style={{ color: '#10B981' }} />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium" style={{ color: '#1E293B' }}>
+                        Mémoire technique v{detail.memoire_info.version}
+                      </p>
+                      <p className="text-xs" style={{ color: '#64748B' }}>
+                        {detail.memoire_info.estimated_pages} pages, {detail.memoire_info.sections_count} sections — généré le{' '}
+                        {new Date(detail.memoire_info.generated_at).toLocaleDateString('fr-FR')}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => navigate(`/projects/${project.id}/memoire`)}
+                      className="flex items-center gap-1 text-xs font-medium shrink-0 transition-colors"
+                      style={{ color: '#0EA5E9' }}
+                    >
+                      <ExternalLink size={12} /> Voir
+                    </button>
+                  </div>
+                  <p className="text-xs px-3" style={{ color: '#94A3B8' }}>
+                    Les documents de réponse seront inclus dans le ZIP.
+                  </p>
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <AlertTriangle size={16} className="mx-auto mb-2" style={{ color: '#F59E0B' }} />
+                  <p className="text-xs" style={{ color: '#64748B' }}>Le mémoire technique n&apos;a pas encore été généré.</p>
+                  <button
+                    onClick={() => navigate(`/projects/${project.id}/memoire`)}
+                    className="mt-2 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors hover:bg-sky-50"
+                    style={{ border: '1px solid #0EA5E9', color: '#0EA5E9' }}
+                  >
+                    Aller à l&apos;étape Mémoire →
+                  </button>
+                </div>
+              )}
+            </div>
+          </AccordionSection>
 
-      {/* 6. Export buttons */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <button
-          onClick={() => exportDocx()}
-          disabled={isExportingDocx || !detail.has_memoire}
-          className="btn-primary flex items-center justify-center gap-2 flex-1 py-3 px-6 disabled:opacity-40"
-        >
-          {isExportingDocx ? <Loader2 size={18} className="animate-spin" /> : <FileDown size={18} />}
-          Télécharger le mémoire (.docx)
-        </button>
+          {/* 3. Analyse du Bordereau de Prix (DPGF) */}
+          <AccordionSection
+            title="Analyse du Bordereau de Prix (DPGF)"
+            ok={dpgfOk}
+            expanded={expanded === 'dpgf'}
+            onToggle={() => toggle('dpgf')}
+          >
+            <div className="p-4 space-y-4">
+              {/* Download original DPGF */}
+              {detail.dpgf_info && (
+                <div
+                  className="flex items-center justify-between p-3 rounded-lg"
+                  style={{ background: '#F8FAFC' }}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <FileSpreadsheet size={16} style={{ color: '#10B981' }} />
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium truncate" style={{ color: '#1E293B' }}>{detail.dpgf_info.file_name}</p>
+                      <p className="text-[11px]" style={{ color: '#64748B' }}>DPGF originale du DCE</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleDownloadDpgf}
+                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors shrink-0 hover:bg-sky-50"
+                    style={{ border: '1px solid #0EA5E9', color: '#0EA5E9' }}
+                  >
+                    <Download size={13} /> Télécharger
+                  </button>
+                </div>
+              )}
 
-        <button
-          onClick={() => exportZip()}
-          disabled={isExportingZip}
-          className="btn-glass flex items-center justify-center gap-2 flex-1 py-3 px-6 font-semibold"
-        >
-          {isExportingZip ? <Loader2 size={18} className="animate-spin" /> : <Archive size={18} />}
-          Dossier complet (.zip)
-        </button>
+              {/* Upload filled DPGF */}
+              <div>
+                <p className="text-xs font-medium mb-2" style={{ color: '#1E293B' }}>
+                  Déposer votre DPGF remplie
+                </p>
+                <div
+                  className="relative rounded-xl p-4 text-center transition-all cursor-pointer"
+                  style={{
+                    border: `2px dashed ${dpgfDragging ? '#10B981' : '#CBD5E1'}`,
+                    background: dpgfDragging ? 'rgba(16,185,129,0.04)' : '#FAFBFC',
+                  }}
+                  onDragOver={(e) => { e.preventDefault(); setDpgfDragging(true) }}
+                  onDragLeave={() => setDpgfDragging(false)}
+                  onDrop={onDpgfDrop}
+                >
+                  {dpgfUploading ? (
+                    <Loader2 size={20} className="mx-auto animate-spin" style={{ color: '#10B981' }} />
+                  ) : (
+                    <>
+                      <Upload size={20} className="mx-auto mb-1.5" style={{ color: '#94A3B8' }} />
+                      <p className="text-xs" style={{ color: '#64748B' }}>
+                        Glissez votre DPGF remplie ici ou{' '}
+                        <label className="cursor-pointer font-medium" style={{ color: '#0EA5E9' }}>
+                          parcourir
+                          <input
+                            type="file"
+                            accept=".xlsx,.xls,.ods,.pdf"
+                            className="hidden"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0]
+                              if (f) handleDpgfUpload(f)
+                              e.target.value = ''
+                            }}
+                          />
+                        </label>
+                      </p>
+                      <p className="text-[10px] mt-0.5" style={{ color: '#94A3B8' }}>XLSX, XLS, ODS, PDF</p>
+                    </>
+                  )}
+                </div>
+                {dpgfError && (
+                  <p className="text-xs mt-1.5" style={{ color: '#EF4444' }}>{dpgfError}</p>
+                )}
+              </div>
+
+              {/* Verification result */}
+              {detail.dpgf_remplie?.verification && (() => {
+                const v = detail.dpgf_remplie!.verification!
+                const isValid = v.valid
+                const hasWarnings = v.warnings.length > 0
+                return (
+                  <div
+                    className="rounded-xl p-4"
+                    style={{
+                      background: isValid ? 'rgba(16,185,129,0.04)' : hasWarnings ? 'rgba(245,158,11,0.04)' : 'rgba(239,68,68,0.04)',
+                      border: `1px solid ${isValid ? 'rgba(16,185,129,0.15)' : hasWarnings ? 'rgba(245,158,11,0.15)' : 'rgba(239,68,68,0.15)'}`,
+                    }}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        {isValid
+                          ? <CheckCircle2 size={16} style={{ color: '#10B981' }} />
+                          : <AlertTriangle size={16} style={{ color: hasWarnings ? '#F59E0B' : '#EF4444' }} />
+                        }
+                        <span
+                          className="text-xs font-semibold"
+                          style={{ color: isValid ? '#10B981' : hasWarnings ? '#D97706' : '#EF4444' }}
+                        >
+                          {isValid ? 'DPGF conforme' : hasWarnings ? 'DPGF avec avertissements' : 'DPGF non conforme'}
+                        </span>
+                      </div>
+                      <span className="text-[11px]" style={{ color: '#94A3B8' }}>
+                        {detail.dpgf_remplie!.file_name}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 mb-3">
+                      <div className="text-center py-1.5 rounded-lg" style={{ background: '#F8FAFC' }}>
+                        <p className="text-sm font-bold" style={{ color: '#0F172A' }}>{v.nb_lignes}</p>
+                        <p className="text-[10px]" style={{ color: '#94A3B8' }}>lignes</p>
+                      </div>
+                      <div className="text-center py-1.5 rounded-lg" style={{ background: '#F8FAFC' }}>
+                        <p className="text-sm font-bold" style={{ color: '#10B981' }}>{v.nb_lignes_remplies}</p>
+                        <p className="text-[10px]" style={{ color: '#94A3B8' }}>remplies</p>
+                      </div>
+                      <div className="text-center py-1.5 rounded-lg" style={{ background: '#F8FAFC' }}>
+                        <p className="text-sm font-bold" style={{ color: v.nb_lignes_vides > 0 ? '#EF4444' : '#10B981' }}>{v.nb_lignes_vides}</p>
+                        <p className="text-[10px]" style={{ color: '#94A3B8' }}>vides</p>
+                      </div>
+                    </div>
+
+                    {v.total_ht != null && (
+                      <div className="flex items-center justify-between py-2 px-3 rounded-lg mb-2" style={{ background: '#F8FAFC' }}>
+                        <span className="text-xs" style={{ color: '#64748B' }}>Total HT</span>
+                        <span className="text-sm font-bold tabular-nums font-mono" style={{ color: '#0F172A' }}>
+                          {v.total_ht.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
+                        </span>
+                      </div>
+                    )}
+
+                    {v.warnings.length > 0 && (
+                      <div className="space-y-1 mt-2">
+                        {v.warnings.map((w, i) => (
+                          <p key={i} className="text-[11px] flex items-start gap-1.5" style={{ color: '#D97706' }}>
+                            <span className="shrink-0 mt-0.5">&#8226;</span>
+                            {w}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
+
+              {!detail.dpgf_info && !detail.dpgf_remplie && (
+                <p className="text-xs" style={{ color: '#94A3B8' }}>
+                  Aucun fichier DPGF détecté dans les documents du projet.
+                </p>
+              )}
+            </div>
+          </AccordionSection>
+
+          {/* 4. Matrice de conformité */}
+          <AccordionSection
+            title={`Matrice de conformité (${detail.compliance_covered}/${detail.compliance_total})`}
+            ok={complianceOk}
+            expanded={expanded === 'compliance'}
+            onToggle={() => toggle('compliance')}
+          >
+            <div className="p-4 space-y-4 max-h-[400px] overflow-y-auto">
+              {Object.entries(complianceByCategory).map(([cat, items]) => {
+                const covered = items.filter((i) => i.status === 'couvert').length
+                return (
+                  <div key={cat}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#64748B' }}>
+                        {CATEGORY_LABELS[cat] || cat}
+                      </span>
+                      <span className="text-[11px] font-medium" style={{ color: covered === items.length ? '#10B981' : '#F59E0B' }}>
+                        {covered}/{items.length}
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      {items.map((item) => (
+                        <div key={item.id} className="flex items-start gap-2 py-1.5 px-2 rounded-lg hover:bg-slate-50 transition-colors">
+                          <StatusIcon status={item.status} />
+                          <span className="text-sm leading-relaxed flex-1" style={{ color: '#334155' }}>
+                            {item.exigence_text}
+                          </span>
+                          {item.priority === 'obligatoire' && (
+                            <span
+                              className="text-[10px] px-1.5 py-0.5 rounded shrink-0 ml-auto"
+                              style={{ background: 'rgba(239,68,68,0.08)', color: '#EF4444' }}
+                            >
+                              Obligatoire
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+              {detail.compliance_items.length === 0 && (
+                <p className="text-xs text-center py-4" style={{ color: '#94A3B8' }}>Aucune exigence extraite</p>
+              )}
+            </div>
+          </AccordionSection>
+        </div>
       </div>
+
+      {/* ── Export buttons (centered) ────────────────────────────── */}
+      <div className="text-center mt-8 space-y-3">
+        <div className="flex items-center justify-center gap-3">
+          <button
+            onClick={() => exportDocx()}
+            disabled={isExportingDocx || !detail.has_memoire}
+            className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg transition-colors hover:bg-sky-50 disabled:opacity-40"
+            style={{ color: '#0EA5E9' }}
+          >
+            {isExportingDocx ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
+            Générer rapport PDF
+          </button>
+          <button
+            className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg transition-colors hover:bg-sky-50"
+            style={{ color: '#0EA5E9' }}
+          >
+            <Mail size={14} />
+            Envoyer par email
+          </button>
+        </div>
+        <p className="text-xs max-w-lg mx-auto" style={{ color: '#94A3B8' }}>
+          Le dossier compressé (.zip) contient l&apos;ensemble des pièces nommées selon les exigences du règlement de consultation.
+        </p>
+      </div>
+
+      {/* ── Sticky bottom bar ───────────────────────────────────── */}
+      {createPortal(bottomBar, document.body)}
+
+      {/* Document viewer modal */}
+      {viewerIndex !== null && viewableDocs.length > 0 && (
+        <DocumentViewer
+          projectId={project.id}
+          documents={viewableDocs}
+          initialIndex={viewerIndex}
+          onClose={() => setViewerIndex(null)}
+        />
+      )}
     </div>
   )
 }

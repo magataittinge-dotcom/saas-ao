@@ -1,993 +1,914 @@
-import { useEffect, useRef } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import {
-  Sparkles, Upload, Brain, FileDown, Check, ArrowRight,
-  FileText, Layers, ShieldCheck, BookOpen,
+  Search, FileText, Layers, Shield, Download, ArrowRight, Check,
+  Menu, X, Star, Play,
 } from 'lucide-react'
-import PlanetBackground from '@/components/common/PlanetBackground'
 
-// ─── Intersection Observer hook ────────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════════════════════
+   LANDING PAGE — Synorix
+   Style: "Stark Automate" — dark premium, neural network bg, glassmorphism
+   Single file, CSS-only animations, no external images
+   ═══════════════════════════════════════════════════════════════════════════ */
 
-function useReveal() {
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const obs = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          el.classList.add('revealed')
-          obs.disconnect()
-        }
-      },
-      { threshold: 0.12 },
-    )
-    obs.observe(el)
-    return () => obs.disconnect()
-  }, [])
-  return ref
+// ── Particle positions (neural network background) ──────────────────────
+// 50 particles roughly clustered in a brain-like oval at center
+const PARTICLES = Array.from({ length: 50 }, (_, i) => {
+  const angle = (i / 50) * Math.PI * 2 + (Math.random() - 0.5) * 1.2
+  const radius = 15 + Math.random() * 25
+  const cx = 50 + Math.cos(angle) * radius * (0.6 + Math.random() * 0.4)
+  const cy = 45 + Math.sin(angle) * radius * (0.5 + Math.random() * 0.5)
+  const size = 2 + Math.random() * 3
+  const dur = 20 + Math.random() * 20
+  const dx = (Math.random() - 0.5) * 6
+  const dy = (Math.random() - 0.5) * 6
+  const delay = -Math.random() * dur
+  return { id: i, cx, cy, size, dur, dx, dy, delay }
+})
+
+// ── Connections between nearby particles ─────────────────────────────────
+const CONNECTIONS: { x1: number; y1: number; x2: number; y2: number; id: string }[] = []
+for (let i = 0; i < PARTICLES.length; i++) {
+  for (let j = i + 1; j < PARTICLES.length; j++) {
+    const dx = PARTICLES[i].cx - PARTICLES[j].cx
+    const dy = PARTICLES[i].cy - PARTICLES[j].cy
+    const dist = Math.sqrt(dx * dx + dy * dy)
+    if (dist < 18) {
+      CONNECTIONS.push({
+        x1: PARTICLES[i].cx, y1: PARTICLES[i].cy,
+        x2: PARTICLES[j].cx, y2: PARTICLES[j].cy,
+        id: `${i}-${j}`,
+      })
+    }
+  }
 }
 
-function Section({
-  children,
-  className = '',
-  delay = 0,
-}: {
-  children: React.ReactNode
-  className?: string
-  delay?: number
-}) {
-  const ref = useReveal()
-  return (
-    <div
-      ref={ref}
-      className={`reveal-section ${className}`}
-      style={{ transitionDelay: `${delay}ms` }}
-    >
-      {children}
-    </div>
-  )
+// ── CSS Keyframes ────────────────────────────────────────────────────────
+const KEYFRAMES = `
+@keyframes float-particle {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(var(--dx), var(--dy)); }
 }
+@keyframes float-pill {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+@keyframes float-pill-2 {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(8px); }
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 4px rgba(14,165,233,0.6); }
+  50% { opacity: 0.5; box-shadow: 0 0 8px rgba(14,165,233,0.9); }
+}
+@keyframes marquee-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 30px rgba(14,165,233,0.3); }
+  50% { box-shadow: 0 0 50px rgba(14,165,233,0.5); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+`
 
-// ─── Data ──────────────────────────────────────────────────────────────────────
+// ── Floating feature pills data ──────────────────────────────────────────
+const FLOATING_PILLS = [
+  { label: 'Analyse DCE', top: '20%', left: '8%', right: undefined, anim: 'float-pill', dur: '4s', delay: '0s' },
+  { label: 'Mémoire 5/5', top: '14%', left: undefined, right: '12%', anim: 'float-pill-2', dur: '3.5s', delay: '0.5s' },
+  { label: '62 exigences', top: undefined, left: '12%', right: undefined, anim: 'float-pill', dur: '5s', delay: '1s', bottom: '34%' },
+  { label: 'Détection lots', top: undefined, left: undefined, right: '9%', anim: 'float-pill-2', dur: '4.5s', delay: '0.3s', bottom: '28%' },
+]
 
-const FEATURES = [
+// ── How it works tabs ────────────────────────────────────────────────────
+const HOW_TABS = [
   {
-    icon: FileText,
-    title: 'Analyse DCE intelligente',
-    desc: "Uploadez votre DCE (ZIP ou fichiers séparés). L'IA extrait toutes les exigences en quelques minutes : RC, CCTP, CCAP, DPGF.",
+    id: 'upload', num: '1', title: 'Upload',
+    desc: 'Glissez-déposez votre DCE complet (ZIP, PDF, DOCX). Synorix extrait et identifie automatiquement chaque document : RC, CCTP, DPGF, plans.',
+    mock: ['RC — Règlement', 'CCTP — 245 pages', 'DPGF — 12 lots', 'Plans — 8 fichiers'],
   },
   {
-    icon: Layers,
-    title: 'Détection multi-lots',
-    desc: "Détection automatique de tous les lots avec score de confiance. Choisissez votre lot et concentrez-vous sur l'essentiel.",
+    id: 'analyse', num: '2', title: 'Analyse',
+    desc: "L'IA analyse chaque document en multi-pass : extraction des exigences, détection des lots, critères de jugement, conditions financières. Source et page référencées.",
+    mock: ['62 exigences détectées', 'Conformité: 94%', 'Prix: 40% / Technique: 60%', 'Délai: J-14'],
   },
   {
-    icon: ShieldCheck,
-    title: 'Conformité automatique',
-    desc: 'Checklist candidature générée et matrice de conformité vérifiée contre votre coffre-fort documentaire.',
+    id: 'memoire', num: '3', title: 'Mémoire',
+    desc: 'Claude Opus génère un mémoire technique complet (~20 pages) adapté à votre entreprise, vos références, et chaque critère de notation du marché.',
+    mock: ['Partie A — Présentation', 'Partie B — Prestation', 'Partie C — Méthodologie', 'Scoring: 18.5/20'],
   },
   {
-    icon: BookOpen,
-    title: 'Mémoire technique IA',
-    desc: "Génération d'un mémoire technique de 20 pages adapté au DCE, export Word (.docx) prêt à soumettre.",
+    id: 'export', num: '4', title: 'Export',
+    desc: 'Téléchargez le mémoire en .docx, la matrice de conformité Excel, et le dossier complet en ZIP. Prêt à déposer sur la plateforme de l\'acheteur.',
+    mock: ['Mémoire.docx ✓', 'Compliance.xlsx ✓', 'Checklist: 12/12', 'ZIP final prêt'],
   },
 ]
 
-const STEPS = [
-  {
-    num: '01',
-    icon: Upload,
-    title: 'Uploadez votre DCE',
-    desc: 'Glissez-déposez vos fichiers PDF, DOCX, XLSX ou une archive ZIP. Synorix reconnaît automatiquement chaque pièce.',
-  },
-  {
-    num: '02',
-    icon: Brain,
-    title: "L'IA analyse et extrait",
-    desc: "Synorix IA lit l'intégralité du dossier, détecte les lots, extrait les exigences et bâtit la matrice de conformité.",
-  },
-  {
-    num: '03',
-    icon: FileDown,
-    title: 'Téléchargez votre mémoire',
-    desc: "Votre mémoire technique de 20 pages est prêt. Révisez-le dans l'éditeur intégré et exportez en Word d'un clic.",
-  },
-]
-
+// ── Pricing ──────────────────────────────────────────────────────────────
 const PLANS = [
   {
-    id: 'pro',
-    name: 'Pro',
-    price: '249',
-    desc: 'Pour les TPE et PME BTP',
-    features: [
-      '2 utilisateurs',
-      '15 AO / mois',
-      'Analyse DCE complète',
-      'Détection multi-lots',
-      'Checklist conformité',
-      'Mémoire technique IA',
-      'Export Word (.docx)',
-      'Coffre-fort documentaire',
-    ],
-    cta: 'Démarrer en Pro',
-    highlight: false,
+    name: 'Pro', price: '149', popular: false,
+    features: ['Analyse IA illimitée', 'Matrice de conformité', 'Checklist candidature', 'Mémoire technique IA', 'Export Word (.docx)', 'Coffre-fort documentaire', '5 projets simultanés'],
   },
   {
-    id: 'business',
-    name: 'Business',
-    price: '399',
-    desc: 'Pour les équipes et groupements',
-    features: [
-      '5+ utilisateurs',
-      '30 AO / mois',
-      'Tout le plan Pro',
-      'Alertes AO automatiques',
-      'Multi-lots avancé',
-      'Tableaux de bord équipe',
-      'Templates personnalisés',
-      'Support prioritaire',
-    ],
-    cta: 'Démarrer en Business',
-    highlight: true,
+    name: 'Business', price: '349', popular: true,
+    features: ['Tout le plan Pro, plus :', 'Projets illimités', 'Templates personnalisés', 'Multi-utilisateurs (5)', 'Scoring IA des offres', 'Support prioritaire', 'Historique complet'],
   },
 ]
 
-// ─── Landing ──────────────────────────────────────────────────────────────────
+// ── Testimonials ─────────────────────────────────────────────────────────
+const TESTIMONIALS = [
+  { quote: "On a divisé par 3 le temps de réponse aux AO. Le mémoire généré était meilleur que ce qu'on faisait à la main.", name: 'Karim B.', role: 'Directeur commercial', company: 'OZDEM BAT' },
+  { quote: "L'analyse DCE détecte des exigences qu'on ratait systématiquement. On n'a plus de mauvaises surprises à l'ouverture des plis.", name: 'Sophie M.', role: 'Responsable marchés', company: 'Plurial Novilia' },
+  { quote: "Le coffre-fort documentaire et la checklist nous font gagner un temps fou sur la partie administrative.", name: 'Jean-Marc L.', role: 'Gérant', company: 'Sionneau SAS' },
+]
+
+// ── Stats ────────────────────────────────────────────────────────────────
+const STATS = [
+  { value: '60+', label: 'exigences détectées', color: '#0EA5E9' },
+  { value: '10 min', label: 'par mémoire technique', color: '#00D4AA' },
+  { value: '13', label: 'lots auto-détectés', color: '#8B5CF6' },
+  { value: '5/5', label: 'note technique visée', color: '#F59E0B' },
+]
+
+// ── Logo clients ─────────────────────────────────────────────────────────
+const CLIENTS = ['Plurial Novilia', 'OZDEM BAT', 'Sionneau', 'CARISO FACADE', 'Reims Habitat']
+
+// ═══════════════════════════════════════════════════════════════════════════
+// COMPONENT
+// ═══════════════════════════════════════════════════════════════════════════
 
 export default function Landing() {
-  const { isSignedIn, isLoaded } = useAuth()
   const navigate = useNavigate()
-  const featuresRef = useRef<HTMLElement>(null)
+  const { isSignedIn } = useAuth()
+  const [mobileMenu, setMobileMenu] = useState(false)
+  const [activeTab, setActiveTab] = useState('upload')
 
-  useEffect(() => {
-    if (isLoaded && isSignedIn) {
-      navigate('/dashboard', { replace: true })
-    }
-  }, [isLoaded, isSignedIn, navigate])
+  const scrollTo = useCallback((id: string) => {
+    setMobileMenu(false)
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' })
+  }, [])
 
-  const scrollToFeatures = () => {
-    featuresRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+  const activeTabData = useMemo(() => HOW_TABS.find(t => t.id === activeTab)!, [activeTab])
 
   return (
     <div
-      style={{
-        background: '#050A18',
-        color: '#E2E8F0',
-        fontFamily: '"DM Sans", system-ui, sans-serif',
-      }}
+      className="min-h-screen w-full overflow-x-hidden"
+      style={{ background: '#050608', color: '#F1F5F9', fontFamily: '"Inter", system-ui, sans-serif' }}
     >
-      <style>{`
-        /* Reveal animation */
-        .reveal-section {
-          opacity: 0;
-          transform: translateY(30px);
-          transition: opacity 0.6s ease-out, transform 0.6s ease-out;
-        }
-        .reveal-section.revealed {
-          opacity: 1;
-          transform: translateY(0);
-        }
+      <style>{KEYFRAMES}</style>
 
-        /* Planet rotation */
-        @keyframes planet-rotate {
-          from { transform: rotate(0deg); }
-          to   { transform: rotate(360deg); }
-        }
+      {/* ════════════════════════════════════════════════════════════════
+          HERO SECTION — 100vh with neural network background
+          ════════════════════════════════════════════════════════════════ */}
+      <section className="relative min-h-screen flex flex-col overflow-hidden">
 
-        /* Shimmer text */
-        @keyframes shimmer-text {
-          0%   { background-position: 0% 50%; }
-          100% { background-position: 200% 50%; }
-        }
-        .shimmer-gradient {
-          background: linear-gradient(
-            90deg,
-            #60A5FA 0%,
-            #22D3EE 25%,
-            #93C5FD 50%,
-            #22D3EE 75%,
-            #60A5FA 100%
-          );
-          background-size: 200% 100%;
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
-          animation: shimmer-text 4s linear infinite;
-        }
-
-        /* Feature card hover */
-        .landing-feature-card {
-          transition: border-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        .landing-feature-card:hover {
-          border-color: rgba(59,130,246,0.20) !important;
-          transform: translateY(-2px);
-          box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 0 1px rgba(59,130,246,0.08);
-        }
-
-        /* Border rotate for highlighted pricing card */
-        @keyframes border-rotate {
-          0%   { background-position: 0% 50%; }
-          100% { background-position: 300% 50%; }
-        }
-        .pricing-highlight-border {
-          position: relative;
-        }
-        .pricing-highlight-border::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          border-radius: inherit;
-          padding: 1px;
-          background: linear-gradient(90deg, #3B82F6, #06B6D4, #3B82F6, #06B6D4);
-          background-size: 300% 100%;
-          animation: border-rotate 4s linear infinite;
-          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-          -webkit-mask-composite: xor;
-          mask-composite: exclude;
-          pointer-events: none;
-        }
-
-        /* CTA glow pulse */
-        @keyframes glow-pulse {
-          0%, 100% { box-shadow: 0 0 32px rgba(59,130,246,0.25); }
-          50%       { box-shadow: 0 0 48px rgba(59,130,246,0.40); }
-        }
-        .cta-glow-pulse {
-          animation: glow-pulse 3s ease-in-out infinite;
-        }
-
-        /* Mobile nav */
-        @media (max-width: 640px) {
-          .nav-links-desktop { display: none !important; }
-          .planet-bg {
-            right: -300px !important;
-            top: -50px !important;
-            width: 500px !important;
-            height: 500px !important;
-          }
-        }
-        @media (min-width: 641px) {
-          .planet-bg {
-            right: -200px;
-            top: -100px;
-          }
-        }
-
-        /* Reduced motion */
-        @media (prefers-reduced-motion: reduce) {
-          .reveal-section { opacity: 1; transform: none; transition: none; }
-          .shimmer-gradient { animation: none; }
-          .pricing-highlight-border::before { animation: none; }
-          .cta-glow-pulse { animation: none; }
-          [style*="planet-rotate"] { animation: none !important; }
-        }
-      `}</style>
-
-      {/* ════════════════════════════════════════════════════════════════════
-          NAV — Sticky glassmorphism
-      ════════════════════════════════════════════════════════════════════ */}
-      <nav
-        className="sticky top-0 z-50"
-        style={{
-          background: 'rgba(5,10,24,0.80)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
-        }}
-      >
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          {/* Logo */}
-          <Link to="/" className="flex items-center gap-2.5 no-underline">
+        {/* ── Neural network background ── */}
+        <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
+          {/* Central glow */}
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+            style={{
+              width: '60vw', height: '60vw', maxWidth: 700, maxHeight: 700,
+              background: 'radial-gradient(circle, rgba(14,165,233,0.08) 0%, rgba(14,165,233,0.02) 40%, transparent 70%)',
+              borderRadius: '50%',
+            }}
+          />
+          {/* Connections */}
+          <svg className="absolute inset-0 w-full h-full" style={{ opacity: 0.06 }}>
+            {CONNECTIONS.map(c => (
+              <line
+                key={c.id}
+                x1={`${c.x1}%`} y1={`${c.y1}%`}
+                x2={`${c.x2}%`} y2={`${c.y2}%`}
+                stroke="#0EA5E9" strokeWidth="0.5"
+              />
+            ))}
+          </svg>
+          {/* Particles */}
+          {PARTICLES.map(p => (
             <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+              key={p.id}
+              className="absolute rounded-full"
               style={{
-                background: 'linear-gradient(135deg, #3B82F6, #06B6D4)',
-                boxShadow: '0 0 16px rgba(59,130,246,0.40)',
+                left: `${p.cx}%`, top: `${p.cy}%`,
+                width: p.size, height: p.size,
+                background: 'rgba(14,165,233,0.25)',
+                boxShadow: '0 0 6px rgba(14,165,233,0.3)',
+                animation: `float-particle ${p.dur}s ease-in-out infinite alternate`,
+                animationDelay: `${p.delay}s`,
+                ['--dx' as string]: `${p.dx}px`,
+                ['--dy' as string]: `${p.dy}px`,
               }}
-            >
-              <span
-                className="text-white font-black text-sm"
-                style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}
+            />
+          ))}
+        </div>
+
+        {/* ── Navbar ── */}
+        <nav
+          className="fixed top-0 left-0 right-0 z-50 border-b border-white/[0.06]"
+          style={{ background: 'rgba(0,0,0,0.50)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
+        >
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+            {/* Logo */}
+            <Link to="/" className="flex items-center gap-2.5 shrink-0">
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ background: 'linear-gradient(135deg, #0EA5E9, #00D4AA)' }}
               >
-                S
+                <span className="text-white font-black text-sm" style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>S</span>
+              </div>
+              <span
+                className="font-extrabold text-lg tracking-tight"
+                style={{
+                  fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
+                  background: 'linear-gradient(135deg, #0EA5E9, #00D4AA)',
+                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+                }}
+              >
+                Synorix
               </span>
+            </Link>
+
+            {/* Desktop links */}
+            <div className="hidden md:flex items-center gap-8">
+              {[
+                { label: 'Fonctionnalités', id: 'features' },
+                { label: 'Comment ça marche', id: 'how' },
+                { label: 'Tarifs', id: 'pricing' },
+              ].map(l => (
+                <button
+                  key={l.id}
+                  onClick={() => scrollTo(l.id)}
+                  className="text-sm text-[#94A3B8] hover:text-white transition-colors bg-transparent border-none cursor-pointer"
+                >
+                  {l.label}
+                </button>
+              ))}
             </div>
-            <span
-              className="font-black text-lg tracking-tight"
-              style={{
-                background: 'linear-gradient(135deg, #60A5FA, #22D3EE)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
-              }}
-            >
-              Synorix
-            </span>
-          </Link>
 
-          {/* Links */}
-          <div className="nav-links-desktop flex items-center gap-1">
-            <button
-              onClick={scrollToFeatures}
-              className="bg-transparent border-none cursor-pointer text-sm px-3 py-2 rounded-lg transition-colors"
-              style={{ color: '#94A3B8' }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = '#fff')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = '#94A3B8')}
-            >
-              Fonctionnalités
-            </button>
-            <Link
-              to="/pricing"
-              className="text-sm no-underline px-3 py-2 rounded-lg transition-colors"
-              style={{ color: '#94A3B8' }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = '#fff')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = '#94A3B8')}
-            >
-              Tarifs
-            </Link>
-            <button
-              className="bg-transparent border-none cursor-pointer text-sm px-3 py-2 rounded-lg transition-colors"
-              style={{ color: '#94A3B8' }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = '#fff')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = '#94A3B8')}
-            >
-              Contact
-            </button>
+            {/* Desktop CTA */}
+            <div className="hidden md:flex items-center gap-3">
+              <Link
+                to={isSignedIn ? '/dashboard' : '/login'}
+                className="text-sm text-[#94A3B8] hover:text-white transition-colors px-4 py-2"
+              >
+                Connexion
+              </Link>
+              <Link
+                to="/register"
+                className="text-sm font-semibold text-white px-5 py-2.5 rounded-xl transition-all"
+                style={{
+                  background: '#0EA5E9',
+                  boxShadow: '0 0 30px rgba(14,165,233,0.3)',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 0 40px rgba(14,165,233,0.5)' }}
+                onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 0 30px rgba(14,165,233,0.3)' }}
+              >
+                Essai gratuit
+              </Link>
+            </div>
 
-            <Link
-              to={isSignedIn ? '/dashboard' : '/login'}
-              className="ml-4 inline-flex items-center gap-1.5 text-sm font-semibold text-white no-underline rounded-full px-6 py-2 transition-all hover:brightness-110 hover:-translate-y-px"
-              style={{
-                background: 'linear-gradient(135deg, #3B82F6, #06B6D4)',
-                fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
-              }}
+            {/* Mobile hamburger */}
+            <button
+              onClick={() => setMobileMenu(!mobileMenu)}
+              className="md:hidden p-2 text-[#94A3B8]"
             >
-              {isSignedIn ? 'Dashboard' : 'Commencer'}
-            </Link>
+              {mobileMenu ? <X size={22} /> : <Menu size={22} />}
+            </button>
           </div>
-        </div>
-      </nav>
 
-      {/* ════════════════════════════════════════════════════════════════════
-          HERO
-      ════════════════════════════════════════════════════════════════════ */}
-      <section className="relative overflow-hidden" style={{ padding: '100px 24px 120px' }}>
-        {/* Planet */}
-        <div className="planet-bg absolute" style={{ right: '-200px', top: '-100px' }}>
-          <PlanetBackground />
-        </div>
+          {/* Mobile menu */}
+          {mobileMenu && (
+            <div className="md:hidden border-t border-white/[0.06] px-4 py-4 space-y-3" style={{ background: 'rgba(0,0,0,0.90)' }}>
+              {['features', 'how', 'pricing'].map(id => (
+                <button key={id} onClick={() => scrollTo(id)} className="block text-sm text-[#94A3B8] hover:text-white transition-colors bg-transparent border-none cursor-pointer">
+                  {id === 'features' ? 'Fonctionnalités' : id === 'how' ? 'Comment ça marche' : 'Tarifs'}
+                </button>
+              ))}
+              <div className="flex gap-3 pt-2">
+                <Link to={isSignedIn ? '/dashboard' : '/login'} className="text-sm text-[#94A3B8]">Connexion</Link>
+                <Link to="/register" className="text-sm font-semibold text-white px-4 py-2 rounded-lg" style={{ background: '#0EA5E9' }}>Essai gratuit</Link>
+              </div>
+            </div>
+          )}
+        </nav>
 
-        <div className="relative max-w-3xl mx-auto text-center">
+        {/* ── Hero content ── */}
+        <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 pt-24 pb-16 text-center">
+          {/* Floating pills — hidden on mobile */}
+          <div className="hidden lg:block">
+            {FLOATING_PILLS.map((pill, i) => (
+              <div
+                key={i}
+                className="absolute hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium"
+                style={{
+                  top: pill.top, left: pill.left, right: pill.right, bottom: (pill as { bottom?: string }).bottom,
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  backdropFilter: 'blur(12px)',
+                  color: '#94A3B8',
+                  animation: `${pill.anim} ${pill.dur} ease-in-out infinite`,
+                  animationDelay: pill.delay,
+                }}
+              >
+                <span
+                  className="w-2 h-2 rounded-full"
+                  style={{ background: '#0EA5E9', animation: 'pulse-dot 2s ease-in-out infinite' }}
+                />
+                {pill.label}
+              </div>
+            ))}
+          </div>
+
           {/* Badge */}
           <div
-            className="inline-flex items-center gap-2 mb-8 text-xs font-semibold tracking-wide"
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm mb-8"
             style={{
-              background: 'rgba(59,130,246,0.08)',
-              backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(59,130,246,0.18)',
-              borderRadius: 999,
-              padding: '7px 18px',
-              color: '#93C5FD',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.10)',
+              animation: 'fade-up 0.6s ease-out both',
             }}
           >
-            <Sparkles size={12} />
-            Propulsé par l&apos;IA
+            <span>✨</span>
+            <span className="text-[#CBD5E1]">Propulsé par l'IA la plus avancée</span>
           </div>
 
           {/* Title */}
           <h1
-            className="mb-6"
-            style={{
-              fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
-              fontSize: 'clamp(2.5rem, 7vw, 4.5rem)',
-              fontWeight: 900,
-              lineHeight: 1.08,
-              letterSpacing: '-0.03em',
-              color: '#FFFFFF',
-            }}
+            className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] mb-6 max-w-4xl"
+            style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif', animation: 'fade-up 0.6s ease-out 0.1s both' }}
           >
-            Répondez aux appels d&apos;offres
+            Ne perdez plus de{' '}
+            <br className="hidden sm:block" />
+            <span
+              style={{
+                background: 'linear-gradient(90deg, #0EA5E9, #00D4AA)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
+              }}
+            >
+              marchés
+            </span>
             <br />
-            <span className="shimmer-gradient">10x plus vite</span>
+            à cause d'un dossier incomplet
           </h1>
 
           {/* Subtitle */}
           <p
-            className="max-w-2xl mx-auto mb-10"
-            style={{
-              fontSize: 'clamp(1rem, 2.5vw, 1.2rem)',
-              lineHeight: 1.7,
-              color: '#94A3B8',
-            }}
+            className="text-base sm:text-lg text-[#94A3B8] max-w-2xl mx-auto mb-10 leading-relaxed"
+            style={{ animation: 'fade-up 0.6s ease-out 0.2s both' }}
           >
-            Synorix analyse vos DCE, vérifie la conformité et génère votre mémoire technique
-            automatiquement grâce à l&apos;IA.{' '}
-            <span style={{ color: '#CBD5E1' }}>Un AO en 2 heures au lieu de 2 jours.</span>
+            Synorix analyse vos DCE, détecte chaque exigence, et génère des mémoires techniques notés 5/5. En 10 minutes.
           </p>
 
-          {/* CTAs */}
-          <div className="flex gap-4 justify-center flex-wrap mb-8">
-            <Link
-              to={isSignedIn ? '/dashboard' : '/register'}
-              className="inline-flex items-center gap-2 font-bold text-white no-underline transition-all hover:scale-105 hover:-translate-y-0.5"
-              style={{
-                background: 'linear-gradient(135deg, #3B82F6, #06B6D4)',
-                padding: '15px 32px',
-                borderRadius: 14,
-                fontSize: 15,
-                fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
-                boxShadow: '0 0 32px rgba(59,130,246,0.25)',
-              }}
-            >
-              {isSignedIn ? 'Accéder au dashboard' : 'Commencer gratuitement'} <ArrowRight size={16} />
-            </Link>
+          {/* CTA buttons */}
+          <div
+            className="flex flex-col sm:flex-row items-center gap-4 mb-10"
+            style={{ animation: 'fade-up 0.6s ease-out 0.3s both' }}
+          >
             <button
-              onClick={scrollToFeatures}
-              className="text-sm font-medium cursor-pointer transition-all"
+              onClick={() => navigate('/register')}
+              className="px-8 py-3.5 rounded-xl text-sm font-semibold text-white flex items-center gap-2 transition-all"
               style={{
-                background: 'transparent',
-                color: '#94A3B8',
-                border: '1px solid rgba(255,255,255,0.20)',
-                borderRadius: 14,
-                padding: '15px 28px',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(59,130,246,0.50)'
-                e.currentTarget.style.color = '#E2E8F0'
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.20)'
-                e.currentTarget.style.color = '#94A3B8'
+                background: '#0EA5E9',
+                boxShadow: '0 0 30px rgba(14,165,233,0.3)',
+                animation: 'glow-pulse 3s ease-in-out infinite',
               }}
             >
-              Voir la démo
+              Démarrer — 1 AO gratuit <ArrowRight size={16} />
+            </button>
+            <button
+              onClick={() => scrollTo('how')}
+              className="px-6 py-3.5 rounded-xl text-sm font-medium flex items-center gap-2 transition-all hover:bg-white/[0.08]"
+              style={{
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                color: '#CBD5E1',
+              }}
+            >
+              <Play size={14} /> Voir la démo
             </button>
           </div>
 
-          {/* Trust signal */}
-          <div className="flex items-center justify-center gap-3 text-sm" style={{ color: '#475569' }}>
-            {/* Placeholder avatars */}
+          {/* Social proof */}
+          <div
+            className="flex items-center gap-3 text-sm text-[#64748B]"
+            style={{ animation: 'fade-up 0.6s ease-out 0.4s both' }}
+          >
             <div className="flex -space-x-2">
-              {['#3B82F6', '#06B6D4', '#60A5FA', '#8B5CF6'].map((bg, i) => (
+              {[0, 1, 2, 3, 4].map(i => (
                 <div
                   key={i}
-                  className="w-7 h-7 rounded-full border-2 flex items-center justify-center text-[10px] font-bold text-white"
-                  style={{ background: bg, borderColor: '#050A18' }}
+                  className="w-7 h-7 rounded-full border-2 border-[#050608] flex items-center justify-center text-[9px] font-bold text-white"
+                  style={{ background: `linear-gradient(135deg, ${i % 2 === 0 ? '#0EA5E9' : '#00D4AA'}, ${i % 2 === 0 ? '#00D4AA' : '#8B5CF6'})` }}
                 >
-                  {['JD', 'ML', 'PB', 'SC'][i]}
+                  {['KB', 'SM', 'JL', 'AR', 'MC'][i]}
                 </div>
               ))}
             </div>
-            <span>Utilisé par <span style={{ color: '#93C5FD', fontWeight: 600 }}>120+</span> entreprises BTP</span>
+            <span>Utilisé par <strong className="text-[#94A3B8]">+50 entreprises BTP</strong></span>
           </div>
         </div>
-      </section>
 
-      {/* ════════════════════════════════════════════════════════════════════
-          FEATURES — 4 cards grid
-      ════════════════════════════════════════════════════════════════════ */}
-      <section ref={featuresRef} className="px-6 pb-24">
-        <div className="max-w-5xl mx-auto">
-          <Section>
-            <div className="text-center mb-14">
-              <h2
-                style={{
-                  fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
-                  fontSize: 'clamp(1.6rem, 4vw, 2.6rem)',
-                  fontWeight: 700,
-                  letterSpacing: '-0.02em',
-                  color: '#FFFFFF',
-                  marginBottom: 12,
-                }}
-              >
-                Tout ce dont vous avez besoin
-              </h2>
-              <p style={{ fontSize: 16, color: '#94A3B8', maxWidth: 500, margin: '0 auto' }}>
-                De l&apos;upload du DCE à l&apos;export du mémoire, Synorix automatise chaque étape.
-              </p>
-            </div>
-          </Section>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {FEATURES.map(({ icon: Icon, title, desc }, i) => (
-              <Section key={title} delay={i * 100}>
-                <div
-                  className="landing-feature-card relative overflow-hidden p-8"
-                  style={{
-                    background: 'rgba(255,255,255,0.04)',
-                    backdropFilter: 'blur(16px) saturate(150%)',
-                    WebkitBackdropFilter: 'blur(16px) saturate(150%)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    borderRadius: '20px',
-                    boxShadow: '14px 17px 40px 4px rgba(0,0,0,0.20)',
-                  }}
-                >
-                  {/* Top accent line */}
-                  <div
-                    className="absolute top-0 left-0 right-0"
-                    style={{
-                      height: 2,
-                      background: 'linear-gradient(90deg, #3B82F6, #06B6D4, transparent)',
-                    }}
-                  />
-
-                  {/* Icon */}
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center mb-5"
-                    style={{
-                      background: 'rgba(59,130,246,0.10)',
-                      border: '1px solid rgba(59,130,246,0.15)',
-                    }}
-                  >
-                    <Icon size={22} style={{ color: '#60A5FA' }} />
-                  </div>
-
-                  <h3
-                    className="mb-2"
-                    style={{
-                      fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
-                      fontWeight: 600,
-                      fontSize: '1.25rem',
-                      color: '#FFFFFF',
-                    }}
-                  >
-                    {title}
-                  </h3>
-                  <p style={{ fontSize: 14, lineHeight: 1.7, color: '#94A3B8' }}>{desc}</p>
-                </div>
-              </Section>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════════════════════════════════════
-          HOW IT WORKS — 3 steps
-      ════════════════════════════════════════════════════════════════════ */}
-      <section className="px-6 pb-24">
-        <div className="max-w-5xl mx-auto">
-          <Section>
-            <div className="text-center mb-14">
-              <h2
-                style={{
-                  fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
-                  fontSize: 'clamp(1.6rem, 4vw, 2.4rem)',
-                  fontWeight: 700,
-                  letterSpacing: '-0.02em',
-                  color: '#FFFFFF',
-                  marginBottom: 12,
-                }}
-              >
-                Comment ça marche
-              </h2>
-              <p style={{ fontSize: 15, color: '#94A3B8' }}>
-                De zéro à un mémoire technique complet en moins de 10 minutes.
-              </p>
-            </div>
-          </Section>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-0 relative">
-            {STEPS.map(({ num, icon: Icon, title, desc }, i) => (
-              <Section key={num} delay={i * 100}>
-                <div className="relative flex flex-col h-full">
-                  {/* Dashed connector (not last) */}
-                  {i < STEPS.length - 1 && (
-                    <div
-                      className="hidden md:block absolute top-10 left-full w-full z-0"
-                      style={{
-                        height: 0,
-                        borderTop: '2px dashed rgba(59,130,246,0.20)',
-                      }}
-                    />
-                  )}
-
-                  <div
-                    className="relative p-7 h-full z-10"
-                    style={{
-                      background: 'rgba(255,255,255,0.04)',
-                      backdropFilter: 'blur(16px) saturate(150%)',
-                      WebkitBackdropFilter: 'blur(16px) saturate(150%)',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      borderRadius: '20px',
-                      boxShadow: '14px 17px 40px 4px rgba(0,0,0,0.20)',
-                      margin: '0 10px',
-                    }}
-                  >
-                    {/* Watermark number */}
-                    <div
-                      className="absolute top-4 right-6 select-none pointer-events-none"
-                      style={{
-                        fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
-                        fontSize: '4rem',
-                        fontWeight: 900,
-                        color: 'rgba(59,130,246,0.08)',
-                        lineHeight: 1,
-                      }}
-                    >
-                      {num}
-                    </div>
-
-                    {/* Icon + step label */}
-                    <div className="flex items-center gap-3 mb-4">
-                      <div
-                        className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0"
-                        style={{
-                          background: 'rgba(59,130,246,0.10)',
-                          border: '1px solid rgba(59,130,246,0.18)',
-                        }}
-                      >
-                        <Icon size={19} style={{ color: '#3B82F6' }} />
-                      </div>
-                      <span
-                        className="text-xs font-medium tracking-wider"
-                        style={{
-                          color: '#475569',
-                          fontFamily: '"JetBrains Mono", monospace',
-                        }}
-                      >
-                        Étape {num}
-                      </span>
-                    </div>
-
-                    <h3
-                      className="mb-2"
-                      style={{
-                        fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
-                        fontWeight: 600,
-                        fontSize: 16,
-                        color: '#FFFFFF',
-                      }}
-                    >
-                      {title}
-                    </h3>
-                    <p style={{ fontSize: 13.5, lineHeight: 1.7, color: '#94A3B8' }}>{desc}</p>
-                  </div>
-                </div>
-              </Section>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════════════════════════════════════
-          PRICING — 2 cards
-      ════════════════════════════════════════════════════════════════════ */}
-      <section className="px-6 pb-24">
-        <div className="max-w-4xl mx-auto">
-          <Section>
-            <div className="text-center mb-12">
-              <h2
-                style={{
-                  fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
-                  fontSize: 'clamp(1.6rem, 4vw, 2.4rem)',
-                  fontWeight: 700,
-                  letterSpacing: '-0.02em',
-                  color: '#FFFFFF',
-                  marginBottom: 12,
-                }}
-              >
-                Des tarifs clairs, sans surprise
-              </h2>
-              <p style={{ fontSize: 15, color: '#94A3B8' }}>
-                Sans engagement · Résiliable à tout moment
-              </p>
-            </div>
-          </Section>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {PLANS.map((plan, idx) => (
-              <Section key={plan.id} delay={idx * 100}>
-                <div
-                  className={`relative overflow-hidden p-8 ${plan.highlight ? 'pricing-highlight-border' : ''}`}
-                  style={{
-                    background: plan.highlight ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.04)',
-                    backdropFilter: 'blur(16px) saturate(150%)',
-                    WebkitBackdropFilter: 'blur(16px) saturate(150%)',
-                    border: plan.highlight ? 'none' : '1px solid rgba(255,255,255,0.08)',
-                    borderRadius: '20px',
-                    boxShadow: plan.highlight
-                      ? '14px 17px 40px 4px rgba(0,0,0,0.30), 0 0 30px rgba(59,130,246,0.08)'
-                      : '14px 17px 40px 4px rgba(0,0,0,0.20)',
-                  }}
-                >
-                  {/* POPULAIRE badge */}
-                  {plan.highlight && (
-                    <div
-                      className="absolute top-5 right-5 text-[11px] font-bold tracking-wider rounded-full px-3 py-1"
-                      style={{
-                        background: 'linear-gradient(135deg, #3B82F6, #06B6D4)',
-                        color: '#FFFFFF',
-                      }}
-                    >
-                      POPULAIRE
-                    </div>
-                  )}
-
-                  {/* Plan name */}
-                  <p
-                    className="text-xs font-bold tracking-widest uppercase mb-1"
-                    style={{
-                      color: plan.highlight ? '#60A5FA' : '#3B82F6',
-                      fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
-                    }}
-                  >
-                    {plan.name}
-                  </p>
-                  <p className="text-sm mb-6" style={{ color: '#475569' }}>
-                    {plan.desc}
-                  </p>
-
-                  {/* Price */}
-                  <div className="flex items-baseline gap-1 mb-6">
-                    <span
-                      style={{
-                        fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
-                        fontSize: '2.5rem',
-                        fontWeight: 900,
-                        letterSpacing: '-0.03em',
-                        color: '#FFFFFF',
-                      }}
-                    >
-                      {plan.price}€
-                    </span>
-                    <span className="text-sm" style={{ color: '#94A3B8' }}>
-                      /mois
-                    </span>
-                  </div>
-
-                  {/* CTA */}
-                  <Link
-                    to={isSignedIn ? '/dashboard' : '/register'}
-                    className="block text-center no-underline font-semibold text-sm rounded-xl py-3 mb-6 transition-all hover:brightness-110 hover:-translate-y-px"
-                    style={{
-                      fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
-                      ...(plan.highlight
-                        ? {
-                            background: 'linear-gradient(135deg, #3B82F6, #06B6D4)',
-                            color: '#FFFFFF',
-                            boxShadow: '0 0 24px rgba(59,130,246,0.25)',
-                          }
-                        : {
-                            background: 'rgba(59,130,246,0.10)',
-                            color: '#93C5FD',
-                            border: '1px solid rgba(59,130,246,0.20)',
-                          }),
-                    }}
-                  >
-                    {plan.cta}
-                  </Link>
-
-                  {/* Features list */}
-                  <ul className="space-y-2.5 list-none p-0 m-0">
-                    {plan.features.map((f) => (
-                      <li
-                        key={f}
-                        className="flex items-center gap-2.5 text-sm"
-                        style={{ color: '#94A3B8' }}
-                      >
-                        <Check size={14} style={{ color: '#60A5FA', flexShrink: 0 }} />
-                        {f}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </Section>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════════════════════════════════════
-          CTA BAND
-      ════════════════════════════════════════════════════════════════════ */}
-      <section className="px-6 pb-24">
-        <Section>
+        {/* ── Dashboard mockup ── */}
+        <div
+          className="relative z-10 max-w-4xl mx-auto px-4 pb-20 w-full"
+          style={{ animation: 'fade-up 0.8s ease-out 0.5s both' }}
+        >
           <div
-            className="max-w-4xl mx-auto relative overflow-hidden text-center"
+            className="rounded-2xl overflow-hidden"
             style={{
-              padding: '64px 40px',
-              background: 'linear-gradient(180deg, rgba(30,58,138,0.25) 0%, rgba(255,255,255,0.04) 100%)',
-              backdropFilter: 'blur(16px) saturate(150%)',
-              WebkitBackdropFilter: 'blur(16px) saturate(150%)',
-              border: '1px solid rgba(59,130,246,0.15)',
-              borderRadius: '20px',
-              boxShadow: '14px 17px 40px 4px rgba(0,0,0,0.25)',
+              background: '#0C1017',
+              border: '1px solid rgba(255,255,255,0.08)',
+              boxShadow: '0 0 80px rgba(14,165,233,0.12), 0 40px 80px rgba(0,0,0,0.5)',
+              transform: 'perspective(1200px) rotateX(4deg)',
             }}
           >
-            {/* Mesh glow */}
-            <div
-              className="absolute inset-0 pointer-events-none"
-              style={{
-                background:
-                  'radial-gradient(ellipse at 50% 0%, rgba(59,130,246,0.15) 0%, transparent 60%)',
-              }}
-            />
-
-            <h2
-              className="relative mb-4"
-              style={{
-                fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
-                fontSize: 'clamp(1.5rem, 3.5vw, 2.2rem)',
-                fontWeight: 700,
-                letterSpacing: '-0.02em',
-                color: '#FFFFFF',
-              }}
-            >
-              Prêt à gagner plus de marchés ?
-            </h2>
-            <p className="relative mb-8" style={{ fontSize: 15, color: '#94A3B8' }}>
-              Rejoignez les entreprises BTP qui répondent plus vite et mieux grâce à l&apos;IA.
-            </p>
-            <Link
-              to={isSignedIn ? '/dashboard' : '/register'}
-              className="relative inline-flex items-center gap-2 font-bold text-white no-underline rounded-xl transition-all hover:brightness-110 hover:-translate-y-0.5 cta-glow-pulse"
-              style={{
-                background: 'linear-gradient(135deg, #3B82F6, #06B6D4)',
-                padding: '16px 40px',
-                fontSize: 15,
-                fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
-              }}
-            >
-              Créer mon compte gratuitement <ArrowRight size={16} />
-            </Link>
+            {/* Browser bar */}
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06]">
+              <div className="w-3 h-3 rounded-full" style={{ background: '#EF4444' }} />
+              <div className="w-3 h-3 rounded-full" style={{ background: '#F59E0B' }} />
+              <div className="w-3 h-3 rounded-full" style={{ background: '#10B981' }} />
+              <div className="flex-1 mx-4 h-6 rounded-md" style={{ background: 'rgba(255,255,255,0.04)', maxWidth: 300 }}>
+                <div className="px-3 py-1 text-[10px] text-[#475569]">app.synorix.fr/dashboard</div>
+              </div>
+            </div>
+            {/* Mock dashboard content */}
+            <div className="p-5 sm:p-6 space-y-4">
+              {/* Stats row */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { label: 'AO en cours', val: '7', color: '#0EA5E9' },
+                  { label: 'Taux conformité', val: '94%', color: '#10B981' },
+                  { label: 'AO gagnés', val: '12', color: '#00D4AA' },
+                  { label: 'Soumis ce mois', val: '3', color: '#F59E0B' },
+                ].map(s => (
+                  <div
+                    key={s.label}
+                    className="rounded-lg p-3"
+                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}
+                  >
+                    <div className="text-[10px] text-[#64748B] mb-1">{s.label}</div>
+                    <div className="text-xl font-bold" style={{ color: s.color, fontFamily: '"JetBrains Mono", monospace' }}>{s.val}</div>
+                  </div>
+                ))}
+              </div>
+              {/* Project cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {['Construction 42 logements', 'Réhab. école Jean Jaurès', 'Voirie ZAC des Halles'].map((name, i) => (
+                  <div
+                    key={i}
+                    className="rounded-lg p-3 space-y-2"
+                    style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-[#E2E8F0] truncate">{name}</span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(14,165,233,0.12)', color: '#38BDF8' }}>En cours</span>
+                    </div>
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                      <div className="h-full rounded-full" style={{ width: `${[65, 40, 85][i]}%`, background: 'linear-gradient(90deg, #0EA5E9, #00D4AA)' }} />
+                    </div>
+                    <div className="text-[10px] text-[#475569]">Étape {[3, 2, 5][i]}/6 · J-{[14, 7, 3][i]}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-        </Section>
+        </div>
       </section>
 
-      {/* ════════════════════════════════════════════════════════════════════
-          FOOTER
-      ════════════════════════════════════════════════════════════════════ */}
-      <footer
-        style={{
-          background: '#050A12',
-          borderTop: '1px solid rgba(255,255,255,0.06)',
-          padding: '48px 24px',
-        }}
-      >
-        <div className="max-w-5xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
-            {/* Brand */}
-            <div className="md:col-span-1">
-              <div className="flex items-center gap-2 mb-3">
-                <div
-                  className="w-7 h-7 rounded-lg flex items-center justify-center"
-                  style={{
-                    background: 'linear-gradient(135deg, #3B82F6, #06B6D4)',
-                  }}
-                >
-                  <span
-                    className="text-white font-black text-xs"
-                    style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}
-                  >
-                    S
-                  </span>
-                </div>
-                <span
-                  className="font-black text-sm tracking-tight"
-                  style={{
-                    background: 'linear-gradient(135deg, #60A5FA, #22D3EE)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text',
-                    fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
-                  }}
-                >
-                  Synorix
-                </span>
-              </div>
-              <p className="text-xs" style={{ color: '#475569', lineHeight: 1.6 }}>
-                La plateforme IA pour répondre aux appels d&apos;offres BTP plus vite et mieux.
-              </p>
-            </div>
-
-            {/* Produit */}
-            <div>
-              <p
-                className="text-xs font-semibold uppercase tracking-widest mb-3"
-                style={{ color: '#64748B' }}
+      {/* ════════════════════════════════════════════════════════════════
+          LOGOS CLIENTS
+          ════════════════════════════════════════════════════════════════ */}
+      <section className="py-12 border-y border-white/[0.04] overflow-hidden">
+        <p className="text-center text-xs text-[#64748B] uppercase tracking-[0.15em] mb-8 font-medium">
+          Ils nous font confiance
+        </p>
+        <div className="relative overflow-hidden" style={{ maskImage: 'linear-gradient(90deg, transparent, black 15%, black 85%, transparent)' }}>
+          <div className="flex whitespace-nowrap" style={{ animation: 'marquee-scroll 25s linear infinite' }}>
+            {[...CLIENTS, ...CLIENTS].map((name, i) => (
+              <span
+                key={i}
+                className="inline-block text-lg font-semibold text-[#334155] mx-10 sm:mx-16"
+                style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}
               >
-                Produit
-              </p>
-              <ul className="space-y-2 list-none p-0 m-0">
-                {['Fonctionnalités', 'Tarifs', 'Démo'].map((item) => (
-                  <li key={item}>
-                    <span
-                      className="text-sm cursor-pointer transition-colors"
-                      style={{ color: '#475569' }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = '#94A3B8')}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = '#475569')}
-                    >
-                      {item}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Entreprise */}
-            <div>
-              <p
-                className="text-xs font-semibold uppercase tracking-widest mb-3"
-                style={{ color: '#64748B' }}
-              >
-                Entreprise
-              </p>
-              <ul className="space-y-2 list-none p-0 m-0">
-                {['À propos', 'Blog', 'Contact'].map((item) => (
-                  <li key={item}>
-                    <span
-                      className="text-sm cursor-pointer transition-colors"
-                      style={{ color: '#475569' }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = '#94A3B8')}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = '#475569')}
-                    >
-                      {item}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Légal */}
-            <div>
-              <p
-                className="text-xs font-semibold uppercase tracking-widest mb-3"
-                style={{ color: '#64748B' }}
-              >
-                Légal
-              </p>
-              <ul className="space-y-2 list-none p-0 m-0">
-                {['Mentions légales', 'Confidentialité', 'CGU'].map((item) => (
-                  <li key={item}>
-                    <span
-                      className="text-sm cursor-pointer transition-colors"
-                      style={{ color: '#475569' }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = '#94A3B8')}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = '#475569')}
-                    >
-                      {item}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+                {name}
+              </span>
+            ))}
           </div>
+        </div>
+      </section>
 
-          {/* Copyright */}
-          <div
-            className="pt-6 flex items-center justify-between flex-wrap gap-4"
-            style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
-          >
-            <p className="text-xs" style={{ color: '#334155' }}>
-              © 2026 Synorix. Tous droits réservés.
+      {/* ════════════════════════════════════════════════════════════════
+          FEATURES — Bento Grid
+          ════════════════════════════════════════════════════════════════ */}
+      <section id="features" className="py-20 sm:py-28 px-4">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2
+              className="text-3xl sm:text-4xl font-bold mb-4"
+              style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}
+            >
+              Une IA experte en{' '}
+              <span style={{ background: 'linear-gradient(90deg, #0EA5E9, #00D4AA)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+                marchés publics BTP
+              </span>
+            </h2>
+            <p className="text-[#64748B] max-w-xl mx-auto">
+              Chaque fonctionnalité est conçue pour maximiser vos chances de remporter le marché.
             </p>
-            <div className="flex gap-4">
-              <Link
-                to={isSignedIn ? '/dashboard' : '/login'}
-                className="text-xs no-underline transition-colors"
-                style={{ color: '#475569' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#94A3B8')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#475569')}
-              >
-                {isSignedIn ? 'Dashboard' : 'Connexion'}
-              </Link>
-              <Link
-                to={isSignedIn ? '/dashboard' : '/register'}
-                className="text-xs no-underline transition-colors"
-                style={{ color: '#475569' }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#94A3B8')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#475569')}
-              >
-                Inscription
-              </Link>
+          </div>
+
+          {/* Bento grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Large 1: Analyse DCE */}
+            <div
+              className="lg:col-span-2 rounded-xl p-6 sm:p-8 transition-all duration-300 hover:border-[#0EA5E9]/30 group"
+              style={{ background: '#0C1017', border: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              <div className="flex items-start gap-4 mb-5">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(14,165,233,0.12)' }}>
+                  <Search size={18} style={{ color: '#0EA5E9' }} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-[#E2E8F0] mb-1" style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>Analyse DCE intelligente</h3>
+                  <p className="text-sm text-[#64748B] leading-relaxed">Multi-pass sur RC, CCTP, DPGF. Chaque exigence est extraite avec sa source, sa page, et sa priorité.</p>
+                </div>
+              </div>
+              {/* Mini illustration */}
+              <div className="rounded-lg p-4 space-y-2" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                {['Attestation décennale — RC p.4', 'Planning détaillé — CCTP §3.2', 'Sous-traitance déclarée — RC p.7'].map((txt, i) => (
+                  <div key={i} className="flex items-center gap-3 text-xs">
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-medium" style={{ background: ['rgba(239,68,68,0.12)', 'rgba(245,158,11,0.12)', 'rgba(14,165,233,0.12)'][i], color: ['#F87171', '#FBBF24', '#38BDF8'][i] }}>
+                      {['Critique', 'Important', 'Standard'][i]}
+                    </span>
+                    <span className="text-[#94A3B8]">{txt}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Small 1: Détection lots */}
+            <div
+              className="rounded-xl p-6 transition-all duration-300 hover:border-[#0EA5E9]/30"
+              style={{ background: '#0C1017', border: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: 'rgba(0,212,170,0.12)' }}>
+                <Layers size={18} style={{ color: '#00D4AA' }} />
+              </div>
+              <h3 className="text-base font-semibold text-[#E2E8F0] mb-2" style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>Détection des lots</h3>
+              <p className="text-sm text-[#64748B] leading-relaxed">L'IA identifie tous les lots depuis le DPGF, RC et noms de fichiers. Badge de confiance pour chaque détection.</p>
+            </div>
+
+            {/* Small 2: Coffre-fort */}
+            <div
+              className="rounded-xl p-6 transition-all duration-300 hover:border-[#0EA5E9]/30"
+              style={{ background: '#0C1017', border: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: 'rgba(139,92,246,0.12)' }}>
+                <Shield size={18} style={{ color: '#8B5CF6' }} />
+              </div>
+              <h3 className="text-base font-semibold text-[#E2E8F0] mb-2" style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>Coffre-fort documents</h3>
+              <p className="text-sm text-[#64748B] leading-relaxed">Centralisez décennale, URSSAF, Kbis. Alerte avant expiration. Lié automatiquement à la checklist candidature.</p>
+            </div>
+
+            {/* Large 2: Mémoire technique */}
+            <div
+              className="lg:col-span-2 rounded-xl p-6 sm:p-8 transition-all duration-300 hover:border-[#0EA5E9]/30 group"
+              style={{ background: '#0C1017', border: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              <div className="flex items-start gap-4 mb-5">
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ background: 'rgba(14,165,233,0.12)' }}>
+                  <FileText size={18} style={{ color: '#0EA5E9' }} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-[#E2E8F0] mb-1" style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>Mémoire technique 5/5</h3>
+                  <p className="text-sm text-[#64748B] leading-relaxed">Claude Opus génère ~20 pages adaptées à vos références, votre équipe, et chaque critère de notation du marché.</p>
+                </div>
+              </div>
+              {/* Mini illustration */}
+              <div className="rounded-lg p-4 space-y-2" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                {['A — Présentation générale', 'B — Prestation & méthodologie', 'C — Planning & sécurité'].map((txt, i) => (
+                  <div key={i} className="flex items-center gap-3 text-xs">
+                    <div className="w-1.5 h-6 rounded-full" style={{ background: ['#0EA5E9', '#00D4AA', '#8B5CF6'][i] }} />
+                    <span className="text-[#94A3B8]">{txt}</span>
+                    <span className="ml-auto text-[10px] text-[#475569]">{['6 pages', '8 pages', '4 pages'][i]}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Small 3: Export */}
+            <div
+              className="rounded-xl p-6 transition-all duration-300 hover:border-[#0EA5E9]/30"
+              style={{ background: '#0C1017', border: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: 'rgba(245,158,11,0.12)' }}>
+                <Download size={18} style={{ color: '#F59E0B' }} />
+              </div>
+              <h3 className="text-base font-semibold text-[#E2E8F0] mb-2" style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>Export ZIP pro</h3>
+              <p className="text-sm text-[#64748B] leading-relaxed">Mémoire .docx, compliance Excel, dossier complet. Prêt à déposer en un clic sur la plateforme de l'acheteur.</p>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════════
+          HOW IT WORKS — 4 Tabs
+          ════════════════════════════════════════════════════════════════ */}
+      <section id="how" className="py-20 sm:py-28 px-4">
+        <div className="max-w-4xl mx-auto">
+          <h2
+            className="text-3xl sm:text-4xl font-bold text-center mb-4"
+            style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}
+          >
+            De l'analyse au dépôt en{' '}
+            <span style={{ background: 'linear-gradient(90deg, #0EA5E9, #00D4AA)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+              4 étapes
+            </span>
+          </h2>
+          <p className="text-center text-[#64748B] mb-12 max-w-lg mx-auto">
+            Uploadez, laissez l'IA travailler, déposez. C'est aussi simple que ça.
+          </p>
+
+          {/* Tabs */}
+          <div className="flex border-b border-white/[0.06] mb-8 overflow-x-auto">
+            {HOW_TABS.map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className="flex-1 min-w-[100px] py-3 px-4 text-sm font-medium transition-all bg-transparent border-none cursor-pointer whitespace-nowrap"
+                style={{
+                  color: activeTab === tab.id ? '#0EA5E9' : '#64748B',
+                  background: activeTab === tab.id ? 'rgba(14,165,233,0.08)' : 'transparent',
+                  borderBottom: activeTab === tab.id ? '2px solid #0EA5E9' : '2px solid transparent',
+                }}
+              >
+                {tab.num}. {tab.title}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab content */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+            <div>
+              <h3
+                className="text-xl font-semibold text-[#E2E8F0] mb-3"
+                style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}
+              >
+                {activeTabData.num}. {activeTabData.title}
+              </h3>
+              <p className="text-[#94A3B8] leading-relaxed text-sm">{activeTabData.desc}</p>
+            </div>
+            <div
+              className="rounded-xl p-5 space-y-3"
+              style={{ background: '#0C1017', border: '1px solid rgba(255,255,255,0.06)' }}
+            >
+              {activeTabData.mock.map((line, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm"
+                  style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.04)' }}
+                >
+                  <div className="w-2 h-2 rounded-full shrink-0" style={{ background: '#0EA5E9' }} />
+                  <span className="text-[#CBD5E1]">{line}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════════
+          STATS
+          ════════════════════════════════════════════════════════════════ */}
+      <section className="py-20 px-4" style={{ background: '#0A0E14' }}>
+        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+          {STATS.map(s => (
+            <div key={s.label}>
+              <div
+                className="text-4xl sm:text-5xl font-bold mb-2"
+                style={{ color: s.color, fontFamily: '"JetBrains Mono", monospace' }}
+              >
+                {s.value}
+              </div>
+              <div className="text-sm text-[#64748B]">{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════════
+          PRICING
+          ════════════════════════════════════════════════════════════════ */}
+      <section id="pricing" className="py-20 sm:py-28 px-4">
+        <div className="max-w-4xl mx-auto">
+          <h2
+            className="text-3xl sm:text-4xl font-bold text-center mb-4"
+            style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}
+          >
+            Des prix simples, un{' '}
+            <span style={{ background: 'linear-gradient(90deg, #0EA5E9, #00D4AA)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+              ROI immédiat
+            </span>
+          </h2>
+          <p className="text-center text-[#64748B] mb-12">
+            1 AO gratuit pour tester — Sans engagement
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {PLANS.map(plan => (
+              <div
+                key={plan.name}
+                className="rounded-2xl p-8 relative transition-all duration-300"
+                style={{
+                  background: '#0C1017',
+                  border: plan.popular ? '1px solid rgba(14,165,233,0.30)' : '1px solid rgba(255,255,255,0.06)',
+                  boxShadow: plan.popular ? '0 0 40px rgba(14,165,233,0.08)' : 'none',
+                }}
+              >
+                {plan.popular && (
+                  <div
+                    className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-xs font-semibold text-white"
+                    style={{ background: 'linear-gradient(135deg, #0EA5E9, #00D4AA)' }}
+                  >
+                    Populaire
+                  </div>
+                )}
+                <h3
+                  className="text-xl font-bold text-[#E2E8F0] mb-2"
+                  style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}
+                >
+                  {plan.name}
+                </h3>
+                <div className="flex items-baseline gap-1 mb-6">
+                  <span className="text-4xl font-bold text-white" style={{ fontFamily: '"JetBrains Mono", monospace' }}>{plan.price}€</span>
+                  <span className="text-sm text-[#64748B]">/mois</span>
+                </div>
+                <ul className="space-y-3 mb-8">
+                  {plan.features.map(f => (
+                    <li key={f} className="flex items-center gap-3 text-sm text-[#94A3B8]">
+                      <Check size={14} style={{ color: '#10B981' }} className="shrink-0" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  onClick={() => navigate('/register')}
+                  className="w-full py-3 rounded-xl text-sm font-semibold transition-all"
+                  style={plan.popular
+                    ? { background: '#0EA5E9', color: 'white', boxShadow: '0 0 30px rgba(14,165,233,0.3)' }
+                    : { background: 'transparent', color: '#CBD5E1', border: '1px solid rgba(255,255,255,0.15)' }
+                  }
+                  onMouseEnter={e => {
+                    if (plan.popular) e.currentTarget.style.boxShadow = '0 0 40px rgba(14,165,233,0.5)'
+                    else e.currentTarget.style.background = 'rgba(255,255,255,0.06)'
+                  }}
+                  onMouseLeave={e => {
+                    if (plan.popular) e.currentTarget.style.boxShadow = '0 0 30px rgba(14,165,233,0.3)'
+                    else e.currentTarget.style.background = 'transparent'
+                  }}
+                >
+                  Commencer
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════════
+          TESTIMONIALS
+          ════════════════════════════════════════════════════════════════ */}
+      <section className="py-20 sm:py-28 px-4" style={{ background: '#0A0E14' }}>
+        <div className="max-w-6xl mx-auto">
+          <h2
+            className="text-3xl sm:text-4xl font-bold text-center mb-14"
+            style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}
+          >
+            Ce qu'en disent nos utilisateurs
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {TESTIMONIALS.map((t, i) => (
+              <div
+                key={i}
+                className="rounded-xl p-6 transition-all duration-300 hover:border-white/[0.12]"
+                style={{
+                  background: 'rgba(255,255,255,0.03)',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                }}
+              >
+                <div className="flex gap-0.5 mb-4">
+                  {[0, 1, 2, 3, 4].map(s => (
+                    <Star key={s} size={14} fill="#F59E0B" stroke="none" />
+                  ))}
+                </div>
+                <p className="text-sm text-[#CBD5E1] leading-relaxed mb-5 italic">"{t.quote}"</p>
+                <div>
+                  <div className="text-sm font-semibold text-[#E2E8F0]">{t.name}</div>
+                  <div className="text-xs text-[#64748B]">{t.role} · {t.company}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════════
+          CTA FINAL
+          ════════════════════════════════════════════════════════════════ */}
+      <section className="py-24 sm:py-32 px-4 text-center relative overflow-hidden">
+        {/* Glow */}
+        <div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full pointer-events-none"
+          style={{ background: 'radial-gradient(circle, rgba(14,165,233,0.08) 0%, transparent 60%)' }}
+        />
+        <div className="relative z-10">
+          <h2
+            className="text-3xl sm:text-5xl font-bold mb-6"
+            style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}
+          >
+            Prêt à gagner plus de{' '}
+            <span style={{ background: 'linear-gradient(90deg, #0EA5E9, #00D4AA)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+              marchés
+            </span>
+            {' '}?
+          </h2>
+          <p className="text-[#64748B] mb-10 max-w-md mx-auto">
+            Commencez gratuitement avec 1 AO complet. Aucune carte bancaire requise.
+          </p>
+          <button
+            onClick={() => navigate('/register')}
+            className="px-10 py-4 rounded-xl text-base font-semibold text-white transition-all inline-flex items-center gap-2"
+            style={{
+              background: '#0EA5E9',
+              boxShadow: '0 0 40px rgba(14,165,233,0.35)',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 0 60px rgba(14,165,233,0.55)' }}
+            onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 0 40px rgba(14,165,233,0.35)' }}
+          >
+            Démarrer gratuitement <ArrowRight size={18} />
+          </button>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════════════
+          FOOTER
+          ════════════════════════════════════════════════════════════════ */}
+      <footer className="border-t border-white/[0.06] py-16 px-4" style={{ background: '#050608' }}>
+        <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-10">
+          <div>
+            <h4 className="text-sm font-semibold text-[#E2E8F0] mb-4" style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>Produit</h4>
+            <ul className="space-y-2.5 text-sm text-[#64748B]">
+              <li><button onClick={() => scrollTo('features')} className="hover:text-white transition-colors bg-transparent border-none cursor-pointer text-[#64748B] text-sm p-0">Fonctionnalités</button></li>
+              <li><button onClick={() => scrollTo('pricing')} className="hover:text-white transition-colors bg-transparent border-none cursor-pointer text-[#64748B] text-sm p-0">Tarifs</button></li>
+              <li><button onClick={() => scrollTo('how')} className="hover:text-white transition-colors bg-transparent border-none cursor-pointer text-[#64748B] text-sm p-0">Comment ça marche</button></li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-[#E2E8F0] mb-4" style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>Ressources</h4>
+            <ul className="space-y-2.5 text-sm text-[#64748B]">
+              <li>Documentation</li>
+              <li>Blog</li>
+              <li>Changelog</li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-[#E2E8F0] mb-4" style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>Légal</h4>
+            <ul className="space-y-2.5 text-sm text-[#64748B]">
+              <li>Mentions légales</li>
+              <li>CGU</li>
+              <li>Politique de confidentialité</li>
+            </ul>
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-[#E2E8F0] mb-4" style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>Contact</h4>
+            <ul className="space-y-2.5 text-sm text-[#64748B]">
+              <li>contact@synorix.fr</li>
+              <li>Support</li>
+            </ul>
+          </div>
+        </div>
+        <div className="max-w-6xl mx-auto mt-12 pt-6 border-t border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #0EA5E9, #00D4AA)' }}>
+              <span className="text-white font-black text-[10px]">S</span>
+            </div>
+            <span className="text-sm text-[#475569]">Synorix</span>
+          </div>
+          <span className="text-xs text-[#334155]">© 2026 Synorix. Tous droits réservés.</span>
         </div>
       </footer>
     </div>

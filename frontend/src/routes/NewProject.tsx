@@ -29,7 +29,7 @@ function FieldGroup({ label, hint, error, children }: {
       </label>
       {children}
       {error && (
-        <p className="text-xs flex items-center gap-1" style={{ color: '#F87171' }}>
+        <p className="text-xs flex items-center gap-1 text-ds-danger-light">
           {error}
         </p>
       )}
@@ -76,22 +76,22 @@ export default function NewProject() {
 
       <div
         className="glass-card overflow-hidden"
-        style={{ boxShadow: '0 0 60px rgba(59,130,246,0.06), 0 24px 48px rgba(0,0,0,0.40)' }}
+        style={{ boxShadow: '0 0 60px rgba(14,165,233,0.06), 0 24px 48px rgba(0,0,0,0.40)' }}
       >
         {/* Card header */}
         <div
           className="px-8 pt-8 pb-6"
-          style={{ borderBottom: '1px solid rgba(59,130,246,0.08)' }}
+          style={{ borderBottom: '1px solid rgba(14,165,233,0.08)' }}
         >
           <div className="flex items-center gap-3 mb-3">
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
               style={{
-                background: 'linear-gradient(135deg, rgba(59,130,246,0.15), rgba(96,165,250,0.10))',
-                border: '1px solid rgba(59,130,246,0.20)',
+                background: 'linear-gradient(135deg, rgba(14,165,233,0.15), rgba(0,212,170,0.10))',
+                border: '1px solid rgba(14,165,233,0.20)',
               }}
             >
-              <Briefcase size={18} style={{ color: '#3B82F6' }} />
+              <Briefcase size={18} className="text-ds-blue" />
             </div>
             <div>
               <h1 className="text-ds-text leading-tight">Nouvel appel d&apos;offres</h1>
@@ -122,8 +122,7 @@ export default function NewProject() {
               <div className="relative">
                 <User
                   size={14}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                  style={{ color: '#475569' }}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-ds-text-3"
                 />
                 <input
                   {...register('maitre_ouvrage')}
@@ -140,8 +139,7 @@ export default function NewProject() {
               <div className="relative">
                 <Calendar
                   size={14}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-                  style={{ color: '#475569' }}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-ds-text-3"
                 />
                 <input
                   {...register('deadline')}
@@ -153,8 +151,8 @@ export default function NewProject() {
 
             {apiError && (
               <div
-                className="flex items-start gap-2 p-3 rounded-lg text-sm"
-                style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.25)', color: '#F87171' }}
+                className="flex items-start gap-2 p-3 rounded-lg text-sm text-ds-danger-light"
+                style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.25)' }}
               >
                 <AlertCircle size={16} className="shrink-0 mt-0.5" />
                 <span>{apiError}</span>

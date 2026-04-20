@@ -1,16 +1,23 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Layers, CheckCircle2, AlertCircle, Zap, Plus, X, ShieldCheck, AlertTriangle, HelpCircle, Users, Loader2 } from 'lucide-react'
+import {
+  Layers, CheckCircle2, AlertCircle, Zap, Plus, X,
+  ShieldCheck, AlertTriangle, Loader2,
+  Sparkles, FileArchive,
+} from 'lucide-react'
 import axios from 'axios'
 import { api } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
-import { AnalysisProgress } from '@/components/project/AnalysisProgress'
+import { PipelineProgress } from '@/components/project/PipelineProgress'
 import SubscriptionWall from '@/components/common/SubscriptionWall'
 import LoadingProgress from '@/components/common/LoadingProgress'
 import type { Project, LotOption } from '@/types'
 import { cn } from '@/lib/utils'
+import { AiTipsBlock, type TipData } from '@/components/common/AiTip'
+
+const F = "'DM Sans', sans-serif"
 
 interface Props { project: Project }
 
@@ -18,29 +25,24 @@ interface Props { project: Project }
 
 function ConfidenceBadge({ confidence }: { confidence?: number }) {
   if (confidence === undefined) return null
+  const pct = Math.round(confidence)
   if (confidence >= 80) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full transition-all duration-200"
-        style={{ background: 'rgba(16,185,129,0.12)', color: '#10B981', border: '1px solid rgba(16,185,129,0.25)', boxShadow: '0 0 8px rgba(16,185,129,0.20)' }}>
-        <ShieldCheck size={10} />
-        Détection fiable
+      <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full" style={{ color: '#059669' }}>
+        <ShieldCheck size={11} /> FIABLE {pct}%
       </span>
     )
   }
   if (confidence >= 50) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full transition-all duration-200"
-        style={{ background: 'rgba(245,158,11,0.12)', color: '#F59E0B', border: '1px solid rgba(245,158,11,0.25)', boxShadow: '0 0 8px rgba(245,158,11,0.18)' }}>
-        <AlertTriangle size={10} />
-        À vérifier
+      <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full" style={{ color: '#D97706' }}>
+        <Zap size={11} /> PROBABLE {pct}%
       </span>
     )
   }
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full transition-all duration-200"
-      style={{ background: 'rgba(239,68,68,0.12)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.25)', boxShadow: '0 0 8px rgba(239,68,68,0.18)' }}>
-      <HelpCircle size={10} />
-      Incertain
+    <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full" style={{ color: '#EF4444', background: 'rgba(239,68,68,0.08)' }}>
+      <AlertCircle size={11} /> INCERTAIN {pct}%
     </span>
   )
 }
@@ -54,13 +56,11 @@ const SOURCE_LABELS: Record<string, string> = {
 }
 
 function SourcesIndicator({ sources }: { sources?: string[] }) {
-  if (!sources || sources.length <= 1) return null
+  if (!sources || sources.length === 0) return null
   const labels = sources.map(s => SOURCE_LABELS[s] ?? s)
   return (
-    <span className="inline-flex items-center gap-1 text-xs"
-      style={{ color: '#64748B' }}>
-      <Users size={10} />
-      Confirmé par {sources.length} sources ({labels.join(', ')})
+    <span className="text-xs" style={{ color: '#94A3B8' }}>
+      {labels.join('  ')}
     </span>
   )
 }
@@ -72,72 +72,79 @@ interface LotCardProps {
   selected: boolean
   onSelect: () => void
   onDelete?: () => void
-  icon?: React.ReactNode
+  index?: number
 }
 
-function LotCard({ lot, selected, onSelect, onDelete, icon }: LotCardProps) {
+function LotCard({ lot, selected, onSelect, onDelete, index }: LotCardProps) {
+  const lotNum = index !== undefined ? String(index).padStart(2, '0') : null
+
   return (
     <div className="group relative">
       <button
         type="button"
         onClick={onSelect}
         className={cn(
-          'w-full flex items-start gap-3 p-4 rounded-xl border text-left transition-all duration-200',
+          'w-full flex items-center gap-4 p-5 rounded-xl text-left transition-all duration-200 cursor-pointer',
           selected
-            ? 'border-ds-cyan'
-            : 'border-white/10 hover:border-white/20 hover:bg-white/[0.02]',
+            ? 'shadow-sm'
+            : 'hover:bg-[#FAFBFC]',
         )}
-        style={selected ? { borderColor: '#3B82F6', background: 'rgba(59,130,246,0.08)' } : undefined}
+        style={{
+          background: selected ? 'rgba(14,165,233,0.04)' : '#FFFFFF',
+          border: selected ? '2px solid #0EA5E9' : '1px solid #F1F5F9',
+        }}
       >
-        {/* Radio indicator */}
+        {/* Radio */}
         <div
-          className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-0.5 transition-all"
+          className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all"
           style={
             selected
-              ? { borderColor: '#3B82F6', background: '#3B82F6' }
-              : { borderColor: 'rgba(255,255,255,0.25)' }
+              ? { borderColor: '#0EA5E9', background: '#0EA5E9' }
+              : { borderColor: '#CBD5E1' }
           }
         >
           {selected && <div className="w-2 h-2 rounded-full bg-white" />}
         </div>
 
-        {icon && <span className="shrink-0 mt-0.5" style={{ color: selected ? '#3B82F6' : '#64748B' }}>{icon}</span>}
-
-        <div className="flex-1 min-w-0 space-y-1.5">
-          <span className={cn('text-sm font-medium block', selected ? 'text-ds-text' : 'text-ds-text-2')}>
-            {lot.nom}
-          </span>
-          <div className="flex flex-wrap items-center gap-2">
-            <ConfidenceBadge confidence={lot.confidence} />
-            <SourcesIndicator sources={lot.sources} />
-            {/* AMÉLIORATION 7: tranches badge */}
-            {lot.tranches && lot.tranches.length > 0 && (
-              <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
-                title={lot.tranches.join('\n')}
-                style={{ background: 'rgba(139,92,246,0.12)', color: '#A78BFA', border: '1px solid rgba(139,92,246,0.25)', cursor: 'help' }}>
-                {lot.tranches.length} tranche{lot.tranches.length > 1 ? 's' : ''}
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            {lotNum && (
+              <span className="text-sm font-bold uppercase tracking-wide" style={{ color: '#0F172A' }}>
+                LOT {lotNum}
               </span>
             )}
             {lot._manual && (
-              <span className="text-xs px-1.5 py-0.5 rounded"
-                style={{ background: 'rgba(99,102,241,0.12)', color: '#818CF8', border: '1px solid rgba(99,102,241,0.25)' }}>
-                Ajouté manuellement
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ color: '#8B5CF6', background: 'rgba(139,92,246,0.08)' }}>
+                Manuel
               </span>
             )}
           </div>
+          <p className="text-base mt-0.5" style={{ color: '#64748B' }}>{lot.nom}</p>
+          {lot.tranches && lot.tranches.length > 0 && (
+            <span className="inline-flex items-center gap-1 text-xs font-medium mt-1 px-2 py-0.5 rounded-full" style={{ color: '#8B5CF6', background: 'rgba(139,92,246,0.08)' }} title={lot.tranches.join('\n')}>
+              {lot.tranches.length} tranche{lot.tranches.length > 1 ? 's' : ''}
+            </span>
+          )}
+        </div>
+
+        {/* Right side: confidence + sources */}
+        <div className="shrink-0 text-right space-y-1">
+          <ConfidenceBadge confidence={lot.confidence} />
+          <SourcesIndicator sources={lot.sources} />
         </div>
       </button>
 
-      {/* Delete button — visible on hover */}
+      {/* Delete */}
       {onDelete && (
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onDelete() }}
-          className="absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200"
-          style={{ background: 'rgba(239,68,68,0.15)', color: '#EF4444' }}
+          className="absolute top-3 right-3 w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
+          style={{ color: '#EF4444', background: 'rgba(239,68,68,0.06)' }}
           title="Supprimer ce lot"
         >
-          <X size={12} />
+          <X size={13} />
         </button>
       )}
     </div>
@@ -169,47 +176,36 @@ function AddLotForm({ onAdd, onCancel }: AddLotFormProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex items-end gap-2 p-3 rounded-xl border"
-      style={{ background: 'rgba(99,102,241,0.05)', borderColor: 'rgba(99,102,241,0.20)' }}
+      className="flex items-end gap-3 p-4 rounded-xl"
+      style={{ background: '#F8FAFC', border: '1px solid #E2E8F0' }}
     >
       <div className="flex flex-col gap-1">
-        <label className="text-xs text-ds-text-2">N° lot</label>
+        <label className="text-xs font-medium" style={{ color: '#64748B' }}>N° lot</label>
         <input
-          type="number"
-          min={1}
-          max={30}
-          placeholder="1"
-          value={num}
-          onChange={(e) => setNum(e.target.value)}
-          className="w-16 text-sm rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 text-ds-text"
-          style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}
+          type="number" min={1} max={30} placeholder="1"
+          value={num} onChange={(e) => setNum(e.target.value)}
+          className="w-16 text-sm rounded-lg px-2.5 py-2 outline-none"
+          style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', color: '#0F172A' }}
           required
         />
       </div>
       <div className="flex flex-col gap-1 flex-1">
-        <label className="text-xs text-ds-text-2">Intitulé (optionnel)</label>
+        <label className="text-xs font-medium" style={{ color: '#64748B' }}>Intitulé (optionnel)</label>
         <input
-          type="text"
-          placeholder="ex : Gros œuvre"
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-          maxLength={60}
-          className="text-sm rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 text-ds-text"
-          style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}
+          type="text" placeholder="ex : Gros œuvre"
+          value={label} onChange={(e) => setLabel(e.target.value)} maxLength={60}
+          className="text-sm rounded-lg px-2.5 py-2 outline-none"
+          style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', color: '#0F172A' }}
         />
       </div>
-      <button
-        type="submit"
-        disabled={!num}
-        className="btn-primary px-3 py-1.5 text-sm shrink-0"
-      >
+      <button type="submit" disabled={!num}
+        className="px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors disabled:opacity-40 shrink-0"
+        style={{ background: '#0EA5E9' }}>
         Ajouter
       </button>
-      <button
-        type="button"
-        onClick={onCancel}
-        className="px-3 py-1.5 text-sm shrink-0 text-ds-text-2 hover:text-ds-text transition-colors"
-      >
+      <button type="button" onClick={onCancel}
+        className="px-3 py-2 text-sm shrink-0 transition-colors"
+        style={{ color: '#64748B' }}>
         Annuler
       </button>
     </form>
@@ -227,7 +223,6 @@ export default function StepLotSelection({ project }: Props) {
   const [waitingForExtraction, setWaitingForExtraction] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  // Check if backend is still extracting text before attempting lot detection
   const { data: procStatus } = useQuery({
     queryKey: ['processing-status', project.id],
     queryFn: async () => {
@@ -240,12 +235,10 @@ export default function StepLotSelection({ project }: Props) {
 
   const isBackendBusy = procStatus?.status === 'extracting_text' || procStatus?.status === 'extracting_zip'
 
-  // Poll while backend is still processing
   useEffect(() => {
     if (!isBackendBusy) {
       if (waitingForExtraction) {
         setWaitingForExtraction(false)
-        // Refetch lots now that extraction is done
         queryClient.invalidateQueries({ queryKey: ['projects', project.id, 'lots'] })
       }
       if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
@@ -277,17 +270,14 @@ export default function StepLotSelection({ project }: Props) {
   const [detectLabel, setDetectLabel] = useState('Détection des lots en cours...')
   const detectPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const detectCrawlRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const detectDisplayRef = useRef(0) // tracks displayed value for crawl logic
-  const detectDoneRef = useRef(false) // permanent guard — once done, never re-trigger
+  const detectDisplayRef = useRef(0)
+  const detectDoneRef = useRef(false)
 
-  // Fetch lots — fires immediately on mount, triggers detection on backend cache miss
   const { data: lotsData, isLoading: lotsLoading } = useQuery({
     queryKey: ['projects', project.id, 'lots'],
     queryFn: async () => {
       const { data } = await api.get<{ lots?: LotOption[]; count?: number; cached?: boolean; status?: string; progress?: number; detail?: string }>(`/projects/${project.id}/lots`)
-      // Backend returned "detecting_lots" → start polling
       if (data.status === 'detecting_lots') {
-        // Use ref (not state) to avoid stale closure re-triggering after done
         if (!detectDoneRef.current && !detectPollRef.current) {
           setDetectPhase('detecting')
           setDetectPct(0)
@@ -296,21 +286,17 @@ export default function StepLotSelection({ project }: Props) {
           startDetectCrawl()
           startDetectPoll()
         }
-        return null // no lots yet
+        return null
       }
-      // Got cached or freshly computed lots
-      // Refresh project data for stepper — use exact:true to avoid invalidating THIS query
       queryClient.invalidateQueries({ queryKey: ['projects', project.id], exact: true })
       return data as { lots: LotOption[]; count: number }
     },
-    // No enabled gate — fire immediately. Backend handles "still extracting" gracefully.
   })
 
-  // Slow crawl: +0.3%/200ms while waiting for first real backend value
   function startDetectCrawl() {
     if (detectCrawlRef.current) return
     detectCrawlRef.current = setInterval(() => {
-      detectDisplayRef.current = Math.min(detectDisplayRef.current + 0.3, 20) // cap at 20% before real data
+      detectDisplayRef.current = Math.min(detectDisplayRef.current + 0.3, 20)
       setDetectPct(detectDisplayRef.current)
     }, 200)
   }
@@ -322,16 +308,12 @@ export default function StepLotSelection({ project }: Props) {
   function startDetectPoll() {
     if (detectPollRef.current) return
     detectPollRef.current = setInterval(async () => {
-      // Permanent guard — once done, never process another tick
       if (detectDoneRef.current) return
-
       try {
         const { data } = await api.get<{ status: string; progress: number; detail: string }>(
           `/projects/${project.id}/processing-status`
         )
-
-        if (detectDoneRef.current) return // re-check after await
-
+        if (detectDoneRef.current) return
         if (data.status === 'detecting_lots') {
           if (data.progress > detectDisplayRef.current) {
             stopDetectCrawl()
@@ -340,35 +322,22 @@ export default function StepLotSelection({ project }: Props) {
           }
           if (data.detail) setDetectLabel(data.detail)
         } else if (data.status === 'ready' || data.status === 'error') {
-          // Mark done FIRST — prevents any re-trigger
           detectDoneRef.current = true
-
-          // Stop ALL intervals BEFORE changing any state
           stopDetectCrawl()
           if (detectPollRef.current) { clearInterval(detectPollRef.current); detectPollRef.current = null }
-
-          if (data.status === 'error') {
-            setDetectPhase('idle')
-            setDetectPct(0)
-            return
-          }
-
-          // Show 100% briefly, then fetch lots
+          if (data.status === 'error') { setDetectPhase('idle'); setDetectPct(0); return }
           setDetectPct(100)
           const { data: lotsResult } = await api.get<{ lots: LotOption[]; count: number }>(`/projects/${project.id}/lots`)
           const count = lotsResult?.lots?.filter((l: LotOption) => l.id !== '!!')?.length ?? 0
           setDetectLabel(count > 0 ? `${count} lot${count > 1 ? 's' : ''} détecté${count > 1 ? 's' : ''} !` : 'Marché unique détecté')
           setDetectPhase('done')
           queryClient.invalidateQueries({ queryKey: ['projects', project.id, 'lots'] })
-
-          // Dismiss after 1.2s — doneRef stays true, overlay never comes back
           setTimeout(() => { setDetectPhase('idle'); setDetectPct(0) }, 1200)
         }
       } catch { /* ignore */ }
     }, 1000)
   }
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (detectPollRef.current) { clearInterval(detectPollRef.current); detectPollRef.current = null }
@@ -381,24 +350,32 @@ export default function StepLotSelection({ project }: Props) {
   const [lots, setLots] = useState<(LotOption & { _manual?: boolean })[]>([])
   const [lotsInitialized, setLotsInitialized] = useState(false)
 
-  // Sync lots state once detection completes
   if (!lotsInitialized && !lotsLoading && allDetected.length > 0) {
     setLots(allDetected.filter(l => l.id !== '!!'))
     setLotsInitialized(true)
   }
 
-  const [selectedId, setSelectedId] = useState<string>(
-    project.selected_lot ?? 'all'
-  )
+  const [selectedId, setSelectedId] = useState<string>(project.selected_lot ?? 'all')
   const [showAddForm, setShowAddForm] = useState(false)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
-  const [preparation, setPreparation] = useState<{ extracted: number; total: number } | null>(null)
+  const [, setPreparation] = useState<{ extracted: number; total: number } | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
+  const [dismissedTips, setDismissedTips] = useState<Set<string>>(new Set())
+
   const hasMultiLots = lots.length >= 2
-  const highConfidenceCount = lots.filter(l => (l.confidence ?? 0) >= 80).length
+
+  const lotTips = useMemo<TipData[]>(() => {
+    const tips: TipData[] = []
+    const lowConfidence = lots.filter(l => (l.confidence ?? 100) < 50)
+    if (lowConfidence.length > 0) {
+      tips.push({ id: 'lots-low-conf', variant: 'warning', text: `Certains lots ont une confiance faible — verifiez les noms et numeros.` })
+    }
+    tips.push({ id: 'lots-info', variant: 'info', text: `Verifiez que tous les lots qui vous interessent sont bien detectes. Vous pouvez en ajouter manuellement.` })
+    return tips
+  }, [lots])
   const selectedName = lots.find(l => l.id === selectedId)?.nom ?? null
 
   const handleDelete = (lotId: string) => {
@@ -430,27 +407,17 @@ export default function StepLotSelection({ project }: Props) {
 
   const handleLaunch = async () => {
     const plan = organization?.plan ?? 'free'
-    if (plan === 'free') {
-      setShowPaywall(true)
-      return
-    }
+    if (plan === 'free') { setShowPaywall(true); return }
     setAnalysisError(null)
-
-    // Create abort controller for this analysis run
     const abort = new AbortController()
     abortRef.current = abort
-
     try {
       await selectLot({
         lot_id: selectedId === 'all' ? null : selectedId,
         lot_name: selectedId === 'all' ? null : selectedName,
       })
       queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
-
-      // Show overlay immediately
       setIsAnalyzing(true)
-
-      // ── Wait for ALL documents to have extracted_text (phase 2) ──────
       let ready = false
       while (!ready) {
         if (abort.signal.aborted) return
@@ -458,26 +425,15 @@ export default function StepLotSelection({ project }: Props) {
           `/projects/${project.id}/extraction-status`,
         )
         setPreparation({ extracted: data.extracted, total: data.total })
-        if (data.ready) {
-          ready = true
-        } else {
-          await new Promise((r) => setTimeout(r, 2000))
-        }
+        if (data.ready) { ready = true } else { await new Promise((r) => setTimeout(r, 2000)) }
       }
       if (abort.signal.aborted) return
-      // Clear preparation state — switch overlay to analysis animation
       setPreparation(null)
-
-      await api.post(`/projects/${project.id}/analyze`, {}, {
-        timeout: 420_000,
-        signal: abort.signal,
-      })
-
+      await api.post(`/projects/${project.id}/analyze`, {}, { timeout: 420_000, signal: abort.signal })
       if (abort.signal.aborted) return
       queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
-      setIsSuccess(true)
     } catch (err) {
-      if (abort.signal.aborted) return  // cancelled — already handled
+      if (abort.signal.aborted) return
       setIsAnalyzing(false)
       setIsSuccess(false)
       setPreparation(null)
@@ -488,192 +444,205 @@ export default function StepLotSelection({ project }: Props) {
     }
   }
 
+  /* ════════════════════════════════════════════════════════════════
+     JSX
+     ════════════════════════════════════════════════════════════════ */
   return (
     <>
       <SubscriptionWall open={showPaywall} onClose={() => setShowPaywall(false)} feature="analysis" />
 
-      <AnalysisProgress
-        isAnalyzing={isAnalyzing}
-        isSuccess={isSuccess}
-        onComplete={() => navigate(`/projects/${project.id}/analysis`)}
+      <PipelineProgress
+        projectId={project.id}
+        active={isAnalyzing}
+        onComplete={() => {
+          setIsAnalyzing(false)
+          setIsSuccess(true)
+          navigate(`/projects/${project.id}/analysis`)
+        }}
         onCancel={handleCancel}
-        preparation={preparation}
+        subtitle="Analyse IA des documents DCE..."
       />
 
-      {/* Lot detection progress overlay */}
+      {/* Lot detection overlay */}
       {detectPhase !== 'idle' && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(6,9,15,0.95)', backdropFilter: 'blur(4px)' }}>
-          <div className="glass-card p-8 max-w-sm">
-            <LoadingProgress
-              progress={Math.round(detectPct)}
-              label={detectLabel}
-              variant="upload"
-            />
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(15,23,42,0.60)', backdropFilter: 'blur(4px)' }}>
+          <div className="rounded-2xl p-8 max-w-sm w-full mx-4" style={{ background: '#FFFFFF', border: '1px solid #F1F5F9', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
+            <LoadingProgress progress={Math.round(detectPct)} label={detectLabel} variant="upload" />
           </div>
         </div>,
         document.body,
       )}
 
-      <div className="glass-card p-6 space-y-6">
+      <div style={{ fontFamily: F }}>
+
+        {/* Backend busy */}
         {isBackendBusy && (
-          <div className="flex items-center gap-3 p-4 rounded-xl" style={{ background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.20)' }}>
-            <Loader2 size={18} className="animate-spin" style={{ color: '#3B82F6' }} />
+          <div className="flex items-center gap-3 p-4 rounded-xl mb-4" style={{ background: 'rgba(14,165,233,0.05)', border: '1px solid rgba(14,165,233,0.12)' }}>
+            <Loader2 size={18} className="animate-spin" style={{ color: '#0EA5E9' }} />
             <div>
-              <span className="text-sm block" style={{ color: '#60A5FA' }}>
-                Extraction des documents en cours...
-              </span>
-              {processingDetail && (
-                <span className="text-xs block mt-0.5" style={{ color: '#8B95A9', fontFamily: '"DM Sans", system-ui, sans-serif' }}>
-                  {processingDetail}
-                </span>
-              )}
+              <span className="text-sm font-medium block" style={{ color: '#0EA5E9' }}>Extraction des documents en cours...</span>
+              {processingDetail && <span className="text-xs block mt-0.5" style={{ color: '#94A3B8' }}>{processingDetail}</span>}
             </div>
           </div>
         )}
 
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold text-ds-text">Étape 2 — Sélection du lot</h2>
-            <p className="text-sm text-ds-text-2 mt-1">
-              {hasMultiLots
-                ? 'Plusieurs lots ont été détectés. Sélectionnez le lot pour lequel vous répondez.'
-                : lots.length === 1
-                  ? 'Un seul lot a été détecté. Confirmez ou ajoutez des lots manuellement.'
-                  : "Cet appel d'offres semble être mono-lot. Vous pouvez passer cette étape ou ajouter les lots manuellement."}
-            </p>
+        {/* ── TITLE + BADGE ───────────────────────────────── */}
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h2 className="text-2xl font-bold" style={{ color: '#0F172A' }}>
+              Sélection du lot à analyser
+            </h2>
+            {lots.length > 0 && (
+              <span className="text-xs font-bold text-white px-3 py-1 rounded-full" style={{ background: '#0EA5E9' }}>
+                {lots.length} lot{lots.length > 1 ? 's' : ''} détecté{lots.length > 1 ? 's' : ''}
+              </span>
+            )}
           </div>
-
-          {/* High-confidence counter */}
-          {lots.length > 0 && (
-            <div
-              className="shrink-0 text-xs font-medium px-3 py-1.5 rounded-full"
-              style={{ background: 'rgba(59,130,246,0.10)', color: '#60A5FA', border: '1px solid rgba(59,130,246,0.20)' }}
-            >
-              {highConfidenceCount}/{lots.length} fiable{highConfidenceCount > 1 ? 's' : ''}
-            </div>
-          )}
+          <div className="flex items-center gap-1.5 text-sm" style={{ color: '#94A3B8' }}>
+            <FileArchive size={14} />
+            Source : {project.name}
+          </div>
         </div>
 
-        {/* AMÉLIORATION 3: password-protected Excel warning */}
+        {/* ── ACTION REQUISE ──────────────────────────────── */}
+        <div className="flex items-start gap-3 p-4 rounded-xl mb-5" style={{ background: 'rgba(14,165,233,0.04)', border: '1px solid rgba(14,165,233,0.12)' }}>
+          <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(14,165,233,0.10)' }}>
+            <Zap size={16} style={{ color: '#0EA5E9' }} />
+          </div>
+          <div>
+            <p className="text-sm font-semibold" style={{ color: '#0284C7' }}>Action requise</p>
+            <p className="text-sm mt-0.5" style={{ color: '#64748B' }}>
+              {hasMultiLots
+                ? "L'intelligence artificielle a segmenté les documents du marché. Sélectionnez le lot sur lequel votre entreprise va répondre pour lancer l'analyse de conformité technique."
+                : lots.length === 1
+                  ? 'Un seul lot a été détecté. Confirmez ou ajoutez des lots manuellement.'
+                  : "Cet appel d'offres semble être mono-lot. Vous pouvez lancer l'analyse ou ajouter les lots manuellement."}
+            </p>
+          </div>
+        </div>
+
+        {/* AiTips */}
+        <div className="mb-5">
+          <AiTipsBlock tips={lotTips} dismissed={dismissedTips} onDismiss={(id) => setDismissedTips((s) => new Set(s).add(id))} />
+        </div>
+
+        {/* Excel error */}
         {errorLots.length > 0 && (
-          <div className="flex items-start gap-3 p-3 rounded-lg"
-            style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)' }}>
+          <div className="flex items-start gap-3 p-4 rounded-xl mb-5" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)' }}>
             <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: '#F59E0B' }} />
             <div>
-              <p className="text-sm font-medium" style={{ color: '#F59E0B' }}>Fichier(s) Excel protégé(s) par mot de passe</p>
-              {errorLots.map(l => (
-                <p key={l.id} className="text-xs mt-0.5" style={{ color: '#FCD34D' }}>{l.nom}</p>
-              ))}
+              <p className="text-sm font-semibold" style={{ color: '#D97706' }}>Fichier(s) Excel protégé(s) par mot de passe</p>
+              {errorLots.map(l => <p key={l.id} className="text-xs mt-0.5" style={{ color: '#D97706' }}>{l.nom}</p>)}
             </div>
           </div>
         )}
 
-        {/* Lot list */}
+        {/* ── LOT LIST ────────────────────────────────────── */}
         {lots.length > 0 ? (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {/* All lots option */}
             <LotCard
-              lot={{ id: 'all', nom: "Tous les lots — Analyser l'ensemble du DCE" }}
+              lot={{ id: 'all', nom: "Analyser l'ensemble du DCE (tous les lots)" }}
               selected={selectedId === 'all'}
               onSelect={() => setSelectedId('all')}
-              icon={<Layers size={18} />}
             />
-            {lots.map((lot) => (
+            {lots.map((lot, i) => (
               <LotCard
                 key={lot.id}
                 lot={lot}
                 selected={selectedId === lot.id}
                 onSelect={() => setSelectedId(lot.id)}
                 onDelete={() => handleDelete(lot.id)}
+                index={i + 1}
               />
             ))}
           </div>
         ) : !lotsInitialized && (lotsLoading || detectPhase === 'detecting' || isBackendBusy) ? (
-          /* Still loading / detecting — don't show "Marché unique" yet */
-          <div
-            className="flex items-center gap-3 p-4 rounded-xl border"
-            style={{ background: 'rgba(59,130,246,0.06)', borderColor: 'rgba(59,130,246,0.20)' }}
-          >
-            <Loader2 size={20} className="animate-spin" style={{ color: '#3B82F6' }} />
+          <div className="flex items-center gap-3 p-5 rounded-xl" style={{ background: 'rgba(14,165,233,0.04)', border: '1px solid rgba(14,165,233,0.12)' }}>
+            <Loader2 size={20} className="animate-spin" style={{ color: '#0EA5E9' }} />
             <div>
-              <p className="text-sm font-medium text-ds-text">Détection des lots en cours...</p>
-              <p className="text-xs text-ds-text-2 mt-0.5">
-                Analyse des documents du DCE.
-              </p>
+              <p className="text-sm font-semibold" style={{ color: '#0F172A' }}>Détection des lots en cours...</p>
+              <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>Analyse des documents du DCE.</p>
             </div>
           </div>
         ) : (
-          /* Detection done, genuinely no lots found */
-          <div
-            className="flex items-center gap-3 p-4 rounded-xl border"
-            style={{ background: 'rgba(59,130,246,0.06)', borderColor: 'rgba(59,130,246,0.20)' }}
-          >
-            <Layers size={20} style={{ color: '#3B82F6' }} />
+          <div className="flex items-center gap-3 p-5 rounded-xl" style={{ background: '#F8FAFC', border: '1px solid #F1F5F9' }}>
+            <Layers size={20} style={{ color: '#0EA5E9' }} />
             <div>
-              <p className="text-sm font-medium text-ds-text">Marché unique (pas de lots)</p>
-              <p className="text-xs text-ds-text-2 mt-0.5">
-                L'IA analysera l'intégralité du DCE sans filtre par lot.
-              </p>
+              <p className="text-sm font-semibold" style={{ color: '#0F172A' }}>Marché unique (pas de lots)</p>
+              <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>L&apos;IA analysera l&apos;intégralité du DCE sans filtre par lot.</p>
             </div>
           </div>
         )}
 
-        {/* Add lot manually */}
+        {/* Add lot */}
         {showAddForm ? (
-          <AddLotForm onAdd={handleAddLot} onCancel={() => setShowAddForm(false)} />
+          <div className="mt-4">
+            <AddLotForm onAdd={handleAddLot} onCancel={() => setShowAddForm(false)} />
+          </div>
         ) : (
           <button
             type="button"
             onClick={() => setShowAddForm(true)}
-            className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed text-sm transition-all duration-200 hover:bg-white/[0.02]"
-            style={{ borderColor: 'rgba(96,165,250,0.30)', color: '#60A5FA' }}
+            className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed text-sm font-medium mt-4 transition-colors"
+            style={{ borderColor: '#E2E8F0', color: '#94A3B8' }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#CBD5E1'; e.currentTarget.style.color = '#64748B'; e.currentTarget.style.background = '#FAFBFC' }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.color = '#94A3B8'; e.currentTarget.style.background = 'transparent' }}
           >
             <Plus size={16} />
             Ajouter un lot manuellement
           </button>
         )}
 
-        {/* Selected lot recap */}
-        {selectedId !== 'all' && selectedName && (
-          <div
-            className="flex items-center gap-2 p-3 rounded-lg text-sm"
-            style={{ background: 'rgba(96,165,250,0.08)', border: '1px solid rgba(96,165,250,0.20)' }}
-          >
-            <CheckCircle2 size={15} style={{ color: '#60A5FA' }} />
-            <span style={{ color: '#60A5FA' }}>
-              Lot sélectionné : <strong>{selectedName}</strong>
-            </span>
-          </div>
-        )}
-
         {/* Error */}
         {analysisError && (
-          <div
-            className="flex items-start gap-2 p-3 rounded-lg text-sm"
-            style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.25)', color: '#F87171' }}
-          >
+          <div className="flex items-start gap-2 p-4 rounded-xl text-sm mt-4" style={{ color: '#EF4444', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)' }}>
             <AlertCircle size={16} className="shrink-0 mt-0.5" />
             <span>{analysisError}</span>
           </div>
         )}
 
-        {/* CTA */}
-        <div className="flex justify-between items-center pt-2">
-          <button
-            type="button"
-            onClick={() => navigate(`/projects/${project.id}/upload`)}
-            className="text-sm text-ds-text-2 hover:text-ds-text transition-colors"
-          >
-            ← Retour
-          </button>
-          <button
-            onClick={handleLaunch}
-            disabled={isAnalyzing || isSuccess}
-            className="btn-primary flex items-center gap-2 px-6 py-2.5"
-          >
-            <Zap size={16} />
-            Lancer l&apos;analyse IA →
-          </button>
+        {/* ── BOTTOM BAR ──────────────────────────────────── */}
+        <div
+          className="sticky bottom-0 mt-6 -mx-3 sm:-mx-4 px-5 py-3.5 flex items-center justify-between"
+          style={{
+            background: 'rgba(255,255,255,0.90)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            borderTop: '1px solid #F1F5F9',
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={16} style={{ color: selectedId !== 'all' && selectedName ? '#10B981' : '#CBD5E1' }} />
+            <span className="text-sm" style={{ color: '#64748B' }}>
+              {selectedId !== 'all' && selectedName
+                ? <>Lot sélectionné : <strong style={{ color: '#0F172A' }}>{selectedName}</strong></>
+                : 'Tous les lots sélectionnés'
+              }
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate(`/projects/${project.id}/upload`)}
+              className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              style={{ color: '#64748B', border: '1px solid #E2E8F0' }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#CBD5E1'; e.currentTarget.style.color = '#0F172A' }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.color = '#64748B' }}
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleLaunch}
+              disabled={isAnalyzing || isSuccess}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ background: '#0EA5E9' }}
+              onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.background = '#0284C7' }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = '#0EA5E9' }}
+            >
+              <Sparkles size={16} />
+              LANCER L&apos;ANALYSE IA &gt;
+            </button>
+          </div>
         </div>
       </div>
     </>

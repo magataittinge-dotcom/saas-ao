@@ -16,7 +16,7 @@ export default function Team() {
     <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Users size={24} style={{ color: '#3B82F6' }} />
+          <Users size={24} style={{ color: '#0EA5E9' }} />
           <h1 className="text-2xl font-bold text-ds-text">Équipe</h1>
         </div>
         <button className="btn-primary flex items-center gap-2 text-sm font-medium py-2 px-4">
@@ -31,7 +31,7 @@ export default function Team() {
             className="text-center py-16 rounded-xl text-ds-text-3"
             style={{
               border: '2px dashed rgba(100,116,139,0.3)',
-              background: 'rgba(15,23,42,0.4)',
+              background: '#F8FAFC',
             }}
           >
             <Users size={36} className="mx-auto mb-3 opacity-30" />
@@ -43,7 +43,7 @@ export default function Team() {
             <div key={member.id} className="glass-card flex items-center gap-4 p-4">
               <div
                 className="w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm"
-                style={{ background: 'rgba(59,130,246,0.15)', color: '#3B82F6' }}
+                style={{ background: 'rgba(14,165,233,0.15)', color: '#0EA5E9' }}
               >
                 {member.name.charAt(0).toUpperCase()}
               </div>

@@ -1,185 +1,224 @@
-import { useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, FolderOpen, FileStack, Building2, Archive, Users, CreditCard, LogOut,
-  Sparkles, Zap, Crown, ArrowRight,
+  Settings, X,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useLogout } from '@/hooks/useAuth'
 import { cn } from '@/lib/utils'
 
 const navItems = [
-  { to: '/dashboard',  icon: LayoutDashboard, label: 'Tableau de bord' },
-  { to: '/projects',   icon: FolderOpen,      label: 'Projets' },
-  { to: '/memoire-config', icon: FileStack,   label: 'Mémoires techniques' },
-  { to: '/references', icon: Building2,       label: 'Références' },
-  { to: '/vault',      icon: Archive,         label: 'Coffre-fort' },
-  { to: '/team',       icon: Users,           label: 'Équipe' },
-  { to: '/billing',    icon: CreditCard,      label: 'Facturation' },
+  { to: '/dashboard',      icon: LayoutDashboard, label: 'Tableau de bord' },
+  { to: '/projects',       icon: FolderOpen,      label: 'Projets' },
+  { to: '/memoire-config', icon: FileStack,       label: 'Mémoires techniques' },
+  { to: '/references',     icon: Building2,       label: 'Références' },
+  { to: '/vault',          icon: Archive,         label: 'Coffre-fort' },
+  { to: '/team',           icon: Users,           label: 'Équipe' },
+  { to: '/billing',        icon: CreditCard,      label: 'Facturation' },
+  { to: '/settings',       icon: Settings,        label: 'Paramètres' },
 ]
 
-const PLAN_CONFIG: Record<string, { label: string; icon: typeof Sparkles; color: string; colorLight: string; bg: string; border: string; gradient: string; maxAO: number | null }> = {
-  free: {
-    label: 'Gratuit', icon: Sparkles, color: '#64748B', colorLight: '#94A3B8',
-    bg: 'rgba(100,116,139,0.10)', border: 'rgba(100,116,139,0.20)', gradient: 'linear-gradient(135deg, #64748B, #94A3B8)',
-    maxAO: 1,
-  },
-  pro: {
-    label: 'Pro', icon: Zap, color: '#3B82F6', colorLight: '#60A5FA',
-    bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.22)', gradient: 'linear-gradient(135deg, #3B82F6, #60A5FA)',
-    maxAO: 15,
-  },
-  business: {
-    label: 'Business', icon: Crown, color: '#8B5CF6', colorLight: '#A78BFA',
-    bg: 'rgba(139,92,246,0.12)', border: 'rgba(139,92,246,0.22)', gradient: 'linear-gradient(135deg, #7C3AED, #A78BFA)',
-    maxAO: null, // unlimited
-  },
+const PLAN_PILL: Record<string, { label: string; pillClass: string }> = {
+  free:     { label: 'Free',     pillClass: 'bg-[#F1F5F9] text-[#64748B]' },
+  pro:      { label: 'Pro',      pillClass: 'bg-[rgba(14,165,233,0.10)] text-[#0284C7]' },
+  business: { label: 'Business', pillClass: 'bg-[rgba(16,185,129,0.10)] text-[#059669]' },
 }
 
-export default function Sidebar() {
-  const [expanded, setExpanded] = useState(false)
+interface Props {
+  mobileOpen: boolean
+  onMobileClose: () => void
+}
+
+export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
+  const [hoverExpanded, setHoverExpanded] = useState(false)
   const handleLogout = useLogout()
   const navigate = useNavigate()
-  const { organization } = useAuthStore()
+  const location = useLocation()
+  const { user, organization } = useAuthStore()
 
   const planKey = (organization?.plan || 'free') as string
-  const cfg = PLAN_CONFIG[planKey] ?? PLAN_CONFIG.free
-  const PlanIcon = cfg.icon
-  const maxAO = cfg.maxAO
+  const pill = PLAN_PILL[planKey] ?? PLAN_PILL.free
+  const initials = user?.name ? user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() : 'U'
+
+  useEffect(() => { onMobileClose() }, [location.pathname, onMobileClose])
+
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = 'hidden'
+      return () => { document.body.style.overflow = '' }
+    }
+  }, [mobileOpen])
+
+  const expanded = mobileOpen || hoverExpanded
 
   return (
-    <aside
-      onMouseEnter={() => setExpanded(true)}
-      onMouseLeave={() => setExpanded(false)}
-      className={cn(
-        'glass-sidebar flex flex-col shrink-0 transition-all duration-300 ease-in-out relative z-20',
-        expanded ? 'w-[260px]' : 'w-[72px]',
-      )}
-    >
-      {/* ── Logo ─────────────────────────────────── */}
-      <div className="h-16 flex items-center shrink-0 overflow-hidden"
-        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <div className={cn('flex items-center gap-2.5 transition-all duration-300', expanded ? 'px-4' : 'px-0 justify-center w-full')}>
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: 'linear-gradient(135deg, #3B82F6, #60A5FA)', boxShadow: '0 0 25px rgba(59,130,246,0.5)' }}>
-            <span className="text-white font-black text-base" style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>S</span>
-          </div>
-          <span className="font-black text-xl tracking-tight whitespace-nowrap"
-            style={{
-              background: 'linear-gradient(135deg, #60A5FA, #22D3EE)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text', fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
-              opacity: expanded ? 1 : 0, transition: 'opacity 0.2s ease 0.15s', width: expanded ? 'auto' : 0, overflow: 'hidden',
-            }}>
-            Synorix
-          </span>
-        </div>
-      </div>
-
-      {/* ── Nav label ──────────────────────────── */}
-      {expanded && (
-        <div className="px-4 pt-4 pb-1">
-          <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Menu</span>
-        </div>
+    <>
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-30 md:hidden"
+          style={{ background: 'rgba(0,0,0,0.20)' }}
+          onClick={onMobileClose}
+        />
       )}
 
-      {/* ── Nav items ──────────────────────────── */}
-      <nav className="flex-1 py-2 px-3 space-y-1 overflow-y-auto overflow-x-hidden">
-        {navItems.map(({ to, icon: Icon, label }) => (
-          <div key={to} className="relative group">
-            <NavLink to={to}
-              className={() => cn('glass-nav', !expanded && 'justify-center px-0')}
-              style={({ isActive }) => isActive ? { background: 'rgba(59,130,246,0.12)', color: '#60A5FA' } : undefined}
-              onMouseEnter={(e) => {
-                if (e.currentTarget.getAttribute('aria-current') !== 'page') {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
-                  e.currentTarget.style.color = 'var(--text-secondary)'
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (e.currentTarget.getAttribute('aria-current') !== 'page') {
-                  e.currentTarget.style.background = 'transparent'
-                  e.currentTarget.style.color = ''
-                }
-              }}
-            >
-              {({ isActive }) => (
-                <>
-                  {isActive && (
-                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 rounded-l-full"
-                      style={{ height: '60%', background: '#3B82F6', boxShadow: '0 0 10px rgba(59,130,246,0.6)' }} />
-                  )}
-                  <Icon size={18} className="shrink-0" style={{ color: isActive ? '#3B82F6' : undefined }} />
-                  {expanded && (
-                    <span className="truncate" style={{ opacity: expanded ? 1 : 0, transition: 'opacity 0.2s ease 0.15s' }}>{label}</span>
-                  )}
-                </>
-              )}
-            </NavLink>
-            {!expanded && <Tooltip label={label} />}
-          </div>
-        ))}
-      </nav>
-
-      <div className="mx-3" style={{ height: '1px', background: 'rgba(255,255,255,0.06)' }} />
-
-      {/* ── Plan card ── */}
-      <div className={cn('px-3 py-3', !expanded && 'flex justify-center')}>
-        {expanded ? (
-          <div className="rounded-[20px] p-4 text-center relative overflow-hidden"
-            style={{ background: cfg.bg, border: `1px solid ${cfg.border}` }}>
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-2"
-              style={{ background: cfg.gradient, boxShadow: `0 4px 12px ${cfg.color}40` }}>
-              <PlanIcon size={18} className="text-white" />
+      <aside
+        onMouseEnter={() => setHoverExpanded(true)}
+        onMouseLeave={() => setHoverExpanded(false)}
+        className={cn(
+          'glass-sidebar flex flex-col shrink-0 transition-all duration-300 ease-in-out',
+          'fixed md:relative z-40',
+          mobileOpen
+            ? 'translate-x-0 w-[240px]'
+            : '-translate-x-full md:translate-x-0',
+          !mobileOpen && (hoverExpanded ? 'md:w-[240px]' : 'md:w-16'),
+          'h-full',
+        )}
+      >
+        {/* ── Logo ─────────────────────────────────── */}
+        <div className="h-16 flex items-center shrink-0 overflow-hidden"
+          style={{ borderBottom: '1px solid #E2E8F0' }}>
+          <div className={cn('flex items-center gap-2.5 transition-all duration-300 flex-1', expanded ? 'px-4' : 'px-0 justify-center w-full')}>
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
+              style={{ background: 'linear-gradient(135deg, #0EA5E9, #10B981)' }}>
+              <span className="text-white font-black text-base font-display">S</span>
             </div>
-            <span className="text-xs font-semibold block" style={{ color: cfg.colorLight }}>Plan {cfg.label}</span>
-            <span className="text-[10px] mt-1 block" style={{ color: 'var(--text-muted)' }}>
-              {maxAO === null ? 'AO illimités' : `${maxAO} AO / mois`}
-            </span>
+            {expanded && (
+              <span className="font-black text-xl tracking-tight whitespace-nowrap font-display"
+                style={{
+                  background: 'linear-gradient(135deg, #0EA5E9, #10B981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}>
+                Synorix
+              </span>
+            )}
+          </div>
+          {mobileOpen && (
+            <button
+              onClick={onMobileClose}
+              className="p-2 mr-2 rounded-lg md:hidden touch-target"
+              style={{ color: '#94A3B8' }}
+            >
+              <X size={20} />
+            </button>
+          )}
+        </div>
 
-            {/* Upgrade CTA for free plan */}
-            {planKey === 'free' && (
-              <button
-                onClick={() => navigate('/billing')}
-                className="mt-3 w-full flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200"
-                style={{ background: 'linear-gradient(135deg, #3B82F6, #60A5FA)', color: '#fff', boxShadow: '0 4px 12px rgba(59,130,246,0.3)' }}
-                onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.1)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
-                onMouseLeave={(e) => { e.currentTarget.style.filter = ''; e.currentTarget.style.transform = '' }}
+        {/* ── Nav label ──────────────────────────── */}
+        {expanded && (
+          <div className="px-4 pt-4 pb-1">
+            <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#94A3B8' }}>Menu</span>
+          </div>
+        )}
+
+        {/* ── Nav items ──────────────────────────── */}
+        <nav className="flex-1 py-2 px-2 space-y-0.5 overflow-y-auto overflow-x-hidden">
+          {navItems.map(({ to, icon: Icon, label }) => (
+            <div key={to} className="relative group">
+              <NavLink to={to}
+                className={() => cn('glass-nav touch-target', !expanded && 'justify-center px-0')}
+                style={({ isActive }) => isActive ? { background: 'rgba(14,165,233,0.10)', color: '#0EA5E9' } : undefined}
+                onMouseEnter={(e) => {
+                  if (e.currentTarget.getAttribute('aria-current') !== 'page') {
+                    e.currentTarget.style.background = '#F1F5F9'
+                    e.currentTarget.style.color = '#0F172A'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (e.currentTarget.getAttribute('aria-current') !== 'page') {
+                    e.currentTarget.style.background = 'transparent'
+                    e.currentTarget.style.color = ''
+                  }
+                }}
               >
-                Passer à Pro <ArrowRight size={13} />
+                {({ isActive }) => (
+                  <>
+                    {isActive && (
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full"
+                        style={{ height: '60%', background: '#0EA5E9' }} />
+                    )}
+                    <Icon size={18} className="shrink-0" style={{ color: isActive ? '#0EA5E9' : undefined }} />
+                    {expanded && (
+                      <span className="truncate text-[13px]">{label}</span>
+                    )}
+                  </>
+                )}
+              </NavLink>
+              {!expanded && <Tooltip label={label} />}
+            </div>
+          ))}
+        </nav>
+
+        {/* ── Plan badge ── */}
+        <div className="border-t border-[#E2E8F0]">
+          {expanded ? (
+            <div className="flex items-center gap-2 px-4 h-10">
+              <span className={cn('px-2 py-0.5 rounded-full text-[10px] font-semibold leading-none', pill.pillClass)}>
+                {pill.label}
+              </span>
+              {planKey === 'free' && (
+                <button
+                  onClick={() => navigate('/billing')}
+                  className="text-[10px] text-[#0EA5E9] hover:text-[#0284C7] transition-colors ml-auto"
+                >
+                  Upgrade
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="relative group flex justify-center h-10 items-center">
+              <span className={cn('px-1.5 py-0.5 rounded text-[9px] font-bold leading-none', pill.pillClass)}>
+                {pill.label.charAt(0)}
+              </span>
+              <Tooltip label={`Plan ${pill.label}`} />
+            </div>
+          )}
+        </div>
+
+        {/* ── User + Logout ─────────────────────── */}
+        <div className="border-t border-[#E2E8F0] p-2">
+          <div className={cn('flex items-center gap-2.5 rounded-lg p-2 transition-all duration-200', expanded ? '' : 'justify-center')}>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0"
+              style={{ background: 'linear-gradient(135deg, #0EA5E9, #10B981)' }}>
+              {initials}
+            </div>
+            {expanded && (
+              <div className="flex-1 min-w-0">
+                <p className="text-[12px] font-medium text-[#0F172A] truncate">{user?.name || 'Utilisateur'}</p>
+                <p className="text-[10px] text-[#94A3B8] truncate">{user?.email || ''}</p>
+              </div>
+            )}
+            {expanded && (
+              <button onClick={handleLogout}
+                className="p-1.5 rounded-md transition-colors hover:bg-[#F1F5F9] touch-target"
+                style={{ color: '#94A3B8' }}
+                title="Déconnexion"
+              >
+                <LogOut size={14} />
               </button>
             )}
           </div>
-        ) : (
-          <div className="relative group">
-            <div className="w-9 h-9 rounded-lg flex items-center justify-center"
-              style={{ color: cfg.colorLight, background: cfg.bg, border: `1px solid ${cfg.border}` }}>
-              <PlanIcon size={16} />
+          {!expanded && (
+            <div className="relative group">
+              <button onClick={handleLogout}
+                className="w-full flex justify-center py-1.5 transition-colors touch-target"
+                style={{ color: '#94A3B8' }}
+              >
+                <LogOut size={14} />
+              </button>
+              <Tooltip label="Déconnexion" />
             </div>
-            <Tooltip label={`Plan ${cfg.label} — ${maxAO === null ? '∞' : maxAO} AO/mois`} />
-          </div>
-        )}
-      </div>
-
-      {/* ── Logout ─────────────────────────────── */}
-      <div className="relative group">
-        <button onClick={handleLogout}
-          className={cn('w-full flex items-center gap-2 py-3 text-xs font-medium transition-all duration-200', expanded ? 'px-4' : 'justify-center px-2')}
-          style={{ borderTop: '1px solid rgba(255,255,255,0.06)', color: 'var(--text-muted)' }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)' }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent' }}>
-          <LogOut size={15} className="shrink-0" />
-          {expanded && <span style={{ opacity: expanded ? 1 : 0, transition: 'opacity 0.2s ease 0.15s' }}>Déconnexion</span>}
-        </button>
-        {!expanded && <Tooltip label="Déconnexion" />}
-      </div>
-    </aside>
+          )}
+        </div>
+      </aside>
+    </>
   )
 }
 
 function Tooltip({ label }: { label: string }) {
   return (
-    <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 px-2.5 py-1.5 text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50"
-      style={{ color: 'var(--text-primary)', background: '#111C44', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', boxShadow: '14px 17px 40px 4px rgba(0,0,0,0.25)' }}>
+    <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 px-2.5 py-1.5 text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50 hidden md:block"
+      style={{ color: '#0F172A', background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
       {label}
     </div>
   )

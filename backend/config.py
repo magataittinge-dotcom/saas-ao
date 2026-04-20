@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     STRIPE_SECRET_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
 
+    # Google Maps Static API
+    GOOGLE_MAPS_API_KEY: str = ""
+
     # CORS
     FRONTEND_URL: str = "http://localhost:3000"
 
