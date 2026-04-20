@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, Date, DateTime, Text, ForeignKey, Enum as SAEnum, JSON
+from sqlalchemy import Boolean, Column, String, Integer, Date, DateTime, Text, ForeignKey, Enum as SAEnum, JSON
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -57,6 +57,7 @@ class ProjectDocument(Base):
     page_count = Column(Integer, nullable=True)
     pdf_preview_url = Column(String(500), nullable=True)  # URL du PDF converti pour prévisualisation
     related_lots = Column(JSON, nullable=True)             # ["all"] | ["info"] | ["5"] | ["5","13"]
+    is_user_completed = Column(Boolean, nullable=False, default=False, server_default="false")
     uploaded_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships

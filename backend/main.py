@@ -37,6 +37,27 @@ settings = get_settings()
 # Create tables
 Base.metadata.create_all(bind=engine)
 
+
+def _ensure_schema_columns():
+    """Idempotent runtime migrations for columns added after initial deploy."""
+    from sqlalchemy import inspect, text
+    try:
+        insp = inspect(engine)
+        if insp.has_table("project_documents"):
+            existing = {c["name"] for c in insp.get_columns("project_documents")}
+            if "is_user_completed" not in existing:
+                with engine.begin() as conn:
+                    conn.execute(text(
+                        "ALTER TABLE project_documents "
+                        "ADD COLUMN is_user_completed BOOLEAN NOT NULL DEFAULT FALSE"
+                    ))
+                logger.info("Added column project_documents.is_user_completed")
+    except Exception as e:
+        logger.warning(f"Schema migration skipped: {e}")
+
+
+_ensure_schema_columns()
+
 # ── Rate limiter ─────────────────────────────────────────────────────────────
 limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
 

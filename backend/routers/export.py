@@ -1,4 +1,5 @@
 import io
+import json
 import re
 import unicodedata
 import zipfile
@@ -187,6 +188,16 @@ def export_zip(
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ):
+    """
+    Export a ZIP containing ONLY the deliverables produced by the company.
+    Never includes originals from the DCE (RC, CCAP, CCTP, blank templates).
+
+    Contents:
+      - 01_Candidature/ : vault documents linked via checklist
+                          + ProjectDocuments flagged is_user_completed=True
+      - 02_Offre/       : Memoire_technique.docx + DPGF remplie
+                          + user-completed offer documents (AE signé, etc.)
+    """
     project = _get_project_or_404(project_id, user.organization_id, db)
 
     memoire = db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project_id).first()
@@ -211,26 +222,16 @@ def export_zip(
     if project.selected_lot_name:
         lot_suffix = "_" + _sanitize(project.selected_lot_name)
     date_str = datetime.utcnow().strftime("%Y%m%d")
-    root = f"{_sanitize(project.name)}{lot_suffix}_{date_str}"
+    root = f"Reponse_AO_{_sanitize(project.name)}{lot_suffix}_{date_str}"
 
-    # ── Classify documents ────────────────────────────────────────────────────
-    #
-    # Vault document types → subfolder mapping
-    CANDIDATURE_TYPES = {
-        "urssaf", "kbis", "decennale", "rc_civile", "qualibat",
-        "pro_btp", "cibtp", "fiscal", "dc1", "dc2",
-        "caces", "amiante_ss4", "declaration_honneur", "pouvoir",
-        "organigramme_doc", "chiffre_affaires", "effectifs",
-    }
-    OFFRE_TYPES = {"rib"}  # RIB goes with the offer
-    #
-    # Project document types → subfolder mapping
-    PROJECT_DOC_OFFRE = {"dpgf", "acte_engagement"}
-    PROJECT_DOC_TECHNIQUE = {"cctp"}
-    PROJECT_DOC_CANDIDATURE = {"rc", "ccap"}
+    # ── Offer-side destination for user-completed project documents ───────
+    # DPGF/AE completed by the user belong to 02_Offre, everything else to
+    # 01_Candidature (DC1, DC2, declaration honneur, etc.).
+    OFFER_COMPLETED_TYPES = {"dpgf", "acte_engagement"}
 
+    warnings: list[str] = []
     buf = io.BytesIO()
-    seen_names: dict[str, int] = {}  # track duplicates per folder
+    seen_names: dict[str, int] = {}
 
     from services.docx_exporter import build_memoire_docx
 
@@ -241,31 +242,22 @@ def export_zip(
             doc = vault_by_id.get(ci.linked_document_id) if ci.linked_document_id else None
             if not doc:
                 continue
-            doc_type = doc.type or "autre"
-            if doc_type in CANDIDATURE_TYPES or doc_type == "autre":
-                folder = f"{root}/01_Candidature"
-            elif doc_type in OFFRE_TYPES:
-                folder = f"{root}/02_Offre"
-            else:
-                folder = f"{root}/04_Annexes"
-            _add_file_to_zip(zf, doc.file_url, doc.file_name, folder, seen_names)
+            _add_file_to_zip(zf, doc.file_url, doc.file_name, f"{root}/01_Candidature", seen_names)
 
-        # ── 02_Offre: mémoire technique + DPGF + AE from project docs ────
+        # ── User-completed project documents (DC1/DC2 rempli, AE signé) ───
+        for doc in project_docs:
+            if not getattr(doc, "is_user_completed", False):
+                continue
+            doc_type = doc.type or "autre"
+            folder_sub = "02_Offre" if doc_type in OFFER_COMPLETED_TYPES else "01_Candidature"
+            _add_file_to_zip(zf, doc.file_url, doc.file_name, f"{root}/{folder_sub}", seen_names)
+
+        # ── 02_Offre: mémoire technique ───────────────────────────────────
         if memoire:
             docx_bytes = build_memoire_docx(memoire.content_json, project.name, org_name)
-            zf.writestr(
-                f"{root}/02_Offre/Memoire_technique.docx",
-                docx_bytes,
-            )
-
-        for doc in project_docs:
-            doc_type = doc.type or "autre"
-            if doc_type in PROJECT_DOC_OFFRE:
-                _add_file_to_zip(zf, doc.file_url, doc.file_name, f"{root}/02_Offre", seen_names)
-            elif doc_type in PROJECT_DOC_TECHNIQUE:
-                _add_file_to_zip(zf, doc.file_url, doc.file_name, f"{root}/03_Technique", seen_names)
-            elif doc_type in PROJECT_DOC_CANDIDATURE:
-                _add_file_to_zip(zf, doc.file_url, doc.file_name, f"{root}/01_Candidature", seen_names)
+            zf.writestr(f"{root}/02_Offre/Memoire_technique.docx", docx_bytes)
+        else:
+            warnings.append("Mémoire technique non généré")
 
         # ── 02_Offre: filled DPGF if uploaded ─────────────────────────────
         if project.dpgf_remplie_url and project.dpgf_remplie_name:
@@ -274,9 +266,19 @@ def export_zip(
                 f"DPGF_remplie_{project.dpgf_remplie_name}",
                 f"{root}/02_Offre", seen_names,
             )
+        elif any((d.type or "") == "dpgf" for d in project_docs):
+            warnings.append("DPGF non remplie")
 
-        # ── Ensure all 4 folders exist (even if empty) ────────────────────
-        for sub in ("01_Candidature", "02_Offre", "03_Technique", "04_Annexes"):
+        # ── Warnings for expected-but-missing user-completed documents ────
+        has_completed_ae = any(
+            (d.type or "") == "acte_engagement" and getattr(d, "is_user_completed", False)
+            for d in project_docs
+        )
+        if not has_completed_ae and any((d.type or "") == "acte_engagement" for d in project_docs):
+            warnings.append("Acte d'engagement non signé")
+
+        # ── Ensure 3 folders exist (even if empty) ────────────────────────
+        for sub in ("01_Candidature", "02_Offre", "03_Technique"):
             folder_path = f"{root}/{sub}/"
             if folder_path not in {info.filename for info in zf.filelist}:
                 zf.writestr(folder_path, "")
@@ -285,11 +287,11 @@ def export_zip(
     zip_filename = f"{root}.zip"
     ascii_zip = zip_filename.encode("ascii", errors="replace").decode("ascii")
     utf8_zip = quote(zip_filename, safe="")
-    return StreamingResponse(
-        buf,
-        media_type="application/zip",
-        headers={"Content-Disposition": f"attachment; filename=\"{ascii_zip}\"; filename*=UTF-8''{utf8_zip}"},
-    )
+    headers = {
+        "Content-Disposition": f"attachment; filename=\"{ascii_zip}\"; filename*=UTF-8''{utf8_zip}",
+        "X-Export-Warnings": json.dumps(warnings),
+    }
+    return StreamingResponse(buf, media_type="application/zip", headers=headers)
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
