@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from database import get_db
 from models.user import User
-from models.project import Project, ProjectDocument
+from models.project import Project, ProjectDocument, PROJECT_DOC_TYPES
 from schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse, ProjectDocumentUpdate
 from schemas.document import ProjectDocumentResponse
 from routers.auth import get_auth_user
@@ -48,30 +48,98 @@ def _normalize_fname(text: str) -> str:
 
 def _detect_doc_type(filename: str, form_type: str) -> str:
     """
-    Auto-detect document type from filename.
-    Enhanced with normalized matching and full BTP document patterns.
-    Uses (?<![a-z0-9]) / (?![a-z0-9]) instead of \\b to correctly handle underscores.
+    Auto-detect a project_documents.type value from a filename.
+
+    Returns a value from PROJECT_DOC_TYPES, defaulting to 'autre'.
+    Word boundaries use (?<![a-z0-9]) / (?![a-z0-9]) so that underscores,
+    dashes and dots act as separators (regex \\b doesn't help with '_').
+
+    Priority cascade (most specific first):
+      DC1 → DC2 → AE → DPGF → BPU → DQE → cadre_reponse → visite →
+      RC → CCAP → CCTP → plan → autre.
+
+    DPGF wins over BPU/DQE; DC1/DC2 win over AE if both terms appear.
     """
-    if form_type != "autre":
+    if form_type and form_type != "autre" and form_type in PROJECT_DOC_TYPES:
         return form_type
 
     norm = _normalize_fname(filename)
+    if not norm:
+        return "autre"
 
-    # Token boundary helpers: underscores, dots, dashes act as separators
     def tok(t: str) -> str:
         return r'(?<![a-z0-9])' + t + r'(?![a-z0-9])'
 
-    # Helpers to exclude false positives
-    is_annexe = bool(re.search(r'annexe|nommage|cadre|liste|modele', norm))
+    # ── 1. DC1 — Lettre de candidature ─────────────────────────────────────
+    if re.search(
+        r'(?<![a-z0-9])dc[\s_\-]?1(?![a-z0-9])|lettre.{0,8}candidature',
+        norm,
+    ):
+        return 'dc1_template'
+
+    # ── 2. DC2 — Déclaration du candidat ───────────────────────────────────
+    if re.search(
+        r'(?<![a-z0-9])dc[\s_\-]?2(?![a-z0-9])|declaration.{0,8}candidat',
+        norm,
+    ):
+        return 'dc2_template'
+
+    # ── 3. Acte d'engagement ───────────────────────────────────────────────
+    # 'AE' alone is too generic — only trust it at start of name, with the
+    # full phrase, or with explicit confirmers (signe, rempli, vierge…).
+    if re.search(
+        r'acte.{0,6}engagement|'
+        r'^ae(?![a-z0-9])|'
+        r'(?<![a-z0-9])ae[\s_.\-](?:signe|rempli|vierge|template|complete|final)|'
+        r'(?<![a-z0-9])attri\d+',
+        norm,
+    ):
+        return 'acte_engagement_template'
+
+    # ── 4. DPGF — Décomposition Prix Global et Forfaitaire ────────────────
+    # DPGF wins when combined with BPU/DQE in the same filename.
+    if filename.lower().endswith(".ods") and re.search(
+        r'dpgf|prix|bordereau|decomposition', norm,
+    ):
+        return 'dpgf_template'
+    if re.search(
+        tok('dpgf') + r'|d[eé]composition.{0,12}prix|'
+        r'prix.{0,6}global|prix.{0,6}forfaitaire',
+        norm,
+    ):
+        return 'dpgf_template'
+
+    # ── 5. BPU — Bordereau de Prix Unitaire ───────────────────────────────
+    if re.search(tok('bpu') + r'|bordereau.{0,6}prix|prix.{0,6}unitaire', norm):
+        return 'bpu_template'
+
+    # ── 6. DQE — Détail Quantitatif Estimatif ─────────────────────────────
+    if re.search(
+        tok('dqe') + r'|d[eé]tail.{0,6}quantitatif|quantitatif.{0,6}estimatif',
+        norm,
+    ):
+        return 'dqe_template'
+
+    # ── 7. Cadre de réponse mémoire ───────────────────────────────────────
+    if re.search(r'cadre.{0,8}r[eé]ponse|cadre.{0,8}memoire', norm):
+        return 'cadre_reponse'
+
+    # ── 8. Attestation de visite ──────────────────────────────────────────
+    if re.search(
+        r'attestation.{0,8}visite|visite.{0,8}obligatoire|visite.{0,8}site',
+        norm,
+    ):
+        return 'attestation_visite_template'
+
+    # ── Plan filename markers — used to disambiguate 'RDC' below ──────────
     is_plan_fname = bool(re.search(
         r'(?<![a-z0-9])arch\s*\d|coupe|niveau|zoom|etage|r\+\d|'
-        r'(?<![a-z0-9])el\d|(?<![a-z0-9])plan\b',
+        r'(?<![a-z0-9])el\d|(?<![a-z0-9])plan\b|\.dwg$|\.dwf$|\.dxf$',
         norm,
     ))
+    is_annexe = bool(re.search(r'annexe|nommage|liste|modele', norm))
 
-    # ── RC — Règlement de Consultation ────────────────────────────────────────
-    # Variants: RC, RCE, RDC (Règlement De Consultation), "reglement", "règlement"
-    # RDC matched ONLY when NOT in a plan filename (plan/arch/coupe/EL02 - RDC)
+    # ── 9. RC — Règlement de Consultation ─────────────────────────────────
     is_rc = bool(re.search(
         r'reglement|r[eè]gl[\._\s]?consul|' + tok('rc') + r'|' + tok('rce') + r'|'
         r'reglement.{0,4}consultation|r[eè]glement.{0,4}la.{0,4}consultation',
@@ -82,45 +150,24 @@ def _detect_doc_type(filename: str, form_type: str) -> str:
     if is_rc and not is_annexe:
         return 'rc'
 
-    # ── CCAP — Cahier des Clauses Administratives ──────────────────────────────
+    # ── 10. CCAP — Cahier des Clauses Administratives ─────────────────────
     if re.search(tok('ccap') + r'|clauses.{0,6}admin|cahier.{0,6}admin', norm):
         return 'ccap'
 
-    # ── CCTP — Cahier des Clauses Techniques ──────────────────────────────────
-    # Also match lot-specific descriptive files: "lot XX ... _DCE.pdf" (common CCTP pattern)
-    if re.search(tok('cctp') + r'|clauses.{0,6}tech|cahier.{0,6}technique|descriptif.{0,6}tech', norm):
+    # ── 11. CCTP — Cahier des Clauses Techniques ──────────────────────────
+    if re.search(
+        tok('cctp') + r'|clauses.{0,6}tech|cahier.{0,6}technique|'
+        r'descriptif.{0,6}tech',
+        norm,
+    ):
         return 'cctp'
-    # Lot-specific DCE PDFs are per-lot CCTPs: "lot 01 Demolition-GO_DCE.pdf"
+    # Lot-specific DCE PDFs are usually per-lot CCTPs: "lot 01 GO_DCE.pdf"
     if re.search(r'lot[\s_-]*\d{1,2}.*_dce\.pdf$', norm) and not is_annexe:
         return 'cctp'
 
-    # ── DPGF / BPU / DQE — Pricing documents (+ .ods) ────────────────────────
-    if filename.lower().endswith(".ods") and re.search(r'dpgf|prix|bordereau|decomposition', norm):
-        return 'dpgf'
-    if re.search(tok('dpgf') + r'|decomposition|d[eé]composition|prix.{0,6}global|prix.{0,6}forfaitaire', norm):
-        return 'dpgf'
-    if re.search(tok('bpu') + r'|bordereau.{0,6}prix|prix.{0,6}unitaire', norm):
-        return 'dpgf'
-    if re.search(tok('dqe') + r'|d[eé]tail.{0,6}quantitatif|quantitatif.{0,6}estimatif', norm):
-        return 'dpgf'
-
-    # ── Acte d'Engagement ─────────────────────────────────────────────────────
-    if re.search(
-        r'acte.{0,6}engagement|acte_engagement|' + tok('ae') + r'|attri\d*|' + tok('dc[34]'),
-        norm,
-    ):
-        return 'acte_engagement'
-
-    # ── DC1 / DC2 — Formulaires de candidature ───────────────────────────────
-    if re.search(tok('dc1') + r'|lettre.{0,6}candidature', norm):
-        return 'acte_engagement'   # grouped with candidature admin docs
-    if re.search(tok('dc2') + r'|declaration.{0,6}candidat', norm):
-        return 'acte_engagement'
-
-    # ── Plans ─────────────────────────────────────────────────────────────────
-    if re.search(
-        tok('plans?') + r'|\.dwg$|\.dwf$|\.dxf$|'
-        r'(?<![a-z0-9])arch\s*\d|coupe|facade|niveau|rez.{0,4}de.{0,4}chaussee',
+    # ── 12. Plans ─────────────────────────────────────────────────────────
+    if is_plan_fname or re.search(
+        tok('plans?') + r'|coupe|facade|niveau|rez.{0,4}de.{0,4}chaussee',
         norm,
     ):
         return 'plan'

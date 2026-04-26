@@ -131,8 +131,67 @@ def _ensure_schema_columns():
                 if deleted:
                     logger.info(f"Wiped {deleted} checklist_items rows for re-run")
 
+        # ── One-shot: re-tag project_documents using the new detector ─────
+        if insp.has_table("project_documents"):
+            _backfill_project_doc_types_v1()
+
     except Exception as e:
         logger.warning(f"Schema migration skipped: {e}")
+
+
+def _backfill_project_doc_types_v1():
+    """One-shot backfill: re-run _detect_doc_type on every project_documents row
+    so that previously merged types (DC1/DC2 → AE, BPU/DQE → DPGF) get split
+    into their dedicated types. Idempotent via a marker file."""
+    # Place marker inside uploads/ (gitignored) so tests don't dirty the tree.
+    uploads_dir = Path(__file__).parent / "uploads"
+    uploads_dir.mkdir(exist_ok=True)
+    marker = uploads_dir / ".backfill_doc_types_v1.done"
+    if marker.exists():
+        return
+
+    try:
+        from sqlalchemy.orm import sessionmaker
+        from collections import Counter
+
+        from routers.projects import _detect_doc_type
+        from models.project import ProjectDocument
+
+        SessionLocal = sessionmaker(bind=engine)
+        db = SessionLocal()
+        try:
+            docs = db.query(ProjectDocument).all()
+            if not docs:
+                marker.touch()
+                return
+
+            before = Counter(d.type for d in docs)
+            transitions: Counter = Counter()
+
+            for d in docs:
+                new_type = _detect_doc_type(d.file_name or "", "autre")
+                if new_type != d.type:
+                    transitions[(d.type, new_type)] += 1
+                    d.type = new_type
+
+            if transitions:
+                db.commit()
+
+            after = Counter(d.type for d in docs)
+            logger.info(
+                f"Backfill v1: {len(docs)} project_documents inspected, "
+                f"{sum(transitions.values())} reclassified"
+            )
+            logger.info(f"  Before: {dict(before)}")
+            logger.info(f"  After:  {dict(after)}")
+            for (old, new), n in transitions.items():
+                logger.info(f"  {old} → {new}: {n}")
+        finally:
+            db.close()
+
+        marker.touch()
+    except Exception as e:
+        logger.warning(f"Backfill v1 skipped: {e}")
 
 
 def _migrate_pg_enum_to_check(table, column, enum_type, allowed, check_name, renames):
