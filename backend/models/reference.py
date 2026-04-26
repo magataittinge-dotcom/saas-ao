@@ -23,7 +23,9 @@ class Reference(Base):
         default="en_cours",
     )
     is_reference = Column(Boolean, default=True)
+    attestation_document_id = Column(String, ForeignKey("documents.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
     organization = relationship("Organization", back_populates="references")
+    attestation_document = relationship("Document", foreign_keys=[attestation_document_id])

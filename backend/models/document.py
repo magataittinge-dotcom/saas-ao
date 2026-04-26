@@ -1,14 +1,27 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime, ForeignKey, Date, Enum as SAEnum
+from sqlalchemy import (
+    Column, String, DateTime, ForeignKey, Date,
+    CheckConstraint, Enum as SAEnum,
+)
 from sqlalchemy.orm import relationship
 from database import Base
 
 DOCUMENT_TYPES = [
-    "urssaf", "kbis", "decennale", "rc_civile", "qualibat",
-    "pro_btp", "cibtp", "fiscal", "dc1", "dc2", "rib",
-    "caces", "amiante_ss4", "declaration_honneur", "pouvoir",
-    "organigramme_doc", "chiffre_affaires", "effectifs", "autre",
+    # Pièces administratives
+    "urssaf", "kbis", "fiscal", "pro_btp", "cibtp",
+    "declaration_honneur", "pouvoir", "rib",
+    # Assurances
+    "decennale", "rc_civile", "trc", "dommages_ouvrage",
+    # Qualifications / habilitations
+    "qualibat", "rge", "caces", "amiante_ss4",
+    # Capacités économiques / techniques
+    "chiffre_affaires", "effectifs", "organigramme_doc",
+    "attestation_travaux",
+    # Alternative globale aux DC1/DC2
+    "dume",
+    # Fallback
+    "autre",
 ]
 
 DOCUMENT_STATUSES = ["valid", "expiring_soon", "expired"]
@@ -16,10 +29,16 @@ DOCUMENT_STATUSES = ["valid", "expiring_soon", "expired"]
 
 class Document(Base):
     __tablename__ = "documents"
+    __table_args__ = (
+        CheckConstraint(
+            "type IN ('" + "', '".join(DOCUMENT_TYPES) + "')",
+            name="documents_type_check",
+        ),
+    )
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     organization_id = Column(String, ForeignKey("organizations.id"), nullable=False)
-    type = Column(SAEnum(*DOCUMENT_TYPES, name="document_type"), nullable=False, default="autre")
+    type = Column(String(64), nullable=False, default="autre")
     file_url = Column(String(500), nullable=False)
     file_name = Column(String(255), nullable=False)
     issued_date = Column(Date, nullable=True)

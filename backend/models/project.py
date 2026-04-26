@@ -1,10 +1,28 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Boolean, Column, String, Integer, Date, DateTime, Text, ForeignKey, Enum as SAEnum, JSON
+from sqlalchemy import (
+    Boolean, Column, String, Integer, Date, DateTime, Text,
+    ForeignKey, CheckConstraint, Enum as SAEnum, JSON,
+)
 from sqlalchemy.orm import relationship
 from database import Base
 
-PROJECT_DOC_TYPES = ["rc", "cctp", "ccap", "dpgf", "acte_engagement", "plan", "autre"]
+# Templates fournis vierges dans le DCE — l'utilisateur doit les compléter.
+DCE_TEMPLATE_TYPES = [
+    "dc1_template",
+    "dc2_template",
+    "acte_engagement_template",
+    "dpgf_template",
+    "bpu_template",
+    "dqe_template",
+    "cadre_reponse",
+    "attestation_visite_template",
+]
+
+# Documents de référence du DCE — fournis par l'acheteur, jamais re-exportés.
+DCE_REFERENCE_TYPES = ["rc", "cctp", "ccap", "plan", "autre"]
+
+PROJECT_DOC_TYPES = DCE_REFERENCE_TYPES + DCE_TEMPLATE_TYPES
 
 
 class Project(Base):
@@ -46,10 +64,16 @@ class Project(Base):
 
 class ProjectDocument(Base):
     __tablename__ = "project_documents"
+    __table_args__ = (
+        CheckConstraint(
+            "type IN ('" + "', '".join(PROJECT_DOC_TYPES) + "')",
+            name="project_documents_type_check",
+        ),
+    )
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     project_id = Column(String, ForeignKey("projects.id"), nullable=False)
-    type = Column(SAEnum(*PROJECT_DOC_TYPES, name="project_doc_type"), nullable=False, default="autre")
+    type = Column(String(64), nullable=False, default="autre")
     file_url = Column(String(500), nullable=False)
     file_name = Column(String(255), nullable=False)
     extracted_text = Column(Text, nullable=True)

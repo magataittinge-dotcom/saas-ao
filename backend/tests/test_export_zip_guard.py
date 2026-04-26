@@ -24,7 +24,12 @@ from models.project import Project, ProjectDocument
 
 # Files uploaded by the maître d'ouvrage — must NEVER appear in the export ZIP.
 # These match the project_documents.type enum values (PROJECT_DOC_TYPES).
-FORBIDDEN_PROJECT_DOC_TYPES = {"rc", "ccap", "cctp", "acte_engagement", "dpgf"}
+FORBIDDEN_PROJECT_DOC_TYPES = {
+    "rc", "ccap", "cctp",
+    "acte_engagement_template", "dpgf_template",
+    "dc1_template", "dc2_template", "bpu_template", "dqe_template",
+    "cadre_reponse", "attestation_visite_template",
+}
 
 # Filename markers that indicate a blank template from the DCE.
 FORBIDDEN_FILENAME_MARKERS = ("_vierge", "_template", "_original")
@@ -79,8 +84,8 @@ def seeded_project(db_session, test_org, uploads_workspace):
         ("rc", "RC_reglement_consultation.pdf"),
         ("ccap", "CCAP_clauses_administratives.pdf"),
         ("cctp", "CCTP_clauses_techniques.pdf"),
-        ("acte_engagement", "AE_acte_engagement_vierge.pdf"),
-        ("dpgf", "DPGF_decomposition_template.xlsx"),
+        ("acte_engagement_template", "AE_acte_engagement_vierge.pdf"),
+        ("dpgf_template", "DPGF_decomposition_template.xlsx"),
     ]
     for doc_type, name in dce_files:
         db_session.add(ProjectDocument(
@@ -252,7 +257,7 @@ def test_export_zip_includes_user_completed_project_doc(
     db_session.add(ProjectDocument(
         id="pdoc-ae-signed",
         project_id=seeded_project.id,
-        type="acte_engagement",
+        type="acte_engagement_template",
         file_url=uploads_workspace("AE_signe_final.pdf"),
         file_name="AE_signe_final.pdf",
         is_user_completed=True,

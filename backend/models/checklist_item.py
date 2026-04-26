@@ -1,18 +1,35 @@
 import uuid
-from sqlalchemy import Column, String, Text, ForeignKey, Enum as SAEnum
+from sqlalchemy import (
+    Column, String, Text, ForeignKey,
+    CheckConstraint, Enum as SAEnum,
+)
 from sqlalchemy.orm import relationship
 from database import Base
 
 CHECKLIST_STATUSES = ["present", "manquant", "expire", "expiration_proche"]
 
+# Origine de la pièce attendue pour cet item de checklist :
+#  - "vault"        → l'entreprise doit la fournir depuis son coffre-fort
+#  - "dce_template" → l'utilisateur doit compléter un template fourni dans le DCE
+CHECKLIST_SOURCE_KINDS = ["vault", "dce_template"]
+
 
 class ChecklistItem(Base):
     __tablename__ = "checklist_items"
+    __table_args__ = (
+        CheckConstraint(
+            "source_kind IN ('" + "', '".join(CHECKLIST_SOURCE_KINDS) + "')",
+            name="checklist_items_source_kind_check",
+        ),
+    )
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     project_id = Column(String, ForeignKey("projects.id"), nullable=False)
     document_type_required = Column(String(255), nullable=False)
+    source_kind = Column(String(20), nullable=False, default="vault", server_default="vault")
     linked_document_id = Column(String, ForeignKey("documents.id"), nullable=True)
+    template_project_doc_id = Column(String, ForeignKey("project_documents.id"), nullable=True)
+    completed_project_doc_id = Column(String, ForeignKey("project_documents.id"), nullable=True)
     status = Column(
         SAEnum(*CHECKLIST_STATUSES, name="checklist_status"),
         nullable=False,
@@ -24,3 +41,9 @@ class ChecklistItem(Base):
     # Relationships
     project = relationship("Project", back_populates="checklist_items")
     linked_document = relationship("Document", back_populates="checklist_items")
+    template_project_doc = relationship(
+        "ProjectDocument", foreign_keys=[template_project_doc_id]
+    )
+    completed_project_doc = relationship(
+        "ProjectDocument", foreign_keys=[completed_project_doc_id]
+    )

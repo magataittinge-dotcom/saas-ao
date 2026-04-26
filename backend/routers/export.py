@@ -90,7 +90,7 @@ def get_export_detail(
 
     # DPGF info
     dpgf_info = None
-    dpgf_doc = next((d for d in project_docs if d.type == "dpgf"), None)
+    dpgf_doc = next((d for d in project_docs if d.type == "dpgf_template"), None)
     if dpgf_doc:
         dpgf_info = DpgfExportInfo(file_name=dpgf_doc.file_name, file_id=dpgf_doc.id)
 
@@ -149,7 +149,7 @@ def get_export_summary(
         checklist_total=len(checklist_items),
         checklist_present=sum(1 for i in checklist_items if i.status == "present"),
         has_memoire=memoire is not None,
-        has_dpgf=any(d.type == "dpgf" for d in project_docs),
+        has_dpgf=any(d.type == "dpgf_template" for d in project_docs),
     )
 
 
@@ -227,7 +227,7 @@ def export_zip(
     # ── Offer-side destination for user-completed project documents ───────
     # DPGF/AE completed by the user belong to 02_Offre, everything else to
     # 01_Candidature (DC1, DC2, declaration honneur, etc.).
-    OFFER_COMPLETED_TYPES = {"dpgf", "acte_engagement"}
+    OFFER_COMPLETED_TYPES = {"dpgf_template", "acte_engagement_template"}
 
     warnings: list[str] = []
     buf = io.BytesIO()
@@ -266,15 +266,15 @@ def export_zip(
                 f"DPGF_remplie_{project.dpgf_remplie_name}",
                 f"{root}/02_Offre", seen_names,
             )
-        elif any((d.type or "") == "dpgf" for d in project_docs):
+        elif any((d.type or "") == "dpgf_template" for d in project_docs):
             warnings.append("DPGF non remplie")
 
         # ── Warnings for expected-but-missing user-completed documents ────
         has_completed_ae = any(
-            (d.type or "") == "acte_engagement" and getattr(d, "is_user_completed", False)
+            (d.type or "") == "acte_engagement_template" and getattr(d, "is_user_completed", False)
             for d in project_docs
         )
-        if not has_completed_ae and any((d.type or "") == "acte_engagement" for d in project_docs):
+        if not has_completed_ae and any((d.type or "") == "acte_engagement_template" for d in project_docs):
             warnings.append("Acte d'engagement non signé")
 
         # ── Ensure 3 folders exist (even if empty) ────────────────────────

@@ -41,8 +41,14 @@ Base.metadata.create_all(bind=engine)
 def _ensure_schema_columns():
     """Idempotent runtime migrations for columns added after initial deploy."""
     from sqlalchemy import inspect, text
+    from models.document import DOCUMENT_TYPES
+    from models.project import PROJECT_DOC_TYPES
+
     try:
         insp = inspect(engine)
+        is_postgres = engine.dialect.name == "postgresql"
+
+        # ── project_documents.is_user_completed (legacy migration) ────────
         if insp.has_table("project_documents"):
             existing = {c["name"] for c in insp.get_columns("project_documents")}
             if "is_user_completed" not in existing:
@@ -52,8 +58,121 @@ def _ensure_schema_columns():
                         "ADD COLUMN is_user_completed BOOLEAN NOT NULL DEFAULT FALSE"
                     ))
                 logger.info("Added column project_documents.is_user_completed")
+
+        # ── checklist_items: source_kind + template/completed FKs ─────────
+        if insp.has_table("checklist_items"):
+            existing = {c["name"] for c in insp.get_columns("checklist_items")}
+            with engine.begin() as conn:
+                if "source_kind" not in existing:
+                    conn.execute(text(
+                        "ALTER TABLE checklist_items "
+                        "ADD COLUMN source_kind VARCHAR(20) NOT NULL DEFAULT 'vault'"
+                    ))
+                    if is_postgres:
+                        conn.execute(text(
+                            "ALTER TABLE checklist_items ADD CONSTRAINT "
+                            "checklist_items_source_kind_check "
+                            "CHECK (source_kind IN ('vault', 'dce_template'))"
+                        ))
+                    logger.info("Added column checklist_items.source_kind")
+                if "template_project_doc_id" not in existing:
+                    conn.execute(text(
+                        "ALTER TABLE checklist_items "
+                        "ADD COLUMN template_project_doc_id VARCHAR "
+                        "REFERENCES project_documents(id)"
+                    ))
+                    logger.info("Added column checklist_items.template_project_doc_id")
+                if "completed_project_doc_id" not in existing:
+                    conn.execute(text(
+                        "ALTER TABLE checklist_items "
+                        "ADD COLUMN completed_project_doc_id VARCHAR "
+                        "REFERENCES project_documents(id)"
+                    ))
+                    logger.info("Added column checklist_items.completed_project_doc_id")
+
+        # ── references.attestation_document_id ────────────────────────────
+        if insp.has_table("references"):
+            existing = {c["name"] for c in insp.get_columns("references")}
+            if "attestation_document_id" not in existing:
+                with engine.begin() as conn:
+                    conn.execute(text(
+                        "ALTER TABLE \"references\" "
+                        "ADD COLUMN attestation_document_id VARCHAR "
+                        "REFERENCES documents(id)"
+                    ))
+                logger.info("Added column references.attestation_document_id")
+
+        # ── Postgres-only: convert native ENUMs to VARCHAR + CHECK ────────
+        if is_postgres:
+            _migrate_pg_enum_to_check(
+                table="documents",
+                column="type",
+                enum_type="document_type",
+                allowed=DOCUMENT_TYPES,
+                check_name="documents_type_check",
+                renames={"dc1": "autre", "dc2": "autre"},   # vault dc1/dc2 retired
+            )
+            _migrate_pg_enum_to_check(
+                table="project_documents",
+                column="type",
+                enum_type="project_doc_type",
+                allowed=PROJECT_DOC_TYPES,
+                check_name="project_documents_type_check",
+                renames={
+                    "acte_engagement": "acte_engagement_template",
+                    "dpgf": "dpgf_template",
+                },
+            )
+
+        # ── Wipe checklist_items (decision validée : re-run propre) ───────
+        if insp.has_table("checklist_items"):
+            with engine.begin() as conn:
+                deleted = conn.execute(text("DELETE FROM checklist_items")).rowcount
+                if deleted:
+                    logger.info(f"Wiped {deleted} checklist_items rows for re-run")
+
     except Exception as e:
         logger.warning(f"Schema migration skipped: {e}")
+
+
+def _migrate_pg_enum_to_check(table, column, enum_type, allowed, check_name, renames):
+    """Convert a Postgres native ENUM column to VARCHAR + CHECK constraint.
+    Idempotent : no-op if the column is already VARCHAR.
+    Applies the `renames` map before adding the new CHECK constraint."""
+    from sqlalchemy import text
+
+    with engine.begin() as conn:
+        is_enum = conn.execute(text("""
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = :t AND column_name = :c AND udt_name = :u
+        """), {"t": table, "c": column, "u": enum_type}).scalar()
+
+        if is_enum:
+            conn.execute(text(
+                f'ALTER TABLE "{table}" ALTER COLUMN "{column}" '
+                f'TYPE VARCHAR(64) USING "{column}"::text'
+            ))
+            logger.info(f"Converted {table}.{column} from ENUM {enum_type} to VARCHAR")
+
+        for old_value, new_value in renames.items():
+            res = conn.execute(text(
+                f'UPDATE "{table}" SET "{column}" = :new WHERE "{column}" = :old'
+            ), {"new": new_value, "old": old_value})
+            if res.rowcount:
+                logger.info(f"Renamed {res.rowcount} {table}.{column} '{old_value}' → '{new_value}'")
+
+        # Drop legacy ENUM type if no other column references it.
+        conn.execute(text(f'DROP TYPE IF EXISTS {enum_type} CASCADE'))
+
+        # (Re)create the CHECK constraint with current allowed values.
+        conn.execute(text(
+            f'ALTER TABLE "{table}" DROP CONSTRAINT IF EXISTS {check_name}'
+        ))
+        allowed_sql = "', '".join(allowed)
+        conn.execute(text(
+            f'ALTER TABLE "{table}" ADD CONSTRAINT {check_name} '
+            f"CHECK (\"{column}\" IN ('{allowed_sql}'))"
+        ))
 
 
 _ensure_schema_columns()
