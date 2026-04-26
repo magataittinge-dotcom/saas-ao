@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   FileText, FileSpreadsheet, File, Trash2, AlertCircle,
-  CloudUpload, CheckCircle2, ChevronRight, FileArchive,
+  CloudUpload, CheckCircle2, ChevronRight, FileArchive, Clock,
 } from 'lucide-react'
 import axios from 'axios'
 import { api } from '@/services/api'
@@ -79,6 +79,7 @@ export default function StepUpload({ project }: Props) {
   const [sublabel, setSublabel] = useState('')
   const [uploadErrors, setUploadErrors] = useState<string[]>([])
   const [uploadWarnings, setUploadWarnings] = useState<string[]>([])
+  const [largeFileNotice, setLargeFileNotice] = useState<{ message: string; tone: 'cyan' | 'orange' } | null>(null)
   const [nextError, setNextError] = useState<string | null>(null)
   const [isNavigating, setIsNavigating] = useState(false)
 
@@ -87,6 +88,7 @@ export default function StepUpload({ project }: Props) {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const safetyRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const doneRef = useRef(false)
+  const lastProgressUpdateRef = useRef(0)
 
   const [dismissedTips, setDismissedTips] = useState<Set<string>>(new Set())
 
@@ -177,6 +179,7 @@ export default function StepUpload({ project }: Props) {
             setUploadErrors(prev => [...prev, 'Erreur lors du traitement des documents.'])
           }
           queryClient.invalidateQueries({ queryKey: ['project-documents', project.id] })
+          setLargeFileNotice(null)
           setTimeout(() => { setPhase('idle'); setDisplayPct(0) }, 1000)
         }
       } catch { /* ignore poll errors */ }
@@ -201,12 +204,35 @@ export default function StepUpload({ project }: Props) {
       if (acceptedFiles.length === 0) return
       setUploadErrors([])
       setUploadWarnings([])
+      const largestSize = acceptedFiles.reduce((m, f) => Math.max(m, f.size), 0)
+      const MB = 1024 * 1024
+      const GB = 1024 * MB
+      const mb = Math.round(largestSize / MB)
+      if (largestSize > 1 * GB) {
+        setLargeFileNotice({
+          tone: 'orange',
+          message: `Très gros DCE détecté (${mb} Mo). Upload jusqu'à 15 minutes selon votre connexion. Restez sur cette page.`,
+        })
+      } else if (largestSize > 500 * MB) {
+        setLargeFileNotice({
+          tone: 'cyan',
+          message: 'Upload volumineux, ~3-7 minutes. Ne fermez pas l\'onglet.',
+        })
+      } else if (largestSize > 100 * MB) {
+        setLargeFileNotice({
+          tone: 'cyan',
+          message: 'Upload en cours, ~1-3 minutes.',
+        })
+      } else {
+        setLargeFileNotice(null)
+      }
       setPhase('uploading')
       setDisplayPct(0)
       setLabel('Upload des fichiers...')
       setSublabel('')
       processingStartedRef.current = false
       doneRef.current = false
+      lastProgressUpdateRef.current = 0
 
       const errors: string[] = []
       const warnings: string[] = []
@@ -221,12 +247,23 @@ export default function StepUpload({ project }: Props) {
           const result = await uploadService.uploadProjectDocument(
             project.id, file, detectedType,
             ({ loaded, total }) => {
+              const isComplete = total > 0 && loaded >= total
+              const now = Date.now()
+              if (!isComplete && now - lastProgressUpdateRef.current < 500) return
+              lastProgressUpdateRef.current = now
+
               const filePct = total > 0 ? loaded / total : 0
               const overallPct = ((i + filePct) / acceptedFiles.length) * 100
               const mapped = Math.round(Math.min(overallPct, 100) * 0.3)
               setDisplayPct(mapped)
-              setSublabel(`${Math.round(overallPct)}% envoyé`)
-              if (hasZip && loaded >= total && total > 0) {
+
+              const MB = 1024 * 1024
+              const loadedMb = (loaded / MB).toFixed(1)
+              const totalMb = total > 0 ? (total / MB).toFixed(1) : '?'
+              const pct = Math.round(overallPct)
+              setSublabel(`${loadedMb} / ${totalMb} Mo (${pct}%)`)
+
+              if (hasZip && isComplete) {
                 startProcessing()
               }
             },
@@ -254,9 +291,11 @@ export default function StepUpload({ project }: Props) {
         processingStartedRef.current = false
         setPhase('idle')
         setDisplayPct(0)
+        setLargeFileNotice(null)
       } else if (!hasZip) {
         setPhase('idle')
         setDisplayPct(0)
+        setLargeFileNotice(null)
       }
 
       if (warnings.length > 0) setUploadWarnings(warnings)
@@ -398,6 +437,25 @@ export default function StepUpload({ project }: Props) {
             Formats acceptés : .pdf .docx .xlsx .ods .zip — jusqu&apos;à 2 Go
           </p>
         </div>
+
+        {/* ── Large-file reassurance (cyan for normal, orange for very large) ─ */}
+        {largeFileNotice && (phase === 'uploading' || phase === 'processing') && (
+          <div
+            className="rounded-xl p-4 mt-4 flex items-start gap-3"
+            style={
+              largeFileNotice.tone === 'orange'
+                ? { background: 'rgba(249,115,22,0.06)', border: '1px solid rgba(249,115,22,0.25)' }
+                : { background: 'rgba(14,165,233,0.06)', border: '1px solid rgba(14,165,233,0.20)' }
+            }
+          >
+            <Clock
+              size={16}
+              style={{ color: largeFileNotice.tone === 'orange' ? '#F97316' : '#0EA5E9' }}
+              className="shrink-0 mt-0.5"
+            />
+            <p className="text-sm" style={{ color: '#0F172A' }}>{largeFileNotice.message}</p>
+          </div>
+        )}
 
         {/* ── Upload errors ───────────────────────────────── */}
         {uploadErrors.length > 0 && (

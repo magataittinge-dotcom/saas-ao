@@ -1,9 +1,11 @@
 import zipfile
 import re
+import shutil
+import tempfile
 import unicodedata
 import io as _io
 import threading
-from typing import List, Optional, Any
+from typing import IO, List, Optional, Any
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, UploadFile, File, Form
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -25,6 +27,12 @@ from services import pipeline_tracker
 from pathlib import Path as FilePath
 
 UPLOADS_ROOT = FilePath(__file__).parent.parent / "uploads"
+
+# Upload limits — DCE archives can legitimately reach ~1.5 GB on big projects.
+_ALLOWED_EXTENSIONS = {".pdf", ".docx", ".doc", ".xlsx", ".xls", ".zip", ".png", ".jpg", ".jpeg"}
+_MAX_UPLOAD_SIZE = 2 * 1024 * 1024 * 1024     # 2 GB
+_UPLOAD_CHUNK_SIZE = 4 * 1024 * 1024          # 4 MB per chunk
+_UPLOAD_SPOOL_THRESHOLD = 10 * 1024 * 1024    # spill to disk past 10 MB
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -351,84 +359,125 @@ async def upload_project_document(
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ) -> Any:
+    """
+    Stream uploads to a SpooledTemporaryFile (RAM up to 10 MB, then disk) so that
+    large DCE archives never load fully into memory. Hard cap: 2 GB.
+    """
     import time as _time
-    import logging as _logging
-    _tlog = _logging.getLogger("TIMING")
     _t0 = _time.monotonic()
 
     _get_project_or_404(project_id, user.organization_id, db)
 
-    # ── Upload validation ────────────────────────────────────────────────────
-    _ALLOWED_EXTENSIONS = {".pdf", ".docx", ".doc", ".xlsx", ".xls", ".zip", ".png", ".jpg", ".jpeg"}
-    _MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50 MB
-    filename = (file.filename or "").lower()
-    ext = filename[filename.rfind("."):] if "." in filename else ""
+    # ── Cheap validation: extension first, before reading any bytes ──────────
+    raw_filename = (file.filename or "").strip()
+    filename_lower = raw_filename.lower()
+    ext = filename_lower[filename_lower.rfind("."):] if "." in filename_lower else ""
     if ext not in _ALLOWED_EXTENSIONS:
         raise HTTPException(status_code=400, detail=f"Type de fichier non autorisé : {ext}")
 
-    content = await file.read()
-    if len(content) > _MAX_UPLOAD_SIZE:
-        raise HTTPException(status_code=413, detail="Fichier trop volumineux (max 50 Mo)")
-    print(f"[TIMING] file.read(): {_time.monotonic()-_t0:.2f}s ({len(content)/1024/1024:.1f} MB)", flush=True)
+    # ── Pre-flight Content-Length check: reject obvious oversize fast ────────
+    content_length_hdr = request.headers.get("content-length")
+    if content_length_hdr:
+        try:
+            declared = int(content_length_hdr)
+        except ValueError:
+            declared = 0
+        if declared > _MAX_UPLOAD_SIZE:
+            size_mb = declared // (1024 * 1024)
+            raise HTTPException(
+                status_code=413,
+                detail=(
+                    f"Fichier trop volumineux ({size_mb} Mo, max 2 Go). "
+                    "Pour les DCE > 2 Go, contactez support@synorix.tech "
+                    "pour activer l'upload chunked dédié aux gros marchés."
+                ),
+            )
 
-    # ── ZIP handling ──────────────────────────────────────────────────────────
-    if file.filename.lower().endswith(".zip"):
-        # Mark project as processing
-        project = _get_project_or_404(project_id, user.organization_id, db)
-        project.processing_status = "extracting_zip"
-        project.processing_progress = 0
-        project.processing_detail = "Extraction de l'archive..."
-        db.commit()
-
-        _t1 = _time.monotonic()
-        docs, zip_warnings = await _handle_zip_upload(content, project_id, background_tasks, db)
-        print(f"[TIMING] _handle_zip_upload ({len(docs)} docs): {_time.monotonic()-_t1:.2f}s (total: {_time.monotonic()-_t0:.2f}s)", flush=True)
-
-        # Collect docs that still need text extraction
-        docs_needing_text = [(d.id, d.file_name, d.type, d.file_size or 0, d.file_url or "") for d in docs if d.extracted_text is None]
-        if docs_needing_text:
-            project.processing_status = "extracting_text"
-            project.processing_progress = 0
-            project.processing_detail = f"0/{len(docs_needing_text)} documents"
-            db.commit()
-            # Launch parallel extraction in a background thread
-            print(f"[TIMING] launching _extract_all_parallel: {len(docs_needing_text)} docs needing text (total: {_time.monotonic()-_t0:.2f}s)", flush=True)
-            threading.Thread(
-                target=_extract_all_parallel,
-                args=(project_id, docs_needing_text),
-                daemon=True,
-            ).start()
-        else:
-            project.processing_status = "ready"
-            project.processing_progress = 100
-            project.processing_detail = ""
-            db.commit()
-
-        # Invalidate lots cache after new documents added (AMÉLIORATION 7)
-        _invalidate_lots_cache(project_id, db)
-        # Mark step 1 complete and advance to step 2
-        _mark_step_1_complete(project, db)
-
-        print(f"[TIMING] endpoint returning response (total: {_time.monotonic()-_t0:.2f}s)", flush=True)
-        response: dict = {
-            "documents": [ProjectDocumentResponse.model_validate(d) for d in docs],
-            "extracted_count": len(docs),
-        }
-        if zip_warnings:
-            response["warnings"] = zip_warnings  # AMÉLIORATION 9
-        return response
-
-    # ── Regular single-file upload ────────────────────────────────────────────
-    project = _get_project_or_404(project_id, user.organization_id, db)
-    doc = await _create_project_document(
-        content, file.filename, file.content_type or "",
-        type, project_id, background_tasks, db,
+    # ── Stream body into a spooled temp file with a running size cap ─────────
+    spool: tempfile.SpooledTemporaryFile = tempfile.SpooledTemporaryFile(
+        max_size=_UPLOAD_SPOOL_THRESHOLD, mode="w+b",
     )
-    # Invalidate lots cache (AMÉLIORATION 7)
-    _invalidate_lots_cache(project_id, db)
-    # Mark step 1 complete and advance to step 2
-    _mark_step_1_complete(project, db)
-    return ProjectDocumentResponse.model_validate(doc)
+    try:
+        total = 0
+        while True:
+            chunk = await file.read(_UPLOAD_CHUNK_SIZE)
+            if not chunk:
+                break
+            total += len(chunk)
+            if total > _MAX_UPLOAD_SIZE:
+                size_mb = total // (1024 * 1024)
+                raise HTTPException(
+                    status_code=413,
+                    detail=(
+                        f"Fichier trop volumineux ({size_mb} Mo, max 2 Go). "
+                        "Pour les DCE > 2 Go, contactez support@synorix.tech "
+                        "pour activer l'upload chunked dédié aux gros marchés."
+                    ),
+                )
+            spool.write(chunk)
+        file_size = total
+        spool.seek(0)
+        print(f"[TIMING] streamed upload: {_time.monotonic()-_t0:.2f}s ({file_size/1024/1024:.1f} MB)", flush=True)
+
+        # ── ZIP handling — pass the spool, never load full bytes ─────────────
+        if filename_lower.endswith(".zip"):
+            project = _get_project_or_404(project_id, user.organization_id, db)
+            project.processing_status = "extracting_zip"
+            project.processing_progress = 0
+            project.processing_detail = "Extraction de l'archive..."
+            db.commit()
+
+            _t1 = _time.monotonic()
+            docs, zip_warnings = await _handle_zip_upload(spool, project_id, background_tasks, db)
+            print(f"[TIMING] _handle_zip_upload ({len(docs)} docs): {_time.monotonic()-_t1:.2f}s (total: {_time.monotonic()-_t0:.2f}s)", flush=True)
+
+            docs_needing_text = [
+                (d.id, d.file_name, d.type, d.file_size or 0, d.file_url or "")
+                for d in docs if d.extracted_text is None
+            ]
+            if docs_needing_text:
+                project.processing_status = "extracting_text"
+                project.processing_progress = 0
+                project.processing_detail = f"0/{len(docs_needing_text)} documents"
+                db.commit()
+                print(f"[TIMING] launching _extract_all_parallel: {len(docs_needing_text)} docs needing text (total: {_time.monotonic()-_t0:.2f}s)", flush=True)
+                threading.Thread(
+                    target=_extract_all_parallel,
+                    args=(project_id, docs_needing_text),
+                    daemon=True,
+                ).start()
+            else:
+                project.processing_status = "ready"
+                project.processing_progress = 100
+                project.processing_detail = ""
+                db.commit()
+
+            _invalidate_lots_cache(project_id, db)
+            _mark_step_1_complete(project, db)
+
+            print(f"[TIMING] endpoint returning response (total: {_time.monotonic()-_t0:.2f}s)", flush=True)
+            response: dict = {
+                "documents": [ProjectDocumentResponse.model_validate(d) for d in docs],
+                "extracted_count": len(docs),
+            }
+            if zip_warnings:
+                response["warnings"] = zip_warnings
+            return response
+
+        # ── Single-file upload — stream spool to storage via copyfileobj ─────
+        project = _get_project_or_404(project_id, user.organization_id, db)
+        doc = await _create_project_document_from_stream(
+            spool, file_size, raw_filename, file.content_type or "",
+            type, project_id, background_tasks, db,
+        )
+        _invalidate_lots_cache(project_id, db)
+        _mark_step_1_complete(project, db)
+        return ProjectDocumentResponse.model_validate(doc)
+    finally:
+        try:
+            spool.close()
+        except Exception:
+            pass
 
 
 def _mark_step_1_complete(project: Project, db: Session) -> None:
@@ -760,57 +809,22 @@ def _track_extraction_progress(project_id: str, total_needing_text: int) -> None
             pass
 
 
-def _extract_text_background(doc_id: str, content: bytes, filename: str) -> None:
-    """Background task: extract text from document and update DB.
-    Always sets extracted_text (empty string on failure) so NULL = 'not yet processed'."""
-    import logging as _logging
-    _log = _logging.getLogger(__name__)
-    extracted_text = ""
-    page_count = None
-    try:
-        from database import SessionLocal
-
-        result_text, result_pages = processor.extract(content, filename)
-        if result_text:
-            extracted_text = result_text.replace("\x00", "")
-        page_count = result_pages
-    except Exception as e:
-        _log.error(f"Background text extraction failed for {filename}: {e}")
-
-    try:
-        from database import SessionLocal
-        db = SessionLocal()
-        try:
-            doc = db.query(ProjectDocument).filter(ProjectDocument.id == doc_id).first()
-            if doc:
-                doc.extracted_text = extracted_text
-                if page_count is not None:
-                    doc.page_count = page_count
-                db.commit()
-                _log.info(f"Text extraction done for {filename} (doc {doc_id}): {len(extracted_text)} chars, {page_count} pages")
-        finally:
-            db.close()
-    except Exception as e:
-        _log.error(f"DB update failed for {filename} (doc {doc_id}): {e}")
-
-
-async def _create_project_document(
-    content: bytes,
+async def _create_project_document_from_stream(
+    spool: IO[bytes],
+    file_size: int,
     filename: str,
     content_type: str,
     form_type: str,
     project_id: str,
     background_tasks: BackgroundTasks,
     db: Session,
-    skip_bg_extraction: bool = False,
 ) -> ProjectDocument:
-    """Upload one file, persist to DB, schedule text extraction + PDF conversion in background.
-    skip_bg_extraction: True when called from ZIP (parallel extractor handles it)."""
+    """Persist a file-like upload to storage without ever loading full bytes in RAM."""
     import logging as _logging
     _log = _logging.getLogger(__name__)
 
-    file_url = await storage.upload(
-        content,
+    file_url = await storage.upload_stream(
+        spool,
         filename,
         f"projects/{project_id}/dce",
         content_type or None,
@@ -823,7 +837,7 @@ async def _create_project_document(
         type=doc_type,
         file_url=file_url,
         file_name=filename,
-        file_size=len(content),
+        file_size=file_size,
         extracted_text=None,
         page_count=None,
         related_lots=assign_document_lots(filename, doc_type),
@@ -832,9 +846,7 @@ async def _create_project_document(
     db.commit()
     db.refresh(doc)
 
-    # Text extraction always deferred to _extract_all_parallel for ZIP
-    if not skip_bg_extraction:
-        background_tasks.add_task(_extract_text_background, doc.id, content, filename)
+    background_tasks.add_task(_extract_text_from_url_background, doc.id, doc.file_url, filename)
 
     try:
         if PdfConverter.can_convert(filename):
@@ -845,6 +857,47 @@ async def _create_project_document(
     return doc
 
 
+def _extract_text_from_url_background(doc_id: str, file_url: str, filename: str) -> None:
+    """Background task: read the persisted file from disk and extract text.
+    Reads bytes from disk on demand instead of carrying the upload payload through memory."""
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
+    extracted_text = ""
+    page_count = None
+    try:
+        if file_url.startswith("/uploads/"):
+            path = UPLOADS_ROOT / file_url.removeprefix("/uploads/")
+            if not path.exists():
+                _log.error(f"Fichier introuvable pour extraction: {path}")
+                return
+            content = path.read_bytes()
+        else:
+            # S3-backed file — extraction would need a download step we don't yet support.
+            _log.warning(f"Extraction texte ignorée (URL non locale): {file_url}")
+            return
+        result_text, result_pages = processor.extract(content, filename)
+        if result_text:
+            extracted_text = result_text.replace("\x00", "")
+        page_count = result_pages
+    except Exception as e:
+        _log.error(f"Extraction texte (disque) échouée pour {filename}: {e}")
+
+    try:
+        from database import SessionLocal
+        db = SessionLocal()
+        try:
+            doc = db.query(ProjectDocument).filter(ProjectDocument.id == doc_id).first()
+            if doc:
+                doc.extracted_text = extracted_text
+                if page_count is not None:
+                    doc.page_count = page_count
+                db.commit()
+        finally:
+            db.close()
+    except Exception as e:
+        _log.error(f"Mise à jour DB échouée pour {filename} (doc {doc_id}): {e}")
+
+
 # Files to extract from a ZIP (AMÉLIORATION 1: added .ods)
 _ZIP_ALLOWED = {".pdf", ".docx", ".xlsx", ".xls", ".doc", ".ods"}
 # Ignore macOS artefacts and hidden files
@@ -852,7 +905,7 @@ _ZIP_IGNORE = re.compile(r'^(__MACOSX[/\\]|\.)', re.IGNORECASE)
 
 
 async def _extract_zip_members(
-    content: bytes,
+    source,  # IO[bytes] | bytes — file-like at outer call, bytes for nested archives
     project_id: str,
     background_tasks: BackgroundTasks,
     db: Session,
@@ -862,19 +915,31 @@ async def _extract_zip_members(
     depth: int = 0,
 ) -> List[ProjectDocument]:
     """
-    Core ZIP extraction logic (recursive for nested ZIPs — AMÉLIORATION 2).
-    depth: current recursion level (max 2).
+    Core ZIP extraction (recursive — max 2 levels for nested ZIPs).
+
+    `source` is a seekable file-like object on the outer call (so the archive
+    is never fully loaded into memory) and bytes/BytesIO for nested archives.
+    Members are streamed straight to disk via shutil.copyfileobj — at no point
+    is the full uploaded payload held as a single bytes blob.
     """
     import logging as _logging
     import time as _time
     _log = _logging.getLogger(__name__)
-    _tlog = _logging.getLogger("TIMING")
 
     created: List[ProjectDocument] = []
     _tz0 = _time.monotonic()
 
+    if isinstance(source, (bytes, bytearray)):
+        zip_source: IO[bytes] = _io.BytesIO(source)
+    else:
+        zip_source = source
+        try:
+            zip_source.seek(0)
+        except Exception:
+            pass
+
     try:
-        zf = zipfile.ZipFile(_io.BytesIO(content), 'r')
+        zf = zipfile.ZipFile(zip_source, 'r')
     except zipfile.BadZipFile:
         if depth == 0:
             raise HTTPException(status_code=400, detail="Fichier ZIP invalide ou corrompu")
@@ -883,11 +948,14 @@ async def _extract_zip_members(
 
     import uuid as _uuid
 
-    # Phase A: read all valid members from ZIP into memory
-    pending: list[tuple[str, bytes]] = []  # (base_filename, file_bytes)
+    file_records: list[tuple[str, str, str, int]] = []  # (base, file_url, doc_type, file_size)
+    prefix = f"projects/{project_id}/dce"
+    _t_read = 0.0
 
     with zf:
         members = zf.infolist()
+        _t_read = _time.monotonic() - _tz0
+
         for member in members:
             if member.is_dir():
                 continue
@@ -903,7 +971,7 @@ async def _extract_zip_members(
 
             suffix = FilePath(base).suffix.lower()
 
-            # AMÉLIORATION 2: nested ZIP — recurse (max 2 levels)
+            # AMÉLIORATION 2: nested ZIP — read into bytes (rare path, archives are usually <100MB)
             if suffix == ".zip" and depth < 2:
                 if member.file_size == 0:
                     continue
@@ -939,39 +1007,36 @@ async def _extract_zip_members(
                 base = f"{stem}_{counter}{ext}"
             used_in_zip.add(base)
 
-            # Skip if already exists in the project
             if base.lower().strip() in existing_names:
                 continue
 
+            # Stream the member straight to disk — avoids loading huge files into RAM.
+            key = f"{prefix}/{_uuid.uuid4()}-{base}"
+            path = UPLOADS_ROOT / key
+            path.parent.mkdir(parents=True, exist_ok=True)
             try:
-                file_bytes = zf.read(member)
+                with zf.open(member) as src, open(path, "wb") as dst:
+                    shutil.copyfileobj(src, dst, length=_UPLOAD_CHUNK_SIZE)
             except Exception as e:
                 warnings.append(f"{base} : impossible de lire le fichier ({e})")
+                if path.exists():
+                    try:
+                        path.unlink()
+                    except Exception:
+                        pass
                 continue
 
-            pending.append((base, file_bytes))
+            file_url = f"/uploads/{key}"
+            doc_type = _detect_doc_type(base, "autre")
+            file_records.append((base, file_url, doc_type, member.file_size))
             existing_names.add(base.lower().strip())
 
-    _t_read = _time.monotonic() - _tz0
-    print(f"[TIMING] ZIP read: {len(pending)} files in {_t_read:.2f}s", flush=True)
+    _t_write = _time.monotonic() - _tz0 - _t_read
+    print(f"[TIMING] ZIP stream-write: {len(file_records)} files in {_t_write:.2f}s", flush=True)
 
-    # Phase B: write all files to disk in batch
-    _tw0 = _time.monotonic()
-    file_records: list[tuple[str, str, str, int]] = []  # (base, file_url, doc_type, file_size)
-    prefix = f"projects/{project_id}/dce"
-    for base, file_bytes in pending:
-        key = f"{prefix}/{_uuid.uuid4()}-{base}"
-        path = UPLOADS_ROOT / key
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(file_bytes)
-        file_url = f"/uploads/{key}"
-        doc_type = _detect_doc_type(base, "autre")
-        file_records.append((base, file_url, doc_type, len(file_bytes)))
-    _t_write = _time.monotonic() - _tw0
-    print(f"[TIMING] disk write: {len(file_records)} files in {_t_write:.2f}s", flush=True)
-
-    # Phase C: bulk insert all documents — single commit
+    # Bulk insert all documents — single commit
     _td0 = _time.monotonic()
+    new_docs: List[ProjectDocument] = []
     for base, file_url, doc_type, file_size in file_records:
         doc = ProjectDocument(
             project_id=project_id,
@@ -984,11 +1049,11 @@ async def _extract_zip_members(
             related_lots=assign_document_lots(base, doc_type),
         )
         db.add(doc)
-        created.append(doc)
+        new_docs.append(doc)
     db.commit()
-    # Refresh all to get IDs
-    for doc in created:
+    for doc in new_docs:
         db.refresh(doc)
+    created.extend(new_docs)
     _t_db = _time.monotonic() - _td0
 
     print(
@@ -1000,7 +1065,7 @@ async def _extract_zip_members(
 
 
 async def _handle_zip_upload(
-    content: bytes,
+    source,  # IO[bytes] (seekable) — typically a SpooledTemporaryFile
     project_id: str,
     background_tasks: BackgroundTasks,
     db: Session,
@@ -1009,10 +1074,9 @@ async def _handle_zip_upload(
     Extract a ZIP and create one ProjectDocument per valid file inside.
     Returns (created_docs, warnings).
 
-    AMÉLIORATION 2: nested ZIP support (max 2 levels)
-    AMÉLIORATION 9: returns warnings for failed/skipped files
+    `source` is a file-like (the streamed upload spool); members are unpacked
+    to disk without ever holding the whole archive as bytes.
     """
-    # Pre-fetch existing filenames for duplicate check
     existing_rows = (
         db.query(ProjectDocument.file_name)
         .filter(ProjectDocument.project_id == project_id)
@@ -1023,7 +1087,7 @@ async def _handle_zip_upload(
     warnings: List[str] = []
 
     created = await _extract_zip_members(
-        content, project_id, background_tasks, db,
+        source, project_id, background_tasks, db,
         existing_names, used_in_zip, warnings, depth=0,
     )
     return created, warnings

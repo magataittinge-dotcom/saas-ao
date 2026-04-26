@@ -37,6 +37,7 @@ export const uploadService = {
       formData,
       {
         headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 30 * 60 * 1000,
         onUploadProgress: onUploadProgress
           ? (e) => onUploadProgress({ loaded: e.loaded ?? 0, total: e.total ?? file.size })
           : undefined,

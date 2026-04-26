@@ -81,3 +81,66 @@ npx shadcn-ui@latest init
 # Ajouter les composants nécessaires
 npx shadcn-ui@latest add button input label card badge dialog select tabs toast
 ```
+
+## Déploiement — taille maximale des uploads
+
+L'API accepte des uploads DCE jusqu'à **2 Go** (streaming sur disque via
+`SpooledTemporaryFile`, jamais en RAM). En production, le proxy en amont doit
+être configuré pour ne pas tronquer ces requêtes — par défaut nginx coupe à
+1 Mo et la plupart des PaaS appliquent leurs propres limites.
+
+### nginx
+
+Dans le `server { ... }` ou `location /api/ { ... }` qui sert FastAPI :
+
+```nginx
+client_max_body_size 2g;
+client_body_timeout  600s;
+proxy_request_buffering off;     # streaming pass-through, sinon nginx bufferise tout
+proxy_read_timeout   600s;
+proxy_send_timeout   600s;
+```
+
+### Render
+
+Dans `render.yaml` (ou via le dashboard) sur le service web FastAPI :
+
+```yaml
+services:
+  - type: web
+    runtime: python
+    plan: standard          # le plan free coupe à ~100 Mo
+    envVars:
+      - key: WEB_CONCURRENCY
+        value: "2"
+    # Render n'expose pas client_max_body_size; le runtime accepte 2 Go par défaut
+    # sur les plans payants. Vérifier `Settings > Networking > Request size limit`.
+```
+
+### Railway
+
+Railway proxifie via un edge sans limite de taille fixe, mais le timeout HTTP
+par défaut est 100 s. Pour des uploads de 2 Go sur connexions lentes :
+
+```bash
+railway variables set RAILWAY_HTTP_TIMEOUT=600
+```
+
+### Cloudflare (si utilisé en frontend)
+
+Les plans Free/Pro plafonnent les requêtes à **100 Mo**. Pour autoriser 2 Go,
+soit passer en plan Business (500 Mo) / Enterprise (5 Go), soit exclure
+`/api/projects/*/documents` de Cloudflare via une Page Rule **Bypass Cache &
+Disable Performance** ou un sous-domaine direct (`api-direct.synorix.fr`).
+
+### Vérification
+
+```bash
+# Doit renvoyer 413 immédiatement, sans transférer le corps
+curl -X POST https://api.synorix.fr/api/projects/<id>/documents \
+  -H "Content-Length: 3221225472" \
+  -F "file=@small.pdf"
+```
+
+Un 413 rapide ⇒ le proxy laisse passer la limite applicative (FastAPI). Un
+413 d'nginx (HTML) ⇒ le `client_max_body_size` est encore trop bas.
