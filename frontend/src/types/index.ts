@@ -222,12 +222,16 @@ export interface ComplianceItem {
 // ─── Candidature Checklist ────────────────────────────────────────────────────
 
 export type ChecklistStatus = 'present' | 'manquant' | 'expire' | 'expiration_proche'
+export type ChecklistSourceKind = 'vault' | 'dce_template'
 
 export interface ChecklistItem {
   id: string
   project_id: string
   document_type_required: string
+  source_kind: ChecklistSourceKind
   linked_document_id?: string
+  template_project_doc_id?: string
+  completed_project_doc_id?: string
   status: ChecklistStatus
   details?: string
   source_in_rc?: string

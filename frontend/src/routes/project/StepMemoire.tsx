@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, Link } from 'react-router-dom'
 import {
-  Sparkles, Save, CheckCircle2, ChevronDown, ChevronUp,
+  Sparkles, Save, CheckCircle2, ChevronDown,
   Pencil, X, Download, Building2, BarChart3,
   ChevronRight, Zap, Eye, MessageSquare, Shield,
   Loader2,
@@ -487,7 +487,7 @@ function DocumentView({
 }: {
   content: MemoireContent
   project: Project
-  docRef: React.RefObject<HTMLDivElement | null>
+  docRef: React.MutableRefObject<HTMLDivElement | null>
 }) {
   const a = content.partie_a as Record<string, string>
   const b = content.partie_b as Record<string, string>
