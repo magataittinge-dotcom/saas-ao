@@ -137,9 +137,9 @@ const TESTIMONIALS = [
 // ── Stats ────────────────────────────────────────────────────────────────
 const STATS = [
   { value: '60+', label: 'exigences détectées', color: '#0EA5E9' },
-  { value: '10 min', label: 'par mémoire technique', color: '#00D4AA' },
-  { value: '13', label: 'lots auto-détectés', color: '#8B5CF6' },
-  { value: '5/5', label: 'note technique visée', color: '#F59E0B' },
+  { value: '10 min', label: 'par mémoire technique', color: '#0284C7' },
+  { value: '13', label: 'lots auto-détectés', color: '#0EA5E9' },
+  { value: '5/5', label: 'note technique visée', color: '#64748B' },
 ]
 
 // ── Logo clients ─────────────────────────────────────────────────────────
@@ -165,7 +165,7 @@ export default function Landing() {
   return (
     <div
       className="min-h-screen w-full overflow-x-hidden"
-      style={{ background: '#050608', color: '#F1F5F9', fontFamily: '"Inter", system-ui, sans-serif' }}
+      style={{ background: '#050608', color: '#F1F5F9', fontFamily: '"DM Sans", system-ui, sans-serif' }}
     >
       <style>{KEYFRAMES}</style>
 
@@ -223,19 +223,12 @@ export default function Landing() {
           <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2.5 shrink-0">
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #0EA5E9, #00D4AA)' }}
-              >
-                <span className="text-white font-black text-sm" style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>S</span>
+              <div className="logo-synorix" style={{ width: 32, height: 32 }}>
+                <span className="logo-synorix-text" style={{ fontSize: 14 }}>S</span>
               </div>
               <span
                 className="font-extrabold text-lg tracking-tight"
-                style={{
-                  fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif',
-                  background: 'linear-gradient(135deg, #0EA5E9, #00D4AA)',
-                  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
-                }}
+                style={{ fontFamily: '"DM Sans", system-ui, sans-serif', color: '#0F172A' }}
               >
                 Synorix
               </span>
@@ -348,13 +341,13 @@ export default function Landing() {
           {/* Title */}
           <h1
             className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] mb-6 max-w-4xl"
-            style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif', animation: 'fade-up 0.6s ease-out 0.1s both' }}
+            style={{ fontFamily: '"DM Sans", system-ui, sans-serif', animation: 'fade-up 0.6s ease-out 0.1s both' }}
           >
             Ne perdez plus de{' '}
             <br className="hidden sm:block" />
             <span
               style={{
-                background: 'linear-gradient(90deg, #0EA5E9, #00D4AA)',
+                background: 'linear-gradient(90deg, #0EA5E9, #0284C7)',
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text',
               }}
             >
@@ -411,7 +404,7 @@ export default function Landing() {
                 <div
                   key={i}
                   className="w-7 h-7 rounded-full border-2 border-[#050608] flex items-center justify-center text-[9px] font-bold text-white"
-                  style={{ background: `linear-gradient(135deg, ${i % 2 === 0 ? '#0EA5E9' : '#00D4AA'}, ${i % 2 === 0 ? '#00D4AA' : '#8B5CF6'})` }}
+                  style={{ background: `linear-gradient(135deg, ${i % 2 === 0 ? '#0EA5E9' : '#0284C7'}, ${i % 2 === 0 ? '#0284C7' : '#0EA5E9'})` }}
                 >
                   {['KB', 'SM', 'JL', 'AR', 'MC'][i]}
                 </div>
@@ -438,8 +431,8 @@ export default function Landing() {
             {/* Browser bar */}
             <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.06]">
               <div className="w-3 h-3 rounded-full" style={{ background: '#EF4444' }} />
-              <div className="w-3 h-3 rounded-full" style={{ background: '#F59E0B' }} />
-              <div className="w-3 h-3 rounded-full" style={{ background: '#10B981' }} />
+              <div className="w-3 h-3 rounded-full" style={{ background: '#64748B' }} />
+              <div className="w-3 h-3 rounded-full" style={{ background: '#0EA5E9' }} />
               <div className="flex-1 mx-4 h-6 rounded-md" style={{ background: 'rgba(255,255,255,0.04)', maxWidth: 300 }}>
                 <div className="px-3 py-1 text-[10px] text-[#475569]">app.synorix.fr/dashboard</div>
               </div>
@@ -450,9 +443,9 @@ export default function Landing() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
                   { label: 'AO en cours', val: '7', color: '#0EA5E9' },
-                  { label: 'Taux conformité', val: '94%', color: '#10B981' },
-                  { label: 'AO gagnés', val: '12', color: '#00D4AA' },
-                  { label: 'Soumis ce mois', val: '3', color: '#F59E0B' },
+                  { label: 'Taux conformité', val: '94%', color: '#0EA5E9' },
+                  { label: 'AO gagnés', val: '12', color: '#0284C7' },
+                  { label: 'Soumis ce mois', val: '3', color: '#64748B' },
                 ].map(s => (
                   <div
                     key={s.label}
@@ -477,7 +470,7 @@ export default function Landing() {
                       <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(14,165,233,0.12)', color: '#38BDF8' }}>En cours</span>
                     </div>
                     <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
-                      <div className="h-full rounded-full" style={{ width: `${[65, 40, 85][i]}%`, background: 'linear-gradient(90deg, #0EA5E9, #00D4AA)' }} />
+                      <div className="h-full rounded-full" style={{ width: `${[65, 40, 85][i]}%`, background: 'linear-gradient(90deg, #0EA5E9, #0284C7)' }} />
                     </div>
                     <div className="text-[10px] text-[#475569]">Étape {[3, 2, 5][i]}/6 · J-{[14, 7, 3][i]}</div>
                   </div>
@@ -501,7 +494,7 @@ export default function Landing() {
               <span
                 key={i}
                 className="inline-block text-lg font-semibold text-[#334155] mx-10 sm:mx-16"
-                style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}
+                style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}
               >
                 {name}
               </span>
@@ -518,10 +511,10 @@ export default function Landing() {
           <div className="text-center mb-16">
             <h2
               className="text-3xl sm:text-4xl font-bold mb-4"
-              style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}
+              style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}
             >
               Une IA experte en{' '}
-              <span style={{ background: 'linear-gradient(90deg, #0EA5E9, #00D4AA)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+              <span style={{ background: 'linear-gradient(90deg, #0EA5E9, #0284C7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
                 marchés publics BTP
               </span>
             </h2>
@@ -542,7 +535,7 @@ export default function Landing() {
                   <Search size={18} style={{ color: '#0EA5E9' }} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-[#E2E8F0] mb-1" style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>Analyse DCE intelligente</h3>
+                  <h3 className="text-lg font-semibold text-[#E2E8F0] mb-1" style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}>Analyse DCE intelligente</h3>
                   <p className="text-sm text-[#64748B] leading-relaxed">Multi-pass sur RC, CCTP, DPGF. Chaque exigence est extraite avec sa source, sa page, et sa priorité.</p>
                 </div>
               </div>
@@ -565,9 +558,9 @@ export default function Landing() {
               style={{ background: '#0C1017', border: '1px solid rgba(255,255,255,0.06)' }}
             >
               <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: 'rgba(0,212,170,0.12)' }}>
-                <Layers size={18} style={{ color: '#00D4AA' }} />
+                <Layers size={18} style={{ color: '#0284C7' }} />
               </div>
-              <h3 className="text-base font-semibold text-[#E2E8F0] mb-2" style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>Détection des lots</h3>
+              <h3 className="text-base font-semibold text-[#E2E8F0] mb-2" style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}>Détection des lots</h3>
               <p className="text-sm text-[#64748B] leading-relaxed">L'IA identifie tous les lots depuis le DPGF, RC et noms de fichiers. Badge de confiance pour chaque détection.</p>
             </div>
 
@@ -577,9 +570,9 @@ export default function Landing() {
               style={{ background: '#0C1017', border: '1px solid rgba(255,255,255,0.06)' }}
             >
               <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: 'rgba(139,92,246,0.12)' }}>
-                <Shield size={18} style={{ color: '#8B5CF6' }} />
+                <Shield size={18} style={{ color: '#0EA5E9' }} />
               </div>
-              <h3 className="text-base font-semibold text-[#E2E8F0] mb-2" style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>Coffre-fort documents</h3>
+              <h3 className="text-base font-semibold text-[#E2E8F0] mb-2" style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}>Coffre-fort documents</h3>
               <p className="text-sm text-[#64748B] leading-relaxed">Centralisez décennale, URSSAF, Kbis. Alerte avant expiration. Lié automatiquement à la checklist candidature.</p>
             </div>
 
@@ -593,7 +586,7 @@ export default function Landing() {
                   <FileText size={18} style={{ color: '#0EA5E9' }} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-[#E2E8F0] mb-1" style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>Mémoire technique 5/5</h3>
+                  <h3 className="text-lg font-semibold text-[#E2E8F0] mb-1" style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}>Mémoire technique 5/5</h3>
                   <p className="text-sm text-[#64748B] leading-relaxed">Claude Opus génère ~20 pages adaptées à vos références, votre équipe, et chaque critère de notation du marché.</p>
                 </div>
               </div>
@@ -601,7 +594,7 @@ export default function Landing() {
               <div className="rounded-lg p-4 space-y-2" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}>
                 {['A — Présentation générale', 'B — Prestation & méthodologie', 'C — Planning & sécurité'].map((txt, i) => (
                   <div key={i} className="flex items-center gap-3 text-xs">
-                    <div className="w-1.5 h-6 rounded-full" style={{ background: ['#0EA5E9', '#00D4AA', '#8B5CF6'][i] }} />
+                    <div className="w-1.5 h-6 rounded-full" style={{ background: ['#0EA5E9', '#0284C7', '#0EA5E9'][i] }} />
                     <span className="text-[#94A3B8]">{txt}</span>
                     <span className="ml-auto text-[10px] text-[#475569]">{['6 pages', '8 pages', '4 pages'][i]}</span>
                   </div>
@@ -615,9 +608,9 @@ export default function Landing() {
               style={{ background: '#0C1017', border: '1px solid rgba(255,255,255,0.06)' }}
             >
               <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: 'rgba(245,158,11,0.12)' }}>
-                <Download size={18} style={{ color: '#F59E0B' }} />
+                <Download size={18} style={{ color: '#64748B' }} />
               </div>
-              <h3 className="text-base font-semibold text-[#E2E8F0] mb-2" style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>Export ZIP pro</h3>
+              <h3 className="text-base font-semibold text-[#E2E8F0] mb-2" style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}>Export ZIP pro</h3>
               <p className="text-sm text-[#64748B] leading-relaxed">Mémoire .docx, compliance Excel, dossier complet. Prêt à déposer en un clic sur la plateforme de l'acheteur.</p>
             </div>
           </div>
@@ -631,10 +624,10 @@ export default function Landing() {
         <div className="max-w-4xl mx-auto">
           <h2
             className="text-3xl sm:text-4xl font-bold text-center mb-4"
-            style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}
+            style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}
           >
             De l'analyse au dépôt en{' '}
-            <span style={{ background: 'linear-gradient(90deg, #0EA5E9, #00D4AA)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+            <span style={{ background: 'linear-gradient(90deg, #0EA5E9, #0284C7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
               4 étapes
             </span>
           </h2>
@@ -665,7 +658,7 @@ export default function Landing() {
             <div>
               <h3
                 className="text-xl font-semibold text-[#E2E8F0] mb-3"
-                style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}
+                style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}
               >
                 {activeTabData.num}. {activeTabData.title}
               </h3>
@@ -716,10 +709,10 @@ export default function Landing() {
         <div className="max-w-4xl mx-auto">
           <h2
             className="text-3xl sm:text-4xl font-bold text-center mb-4"
-            style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}
+            style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}
           >
             Des prix simples, un{' '}
-            <span style={{ background: 'linear-gradient(90deg, #0EA5E9, #00D4AA)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+            <span style={{ background: 'linear-gradient(90deg, #0EA5E9, #0284C7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
               ROI immédiat
             </span>
           </h2>
@@ -741,14 +734,14 @@ export default function Landing() {
                 {plan.popular && (
                   <div
                     className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-xs font-semibold text-white"
-                    style={{ background: 'linear-gradient(135deg, #0EA5E9, #00D4AA)' }}
+                    style={{ background: 'linear-gradient(135deg, #0EA5E9, #0284C7)' }}
                   >
                     Populaire
                   </div>
                 )}
                 <h3
                   className="text-xl font-bold text-[#E2E8F0] mb-2"
-                  style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}
+                  style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}
                 >
                   {plan.name}
                 </h3>
@@ -759,7 +752,7 @@ export default function Landing() {
                 <ul className="space-y-3 mb-8">
                   {plan.features.map(f => (
                     <li key={f} className="flex items-center gap-3 text-sm text-[#94A3B8]">
-                      <Check size={14} style={{ color: '#10B981' }} className="shrink-0" />
+                      <Check size={14} style={{ color: '#0EA5E9' }} className="shrink-0" />
                       {f}
                     </li>
                   ))}
@@ -795,7 +788,7 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto">
           <h2
             className="text-3xl sm:text-4xl font-bold text-center mb-14"
-            style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}
+            style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}
           >
             Ce qu'en disent nos utilisateurs
           </h2>
@@ -812,7 +805,7 @@ export default function Landing() {
               >
                 <div className="flex gap-0.5 mb-4">
                   {[0, 1, 2, 3, 4].map(s => (
-                    <Star key={s} size={14} fill="#F59E0B" stroke="none" />
+                    <Star key={s} size={14} fill="#64748B" stroke="none" />
                   ))}
                 </div>
                 <p className="text-sm text-[#CBD5E1] leading-relaxed mb-5 italic">"{t.quote}"</p>
@@ -838,10 +831,10 @@ export default function Landing() {
         <div className="relative z-10">
           <h2
             className="text-3xl sm:text-5xl font-bold mb-6"
-            style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}
+            style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}
           >
             Prêt à gagner plus de{' '}
-            <span style={{ background: 'linear-gradient(90deg, #0EA5E9, #00D4AA)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
+            <span style={{ background: 'linear-gradient(90deg, #0EA5E9, #0284C7)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
               marchés
             </span>
             {' '}?
@@ -870,7 +863,7 @@ export default function Landing() {
       <footer className="border-t border-white/[0.06] py-16 px-4" style={{ background: '#050608' }}>
         <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-10">
           <div>
-            <h4 className="text-sm font-semibold text-[#E2E8F0] mb-4" style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>Produit</h4>
+            <h4 className="text-sm font-semibold text-[#E2E8F0] mb-4" style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}>Produit</h4>
             <ul className="space-y-2.5 text-sm text-[#64748B]">
               <li><button onClick={() => scrollTo('features')} className="hover:text-white transition-colors bg-transparent border-none cursor-pointer text-[#64748B] text-sm p-0">Fonctionnalités</button></li>
               <li><button onClick={() => scrollTo('pricing')} className="hover:text-white transition-colors bg-transparent border-none cursor-pointer text-[#64748B] text-sm p-0">Tarifs</button></li>
@@ -878,7 +871,7 @@ export default function Landing() {
             </ul>
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-[#E2E8F0] mb-4" style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>Ressources</h4>
+            <h4 className="text-sm font-semibold text-[#E2E8F0] mb-4" style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}>Ressources</h4>
             <ul className="space-y-2.5 text-sm text-[#64748B]">
               <li>Documentation</li>
               <li>Blog</li>
@@ -886,7 +879,7 @@ export default function Landing() {
             </ul>
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-[#E2E8F0] mb-4" style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>Légal</h4>
+            <h4 className="text-sm font-semibold text-[#E2E8F0] mb-4" style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}>Légal</h4>
             <ul className="space-y-2.5 text-sm text-[#64748B]">
               <li>Mentions légales</li>
               <li>CGU</li>
@@ -894,7 +887,7 @@ export default function Landing() {
             </ul>
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-[#E2E8F0] mb-4" style={{ fontFamily: '"Plus Jakarta Sans", system-ui, sans-serif' }}>Contact</h4>
+            <h4 className="text-sm font-semibold text-[#E2E8F0] mb-4" style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}>Contact</h4>
             <ul className="space-y-2.5 text-sm text-[#64748B]">
               <li>contact@synorix.fr</li>
               <li>Support</li>
@@ -903,7 +896,7 @@ export default function Landing() {
         </div>
         <div className="max-w-6xl mx-auto mt-12 pt-6 border-t border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #0EA5E9, #00D4AA)' }}>
+            <div className="w-6 h-6 rounded flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #0EA5E9, #0284C7)' }}>
               <span className="text-white font-black text-[10px]">S</span>
             </div>
             <span className="text-sm text-[#475569]">Synorix</span>

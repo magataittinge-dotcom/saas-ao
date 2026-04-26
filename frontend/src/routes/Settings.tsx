@@ -4,9 +4,9 @@ import { useAuthStore } from '@/stores/authStore'
 import PaymentCard from '@/components/common/PaymentCard'
 
 const PLAN_LABELS: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  pro:      { label: 'Pro',      color: '#059669', bg: 'rgba(14,165,233,0.12)',  border: 'rgba(14,165,233,0.30)' },
-  business: { label: 'Business', color: '#0284C7', bg: 'rgba(0,212,170,0.12)',   border: 'rgba(0,212,170,0.30)' },
-  free:     { label: 'Gratuit',  color: '#94A3B8', bg: '#E2E8F0', border: '#CBD5E1' },
+  pro:      { label: 'Pro',      color: '#0284C7', bg: 'rgba(14,165,233,0.10)',  border: 'rgba(14,165,233,0.25)' },
+  business: { label: 'Business', color: '#0F172A', bg: 'rgba(15,23,42,0.08)',   border: 'rgba(15,23,42,0.20)' },
+  free:     { label: 'Gratuit',  color: '#64748B', bg: '#F8FAFC', border: '#E2E8F0' },
 }
 
 function SectionCard({ icon, title, children }: {
@@ -87,7 +87,7 @@ export default function Settings() {
       </SectionCard>
 
       {/* ── Entreprise ──────────────────────────────────────────────────── */}
-      <SectionCard icon={<Building2 size={15} className="text-ds-teal" />} title="Entreprise">
+      <SectionCard icon={<Building2 size={15} className="text-ds-cyan" />} title="Entreprise">
         <div className="divide-y" style={{ borderColor: 'transparent' }}>
           <InfoRow label="Raison sociale"   value={organization?.name} />
           <InfoRow label="SIRET"            value={(organization as any)?.siret} />
@@ -106,7 +106,7 @@ export default function Settings() {
       </SectionCard>
 
       {/* ── Abonnement ──────────────────────────────────────────────────── */}
-      <SectionCard icon={<CreditCard size={15} className="text-ds-purple" />} title="Abonnement">
+      <SectionCard icon={<CreditCard size={15} className="text-ds-cyan" />} title="Abonnement">
         <div className="flex items-center justify-between mb-5">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -139,7 +139,7 @@ export default function Settings() {
             href="/billing"
             className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 no-underline"
             style={{
-              background: 'linear-gradient(135deg, #0EA5E9 0%, #10B981 100%)',
+              background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0369A1 100%)',
               color: '#fff',
               border: 'none',
               cursor: 'pointer',

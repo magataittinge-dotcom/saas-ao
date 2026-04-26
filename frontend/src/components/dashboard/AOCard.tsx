@@ -9,8 +9,8 @@ const STEP_LABELS = ['Upload DCE', 'Analyse IA', 'Candidature', 'Mémoire', 'Exp
 const STATUS_CONFIG: Record<string, { label: string; cls: string; accent: string }> = {
   brouillon: { label: 'Brouillon', cls: 'pill-muted',   accent: '#64748B' },
   en_cours:  { label: 'En cours',  cls: 'pill-cyan',    accent: '#0EA5E9' },
-  soumis:    { label: 'Soumis',    cls: 'pill-warning', accent: '#F59E0B' },
-  gagné:     { label: 'Gagné',     cls: 'pill-success', accent: '#10B981' },
+  soumis:    { label: 'Soumis',    cls: 'pill-muted',   accent: '#475569' },
+  gagné:     { label: 'Gagné',     cls: 'pill-gagne',   accent: '#047857' },
   perdu:     { label: 'Perdu',     cls: 'pill-danger',  accent: '#EF4444' },
 }
 

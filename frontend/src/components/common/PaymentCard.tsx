@@ -125,7 +125,7 @@ export default function PaymentCard({
       {/* Holder name */}
       <div
         className="absolute bottom-5 left-6 text-sm uppercase text-white/70 tracking-wider"
-        style={{ fontFamily: '"Inter", system-ui, sans-serif' }}
+        style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}
       >
         {holderName}
       </div>

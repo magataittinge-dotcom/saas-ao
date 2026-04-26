@@ -205,9 +205,9 @@ function ProfileSummary({ stats }: { stats: { filled: number; total: number; nom
       <div className="flex items-start gap-3">
         <div
           className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-          style={{ background: isComplete ? 'rgba(16,185,129,0.10)' : 'rgba(245,158,11,0.10)' }}
+          style={{ background: isComplete ? 'rgba(14,165,233,0.10)' : 'rgba(100,116,139,0.08)' }}
         >
-          <Building2 size={18} style={{ color: isComplete ? '#10B981' : '#F59E0B' }} />
+          <Building2 size={18} style={{ color: isComplete ? '#0EA5E9' : '#64748B' }} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2.5">
@@ -217,7 +217,7 @@ function ProfileSummary({ stats }: { stats: { filled: number; total: number; nom
             {isComplete && (
               <span
                 className="text-[11px] font-medium px-2 py-0.5 rounded-full"
-                style={{ background: 'rgba(16,185,129,0.10)', color: '#10B981', border: '1px solid rgba(16,185,129,0.20)' }}
+                style={{ background: 'rgba(14,165,233,0.10)', color: '#0EA5E9', border: '1px solid rgba(14,165,233,0.20)' }}
               >
                 Complet
               </span>
@@ -237,7 +237,7 @@ function ProfileSummary({ stats }: { stats: { filled: number; total: number; nom
                 <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: '#F1F5F9' }}>
                   <div
                     className="h-full rounded-full transition-all duration-500"
-                    style={{ width: `${pct}%`, background: pct < 30 ? '#F59E0B' : pct < 70 ? '#0EA5E9' : '#10B981' }}
+                    style={{ width: `${pct}%`, background: pct < 30 ? '#64748B' : pct < 70 ? '#0EA5E9' : '#0EA5E9' }}
                   />
                 </div>
                 <span className="text-xs font-medium shrink-0" style={{ color: '#64748B' }}>
@@ -617,7 +617,7 @@ function DocumentView({
             Synorix BTP SaaS — Page 1
           </p>
           <div className="flex items-center gap-1.5">
-            <Shield size={12} style={{ color: '#10B981' }} />
+            <Shield size={12} style={{ color: '#0EA5E9' }} />
             <p className="text-xs" style={{ color: '#94A3B8' }}>
               Signe numeriquement via Synorix Trust
             </p>
@@ -835,10 +835,10 @@ export default function StepMemoire({ project }: Props) {
       <button
         onClick={() => navigate(`/projects/${project.id}/export`)}
         disabled={!hasMemoire}
-        className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold text-white transition-colors disabled:opacity-40"
-        style={{ background: '#0EA5E9', fontFamily: F }}
+        className="signature-btn disabled:opacity-40"
+        style={{ fontFamily: F }}
       >
-        Verification finale →
+        Vérification finale →
       </button>
     </div>
   )
@@ -902,7 +902,7 @@ export default function StepMemoire({ project }: Props) {
             </div>
 
             {hasMemoire && (
-              <p className="text-sm font-medium" style={{ color: '#F59E0B' }}>
+              <p className="text-sm font-medium" style={{ color: '#64748B' }}>
                 La regeneration remplacera le memoire actuel.
               </p>
             )}
@@ -1040,8 +1040,8 @@ export default function StepMemoire({ project }: Props) {
               generate()
             }}
             disabled={isGenerating || !variables.nb_ouvriers || !variables.delai}
-            className="flex items-center gap-2 py-3 px-6 rounded-lg text-sm font-bold text-white transition-colors disabled:opacity-40"
-            style={{ background: '#0EA5E9', fontFamily: F }}
+            className="signature-btn disabled:opacity-40"
+            style={{ fontFamily: F, padding: '12px 24px' }}
           >
             <Sparkles size={18} />
             {hasMemoire ? 'Regenerer le memoire' : 'Generer le memoire technique'}
@@ -1087,9 +1087,9 @@ export default function StepMemoire({ project }: Props) {
             <span
               className="text-xs font-medium px-2.5 py-1 rounded-full"
               style={{
-                background: displayContent ? 'rgba(16,185,129,0.10)' : '#F1F5F9',
-                color: displayContent ? '#10B981' : '#94A3B8',
-                border: displayContent ? '1px solid rgba(16,185,129,0.20)' : '1px solid #E2E8F0',
+                background: displayContent ? 'rgba(14,165,233,0.10)' : '#F1F5F9',
+                color: displayContent ? '#0EA5E9' : '#94A3B8',
+                border: displayContent ? '1px solid rgba(14,165,233,0.20)' : '1px solid #E2E8F0',
               }}
             >
               {displayContent ? 'Valide' : 'Brouillon'}

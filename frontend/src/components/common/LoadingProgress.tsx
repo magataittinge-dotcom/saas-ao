@@ -39,7 +39,7 @@ export default function LoadingProgress({
             id: i,
             x: Math.cos((i * 30 * Math.PI) / 180) * 55,
             y: Math.sin((i * 30 * Math.PI) / 180) * 55,
-            color: ['#0EA5E9', '#10B981', '#10B981', '#06B6D4'][i % 4],
+            color: ['#0EA5E9', '#0284C7', '#38BDF8', '#0EA5E9'][i % 4],
           })),
         )
         setTimeout(() => setParticles([]), 900)
@@ -66,14 +66,14 @@ export default function LoadingProgress({
           <circle
             cx="80" cy="80" r={RADIUS}
             fill="none"
-            stroke={showCheck ? '#10B981' : colors.stroke}
+            stroke={showCheck ? '#0EA5E9' : colors.stroke}
             strokeWidth="8"
             strokeLinecap="round"
             strokeDasharray={CIRCUMFERENCE}
             strokeDashoffset={offset}
             style={{
               transition: 'stroke-dashoffset 0.5s ease, stroke 0.3s ease',
-              filter: `drop-shadow(0 0 8px ${showCheck ? 'rgba(16,185,129,0.5)' : colors.glow})`,
+              filter: `drop-shadow(0 0 8px ${showCheck ? 'rgba(14,165,233,0.5)' : colors.glow})`,
             }}
           />
         </svg>

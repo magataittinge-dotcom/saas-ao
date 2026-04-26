@@ -21,8 +21,8 @@ const navItems = [
 
 const PLAN_PILL: Record<string, { label: string; pillClass: string }> = {
   free:     { label: 'Free',     pillClass: 'bg-[#F1F5F9] text-[#64748B]' },
-  pro:      { label: 'Pro',      pillClass: 'bg-[rgba(14,165,233,0.10)] text-[#0284C7]' },
-  business: { label: 'Business', pillClass: 'bg-[rgba(16,185,129,0.10)] text-[#059669]' },
+  pro:      { label: 'Pro',      pillClass: 'pill-pro' },
+  business: { label: 'Business', pillClass: 'pill-entreprise' },
 }
 
 interface Props {
@@ -79,16 +79,10 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
         <div className="h-16 flex items-center shrink-0 overflow-hidden"
           style={{ borderBottom: '1px solid #E2E8F0' }}>
           <div className={cn('flex items-center gap-2.5 transition-all duration-300 flex-1', expanded ? 'px-4' : 'px-0 justify-center w-full')}>
-            <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-              style={{ background: 'linear-gradient(135deg, #0EA5E9, #10B981)' }}>
-              <span className="text-white font-black text-base font-display">S</span>
-            </div>
+            <div className="logo-synorix"><span className="logo-synorix-text">S</span></div>
             {expanded && (
               <span className="font-black text-xl tracking-tight whitespace-nowrap font-display"
-                style={{
-                  background: 'linear-gradient(135deg, #0EA5E9, #10B981)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                }}>
+                style={{ color: '#0F172A' }}>
                 Synorix
               </span>
             )}
@@ -179,7 +173,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
         <div className="border-t border-[#E2E8F0] p-2">
           <div className={cn('flex items-center gap-2.5 rounded-lg p-2 transition-all duration-200', expanded ? '' : 'justify-center')}>
             <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0"
-              style={{ background: 'linear-gradient(135deg, #0EA5E9, #10B981)' }}>
+              style={{ background: 'linear-gradient(135deg, #0F172A, #0369A1)' }}>
               {initials}
             </div>
             {expanded && (

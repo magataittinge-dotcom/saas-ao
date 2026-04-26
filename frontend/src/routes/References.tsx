@@ -67,12 +67,12 @@ export default function References() {
                     {ref.montant_ht ? formatMontant(ref.montant_ht) : '—'}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border ${
                       ref.statut === 'gagné'
-                        ? 'bg-emerald-500/20 text-emerald-400'
+                        ? 'bg-[#ECFDF5] text-[#047857] border-[#A7F3D0]'
                         : ref.statut === 'perdu'
-                        ? 'bg-red-500/20 text-red-400'
-                        : 'bg-sky-500/20 text-sky-400'
+                        ? 'bg-[#FEF2F2] text-[#B91C1C] border-[#FECACA]'
+                        : 'bg-[#ECFEFF] text-[#0E7490] border-[#A5F3FC]'
                     }`}>
                       {ref.statut}
                     </span>

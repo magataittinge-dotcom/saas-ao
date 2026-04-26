@@ -94,7 +94,7 @@ export default function Projects() {
         </div>
         <button
           onClick={() => navigate('/projects/new')}
-          className="btn-primary flex items-center gap-2 touch-target shrink-0"
+          className="signature-btn touch-target shrink-0"
         >
           <Plus size={16} />
           Nouvel AO
@@ -131,7 +131,7 @@ export default function Projects() {
                   className="px-3 py-1.5 text-xs font-medium transition-colors touch-target"
                   style={{
                     background: sort === opt.key ? 'rgba(14,165,233,0.12)' : 'transparent',
-                    color: sort === opt.key ? '#10B981' : '#64748B',
+                    color: sort === opt.key ? '#0EA5E9' : '#64748B',
                     borderRight: '1px solid #E2E8F0',
                   }}
                 >
@@ -156,7 +156,7 @@ export default function Projects() {
                   className="px-3 py-1.5 text-xs font-medium transition-colors touch-target"
                   style={{
                     background: filter === opt.key ? 'rgba(14,165,233,0.12)' : 'transparent',
-                    color: filter === opt.key ? '#10B981' : '#64748B',
+                    color: filter === opt.key ? '#0EA5E9' : '#64748B',
                     borderRight: '1px solid #E2E8F0',
                   }}
                 >

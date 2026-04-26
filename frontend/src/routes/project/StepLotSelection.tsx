@@ -28,14 +28,14 @@ function ConfidenceBadge({ confidence }: { confidence?: number }) {
   const pct = Math.round(confidence)
   if (confidence >= 80) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full" style={{ color: '#059669' }}>
+      <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full" style={{ color: '#0284C7' }}>
         <ShieldCheck size={11} /> FIABLE {pct}%
       </span>
     )
   }
   if (confidence >= 50) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full" style={{ color: '#D97706' }}>
+      <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full" style={{ color: '#64748B' }}>
         <Zap size={11} /> PROBABLE {pct}%
       </span>
     )
@@ -115,14 +115,14 @@ function LotCard({ lot, selected, onSelect, onDelete, index }: LotCardProps) {
               </span>
             )}
             {lot._manual && (
-              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ color: '#8B5CF6', background: 'rgba(139,92,246,0.08)' }}>
+              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ color: '#0EA5E9', background: 'rgba(14,165,233,0.08)' }}>
                 Manuel
               </span>
             )}
           </div>
           <p className="text-base mt-0.5" style={{ color: '#64748B' }}>{lot.nom}</p>
           {lot.tranches && lot.tranches.length > 0 && (
-            <span className="inline-flex items-center gap-1 text-xs font-medium mt-1 px-2 py-0.5 rounded-full" style={{ color: '#8B5CF6', background: 'rgba(139,92,246,0.08)' }} title={lot.tranches.join('\n')}>
+            <span className="inline-flex items-center gap-1 text-xs font-medium mt-1 px-2 py-0.5 rounded-full" style={{ color: '#0EA5E9', background: 'rgba(14,165,233,0.08)' }} title={lot.tranches.join('\n')}>
               {lot.tranches.length} tranche{lot.tranches.length > 1 ? 's' : ''}
             </span>
           )}
@@ -529,10 +529,10 @@ export default function StepLotSelection({ project }: Props) {
         {/* Excel error */}
         {errorLots.length > 0 && (
           <div className="flex items-start gap-3 p-4 rounded-xl mb-5" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)' }}>
-            <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: '#F59E0B' }} />
+            <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: '#64748B' }} />
             <div>
-              <p className="text-sm font-semibold" style={{ color: '#D97706' }}>Fichier(s) Excel protégé(s) par mot de passe</p>
-              {errorLots.map(l => <p key={l.id} className="text-xs mt-0.5" style={{ color: '#D97706' }}>{l.nom}</p>)}
+              <p className="text-sm font-semibold" style={{ color: '#475569' }}>Fichier(s) Excel protégé(s) par mot de passe</p>
+              {errorLots.map(l => <p key={l.id} className="text-xs mt-0.5" style={{ color: '#475569' }}>{l.nom}</p>)}
             </div>
           </div>
         )}
@@ -613,7 +613,7 @@ export default function StepLotSelection({ project }: Props) {
           }}
         >
           <div className="flex items-center gap-2">
-            <CheckCircle2 size={16} style={{ color: selectedId !== 'all' && selectedName ? '#10B981' : '#CBD5E1' }} />
+            <CheckCircle2 size={16} style={{ color: selectedId !== 'all' && selectedName ? '#0EA5E9' : '#CBD5E1' }} />
             <span className="text-sm" style={{ color: '#64748B' }}>
               {selectedId !== 'all' && selectedName
                 ? <>Lot sélectionné : <strong style={{ color: '#0F172A' }}>{selectedName}</strong></>

@@ -92,14 +92,14 @@ const CATEGORY_LABELS: Record<string, string> = {
 }
 
 const STATUS_ICON: Record<string, { icon: typeof CheckCircle2; color: string }> = {
-  couvert:     { icon: CheckCircle2, color: '#10B981' },
-  present:     { icon: CheckCircle2, color: '#10B981' },
+  couvert:     { icon: CheckCircle2, color: '#0EA5E9' },
+  present:     { icon: CheckCircle2, color: '#0EA5E9' },
   non_couvert: { icon: XCircle,      color: '#EF4444' },
   manquant:    { icon: XCircle,      color: '#EF4444' },
-  partiel:     { icon: AlertTriangle, color: '#F59E0B' },
-  expire:      { icon: AlertTriangle, color: '#F59E0B' },
-  expiration_proche: { icon: AlertTriangle, color: '#F59E0B' },
-  a_generer:   { icon: AlertTriangle, color: '#F59E0B' },
+  partiel:     { icon: AlertTriangle, color: '#64748B' },
+  expire:      { icon: AlertTriangle, color: '#EF4444' },
+  expiration_proche: { icon: AlertTriangle, color: '#64748B' },
+  a_generer:   { icon: AlertTriangle, color: '#64748B' },
 }
 
 function StatusIcon({ status }: { status: string }) {
@@ -135,8 +135,8 @@ function SummaryCard({
       <span
         className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-0.5 rounded-full"
         style={ok
-          ? { background: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0' }
-          : { background: '#FFFBEB', color: '#D97706', border: '1px solid #FDE68A' }
+          ? { background: '#ECFDF5', color: '#0284C7', border: '1px solid #A7F3D0' }
+          : { background: 'rgba(100,116,139,0.08)', color: '#475569', border: '1px solid rgba(100,116,139,0.20)' }
         }
       >
         {ok ? (
@@ -176,8 +176,8 @@ function AccordionSection({
       >
         <div className="flex items-center gap-2.5">
           {ok
-            ? <CheckCircle2 size={16} style={{ color: '#10B981' }} />
-            : <AlertTriangle size={16} style={{ color: '#F59E0B' }} />
+            ? <CheckCircle2 size={16} style={{ color: '#0EA5E9' }} />
+            : <AlertTriangle size={16} style={{ color: '#64748B' }} />
           }
           <span className="text-sm font-semibold" style={{ color: '#0F172A', fontFamily: F }}>
             {title}
@@ -342,8 +342,8 @@ export default function StepExport({ project }: Props) {
       <button
         onClick={() => exportZip()}
         disabled={isExportingZip}
-        className="flex items-center gap-2 px-8 py-3 rounded-xl text-base font-bold text-white transition-colors hover:opacity-90 disabled:opacity-40"
-        style={{ background: '#0EA5E9', boxShadow: '0 2px 8px rgba(14,165,233,0.30)', fontFamily: F }}
+        className="signature-btn disabled:opacity-40"
+        style={{ fontFamily: F, padding: '12px 32px', fontSize: '16px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(14,165,233,0.30)' }}
       >
         {isExportingZip ? <Loader2 size={18} className="animate-spin" /> : <Archive size={18} />}
         Télécharger le dossier ZIP
@@ -458,7 +458,7 @@ export default function StepExport({ project }: Props) {
               {detail.memoire_info ? (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2.5 py-2.5 px-3 rounded-lg hover:bg-slate-50 transition-colors">
-                    <CheckCircle2 size={15} style={{ color: '#10B981' }} />
+                    <CheckCircle2 size={15} style={{ color: '#0EA5E9' }} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium" style={{ color: '#1E293B' }}>
                         Mémoire technique v{detail.memoire_info.version}
@@ -482,7 +482,7 @@ export default function StepExport({ project }: Props) {
                 </div>
               ) : (
                 <div className="text-center py-4">
-                  <AlertTriangle size={16} className="mx-auto mb-2" style={{ color: '#F59E0B' }} />
+                  <AlertTriangle size={16} className="mx-auto mb-2" style={{ color: '#64748B' }} />
                   <p className="text-xs" style={{ color: '#64748B' }}>Le mémoire technique n&apos;a pas encore été généré.</p>
                   <button
                     onClick={() => navigate(`/projects/${project.id}/memoire`)}
@@ -511,7 +511,7 @@ export default function StepExport({ project }: Props) {
                   style={{ background: '#F8FAFC' }}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <FileSpreadsheet size={16} style={{ color: '#10B981' }} />
+                    <FileSpreadsheet size={16} style={{ color: '#0EA5E9' }} />
                     <div className="min-w-0">
                       <p className="text-xs font-medium truncate" style={{ color: '#1E293B' }}>{detail.dpgf_info.file_name}</p>
                       <p className="text-[11px]" style={{ color: '#64748B' }}>DPGF originale du DCE</p>
@@ -535,7 +535,7 @@ export default function StepExport({ project }: Props) {
                 <div
                   className="relative rounded-xl p-4 text-center transition-all cursor-pointer"
                   style={{
-                    border: `2px dashed ${dpgfDragging ? '#10B981' : '#CBD5E1'}`,
+                    border: `2px dashed ${dpgfDragging ? '#0EA5E9' : '#CBD5E1'}`,
                     background: dpgfDragging ? 'rgba(16,185,129,0.04)' : '#FAFBFC',
                   }}
                   onDragOver={(e) => { e.preventDefault(); setDpgfDragging(true) }}
@@ -543,7 +543,7 @@ export default function StepExport({ project }: Props) {
                   onDrop={onDpgfDrop}
                 >
                   {dpgfUploading ? (
-                    <Loader2 size={20} className="mx-auto animate-spin" style={{ color: '#10B981' }} />
+                    <Loader2 size={20} className="mx-auto animate-spin" style={{ color: '#0EA5E9' }} />
                   ) : (
                     <>
                       <Upload size={20} className="mx-auto mb-1.5" style={{ color: '#94A3B8' }} />
@@ -588,12 +588,12 @@ export default function StepExport({ project }: Props) {
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         {isValid
-                          ? <CheckCircle2 size={16} style={{ color: '#10B981' }} />
-                          : <AlertTriangle size={16} style={{ color: hasWarnings ? '#F59E0B' : '#EF4444' }} />
+                          ? <CheckCircle2 size={16} style={{ color: '#0EA5E9' }} />
+                          : <AlertTriangle size={16} style={{ color: hasWarnings ? '#64748B' : '#EF4444' }} />
                         }
                         <span
                           className="text-xs font-semibold"
-                          style={{ color: isValid ? '#10B981' : hasWarnings ? '#D97706' : '#EF4444' }}
+                          style={{ color: isValid ? '#0EA5E9' : hasWarnings ? '#475569' : '#EF4444' }}
                         >
                           {isValid ? 'DPGF conforme' : hasWarnings ? 'DPGF avec avertissements' : 'DPGF non conforme'}
                         </span>
@@ -609,11 +609,11 @@ export default function StepExport({ project }: Props) {
                         <p className="text-[10px]" style={{ color: '#94A3B8' }}>lignes</p>
                       </div>
                       <div className="text-center py-1.5 rounded-lg" style={{ background: '#F8FAFC' }}>
-                        <p className="text-sm font-bold" style={{ color: '#10B981' }}>{v.nb_lignes_remplies}</p>
+                        <p className="text-sm font-bold" style={{ color: '#0EA5E9' }}>{v.nb_lignes_remplies}</p>
                         <p className="text-[10px]" style={{ color: '#94A3B8' }}>remplies</p>
                       </div>
                       <div className="text-center py-1.5 rounded-lg" style={{ background: '#F8FAFC' }}>
-                        <p className="text-sm font-bold" style={{ color: v.nb_lignes_vides > 0 ? '#EF4444' : '#10B981' }}>{v.nb_lignes_vides}</p>
+                        <p className="text-sm font-bold" style={{ color: v.nb_lignes_vides > 0 ? '#EF4444' : '#0EA5E9' }}>{v.nb_lignes_vides}</p>
                         <p className="text-[10px]" style={{ color: '#94A3B8' }}>vides</p>
                       </div>
                     </div>
@@ -630,7 +630,7 @@ export default function StepExport({ project }: Props) {
                     {v.warnings.length > 0 && (
                       <div className="space-y-1 mt-2">
                         {v.warnings.map((w, i) => (
-                          <p key={i} className="text-[11px] flex items-start gap-1.5" style={{ color: '#D97706' }}>
+                          <p key={i} className="text-[11px] flex items-start gap-1.5" style={{ color: '#475569' }}>
                             <span className="shrink-0 mt-0.5">&#8226;</span>
                             {w}
                           </p>
@@ -665,7 +665,7 @@ export default function StepExport({ project }: Props) {
                       <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#64748B' }}>
                         {CATEGORY_LABELS[cat] || cat}
                       </span>
-                      <span className="text-[11px] font-medium" style={{ color: covered === items.length ? '#10B981' : '#F59E0B' }}>
+                      <span className="text-[11px] font-medium" style={{ color: covered === items.length ? '#0EA5E9' : '#64748B' }}>
                         {covered}/{items.length}
                       </span>
                     </div>

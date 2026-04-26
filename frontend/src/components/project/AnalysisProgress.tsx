@@ -146,12 +146,12 @@ export function AnalysisProgress({
               cy="100"
               r={RADIUS}
               fill="none"
-              stroke={showCheck ? '#10B981' : '#0EA5E9'}
+              stroke={showCheck ? '#0EA5E9' : '#0EA5E9'}
               strokeWidth="10"
               strokeLinecap="round"
               strokeDasharray={CIRCUMFERENCE}
               strokeDashoffset={offset}
-              style={{ transition: 'stroke-dashoffset 0.4s ease, stroke 0.3s ease', filter: `drop-shadow(0 0 8px ${showCheck ? '#10B981' : '#0EA5E9'})` }}
+              style={{ transition: 'stroke-dashoffset 0.4s ease, stroke 0.3s ease', filter: `drop-shadow(0 0 8px ${showCheck ? '#0EA5E9' : '#0EA5E9'})` }}
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
@@ -160,7 +160,7 @@ export function AnalysisProgress({
                 className="flex items-center justify-center w-16 h-16 rounded-full"
                 style={{ background: 'rgba(0,212,170,0.15)' }}
               >
-                <Check size={36} className="text-ds-teal" strokeWidth={2.5} />
+                <Check size={36} className="text-ds-cyan" strokeWidth={2.5} />
               </div>
             ) : (
               <span

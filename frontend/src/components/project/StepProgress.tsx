@@ -47,7 +47,7 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick }: 
                 className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all duration-300"
                 style={
                   isCompleted && !isActive
-                    ? { background: '#10B981', borderColor: '#10B981', color: '#fff' }
+                    ? { background: '#0EA5E9', borderColor: '#0EA5E9', color: '#fff' }
                     : isActive && isCompleted
                     ? { background: '#0EA5E9', borderColor: '#0EA5E9', color: '#fff' }
                     : isActive
@@ -63,7 +63,7 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick }: 
                 className="text-xs whitespace-nowrap font-medium transition-colors"
                 style={
                   isActive    ? { color: '#0EA5E9' }
-                  : isCompleted ? { color: '#059669' }
+                  : isCompleted ? { color: '#0284C7' }
                   : { color: '#94A3B8' }
                 }
               >
@@ -77,7 +77,7 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick }: 
                 className="flex-1 h-0.5 mx-2 mt-[-1.25rem] rounded-full transition-all duration-500"
                 style={
                   isCompleted
-                    ? { background: 'linear-gradient(90deg, #10B981, #0EA5E9)' }
+                    ? { background: 'linear-gradient(90deg, #0EA5E9, #0284C7)' }
                     : isActive
                     ? { background: 'linear-gradient(90deg, rgba(14,165,233,0.40), #E2E8F0)' }
                     : { background: '#E2E8F0' }

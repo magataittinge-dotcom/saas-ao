@@ -31,10 +31,10 @@ function detectDocType(filename: string): ProjectDocumentType {
 
 const TYPE_BADGE: Record<ProjectDocumentType, { color: string; bg: string; border: string }> = {
   rc:              { color: '#0EA5E9', bg: 'rgba(14,165,233,0.10)', border: 'rgba(14,165,233,0.20)' },
-  cctp:           { color: '#8B5CF6', bg: 'rgba(139,92,246,0.10)', border: 'rgba(139,92,246,0.20)' },
-  ccap:           { color: '#0EA5E9', bg: '#0EA5E9', border: '#0EA5E9' },  // filled cyan
-  dpgf:           { color: '#F59E0B', bg: 'rgba(245,158,11,0.10)', border: 'rgba(245,158,11,0.20)' },
-  acte_engagement: { color: '#10B981', bg: 'rgba(16,185,129,0.10)', border: 'rgba(16,185,129,0.20)' },
+  cctp:           { color: '#0E7490', bg: 'rgba(14,165,233,0.08)', border: 'rgba(14,165,233,0.20)' },
+  ccap:           { color: '#0EA5E9', bg: 'rgba(14,165,233,0.10)', border: 'rgba(14,165,233,0.20)' },
+  dpgf:           { color: '#475569', bg: 'rgba(100,116,139,0.08)', border: 'rgba(100,116,139,0.20)' },
+  acte_engagement: { color: '#0284C7', bg: 'rgba(14,165,233,0.10)', border: 'rgba(14,165,233,0.20)' },
   plan:           { color: '#64748B', bg: '#F1F5F9', border: '#E2E8F0' },
   autre:          { color: '#94A3B8', bg: 'transparent', border: 'transparent' },
 }
@@ -43,8 +43,8 @@ function FileIcon({ filename }: { filename: string }) {
   const ext = filename.split('.').pop()?.toLowerCase() ?? ''
   if (ext === 'pdf') return <FileText size={18} className="shrink-0" style={{ color: '#EF4444' }} />
   if (ext === 'docx' || ext === 'doc') return <FileText size={18} className="shrink-0" style={{ color: '#3B82F6' }} />
-  if (ext === 'xlsx' || ext === 'xls' || ext === 'ods') return <FileSpreadsheet size={18} className="shrink-0" style={{ color: '#10B981' }} />
-  if (ext === 'zip') return <FileArchive size={18} className="shrink-0" style={{ color: '#8B5CF6' }} />
+  if (ext === 'xlsx' || ext === 'xls' || ext === 'ods') return <FileSpreadsheet size={18} className="shrink-0" style={{ color: '#0EA5E9' }} />
+  if (ext === 'zip') return <FileArchive size={18} className="shrink-0" style={{ color: '#64748B' }} />
   return <File size={18} className="shrink-0" style={{ color: '#94A3B8' }} />
 }
 
@@ -411,10 +411,10 @@ export default function StepUpload({ project }: Props) {
 
         {/* ── ZIP warnings ────────────────────────────────── */}
         {uploadWarnings.length > 0 && (
-          <div className="rounded-xl p-4 mt-4" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)' }}>
-            <p className="text-sm font-semibold mb-1" style={{ color: '#F59E0B' }}>Certains fichiers n&apos;ont pas pu être extraits :</p>
+          <div className="rounded-xl p-4 mt-4" style={{ background: 'rgba(100,116,139,0.06)', border: '1px solid rgba(100,116,139,0.15)' }}>
+            <p className="text-sm font-semibold mb-1" style={{ color: '#475569' }}>Certains fichiers n&apos;ont pas pu être extraits :</p>
             {uploadWarnings.map((w, i) => (
-              <p key={i} className="text-xs" style={{ color: '#D97706' }}>• {w}</p>
+              <p key={i} className="text-xs" style={{ color: '#64748B' }}>• {w}</p>
             ))}
           </div>
         )}
@@ -548,7 +548,7 @@ export default function StepUpload({ project }: Props) {
           }}
         >
           <div className="flex items-center gap-2">
-            <CheckCircle2 size={16} style={{ color: hasDocuments ? '#10B981' : '#CBD5E1' }} />
+            <CheckCircle2 size={16} style={{ color: hasDocuments ? '#0EA5E9' : '#CBD5E1' }} />
             <span className="text-sm" style={{ color: hasDocuments ? '#64748B' : '#CBD5E1' }}>
               {hasDocuments
                 ? "Tous les fichiers ont été vérifiés pour l'intégrité."
@@ -569,10 +569,7 @@ export default function StepUpload({ project }: Props) {
             <button
               onClick={handleNext}
               disabled={!hasDocuments || anyUploading || isProcessing || isNavigating}
-              className="px-5 py-2 rounded-lg text-sm font-semibold text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{ background: '#0EA5E9' }}
-              onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.background = '#0284C7' }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = '#0EA5E9' }}
+              className="signature-btn disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Suivant &gt;
             </button>

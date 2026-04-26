@@ -257,7 +257,7 @@ function ImportDialog({ onClose, onImported }: ImportDialogProps) {
                 borderColor: dragOver
                   ? '#0EA5E9'
                   : file
-                  ? '#10B981'
+                  ? '#0EA5E9'
                   : 'rgba(100,116,139,0.35)',
                 background: dragOver
                   ? 'rgba(14,165,233,0.08)'
@@ -275,8 +275,8 @@ function ImportDialog({ onClose, onImported }: ImportDialogProps) {
               />
               {file ? (
                 <div className="flex flex-col items-center gap-2">
-                  <CheckCircle2 size={28} style={{ color: '#059669' }} />
-                  <p className="text-sm font-medium" style={{ color: '#059669' }}>{file.name}</p>
+                  <CheckCircle2 size={28} style={{ color: '#0284C7' }} />
+                  <p className="text-sm font-medium" style={{ color: '#0284C7' }}>{file.name}</p>
                   <p className="text-xs text-ds-text-3">{(file.size / 1024).toFixed(0)} Ko</p>
                 </div>
               ) : (
@@ -357,10 +357,10 @@ function Section({
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center"
             style={{
-              background: complete ? 'rgba(0,212,170,0.15)' : 'rgba(14,165,233,0.15)',
+              background: complete ? 'rgba(14,165,233,0.10)' : 'rgba(14,165,233,0.15)',
             }}
           >
-            <Icon size={16} style={{ color: complete ? '#10B981' : '#0EA5E9' }} />
+            <Icon size={16} style={{ color: complete ? '#0EA5E9' : '#0EA5E9' }} />
           </div>
           <span className="font-medium text-ds-text">{section.label}</span>
         </div>
@@ -369,9 +369,9 @@ function Section({
             className="text-xs font-medium px-2 py-0.5 rounded-full"
             style={
               complete
-                ? { background: 'rgba(0,212,170,0.15)', color: '#059669' }
+                ? { background: 'rgba(14,165,233,0.10)', color: '#0284C7' }
                 : filled > 0
-                ? { background: 'rgba(245,158,11,0.15)', color: '#F59E0B' }
+                ? { background: 'rgba(100,116,139,0.08)', color: '#64748B' }
                 : { background: 'rgba(100,116,139,0.15)', color: '#64748B' }
             }
           >
@@ -538,12 +538,12 @@ export default function MemoireConfig() {
           }}
         >
           <div className="flex items-center gap-2">
-            <CheckCircle2 size={18} style={{ color: '#059669' }} />
-            <p className="text-sm font-medium" style={{ color: '#059669' }}>
+            <CheckCircle2 size={18} style={{ color: '#0284C7' }} />
+            <p className="text-sm font-medium" style={{ color: '#0284C7' }}>
               {importBanner.count}/18 champs pré-remplis par l'IA — vérifiez et complétez avant de sauvegarder
             </p>
           </div>
-          <button onClick={() => setImportBanner(null)} style={{ color: '#059669' }} className="opacity-70 hover:opacity-100 transition-opacity">
+          <button onClick={() => setImportBanner(null)} style={{ color: '#0284C7' }} className="opacity-70 hover:opacity-100 transition-opacity">
             <X size={16} />
           </button>
         </div>
@@ -564,13 +564,13 @@ export default function MemoireConfig() {
             style={{
               width: `${pct}%`,
               background: pct === 100
-                ? '#10B981'
-                : `linear-gradient(to right, #0EA5E9, ${pct > 60 ? '#10B981' : '#F97316'})`,
+                ? '#0EA5E9'
+                : `linear-gradient(to right, #0EA5E9, ${pct > 60 ? '#0EA5E9' : '#64748B'})`,
             }}
           />
         </div>
         {pct === 100 && (
-          <p className="text-xs font-medium mt-2 flex items-center gap-1" style={{ color: '#059669' }}>
+          <p className="text-xs font-medium mt-2 flex items-center gap-1" style={{ color: '#0284C7' }}>
             <CheckCircle2 size={13} /> Profil mémoire complet — la génération sera optimale
           </p>
         )}
@@ -762,7 +762,7 @@ export default function MemoireConfig() {
             className="btn-primary flex items-center gap-2 font-semibold py-2.5 px-6 disabled:opacity-60"
           >
             {saveSuccess ? (
-              <><CheckCircle2 size={16} style={{ color: '#059669' }} />Sauvegardé</>
+              <><CheckCircle2 size={16} style={{ color: '#0284C7' }} />Sauvegardé</>
             ) : (
               <><Save size={16} />{isSaving ? 'Sauvegarde...' : 'Sauvegarder'}</>
             )}

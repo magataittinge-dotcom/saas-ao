@@ -14,10 +14,10 @@ const PLANS = [
     price: '249',
     icon: Zap,
     color: '#0EA5E9',
-    colorLight: '#10B981',
+    colorLight: '#38BDF8',
     bg: 'rgba(14,165,233,0.08)',
     border: 'rgba(14,165,233,0.25)',
-    gradient: 'linear-gradient(135deg, #0EA5E9 0%, #10B981 100%)',
+    gradient: 'linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%)',
     features: [
       'Analyse IA illimitée',
       'Matrice de conformité automatique',
@@ -33,11 +33,11 @@ const PLANS = [
     name: 'Business',
     price: '399',
     icon: Crown,
-    color: '#7C3AED',
-    colorLight: '#C4B5FD',
-    bg: 'rgba(139,92,246,0.08)',
-    border: 'rgba(139,92,246,0.25)',
-    gradient: 'linear-gradient(135deg, #7C3AED 0%, #A78BFA 100%)',
+    color: '#0F172A',
+    colorLight: '#64748B',
+    bg: 'rgba(15,23,42,0.06)',
+    border: 'rgba(15,23,42,0.20)',
+    gradient: 'linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0369A1 100%)',
     popular: true,
     features: [
       'Tout le plan Pro, plus :',
@@ -52,9 +52,9 @@ const PLANS = [
 ] as const
 
 const PLAN_BADGES: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  pro:      { label: 'Pro',      color: '#059669', bg: 'rgba(14,165,233,0.12)',  border: 'rgba(14,165,233,0.30)' },
-  business: { label: 'Business', color: '#C4B5FD', bg: 'rgba(139,92,246,0.12)', border: 'rgba(139,92,246,0.30)' },
-  free:     { label: 'Gratuit',  color: '#94A3B8', bg: '#E2E8F0', border: '#CBD5E1' },
+  pro:      { label: 'Pro',      color: '#0284C7', bg: 'rgba(14,165,233,0.10)',  border: 'rgba(14,165,233,0.25)' },
+  business: { label: 'Business', color: '#0F172A', bg: 'rgba(15,23,42,0.08)', border: 'rgba(15,23,42,0.20)' },
+  free:     { label: 'Gratuit',  color: '#64748B', bg: '#F8FAFC', border: '#E2E8F0' },
 }
 
 export default function Billing() {
@@ -171,9 +171,9 @@ export default function Billing() {
             border: '1px solid rgba(14,165,233,0.25)',
           }}
         >
-          <Loader2 size={20} className="animate-spin text-ds-teal" />
+          <Loader2 size={20} className="animate-spin text-ds-cyan" />
           <div>
-            <p className="text-sm font-semibold text-ds-teal">Vérification du paiement...</p>
+            <p className="text-sm font-semibold text-ds-cyan">Vérification du paiement...</p>
             <p className="text-xs text-ds-text-3 mt-0.5">Confirmation en cours, veuillez patienter.</p>
           </div>
         </div>
@@ -273,7 +273,7 @@ export default function Billing() {
             className="flex items-center gap-3 px-6 py-4"
             style={{ borderBottom: '1px solid rgba(14,165,233,0.08)', background: 'rgba(14,165,233,0.02)' }}
           >
-            <Sparkles size={15} className="text-ds-teal" />
+            <Sparkles size={15} className="text-ds-cyan" />
             <h2 className="text-sm font-semibold text-ds-text">Choisir un plan</h2>
           </div>
           <div className="grid grid-cols-2 gap-4 px-6 py-6">
@@ -366,7 +366,7 @@ export default function Billing() {
           className="flex items-center gap-3 px-6 py-4"
           style={{ borderBottom: '1px solid rgba(14,165,233,0.08)', background: 'rgba(14,165,233,0.02)' }}
         >
-          <Download size={15} className="text-ds-purple" />
+          <Download size={15} className="text-ds-cyan" />
           <h2 className="text-sm font-semibold text-ds-text">Historique de facturation</h2>
         </div>
         <div className="px-6 py-5">

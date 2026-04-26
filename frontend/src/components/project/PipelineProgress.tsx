@@ -126,7 +126,7 @@ export function PipelineProgress({
   const CIRCUMFERENCE = 2 * Math.PI * RADIUS
   const offset = CIRCUMFERENCE * (1 - Math.min(progress, 100) / 100)
 
-  const accentColor = showCheck ? '#10B981' : isError ? '#EF4444' : '#0EA5E9'
+  const accentColor = showCheck ? '#0EA5E9' : isError ? '#EF4444' : '#0EA5E9'
 
   return createPortal(
     <div

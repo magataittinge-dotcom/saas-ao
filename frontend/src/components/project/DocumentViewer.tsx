@@ -167,7 +167,7 @@ export default function DocumentViewer({ projectId, documents, initialIndex, onC
               {isPdf ? (
                 <FileText size={15} className="shrink-0 text-ds-danger" />
               ) : isImage ? (
-                <ImageIcon size={15} className="shrink-0 text-ds-violet" />
+                <ImageIcon size={15} className="shrink-0 text-ds-cyan" />
               ) : (
                 <FileText size={15} className="shrink-0 text-ds-text-2" />
               )}

@@ -12,10 +12,10 @@ export interface ToastData {
 const VARIANT_CONFIG: Record<ToastVariant, { icon: typeof CheckCircle2; color: string; bg: string; border: string; barColor: string }> = {
   success: {
     icon: CheckCircle2,
-    color: '#059669',
-    bg: 'rgba(16,185,129,0.08)',
-    border: 'rgba(16,185,129,0.20)',
-    barColor: '#10B981',
+    color: '#0284C7',
+    bg: 'rgba(14,165,233,0.08)',
+    border: 'rgba(14,165,233,0.20)',
+    barColor: '#0EA5E9',
   },
   error: {
     icon: XCircle,
@@ -26,17 +26,17 @@ const VARIANT_CONFIG: Record<ToastVariant, { icon: typeof CheckCircle2; color: s
   },
   info: {
     icon: Info,
-    color: '#059669',
+    color: '#0284C7',
     bg: 'rgba(14,165,233,0.08)',
     border: 'rgba(14,165,233,0.20)',
     barColor: '#0EA5E9',
   },
   warning: {
     icon: AlertTriangle,
-    color: '#FBBF24',
-    bg: 'rgba(245,158,11,0.08)',
-    border: 'rgba(245,158,11,0.20)',
-    barColor: '#F59E0B',
+    color: '#475569',
+    bg: 'rgba(100,116,139,0.08)',
+    border: 'rgba(100,116,139,0.20)',
+    barColor: '#64748B',
   },
 }
 

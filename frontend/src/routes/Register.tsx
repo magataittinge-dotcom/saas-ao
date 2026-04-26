@@ -19,7 +19,7 @@ const clerkAppearance = {
       borderRadius: '20px',
       boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
     },
-    headerTitle: { color: '#0F172A', fontFamily: 'Plus Jakarta Sans, system-ui, sans-serif' },
+    headerTitle: { color: '#0F172A', fontFamily: 'DM Sans, system-ui, sans-serif' },
     headerSubtitle: { color: '#64748B' },
     socialButtonsBlockButton: {
       backgroundColor: '#F8FAFC',
@@ -58,14 +58,14 @@ export default function Register() {
         {/* Logo + tagline */}
         <div className="flex flex-col items-center gap-3 mb-8">
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #0EA5E9, #10B981)' }}>
+            style={{ background: 'linear-gradient(135deg, #0F172A 0%, #0C4A6E 40%, #0284C7 100%)' }}>
             <Sparkles size={24} className="text-white" />
           </div>
           <span className="text-3xl font-extrabold tracking-tight"
             style={{
-              background: 'linear-gradient(135deg, #0EA5E9, #10B981)',
+              background: 'linear-gradient(135deg, #0F172A 0%, #0C4A6E 40%, #0284C7 100%)',
               WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-              fontFamily: 'Plus Jakarta Sans, system-ui, sans-serif',
+              fontFamily: 'DM Sans, system-ui, sans-serif',
             }}>
             SYNORIX
           </span>

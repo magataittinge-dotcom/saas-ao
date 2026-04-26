@@ -20,7 +20,7 @@ export function ExpiryAlert({ expiryDate, documentName }: Props) {
       style={
         isExpired || isUrgent
           ? { background: 'rgba(239,68,68,0.10)', color: '#DC2626', border: '1px solid rgba(239,68,68,0.25)' }
-          : { background: 'rgba(245,158,11,0.10)', color: '#D97706', border: '1px solid rgba(245,158,11,0.25)' }
+          : { background: 'rgba(100,116,139,0.08)', color: '#475569', border: '1px solid rgba(100,116,139,0.20)' }
       }
     >
       {isExpired || isUrgent ? <AlertTriangle size={16} /> : <Clock size={16} />}

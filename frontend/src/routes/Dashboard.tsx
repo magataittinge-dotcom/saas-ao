@@ -54,11 +54,11 @@ function fmtDate(d: Date) {
 
 /* ── Status config ───────────────────────────────────────────── */
 const STATUS_MAP: Record<string, { label: string; color: string; bg: string }> = {
-  brouillon: { label: 'Brouillon', color: '#64748B', bg: '#F1F5F9' },
-  en_cours:  { label: 'En cours',  color: '#0EA5E9', bg: 'rgba(14,165,233,0.10)' },
-  soumis:    { label: 'Soumis',    color: '#8B5CF6', bg: 'rgba(139,92,246,0.10)' },
-  gagné:     { label: 'Gagné',     color: '#10B981', bg: 'rgba(16,185,129,0.10)' },
-  perdu:     { label: 'Perdu',     color: '#EF4444', bg: 'rgba(239,68,68,0.10)' },
+  brouillon: { label: 'Brouillon', color: '#475569', bg: '#F8FAFC' },
+  en_cours:  { label: 'En cours',  color: '#0E7490', bg: '#ECFEFF' },
+  soumis:    { label: 'Soumis',    color: '#475569', bg: '#F8FAFC' },
+  gagné:     { label: 'Gagné',     color: '#047857', bg: '#ECFDF5' },
+  perdu:     { label: 'Perdu',     color: '#B91C1C', bg: '#FEF2F2' },
 }
 
 /* ── Stat cards config ───────────────────────────────────────── */
@@ -67,8 +67,8 @@ const STAT_CARDS: {
   accent: string; iconBg: string
 }[] = [
   { key: 'projects_en_cours',       label: 'AO en cours',      icon: BarChart3,   suffix: '', accent: '#0EA5E9', iconBg: 'rgba(14,165,233,0.08)' },
-  { key: 'taux_succes',             label: 'Taux conformité',  icon: ShieldCheck, suffix: '%', accent: '#10B981', iconBg: 'rgba(16,185,129,0.08)' },
-  { key: 'projects_gagnes',         label: 'AO gagnés',        icon: Trophy,      suffix: '', accent: '#3B82F6', iconBg: 'rgba(59,130,246,0.08)' },
+  { key: 'taux_succes',             label: 'Taux conformité',  icon: ShieldCheck, suffix: '%', accent: '#0EA5E9', iconBg: 'rgba(14,165,233,0.08)' },
+  { key: 'projects_gagnes',         label: 'AO gagnés',        icon: Trophy,      suffix: '', accent: '#0EA5E9', iconBg: 'rgba(14,165,233,0.08)' },
   { key: 'projects_soumis_ce_mois', label: 'Soumis ce mois',   icon: Send,        suffix: '', accent: '#64748B', iconBg: 'rgba(100,116,139,0.08)' },
 ]
 
@@ -139,20 +139,14 @@ export default function Dashboard() {
             <h1 className="text-2xl font-bold" style={{ color: '#0F172A' }}>
               Bonjour, {firstName}
             </h1>
-            <span
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold uppercase tracking-wide"
-              style={{ color: '#059669', background: 'rgba(16,185,129,0.10)', border: '1px solid rgba(16,185,129,0.15)' }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
-              AI Active
-            </span>
+            <span className="ai-badge">IA active</span>
           </div>
           <div className="flex items-center gap-4 mt-1.5">
             <span className="inline-flex items-center gap-1.5 text-sm" style={{ color: '#64748B' }}>
               <CalendarDays size={14} style={{ color: '#94A3B8' }} />
               {fmtDate(new Date())}
             </span>
-            <span className="inline-flex items-center gap-1 text-sm font-medium" style={{ color: '#10B981' }}>
+            <span className="inline-flex items-center gap-1 text-sm font-medium" style={{ color: '#0EA5E9' }}>
               <TrendingUp size={14} />
               +12% vs mois dernier
             </span>
@@ -160,10 +154,7 @@ export default function Dashboard() {
         </div>
         <button
           onClick={() => navigate('/projects/new')}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-colors shrink-0"
-          style={{ background: '#0F172A' }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = '#1E293B' }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = '#0F172A' }}
+          className="signature-btn shrink-0"
         >
           <Plus size={16} strokeWidth={2.5} /> Nouvel AO
         </button>
@@ -282,9 +273,9 @@ export default function Dashboard() {
                 const deadlineColor = days !== null && days <= 3
                   ? '#EF4444'
                   : days !== null && days <= 7
-                    ? '#F59E0B'
+                    ? '#64748B'
                     : '#94A3B8'
-                const progressColor = progress >= 80 ? '#10B981' : progress >= 40 ? '#0EA5E9' : '#F59E0B'
+                const progressColor = '#0EA5E9'
 
                 return (
                   <div
@@ -328,8 +319,8 @@ export default function Dashboard() {
                     <div className="flex items-center gap-2">
                       <div className="flex-1 h-1.5 rounded-full" style={{ background: '#F1F5F9' }}>
                         <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{ width: `${progress}%`, background: progressColor }}
+                          className="h-full progress-fill"
+                          style={{ width: `${progress}%` }}
                         />
                       </div>
                       <span className="text-[11px] font-semibold tabular-nums w-[32px] text-right" style={{ color: progressColor }}>
@@ -472,7 +463,7 @@ export default function Dashboard() {
                       {!isUrgent && isWarn && (
                         <span
                           className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full"
-                          style={{ color: '#F59E0B', background: 'rgba(245,158,11,0.10)' }}
+                          style={{ color: '#475569', background: 'rgba(100,116,139,0.08)' }}
                         >
                           J-{p._days}
                         </span>
@@ -521,10 +512,10 @@ export default function Dashboard() {
                 {aiScore}/100
               </span>
             </div>
-            <div className="h-1.5 rounded-full mt-2" style={{ background: 'rgba(14,165,233,0.12)' }}>
+            <div className="h-1.5 rounded-full mt-2" style={{ background: '#F1F5F9' }}>
               <div
-                className="h-full rounded-full transition-all duration-700"
-                style={{ width: `${aiScore}%`, background: '#0EA5E9' }}
+                className="h-full progress-fill"
+                style={{ width: `${aiScore}%` }}
               />
             </div>
           </div>
@@ -560,7 +551,7 @@ function StatCard({ icon: Icon, label, value, suffix, accent, iconBg }: {
         {value > 0 && (
           <span
             className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md"
-            style={{ color: '#10B981', background: 'rgba(16,185,129,0.08)' }}
+            style={{ color: '#0EA5E9', background: 'rgba(14,165,233,0.08)' }}
           >
             +{Math.min(value, 5)}
           </span>

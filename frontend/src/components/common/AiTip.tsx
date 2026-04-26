@@ -23,24 +23,24 @@ const VARIANT_CONFIG: Record<TipVariant, {
 }> = {
   info: {
     icon: Lightbulb,
-    bg: '#FFFBEB',
-    border: '#FDE68A',
-    iconColor: '#F59E0B',
-    textColor: '#92400E',
+    bg: 'rgba(14,165,233,0.06)',
+    border: 'rgba(14,165,233,0.20)',
+    iconColor: '#0EA5E9',
+    textColor: '#0F172A',
   },
   warning: {
     icon: AlertTriangle,
-    bg: '#FEF2F2',
-    border: '#FECACA',
+    bg: 'rgba(239,68,68,0.06)',
+    border: 'rgba(239,68,68,0.20)',
     iconColor: '#EF4444',
     textColor: '#991B1B',
   },
   success: {
     icon: CheckCircle2,
-    bg: '#F0FDF4',
-    border: '#BBF7D0',
-    iconColor: '#10B981',
-    textColor: '#166534',
+    bg: 'rgba(14,165,233,0.06)',
+    border: 'rgba(14,165,233,0.20)',
+    iconColor: '#0EA5E9',
+    textColor: '#0F172A',
   },
 }
 

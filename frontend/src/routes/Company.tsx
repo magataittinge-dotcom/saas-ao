@@ -70,11 +70,11 @@ export default function Company() {
         <div className="w-full progress-track rounded-full h-2">
           <div
             className="h-2 rounded-full transition-all"
-            style={{ width: `${completionPct}%`, background: 'linear-gradient(90deg, #0EA5E9, #10B981)' }}
+            style={{ width: `${completionPct}%`, background: 'linear-gradient(90deg, #0EA5E9, #0284C7)' }}
           />
         </div>
         {completionPct < 80 && (
-          <p className="text-xs mt-2" style={{ color: '#D97706' }}>
+          <p className="text-xs mt-2" style={{ color: '#475569' }}>
             ⚠️ Un profil complet permet à l'IA de générer des mémoires techniques de meilleure qualité
           </p>
         )}

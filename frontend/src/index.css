@@ -4,8 +4,9 @@
 
 /* ═══════════════════════════════════════════════════════════════
    SYNORIX DESIGN SYSTEM
-   Light Mode — Fond #FFFFFF — Accent Cyan #0EA5E9 / Emerald #10B981
-   Typo : Plus Jakarta Sans (titres) · Inter (corps)
+   Light Mode — Fond #F8FAFB — Accent Cyan #0EA5E9
+   Typo : DM Sans (unified)
+   Palette : cyan + slate + red + emerald (Gagné/Conforme only)
    ═══════════════════════════════════════════════════════════════ */
 
 /* ── Glass Cards (overridden in tokens.css, kept for compat) ── */
@@ -26,14 +27,7 @@
 
 /* ── Gradient Text ────────────────────────────────────────────── */
 .text-gradient {
-  background: linear-gradient(135deg, #0EA5E9 0%, #10B981 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.text-gradient-subtle {
-  background: linear-gradient(135deg, #0EA5E9 0%, #10B981 100%);
+  background: linear-gradient(135deg, #0F172A 0%, #0369A1 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -53,7 +47,7 @@
               box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
               transform  0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+  font-family: "DM Sans", system-ui, sans-serif;
 }
 
 .btn-primary::before {
@@ -110,7 +104,7 @@
   cursor: pointer;
   transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
               border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+  font-family: "DM Sans", system-ui, sans-serif;
 }
 .btn-destructive:hover {
   background: rgba(239, 68, 68, 0.15);
@@ -190,7 +184,7 @@
   padding: 0.625rem 0.875rem;
   width: 100%;
   outline: none;
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: "DM Sans", system-ui, sans-serif;
   transition: border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
               box-shadow   0.2s cubic-bezier(0.4, 0, 0.2, 1),
               background   0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -212,13 +206,13 @@
 }
 
 .progress-bar-gradient {
-  background: linear-gradient(90deg, #0EA5E9, #10B981);
+  background: linear-gradient(90deg, #0EA5E9, #0284C7);
   border-radius: 999px;
   transition: width 0.7s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .progress-bar-success {
-  background: linear-gradient(90deg, #10B981, #0EA5E9);
+  background: linear-gradient(90deg, #0EA5E9, #0284C7);
   border-radius: 999px;
   transition: width 0.7s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -233,18 +227,17 @@
   font-size: 0.75rem;
   font-weight: 500;
   border: 1px solid transparent;
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: "DM Sans", system-ui, sans-serif;
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
-.pill-success { background: rgba(16,185,129,0.10);  color: #059669; border-color: rgba(16,185,129,0.20); }
-.pill-warning { background: rgba(245,158,11,0.10);  color: #D97706; border-color: rgba(245,158,11,0.20); }
+.pill-success { background: rgba(14,165,233,0.10);  color: #0284C7; border-color: rgba(14,165,233,0.20); }
+.pill-gagne   { background: #ECFDF5;  color: #047857; border-color: #A7F3D0; }
+.pill-conforme { background: #ECFDF5;  color: #047857; border-color: #A7F3D0; }
+.pill-warning { background: rgba(100,116,139,0.08); color: #475569; border-color: rgba(100,116,139,0.20); }
 .pill-danger  { background: rgba(239,68,68,0.10);   color: #DC2626; border-color: rgba(239,68,68,0.20); }
 .pill-cyan    { background: rgba(14,165,233,0.10);   color: #0284C7; border-color: rgba(14,165,233,0.20); }
-.pill-indigo  { background: rgba(99,102,241,0.10);   color: #4F46E5; border-color: rgba(99,102,241,0.20); }
-.pill-teal    { background: rgba(16,185,129,0.10);    color: #059669; border-color: rgba(16,185,129,0.20); }
-.pill-violet  { background: rgba(139,92,246,0.10);   color: #7C3AED; border-color: rgba(139,92,246,0.20); }
-.pill-muted   { background: #F1F5F9;  color: #64748B; border-color: #E2E8F0; }
+.pill-muted   { background: #F8FAFC;  color: #475569; border-color: #E2E8F0; }
 
 /* ── Tables ───────────────────────────────────────────────────── */
 .table-dark { width: 100%; font-size: 0.875rem; border-collapse: collapse; }
@@ -257,7 +250,7 @@
   color: #64748B;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: "DM Sans", system-ui, sans-serif;
 }
 .table-dark tbody tr {
   border-bottom: 1px solid #F1F5F9;
@@ -309,7 +302,7 @@
 /* ── Avatar Ring ──────────────────────────────────────────────── */
 .avatar-ring  {
   padding: 2px;
-  background: linear-gradient(135deg, #0EA5E9, #10B981);
+  background: linear-gradient(135deg, #0F172A 0%, #0369A1 100%);
   border-radius: 50%;
 }
 .avatar-inner {
@@ -319,7 +312,7 @@
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+  font-family: "DM Sans", system-ui, sans-serif;
 }
 
 /* ── Divider ──────────────────────────────────────────────────── */
@@ -327,11 +320,9 @@
 
 /* ── Glow utilities (subtle on light) ────────────────────────── */
 .glow-cyan  { box-shadow: 0 0 12px rgba(14, 165, 233, 0.15); }
-.glow-teal  { box-shadow: 0 0 12px rgba(16, 185, 129, 0.12); }
 .glow-sm    { box-shadow: 0 0 8px rgba(14, 165, 233, 0.10); }
 .glow-blue  { box-shadow: 0 0 12px rgba(14,165,233,0.10); }
 .glow-blue-strong { box-shadow: 0 0 20px rgba(14,165,233,0.15); }
-.glow-violet { box-shadow: 0 0 12px rgba(139,92,246,0.12); }
 
 /* ── Card Premium ─────────────────────────────────────────────── */
 .card-premium {
@@ -359,7 +350,7 @@
   inset: 0;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(135deg, rgba(14,165,233,0.3), transparent 50%, rgba(16,185,129,0.2));
+  background: linear-gradient(135deg, rgba(14,165,233,0.3), transparent 50%, rgba(14,165,233,0.15));
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
@@ -413,6 +404,135 @@
   background: rgba(14, 165, 233, 0.04);
   border-color: #0EA5E9 !important;
   animation: dropzone-pulse 1.5s ease-in-out infinite;
+}
+
+/* ── Synorix Premium Tokens ───────────────────────────────────── */
+.signature-gradient {
+  background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0369A1 100%);
+}
+
+.progress-fill {
+  background: linear-gradient(90deg, #0EA5E9 0%, #0284C7 100%);
+  border-radius: 999px;
+  transition: width 0.8s ease-out;
+}
+
+.ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%);
+  color: white;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.ai-badge::before {
+  content: '';
+  width: 6px; height: 6px;
+  background: #BAE6FD;
+  border-radius: 50%;
+  animation: pulse-cyan 2s infinite;
+}
+
+@keyframes pulse-cyan {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.signature-btn {
+  background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0369A1 100%);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  border: none;
+  box-shadow: 0 1px 3px rgba(14, 165, 233, 0.15);
+  transition: all 0.15s;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.signature-btn:hover {
+  background: linear-gradient(135deg, #020617 0%, #0F172A 50%, #075985 100%);
+  box-shadow: 0 2px 6px rgba(14, 165, 233, 0.25);
+}
+.signature-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.logo-synorix {
+  width: 36px; height: 36px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #0F172A 0%, #0C4A6E 40%, #0284C7 100%);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow:
+    inset 1px 1px 0 rgba(255,255,255,0.15),
+    0 4px 12px rgba(14, 165, 233, 0.25);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.logo-synorix::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%);
+  animation: shimmer-slow 6s infinite;
+}
+.logo-synorix-text {
+  color: white;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes shimmer-slow {
+  0% { left: -100%; }
+  30% { left: 100%; }
+  100% { left: 100%; }
+}
+
+.pill-entreprise {
+  background: linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0369A1 100%);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 2px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(14, 165, 233, 0.2);
+}
+.pill-entreprise::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%);
+  animation: shimmer-slow 5s infinite;
+}
+
+.pill-pro {
+  background: linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%);
+  color: white;
+  border: 1px solid #0284C7;
+  padding: 2px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(14, 165, 233, 0.2);
 }
 
 /* ── Animations ───────────────────────────────────────────────── */
@@ -545,7 +665,7 @@
   body {
     background-color: #FFFFFF;
     color: #0F172A;
-    font-family: "Inter", system-ui, sans-serif;
+    font-family: "DM Sans", system-ui, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
     font-size: 0.875rem;
     line-height: 1.65;
@@ -554,7 +674,7 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+    font-family: "DM Sans", system-ui, sans-serif;
     letter-spacing: -0.01em;
   }
 

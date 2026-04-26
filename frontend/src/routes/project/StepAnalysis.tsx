@@ -294,13 +294,8 @@ export default function StepAnalysis({ project }: Props) {
         <button
           onClick={handleValidate}
           disabled={isValidating}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white transition-colors"
-          style={{
-            background: isStepAlreadyDone
-              ? 'linear-gradient(135deg, #10B981, #0EA5E9)'
-              : '#0EA5E9',
-            fontFamily: F,
-          }}
+          className="signature-btn"
+          style={{ fontFamily: F }}
         >
           {isValidating
             ? <><Loader2 size={16} className="animate-spin" /> Validation...</>
@@ -325,13 +320,7 @@ export default function StepAnalysis({ project }: Props) {
           <h1 className="text-xl font-bold" style={{ color: '#0F172A' }}>
             Analyse du Dossier
           </h1>
-          <span
-            className="flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold"
-            style={{ background: '#DCFCE7', color: '#16A34A' }}
-          >
-            <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#16A34A' }} />
-            AI ACTIVE
-          </span>
+          <span className="ai-badge">IA active</span>
         </div>
 
         <div className="flex items-center gap-2 text-xs" style={{ color: '#64748B' }}>
@@ -363,7 +352,7 @@ export default function StepAnalysis({ project }: Props) {
         >
           {lotFilterInfo.included.map(doc => (
             <span key={doc.id} className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#10B981' }} />
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#0EA5E9' }} />
               <span style={{ color: '#334155' }}>{doc.file_name}</span>
             </span>
           ))}
@@ -517,7 +506,7 @@ export default function StepAnalysis({ project }: Props) {
         if (infos.penalites_retard) {
           infoItems.push(
             <div key="penalites" className="flex items-start gap-2">
-              <Shield size={14} className="shrink-0 mt-0.5" style={{ color: '#D97706' }} />
+              <Shield size={14} className="shrink-0 mt-0.5" style={{ color: '#64748B' }} />
               <div>
                 <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#64748B' }}>Pénalités de retard</p>
                 <p className="text-sm" style={{ color: '#334155' }}>{infos.penalites_retard}</p>
@@ -700,7 +689,7 @@ function ExigenceColumn({
               ) : (
                 <span
                   className="px-2 py-0.5 rounded-md text-xs font-medium"
-                  style={{ background: '#FFFBEB', color: '#D97706' }}
+                  style={{ background: 'rgba(100,116,139,0.08)', color: '#475569' }}
                 >
                   Souhaitée
                 </span>

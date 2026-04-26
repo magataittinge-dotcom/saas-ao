@@ -4,11 +4,11 @@ import type { ComplianceStatus, DocumentStatus, ProjectStatus } from '@/types'
 type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral'
 
 const variantStyles: Record<BadgeVariant, React.CSSProperties> = {
-  success: { background: 'rgba(16,185,129,0.12)', color: '#059669',  border: '1px solid rgba(16,185,129,0.25)' },
-  warning: { background: 'rgba(245,158,11,0.12)', color: '#D97706',  border: '1px solid rgba(245,158,11,0.25)' },
-  danger:  { background: 'rgba(239,68,68,0.12)',  color: '#DC2626',  border: '1px solid rgba(239,68,68,0.25)'  },
-  info:    { background: 'rgba(14,165,233,0.12)', color: '#0284C7',  border: '1px solid rgba(14,165,233,0.25)' },
-  neutral: { background: '#E2E8F0',color: '#64748B',  border: '1px solid #CBD5E1'},
+  success: { background: 'rgba(14,165,233,0.10)', color: '#0284C7',  border: '1px solid rgba(14,165,233,0.20)' },
+  warning: { background: 'rgba(100,116,139,0.08)', color: '#475569',  border: '1px solid rgba(100,116,139,0.20)' },
+  danger:  { background: 'rgba(239,68,68,0.10)',  color: '#DC2626',  border: '1px solid rgba(239,68,68,0.20)'  },
+  info:    { background: 'rgba(14,165,233,0.10)', color: '#0284C7',  border: '1px solid rgba(14,165,233,0.20)' },
+  neutral: { background: '#F8FAFC', color: '#475569',  border: '1px solid #E2E8F0'},
 }
 
 interface Props {

@@ -13,8 +13,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans:    ['"Inter"', 'system-ui', 'sans-serif'],
-        display: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+        sans:    ['"DM Sans"', 'system-ui', 'sans-serif'],
+        display: ['"DM Sans"', 'system-ui', 'sans-serif'],
         mono:    ['"JetBrains Mono"', 'Menlo', 'monospace'],
       },
       colors: {
@@ -32,25 +32,18 @@ export default {
           'text-3':  '#94A3B8',
           'text-muted': '#94A3B8',
           'text-dim':   '#CBD5E1',
-          // Primary palette
+          // Primary palette (cyan + slate + red + emerald only)
           cyan:      '#0EA5E9',
-          teal:      '#10B981',
-          blue:      '#0EA5E9',
-          'blue-light': '#38BDF8',
+          'cyan-light': '#38BDF8',
+          'cyan-dark': '#0284C7',
           accent:    '#0EA5E9',
-          'accent-light': '#0284C7',
-          indigo:    '#6366F1',
-          violet:    '#8B5CF6',
-          purple:    '#A78BFA',
-          // Semantic
-          success:   '#10B981',
-          'success-light': '#059669',
-          'success-lighter': '#047857',
-          warning:   '#F59E0B',
-          'warning-light': '#D97706',
-          'warning-lighter': '#B45309',
+          // Semantic — strict 4-role: cyan (info/AI), slate (neutral/warning), red (danger), emerald (Gagné/Conforme only)
+          success:   '#0EA5E9',
+          warning:   '#64748B',
           danger:    '#EF4444',
           'danger-light': '#DC2626',
+          // Emerald reserved for Gagné/Conforme ONLY
+          'gagne':   '#10B981',
           // Borders
           'border-subtle': '#E2E8F0',
           'border-hover':  '#CBD5E1',
@@ -98,18 +91,13 @@ export default {
         '3xl': '1.25rem',
       },
       backgroundImage: {
-        'gradient-cta':     'linear-gradient(135deg, #0EA5E9, #10B981)',
-        'gradient-cta-h':   'linear-gradient(90deg, #0EA5E9, #10B981)',
-        'gradient-teal':    'linear-gradient(135deg, #10B981, #0EA5E9)',
-        'gradient-success': 'linear-gradient(135deg, #10B981, #0EA5E9)',
-        'gradient-subtle':  'linear-gradient(135deg, rgba(14,165,233,0.08), rgba(16,185,129,0.05))',
-        'gradient-violet':  'linear-gradient(135deg, #8B5CF6, #0EA5E9)',
+        'gradient-signature': 'linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0369A1 100%)',
+        'gradient-cyan':      'linear-gradient(90deg, #0EA5E9, #0284C7)',
+        'gradient-subtle':    'linear-gradient(135deg, rgba(14,165,233,0.04), rgba(14,165,233,0.08))',
       },
       boxShadow: {
         'glow-cyan':   '0 0 12px rgba(14,165,233,0.15)',
-        'glow-teal':   '0 0 12px rgba(16,185,129,0.12)',
         'glow-sm':     '0 0 8px rgba(14,165,233,0.10)',
-        'glow-violet': '0 0 12px rgba(139,92,246,0.15)',
         'card':        '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
         'card-hover':  '0 4px 12px rgba(0,0,0,0.08), 0 0 0 1px rgba(14,165,233,0.08)',
         'glass':       '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',

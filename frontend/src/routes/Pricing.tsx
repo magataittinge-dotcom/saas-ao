@@ -46,7 +46,7 @@ const plans = [
     users: '5+ utilisateurs',
     target: 'ETI BTP (CA > 10M)',
     icon: Crown,
-    color: '#8B5CF6',
+    color: '#0F172A',
     popular: true,
     features: [
       { text: 'AO illimités', included: true },
@@ -66,7 +66,7 @@ export default function Pricing() {
     <div className="min-h-screen py-16 px-6 relative" style={{ background: '#F8FAFC' }}>
       <div className="max-w-5xl mx-auto relative z-10">
         <div className="text-center mb-14">
-          <h1 className="text-4xl font-extrabold mb-4" style={{ color: '#0F172A', fontFamily: 'Plus Jakarta Sans, system-ui, sans-serif' }}>
+          <h1 className="text-4xl font-extrabold mb-4" style={{ color: '#0F172A', fontFamily: 'DM Sans, system-ui, sans-serif' }}>
             Tarifs simples et transparents
           </h1>
           <p className="text-lg" style={{ color: '#64748B' }}>
@@ -88,8 +88,7 @@ export default function Pricing() {
                 }
               >
                 {plan.popular && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10 px-4 py-1 rounded-full text-xs font-semibold text-white"
-                    style={{ background: 'linear-gradient(135deg, #0EA5E9, #10B981)' }}>
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10 px-4 py-1 rounded-full text-xs font-semibold text-white signature-gradient">
                     Recommandé
                   </div>
                 )}
@@ -115,7 +114,7 @@ export default function Pricing() {
 
                   {/* Price */}
                   <div className="mb-5">
-                    <span className="text-4xl font-extrabold" style={{ color: '#0F172A', fontFamily: 'Plus Jakarta Sans, system-ui, sans-serif' }}>
+                    <span className="text-4xl font-extrabold" style={{ color: '#0F172A', fontFamily: 'DM Sans, system-ui, sans-serif' }}>
                       {plan.price}€
                     </span>
                     <span className="text-sm ml-1" style={{ color: '#94A3B8' }}>/mois HT</span>
@@ -127,7 +126,7 @@ export default function Pricing() {
                     {plan.features.map((f) => (
                       <li key={f.text} className="flex items-center gap-2.5 text-sm">
                         {f.included ? (
-                          <CheckCircle2 size={15} className="shrink-0" style={{ color: '#10B981' }} />
+                          <CheckCircle2 size={15} className="shrink-0" style={{ color: '#0EA5E9' }} />
                         ) : (
                           <X size={15} className="shrink-0" style={{ color: '#CBD5E1' }} />
                         )}
@@ -139,10 +138,10 @@ export default function Pricing() {
                   {/* CTA */}
                   <Link
                     to={plan.id === 'free' ? '/register' : `/register?plan=${plan.id}`}
-                    className="block w-full text-center font-semibold py-3 rounded-xl text-sm transition-all duration-200"
+                    className={plan.popular ? 'signature-btn block w-full text-center py-3 rounded-xl text-sm' : 'block w-full text-center font-semibold py-3 rounded-xl text-sm transition-all duration-200'}
                     style={
                       plan.popular
-                        ? { background: '#0EA5E9', color: '#fff' }
+                        ? {}
                         : { background: '#F1F5F9', color: '#64748B', border: '1px solid #E2E8F0' }
                     }
                     onMouseEnter={(e) => {
