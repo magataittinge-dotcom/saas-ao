@@ -164,6 +164,14 @@ def _detect_doc_type(filename: str, form_type: str) -> str:
     # Lot-specific DCE PDFs are usually per-lot CCTPs: "lot 01 GO_DCE.pdf"
     if re.search(r'lot[\s_-]*\d{1,2}.*_dce\.pdf$', norm) and not is_annexe:
         return 'cctp'
+    # Corps-d'état prefix: "DCE-GO01.pdf", "DCE-CVC.pdf", "DCE-MEN03.docx".
+    # Codes BTP courants : GO (Gros Œuvre), ST (Structure), PIC (Plomberie),
+    # CVC (Chauffage-Ventilation), MEN (Menuiserie), ELE (Électricité),
+    # PEI (Peinture), REV (Revêtements), VRD (Voirie), ITE (Isolation
+    # Thermique Extérieure), FAC (Façade), CHA (Charpente), COU (Couverture),
+    # ETA (Étanchéité). 2–4 lettres + 0–3 chiffres pour rester strict.
+    if re.search(r'^dce-[a-z]{2,4}\d{0,3}\.(pdf|docx)$', norm):
+        return 'cctp'
 
     # ── 12. Plans ─────────────────────────────────────────────────────────
     if is_plan_fname or re.search(

@@ -126,6 +126,24 @@ def test_detect_reference_docs(filename, expected):
     assert _detect_doc_type(filename, "autre") == expected
 
 
+# ─── CCTP — corps d'état prefix "DCE-XX[0-9]?" ───────────────────────────────
+
+@pytest.mark.parametrize("filename, expected", [
+    ("DCE-GO01.pdf",                     "cctp"),  # Gros Œuvre
+    ("DCE-ST.pdf",                       "cctp"),  # Structure
+    ("DCE-PIC02.pdf",                    "cctp"),  # Plomberie
+    ("DCE-MEN03.docx",                   "cctp"),  # Menuiserie
+    ("DCE-CVC.pdf",                      "cctp"),  # Chauffage-Ventilation
+    ("DCE-ELE.pdf",                      "cctp"),  # Électricité
+
+    # FALSE POSITIVE GUARDS
+    ("DCE-XYZABC123.pdf",                "autre"),  # >4 lettres
+    ("MyDCE-GO01.pdf",                   "autre"),  # pas en début de nom
+])
+def test_detect_cctp_corps_etat_prefix(filename, expected):
+    assert _detect_doc_type(filename, "autre") == expected
+
+
 # ─── Edge cases ──────────────────────────────────────────────────────────────
 
 @pytest.mark.parametrize("filename, expected", [

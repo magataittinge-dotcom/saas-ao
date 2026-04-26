@@ -132,21 +132,22 @@ def _ensure_schema_columns():
                     logger.info(f"Wiped {deleted} checklist_items rows for re-run")
 
         # ── One-shot: re-tag project_documents using the new detector ─────
+        # Bump the version when the detector gains rules that should re-evaluate
+        # historical rows. v2: adds DCE-XX corps d'état CCTP recognition.
         if insp.has_table("project_documents"):
-            _backfill_project_doc_types_v1()
+            _backfill_project_doc_types(version="v2")
 
     except Exception as e:
         logger.warning(f"Schema migration skipped: {e}")
 
 
-def _backfill_project_doc_types_v1():
+def _backfill_project_doc_types(version: str):
     """One-shot backfill: re-run _detect_doc_type on every project_documents row
-    so that previously merged types (DC1/DC2 → AE, BPU/DQE → DPGF) get split
-    into their dedicated types. Idempotent via a marker file."""
-    # Place marker inside uploads/ (gitignored) so tests don't dirty the tree.
+    so that previously merged or unrecognized types get reclassified.
+    Idempotent via a per-version marker file in uploads/ (gitignored)."""
     uploads_dir = Path(__file__).parent / "uploads"
     uploads_dir.mkdir(exist_ok=True)
-    marker = uploads_dir / ".backfill_doc_types_v1.done"
+    marker = uploads_dir / f".backfill_doc_types_{version}.done"
     if marker.exists():
         return
 
@@ -179,7 +180,7 @@ def _backfill_project_doc_types_v1():
 
             after = Counter(d.type for d in docs)
             logger.info(
-                f"Backfill v1: {len(docs)} project_documents inspected, "
+                f"Backfill {version}: {len(docs)} project_documents inspected, "
                 f"{sum(transitions.values())} reclassified"
             )
             logger.info(f"  Before: {dict(before)}")
@@ -191,7 +192,7 @@ def _backfill_project_doc_types_v1():
 
         marker.touch()
     except Exception as e:
-        logger.warning(f"Backfill v1 skipped: {e}")
+        logger.warning(f"Backfill {version} skipped: {e}")
 
 
 def _migrate_pg_enum_to_check(table, column, enum_type, allowed, check_name, renames):
