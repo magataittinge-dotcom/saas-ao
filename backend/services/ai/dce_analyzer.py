@@ -3,7 +3,9 @@ import asyncio
 import time
 import anthropic
 from json_repair import repair_json
+from pydantic import ValidationError
 from config import get_settings
+from schemas.compliance import RequirementFromAI
 from .prompts import DCE_ANALYSIS_SYSTEM, DCE_PASS1_SYSTEM, DCE_PASS2_SYSTEM
 from services.skill_loader import load_skill, load_skill_section
 import logging
@@ -318,13 +320,81 @@ class DCEAnalyzer:
 
         result = self._parse_json(raw)
 
-        reqs = result.get("requirements", [])
+        result["requirements"] = self._validate_requirements(
+            result.get("requirements", []), label
+        )
+        reqs = result["requirements"]
         print(f"[DCE Analyzer] [{label}] {len(reqs)} exigences extraites", flush=True)
 
         if partial:
             result["partial_analysis"] = True
 
         return result
+
+    @staticmethod
+    def _validate_requirements(raw_reqs: list, label: str) -> list[dict]:
+        """Run each requirement through RequirementFromAI.
+        Invalid source_kind/expected_template_type fall back to defaults
+        (vault, None). Other ValidationErrors drop the requirement and log."""
+        validated: list[dict] = []
+        invalid_kind = 0
+        invalid_template = 0
+        dropped = 0
+
+        for raw in raw_reqs:
+            if not isinstance(raw, dict):
+                dropped += 1
+                continue
+
+            patched = dict(raw)
+
+            # Pre-clean: unknown source_kind → fall back to vault
+            sk = patched.get("source_kind")
+            if sk not in (None, "vault", "dce_template"):
+                logger.warning(
+                    "[%s] invalid source_kind=%r → fallback to 'vault' (exigence: %r)",
+                    label, sk, str(patched.get("exigence", ""))[:80],
+                )
+                patched["source_kind"] = "vault"
+                patched["expected_template_type"] = None
+                invalid_kind += 1
+
+            # Pre-clean: unknown expected_template_type → null
+            allowed_templates = {
+                "dc1_template", "dc2_template", "acte_engagement_template",
+                "dpgf_template", "bpu_template", "dqe_template",
+                "cadre_reponse", "attestation_visite_template",
+            }
+            ett = patched.get("expected_template_type")
+            if ett is not None and ett not in allowed_templates:
+                logger.warning(
+                    "[%s] invalid expected_template_type=%r → fallback to null "
+                    "(exigence: %r)",
+                    label, ett, str(patched.get("exigence", ""))[:80],
+                )
+                patched["expected_template_type"] = None
+                invalid_template += 1
+
+            try:
+                req = RequirementFromAI(**patched)
+            except ValidationError as e:
+                logger.warning(
+                    "[%s] dropping invalid requirement: %s (raw=%r)",
+                    label, e.errors()[:2], str(patched.get("exigence", ""))[:80],
+                )
+                dropped += 1
+                continue
+
+            validated.append(req.model_dump(exclude_none=False))
+
+        if invalid_kind or invalid_template or dropped:
+            print(
+                f"[DCE Analyzer] [{label}] validation: "
+                f"{invalid_kind} bad source_kind, {invalid_template} bad template, "
+                f"{dropped} dropped",
+                flush=True,
+            )
+        return validated
 
     def _parse_json(self, raw: str) -> dict:
         """Extract JSON object from Claude's response, with repair fallback."""

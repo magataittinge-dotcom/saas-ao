@@ -42,7 +42,9 @@ DOCUMENTS COMPLÉMENTAIRES :
       "source_page": entier (OBLIGATOIRE, jamais null — estimer si incertain),
       "source_excerpt": "citation EXACTE et COMPLÈTE de la PHRASE ENTIÈRE du document source (max 100 caractères) — sera utilisé pour surligner dans le PDF",
       "category": "candidature" | "offre" | "technique" | "planning" | "criteres_notation",
-      "priority": "obligatoire" | "souhaitée"
+      "priority": "obligatoire" | "souhaitée",
+      "source_kind": "vault" | "dce_template",
+      "expected_template_type": null | "dc1_template" | "dc2_template" | "acte_engagement_template" | "dpgf_template" | "bpu_template" | "dqe_template" | "cadre_reponse" | "attestation_visite_template"
     }
   ],
   "criteres_jugement": [
@@ -88,6 +90,108 @@ DOCUMENTS COMPLÉMENTAIRES :
     "assurances_specifiques": ["Décennale 10 ans minimum", "RC Civile > 5M€"] ou []
   }
 }
+
+━━━ COMMENT DÉCIDER source_kind + expected_template_type ━━━
+
+Pour CHAQUE requirement, tu dois décider :
+• source_kind = "vault"        → l'entreprise fournit la pièce depuis SON coffre-fort (Kbis, attestations, assurances, références…)
+• source_kind = "dce_template" → l'acheteur a JOINT un FORMULAIRE VIERGE au DCE et l'utilisateur DOIT le compléter (DC1, DC2, AE, DPGF, BPU, DQE, cadre de réponse, attestation de visite)
+
+Et expected_template_type :
+• null si source_kind = "vault"
+• une valeur DCE_TEMPLATE_TYPES si source_kind = "dce_template"
+
+▶ RÈGLES IMPÉRATIVES :
+
+1. DC1 / DC2 → TOUJOURS source_kind="dce_template" (formulaires Cerfa à remplir, JAMAIS un document du coffre-fort).
+   • DC1 → expected_template_type="dc1_template"
+   • DC2 → expected_template_type="dc2_template"
+2. Acte d'engagement (AE / ATTRI1) → "dce_template" + "acte_engagement_template".
+3. DPGF / BPU / DQE → "dce_template" + "dpgf_template" / "bpu_template" / "dqe_template".
+4. Cadre de réponse (mémoire) → "dce_template" + "cadre_reponse".
+5. Attestation de visite obligatoire → "dce_template" + "attestation_visite_template".
+6. Attestations légales / fiscales / sociales / assurances / qualifications / capacités / références
+   → TOUJOURS "vault", expected_template_type=null. Concerne URSSAF, fiscale, Kbis, RIB, décennale, RC pro,
+   Pro BTP, CIBTP, Qualibat, RGE, CACES, amiante SS4, CA, effectifs, organigramme, références, DUME, pouvoir.
+7. "Déclaration sur l'honneur" :
+   • RC dit "selon modèle joint" / annexe précise → "dce_template" + "cadre_reponse"
+   • Sinon (déclaration libre) → "vault" + null
+8. Mémoire technique :
+   • Cadre de réponse joint → "dce_template" + "cadre_reponse"
+   • Mémoire libre → "vault" + null
+9. category in (technique, planning, criteres_notation) → "vault" + null par défaut.
+10. Doute → "vault" + null. JAMAIS inventer un template_type hors DCE_TEMPLATE_TYPES.
+
+▶ EXEMPLES :
+
+Exemple 1 — vault (Kbis) :
+{"exigence": "Fournir un extrait Kbis de moins de 3 mois", "source_document": "RC", "source_page": 4,
+ "source_excerpt": "Extrait Kbis ou équivalent datant de moins de 3 mois",
+ "category": "candidature", "priority": "obligatoire",
+ "source_kind": "vault", "expected_template_type": null}
+
+Exemple 2 — vault (URSSAF) :
+{"exigence": "Fournir une attestation de vigilance URSSAF datant de moins de 6 mois",
+ "source_document": "RC", "source_page": 5,
+ "source_excerpt": "Attestation de vigilance URSSAF de moins de 6 mois",
+ "category": "candidature", "priority": "obligatoire",
+ "source_kind": "vault", "expected_template_type": null}
+
+Exemple 3 — vault (assurance décennale) :
+{"exigence": "Joindre l'attestation d'assurance décennale en cours de validité",
+ "source_document": "RC", "source_page": 6,
+ "source_excerpt": "Attestation d'assurance décennale couvrant le lot",
+ "category": "candidature", "priority": "obligatoire",
+ "source_kind": "vault", "expected_template_type": null}
+
+Exemple 4 — vault (références) :
+{"exigence": "Fournir la liste des travaux exécutés sur les 5 dernières années",
+ "source_document": "RC", "source_page": 7,
+ "source_excerpt": "Liste des principaux travaux exécutés au cours des cinq dernières années",
+ "category": "candidature", "priority": "obligatoire",
+ "source_kind": "vault", "expected_template_type": null}
+
+Exemple 5 — vault (CA) :
+{"exigence": "Communiquer le chiffre d'affaires des 3 derniers exercices clos",
+ "source_document": "RC", "source_page": 5,
+ "source_excerpt": "Chiffre d'affaires global des trois derniers exercices",
+ "category": "candidature", "priority": "obligatoire",
+ "source_kind": "vault", "expected_template_type": null}
+
+Exemple 6 — dce_template (DC1) :
+{"exigence": "Compléter, dater et signer le formulaire DC1 (Lettre de candidature)",
+ "source_document": "RC", "source_page": 3,
+ "source_excerpt": "Le candidat remplira le formulaire DC1 joint au présent règlement",
+ "category": "candidature", "priority": "obligatoire",
+ "source_kind": "dce_template", "expected_template_type": "dc1_template"}
+
+Exemple 7 — dce_template (DC2) :
+{"exigence": "Compléter et signer le formulaire DC2 (Déclaration du candidat)",
+ "source_document": "RC", "source_page": 3,
+ "source_excerpt": "Déclaration du candidat (formulaire DC2) à compléter",
+ "category": "candidature", "priority": "obligatoire",
+ "source_kind": "dce_template", "expected_template_type": "dc2_template"}
+
+Exemple 8 — dce_template (AE) :
+{"exigence": "Compléter, dater et signer l'acte d'engagement (AE) joint",
+ "source_document": "RC", "source_page": 8,
+ "source_excerpt": "L'acte d'engagement devra être complété, daté et signé par le candidat",
+ "category": "offre", "priority": "obligatoire",
+ "source_kind": "dce_template", "expected_template_type": "acte_engagement_template"}
+
+Exemple 9 — dce_template (DPGF) :
+{"exigence": "Renseigner toutes les lignes du DPGF",
+ "source_document": "RC", "source_page": 9,
+ "source_excerpt": "Le DPGF joint sera intégralement renseigné, à peine d'irrecevabilité",
+ "category": "offre", "priority": "obligatoire",
+ "source_kind": "dce_template", "expected_template_type": "dpgf_template"}
+
+Exemple 10 — dce_template (cadre de réponse) :
+{"exigence": "Rédiger le mémoire technique selon le cadre de réponse joint",
+ "source_document": "RC", "source_page": 10,
+ "source_excerpt": "Le mémoire technique sera structuré selon le cadre de réponse fourni en annexe",
+ "category": "offre", "priority": "obligatoire",
+ "source_kind": "dce_template", "expected_template_type": "cadre_reponse"}
 
 ━━━ OÙ CHERCHER LES EXIGENCES — PAR DOCUMENT ━━━
 
@@ -337,7 +441,9 @@ Sois concis. Ta réponse doit commencer par { et finir par }.
       "source_page": entier (OBLIGATOIRE),
       "source_excerpt": "citation exacte du document (max 100 chars)",
       "category": "candidature" | "offre" | "technique" | "planning" | "criteres_notation",
-      "priority": "obligatoire" | "souhaitée"
+      "priority": "obligatoire" | "souhaitée",
+      "source_kind": "vault" | "dce_template",
+      "expected_template_type": null | "dc1_template" | "dc2_template" | "acte_engagement_template" | "dpgf_template" | "bpu_template" | "dqe_template" | "cadre_reponse" | "attestation_visite_template"
     }
   ],
   "criteres_jugement": [
@@ -365,6 +471,147 @@ Sois concis. Ta réponse doit commencer par { et finir par }.
     "conditions_sous_traitance": "..." ou null,
     "assurances_specifiques": ["Décennale", "RC > 5M€"] ou []
   }
+}
+
+━━━ COMMENT DÉCIDER source_kind + expected_template_type ━━━
+
+Pour CHAQUE requirement, tu dois décider :
+• source_kind = "vault"        → l'entreprise fournit la pièce depuis SON coffre-fort (Kbis, attestations, assurances, références…)
+• source_kind = "dce_template" → l'acheteur a JOINT un FORMULAIRE VIERGE au DCE et l'utilisateur DOIT le compléter (DC1, DC2, AE, DPGF, BPU, DQE, cadre de réponse, attestation de visite)
+
+Et expected_template_type :
+• null si source_kind = "vault" (le coffre-fort fournit, pas de template à compléter)
+• une valeur DCE_TEMPLATE_TYPES si source_kind = "dce_template"
+
+▶ RÈGLES IMPÉRATIVES (priorité absolue, ne jamais dévier) :
+
+1. DC1 / DC2 → TOUJOURS source_kind="dce_template" (ce sont des formulaires Cerfa à remplir, JAMAIS un document du coffre-fort).
+   • DC1 (Lettre de candidature) → expected_template_type="dc1_template"
+   • DC2 (Déclaration du candidat) → expected_template_type="dc2_template"
+
+2. Acte d'engagement (AE / ATTRI1) → TOUJOURS source_kind="dce_template", expected_template_type="acte_engagement_template" (à compléter, dater, signer).
+
+3. DPGF / BPU / DQE → TOUJOURS source_kind="dce_template" (ce sont des tableaux de prix vierges joints au DCE).
+   • DPGF → "dpgf_template"
+   • BPU  → "bpu_template"
+   • DQE  → "dqe_template"
+
+4. Cadre de réponse (memoire) → source_kind="dce_template", expected_template_type="cadre_reponse"
+   (l'acheteur impose la structure du mémoire technique via un cadre joint).
+
+5. Attestation de visite obligatoire → source_kind="dce_template", expected_template_type="attestation_visite_template"
+   (formulaire à faire signer par l'acheteur lors de la visite).
+
+6. Attestations légales / fiscales / sociales / assurances → TOUJOURS source_kind="vault", expected_template_type=null.
+   Concerne : URSSAF, attestation fiscale, Kbis, RIB, décennale, RC pro, Pro BTP, CIBTP, Qualibat, RGE, CACES, amiante SS4,
+   chiffre d'affaires, effectifs, organigramme, références travaux, DUME, attestations de bonne exécution, pouvoir.
+   → JAMAIS de dce_template pour ces pièces, même si le RC dit "selon modèle joint".
+
+7. "Déclaration sur l'honneur" — cas particulier :
+   • Si le RC dit "selon le modèle joint au DCE" / "selon modèle ci-joint" / référence à un fichier annexe précis
+     → source_kind="dce_template", expected_template_type="cadre_reponse" (utiliser cadre_reponse comme proxy générique)
+   • Sinon (déclaration libre rédigée par l'entreprise) → source_kind="vault", expected_template_type=null
+
+8. Mémoire technique :
+   • Si RC mentionne un "cadre de réponse" joint → source_kind="dce_template", expected_template_type="cadre_reponse"
+   • Sinon (mémoire libre rédigé) → source_kind="vault", expected_template_type=null
+     (le mémoire sera produit par l'outil — non pertinent pour la checklist coffre-fort, mais on garde "vault" par défaut)
+
+9. category != "candidature" et category != "offre" → source_kind="vault", expected_template_type=null
+   (les exigences technique/planning/criteres_notation ne sont pas des pièces à fournir → valeurs par défaut)
+
+10. Doute → source_kind="vault", expected_template_type=null. JAMAIS inventer un template_type qui n'est pas dans la liste.
+
+▶ EXEMPLES DE SORTIE JSON ATTENDUE :
+
+Exemple 1 — vault (Kbis) :
+{
+  "exigence": "Fournir un extrait Kbis de moins de 3 mois",
+  "source_document": "RC", "source_page": 4,
+  "source_excerpt": "Extrait Kbis ou équivalent datant de moins de 3 mois",
+  "category": "candidature", "priority": "obligatoire",
+  "source_kind": "vault", "expected_template_type": null
+}
+
+Exemple 2 — vault (URSSAF) :
+{
+  "exigence": "Fournir une attestation de vigilance URSSAF datant de moins de 6 mois",
+  "source_document": "RC", "source_page": 5,
+  "source_excerpt": "Attestation de vigilance URSSAF de moins de 6 mois",
+  "category": "candidature", "priority": "obligatoire",
+  "source_kind": "vault", "expected_template_type": null
+}
+
+Exemple 3 — vault (assurance décennale) :
+{
+  "exigence": "Joindre l'attestation d'assurance décennale en cours de validité",
+  "source_document": "RC", "source_page": 6,
+  "source_excerpt": "Attestation d'assurance décennale couvrant le lot et en cours de validité",
+  "category": "candidature", "priority": "obligatoire",
+  "source_kind": "vault", "expected_template_type": null
+}
+
+Exemple 4 — vault (références) :
+{
+  "exigence": "Fournir la liste des travaux exécutés sur les 5 dernières années avec attestations de bonne exécution",
+  "source_document": "RC", "source_page": 7,
+  "source_excerpt": "Liste des principaux travaux exécutés au cours des cinq dernières années",
+  "category": "candidature", "priority": "obligatoire",
+  "source_kind": "vault", "expected_template_type": null
+}
+
+Exemple 5 — vault (chiffre d'affaires) :
+{
+  "exigence": "Communiquer le chiffre d'affaires des 3 derniers exercices clos",
+  "source_document": "RC", "source_page": 5,
+  "source_excerpt": "Chiffre d'affaires global des trois derniers exercices",
+  "category": "candidature", "priority": "obligatoire",
+  "source_kind": "vault", "expected_template_type": null
+}
+
+Exemple 6 — dce_template (DC1) :
+{
+  "exigence": "Compléter, dater et signer le formulaire DC1 (Lettre de candidature)",
+  "source_document": "RC", "source_page": 3,
+  "source_excerpt": "Le candidat remplira le formulaire DC1 joint au présent règlement",
+  "category": "candidature", "priority": "obligatoire",
+  "source_kind": "dce_template", "expected_template_type": "dc1_template"
+}
+
+Exemple 7 — dce_template (DC2) :
+{
+  "exigence": "Compléter et signer le formulaire DC2 (Déclaration du candidat)",
+  "source_document": "RC", "source_page": 3,
+  "source_excerpt": "Déclaration du candidat (formulaire DC2) à compléter",
+  "category": "candidature", "priority": "obligatoire",
+  "source_kind": "dce_template", "expected_template_type": "dc2_template"
+}
+
+Exemple 8 — dce_template (Acte d'engagement) :
+{
+  "exigence": "Compléter, dater et signer l'acte d'engagement (AE) joint",
+  "source_document": "RC", "source_page": 8,
+  "source_excerpt": "L'acte d'engagement devra être complété, daté et signé par le candidat",
+  "category": "offre", "priority": "obligatoire",
+  "source_kind": "dce_template", "expected_template_type": "acte_engagement_template"
+}
+
+Exemple 9 — dce_template (DPGF) :
+{
+  "exigence": "Renseigner toutes les lignes du DPGF (Décomposition du Prix Global et Forfaitaire)",
+  "source_document": "RC", "source_page": 9,
+  "source_excerpt": "Le DPGF joint sera intégralement renseigné, à peine d'irrecevabilité",
+  "category": "offre", "priority": "obligatoire",
+  "source_kind": "dce_template", "expected_template_type": "dpgf_template"
+}
+
+Exemple 10 — dce_template (cadre de réponse) :
+{
+  "exigence": "Rédiger le mémoire technique selon le cadre de réponse joint au DCE",
+  "source_document": "RC", "source_page": 10,
+  "source_excerpt": "Le mémoire technique sera structuré selon le cadre de réponse fourni en annexe",
+  "category": "offre", "priority": "obligatoire",
+  "source_kind": "dce_template", "expected_template_type": "cadre_reponse"
 }
 
 ━━━ OÙ CHERCHER — RC ━━━

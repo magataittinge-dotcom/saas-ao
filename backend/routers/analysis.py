@@ -239,27 +239,31 @@ async def trigger_analysis(
         project.current_step = 4
     db.commit()
 
-    # Generate checklist from candidature requirements (best-effort)
-    candidature_reqs = [r for r in requirements if r.get("category") == "candidature"]
-    if candidature_reqs:
+    # Generate checklist from candidature/offre requirements (best-effort)
+    checklist_reqs = [r for r in requirements if r.get("category") in ("candidature", "offre")]
+    if checklist_reqs:
         try:
             vault_docs = db.query(Document).filter(Document.organization_id == user.organization_id).all()
             matcher = ChecklistMatcher()
-            checklist = await matcher.match(candidature_reqs, vault_docs)
+            checklist = await matcher.match(checklist_reqs, vault_docs, project_id=project_id, db=db)
 
             db.query(ChecklistItem).filter(ChecklistItem.project_id == project_id).delete()
             for item_data in checklist:
                 db.add(ChecklistItem(
                     project_id=project_id,
                     document_type_required=item_data.get("document_type_required", ""),
-                    linked_document_id=item_data.get("matched_document_id"),
+                    source_kind=item_data.get("source_kind", "vault"),
+                    linked_document_id=item_data.get("linked_document_id"),
+                    template_project_doc_id=item_data.get("template_project_doc_id"),
+                    completed_project_doc_id=item_data.get("completed_project_doc_id"),
                     status=item_data.get("status", "manquant"),
                     details=item_data.get("details"),
                     source_in_rc=item_data.get("source_in_rc"),
                 ))
             db.commit()
-        except Exception:
-            pass  # Checklist failure is non-blocking
+        except Exception as e:
+            logger.warning(f"Checklist generation failed (non-blocking): {e}", exc_info=True)
+            db.rollback()
 
     pipeline_tracker.complete_pipeline(project_id)
 
