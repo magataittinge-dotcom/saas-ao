@@ -1,13 +1,14 @@
-from typing import List
+from datetime import datetime
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from typing import Optional
 
 from database import get_db
 from models.user import User
 from models.reference import Reference
 from routers.auth import get_auth_user
+from services.audit_logger import log_action
 
 router = APIRouter()
 
@@ -41,13 +42,15 @@ class ReferenceResponse(BaseModel):
 
 
 @router.get("", response_model=List[ReferenceResponse])
-def list_references(user: User = Depends(get_auth_user), db: Session = Depends(get_db)):
-    return (
-        db.query(Reference)
-        .filter(Reference.organization_id == user.organization_id)
-        .order_by(Reference.annee.desc())
-        .all()
-    )
+def list_references(
+    include_deleted: bool = False,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    q = db.query(Reference).filter(Reference.organization_id == user.organization_id)
+    if not include_deleted:
+        q = q.filter(Reference.deleted_at.is_(None))
+    return q.order_by(Reference.annee.desc()).all()
 
 
 @router.post("", response_model=ReferenceResponse)
@@ -60,11 +63,39 @@ def create_reference(
     db.add(ref)
     db.commit()
     db.refresh(ref)
+    log_action(
+        db, user, "reference.create",
+        target_type="reference", target_id=ref.id,
+        extra={"intitule": ref.intitule, "lot": ref.lot},
+    )
     return ref
 
 
 @router.delete("/{ref_id}", status_code=204)
 def delete_reference(
+    ref_id: str,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """Soft-delete: set deleted_at, keep history."""
+    ref = db.query(Reference).filter(
+        Reference.id == ref_id,
+        Reference.organization_id == user.organization_id,
+        Reference.deleted_at.is_(None),
+    ).first()
+    if not ref:
+        raise HTTPException(status_code=404, detail="Référence introuvable")
+    ref.deleted_at = datetime.utcnow()
+    db.commit()
+    log_action(
+        db, user, "reference.delete",
+        target_type="reference", target_id=ref_id,
+        extra={"intitule": ref.intitule},
+    )
+
+
+@router.post("/{ref_id}/restore", response_model=ReferenceResponse)
+def restore_reference(
     ref_id: str,
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
@@ -75,5 +106,13 @@ def delete_reference(
     ).first()
     if not ref:
         raise HTTPException(status_code=404, detail="Référence introuvable")
-    db.delete(ref)
+    if not ref.deleted_at:
+        raise HTTPException(status_code=400, detail="Référence non supprimée")
+    ref.deleted_at = None
     db.commit()
+    db.refresh(ref)
+    log_action(
+        db, user, "reference.restore",
+        target_type="reference", target_id=ref_id,
+    )
+    return ref

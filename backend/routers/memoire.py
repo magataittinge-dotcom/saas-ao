@@ -23,6 +23,7 @@ from services.docx_exporter import build_memoire_docx
 from services.maps_service import generate_location_map
 from services.document_tagger import get_documents_for_lot
 from services import pipeline_tracker
+from services.audit_logger import log_action
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -147,6 +148,11 @@ async def generate_memoire(
 
     db.commit()
     db.refresh(memoire)
+    log_action(
+        db, user, "memoire.generate",
+        target_type="project", target_id=project_id,
+        extra={"version": memoire.version, "lot": project.selected_lot},
+    )
     return memoire
 
 

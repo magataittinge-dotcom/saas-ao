@@ -25,6 +25,7 @@ class Reference(Base):
     is_reference = Column(Boolean, default=True)
     attestation_document_id = Column(String, ForeignKey("documents.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    deleted_at = Column(DateTime, nullable=True, index=True)  # soft-delete
 
     # Relationships
     organization = relationship("Organization", back_populates="references")

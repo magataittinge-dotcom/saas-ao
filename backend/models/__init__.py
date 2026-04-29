@@ -8,6 +8,7 @@ from .compliance_item import ComplianceItem
 from .checklist_item import ChecklistItem
 from .memoire import MemoireTechnique
 from .memoire_template import MemoireTemplate
+from .audit_log import AuditLog
 
 __all__ = [
     "Organization",
@@ -21,4 +22,5 @@ __all__ = [
     "ChecklistItem",
     "MemoireTechnique",
     "MemoireTemplate",
+    "AuditLog",
 ]

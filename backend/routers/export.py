@@ -291,6 +291,18 @@ def export_zip(
         "Content-Disposition": f"attachment; filename=\"{ascii_zip}\"; filename*=UTF-8''{utf8_zip}",
         "X-Export-Warnings": json.dumps(warnings),
     }
+
+    from services.audit_logger import log_action
+    log_action(
+        db, user, "export.zip",
+        target_type="project", target_id=project_id,
+        extra={
+            "project_name": project.name,
+            "lot": project.selected_lot,
+            "warnings_count": len(warnings),
+            "size_bytes": buf.getbuffer().nbytes,
+        },
+    )
     return StreamingResponse(buf, media_type="application/zip", headers=headers)
 
 

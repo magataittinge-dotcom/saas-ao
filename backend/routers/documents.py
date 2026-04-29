@@ -1,5 +1,5 @@
+from datetime import date, datetime
 from typing import List, Optional
-from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from sqlalchemy.orm import Session
 
@@ -8,6 +8,7 @@ from models.user import User
 from models.document import Document
 from schemas.document import DocumentResponse
 from routers.auth import get_auth_user
+from services.audit_logger import log_action
 from services.file_storage import FileStorage
 from services.expiry_checker import compute_status
 
@@ -16,13 +17,15 @@ storage = FileStorage()
 
 
 @router.get("", response_model=List[DocumentResponse])
-def list_documents(user: User = Depends(get_auth_user), db: Session = Depends(get_db)):
-    return (
-        db.query(Document)
-        .filter(Document.organization_id == user.organization_id)
-        .order_by(Document.uploaded_at.desc())
-        .all()
-    )
+def list_documents(
+    include_deleted: bool = False,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    q = db.query(Document).filter(Document.organization_id == user.organization_id)
+    if not include_deleted:
+        q = q.filter(Document.deleted_at.is_(None))
+    return q.order_by(Document.uploaded_at.desc()).all()
 
 
 @router.post("", response_model=DocumentResponse)
@@ -58,6 +61,11 @@ async def upload_document(
     db.add(doc)
     db.commit()
     db.refresh(doc)
+    log_action(
+        db, user, "vault.upload",
+        target_type="document", target_id=doc.id,
+        extra={"type": type, "file_name": file.filename, "size": len(content)},
+    )
     return doc
 
 
@@ -67,11 +75,43 @@ def delete_document(
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ):
+    """Soft-delete: keep history for compliance/restore."""
+    doc = db.query(Document).filter(
+        Document.id == doc_id,
+        Document.organization_id == user.organization_id,
+        Document.deleted_at.is_(None),
+    ).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document introuvable")
+    doc.deleted_at = datetime.utcnow()
+    db.commit()
+    log_action(
+        db, user, "vault.delete",
+        target_type="document", target_id=doc_id,
+        extra={"type": doc.type, "file_name": doc.file_name},
+    )
+
+
+@router.post("/{doc_id}/restore", response_model=DocumentResponse)
+def restore_document(
+    doc_id: str,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """Restore a soft-deleted vault document."""
     doc = db.query(Document).filter(
         Document.id == doc_id,
         Document.organization_id == user.organization_id,
     ).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document introuvable")
-    db.delete(doc)
+    if not doc.deleted_at:
+        raise HTTPException(status_code=400, detail="Document non supprimé")
+    doc.deleted_at = None
     db.commit()
+    db.refresh(doc)
+    log_action(
+        db, user, "vault.restore",
+        target_type="document", target_id=doc_id,
+    )
+    return doc

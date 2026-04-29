@@ -294,13 +294,15 @@ def _invalidate_lots_cache(project_id: str, db: Session) -> None:
 # ─── Project CRUD ─────────────────────────────────────────────────────────────
 
 @router.get("", response_model=List[ProjectResponse])
-def list_projects(user: User = Depends(get_auth_user), db: Session = Depends(get_db)):
-    return (
-        db.query(Project)
-        .filter(Project.organization_id == user.organization_id)
-        .order_by(Project.updated_at.desc())
-        .all()
-    )
+def list_projects(
+    include_deleted: bool = False,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    q = db.query(Project).filter(Project.organization_id == user.organization_id)
+    if not include_deleted:
+        q = q.filter(Project.deleted_at.is_(None))
+    return q.order_by(Project.updated_at.desc()).all()
 
 
 @router.post("", response_model=ProjectResponse)
@@ -352,9 +354,50 @@ def delete_project(
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ):
+    """Soft-delete: set deleted_at instead of removing rows.
+    The project keeps its files and history for 30 days, then a cron may purge."""
+    from datetime import datetime
+    from services.audit_logger import log_action
+
     project = _get_project_or_404(project_id, user.organization_id, db)
-    db.delete(project)
+    project.deleted_at = datetime.utcnow()
     db.commit()
+    log_action(
+        db, user, "project.delete",
+        target_type="project", target_id=project_id,
+        extra={"name": project.name, "status": project.status},
+    )
+
+
+@router.post("/{project_id}/restore", response_model=ProjectResponse)
+def restore_project(
+    project_id: str,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """Undo a soft-delete (within the 30-day window)."""
+    from services.audit_logger import log_action
+
+    project = (
+        db.query(Project)
+        .filter(
+            Project.id == project_id,
+            Project.organization_id == user.organization_id,
+        )
+        .first()
+    )
+    if not project:
+        raise HTTPException(status_code=404, detail="Projet introuvable")
+    if not project.deleted_at:
+        raise HTTPException(status_code=400, detail="Projet non supprimé")
+    project.deleted_at = None
+    db.commit()
+    db.refresh(project)
+    log_action(
+        db, user, "project.restore",
+        target_type="project", target_id=project_id,
+    )
+    return project
 
 
 # ─── Project Documents ────────────────────────────────────────────────────────
@@ -1434,9 +1477,11 @@ def complete_step(
 
 
 def _get_project_or_404(project_id: str, org_id: str, db: Session) -> Project:
+    """Fetch a project for the org, ignoring soft-deleted rows."""
     project = db.query(Project).filter(
         Project.id == project_id,
         Project.organization_id == org_id,
+        Project.deleted_at.is_(None),
     ).first()
     if not project:
         raise HTTPException(status_code=404, detail="Projet introuvable")

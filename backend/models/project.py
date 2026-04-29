@@ -61,6 +61,7 @@ class Project(Base):
     dpgf_remplie_check = Column(JSON, nullable=True)            # verification result JSON
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    deleted_at = Column(DateTime, nullable=True, index=True)  # soft-delete
 
     # Relationships
     organization = relationship("Organization", back_populates="projects")

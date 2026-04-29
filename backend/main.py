@@ -100,6 +100,44 @@ def _ensure_schema_columns():
                         "REFERENCES documents(id)"
                     ))
                 logger.info("Added column references.attestation_document_id")
+            if "deleted_at" not in existing:
+                with engine.begin() as conn:
+                    conn.execute(text(
+                        'ALTER TABLE "references" ADD COLUMN deleted_at TIMESTAMP'
+                    ))
+                    conn.execute(text(
+                        'CREATE INDEX IF NOT EXISTS '
+                        'ix_references_deleted_at ON "references" (deleted_at)'
+                    ))
+                logger.info("Added column references.deleted_at (+index)")
+
+        # ── projects.deleted_at (soft-delete) ──────────────────────────────
+        if insp.has_table("projects"):
+            existing = {c["name"] for c in insp.get_columns("projects")}
+            if "deleted_at" not in existing:
+                with engine.begin() as conn:
+                    conn.execute(text(
+                        "ALTER TABLE projects ADD COLUMN deleted_at TIMESTAMP"
+                    ))
+                    conn.execute(text(
+                        "CREATE INDEX IF NOT EXISTS "
+                        "ix_projects_deleted_at ON projects (deleted_at)"
+                    ))
+                logger.info("Added column projects.deleted_at (+index)")
+
+        # ── documents.deleted_at (soft-delete) ─────────────────────────────
+        if insp.has_table("documents"):
+            existing = {c["name"] for c in insp.get_columns("documents")}
+            if "deleted_at" not in existing:
+                with engine.begin() as conn:
+                    conn.execute(text(
+                        "ALTER TABLE documents ADD COLUMN deleted_at TIMESTAMP"
+                    ))
+                    conn.execute(text(
+                        "CREATE INDEX IF NOT EXISTS "
+                        "ix_documents_deleted_at ON documents (deleted_at)"
+                    ))
+                logger.info("Added column documents.deleted_at (+index)")
 
         # ── Postgres-only: convert native ENUMs to VARCHAR + CHECK ────────
         if is_postgres:

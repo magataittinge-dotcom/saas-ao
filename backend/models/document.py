@@ -45,6 +45,7 @@ class Document(Base):
     expiry_date = Column(Date, nullable=True)
     status = Column(SAEnum(*DOCUMENT_STATUSES, name="document_status"), nullable=False, default="valid")
     uploaded_at = Column(DateTime, default=datetime.utcnow)
+    deleted_at = Column(DateTime, nullable=True, index=True)  # soft-delete
 
     # Relationships
     organization = relationship("Organization", back_populates="documents")
