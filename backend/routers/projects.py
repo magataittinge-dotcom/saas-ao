@@ -253,21 +253,48 @@ def _detect_doc_type(filename: str, form_type: str) -> str:
 def _decode_zip_entry_name(member: zipfile.ZipInfo) -> str:
     """
     Robustly decode a ZIP entry filename.
-    Handles CP437 (default ZIP), Latin-1, and Windows-1252 encodings
+    Handles CP437 (default ZIP), Latin-1, CP850, CP1252 and UTF-8 encodings
     used by French public procurement platforms (PLACE, achatpublic.com, AWS).
+
+    The fix from earlier rounds (cp437→latin-1 only) leaked control chars
+    like U+0090 / U+0082 for files originally encoded in CP850 (typical for
+    French Windows ZIPs, e.g. "DCE - CARNET DE DÉTAIL.pdf" → 0x90 in CP850).
+
+    Strategy: rebuild the original bytes from Python's CP437 decode, then try
+    a list of likely encodings — keep the one whose result has the fewest
+    control characters (best signal of "real text").
     """
     if member.flag_bits & 0x800:
         # UTF-8 flag set — Python already decoded it correctly
         raw = member.filename
     else:
-        # Python decoded as CP437 by default; French files may use Latin-1
         try:
-            raw = member.filename.encode('cp437').decode('latin-1')
-        except (UnicodeDecodeError, UnicodeEncodeError):
+            raw_bytes = member.filename.encode('cp437')
+        except UnicodeEncodeError:
+            raw_bytes = member.filename.encode('cp437', errors='replace')
+
+        # Score candidate decodings by # of control chars (lower = better).
+        # CP850 first because it's the historical French-Windows ZIP encoding
+        # and is the source of the U+0090/U+0082 bug we hit on Gueux DCE.
+        candidates = []
+        for enc in ("cp850", "cp1252", "latin-1", "utf-8"):
             try:
-                raw = member.filename.encode('cp437').decode('utf-8', errors='replace')
-            except Exception:
-                raw = member.filename
+                decoded = raw_bytes.decode(enc)
+                ctrl_count = sum(
+                    1 for c in decoded
+                    if (ord(c) < 0x20 and c not in "\t\n\r") or 0x7F <= ord(c) < 0xA0
+                )
+                candidates.append((ctrl_count, len(decoded), enc, decoded))
+            except UnicodeDecodeError:
+                continue
+
+        if candidates:
+            # Pick the decoding with the fewest control chars; tiebreak on
+            # length (longer wins — favours full-information encoding).
+            candidates.sort(key=lambda c: (c[0], -c[1]))
+            raw = candidates[0][3]
+        else:
+            raw = member.filename
 
     # Keep only the basename (flatten directory structure)
     base = raw.replace("\\", "/").split("/")[-1]

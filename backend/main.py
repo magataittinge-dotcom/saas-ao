@@ -187,8 +187,11 @@ def _ensure_schema_columns():
         # historical rows. v2: adds DCE-XX corps d'état CCTP recognition.
         # v3: adds diagnostic / notice / dt / pgc_sps / planning types and
         # fixes AE detection for prefixed filenames ("2829 - AE.pdf").
+        # v4: sanitize file_name from CP437/CP850 control char leftovers
+        # (U+0090, U+0082) — original bytes are gone, but at least display is clean.
         if insp.has_table("project_documents"):
             _backfill_project_doc_types(version="v3")
+            _backfill_filename_encoding(version="v4")
 
     except Exception as e:
         logger.warning(f"Schema migration skipped: {e}")
@@ -284,6 +287,47 @@ def _backfill_project_doc_types(version: str):
         finally:
             db.close()
 
+        marker.touch()
+    except Exception as e:
+        logger.warning(f"Backfill {version} skipped: {e}")
+
+
+def _backfill_filename_encoding(version: str) -> None:
+    """One-shot sanitisation of project_documents.file_name fields polluted by
+    earlier broken cp437→latin-1 decoding. The control chars (U+0080-U+009F)
+    can't be inverted without the original bytes — we just replace them with
+    '_' the same way the new decoder does.
+    Idempotent via a per-version marker file in uploads/."""
+    import re as _re
+    uploads_dir = Path(__file__).parent / "uploads"
+    uploads_dir.mkdir(exist_ok=True)
+    marker = uploads_dir / f".backfill_filename_encoding_{version}.done"
+    if marker.exists():
+        return
+
+    try:
+        from sqlalchemy.orm import sessionmaker
+        from models.project import ProjectDocument
+
+        SessionLocal = sessionmaker(bind=engine)
+        db = SessionLocal()
+        try:
+            # Match any ASCII control or C1 control char (0x00-0x1f, 0x7f-0x9f).
+            pat = _re.compile(r'[\x00-\x1f\x7f-\x9f]')
+            count = 0
+            for d in db.query(ProjectDocument).all():
+                if not d.file_name:
+                    continue
+                if pat.search(d.file_name):
+                    cleaned = pat.sub('_', d.file_name)
+                    cleaned = _re.sub(r'_+', '_', cleaned).strip('_. ')
+                    d.file_name = cleaned or "fichier_sans_nom"
+                    count += 1
+            if count:
+                db.commit()
+                logger.info(f"Backfill {version}: sanitized {count} project_document file_names")
+        finally:
+            db.close()
         marker.touch()
     except Exception as e:
         logger.warning(f"Backfill {version} skipped: {e}")
