@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -435,9 +436,99 @@ app.include_router(stripe_billing.router, prefix="/api/stripe", tags=["stripe"])
 app.include_router(file_serve_router, prefix="/api/files", tags=["files"])
 
 
+_APP_BOOTED_AT = datetime.utcnow()
+
+
 @app.get("/api/health")
 def health_check():
-    return {"status": "ok", "version": "1.0.0"}
+    """Liveness + readiness probe.
+
+    Returns degraded markers without ever 5xx-ing — load balancers should
+    keep traffic flowing while the service self-heals (e.g. transient PG
+    blip). External monitor reads `status=ok` and `db=up`.
+    """
+    from datetime import datetime as _dt
+    import shutil as _shutil
+    from sqlalchemy import text as _text
+
+    db_status = "up"
+    try:
+        with engine.connect() as conn:
+            conn.execute(_text("SELECT 1"))
+    except Exception as exc:
+        logger.warning("health: DB check failed: %s", exc)
+        db_status = "down"
+
+    disk_free_gb: float | None = None
+    try:
+        usage = _shutil.disk_usage(str(_uploads_dir))
+        disk_free_gb = round(usage.free / (1024 ** 3), 2)
+    except Exception:
+        pass
+
+    uptime_s = int((_dt.utcnow() - _APP_BOOTED_AT).total_seconds())
+
+    return {
+        "status": "ok" if db_status == "up" else "degraded",
+        "db": db_status,
+        "version": "1.0.0",
+        "uptime_seconds": uptime_s,
+        "disk_free_gb": disk_free_gb,
+        "ai_api_configured": bool(settings.ANTHROPIC_API_KEY),
+        "stripe_configured": bool(settings.STRIPE_SECRET_KEY),
+    }
+
+
+@app.get("/api/metrics")
+def metrics():
+    """Lightweight metrics endpoint, JSON only (no Prometheus exposition).
+
+    Use it for the night/morning ops report. Wire to Prometheus later by
+    placing a sidecar that scrapes this and rewrites to text/exposition.
+    """
+    from sqlalchemy import func as _func
+    from services.cache import org_cache as _cache
+    from models.organization import Organization as _Org
+    from models.project import Project as _Project
+    from models.document import Document as _Doc
+    from models.audit_log import AuditLog as _Audit
+    from datetime import timedelta as _td
+
+    from sqlalchemy.orm import sessionmaker
+    Session = sessionmaker(bind=engine)
+    db = Session()
+    try:
+        now = datetime.utcnow()
+        since_24h = now - _td(hours=24)
+        m = {
+            "uptime_seconds": int((now - _APP_BOOTED_AT).total_seconds()),
+            "orgs_total": db.query(_func.count(_Org.id)).scalar() or 0,
+            "projects_total": db.query(_func.count(_Project.id)).filter(
+                _Project.deleted_at.is_(None)
+            ).scalar() or 0,
+            "documents_total": db.query(_func.count(_Doc.id)).filter(
+                _Doc.deleted_at.is_(None)
+            ).scalar() or 0,
+            "audit_24h_total": db.query(_func.count(_Audit.id)).filter(
+                _Audit.created_at >= since_24h
+            ).scalar() or 0,
+            "audit_24h_memoire_generate": db.query(_func.count(_Audit.id)).filter(
+                _Audit.created_at >= since_24h,
+                _Audit.action == "memoire.generate",
+            ).scalar() or 0,
+            "audit_24h_export_zip": db.query(_func.count(_Audit.id)).filter(
+                _Audit.created_at >= since_24h,
+                _Audit.action == "export.zip",
+            ).scalar() or 0,
+            "audit_24h_vault_upload": db.query(_func.count(_Audit.id)).filter(
+                _Audit.created_at >= since_24h,
+                _Audit.action == "vault.upload",
+            ).scalar() or 0,
+            "cache_stats": _cache.stats(),
+        }
+        return m
+    finally:
+        db.close()
 
 
 # NOTE: We deliberately do NOT mount /uploads as a public StaticFiles route.
