@@ -9,7 +9,7 @@ class Reference(Base):
     __tablename__ = "references"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    organization_id = Column(String, ForeignKey("organizations.id"), nullable=False)
+    organization_id = Column(String, ForeignKey("organizations.id"), nullable=False, index=True)
     intitule = Column(String(500), nullable=False)
     adresse = Column(String(500), nullable=True)
     maitre_ouvrage = Column(String(255), nullable=True)

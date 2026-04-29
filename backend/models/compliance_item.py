@@ -12,7 +12,7 @@ class ComplianceItem(Base):
     __tablename__ = "compliance_items"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    project_id = Column(String, ForeignKey("projects.id"), nullable=False)
+    project_id = Column(String, ForeignKey("projects.id"), nullable=False, index=True)
     exigence_text = Column(Text, nullable=False)
     source_document = Column(Text, nullable=True)
     source_page = Column(Integer, nullable=True)

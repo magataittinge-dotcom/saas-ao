@@ -37,12 +37,13 @@ class Project(Base):
     __tablename__ = "projects"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    organization_id = Column(String, ForeignKey("organizations.id"), nullable=False)
+    organization_id = Column(String, ForeignKey("organizations.id"), nullable=False, index=True)
     name = Column(String(500), nullable=False)
     status = Column(
         SAEnum("brouillon", "en_cours", "soumis", "gagné", "perdu", name="project_status"),
         nullable=False,
         default="brouillon",
+        index=True,
     )
     deadline = Column(Date, nullable=True)
     maitre_ouvrage = Column(String(255), nullable=True)
@@ -81,8 +82,8 @@ class ProjectDocument(Base):
     )
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    project_id = Column(String, ForeignKey("projects.id"), nullable=False)
-    type = Column(String(64), nullable=False, default="autre")
+    project_id = Column(String, ForeignKey("projects.id"), nullable=False, index=True)
+    type = Column(String(64), nullable=False, default="autre", index=True)
     file_url = Column(String(500), nullable=False)
     file_name = Column(String(255), nullable=False)
     extracted_text = Column(Text, nullable=True)

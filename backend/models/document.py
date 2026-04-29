@@ -37,12 +37,12 @@ class Document(Base):
     )
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    organization_id = Column(String, ForeignKey("organizations.id"), nullable=False)
-    type = Column(String(64), nullable=False, default="autre")
+    organization_id = Column(String, ForeignKey("organizations.id"), nullable=False, index=True)
+    type = Column(String(64), nullable=False, default="autre", index=True)
     file_url = Column(String(500), nullable=False)
     file_name = Column(String(255), nullable=False)
     issued_date = Column(Date, nullable=True)
-    expiry_date = Column(Date, nullable=True)
+    expiry_date = Column(Date, nullable=True, index=True)
     status = Column(SAEnum(*DOCUMENT_STATUSES, name="document_status"), nullable=False, default="valid")
     uploaded_at = Column(DateTime, default=datetime.utcnow)
     deleted_at = Column(DateTime, nullable=True, index=True)  # soft-delete

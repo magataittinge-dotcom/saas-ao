@@ -168,6 +168,9 @@ def _ensure_schema_columns():
                 if deleted:
                     logger.info(f"Wiped {deleted} checklist_items rows for re-run")
 
+        # ── Performance indexes — additive, idempotent (CREATE INDEX IF NOT EXISTS) ─
+        _ensure_performance_indexes(insp)
+
         # ── One-shot: re-tag project_documents using the new detector ─────
         # Bump the version when the detector gains rules that should re-evaluate
         # historical rows. v2: adds DCE-XX corps d'état CCTP recognition.
@@ -178,6 +181,47 @@ def _ensure_schema_columns():
 
     except Exception as e:
         logger.warning(f"Schema migration skipped: {e}")
+
+
+def _ensure_performance_indexes(insp) -> None:
+    """Create FK + hot-path indexes idempotently (no-op if they already exist).
+
+    Postgres does NOT auto-index FKs. This costs us heavily on filtered queries
+    like `Document.organization_id == org_id`. SQLAlchemy index=True helps on
+    fresh DBs (via Base.metadata.create_all) but does nothing on tables that
+    pre-exist without those indexes — so we add them here too.
+    """
+    from sqlalchemy import text
+
+    # (table, column, index_name) tuples — index_name kept short for Postgres.
+    indexes = [
+        ("projects", "organization_id", "ix_projects_organization_id"),
+        ("projects", "status", "ix_projects_status"),
+        ("project_documents", "project_id", "ix_project_documents_project_id"),
+        ("project_documents", "type", "ix_project_documents_type"),
+        ("documents", "organization_id", "ix_documents_organization_id"),
+        ("documents", "type", "ix_documents_type"),
+        ("documents", "expiry_date", "ix_documents_expiry_date"),
+        ("references", "organization_id", "ix_references_organization_id"),
+        ("checklist_items", "project_id", "ix_checklist_items_project_id"),
+        ("checklist_items", "linked_document_id", "ix_checklist_items_linked_document_id"),
+        ("checklist_items", "template_project_doc_id", "ix_checklist_items_template_doc_id"),
+        ("checklist_items", "completed_project_doc_id", "ix_checklist_items_completed_doc_id"),
+        ("compliance_items", "project_id", "ix_compliance_items_project_id"),
+        ("team_members", "organization_id", "ix_team_members_organization_id"),
+    ]
+    for table, column, name in indexes:
+        if not insp.has_table(table):
+            continue
+        try:
+            with engine.begin() as conn:
+                # Postgres needs quoted identifiers for "references" (reserved keyword).
+                t_q = f'"{table}"' if table == "references" else table
+                conn.execute(text(
+                    f"CREATE INDEX IF NOT EXISTS {name} ON {t_q} ({column})"
+                ))
+        except Exception as exc:
+            logger.warning("perf index %s skipped: %s", name, exc)
 
 
 def _backfill_project_doc_types(version: str):

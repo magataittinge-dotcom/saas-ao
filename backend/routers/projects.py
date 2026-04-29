@@ -311,6 +311,8 @@ def create_project(
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ):
+    from services.cache import org_cache
+
     if not user.organization_id:
         raise HTTPException(status_code=400, detail="Aucune organisation associée à ce compte. Veuillez compléter votre inscription.")
     project = Project(
@@ -324,6 +326,7 @@ def create_project(
     db.add(project)
     db.commit()
     db.refresh(project)
+    org_cache.invalidate(f"dashboard_stats:{user.organization_id}")
     return project
 
 
@@ -340,11 +343,16 @@ def update_project(
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ):
+    from services.cache import org_cache
+
     project = _get_project_or_404(project_id, user.organization_id, db)
+    status_before = project.status
     for field, value in payload.model_dump(exclude_none=True).items():
         setattr(project, field, value)
     db.commit()
     db.refresh(project)
+    if project.status != status_before:
+        org_cache.invalidate(f"dashboard_stats:{user.organization_id}")
     return project
 
 
@@ -359,9 +367,12 @@ def delete_project(
     from datetime import datetime
     from services.audit_logger import log_action
 
+    from services.cache import org_cache
+
     project = _get_project_or_404(project_id, user.organization_id, db)
     project.deleted_at = datetime.utcnow()
     db.commit()
+    org_cache.invalidate(f"dashboard_stats:{user.organization_id}")
     log_action(
         db, user, "project.delete",
         target_type="project", target_id=project_id,
