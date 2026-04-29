@@ -134,8 +134,10 @@ def _ensure_schema_columns():
         # ── One-shot: re-tag project_documents using the new detector ─────
         # Bump the version when the detector gains rules that should re-evaluate
         # historical rows. v2: adds DCE-XX corps d'état CCTP recognition.
+        # v3: adds diagnostic / notice / dt / pgc_sps / planning types and
+        # fixes AE detection for prefixed filenames ("2829 - AE.pdf").
         if insp.has_table("project_documents"):
-            _backfill_project_doc_types(version="v2")
+            _backfill_project_doc_types(version="v3")
 
     except Exception as e:
         logger.warning(f"Schema migration skipped: {e}")

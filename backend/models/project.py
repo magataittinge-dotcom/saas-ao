@@ -20,7 +20,15 @@ DCE_TEMPLATE_TYPES = [
 ]
 
 # Documents de référence du DCE — fournis par l'acheteur, jamais re-exportés.
-DCE_REFERENCE_TYPES = ["rc", "cctp", "ccap", "plan", "autre"]
+DCE_REFERENCE_TYPES = [
+    "rc", "cctp", "ccap", "plan",
+    "diagnostic",   # DAT, CREP, G2PRO, contrôles techniques (APAVE, SOCOTEC…)
+    "notice",       # notices accessibilité / sécurité / acoustique / PC / EP
+    "dt",           # DT concessionnaires (ENEDIS, GRDF, ORANGE, SIEM, CUGR…)
+    "pgc_sps",      # Plan Général de Coordination SPS
+    "planning",     # planning prévisionnel / travaux / DCE / chantier
+    "autre",
+]
 
 PROJECT_DOC_TYPES = DCE_REFERENCE_TYPES + DCE_TEMPLATE_TYPES
 

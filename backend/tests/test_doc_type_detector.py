@@ -48,6 +48,13 @@ def test_detect_dc1_dc2(filename, expected):
     ("AE_template.pdf",                  "acte_engagement_template"),
     ("AE_vierge.pdf",                    "acte_engagement_template"),
 
+    # PREFIXED FILENAMES: AE just before file extension (real DCE pattern,
+    # e.g. dossier-numeric-prefix from PLACE / achatpublic).
+    ("2829 - AE.pdf",                    "acte_engagement_template"),
+    ("2829 _ AE.pdf",                    "acte_engagement_template"),
+    ("DCE_AE.pdf",                       "acte_engagement_template"),
+    ("DOSSIER-001-AE.docx",              "acte_engagement_template"),
+
     # FALSE POSITIVE GUARD: 'AE' embedded in unrelated word
     ("phase_AE_dossier.pdf",             "autre"),
     ("phase_ae_avant_projet.pdf",        "autre"),
@@ -57,6 +64,115 @@ def test_detect_dc1_dc2(filename, expected):
     ("DC1_AE_combine.pdf",               "dc1_template"),
 ])
 def test_detect_acte_engagement(filename, expected):
+    assert _detect_doc_type(filename, "autre") == expected
+
+
+# ─── Diagnostic — DAT, CREP, G2, contrôles techniques ────────────────────────
+
+@pytest.mark.parametrize("filename, expected", [
+    ("DIAG AMIANTE 1.pdf",               "diagnostic"),
+    ("ECOLE_DIAG_AMIANTE_2.pdf",         "diagnostic"),
+    ("DIAG PLOMB.pdf",                   "diagnostic"),
+    ("DAT_amiante_2024.pdf",             "diagnostic"),
+    ("CREP_plomb.pdf",                   "diagnostic"),
+    ("260310-APAVE-C24192521-1-RI.pdf",  "diagnostic"),
+    ("Rapport_SOCOTEC.pdf",              "diagnostic"),
+    ("QUALICONSULT_controle.pdf",        "diagnostic"),
+    ("BUREAU_VERITAS_2024.pdf",          "diagnostic"),
+    ("I-25-03-66-G2PRO_etude.pdf",       "diagnostic"),
+    ("ETUDE_STRUCTURE_batiment.pdf",     "diagnostic"),
+    ("controle_technique.pdf",           "diagnostic"),
+    ("Diagnostic_termites.pdf",          "diagnostic"),
+
+    # FALSE POSITIVE GUARDS
+    ("Plomberie_lot.pdf",                "autre"),  # 'plomberie' ≠ 'plomb'
+])
+def test_detect_diagnostic(filename, expected):
+    assert _detect_doc_type(filename, "autre") == expected
+
+
+# ─── Notice (accessibilité, sécurité, acoustique, PC, EP) ────────────────────
+
+@pytest.mark.parametrize("filename, expected", [
+    ("EQ2402-NOTICE_ACCESSIBILITE.pdf",  "notice"),
+    ("Notice_acoustique.pdf",            "notice"),
+    ("Notice gestion EP.pdf",            "notice"),
+    ("Notice PC.pdf",                    "notice"),
+    ("Notice_securite_incendie.pdf",     "notice"),
+    ("Notice_environnementale.pdf",      "notice"),
+])
+def test_detect_notice(filename, expected):
+    assert _detect_doc_type(filename, "autre") == expected
+
+
+# ─── DT — déclarations concessionnaires (vs DTU/DTI false positives) ─────────
+
+@pytest.mark.parametrize("filename, expected", [
+    ("DT ENEDIS.pdf",                    "dt"),
+    ("DT GRDF.pdf",                      "dt"),
+    ("DT ORANGE.pdf",                    "dt"),
+    ("DT_SIEM.pdf",                      "dt"),
+    ("DT CUGR_EP.pdf",                   "dt"),
+    ("DT-FREE.pdf",                      "dt"),
+
+    # FALSE POSITIVE GUARDS — DTU / DTI are technical reference docs,
+    # not concessionnaire declarations (no separator after DT).
+    ("DTU 13.3 fondations.pdf",          "autre"),
+    ("dtu_2024_ref.pdf",                 "autre"),
+    ("DTI_specifications.pdf",           "autre"),
+])
+def test_detect_dt(filename, expected):
+    assert _detect_doc_type(filename, "autre") == expected
+
+
+# ─── PGC SPS — Plan Général de Coordination ─────────────────────────────────
+
+@pytest.mark.parametrize("filename, expected", [
+    ("PGC SPS.pdf",                      "pgc_sps"),
+    ("PGC-SPS.pdf",                      "pgc_sps"),
+    ("PGCSPS_2024.pdf",                  "pgc_sps"),
+    ("Plan_general_coordination.pdf",    "pgc_sps"),
+])
+def test_detect_pgc_sps(filename, expected):
+    assert _detect_doc_type(filename, "autre") == expected
+
+
+# ─── Planning ────────────────────────────────────────────────────────────────
+
+@pytest.mark.parametrize("filename, expected", [
+    ("Planning previsionnel.pdf",        "planning"),
+    ("Planning_travaux.pdf",             "planning"),
+    ("Planning_DCE.pdf",                 "planning"),
+    ("Planning_chantier_2024.pdf",       "planning"),
+])
+def test_detect_planning(filename, expected):
+    assert _detect_doc_type(filename, "autre") == expected
+
+
+# ─── CCTP — carnet de détail / menuiseries / plans ───────────────────────────
+
+@pytest.mark.parametrize("filename, expected", [
+    ("DCE - CARNET DE DETAIL.pdf",       "cctp"),
+    ("CARNET MENUISERIES.pdf",           "cctp"),
+    ("Carnet_de_plan.pdf",               "cctp"),
+    ("Carnet_detail_facade.pdf",         "cctp"),
+])
+def test_detect_cctp_carnet(filename, expected):
+    assert _detect_doc_type(filename, "autre") == expected
+
+
+# ─── RDC — Règlement vs Rez-De-Chaussée disambiguation ───────────────────────
+
+@pytest.mark.parametrize("filename, expected", [
+    # RDC alone or with règlement context → RC
+    ("RDC.pdf",                          "rc"),
+    ("RDC_consultation.pdf",             "rc"),
+    # RDC + plan markers → plan
+    ("Plan_RDC.dwg",                     "plan"),
+    ("RDC_coupe.pdf",                    "plan"),
+    ("ARCH 02 - RDC.pdf",                "plan"),
+])
+def test_rdc_disambiguation(filename, expected):
     assert _detect_doc_type(filename, "autre") == expected
 
 
@@ -185,6 +301,9 @@ def test_form_type_autre_runs_detection():
     "", "DC1.pdf", "DC2.pdf", "AE.pdf", "DPGF.xlsx", "BPU.xlsx", "DQE.xlsx",
     "Cadre_reponse.docx", "Attestation_visite.pdf", "RC.pdf", "CCAP.pdf",
     "CCTP.pdf", "Plan_RDC.dwg", "phase_AE_dossier.pdf", "DC14.pdf",
+    "2829 - AE.pdf", "DIAG AMIANTE 1.pdf", "Notice_PC.pdf", "DT ENEDIS.pdf",
+    "PGC SPS.pdf", "Planning previsionnel.pdf", "Carnet_menuiseries.pdf",
+    "DTU 13.3.pdf",
     "random.pdf", "image.png",
 ])
 def test_detected_type_is_always_in_project_doc_types(filename):

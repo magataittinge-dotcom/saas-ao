@@ -64,6 +64,7 @@ def _detect_doc_type(filename: str, form_type: str) -> str:
 
     Priority cascade (most specific first):
       DC1 → DC2 → AE → DPGF → BPU → DQE → cadre_reponse → visite →
+      pgc_sps → diagnostic → notice → dt → planning →
       RC → CCAP → CCTP → plan → autre.
 
     DPGF wins over BPU/DQE; DC1/DC2 win over AE if both terms appear.
@@ -93,11 +94,13 @@ def _detect_doc_type(filename: str, form_type: str) -> str:
         return 'dc2_template'
 
     # ── 3. Acte d'engagement ───────────────────────────────────────────────
-    # 'AE' alone is too generic — only trust it at start of name, with the
-    # full phrase, or with explicit confirmers (signe, rempli, vierge…).
+    # 'AE' alone is too generic — only trust it at start of name, just before
+    # the file extension ("2829 - AE.pdf", "DCE_AE.pdf"), with the full phrase,
+    # or with explicit confirmers (signe, rempli, vierge…).
     if re.search(
         r'acte.{0,6}engagement|'
         r'^ae(?![a-z0-9])|'
+        r'(?<![a-z0-9])ae(?=\.[a-z]{2,5}$)|'
         r'(?<![a-z0-9])ae[\s_.\-](?:signe|rempli|vierge|template|complete|final)|'
         r'(?<![a-z0-9])attri\d+',
         norm,
@@ -139,6 +142,53 @@ def _detect_doc_type(filename: str, form_type: str) -> str:
     ):
         return 'attestation_visite_template'
 
+    # ── 9. PGC SPS — Plan Général de Coordination Sécurité Protection Santé ─
+    # Goes BEFORE 'planning' so "PGC SPS.pdf" doesn't get planning'd by mistake.
+    if re.search(
+        r'(?<![a-z0-9])pgc[\s_.\-]?sps(?![a-z0-9])|'
+        r'plan.{0,8}general.{0,8}coordination|'
+        r'coordination.{0,8}sps',
+        norm,
+    ):
+        return 'pgc_sps'
+
+    # ── 10. Diagnostic / contrôle technique ───────────────────────────────
+    # DAT (Dossier Amiante Travaux), CREP (plomb), RAAT, étude structure /
+    # géotech (G2 PRO, G2 AVP…), bureaux de contrôle (APAVE, SOCOTEC,
+    # QUALICONSULT, BUREAU VERITAS), diag amiante / plomb / termite.
+    if re.search(
+        r'diagnos|' +
+        tok('diag') + r'|' +
+        tok('dat') + r'|' +
+        tok('crep') + r'|' +
+        tok('raat') + r'|' +
+        r'apave|socotec|qualiconsult|veritas|bureau.{0,4}controle|'
+        r'controle.{0,4}technique|'
+        r'(?<![a-z0-9])g2[\s_.\-]?(?:pro|avp|aps|g[12])?(?![a-z0-9])|'
+        r'etude.{0,4}structure|etude.{0,4}geotechnique|'
+        r'(?<![a-z0-9])amiante(?![a-z0-9])|'
+        r'(?<![a-z0-9])plomb(?![a-z0-9])',
+        norm,
+    ):
+        return 'diagnostic'
+
+    # ── 11. Notice (accessibilité / sécurité / acoustique / PC / EP) ──────
+    # In a DCE, "notice" is almost always a design/safety notice attached
+    # to the permis de construire or a technical chapter.
+    if re.search(tok('notice'), norm):
+        return 'notice'
+
+    # ── 12. DT — déclarations concessionnaires (ENEDIS, GRDF, ORANGE…) ────
+    # Pattern: 'DT' + separator + ≥3 letters (operator name).
+    # Rejects DTU/DTI (no separator after DT) so technical reference docs
+    # don't get miscategorised.
+    if re.search(r'^dt[\s_.\-][a-z]{3,}', norm):
+        return 'dt'
+
+    # ── 13. Planning ──────────────────────────────────────────────────────
+    if re.search(tok('planning'), norm):
+        return 'planning'
+
     # ── Plan filename markers — used to disambiguate 'RDC' below ──────────
     is_plan_fname = bool(re.search(
         r'(?<![a-z0-9])arch\s*\d|coupe|niveau|zoom|etage|r\+\d|'
@@ -147,7 +197,11 @@ def _detect_doc_type(filename: str, form_type: str) -> str:
     ))
     is_annexe = bool(re.search(r'annexe|nommage|liste|modele', norm))
 
-    # ── 9. RC — Règlement de Consultation ─────────────────────────────────
+    # ── 14. RC — Règlement de Consultation ────────────────────────────────
+    # 'RDC' is ambiguous: it can mean Règlement de Consultation (rc) OR
+    # Rez-De-Chaussée (a plan). Disambiguation: if any plan marker is
+    # present in the filename (Plan_RDC.dwg, RDC_coupe.pdf), keep it as
+    # a plan; otherwise treat it as a règlement.
     is_rc = bool(re.search(
         r'reglement|r[eè]gl[\._\s]?consul|' + tok('rc') + r'|' + tok('rce') + r'|'
         r'reglement.{0,4}consultation|r[eè]glement.{0,4}la.{0,4}consultation',
@@ -158,16 +212,19 @@ def _detect_doc_type(filename: str, form_type: str) -> str:
     if is_rc and not is_annexe:
         return 'rc'
 
-    # ── 10. CCAP — Cahier des Clauses Administratives ─────────────────────
+    # ── 15. CCAP — Cahier des Clauses Administratives ─────────────────────
     if re.search(tok('ccap') + r'|clauses.{0,6}admin|cahier.{0,6}admin', norm):
         return 'ccap'
 
-    # ── 11. CCTP — Cahier des Clauses Techniques ──────────────────────────
+    # ── 16. CCTP — Cahier des Clauses Techniques ──────────────────────────
     if re.search(
         tok('cctp') + r'|clauses.{0,6}tech|cahier.{0,6}technique|'
         r'descriptif.{0,6}tech',
         norm,
     ):
+        return 'cctp'
+    # Carnet de détail / menuiseries / plans = pièces écrites techniques.
+    if re.search(r'carnet.{0,4}(?:de.{0,4})?(?:detail|menuiserie|plan)', norm):
         return 'cctp'
     # Lot-specific DCE PDFs are usually per-lot CCTPs: "lot 01 GO_DCE.pdf"
     if re.search(r'lot[\s_-]*\d{1,2}.*_dce\.pdf$', norm) and not is_annexe:
@@ -181,7 +238,7 @@ def _detect_doc_type(filename: str, form_type: str) -> str:
     if re.search(r'^dce-[a-z]{2,4}\d{0,3}\.(pdf|docx)$', norm):
         return 'cctp'
 
-    # ── 12. Plans ─────────────────────────────────────────────────────────
+    # ── 17. Plans ─────────────────────────────────────────────────────────
     if is_plan_fname or re.search(
         tok('plans?') + r'|coupe|facade|niveau|rez.{0,4}de.{0,4}chaussee',
         norm,
