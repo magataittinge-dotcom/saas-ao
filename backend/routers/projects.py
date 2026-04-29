@@ -1514,6 +1514,152 @@ def complete_step(
     return project
 
 
+@router.get("/{project_id}/go-no-go")
+def get_go_no_go_score(
+    project_id: str,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """Heuristic Go/No-Go score (0-100) based on already-extracted data.
+
+    No IA call — purely arithmetic on:
+      • days until deadline
+      • % of checklist items present
+      • # of relevant references for the selected lot
+      • presence of a generated mémoire technique
+      • presence of a filled DPGF
+
+    For a full IA-backed scoring we have a P1 follow-up using the
+    `scoring-offres-expert` skill.
+    """
+    from datetime import date as _date
+    from models.checklist_item import ChecklistItem
+    from models.compliance_item import ComplianceItem
+    from models.memoire import MemoireTechnique
+    from models.reference import Reference
+
+    project = _get_project_or_404(project_id, user.organization_id, db)
+
+    breakdown: dict[str, dict] = {}
+
+    # 1. Time pressure (worth 25 pts)
+    if project.deadline:
+        days = (project.deadline - _date.today()).days
+        if days < 0:
+            time_score = 0
+            time_msg = "Échéance dépassée"
+        elif days <= 3:
+            time_score = 5
+            time_msg = f"Très court : {days} jours"
+        elif days <= 7:
+            time_score = 12
+            time_msg = f"Court : {days} jours"
+        elif days <= 14:
+            time_score = 20
+            time_msg = f"Faisable : {days} jours"
+        else:
+            time_score = 25
+            time_msg = f"Confortable : {days} jours"
+    else:
+        time_score = 15
+        time_msg = "Échéance non renseignée"
+    breakdown["temps"] = {"score": time_score, "max": 25, "message": time_msg}
+
+    # 2. Checklist completion (worth 25 pts)
+    items = db.query(ChecklistItem).filter(ChecklistItem.project_id == project_id).all()
+    if items:
+        present = sum(1 for i in items if i.status in ("present", "non_applicable"))
+        ratio = present / len(items)
+        cl_score = round(ratio * 25)
+        cl_msg = f"{present}/{len(items)} pièces couvertes"
+    else:
+        cl_score = 5
+        cl_msg = "Checklist non générée"
+    breakdown["checklist"] = {"score": cl_score, "max": 25, "message": cl_msg}
+
+    # 3. References match (worth 20 pts)
+    org_refs = db.query(Reference).filter(
+        Reference.organization_id == user.organization_id,
+        Reference.deleted_at.is_(None),
+        Reference.is_reference == True,
+    ).all()
+    if project.selected_lot_name and org_refs:
+        ranked = _rank_refs_for_score(org_refs, project.selected_lot_name)
+        matched = sum(1 for r in ranked if r["matched"])
+        ref_score = min(20, matched * 5)
+        ref_msg = f"{matched} référence(s) directement pertinente(s)"
+    elif org_refs:
+        ref_score = 10
+        ref_msg = f"{len(org_refs)} références au total — pas de filtre lot"
+    else:
+        ref_score = 0
+        ref_msg = "Aucune référence renseignée"
+    breakdown["references"] = {"score": ref_score, "max": 20, "message": ref_msg}
+
+    # 4. Mémoire generated (worth 15 pts)
+    memoire = (
+        db.query(MemoireTechnique)
+        .filter(MemoireTechnique.project_id == project_id)
+        .first()
+    )
+    if memoire:
+        breakdown["memoire"] = {"score": 15, "max": 15, "message": "Mémoire généré"}
+    else:
+        breakdown["memoire"] = {"score": 0, "max": 15, "message": "Mémoire non généré"}
+
+    # 5. DPGF filled (worth 15 pts)
+    if project.dpgf_remplie_url:
+        check = project.dpgf_remplie_check or {}
+        if check.get("valid"):
+            breakdown["dpgf"] = {"score": 15, "max": 15, "message": "DPGF remplie validée"}
+        else:
+            breakdown["dpgf"] = {"score": 8, "max": 15, "message": "DPGF déposée mais avec warnings"}
+    else:
+        breakdown["dpgf"] = {"score": 0, "max": 15, "message": "DPGF non déposée"}
+
+    total = sum(b["score"] for b in breakdown.values())
+
+    if total >= 80:
+        verdict = "GO"
+        recommendation = "L'offre est prête à déposer."
+    elif total >= 60:
+        verdict = "GO modéré"
+        recommendation = "Compléter les points faibles avant dépôt."
+    elif total >= 40:
+        verdict = "À RISQUE"
+        recommendation = "Plusieurs blocages — repousser ou prioriser un autre AO."
+    else:
+        verdict = "NO-GO"
+        recommendation = "Beaucoup trop de manques pour gagner — abandonner cet AO."
+
+    return {
+        "score": total,
+        "verdict": verdict,
+        "recommendation": recommendation,
+        "breakdown": breakdown,
+    }
+
+
+def _rank_refs_for_score(refs, selected_lot_name: str | None):
+    """Tag each ref with `matched=True` if its lot field contains keywords from
+    selected_lot_name. Mirrors the scoring used in memoire_generator."""
+    from services.ai.memoire_generator import _CORPS_METIER_KEYWORDS
+    if not selected_lot_name:
+        return [{"ref": r, "matched": False} for r in refs]
+    lot_lower = selected_lot_name.lower()
+    matched_kw: list[str] = []
+    for kws, _file in _CORPS_METIER_KEYWORDS:
+        if any(kw in lot_lower for kw in kws):
+            matched_kw = kws
+            break
+    out = []
+    for r in refs:
+        ref_text = ((r.lot or "") + " " + (r.intitule or "")).lower()
+        is_match = bool(matched_kw) and any(kw in ref_text for kw in matched_kw)
+        out.append({"ref": r, "matched": is_match})
+    return out
+
+
 def _get_project_or_404(project_id: str, org_id: str, db: Session) -> Project:
     """Fetch a project for the org, ignoring soft-deleted rows."""
     project = db.query(Project).filter(

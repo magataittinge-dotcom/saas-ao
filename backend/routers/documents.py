@@ -28,6 +28,48 @@ def list_documents(
     return q.order_by(Document.uploaded_at.desc()).all()
 
 
+@router.get("/expiring-soon")
+def list_expiring_soon(
+    days: int = 30,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """List vault documents that are expired or will expire within `days`.
+
+    Used by the dashboard banner ('3 attestations à renouveler') and by the
+    `MARKETING_STRATEGY.md` quick-win 'reminder attestations expirantes'.
+    Returns the docs with computed days_left so the UI doesn't have to.
+    """
+    from datetime import date as _date
+    days = max(1, min(days, 365))
+    today = _date.today()
+    docs = (
+        db.query(Document)
+        .filter(
+            Document.organization_id == user.organization_id,
+            Document.deleted_at.is_(None),
+            Document.expiry_date.isnot(None),
+        )
+        .order_by(Document.expiry_date.asc())
+        .all()
+    )
+    out = []
+    for d in docs:
+        days_left = (d.expiry_date - today).days
+        if days_left > days:
+            continue
+        out.append({
+            "id": d.id,
+            "type": d.type,
+            "file_name": d.file_name,
+            "expiry_date": d.expiry_date.isoformat(),
+            "days_left": days_left,
+            "status": "expired" if days_left < 0 else "expiring_soon",
+            "file_url": d.file_url,
+        })
+    return {"count": len(out), "items": out}
+
+
 @router.post("", response_model=DocumentResponse)
 async def upload_document(
     file: UploadFile = File(...),
