@@ -6,7 +6,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from database import Base
 
-CHECKLIST_STATUSES = ["present", "manquant", "expire", "expiration_proche"]
+CHECKLIST_STATUSES = ["present", "manquant", "expire", "expiration_proche", "non_applicable"]
 
 # Origine de la pièce attendue pour cet item de checklist :
 #  - "vault"        → l'entreprise doit la fournir depuis son coffre-fort

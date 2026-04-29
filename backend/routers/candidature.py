@@ -105,8 +105,10 @@ async def upload_completed_template(
         if template:
             doc_type = template.type
 
+    # Store under projects/<id>/completed so file_serve._authorize_path accepts it
+    # (it scopes access by reading the second path segment as the project_id).
     stored_name = f"{uuid.uuid4()}_{safe_name}"
-    rel_path = Path(project_id) / "completed" / stored_name
+    rel_path = Path("projects") / project_id / "completed" / stored_name
     abs_path = UPLOADS_ROOT / rel_path
     abs_path.parent.mkdir(parents=True, exist_ok=True)
     abs_path.write_bytes(content)
@@ -166,6 +168,57 @@ def link_vault_document(
 
     item.linked_document_id = doc.id
     item.status = _vault_doc_status(doc)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+class ChecklistItemPatch(BaseModel):
+    """Manual overrides on a checklist item.
+
+    `status='non_applicable'` lets the user mark an exigence as N/A without
+    having to attach a doc — useful when the IA is over-zealous. `details`
+    receives the user's free-form comment (kept for export traceability)."""
+    status: Optional[str] = None  # one of CHECKLIST_STATUSES + 'non_applicable'
+    details: Optional[str] = None
+    unlink: Optional[bool] = False  # detach linked vault / completed template
+
+
+@router.patch(
+    "/{project_id}/checklist/{item_id}",
+    response_model=ChecklistItemResponse,
+)
+def patch_checklist_item(
+    project_id: str,
+    item_id: str,
+    payload: ChecklistItemPatch,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """Manual overrides: mark N/A, edit comment, or detach a linked doc."""
+    _get_project_or_404(project_id, user.organization_id, db)
+    item = _get_checklist_item_or_404(item_id, project_id, db)
+
+    allowed_statuses = {
+        "present", "manquant", "expire", "expiration_proche", "non_applicable",
+    }
+    if payload.status is not None:
+        if payload.status not in allowed_statuses:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Statut invalide. Valeurs acceptées : {sorted(allowed_statuses)}",
+            )
+        item.status = payload.status
+
+    if payload.details is not None:
+        item.details = payload.details[:500]
+
+    if payload.unlink:
+        item.linked_document_id = None
+        item.completed_project_doc_id = None
+        if item.status == "present":
+            item.status = "manquant"
+
     db.commit()
     db.refresh(item)
     return item

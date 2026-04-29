@@ -168,6 +168,16 @@ def _ensure_schema_columns():
                 if deleted:
                     logger.info(f"Wiped {deleted} checklist_items rows for re-run")
 
+        # ── Postgres-only: extend checklist_status ENUM with non_applicable ─
+        if is_postgres:
+            try:
+                with engine.begin() as conn:
+                    conn.execute(text(
+                        "ALTER TYPE checklist_status ADD VALUE IF NOT EXISTS 'non_applicable'"
+                    ))
+            except Exception as exc:
+                logger.warning("ALTER TYPE checklist_status skipped: %s", exc)
+
         # ── Performance indexes — additive, idempotent (CREATE INDEX IF NOT EXISTS) ─
         _ensure_performance_indexes(insp)
 

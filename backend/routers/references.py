@@ -71,6 +71,45 @@ def create_reference(
     return ref
 
 
+class ReferenceUpdate(BaseModel):
+    intitule: Optional[str] = None
+    adresse: Optional[str] = None
+    maitre_ouvrage: Optional[str] = None
+    maitre_oeuvre: Optional[str] = None
+    lot: Optional[str] = None
+    montant_ht: Optional[float] = None
+    annee: Optional[int] = None
+    statut: Optional[str] = None
+    is_reference: Optional[bool] = None
+
+
+@router.patch("/{ref_id}", response_model=ReferenceResponse)
+def update_reference(
+    ref_id: str,
+    payload: ReferenceUpdate,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    ref = db.query(Reference).filter(
+        Reference.id == ref_id,
+        Reference.organization_id == user.organization_id,
+        Reference.deleted_at.is_(None),
+    ).first()
+    if not ref:
+        raise HTTPException(status_code=404, detail="Référence introuvable")
+    changes = payload.model_dump(exclude_none=True)
+    for k, v in changes.items():
+        setattr(ref, k, v)
+    db.commit()
+    db.refresh(ref)
+    log_action(
+        db, user, "reference.update",
+        target_type="reference", target_id=ref_id,
+        extra={"changed_fields": list(changes.keys())},
+    )
+    return ref
+
+
 @router.delete("/{ref_id}", status_code=204)
 def delete_reference(
     ref_id: str,

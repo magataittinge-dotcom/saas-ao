@@ -1,5 +1,6 @@
 import logging
 import mimetypes
+import re
 from pathlib import Path
 from urllib.parse import quote, unquote
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -27,12 +28,20 @@ router = APIRouter()
 UPLOADS_ROOT = Path(__file__).parent.parent / "uploads"
 
 
+_UUID_RE = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    re.IGNORECASE,
+)
+
+
 def _authorize_path(file_path: str, user: User, db: Session) -> None:
     """Verify the user is allowed to read a file at the given relative path.
 
-    Two known prefixes:
+    Known prefixes:
       • projects/<project_id>/...      → project must belong to user.organization_id
       • organizations/<org_id>/...     → org_id must equal user.organization_id
+      • <project_id>/completed/...     → legacy candidature uploads (pre-migration);
+                                         still supported via project ownership check.
 
     Anything else → 403 (no implicit trust).
     """
@@ -51,7 +60,6 @@ def _authorize_path(file_path: str, user: User, db: Session) -> None:
             Project.organization_id == user.organization_id,
         ).first()
         if not proj:
-            # Same response as not-found to avoid information leak.
             raise HTTPException(status_code=404, detail="Fichier introuvable")
         return
 
@@ -64,13 +72,23 @@ def _authorize_path(file_path: str, user: User, db: Session) -> None:
         return
 
     if head == "tests":
-        # Test fixtures — only allow in DEBUG mode and only for the same org.
         from config import get_settings
         if not get_settings().DEBUG:
             raise HTTPException(status_code=403, detail="Accès interdit")
         return
 
-    # Any other top-level prefix → reject.
+    # Legacy: candidature.py used to store completed templates at
+    # <project_id>/completed/... (pre-2026-04-30). Treat the first segment
+    # as a project_id and authorise via project ownership.
+    if _UUID_RE.match(head):
+        proj = db.query(Project).filter(
+            Project.id == head,
+            Project.organization_id == user.organization_id,
+        ).first()
+        if not proj:
+            raise HTTPException(status_code=404, detail="Fichier introuvable")
+        return
+
     logger.warning(
         "file_serve: refused access to unknown prefix %r for user %s",
         head, user.id,
