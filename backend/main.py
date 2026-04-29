@@ -263,6 +263,28 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 # ── Security headers middleware ──────────────────────────────────────────────
+# CSP — strict in prod, relaxed in DEBUG (Vite needs unsafe-inline for HMR).
+# 'self' covers same-origin XHR (the SPA hits the API at the same host in prod
+# via the reverse proxy). Stripe.js is whitelisted because the front loads it
+# for the checkout / portal flows.
+_CSP_PROD = (
+    "default-src 'self'; "
+    "script-src 'self' https://js.stripe.com; "
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+    "font-src 'self' https://fonts.gstatic.com data:; "
+    "img-src 'self' data: blob: https://maps.googleapis.com https://maps.gstatic.com; "
+    "connect-src 'self' https://api.stripe.com https://*.clerk.accounts.dev "
+    "https://clerk.synorix.fr https://*.synorix.fr; "
+    "frame-src 'self' https://js.stripe.com https://hooks.stripe.com; "
+    "object-src 'none'; base-uri 'self'; form-action 'self'; "
+    "frame-ancestors 'none'; upgrade-insecure-requests"
+)
+_PERMISSIONS_POLICY = (
+    "accelerometer=(), camera=(), geolocation=(), gyroscope=(), "
+    "magnetometer=(), microphone=(), payment=(self), usb=()"
+)
+
+
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
@@ -270,27 +292,37 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = _PERMISSIONS_POLICY
+        response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+        response.headers["Cross-Origin-Resource-Policy"] = "same-site"
         if not settings.DEBUG:
-            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=63072000; includeSubDomains; preload"
+            )
+            response.headers["Content-Security-Policy"] = _CSP_PROD
         return response
 
 
 app.add_middleware(SecurityHeadersMiddleware)
 
-# CORS
+# CORS — strict allowlist. The Vite dev server is only added in DEBUG.
 _cors_origins = [settings.FRONTEND_URL]
-# Always allow Vite dev server (port 5173) in addition to configured origin
-if "localhost" in settings.FRONTEND_URL and "5173" not in settings.FRONTEND_URL:
-    _cors_origins.append("http://localhost:5173")
-if "localhost" in settings.FRONTEND_URL and "3000" not in settings.FRONTEND_URL:
-    _cors_origins.append("http://localhost:3000")
+if settings.DEBUG:
+    if "localhost" in settings.FRONTEND_URL and "5173" not in settings.FRONTEND_URL:
+        _cors_origins.append("http://localhost:5173")
+    if "localhost" in settings.FRONTEND_URL and "3000" not in settings.FRONTEND_URL:
+        _cors_origins.append("http://localhost:3000")
+
+# Refuse the catch-all * even if mis-configured.
+_cors_origins = [o for o in _cors_origins if o and o != "*"]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
+    max_age=600,
 )
 
 # Routers
