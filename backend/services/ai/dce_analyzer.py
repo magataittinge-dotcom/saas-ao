@@ -254,16 +254,35 @@ class DCEAnalyzer:
         """Synchronous streaming Claude call with 3 retries — runs in a thread.
 
         Streaming keeps TCP alive (bytes every ~100ms), avoiding WSL2 NAT timeout.
+        Prompt caching is enabled on the system prompt + skills bundle: a typical
+        DCE pipeline calls this fn 3-8 times for chunks of the same archive →
+        cache hit on calls 2..N saves ~90 % of system+skills input tokens.
         """
-        user_content = f"Voici les documents DCE à analyser :\n\n{dce_text}"
+        # Stable system blocks (cached) — system prompt + BTP skills bundle.
+        system_blocks: list[dict] = [{"type": "text", "text": system_prompt}]
         if skills_ref:
-            user_content += (
-                f"\n\n━━━ RÉFÉRENTIELS COMPLÉMENTAIRES (expertise BTP) ━━━\n"
-                f"Utilise ces référentiels pour enrichir ton analyse — "
-                f"ils contiennent les normes DTU exactes, la réglementation marchés publics 2026, "
-                f"et les bonnes pratiques d'extraction d'exigences DCE.\n\n"
-                f"{skills_ref}"
-            )
+            system_blocks.append({
+                "type": "text",
+                "text": (
+                    "━━━ RÉFÉRENTIELS COMPLÉMENTAIRES (expertise BTP) ━━━\n"
+                    "Utilise ces référentiels pour enrichir ton analyse — "
+                    "ils contiennent les normes DTU exactes, la réglementation "
+                    "marchés publics 2026, et les bonnes pratiques d'extraction "
+                    "d'exigences DCE.\n\n"
+                    f"{skills_ref}"
+                ),
+                "cache_control": {"type": "ephemeral"},
+            })
+        else:
+            system_blocks[-1] = {
+                **system_blocks[-1],
+                "cache_control": {"type": "ephemeral"},
+            }
+
+        user_content = [{
+            "type": "text",
+            "text": f"Voici les documents DCE à analyser :\n\n{dce_text}",
+        }]
         last_error = None
 
         for attempt in range(1, 4):
@@ -273,10 +292,10 @@ class DCEAnalyzer:
                 collected = ""
 
                 with self.client.messages.stream(
-                    model="claude-sonnet-4-20250514",
+                    model="claude-sonnet-4-6",
                     max_tokens=8000,
                     temperature=0,
-                    system=system_prompt,
+                    system=system_blocks,
                     messages=[{"role": "user", "content": user_content}],
                 ) as stream:
                     for text in stream.text_stream:

@@ -47,7 +47,7 @@ _IMPORT_PROMPT_TEMPLATE = (
 
 
 class MemoireImporter:
-    MODEL = "claude-sonnet-4-20250514"
+    MODEL = "claude-sonnet-4-6"
 
     def __init__(self):
         # Synchronous client — more reliable for long-running calls

@@ -101,7 +101,9 @@ class MemoireGenerator:
     def __init__(self):
         self.client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
 
-    MODEL = "claude-opus-4-5"
+    # Latest Opus is the right tool for memoire generation (long-form,
+    # high-stakes, structured). Sonnet is reserved for extraction/matching.
+    MODEL = "claude-opus-4-7"
 
     async def generate(
         self,
@@ -117,7 +119,19 @@ class MemoireGenerator:
         criteres_jugement: list | None = None,
         reference_template_text: str | None = None,  # text from imported mémoire
     ) -> dict:
-        """Generate a complete mémoire technique using Claude Opus."""
+        """Generate a complete mémoire technique using Claude Opus.
+
+        Cost optimisation — prompt caching: the *stable* parts of every call
+        (system prompt, BTP skills, methodology references, company profile,
+        chantiers references) are tagged with `cache_control=ephemeral` so
+        Anthropic only bills the cached-read price (~10 % of the input price)
+        on subsequent calls within the 5 min TTL.
+
+        Result on a typical mémoire:
+          • 1st generation of an org : full price (~80k input tokens)
+          • subsequent generations : ~70k tokens cached (90 % discount) +
+            ~10k uncached → ~5x cost reduction.
+        """
 
         # ── 1. Company profile ────────────────────────────────────────────────
         cfg = memoire_config
@@ -217,8 +231,39 @@ class MemoireGenerator:
                     lines.append(f"\n⚡ INSISTE PARTICULIÈREMENT sur '{top_sc['nom']}' ({top_sc['poids']}%) — c'est le sous-critère le mieux pondéré.")
             criteres_block = "\n".join(lines)
 
-        # ── 6. Build prompt ────────────────────────────────────────────────────
-        prompt = (
+        # ── 6. Build STABLE blocks (cached) — same across all calls of an org ─
+        methodology_ref = _load_methodology_reference(selected_lot_name)
+        memoire_skills, _ = _build_memoire_skills(has_references=len(references) > 0)
+
+        # Each big stable text becomes its own block with cache_control on the
+        # last one of the group (Anthropic caches the prefix up to that block).
+        stable_skills_block = ""
+        if memoire_skills:
+            stable_skills_block += (
+                "━━━ RÉFÉRENTIELS COMPLÉMENTAIRES (expertise mémoire BTP) ━━━\n"
+                "Expertise complémentaire sur la notation des offres et les techniques "
+                "de rédaction gagnantes. Utilise ces conseils pour maximiser la note.\n\n"
+                f"{memoire_skills}\n\n"
+            )
+        if methodology_ref:
+            stable_skills_block += (
+                "━━━ RÉFÉRENTIEL MÉTHODOLOGIE BTP (corps de métier détecté depuis le lot) ━━━\n"
+                "Utilise ce référentiel technique comme base pour rédiger la PARTIE C (méthodologie). "
+                "Il contient les normes DTU exactes, les tolérances, les étapes détaillées, "
+                "les autocontrôles et les erreurs fréquentes du corps de métier. "
+                "ADAPTE ce contenu au CCTP spécifique du marché — ne recopie pas tel quel.\n\n"
+                f"{methodology_ref}\n\n"
+            )
+
+        org_block_text = (
+            "━━━ PROFIL ENTREPRISE (memoire_config) ━━━\n"
+            f"{json.dumps(company_block, ensure_ascii=False, indent=2)}\n\n"
+            "━━━ RÉFÉRENCES CHANTIERS ━━━\n"
+            f"{json.dumps(ref_list, ensure_ascii=False, indent=2)}\n"
+        )
+
+        # ── 7. Build DYNAMIC block (uncached — varies per AO) ────────────────
+        dynamic_block = (
             f"MARCHÉ : {project_name}\n"
             f"MAÎTRE D'OUVRAGE : {maitre_ouvrage or 'Non renseigné'}\n"
             f"TYPE DE LOT : {selected_lot_name or 'Non renseigné'}\n\n"
@@ -226,68 +271,93 @@ class MemoireGenerator:
             f"━━━ VARIABLES CHANTIER ━━━\n"
             f"{json.dumps(variables, ensure_ascii=False, indent=2)}\n\n"
             + (f"━━━ CRITÈRES DE JUGEMENT ━━━\n{criteres_block}\n\n" if criteres_block else "")
-            + f"━━━ PROFIL ENTREPRISE (memoire_config) ━━━\n"
-            f"{json.dumps(company_block, ensure_ascii=False, indent=2)}\n\n"
-            f"━━━ RÉFÉRENCES CHANTIERS ━━━\n"
-            f"{json.dumps(ref_list, ensure_ascii=False, indent=2)}\n\n"
             + (f"━━━ EXIGENCES DCE (compliance matrix) ━━━\n{compliance_summary}\n\n" if compliance_summary else "")
             + f"━━━ DOCUMENTS DCE ━━━\n{dce_text}"
         )
 
-        # ── 7b. Methodology reference (BTP corps de métier) ──────────────────
-        methodology_ref = _load_methodology_reference(selected_lot_name)
-        if methodology_ref:
-            prompt += (
-                f"\n\n━━━ RÉFÉRENTIEL MÉTHODOLOGIE BTP (corps de métier détecté depuis le lot) ━━━\n"
-                f"Utilise ce référentiel technique comme base pour rédiger la PARTIE C (méthodologie). "
-                f"Il contient les normes DTU exactes, les tolérances, les étapes détaillées, "
-                f"les autocontrôles et les erreurs fréquentes du corps de métier. "
-                f"ADAPTE ce contenu au CCTP spécifique du marché — ne recopie pas tel quel.\n\n"
-                f"{methodology_ref}"
-            )
-
-        # ── 7c. Mémoire expertise skills (scoring, rédaction) ────────────────
-        memoire_skills, _ = _build_memoire_skills(has_references=len(references) > 0)
-        if memoire_skills:
-            prompt += (
-                f"\n\n━━━ RÉFÉRENTIELS COMPLÉMENTAIRES (expertise mémoire BTP) ━━━\n"
-                f"Expertise complémentaire sur la notation des offres et les techniques "
-                f"de rédaction gagnantes. Utilise ces conseils pour maximiser la note.\n\n"
-                f"{memoire_skills}"
-            )
-
-        # ── 8. Reference template (style guide from imported mémoire) ────────
         if reference_template_text:
-            prompt += (
-                f"\n\n━━━ MÉMOIRE DE RÉFÉRENCE (style et structure à reproduire) ━━━\n"
-                f"Voici un extrait d'un mémoire technique précédent de l'entreprise. "
-                f"Adapte le style, le ton, le niveau de détail et la structure à cet exemple. "
-                f"Ne copie PAS le contenu — adapte uniquement le style.\n\n"
+            dynamic_block += (
+                "\n\n━━━ MÉMOIRE DE RÉFÉRENCE (style et structure à reproduire) ━━━\n"
+                "Voici un extrait d'un mémoire technique précédent de l'entreprise. "
+                "Adapte le style, le ton, le niveau de détail et la structure à cet exemple. "
+                "Ne copie PAS le contenu — adapte uniquement le style.\n\n"
                 f"{reference_template_text[:10_000]}"
             )
 
-        # ── 9. Call Opus via sync client in thread ────────────────────────────
-        return await asyncio.to_thread(self._sync_call, prompt)
+        # ── 8. Call Opus via sync client in thread ────────────────────────────
+        return await asyncio.to_thread(
+            self._sync_call,
+            stable_skills_block,
+            org_block_text,
+            dynamic_block,
+        )
 
-    def _sync_call(self, prompt: str) -> dict:
+    def _sync_call(
+        self,
+        stable_skills_block: str,
+        org_block_text: str,
+        dynamic_block: str,
+    ) -> dict:
         """Synchronous streaming Claude call — runs in a thread.
 
-        Streaming keeps the TCP connection alive (bytes every ~100ms),
-        avoiding WSL2 NAT timeout at ~185s for long Opus generations.
+        Uses Anthropic prompt caching: stable blocks are cached for 5 min,
+        billed at ~10 % of normal input pricing on cache hit.
+
+        Streaming keeps the TCP connection alive (bytes every ~100 ms),
+        avoiding WSL2 NAT timeout at ~185 s for long Opus generations.
         """
+        # Build system as a list of blocks. The cache_control marker on the
+        # last block tells Anthropic to cache everything up to (and including)
+        # that block. All shared instructions across all orgs get cached here.
+        system_blocks = [
+            {"type": "text", "text": MEMOIRE_GENERATION_SYSTEM},
+        ]
+        if stable_skills_block:
+            system_blocks.append({
+                "type": "text",
+                "text": stable_skills_block,
+                "cache_control": {"type": "ephemeral"},
+            })
+        else:
+            system_blocks[-1] = {
+                **system_blocks[-1],
+                "cache_control": {"type": "ephemeral"},
+            }
+
+        # User message: org-stable block (cached, per-org TTL 5 min) + dynamic.
+        user_content = [
+            {
+                "type": "text",
+                "text": org_block_text,
+                "cache_control": {"type": "ephemeral"},
+            },
+            {"type": "text", "text": dynamic_block},
+        ]
+
+        prompt_chars = (
+            len(stable_skills_block) + len(org_block_text) + len(dynamic_block)
+        )
+
         last_error = None
         for attempt in range(1, 4):
             t0 = time.monotonic()
             try:
-                print(f"[Memoire Generator] Tentative {attempt}/3 — streaming Opus ({len(prompt)} chars)", flush=True)
+                print(
+                    f"[Memoire Generator] Tentative {attempt}/3 — streaming Opus "
+                    f"({prompt_chars} chars total, "
+                    f"stable={len(stable_skills_block)}, "
+                    f"org={len(org_block_text)}, "
+                    f"dyn={len(dynamic_block)})",
+                    flush=True,
+                )
                 collected = ""
 
                 with self.client.messages.stream(
                     model=self.MODEL,
                     max_tokens=16000,
                     temperature=0,
-                    system=MEMOIRE_GENERATION_SYSTEM,
-                    messages=[{"role": "user", "content": prompt}],
+                    system=system_blocks,
+                    messages=[{"role": "user", "content": user_content}],
                 ) as stream:
                     for text in stream.text_stream:
                         collected += text
@@ -295,9 +365,16 @@ class MemoireGenerator:
                 final_message = stream.get_final_message()
                 elapsed = time.monotonic() - t0
                 stop_reason = final_message.stop_reason
+                usage = getattr(final_message, "usage", None)
+                cache_read = getattr(usage, "cache_read_input_tokens", 0) if usage else 0
+                cache_write = getattr(usage, "cache_creation_input_tokens", 0) if usage else 0
+                input_uncached = getattr(usage, "input_tokens", 0) if usage else 0
+                output_tokens = getattr(usage, "output_tokens", 0) if usage else 0
                 print(
                     f"[TIMING] Memoire streaming: {elapsed:.1f}s, {len(collected)} chars, "
-                    f"stop_reason={stop_reason}",
+                    f"stop_reason={stop_reason}, "
+                    f"tokens in={input_uncached}, cache_read={cache_read}, "
+                    f"cache_write={cache_write}, out={output_tokens}",
                     flush=True,
                 )
 
