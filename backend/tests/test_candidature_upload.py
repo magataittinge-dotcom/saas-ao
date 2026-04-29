@@ -105,8 +105,8 @@ def test_upload_completed_success(client, db_session, test_org, tmp_path, monkey
     assert pd.type == "dc1_template"
     assert pd.file_name == "DC1_signe.pdf"
 
-    # File landed under tmp_path/{project_id}/completed/.
-    saved = list((tmp_path / project.id / "completed").iterdir())
+    # File landed under tmp_path/projects/{project_id}/completed/.
+    saved = list((tmp_path / "projects" / project.id / "completed").iterdir())
     assert len(saved) == 1
     assert saved[0].name.endswith("_DC1_signe.pdf")
 

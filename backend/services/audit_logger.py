@@ -46,6 +46,12 @@ def log_action(
                 blob = json.dumps(extra, default=str)
                 if len(blob.encode("utf-8")) > _MAX_EXTRA_BYTES:
                     extra = {"_truncated": True, "_keys": list(extra.keys())[:20]}
+                else:
+                    # Round-trip through json so that any non-trivially
+                    # serialisable values (uuid, set, date, custom obj) get
+                    # coerced to strings via default=str. Otherwise SQLAlchemy
+                    # will re-serialise without that hint and crash.
+                    extra = json.loads(blob)
             except Exception:
                 extra = {"_serialization_error": True}
 
