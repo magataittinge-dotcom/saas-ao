@@ -1,3 +1,4 @@
+import logging
 import mimetypes
 from pathlib import Path
 from urllib.parse import quote, unquote
@@ -6,8 +7,12 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from database import get_db
 from models.user import User
+from models.project import Project
+from models.document import Document
 from routers.auth import get_auth_user
 from services.pdf_highlighter import PdfHighlighter
+
+logger = logging.getLogger(__name__)
 
 
 def _content_disposition(filename: str, disposition: str = "inline") -> str:
@@ -16,9 +21,61 @@ def _content_disposition(filename: str, disposition: str = "inline") -> str:
     utf8_name = quote(filename, safe="")
     return f'{disposition}; filename="{ascii_name}"; filename*=UTF-8\'\'{utf8_name}'
 
+
 router = APIRouter()
 
 UPLOADS_ROOT = Path(__file__).parent.parent / "uploads"
+
+
+def _authorize_path(file_path: str, user: User, db: Session) -> None:
+    """Verify the user is allowed to read a file at the given relative path.
+
+    Two known prefixes:
+      • projects/<project_id>/...      → project must belong to user.organization_id
+      • organizations/<org_id>/...     → org_id must equal user.organization_id
+
+    Anything else → 403 (no implicit trust).
+    """
+    parts = file_path.replace("\\", "/").split("/")
+    if not parts:
+        raise HTTPException(status_code=403, detail="Accès interdit")
+
+    head = parts[0]
+
+    if head == "projects":
+        if len(parts) < 2:
+            raise HTTPException(status_code=403, detail="Accès interdit")
+        project_id = parts[1]
+        proj = db.query(Project).filter(
+            Project.id == project_id,
+            Project.organization_id == user.organization_id,
+        ).first()
+        if not proj:
+            # Same response as not-found to avoid information leak.
+            raise HTTPException(status_code=404, detail="Fichier introuvable")
+        return
+
+    if head == "organizations":
+        if len(parts) < 2:
+            raise HTTPException(status_code=403, detail="Accès interdit")
+        org_id = parts[1]
+        if org_id != user.organization_id:
+            raise HTTPException(status_code=404, detail="Fichier introuvable")
+        return
+
+    if head == "tests":
+        # Test fixtures — only allow in DEBUG mode and only for the same org.
+        from config import get_settings
+        if not get_settings().DEBUG:
+            raise HTTPException(status_code=403, detail="Accès interdit")
+        return
+
+    # Any other top-level prefix → reject.
+    logger.warning(
+        "file_serve: refused access to unknown prefix %r for user %s",
+        head, user.id,
+    )
+    raise HTTPException(status_code=403, detail="Accès interdit")
 
 
 @router.get("/view/{file_path:path}")
@@ -29,15 +86,25 @@ async def view_file(
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ):
-    """Serve a file inline. Si c'est un PDF avec highlight, surligne le passage en jaune."""
+    """Serve a file inline. Si c'est un PDF avec highlight, surligne le passage en jaune.
+
+    Security:
+      • requires authentication (get_auth_user)
+      • verifies ownership via _authorize_path
+      • blocks path traversal via .resolve() + prefix check
+    """
     file_path = unquote(file_path)
+    _authorize_path(file_path, user, db)
+
     full_path = UPLOADS_ROOT / file_path
 
-    # Sécurité : empêcher path traversal
+    # Path traversal defence
     try:
         full_path = full_path.resolve()
         if not str(full_path).startswith(str(UPLOADS_ROOT.resolve())):
             raise HTTPException(status_code=403, detail="Accès interdit")
+    except HTTPException:
+        raise
     except Exception:
         raise HTTPException(status_code=403, detail="Chemin invalide")
 

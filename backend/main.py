@@ -3,7 +3,6 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -317,7 +316,8 @@ def health_check():
     return {"status": "ok", "version": "1.0.0"}
 
 
-# Serve uploaded files
+# NOTE: We deliberately do NOT mount /uploads as a public StaticFiles route.
+# All file access goes through /api/files/view/... (authenticated + ownership-checked).
+# See routers/file_serve.py.
 _uploads_dir = Path(__file__).parent / "uploads"
 _uploads_dir.mkdir(exist_ok=True)
-app.mount("/uploads", StaticFiles(directory=str(_uploads_dir)), name="uploads")
