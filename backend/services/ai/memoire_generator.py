@@ -56,6 +56,57 @@ _CORPS_METIER_KEYWORDS: list[tuple[list[str], str]] = [
 ]
 
 
+def _rank_references_for_lot(references: list, selected_lot_name: str | None) -> list:
+    """Sort references so the ones matching the lot's corps de métier come first.
+
+    A candidate offering façade ITE ought to push its 3 façade references on top,
+    not its 12 best-paid plumbing jobs. We bucket references in 3 tiers:
+      • TIER 1: lot keywords match the reference's `lot` field
+      • TIER 2: same broad family (gros œuvre / second œuvre / VRD …)
+      • TIER 3: rest
+    Within each tier we sort by year desc, then montant_ht desc.
+    """
+    if not references:
+        return []
+    if not selected_lot_name:
+        return sorted(
+            references,
+            key=lambda r: (r.annee or 0, r.montant_ht or 0),
+            reverse=True,
+        )
+
+    lot_lower = selected_lot_name.lower()
+    matched_keywords: list[str] = []
+    for keywords, _file in _CORPS_METIER_KEYWORDS:
+        if any(kw in lot_lower for kw in keywords):
+            matched_keywords = keywords
+            break
+
+    tier1, tier2, tier3 = [], [], []
+    for r in references:
+        ref_lot = (r.lot or "").lower()
+        if matched_keywords and any(kw in ref_lot for kw in matched_keywords):
+            tier1.append(r)
+        elif matched_keywords and any(kw in (r.intitule or "").lower() for kw in matched_keywords):
+            tier2.append(r)
+        else:
+            tier3.append(r)
+
+    def _sort_key(r):
+        return (r.annee or 0, r.montant_ht or 0)
+
+    tier1.sort(key=_sort_key, reverse=True)
+    tier2.sort(key=_sort_key, reverse=True)
+    tier3.sort(key=_sort_key, reverse=True)
+    print(
+        f"[Memoire Generator] References ranked for lot '{selected_lot_name}': "
+        f"tier1={len(tier1)} (lot match), tier2={len(tier2)} (intitule match), "
+        f"tier3={len(tier3)} (other)",
+        flush=True,
+    )
+    return tier1 + tier2 + tier3
+
+
 def _load_methodology_reference(selected_lot_name: str | None) -> str:
     """Load the BTP methodology reference matching the lot's corps de métier.
 
@@ -173,7 +224,12 @@ class MemoireGenerator:
                 "fournisseurs": organization.fournisseurs,
             })
 
-        # ── 2. References ──────────────────────────────────────────────────────
+        # ── 2. References — sorted by relevance to the lot, then by year ──────
+        # The acheteur public scores higher when a candidate proves it has done
+        # similar projects. Façade reference for a façade lot beats a generic
+        # one by year alone. We do NOT drop unrelated references — Claude will
+        # still see them as fallbacks — but we put the matching ones first.
+        sorted_refs = _rank_references_for_lot(references, selected_lot_name)
         ref_list = [
             {
                 "intitule": r.intitule,
@@ -183,7 +239,7 @@ class MemoireGenerator:
                 "annee": r.annee,
                 "description": getattr(r, "description", None),
             }
-            for r in references[:35]
+            for r in sorted_refs[:35]
         ]
 
         # ── 3. DCE text (priority: CCTP first — critical for méthodologie) ─────
