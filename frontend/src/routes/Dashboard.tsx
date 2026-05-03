@@ -10,7 +10,7 @@ import {
 import { useAuthStore } from '@/stores/authStore'
 import { api } from '@/services/api'
 import DeleteConfirmModal from '@/components/common/DeleteConfirmModal'
-import { SkeletonCard } from '@/components/common/Skeleton'
+import { StatCardGridSkeleton, ProjectListSkeleton } from '@/components/skeletons'
 import { daysUntil } from '@/lib/utils'
 import type { Project, DashboardStats } from '@/types'
 
@@ -162,11 +162,9 @@ export default function Dashboard() {
 
       {/* ── 4 STAT CARDS ────────────────────────────────────── */}
       {sLoad ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {[0, 1, 2, 3].map((i) => <SkeletonCard key={i} className="h-[110px]" />)}
-        </div>
+        <StatCardGridSkeleton count={4} />
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 animate-fade-in">
           {STAT_CARDS.map((cfg) => (
             <StatCard
               key={cfg.key}
@@ -219,8 +217,8 @@ export default function Dashboard() {
           </div>
 
           {pLoad ? (
-            <div className="p-5 space-y-3">
-              {[0, 1, 2].map((i) => <SkeletonCard key={i} className="h-[52px]" />)}
+            <div>
+              <ProjectListSkeleton count={3} />
             </div>
           ) : active.length === 0 ? (
             <div className="p-10 text-center">

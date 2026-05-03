@@ -1,10 +1,18 @@
 import { type CSSProperties } from 'react'
 import { cn } from '@/lib/utils'
 
+/* Base — slate-100 background with a left→right shimmer overlay.
+   The shimmer is defined in index.css as `.skeleton-shimmer`. We keep
+   the wrapper as a single div with both background colour AND shimmer
+   class so callers don't have to remember to add the shimmer.
+
+   ⚠️ Never use a colour outside slate-100/slate-50 here — anything
+   darker reads as a "hole" in the page (the previous bug used
+   `#0C1222`). */
 function Skeleton({ className, style }: { className?: string; style?: CSSProperties }) {
   return (
     <div
-      className={cn('rounded-lg skeleton-shimmer', className)}
+      className={cn('rounded-md skeleton-shimmer', className)}
       style={{ background: '#F1F5F9', ...style }}
     />
   )
@@ -33,21 +41,30 @@ export function SkeletonAvatar({ size = 40, className }: { size?: number; classN
   )
 }
 
-export function SkeletonCard({ className }: { className?: string }) {
+/* SkeletonCard — generic white card placeholder that matches the visual
+   weight of a real white-bg, slate-100-border card in the app. Used as
+   the *outer* wrapper for higher-level skeletons like StatCardSkeleton.
+
+   Was the source of the dark-rectangle bug (background `#0C1222`).
+   Now defaults to white with a subtle border so the page doesn't get
+   "holes" while data loads. */
+export function SkeletonCard({ className, children }: { className?: string; children?: React.ReactNode }) {
   return (
     <div
-      className={cn('rounded-2xl p-6 skeleton-shimmer', className)}
+      className={cn('rounded-xl p-5', className)}
       style={{
-        background: '#0C1222',
-        border: '1px solid #E2E8F0',
+        background: '#FFFFFF',
+        border: '1px solid #F1F5F9',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
       }}
     >
-      <div className="space-y-4">
-        <Skeleton className="h-10 w-10 rounded-xl" />
-        <Skeleton className="h-6 w-24" />
-        <Skeleton className="h-3.5 w-full" />
-        <Skeleton className="h-3.5 w-3/4" />
-      </div>
+      {children ?? (
+        <div className="space-y-4">
+          <Skeleton className="h-10 w-10 rounded-lg" />
+          <Skeleton className="h-7 w-20" />
+          <Skeleton className="h-3.5 w-full" />
+        </div>
+      )}
     </div>
   )
 }
