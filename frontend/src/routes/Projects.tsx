@@ -7,6 +7,7 @@ import { daysUntil } from '@/lib/utils'
 import { api } from '@/services/api'
 import { AOCard } from '@/components/dashboard/AOCard'
 import DeleteConfirmModal from '@/components/common/DeleteConfirmModal'
+import { ProjectCardGridSkeleton } from '@/components/skeletons'
 
 type SortKey = 'deadline' | 'created_at' | 'name'
 type StatusFilter = 'all' | 'active' | 'done'
@@ -170,12 +171,7 @@ export default function Projects() {
 
       {/* Content */}
       {isLoading ? (
-        <div className="flex justify-center py-16">
-          <div
-            className="w-8 h-8 rounded-full border-2 border-transparent animate-spin"
-            style={{ borderTopColor: '#0EA5E9' }}
-          />
-        </div>
+        <ProjectCardGridSkeleton count={6} />
       ) : projects.length === 0 ? (
         <div
           className="glass-card p-16 flex flex-col items-center gap-5 text-center"

@@ -6,7 +6,6 @@ import {
   Sparkles, Save, CheckCircle2, ChevronDown,
   Pencil, X, Download, Building2, BarChart3,
   ChevronRight, Zap, Eye, MessageSquare, Shield,
-  Loader2,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import axios from 'axios'
@@ -14,6 +13,7 @@ import { api } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
 import { PipelineProgress } from '@/components/project/PipelineProgress'
 import SubscriptionWall from '@/components/common/SubscriptionWall'
+import { MemoireSkeleton } from '@/components/skeletons'
 import type { Project, MemoireTechnique, MemoireContent, CritereJugement } from '@/types'
 
 const F = "'DM Sans', sans-serif"
@@ -804,17 +804,7 @@ export default function StepMemoire({ project }: Props) {
   // ── Loading ─────────────────────────────────────────────────────
 
   if (isLoading) {
-    return (
-      <div
-        className="bg-white rounded-xl p-12 flex flex-col items-center gap-3"
-        style={{ border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
-      >
-        <Loader2 size={32} className="animate-spin" style={{ color: '#0EA5E9' }} />
-        <p className="font-medium" style={{ color: '#0F172A', fontFamily: F }}>
-          Chargement du memoire...
-        </p>
-      </div>
-    )
+    return <MemoireSkeleton />
   }
 
   const hasMemoire = !!memoire

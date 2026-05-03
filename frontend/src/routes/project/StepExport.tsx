@@ -11,6 +11,7 @@ import {
 import { api } from '@/services/api'
 import type { Project } from '@/types'
 import DocumentViewer, { type ViewableDocument } from '@/components/project/DocumentViewer'
+import { DocumentRowSkeleton } from '@/components/skeletons'
 
 const F = "'DM Sans', sans-serif"
 
@@ -295,14 +296,11 @@ export default function StepExport({ project }: Props) {
   // ── Loading state ─────────────────────────────────────────────────────────
   if (isLoading || !detail) {
     return (
-      <div
-        className="bg-white rounded-xl p-12 flex flex-col items-center gap-3"
-        style={{ border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
-      >
-        <Loader2 size={32} className="animate-spin" style={{ color: '#0EA5E9' }} />
-        <p className="font-medium" style={{ color: '#0F172A', fontFamily: F }}>
-          Chargement de la vérification...
-        </p>
+      <div className="space-y-3">
+        <DocumentRowSkeleton />
+        <DocumentRowSkeleton />
+        <DocumentRowSkeleton />
+        <DocumentRowSkeleton />
       </div>
     )
   }

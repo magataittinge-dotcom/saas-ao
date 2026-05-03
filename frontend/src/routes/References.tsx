@@ -3,12 +3,13 @@ import { useState } from 'react'
 import { Plus, Building2 } from 'lucide-react'
 import { api } from '@/services/api'
 import { formatMontant } from '@/lib/utils'
+import { ReferenceTableSkeleton } from '@/components/skeletons'
 import type { Reference } from '@/types'
 
 export default function References() {
   const [_showForm, setShowForm] = useState(false)
 
-  const { data: references = [] } = useQuery({
+  const { data: references = [], isLoading } = useQuery({
     queryKey: ['references'],
     queryFn: async () => {
       const { data } = await api.get<Reference[]>('/references')
@@ -47,7 +48,9 @@ export default function References() {
             </tr>
           </thead>
           <tbody style={{ borderColor: 'rgba(100,116,139,0.1)' }} className="divide-y divide-current">
-            {references.length === 0 ? (
+            {isLoading ? (
+              <ReferenceTableSkeleton count={5} />
+            ) : references.length === 0 ? (
               <tr>
                 <td colSpan={6} className="text-center py-12 text-ds-text-3">
                   Aucune référence. Ajoutez vos chantiers passés.

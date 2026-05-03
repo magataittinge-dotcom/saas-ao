@@ -8,6 +8,7 @@ import { useCompleteStep } from '@/hooks/useProject'
 import CandidatureSectionVault from '@/components/project/CandidatureSectionVault'
 import CandidatureSectionTemplates from '@/components/project/CandidatureSectionTemplates'
 import VaultPickerModal from '@/components/project/VaultPickerModal'
+import { RequirementListSkeleton } from '@/components/skeletons'
 import type { Project, ChecklistItem, Document } from '@/types'
 
 const F = "'DM Sans', sans-serif"
@@ -71,14 +72,8 @@ export default function StepCandidat({ project }: Props) {
   // ── Loading / empty ─────────────────────────────────────────────
 
   if (isLoading) return (
-    <div
-      className="bg-white rounded-lg p-12 flex flex-col items-center gap-3"
-      style={{ border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', fontFamily: F }}
-    >
-      <Loader2 size={32} className="animate-spin" style={{ color: '#0EA5E9' }} />
-      <p className="font-medium" style={{ color: '#0F172A' }}>
-        Chargement de la checklist...
-      </p>
+    <div style={{ fontFamily: F }}>
+      <RequirementListSkeleton count={5} />
     </div>
   )
 

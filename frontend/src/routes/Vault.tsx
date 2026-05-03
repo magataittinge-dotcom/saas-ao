@@ -5,6 +5,7 @@ import { useDocuments, useDeleteDocument } from '@/hooks/useDocuments'
 import { uploadService } from '@/services/upload'
 import { FileCard } from '@/components/common/FileCard'
 import { ExpiryAlert } from '@/components/common/ExpiryAlert'
+import { DocumentListSkeleton } from '@/components/skeletons'
 import { useQueryClient } from '@tanstack/react-query'
 import type { DocumentType } from '@/types'
 
@@ -21,7 +22,7 @@ const CATEGORIES: { label: string; types: DocumentType[] }[] = [
 
 export default function Vault() {
   const queryClient = useQueryClient()
-  const { data: documents = [] } = useDocuments()
+  const { data: documents = [], isLoading } = useDocuments()
   const { mutate: deleteDocument } = useDeleteDocument()
   const [isUploading, setIsUploading] = useState(false)
 
@@ -94,27 +95,33 @@ export default function Vault() {
       </div>
 
       {/* Documents by category */}
-      {CATEGORIES.map(({ label, types }) => {
-        const catDocs = documents.filter((d) => types.includes(d.type))
-        if (catDocs.length === 0) return null
-        return (
-          <div key={label}>
-            <h2 className="text-sm font-semibold text-ds-text-2 mb-2">{label}</h2>
-            <div className="space-y-2">
-              {catDocs.map((doc) => (
-                <FileCard key={doc.id} document={doc} onDelete={deleteDocument} />
-              ))}
-            </div>
-          </div>
-        )
-      })}
+      {isLoading ? (
+        <DocumentListSkeleton count={6} />
+      ) : (
+        <>
+          {CATEGORIES.map(({ label, types }) => {
+            const catDocs = documents.filter((d) => types.includes(d.type))
+            if (catDocs.length === 0) return null
+            return (
+              <div key={label}>
+                <h2 className="text-sm font-semibold text-ds-text-2 mb-2">{label}</h2>
+                <div className="space-y-2">
+                  {catDocs.map((doc) => (
+                    <FileCard key={doc.id} document={doc} onDelete={deleteDocument} />
+                  ))}
+                </div>
+              </div>
+            )
+          })}
 
-      {documents.length === 0 && (
-        <div className="text-center py-16 text-ds-text-3">
-          <Archive size={40} className="mx-auto mb-3 opacity-30" />
-          <p>Votre coffre-fort est vide</p>
-          <p className="text-sm mt-1">Uploadez vos documents administratifs pour les retrouver facilement</p>
-        </div>
+          {documents.length === 0 && (
+            <div className="text-center py-16 text-ds-text-3">
+              <Archive size={40} className="mx-auto mb-3 opacity-30" />
+              <p>Votre coffre-fort est vide</p>
+              <p className="text-sm mt-1">Uploadez vos documents administratifs pour les retrouver facilement</p>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

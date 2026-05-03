@@ -20,6 +20,7 @@ import {
 import axios from 'axios'
 import { api } from '@/services/api'
 import { cn } from '@/lib/utils'
+import { MemoireSkeleton } from '@/components/skeletons'
 import type { MemoireConfig, CAEntry, PosteCle } from '@/types'
 
 // ─── Section definitions ───────────────────────────────────────────────────────
@@ -478,11 +479,7 @@ export default function MemoireConfig() {
   const pct = Math.round((totalFilled / totalFields) * 100)
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 rounded-full border-2 border-transparent animate-spin" style={{ borderTopColor: '#0EA5E9' }} />
-      </div>
-    )
+    return <MemoireSkeleton />
   }
 
   const ca: CAEntry[] = form.chiffre_affaires ?? [

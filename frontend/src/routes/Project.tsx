@@ -2,6 +2,8 @@ import { useRef, useState, useEffect } from 'react'
 import { useParams, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { useProject } from '@/hooks/useProject'
 import { StepProgress } from '@/components/project/StepProgress'
+import { StepperSkeleton } from '@/components/skeletons'
+import Skeleton from '@/components/common/Skeleton'
 import StepUpload       from './project/StepUpload'
 import StepLotSelection from './project/StepLotSelection'
 import StepAnalysis     from './project/StepAnalysis'
@@ -32,12 +34,15 @@ export default function Project() {
   }, [])
 
   if (isLoading) {
+    // Show the page skeleton (header + stepper) instead of a full-screen
+    // spinner so the user feels the page is responsive while we fetch.
     return (
-      <div className="flex items-center justify-center h-64">
-        <div
-          className="w-8 h-8 rounded-full border-2 border-transparent animate-spin"
-          style={{ borderTopColor: '#0EA5E9' }}
-        />
+      <div>
+        <div className="mb-4 space-y-2">
+          <Skeleton className="h-7 w-2/3 max-w-md" />
+          <Skeleton className="h-4 w-1/3 max-w-xs" />
+        </div>
+        <StepperSkeleton />
       </div>
     )
   }

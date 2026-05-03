@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { api } from '@/services/api'
 import LoadingProgress from '@/components/common/LoadingProgress'
+import { RequirementListSkeleton } from '@/components/skeletons'
 import type { Project, ComplianceItem, ComplianceCategory, ProjectDocument } from '@/types'
 import { useCompleteStep } from '@/hooks/useProject'
 
@@ -228,17 +229,8 @@ export default function StepAnalysis({ project }: Props) {
 
   // ── Loading states ────────────────────────────────────────────
 
-  if (isLoading) return (
-    <div
-      className="bg-white rounded-xl p-12 flex flex-col items-center gap-3"
-      style={{ border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
-    >
-      <Loader2 size={32} className="animate-spin" style={{ color: '#0EA5E9' }} />
-      <p className="font-medium" style={{ color: '#0F172A', fontFamily: F }}>
-        Chargement de l&apos;analyse...
-      </p>
-    </div>
-  )
+  if (isLoading) return <RequirementListSkeleton count={5} />
+
 
   if (items.length === 0) return (
     <div
