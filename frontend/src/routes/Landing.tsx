@@ -881,16 +881,18 @@ export default function Landing() {
           <div>
             <h4 className="text-sm font-semibold text-[#E2E8F0] mb-4" style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}>Légal</h4>
             <ul className="space-y-2.5 text-sm text-[#64748B]">
-              <li>Mentions légales</li>
-              <li>CGU</li>
-              <li>Politique de confidentialité</li>
+              <li><Link to="/legal/mentions-legales" className="hover:text-white transition-colors">Mentions légales</Link></li>
+              <li><Link to="/legal/cgu" className="hover:text-white transition-colors">CGU</Link></li>
+              <li><Link to="/legal/cgv" className="hover:text-white transition-colors">CGV</Link></li>
+              <li><Link to="/legal/politique-confidentialite" className="hover:text-white transition-colors">Confidentialité</Link></li>
+              <li><Link to="/legal/cookies" className="hover:text-white transition-colors">Cookies</Link></li>
             </ul>
           </div>
           <div>
             <h4 className="text-sm font-semibold text-[#E2E8F0] mb-4" style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}>Contact</h4>
             <ul className="space-y-2.5 text-sm text-[#64748B]">
-              <li>contact@synorix.fr</li>
-              <li>Support</li>
+              <li><a href="mailto:contact@synorix.tech" className="hover:text-white transition-colors">contact@synorix.tech</a></li>
+              <li><a href="mailto:support@synorix.tech" className="hover:text-white transition-colors">support@synorix.tech</a></li>
             </ul>
           </div>
         </div>

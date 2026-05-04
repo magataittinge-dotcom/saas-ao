@@ -85,6 +85,27 @@ export default function Login() {
         <p className="text-center text-xs mt-6 font-sans" style={{ color: '#94A3B8' }}>
           Synorix · Réponses aux AO BTP automatisées par IA
         </p>
+
+        <nav className="flex flex-wrap items-center gap-x-3 gap-y-1 justify-center mt-3">
+          {[
+            ['/legal/mentions-legales', 'Mentions légales'],
+            ['/legal/cgu', 'CGU'],
+            ['/legal/cgv', 'CGV'],
+            ['/legal/politique-confidentialite', 'Confidentialité'],
+            ['/legal/cookies', 'Cookies'],
+          ].map(([to, label]) => (
+            <a
+              key={to}
+              href={to}
+              className="text-[11px] transition-colors"
+              style={{ color: '#94A3B8' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#0EA5E9' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = '#94A3B8' }}
+            >
+              {label}
+            </a>
+          ))}
+        </nav>
       </div>
     </div>
   )

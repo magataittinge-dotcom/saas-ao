@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import Header from './Header'
+import LegalFooter from './LegalFooter'
 import { ToastContainer } from '@/components/common/Toast'
 
 export default function Layout() {
@@ -14,8 +15,11 @@ export default function Layout() {
       <Sidebar mobileOpen={mobileOpen} onMobileClose={closeMobile} />
       <div className="flex flex-col flex-1 overflow-hidden min-w-0 relative z-10">
         <Header onMenuToggle={toggleMobile} />
-        <main className="flex-1 overflow-y-auto px-3 sm:px-4 py-5" style={{ background: '#F8FAFC' }}>
-          <Outlet />
+        <main className="flex-1 overflow-y-auto px-3 sm:px-4 py-5 flex flex-col" style={{ background: '#F8FAFC' }}>
+          <div className="flex-1 min-h-0">
+            <Outlet />
+          </div>
+          <LegalFooter />
         </main>
       </div>
       <ToastContainer />

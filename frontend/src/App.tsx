@@ -7,6 +7,7 @@ import Landing from '@/routes/Landing'
 import Login from '@/routes/Login'
 import Register from '@/routes/Register'
 import Pricing from '@/routes/Pricing'
+import Legal from '@/routes/Legal'
 import Dashboard from '@/routes/Dashboard'
 import Projects from '@/routes/Projects'
 import NewProject from '@/routes/NewProject'
@@ -42,6 +43,8 @@ function AppRoutes() {
       {/* Public routes */}
       <Route path="/" element={<Landing />} />
       <Route path="/pricing" element={<Pricing />} />
+      <Route path="/legal" element={<Legal />} />
+      <Route path="/legal/:slug" element={<Legal />} />
       <Route
         path="/login/*"
         element={
