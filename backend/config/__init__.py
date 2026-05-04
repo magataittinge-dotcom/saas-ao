@@ -47,3 +47,10 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+# Re-exports — keep the public surface stable for callers that already
+# do `from config import get_settings` (12 sites at the time of writing).
+from .locale import LocaleConfig, get_locale_config  # noqa: E402,F401
+
+__all__ = ["Settings", "get_settings", "LocaleConfig", "get_locale_config"]
