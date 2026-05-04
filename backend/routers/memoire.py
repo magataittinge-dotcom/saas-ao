@@ -110,6 +110,7 @@ async def generate_memoire(
             variables=variables,
             criteres_jugement=project.criteres_jugement or [],
             reference_template_text=ref_template_text,
+            project_id=project_id,
         )
         pipeline_tracker.complete_step(project_id, "generating")
         pipeline_tracker.start_step(project_id, "finalizing")

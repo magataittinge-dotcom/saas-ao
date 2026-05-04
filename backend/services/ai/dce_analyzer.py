@@ -13,6 +13,16 @@ import logging
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
+
+def _safe_update_progress(project_id: str, ratio: float) -> None:
+    """Best-effort publish of a real progress signal. Never raises so
+    pipeline_tracker / progress_bus failures can't break the AI call."""
+    try:
+        from services import pipeline_tracker
+        pipeline_tracker.update_step_progress(project_id, ratio)
+    except Exception:
+        pass
+
 # ── Mapping lot keywords → DTU section headers in normes-dtu-btp ────────────
 _DTU_SECTION_KEYWORDS: list[tuple[list[str], str]] = [
     (["façade", "facade", "ravalement", "bardage", "enduit ext"],
@@ -161,6 +171,7 @@ class DCEAnalyzer:
         lot_header: str = "",
         selected_lot_name: str | None = None,
         on_pass1_done: callable = None,
+        project_id: str | None = None,
     ) -> dict:
         """Two-pass analysis: admin docs (RC+CCAP) then technical docs (CCTP+DPGF).
         Each call is <30K chars → response <60s → no WSL2 timeout."""
@@ -174,7 +185,8 @@ class DCEAnalyzer:
         prompt1 = lot_header + pass1_text if lot_header else pass1_text
         prompt1 = self._guard_tokens(prompt1, "passe1-admin")
         result1 = await asyncio.to_thread(
-            self._sync_call, prompt1, DCE_PASS1_SYSTEM, "passe1-admin", skills_ref
+            self._sync_call, prompt1, DCE_PASS1_SYSTEM, "passe1-admin", skills_ref,
+            project_id,
         )
 
         # Notify caller that pass 1 is done (for progress tracking)
@@ -187,7 +199,8 @@ class DCEAnalyzer:
             prompt2 = lot_header + pass2_text if lot_header else pass2_text
             prompt2 = self._guard_tokens(prompt2, "passe2-technique")
             result2 = await asyncio.to_thread(
-                self._sync_call, prompt2, DCE_PASS2_SYSTEM, "passe2-technique", skills_ref
+                self._sync_call, prompt2, DCE_PASS2_SYSTEM, "passe2-technique", skills_ref,
+                project_id,
             )
 
         # ── Merge results ────────────────────────────────────────────────────
@@ -250,13 +263,24 @@ class DCEAnalyzer:
 
     # ── Core sync call with retries ──────────────────────────────────────────
 
-    def _sync_call(self, dce_text: str, system_prompt: str, label: str = "", skills_ref: str = "") -> dict:
+    def _sync_call(
+        self,
+        dce_text: str,
+        system_prompt: str,
+        label: str = "",
+        skills_ref: str = "",
+        project_id: str | None = None,
+    ) -> dict:
         """Synchronous streaming Claude call with 3 retries — runs in a thread.
 
         Streaming keeps TCP alive (bytes every ~100ms), avoiding WSL2 NAT timeout.
         Prompt caching is enabled on the system prompt + skills bundle: a typical
         DCE pipeline calls this fn 3-8 times for chunks of the same archive →
         cache hit on calls 2..N saves ~90 % of system+skills input tokens.
+
+        If ``project_id`` is set, the chars received during streaming are
+        published to ``pipeline_tracker.update_step_progress`` so SSE clients
+        get a real progress signal (no more elapsed-time interpolation).
         """
         # Stable system blocks (cached) — system prompt + BTP skills bundle.
         system_blocks: list[dict] = [{"type": "text", "text": system_prompt}]
@@ -285,11 +309,17 @@ class DCEAnalyzer:
         }]
         last_error = None
 
+        # Approx 3.5 chars per output token in French → for max_tokens=8000
+        # the response stays under 28000 chars in practice. We use that as
+        # the denominator for the streaming progress signal.
+        chars_estimate = 8000 * 3.5
+
         for attempt in range(1, 4):
             t0 = time.monotonic()
             try:
                 print(f"[DCE Analyzer] [{label}] Tentative {attempt}/3 (streaming)...", flush=True)
                 collected = ""
+                last_publish = time.time()
 
                 with self.client.messages.stream(
                     model="claude-sonnet-4-6",
@@ -300,6 +330,15 @@ class DCEAnalyzer:
                 ) as stream:
                     for text in stream.text_stream:
                         collected += text
+                        # Throttled real-progress signal — at most ~3 publishes
+                        # per second per ongoing stream. We only publish if a
+                        # project_id was supplied (else the call is one-shot).
+                        if project_id:
+                            now = time.time()
+                            if now - last_publish >= 0.3:
+                                ratio = min(len(collected) / chars_estimate, 0.99)
+                                _safe_update_progress(project_id, ratio)
+                                last_publish = now
 
                 final_message = stream.get_final_message()
                 elapsed = time.monotonic() - t0

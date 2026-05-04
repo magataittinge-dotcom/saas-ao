@@ -179,6 +179,7 @@ async def trigger_analysis(
                     pipeline_tracker.complete_step(project_id, "analyzing_pass1"),
                     pipeline_tracker.start_step(project_id, "analyzing_pass2"),
                 ),
+                project_id=project_id,
             ),
             timeout=480.0,  # 8 min total (2 passes × 3 retries × ~60s + overhead)
         )

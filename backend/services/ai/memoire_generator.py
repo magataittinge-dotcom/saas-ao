@@ -11,6 +11,17 @@ import logging
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
+
+def _safe_update_progress(project_id: str, ratio: float) -> None:
+    """Best-effort publish of a real progress signal. Never raises so
+    pipeline_tracker / progress_bus failures can't break the AI call."""
+    try:
+        from services import pipeline_tracker
+        pipeline_tracker.update_step_progress(project_id, ratio)
+    except Exception:
+        pass
+
+
 _DETAIL_INSTRUCTION = "Génère un mémoire technique COMPLET et DÉTAILLÉ de 20 à 25 pages. Chaque section doit être exhaustive."
 
 # Skills always loaded for mémoire generation
@@ -169,6 +180,7 @@ class MemoireGenerator:
         variables: dict,
         criteres_jugement: list | None = None,
         reference_template_text: str | None = None,  # text from imported mémoire
+        project_id: str | None = None,
     ) -> dict:
         """Generate a complete mémoire technique using Claude Opus.
 
@@ -346,6 +358,7 @@ class MemoireGenerator:
             stable_skills_block,
             org_block_text,
             dynamic_block,
+            project_id,
         )
 
     def _sync_call(
@@ -353,6 +366,7 @@ class MemoireGenerator:
         stable_skills_block: str,
         org_block_text: str,
         dynamic_block: str,
+        project_id: str | None = None,
     ) -> dict:
         """Synchronous streaming Claude call — runs in a thread.
 
@@ -407,6 +421,11 @@ class MemoireGenerator:
                     flush=True,
                 )
                 collected = ""
+                last_publish = time.time()
+                # Approx 3.5 chars per output token in French. max_tokens=16000
+                # → typical mémoire response is 35-45k chars. Use 50k as
+                # the denominator so we cap at ~99 % only when truly long.
+                chars_estimate = 16000 * 3.5
 
                 with self.client.messages.stream(
                     model=self.MODEL,
@@ -417,6 +436,14 @@ class MemoireGenerator:
                 ) as stream:
                     for text in stream.text_stream:
                         collected += text
+                        # Real progress signal — at most 3 publishes per second
+                        # so we don't spam the SSE bus on long generations.
+                        if project_id:
+                            now = time.time()
+                            if now - last_publish >= 0.3:
+                                ratio = min(len(collected) / chars_estimate, 0.99)
+                                _safe_update_progress(project_id, ratio)
+                                last_publish = now
 
                 final_message = stream.get_final_message()
                 elapsed = time.monotonic() - t0
