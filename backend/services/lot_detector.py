@@ -674,19 +674,24 @@ def detect_all_lots(
             except Exception:
                 pass
 
-    # ── Step 1: Scan filenames (5%) ─────────────────────────────────────────
-    _report(5, "Scan des noms de fichiers...")
+    # ── Step 1: Scan filenames (0% → 5%) — interpolated per file ───────────
     filenames: List[str] = [doc.file_name for doc in documents]
+    total_files = max(len(filenames), 1)
+    for i in range(total_files):
+        # Smooth ramp 0 → 5 instead of a single 5% jump.
+        pct = int(((i + 1) / total_files) * 5)
+        _report(pct, "Scan des noms de fichiers...")
     filename_dets = _detect_lots_from_filenames(filenames)
 
-    # ── Step 2: Analyse RC / CCAP / DOCX text (10%) ──────────────────────────
-    _report(10, "Analyse du règlement de consultation...")
+    # ── Step 2: Analyse RC / CCAP / DOCX text (5% → 10%) — per file ────────
     text_dets: List[LotDetection] = []
-    for doc in documents:
-        fname_lower = doc.file_name.lower()
-        doc_type = getattr(doc, 'type', 'autre') or 'autre'
-
-        if fname_lower.endswith(".docx"):
+    docx_docs = [d for d in documents if d.file_name.lower().endswith(".docx")]
+    docx_total = max(len(docx_docs), 1)
+    if docx_docs:
+        for i, doc in enumerate(docx_docs):
+            pct = 5 + int(((i + 1) / docx_total) * 5)
+            _report(pct, "Analyse du règlement de consultation...")
+            doc_type = getattr(doc, 'type', 'autre') or 'autre'
             text_to_scan = ""
             if uploads_root and doc.file_url:
                 rel = doc.file_url.removeprefix("/uploads/")
@@ -698,38 +703,44 @@ def detect_all_lots(
             if text_to_scan:
                 dets = _detect_lots_from_rc_text(text_to_scan, doc_type)
                 text_dets.extend(dets)
+    else:
+        # No docx — bridge the gap so the bar still progresses.
+        _report(10, "Analyse du règlement de consultation...")
 
-    # ── Step 3: Analyse spreadsheets / DPGF (20%) ────────────────────────────
-    _report(20, "Analyse des DPGF...")
+    # ── Step 3: Analyse spreadsheets / DPGF (10% → 20%) — per file ────────
     excel_dets: List[LotDetection] = []
-    for doc in documents:
-        fname_lower = doc.file_name.lower()
-        if not fname_lower.endswith((".xls", ".xlsx", ".ods")):
-            continue
-        fname_m = _LOT_FNAME.search(doc.file_name)
-        if fname_m:
-            raw_id = fname_m.group(1)
-            lot_id = _lot_id_from_raw(raw_id)
-            if lot_id:
-                excel_dets.append(LotDetection(
-                    id=lot_id, nom=f"Lot {raw_id}", confidence=75, sources=["excel"],
-                ))
-        if uploads_root and doc.file_url:
-            rel = doc.file_url.removeprefix("/uploads/")
-            excel_path = uploads_root / rel
-            raw = detect_lots_from_excel(str(excel_path))
-            for d in raw:
-                excel_dets.append(LotDetection(
-                    id=d["id"], nom=d["nom"],
-                    confidence=d.get("confidence", 70),
-                    sources=d.get("sources", ["excel"]),
-                    tranches=d.get("tranches", []),
-                ))
+    spreadsheet_docs = [
+        d for d in documents
+        if d.file_name.lower().endswith((".xls", ".xlsx", ".ods"))
+    ]
+    excel_total = max(len(spreadsheet_docs), 1)
+    if spreadsheet_docs:
+        for i, doc in enumerate(spreadsheet_docs):
+            pct = 10 + int(((i + 1) / excel_total) * 10)
+            _report(pct, "Analyse des DPGF...")
+            fname_m = _LOT_FNAME.search(doc.file_name)
+            if fname_m:
+                raw_id = fname_m.group(1)
+                lot_id = _lot_id_from_raw(raw_id)
+                if lot_id:
+                    excel_dets.append(LotDetection(
+                        id=lot_id, nom=f"Lot {raw_id}", confidence=75, sources=["excel"],
+                    ))
+            if uploads_root and doc.file_url:
+                rel = doc.file_url.removeprefix("/uploads/")
+                excel_path = uploads_root / rel
+                raw = detect_lots_from_excel(str(excel_path))
+                for d in raw:
+                    excel_dets.append(LotDetection(
+                        id=d["id"], nom=d["nom"],
+                        confidence=d.get("confidence", 70),
+                        sources=d.get("sources", ["excel"]),
+                        tranches=d.get("tranches", []),
+                    ))
+    else:
+        _report(20, "Analyse des DPGF...")
 
-    # ── Step 4: Scan PDF content (25% → 90%) ───────────────────────────────────
-    # Use already-extracted text (from upload phase) — no need to re-read PDFs.
-    # Only re-read from disk for key docs (RC, CCAP) that have placeholder text.
-    _report(25, "Scan du contenu des documents...")
+    # ── Step 4: Scan PDF content (20% → 95%) ───────────────────────────────
     pdfs_to_scan = []
     for doc in documents:
         fname_lower = doc.file_name.lower()
@@ -745,9 +756,13 @@ def detect_all_lots(
             pdfs_to_scan.append(doc)
 
     total_pdfs = len(pdfs_to_scan)
+    if total_pdfs == 0:
+        _report(90, "Aucun PDF à scanner.")
     for idx, doc in enumerate(pdfs_to_scan):
+        # Report on every doc for small DCEs, every 3 for large ones — same
+        # rate as before but with a wider range (20→90 instead of 25→90).
         if total_pdfs <= 10 or idx % 3 == 0 or idx == total_pdfs - 1:
-            pct = 25 + int((idx / max(total_pdfs, 1)) * 65)
+            pct = 20 + int((idx / max(total_pdfs, 1)) * 70)
             _report(pct, f"Scan du contenu... {idx + 1}/{total_pdfs} documents")
 
         doc_type = getattr(doc, 'type', 'autre') or 'autre'
