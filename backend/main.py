@@ -29,6 +29,7 @@ from routers import (
     export,
     dashboard,
     stripe_billing,
+    progress,
 )
 from routers.file_serve import router as file_serve_router
 
@@ -522,6 +523,7 @@ app.include_router(memoire_config.router, prefix="/api/memoire-config", tags=["m
 app.include_router(export.router, prefix="/api/projects", tags=["export"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
 app.include_router(stripe_billing.router, prefix="/api/stripe", tags=["stripe"])
+app.include_router(progress.router, prefix="/api/projects", tags=["progress"])
 app.include_router(file_serve_router, prefix="/api/files", tags=["files"])
 
 

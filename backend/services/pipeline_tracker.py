@@ -43,6 +43,11 @@ class StepState:
     started_at: Optional[float] = None
     completed_at: Optional[float] = None
     duration_s: Optional[float] = None
+    # Internal progress signal in [0, 1] published by services that have a
+    # real measure of work done (e.g. AI services tracking received chars
+    # vs. expected output). When None we fall back to elapsed-time
+    # interpolation so the bar still moves.
+    internal_progress: Optional[float] = None
 
 
 @dataclass
@@ -56,6 +61,20 @@ class PipelineState:
 
 _store: dict[str, PipelineState] = {}
 _lock = Lock()
+
+
+def _publish(project_id: str, event_type: str = "progress") -> None:
+    """Push the latest snapshot to any SSE subscribers. Never raises."""
+    try:
+        # Local import to keep the dependency one-way (progress_bus knows
+        # nothing about the tracker; the tracker drives the bus).
+        from services import progress_bus
+        snap = get_status(project_id)
+        if snap is not None:
+            progress_bus.publish(project_id, event_type, snap)
+    except Exception:
+        # Telemetry must never break the user-facing pipeline.
+        pass
 
 
 def _make_steps(definitions: list[tuple]) -> list[StepState]:
@@ -80,6 +99,7 @@ def start_pipeline(project_id: str, pipeline_type: str = "analysis") -> None:
             started_at=time.time(),
             steps=_make_steps(defs),
         )
+    _publish(project_id)
 
 
 def start_step(project_id: str, step_id: str) -> None:
@@ -92,7 +112,33 @@ def start_step(project_id: str, step_id: str) -> None:
             if s.step_id == step_id:
                 s.status = "in_progress"
                 s.started_at = time.time()
+                s.internal_progress = None
                 break
+    _publish(project_id)
+
+
+def update_step_progress(project_id: str, internal_progress: float) -> None:
+    """Publish a real progress signal (0-1) for the currently-running step.
+
+    Called from inside the long-running operation (e.g. the Claude stream
+    consumer) so the SSE clients see a true bar instead of an elapsed-
+    time interpolation. Throttling is the caller's responsibility — the
+    bus drops events if the queue is full anyway.
+    """
+    if internal_progress is None:
+        return
+    clamped = max(0.0, min(float(internal_progress), 0.99))
+    with _lock:
+        state = _store.get(project_id)
+        if not state:
+            return
+        for s in state.steps:
+            if s.status == "in_progress":
+                s.internal_progress = clamped
+                break
+        else:
+            return
+    _publish(project_id)
 
 
 def complete_step(project_id: str, step_id: str) -> None:
@@ -106,7 +152,9 @@ def complete_step(project_id: str, step_id: str) -> None:
                 s.status = "completed"
                 s.completed_at = time.time()
                 s.duration_s = round(s.completed_at - s.started_at, 1) if s.started_at else None
+                s.internal_progress = None
                 break
+    _publish(project_id)
 
 
 def complete_pipeline(project_id: str) -> None:
@@ -121,6 +169,7 @@ def complete_pipeline(project_id: str) -> None:
             if s.status != "completed":
                 s.status = "completed"
                 s.completed_at = time.time()
+    _publish(project_id, event_type="complete")
 
 
 def fail_pipeline(project_id: str, message: str = "") -> None:
@@ -131,6 +180,7 @@ def fail_pipeline(project_id: str, message: str = "") -> None:
             return
         state.status = "error"
         state.error_message = message
+    _publish(project_id, event_type="error")
 
 
 def get_status(project_id: str) -> Optional[dict]:
@@ -155,9 +205,15 @@ def get_status(project_id: str) -> Optional[dict]:
             progress = s.pct_end
         elif s.status == "in_progress":
             current_step_label = s.label
-            # Interpolate progress within the step based on elapsed time
-            elapsed = now - s.started_at if s.started_at else 0
-            ratio = min(elapsed / max(s.estimated_s, 1), 0.95)  # cap at 95% of step
+            # Prefer the real internal_progress signal when the step
+            # publishes one (e.g. AI services tracking received chars).
+            # Fallback to elapsed-time interpolation so the bar still
+            # moves for steps that don't have a real signal yet.
+            if s.internal_progress is not None:
+                ratio = max(0.0, min(s.internal_progress, 0.99))
+            else:
+                elapsed = now - s.started_at if s.started_at else 0
+                ratio = min(elapsed / max(s.estimated_s, 1), 0.95)
             progress = s.pct_start + int((s.pct_end - s.pct_start) * ratio)
             break
         else:
