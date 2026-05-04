@@ -82,11 +82,17 @@ def _sync_clerk_user(clerk_user_id: str, db: Session) -> User:
         db.refresh(user)
         return user
 
-    # 4. Fully new user — create org + user
+    # 4. Fully new user — create org + user.
+    # billing_country tracks where the billing entity is registered so a
+    # future provider/country migration can target a specific cohort.
+    from config import get_locale_config
+    locale_cfg = get_locale_config()
     org = Organization(
         name=name,
         siret=None,
         plan="free",
+        billing_provider="stripe",
+        billing_country=locale_cfg.country_code,
     )
     db.add(org)
     db.flush()

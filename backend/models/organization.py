@@ -26,8 +26,19 @@ class Organization(Base):
 
     # Billing
     plan = Column(SAEnum("free", "pro", "business", name="plan_type"), nullable=False, default="free")
-    stripe_customer_id = Column(String(255), nullable=True)
-    stripe_subscription_id = Column(String(255), nullable=True)
+    stripe_customer_id = Column(String(255), nullable=True, index=True)
+    stripe_subscription_id = Column(String(255), nullable=True, index=True)
+    # Pluggable provider — today always 'stripe'. Tomorrow could be a
+    # different Stripe account (UAE) or another provider entirely.
+    billing_provider = Column(
+        String(32), nullable=False, default="stripe", server_default="stripe", index=True,
+    )
+    # ISO country code of the billing entity for this org. Defaults to the
+    # COUNTRY_CODE env var at row creation time so a future provider migration
+    # can target a specific cohort by country.
+    billing_country = Column(
+        String(2), nullable=False, default="FR", server_default="FR",
+    )
 
     created_at = Column(DateTime, default=datetime.utcnow)
 

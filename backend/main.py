@@ -140,6 +140,51 @@ def _ensure_schema_columns():
                     ))
                 logger.info("Added column documents.deleted_at (+index)")
 
+        # ── organizations.billing_provider / billing_country ──────────────
+        # Pluggable billing provider — added Apr 2026 so we can migrate
+        # the billing entity (Stripe FR → Stripe UAE in 2027) without code
+        # changes. Existing rows default to ('stripe', COUNTRY_CODE).
+        if insp.has_table("organizations"):
+            existing = {c["name"] for c in insp.get_columns("organizations")}
+            from config import get_locale_config as _glc
+            default_country = _glc().country_code
+            if "billing_provider" not in existing:
+                with engine.begin() as conn:
+                    conn.execute(text(
+                        "ALTER TABLE organizations "
+                        "ADD COLUMN billing_provider VARCHAR(32) "
+                        "NOT NULL DEFAULT 'stripe'"
+                    ))
+                    conn.execute(text(
+                        "CREATE INDEX IF NOT EXISTS "
+                        "ix_organizations_billing_provider ON organizations (billing_provider)"
+                    ))
+                logger.info("Added column organizations.billing_provider (+index)")
+            if "billing_country" not in existing:
+                with engine.begin() as conn:
+                    conn.execute(text(
+                        "ALTER TABLE organizations "
+                        "ADD COLUMN billing_country VARCHAR(2) "
+                        f"NOT NULL DEFAULT '{default_country}'"
+                    ))
+                logger.info(f"Added column organizations.billing_country default={default_country!r}")
+            # FK indexes used by webhook lookups (already added in night perf
+            # work for org-scoped ones; this covers the customer/sub IDs).
+            if "stripe_customer_id" in existing:
+                with engine.begin() as conn:
+                    conn.execute(text(
+                        "CREATE INDEX IF NOT EXISTS "
+                        "ix_organizations_stripe_customer_id "
+                        "ON organizations (stripe_customer_id)"
+                    ))
+            if "stripe_subscription_id" in existing:
+                with engine.begin() as conn:
+                    conn.execute(text(
+                        "CREATE INDEX IF NOT EXISTS "
+                        "ix_organizations_stripe_subscription_id "
+                        "ON organizations (stripe_subscription_id)"
+                    ))
+
         # ── Postgres-only: convert native ENUMs to VARCHAR + CHECK ────────
         if is_postgres:
             _migrate_pg_enum_to_check(
