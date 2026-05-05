@@ -107,7 +107,7 @@ export interface Reference {
 
 // ─── Projects ─────────────────────────────────────────────────────────────────
 
-export type ProjectStatus = 'brouillon' | 'en_cours' | 'soumis' | 'gagné' | 'perdu'
+export type ProjectStatus = 'brouillon' | 'en_cours' | 'analyzed' | 'soumis' | 'gagné' | 'perdu'
 
 export interface SousCritere {
   nom: string

@@ -225,6 +225,16 @@ def _ensure_schema_columns():
             except Exception as exc:
                 logger.warning("ALTER TYPE checklist_status skipped: %s", exc)
 
+            # project_status gains 'analyzed' — set on a project once the
+            # compliance items extracted by the AI are committed.
+            try:
+                with engine.begin() as conn:
+                    conn.execute(text(
+                        "ALTER TYPE project_status ADD VALUE IF NOT EXISTS 'analyzed'"
+                    ))
+            except Exception as exc:
+                logger.warning("ALTER TYPE project_status skipped: %s", exc)
+
         # ── Performance indexes — additive, idempotent (CREATE INDEX IF NOT EXISTS) ─
         _ensure_performance_indexes(insp)
 

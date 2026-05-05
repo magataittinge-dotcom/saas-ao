@@ -56,6 +56,7 @@ function fmtDate(d: Date) {
 const STATUS_MAP: Record<string, { label: string; color: string; bg: string }> = {
   brouillon: { label: 'Brouillon', color: '#475569', bg: '#F8FAFC' },
   en_cours:  { label: 'En cours',  color: '#0E7490', bg: '#ECFEFF' },
+  analyzed:  { label: 'Analysé',   color: '#0E7490', bg: '#ECFEFF' },
   soumis:    { label: 'Soumis',    color: '#475569', bg: '#F8FAFC' },
   gagné:     { label: 'Gagné',     color: '#047857', bg: '#ECFDF5' },
   perdu:     { label: 'Perdu',     color: '#B91C1C', bg: '#FEF2F2' },

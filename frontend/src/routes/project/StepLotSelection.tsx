@@ -359,6 +359,18 @@ export default function StepLotSelection({ project }: Props) {
       setIsSuccess(false)
     },
   })
+
+  // Fallback: if the SSE missed the 'complete' event (network blip during
+  // the last 100 ms of the pipeline) the project still ends up with
+  // status='analyzed' on the next refetch. Navigate to /analysis in that
+  // case so the user never gets stuck on this page.
+  useEffect(() => {
+    if (project.status === 'analyzed' && isAnalyzing) {
+      setIsAnalyzing(false)
+      setIsSuccess(true)
+      navigate(`/projects/${project.id}/analysis`)
+    }
+  }, [project.status, isAnalyzing, project.id, navigate])
   const [, setPreparation] = useState<{ extracted: number; total: number } | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 

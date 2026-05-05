@@ -52,6 +52,7 @@ export function projectStatusBadge(status: ProjectStatus) {
   const map: Record<ProjectStatus, { label: string; variant: BadgeVariant }> = {
     brouillon: { label: 'Brouillon', variant: 'neutral'  },
     en_cours:  { label: 'En cours',  variant: 'info'     },
+    analyzed:  { label: 'Analysé',   variant: 'info'     },
     soumis:    { label: 'Soumis',    variant: 'warning'  },
     gagné:     { label: 'Gagné',     variant: 'success'  },
     perdu:     { label: 'Perdu',     variant: 'danger'   },

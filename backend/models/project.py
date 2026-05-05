@@ -33,6 +33,11 @@ DCE_REFERENCE_TYPES = [
 PROJECT_DOC_TYPES = DCE_REFERENCE_TYPES + DCE_TEMPLATE_TYPES
 
 
+# Pipeline of project.status values. Two distinct semantics share this column:
+#   - business outcomes: "soumis", "gagné", "perdu" (set explicitly by the user)
+#   - workflow markers: "brouillon" (initial), "en_cours" (analysis launched),
+#     "analyzed" (compliance items extracted, ready for candidature)
+# The frontend maps each value to a label/colour in STATUS_MAP.
 class Project(Base):
     __tablename__ = "projects"
 
@@ -40,7 +45,10 @@ class Project(Base):
     organization_id = Column(String, ForeignKey("organizations.id"), nullable=False, index=True)
     name = Column(String(500), nullable=False)
     status = Column(
-        SAEnum("brouillon", "en_cours", "soumis", "gagné", "perdu", name="project_status"),
+        SAEnum(
+            "brouillon", "en_cours", "analyzed", "soumis", "gagné", "perdu",
+            name="project_status",
+        ),
         nullable=False,
         default="brouillon",
         index=True,

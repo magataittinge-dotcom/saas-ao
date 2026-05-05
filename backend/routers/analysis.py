@@ -15,7 +15,7 @@ from models.checklist_item import ChecklistItem
 from models.document import Document
 from schemas.compliance import ComplianceItemResponse
 from routers.auth import get_auth_user
-from services.ai.dce_analyzer import DCEAnalyzer
+from services.ai.dce_analyzer import DCEAnalyzer, ClaudeRateLimitError
 from services.ai.checklist_matcher import ChecklistMatcher
 from services.document_tagger import (
     get_documents_for_lot, extract_excel_sheet_for_lot, _normalize_lot_num,
@@ -190,6 +190,20 @@ async def trigger_analysis(
         project.current_step = 2
         db.commit()
         raise HTTPException(status_code=504, detail="L'analyse a pris trop de temps. Réessayez.")
+    except ClaudeRateLimitError as e:
+        # The Anthropic input-token rate limit is hard to predict per
+        # workspace; surface it as a 503 with a clear message + Retry-After
+        # header so the frontend can offer a meaningful "réessayer" CTA
+        # instead of a scary 500.
+        pipeline_tracker.fail_pipeline(project_id, "rate_limit")
+        project.current_step = 2
+        db.commit()
+        logger.warning(f"Rate limit Anthropic projet {project_id}: {e}")
+        raise HTTPException(
+            status_code=503,
+            detail="Limite Anthropic atteinte. Réessayez dans une minute.",
+            headers={"Retry-After": "60"},
+        )
     except Exception as e:
         pipeline_tracker.fail_pipeline(project_id, str(e))
         project.current_step = 2
@@ -232,12 +246,16 @@ async def trigger_analysis(
         db.add(item)
     db.commit()
 
-    # Advance to step 3 (analysis results) when done
+    # Advance to step 3 (analysis results) when done.
+    # Also flip status from 'en_cours' to 'analyzed' so the frontend can
+    # auto-route the user to the next step on the next project refetch.
     steps = dict(project.completed_steps or {})
     steps["3"] = True
     project.completed_steps = steps
     if project.current_step <= 3:
         project.current_step = 4
+    if project.status in ("brouillon", "en_cours"):
+        project.status = "analyzed"
     db.commit()
 
     # Generate checklist from candidature/offre requirements (best-effort)
