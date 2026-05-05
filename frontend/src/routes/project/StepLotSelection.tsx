@@ -84,12 +84,13 @@ interface LotCardProps {
   selected: boolean
   onSelect: () => void
   onDelete?: () => void
-  index?: number
 }
 
-function LotCard({ lot, selected, onSelect, onDelete, index }: LotCardProps) {
-  const lotNum = index !== undefined ? String(index).padStart(2, '0') : null
-
+function LotCard({ lot, selected, onSelect, onDelete }: LotCardProps) {
+  // We deliberately do NOT show a Synorix-internal sequential number
+  // (e.g. "LOT 06") next to the real DCE label — it confused users by
+  // implying two competing numbering systems. lot.nom already starts
+  // with the correct DCE number ("Lot 5 — …") when available.
   return (
     <div className="group relative">
       <button
@@ -121,18 +122,15 @@ function LotCard({ lot, selected, onSelect, onDelete, index }: LotCardProps) {
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            {lotNum && (
-              <span className="text-sm font-bold uppercase tracking-wide" style={{ color: '#0F172A' }}>
-                LOT {lotNum}
-              </span>
-            )}
+            <span className="text-base font-semibold" style={{ color: '#0F172A' }}>
+              {lot.nom}
+            </span>
             {lot._manual && (
               <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ color: '#0EA5E9', background: 'rgba(14,165,233,0.08)' }}>
                 Manuel
               </span>
             )}
           </div>
-          <p className="text-base mt-0.5" style={{ color: '#64748B' }}>{lot.nom}</p>
           {lot.tranches && lot.tranches.length > 0 && (
             <span className="inline-flex items-center gap-1 text-xs font-medium mt-1 px-2 py-0.5 rounded-full" style={{ color: '#0EA5E9', background: 'rgba(14,165,233,0.08)' }} title={lot.tranches.join('\n')}>
               {lot.tranches.length} tranche{lot.tranches.length > 1 ? 's' : ''}
@@ -566,14 +564,13 @@ export default function StepLotSelection({ project }: Props) {
               selected={selectedId === 'all'}
               onSelect={() => setSelectedId('all')}
             />
-            {lots.map((lot, i) => (
+            {lots.map((lot) => (
               <LotCard
                 key={lot.id}
                 lot={lot}
                 selected={selectedId === lot.id}
                 onSelect={() => setSelectedId(lot.id)}
                 onDelete={() => handleDelete(lot.id)}
-                index={i + 1}
               />
             ))}
           </div>
