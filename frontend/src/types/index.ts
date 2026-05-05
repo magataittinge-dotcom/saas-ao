@@ -154,11 +154,13 @@ export interface InfosMarche {
 }
 
 export interface LotOption {
-  id: string           // "lot1", "lot1A", "lotA", etc.
-  nom: string          // "Lot 1 — Gros œuvre"
-  confidence?: number  // 0–100 detection confidence
-  sources?: string[]   // ["excel", "rc_text", "filename", "error"]
-  tranches?: string[]  // ["Tranche ferme: Existant école", ...] (AMÉLIORATION 7)
+  id: string             // "lot1", "lot1A", "lotA", etc.
+  nom: string            // "Lot 1 — Gros œuvre" (auto-detected)
+  user_label?: string    // user override saved via PATCH /lots/{id}/rename
+  description_long?: string // CCTP excerpt (optional, set by lot_detector)
+  confidence?: number    // 0–100 detection confidence (kept server-side; not displayed)
+  sources?: string[]     // ["excel", "rc_text", "filename", "error"]
+  tranches?: string[]    // ["Tranche ferme: Existant école", ...] (AMÉLIORATION 7)
 }
 
 export interface Project {

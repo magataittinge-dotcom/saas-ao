@@ -1510,6 +1510,55 @@ def _run_lot_detection_background(project_id: str, docs_data: list, uploads_root
         pipeline_tracker.fail_pipeline(project_id, str(e)[:200])
 
 
+class LotRenamePayload(BaseModel):
+    user_label: str
+
+
+@router.patch("/{project_id}/lots/{lot_id}/rename", response_model=ProjectResponse)
+def rename_lot(
+    project_id: str,
+    lot_id: str,
+    payload: LotRenamePayload,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """Persist a user-supplied label for a lot.
+
+    When the auto-detector returns a bare 'Lot 6' with no description, the
+    UI offers an inline rename. We store the override in lots_detectes
+    (JSON column) under `user_label`, leaving the original `nom` intact
+    for traceability.
+    """
+    project = _get_project_or_404(project_id, user.organization_id, db)
+    label = (payload.user_label or "").strip()
+    if not label:
+        raise HTTPException(status_code=400, detail="Libellé vide")
+    if len(label) > 200:
+        raise HTTPException(status_code=400, detail="Libellé trop long (200 caractères max)")
+
+    lots = list(project.lots_detectes or [])
+    found = False
+    for lot in lots:
+        if lot.get("id") == lot_id:
+            lot["user_label"] = label
+            found = True
+            break
+    if not found:
+        raise HTTPException(status_code=404, detail="Lot introuvable")
+
+    project.lots_detectes = lots
+    # Force JSON column dirty flag so SQLAlchemy actually writes the update.
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(project, "lots_detectes")
+    # If the user renamed the currently-selected lot, keep the
+    # selected_lot_name in sync.
+    if project.selected_lot == lot_id:
+        project.selected_lot_name = label
+    db.commit()
+    db.refresh(project)
+    return project
+
+
 @router.post("/{project_id}/lots/select", response_model=ProjectResponse)
 def select_lot(
     project_id: str,

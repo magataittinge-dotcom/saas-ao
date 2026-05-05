@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Layers, CheckCircle2, AlertCircle, Zap, Plus, X,
   ShieldCheck, AlertTriangle, Loader2,
-  Sparkles, FileArchive,
+  Sparkles, FileArchive, Pencil, Check as CheckIcon,
 } from 'lucide-react'
 import axios from 'axios'
 import { api } from '@/services/api'
@@ -84,13 +84,50 @@ interface LotCardProps {
   selected: boolean
   onSelect: () => void
   onDelete?: () => void
+  onRename?: (newLabel: string) => void
 }
 
-function LotCard({ lot, selected, onSelect, onDelete }: LotCardProps) {
+/* A lot label is "generic" when the detector found a number but no
+ * description (e.g. "Lot 6" or "Lot 06A"). The UI offers an inline edit
+ * for those — for everything else the label is shown as-is. */
+function isGenericLotLabel(label: string): boolean {
+  const trimmed = label.trim()
+  return /^Lot\s+[0-9A-Za-z]+\s*$/i.test(trimmed)
+}
+
+function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) {
   // We deliberately do NOT show a Synorix-internal sequential number
   // (e.g. "LOT 06") next to the real DCE label — it confused users by
   // implying two competing numbering systems. lot.nom already starts
   // with the correct DCE number ("Lot 5 — …") when available.
+  const displayedLabel = lot.user_label?.trim() || lot.nom
+  const isGeneric = !lot.user_label && isGenericLotLabel(displayedLabel)
+
+  const [isEditing, setIsEditing] = useState(false)
+  const [draft, setDraft] = useState(lot.user_label ?? '')
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const startEdit = (e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    setDraft(lot.user_label ?? '')
+    setIsEditing(true)
+    setTimeout(() => inputRef.current?.focus(), 0)
+  }
+  const cancelEdit = (e?: React.MouseEvent | React.KeyboardEvent) => {
+    e?.stopPropagation?.()
+    setIsEditing(false)
+  }
+  const saveEdit = (e?: React.MouseEvent | React.KeyboardEvent) => {
+    e?.stopPropagation?.()
+    const value = draft.trim()
+    if (!value || !onRename) {
+      setIsEditing(false)
+      return
+    }
+    onRename(value)
+    setIsEditing(false)
+  }
+
   return (
     <div className="group relative">
       <button
@@ -121,20 +158,90 @@ function LotCard({ lot, selected, onSelect, onDelete }: LotCardProps) {
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="text-base font-semibold" style={{ color: '#0F172A' }}>
-              {lot.nom}
-            </span>
-            {lot._manual && (
-              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded" style={{ color: '#0EA5E9', background: 'rgba(14,165,233,0.08)' }}>
-                Manuel
-              </span>
-            )}
-          </div>
-          {lot.tranches && lot.tranches.length > 0 && (
-            <span className="inline-flex items-center gap-1 text-xs font-medium mt-1 px-2 py-0.5 rounded-full" style={{ color: '#0EA5E9', background: 'rgba(14,165,233,0.08)' }} title={lot.tranches.join('\n')}>
-              {lot.tranches.length} tranche{lot.tranches.length > 1 ? 's' : ''}
-            </span>
+          {isEditing ? (
+            <div
+              className="flex items-center gap-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <input
+                ref={inputRef}
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') saveEdit(e)
+                  if (e.key === 'Escape') cancelEdit(e)
+                }}
+                placeholder={`${displayedLabel} — décrivez le lot`}
+                maxLength={200}
+                className="input-dark flex-1"
+                style={{ padding: '0.4rem 0.6rem' }}
+              />
+              <button
+                type="button"
+                onClick={saveEdit}
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ background: '#0EA5E9', color: '#FFFFFF' }}
+                title="Enregistrer"
+              >
+                <CheckIcon size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={cancelEdit}
+                className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ background: '#F1F5F9', color: '#475569' }}
+                title="Annuler"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span
+                  className="text-base font-semibold"
+                  style={{
+                    color: isGeneric ? '#94A3B8' : '#0F172A',
+                    fontStyle: isGeneric ? 'italic' : 'normal',
+                  }}
+                >
+                  {displayedLabel}
+                  {isGeneric && (
+                    <span style={{ color: '#94A3B8' }}> — Description à compléter</span>
+                  )}
+                </span>
+                {lot._manual && (
+                  <span
+                    className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                    style={{ color: '#0EA5E9', background: 'rgba(14,165,233,0.08)' }}
+                  >
+                    Manuel
+                  </span>
+                )}
+                {onRename && (
+                  <button
+                    type="button"
+                    onClick={startEdit}
+                    className="inline-flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded transition-colors"
+                    style={{ color: '#64748B', background: 'transparent' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#F1F5F9' }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
+                    title="Renommer ce lot"
+                  >
+                    <Pencil size={11} /> Renommer
+                  </button>
+                )}
+              </div>
+              {lot.tranches && lot.tranches.length > 0 && (
+                <span
+                  className="inline-flex items-center gap-1 text-xs font-medium mt-1 px-2 py-0.5 rounded-full"
+                  style={{ color: '#0EA5E9', background: 'rgba(14,165,233,0.08)' }}
+                  title={lot.tranches.join('\n')}
+                >
+                  {lot.tranches.length} tranche{lot.tranches.length > 1 ? 's' : ''}
+                </span>
+              )}
+            </>
           )}
         </div>
 
@@ -407,6 +514,18 @@ export default function StepLotSelection({ project }: Props) {
       api.post(`/projects/${project.id}/lots/select`, payload),
   })
 
+  const { mutate: renameLot } = useMutation({
+    mutationFn: ({ lotId, label }: { lotId: string; label: string }) =>
+      api.patch<Project>(
+        `/projects/${project.id}/lots/${lotId}/rename`,
+        { user_label: label },
+      ),
+    onSuccess: (_resp, vars) => {
+      setLots(prev => prev.map(l => (l.id === vars.lotId ? { ...l, user_label: vars.label } : l)))
+      queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
+    },
+  })
+
   const handleCancel = () => {
     abortRef.current?.abort()
     setIsAnalyzing(false)
@@ -571,6 +690,7 @@ export default function StepLotSelection({ project }: Props) {
                 selected={selectedId === lot.id}
                 onSelect={() => setSelectedId(lot.id)}
                 onDelete={() => handleDelete(lot.id)}
+                onRename={(label) => renameLot({ lotId: lot.id, label })}
               />
             ))}
           </div>
