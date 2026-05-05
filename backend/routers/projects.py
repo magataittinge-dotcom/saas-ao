@@ -559,15 +559,27 @@ async def upload_project_document(
 
         # ── ZIP handling — pass the spool, never load full bytes ─────────────
         if filename_lower.endswith(".zip"):
+            from services import pipeline_tracker as _pt
             project = _get_project_or_404(project_id, user.organization_id, db)
             project.processing_status = "extracting_zip"
             project.processing_progress = 0
             project.processing_detail = "Extraction de l'archive..."
             db.commit()
 
+            # Drive an "upload" pipeline so SSE subscribers see the same
+            # shape as for analysis/mémoire (3 steps: uploading / zip / text).
+            _pt.start_pipeline(project_id, "upload")
+            # The 'uploading' step is already done by the time we get here
+            # (axios delivered the body), so mark it complete and move on.
+            _pt.start_step(project_id, "uploading")
+            _pt.complete_step(project_id, "uploading")
+            _pt.start_step(project_id, "extracting_zip")
+
             _t1 = _time.monotonic()
             docs, zip_warnings = await _handle_zip_upload(spool, project_id, background_tasks, db)
             print(f"[TIMING] _handle_zip_upload ({len(docs)} docs): {_time.monotonic()-_t1:.2f}s (total: {_time.monotonic()-_t0:.2f}s)", flush=True)
+
+            _pt.complete_step(project_id, "extracting_zip")
 
             docs_needing_text = [
                 (d.id, d.file_name, d.type, d.file_size or 0, d.file_url or "")
@@ -578,6 +590,7 @@ async def upload_project_document(
                 project.processing_progress = 0
                 project.processing_detail = f"0/{len(docs_needing_text)} documents"
                 db.commit()
+                _pt.start_step(project_id, "extracting_text")
                 print(f"[TIMING] launching _extract_all_parallel: {len(docs_needing_text)} docs needing text (total: {_time.monotonic()-_t0:.2f}s)", flush=True)
                 threading.Thread(
                     target=_extract_all_parallel,
@@ -589,6 +602,7 @@ async def upload_project_document(
                 project.processing_progress = 100
                 project.processing_detail = ""
                 db.commit()
+                _pt.complete_pipeline(project_id)
 
             _invalidate_lots_cache(project_id, db)
             _mark_step_1_complete(project, db)
@@ -707,6 +721,12 @@ def _extract_all_parallel(project_id: str, docs_info: list) -> None:
                 db_p.close()
         except Exception:
             pass
+        # SSE: publish on the in-progress upload pipeline step.
+        try:
+            from services import pipeline_tracker as _pt
+            _pt.update_step_progress(project_id, max(0.0, min(done / max(total_all, 1), 0.99)))
+        except Exception:
+            pass
 
     _update_progress(skipped)
 
@@ -767,6 +787,13 @@ def _extract_all_parallel(project_id: str, docs_info: list) -> None:
                     db_r.commit()
             finally:
                 db_r.close()
+        except Exception:
+            pass
+        # SSE: signal completion of the upload pipeline (if active).
+        try:
+            from services import pipeline_tracker as _pt
+            _pt.complete_step(project_id, "extracting_text")
+            _pt.complete_pipeline(project_id)
         except Exception:
             pass
 
@@ -1398,18 +1425,25 @@ def detect_lots(
 
 
 def _run_lot_detection_background(project_id: str, docs_data: list, uploads_root_str: str) -> None:
-    """Background thread: run lot detection with real progress updates to DB."""
+    """Background thread: run lot detection with real progress updates to DB
+    AND to the SSE bus via pipeline_tracker."""
     import logging
     _log = logging.getLogger(__name__)
     _log.info(f"Lot detection background thread started for project {project_id}")
 
     from database import SessionLocal
     from pathlib import Path as _Path
+    from services import pipeline_tracker
 
     uploads_root = _Path(uploads_root_str)
 
+    # Drive a single-step "lot_detection" pipeline so SSE subscribers see
+    # the same shape as for analysis / mémoire.
+    pipeline_tracker.start_pipeline(project_id, "lot_detection")
+    pipeline_tracker.start_step(project_id, "detecting_lots")
+
     def _update_progress(pct: int, detail: str) -> None:
-        """Callback: write progress to DB so frontend can poll it."""
+        """Callback: write progress to DB (legacy poll) AND push to SSE bus."""
         db = SessionLocal()
         try:
             project = db.query(Project).filter(Project.id == project_id).first()
@@ -1421,6 +1455,12 @@ def _run_lot_detection_background(project_id: str, docs_data: list, uploads_root
             _log.warning(f"Lot detection progress update failed: {e}")
         finally:
             db.close()
+        # SSE signal — pct is 0-100 from the detector, the step covers
+        # 0-100 in pipeline_tracker so we publish ratio = pct / 100.
+        try:
+            pipeline_tracker.update_step_progress(project_id, max(0.0, min(pct / 100.0, 0.99)))
+        except Exception:
+            pass
 
     # Build lightweight doc-like objects for lot_detector
     class _DocProxy:
@@ -1452,6 +1492,8 @@ def _run_lot_detection_background(project_id: str, docs_data: list, uploads_root
                 db.commit()
         finally:
             db.close()
+        pipeline_tracker.complete_step(project_id, "detecting_lots")
+        pipeline_tracker.complete_pipeline(project_id)
 
     except Exception as e:
         _log.error(f"Lot detection failed for {project_id}: {e}")
@@ -1465,6 +1507,7 @@ def _run_lot_detection_background(project_id: str, docs_data: list, uploads_root
                 db.commit()
         finally:
             db.close()
+        pipeline_tracker.fail_pipeline(project_id, str(e)[:200])
 
 
 @router.post("/{project_id}/lots/select", response_model=ProjectResponse)

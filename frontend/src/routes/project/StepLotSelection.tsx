@@ -10,10 +10,21 @@ import {
 import axios from 'axios'
 import { api } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
-import { PipelineProgress } from '@/components/project/PipelineProgress'
 import SubscriptionWall from '@/components/common/SubscriptionWall'
-import LoadingProgress from '@/components/common/LoadingProgress'
+import ProgressDisplay, { type StepDescriptor } from '@/components/common/ProgressDisplay'
+import { useProgressStream } from '@/hooks/useProgressStream'
 import type { Project, LotOption } from '@/types'
+
+const LOT_DETECTION_STEPS: StepDescriptor[] = [
+  { key: 'detecting_lots', label: 'Détection des lots', estimated_s: 30 },
+]
+
+// Used by the modal shown right after the user clicks "Analyser le DCE".
+const ANALYSIS_STEPS_FOR_DISPLAY: StepDescriptor[] = [
+  { key: 'analyzing_pass1', label: 'Analyse exigences administratives', estimated_s: 50 },
+  { key: 'analyzing_pass2', label: 'Analyse exigences techniques',     estimated_s: 50 },
+  { key: 'finalizing',      label: 'Finalisation',                       estimated_s: 5 },
+]
 import { cn } from '@/lib/utils'
 import { AiTipsBlock, type TipData } from '@/components/common/AiTip'
 
@@ -264,13 +275,12 @@ export default function StepLotSelection({ project }: Props) {
     }
   }, [isBackendBusy, waitingForExtraction, procStatus, project.id, queryClient])
 
-  // ─── Lot detection with real progress ────────────────────────────────────────
+  // ─── Lot detection ──────────────────────────────────────────────────────────
+  // The /lots endpoint either returns the cached lots, or kicks off a
+  // background detection thread and returns {status: 'detecting_lots'}.
+  // We then drive the UI from the SSE bus instead of polling.
   const [detectPhase, setDetectPhase] = useState<'idle' | 'detecting' | 'done'>('idle')
-  const [detectPct, setDetectPct] = useState(0)
   const [detectLabel, setDetectLabel] = useState('Détection des lots en cours...')
-  const detectPollRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const detectCrawlRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const detectDisplayRef = useRef(0)
   const detectDoneRef = useRef(false)
 
   const { data: lotsData, isLoading: lotsLoading } = useQuery({
@@ -278,13 +288,9 @@ export default function StepLotSelection({ project }: Props) {
     queryFn: async () => {
       const { data } = await api.get<{ lots?: LotOption[]; count?: number; cached?: boolean; status?: string; progress?: number; detail?: string }>(`/projects/${project.id}/lots`)
       if (data.status === 'detecting_lots') {
-        if (!detectDoneRef.current && !detectPollRef.current) {
+        if (!detectDoneRef.current) {
           setDetectPhase('detecting')
-          setDetectPct(0)
-          detectDisplayRef.current = 0
           setDetectLabel(data.detail || 'Détection des lots en cours...')
-          startDetectCrawl()
-          startDetectPoll()
         }
         return null
       }
@@ -293,57 +299,35 @@ export default function StepLotSelection({ project }: Props) {
     },
   })
 
-  function startDetectCrawl() {
-    if (detectCrawlRef.current) return
-    detectCrawlRef.current = setInterval(() => {
-      detectDisplayRef.current = Math.min(detectDisplayRef.current + 0.3, 20)
-      setDetectPct(detectDisplayRef.current)
-    }, 200)
-  }
-
-  function stopDetectCrawl() {
-    if (detectCrawlRef.current) { clearInterval(detectCrawlRef.current); detectCrawlRef.current = null }
-  }
-
-  function startDetectPoll() {
-    if (detectPollRef.current) return
-    detectPollRef.current = setInterval(async () => {
-      if (detectDoneRef.current) return
+  // SSE stream during detection. Disabled when not detecting so we don't
+  // hold an open HTTP connection on every page visit.
+  const detectSse = useProgressStream(project.id, {
+    enabled: detectPhase === 'detecting' && !detectDoneRef.current,
+    onComplete: async () => {
+      detectDoneRef.current = true
       try {
-        const { data } = await api.get<{ status: string; progress: number; detail: string }>(
-          `/projects/${project.id}/processing-status`
-        )
-        if (detectDoneRef.current) return
-        if (data.status === 'detecting_lots') {
-          if (data.progress > detectDisplayRef.current) {
-            stopDetectCrawl()
-            detectDisplayRef.current = data.progress
-            setDetectPct(data.progress)
-          }
-          if (data.detail) setDetectLabel(data.detail)
-        } else if (data.status === 'ready' || data.status === 'error') {
-          detectDoneRef.current = true
-          stopDetectCrawl()
-          if (detectPollRef.current) { clearInterval(detectPollRef.current); detectPollRef.current = null }
-          if (data.status === 'error') { setDetectPhase('idle'); setDetectPct(0); return }
-          setDetectPct(100)
-          const { data: lotsResult } = await api.get<{ lots: LotOption[]; count: number }>(`/projects/${project.id}/lots`)
-          const count = lotsResult?.lots?.filter((l: LotOption) => l.id !== '!!')?.length ?? 0
-          setDetectLabel(count > 0 ? `${count} lot${count > 1 ? 's' : ''} détecté${count > 1 ? 's' : ''} !` : 'Marché unique détecté')
-          setDetectPhase('done')
-          queryClient.invalidateQueries({ queryKey: ['projects', project.id, 'lots'] })
-          setTimeout(() => { setDetectPhase('idle'); setDetectPct(0) }, 1200)
-        }
+        const { data: lotsResult } = await api.get<{ lots: LotOption[]; count: number }>(`/projects/${project.id}/lots`)
+        const count = lotsResult?.lots?.filter((l: LotOption) => l.id !== '!!')?.length ?? 0
+        setDetectLabel(count > 0
+          ? `${count} lot${count > 1 ? 's' : ''} détecté${count > 1 ? 's' : ''} !`
+          : 'Marché unique détecté')
       } catch { /* ignore */ }
-    }, 1000)
-  }
+      setDetectPhase('done')
+      queryClient.invalidateQueries({ queryKey: ['projects', project.id, 'lots'] })
+      setTimeout(() => { setDetectPhase('idle') }, 1200)
+    },
+    onError: () => {
+      detectDoneRef.current = true
+      setDetectPhase('idle')
+    },
+  })
 
+  // Mirror the SSE "detail" line into the page label.
   useEffect(() => {
-    return () => {
-      if (detectPollRef.current) { clearInterval(detectPollRef.current); detectPollRef.current = null }
-      if (detectCrawlRef.current) { clearInterval(detectCrawlRef.current); detectCrawlRef.current = null }
+    if (detectPhase === 'detecting' && detectSse.detail) {
+      setDetectLabel(detectSse.detail)
     }
-  }, [])
+  }, [detectSse.detail, detectPhase])
 
   const allDetected = lotsData?.lots ?? project.lots_detectes ?? []
   const errorLots = allDetected.filter(l => l.sources?.includes('error'))
@@ -360,6 +344,21 @@ export default function StepLotSelection({ project }: Props) {
   const [analysisError, setAnalysisError] = useState<string | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
+
+  // SSE driving the modal during analysis. Disabled when not analyzing
+  // so we don't keep an idle stream open.
+  const analysisSse = useProgressStream(project.id, {
+    enabled: isAnalyzing,
+    onComplete: () => {
+      setIsAnalyzing(false)
+      setIsSuccess(true)
+      navigate(`/projects/${project.id}/analysis`)
+    },
+    onError: () => {
+      setIsAnalyzing(false)
+      setIsSuccess(false)
+    },
+  })
   const [, setPreparation] = useState<{ extracted: number; total: number } | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
@@ -451,23 +450,31 @@ export default function StepLotSelection({ project }: Props) {
     <>
       <SubscriptionWall open={showPaywall} onClose={() => setShowPaywall(false)} feature="analysis" />
 
-      <PipelineProgress
-        projectId={project.id}
-        active={isAnalyzing}
-        onComplete={() => {
-          setIsAnalyzing(false)
-          setIsSuccess(true)
-          navigate(`/projects/${project.id}/analysis`)
-        }}
-        onCancel={handleCancel}
-        subtitle="Analyse IA des documents DCE..."
-      />
+      {isAnalyzing && (
+        <ProgressDisplay
+          variant="modal"
+          title="Analyse IA en cours"
+          steps={ANALYSIS_STEPS_FOR_DISPLAY}
+          currentStep={analysisSse.step}
+          progress={analysisSse.progress}
+          detail={analysisSse.detail}
+          phase={analysisSse.phase}
+          onCancel={handleCancel}
+        />
+      )}
 
-      {/* Lot detection overlay */}
+      {/* Lot detection overlay (inline circle wrapped in our own portal) */}
       {detectPhase !== 'idle' && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(15,23,42,0.60)', backdropFilter: 'blur(4px)' }}>
           <div className="rounded-2xl p-8 max-w-sm w-full mx-4" style={{ background: '#FFFFFF', border: '1px solid #F1F5F9', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
-            <LoadingProgress progress={Math.round(detectPct)} label={detectLabel} variant="upload" />
+            <ProgressDisplay
+              variant="inline"
+              steps={LOT_DETECTION_STEPS}
+              currentStep="detecting_lots"
+              progress={detectPhase === 'done' ? 100 : detectSse.progress}
+              detail={detectLabel}
+              phase={detectPhase === 'done' ? 'complete' : 'in_progress'}
+            />
           </div>
         </div>,
         document.body,

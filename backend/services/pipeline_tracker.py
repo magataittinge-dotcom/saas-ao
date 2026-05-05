@@ -29,6 +29,16 @@ MEMOIRE_STEPS = [
     ("finalizing",      "Finalisation du mémoire",                85, 100,  5),
 ]
 
+LOT_DETECTION_STEPS = [
+    ("detecting_lots",  "Détection des lots",                      0, 100, 30),
+]
+
+UPLOAD_STEPS = [
+    ("uploading",        "Transfert du dossier",                   0,  30, 30),
+    ("extracting_zip",   "Extraction du ZIP",                     30,  40,  5),
+    ("extracting_text",  "Indexation des documents",              40, 100, 60),
+]
+
 # (step_id, label, pct_start, pct_end, estimated_seconds)
 
 
@@ -89,9 +99,17 @@ def _make_steps(definitions: list[tuple]) -> list[StepState]:
 
 # ── Public API ───────────────────────────────────────────────────────────────
 
+_PIPELINE_DEFS = {
+    "analysis": ANALYSIS_STEPS,
+    "memoire": MEMOIRE_STEPS,
+    "lot_detection": LOT_DETECTION_STEPS,
+    "upload": UPLOAD_STEPS,
+}
+
+
 def start_pipeline(project_id: str, pipeline_type: str = "analysis") -> None:
     """Initialize tracking for a project pipeline."""
-    defs = ANALYSIS_STEPS if pipeline_type == "analysis" else MEMOIRE_STEPS
+    defs = _PIPELINE_DEFS.get(pipeline_type, ANALYSIS_STEPS)
     with _lock:
         _store[project_id] = PipelineState(
             pipeline_type=pipeline_type,

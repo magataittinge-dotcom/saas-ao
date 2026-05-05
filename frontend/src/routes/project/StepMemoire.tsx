@@ -11,10 +11,17 @@ import ReactMarkdown from 'react-markdown'
 import axios from 'axios'
 import { api } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
-import { PipelineProgress } from '@/components/project/PipelineProgress'
+import ProgressDisplay, { type StepDescriptor } from '@/components/common/ProgressDisplay'
+import { useProgressStream } from '@/hooks/useProgressStream'
 import SubscriptionWall from '@/components/common/SubscriptionWall'
 import { MemoireSkeleton } from '@/components/skeletons'
 import type { Project, MemoireTechnique, MemoireContent, CritereJugement } from '@/types'
+
+const MEMOIRE_GEN_STEPS: StepDescriptor[] = [
+  { key: 'preparing',  label: 'Préparation du contexte',         estimated_s: 3 },
+  { key: 'generating', label: 'Rédaction du mémoire technique',  estimated_s: 120 },
+  { key: 'finalizing', label: 'Finalisation',                    estimated_s: 5 },
+]
 
 const F = "'DM Sans', sans-serif"
 
@@ -772,6 +779,12 @@ export default function StepMemoire({ project }: Props) {
     },
   })
 
+  // SSE drives the modal during generation. Disabled when not generating
+  // so we don't keep an idle stream open while the user reads the result.
+  const memoireSse = useProgressStream(project.id, {
+    enabled: isGenerating,
+  })
+
   const { mutate: saveEdits, isPending: isSaving } = useMutation({
     mutationFn: (content: MemoireContent) =>
       api.patch(`/projects/${project.id}/memoire`, { content_json: content }),
@@ -839,13 +852,18 @@ export default function StepMemoire({ project }: Props) {
     return (
       <>
         <SubscriptionWall open={showPaywall} onClose={() => setShowPaywall(false)} feature="memoire" />
-        <PipelineProgress
-          projectId={project.id}
-          active={isGenerating}
-          onComplete={() => setGenSuccess(true)}
-          onCancel={handleCancel}
-          subtitle="Synorix IA redige votre memoire technique..."
-        />
+        {isGenerating && (
+          <ProgressDisplay
+            variant="modal"
+            title="Synorix IA rédige votre mémoire"
+            steps={MEMOIRE_GEN_STEPS}
+            currentStep={memoireSse.step}
+            progress={memoireSse.progress}
+            detail={memoireSse.detail || 'Préparation du contexte…'}
+            phase={memoireSse.phase}
+            onCancel={handleCancel}
+          />
+        )}
 
         <div className="space-y-4 pb-20" style={{ fontFamily: F }}>
           {/* Title bar */}
@@ -1048,13 +1066,18 @@ export default function StepMemoire({ project }: Props) {
   return (
     <>
       <SubscriptionWall open={showPaywall} onClose={() => setShowPaywall(false)} feature="memoire" />
-      <PipelineProgress
-        projectId={project.id}
-        active={isGenerating}
-        onComplete={() => setGenSuccess(true)}
-        onCancel={handleCancel}
-        subtitle="Synorix IA redige votre memoire technique..."
-      />
+      {isGenerating && (
+        <ProgressDisplay
+          variant="modal"
+          title="Synorix IA rédige votre mémoire"
+          steps={MEMOIRE_GEN_STEPS}
+          currentStep={memoireSse.step}
+          progress={memoireSse.progress}
+          detail={memoireSse.detail || 'Préparation du contexte…'}
+          phase={memoireSse.phase}
+          onCancel={handleCancel}
+        />
+      )}
 
       {showEditor && displayContent && (
         <FullscreenEditor

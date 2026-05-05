@@ -7,10 +7,17 @@ import {
   CheckCircle2, Sparkles, Info, Shield,
 } from 'lucide-react'
 import { api } from '@/services/api'
-import LoadingProgress from '@/components/common/LoadingProgress'
+import ProgressDisplay, { type StepDescriptor } from '@/components/common/ProgressDisplay'
+import { useProgressStream } from '@/hooks/useProgressStream'
 import { RequirementListSkeleton } from '@/components/skeletons'
 import type { Project, ComplianceItem, ComplianceCategory, ProjectDocument } from '@/types'
 import { useCompleteStep } from '@/hooks/useProject'
+
+const ANALYSIS_STEPS: StepDescriptor[] = [
+  { key: 'analyzing_pass1', label: 'Analyse exigences administratives', estimated_s: 50 },
+  { key: 'analyzing_pass2', label: 'Analyse exigences techniques',     estimated_s: 50 },
+  { key: 'finalizing',      label: 'Finalisation',                       estimated_s: 5 },
+]
 
 const F = "'DM Sans', sans-serif"
 
@@ -162,31 +169,12 @@ export default function StepAnalysis({ project }: Props) {
     })
   }
 
-  // Poll analysis progress when items are empty
-  const { data: analysisProgress } = useQuery({
-    queryKey: ['analysis-progress', project.id],
-    queryFn: async () => {
-      try {
-        const { data } = await api.get<{
-          total_docs: number
-          analyzed_docs: number
-          current_doc_name: string
-          status: string
-        }>(`/projects/${project.id}/analysis-progress`)
-        return data
-      } catch {
-        return null
-      }
-    },
+  // Real-time analysis progress via SSE. Replaces the legacy poll on a
+  // dead /analysis-progress endpoint (which was always returning 404 and
+  // freezing the bar at 15 %).
+  const analysisSse = useProgressStream(project.id, {
     enabled: !isLoading && items.length === 0,
-    refetchInterval: 2000,
   })
-
-  const analysisPercent = analysisProgress
-    ? analysisProgress.total_docs > 0
-      ? (analysisProgress.analyzed_docs / analysisProgress.total_docs) * 100
-      : 10
-    : 15
 
   // ── Lot filter computation ────────────────────────────────────
   const lotFilterInfo = useMemo(() => {
@@ -233,21 +221,15 @@ export default function StepAnalysis({ project }: Props) {
 
 
   if (items.length === 0) return (
-    <div
-      className="bg-white rounded-xl p-12"
-      style={{ border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
-    >
-      <LoadingProgress
-        progress={analysisPercent}
-        label="Analyse IA en cours..."
-        sublabel={
-          analysisProgress
-            ? `Document ${analysisProgress.analyzed_docs}/${analysisProgress.total_docs} — ${analysisProgress.current_doc_name}`
-            : "L'IA lit vos documents et extrait toutes les informations"
-        }
-        variant="analysis"
-      />
-    </div>
+    <ProgressDisplay
+      variant="modal"
+      title="Analyse du DCE par l'IA"
+      steps={ANALYSIS_STEPS}
+      currentStep={analysisSse.step}
+      progress={analysisSse.progress}
+      detail={analysisSse.detail || "L'IA lit vos documents et extrait les exigences"}
+      phase={analysisSse.phase}
+    />
   )
 
   // ── Bottom bar (portalled) ────────────────────────────────────

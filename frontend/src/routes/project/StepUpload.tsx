@@ -10,10 +10,17 @@ import {
 import axios from 'axios'
 import { api } from '@/services/api'
 import { uploadService } from '@/services/upload'
-import LoadingProgress from '@/components/common/LoadingProgress'
+import ProgressDisplay, { type StepDescriptor } from '@/components/common/ProgressDisplay'
+import { useProgressStream } from '@/hooks/useProgressStream'
 import type { Project, ProjectDocument, ProjectDocumentType } from '@/types'
 import { cn } from '@/lib/utils'
 import { AiTipsBlock, type TipData } from '@/components/common/AiTip'
+
+const UPLOAD_STEPS: StepDescriptor[] = [
+  { key: 'uploading',       label: 'Transfert du dossier',   estimated_s: 30 },
+  { key: 'extracting_zip',  label: 'Extraction du ZIP',      estimated_s: 5 },
+  { key: 'extracting_text', label: 'Indexation des documents', estimated_s: 60 },
+]
 
 const F = "'DM Sans', sans-serif"
 
@@ -124,9 +131,42 @@ export default function StepUpload({ project }: Props) {
     }
   }, [])
 
-  // ─── Start simulated progress + polling ────────────────────────────────────
-  const speedRef = useRef(0.15)
   const processingStartedRef = useRef(false)
+
+  // ─── Backend extraction tracked via SSE on /progress-stream ──────────────
+  // (replaces the legacy 2s polling on /processing-status). The SSE hook
+  // handles reconnect + fallback automatically.
+  const sse = useProgressStream(project.id, {
+    enabled: phase === 'processing',
+    onComplete: () => {
+      doneRef.current = true
+      setDisplayPct(100)
+      setLabel('Traitement terminé !')
+      setSublabel('')
+      setPhase('done')
+      queryClient.invalidateQueries({ queryKey: ['project-documents', project.id] })
+      setLargeFileNotice(null)
+      if (safetyRef.current) { clearTimeout(safetyRef.current); safetyRef.current = null }
+      setTimeout(() => { setPhase('idle'); setDisplayPct(0) }, 1000)
+    },
+    onError: () => {
+      doneRef.current = true
+      setUploadErrors(prev => [...prev, 'Erreur lors du traitement des documents.'])
+      setPhase('idle')
+      if (safetyRef.current) { clearTimeout(safetyRef.current); safetyRef.current = null }
+    },
+  })
+
+  // Map the SSE progress into the page's display state during processing.
+  useEffect(() => {
+    if (phase !== 'processing' || doneRef.current) return
+    // Backend covers upload + extraction in 0-100. We map onto 30-95 so
+    // the overall bar continues from where axios-upload left off (0-30).
+    const realPct = 30 + (sse.progress / 100) * 65
+    setDisplayPct(prev => Math.max(prev, Math.min(realPct, 95)))
+    if (sse.detail) setSublabel(sse.detail)
+    if (sse.step) setLabel(sse.step)
+  }, [sse.progress, sse.detail, sse.step, phase])
 
   const startProcessing = useCallback(() => {
     if (processingStartedRef.current || doneRef.current) return
@@ -136,60 +176,12 @@ export default function StepUpload({ project }: Props) {
     setDisplayPct(30)
     setLabel("Extraction de l'archive...")
     setSublabel('')
-    speedRef.current = 0.15
 
-    if (animRef.current) clearInterval(animRef.current)
-    animRef.current = setInterval(() => {
-      setDisplayPct(prev => Math.min(prev + speedRef.current, 95))
-    }, 200)
-
-    if (pollRef.current) clearInterval(pollRef.current)
-    pollRef.current = setInterval(async () => {
-      if (doneRef.current) return
-      try {
-        const { data } = await api.get<{ status: string; progress: number; detail: string }>(
-          `/projects/${project.id}/processing-status`
-        )
-        if (doneRef.current) return
-
-        if (data.status === 'extracting_text' && data.progress > 0) {
-          if (animRef.current) { clearInterval(animRef.current); animRef.current = null }
-          const realPct = 30 + (data.progress / 100) * 65
-          setDisplayPct(realPct)
-          setLabel('Extraction des documents...')
-          if (data.detail) setSublabel(data.detail)
-        } else if (data.status === 'extracting_text') {
-          setLabel('Extraction des documents...')
-        } else if (data.status === 'extracting_zip') {
-          setLabel("Extraction de l'archive...")
-        }
-
-        if (data.status === 'ready' || data.status === 'error') {
-          doneRef.current = true
-          if (animRef.current) { clearInterval(animRef.current); animRef.current = null }
-          if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
-          if (safetyRef.current) { clearTimeout(safetyRef.current); safetyRef.current = null }
-
-          setDisplayPct(100)
-          setLabel('Traitement terminé !')
-          setSublabel('')
-          setPhase('done')
-
-          if (data.status === 'error') {
-            setUploadErrors(prev => [...prev, 'Erreur lors du traitement des documents.'])
-          }
-          queryClient.invalidateQueries({ queryKey: ['project-documents', project.id] })
-          setLargeFileNotice(null)
-          setTimeout(() => { setPhase('idle'); setDisplayPct(0) }, 1000)
-        }
-      } catch { /* ignore poll errors */ }
-    }, 2000)
-
+    // Hard timeout safety net (10 minutes) in case neither SSE nor fallback
+    // ever delivers a complete event (network split-brain).
     safetyRef.current = setTimeout(() => {
       if (doneRef.current) return
       doneRef.current = true
-      if (animRef.current) { clearInterval(animRef.current); animRef.current = null }
-      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
       setDisplayPct(100)
       setLabel('Traitement terminé !')
       setPhase('done')
@@ -355,11 +347,17 @@ export default function StepUpload({ project }: Props) {
       {showOverlay && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(15,23,42,0.60)', backdropFilter: 'blur(4px)' }}>
           <div className="rounded-2xl p-8 max-w-sm w-full mx-4" style={{ background: '#FFFFFF', border: '1px solid #F1F5F9', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
-            <LoadingProgress
+            <ProgressDisplay
+              variant="inline"
+              steps={UPLOAD_STEPS}
+              currentStep={
+                phase === 'uploading' ? 'uploading'
+                  : phase === 'processing' ? 'extracting_text'
+                  : 'extracting_text'
+              }
               progress={Math.round(displayPct)}
-              label={label}
-              sublabel={sublabel}
-              variant="upload"
+              detail={sublabel || label}
+              phase={phase === 'done' ? 'complete' : 'in_progress'}
             />
           </div>
         </div>,
