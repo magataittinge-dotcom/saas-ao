@@ -23,6 +23,12 @@ def _safe_update_progress(project_id: str, ratio: float) -> None:
     except Exception:
         pass
 
+
+class ClaudeRateLimitError(Exception):
+    """Raised when Anthropic's API stays rate-limited after our retries.
+    The router turns this into a 503 (Service Unavailable) with Retry-After
+    rather than a confusing 500."""
+
 # ── Mapping lot keywords → DTU section headers in normes-dtu-btp ────────────
 _DTU_SECTION_KEYWORDS: list[tuple[list[str], str]] = [
     (["façade", "facade", "ravalement", "bardage", "enduit ext"],
@@ -309,10 +315,15 @@ class DCEAnalyzer:
         }]
         last_error = None
 
-        # Approx 3.5 chars per output token in French → for max_tokens=8000
-        # the response stays under 28000 chars in practice. We use that as
-        # the denominator for the streaming progress signal.
-        chars_estimate = 8000 * 3.5
+        # Larger output budget: at 8000 the model truncated systematically
+        # on dense DCEs (cf logs "stop_reason=max_tokens" on every pass).
+        # 16384 is the safe upper bound for Sonnet 4.6 without the extended-
+        # output beta header. We log a warning further down if even this
+        # cap is hit so we know it's time for option B (continue-from-cut).
+        _MAX_TOKENS = 16384
+        # Approx 3.5 chars per output token in French → ~57k chars at full
+        # 16384 budget. Used as the denominator for the streaming progress.
+        chars_estimate = _MAX_TOKENS * 3.5
 
         for attempt in range(1, 4):
             t0 = time.monotonic()
@@ -323,7 +334,7 @@ class DCEAnalyzer:
 
                 with self.client.messages.stream(
                     model="claude-sonnet-4-6",
-                    max_tokens=8000,
+                    max_tokens=_MAX_TOKENS,
                     temperature=0,
                     system=system_blocks,
                     messages=[{"role": "user", "content": user_content}],
@@ -356,14 +367,35 @@ class DCEAnalyzer:
                 if attempt < 3:
                     time.sleep(3)
             except anthropic.APIStatusError as e:
-                if e.status_code in (429, 500, 502, 503, 529) and attempt < 3:
+                last_error = e
+                # 429 = input-token-per-minute rate limit (default 30k for
+                # Sonnet 4.6 free tier). 5 s sleep was not enough to clear
+                # the window; back off 20 s, 45 s on subsequent attempts.
+                # Other transient errors keep the original 5 s backoff.
+                if e.status_code == 429:
+                    if attempt < 3:
+                        wait = 20 if attempt == 1 else 45
+                        elapsed = time.monotonic() - t0
+                        print(
+                            f"[DCE Analyzer] [{label}] Rate-limit 429 après {elapsed:.1f}s, "
+                            f"retry dans {wait}s...",
+                            flush=True,
+                        )
+                        time.sleep(wait)
+                    # else: fall through to the for/else branch below.
+                elif e.status_code in (500, 502, 503, 529) and attempt < 3:
                     elapsed = time.monotonic() - t0
                     print(f"[DCE Analyzer] [{label}] Tentative {attempt} status {e.status_code} après {elapsed:.1f}s, retry...", flush=True)
-                    last_error = e
                     time.sleep(5)
                 else:
                     raise Exception(f"Erreur API Claude (status {e.status_code}): {e.message}")
         else:
+            # Loop completed all 3 attempts without breaking — final error.
+            if isinstance(last_error, anthropic.APIStatusError) and getattr(last_error, "status_code", None) == 429:
+                raise ClaudeRateLimitError(
+                    f"[{label}] Limite de débit Anthropic dépassée après 3 tentatives. "
+                    f"Réessayez dans une minute."
+                )
             raise Exception(f"[{label}] Échec après 3 tentatives. Dernière erreur: {last_error}")
 
         # Check stop_reason for truncated responses
