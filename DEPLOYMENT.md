@@ -280,14 +280,22 @@ server {
     root /srv/synorix/frontend/dist;
     index index.html;
 
-    # API
+    # API — long-lived SSE streams (/api/projects/.../progress-stream) and
+    # Anthropic streaming both require buffering off. Don't tighten these
+    # without verifying the in-progress modal still ticks in real time.
     location /api/ {
         proxy_pass http://127.0.0.1:8000;
+        proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto https;
-        proxy_buffering off;       # streaming Anthropic
+        proxy_set_header Connection '';        # required for keep-alive on SSE
+        proxy_buffering off;                   # SSE + Anthropic streaming
+        proxy_cache off;                       # never cache stream responses
+        proxy_read_timeout 600s;               # 10 min — long Opus generations
+        proxy_send_timeout 600s;
+        chunked_transfer_encoding on;
     }
 
     # SPA fallback
