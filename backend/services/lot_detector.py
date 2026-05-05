@@ -78,6 +78,7 @@ class LotDetection:
     confidence: int  # 0–100
     sources: List[str] = field(default_factory=list)
     tranches: List[str] = field(default_factory=list)  # AMÉLIORATION 7
+    description_long: str = ""   # 200-char excerpt around the lot heading
 
     def to_dict(self) -> Dict:
         d: Dict[str, Any] = {
@@ -88,6 +89,8 @@ class LotDetection:
         }
         if self.tranches:
             d["tranches"] = list(self.tranches)
+        if self.description_long:
+            d["description_long"] = self.description_long
         return d
 
 
@@ -533,6 +536,34 @@ def detect_lots_from_excel(file_path: str) -> List[Dict]:
 
 # ─── Text detection ────────────────────────────────────────────────────────────
 
+def _extract_description_excerpt(text: str, line_idx: int, lines: List[str]) -> str:
+    """Take a 250-char excerpt after the line at line_idx.
+
+    Use case: when we just spotted "Lot 5 — Façade" we grab the next ~3
+    non-empty lines so the UI can show a hint of the CCTP description
+    under the title. Excerpt is stripped to a clean sentence.
+    """
+    chunks: List[str] = []
+    total = 0
+    for line in lines[line_idx + 1: line_idx + 12]:
+        s = line.strip()
+        if not s:
+            if chunks:
+                break
+            continue
+        # Skip lines that look like the next lot heading.
+        if _LOT_LINE.match(s) or _LOT_TABLE_ROW_NUM.match(s):
+            break
+        chunks.append(s)
+        total += len(s)
+        if total >= 220:
+            break
+    excerpt = " ".join(chunks).strip()
+    if len(excerpt) > 250:
+        excerpt = excerpt[:247].rstrip() + "…"
+    return excerpt
+
+
 def _detect_lots_from_rc_text(text: str, doc_type: str) -> List[LotDetection]:
     """Extract lots from document text (RC, CCAP, or any doc with RC markers)."""
     lines = text.splitlines()
@@ -555,7 +586,8 @@ def _detect_lots_from_rc_text(text: str, doc_type: str) -> List[LotDetection]:
 
     if header_idx is not None:
         consecutive_misses = 0
-        for line in scan_lines[header_idx + 1:]:
+        for offset, line in enumerate(scan_lines[header_idx + 1:]):
+            line_idx = header_idx + 1 + offset
             m_num = _LOT_TABLE_ROW_NUM.match(line)
             m_alpha = _LOT_TABLE_ROW_ALPHA.match(line) if not m_num else None
 
@@ -569,7 +601,11 @@ def _detect_lots_from_rc_text(text: str, doc_type: str) -> List[LotDetection]:
                 label = m.group(2).strip()[:60]
                 label = re.sub(r'\s{2,}', ' ', label).strip(' -–—')
                 nom = f"Lot {raw_id} — {label}" if label else f"Lot {raw_id}"
-                lots.setdefault(lot_id, LotDetection(id=lot_id, nom=nom, confidence=90, sources=["rc_text"]))
+                description = _extract_description_excerpt(text, line_idx, scan_lines)
+                lots.setdefault(lot_id, LotDetection(
+                    id=lot_id, nom=nom, confidence=90, sources=["rc_text"],
+                    description_long=description,
+                ))
             else:
                 if line.strip():
                     consecutive_misses += 1
@@ -595,7 +631,15 @@ def _detect_lots_from_rc_text(text: str, doc_type: str) -> List[LotDetection]:
         ).strip(' :—-–')
         label = re.split(r'[.\n]', after_num)[0].strip()[:60]
         nom = f"Lot {raw_id} — {label}" if label else f"Lot {raw_id}"
-        lots[lot_id] = LotDetection(id=lot_id, nom=nom, confidence=80, sources=["rc_text"])
+
+        # Pull a description excerpt from the lines after this match.
+        match_line_idx = block.count("\n", 0, m.start())
+        description = _extract_description_excerpt(text, match_line_idx, scan_lines)
+
+        lots[lot_id] = LotDetection(
+            id=lot_id, nom=nom, confidence=80, sources=["rc_text"],
+            description_long=description,
+        )
 
     return list(lots.values())
 
@@ -634,6 +678,7 @@ def _merge_detections(*source_lists: List[LotDetection]) -> List[LotDetection]:
                     confidence=det.confidence,
                     sources=list(det.sources),
                     tranches=list(det.tranches),
+                    description_long=det.description_long,
                 )
             else:
                 existing = merged[det.id]
@@ -646,6 +691,10 @@ def _merge_detections(*source_lists: List[LotDetection]) -> List[LotDetection]:
                 # RC text (rc_text) is preferred over Excel when equal length
                 prefer_existing = "rc_text" in existing.sources
                 existing.nom = _best_label(existing.nom, det.nom, prefer_a=prefer_existing)
+
+                # Pick the longest description excerpt across sources.
+                if len(det.description_long) > len(existing.description_long):
+                    existing.description_long = det.description_long
 
                 # Merge tranches
                 for t in det.tranches:

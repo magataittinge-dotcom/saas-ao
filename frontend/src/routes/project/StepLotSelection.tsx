@@ -232,6 +232,15 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) 
                   </button>
                 )}
               </div>
+              {lot.description_long && (
+                <p
+                  className="text-xs mt-1 line-clamp-2"
+                  style={{ color: '#64748B' }}
+                  title={lot.description_long}
+                >
+                  {lot.description_long}
+                </p>
+              )}
               {lot.tranches && lot.tranches.length > 0 && (
                 <span
                   className="inline-flex items-center gap-1 text-xs font-medium mt-1 px-2 py-0.5 rounded-full"
