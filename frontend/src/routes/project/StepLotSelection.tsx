@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Layers, CheckCircle2, AlertCircle, Zap, Plus, X,
-  ShieldCheck, AlertTriangle, Loader2,
+  AlertTriangle, Loader2,
   Sparkles, FileArchive, Pencil, Check as CheckIcon,
 } from 'lucide-react'
 import axios from 'axios'
@@ -33,28 +33,23 @@ const F = "'DM Sans', sans-serif"
 
 interface Props { project: Project }
 
-// ─── Confidence badge ─────────────────────────────────────────────────────────
+// ─── Low-confidence indicator ───────────────────────────────────────────────
+// We deliberately do NOT display the % score or any 'FIABLE/PROBABLE'
+// label. On a paid B2B product, surfacing the AI's self-doubt erodes
+// trust; we either trust the detection or we ask the user to verify it
+// silently. For confidence >= 80 we show nothing. For < 80 we show a
+// tiny grey AlertTriangle with a tooltip suggesting a quick check.
 
-function ConfidenceBadge({ confidence }: { confidence?: number }) {
-  if (confidence === undefined) return null
-  const pct = Math.round(confidence)
-  if (confidence >= 80) {
-    return (
-      <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full" style={{ color: '#0284C7' }}>
-        <ShieldCheck size={11} /> FIABLE {pct}%
-      </span>
-    )
-  }
-  if (confidence >= 50) {
-    return (
-      <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full" style={{ color: '#64748B' }}>
-        <Zap size={11} /> PROBABLE {pct}%
-      </span>
-    )
-  }
+function ConfidenceWarning({ confidence }: { confidence?: number }) {
+  if (confidence === undefined || confidence >= 80) return null
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full" style={{ color: '#EF4444', background: 'rgba(239,68,68,0.08)' }}>
-      <AlertCircle size={11} /> INCERTAIN {pct}%
+    <span
+      className="inline-flex items-center justify-center w-5 h-5 rounded-full"
+      style={{ color: '#94A3B8' }}
+      title="Cette détection mérite une vérification"
+      aria-label="Cette détection mérite une vérification"
+    >
+      <AlertTriangle size={13} />
     </span>
   )
 }
@@ -254,9 +249,9 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) 
           )}
         </div>
 
-        {/* Right side: confidence + sources */}
-        <div className="shrink-0 text-right space-y-1">
-          <ConfidenceBadge confidence={lot.confidence} />
+        {/* Right side: discrete warning (only for < 80% confidence) + sources */}
+        <div className="shrink-0 flex flex-col items-end gap-1">
+          <ConfidenceWarning confidence={lot.confidence} />
           <SourcesIndicator sources={lot.sources} />
         </div>
       </button>
