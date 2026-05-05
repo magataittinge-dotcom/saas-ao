@@ -15,12 +15,14 @@ from typing import Optional
 # ── Step definitions with progress ranges and estimated durations ────────────
 
 ANALYSIS_STEPS = [
-    ("upload",          "Upload des fichiers",                     0,  10,  5),
-    ("extraction",      "Extraction des documents",               10,  25, 13),
-    ("detecting_lots",  "Détection des lots",                     25,  35,  4),
-    ("analyzing_pass1", "Analyse IA — Passe 1 (administratif)",   35,  60, 50),
-    ("analyzing_pass2", "Analyse IA — Passe 2 (technique)",       60,  85, 50),
-    ("finalizing",      "Finalisation",                           85, 100,  5),
+    # Upload / extraction / lot detection happen BEFORE /analyze fires.
+    # The router still drives this single 'preparation' step (instant)
+    # to mark the transition; UI shows it ticking briefly to 5 % then
+    # the long IA passes get the lion's share of the bar.
+    ("preparation",     "Lecture des documents",                   0,   5,  2),
+    ("analyzing_pass1", "Analyse des exigences administratives",   5,  50, 50),
+    ("analyzing_pass2", "Analyse des exigences techniques",       50,  95, 50),
+    ("finalizing",      "Finalisation",                           95, 100,  5),
 ]
 
 MEMOIRE_STEPS = [

@@ -21,9 +21,10 @@ const LOT_DETECTION_STEPS: StepDescriptor[] = [
 
 // Used by the modal shown right after the user clicks "Analyser le DCE".
 const ANALYSIS_STEPS_FOR_DISPLAY: StepDescriptor[] = [
-  { key: 'analyzing_pass1', label: 'Analyse exigences administratives', estimated_s: 50 },
-  { key: 'analyzing_pass2', label: 'Analyse exigences techniques',     estimated_s: 50 },
-  { key: 'finalizing',      label: 'Finalisation',                       estimated_s: 5 },
+  { key: 'preparation',     label: 'Lecture des documents',                 estimated_s: 2 },
+  { key: 'analyzing_pass1', label: 'Analyse des exigences administratives', estimated_s: 50 },
+  { key: 'analyzing_pass2', label: 'Analyse des exigences techniques',      estimated_s: 50 },
+  { key: 'finalizing',      label: 'Finalisation',                          estimated_s: 5 },
 ]
 import { cn } from '@/lib/utils'
 import { AiTipsBlock, type TipData } from '@/components/common/AiTip'

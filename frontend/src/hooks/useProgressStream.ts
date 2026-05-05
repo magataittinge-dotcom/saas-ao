@@ -46,7 +46,21 @@ const BACKOFF_BASE_MS = 1000
  * Map a tracker snapshot (or the legacy fallback shape) onto our React state.
  * Both endpoints (SSE + processing-status) return the same JSON shape, so
  * one mapper covers both paths.
+ *
+ * `step` (used by ProgressDisplay to highlight the active step in its list)
+ * must be the step *id* (e.g. 'analyzing_pass1'), not the human label.
+ * The backend's pipeline_tracker.get_status() exposes the active step id
+ * via the `status` field when a step is in progress; otherwise that field
+ * holds the pipeline state ('running'/'completed'/'error') which won't
+ * match any step id and is fine — the list just shows nothing highlighted.
+ *
+ * `detail` keeps the human label so the line under the cercle reads
+ * naturally ("Analyse des exigences administratives").
  */
+const _PIPELINE_STATES = new Set([
+  'idle', 'pending', 'running', 'completed', 'error',
+])
+
 function mapSnapshotToState(
   snap: ProgressEventData,
   prevConnected: boolean,
@@ -59,8 +73,9 @@ function mapSnapshotToState(
   else if (eventType === 'error' || status === 'error') phase = 'error'
   else if (status === 'idle' || status === 'pending') phase = 'pending'
 
+  const stepKey = _PIPELINE_STATES.has(status) ? null : status
   return {
-    step: snap.current_step || null,
+    step: stepKey,
     progress: typeof snap.progress === 'number' ? snap.progress : 0,
     detail: snap.detail || snap.current_step || '',
     phase,

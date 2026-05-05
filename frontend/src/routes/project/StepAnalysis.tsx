@@ -14,9 +14,10 @@ import type { Project, ComplianceItem, ComplianceCategory, ProjectDocument } fro
 import { useCompleteStep } from '@/hooks/useProject'
 
 const ANALYSIS_STEPS: StepDescriptor[] = [
-  { key: 'analyzing_pass1', label: 'Analyse exigences administratives', estimated_s: 50 },
-  { key: 'analyzing_pass2', label: 'Analyse exigences techniques',     estimated_s: 50 },
-  { key: 'finalizing',      label: 'Finalisation',                       estimated_s: 5 },
+  { key: 'preparation',     label: 'Lecture des documents',                 estimated_s: 2 },
+  { key: 'analyzing_pass1', label: 'Analyse des exigences administratives', estimated_s: 50 },
+  { key: 'analyzing_pass2', label: 'Analyse des exigences techniques',      estimated_s: 50 },
+  { key: 'finalizing',      label: 'Finalisation',                          estimated_s: 5 },
 ]
 
 const F = "'DM Sans', sans-serif"

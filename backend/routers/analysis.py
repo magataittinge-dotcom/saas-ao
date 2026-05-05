@@ -155,14 +155,13 @@ async def trigger_analysis(
     project.status = "en_cours"
     db.commit()
 
-    # ── Pipeline tracking: mark upload+extraction+lots as already done ────────
+    # ── Pipeline tracking: prep is done by the time we get here (upload +
+    # lot detection happened on previous routes). We still emit a tracked
+    # 'preparation' step so the UI bar starts at 0 and briefly ticks to
+    # 5 %, then the IA passes own the rest of the cercle.
     pipeline_tracker.start_pipeline(project_id, "analysis")
-    pipeline_tracker.start_step(project_id, "upload")
-    pipeline_tracker.complete_step(project_id, "upload")
-    pipeline_tracker.start_step(project_id, "extraction")
-    pipeline_tracker.complete_step(project_id, "extraction")
-    pipeline_tracker.start_step(project_id, "detecting_lots")
-    pipeline_tracker.complete_step(project_id, "detecting_lots")
+    pipeline_tracker.start_step(project_id, "preparation")
+    pipeline_tracker.complete_step(project_id, "preparation")
 
     # Run 2-pass AI analysis — each pass <60s, total <3min with retries
     analyzer = DCEAnalyzer()
