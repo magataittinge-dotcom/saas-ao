@@ -4,7 +4,7 @@
 
 | Field | Value |
 |---|---|
-| Document version | 2.1 |
+| Document version | 2.2 |
 | Status | Active — drives the `refactor-v2` engineering build |
 | Companion to | [`PRD_SYNORIX_V2.md`](./PRD_SYNORIX_V2.md), [`SKILLS_REGISTRY_V2.md`](./SKILLS_REGISTRY_V2.md) |
 | Last updated | 2026-05-13 |
@@ -274,7 +274,9 @@ CREATE TABLE companies (
     id BIGSERIAL PRIMARY KEY,
     account_id BIGINT NOT NULL UNIQUE REFERENCES accounts(id) ON DELETE CASCADE,
     legal_name TEXT,
-    siret CHAR(14),
+    siret CHAR(14) NOT NULL UNIQUE,        -- one SIRET = one account, INSEE-validated
+    naf_code VARCHAR(6),                   -- INSEE NAF — must start with 41/42/43 (BTP)
+    siret_validated_at TIMESTAMPTZ,        -- when INSEE SIRENE confirmed active status
     legal_form TEXT,
     capital_eur NUMERIC(15, 2),
     headquarters_address JSONB,
@@ -347,9 +349,10 @@ CREATE TABLE projects (
     account_id BIGINT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     status TEXT NOT NULL CHECK (status IN (
-        'draft', 'analyzing', 'memo_ready', 'submitted',
-        'awarded', 'lost', 'no_response', 'archived'
+        'brouillon', 'en_cours', 'pret_a_deposer', 'depose',
+        'en_cours_evaluation', 'gagne', 'perdu', 'sans_reponse'
     )),
+    archived BOOLEAN NOT NULL DEFAULT FALSE,
     deposit_deadline TIMESTAMPTZ,
     deposit_platform TEXT,
     site_visit JSONB,                    -- {is_mandatory, when, where, registration}
@@ -362,6 +365,8 @@ CREATE TABLE projects (
 );
 CREATE INDEX prj_account_idx ON projects(account_id);
 CREATE INDEX prj_status_idx ON projects(status);
+CREATE INDEX idx_projects_active ON projects(account_id, status)
+    WHERE archived = FALSE;
 
 CREATE TABLE dce_documents (
     id BIGSERIAL PRIMARY KEY,
@@ -438,6 +443,19 @@ CREATE TABLE editable_docs (
     last_saved_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Quota tracking: one row per AO consumed (included or overage)
+CREATE TABLE ao_quota_consumption (
+    id BIGSERIAL PRIMARY KEY,
+    account_id BIGINT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    project_id BIGINT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    consumed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    billing_period DATE NOT NULL,        -- first day of the month (truncated)
+    is_overage BOOLEAN NOT NULL DEFAULT FALSE,
+    overage_amount_eur NUMERIC(6, 2)     -- €15 (Pro) / €10 (Business) when is_overage
+);
+CREATE INDEX idx_quota_account_period
+    ON ao_quota_consumption(account_id, billing_period);
 ```
 
 ### 4.4 Skills tracking
@@ -839,10 +857,20 @@ V1.0 — sized for KVM2 (16 GB RAM total, shared with FastAPI + Redis + Celery +
 
 ### 8.10 Cost guard
 
-- **Per-account daily cap: €15** (≈ 20 AO/day) — accommodates clustered deadlines common in public-sector BTP procurement.
-- **Per-account monthly cap: €100 (Pro) / €300 (Business)**.
-- **Soft warning at 70% of daily, hard block at 100%.**
-- Breaches surface as a Coach explainer: *"Limite quotidienne atteinte, reprise à minuit. Besoin d'une augmentation ? Contactez-nous."* (premium-silent tone — never blame the user, never mention cost).
+Two distinct dimensions: **customer-visible AO quota** (billing-facing) and **internal AI hard ceiling** (cost-protection, invisible to user).
+
+- **Per-account daily cap: €15** (= 20 AO/day at €0.77 unit).
+- **Per-account monthly cap (hard AI ceiling, not visible to customer):**
+  - Pro: €100 (~130 AO/month worst-case)
+  - Business: €300 (~390 AO/month worst-case)
+- **Customer-visible quota** (separate from AI ceiling — see PRD §6.2):
+  - Pro: 30 included AO/month, then **€15/AO** overage
+  - Business: 120 included AO/month, then **€10/AO** overage
+- **Soft warning at 70% of monthly included quota.**
+- **At quota:** Coach explainer, overage billing starts, never a silent block.
+- **At hard AI cap:** pause new analyses, full read access preserved, contact CTA.
+
+Breaches surface as a Coach explainer: *"Limite quotidienne atteinte, reprise à minuit. Besoin d'une augmentation ? Contactez-nous."* (premium-silent tone — never blame the user, never mention cost).
 
 ---
 
@@ -980,6 +1008,10 @@ COFFRE_FORT_KEK=...                 # 32-byte hex; rotated yearly
 COST_GUARD_DAILY_EUR=15.00
 COST_GUARD_MONTHLY_PRO_EUR=100.00
 COST_GUARD_MONTHLY_BUSINESS_EUR=300.00
+# INSEE SIRENE — SIRET validation at sign-up (see §11.4)
+INSEE_SIRENE_API_TOKEN=...
+INSEE_SIRENE_API_URL=https://api.insee.fr/entreprises/sirene/V3
+SIRET_NAF_ALLOWED_PREFIXES=41,42,43   # BTP sector
 ```
 
 ### 10.7 Environment variables (frontend)
@@ -1020,14 +1052,24 @@ VITE_SENTRY_DSN=...
 - **Organisations** for Plan Business multi-seat
 - Webhooks for user.created → triggers welcome email
 
-### 11.4 Stripe
+### 11.4 INSEE SIRENE — SIRET validation
+
+Used at sign-up to validate the customer's SIRET, ensure the entity is active, and verify it belongs to the BTP sector (NAF code prefix 41, 42, or 43).
+
+- **Endpoint:** `GET https://api.insee.fr/entreprises/sirene/V3/siret/{siret}`
+- **Auth:** OAuth2 bearer token (free, INSEE-issued, 30 req/sec rate limit).
+- Used only at **sign-up** and at **SIRET-change events** — not on every request.
+- **Failure modes:** API outage → queue the validation, allow sign-up with `siret_validated_at = NULL`, retry job; do **NOT** block sign-up on INSEE outage.
+- **Cache:** 24h Redis cache per SIRET to avoid double-fetching during a multi-step sign-up.
+
+### 11.5 Stripe
 
 - Subscriptions (Pro / Business)
 - Customer Portal for self-service plan management
 - Webhooks for `customer.subscription.updated` → updates `accounts.subscription_status`
 - **Production keys** activated before V1.0 ships
 
-### 11.5 NotebookLM strategy
+### 11.6 NotebookLM strategy
 
 NotebookLM is the **single source of truth** for BTP métier knowledge inside Synorix. Each skill in `SKILLS_REGISTRY_V2.md` has:
 
@@ -1060,6 +1102,15 @@ The expert knowledge is **baked in at build time**, not retrieved at runtime —
 
 ## 12. Changelog
 
+### 2.2 — 2026-05-13
+
+- **§4** — Projects table: 8-status enum (French codes) + `archived` flag + partial index on active projects.
+- **§4** — Companies table: SIRET `NOT NULL UNIQUE` + `naf_code` + `siret_validated_at`.
+- **§4** — New `ao_quota_consumption` table for AO counting & overage billing.
+- **§8.10** — Cost guard separated into customer-visible quota (30/120 AO) vs internal AI hard ceiling (€100/€300).
+- **§10.6** — `INSEE_SIRENE_API_TOKEN` + `INSEE_SIRENE_API_URL` + `SIRET_NAF_ALLOWED_PREFIXES` env vars added.
+- **§11.4** — INSEE SIRENE integration documented (SIRET validation at sign-up); Stripe pushed to §11.5, NotebookLM strategy to §11.6.
+
 ### 2.1 — 2026-05-13
 
 - **7.7** — Split Anthropic API key into PROD (IP-locked) and DEV (capped) for WSL2 dev.
@@ -1076,4 +1127,4 @@ The expert knowledge is **baked in at build time**, not retrieved at runtime —
 
 ---
 
-*End of Architecture — Synorix v2.1*
+*End of Architecture — Synorix v2.2*
