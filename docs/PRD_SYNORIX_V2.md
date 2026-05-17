@@ -4,7 +4,7 @@
 
 | Field | Value |
 |---|---|
-| Document version | 2.1 |
+| Document version | 2.2 |
 | Status | Active — drives the v2.0 refactor (`refactor-v2` branch) |
 | Owner | Mohamed (Founder) |
 | Audience | Engineering, Design, future contributors, Claude Code |
@@ -180,7 +180,7 @@ Synorix must accept all of this without friction.
 | FR-UPL-04 | Per-document type detection (RC, CCAP, CCTP, DPGF, etc.) — types list **deferred to NotebookLM skill `recherche-types-documents`** |
 | FR-UPL-05 | Duplicate detection (hash + filename heuristics) and version detection (v1/v2, "annule et remplace") |
 | FR-UPL-06 | Mark any document that fails text extraction as **"Document illisible — à vérifier !"** with explicit user-visible flag |
-| FR-UPL-07 | Estimate post-upload **analysis time** based on volumetry — formula **deferred to skill `estimation-temps-analyse`** |
+| FR-UPL-07 | Once Step 3 launches, display real-time pipeline progress with named-step checkpoints (no percentage bar) — see §3.3.7 |
 | FR-UPL-08 | Detect deposit deadline (date + time) — extraction **deferred to skill `detection-date-limite`** |
 | FR-UPL-09 | Detect deposit platform (PLACE, AWS, profil acheteur) — **deferred to skill `detection-plateforme-depot`** |
 | FR-UPL-10 | Detect mandatory site-visit requirement — **deferred to skill `detection-visite-obligatoire`** |
@@ -223,11 +223,9 @@ Page layout (top to bottom):
 | Duplicate detected | 🔁 grey | secondary opacity, kept for traceability |
 | New version detected | 🆕 orange | both kept, old marked "annulé" if "annule et remplace" found |
 
-**Estimation banner (post-upload):**
+**Live progress display (during Step 3):**
 
-> *"Synorix analysera votre dossier en ~14 minutes."*
-
-(no progress bar yet; the actual analysis starts in Step 3)
+Once the user has selected lots and launched the analysis, Synorix displays a named-step checkpoint panel (no percentage bar — see §3.3.7 for rationale and full specification).
 
 #### 3.1.4 Edge Cases
 
@@ -236,9 +234,9 @@ Page layout (top to bottom):
 - **Zero readable text in the entire DCE** → escalate to Coach, surface as critical alert.
 - **Truncated upload (connection drop)** → resume not supported in V1; full re-upload required (V1.5 adds tus-based resume).
 
-#### 3.1.5 Skills Mobilised (6)
+#### 3.1.5 Skills Mobilised (5)
 
-See [SKILLS_REGISTRY_V2.md §Step 1](./SKILLS_REGISTRY_V2.md) — `recherche-types-documents`, `detection-date-limite`, `detection-doublons-versions`, `detection-plateforme-depot`, `detection-visite-obligatoire`, `estimation-temps-analyse`.
+See [SKILLS_REGISTRY_V2.md §Step 1](./SKILLS_REGISTRY_V2.md) — `recherche-types-documents`, `detection-date-limite`, `detection-doublons-versions`, `detection-plateforme-depot`, `detection-visite-obligatoire`.
 
 ---
 
@@ -410,11 +408,32 @@ Synorix must **never** ask the user to download an Excel file, edit it, and re-u
 
 Per-cell editing on DPGF must remember the user's last cell on tab switch.
 
-#### 3.3.7 Auto-Completion Detection
+#### 3.3.7 Live Progress Display
+
+Synorix never displays a percentage progress bar during pipeline execution. Two reasons:
+
+1. **Honesty.** AI-driven analysis has high variance per document. A predicted percentage is always wrong; "70% in 4 minutes" followed by "70% in 6 minutes" actively erodes trust.
+2. **Premium-silent.** A percentage bar that jumps backward or stalls looks amateurish — incompatible with the positioning defined in §7.1.
+
+**The replacement: named-step checkpoints with live results.**
+
+The user sees a vertical list of steps (each prefixed by ✅ done, ⏳ current, or ⏸ pending). Done steps display a one-line summary of their result (e.g., *"Classification des documents → 3 RC, 1 CCAP, 12 plans, 1 DPGF, 8 annexes"*). The current step shows sub-checkpoints as they emerge from the skill (e.g., *"5 lots identifiés"*, *"Réconciliation RC ↔ DPGF en cours..."*). Pending steps are greyed without any time estimate. Below the list, the Coach surfaces a calm, premium-silent message during long-running steps.
+
+**Rules:**
+
+- ✅ Done step: shows the result count or summary inline; timestamp available on hover.
+- ⏳ Current step: shows sub-checkpoints as they emerge from the skill (e.g., *"5 lots identifiés"*, *"Réconciliation..."*).
+- ⏸ Pending step: greyed, no time estimate.
+- **Coach explainer** surfaces automatically on any step running longer than 60 seconds, with a calm, premium-silent message that humanises the wait — never an apology, never a time estimate.
+- Results stream into the right-side panel **as they are produced** (skeleton screens fill in progressively).
+
+**Technical realisation:** the backend emits Server-Sent Events (SSE) at every real checkpoint of every skill invocation. The frontend listens and updates the UI on event arrival only — no animated interpolation, no client-side guessing. See ARCHITECTURE §5 for the event schema.
+
+#### 3.3.8 Auto-Completion Detection
 
 The AI continuously inspects the state of in-Synorix-edited documents. When a document is **detectably complete** (signature placeholder filled, every required line populated, totals match), the requirement card flips to `[Complété ✓]` **without a manual click**. Detection rules deferred to skill `validation-completude-document`.
 
-#### 3.3.8 Functional Requirements
+#### 3.3.9 Functional Requirements
 
 | Req ID | Requirement |
 |---|---|
@@ -433,7 +452,7 @@ The AI continuously inspects the state of in-Synorix-edited documents. When a do
 | FR-ANA-13 | Auto-detect completion of edited documents |
 | FR-ANA-14 | Calculator for retenue de garantie + pénalités |
 
-#### 3.3.9 Skills Mobilised (26)
+#### 3.3.10 Skills Mobilised (26)
 
 See [SKILLS_REGISTRY_V2.md §Step 3](./SKILLS_REGISTRY_V2.md) — 4 extraction skills, 4 alert-detection skills, 5 linkage skills, 2 synthesis skills, 10 corps-de-métier experts, 1 piece-validation skill.
 
@@ -1233,7 +1252,7 @@ pieges-dce-detecteur
 
 | Block | Skill count |
 |---|---|
-| Step 1 — Upload | 6 |
+| Step 1 — Upload | 5 |
 | Step 2 — Lots | 4 |
 | Step 3 — AI Analysis | 26 (incl. 10 corps-de-métier experts) |
 | Step 4 — Memo | 28 |
@@ -1241,7 +1260,7 @@ pieges-dce-detecteur
 | Step 6 — Export | 4 |
 | Sidebar | 5 |
 | Coach | 4 |
-| **Total** | **85** |
+| **Total** | **84** |
 
 ### 10.4 Tech Reference
 
@@ -1298,6 +1317,11 @@ Synorix's design system lives in code, not as an AI skill.
 
 ## 11. Changelog
 
+### 2.2 — 2026-05-13
+
+- **§3.1.2 + §3.1.3 + §3.3.7** — Removed estimated analysis time. Replaced by live named-step checkpoints with SSE streaming and Coach explainer (no percentage bar — honesty + premium-silent).
+- **§10.3** — Skills count updated to 84 (Step 1 Upload: 5 skills, `estimation-temps-analyse` removed).
+
 ### 2.1 — 2026-05-13
 
 - **§2.4** — UC-1 rewritten (10 steps) with native DPGF editing, URSSAF upload, offline AE signature (eSign deferred to V1.5). UC-2 kept consistent.
@@ -1316,4 +1340,4 @@ Synorix's design system lives in code, not as an AI skill.
 
 ---
 
-*End of PRD — Synorix v2.1*
+*End of PRD — Synorix v2.2*
