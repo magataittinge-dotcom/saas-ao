@@ -4,7 +4,7 @@
 
 | Field | Value |
 |---|---|
-| Document version | 2.2 |
+| Document version | 2.3 |
 | Status | Active — drives the `refactor-v2` engineering build |
 | Companion to | [`PRD_SYNORIX_V2.md`](./PRD_SYNORIX_V2.md), [`SKILLS_REGISTRY_V2.md`](./SKILLS_REGISTRY_V2.md) |
 | Last updated | 2026-05-13 |
@@ -353,6 +353,8 @@ CREATE TABLE projects (
         'en_cours_evaluation', 'gagne', 'perdu', 'sans_reponse'
     )),
     archived BOOLEAN NOT NULL DEFAULT FALSE,
+    pipeline_progress JSONB NOT NULL DEFAULT '{"steps": []}'::jsonb,
+        -- live progress steps: [{name, status, started_at, ended_at, substeps: [...]}]; see §5 for schema details
     deposit_deadline TIMESTAMPTZ,
     deposit_platform TEXT,
     site_visit JSONB,                    -- {is_mandatory, when, where, registration}
@@ -603,6 +605,22 @@ Cost-cap and rate-limit guards run at the orchestrator level, not per-skill.
 ### 5.4 Idempotency
 
 Every `POST` mutation accepts an idempotency key (UUID v4 from client). Replays with the same key return the cached result without re-running.
+
+### 5.5 Live progress events (SSE)
+
+Every skill invocation emits one or more progress events over a per-project SSE channel. The frontend connects to `/api/projects/{id}/progress` (SSE) and renders the checkpoint panel from event arrivals (see PRD §3.3.7 for UX).
+
+**Event types:**
+
+- `step_started` — `{ step_name, started_at }`
+- `step_substep` — `{ step_name, substep_text, count? }`
+- `step_completed` — `{ step_name, completed_at, summary }`
+- `step_failed` — `{ step_name, reason }`
+- `pipeline_stalled` — emitted after 60 s without any event on the current step; the Coach uses this to surface its explainer
+
+**Storage:** every event is also appended to `projects.pipeline_progress` (JSONB) for replay if the SSE channel drops mid-pipeline. The frontend reconnects with `Last-Event-ID` and the backend resends from that point.
+
+**WSL2 dev note:** SSE is implemented over HTTP/1.1 with `asyncio.to_thread`-wrapped emitters to avoid the long-running async-context timeout observed in WSL2 dev environments.
 
 ---
 
@@ -1102,6 +1120,11 @@ The expert knowledge is **baked in at build time**, not retrieved at runtime —
 
 ## 12. Changelog
 
+### 2.3 — 2026-05-13
+
+- **§4** — Projects table: `pipeline_progress JSONB` column for live progress state and SSE replay.
+- **§5.5** — Live progress events documented (SSE channel `/api/projects/{id}/progress`, 5 event types, JSONB storage for replay, WSL2 dev note).
+
 ### 2.2 — 2026-05-13
 
 - **§4** — Projects table: 8-status enum (French codes) + `archived` flag + partial index on active projects.
@@ -1127,4 +1150,4 @@ The expert knowledge is **baked in at build time**, not retrieved at runtime —
 
 ---
 
-*End of Architecture — Synorix v2.2*
+*End of Architecture — Synorix v2.3*
