@@ -1,21 +1,36 @@
 # Skills Registry — Synorix v2.0
 
-**Authoritative catalogue of the 85 modular skills that power Synorix v2.0.**
+**Authoritative catalogue of the 84 modular skills that power Synorix v2.0.**
 
 | Field | Value |
 |---|---|
-| Document version | 2.0 |
+| Document version | 2.1 |
 | Status | Active — registry for the `refactor-v2` skills build |
 | Companion to | [`PRD_SYNORIX_V2.md`](./PRD_SYNORIX_V2.md), [`ARCHITECTURE_V2.md`](./ARCHITECTURE_V2.md) |
 | Last updated | 2026-05-13 |
 
 ---
 
+## Global Rules for All Skills
+
+These rules apply to every skill in this registry, regardless of category.
+
+1. **Fail loudly, never hallucinate.** If a skill cannot extract or determine an output with confidence, it MUST return a structured indication of failure (`not_found: true`, `confidence: <0.5`, or equivalent typed signal). Never invent a plausible-looking value.
+
+2. **Internal confidence scores are persisted, never displayed.** Every skill that produces a confidence metric stores it in `skill_invocations.metadata` (see ARCHITECTURE §4) for later re-evaluation. User-facing UI never exposes raw confidence scores (see PRD §3.2.3).
+
+3. **Source citation is mandatory for every extracted fact.** Every skill that extracts a textual fact (date, amount, requirement, clause) must output the source document and page number. No source = output is invalid.
+
+4. **Cost-effective model selection.** Use Haiku 4.5 by default. Step up to Sonnet 4.6 only when the task requires multi-document reasoning, nuanced judgement, or complex extraction. Use Opus 4.7 only for the memo generator skills (Step 4).
+
+---
+
 ## Table of Contents
 
+- [Global Rules for All Skills](#global-rules-for-all-skills)
 - [Philosophy](#philosophy)
 - [Skill Schema](#skill-schema)
-- [Step 1 — Upload (6 skills)](#step-1--upload-6-skills)
+- [Step 1 — Upload (5 skills)](#step-1--upload-5-skills)
 - [Step 2 — Lot Detection (4 skills)](#step-2--lot-detection-4-skills)
 - [Step 3 — AI Analysis (26 skills)](#step-3--ai-analysis-26-skills)
 - [Step 4 — Technical Memo (28 skills)](#step-4--technical-memo-28-skills)
@@ -24,6 +39,7 @@
 - [Sidebar (5 skills)](#sidebar-5-skills)
 - [Synorix Coach (4 skills)](#synorix-coach-4-skills)
 - [Legacy Skills to Retire](#legacy-skills-to-retire)
+- [Changelog](#changelog)
 
 ---
 
@@ -100,13 +116,13 @@ Every skill in this registry follows this template:
 
 ---
 
-## Step 1 — Upload (6 skills)
+## Step 1 — Upload (5 skills)
 
 ### Skill #1 — `recherche-types-documents`
 
 **Catégorie :** Recherche
 **Étape :** Upload
-**Modèle IA recommandé :** Sonnet 4.6
+**Modèle IA recommandé :** Haiku 4.5
 **Status :** À créer
 
 **Mission :**
@@ -140,6 +156,8 @@ Identifier la liste exhaustive des types de documents qu'on peut rencontrer dans
 - Détecte correctement même les fichiers mal nommés (test sur 50+ DCE réels).
 - Faux positif < 5% sur un dataset de validation.
 
+> **Modèle :** Haiku 4.5 — la classification multi-classes sur nom de fichier + premiers 2000 caractères est un signal fort qui ne nécessite pas le raisonnement de Sonnet. Économie ~10× vs Sonnet sur un DCE typique de 50 documents.
+
 ---
 
 ### Skill #2 — `detection-date-limite`
@@ -161,10 +179,12 @@ Après détection du RC.
 - Texte du CCAP si disponible
 
 **Outputs produits :**
-- Date limite (`YYYY-MM-DD`)
-- Heure limite (`HH:MM`)
+- Date limite (`YYYY-MM-DD`) ou `null` si non détectée
+- Heure limite (`HH:MM`) ou `null` si non détectée
 - Fuseau horaire (par défaut Europe/Paris)
-- Source citée (document + page)
+- Source citée (document + page) — obligatoire si date trouvée
+- `not_found: bool` — true si extraction impossible avec confiance
+- `confidence: float` (0.0–1.0) — confiance globale
 
 **Question NotebookLM :**
 "Où précisément trouve-t-on la date et l'heure limites de remise des offres dans un RC français ? Quelles sont les formulations exactes employées ? Comment gérer les divergences entre RC et AE ? Quelles sont les conventions de fuseau horaire ?"
@@ -175,8 +195,9 @@ Après détection du RC.
 - CCAG-Travaux 2021
 
 **Critères de qualité :**
-- 99%+ d'extraction correcte sur fixtures.
-- En cas d'ambiguïté, surface un warning interne plutôt que de deviner.
+- 99%+ d'extraction correcte sur fixtures DCE bien structurés.
+- En cas d'ambiguïté → `not_found: true`, jamais de date inventée.
+- Si `not_found: true`, le frontend affiche *"Date limite à confirmer manuellement"* avec champ éditable (cf. PRD §3.1.3).
 
 ---
 
@@ -194,7 +215,7 @@ Détecter les doublons (même fichier sous deux noms) et les nouvelles versions 
 Sur l'ensemble des fichiers extraits après upload.
 
 **Inputs attendus :**
-- Liste des fichiers extraits (nom + hash de contenu + premiers 1000 caractères)
+- Liste des fichiers extraits, pour chacun : nom, taille, **hash SHA-256 calculé sur les bytes complets du fichier original** (pour doublons exacts), premiers 2000 caractères du texte extrait (pour détection de versions textuelles), date de modification si présente dans le ZIP.
 
 **Outputs produits :**
 - Groupes de fichiers liés
@@ -208,7 +229,7 @@ Sur l'ensemble des fichiers extraits après upload.
 - Exemples de modifications de DCE en cours de consultation
 
 **Critères de qualité :**
-- Détecte les doublons exacts (hash identique) à 100%.
+- Doublons exacts (SHA-256 identique sur bytes complets) → détectés à 100%, déterministe.
 - Détecte les nouvelles versions textuellement marquées à 95%+.
 - Ne génère pas de faux positifs sur des documents légitimement similaires.
 
@@ -233,7 +254,8 @@ Après détection du RC.
 
 **Outputs produits :**
 - Plateforme identifiée (énuméré + libre si inconnue)
-- URL de dépôt si extractible
+- URL canonique de la plateforme (vérifiée contre l'allowlist Synorix des plateformes officielles : PLACE, AWS Achatpublic, Maximilien, marches-securises.fr, etc.)
+- Si l'URL extraite ne correspond à AUCUNE plateforme connue → retourner uniquement le libellé textuel, jamais l'URL brute.
 - Source citée
 
 **Question NotebookLM :**
@@ -247,6 +269,7 @@ Après détection du RC.
 **Critères de qualité :**
 - Couvre les 10+ plateformes les plus fréquentes.
 - En cas d'inconnu, retourne le libellé brut sans inventer.
+- **Sécurité :** une URL extraite du DCE n'est jamais affichée cliquable à l'utilisateur sans validation contre l'allowlist. Le frontend résout le nom canonique vers l'URL officielle stockée côté Synorix.
 
 ---
 
@@ -286,44 +309,13 @@ Sur le RC et le CCAP.
 
 ---
 
-### Skill #6 — `estimation-temps-analyse`
-
-**Catégorie :** Synthèse
-**Étape :** Upload
-**Modèle IA recommandé :** aucun (formule déterministe)
-**Status :** À créer
-
-**Mission :**
-Estimer le temps que prendra la pipeline (Step 3 surtout) en fonction de la volumétrie du DCE.
-
-**Déclenchement :**
-Juste après l'extraction et la classification des documents.
-
-**Inputs attendus :**
-- Nombre de documents par type
-- Volume total de texte extrait
-- Présence ou non de plans à OCRiser
-
-**Outputs produits :**
-- Estimation en minutes (entier, arrondi à 5 min près)
-- Range optimiste / pessimiste
-
-**Question NotebookLM :**
-"Pour estimer la durée d'une analyse approfondie d'un DCE BTP par un expert, quelles sont les variables clés (nombre de pages, nombre de lots, complexité technique) ? Quels temps observe-t-on en pratique pour un bureau d'études chevronné ?"
-
-**Sources NotebookLM suggérées :**
-- Témoignages BE (durée d'analyse manuelle)
-- Benchmarks internes Synorix (à mesurer après les premières exécutions)
-
-**Critères de qualité :**
-- Estimation crédible (entre 5 min et 90 min selon volumétrie).
-- Pas de promesse impossible à tenir (sous-estimation interdite).
+> **Note on real-time progress display:** Synorix does NOT estimate pipeline duration with an AI skill (the estimation problem is fundamentally noisy and a wrong estimate erodes trust). Instead, the pipeline emits live named-step events via SSE — see PRD §3.3.7 and ARCHITECTURE §5.
 
 ---
 
 ## Step 2 — Lot Detection (4 skills)
 
-### Skill #7 — `recherche-lots`
+### Skill #6 — `recherche-lots`
 
 **Catégorie :** Détection
 **Étape :** Lots
@@ -343,7 +335,7 @@ Après upload et classification réussie d'au moins un RC ou une DPGF.
 
 **Outputs produits :**
 - Liste de lots : numéro, intitulé, source d'extraction (RC / DPGF / les deux)
-- Score de confiance interne
+- Score de confiance interne (0.0–1.0) **persisté dans `skill_invocations.metadata`, jamais exposé à l'UI** (cf. PRD §3.2.3 + ARCHITECTURE §4).
 
 **Question NotebookLM :**
 "Comment les bureaux d'études professionnels détectent-ils la structure des lots d'un marché public BTP ? Comment réconcilient-ils les divergences entre le RC et la DPGF ? Quels sont les patterns de numérotation rencontrés (numérique, lettré, tranches, sous-lots) ?"
@@ -359,7 +351,7 @@ Après upload et classification réussie d'au moins un RC ou une DPGF.
 
 ---
 
-### Skill #8 — `detection-corps-de-metier-lot`
+### Skill #7 — `detection-corps-de-metier-lot`
 
 **Catégorie :** Détection
 **Étape :** Lots
@@ -377,8 +369,9 @@ Pour chaque lot détecté.
 - Premier paragraphe du CCTP du lot
 
 **Outputs produits :**
-- Corps de métier principal (énuméré)
-- Corps de métier secondaires éventuels
+- Corps de métier principal : `'facade' | 'gros_oeuvre' | 'electricite' | 'cvc' | 'plomberie' | 'peinture' | 'vrd' | 'menuiserie' | 'etancheite' | 'ite' | 'autre'` (10 corps mappés aux skills expertes du Step 3 + `'autre'` avec libellé libre)
+- Si `'autre'`, le champ `libelle_libre: string` doit être renseigné.
+- Corps de métier secondaires éventuels (même énuméré)
 
 **Question NotebookLM :**
 "Quelle est la taxonomie professionnelle des corps de métier BTP en France ? Comment chaque corps de métier est-il typiquement intitulé dans un lot de marché public ?"
@@ -388,12 +381,12 @@ Pour chaque lot détecté.
 - Codes NAF BTP
 
 **Critères de qualité :**
-- Couvre les 30+ corps de métier principaux du BTP français.
-- Pas d'invention sur des intitulés ambigus → retourne "indéterminé".
+- Mappe systématiquement vers l'un des 10 corps de métier ayant une skill experte dédiée en Step 3, ou retourne `'autre'` avec un libellé libre — jamais d'invention de catégorie hors mapping.
+- Pas d'invention sur des intitulés ambigus → retourne `'autre'` + libellé libre.
 
 ---
 
-### Skill #9 — `extraction-description-lot`
+### Skill #8 — `extraction-description-lot`
 
 **Catégorie :** Extraction
 **Étape :** Lots
@@ -428,7 +421,7 @@ Pour chaque lot, après que sa documentation a été identifiée.
 
 ---
 
-### Skill #10 — `detection-incoherences-lots`
+### Skill #9 — `detection-incoherences-lots`
 
 **Catégorie :** Détection
 **Étape :** Lots
@@ -447,7 +440,10 @@ Après détection des lots par les deux sources.
 
 **Outputs produits :**
 - Liste des incohérences (lot présent d'un côté, absent de l'autre, renommé, etc.)
-- Niveau de gravité
+- `severity: 'critical' | 'warning' | 'info'` — aligné sur l'échelle de sévérité globale du PRD §7.2.1 :
+  - `critical` : incohérence matérielle (lot dans RC mais pas dans DPGF, ou inverse — risque de rejet)
+  - `warning` : renommage substantiel du lot entre RC et DPGF
+  - `info` : différence cosmétique (casse, ponctuation, accents)
 
 **Question NotebookLM :**
 "Dans la pratique, quelles incohérences entre RC et DPGF sont matérielles (risque de rejet) vs cosmétiques (simple renommage) ? Quelle est la jurisprudence en cas de divergence ?"
@@ -460,6 +456,7 @@ Après détection des lots par les deux sources.
 **Critères de qualité :**
 - Pas de surinflation des alertes (seuil de matérialité respecté).
 - Ne déclenche pas d'alerte pour de simples reformulations.
+- Le frontend ne surface une alerte utilisateur QUE pour `critical`. Les niveaux `warning` et `info` restent en log interne et accessibles via le Coach sur demande.
 
 ---
 
@@ -467,7 +464,7 @@ Après détection des lots par les deux sources.
 
 ### Catégorie A — Extraction (4 skills)
 
-### Skill #11 — `extraction-exigences-administratives`
+### Skill #10 — `extraction-exigences-administratives`
 
 **Catégorie :** Extraction
 **Étape :** Analyse
@@ -500,7 +497,7 @@ Après ouverture de Step 3, sur le RC, CCAP, et tout document administratif dét
 
 ---
 
-### Skill #12 — `extraction-pieces-offre`
+### Skill #11 — `extraction-pieces-offre`
 
 **Catégorie :** Extraction
 **Étape :** Analyse
@@ -533,7 +530,7 @@ Step 3, sur RC, CCAP, AE.
 
 ---
 
-### Skill #13 — `extraction-exigences-techniques`
+### Skill #12 — `extraction-exigences-techniques`
 
 **Catégorie :** Extraction
 **Étape :** Analyse
@@ -566,7 +563,7 @@ Step 3, sur le CCTP du lot sélectionné.
 
 ---
 
-### Skill #14 — `extraction-criteres-jugement`
+### Skill #13 — `extraction-criteres-jugement`
 
 **Catégorie :** Extraction
 **Étape :** Analyse
@@ -601,7 +598,7 @@ Step 3, sur le RC.
 
 ### Catégorie B — Détection alertes (4 skills)
 
-### Skill #15 — `detection-visite-obligatoire` (Analyse-side)
+### Skill #14 — `detection-visite-obligatoire` (Analyse-side)
 
 **Catégorie :** Détection
 **Étape :** Analyse
@@ -634,7 +631,7 @@ Au rendu de Step 3.
 
 ---
 
-### Skill #16 — `detection-cautionnement-garanties`
+### Skill #15 — `detection-cautionnement-garanties`
 
 **Catégorie :** Détection
 **Étape :** Analyse
@@ -668,7 +665,7 @@ Step 3, sur le RC + CCAP.
 
 ---
 
-### Skill #17 — `detection-pieges-dce`
+### Skill #16 — `detection-pieges-dce`
 
 **Catégorie :** Détection
 **Étape :** Analyse
@@ -701,7 +698,7 @@ Step 3, sur tous les documents.
 
 ---
 
-### Skill #18 — `detection-incoherences-dce`
+### Skill #17 — `detection-incoherences-dce`
 
 **Catégorie :** Détection
 **Étape :** Analyse
@@ -715,7 +712,7 @@ Détecter les incohérences matérielles entre les pièces du DCE (ex. délai di
 Step 3, après extraction par toutes les skills précédentes.
 
 **Inputs attendus :**
-- Outputs structurés des skills #11–#16
+- Outputs structurés des skills #10–#15
 
 **Outputs produits :**
 - Liste des incohérences matérielles + suggestion d'action (demander une précision à l'acheteur, etc.)
@@ -736,7 +733,7 @@ Step 3, après extraction par toutes les skills précédentes.
 
 ### Catégorie C — Liaisons & enrichissement (5 skills)
 
-### Skill #19 — `liaison-coffre-fort`
+### Skill #18 — `liaison-coffre-fort`
 
 **Catégorie :** Validation
 **Étape :** Analyse
@@ -747,10 +744,10 @@ Step 3, après extraction par toutes les skills précédentes.
 Pour chaque exigence administrative extraite, chercher dans le coffre-fort de l'entreprise un document correspondant, et déterminer s'il est valide.
 
 **Déclenchement :**
-Step 3, pour chaque output de #11.
+Step 3, pour chaque output de #10.
 
 **Inputs attendus :**
-- Type d'exigence (output de #11)
+- Type d'exigence (output de #10)
 - Index du coffre-fort de l'utilisateur
 
 **Outputs produits :**
@@ -768,7 +765,7 @@ Step 3, pour chaque output de #11.
 
 ---
 
-### Skill #20 — `enrichissement-source-document`
+### Skill #19 — `enrichissement-source-document`
 
 **Catégorie :** Extraction
 **Étape :** Analyse
@@ -799,7 +796,7 @@ Step 3, en post-traitement des skills d'extraction.
 
 ---
 
-### Skill #21 — `surlignage-exigence-complete`
+### Skill #20 — `surlignage-exigence-complete`
 
 **Catégorie :** Extraction
 **Étape :** Analyse
@@ -813,7 +810,7 @@ Quand l'utilisateur clique sur la source d'une exigence, surligner **la phrase c
 Au clic utilisateur sur `📍 RC page 4` dans Zone 3.
 
 **Inputs attendus :**
-- Référence d'exigence (#20)
+- Référence d'exigence (#19)
 - PDF source
 
 **Outputs produits :**
@@ -832,7 +829,7 @@ Au clic utilisateur sur `📍 RC page 4` dans Zone 3.
 
 ---
 
-### Skill #22 — `detection-documents-a-completer`
+### Skill #21 — `detection-documents-a-completer`
 
 **Catégorie :** Détection
 **Étape :** Analyse
@@ -866,7 +863,7 @@ Step 3, sur l'ensemble des documents extraits.
 
 ---
 
-### Skill #23 — `validation-completude-document`
+### Skill #22 — `validation-completude-document`
 
 **Catégorie :** Validation
 **Étape :** Analyse
@@ -900,7 +897,7 @@ Pour chaque document édité dans Synorix (DPGF, Cerfa, etc.), détecter si l'ut
 
 ### Catégorie D — Synthèse (2 skills)
 
-### Skill #24 — `synthese-executive-dce`
+### Skill #23 — `synthese-executive-dce`
 
 **Catégorie :** Synthèse
 **Étape :** Analyse
@@ -911,10 +908,10 @@ Pour chaque document édité dans Synorix (DPGF, Cerfa, etc.), détecter si l'ut
 Produire le **bandeau infos clés** (zone 1 de Step 3) : date limite, nom chantier, critères + pondérations, visite, cautionnement, garanties, nombre de pièges détectés.
 
 **Déclenchement :**
-Step 3, après que les skills #11–#18 ont produit leurs outputs.
+Step 3, après que les skills #10–#17 ont produit leurs outputs.
 
 **Inputs attendus :**
-- Outputs structurés des skills #2, #4, #5, #14, #16, #17
+- Outputs structurés des skills #2, #4, #5, #13, #15, #16
 
 **Outputs produits :**
 - Bloc UI prêt à afficher (JSON)
@@ -932,7 +929,7 @@ Step 3, après que les skills #11–#18 ont produit leurs outputs.
 
 ---
 
-### Skill #25 — `calculatrice-retenue-garantie`
+### Skill #24 — `calculatrice-retenue-garantie`
 
 **Catégorie :** Synthèse
 **Étape :** Analyse
@@ -970,7 +967,7 @@ Calculatrice qui, à partir du montant HT estimé et des taux extraits, calcule 
 
 Chacun de ces 10 experts est une skill **spécialisée par corps de métier**. Ils sont mobilisés conditionnellement par les skills de Step 4 (méthodologie, références, etc.) selon le lot sélectionné.
 
-### Skill #26 — `expert-facade`
+### Skill #25 — `expert-facade`
 
 **Catégorie :** Coaching
 **Étape :** Analyse (déclenche aussi Mémoire)
@@ -1007,7 +1004,7 @@ Si le lot sélectionné a corps de métier "façade".
 
 ---
 
-### Skill #27 — `expert-ite`
+### Skill #26 — `expert-ite`
 
 **Catégorie :** Coaching
 **Étape :** Analyse / Mémoire
@@ -1041,7 +1038,7 @@ Lot corps de métier "ITE" ou "façade isolante".
 
 ---
 
-### Skill #28 — `expert-gros-oeuvre`
+### Skill #27 — `expert-gros-oeuvre`
 
 **Catégorie :** Coaching
 **Étape :** Analyse / Mémoire
@@ -1073,7 +1070,7 @@ Lot corps de métier "gros œuvre".
 
 ---
 
-### Skill #29 — `expert-electricite`
+### Skill #28 — `expert-electricite`
 
 **Catégorie :** Coaching
 **Étape :** Analyse / Mémoire
@@ -1096,7 +1093,7 @@ Expert électricité bâtiment (NF C 15-100, faible courant, courants forts, sé
 
 ---
 
-### Skill #30 — `expert-cvc`
+### Skill #29 — `expert-cvc`
 
 **Catégorie :** Coaching
 **Étape :** Analyse / Mémoire
@@ -1119,7 +1116,7 @@ Expert CVC (Chauffage, Ventilation, Climatisation). Connaît les pompes à chale
 
 ---
 
-### Skill #31 — `expert-plomberie`
+### Skill #30 — `expert-plomberie`
 
 **Catégorie :** Coaching
 **Étape :** Analyse / Mémoire
@@ -1142,7 +1139,7 @@ Expert plomberie sanitaire et alimentation eau. NF DTU 60.1, 60.11, normes press
 
 ---
 
-### Skill #32 — `expert-peinture`
+### Skill #31 — `expert-peinture`
 
 **Catégorie :** Coaching
 **Étape :** Analyse / Mémoire
@@ -1164,7 +1161,7 @@ Expert peinture / revêtements intérieurs (NF DTU 59.1, 59.2, 59.3 ; classifica
 
 ---
 
-### Skill #33 — `expert-vrd`
+### Skill #32 — `expert-vrd`
 
 **Catégorie :** Coaching
 **Étape :** Analyse / Mémoire
@@ -1187,7 +1184,7 @@ Expert VRD (Voirie et Réseaux Divers) : terrassement, voirie, réseaux EU/EP/AE
 
 ---
 
-### Skill #34 — `expert-menuiserie`
+### Skill #33 — `expert-menuiserie`
 
 **Catégorie :** Coaching
 **Étape :** Analyse / Mémoire
@@ -1209,7 +1206,7 @@ Expert menuiserie extérieure et intérieure : alu, bois, PVC, NF DTU 36.5, 36.1
 
 ---
 
-### Skill #35 — `expert-etancheite`
+### Skill #34 — `expert-etancheite`
 
 **Catégorie :** Coaching
 **Étape :** Analyse / Mémoire
@@ -1234,7 +1231,7 @@ Expert étanchéité (toitures-terrasses, sous-sols) : NF DTU 43.1 / 43.3 / 43.4
 
 ### Catégorie F — Validation pièces (1 skill)
 
-### Skill #36 — `validation-piece-coffre-fort`
+### Skill #35 — `validation-piece-coffre-fort`
 
 **Catégorie :** Validation
 **Étape :** Analyse
@@ -1274,7 +1271,7 @@ Pour chaque document du coffre-fort, vérifier sa validité (Kbis < 3 mois, atte
 
 ### Catégorie A — Récupération données entreprise (4 skills)
 
-### Skill #37 — `recuperation-profil-entreprise`
+### Skill #36 — `recuperation-profil-entreprise`
 
 **Catégorie :** Extraction
 **Étape :** Mémoire
@@ -1306,7 +1303,7 @@ Au démarrage de Step 4.
 
 ---
 
-### Skill #38 — `selection-references-pertinentes`
+### Skill #37 — `selection-references-pertinentes`
 
 **Catégorie :** Synthèse
 **Étape :** Mémoire
@@ -1340,7 +1337,7 @@ Step 4, après chargement du profil entreprise et du contexte AO.
 
 ---
 
-### Skill #39 — `recuperation-bibliotheque-memoire`
+### Skill #38 — `recuperation-bibliotheque-memoire`
 
 **Catégorie :** Extraction
 **Étape :** Mémoire
@@ -1374,7 +1371,7 @@ Step 4, pour chaque section générée.
 
 ---
 
-### Skill #40 — `extraction-memoire-importe`
+### Skill #39 — `extraction-memoire-importe`
 
 **Catégorie :** Extraction
 **Étape :** Sidebar (Bibliothèque) — utilisée par Mémoire
@@ -1409,7 +1406,7 @@ Lors d'un upload de mémoire dans `Ma bibliothèque mémoire`.
 
 ### Catégorie B — Génération par section (10 skills)
 
-### Skill #41 — `redacteur-preambule`
+### Skill #40 — `redacteur-preambule`
 
 **Catégorie :** Génération
 **Étape :** Mémoire
@@ -1443,7 +1440,7 @@ Step 4, première section générée.
 
 ---
 
-### Skill #42 — `redacteur-presentation-entreprise`
+### Skill #41 — `redacteur-presentation-entreprise`
 
 **Catégorie :** Génération
 **Étape :** Mémoire
@@ -1473,7 +1470,7 @@ Rédiger PARTIE A — Présentation entreprise (5-7 pages) : historique, identit
 
 ---
 
-### Skill #43 — `redacteur-equipe-dediee`
+### Skill #42 — `redacteur-equipe-dediee`
 
 **Catégorie :** Génération
 **Étape :** Mémoire
@@ -1502,7 +1499,7 @@ Rédiger la sous-section "Équipe dédiée au chantier" : conducteur de travaux,
 
 ---
 
-### Skill #44 — `redacteur-references-chantiers`
+### Skill #43 — `redacteur-references-chantiers`
 
 **Catégorie :** Génération
 **Étape :** Mémoire
@@ -1513,7 +1510,7 @@ Rédiger la sous-section "Équipe dédiée au chantier" : conducteur de travaux,
 Rédiger la section "Nos références chantiers" — tableau formaté (Année / Intitulé / Adresse / MOA / MOE / Lot / Montant HT), inspiré du format Cariso.
 
 **Inputs attendus :**
-- Références sélectionnées par #38
+- Références sélectionnées par #37
 
 **Outputs produits :**
 - Tableau structuré + courte intro
@@ -1527,11 +1524,11 @@ Rédiger la section "Nos références chantiers" — tableau formaté (Année / 
 
 **Critères de qualité :**
 - Format tableau respecté.
-- Sélection par #38 fidèlement intégrée.
+- Sélection par #37 fidèlement intégrée.
 
 ---
 
-### Skill #45 — `redacteur-presentation-prestation`
+### Skill #44 — `redacteur-presentation-prestation`
 
 **Catégorie :** Génération
 **Étape :** Mémoire
@@ -1562,7 +1559,7 @@ Rédiger PARTIE B — Présentation de la prestation (4-6 pages) : compréhensio
 
 ---
 
-### Skill #46 — `redacteur-methodologie`
+### Skill #45 — `redacteur-methodologie`
 
 **Catégorie :** Génération
 **Étape :** Mémoire
@@ -1575,7 +1572,7 @@ PARTIE C — Méthodologie d'exécution (5-8 pages). **La section la plus pondé
 **Inputs attendus :**
 - CCTP du lot
 - Corps de métier
-- Expert métier mobilisé (skill #26–#35)
+- Expert métier mobilisé (skill #25–#34)
 - Bibliothèque mémoire
 
 **Outputs produits :**
@@ -1597,7 +1594,7 @@ PARTIE C — Méthodologie d'exécution (5-8 pages). **La section la plus pondé
 
 ---
 
-### Skill #47 — `redacteur-securite-ppsps`
+### Skill #46 — `redacteur-securite-ppsps`
 
 **Catégorie :** Génération
 **Étape :** Mémoire
@@ -1629,7 +1626,7 @@ Rédiger la section sécurité, et si l'option PPSPS est cochée, générer un P
 
 ---
 
-### Skill #48 — `redacteur-environnement-soged`
+### Skill #47 — `redacteur-environnement-soged`
 
 **Catégorie :** Génération
 **Étape :** Mémoire
@@ -1653,7 +1650,7 @@ Rédiger section environnement + SOGED si option cochée.
 
 ---
 
-### Skill #49 — `redacteur-qualite-paq`
+### Skill #48 — `redacteur-qualite-paq`
 
 **Catégorie :** Génération
 **Étape :** Mémoire
@@ -1676,7 +1673,7 @@ Rédiger section qualité + PAQ (Plan d'Assurance Qualité) si option cochée.
 
 ---
 
-### Skill #50 — `redacteur-planning-gantt`
+### Skill #49 — `redacteur-planning-gantt`
 
 **Catégorie :** Génération
 **Étape :** Mémoire
@@ -1688,7 +1685,7 @@ Rédiger la section planning + générer un Gantt prévisionnel si option coché
 
 **Inputs attendus :**
 - Délais imposés par le CCAP
-- Phases d'exécution (skill #46)
+- Phases d'exécution (skill #45)
 
 **Outputs produits :**
 - Section planning + image / SVG Gantt
@@ -1708,7 +1705,7 @@ Rédiger la section planning + générer un Gantt prévisionnel si option coché
 
 ### Catégorie C — Options à cocher (8 skills)
 
-### Skill #51 — `generateur-organigramme`
+### Skill #50 — `generateur-organigramme`
 
 **Catégorie :** Génération
 **Étape :** Mémoire
@@ -1729,7 +1726,7 @@ Générer un organigramme dédié au chantier (image SVG) à partir de l'équipe
 
 ---
 
-### Skill #52 — `generateur-planning-gantt-option`
+### Skill #51 — `generateur-planning-gantt-option`
 
 **Catégorie :** Génération
 **Étape :** Mémoire
@@ -1737,7 +1734,7 @@ Générer un organigramme dédié au chantier (image SVG) à partir de l'équipe
 **Status :** À créer
 
 **Mission :**
-Variant de #50 pour les cas où la section planning n'est pas demandée mais l'utilisateur veut quand même un Gantt en annexe.
+Variant de #49 pour les cas où la section planning n'est pas demandée mais l'utilisateur veut quand même un Gantt en annexe.
 
 **Question NotebookLM :**
 "Quand un Gantt est-il optionnel dans un mémoire BTP ? Quel format si placé en annexe ?"
@@ -1747,7 +1744,7 @@ Variant de #50 pour les cas où la section planning n'est pas demandée mais l'u
 
 ---
 
-### Skill #53 — `generateur-photos-references`
+### Skill #52 — `generateur-photos-references`
 
 **Catégorie :** Génération
 **Étape :** Mémoire
@@ -1765,7 +1762,7 @@ Intégrer dans le mémoire les photos de chantiers stockées dans `Mes référen
 
 ---
 
-### Skill #54 — `generateur-ppsps`
+### Skill #53 — `generateur-ppsps`
 
 **Catégorie :** Génération
 **Étape :** Mémoire
@@ -1773,7 +1770,7 @@ Intégrer dans le mémoire les photos de chantiers stockées dans `Mes référen
 **Status :** À créer
 
 **Mission :**
-Variant de #47 quand un PPSPS complet (et non juste une section sécurité) est demandé en pièce séparée.
+Variant de #46 quand un PPSPS complet (et non juste une section sécurité) est demandé en pièce séparée.
 
 **Question NotebookLM :**
 "PPSPS BTP autonome (pièce séparée du mémoire) : structure réglementaire, taille, niveau de détail attendu."
@@ -1787,7 +1784,7 @@ Variant de #47 quand un PPSPS complet (et non juste une section sécurité) est 
 
 ---
 
-### Skill #55 — `generateur-soged`
+### Skill #54 — `generateur-soged`
 
 **Catégorie :** Génération
 **Étape :** Mémoire
@@ -1795,7 +1792,7 @@ Variant de #47 quand un PPSPS complet (et non juste une section sécurité) est 
 **Status :** À créer
 
 **Mission :**
-Variant de #48 quand un SOGED autonome est demandé.
+Variant de #47 quand un SOGED autonome est demandé.
 
 **Question NotebookLM :**
 "SOGED BTP autonome 2026 (intégrant REP PMCB) : structure réglementaire, taille."
@@ -1809,7 +1806,7 @@ Variant de #48 quand un SOGED autonome est demandé.
 
 ---
 
-### Skill #56 — `generateur-paq`
+### Skill #55 — `generateur-paq`
 
 **Catégorie :** Génération
 **Étape :** Mémoire
@@ -1817,7 +1814,7 @@ Variant de #48 quand un SOGED autonome est demandé.
 **Status :** À créer
 
 **Mission :**
-Variant de #49 — PAQ autonome.
+Variant de #48 — PAQ autonome.
 
 **Question NotebookLM :**
 "PAQ BTP autonome : structure, points d'arrêt, indicateurs qualité, plan de surveillance."
@@ -1827,7 +1824,7 @@ Variant de #49 — PAQ autonome.
 
 ---
 
-### Skill #57 — `generateur-note-innovation`
+### Skill #56 — `generateur-note-innovation`
 
 **Catégorie :** Génération
 **Étape :** Mémoire
@@ -1849,7 +1846,7 @@ Rédiger une note d'innovation spécifique au chantier — innovations technique
 
 ---
 
-### Skill #58 — `generateur-note-rse`
+### Skill #57 — `generateur-note-rse`
 
 **Catégorie :** Génération
 **Étape :** Mémoire
@@ -1873,7 +1870,7 @@ Rédiger une note RSE — engagement social, environnemental, économique de l'e
 
 ### Catégorie D — Édition & qualité (4 skills)
 
-### Skill #59 — `editeur-section-regeneration`
+### Skill #58 — `editeur-section-regeneration`
 
 **Catégorie :** Génération
 **Étape :** Mémoire
@@ -1901,7 +1898,7 @@ Bouton `[Régénérer]` sur une section.
 
 ---
 
-### Skill #60 — `editeur-reecriture-instruction`
+### Skill #59 — `editeur-reecriture-instruction`
 
 **Catégorie :** Génération
 **Étape :** Mémoire
@@ -1930,7 +1927,7 @@ Sélection paragraphe + bouton `[Réécrire avec instructions]`.
 
 ---
 
-### Skill #61 — `detection-phrases-risque`
+### Skill #60 — `detection-phrases-risque`
 
 **Catégorie :** Détection
 **Étape :** Mémoire
@@ -1952,7 +1949,7 @@ Avant export, détecter dans le mémoire les phrases à risque (engagements impo
 
 ---
 
-### Skill #62 — `suggestion-plus-values`
+### Skill #61 — `suggestion-plus-values`
 
 **Catégorie :** Coaching
 **Étape :** Mémoire
@@ -1976,7 +1973,7 @@ Suggérer des plus-values à mettre en avant pour différencier l'offre (innovat
 
 ### Catégorie E — Export & restitution (2 skills)
 
-### Skill #63 — `exporteur-memoire-docx`
+### Skill #62 — `exporteur-memoire-docx`
 
 **Catégorie :** Génération
 **Étape :** Mémoire
@@ -1998,7 +1995,7 @@ Exporter le mémoire en `.docx` éditable, avec mise en page conforme à la char
 
 ---
 
-### Skill #64 — `exporteur-memoire-pdf`
+### Skill #63 — `exporteur-memoire-pdf`
 
 **Catégorie :** Génération
 **Étape :** Mémoire
@@ -2022,7 +2019,7 @@ Exporter en `.pdf` finalisé prêt pour dépôt.
 
 ## Step 5 — Final Verification (8 skills)
 
-### Skill #65 — `recherche-format-rapport-conformite`
+### Skill #64 — `recherche-format-rapport-conformite`
 
 **Catégorie :** Recherche
 **Étape :** Vérification
@@ -2044,7 +2041,7 @@ Définir le format du rapport de conformité affiché à l'utilisateur (sections
 
 ---
 
-### Skill #66 — `recherche-criteres-evaluation-memoire`
+### Skill #65 — `recherche-criteres-evaluation-memoire`
 
 **Catégorie :** Recherche
 **Étape :** Vérification
@@ -2067,7 +2064,7 @@ Connaître les critères et pondérations utilisés par les commissions d'évalu
 
 ---
 
-### Skill #67 — `recherche-nomenclature-fichiers-ao`
+### Skill #66 — `recherche-nomenclature-fichiers-ao`
 
 **Catégorie :** Recherche
 **Étape :** Vérification
@@ -2089,7 +2086,7 @@ Trouver et appliquer la nomenclature de fichiers attendue (selon le RC) pour le 
 
 ---
 
-### Skill #68 — `recherche-procedures-depot-plateformes`
+### Skill #67 — `recherche-procedures-depot-plateformes`
 
 **Catégorie :** Recherche
 **Étape :** Vérification
@@ -2111,7 +2108,7 @@ Pour chaque plateforme (PLACE, AWS, etc.), connaître la procédure de dépôt :
 
 ---
 
-### Skill #69 — `detection-pieces-manquantes-vs-ao`
+### Skill #68 — `detection-pieces-manquantes-vs-ao`
 
 **Catégorie :** Détection
 **Étape :** Vérification
@@ -2125,7 +2122,7 @@ Vérifier que chaque pièce demandée par le DCE est présente dans le dossier p
 À l'ouverture de Step 5.
 
 **Inputs attendus :**
-- Exigences extraites (skills #11, #12)
+- Exigences extraites (skills #10, #11)
 - Contenu du dossier préparé
 
 **Outputs produits :**
@@ -2142,7 +2139,7 @@ Vérifier que chaque pièce demandée par le DCE est présente dans le dossier p
 
 ---
 
-### Skill #70 — `detection-validite-pieces-administratives`
+### Skill #69 — `detection-validite-pieces-administratives`
 
 **Catégorie :** Validation
 **Étape :** Vérification
@@ -2163,14 +2160,14 @@ Step 5.
 - Liste des pièces invalides ou bientôt expirées
 
 **Question NotebookLM :**
-(réutilise la table de validité de la skill #36)
+(réutilise la table de validité de la skill #35)
 
 **Critères de qualité :**
 - 100% de détection des expirations.
 
 ---
 
-### Skill #71 — `synorix-score-evaluateur`
+### Skill #70 — `synorix-score-evaluateur`
 
 **Catégorie :** Synthèse
 **Étape :** Vérification
@@ -2185,7 +2182,7 @@ Step 5 (intégré pipeline) + page dédiée standalone.
 
 **Inputs attendus :**
 - Mémoire technique généré
-- Pondérations (skill #66)
+- Pondérations (skill #65)
 
 **Outputs produits :**
 - Note globale + ventilation par axe
@@ -2205,7 +2202,7 @@ Step 5 (intégré pipeline) + page dédiée standalone.
 
 ---
 
-### Skill #72 — `synorix-score-suggestions`
+### Skill #71 — `synorix-score-suggestions`
 
 **Catégorie :** Coaching
 **Étape :** Vérification
@@ -2235,7 +2232,7 @@ Après calcul Synorix Score.
 
 ## Step 6 — Export (4 skills)
 
-### Skill #73 — `recherche-format-zip-ao-pro`
+### Skill #72 — `recherche-format-zip-ao-pro`
 
 **Catégorie :** Recherche
 **Étape :** Export
@@ -2257,7 +2254,7 @@ Définir la structure du ZIP final : sous-dossiers, ordre, racine.
 
 ---
 
-### Skill #74 — `recherche-page-garde-memoire`
+### Skill #73 — `recherche-page-garde-memoire`
 
 **Catégorie :** Recherche
 **Étape :** Export
@@ -2279,7 +2276,7 @@ Générer une page de garde pour le mémoire (logo entreprise, intitulé AO, lot
 
 ---
 
-### Skill #75 — `recherche-checklist-depot-plateforme`
+### Skill #74 — `recherche-checklist-depot-plateforme`
 
 **Catégorie :** Recherche
 **Étape :** Export
@@ -2301,7 +2298,7 @@ Produire une **checklist** (PDF ou markdown) à inclure dans le ZIP, listant cha
 
 ---
 
-### Skill #76 — `recherche-suivi-post-depot`
+### Skill #75 — `recherche-suivi-post-depot`
 
 **Catégorie :** Recherche / Coaching
 **Étape :** Export
@@ -2325,7 +2322,7 @@ Définir le scénario de suivi post-dépôt : J+1 confirmation, J+30 relance ami
 
 ## Sidebar (5 skills)
 
-### Skill #77 — `recherche-structure-profil-entreprise-btp`
+### Skill #76 — `recherche-structure-profil-entreprise-btp`
 
 **Catégorie :** Recherche
 **Étape :** Sidebar (Mon entreprise)
@@ -2347,7 +2344,7 @@ Définir la structure exacte du profil entreprise BTP (champs canoniques, valida
 
 ---
 
-### Skill #78 — `recherche-format-references-chantiers`
+### Skill #77 — `recherche-format-references-chantiers`
 
 **Catégorie :** Recherche
 **Étape :** Sidebar (Mes références)
@@ -2369,7 +2366,7 @@ Définir le format optimal pour stocker et afficher les références chantiers.
 
 ---
 
-### Skill #79 — `recherche-bibliotheque-phrases-memoire`
+### Skill #78 — `recherche-bibliotheque-phrases-memoire`
 
 **Catégorie :** Recherche
 **Étape :** Sidebar (Bibliothèque mémoire)
@@ -2391,7 +2388,7 @@ Définir la taxonomie de la bibliothèque mémoire (sections, sous-sections, cor
 
 ---
 
-### Skill #80 — `recherche-coffre-fort-pieces-administratives`
+### Skill #79 — `recherche-coffre-fort-pieces-administratives`
 
 **Catégorie :** Recherche
 **Étape :** Sidebar (Coffre-fort)
@@ -2414,7 +2411,7 @@ Compléter la liste des catégories du coffre-fort (au-delà des 20 catégories 
 
 ---
 
-### Skill #81 — `analyse-historique-ao-entreprise`
+### Skill #80 — `analyse-historique-ao-entreprise`
 
 **Catégorie :** Synthèse
 **Étape :** Sidebar (Mes AO)
@@ -2438,7 +2435,7 @@ Analyser l'historique des AO de l'utilisateur pour produire des insights (taux d
 
 ## Synorix Coach (4 skills)
 
-### Skill #82 — `recherche-architecture-chatbot-saas-pro`
+### Skill #81 — `recherche-architecture-chatbot-saas-pro`
 
 **Catégorie :** Recherche
 **Étape :** Coach
@@ -2461,7 +2458,7 @@ Définir l'architecture conversationnelle du Coach : surfaces, modes, contexte, 
 
 ---
 
-### Skill #83 — `recherche-mode-coaching-ao-btp`
+### Skill #82 — `recherche-mode-coaching-ao-btp`
 
 **Catégorie :** Recherche / Coaching
 **Étape :** Coach
@@ -2483,7 +2480,7 @@ Définir les patterns de coaching propres aux AO BTP : quand surfacer une sugges
 
 ---
 
-### Skill #84 — `recherche-suggestions-strategiques-ao`
+### Skill #83 — `recherche-suggestions-strategiques-ao`
 
 **Catégorie :** Coaching
 **Étape :** Coach
@@ -2505,7 +2502,7 @@ Le Coach propose des suggestions stratégiques (choix de lot, sélection de réf
 
 ---
 
-### Skill #85 — `recherche-suivi-resultat-ao`
+### Skill #84 — `recherche-suivi-resultat-ao`
 
 **Catégorie :** Coaching
 **Étape :** Coach
@@ -2534,14 +2531,14 @@ The following 9 monolithic project skills are **deprecated** and to be deleted o
 | Legacy skill | Replaced by (selection) |
 |---|---|
 | `synorix-design-system` | (Replaced by Stack Design phase, not a single skill) |
-| `analyse-dce-expert` | #11, #12, #13, #14, #18 |
-| `reglementation-marches-publics` | #16, #36, #65, #66, #70 |
-| `normes-dtu-btp` | #26–#35 (corps-de-métier experts) |
-| `scoring-offres-expert` | #66, #71, #72 |
-| `dpgf-chiffrage-expert` | #22, #23 (édition native) + future pricing skills |
-| `conformite-candidature` | #65, #69, #70 |
-| `memoire-technique-expert` | #41–#64 (full Step 4 stack) |
-| `pieges-dce-detecteur` | #17, #18, #61 |
+| `analyse-dce-expert` | #10, #11, #12, #13, #17 |
+| `reglementation-marches-publics` | #15, #35, #64, #65, #69 |
+| `normes-dtu-btp` | #25–#34 (corps-de-métier experts) |
+| `scoring-offres-expert` | #65, #70, #71 |
+| `dpgf-chiffrage-expert` | #21, #22 (édition native) + future pricing skills |
+| `conformite-candidature` | #64, #68, #69 |
+| `memoire-technique-expert` | #40–#63 (full Step 4 stack) |
+| `pieges-dce-detecteur` | #16, #17, #60 |
 
 ---
 
@@ -2549,15 +2546,34 @@ The following 9 monolithic project skills are **deprecated** and to be deleted o
 
 | Block | Count | Cumulative |
 |---|---|---|
-| Step 1 — Upload | 6 | 6 |
-| Step 2 — Lots | 4 | 10 |
-| Step 3 — AI Analysis | 26 | 36 |
-| Step 4 — Memo | 28 | 64 |
-| Step 5 — Verification | 8 | 72 |
-| Step 6 — Export | 4 | 76 |
-| Sidebar | 5 | 81 |
-| Coach | 4 | **85** |
+| Step 1 — Upload | 5 | 5 |
+| Step 2 — Lots | 4 | 9 |
+| Step 3 — AI Analysis | 26 | 35 |
+| Step 4 — Memo | 28 | 63 |
+| Step 5 — Verification | 8 | 71 |
+| Step 6 — Export | 4 | 75 |
+| Sidebar | 5 | 80 |
+| Coach | 4 | **84** |
 
 ---
 
-*End of Skills Registry — Synorix v2.0*
+## Changelog
+
+### 2.1 — 2026-05-13
+
+- **Global Rules** — Added 4 cross-cutting rules (fail loudly, internal confidence persisted, source citation mandatory, cost-effective model selection).
+- **Skill #1** — Model downgraded from Sonnet 4.6 to Haiku 4.5 (classification task on strong signal).
+- **Skill #2** — Added `not_found` + `confidence` outputs, anti-hallucination rule enforced.
+- **Skill #3** — Hash clarified to SHA-256 on complete file bytes.
+- **Skill #4** — URL allowlist enforced for security (anti-phishing).
+- **Skill #6 (`estimation-temps-analyse`)** — **REMOVED**. Replaced by real-time SSE-based progress display (PRD §3.3.7, ARCH §5). Total skills 85 → 84.
+- **Skill #7 (renamed from #8) — `detection-corps-de-metier-lot`** — Output constrained to the 10 mapped corps de métier + `'autre'`.
+- **Skill #9 (renamed from #10) — `detection-incoherences-lots`** — Severity enum aligned with PRD §7.2.1.
+
+### 2.0 — 2026-05-13
+
+- Initial release of the Skills Registry (85 skills).
+
+---
+
+*End of Skills Registry — Synorix v2.1*
