@@ -4,7 +4,7 @@
 
 | Field | Value |
 |---|---|
-| Document version | 2.0 |
+| Document version | 2.1 |
 | Status | Active — drives the v2.0 refactor (`refactor-v2` branch) |
 | Owner | Mohamed (Founder) |
 | Audience | Engineering, Design, future contributors, Claude Code |
@@ -31,6 +31,7 @@
 8. [V2.0 Success Criteria](#8-v20-success-criteria)
 9. [Roadmap V1 / V1.5 / V2.5](#9-roadmap)
 10. [Appendices — Reference Materials](#10-appendices)
+11. [Changelog](#11-changelog)
 
 ---
 
@@ -124,12 +125,14 @@ The team chose **not** to ship a pro/beginner mode toggle. Reasoning:
 
 1. Drops the DCE ZIP into Synorix.
 2. Selects only lot 3 (façade) from the auto-detected list.
-3. Reviews the analysis tab quickly — confirms the dossier of required pieces is correct.
-4. Verifies the coffre-fort auto-link picked the right Kbis (< 3 months) and assurance décennale.
-5. Triggers memo generation with **Détaillé / Très technique** settings.
-6. Edits the methodology section using "Réécrire avec instructions".
-7. Runs Step 5 verification — checks Synorix Score, fixes 1 flagged item.
-8. Exports ZIP — deposits on PLACE.
+3. Reviews the AI analysis tab — confirms the 12 admin pieces, 4 offer documents, and 28 technical requirements are correctly extracted.
+4. Verifies the coffre-fort auto-link picked the right Kbis (< 3 months) and assurance décennale. Uploads a fresh attestation URSSAF directly into the coffre-fort via the "à téléverser" CTA.
+5. Opens the DPGF in Synorix's spreadsheet editor — fills in 23 lines (quantities pre-filled from CCTP extraction). Total auto-computed.
+6. Reviews the AE — downloads it for offline signature using the company's existing process, re-uploads the signed PDF (eIDAS-compliant in-app signature deferred to V1.5).
+7. Triggers memo generation with **Détaillé / Très technique** settings.
+8. Edits the methodology section using "Réécrire avec instructions" — strengthens the environmental angle.
+9. Runs Step 5 verification — Synorix Score 87/100. Fixes 1 flagged item (missing SOGED reference).
+10. Exports ZIP — deposits on PLACE via the deep-link.
 
 **Total wall time:** ~2 hours instead of ~3 days.
 
@@ -140,10 +143,11 @@ The team chose **not** to ship a pro/beginner mode toggle. Reasoning:
 3. Lot detection runs. The user is told plainly: *"Choisissez vos lots pour lancer l'analyse"*.
 4. Step 3 surfaces the **administrative pieces** tab first — Synorix has already linked anything the user previously uploaded to the coffre-fort.
 5. Each missing piece presents a positive call-to-action *"Téléverser pour le coffre-fort"* — never *"manquant"*.
-6. Step 4 récapitulatif clearly shows which company information is being reused.
-7. Memo generated with **Standard / Vulgarisé** settings.
-8. Step 5 returns a Synorix Score. Suggestions are written as *positive improvement options*, not faults.
-9. User exports — Coach offers a 1-minute tutorial for PLACE.
+6. The AE (Acte d'Engagement) is downloaded for signature via the company's existing process and re-uploaded as a signed PDF (in-app eIDAS-compliant signature ships in V1.5).
+7. Step 4 récapitulatif clearly shows which company information is being reused.
+8. Memo generated with **Standard / Vulgarisé** settings.
+9. Step 5 returns a Synorix Score. Suggestions are written as *positive improvement options*, not faults.
+10. User exports — Coach offers a 1-minute tutorial for PLACE.
 
 ---
 
@@ -676,8 +680,17 @@ Electronic signature is **deferred to V1.5**.
 │              │   84     │  / 100                                     │
 │              └──────────┘                                            │
 │                                                                      │
-│  Axes notés : méthodologie 88 / moyens 80 / sécurité 86 /           │
-│               environnement 78 / innovation 82                       │
+│  Pondération (exemple — à valider par skill                          │
+│  `synorix-score-evaluateur` selon les critères réels CCAG-T) :       │
+│                                                                      │
+│  • Méthodologie d'exécution      (35%)  →  88                        │
+│  • Moyens humains et matériels   (20%)  →  80                        │
+│  • Sécurité et PPSPS             (15%)  →  86                        │
+│  • Environnement et SOGED        (15%)  →  78                        │
+│  • Innovation et RSE             (15%)  →  82                        │
+│                                                                      │
+│  Total pondéré : 0.35×88 + 0.20×80 + 0.15×86 +                       │
+│                  0.15×78 + 0.15×82 = 84.0                            │
 │                                                                      │
 │  3 suggestions d'amélioration disponibles  [Voir le détail]         │
 └────────────────────────────────────────────────────────────────────┘
@@ -699,6 +712,8 @@ Electronic signature is **deferred to V1.5**.
 │  [Télécharger le ZIP]   [Déposer sur PLACE →]                        │
 └────────────────────────────────────────────────────────────────────┘
 ```
+
+**Note importante :** the weights above (35/20/15/15/15) are a plausible example based on CCAG-T 2021 practice. The **authoritative weights** are delivered by skill `synorix-score-evaluateur`, which sources real evaluation-commission criteria via NotebookLM. The PRD mockup is a UI reference only; the skill's output is the source of truth at runtime.
 
 #### 3.5.5 Functional Requirements
 
@@ -750,7 +765,7 @@ After 30 days, the Coach (Section 5) proactively asks:
 
 > *"Bonjour, votre AO sur le projet « Réhabilitation école Jean Moulin » a été déposé il y a 30 jours. Avez-vous eu un retour ?"*
 
-The user updates the status manually to one of: `En cours d'évaluation` / `Gagné` / `Perdu` / `Sans réponse`. **BOAMP / DECP integration for automatic status updates is V1.5.**
+After 7 days post-deposit, the project transitions automatically to `En cours d'évaluation`. The user then updates manually to `Gagné`, `Perdu`, or `Sans réponse` when they have news (or the system auto-flags `Sans réponse` after 120 days). **BOAMP / DECP integration for automatic status updates is V1.5.**
 
 #### 3.6.4 Skills Mobilised (4)
 
@@ -766,12 +781,26 @@ Synorix's left rail is **permanent** across all pages — even inside an active 
 
 **Purpose:** the source of truth for every tender the user has touched.
 
+**Project lifecycle — 8 statuses + 1 flag:**
+
+| Status | Trigger | UI hint |
+|---|---|---|
+| `Brouillon` | Project created, pipeline not started | grey |
+| `En cours` | At least step 1 started | blue |
+| `Prêt à déposer` | Step 5 validated (Synorix Score shown) | light green |
+| `Déposé` | User confirms deposit in step 6 | green |
+| `En cours d'évaluation` | Auto, 7 days after `Déposé` | deep blue |
+| `Gagné` | User updates manually | vivid green |
+| `Perdu` | User updates manually | muted red |
+| `Sans réponse` | User updates manually, or auto after 120 days | grey |
+
+Independent flag: `archived` (boolean) — any status can be archived. Default list view excludes archived; a separate **"Archivés"** view shows them.
+
 **Functional requirements:**
 
-- List view filterable by status: `En cours`, `Soumis`, `Gagné`, `Perdu`, `Sans réponse`, `Archivé`.
+- List view filterable by any of the 8 statuses; default excludes `archived`.
 - Each AO links to its full pipeline state — user can re-enter any step.
-- A separate **"Archivés"** view contains tenders the user has hidden after closure.
-- Statuses are updated **manually in V1**; BOAMP/DECP-driven auto-update is V1.5.
+- Statuses are updated **manually in V1** except for the two automatic transitions above; BOAMP/DECP-driven auto-update is V1.5.
 - 360° link: from any reference chantier the user can see in which AOs it was used (back-reference).
 - **Proactive 30-day follow-up** by the Coach — see [§3.6.3](#363-post-deposit-tracking-ux).
 
@@ -937,35 +966,66 @@ Both share the same conversation history.
 
 ### 6.1 Plans
 
-| Plan | Price | Seats | Audience |
+| Feature | **Pro €299/mo** | **Business €499/mo** | Enterprise (V2.5) |
 |---|---|---|---|
-| **Pro** | **€299 / month** | 1 | Solo dirigeant, BE indépendant, small PME |
-| **Business** | **€499 / month** | 5 | Growing PME / structured offices |
+| **Seats** | 1 | 5 | Unlimited |
+| **AO included / month** | **30** | **120** | Unlimited |
+| **Additional AO** | €15 / AO | €10 / AO | — |
+| **Coffre-fort storage** | 5 GB | 50 GB | Unlimited |
+| **Memo library imports** | 10 memos | Unlimited | Unlimited |
+| **References chantiers** | 50 max | Unlimited | Unlimited |
+| **Synorix Coach** | Reactive + light suggestions | + **Proactive AO audit (running tenders)** | + Weekly strategy agent |
+| **Synorix Score** | In-pipeline only | + **Public API to score external memos** (lead-gen) | + White-label |
+| **Multi-user workflow** | — | **Admin/member roles, validation flow, shared history** | + SSO, SAML |
+| **Coffre-fort security** | Standard | + **Mandatory 2FA, audit log** | + Custom retention policy |
+| **Support** | Email (48h) | Email **priority (24h)** + chat | Email + **dedicated account manager** |
+| **Onboarding** | Self-service | **Free 1-hour live session** | + team training |
+| **Custom memo templates** | Synorix standard | **Per-trade custom templates** saved in library | + Synorix agency designs a bespoke template |
 
-**Both plans include:**
+Both plans include: full 6-step pipeline, full sidebar (5 sections), Synorix Coach (Level 3 — modes differ as shown above), Synorix Score (in-pipeline), SIRET-validated account.
 
-- Unlimited AO responses
-- Full pipeline (Upload → Export)
-- Full Sidebar (5 sections, unlimited storage in V1)
-- Synorix Coach (Level 3)
-- Synorix Score (in-pipeline)
-- Email support
+**Design intent:** every line above is a deliberate reason for a Pro customer to upgrade to Business as soon as a second person joins, volume rises, or clients ask to see Synorix Score on the company's website. No artificial gating; each Business-only feature unlocks real value for the next growth stage.
 
 ### 6.2 Unit Economics
 
-| Item | Value |
-|---|---|
-| Target AI cost per AO | **~€0.77** |
-| AI cost breakdown | Haiku 0.02 + Sonnet 0.05 + Sonnet 0.40 + Opus 0.30 + Sonnet incl. + 0 |
-| Average AO/customer/month (target) | 5–10 |
-| Monthly AI cost @ 30 AO | ~€23 |
-| Margin on Pro plan (€299) | **~95%** |
+Per-AO AI cost target: **~€0.77** (Haiku 0.02 + Sonnet 0.05 + Sonnet 0.40 + Opus 0.30 + Sonnet incl. + 0 export). Three usage scenarios drive the margin analysis:
 
-### 6.3 Billing
+| Scenario | AO/month | AI cost/month | Margin Pro (€299) | Margin Business (€499) |
+|---|---|---|---|---|
+| **Light** (median target) | 7 | ~€5.40 | **98.2%** | 98.9% |
+| **Normal** (high target) | 15 | ~€11.55 | **96.1%** | 97.7% |
+| **Heavy** (at fair-use cap) | 30 (Pro) / 120 (Business) | ~€23.10 / €92.40 | **92.3%** | **81.5%** |
 
-- Stripe subscriptions, monthly recurring.
-- Prorated upgrades / downgrades.
-- 14-day no-card trial reconsidered — V2.0 ships with **no trial**: paid from day 1; first 30 days money-back if requested in writing (lower CAC drift than trial).
+**Hard cap** (cost-guard, see ARCHITECTURE §8.10): blocks consumption beyond ~130 AO/month on Pro (~€100 AI ceiling) and ~390 AO/month on Business (~€300 AI ceiling). Reaching the cap triggers a Coach explainer; no silent block.
+
+Beyond included AO, the customer pays per-AO overage:
+
+- Pro: €15 per additional AO
+- Business: €10 per additional AO
+
+### 6.3 Onboarding & Billing
+
+Synorix ships **no free trial in the classical sense**. Instead, every new account gets **1 complete AO offered** to experience the full pipeline before committing.
+
+**Sign-up flow:**
+
+1. Email + name + **SIRET** (14 digits, validated against the official INSEE SIRENE API).
+2. The SIRET's **NAF code** must start with 41, 42, or 43 (the BTP sector). Non-BTP SIRETs see a polite message: *"Synorix est spécialisé BTP. Contactez-nous si vous souhaitez tester pour un autre secteur."*
+3. Active SIRET status required (no liquidation, no closure).
+
+**Free trial scope (1 AO offered):**
+
+- Full pipeline access: Upload → Lots → AI Analysis → Memo → Verification.
+- Editing, regeneration, Coach access — all included.
+- **The export ZIP is locked** until the user subscribes. The user sees the generated memo, can scroll it, can edit it, but cannot download a deposit-ready dossier.
+
+**Conversion CTA:** appears after the user has experienced the memo:
+
+> *"Débloquez l'export et lancez autant d'AO que vous voulez — €299/mois"*
+
+**Why no money-back guarantee:** Free AO at sign-up + SIRET gate covers the trust gap upfront. Customer-service refund decisions are handled case by case, human, rare — a signal of quality, not a contractual escape hatch.
+
+Stripe drives all paid subscriptions, prorated upgrades/downgrades, monthly recurring billing.
 
 ### 6.4 Future Plans (out of V2.0 scope)
 
@@ -998,6 +1058,33 @@ Synorix is **paid software**. The customer pays €299–€499 per month. The p
 | "Aidez-nous à améliorer l'IA" | (delete entirely) |
 | "Vos données nous permettent…" | (delete entirely — confidentiality framing instead) |
 | "Mode débutant" / "Mode pro" | (delete — single mode, Coach adapts) |
+
+### 7.2.1 Severity Scale for Required Pieces
+
+Synorix communicates required items on a three-level scale, never as alarms:
+
+| Severity | When | Wording template | UI |
+|---|---|---|---|
+| 🟢 **Optional** | Not required by the DCE; would strengthen the bid | *"Ajouter [item]"* | Neutral grey |
+| 🟡 **Recommended** | Mentioned in the DCE without being mandatory | *"À téléverser pour renforcer votre dossier"* | Soft blue |
+| 🔴 **Blocking** | Formally required by the DCE | *"À téléverser pour finaliser le dossier — [factual citation, e.g., RC art. 5.2]"* | Muted red |
+
+**Rules for the blocking level (🔴):**
+
+- Start with the action verb: **À téléverser**, **À compléter**, **À fournir**.
+- Include the factual citation in the middle: *"Le RC exige un Kbis de moins de 3 mois (page 4, article 5.2)"*.
+- No exclamation marks. No *"Attention !"*. No *"URGENT"*.
+- The Coach can surface it proactively in a calm tone: *"Synorix a identifié 2 documents requis qui ne sont pas encore dans votre coffre-fort. Je vous mets le premier ?"*
+
+**Behaviour in Step 5 (Verification):**
+
+- If any 🔴 item exists → Synorix Score is shown **but** the export ZIP action is disabled, with the message *"Téléversez les pièces requises pour activer le dépôt"* + list.
+- The Coach surfaces the blockers in a single message, never as a stack of alerts.
+
+**Behaviour in Step 6 (Export):**
+
+- If the user clicks *"Télécharger ZIP"* while 🔴 items remain → confirmation modal: *"Le dossier sera incomplet. Préférez-vous d'abord téléverser les pièces requises ?"* with `[Téléverser maintenant]` / `[Télécharger quand même]` buttons.
+- Export remains technically possible (the Pro persona may want the memo only, knowing what they do).
 
 ### 7.3 Confidentiality Framing
 
@@ -1125,10 +1212,9 @@ Real memorandum from a French BTP company specialising in **façade and ITE**, u
 
 ### 10.2 Legacy Skills to be Retired
 
-The following 9 project-level skills are **deprecated** and will be **deleted** as the 85 modular skills replace them:
+The following 8 project-level skills are **deprecated** and will be **deleted** as the 85 modular skills replace them:
 
 ```
-synorix-design-system
 analyse-dce-expert
 reglementation-marches-publics
 normes-dtu-btp
@@ -1140,6 +1226,8 @@ pieges-dce-detecteur
 ```
 
 **Rationale:** monolithic skills mix concerns (extraction + generation + scoring), are hard to evaluate independently, and were built without NotebookLM-grounded expertise. The new modular skills are scope-narrow, individually testable, and each grounded in real BTP expertise via NotebookLM.
+
+**Note on `synorix-design-system`:** removed from this list entirely. A design system is not an AI skill — it lives in code. See §10.6 for how Synorix v2.0 handles design.
 
 ### 10.3 Skills Count Summary
 
@@ -1177,14 +1265,55 @@ See companion documents:
 | **DQE** | Détail Quantitatif Estimatif |
 | **ITE** | Isolation Thermique par l'Extérieur |
 | **MOA / MOE** | Maître d'Ouvrage / Maître d'Œuvre |
+| **NAF** | Nomenclature d'Activités Française — INSEE sector code |
 | **PAQ** | Plan d'Assurance Qualité |
 | **PLACE** | Plateforme des Achats de l'État |
 | **PPSPS** | Plan Particulier de Sécurité et de Protection de la Santé |
 | **RC** | Règlement de la Consultation |
 | **RG** | Retenue de Garantie |
+| **SIRENE** | Système Informatique pour le Répertoire des ENtreprises et des Établissements (INSEE) |
+| **SIRET** | 14-digit French establishment identifier |
 | **SOGED** | Schéma d'Organisation et de Gestion des Déchets |
 | **VRD** | Voirie et Réseaux Divers |
 
+### 10.6 Design System Reference
+
+Synorix's design system lives in code, not as an AI skill.
+
+- **Foundation:** existing `/frontend/tailwind.config.ts` is conserved, audited, and refined as needed during the v2.0 refactor.
+- **Components:** built progressively in `/frontend/src/components/` — what exists is kept; missing components are built case-by-case using Claude Design (claude.ai/design) for generation, then assembled by Claude Code.
+- **Animations:** Framer Motion for pipeline-step transitions, modal slide-ins, and the Coach panel.
+- **Theme:** Light **and** Dark mode toggle ships in V1.0. Theme persists per user via Clerk metadata. Default = light. The toggle lives in the user menu (top-right).
+- **Premium visual content** (hero landing, demo videos, illustrations): generated via Higgsfield MCP (`https://mcp.higgsfield.ai/mcp`) during the Design Phase (post-skills creation). Brand kit configured in Higgsfield for consistency.
+- **Aesthetic direction:** *premium-technical, futuristic-without-gadgetry*. Reference SaaS for tone: Linear, Vercel, Cursor (not literal style, but the conviction that every pixel earns its place).
+
+**Frontend rules:**
+
+- No Inter, no Roboto, no default Tailwind blue, no purple gradients on white.
+- Distinctive display font + clean body sans-serif; verify both render well in dark and light.
+- Animations 200–300 ms ease-out; no bouncing, no excessive parallax.
+- Theme switch must not break any component — every color uses Tailwind dark variants or CSS variables.
+
 ---
 
-*End of PRD — Synorix v2.0*
+## 11. Changelog
+
+### 2.1 — 2026-05-13
+
+- **§2.4** — UC-1 rewritten (10 steps) with native DPGF editing, URSSAF upload, offline AE signature (eSign deferred to V1.5). UC-2 kept consistent.
+- **§3.5.4** — Synorix Score mockup made arithmetically coherent (weighted average 35/20/15/15/15 = 84.0). Marked weights as "example to be authoritatively defined by skill `synorix-score-evaluateur`".
+- **§3.6.3 + §4.1** — Project status lifecycle unified to 8 statuses + `archived` flag.
+- **§6.1** — Plans differentiated across 12 axes (seats, AO included, overage price, storage, library, references, Coach mode, Score API, multi-user workflow, 2FA, support tier, onboarding, custom templates).
+- **§6.2** — Unit economics restructured into 3 scenarios (Light/Normal/Heavy) + hard cap row.
+- **§6.3** — Trial replaced by SIRET-gated freemium (1 AO offered, NAF 41/42/43, export locked until paid). Money-back removed.
+- **§7.2.1** — Severity scale added (Optional/Recommended/Blocking) with behaviour rules for Steps 5 and 6.
+- **§10.2** — Removed `synorix-design-system` from legacy skill list.
+- **§10.6** — Added Design System Reference section (Tailwind + shadcn/ui + Framer Motion + Light/Dark toggle V1 + Higgsfield phase Design).
+
+### 2.0 — 2026-05-13
+
+- Initial v2.0 PRD.
+
+---
+
+*End of PRD — Synorix v2.1*
