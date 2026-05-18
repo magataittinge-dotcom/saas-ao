@@ -4,11 +4,11 @@
 
 | Field | Value |
 |---|---|
-| Document version | 1.0 |
+| Document version | 1.1 |
 | Status | Active — source of truth for skill-building expertise |
 | Workspace | `magaaa.dev@gmail.com` (NotebookLM, free tier) |
 | Created & validated | 2026-05-17 |
-| Last updated | 2026-05-18 |
+| Last updated | 2026-05-18 (v1.1 — D7 OAB renamed to Skill #95; D6/D8/D10/D11 marked PENDING_ID) |
 | Companion to | [`PRD_SYNORIX_V2.md`](./PRD_SYNORIX_V2.md), [`SKILLS_REGISTRY_V2.md`](./SKILLS_REGISTRY_V2.md), [`ARCHITECTURE_V2.md`](./ARCHITECTURE_V2.md) |
 
 ---
@@ -70,8 +70,8 @@ At runtime, NotebookLM is **never** consulted — the skill prompts carry the ba
 **Skills alimentées (mapping):**
 
 - Skill #15 (analyse-side `detection-visite-obligatoire`) — CCP article references
-- Skill #75 (future) `detection-criteres-disproportionnes` — L2142-1 CCP
-- Skill #82 (future) calculateur OAB — articles L2152-5 + R2152-3 à R2152-5
+- `detection-criteres-disproportionnes` (PENDING_ID — collision flagged, see SKILLS_REGISTRY §Collision Flag) — L2142-1 CCP
+- **Skill #95 STUB** `calculateur-OAB-temps-reel` — articles L2152-5 + R2152-3 à R2152-5
 - Other CCP-anchored citations across the registry
 
 **Liste des sources** _(à compléter par Mohamed depuis NotebookLM)_:
@@ -241,7 +241,7 @@ At runtime, NotebookLM is **never** consulted — the skill prompts carry the ba
 - Skill #60 `detection-phrases-risque`
 - Skill #71 `synorix-score-evaluateur`
 - Skill #72 `synorix-score-suggestions` (Differentiator **D4** — diligence prouvable horodatée, CE 2025)
-- Skill #77 (future) `conseil-recours-eviction` (Differentiator **D11**)
+- `conseil-recours-eviction` (PENDING_ID — collision flagged) (Differentiator **D11**)
 - Skill #89 `cotraitance-groupement` (jurisprudence GME)
 - Almost every skill that cites jurisprudence in its output (Differentiator **D1** — cross-cutting)
 
@@ -272,7 +272,7 @@ At runtime, NotebookLM is **never** consulted — the skill prompts carry the ba
 **Apprentissages clés :**
 
 - Jurisprudence 2024-2026 inflexion en faveur du candidat sur la traçabilité (horodatage diligence).
-- Référé précontractuel L551-1 = arme défensive ; Synorix doit guider l'utilisateur quand pertinent (Skill #77 future).
+- Référé précontractuel L551-1 = arme défensive ; Synorix doit guider l'utilisateur quand pertinent (`conseil-recours-eviction`, PENDING_ID).
 
 ---
 
@@ -290,9 +290,9 @@ At runtime, NotebookLM is **never** consulted — the skill prompts carry the ba
 - Skill #66 `recherche-criteres-evaluation-memoire`
 - Skill #71 `synorix-score-evaluateur`
 - Skill #72 `synorix-score-suggestions`
-- Skill #79 (future) simulateur 3 formules prix (Differentiator **D6**)
-- Skill #80 (future) RAO Prédictif (Differentiator **D8**)
-- Skill #82 (future) calculateur OAB (Differentiator **D7**)
+- `simulateur-prix-DAJ` (PENDING_ID — collision flagged) (Differentiator **D6**)
+- `RAO-predictif` (PENDING_ID — collision flagged) (Differentiator **D8**)
+- **Skill #95 STUB** `calculateur-OAB-temps-reel` (Differentiator **D7**)
 - Skill #84 `recherche-suggestions-strategiques-ao` (Differentiator **D14** — justification OAB)
 - Skill #92 `criteres-RSE-2026` (Differentiator **D13**)
 
@@ -310,7 +310,7 @@ At runtime, NotebookLM is **never** consulted — the skill prompts carry the ba
 **Apprentissages clés :**
 
 - Formule inversement proportionnelle = pénalise plus les écarts → favoriser quand l'acheteur veut écarter les outliers.
-- Double moyenne pour OAB = seuil glissant relatif à la moyenne des offres → Skill #82 doit calculer en temps réel selon les offres concurrentes (estimation Bayésienne hors V1).
+- Double moyenne pour OAB = seuil glissant relatif à la moyenne des offres → **Skill #95** doit calculer en temps réel selon les offres concurrentes (estimation Bayésienne hors V1).
 
 ---
 
@@ -358,14 +358,14 @@ The canonical mapping is also embedded in each skill's `Notebook source` field i
 
 | Notebook | Primary skills (non-exhaustive) |
 |---|---|
-| N1 | #15, #75 (future), #82 (future), broad CCP citations |
+| N1 | #15, `detection-criteres-disproportionnes` (PENDING_ID), **#95 STUB**, broad CCP citations |
 | N2 | #1, #2, #11, #35, #69, #70 |
 | N3 | #40–#49, #50–#57, #58, #61, #71 |
 | N4 | #25–#34, #45, #60 |
-| N5 | #4, #67, #68, #71, #73, #74, #75 |
-| N6 | #16, #17, #60, #72, #77 (future), every jurisprudence citation |
-| N7 | #14, #66, #71, #72, #79/80/82 (future), #84, #92 |
-| N8 | #82–#85, **#89**, #90/91/93/94 (V2), #92 |
+| N5 | #4, #67, #68, #71, #73, #74 |
+| N6 | #16, #17, #60, #72, `conseil-recours-eviction` (PENDING_ID), every jurisprudence citation |
+| N7 | #14, #66, #71, #72, `simulateur-prix-DAJ` + `RAO-predictif` (PENDING_IDs), **#95 STUB**, #84, #92 |
+| N8 | Coach skills #81–#84, **#89**, #90/91/93/94 (V2), #92 |
 
 ---
 
@@ -393,4 +393,4 @@ Once those are filled in, the registry becomes the definitive build-time referen
 
 ---
 
-*End of NOTEBOOKS_REGISTRY — Synorix v2.1*
+*End of NOTEBOOKS_REGISTRY — Synorix v2.1 (registry doc v1.1)*

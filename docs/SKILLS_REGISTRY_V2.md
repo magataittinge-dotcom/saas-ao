@@ -1,10 +1,10 @@
 # Skills Registry — Synorix v2.0
 
-**Authoritative catalogue of the 86 modular skills that power Synorix v2.0.**
+**Authoritative catalogue of the 87 modular skills that power Synorix v2.0 (86 fully specified + 1 stub).**
 
 | Field | Value |
 |---|---|
-| Document version | 2.2 |
+| Document version | 2.3 |
 | Status | Active — registry for the `refactor-v2` skills build |
 | Companion to | [`PRD_SYNORIX_V2.md`](./PRD_SYNORIX_V2.md), [`ARCHITECTURE_V2.md`](./ARCHITECTURE_V2.md) |
 | Last updated | 2026-05-13 |
@@ -2652,18 +2652,51 @@ The 15 product differentiators defined in [PRD §1.7](./PRD_SYNORIX_V2.md) map t
 | D3 | #69 `detection-pieces-manquantes-vs-ao` (signature per-piece check) | N5+N6 |
 | D4 | #72 `synorix-score-suggestions` (horodatage proof of due diligence) | N6+N7 |
 | D5 | #71 `synorix-score-evaluateur` (R2132-11 copie sauvegarde) | N5+N6 |
-| D6 | #79 — *future* simulateur 3 formules prix (Step 5 enrichment) | N7 |
-| D7 | #82 — *future* calculateur OAB (double moyenne, L2152-5) | N7 |
-| D8 | #80 — *future* RAO Prédictif | N7 |
+| D6 | `simulateur-prix-DAJ` — PENDING_ID (collision flagged, see §Collision Flag below) | N7 |
+| **D7** | **#95 `calculateur-OAB-temps-reel`** (double moyenne, L2152-5) — STUB | N7 |
+| D8 | `RAO-predictif` — PENDING_ID (collision flagged) | N7 |
 | D9 | #16 `detection-pieges-dce` (CE NAYMA 2024 contradictions) | N6 |
-| D10 | #75 — *future* detection-criteres-disproportionnes (L2142-1) | N1+N6 |
-| D11 | #77 — *future* conseil-recours-eviction (L551 CJA, 3 référés) | N6 |
+| D10 | `detection-criteres-disproportionnes` (L2142-1) — PENDING_ID (collision flagged) | N1+N6 |
+| D11 | `conseil-recours-eviction` (L551 CJA, 3 référés) — PENDING_ID (collision flagged) | N6 |
 | **D12** | **#89 `cotraitance-groupement`** (R2142-20, NEW V1) | N8 |
 | **D13** | **#92 `criteres-RSE-2026`** (Loi Climat 22/8/2026, NEW V1) | N7+N8 |
 | D14 | #84 `recherche-suggestions-strategiques-ao` (OAB auto-generated justification) | N7 |
 | D15 | #2 `detection-date-limite` (RGE Qualibat 8632/8633 → Certibat 30/9/2026 transition) | N2 |
 
-**Note on skills marked *future*:** D6, D7, D8, D10, D11 reference skill IDs that are conceptually defined in this V2.1 mapping but whose full registry entries (Mission / Inputs / Outputs / etc.) will be added in a follow-up patch once their NotebookLM extraction is done. They are NOT V2-roadmap skills; they are V1 skills that need their formal entry written. Tracked separately in the dev backlog.
+### Collision Flag — D6 / D8 / D10 / D11 (2026-05-18)
+
+The v2.1 commit (75432a9) mapped four differentiators (D6, D8, D10, D11) to IDs (#75, #77, #79, #80) that turned out to be **already occupied** by existing skills (post-#6 renumber):
+
+| Diff. | ID assumed in brief | Reality in registry today |
+|---|---|---|
+| D6 | #79 simulateur-prix-DAJ | #79 = `recherche-coffre-fort-pieces-administratives` (Sidebar) |
+| D8 | #80 RAO-predictif | #80 = `analyse-historique-ao-entreprise` (Sidebar) |
+| D10 | #75 detection-criteres-disproportionnes | #75 = `recherche-suivi-post-depot` (Step 6 Export) |
+| D11 | #77 conseil-recours-eviction | #77 = `recherche-format-references-chantiers` (Sidebar) |
+
+**Decision pending (Mohamed):** assign these 4 skills to new IDs. The gap slots **#85, #86, #87, #88** (intentional expansion buffer set in v2.1) are free and the natural target. Suggested allocation:
+
+- D6 `simulateur-prix-DAJ` → **#85**
+- D8 `RAO-predictif` → **#86**
+- D10 `detection-criteres-disproportionnes` → **#87**
+- D11 `conseil-recours-eviction` → **#88**
+
+Once arbitrated, stubs analogous to #95 below will be added. **D7 was unblocked by Mohamed's instruction** (#82 → #95) and is processed in this patch.
+
+### Skill #95 — `calculateur-OAB-temps-reel` (STUB)
+
+**Catégorie :** Synthèse
+**Étape :** Vérification
+**Modèle IA recommandé :** (à confirmer — probablement Sonnet 4.6 + calculs déterministes côté backend)
+**Status :** **STUB** — à compléter en Phase 3 NotebookLM extraction
+**Notebook source :** N7 (Scoring / Évaluation)
+**Validated :** false (stub uniquement)
+**Différenciateur :** **D7** (PRD §1.7)
+
+**Mission :**
+Calculer en temps réel le seuil d'**offre anormalement basse** selon la méthode de la **double moyenne** au sens de l'article **L2152-5 CCP** (articles d'application R2152-3 à R2152-5), et alerter l'utilisateur si son prix s'approche du seuil de qualification OAB — avant le dépôt.
+
+> **Stub intent :** la fiche complète (Inputs / Outputs / Question NotebookLM / Sources / Critères de qualité) sera générée en Phase 3 NotebookLM extraction, par interrogation directe de N7 (Scoring/Évaluation) sur la méthode de la double moyenne et la jurisprudence associée (TA Nantes 19/5/2025 Verchéenne n°2506407 — rejet OAB sans contradictoire = annulation).
 
 ---
 
@@ -2695,14 +2728,25 @@ The following 9 monolithic project skills are **deprecated** and to be deleted o
 | Step 4 — Memo | 28 | 63 |
 | Step 4 — Memo (emergent V1) — **#92 `criteres-RSE-2026`** <!-- v2.1 --> | 1 | 64 |
 | Step 5 — Verification | 8 | 72 |
-| Step 6 — Export | 4 | 76 |
-| Sidebar | 5 | 81 |
-| Coach | 4 | 85 |
-| Coach (emergent V1) — **#89 `cotraitance-groupement`** <!-- v2.1 --> | 1 | **86** |
+| Step 5 — Verification (stub V1) — **#95 `calculateur-OAB-temps-reel`** <!-- v2.1 — D7 --> | 1 | 73 |
+| Step 6 — Export | 4 | 77 |
+| Sidebar | 5 | 82 |
+| Coach | 4 | 86 |
+| Coach (emergent V1) — **#89 `cotraitance-groupement`** <!-- v2.1 --> | 1 | **87** |
 
 ---
 
 ## Changelog
+
+### 2.3 — 2026-05-18 (later same day, patch follow-up)
+
+Collision resolution following Mohamed's arbitration on commit 75432a9.
+
+- **D7 — OAB calculator** unblocked: `calculateur-OAB-temps-reel` assigned to new ID **#95** (was conflicting with existing #82 `recherche-mode-coaching-ao-btp`). Stub entry added.
+- **Skill #95** STUB added (Step 5 Verification, N7 source, status STUB pending Phase 3 NotebookLM extraction).
+- **D6 / D8 / D10 / D11 collision flag** added in §V1 Differentiators Mapping — the originally proposed IDs (#79, #80, #75, #77) are all already occupied by other existing skills. Suggested resolution: assign to the existing expansion buffer #85, #86, #87, #88. **Pending Mohamed's arbitration.**
+- **Skills Summary Matrix** — total 86 → 87 (one stub at #95 in Step 5 Verification).
+- **Subtitle** — clarified count as "86 fully specified + 1 stub".
 
 ### 2.2 — 2026-05-18
 
@@ -2732,4 +2776,4 @@ Integration of 8 validated NotebookLM notebooks (193 sources) — see [NOTEBOOKS
 
 ---
 
-*End of Skills Registry — Synorix v2.2*
+*End of Skills Registry — Synorix v2.3*
