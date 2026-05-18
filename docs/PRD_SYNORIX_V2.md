@@ -4,7 +4,7 @@
 
 | Field | Value |
 |---|---|
-| Document version | 2.2 |
+| Document version | 2.3 |
 | Status | Active — drives the v2.0 refactor (`refactor-v2` branch) |
 | Owner | Mohamed (Founder) |
 | Audience | Engineering, Design, future contributors, Claude Code |
@@ -74,9 +74,33 @@ Synorix's wedge is the **automated generation of personalised, deposit-grade tec
 - **6-step Pipeline AO** — Upload → Lots → AI Analysis → Memo → Verification → Export
 - **5-section persistent Sidebar** — Mes AO / Mon entreprise / Mes références / Ma bibliothèque mémoire / Mon coffre-fort
 - **Synorix Coach** — level-3 strategic chatbot
-- **~85 modular skills** — each grounded in real BTP expertise via NotebookLM
+- **86 modular skills V1** — each grounded in real BTP expertise from 8 validated NotebookLM notebooks (193 curated sources) <!-- v2.1 - notebooks 17/5/26 -->
 - **Multi-model AI stack** — Haiku 4.5 / Sonnet 4.6 / Opus 4.7 — target cost **~€0.77 per complete tender response**
 - **Two plans** — Pro (€299/mo, 1 seat) and Business (€499/mo, 5 seats)
+
+### 1.7 Differentiators — Notebook-validated <!-- v2.1 - notebooks 17/5/26 -->
+
+The following 15 product differentiators are grounded in the 8 NotebookLM notebooks created on 2026-05-17 (see [NOTEBOOKS_REGISTRY.md](./NOTEBOOKS_REGISTRY.md)). Each is backed by a specific jurisprudence or article of the Code de la commande publique (CCP) — no Synorix competitor surfaces this level of legal grounding.
+
+| # | Differentiator | Legal / source anchor | Skill |
+|---|---|---|---|
+| D1 | Citation jurisprudence 2024-2026 dans chaque analyse | CE 474772, TA Montpellier 2405722, CAA Nantes pondération 90/10 | all extraction skills |
+| D2 | Validation ZIP avant dépôt (corruption = rejet irrégularisable) | TA Montpellier 29/10/2024 n°2405722 | Skill #74 |
+| D3 | Vérification signature individuelle des pièces vs signature ZIP | TA Toulouse 9/3/2011 n°1100792 | Skill #69 |
+| D4 | Diligence prouvable horodatée du candidat | CE 2/10/2025 SFRS n°501204 | Skill #72 |
+| D5 | Copie de sauvegarde R2132-11 CCP générée systématiquement | R2132-11 CCP | Skill #71 |
+| D6 | Simulateur 3 formules prix DAJ (linéaire / inversement proportionnelle / variante) | Guides DAJ | Skill #79 |
+| D7 | Calculateur OAB temps réel (méthode double moyenne) | L2152-5, R2152-3 à R2152-5 CCP | Skill #82 |
+| D8 | RAO Prédictif (simulation rapport d'analyse de l'acheteur) | R2152-6 à R2152-8 CCP | Skill #80 |
+| D9 | Détection contradictions DCE | CE 18/7/2024 NAYMA n°492938 (devoir de vigilance du candidat) | Skill #16 |
+| D10 | Détection critères disproportionnés (capacité non liée / proportionnée) | L2142-1 CCP | Skill #75 |
+| D11 | Conseil recours après éviction (3 référés) | L551 CJA + CE 4/4/2014 Tarn-et-Garonne + TA Nantes 19/5/2025 Verchéenne n°2506407 | Skill #77 |
+| D12 | **Mode Groupement GME** (cotraitance conjoint / solidaire) | R2142-20 CCP | **Skill #89** (NEW V1) |
+| D13 | **Auto-suggestions RSE 2026** (Loi Climat 22/8/2026) | Loi Climat 22/8/2026 | **Skill #92** (NEW V1) |
+| D14 | Justification OAB auto-générée (réponse 21 jours) | L2152-5 + R2152-3 à R2152-5 CCP | Skill #84 |
+| D15 | Détection RGE Qualibat 8632/8633 expirant 30/9/2026 → migration Certibat | Référentiel RGE 2025 (transition Certibat) | Skill #2 |
+
+**Why this matters commercially:** Synorix is the only SaaS that lets a small BTP firm cite Conseil d'État rulings in their bid — turning legal sophistication into a competitive advantage they couldn't buy from a consultant for less than several thousand euros per AO.
 
 ---
 
@@ -792,6 +816,50 @@ After 7 days post-deposit, the project transitions automatically to `En cours d'
 
 ---
 
+### 3.7 Emergent V1 Features — Notebook-validated <!-- v2.1 - notebooks 17/5/26 -->
+
+Two cross-cutting features emerged from the validated NotebookLM notebooks N7 + N8 as **mandatory for V1**, beyond the original 6-step pipeline. They are not bound to a single step — they span the whole project lifecycle.
+
+#### 3.7.1 Mode Groupement GME (Skill #89 — `cotraitance-groupement`)
+
+**Product need.** Many BTP tenders > 1 M€ HT are out of reach for a single PME but accessible to a *groupement momentané d'entreprises* (GME). The CCP article R2142-20 allows two regimes:
+
+- **Groupement conjoint** — each member responsible only for its lot share.
+- **Groupement solidaire** — every member liable for the entire performance.
+
+**Functional requirements:**
+
+| Req ID | Requirement |
+|---|---|
+| FR-GME-01 | Toggle "Mode Groupement" on a project; on activation, Synorix asks: regime (`conjoint` / `solidaire`), mandataire, list of co-traitants (with each one's SIRET). |
+| FR-GME-02 | Each co-traitant's SIRET is validated against INSEE SIRENE (see ARCH §11.4). |
+| FR-GME-03 | The candidature pieces (DC1/DC2/DC4) are generated per co-traitant; Synorix tracks which pieces are received from each. |
+| FR-GME-04 | The technical memo presents the GME with a dedicated section: roles, responsibilities, combined references, combined capacities. |
+| FR-GME-05 | At Step 5 verification, capacities are summed across the GME (financial, technical, human) and checked against the DCE's stated requirements (R2142-1 CCP). |
+| FR-GME-06 | Synorix Coach surfaces a proactive suggestion to *consider* GME when the lot amount > 60% of the company's annual CA, or when a single capacity criterion is missed individually but reachable jointly. |
+
+**Trigger heuristics** (Coach proactivity): based on N8 — *if `lot_amount > 0.6 × company.revenue_3y[-1]` OR a R2142-1 capacity criterion is unmet by the user alone but met by a saved partner*, surface the suggestion.
+
+**Skill location:** see [SKILLS_REGISTRY_V2.md Skill #89](./SKILLS_REGISTRY_V2.md). Skill #89 lives in the **Coach** category.
+
+#### 3.7.2 Auto-suggestions RSE 2026 (Skill #92 — `criteres-RSE-2026`)
+
+**Product need.** The Loi Climat et Résilience, fully applied from **22/8/2026**, makes RSE criteria mandatory in public procurement above defined thresholds (low-carbon construction, biosourced materials, waste valorisation, social insertion, sustainable mobility). A non-RSE-aware bid post 22/8/2026 risks systematic eviction even at competitive pricing.
+
+**Functional requirements:**
+
+| Req ID | Requirement |
+|---|---|
+| FR-RSE-01 | At Step 3 extraction, Synorix flags every RSE criterion in the DCE (with article citation: CCP, CCAP RSE clauses). |
+| FR-RSE-02 | At Step 4 memo generation, Synorix auto-suggests RSE engagement content for 5 standard categories: déchets / carbone / biosourcés / insertion / mobilité. |
+| FR-RSE-03 | Suggestions are sourced from the user's sidebar (past RSE engagements, certifications) — *never invented*. |
+| FR-RSE-04 | Each suggestion carries an indicator-chiffré field (taux de valorisation des déchets, kg CO₂eq/m², % matériaux biosourcés) — the user fills the number, Synorix never invents it. |
+| FR-RSE-05 | At Step 5 verification, the memo's RSE section is cross-checked against the DCE's RSE expectations; gaps trigger 🟡 Recommended or 🔴 Blocking severity (PRD §7.2.1). |
+
+**Skill location:** see [SKILLS_REGISTRY_V2.md Skill #92](./SKILLS_REGISTRY_V2.md). Skill #92 lives in the **Step 4 Memo** category.
+
+---
+
 ## 4. Sidebar — 5 Permanent Sections
 
 Synorix's left rail is **permanent** across all pages — even inside an active pipeline. It hosts five rubriques. Each is a first-class workspace, not a settings page.
@@ -1180,10 +1248,12 @@ V2.0 ships when **all four** of the following are true:
 
 | Block | Status |
 |---|---|
-| Refactor of legacy 9 project skills → 85 modular skills | To do (via NotebookLM) |
+| Refactor of legacy 9 project skills → 86 modular skills | In progress — 8 NotebookLM notebooks validated 2026-05-17 (193 sources) <!-- v2.1 - notebooks 17/5/26 --> |
 | 6-step pipeline UI | To do |
 | Sidebar with 5 sections | To do |
 | Synorix Coach (Level 3) | To do |
+| **Mode Groupement GME (Skill #89)** <!-- v2.1 --> | To do — emergent V1 from N8 |
+| **Auto-suggestions RSE 2026 (Skill #92)** <!-- v2.1 --> | To do — mandatory from 22/8/2026 (Loi Climat) |
 | Stripe live (Pro + Business) | To do |
 | Production deployment on `synorix.tech` | To do |
 
@@ -1203,6 +1273,45 @@ V2.0 ships when **all four** of the following are true:
 - **Switzerland** — adapt to SIA norms, RPA
 - **Enterprise plan** with SSO, custom templates
 - Marketplace de templates (community-contributed memo phrasings, moderated)
+
+### 9.4 V2 Skills Roadmap — Notebook-emergent <!-- v2.1 - notebooks 17/5/26 -->
+
+Four skills emerged from notebook validation but are **deferred post-launch** (post-first-win). They unlock post-attribution and growth flows, not the initial bid pipeline:
+
+| Skill ID | Name | Purpose | Source notebook |
+|---|---|---|---|
+| #90 | `chorus-pro-facturation` | Post-attribution invoicing via Chorus Pro (mandatory for public market suppliers) | N8 |
+| #91 | `choix-TCE-vs-allotissement` | Strategic decision aid: respond Tous Corps d'État vs lot-by-lot | N8 |
+| #93 | `sourcing-amont` | Sourcing intelligence — identify upcoming AOs via R2111-1 CCP early signals | N8 |
+| #94 | `strategie-croissance-MP` | Growth strategy: which lot families to target next based on win/loss history | N8 |
+
+Gap IDs (#85–#88) are reserved for future expansion; they are intentionally unallocated to keep semantic numbering stable for V1 references.
+
+### 9.5 Data Strategy — NotebookLM static snapshot <!-- v2.1 - notebooks 17/5/26 -->
+
+**The strategy in one sentence:** NotebookLM is the source of expert truth at **build time**; at runtime, Synorix consults nothing.
+
+| Phase | NotebookLM role | Synorix runtime |
+|---|---|---|
+| **Dev (skill generation)** | Source of validated BTP expertise (8 notebooks, 193 sources) | — |
+| **Dev (skill update)** | Re-queried when a notebook receives new sources (jurisprudence, DTU revision) | — |
+| **Production runtime** | Not consulted | Skills carry baked-in prompts derived from NotebookLM answers |
+
+**Why a static snapshot rather than live queries:**
+
+1. **Determinism.** Runtime queries to NotebookLM would introduce variance in skill behaviour — incompatible with reproducibility, A/B testing, and Synorix Score consistency.
+2. **Cost.** A live NotebookLM call per skill invocation would add €0.05–€0.20 per AO, eroding margin.
+3. **Latency.** NotebookLM queries take 5–15s — incompatible with the live SSE progress UX (PRD §3.3.7).
+4. **Compliance auditability.** A frozen prompt can be inspected, version-controlled, replayed; a live RAG response cannot.
+
+**Process for refreshing skill knowledge** (e.g., new jurisprudence, DTU revision):
+
+1. Add the new source to the relevant notebook on `magaaa.dev@gmail.com` (NotebookLM workspace).
+2. Re-validate the notebook with its standard test questions.
+3. Re-generate the affected SKILL.md from the updated notebook.
+4. Bump the skill `version` field (ARCH §6.5); deploy.
+
+**Post-launch V2 ambition** (out of V1 scope): build an Obsidian + RSS regulatory-watch system that auto-suggests new sources to add to NotebookLM when CE/CAA/TA decisions, DTU updates, or DAJ guides are published.
 
 ---
 
@@ -1317,6 +1426,19 @@ Synorix's design system lives in code, not as an AI skill.
 
 ## 11. Changelog
 
+### 2.3 — 2026-05-18
+
+Integration of the 8 validated NotebookLM notebooks (193 sources, created & validated on 2026-05-17 on the `magaaa.dev@gmail.com` workspace). See [NOTEBOOKS_REGISTRY.md](./NOTEBOOKS_REGISTRY.md).
+
+- **§1.6** — Skills count updated to 86 V1 (was 85 placeholder, now reflects two emergent V1 skills below).
+- **§1.7** — NEW. 15 product differentiators with legal/jurisprudence anchors (CE / TA / CAA decisions 2024-2026 + CCP articles).
+- **§3.7** — NEW. Two emergent V1 features beyond the original pipeline:
+  - **§3.7.1** Mode Groupement GME (Skill #89, R2142-20 CCP)
+  - **§3.7.2** Auto-suggestions RSE 2026 (Skill #92, Loi Climat 22/8/2026)
+- **§9.1** — Refactor count 85 → 86; explicit lines for #89 GME and #92 RSE; status updated to reflect notebooks validated.
+- **§9.4** — NEW. V2 Skills Roadmap (#90 Chorus Pro, #91 TCE-vs-allotissement, #93 sourcing amont, #94 stratégie croissance MP).
+- **§9.5** — NEW. NotebookLM static-snapshot strategy (build-time only, no runtime queries).
+
 ### 2.2 — 2026-05-13
 
 - **§3.1.2 + §3.1.3 + §3.3.7** — Removed estimated analysis time. Replaced by live named-step checkpoints with SSE streaming and Coach explainer (no percentage bar — honesty + premium-silent).
@@ -1340,4 +1462,4 @@ Synorix's design system lives in code, not as an AI skill.
 
 ---
 
-*End of PRD — Synorix v2.2*
+*End of PRD — Synorix v2.3*

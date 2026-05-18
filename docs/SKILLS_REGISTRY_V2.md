@@ -1,10 +1,10 @@
 # Skills Registry — Synorix v2.0
 
-**Authoritative catalogue of the 84 modular skills that power Synorix v2.0.**
+**Authoritative catalogue of the 86 modular skills that power Synorix v2.0.**
 
 | Field | Value |
 |---|---|
-| Document version | 2.1 |
+| Document version | 2.2 |
 | Status | Active — registry for the `refactor-v2` skills build |
 | Companion to | [`PRD_SYNORIX_V2.md`](./PRD_SYNORIX_V2.md), [`ARCHITECTURE_V2.md`](./ARCHITECTURE_V2.md) |
 | Last updated | 2026-05-13 |
@@ -91,6 +91,9 @@ Every skill in this registry follows this template:
 **Étape :** [Upload / Lots / Analyse / Mémoire / Vérification / Export / Sidebar / Coach]
 **Modèle IA recommandé :** [Haiku 4.5 / Sonnet 4.6 / Opus 4.7 / aucun]
 **Status :** À créer
+**Notebook source :** [N1 / N2 / N3 / N4 / N5 / N6 / N7 / N8 / combinations, e.g., "N3+N4"]   <!-- v2.1 - notebooks 17/5/26 -->
+**Validated :** [true / false]   <!-- v2.1 - true = notebooks ingested; false = pending -->
+**Différenciateur :** [Dn ID from PRD §1.7, or 0 if not a differentiator]   <!-- v2.1 -->
 
 **Mission :**
 [What this skill does and why it matters.]
@@ -113,6 +116,8 @@ Every skill in this registry follows this template:
 **Critères de qualité :**
 - [How we know the skill is well built.]
 ```
+
+> **v2.1 retrofit note** — the three new fields (`Notebook source`, `Validated`, `Différenciateur`) are introduced in this version. Skills #89 and #92 below carry them already. The retrofit on the 84 previously catalogued skills is tracked separately (one-shot Python pass against the [NOTEBOOKS_REGISTRY.md](./NOTEBOOKS_REGISTRY.md) source map); the registry itself is the single source of truth at runtime regardless.
 
 ---
 
@@ -2524,6 +2529,144 @@ Pilote la conversation J+30 de relance amicale, puis l'analyse post-résultat (g
 
 ---
 
+## Emergent V1 Skills — Notebook-validated <!-- v2.1 - notebooks 17/5/26 -->
+
+The two skills below emerged from the validated NotebookLM notebooks N7 + N8 as **mandatory for V1**, beyond the original 84-skill catalogue. They are cross-cutting (not bound to a single pipeline step) and are documented in the PRD at §3.7.
+
+ID gaps explanation: V1 reserves IDs #85–#88 as expansion buffer; V2 roadmap reserves #90, #91, #93, #94. The two V1 emergent skills are placed at #89 (Coach category) and #92 (Step 4 Memo category) — see §V2 Skills Roadmap below.
+
+### Skill #89 — `cotraitance-groupement`
+
+**Catégorie :** Coaching
+**Étape :** Coach
+**Modèle IA recommandé :** Sonnet 4.6
+**Status :** À créer
+**Notebook source :** N8 (Coach/Conseil)   <!-- v2.1 - notebooks 17/5/26 -->
+**Validated :** true
+**Différenciateur :** D12 (PRD §1.7)
+
+**Mission :**
+Permettre à une PME d'envisager et de structurer un *groupement momentané d'entreprises* (GME) en mode **conjoint** ou **solidaire** au sens de l'article **R2142-20 CCP**, pour répondre à des marchés > capacité individuelle. Combine pédagogie (expliquer la différence des régimes), détection (signaler proactivement quand un GME serait pertinent) et orchestration (pré-remplir DC1/DC2/DC4 pour chaque cotraitant).
+
+**Déclenchement :**
+- Proactivement par le Coach : si `lot_amount > 0.6 × company.revenue_3y[-1]` OU si une capacité R2142-1 est manquante seul mais accessible jointement.
+- Manuellement : toggle « Mode Groupement » sur un projet (PRD §3.7.1).
+
+**Inputs attendus :**
+- Profil entreprise utilisateur
+- Lot(s) sélectionné(s) avec montant estimé
+- Exigences de capacités du DCE (issues de Skill #75 `detection-criteres-disproportionnes`)
+- Liste éventuelle de partenaires habituels (sidebar — V2 ajout dans `Mon entreprise`)
+
+**Outputs produits :**
+- `is_gme_recommended: bool` + raison (montant / capacité manquante / volonté utilisateur)
+- `regime_suggere: 'conjoint' | 'solidaire'` avec justification
+- Liste pré-formattée DC1/DC2/DC4 par cotraitant
+- Calcul des capacités combinées (CA cumulé, effectifs cumulés, références cumulées) vs exigences DCE
+- Mémoire — section GME pré-rédigée (rôles, responsabilités, mandataire)
+
+**Question NotebookLM :**
+« Comment structurer un GME conjoint vs solidaire pour répondre à un marché public BTP français en 2026 ? Quels sont les pièges juridiques R2142-20 CCP, les modalités de représentation par mandataire, le partage des responsabilités, et les bonnes pratiques de présentation dans le mémoire technique ? »
+
+**Sources NotebookLM suggérées :**
+- N8 (Coach/Conseil) — onboarding PME, GME R2142-20, TCE vs allotissement
+- Articles R2142-1 à R2142-20 CCP
+- Pratiques BE expérimentés en cotraitance
+
+**Critères de qualité :**
+- Suggère un GME uniquement quand pertinent (pas de surinflation).
+- Régime `conjoint` recommandé par défaut sauf si le DCE exige `solidaire` — alors clairement signalé.
+- Si SIRET du cotraitant invalide à INSEE SIRENE (cf. ARCH §11.4), bloque la candidature et explique pourquoi.
+
+---
+
+### Skill #92 — `criteres-RSE-2026`
+
+**Catégorie :** Génération
+**Étape :** Mémoire (cross-cutting — alimente aussi Step 3 extraction et Step 5 vérification)
+**Modèle IA recommandé :** Sonnet 4.6 (suggestions structurées sans génération longue)
+**Status :** À créer
+**Notebook source :** N7 (Scoring/Évaluation) + N8 (Coach/Conseil)   <!-- v2.1 - notebooks 17/5/26 -->
+**Validated :** true
+**Différenciateur :** D13 (PRD §1.7)
+
+**Mission :**
+Détecter les exigences RSE dans le DCE et suggérer des engagements RSE personnalisés pour le mémoire, sur les 5 catégories standards rendues mandatory par la **Loi Climat et Résilience** applicable en plein effet au **22/8/2026** : **déchets, carbone, biosourcés, insertion sociale, mobilité durable**. Toutes les suggestions sont sourcées depuis le profil entreprise utilisateur (`Mon entreprise`, `Mes références`) — jamais inventées.
+
+**Déclenchement :**
+- Step 3 (Analyse) : extraction des critères RSE du DCE.
+- Step 4 (Mémoire) : génération auto-suggérée de la section RSE.
+- Step 5 (Vérification) : gap analysis RSE et severity grading (🟢 / 🟡 / 🔴 selon PRD §7.2.1).
+
+**Inputs attendus :**
+- CCTP + CCAP du lot (extraction RSE)
+- Profil entreprise (engagements RSE existants, certifications environnementales)
+- Mémoires similaires importés (bibliothèque — phrases RSE déjà utilisées)
+
+**Outputs produits :**
+- Liste des **critères RSE détectés** dans le DCE (avec citation page + article)
+- Par catégorie (déchets / carbone / biosourcés / insertion / mobilité) : suggestion d'engagement + champ `indicateur_chiffré` à remplir par l'utilisateur (jamais inventé)
+- Section RSE rédigée pour intégration au mémoire
+- Liste des écarts pour Step 5 (avec severity)
+
+**Question NotebookLM :**
+« Quels sont les critères RSE obligatoires des marchés publics BTP français à partir du 22/8/2026 (Loi Climat) ? Donne les 5 catégories standards, les indicateurs chiffrés attendus par les acheteurs, les certifications associées (Effinergie, BBCA, NF Habitat, etc.), les engagements gagnants en mémoire technique, et la jurisprudence récente sur l'éviction d'offres pour non-conformité RSE. »
+
+**Sources NotebookLM suggérées :**
+- N7 (Scoring/Évaluation) — RSE 2026
+- N8 (Coach/Conseil) — engagements gagnants
+- Loi Climat et Résilience (texte officiel)
+- Mémoires gagnants ayant intégré une section RSE forte
+
+**Critères de qualité :**
+- Couvre les 5 catégories standards.
+- Détecte les critères implicites RSE même quand non explicitement nommés.
+- Tous les indicateurs chiffrés viennent de l'utilisateur — Synorix ne génère JAMAIS un chiffre RSE.
+- Section générée < 2 pages (densité d'engagement, pas de remplissage).
+
+---
+
+## Skills V2 Roadmap — Notebook-emergent <!-- v2.1 - notebooks 17/5/26 -->
+
+Four skills emerged from notebook validation but are **deferred to post-launch** (after the first won AO). They unlock post-attribution and strategic-growth flows, not the initial bid pipeline. Reserved IDs:
+
+| ID | Name | Mission (one line) | Source notebook |
+|---|---|---|---|
+| #90 | `chorus-pro-facturation` | Émission de factures Chorus Pro post-attribution (obligatoire fournisseurs marchés publics) | N8 |
+| #91 | `choix-TCE-vs-allotissement` | Aide à la décision : répondre Tous Corps d'État vs lot par lot | N8 |
+| #93 | `sourcing-amont` | Sourcing amont — détecter les futurs AOs via signaux R2111-1 CCP | N8 |
+| #94 | `strategie-croissance-MP` | Stratégie de croissance : quels lots cibler ensuite selon historique gagne/perte | N8 |
+
+Each V2 skill carries its own future expansion of `Notebook source` and validation status. Gap IDs #85–#88 are intentionally unallocated (expansion buffer).
+
+---
+
+## V1 Differentiators — Mapping <!-- v2.1 - notebooks 17/5/26 -->
+
+The 15 product differentiators defined in [PRD §1.7](./PRD_SYNORIX_V2.md) map to skills as follows. This is the canonical source for the `Différenciateur` field carried by each skill.
+
+| Diff. | Skill(s) involved | Notebook |
+|---|---|---|
+| D1 | (cross-cutting — every extraction/analysis skill cites jurisprudence when relevant) | N6 |
+| D2 | #74 `recherche-page-garde-memoire` + ZIP validator (Step 6 export) | N5+N6 |
+| D3 | #69 `detection-pieces-manquantes-vs-ao` (signature per-piece check) | N5+N6 |
+| D4 | #72 `synorix-score-suggestions` (horodatage proof of due diligence) | N6+N7 |
+| D5 | #71 `synorix-score-evaluateur` (R2132-11 copie sauvegarde) | N5+N6 |
+| D6 | #79 — *future* simulateur 3 formules prix (Step 5 enrichment) | N7 |
+| D7 | #82 — *future* calculateur OAB (double moyenne, L2152-5) | N7 |
+| D8 | #80 — *future* RAO Prédictif | N7 |
+| D9 | #16 `detection-pieges-dce` (CE NAYMA 2024 contradictions) | N6 |
+| D10 | #75 — *future* detection-criteres-disproportionnes (L2142-1) | N1+N6 |
+| D11 | #77 — *future* conseil-recours-eviction (L551 CJA, 3 référés) | N6 |
+| **D12** | **#89 `cotraitance-groupement`** (R2142-20, NEW V1) | N8 |
+| **D13** | **#92 `criteres-RSE-2026`** (Loi Climat 22/8/2026, NEW V1) | N7+N8 |
+| D14 | #84 `recherche-suggestions-strategiques-ao` (OAB auto-generated justification) | N7 |
+| D15 | #2 `detection-date-limite` (RGE Qualibat 8632/8633 → Certibat 30/9/2026 transition) | N2 |
+
+**Note on skills marked *future*:** D6, D7, D8, D10, D11 reference skill IDs that are conceptually defined in this V2.1 mapping but whose full registry entries (Mission / Inputs / Outputs / etc.) will be added in a follow-up patch once their NotebookLM extraction is done. They are NOT V2-roadmap skills; they are V1 skills that need their formal entry written. Tracked separately in the dev backlog.
+
+---
+
 ## Legacy Skills to Retire
 
 The following 9 monolithic project skills are **deprecated** and to be deleted once their successors above ship:
@@ -2550,14 +2693,27 @@ The following 9 monolithic project skills are **deprecated** and to be deleted o
 | Step 2 — Lots | 4 | 9 |
 | Step 3 — AI Analysis | 26 | 35 |
 | Step 4 — Memo | 28 | 63 |
-| Step 5 — Verification | 8 | 71 |
-| Step 6 — Export | 4 | 75 |
-| Sidebar | 5 | 80 |
-| Coach | 4 | **84** |
+| Step 4 — Memo (emergent V1) — **#92 `criteres-RSE-2026`** <!-- v2.1 --> | 1 | 64 |
+| Step 5 — Verification | 8 | 72 |
+| Step 6 — Export | 4 | 76 |
+| Sidebar | 5 | 81 |
+| Coach | 4 | 85 |
+| Coach (emergent V1) — **#89 `cotraitance-groupement`** <!-- v2.1 --> | 1 | **86** |
 
 ---
 
 ## Changelog
+
+### 2.2 — 2026-05-18
+
+Integration of 8 validated NotebookLM notebooks (193 sources) — see [NOTEBOOKS_REGISTRY.md](./NOTEBOOKS_REGISTRY.md).
+
+- **Skill Schema** — Added 3 new fields: `Notebook source`, `Validated`, `Différenciateur`. Retrofit of the 84 existing skills is queued (one-shot Python pass against NOTEBOOKS_REGISTRY).
+- **Skill #89 `cotraitance-groupement`** — NEW V1. Mode GME R2142-20 CCP. Differentiator D12. Source notebook N8.
+- **Skill #92 `criteres-RSE-2026`** — NEW V1. Loi Climat 22/8/2026. Differentiator D13. Source notebooks N7+N8.
+- **Skills V2 Roadmap** — Added section listing #90 Chorus Pro, #91 TCE-vs-allotissement, #93 sourcing amont, #94 stratégie croissance MP.
+- **V1 Differentiators mapping** — Added section listing the 15 PRD §1.7 differentiators with skill mapping (5 carry "future" skill IDs to be formally entered post-extraction).
+- **Skills Summary Matrix** — Total 84 → 86 (Step 4 +1 RSE, Coach +1 GME).
 
 ### 2.1 — 2026-05-13
 
@@ -2576,4 +2732,4 @@ The following 9 monolithic project skills are **deprecated** and to be deleted o
 
 ---
 
-*End of Skills Registry — Synorix v2.1*
+*End of Skills Registry — Synorix v2.2*

@@ -4,7 +4,7 @@
 
 | Field | Value |
 |---|---|
-| Document version | 2.3 |
+| Document version | 2.4 |
 | Status | Active — drives the `refactor-v2` engineering build |
 | Companion to | [`PRD_SYNORIX_V2.md`](./PRD_SYNORIX_V2.md), [`SKILLS_REGISTRY_V2.md`](./SKILLS_REGISTRY_V2.md) |
 | Last updated | 2026-05-13 |
@@ -302,8 +302,12 @@ CREATE TABLE chantier_references (
     lot TEXT,
     corps_de_metier TEXT,       -- enum-like FK to a separate ref table
     amount_ht_eur NUMERIC(15, 2),
-    photos JSONB,               -- list of S3 keys
+    photos JSONB,               -- list of S3 keys (kept; see photos_path[] below for typed paths)
+    photos_path TEXT[],         -- v2.1: typed S3 paths to photos (preferred over photos JSONB for new entries)
     attestation_doc_id BIGINT REFERENCES coffre_fort_docs(id),
+    attestation_bonne_execution_path TEXT,    -- v2.1: S3 path to "attestation de bonne exécution" PDF
+    fiche_dechets_path TEXT,                  -- v2.1: S3 path to "fiche déchets" / SOGED of this past chantier (RSE)
+    performance_thermique_kWh NUMERIC(8, 2),  -- v2.1: post-execution measured thermal performance, when applicable (ITE / rénovation énergétique refs)
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -458,6 +462,53 @@ CREATE TABLE ao_quota_consumption (
 );
 CREATE INDEX idx_quota_account_period
     ON ao_quota_consumption(account_id, billing_period);
+
+-- v2.1 - notebooks 17/5/26 --
+-- Jurisprudence reference table. Populated at build time from NotebookLM N6.
+-- Read-only at runtime; refreshed when a new ruling is added to N6.
+CREATE TABLE jurisprudence (
+    id BIGSERIAL PRIMARY KEY,
+    juridiction TEXT NOT NULL CHECK (juridiction IN ('CE', 'CAA', 'TA', 'CJUE', 'Conseil constitutionnel')),
+    date DATE NOT NULL,
+    numero TEXT NOT NULL,                  -- e.g., "474772", "2405722", "n°506640"
+    principe TEXT NOT NULL,                -- the legal principle in one sentence
+    application_pratique TEXT NOT NULL,    -- how Synorix surfaces it to users
+    notebook_source TEXT NOT NULL DEFAULT 'N6',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_jur_juridiction_date ON jurisprudence(juridiction, date DESC);
+CREATE INDEX idx_jur_numero ON jurisprudence(numero);
+
+-- v2.1 - notebooks 17/5/26 --
+-- GME (Groupement Momentané d'Entreprises) — supports Skill #89, PRD §3.7.1.
+CREATE TABLE groupements (
+    id BIGSERIAL PRIMARY KEY,
+    project_id BIGINT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    type TEXT NOT NULL CHECK (type IN ('conjoint', 'solidaire')),
+    mandataire_id BIGINT NOT NULL REFERENCES accounts(id),
+    partenaires JSONB NOT NULL,            -- [{siret, raison_sociale, role, capacites_apportees}]
+    cca_clauses JSONB,                     -- specific CCAP clauses on the GME (article references)
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_grp_project ON groupements(project_id);
+CREATE INDEX idx_grp_mandataire ON groupements(mandataire_id);
+
+-- v2.1 - notebooks 17/5/26 --
+-- RSE engagements per project — supports Skill #92, PRD §3.7.2.
+CREATE TABLE engagements_rse (
+    id BIGSERIAL PRIMARY KEY,
+    project_id BIGINT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    categorie TEXT NOT NULL CHECK (categorie IN ('dechets', 'carbone', 'biosources', 'insertion', 'mobilite')),
+    description TEXT NOT NULL,
+    indicateur_chiffre NUMERIC(12, 3),     -- always user-supplied, never invented
+    indicateur_unite TEXT,                 -- e.g., '%', 'kgCO2eq/m2', 't', 'heures d insertion'
+    certification_source TEXT,             -- e.g., 'BBCA', 'Effinergie', 'NF Habitat HQE', 'RGE 8632'
+    cite_jurisprudence_id BIGINT REFERENCES jurisprudence(id),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_rse_project_cat ON engagements_rse(project_id, categorie);
 ```
 
 ### 4.4 Skills tracking
@@ -720,6 +771,54 @@ Each skill carries a `version` field. A change to system prompt → `version` bu
 - Replay an exact prior run
 - A/B test versions
 - Identify regressions
+
+### 6.6 Skill generation strategy — NotebookLM static snapshot <!-- v2.1 - notebooks 17/5/26 -->
+
+NotebookLM is consulted **only at build time**, never at runtime. The workflow that converts validated notebook expertise into deployable skill code:
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  BUILD TIME (dev, on demand)                                      │
+│                                                                    │
+│  1. Operator opens NotebookLM workspace (magaaa.dev@gmail.com)    │
+│  2. Notebook (e.g., N6 Pièges/Jurisprudence) is verified —        │
+│     all expected sources present, validation score ≥ 9/10         │
+│  3. Operator asks the skill's "Question NotebookLM"               │
+│  4. Operator copies validated answer → `prompts/<skill>.md`       │
+│  5. Operator writes `backend/skills/<cat>/<name>.py` with         │
+│     Pydantic Input/Output + skill class loading the .md prompt    │
+│  6. Operator writes fixtures + tests; pytest                      │
+│  7. Skill `version` bumps; deploy                                  │
+└──────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────────┐
+│  RUNTIME (production)                                              │
+│                                                                    │
+│  Anthropic API call uses the frozen prompt from <skill>.md        │
+│  NotebookLM is NEVER called                                       │
+│  Determinism, latency, cost — all preserved                       │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Why static and not live (RAG against NotebookLM):**
+
+| Concern | Static snapshot | Live NotebookLM RAG |
+|---|---|---|
+| Determinism | ✅ frozen prompt → reproducible | ❌ source set drifts |
+| Latency | ✅ direct Anthropic call (1–5 s) | ❌ +5–15 s per skill call |
+| Cost | ✅ included in €0.77/AO target | ❌ adds €0.05–0.20/AO |
+| Audit / compliance | ✅ prompt is in git, replayable | ❌ retrieval drift is opaque |
+| Anthropic prompt cache | ✅ hot, ~80% hit ratio | ❌ broken by varying retrieved chunks |
+
+**Refresh process when a notebook source is added (e.g., new CE ruling, new DTU revision):**
+
+1. Add the source to the appropriate notebook in NotebookLM.
+2. Re-run the notebook's validation question(s).
+3. If the answer materially changes, regenerate `prompts/<skill>.md` for affected skills.
+4. Bump each affected skill's `version`; redeploy.
+5. Update `NOTEBOOKS_REGISTRY.md` with the new source entry.
+
+**V2 ambition** — automate the change-detection: an Obsidian + RSS regulatory-watch system that auto-suggests new sources to add to NotebookLM when CE / CAA / TA decisions, DTU updates, or DAJ guides are published. Out of V1 scope.
 
 ---
 
@@ -1120,6 +1219,16 @@ The expert knowledge is **baked in at build time**, not retrieved at runtime —
 
 ## 12. Changelog
 
+### 2.4 — 2026-05-18
+
+Integration of 8 validated NotebookLM notebooks (193 sources) — see [NOTEBOOKS_REGISTRY.md](./NOTEBOOKS_REGISTRY.md).
+
+- **§4 `chantier_references`** — Enriched: `photos_path TEXT[]`, `attestation_bonne_execution_path`, `fiche_dechets_path`, `performance_thermique_kWh`. Original `photos JSONB` kept for backward compatibility.
+- **§4 NEW `jurisprudence`** — Reference table populated from N6 at build time; read-only at runtime.
+- **§4 NEW `groupements`** — Supports Skill #89 (Mode GME, PRD §3.7.1).
+- **§4 NEW `engagements_rse`** — Supports Skill #92 (RSE 2026, PRD §3.7.2).
+- **§6.6** — NEW. Skill generation strategy (NotebookLM static snapshot vs live RAG); refresh process; V2 Obsidian-watch ambition.
+
 ### 2.3 — 2026-05-13
 
 - **§4** — Projects table: `pipeline_progress JSONB` column for live progress state and SSE replay.
@@ -1150,4 +1259,4 @@ The expert knowledge is **baked in at build time**, not retrieved at runtime —
 
 ---
 
-*End of Architecture — Synorix v2.3*
+*End of Architecture — Synorix v2.4*
