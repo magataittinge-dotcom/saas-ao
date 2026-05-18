@@ -1,10 +1,10 @@
 # Skills Registry — Synorix v2.0
 
-**Authoritative catalogue of the 87 modular skills that power Synorix v2.0 (86 fully specified + 1 stub).**
+**Authoritative catalogue of the 91 modular skills that power Synorix v2.0 (86 fully specified + 5 differentiator stubs at #85/#86/#87/#88/#95).**
 
 | Field | Value |
 |---|---|
-| Document version | 2.3 |
+| Document version | 2.4 |
 | Status | Active — registry for the `refactor-v2` skills build |
 | Companion to | [`PRD_SYNORIX_V2.md`](./PRD_SYNORIX_V2.md), [`ARCHITECTURE_V2.md`](./ARCHITECTURE_V2.md) |
 | Last updated | 2026-05-13 |
@@ -2652,51 +2652,144 @@ The 15 product differentiators defined in [PRD §1.7](./PRD_SYNORIX_V2.md) map t
 | D3 | #69 `detection-pieces-manquantes-vs-ao` (signature per-piece check) | N5+N6 |
 | D4 | #72 `synorix-score-suggestions` (horodatage proof of due diligence) | N6+N7 |
 | D5 | #71 `synorix-score-evaluateur` (R2132-11 copie sauvegarde) | N5+N6 |
-| D6 | `simulateur-prix-DAJ` — PENDING_ID (collision flagged, see §Collision Flag below) | N7 |
+| **D6** | **#85 `simulateur-prix-DAJ`** (3 formules DAJ) — STUB | N7 |
 | **D7** | **#95 `calculateur-OAB-temps-reel`** (double moyenne, L2152-5) — STUB | N7 |
-| D8 | `RAO-predictif` — PENDING_ID (collision flagged) | N7 |
+| **D8** | **#86 `RAO-predictif`** (grille notation simulée) — STUB | N7 |
 | D9 | #16 `detection-pieges-dce` (CE NAYMA 2024 contradictions) | N6 |
-| D10 | `detection-criteres-disproportionnes` (L2142-1) — PENDING_ID (collision flagged) | N1+N6 |
-| D11 | `conseil-recours-eviction` (L551 CJA, 3 référés) — PENDING_ID (collision flagged) | N6 |
+| **D10** | **#87 `detection-criteres-disproportionnes`** (L2142-1) — STUB | N1+N6 |
+| **D11** | **#88 `conseil-recours-eviction`** (L551 CJA, 3 référés) — STUB | N6 |
 | **D12** | **#89 `cotraitance-groupement`** (R2142-20, NEW V1) | N8 |
 | **D13** | **#92 `criteres-RSE-2026`** (Loi Climat 22/8/2026, NEW V1) | N7+N8 |
 | D14 | #84 `recherche-suggestions-strategiques-ao` (OAB auto-generated justification) | N7 |
 | D15 | #2 `detection-date-limite` (RGE Qualibat 8632/8633 → Certibat 30/9/2026 transition) | N2 |
 
-### Collision Flag — D6 / D8 / D10 / D11 (2026-05-18)
+### Collision Flag — D6 / D8 / D10 / D11 — RESOLVED 2026-05-18
 
-The v2.1 commit (75432a9) mapped four differentiators (D6, D8, D10, D11) to IDs (#75, #77, #79, #80) that turned out to be **already occupied** by existing skills (post-#6 renumber):
+The v2.1 commit (75432a9) initially mapped four differentiators (D6, D8, D10, D11) to IDs (#75, #77, #79, #80) that turned out to be **already occupied** by existing skills (post-#6 renumber). The collision was resolved by allocating the four stubs to the expansion-buffer gap **#85–#88** that was deliberately reserved in v2.1 for exactly this kind of need:
 
-| Diff. | ID assumed in brief | Reality in registry today |
-|---|---|---|
-| D6 | #79 simulateur-prix-DAJ | #79 = `recherche-coffre-fort-pieces-administratives` (Sidebar) |
-| D8 | #80 RAO-predictif | #80 = `analyse-historique-ao-entreprise` (Sidebar) |
-| D10 | #75 detection-criteres-disproportionnes | #75 = `recherche-suivi-post-depot` (Step 6 Export) |
-| D11 | #77 conseil-recours-eviction | #77 = `recherche-format-references-chantiers` (Sidebar) |
+| Diff. | Originally assumed | Existing occupant | **Final ID** |
+|---|---|---|---|
+| D6 | #79 | `recherche-coffre-fort-pieces-administratives` (Sidebar) | **#85** `simulateur-prix-DAJ` |
+| D8 | #80 | `analyse-historique-ao-entreprise` (Sidebar) | **#86** `RAO-predictif` |
+| D10 | #75 | `recherche-suivi-post-depot` (Step 6 Export) | **#87** `detection-criteres-disproportionnes` |
+| D11 | #77 | `recherche-format-references-chantiers` (Sidebar) | **#88** `conseil-recours-eviction` |
 
-**Decision pending (Mohamed):** assign these 4 skills to new IDs. The gap slots **#85, #86, #87, #88** (intentional expansion buffer set in v2.1) are free and the natural target. Suggested allocation:
+D7 (`calculateur-OAB-temps-reel`) was unblocked separately by Mohamed's #82 → **#95** instruction.
 
-- D6 `simulateur-prix-DAJ` → **#85**
-- D8 `RAO-predictif` → **#86**
-- D10 `detection-criteres-disproportionnes` → **#87**
-- D11 `conseil-recours-eviction` → **#88**
+The expansion buffer #85–#88, originally introduced in v2.1 (commit 75432a9) "to keep semantic numbering stable for V1 references", is now fully allocated to differentiator stubs.
 
-Once arbitrated, stubs analogous to #95 below will be added. **D7 was unblocked by Mohamed's instruction** (#82 → #95) and is processed in this patch.
+### Skill #85 — `simulateur-prix-DAJ`   <!-- v2.1 - notebooks 17/5/26 -->
 
-### Skill #95 — `calculateur-OAB-temps-reel` (STUB)
+**Status :** 🟡 STUB (full spec to be extracted from NotebookLM in Phase 3)
 
-**Catégorie :** Synthèse
-**Étape :** Vérification
-**Modèle IA recommandé :** (à confirmer — probablement Sonnet 4.6 + calculs déterministes côté backend)
-**Status :** **STUB** — à compléter en Phase 3 NotebookLM extraction
-**Notebook source :** N7 (Scoring / Évaluation)
-**Validated :** false (stub uniquement)
-**Différenciateur :** **D7** (PRD §1.7)
+| Champ | Valeur |
+|---|---|
+| Mission | Simuler la note prix du candidat selon les 3 formules officielles DAJ (classique, linéaire, moyenne) et identifier la formule la plus favorable. |
+| Étape pipeline | Step 3 Analyse IA / Step 5 Vérification |
+| Modèle IA | Haiku 4.5 (calculs simples) |
+| Notebook source | N7 (Scoring / Évaluation) |
+| Validated | false (STUB) |
+| Différenciateur | D6 |
 
-**Mission :**
-Calculer en temps réel le seuil d'**offre anormalement basse** selon la méthode de la **double moyenne** au sens de l'article **L2152-5 CCP** (articles d'application R2152-3 à R2152-5), et alerter l'utilisateur si son prix s'approche du seuil de qualification OAB — avant le dépôt.
+**À compléter en Phase 3 :**
 
-> **Stub intent :** la fiche complète (Inputs / Outputs / Question NotebookLM / Sources / Critères de qualité) sera générée en Phase 3 NotebookLM extraction, par interrogation directe de N7 (Scoring/Évaluation) sur la méthode de la double moyenne et la jurisprudence associée (TA Nantes 19/5/2025 Verchéenne n°2506407 — rejet OAB sans contradictoire = annulation).
+- Inputs détaillés (formule détectée dans le RC, prix candidat, prix concurrents si simulés)
+- Outputs JSON Schema (note par formule, formule la plus favorable, écart)
+- Prompt template
+- Validation criteria
+- Citation jurisprudence (si applicable — guides DAJ)
+
+---
+
+### Skill #86 — `RAO-predictif`   <!-- v2.1 - notebooks 17/5/26 -->
+
+**Status :** 🟡 STUB (full spec to be extracted from NotebookLM in Phase 3)
+
+| Champ | Valeur |
+|---|---|
+| Mission | Générer un Rapport d'Analyse d'Offres (RAO) prédictif simulant la grille de notation de l'acheteur public (échelle 0–5 par sous-critère + pondération + classement probable). |
+| Étape pipeline | Step 5 Vérification |
+| Modèle IA | Sonnet 4.6 |
+| Notebook source | N7 (Scoring / Évaluation) |
+| Validated | false (STUB) |
+| Différenciateur | D8 |
+
+**À compléter en Phase 3 :**
+
+- Inputs détaillés (mémoire généré, critères pondérés extraits du RC, références entreprise)
+- Outputs JSON Schema (grille notée 0–5 par sous-critère, classement probable, écarts critiques)
+- Prompt template
+- Validation criteria (reproductibilité ≥ 90% sur scoring)
+- Citation jurisprudence : R2152-6 à R2152-8 CCP
+
+---
+
+### Skill #87 — `detection-criteres-disproportionnes`   <!-- v2.1 - notebooks 17/5/26 -->
+
+**Status :** 🟡 STUB (full spec to be extracted from NotebookLM in Phase 3)
+
+| Champ | Valeur |
+|---|---|
+| Mission | Détecter dans le RC les critères de capacité (CA, références) disproportionnés par rapport à l'objet du marché (article L2142-1 CCP). |
+| Étape pipeline | Step 3 Analyse IA |
+| Modèle IA | Sonnet 4.6 |
+| Notebook source | N6 (Pièges + Jurisprudence) |
+| Validated | false (STUB) |
+| Différenciateur | D10 |
+
+**À compléter en Phase 3 :**
+
+- Inputs détaillés (texte du RC, montant estimé du marché, capacités exigées)
+- Outputs JSON Schema (liste critères disproportionnés, niveau de disproportion, citation article)
+- Prompt template
+- Validation criteria
+- Citation jurisprudence : L2142-1 CCP + jurisprudence CE sur disproportion
+
+---
+
+### Skill #88 — `conseil-recours-eviction`   <!-- v2.1 - notebooks 17/5/26 -->
+
+**Status :** 🟡 STUB (full spec to be extracted from NotebookLM in Phase 3)
+
+| Champ | Valeur |
+|---|---|
+| Mission | Conseiller le candidat évincé sur le bon recours (référé précontractuel L551-1 CJA / référé contractuel L551-13 CJA / recours Tarn-et-Garonne CE 4/4/2014) selon le contexte temporel. |
+| Étape pipeline | Step 6 Export (post-éviction) |
+| Modèle IA | Sonnet 4.6 |
+| Notebook source | N6 (Pièges + Jurisprudence) |
+| Validated | false (STUB) |
+| Différenciateur | D11 |
+
+**À compléter en Phase 3 :**
+
+- Inputs détaillés (date notification d'éviction, motif éviction, signature ou non du marché)
+- Outputs JSON Schema (recours recommandé, délai, juridiction compétente, modèle requête)
+- Prompt template
+- Validation criteria
+- Citation jurisprudence : L551-1 / L551-13 CJA + CE 4/4/2014 Tarn-et-Garonne + TA Nantes 19/5/2025 Verchéenne n°2506407
+
+---
+
+### Skill #95 — `calculateur-OAB-temps-reel`   <!-- v2.1 - notebooks 17/5/26 -->
+
+**Status :** 🟡 STUB (full spec to be extracted from NotebookLM in Phase 3)
+
+| Champ | Valeur |
+|---|---|
+| Mission | Calculer en temps réel le risque OAB selon la méthode de double moyenne (article L2152-5 CCP) : moyenne M1 → exclusion offres >20% M1 → seuil 0,9 × M2. Afficher gauge vert/orange/rouge avec seuil chiffré (€) et marge avant zone OAB. |
+| Étape pipeline | Step 5 Vérification |
+| Modèle IA | Haiku 4.5 (calculs déterministes) |
+| Notebook source | N7 (Scoring / Évaluation) |
+| Validated | false (STUB) |
+| Différenciateur | D7 |
+
+**À compléter en Phase 3 :**
+
+- Inputs détaillés (prix candidat, prix concurrents si simulés, montant estimé marché)
+- Outputs JSON Schema (M1, M2, seuil OAB en €, marge candidat, gauge couleur)
+- Prompt template (peu de prompt — calcul déterministe surtout côté backend)
+- Validation criteria (équivalence avec méthode officielle DAJ)
+- Citation jurisprudence : L2152-5 + R2152-3 à R2152-5 CCP + TA Nantes 19/5/2025 Verchéenne n°2506407 (rejet OAB sans contradictoire = annulation)
 
 ---
 
@@ -2725,18 +2818,34 @@ The following 9 monolithic project skills are **deprecated** and to be deleted o
 | Step 1 — Upload | 5 | 5 |
 | Step 2 — Lots | 4 | 9 |
 | Step 3 — AI Analysis | 26 | 35 |
-| Step 4 — Memo | 28 | 63 |
-| Step 4 — Memo (emergent V1) — **#92 `criteres-RSE-2026`** <!-- v2.1 --> | 1 | 64 |
-| Step 5 — Verification | 8 | 72 |
-| Step 5 — Verification (stub V1) — **#95 `calculateur-OAB-temps-reel`** <!-- v2.1 — D7 --> | 1 | 73 |
-| Step 6 — Export | 4 | 77 |
-| Sidebar | 5 | 82 |
-| Coach | 4 | 86 |
-| Coach (emergent V1) — **#89 `cotraitance-groupement`** <!-- v2.1 --> | 1 | **87** |
+| Step 3 — AI Analysis (stub V1) — **#87 `detection-criteres-disproportionnes`** <!-- v2.1 — D10 --> | 1 | 36 |
+| Step 4 — Memo | 28 | 64 |
+| Step 4 — Memo (emergent V1) — **#92 `criteres-RSE-2026`** <!-- v2.1 — D13 --> | 1 | 65 |
+| Step 5 — Verification | 8 | 73 |
+| Step 5 — Verification (stubs V1) — **#85** `simulateur-prix-DAJ` + **#86** `RAO-predictif` + **#95** `calculateur-OAB-temps-reel` <!-- v2.1 — D6/D8/D7 --> | 3 | 76 |
+| Step 6 — Export | 4 | 80 |
+| Step 6 — Export (stub V1) — **#88 `conseil-recours-eviction`** <!-- v2.1 — D11 --> | 1 | 81 |
+| Sidebar | 5 | 86 |
+| Coach | 4 | 90 |
+| Coach (emergent V1) — **#89 `cotraitance-groupement`** <!-- v2.1 — D12 --> | 1 | **91** |
 
 ---
 
 ## Changelog
+
+### 2.4 — 2026-05-18 (final pass — all 5 differentiator stubs)
+
+Mohamed arbitrated collision resolution: the 4 differentiator stubs blocked at #75/#77/#79/#80 are reallocated to the expansion-buffer gap #85–#88. The expansion buffer originally set in v2.1 is now fully spent.
+
+- **Stub #85 `simulateur-prix-DAJ`** (D6) added — Step 5 Verification, Haiku 4.5, N7.
+- **Stub #86 `RAO-predictif`** (D8) added — Step 5 Verification, Sonnet 4.6, N7.
+- **Stub #87 `detection-criteres-disproportionnes`** (D10) added — Step 3 Analyse IA, Sonnet 4.6, N6.
+- **Stub #88 `conseil-recours-eviction`** (D11) added — Step 6 Export, Sonnet 4.6, N6.
+- **Stub #95 `calculateur-OAB-temps-reel`** (D7) reformatted to the table-stub format (consistent with #85–#88) + Mission refined (double moyenne explicit, gauge UX) + model changed Sonnet 4.6 → Haiku 4.5 (calculs déterministes).
+- **V1 Differentiators Mapping** — D6/D8/D10/D11 lines updated to point to their final IDs (was PENDING_ID).
+- **Collision Flag** section — status marked RESOLVED.
+- **Skills Summary Matrix** — total 87 → 91 (5 stubs across Step 3, Step 5, Step 6).
+- **Subtitle** — clarified count as "86 fully specified + 5 differentiator stubs".
 
 ### 2.3 — 2026-05-18 (later same day, patch follow-up)
 
@@ -2776,4 +2885,4 @@ Integration of 8 validated NotebookLM notebooks (193 sources) — see [NOTEBOOKS
 
 ---
 
-*End of Skills Registry — Synorix v2.3*
+*End of Skills Registry — Synorix v2.4*

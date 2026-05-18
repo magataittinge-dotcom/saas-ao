@@ -4,11 +4,11 @@
 
 | Field | Value |
 |---|---|
-| Document version | 1.1 |
+| Document version | 1.2 |
 | Status | Active — source of truth for skill-building expertise |
 | Workspace | `magaaa.dev@gmail.com` (NotebookLM, free tier) |
 | Created & validated | 2026-05-17 |
-| Last updated | 2026-05-18 (v1.1 — D7 OAB renamed to Skill #95; D6/D8/D10/D11 marked PENDING_ID) |
+| Last updated | 2026-05-18 (v1.2 — D6/D8/D10/D11 PENDING_ID resolved → Skills #85/#86/#87/#88) |
 | Companion to | [`PRD_SYNORIX_V2.md`](./PRD_SYNORIX_V2.md), [`SKILLS_REGISTRY_V2.md`](./SKILLS_REGISTRY_V2.md), [`ARCHITECTURE_V2.md`](./ARCHITECTURE_V2.md) |
 
 ---
@@ -70,7 +70,7 @@ At runtime, NotebookLM is **never** consulted — the skill prompts carry the ba
 **Skills alimentées (mapping):**
 
 - Skill #15 (analyse-side `detection-visite-obligatoire`) — CCP article references
-- `detection-criteres-disproportionnes` (PENDING_ID — collision flagged, see SKILLS_REGISTRY §Collision Flag) — L2142-1 CCP
+- **Skill #87 STUB** `detection-criteres-disproportionnes` — L2142-1 CCP
 - **Skill #95 STUB** `calculateur-OAB-temps-reel` — articles L2152-5 + R2152-3 à R2152-5
 - Other CCP-anchored citations across the registry
 
@@ -241,7 +241,7 @@ At runtime, NotebookLM is **never** consulted — the skill prompts carry the ba
 - Skill #60 `detection-phrases-risque`
 - Skill #71 `synorix-score-evaluateur`
 - Skill #72 `synorix-score-suggestions` (Differentiator **D4** — diligence prouvable horodatée, CE 2025)
-- `conseil-recours-eviction` (PENDING_ID — collision flagged) (Differentiator **D11**)
+- **Skill #88 STUB** `conseil-recours-eviction` (Differentiator **D11**)
 - Skill #89 `cotraitance-groupement` (jurisprudence GME)
 - Almost every skill that cites jurisprudence in its output (Differentiator **D1** — cross-cutting)
 
@@ -272,7 +272,7 @@ At runtime, NotebookLM is **never** consulted — the skill prompts carry the ba
 **Apprentissages clés :**
 
 - Jurisprudence 2024-2026 inflexion en faveur du candidat sur la traçabilité (horodatage diligence).
-- Référé précontractuel L551-1 = arme défensive ; Synorix doit guider l'utilisateur quand pertinent (`conseil-recours-eviction`, PENDING_ID).
+- Référé précontractuel L551-1 = arme défensive ; Synorix doit guider l'utilisateur quand pertinent (**Skill #88** STUB `conseil-recours-eviction`).
 
 ---
 
@@ -290,8 +290,8 @@ At runtime, NotebookLM is **never** consulted — the skill prompts carry the ba
 - Skill #66 `recherche-criteres-evaluation-memoire`
 - Skill #71 `synorix-score-evaluateur`
 - Skill #72 `synorix-score-suggestions`
-- `simulateur-prix-DAJ` (PENDING_ID — collision flagged) (Differentiator **D6**)
-- `RAO-predictif` (PENDING_ID — collision flagged) (Differentiator **D8**)
+- **Skill #85 STUB** `simulateur-prix-DAJ` (Differentiator **D6**)
+- **Skill #86 STUB** `RAO-predictif` (Differentiator **D8**)
 - **Skill #95 STUB** `calculateur-OAB-temps-reel` (Differentiator **D7**)
 - Skill #84 `recherche-suggestions-strategiques-ao` (Differentiator **D14** — justification OAB)
 - Skill #92 `criteres-RSE-2026` (Differentiator **D13**)
@@ -358,13 +358,13 @@ The canonical mapping is also embedded in each skill's `Notebook source` field i
 
 | Notebook | Primary skills (non-exhaustive) |
 |---|---|
-| N1 | #15, `detection-criteres-disproportionnes` (PENDING_ID), **#95 STUB**, broad CCP citations |
+| N1 | #15, **#87 STUB**, **#95 STUB**, broad CCP citations |
 | N2 | #1, #2, #11, #35, #69, #70 |
 | N3 | #40–#49, #50–#57, #58, #61, #71 |
 | N4 | #25–#34, #45, #60 |
 | N5 | #4, #67, #68, #71, #73, #74 |
-| N6 | #16, #17, #60, #72, `conseil-recours-eviction` (PENDING_ID), every jurisprudence citation |
-| N7 | #14, #66, #71, #72, `simulateur-prix-DAJ` + `RAO-predictif` (PENDING_IDs), **#95 STUB**, #84, #92 |
+| N6 | #16, #17, #60, #72, **#87 STUB**, **#88 STUB**, every jurisprudence citation |
+| N7 | #14, #66, #71, #72, **#85 STUB**, **#86 STUB**, **#95 STUB**, #84, #92 |
 | N8 | Coach skills #81–#84, **#89**, #90/91/93/94 (V2), #92 |
 
 ---
@@ -393,4 +393,4 @@ Once those are filled in, the registry becomes the definitive build-time referen
 
 ---
 
-*End of NOTEBOOKS_REGISTRY — Synorix v2.1 (registry doc v1.1)*
+*End of NOTEBOOKS_REGISTRY — Synorix v2.1 (registry doc v1.2)*

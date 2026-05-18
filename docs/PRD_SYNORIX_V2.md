@@ -4,7 +4,7 @@
 
 | Field | Value |
 |---|---|
-| Document version | 2.4 |
+| Document version | 2.5 |
 | Status | Active — drives the v2.0 refactor (`refactor-v2` branch) |
 | Owner | Mohamed (Founder) |
 | Audience | Engineering, Design, future contributors, Claude Code |
@@ -89,12 +89,12 @@ The following 15 product differentiators are grounded in the 8 NotebookLM notebo
 | D3 | Vérification signature individuelle des pièces vs signature ZIP | TA Toulouse 9/3/2011 n°1100792 | Skill #69 |
 | D4 | Diligence prouvable horodatée du candidat | CE 2/10/2025 SFRS n°501204 | Skill #72 |
 | D5 | Copie de sauvegarde R2132-11 CCP générée systématiquement | R2132-11 CCP | Skill #71 |
-| D6 | Simulateur 3 formules prix DAJ (linéaire / inversement proportionnelle / variante) | Guides DAJ | `simulateur-prix-DAJ` — **PENDING_ID** (collision flagged, see [SKILLS_REGISTRY V1 Differentiators §Collision Flag](./SKILLS_REGISTRY_V2.md)) |
+| D6 | Simulateur 3 formules prix DAJ (linéaire / inversement proportionnelle / variante) | Guides DAJ | **Skill #85** (STUB) |
 | D7 | Calculateur OAB temps réel (méthode double moyenne) | L2152-5, R2152-3 à R2152-5 CCP | **Skill #95** (STUB) |
-| D8 | RAO Prédictif (simulation rapport d'analyse de l'acheteur) | R2152-6 à R2152-8 CCP | `RAO-predictif` — **PENDING_ID** |
+| D8 | RAO Prédictif (simulation rapport d'analyse de l'acheteur) | R2152-6 à R2152-8 CCP | **Skill #86** (STUB) |
 | D9 | Détection contradictions DCE | CE 18/7/2024 NAYMA n°492938 (devoir de vigilance du candidat) | Skill #16 |
-| D10 | Détection critères disproportionnés (capacité non liée / proportionnée) | L2142-1 CCP | `detection-criteres-disproportionnes` — **PENDING_ID** |
-| D11 | Conseil recours après éviction (3 référés) | L551 CJA + CE 4/4/2014 Tarn-et-Garonne + TA Nantes 19/5/2025 Verchéenne n°2506407 | `conseil-recours-eviction` — **PENDING_ID** |
+| D10 | Détection critères disproportionnés (capacité non liée / proportionnée) | L2142-1 CCP | **Skill #87** (STUB) |
+| D11 | Conseil recours après éviction (3 référés) | L551 CJA + CE 4/4/2014 Tarn-et-Garonne + TA Nantes 19/5/2025 Verchéenne n°2506407 | **Skill #88** (STUB) |
 | D12 | **Mode Groupement GME** (cotraitance conjoint / solidaire) | R2142-20 CCP | **Skill #89** (NEW V1) |
 | D13 | **Auto-suggestions RSE 2026** (Loi Climat 22/8/2026) | Loi Climat 22/8/2026 | **Skill #92** (NEW V1) |
 | D14 | Justification OAB auto-générée (réponse 21 jours) | L2152-5 + R2152-3 à R2152-5 CCP | Skill #84 |
@@ -1426,6 +1426,10 @@ Synorix's design system lives in code, not as an AI skill.
 
 ## 11. Changelog
 
+### 2.5 — 2026-05-18 (final pass — collisions resolved)
+
+- **§1.7 Differentiators table** — D6/D8/D10/D11 PENDING_ID resolved: now point to **Skill #85** (D6), **Skill #86** (D8), **Skill #87** (D10), **Skill #88** (D11). All STUB entries created in SKILLS_REGISTRY (see SKILLS v2.4).
+
 ### 2.4 — 2026-05-18 (later same day, patch follow-up)
 
 - **§1.7 Differentiators table** — D7 column updated (Skill #82 → **Skill #95**, STUB). D6 / D8 / D10 / D11 marked **PENDING_ID** (collision flagged in SKILLS_REGISTRY §Collision Flag). The originally proposed IDs (#79, #80, #75, #77) are already occupied; resolution pending Mohamed's arbitration.
@@ -1466,4 +1470,4 @@ Integration of the 8 validated NotebookLM notebooks (193 sources, created & vali
 
 ---
 
-*End of PRD — Synorix v2.4*
+*End of PRD — Synorix v2.5*
