@@ -1,0 +1,1 @@
+"""Synorix skills — upload category."""
