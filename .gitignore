@@ -1,9 +1,26 @@
-node_modules/
+# Auth tokens et secrets
+*cookies*.txt
+notebooklm.google.com_cookies*
+.notebooklm/
+
+# Python
 __pycache__/
-*.pyc
-.env
-venv/
+*.py[cod]
+.pytest_cache/
 .venv/
+venv/
+*.egg-info/
+
+# Env
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+
+# Node / project
+node_modules/
 uploads/
 *.db
 .claude/
