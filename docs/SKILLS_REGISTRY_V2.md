@@ -4,10 +4,54 @@
 
 | Field | Value |
 |---|---|
-| Document version | 2.4 |
+| Document version | 2.5 |
 | Status | Active — registry for the `refactor-v2` skills build |
 | Companion to | [`PRD_SYNORIX_V2.md`](./PRD_SYNORIX_V2.md), [`ARCHITECTURE_V2.md`](./ARCHITECTURE_V2.md) |
-| Last updated | 2026-05-13 |
+| Last updated | 2026-05-27 |
+
+<!--
+====================================================================
+v2.5 (2026-05-27) — Taxonomy alignment: prose categories → 9 pipeline-aware code categories
+(source of truth = backend/synorix/skills/<cat>/). Applied to all 91 skills.
+
+Conversion table (old "Catégorie :" → new pipeline category : count of skills):
+
+  Génération            -> memoire        : 23
+  Coaching              -> expert-metier  : 10
+  Extraction            -> extraction     :  6
+  Détection             -> extraction     :  5
+  Recherche             -> sidebar        :  4
+  Recherche             -> verification   :  4
+  Coaching              -> chatbot        :  3
+  Détection             -> lots           :  3
+  Détection             -> upload         :  3
+  Recherche             -> export         :  3
+  Validation            -> extraction     :  3
+  Extraction            -> memoire        :  2
+  Synthèse              -> extraction     :  2
+  Coaching              -> memoire        :  1
+  Coaching              -> verification   :  1
+  Détection             -> memoire        :  1
+  Détection             -> verification   :  1
+  Extraction            -> lots           :  1
+  Extraction            -> sidebar        :  1
+  Extraction            -> upload         :  1
+  Recherche             -> chatbot        :  1
+  Recherche             -> upload         :  1
+  Recherche / Coaching  -> chatbot        :  1
+  Recherche / Coaching  -> export         :  1
+  Synthèse              -> memoire        :  1
+  Synthèse              -> sidebar        :  1
+  Synthèse              -> verification   :  1
+  Validation            -> verification   :  1
+  (stub format) #85,#86,#95 -> verification     : 3
+  (stub format) #87       -> extraction       : 1
+  (stub format) #88       -> export           : 1
+
+Total: 86 prose Catégorie rewrites + 5 stub-table additions = 91 skills.
+Unmapped: 0. No skill required manual reclassification.
+====================================================================
+-->
 
 ---
 
@@ -87,7 +131,7 @@ Every skill in this registry follows this template:
 ```markdown
 ### Skill #N — `nom-de-la-skill`
 
-**Catégorie :** [Extraction / Détection / Génération / Recherche / Validation / Synthèse / Coaching]
+**Catégorie :** [upload / lots / extraction / expert-metier / memoire / verification / export / sidebar / chatbot]
 **Étape :** [Upload / Lots / Analyse / Mémoire / Vérification / Export / Sidebar / Coach]
 **Modèle IA recommandé :** [Haiku 4.5 / Sonnet 4.6 / Opus 4.7 / aucun]
 **Status :** À créer
@@ -125,7 +169,7 @@ Every skill in this registry follows this template:
 
 ### Skill #1 — `recherche-types-documents`
 
-**Catégorie :** Recherche
+**Catégorie :** upload
 **Étape :** Upload
 **Modèle IA recommandé :** Haiku 4.5
 **Status :** À créer
@@ -167,7 +211,7 @@ Identifier la liste exhaustive des types de documents qu'on peut rencontrer dans
 
 ### Skill #2 — `detection-date-limite`
 
-**Catégorie :** Extraction
+**Catégorie :** upload
 **Étape :** Upload
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -208,7 +252,7 @@ Après détection du RC.
 
 ### Skill #3 — `detection-doublons-versions`
 
-**Catégorie :** Détection
+**Catégorie :** upload
 **Étape :** Upload
 **Modèle IA recommandé :** Haiku 4.5
 **Status :** À créer
@@ -242,7 +286,7 @@ Sur l'ensemble des fichiers extraits après upload.
 
 ### Skill #4 — `detection-plateforme-depot`
 
-**Catégorie :** Détection
+**Catégorie :** upload
 **Étape :** Upload
 **Modèle IA recommandé :** Haiku 4.5
 **Status :** À créer
@@ -280,7 +324,7 @@ Après détection du RC.
 
 ### Skill #5 — `detection-visite-obligatoire`
 
-**Catégorie :** Détection
+**Catégorie :** upload
 **Étape :** Upload
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -322,7 +366,7 @@ Sur le RC et le CCAP.
 
 ### Skill #6 — `recherche-lots`
 
-**Catégorie :** Détection
+**Catégorie :** lots
 **Étape :** Lots
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -358,7 +402,7 @@ Après upload et classification réussie d'au moins un RC ou une DPGF.
 
 ### Skill #7 — `detection-corps-de-metier-lot`
 
-**Catégorie :** Détection
+**Catégorie :** lots
 **Étape :** Lots
 **Modèle IA recommandé :** Haiku 4.5
 **Status :** À créer
@@ -393,7 +437,7 @@ Pour chaque lot détecté.
 
 ### Skill #8 — `extraction-description-lot`
 
-**Catégorie :** Extraction
+**Catégorie :** lots
 **Étape :** Lots
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -428,7 +472,7 @@ Pour chaque lot, après que sa documentation a été identifiée.
 
 ### Skill #9 — `detection-incoherences-lots`
 
-**Catégorie :** Détection
+**Catégorie :** lots
 **Étape :** Lots
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -471,7 +515,7 @@ Après détection des lots par les deux sources.
 
 ### Skill #10 — `extraction-exigences-administratives`
 
-**Catégorie :** Extraction
+**Catégorie :** extraction
 **Étape :** Analyse
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -504,7 +548,7 @@ Après ouverture de Step 3, sur le RC, CCAP, et tout document administratif dét
 
 ### Skill #11 — `extraction-pieces-offre`
 
-**Catégorie :** Extraction
+**Catégorie :** extraction
 **Étape :** Analyse
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -537,7 +581,7 @@ Step 3, sur RC, CCAP, AE.
 
 ### Skill #12 — `extraction-exigences-techniques`
 
-**Catégorie :** Extraction
+**Catégorie :** extraction
 **Étape :** Analyse
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -570,7 +614,7 @@ Step 3, sur le CCTP du lot sélectionné.
 
 ### Skill #13 — `extraction-criteres-jugement`
 
-**Catégorie :** Extraction
+**Catégorie :** extraction
 **Étape :** Analyse
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -605,7 +649,7 @@ Step 3, sur le RC.
 
 ### Skill #14 — `detection-visite-obligatoire` (Analyse-side)
 
-**Catégorie :** Détection
+**Catégorie :** extraction
 **Étape :** Analyse
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -638,7 +682,7 @@ Au rendu de Step 3.
 
 ### Skill #15 — `detection-cautionnement-garanties`
 
-**Catégorie :** Détection
+**Catégorie :** extraction
 **Étape :** Analyse
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -672,7 +716,7 @@ Step 3, sur le RC + CCAP.
 
 ### Skill #16 — `detection-pieges-dce`
 
-**Catégorie :** Détection
+**Catégorie :** extraction
 **Étape :** Analyse
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -705,7 +749,7 @@ Step 3, sur tous les documents.
 
 ### Skill #17 — `detection-incoherences-dce`
 
-**Catégorie :** Détection
+**Catégorie :** extraction
 **Étape :** Analyse
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -740,7 +784,7 @@ Step 3, après extraction par toutes les skills précédentes.
 
 ### Skill #18 — `liaison-coffre-fort`
 
-**Catégorie :** Validation
+**Catégorie :** extraction
 **Étape :** Analyse
 **Modèle IA recommandé :** Haiku 4.5
 **Status :** À créer
@@ -772,7 +816,7 @@ Step 3, pour chaque output de #10.
 
 ### Skill #19 — `enrichissement-source-document`
 
-**Catégorie :** Extraction
+**Catégorie :** extraction
 **Étape :** Analyse
 **Modèle IA recommandé :** Haiku 4.5
 **Status :** À créer
@@ -803,7 +847,7 @@ Step 3, en post-traitement des skills d'extraction.
 
 ### Skill #20 — `surlignage-exigence-complete`
 
-**Catégorie :** Extraction
+**Catégorie :** extraction
 **Étape :** Analyse
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -836,7 +880,7 @@ Au clic utilisateur sur `📍 RC page 4` dans Zone 3.
 
 ### Skill #21 — `detection-documents-a-completer`
 
-**Catégorie :** Détection
+**Catégorie :** extraction
 **Étape :** Analyse
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -870,7 +914,7 @@ Step 3, sur l'ensemble des documents extraits.
 
 ### Skill #22 — `validation-completude-document`
 
-**Catégorie :** Validation
+**Catégorie :** extraction
 **Étape :** Analyse
 **Modèle IA recommandé :** Haiku 4.5
 **Status :** À créer
@@ -904,7 +948,7 @@ Pour chaque document édité dans Synorix (DPGF, Cerfa, etc.), détecter si l'ut
 
 ### Skill #23 — `synthese-executive-dce`
 
-**Catégorie :** Synthèse
+**Catégorie :** extraction
 **Étape :** Analyse
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -936,7 +980,7 @@ Step 3, après que les skills #10–#17 ont produit leurs outputs.
 
 ### Skill #24 — `calculatrice-retenue-garantie`
 
-**Catégorie :** Synthèse
+**Catégorie :** extraction
 **Étape :** Analyse
 **Modèle IA recommandé :** aucun (calcul déterministe + UI)
 **Status :** À créer
@@ -974,7 +1018,7 @@ Chacun de ces 10 experts est une skill **spécialisée par corps de métier**. I
 
 ### Skill #25 — `expert-facade`
 
-**Catégorie :** Coaching
+**Catégorie :** expert-metier
 **Étape :** Analyse (déclenche aussi Mémoire)
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -1011,7 +1055,9 @@ Si le lot sélectionné a corps de métier "façade".
 
 ### Skill #26 — `expert-ite`
 
-**Catégorie :** Coaching
+<!-- v2.1: NF DTU 45.1 = bâtiments frigorifiques, PAS l'ITE. Référentiel opérationnel ETICS = CPT 3035 V3 (CSTB). Corrigé suite arbitrage N4/Mohamed 27/5/26. -->
+
+**Catégorie :** expert-metier
 **Étape :** Analyse / Mémoire
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -1030,10 +1076,10 @@ Lot corps de métier "ITE" ou "façade isolante".
 - Suggestions méthodologie + arguments thermiques
 
 **Question NotebookLM :**
-"Expert ITE BTP français : systèmes courants, NF DTU 45.1, certifications RGE Qualibat, pièges (ponts thermiques, défauts d'étanchéité), critères de performance R, λ. Quels arguments gagnants en mémoire technique ?"
+"Expert ITE BTP français : systèmes courants, CPT 3035 V3, certifications RGE Qualibat, pièges (ponts thermiques, défauts d'étanchéité), critères de performance R, λ. Quels arguments gagnants en mémoire technique ?"
 
 **Sources NotebookLM suggérées :**
-- NF DTU 45.1
+- CPT 3035 V3 (CSTB) — référentiel opérationnel ETICS sous enduit
 - Référentiel RGE Qualibat
 - ATEx CSTB ITE
 - Mémoires gagnants ITE
@@ -1045,7 +1091,7 @@ Lot corps de métier "ITE" ou "façade isolante".
 
 ### Skill #27 — `expert-gros-oeuvre`
 
-**Catégorie :** Coaching
+**Catégorie :** expert-metier
 **Étape :** Analyse / Mémoire
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -1077,7 +1123,7 @@ Lot corps de métier "gros œuvre".
 
 ### Skill #28 — `expert-electricite`
 
-**Catégorie :** Coaching
+**Catégorie :** expert-metier
 **Étape :** Analyse / Mémoire
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -1100,7 +1146,7 @@ Expert électricité bâtiment (NF C 15-100, faible courant, courants forts, sé
 
 ### Skill #29 — `expert-cvc`
 
-**Catégorie :** Coaching
+**Catégorie :** expert-metier
 **Étape :** Analyse / Mémoire
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -1123,7 +1169,7 @@ Expert CVC (Chauffage, Ventilation, Climatisation). Connaît les pompes à chale
 
 ### Skill #30 — `expert-plomberie`
 
-**Catégorie :** Coaching
+**Catégorie :** expert-metier
 **Étape :** Analyse / Mémoire
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -1146,7 +1192,7 @@ Expert plomberie sanitaire et alimentation eau. NF DTU 60.1, 60.11, normes press
 
 ### Skill #31 — `expert-peinture`
 
-**Catégorie :** Coaching
+**Catégorie :** expert-metier
 **Étape :** Analyse / Mémoire
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -1168,7 +1214,7 @@ Expert peinture / revêtements intérieurs (NF DTU 59.1, 59.2, 59.3 ; classifica
 
 ### Skill #32 — `expert-vrd`
 
-**Catégorie :** Coaching
+**Catégorie :** expert-metier
 **Étape :** Analyse / Mémoire
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -1191,7 +1237,7 @@ Expert VRD (Voirie et Réseaux Divers) : terrassement, voirie, réseaux EU/EP/AE
 
 ### Skill #33 — `expert-menuiserie`
 
-**Catégorie :** Coaching
+**Catégorie :** expert-metier
 **Étape :** Analyse / Mémoire
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -1213,7 +1259,7 @@ Expert menuiserie extérieure et intérieure : alu, bois, PVC, NF DTU 36.5, 36.1
 
 ### Skill #34 — `expert-etancheite`
 
-**Catégorie :** Coaching
+**Catégorie :** expert-metier
 **Étape :** Analyse / Mémoire
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -1238,7 +1284,7 @@ Expert étanchéité (toitures-terrasses, sous-sols) : NF DTU 43.1 / 43.3 / 43.4
 
 ### Skill #35 — `validation-piece-coffre-fort`
 
-**Catégorie :** Validation
+**Catégorie :** extraction
 **Étape :** Analyse
 **Modèle IA recommandé :** Haiku 4.5
 **Status :** À créer
@@ -1278,7 +1324,7 @@ Pour chaque document du coffre-fort, vérifier sa validité (Kbis < 3 mois, atte
 
 ### Skill #36 — `recuperation-profil-entreprise`
 
-**Catégorie :** Extraction
+**Catégorie :** memoire
 **Étape :** Mémoire
 **Modèle IA recommandé :** Haiku 4.5
 **Status :** À créer
@@ -1310,7 +1356,7 @@ Au démarrage de Step 4.
 
 ### Skill #37 — `selection-references-pertinentes`
 
-**Catégorie :** Synthèse
+**Catégorie :** memoire
 **Étape :** Mémoire
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -1344,7 +1390,7 @@ Step 4, après chargement du profil entreprise et du contexte AO.
 
 ### Skill #38 — `recuperation-bibliotheque-memoire`
 
-**Catégorie :** Extraction
+**Catégorie :** memoire
 **Étape :** Mémoire
 **Modèle IA recommandé :** Haiku 4.5
 **Status :** À créer
@@ -1378,7 +1424,7 @@ Step 4, pour chaque section générée.
 
 ### Skill #39 — `extraction-memoire-importe`
 
-**Catégorie :** Extraction
+**Catégorie :** sidebar
 **Étape :** Sidebar (Bibliothèque) — utilisée par Mémoire
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -1413,7 +1459,7 @@ Lors d'un upload de mémoire dans `Ma bibliothèque mémoire`.
 
 ### Skill #40 — `redacteur-preambule`
 
-**Catégorie :** Génération
+**Catégorie :** memoire
 **Étape :** Mémoire
 **Modèle IA recommandé :** Opus 4.7
 **Status :** À créer
@@ -1447,7 +1493,7 @@ Step 4, première section générée.
 
 ### Skill #41 — `redacteur-presentation-entreprise`
 
-**Catégorie :** Génération
+**Catégorie :** memoire
 **Étape :** Mémoire
 **Modèle IA recommandé :** Opus 4.7
 **Status :** À créer
@@ -1477,7 +1523,7 @@ Rédiger PARTIE A — Présentation entreprise (5-7 pages) : historique, identit
 
 ### Skill #42 — `redacteur-equipe-dediee`
 
-**Catégorie :** Génération
+**Catégorie :** memoire
 **Étape :** Mémoire
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -1506,7 +1552,7 @@ Rédiger la sous-section "Équipe dédiée au chantier" : conducteur de travaux,
 
 ### Skill #43 — `redacteur-references-chantiers`
 
-**Catégorie :** Génération
+**Catégorie :** memoire
 **Étape :** Mémoire
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -1535,7 +1581,7 @@ Rédiger la section "Nos références chantiers" — tableau formaté (Année / 
 
 ### Skill #44 — `redacteur-presentation-prestation`
 
-**Catégorie :** Génération
+**Catégorie :** memoire
 **Étape :** Mémoire
 **Modèle IA recommandé :** Opus 4.7
 **Status :** À créer
@@ -1566,7 +1612,7 @@ Rédiger PARTIE B — Présentation de la prestation (4-6 pages) : compréhensio
 
 ### Skill #45 — `redacteur-methodologie`
 
-**Catégorie :** Génération
+**Catégorie :** memoire
 **Étape :** Mémoire
 **Modèle IA recommandé :** Opus 4.7
 **Status :** À créer
@@ -1601,7 +1647,7 @@ PARTIE C — Méthodologie d'exécution (5-8 pages). **La section la plus pondé
 
 ### Skill #46 — `redacteur-securite-ppsps`
 
-**Catégorie :** Génération
+**Catégorie :** memoire
 **Étape :** Mémoire
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -1633,7 +1679,7 @@ Rédiger la section sécurité, et si l'option PPSPS est cochée, générer un P
 
 ### Skill #47 — `redacteur-environnement-soged`
 
-**Catégorie :** Génération
+**Catégorie :** memoire
 **Étape :** Mémoire
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -1657,7 +1703,7 @@ Rédiger section environnement + SOGED si option cochée.
 
 ### Skill #48 — `redacteur-qualite-paq`
 
-**Catégorie :** Génération
+**Catégorie :** memoire
 **Étape :** Mémoire
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -1680,7 +1726,7 @@ Rédiger section qualité + PAQ (Plan d'Assurance Qualité) si option cochée.
 
 ### Skill #49 — `redacteur-planning-gantt`
 
-**Catégorie :** Génération
+**Catégorie :** memoire
 **Étape :** Mémoire
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -1712,7 +1758,7 @@ Rédiger la section planning + générer un Gantt prévisionnel si option coché
 
 ### Skill #50 — `generateur-organigramme`
 
-**Catégorie :** Génération
+**Catégorie :** memoire
 **Étape :** Mémoire
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -1733,7 +1779,7 @@ Générer un organigramme dédié au chantier (image SVG) à partir de l'équipe
 
 ### Skill #51 — `generateur-planning-gantt-option`
 
-**Catégorie :** Génération
+**Catégorie :** memoire
 **Étape :** Mémoire
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -1751,7 +1797,7 @@ Variant de #49 pour les cas où la section planning n'est pas demandée mais l'u
 
 ### Skill #52 — `generateur-photos-references`
 
-**Catégorie :** Génération
+**Catégorie :** memoire
 **Étape :** Mémoire
 **Modèle IA recommandé :** aucun (rendu visuel pur)
 **Status :** À créer
@@ -1769,7 +1815,7 @@ Intégrer dans le mémoire les photos de chantiers stockées dans `Mes référen
 
 ### Skill #53 — `generateur-ppsps`
 
-**Catégorie :** Génération
+**Catégorie :** memoire
 **Étape :** Mémoire
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -1791,7 +1837,7 @@ Variant de #46 quand un PPSPS complet (et non juste une section sécurité) est 
 
 ### Skill #54 — `generateur-soged`
 
-**Catégorie :** Génération
+**Catégorie :** memoire
 **Étape :** Mémoire
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -1813,7 +1859,7 @@ Variant de #47 quand un SOGED autonome est demandé.
 
 ### Skill #55 — `generateur-paq`
 
-**Catégorie :** Génération
+**Catégorie :** memoire
 **Étape :** Mémoire
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -1831,7 +1877,7 @@ Variant de #48 — PAQ autonome.
 
 ### Skill #56 — `generateur-note-innovation`
 
-**Catégorie :** Génération
+**Catégorie :** memoire
 **Étape :** Mémoire
 **Modèle IA recommandé :** Opus 4.7
 **Status :** À créer
@@ -1853,7 +1899,7 @@ Rédiger une note d'innovation spécifique au chantier — innovations technique
 
 ### Skill #57 — `generateur-note-rse`
 
-**Catégorie :** Génération
+**Catégorie :** memoire
 **Étape :** Mémoire
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -1877,7 +1923,7 @@ Rédiger une note RSE — engagement social, environnemental, économique de l'e
 
 ### Skill #58 — `editeur-section-regeneration`
 
-**Catégorie :** Génération
+**Catégorie :** memoire
 **Étape :** Mémoire
 **Modèle IA recommandé :** Opus 4.7
 **Status :** À créer
@@ -1905,7 +1951,7 @@ Bouton `[Régénérer]` sur une section.
 
 ### Skill #59 — `editeur-reecriture-instruction`
 
-**Catégorie :** Génération
+**Catégorie :** memoire
 **Étape :** Mémoire
 **Modèle IA recommandé :** Opus 4.7
 **Status :** À créer
@@ -1934,7 +1980,7 @@ Sélection paragraphe + bouton `[Réécrire avec instructions]`.
 
 ### Skill #60 — `detection-phrases-risque`
 
-**Catégorie :** Détection
+**Catégorie :** memoire
 **Étape :** Mémoire
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -1956,7 +2002,7 @@ Avant export, détecter dans le mémoire les phrases à risque (engagements impo
 
 ### Skill #61 — `suggestion-plus-values`
 
-**Catégorie :** Coaching
+**Catégorie :** memoire
 **Étape :** Mémoire
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -1980,7 +2026,7 @@ Suggérer des plus-values à mettre en avant pour différencier l'offre (innovat
 
 ### Skill #62 — `exporteur-memoire-docx`
 
-**Catégorie :** Génération
+**Catégorie :** memoire
 **Étape :** Mémoire
 **Modèle IA recommandé :** aucun (rendu pur)
 **Status :** À créer
@@ -2002,7 +2048,7 @@ Exporter le mémoire en `.docx` éditable, avec mise en page conforme à la char
 
 ### Skill #63 — `exporteur-memoire-pdf`
 
-**Catégorie :** Génération
+**Catégorie :** memoire
 **Étape :** Mémoire
 **Modèle IA recommandé :** aucun
 **Status :** À créer
@@ -2026,7 +2072,7 @@ Exporter en `.pdf` finalisé prêt pour dépôt.
 
 ### Skill #64 — `recherche-format-rapport-conformite`
 
-**Catégorie :** Recherche
+**Catégorie :** verification
 **Étape :** Vérification
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -2048,7 +2094,7 @@ Définir le format du rapport de conformité affiché à l'utilisateur (sections
 
 ### Skill #65 — `recherche-criteres-evaluation-memoire`
 
-**Catégorie :** Recherche
+**Catégorie :** verification
 **Étape :** Vérification
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -2071,7 +2117,7 @@ Connaître les critères et pondérations utilisés par les commissions d'évalu
 
 ### Skill #66 — `recherche-nomenclature-fichiers-ao`
 
-**Catégorie :** Recherche
+**Catégorie :** verification
 **Étape :** Vérification
 **Modèle IA recommandé :** Haiku 4.5
 **Status :** À créer
@@ -2093,7 +2139,7 @@ Trouver et appliquer la nomenclature de fichiers attendue (selon le RC) pour le 
 
 ### Skill #67 — `recherche-procedures-depot-plateformes`
 
-**Catégorie :** Recherche
+**Catégorie :** verification
 **Étape :** Vérification
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -2115,7 +2161,7 @@ Pour chaque plateforme (PLACE, AWS, etc.), connaître la procédure de dépôt :
 
 ### Skill #68 — `detection-pieces-manquantes-vs-ao`
 
-**Catégorie :** Détection
+**Catégorie :** verification
 **Étape :** Vérification
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -2146,7 +2192,7 @@ Vérifier que chaque pièce demandée par le DCE est présente dans le dossier p
 
 ### Skill #69 — `detection-validite-pieces-administratives`
 
-**Catégorie :** Validation
+**Catégorie :** verification
 **Étape :** Vérification
 **Modèle IA recommandé :** Haiku 4.5
 **Status :** À créer
@@ -2174,7 +2220,7 @@ Step 5.
 
 ### Skill #70 — `synorix-score-evaluateur`
 
-**Catégorie :** Synthèse
+**Catégorie :** verification
 **Étape :** Vérification
 **Modèle IA recommandé :** Opus 4.7
 **Status :** À créer
@@ -2209,7 +2255,7 @@ Step 5 (intégré pipeline) + page dédiée standalone.
 
 ### Skill #71 — `synorix-score-suggestions`
 
-**Catégorie :** Coaching
+**Catégorie :** verification
 **Étape :** Vérification
 **Modèle IA recommandé :** Opus 4.7
 **Status :** À créer
@@ -2239,7 +2285,7 @@ Après calcul Synorix Score.
 
 ### Skill #72 — `recherche-format-zip-ao-pro`
 
-**Catégorie :** Recherche
+**Catégorie :** export
 **Étape :** Export
 **Modèle IA recommandé :** Haiku 4.5
 **Status :** À créer
@@ -2261,7 +2307,7 @@ Définir la structure du ZIP final : sous-dossiers, ordre, racine.
 
 ### Skill #73 — `recherche-page-garde-memoire`
 
-**Catégorie :** Recherche
+**Catégorie :** export
 **Étape :** Export
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -2283,7 +2329,7 @@ Générer une page de garde pour le mémoire (logo entreprise, intitulé AO, lot
 
 ### Skill #74 — `recherche-checklist-depot-plateforme`
 
-**Catégorie :** Recherche
+**Catégorie :** export
 **Étape :** Export
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -2305,7 +2351,7 @@ Produire une **checklist** (PDF ou markdown) à inclure dans le ZIP, listant cha
 
 ### Skill #75 — `recherche-suivi-post-depot`
 
-**Catégorie :** Recherche / Coaching
+**Catégorie :** export
 **Étape :** Export
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -2329,7 +2375,7 @@ Définir le scénario de suivi post-dépôt : J+1 confirmation, J+30 relance ami
 
 ### Skill #76 — `recherche-structure-profil-entreprise-btp`
 
-**Catégorie :** Recherche
+**Catégorie :** sidebar
 **Étape :** Sidebar (Mon entreprise)
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -2351,7 +2397,7 @@ Définir la structure exacte du profil entreprise BTP (champs canoniques, valida
 
 ### Skill #77 — `recherche-format-references-chantiers`
 
-**Catégorie :** Recherche
+**Catégorie :** sidebar
 **Étape :** Sidebar (Mes références)
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -2373,7 +2419,7 @@ Définir le format optimal pour stocker et afficher les références chantiers.
 
 ### Skill #78 — `recherche-bibliotheque-phrases-memoire`
 
-**Catégorie :** Recherche
+**Catégorie :** sidebar
 **Étape :** Sidebar (Bibliothèque mémoire)
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -2395,7 +2441,7 @@ Définir la taxonomie de la bibliothèque mémoire (sections, sous-sections, cor
 
 ### Skill #79 — `recherche-coffre-fort-pieces-administratives`
 
-**Catégorie :** Recherche
+**Catégorie :** sidebar
 **Étape :** Sidebar (Coffre-fort)
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -2418,7 +2464,7 @@ Compléter la liste des catégories du coffre-fort (au-delà des 20 catégories 
 
 ### Skill #80 — `analyse-historique-ao-entreprise`
 
-**Catégorie :** Synthèse
+**Catégorie :** sidebar
 **Étape :** Sidebar (Mes AO)
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -2442,7 +2488,7 @@ Analyser l'historique des AO de l'utilisateur pour produire des insights (taux d
 
 ### Skill #81 — `recherche-architecture-chatbot-saas-pro`
 
-**Catégorie :** Recherche
+**Catégorie :** chatbot
 **Étape :** Coach
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -2465,7 +2511,7 @@ Définir l'architecture conversationnelle du Coach : surfaces, modes, contexte, 
 
 ### Skill #82 — `recherche-mode-coaching-ao-btp`
 
-**Catégorie :** Recherche / Coaching
+**Catégorie :** chatbot
 **Étape :** Coach
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -2487,7 +2533,7 @@ Définir les patterns de coaching propres aux AO BTP : quand surfacer une sugges
 
 ### Skill #83 — `recherche-suggestions-strategiques-ao`
 
-**Catégorie :** Coaching
+**Catégorie :** chatbot
 **Étape :** Coach
 **Modèle IA recommandé :** Opus 4.7
 **Status :** À créer
@@ -2509,7 +2555,7 @@ Le Coach propose des suggestions stratégiques (choix de lot, sélection de réf
 
 ### Skill #84 — `recherche-suivi-resultat-ao`
 
-**Catégorie :** Coaching
+**Catégorie :** chatbot
 **Étape :** Coach
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -2537,7 +2583,7 @@ ID gaps explanation: V1 reserves IDs #85–#88 as expansion buffer; V2 roadmap r
 
 ### Skill #89 — `cotraitance-groupement`
 
-**Catégorie :** Coaching
+**Catégorie :** chatbot
 **Étape :** Coach
 **Modèle IA recommandé :** Sonnet 4.6
 **Status :** À créer
@@ -2582,7 +2628,7 @@ Permettre à une PME d'envisager et de structurer un *groupement momentané d'en
 
 ### Skill #92 — `criteres-RSE-2026`
 
-**Catégorie :** Génération
+**Catégorie :** memoire
 **Étape :** Mémoire (cross-cutting — alimente aussi Step 3 extraction et Step 5 vérification)
 **Modèle IA recommandé :** Sonnet 4.6 (suggestions structurées sans génération longue)
 **Status :** À créer
@@ -2685,6 +2731,7 @@ The expansion buffer #85–#88, originally introduced in v2.1 (commit 75432a9) "
 | Champ | Valeur |
 |---|---|
 | Mission | Simuler la note prix du candidat selon les 3 formules officielles DAJ (classique, linéaire, moyenne) et identifier la formule la plus favorable. |
+| Catégorie pipeline | verification |
 | Étape pipeline | Step 3 Analyse IA / Step 5 Vérification |
 | Modèle IA | Haiku 4.5 (calculs simples) |
 | Notebook source | N7 (Scoring / Évaluation) |
@@ -2708,6 +2755,7 @@ The expansion buffer #85–#88, originally introduced in v2.1 (commit 75432a9) "
 | Champ | Valeur |
 |---|---|
 | Mission | Générer un Rapport d'Analyse d'Offres (RAO) prédictif simulant la grille de notation de l'acheteur public (échelle 0–5 par sous-critère + pondération + classement probable). |
+| Catégorie pipeline | verification |
 | Étape pipeline | Step 5 Vérification |
 | Modèle IA | Sonnet 4.6 |
 | Notebook source | N7 (Scoring / Évaluation) |
@@ -2731,6 +2779,7 @@ The expansion buffer #85–#88, originally introduced in v2.1 (commit 75432a9) "
 | Champ | Valeur |
 |---|---|
 | Mission | Détecter dans le RC les critères de capacité (CA, références) disproportionnés par rapport à l'objet du marché (article L2142-1 CCP). |
+| Catégorie pipeline | extraction |
 | Étape pipeline | Step 3 Analyse IA |
 | Modèle IA | Sonnet 4.6 |
 | Notebook source | N6 (Pièges + Jurisprudence) |
@@ -2754,6 +2803,7 @@ The expansion buffer #85–#88, originally introduced in v2.1 (commit 75432a9) "
 | Champ | Valeur |
 |---|---|
 | Mission | Conseiller le candidat évincé sur le bon recours (référé précontractuel L551-1 CJA / référé contractuel L551-13 CJA / recours Tarn-et-Garonne CE 4/4/2014) selon le contexte temporel. |
+| Catégorie pipeline | export |
 | Étape pipeline | Step 6 Export (post-éviction) |
 | Modèle IA | Sonnet 4.6 |
 | Notebook source | N6 (Pièges + Jurisprudence) |
@@ -2777,6 +2827,7 @@ The expansion buffer #85–#88, originally introduced in v2.1 (commit 75432a9) "
 | Champ | Valeur |
 |---|---|
 | Mission | Calculer en temps réel le risque OAB selon la méthode de double moyenne (article L2152-5 CCP) : moyenne M1 → exclusion offres >20% M1 → seuil 0,9 × M2. Afficher gauge vert/orange/rouge avec seuil chiffré (€) et marge avant zone OAB. |
+| Catégorie pipeline | verification |
 | Étape pipeline | Step 5 Vérification |
 | Modèle IA | Haiku 4.5 (calculs déterministes) |
 | Notebook source | N7 (Scoring / Évaluation) |
@@ -2833,6 +2884,13 @@ The following 9 monolithic project skills are **deprecated** and to be deleted o
 
 ## Changelog
 
+### 2.5 — 2026-05-27 (taxonomy alignment + #26 ETICS correction)
+
+- **All 91 skills** — `Catégorie` field rewritten to one of the 9 pipeline-aware values matching the code packages (`backend/synorix/skills/<cat>/`): `upload`, `lots`, `extraction`, `expert-metier`, `memoire`, `verification`, `export`, `sidebar`, `chatbot`. Conversion table in HTML comment at the top of the file. 86 prose rewrites + 5 stub-table `Catégorie pipeline` rows added. Zero unmapped, zero manual reclassification needed.
+- **Schema template** — option list updated to the 9 categories.
+- **Skill #26 `expert-ite`** — corrected ETICS referential: `NF DTU 45.1` → **`CPT 3035 V3`** (NotebookLM N4 confirms NF DTU 45.1 covers bâtiments frigorifiques, not ITE). Updated in `Question NotebookLM` and `Sources NotebookLM suggérées`. HTML note added above the fiche.
+- **#26 Catégorie** — `Coaching` → `expert-metier` (caught by the global pass).
+
 ### 2.4 — 2026-05-18 (final pass — all 5 differentiator stubs)
 
 Mohamed arbitrated collision resolution: the 4 differentiator stubs blocked at #75/#77/#79/#80 are reallocated to the expansion-buffer gap #85–#88. The expansion buffer originally set in v2.1 is now fully spent.
@@ -2885,4 +2943,4 @@ Integration of 8 validated NotebookLM notebooks (193 sources) — see [NOTEBOOKS
 
 ---
 
-*End of Skills Registry — Synorix v2.4*
+*End of Skills Registry — Synorix v2.5*
