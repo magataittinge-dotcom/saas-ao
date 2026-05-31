@@ -85,19 +85,21 @@ Qualifications : **Qualibat** (menuiserie/fermetures) ; **RGE** (audits stricts 
 
 ---
 
-## Phrases-types pour le mémoire (à adapter au CCTP)
-<!-- ⚠ N3 non disponible (rate limit) — reformulé à partir de N4, 29/5/26. À re-valider au prochain accès N3. -->
+## Phrases-types pour le mémoire
+<!-- Source: NotebookLM N3, 31/5/26 (recapture Q4) -->
 
-1. « Reconnaissance des dormants existants et choix AEV selon l'exposition (FD DTU 36.5 P3). »
-2. « Pose conforme NF DTU 36.5 P1-1, en applique / tunnel / feuillure selon le marché. »
-3. « Calfeutrement continu sur toute la périphérie, sur gros œuvre (NF DTU 44.1) ; mastic Classe 25 E label SNJF. »
-4. « Vitrages certifiés CEKAL ; performance acoustique + thermique validée par label Acotherm. »
-5. « Mortaises et entrées d'air normalisées : 2 × (172 × 12 mm) ou 1 × (250 × 15 mm) bois (NF DTU 68.3). »
-6. « Fixations mécaniques : espacement ≤ 0,80 m, distance angles ≤ 0,25 m ; mousse expansive proscrite. »
-7. « Tolérances pose : verticalité ≤ 2 mm/m, horizontalité ≤ 2 mm (L ≤ 1,50 m) ou 3 mm au-delà. »
-8. « Portes intérieures détalonnées 1 cm en partie basse (balayage VMC, NF DTU 68.3). »
-9. « En rénovation où la menuiserie fait fonction de garde-corps : dépose totale obligatoire. »
-10. « Essais AEV in situ disponibles (NF EN 13051) ; remise notice maintenance au DOE. »
+Méthode "action + justification technique" ; proscrire les superlatifs creux (« isolation parfaite », « équipe très expérimentée ») qui pénalisent la note technique.
+
+1. « Avant toute fabrication, nous réalisons systématiquement un relevé de cotes contradictoire et une vérification de la planéité des tableaux, afin de valider les tolérances du gros œuvre exigées par le NF DTU 36.5. »
+2. « Toutes nos menuiseries extérieures sont équipées de vitrages certifiés CEKAL et bénéficient du label Acotherm, garantissant objectivement leurs performances d'affaiblissement acoustique. »
+3. « La sélection de nos profilés (alu, bois, PVC) s'appuie strictement sur un classement AEV (Air-Eau-Vent) supérieur ou égal aux préconisations de l'étude thermique, validé par l'Avis Technique du fabricant. »
+4. « Pour les façades prévoyant un doublage intérieur, nous réalisons une pose en applique fixée par des équerres crantées, dont l'entraxe et la densité sont calculés selon la nature du support (béton ou brique). »
+5. « En réhabilitation sur murs épais, la pose en tunnel ou en feuillure est exécutée en maintenant un jeu périphérique régulier (5 à 10 mm), assurant la libre dilatation du dormant bois ou PVC. »
+6. « Le calfeutrement entre la menuiserie et la maçonnerie est traité par la mise en place d'un fond de joint cellulaire suivi de l'extrusion d'un mastic élastomère de 1ère catégorie, garantissant une étanchéité à l'air et à l'eau pérenne. »
+7. « Afin de supprimer tout pont thermique de liaison et risque de condensation, nous appliquons une membrane pare-vapeur continue entre le dormant et le gros œuvre avant fixation. »
+8. « La pose des blocs-portes intérieurs est réalisée en respectant les tolérances d'aplomb et de niveau du NF DTU 36.1, avec un calage rigide au niveau des paumelles et de la gâche. »
+9. « En site occupé, le dégondage des anciens ouvrants et la pose des nouveaux châssis sont réalisés zone par zone : chaque menuiserie déposée est systématiquement remplacée et calfeutrée le jour même pour maintenir le clos et couvert. »
+10. « Avant la réception de chaque zone, un autocontrôle rigoureux est opéré : vérification du drainage des traverses basses, test de fluidité des manœuvres, et contrôle visuel continu du mastic d'étanchéité. »
 
 ---
 
@@ -142,4 +144,4 @@ Contraintes :
 - `phases` ≥ 4 phases.
 - `normes_citees` inclut au minimum **"NF DTU 36.5"** et **"NF DTU 44.1"**.
 - Valeurs chiffrées **verbatim**.
-- `sources_nbk` = `["N4", "N3"]` (N3 dérivé indirectement via N4 ; à re-valider).
+- `sources_nbk` = `["N4", "N3"]` (N3 capturé directement, recapture Q4 du 31/5/26).

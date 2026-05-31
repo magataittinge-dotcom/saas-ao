@@ -1,12 +1,14 @@
 """Skill #34 — Expert Étanchéité de toiture-terrasse.
 
-⚠ Skill livrée en mode SQUELETTE STRUCTUREL — captures NotebookLM N4/N3
-non effectuées (quota Free épuisé en fin de batch 2026-05-29). Le prompt
-`prompts/expert_etancheite.md` contient des placeholders `[À COMPLÉTER]`
-dans toutes les sections d'expertise BTP. À ré-exécuter dès quota restauré.
+Generates the technical methodology section for an étanchéité lot in a BTP
+tender response. Sources : NotebookLM N4 (série NF DTU 43 + 20.12, CSFE) + N3
+(Mémoires gagnants).
 
-Sources cibles : NotebookLM N4 (série NF DTU 43, CSFE) + N3 (Mémoires gagnants).
+Recapture complète 2026-05-31 (quota Pro restauré) — squelette remplacé par
+contenu réel, version "1" → "2".
+
 Raw extract: docs/notebook-extracts/skill-34-expert-etancheite-raw.md
+System prompt: prompts/expert_etancheite.md
 """
 
 from pydantic import BaseModel
@@ -48,7 +50,7 @@ class ExpertEtancheite(Skill):
     name = "expert-etancheite"
     category = "expert-metier"
     model = "claude-sonnet-4-6"
-    version = "1"  # bump dès que le prompt est complété depuis NotebookLM
+    version = "2"  # v2 : prompt complété depuis NotebookLM N4/N3 (31/5/26)
     system_prompt_path = "prompts/expert_etancheite.md"
 
     notebook_sources = ["N4", "N3"]

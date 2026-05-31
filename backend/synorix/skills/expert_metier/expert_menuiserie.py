@@ -1,7 +1,7 @@
 """Skill #33 — Expert Menuiserie (intérieure + extérieure + fermetures).
 
 Sources : NotebookLM N4 (NF DTU 36.5, 44.1, 68.3, classement AEV) + N3 (phrases-types
-dérivées N4, à re-valider — rate limit N3 au moment de la capture initiale).
+mémoires gagnants). version "1" → "2" : Q4 N3 recapturée directement le 31/5/26.
 Raw extract: docs/notebook-extracts/skill-33-expert-menuiserie-raw.md
 """
 
@@ -44,7 +44,7 @@ class ExpertMenuiserie(Skill):
     name = "expert-menuiserie"
     category = "expert-metier"
     model = "claude-sonnet-4-6"
-    version = "1"
+    version = "2"  # v2 : Q4 phrases-types recapturées directement sur N3 (31/5/26)
     system_prompt_path = "prompts/expert_menuiserie.md"
 
     notebook_sources = ["N4", "N3"]

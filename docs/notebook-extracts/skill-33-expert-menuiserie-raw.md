@@ -1,8 +1,9 @@
 # Raw NotebookLM extract — Skill #33 `expert-menuiserie`
 
 **Captured:** 2026-05-29 — N4 (777badb4) + N3 (43615791). Build-time only.
+**Recapture Q4 :** 2026-05-31 — N3 (43615791). ✅ Phrases-types directes récupérées (voir section Q4 ci-dessous). version "1" → "2".
 
-> ⚠️ **Q4 (N3) NON CAPTURÉE** — rate limit persistant > 6 min sur N3 après Q4 #32 (5 retries en cascade au cours du batch). Les phrases-types ci-dessous sont **dérivées de Q2/Q3 N4** (toutes les valeurs et formulations sont sourcées N4, pas inventées). À re-tester sur N3 quand l'API redevient disponible pour valider/enrichir.
+> ✅ **Q4 (N3) RECAPTURÉE le 31/5/26** (quota Pro restauré). Les phrases-types dérivées de N4 ont été remplacées dans le prompt par les 10 formulations directes issues de N3 (mémoires gagnants). Voir section « Q4 (N3) — recapture 31/5/26 » en fin de fichier.
 
 ---
 
@@ -122,6 +123,23 @@ NF DTU 36.5 ; NF DTU 44.1 ; NF EN ISO 11600 ; NF EN 13051 ; NF DTU 68.3 ; CCAG T
 
 ---
 
+## Q4 (N3) — recapture 31/5/26 (phrases-types mémoires gagnants)
+
+Méthode "action + justification technique" ; proscrire « isolation parfaite » / « équipe très expérimentée ».
+
+1. [Études/tolérances] « Avant toute fabrication, nous réalisons systématiquement un relevé de cotes contradictoire et une vérification de la planéité des tableaux, afin de valider les tolérances du gros œuvre exigées par le NF DTU 36.5. »
+2. [Certifications] « Toutes nos menuiseries extérieures sont équipées de vitrages certifiés CEKAL et bénéficient du label Acotherm, garantissant objectivement leurs performances d'affaiblissement acoustique. »
+3. [AEV] « La sélection de nos profilés (alu, bois, PVC) s'appuie strictement sur un classement AEV (Air-Eau-Vent) supérieur ou égal aux préconisations de l'étude thermique, validé par l'Avis Technique du fabricant. »
+4. [Pose applique] « Pour les façades prévoyant un doublage intérieur, nous réalisons une pose en applique fixée par des équerres crantées, dont l'entraxe et la densité sont calculés selon la nature du support (béton ou brique). »
+5. [Pose tunnel/feuillure] « En réhabilitation sur murs épais, la pose en tunnel ou en feuillure est exécutée en maintenant un jeu périphérique régulier (5 à 10 mm), assurant la libre dilatation du dormant bois ou PVC. »
+6. [Calfeutrement] « Le calfeutrement entre la menuiserie et la maçonnerie est traité par la mise en place d'un fond de joint cellulaire suivi de l'extrusion d'un mastic élastomère de 1ère catégorie, garantissant une étanchéité à l'air et à l'eau pérenne. »
+7. [Pont thermique] « Afin de supprimer tout pont thermique de liaison et risque de condensation, nous appliquons une membrane pare-vapeur continue entre le dormant et le gros œuvre avant fixation. »
+8. [Intérieur] « La pose des blocs-portes intérieurs est réalisée en respectant les tolérances d'aplomb et de niveau du NF DTU 36.1, avec un calage rigide au niveau des paumelles et de la gâche. »
+9. [Site occupé] « En site occupé, le dégondage des anciens ouvrants et la pose des nouveaux châssis sont réalisés zone par zone : chaque menuiserie déposée est systématiquement remplacée et calfeutrée le jour même pour maintenir le clos et couvert. »
+10. [Autocontrôle] « Avant la réception de chaque zone, un autocontrôle rigoureux est opéré : vérification du drainage des traverses basses, test de fluidité des manœuvres, et contrôle visuel continu du mastic d'étanchéité. »
+
+---
+
 ## Build notes
-- **Q4 N3 NON CAPTURÉE** → rate limit persistant > 6 min après Q4 #32. Phrases-types ci-dessus = reformulations N4. **À re-tester sur N3** quand l'API redevient disponible.
+- **Q4 N3 RECAPTURÉE le 31/5/26** ✅ — les 10 phrases-types ci-dessus (directes N3) remplacent les reformulations N4 dans le prompt. version "1" → "2".
 - Cohérence : 14 % ITE vs 6 % ITI menuiseries aligné #26 expert-ite ; calfeutrement sur gros œuvre récurrent à travers les skills.

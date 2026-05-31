@@ -1,8 +1,7 @@
 """Tests for skill #34 expert-etancheite.
 
-⚠ Skill en mode squelette structurel — captures NotebookLM N4/N3 manquantes
-au moment de la création (quota Free épuisé). Tests valident la structure
-Python et les métadonnées ; le prompt sera complété au prochain accès N4/N3.
+Recapture complète 2026-05-31 — le prompt est désormais alimenté par NotebookLM
+N4 (série NF DTU 43 + 20.12, CSFE) + N3 (mémoires gagnants). version="2".
 """
 
 import pytest
@@ -17,40 +16,47 @@ from synorix.skills.expert_metier.expert_etancheite import (
 
 @pytest.mark.asyncio
 async def test_expert_etancheite_basic_structure():
-    """Output structure valide avec ≥ 4 phases et au moins NF DTU 43.1 cité."""
+    """Output structure valide avec ≥ 4 phases et NF DTU 43.1 + 43.11 cités."""
     fake_response = {
         "methodologie": {
             "phases": [
                 {
                     "nom": "Préparation & études",
-                    "description": "[À COMPLÉTER — capture N4 manquante]",
-                    "normes_appliquees": ["NF DTU 43.1"],
-                    "valeurs_chiffrees": {},
+                    "description": "Reconnaissance support, calcul des pentes.",
+                    "normes_appliquees": ["NF DTU 43.11", "NF DTU 20.12"],
+                    "valeurs_chiffrees": {"pente_min_pct": "1 à 5"},
                 },
                 {
-                    "nom": "Approvisionnement",
-                    "description": "[À COMPLÉTER]",
+                    "nom": "Approvisionnement & matériel",
+                    "description": "Membranes bitume/synthétiques certifiées.",
                     "normes_appliquees": ["NF DTU 43.1"],
                     "valeurs_chiffrees": {},
                 },
                 {
                     "nom": "Mise en œuvre",
-                    "description": "[À COMPLÉTER]",
-                    "normes_appliquees": ["NF DTU 43.1", "CSFE"],
-                    "valeurs_chiffrees": {},
+                    "description": "Pose isolant, membrane, relevés, raccords EP.",
+                    "normes_appliquees": ["NF DTU 43.11", "NF DTU 43.1"],
+                    "valeurs_chiffrees": {"equerre_renfort_cm": "25"},
                 },
                 {
                     "nom": "Contrôles & réception",
-                    "description": "[À COMPLÉTER]",
-                    "normes_appliquees": ["NF DTU 43.1"],
-                    "valeurs_chiffrees": {},
+                    "description": "Mise en eau, PV, DOE.",
+                    "normes_appliquees": ["NF DTU 43.11"],
+                    "valeurs_chiffrees": {"mise_en_eau_h": "24"},
                 },
             ],
-            "normes_citees": ["NF DTU 43.1", "NF DTU 43.3", "NF DTU 43.4", "NF DTU 43.5", "CSFE"],
-            "phrases_types": ["[À COMPLÉTER — capture N3 manquante]"] * 8,
-            "controles_obligatoires": ["[À COMPLÉTER]"],
-            "livrables_exiges": ["DOE"],
-            "points_vigilance": ["[À COMPLÉTER]"],
+            "normes_citees": [
+                "NF DTU 43.1",
+                "NF DTU 43.11",
+                "NF DTU 43.3",
+                "NF DTU 43.5",
+                "NF DTU 20.12",
+                "CSFE",
+            ],
+            "phrases_types": ["..."] * 10,
+            "controles_obligatoires": ["Mise en eau 24h", "Contrôle des relevés"],
+            "livrables_exiges": ["DOE", "PAQ", "PV de réception"],
+            "points_vigilance": ["Points singuliers", "Évacuations EP"],
         },
         "sources_nbk": ["N4", "N3"],
     }
@@ -71,13 +77,15 @@ async def test_expert_etancheite_basic_structure():
     assert isinstance(output, Output)
     assert len(output.methodologie.phases) >= 4
     assert "NF DTU 43.1" in output.methodologie.normes_citees
+    assert "NF DTU 43.11" in output.methodologie.normes_citees
     assert "N4" in output.sources_nbk
 
 
 def test_expert_etancheite_metadata():
-    """Correct Synorix v2.1 metadata (le prompt sera complété ultérieurement)."""
+    """Correct Synorix v2.1 metadata, version bumpée à 2 après recapture."""
     assert ExpertEtancheite.name == "expert-etancheite"
     assert ExpertEtancheite.category == "expert-metier"
     assert ExpertEtancheite.model == "claude-sonnet-4-6"
     assert ExpertEtancheite.notebook_sources == ["N4", "N3"]
     assert ExpertEtancheite.pipeline_step == 3
+    assert ExpertEtancheite.version == "2"
