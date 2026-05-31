@@ -28,19 +28,27 @@
 - [OK] #8 extraction-description-lot (Sonnet, N4) — structure CCTP fasc. CCTG, prestations principales/accessoires
 - [OK] #9 detection-incoherences-lots (Sonnet, N6) — matériel/cosmétique, juris. CE NAYMA n°492938 + TA Nantes n°2506999
 
-### PHASE 3 — extraction (16 skills) — à démarrer
-- #10 exigences-administratives · #11 pieces-offre · #12 exigences-techniques · #13 criteres-jugement · #14 visite-obligatoire-analyse · #15 cautionnement-garanties · #16 pieges-dce · #17 incoherences-dce · #18 liaison-coffre-fort · #19 enrichissement-source-document · #20 surlignage-exigence-complete · #21 documents-a-completer · #22 validation-completude-document · #23 synthese-executive-dce · #24 calculatrice-retenue-garantie · #35 validation-piece-coffre-fort
+### PHASE 3 — extraction (16 skills) ✅ TERMINÉE — 36 tests verts
+- [OK] #10 exigences-administratives (Sonnet, N2) · #11 pieces-offre (Sonnet, N2) · #12 exigences-techniques (Sonnet, N4) · #13 criteres-jugement (Sonnet, N7, 3 formules DAJ)
+- [OK] #14 visite-obligatoire-analyse (Sonnet, présentation/reuse #5) · #15 cautionnement-garanties (Sonnet, N1, Art.19) · #16 pieges-dce (Sonnet, N6) · #17 incoherences-dce (Sonnet, N6, CE NAYMA)
+- [OK] #18 liaison-coffre-fort (Haiku, N2 reuse #10) · #19 enrichissement-source-document (Haiku, technique PDF) · #20 surlignage-exigence-complete (Sonnet, technique PDF) · #21 documents-a-completer (Sonnet, N2 reuse #1)
+- [OK] #22 validation-completude-document (Haiku, N2) · #23 synthese-executive-dce (Sonnet, agrégation) · #24 calculatrice-retenue-garantie (model="none", déterministe, N1) · #35 validation-piece-coffre-fort (Haiku, N2 reuse #10)
+
+### PHASE 4 — memoire (28 skills) — à démarrer
+- #36-#63 (génération mémoire technique ; Opus 4.7 pour les rédacteurs long-form, Sonnet/Haiku pour récup/scoring). Notebook principal N3 (mémoires gagnants) + N4 (méthodologie).
 
 ---
 
 ## Compteurs
-- OK : 11 (Phase 0 = 2, Phase 1 = 5, Phase 2 = 4)
+- OK : 27 (Phase 0 = 2, Phase 1 = 5, Phase 2 = 4, Phase 3 = 16)
 - Incomplètes : 0
-- Restantes (cible) : extraction(16) + memoire(28) + verification(8) + export(4) + sidebar(6) + chatbot(5) = 67
+- Restantes (cible) : memoire(28) + verification(8) + export(4) + sidebar(6) + chatbot(5) = 51
 
 ## Divergences registry/NotebookLM à arbitrer (Mohamed)
 - #34 étanchéité : ajout NF DTU 43.11 + 20.12 (non listés au registry).
 - #2 date-limite : N2 (pièces admin) ne couvre PAS la date-limite ; grounding réel via N1. Suggestion : re-router #2 → N1 ou enrichir N2 avec RC réels.
+- #24 calculatrice : N1 contient le CCAG **MOE**, pas le CCAG **Travaux 2021** intégral → formules pénalités/intérêts partiellement hors corpus (signalées). Suggestion : ajouter le CCAG Travaux 2021 à N1.
+- Divers (#1, #3, #11) : sigles DPGF/BPU/DQE + formats fichiers + marqueurs de version signalés par N2 comme « pratique courante » hors corpus strict — universels, conservés avec marqueur.
 
 ## REPRENDRE À
-PHASE 3 / extraction / #10 extraction-exigences-administratives
+PHASE 4 / memoire / #36 recuperation-profil-entreprise
