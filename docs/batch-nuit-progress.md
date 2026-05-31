@@ -22,19 +22,25 @@
 - [OK] #4 detection-plateforme-depot (Haiku, N5) — allowlist 5 plateformes, URL jamais brute
 - [OK] #5 detection-visite-obligatoire (Sonnet, N6+N1) — juris. TA Rennes 25/10/2010 Ekdo Redon
 
-### PHASE 2 — lots (4 skills) — à démarrer
-- #6 recherche-lots (Sonnet, N?) · #7 detection-corps-de-metier-lot (Haiku) · #8 extraction-description-lot (Sonnet) · #9 detection-incoherences-lots (Sonnet, N6)
+### PHASE 2 — lots (4 skills) ✅ TERMINÉE — 10 tests verts
+- [OK] #6 recherche-lots (Sonnet, N8) — double source RC+DPGF, tranches/sous-lots, allotissement L.2113-10
+- [OK] #7 detection-corps-de-metier-lot (Haiku, N4) — enum 10 corps + autre, mots-clés par corps
+- [OK] #8 extraction-description-lot (Sonnet, N4) — structure CCTP fasc. CCTG, prestations principales/accessoires
+- [OK] #9 detection-incoherences-lots (Sonnet, N6) — matériel/cosmétique, juris. CE NAYMA n°492938 + TA Nantes n°2506999
+
+### PHASE 3 — extraction (16 skills) — à démarrer
+- #10 exigences-administratives · #11 pieces-offre · #12 exigences-techniques · #13 criteres-jugement · #14 visite-obligatoire-analyse · #15 cautionnement-garanties · #16 pieges-dce · #17 incoherences-dce · #18 liaison-coffre-fort · #19 enrichissement-source-document · #20 surlignage-exigence-complete · #21 documents-a-completer · #22 validation-completude-document · #23 synthese-executive-dce · #24 calculatrice-retenue-garantie · #35 validation-piece-coffre-fort
 
 ---
 
 ## Compteurs
-- OK : 7 (Phase 0 = 2, Phase 1 = 5)
+- OK : 11 (Phase 0 = 2, Phase 1 = 5, Phase 2 = 4)
 - Incomplètes : 0
-- Restantes (cible) : lots(4) + extraction(16) + memoire(28) + verification(8) + export(4) + sidebar(6) + chatbot(5) = 71
+- Restantes (cible) : extraction(16) + memoire(28) + verification(8) + export(4) + sidebar(6) + chatbot(5) = 67
 
 ## Divergences registry/NotebookLM à arbitrer (Mohamed)
 - #34 étanchéité : ajout NF DTU 43.11 + 20.12 (non listés au registry).
 - #2 date-limite : N2 (pièces admin) ne couvre PAS la date-limite ; grounding réel via N1. Suggestion : re-router #2 → N1 ou enrichir N2 avec RC réels.
 
 ## REPRENDRE À
-PHASE 2 / lots / #6 recherche-lots
+PHASE 3 / extraction / #10 extraction-exigences-administratives
