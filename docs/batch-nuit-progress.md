@@ -15,18 +15,26 @@
 - Divergence loggée : #34 → registry liste 43.1/43.3/43.4/43.5 ; N4 ajoute **NF DTU 43.11** (global TT) + **NF DTU 20.12** (support GO). Suivi NotebookLM. → arbitrage Mohamed.
 - Commit Phase 0 : à faire.
 
-### PHASE 1 — upload (5 skills) — à démarrer
-- #1 recherche-types-documents (Haiku, N1+N2?) · #2 detection-date-limite (Sonnet) · #3 detection-doublons-versions (Haiku, technique) · #4 detection-plateforme-depot (Haiku, N5) · #5 detection-visite-obligatoire (Sonnet, N1+N6)
+### PHASE 1 — upload (5 skills) ✅ TERMINÉE — 15 tests verts
+- [OK] #1 recherche-types-documents (Haiku, N2) — taxonomie 15+ types DCE
+- [OK] #2 detection-date-limite (Sonnet, N2+N1) — RC fait foi, horodatage serveur, divergence jamais tranchée
+- [OK] #3 detection-doublons-versions (Haiku/technique, N2) — SHA-256 exact + marqueurs version
+- [OK] #4 detection-plateforme-depot (Haiku, N5) — allowlist 5 plateformes, URL jamais brute
+- [OK] #5 detection-visite-obligatoire (Sonnet, N6+N1) — juris. TA Rennes 25/10/2010 Ekdo Redon
+
+### PHASE 2 — lots (4 skills) — à démarrer
+- #6 recherche-lots (Sonnet, N?) · #7 detection-corps-de-metier-lot (Haiku) · #8 extraction-description-lot (Sonnet) · #9 detection-incoherences-lots (Sonnet, N6)
 
 ---
 
 ## Compteurs
-- OK : 2 (Phase 0)
+- OK : 7 (Phase 0 = 2, Phase 1 = 5)
 - Incomplètes : 0
-- Restantes (cible) : upload(5) + lots(4) + extraction(16) + memoire(28) + verification(8) + export(4) + sidebar(6) + chatbot(5) = 76
+- Restantes (cible) : lots(4) + extraction(16) + memoire(28) + verification(8) + export(4) + sidebar(6) + chatbot(5) = 71
 
 ## Divergences registry/NotebookLM à arbitrer (Mohamed)
 - #34 étanchéité : ajout NF DTU 43.11 + 20.12 (non listés au registry).
+- #2 date-limite : N2 (pièces admin) ne couvre PAS la date-limite ; grounding réel via N1. Suggestion : re-router #2 → N1 ou enrichir N2 avec RC réels.
 
 ## REPRENDRE À
-PHASE 1 / upload / #1 recherche-types-documents
+PHASE 2 / lots / #6 recherche-lots
