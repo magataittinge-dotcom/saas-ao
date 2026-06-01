@@ -24,3 +24,10 @@ from synorix.skills.memoire.redacteur_references_chantiers import (  # noqa: F40
 from synorix.skills.memoire.redacteur_presentation_prestation import (  # noqa: F401
     RedacteurPresentationPrestation,
 )
+from synorix.skills.memoire.redacteur_methodologie import RedacteurMethodologie  # noqa: F401
+from synorix.skills.memoire.redacteur_securite_ppsps import RedacteurSecuritePpsps  # noqa: F401
+from synorix.skills.memoire.redacteur_environnement_soged import (  # noqa: F401
+    RedacteurEnvironnementSoged,
+)
+from synorix.skills.memoire.redacteur_qualite_paq import RedacteurQualitePaq  # noqa: F401
+from synorix.skills.memoire.redacteur_planning_gantt import RedacteurPlanningGantt  # noqa: F401
