@@ -45,3 +45,13 @@ from synorix.skills.memoire.generateur_note_innovation import (  # noqa: F401
     GenerateurNoteInnovation,
 )
 from synorix.skills.memoire.generateur_note_rse import GenerateurNoteRse  # noqa: F401
+from synorix.skills.memoire.editeur_section_regeneration import (  # noqa: F401
+    EditeurSectionRegeneration,
+)
+from synorix.skills.memoire.editeur_reecriture_instruction import (  # noqa: F401
+    EditeurReecritureInstruction,
+)
+from synorix.skills.memoire.detection_phrases_risque import DetectionPhrasesRisque  # noqa: F401
+from synorix.skills.memoire.suggestion_plus_values import SuggestionPlusValues  # noqa: F401
+from synorix.skills.memoire.exporteur_memoire_docx import ExporteurMemoireDocx  # noqa: F401
+from synorix.skills.memoire.exporteur_memoire_pdf import ExporteurMemoirePdf  # noqa: F401
