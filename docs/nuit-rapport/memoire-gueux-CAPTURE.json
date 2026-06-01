@@ -1,0 +1,12 @@
+{
+  "stop_reason": "max_tokens",
+  "usage": {
+    "input": 34017,
+    "output": 32000,
+    "cache_read": 0,
+    "cache_write": 34826
+  },
+  "raw_chars": 67672,
+  "elapsed_s": 486.5,
+  "gen_error": null
+}
