@@ -20,3 +20,5 @@ Coût mémoire estimé ≈ 8 $ (3 runs Opus 4.7).
 - [BLOC4] Non-régression : `pytest synorix/` → **199 passed** (9s) ; `pytest tests/` → **295 passed** (4s). TOTAL **494 verts, 0 échec**. Aucun fichier cœur modifié cette nuit (monkeypatch confiné au script jetable). Note : les tests ne couvrent PAS la génération mémoire réelle → d'où la non-détection des bugs BLOC1. Rapport : BLOC4-tests.md.
 
 - [BLOC5] Déterministes en service pur (0 API). Créé `services/synorix_calc.py` (compute_oab #95 + compute_retenue_garantie #24, délègue aux skills testées, renvoie dicts) + `tests/test_synorix_calc.py` (5 tests verts). NON câblé à main.py (isolé, vérifié). Suite complète : **499 passed**. Découverte : retenue garantie calculée sur TTC (base légale Art.19 CCAG). Rapport : BLOC5-determ-service-pur.md.
+
+- [FIN] RECAP-NUIT.md écrit. Tous blocs (1-5) terminés et pushés. Budget : analyse 0/3, mémoire 3/3 (≈8$). Cœur IA jamais modifié. TOP 3 priorités : (1) réparer moteur mémoire, (2) brancher déterministes + sidebar, (3) fiabiliser critères jugement + test mémoire. STOP propre.
