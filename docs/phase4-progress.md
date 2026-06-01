@@ -15,20 +15,28 @@
 - [OK] #38 recuperation-bibliotheque-memoire (Haiku, N3) — double axe section/métier, granularité paragraphe-thématique, exclusion métier incompatible. memoire.
 - [OK] #39 extraction-memoire-importe (Sonnet, N3) — **catégorie sidebar** (registry), parsing sans TDM, tag section+métier, 5+ sections, extraits verbatim. → placé dans `skills/sidebar/`.
 
+### Group 2 — Rédacteurs long-form (#40-#44) ✅ — 10 tests verts
+- [OK] #40 redacteur-preambule (**Opus**, N3) — structure 4 mouvements (effet miroir, visite site, solution chiffrée, transition), anti-plaqué corporate.
+- [OK] #41 redacteur-presentation-entreprise (**Opus**, N3) — PARTIE A, sous-sections = rubriques canoniques, anti-autobiographie, zéro invention.
+- [OK] #42 redacteur-equipe-dediee (Sonnet, N3) — CV synthétiques factuels, engagement FERME (CE 21/03/2018 anti-affectation conditionnelle).
+- [OK] #43 redacteur-references-chantiers (Sonnet, N3) — tableau 7 colonnes (format Cariso/SERI), photos avant/après, volumétrie 3-5.
+- [OK] #44 redacteur-presentation-prestation (**Opus**, N3) — PARTIE B, reformulation (anti copier-coller CCTP), tableau Contraintes=Solutions, aléas.
+
 ---
 
 ## Compteurs
-- OK : 4 (Group 1)
+- OK : 9 (Group 1 = 4, Group 2 = 5)
 - Incomplètes : 0
-- Restantes : 24 (#40-#63)
+- Restantes : 19 (#45-#63)
 
 ## Divergences registry/NotebookLM à arbitrer (Mohamed)
-- (aucune pour Group 1) — #39 confirmé en catégorie `sidebar` conformément au registry (et non `memoire`).
+- (aucune nouvelle) — #39 confirmé en catégorie `sidebar` conformément au registry (et non `memoire`).
+- Note #41 : N3 (mémoires gagnants) recommande 2-3 pages pour la présentation entreprise ; le registry vise 5-7 pages. Prompt = densité utile prioritaire sur le remplissage. À arbitrer.
 
 ## Modèles utilisés (suivi coût)
 - Haiku : #36, #38
-- Sonnet : #37, #39
-- Opus : (à venir, rédacteurs long-form Group 2+)
+- Sonnet : #37, #39, #42, #43
+- Opus : #40, #41, #44
 
 ## REPRENDRE À
-Group 2 / memoire / #40 redacteur-preambule (Opus)
+Group 3 / memoire / #45 redacteur-methodologie (Opus)
