@@ -51,7 +51,7 @@
 - Divers (#1, #3, #11) : sigles DPGF/BPU/DQE + formats fichiers + marqueurs de version signalés par N2 comme « pratique courante » hors corpus strict — universels, conservés avec marqueur.
 
 ## REPRENDRE À
-PHASE 4 / memoire / #36 recuperation-profil-entreprise
+~~PHASE 4 / memoire / #36~~ → **Phase 4 memoire TERMINÉE (28/28) le 2026-06-01.** Voir `docs/phase4-progress.md`. Prochaine : Phase 5 verification (#64+).
 
 ---
 
