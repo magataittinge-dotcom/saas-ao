@@ -17,6 +17,9 @@ from synorix.skills.extraction.detection_documents_a_completer import (  # noqa:
     DetectionDocumentsACompleter,
 )
 from synorix.skills.extraction.detection_incoherences_dce import DetectionIncoherencesDce  # noqa: F401
+from synorix.skills.extraction.detection_criteres_disproportionnes import (  # noqa: F401
+    DetectionCriteresDisproportionnes,
+)
 from synorix.skills.extraction.detection_pieges_dce import DetectionPiegesDce  # noqa: F401
 from synorix.skills.extraction.liaison_coffre_fort import LiaisonCoffreFort  # noqa: F401
 from synorix.skills.extraction.surlignage_exigence_complete import (  # noqa: F401

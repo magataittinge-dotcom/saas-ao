@@ -39,5 +39,20 @@
 - Sonnet : #64, #65, #67, #68, #86
 - Opus : #70, #71 (registry l'exige explicitement pour le Synorix Score)
 
+### Phase 6 — export (5) + extraction #87 (6 skills) ✅ — 12 tests verts
+- [OK] #72 recherche-format-zip-ao-pro (Haiku, N5) — sous-dossiers Candidature/Offre_Lot_X, checklist en racine.
+- [OK] #73 recherche-page-garde-memoire (Sonnet, N3) — lot/MOA exacts, logos réassurance, charte, chaînage sommaire. D2.
+- [OK] #74 recherche-checklist-depot-plateforme (Sonnet, N5) — vérifs avant envoi, pièges (mauvais lot/fichier/signature).
+- [OK] #75 recherche-suivi-post-depot (Sonnet, N8) — J+1/J+30/J+90, perdu→demander RAO, gagné→standstill 11j.
+- [OK] #88 conseil-recours-eviction (Sonnet, N6, **export**) — référé précontractuel L551-1, contractuel L551-13 (31j/6mois), Tarn-et-Garonne CE 4/4/2014 (2 mois). D11.
+- [OK] #87 detection-criteres-disproportionnes (Sonnet, N6, **extraction**) — CA > 2× montant (R2142-6), R2142-14, CE 10/4/2024 n°482722, CAA Marseille 19/1/2022 n°19MA02554. D10.
+
+---
+
+## Compteurs (mise à jour)
+- OK : 17 (Phase 5 = 11, Phase 6+#87 = 6)
+- Total registry : 63 + 17 = 80
+- Restantes vers 91 : 11 (sidebar 5 + chatbot 5 + memoire 1)
+
 ## REPRENDRE À
-Phase 6 / export / #72 recherche-format-zip-ao-pro
+Phase 7 / sidebar / #76 recherche-structure-profil-entreprise-btp
