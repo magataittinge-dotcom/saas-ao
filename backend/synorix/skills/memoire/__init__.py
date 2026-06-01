@@ -55,3 +55,4 @@ from synorix.skills.memoire.detection_phrases_risque import DetectionPhrasesRisq
 from synorix.skills.memoire.suggestion_plus_values import SuggestionPlusValues  # noqa: F401
 from synorix.skills.memoire.exporteur_memoire_docx import ExporteurMemoireDocx  # noqa: F401
 from synorix.skills.memoire.exporteur_memoire_pdf import ExporteurMemoirePdf  # noqa: F401
+from synorix.skills.memoire.criteres_rse_2026 import CriteresRse2026  # noqa: F401

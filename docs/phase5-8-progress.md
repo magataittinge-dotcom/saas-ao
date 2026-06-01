@@ -63,10 +63,43 @@
 
 ---
 
-## Compteurs (mise à jour)
-- OK : 22 (Phase 5 = 11, Phase 6+#87 = 6, Phase 7 = 5)
-- Total registry : 63 + 22 = 85
-- Restantes vers 91 : 6 (chatbot 5 + memoire 1)
+### Phase 8 — chatbot (5 #81-84, #89) + memoire #92 (6 skills) ✅ — 12 tests verts
+- [OK] #81 recherche-architecture-chatbot-saas-pro (Sonnet, technique) — bulle + page, contexte multi-AO, mémoire long terme, streaming.
+- [OK] #82 recherche-mode-coaching-ao-btp (Sonnet, N8) — personas débutant/expert, moments d'intervention, ultra-concision.
+- [OK] #83 recherche-suggestions-strategiques-ao (**Opus**, N8) — prix/références/plus-values RSE chiffrées, jamais bateau. D14.
+- [OK] #84 recherche-suivi-resultat-ao (Sonnet, N8) — J+30, perdu→RAO, gagné→standstill 11j, jamais "pour améliorer l'IA".
+- [OK] #89 cotraitance-groupement (Sonnet, N8) — GME conjoint/solidaire R2142-20, DC1/DC2, piège DC4≠cotraitance, détection 0.6×CA. D12.
+- [OK] #92 criteres-RSE-2026 (Sonnet, N7+N8, **memoire**) — 5 catégories Loi Climat 22/8/2026, indicateurs JAMAIS inventés, section <2p, severity Step5. D13.
+
+---
+
+# RECAP FINAL — 91/91 skills ✅
+
+## Total : 91 skills registered, **199 tests passed** (0 échec) sur `synorix/skills/`
+Répartition : upload 5 · lots 4 · extraction 17 · expert-metier 10 · memoire 28 · verification 11 · export 5 · sidebar 6 · chatbot 5 = **91**.
+
+## Générées cette session (28, 63 → 91)
+- Phase 5 verification (11) : #64-71 + #85 #86 #95.
+- Phase 6 export (5) + extraction (1) : #72-75 #88 + #87.
+- Phase 7 sidebar (5) : #76-80.
+- Phase 8 chatbot (5) + memoire (1) : #81-84 #89 + #92.
+
+## Incomplètes / à reprendre : 0
+
+## Répartition modèles (vérif coût) — session
+- **none (déterministe, 0 LLM)** : #85, #95.
+- **Haiku 4.5** : #66, #69, #72.
+- **Sonnet 4.6** : #64, #65, #67, #68, #73, #74, #75, #76, #77, #78, #79, #80, #81, #82, #84, #86, #87, #88, #89, #92.
+- **Opus 4.7** (registry explicite) : #70, #71, #83.
+
+## Divergences registry/NotebookLM à arbitrer (Mohamed)
+1. **#85 simulateur-prix-DAJ** + **#95 calculateur-OAB** : registry=Haiku ; implémentés `model="none"` (calcul pur déterministe, règle de mission). À valider.
+2. **#92** : certifications BBCA/Effinergie/NF Habitat signalées hors corpus → marquées `[À COMPLÉTER — à vérifier]`. Loi Climat 22/8/2026 confirmée N7/N8.
+3. **R.4532** (PPSPS #46/#53) toujours hors corpus → enrichir N1.
+
+## État Git (branche refactor-v2, AUCUN push)
+Commits session : verification (ph.5), export+#87 (ph.6), sidebar (ph.7), chatbot+#92 (ph.8) + ce log.
 
 ## REPRENDRE À
-Phase 8 / chatbot / #81 recherche-architecture-chatbot-saas-pro
+**TERMINÉ — les 91 skills du catalogue Synorix V1 sont complètes et testées.**
+(V2 roadmap #90/#91/#93/#94 = post-lancement, hors périmètre.)
