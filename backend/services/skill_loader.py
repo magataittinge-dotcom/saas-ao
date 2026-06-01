@@ -1,15 +1,17 @@
 """
-Skill loader — reads .claude/skills/ SKILL.md files and injects them into backend prompts.
+Skill loader — reads backend/ai_skills/ SKILL.md files and injects them into backend prompts.
 
-The .claude/skills/ directory contains domain knowledge written for the Claude Code CLI.
-This module loads their content so it can also enrich the Claude API prompts used by the
-backend (DCE analysis, mémoire generation, etc.).
+backend/ai_skills/ holds the *product* domain-knowledge skills (DCE analysis, mémoire
+generation references). They were relocated here from .claude/skills/ (which is gitignored
+and therefore not deployed) so the enrichment actually ships with the backend.
 """
 
 import pathlib
 import functools
 
-_SKILLS_ROOT = pathlib.Path(__file__).resolve().parents[2] / ".claude" / "skills"
+# Tracked, deployed product skills. Resolved relative to this module (cwd-independent):
+# parents[1] == backend/ → backend/ai_skills.
+_SKILLS_ROOT = pathlib.Path(__file__).resolve().parents[1] / "ai_skills"
 
 
 @functools.lru_cache(maxsize=32)
