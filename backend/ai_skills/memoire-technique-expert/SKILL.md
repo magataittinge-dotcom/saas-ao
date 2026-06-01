@@ -277,6 +277,20 @@ Points clés : terrassement, réseaux EU/EP/AEP, voirie, enrobés, signalisation
 **Plomberie / CVC**
 Points clés : dimensionnement, matériaux, essais pression, mise en service, équilibrage
 
+## Cadres sourcés des sections (corpus enrichi)
+<!-- Source: NotebookLM N3/N1/N6, 01/06/26 — backport densifié des rédacteurs synorix #40-#49 -->
+
+- **Préambule — effet miroir** : nommer le projet et l'enjeu MAJEUR réel de l'acheteur (« …votre enjeu majeur n'est pas seulement [X], mais réside dans [maintien d'activité / sécurité des usagers] »), valoriser la visite de site, relier chaque exigence du CCTP à une solution chiffrée, puis transition vers moyens/méthodo.
+- **Méthodologie — méthode SPAC** : structurer chaque point en **Situation → Problème → Action → Conclusion/Bénéfice**. Associer systématiquement **mode opératoire précis + une norme (DTU verbatim) + bénéfice direct acheteur** (sécurité/délai/tranquillité). Par phase : mode opératoire, normes, **points singuliers**, **autocontrôles / points d'arrêt**, bénéfice. Bannir toute phrase creuse.
+- **Présentation prestation** : reformulation experte (jamais de copier-coller CCTP) ; **tableau « Contraintes = Solutions »** ; anticipation des aléas (risques + solutions de repli).
+- **Références chantiers** : volumétrie **3 à 5 strictes** (éviter le piège « catalogue ») ; sélectionner les chantiers les plus proches de l'AO (effet miroir) ; tableau Année/Intitulé/Adresse/MOA/MOE/Lot/Montant HT + photos avant/après annotées.
+- **Sécurité / PPSPS** : obligation **Art. L.4532-9** (PGC SPS en co-activité → PPSPS par chaque entreprise y compris sous-traitants ; entreprise isolée si **> 1 an ET > 50 salariés pendant > 10 j**). Catégories coordination SPS (**R.4532-1**) : **Cat. 1** > **10 000 hommes×jour** + (**≥ 10 entreprises** bâtiment / **5** génie civil) → **CISSCT** ; **Cat. 2** > **500 hommes×jour** ou **30 j & effectif pointe > 20 salariés** ; **Cat. 3** autres. VIC + coordonnateur SPS.
+- **Environnement / SOGED** : **REP PMCB** (loi AGEC, **décret n° 2021-1941 du 31/12/2021**, **art. R.543-289 Code env.**) — **tri à la source 5 flux** (bois, métaux, plastiques, inertes, plâtre) → **reprise gratuite** des déchets triés (éco-organismes Valobat/Ecominéro), économie répercutée à la collectivité. Traçabilité BSD, taux de valorisation cible quantitatif.
+- **Qualité / PAQ** : cadre **ISO 9001** — KPI chiffrés engageables : **taux d'anomalies bloquantes à la réception = 0** ; **NC processus < 10** sur le projet ; **NCE = 0** ; **taux de service** = (remises conformes à temps / attendues) × 100, cible **100 %**, seuil **> 80 %** ; **délai SAV/GPA < 48 h** ; **taux de fréquence accidents** = (accidents avec arrêt / heures travaillées) × **200 000**, cible **< 1**. Points d'arrêt + autocontrôles explicites. Respecter à la lettre la structure SOPAQ imposée par le RC.
+- **Note RSE / innovation** : prouver-chiffrer-sourcer (phrases banales = éliminatoires) ; certifs **BBCA** (carbone), **Effinergie/BEPOS** (énergie), **NF Habitat HQE** (qualité environnementale globale). Insertion sociale : heures via Mission Locale / GEIQ.
+- **Garde-fous (N6)** : ne jamais contredire le CCTP (variante déguisée → offre irrégulière) ; pas de renvoi vers liens externes hors CRT ; engagements **mesurables et tenables**, jamais absolus.
+- **Anti-invention** : tout chiffre/référence/engagement propre à l'entreprise non fourni reste `[À COMPLÉTER PAR L'ENTREPRISE]`.
+
 ## Utilisation de cette skill
 
 Quand tu génères un mémoire technique :
