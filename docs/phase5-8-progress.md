@@ -54,5 +54,19 @@
 - Total registry : 63 + 17 = 80
 - Restantes vers 91 : 11 (sidebar 5 + chatbot 5 + memoire 1)
 
+### Phase 7 — sidebar (5 skills #76-80) ✅ — 10 tests verts
+- [OK] #76 recherche-structure-profil-entreprise-btp (Sonnet, N2) — champs DC1/DC2, CERTIBAT 30/09/2026, décennale L241-1.
+- [OK] #77 recherche-format-references-chantiers (Sonnet, N3) — champs obligatoires/optionnels + score de pertinence (#37).
+- [OK] #78 recherche-bibliotheque-phrases-memoire (Sonnet, N3) — taxonomie section × corps de métier, granularité paragraphe.
+- [OK] #79 recherche-coffre-fort-pieces-administratives (Sonnet, N2) — >30 catégories (DC/NOTI/EXE), Kbis ≤3 mois, validités + alternatives.
+- [OK] #80 analyse-historique-ao-entreprise (Sonnet, BE) — insights actionnables premium, axes à renforcer, zéro chiffre inventé.
+
+---
+
+## Compteurs (mise à jour)
+- OK : 22 (Phase 5 = 11, Phase 6+#87 = 6, Phase 7 = 5)
+- Total registry : 63 + 22 = 85
+- Restantes vers 91 : 6 (chatbot 5 + memoire 1)
+
 ## REPRENDRE À
-Phase 7 / sidebar / #76 recherche-structure-profil-entreprise-btp
+Phase 8 / chatbot / #81 recherche-architecture-chatbot-saas-pro
