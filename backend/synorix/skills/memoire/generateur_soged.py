@@ -43,10 +43,10 @@ class GenerateurSoged(Skill):
     name = "generateur-soged"
     category = "memoire"
     model = "claude-sonnet-4-6"
-    version = "1"
+    version = "2"  # v2 : REP PMCB sourcée (décret 2021-1941, R.543-289) — corpus N4 enrichi
     system_prompt_path = "prompts/generateur_soged.md"
 
-    notebook_sources = ["N3"]
+    notebook_sources = ["N3", "N4"]
     pipeline_step = 4
     differentiateur = 0
 

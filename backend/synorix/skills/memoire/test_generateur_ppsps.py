@@ -44,5 +44,5 @@ def test_generateur_ppsps_metadata():
     assert GenerateurPpsps.name == "generateur-ppsps"
     assert GenerateurPpsps.category == "memoire"
     assert GenerateurPpsps.model == "claude-sonnet-4-6"
-    assert GenerateurPpsps.notebook_sources == ["N3"]
+    assert GenerateurPpsps.notebook_sources == ["N3", "N1"]
     assert GenerateurPpsps.pipeline_step == 4

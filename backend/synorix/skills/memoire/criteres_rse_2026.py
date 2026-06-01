@@ -53,7 +53,7 @@ class CriteresRse2026(Skill):
     name = "criteres-RSE-2026"
     category = "memoire"
     model = "claude-sonnet-4-6"
-    version = "1"
+    version = "2"  # v2 : certifications RSE (BBCA/Effinergie/NF Habitat HQE) sourcées — corpus N7 enrichi
     system_prompt_path = "prompts/criteres_rse_2026.md"
 
     notebook_sources = ["N7", "N8"]

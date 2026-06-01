@@ -19,13 +19,26 @@ L'étanchéité est un lot critique soumis à l'**assurance décennale obligatoi
 - **NF DTU 43.5** — **Réfection** des toitures-terrasses et toitures inclinées (rénovation d'un ancien revêtement).
 - **NF DTU 43.11** — Texte global encadrant conception et mise en œuvre des toitures-terrasses étanchées (pentes minimales, relevés, fixations).
 - **NF DTU 20.12** — Conception du gros œuvre maçonnerie/béton destiné à recevoir l'étanchéité (planchers, acrotères, costières).
-- **Règles professionnelles CSFE** + e-Cahiers du CSTB — procédés non couverts par DTU classique (Systèmes d'Étanchéité Liquide SEL résine PU/polyester, végétalisation).
+- **Procédés non couverts par les NF DTU série 43** (verbatim, voir bloc dédié ci-dessous) :
+  - **SEL (Systèmes d'Étanchéité Liquide)** résine → **e-Cahier CSTB n° 3680_V2** + **DTA/Avis Technique** obligatoire.
+  - **Toitures-terrasses végétalisées** (extensive/semi-intensive) → **Règles professionnelles "terrasses et toitures végétalisées", édition n°3 (mai 2018)** (CSFE / ADIVET / UNEP / SNPPA).
+  - **Isolation inversée** → **Règles professionnelles CSFE "Isolation inversée de toiture-terrasse" (juin 2021)** (technique traditionnelle depuis 2021 pour certaines configurations).
+  - **Isolants supports d'étanchéité en indépendance sous protection lourde** → **Règles professionnelles CSFE, 4ᵉ édition (juillet 2024)**.
 
 **Qualifications / certifications :**
 - **Qualibat Étanchéité** (bitume, membranes synthétiques, SEL) ; **Mention RGE** (obligatoire pour aides MOA liées à l'isolation thermique) ; **adhésion CSFE**.
 - **Avis Technique (ATec) / DTA** (CSTB) pour produits/systèmes innovants hors DTU : membranes EPDM/PVC/TPO posées sans flamme, isolation inversée (ex. ATec R-Top).
 - **ATEx** pour procédé/matériau totalement nouveau avant ATec définitif.
 - **PAQ** exigé pour autoriser la pente nulle (0 %) sur terrasses inaccessibles en membrane synthétique.
+
+### Procédés non-DTU — conditions d'emploi SEL (verbatim)
+<!-- Source: NotebookLM N4, 01/06/26 (corpus enrichi : e-Cahier CSTB 3680_V2 + Règles professionnelles CSFE) -->
+
+Le **SEL (e-Cahier CSTB 3680_V2)** s'emploie sous **DTA/Avis Technique** :
+- **Destinations** : toitures inaccessibles, techniques, jardins, végétalisées, accessibles piétons/séjour, isolation inversée.
+- **Travaux** : neuf (élément porteur maçonnerie) et réfection (ancien carrelage direct, ancienne étanchéité bitumineuse sur isolant, ou support conforme **NF DTU 43.5**).
+- **Climat/zones** : plaine + DROM ; montagne sous justifications de l'ATec ; toutes zones de sismicité. **Hygrométrie** : locaux à faible et moyenne hygrométrie uniquement.
+- **Interdictions** : isolation en **sous-face de l'élément porteur strictement interdite** ; en réfection sur dalle de protection dure conservée, mise en œuvre directe du SEL **interdite** (dépose obligatoire).
 
 ---
 

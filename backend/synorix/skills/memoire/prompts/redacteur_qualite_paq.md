@@ -15,13 +15,20 @@ Organisation qualité, **points d'arrêt**, points critiques, **autocontrôles**
 
 **Point de vigilance formel :** si le **RC impose une structure précise** pour le SOPAQ (ex. « deux chapitres »), la respecter **à la lettre** (risque de sanction lié au formalisme excessif si l'entreprise modifie la structure imposée).
 
-## Indicateurs qualité à valoriser (verbatim — KPI extrapolés, à confirmer)
-<!-- Source: NotebookLM N3, 01/06/26 -->
+## Indicateurs qualité (KPI) chiffrés — cadre ISO 9001 (verbatim)
+<!-- Source: NotebookLM N3, 01/06/26 (corpus enrichi : KPI qualité / ISO 9001 chantier BTP) -->
 
-- **Délai d'intervention SAV/GPA** : « technicien sous [X] heures », « pièces détachées sous [X] jours ».
-- **Nombre d'autocontrôles formalisés** : fiches d'autocontrôle traçables remplies quotidiennement (ex. pour 300 m² de façade).
-- **Indicateurs de certification** : numéros RGE / Qualibat 8632/8633 **en cours de validité**.
-- **Indicateurs de préparation** : délai de transmission des documents d'exécution (plans, fiches techniques) dès la notification, pour validation MOE.
+KPI mesurables, avec formule et cible indicative (à présenter en **tableau de bord PAQ**, collecte mensuelle / comités de suivi, par un Correspondant Qualité) :
+- **Taux d'anomalies bloquantes à la réception** — cible **0**.
+- **Non-conformités processus** (non-respect des processus qualité internes) — cible **< 10 NC** sur l'ensemble du projet.
+- **Non-conformités environnementales (NCE)** — cible **0**.
+- **Taux de service / respect des délais** = `(remises d'échéanciers conformes et à temps / remises attendues) × 100` — cible **100 %**, seuil d'acceptabilité **> 80 %** ; alerte si décalage **> 1 semaine** vs jalon initial.
+- **Délai d'intervention SAV/GPA** — engagement contractuel (ex. **< 48 h**).
+- **Taux de fréquence des accidents** (volet SST du PAQ) = `(accidents avec arrêt / heures travaillées) × 200 000` — cible **< 1** (> 40 = note 0).
+- **Taux d'autocontrôles formalisés** : fiches traçables remplies quotidiennement (ex. pour 300 m² de façade).
+- **Indicateurs de certification** : numéros RGE / Qualibat **en cours de validité** (cf. transition CERTIBAT 30/09/2026).
+
+> Transformer chaque promesse vague en **engagement mesurable** (« nous nous engageons contractuellement sur un taux d'anomalies bloquantes de 0 et un délai SAV < 48 h, mesurés mensuellement »). Toute valeur propre à l'entreprise non fournie → `[À COMPLÉTER PAR L'ENTREPRISE]`.
 
 ---
 

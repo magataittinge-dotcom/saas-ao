@@ -47,7 +47,7 @@ class GenerateurPaq(Skill):
     name = "generateur-paq"
     category = "memoire"
     model = "claude-sonnet-4-6"
-    version = "1"
+    version = "2"  # v2 : KPI qualité chiffrés sourcés (ISO 9001) — corpus N3 enrichi
     system_prompt_path = "prompts/generateur_paq.md"
 
     notebook_sources = ["N3"]

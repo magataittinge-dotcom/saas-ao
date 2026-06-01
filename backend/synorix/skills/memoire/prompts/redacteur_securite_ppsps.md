@@ -27,7 +27,18 @@ Règle absolue : section **spécifique au chantier, jamais générique**. Tu n'i
 
 - La **section sécurité** du mémoire = démarche SSE ; peut intégrer une **ébauche** de PPSPS (preuve de maîtrise).
 - Le **PPSPS** = document clinique, strictement opérationnel, élaboré en phase de préparation **une fois le marché notifié** ; il ne remplace jamais le PPSPS définitif d'exécution.
-- **Obligation** : PPSPS imposé sur les **chantiers soumis à coordination SPS** (co-activité de plusieurs entreprises). `[À COMPLÉTER — référence Code du travail (registry : R.4532) et seuils jours-hommes à vérifier — hors corpus N3]`.
+
+## Obligation & seuils PPSPS / coordination SPS (verbatim)
+<!-- Source: NotebookLM N1, 01/06/26 (corpus enrichi : Code du travail R.4532 + INRS + Art. L.4532-9) -->
+
+- **Obligation (Art. L.4532-9)** — le PPSPS est obligatoire :
+  1. **Chantier en co-activité** : dès qu'un **PGC SPS** est établi par le coordonnateur (plusieurs entreprises) → chaque entreprise, **y compris sous-traitantes**, établit son PPSPS et le communique au coordonnateur avant le début des travaux.
+  2. **Entreprise isolée** : si la durée des travaux est **> 1 an** ET le volume **> 50 salariés pendant plus de 10 jours**.
+- **Catégories d'opération (R.4532-1 et s.)** :
+  - **Catégorie 1** : **> 10 000 hommes×jour** ET (**≥ 10 entreprises** en bâtiment ou **5** en génie civil) → impose aussi un **CISSCT**.
+  - **Catégorie 2** : **> 500 hommes×jour**, ou chantier de **30 jours avec effectif en pointe > 20 salariés**.
+  - **Catégorie 3** : autres opérations.
+- **Rédaction** : le PPSPS est rédigé par le **responsable opérationnel** (ou sous son contrôle), à partir du **PGC SPS**, du **DUER** et de l'**inspection commune préalable** avec le coordonnateur.
 - **Contenu PPSPS** : analyse minutieuse des risques par tâche ; mesures de prévention + équipements ; organisation des secours ; mesures d'hygiène et bases-vie.
 
 ---

@@ -19,7 +19,11 @@ La RSE pèse souvent **5 à 25 %** de la note en 2026. **Prouver, chiffrer, sour
 4. **Insertion sociale** : **heures d'insertion** (base **5 à 10 % du volume total d'heures**), via Mission Locale / GEIQ.
 5. **Mobilité durable** : % de flotte à faibles émissions, limitation des rotations camions, distance d'approvisionnement.
 
-**Certifications** *(hors corpus, à vérifier → `[À COMPLÉTER — certifications à vérifier]`)* : BBCA, Effinergie, NF Habitat / NF Habitat HQE.
+**Certifications à mobiliser comme preuves (verbatim) :**
+<!-- Source: NotebookLM N7, 01/06/26 (corpus enrichi : référentiels certifications RSE) -->
+- **BBCA (Bâtiment Bas Carbone)** — preuve catégorie **CARBONE** : réduction de l'empreinte carbone sur tout le cycle de vie + stockage carbone. → critères « matériaux / bilan carbone ».
+- **Effinergie / BEPOS** — preuve catégorie **ÉNERGIE** : sobriété et efficacité énergétiques (conception bioclimatique, perméabilité à l'air, ENR ; BEPOS = production > consommation). → critères « équipements / optimisation énergétique ».
+- **NF Habitat / NF Habitat HQE** (délivrée par **CERQUAL Qualitel Certification**, volet HQE avec l'Association HQE) — preuve **QUALITÉ ENVIRONNEMENTALE GLOBALE** : 4 engagements (respect de l'environnement, qualité de vie, performance économique, management responsable) ; couvre eau/déchets/biodiversité, santé/confort (qualité de l'air intérieur, confort thermique/visuel), management de l'opération. → chantier à faible impact global (nuisances, déchets, qualité de l'air).
 
 ---
 

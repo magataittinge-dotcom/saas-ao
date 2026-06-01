@@ -15,7 +15,7 @@ async def test_generateur_soged_structure():
             "filieres_markdown": "Points de collecte agréés...",
             "tracabilite_markdown": "Bordereaux BSDD...",
             "taux_valorisation_cible": "[À COMPLÉTER PAR L'ENTREPRISE]",
-            "rep_pmcb_note": "[À COMPLÉTER — REP PMCB à vérifier, hors corpus N3]",
+            "rep_pmcb_note": "REP PMCB — décret 2021-1941, R.543-289 : reprise gratuite sous condition de collecte séparée",
             "longueur_estimee_mots": 700,
         },
         "champs_a_completer": ["taux de valorisation"],
@@ -38,5 +38,5 @@ def test_generateur_soged_metadata():
     assert GenerateurSoged.name == "generateur-soged"
     assert GenerateurSoged.category == "memoire"
     assert GenerateurSoged.model == "claude-sonnet-4-6"
-    assert GenerateurSoged.notebook_sources == ["N3"]
+    assert GenerateurSoged.notebook_sources == ["N3", "N4"]
     assert GenerateurSoged.pipeline_step == 4

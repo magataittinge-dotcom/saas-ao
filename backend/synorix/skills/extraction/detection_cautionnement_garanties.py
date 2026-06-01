@@ -39,7 +39,7 @@ class DetectionCautionnementGaranties(Skill):
     name = "detection-cautionnement-garanties"
     category = "extraction"
     model = "claude-sonnet-4-6"
-    version = "1"
+    version = "2"  # v2 : assiette RG / taux clarifiés via CCAG-Travaux 2021 (corpus N1 enrichi)
     system_prompt_path = "prompts/detection_cautionnement_garanties.md"
 
     notebook_sources = ["N1"]

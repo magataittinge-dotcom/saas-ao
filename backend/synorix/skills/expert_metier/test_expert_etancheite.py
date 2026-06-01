@@ -88,4 +88,4 @@ def test_expert_etancheite_metadata():
     assert ExpertEtancheite.model == "claude-sonnet-4-6"
     assert ExpertEtancheite.notebook_sources == ["N4", "N3"]
     assert ExpertEtancheite.pipeline_step == 3
-    assert ExpertEtancheite.version == "2"
+    assert ExpertEtancheite.version == "3"

@@ -101,3 +101,14 @@ Méthode "action + justification technique", bannir superlatifs creux ("qualité
 - Chiffres préservés verbatim : pentes 0 %/1 %/3 %/1-5 %, équerre 25 cm, mise en eau 24h, hygrométrie 5 %, EPDM 40-50 ans, sinistralité 64 % / Code 40 = 6 %.
 - version bumpée "1" → "2".
 - **Divergence registry** : le registry liste 43.1/43.3/43.4/43.5 ; N4 ajoute **NF DTU 43.11** (texte global TT) et **NF DTU 20.12** (support gros œuvre). Suivi NotebookLM. À noter pour Mohamed.
+
+---
+
+## RECAPTURE 01/06/26 — corpus N4 enrichi (CSFE / e-Cahiers CSTB, procédés non-DTU)
+
+- **SEL (Systèmes d'Étanchéité Liquide)** résine → **e-Cahier CSTB n° 3680_V2** + **DTA/Avis Technique**. Destinations : inaccessibles, techniques, jardins, végétalisées, accessibles piétons, isolation inversée. Neuf + réfection (support conforme NF DTU 43.5). Locaux faible/moyenne hygrométrie. Interdictions : isolation en sous-face de l'élément porteur ; SEL direct sur dalle de protection dure conservée en réfection (dépose obligatoire).
+- **Toitures-terrasses végétalisées** (extensive/semi-intensive) → **Règles professionnelles éd. n°3 (mai 2018)** (CSFE / ADIVET / UNEP / SNPPA).
+- **Isolation inversée** → **Règles professionnelles CSFE (juin 2021)** — traditionnelle depuis 2021.
+- **Isolants supports d'étanchéité en indépendance sous protection lourde** → **Règles pro CSFE, 4ᵉ éd. (juillet 2024)**.
+
+→ Coverage SEL/végétalisation ajoutée au prompt (procédés hors NF DTU série 43). version 2→3.

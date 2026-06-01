@@ -9,3 +9,10 @@
 
 ## Build notes
 - Sonnet. Taux + articles verbatim. base_calcul HT/TTC seulement si DCE le précise (TTC non tranché d'office — hors corpus).
+
+---
+
+## RECAPTURE 01/06/26 — corpus N1 enrichi (CCAG-Travaux 2021)
+
+- **Retenue de garantie (Art. 19.1)** : max **5 %** ; État **2 %** pour ses marchés (**pas** de réduction à 3 % pour les PME) ; libérée **1 an après réception**, réserves levées.
+- **Assiette** : le CCAG-Travaux 2021 **ne donne pas** l'assiette ; c'est le **CCP** qui impose le calcul sur le montant **TTC** des acomptes (CCP non intégralement dans N1, confirmé par doctrine). → marqueur « hors corpus à confirmer » levé : assiette TTC (CCP), CCAG-T muet.

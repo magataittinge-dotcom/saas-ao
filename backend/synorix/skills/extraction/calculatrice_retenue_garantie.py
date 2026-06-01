@@ -20,7 +20,7 @@ class Input(SkillInput):
     montant_ht: float
     tva: float = 0.20  # taux de TVA (20% par défaut)
     taux_rg: float = 0.05  # retenue de garantie (max 5%)
-    penalite_diviseur: int = 3000  # CCAG MOE P=V*R/3000 ; Travaux souvent /1000 (param)
+    penalite_diviseur: int = 3000  # CCAG-Travaux 2021 Art. 19.2.3 : 1/3000 du montant HT (param. si CCAP déroge)
     jours_retard_execution: int = 0  # R (jours calendaires)
     valeur_ht_en_retard: float | None = None  # V ; défaut = montant_ht
     creance_ttc: float | None = None  # pour intérêts moratoires ; défaut = montant TTC
@@ -46,7 +46,7 @@ class CalculatriceRetenueGarantie(Skill):
     name = "calculatrice-retenue-garantie"
     category = "extraction"
     model = "none"  # calcul déterministe, aucun appel LLM (cf. registry #24)
-    version = "1"
+    version = "2"  # v2 : formules CCAG-Travaux 2021 sourcées verbatim (corpus N1 enrichi)
     system_prompt_path = "prompts/calculatrice_retenue_garantie.md"
 
     notebook_sources = ["N1"]

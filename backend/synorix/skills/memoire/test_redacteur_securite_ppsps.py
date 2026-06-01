@@ -69,5 +69,5 @@ def test_securite_ppsps_metadata():
     assert RedacteurSecuritePpsps.name == "redacteur-securite-ppsps"
     assert RedacteurSecuritePpsps.category == "memoire"
     assert RedacteurSecuritePpsps.model == "claude-sonnet-4-6"
-    assert RedacteurSecuritePpsps.notebook_sources == ["N3"]
+    assert RedacteurSecuritePpsps.notebook_sources == ["N3", "N1"]
     assert RedacteurSecuritePpsps.pipeline_step == 4

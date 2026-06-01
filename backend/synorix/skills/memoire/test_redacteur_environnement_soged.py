@@ -28,7 +28,7 @@ def _fake(with_soged: bool):
         resp["soged"] = {
             "titre": "SOGED",
             "contenu_markdown": "Organisation du tri sur 5 flux...",
-            "rep_pmcb_note": "[À COMPLÉTER — REP PMCB à vérifier, hors corpus N3]",
+            "rep_pmcb_note": "REP PMCB — décret 2021-1941, R.543-289 : reprise gratuite sous condition de collecte séparée",
         }
     return resp
 
@@ -63,5 +63,5 @@ def test_environnement_soged_metadata():
     assert RedacteurEnvironnementSoged.name == "redacteur-environnement-soged"
     assert RedacteurEnvironnementSoged.category == "memoire"
     assert RedacteurEnvironnementSoged.model == "claude-sonnet-4-6"
-    assert RedacteurEnvironnementSoged.notebook_sources == ["N3"]
+    assert RedacteurEnvironnementSoged.notebook_sources == ["N3", "N4"]
     assert RedacteurEnvironnementSoged.pipeline_step == 4

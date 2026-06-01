@@ -50,7 +50,7 @@ class ExpertEtancheite(Skill):
     name = "expert-etancheite"
     category = "expert-metier"
     model = "claude-sonnet-4-6"
-    version = "2"  # v2 : prompt complété depuis NotebookLM N4/N3 (31/5/26)
+    version = "3"  # v3 : procédés non-DTU sourcés (SEL e-Cahier CSTB 3680_V2 + Règles pro CSFE) — corpus N4 enrichi 01/06/26
     system_prompt_path = "prompts/expert_etancheite.md"
 
     notebook_sources = ["N4", "N3"]

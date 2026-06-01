@@ -58,10 +58,10 @@ class RedacteurSecuritePpsps(Skill):
     name = "redacteur-securite-ppsps"
     category = "memoire"
     model = "claude-sonnet-4-6"
-    version = "1"
+    version = "2"  # v2 : obligation/seuils SPS-PPSPS sourcés (corpus N1 enrichi R.4532/L.4532-9)
     system_prompt_path = "prompts/redacteur_securite_ppsps.md"
 
-    notebook_sources = ["N3"]
+    notebook_sources = ["N3", "N1"]
     pipeline_step = 4
     differentiateur = 0
 

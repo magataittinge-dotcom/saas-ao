@@ -19,3 +19,8 @@ Parent : `redacteur-environnement-soged` (#47) → voir `skill-47-redacteur-envi
 ## #55 `generateur-paq` — variante autonome de #48
 Parent : `redacteur-qualite-paq` (#48) → voir `skill-48-redacteur-qualite-paq-raw.md`.
 **Variante** : **PAQ autonome**. Organisation qualité, points d'arrêt, points critiques, autocontrôles, plan de surveillance, traçabilité, gestion des non-conformités, indicateurs quantifiés. Respecter à la lettre la structure SOPAQ imposée par le RC.
+
+---
+
+## RECAPTURE 01/06/26 — #53 generateur-ppsps : corpus N1 enrichi (R.4532 / L.4532-9)
+Mêmes seuils que #46 (voir skill-46 RECAPTURE) : obligation L.4532-9 (PGC SPS / entreprise isolée >1 an & >50 sal. >10 j) ; catégories R.4532-1 (Cat.1 >10 000 H×J + ≥10/5 entr. + CISSCT ; Cat.2 >500 H×J ou 30 j & >20 sal. ; Cat.3 autres). Marqueur Code du travail **levé** (sourcé N1).

@@ -21,3 +21,13 @@ Le critère RSE pèse souvent **entre 5 et 25 % de la note finale** en 2026 (N8)
 - « Enduits certifiés Ecolabel, sans perturbateurs endocriniens ; 50 heures réalisées par un salarié en insertion (Mission Locale). »
 
 ⚠️ **Règle absolue** : tous les **indicateurs chiffrés viennent de l'utilisateur** — Synorix ne génère JAMAIS un chiffre RSE → `[À COMPLÉTER PAR L'ENTREPRISE]`.
+
+---
+
+## RECAPTURE 01/06/26 — corpus N7 enrichi (certifications RSE)
+
+- **BBCA (Bâtiment Bas Carbone)** → preuve catégorie **CARBONE** : réduction empreinte carbone sur le cycle de vie + stockage carbone. Critères « matériaux / bilan carbone ».
+- **Effinergie / BEPOS** → preuve catégorie **ÉNERGIE** : sobriété/efficacité énergétiques (bioclimatique, perméabilité à l'air, ENR ; BEPOS = production > consommation).
+- **NF Habitat / NF Habitat HQE** (**CERQUAL Qualitel Certification** + Association HQE) → **QUALITÉ ENVIRONNEMENTALE GLOBALE** : 4 engagements (environnement, qualité de vie, performance économique, management responsable) ; eau/déchets/biodiversité, santé/confort (air intérieur, thermique/visuel), management de l'opération.
+
+→ Marqueur « certifications hors corpus à vérifier » **levé** (sourcé N7). Les indicateurs CHIFFRÉS RSE restent [À COMPLÉTER PAR L'ENTREPRISE] (jamais générés).

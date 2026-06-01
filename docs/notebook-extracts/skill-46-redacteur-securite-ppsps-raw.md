@@ -21,3 +21,20 @@
 - **Contenu** : analyse minutieuse des risques par tâche, mesures de prévention + équipements, organisation des secours, mesures d'hygiène et bases-vie.
 
 ⚠️ **Hors corpus N3** : NotebookLM précise que les sources ne donnent **pas les articles exacts du Code du travail ni les seuils** (jours-hommes) déclenchant l'obligation. → marquer `[À COMPLÉTER — référence Code du travail (registry indique R.4532) et seuils à vérifier]`.
+
+---
+
+## RECAPTURE 01/06/26 — corpus N1 enrichi (Code du travail R.4532 + INRS + Art. L.4532-9)
+
+**Obligation PPSPS (Art. L.4532-9) :**
+1. Co-activité : dès qu'un **PGC SPS** est établi par le coordonnateur → chaque entreprise (y compris **sous-traitantes**) établit son PPSPS, communiqué au coordonnateur avant le début des travaux.
+2. Entreprise isolée : PPSPS si durée **> 1 an** ET **> 50 salariés pendant plus de 10 jours**.
+
+**Catégories d'opération de coordination SPS (R.4532-1 et s.) — verbatim :**
+- **Catégorie 1** : > **10 000 hommes×jour** ET (**≥ 10 entreprises** bâtiment / **5** génie civil) → impose un **CISSCT**.
+- **Catégorie 2** : > **500 hommes×jour**, ou chantier de **30 jours avec effectif en pointe > 20 salariés**.
+- **Catégorie 3** : autres opérations.
+
+**Rédaction** : par le **responsable opérationnel** (ou sous son contrôle), à partir du **PGC SPS**, du **DUER** et de l'**inspection commune préalable** avec le coordonnateur.
+
+→ Marqueur « R.4532 / seuils jours-hommes hors corpus N3 » **levé** (sourcé N1).
