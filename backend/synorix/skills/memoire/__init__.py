@@ -31,3 +31,17 @@ from synorix.skills.memoire.redacteur_environnement_soged import (  # noqa: F401
 )
 from synorix.skills.memoire.redacteur_qualite_paq import RedacteurQualitePaq  # noqa: F401
 from synorix.skills.memoire.redacteur_planning_gantt import RedacteurPlanningGantt  # noqa: F401
+from synorix.skills.memoire.generateur_organigramme import GenerateurOrganigramme  # noqa: F401
+from synorix.skills.memoire.generateur_planning_gantt_option import (  # noqa: F401
+    GenerateurPlanningGanttOption,
+)
+from synorix.skills.memoire.generateur_photos_references import (  # noqa: F401
+    GenerateurPhotosReferences,
+)
+from synorix.skills.memoire.generateur_ppsps import GenerateurPpsps  # noqa: F401
+from synorix.skills.memoire.generateur_soged import GenerateurSoged  # noqa: F401
+from synorix.skills.memoire.generateur_paq import GenerateurPaq  # noqa: F401
+from synorix.skills.memoire.generateur_note_innovation import (  # noqa: F401
+    GenerateurNoteInnovation,
+)
+from synorix.skills.memoire.generateur_note_rse import GenerateurNoteRse  # noqa: F401

@@ -33,10 +33,22 @@
 
 ---
 
+### Group 4 — Options à cocher (#50-#57) ✅ — 16 tests verts
+- [OK] #50 generateur-organigramme (Sonnet, N3) — organigramme dédié 3 niveaux + SVG, taux d'affectation, zéro nom inventé.
+- [OK] #51 generateur-planning-gantt-option (Sonnet, N3) — variante annexe de #49, cohérence CCAP.
+- [OK] #52 generateur-photos-references (**none/déterministe**, N3) — légende obligatoire (photo n'illustre pas = rejetée, juris.), max 3/réf, ratio normalisé. Aucun appel LLM.
+- [OK] #53 generateur-ppsps (Sonnet, N3) — PPSPS complet autonome, risques par tâche, SPS/VIC. R.4532 hors corpus → [À COMPLÉTER].
+- [OK] #54 generateur-soged (Sonnet, N3) — SOGED autonome 5 flux ; REP PMCB hors corpus → à vérifier.
+- [OK] #55 generateur-paq (Sonnet, N3) — PAQ autonome, points d'arrêt + plan surveillance + indicateurs quantifiés.
+- [OK] #56 generateur-note-innovation (**Opus**, N3) — innovation = bénéfice chiffré (sinon gadget écarté), rappel juridique variantes (MAPA/formalisée).
+- [OK] #57 generateur-note-rse (Sonnet, N3) — 3 volets, insertion sociale quantifiée (GEIQ, 200h), anti-greenwashing (preuves obligatoires).
+
+---
+
 ## Compteurs
-- OK : 14 (Group 1 = 4, Group 2 = 5, Group 3 = 5)
+- OK : 22 (Group 1 = 4, Group 2 = 5, Group 3 = 5, Group 4 = 8)
 - Incomplètes : 0
-- Restantes : 14 (#50-#63)
+- Restantes : 6 (#58-#63)
 
 ## Divergences registry/NotebookLM à arbitrer (Mohamed)
 - #39 confirmé en catégorie `sidebar` conformément au registry (et non `memoire`).
@@ -47,8 +59,9 @@
 
 ## Modèles utilisés (suivi coût)
 - Haiku : #36, #38
-- Sonnet : #37, #39, #42, #43, #46, #47, #48, #49
-- Opus : #40, #41, #44, #45
+- Sonnet : #37, #39, #42, #43, #46, #47, #48, #49, #50, #51, #53, #54, #55, #57
+- Opus : #40, #41, #44, #45, #56
+- none (déterministe) : #52
 
 ## REPRENDRE À
-Group 4 / memoire / #50 generateur-organigramme (Sonnet)
+Group 5 / memoire / #58 editeur-section-regeneration (Opus)
