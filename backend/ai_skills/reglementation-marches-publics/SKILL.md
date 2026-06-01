@@ -46,6 +46,12 @@ argument-hint: [sujet juridique ou article de loi]
 - Mise en demeure préalable obligatoire (écrit + 15 jours pour répondre)
 - Pénalités spécifiques possibles dans le CCAP (absence RDV chantier, etc.)
 
+### Précisions sourcées CCAG-Travaux 2021 + CCP (corpus enrichi)
+<!-- Source: NotebookLM N1, 01/06/26 (CCAG-Travaux 2021 intégral) — backport synorix #15/#24 -->
+- **Pénalités de retard — granularité d'article** : **Art. 19.2.3** = pénalité journalière de **1/3 000 du montant HT** de l'ensemble du marché, de la tranche considérée ou du bon de commande ; **Art. 19.2.2** = plafond **10 % du montant total HT** ; **Art. 19.2.1** = exonération si le total des pénalités ≤ **1 000 €**. Base **HT**. (`1/3000` paramétrable si le CCAP déroge.)
+- **Retenue de garantie (Art. 19.1)** : **5 % max** ; l'État l'a ramenée à **2 %** pour ses propres marchés (plan de relance PME — **pas** de réduction à 3 %). **Assiette** : le CCAG-Travaux 2021 **ne précise pas** l'assiette ; c'est le **CCP** qui impose le calcul sur le montant **TTC** des acomptes. Substituable par caution (CCP R2191-36).
+- **Intérêts moratoires** (retard de paiement) : **taux directeur BCE + 8 points** (CCP **R2192-31**) + indemnité forfaitaire de recouvrement de **40 €** (CCP **D2192-35**). Base TTC, pas de plafond.
+
 ### Réception (Articles 41-42)
 - Demande de réception par le titulaire
 - OPR (Opérations Préalables à la Réception) par le maître d'œuvre

@@ -348,3 +348,18 @@ Pour chaque piege detecte, produire :
 4. **Analyse technique** : verifier normes, performances, delais, contradictions (section 2)
 5. **Analyse administrative** : verifier visite, documents, signature, nommage (section 1)
 6. **Synthese** : classer les pieges par gravite, produire le rapport
+
+## 9. Jurisprudences clés & critères de capacité disproportionnés (corpus enrichi)
+<!-- Source: NotebookLM N6, 01/06/26 — backport synorix #16/#17 (contradictions) + #87 (critères disproportionnés) -->
+
+### Contradictions inter-pièces — forclusion (CE NAYMA)
+- **CE, 18 juillet 2024, NAYMA, n° 492938** : une contradiction « **facilement décelable** » dans le DCE, **non questionnée** par le candidat avant remise, ne peut plus être invoquée ensuite. → toute contradiction matérielle inter-pièces (CCAP/CCTP/RC) doit être **remontée à l'acheteur par écrit (profil acheteur)** sans délai, jamais tranchée seul.
+
+### Critères de capacité disproportionnés (Article L2142-1 CCP)
+Détecter dans le RC des conditions de participation **disproportionnées** par rapport à l'objet du marché :
+- **Plafond du CA exigible (R2142-6)** : CA annuel minimal exigé **plafonné** par rapport au montant estimé du marché — **cf. `reglementation-marches-publics` pour le multiplicateur en vigueur** (1,5× — décret 2025-1383 ; R2142-6 fixait historiquement 2×). En marché alloti (**R2142-8**), la limite s'applique **par lot**. ⚠️ *Divergence de source à arbitrer : synorix #87 (N6) cite 2× (R2142-6) ; le contenu A en vigueur cite 1,5× (décret 2025-1383) — retenir 1,5× (plus récent) côté détection.*
+- **Références (R2142-14)** : l'**absence de références de même nature ne peut, à elle seule, justifier l'élimination** d'un candidat ; la capacité est prouvable par d'autres moyens (expérience, CV, qualifications du personnel).
+- **CE, 10 avril 2024, n° 482722** : l'appréciation des garanties/capacités/références fait l'objet d'un **contrôle limité à l'erreur manifeste d'appréciation** — le juge censure toute exigence ou rejet **manifestement abusif**.
+- **CAA Marseille, 19 janvier 2022, n° 19MA02554** : illégal de rejeter une **société récemment créée** faute de références sur 3  ans, dès lors qu'elle prouve sa capacité par l'expérience de ses effectifs. Une entreprise ne se juge pas sur sa seule date de création.
+
+→ Signaler comme **piège** tout CA exigé au-delà du plafond, toute exigence de références strictement identiques au marché, ou toute ancienneté minimale excluant les sociétés récentes (fondement L2142-1 + jurisprudences ci-dessus).
