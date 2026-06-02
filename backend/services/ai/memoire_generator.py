@@ -27,6 +27,60 @@ _DETAIL_INSTRUCTION = "Génère un mémoire technique COMPLET et DÉTAILLÉ de 2
 # Skills always loaded for mémoire generation
 _ALWAYS_LOAD_MEMOIRE = ["memoire-technique-expert", "scoring-offres-expert", "redaction-gagnante-btp"]
 
+# ── Découpage de la sortie en appels SÉQUENTIELS (un par "partie") ──────────
+# Un mémoire complet = 26 sous-sections, ce qui dépasse le max de tokens de
+# sortie du modèle en un seul appel → troncature. On génère une partie par
+# appel ; le contexte stable (système + skills + méthodo + profil + DCE) est
+# identique sur les 4 appels et mis en cache (TTL 5 min) → surcoût ≈ sortie.
+# preambule est une chaîne ; partie_* sont des objets avec ces sous-sections
+# (ordre et clés EXACTEMENT alignés sur prompts.py / le contrat de sortie).
+_MEMOIRE_SEGMENTS: list[tuple[str, list[str] | None]] = [
+    ("preambule", None),
+    ("partie_a", [
+        "implantation", "historique", "engagement_qualitatif", "activites",
+        "organigramme", "roles_missions", "moyens_informatiques", "vehicules",
+        "materiel", "references", "fournisseurs",
+    ]),
+    ("partie_b", [
+        "demarrage", "interlocuteur", "qualite_ouvrages", "respect_planning",
+        "securite", "dechets", "environnement",
+    ]),
+    ("partie_c", [
+        "methodologie", "effectifs", "materiels", "hygiene_securite",
+        "mesures_environnementales", "gpa", "delai",
+    ]),
+]
+
+
+def _build_segment_instruction(key: str, subkeys: list[str] | None) -> str:
+    """Instruction (non cachée) qui scope CET appel à une seule partie.
+
+    Placée en dernier dans le message user, elle prime sur le schéma global du
+    prompt système (qui reste en cache) sans le modifier."""
+    if subkeys is None:
+        return (
+            "\n\n━━━ CONSIGNE DE CET APPEL (IMPÉRATIVE) ━━━\n"
+            "Le mémoire est généré EN PLUSIEURS APPELS. Pour CET appel, génère "
+            "UNIQUEMENT le préambule.\n"
+            'Réponds avec un objet JSON STRICT contenant EXACTEMENT cette unique '
+            'clé : {"preambule": "markdown..."} — et RIEN d\'autre. Ne génère '
+            "aucune autre partie. Ta réponse commence par { et finit par }."
+        )
+    subs = "\n".join(f"  - {s}" for s in subkeys)
+    return (
+        "\n\n━━━ CONSIGNE DE CET APPEL (IMPÉRATIVE) ━━━\n"
+        "Le mémoire est généré EN PLUSIEURS APPELS. Pour CET appel, génère "
+        f"UNIQUEMENT la partie « {key} ».\n"
+        f'Réponds avec un objet JSON STRICT contenant EXACTEMENT l\'unique clé de '
+        f'premier niveau "{key}", dont la valeur est un objet avec ces '
+        "sous-sections (TOUTES obligatoires, valeurs en markdown détaillé et "
+        "spécifique au marché) :\n"
+        f"{subs}\n"
+        "Ne génère AUCUNE autre partie (ni preambule, ni les autres partie_*). "
+        f'Format attendu : {{"{key}": {{"<sous_section>": "markdown...", ...}}}}. '
+        "Ta réponse commence par { et finit par }."
+    )
+
 
 def _build_memoire_skills(has_references: bool) -> tuple[str, list[str]]:
     """Build mémoire skills supplement per-call.
@@ -352,33 +406,116 @@ class MemoireGenerator:
                 f"{reference_template_text[:10_000]}"
             )
 
-        # ── 8. Call Opus via sync client in thread ────────────────────────────
-        return await asyncio.to_thread(
-            self._sync_call,
-            stable_skills_block,
-            org_block_text,
-            dynamic_block,
-            project_id,
-        )
+        # ── 8. Génération SÉQUENTIELLE, une partie par appel ──────────────────
+        # Évite la troncature du monobloc (26 sous-sections > max tokens de
+        # sortie). Le préfixe stable est mis en cache → calls 2..N le relisent.
+        assembled: dict = {}
+        meta: dict = {
+            "mode": "per-partie",
+            "model": self.MODEL,
+            "segments": [],
+            "warnings": [],
+        }
+        n = len(_MEMOIRE_SEGMENTS)
+        for i, (seg_key, seg_subkeys) in enumerate(_MEMOIRE_SEGMENTS):
+            prog_base = 0.02 + (i / n) * 0.96
+            prog_span = (1.0 / n) * 0.96
+            try:
+                parsed, seg_meta = await asyncio.to_thread(
+                    self._sync_call_segment,
+                    stable_skills_block,
+                    org_block_text,
+                    dynamic_block,
+                    seg_key,
+                    seg_subkeys,
+                    project_id,
+                    prog_base,
+                    prog_span,
+                )
+            except anthropic.AuthenticationError:
+                raise
+            except Exception as e:  # noqa: BLE001 — ne jamais perdre les bonnes parties
+                logger.error(f"Segment '{seg_key}' échoué (placeholder conservé): {e}")
+                parsed, seg_meta = {}, {"segment": seg_key, "error": str(e)}
+            meta["segments"].append(seg_meta)
 
-    def _sync_call(
+            if seg_subkeys is None:
+                # preambule (valeur = chaîne)
+                val = parsed.get("preambule") if isinstance(parsed, dict) else None
+                if (not val or not str(val).strip()) and seg_meta.get("raw_fallback"):
+                    val = seg_meta["raw_fallback"]
+                if not val or not str(val).strip():
+                    val = "[SECTION À RÉGÉNÉRER : preambule]"
+                    meta["warnings"].append("preambule")
+                assembled["preambule"] = val
+            else:
+                obj = None
+                if isinstance(parsed, dict):
+                    if isinstance(parsed.get(seg_key), dict):
+                        obj = parsed[seg_key]
+                    elif any(sk in parsed for sk in seg_subkeys):
+                        obj = parsed  # le modèle a renvoyé l'objet interne directement
+                obj = obj or {}
+                filled: dict = {}
+                for sk in seg_subkeys:
+                    v = obj.get(sk)
+                    if not v or not str(v).strip():
+                        filled[sk] = f"[SECTION À RÉGÉNÉRER : {seg_key}.{sk}]"
+                        meta["warnings"].append(f"{seg_key}.{sk}")
+                    else:
+                        filled[sk] = v
+                assembled[seg_key] = filled
+
+        # Garantit le contrat de sortie {preambule, partie_a, partie_b, partie_c}.
+        for seg_key, seg_subkeys in _MEMOIRE_SEGMENTS:
+            if seg_key not in assembled:
+                assembled[seg_key] = (
+                    "[SECTION À RÉGÉNÉRER : preambule]" if seg_subkeys is None else {}
+                )
+                meta["warnings"].append(seg_key)
+
+        if meta["warnings"]:
+            logger.warning(
+                f"Mémoire généré avec {len(meta['warnings'])} section(s) à régénérer: "
+                f"{meta['warnings']}"
+            )
+            print(
+                f"[Memoire Generator] ⚠ {len(meta['warnings'])} section(s) manquante(s): "
+                f"{meta['warnings']}",
+                flush=True,
+            )
+        else:
+            print("[Memoire Generator] ✅ 26/26 sous-sections générées (aucune troncature)", flush=True)
+
+        if project_id:
+            _safe_update_progress(project_id, 0.99)
+        assembled["_generation_meta"] = meta
+        return assembled
+
+    def _sync_call_segment(
         self,
         stable_skills_block: str,
         org_block_text: str,
         dynamic_block: str,
+        segment_key: str,
+        segment_subkeys: list[str] | None,
         project_id: str | None = None,
-    ) -> dict:
-        """Synchronous streaming Claude call — runs in a thread.
+        progress_base: float = 0.0,
+        progress_span: float = 1.0,
+    ) -> tuple[dict, dict]:
+        """Un appel streaming Opus pour UNE SEULE partie du mémoire.
 
-        Uses Anthropic prompt caching: stable blocks are cached for 5 min,
-        billed at ~10 % of normal input pricing on cache hit.
+        Retourne (parsed_json, seg_meta). NE LÈVE PAS sur troncature ou parse
+        impossible (gracieux — l'appelant remplit des placeholders) ; ne lève
+        que sur erreur d'authentification ou retries transitoires épuisés.
 
-        Streaming keeps the TCP connection alive (bytes every ~100 ms),
-        avoiding WSL2 NAT timeout at ~185 s for long Opus generations.
+        Prompt caching : le préfixe stable (système + skills + profil + bloc DCE
+        dynamique) est IDENTIQUE pour toutes les parties et marqué ephemeral, donc
+        les appels 2..N le relisent en cache au lieu de re-facturer tout l'input.
+        Seule la petite consigne de segment varie (non cachée).
         """
-        # Build system as a list of blocks. The cache_control marker on the
-        # last block tells Anthropic to cache everything up to (and including)
-        # that block. All shared instructions across all orgs get cached here.
+        # System: prompt complet + skills (cachés). Le schéma global du prompt
+        # reste en cache ; la consigne de segment (user, non cachée) le scope.
         system_blocks = [
             {"type": "text", "text": MEMOIRE_GENERATION_SYSTEM},
         ]
@@ -394,55 +531,59 @@ class MemoireGenerator:
                 "cache_control": {"type": "ephemeral"},
             }
 
-        # User message: org-stable block (cached, per-org TTL 5 min) + dynamic.
+        # User: org-stable + bloc DCE dynamique CACHÉS (identiques pour chaque
+        # partie) ; seule la consigne de segment (dernière, non cachée) varie.
+        segment_instruction = _build_segment_instruction(segment_key, segment_subkeys)
         user_content = [
             {
                 "type": "text",
                 "text": org_block_text,
                 "cache_control": {"type": "ephemeral"},
             },
-            {"type": "text", "text": dynamic_block},
+            {
+                "type": "text",
+                "text": dynamic_block,
+                "cache_control": {"type": "ephemeral"},
+            },
+            {"type": "text", "text": segment_instruction},
         ]
 
-        prompt_chars = (
-            len(stable_skills_block) + len(org_block_text) + len(dynamic_block)
+        seg_estimate_chars = (
+            4000 if segment_subkeys is None else max(len(segment_subkeys), 1) * 6000
         )
 
         last_error = None
+        raw = ""
+        seg_meta: dict = {"segment": segment_key}
         for attempt in range(1, 4):
             t0 = time.monotonic()
             try:
                 print(
-                    f"[Memoire Generator] Tentative {attempt}/3 — streaming Opus "
-                    f"({prompt_chars} chars total, "
-                    f"stable={len(stable_skills_block)}, "
-                    f"org={len(org_block_text)}, "
-                    f"dyn={len(dynamic_block)})",
+                    f"[Memoire Generator] Partie '{segment_key}' — tentative {attempt}/3 "
+                    f"(streaming Opus, max_tokens=32000)",
                     flush=True,
                 )
                 collected = ""
                 last_publish = time.time()
-                # Approx 3.5 chars per output token in French. max_tokens=16000
-                # → typical mémoire response is 35-45k chars. Use 50k as
-                # the denominator so we cap at ~99 % only when truly long.
-                chars_estimate = 16000 * 3.5
 
+                # temperature non transmis : déprécié pour claude-opus-4-7 (→ 400).
                 with self.client.messages.stream(
                     model=self.MODEL,
-                    max_tokens=16000,
-                    temperature=0,
+                    max_tokens=32000,
                     system=system_blocks,
                     messages=[{"role": "user", "content": user_content}],
                 ) as stream:
                     for text in stream.text_stream:
                         collected += text
-                        # Real progress signal — at most 3 publishes per second
-                        # so we don't spam the SSE bus on long generations.
+                        # Progrès réel mappé sur la bande allouée à cette partie.
                         if project_id:
                             now = time.time()
                             if now - last_publish >= 0.3:
-                                ratio = min(len(collected) / chars_estimate, 0.99)
-                                _safe_update_progress(project_id, ratio)
+                                local = min(len(collected) / seg_estimate_chars, 1.0)
+                                _safe_update_progress(
+                                    project_id,
+                                    min(progress_base + local * progress_span, 0.99),
+                                )
                                 last_publish = now
 
                 final_message = stream.get_final_message()
@@ -454,16 +595,27 @@ class MemoireGenerator:
                 input_uncached = getattr(usage, "input_tokens", 0) if usage else 0
                 output_tokens = getattr(usage, "output_tokens", 0) if usage else 0
                 print(
-                    f"[TIMING] Memoire streaming: {elapsed:.1f}s, {len(collected)} chars, "
-                    f"stop_reason={stop_reason}, "
-                    f"tokens in={input_uncached}, cache_read={cache_read}, "
-                    f"cache_write={cache_write}, out={output_tokens}",
+                    f"[TIMING] Partie '{segment_key}': {elapsed:.1f}s, {len(collected)} chars, "
+                    f"stop_reason={stop_reason}, in={input_uncached}, "
+                    f"cache_read={cache_read}, cache_write={cache_write}, out={output_tokens}",
                     flush=True,
                 )
-
+                seg_meta.update({
+                    "stop_reason": stop_reason,
+                    "elapsed_s": round(elapsed, 1),
+                    "chars": len(collected),
+                    "input_tokens": input_uncached,
+                    "cache_read": cache_read,
+                    "cache_write": cache_write,
+                    "output_tokens": output_tokens,
+                })
                 if stop_reason == "max_tokens":
-                    print("[Memoire Generator] ⚠ TRONQUÉ — stop_reason=max_tokens", flush=True)
-
+                    seg_meta["truncated"] = True
+                    print(
+                        f"[Memoire Generator] ⚠ Partie '{segment_key}' TRONQUÉE "
+                        f"(stop_reason=max_tokens) — à découper plus finement",
+                        flush=True,
+                    )
                 raw = collected.strip()
                 break
 
@@ -471,41 +623,38 @@ class MemoireGenerator:
                 raise
             except (anthropic.APIConnectionError, anthropic.APITimeoutError) as e:
                 elapsed = time.monotonic() - t0
-                print(f"[Memoire Generator] Tentative {attempt} échouée après {elapsed:.1f}s: {e}", flush=True)
+                print(f"[Memoire Generator] Partie '{segment_key}' tentative {attempt} échouée après {elapsed:.1f}s: {e}", flush=True)
                 last_error = e
                 if attempt < 3:
                     time.sleep(3)
             except anthropic.APIStatusError as e:
                 if e.status_code in (429, 500, 502, 503, 529) and attempt < 3:
-                    print(f"[Memoire Generator] Tentative {attempt} status {e.status_code}, retry...", flush=True)
+                    print(f"[Memoire Generator] Partie '{segment_key}' status {e.status_code}, retry...", flush=True)
                     last_error = e
                     time.sleep(5)
                 else:
                     raise
         else:
-            raise Exception(f"Échec après 3 tentatives. Dernière erreur: {last_error}")
+            raise Exception(f"Partie '{segment_key}' — échec après 3 tentatives. Dernière erreur: {last_error}")
 
-        # ── Parse JSON ────────────────────────────────────────────────────────
+        # ── Parse JSON (GRACIEUX — ne lève jamais) ────────────────────────────
+        parsed: dict = {}
         start = raw.find("{")
-        if start == -1:
-            raise ValueError(f"Claude n'a pas retourné de JSON valide. Début : {raw[:200]}")
-
-        try:
-            decoder = json.JSONDecoder()
+        if start != -1:
             try:
-                result, _ = decoder.raw_decode(raw, start)
+                parsed, _ = json.JSONDecoder().raw_decode(raw, start)
             except json.JSONDecodeError:
-                repaired = repair_json(raw[start:], return_objects=True)
-                if not isinstance(repaired, dict):
-                    raise ValueError("json_repair n'a pas pu reconstruire un objet valide")
-                result = repaired
-        except ValueError:
-            raise
-        except Exception as e:
-            raise ValueError(f"JSON invalide dans la réponse Claude : {e}")
-
-        required = {"preambule", "partie_a", "partie_b", "partie_c"}
-        if not required.issubset(result.keys()):
-            raise ValueError(f"Structure JSON incomplète. Clés : {list(result.keys())}")
-
-        return result
+                try:
+                    repaired = repair_json(raw[start:], return_objects=True)
+                    if isinstance(repaired, dict):
+                        parsed = repaired
+                except Exception as e:  # noqa: BLE001
+                    print(f"[Memoire Generator] json_repair échec partie '{segment_key}': {e}", flush=True)
+                    parsed = {}
+        if not isinstance(parsed, dict):
+            parsed = {}
+        # preambule peut revenir en texte brut (sans JSON) → conservé en fallback.
+        if segment_subkeys is None and not parsed.get("preambule"):
+            if raw and not raw.lstrip().startswith("{"):
+                seg_meta["raw_fallback"] = raw
+        return parsed, seg_meta
