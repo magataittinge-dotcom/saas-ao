@@ -121,3 +121,40 @@
 
 ### Fichiers
 `memoire-gueux-SONNET.{md,json}` (ce test) · référence Opus : `../nuit-rapport/memoire-gueux-REPARE.{md,json}`.
+
+---
+
+## SUITE — Décision : full-Sonnet + prompt densité renforcé
+
+Le test hybride (Sonnet a/b + Opus partie_c) a confirmé que le gain coût était modeste (4,12 $, −38 % seulement, car la partie chère reste Opus) et que la densité d'un run Opus unique varie (temperature dépréciée sur opus-4-7 → non figeable). **Décision : full-Sonnet**, et on récupère la densité normative **par le prompt** (le corpus DTU/Avis Technique est déjà fourni via les skills), pas par le modèle.
+
+Changements : `_MEMOIRE_SEGMENT_MODELS` = 4× `claude-sonnet-4-6` ; `prompts.py` = consigne de densité renforcée (citer SYSTÉMATIQUEMENT NF DTU + Avis Technique/ACERMI/CSTB/Règles Pro/CNAMTS **présents dans le corpus**, avec seuils chiffrés) **+ garde anti-invention renforcée** (« citer ce qui EXISTE, jamais fabriquer » ; données entreprise en `[À COMPLÉTER]`).
+
+### Densité partie_c — Opus-full / Sonnet-ancien / Sonnet-RENFORCÉ
+
+| partie_c (isolée) | Opus-full | Sonnet-ancien | **Sonnet-RENFORCÉ** |
+|---|---|---|---|
+| mots | 9 612 | 8 940 | **10 719** |
+| DTU 43.x | 18 | 11 | **13** ↑ |
+| Avis Tech / ACERMI / CSTB / DTA | 62 | 24 | **36** ↑ (+50 %) |
+| Règles Pro / CSFE | 9 | 1 | **7** ↑↑ |
+| CNAMTS R408/R457 | 6 | 4 | **8** ↑ (> Opus) |
+| REP PMCB / AGEC | 30 | 13 | **19** ↑ |
+| produits cités | 41 | 30 | 19 (variance) |
+| [À COMPLÉTER] | 7 | 18 | **30** (anti-invention ↑) |
+
+→ Le renforcement rapproche nettement Sonnet d'Opus sur tous les axes réglementaires (égale/dépasse Opus sur Règles Pro et CNAMTS) ; il reste sous Opus sur le **volume brut d'Avis Techniques** (36 vs 62) — gap réduit, résidu en partie dû à la variance d'un run unique.
+
+### ⚠️ Vérification anti-invention — 0 référence fabriquée
+Les 8 références numérotées de partie_c renforcé sont **toutes présentes dans le corpus** (CCTP/CCAP + référentiels skills + liste DTU du prompt) : DTU 20.12, 40.35, 43.1, 43.3 + leurs équivalents NF P (10-203, 34-205, 84-204, 84-206). **Aucune suspecte.** 0 CA/donnée entreprise inventée ; `[À COMPLÉTER]` en hausse.
+
+### Coût & robustesse
+- **Coût réel : ≈ 1,03 $** (preambule 0,22 + a 0,18 + b 0,22 + c 0,40) → **6,71 $ → 1,03 $ = −85 %**.
+- Cache full-Sonnet optimal : **1 write + 3 reads**.
+- **26/26 sous-sections, end_turn ×4, 0 troncature, 0 invention.** Tests : 503 verts.
+
+### Verdict
+✅ **Full-Sonnet + prompt renforcé retenu** : densité réglementaire nettement améliorée (proche d'Opus sur la plupart des axes), **0 invention**, **~1 $** (vs 6,71 $ Opus). Le mapping reste configurable par segment — un segment pourra repasser en Opus plus tard si un marché à très fort poids « valeur technique » le justifie.
+
+### Fichiers (suite)
+`memoire-gueux-SONNET-RENFORCE.{md,json}` (run retenu) · `memoire-gueux-HYBRIDE.{md,json}` (test hybride écarté).

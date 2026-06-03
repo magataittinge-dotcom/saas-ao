@@ -14,7 +14,21 @@ from types import SimpleNamespace
 
 import pytest
 
-from services.ai.memoire_generator import MemoireGenerator, _MEMOIRE_SEGMENTS
+from services.ai.memoire_generator import (
+    MemoireGenerator,
+    _MEMOIRE_SEGMENTS,
+    _MEMOIRE_SEGMENT_MODELS,
+)
+
+
+def _segment_of(instr: str) -> str:
+    if "« partie_a »" in instr:
+        return "partie_a"
+    if "« partie_b »" in instr:
+        return "partie_b"
+    if "« partie_c »" in instr:
+        return "partie_c"
+    return "preambule"
 
 
 class _FakeStream:
@@ -140,6 +154,45 @@ async def test_caching_preserved_dynamic_block_cached(monkeypatch):
         assert content[0].get("cache_control") == {"type": "ephemeral"}  # org
         assert content[1].get("cache_control") == {"type": "ephemeral"}  # dynamic DCE
         assert "cache_control" not in content[-1]                         # consigne segment
+
+
+@pytest.mark.asyncio
+async def test_model_per_segment_and_cache_grouping(monkeypatch):
+    """Chaque segment utilise le modèle du mapping centralisé. Le mapping étant
+    configurable, on vérifie la cohérence (modèle appliqué = modèle mappé) et le
+    regroupement cache : les segments d'un même modèle doivent être consécutifs
+    (≤1 changement de modèle sur la séquence) pour partager le préfixe caché.
+    Avec le mapping full-Sonnet courant : 4× Sonnet, 0 changement → 1 seul groupe
+    cache. Le contexte caché (org + DCE) est présent à chaque appel."""
+    gen = MemoireGenerator()
+    side_effect, calls = _build_side_effect()
+    monkeypatch.setattr(gen.client.messages, "stream", side_effect)
+
+    result = await _run(gen)
+
+    # 1) bon modèle par segment (selon le mapping centralisé)
+    seq = []
+    for kw in calls["kwargs"]:
+        seg = _segment_of(kw["messages"][0]["content"][-1]["text"])
+        assert kw["model"] == _MEMOIRE_SEGMENT_MODELS[seg], (seg, kw["model"])
+        seq.append(kw["model"])
+
+    # 2) regroupement cache : segments d'un même modèle consécutifs → switches
+    #    = (nb de modèles distincts - 1). Avec full-Sonnet : 0 switch, 1 groupe.
+    switches = sum(1 for a, b in zip(seq, seq[1:]) if a != b)
+    distinct_models = len(set(seq))
+    assert switches == distinct_models - 1, f"modèles non groupés (cache cassé): {seq}"
+
+    # 3) contexte caché présent à chaque appel (org + DCE)
+    for kw in calls["kwargs"]:
+        content = kw["messages"][0]["content"]
+        assert content[0].get("cache_control") == {"type": "ephemeral"}
+        assert content[1].get("cache_control") == {"type": "ephemeral"}
+
+    # 4) meta logge le modèle par segment
+    assert result["_generation_meta"]["models"] == _MEMOIRE_SEGMENT_MODELS
+    for s in result["_generation_meta"]["segments"]:
+        assert s["model"] == _MEMOIRE_SEGMENT_MODELS[s["segment"]]
 
 
 @pytest.mark.asyncio

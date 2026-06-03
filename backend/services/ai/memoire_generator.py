@@ -51,6 +51,26 @@ _MEMOIRE_SEGMENTS: list[tuple[str, list[str] | None]] = [
     ]),
 ]
 
+# ── Modèle PAR segment (génération hybride, configurable) ───────────────────
+_MEMOIRE_MODEL_OPUS = "claude-opus-4-7"
+_MEMOIRE_MODEL_SONNET = "claude-sonnet-4-6"
+
+# Mapping centralisé : réajuster un segment ICI suffit, la logique de génération
+# ne change pas. Full-Sonnet : Sonnet 4.6 est complet, spécifique et sans
+# invention sur tout le périmètre, ~7× moins cher qu'Opus (0,97$ vs 6,71$ sur le
+# DCE Gueux, cf. docs/comparaison-memoire-AB/RESULTAT.md). La densité normative
+# (DTU/Avis Technique) est récupérée par le PROMPT (prompts.py), pas par le
+# modèle — le corpus est déjà fourni via les skills. Fallback = self.MODEL.
+# ⚠️ CACHE : le préfixe stable est caché PAR MODÈLE. Tous les segments en Sonnet
+# → 1 seul cache_write puis cache_read sur les 3 suivants (optimal). Si un jour
+# un segment repasse en Opus, le garder CONSÉCUTIF aux autres du même modèle.
+_MEMOIRE_SEGMENT_MODELS: dict[str, str] = {
+    "preambule": _MEMOIRE_MODEL_SONNET,
+    "partie_a": _MEMOIRE_MODEL_SONNET,
+    "partie_b": _MEMOIRE_MODEL_SONNET,
+    "partie_c": _MEMOIRE_MODEL_SONNET,
+}
+
 
 def _build_segment_instruction(key: str, subkeys: list[str] | None) -> str:
     """Instruction (non cachée) qui scope CET appel à une seule partie.
@@ -410,16 +430,22 @@ class MemoireGenerator:
         # Évite la troncature du monobloc (26 sous-sections > max tokens de
         # sortie). Le préfixe stable est mis en cache → calls 2..N le relisent.
         assembled: dict = {}
+        seg_model_map = {
+            k: _MEMOIRE_SEGMENT_MODELS.get(k, self.MODEL) for k, _ in _MEMOIRE_SEGMENTS
+        }
         meta: dict = {
-            "mode": "per-partie",
-            "model": self.MODEL,
+            "mode": "per-partie-hybride",
+            "default_model": self.MODEL,
+            "models": seg_model_map,
             "segments": [],
             "warnings": [],
         }
+        print(f"[Memoire Generator] Modèles par segment : {seg_model_map}", flush=True)
         n = len(_MEMOIRE_SEGMENTS)
         for i, (seg_key, seg_subkeys) in enumerate(_MEMOIRE_SEGMENTS):
             prog_base = 0.02 + (i / n) * 0.96
             prog_span = (1.0 / n) * 0.96
+            seg_model = seg_model_map[seg_key]
             try:
                 parsed, seg_meta = await asyncio.to_thread(
                     self._sync_call_segment,
@@ -428,6 +454,7 @@ class MemoireGenerator:
                     dynamic_block,
                     seg_key,
                     seg_subkeys,
+                    seg_model,
                     project_id,
                     prog_base,
                     prog_span,
@@ -436,7 +463,7 @@ class MemoireGenerator:
                 raise
             except Exception as e:  # noqa: BLE001 — ne jamais perdre les bonnes parties
                 logger.error(f"Segment '{seg_key}' échoué (placeholder conservé): {e}")
-                parsed, seg_meta = {}, {"segment": seg_key, "error": str(e)}
+                parsed, seg_meta = {}, {"segment": seg_key, "model": seg_model, "error": str(e)}
             meta["segments"].append(seg_meta)
 
             if seg_subkeys is None:
@@ -499,20 +526,22 @@ class MemoireGenerator:
         dynamic_block: str,
         segment_key: str,
         segment_subkeys: list[str] | None,
+        model: str,
         project_id: str | None = None,
         progress_base: float = 0.0,
         progress_span: float = 1.0,
     ) -> tuple[dict, dict]:
-        """Un appel streaming Opus pour UNE SEULE partie du mémoire.
+        """Un appel streaming pour UNE SEULE partie du mémoire, avec `model` dédié.
 
         Retourne (parsed_json, seg_meta). NE LÈVE PAS sur troncature ou parse
         impossible (gracieux — l'appelant remplit des placeholders) ; ne lève
         que sur erreur d'authentification ou retries transitoires épuisés.
 
         Prompt caching : le préfixe stable (système + skills + profil + bloc DCE
-        dynamique) est IDENTIQUE pour toutes les parties et marqué ephemeral, donc
-        les appels 2..N le relisent en cache au lieu de re-facturer tout l'input.
-        Seule la petite consigne de segment varie (non cachée).
+        dynamique) est IDENTIQUE pour toutes les parties et marqué ephemeral. Le
+        cache est lié AU MODÈLE : des segments d'un même modèle, appelés
+        consécutivement, partagent le cache (1 write puis cache_read) ; changer de
+        modèle force un nouveau write. Seule la consigne de segment varie (non cachée).
         """
         # System: prompt complet + skills (cachés). Le schéma global du prompt
         # reste en cache ; la consigne de segment (user, non cachée) le scope.
@@ -554,13 +583,13 @@ class MemoireGenerator:
 
         last_error = None
         raw = ""
-        seg_meta: dict = {"segment": segment_key}
+        seg_meta: dict = {"segment": segment_key, "model": model}
         for attempt in range(1, 4):
             t0 = time.monotonic()
             try:
                 print(
                     f"[Memoire Generator] Partie '{segment_key}' — tentative {attempt}/3 "
-                    f"(streaming Opus, max_tokens=32000)",
+                    f"(streaming {model}, max_tokens=32000)",
                     flush=True,
                 )
                 collected = ""
@@ -568,7 +597,7 @@ class MemoireGenerator:
 
                 # temperature non transmis : déprécié pour claude-opus-4-7 (→ 400).
                 with self.client.messages.stream(
-                    model=self.MODEL,
+                    model=model,
                     max_tokens=32000,
                     system=system_blocks,
                     messages=[{"role": "user", "content": user_content}],
@@ -595,7 +624,7 @@ class MemoireGenerator:
                 input_uncached = getattr(usage, "input_tokens", 0) if usage else 0
                 output_tokens = getattr(usage, "output_tokens", 0) if usage else 0
                 print(
-                    f"[TIMING] Partie '{segment_key}': {elapsed:.1f}s, {len(collected)} chars, "
+                    f"[TIMING] Partie '{segment_key}' [{model}]: {elapsed:.1f}s, {len(collected)} chars, "
                     f"stop_reason={stop_reason}, in={input_uncached}, "
                     f"cache_read={cache_read}, cache_write={cache_write}, out={output_tokens}",
                     flush=True,

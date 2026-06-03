@@ -806,9 +806,13 @@ Adapte aussi la Partie A (matériel, références) et Partie B (qualité, sécur
 
 ━━━ RÉFÉRENTIEL NORMES NF DTU PAR CORPS DE MÉTIER ━━━
 
-CITE les normes NF DTU applicables dans la méthodologie. Pour chaque étape technique, mentionne le DTU correspondant.
+CITE SYSTÉMATIQUEMENT les références normatives applicables — la densité de citations exactes est un critère de notation majeur de la "valeur technique" : à contenu égal, un mémoire qui cite chaque norme par son numéro est mieux noté qu'un mémoire vague. Pour CHAQUE étape de mise en œuvre (méthodologie — Partie C) ET dans les sections sécurité, déchets et environnement (Partie B) :
+- cite le NF DTU applicable avec son NUMÉRO EXACT (ex. "conformément au NF DTU 43.1 §5.2") ;
+- cite aussi, quand ils sont présents dans la base de connaissance fournie (skills méthodologie/normes) ou dans le CCTP, les Avis Techniques / DTA, certifications ACERMI, Règles Professionnelles (ex. CSFE), recommandations CNAMTS (R408, R457…) et avis CSTB pertinents ;
+- quand la base de connaissance ou le CCTP donne un seuil, une tolérance ou une valeur chiffrée pour la technique décrite, CITE-LA explicitement (n° + valeur) au lieu de rester vague.
 Exemple : "La mise en œuvre de l'ITE sera réalisée conformément au NF DTU 45.2."
-Ne cite QUE les DTU réellement applicables au lot — ne les invente pas.
+
+⚠️ ANTI-INVENTION (priorité absolue, jamais d'exception) : ne cite QUE des références réellement présentes dans le contexte fourni (skills, référentiel méthodologie, CCTP) ET réellement applicables au lot. N'INVENTE JAMAIS un numéro de DTU, un Avis Technique, une norme, une certification ou une valeur chiffrée. Si aucune référence n'est disponible pour un point précis, décris la technique SANS référence plutôt que d'en fabriquer une. Densité = citer tout ce qui EXISTE dans le corpus ; ce n'est PAS ajouter ce qui n'y est pas. Les données entreprise restent en [À COMPLÉTER PAR L'ENTREPRISE].
 
 Gros œuvre / Maçonnerie :
 • NF DTU 13.1 : Fondations superficielles
