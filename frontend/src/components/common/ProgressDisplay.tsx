@@ -78,12 +78,26 @@ export default function ProgressDisplay({
     }
   }, [])
 
-  // Drive the lerp target from the prop.
+  // Drive the lerp target from the prop — MONOTONE within a single run.
+  // The bar must never animate backwards: server jitter, an SSE reconnect
+  // replaying its `init` snapshot, a late internal_progress signal, or the
+  // upload's fake-crawl→real-SSE handover can all report a momentarily lower
+  // value. We clamp the target to never drop below what we've already shown.
   useEffect(() => {
+    const clamped = Math.max(0, Math.min(progress, 99))
     if (phase === 'complete') {
       targetProgressRef.current = 100
+    } else if (phase === 'pending') {
+      // Not started / reset for a fresh run → follow the incoming value.
+      targetProgressRef.current = clamped
     } else {
-      targetProgressRef.current = Math.max(0, Math.min(progress, 99))
+      // in_progress | error → monotone. Reset only when a clearly-new run
+      // starts (we were at completion and the server now reports low).
+      if (targetProgressRef.current >= 100 && clamped < 95) {
+        targetProgressRef.current = clamped
+      } else {
+        targetProgressRef.current = Math.max(targetProgressRef.current, clamped)
+      }
     }
   }, [progress, phase])
 
