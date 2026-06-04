@@ -19,6 +19,7 @@ import MemoireConfig from '@/routes/MemoireConfig'
 import Team from '@/routes/Team'
 import Settings from '@/routes/Settings'
 import Billing from '@/routes/Billing'
+import Tools from '@/routes/Tools'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isSignedIn, isLoaded } = useAuth()
@@ -76,6 +77,7 @@ function AppRoutes() {
         <Route path="/projects/:id/*" element={<Project />} />
         <Route path="/vault" element={<Vault />} />
         <Route path="/references" element={<References />} />
+        <Route path="/outils" element={<Tools />} />
         <Route path="/memoire-config" element={<MemoireConfig />} />
         <Route path="/company" element={<Company />} />
         <Route path="/team" element={<Team />} />

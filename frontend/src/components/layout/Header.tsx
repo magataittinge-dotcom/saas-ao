@@ -9,6 +9,7 @@ const ROUTE_LABELS: Record<string, { parent?: string; label: string }> = {
   '/projects/new':   { parent: 'Projets', label: 'Nouveau projet' },
   '/vault':          { label: 'Coffre-fort' },
   '/references':     { label: 'Références' },
+  '/outils':         { label: 'Calculateurs' },
   '/memoire-config': { label: 'Mémoire Technique' },
   '/company':        { label: 'Mon Entreprise' },
   '/team':           { label: 'Équipe' },
