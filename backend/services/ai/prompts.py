@@ -812,6 +812,20 @@ CITE SYSTÉMATIQUEMENT les références normatives applicables — la densité d
 - quand la base de connaissance ou le CCTP donne un seuil, une tolérance ou une valeur chiffrée pour la technique décrite, CITE-LA explicitement (n° + valeur) au lieu de rester vague.
 Exemple : "La mise en œuvre de l'ITE sera réalisée conformément au NF DTU 45.2."
 
+━━━ NIVEAU DE DENSITÉ ATTENDU (exemple de FORME, à NE PAS recopier) ━━━
+Une sous-section de méthodologie notée 5/5 intègre, à CHAQUE étape : le geste technique + (si le corpus la fournit) la référence normative exacte + le seuil/tolérance chiffré + le point de contrôle. Exemple illustratif du NIVEAU et de la DENSITÉ attendus — il montre la FORME, ce n'est PAS un contenu à copier ; n'emploie que les références réellement présentes dans TON corpus pour CE marché :
+
+« Étape 3 — Pose de l'isolant thermique. Panneaux certifiés ACERMI (résistance thermique conforme au CCTP), posés à joints croisés et décalés ≥ 20 cm conformément au NF DTU 43.1 §6.2. Planéité du support vérifiée à la règle de 2 m (tolérance ≤ 5 mm) ; recouvrement des lés contrôlé au peigne d'étancheur. Point d'arrêt : réception du support par le bureau de contrôle avant mise en œuvre du revêtement d'étanchéité. »
+
+→ Vise CE niveau partout dans la Partie C : chaque étape = 1 geste + (si disponible dans le corpus) 1 référence exacte + 1 valeur/seuil + 1 autocontrôle. Préfère des phrases qui ANCRENT chaque affirmation sur une norme du corpus plutôt que des généralités.
+
+━━━ QUOTA DE CITATIONS (sous contrôle anti-invention strict) ━━━
+- Pour CHAQUE étape de mise en œuvre, cite la/les référence(s) applicable(s) (NF DTU, Avis Technique/DTA, ACERMI, Règles Pro, CNAMTS) PRÉSENTES DANS TON CORPUS (skills méthodologie/normes + CCTP).
+- Si le corpus fournit une référence pour la technique décrite → cite-la (numéro EXACT). Si AUCUNE référence n'est disponible pour un point → décris la technique SANS citer.
+- INTERDICTION ABSOLUE : ne JAMAIS inventer ni « deviner » un numéro de DTU / Avis Technique / certification pour atteindre un quota. Une citation FAUSSE est une faute grave qui décrédibilise tout le mémoire devant l'acheteur. Mieux vaut MOINS de citations, toutes exactes, que davantage dont une seule erronée. Le quota cède toujours devant l'exactitude.
+
+CAS PARTICULIER — NORMES D'EPI ET D'ÉQUIPEMENTS DE SÉCURITÉ (normes EN de harnais, garde-corps, filets, lignes de vie, casques, gants, lunettes, absorbeurs…) : ne cite un numéro de norme (ex. « EN 361 », « EN 13374 ») QUE s'il est explicitement présent dans la base de connaissance fournie (skills / CCTP / PGC). Sinon, NOMME le dispositif et sa fonction SANS numéro (ex. « garde-corps périphériques conformes à la réglementation en vigueur », « harnais antichute homologués », « filets de protection ») — n'attache JAMAIS un numéro de norme EN issu de ta connaissance générale. Cette règle vise UNIQUEMENT les normes EPI/sécurité ; elle ne s'applique PAS aux NF DTU, Avis Techniques, ACERMI, Règles Professionnelles ni à la REP PMCB, qui doivent rester cités dès qu'ils figurent dans le corpus.
+
 ⚠️ ANTI-INVENTION (priorité absolue, jamais d'exception) : ne cite QUE des références réellement présentes dans le contexte fourni (skills, référentiel méthodologie, CCTP) ET réellement applicables au lot. N'INVENTE JAMAIS un numéro de DTU, un Avis Technique, une norme, une certification ou une valeur chiffrée. Si aucune référence n'est disponible pour un point précis, décris la technique SANS référence plutôt que d'en fabriquer une. Densité = citer tout ce qui EXISTE dans le corpus ; ce n'est PAS ajouter ce qui n'y est pas. Les données entreprise restent en [À COMPLÉTER PAR L'ENTREPRISE].
 
 Gros œuvre / Maçonnerie :
