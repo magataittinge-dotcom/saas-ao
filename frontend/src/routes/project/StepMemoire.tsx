@@ -281,9 +281,9 @@ function CriteresCard({ criteres }: { criteres: CritereJugement[] }) {
       <div className="flex items-center gap-2.5">
         <div
           className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-          style={{ background: 'rgba(99,102,241,0.10)' }}
+          style={{ background: 'rgba(14,165,233,0.10)' }}
         >
-          <BarChart3 size={18} style={{ color: '#818CF8' }} />
+          <BarChart3 size={18} style={{ color: '#0284C7' }} />
         </div>
         <div>
           <h3 className="text-sm font-semibold" style={{ color: '#0F172A', fontFamily: F }}>
@@ -299,7 +299,7 @@ function CriteresCard({ criteres }: { criteres: CritereJugement[] }) {
           <div key={c.nom} className="space-y-1">
             <span
               className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg"
-              style={{ background: 'rgba(99,102,241,0.10)', color: '#818CF8' }}
+              style={{ background: 'rgba(14,165,233,0.10)', color: '#0284C7' }}
             >
               {c.nom} — {c.poids}%
             </span>
