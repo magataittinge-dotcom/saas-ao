@@ -24,3 +24,6 @@ node_modules/
 uploads/
 *.db
 .claude/
+
+# Build output front (généré par `vite build` — ne pas versionner)
+frontend/dist/
