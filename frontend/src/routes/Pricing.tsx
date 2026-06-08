@@ -83,7 +83,7 @@ export default function Pricing() {
                 className="relative rounded-2xl"
                 style={
                   plan.popular
-                    ? { background: 'linear-gradient(135deg, rgba(14,165,233,0.5), rgba(16,185,129,0.3), rgba(139,92,246,0.4))', padding: '1px' }
+                    ? { background: 'linear-gradient(135deg, #0EA5E9, #0369A1)', padding: '1px' }
                     : {}
                 }
               >

@@ -154,11 +154,11 @@ export default function Billing() {
           className="w-10 h-10 rounded-xl flex items-center justify-center"
           style={{ background: 'rgba(14,165,233,0.10)', border: '1px solid rgba(14,165,233,0.18)' }}
         >
-          <CreditCard size={18} className="text-ds-blue" />
+          <CreditCard size={18} className="text-ds-cyan" />
         </div>
         <div>
           <h1 className="text-ds-text leading-tight">Facturation</h1>
-          <p className="text-xs text-ds-text-3 mt-0.5">Gérez votre abonnement et vos paiements</p>
+          <p className="text-sm text-ds-text-2 mt-0.5">Gérez votre abonnement et vos paiements</p>
         </div>
       </div>
 
@@ -184,13 +184,13 @@ export default function Billing() {
         <div
           className="flex items-center gap-3 px-5 py-4 rounded-2xl animate-fade-in"
           style={{
-            background: 'rgba(16,185,129,0.08)',
-            border: '1px solid rgba(16,185,129,0.25)',
+            background: 'rgba(14,165,233,0.08)',
+            border: '1px solid rgba(14,165,233,0.25)',
           }}
         >
-          <CheckCircle2 size={20} className="text-ds-success-light" />
+          <CheckCircle2 size={20} className="text-ds-cyan" />
           <div>
-            <p className="text-sm font-semibold text-ds-success-light">
+            <p className="text-sm font-semibold text-ds-cyan-dark">
               Paiement réussi !
             </p>
             <p className="text-xs text-ds-text-3 mt-0.5">
@@ -208,7 +208,7 @@ export default function Billing() {
           className="flex items-center gap-3 px-6 py-4"
           style={{ borderBottom: '1px solid rgba(14,165,233,0.08)', background: 'rgba(14,165,233,0.02)' }}
         >
-          <Sparkles size={15} className="text-ds-blue" />
+          <Sparkles size={15} className="text-ds-cyan" />
           <h2 className="text-sm font-semibold text-ds-text">Mon abonnement</h2>
         </div>
         <div className="px-6 py-5">
@@ -222,7 +222,7 @@ export default function Billing() {
                   {badge.label}
                 </span>
                 {isPaid && (
-                  <span className="text-2xl font-bold text-white">
+                  <span className="text-2xl font-bold text-ds-text">
                     {plan === 'pro' ? '299€' : '499€'}
                     <span className="text-sm font-normal text-ds-text-3">/mois HT</span>
                   </span>
@@ -240,18 +240,20 @@ export default function Billing() {
                 disabled={portalLoading}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
                 style={{
-                  background: '#F1F5F9',
+                  background: '#F8FAFC',
                   border: '1px solid #E2E8F0',
-                  color: '#94A3B8',
+                  color: '#475569',
                   cursor: 'pointer',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#E2E8F0'
-                  e.currentTarget.style.color = '#E2E8F0'
+                  e.currentTarget.style.background = '#F1F5F9'
+                  e.currentTarget.style.color = '#0F172A'
+                  e.currentTarget.style.borderColor = '#CBD5E1'
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#F1F5F9'
-                  e.currentTarget.style.color = '#94A3B8'
+                  e.currentTarget.style.background = '#F8FAFC'
+                  e.currentTarget.style.color = '#475569'
+                  e.currentTarget.style.borderColor = '#E2E8F0'
                 }}
               >
                 {portalLoading ? (
@@ -296,7 +298,7 @@ export default function Billing() {
                       style={{
                         background: p.gradient,
                         color: '#fff',
-                        boxShadow: '0 0 12px rgba(139,92,246,0.40)',
+                        boxShadow: '0 2px 10px rgba(2,105,161,0.35)',
                       }}
                     >
                       Populaire
@@ -316,7 +318,7 @@ export default function Billing() {
                   </div>
 
                   <div className="mb-4">
-                    <span className="text-3xl font-bold text-white">{p.price}€</span>
+                    <span className="text-3xl font-bold text-ds-text">{p.price}€</span>
                     <span className="text-sm text-ds-text-3">/mois HT</span>
                   </div>
 
@@ -375,7 +377,7 @@ export default function Billing() {
               Consultez vos factures via le{' '}
               <button
                 onClick={handlePortal}
-                className="text-blue-400 hover:text-blue-300 underline underline-offset-2 transition-colors"
+                className="text-ds-cyan hover:text-ds-cyan-dark underline underline-offset-2 transition-colors"
               >
                 portail Stripe
               </button>.
