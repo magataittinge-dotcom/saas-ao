@@ -51,7 +51,7 @@ export default function Settings() {
   const planPrice = plan === 'pro' ? '299€' : plan === 'business' ? '499€' : '0€'
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5 animate-fade-in">
+    <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
 
       {/* Page header */}
       <div className="flex items-center gap-3">
@@ -59,16 +59,16 @@ export default function Settings() {
           className="w-10 h-10 rounded-xl flex items-center justify-center"
           style={{ background: 'rgba(14,165,233,0.10)', border: '1px solid rgba(14,165,233,0.18)' }}
         >
-          <SettingsIcon size={18} className="text-ds-blue" />
+          <SettingsIcon size={18} className="text-ds-cyan" />
         </div>
         <div>
           <h1 className="text-ds-text leading-tight">Paramètres</h1>
-          <p className="text-xs text-ds-text-3 mt-0.5">Gérez votre compte et votre abonnement</p>
+          <p className="text-sm text-ds-text-2 mt-0.5">Gérez votre compte et votre abonnement</p>
         </div>
       </div>
 
       {/* ── Profil ─────────────────────────────────────────────────────── */}
-      <SectionCard icon={<User size={15} className="text-ds-blue" />} title="Mon profil">
+      <SectionCard icon={<User size={15} className="text-ds-cyan" />} title="Mon profil">
         <div className="divide-y" style={{ borderColor: 'transparent' }}>
           <InfoRow label="Nom complet"  value={user?.name} />
           <InfoRow label="Adresse email" value={user?.email} />
@@ -76,7 +76,7 @@ export default function Settings() {
             label="Rôle"
             value={
               <span
-                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium text-ds-blue-light"
+                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium text-ds-cyan-dark"
                 style={{ background: 'rgba(14,165,233,0.10)', border: '1px solid rgba(14,165,233,0.20)' }}
               >
                 <Shield size={10} />
@@ -88,7 +88,7 @@ export default function Settings() {
       </SectionCard>
 
       {/* ── Entreprise ──────────────────────────────────────────────────── */}
-      <SectionCard icon={<Building2 size={15} className="text-ds-cyan" />} title="Entreprise">
+      <SectionCard icon={<Building2 size={15} className="text-ds-cyan" />} title="Mon entreprise">
         <div className="divide-y" style={{ borderColor: 'transparent' }}>
           <InfoRow label="Raison sociale"   value={organization?.name} />
           <InfoRow label="SIRET"            value={(organization as any)?.siret} />
@@ -99,7 +99,7 @@ export default function Settings() {
           Complétez votre profil entreprise depuis la section{' '}
           <Link
             to="/company"
-            className="text-ds-blue hover:text-ds-blue-light transition-colors duration-200"
+            className="text-ds-cyan hover:text-ds-cyan-dark transition-colors duration-200"
           >
             Mon entreprise
           </Link>
