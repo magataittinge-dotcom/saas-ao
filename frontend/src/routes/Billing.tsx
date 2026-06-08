@@ -11,7 +11,7 @@ const PLANS = [
   {
     id: 'pro',
     name: 'Pro',
-    price: '249',
+    price: '299',
     icon: Zap,
     color: '#0EA5E9',
     colorLight: '#38BDF8',
@@ -31,7 +31,7 @@ const PLANS = [
   {
     id: 'business',
     name: 'Business',
-    price: '399',
+    price: '499',
     icon: Crown,
     color: '#0F172A',
     colorLight: '#64748B',
@@ -223,7 +223,7 @@ export default function Billing() {
                 </span>
                 {isPaid && (
                   <span className="text-2xl font-bold text-white">
-                    {plan === 'pro' ? '249€' : '399€'}
+                    {plan === 'pro' ? '299€' : '499€'}
                     <span className="text-sm font-normal text-ds-text-3">/mois HT</span>
                   </span>
                 )}

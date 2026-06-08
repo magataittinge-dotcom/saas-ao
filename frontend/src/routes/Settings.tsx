@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { Settings as SettingsIcon, User, Building2, CreditCard, ChevronRight, Shield } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import PaymentCard from '@/components/common/PaymentCard'
@@ -47,7 +48,7 @@ export default function Settings() {
 
   const plan     = organization?.plan ?? 'free'
   const planCfg  = PLAN_LABELS[plan] ?? PLAN_LABELS.free
-  const planPrice = plan === 'pro' ? '249€' : plan === 'business' ? '399€' : '0€'
+  const planPrice = plan === 'pro' ? '299€' : plan === 'business' ? '499€' : '0€'
 
   return (
     <div className="max-w-2xl mx-auto space-y-5 animate-fade-in">
@@ -96,12 +97,12 @@ export default function Settings() {
         </div>
         <p className="text-xs text-ds-text-3 mt-4">
           Complétez votre profil entreprise depuis la section{' '}
-          <a
-            href="/profile"
+          <Link
+            to="/company"
             className="text-ds-blue hover:text-ds-blue-light transition-colors duration-200"
           >
-            Profil entreprise
-          </a>
+            Mon entreprise
+          </Link>
         </p>
       </SectionCard>
 
