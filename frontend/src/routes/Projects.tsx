@@ -181,7 +181,7 @@ export default function Projects() {
             className="w-14 h-14 rounded-2xl flex items-center justify-center"
             style={{ background: 'rgba(14,165,233,0.10)' }}
           >
-            <Plus size={28} className="text-ds-blue" />
+            <Plus size={28} className="text-ds-cyan" />
           </div>
           <div>
             <p className="text-ds-text font-semibold mb-1">Aucun appel d&apos;offres pour l&apos;instant</p>

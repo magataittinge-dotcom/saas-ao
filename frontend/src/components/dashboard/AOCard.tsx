@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Clock, AlertTriangle, ArrowRight, Trash2 } from 'lucide-react'
+import { Clock, ArrowRight, Trash2 } from 'lucide-react'
 import { daysUntil } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import type { Project } from '@/types'
@@ -25,22 +25,22 @@ export function AOCard({ project, onDelete }: Props) {
   const isUrgent = days !== null && days <= 7
   const progress = ((project.current_step - 1) / 4) * 100
   const status = STATUS_CONFIG[project.status] ?? STATUS_CONFIG.brouillon
-  const accentColor = isUrgent ? '#EF4444' : status.accent
+  const accentColor = isUrgent ? '#0EA5E9' : status.accent
 
   return (
     <div
       className="glass-card p-5 cursor-pointer flex flex-col gap-4 relative overflow-hidden"
       style={{
-        borderColor: isUrgent ? 'rgba(240,68,56,0.25)' : undefined,
+        borderColor: isUrgent ? 'rgba(14,165,233,0.30)' : undefined,
       }}
       onClick={() => navigate(`/projects/${project.id}`)}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = isUrgent ? 'rgba(240,68,56,0.35)' : 'rgba(14,165,233,0.15)'
+        e.currentTarget.style.borderColor = isUrgent ? 'rgba(14,165,233,0.45)' : 'rgba(14,165,233,0.15)'
         e.currentTarget.style.transform = 'translateY(-2px)'
-        e.currentTarget.style.boxShadow = `0 4px 12px rgba(0,0,0,0.08), 0 0 0 1px ${isUrgent ? 'rgba(240,68,56,0.15)' : 'rgba(14,165,233,0.10)'}`
+        e.currentTarget.style.boxShadow = `0 4px 12px rgba(0,0,0,0.08), 0 0 0 1px rgba(14,165,233,0.10)`
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = isUrgent ? 'rgba(240,68,56,0.25)' : ''
+        e.currentTarget.style.borderColor = isUrgent ? 'rgba(14,165,233,0.30)' : ''
         e.currentTarget.style.transform = 'translateY(0)'
         e.currentTarget.style.boxShadow = ''
       }}
@@ -110,15 +110,15 @@ export function AOCard({ project, onDelete }: Props) {
           <div
             className={cn(
               'flex items-center gap-1.5 text-xs',
-              isUrgent ? 'font-medium' : 'text-ds-text-3',
+              isUrgent ? 'font-semibold' : 'text-ds-text-3',
             )}
-            style={isUrgent ? { color: '#EF4444' } : undefined}
+            style={isUrgent ? { color: '#0284C7' } : undefined}
           >
-            {isUrgent ? <AlertTriangle size={11} /> : <Clock size={11} />}
+            <Clock size={11} />
             {days === 0
-              ? "Deadline aujourd'hui !"
+              ? "Échéance aujourd'hui"
               : days !== null && days < 0
-                ? 'Dépassée'
+                ? 'À déposer'
                 : `J-${days}`}
           </div>
         ) : (

@@ -87,15 +87,15 @@ export default function NewProject() {
             <div
               className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
               style={{
-                background: 'linear-gradient(135deg, rgba(14,165,233,0.15), rgba(0,212,170,0.10))',
+                background: 'linear-gradient(135deg, rgba(14,165,233,0.15), rgba(2,132,199,0.10))',
                 border: '1px solid rgba(14,165,233,0.20)',
               }}
             >
-              <Briefcase size={18} className="text-ds-blue" />
+              <Briefcase size={18} className="text-ds-cyan" />
             </div>
             <div>
               <h1 className="text-ds-text leading-tight">Nouvel appel d&apos;offres</h1>
-              <p className="text-xs text-ds-text-3 mt-0.5">Remplissez les informations de base pour démarrer</p>
+              <p className="text-sm text-ds-text-2 mt-0.5">Remplissez les informations de base pour démarrer</p>
             </div>
           </div>
         </div>
