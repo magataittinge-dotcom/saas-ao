@@ -164,7 +164,7 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis' }
                     style={{
                       background: plan.gradient,
                       color: '#fff',
-                      boxShadow: `0 0 12px rgba(139,92,246,0.40)`,
+                      boxShadow: `0 2px 10px rgba(2,105,161,0.35)`,
                     }}
                   >
                     Populaire

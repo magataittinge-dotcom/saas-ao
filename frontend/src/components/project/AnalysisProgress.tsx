@@ -158,7 +158,7 @@ export function AnalysisProgress({
             {showCheck ? (
               <div
                 className="flex items-center justify-center w-16 h-16 rounded-full"
-                style={{ background: 'rgba(0,212,170,0.15)' }}
+                style={{ background: 'rgba(14,165,233,0.15)' }}
               >
                 <Check size={36} className="text-ds-cyan" strokeWidth={2.5} />
               </div>

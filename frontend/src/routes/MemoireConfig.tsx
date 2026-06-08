@@ -263,7 +263,7 @@ function ImportDialog({ onClose, onImported }: ImportDialogProps) {
                 background: dragOver
                   ? 'rgba(14,165,233,0.08)'
                   : file
-                  ? 'rgba(0,212,170,0.08)'
+                  ? 'rgba(14,165,233,0.08)'
                   : '#F8FAFC',
               }}
             >
@@ -530,8 +530,8 @@ export default function MemoireConfig() {
         <div
           className="flex items-center justify-between rounded-xl px-4 py-3"
           style={{
-            background: 'rgba(0,212,170,0.1)',
-            border: '1px solid rgba(0,212,170,0.3)',
+            background: 'rgba(14,165,233,0.10)',
+            border: '1px solid rgba(14,165,233,0.25)',
           }}
         >
           <div className="flex items-center gap-2">

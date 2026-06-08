@@ -301,7 +301,7 @@ function PdfViewer({ fullUrl, fileName, targetPage = 1, searchText, onClose }: {
             <div className="text-sm font-medium text-ds-text truncate max-w-md">{fileName}</div>
             {searchText && (
               <div
-                className="text-xs px-2 py-0.5 rounded-full text-ds-blue-light"
+                className="text-xs px-2 py-0.5 rounded-full text-ds-cyan-dark"
                 style={{ background: 'rgba(14,165,233,0.15)', border: '1px solid rgba(14,165,233,0.25)' }}
               >
                 Passage surligné
