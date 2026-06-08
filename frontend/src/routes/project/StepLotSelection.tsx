@@ -669,7 +669,7 @@ export default function StepLotSelection({ project }: Props) {
 
         {/* Excel error */}
         {errorLots.length > 0 && (
-          <div className="flex items-start gap-3 p-4 rounded-xl mb-5" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)' }}>
+          <div className="flex items-start gap-3 p-4 rounded-xl mb-5" style={{ background: 'rgba(100,116,139,0.06)', border: '1px solid rgba(100,116,139,0.15)' }}>
             <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: '#64748B' }} />
             <div>
               <p className="text-sm font-semibold" style={{ color: '#475569' }}>Fichier(s) Excel protégé(s) par mot de passe</p>

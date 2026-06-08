@@ -114,7 +114,7 @@ function TemplateRow({
       <span className="shrink-0 mt-0.5">
         {isPresent
           ? <CheckCircle2 size={18} style={{ color: '#10B981' }} />
-          : <AlertCircle size={18} style={{ color: hasTemplate ? '#F59E0B' : '#EF4444' }} />}
+          : <AlertCircle size={18} style={{ color: hasTemplate ? '#64748B' : '#EF4444' }} />}
       </span>
 
       {/* Body */}
@@ -127,7 +127,7 @@ function TemplateRow({
             </span>
           )}
           {hasTemplate && !isPresent && (
-            <span className="text-[11px]" style={{ color: '#F59E0B' }}>
+            <span className="text-[11px]" style={{ color: '#64748B' }}>
               À compléter
             </span>
           )}

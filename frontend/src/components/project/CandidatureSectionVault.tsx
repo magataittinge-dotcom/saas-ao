@@ -168,9 +168,9 @@ function statusFor(status: ChecklistItem['status']): { icon: JSX.Element; label:
       }
     case 'expiration_proche':
       return {
-        icon: <Clock size={16} style={{ color: '#F59E0B' }} />,
+        icon: <Clock size={16} style={{ color: '#64748B' }} />,
         label: 'Expire bientôt',
-        color: '#F59E0B',
+        color: '#64748B',
       }
     default:
       return {

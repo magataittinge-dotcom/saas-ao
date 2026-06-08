@@ -195,7 +195,7 @@ function StatusPill({ status }: { status: Document['status'] }) {
     status === 'expired'
       ? { label: 'Expiré', color: '#EF4444', bg: '#FEF2F2' }
       : status === 'expiring_soon'
-      ? { label: 'Expire bientôt', color: '#F59E0B', bg: '#FFFBEB' }
+      ? { label: 'Expire bientôt', color: '#64748B', bg: '#F8FAFC' }
       : { label: 'Valide', color: '#10B981', bg: '#ECFDF5' }
   return (
     <span

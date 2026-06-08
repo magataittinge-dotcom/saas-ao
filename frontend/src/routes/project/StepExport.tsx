@@ -579,8 +579,8 @@ export default function StepExport({ project }: Props) {
                   <div
                     className="rounded-xl p-4"
                     style={{
-                      background: isValid ? 'rgba(16,185,129,0.04)' : hasWarnings ? 'rgba(245,158,11,0.04)' : 'rgba(239,68,68,0.04)',
-                      border: `1px solid ${isValid ? 'rgba(16,185,129,0.15)' : hasWarnings ? 'rgba(245,158,11,0.15)' : 'rgba(239,68,68,0.15)'}`,
+                      background: isValid ? 'rgba(16,185,129,0.04)' : hasWarnings ? 'rgba(100,116,139,0.04)' : 'rgba(239,68,68,0.04)',
+                      border: `1px solid ${isValid ? 'rgba(16,185,129,0.15)' : hasWarnings ? 'rgba(100,116,139,0.15)' : 'rgba(239,68,68,0.15)'}`,
                     }}
                   >
                     <div className="flex items-center justify-between mb-3">

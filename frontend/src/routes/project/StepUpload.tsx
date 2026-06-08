@@ -49,7 +49,7 @@ const TYPE_BADGE: Record<ProjectDocumentType, { color: string; bg: string; borde
 function FileIcon({ filename }: { filename: string }) {
   const ext = filename.split('.').pop()?.toLowerCase() ?? ''
   if (ext === 'pdf') return <FileText size={18} className="shrink-0" style={{ color: '#EF4444' }} />
-  if (ext === 'docx' || ext === 'doc') return <FileText size={18} className="shrink-0" style={{ color: '#3B82F6' }} />
+  if (ext === 'docx' || ext === 'doc') return <FileText size={18} className="shrink-0" style={{ color: '#0EA5E9' }} />
   if (ext === 'xlsx' || ext === 'xls' || ext === 'ods') return <FileSpreadsheet size={18} className="shrink-0" style={{ color: '#0EA5E9' }} />
   if (ext === 'zip') return <FileArchive size={18} className="shrink-0" style={{ color: '#64748B' }} />
   return <File size={18} className="shrink-0" style={{ color: '#94A3B8' }} />
@@ -442,13 +442,13 @@ export default function StepUpload({ project }: Props) {
             className="rounded-xl p-4 mt-4 flex items-start gap-3"
             style={
               largeFileNotice.tone === 'orange'
-                ? { background: 'rgba(249,115,22,0.06)', border: '1px solid rgba(249,115,22,0.25)' }
+                ? { background: 'rgba(100,116,139,0.06)', border: '1px solid rgba(100,116,139,0.25)' }
                 : { background: 'rgba(14,165,233,0.06)', border: '1px solid rgba(14,165,233,0.20)' }
             }
           >
             <Clock
               size={16}
-              style={{ color: largeFileNotice.tone === 'orange' ? '#F97316' : '#0EA5E9' }}
+              style={{ color: largeFileNotice.tone === 'orange' ? '#64748B' : '#0EA5E9' }}
               className="shrink-0 mt-0.5"
             />
             <p className="text-sm" style={{ color: '#0F172A' }}>{largeFileNotice.message}</p>
