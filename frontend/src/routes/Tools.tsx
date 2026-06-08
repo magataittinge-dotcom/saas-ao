@@ -175,9 +175,9 @@ function OabCalculator() {
         </Field>
 
         <button
-          onClick={calculer} disabled={loading || !valid}
+          onClick={calculer} disabled={loading}
           className="btn-primary w-full flex items-center justify-center gap-2"
-          style={{ cursor: loading || !valid ? 'not-allowed' : 'pointer' }}
+          style={{ cursor: loading ? 'not-allowed' : 'pointer' }}
         >
           {loading ? <><Loader2 size={15} className="animate-spin" /> Calcul…</> : 'Calculer le seuil OAB'}
         </button>
@@ -343,9 +343,9 @@ function RetenueCalculator() {
         )}
 
         <button
-          onClick={calculer} disabled={loading || !valid}
+          onClick={calculer} disabled={loading}
           className="btn-primary w-full flex items-center justify-center gap-2"
-          style={{ cursor: loading || !valid ? 'not-allowed' : 'pointer' }}
+          style={{ cursor: loading ? 'not-allowed' : 'pointer' }}
         >
           {loading ? <><Loader2 size={15} className="animate-spin" /> Calcul…</> : 'Calculer'}
         </button>
