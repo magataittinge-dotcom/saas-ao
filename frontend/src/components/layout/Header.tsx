@@ -11,7 +11,7 @@ const ROUTE_LABELS: Record<string, { parent?: string; label: string }> = {
   '/references':     { label: 'Références' },
   '/outils':         { label: 'Calculateurs' },
   '/memoire-config': { label: 'Mémoire Technique' },
-  '/company':        { label: 'Mon Entreprise' },
+  '/company':        { label: 'Mon entreprise' },
   '/team':           { label: 'Équipe' },
   '/settings':       { label: 'Paramètres' },
   '/pricing':        { label: 'Facturation' },

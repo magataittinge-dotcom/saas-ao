@@ -56,7 +56,7 @@ export default function Company() {
       <div className="flex items-center gap-3">
         <Building size={24} style={{ color: '#0EA5E9' }} />
         <div>
-          <h1 className="text-2xl font-bold text-ds-text">Mon Entreprise</h1>
+          <h1 className="text-2xl font-bold text-ds-text">Mon entreprise</h1>
           <p className="text-sm text-ds-text-2">Ces informations seront utilisées dans vos mémoires techniques</p>
         </div>
       </div>

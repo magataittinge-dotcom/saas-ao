@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, FolderOpen, FileStack, Building2, Archive, Users, CreditCard, LogOut,
-  Settings, X, Calculator,
+  Settings, X, Calculator, Briefcase,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useLogout } from '@/hooks/useAuth'
@@ -13,6 +13,7 @@ const navItems = [
   { to: '/projects',       icon: FolderOpen,      label: 'Projets' },
   { to: '/memoire-config', icon: FileStack,       label: 'Mémoires techniques' },
   { to: '/references',     icon: Building2,       label: 'Références' },
+  { to: '/company',        icon: Briefcase,       label: 'Mon entreprise' },
   { to: '/outils',         icon: Calculator,      label: 'Calculateurs' },
   { to: '/vault',          icon: Archive,         label: 'Coffre-fort' },
   { to: '/team',           icon: Users,           label: 'Équipe' },
