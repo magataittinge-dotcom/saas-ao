@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     # Anthropic (Claude API)
     ANTHROPIC_API_KEY: str
 
+    # Voyage AI (embeddings RAG — Phase 1). Optionnel tant que le RAG n'est
+    # pas activé ; requis dès l'indexation/recherche vectorielle.
+    VOYAGE_API_KEY: str = ""
+
     # AWS S3
     AWS_ACCESS_KEY_ID: str = ""
     AWS_SECRET_ACCESS_KEY: str = ""
