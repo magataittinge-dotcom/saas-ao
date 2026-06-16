@@ -78,8 +78,29 @@ async def trigger_analysis(
     # ── Separate documents by type for 2-pass analysis ───────────────────────
     # Pass 1: RC + CCAP + AE ONLY (no "autre" — they bloat the context)
     # Pass 2: CCTP + DPGF ONLY
-    PASS1_CAPS = {"rc": 50_000, "ccap": 30_000, "acte_engagement": 10_000}
-    PASS2_CAPS = {"cctp": 30_000, "dpgf": 10_000}
+    #
+    # Plus de troncature par cap (régression "30k → 71% du CCAP perdu", cf.
+    # docs/rag/PHASE0-investigation-troncature.md). Le document ENTIER est
+    # envoyé ; le découpage en tranches est fait par l'analyzer (chunking +
+    # dédup). On garde un garde-fou anti-pathologique, JAMAIS silencieux.
+    PASS1_TYPES = {"rc", "ccap", "acte_engagement"}
+    PASS2_TYPES = {"cctp", "dpgf"}
+    _SAFETY_MAX_CHARS = 300_000   # ~75 tranches : protège le serveur des cas extrêmes
+
+    def _safety(text: str, fname: str) -> str:
+        if len(text) > _SAFETY_MAX_CHARS:
+            logger.warning(
+                "[Analysis] %s : %d chars > garde-fou %d → tronqué "
+                "(cas pathologique ; en deçà le chunking couvre 100%%)",
+                fname, len(text), _SAFETY_MAX_CHARS,
+            )
+            print(
+                f"[Analysis] ⚠ {fname}: {len(text):,} chars > garde-fou "
+                f"{_SAFETY_MAX_CHARS:,} → tronqué",
+                flush=True,
+            )
+            return text[:_SAFETY_MAX_CHARS]
+        return text
 
     pass1_parts: list[str] = []
     pass2_parts: list[str] = []
@@ -92,7 +113,7 @@ async def trigger_analysis(
             continue
 
         # Skip types not in either pass (plan, autre, etc.)
-        if doc_type not in PASS1_CAPS and doc_type not in PASS2_CAPS:
+        if doc_type not in PASS1_TYPES and doc_type not in PASS2_TYPES:
             continue
 
         # DPGF with lot: extract matching sheet only
@@ -100,19 +121,15 @@ async def trigger_analysis(
             sheet_text = _get_dpgf_sheet_text(doc, lot_num_norm)
             if sheet_text:
                 dpgf_sheet_text = sheet_text
-                cap = PASS2_CAPS["dpgf"]
                 label = f"DPGF — {doc.file_name} (onglet Lot {lot_num_norm})"
-                pass2_parts.append(f"=== {label} ===\n{sheet_text[:cap]}")
+                pass2_parts.append(f"=== {label} ===\n{_safety(sheet_text, doc.file_name)}")
                 continue
 
         label = doc_type.upper()
-        if doc_type in PASS1_CAPS:
-            cap = PASS1_CAPS[doc_type]
-            entry = f"=== {label} — {doc.file_name} ===\n{text[:cap]}"
+        entry = f"=== {label} — {doc.file_name} ===\n{_safety(text, doc.file_name)}"
+        if doc_type in PASS1_TYPES:
             pass1_parts.append(entry)
-        elif doc_type in PASS2_CAPS:
-            cap = PASS2_CAPS[doc_type]
-            entry = f"=== {label} — {doc.file_name} ===\n{text[:cap]}"
+        else:
             pass2_parts.append(entry)
 
     if not pass1_parts and not pass2_parts:
@@ -180,7 +197,12 @@ async def trigger_analysis(
                 ),
                 project_id=project_id,
             ),
-            timeout=480.0,  # 8 min total (2 passes × 3 retries × ~60s + overhead)
+            # 15 min : avec le chunking (Option A), un gros DCE peut générer
+            # plusieurs tranches séquentielles (CCAP/CCTP volumineux) + backoff
+            # rate-limit Anthropic. Le streaming garde la connexion vivante.
+            # Si des proxys prod coupent les requêtes longues → passer en async
+            # (Option C) ; cf. docs/rag/PHASE0-investigation-troncature.md.
+            timeout=900.0,
         )
         pipeline_tracker.complete_step(project_id, "analyzing_pass2")
         pipeline_tracker.start_step(project_id, "finalizing")

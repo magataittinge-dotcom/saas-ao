@@ -1,4 +1,5 @@
 import json
+import re
 import asyncio
 import time
 import anthropic
@@ -158,6 +159,100 @@ _DEMO_RESULT = {
 }
 
 
+# ── Chunking (Option A — corrige la troncature 30k SANS perte) ───────────────
+# Taille d'une tranche envoyée au modèle. Choisie < plafond de SORTIE
+# (max_tokens=16384 ≈ ~55k chars JSON) pour qu'une tranche dense ne tronque pas
+# la réponse, et assez grande pour éviter un chunking inutile sur les docs courts.
+_CHUNK_CHARS = 40_000
+_CHUNK_OVERLAP = 1_500   # recouvrement : évite de couper une exigence à la frontière
+
+
+def _split_into_chunks(text: str, max_chars: int = _CHUNK_CHARS, overlap: int = _CHUNK_OVERLAP) -> list[str]:
+    """Découpe `text` en tranches <= max_chars, coupées sur une frontière propre
+    (double saut de ligne > saut de ligne > espace), avec recouvrement.
+
+    Garantit la couverture de 100 % du texte (aucun caractère perdu). Pur et
+    déterministe → testé unitairement sans aucun appel API.
+    """
+    text = text or ""
+    if len(text) <= max_chars:
+        return [text] if text.strip() else []
+    chunks: list[str] = []
+    start, n = 0, len(text)
+    while start < n:
+        end = min(start + max_chars, n)
+        if end < n:
+            window = text[start:end]
+            cut = window.rfind("\n\n")
+            if cut < max_chars // 2:
+                cut = window.rfind("\n")
+            if cut < max_chars // 2:
+                cut = window.rfind(" ")
+            if cut > 0:
+                end = start + cut
+        piece = text[start:end]
+        if piece.strip():
+            chunks.append(piece)
+        if end >= n:
+            break
+        start = max(end - overlap, start + 1)
+    return chunks
+
+
+def _split_segments(text: str) -> list[tuple[str, str]]:
+    """Sépare un texte de passe en segments par document, en repérant les
+    en-têtes '=== TYPE — fichier ==='. Retourne [(header, body), ...].
+
+    Permet de chunker CHAQUE document séparément et de ré-injecter son en-tête
+    dans chaque tranche → l'attribution source_document reste correcte même au
+    milieu d'un gros document. Pur → testé unitairement.
+    """
+    segments: list[tuple[str, str]] = []
+    cur_header, cur_body = "", []
+    for ln in (text or "").split("\n"):
+        stripped = ln.strip()
+        if stripped.startswith("=== ") and stripped.endswith("==="):
+            if cur_header or cur_body:
+                segments.append((cur_header, "\n".join(cur_body)))
+            cur_header, cur_body = ln, []
+        else:
+            cur_body.append(ln)
+    if cur_header or cur_body:
+        segments.append((cur_header, "\n".join(cur_body)))
+    return segments
+
+
+def _dedup_requirements(reqs: list[dict]) -> list[dict]:
+    """Déduplique par texte d'exigence normalisé (casse/espaces), en gardant la
+    première occurrence (ordre stable). Élimine les doublons nés du recouvrement
+    entre tranches. Pur → testé unitairement.
+    """
+    seen: set[str] = set()
+    out: list[dict] = []
+    for r in reqs:
+        if not isinstance(r, dict):
+            continue
+        key = re.sub(r"\s+", " ", (r.get("exigence") or "").strip().lower())
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        out.append(r)
+    return out
+
+
+def _build_call_texts(pass_text: str) -> list[str]:
+    """Transforme le texte d'une passe en liste de textes d'appels modèle :
+    chaque document est chunké, et l'en-tête du document est ré-injecté en tête
+    de chaque tranche. Pur → testé unitairement.
+    """
+    call_texts: list[str] = []
+    for header, body in _split_segments(pass_text):
+        pieces = _split_into_chunks(body) or ([body] if body.strip() else [])
+        for piece in pieces:
+            call_texts.append(f"{header}\n{piece}" if header else piece)
+    return call_texts
+
+
 class DCEAnalyzer:
     def __init__(self):
         key = settings.ANTHROPIC_API_KEY
@@ -187,26 +282,22 @@ class DCEAnalyzer:
         # Build skills supplement once for both passes (context-aware)
         skills_ref, _ = _build_dce_skills(selected_lot_name)
 
-        # ── Pass 1: RC + CCAP (administrative) ──────────────────────────────
-        prompt1 = lot_header + pass1_text if lot_header else pass1_text
-        prompt1 = self._guard_tokens(prompt1, "passe1-admin")
+        # ── Pass 1: RC + CCAP (administrative) — chunké si volumineux ────────
         result1 = await asyncio.to_thread(
-            self._sync_call, prompt1, DCE_PASS1_SYSTEM, "passe1-admin", skills_ref,
-            project_id,
+            self._run_pass_chunked, pass1_text, DCE_PASS1_SYSTEM, "passe1-admin",
+            skills_ref, project_id, lot_header,
         )
 
         # Notify caller that pass 1 is done (for progress tracking)
         if on_pass1_done:
             on_pass1_done()
 
-        # ── Pass 2: CCTP + DPGF (technical) ─────────────────────────────────
+        # ── Pass 2: CCTP + DPGF (technical) — chunké si volumineux ──────────
         result2 = {"requirements": []}
         if pass2_text:
-            prompt2 = lot_header + pass2_text if lot_header else pass2_text
-            prompt2 = self._guard_tokens(prompt2, "passe2-technique")
             result2 = await asyncio.to_thread(
-                self._sync_call, prompt2, DCE_PASS2_SYSTEM, "passe2-technique", skills_ref,
-                project_id,
+                self._run_pass_chunked, pass2_text, DCE_PASS2_SYSTEM, "passe2-technique",
+                skills_ref, project_id, lot_header,
             )
 
         # ── Merge results ────────────────────────────────────────────────────
@@ -234,8 +325,82 @@ class DCEAnalyzer:
             output["partial_analysis"] = True
         if len(reqs) < 15 and len(reqs) > 0:
             output["low_requirement_count"] = True
+        chunks_used = (result1.get("chunked_passes") or 0) + (result2.get("chunked_passes") or 0)
+        if chunks_used:
+            output["analyzed_in_chunks"] = chunks_used
 
         return output
+
+    # ── Pass runner with chunking (Option A) ─────────────────────────────────
+
+    def _run_pass_chunked(
+        self,
+        pass_text: str,
+        system_prompt: str,
+        label: str,
+        skills_ref: str = "",
+        project_id: str | None = None,
+        lot_header: str = "",
+    ) -> dict:
+        """Exécute une passe en découpant chaque document en tranches si besoin,
+        puis FUSIONNE et DÉDUPLIQUE les exigences.
+
+        Corrige la troncature : 100 % de chaque document est analysé, sans perte
+        silencieuse. Si > 1 tranche, un avertissement est loggé et le nombre de
+        tranches est remonté (`chunked_passes`). Synchrone — exécuté dans un
+        thread par l'appelant (préserve le prompt caching : system + skills
+        identiques sur chaque tranche → cache hit).
+        """
+        call_texts = _build_call_texts(pass_text)
+        if not call_texts:
+            return {"requirements": [], "criteres_jugement": [], "infos_marche": {}}
+
+        # Cas nominal : un seul appel (document(s) sous le seuil de tranche).
+        if len(call_texts) == 1:
+            return self._sync_call(
+                lot_header + call_texts[0], system_prompt, label, skills_ref, project_id,
+            )
+
+        # Document(s) volumineux → plusieurs tranches.
+        logger.warning(
+            "[%s] document volumineux → analyse en %d tranches (chunking, aucune perte)",
+            label, len(call_texts),
+        )
+        print(f"[DCE Analyzer] [{label}] CHUNKING : {len(call_texts)} tranches", flush=True)
+
+        merged: list[dict] = []
+        criteres: list = []
+        infos: dict = {}
+        partial = False
+        for i, ct in enumerate(call_texts, 1):
+            sub = self._sync_call(
+                lot_header + ct, system_prompt, f"{label}-tranche{i}/{len(call_texts)}",
+                skills_ref, project_id,
+            )
+            merged.extend(sub.get("requirements", []))
+            if not criteres and sub.get("criteres_jugement"):
+                criteres = sub["criteres_jugement"]
+            for k, v in (sub.get("infos_marche") or {}).items():
+                if v not in (None, "", []) and not infos.get(k):
+                    infos[k] = v
+            if sub.get("partial_analysis"):
+                partial = True
+
+        deduped = _dedup_requirements(merged)
+        print(
+            f"[DCE Analyzer] [{label}] fusion {len(call_texts)} tranches : "
+            f"{len(merged)} exigences brutes → {len(deduped)} après dédup",
+            flush=True,
+        )
+        result: dict = {
+            "requirements": deduped,
+            "criteres_jugement": criteres,
+            "infos_marche": infos,
+            "chunked_passes": len(call_texts),
+        }
+        if partial:
+            result["partial_analysis"] = True
+        return result
 
     # ── Legacy single-pass (kept for compatibility) ──────────────────────────
 
