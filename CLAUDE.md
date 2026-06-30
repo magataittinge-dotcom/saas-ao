@@ -4,7 +4,7 @@ Tu es un développeur full-stack senior qui construit un SaaS de réponse aux ap
 
 ## Contexte du projet
 
-Lis le fichier `PRD_SAAS_AO_BTP.md` pour comprendre le projet complet.
+Lis le fichier `docs/PRD_SYNORIX_V2.md` pour comprendre le projet complet (PRD courant). L'ancien PRD est archivé dans `docs/archive/PRD_SAAS_AO_BTP.md`.
 
 **Objectif :** Automatiser la réponse aux appels d'offres BTP via l'IA (Claude API) — analyse DCE, compliance matrix, checklist candidature, génération de mémoire technique (~20 pages), export Word.
 
