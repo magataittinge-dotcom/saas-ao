@@ -10,7 +10,7 @@
 | 4 | **Couleurs hors-charte résiduelles** | Amber « Expire bientôt » (candidature/vault), incohérence `StatusBadge` (slate) vs composants (amber). | Faible (cohérence visuelle) | Faible | À trancher dans la passe design (cf. `design/QUICK_WINS_appliques.md`). |
 | 5 | **Scripts jetables non rangés** | 12 scripts `scripts/*.py` (comparaison/e2e), partiellement trackés/untracked. Documentés cette nuit (`scripts/README.md`). | Faible | Faible | Garder pour re-test ; décider lesquels tracker. |
 | 6 | **`References.tsx` — bouton mort** | `_showForm`/`setShowForm` déclaré mais le formulaire d'ajout n'est pas branché (bouton « Ajouter une référence » sans effet). | Faible (fonctionnel) | Faible | Brancher le formulaire ou retirer le bouton. |
-| 7 | **Progression — interpolation backend** | « fige puis saute » quand l'op dépasse `estimated_s` (cf. `nuit-rapport-3/BLOC1-progression.md`). | Faible-Moyen (UX) | Moyen | Recalibrer `estimated_s` (quick win) ou vrai signal d'avancement analyse (proche cœur → supervisé). |
+| 7 | **Progression — interpolation backend** | « fige puis saute » quand l'op dépasse `estimated_s`. | Faible-Moyen (UX) | Moyen | Recalibrer `estimated_s` (quick win) ou vrai signal d'avancement analyse (proche cœur → supervisé). |
 
 ## Notes config
 - **`.claude/` gitignoré** : contient `settings.local.json` (réglages locaux, OK non tracké) + `skills/` (skills Claude Code, OK). Les skills **produit** ont été relocalisées en `backend/ai_skills/` (trackées) — donc plus de perte. RAS.

@@ -75,7 +75,7 @@ Synorix's wedge is the **automated generation of personalised, deposit-grade tec
 - **5-section persistent Sidebar** — Mes AO / Mon entreprise / Mes références / Ma bibliothèque mémoire / Mon coffre-fort
 - **Synorix Coach** — level-3 strategic chatbot
 - **86 modular skills V1** — each grounded in real BTP expertise from 8 validated NotebookLM notebooks (193 curated sources) <!-- v2.1 - notebooks 17/5/26 -->
-- **Multi-model AI stack** — Haiku 4.5 / Sonnet 4.6 / Opus 4.7 — target cost **~€0.77 per complete tender response**
+- **Multi-model AI stack** — Haiku 4.5 (routing) / Sonnet 4.6 (extraction, analyse **et génération mémoire**) / Opus 4.7 (réécriture ciblée + Synorix Score) — measured cost **~€1 per complete tender response** (mémoire en full-Sonnet, ~7× moins cher qu'Opus)
 - **Two plans** — Pro (€299/mo, 1 seat) and Business (€499/mo, 5 seats)
 
 ### 1.7 Differentiators — Notebook-validated <!-- v2.1 - notebooks 17/5/26 -->
@@ -1075,7 +1075,7 @@ Both plans include: full 6-step pipeline, full sidebar (5 sections), Synorix Coa
 
 ### 6.2 Unit Economics
 
-Per-AO AI cost target: **~€0.77** (Haiku 0.02 + Sonnet 0.05 + Sonnet 0.40 + Opus 0.30 + Sonnet incl. + 0 export). Three usage scenarios drive the margin analysis:
+Per-AO AI cost (measured, full-Sonnet): **~€1** (Haiku 0.02 + Sonnet 0.05 + Sonnet 0.40 + **Sonnet ~0.50 mémoire** + Sonnet incl. + 0 export). La génération mémoire tourne sur **Sonnet 4.6** (tous segments), pas Opus — mesure DCE Gueux : mémoire ≈ €0.90 en Sonnet vs ~€6 en Opus (~7× moins cher), cf. `docs/comparaison-memoire-AB/RESULTAT.md`. Même au coût mesuré ~€1/AO, les marges Pro restent **> 90 %** en usage normal (≤ 30 AO/mois). Three usage scenarios drive the margin analysis (chiffres ci-dessous conservés à titre indicatif, ordre de grandeur inchangé) :
 
 | Scenario | AO/month | AI cost/month | Margin Pro (€299) | Margin Business (€499) |
 |---|---|---|---|---|

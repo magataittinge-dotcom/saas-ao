@@ -139,7 +139,7 @@ This is deliberate — the V2.0 success criterion is *ship & be impressive*, not
 | Primary DB | PostgreSQL 16 | JSONB for unstructured DCE outputs, robust SQL for everything else |
 | Cache | Redis 7 | Hot reads, session scratch, Coach pub/sub |
 | Object storage | Hostinger object storage (S3-compatible) | DCE uploads, generated docs, coffre-fort encrypted |
-| Search | Postgres full-text (V1.0); pgvector + embeddings (V1.5) | V1.0 doesn't need semantic search |
+| Search | Postgres full-text (V1.0); **socle pgvector en place** — migration `0003_rag_corpus_pgvector` (table `rag_chunks`, extension `vector`, index HNSW cosine + GIN FTS français). Ingestion du corpus réglementaire à venir | Le schéma RAG est posé ; le branchement (embeddings Voyage + recherche hybride) reste à câbler |
 
 ### 2.4 Auth & payments
 
@@ -177,8 +177,8 @@ This is deliberate — the V2.0 success criterion is *ship & be impressive*, not
 | Model | Use | Avg cost / call | Skills assigned |
 |---|---|---|---|
 | **Claude Haiku 4.5** | Lightweight classification, deterministic extraction, fast routing | €0.005–0.02 | Steps 1, validation, low-stakes |
-| **Claude Sonnet 4.6** | Bulk analysis, extraction-with-reasoning, bounded generation | €0.02–0.10 | Steps 2 & 3 (extraction + alerts), Step 4 short sections |
-| **Claude Opus 4.7** | Long-form composition, high-stakes synthesis | €0.10–0.30 | Step 4 memo composition, Synorix Score evaluation |
+| **Claude Sonnet 4.6** | Bulk analysis, extraction-with-reasoning, long-form memo composition | €0.02–0.90 | Steps 2 & 3 (extraction + alerts), **Step 4 memo composition** |
+| **Claude Opus 4.7** | Targeted paragraph rewrite, high-stakes synthesis | €0.10–0.30 | Paragraph rewrite (editeur), Synorix Score evaluation |
 
 ### 3.2 Cost target per AO
 
@@ -187,12 +187,14 @@ This is deliberate — the V2.0 success criterion is *ship & be impressive*, not
 | 1 — Upload | Haiku 4.5 | €0.02 |
 | 2 — Lots | Sonnet 4.6 | €0.05 |
 | 3 — AI Analysis | Sonnet 4.6 | €0.40 |
-| 4 — Memo | Opus 4.7 | €0.30 |
+| 4 — Memo | Sonnet 4.6 | ~€0.50† |
 | 5 — Verification | Sonnet 4.6 (Opus only for Synorix Score) | included |
 | 6 — Export | none | €0 |
-| **Total per AO** | | **~€0.77** |
+| **Total per AO** | | **~€1.0†** |
 
-At 30 AO/month per customer on Pro (€299) → ~€23 of AI cost → **~92% gross margin**.
+> † **Mesuré (full-Sonnet).** La génération mémoire tourne sur Sonnet 4.6 (tous segments), pas Opus. Mesure sur le DCE Gueux (gros DCE) : mémoire ≈ **€0.90 en Sonnet vs ~€6 en Opus** (~7× moins cher), cf. `docs/comparaison-memoire-AB/RESULTAT.md`. Coût/AO réel mesuré **~€1**, dominé par la mémoire ; Opus 4.7 n'est utilisé que pour la réécriture ciblée de paragraphe et le Synorix Score.
+
+At ~30 AO/month per customer on Pro (€299) → ~€30 of AI cost → **>90% gross margin** (Sonnet étant ~7× moins cher qu'Opus, la marge reste préservée).
 
 ### 3.3 Prompt caching
 
@@ -222,7 +224,7 @@ Frontend connects via `EventSource` and progressively renders.
 ### 3.5 Timeouts
 
 - WSL2 development environment causes blocking-call timeouts. Every Anthropic SDK call wraps in `asyncio.to_thread(...)` to avoid event-loop starvation.
-- Production timeout per call: **120 s** (Haiku/Sonnet), **300 s** (Opus memo composition).
+- Production timeout per call: **120 s** (Haiku/Sonnet standard), **300 s** (memo composition — Sonnet 4.6, long-form).
 - Retry policy: 1 retry on 5xx and 429, exponential back-off.
 
 ### 3.6 Failure modes
@@ -653,6 +655,10 @@ admin, offer, tech, criteria, traps, visit, caution = await asyncio.gather(
 
 Cost-cap and rate-limit guards run at the orchestrator level, not per-skill.
 
+### 5.3bis Chunking anti-troncature (DCE volumineux)
+
+Avant le fan-out des skills d'extraction, le `dce_analyzer` découpe les pièces volumineuses (CCAP/CCTP) en **documents entiers chunkés** avec **déduplication**, ce qui supprime le cap de troncature historique (~30k caractères) qui amputait l'analyse en prod. Couvert par `backend/tests/test_dce_chunking.py` ; mesures avant/après dans `docs/rag/PHASE0-*` (passage ~13 → ~118 exigences CCAP).
+
 ### 5.4 Idempotency
 
 Every `POST` mutation accepts an idempotency key (UUID v4 from client). Replays with the same key return the cached result without re-running.
@@ -806,7 +812,7 @@ NotebookLM is consulted **only at build time**, never at runtime. The workflow t
 |---|---|---|
 | Determinism | ✅ frozen prompt → reproducible | ❌ source set drifts |
 | Latency | ✅ direct Anthropic call (1–5 s) | ❌ +5–15 s per skill call |
-| Cost | ✅ included in €0.77/AO target | ❌ adds €0.05–0.20/AO |
+| Cost | ✅ included in ~€1/AO measured cost | ❌ adds €0.05–0.20/AO |
 | Audit / compliance | ✅ prompt is in git, replayable | ❌ retrieval drift is opaque |
 | Anthropic prompt cache | ✅ hot, ~80% hit ratio | ❌ broken by varying retrieved chunks |
 
@@ -976,7 +982,7 @@ V1.0 — sized for KVM2 (16 GB RAM total, shared with FastAPI + Redis + Celery +
 
 Two distinct dimensions: **customer-visible AO quota** (billing-facing) and **internal AI hard ceiling** (cost-protection, invisible to user).
 
-- **Per-account daily cap: €15** (= 20 AO/day at €0.77 unit).
+- **Per-account daily cap: €15** (~15 AO/day at the measured ~€1/AO unit).
 - **Per-account monthly cap (hard AI ceiling, not visible to customer):**
   - Pro: €100 (~130 AO/month worst-case)
   - Business: €300 (~390 AO/month worst-case)

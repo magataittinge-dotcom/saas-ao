@@ -12,9 +12,9 @@ Lis le fichier `docs/PRD_SYNORIX_V2.md` pour comprendre le projet complet (PRD c
 
 - **Frontend :** React 18 + TypeScript + Tailwind CSS + shadcn/ui + Zustand + React Router v6
 - **Backend :** FastAPI (Python) + SQLAlchemy + PostgreSQL + Redis + Celery
-- **IA :** Claude API — Sonnet 4.6 (tâches simples), Opus 4.6 (génération mémoire)
+- **IA :** Claude API — Sonnet 4.6 (extraction, analyse, génération mémoire), Opus 4.7 (réécriture ciblée de paragraphe + fallback)
 - **Stockage :** AWS S3 (fichiers), Stripe (paiement)
-- **Déploiement :** Vercel (front), Railway/Render (back)
+- **Déploiement :** Hostinger VPS (Nginx + FastAPI + Postgres + Redis + Celery)
 
 ## Architecture des fichiers
 
@@ -25,7 +25,7 @@ Respecter strictement l'architecture définie dans le PRD (section 2.4).
 - Toujours écrire du code propre, typé (TypeScript strict, Pydantic pour Python)
 - **Ne jamais hardcoder de clés API ou secrets** — utiliser les variables d'environnement
 - Suivre les conventions de nommage : camelCase (JS/TS), snake_case (Python)
-- Les modèles IA : Sonnet 4.6 pour extraction/matching, Opus 4.6 pour génération mémoire
+- Les modèles IA : Sonnet 4.6 pour extraction/matching **et génération mémoire** ; Opus 4.7 pour la réécriture ciblée de paragraphe
 - Écrire des tests pour les fonctions critiques (auth, IA, export)
 - Utiliser les schémas Pydantic pour toute validation de données côté backend
 - Les tâches longues (analyse DCE, génération mémoire) sont des tâches Celery asynchrones
@@ -35,7 +35,7 @@ Respecter strictement l'architecture définie dans le PRD (section 2.4).
 - **Phase 1** : Fondations — setup, auth, modèles DB, layout, dashboard statique
 - **Phase 2** : Coffre-fort, profil entreprise, références chantiers
 - **Phase 3** : Cœur — upload DCE, analyse IA, compliance matrix, checklist
-- **Phase 4** : Mémoire technique — génération Opus, éditeur, export .docx
+- **Phase 4** : Mémoire technique — génération Sonnet 4.6, éditeur, export .docx
 - **Phase 5** : Finitions — pricing, Stripe, landing page, déploiement
 
 ## Variables d'environnement clés
