@@ -17,7 +17,8 @@ Scripts ad hoc de comparaison et de test end-to-end du moteur IA. **Non intégr�
 - `e2e_memoire_gueux_sonnet_f1.py` — full-Sonnet + prompt F1 (few-shot + quota).
 - `e2e_memoire_gueux_sonnet_f1v2.py` — full-Sonnet + prompt **F1 v2** (EPI corpus-only) — **version retenue**.
 
-## Métriques
+## Métriques & validation
 - `_compare_memoire_metrics.py` — métriques objectives d'un mémoire JSON (densité, sous-sections, anti-invention). Usage : `python scripts/_compare_memoire_metrics.py <chemin.json> [label]`.
+- `_validate_chunking_run.py` — vérifie une sortie d'analyse chunkée (anti-troncature CCAP/CCTP, dedup). Inspection de fichiers = 0 API.
 
-> Sorties sauvegardées dans `docs/comparaison-AB/` et `docs/comparaison-memoire-AB/`. Voir `docs/comparaison-memoire-AB/RESULTAT.md` pour la synthèse.
+> ⚠️ **Tous les scripts de ce dossier sont JETABLES** : outillage ad hoc de test/comparaison, non couvert par la CI, à ne pas importer depuis le backend. Sorties sauvegardées dans `docs/comparaison-AB/` et `docs/comparaison-memoire-AB/`. Voir `docs/comparaison-memoire-AB/RESULTAT.md` pour la synthèse.
