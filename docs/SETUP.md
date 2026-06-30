@@ -82,12 +82,20 @@ npx shadcn-ui@latest init
 npx shadcn-ui@latest add button input label card badge dialog select tabs toast
 ```
 
-## Déploiement — taille maximale des uploads
+## Déploiement
+
+La production tourne sur un **VPS Hostinger** (Ubuntu Server 24.04 LTS) —
+stack **Nginx + FastAPI (uvicorn) + PostgreSQL 16 + Redis 7 + Celery**, le tout
+géré par **systemd**. Procédure complète d'installation, services systemd,
+reverse-proxy SSL et sauvegardes : voir **[DEPLOYMENT.md](DEPLOYMENT.md)** et
+**[BACKUP_RECOVERY.md](BACKUP_RECOVERY.md)**.
+
+### Taille maximale des uploads
 
 L'API accepte des uploads DCE jusqu'à **2 Go** (streaming sur disque via
-`SpooledTemporaryFile`, jamais en RAM). En production, le proxy en amont doit
+`SpooledTemporaryFile`, jamais en RAM). Le reverse-proxy nginx en amont doit
 être configuré pour ne pas tronquer ces requêtes — par défaut nginx coupe à
-1 Mo et la plupart des PaaS appliquent leurs propres limites.
+1 Mo.
 
 ### nginx
 
@@ -101,32 +109,7 @@ proxy_read_timeout   600s;
 proxy_send_timeout   600s;
 ```
 
-### Render
-
-Dans `render.yaml` (ou via le dashboard) sur le service web FastAPI :
-
-```yaml
-services:
-  - type: web
-    runtime: python
-    plan: standard          # le plan free coupe à ~100 Mo
-    envVars:
-      - key: WEB_CONCURRENCY
-        value: "2"
-    # Render n'expose pas client_max_body_size; le runtime accepte 2 Go par défaut
-    # sur les plans payants. Vérifier `Settings > Networking > Request size limit`.
-```
-
-### Railway
-
-Railway proxifie via un edge sans limite de taille fixe, mais le timeout HTTP
-par défaut est 100 s. Pour des uploads de 2 Go sur connexions lentes :
-
-```bash
-railway variables set RAILWAY_HTTP_TIMEOUT=600
-```
-
-### Cloudflare (si utilisé en frontend)
+### Cloudflare (si placé devant le VPS)
 
 Les plans Free/Pro plafonnent les requêtes à **100 Mo**. Pour autoriser 2 Go,
 soit passer en plan Business (500 Mo) / Enterprise (5 Go), soit exclure
