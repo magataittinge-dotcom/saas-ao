@@ -2,6 +2,15 @@
 
 Tu es un développeur full-stack senior qui construit un SaaS de réponse aux appels d'offres BTP.
 
+## Règles de travail (PRIORITAIRES — s'appliquent à chaque session)
+
+- **Terminé = Prouvé.** Jamais « fini » sans avoir lancé le code / un test vert. Pas de « ça devrait marcher ». Preuve (sortie de test, comportement observé) avant toute affirmation de succès.
+- **Plan avant exécution.** Tu proposes, j'approuve, PUIS tu exécutes. Pas de suppression/déplacement/renommage sans mon OK.
+- **Aucun rapport de statut sur le disque** (pas de `*_REPORT`, `*_PROGRESS`, `*_AUDIT`). Le compte-rendu va dans le terminal.
+- **Une tranche verticale à la fois** → test vert → commit dédié. Pas de gros commits fourre-tout.
+- **`git revert` plutôt que rustiner.** En cas d'erreur, revenir proprement à l'état sain ; ne jamais empiler des correctifs sur du cassé.
+- **Moins de docs, justes et à jour** > beaucoup de docs. La doc reflète le code réel (le code est la source de vérité).
+
 ## Contexte du projet
 
 Lis le fichier `docs/PRD_SYNORIX_V2.md` pour comprendre le projet complet (PRD courant). L'ancien PRD est archivé dans `docs/archive/PRD_SAAS_AO_BTP.md`.
@@ -13,12 +22,12 @@ Lis le fichier `docs/PRD_SYNORIX_V2.md` pour comprendre le projet complet (PRD c
 - **Frontend :** React 18 + TypeScript + Tailwind CSS + shadcn/ui + Zustand + React Router v6
 - **Backend :** FastAPI (Python) + SQLAlchemy + PostgreSQL + Redis + Celery
 - **IA :** Claude API — Sonnet 4.6 (extraction, analyse, génération mémoire), Opus 4.7 (réécriture ciblée de paragraphe + fallback)
-- **Stockage :** AWS S3 (fichiers), Stripe (paiement)
+- **Stockage :** uploads sur disque du VPS (`backend/uploads/`, servis via `/api/files/view/...` avec contrôle d'ownership) ; object storage Hostinger (S3-compatible) prévu à l'échelle. Stripe (paiement)
 - **Déploiement :** Hostinger VPS (Nginx + FastAPI + Postgres + Redis + Celery)
 
 ## Architecture des fichiers
 
-Respecter strictement l'architecture définie dans le PRD (section 2.4).
+Architecture cible et réelle (moteur `services/ai`, pipeline 6 étapes, chunking anti-troncature, socle RAG pgvector) : voir `docs/ARCHITECTURE_V2.md`. Vision produit : `docs/PRD_SYNORIX_V2.md`.
 
 ## Règles de développement
 
@@ -30,7 +39,9 @@ Respecter strictement l'architecture définie dans le PRD (section 2.4).
 - Utiliser les schémas Pydantic pour toute validation de données côté backend
 - Les tâches longues (analyse DCE, génération mémoire) sont des tâches Celery asynchrones
 
-## Phases de développement
+## Phases de développement (HISTORIQUE — plan de build initial, déjà livré)
+
+> ⚠️ Ces 5 phases décrivent le plan de construction initial, **aujourd'hui réalisé**. La roadmap courante (V1 / V1.5 / V2.5) est dans `docs/PRD_SYNORIX_V2.md` §9 ; le backlog actif et priorisé est dans `TASKS.md`.
 
 - **Phase 1** : Fondations — setup, auth, modèles DB, layout, dashboard statique
 - **Phase 2** : Coffre-fort, profil entreprise, références chantiers
@@ -60,7 +71,7 @@ VITE_STRIPE_PUBLIC_KEY=...
 
 ## Modèles IA — prompts
 
-Les prompts système sont définis dans `backend/services/ai/prompts.py` et documentés dans le PRD (section 4).
+Les prompts système sont définis dans `backend/services/ai/prompts.py`.
 
 ## Notes importantes
 
