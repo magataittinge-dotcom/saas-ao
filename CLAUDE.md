@@ -79,3 +79,10 @@ Les prompts système sont définis dans `backend/services/ai/prompts.py`.
 - Le coffre-fort documentaire est central : les documents uploadés lors d'un AO y sont automatiquement stockés
 - Les templates de mémoire s'améliorent au fil des utilisations ("Utiliser comme référence")
 - Toujours référencer la source dans le document original pour chaque exigence extraite (confiance utilisateur)
+
+## Pièges connus (gotchas — déjà payés en temps, ne pas réapprendre)
+
+- **Cap input ~30k sur le DCE** : un cap de troncature amputait l'analyse (CCAP coupé à ~30k caractères). **Résolu** par le chunking anti-troncature (`dce_analyzer` : CCAP/CCTP entiers + dedup). Ne pas réintroduire de limite naïve sur le texte source. Cf. `docs/rag/PHASE0-*`.
+- **WSL2 timeouts** : tout appel au SDK Anthropic doit être enveloppé dans `asyncio.to_thread(...)` (sinon famine de l'event-loop → timeouts). C'est déjà le cas dans `services/ai/` — le conserver.
+- **`temperature` dépréciée pour `claude-opus-4-7`** : transmettre `temperature` à ce modèle renvoie une **400**. Ne pas la passer (cf. `memoire_generator.py`).
+- **Prompt cache par modèle** : le préfixe stable est caché PAR MODÈLE. Garder les segments d'un même modèle **consécutifs** (sinon 1 cache_write par changement de modèle → cache cassé, coût ×N). En full-Sonnet actuel : 1 cache_write puis cache_read sur les suivants.

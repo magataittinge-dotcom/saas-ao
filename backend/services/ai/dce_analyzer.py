@@ -1,3 +1,10 @@
+"""Analyse DCE — moteur d'extraction des exigences d'un dossier de consultation.
+
+Orchestre l'analyse IA (Sonnet 4.6) du DCE : classification des pièces, extraction
+des exigences administratives/techniques/critères, détection des pièges, synthèse.
+Applique le chunking anti-troncature (CCAP/CCTP entiers + dedup) pour ne pas amputer
+les gros documents. Skills domaine chargés depuis `ai_skills/` via `skill_loader`.
+"""
 import json
 import re
 import asyncio

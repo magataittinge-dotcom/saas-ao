@@ -1,3 +1,10 @@
+"""Génération du mémoire technique — composition long-form par segments.
+
+Génère le mémoire (~20 pages) en plusieurs segments (préambule, parties A/B/C) via
+Claude. Configuration prod = full-Sonnet 4.6 (`_MEMOIRE_SEGMENT_MODELS`) ; Opus 4.7
+reste en fallback. Segments d'un même modèle gardés consécutifs pour le prompt cache.
+La densité normative (DTU/Avis Technique) vient du PROMPT + corpus skills, pas du modèle.
+"""
 import json
 import asyncio
 import time

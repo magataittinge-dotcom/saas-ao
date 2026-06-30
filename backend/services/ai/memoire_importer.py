@@ -1,3 +1,9 @@
+"""Import de mémoire existant — parsing structuré pour réutilisation.
+
+Analyse un mémoire technique fourni par l'utilisateur (Sonnet 4.6) et le découpe en
+sections taggées (méthodologie, sécurité, etc.) réutilisables comme base/bibliothèque
+pour de futures générations ("Utiliser comme référence").
+"""
 import json
 import asyncio
 import time
