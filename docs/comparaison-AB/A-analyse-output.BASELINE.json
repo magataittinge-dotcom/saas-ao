@@ -1,0 +1,828 @@
+{
+  "requirements": [
+    {
+      "exigence": "Fournir l'attestation d'assurance de responsabilité civile en cours de travaux avec montant minimum de 8 M€ par sinistre tous dommages confondus",
+      "source_document": "CCAP",
+      "source_page": 39,
+      "source_excerpt": "Tous dommages confondus (dommages corporels; matériels et immatériels consécutifs ou non) : 8 M€ par sinistre",
+      "category": "candidature",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Fournir l'attestation d'assurance de responsabilité civile après travaux avec montant minimum de 3 M€ par année d'assurance",
+      "source_document": "CCAP",
+      "source_page": 40,
+      "source_excerpt": "montant minimum de 3 millions € par année d'assurance avec un minimum d'1,5 million pour les dommages immatériels",
+      "category": "candidature",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Fournir l'attestation d'assurance décennale en cours de validité à la date d'ouverture du chantier couvrant les activités du lot",
+      "source_document": "CCAP",
+      "source_page": 40,
+      "source_excerpt": "Etre en cours de validité à la date d'ouverture du chantier quelle que soit la date d'intervention du titulaire",
+      "category": "candidature",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Transmettre les attestations d'assurance RC et décennale dans le délai prévu (pénalité de 100 € HT/jour de retard applicable)",
+      "source_document": "CCAP",
+      "source_page": 23,
+      "source_excerpt": "pénalité de retard égale à 100 € HT par jour de retard",
+      "category": "planning",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Compléter, dater et signer l'acte d'engagement (AE) joint au DCE",
+      "source_document": "CCAP",
+      "source_page": 10,
+      "source_excerpt": "1 - l'acte d'engagement (AE)",
+      "category": "offre",
+      "priority": "obligatoire",
+      "source_kind": "dce_template",
+      "expected_template_type": "acte_engagement_template"
+    },
+    {
+      "exigence": "Renseigner la Décomposition du Prix Global Forfaitaire (DPGF) jointe au DCE",
+      "source_document": "CCAP",
+      "source_page": 10,
+      "source_excerpt": "La décomposition du prix global forfaitaire",
+      "category": "offre",
+      "priority": "obligatoire",
+      "source_kind": "dce_template",
+      "expected_template_type": "dpgf_template"
+    },
+    {
+      "exigence": "Fournir un mémoire méthodologique (rendu contractuel à la notification)",
+      "source_document": "CCAP",
+      "source_page": 10,
+      "source_excerpt": "Mémoire méthodologique",
+      "category": "offre",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Établir et remettre le Plan Particulier de Sécurité et de Protection de la Santé (PPSPS) au coordonnateur dans les 30 jours après notification du marché",
+      "source_document": "CCAP",
+      "source_page": 35,
+      "source_excerpt": "Le Plan particulier de sécurité et de santé devra être transmis par l'entreprise au coordonnateur... dans un délai de 30 jours après la notification du marché",
+      "category": "planning",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Établir le programme d'exécution des travaux (calendrier, installations de chantier, plan de sécurité, PAQ) dans le mois suivant le démarrage de la période de préparation",
+      "source_document": "CCAP",
+      "source_page": 33,
+      "source_excerpt": "l'ensemble des éléments du programme d'exécution des travaux est soumis pour visa du maître d'œuvre... dans le mois qui suit la date de démarrage de la période de préparation",
+      "category": "planning",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Établir un Plan d'Assurance Qualité (PAQ) conformément au cadre annexé au CCTP",
+      "source_document": "CCAP",
+      "source_page": 33,
+      "source_excerpt": "Le titulaire est tenu d'établir un plan d'assurance qualité du chantier conformément aux dispositions de l'article 28.2.1 du CCAG",
+      "category": "planning",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Désigner nominativement un Responsable Environnement Entreprise au plus tard à l'expiration de la période de préparation",
+      "source_document": "CCAP",
+      "source_page": 36,
+      "source_excerpt": "Le titulaire désignera nominativement un Responsable Environnement Entreprise... au plus tard à l'expiration de la période de préparation",
+      "category": "planning",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Remettre le Dossier des Ouvrages Exécutés (DOE) comprenant plans de récolement, notices de fonctionnement et constats d'évacuation des déchets",
+      "source_document": "CCAP",
+      "source_page": 39,
+      "source_excerpt": "le titulaire remet au maître d'œuvre les éléments constitutifs du DOE et les éléments nécessaires à l'établissement du DIUO",
+      "category": "planning",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Transmettre les éléments nécessaires à l'établissement du DIUO au coordonnateur SPS",
+      "source_document": "CCAP",
+      "source_page": 39,
+      "source_excerpt": "Un exemplaire des documents nécessaires à l'établissement du DIUO est également transmis au coordonnateur",
+      "category": "planning",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Effectuer les DICT (Déclarations d'Intention de Commencement de Travaux) auprès de tous les exploitants de réseaux dès notification du marché",
+      "source_document": "CCAP",
+      "source_page": 26,
+      "source_excerpt": "dès la notification du marché et avant l'exécution des travaux, le titulaire est tenu de consulter la plateforme de téléservice du guichet unique",
+      "category": "planning",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Présenter le cadre d'acte spécial de sous-traitance dûment complété et signé avec toutes les pièces requises pour tout sous-traitant",
+      "source_document": "CCAP",
+      "source_page": 5,
+      "source_excerpt": "il présentera le cadre d'acte spécial de sous-traitance annexé à l'acte d'engagement, dûment complété et signé",
+      "category": "offre",
+      "priority": "obligatoire",
+      "source_kind": "dce_template",
+      "expected_template_type": "cadre_reponse"
+    },
+    {
+      "exigence": "Fournir pour chaque sous-traitant : déclaration sur l'honneur de non-exclusion, pièces de capacité, attestation RCP, attestation décennale et certificats fiscaux/sociaux",
+      "source_document": "CCAP",
+      "source_page": 5,
+      "source_excerpt": "Les attestations d'assurances RCP du sous-traitant... L'attestation d'assurance décennale",
+      "category": "offre",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Transmettre les demandes de paiement par voie électronique via Chorus Pro (SIRET maître d'ouvrage : 354 063 810 00064)",
+      "source_document": "CCAP",
+      "source_page": 17,
+      "source_excerpt": "Toutes les demandes de paiement... devront être transmises par voie électronique en application de l'article L.2192-1",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Fournir une garantie à première demande en contrepartie de l'avance (la caution personnelle et solidaire n'est pas acceptée)",
+      "source_document": "CCAP",
+      "source_page": 15,
+      "source_excerpt": "Il est exigé une garantie à première demande en contrepartie de l'avance... Le maître d'ouvrage n'accepte pas qu'une caution personnelle et solidaire remplace",
+      "category": "offre",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Fournir une garantie à première demande en remplacement de la retenue de garantie (la caution personnelle et solidaire n'est pas acceptée)",
+      "source_document": "CCAP",
+      "source_page": 13,
+      "source_excerpt": "Le maître d'ouvrage accepte n'accepte pas qu'une caution personnelle et solidaire remplace la garantie à première demande",
+      "category": "offre",
+      "priority": "souhaitée",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Remettre les plans de récolement et le DOE (pénalité de 800 € HT par jour de retard applicable)",
+      "source_document": "CCAP",
+      "source_page": 24,
+      "source_excerpt": "Retard dans la remise des plans de récolement et DOE : 800",
+      "category": "planning",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Participer à toutes les réunions de chantier (pénalité de 300 € HT par absence constatée)",
+      "source_document": "CCAP",
+      "source_page": 23,
+      "source_excerpt": "en cas d'absence aux réunions de chantier, le maître d'ouvrage appliquera sur le décompte une pénalité par absence constatée de 300 € HT",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Remettre les documents fournis après exécution lors de la demande de réception (retenue provisoire de 800 € HT en cas de non-remise)",
+      "source_document": "CCAP",
+      "source_page": 23,
+      "source_excerpt": "En cas de non remise, lorsqu'il demande la réception, des documents à fournir après exécution... une retenue provisoire sera opérée d'un montant de 800 € HT",
+      "category": "planning",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Produire les éléments de traçabilité des déchets conformément aux articles 36.2.1 et 36.2.2 du CCAG (pénalité de 200 € en cas d'absence)",
+      "source_document": "CCAP",
+      "source_page": 23,
+      "source_excerpt": "En cas d'absence de production des éléments mentionnés aux articles 36.2.1 et 36.2.2 du CCAG, le titulaire se verra appliquer... une pénalité dont le montant est fixé à 200 €",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Mettre à disposition du maître d'œuvre les documents de traçabilité de tous les produits et matériaux préalablement à leur mise en œuvre",
+      "source_document": "CCAP",
+      "source_page": 24,
+      "source_excerpt": "Le titulaire est tenu de mettre à la disposition du maître d'œuvre les documents assurant la traçabilité de tous les produits et matériaux",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Remettre au maître d'ouvrage l'enregistrement exhaustif de toutes les personnes employées sur le chantier dans les 15 jours sur demande (lutte contre le travail dissimulé)",
+      "source_document": "CCAP",
+      "source_page": 34,
+      "source_excerpt": "Le titulaire devra remettre au maître d'ouvrage, sur demande de celui-ci, dans un délai de quinze jours, l'enregistrement exhaustif de toutes les personnes",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Communiquer au contrôleur technique tous les documents et éléments nécessaires à l'exécution de sa mission",
+      "source_document": "CCAP",
+      "source_page": 44,
+      "source_excerpt": "L'entrepreneur devra communiquer au contrôleur technique tous les documents et éléments nécessaires à ce dernier pour qu'il puisse exécuter sa mission",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Obtenir les visas du contrôleur technique et du maître d'œuvre sur les plans d'exécution avant tout commencement d'exécution",
+      "source_document": "CCAP",
+      "source_page": 44,
+      "source_excerpt": "il devra procéder à leur établissement et obtenir les visas du contrôleur technique et du maître d'œuvre, avant tout commencement d'exécution",
+      "category": "planning",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Réaliser les études d'exécution à la charge de l'entreprise et les soumettre au maître d'œuvre et au contrôleur technique pour visa préalablement aux travaux",
+      "source_document": "CCAP",
+      "source_page": 34,
+      "source_excerpt": "Les études d'exécution qui ne sont pas confiées au maître d'œuvre seront réalisées par les entreprises. Ces études seront soumises au maître d'œuvre et au contrôleur technique",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Fournir le DOE en 2 exemplaires papiers + 1 dossier numérique à la réception des travaux, incluant un DUEM avec notices de fonctionnement et prescriptions de maintenance",
+      "source_document": "CCTP",
+      "source_page": 3,
+      "source_excerpt": "DOE en 2 exemplaires papiers + 1 dossier numérique. Les entreprises devront fournir des DOE clairs et complets",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Fournir un dossier d'exécution complet (calepinage inclus) soumis à la Maîtrise d'œuvre et au Bureau de Contrôle avant toute réalisation, avec accord écrit préalable",
+      "source_document": "CCTP",
+      "source_page": 3,
+      "source_excerpt": "Ce n'est qu'après accord écrit pour la Maîtrise d'œuvre et du bureau de contrôle que l'entreprise pourra intervenir.",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Fournir la liste, les fiches techniques, les avis techniques CSTB et les PV d'essais des matériels prévus avant travaux",
+      "source_document": "CCTP",
+      "source_page": 3,
+      "source_excerpt": "Elle fournira la liste, les fiches techniques, les avis techniques CSTB et les Procès-Verbaux d'essais des matériels prévus",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Fournir en fin de chantier un dossier complet comprenant plans de récolement et notices d'entretien des matériels, remis au Maître d'Ouvrage à la réception",
+      "source_document": "CCTP",
+      "source_page": 4,
+      "source_excerpt": "En fin de chantier l'entreprise fournira un dossier complet comprenant les plans de récolement et les notices d'entretien",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Faire effectuer par un BET de son choix toutes les études techniques nécessaires à la réalisation des ouvrages du présent lot",
+      "source_document": "CCTP",
+      "source_page": 4,
+      "source_excerpt": "Il appartiendra à l'Entreprise attributaire du présent lot de faire effectuer par le BET de son choix, toutes les études techniques",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Provisionner un compte prorata de 1,5% du montant du marché pour les dépenses communes de chantier (eau, électricité, préchauffage, nettoyage), géré par le lot Gros Œuvre",
+      "source_document": "CCTP",
+      "source_page": 4,
+      "source_excerpt": "l'entrepreneur fixe un budget de départ minimum de 1,5% du montant de son marché afin de financer les dépenses communes",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Prévoir tous les agrès, protections, échafaudages, gardes corps périphériques, filets et prestations de sécurité collective et individuelle conformément au Code du Travail et aux recommandations du coordonnateur SPS",
+      "source_document": "CCTP",
+      "source_page": 5,
+      "source_excerpt": "conformément au Code du Travail et à la demande du coordonnateur SPS (Cf. P.G.C).",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Présenter à la demande du coordonnateur SPS les livrets d'entretien des matériels de chantier fixes ou mobiles et les documents d'autorisation (qualifications chauffeurs, etc.)",
+      "source_document": "CCTP",
+      "source_page": 5,
+      "source_excerpt": "elle devra présenter les livrets d'entretien des matériels de chantier qu'ils soient fixes ou mobiles, ainsi que les divers documents d'autorisation",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Assurer le hors d'eau total du bâtiment pendant toute la durée des travaux jusqu'à l'achèvement des réseaux EP, avec étanchéités provisoires et renvois d'eau si nécessaire",
+      "source_document": "CCTP",
+      "source_page": 5,
+      "source_excerpt": "Le hors d'eau total du bâtiment jusqu'à l'achèvement de la réalisation des réseaux EP.",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Mettre en place des protections de l'étanchéité nécessaires à l'intervention des autres corps d'état jusqu'à la réception TCE",
+      "source_document": "CCTP",
+      "source_page": 5,
+      "source_excerpt": "Mise en place de protection de l'étanchéité nécessaire à l'intervention des autres corps d'état jusqu'à la réception TCE.",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Mettre en œuvre une isolation thermique type EFIGREEN DUO+ en deux couches de 200 mm, R ≥ 9,10 m².K/W, certifiée ACERMI, sur toiture terrasse béton non circulable sous gravillons",
+      "source_document": "CCTP",
+      "source_page": 6,
+      "source_excerpt": "isolation thermique type EFIGREEN DUO + en deux couches, 200 mm R ≥ 9,10 m². K/W, certifié ACERMI.",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Réaliser l'étanchéité sur éléments porteurs en maçonnerie conforme à la norme NF P 10-203 (NF DTU 20.12) pour les toitures terrasses béton",
+      "source_document": "CCTP",
+      "source_page": 6,
+      "source_excerpt": "L'étanchéité se fera sur des éléments porteurs en maçonnerie, conforme à la norme NF P 10-203 (NF DTU 20.12).",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Le complexe d'étanchéité des toitures terrasses béton doit répondre aux règles incendie ERP avec classement Broof T3",
+      "source_document": "CCTP",
+      "source_page": 6,
+      "source_excerpt": "Le complexe d'étanchéité devra répondre en termes de sécurité incendie aux règles des bâtiments recevant du public (ERP) Classement Broof T3.",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Mettre en œuvre un pare-vapeur avec enduit d'imprégnation à froid sans solvant, feuille bitume élastomère SBS armée voile de verre, et équerre ALSAN FLASHING 700 g/m² relevée à 6 cm au-dessus de l'isolant",
+      "source_document": "CCTP",
+      "source_page": 6,
+      "source_excerpt": "Soudure en plein d'un pare-vapeur avec recouvrement constitué d'une feuille bitume élastomère SBS armée d'un voile de verre",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Mettre en œuvre des panneaux isolants en mousse rigide de polyuréthane de 20 cm bénéficiant d'un Avis Technique ou DTA ; premier lit collé sur pare-vapeur par bandes SOPRACOLLE 300 N ou équivalent",
+      "source_document": "CCTP",
+      "source_page": 6,
+      "source_excerpt": "Panneaux en mousse rigide de polyuréthane de 20 cm d'épaisseur bénéficiant d'un Avis Technique ou Document Technique d'Application.",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Mettre en œuvre un complexe d'étanchéité bicouche élastomère SBS posé en indépendance, conforme au DTA ELASTOPHENE FLAM / SOPRALENE FLAM ou équivalent, classement FIT F5 I5 T4, avec Avis Technique",
+      "source_document": "CCTP",
+      "source_page": 6,
+      "source_excerpt": "complexe d'étanchéité est de type bicouche élastomère SBS, posé en indépendance, conforme au Document Technique d'Application",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Réaliser les relevés d'étanchéité à froid en résine bitume polyuréthane monocomposante ALSAN FLASHING (contrainte d'adhérence ≈ 4 MPa), avec isolant mince PU certifié ACERMI R > 1,5 m².K/W sous relevé",
+      "source_document": "CCTP",
+      "source_page": 6,
+      "source_excerpt": "Les relevés sont réalisés à froid, sans primaire, en résine bitume polyuréthane moncomposante ALSAN FLASHING répondant à une contrainte d'adhérence de l'ordre de 4 MPa.",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Réaliser les relevés d'étanchéité avec retour sur le dessus de l'acrotère de 0,15 m minimum, soudé sur 0,05 m minimum sur la partie courante (EIF)",
+      "source_document": "CCTP",
+      "source_page": 7,
+      "source_excerpt": "Relevé d'étanchéité avec retour sur le dessus de l'acrotère de 0,15 m minimum, soudé sur 0,05 m minimum sur la partie courante (EIF).",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Réaliser les joints de dilatation conformément à l'Avis Technique SOPRAJOINT ou équivalent",
+      "source_document": "CCTP",
+      "source_page": 7,
+      "source_excerpt": "Les joints de dilatation sont réalisés conformément à l'Avis Technique « SOPRAJOINT » - ou équivalent",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Utiliser exclusivement des produits d'étanchéité (membranes bitumineuses, enduits) fabriqués dans des sites certifiés ISO 9001",
+      "source_document": "CCTP",
+      "source_page": 7,
+      "source_excerpt": "Les produits d'étanchéité (membranes bitumineuses, enduits...) sont fabriqués dans des sites certifiés ISO 9001.",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Transmettre le dossier technique complet au Bureau de Contrôle pour les toitures terrasses béton (postes 3 et 5)",
+      "source_document": "CCTP",
+      "source_page": 7,
+      "source_excerpt": "Le dossier technique complet sera à transmettre au Bureau de Contrôle",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Mettre en œuvre la végétalisation conforme aux Règles Professionnelles pour la conception et réalisation des Terrasses et Toitures Végétalisées (édition novembre 2007)",
+      "source_document": "CCTP",
+      "source_page": 10,
+      "source_excerpt": "La mise en œuvre sera conforme aux Règles Professionnelles pour la conception et la réalisation des Terrasses et Toitures Végétalisées (Edition novembre 2007).",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Inclure une offre d'entretien de confortement de la végétalisation pour la première année ; l'entretien courant à partir de la 2e année sur contrat annuel avec prestataire habilité",
+      "source_document": "CCTP",
+      "source_page": 10,
+      "source_excerpt": "L'entretien est obligatoire. L'entreprise devra inclure une offre d'entretien de confortement (première année).",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Réaliser l'étanchéité sur éléments porteurs en tôles d'acier nervurées conforme à la norme NF P 84-206 (DTU 43.3) pour les postes sur bac acier",
+      "source_document": "CCTP",
+      "source_page": 10,
+      "source_excerpt": "L'étanchéité se fera sur des éléments porteurs en tôles d'acier nervurées conforme à la norme NF P 84-206 (DTU 43.3).",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Mettre en œuvre l'isolant thermique EFIGREEN ACIER ou équivalent, certifié ACERMI, avec Avis Technique ou DTA, fixé mécaniquement conformément à la norme DTU 43.3 (poste 7 : 4 cm, R ≥ 1,50 m².K/W)",
+      "source_document": "CCTP",
+      "source_page": 11,
+      "source_excerpt": "Panneaux en mousse polyuréthane EFIGREEN Acier, ou équivalent, de 4 cm d'épaisseur, un R ≥ 1,50 m².K/W, certifié ACERMI",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Mettre en œuvre le revêtement d'étanchéité bicouche élastomère en semi-indépendance conforme au DTA SOPRAFIX Bicouche sur bac acier (postes 7 et 8)",
+      "source_document": "CCTP",
+      "source_page": 11,
+      "source_excerpt": "Le revêtement d'étanchéité est de type bicouche élastomère, posé en semi-indépendance, conforme au document technique d'application \"SOPRAFIX Bicouche\".",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Transmettre l'avis technique au Bureau de Contrôle pour les postes sur bac acier (postes 7, 8, 9, 10, 11)",
+      "source_document": "CCTP",
+      "source_page": 11,
+      "source_excerpt": "Avis technique à transmettre au Bureau de Contrôle",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Pour le poste 8 (bac acier support PV), mettre en œuvre une première couche d'isolant laine de roche type ROCKACIER C NU de 60 mm (R ≥ 1,50 m².K/W, certifié ACERMI) puis isolant PU EFIGREEN ACIER 130 mm (R ≥ 5,90 m².K/W, certifié ACERMI)",
+      "source_document": "CCTP",
+      "source_page": 12,
+      "source_excerpt": "première couche d'isolant thermique en laine de roche de type Rockacier C nu, de 60cm d'épaisseur, un R ≥ 1,50m².K/W, certifié ACERMI",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Pour le poste 8, le complexe d'étanchéité doit avoir une Résistance au Poinçonnement Statique Rps ≥ 15 kg (classe L3) et être conforme aux règles AM8",
+      "source_document": "CCTP",
+      "source_page": 12,
+      "source_excerpt": "Il possède une Résistance au Poinçonnement Statique (Rps) ≥ 15 kg (classe L3). Classement au feu, Broof t3 et conforme aux règles AM8",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Pour le poste 8, utiliser des tôles d'acier nervuré acoustique perforées avec caractéristique d'absorption acoustique Rw + Ctr ≥ 40 dB, compris remplissage des nervures en laine de roche",
+      "source_document": "CCTP",
+      "source_page": 12,
+      "source_excerpt": "Caractéristique d'absorption acoustique : Rw + Ctr ³ 40 dB suivant étude acoustique",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Pour le poste 8, l'ensemble des procédés et systèmes mis en œuvre doit impérativement bénéficier d'un avis technique valide couvrant explicitement l'usage, les conditions de mise en œuvre, la compatibilité avec le bac acier et les charges PV",
+      "source_document": "CCTP",
+      "source_page": 13,
+      "source_excerpt": "L'ensemble des procédés et systèmes mis en œuvre devra impérativement bénéficier d'un avis technique valide.",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Mettre en œuvre les supports panneaux photovoltaïques sur toiture terrasse de type SOPRASOLAR FIX EVO TILT ou équivalent, sans percement, avec avis technique transmis au Bureau de Contrôle (poste 9)",
+      "source_document": "CCTP",
+      "source_page": 13,
+      "source_excerpt": "support d'étanchéité photovoltaïque sans percement pour toiture terrasse... type SOPRASOLAR FIX EVO TILT de chez SOPREMA ou équivalent.",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Réaliser la couverture sèche en panneau sandwich isolé (bac acier) conforme à la norme NF P 34-205-1 (DTU 40.35), classement Broof T3, avec panneau type ONDAROCK T ou équivalent, épaisseur 240 mm, R ≥ 5,42 m².K/W certifié ACERMI",
+      "source_document": "CCTP",
+      "source_page": 14,
+      "source_excerpt": "conforme à la norme NF P 34-205-1 (DTU 40.35)... Classement Broof T3... épaisseur 240mm, R ≥ 5,42 m². K/W, certifié ACERMI",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Le panneau sandwich couverture sèche doit présenter une caractéristique d'absorption acoustique Rw + Ctr ≥ 40 dB et une réaction au feu A2-s1,d0",
+      "source_document": "CCTP",
+      "source_page": 14,
+      "source_excerpt": "Caractéristique d'absorption acoustique : Rw + Ctr ³ 40 dB suivant étude acoustique... Réaction au feu A2-s1,d0",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Mettre en œuvre les supports panneaux photovoltaïques sur bac acier de type KOGYSUN i+ ou équivalent, avec ATec en cours de validité transmis au Bureau de Contrôle, sans affecter les performances mécaniques ou thermiques des panneaux sandwich",
+      "source_document": "CCTP",
+      "source_page": 15,
+      "source_excerpt": "Avis Technique (ATec) en cours de validité à transmettre... la fixation photovoltaïque ne devra pas affecter les performances techniques",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Dimensionner les gouttières et chéneaux en fonction de la surface desservie, de la pente et de la norme NFP 30.201",
+      "source_document": "CCTP",
+      "source_page": 17,
+      "source_excerpt": "La dimension de ces gouttières sera en fonction de la surface en plan desservie, de la pente et de la Norme NFP 30.201.",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Réaliser le chéneau encastré en zinc d'épaisseur 0,65 mm, finition zinc naturel, avec trop-pleins en barbacane de cuivre, carottage des murs béton et calfeutrement inclus",
+      "source_document": "CCTP",
+      "source_page": 17,
+      "source_excerpt": "L'ensemble sera réalisé en ZINC d'épaisseur 0,65mm ; finition : ZINC naturel.",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Fournir les plans EXE et notes de calcul pour le dimensionnement des sections des boîtes à eau, trop-pleins et descentes EP selon le DTU, à transmettre au Bureau de Contrôle avant exécution",
+      "source_document": "CCTP",
+      "source_page": 18,
+      "source_excerpt": "Plans EXE et note de calcul pour le dimensionnement des sections suivant le DTU à transmettre au Bureau de Contrôle",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Dimensionner en section majorée les descentes EP des noues ne comportant que 2 DEP, conformément au DTU 43.3",
+      "source_document": "CCTP",
+      "source_page": 18,
+      "source_excerpt": "pour les noues ne comportant que 2 DEP, celles-ci devront être dimensionnées en section majorée – DTU 43.3",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Mettre en œuvre les bandes solins aluminium type SOLINET ou équivalent avec joint d'étanchéité à l'air Compriband ou similaire, bande de serrage continue en aluminium et joint mastic/silicone",
+      "source_document": "CCTP",
+      "source_page": 20,
+      "source_excerpt": "bandes solins en aluminium brut type SOLINET de chez DANUALU ou équivalent, étanches à l'eau et à l'air.",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Fournir et poser des potelets d'ancrage de sécurité et ligne de vie conformes au Code du Travail, avec plan d'exécution et de positionnement validé par le CSPS en phase préparation de chantier",
+      "source_document": "CCTP",
+      "source_page": 21,
+      "source_excerpt": "Plan d'exécution et de positionnement à faire valider en phase préparation de chantier par le CSPS.",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Mettre en œuvre la voûte filante en polycarbonate conforme à la norme européenne EN 14963, classement feu B-s1,d0 (M1), avec système 1200 Joules par câble acier pour résistance à la chute de personnes",
+      "source_document": "CCTP",
+      "source_page": 22,
+      "source_excerpt": "La voûte devra être conforme à la norme européenne EN 14963... Système 1200 Joules par câble acier pour résister à la chute des personnes",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Mettre en œuvre les exutoires de désenfumage DENFC conformes à la norme NF EN 12101-2, classement feu B-s1,d0 (M1), avec embase sandwich pour bac acier isolé et costière isolée anti-condensation",
+      "source_document": "CCTP",
+      "source_page": 22,
+      "source_excerpt": "La commande à énergie alimentée par énergie pneumatique interne et/ou externe au sens de la norme NF EN 12101-2",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Réaliser les essais d'étanchéité en fin de chantier avant les OPR : mise en eau complète des toitures terrasses avec bouchonnage des naissances EP, utilisation d'un colorant type fluo ricine, et fournir un rapport d'autocontrôle dans les DOE",
+      "source_document": "CCTP",
+      "source_page": 24,
+      "source_excerpt": "La mise en eau complète de l'ensemble des toitures terrasses avec bouchonnage des naissances EP. L'utilisation d'un colorant type fluo ricine.",
+      "category": "technique",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Assurer l'évacuation provisoire des eaux pluviales pendant toute la durée du chantier jusqu'à la réception TCE (postes 16 et 17)",
+      "source_document": "CCTP",
+      "source_page": 19,
+      "source_excerpt": "Pendant la durée du chantier, l'entreprise devra l'évacuation provisoire des eaux pluviales jusqu'à réception TCE.",
+      "category": "planning",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Coordonner avec le lot Gros Œuvre pour la réception de la dalle (planéité, pentes) avant mise en œuvre de l'étanchéité sur support béton",
+      "source_document": "CCTP",
+      "source_page": 7,
+      "source_excerpt": "La réception de la dalle et notamment de sa planéité et ses pentes. La coordination avec le lot Gros Œuvre",
+      "category": "planning",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Coordonner avec le lot Revêtement de façade / Bardage Métallique pour la mise en place d'étanchéités provisoires sur dessus d'acrotères dans l'attente de la pose des couvertines isolées",
+      "source_document": "CCTP",
+      "source_page": 7,
+      "source_excerpt": "Étanchéité provisoire dessus d'acrotères, dans l'attente de la pose des couvertines « isolées » du lot Revêtement de façade.",
+      "category": "planning",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Coordonner avec le lot Charpente bois pour la réception de la charpente et le calepinage avant mise en œuvre des couvertures bac acier",
+      "source_document": "CCTP",
+      "source_page": 14,
+      "source_excerpt": "La réception de la charpente bois. La coordination avec le charpentier, pour le calepinage de la charpente",
+      "category": "planning",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    },
+    {
+      "exigence": "Communiquer la position et la section des descentes EP au Bureau de Contrôle avant exécution",
+      "source_document": "CCTP",
+      "source_page": 19,
+      "source_excerpt": "La position et la section des descentes EP seront à communiquer.",
+      "category": "planning",
+      "priority": "obligatoire",
+      "source_kind": "vault",
+      "expected_template_type": null
+    }
+  ],
+  "criteres_jugement": [],
+  "infos_marche": {
+    "objet": "Restructuration de l'école élémentaire de GUEUX (51390) - Groupe scolaire LES TILLEULS, 6 rue du Moutier",
+    "maitre_ouvrage": "Commune de GUEUX (SIRET : 354 063 810 00064)",
+    "maitre_oeuvre": null,
+    "lots": [
+      "Lot 01 - Démolition – GO – Charpente bois – Ossature bois",
+      "Lot 02 - Étanchéité - Couverture",
+      "Lot 03 - Menuiseries extérieures PVC",
+      "Lot 04 - Menuiseries extérieures alu – Serrurerie - Métallerie",
+      "Lot 05 - Revêtement de façade – ITE",
+      "Lot 06 - Plaquisterie – Menuiserie intérieure – Faux-plafonds",
+      "Lot 07 - Chape – Carrelage – Faïence",
+      "Lot 08 - Peinture – Sol souple",
+      "Lot 09 - Électricité",
+      "Lot 10 - Plomberie sanitaires",
+      "Lot 11 - Chauffage – Ventilation",
+      "Lot 12 - Ascenseur",
+      "Lot 13 - Panneaux photovoltaïques"
+    ],
+    "date_limite_reponse": null,
+    "duree_marche": null,
+    "montant_estime": null,
+    "type_procedure": null,
+    "conditions_paiement": {
+      "delai_jours": 30,
+      "avance_pct": 10,
+      "acomptes": "Acomptes mensuels sur situations de travaux"
+    },
+    "penalites_retard": "300 € HT/jour (dérogation à l'article 19 CCAG)",
+    "retenue_garantie_pct": 5,
+    "caution_remplacante": false,
+    "validite_offres_jours": null,
+    "visite_site": {
+      "obligatoire": false,
+      "details": null
+    },
+    "variantes_autorisees": null,
+    "conditions_sous_traitance": "Sous-traitance directe et indirecte autorisée avec acceptation et agrément obligatoires. Paiement direct obligatoire. Caution personnelle et solidaire exigée pour sous-traitants de rang 2 et plus dans les 8 jours de l'acceptation.",
+    "assurances_specifiques": [
+      "RC en cours de travaux : 8 M€/sinistre tous dommages confondus (dont 2 M€ dommages matériels et immatériels, dont 1 M€ immatériels non consécutifs)",
+      "RC après travaux : 3 M€/an minimum (dont 1,5 M€ immatériels non consécutifs)",
+      "Assurance décennale en cours de validité à la date d'ouverture du chantier",
+      "Garantie de bon fonctionnement (art. 1792-3 Code civil)",
+      "Garantie des dommages aux existants en cas de réhabilitation",
+      "Garantie des dommages immatériels consécutifs aux dommages décennaux"
+    ]
+  },
+  "_meta": {
+    "elapsed_seconds": 204.7,
+    "pass1_chars": 120635,
+    "pass2_chars": 69437,
+    "model": "claude-sonnet-4-6"
+  }
+}
