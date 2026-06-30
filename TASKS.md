@@ -1,16 +1,37 @@
 # TASKS — Synorix (backlog)
 
 Backlog cochable. Chaque tâche a un **critère de « fini » objectif** (test vert / comportement vérifiable).
-Source d'extraction : `SECURITY_AUDIT_REPORT.md` (29 avr 2026) et `IMPROVEMENT_ROADMAP.md` (29 avr 2026), supprimés après report ici.
+Convention priorité : **P0** = en cours / prochaine étape · **P1** = court terme · **P2** = moyen terme · **P3** = plus tard.
 
-Convention priorité : **P1** = court terme · **P2** = moyen terme · **P3** = plus tard.
+---
+
+## 🗄️ P0 — Phase 1 RAG réglementaire (PROCHAINE ÉTAPE)
+
+Objectif : brancher le corpus réglementaire (Code de la commande publique d'abord) pour que la génération mémoire et l'analyse DCE citent des articles **réels et sourcés**. Socle posé : migration `0003_rag_corpus_pgvector` (table `rag_chunks`, extension `vector`, index HNSW + GIN FTS). PDF en place : `backend/rag_corpus/reglementation-marches-publics/`. Mesures de référence : `docs/rag/PHASE0-*`.
+
+- [ ] **1. Ingestion CCP (extraction texte)**
+  Fini = un loader lit le PDF `backend/rag_corpus/reglementation-marches-publics/Code de la commande publique.pdf` et produit un texte structuré (parties/livres/articles) ; test sur ≥1 article connu (ex. `R2143-3`) retrouve son texte intégral.
+- [ ] **2. Chunking par article**
+  Fini = le découpage produit un chunk par article (pas de troncature mi-article) ; un test vérifie qu'un article long n'est pas coupé et que `article_ref` est renseigné.
+- [ ] **3. Contextualisation (Haiku)**
+  Fini = chaque chunk reçoit un `contexte` court généré (contextual retrieval) ; test : le contexte mentionne le titre/section parent de l'article.
+- [ ] **4. Embeddings Voyage**
+  Fini = chaque chunk a un `embedding` de dimension `VECTOR_DIM` (1024) via le modèle Voyage retenu ; test : appel embeddings renvoie un vecteur de bonne dimension (clé API mockée en CI).
+- [ ] **5. Indexation pgvector**
+  Fini = les chunks (contenu + contexte + embedding + FTS) sont insérés dans `rag_chunks` ; `SELECT count(*)` > 0 et l'index HNSW est utilisé (`EXPLAIN` montre l'index).
+- [ ] **6. Retriever hybride (vector + FTS + RRF + rerank)**
+  Fini = une fonction `retrieve(query, k)` combine ANN cosine + FTS français, fusionne par **RRF**, puis **rerank** ; test : top-k contient l'article attendu pour une requête test.
+- [ ] **7. Validation bout-en-bout**
+  Fini = une requête réglementaire réelle (ex. « assiette de la retenue de garantie ») retourne le **bon article cité** (numéro exact) en tête de résultat — vérifié par un test d'intégration.
+- [ ] **Migration 0003 en prod** — `CREATE EXTENSION vector` validé.
+  Fini = `alembic upgrade head` passe sur la prod avec pgvector installé côté serveur PostgreSQL (cf. `docs/rag/PHASE0-*`).
 
 ---
 
 ## 🔒 Sécurité (résidus de l'audit du 29 avr — failles critiques/hautes déjà corrigées)
 
-- [ ] **SEC-RESID-1 — Tests d'intégration cross-org** (P1)
-  Fini = un test `backend/tests/test_file_serve_cross_org_blocked.py` est VERT : un user de l'org A reçoit `403/404` en accédant à un fichier (`/api/files/view/...`) et à un projet de l'org B.
+- [x] **SEC-RESID-1 — Tests d'intégration cross-org** ✅ FAIT
+  Couvert par `backend/tests/test_security_cross_org.py` (9 tests verts) : `test_user_b_cannot_view_user_a_project_file` (file_serve cross-org → 403/404, pas de fuite de corps), `test_path_traversal_blocked`, `test_unknown_prefix_blocked`, + cross-org projet/document/référence.
 - [ ] **SEC-RESID-2 — Audit XSS frontend exhaustif** (P1)
   Fini = `grep -rn "dangerouslySetInnerHTML\|innerHTML" frontend/src` revu ; chaque occurrence est sanitisée ou justifiée par écrit ; rendu de l'éditeur de mémoire vérifié sur un payload `<script>`/`<img onerror>` (pas d'exécution).
 - [ ] **SEC-RESID-5 — Alerting exceptions (Sentry)** (P1)
@@ -30,8 +51,9 @@ Convention priorité : **P1** = court terme · **P2** = moyen terme · **P3** = 
 
 ## 💶 Coût & robustesse IA
 
-- [ ] **Coût IA / mémoire < 0,10 €** (P1)
-  Fini = mesure réelle sur une génération complète (prompt caching Anthropic + fragments DB) loggée sous 0,10 €.
+- [ ] **Réduire le coût de génération mémoire via prompt caching** (P1)
+  Réalité mesurée : **~€0,90 / mémoire en full-Sonnet** (DCE Gueux ; vs ~€6 en Opus, cf. `docs/comparaison-memoire-AB/RESULTAT.md`). Cible : abaisser via prompt caching Anthropic (préfixe stable caché par modèle) + fragments DB.
+  Fini = mesure réelle sur une génération complète loggée **< €0,50 / mémoire** grâce au cache (cache_read effectif sur les segments consécutifs), sans perte de densité normative.
 
 ---
 
@@ -59,10 +81,3 @@ Convention priorité : **P1** = court terme · **P2** = moyen terme · **P3** = 
 - [ ] **Intégration ERP BTP** (Sage Batigest / Codial / Onaya) — export DPGF compatible. Fini = export ouvert sans erreur dans un ERP cible.
 - [ ] **SSO SAML** (plan Entreprise). Fini = login SSO test réussi.
 - [ ] **Multi-langue (EN/ES)** — i18n + prompts bilingues. *(P3 — repoussé : marché FR prioritaire.)*
-
----
-
-## 🗄️ RAG réglementaire (en cours)
-
-- [ ] **Ingestion du corpus `backend/rag_corpus/`** (PDF Code de la commande publique). Fini = `rag_chunks` peuplée + une requête hybride (vector + FTS) retourne un article pertinent.
-- [ ] **Migration 0003 en prod** — `CREATE EXTENSION vector` validé. Fini = `alembic upgrade head` passe sur la prod avec pgvector installé (cf. `docs/rag/PHASE0-*`).
