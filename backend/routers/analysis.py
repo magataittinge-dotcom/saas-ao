@@ -412,6 +412,31 @@ def get_tresorerie(
     return {"lot": project.selected_lot, "lignes": lignes}
 
 
+@router.get("/{project_id}/retroplanning")
+def get_retroplanning(
+    project_id: str,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """C20 — rétro-planning du lot courant, dérivé des champs critiques (C5)."""
+    from services.critical_fields import build_critical_fields
+    from services.retroplanning import build_retroplanning
+
+    project = _get_project_or_404(project_id, user.organization_id, db)
+    lot_key = project.selected_lot or "_all"
+    cache = dict(project.critical_fields or {})
+    if lot_key not in cache:
+        docs = db.query(ProjectDocument).filter(
+            ProjectDocument.project_id == project_id,
+        ).all()
+        cache[lot_key] = build_critical_fields(
+            project.infos_marche, project.criteres_jugement, docs,
+        )
+        project.critical_fields = cache
+        db.commit()
+    return {"lot": project.selected_lot, "steps": build_retroplanning(cache[lot_key])}
+
+
 def _get_project_or_404(project_id: str, org_id: str, db: Session) -> Project:
     project = db.query(Project).filter(
         Project.id == project_id,
