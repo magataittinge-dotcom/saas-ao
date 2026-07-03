@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime, Text, Enum as SAEnum
+from sqlalchemy import Boolean, Column, String, DateTime, Text, Enum as SAEnum
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -42,6 +42,13 @@ class Organization(Base):
     # Ancre du reset mensuel des quotas (C1) : date de souscription au plan
     # payant. NULL tant que l'org est en free — fallback sur created_at.
     subscription_started_at = Column(DateTime, nullable=True)
+
+    # Vérification Sirene (C2). trial_granted passe à False si le SIRET a déjà
+    # servi à un essai gratuit (1 SIRET = 1 essai — le compte, lui, vit).
+    siret_verified = Column(Boolean, nullable=False, default=False, server_default="0")
+    trial_granted = Column(Boolean, nullable=False, default=True, server_default="1")
+    naf_code = Column(String(10), nullable=True)
+    effectif_tranche = Column(String(80), nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)
 

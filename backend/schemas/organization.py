@@ -6,7 +6,10 @@ from datetime import datetime
 class OrganizationResponse(BaseModel):
     id: str
     name: str
-    siret: str
+    siret: Optional[str]
+    siret_verified: bool = False
+    naf_code: Optional[str] = None
+    effectif_tranche: Optional[str] = None
     address: Optional[str]
     logo_url: Optional[str]
     presentation: Optional[str]

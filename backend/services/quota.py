@@ -73,7 +73,11 @@ def _next_reset(anchor: datetime, now: Optional[datetime] = None) -> datetime:
 
 
 def _plan_limits(org: Organization) -> dict:
-    return PLAN_LIMITS.get(org.plan or "free", PLAN_LIMITS["free"])
+    limits = PLAN_LIMITS.get(org.plan or "free", PLAN_LIMITS["free"])
+    # 1 SIRET = 1 essai gratuit (C2) : essai non accordé → free à zéro unité.
+    if (org.plan or "free") == "free" and getattr(org, "trial_granted", True) is False:
+        return {**limits, "analysis": 0, "memoire": 0}
+    return limits
 
 
 def _quota_anchor(org: Organization) -> datetime:
@@ -117,7 +121,13 @@ def check_quota(db: Session, org: Organization, kind: str) -> None:
 
     plan = org.plan or "free"
     if plan == "free":
-        detail = _UPGRADE_MESSAGES["free"]
+        if getattr(org, "trial_granted", True) is False:
+            detail = (
+                "L'essai gratuit a déjà été utilisé pour ce SIRET. "
+                "Passez au plan Pro (40 analyses + 40 mémoires/mois) pour continuer."
+            )
+        else:
+            detail = _UPGRADE_MESSAGES["free"]
     else:
         detail = _UPGRADE_MESSAGES["pro"].format(
             used=used, limit=limit, label=_KIND_LABELS[kind],

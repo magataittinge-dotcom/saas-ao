@@ -12,6 +12,7 @@ from database import get_db
 from config import get_settings
 from models.user import User
 from models.organization import Organization
+from services import insee_service
 
 logger = logging.getLogger(__name__)
 
@@ -138,22 +139,87 @@ def sync_onboarding(
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ):
-    """Post-signup: set organization name, SIRET, plan."""
+    """Post-signup: set organization name, SIRET, plan.
+
+    C2 — le SIRET est vérifié via l'API Sirene et pré-remplit le profil.
+    Aucun échec Sirene ne bloque l'inscription (fallback saisie manuelle) ;
+    seule règle dure : 1 SIRET = 1 essai gratuit (le doublon garde son compte
+    mais perd l'essai)."""
     org = db.query(Organization).filter(Organization.id == user.organization_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Organisation introuvable")
 
     if payload.get("organization_name"):
         org.name = payload["organization_name"]
-    if payload.get("siret"):
-        org.siret = payload["siret"]
     if payload.get("plan") and payload["plan"] in ("free", "pro", "business"):
         org.plan = payload["plan"]
 
+    siret_warning = None
+    if payload.get("siret"):
+        siret_warning = _apply_siret(
+            org, payload["siret"], db,
+            name_provided=bool(payload.get("organization_name")),
+        )
+
     db.commit()
     db.refresh(org)
-    db.refresh(user)
-    return {"user": _user_response(user), "organization": org}
+    if user in db:  # même session que get_db (prod) ; sinon l'objet est déjà à jour
+        db.refresh(user)
+    response = {"user": _user_response(user), "organization": org}
+    if siret_warning:
+        response["siret_warning"] = siret_warning
+    return response
+
+
+def _apply_siret(org: Organization, raw_siret: str, db: Session, name_provided: bool = False):
+    """Valide, dédoublonne et enrichit le profil org depuis Sirene.
+
+    Retourne un message d'avertissement à afficher, ou None si tout est ok."""
+    try:
+        siret = insee_service.normalize_siret(raw_siret)
+    except insee_service.SiretFormatError as exc:
+        return f"SIRET invalide : {exc} Vous pourrez le corriger dans Mon entreprise."
+
+    duplicate = db.query(Organization).filter(
+        Organization.siret == siret,
+        Organization.id != org.id,
+    ).first()
+    if duplicate:
+        org.trial_granted = False
+        return (
+            "Ce SIRET est déjà associé à un compte Synorix : l'essai gratuit a "
+            "déjà été utilisé pour cette entreprise. Votre compte est créé — "
+            "passez au plan Pro pour lancer vos analyses."
+        )
+
+    org.siret = siret
+    try:
+        info = insee_service.lookup_siret(siret)
+    except insee_service.SiretNotFoundError:
+        org.siret_verified = False
+        return (
+            "SIRET introuvable au répertoire Sirene — vérifiez le numéro ou "
+            "complétez votre profil manuellement dans Mon entreprise."
+        )
+    except insee_service.SireneUnavailableError:
+        org.siret_verified = False
+        return (
+            "La vérification Sirene est momentanément indisponible — votre "
+            "profil pourra être complété manuellement dans Mon entreprise."
+        )
+
+    org.siret_verified = True
+    # La raison sociale officielle pré-remplit le nom, sauf si l'utilisateur
+    # vient d'en saisir un lui-même dans ce même formulaire.
+    if info.raison_sociale and not name_provided:
+        org.name = info.raison_sociale
+    if info.adresse and not org.address:
+        org.address = info.adresse
+    if info.naf_code:
+        org.naf_code = info.naf_code
+    if info.effectif_tranche:
+        org.effectif_tranche = info.effectif_tranche
+    return None
 
 
 def _user_response(user: User) -> dict:
