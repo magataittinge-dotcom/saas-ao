@@ -5,12 +5,16 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models.user import User
-from models.document import Document
-from schemas.document import DocumentResponse
+from models.document import Document, DOCUMENT_TYPES, VAULT_CATEGORIES
+from schemas.document import DocumentResponse, DocumentUpdateRequest
 from routers.auth import get_auth_user
 from services.audit_logger import log_action
 from services.file_storage import FileStorage
-from services.expiry_checker import compute_status
+from services.vault_classifier import (
+    category_for_type,
+    compute_document_status,
+    detect_vault_type,
+)
 
 router = APIRouter()
 storage = FileStorage()
@@ -89,11 +93,18 @@ async def upload_document(
 
     exp_date = date.fromisoformat(expiry_date) if expiry_date else None
     iss_date = date.fromisoformat(issued_date) if issued_date else None
-    status = compute_status(exp_date)
+
+    # États honnêtes : « valide » = reconnu ET daté, jamais « fichier reçu ».
+    # Un type explicite du front prime ; sinon classement auto par nom de
+    # fichier ; rien de reconnu → unclassified (aucun badge de validité).
+    doc_type = type if type and type != "autre" else detect_vault_type(file.filename or "")
+    category = "unclassified" if doc_type == "autre" else category_for_type(doc_type)
+    status = compute_document_status(doc_type, exp_date)
 
     doc = Document(
         organization_id=user.organization_id,
-        type=type,
+        type=doc_type,
+        category=category,
         file_url=file_url,
         file_name=file.filename,
         issued_date=iss_date,
@@ -107,6 +118,50 @@ async def upload_document(
         db, user, "vault.upload",
         target_type="document", target_id=doc.id,
         extra={"type": type, "file_name": file.filename, "size": len(content)},
+    )
+    return doc
+
+
+@router.patch("/{doc_id}", response_model=DocumentResponse)
+def update_document(
+    doc_id: str,
+    payload: DocumentUpdateRequest,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """Re-classement manuel (catégorie + type + dates) — ownership org vérifié.
+
+    Le statut est recalculé honnêtement : type reconnu + date → validité
+    réelle ; sans date → unverified ; type "autre" → unclassified."""
+    doc = db.query(Document).filter(
+        Document.id == doc_id,
+        Document.organization_id == user.organization_id,
+        Document.deleted_at.is_(None),
+    ).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document introuvable")
+
+    if payload.type is not None:
+        if payload.type not in DOCUMENT_TYPES:
+            raise HTTPException(status_code=422, detail=f"Type inconnu : {payload.type}")
+        doc.type = payload.type
+        doc.category = category_for_type(payload.type)
+    if payload.category is not None:
+        if payload.category not in VAULT_CATEGORIES:
+            raise HTTPException(status_code=422, detail=f"Catégorie inconnue : {payload.category}")
+        doc.category = payload.category
+    if payload.issued_date is not None:
+        doc.issued_date = payload.issued_date
+    if payload.expiry_date is not None:
+        doc.expiry_date = payload.expiry_date
+
+    doc.status = compute_document_status(doc.type, doc.expiry_date)
+    db.commit()
+    db.refresh(doc)
+    log_action(
+        db, user, "vault.reclassify",
+        target_type="document", target_id=doc.id,
+        extra={"type": doc.type, "category": doc.category, "status": doc.status},
     )
     return doc
 

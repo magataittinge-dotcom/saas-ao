@@ -1,5 +1,6 @@
-import { FileText, Trash2, ExternalLink } from 'lucide-react'
+import { FileText, Trash2, ExternalLink, Tag, Pencil } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { DOC_TYPE_LABELS } from '@/lib/vault'
 import { getSignedFileUrl } from '@/services/api'
 import { StatusBadge, documentStatusBadge } from './StatusBadge'
 import type { Document } from '@/types'
@@ -7,20 +8,12 @@ import type { Document } from '@/types'
 interface Props {
   document: Document
   onDelete?: (id: string) => void
+  onEdit?: (document: Document) => void
 }
 
-const docTypeLabels: Record<string, string> = {
-  urssaf: 'Attestation URSSAF', kbis: 'KBIS', decennale: 'Décennale',
-  rc_civile: 'RC Civile', qualibat: 'Qualibat RGE', pro_btp: 'PRO BTP',
-  cibtp: 'CIBTP', fiscal: 'Attestation fiscale', dc1: 'DC1', dc2: 'DC2',
-  rib: 'RIB', caces: 'CACES', amiante_ss4: 'Amiante SS4',
-  declaration_honneur: "Déclaration sur l'honneur", pouvoir: 'Pouvoir habilité',
-  organigramme_doc: 'Organigramme', chiffre_affaires: "Chiffre d'affaires",
-  effectifs: 'Effectifs', autre: 'Autre',
-}
-
-export function FileCard({ document, onDelete }: Props) {
+export function FileCard({ document, onDelete, onEdit }: Props) {
   const badge = documentStatusBadge(document.status)
+  const isUnclassified = document.status === 'unclassified'
 
   const openFile = async () => {
     try {
@@ -45,9 +38,11 @@ export function FileCard({ document, onDelete }: Props) {
         </div>
         <div className="min-w-0">
           <p className="text-sm font-medium text-ds-text truncate">
-            {docTypeLabels[document.type] ?? document.type}
+            {isUnclassified ? document.file_name : (DOC_TYPE_LABELS[document.type] ?? document.type)}
           </p>
-          <p className="text-xs text-ds-text-2 truncate">{document.file_name}</p>
+          {!isUnclassified && (
+            <p className="text-xs text-ds-text-2 truncate">{document.file_name}</p>
+          )}
           {document.expiry_date && (
             <p className="text-xs text-ds-text-3">
               Expire le {formatDate(document.expiry_date)}
@@ -57,6 +52,25 @@ export function FileCard({ document, onDelete }: Props) {
       </div>
       <div className="flex items-center gap-2 ml-2 shrink-0">
         <StatusBadge label={badge.label} variant={badge.variant} />
+        {onEdit && (
+          isUnclassified ? (
+            <button
+              onClick={() => onEdit(document)}
+              className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold transition-colors"
+              style={{ color: '#0EA5E9', background: 'rgba(14,165,233,0.10)' }}
+            >
+              <Tag size={12} /> Classer
+            </button>
+          ) : (
+            <button
+              onClick={() => onEdit(document)}
+              title="Modifier (catégorie, type, dates)"
+              className="p-1.5 text-ds-text-3 hover:text-ds-text rounded transition-colors"
+            >
+              <Pencil size={14} />
+            </button>
+          )
+        )}
         <button
           onClick={openFile}
           title="Ouvrir le document"

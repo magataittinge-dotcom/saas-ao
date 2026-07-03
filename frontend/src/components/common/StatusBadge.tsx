@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils'
 import type { ComplianceStatus, DocumentStatus, ProjectStatus } from '@/types'
 
-type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral'
+type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'amber'
 
 const variantStyles: Record<BadgeVariant, React.CSSProperties> = {
   success: { background: 'rgba(14,165,233,0.10)', color: '#0284C7',  border: '1px solid rgba(14,165,233,0.20)' },
@@ -9,6 +9,7 @@ const variantStyles: Record<BadgeVariant, React.CSSProperties> = {
   danger:  { background: 'rgba(239,68,68,0.10)',  color: '#DC2626',  border: '1px solid rgba(239,68,68,0.20)'  },
   info:    { background: 'rgba(14,165,233,0.10)', color: '#0284C7',  border: '1px solid rgba(14,165,233,0.20)' },
   neutral: { background: '#F8FAFC', color: '#475569',  border: '1px solid #E2E8F0'},
+  amber:   { background: 'rgba(245,158,11,0.10)', color: '#B45309',  border: '1px solid rgba(245,158,11,0.25)' },
 }
 
 interface Props {
@@ -41,11 +42,13 @@ export function complianceStatusBadge(status: ComplianceStatus) {
 
 export function documentStatusBadge(status: DocumentStatus) {
   const map: Record<DocumentStatus, { label: string; variant: BadgeVariant }> = {
-    valid:          { label: '🟢 Valide',        variant: 'success' },
+    valid:          { label: '✓ Valide',         variant: 'success' },
     expiring_soon:  { label: '🟠 Expire bientôt',variant: 'warning' },
-    expired:        { label: '🔴 Expiré',        variant: 'danger'  },
+    expired:        { label: '✗ Expiré',         variant: 'danger'  },
+    unverified:     { label: '⚠️ À vérifier',    variant: 'amber'   },
+    unclassified:   { label: 'Non classé',       variant: 'neutral' },
   }
-  return map[status]
+  return map[status] ?? map.unclassified
 }
 
 export function projectStatusBadge(status: ProjectStatus) {

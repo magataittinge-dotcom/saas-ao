@@ -12,6 +12,27 @@ export function useDocuments() {
   })
 }
 
+export interface DocumentUpdatePayload {
+  type?: string
+  category?: string
+  issued_date?: string
+  expiry_date?: string
+}
+
+export function useUpdateDocument() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ id, payload }: { id: string; payload: DocumentUpdatePayload }) => {
+      const { data } = await api.patch<Document>(`/documents/${id}`, payload)
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['documents'] })
+    },
+  })
+}
+
 export function useDeleteDocument() {
   const queryClient = useQueryClient()
 

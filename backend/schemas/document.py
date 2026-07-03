@@ -7,6 +7,7 @@ class DocumentResponse(BaseModel):
     id: str
     organization_id: str
     type: str
+    category: str
     file_url: str
     file_name: str
     issued_date: Optional[date]
@@ -15,6 +16,14 @@ class DocumentResponse(BaseModel):
     uploaded_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class DocumentUpdateRequest(BaseModel):
+    """Re-classement manuel d'un document du coffre-fort (PATCH)."""
+    type: Optional[str] = None
+    category: Optional[str] = None
+    issued_date: Optional[date] = None
+    expiry_date: Optional[date] = None
 
 
 class ProjectDocumentResponse(BaseModel):

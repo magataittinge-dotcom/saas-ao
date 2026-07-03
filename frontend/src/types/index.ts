@@ -59,12 +59,23 @@ export type DocumentType =
   | 'effectifs'
   | 'autre'
 
-export type DocumentStatus = 'valid' | 'expiring_soon' | 'expired'
+// « valid » = document reconnu ET daté — jamais « fichier reçu ».
+export type DocumentStatus = 'valid' | 'expiring_soon' | 'expired' | 'unverified' | 'unclassified'
+
+export type VaultCategory =
+  | 'attestations_sociales_fiscales'
+  | 'documents_legaux'
+  | 'assurances'
+  | 'qualifications'
+  | 'references_moyens'
+  | 'autres'
+  | 'unclassified'
 
 export interface Document {
   id: string
   organization_id: string
   type: DocumentType
+  category: VaultCategory
   file_url: string
   file_name: string
   issued_date?: string

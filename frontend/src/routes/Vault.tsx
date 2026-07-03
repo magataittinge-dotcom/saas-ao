@@ -1,30 +1,22 @@
 import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { Upload, Archive } from 'lucide-react'
+import { Upload, Archive, Tag } from 'lucide-react'
 import { useDocuments, useDeleteDocument } from '@/hooks/useDocuments'
 import { uploadService } from '@/services/upload'
 import { FileCard } from '@/components/common/FileCard'
 import { ExpiryAlert } from '@/components/common/ExpiryAlert'
+import ClassifyDocumentModal from '@/components/vault/ClassifyDocumentModal'
 import { DocumentListSkeleton } from '@/components/skeletons'
 import { useQueryClient } from '@tanstack/react-query'
-import type { DocumentType } from '@/types'
-
-const CATEGORIES: { label: string; types: DocumentType[] }[] = [
-  { label: 'Assurances', types: ['decennale', 'rc_civile'] },
-  { label: 'Social', types: ['urssaf', 'pro_btp', 'cibtp'] },
-  { label: 'Fiscal', types: ['fiscal'] },
-  { label: 'Juridique', types: ['kbis', 'declaration_honneur', 'pouvoir'] },
-  { label: 'Qualifications', types: ['qualibat', 'caces', 'amiante_ss4'] },
-  { label: 'Formulaires', types: ['dc1', 'dc2', 'rib'] },
-  { label: 'Entreprise', types: ['organigramme_doc', 'chiffre_affaires', 'effectifs'] },
-  { label: 'Autres', types: ['autre'] },
-]
+import { VAULT_CATEGORY_LABELS, VAULT_CATEGORY_ORDER } from '@/lib/vault'
+import type { Document } from '@/types'
 
 export default function Vault() {
   const queryClient = useQueryClient()
   const { data: documents = [], isLoading } = useDocuments()
   const { mutate: deleteDocument } = useDeleteDocument()
   const [isUploading, setIsUploading] = useState(false)
+  const [editingDoc, setEditingDoc] = useState<Document | null>(null)
 
   const expiringDocs = documents.filter(
     (d) => (d.status === 'expired' || d.status === 'expiring_soon') && d.expiry_date,
@@ -94,22 +86,47 @@ export default function Vault() {
         <p className="text-xs text-ds-text-3 mt-1">PDF — 20 MB max</p>
       </div>
 
-      {/* Documents by category */}
+      {/* Documents par catégorie — « Non classés » en tête (à traiter) */}
       {isLoading ? (
         <DocumentListSkeleton count={6} />
       ) : (
         <>
-          {CATEGORIES.map(({ label, types }) => {
-            const catDocs = documents.filter((d) => types.includes(d.type))
-            if (catDocs.length === 0) return null
+          {(() => {
+            const unclassified = documents.filter((d) => d.category === 'unclassified')
+            if (unclassified.length === 0) return null
             return (
-              <div key={label}>
-                <h2 className="text-sm font-semibold text-ds-text-2 mb-2">{label}</h2>
+              <div className="rounded-xl p-3"
+                style={{ background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.20)' }}>
+                <h2 className="flex items-center gap-2 text-sm font-semibold mb-2" style={{ color: '#B45309' }}>
+                  <Tag size={14} />
+                  Non classés ({unclassified.length}) — à classer pour être utilisables dans vos candidatures
+                </h2>
                 <div className="space-y-2">
-                  {catDocs.map((doc) => (
-                    <FileCard key={doc.id} document={doc} onDelete={deleteDocument} />
+                  {unclassified.map((doc) => (
+                    <FileCard key={doc.id} document={doc} onDelete={deleteDocument} onEdit={setEditingDoc} />
                   ))}
                 </div>
+              </div>
+            )
+          })()}
+
+          {VAULT_CATEGORY_ORDER.map((category) => {
+            const catDocs = documents.filter((d) => d.category === category)
+            return (
+              <div key={category} className={catDocs.length === 0 ? 'opacity-50' : undefined}>
+                <h2 className="text-sm font-semibold text-ds-text-2 mb-2">
+                  {VAULT_CATEGORY_LABELS[category]}
+                  <span className="ml-2 text-xs font-normal text-ds-text-3">({catDocs.length})</span>
+                </h2>
+                {catDocs.length > 0 ? (
+                  <div className="space-y-2">
+                    {catDocs.map((doc) => (
+                      <FileCard key={doc.id} document={doc} onDelete={deleteDocument} onEdit={setEditingDoc} />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-ds-text-3 pb-1">Aucun document</p>
+                )}
               </div>
             )
           })}
@@ -122,6 +139,10 @@ export default function Vault() {
             </div>
           )}
         </>
+      )}
+
+      {editingDoc && (
+        <ClassifyDocumentModal document={editingDoc} onClose={() => setEditingDoc(null)} />
       )}
     </div>
   )

@@ -24,7 +24,20 @@ DOCUMENT_TYPES = [
     "autre",
 ]
 
-DOCUMENT_STATUSES = ["valid", "expiring_soon", "expired"]
+# « valid » = document reconnu ET daté — jamais « fichier reçu ».
+#   unverified   → type reconnu mais date de validité inconnue (à saisir)
+#   unclassified → type non reconnu (jamais de badge de validité)
+DOCUMENT_STATUSES = ["valid", "expiring_soon", "expired", "unverified", "unclassified"]
+
+VAULT_CATEGORIES = [
+    "attestations_sociales_fiscales",  # URSSAF, fiscale, PRO BTP, CIBTP
+    "documents_legaux",                # KBIS, RIB, pouvoirs...
+    "assurances",                      # décennale, RC pro...
+    "qualifications",                  # Qualibat/RGE, CACES, SS4
+    "references_moyens",               # CA, effectifs, organigramme...
+    "autres",                          # classé manuellement, hors cases ci-dessus
+    "unclassified",                    # non reconnu — en attente de classement
+]
 
 
 class Document(Base):
@@ -43,7 +56,11 @@ class Document(Base):
     file_name = Column(String(255), nullable=False)
     issued_date = Column(Date, nullable=True)
     expiry_date = Column(Date, nullable=True, index=True)
-    status = Column(SAEnum(*DOCUMENT_STATUSES, name="document_status"), nullable=False, default="valid")
+    status = Column(SAEnum(*DOCUMENT_STATUSES, name="document_status"), nullable=False, default="unclassified")
+    category = Column(
+        String(40), nullable=False, default="unclassified", server_default="unclassified",
+        index=True,
+    )
     uploaded_at = Column(DateTime, default=datetime.utcnow)
     deleted_at = Column(DateTime, nullable=True, index=True)  # soft-delete
 
