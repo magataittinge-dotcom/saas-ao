@@ -4,10 +4,10 @@
 
 | Field | Value |
 |---|---|
-| Document version | 2.4 |
-| Status | Active — drives the `refactor-v2` engineering build |
+| Document version | 2.5 |
+| Status | Active — aligné sur **Vision V1 FINALE** (PRD v3.0, 2026-07-01) |
 | Companion to | [`PRD_SYNORIX_V2.md`](./PRD_SYNORIX_V2.md), [`SKILLS_REGISTRY_V2.md`](./SKILLS_REGISTRY_V2.md) |
-| Last updated | 2026-05-13 |
+| Last updated | 2026-07-01 |
 
 ---
 
@@ -176,9 +176,11 @@ This is deliberate — the V2.0 success criterion is *ship & be impressive*, not
 
 | Model | Use | Avg cost / call | Skills assigned |
 |---|---|---|---|
-| **Claude Haiku 4.5** | Lightweight classification, deterministic extraction, fast routing | €0.005–0.02 | Steps 1, validation, low-stakes |
+| **Claude Haiku 4.5** | Lightweight classification, deterministic extraction, fast routing, **reformulation de texte libre du profil** | €0.005–0.02 | Steps 1, validation, low-stakes, profil mémoire vivant (§3.7) |
 | **Claude Sonnet 4.6** | Bulk analysis, extraction-with-reasoning, long-form memo composition | €0.02–0.90 | Steps 2 & 3 (extraction + alerts), **Step 4 memo composition** |
-| **Claude Opus 4.7** | Targeted paragraph rewrite, high-stakes synthesis | €0.10–0.30 | Paragraph rewrite (editeur), Synorix Score evaluation |
+| **Claude Opus 4.7** | Targeted paragraph rewrite, high-stakes synthesis, **fallback** | €0.10–0.30 | Réécriture ciblée de paragraphe (éditeur mémoire) + fallback |
+
+> **Synorix Score = déterministe 0 € (Vision V1 FINALE).** Le go/no-go d'éligibilité (PRD §1.7 D1) et le score de conformité étape 5 (« 14/16 », PRD §3.5) sont **calculés sans LLM** sur les données déjà extraites — Opus n'y intervient **pas**. Le Synorix Score qualité mémoire /100 (LLM) est déclassé en V1.5.
 
 ### 3.2 Cost target per AO
 
@@ -188,13 +190,13 @@ This is deliberate — the V2.0 success criterion is *ship & be impressive*, not
 | 2 — Lots | Sonnet 4.6 | €0.05 |
 | 3 — AI Analysis | Sonnet 4.6 | €0.40 |
 | 4 — Memo | Sonnet 4.6 | ~€0.50† |
-| 5 — Verification | Sonnet 4.6 (Opus only for Synorix Score) | included |
+| 5 — Verification | Déterministe 0 € (score conformité, dates, DPGF, signatures) ; Sonnet 4.6 résiduel pour le matching exigences↔pièces | ~€0.02 |
 | 6 — Export | none | €0 |
 | **Total per AO** | | **~€1.0†** |
 
 > † **Mesuré (full-Sonnet).** La génération mémoire tourne sur Sonnet 4.6 (tous segments), pas Opus. Mesure sur le DCE Gueux (gros DCE) : mémoire ≈ **€0.90 en Sonnet vs ~€6 en Opus** (~7× moins cher), cf. `docs/comparaison-memoire-AB/RESULTAT.md`. Coût/AO réel mesuré **~€1**, dominé par la mémoire ; Opus 4.7 n'est utilisé que pour la réécriture ciblée de paragraphe et le Synorix Score.
 
-At ~30 AO/month per customer on Pro (€299) → ~€30 of AI cost → **>90% gross margin** (Sonnet étant ~7× moins cher qu'Opus, la marge reste préservée).
+À ~40 mémoires/mois sur Pro (€349) → ~€40 de coût IA → **>90 % de marge brute** (Sonnet ~7× moins cher qu'Opus ; le profil mémoire vivant + prompt caching abaissent le coût des mémoires suivants à **< €0,50**).
 
 ### 3.3 Prompt caching
 
@@ -235,6 +237,15 @@ Frontend connects via `EventSource` and progressively renders.
 | 5xx | 1 retry; on persistent failure, surface a banner with "réessayer" CTA |
 | Cost guard breach | Soft cap per user/day; hard cap per account; alert via Sentry |
 | Output validation failure (Pydantic schema mismatch) | Retry with stricter prompt; on second failure, log + surface graceful error |
+
+### 3.7 Profil mémoire vivant <!-- v2.5 - vision V1 FINALE -->
+
+Le profil entreprise est une **couche stable persistée en BDD** (`companies`, §4.2) — c'est le *profil mémoire vivant* du PRD §4.2. Il vit dans « Mon entreprise » (onglets Identité / Moyens / Certifications), **pas** dans une entrée « mémoire technique » séparée.
+
+- **Lecture au moment T.** La génération du mémoire (Step 4) lit le profil **à l'instant de la génération** ; aucune reconstruction depuis zéro à chaque AO.
+- **Overrides locaux par mémoire.** Les modifications faites dans le pre-flight preview sont **locales au mémoire** par défaut (`memos.profile_overrides`, §4.3) ; une case « mettre à jour mon profil » les promeut dans `companies`.
+- **Reformulation texte libre → Haiku.** Les champs narratifs libres (historique, présentation) sont reformulables via **Haiku 4.5** (coût négligeable), sans toucher aux données factuelles.
+- **Coût.** Profil stable + prompt caching (§3.3) tiennent la cible : **1er mémoire ≤ €1, suivants < €0,50**.
 
 ---
 
@@ -430,6 +441,7 @@ CREATE TABLE memos (
     project_id BIGINT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     lot_id BIGINT NOT NULL REFERENCES lots(id) ON DELETE CASCADE,
     structure JSONB NOT NULL,            -- ordered sections + content
+    profile_overrides JSONB,             -- v2.5: per-memo local edits to the living profile (§3.7)
     options JSONB,                       -- which add-ons were checked
     generation_params JSONB,             -- length / tone / technical_level
     docx_key TEXT,
@@ -452,22 +464,26 @@ CREATE TABLE editable_docs (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Quota tracking: one row per AO consumed (included or overage)
-CREATE TABLE ao_quota_consumption (
+-- Quota tracking (Vision V1 FINALE): DEUX compteurs mensuels distincts —
+-- analyses ET mémoires. Unité : 1 lot = 1 mémoire = 1 unité.
+-- Pro : 40 analyses + 40 mémoires / mois. Business : illimité (fair use).
+-- Pas de facturation à l'unité supplémentaire en V1 (dépassement -> upgrade).
+CREATE TABLE quota_consumption (
     id BIGSERIAL PRIMARY KEY,
     account_id BIGINT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
     project_id BIGINT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    lot_id BIGINT REFERENCES lots(id) ON DELETE SET NULL,   -- 1 lot = 1 unité
+    kind TEXT NOT NULL CHECK (kind IN ('analyse', 'memoire')),
     consumed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    billing_period DATE NOT NULL,        -- first day of the month (truncated)
-    is_overage BOOLEAN NOT NULL DEFAULT FALSE,
-    overage_amount_eur NUMERIC(6, 2)     -- €15 (Pro) / €10 (Business) when is_overage
+    billing_period DATE NOT NULL         -- first day of the month (truncated)
 );
-CREATE INDEX idx_quota_account_period
-    ON ao_quota_consumption(account_id, billing_period);
+CREATE INDEX idx_quota_account_period_kind
+    ON quota_consumption(account_id, billing_period, kind);
 
--- v2.1 - notebooks 17/5/26 --
+-- v2.1 - notebooks 17/5/26 -- [V1.5 — déclassé de V1 par la Vision V1 FINALE]
 -- Jurisprudence reference table. Populated at build time from NotebookLM N6.
 -- Read-only at runtime; refreshed when a new ruling is added to N6.
+-- Supporte l'ancrage juridique profond (Roadmap V1.5, PRD §9.2).
 CREATE TABLE jurisprudence (
     id BIGSERIAL PRIMARY KEY,
     juridiction TEXT NOT NULL CHECK (juridiction IN ('CE', 'CAA', 'TA', 'CJUE', 'Conseil constitutionnel')),
@@ -481,8 +497,8 @@ CREATE TABLE jurisprudence (
 CREATE INDEX idx_jur_juridiction_date ON jurisprudence(juridiction, date DESC);
 CREATE INDEX idx_jur_numero ON jurisprudence(numero);
 
--- v2.1 - notebooks 17/5/26 --
--- GME (Groupement Momentané d'Entreprises) — supports Skill #89, PRD §3.7.1.
+-- v2.1 - notebooks 17/5/26 -- [V1.5 — déclassé de V1]
+-- GME (Groupement Momentané d'Entreprises) — supports Skill #89, PRD §9.2 (Roadmap V1.5).
 CREATE TABLE groupements (
     id BIGSERIAL PRIMARY KEY,
     project_id BIGINT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -496,8 +512,8 @@ CREATE TABLE groupements (
 CREATE INDEX idx_grp_project ON groupements(project_id);
 CREATE INDEX idx_grp_mandataire ON groupements(mandataire_id);
 
--- v2.1 - notebooks 17/5/26 --
--- RSE engagements per project — supports Skill #92, PRD §3.7.2.
+-- v2.1 - notebooks 17/5/26 -- [V1.5 — déclassé de V1]
+-- RSE engagements per project — supports Skill #92, PRD §9.2 (Roadmap V1.5).
 CREATE TABLE engagements_rse (
     id BIGSERIAL PRIMARY KEY,
     project_id BIGINT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -909,7 +925,7 @@ Even if the frontend validates a field, the backend **revalidates**. The fronten
 ### 7.11 Rate limiting
 
 - Per-IP: 100 req / min (Nginx)
-- Per-account: 30 AO uploads / day; 100 memo generations / day (FastAPI middleware backed by Redis)
+- Per-account **throttle technique anti-abus** (distinct du **quota commercial** §8.10 / PRD §6) : 30 uploads DCE / jour ; 100 générations mémoire / jour (FastAPI middleware Redis)
 - Coach: 60 messages / hour per user
 
 ### 7.12 Audit log
@@ -980,18 +996,17 @@ V1.0 — sized for KVM2 (16 GB RAM total, shared with FastAPI + Redis + Celery +
 
 ### 8.10 Cost guard
 
-Two distinct dimensions: **customer-visible AO quota** (billing-facing) and **internal AI hard ceiling** (cost-protection, invisible to user).
+Two distinct dimensions: **customer-visible quota** (Vision V1 FINALE, billing-facing) and **internal AI hard ceiling** (cost-protection, invisible to user).
 
-- **Per-account daily cap: €15** (~15 AO/day at the measured ~€1/AO unit).
-- **Per-account monthly cap (hard AI ceiling, not visible to customer):**
-  - Pro: €100 (~130 AO/month worst-case)
-  - Business: €300 (~390 AO/month worst-case)
-- **Customer-visible quota** (separate from AI ceiling — see PRD §6.2):
-  - Pro: 30 included AO/month, then **€15/AO** overage
-  - Business: 120 included AO/month, then **€10/AO** overage
-- **Soft warning at 70% of monthly included quota.**
-- **At quota:** Coach explainer, overage billing starts, never a silent block.
-- **At hard AI cap:** pause new analyses, full read access preserved, contact CTA.
+- **Customer-visible quota** (§4.3 `quota_consumption`, PRD §6) — **deux compteurs mensuels** :
+  - Pro : **40 analyses + 40 mémoires / mois** (1 lot = 1 mémoire = 1 unité).
+  - Business : **illimité (fair use)**.
+  - **Pas d'overage facturé en V1.** Au dépassement Pro : **blocage doux + nudge upgrade** ; jamais de blocage silencieux.
+  - **Soft warning à 70 %** du quota mensuel.
+- **Internal AI hard ceiling (invisible au client, cost-protection) :**
+  - Per-account daily cap: €15 (~15 AO/day at ~€1/AO).
+  - Monthly: Pro €100, Business €300 (fair-use safety ceiling).
+  - At hard AI cap: pause new analyses, full read access preserved, contact CTA.
 
 Breaches surface as a Coach explainer: *"Limite quotidienne atteinte, reprise à minuit. Besoin d'une augmentation ? Contactez-nous."* (premium-silent tone — never blame the user, never mention cost).
 
@@ -1128,6 +1143,11 @@ S3_BUCKET=...
 REDIS_URL=redis://localhost:6379/0
 SENTRY_DSN=...
 COFFRE_FORT_KEK=...                 # 32-byte hex; rotated yearly
+# Quotas client (Vision V1 FINALE) — deux compteurs, pas d'overage en V1
+QUOTA_PRO_ANALYSES_PER_MONTH=40
+QUOTA_PRO_MEMOIRES_PER_MONTH=40
+QUOTA_BUSINESS_MODE=fair_use
+# Plafond IA interne (invisible client, cost-protection)
 COST_GUARD_DAILY_EUR=15.00
 COST_GUARD_MONTHLY_PRO_EUR=100.00
 COST_GUARD_MONTHLY_BUSINESS_EUR=300.00
@@ -1179,6 +1199,8 @@ VITE_SENTRY_DSN=...
 
 Used at sign-up to validate the customer's SIRET, ensure the entity is active, and verify it belongs to the BTP sector (NAF code prefix 41, 42, or 43).
 
+> **Statut d'implémentation (2026-07-01) :** le champ `siret` est **stocké** (modèle `Organization`), mais l'appel Sirene n'est **pas encore câblé** — pré-remplissage profil + validation NAF **à construire** (voir TASKS). Ci-dessous = design cible.
+
 - **Endpoint:** `GET https://api.insee.fr/entreprises/sirene/V3/siret/{siret}`
 - **Auth:** OAuth2 bearer token (free, INSEE-issued, 30 req/sec rate limit).
 - Used only at **sign-up** and at **SIRET-change events** — not on every request.
@@ -1187,7 +1209,8 @@ Used at sign-up to validate the customer's SIRET, ensure the entity is active, a
 
 ### 11.5 Stripe
 
-- Subscriptions (Pro / Business)
+- Subscriptions (Pro / Business) — **carte uniquement en V1** (`payment_method_types=["card"]`) ; **pas de SEPA** (migration d'entité juridique : les mandats ne migrent pas entre comptes Stripe)
+- Provider abstrait (`billing_provider`, `billing_country`) déjà en place — prêt pour la migration d'entité
 - Customer Portal for self-service plan management
 - Webhooks for `customer.subscription.updated` → updates `accounts.subscription_status`
 - **Production keys** activated before V1.0 ships
@@ -1224,6 +1247,15 @@ The expert knowledge is **baked in at build time**, not retrieved at runtime —
 ---
 
 ## 12. Changelog
+
+### 2.5 — 2026-07-01 (alignement Vision V1 FINALE)
+
+- **Métadonnées** — v2.5, alignée sur PRD v3.0 (2026-07-01).
+- **§3.1 / §3.2** — Opus 4.7 = réécriture ciblée **+ fallback** (retrait du Synorix Score : désormais **déterministe 0 €**). Haiku 4.5 = routing **+ reformulation texte libre du profil**. Étape 5 recentrée déterministe. Pricing €299 → €349, quota 40.
+- **§3.7 NEW** — Profil mémoire vivant (couche stable BDD lue au moment T, overrides locaux par mémoire, reformulation Haiku, cible ≤ €1 puis < €0,50).
+- **§4.3** — `ao_quota_consumption` → **`quota_consumption`** : deux compteurs (analyse / mémoire), unité 1 lot = 1 mémoire, **overage retiré**. `memos.profile_overrides` ajouté. Tables `jurisprudence` / `groupements` / `engagements_rse` marquées **V1.5 (déclassées)**.
+- **§8.10 / §10.6** — Cost guard : quota client **40 analyses + 40 mémoires** (Pro) / **fair-use** (Business), **pas d'overage** (dépassement → upgrade). Vars quota ajoutées.
+- **§11.4** — INSEE SIRENE : statut « à construire » explicité (champ stocké, appel non câblé). **§11.5** — Stripe **carte uniquement en V1**.
 
 ### 2.4 — 2026-05-18
 
