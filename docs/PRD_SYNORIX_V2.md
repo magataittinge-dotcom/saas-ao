@@ -4,12 +4,12 @@
 
 | Field | Value |
 |---|---|
-| Document version | 2.5 |
-| Status | Active — drives the v2.0 refactor (`refactor-v2` branch) |
+| Document version | 3.0 |
+| Status | Active — **Vision V1 FINALE** (session produit du 2026-07-01), référence canonique |
 | Owner | Mohamed (Founder) |
 | Audience | Engineering, Design, future contributors, Claude Code |
-| Last updated | 2026-05-13 |
-| Supersedes | `PRD_SAAS_AO_BTP.md` (v1, MVP phase) |
+| Last updated | 2026-07-01 |
+| Supersedes | `PRD_SAAS_AO_BTP.md` (v1, MVP phase) ; toute vision antérieure contradictoire |
 
 ---
 
@@ -24,7 +24,7 @@
    - 3.4. [Step 4 — Technical Memorandum](#34-step-4--technical-memorandum-the-star)
    - 3.5. [Step 5 — Final Verification](#35-step-5--final-verification)
    - 3.6. [Step 6 — Export & Submission](#36-step-6--export--submission)
-4. [Sidebar — 5 Permanent Sections](#4-sidebar--5-permanent-sections)
+4. [Sidebar — Structure V1 FINALE](#4-sidebar--structure-v1-finale)
 5. [Synorix Coach — Level 3 Chatbot](#5-synorix-coach--level-3-chatbot)
 6. [Business Model & Plans](#6-business-model--plans)
 7. [Tone & Product Communication Rules](#7-tone--product-communication-rules)
@@ -60,7 +60,7 @@ Synorix's wedge is the **automated generation of personalised, deposit-grade tec
 |---|---|---|---|
 | DCE analysis | Manual questionnaires | Manual | **AI-driven extraction with source highlighting** |
 | Technical memo | ❌ Not generated | Manual | ✅ **Generated, personalised, editable** |
-| Pricing per response | — | €2k–€8k | €299–€499 **per month, unlimited responses** |
+| Pricing per response | — | €2k–€8k | €349–€599 **par mois (quota Pro 40/40, Business fair-use)** |
 | Onboarding | Heavy | N/A | **Progressive — onboarded while working** |
 | Coaching | None | Human consultant | **Synorix Coach** chatbot (BTP-trained) |
 | Vendor-side personalisation | Generic | Personalised | **Auto-pulled from sidebar (company / refs / library)** |
@@ -72,35 +72,27 @@ Synorix's wedge is the **automated generation of personalised, deposit-grade tec
 ### 1.6 V2.0 Scope at a Glance
 
 - **6-step Pipeline AO** — Upload → Lots → AI Analysis → Memo → Verification → Export
-- **5-section persistent Sidebar** — Mes AO / Mon entreprise / Mes références / Ma bibliothèque mémoire / Mon coffre-fort
-- **Synorix Coach** — level-3 strategic chatbot
+- **Sidebar permanente** — bouton `[+ Nouvel AO]` + 2 groupes (**TRAVAIL** : Dashboard, Mes AO · **MON CAPITAL** : Mon entreprise, Mes références, Coffre-fort, Bibliothèque) + jauge quota → Paramètres > Abonnement. **Le pipeline n'apparaît jamais dans la sidebar.**
+- **Synorix Coach** — level-3 strategic chatbot (bulle flottante)
 - **86 modular skills V1** — each grounded in real BTP expertise from 8 validated NotebookLM notebooks (193 curated sources) <!-- v2.1 - notebooks 17/5/26 -->
-- **Multi-model AI stack** — Haiku 4.5 (routing) / Sonnet 4.6 (extraction, analyse **et génération mémoire**) / Opus 4.7 (réécriture ciblée + Synorix Score) — measured cost **~€1 per complete tender response** (mémoire en full-Sonnet, ~7× moins cher qu'Opus)
-- **Two plans** — Pro (€299/mo, 1 seat) and Business (€499/mo, 5 seats)
+- **Multi-model AI stack** — Haiku 4.5 (routing + **reformulation de texte libre du profil**) / Sonnet 4.6 (extraction, analyse **et génération mémoire**) / Opus 4.7 (réécriture ciblée + fallback) — measured cost **~€1 per complete tender response** (1er mémoire ≤ €1, suivants < €0,50 via profil mémoire vivant + prompt caching)
+- **Two plans** — Pro (€349/mo, 1 seat, **40 analyses + 40 mémoires/mois**) and Business (€599/mo, 5 seats, **illimité fair-use**). Paiement Stripe **carte uniquement en V1**. **1 AO offert** à la création (SIRET vérifié via API Sirene INSEE).
 
-### 1.7 Differentiators — Notebook-validated <!-- v2.1 - notebooks 17/5/26 -->
+### 1.7 Différenciateurs V1 — déterministes, 0 € API <!-- v3.0 - vision V1 FINALE -->
 
-The following 15 product differentiators are grounded in the 8 NotebookLM notebooks created on 2026-05-17 (see [NOTEBOOKS_REGISTRY.md](./NOTEBOOKS_REGISTRY.md)). Each is backed by a specific jurisprudence or article of the Code de la commande publique (CCP) — no Synorix competitor surfaces this level of legal grounding.
+Les différenciateurs livrés en V1 sont **tous déterministes** et calculés à **coût API nul**, sur les données déjà extraites par l'analyse (§3.3). Ils ne dépendent d'aucun appel LLM supplémentaire.
 
-| # | Differentiator | Legal / source anchor | Skill |
+| # | Différenciateur | Nature | Base de calcul |
 |---|---|---|---|
-| D1 | Citation jurisprudence 2024-2026 dans chaque analyse | CE 474772, TA Montpellier 2405722, CAA Nantes pondération 90/10 | all extraction skills |
-| D2 | Validation ZIP avant dépôt (corruption = rejet irrégularisable) | TA Montpellier 29/10/2024 n°2405722 | Skill #74 |
-| D3 | Vérification signature individuelle des pièces vs signature ZIP | TA Toulouse 9/3/2011 n°1100792 | Skill #69 |
-| D4 | Diligence prouvable horodatée du candidat | CE 2/10/2025 SFRS n°501204 | Skill #72 |
-| D5 | Copie de sauvegarde R2132-11 CCP générée systématiquement | R2132-11 CCP | Skill #71 |
-| D6 | Simulateur 3 formules prix DAJ (linéaire / inversement proportionnelle / variante) | Guides DAJ | **Skill #85** (STUB) |
-| D7 | Calculateur OAB temps réel (méthode double moyenne) | L2152-5, R2152-3 à R2152-5 CCP | **Skill #95** (STUB) |
-| D8 | RAO Prédictif (simulation rapport d'analyse de l'acheteur) | R2152-6 à R2152-8 CCP | **Skill #86** (STUB) |
-| D9 | Détection contradictions DCE | CE 18/7/2024 NAYMA n°492938 (devoir de vigilance du candidat) | Skill #16 |
-| D10 | Détection critères disproportionnés (capacité non liée / proportionnée) | L2142-1 CCP | **Skill #87** (STUB) |
-| D11 | Conseil recours après éviction (3 référés) | L551 CJA + CE 4/4/2014 Tarn-et-Garonne + TA Nantes 19/5/2025 Verchéenne n°2506407 | **Skill #88** (STUB) |
-| D12 | **Mode Groupement GME** (cotraitance conjoint / solidaire) | R2142-20 CCP | **Skill #89** (NEW V1) |
-| D13 | **Auto-suggestions RSE 2026** (Loi Climat 22/8/2026) | Loi Climat 22/8/2026 | **Skill #92** (NEW V1) |
-| D14 | Justification OAB auto-générée (réponse 21 jours) | L2152-5 + R2152-3 à R2152-5 CCP | Skill #84 |
-| D15 | Détection RGE Qualibat 8632/8633 expirant 30/9/2026 → migration Certibat | Référentiel RGE 2025 (transition Certibat) | Skill #2 |
+| D1 | **Synorix Score go/no-go** | Éligibilité factuelle | CA exigé vs profil, qualifications détenues vs requises, pondérations, délais |
+| D2 | **Traduction trésorerie CCAP** | Lecture de contrat en clair | Avance, délais de paiement, retenue de garantie, pénalités — extraits du CCAP |
+| D3 | **Rétro-planning automatique** | Planification | Visite → questions → dépôt J-1 → deadline |
+| D4 | **Statistiques gagné/perdu** | Pilotage | Cycle de vie des statuts AO (§3.6) |
+| D5 | **Calculateur retenue de garantie** | Lecture de contrat | Montant HT, taux RG, TVA (conservé de l'existant) |
 
-**Why this matters commercially:** Synorix is the only SaaS that lets a small BTP firm cite Conseil d'État rulings in their bid — turning legal sophistication into a competitive advantage they couldn't buy from a consultant for less than several thousand euros per AO.
+**Frontière chiffrage (décision ferme) :** Synorix **ne commente ni ne conseille jamais** les prix ou le chiffrage. Il **lit le contrat** (faits CCAP) et vérifie la conformité **formelle** de la DPGF (§3.5). Le calculateur **OAB** (offre anormalement basse) est **retiré du produit** en V1 — Synorix est un éditeur, pas un juge du prix. Les déclarations de l'entreprise sont des **champs libres** sous la responsabilité de l'utilisateur.
+
+> L'ambition d'ancrage juridique profond (citation de jurisprudence CE/CAA/TA à chaque analyse, RAO prédictif, mode Groupement GME, auto-suggestions RSE 2026) est **déclassée en Roadmap V1.5+** — voir §9.2. Elle ne fait pas partie du périmètre livrable V1.
 
 ---
 
@@ -484,13 +476,13 @@ See [SKILLS_REGISTRY_V2.md §Step 3](./SKILLS_REGISTRY_V2.md) — 4 extraction s
 
 ### 3.4 Step 4 — Technical Memorandum (THE STAR)
 
-> **The differentiator vs SPIGAO / Intescia. This is what people pay €299–€499 / month for.**
+> **The differentiator vs SPIGAO / Intescia. This is what people pay €349–€599 / month for.**
 
 #### 3.4.1 Product Need — and the Non-Negotiable
 
 The technical memo must be **personalised to the company**. Never generic. The memo:
 
-- Pulls **automatically** from sidebar data — `Mon entreprise`, `Mes références`, `Ma bibliothèque mémoire`, `Mon coffre-fort`.
+- Pulls **automatically** from sidebar data — `Mon entreprise` (profil mémoire vivant), `Mes références`, `Bibliothèque`, `Mon coffre-fort`.
 - Reflects the company's real voice, real history, real references.
 - Adapts to the specific lot / corps de métier of the AO.
 
@@ -630,7 +622,7 @@ When a user imports a past memo (e.g., one they previously wrote in Word):
 
 1. The memo is structurally parsed — each section identified.
 2. Phrases / paragraphs are tagged by section type (méthodologie, sécurité, etc.) and by corps de métier (façade, ITE, etc.).
-3. Stored in `Ma bibliothèque mémoire`.
+3. Stored in `Bibliothèque`.
 4. On the next AO with a matching corps de métier, those phrases are **automatically pulled in** as preferred wording — so the company's voice persists.
 
 Structure extraction logic is deferred to skill `extraction-memoire-importe`.
@@ -654,7 +646,7 @@ This is **reference, not template** — Synorix produces the same information *q
 |---|---|
 | FR-MEM-01 | Auto-pull from `Mon entreprise` — all relevant legal & capacity data |
 | FR-MEM-02 | Auto-select most relevant references per AO from `Mes références` |
-| FR-MEM-03 | Auto-inject pertinent phrases from `Ma bibliothèque mémoire` |
+| FR-MEM-03 | Auto-inject pertinent phrases from `Bibliothèque` |
 | FR-MEM-04 | Pre-generation récapitulatif with **Modifier** affordance everywhere |
 | FR-MEM-05 | Option block — always positive framing, never "missing" |
 | FR-MEM-06 | Generation parameters: length / tone / technical level |
@@ -676,13 +668,15 @@ See [SKILLS_REGISTRY_V2.md §Step 4](./SKILLS_REGISTRY_V2.md) — 4 data-pull sk
 
 A **mandatory** gate before export. The bid is automatically inspected for:
 
-- Missing or expired administrative pieces
-- Incomplete editable documents (DPGF, Cerfa)
-- Memo quality, via the **Synorix Score** (/100)
+- Pièces administratives manquantes ou expirées — **contrôles déterministes de validité** : URSSAF / fiscale / PROBTP / CIBTP < 6 mois, KBIS < 3 mois, assurances valides
+- Documents éditables incomplets — **DPGF** : aucune ligne vide + total = montant AE ; Cerfa
+- **Signatures confirmées** (liste + case explicite)
 - Compliance with naming and structure conventions
 - Coherence with the DCE's stated requirements
 
-The user receives a clear **rapport de conformité** and a remediation queue.
+Chaque pièce porte l'un de **3 états** : **✓ conforme / ⚠️ présente-mais-problème / ✗ manquante**. L'utilisateur reçoit un **rapport de conformité** et une file de remédiation. Cycle de vie par pièce : upload / remplacer (garde le lien exigence, relance les contrôles) / supprimer (warning si requise) / visualiser.
+
+> **Vision V1 FINALE — nature du score.** En V1, l'étape 5 produit un **score de conformité déterministe** (ex. « 14/16 ») qui **conditionne le bouton ZIP de façon NON-bloquante** — calculé sur les contrôles ci-dessus, **0 € API**. Le **Synorix Score de qualité mémoire /100** (skill `synorix-score-evaluateur`, rubrique LLM) est **déclassé en V1.5** (§9.2), en pipeline comme en page autonome. Le **Synorix Score go/no-go** d'éligibilité (§1.7 D1) est un indicateur **déterministe** distinct, surfacé plus tôt (analyse / dashboard).
 
 #### 3.5.2 Synorix Score — Dual Surface
 
@@ -691,9 +685,9 @@ The user receives a clear **rapport de conformité** and a remediation queue.
 | **Pipeline Step 5** | Active customer | Quality gate on the memo they just generated |
 | **Dedicated standalone page** | Anyone (lead-magnet candidate for V1.5) | Upload **any memo** (even non-Synorix) and get a /100 score with suggestions |
 
-The standalone page is a marketing wedge — competitors don't offer this — but the V2.0 launch only requires the **in-pipeline** integration.
+The standalone page is a marketing wedge — competitors don't offer this. **Déclassé en V1.5 (§9.2, vision V1 FINALE) :** le Synorix Score qualité mémoire /100 (LLM), **les deux surfaces** (pipeline + page autonome), sort du périmètre V1. La V1 s'appuie sur le **score de conformité déterministe** (§3.5.1). Le mockup §3.5.4 illustre donc une brique V1.5.
 
-Scoring criteria, weights, and the rubric are **deferred to skill `synorix-score-evaluateur`** — built on real evaluation-commission data via NotebookLM, **never invented**.
+Scoring criteria, weights, and the rubric are **deferred to skill `synorix-score-evaluateur`** — built on real evaluation-commission data via NotebookLM, **never invented** (V1.5).
 
 #### 3.5.3 Submission Envelope Preparation
 
@@ -816,53 +810,28 @@ After 7 days post-deposit, the project transitions automatically to `En cours d'
 
 ---
 
-### 3.7 Emergent V1 Features — Notebook-validated <!-- v2.1 - notebooks 17/5/26 -->
+### 3.7 Features déclassées en Roadmap V1.5+ <!-- v3.0 - vision V1 FINALE -->
 
-Two cross-cutting features emerged from the validated NotebookLM notebooks N7 + N8 as **mandatory for V1**, beyond the original 6-step pipeline. They are not bound to a single step — they span the whole project lifecycle.
+Deux features étaient précédemment cadrées comme « emergent V1 » : le **Mode Groupement GME** (Skill #89 — `cotraitance-groupement`, regimes conjoint/solidaire R2142-20 CCP) et les **Auto-suggestions RSE 2026** (Skill #92 — `criteres-RSE-2026`, Loi Climat 22/8/2026, catégories déchets/carbone/biosourcés/insertion/mobilité).
 
-#### 3.7.1 Mode Groupement GME (Skill #89 — `cotraitance-groupement`)
-
-**Product need.** Many BTP tenders > 1 M€ HT are out of reach for a single PME but accessible to a *groupement momentané d'entreprises* (GME). The CCP article R2142-20 allows two regimes:
-
-- **Groupement conjoint** — each member responsible only for its lot share.
-- **Groupement solidaire** — every member liable for the entire performance.
-
-**Functional requirements:**
-
-| Req ID | Requirement |
-|---|---|
-| FR-GME-01 | Toggle "Mode Groupement" on a project; on activation, Synorix asks: regime (`conjoint` / `solidaire`), mandataire, list of co-traitants (with each one's SIRET). |
-| FR-GME-02 | Each co-traitant's SIRET is validated against INSEE SIRENE (see ARCH §11.4). |
-| FR-GME-03 | The candidature pieces (DC1/DC2/DC4) are generated per co-traitant; Synorix tracks which pieces are received from each. |
-| FR-GME-04 | The technical memo presents the GME with a dedicated section: roles, responsibilities, combined references, combined capacities. |
-| FR-GME-05 | At Step 5 verification, capacities are summed across the GME (financial, technical, human) and checked against the DCE's stated requirements (R2142-1 CCP). |
-| FR-GME-06 | Synorix Coach surfaces a proactive suggestion to *consider* GME when the lot amount > 60% of the company's annual CA, or when a single capacity criterion is missed individually but reachable jointly. |
-
-**Trigger heuristics** (Coach proactivity): based on N8 — *if `lot_amount > 0.6 × company.revenue_3y[-1]` OR a R2142-1 capacity criterion is unmet by the user alone but met by a saved partner*, surface the suggestion.
-
-**Skill location:** see [SKILLS_REGISTRY_V2.md Skill #89](./SKILLS_REGISTRY_V2.md). Skill #89 lives in the **Coach** category.
-
-#### 3.7.2 Auto-suggestions RSE 2026 (Skill #92 — `criteres-RSE-2026`)
-
-**Product need.** The Loi Climat et Résilience, fully applied from **22/8/2026**, makes RSE criteria mandatory in public procurement above defined thresholds (low-carbon construction, biosourced materials, waste valorisation, social insertion, sustainable mobility). A non-RSE-aware bid post 22/8/2026 risks systematic eviction even at competitive pricing.
-
-**Functional requirements:**
-
-| Req ID | Requirement |
-|---|---|
-| FR-RSE-01 | At Step 3 extraction, Synorix flags every RSE criterion in the DCE (with article citation: CCP, CCAP RSE clauses). |
-| FR-RSE-02 | At Step 4 memo generation, Synorix auto-suggests RSE engagement content for 5 standard categories: déchets / carbone / biosourcés / insertion / mobilité. |
-| FR-RSE-03 | Suggestions are sourced from the user's sidebar (past RSE engagements, certifications) — *never invented*. |
-| FR-RSE-04 | Each suggestion carries an indicator-chiffré field (taux de valorisation des déchets, kg CO₂eq/m², % matériaux biosourcés) — the user fills the number, Synorix never invents it. |
-| FR-RSE-05 | At Step 5 verification, the memo's RSE section is cross-checked against the DCE's RSE expectations; gaps trigger 🟡 Recommended or 🔴 Blocking severity (PRD §7.2.1). |
-
-**Skill location:** see [SKILLS_REGISTRY_V2.md Skill #92](./SKILLS_REGISTRY_V2.md). Skill #92 lives in the **Step 4 Memo** category.
+La **vision V1 FINALE** (2026-07-01) les **déclasse hors périmètre V1** : elles restent des ambitions cadrées mais partent en **Roadmap V1.5+** (voir §9.2). Motif : la V1 se concentre sur le pipeline cœur + les différenciateurs déterministes 0 € (§1.7). Le détail fonctionnel initial est conservé pour reprise en V1.5 dans `SKILLS_REGISTRY_V2.md` (Skills #89, #92).
 
 ---
 
-## 4. Sidebar — 5 Permanent Sections
+## 4. Sidebar — Structure V1 FINALE
 
-Synorix's left rail is **permanent** across all pages — even inside an active pipeline. It hosts five rubriques. Each is a first-class workspace, not a settings page.
+Synorix's left rail is **permanent** across all pages — même à l'intérieur d'un pipeline actif. Le **pipeline n'apparaît jamais dans la sidebar** : il vit dans l'AO ouvert, sous forme de rail d'étapes.
+
+**Structure (haut → bas) :**
+
+- **`[+ Nouvel AO]`** — bouton primaire, **hors navigation**, tout en haut.
+- **TRAVAIL** — Dashboard · Mes AO (badge deadlines).
+- **MON CAPITAL** — Mon entreprise (le **profil mémoire vivant** vit ICI) · Mes références · Coffre-fort (badge expiration) · Bibliothèque (import d'anciens mémoires via `memoire_importer`).
+- **Jauge quota** (« 32/40 ») en bas, cliquable → **Paramètres > Abonnement & Facturation** (le billing vit dans **Paramètres**, *pas* en premier niveau de la sidebar).
+
+Il n'y a **pas** d'entrée « mémoire technique » séparée : le profil qui alimente le mémoire est un **onglet de Mon entreprise** (§4.2). Le Synorix Coach (§5) est une **bulle flottante**, pas une entrée de navigation.
+
+Chaque rubrique ci-dessous reste un espace de travail de première classe.
 
 ### 4.1 📋 Mes AO
 
@@ -901,9 +870,11 @@ Independent flag: `archived` (boolean) — any status can be archived. Default l
 
 The follow-up exists to show **care for this customer** — never to extract data, never to invoke other customers.
 
-### 4.2 🏢 Mon entreprise
+### 4.2 🏢 Mon entreprise — le profil mémoire vivant
 
-**Purpose:** centralised company profile that feeds DC1/DC2 and the memo.
+**Purpose:** profil entreprise centralisé et **persistant en BDD** — c'est le **profil mémoire vivant** lu au moment de la génération du mémoire (§3.4). Il alimente DC1/DC2 et la *PARTIE A* du mémoire.
+
+**Organisation en 3 onglets (vision V1) :** **Identité** · **Moyens humains & matériels** · **Certifications**. Les sous-sections fonctionnelles ci-dessous se répartissent dans ces onglets. Les modifications faites au moment d'une génération sont **locales à ce mémoire par défaut** (case « mettre à jour mon profil » pour les rendre permanentes). La reformulation de **texte libre** du profil passe par **Haiku**.
 
 **Functional sub-sections:**
 
@@ -933,9 +904,9 @@ The follow-up exists to show **care for this customer** — never to extract dat
 - Auto-selection in Step 4 based on relevance to the active AO (corps de métier, montant range, récence) — selection logic deferred to skill `selection-references-pertinentes`.
 - Back-reference: each reference shows which AOs used it.
 
-### 4.4 📝 Ma bibliothèque mémoire
+### 4.4 📝 Bibliothèque
 
-**Purpose:** the company's writing memory — the voice of the company.
+**Purpose:** the company's writing memory — la voix de l'entreprise. **Distincte du profil mémoire vivant** (§4.2) : la Bibliothèque sert à **importer d'anciens mémoires** (via `memoire_importer`) et à réutiliser leurs formulations ; le profil stable, lui, vit dans Mon entreprise.
 
 **Functional requirements:**
 
@@ -1013,9 +984,9 @@ V1.5 will introduce **Synorix Brief audio** (NotebookLM-style daily audio briefi
 | Surface | Behaviour |
 |---|---|
 | **Floating bubble** (bottom-right, every page) | Click → 60% screen-height panel slides up, conversational |
-| **Dedicated "Coach" sidebar entry** | Full-page workspace — long sessions, strategic deep-dives |
+| **Dedicated "Coach" full-page workspace** (V1.5) | Long sessions, strategic deep-dives — **pas d'entrée de navigation dédiée en V1** (la sidebar est réservée, §4) |
 
-Both share the same conversation history.
+Both share the same conversation history. En V1, le Coach vit **uniquement** comme bulle flottante.
 
 ### 5.3 Modes
 
@@ -1053,50 +1024,51 @@ Both share the same conversation history.
 
 ### 6.1 Plans
 
-| Feature | **Pro €299/mo** | **Business €499/mo** | Enterprise (V2.5) |
+| Feature | **Pro €349/mo** | **Business €599/mo** | Enterprise (V2.5) |
 |---|---|---|---|
 | **Seats** | 1 | 5 | Unlimited |
-| **AO included / month** | **30** | **120** | Unlimited |
-| **Additional AO** | €15 / AO | €10 / AO | — |
+| **Quota mensuel** | **40 analyses + 40 mémoires** | **Illimité (fair use)** | Unlimited |
+| **Unité de quota** | **1 lot = 1 mémoire = 1 unité** | idem (fair use) | — |
+| **Paiement** | **Stripe — carte uniquement (V1)** | idem | idem |
 | **Coffre-fort storage** | 5 GB | 50 GB | Unlimited |
 | **Memo library imports** | 10 memos | Unlimited | Unlimited |
 | **References chantiers** | 50 max | Unlimited | Unlimited |
-| **Synorix Coach** | Reactive + light suggestions | + **Proactive AO audit (running tenders)** | + Weekly strategy agent |
-| **Synorix Score** | In-pipeline only | + **Public API to score external memos** (lead-gen) | + White-label |
-| **Multi-user workflow** | — | **Admin/member roles, validation flow, shared history** | + SSO, SAML |
-| **Coffre-fort security** | Standard | + **Mandatory 2FA, audit log** | + Custom retention policy |
-| **Support** | Email (48h) | Email **priority (24h)** + chat | Email + **dedicated account manager** |
-| **Onboarding** | Self-service | **Free 1-hour live session** | + team training |
-| **Custom memo templates** | Synorix standard | **Per-trade custom templates** saved in library | + Synorix agency designs a bespoke template |
+| **Synorix Coach** | Reactive + light suggestions | + Proactive AO audit | + Weekly strategy agent |
+| **Synorix Score** | In-pipeline | + standalone page (V1.5) | + White-label |
+| **Multi-user workflow** | — | **Admin/member roles (V1.5)** | + SSO, SAML |
+| **Coffre-fort security** | Standard | + 2FA, audit log (V1.5) | + Custom retention policy |
+| **Support** | Email (48h) | Email priority (24h) + chat | + dedicated account manager |
+| **Onboarding** | Self-service | Free 1-hour live session | + team training |
 
-Both plans include: full 6-step pipeline, full sidebar (5 sections), Synorix Coach (Level 3 — modes differ as shown above), Synorix Score (in-pipeline), SIRET-validated account.
+Both plans include: full 6-step pipeline, full sidebar, Synorix Coach (bulle flottante), Synorix Score (in-pipeline), SIRET-validated account (Sirene INSEE).
+
+**Paiement — carte uniquement en V1 :** pas de prélèvement SEPA. Motif : une **migration d'entité juridique** est prévue et **les mandats SEPA ne migrent pas** entre comptes Stripe ; la carte évite ce blocage. Le SEPA est envisagé post-migration (Roadmap, §9.2).
+
+**Note multi-utilisateurs :** le plan Business est vendu à **5 seats** dès la V1, mais le **workflow collaboratif** (rôles admin/member, validation partagée, historique partagé) ne ship qu'en **V1.5** (cf. HORS-V1). En V1, les seats Business partagent le même compte sans gouvernance de rôles fine.
 
 **Design intent:** every line above is a deliberate reason for a Pro customer to upgrade to Business as soon as a second person joins, volume rises, or clients ask to see Synorix Score on the company's website. No artificial gating; each Business-only feature unlocks real value for the next growth stage.
 
 ### 6.2 Unit Economics
 
-Per-AO AI cost (measured, full-Sonnet): **~€1** (Haiku 0.02 + Sonnet 0.05 + Sonnet 0.40 + **Sonnet ~0.50 mémoire** + Sonnet incl. + 0 export). La génération mémoire tourne sur **Sonnet 4.6** (tous segments), pas Opus — mesure DCE Gueux : mémoire ≈ €0.90 en Sonnet vs ~€6 en Opus (~7× moins cher), cf. `docs/comparaison-memoire-AB/RESULTAT.md`. Même au coût mesuré ~€1/AO, les marges Pro restent **> 90 %** en usage normal (≤ 30 AO/mois). Three usage scenarios drive the margin analysis (chiffres ci-dessous conservés à titre indicatif, ordre de grandeur inchangé) :
+Coût IA par AO (mesuré, full-Sonnet) : **~€1** — 1er mémoire ≤ €1, suivants **< €0,50** via profil mémoire vivant + prompt caching (cf. `docs/comparaison-memoire-AB/RESULTAT.md`). La génération mémoire tourne sur **Sonnet 4.6** (tous segments), ~7× moins cher qu'Opus (mémoire ≈ €0,90 en Sonnet vs ~€6 en Opus). Aux quotas V1 (Pro 40 analyses + 40 mémoires ; Business fair use), les marges restent **> 90 %** en usage normal (chiffres indicatifs) :
 
-| Scenario | AO/month | AI cost/month | Margin Pro (€299) | Margin Business (€499) |
+| Scenario | AO/mois | Coût IA/mois | Marge Pro (€349) | Marge Business (€599) |
 |---|---|---|---|---|
-| **Light** (median target) | 7 | ~€5.40 | **98.2%** | 98.9% |
-| **Normal** (high target) | 15 | ~€11.55 | **96.1%** | 97.7% |
-| **Heavy** (at fair-use cap) | 30 (Pro) / 120 (Business) | ~€23.10 / €92.40 | **92.3%** | **81.5%** |
+| **Light** (median target) | 7 | ~€5,40 | ~98 % | ~99 % |
+| **Normal** (high target) | 15 | ~€11,55 | ~97 % | ~98 % |
+| **Heavy** (cap Pro 40) | 40 (Pro) | ~€30,80 | **~91 %** | — |
 
-**Hard cap** (cost-guard, see ARCHITECTURE §8.10): blocks consumption beyond ~130 AO/month on Pro (~€100 AI ceiling) and ~390 AO/month on Business (~€300 AI ceiling). Reaching the cap triggers a Coach explainer; no silent block.
-
-Beyond included AO, the customer pays per-AO overage:
-
-- Pro: €15 per additional AO
-- Business: €10 per additional AO
+**Cost-guard** (see ARCHITECTURE §8.10) : au-delà du **quota Pro (40/40)**, blocage **doux** avec explication Coach + nudge upgrade ; Business en fair-use avec plafond de sécurité. **Jamais de blocage silencieux.** Pas de facturation à l'AO supplémentaire en V1 — le dépassement mène à l'upgrade, pas à la surfacturation.
 
 ### 6.3 Onboarding & Billing
 
 Synorix ships **no free trial in the classical sense**. Instead, every new account gets **1 complete AO offered** to experience the full pipeline before committing.
 
+**Onboarding « wow » < 5 min, zéro formulaire :** inscription → SIRET → **l'API Sirene INSEE pré-remplit le profil entreprise** → un **seul écran** *« Déposez votre premier DCE — il est offert »*. Coffre-fort, profil et références se remplissent **au fil de l'eau** : à chaque upload d'un document perso, un bandeau discret propose *« Enregistrer ce document dans votre coffre-fort ? »* (classement auto par type, date de validité lue au passage, jamais de relance si refus).
+
 **Sign-up flow:**
 
-1. Email + name + **SIRET** (14 digits, validated against the official INSEE SIRENE API).
+1. Email + name + **SIRET** (14 digits, validated against the official INSEE SIRENE API — pré-remplit raison sociale, adresse, NAF).
 2. The SIRET's **NAF code** must start with 41, 42, or 43 (the BTP sector). Non-BTP SIRETs see a polite message: *"Synorix est spécialisé BTP. Contactez-nous si vous souhaitez tester pour un autre secteur."*
 3. Active SIRET status required (no liquidation, no closure).
 
@@ -1108,11 +1080,11 @@ Synorix ships **no free trial in the classical sense**. Instead, every new accou
 
 **Conversion CTA:** appears after the user has experienced the memo:
 
-> *"Débloquez l'export et lancez autant d'AO que vous voulez — €299/mois"*
+> *"Débloquez l'export et vos 40 analyses + 40 mémoires mensuels — €349/mois"*
 
 **Why no money-back guarantee:** Free AO at sign-up + SIRET gate covers the trust gap upfront. Customer-service refund decisions are handled case by case, human, rare — a signal of quality, not a contractual escape hatch.
 
-Stripe drives all paid subscriptions, prorated upgrades/downgrades, monthly recurring billing.
+Stripe drives all paid subscriptions, prorated upgrades/downgrades, monthly recurring billing — **carte uniquement en V1** (cf. §6.1).
 
 ### 6.4 Future Plans (out of V2.0 scope)
 
@@ -1127,7 +1099,7 @@ These rules govern **all customer-facing text** — UI strings, emails, Coach re
 
 ### 7.1 Premium-Silent Positioning
 
-Synorix is **paid software**. The customer pays €299–€499 per month. The product must therefore **do the work** — not ask the customer for services.
+Synorix is **paid software**. The customer pays €349–€599 per month. The product must therefore **do the work** — not ask the customer for services.
 
 | Principle | Implementation |
 |---|---|
@@ -1222,7 +1194,7 @@ Every error / friction / mismatch surfaces with an **action**, not an alarm.
 
 V2.0 ships when **all four** of the following are true:
 
-1. ✅ **Adil (expert tester) uses Synorix end-to-end and is impressed.** *"Bluffé"* is the bar — not "OK", not "useful". Specifically: a complete AO response generated in Synorix with the memo achieving a Synorix Score ≥ 80 and Adil himself rating it ≥ 80 in blind review.
+1. ✅ **Adil (expert tester) uses Synorix end-to-end and is impressed.** *"Bluffé"* is the bar — not "OK", not "useful". Specifically: a complete AO response generated in Synorix, **score de conformité au vert**, and **Adil himself rating the memo ≥ 80/100 in blind review** (notation humaine — le Synorix Score qualité /100 automatisé est V1.5).
 
 2. ✅ **Ozcan refers Synorix to at least 5 contacts within 14 days of his first paid usage.** This is the organic signal — referrals from a paying customer who has just experienced the product.
 
@@ -1249,15 +1221,30 @@ V2.0 ships when **all four** of the following are true:
 | Block | Status |
 |---|---|
 | Refactor of legacy 9 project skills → 86 modular skills | In progress — 8 NotebookLM notebooks validated 2026-05-17 (193 sources) <!-- v2.1 - notebooks 17/5/26 --> |
-| 6-step pipeline UI | To do |
-| Sidebar with 5 sections | To do |
-| Synorix Coach (Level 3) | To do |
-| **Mode Groupement GME (Skill #89)** <!-- v2.1 --> | To do — emergent V1 from N8 |
-| **Auto-suggestions RSE 2026 (Skill #92)** <!-- v2.1 --> | To do — mandatory from 22/8/2026 (Loi Climat) |
-| Stripe live (Pro + Business) | To do |
+| 6-step pipeline UI (Upload → Lots → Analyse → Mémoire → **Vérification** → Export) | To do |
+| Sidebar V1 FINALE (TRAVAIL / MON CAPITAL + jauge quota) | To do |
+| Synorix Coach (bulle flottante) | To do |
+| **Différenciateurs déterministes 0 € (§1.7 : Score go/no-go, trésorerie CCAP, rétro-planning, stats, retenue de garantie)** <!-- v3.0 --> | To do |
+| **Quotas + enforcement (Pro 40/40, Business fair-use)** <!-- v3.0 --> | To do |
+| **SIRET / Sirene INSEE (pré-remplissage profil)** <!-- v3.0 --> | To do |
+| Stripe live (Pro + Business) — **carte uniquement** | To do |
 | Production deployment on `synorix.tech` | To do |
 
 ### 9.2 V1.5 — 2–3 months post-V1
+
+**Déclassées de la V1 par la vision V1 FINALE (§1.7, §3.7) :**
+
+- **Multi-utilisateurs Business** — rôles admin/member, workflow de validation, historique partagé
+- **Mode Groupement GME** (Skill #89, R2142-20 CCP) — cotraitance conjoint/solidaire
+- **Auto-suggestions RSE 2026** (Skill #92, Loi Climat 22/8/2026)
+- **Ancrage juridique profond** — citation de jurisprudence CE/CAA/TA dans chaque analyse
+- **RAO prédictif** (Skill #86, R2152-6 à R2152-8 CCP)
+- **Synorix Score qualité mémoire /100** (LLM, skill `synorix-score-evaluateur`) — pipeline **et** page autonome ; la V1 utilise le score de conformité déterministe (§3.5.1)
+- **Veille AO multi-sources** (BOAMP / DECP) + **veille réglementaire RAG Phase 4**
+- **Dépôt direct sur plateformes** (PLACE / AWS)
+- **Prélèvement SEPA** (post-migration d'entité juridique — les mandats ne migrant pas entre comptes Stripe)
+
+**Autres V1.5 :**
 
 - BOAMP / DECP auto-import (status updates)
 - Electronic signature (eIDAS-compliant)
@@ -1425,6 +1412,19 @@ Synorix's design system lives in code, not as an AI skill.
 ---
 
 ## 11. Changelog
+
+### 3.0 — 2026-07-01 (Vision V1 FINALE — référence canonique)
+
+Alignement chirurgical du PRD sur la **vision produit V1 FINALE** (session du 2026-07-01). Cette vision **prime sur toute vision antérieure contradictoire**.
+
+- **Métadonnées** — version 3.0, statut « Vision V1 FINALE », supersedes toute vision antérieure contradictoire.
+- **§1.4 / §1.6 / §3.4 / §6 / §7.1** — Pricing **€299/€499 → €349/€599**. Quotas **30/120 AO → 40 analyses + 40 mémoires (Pro) / illimité fair-use (Business)**. Unité « 1 lot = 1 mémoire = 1 unité ». Paiement **Stripe carte uniquement en V1** (SEPA déclassé — migration d'entité). Suppression de la facturation à l'AO supplémentaire.
+- **§1.6 / §4** — Sidebar refondue : bouton `[+ Nouvel AO]`, groupes **TRAVAIL / MON CAPITAL**, jauge quota → Paramètres > Abonnement, billing hors premier niveau, **pipeline jamais dans la sidebar**.
+- **§4.2** — « Mon entreprise » = **profil mémoire vivant** (3 onglets Identité / Moyens / Certifications) ; plus d'entrée « mémoire technique » séparée ; reformulation texte libre via **Haiku**. **§4.4** — « Bibliothèque » = import d'anciens mémoires, distincte du profil.
+- **§1.7** — Différenciateurs recentrés sur **5 briques déterministes 0 €** (Synorix Score go/no-go, traduction trésorerie CCAP, rétro-planning, stats gagné/perdu, calculateur retenue de garantie). **Frontière chiffrage** actée : **OAB retiré du produit**, Synorix ne conseille jamais le prix.
+- **§3.5** — Étape 5 « Vérification » recentrée sur un **score de conformité déterministe** (« 14/16 », 0 € API, gate ZIP non-bloquant) + contrôles déterministes (validité dates, DPGF, signatures) et 3 états par pièce. Le **Synorix Score qualité mémoire /100 (LLM)** est déclassé en V1.5 (les deux surfaces). Critère de succès §8 ajusté (notation humaine d'Adil).
+- **§3.7 / §9.2** — **Déclassés en Roadmap V1.5+** : Mode GME (#89), RSE 2026 (#92), RAO (#86), ancrage juridique profond, Synorix Score /100 LLM, multi-utilisateurs Business, veille AO, dépôt direct plateformes.
+- **§1.6 / §6.3** — Modèles : Haiku 4.5 (routing **+ reformulation profil**) / Sonnet 4.6 (extraction, analyse, mémoire) / Opus 4.7 (réécriture + fallback). Onboarding « wow < 5 min » : SIRET → **Sirene pré-remplit** → écran unique « 1er DCE offert » ; coffre-fort progressif.
 
 ### 2.5 — 2026-05-18 (final pass — collisions resolved)
 
