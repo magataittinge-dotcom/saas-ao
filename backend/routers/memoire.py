@@ -22,7 +22,7 @@ from services.ai.memoire_generator import MemoireGenerator
 from services.docx_exporter import build_memoire_docx
 from services.maps_service import generate_location_map
 from services.document_tagger import get_documents_for_lot
-from services import pipeline_tracker
+from services import pipeline_tracker, quota
 from services.audit_logger import log_action
 
 router = APIRouter()
@@ -72,6 +72,10 @@ async def generate_memoire(
 
     if not docs:
         raise HTTPException(status_code=400, detail="Aucun document DCE uploadé")
+
+    # ── Quota (C1) : vérifié AVANT la génération (blocage doux 402) ; l'unité
+    # n'est décomptée qu'au succès — « 1 mémoire PAR LOT généré ».
+    quota.check_quota(db, org, "memoire")
 
     variables = payload.model_dump(exclude_none=True)
 
@@ -135,6 +139,9 @@ async def generate_memoire(
             variables=variables,
         )
         db.add(memoire)
+
+    # Génération réussie → décompte de l'unité (1 mémoire = 1 lot).
+    quota.consume(db, org, "memoire", project_id=project_id, lot=project.selected_lot)
 
     pipeline_tracker.complete_pipeline(project_id)
 

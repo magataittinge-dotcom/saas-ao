@@ -8,6 +8,7 @@ from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
 from database import get_db
+from models.organization import Organization
 from models.user import User
 from models.project import Project, ProjectDocument
 from models.compliance_item import ComplianceItem
@@ -20,7 +21,7 @@ from services.ai.checklist_matcher import ChecklistMatcher
 from services.document_tagger import (
     get_documents_for_lot, extract_excel_sheet_for_lot, _normalize_lot_num,
 )
-from services import pipeline_tracker
+from services import pipeline_tracker, quota
 from typing import List
 
 logger = logging.getLogger(__name__)
@@ -166,6 +167,13 @@ async def trigger_analysis(
             lot_header += (
                 f"DPGF DU {lot_label} :\n{dpgf_sheet_text[:3000]}\n\n"
             )
+
+    # ── Quota (C1) : 1 analyse décomptée AU LANCEMENT ─────────────────────────
+    # Vérifié après les validations (une 400 ne consomme pas) mais avant tout
+    # appel Claude — un échec d'analyse ultérieur reste décompté.
+    org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+    quota.check_quota(db, org, "analysis")
+    quota.consume(db, org, "analysis", project_id=project_id, lot=project.selected_lot)
 
     # Update step before analysis
     project.current_step = 3

@@ -7,6 +7,7 @@ even there the verification is delegated to the provider.
 """
 import json
 import logging
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from slowapi import Limiter
@@ -176,6 +177,9 @@ def verify_session(
         org.stripe_customer_id = session["customer"]
     if session.get("subscription"):
         org.stripe_subscription_id = session["subscription"]
+    # Ancre du reset mensuel des quotas (C1) : date de souscription.
+    if org.subscription_started_at is None:
+        org.subscription_started_at = datetime.utcnow()
     db.commit()
 
     return {"plan": plan, "updated": True}
@@ -237,6 +241,8 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                     org.stripe_customer_id = customer_id
                 if subscription_id:
                     org.stripe_subscription_id = subscription_id
+                # Nouvel abonnement → nouvelle ancre de quotas (C1).
+                org.subscription_started_at = datetime.utcnow()
                 db.commit()
 
     # ── customer.subscription.deleted → downgrade to free ─────────────────────
@@ -247,6 +253,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             if org:
                 org.plan = "free"
                 org.stripe_subscription_id = None
+                org.subscription_started_at = None
                 db.commit()
 
     # ── customer.subscription.updated → handle plan changes ───────────────────

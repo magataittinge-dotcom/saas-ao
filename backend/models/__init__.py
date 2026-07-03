@@ -9,6 +9,7 @@ from .checklist_item import ChecklistItem
 from .memoire import MemoireTechnique
 from .memoire_template import MemoireTemplate
 from .audit_log import AuditLog
+from .quota_consumption import QuotaConsumption
 
 __all__ = [
     "Organization",
@@ -23,4 +24,5 @@ __all__ = [
     "MemoireTechnique",
     "MemoireTemplate",
     "AuditLog",
+    "QuotaConsumption",
 ]

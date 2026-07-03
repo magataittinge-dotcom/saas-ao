@@ -39,6 +39,9 @@ class Organization(Base):
     billing_country = Column(
         String(2), nullable=False, default="FR", server_default="FR",
     )
+    # Ancre du reset mensuel des quotas (C1) : date de souscription au plan
+    # payant. NULL tant que l'org est en free — fallback sur created_at.
+    subscription_started_at = Column(DateTime, nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)
 
