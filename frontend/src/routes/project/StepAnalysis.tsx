@@ -10,6 +10,7 @@ import { api, getSignedFileUrl } from '@/services/api'
 import CriticalBanner, { type FieldSource } from '@/components/project/CriticalBanner'
 import TresorerieCard from '@/components/project/TresorerieCard'
 import RetroPlanning from '@/components/project/RetroPlanning'
+import SynorixScoreCard from '@/components/project/SynorixScoreCard'
 import ProgressDisplay, { type StepDescriptor } from '@/components/common/ProgressDisplay'
 import { useProgressStream } from '@/hooks/useProgressStream'
 import { RequirementListSkeleton } from '@/components/skeletons'
@@ -433,6 +434,9 @@ export default function StepAnalysis({ project }: Props) {
           </div>
         </div>
       )}
+
+      {/* ── SYNORIX SCORE (C18) — go/no-go factuel en tête ── */}
+      <SynorixScoreCard projectId={project.id} onOpenSource={openFieldSource} />
 
       {/* ── BANDEAU CRITIQUE (C5) — deadline, visite, critères, pénalités ── */}
       <CriticalBanner projectId={project.id} onOpenSource={openFieldSource} />

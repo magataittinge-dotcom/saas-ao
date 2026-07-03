@@ -437,6 +437,55 @@ def get_retroplanning(
     return {"lot": project.selected_lot, "steps": build_retroplanning(cache[lot_key])}
 
 
+@router.get("/{project_id}/synorix-score")
+def get_synorix_score(
+    project_id: str,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """C18 — Synorix Score go/no-go : croisement factuel DCE × profil org.
+
+    Déterministe, aucun LLM, aucun commentaire de prix."""
+    from models.memoire_config import MemoireConfig
+    from services.critical_fields import build_critical_fields
+    from services.synorix_score import build_score
+
+    project = _get_project_or_404(project_id, user.organization_id, db)
+    lot_key = project.selected_lot or "_all"
+    cache = dict(project.critical_fields or {})
+    if lot_key not in cache:
+        docs = db.query(ProjectDocument).filter(
+            ProjectDocument.project_id == project_id,
+        ).all()
+        cache[lot_key] = build_critical_fields(
+            project.infos_marche, project.criteres_jugement, docs,
+        )
+        project.critical_fields = cache
+        db.commit()
+
+    memoire_config = db.query(MemoireConfig).filter(
+        MemoireConfig.organization_id == user.organization_id,
+    ).first()
+    vault_docs = db.query(Document).filter(
+        Document.organization_id == user.organization_id,
+        Document.deleted_at.is_(None),
+    ).all()
+    compliance_items = db.query(ComplianceItem).filter(
+        ComplianceItem.project_id == project_id,
+    ).all()
+
+    result = build_score(
+        memoire_config=memoire_config,
+        vault_docs=vault_docs,
+        compliance_items=compliance_items,
+        criteres_jugement=project.criteres_jugement,
+        critical_fields=cache[lot_key],
+        infos_marche=project.infos_marche,
+    )
+    result["lot"] = project.selected_lot
+    return result
+
+
 def _get_project_or_404(project_id: str, org_id: str, db: Session) -> Project:
     project = db.query(Project).filter(
         Project.id == project_id,
