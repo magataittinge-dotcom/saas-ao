@@ -16,6 +16,7 @@ const ROUTE_LABELS: Record<string, { parent?: string; label: string }> = {
   '/settings':       { label: 'Paramètres' },
   '/pricing':        { label: 'Facturation' },
   '/billing':        { label: 'Facturation' },
+  '/settings/billing': { label: 'Abonnement' },
 }
 const STEP_LABELS: Record<string, string> = { upload: 'Upload DCE', lots: 'Sélection lots', analysis: 'Analyse IA', candidature: 'Candidature', memoire: 'Mémoire', export: 'Export' }
 

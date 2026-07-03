@@ -137,7 +137,7 @@ export default function Settings() {
 
         <div className="space-y-2">
           <a
-            href="/billing"
+            href="/settings/billing"
             className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 no-underline"
             style={{
               background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0369A1 100%)',
@@ -153,7 +153,7 @@ export default function Settings() {
           </a>
 
           <a
-            href="/billing"
+            href="/settings/billing"
             className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm text-ds-text-2 transition-all duration-200 hover:text-ds-text no-underline"
             style={{
               background: 'rgba(248,250,252,1)',

@@ -82,7 +82,9 @@ function AppRoutes() {
         <Route path="/company" element={<Company />} />
         <Route path="/team" element={<Team />} />
         <Route path="/settings" element={<Settings />} />
-        <Route path="/billing" element={<Billing />} />
+        {/* B4 — billing = sous-onglet de Paramètres ; /billing conservé en redirect */}
+        <Route path="/settings/billing" element={<Billing />} />
+        <Route path="/billing" element={<Navigate to="/settings/billing" replace />} />
       </Route>
 
       {/* Fallback */}

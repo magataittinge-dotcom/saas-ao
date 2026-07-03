@@ -1,25 +1,41 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
-  LayoutDashboard, FolderOpen, FileStack, Building2, Archive, Users, CreditCard, LogOut,
-  Settings, X, Calculator, Briefcase,
+  LayoutDashboard, FolderOpen, FileStack, Building2, Archive, Users, LogOut,
+  Settings, X, Calculator, Briefcase, Plus,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useLogout } from '@/hooks/useAuth'
+import { useProjects } from '@/hooks/useProject'
 import { cn } from '@/lib/utils'
 import QuotaGauge from './QuotaGauge'
 
-const navItems = [
-  { to: '/dashboard',      icon: LayoutDashboard, label: 'Tableau de bord' },
-  { to: '/projects',       icon: FolderOpen,      label: 'Projets' },
-  { to: '/memoire-config', icon: FileStack,       label: 'Mémoires techniques' },
-  { to: '/references',     icon: Building2,       label: 'Références' },
-  { to: '/company',        icon: Briefcase,       label: 'Mon entreprise' },
-  { to: '/outils',         icon: Calculator,      label: 'Calculateurs' },
-  { to: '/vault',          icon: Archive,         label: 'Coffre-fort' },
-  { to: '/team',           icon: Users,           label: 'Équipe' },
-  { to: '/billing',        icon: CreditCard,      label: 'Facturation' },
-  { to: '/settings',       icon: Settings,        label: 'Paramètres' },
+// B4 — structure cible PRD §4 : [+ Nouvel AO] hors nav · TRAVAIL · MON
+// CAPITAL · jauge quota · Paramètres en bas (billing = sous-onglet de
+// Paramètres). Le pipeline n'apparaît JAMAIS ici.
+const SECTIONS: { label: string; items: { to: string; icon: typeof LayoutDashboard; label: string }[] }[] = [
+  {
+    label: 'Travail',
+    items: [
+      { to: '/dashboard', icon: LayoutDashboard, label: 'Tableau de bord' },
+      { to: '/projects',  icon: FolderOpen,      label: 'Mes AO' },
+    ],
+  },
+  {
+    label: 'Mon capital',
+    items: [
+      { to: '/company',        icon: Briefcase,  label: 'Mon entreprise' },
+      { to: '/references',     icon: Building2,  label: 'Mes références' },
+      { to: '/vault',          icon: Archive,    label: 'Coffre-fort' },
+      { to: '/memoire-config', icon: FileStack,  label: 'Bibliothèque' },
+      { to: '/outils',         icon: Calculator, label: 'Calculateurs' },
+    ],
+  },
+]
+
+const BOTTOM_ITEMS = [
+  { to: '/team',     icon: Users,    label: 'Équipe' },
+  { to: '/settings', icon: Settings, label: 'Paramètres' },
 ]
 
 const PLAN_PILL: Record<string, { label: string; pillClass: string }> = {
@@ -39,10 +55,27 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, organization } = useAuthStore()
+  const { data: projects = [] } = useProjects()
 
   const planKey = (organization?.plan || 'free') as string
   const pill = PLAN_PILL[planKey] ?? PLAN_PILL.free
   const initials = user?.name ? user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() : 'U'
+
+  // Badge deadline sur « Mes AO » : au moins un AO actif avec une échéance < 7 j.
+  const urgentCount = useMemo(() => {
+    const closed = new Set(['soumis', 'gagné', 'perdu'])
+    let count = 0
+    for (const p of projects) {
+      if (closed.has(p.status)) continue
+      const raw = p.deadline || p.infos_marche?.date_limite_reponse
+      if (!raw) continue
+      const d = new Date(raw)
+      if (isNaN(d.getTime())) continue
+      const days = (d.getTime() - Date.now()) / 86400000
+      if (days >= 0 && days < 7) count += 1
+    }
+    return count
+  }, [projects])
 
   useEffect(() => { onMobileClose() }, [location.pathname, onMobileClose])
 
@@ -54,6 +87,55 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
   }, [mobileOpen])
 
   const expanded = mobileOpen || hoverExpanded
+
+  const renderItem = ({ to, icon: Icon, label }: { to: string; icon: typeof LayoutDashboard; label: string }) => (
+    <div key={to} className="relative group">
+      <NavLink to={to}
+        className={() => cn('glass-nav touch-target', !expanded && 'justify-center px-0')}
+        style={({ isActive }) => isActive ? { background: 'rgba(14,165,233,0.10)', color: '#0EA5E9' } : undefined}
+        onMouseEnter={(e) => {
+          if (e.currentTarget.getAttribute('aria-current') !== 'page') {
+            e.currentTarget.style.background = '#F1F5F9'
+            e.currentTarget.style.color = '#0F172A'
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (e.currentTarget.getAttribute('aria-current') !== 'page') {
+            e.currentTarget.style.background = 'transparent'
+            e.currentTarget.style.color = ''
+          }
+        }}
+      >
+        {({ isActive }) => (
+          <>
+            {isActive && (
+              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full"
+                style={{ height: '60%', background: '#0EA5E9' }} />
+            )}
+            <span className="relative shrink-0">
+              <Icon size={18} style={{ color: isActive ? '#0EA5E9' : undefined }} />
+              {to === '/projects' && urgentCount > 0 && !expanded && (
+                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full" style={{ background: '#EF4444' }} />
+              )}
+            </span>
+            {expanded && (
+              <span className="truncate text-[13px] flex-1">{label}</span>
+            )}
+            {expanded && to === '/projects' && urgentCount > 0 && (
+              <span
+                className="px-1.5 py-0.5 rounded-full text-[10px] font-bold leading-none shrink-0"
+                style={{ background: 'rgba(239,68,68,0.10)', color: '#DC2626' }}
+                title={`${urgentCount} AO avec une échéance sous 7 jours`}
+              >
+                {urgentCount}
+              </span>
+            )}
+          </>
+        )}
+      </NavLink>
+      {!expanded && <Tooltip label={label} />}
+    </div>
+  )
 
   return (
     <>
@@ -101,52 +183,50 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
           )}
         </div>
 
-        {/* ── Nav label ──────────────────────────── */}
-        {expanded && (
-          <div className="px-4 pt-4 pb-1">
-            <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#94A3B8' }}>Menu</span>
+        {/* ── [+ Nouvel AO] — bouton primaire hors nav ── */}
+        <div className={cn('pt-3 pb-1', expanded ? 'px-3' : 'px-2')}>
+          <div className="relative group">
+            <button
+              onClick={() => navigate('/projects/new')}
+              className={cn(
+                'w-full flex items-center justify-center gap-2 rounded-lg py-2 text-[13px] font-semibold text-white transition-all touch-target',
+              )}
+              style={{ background: 'linear-gradient(135deg, #0F172A 0%, #0369A1 100%)' }}
+              onMouseEnter={(e) => (e.currentTarget.style.filter = 'brightness(1.12)')}
+              onMouseLeave={(e) => (e.currentTarget.style.filter = '')}
+            >
+              <Plus size={16} className="shrink-0" />
+              {expanded && <span className="whitespace-nowrap">Nouvel AO</span>}
+            </button>
+            {!expanded && <Tooltip label="Nouvel AO" />}
           </div>
-        )}
+        </div>
 
-        {/* ── Nav items ──────────────────────────── */}
-        <nav className="flex-1 py-2 px-2 space-y-0.5 overflow-y-auto overflow-x-hidden">
-          {navItems.map(({ to, icon: Icon, label }) => (
-            <div key={to} className="relative group">
-              <NavLink to={to}
-                className={() => cn('glass-nav touch-target', !expanded && 'justify-center px-0')}
-                style={({ isActive }) => isActive ? { background: 'rgba(14,165,233,0.10)', color: '#0EA5E9' } : undefined}
-                onMouseEnter={(e) => {
-                  if (e.currentTarget.getAttribute('aria-current') !== 'page') {
-                    e.currentTarget.style.background = '#F1F5F9'
-                    e.currentTarget.style.color = '#0F172A'
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (e.currentTarget.getAttribute('aria-current') !== 'page') {
-                    e.currentTarget.style.background = 'transparent'
-                    e.currentTarget.style.color = ''
-                  }
-                }}
-              >
-                {({ isActive }) => (
-                  <>
-                    {isActive && (
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full"
-                        style={{ height: '60%', background: '#0EA5E9' }} />
-                    )}
-                    <Icon size={18} className="shrink-0" style={{ color: isActive ? '#0EA5E9' : undefined }} />
-                    {expanded && (
-                      <span className="truncate text-[13px]">{label}</span>
-                    )}
-                  </>
-                )}
-              </NavLink>
-              {!expanded && <Tooltip label={label} />}
+        {/* ── Sections TRAVAIL / MON CAPITAL ────────── */}
+        <nav className="flex-1 py-1 px-2 overflow-y-auto overflow-x-hidden">
+          {SECTIONS.map((section) => (
+            <div key={section.label} className="mb-1">
+              {expanded && (
+                <div className="px-2 pt-3 pb-1">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#94A3B8' }}>
+                    {section.label}
+                  </span>
+                </div>
+              )}
+              {!expanded && <div className="pt-3" />}
+              <div className="space-y-0.5">
+                {section.items.map(renderItem)}
+              </div>
             </div>
           ))}
         </nav>
 
-        {/* ── Jauge quota (C17) — cliquable vers Facturation ── */}
+        {/* ── Équipe + Paramètres (bas) ─────────────── */}
+        <div className="px-2 py-1 space-y-0.5" style={{ borderTop: '1px solid #E2E8F0' }}>
+          {BOTTOM_ITEMS.map(renderItem)}
+        </div>
+
+        {/* ── Jauge quota (C17) — cliquable vers l'abonnement ── */}
         {expanded && <QuotaGauge />}
 
         {/* ── Plan badge ── */}
@@ -158,7 +238,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
               </span>
               {planKey === 'free' && (
                 <button
-                  onClick={() => navigate('/billing')}
+                  onClick={() => navigate('/settings/billing')}
                   className="text-[10px] text-[#0EA5E9] hover:text-[#0284C7] transition-colors ml-auto"
                 >
                   Upgrade

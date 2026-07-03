@@ -59,7 +59,7 @@ export default function QuotaGauge() {
 
   return (
     <button
-      onClick={() => navigate('/billing')}
+      onClick={() => navigate('/settings/billing')}
       title="Voir mon abonnement"
       className="w-full text-left px-4 py-2 space-y-1.5 transition-colors hover:bg-[#F1F5F9]"
       style={{ borderTop: '1px solid #E2E8F0' }}
