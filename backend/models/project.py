@@ -101,6 +101,9 @@ class ProjectDocument(Base):
     pdf_preview_url = Column(String(500), nullable=True)  # URL du PDF converti pour prévisualisation
     related_lots = Column(JSON, nullable=True)             # ["all"] | ["info"] | ["5"] | ["5","13"]
     is_user_completed = Column(Boolean, nullable=False, default=False, server_default="false")
+    # C16 — coffre-fort progressif : l'utilisateur a refusé (ou déjà accepté)
+    # l'enregistrement de CE document au coffre → plus jamais re-proposé.
+    vault_prompt_dismissed = Column(Boolean, nullable=False, default=False, server_default="false")
     uploaded_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships

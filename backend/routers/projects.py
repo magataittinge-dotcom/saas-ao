@@ -709,7 +709,18 @@ async def upload_project_document(
         )
         _invalidate_lots_cache(project_id, db)
         _mark_step_1_complete(project, db)
-        return ProjectDocumentResponse.model_validate(doc)
+        response = ProjectDocumentResponse.model_validate(doc)
+
+        # C16 — coffre-fort progressif : un doc perso reconnu (URSSAF, KBIS…)
+        # déclenche le bandeau « enregistrer au coffre-fort » côté front.
+        from services.vault_classifier import category_for_type, detect_vault_type
+        vault_type = detect_vault_type(raw_filename)
+        if vault_type != "autre":
+            response.vault_suggestion = {
+                "type": vault_type,
+                "category": category_for_type(vault_type),
+            }
+        return response
     finally:
         try:
             spool.close()

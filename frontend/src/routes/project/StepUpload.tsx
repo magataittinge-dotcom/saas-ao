@@ -15,6 +15,7 @@ import { useProgressStream } from '@/hooks/useProgressStream'
 import type { Project, ProjectDocument, ProjectDocumentType } from '@/types'
 import { cn } from '@/lib/utils'
 import { AiTipsBlock, type TipData } from '@/components/common/AiTip'
+import VaultSavePrompt, { type VaultSuggestion } from '@/components/vault/VaultSavePrompt'
 
 const UPLOAD_STEPS: StepDescriptor[] = [
   { key: 'uploading',       label: 'Transfert du dossier',   estimated_s: 30 },
@@ -86,6 +87,7 @@ export default function StepUpload({ project }: Props) {
   const [sublabel, setSublabel] = useState('')
   const [uploadErrors, setUploadErrors] = useState<string[]>([])
   const [uploadWarnings, setUploadWarnings] = useState<string[]>([])
+  const [vaultPrompts, setVaultPrompts] = useState<VaultSuggestion[]>([])
   const [largeFileNotice, setLargeFileNotice] = useState<{ message: string; tone: 'cyan' | 'orange' } | null>(null)
   const [nextError, setNextError] = useState<string | null>(null)
   const [isNavigating, setIsNavigating] = useState(false)
@@ -263,6 +265,17 @@ export default function StepUpload({ project }: Props) {
           if (result && typeof result === 'object' && 'warnings' in result) {
             const w = (result as { warnings?: string[] }).warnings
             if (w && w.length > 0) warnings.push(...w)
+          }
+          // C16 — doc perso reconnu → bandeau coffre-fort (non-bloquant)
+          if (result && typeof result === 'object' && 'vault_suggestion' in result) {
+            const r = result as { id: string; file_name: string; vault_suggestion?: { type: string; category: string } | null }
+            if (r.vault_suggestion) {
+              const s: VaultSuggestion = {
+                docId: r.id, fileName: r.file_name,
+                type: r.vault_suggestion.type, category: r.vault_suggestion.category,
+              }
+              setVaultPrompts((prev) => prev.some(p => p.docId === s.docId) ? prev : [...prev, s])
+            }
           }
           queryClient.invalidateQueries({ queryKey: ['project-documents', project.id] })
         } catch (err) {
@@ -474,6 +487,15 @@ export default function StepUpload({ project }: Props) {
             ))}
           </div>
         )}
+
+        {/* ── C16 : bandeau coffre-fort progressif ─────────── */}
+        {vaultPrompts.map((s) => (
+          <VaultSavePrompt
+            key={s.docId}
+            suggestion={s}
+            onDone={(docId) => setVaultPrompts((prev) => prev.filter(p => p.docId !== docId))}
+          />
+        ))}
 
         {/* ── FILES TABLE ─────────────────────────────────── */}
         {hasDocuments && (

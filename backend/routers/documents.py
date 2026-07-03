@@ -1,11 +1,13 @@
 from datetime import date, datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from database import get_db
 from models.user import User
 from models.document import Document, DOCUMENT_TYPES, VAULT_CATEGORIES
+from models.project import Project, ProjectDocument
 from schemas.document import DocumentResponse, DocumentUpdateRequest
 from routers.auth import get_auth_user
 from services.audit_logger import log_action
@@ -120,6 +122,90 @@ async def upload_document(
         extra={"type": type, "file_name": file.filename, "size": len(content)},
     )
     return doc
+
+
+class FromProjectDocRequest(BaseModel):
+    project_doc_id: str
+    issued_date: Optional[date] = None
+    expiry_date: Optional[date] = None
+
+
+class DismissVaultPromptRequest(BaseModel):
+    project_doc_id: str
+
+
+def _get_owned_project_doc(project_doc_id: str, org_id: str, db: Session) -> ProjectDocument:
+    pd = (
+        db.query(ProjectDocument)
+        .join(Project, Project.id == ProjectDocument.project_id)
+        .filter(
+            ProjectDocument.id == project_doc_id,
+            Project.organization_id == org_id,
+        )
+        .first()
+    )
+    if not pd:
+        raise HTTPException(status_code=404, detail="Document de projet introuvable")
+    return pd
+
+
+@router.post("/from-project-doc", response_model=DocumentResponse)
+async def save_project_doc_to_vault(
+    payload: FromProjectDocRequest,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """C16 — coffre-fort progressif : copie un document de projet dans le
+    coffre-fort (1 tap depuis le bandeau). Classement auto + statut honnête ;
+    le document ne sera plus jamais re-proposé."""
+    pd = _get_owned_project_doc(payload.project_doc_id, user.organization_id, db)
+
+    from services.file_storage import UPLOADS_ROOT as _uploads_root
+    src = _uploads_root / pd.file_url.removeprefix("/uploads/")
+    if not pd.file_url.startswith("/uploads/") or not src.exists():
+        raise HTTPException(status_code=404, detail="Fichier source introuvable")
+
+    file_url = await storage.upload(
+        src.read_bytes(),
+        pd.file_name,
+        f"organizations/{user.organization_id}/vault",
+    )
+
+    doc_type = detect_vault_type(pd.file_name)
+    category = "unclassified" if doc_type == "autre" else category_for_type(doc_type)
+    doc = Document(
+        organization_id=user.organization_id,
+        type=doc_type,
+        category=category,
+        file_url=file_url,
+        file_name=pd.file_name,
+        issued_date=payload.issued_date,
+        expiry_date=payload.expiry_date,
+        status=compute_document_status(doc_type, payload.expiry_date),
+    )
+    db.add(doc)
+    pd.vault_prompt_dismissed = True  # enregistré → plus de re-proposition
+    db.commit()
+    db.refresh(doc)
+    log_action(
+        db, user, "vault.save_from_project",
+        target_type="document", target_id=doc.id,
+        extra={"project_doc_id": pd.id, "type": doc_type},
+    )
+    return doc
+
+
+@router.post("/vault-prompt/dismiss")
+def dismiss_vault_prompt(
+    payload: DismissVaultPromptRequest,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """C16 — refus du bandeau : flag no-repropose pour CE document."""
+    pd = _get_owned_project_doc(payload.project_doc_id, user.organization_id, db)
+    pd.vault_prompt_dismissed = True
+    db.commit()
+    return {"dismissed": True}
 
 
 @router.patch("/{doc_id}", response_model=DocumentResponse)

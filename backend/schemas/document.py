@@ -37,5 +37,8 @@ class ProjectDocumentResponse(BaseModel):
     pdf_preview_url: Optional[str] = None
     related_lots: Optional[List[str]] = None
     uploaded_at: datetime
+    # C16 — renseigné uniquement dans la réponse d'upload quand le fichier
+    # ressemble à un document perso (URSSAF, KBIS…) : {type, category}.
+    vault_suggestion: Optional[dict] = None
 
     model_config = {"from_attributes": True}
