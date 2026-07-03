@@ -7,6 +7,7 @@ import {
 import { useAuthStore } from '@/stores/authStore'
 import { useLogout } from '@/hooks/useAuth'
 import { cn } from '@/lib/utils'
+import QuotaGauge from './QuotaGauge'
 
 const navItems = [
   { to: '/dashboard',      icon: LayoutDashboard, label: 'Tableau de bord' },
@@ -144,6 +145,9 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
             </div>
           ))}
         </nav>
+
+        {/* ── Jauge quota (C17) — cliquable vers Facturation ── */}
+        {expanded && <QuotaGauge />}
 
         {/* ── Plan badge ── */}
         <div className="border-t border-[#E2E8F0]">
