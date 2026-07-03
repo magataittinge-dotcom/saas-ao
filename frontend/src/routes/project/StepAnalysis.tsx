@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { api, getSignedFileUrl } from '@/services/api'
 import CriticalBanner, { type FieldSource } from '@/components/project/CriticalBanner'
+import TresorerieCard from '@/components/project/TresorerieCard'
 import ProgressDisplay, { type StepDescriptor } from '@/components/common/ProgressDisplay'
 import { useProgressStream } from '@/hooks/useProgressStream'
 import { RequirementListSkeleton } from '@/components/skeletons'
@@ -434,6 +435,9 @@ export default function StepAnalysis({ project }: Props) {
 
       {/* ── BANDEAU CRITIQUE (C5) — deadline, visite, critères, pénalités ── */}
       <CriticalBanner projectId={project.id} onOpenSource={openFieldSource} />
+
+      {/* ── TRÉSORERIE DU MARCHÉ (C19) — lecture factuelle du CCAP ── */}
+      <TresorerieCard projectId={project.id} onOpenSource={openFieldSource} />
 
       {/* ── SEARCH BAR ──────────────────────────────────────────── */}
       <div className="relative">

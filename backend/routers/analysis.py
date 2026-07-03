@@ -393,6 +393,25 @@ def get_critical_fields(
     return {"lot": project.selected_lot, "fields": cache[lot_key]}
 
 
+@router.get("/{project_id}/tresorerie")
+def get_tresorerie(
+    project_id: str,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """C19 — trésorerie du marché « en clair » (lecture factuelle du CCAP).
+
+    Déterministe, calculé à la volée depuis les données extraites + regex
+    ciblées. Ne commente JAMAIS le prix ni le chiffrage."""
+    from services.tresorerie import build_tresorerie
+    project = _get_project_or_404(project_id, user.organization_id, db)
+    docs = db.query(ProjectDocument).filter(
+        ProjectDocument.project_id == project_id,
+    ).all()
+    lignes = build_tresorerie(project.infos_marche, docs)
+    return {"lot": project.selected_lot, "lignes": lignes}
+
+
 def _get_project_or_404(project_id: str, org_id: str, db: Session) -> Project:
     project = db.query(Project).filter(
         Project.id == project_id,
