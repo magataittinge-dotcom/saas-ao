@@ -34,6 +34,84 @@ _MAX_UPLOAD_SIZE = 2 * 1024 * 1024 * 1024     # 2 GB
 _UPLOAD_CHUNK_SIZE = 4 * 1024 * 1024          # 4 MB per chunk
 _UPLOAD_SPOOL_THRESHOLD = 10 * 1024 * 1024    # spill to disk past 10 MB
 
+# Anti-zip-bomb (C21) — caps cumulés sur TOUTES les profondeurs d'archive.
+_ZIP_MAX_FILES = 1000                              # nb max de membres (fichiers) extraits
+_ZIP_MAX_TOTAL_UNCOMPRESSED = 4 * 1024 * 1024 * 1024  # 4 GB décompressés cumulés
+_ZIP_MAX_RATIO = 100                               # ratio décompressé/compressé max
+# Le ratio n'est vérifié qu'au-delà de ce plancher déclaré : les petites archives
+# très compressibles (un .doc texte) sont légitimes et bornées par le cap absolu.
+_ZIP_RATIO_MIN_DECLARED = 10 * 1024 * 1024         # 10 MB
+
+
+class ZipBombError(Exception):
+    """Archive détectée comme bombe de décompression — rejet 413."""
+
+
+class _ZipBudget:
+    """Compteurs partagés à travers la récursion des archives imbriquées,
+    + traces (fichiers écrits, docs commis) pour le cleanup en cas de rejet."""
+
+    def __init__(self):
+        self.files = 0
+        self.declared_bytes = 0
+        self.written_bytes = 0
+        self.written_paths: list = []
+        self.created_doc_ids: list = []
+
+
+def _check_zip_archive_budget(zf: "zipfile.ZipFile", budget: _ZipBudget) -> None:
+    """Pré-check sur les métadonnées de l'archive (avant toute décompression).
+
+    Les tailles déclarées peuvent mentir — l'enforcement réel a lieu aussi
+    pendant le streaming (_copy_zip_member_bounded). Fail closed."""
+    members = [m for m in zf.infolist() if not m.is_dir()]
+
+    budget.files += len(members)
+    if budget.files > _ZIP_MAX_FILES:
+        raise ZipBombError(
+            f"Archive rejetée : plus de {_ZIP_MAX_FILES} fichiers contenus "
+            "(archives imbriquées comprises)."
+        )
+
+    declared = sum(m.file_size for m in members)
+    compressed = sum(m.compress_size for m in members)
+    budget.declared_bytes += declared
+    if budget.declared_bytes > _ZIP_MAX_TOTAL_UNCOMPRESSED:
+        gb = _ZIP_MAX_TOTAL_UNCOMPRESSED // (1024 ** 3)
+        raise ZipBombError(
+            f"Archive rejetée : taille décompressée annoncée supérieure à {gb} Go."
+        )
+    if declared > _ZIP_RATIO_MIN_DECLARED and declared > _ZIP_MAX_RATIO * max(compressed, 1):
+        raise ZipBombError(
+            "Archive rejetée : ratio de décompression anormal "
+            f"(> {_ZIP_MAX_RATIO}:1) — bombe de décompression suspectée."
+        )
+
+
+def _copy_zip_member_bounded(src, dst, declared_size: int, budget: _ZipBudget) -> int:
+    """Copie un membre ZIP en comptant les octets réels. Rejette si le flux
+    dépasse la taille déclarée dans l'en-tête (en-tête falsifié) ou si le
+    cumul décompressé de l'upload dépasse le cap global."""
+    written = 0
+    while True:
+        chunk = src.read(_UPLOAD_CHUNK_SIZE)
+        if not chunk:
+            break
+        written += len(chunk)
+        if written > declared_size:
+            raise ZipBombError(
+                "Archive rejetée : un fichier produit plus d'octets que sa "
+                "taille annoncée — bombe de décompression suspectée."
+            )
+        budget.written_bytes += len(chunk)
+        if budget.written_bytes > _ZIP_MAX_TOTAL_UNCOMPRESSED:
+            gb = _ZIP_MAX_TOTAL_UNCOMPRESSED // (1024 ** 3)
+            raise ZipBombError(
+                f"Archive rejetée : taille décompressée cumulée supérieure à {gb} Go."
+            )
+        dst.write(chunk)
+    return written
+
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 storage = FileStorage()
@@ -576,7 +654,14 @@ async def upload_project_document(
             _pt.start_step(project_id, "extracting_zip")
 
             _t1 = _time.monotonic()
-            docs, zip_warnings = await _handle_zip_upload(spool, project_id, background_tasks, db)
+            try:
+                docs, zip_warnings = await _handle_zip_upload(spool, project_id, background_tasks, db)
+            except HTTPException as e:
+                project.processing_status = "error"
+                project.processing_detail = str(e.detail)
+                db.commit()
+                _pt.fail_pipeline(project_id, str(e.detail))
+                raise
             print(f"[TIMING] _handle_zip_upload ({len(docs)} docs): {_time.monotonic()-_t1:.2f}s (total: {_time.monotonic()-_t0:.2f}s)", flush=True)
 
             _pt.complete_step(project_id, "extracting_zip")
@@ -1077,6 +1162,7 @@ async def _extract_zip_members(
     existing_names: set,
     used_in_zip: set,
     warnings: List[str],
+    budget: _ZipBudget,
     depth: int = 0,
 ) -> List[ProjectDocument]:
     """
@@ -1111,6 +1197,9 @@ async def _extract_zip_members(
         warnings.append("Archive ZIP imbriquée invalide ou corrompue (ignorée)")
         return []
 
+    # Anti-zip-bomb (C21) : pré-check sur les métadonnées avant toute extraction.
+    _check_zip_archive_budget(zf, budget)
+
     import uuid as _uuid
 
     file_records: list[tuple[str, str, str, int]] = []  # (base, file_url, doc_type, file_size)
@@ -1141,12 +1230,18 @@ async def _extract_zip_members(
                 if member.file_size == 0:
                     continue
                 try:
-                    inner_bytes = zf.read(member)
+                    # Lecture bornée : un membre .zip qui ment sur sa taille
+                    # déclarée est rejeté avant de saturer la RAM.
+                    inner_buf = _io.BytesIO()
+                    with zf.open(member) as inner_src:
+                        _copy_zip_member_bounded(inner_src, inner_buf, member.file_size, budget)
                     inner_docs = await _extract_zip_members(
-                        inner_bytes, project_id, background_tasks, db,
-                        existing_names, used_in_zip, warnings, depth=depth + 1,
+                        inner_buf.getvalue(), project_id, background_tasks, db,
+                        existing_names, used_in_zip, warnings, budget, depth=depth + 1,
                     )
                     created.extend(inner_docs)
+                except ZipBombError:
+                    raise
                 except Exception as e:
                     warnings.append(f"{base} : archive imbriquée non extractible ({e})")
                 continue
@@ -1179,9 +1274,12 @@ async def _extract_zip_members(
             key = f"{prefix}/{_uuid.uuid4()}-{base}"
             path = UPLOADS_ROOT / key
             path.parent.mkdir(parents=True, exist_ok=True)
+            budget.written_paths.append(path)
             try:
                 with zf.open(member) as src, open(path, "wb") as dst:
-                    shutil.copyfileobj(src, dst, length=_UPLOAD_CHUNK_SIZE)
+                    _copy_zip_member_bounded(src, dst, member.file_size, budget)
+            except ZipBombError:
+                raise
             except Exception as e:
                 warnings.append(f"{base} : impossible de lire le fichier ({e})")
                 if path.exists():
@@ -1218,6 +1316,7 @@ async def _extract_zip_members(
     db.commit()
     for doc in new_docs:
         db.refresh(doc)
+    budget.created_doc_ids.extend(d.id for d in new_docs)
     created.extend(new_docs)
     _t_db = _time.monotonic() - _td0
 
@@ -1250,11 +1349,27 @@ async def _handle_zip_upload(
     existing_names: set = {row[0].lower().strip() for row in existing_rows}
     used_in_zip: set = set()
     warnings: List[str] = []
+    budget = _ZipBudget()
 
-    created = await _extract_zip_members(
-        source, project_id, background_tasks, db,
-        existing_names, used_in_zip, warnings, depth=0,
-    )
+    try:
+        created = await _extract_zip_members(
+            source, project_id, background_tasks, db,
+            existing_names, used_in_zip, warnings, budget, depth=0,
+        )
+    except ZipBombError as e:
+        # Rejet propre : rien ne doit rester ni sur disque ni en DB.
+        db.rollback()
+        for path in budget.written_paths:
+            try:
+                path.unlink(missing_ok=True)
+            except Exception:
+                pass
+        if budget.created_doc_ids:
+            db.query(ProjectDocument).filter(
+                ProjectDocument.id.in_(budget.created_doc_ids),
+            ).delete(synchronize_session=False)
+            db.commit()
+        raise HTTPException(status_code=413, detail=str(e))
     return created, warnings
 
 
