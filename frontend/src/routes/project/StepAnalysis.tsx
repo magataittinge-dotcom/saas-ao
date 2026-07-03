@@ -6,7 +6,7 @@ import {
   Loader2, Search, Calendar, MapPin, Clock,
   CheckCircle2, Sparkles, Info, Shield,
 } from 'lucide-react'
-import { api } from '@/services/api'
+import { api, getSignedFileUrl } from '@/services/api'
 import ProgressDisplay, { type StepDescriptor } from '@/components/common/ProgressDisplay'
 import { useProgressStream } from '@/hooks/useProgressStream'
 import { RequirementListSkeleton } from '@/components/skeletons'
@@ -53,7 +53,7 @@ export default function StepAnalysis({ project }: Props) {
   })
 
   // Ouvrir le document source dans un nouvel onglet
-  const openSourceDocument = (item: ComplianceItem) => {
+  const openSourceDocument = async (item: ComplianceItem) => {
     if (!item.source_document && !item.source_page) return
 
     const sourceDoc = (item.source_document || '').toLowerCase().trim()
@@ -83,35 +83,32 @@ export default function StepAnalysis({ project }: Props) {
     const doc = matchedDoc || projectDocs[0]
     if (!doc) return
 
-    const baseUrl = import.meta.env.PROD
-      ? (import.meta.env.VITE_API_URL || '')
-      : ''
-
     const fileUrlToUse = doc.pdf_preview_url || doc.file_url
 
-    let relativePath = fileUrlToUse
-    if (relativePath.startsWith('/uploads/')) {
-      relativePath = relativePath.replace('/uploads/', '')
-    } else if (relativePath.startsWith('http')) {
-      window.open(relativePath, '_blank')
+    if (fileUrlToUse.startsWith('http')) {
+      window.open(fileUrlToUse, '_blank')
       return
     }
 
-    const viewUrl = `${baseUrl}/api/files/view/${relativePath.split('/').map(s => encodeURIComponent(s)).join('/')}`
-    const params = new URLSearchParams()
+    // C22 — mint une URL signée (15 min) puis ajoute les params de rendu.
+    let signedUrl: string
+    try {
+      signedUrl = await getSignedFileUrl(fileUrlToUse)
+    } catch (err) {
+      console.error('[StepAnalysis] impossible d’obtenir le lien signé:', err)
+      return
+    }
 
+    const url = new URL(signedUrl, window.location.origin)
     if (item.source_page) {
-      params.set('page', String(item.source_page))
+      url.searchParams.set('page', String(item.source_page))
     }
     if (item.source_excerpt) {
-      params.set('highlight', item.source_excerpt)
+      url.searchParams.set('highlight', item.source_excerpt)
     }
 
-    const queryString = params.toString()
     const isPdf = fileUrlToUse.toLowerCase().endsWith('.pdf')
-
-    let finalUrl = queryString ? `${viewUrl}?${queryString}` : viewUrl
-
+    let finalUrl = url.toString()
     if (isPdf && item.source_page) {
       finalUrl += `#page=${item.source_page}`
     }

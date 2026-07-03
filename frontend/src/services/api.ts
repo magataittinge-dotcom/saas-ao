@@ -19,6 +19,18 @@ export function setClerkTokenProvider(fn: () => Promise<string | null>) {
   _getToken = fn
 }
 
+// C22 — URLs signées : les accès fichiers directs (href, window.open,
+// visionneuse) ne peuvent pas porter le header Bearer. On mint une URL
+// signée à durée limitée (15 min) via l'API authentifiée, puis on l'utilise
+// telle quelle dans le navigateur.
+export async function getSignedFileUrl(fileUrl: string): Promise<string> {
+  const { data } = await api.get<{ url: string }>('/files/sign', {
+    params: { path: fileUrl },
+  })
+  // En dev l'URL relative passe par le proxy Vite (/api) ; en prod on préfixe.
+  return `${API_URL}${data.url}`
+}
+
 // Attach Clerk JWT to every request
 api.interceptors.request.use(async (config) => {
   if (_getToken) {

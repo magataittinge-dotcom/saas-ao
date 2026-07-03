@@ -172,10 +172,17 @@ def test_user_b_cannot_view_user_a_project_file(db_session, two_orgs, tmp_path, 
 
     try:
         c_b = _client_as(user_b)
+        # Accès direct sans signature → refus (C22).
         resp = c_b.get(f"/api/files/view/projects/proj-X/dce/leaked.pdf")
-        # Either 403 or 404 are acceptable; the point is no body leak.
         assert resp.status_code in (403, 404), resp.text
         assert b"secret CCTP" not in resp.content
+
+        # B ne peut pas non plus minter une URL signée pour le fichier de A.
+        resp_sign = c_b.get(
+            "/api/files/sign",
+            params={"path": "/uploads/projects/proj-X/dce/leaked.pdf"},
+        )
+        assert resp_sign.status_code in (403, 404), resp_sign.text
     finally:
         app.dependency_overrides.clear()
 
@@ -195,7 +202,13 @@ def test_user_a_can_view_own_project_file(db_session, two_orgs, tmp_path, monkey
 
     try:
         c_a = _client_as(user_a)
-        resp = c_a.get(f"/api/files/view/projects/proj-Y/dce/doc.pdf")
+        # Depuis C22 l'accès passe par une URL signée mintée via /api/files/sign.
+        resp_sign = c_a.get(
+            "/api/files/sign",
+            params={"path": "/uploads/projects/proj-Y/dce/doc.pdf"},
+        )
+        assert resp_sign.status_code == 200, resp_sign.text
+        resp = c_a.get(resp_sign.json()["url"])
         assert resp.status_code == 200
         assert b"my own CCTP" in resp.content
     finally:

@@ -1,12 +1,48 @@
+import hashlib
+import hmac
 import shutil
+import time
 import uuid
 from pathlib import Path
 from typing import IO, Optional
+from urllib.parse import quote
 from config import get_settings
 
 settings = get_settings()
 
 UPLOADS_ROOT = Path(__file__).parent.parent / "uploads"
+
+# URLs signées à durée limitée (C22) — liens coffre-fort / documents.
+SIGNED_URL_TTL = 15 * 60  # 15 minutes
+
+
+def _file_signature(file_path: str, org_id: str, exp: int) -> str:
+    msg = f"{file_path}|{org_id}|{exp}".encode("utf-8")
+    return hmac.new(settings.SECRET_KEY.encode("utf-8"), msg, hashlib.sha256).hexdigest()
+
+
+def sign_file_path(file_path: str, org_id: str, expires_in: int = SIGNED_URL_TTL) -> str:
+    """Retourne une URL signée /api/files/view/... valable `expires_in` secondes.
+
+    `file_path` est le chemin relatif sous uploads/ (sans préfixe /uploads/),
+    NON encodé. La signature lie chemin + org + expiration : toute altération
+    de l'un des trois invalide l'URL."""
+    exp = int(time.time()) + expires_in
+    sig = _file_signature(file_path, org_id, exp)
+    quoted = "/".join(quote(seg) for seg in file_path.split("/"))
+    return f"/api/files/view/{quoted}?org={quote(org_id)}&exp={exp}&sig={sig}"
+
+
+def verify_file_signature(file_path: str, org_id: str, exp, sig) -> bool:
+    """Vérifie signature + expiration. Fail closed sur toute entrée invalide."""
+    try:
+        exp_int = int(exp)
+    except (TypeError, ValueError):
+        return False
+    if time.time() > exp_int:
+        return False
+    expected = _file_signature(file_path, org_id, exp_int)
+    return hmac.compare_digest(expected, sig or "")
 
 
 class FileStorage:

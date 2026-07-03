@@ -1,5 +1,6 @@
 import { FileText, Trash2, ExternalLink } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { getSignedFileUrl } from '@/services/api'
 import { StatusBadge, documentStatusBadge } from './StatusBadge'
 import type { Document } from '@/types'
 
@@ -20,6 +21,15 @@ const docTypeLabels: Record<string, string> = {
 
 export function FileCard({ document, onDelete }: Props) {
   const badge = documentStatusBadge(document.status)
+
+  const openFile = async () => {
+    try {
+      const url = await getSignedFileUrl(document.file_url)
+      window.open(url, '_blank', 'noopener,noreferrer')
+    } catch (err) {
+      console.error('[FileCard] impossible d’obtenir le lien signé:', err)
+    }
+  }
 
   return (
     <div
@@ -47,14 +57,13 @@ export function FileCard({ document, onDelete }: Props) {
       </div>
       <div className="flex items-center gap-2 ml-2 shrink-0">
         <StatusBadge label={badge.label} variant={badge.variant} />
-        <a
-          href={document.file_url}
-          target="_blank"
-          rel="noopener noreferrer"
+        <button
+          onClick={openFile}
+          title="Ouvrir le document"
           className="p-1.5 text-ds-text-3 hover:text-ds-text rounded transition-colors"
         >
           <ExternalLink size={14} />
-        </a>
+        </button>
         {onDelete && (
           <button
             onClick={() => onDelete(document.id)}

@@ -635,7 +635,7 @@ def metrics():
 
 
 # NOTE: We deliberately do NOT mount /uploads as a public StaticFiles route.
-# All file access goes through /api/files/view/... (authenticated + ownership-checked).
-# See routers/file_serve.py.
+# All file access goes through /api/files/view/... (signed time-limited URLs
+# minted via /api/files/sign — auth + ownership). See routers/file_serve.py.
 _uploads_dir = Path(__file__).parent / "uploads"
 _uploads_dir.mkdir(exist_ok=True)
