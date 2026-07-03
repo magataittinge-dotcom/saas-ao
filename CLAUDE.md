@@ -17,11 +17,23 @@ Lis le fichier `docs/PRD_SYNORIX_V2.md` pour comprendre le projet complet (PRD c
 
 **Objectif :** Automatiser la réponse aux appels d'offres BTP via l'IA (Claude API) — analyse DCE, compliance matrix, checklist candidature, génération de mémoire technique (~20 pages), export Word.
 
+## Décisions structurantes (Vision V1 FINALE — 2026-07-01)
+
+> Référence canonique : `docs/PRD_SYNORIX_V2.md` v3.0. Ces décisions **priment** sur toute vision antérieure contradictoire.
+
+- **Pricing & quotas.** Pro **349 €/mois** (1 user, **40 analyses + 40 mémoires/mois**) · Business **599 €/mois** (5 users, **illimité fair-use**). Unité : **1 lot = 1 mémoire = 1 unité**. **1 AO offert** à la création. Dépassement Pro → **blocage doux + upgrade** (pas de facturation à l'unité).
+- **Paiement carte uniquement en V1.** Stripe `payment_method_types=["card"]`, **pas de SEPA** (migration d'entité prévue ; les mandats SEPA ne migrent pas entre comptes Stripe).
+- **Frontière chiffrage (FERME).** Synorix **ne commente ni ne conseille JAMAIS** les prix ou le chiffrage. Il **lit le contrat** (faits CCAP) et vérifie la conformité **formelle** de la DPGF. Le **calculateur OAB est retiré** du produit (route + UI + `services/calculators/oab.py` + tests — planifié dans `TASKS.md`). Déclarations de l'entreprise = **champs libres** sous la responsabilité de l'utilisateur (Synorix est un éditeur, pas un juge).
+- **Différenciateurs V1 = déterministes, 0 € API** : Synorix Score go/no-go, traduction trésorerie CCAP, rétro-planning, stats gagné/perdu, calculateur retenue de garantie. Le Synorix Score qualité mémoire /100 (LLM) est **déclassé V1.5** — jamais d'Opus sur les scores en V1.
+- **Profil mémoire vivant.** Couche stable entreprise en BDD, vit dans « Mon entreprise » (onglets Identité / Moyens / Certifications) — **pas** d'entrée « mémoire technique » séparée. Lu au moment de la génération ; modifs **locales par mémoire** par défaut (+ case « mettre à jour mon profil »).
+- **Sidebar.** `[+ Nouvel AO]` hors nav · TRAVAIL (Dashboard, Mes AO) · MON CAPITAL (Mon entreprise, Mes références, Coffre-fort, Bibliothèque) · jauge quota → Paramètres > Abonnement. **Le pipeline n'apparaît JAMAIS dans la sidebar** ; le billing vit dans Paramètres.
+- **Sécurité by-design (à inscrire dans chaque nouvelle route).** Isolation multi-tenant stricte (`org_id` sur chaque requête, **tests cross-org systématiques**) · coffre-fort hors webroot, noms aléatoires, **URLs signées à durée limitée**, ownership vérifié · TLS+HSTS, cookies HttpOnly/Secure/SameSite, CSP · validation Pydantic partout ; uploads type+taille validés, **garde anti-zip-bomb** · rate limiting auth + endpoints coûteux · secrets en env vars only · RGPD (données UE, logs sans données perso) · Sentry + uptime.
+
 ## Stack technique
 
 - **Frontend :** React 18 + TypeScript + Tailwind CSS + shadcn/ui + Zustand + React Router v6
 - **Backend :** FastAPI (Python) + SQLAlchemy + PostgreSQL + Redis + Celery
-- **IA :** Claude API — Sonnet 4.6 (extraction, analyse, génération mémoire), Opus 4.7 (réécriture ciblée de paragraphe + fallback)
+- **IA :** Claude API — Haiku 4.5 (routing + reformulation de texte libre du profil), Sonnet 4.6 (extraction, analyse, génération mémoire), Opus 4.7 (réécriture ciblée de paragraphe + fallback)
 - **Stockage :** uploads sur disque du VPS (`backend/uploads/`, servis via `/api/files/view/...` avec contrôle d'ownership) ; object storage Hostinger (S3-compatible) prévu à l'échelle. Stripe (paiement)
 - **Déploiement :** Hostinger VPS (Nginx + FastAPI + Postgres + Redis + Celery)
 
@@ -34,7 +46,7 @@ Architecture cible et réelle (moteur `services/ai`, pipeline 6 étapes, chunkin
 - Toujours écrire du code propre, typé (TypeScript strict, Pydantic pour Python)
 - **Ne jamais hardcoder de clés API ou secrets** — utiliser les variables d'environnement
 - Suivre les conventions de nommage : camelCase (JS/TS), snake_case (Python)
-- Les modèles IA : Sonnet 4.6 pour extraction/matching **et génération mémoire** ; Opus 4.7 pour la réécriture ciblée de paragraphe
+- Les modèles IA : **Haiku 4.5** pour le routing + la reformulation de texte libre du profil ; **Sonnet 4.6** pour extraction/matching **et génération mémoire** ; **Opus 4.7** pour la réécriture ciblée de paragraphe + fallback. Les **scores (Synorix Score, conformité) sont déterministes** — pas de LLM.
 - Écrire des tests pour les fonctions critiques (auth, IA, export)
 - Utiliser les schémas Pydantic pour toute validation de données côté backend
 - Les tâches longues (analyse DCE, génération mémoire) sont des tâches Celery asynchrones
