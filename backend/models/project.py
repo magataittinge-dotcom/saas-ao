@@ -59,7 +59,8 @@ class Project(Base):
     completed_steps = Column(JSON, nullable=True, default=dict)  # {"1": true, "2": true, ...}
     criteres_jugement = Column(JSON, nullable=True)   # [{nom, poids, sous_criteres}]
     infos_marche = Column(JSON, nullable=True)         # {objet, maitre_ouvrage, ...}
-    lots_detectes = Column(JSON, nullable=True)        # [{id, nom}] cached lot list
+    lots_detectes = Column(JSON, nullable=True)        # [{id, nom, confidence, sources, ...}] cached lot list
+    lots_announced = Column(Integer, nullable=True)    # nb de lots annoncé dans le RC (C3)
     selected_lot = Column(String(50), nullable=True)   # "lot1"
     selected_lot_name = Column(String(255), nullable=True)  # "Lot 1 — Gros œuvre"
     processing_status = Column(Text, nullable=True)   # uploading|extracting_text|detecting_lots|ready|error

@@ -844,6 +844,62 @@ def detect_all_lots(
     return [d.to_dict() for d in merged]
 
 
+# ─── Nombre de lots ANNONCÉ dans le RC (C3 — déterministe, 0 € API) ───────────
+
+# « divisé en 13 lots », « alloti en 5 lots », « comporte 8 lots »…
+_ANNOUNCED_PATTERNS = [
+    re.compile(
+        r'(?:divis\w+|decompos\w+|allot\w+|repart\w+|compos\w+|decoup\w+|scind\w+)'
+        r'\s+en\s+(\d{1,2})\s+lots?\b'
+    ),
+    re.compile(r'(?:comporte|comprend|constitue\s+de)\s+(\d{1,2})\s+lots?\b'),
+    re.compile(r'(\d{1,2})\s+lots?\s+(?:suivants|designes|definis|ci-(?:dessous|apres))\b'),
+]
+
+_ANNOUNCED_MAX = 60  # au-delà, valeur aberrante pour un DCE BTP
+
+
+def extract_announced_lot_count(text: str) -> Optional[int]:
+    """Nombre de lots annoncé dans le texte du RC/CCAP, ou None.
+
+    Purement regex — sert de référence objective pour déclencher (ou non)
+    le filet IA : détectés ≠ annoncés = échec objectif de la détection."""
+    if not text:
+        return None
+    norm = _normalize(text)
+    for pattern in _ANNOUNCED_PATTERNS:
+        m = pattern.search(norm)
+        if m:
+            count = int(m.group(1))
+            if 1 <= count <= _ANNOUNCED_MAX:
+                return count
+    return None
+
+
+def extract_announced_from_docs(documents) -> Optional[int]:
+    """Scanne les documents (RC/CCAP en priorité) pour le nombre annoncé."""
+    prioritized = sorted(
+        documents,
+        key=lambda d: 0 if (getattr(d, "type", "") or "") in ("rc", "ccap") else 1,
+    )
+    for doc in prioritized:
+        text = getattr(doc, "extracted_text", None) or ""
+        if text.startswith("[document volumineux"):
+            continue
+        count = extract_announced_lot_count(text)
+        if count is not None:
+            return count
+    return None
+
+
+def mentions_allotissement(text: str) -> bool:
+    """Le texte parle-t-il d'un marché alloti ? (déclencheur du filet si 0 lot)"""
+    if not text:
+        return False
+    norm = _normalize(text)
+    return bool(re.search(r'\ballot\w+|\blots?\s+(?:n\s*°|\d|suivants)\b|\ben\s+\d{1,2}\s+lots?\b', norm))
+
+
 # ─── Class interface ──────────────────────────────────────────────────────────
 
 class LotDetector:

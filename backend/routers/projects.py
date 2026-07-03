@@ -1595,12 +1595,30 @@ def _run_lot_detection_background(project_id: str, docs_data: list, uploads_root
         lots = lot_detector.detect(doc_proxies, uploads_root=uploads_root, on_progress=_update_progress)
         print(f"[TIMING] lot_detector.detect: {_time.monotonic()-_t0:.2f}s, {len(lots or [])} lots found", flush=True)
 
+        # ── C3 : nombre de lots annoncé dans le RC (déterministe) ─────────────
+        from services.lot_detector import extract_announced_from_docs
+        from services.ai import lot_fallback
+        announced = extract_announced_from_docs(doc_proxies)
+
+        # ── C4 : filet IA (au plus UN appel Sonnet) sur échec objectif ────────
+        doc_texts = {
+            p.file_name: (p.extracted_text or "")
+            for p in doc_proxies
+            if (p.type or "autre") in ("rc", "ccap", "autre")
+        }
+        lots, ia_used = lot_fallback.run_fallback_if_needed(doc_texts, lots or [], announced)
+        if ia_used:
+            print(f"[LOTS] filet IA utilisé → {len(lots)} lots après fusion", flush=True)
+        # Invariant : jamais de lot sans libellé affiché.
+        lots = lot_fallback.drop_unlabeled(lots)
+
         # Save results
         db = SessionLocal()
         try:
             project = db.query(Project).filter(Project.id == project_id).first()
             if project:
                 project.lots_detectes = lots or []
+                project.lots_announced = announced
                 project.processing_status = "ready"
                 project.processing_progress = 100
                 project.processing_detail = ""

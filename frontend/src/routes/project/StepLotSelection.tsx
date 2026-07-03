@@ -57,17 +57,30 @@ function ConfidenceWarning({ confidence }: { confidence?: number }) {
 // ─── Sources indicator ────────────────────────────────────────────────────────
 
 const SOURCE_LABELS: Record<string, string> = {
-  excel:    'DPGF',
-  rc_text:  'RC',
-  filename: 'Fichier',
+  excel:       'DPGF',
+  rc_text:     'RC',
+  filename:    'Fichier',
+  ia_fallback: 'Complété par IA',
 }
 
 function SourcesIndicator({ sources }: { sources?: string[] }) {
   if (!sources || sources.length === 0) return null
-  const labels = sources.map(s => SOURCE_LABELS[s] ?? s)
+  const regular = sources.filter(s => s !== 'ia_fallback').map(s => SOURCE_LABELS[s] ?? s)
+  const fromIA = sources.includes('ia_fallback')
   return (
-    <span className="text-xs" style={{ color: '#94A3B8' }}>
-      {labels.join('  ')}
+    <span className="inline-flex items-center gap-1.5 text-xs" style={{ color: '#94A3B8' }}>
+      {regular.join('  ')}
+      {fromIA && (
+        // Badge distinct : lot ajouté/complété par le filet IA (à vérifier
+        // d'un coup d'œil, contrairement aux détections déterministes).
+        <span
+          className="px-1.5 py-0.5 rounded-full font-medium"
+          style={{ background: 'rgba(245,158,11,0.10)', color: '#B45309', border: '1px solid rgba(245,158,11,0.25)' }}
+          title="Ce lot a été complété par l'IA à partir du règlement de consultation — vérifiez son intitulé"
+        >
+          {SOURCE_LABELS.ia_fallback}
+        </span>
+      )}
     </span>
   )
 }
