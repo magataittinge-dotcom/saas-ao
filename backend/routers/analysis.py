@@ -259,6 +259,15 @@ async def trigger_analysis(
     if infos_marche and infos_marche.get("maitre_ouvrage") and not project.maitre_ouvrage:
         project.maitre_ouvrage = infos_marche["maitre_ouvrage"]
 
+    # ── C5 : champs critiques structurés, persistés PAR LOT ──────────────────
+    # (une relance d'analyse sur un autre lot n'écrase pas ceux-ci)
+    from services.critical_fields import build_critical_fields
+    lot_key = project.selected_lot or "_all"
+    fields = build_critical_fields(infos_marche, criteres_jugement, all_docs)
+    existing_cf = dict(project.critical_fields or {})
+    existing_cf[lot_key] = fields
+    project.critical_fields = existing_cf
+
     # Clear existing and insert new compliance items
     db.query(ComplianceItem).filter(ComplianceItem.project_id == project_id).delete()
     for req in requirements:
@@ -355,6 +364,33 @@ def _safe_category(value: str | None) -> str:
 
 def _safe_priority(value: str | None) -> str:
     return value if value in ("obligatoire", "souhaitée") else "obligatoire"
+
+
+@router.get("/{project_id}/critical-fields")
+def get_critical_fields(
+    project_id: str,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """C5 — champs critiques structurés du lot courant (bandeau d'analyse).
+
+    Calcul paresseux pour les projets analysés avant l'existence du bandeau :
+    reconstruit depuis infos_marche/criteres + RC/CCAP, puis persiste sous la
+    clé du lot."""
+    project = _get_project_or_404(project_id, user.organization_id, db)
+    lot_key = project.selected_lot or "_all"
+    cache = dict(project.critical_fields or {})
+    if lot_key not in cache:
+        from services.critical_fields import build_critical_fields
+        docs = db.query(ProjectDocument).filter(
+            ProjectDocument.project_id == project_id,
+        ).all()
+        cache[lot_key] = build_critical_fields(
+            project.infos_marche, project.criteres_jugement, docs,
+        )
+        project.critical_fields = cache
+        db.commit()
+    return {"lot": project.selected_lot, "fields": cache[lot_key]}
 
 
 def _get_project_or_404(project_id: str, org_id: str, db: Session) -> Project:

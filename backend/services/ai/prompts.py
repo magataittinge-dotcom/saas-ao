@@ -458,6 +458,7 @@ Sois concis. Ta réponse doit commencer par { et finir par }.
     "maitre_oeuvre": "..." ou null,
     "lots": ["Lot 1 - ...", "Lot 2 - ..."],
     "date_limite_reponse": "2025-04-15" ou null,
+    "date_limite_questions": "2025-04-05" ou null,
     "duree_marche": "12 mois" ou null,
     "montant_estime": "500 000 € HT" ou null,
     "type_procedure": "procédure adaptée" | "appel d'offres ouvert" | autre,
@@ -466,7 +467,7 @@ Sois concis. Ta réponse doit commencer par { et finir par }.
     "retenue_garantie_pct": 5 ou null,
     "caution_remplacante": true ou false ou null,
     "validite_offres_jours": 120 ou null,
-    "visite_site": {"obligatoire": true ou false, "details": "..." ou null},
+    "visite_site": {"obligatoire": true ou false, "details": "..." ou null, "date": "2025-04-02" ou null},
     "variantes_autorisees": true ou false ou null,
     "conditions_sous_traitance": "..." ou null,
     "assurances_specifiques": ["Décennale", "RC > 5M€"] ou []

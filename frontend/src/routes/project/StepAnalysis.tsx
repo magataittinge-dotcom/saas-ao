@@ -3,10 +3,11 @@ import { createPortal } from 'react-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
-  Loader2, Search, Calendar, MapPin, Clock,
-  CheckCircle2, Sparkles, Info, Shield,
+  Loader2, Search,
+  CheckCircle2, Sparkles, Info,
 } from 'lucide-react'
 import { api, getSignedFileUrl } from '@/services/api'
+import CriticalBanner, { type FieldSource } from '@/components/project/CriticalBanner'
 import ProgressDisplay, { type StepDescriptor } from '@/components/common/ProgressDisplay'
 import { useProgressStream } from '@/hooks/useProgressStream'
 import { RequirementListSkeleton } from '@/components/skeletons'
@@ -51,6 +52,26 @@ export default function StepAnalysis({ project }: Props) {
       return data
     },
   })
+
+  // C5 — ouvrir la source exacte d'un champ du bandeau critique
+  const openFieldSource = async (src: FieldSource) => {
+    const doc = projectDocs.find(d => d.file_name === src.document)
+    if (!doc) return
+    const fileUrl = doc.pdf_preview_url || doc.file_url
+    if (fileUrl.startsWith('http')) {
+      window.open(fileUrl, '_blank')
+      return
+    }
+    try {
+      const signed = await getSignedFileUrl(fileUrl)
+      const url = new URL(signed, window.location.origin)
+      if (src.page) url.searchParams.set('page', String(src.page))
+      if (src.excerpt) url.searchParams.set('highlight', src.excerpt.slice(0, 150))
+      window.open(url.toString(), '_blank')
+    } catch (err) {
+      console.error('[StepAnalysis] source du bandeau inaccessible:', err)
+    }
+  }
 
   // Ouvrir le document source dans un nouvel onglet
   const openSourceDocument = async (item: ComplianceItem) => {
@@ -411,110 +432,8 @@ export default function StepAnalysis({ project }: Props) {
         </div>
       )}
 
-      {/* ── BARRE INFOS SECONDAIRES ─────────────────────────────── */}
-      {infos && (infos.date_limite_reponse || infos.type_procedure || infos.visite_site || infos.duree_marche || infos.penalites_retard || infos.retenue_garantie_pct != null) && (() => {
-        const isUrgent = (() => {
-          if (!infos.date_limite_reponse) return false
-          try {
-            const d = new Date(infos.date_limite_reponse)
-            return !isNaN(d.getTime()) && (d.getTime() - Date.now()) / 86400000 < 15
-          } catch { return false }
-        })()
-
-        const infoItems: React.ReactNode[] = []
-
-        if (infos.date_limite_reponse) {
-          infoItems.push(
-            <div key="deadline" className="flex items-start gap-2">
-              <Calendar size={14} className="shrink-0 mt-0.5" style={{ color: isUrgent ? '#EF4444' : '#64748B' }} />
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#64748B' }}>Date limite de réponse</p>
-                <p className="text-sm" style={{ color: isUrgent ? '#EF4444' : '#334155' }}>{infos.date_limite_reponse}</p>
-              </div>
-            </div>,
-          )
-        }
-
-        if (infos.type_procedure) {
-          infoItems.push(
-            <div key="procedure" className="flex items-start gap-2">
-              <Info size={14} className="shrink-0 mt-0.5" style={{ color: '#64748B' }} />
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#64748B' }}>Procédure</p>
-                <p className="text-sm" style={{ color: '#334155' }}>{infos.type_procedure}</p>
-              </div>
-            </div>,
-          )
-        }
-
-        if (infos.visite_site) {
-          infoItems.push(
-            <div key="visite" className="flex items-start gap-2">
-              <MapPin size={14} className="shrink-0 mt-0.5" style={{ color: infos.visite_site.obligatoire ? '#EF4444' : '#64748B' }} />
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#64748B' }}>
-                  Visite {infos.visite_site.obligatoire ? 'obligatoire' : 'facultative'}
-                </p>
-                <p className="text-sm" style={{ color: infos.visite_site.obligatoire ? '#EF4444' : '#334155' }}>
-                  {infos.visite_site.details || (infos.visite_site.obligatoire ? 'Obligatoire' : 'Facultative')}
-                </p>
-              </div>
-            </div>,
-          )
-        }
-
-        if (infos.duree_marche) {
-          infoItems.push(
-            <div key="duree" className="flex items-start gap-2">
-              <Clock size={14} className="shrink-0 mt-0.5" style={{ color: '#64748B' }} />
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#64748B' }}>Durée du marché</p>
-                <p className="text-sm" style={{ color: '#334155' }}>{infos.duree_marche}</p>
-              </div>
-            </div>,
-          )
-        }
-
-        if (infos.penalites_retard) {
-          infoItems.push(
-            <div key="penalites" className="flex items-start gap-2">
-              <Shield size={14} className="shrink-0 mt-0.5" style={{ color: '#64748B' }} />
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#64748B' }}>Pénalités de retard</p>
-                <p className="text-sm" style={{ color: '#334155' }}>{infos.penalites_retard}</p>
-              </div>
-            </div>,
-          )
-        }
-
-        if (infos.retenue_garantie_pct != null) {
-          infoItems.push(
-            <div key="retenue" className="flex items-start gap-2">
-              <Shield size={14} className="shrink-0 mt-0.5" style={{ color: '#64748B' }} />
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#64748B' }}>Retenue de garantie</p>
-                <p className="text-sm" style={{ color: '#334155' }}>{infos.retenue_garantie_pct}%</p>
-              </div>
-            </div>,
-          )
-        }
-
-        return (
-          <div
-            className="rounded-lg px-5 py-3 flex flex-wrap items-start gap-x-6 gap-y-2"
-            style={{ background: '#F8FAFC', border: '1px solid #F1F5F9' }}
-          >
-            {infoItems.map((item, i) => (
-              <div key={i} className="flex items-start gap-x-6">
-                {item}
-                {i < infoItems.length - 1 && (
-                  <div className="w-px self-stretch ml-6" style={{ background: '#CBD5E1', minHeight: 24 }} />
-                )}
-              </div>
-            ))}
-          </div>
-        )
-      })()}
+      {/* ── BANDEAU CRITIQUE (C5) — deadline, visite, critères, pénalités ── */}
+      <CriticalBanner projectId={project.id} onOpenSource={openFieldSource} />
 
       {/* ── SEARCH BAR ──────────────────────────────────────────── */}
       <div className="relative">
