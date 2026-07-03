@@ -32,7 +32,9 @@ def refresh_organization_statuses(organization_id: str, db) -> None:
 
     docs = db.query(Document).filter(Document.organization_id == organization_id).all()
     for doc in docs:
-        new_status = compute_document_status(doc.type, doc.expiry_date)
+        new_status = compute_document_status(
+            doc.type, doc.expiry_date, issued_date=doc.issued_date,
+        )
         if new_status != doc.status:
             doc.status = new_status
     db.commit()

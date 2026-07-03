@@ -11,6 +11,18 @@ from typing import Optional
 
 EXPIRING_SOON_DAYS = 30
 
+# C11 — durée de validité réglementaire par type (dérivée de la date
+# d'émission quand aucune date de fin explicite n'est fournie).
+#   Attestations sociales/fiscales : 6 mois · KBIS : 3 mois.
+#   Assurances : pas de dérivation — seule la date de fin d'attestation vaut.
+VALIDITY_MONTHS_BY_TYPE: dict = {
+    "urssaf": 6,
+    "fiscal": 6,
+    "pro_btp": 6,
+    "cibtp": 6,
+    "kbis": 3,
+}
+
 # type de document → catégorie du coffre-fort
 TYPE_TO_CATEGORY: dict = {
     # Attestations sociales & fiscales
@@ -92,19 +104,46 @@ def category_for_type(doc_type: str) -> str:
     return TYPE_TO_CATEGORY.get(doc_type, "autres")
 
 
+def _add_months(d: date, months: int) -> date:
+    """d + N mois calendaires (jour clampé en fin de mois)."""
+    import calendar
+    month_index = d.month - 1 + months
+    year = d.year + month_index // 12
+    month = month_index % 12 + 1
+    day = min(d.day, calendar.monthrange(year, month)[1])
+    return date(year, month, day)
+
+
+def effective_expiry_date(doc_type: Optional[str], expiry_date: Optional[date],
+                          issued_date: Optional[date] = None) -> Optional[date]:
+    """Date de fin de validité effective (C11).
+
+    Une date de fin EXPLICITE prime toujours ; sinon elle est dérivée de la
+    date d'émission selon la durée réglementaire du type (URSSAF 6 mois,
+    KBIS 3 mois…). Types sans règle (assurances…) → pas de dérivation."""
+    if expiry_date is not None:
+        return expiry_date
+    months = VALIDITY_MONTHS_BY_TYPE.get(doc_type or "")
+    if months and issued_date is not None:
+        return _add_months(issued_date, months)
+    return None
+
+
 def compute_document_status(doc_type: Optional[str], expiry_date: Optional[date],
-                            today: Optional[date] = None) -> str:
+                            today: Optional[date] = None,
+                            issued_date: Optional[date] = None) -> str:
     """État honnête d'un document du coffre-fort.
 
     • type non reconnu ("autre"/None) → "unclassified" (jamais de validité)
-    • type reconnu sans date          → "unverified" (date à saisir)
-    • type reconnu + date             → valid / expiring_soon / expired
+    • type reconnu sans date exploitable → "unverified" (date à saisir)
+    • type reconnu + date (explicite ou dérivée C11) → valid / expiring_soon / expired
     """
     if not doc_type or doc_type == "autre":
         return "unclassified"
-    if expiry_date is None:
+    effective = effective_expiry_date(doc_type, expiry_date, issued_date)
+    if effective is None:
         return "unverified"
-    days_left = (expiry_date - (today or date.today())).days
+    days_left = (effective - (today or date.today())).days
     if days_left < 0:
         return "expired"
     if days_left <= EXPIRING_SOON_DAYS:

@@ -101,7 +101,7 @@ async def upload_document(
     # fichier ; rien de reconnu → unclassified (aucun badge de validité).
     doc_type = type if type and type != "autre" else detect_vault_type(file.filename or "")
     category = "unclassified" if doc_type == "autre" else category_for_type(doc_type)
-    status = compute_document_status(doc_type, exp_date)
+    status = compute_document_status(doc_type, exp_date, issued_date=iss_date)
 
     doc = Document(
         organization_id=user.organization_id,
@@ -181,7 +181,7 @@ async def save_project_doc_to_vault(
         file_name=pd.file_name,
         issued_date=payload.issued_date,
         expiry_date=payload.expiry_date,
-        status=compute_document_status(doc_type, payload.expiry_date),
+        status=compute_document_status(doc_type, payload.expiry_date, issued_date=payload.issued_date),
     )
     db.add(doc)
     pd.vault_prompt_dismissed = True  # enregistré → plus de re-proposition
@@ -241,7 +241,7 @@ def update_document(
     if payload.expiry_date is not None:
         doc.expiry_date = payload.expiry_date
 
-    doc.status = compute_document_status(doc.type, doc.expiry_date)
+    doc.status = compute_document_status(doc.type, doc.expiry_date, issued_date=doc.issued_date)
     db.commit()
     db.refresh(doc)
     log_action(
