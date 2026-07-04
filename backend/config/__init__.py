@@ -40,6 +40,13 @@ class Settings(BaseSettings):
     # Google Maps Static API
     GOOGLE_MAPS_API_KEY: str = ""
 
+    # SMTP (C23 — notifications email). Absents → in-app seul, jamais de crash.
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = ""
+
     # CORS
     FRONTEND_URL: str = "http://localhost:3000"
 

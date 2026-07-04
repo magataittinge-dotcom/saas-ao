@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Search, Bell, Menu, X, Sparkles } from 'lucide-react'
+import { Search, Menu, X, Sparkles } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useLocation } from 'react-router-dom'
+import NotificationBell from './NotificationBell'
 
 const ROUTE_LABELS: Record<string, { parent?: string; label: string }> = {
   '/dashboard':      { label: 'Tableau de bord' },
@@ -103,6 +104,8 @@ export default function Header({ onMenuToggle }: Props) {
 
       {/* Right side */}
       <div className="flex items-center gap-3">
+        {/* Notifications (C23) */}
+        <NotificationBell />
         {/* Search — desktop */}
         <div className="relative hidden sm:block">
           <Sparkles size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#0EA5E9' }} />
@@ -124,15 +127,6 @@ export default function Header({ onMenuToggle }: Props) {
           title="Rechercher"
         >
           <Search size={18} />
-        </button>
-
-        {/* Notifications */}
-        <button className="relative p-2 rounded-full transition-colors touch-target" title="Notifications"
-          style={{ color: '#94A3B8' }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.color = '#0F172A' }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#94A3B8' }}>
-          <Bell size={18} />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full" style={{ background: '#EF4444' }} />
         </button>
 
         <div className="w-px h-6 hidden sm:block" style={{ background: '#E2E8F0' }} />

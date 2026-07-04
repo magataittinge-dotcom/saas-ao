@@ -29,6 +29,7 @@ from routers import (
     export,
     dashboard,
     billing,
+    notifications,
     stripe_billing,
     progress,
     calculators,
@@ -536,6 +537,7 @@ app.include_router(export.router, prefix="/api/projects", tags=["export"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
 app.include_router(stripe_billing.router, prefix="/api/stripe", tags=["stripe"])
 app.include_router(billing.router, prefix="/api/billing", tags=["billing"])
+app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
 app.include_router(progress.router, prefix="/api/projects", tags=["progress"])
 app.include_router(calculators.router, prefix="/api/calculators", tags=["calculators"])
 app.include_router(file_serve_router, prefix="/api/files", tags=["files"])

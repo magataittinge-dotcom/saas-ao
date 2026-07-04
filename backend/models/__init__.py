@@ -10,6 +10,7 @@ from .memoire import MemoireTechnique
 from .memoire_template import MemoireTemplate
 from .audit_log import AuditLog
 from .quota_consumption import QuotaConsumption
+from .notification import Notification
 
 __all__ = [
     "Organization",
@@ -25,4 +26,5 @@ __all__ = [
     "MemoireTemplate",
     "AuditLog",
     "QuotaConsumption",
+    "Notification",
 ]

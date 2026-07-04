@@ -240,6 +240,17 @@ async def generate_memoire(
     # Génération réussie → décompte de l'unité (1 mémoire = 1 lot).
     quota.consume(db, org, "memoire", project_id=project_id, lot=project.selected_lot)
 
+    # C23 — notification sobre « mémoire prêt » (in-app + email best-effort).
+    from services.notifications import notify as _notify
+    _notify(
+        db, user.organization_id, "memoire_ready",
+        titre=f"Mémoire technique prêt — {project.name}",
+        corps=f"Le mémoire du projet « {project.name} »"
+              + (f" ({project.selected_lot_name})" if project.selected_lot_name else "")
+              + " est généré. Relisez-le avant export.",
+        send_email=True,
+    )
+
     pipeline_tracker.complete_pipeline(project_id)
 
     # Mark steps 4+5 complete, advance to step 6 (export)
