@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Optional, List, Any
+from typing import Literal, Optional, List, Any
 from datetime import date, datetime
 
 
@@ -11,7 +11,9 @@ class ProjectCreate(BaseModel):
 
 class ProjectUpdate(BaseModel):
     name: Optional[str] = None
-    status: Optional[str] = None
+    status: Optional[Literal[
+        "brouillon", "en_cours", "analyzed", "sans_suite", "soumis", "gagné", "perdu",
+    ]] = None
     maitre_ouvrage: Optional[str] = None
     deadline: Optional[date] = None
     current_step: Optional[int] = None

@@ -1,12 +1,13 @@
 import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Plus, ChevronRight, ArrowRight, CalendarDays, MapPin, Sparkles,
-  BarChart3, ShieldCheck, Trophy, Send,
+  BarChart3, ShieldCheck, Trophy, Send, FolderX,
   FolderOpen, Building2, Award, FileStack, Archive, Calculator,
   type LucideIcon,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
+import QuotaGauge from '@/components/layout/QuotaGauge'
 import { api } from '@/services/api'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { PipelineRail } from '@/components/dashboard/PipelineRail'
@@ -58,15 +59,39 @@ export default function Dashboard() {
     queryFn: async () => { const { data } = await api.get<DashboardStats>('/dashboard/stats'); return data },
   })
 
+  const queryClient = useQueryClient()
+  const { mutate: markSansSuite } = useMutation({
+    mutationFn: async (projectId: string) => {
+      await api.patch(`/projects/${projectId}`, { status: 'sans_suite' })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
+    },
+  })
+
   const s = stats ?? EMPTY_STATS
   const firstName = user?.name?.split(' ')[0] ?? 'vous'
-  const active = projects.filter((p) => p.status === 'en_cours' || p.status === 'brouillon')
 
-  // Échéances à venir (AO actifs avec deadline, triées du plus proche au plus lointain)
-  const upcoming = projects
-    .filter((p) => p.deadline && (p.status === 'en_cours' || p.status === 'brouillon'))
+  // B7 — deux zones : les AO clos (soumis/gagné/perdu/sans_suite) sortent des deux.
+  const activeStatuses = new Set(['brouillon', 'en_cours', 'analyzed'])
+  const activeProjects = projects.filter((p) => activeStatuses.has(p.status))
+  // « En cours de réponse » : a dépassé l'analyse (candidature/mémoire entamés)
+  // ou n'a pas encore atteint l'analyse (dossier en préparation).
+  const enCoursReponse = activeProjects.filter(
+    (p) => p.current_step >= 4 || p.status !== 'analyzed',
+  )
+  // « Analysés » : analyse terminée, aucune suite donnée pour l'instant.
+  const analysesSansSuite = activeProjects.filter(
+    (p) => p.status === 'analyzed' && p.current_step < 4,
+  )
+  const active = enCoursReponse
+
+  // Piloter : uniquement les échéances sous 7 jours (AO actifs)
+  const upcoming = activeProjects
+    .filter((p) => p.deadline)
     .map((p) => ({ ...p, _days: daysUntil(p.deadline!) }))
-    .filter((p) => p._days >= -1)
+    .filter((p) => p._days >= -1 && p._days < 7)
     .sort((a, b) => a._days - b._days)
     .slice(0, 4)
 
@@ -131,11 +156,12 @@ export default function Dashboard() {
       {/* ── 2 COLONNES ───────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-5 items-start">
 
-        {/* ─── GAUCHE : AO actifs en vue pipeline ─────────────────── */}
+        {/* ─── GAUCHE : deux zones (B7) ────────────────────────────── */}
+        <div className="space-y-5">
         <section className="glass-card overflow-hidden">
           <header className="flex items-center justify-between px-5 py-4 border-b border-ds-border-subtle">
             <div className="flex items-center gap-2.5">
-              <h2 className="text-[15px] font-semibold text-ds-text">Appels d'offres en cours</h2>
+              <h2 className="text-[15px] font-semibold text-ds-text">En cours de réponse</h2>
               {active.length > 0 && (
                 <span className="pill pill-cyan text-[11px]">{active.length}</span>
               )}
@@ -200,17 +226,59 @@ export default function Dashboard() {
           )}
         </section>
 
+        {/* ── Zone « Analysés » : analyse faite, pas encore de suite ── */}
+        {analysesSansSuite.length > 0 && (
+          <section className="glass-card overflow-hidden">
+            <header className="flex items-center gap-2.5 px-5 py-4 border-b border-ds-border-subtle">
+              <h2 className="text-[15px] font-semibold text-ds-text">Analysés</h2>
+              <span className="pill text-[11px]" style={{ background: '#F1F5F9', color: '#64748B' }}>
+                {analysesSansSuite.length}
+              </span>
+              <span className="text-xs text-ds-text-3">analyse terminée, à vous de décider</span>
+            </header>
+            <ul>
+              {analysesSansSuite.slice(0, 4).map((p, i) => (
+                <li key={p.id}
+                  className={`px-5 py-3.5 flex items-center gap-3 ${i > 0 ? 'border-t border-ds-bg-3' : ''}`}>
+                  <button
+                    onClick={() => navigate(`/projects/${p.id}`)}
+                    className="flex-1 min-w-0 text-left cursor-pointer"
+                  >
+                    <p className="text-sm font-semibold text-ds-text truncate">{p.name}</p>
+                    {p.maitre_ouvrage && (
+                      <p className="text-xs text-ds-text-3 truncate">{p.maitre_ouvrage}</p>
+                    )}
+                  </button>
+                  <DeadlinePill deadline={p.deadline} />
+                  <button
+                    onClick={() => markSansSuite(p.id)}
+                    title="Classer cet AO « Analysé — sans suite » : décision prise, il quitte le tableau de bord"
+                    className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-ds-text-2 hover:bg-ds-bg-2 transition-colors cursor-pointer"
+                    style={{ border: '1px solid #E2E8F0' }}
+                  >
+                    <FolderX size={13} /> Sans suite
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        </div>
+
         {/* ─── DROITE ─────────────────────────────────────────────── */}
         <div className="flex flex-col gap-4">
 
-          {/* Échéances à venir */}
+          {/* Zone Piloter : jauge quota + échéances < 7 jours (B7) */}
           <section className="glass-card p-4">
             <div className="flex items-center gap-2 mb-3">
               <CalendarDays size={14} className="text-ds-cyan" />
-              <h3 className="text-[11px] font-semibold uppercase tracking-wider text-ds-text-3">Échéances à venir</h3>
+              <h3 className="text-[11px] font-semibold uppercase tracking-wider text-ds-text-3">Piloter</h3>
+            </div>
+            <div className="-mx-4 mb-2">
+              <QuotaGauge />
             </div>
             {upcoming.length === 0 ? (
-              <p className="text-sm text-ds-text-3 py-2">Aucune échéance planifiée.</p>
+              <p className="text-sm text-ds-text-3 py-2">Aucune échéance sous 7 jours.</p>
             ) : (
               <ul className="space-y-0.5">
                 {upcoming.map((p, i) => {

@@ -53,12 +53,14 @@ export function documentStatusBadge(status: DocumentStatus) {
 
 export function projectStatusBadge(status: ProjectStatus) {
   const map: Record<ProjectStatus, { label: string; variant: BadgeVariant }> = {
-    brouillon: { label: 'Brouillon', variant: 'neutral'  },
-    en_cours:  { label: 'En cours',  variant: 'info'     },
-    analyzed:  { label: 'Analysé',   variant: 'info'     },
-    soumis:    { label: 'Soumis',    variant: 'warning'  },
-    gagné:     { label: 'Gagné',     variant: 'success'  },
-    perdu:     { label: 'Perdu',     variant: 'danger'   },
+    brouillon:  { label: 'Brouillon',            variant: 'neutral'  },
+    en_cours:   { label: 'En cours',             variant: 'info'     },
+    analyzed:   { label: 'Analysé',              variant: 'info'     },
+    // Ton neutre : décision éclairée de ne pas répondre — pas une alerte.
+    sans_suite: { label: 'Analysé — sans suite', variant: 'neutral'  },
+    soumis:     { label: 'Soumis',               variant: 'warning'  },
+    gagné:      { label: 'Gagné',                variant: 'success'  },
+    perdu:      { label: 'Perdu',                variant: 'danger'   },
   }
   return map[status]
 }
