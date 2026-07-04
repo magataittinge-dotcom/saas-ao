@@ -29,6 +29,16 @@ export default function StepCandidat({ project }: Props) {
     },
   })
 
+  // C10 — score de conformité (les ⚠️ ne comptent pas conformes)
+  const { data: score } = useQuery<{ conformes: number; total: number }>({
+    queryKey: ['checklist-score', project.id, items],
+    queryFn: async () => {
+      const { data } = await api.get(`/projects/${project.id}/checklist/score`)
+      return data
+    },
+    enabled: items.length > 0,
+  })
+
   const [pickerItem, setPickerItem] = useState<ChecklistItem | null>(null)
 
   const { vaultItems, templateItems } = useMemo(() => {
@@ -166,12 +176,17 @@ export default function StepCandidat({ project }: Props) {
         </button>
       </div>
 
-      {/* 2-metric header */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {/* 3-metric header — score de conformité C10 en tête */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Stat
+          label="Pièces conformes"
+          value={score ? `${score.conformes} / ${score.total}` : '— / —'}
+          tone="primary"
+        />
         <Stat
           label="Pièces du coffre-fort"
           value={`${vaultItems.filter((i) => i.status === 'present').length} / ${vaultItems.length}`}
-          tone="primary"
+          tone="neutral"
         />
         <Stat
           label="Formulaires DCE complétés"

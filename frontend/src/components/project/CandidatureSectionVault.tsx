@@ -172,6 +172,13 @@ function statusFor(status: ChecklistItem['status']): { icon: JSX.Element; label:
         label: 'Expire bientôt',
         color: '#64748B',
       }
+    case 'warning':
+      // C10 — présente mais problème (doc à vérifier / non classé / date illisible)
+      return {
+        icon: <AlertCircle size={16} style={{ color: '#B45309' }} />,
+        label: 'Présente — à vérifier',
+        color: '#B45309',
+      }
     default:
       return {
         icon: <AlertCircle size={16} style={{ color: '#EF4444' }} />,

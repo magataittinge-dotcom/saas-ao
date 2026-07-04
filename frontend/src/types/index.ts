@@ -234,7 +234,7 @@ export interface ComplianceItem {
 
 // ─── Candidature Checklist ────────────────────────────────────────────────────
 
-export type ChecklistStatus = 'present' | 'manquant' | 'expire' | 'expiration_proche'
+export type ChecklistStatus = 'present' | 'manquant' | 'expire' | 'expiration_proche' | 'warning' | 'non_applicable'
 export type ChecklistSourceKind = 'vault' | 'dce_template'
 
 export interface ChecklistItem {

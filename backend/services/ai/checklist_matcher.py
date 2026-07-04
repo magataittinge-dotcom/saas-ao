@@ -62,12 +62,30 @@ def _detect_vault_type(exigence: str) -> Optional[str]:
 
 
 def _vault_doc_status(vault_doc: Document) -> str:
-    """Map Document.status to the CHECKLIST_STATUSES enum."""
+    """Map Document.status to the CHECKLIST_STATUSES enum.
+
+    C10 — « valide » = reconnu ET daté : un document non vérifié (unverified)
+    ou non classé matché sur une exigence donne un ⚠️ "warning", jamais ✓."""
     if vault_doc.status == "expired":
         return "expire"
     if vault_doc.status == "expiring_soon":
         return "expiration_proche"
+    if vault_doc.status in ("unverified", "unclassified"):
+        return "warning"
     return "present"
+
+
+# Statuts comptant comme « pièce conforme » dans le score X/Y (C10).
+# expiration_proche reste conforme (encore valide aujourd'hui) ;
+# warning/expire/manquant ne le sont pas ; non_applicable sort du total.
+_CONFORME_STATUSES = {"present", "expiration_proche"}
+
+
+def conformity_score(items) -> dict:
+    """Score de conformité « X/Y pièces conformes » de la checklist."""
+    considered = [i for i in items if i.status != "non_applicable"]
+    conformes = sum(1 for i in considered if i.status in _CONFORME_STATUSES)
+    return {"conformes": conformes, "total": len(considered)}
 
 
 def _pick_best_vault_doc(candidates: list[Document]) -> Document:

@@ -6,7 +6,9 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from database import Base
 
-CHECKLIST_STATUSES = ["present", "manquant", "expire", "expiration_proche", "non_applicable"]
+# "warning" (C10) = pièce présente mais problème : doc du coffre expiré,
+# non vérifié (unverified) ou non classé — distinct de présent/manquant.
+CHECKLIST_STATUSES = ["present", "manquant", "expire", "expiration_proche", "warning", "non_applicable"]
 
 # Origine de la pièce attendue pour cet item de checklist :
 #  - "vault"        → l'entreprise doit la fournir depuis son coffre-fort

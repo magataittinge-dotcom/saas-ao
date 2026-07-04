@@ -39,6 +39,24 @@ router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
 
+@router.get("/{project_id}/checklist/score")
+def get_checklist_score(
+    project_id: str,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """C10 — score de conformité « X/Y pièces conformes » de la checklist.
+
+    Les ⚠️ (warning : présente mais problème) et les expirées ne comptent
+    pas conformes ; les non_applicable sortent du dénominateur."""
+    from services.ai.checklist_matcher import conformity_score
+    _get_project_or_404(project_id, user.organization_id, db)
+    items = db.query(ChecklistItem).filter(
+        ChecklistItem.project_id == project_id,
+    ).all()
+    return conformity_score(items)
+
+
 @router.get("/{project_id}/checklist", response_model=List[ChecklistItemResponse])
 def get_checklist(
     project_id: str,
@@ -246,9 +264,6 @@ def _get_checklist_item_or_404(item_id: str, project_id: str, db: Session) -> Ch
     return item
 
 
-def _vault_doc_status(doc: Document) -> str:
-    if doc.status == "expired":
-        return "expire"
-    if doc.status == "expiring_soon":
-        return "expiration_proche"
-    return "present"
+# Source unique du mapping statut coffre → statut checklist (C10 compris) :
+# services/ai/checklist_matcher._vault_doc_status
+from services.ai.checklist_matcher import _vault_doc_status  # noqa: E402
