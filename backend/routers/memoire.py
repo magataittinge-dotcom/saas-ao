@@ -343,6 +343,17 @@ def export_memoire_docx(
                 import logging as _logging
                 _logging.getLogger(__name__).warning(f"Organigramme non rasterisé: {e}")
 
+    # C8b — logo pour la page de garde (fallback texte propre si absent/illisible)
+    logo_image = None
+    if org and org.logo_url and org.logo_url.startswith("/uploads/"):
+        from services.file_storage import UPLOADS_ROOT as _uploads_root
+        logo_path = _uploads_root / org.logo_url.removeprefix("/uploads/")
+        if logo_path.exists():
+            try:
+                logo_image = logo_path.read_bytes()
+            except Exception:
+                logo_image = None
+
     docx_bytes = build_memoire_docx(
         content_json=memoire.content_json,
         project_name=project.name,
@@ -350,6 +361,11 @@ def export_memoire_docx(
         map_image=map_image,
         map_caption=map_caption,
         organigramme_image=organigramme_image,
+        logo_image=logo_image,
+        lot_name=project.selected_lot_name,
+        maitre_ouvrage=project.maitre_ouvrage,
+        org_address=org.address if org else None,
+        org_siret=org.siret if org else None,
     )
 
     filename = f"Memoire_Technique_{project.name.replace(' ', '_')}.docx"

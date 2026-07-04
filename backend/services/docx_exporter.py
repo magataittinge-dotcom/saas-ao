@@ -140,41 +140,63 @@ def _setup_doc(org_name: str) -> Document:
     return doc
 
 
-def _cover_page(doc: Document, project_name: str, org_name: str):
-    for _ in range(3):
+def _centered_line(doc: Document, text: str, *, size: int, color, bold: bool = False,
+                   space_after: int = 6):
+    p = doc.add_paragraph()
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    r = p.add_run(text)
+    r.font.name = "Calibri"
+    r.font.size = Pt(size)
+    r.font.bold = bold
+    r.font.color.rgb = color
+    p.paragraph_format.space_after = Pt(space_after)
+    return p
+
+
+def _cover_page(
+    doc: Document,
+    project_name: str,
+    org_name: str,
+    *,
+    logo_image: bytes | None = None,
+    lot_name: str | None = None,
+    maitre_ouvrage: str | None = None,
+    org_address: str | None = None,
+    org_siret: str | None = None,
+):
+    """C8b — page de garde sobre : logo (si présent), marché, lot, MOA,
+    date, coordonnées entreprise. Sans logo → texte propre, jamais de
+    placeholder d'image cassé."""
+    for _ in range(2):
         doc.add_paragraph()
 
-    pt = doc.add_paragraph()
-    pt.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    rt = pt.add_run("MÉMOIRE TECHNIQUE")
-    rt.font.name = "Calibri"
-    rt.font.size = Pt(13)
-    rt.font.color.rgb = _GREY_META
-    pt.paragraph_format.space_after = Pt(14)
+    if logo_image:
+        try:
+            p_logo = doc.add_paragraph()
+            p_logo.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            p_logo.add_run().add_picture(io.BytesIO(logo_image), width=Cm(4.5))
+            p_logo.paragraph_format.space_after = Pt(18)
+        except Exception:
+            # Logo illisible → page de garde texte propre, pas d'image cassée.
+            pass
 
-    pp = doc.add_paragraph()
-    pp.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    rp = pp.add_run(project_name.upper())
-    rp.font.name = "Calibri"
-    rp.font.size = Pt(24)
-    rp.font.bold = True
-    rp.font.color.rgb = _BLUE_H1
-    pp.paragraph_format.space_after = Pt(10)
+    _centered_line(doc, "MÉMOIRE TECHNIQUE", size=13, color=_GREY_META, space_after=14)
+    _centered_line(doc, project_name.upper(), size=24, color=_BLUE_H1, bold=True, space_after=10)
+    if lot_name:
+        _centered_line(doc, lot_name, size=14, color=RGBColor(0x03, 0x69, 0xA1), space_after=8)
+    if maitre_ouvrage:
+        _centered_line(
+            doc, f"Maître d'ouvrage : {maitre_ouvrage}", size=11,
+            color=RGBColor(0x47, 0x55, 0x69), space_after=16,
+        )
 
-    po = doc.add_paragraph()
-    po.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    ro = po.add_run(org_name)
-    ro.font.name = "Calibri"
-    ro.font.size = Pt(13)
-    ro.font.color.rgb = RGBColor(0x37, 0x41, 0x51)
-    po.paragraph_format.space_after = Pt(6)
+    _centered_line(doc, org_name, size=13, color=RGBColor(0x37, 0x41, 0x51))
+    if org_address:
+        _centered_line(doc, org_address, size=10, color=_GREY_PG, space_after=2)
+    if org_siret:
+        _centered_line(doc, f"SIRET {org_siret}", size=10, color=_GREY_PG, space_after=2)
 
-    pd = doc.add_paragraph()
-    pd.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    rd = pd.add_run(datetime.now().strftime("%B %Y").capitalize())
-    rd.font.name = "Calibri"
-    rd.font.size = Pt(11)
-    rd.font.color.rgb = _GREY_PG
+    _centered_line(doc, datetime.now().strftime("%B %Y").capitalize(), size=11, color=_GREY_PG)
 
     doc.add_page_break()
 
@@ -284,10 +306,19 @@ def build_memoire_docx(
     map_image: bytes | None = None,
     map_caption: str | None = None,
     organigramme_image: bytes | None = None,
+    logo_image: bytes | None = None,
+    lot_name: str | None = None,
+    maitre_ouvrage: str | None = None,
+    org_address: str | None = None,
+    org_siret: str | None = None,
 ) -> bytes:
     """Retourne les bytes du .docx prêt à être streamé en réponse HTTP."""
     doc = _setup_doc(org_name)
-    _cover_page(doc, project_name, org_name)
+    _cover_page(
+        doc, project_name, org_name,
+        logo_image=logo_image, lot_name=lot_name, maitre_ouvrage=maitre_ouvrage,
+        org_address=org_address, org_siret=org_siret,
+    )
 
     preambule = content_json.get("preambule", "")
     if preambule and preambule.strip():
