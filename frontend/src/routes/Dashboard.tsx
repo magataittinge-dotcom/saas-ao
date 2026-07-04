@@ -100,7 +100,7 @@ export default function Dashboard() {
     { icon: BarChart3,  label: 'AO en cours',     value: s.projects_en_cours },
     { icon: Send,       label: 'Soumis ce mois',  value: s.projects_soumis_ce_mois },
     { icon: Trophy,     label: 'AO gagnés',       value: s.projects_gagnes },
-    { icon: ShieldCheck, label: 'Taux conformité', value: s.taux_succes, suffix: '%', ring: s.taux_succes / 100 },
+    { icon: ShieldCheck, label: 'Taux de réussite', value: s.taux_succes, suffix: '%', ring: s.taux_succes / 100 },
   ]
 
   // Note assistant — positive, basée sur les vrais compteurs
@@ -277,6 +277,13 @@ export default function Dashboard() {
             <div className="-mx-4 mb-2">
               <QuotaGauge />
             </div>
+            {/* C14 — taux de réussite (gagnés / décidés) */}
+            {(s.projects_gagnes > 0 || s.taux_succes > 0) && (
+              <div className="flex items-center justify-between px-2 py-1.5 mb-1 text-xs">
+                <span className="text-ds-text-3">Taux de réussite</span>
+                <span className="font-semibold text-ds-text">{s.taux_succes} %</span>
+              </div>
+            )}
             {upcoming.length === 0 ? (
               <p className="text-sm text-ds-text-3 py-2">Aucune échéance sous 7 jours.</p>
             ) : (

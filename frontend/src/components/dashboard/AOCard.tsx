@@ -1,5 +1,7 @@
 import { useNavigate } from 'react-router-dom'
-import { Clock, ArrowRight, Trash2 } from 'lucide-react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Clock, ArrowRight, Send, Trash2, Trophy, X } from 'lucide-react'
+import { api } from '@/services/api'
 import { daysUntil } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import type { Project } from '@/types'
@@ -7,11 +9,13 @@ import type { Project } from '@/types'
 const STEP_LABELS = ['Upload DCE', 'Analyse IA', 'Candidature', 'Mémoire', 'Export']
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string; accent: string }> = {
-  brouillon: { label: 'Brouillon', cls: 'pill-muted',   accent: '#64748B' },
-  en_cours:  { label: 'En cours',  cls: 'pill-cyan',    accent: '#0EA5E9' },
-  soumis:    { label: 'Soumis',    cls: 'pill-muted',   accent: '#475569' },
-  gagné:     { label: 'Gagné',     cls: 'pill-gagne',   accent: '#047857' },
-  perdu:     { label: 'Perdu',     cls: 'pill-danger',  accent: '#EF4444' },
+  brouillon:  { label: 'Brouillon',            cls: 'pill-muted',   accent: '#64748B' },
+  en_cours:   { label: 'En cours',             cls: 'pill-cyan',    accent: '#0EA5E9' },
+  analyzed:   { label: 'Analysé',              cls: 'pill-cyan',    accent: '#0EA5E9' },
+  sans_suite: { label: 'Analysé — sans suite', cls: 'pill-muted',   accent: '#94A3B8' },
+  soumis:     { label: 'Déposé',               cls: 'pill-muted',   accent: '#475569' },
+  gagné:      { label: 'Gagné',                cls: 'pill-gagne',   accent: '#047857' },
+  perdu:      { label: 'Perdu',                cls: 'pill-danger',  accent: '#EF4444' },
 }
 
 interface Props {
@@ -21,6 +25,22 @@ interface Props {
 
 export function AOCard({ project, onDelete }: Props) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+
+  // C14 — cycle de vie post-export en 1 clic : Prêt → Déposé → Gagné/Perdu
+  const { mutate: setStatus, isPending: statusPending } = useMutation({
+    mutationFn: async (status: string) => {
+      await api.patch(`/projects/${project.id}`, { status })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
+    },
+  })
+  const isReady = project.current_step >= 6
+    && ['brouillon', 'en_cours', 'analyzed'].includes(project.status)
+  const isDeposed = project.status === 'soumis'
+
   const days = project.deadline ? daysUntil(project.deadline) : null
   const isUrgent = days !== null && days <= 7
   const progress = ((project.current_step - 1) / 4) * 100
@@ -125,16 +145,50 @@ export function AOCard({ project, onDelete }: Props) {
           <span />
         )}
 
-        <button
-          className="flex items-center gap-1 text-xs font-medium transition-colors"
-          style={{ color: '#0EA5E9' }}
-          onMouseEnter={(e) => (e.currentTarget.style.color = '#0284C7')}
-          onMouseLeave={(e) => (e.currentTarget.style.color = '#0EA5E9')}
-          onClick={(e) => { e.stopPropagation(); navigate(`/projects/${project.id}`) }}
-        >
-          Continuer
-          <ArrowRight size={12} />
-        </button>
+        <div className="flex items-center gap-2">
+          {/* C14 — actions de cycle de vie (1 clic) */}
+          {isReady && (
+            <button
+              disabled={statusPending}
+              onClick={(e) => { e.stopPropagation(); setStatus('soumis') }}
+              title="Marquer cet AO comme déposé (date enregistrée)"
+              className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-50"
+              style={{ border: '1px solid #E2E8F0', color: '#475569' }}
+            >
+              <Send size={11} /> Déposé
+            </button>
+          )}
+          {isDeposed && (
+            <>
+              <button
+                disabled={statusPending}
+                onClick={(e) => { e.stopPropagation(); setStatus('gagné') }}
+                className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-50"
+                style={{ border: '1px solid rgba(16,185,129,0.30)', color: '#047857' }}
+              >
+                <Trophy size={11} /> Gagné
+              </button>
+              <button
+                disabled={statusPending}
+                onClick={(e) => { e.stopPropagation(); setStatus('perdu') }}
+                className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-50"
+                style={{ border: '1px solid #E2E8F0', color: '#64748B' }}
+              >
+                <X size={11} /> Perdu
+              </button>
+            </>
+          )}
+          <button
+            className="flex items-center gap-1 text-xs font-medium transition-colors"
+            style={{ color: '#0EA5E9' }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#0284C7')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = '#0EA5E9')}
+            onClick={(e) => { e.stopPropagation(); navigate(`/projects/${project.id}`) }}
+          >
+            Continuer
+            <ArrowRight size={12} />
+          </button>
+        </div>
       </div>
     </div>
   )

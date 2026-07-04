@@ -114,6 +114,19 @@ def _copy_zip_member_bounded(src, dst, declared_size: int, budget: _ZipBudget) -
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
+
+# C14 — transitions de statut autorisées. Prêt (workflow) → soumis (dépôt
+# daté) → gagné/perdu (terminaux). sans_suite (B7) est réouvrable ; gagné
+# direct sans dépôt est interdit.
+_STATUS_TRANSITIONS: dict = {
+    "brouillon":  {"en_cours", "analyzed", "sans_suite", "soumis"},
+    "en_cours":   {"brouillon", "analyzed", "sans_suite", "soumis"},
+    "analyzed":   {"en_cours", "sans_suite", "soumis"},
+    "sans_suite": {"en_cours", "analyzed"},
+    "soumis":     {"gagné", "perdu", "en_cours"},
+    "gagné":      set(),   # terminal
+    "perdu":      set(),   # terminal
+}
 storage = FileStorage()
 processor = DocumentProcessor()
 lot_detector = LotDetector()
@@ -452,6 +465,19 @@ def update_project(
 
     project = _get_project_or_404(project_id, user.organization_id, db)
     status_before = project.status
+
+    # C14 — cycle de vie des statuts : transitions contrôlées.
+    if payload.status is not None and payload.status != status_before:
+        allowed = _STATUS_TRANSITIONS.get(status_before, set())
+        if payload.status not in allowed:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Transition de statut invalide : {status_before} → {payload.status}.",
+            )
+        if payload.status == "soumis":
+            from datetime import datetime as _datetime
+            project.depose_at = _datetime.utcnow()
+
     for field, value in payload.model_dump(exclude_none=True).items():
         setattr(project, field, value)
     db.commit()

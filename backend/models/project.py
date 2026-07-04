@@ -66,6 +66,9 @@ class Project(Base):
     # C5 — bandeau critique : champs structurés PAR LOT analysé
     # {"lot1": {date_limite_remise: {value, source}, ...}, "_all": {...}}
     critical_fields = Column(JSON, nullable=True)
+    # C14 — date de dépôt réelle (posée au passage en 'soumis') ;
+    # base du taux de réussite et de la relance à J+30.
+    depose_at = Column(DateTime, nullable=True)
     selected_lot = Column(String(50), nullable=True)   # "lot1"
     selected_lot_name = Column(String(255), nullable=True)  # "Lot 1 — Gros œuvre"
     processing_status = Column(Text, nullable=True)   # uploading|extracting_text|detecting_lots|ready|error
