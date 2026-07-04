@@ -181,7 +181,7 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
             onChange={(e) => setIncludeOrganigramme(e.target.checked)} />
           Inclure un organigramme du chantier dans le mémoire
           {!data.organigramme_available && (
-            <a href="/memoire-config" className="underline" style={{ color: '#0EA5E9' }}>
+            <a href="/company" className="underline" style={{ color: '#0EA5E9' }}>
               compléter mon équipe
             </a>
           )}

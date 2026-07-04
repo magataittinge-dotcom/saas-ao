@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
-  FileText,
   Building,
   Users,
   Wrench,
@@ -331,16 +330,20 @@ function Section({
   isOpen,
   onToggle,
   children,
+  hidden = false,
 }: {
   section: typeof SECTIONS[0]
   data: Partial<MemoireConfig>
   isOpen: boolean
   onToggle: () => void
   children: React.ReactNode
+  hidden?: boolean
 }) {
   const [filled, total] = countFilled(data, section.fields)
   const Icon = section.icon
   const complete = filled === total
+
+  if (hidden) return null
 
   return (
     <div
@@ -413,8 +416,18 @@ function Field({ label, optional, children }: { label: string; optional?: boolea
 }
 
 // ─── Main component ────────────────────────────────────────────────────────────
+// B6 — le profil mémoire vit dans « Mon entreprise » (onglets) : ce composant
+// est l'éditeur réutilisable, filtrable par sections. Il n'y a plus de page
+// « Mémoire technique » séparée (/memoire-config redirige vers /company).
 
-export default function MemoireConfig() {
+export function ProfilMemoireEditor({
+  visibleSections,
+  showImport = false,
+}: {
+  visibleSections?: string[]
+  showImport?: boolean
+}) {
+  const shown = (id: string) => !visibleSections || visibleSections.includes(id)
   const queryClient = useQueryClient()
   const [openSections, setOpenSections] = useState<Set<string>>(new Set(['entreprise']))
   const [form, setForm] = useState<Partial<MemoireConfig>>({})
@@ -505,25 +518,21 @@ export default function MemoireConfig() {
         />
       )}
 
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <FileText size={24} style={{ color: '#0EA5E9' }} className="shrink-0" />
-          <div>
-            <h1 className="text-2xl font-bold text-ds-text">Mémoire Technique</h1>
-            <p className="text-sm text-ds-text-2">
-              Renseignez ces informations une fois — elles seront réutilisées pour chaque AO
-            </p>
-          </div>
+      {/* Import d'un mémoire de référence (onglet Certifications & références) */}
+      {showImport && (
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-sm text-ds-text-2">
+            Un mémoire déjà rédigé ? Importez-le : l'IA pré-remplit votre profil.
+          </p>
+          <button
+            onClick={() => setShowImportDialog(true)}
+            className="btn-glass flex items-center gap-2 text-sm font-medium py-2 px-4 shrink-0"
+          >
+            <Upload size={15} />
+            Importer un mémoire
+          </button>
         </div>
-        <button
-          onClick={() => setShowImportDialog(true)}
-          className="btn-glass flex items-center gap-2 text-sm font-medium py-2 px-4 shrink-0"
-        >
-          <Upload size={15} />
-          Importer un mémoire
-        </button>
-      </div>
+      )}
 
       {/* Import success banner */}
       {importBanner && (
@@ -577,7 +586,7 @@ export default function MemoireConfig() {
       <div className="space-y-3">
 
         {/* ENTREPRISE */}
-        <Section section={SECTIONS[0]} data={form} isOpen={openSections.has('entreprise')} onToggle={() => toggleSection('entreprise')}>
+        <Section section={SECTIONS[0]} data={form} isOpen={openSections.has('entreprise')} onToggle={() => toggleSection('entreprise')} hidden={!shown('entreprise')}>
           <Field label={FIELD_LABELS.nom_entreprise}>
             <input type="text" className="glass-input w-full py-2.5 text-sm" placeholder="Ex: SARL DUPONT BTP"
               value={form.nom_entreprise ?? ''} onChange={(e) => set('nom_entreprise', e.target.value)} />
@@ -642,7 +651,7 @@ export default function MemoireConfig() {
         </Section>
 
         {/* ÉQUIPE */}
-        <Section section={SECTIONS[1]} data={form} isOpen={openSections.has('equipe')} onToggle={() => toggleSection('equipe')}>
+        <Section section={SECTIONS[1]} data={form} isOpen={openSections.has('equipe')} onToggle={() => toggleSection('equipe')} hidden={!shown('equipe')}>
           <Field label={FIELD_LABELS.organigramme_description} optional>
             <textarea className="glass-input w-full py-2.5 text-sm" rows={3} placeholder="1 gérant + 2 conducteurs de travaux + 8 ouvriers..."
               style={{ resize: 'vertical' }}
@@ -692,7 +701,7 @@ export default function MemoireConfig() {
         </Section>
 
         {/* MOYENS */}
-        <Section section={SECTIONS[2]} data={form} isOpen={openSections.has('moyens')} onToggle={() => toggleSection('moyens')}>
+        <Section section={SECTIONS[2]} data={form} isOpen={openSections.has('moyens')} onToggle={() => toggleSection('moyens')} hidden={!shown('moyens')}>
           {(['moyens_informatiques', 'vehicules', 'materiel'] as const).map((field) => (
             <Field key={field} label={FIELD_LABELS[field]} optional>
               <textarea className="glass-input w-full py-2.5 text-sm" rows={3}
@@ -709,7 +718,7 @@ export default function MemoireConfig() {
         </Section>
 
         {/* MÉTHODOLOGIE */}
-        <Section section={SECTIONS[3]} data={form} isOpen={openSections.has('methodologie')} onToggle={() => toggleSection('methodologie')}>
+        <Section section={SECTIONS[3]} data={form} isOpen={openSections.has('methodologie')} onToggle={() => toggleSection('methodologie')} hidden={!shown('methodologie')}>
           {(['demarche_qualite', 'procedure_demarrage', 'gestion_securite', 'traitement_dechets', 'mesures_environnementales'] as const).map((field) => (
             <Field key={field} label={FIELD_LABELS[field]} optional>
               <textarea className="glass-input w-full py-2.5 text-sm" rows={4}
@@ -728,7 +737,7 @@ export default function MemoireConfig() {
         </Section>
 
         {/* FOURNISSEURS */}
-        <Section section={SECTIONS[4]} data={form} isOpen={openSections.has('fournisseurs')} onToggle={() => toggleSection('fournisseurs')}>
+        <Section section={SECTIONS[4]} data={form} isOpen={openSections.has('fournisseurs')} onToggle={() => toggleSection('fournisseurs')} hidden={!shown('fournisseurs')}>
           <Field label={FIELD_LABELS.fournisseurs_principaux} optional>
             <textarea className="glass-input w-full py-2.5 text-sm" rows={4}
               style={{ resize: 'vertical' }}

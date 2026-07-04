@@ -38,7 +38,7 @@ const RUBRIQUES: { icon: LucideIcon; label: string; to: string }[] = [
   { icon: FolderOpen, label: 'Mes AO',            to: '/projects' },
   { icon: Building2,  label: 'Mon entreprise',    to: '/company' },
   { icon: Award,      label: 'Mes références',     to: '/references' },
-  { icon: FileStack,  label: 'Bibliothèque mém.',  to: '/memoire-config' },
+  { icon: FileStack,  label: 'Profil mémoire',     to: '/company' },
   { icon: Archive,    label: 'Coffre-fort',        to: '/vault' },
   { icon: Calculator, label: 'Calculateurs',       to: '/outils' },
 ]

@@ -260,7 +260,7 @@ function ProfileSummary({ stats }: { stats: { filled: number; total: number; nom
           {isComplete ? (
             <div className="flex items-center gap-3 mt-2">
               <span className="text-sm" style={{ color: '#64748B' }}>{stats.nom_entreprise || 'Entreprise'}</span>
-              <Link to="/memoire-config" className="text-xs hover:underline" style={{ color: '#0EA5E9' }}>
+              <Link to="/company" className="text-xs hover:underline" style={{ color: '#0EA5E9' }}>
                 Modifier →
               </Link>
             </div>
@@ -281,7 +281,7 @@ function ProfileSummary({ stats }: { stats: { filled: number; total: number; nom
                 Completez votre profil pour un memoire personnalise avec vos vraies informations.
               </p>
               <Link
-                to="/memoire-config"
+                to="/company"
                 className="inline-flex items-center gap-1.5 text-xs font-medium mt-3 px-3.5 py-1.5 rounded-lg transition-colors hover:bg-sky-50"
                 style={{ border: '1px solid #0EA5E9', color: '#0EA5E9' }}
               >

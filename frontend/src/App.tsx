@@ -15,7 +15,6 @@ import Project from '@/routes/Project'
 import Vault from '@/routes/Vault'
 import References from '@/routes/References'
 import Company from '@/routes/Company'
-import MemoireConfig from '@/routes/MemoireConfig'
 import Team from '@/routes/Team'
 import Settings from '@/routes/Settings'
 import Billing from '@/routes/Billing'
@@ -78,7 +77,8 @@ function AppRoutes() {
         <Route path="/vault" element={<Vault />} />
         <Route path="/references" element={<References />} />
         <Route path="/outils" element={<Tools />} />
-        <Route path="/memoire-config" element={<MemoireConfig />} />
+        {/* B6 — le profil mémoire vit dans Mon entreprise ; redirect propre */}
+        <Route path="/memoire-config" element={<Navigate to="/company" replace />} />
         <Route path="/company" element={<Company />} />
         <Route path="/team" element={<Team />} />
         <Route path="/settings" element={<Settings />} />

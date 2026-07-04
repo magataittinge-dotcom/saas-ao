@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
-  LayoutDashboard, FolderOpen, FileStack, Building2, Archive, Users, LogOut,
+  LayoutDashboard, FolderOpen, Building2, Archive, Users, LogOut,
   Settings, X, Calculator, Briefcase, Plus,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
@@ -27,7 +27,7 @@ const SECTIONS: { label: string; items: { to: string; icon: typeof LayoutDashboa
       { to: '/company',        icon: Briefcase,  label: 'Mon entreprise' },
       { to: '/references',     icon: Building2,  label: 'Mes références' },
       { to: '/vault',          icon: Archive,    label: 'Coffre-fort' },
-      { to: '/memoire-config', icon: FileStack,  label: 'Bibliothèque' },
+      
       { to: '/outils',         icon: Calculator, label: 'Calculateurs' },
     ],
   },

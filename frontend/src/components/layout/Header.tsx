@@ -11,7 +11,7 @@ const ROUTE_LABELS: Record<string, { parent?: string; label: string }> = {
   '/vault':          { label: 'Coffre-fort' },
   '/references':     { label: 'Références' },
   '/outils':         { label: 'Calculateurs' },
-  '/memoire-config': { label: 'Mémoire Technique' },
+  '/memoire-config': { label: 'Mon entreprise' },
   '/company':        { label: 'Mon entreprise' },
   '/team':           { label: 'Équipe' },
   '/settings':       { label: 'Paramètres' },
