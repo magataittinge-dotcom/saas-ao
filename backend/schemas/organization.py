@@ -8,6 +8,7 @@ class OrganizationResponse(BaseModel):
     name: str
     siret: Optional[str]
     siret_verified: bool = False
+    trial_granted: bool = True  # C15 — pilote l'écran « premier DCE offert »
     naf_code: Optional[str] = None
     effectif_tranche: Optional[str] = None
     address: Optional[str]

@@ -16,6 +16,7 @@ import type { Project, ProjectDocument, ProjectDocumentType } from '@/types'
 import { cn } from '@/lib/utils'
 import { AiTipsBlock, type TipData } from '@/components/common/AiTip'
 import VaultSavePrompt, { type VaultSuggestion } from '@/components/vault/VaultSavePrompt'
+import { takePendingUpload } from '@/lib/pendingUpload'
 
 const UPLOAD_STEPS: StepDescriptor[] = [
   { key: 'uploading',       label: 'Transfert du dossier',   estimated_s: 30 },
@@ -307,6 +308,14 @@ export default function StepUpload({ project }: Props) {
     },
     [project.id, queryClient, startProcessing],
   )
+
+  // C15 — fichier déposé sur l'écran d'accueil (premier AO offert) :
+  // récupéré une seule fois au montage et uploadé automatiquement.
+  useEffect(() => {
+    const pending = takePendingUpload()
+    if (pending) onDrop([pending])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     onDrop,

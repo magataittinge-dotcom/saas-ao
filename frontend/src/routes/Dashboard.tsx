@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import QuotaGauge from '@/components/layout/QuotaGauge'
+import FirstAOWelcome from '@/components/onboarding/FirstAOWelcome'
 import { api } from '@/services/api'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { PipelineRail } from '@/components/dashboard/PipelineRail'
@@ -48,7 +49,7 @@ const RUBRIQUES: { icon: LucideIcon; label: string; to: string }[] = [
    ═══════════════════════════════════════════════════════════════════ */
 export default function Dashboard() {
   const navigate = useNavigate()
-  const { user } = useAuthStore()
+  const { user, organization } = useAuthStore()
 
   const { data: projects = [], isLoading: pLoad } = useQuery({
     queryKey: ['projects'],
@@ -68,6 +69,16 @@ export default function Dashboard() {
       queryClient.invalidateQueries({ queryKey: ['projects'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
     },
+  })
+
+  // C15 — quota pour l'écran « premier DCE offert » + CTA upgrade sobre
+  const { data: quotaStatus } = useQuery<{
+    plan: string
+    analyses: { used: number; limit: number | null }
+    memoires: { used: number; limit: number | null }
+  }>({
+    queryKey: ['billing-quota'],
+    queryFn: async () => { const { data } = await api.get('/billing/quota'); return data },
   })
 
   const s = stats ?? EMPTY_STATS
@@ -114,8 +125,43 @@ export default function Dashboard() {
           : ` Prochaine échéance dans ${next._days} jour${next._days > 1 ? 's' : ''} : « ${next.name} ».`
         : ' Aucune échéance imminente, vous avez de la marge.')
 
+  // C15 — essai intact (free, trial accordé, 0 unité, 0 projet) → écran
+  // central « premier DCE offert » ; essai consommé → dashboard normal.
+  const freshTrial =
+    organization?.plan === 'free'
+    && organization?.trial_granted !== false
+    && quotaStatus !== undefined
+    && quotaStatus.analyses.used === 0
+    && quotaStatus.memoires.used === 0
+    && !pLoad && projects.length === 0
+
+  if (freshTrial) {
+    return <FirstAOWelcome />
+  }
+
+  const consumedFreeTrial =
+    organization?.plan === 'free'
+    && quotaStatus !== undefined
+    && (quotaStatus.analyses.used > 0 || quotaStatus.memoires.used > 0
+        || organization?.trial_granted === false)
+
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-fade-in">
+
+      {/* C15 — essai utilisé : CTA upgrade sobre, jamais bloquant */}
+      {consumedFreeTrial && (
+        <div className="glass-card px-4 py-3 flex items-center justify-between gap-3">
+          <p className="text-sm text-ds-text-2">
+            Votre AO d'essai est utilisé. Le plan Pro couvre 40 analyses et 40 mémoires par mois.
+          </p>
+          <button
+            onClick={() => navigate('/settings/billing')}
+            className="shrink-0 text-sm font-medium text-ds-cyan hover:underline"
+          >
+            Voir les plans
+          </button>
+        </div>
+      )}
 
       {/* ── EN-TÊTE ──────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
