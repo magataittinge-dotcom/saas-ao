@@ -778,6 +778,7 @@ export default function StepMemoire({ project }: Props) {
   // C9a — dernière sélection du pre-flight (overrides locaux, refs, propagation)
   const preflightRef = useRef<PreflightSelection>({
     profile_overrides: null, reference_ids: null, update_profile: false,
+    include_organigramme: false,
   })
   const handlePreflightChange = useCallback((sel: PreflightSelection) => {
     preflightRef.current = sel
@@ -797,6 +798,7 @@ export default function StepMemoire({ project }: Props) {
         profile_overrides: preflightRef.current.profile_overrides || undefined,
         reference_ids: preflightRef.current.reference_ids || undefined,
         update_profile: preflightRef.current.update_profile || undefined,
+        include_organigramme: preflightRef.current.include_organigramme || undefined,
       }, { timeout: 600_000 }),
     onSuccess: (res) => {
       setGenError(null)

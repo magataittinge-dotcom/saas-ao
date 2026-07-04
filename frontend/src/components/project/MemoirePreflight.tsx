@@ -33,12 +33,14 @@ interface PreflightPayload {
   profil: PreflightProfil
   references: PreflightReference[]
   quota: { used: number; limit: number | null }
+  organigramme_available: boolean
 }
 
 export interface PreflightSelection {
   profile_overrides: Record<string, string> | null
   reference_ids: string[] | null
   update_profile: boolean
+  include_organigramme: boolean
 }
 
 interface Props {
@@ -78,6 +80,7 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
   const [overrides, setOverrides] = useState<Record<string, string>>({})
   const [checkedRefs, setCheckedRefs] = useState<Set<string> | null>(null)
   const [updateProfile, setUpdateProfile] = useState(false)
+  const [includeOrganigramme, setIncludeOrganigramme] = useState(false)
 
   // Initialise la sélection de références depuis la pré-sélection serveur.
   useEffect(() => {
@@ -92,8 +95,9 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
       profile_overrides: Object.keys(overrides).length > 0 ? overrides : null,
       reference_ids: checkedRefs !== null ? Array.from(checkedRefs) : null,
       update_profile: updateProfile,
+      include_organigramme: includeOrganigramme,
     })
-  }, [overrides, checkedRefs, updateProfile, onChange])
+  }, [overrides, checkedRefs, updateProfile, includeOrganigramme, onChange])
 
   if (!data) return null
 
@@ -164,6 +168,23 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
           <input type="checkbox" checked={updateProfile}
             onChange={(e) => setUpdateProfile(e.target.checked)} />
           Mettre à jour mon profil avec ces modifications (sinon elles restent locales à ce mémoire)
+        </label>
+
+        {/* C8a — option organigramme (grisée si l'équipe du profil est vide) */}
+        <label
+          className={`flex items-center gap-2 mt-2 text-xs ${data.organigramme_available ? 'cursor-pointer' : 'opacity-60'}`}
+          style={{ color: '#475569' }}
+        >
+          <input type="checkbox"
+            disabled={!data.organigramme_available}
+            checked={includeOrganigramme && data.organigramme_available}
+            onChange={(e) => setIncludeOrganigramme(e.target.checked)} />
+          Inclure un organigramme du chantier dans le mémoire
+          {!data.organigramme_available && (
+            <a href="/memoire-config" className="underline" style={{ color: '#0EA5E9' }}>
+              compléter mon équipe
+            </a>
+          )}
         </label>
       </div>
 

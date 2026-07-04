@@ -104,11 +104,15 @@ def get_memoire_preflight(
     ]
 
     status = quota.get_quota_status(db, org)
+    from services.organigramme import organigramme_available
     return {
         "lot": project.selected_lot,
         "profil": profil,
         "references": references,
         "quota": status["memoires"],
+        # C8a — l'option organigramme n'est proposée que si le profil équipe
+        # permet un rendu réel (jamais d'organigramme vide).
+        "organigramme_available": organigramme_available(cfg),
     }
 
 
@@ -323,12 +327,29 @@ def export_memoire_docx(
         project_address,
     )
 
+    # C8a — organigramme si l'option a été cochée au pre-flight (fallback
+    # gracieux : données devenues insuffisantes → pas d'image, pas d'erreur).
+    organigramme_image = None
+    if (memoire.variables or {}).get("include_organigramme"):
+        from services.organigramme import generate_organigramme_svg, svg_to_png_bytes
+        cfg = db.query(MemoireConfig).filter(
+            MemoireConfig.organization_id == user.organization_id,
+        ).first()
+        svg = generate_organigramme_svg(cfg)
+        if svg:
+            try:
+                organigramme_image = svg_to_png_bytes(svg)
+            except Exception as e:
+                import logging as _logging
+                _logging.getLogger(__name__).warning(f"Organigramme non rasterisé: {e}")
+
     docx_bytes = build_memoire_docx(
         content_json=memoire.content_json,
         project_name=project.name,
         org_name=org_name,
         map_image=map_image,
         map_caption=map_caption,
+        organigramme_image=organigramme_image,
     )
 
     filename = f"Memoire_Technique_{project.name.replace(' ', '_')}.docx"

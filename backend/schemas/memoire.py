@@ -25,6 +25,9 @@ class MemoireGenerateRequest(BaseModel):
     profile_overrides: Optional[dict] = None
     reference_ids: Optional[List[str]] = None
     update_profile: bool = False
+    # C8a — option « inclure un organigramme du chantier » (rangée dans
+    # variables → relue par l'export DOCX)
+    include_organigramme: bool = False
 
     @field_validator("profile_overrides")
     @classmethod
