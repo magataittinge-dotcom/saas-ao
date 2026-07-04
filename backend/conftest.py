@@ -38,6 +38,13 @@ def _reset_schema():
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     yield
+    # Durcissement anti-flakiness : les endpoints d'upload lancent des threads
+    # démons ("synorix-*") qui écrivent en base ; sans join, ils survivent au
+    # test et percutent le drop_all du test suivant.
+    import threading
+    for t in threading.enumerate():
+        if t.name.startswith("synorix-") and t.is_alive():
+            t.join(timeout=15)
 
 
 @pytest.fixture

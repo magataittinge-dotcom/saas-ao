@@ -707,6 +707,9 @@ async def upload_project_document(
                     target=_extract_all_parallel,
                     args=(project_id, docs_needing_text),
                     daemon=True,
+                    # Nom stable : les tests joignent les threads "synorix-*"
+                    # en fin de test (écritures DB après reset de schéma sinon).
+                    name=f"synorix-extract-{project_id}",
                 ).start()
             else:
                 project.processing_status = "ready"
@@ -1571,6 +1574,7 @@ def detect_lots(
         target=_run_lot_detection_background,
         args=(project_id, docs_data, str(UPLOADS_ROOT)),
         daemon=True,
+        name=f"synorix-lots-{project_id}",
     ).start()
 
     return {"status": "detecting_lots", "progress": 0, "detail": "Démarrage de la détection..."}
