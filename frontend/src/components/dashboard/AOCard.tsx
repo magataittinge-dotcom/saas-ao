@@ -6,7 +6,7 @@ import { daysUntil } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import type { Project } from '@/types'
 
-const STEP_LABELS = ['Upload DCE', 'Analyse IA', 'Vérification', 'Mémoire', 'Export']
+import { PIPELINE_STEPS } from './PipelineRail'
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string; accent: string }> = {
   brouillon:  { label: 'Brouillon',            cls: 'pill-muted',   accent: '#64748B' },
@@ -43,7 +43,10 @@ export function AOCard({ project, onDelete }: Props) {
 
   const days = project.deadline ? daysUntil(project.deadline) : null
   const isUrgent = days !== null && days <= 7
-  const progress = ((project.current_step - 1) / 4) * 100
+  // 6 étapes réelles (cf. PIPELINE_STEPS) — clamp : jamais > 100 %, jamais
+  // de libellé « undefined » à l'étape Export.
+  const stepIndex = Math.min(Math.max(project.current_step, 1), PIPELINE_STEPS.length)
+  const progress = ((stepIndex - 1) / (PIPELINE_STEPS.length - 1)) * 100
   const status = STATUS_CONFIG[project.status] ?? STATUS_CONFIG.brouillon
   const accentColor = isUrgent ? '#0EA5E9' : status.accent
 
@@ -111,7 +114,7 @@ export function AOCard({ project, onDelete }: Props) {
       {/* Progress */}
       <div className="relative">
         <div className="flex justify-between text-xs mb-1.5">
-          <span className="text-ds-text-3">{STEP_LABELS[project.current_step - 1]}</span>
+          <span className="text-ds-text-3">{PIPELINE_STEPS[stepIndex - 1]}</span>
           <span
             className="text-ds-text-2 font-medium"
             style={{ fontFamily: '"JetBrains Mono", monospace' }}

@@ -6,8 +6,8 @@ import NotificationBell from './NotificationBell'
 
 const ROUTE_LABELS: Record<string, { parent?: string; label: string }> = {
   '/dashboard':      { label: 'Tableau de bord' },
-  '/projects':       { label: 'Projets' },
-  '/projects/new':   { parent: 'Projets', label: 'Nouveau projet' },
+  '/projects':       { label: 'Mes AO' },
+  '/projects/new':   { parent: 'Mes AO', label: 'Nouvel AO' },
   '/vault':          { label: 'Coffre-fort' },
   '/references':     { label: 'Références' },
   '/outils':         { label: 'Calculateurs' },
@@ -37,7 +37,7 @@ export default function Header({ onMenuToggle }: Props) {
   let parent: string | undefined
   let label = ''
   const projectMatch = pathname.match(/^\/projects\/[^/]+\/(\w+)/)
-  if (projectMatch) { parent = 'Projets'; label = STEP_LABELS[projectMatch[1]] ?? 'Projet' }
+  if (projectMatch) { parent = 'Mes AO'; label = STEP_LABELS[projectMatch[1]] ?? 'Projet' }
   else {
     const match = Object.entries(ROUTE_LABELS).sort((a, b) => b[0].length - a[0].length).find(([r]) => pathname.startsWith(r))
     if (match) { parent = match[1].parent; label = match[1].label }
