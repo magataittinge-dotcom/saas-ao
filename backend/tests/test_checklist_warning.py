@@ -111,6 +111,21 @@ def test_linking_valid_doc_gives_present(client, db_session, test_org):
 
 # ─── Endpoint score ──────────────────────────────────────────────────────────
 
+def test_checklist_score_all_green_state(client, db_session, test_org):
+    """Second état du gate d'export : X == Y quand tout est conforme."""
+    p = Project(id="proj-c10g", organization_id=test_org.id, name="AO")
+    db_session.add(p)
+    for status in ("present", "present", "expiration_proche"):
+        db_session.add(ChecklistItem(
+            project_id="proj-c10g", document_type_required="urssaf",
+            source_kind="vault", status=status,
+        ))
+    db_session.commit()
+
+    body = client.get("/api/projects/proj-c10g/checklist/score").json()
+    assert body["conformes"] == body["total"] == 3
+
+
 def test_checklist_score_endpoint(client, db_session, test_org):
     p = Project(id="proj-c10s", organization_id=test_org.id, name="AO")
     db_session.add(p)

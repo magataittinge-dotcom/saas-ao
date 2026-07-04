@@ -32,6 +32,8 @@ interface ChecklistExportItem {
   details: string | null
   linked_document_name: string | null
   linked_document_id: string | null
+  source_kind: string
+  signature_confirmed: boolean
 }
 
 interface ProjectDocumentExportItem {
@@ -222,6 +224,16 @@ export default function StepExport({ project }: Props) {
     },
   })
 
+  // Gate ZIP (C10) — score de conformité : X < Y → export ambre non-bloquant
+  const { data: score } = useQuery<{ conformes: number; total: number }>({
+    queryKey: ['checklist-score', project.id],
+    queryFn: async () => {
+      const { data } = await api.get(`/projects/${project.id}/checklist/score`)
+      return data
+    },
+  })
+  const [showGateWarning, setShowGateWarning] = useState(false)
+
   const { mutate: exportDocx, isPending: isExportingDocx } = useMutation({
     mutationFn: async () => {
       const response = await api.get(`/projects/${project.id}/export/docx`, { responseType: 'blob' })
@@ -342,10 +354,21 @@ export default function StepExport({ project }: Props) {
 
   const dpgfLignes = detail.dpgf_remplie?.verification?.nb_lignes ?? 0
 
+  // ── Gate ZIP (C10) : X < Y pièces conformes → ambre + avertissement ──────
+  const gateBlocked = !!score && score.total > 0 && score.conformes < score.total
+  const CONFORME_STATUSES = new Set(['present', 'expiration_proche', 'non_applicable'])
+  const SIGNABLE = new Set(['acte_engagement_template', 'dc1_template', 'dc2_template'])
+  const nonConformes = (detail?.checklist_items ?? []).filter((i) =>
+    i.status !== 'non_applicable' && (
+      !CONFORME_STATUSES.has(i.status)
+      || (i.source_kind === 'dce_template' && SIGNABLE.has(i.document_type_required) && !i.signature_confirmed)
+    ),
+  )
+
   // ── Bottom bar ──────────────────────────────────────────────────────────
   const bottomBar = (
     <div
-      className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-center px-6 py-3 gap-3"
+      className="fixed bottom-0 left-0 right-0 z-50 flex flex-col items-center px-6 py-3 gap-2"
       style={{
         background: 'rgba(255,255,255,0.85)',
         backdropFilter: 'blur(12px)',
@@ -353,14 +376,49 @@ export default function StepExport({ project }: Props) {
         borderTop: '1px solid #F1F5F9',
       }}
     >
+      {gateBlocked && showGateWarning && (
+        <div className="w-full max-w-xl rounded-xl px-4 py-3 text-left"
+          style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.25)' }}>
+          <p className="text-xs font-semibold mb-1" style={{ color: '#B45309' }}>
+            {score!.conformes}/{score!.total} pièces conformes — à vérifier avant dépôt :
+          </p>
+          <ul className="text-xs space-y-0.5" style={{ color: '#92400E' }}>
+            {nonConformes.slice(0, 6).map((i) => (
+              <li key={i.id}>
+                • {i.linked_document_name || i.document_type_required}
+                {' '}({i.status === 'manquant' ? 'manquante'
+                  : i.status === 'expire' ? 'expirée'
+                  : i.status === 'warning' ? 'à vérifier'
+                  : 'signature non confirmée'})
+              </li>
+            ))}
+            {nonConformes.length > 6 && <li>… et {nonConformes.length - 6} autre(s)</li>}
+          </ul>
+          <button
+            onClick={() => exportZip()}
+            disabled={isExportingZip}
+            className="mt-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
+            style={{ background: '#B45309' }}
+          >
+            {isExportingZip ? 'Export…' : 'Exporter quand même'}
+          </button>
+        </div>
+      )}
       <button
-        onClick={() => exportZip()}
+        onClick={() => (gateBlocked ? setShowGateWarning(s => !s) : exportZip())}
         disabled={isExportingZip}
         className="signature-btn disabled:opacity-40"
-        style={{ fontFamily: F, padding: '12px 32px', fontSize: '16px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(14,165,233,0.30)' }}
+        style={{
+          fontFamily: F, padding: '12px 32px', fontSize: '16px', borderRadius: '12px',
+          ...(gateBlocked
+            ? { background: 'linear-gradient(135deg, #B45309, #F59E0B)', boxShadow: '0 2px 8px rgba(245,158,11,0.30)' }
+            : { boxShadow: '0 2px 8px rgba(14,165,233,0.30)' }),
+        }}
       >
         {isExportingZip ? <Loader2 size={18} className="animate-spin" /> : <Archive size={18} />}
-        Télécharger le dossier ZIP
+        {gateBlocked
+          ? `Télécharger le ZIP (${score!.conformes}/${score!.total} conformes)`
+          : 'Télécharger le dossier ZIP'}
       </button>
     </div>
   )
