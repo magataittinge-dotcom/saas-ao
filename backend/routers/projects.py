@@ -1250,9 +1250,30 @@ async def _extract_zip_members(
         members = zf.infolist()
         _t_read = _time.monotonic() - _tz0
 
+        # DÉMO-1 — progression par fichier pendant l'extraction (throttlée).
+        # Sans ça, l'étape « extraction du ZIP » était muette du début à la
+        # fin → gel apparent à ~30 % sur les gros DCE.
+        real_members = [m for m in members if not m.is_dir()]
+        _last_tick = 0.0
+        _done = 0
+
+        def _tick_progress():
+            nonlocal _last_tick
+            now = _time.monotonic()
+            if now - _last_tick < 0.5 or depth != 0:
+                return
+            _last_tick = now
+            try:
+                from services import pipeline_tracker as _tracker
+                _tracker.update_step_progress(project_id, min(_done / max(len(real_members), 1), 0.99))
+            except Exception:
+                pass
+
         for member in members:
             if member.is_dir():
                 continue
+            _done += 1
+            _tick_progress()
 
             raw_name = member.filename
             parts = raw_name.replace("\\", "/").split("/")
