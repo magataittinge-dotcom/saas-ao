@@ -34,6 +34,12 @@ interface PreflightPayload {
   references: PreflightReference[]
   quota: { used: number; limit: number | null }
   organigramme_available: boolean
+  vault_documents: { id: string; file_name: string; category: string }[]
+}
+
+export interface GanttPhase {
+  nom: string
+  duree_semaines: number
 }
 
 export interface PreflightSelection {
@@ -41,6 +47,8 @@ export interface PreflightSelection {
   reference_ids: string[] | null
   update_profile: boolean
   include_organigramme: boolean
+  gantt_phases: GanttPhase[] | null
+  annexe_document_ids: string[] | null
 }
 
 interface Props {
@@ -81,6 +89,8 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
   const [checkedRefs, setCheckedRefs] = useState<Set<string> | null>(null)
   const [updateProfile, setUpdateProfile] = useState(false)
   const [includeOrganigramme, setIncludeOrganigramme] = useState(false)
+  const [ganttPhases, setGanttPhases] = useState<GanttPhase[]>([])
+  const [checkedAnnexes, setCheckedAnnexes] = useState<Set<string>>(new Set())
 
   // Initialise la sélection de références depuis la pré-sélection serveur.
   useEffect(() => {
@@ -91,13 +101,16 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
 
   // Remonte la sélection courante au parent (payload de génération).
   useEffect(() => {
+    const validPhases = ganttPhases.filter(p => p.nom.trim() && p.duree_semaines > 0)
     onChange({
       profile_overrides: Object.keys(overrides).length > 0 ? overrides : null,
       reference_ids: checkedRefs !== null ? Array.from(checkedRefs) : null,
       update_profile: updateProfile,
       include_organigramme: includeOrganigramme,
+      gantt_phases: validPhases.length > 0 ? validPhases : null,
+      annexe_document_ids: checkedAnnexes.size > 0 ? Array.from(checkedAnnexes) : null,
     })
-  }, [overrides, checkedRefs, updateProfile, includeOrganigramme, onChange])
+  }, [overrides, checkedRefs, updateProfile, includeOrganigramme, ganttPhases, checkedAnnexes, onChange])
 
   if (!data) return null
 
@@ -213,6 +226,67 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
                       {[ref.lot, ref.maitre_ouvrage, ref.annee].filter(Boolean).join(' · ')}
                     </span>
                   </span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* ── Gantt du phasage (option — phases saisies, jamais inventées) ── */}
+      <div className="rounded-lg p-4" style={{ background: '#FFFFFF', border: '1px solid #E2E8F0' }}>
+        <h3 className="text-sm font-bold mb-1" style={{ color: '#0F172A' }}>
+          Planning prévisionnel (option)
+        </h3>
+        <p className="text-xs mb-3" style={{ color: '#94A3B8' }}>
+          Saisissez vos phases : un Gantt sera inséré dans le mémoire. Vide = pas de Gantt.
+        </p>
+        <div className="space-y-2">
+          {ganttPhases.map((phase, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input className={inputClass} style={inputStyle} placeholder="Nom de la phase"
+                value={phase.nom}
+                onChange={(e) => setGanttPhases(prev =>
+                  prev.map((p, j) => j === i ? { ...p, nom: e.target.value } : p))} />
+              <input type="number" min={1} className={`${inputClass} w-24 shrink-0`} style={inputStyle}
+                placeholder="sem."
+                value={phase.duree_semaines || ''}
+                onChange={(e) => setGanttPhases(prev =>
+                  prev.map((p, j) => j === i ? { ...p, duree_semaines: parseInt(e.target.value) || 0 } : p))} />
+              <button onClick={() => setGanttPhases(prev => prev.filter((_, j) => j !== i))}
+                className="text-xs shrink-0" style={{ color: '#94A3B8' }}>retirer</button>
+            </div>
+          ))}
+        </div>
+        <button
+          onClick={() => setGanttPhases(prev => [...prev, { nom: '', duree_semaines: 0 }])}
+          className="mt-2 text-xs font-medium" style={{ color: '#0EA5E9' }}>
+          + Ajouter une phase
+        </button>
+      </div>
+
+      {/* ── Annexes du coffre-fort (jointes au ZIP d'export) ── */}
+      {data.vault_documents.length > 0 && (
+        <div className="rounded-lg p-4" style={{ background: '#FFFFFF', border: '1px solid #E2E8F0' }}>
+          <h3 className="text-sm font-bold mb-1" style={{ color: '#0F172A' }}>
+            Annexes du coffre-fort (option)
+          </h3>
+          <p className="text-xs mb-2" style={{ color: '#94A3B8' }}>
+            Jointes au ZIP d'export en section 3_ANNEXES.
+          </p>
+          <ul className="space-y-1 max-h-40 overflow-y-auto">
+            {data.vault_documents.map((doc) => (
+              <li key={doc.id}>
+                <label className="flex items-center gap-2 px-1 py-1 text-sm cursor-pointer" style={{ color: '#0F172A' }}>
+                  <input type="checkbox"
+                    checked={checkedAnnexes.has(doc.id)}
+                    onChange={() => setCheckedAnnexes(prev => {
+                      const next = new Set(prev)
+                      if (next.has(doc.id)) next.delete(doc.id)
+                      else next.add(doc.id)
+                      return next
+                    })} />
+                  <span className="truncate">{doc.file_name}</span>
                 </label>
               </li>
             ))}

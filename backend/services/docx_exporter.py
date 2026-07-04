@@ -279,6 +279,7 @@ def _add_part(
     map_image: bytes | None = None,
     map_caption: str | None = None,
     organigramme_image: bytes | None = None,
+    gantt_image: bytes | None = None,
 ):
     _h1(doc, title)
     for key, label in sections:
@@ -292,6 +293,10 @@ def _add_part(
                 # C8a — organigramme du chantier sous les moyens humains
                 _body(doc, text)
                 _add_map_image(doc, organigramme_image, "Organigramme du chantier")
+            elif key == "methodologie" and gantt_image:
+                # BONUS — Gantt du phasage sous la méthodologie
+                _body(doc, text)
+                _add_map_image(doc, gantt_image, "Planning prévisionnel des travaux")
             else:
                 _body(doc, text)
 
@@ -306,6 +311,7 @@ def build_memoire_docx(
     map_image: bytes | None = None,
     map_caption: str | None = None,
     organigramme_image: bytes | None = None,
+    gantt_image: bytes | None = None,
     logo_image: bytes | None = None,
     lot_name: str | None = None,
     maitre_ouvrage: str | None = None,
@@ -327,7 +333,7 @@ def build_memoire_docx(
 
     _add_part(doc, "PARTIE A — PRÉSENTATION GÉNÉRALE",       content_json.get("partie_a", {}), _PART_A, map_image=map_image, map_caption=map_caption)
     _add_part(doc, "PARTIE B — PRÉSENTATION DE LA PRESTATION", content_json.get("partie_b", {}), _PART_B)
-    _add_part(doc, "PARTIE C — MÉTHODOLOGIE MISE EN ŒUVRE",   content_json.get("partie_c", {}), _PART_C, organigramme_image=organigramme_image)
+    _add_part(doc, "PARTIE C — MÉTHODOLOGIE MISE EN ŒUVRE",   content_json.get("partie_c", {}), _PART_C, organigramme_image=organigramme_image, gantt_image=gantt_image)
 
     buf = io.BytesIO()
     doc.save(buf)

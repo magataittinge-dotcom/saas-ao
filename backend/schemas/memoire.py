@@ -28,6 +28,10 @@ class MemoireGenerateRequest(BaseModel):
     # C8a — option « inclure un organigramme du chantier » (rangée dans
     # variables → relue par l'export DOCX)
     include_organigramme: bool = False
+    # BONUS — phases du Gantt saisies au pre-flight [{nom, duree_semaines}]
+    # et annexes du coffre à joindre au ZIP (les deux rangés dans variables)
+    gantt_phases: Optional[List[dict]] = None
+    annexe_document_ids: Optional[List[str]] = None
 
     @field_validator("profile_overrides")
     @classmethod

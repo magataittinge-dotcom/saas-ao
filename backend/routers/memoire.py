@@ -105,6 +105,17 @@ def get_memoire_preflight(
 
     status = quota.get_quota_status(db, org)
     from services.organigramme import organigramme_available
+
+    # BONUS — pièces du coffre proposées en annexes du ZIP d'export
+    from models.document import Document as _VaultDoc
+    vault_documents = [
+        {"id": d.id, "file_name": d.file_name, "category": d.category}
+        for d in db.query(_VaultDoc).filter(
+            _VaultDoc.organization_id == user.organization_id,
+            _VaultDoc.deleted_at.is_(None),
+        ).order_by(_VaultDoc.category, _VaultDoc.file_name).all()
+    ]
+
     return {
         "lot": project.selected_lot,
         "profil": profil,
@@ -113,6 +124,7 @@ def get_memoire_preflight(
         # C8a — l'option organigramme n'est proposée que si le profil équipe
         # permet un rendu réel (jamais d'organigramme vide).
         "organigramme_available": organigramme_available(cfg),
+        "vault_documents": vault_documents,
     }
 
 
@@ -356,6 +368,20 @@ def build_project_memoire_docx(project, memoire, org, db) -> bytes:
             except Exception:
                 logo_image = None
 
+    # BONUS — Gantt du phasage si des phases ont été saisies au pre-flight
+    gantt_image = None
+    gantt_phases = (memoire.variables or {}).get("gantt_phases")
+    if gantt_phases:
+        from services.gantt import generate_gantt_svg
+        from services.organigramme import svg_to_png_bytes as _svg_png
+        svg = generate_gantt_svg(gantt_phases)
+        if svg:
+            try:
+                gantt_image = _svg_png(svg)
+            except Exception as e:
+                import logging as _logging
+                _logging.getLogger(__name__).warning(f"Gantt non rasterisé: {e}")
+
     return build_memoire_docx(
         content_json=memoire.content_json,
         project_name=project.name,
@@ -363,6 +389,7 @@ def build_project_memoire_docx(project, memoire, org, db) -> bytes:
         map_image=map_image,
         map_caption=map_caption,
         organigramme_image=organigramme_image,
+        gantt_image=gantt_image,
         logo_image=logo_image,
         lot_name=project.selected_lot_name,
         maitre_ouvrage=project.maitre_ouvrage,

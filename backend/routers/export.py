@@ -325,6 +325,19 @@ def export_zip(
         else:
             warnings.append("Mémoire technique non généré")
 
+        # ── 3_ANNEXES : pièces du coffre sélectionnées au pre-flight ───────
+        # (BONUS Lot 5) — ownership org : seuls les documents de l'org sortent.
+        annexe_ids = list(((memoire.variables if memoire else None) or {}).get(
+            "annexe_document_ids") or [])
+        if annexe_ids:
+            annexe_docs = db.query(Document).filter(
+                Document.id.in_(annexe_ids),
+                Document.organization_id == user.organization_id,
+                Document.deleted_at.is_(None),
+            ).all()
+            for doc in annexe_docs:
+                _add_file_to_zip(zf, doc.file_url, doc.file_name, f"{root}/3_ANNEXES", seen_names)
+
         # ── 02_Offre: filled DPGF if uploaded ─────────────────────────────
         if project.dpgf_remplie_url and project.dpgf_remplie_name:
             _add_file_to_zip(
