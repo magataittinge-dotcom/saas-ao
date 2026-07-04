@@ -1,6 +1,6 @@
 import uuid
 from sqlalchemy import (
-    Column, String, Text, ForeignKey,
+    Boolean, Column, String, Text, ForeignKey,
     CheckConstraint, Enum as SAEnum,
 )
 from sqlalchemy.orm import relationship
@@ -39,6 +39,9 @@ class ChecklistItem(Base):
     )
     details = Column(Text, nullable=True)
     source_in_rc = Column(String(500), nullable=True)
+    # C12 — confirmation explicite « Je confirme avoir signé » (AE, DC1, DC2).
+    # Sans confirmation, la pièce ne compte pas conforme dans le score.
+    signature_confirmed = Column(Boolean, nullable=False, default=False, server_default="false")
 
     # Relationships
     project = relationship("Project", back_populates="checklist_items")

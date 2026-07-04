@@ -17,16 +17,28 @@ const TEMPLATE_LABELS: Record<string, string> = {
   attestation_visite_template: 'Attestation de visite',
 }
 
+// C12 — documents exigeant une signature (AE en tête de liste)
+const SIGNABLE_TYPES = ['acte_engagement_template', 'dc1_template', 'dc2_template']
+
 interface Props {
   projectId: string
   items: ChecklistItem[]
   onUploadCompleted: (item: ChecklistItem, file: File) => Promise<void>
+  onToggleSignature?: (item: ChecklistItem, confirmed: boolean) => Promise<void>
 }
 
-export default function CandidatureSectionTemplates({ projectId, items, onUploadCompleted }: Props) {
+export default function CandidatureSectionTemplates({ projectId, items, onUploadCompleted, onToggleSignature }: Props) {
   if (items.length === 0) return null
 
   const present = items.filter((i) => i.status === 'present').length
+  // AE en tête, puis les autres documents à signer, puis le reste.
+  const sorted = [...items].sort((a, b) => {
+    const rank = (i: ChecklistItem) => {
+      const idx = SIGNABLE_TYPES.indexOf(i.document_type_required)
+      return idx === -1 ? SIGNABLE_TYPES.length : idx
+    }
+    return rank(a) - rank(b)
+  })
 
   return (
     <section
@@ -54,12 +66,13 @@ export default function CandidatureSectionTemplates({ projectId, items, onUpload
       </header>
 
       <ul className="divide-y" style={{ borderColor: '#F1F5F9' }}>
-        {items.map((item) => (
+        {sorted.map((item) => (
           <TemplateRow
             key={item.id}
             projectId={projectId}
             item={item}
             onUploadCompleted={onUploadCompleted}
+            onToggleSignature={onToggleSignature}
           />
         ))}
       </ul>
@@ -68,18 +81,21 @@ export default function CandidatureSectionTemplates({ projectId, items, onUpload
 }
 
 function TemplateRow({
-  projectId, item, onUploadCompleted,
+  projectId, item, onUploadCompleted, onToggleSignature,
 }: {
   projectId: string
   item: ChecklistItem
   onUploadCompleted: (item: ChecklistItem, file: File) => Promise<void>
+  onToggleSignature?: (item: ChecklistItem, confirmed: boolean) => Promise<void>
 }) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const isPresent = item.status === 'present'
+  const isWarning = item.status === 'warning'
   const hasTemplate = !!item.template_project_doc_id
+  const isSignable = SIGNABLE_TYPES.includes(item.document_type_required)
   const label = TEMPLATE_LABELS[item.document_type_required] || item.document_type_required
 
   const downloadHref = item.template_project_doc_id
@@ -114,7 +130,9 @@ function TemplateRow({
       <span className="shrink-0 mt-0.5">
         {isPresent
           ? <CheckCircle2 size={18} style={{ color: '#10B981' }} />
-          : <AlertCircle size={18} style={{ color: hasTemplate ? '#64748B' : '#EF4444' }} />}
+          : isWarning
+            ? <AlertCircle size={18} style={{ color: '#B45309' }} />
+            : <AlertCircle size={18} style={{ color: hasTemplate ? '#64748B' : '#EF4444' }} />}
       </span>
 
       {/* Body */}
@@ -136,7 +154,26 @@ function TemplateRow({
               Complété
             </span>
           )}
+          {isWarning && (
+            <span className="text-[11px] font-medium" style={{ color: '#B45309' }}>
+              ⚠️ Présente — à vérifier
+            </span>
+          )}
         </div>
+        {/* C12 — confirmation de signature (AE, DC1, DC2) */}
+        {isSignable && onToggleSignature && (
+          <label className="flex items-center gap-2 mt-2 text-xs cursor-pointer" style={{ color: '#475569' }}>
+            <input
+              type="checkbox"
+              checked={item.signature_confirmed ?? false}
+              onChange={(e) => onToggleSignature(item, e.target.checked)}
+            />
+            Je confirme avoir signé ce document
+            {!item.signature_confirmed && (
+              <span style={{ color: '#94A3B8' }}>— requis pour compter conforme</span>
+            )}
+          </label>
+        )}
         {item.details && (
           <p className="text-xs mt-1 leading-relaxed" style={{ color: '#64748B' }}>
             {item.details}

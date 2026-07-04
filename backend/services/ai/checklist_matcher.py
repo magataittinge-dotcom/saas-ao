@@ -80,11 +80,27 @@ def _vault_doc_status(vault_doc: Document) -> str:
 # warning/expire/manquant ne le sont pas ; non_applicable sort du total.
 _CONFORME_STATUSES = {"present", "expiration_proche"}
 
+# C12 — templates DCE exigeant une signature : sans confirmation explicite
+# (« Je confirme avoir signé »), la pièce ne compte pas conforme.
+SIGNABLE_TEMPLATE_TYPES = {"acte_engagement_template", "dc1_template", "dc2_template"}
+
+
+def _is_conforme(item) -> bool:
+    if item.status not in _CONFORME_STATUSES:
+        return False
+    if (
+        getattr(item, "source_kind", "") == "dce_template"
+        and getattr(item, "document_type_required", "") in SIGNABLE_TEMPLATE_TYPES
+        and not getattr(item, "signature_confirmed", False)
+    ):
+        return False
+    return True
+
 
 def conformity_score(items) -> dict:
     """Score de conformité « X/Y pièces conformes » de la checklist."""
     considered = [i for i in items if i.status != "non_applicable"]
-    conformes = sum(1 for i in considered if i.status in _CONFORME_STATUSES)
+    conformes = sum(1 for i in considered if _is_conforme(i))
     return {"conformes": conformes, "total": len(considered)}
 
 

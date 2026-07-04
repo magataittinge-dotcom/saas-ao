@@ -235,6 +235,7 @@ export interface ComplianceItem {
 // ─── Candidature Checklist ────────────────────────────────────────────────────
 
 export type ChecklistStatus = 'present' | 'manquant' | 'expire' | 'expiration_proche' | 'warning' | 'non_applicable'
+// C12 — confirmation de signature portée par ChecklistItem (voir plus bas)
 export type ChecklistSourceKind = 'vault' | 'dce_template'
 
 export interface ChecklistItem {
@@ -248,6 +249,7 @@ export interface ChecklistItem {
   status: ChecklistStatus
   details?: string
   source_in_rc?: string
+  signature_confirmed?: boolean
 }
 
 // ─── Mémoire Technique ────────────────────────────────────────────────────────

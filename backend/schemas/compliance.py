@@ -34,6 +34,7 @@ class ChecklistItemResponse(BaseModel):
     status: str
     details: Optional[str]
     source_in_rc: Optional[str]
+    signature_confirmed: bool = False
 
     model_config = {"from_attributes": True}
 

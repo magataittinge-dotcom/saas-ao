@@ -147,6 +147,33 @@ async def upload_completed_template(
     item.status = "present"
     if item.details:
         item.details = f"Template complété : {safe_name}"
+
+    # ── C12 : une DPGF re-uploadée passe au contrôle formel automatique ──────
+    # (lignes vides, totaux) — on lit le CONTRAT, jamais de jugement de prix.
+    if doc_type == "dpgf_template" and ext in (".xlsx", ".xlsm", ".xls", ".ods"):
+        from services.dpgf_checker import check_dpgf
+        try:
+            report = check_dpgf(abs_path)
+        except Exception as exc:
+            logger.warning("Contrôle DPGF impossible pour %s : %s", safe_name, exc)
+            report = None
+        if report is not None:
+            if report.get("valid") and not report.get("nb_lignes_vides"):
+                item.status = "present"
+                item.details = (
+                    f"DPGF vérifiée : {report.get('nb_lignes_remplies', 0)} lignes remplies"
+                    + (f", total {report['total_ht']:,.2f} € HT".replace(",", " ")
+                       if report.get("total_ht") else "")
+                )
+            else:
+                item.status = "warning"
+                vides = report.get("nb_lignes_vides", 0)
+                warnings_txt = " · ".join(report.get("warnings", [])[:3])
+                item.details = (
+                    f"DPGF : {vides} ligne(s) sans prix"
+                    + (f" — {warnings_txt}" if warnings_txt else "")
+                )
+
     db.commit()
     db.refresh(item)
     return item
@@ -200,6 +227,8 @@ class ChecklistItemPatch(BaseModel):
     status: Optional[str] = None  # one of CHECKLIST_STATUSES + 'non_applicable'
     details: Optional[str] = None
     unlink: Optional[bool] = False  # detach linked vault / completed template
+    # C12 — « Je confirme avoir signé » (AE, DC1, DC2)
+    signature_confirmed: Optional[bool] = None
 
 
 @router.patch(
@@ -218,8 +247,10 @@ def patch_checklist_item(
     item = _get_checklist_item_or_404(item_id, project_id, db)
 
     allowed_statuses = {
-        "present", "manquant", "expire", "expiration_proche", "non_applicable",
+        "present", "manquant", "expire", "expiration_proche", "warning", "non_applicable",
     }
+    if payload.signature_confirmed is not None:
+        item.signature_confirmed = payload.signature_confirmed
     if payload.status is not None:
         if payload.status not in allowed_statuses:
             raise HTTPException(

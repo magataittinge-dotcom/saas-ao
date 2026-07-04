@@ -223,6 +223,13 @@ export default function StepCandidat({ project }: Props) {
         projectId={project.id}
         items={templateItems}
         onUploadCompleted={handleUploadCompleted}
+        onToggleSignature={async (item, confirmed) => {
+          await api.patch(`/projects/${project.id}/checklist/${item.id}`, {
+            signature_confirmed: confirmed,
+          })
+          await refresh()
+          queryClient.invalidateQueries({ queryKey: ['checklist-score', project.id] })
+        }}
       />
 
       {pickerItem && (
