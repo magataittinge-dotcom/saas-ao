@@ -176,7 +176,7 @@ export default function StepAnalysis({ project }: Props) {
 
   const handleValidate = () => {
     completeStep(3, {
-      onSuccess: () => navigate(`/projects/${project.id}/candidature`),
+      onSuccess: () => navigate(`/projects/${project.id}/verification`),
     })
   }
 
@@ -285,8 +285,8 @@ export default function StepAnalysis({ project }: Props) {
           {isValidating
             ? <><Loader2 size={16} className="animate-spin" /> Validation...</>
             : isStepAlreadyDone
-            ? <><CheckCircle2 size={16} /> Passer à la candidature</>
-            : <><Sparkles size={16} /> Étape Suivante : Candidature</>}
+            ? <><CheckCircle2 size={16} /> Passer à la vérification</>
+            : <><Sparkles size={16} /> Étape Suivante : Vérification</>}
         </button>
       </div>
     </div>

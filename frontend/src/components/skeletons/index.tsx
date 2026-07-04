@@ -155,7 +155,7 @@ export function DocumentListSkeleton({ count = 6 }: { count?: number }) {
   )
 }
 
-/* ── Requirement card (StepCandidat / StepAnalysis) ────────────────── */
+/*/* ── Requirement card (StepVerification / StepAnalysis) ────────────────── */
 export function RequirementCardSkeleton() {
   return (
     <div className="rounded-xl p-4 space-y-3" style={CARD}>

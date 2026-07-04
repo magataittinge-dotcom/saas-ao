@@ -15,7 +15,7 @@ const F = "'DM Sans', sans-serif"
 
 interface Props { project: Project }
 
-export default function StepCandidat({ project }: Props) {
+export default function StepVerification({ project }: Props) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const completeStep = useCompleteStep(project.id)

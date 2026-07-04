@@ -6,7 +6,7 @@ import { daysUntil } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import type { Project } from '@/types'
 
-const STEP_LABELS = ['Upload DCE', 'Analyse IA', 'Candidature', 'Mémoire', 'Export']
+const STEP_LABELS = ['Upload DCE', 'Analyse IA', 'Vérification', 'Mémoire', 'Export']
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string; accent: string }> = {
   brouillon:  { label: 'Brouillon',            cls: 'pill-muted',   accent: '#64748B' },

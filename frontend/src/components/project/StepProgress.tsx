@@ -6,7 +6,7 @@ const STEPS = [
   { number: 1, label: 'Upload DCE',  segment: 'upload' },
   { number: 2, label: 'Lots',        segment: 'lots' },
   { number: 3, label: 'Analyse IA',  segment: 'analysis' },
-  { number: 4, label: 'Candidature', segment: 'candidature' },
+  { number: 4, label: 'Vérification', segment: 'verification' },
   { number: 5, label: 'Mémoire',     segment: 'memoire' },
   { number: 6, label: 'Export',      segment: 'export' },
 ]

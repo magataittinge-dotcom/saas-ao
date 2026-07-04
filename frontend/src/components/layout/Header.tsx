@@ -19,7 +19,7 @@ const ROUTE_LABELS: Record<string, { parent?: string; label: string }> = {
   '/billing':        { label: 'Facturation' },
   '/settings/billing': { label: 'Abonnement' },
 }
-const STEP_LABELS: Record<string, string> = { upload: 'Upload DCE', lots: 'Sélection lots', analysis: 'Analyse IA', candidature: 'Candidature', memoire: 'Mémoire', export: 'Export' }
+const STEP_LABELS: Record<string, string> = { upload: 'Upload DCE', lots: 'Sélection lots', analysis: 'Analyse IA', verification: 'Vérification', candidature: 'Vérification', memoire: 'Mémoire', export: 'Export' }
 
 interface Props {
   onMenuToggle: () => void

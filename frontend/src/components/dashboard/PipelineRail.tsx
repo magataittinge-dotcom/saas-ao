@@ -5,7 +5,7 @@ export const PIPELINE_STEPS = [
   'Upload DCE',
   'Lots',
   'Analyse IA',
-  'Candidature',
+  'Vérification',
   'Mémoire',
   'Export',
 ] as const

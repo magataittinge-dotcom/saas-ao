@@ -7,12 +7,12 @@ import Skeleton from '@/components/common/Skeleton'
 import StepUpload       from './project/StepUpload'
 import StepLotSelection from './project/StepLotSelection'
 import StepAnalysis     from './project/StepAnalysis'
-import StepCandidat     from './project/StepCandidat'
+import StepVerification from './project/StepVerification'
 import StepMemoire      from './project/StepMemoire'
 import StepExport       from './project/StepExport'
 import { cn } from '@/lib/utils'
 
-const STEP_ROUTES = ['upload', 'lots', 'analysis', 'candidature', 'memoire', 'export']
+const STEP_ROUTES = ['upload', 'lots', 'analysis', 'verification', 'memoire', 'export']
 
 export default function Project() {
   const { id } = useParams<{ id: string }>()
@@ -86,7 +86,9 @@ export default function Project() {
         <Route path="upload"       element={<StepUpload       project={project} />} />
         <Route path="lots"         element={<StepLotSelection project={project} />} />
         <Route path="analysis"     element={<StepAnalysis     project={project} />} />
-        <Route path="candidature"  element={<StepCandidat     project={project} />} />
+        <Route path="verification" element={<StepVerification project={project} />} />
+        {/* B9 — ancien nom d'étape conservé en redirect */}
+        <Route path="candidature"  element={<Navigate to={`/projects/${project.id}/verification`} replace />} />
         <Route path="memoire"      element={<StepMemoire      project={project} />} />
         <Route path="export"       element={<StepExport       project={project} />} />
       </Routes>
