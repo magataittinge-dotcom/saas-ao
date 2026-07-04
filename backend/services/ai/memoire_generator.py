@@ -262,6 +262,7 @@ class MemoireGenerator:
         criteres_jugement: list | None = None,
         reference_template_text: str | None = None,  # text from imported mémoire
         project_id: str | None = None,
+        profile_overrides: dict | None = None,  # C9a — overrides locaux du pre-flight
     ) -> dict:
         """Generate a complete mémoire technique using Claude Opus.
 
@@ -315,6 +316,13 @@ class MemoireGenerator:
                 "vehicules": organization.vehicules,
                 "materiel": organization.materiel,
                 "fournisseurs": organization.fournisseurs,
+            })
+
+        # C9a — couche override du pre-flight : prime sur cfg et organization,
+        # LOCALE à ce mémoire (le profil org n'est jamais modifié ici).
+        if profile_overrides:
+            company_block.update({
+                k: v for k, v in profile_overrides.items() if v is not None
             })
 
         # ── 2. References — sorted by relevance to the lot, then by year ──────

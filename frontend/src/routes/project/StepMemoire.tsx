@@ -10,6 +10,7 @@ import {
 import ReactMarkdown from 'react-markdown'
 import axios from 'axios'
 import { api } from '@/services/api'
+import MemoirePreflight, { type PreflightSelection } from '@/components/project/MemoirePreflight'
 import { useAuthStore } from '@/stores/authStore'
 import ProgressDisplay, { type StepDescriptor } from '@/components/common/ProgressDisplay'
 import { useProgressStream } from '@/hooks/useProgressStream'
@@ -749,6 +750,14 @@ export default function StepMemoire({ project }: Props) {
     [dismissedSuggestions],
   )
 
+  // C9a — dernière sélection du pre-flight (overrides locaux, refs, propagation)
+  const preflightRef = useRef<PreflightSelection>({
+    profile_overrides: null, reference_ids: null, update_profile: false,
+  })
+  const handlePreflightChange = useCallback((sel: PreflightSelection) => {
+    preflightRef.current = sel
+  }, [])
+
   const { mutate: generate, isPending: isGenerating } = useMutation({
     mutationFn: () =>
       api.post<MemoireTechnique>(`/projects/${project.id}/memoire/generate`, {
@@ -760,6 +769,9 @@ export default function StepMemoire({ project }: Props) {
         conducteur_travaux_qualification: variables.conducteur_travaux_qualification || undefined,
         materiel_specifique: variables.materiel_specifique || undefined,
         particularites: variables.particularites || undefined,
+        profile_overrides: preflightRef.current.profile_overrides || undefined,
+        reference_ids: preflightRef.current.reference_ids || undefined,
+        update_profile: preflightRef.current.update_profile || undefined,
       }, { timeout: 600_000 }),
     onSuccess: (res) => {
       setGenError(null)
@@ -894,6 +906,9 @@ export default function StepMemoire({ project }: Props) {
 
           {/* Profile summary */}
           <ProfileSummary stats={profileStats ?? null} />
+
+          {/* C9a — pre-flight : profil condensé éditable + références + quota */}
+          <MemoirePreflight projectId={project.id} onChange={handlePreflightChange} />
 
           {/* Chantier-specific form */}
           <div

@@ -42,6 +42,73 @@ def get_memoire(
     return memoire
 
 
+@router.get("/{project_id}/memoire/preflight")
+def get_memoire_preflight(
+    project_id: str,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """C9a — pre-flight avant génération : profil condensé éditable,
+    références classées par pertinence pour CE lot (5-8 pré-cochées),
+    rappel quota (« consommera 1 mémoire — X/40 ce mois »)."""
+    from services.ai.memoire_generator import _rank_references_for_lot
+    from services import quota
+
+    project = _get_project_or_404(project_id, user.organization_id, db)
+    org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+    cfg = db.query(MemoireConfig).filter(
+        MemoireConfig.organization_id == user.organization_id,
+    ).first()
+
+    profil = {
+        "nom": (cfg.nom_entreprise if cfg and cfg.nom_entreprise else org.name),
+        "gerant_nom": cfg.gerant_nom if cfg else None,
+        "gerant_titre": cfg.gerant_titre if cfg else None,
+        "zone_intervention": cfg.zone_intervention if cfg else None,
+        "activites": (cfg.activites if cfg and cfg.activites else org.activites),
+        "organigramme_description": (
+            cfg.organigramme_description if cfg and cfg.organigramme_description
+            else org.organigramme
+        ),
+        "moyens_informatiques": (
+            cfg.moyens_informatiques if cfg and cfg.moyens_informatiques
+            else org.moyens_informatiques
+        ),
+        "vehicules": (cfg.vehicules if cfg and cfg.vehicules else org.vehicules),
+        "materiel": (cfg.materiel if cfg and cfg.materiel else org.materiel),
+        "effectif_tranche": org.effectif_tranche,
+    }
+
+    refs = db.query(Reference).filter(
+        Reference.organization_id == user.organization_id,
+        Reference.is_reference == True,
+        Reference.deleted_at.is_(None),
+    ).all()
+    ranked = _rank_references_for_lot(refs, project.selected_lot_name or "")
+    # 5 à 8 pré-cochées : les plus pertinentes d'abord (jamais plus de 8).
+    preselected_count = min(8, max(5, min(len(ranked), 8))) if ranked else 0
+    references = [
+        {
+            "id": r.id,
+            "intitule": r.intitule,
+            "lot": r.lot,
+            "maitre_ouvrage": r.maitre_ouvrage,
+            "annee": r.annee,
+            "montant_ht": r.montant_ht,
+            "selected": i < preselected_count,
+        }
+        for i, r in enumerate(ranked)
+    ]
+
+    status = quota.get_quota_status(db, org)
+    return {
+        "lot": project.selected_lot,
+        "profil": profil,
+        "references": references,
+        "quota": status["memoires"],
+    }
+
+
 @router.post("/{project_id}/memoire/generate", response_model=MemoireResponse)
 @limiter.limit("3/minute")
 async def generate_memoire(
@@ -62,6 +129,11 @@ async def generate_memoire(
         Reference.organization_id == user.organization_id,
         Reference.is_reference == True,
     ).all()
+    # C9a — sélection du pre-flight : si fournie, seules ces références
+    # partent au générateur (les ids étrangers sont ignorés par le scope org).
+    if payload.reference_ids is not None:
+        wanted = set(payload.reference_ids)
+        refs = [r for r in refs if r.id in wanted]
     _CATEGORY_ORDER = {"technique": 0, "planning": 1, "offre": 2, "criteres_notation": 3, "candidature": 4}
     compliance_items_raw = (
         db.query(ComplianceItem)
@@ -77,7 +149,22 @@ async def generate_memoire(
     # n'est décomptée qu'au succès — « 1 mémoire PAR LOT généré ».
     quota.check_quota(db, org, "memoire")
 
-    variables = payload.model_dump(exclude_none=True)
+    variables = payload.model_dump(
+        exclude_none=True,
+        exclude={"profile_overrides", "reference_ids", "update_profile"},
+    )
+    profile_overrides = payload.profile_overrides or None
+
+    # C9a — case « mettre à jour mon profil » : propage les overrides dans la
+    # couche stable entreprise (MemoireConfig). Sans la case, ils restent
+    # LOCAUX à ce mémoire.
+    if profile_overrides and payload.update_profile:
+        if not memoire_cfg:
+            memoire_cfg = MemoireConfig(organization_id=user.organization_id)
+            db.add(memoire_cfg)
+        _CFG_FIELD_MAP = {"nom": "nom_entreprise"}
+        for key, value in profile_overrides.items():
+            setattr(memoire_cfg, _CFG_FIELD_MAP.get(key, key), value)
 
     # Check for reference template (imported mémoire)
     ref_template = db.query(MemoireTemplate).filter(
@@ -115,6 +202,7 @@ async def generate_memoire(
             criteres_jugement=project.criteres_jugement or [],
             reference_template_text=ref_template_text,
             project_id=project_id,
+            profile_overrides=profile_overrides,
         )
         pipeline_tracker.complete_step(project_id, "generating")
         pipeline_tracker.start_step(project_id, "finalizing")
@@ -130,6 +218,7 @@ async def generate_memoire(
         existing.content_json = content
         existing.version += 1
         existing.variables = variables
+        existing.profile_overrides = profile_overrides
         existing.generated_at = datetime.utcnow()
         memoire = existing
     else:
@@ -137,6 +226,7 @@ async def generate_memoire(
             project_id=project_id,
             content_json=content,
             variables=variables,
+            profile_overrides=profile_overrides,
         )
         db.add(memoire)
 
