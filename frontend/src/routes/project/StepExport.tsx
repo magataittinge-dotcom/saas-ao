@@ -80,6 +80,7 @@ interface ExportDetail {
   memoire_info: MemoireExportInfo | null
   dpgf_info: DpgfExportInfo | null
   dpgf_remplie: DpgfRemplieInfo | null
+  naming_convention: string | null
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -713,6 +714,15 @@ export default function StepExport({ project }: Props) {
 
       {/* ── Export buttons (centered) ────────────────────────────── */}
       <div className="text-center mt-8 space-y-3">
+        {/* C13b — convention de nommage du RC appliquée au ZIP */}
+        {detail.naming_convention && (
+          <p className="text-xs" style={{ color: '#64748B' }}>
+            <span className="font-semibold" style={{ color: '#0284C7' }}>Convention du RC appliquée</span>
+            {' '}— les pièces du ZIP sont nommées{' '}
+            <span className="font-mono">{detail.naming_convention.replace('{lot}', 'Lot').replace('{entreprise}', 'Entreprise').replace('{piece}', 'Pièce')}</span>
+            {' '}et numérotées dans l'ordre du RC.
+          </p>
+        )}
         <div className="flex items-center justify-center gap-3">
           <button
             onClick={() => exportPdf()}

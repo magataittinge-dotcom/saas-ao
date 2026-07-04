@@ -206,6 +206,8 @@ def test_export_zip_candidature_folder_only_vault_or_user_completed(
 
     for zname in candidature_files:
         bare = Path(zname).name
+        # C13b — les pièces sont numérotées dans l'ordre du RC ("01_", "02_"…)
+        bare = re.sub(r"^\d{2}_", "", bare)
         assert bare in allowed, (
             f"01_Candidature/ contient un fichier non autorisé : {zname} "
             f"— seuls les docs coffre-fort ou is_user_completed=True sont permis."

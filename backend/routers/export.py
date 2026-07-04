@@ -118,6 +118,15 @@ def get_export_detail(
         for d in project_docs
     ]
 
+    # C13b — convention de nommage du RC (signalée dans l'UI d'export)
+    from services.export_naming import detect_naming_convention
+    rc_doc = next(
+        (d for d in project_docs if (d.type or "") == "rc" and d.extracted_text
+         and not d.extracted_text.startswith("[document volumineux")),
+        None,
+    )
+    convention = detect_naming_convention(rc_doc.extracted_text) if rc_doc else None
+
     return ExportDetail(
         compliance_total=len(compliance_items),
         compliance_covered=sum(1 for i in compliance_items if i.status == "couvert"),
@@ -131,6 +140,7 @@ def get_export_detail(
         memoire_info=memoire_info,
         dpgf_info=dpgf_info,
         dpgf_remplie=dpgf_remplie,
+        naming_convention=convention["template"] if convention else None,
     )
 
 
@@ -211,7 +221,25 @@ def export_zip(
     org_name = org.name if org else "Entreprise"
 
     project_docs = db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).all()
-    checklist_items = db.query(ChecklistItem).filter(ChecklistItem.project_id == project_id).all()
+    # C13b — l'ordre des pièces suit l'ordre du RC (rc_position posé par
+    # l'analyse) ; les checklists antérieures (NULL) restent en fin.
+    from sqlalchemy import func as _func
+    checklist_items = (
+        db.query(ChecklistItem)
+        .filter(ChecklistItem.project_id == project_id)
+        .order_by(_func.coalesce(ChecklistItem.rc_position, 999_999))
+        .all()
+    )
+
+    # C13b — convention de nommage éventuelle du RC
+    from services.export_naming import apply_convention, detect_naming_convention
+    rc_doc = next(
+        (d for d in project_docs if (d.type or "") == "rc" and d.extracted_text
+         and not d.extracted_text.startswith("[document volumineux")),
+        None,
+    )
+    convention = detect_naming_convention(rc_doc.extracted_text) if rc_doc else None
+    lot_segment = project.selected_lot or (project.selected_lot_name or "lot").split("—")[0].strip()
 
     # Collect coffre-fort documents linked via checklist
     linked_doc_ids = {ci.linked_document_id for ci in checklist_items if ci.linked_document_id}
@@ -220,6 +248,18 @@ def export_zip(
         if linked_doc_ids else []
     )
     vault_by_id = {d.id: d for d in vault_docs}
+
+    def _piece_arcname(counter: int, original_name: str) -> str:
+        """Numérotation ordre RC + convention du RC si détectée."""
+        stem = FilePath(original_name).stem
+        ext = FilePath(original_name).suffix
+        if convention:
+            named = apply_convention(
+                convention["template"],
+                lot=lot_segment, entreprise=org_name, piece=stem,
+            )
+            return f"{counter:02d}_{named}{ext}"
+        return f"{counter:02d}_{original_name}"
 
     # ── Build root folder name ────────────────────────────────────────────────
     lot_suffix = ""
@@ -242,11 +282,17 @@ def export_zip(
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
 
         # ── 01_Candidature: vault documents linked by checklist ───────────
+        # C13b — numérotation = ordre du RC, convention de nommage appliquée.
+        piece_counter = 0
         for ci in checklist_items:
             doc = vault_by_id.get(ci.linked_document_id) if ci.linked_document_id else None
             if not doc:
                 continue
-            _add_file_to_zip(zf, doc.file_url, doc.file_name, f"{root}/01_Candidature", seen_names)
+            piece_counter += 1
+            _add_file_to_zip(
+                zf, doc.file_url, _piece_arcname(piece_counter, doc.file_name),
+                f"{root}/01_Candidature", seen_names,
+            )
 
         # ── User-completed project documents (DC1/DC2 rempli, AE signé) ───
         for doc in project_docs:
@@ -254,7 +300,12 @@ def export_zip(
                 continue
             doc_type = doc.type or "autre"
             folder_sub = "02_Offre" if doc_type in OFFER_COMPLETED_TYPES else "01_Candidature"
-            _add_file_to_zip(zf, doc.file_url, doc.file_name, f"{root}/{folder_sub}", seen_names)
+            if folder_sub == "01_Candidature":
+                piece_counter += 1
+                arcname = _piece_arcname(piece_counter, doc.file_name)
+            else:
+                arcname = doc.file_name
+            _add_file_to_zip(zf, doc.file_url, arcname, f"{root}/{folder_sub}", seen_names)
 
         # ── 02_Offre: mémoire technique ───────────────────────────────────
         # C13a — le PDF est la version dépôt par défaut ; conversion

@@ -1,6 +1,6 @@
 import uuid
 from sqlalchemy import (
-    Boolean, Column, String, Text, ForeignKey,
+    Boolean, Column, Integer, String, Text, ForeignKey,
     CheckConstraint, Enum as SAEnum,
 )
 from sqlalchemy.orm import relationship
@@ -42,6 +42,9 @@ class ChecklistItem(Base):
     # C12 — confirmation explicite « Je confirme avoir signé » (AE, DC1, DC2).
     # Sans confirmation, la pièce ne compte pas conforme dans le score.
     signature_confirmed = Column(Boolean, nullable=False, default=False, server_default="false")
+    # C13b — position de l'exigence dans le RC (ordre de l'analyse) :
+    # la numérotation des pièces du ZIP d'export suit cet ordre.
+    rc_position = Column(Integer, nullable=True)
 
     # Relationships
     project = relationship("Project", back_populates="checklist_items")

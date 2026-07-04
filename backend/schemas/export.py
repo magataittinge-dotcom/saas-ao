@@ -75,3 +75,5 @@ class ExportDetail(BaseModel):
     memoire_info: Optional[MemoireExportInfo] = None
     dpgf_info: Optional[DpgfExportInfo] = None
     dpgf_remplie: Optional[DpgfRemplieInfo] = None
+    # C13b — convention de nommage détectée dans le RC (template), sinon None
+    naming_convention: Optional[str] = None

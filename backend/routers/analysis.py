@@ -305,7 +305,7 @@ async def trigger_analysis(
             checklist = await matcher.match(checklist_reqs, vault_docs, project_id=project_id, db=db)
 
             db.query(ChecklistItem).filter(ChecklistItem.project_id == project_id).delete()
-            for item_data in checklist:
+            for idx, item_data in enumerate(checklist):
                 db.add(ChecklistItem(
                     project_id=project_id,
                     document_type_required=item_data.get("document_type_required", ""),
@@ -316,6 +316,8 @@ async def trigger_analysis(
                     status=item_data.get("status", "manquant"),
                     details=item_data.get("details"),
                     source_in_rc=item_data.get("source_in_rc"),
+                    # C13b — ordre du RC (ordre des exigences de l'analyse)
+                    rc_position=idx,
                 ))
             db.commit()
         except Exception as e:
