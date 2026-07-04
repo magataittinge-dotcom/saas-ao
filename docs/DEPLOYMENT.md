@@ -92,7 +92,9 @@ apt install -y \
   nginx certbot python3-certbot-nginx \
   curl git rsync \
   imagemagick poppler-utils libreoffice
-# poppler / libreoffice : conversion PDF / DOCX
+# poppler : outils PDF
+# libreoffice : REQUIS pour l'export PDF du mémoire (C13a — soffice headless,
+#   la version dépôt du ZIP). Vérifier après install : `soffice --version`.
 # imagemagick : redimensionnement Maps statiques
 ```
 

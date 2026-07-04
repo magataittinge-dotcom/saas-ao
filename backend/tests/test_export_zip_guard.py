@@ -35,8 +35,10 @@ FORBIDDEN_PROJECT_DOC_TYPES = {
 FORBIDDEN_FILENAME_MARKERS = ("_vierge", "_template", "_original")
 
 # Patterns for expected user-produced deliverables in 02_Offre/.
+# C13a — le mémoire est en PDF (version dépôt) par défaut ; le DOCX ne
+# reste possible que si la conversion LibreOffice est indisponible.
 OFFRE_ALLOWED_PATTERNS = (
-    re.compile(r"^Memoire_technique\.docx$"),
+    re.compile(r"^Memoire_technique\.(pdf|docx)$"),
     re.compile(r"^DPGF_remplie.*\.(xlsx|xlsm|xls|ods|pdf)$", re.IGNORECASE),
     re.compile(r"^AE_sign[eé].*\.(pdf|docx)$", re.IGNORECASE),
     re.compile(r"^DC[12]_rempli.*\.(pdf|docx)$", re.IGNORECASE),
@@ -245,8 +247,11 @@ def test_export_zip_includes_memoire_technique(client, seeded_project):
     assert resp.status_code == 200
     names = _zip_filenames(resp.content)
 
-    memoire_files = [n for n in names if "Memoire_technique.docx" in n]
+    # C13a — PDF = version dépôt par défaut (DOCX seulement si LibreOffice
+    # indisponible, ce qui n'est pas le cas de cet environnement de test).
+    memoire_files = [n for n in names if "Memoire_technique." in n]
     assert len(memoire_files) == 1
+    assert memoire_files[0].endswith("Memoire_technique.pdf")
     assert "/02_Offre/" in memoire_files[0]
 
 

@@ -316,18 +316,9 @@ async def rewrite_passage_endpoint(
     }
 
 
-@router.get("/{project_id}/memoire/export-docx")
-def export_memoire_docx(
-    project_id: str,
-    user: User = Depends(get_auth_user),
-    db: Session = Depends(get_db),
-):
-    project = _get_project_or_404(project_id, user.organization_id, db)
-    memoire = db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project_id).first()
-    if not memoire:
-        raise HTTPException(status_code=404, detail="Mémoire non généré")
-
-    org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+def build_project_memoire_docx(project, memoire, org, db) -> bytes:
+    """Construit le DOCX complet du mémoire (page de garde, carte,
+    organigramme, logo) — source unique pour export-docx, export-pdf et ZIP."""
     org_name = org.name if org else "Entreprise"
 
     # Generate location map (graceful fallback to None)
@@ -344,7 +335,7 @@ def export_memoire_docx(
     if (memoire.variables or {}).get("include_organigramme"):
         from services.organigramme import generate_organigramme_svg, svg_to_png_bytes
         cfg = db.query(MemoireConfig).filter(
-            MemoireConfig.organization_id == user.organization_id,
+            MemoireConfig.organization_id == project.organization_id,
         ).first()
         svg = generate_organigramme_svg(cfg)
         if svg:
@@ -365,7 +356,7 @@ def export_memoire_docx(
             except Exception:
                 logo_image = None
 
-    docx_bytes = build_memoire_docx(
+    return build_memoire_docx(
         content_json=memoire.content_json,
         project_name=project.name,
         org_name=org_name,
@@ -379,13 +370,69 @@ def export_memoire_docx(
         org_siret=org.siret if org else None,
     )
 
-    filename = f"Memoire_Technique_{project.name.replace(' ', '_')}.docx"
+
+def _attachment_response(content: bytes, filename: str, media_type: str) -> Response:
     ascii_name = filename.encode("ascii", errors="replace").decode("ascii")
     utf8_name = quote(filename, safe="")
     return Response(
-        content=docx_bytes,
-        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        content=content,
+        media_type=media_type,
         headers={"Content-Disposition": f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{utf8_name}"},
+    )
+
+
+@router.get("/{project_id}/memoire/export-docx")
+def export_memoire_docx(
+    project_id: str,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """DOCX = version retouche (le PDF est la version dépôt, cf. export-pdf)."""
+    project = _get_project_or_404(project_id, user.organization_id, db)
+    memoire = db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project_id).first()
+    if not memoire:
+        raise HTTPException(status_code=404, detail="Mémoire non généré")
+    org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+
+    docx_bytes = build_project_memoire_docx(project, memoire, org, db)
+    return _attachment_response(
+        docx_bytes,
+        f"Memoire_Technique_{project.name.replace(' ', '_')}.docx",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
+
+
+@router.get("/{project_id}/memoire/export-pdf")
+def export_memoire_pdf(
+    project_id: str,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """C13a — PDF fidèle du mémoire : la version dépôt par défaut."""
+    from services.pdf_export import PdfConversionError, docx_to_pdf, soffice_available
+
+    project = _get_project_or_404(project_id, user.organization_id, db)
+    memoire = db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project_id).first()
+    if not memoire:
+        raise HTTPException(status_code=404, detail="Mémoire non généré")
+    if not soffice_available():
+        raise HTTPException(
+            status_code=503,
+            detail="Export PDF indisponible sur ce serveur (LibreOffice manquant) — "
+                   "utilisez l'export Word en attendant.",
+        )
+    org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+
+    docx_bytes = build_project_memoire_docx(project, memoire, org, db)
+    try:
+        pdf_bytes = docx_to_pdf(docx_bytes)
+    except PdfConversionError as exc:
+        raise HTTPException(status_code=503, detail=f"Export PDF impossible : {exc}")
+
+    return _attachment_response(
+        pdf_bytes,
+        f"Memoire_Technique_{project.name.replace(' ', '_')}.pdf",
+        "application/pdf",
     )
 
 

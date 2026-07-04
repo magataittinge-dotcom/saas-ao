@@ -233,6 +233,21 @@ export default function StepExport({ project }: Props) {
     },
   })
 
+  // C13a — PDF fidèle : la version dépôt (le Word reste pour la retouche)
+  const { mutate: exportPdf, isPending: isExportingPdf } = useMutation({
+    mutationFn: async () => {
+      const response = await api.get(`/projects/${project.id}/memoire/export-pdf`, {
+        responseType: 'blob', timeout: 180_000,
+      })
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `Memoire_Technique_${project.name.replace(/\s+/g, '_')}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    },
+  })
+
   const { mutate: exportZip, isPending: isExportingZip } = useMutation({
     mutationFn: async () => {
       const response = await api.get(`/projects/${project.id}/export/zip`, { responseType: 'blob' })
@@ -700,13 +715,22 @@ export default function StepExport({ project }: Props) {
       <div className="text-center mt-8 space-y-3">
         <div className="flex items-center justify-center gap-3">
           <button
-            onClick={() => exportDocx()}
-            disabled={isExportingDocx || !detail.has_memoire}
+            onClick={() => exportPdf()}
+            disabled={isExportingPdf || !detail.has_memoire}
             className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg transition-colors hover:bg-sky-50 disabled:opacity-40"
             style={{ color: '#0EA5E9' }}
           >
+            {isExportingPdf ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
+            Mémoire PDF (dépôt)
+          </button>
+          <button
+            onClick={() => exportDocx()}
+            disabled={isExportingDocx || !detail.has_memoire}
+            className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg transition-colors hover:bg-sky-50 disabled:opacity-40"
+            style={{ color: '#64748B' }}
+          >
             {isExportingDocx ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
-            Générer rapport PDF
+            Word (retouche)
           </button>
           <button
             className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg transition-colors hover:bg-sky-50"

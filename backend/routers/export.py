@@ -1,5 +1,6 @@
 import io
 import json
+import logging
 import re
 import unicodedata
 import zipfile
@@ -21,6 +22,9 @@ from schemas.export import ExportSummary, ExportDetail, ComplianceExportItem, Ch
 from routers.auth import get_auth_user
 from services.file_storage import FileStorage
 from services.dpgf_checker import check_dpgf
+from services.pdf_export import PdfConversionError, docx_to_pdf
+
+logger = logging.getLogger(__name__)
 
 UPLOADS_ROOT = FilePath(__file__).parent.parent / "uploads"
 
@@ -253,9 +257,20 @@ def export_zip(
             _add_file_to_zip(zf, doc.file_url, doc.file_name, f"{root}/{folder_sub}", seen_names)
 
         # ── 02_Offre: mémoire technique ───────────────────────────────────
+        # C13a — le PDF est la version dépôt par défaut ; conversion
+        # impossible → fallback DOCX (jamais de ZIP sans mémoire).
         if memoire:
-            docx_bytes = build_memoire_docx(memoire.content_json, project.name, org_name)
-            zf.writestr(f"{root}/02_Offre/Memoire_technique.docx", docx_bytes)
+            from routers.memoire import build_project_memoire_docx
+            docx_bytes = build_project_memoire_docx(project, memoire, org, db)
+            try:
+                pdf_bytes = docx_to_pdf(docx_bytes)
+                zf.writestr(f"{root}/02_Offre/Memoire_technique.pdf", pdf_bytes)
+            except PdfConversionError as exc:
+                logger.warning("PDF mémoire indisponible pour le ZIP : %s", exc)
+                warnings.append(
+                    "Mémoire fourni en Word (conversion PDF indisponible sur ce serveur)"
+                )
+                zf.writestr(f"{root}/02_Offre/Memoire_technique.docx", docx_bytes)
         else:
             warnings.append("Mémoire technique non généré")
 
