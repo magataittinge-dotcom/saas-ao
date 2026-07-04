@@ -6,6 +6,7 @@ import { Archive, Award, Building, Save, MapPin } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { api } from '@/services/api'
 import { ProfilMemoireEditor } from './MemoireConfig'
+import ProfileFreeTextCard from '@/components/company/ProfileFreeTextCard'
 import type { Organization } from '@/types'
 
 const GMAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
@@ -63,6 +64,9 @@ export default function Company() {
           </button>
         ))}
       </div>
+
+      {/* C7 — texte libre → Haiku structure → validation avant écriture */}
+      <ProfileFreeTextCard />
 
       {/* Identité : coordonnées légales de l'org (Sirene) + section entreprise */}
       {tab === 'identite' && <OrganizationIdentityForm />}

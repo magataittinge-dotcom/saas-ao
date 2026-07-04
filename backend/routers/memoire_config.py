@@ -1,5 +1,6 @@
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from pydantic import BaseModel, field_validator
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -11,6 +12,45 @@ from services.document_processor import DocumentProcessor
 from services.ai.memoire_importer import MemoireImporter
 
 router = APIRouter()
+
+
+class StructureTextRequest(BaseModel):
+    """C7 — texte libre à structurer vers les champs du profil."""
+    text: str
+
+    @field_validator("text")
+    @classmethod
+    def _text_bounds(cls, v):
+        from services.ai.profile_structurer import MAX_TEXT_CHARS
+        if not (v or "").strip():
+            raise ValueError("Le texte est vide.")
+        if len(v) > MAX_TEXT_CHARS:
+            raise ValueError(f"Texte trop long ({len(v)} caractères, max {MAX_TEXT_CHARS}).")
+        return v
+
+
+@router.post("/structure-text")
+async def structure_text(
+    payload: StructureTextRequest,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """C7 — Haiku structure le texte libre vers les champs du profil.
+
+    Retourne une PROPOSITION (preview) : rien n'est écrit en base — c'est
+    le PUT /memoire-config existant qui persiste après validation."""
+    from services.ai.profile_structurer import structure_profile_text
+
+    try:
+        proposed, usage = await structure_profile_text(payload.text)
+    except Exception as e:
+        import logging as _logging
+        _logging.getLogger(__name__).error(f"structure-text échoué: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=502,
+            detail="Structuration indisponible — réessayez dans un instant.",
+        )
+    return {"proposed": proposed, "usage": usage}
 
 
 @router.get("", response_model=MemoireConfigResponse)
