@@ -11,6 +11,7 @@ import ReactMarkdown from 'react-markdown'
 import axios from 'axios'
 import { api } from '@/services/api'
 import MemoirePreflight, { type PreflightSelection } from '@/components/project/MemoirePreflight'
+import RewritePassageBar, { type PassageSelection } from '@/components/project/RewritePassageBar'
 import { useAuthStore } from '@/stores/authStore'
 import ProgressDisplay, { type StepDescriptor } from '@/components/common/ProgressDisplay'
 import { useProgressStream } from '@/hooks/useProgressStream'
@@ -134,15 +135,35 @@ function buildFullMarkdown(content: MemoireContent): string {
 // ─── Fullscreen editor ─────────────────────────────────────────────────────────
 
 function FullscreenEditor({
-  content, onSave, onClose, isSaving, saveSuccess,
+  content, projectId, onSave, onClose, isSaving, saveSuccess,
 }: {
   content: MemoireContent
+  projectId: string
   onSave: (raw: string) => void
   onClose: () => void
   isSaving: boolean
   saveSuccess: boolean
 }) {
   const [raw, setRaw] = useState(() => buildFullMarkdown(content))
+  // C9b — sélection courante dans le textarea (pour la réécriture ciblée)
+  const [selection, setSelection] = useState<PassageSelection | null>(null)
+  const editorRef = useRef<HTMLTextAreaElement>(null)
+
+  const captureSelection = () => {
+    const el = editorRef.current
+    if (!el) return
+    const { selectionStart, selectionEnd } = el
+    if (selectionEnd > selectionStart) {
+      setSelection({ text: raw.slice(selectionStart, selectionEnd), start: selectionStart, end: selectionEnd })
+    } else {
+      setSelection(null)
+    }
+  }
+
+  const applyRewrite = (start: number, end: number, rewritten: string) => {
+    setRaw((prev) => prev.slice(0, start) + rewritten + prev.slice(end))
+    setSelection(null)
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col" style={{ background: '#FFFFFF', fontFamily: F }}>
@@ -175,9 +196,13 @@ function FullscreenEditor({
           </button>
         </div>
       </div>
+      {/* C9b — barre de réécriture IA ciblée (agit sur la sélection seule) */}
+      <RewritePassageBar projectId={projectId} selection={selection} onApply={applyRewrite} />
       <textarea
+        ref={editorRef}
         value={raw}
-        onChange={(e) => setRaw(e.target.value)}
+        onChange={(e) => { setRaw(e.target.value); setSelection(null) }}
+        onSelect={captureSelection}
         className="flex-1 px-8 py-6 text-sm leading-relaxed resize-none focus:outline-none font-mono"
         style={{ background: '#FFFFFF', color: '#0F172A', caretColor: '#0EA5E9' }}
         spellCheck={false}
@@ -1097,6 +1122,7 @@ export default function StepMemoire({ project }: Props) {
       {showEditor && displayContent && (
         <FullscreenEditor
           content={displayContent}
+          projectId={project.id}
           onSave={handleEditorSave}
           onClose={() => setShowEditor(false)}
           isSaving={isSaving}

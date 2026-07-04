@@ -16,7 +16,10 @@ from models.team_member import TeamMember
 from models.reference import Reference
 from models.memoire_config import MemoireConfig
 from models.memoire_template import MemoireTemplate
-from schemas.memoire import MemoireGenerateRequest, MemoireUpdateRequest, MemoireResponse
+from schemas.memoire import (
+    MemoireGenerateRequest, MemoireUpdateRequest, MemoireResponse,
+    PassageRewriteRequest,
+)
 from routers.auth import get_auth_user
 from services.ai.memoire_generator import MemoireGenerator
 from services.docx_exporter import build_memoire_docx
@@ -252,6 +255,50 @@ async def generate_memoire(
         extra={"version": memoire.version, "lot": project.selected_lot},
     )
     return memoire
+
+
+@router.post("/{project_id}/memoire/rewrite-passage")
+@limiter.limit("10/minute")
+async def rewrite_passage_endpoint(
+    request: Request,
+    project_id: str,
+    payload: PassageRewriteRequest,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """C9b — réécrit le passage sélectionné SEUL (Opus 4.7).
+
+    Ne modifie JAMAIS le mémoire en base : le front affiche le diff
+    avant/après et applique (ou non) via le PATCH mémoire existant.
+    Usage loggé par org (compteur simple, pas de quota V1)."""
+    from services.ai.passage_rewriter import rewrite_passage
+
+    _get_project_or_404(project_id, user.organization_id, db)
+
+    try:
+        rewritten = await rewrite_passage(
+            payload.passage, payload.action, payload.instruction,
+        )
+    except Exception as e:
+        import logging as _logging
+        _logging.getLogger(__name__).error(
+            f"Réécriture passage échouée (projet {project_id}): {e}", exc_info=True,
+        )
+        raise HTTPException(
+            status_code=502,
+            detail="La réécriture a échoué — réessayez dans un instant.",
+        )
+
+    log_action(
+        db, user, "memoire.rewrite_passage",
+        target_type="project", target_id=project_id,
+        extra={"action": payload.action, "chars": len(payload.passage)},
+    )
+    return {
+        "original": payload.passage,
+        "rewritten": rewritten,
+        "action": payload.action,
+    }
 
 
 @router.get("/{project_id}/memoire/export-docx")

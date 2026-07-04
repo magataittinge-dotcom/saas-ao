@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 from typing import List, Optional, Any
 from datetime import datetime
 
@@ -42,6 +42,40 @@ class MemoireGenerateRequest(BaseModel):
 
 class MemoireUpdateRequest(BaseModel):
     content_json: Any
+
+
+class PassageRewriteRequest(BaseModel):
+    """C9b — réécriture ciblée d'un passage sélectionné dans l'éditeur."""
+    passage: str
+    action: Any  # validé ci-dessous contre ACTIONS (message d'erreur clair)
+    instruction: Optional[str] = None
+
+    @field_validator("passage")
+    @classmethod
+    def _passage_not_empty(cls, v):
+        from services.ai.passage_rewriter import MAX_PASSAGE_CHARS
+        if not (v or "").strip():
+            raise ValueError("Le passage sélectionné est vide.")
+        if len(v) > MAX_PASSAGE_CHARS:
+            raise ValueError(
+                f"Passage trop long ({len(v)} caractères, max {MAX_PASSAGE_CHARS}) — "
+                "sélectionnez un passage plus court."
+            )
+        return v
+
+    @field_validator("action")
+    @classmethod
+    def _action_known(cls, v):
+        from services.ai.passage_rewriter import ACTIONS
+        if v not in ACTIONS:
+            raise ValueError(f"Action inconnue : {v!r}. Actions : {', '.join(sorted(ACTIONS))}")
+        return v
+
+    @model_validator(mode="after")
+    def _insister_needs_instruction(self):
+        if self.action == "insister" and not (self.instruction or "").strip():
+            raise ValueError("L'action « insister » nécessite une consigne (champ instruction).")
+        return self
 
 
 class MemoireResponse(BaseModel):
