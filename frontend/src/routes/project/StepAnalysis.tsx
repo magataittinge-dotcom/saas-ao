@@ -11,6 +11,7 @@ import CriticalBanner, { type FieldSource } from '@/components/project/CriticalB
 import TresorerieCard from '@/components/project/TresorerieCard'
 import RetroPlanning from '@/components/project/RetroPlanning'
 import SynorixScoreCard from '@/components/project/SynorixScoreCard'
+import PdfSourceViewer from '@/components/project/PdfSourceViewer'
 import ProgressDisplay, { type StepDescriptor } from '@/components/common/ProgressDisplay'
 import { useProgressStream } from '@/hooks/useProgressStream'
 import { RequirementListSkeleton } from '@/components/skeletons'
@@ -56,11 +57,12 @@ export default function StepAnalysis({ project }: Props) {
     },
   })
 
-  // C5 — ouvrir la source exacte d'un champ du bandeau critique
-  const openFieldSource = async (src: FieldSource) => {
-    const doc = projectDocs.find(d => d.file_name === src.document)
-    if (!doc) return
-    const fileUrl = doc.pdf_preview_url || doc.file_url
+  // C6 — viewer PDF intégré (page + excerpt surligné verbatim côté serveur)
+  const [viewer, setViewer] = useState<{ url: string; name: string; page: number } | null>(null)
+
+  const openInViewer = async (
+    fileUrl: string, fileName: string, page: number | null, excerpt: string | null,
+  ) => {
     if (fileUrl.startsWith('http')) {
       window.open(fileUrl, '_blank')
       return
@@ -68,12 +70,25 @@ export default function StepAnalysis({ project }: Props) {
     try {
       const signed = await getSignedFileUrl(fileUrl)
       const url = new URL(signed, window.location.origin)
-      if (src.page) url.searchParams.set('page', String(src.page))
-      if (src.excerpt) url.searchParams.set('highlight', src.excerpt.slice(0, 150))
-      window.open(url.toString(), '_blank')
+      if (page) url.searchParams.set('page', String(page))
+      if (excerpt) url.searchParams.set('highlight', excerpt.slice(0, 300))
+      if (fileUrl.toLowerCase().endsWith('.pdf')) {
+        setViewer({ url: url.toString(), name: fileName, page: page ?? 1 })
+      } else {
+        window.open(url.toString(), '_blank')  // non-PDF : téléchargement
+      }
     } catch (err) {
-      console.error('[StepAnalysis] source du bandeau inaccessible:', err)
+      console.error('[StepAnalysis] source inaccessible:', err)
     }
+  }
+
+  // C5 — ouvrir la source exacte d'un champ du bandeau critique
+  const openFieldSource = async (src: FieldSource) => {
+    const doc = projectDocs.find(d => d.file_name === src.document)
+    if (!doc) return
+    await openInViewer(
+      doc.pdf_preview_url || doc.file_url, doc.file_name, src.page, src.excerpt,
+    )
   }
 
   // Ouvrir le document source dans un nouvel onglet
@@ -107,37 +122,11 @@ export default function StepAnalysis({ project }: Props) {
     const doc = matchedDoc || projectDocs[0]
     if (!doc) return
 
-    const fileUrlToUse = doc.pdf_preview_url || doc.file_url
-
-    if (fileUrlToUse.startsWith('http')) {
-      window.open(fileUrlToUse, '_blank')
-      return
-    }
-
-    // C22 — mint une URL signée (15 min) puis ajoute les params de rendu.
-    let signedUrl: string
-    try {
-      signedUrl = await getSignedFileUrl(fileUrlToUse)
-    } catch (err) {
-      console.error('[StepAnalysis] impossible d’obtenir le lien signé:', err)
-      return
-    }
-
-    const url = new URL(signedUrl, window.location.origin)
-    if (item.source_page) {
-      url.searchParams.set('page', String(item.source_page))
-    }
-    if (item.source_excerpt) {
-      url.searchParams.set('highlight', item.source_excerpt)
-    }
-
-    const isPdf = fileUrlToUse.toLowerCase().endsWith('.pdf')
-    let finalUrl = url.toString()
-    if (isPdf && item.source_page) {
-      finalUrl += `#page=${item.source_page}`
-    }
-
-    window.open(finalUrl, '_blank')
+    // C6 — ouverture dans le viewer intégré (excerpt entier surligné)
+    await openInViewer(
+      doc.pdf_preview_url || doc.file_url, doc.file_name,
+      item.source_page ?? null, item.source_excerpt ?? null,
+    )
   }
 
   const { data: items = [], isLoading } = useQuery({
@@ -433,6 +422,16 @@ export default function StepAnalysis({ project }: Props) {
             )}
           </div>
         </div>
+      )}
+
+      {/* ── C6 : viewer PDF intégré (source à la bonne page, excerpt surligné) ── */}
+      {viewer && (
+        <PdfSourceViewer
+          fileUrl={viewer.url}
+          fileName={viewer.name}
+          initialPage={viewer.page}
+          onClose={() => setViewer(null)}
+        />
       )}
 
       {/* ── SYNORIX SCORE (C18) — go/no-go factuel en tête ── */}
