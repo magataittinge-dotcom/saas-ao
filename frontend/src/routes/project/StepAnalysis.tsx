@@ -129,10 +129,22 @@ export default function StepAnalysis({ project }: Props) {
     )
   }
 
-  const { data: items = [], isLoading } = useQuery({
-    queryKey: ['compliance', project.id],
+  // Multi-lots : lots analysés disponibles + lot affiché (défaut : lot sélectionné)
+  const [viewLot, setViewLot] = useState<string | null>(null)
+  const { data: analyzedLots = [] } = useQuery({
+    queryKey: ['compliance-lots', project.id],
     queryFn: async () => {
-      const { data } = await api.get<ComplianceItem[]>(`/projects/${project.id}/compliance`)
+      const { data } = await api.get<{ lots: string[] }>(`/projects/${project.id}/compliance/lots`)
+      return data.lots
+    },
+  })
+  const activeLot = viewLot ?? project.selected_lot ?? analyzedLots[0] ?? null
+
+  const { data: items = [], isLoading } = useQuery({
+    queryKey: ['compliance', project.id, activeLot],
+    queryFn: async () => {
+      const { data } = await api.get<ComplianceItem[]>(
+        `/projects/${project.id}/compliance${activeLot ? `?lot=${encodeURIComponent(activeLot)}` : ''}`)
       return data
     },
     refetchInterval: (query) => (query.state.data?.length === 0 ? 3000 : false),
@@ -468,6 +480,24 @@ export default function StepAnalysis({ project }: Props) {
 
       {/* Synorix Score retiré de cette page (décision produit) — composant
           et endpoint conservés, réactivables. */}
+
+      {/* Sélecteur de lot (multi-lots mutualisé) */}
+      {analyzedLots.length > 1 && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-ds-text-2">Lot affiché :</span>
+          <select
+            value={activeLot ?? ''}
+            onChange={(e) => setViewLot(e.target.value)}
+            className="glass-input py-1.5 px-2 text-sm"
+          >
+            {analyzedLots.map((l) => (
+              <option key={l} value={l}>
+                {(project.lots_detectes || []).find(d => d.id === l)?.nom ?? l}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* ── BANDEAU CRITIQUE (C5) — deadline, visite, critères, pénalités ── */}
       <CriticalBanner projectId={project.id} onOpenSource={openFieldSource} />

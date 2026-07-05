@@ -462,7 +462,22 @@ export default function StepLotSelection({ project }: Props) {
     setLotsInitialized(true)
   }
 
-  const [selectedId, setSelectedId] = useState<string>(project.selected_lot ?? 'all')
+  // Multi-sélection : cliquer une carte AJOUTE/RETIRE le lot ; « tous les
+  // lots » est exclusif. 1 POST /analyze = N lots (tronc commun mutualisé).
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(
+    new Set([project.selected_lot ?? 'all']))
+  const toggleLot = (lotId: string) => {
+    setSelectedIds(prev => {
+      if (lotId === 'all') return new Set(['all'])
+      const next = new Set(prev)
+      next.delete('all')
+      if (next.has(lotId)) next.delete(lotId)
+      else next.add(lotId)
+      return next.size === 0 ? new Set(['all']) : next
+    })
+  }
+  const selectedLotIds = [...selectedIds].filter(id => id !== 'all')
+  const selectedId = selectedLotIds[0] ?? 'all'
   const [showAddForm, setShowAddForm] = useState(false)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -514,7 +529,7 @@ export default function StepLotSelection({ project }: Props) {
 
   const handleDelete = (lotId: string) => {
     setLots(prev => prev.filter(l => l.id !== lotId))
-    if (selectedId === lotId) setSelectedId('all')
+    if (selectedIds.has(lotId)) toggleLot(lotId)
   }
 
   const handleAddLot = (lot: LotOption & { _manual: true }) => {
@@ -522,7 +537,7 @@ export default function StepLotSelection({ project }: Props) {
       if (prev.some(l => l.id === lot.id)) return prev
       return [...prev, lot]
     })
-    setSelectedId(lot.id)
+    toggleLot(lot.id)
     setShowAddForm(false)
   }
 
@@ -562,6 +577,7 @@ export default function StepLotSelection({ project }: Props) {
         lot_id: selectedId === 'all' ? null : selectedId,
         lot_name: selectedId === 'all' ? null : selectedName,
       })
+      const lotsPayload = selectedLotIds.length > 1 ? { lots: selectedLotIds } : {}
       queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
       setIsAnalyzing(true)
       let ready = false
@@ -579,7 +595,7 @@ export default function StepLotSelection({ project }: Props) {
       // « started » immédiatement et le run survit à tout — navigation,
       // reload, connexion coupée. On rejoint l'écran d'analyse qui suit
       // la progression via SSE (et la retrouve après un reload).
-      await api.post(`/projects/${project.id}/analyze`, {}, { timeout: 60_000 })
+      await api.post(`/projects/${project.id}/analyze`, lotsPayload, { timeout: 60_000 })
       queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
       navigate(`/projects/${project.id}/analysis`)
       return
@@ -702,15 +718,15 @@ export default function StepLotSelection({ project }: Props) {
             {/* All lots option */}
             <LotCard
               lot={{ id: 'all', nom: "Analyser l'ensemble du DCE (tous les lots)" }}
-              selected={selectedId === 'all'}
-              onSelect={() => setSelectedId('all')}
+              selected={selectedIds.has('all')}
+              onSelect={() => toggleLot('all')}
             />
             {lots.map((lot) => (
               <LotCard
                 key={lot.id}
                 lot={lot}
-                selected={selectedId === lot.id}
-                onSelect={() => setSelectedId(lot.id)}
+                selected={selectedIds.has(lot.id)}
+                onSelect={() => toggleLot(lot.id)}
                 onDelete={() => handleDelete(lot.id)}
                 onRename={(label) => renameLot({ lotId: lot.id, label })}
               />
@@ -799,7 +815,9 @@ export default function StepLotSelection({ project }: Props) {
               onMouseLeave={(e) => { e.currentTarget.style.background = '#0EA5E9' }}
             >
               <Sparkles size={16} />
-              LANCER L&apos;ANALYSE IA &gt;
+              {selectedLotIds.length > 1
+                ? `LANCER L'ANALYSE IA (${selectedLotIds.length} LOTS) >`
+                : "LANCER L'ANALYSE IA >"}
             </button>
           </div>
         </div>

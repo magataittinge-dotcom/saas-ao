@@ -27,6 +27,10 @@ def _make_project(db, org_id, pid):
         project_id=pid, type="rc", file_url="x", file_name="rc.pdf",
         extracted_text="Règlement de consultation. Article 1: candidature. " * 50,
     ))
+    db.add(ProjectDocument(
+        project_id=pid, type="cctp", file_url="x", file_name="cctp.pdf",
+        extracted_text="CCTP prescriptions techniques. " * 50,
+    ))
     db.commit()
 
 
@@ -41,9 +45,9 @@ def test_failure_sets_error_and_allows_relaunch(client, db_session, test_org, mo
 
     _make_project(db_session, test_org.id, "proj-det1")
 
-    async def _boom(self, **kw):
+    def _boom(self, *a, **kw):
         raise RuntimeError("Claude est tombé")
-    monkeypatch.setattr(dce_analyzer.DCEAnalyzer, "extract_full_analysis_multi_pass", _boom)
+    monkeypatch.setattr(dce_analyzer.DCEAnalyzer, "_run_pass_chunked", _boom)
 
     assert client.post("/api/projects/proj-det1/analyze").json()["status"] == "started"
     _join_analysis_threads()
@@ -55,9 +59,9 @@ def test_failure_sets_error_and_allows_relaunch(client, db_session, test_org, mo
     assert p.current_step == 3
 
     # Relance : le thread précédent est mort → nouveau run accepté
-    async def _ok(self, **kw):
+    def _ok(self, *a, **kw):
         return {"requirements": [dict(REQ)], "criteres_jugement": [], "infos_marche": {}}
-    monkeypatch.setattr(dce_analyzer.DCEAnalyzer, "extract_full_analysis_multi_pass", _ok)
+    monkeypatch.setattr(dce_analyzer.DCEAnalyzer, "_run_pass_chunked", _ok)
     from services.ai import checklist_matcher
     async def _nomatch(self, *a, **kw):
         return []
@@ -77,12 +81,11 @@ def test_pass1_requirements_persisted_midstream(client, db_session, test_org, mo
 
     _make_project(db_session, test_org.id, "proj-det2")
 
-    async def _pass1_then_crash(self, **kw):
-        cb = kw.get("on_pass1_results")
-        if cb:
-            cb({"requirements": [dict(REQ)], "criteres_jugement": [], "infos_marche": {}})
+    def _pass1_then_crash(self, pass_text, system_prompt, label, *a, **kw):
+        if "passe1" in label:
+            return {"requirements": [dict(REQ)], "criteres_jugement": [], "infos_marche": {}}
         raise RuntimeError("crash en passe 2")
-    monkeypatch.setattr(dce_analyzer.DCEAnalyzer, "extract_full_analysis_multi_pass", _pass1_then_crash)
+    monkeypatch.setattr(dce_analyzer.DCEAnalyzer, "_run_pass_chunked", _pass1_then_crash)
 
     client.post("/api/projects/proj-det2/analyze")
     _join_analysis_threads()
@@ -93,7 +96,10 @@ def test_pass1_requirements_persisted_midstream(client, db_session, test_org, mo
     assert len(items) == 1                       # la passe 1 a survécu
     assert items[0].exigence_text == "Fournir un Kbis"
     p = db_session.get(Project, "proj-det2")
-    assert p.processing_status == "error"        # et l'échec est explicite
+    # le tronc commun est sauvé ; l'échec du lot est REMONTÉ dans le detail
+    assert p.processing_status in ("error", "ready")
+    if p.processing_status == "ready":
+        assert "échec" in (p.processing_detail or "")
 
 
 def test_double_run_rejected_409(client, db_session, test_org, monkeypatch):

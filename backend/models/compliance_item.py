@@ -17,6 +17,9 @@ class ComplianceItem(Base):
     source_document = Column(Text, nullable=True)
     source_page = Column(Integer, nullable=True)
     source_excerpt = Column(Text, nullable=True)
+    # Mutualisation multi-lots : '_commun' (RC/CCAP/AE, partagé) | 'lotN'
+    # (spécifique) | NULL (lignes legacy = lot courant)
+    lot = Column(Text, nullable=True, index=True)
     status = Column(
         SAEnum(*COMPLIANCE_STATUSES, name="compliance_status"),
         nullable=False,

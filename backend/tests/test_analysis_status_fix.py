@@ -63,12 +63,12 @@ def test_rate_limit_sets_error_status_without_step_regression(client, db_session
 
     # Patch DCEAnalyzer.extract_full_analysis_multi_pass to raise the
     # exception we care about. Network is not touched.
-    async def _fake(self, **kw):
+    def _fake(self, *a, **kw):
         raise ClaudeRateLimitError("Rate limit during pass1")
 
     from services.ai import dce_analyzer
     monkeypatch.setattr(
-        dce_analyzer.DCEAnalyzer, "extract_full_analysis_multi_pass", _fake,
+        dce_analyzer.DCEAnalyzer, "_run_pass_chunked", _fake,
     )
 
     resp = client.post(f"/api/projects/proj-rl/analyze")
@@ -99,7 +99,7 @@ def test_status_set_to_analyzed_after_compliance_commit(client, db_session, test
     db_session.commit()
 
     # Stub the AI call so the test doesn't need network.
-    async def _fake(self, **kw):
+    def _fake(self, *a, **kw):
         return {
             "requirements": [
                 {
@@ -116,7 +116,7 @@ def test_status_set_to_analyzed_after_compliance_commit(client, db_session, test
         }
     from services.ai import dce_analyzer
     monkeypatch.setattr(
-        dce_analyzer.DCEAnalyzer, "extract_full_analysis_multi_pass", _fake,
+        dce_analyzer.DCEAnalyzer, "_run_pass_chunked", _fake,
     )
 
     # Avoid the (slow) checklist matcher by patching it to a no-op too.

@@ -38,9 +38,15 @@ limiter = Limiter(key_func=get_remote_address)
 async def trigger_analysis(
     request: Request,
     project_id: str,
+    payload: dict | None = None,
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ):
+    """Analyse d'un ou PLUSIEURS lots en un seul run (1 action utilisateur).
+
+    Multi-lots mutualisé : le tronc commun (RC/CCAP/AE) est analysé UNE
+    fois et partagé ; seul le spécifique (CCTP/DPGF filtrés) est analysé
+    par lot. body optionnel : {"lots": ["lot1", "lot2"]}."""
     project = _get_project_or_404(project_id, user.organization_id, db)
     all_docs = db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).all()
     docs_total = len(all_docs)
@@ -48,133 +54,43 @@ async def trigger_analysis(
     if not all_docs:
         raise HTTPException(status_code=400, detail="Aucun document uploadé pour ce projet")
 
-    # ── Filter documents by selected lot ──────────────────────────────────────
-    selected_lot = project.selected_lot   # e.g. "lot4", "lot05", None
-    docs = get_documents_for_lot(all_docs, selected_lot)
-    docs_sent = len(docs)
+    lot_ids = (payload or {}).get("lots") or [project.selected_lot or "all"]
+    lot_names = {l.get("id"): l.get("nom") for l in (project.lots_detectes or [])}
 
-    lot_num_norm = _normalize_lot_num(selected_lot) if selected_lot and selected_lot != "all" else None
-    lot_label = project.selected_lot_name or (f"Lot {lot_num_norm}" if lot_num_norm else None)
+    # ── Tronc commun (pass1 : RC+CCAP+AE — identique quel que soit le lot) ──
+    pass1_text, truncated1 = _build_pass1_text(all_docs)
 
-    if lot_label:
-        logger.info(
-            f"Analyse {lot_label} (projet {project_id}): "
-            f"envoi de {docs_sent}/{docs_total} documents à Claude"
-        )
-    else:
-        logger.info(f"Analyse projet {project_id}: envoi de {docs_sent}/{docs_total} documents à Claude")
+    # ── Spécifique par lot (pass2 : CCTP+DPGF filtrés) ───────────────────────
+    lot_specs = []
+    truncated_files = list(truncated1)
+    for lot_id in lot_ids:
+        spec = _build_lot_spec(all_docs, lot_id, lot_names, project)
+        truncated_files.extend(spec.pop("truncated"))
+        lot_specs.append(spec)
+    docs_sent = max((s["docs_sent"] for s in lot_specs), default=docs_total)
 
-    # ── Deduplicate by content hash ────────────────────────────────────────
-    seen_hashes: set[str] = set()
-    deduped_docs = []
-    for doc in docs:
-        if not doc.extracted_text:
-            continue
-        h = hashlib.md5(doc.extracted_text.encode()).hexdigest()
-        if h in seen_hashes:
-            print(f"[Analysis] Doublon détecté : {doc.file_name} (hash={h[:8]}), skip", flush=True)
-            continue
-        seen_hashes.add(h)
-        deduped_docs.append(doc)
-
-    # ── Separate documents by type for 2-pass analysis ───────────────────────
-    # Pass 1: RC + CCAP + AE ONLY (no "autre" — they bloat the context)
-    # Pass 2: CCTP + DPGF ONLY
-    #
-    # Plus de troncature par cap (régression "30k → 71% du CCAP perdu", cf.
-    # docs/rag/PHASE0-investigation-troncature.md). Le document ENTIER est
-    # envoyé ; le découpage en tranches est fait par l'analyzer (chunking +
-    # dédup). On garde un garde-fou anti-pathologique, JAMAIS silencieux.
-    PASS1_TYPES = {"rc", "ccap", "acte_engagement"}
-    PASS2_TYPES = {"cctp", "dpgf"}
-    _SAFETY_MAX_CHARS = 300_000   # ~75 tranches : protège le serveur des cas extrêmes
-
-    def _safety(text: str, fname: str) -> str:
-        if len(text) > _SAFETY_MAX_CHARS:
-            logger.warning(
-                "[Analysis] %s : %d chars > garde-fou %d → tronqué "
-                "(cas pathologique ; en deçà le chunking couvre 100%%)",
-                fname, len(text), _SAFETY_MAX_CHARS,
-            )
-            print(
-                f"[Analysis] ⚠ {fname}: {len(text):,} chars > garde-fou "
-                f"{_SAFETY_MAX_CHARS:,} → tronqué",
-                flush=True,
-            )
-            return text[:_SAFETY_MAX_CHARS]
-        return text
-
-    pass1_parts: list[str] = []
-    pass2_parts: list[str] = []
-    dpgf_sheet_text: str = ""
-
-    for doc in deduped_docs:
-        doc_type = doc.type or "autre"
-        text = doc.extracted_text or ""
-        if not text or text.startswith("[document volumineux"):
-            continue
-
-        # Skip types not in either pass (plan, autre, etc.)
-        if doc_type not in PASS1_TYPES and doc_type not in PASS2_TYPES:
-            continue
-
-        # DPGF with lot: extract matching sheet only
-        if doc_type == "dpgf" and lot_num_norm:
-            sheet_text = _get_dpgf_sheet_text(doc, lot_num_norm)
-            if sheet_text:
-                dpgf_sheet_text = sheet_text
-                label = f"DPGF — {doc.file_name} (onglet Lot {lot_num_norm})"
-                pass2_parts.append(f"=== {label} ===\n{_safety(sheet_text, doc.file_name)}")
-                continue
-
-        label = doc_type.upper()
-        entry = f"=== {label} — {doc.file_name} ===\n{_safety(text, doc.file_name)}"
-        if doc_type in PASS1_TYPES:
-            pass1_parts.append(entry)
-        else:
-            pass2_parts.append(entry)
-
-    if not pass1_parts and not pass2_parts:
+    if not pass1_text and not any(s["pass2_text"] for s in lot_specs):
         raise HTTPException(
             status_code=400,
             detail="Aucun texte extrait des documents. Assurez-vous d'uploader des PDF ou DOCX lisibles.",
         )
 
-    pass1_text = "\n\n".join(pass1_parts)
-    pass2_text = "\n\n".join(pass2_parts) if pass2_parts else None
+    logger.info("Analyse projet %s : %d lot(s) %s — tronc commun %d chars",
+                project_id, len(lot_specs), [s["lot_id"] for s in lot_specs], len(pass1_text))
 
-    p1_tokens = len(pass1_text) // 4
-    p2_tokens = (len(pass2_text) // 4) if pass2_text else 0
-    print(
-        f"[Analysis] 2-pass: "
-        f"passe1={len(pass1_text):,} chars (~{p1_tokens:,} tokens, {len(pass1_parts)} docs), "
-        f"passe2={len(pass2_text):,} chars (~{p2_tokens:,} tokens, {len(pass2_parts)} docs)"
-        if pass2_text else
-        f"[Analysis] 2-pass: "
-        f"passe1={len(pass1_text):,} chars (~{p1_tokens:,} tokens, {len(pass1_parts)} docs), "
-        f"passe2=skip (pas de CCTP/DPGF)",
-        flush=True,
-    )
-
-    # ── Build lot context header ──────────────────────────────────────────────
-    lot_header = ""
-    if lot_label:
-        lot_header = (
-            f"IMPORTANT : Cette analyse concerne spécifiquement le {lot_label}. "
-            f"Concentre-toi UNIQUEMENT sur les exigences relatives à ce lot. "
-            f"Ignore les informations relatives aux autres lots.\n\n"
-        )
-        if dpgf_sheet_text:
-            lot_header += (
-                f"DPGF DU {lot_label} :\n{dpgf_sheet_text[:3000]}\n\n"
-            )
-
-    # ── Quota (C1) : 1 analyse décomptée AU LANCEMENT ─────────────────────────
-    # Vérifié après les validations (une 400 ne consomme pas) mais avant tout
-    # appel Claude — un échec d'analyse ultérieur reste décompté.
+    # ── Quota (C1) : 1 unité PAR LOT, décomptée AU LANCEMENT ─────────────────
     org = db.query(Organization).filter(Organization.id == user.organization_id).first()
-    quota.check_quota(db, org, "analysis")
-    quota.consume(db, org, "analysis", project_id=project_id, lot=project.selected_lot)
+    status = quota.get_quota_status(db, org)
+    limit = status["analyses"]["limit"]
+    if limit is not None and status["analyses"]["used"] + len(lot_specs) > limit:
+        raise HTTPException(
+            status_code=402,
+            detail=(f"Quota insuffisant : {len(lot_specs)} lot(s) demandés, "
+                    f"{limit - status['analyses']['used']} analyse(s) restante(s) ce mois."),
+        )
+    for spec in lot_specs:
+        quota.check_quota(db, org, "analysis")
+        quota.consume(db, org, "analysis", project_id=project_id, lot=spec["lot_id"])
 
     # Update step before analysis — current_step ne RÉGRESSE plus jamais :
     # un échec d'analyse laisse le projet à l'étape analyse avec un statut
@@ -195,14 +111,12 @@ async def trigger_analysis(
     pipeline_tracker.complete_step(project_id, "preparation")
 
     # ── Run DÉTACHÉ (thread démon) : l'analyse survit à la navigation, au
-    # rechargement de page et à la coupure de la connexion HTTP. L'ancien
-    # design (await dans le handler + AbortSignal côté front) tuait le run
-    # en plein vol au moindre reload — perte d'état totale constatée.
+    # rechargement de page et à la coupure de la connexion HTTP.
     org_id = user.organization_id
     thread = threading.Thread(
         target=_run_analysis_job,
-        args=(project_id, org_id, pass1_text, pass2_text, lot_header,
-              lot_label, docs_sent, docs_total),
+        args=(project_id, org_id, pass1_text, lot_specs,
+              docs_sent, docs_total, truncated_files),
         daemon=True,
         name=thread_name,
     )
@@ -211,8 +125,100 @@ async def trigger_analysis(
     return {
         "status": "started",
         "project_id": project_id,
+        "lots": [s["lot_id"] for s in lot_specs],
         "docs_sent": docs_sent,
         "docs_total": docs_total,
+    }
+
+
+# ── Construction des textes (tronc commun / spécifique par lot) ──────────────
+
+_PASS1_TYPES = {"rc", "ccap", "acte_engagement"}
+_PASS2_TYPES = {"cctp", "dpgf"}
+# Garde-fou anti-pathologique PAR DOCUMENT (~125 tranches). Le chunking
+# anti-troncature couvre 100 % en deçà. Tout dépassement est REMONTÉ à
+# l'utilisateur (processing_detail), jamais silencieux.
+_SAFETY_MAX_CHARS = 500_000
+
+
+def _dedup_by_content(docs) -> list:
+    seen: set = set()
+    out = []
+    for doc in docs:
+        if not doc.extracted_text:
+            continue
+        h = hashlib.md5(doc.extracted_text.encode()).hexdigest()
+        if h in seen:
+            continue
+        seen.add(h)
+        out.append(doc)
+    return out
+
+
+def _safety(text: str, fname: str, truncated: list) -> str:
+    if len(text) > _SAFETY_MAX_CHARS:
+        logger.warning("[Analysis] %s : %d chars > garde-fou %d → tronqué (REMONTÉ à l'utilisateur)",
+                       fname, len(text), _SAFETY_MAX_CHARS)
+        truncated.append(fname)
+        return text[:_SAFETY_MAX_CHARS]
+    return text
+
+
+def _build_pass1_text(all_docs) -> tuple:
+    """Texte du tronc commun (RC/CCAP/AE) — identique pour tous les lots."""
+    truncated: list = []
+    parts = []
+    for doc in _dedup_by_content(all_docs):
+        doc_type = doc.type or "autre"
+        text = doc.extracted_text or ""
+        if doc_type not in _PASS1_TYPES or not text or text.startswith("[document volumineux"):
+            continue
+        parts.append(f"=== {doc_type.upper()} — {doc.file_name} ===\n{_safety(text, doc.file_name, truncated)}")
+    return "\n\n".join(parts), truncated
+
+
+def _build_lot_spec(all_docs, lot_id, lot_names, project) -> dict:
+    """pass2_text + en-tête de contexte pour UN lot."""
+    truncated: list = []
+    docs = get_documents_for_lot(all_docs, lot_id)
+    lot_num_norm = _normalize_lot_num(lot_id) if lot_id and lot_id != "all" else None
+    lot_label = (lot_names.get(lot_id)
+                 or (project.selected_lot_name if lot_id == project.selected_lot else None)
+                 or (f"Lot {lot_num_norm}" if lot_num_norm else None))
+
+    parts: list = []
+    dpgf_sheet_text = ""
+    for doc in _dedup_by_content(docs):
+        doc_type = doc.type or "autre"
+        text = doc.extracted_text or ""
+        if doc_type not in _PASS2_TYPES or not text or text.startswith("[document volumineux"):
+            continue
+        if doc_type == "dpgf" and lot_num_norm:
+            sheet_text = _get_dpgf_sheet_text(doc, lot_num_norm)
+            if sheet_text:
+                dpgf_sheet_text = sheet_text
+                parts.append(f"=== DPGF — {doc.file_name} (onglet Lot {lot_num_norm}) ===\n"
+                             f"{_safety(sheet_text, doc.file_name, truncated)}")
+                continue
+        parts.append(f"=== {doc_type.upper()} — {doc.file_name} ===\n{_safety(text, doc.file_name, truncated)}")
+
+    lot_header = ""
+    if lot_label:
+        lot_header = (
+            f"IMPORTANT : Cette analyse concerne spécifiquement le {lot_label}. "
+            f"Concentre-toi UNIQUEMENT sur les exigences relatives à ce lot. "
+            f"Ignore les informations relatives aux autres lots.\n\n"
+        )
+        if dpgf_sheet_text:
+            lot_header += f"DPGF DU {lot_label} :\n{dpgf_sheet_text[:3000]}\n\n"
+
+    return {
+        "lot_id": lot_id or "all",
+        "lot_label": lot_label,
+        "pass2_text": "\n\n".join(parts) if parts else None,
+        "lot_header": lot_header,
+        "docs_sent": len(docs),
+        "truncated": truncated,
     }
 
 
@@ -283,67 +289,133 @@ def _persist_requirements(db: Session, project_id: str, requirements: list) -> N
     db.commit()
 
 
+def _requirements_from_rows(rows) -> list:
+    return [{
+        "exigence": r.exigence_text, "source_document": r.source_document,
+        "source_page": r.source_page, "source_excerpt": r.source_excerpt,
+        "category": r.category, "priority": r.priority,
+    } for r in rows]
+
+
 def _run_analysis_job(
     project_id: str,
     org_id: str,
     pass1_text: str,
-    pass2_text,
-    lot_header: str,
-    lot_label,
+    lot_specs: list,
     docs_sent: int,
     docs_total: int,
+    truncated_files: list,
 ) -> None:
-    """Corps de l'analyse — thread démon, session DB propre, jamais d'exception
-    qui fuit (tout échec = statut 'error' + message utilisateur)."""
+    """Analyse multi-lots MUTUALISÉE — thread démon, session DB propre.
+
+    Tronc commun (pass1) : réutilisé s'il existe déjà en base ('_commun'),
+    sinon analysé une fois. Spécifique (pass2) : par lot, en parallèle
+    borné (2). Jamais d'exception qui fuit."""
+    from concurrent.futures import ThreadPoolExecutor
     from database import SessionLocal
+    from services.ai.dce_analyzer import _build_dce_skills
+    from services.ai.prompts import DCE_PASS1_SYSTEM, DCE_PASS2_SYSTEM
 
     analyzer = DCEAnalyzer()
     db = SessionLocal()
     try:
-        # Persistance FIL DE L'EAU : les exigences de la passe 1 sont écrites
-        # dès qu'elle se termine.
-        def on_pass1_results(result1: dict) -> None:
-            pipeline_tracker.complete_step(project_id, "analyzing_pass1")
-            pipeline_tracker.start_step(project_id, "analyzing_pass2")
-            reqs1 = result1.get("requirements") or []
-            if reqs1:
-                try:
-                    _persist_requirements(db, project_id, reqs1)
-                    logger.info("Analyse %s : %d exigences passe 1 persistées (fil de l'eau)",
-                                project_id, len(reqs1))
-                except Exception:
-                    db.rollback()
-
+        # ── Tronc commun ────────────────────────────────────────────────────
         pipeline_tracker.start_step(project_id, "analyzing_pass1")
+        commun_rows = db.query(ComplianceItem).filter(
+            ComplianceItem.project_id == project_id,
+            ComplianceItem.lot == "_commun",
+        ).all()
+        project = db.query(Project).filter(Project.id == project_id).first()
+
         try:
-            analysis = asyncio.run(asyncio.wait_for(
-                analyzer.extract_full_analysis_multi_pass(
-                    pass1_text=pass1_text,
-                    pass2_text=pass2_text,
-                    lot_header=lot_header,
-                    selected_lot_name=lot_label,
-                    on_pass1_results=on_pass1_results,
-                    project_id=project_id,
-                ),
-                timeout=900.0,
-            ))
-        except asyncio.TimeoutError:
-            _fail_analysis(project_id, "L'analyse a pris trop de temps. Relancez-la.", "Timeout")
-            return
+            if commun_rows:
+                logger.info("Analyse %s : tronc commun RÉUTILISÉ (%d exigences, 0 appel Claude)",
+                            project_id, len(commun_rows))
+                commun_reqs = _requirements_from_rows(commun_rows)
+                criteres = project.criteres_jugement or []
+                infos = project.infos_marche or {}
+            else:
+                skills1, _ = _build_dce_skills(None)
+                r1 = analyzer._run_pass_chunked(
+                    pass1_text, DCE_PASS1_SYSTEM, "passe1-admin",
+                    skills1, project_id, "", "Analyse administrative (tronc commun)",
+                )
+                commun_reqs = r1.get("requirements", [])
+                criteres = r1.get("criteres_jugement", [])
+                infos = r1.get("infos_marche", {})
+                # Ancrage + persistance du tronc commun (scope '_commun' ;
+                # les lignes legacy lot IS NULL sont remplacées ici).
+                _anchor_requirements_safe(db, project_id, commun_reqs)
+                _persist_scope(db, project_id, commun_reqs, "_commun", also_null=True)
         except ClaudeRateLimitError as e:
             logger.warning(f"Rate limit Anthropic projet {project_id}: {e}")
-            _fail_analysis(project_id,
-                           "Limite Anthropic atteinte. Relancez dans une minute.", "rate_limit")
+            _fail_analysis(project_id, "Limite Anthropic atteinte. Relancez dans une minute.", "rate_limit")
             return
         except Exception as e:
-            logger.error(f"Erreur analyse IA projet {project_id}: {e}", exc_info=True)
+            logger.error(f"Erreur analyse IA (tronc commun) {project_id}: {e}", exc_info=True)
+            _fail_analysis(project_id, "Erreur lors de l'analyse IA. Relancez l'analyse.", str(e))
+            return
+
+        pipeline_tracker.complete_step(project_id, "analyzing_pass1")
+        pipeline_tracker.start_step(project_id, "analyzing_pass2")
+
+        # ── Spécifique par lot, parallèle borné (2) ─────────────────────────
+        def _one_lot(spec):
+            if not spec["pass2_text"]:
+                return spec, {"requirements": []}
+            skills_lot, _ = _build_dce_skills(spec["lot_label"])
+            r2 = analyzer._run_pass_chunked(
+                spec["pass2_text"], DCE_PASS2_SYSTEM, f"passe2-{spec['lot_id']}",
+                skills_lot, project_id, spec["lot_header"],
+                f"Analyse technique — {spec['lot_label'] or spec['lot_id']}",
+            )
+            return spec, r2
+
+        results = []
+        failed_lots = []
+        try:
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                futures = [pool.submit(_one_lot, spec) for spec in lot_specs]
+                for fut in futures:
+                    try:
+                        results.append(fut.result(timeout=1200))
+                    except ClaudeRateLimitError:
+                        failed_lots.append("rate_limit")
+                    except Exception as e:
+                        logger.error("Analyse lot échouée: %s", e, exc_info=True)
+                        failed_lots.append(str(e))
+        except Exception as e:
+            logger.error("Pool lots: %s", e, exc_info=True)
+
+        if not results and failed_lots:
             _fail_analysis(project_id,
-                           "Erreur lors de l'analyse IA. Relancez l'analyse.", str(e))
+                           "Limite Anthropic atteinte. Relancez dans une minute."
+                           if "rate_limit" in failed_lots else
+                           "Erreur lors de l'analyse IA. Relancez l'analyse.",
+                           ";".join(failed_lots))
             return
 
         pipeline_tracker.complete_step(project_id, "analyzing_pass2")
         pipeline_tracker.start_step(project_id, "finalizing")
-        _finalize_analysis(db, project_id, org_id, analysis, docs_sent, docs_total)
+
+        # ── Persistance par lot + finalisation ──────────────────────────────
+        all_requirements = list(commun_reqs)
+        for spec, r2 in results:
+            reqs2 = _dedup_against(r2.get("requirements", []), commun_reqs)
+            _anchor_requirements_safe(db, project_id, reqs2)
+            _persist_scope(db, project_id, reqs2, spec["lot_id"])
+            all_requirements.extend(reqs2)
+            logger.info("Analyse %s : lot %s → %d exigences spécifiques",
+                        project_id, spec["lot_id"], len(reqs2))
+
+        analysis = {
+            "requirements": all_requirements,
+            "criteres_jugement": criteres,
+            "infos_marche": infos,
+        }
+        _finalize_analysis(db, project_id, org_id, analysis, docs_sent, docs_total,
+                           lot_specs=lot_specs, truncated_files=truncated_files,
+                           failed_lots=failed_lots)
     except Exception as e:
         logger.error(f"Analyse {project_id} : échec de finalisation: {e}", exc_info=True)
         _fail_analysis(project_id, "Erreur lors de l'enregistrement des résultats. Relancez l'analyse.", str(e))
@@ -351,9 +423,54 @@ def _run_analysis_job(
         db.close()
 
 
+def _dedup_against(new_reqs: list, existing: list) -> list:
+    """Écarte les exigences déjà présentes dans le tronc commun (mêmes 60
+    premiers caractères normalisés)."""
+    seen = {(r.get("exigence") or "").lower().strip()[:60] for r in existing}
+    return [r for r in new_reqs
+            if (r.get("exigence") or "").lower().strip()[:60] not in seen]
+
+
+def _anchor_requirements_safe(db: Session, project_id: str, requirements: list) -> None:
+    from services.ai.excerpt_anchor import anchor_requirements, resolve_pages
+    try:
+        texts, paths = _build_anchor_docs(db, project_id)
+        anchor_requirements(requirements, texts)
+        resolve_pages(requirements, paths)
+    except Exception:
+        logger.warning("Ancrage des sources échoué (non bloquant)", exc_info=True)
+
+
+def _persist_scope(db: Session, project_id: str, requirements: list,
+                   lot: str, also_null: bool = False) -> None:
+    """Remplace les exigences d'UN scope (lot) — ne touche JAMAIS les
+    autres lots (fini l'écrasement global)."""
+    q = db.query(ComplianceItem).filter(ComplianceItem.project_id == project_id)
+    if also_null:
+        q = q.filter((ComplianceItem.lot == lot) | (ComplianceItem.lot.is_(None)))
+    else:
+        q = q.filter(ComplianceItem.lot == lot)
+    q.delete(synchronize_session=False)
+    for req in requirements:
+        db.add(ComplianceItem(
+            project_id=project_id,
+            exigence_text=req.get("exigence", ""),
+            source_document=req.get("source_document"),
+            source_page=req.get("source_page") or 1,
+            source_excerpt=req.get("source_excerpt"),
+            category=_safe_category(req.get("category")),
+            priority=_safe_priority(req.get("priority")),
+            status="non_couvert",
+            lot=lot,
+        ))
+    db.commit()
+
+
 def _finalize_analysis(
     db: Session, project_id: str, org_id: str, analysis: dict,
     docs_sent: int, docs_total: int,
+    lot_specs: list | None = None, truncated_files: list | None = None,
+    failed_lots: list | None = None,
 ) -> None:
     project = db.query(Project).filter(Project.id == project_id).first()
     if project is None:
@@ -383,15 +500,13 @@ def _finalize_analysis(
     # ── C5 : champs critiques structurés, persistés PAR LOT ──────────────────
     # (une relance d'analyse sur un autre lot n'écrase pas ceux-ci)
     from services.critical_fields import build_critical_fields
-    lot_key = project.selected_lot or "_all"
     fields = build_critical_fields(infos_marche, criteres_jugement, all_docs)
     existing_cf = dict(project.critical_fields or {})
-    existing_cf[lot_key] = fields
+    for lot_key in ([s_["lot_id"] for s_ in (lot_specs or [])] or [project.selected_lot or "_all"]):
+        existing_cf[lot_key] = fields
     project.critical_fields = existing_cf
 
-    # Ancrage verbatim + persistance (résultat complet — remplace le batch
-    # fil-de-l'eau de la passe 1). Barre : libellés de finalisation.
-    _anchor_and_persist(db, project_id, requirements)
+    # (ancrage + persistance déjà faits PAR SCOPE — commun et chaque lot)
     pipeline_tracker.update_step_progress(project_id, 0.6, detail="Enregistrement des résultats…")
 
     # Advance to step 3 (analysis results) when done.
@@ -405,7 +520,14 @@ def _finalize_analysis(
     if project.status in ("brouillon", "en_cours"):
         project.status = "analyzed"
     project.processing_status = "ready"
-    project.processing_detail = ""
+    warnings_ui = []
+    if truncated_files:
+        warnings_ui.append(
+            f"{len(set(truncated_files))} document(s) exceptionnellement long(s) tronqué(s) "
+            f"au garde-fou de 500 000 caractères : {', '.join(sorted(set(truncated_files))[:3])}")
+    if failed_lots:
+        warnings_ui.append(f"{len(failed_lots)} lot(s) en échec — relancez-les.")
+    project.processing_detail = " · ".join(warnings_ui)
     db.commit()
 
     # Generate checklist from candidature/offre requirements (best-effort)

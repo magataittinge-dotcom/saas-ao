@@ -18,6 +18,7 @@ class ComplianceItemResponse(BaseModel):
     category: str
     priority: str
     suggestion_ia: Optional[str]
+    lot: Optional[str] = None   # '_commun' | 'lotN' | None (legacy)
     created_at: datetime
 
     model_config = {"from_attributes": True}
