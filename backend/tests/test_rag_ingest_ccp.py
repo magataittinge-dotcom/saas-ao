@@ -123,6 +123,31 @@ def test_embedder_returns_1024_dims_and_batches(monkeypatch):
         assert p["output_dimension"] == 1024
 
 
+def test_embedder_splits_oversize_text_and_averages(monkeypatch):
+    """Un article plus gros que le budget d'UNE requête (annexes-tableaux du
+    CCP, ~42k chars) est découpé et son embedding = moyenne normalisée des
+    morceaux — sinon il ne passe jamais sous un TPM serré."""
+    import math
+
+    import services.rag.embedder as emb
+
+    def fake_post(payload):
+        n = sum(len(doc) for doc in payload["inputs"])
+        # Chaque morceau reçoit un vecteur unitaire distinct mais déterministe
+        return [[1.0] + [0.0] * 1023 for _ in range(n)]
+
+    monkeypatch.setattr(emb, "_post_voyage", fake_post)
+
+    oversize = "Contenu d'annexe. " * 3000  # ~54k chars > budget requête
+    vectors = emb.embed_chunks(["court texte", oversize, "autre court"])
+
+    assert len(vectors) == 3
+    assert all(len(v) == 1024 for v in vectors)
+    # Moyenne normalisée → norme ~1 pour le texte découpé
+    norm = math.sqrt(sum(x * x for x in vectors[1]))
+    assert abs(norm - 1.0) < 1e-6
+
+
 # ─── 5. Dédoublonnage interne avant upsert ───────────────────────────────────
 
 def test_dedupe_articles_last_wins():

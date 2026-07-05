@@ -59,8 +59,42 @@ def _post_voyage(payload: dict) -> List[List[float]]:
     raise RuntimeError("Voyage : rate limit persistant après 8 tentatives")
 
 
+def _mean_normalized(vectors: List[List[float]]) -> List[float]:
+    """Moyenne normalisée (norme 1) — représentation d'un texte découpé."""
+    import math
+    n = len(vectors)
+    mean = [sum(v[i] for v in vectors) / n for i in range(len(vectors[0]))]
+    norm = math.sqrt(sum(x * x for x in mean)) or 1.0
+    return [x / norm for x in mean]
+
+
 def embed_chunks(texts: List[str]) -> List[List[float]]:
-    """Embeddings (dimension 1024) pour chaque texte, ordre préservé."""
+    """Embeddings (dimension 1024) pour chaque texte, ordre préservé.
+
+    Un texte plus gros que le budget d'UNE requête (annexes-tableaux du CCP)
+    est découpé en morceaux embeddés séparément ; son embedding final est la
+    moyenne normalisée des morceaux (sinon il ne passe jamais sous un TPM
+    serré — et dépasserait de toute façon le contexte du modèle à terme)."""
+    pieces: List[str] = []
+    spans: List[tuple] = []  # (début, fin) des morceaux de chaque texte
+    for text in texts:
+        start = len(pieces)
+        if len(text) > _MAX_CHARS_PER_REQUEST:
+            for i in range(0, len(text), _MAX_CHARS_PER_REQUEST):
+                pieces.append(text[i:i + _MAX_CHARS_PER_REQUEST])
+        else:
+            pieces.append(text)
+        spans.append((start, len(pieces)))
+
+    piece_vectors = _embed_pieces(pieces)
+
+    return [
+        piece_vectors[a] if b - a == 1 else _mean_normalized(piece_vectors[a:b])
+        for a, b in spans
+    ]
+
+
+def _embed_pieces(texts: List[str]) -> List[List[float]]:
     vectors: List[List[float]] = []
     batch_docs: List[List[str]] = []
     batch_chars = 0
