@@ -88,16 +88,25 @@ def _check_zip_archive_budget(zf: "zipfile.ZipFile", budget: _ZipBudget) -> None
         )
 
 
-def _copy_zip_member_bounded(src, dst, declared_size: int, budget: _ZipBudget) -> int:
+def _copy_zip_member_bounded(
+    src, dst, declared_size: int, budget: _ZipBudget, on_chunk=None,
+) -> int:
     """Copie un membre ZIP en comptant les octets réels. Rejette si le flux
     dépasse la taille déclarée dans l'en-tête (en-tête falsifié) ou si le
-    cumul décompressé de l'upload dépasse le cap global."""
+    cumul décompressé de l'upload dépasse le cap global.
+    on_chunk : callback de progression (octets cumulés du budget) — fluidité
+    de la barre pendant les gros membres."""
     written = 0
     while True:
         chunk = src.read(_UPLOAD_CHUNK_SIZE)
         if not chunk:
             break
         written += len(chunk)
+        if on_chunk is not None:
+            try:
+                on_chunk()
+            except Exception:
+                pass
         if written > declared_size:
             raise ZipBombError(
                 "Archive rejetée : un fichier produit plus d'octets que sa "
@@ -639,6 +648,17 @@ async def upload_project_document(
     spool: tempfile.SpooledTemporaryFile = tempfile.SpooledTemporaryFile(
         max_size=_UPLOAD_SPOOL_THRESHOLD, mode="w+b",
     )
+    if filename_lower.endswith(".zip"):
+        # Sous-phase « préparation » (relecture du multipart) : libellé publié
+        # pour ne jamais laisser la barre muette entre réception et extraction.
+        try:
+            from services import progress_bus as _pbus
+            _pbus.publish(project_id, "progress", {
+                "status": "uploading", "progress": 25,
+                "detail": "Préparation du fichier reçu…",
+            })
+        except Exception:
+            pass
     try:
         total = 0
         while True:
@@ -678,6 +698,7 @@ async def upload_project_document(
             _pt.start_step(project_id, "uploading")
             _pt.complete_step(project_id, "uploading")
             _pt.start_step(project_id, "extracting_zip")
+            _pt.update_step_progress(project_id, 0.0, detail="Vérification de l'archive…")
 
             _t1 = _time.monotonic()
             try:
@@ -838,7 +859,7 @@ def _extract_all_parallel(project_id: str, docs_info: list) -> None:
     page_fractions: dict = {}
     _last_partial_pub = [0.0]
 
-    def _publish_partial() -> None:
+    def _publish_partial(detail: str | None = None) -> None:
         now = _time.monotonic()
         if now - _last_partial_pub[0] < 0.3:
             return
@@ -847,7 +868,11 @@ def _extract_all_parallel(project_id: str, docs_info: list) -> None:
             done = completed_count[0] + sum(page_fractions.values())
         try:
             from services import pipeline_tracker as _pt
-            _pt.update_step_progress(project_id, max(0.0, min(done / max(total_all, 1), 0.99)))
+            _pt.update_step_progress(
+                project_id,
+                max(0.0, min(done / max(total_all, 1), 0.99)),
+                detail=detail,
+            )
         except Exception:
             pass
 
@@ -877,6 +902,19 @@ def _extract_all_parallel(project_id: str, docs_info: list) -> None:
         """Extract text for a small file. Runs in thread pool."""
         extracted_text = ""
         page_count = None
+        # Libellé de sous-phase : les formats sans granularité page
+        # (docx/xlsx lourds) changent au moins le libellé — jamais muet.
+        try:
+            from services import pipeline_tracker as _pt_label
+            with count_lock:
+                _done_now = completed_count[0] + sum(page_fractions.values())
+            _pt_label.update_step_progress(
+                project_id,
+                max(0.0, min(_done_now / max(total_all, 1), 0.99)),
+                detail=f"Indexation : {filename[:60]}",
+            )
+        except Exception:
+            pass
         try:
             db_inner = SessionLocal()
             try:
@@ -894,7 +932,10 @@ def _extract_all_parallel(project_id: str, docs_info: list) -> None:
                     # Pas de lock ici : écriture d'une clé propre au thread,
                     # et _publish_partial prend count_lock lui-même.
                     page_fractions[doc_id] = done_pages / max(total_pages, 1)
-                    _publish_partial()
+                    # Le libellé porte la page : un gros PDF seul en fin de
+                    # pool ne fait plus bouger le % — le libellé, si.
+                    _publish_partial(
+                        detail=f"Indexation : {filename[:50]} — page {done_pages}/{total_pages}")
 
                 result_text, result_pages = processor.extract(
                     content, filename, on_page=_on_page)
@@ -1220,7 +1261,7 @@ _ZIP_ALLOWED = {".pdf", ".docx", ".xlsx", ".xls", ".doc", ".ods"}
 _ZIP_IGNORE = re.compile(r'^(__MACOSX[/\\]|\.)', re.IGNORECASE)
 
 
-async def _extract_zip_members(
+def _extract_zip_members(
     source,  # IO[bytes] | bytes — file-like at outer call, bytes for nested archives
     project_id: str,
     background_tasks: BackgroundTasks,
@@ -1276,30 +1317,34 @@ async def _extract_zip_members(
         members = zf.infolist()
         _t_read = _time.monotonic() - _tz0
 
-        # DÉMO-1 — progression par fichier pendant l'extraction (throttlée).
-        # Sans ça, l'étape « extraction du ZIP » était muette du début à la
-        # fin → gel apparent à ~30 % sur les gros DCE.
+        # Progression par OCTETS écrits (throttlée) — le tick par fichier
+        # figeait la barre pendant l'écriture d'un gros plan (83 Mo sur un
+        # disque lent = plusieurs secondes muettes). Le libellé suit aussi
+        # (« x/y Mo enregistrés ») : jamais de phase muette.
         real_members = [m for m in members if not m.is_dir()]
+        _declared_total = max(sum(m.file_size for m in real_members), 1)
         _last_tick = 0.0
-        _done = 0
 
-        def _tick_progress():
+        def _tick_bytes():
             nonlocal _last_tick
             now = _time.monotonic()
-            if now - _last_tick < 0.5 or depth != 0:
+            if now - _last_tick < 0.3 or depth != 0:
                 return
             _last_tick = now
             try:
                 from services import pipeline_tracker as _tracker
-                _tracker.update_step_progress(project_id, min(_done / max(len(real_members), 1), 0.99))
+                _tracker.update_step_progress(
+                    project_id,
+                    min(budget.written_bytes / _declared_total, 0.99),
+                    detail=f"{budget.written_bytes / 1e6:.0f} / {_declared_total / 1e6:.0f} Mo enregistrés",
+                )
             except Exception:
                 pass
 
         for member in members:
             if member.is_dir():
                 continue
-            _done += 1
-            _tick_progress()
+            _tick_bytes()
 
             raw_name = member.filename
             parts = raw_name.replace("\\", "/").split("/")
@@ -1322,7 +1367,7 @@ async def _extract_zip_members(
                     inner_buf = _io.BytesIO()
                     with zf.open(member) as inner_src:
                         _copy_zip_member_bounded(inner_src, inner_buf, member.file_size, budget)
-                    inner_docs = await _extract_zip_members(
+                    inner_docs = _extract_zip_members(
                         inner_buf.getvalue(), project_id, background_tasks, db,
                         existing_names, used_in_zip, warnings, budget, depth=depth + 1,
                     )
@@ -1364,7 +1409,8 @@ async def _extract_zip_members(
             budget.written_paths.append(path)
             try:
                 with zf.open(member) as src, open(path, "wb") as dst:
-                    _copy_zip_member_bounded(src, dst, member.file_size, budget)
+                    _copy_zip_member_bounded(
+                        src, dst, member.file_size, budget, on_chunk=_tick_bytes)
             except ZipBombError:
                 raise
             except Exception as e:
@@ -1439,9 +1485,16 @@ async def _handle_zip_upload(
     budget = _ZipBudget()
 
     try:
-        created = await _extract_zip_members(
+        # asyncio.to_thread : 6-20 s d'IO disque synchrone (écriture des
+        # membres) gelaient l'event loop uvicorn → le SSE ne livrait RIEN
+        # pendant toute l'extraction (gel UI). Même piège que le SDK
+        # Anthropic sous WSL2 (cf. CLAUDE.md) — jamais d'IO massif bloquant
+        # dans une coroutine.
+        import asyncio as _asyncio
+        created = await _asyncio.to_thread(
+            _extract_zip_members,
             source, project_id, background_tasks, db,
-            existing_names, used_in_zip, warnings, budget, depth=0,
+            existing_names, used_in_zip, warnings, budget, 0,
         )
     except ZipBombError as e:
         # Rejet propre : rien ne doit rester ni sur disque ni en DB.

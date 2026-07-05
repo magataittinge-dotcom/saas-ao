@@ -185,7 +185,7 @@ export default function StepUpload({ project }: Props) {
     processingStartedRef.current = true
 
     setPhase('processing')
-    setDisplayPct(prev => Math.max(prev, 30))
+    setDisplayPct(prev => Math.max(prev, 25))
     setLabel("Extraction de l'archive...")
     setSublabel('')
 
@@ -258,7 +258,7 @@ export default function StepUpload({ project }: Props) {
 
               const filePct = total > 0 ? loaded / total : 0
               const overallPct = ((i + filePct) / acceptedFiles.length) * 100
-              const mapped = Math.round(Math.min(overallPct, 100) * 0.3)
+              const mapped = Math.round(Math.min(overallPct, 100) * 0.25)
               // max : la réception serveur (SSE) peut être devant l'envoi
               // axios throttlé — jamais de retour en arrière.
               setDisplayPct(prev => Math.max(prev, mapped))

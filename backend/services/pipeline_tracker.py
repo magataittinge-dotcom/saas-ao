@@ -36,9 +36,12 @@ LOT_DETECTION_STEPS = [
 ]
 
 UPLOAD_STEPS = [
-    ("uploading",        "Transfert du dossier",                   0,  30, 30),
-    ("extracting_zip",   "Extraction du ZIP",                     30,  40,  5),
-    ("extracting_text",  "Indexation des documents",              40, 100, 60),
+    # Poids mesurés sur DCE réel (348 Mo, disque lent) : la réception et
+    # l'écriture des membres pèsent autant que l'indexation — l'ancien
+    # 30/10/60 figeait la barre à 30 % pendant toute l'écriture disque.
+    ("uploading",        "Transfert du dossier",                   0,  25, 30),
+    ("extracting_zip",   "Enregistrement des documents",          25,  55, 15),
+    ("extracting_text",  "Indexation des documents",              55, 100, 60),
 ]
 
 # (step_id, label, pct_start, pct_end, estimated_seconds)
@@ -69,6 +72,7 @@ class PipelineState:
     started_at: Optional[float] = None
     steps: list[StepState] = field(default_factory=list)
     error_message: Optional[str] = None
+    detail: Optional[str] = None     # libellé de sous-phase (jamais muet)
 
 
 _store: dict[str, PipelineState] = {}
@@ -137,13 +141,18 @@ def start_step(project_id: str, step_id: str) -> None:
     _publish(project_id)
 
 
-def update_step_progress(project_id: str, internal_progress: float) -> None:
+def update_step_progress(
+    project_id: str, internal_progress: float, detail: str | None = None,
+) -> None:
     """Publish a real progress signal (0-1) for the currently-running step.
 
     Called from inside the long-running operation (e.g. the Claude stream
     consumer) so the SSE clients see a true bar instead of an elapsed-
     time interpolation. Throttling is the caller's responsibility — the
     bus drops events if the queue is full anyway.
+
+    detail: libellé de sous-phase (« 120/366 Mo enregistrés ») — règle
+    produit : aucune phase muette, le libellé bouge même quand le % stagne.
     """
     if internal_progress is None:
         return
@@ -152,6 +161,8 @@ def update_step_progress(project_id: str, internal_progress: float) -> None:
         state = _store.get(project_id)
         if not state:
             return
+        if detail is not None:
+            state.detail = detail
         for s in state.steps:
             if s.status == "in_progress":
                 s.internal_progress = clamped
@@ -274,6 +285,7 @@ def get_status(project_id: str) -> Optional[dict]:
         "status": status_str,
         "progress": min(progress, 100),
         "current_step": current_step_label,
+        "detail": state.detail,
         "steps": [
             {
                 "name": s.label,

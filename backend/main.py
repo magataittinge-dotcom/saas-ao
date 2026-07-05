@@ -550,7 +550,8 @@ class UploadReceiveProgressMiddleware:
                     last_pub = now
                     progress_bus.publish(project_id, "progress", {
                         "status": "uploading",
-                        "progress": round(min(received / total, 1.0) * 30, 1),
+                        # 0→25 : échelle du pipeline_tracker « uploading »
+                        "progress": round(min(received / total, 1.0) * 25, 1),
                         "detail": f"{received / 1e6:.0f} / {total / 1e6:.0f} Mo reçus",
                     })
             return message
