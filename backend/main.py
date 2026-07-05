@@ -33,6 +33,7 @@ from routers import (
     stripe_billing,
     progress,
     calculators,
+    rag,
 )
 from routers.file_serve import router as file_serve_router
 
@@ -533,6 +534,7 @@ app.include_router(compliance.router, prefix="/api/projects", tags=["compliance"
 app.include_router(candidature.router, prefix="/api/projects", tags=["candidature"])
 app.include_router(memoire.router, prefix="/api/projects", tags=["memoire"])
 app.include_router(memoire_config.router, prefix="/api/memoire-config", tags=["memoire-config"])
+app.include_router(rag.router, prefix="/api/rag", tags=["rag"])
 app.include_router(export.router, prefix="/api/projects", tags=["export"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
 app.include_router(stripe_billing.router, prefix="/api/stripe", tags=["stripe"])
