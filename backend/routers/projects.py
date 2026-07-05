@@ -1747,12 +1747,14 @@ def _run_lot_detection_background(project_id: str, docs_data: list, uploads_root
             for p in doc_proxies
             if (p.type or "autre") in ("rc", "ccap", "autre")
         }
-        lots, ia_used = lot_fallback.run_fallback_if_needed(doc_texts, lots or [], announced)
+        # Fantômes écartés AVANT le déclencheur IA : sinon l'écart brut
+        # (fantômes inclus) déclenche ~11 s d'appel Sonnet pour rien alors
+        # que le tableau RC est complet.
+        lots = lot_fallback.drop_ghosts(lots or [], announced)
+        lots, ia_used = lot_fallback.run_fallback_if_needed(doc_texts, lots, announced)
         if ia_used:
             print(f"[LOTS] filet IA utilisé → {len(lots)} lots après fusion", flush=True)
-        # Invariants d'affichage : pas de fantôme hors liste RC complète,
-        # jamais de lot sans libellé exploitable.
-        lots = lot_fallback.drop_ghosts(lots, announced)
+        # Invariant : jamais de lot sans libellé exploitable affiché.
         lots = lot_fallback.drop_unlabeled(lots)
 
         # Save results

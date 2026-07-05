@@ -130,6 +130,55 @@ def test_ghosts_kept_when_rc_list_incomplete():
     assert drop_ghosts(lots, announced=None) == lots
 
 
+def test_annexe_prescriptions_never_a_lot():
+    """« Lot 00 — ANNEXE AUX PRESCRIPTIONS COMMUNES » (doc général) n'est
+    jamais détecté comme lot — bug réel : il venait d'une mention inline
+    dans un CCTP et survivait à drop_ghosts."""
+    txt = ("CCTP\nLOT 00 ANNEXE AUX PRESCRIPTIONS COMMUNES GÉNÉRALES\n"
+           "Le présent document s'applique à tous les lots.\n"
+           "Lot 03 Menuiseries extérieures PVC : voir CCTP dédié.\n")
+    dets = _detect_lots_from_rc_text(txt, "autre")
+    ids = [d.id for d in dets]
+    assert "lot0" not in ids, [d.nom for d in dets]
+    assert "lot3" in ids
+
+
+def test_rc_table_is_the_ghost_reference():
+    """Le TABLEAU du RC (source rc_table) est la référence : un lot avec un
+    rc_text inline (CCTP) hors de la liste complète est écarté."""
+    from services.ai.lot_fallback import drop_ghosts
+
+    lots = [
+        {"id": "lot1", "nom": "Lot 01 — Démolition", "sources": ["rc_table", "rc_text"]},
+        {"id": "lot2", "nom": "Lot 02 — Etanchéité", "sources": ["rc_table", "rc_text", "excel"]},
+        {"id": "lot0", "nom": "Lot 00 — ANNEXE AUX PRESCRIPTIONS", "sources": ["rc_text", "filename"]},
+    ]
+    out = drop_ghosts(lots, announced=2)
+    assert [l["id"] for l in out] == ["lot1", "lot2"]
+
+
+def test_vertical_table_tags_rc_table():
+    dets = _detect_lots_from_rc_text(RC_GUEUX, "rc")
+    lot6 = next(d for d in dets if d.id == "lot6")
+    assert "rc_table" in lot6.sources
+
+
+def test_no_ai_call_when_rc_parsing_complete(monkeypatch):
+    """Après filtrage, détectés == annoncés → ZÉRO appel IA (la lenteur
+    mesurée : 10,8 s d'appel Sonnet inutile sur écart brut pré-filtrage)."""
+    from services.ai import lot_fallback as lf
+
+    def forbidden(*a, **k):
+        raise AssertionError("appel Claude alors que le parsing RC est complet")
+    monkeypatch.setattr(lf, "_call_claude", forbidden)
+
+    lots = [{"id": f"lot{i}", "nom": f"Lot {i} — Intitulé {i}",
+             "sources": ["rc_table", "rc_text"]} for i in range(1, 14)]
+    out, ia_used = lf.run_fallback_if_needed({"rc.pdf": "alloti en 13 lots"}, lots, announced=13)
+    assert ia_used is False
+    assert len(out) == 13
+
+
 def test_generic_label_never_displayed(caplog):
     lots = [
         {"id": "lot6", "nom": "Lot 06 — Plaquisterie", "sources": ["rc_text"]},

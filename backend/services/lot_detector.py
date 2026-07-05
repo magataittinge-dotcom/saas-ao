@@ -54,6 +54,12 @@ _LOT_LINE = re.compile(
 # Tableau PDF aplati VERTICALEMENT (format réel RC Gueux) :
 #   LOT ⏎ INTITULE ⏎ 01 ⏎ Démolition… ⏎ 02 ⏎ Etanchéité…
 _LOT_NUM_ALONE = re.compile(r'^\s*(\d{1,2})\s*$')
+# Un document général n'est JAMAIS un lot (bug réel : « Lot 00 — ANNEXE AUX
+# PRESCRIPTIONS COMMUNES GÉNÉRALES » détecté depuis un titre de CCTP).
+_NOT_A_LOT_LABEL = re.compile(
+    r'annexe|prescriptions?\s+communes?|g[eé]n[eé]ralit[eé]s',
+    re.IGNORECASE,
+)
 _RC_MARKER = re.compile(
     r'r[eè]glement\s+de\s+la\s+consultation|MARCHE\s+PASSE\s+PAR\s+LOTS|'
     r'alloti|lots\s+s[eé]par[eé]s',
@@ -611,10 +617,13 @@ def _detect_lots_from_rc_text(text: str, doc_type: str) -> List[LotDetection]:
                     continue
                 label = m.group(2).strip()[:60]
                 label = re.sub(r'\s{2,}', ' ', label).strip(' -–—')
+                if _NOT_A_LOT_LABEL.search(label):
+                    continue  # doc général (annexe, prescriptions communes…)
                 nom = f"Lot {raw_id} — {label}" if label else f"Lot {raw_id}"
                 description = _extract_description_excerpt(text, line_idx, scan_lines)
                 lots.setdefault(lot_id, LotDetection(
-                    id=lot_id, nom=nom, confidence=90, sources=["rc_text"],
+                    id=lot_id, nom=nom, confidence=90,
+                    sources=["rc_table", "rc_text"],
                     description_long=description,
                 ))
             else:
@@ -652,10 +661,12 @@ def _detect_lots_from_rc_text(text: str, doc_type: str) -> List[LotDetection]:
             if not lot_id:
                 continue
             label = re.sub(r'\s{2,}', ' ', label.strip())[:60].strip(' -–—')
+            if _NOT_A_LOT_LABEL.search(label):
+                continue  # doc général (annexe, prescriptions communes…)
             description = _extract_description_excerpt(text, line_idx, scan_lines)
             lots.setdefault(lot_id, LotDetection(
                 id=lot_id, nom=f"Lot {raw_id} — {label}", confidence=90,
-                sources=["rc_text"], description_long=description,
+                sources=["rc_table", "rc_text"], description_long=description,
             ))
         if lots:
             return list(lots.values())
@@ -675,6 +686,8 @@ def _detect_lots_from_rc_text(text: str, doc_type: str) -> List[LotDetection]:
             r'(?i)(?:lot|tranche)\s*[nN°]*\s*[\w]+[\s:\-–—]*', '', raw
         ).strip(' :—-–')
         label = re.split(r'[.\n]', after_num)[0].strip()[:60]
+        if _NOT_A_LOT_LABEL.search(label):
+            continue  # doc général (annexe, prescriptions communes…)
         nom = f"Lot {raw_id} — {label}" if label else f"Lot {raw_id}"
 
         # Pull a description excerpt from the lines after this match.
