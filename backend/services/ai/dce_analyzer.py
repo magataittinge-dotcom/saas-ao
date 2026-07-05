@@ -22,12 +22,12 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
-def _safe_update_progress(project_id: str, ratio: float) -> None:
+def _safe_update_progress(project_id: str, ratio: float, detail: str | None = None) -> None:
     """Best-effort publish of a real progress signal. Never raises so
     pipeline_tracker / progress_bus failures can't break the AI call."""
     try:
         from services import pipeline_tracker
-        pipeline_tracker.update_step_progress(project_id, ratio)
+        pipeline_tracker.update_step_progress(project_id, ratio, detail=detail)
     except Exception:
         pass
 
@@ -279,6 +279,7 @@ class DCEAnalyzer:
         lot_header: str = "",
         selected_lot_name: str | None = None,
         on_pass1_done: callable = None,
+        on_pass1_results: callable = None,  # reçoit le dict passe 1 (persistance fil de l'eau)
         project_id: str | None = None,
     ) -> dict:
         """Two-pass analysis: admin docs (RC+CCAP) then technical docs (CCTP+DPGF).
@@ -292,19 +293,25 @@ class DCEAnalyzer:
         # ── Pass 1: RC + CCAP (administrative) — chunké si volumineux ────────
         result1 = await asyncio.to_thread(
             self._run_pass_chunked, pass1_text, DCE_PASS1_SYSTEM, "passe1-admin",
-            skills_ref, project_id, lot_header,
+            skills_ref, project_id, lot_header, "Analyse administrative",
         )
 
-        # Notify caller that pass 1 is done (for progress tracking)
+        # Notify caller that pass 1 is done (for progress tracking +
+        # persistance fil de l'eau des exigences de la passe 1)
         if on_pass1_done:
             on_pass1_done()
+        if on_pass1_results:
+            try:
+                on_pass1_results(result1)
+            except Exception:
+                logger.warning("on_pass1_results a échoué (non bloquant)", exc_info=True)
 
         # ── Pass 2: CCTP + DPGF (technical) — chunké si volumineux ──────────
         result2 = {"requirements": []}
         if pass2_text:
             result2 = await asyncio.to_thread(
                 self._run_pass_chunked, pass2_text, DCE_PASS2_SYSTEM, "passe2-technique",
-                skills_ref, project_id, lot_header,
+                skills_ref, project_id, lot_header, "Analyse technique",
             )
 
         # ── Merge results ────────────────────────────────────────────────────
@@ -348,6 +355,7 @@ class DCEAnalyzer:
         skills_ref: str = "",
         project_id: str | None = None,
         lot_header: str = "",
+        detail_label: str = "Analyse",
     ) -> dict:
         """Exécute une passe en découpant chaque document en tranches si besoin,
         puis FUSIONNE et DÉDUPLIQUE les exigences.
@@ -362,10 +370,37 @@ class DCEAnalyzer:
         if not call_texts:
             return {"requirements": [], "criteres_jugement": [], "infos_marche": {}}
 
+        n = len(call_texts)
+
+        # ── Barre HONNÊTE par tranche : chaque tranche streame son ratio ;
+        # le % du step = moyenne des ratios (monotone, proportionnel au
+        # volume réel). Le libellé suit : « Analyse administrative — partie
+        # 2/5 ». Sans ça, la barre restait figée pendant chaque tranche
+        # longue puis sautait d'un bloc.
+        import threading as _threading
+        ratios: dict[int, float] = {}
+        ratios_lock = _threading.Lock()
+
+        def _tranche_cb(idx: int):
+            def cb(ratio: float) -> None:
+                if not project_id:
+                    return
+                with ratios_lock:
+                    ratios[idx] = ratio
+                    total = sum(ratios.values()) / n
+                    done = sum(1 for r in ratios.values() if r >= 0.99)
+                _safe_update_progress(
+                    project_id, min(total, 0.99),
+                    detail=(f"{detail_label} — partie {min(done + 1, n)}/{n}"
+                            if n > 1 else detail_label),
+                )
+            return cb
+
         # Cas nominal : un seul appel (document(s) sous le seuil de tranche).
-        if len(call_texts) == 1:
+        if n == 1:
             return self._sync_call(
-                lot_header + call_texts[0], system_prompt, label, skills_ref, project_id,
+                lot_header + call_texts[0], system_prompt, label, skills_ref,
+                project_id, progress_cb=_tranche_cb(0),
             )
 
         # Document(s) volumineux → plusieurs tranches.
@@ -373,17 +408,39 @@ class DCEAnalyzer:
             "[%s] document volumineux → analyse en %d tranches (chunking, aucune perte)",
             label, len(call_texts),
         )
-        print(f"[DCE Analyzer] [{label}] CHUNKING : {len(call_texts)} tranches", flush=True)
+        print(f"[DCE Analyzer] [{label}] CHUNKING : {n} tranches", flush=True)
+
+        # ── Parallélisation cache-friendly : la 1re tranche part SEULE
+        # (elle écrit le prompt cache system+skills), les suivantes en
+        # parallèle borné (3) profitent du cache_read. Le chunking
+        # anti-troncature est INTACT : mêmes tranches, même dédup.
+        subs: dict[int, dict] = {}
+        subs[0] = self._sync_call(
+            lot_header + call_texts[0], system_prompt, f"{label}-tranche1/{n}",
+            skills_ref, project_id, progress_cb=_tranche_cb(0),
+        )
+        _tranche_cb(0)(1.0)
+        if n > 1:
+            from concurrent.futures import ThreadPoolExecutor
+            with ThreadPoolExecutor(max_workers=3) as pool:
+                futures = {
+                    pool.submit(
+                        self._sync_call,
+                        lot_header + ct, system_prompt, f"{label}-tranche{i + 1}/{n}",
+                        skills_ref, project_id, _tranche_cb(i),
+                    ): i
+                    for i, ct in enumerate(call_texts[1:], start=1)
+                }
+                for future, i in futures.items():
+                    subs[i] = future.result()
+                    _tranche_cb(i)(1.0)
 
         merged: list[dict] = []
         criteres: list = []
         infos: dict = {}
         partial = False
-        for i, ct in enumerate(call_texts, 1):
-            sub = self._sync_call(
-                lot_header + ct, system_prompt, f"{label}-tranche{i}/{len(call_texts)}",
-                skills_ref, project_id,
-            )
+        for i in range(n):
+            sub = subs.get(i) or {}
             merged.extend(sub.get("requirements", []))
             if not criteres and sub.get("criteres_jugement"):
                 criteres = sub["criteres_jugement"]
@@ -448,6 +505,7 @@ class DCEAnalyzer:
         label: str = "",
         skills_ref: str = "",
         project_id: str | None = None,
+        progress_cb=None,  # ratio 0-1 par tranche (agrégé par _run_pass_chunked)
     ) -> dict:
         """Synchronous streaming Claude call with 3 retries — runs in a thread.
 
@@ -516,11 +574,17 @@ class DCEAnalyzer:
                         # Throttled real-progress signal — at most ~3 publishes
                         # per second per ongoing stream. We only publish if a
                         # project_id was supplied (else the call is one-shot).
-                        if project_id:
+                        if project_id or progress_cb:
                             now = time.time()
                             if now - last_publish >= 0.3:
                                 ratio = min(len(collected) / chars_estimate, 0.99)
-                                _safe_update_progress(project_id, ratio)
+                                if progress_cb is not None:
+                                    try:
+                                        progress_cb(ratio)
+                                    except Exception:
+                                        pass
+                                else:
+                                    _safe_update_progress(project_id, ratio)
                                 last_publish = now
 
                 final_message = stream.get_final_message()

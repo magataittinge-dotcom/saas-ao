@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import logging
+import threading
 from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, Request
 from slowapi import Limiter
@@ -175,70 +176,155 @@ async def trigger_analysis(
     quota.check_quota(db, org, "analysis")
     quota.consume(db, org, "analysis", project_id=project_id, lot=project.selected_lot)
 
-    # Update step before analysis
+    # Update step before analysis — current_step ne RÉGRESSE plus jamais :
+    # un échec d'analyse laisse le projet à l'étape analyse avec un statut
+    # d'erreur explicite et un bouton relancer (vision : état persistant).
     project.current_step = 3
     project.status = "en_cours"
+    project.processing_status = "analyzing"
+    project.processing_detail = ""
     db.commit()
 
-    # ── Pipeline tracking: prep is done by the time we get here (upload +
-    # lot detection happened on previous routes). We still emit a tracked
-    # 'preparation' step so the UI bar starts at 0 and briefly ticks to
-    # 5 %, then the IA passes own the rest of the cercle.
+    # Anti double-run : une analyse déjà en cours sur ce projet → 409.
+    thread_name = f"synorix-analysis-{project_id[:12]}"
+    if any(t.name == thread_name and t.is_alive() for t in threading.enumerate()):
+        raise HTTPException(status_code=409, detail="Une analyse est déjà en cours pour ce projet.")
+
     pipeline_tracker.start_pipeline(project_id, "analysis")
     pipeline_tracker.start_step(project_id, "preparation")
     pipeline_tracker.complete_step(project_id, "preparation")
 
-    # Run 2-pass AI analysis — each pass <60s, total <3min with retries
-    analyzer = DCEAnalyzer()
+    # ── Run DÉTACHÉ (thread démon) : l'analyse survit à la navigation, au
+    # rechargement de page et à la coupure de la connexion HTTP. L'ancien
+    # design (await dans le handler + AbortSignal côté front) tuait le run
+    # en plein vol au moindre reload — perte d'état totale constatée.
+    org_id = user.organization_id
+    thread = threading.Thread(
+        target=_run_analysis_job,
+        args=(project_id, org_id, pass1_text, pass2_text, lot_header,
+              lot_label, docs_sent, docs_total),
+        daemon=True,
+        name=thread_name,
+    )
+    thread.start()
+
+    return {
+        "status": "started",
+        "project_id": project_id,
+        "docs_sent": docs_sent,
+        "docs_total": docs_total,
+    }
+
+
+def _fail_analysis(project_id: str, user_message: str, tracker_reason: str) -> None:
+    """Échec du job : statut erreur EXPLICITE, jamais de régression d'étape."""
+    from database import SessionLocal
+    pipeline_tracker.fail_pipeline(project_id, tracker_reason)
+    db = SessionLocal()
     try:
-        # ── Passe 1 ──────────────────────────────────────────────────────────
+        project = db.query(Project).filter(Project.id == project_id).first()
+        if project:
+            project.processing_status = "error"
+            project.processing_detail = user_message
+            db.commit()
+    finally:
+        db.close()
+
+
+def _persist_requirements(db: Session, project_id: str, requirements: list) -> None:
+    """Écrit les exigences (delete + insert) — appelé au fil de l'eau après
+    chaque passe : un crash en passe 2 ne perd pas la passe 1."""
+    db.query(ComplianceItem).filter(ComplianceItem.project_id == project_id).delete()
+    for req in requirements:
+        db.add(ComplianceItem(
+            project_id=project_id,
+            exigence_text=req.get("exigence", ""),
+            source_document=req.get("source_document"),
+            source_page=req.get("source_page") or 1,
+            source_excerpt=req.get("source_excerpt"),
+            category=_safe_category(req.get("category")),
+            priority=_safe_priority(req.get("priority")),
+            status="non_couvert",
+        ))
+    db.commit()
+
+
+def _run_analysis_job(
+    project_id: str,
+    org_id: str,
+    pass1_text: str,
+    pass2_text,
+    lot_header: str,
+    lot_label,
+    docs_sent: int,
+    docs_total: int,
+) -> None:
+    """Corps de l'analyse — thread démon, session DB propre, jamais d'exception
+    qui fuit (tout échec = statut 'error' + message utilisateur)."""
+    from database import SessionLocal
+
+    analyzer = DCEAnalyzer()
+    db = SessionLocal()
+    try:
+        # Persistance FIL DE L'EAU : les exigences de la passe 1 sont écrites
+        # dès qu'elle se termine.
+        def on_pass1_results(result1: dict) -> None:
+            pipeline_tracker.complete_step(project_id, "analyzing_pass1")
+            pipeline_tracker.start_step(project_id, "analyzing_pass2")
+            reqs1 = result1.get("requirements") or []
+            if reqs1:
+                try:
+                    _persist_requirements(db, project_id, reqs1)
+                    logger.info("Analyse %s : %d exigences passe 1 persistées (fil de l'eau)",
+                                project_id, len(reqs1))
+                except Exception:
+                    db.rollback()
+
         pipeline_tracker.start_step(project_id, "analyzing_pass1")
-        analysis = await asyncio.wait_for(
-            analyzer.extract_full_analysis_multi_pass(
-                pass1_text=pass1_text,
-                pass2_text=pass2_text,
-                lot_header=lot_header,
-                selected_lot_name=lot_label,
-                on_pass1_done=lambda: (
-                    pipeline_tracker.complete_step(project_id, "analyzing_pass1"),
-                    pipeline_tracker.start_step(project_id, "analyzing_pass2"),
+        try:
+            analysis = asyncio.run(asyncio.wait_for(
+                analyzer.extract_full_analysis_multi_pass(
+                    pass1_text=pass1_text,
+                    pass2_text=pass2_text,
+                    lot_header=lot_header,
+                    selected_lot_name=lot_label,
+                    on_pass1_results=on_pass1_results,
+                    project_id=project_id,
                 ),
-                project_id=project_id,
-            ),
-            # 15 min : avec le chunking (Option A), un gros DCE peut générer
-            # plusieurs tranches séquentielles (CCAP/CCTP volumineux) + backoff
-            # rate-limit Anthropic. Le streaming garde la connexion vivante.
-            # Si des proxys prod coupent les requêtes longues → passer en async
-            # (Option C) ; cf. docs/rag/PHASE0-investigation-troncature.md.
-            timeout=900.0,
-        )
+                timeout=900.0,
+            ))
+        except asyncio.TimeoutError:
+            _fail_analysis(project_id, "L'analyse a pris trop de temps. Relancez-la.", "Timeout")
+            return
+        except ClaudeRateLimitError as e:
+            logger.warning(f"Rate limit Anthropic projet {project_id}: {e}")
+            _fail_analysis(project_id,
+                           "Limite Anthropic atteinte. Relancez dans une minute.", "rate_limit")
+            return
+        except Exception as e:
+            logger.error(f"Erreur analyse IA projet {project_id}: {e}", exc_info=True)
+            _fail_analysis(project_id,
+                           "Erreur lors de l'analyse IA. Relancez l'analyse.", str(e))
+            return
+
         pipeline_tracker.complete_step(project_id, "analyzing_pass2")
         pipeline_tracker.start_step(project_id, "finalizing")
-    except asyncio.TimeoutError:
-        pipeline_tracker.fail_pipeline(project_id, "Timeout")
-        project.current_step = 2
-        db.commit()
-        raise HTTPException(status_code=504, detail="L'analyse a pris trop de temps. Réessayez.")
-    except ClaudeRateLimitError as e:
-        # The Anthropic input-token rate limit is hard to predict per
-        # workspace; surface it as a 503 with a clear message + Retry-After
-        # header so the frontend can offer a meaningful "réessayer" CTA
-        # instead of a scary 500.
-        pipeline_tracker.fail_pipeline(project_id, "rate_limit")
-        project.current_step = 2
-        db.commit()
-        logger.warning(f"Rate limit Anthropic projet {project_id}: {e}")
-        raise HTTPException(
-            status_code=503,
-            detail="Limite Anthropic atteinte. Réessayez dans une minute.",
-            headers={"Retry-After": "60"},
-        )
+        _finalize_analysis(db, project_id, org_id, analysis, docs_sent, docs_total)
     except Exception as e:
-        pipeline_tracker.fail_pipeline(project_id, str(e))
-        project.current_step = 2
-        db.commit()
-        logger.error(f"Erreur analyse IA projet {project_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Erreur lors de l'analyse IA. Veuillez réessayer.")
+        logger.error(f"Analyse {project_id} : échec de finalisation: {e}", exc_info=True)
+        _fail_analysis(project_id, "Erreur lors de l'enregistrement des résultats. Relancez l'analyse.", str(e))
+    finally:
+        db.close()
+
+
+def _finalize_analysis(
+    db: Session, project_id: str, org_id: str, analysis: dict,
+    docs_sent: int, docs_total: int,
+) -> None:
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if project is None:
+        return
+    all_docs = db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).all()
 
     requirements = analysis.get("requirements", [])
     criteres_jugement = analysis.get("criteres_jugement", [])
@@ -247,9 +333,10 @@ async def trigger_analysis(
     low_requirement_count = analysis.get("low_requirement_count", False)
 
     if not requirements:
-        project.current_step = 2
-        db.commit()
-        raise HTTPException(status_code=422, detail="L'IA n'a pas pu extraire d'exigences. Vérifiez que les documents contiennent du texte lisible.")
+        _fail_analysis(project_id,
+                       "L'IA n'a pas pu extraire d'exigences. Vérifiez que les documents "
+                       "contiennent du texte lisible, puis relancez.", "no_requirements")
+        return
 
     # Store critères and infos on project
     project.criteres_jugement = criteres_jugement or None
@@ -268,21 +355,9 @@ async def trigger_analysis(
     existing_cf[lot_key] = fields
     project.critical_fields = existing_cf
 
-    # Clear existing and insert new compliance items
-    db.query(ComplianceItem).filter(ComplianceItem.project_id == project_id).delete()
-    for req in requirements:
-        item = ComplianceItem(
-            project_id=project_id,
-            exigence_text=req.get("exigence", ""),
-            source_document=req.get("source_document"),
-            source_page=req.get("source_page") or 1,
-            source_excerpt=req.get("source_excerpt"),
-            category=_safe_category(req.get("category")),
-            priority=_safe_priority(req.get("priority")),
-            status="non_couvert",
-        )
-        db.add(item)
-    db.commit()
+    # Clear existing and insert new compliance items (résultat complet —
+    # remplace le batch fil-de-l'eau de la passe 1)
+    _persist_requirements(db, project_id, requirements)
 
     # Advance to step 3 (analysis results) when done.
     # Also flip status from 'en_cours' to 'analyzed' so the frontend can
@@ -294,15 +369,17 @@ async def trigger_analysis(
         project.current_step = 4
     if project.status in ("brouillon", "en_cours"):
         project.status = "analyzed"
+    project.processing_status = "ready"
+    project.processing_detail = ""
     db.commit()
 
     # Generate checklist from candidature/offre requirements (best-effort)
     checklist_reqs = [r for r in requirements if r.get("category") in ("candidature", "offre")]
     if checklist_reqs:
         try:
-            vault_docs = db.query(Document).filter(Document.organization_id == user.organization_id).all()
+            vault_docs = db.query(Document).filter(Document.organization_id == org_id).all()
             matcher = ChecklistMatcher()
-            checklist = await matcher.match(checklist_reqs, vault_docs, project_id=project_id, db=db)
+            checklist = asyncio.run(matcher.match(checklist_reqs, vault_docs, project_id=project_id, db=db))
 
             db.query(ChecklistItem).filter(ChecklistItem.project_id == project_id).delete()
             for idx, item_data in enumerate(checklist):
@@ -325,18 +402,12 @@ async def trigger_analysis(
             db.rollback()
 
     pipeline_tracker.complete_pipeline(project_id)
-
-    return {
-        "status": "done",
-        "project_id": project_id,
-        "requirements_count": len(requirements),
-        "criteres_count": len(criteres_jugement),
-        "demo_mode": analyzer.is_demo,
-        "docs_sent": docs_sent,
-        "docs_total": docs_total,
-        **({"partial_analysis": True} if partial_analysis else {}),
-        **({"low_requirement_count": True} if low_requirement_count else {}),
-    }
+    logger.info(
+        "Analyse %s terminée : %d exigences, %d critères (docs %d/%d%s%s)",
+        project_id, len(requirements), len(criteres_jugement), docs_sent, docs_total,
+        ", partielle" if partial_analysis else "",
+        ", peu d'exigences" if low_requirement_count else "",
+    )
 
 
 def _get_dpgf_sheet_text(doc, lot_num_norm: str) -> str:

@@ -230,6 +230,29 @@ export default function StepAnalysis({ project }: Props) {
 
   if (isLoading) return <RequirementListSkeleton count={5} />
 
+  // Échec du run détaché : statut erreur EXPLICITE + relance — jamais de
+  // régression d'étape ni d'attente infinie.
+  const analysisFailed =
+    analysisSse.phase === 'error' || project.processing_status === 'error'
+
+  if (items.length === 0 && analysisFailed) return (
+    <div className="max-w-lg mx-auto glass-card p-8 text-center space-y-4 animate-fade-in">
+      <p className="text-base font-semibold text-ds-text">L'analyse a échoué</p>
+      <p className="text-sm text-ds-text-2">
+        {project.processing_detail || analysisSse.detail
+          || "Une erreur est survenue pendant l'analyse. Relancez-la."}
+      </p>
+      <button
+        onClick={async () => {
+          await api.post(`/projects/${project.id}/analyze`, {}, { timeout: 60_000 })
+          window.location.reload()
+        }}
+        className="btn-primary py-2 px-5"
+      >
+        Relancer l'analyse
+      </button>
+    </div>
+  )
 
   if (items.length === 0) return (
     <ProgressDisplay

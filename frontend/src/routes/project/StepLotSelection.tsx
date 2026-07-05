@@ -575,9 +575,14 @@ export default function StepLotSelection({ project }: Props) {
       }
       if (abort.signal.aborted) return
       setPreparation(null)
-      await api.post(`/projects/${project.id}/analyze`, {}, { timeout: 420_000, signal: abort.signal })
-      if (abort.signal.aborted) return
+      // L'analyse est DÉTACHÉE côté serveur (thread) : le POST répond
+      // « started » immédiatement et le run survit à tout — navigation,
+      // reload, connexion coupée. On rejoint l'écran d'analyse qui suit
+      // la progression via SSE (et la retrouve après un reload).
+      await api.post(`/projects/${project.id}/analyze`, {}, { timeout: 60_000 })
       queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
+      navigate(`/projects/${project.id}/analysis`)
+      return
     } catch (err) {
       if (abort.signal.aborted) return
       setIsAnalyzing(false)

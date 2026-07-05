@@ -38,10 +38,17 @@ def test_max_tokens_at_least_16384():
     # And the Stripe SDK is not affected by this change (sanity).
 
 
-def test_analyze_endpoint_returns_503_on_persistent_rate_limit(client, db_session, test_org, monkeypatch):
-    """When DCEAnalyzer.extract_full_analysis_multi_pass raises
-    ClaudeRateLimitError, the router must respond 503 with Retry-After
-    and NOT 500."""
+def _join_analysis_threads():
+    import threading
+    for t in threading.enumerate():
+        if t.name.startswith("synorix-analysis-"):
+            t.join(timeout=30)
+
+
+def test_rate_limit_sets_error_status_without_step_regression(client, db_session, test_org, monkeypatch):
+    """Nouveau contrat (analyse détachée) : le rate limit Anthropic met le
+    projet en processing_status='error' avec un message clair — current_step
+    ne RÉGRESSE JAMAIS (l'ancien code le ramenait à 2, perdant l'état)."""
     from datetime import date
     from models.project import Project, ProjectDocument
 
@@ -65,10 +72,16 @@ def test_analyze_endpoint_returns_503_on_persistent_rate_limit(client, db_sessio
     )
 
     resp = client.post(f"/api/projects/proj-rl/analyze")
-    assert resp.status_code == 503, resp.text
-    assert resp.headers.get("retry-after") == "60"
-    body = resp.json()
-    assert "limite" in body["detail"].lower() or "anthropic" in body["detail"].lower()
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["status"] == "started"
+    _join_analysis_threads()
+
+    db_session.expire_all()
+    fresh = db_session.query(Project).filter(Project.id == "proj-rl").first()
+    assert fresh.processing_status == "error"
+    assert "anthropic" in (fresh.processing_detail or "").lower() \
+        or "limite" in (fresh.processing_detail or "").lower()
+    assert fresh.current_step == 3   # JAMAIS de régression d'étape
 
 
 def test_status_set_to_analyzed_after_compliance_commit(client, db_session, test_org, monkeypatch):
@@ -115,6 +128,8 @@ def test_status_set_to_analyzed_after_compliance_commit(client, db_session, test
 
     resp = client.post("/api/projects/proj-an/analyze")
     assert resp.status_code == 200, resp.text
+    assert resp.json()["status"] == "started"
+    _join_analysis_threads()
 
     db_session.expire(project)
     fresh = db_session.query(Project).filter(Project.id == "proj-an").first()

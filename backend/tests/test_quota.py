@@ -195,8 +195,15 @@ def test_analysis_consumed_at_launch_even_if_it_fails(
         analysis_mod.DCEAnalyzer, "extract_full_analysis_multi_pass", _boom,
     )
 
+    # Nouveau contrat (analyse détachée) : POST → 200 "started" ; l'échec
+    # arrive dans le job de fond, l'unité reste décomptée au lancement.
     resp = client.post("/api/projects/proj-q2/analyze")
-    assert resp.status_code == 504
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "started"
+    import threading
+    for t in threading.enumerate():
+        if t.name.startswith("synorix-analysis-"):
+            t.join(timeout=30)
     used = db_session.query(QuotaConsumption).filter(
         QuotaConsumption.organization_id == test_org.id,
         QuotaConsumption.kind == "analysis",
