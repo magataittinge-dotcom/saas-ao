@@ -55,15 +55,53 @@ def _find_verbatim_on_page(page, clean_search: str) -> list | None:
         return _dedup_rects(rects)
 
     segments = _split_into_segments(clean_search)
-    if not segments:
+    if segments:
+        all_rects = []
+        for segment in segments:
+            seg_rects = page.search_for(segment, quads=False)
+            if not seg_rects:
+                all_rects = None
+                break  # excerpt incomplet sur cette page
+            all_rects.extend(seg_rects)
+        if all_rects:
+            return _dedup_rects(all_rects)
+
+    # 3) Séquence de MOTS normalisés : couvre les écarts d'espaces/césures/
+    #    apostrophes entre l'excerpt (extrait du texte) et le rendu page.
+    #    All-or-nothing : la séquence ENTIÈRE ou rien (jamais de faux
+    #    surlignage partiel).
+    return _find_word_sequence_on_page(page, clean_search)
+
+
+def _norm_word(w: str) -> str:
+    import unicodedata
+    w = unicodedata.normalize("NFKD", w)
+    w = "".join(c for c in w if not unicodedata.combining(c))
+    for a, b in (("’", "'"), ("‘", "'"), ("–", "-"), ("—", "-")):
+        w = w.replace(a, b)
+    return "".join(ch for ch in w.lower() if ch.isalnum())
+
+
+def _find_word_sequence_on_page(page, clean_search: str) -> list | None:
+    target = [_norm_word(w) for w in clean_search.split()]
+    target = [w for w in target if w]
+    if len(target) < 3:
         return None
-    all_rects = []
-    for segment in segments:
-        seg_rects = page.search_for(segment, quads=False)
-        if not seg_rects:
-            return None  # excerpt incomplet sur cette page → pas de surlignage
-        all_rects.extend(seg_rects)
-    return _dedup_rects(all_rects)
+    words = page.get_text("words")  # (x0, y0, x1, y1, texte, ...)
+    page_norm = [(_norm_word(w[4]), w) for w in words]
+    n = len(target)
+    for i in range(len(page_norm) - n + 1):
+        ok = True
+        for j, t in enumerate(target):
+            pw = page_norm[i + j][0]
+            if pw == t or (t and pw and (t in pw or pw in t) and min(len(t), len(pw)) >= 3):
+                continue
+            ok = False
+            break
+        if ok:
+            rects = [fitz.Rect(w[1][:4]) for w in page_norm[i:i + n]]
+            return _dedup_rects(rects)
+    return None
 
 
 class PdfHighlighter:
@@ -117,12 +155,16 @@ class PdfHighlighter:
                 doc.close()
                 return None
 
-            # Ajouter les surlignages jaunes (toutes les lignes de l'excerpt)
+            # Surlignage jaune : rectangles semi-transparents dessinés SOUS
+            # le texte (overlay=False, contenu de page) — rendu net garanti
+            # sur tous les viewers. Les annotations Highlight (appearance
+            # PyMuPDF) déformaient le texte de la ligne dans PDF.js.
             for rect in found_rects:
-                highlight = page.add_highlight_annot(rect)
-                highlight.set_colors(stroke=(1, 0.95, 0))  # Jaune vif
-                highlight.set_opacity(0.4)
-                highlight.update()
+                page.draw_rect(
+                    rect.irect + (-1, -1, 1, 1),
+                    color=None, fill=(1, 0.93, 0.35),
+                    fill_opacity=0.45, overlay=False,
+                )
 
             # Sauvegarder dans un fichier temporaire
             if output_dir is None:

@@ -38,12 +38,29 @@ def _make_pdf() -> bytes:
     return out
 
 
-def _annots_per_page(pdf_bytes: bytes) -> list:
-    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+def _highlights_per_page(pdf_bytes_or_doc) -> list:
+    """Compte les rectangles de surlignage DESSINÉS (fill jaune, sous le
+    texte) — nouveau contrat : plus d'annotations Highlight (leur appearance
+    déformait le texte dans PDF.js), des draw_rect dans le contenu de page."""
+    if isinstance(pdf_bytes_or_doc, (bytes, bytearray)):
+        doc = fitz.open(stream=pdf_bytes_or_doc, filetype="pdf")
+    else:
+        doc = pdf_bytes_or_doc
+    def _count(page):
+        n = 0
+        for d in page.get_drawings():
+            f = d.get("fill")
+            if f and f[0] > 0.9 and f[1] > 0.8 and f[2] < 0.5:  # jaune
+                n += 1
+        return n
     try:
-        return [len(list(doc[i].annots() or [])) for i in range(doc.page_count)]
+        return [_count(doc[i]) for i in range(doc.page_count)]
     finally:
-        doc.close()
+        if isinstance(pdf_bytes_or_doc, (bytes, bytearray)):
+            doc.close()
+
+
+_annots_per_page = _highlights_per_page  # compat noms dans les tests
 
 
 @pytest.fixture
@@ -130,7 +147,7 @@ def test_multiline_excerpt_fully_highlighted():
         out = PdfHighlighter.highlight_text_in_pdf(pdf_path, 1, long_text)
         assert out is not None
         result = fitz.open(str(out))
-        annots = list(result[0].annots() or [])
+        counts = _highlights_per_page(result)
         # Plusieurs lignes → plusieurs rectangles de surlignage (excerpt ENTIER)
-        assert len(annots) >= 2
+        assert counts[0] >= 2
         result.close()

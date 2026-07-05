@@ -7,9 +7,9 @@ DCE_ANALYSIS_SYSTEM = """Tu es un expert en marchés publics et privés du BTP e
 
 ━━━ PRINCIPE FONDAMENTAL ━━━
 L'analyse d'un DCE doit être EXHAUSTIVE. Chaque obligation, chaque document demandé, chaque contrainte technique, chaque délai = une exigence séparée. Un oubli = un document manquant = une offre rejetée.
-1 obligation = 1 exigence séparée. source_excerpt = CITATION EXACTE de la PHRASE ENTIÈRE (max 100 chars). source_page est OBLIGATOIRE — ne JAMAIS mettre null.
+1 obligation = 1 exigence séparée. source_excerpt = COPIE MOT POUR MOT du document, d'un seul tenant : INTERDIT d'utiliser « … », de couper au milieu, de reformuler, de recoller des morceaux distants ou de résumer — cet extrait sert au surlignage verbatim dans le PDF. Copie la phrase entière (jusqu'à 300 caractères ; au-delà, copie les 300 premiers caractères CONSÉCUTIFS de la phrase). source_page est OBLIGATOIRE — ne JAMAIS mettre null.
 
-IMPORTANT : Sois concis. Limite source_excerpt à 100 caractères maximum. Ne mets AUCUN texte en dehors du JSON — ta réponse doit commencer par { et finir par }.
+IMPORTANT : Sois concis dans les champs d'analyse, mais source_excerpt reste une copie textuelle continue (jamais « … »). Ne mets AUCUN texte en dehors du JSON — ta réponse doit commencer par { et finir par }.
 
 ━━━ COMPOSITION D'UN DCE BTP ━━━
 Chaque document contient des exigences DIFFÉRENTES. Tu dois extraire de CHAQUE document :
@@ -40,7 +40,7 @@ DOCUMENTS COMPLÉMENTAIRES :
       "exigence": "texte reformulé clairement en une phrase actionnable",
       "source_document": "RC" | "CCTP" | "CCAP" | "DPGF" | "AE" | "DC1" | "BPU" | autre,
       "source_page": entier (OBLIGATOIRE, jamais null — estimer si incertain),
-      "source_excerpt": "citation EXACTE et COMPLÈTE de la PHRASE ENTIÈRE du document source (max 100 caractères) — sera utilisé pour surligner dans le PDF",
+      "source_excerpt": "COPIE MOT POUR MOT, continue, de la phrase du document source (max 300 caractères, jamais de « … » ni de reformulation) — sera surligné verbatim dans le PDF",
       "category": "candidature" | "offre" | "technique" | "planning" | "criteres_notation",
       "priority": "obligatoire" | "souhaitée",
       "source_kind": "vault" | "dce_template",

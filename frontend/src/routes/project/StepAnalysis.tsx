@@ -1,16 +1,15 @@
 import { useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
-  Loader2, Search,
+  Loader2, Search, FileText,
   CheckCircle2, Sparkles, Info,
 } from 'lucide-react'
 import { api, getSignedFileUrl } from '@/services/api'
 import CriticalBanner, { type FieldSource } from '@/components/project/CriticalBanner'
 import TresorerieCard from '@/components/project/TresorerieCard'
 import RetroPlanning from '@/components/project/RetroPlanning'
-import SynorixScoreCard from '@/components/project/SynorixScoreCard'
 import PdfSourceViewer from '@/components/project/PdfSourceViewer'
 import ProgressDisplay, { type StepDescriptor } from '@/components/common/ProgressDisplay'
 import { useProgressStream } from '@/hooks/useProgressStream'
@@ -44,6 +43,7 @@ type FilterCategory = 'all' | ComplianceCategory
 
 export default function StepAnalysis({ project }: Props) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [activeFilter, setActiveFilter] = useState<FilterCategory>('all')
   const [search, setSearch] = useState('')
   const { mutate: completeStep, isPending: isValidating } = useCompleteStep(project.id)
@@ -183,8 +183,17 @@ export default function StepAnalysis({ project }: Props) {
   // Real-time analysis progress via SSE. Replaces the legacy poll on a
   // dead /analysis-progress endpoint (which was always returning 404 and
   // freezing the bar at 15 %).
+  // Le run est détaché : pendant qu'il tourne (processing_status='analyzing'),
+  // on RESTE sur l'écran de progression même si la passe 1 a déjà persisté
+  // des exigences (fil de l'eau) — sinon la barre « sautait aux résultats »
+  // à ~50 % et la 2e passe devenait invisible.
+  const analysisRunning = project.processing_status === 'analyzing'
   const analysisSse = useProgressStream(project.id, {
-    enabled: !isLoading && items.length === 0,
+    enabled: !isLoading && (items.length === 0 || analysisRunning),
+    onComplete: () => {
+      queryClient.invalidateQueries({ queryKey: ['compliance', project.id] })
+      queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
+    },
   })
 
   // ── Lot filter computation ────────────────────────────────────
@@ -254,7 +263,7 @@ export default function StepAnalysis({ project }: Props) {
     </div>
   )
 
-  if (items.length === 0) return (
+  if (items.length === 0 || (analysisRunning && analysisSse.phase !== 'complete')) return (
     <ProgressDisplay
       variant="modal"
       title="Analyse du DCE par l'IA"
@@ -457,8 +466,8 @@ export default function StepAnalysis({ project }: Props) {
         />
       )}
 
-      {/* ── SYNORIX SCORE (C18) — go/no-go factuel en tête ── */}
-      <SynorixScoreCard projectId={project.id} onOpenSource={openFieldSource} />
+      {/* Synorix Score retiré de cette page (décision produit) — composant
+          et endpoint conservés, réactivables. */}
 
       {/* ── BANDEAU CRITIQUE (C5) — deadline, visite, critères, pénalités ── */}
       <CriticalBanner projectId={project.id} onOpenSource={openFieldSource} />
@@ -593,14 +602,17 @@ function ExigenceColumn({
             </div>
 
             <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
-              {item.source_document && (
+              {/* Affordance source : uniquement si l'ancre est VALIDE
+                  (excerpt verbatim vérifié) — jamais de viewer qui ment. */}
+              {item.source_document && item.source_excerpt && (
                 <button
                   onClick={() => onOpenSource(item)}
-                  className="px-2 py-0.5 rounded-md text-xs font-medium transition-opacity hover:opacity-70"
+                  className="flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium transition-opacity hover:opacity-70 hover:underline"
                   style={{ background: '#F0F9FF', color: '#0284C7' }}
-                  title={`Voir dans ${item.source_document}${item.source_page ? ` p.${item.source_page}` : ''}`}
+                  title={`Ouvrir le document à la page, passage surligné`}
                 >
-                  {item.source_document}
+                  <FileText size={11} />
+                  Voir dans {item.source_document}
                   {item.source_page ? ` p.${item.source_page}` : ''}
                 </button>
               )}

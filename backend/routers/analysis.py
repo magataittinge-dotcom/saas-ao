@@ -231,6 +231,40 @@ def _fail_analysis(project_id: str, user_message: str, tracker_reason: str) -> N
         db.close()
 
 
+def _build_anchor_docs(db: Session, project_id: str) -> tuple:
+    """(textes, chemins PDF) des documents sources pour l'ancrage verbatim."""
+    docs = db.query(ProjectDocument).filter(
+        ProjectDocument.project_id == project_id).all()
+    texts, paths = {}, {}
+    for d in docs:
+        txt = d.extracted_text or ""
+        if len(txt) < 50 or txt.startswith("[document volumineux"):
+            continue
+        if (d.type or "autre") in ("rc", "ccap", "acte_engagement", "cctp", "dpgf",
+                                   "acte_engagement_template", "dpgf_template"):
+            texts[d.file_name] = txt
+            if d.file_url and d.file_name.lower().endswith(".pdf"):
+                p = UPLOADS_ROOT / d.file_url.removeprefix("/uploads/")
+                if p.exists():
+                    paths[d.file_name] = str(p)
+    return texts, paths
+
+
+def _anchor_and_persist(db: Session, project_id: str, requirements: list) -> None:
+    """Ancrage verbatim (sourcé, jamais halluciné) + correction des pages,
+    PUIS persistance."""
+    from services.ai.excerpt_anchor import anchor_requirements, resolve_pages
+    pipeline_tracker.update_step_progress(project_id, 0.1, detail="Ancrage des sources dans les documents…")
+    try:
+        texts, paths = _build_anchor_docs(db, project_id)
+        anchor_requirements(requirements, texts)
+        pipeline_tracker.update_step_progress(project_id, 0.4, detail="Vérification des pages sources…")
+        resolve_pages(requirements, paths)
+    except Exception:
+        logger.warning("Ancrage des sources échoué (non bloquant)", exc_info=True)
+    _persist_requirements(db, project_id, requirements)
+
+
 def _persist_requirements(db: Session, project_id: str, requirements: list) -> None:
     """Écrit les exigences (delete + insert) — appelé au fil de l'eau après
     chaque passe : un crash en passe 2 ne perd pas la passe 1."""
@@ -355,9 +389,10 @@ def _finalize_analysis(
     existing_cf[lot_key] = fields
     project.critical_fields = existing_cf
 
-    # Clear existing and insert new compliance items (résultat complet —
-    # remplace le batch fil-de-l'eau de la passe 1)
-    _persist_requirements(db, project_id, requirements)
+    # Ancrage verbatim + persistance (résultat complet — remplace le batch
+    # fil-de-l'eau de la passe 1). Barre : libellés de finalisation.
+    _anchor_and_persist(db, project_id, requirements)
+    pipeline_tracker.update_step_progress(project_id, 0.6, detail="Enregistrement des résultats…")
 
     # Advance to step 3 (analysis results) when done.
     # Also flip status from 'en_cours' to 'analyzed' so the frontend can
@@ -376,6 +411,8 @@ def _finalize_analysis(
     # Generate checklist from candidature/offre requirements (best-effort)
     checklist_reqs = [r for r in requirements if r.get("category") in ("candidature", "offre")]
     if checklist_reqs:
+        pipeline_tracker.update_step_progress(
+            project_id, 0.8, detail="Génération de la checklist de candidature…")
         try:
             vault_docs = db.query(Document).filter(Document.organization_id == org_id).all()
             matcher = ChecklistMatcher()
