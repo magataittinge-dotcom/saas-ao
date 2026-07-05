@@ -45,10 +45,15 @@ _LOT_TABLE_HEADER = re.compile(
 _LOT_TABLE_ROW_NUM   = re.compile(r'^\s*(\d{1,2})\s{1,6}(\S.{1,80})')
 _LOT_TABLE_ROW_ALPHA = re.compile(r'^\s*([A-Z])\s{1,6}(\S.{1,80})')
 # Inline lot patterns with letter support (AMÉLIORATION 6)
+# \b après lot/tranche : « PAR LOTS SEPARES » ne doit pas se décomposer en
+# « Lot » + « S » (fantôme « Lot S » constaté sur le RC Gueux).
 _LOT_LINE = re.compile(
-    r'(?:^|[\s\-–—:])(?:lot|tranche)\s*[nN°]*\s*(\d{1,2}[A-Za-z]?|[A-Za-z])\b[^\n]{0,80}',
+    r'(?:^|[\s\-–—:])(?:lot|tranche)\b\s*[nN°]*\s*(\d{1,2}[A-Za-z]?|[A-Za-z])\b[^\n]{0,80}',
     re.IGNORECASE | re.MULTILINE,
 )
+# Tableau PDF aplati VERTICALEMENT (format réel RC Gueux) :
+#   LOT ⏎ INTITULE ⏎ 01 ⏎ Démolition… ⏎ 02 ⏎ Etanchéité…
+_LOT_NUM_ALONE = re.compile(r'^\s*(\d{1,2})\s*$')
 _RC_MARKER = re.compile(
     r'r[eè]glement\s+de\s+la\s+consultation|MARCHE\s+PASSE\s+PAR\s+LOTS|'
     r'alloti|lots\s+s[eé]par[eé]s',
@@ -136,6 +141,12 @@ def _lot_id_from_raw(raw: str) -> Optional[str]:
     if re.match(r'^[A-Z]$', raw):
         return f"lot{_alpha_to_num(raw)}"
     return None
+
+
+def _has_label_body(nom: str) -> bool:
+    """« Lot 06 — Plaquisterie » → True ; « Lot 06 » nu → False."""
+    body = re.sub(r'^lot\s*\d+[a-z]?\s*[—\-–:]?\s*', '', nom or '', flags=re.IGNORECASE).strip()
+    return len(body) >= 3
 
 
 def _best_label(nom_a: str, nom_b: str, prefer_a: bool = True) -> str:
@@ -615,6 +626,40 @@ def _detect_lots_from_rc_text(text: str, doc_type: str) -> List[LotDetection]:
         if lots:
             return list(lots.values())
 
+    # ── Strategy A2 : tableau aplati VERTICALEMENT (extraction PDF) ────────────
+    # Format réel (RC Gueux) : « LOT ⏎ INTITULE ⏎ 01 ⏎ Démolition… » — le
+    # numéro et l'intitulé sont sur des lignes séparées. On exige ≥ 3 paires
+    # consécutives (numéro seul → ligne texte) pour éviter les faux positifs.
+    pairs: List[tuple] = []
+    i = 0
+    while i < len(scan_lines) - 1:
+        m_num = _LOT_NUM_ALONE.match(scan_lines[i])
+        nxt = scan_lines[i + 1].strip()
+        if (m_num and nxt and not _LOT_NUM_ALONE.match(nxt)
+                and not nxt[0].isdigit() and len(nxt) >= 3):
+            pairs.append((m_num.group(1), nxt, i))
+            i += 2
+            continue
+        if pairs and len(pairs) >= 3:
+            break  # fin du bloc tableau
+        if pairs:
+            pairs = []  # séquence interrompue trop tôt
+        i += 1
+
+    if len(pairs) >= 3:
+        for raw_id, label, line_idx in pairs:
+            lot_id = _lot_id_from_raw(raw_id)
+            if not lot_id:
+                continue
+            label = re.sub(r'\s{2,}', ' ', label.strip())[:60].strip(' -–—')
+            description = _extract_description_excerpt(text, line_idx, scan_lines)
+            lots.setdefault(lot_id, LotDetection(
+                id=lot_id, nom=f"Lot {raw_id} — {label}", confidence=90,
+                sources=["rc_text"], description_long=description,
+            ))
+        if lots:
+            return list(lots.values())
+
     # ── Strategy B : inline "Lot N" / "Lot A" pattern ─────────────────────────
     block = "\n".join(scan_lines)
     for m in _LOT_LINE.finditer(block):
@@ -682,15 +727,26 @@ def _merge_detections(*source_lists: List[LotDetection]) -> List[LotDetection]:
                 )
             else:
                 existing = merged[det.id]
+                # Capturer AVANT la fusion des sources : sinon rc_text vient
+                # d'être ajouté et le nom Excel existant gagnerait à tort.
+                existing_is_rc = "rc_text" in existing.sources
+                new_is_rc = "rc_text" in det.sources
+
                 new_sources = [s for s in det.sources if s not in existing.sources]
                 for src in new_sources:
                     existing.sources.append(src)
                     existing.confidence = min(100, existing.confidence + 15)
 
-                # AMÉLIORATION 10: prefer the more descriptive name
-                # RC text (rc_text) is preferred over Excel when equal length
-                prefer_existing = "rc_text" in existing.sources
-                existing.nom = _best_label(existing.nom, det.nom, prefer_a=prefer_existing)
+                # Le RC est la SOURCE DE VÉRITÉ des noms : un libellé rc_text
+                # non générique prime toujours (conflit réel : Excel mal
+                # étiqueté vs liste officielle du RC). Sinon, le plus
+                # descriptif gagne (AMÉLIORATION 10).
+                if new_is_rc and not existing_is_rc and _has_label_body(det.nom):
+                    existing.nom = det.nom
+                elif existing_is_rc and not new_is_rc and _has_label_body(existing.nom):
+                    pass  # le nom RC existant est conservé
+                else:
+                    existing.nom = _best_label(existing.nom, det.nom, prefer_a=existing_is_rc)
 
                 # Pick the longest description excerpt across sources.
                 if len(det.description_long) > len(existing.description_long):

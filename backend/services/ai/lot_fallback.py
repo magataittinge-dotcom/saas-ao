@@ -125,14 +125,43 @@ def _call_claude(excerpts: str, detected: List[dict], announced: Optional[int]) 
     return parsed if isinstance(parsed, list) else []
 
 
-def drop_unlabeled(lots: List[dict]) -> List[dict]:
-    """Invariant de sortie : jamais de lot sans libellé (anomalie loggée)."""
+def drop_ghosts(lots: List[dict], announced: Optional[int]) -> List[dict]:
+    """Écarte les lots fantômes quand la liste nommée du RC est complète.
+
+    Si le RC fournit au moins `announced` lots (source rc_text), un lot dont
+    le numéro n'apparaît NI dans le RC NI via le filet IA vient d'un artefact
+    (classeur Excel mal étiqueté, titre de DPGF) — écarté et loggé.
+    Sans liste RC complète : aucun filtrage (jamais de sur-suppression)."""
+    if not announced:
+        return lots
+    rc_count = sum(1 for l in lots if "rc_text" in (l.get("sources") or []))
+    if rc_count < announced:
+        return lots
     out = []
     for lot in lots:
-        if not (lot.get("nom") or "").strip():
+        sources = lot.get("sources") or []
+        if "rc_text" in sources or "ia_fallback" in sources:
+            out.append(lot)
+            continue
+        logger.warning(
+            "Lot fantôme écarté (hors liste RC complète): id=%r nom=%r sources=%r",
+            lot.get("id"), lot.get("nom"), sources,
+        )
+    return out
+
+
+def drop_unlabeled(lots: List[dict]) -> List[dict]:
+    """Invariant de sortie : jamais de lot sans libellé EXPLOITABLE affiché.
+
+    « Lot 06 » nu (générique) = échec de labellisation : après rapprochement
+    RC + filet IA, un tel lot est écarté et loggé (spec C3/C4)."""
+    out = []
+    for lot in lots:
+        nom = (lot.get("nom") or "").strip()
+        if not nom or is_generic_label(nom):
             logger.warning(
-                "Lot sans libellé écarté de l'affichage (anomalie): id=%r sources=%r",
-                lot.get("id"), lot.get("sources"),
+                "Lot sans libellé écarté de l'affichage (anomalie): id=%r nom=%r sources=%r",
+                lot.get("id"), nom, lot.get("sources"),
             )
             continue
         out.append(lot)

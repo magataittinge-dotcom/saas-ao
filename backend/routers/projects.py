@@ -1750,7 +1750,9 @@ def _run_lot_detection_background(project_id: str, docs_data: list, uploads_root
         lots, ia_used = lot_fallback.run_fallback_if_needed(doc_texts, lots or [], announced)
         if ia_used:
             print(f"[LOTS] filet IA utilisé → {len(lots)} lots après fusion", flush=True)
-        # Invariant : jamais de lot sans libellé affiché.
+        # Invariants d'affichage : pas de fantôme hors liste RC complète,
+        # jamais de lot sans libellé exploitable.
+        lots = lot_fallback.drop_ghosts(lots, announced)
         lots = lot_fallback.drop_unlabeled(lots)
 
         # Save results
