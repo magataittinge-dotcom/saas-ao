@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     # Voyage AI (embeddings RAG — Phase 1). Optionnel tant que le RAG n'est
     # pas activé ; requis dès l'indexation/recherche vectorielle.
     VOYAGE_API_KEY: str = ""
+    # Lot 7 T3 — enrichissement réglementaire de la génération mémoire
+    # (retrieve top-3 injecté au prompt). Défaut FALSE : chemin inchangé.
+    RAG_ENRICHMENT: bool = False
 
     # AWS S3
     AWS_ACCESS_KEY_ID: str = ""

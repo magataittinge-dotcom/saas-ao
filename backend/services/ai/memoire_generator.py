@@ -240,6 +240,18 @@ def _load_methodology_reference(selected_lot_name: str | None) -> str:
     return "\n\n".join(parts)
 
 
+def _append_reglementaire(dynamic_block: str, reglementaire_block: str | None) -> str:
+    """Lot 7 T3 — bloc réglementaire (RAG_ENRICHMENT). None/vide → le prompt
+    est retourné STRICTEMENT inchangé (identique à l'octet, testé)."""
+    if not reglementaire_block:
+        return dynamic_block
+    return (
+        dynamic_block
+        + "\n\n━━━ RÉFÉRENCES RÉGLEMENTAIRES (Code de la commande publique) ━━━\n"
+        + reglementaire_block
+    )
+
+
 class MemoireGenerator:
     def __init__(self):
         self.client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
@@ -263,6 +275,7 @@ class MemoireGenerator:
         reference_template_text: str | None = None,  # text from imported mémoire
         project_id: str | None = None,
         profile_overrides: dict | None = None,  # C9a — overrides locaux du pre-flight
+        reglementaire_block: str | None = None,  # Lot 7 T3 — RAG_ENRICHMENT
     ) -> dict:
         """Generate a complete mémoire technique using Claude Opus.
 
@@ -440,6 +453,10 @@ class MemoireGenerator:
                 "Ne copie PAS le contenu — adapte uniquement le style.\n\n"
                 f"{reference_template_text[:10_000]}"
             )
+
+        # Lot 7 T3 — enrichissement réglementaire (flag RAG_ENRICHMENT).
+        # None (flag off / retrieve indisponible) → prompt inchangé À L'OCTET.
+        dynamic_block = _append_reglementaire(dynamic_block, reglementaire_block)
 
         # ── 8. Génération SÉQUENTIELLE, une partie par appel ──────────────────
         # Évite la troncature du monobloc (26 sous-sections > max tokens de

@@ -206,6 +206,14 @@ async def generate_memoire(
     pipeline_tracker.complete_step(project_id, "preparing")
     pipeline_tracker.start_step(project_id, "generating")
 
+    # Lot 7 T3 — enrichissement réglementaire, UNIQUEMENT si RAG_ENRICHMENT
+    # (env, défaut false). Flag off → chemin strictement inchangé (testé).
+    reglementaire_block = None
+    from config import get_settings as _gs
+    if _gs().RAG_ENRICHMENT:
+        from services.rag.enrichment import build_reglementaire_block
+        reglementaire_block = build_reglementaire_block(db, compliance_items)
+
     generator = MemoireGenerator()
     try:
         content = await generator.generate(
@@ -222,6 +230,7 @@ async def generate_memoire(
             reference_template_text=ref_template_text,
             project_id=project_id,
             profile_overrides=profile_overrides,
+            reglementaire_block=reglementaire_block,
         )
         pipeline_tracker.complete_step(project_id, "generating")
         pipeline_tracker.start_step(project_id, "finalizing")
