@@ -1,4 +1,6 @@
 import logging
+import re
+import time as _time_mod
 from datetime import datetime
 from pathlib import Path
 from fastapi import FastAPI, Request
@@ -501,6 +503,62 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 
 app.add_middleware(SecurityHeadersMiddleware)
+
+
+# ── Progression de RÉCEPTION des uploads DCE (fix gel UI à 30 %) ─────────────
+# FastAPI lit et spoole TOUT le multipart AVANT d'exécuter l'endpoint : sur un
+# gros ZIP, cette fenêtre (~10 s) était muette et la barre restait figée.
+# Ce middleware ASGI pur compte les octets réellement reçus et publie la
+# progression 0→30 (échelle du pipeline_tracker « uploading ») sur le bus SSE,
+# throttlée. Write-only : il ne lit rien, n'expose rien, ne bloque jamais
+# (l'auth de l'endpoint s'applique ensuite normalement).
+_DOC_UPLOAD_PATH_RE = re.compile(r"^/api/projects/([^/]+)/documents$")
+
+
+class UploadReceiveProgressMiddleware:
+    def __init__(self, app):  # pure ASGI (BaseHTTPMiddleware bufferise)
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or scope.get("method") != "POST":
+            return await self.app(scope, receive, send)
+        m = _DOC_UPLOAD_PATH_RE.match(scope.get("path", ""))
+        if not m:
+            return await self.app(scope, receive, send)
+
+        project_id = m.group(1)
+        headers = dict(scope.get("headers") or [])
+        try:
+            total = int(headers.get(b"content-length", b"0"))
+        except (TypeError, ValueError):
+            total = 0
+        if total <= 0:
+            return await self.app(scope, receive, send)
+
+        from services import progress_bus
+
+        received = 0
+        last_pub = 0.0
+
+        async def receive_with_progress():
+            nonlocal received, last_pub
+            message = await receive()
+            if message["type"] == "http.request":
+                received += len(message.get("body", b""))
+                now = _time_mod.monotonic()
+                if now - last_pub >= 0.4 or not message.get("more_body", False):
+                    last_pub = now
+                    progress_bus.publish(project_id, "progress", {
+                        "status": "uploading",
+                        "progress": round(min(received / total, 1.0) * 30, 1),
+                        "detail": f"{received / 1e6:.0f} / {total / 1e6:.0f} Mo reçus",
+                    })
+            return message
+
+        return await self.app(scope, receive_with_progress, send)
+
+
+app.add_middleware(UploadReceiveProgressMiddleware)
 
 # CORS — strict allowlist. The Vite dev server is only added in DEBUG.
 _cors_origins = [settings.FRONTEND_URL]

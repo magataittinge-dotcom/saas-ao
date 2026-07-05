@@ -139,8 +139,11 @@ export default function StepUpload({ project }: Props) {
   // ─── Backend extraction tracked via SSE on /progress-stream ──────────────
   // (replaces the legacy 2s polling on /processing-status). The SSE hook
   // handles reconnect + fallback automatically.
+  // SSE ouvert dès l'ENVOI : le middleware serveur publie la progression de
+  // réception réelle (0-30) pendant que FastAPI lit le multipart — c'était
+  // la fenêtre muette responsable du gel à 30 %.
   const sse = useProgressStream(project.id, {
-    enabled: phase === 'processing',
+    enabled: phase === 'uploading' || phase === 'processing',
     onComplete: () => {
       doneRef.current = true
       setDisplayPct(100)
@@ -160,13 +163,19 @@ export default function StepUpload({ project }: Props) {
     },
   })
 
-  // Map the SSE progress into the page's display state during processing.
+  // Map the SSE progress into the page's display state.
+  // Le tracker serveur émet DÉJÀ l'échelle globale 0-100 (transfert 0-30,
+  // extraction ZIP 30-40, indexation 40-100) : on l'affiche telle quelle —
+  // l'ancien re-mapping 30+p×0,65 faisait sauter la barre de 30 à 49,5.
   useEffect(() => {
-    if (phase !== 'processing' || doneRef.current) return
-    // Backend covers upload + extraction in 0-100. We map onto 30-95 so
-    // the overall bar continues from where axios-upload left off (0-30).
-    const realPct = 30 + (sse.progress / 100) * 65
-    setDisplayPct(prev => Math.max(prev, Math.min(realPct, 95)))
+    if ((phase !== 'processing' && phase !== 'uploading') || doneRef.current) return
+    // Pendant l'envoi, seuls les événements de réception (status uploading)
+    // sont pris : un snapshot init d'un pipeline PRÉCÉDENT (progress 100)
+    // ne doit pas faire sauter la barre.
+    if (phase === 'uploading' && sse.step !== 'uploading') return
+    // Cap 99 (pas 95) : les événements réels 96-99 de fin d'extraction
+    // s'affichent — l'ancien cap créait un palier artificiel à 95.
+    setDisplayPct(prev => Math.max(prev, Math.min(sse.progress, 99)))
     if (sse.detail) setSublabel(sse.detail)
     if (sse.step) setLabel(sse.step)
   }, [sse.progress, sse.detail, sse.step, phase])
@@ -176,7 +185,7 @@ export default function StepUpload({ project }: Props) {
     processingStartedRef.current = true
 
     setPhase('processing')
-    setDisplayPct(30)
+    setDisplayPct(prev => Math.max(prev, 30))
     setLabel("Extraction de l'archive...")
     setSublabel('')
 
@@ -250,7 +259,9 @@ export default function StepUpload({ project }: Props) {
               const filePct = total > 0 ? loaded / total : 0
               const overallPct = ((i + filePct) / acceptedFiles.length) * 100
               const mapped = Math.round(Math.min(overallPct, 100) * 0.3)
-              setDisplayPct(mapped)
+              // max : la réception serveur (SSE) peut être devant l'envoi
+              // axios throttlé — jamais de retour en arrière.
+              setDisplayPct(prev => Math.max(prev, mapped))
 
               const MB = 1024 * 1024
               const loadedMb = (loaded / MB).toFixed(1)

@@ -13,10 +13,13 @@ class DocumentProcessor:
         content: bytes,
         filename: str,
         max_pages: Optional[int] = None,
+        on_page=None,
     ) -> Tuple[str, Optional[int]]:
         """Return (extracted_text, page_count).
 
         max_pages: if set, only extract text from the first N pages (PDF only).
+        on_page: optional callback (pages_done, total_pages) — progression
+        RÉELLE intra-document pour les gros PDFs (barre d'upload).
         Always returns a string (never None) — empty string on failure.
         """
         lower = filename.lower()
@@ -26,16 +29,16 @@ class DocumentProcessor:
             return "", None
 
         try:
-            return self._do_extract(content, lower, max_pages)
+            return self._do_extract(content, lower, max_pages, on_page)
         except Exception as e:
             logger.warning(f"Extraction failed for {filename}: {e}")
             return "", None
 
     def _do_extract(
-        self, content: bytes, lower: str, max_pages: Optional[int]
+        self, content: bytes, lower: str, max_pages: Optional[int], on_page=None
     ) -> Tuple[str, Optional[int]]:
         if lower.endswith(".pdf"):
-            return self._extract_pdf(content, max_pages)
+            return self._extract_pdf(content, max_pages, on_page)
         elif lower.endswith(".docx"):
             return self._extract_docx(content)
         elif lower.endswith((".xlsx", ".xls", ".ods")):
@@ -45,18 +48,23 @@ class DocumentProcessor:
         return "", None
 
     def _extract_pdf(
-        self, content: bytes, max_pages: Optional[int] = None
+        self, content: bytes, max_pages: Optional[int] = None, on_page=None
     ) -> Tuple[str, Optional[int]]:
         import fitz  # PyMuPDF — 5-10x faster than PyPDF2
 
         doc = fitz.open(stream=content, filetype="pdf")
         total_pages = len(doc)
-        limit = max_pages if max_pages else total_pages
+        limit = min(max_pages if max_pages else total_pages, total_pages)
         texts = []
-        for i in range(min(limit, total_pages)):
+        for i in range(limit):
             text = doc[i].get_text()
             if text:
                 texts.append(text)
+            if on_page is not None:
+                try:
+                    on_page(i + 1, limit)
+                except Exception:
+                    pass  # la progression ne casse jamais l'extraction
         doc.close()
         return "\n\n".join(texts), total_pages
 

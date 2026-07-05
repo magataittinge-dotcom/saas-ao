@@ -833,6 +833,24 @@ def _extract_all_parallel(project_id: str, docs_info: list) -> None:
     completed_count = [skipped]
     count_lock = threading.Lock()
 
+    # Progression intra-document (fix palier de fin à ~95 %) : les gros PDFs
+    # du pool tickent PAR PAGE — fractions réelles agrégées, throttlées.
+    page_fractions: dict = {}
+    _last_partial_pub = [0.0]
+
+    def _publish_partial() -> None:
+        now = _time.monotonic()
+        if now - _last_partial_pub[0] < 0.3:
+            return
+        _last_partial_pub[0] = now
+        with count_lock:
+            done = completed_count[0] + sum(page_fractions.values())
+        try:
+            from services import pipeline_tracker as _pt
+            _pt.update_step_progress(project_id, max(0.0, min(done / max(total_all, 1), 0.99)))
+        except Exception:
+            pass
+
     def _update_progress(done: int) -> None:
         try:
             db_p = SessionLocal()
@@ -872,7 +890,14 @@ def _extract_all_parallel(project_id: str, docs_info: list) -> None:
                 if not file_path.exists():
                     return
                 content = file_path.read_bytes()
-                result_text, result_pages = processor.extract(content, filename)
+                def _on_page(done_pages: int, total_pages: int) -> None:
+                    # Pas de lock ici : écriture d'une clé propre au thread,
+                    # et _publish_partial prend count_lock lui-même.
+                    page_fractions[doc_id] = done_pages / max(total_pages, 1)
+                    _publish_partial()
+
+                result_text, result_pages = processor.extract(
+                    content, filename, on_page=_on_page)
                 if result_text:
                     extracted_text = result_text.replace("\x00", "")
                 page_count = result_pages
@@ -898,6 +923,7 @@ def _extract_all_parallel(project_id: str, docs_info: list) -> None:
         with count_lock:
             completed_count[0] += 1
             done = completed_count[0]
+            page_fractions.pop(doc_id, None)  # le fichier compte désormais entier
         _update_progress(done)
 
     def _mark_ready() -> None:
