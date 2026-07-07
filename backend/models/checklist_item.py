@@ -45,6 +45,8 @@ class ChecklistItem(Base):
     # C13b — position de l'exigence dans le RC (ordre de l'analyse) :
     # la numérotation des pièces du ZIP d'export suit cet ordre.
     rc_position = Column(Integer, nullable=True)
+    # Pièce commune (NULL) ou spécifique d'un lot ('lotN') — multi-lots
+    lot = Column(Text, nullable=True)
 
     # Relationships
     project = relationship("Project", back_populates="checklist_items")

@@ -530,35 +530,19 @@ def _finalize_analysis(
     project.processing_detail = " · ".join(warnings_ui)
     db.commit()
 
-    # Generate checklist from candidature/offre requirements (best-effort)
-    checklist_reqs = [r for r in requirements if r.get("category") in ("candidature", "offre")]
-    if checklist_reqs:
-        pipeline_tracker.update_step_progress(
-            project_id, 0.8, detail="Génération de la checklist de candidature…")
-        try:
-            vault_docs = db.query(Document).filter(Document.organization_id == org_id).all()
-            matcher = ChecklistMatcher()
-            checklist = asyncio.run(matcher.match(checklist_reqs, vault_docs, project_id=project_id, db=db))
-
-            db.query(ChecklistItem).filter(ChecklistItem.project_id == project_id).delete()
-            for idx, item_data in enumerate(checklist):
-                db.add(ChecklistItem(
-                    project_id=project_id,
-                    document_type_required=item_data.get("document_type_required", ""),
-                    source_kind=item_data.get("source_kind", "vault"),
-                    linked_document_id=item_data.get("linked_document_id"),
-                    template_project_doc_id=item_data.get("template_project_doc_id"),
-                    completed_project_doc_id=item_data.get("completed_project_doc_id"),
-                    status=item_data.get("status", "manquant"),
-                    details=item_data.get("details"),
-                    source_in_rc=item_data.get("source_in_rc"),
-                    # C13b — ordre du RC (ordre des exigences de l'analyse)
-                    rc_position=idx,
-                ))
-            db.commit()
-        except Exception as e:
-            logger.warning(f"Checklist generation failed (non-blocking): {e}", exc_info=True)
-            db.rollback()
+    # Checklist de Vérification — générée depuis la BASE (scopes multi-lots
+    # agrégés, dédupliqués) ; échec loggé ET visible, plus jamais silencieux.
+    pipeline_tracker.update_step_progress(
+        project_id, 0.8, detail="Génération de la checklist de candidature…")
+    try:
+        from services.checklist_builder import generate_checklist_from_db
+        n_checklist = generate_checklist_from_db(db, project_id, org_id)
+        if n_checklist == 0:
+            logger.warning("Checklist vide après analyse %s", project_id)
+    except Exception as e:
+        logger.error(f"Génération checklist échouée (réparable via "
+                     f"/checklist/regenerate): {e}", exc_info=True)
+        db.rollback()
 
     pipeline_tracker.complete_pipeline(project_id)
     logger.info(

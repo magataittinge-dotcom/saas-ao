@@ -36,6 +36,7 @@ class ChecklistItemResponse(BaseModel):
     details: Optional[str]
     source_in_rc: Optional[str]
     signature_confirmed: bool = False
+    lot: Optional[str] = None   # NULL = pièce commune ; 'lotN' = pièce du lot
 
     model_config = {"from_attributes": True}
 

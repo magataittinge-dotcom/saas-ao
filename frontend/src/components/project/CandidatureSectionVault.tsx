@@ -120,6 +120,12 @@ function VaultRow({ item, onPick }: { item: ChecklistItem; onPick: () => void })
         </p>
         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
           <span className="text-[11px]" style={{ color }}>{label}</span>
+          {item.lot && (
+            <span className="text-[11px] px-1.5 rounded-full"
+              style={{ background: 'rgba(14,165,233,0.08)', color: '#0284C7' }}>
+              {item.lot.replace(/^lot/i, 'Lot ')}
+            </span>
+          )}
           {isLinked && (
             <span className="text-[11px] flex items-center gap-1" style={{ color: '#64748B' }}>
               <FileText size={11} />

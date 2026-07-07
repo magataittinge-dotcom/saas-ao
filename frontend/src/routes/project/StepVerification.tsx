@@ -89,12 +89,23 @@ export default function StepVerification({ project }: Props) {
 
   if (items.length === 0) return (
     <div
-      className="bg-white rounded-lg p-12 text-center"
+      className="bg-white rounded-lg p-12 text-center space-y-4"
       style={{ border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', fontFamily: F }}
     >
       <p className="text-sm" style={{ color: '#94A3B8' }}>
-        Aucun document requis détecté dans le DCE
+        La checklist des pièces n'a pas encore été générée pour ce projet.
       </p>
+      {/* Régénération gratuite (matching déterministe) depuis les exigences
+          déjà analysées — répare aussi les projets d'avant le multi-lots. */}
+      <button
+        onClick={async () => {
+          await api.post(`/projects/${project.id}/checklist/regenerate`)
+          queryClient.invalidateQueries({ queryKey: ['checklist', project.id] })
+        }}
+        className="btn-primary py-2 px-5 text-sm"
+      >
+        Générer la checklist des pièces
+      </button>
     </div>
   )
 

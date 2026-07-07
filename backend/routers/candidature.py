@@ -39,6 +39,21 @@ router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
 
+@router.post("/{project_id}/checklist/regenerate")
+def regenerate_checklist(
+    project_id: str,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """(Re)génère la checklist depuis les exigences en base — déterministe,
+    0 € API. Rétro-compatible : répare les projets analysés avant le
+    multi-lots ou dont la génération de fin d'analyse a échoué."""
+    _get_project_or_404(project_id, user.organization_id, db)
+    from services.checklist_builder import generate_checklist_from_db
+    n = generate_checklist_from_db(db, project_id, user.organization_id)
+    return {"items": n}
+
+
 @router.get("/{project_id}/checklist/score")
 def get_checklist_score(
     project_id: str,

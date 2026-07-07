@@ -251,6 +251,7 @@ export interface ChecklistItem {
   details?: string
   source_in_rc?: string
   signature_confirmed?: boolean
+  lot?: string | null
 }
 
 // ─── Mémoire Technique ────────────────────────────────────────────────────────
