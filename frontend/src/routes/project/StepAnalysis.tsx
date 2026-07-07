@@ -544,13 +544,14 @@ export default function StepAnalysis({ project }: Props) {
           Aucune exigence trouvée
         </p>
       ) : (
-        <div className={activeFilter === 'all' ? 'grid grid-cols-1 lg:grid-cols-2 gap-5' : 'space-y-5'}>
-          {Object.entries(grouped).map(([cat, catItems]) => (
-            <ExigenceColumn
+        <div className="space-y-3">
+          {Object.entries(grouped).map(([cat, catItems], sectionIdx) => (
+            <ExigenceSection
               key={cat}
               category={cat as ComplianceCategory}
               items={catItems}
               onOpenSource={openSourceDocument}
+              defaultOpen={sectionIdx === 0 || activeFilter !== 'all' || search.trim().length > 0}
             />
           ))}
         </div>
@@ -583,88 +584,101 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
 
 // ─── Exigence Column ─────────────────────────────────────────────────────────
 
-function ExigenceColumn({
+function ExigenceSection({
   category,
   items,
   onOpenSource,
+  defaultOpen = false,
 }: {
   category: ComplianceCategory
   items: ComplianceItem[]
   onOpenSource: (item: ComplianceItem) => void
+  defaultOpen?: boolean
 }) {
+  // Section REPLIABLE : avec 400+ exigences, tout-ouvert rend la page
+  // interminable. Lignes denses : texte pleine largeur, source + badge
+  // sur la même ligne (wrap en mobile), extrait tronqué retiré (le
+  // passage complet vit dans le viewer au clic).
+  const [open, setOpen] = useState(defaultOpen)
+
   return (
     <div
-      className="bg-white rounded-xl p-5"
+      className="bg-white rounded-xl"
       style={{ border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
     >
-      <div className="flex items-center justify-between mb-3">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-5 py-3.5 text-left"
+      >
         <h3 className="text-base font-bold" style={{ color: '#0F172A', fontFamily: F }}>
-          {CATEGORY_LABELS[category]} ({items.length})
+          {CATEGORY_LABELS[category]}{' '}
+          <span className="font-medium text-sm" style={{ color: '#94A3B8' }}>({items.length})</span>
         </h3>
-        <span className="text-xs font-medium" style={{ color: '#0EA5E9' }}>
-          Voir tout
+        <span
+          className="text-xs font-medium transition-transform"
+          style={{ color: '#0EA5E9', transform: open ? 'rotate(180deg)' : undefined }}
+        >
+          ▾
         </span>
-      </div>
+      </button>
 
-      <div>
-        {items.map((item, idx) => (
-          <div
-            key={item.id}
-            className="flex items-start gap-3 py-3"
-            style={idx < items.length - 1 ? { borderBottom: '1px solid #F8FAFC' } : undefined}
-          >
-            <span className="w-1.5 h-1.5 rounded-full shrink-0 mt-2" style={{ background: '#0EA5E9' }} />
+      {open && (
+        <div className="px-5 pb-3">
+          {items.map((item, idx) => (
+            <div
+              key={item.id}
+              className="flex items-start gap-2.5 py-2 flex-wrap sm:flex-nowrap"
+              style={idx < items.length - 1 ? { borderBottom: '1px solid #F8FAFC' } : undefined}
+            >
+              <span
+                className="shrink-0 mt-0.5 text-[11px] tabular-nums w-7 text-right"
+                style={{ color: '#CBD5E1', fontFamily: '"JetBrains Mono", monospace' }}
+              >
+                {idx + 1}
+              </span>
 
-            <div className="flex-1 min-w-0">
-              <p className="text-sm leading-relaxed" style={{ color: '#334155' }}>
+              <p className="flex-1 min-w-[240px] text-sm leading-snug" style={{ color: '#334155' }}>
                 {item.exigence_text}
+                {item.suggestion_ia && (
+                  <span className="block text-xs mt-0.5 italic" style={{ color: '#0284C7' }}>
+                    💡 {item.suggestion_ia}
+                  </span>
+                )}
               </p>
-              {item.source_excerpt && (
-                <p className="text-xs mt-0.5 italic truncate" style={{ color: '#94A3B8' }}>
-                  «{item.source_excerpt}»
-                </p>
-              )}
-              {item.suggestion_ia && (
-                <p className="text-xs mt-0.5 italic" style={{ color: '#0284C7' }}>
-                  💡 {item.suggestion_ia}
-                </p>
-              )}
-            </div>
 
-            <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
-              {/* Affordance source : uniquement si l'ancre est VALIDE
-                  (excerpt verbatim vérifié) — jamais de viewer qui ment. */}
-              {item.source_document && item.source_excerpt && (
-                <button
-                  onClick={() => onOpenSource(item)}
-                  className="flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium transition-opacity hover:opacity-70 hover:underline"
-                  style={{ background: '#F0F9FF', color: '#0284C7' }}
-                  title={`Ouvrir le document à la page, passage surligné`}
-                >
-                  <FileText size={11} />
-                  Voir dans {item.source_document}
-                  {item.source_page ? ` p.${item.source_page}` : ''}
-                </button>
-              )}
-              {item.priority === 'obligatoire' ? (
-                <span
-                  className="px-2 py-0.5 rounded-md text-xs font-medium"
-                  style={{ background: '#FEF2F2', color: '#EF4444' }}
-                >
-                  Obligatoire
-                </span>
-              ) : (
-                <span
-                  className="px-2 py-0.5 rounded-md text-xs font-medium"
-                  style={{ background: 'rgba(100,116,139,0.08)', color: '#475569' }}
-                >
-                  Souhaitée
-                </span>
-              )}
+              <div className="flex items-center gap-1.5 shrink-0 ml-auto">
+                {item.source_document && item.source_excerpt && (
+                  <button
+                    onClick={() => onOpenSource(item)}
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium transition-opacity hover:opacity-70 hover:underline whitespace-nowrap"
+                    style={{ background: '#F0F9FF', color: '#0284C7' }}
+                    title={`Voir dans ${item.source_document} — passage surligné`}
+                  >
+                    <FileText size={11} />
+                    {item.source_document}
+                    {item.source_page ? ` p.${item.source_page}` : ''}
+                  </button>
+                )}
+                {item.priority === 'obligatoire' ? (
+                  <span
+                    className="px-2 py-0.5 rounded-md text-xs font-medium whitespace-nowrap"
+                    style={{ background: '#FEF2F2', color: '#EF4444' }}
+                  >
+                    Obligatoire
+                  </span>
+                ) : (
+                  <span
+                    className="px-2 py-0.5 rounded-md text-xs font-medium whitespace-nowrap"
+                    style={{ background: 'rgba(100,116,139,0.08)', color: '#475569' }}
+                  >
+                    Souhaitée
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
