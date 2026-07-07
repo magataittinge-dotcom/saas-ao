@@ -37,6 +37,7 @@ class ChecklistItemResponse(BaseModel):
     source_in_rc: Optional[str]
     signature_confirmed: bool = False
     lot: Optional[str] = None   # NULL = pièce commune ; 'lotN' = pièce du lot
+    document_group: str = "fournir"  # fournir | completer | synorix | workflow
 
     model_config = {"from_attributes": True}
 

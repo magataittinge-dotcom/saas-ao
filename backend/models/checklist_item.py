@@ -47,6 +47,10 @@ class ChecklistItem(Base):
     rc_position = Column(Integer, nullable=True)
     # Pièce commune (NULL) ou spécifique d'un lot ('lotN') — multi-lots
     lot = Column(Text, nullable=True)
+    # Typologie métier (4 groupes) : 'fournir' (coffre) | 'completer' (formulaire
+    # à signer) | 'synorix' (produit par Synorix, jalon) | 'workflow' (DPGF/BPU).
+    # Le score de conformité ne compte que 'fournir' + 'completer'.
+    document_group = Column(String(20), nullable=False, default="fournir", server_default="fournir")
 
     # Relationships
     project = relationship("Project", back_populates="checklist_items")

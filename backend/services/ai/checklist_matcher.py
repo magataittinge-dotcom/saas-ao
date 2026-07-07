@@ -97,9 +97,20 @@ def _is_conforme(item) -> bool:
     return True
 
 
+# Le score ne compte QUE les pièces dont l'entreprise est responsable :
+# 'fournir' (coffre) + 'completer' (formulaires à signer). Les jalons produits
+# par Synorix ('synorix') et les pièces à workflow dédié ('workflow', DPGF/BPU)
+# sont hors score.
+_SCORED_GROUPS = {"fournir", "completer"}
+
+
 def conformity_score(items) -> dict:
     """Score de conformité « X/Y pièces conformes » de la checklist."""
-    considered = [i for i in items if i.status != "non_applicable"]
+    considered = [
+        i for i in items
+        if i.status != "non_applicable"
+        and getattr(i, "document_group", "fournir") in _SCORED_GROUPS
+    ]
     conformes = sum(1 for i in considered if _is_conforme(i))
     return {"conformes": conformes, "total": len(considered)}
 

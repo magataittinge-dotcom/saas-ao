@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { Loader2, Lock, AlertTriangle } from 'lucide-react'
+import { Loader2, Lock, AlertTriangle, FileSpreadsheet, ArrowRight, Sparkles } from 'lucide-react'
 import { api } from '@/services/api'
 import { useCompleteStep } from '@/hooks/useProject'
 import CandidatureSectionVault from '@/components/project/CandidatureSectionVault'
@@ -41,19 +41,27 @@ export default function StepVerification({ project }: Props) {
 
   const [pickerItem, setPickerItem] = useState<ChecklistItem | null>(null)
 
-  const { vaultItems, templateItems } = useMemo(() => {
-    const vault: ChecklistItem[] = []
-    const tpl: ChecklistItem[] = []
-    for (const item of items) {
-      if (item.source_kind === 'dce_template') tpl.push(item)
-      else vault.push(item)
+  // Typologie 4 groupes (document_group) : à fournir / à compléter / produit
+  // par Synorix / workflow dédié. Le score ne compte que fournir + completer.
+  const groups = useMemo(() => {
+    const g: Record<'fournir' | 'completer' | 'synorix' | 'workflow', ChecklistItem[]> = {
+      fournir: [], completer: [], synorix: [], workflow: [],
     }
-    return { vaultItems: vault, templateItems: tpl }
+    for (const item of items) {
+      const key = (item.document_group as keyof typeof g) in g ? (item.document_group as keyof typeof g) : 'fournir'
+      g[key].push(item)
+    }
+    return g
   }, [items])
 
-  const present = items.filter((i) => i.status === 'present').length
-  const missing = items.filter((i) => i.status === 'manquant').length
-  const total = items.length
+  const vaultItems = groups.fournir
+  const templateItems = groups.completer
+
+  // Complétion = pièces sous responsabilité de l'entreprise (fournir + completer).
+  const scored = [...vaultItems, ...templateItems]
+  const present = scored.filter((i) => i.status === 'present').length
+  const missing = scored.filter((i) => i.status === 'manquant').length
+  const total = scored.length
   const pct = total > 0 ? Math.round((present / total) * 100) : 0
 
   // ── Mutations ───────────────────────────────────────────────────
@@ -243,6 +251,13 @@ export default function StepVerification({ project }: Props) {
         }}
       />
 
+      <WorkflowSection
+        items={groups.workflow}
+        onOpen={() => navigate(`/projects/${project.id}/export`)}
+      />
+
+      <SynorixJalonSection items={groups.synorix} />
+
       {pickerItem && (
         <VaultPickerModal
           item={pickerItem}
@@ -253,6 +268,93 @@ export default function StepVerification({ project }: Props) {
 
       {createPortal(bottomBar, document.body)}
     </div>
+  )
+}
+
+// ── Workflow dédié (DPGF/BPU) — download → remplir → re-upload (C12) ──────────
+function WorkflowSection({ items, onOpen }: { items: ChecklistItem[]; onOpen: () => void }) {
+  if (items.length === 0) return null
+  return (
+    <section
+      className="bg-white rounded-lg overflow-hidden"
+      style={{ border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', fontFamily: F }}
+    >
+      <header className="flex items-center justify-between px-6 py-4 gap-3" style={{ borderBottom: '1px solid #F1F5F9' }}>
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: '#FEF3C7' }}>
+            <FileSpreadsheet size={18} style={{ color: '#D97706' }} />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-base font-bold" style={{ color: '#0F172A' }}>Bordereaux de prix (DPGF / BPU)</h2>
+            <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
+              À télécharger, remplir puis ré-importer — géré à l&apos;étape Export.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onOpen}
+          className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-amber-50"
+          style={{ border: '1px solid #D97706', color: '#B45309' }}
+        >
+          Ouvrir le remplissage
+          <ArrowRight size={14} />
+        </button>
+      </header>
+      <ul>
+        {items.map((i) => (
+          <li key={i.id} className="flex items-center gap-3 px-6 py-3" style={{ borderTop: '1px solid #F8FAFC' }}>
+            <FileSpreadsheet size={15} style={{ color: '#D97706' }} className="shrink-0" />
+            <span className="text-sm flex-1 min-w-0" style={{ color: '#334155' }}>{i.details}</span>
+            {i.lot && (
+              <span className="text-[11px] px-1.5 rounded-full shrink-0" style={{ background: 'rgba(14,165,233,0.08)', color: '#0284C7' }}>
+                {i.lot.replace(/^lot/i, 'Lot ')}
+              </span>
+            )}
+            <span className="text-xs shrink-0" style={{ color: i.status === 'present' ? '#16A34A' : '#94A3B8' }}>
+              {i.status === 'present' ? 'Rempli' : 'À remplir'}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+// ── Produit par Synorix (mémoire technique) — jalon informatif, jamais upload ─
+function SynorixJalonSection({ items }: { items: ChecklistItem[] }) {
+  if (items.length === 0) return null
+  return (
+    <section
+      className="bg-white rounded-lg overflow-hidden"
+      style={{ border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', fontFamily: F }}
+    >
+      <header className="flex items-center gap-3 px-6 py-4" style={{ borderBottom: '1px solid #F1F5F9' }}>
+        <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: '#F0F9FF' }}>
+          <Sparkles size={18} style={{ color: '#0EA5E9' }} />
+        </div>
+        <div className="min-w-0">
+          <h2 className="text-base font-bold" style={{ color: '#0F172A' }}>Généré par Synorix</h2>
+          <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
+            Produit automatiquement à l&apos;étape suivante — aucune pièce à fournir ici.
+          </p>
+        </div>
+      </header>
+      <ul>
+        {items.map((i) => (
+          <li key={i.id} className="flex items-center gap-3 px-6 py-3" style={{ borderTop: '1px solid #F8FAFC' }}>
+            <Sparkles size={15} style={{ color: '#0EA5E9' }} className="shrink-0" />
+            <span className="text-sm flex-1 min-w-0" style={{ color: '#334155' }}>{i.details}</span>
+            {i.lot && (
+              <span className="text-[11px] px-1.5 rounded-full shrink-0" style={{ background: 'rgba(14,165,233,0.08)', color: '#0284C7' }}>
+                {i.lot.replace(/^lot/i, 'Lot ')}
+              </span>
+            )}
+            <span className="text-xs shrink-0" style={{ color: '#94A3B8' }}>Étape Mémoire</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 

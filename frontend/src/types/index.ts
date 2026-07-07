@@ -252,6 +252,7 @@ export interface ChecklistItem {
   source_in_rc?: string
   signature_confirmed?: boolean
   lot?: string | null
+  document_group?: 'fournir' | 'completer' | 'synorix' | 'workflow'
 }
 
 // ─── Mémoire Technique ────────────────────────────────────────────────────────
