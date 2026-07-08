@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
-import { Loader2, Lock, AlertTriangle, FileSpreadsheet, ArrowRight, Sparkles } from 'lucide-react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { Loader2, Lock, AlertTriangle, FileSpreadsheet, Download, Upload, Sparkles } from 'lucide-react'
 import { api } from '@/services/api'
 import { useCompleteStep } from '@/hooks/useProject'
 import CandidatureSectionVault from '@/components/project/CandidatureSectionVault'
@@ -17,7 +17,11 @@ interface Props { project: Project }
 
 export default function StepVerification({ project }: Props) {
   const navigate = useNavigate()
+  const location = useLocation()
   const queryClient = useQueryClient()
+  // Ouvre le coffre-fort en conservant le chemin de retour vers CETTE étape.
+  const openVaultPage = () =>
+    navigate(`/vault?returnTo=${encodeURIComponent(location.pathname)}`)
   const completeStep = useCompleteStep(project.id)
   const isAlreadyDone = project.completed_steps?.['4'] === true
 
@@ -65,7 +69,11 @@ export default function StepVerification({ project }: Props) {
   const pct = total > 0 ? Math.round((present / total) * 100) : 0
 
   // ── Mutations ───────────────────────────────────────────────────
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['checklist', project.id] })
+  // Rafraîchit la liste ET recalcule le score, sans quitter l'étape.
+  const refresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['checklist', project.id] })
+    queryClient.invalidateQueries({ queryKey: ['checklist-score', project.id] })
+  }
 
   const handleUploadCompleted = async (item: ChecklistItem, file: File) => {
     const form = new FormData()
@@ -84,6 +92,46 @@ export default function StepVerification({ project }: Props) {
       `/projects/${project.id}/checklist/${pickerItem.id}/link`,
       { document_id: doc.id },
     )
+    await refresh()
+  }
+
+  // « Choisir » → téléverser un NOUVEAU fichier pour cette pièce : on l'ajoute
+  // au coffre-fort (avec le type de la pièce) puis on le rattache à l'exigence.
+  const handleUploadNewVaultDoc = async (file: File) => {
+    if (!pickerItem) return
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('type', pickerItem.document_type_required || 'autre')
+    const { data: doc } = await api.post<Document>('/documents', fd)
+    await api.put(
+      `/projects/${project.id}/checklist/${pickerItem.id}/link`,
+      { document_id: doc.id },
+    )
+    await refresh()
+  }
+
+  // ── Workflow DPGF/BPU (C12) — SUR la pièce, pas de saut vers Export ──
+  const DPGF_FILENAME: Record<string, string> = {
+    dpgf_template: 'DPGF.xlsx', bpu_template: 'BPU.xlsx', dqe_template: 'DQE.xlsx',
+  }
+  const handleDownloadTemplate = async (item: ChecklistItem) => {
+    if (!item.template_project_doc_id) return
+    const res = await api.get(
+      `/projects/${project.id}/documents/${item.template_project_doc_id}/download`,
+      { responseType: 'blob' },
+    )
+    const url = window.URL.createObjectURL(new Blob([res.data]))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = DPGF_FILENAME[item.document_type_required] || 'bordereau.xlsx'
+    a.click()
+    window.URL.revokeObjectURL(url)
+  }
+  // Ré-import de la version remplie → contrôle formel dpgf_checker → ✓/⚠️.
+  const handleUploadDpgf = async (item: ChecklistItem, file: File) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    await api.post(`/projects/${project.id}/checklist/${item.id}/upload-completed`, fd)
     await refresh()
   }
 
@@ -186,7 +234,7 @@ export default function StepVerification({ project }: Props) {
         </h1>
         <button
           type="button"
-          onClick={() => navigate('/vault')}
+          onClick={openVaultPage}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-sky-50"
           style={{ border: '1px solid #0EA5E9', color: '#0EA5E9' }}
         >
@@ -235,7 +283,7 @@ export default function StepVerification({ project }: Props) {
       <CandidatureSectionVault
         items={vaultItems}
         onPickFromVault={(item) => setPickerItem(item)}
-        onOpenVault={() => navigate('/vault')}
+        onOpenVault={openVaultPage}
       />
 
       <CandidatureSectionTemplates
@@ -253,7 +301,8 @@ export default function StepVerification({ project }: Props) {
 
       <WorkflowSection
         items={groups.workflow}
-        onOpen={() => navigate(`/projects/${project.id}/export`)}
+        onDownload={handleDownloadTemplate}
+        onUpload={handleUploadDpgf}
       />
 
       <SynorixJalonSection items={groups.synorix} />
@@ -263,6 +312,7 @@ export default function StepVerification({ project }: Props) {
           item={pickerItem}
           onClose={() => setPickerItem(null)}
           onLink={handleLinkVaultDoc}
+          onUploadNew={handleUploadNewVaultDoc}
         />
       )}
 
@@ -271,53 +321,107 @@ export default function StepVerification({ project }: Props) {
   )
 }
 
-// ── Workflow dédié (DPGF/BPU) — download → remplir → re-upload (C12) ──────────
-function WorkflowSection({ items, onOpen }: { items: ChecklistItem[]; onOpen: () => void }) {
+// ── Workflow dédié (DPGF/BPU) — download → remplir → re-import SUR la pièce ────
+// C12 : télécharger la trame du DCE, remplir hors ligne, ré-importer → contrôle
+// formel dpgf_checker → ✓/⚠️. Tout se passe ICI, aucun saut vers Export.
+function WorkflowSection({
+  items, onDownload, onUpload,
+}: {
+  items: ChecklistItem[]
+  onDownload: (item: ChecklistItem) => Promise<void>
+  onUpload: (item: ChecklistItem, file: File) => Promise<void>
+}) {
   if (items.length === 0) return null
   return (
     <section
       className="bg-white rounded-lg overflow-hidden"
       style={{ border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', fontFamily: F }}
     >
-      <header className="flex items-center justify-between px-6 py-4 gap-3" style={{ borderBottom: '1px solid #F1F5F9' }}>
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: '#FEF3C7' }}>
-            <FileSpreadsheet size={18} style={{ color: '#D97706' }} />
-          </div>
-          <div className="min-w-0">
-            <h2 className="text-base font-bold" style={{ color: '#0F172A' }}>Bordereaux de prix (DPGF / BPU)</h2>
-            <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
-              À télécharger, remplir puis ré-importer — géré à l&apos;étape Export.
-            </p>
-          </div>
+      <header className="flex items-center gap-3 px-6 py-4" style={{ borderBottom: '1px solid #F1F5F9' }}>
+        <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: '#FEF3C7' }}>
+          <FileSpreadsheet size={18} style={{ color: '#D97706' }} />
         </div>
-        <button
-          type="button"
-          onClick={onOpen}
-          className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-amber-50"
-          style={{ border: '1px solid #D97706', color: '#B45309' }}
-        >
-          Ouvrir le remplissage
-          <ArrowRight size={14} />
-        </button>
+        <div className="min-w-0">
+          <h2 className="text-base font-bold" style={{ color: '#0F172A' }}>Bordereaux de prix (DPGF / BPU)</h2>
+          <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
+            Téléchargez la trame, remplissez-la puis ré-importez-la — contrôle automatique des lignes.
+          </p>
+        </div>
       </header>
       <ul>
         {items.map((i) => (
-          <li key={i.id} className="flex items-center gap-3 px-6 py-3" style={{ borderTop: '1px solid #F8FAFC' }}>
-            <FileSpreadsheet size={15} style={{ color: '#D97706' }} className="shrink-0" />
-            <span className="text-sm flex-1 min-w-0" style={{ color: '#334155' }}>{i.details}</span>
-            {i.lot && (
-              <span className="text-[11px] px-1.5 rounded-full shrink-0" style={{ background: 'rgba(14,165,233,0.08)', color: '#0284C7' }}>
-                {i.lot.replace(/^lot/i, 'Lot ')}
-              </span>
-            )}
-            <span className="text-xs shrink-0" style={{ color: i.status === 'present' ? '#16A34A' : '#94A3B8' }}>
-              {i.status === 'present' ? 'Rempli' : 'À remplir'}
-            </span>
-          </li>
+          <WorkflowRow key={i.id} item={i} onDownload={onDownload} onUpload={onUpload} />
         ))}
       </ul>
     </section>
+  )
+}
+
+function WorkflowRow({
+  item, onDownload, onUpload,
+}: {
+  item: ChecklistItem
+  onDownload: (item: ChecklistItem) => Promise<void>
+  onUpload: (item: ChecklistItem, file: File) => Promise<void>
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [busy, setBusy] = useState<'dl' | 'up' | null>(null)
+  const done = item.status === 'present'
+  const warn = item.status === 'warning'
+
+  const run = async (kind: 'dl' | 'up', fn: () => Promise<void>) => {
+    setBusy(kind)
+    try { await fn() } finally { setBusy(null) }
+  }
+
+  return (
+    <li className="flex items-center gap-3 px-6 py-3 flex-wrap" style={{ borderTop: '1px solid #F8FAFC' }}>
+      <FileSpreadsheet size={15} style={{ color: '#D97706' }} className="shrink-0" />
+      <div className="flex-1 min-w-[200px]">
+        <p className="text-sm" style={{ color: '#334155' }}>{item.details}</p>
+        <span className="text-xs" style={{ color: done ? '#16A34A' : warn ? '#B45309' : '#94A3B8' }}>
+          {done ? '✓ Rempli et vérifié' : warn ? '⚠️ À corriger (lignes sans prix)' : 'À remplir'}
+        </span>
+      </div>
+      {item.lot && (
+        <span className="text-[11px] px-1.5 rounded-full shrink-0" style={{ background: 'rgba(14,165,233,0.08)', color: '#0284C7' }}>
+          {item.lot.replace(/^lot/i, 'Lot ')}
+        </span>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".xlsx,.xls,.xlsm,.ods,.pdf"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0]
+          if (f) run('up', () => onUpload(item, f))
+          e.target.value = ''
+        }}
+      />
+      {item.template_project_doc_id && (
+        <button
+          type="button"
+          disabled={busy !== null}
+          onClick={() => run('dl', () => onDownload(item))}
+          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-amber-50 disabled:opacity-60"
+          style={{ border: '1px solid #E2E8F0', color: '#64748B' }}
+        >
+          {busy === 'dl' ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+          Télécharger la trame
+        </button>
+      )}
+      <button
+        type="button"
+        disabled={busy !== null}
+        onClick={() => inputRef.current?.click()}
+        className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+        style={{ background: '#D97706' }}
+      >
+        {busy === 'up' ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
+        {done || warn ? 'Remplacer' : 'Importer remplie'}
+      </button>
+    </li>
   )
 }
 

@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { Upload, Archive, Tag } from 'lucide-react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Upload, Archive, Tag, ArrowLeft } from 'lucide-react'
 import { useDocuments, useDeleteDocument } from '@/hooks/useDocuments'
 import { uploadService } from '@/services/upload'
 import { FileCard } from '@/components/common/FileCard'
@@ -13,6 +14,11 @@ import type { Document } from '@/types'
 
 export default function Vault() {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  // Conserve le contexte AO : quand on arrive du parcours (ex. étape
+  // Vérification), on offre un retour explicite sans perdre le projet.
+  const returnTo = searchParams.get('returnTo')
   const { data: documents = [], isLoading } = useDocuments()
   const { mutate: deleteDocument } = useDeleteDocument()
   const [isUploading, setIsUploading] = useState(false)
@@ -45,6 +51,17 @@ export default function Vault() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
+      {returnTo && (
+        <button
+          type="button"
+          onClick={() => navigate(returnTo)}
+          className="flex items-center gap-2 text-sm font-medium transition-colors hover:underline"
+          style={{ color: '#0EA5E9' }}
+        >
+          <ArrowLeft size={15} />
+          Retour à la vérification
+        </button>
+      )}
       <div className="flex items-center gap-3">
         <Archive size={24} style={{ color: '#0EA5E9' }} />
         <div>

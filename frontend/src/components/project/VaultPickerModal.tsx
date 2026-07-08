@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react'
-import { X, FileText, Search, Loader2, AlertCircle } from 'lucide-react'
+import { useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { X, FileText, Search, Loader2, AlertCircle, Upload } from 'lucide-react'
 import { useDocuments } from '@/hooks/useDocuments'
 import type { ChecklistItem, Document } from '@/types'
 
@@ -9,13 +10,17 @@ interface Props {
   item: ChecklistItem
   onClose: () => void
   onLink: (doc: Document) => Promise<void>
+  /** Téléverser un NOUVEAU fichier pour cette pièce (upload coffre + rattachement). */
+  onUploadNew: (file: File) => Promise<void>
 }
 
-export default function VaultPickerModal({ item, onClose, onLink }: Props) {
+export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }: Props) {
   const { data: documents = [], isLoading } = useDocuments()
   const [query, setQuery] = useState('')
   const [linking, setLinking] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const required = item.document_type_required
 
@@ -47,11 +52,28 @@ export default function VaultPickerModal({ item, onClose, onLink }: Props) {
     }
   }
 
-  return (
+  const handleUpload = async (file: File) => {
+    setError(null)
+    setUploading(true)
+    try {
+      await onUploadNew(file)
+      onClose()
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Échec de l'import"
+      setError(msg)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  // Rendu en PORTAIL sur <body> : garantit un overlay plein écran au-dessus de
+  // tout (la barre du bas est elle aussi portée) — sinon un ancêtre au contexte
+  // d'empilement piège le `fixed` et le clic « Choisir » paraît sélectionner la page.
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-[60] flex items-center justify-center px-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center px-4 select-none"
       style={{ background: 'rgba(15, 23, 42, 0.45)', fontFamily: F }}
       onClick={onClose}
     >
@@ -80,8 +102,39 @@ export default function VaultPickerModal({ item, onClose, onLink }: Props) {
           </button>
         </header>
 
-        {/* Search */}
+        {/* Téléverser un nouveau fichier pour CETTE pièce */}
         <div className="px-6 pt-4">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f) handleUpload(f)
+              e.target.value = ''
+            }}
+          />
+          <button
+            type="button"
+            disabled={uploading}
+            onClick={() => fileInputRef.current?.click()}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+            style={{ background: '#0EA5E9' }}
+          >
+            {uploading
+              ? <><Loader2 size={15} className="animate-spin" /> Import…</>
+              : <><Upload size={15} /> Téléverser un fichier depuis mon ordinateur</>}
+          </button>
+          <div className="flex items-center gap-3 my-3">
+            <span className="flex-1 h-px" style={{ background: '#F1F5F9' }} />
+            <span className="text-[11px] uppercase tracking-wider" style={{ color: '#94A3B8' }}>ou choisir au coffre-fort</span>
+            <span className="flex-1 h-px" style={{ background: '#F1F5F9' }} />
+          </div>
+        </div>
+
+        {/* Search */}
+        <div className="px-6">
           <div
             className="flex items-center gap-2 px-3 py-2 rounded-lg"
             style={{ border: '1px solid #E2E8F0' }}
@@ -131,7 +184,8 @@ export default function VaultPickerModal({ item, onClose, onLink }: Props) {
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

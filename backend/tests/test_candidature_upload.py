@@ -76,6 +76,35 @@ def _make_vault_doc(db_session, test_org, doc_type="kbis", status="valid"):
     return d
 
 
+# ─── « Choisir → Téléverser » : upload coffre PUIS rattachement (bug nav #2) ──
+
+def test_pick_upload_new_then_link_updates_piece(client, db_session, test_org):
+    """La séquence exacte de la modale « Choisir » quand l'utilisateur
+    téléverse un nouveau fichier : POST /documents (coffre) → PUT …/link →
+    la pièce n'est plus manquante, sans quitter l'étape."""
+    project = _make_project(db_session, test_org)
+    item = _make_vault_item(db_session, project, doc_type="kbis", item_id="cli-kbis-upl")
+
+    # 1) upload du fichier au coffre-fort avec le type de la pièce
+    up = client.post(
+        "/api/documents",
+        files={"file": ("kbis.pdf", io.BytesIO(b"%PDF-1.4 fake"), "application/pdf")},
+        data={"type": "kbis"},
+    )
+    assert up.status_code == 200, up.text
+    new_doc_id = up.json()["id"]
+
+    # 2) rattachement à l'exigence
+    link = client.put(
+        f"/api/projects/{project.id}/checklist/{item.id}/link",
+        json={"document_id": new_doc_id},
+    )
+    assert link.status_code == 200, link.text
+    body = link.json()
+    assert body["linked_document_id"] == new_doc_id
+    assert body["status"] != "manquant"   # pièce désormais couverte
+
+
 # ─── upload-completed: success ───────────────────────────────────────────────
 
 def test_upload_completed_success(client, db_session, test_org, tmp_path, monkeypatch):

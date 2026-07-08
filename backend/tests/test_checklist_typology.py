@@ -180,6 +180,30 @@ def test_get_checklist_exposes_document_group(client, db_session, test_org):
     assert len(body) == 4
 
 
+def test_workflow_dpgf_carries_template_for_inline_fill(client, db_session, test_org):
+    """La pièce DPGF (workflow) porte le template DCE à télécharger + le
+    source_kind attendu par le flux « remplir sur place » (download →
+    upload-completed → check_dpgf), SANS saut vers l'étape Export."""
+    from models.project import ProjectDocument
+
+    db_session.add(Project(id="proj-ty3", organization_id=test_org.id, name="X",
+                           deadline=date.today()))
+    db_session.add(ProjectDocument(
+        id="tpl-dpgf-1", project_id="proj-ty3", type="dpgf_template",
+        file_url="/uploads/x.xlsx", file_name="DPGF_Lot05.xlsx", is_user_completed=False))
+    db_session.add(ComplianceItem(
+        project_id="proj-ty3", exigence_text="Renseigner intégralement le DPGF du Lot 05",
+        category="offre", priority="obligatoire", status="non_couvert", lot="_commun"))
+    db_session.commit()
+
+    client.post("/api/projects/proj-ty3/checklist/regenerate")
+    body = client.get("/api/projects/proj-ty3/checklist").json()
+    dpgf = [i for i in body if i["document_group"] == "workflow"][0]
+    assert dpgf["source_kind"] == "dce_template"
+    assert dpgf["document_type_required"] == "dpgf_template"
+    assert dpgf["template_project_doc_id"] == "tpl-dpgf-1"  # téléchargeable en place
+
+
 def test_synorix_item_not_upload_and_out_of_score(client, db_session, test_org):
     _seed_full(db_session, test_org.id, "proj-ty2")
     client.post("/api/projects/proj-ty2/checklist/regenerate")
