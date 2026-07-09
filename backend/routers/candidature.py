@@ -78,7 +78,30 @@ def get_checklist(
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ):
+    """Checklist typée du projet. Filet paresseux : si le projet est analysé
+    (des exigences candidature/offre existent) mais qu'aucune checklist n'a
+    encore été matérialisée — cas des projets antérieurs au builder ou dont la
+    génération de fin d'analyse a échoué — on la génère à la volée (déterministe,
+    0 € API) pour que l'utilisateur n'ait JAMAIS à cliquer sur « Générer »."""
+    from models.compliance_item import ComplianceItem
+
     _get_project_or_404(project_id, user.organization_id, db)
+
+    has_checklist = db.query(ChecklistItem.id).filter(
+        ChecklistItem.project_id == project_id).first() is not None
+    if not has_checklist:
+        analyzed = db.query(ComplianceItem.id).filter(
+            ComplianceItem.project_id == project_id,
+            ComplianceItem.category.in_(("candidature", "offre")),
+        ).first() is not None
+        if analyzed:
+            from services.checklist_builder import generate_checklist_from_db
+            try:
+                generate_checklist_from_db(db, project_id, user.organization_id)
+            except Exception:
+                logger.exception("Génération paresseuse de la checklist échouée (%s)", project_id)
+                db.rollback()
+
     return (
         db.query(ChecklistItem)
         .filter(ChecklistItem.project_id == project_id)

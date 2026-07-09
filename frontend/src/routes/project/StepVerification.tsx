@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Loader2, Lock, AlertTriangle, FileSpreadsheet, Download, Upload, Sparkles } from 'lucide-react'
+import { Loader2, Lock, AlertTriangle, FileSpreadsheet, Download, Upload, Sparkles, RefreshCw } from 'lucide-react'
 import { api } from '@/services/api'
 import { useCompleteStep } from '@/hooks/useProject'
 import CandidatureSectionVault from '@/components/project/CandidatureSectionVault'
@@ -139,29 +139,25 @@ export default function StepVerification({ project }: Props) {
 
   if (isLoading) return (
     <div style={{ fontFamily: F }}>
+      <p className="flex items-center gap-2 text-sm mb-4" style={{ color: '#64748B' }}>
+        <Loader2 size={15} className="animate-spin" style={{ color: '#0EA5E9' }} />
+        Préparation de votre checklist…
+      </p>
       <RequirementListSkeleton count={5} />
     </div>
   )
 
+  // La checklist est matérialisée AUTOMATIQUEMENT (fin d'analyse + filet
+  // paresseux côté serveur) : plus aucun bouton manuel. Un état vide ici
+  // signifie que le DCE n'est pas encore analysé.
   if (items.length === 0) return (
     <div
-      className="bg-white rounded-lg p-12 text-center space-y-4"
+      className="bg-white rounded-lg p-12 text-center"
       style={{ border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', fontFamily: F }}
     >
       <p className="text-sm" style={{ color: '#94A3B8' }}>
-        La checklist des pièces n'a pas encore été générée pour ce projet.
+        La checklist des pièces apparaîtra automatiquement une fois le DCE analysé.
       </p>
-      {/* Régénération gratuite (matching déterministe) depuis les exigences
-          déjà analysées — répare aussi les projets d'avant le multi-lots. */}
-      <button
-        onClick={async () => {
-          await api.post(`/projects/${project.id}/checklist/regenerate`)
-          queryClient.invalidateQueries({ queryKey: ['checklist', project.id] })
-        }}
-        className="btn-primary py-2 px-5 text-sm"
-      >
-        Générer la checklist des pièces
-      </button>
     </div>
   )
 
@@ -232,15 +228,32 @@ export default function StepVerification({ project }: Props) {
           <span style={{ color: '#0F172A' }}>VÉRIFICATION </span>
           <span style={{ color: '#0EA5E9' }}>CANDIDATURE</span>
         </h1>
-        <button
-          type="button"
-          onClick={openVaultPage}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-sky-50"
-          style={{ border: '1px solid #0EA5E9', color: '#0EA5E9' }}
-        >
-          <Lock size={14} />
-          Accéder au coffre-fort
-        </button>
+        <div className="flex items-center gap-3">
+          {/* Régénération DISCRÈTE à la demande (ex. après ajout de pièces au
+              coffre). L'état par défaut n'est jamais « vide + bouton ». */}
+          <button
+            type="button"
+            onClick={async () => {
+              await api.post(`/projects/${project.id}/checklist/regenerate`)
+              await refresh()
+            }}
+            className="flex items-center gap-1.5 text-xs font-medium transition-colors hover:underline"
+            style={{ color: '#94A3B8' }}
+            title="Recalculer la checklist depuis les exigences analysées"
+          >
+            <RefreshCw size={13} />
+            Actualiser
+          </button>
+          <button
+            type="button"
+            onClick={openVaultPage}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-sky-50"
+            style={{ border: '1px solid #0EA5E9', color: '#0EA5E9' }}
+          >
+            <Lock size={14} />
+            Accéder au coffre-fort
+          </button>
+        </div>
       </div>
 
       {/* 3-metric header — score de conformité C10 en tête */}

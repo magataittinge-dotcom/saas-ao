@@ -204,6 +204,31 @@ def test_workflow_dpgf_carries_template_for_inline_fill(client, db_session, test
     assert dpgf["template_project_doc_id"] == "tpl-dpgf-1"  # téléchargeable en place
 
 
+def test_get_checklist_lazily_generates_when_analyzed_but_empty(client, db_session, test_org):
+    """Filet paresseux : un projet analysé (exigences candidature/offre en base)
+    mais SANS checklist — cas des projets antérieurs au builder — voit sa
+    checklist générée automatiquement au GET, sans clic manuel."""
+    _seed_full(db_session, test_org.id, "proj-lazy1")
+    assert db_session.query(ChecklistItem).filter(
+        ChecklistItem.project_id == "proj-lazy1").count() == 0
+
+    body = client.get("/api/projects/proj-lazy1/checklist").json()
+    assert len(body) == 4                       # générée à la volée
+    groups = {i["document_group"] for i in body}
+    assert groups == {"fournir", "completer", "synorix", "workflow"}
+
+
+def test_get_checklist_no_lazy_gen_when_not_analyzed(client, db_session, test_org):
+    """Aucune génération parasite si le projet n'a pas encore d'exigences
+    candidature/offre (pas encore analysé)."""
+    from models.project import Project
+    db_session.add(Project(id="proj-lazy2", organization_id=test_org.id, name="X",
+                           deadline=date.today()))
+    db_session.commit()
+    body = client.get("/api/projects/proj-lazy2/checklist").json()
+    assert body == []
+
+
 def test_synorix_item_not_upload_and_out_of_score(client, db_session, test_org):
     _seed_full(db_session, test_org.id, "proj-ty2")
     client.post("/api/projects/proj-ty2/checklist/regenerate")
