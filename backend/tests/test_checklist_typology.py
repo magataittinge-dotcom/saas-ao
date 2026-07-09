@@ -229,6 +229,45 @@ def test_get_checklist_no_lazy_gen_when_not_analyzed(client, db_session, test_or
     assert body == []
 
 
+def test_group2_with_dce_template_is_downloadable(client, db_session, test_org):
+    """Type (a) : l'acte d'engagement fourni dans le DCE → la pièce porte le
+    template à télécharger (même mécanisme que la DPGF, généralisé)."""
+    from models.project import ProjectDocument
+
+    db_session.add(Project(id="proj-g2a", organization_id=test_org.id, name="X",
+                           deadline=date.today()))
+    db_session.add(ProjectDocument(
+        id="tpl-ae-1", project_id="proj-g2a", type="acte_engagement_template",
+        file_url="/uploads/ae.pdf", file_name="AE_ATTRI1.pdf", is_user_completed=False))
+    db_session.add(ComplianceItem(
+        project_id="proj-g2a", exigence_text="Compléter, dater et signer l'acte d'engagement (AE)",
+        category="offre", priority="obligatoire", status="non_couvert", lot="_commun"))
+    db_session.commit()
+
+    client.post("/api/projects/proj-g2a/checklist/regenerate")
+    body = client.get("/api/projects/proj-g2a/checklist").json()
+    ae = [i for i in body if i["document_group"] == "completer"][0]
+    assert ae["document_type_required"] == "acte_engagement_template"
+    assert ae["template_project_doc_id"] == "tpl-ae-1"     # trame téléchargeable
+
+
+def test_group2_standard_form_has_no_dce_template(client, db_session, test_org):
+    """Type (b) : le DC1 (formulaire Cerfa standard) n'est PAS dans le DCE →
+    aucune trame liée ; l'UI proposera le formulaire officiel."""
+    db_session.add(Project(id="proj-g2b", organization_id=test_org.id, name="X",
+                           deadline=date.today()))
+    db_session.add(ComplianceItem(
+        project_id="proj-g2b", exigence_text="Fournir le formulaire DC1 complété et signé",
+        category="candidature", priority="obligatoire", status="non_couvert", lot="_commun"))
+    db_session.commit()
+
+    client.post("/api/projects/proj-g2b/checklist/regenerate")
+    body = client.get("/api/projects/proj-g2b/checklist").json()
+    dc1 = [i for i in body if i["document_group"] == "completer"][0]
+    assert dc1["document_type_required"] == "dc1_template"
+    assert dc1["template_project_doc_id"] is None           # pas de trame DCE → lien officiel
+
+
 def test_synorix_item_not_upload_and_out_of_score(client, db_session, test_org):
     _seed_full(db_session, test_org.id, "proj-ty2")
     client.post("/api/projects/proj-ty2/checklist/regenerate")

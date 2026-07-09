@@ -1,24 +1,38 @@
 import { useRef, useState } from 'react'
 import {
-  CheckCircle2, AlertCircle, Download, Upload, FileText, Loader2,
+  CheckCircle2, AlertCircle, Download, Upload, FileText, Loader2, ExternalLink,
 } from 'lucide-react'
 import type { ChecklistItem } from '@/types'
 
 const F = "'DM Sans', sans-serif"
 
 const TEMPLATE_LABELS: Record<string, string> = {
-  dc1_template: 'Formulaire DC1',
-  dc2_template: 'Formulaire DC2',
+  dc1_template: 'Formulaire DC1 — Lettre de candidature',
+  dc2_template: 'Formulaire DC2 — Déclaration du candidat',
   acte_engagement_template: 'Acte d\'engagement',
   dpgf_template: 'DPGF',
   bpu_template: 'Bordereau de prix unitaires',
   dqe_template: 'Détail quantitatif estimatif',
   cadre_reponse: 'Cadre de réponse',
   attestation_visite_template: 'Attestation de visite',
+  dc4: 'DC4 — Déclaration de sous-traitance',
+  declaration_honneur: 'Déclaration sur l\'honneur',
 }
 
-// C12 — documents exigeant une signature (AE en tête de liste)
-const SIGNABLE_TYPES = ['acte_engagement_template', 'dc1_template', 'dc2_template']
+// C12 — documents exigeant une signature du candidat.
+const SIGNABLE_TYPES = [
+  'acte_engagement_template', 'dc1_template', 'dc2_template', 'declaration_honneur',
+]
+
+// Type (b) — formulaires nationaux standards jamais fournis dans le DCE : on
+// pointe le formulaire officiel (DAJ / economie.gouv.fr, URL stable) que
+// l'utilisateur télécharge, complète/signe, puis réimporte.
+const OFFICIAL_FORM_URLS: Record<string, string> = {
+  dc1_template: 'https://www.economie.gouv.fr/daj/formulaires-declaration-du-candidat',
+  dc2_template: 'https://www.economie.gouv.fr/daj/formulaires-declaration-du-candidat',
+  dc4: 'https://www.economie.gouv.fr/daj/formulaires-declaration-du-candidat',
+  declaration_honneur: 'https://www.economie.gouv.fr/daj/formulaires-declaration-du-candidat',
+}
 
 interface Props {
   projectId: string
@@ -56,10 +70,10 @@ export default function CandidatureSectionTemplates({ projectId, items, onUpload
           </div>
           <div className="min-w-0">
             <h2 className="text-base font-bold" style={{ color: '#0F172A' }}>
-              Formulaires à compléter (DCE)
+              Documents à compléter et signer
             </h2>
             <p className="text-xs mt-0.5" style={{ color: '#64748B' }}>
-              {present}/{items.length} complétés — téléchargez le modèle vierge, complétez-le, puis ré-uploadez la version finale
+              {present}/{items.length} complétés — téléchargez la trame (ou le formulaire officiel), complétez et signez, puis réimportez la version finale
             </p>
           </div>
         </div>
@@ -95,6 +109,7 @@ function TemplateRow({
   const isPresent = item.status === 'present'
   const isWarning = item.status === 'warning'
   const hasTemplate = !!item.template_project_doc_id
+  const officialUrl = OFFICIAL_FORM_URLS[item.document_type_required]
   const isSignable = SIGNABLE_TYPES.includes(item.document_type_required)
   const label = TEMPLATE_LABELS[item.document_type_required] || item.document_type_required
 
@@ -139,25 +154,20 @@ function TemplateRow({
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2 flex-wrap">
           <span className="text-sm font-semibold" style={{ color: '#0F172A' }}>{label}</span>
-          {!hasTemplate && (
-            <span className="text-[11px]" style={{ color: '#EF4444' }}>
-              Modèle non trouvé dans le DCE
-            </span>
-          )}
-          {hasTemplate && !isPresent && (
-            <span className="text-[11px]" style={{ color: '#64748B' }}>
-              À compléter
-            </span>
-          )}
-          {isPresent && (
-            <span className="text-[11px]" style={{ color: '#10B981' }}>
-              Complété
-            </span>
-          )}
-          {isWarning && (
+          {isPresent ? (
+            <span className="text-[11px]" style={{ color: '#10B981' }}>Complété</span>
+          ) : isWarning ? (
             <span className="text-[11px] font-medium" style={{ color: '#B45309' }}>
               ⚠️ Présente — à vérifier
             </span>
+          ) : hasTemplate ? (
+            <span className="text-[11px]" style={{ color: '#64748B' }}>À compléter</span>
+          ) : officialUrl ? (
+            // Type (b) : formulaire standard — normal qu'il ne soit pas au DCE.
+            <span className="text-[11px]" style={{ color: '#64748B' }}>Formulaire standard (Cerfa)</span>
+          ) : (
+            // Type (a) spécifique au DCE mais introuvable → à réclamer, pas une erreur.
+            <span className="text-[11px]" style={{ color: '#64748B' }}>À demander au maître d'ouvrage</span>
           )}
         </div>
         {/* C12 — confirmation de signature (AE, DC1, DC2) */}
@@ -189,9 +199,10 @@ function TemplateRow({
         )}
       </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-2 shrink-0">
-        {hasTemplate && downloadHref && (
+      {/* Actions — affordance UNIFORME : Télécharger (trame DCE ou officiel) /
+          Importer rempli / (Signé via la case ci-dessus) */}
+      <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+        {hasTemplate && downloadHref ? (
           <a
             href={downloadHref}
             target="_blank"
@@ -200,9 +211,21 @@ function TemplateRow({
             style={{ border: '1px solid #E2E8F0', color: '#475569' }}
           >
             <Download size={13} />
-            Modèle vierge
+            Télécharger la trame
           </a>
-        )}
+        ) : officialUrl ? (
+          <a
+            href={officialUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-slate-100"
+            style={{ border: '1px solid #E2E8F0', color: '#475569' }}
+            title="Formulaire officiel sur economie.gouv.fr (DAJ)"
+          >
+            <ExternalLink size={13} />
+            Formulaire officiel
+          </a>
+        ) : null}
         {isPresent && completedHref && (
           <a
             href={completedHref}
@@ -224,7 +247,7 @@ function TemplateRow({
         >
           {uploading
             ? <><Loader2 size={13} className="animate-spin" /> Envoi...</>
-            : <><Upload size={13} /> {isPresent ? 'Remplacer' : 'Uploader complété'}</>}
+            : <><Upload size={13} /> {isPresent ? 'Remplacer' : 'Importer rempli'}</>}
         </button>
         <input
           ref={fileRef}
