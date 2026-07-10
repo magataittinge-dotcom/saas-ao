@@ -181,10 +181,12 @@ def export_docx(
 
     from models.organization import Organization
     org = db.query(Organization).filter(Organization.id == user.organization_id).first()
-    org_name = org.name if org else "Entreprise"
 
-    from services.docx_exporter import build_memoire_docx
-    docx_bytes = build_memoire_docx(memoire.content_json, project.name, org_name)
+    # Point 7 — SOURCE UNIQUE : même builder complet que /memoire/export-docx
+    # (page de garde, organigramme, carte, logo). Le builder nu laissait le
+    # bouton de l'étape Export produire un docx sans page de garde ni images.
+    from routers.memoire import build_project_memoire_docx
+    docx_bytes = build_project_memoire_docx(project, memoire, org, db)
 
     filename = f"Memoire_Technique_{project.name.replace(' ', '_')}.docx"
     ascii_name = filename.encode("ascii", errors="replace").decode("ascii")
