@@ -17,6 +17,7 @@ from models.checklist_item import ChecklistItem
 from models.document import Document
 from schemas.compliance import ComplianceItemResponse
 from routers.auth import get_auth_user
+from services.ai.api_preflight import AIServiceUnavailable, ensure_ai_service_available
 from services.ai.dce_analyzer import DCEAnalyzer, ClaudeRateLimitError
 from services.ai.checklist_matcher import ChecklistMatcher
 from services.document_tagger import (
@@ -88,6 +89,23 @@ async def trigger_analysis(
             detail=(f"Quota insuffisant : {len(lot_specs)} lot(s) demandés, "
                     f"{limit - status['analyses']['used']} analyse(s) restante(s) ce mois."),
         )
+    # Anti double-run : une analyse déjà en cours sur ce projet → 409 —
+    # AVANT toute consommation : un double-clic ne coûte jamais d'unité.
+    thread_name = f"synorix-analysis-{project_id[:12]}"
+    if any(t.name == thread_name and t.is_alive() for t in threading.enumerate()):
+        raise HTTPException(status_code=409, detail="Une analyse est déjà en cours pour ce projet.")
+
+    # ── Garde pré-vol IA (audit risque #4) : jamais de run condamné d'avance
+    # (API down / crédit épuisé) — vérifiée AVANT toute consommation de quota.
+    # asyncio.to_thread : règle WSL2, jamais de SDK dans l'event-loop.
+    try:
+        await asyncio.to_thread(ensure_ai_service_available)
+    except AIServiceUnavailable:
+        raise HTTPException(
+            status_code=503,
+            detail="Service IA momentanément indisponible — réessayez dans quelques minutes.",
+        )
+
     for spec in lot_specs:
         quota.check_quota(db, org, "analysis")
         quota.consume(db, org, "analysis", project_id=project_id, lot=spec["lot_id"])
@@ -100,11 +118,6 @@ async def trigger_analysis(
     project.processing_status = "analyzing"
     project.processing_detail = ""
     db.commit()
-
-    # Anti double-run : une analyse déjà en cours sur ce projet → 409.
-    thread_name = f"synorix-analysis-{project_id[:12]}"
-    if any(t.name == thread_name and t.is_alive() for t in threading.enumerate()):
-        raise HTTPException(status_code=409, detail="Une analyse est déjà en cours pour ce projet.")
 
     pipeline_tracker.start_pipeline(project_id, "analysis")
     pipeline_tracker.start_step(project_id, "preparation")

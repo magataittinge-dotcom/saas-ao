@@ -33,6 +33,16 @@ from routers.auth import get_auth_user  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
+def _ai_preflight_no_network(monkeypatch):
+    """La garde pré-vol IA ne fait JAMAIS de vrai appel réseau en test :
+    ping no-op + cache remis à zéro (les tests qui simulent une panne
+    re-patchent _ping pour lever)."""
+    from services.ai import api_preflight
+    monkeypatch.setattr(api_preflight, "_ping", lambda: None)
+    api_preflight._cache.update(ts=0.0, ok=False)
+
+
+@pytest.fixture(autouse=True)
 def _reset_schema():
     """Rebuild a clean schema before each test — avoids cross-test bleed."""
     Base.metadata.drop_all(bind=engine)

@@ -122,3 +122,11 @@ def test_double_run_rejected_409(client, db_session, test_org, monkeypatch):
     release.set()
     assert resp2.status_code == 409
     _join_analysis_threads()
+
+    # Le 409 arrive AVANT le consume : un double-clic ne coûte jamais d'unité.
+    from models.quota_consumption import QuotaConsumption
+    used = db_session.query(QuotaConsumption).filter(
+        QuotaConsumption.organization_id == test_org.id,
+        QuotaConsumption.kind == "analysis",
+    ).count()
+    assert used == 1

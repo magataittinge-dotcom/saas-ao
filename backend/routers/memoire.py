@@ -165,6 +165,17 @@ async def generate_memoire(
     if any(t.name == thread_name and t.is_alive() for t in threading.enumerate()):
         raise HTTPException(status_code=409, detail="Une génération est déjà en cours pour ce projet.")
 
+    # ── Garde pré-vol IA (audit risque #4) : jamais de run condamné d'avance
+    # (API down / crédit épuisé). asyncio.to_thread : règle WSL2.
+    from services.ai.api_preflight import AIServiceUnavailable, ensure_ai_service_available
+    try:
+        await asyncio.to_thread(ensure_ai_service_available)
+    except AIServiceUnavailable:
+        raise HTTPException(
+            status_code=503,
+            detail="Service IA momentanément indisponible — réessayez dans quelques minutes.",
+        )
+
     variables = payload.model_dump(
         exclude_none=True,
         exclude={"profile_overrides", "reference_ids", "update_profile"},
