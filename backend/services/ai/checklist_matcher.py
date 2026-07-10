@@ -82,7 +82,10 @@ _CONFORME_STATUSES = {"present", "expiration_proche"}
 
 # C12 — templates DCE exigeant une signature : sans confirmation explicite
 # (« Je confirme avoir signé »), la pièce ne compte pas conforme.
-SIGNABLE_TEMPLATE_TYPES = {"acte_engagement_template", "dc1_template", "dc2_template"}
+# Doit rester ALIGNÉ avec SIGNABLE_TYPES du front (CandidatureSectionTemplates).
+SIGNABLE_TEMPLATE_TYPES = {
+    "acte_engagement_template", "dc1_template", "dc2_template", "declaration_honneur",
+}
 
 
 def _is_conforme(item) -> bool:

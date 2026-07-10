@@ -88,6 +88,32 @@ def test_stats_taux_reussite(client, db_session, test_org):
     assert body["taux_succes"] == 67  # 2 / 3
 
 
+def test_stats_soumis_ce_mois_based_on_depose_at(client, db_session, test_org):
+    """Audit #11 — un AO déposé ce mois puis GAGNÉ disparaissait du compteur
+    « soumis ce mois » (comptage sur le statut courant, pas sur depose_at)."""
+    from services.cache import org_cache
+
+    # Déposés ce mois puis DÉCIDÉS (gagné/perdu) → doivent RESTER comptés.
+    _project(db_session, test_org.id, "p-sm1")
+    assert _patch_status(client, "p-sm1", "soumis").status_code == 200
+    assert _patch_status(client, "p-sm1", "gagné").status_code == 200
+    _project(db_session, test_org.id, "p-sm3")
+    assert _patch_status(client, "p-sm3", "soumis").status_code == 200
+    assert _patch_status(client, "p-sm3", "perdu").status_code == 200
+
+    # Encore « soumis » mais déposé il y a 40 jours → hors compteur du mois
+    # (l'ancienne règle le comptait, lui, et perdait les deux décidés).
+    _project(db_session, test_org.id, "p-sm2", status="soumis")
+    db_session.query(Project).filter(Project.id == "p-sm2").update(
+        {"depose_at": datetime.utcnow() - timedelta(days=40)},
+    )
+    db_session.commit()
+
+    org_cache.clear()
+    body = client.get("/api/dashboard/stats").json()
+    assert body["projects_soumis_ce_mois"] == 2
+
+
 # ─── Relance 30 j : basée sur la date de dépôt réelle ────────────────────────
 
 def test_relance_uses_depose_at(client, db_session, test_org):

@@ -186,6 +186,38 @@ def _join_analysis():
             t.join(timeout=30)
 
 
+def test_multilot_402_free_has_upgrade_cta_and_no_monthly_wording(
+    client, db_session, test_org, no_rate_limit,
+):
+    """Audit #10 — le pré-check multi-lots court-circuitait check_quota :
+    message sans CTA upgrade et « ce mois » faux en plan free (essai à vie)."""
+    _make_analyzable_project(db_session, test_org.id, "proj-q402a")
+
+    resp = client.post("/api/projects/proj-q402a/analyze",
+                       json={"lots": ["lot1", "lot2"]})
+    assert resp.status_code == 402
+    detail = resp.json()["detail"]
+    assert "Pro" in detail            # CTA upgrade explicite
+    assert "essai" in detail          # libellé free correct
+    assert "ce mois" not in detail    # pas de fenêtre mensuelle en essai
+
+
+def test_multilot_402_pro_points_to_business(
+    client, db_session, test_org, no_rate_limit,
+):
+    test_org.plan = "pro"
+    db_session.commit()
+    _consume_n(db_session, test_org.id, "analysis", 39)
+    _make_analyzable_project(db_session, test_org.id, "proj-q402b")
+
+    resp = client.post("/api/projects/proj-q402b/analyze",
+                       json={"lots": ["lot1", "lot2"]})
+    assert resp.status_code == 402
+    detail = resp.json()["detail"]
+    assert "Business" in detail
+    assert "1 analyse(s) restante(s)" in detail
+
+
 def test_analysis_technical_failure_refunds_unit(
     client, db_session, test_org, no_rate_limit, monkeypatch,
 ):

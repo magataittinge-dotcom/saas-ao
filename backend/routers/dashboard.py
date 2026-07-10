@@ -32,7 +32,9 @@ def get_dashboard_stats(user: User = Depends(get_auth_user), db: Session = Depen
     # ── 1 query, 4 aggregates: avoids 4 round-trips against the same scan ───
     p_row = db.query(
         func.sum(case((Project.status.in_(["brouillon", "en_cours"]), 1), else_=0)),
-        func.sum(case(((Project.status == "soumis") & (Project.updated_at >= first_of_month), 1), else_=0)),
+        # Audit #11 — « soumis ce mois » = DÉPOSÉ ce mois (depose_at) : un AO
+        # gagné/perdu reste compté ; un vieux dépôt encore « soumis » ne l'est pas.
+        func.sum(case((Project.depose_at >= first_of_month, 1), else_=0)),
         func.sum(case((Project.status == "gagné", 1), else_=0)),
         func.sum(case((Project.status.in_(["gagné", "perdu"]), 1), else_=0)),
     ).filter(

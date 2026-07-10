@@ -5,6 +5,7 @@ from database import Base
 
 # Types de notifications V1 — ton sobre, jamais marketing (CLAUDE.md).
 NOTIFICATION_TYPES = [
+    "analysis_ready",
     "memoire_ready",
     "deadline_j3",
     "deadline_j1",

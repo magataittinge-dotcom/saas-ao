@@ -141,3 +141,41 @@ def test_score_counts_unsigned_ae_as_non_conforme(db_session, test_org):
         _Item("present", "dc1_template", signed=True, kind="dce_template"),  # DC1 signé ✓
     ]
     assert conformity_score(items) == {"conformes": 2, "total": 3}
+
+
+def test_score_counts_unsigned_declaration_honneur_as_non_conforme(db_session, test_org):
+    """Audit #4 — la case « signé » était affichée au front pour la
+    déclaration sur l'honneur mais le score backend ne l'exigeait pas."""
+    from services.ai.checklist_matcher import conformity_score
+
+    class _Item:
+        def __init__(self, status, doc_type="urssaf", signed=False, kind="vault"):
+            self.status = status
+            self.document_type_required = doc_type
+            self.signature_confirmed = signed
+            self.source_kind = kind
+
+    items = [
+        _Item("present", "declaration_honneur", signed=False, kind="dce_template"),
+        _Item("present", "declaration_honneur", signed=True, kind="dce_template"),
+    ]
+    # Non signée → non conforme ; signée → conforme.
+    assert conformity_score(items) == {"conformes": 1, "total": 2}
+
+
+def test_score_counts_unsigned_dc2_as_non_conforme(db_session, test_org):
+    """DC2 était dans le set signable mais jamais exercé par un test."""
+    from services.ai.checklist_matcher import conformity_score
+
+    class _Item:
+        def __init__(self, status, doc_type="urssaf", signed=False, kind="vault"):
+            self.status = status
+            self.document_type_required = doc_type
+            self.signature_confirmed = signed
+            self.source_kind = kind
+
+    items = [
+        _Item("present", "dc2_template", signed=False, kind="dce_template"),
+        _Item("present", "dc2_template", signed=True, kind="dce_template"),
+    ]
+    assert conformity_score(items) == {"conformes": 1, "total": 2}

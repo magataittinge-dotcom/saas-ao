@@ -84,11 +84,22 @@ async def trigger_analysis(
     status = quota.get_quota_status(db, org)
     limit = status["analyses"]["limit"]
     if limit is not None and status["analyses"]["used"] + len(lot_specs) > limit:
-        raise HTTPException(
-            status_code=402,
-            detail=(f"Quota insuffisant : {len(lot_specs)} lot(s) demandés, "
-                    f"{limit - status['analyses']['used']} analyse(s) restante(s) ce mois."),
-        )
+        # Audit #10 — même blocage doux que check_quota : CTA upgrade
+        # explicite, et jamais « ce mois » en plan free (essai à vie).
+        remaining = max(0, limit - status["analyses"]["used"])
+        if (org.plan or "free") == "free":
+            detail = (
+                f"Quota insuffisant : {len(lot_specs)} lot(s) demandés, "
+                f"{remaining} analyse(s) restante(s) sur votre essai gratuit. "
+                "Passez au plan Pro (40 analyses + 40 mémoires/mois) pour continuer."
+            )
+        else:
+            detail = (
+                f"Quota insuffisant : {len(lot_specs)} lot(s) demandés, "
+                f"{remaining} analyse(s) restante(s) ce mois. "
+                "Passez au plan Business (illimité) ou attendez le renouvellement de votre période."
+            )
+        raise HTTPException(status_code=402, detail=detail)
     # Anti double-run : une analyse déjà en cours sur ce projet → 409 —
     # AVANT toute consommation : un double-clic ne coûte jamais d'unité.
     thread_name = f"synorix-analysis-{project_id[:12]}"
@@ -579,6 +590,29 @@ def _finalize_analysis(
     except Exception as e:
         logger.error(f"Génération checklist échouée (réparable via "
                      f"/checklist/regenerate): {e}", exc_info=True)
+        db.rollback()
+
+    # Audit #12 — notification sobre « analyse terminée » (in-app + email),
+    # même canal que memoire_ready. Best-effort : n'échoue jamais le run.
+    try:
+        from services.notifications import notify as _notify
+        corps = (
+            f"L'analyse du DCE « {project.name} » est terminée : "
+            f"{len(requirements)} exigence(s) extraite(s)"
+            + (f" sur {len(lot_specs)} lots" if lot_specs and len(lot_specs) > 1 else "")
+            + ". La checklist de candidature est prête."
+        )
+        if failed_lots:
+            corps += f" Attention : {len(failed_lots)} lot(s) en échec — relancez-les."
+        _notify(
+            db, org_id, "analysis_ready",
+            titre=f"Analyse terminée — {project.name}",
+            corps=corps,
+            send_email=True,
+        )
+        db.commit()
+    except Exception:
+        logger.exception("Notification analysis_ready échouée (non bloquant)")
         db.rollback()
 
     pipeline_tracker.complete_pipeline(project_id)

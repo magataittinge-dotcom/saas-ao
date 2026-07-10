@@ -224,6 +224,46 @@ def test_memoire_ready_emitted_on_generation(client, db_session, test_org, monke
     assert len(notifs) == 1
 
 
+def test_analysis_ready_emitted_on_analysis_end(client, db_session, test_org, monkeypatch):
+    """Audit #12 — le type « fin d'analyse » n'existait pas : memoire_ready
+    avait sa notification, l'analyse (le run le plus long du produit) non."""
+    from models.project import Project, ProjectDocument
+    from services.ai import dce_analyzer, checklist_matcher
+
+    test_org.plan = "pro"
+    db_session.add(Project(id="p-notif-an", organization_id=test_org.id, name="AO Gueux"))
+    db_session.add(ProjectDocument(
+        project_id="p-notif-an", type="rc", file_url="x",
+        file_name="rc.pdf", extracted_text="RC " * 30,
+    ))
+    db_session.commit()
+
+    def _ok(self, *a, **kw):
+        return {"requirements": [
+            {"exigence": "Fournir un Kbis", "source_document": "RC", "source_page": 1,
+             "source_excerpt": "x", "category": "candidature", "priority": "obligatoire"}],
+            "criteres_jugement": [], "infos_marche": {}}
+    monkeypatch.setattr(dce_analyzer.DCEAnalyzer, "_run_pass_chunked", _ok)
+
+    async def _nomatch(self, *a, **kw):
+        return []
+    monkeypatch.setattr(checklist_matcher.ChecklistMatcher, "match", _nomatch)
+
+    resp = client.post("/api/projects/p-notif-an/analyze")
+    assert resp.status_code == 200, resp.text
+    import threading
+    for t in threading.enumerate():
+        if t.name.startswith("synorix-analysis-"):
+            t.join(timeout=30)
+
+    notifs = db_session.query(Notification).filter(
+        Notification.type == "analysis_ready",
+    ).all()
+    assert len(notifs) == 1
+    assert "AO Gueux" in notifs[0].titre
+    assert "exigence" in (notifs[0].corps or "")
+
+
 # ─── Endpoints ───────────────────────────────────────────────────────────────
 
 def test_list_and_mark_read(client, db_session, test_org):

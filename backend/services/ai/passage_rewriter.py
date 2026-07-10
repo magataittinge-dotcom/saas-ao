@@ -34,6 +34,8 @@ _SYSTEM = """Tu réécris un passage d'un mémoire technique de réponse à un a
 Règles STRICTES :
 - Tu retournes UNIQUEMENT le passage réécrit, sans préambule, sans guillemets, sans commentaire.
 - Tu n'inventes JAMAIS de fait, chiffre, référence ou moyen qui n'est pas déjà dans le passage.
+- Tu ne donnes JAMAIS de conseil, commentaire ou estimation de PRIX ou de CHIFFRAGE
+  (frontière absolue : le chiffrage relève de la seule responsabilité de l'entreprise).
 - Tu conserves le format (Markdown si le passage en contient).
 - Tu écris en français professionnel BTP."""
 

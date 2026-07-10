@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -10,6 +11,25 @@ from schemas.compliance import ComplianceItemResponse
 from routers.auth import get_auth_user
 
 router = APIRouter()
+
+
+def _doc_rank(doc: str) -> int:
+    """Ordre de lecture métier du DCE : RC → CCAP → AE → CCTP → prix → autres.
+
+    Matching robuste aux sous-chaînes (« maRChé » ne matche pas RC,
+    « chaussée » ne matche pas AE)."""
+    d = doc.lower()
+    if d.startswith("rc") or "règlement" in d or "reglement" in d:
+        return 0
+    if "ccap" in d:
+        return 1
+    if "acte" in d or d.startswith("ae"):
+        return 2
+    if "cctp" in d:
+        return 3
+    if "dpgf" in d or "bpu" in d or "dqe" in d:
+        return 4
+    return 5
 
 
 @router.get("/{project_id}/compliance", response_model=List[ComplianceItemResponse])
@@ -30,7 +50,17 @@ def get_compliance_matrix(
             | (ComplianceItem.lot == scope)
             | (ComplianceItem.lot.is_(None))
         )
-    return q.order_by(ComplianceItem.category, ComplianceItem.created_at).all()
+    items = q.all()
+    # Audit #6 — l'écran suit l'ORDRE DE LECTURE du DCE (RC → CCAP → AE →
+    # CCTP → prix, page croissante), pas l'ordre de sortie de l'IA. Le front
+    # regroupe par catégorie en préservant cet ordre à l'intérieur des groupes.
+    items.sort(key=lambda i: (
+        i.category or "",
+        _doc_rank(i.source_document or ""),
+        i.source_page if i.source_page is not None else 10**6,
+        i.created_at or datetime.min,
+    ))
+    return items
 
 
 @router.get("/{project_id}/compliance/lots")
