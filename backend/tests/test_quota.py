@@ -7,8 +7,9 @@ Règles (PRD v3.0, vision V1 FINALE) :
   • Business : illimité (fair-use), jamais bloqué.
   • Free   : 1 AO d'essai offert à la création (1 analyse + 1 mémoire, À VIE —
     pas de reset mensuel sur le plan free).
-  • Décompte : 1 analyse AU LANCEMENT (même si l'analyse échoue ensuite) ;
-    1 mémoire PAR LOT généré (au succès — un échec ne consomme pas).
+  • Décompte : 1 analyse AU LANCEMENT, REMBOURSÉE sur échec TECHNIQUE
+    (panne API/5xx/crédit — pas si le DCE ne donne rien) ; 1 mémoire PAR LOT
+    généré, AU SUCCÈS (échec ou contenu 100 % placeholder ne consomme pas).
   • Reset mensuel : fenêtre ancrée sur la date d'abonnement.
   • Blocage doux : 402 avec message d'upgrade explicite, jamais silencieux.
 """
@@ -178,32 +179,109 @@ def test_analysis_402_when_pro_quota_exhausted(
     assert "quota" in resp.json()["detail"].lower()
 
 
-def test_analysis_consumed_at_launch_even_if_it_fails(
+def _join_analysis():
+    import threading
+    for t in threading.enumerate():
+        if t.name.startswith("synorix-analysis-"):
+            t.join(timeout=30)
+
+
+def test_analysis_technical_failure_refunds_unit(
     client, db_session, test_org, no_rate_limit, monkeypatch,
 ):
-    """« 1 analyse au lancement » : l'unité est décomptée même si l'analyse
-    échoue ensuite (timeout Claude par ex.)."""
-    import routers.analysis as analysis_mod
+    """Échec TECHNIQUE (panne API/5xx/crédit épuisé) → l'unité décomptée au
+    lancement est REMBOURSÉE : la relance ne re-paie pas."""
+    from services.ai import dce_analyzer
 
     test_org.plan = "pro"
     db_session.commit()
     _make_analyzable_project(db_session, test_org.id, "proj-q2")
 
-    async def _boom(self, *a, **k):
-        raise asyncio.TimeoutError()
-    monkeypatch.setattr(
-        analysis_mod.DCEAnalyzer, "extract_full_analysis_multi_pass", _boom,
-    )
+    def _boom(self, *a, **kw):
+        raise RuntimeError("Erreur API Claude (status 500): credit balance too low")
+    monkeypatch.setattr(dce_analyzer.DCEAnalyzer, "_run_pass_chunked", _boom)
 
-    # Nouveau contrat (analyse détachée) : POST → 200 "started" ; l'échec
-    # arrive dans le job de fond, l'unité reste décomptée au lancement.
     resp = client.post("/api/projects/proj-q2/analyze")
     assert resp.status_code == 200
     assert resp.json()["status"] == "started"
-    import threading
-    for t in threading.enumerate():
-        if t.name.startswith("synorix-analysis-"):
-            t.join(timeout=30)
+    _join_analysis()
+    used = db_session.query(QuotaConsumption).filter(
+        QuotaConsumption.organization_id == test_org.id,
+        QuotaConsumption.kind == "analysis",
+    ).count()
+    assert used == 0
+
+
+def test_analysis_partial_failure_refunds_only_failed_lot(
+    client, db_session, test_org, no_rate_limit, monkeypatch,
+):
+    """2 lots : lot1 réussit, lot2 tombe en panne API → seule l'unité du
+    lot2 est remboursée (le lot1 livré reste dû)."""
+    from datetime import date
+    from services.ai import dce_analyzer, checklist_matcher
+
+    test_org.plan = "pro"
+    db_session.commit()
+    p = Project(id="proj-q2b", organization_id=test_org.id, name="X",
+                deadline=date.today(),
+                lots_detectes=[{"id": "lot1", "nom": "Lot 01 — GO"},
+                               {"id": "lot2", "nom": "Lot 02 — Étanchéité"}])
+    db_session.add(p)
+    db_session.add(ProjectDocument(
+        project_id="proj-q2b", type="rc", file_url="x", file_name="rc.pdf",
+        extracted_text="Règlement. Candidature. " * 40))
+    db_session.add(ProjectDocument(
+        project_id="proj-q2b", type="cctp", file_url="x", file_name="cctp lot 01.pdf",
+        extracted_text="CCTP lot 1. " * 40, related_lots=["1"]))
+    db_session.add(ProjectDocument(
+        project_id="proj-q2b", type="cctp", file_url="x", file_name="cctp lot 02.pdf",
+        extracted_text="CCTP lot 2. " * 40, related_lots=["2"]))
+    db_session.commit()
+
+    _REQ = {"exigence": "Fournir DC1", "source_document": "RC", "source_page": 1,
+            "source_excerpt": "Candidature.", "category": "candidature",
+            "priority": "obligatoire"}
+
+    def _pass(self, pass_text, system_prompt, label, *a, **kw):
+        if "lot2" in label:
+            raise RuntimeError("Erreur API Claude (status 529): overloaded")
+        return {"requirements": [dict(_REQ)], "criteres_jugement": [], "infos_marche": {}}
+    monkeypatch.setattr(dce_analyzer.DCEAnalyzer, "_run_pass_chunked", _pass)
+
+    async def _nomatch(self, *a, **kw):
+        return []
+    monkeypatch.setattr(checklist_matcher.ChecklistMatcher, "match", _nomatch)
+
+    resp = client.post("/api/projects/proj-q2b/analyze", json={"lots": ["lot1", "lot2"]})
+    assert resp.status_code == 200, resp.text
+    _join_analysis()
+
+    rows = db_session.query(QuotaConsumption).filter(
+        QuotaConsumption.organization_id == test_org.id,
+        QuotaConsumption.kind == "analysis",
+    ).all()
+    assert len(rows) == 1
+    assert rows[0].lot == "lot1"
+
+
+def test_analysis_no_requirements_not_refunded(
+    client, db_session, test_org, no_rate_limit, monkeypatch,
+):
+    """Frontière : l'IA a tourné sans erreur mais le DCE n'a rien donné
+    (no_requirements) → PAS un échec technique, l'unité reste décomptée."""
+    from services.ai import dce_analyzer
+
+    test_org.plan = "pro"
+    db_session.commit()
+    _make_analyzable_project(db_session, test_org.id, "proj-q2c")
+
+    def _empty(self, *a, **kw):
+        return {"requirements": [], "criteres_jugement": [], "infos_marche": {}}
+    monkeypatch.setattr(dce_analyzer.DCEAnalyzer, "_run_pass_chunked", _empty)
+
+    resp = client.post("/api/projects/proj-q2c/analyze")
+    assert resp.status_code == 200
+    _join_analysis()
     used = db_session.query(QuotaConsumption).filter(
         QuotaConsumption.organization_id == test_org.id,
         QuotaConsumption.kind == "analysis",
@@ -300,6 +378,83 @@ def test_memoire_failure_does_not_consume(
     db_session.expire_all()
     from models.project import Project as _P
     assert db_session.get(_P, "proj-q5").processing_status == "error"
+
+
+def test_memoire_all_placeholders_is_failure_not_consumed(
+    client, db_session, test_org, no_rate_limit, monkeypatch,
+):
+    """Crédit API épuisé en plein run → le générateur rend un contenu 100 %
+    placeholders. C'est un ÉCHEC : pas de mémoire fantôme en base, 0 unité
+    consommée, statut error (constat de l'audit Phase 2)."""
+    import routers.memoire as memoire_mod
+    from models.memoire import MemoireTechnique
+
+    test_org.plan = "pro"
+    db_session.commit()
+    _make_analyzable_project(db_session, test_org.id, "proj-q7", lot="lot1")
+
+    _ALL_PLACEHOLDER = {
+        "preambule": "[SECTION À RÉGÉNÉRER : preambule]",
+        "partie_a": {"implantation": "[SECTION À RÉGÉNÉRER : partie_a.implantation]"},
+        "partie_b": {},
+        "partie_c": {},
+        "_generation_meta": {"warnings": ["preambule", "partie_a.implantation"]},
+    }
+
+    async def _empty(self, **kwargs):
+        return dict(_ALL_PLACEHOLDER)
+    monkeypatch.setattr(memoire_mod.MemoireGenerator, "generate", _empty)
+
+    resp = client.post("/api/projects/proj-q7/memoire/generate", json={})
+    assert resp.status_code == 200
+    _join_memoire()
+
+    used = db_session.query(QuotaConsumption).filter(
+        QuotaConsumption.organization_id == test_org.id,
+        QuotaConsumption.kind == "memoire",
+    ).count()
+    assert used == 0
+    assert db_session.query(MemoireTechnique).filter(
+        MemoireTechnique.project_id == "proj-q7").first() is None
+    db_session.expire_all()
+    from models.project import Project as _P
+    assert db_session.get(_P, "proj-q7").processing_status == "error"
+
+
+def test_memoire_partial_content_is_consumed(
+    client, db_session, test_org, no_rate_limit, monkeypatch,
+):
+    """Frontière : au moins UNE section réelle générée → c'est un succès
+    partiel exploitable, l'unité est consommée et le mémoire persisté."""
+    import routers.memoire as memoire_mod
+    from models.memoire import MemoireTechnique
+
+    test_org.plan = "pro"
+    db_session.commit()
+    _make_analyzable_project(db_session, test_org.id, "proj-q8", lot="lot1")
+
+    _PARTIAL = {
+        "preambule": "Notre entreprise intervient depuis 20 ans.",
+        "partie_a": {"implantation": "[SECTION À RÉGÉNÉRER : partie_a.implantation]"},
+        "partie_b": {},
+        "partie_c": {},
+    }
+
+    async def _partial(self, **kwargs):
+        return dict(_PARTIAL)
+    monkeypatch.setattr(memoire_mod.MemoireGenerator, "generate", _partial)
+
+    resp = client.post("/api/projects/proj-q8/memoire/generate", json={})
+    assert resp.status_code == 200
+    _join_memoire()
+
+    used = db_session.query(QuotaConsumption).filter(
+        QuotaConsumption.organization_id == test_org.id,
+        QuotaConsumption.kind == "memoire",
+    ).count()
+    assert used == 1
+    assert db_session.query(MemoireTechnique).filter(
+        MemoireTechnique.project_id == "proj-q8").first() is not None
 
 
 def test_business_generates_beyond_40(

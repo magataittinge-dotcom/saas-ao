@@ -208,6 +208,25 @@ async def generate_memoire(
     return {"status": "started", "project_id": project_id, "lot": project.selected_lot}
 
 
+def _memoire_content_all_placeholders(content: dict) -> bool:
+    """True si AUCUNE section réelle n'a été générée (échec technique total —
+    ex. crédit API épuisé : le générateur conserve des placeholders
+    « [SECTION À RÉGÉNÉRER] » par segment). Un tel run est un ÉCHEC : pas de
+    mémoire fantôme en base, pas d'unité consommée."""
+    leaves: list[str] = []
+    for key, val in (content or {}).items():
+        if key == "_generation_meta":
+            continue
+        if isinstance(val, dict):
+            leaves.extend(str(v) for v in val.values())
+        elif val is not None:
+            leaves.append(str(val))
+    return not any(
+        v.strip() and not v.strip().startswith("[SECTION À RÉGÉNÉRER")
+        for v in leaves
+    )
+
+
 def _run_memoire_job(
     project_id: str, org_id: str, user_id: str, variables: dict,
     profile_overrides: dict | None, reference_ids: list | None,
@@ -280,6 +299,12 @@ def _run_memoire_job(
             profile_overrides=profile_overrides,
             reglementaire_block=reglementaire_block,
         ))
+        # Contenu 100 % placeholders = panne du service IA en plein run
+        # (constat audit : crédit épuisé → 26/26 sections vides quand même
+        # persistées ET décomptées). C'est un échec, pas un succès.
+        if _memoire_content_all_placeholders(content):
+            raise RuntimeError(
+                "Génération vide : toutes les sections ont échoué (service IA indisponible)")
         pipeline_tracker.complete_step(project_id, "generating")
         pipeline_tracker.start_step(project_id, "finalizing")
 

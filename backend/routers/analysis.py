@@ -297,6 +297,23 @@ def _requirements_from_rows(rows) -> list:
     } for r in rows]
 
 
+def _refund_lots(db, org_id: str, project_id: str, lot_ids: list) -> None:
+    """Échec TECHNIQUE (panne API/5xx/crédit) : rembourse les unités
+    décomptées au lancement — la relance ne re-paie pas. Idempotent (un lot
+    déjà remboursé est un no-op) ; jamais appelé quand l'IA a tourné mais
+    que le DCE n'a rien donné (no_requirements : l'unité reste due)."""
+    org = db.query(Organization).filter(Organization.id == org_id).first()
+    if org is None:
+        return
+    try:
+        for lot_id in lot_ids:
+            quota.refund(db, org, "analysis", project_id=project_id, lot=lot_id)
+        db.commit()
+    except Exception:
+        logger.exception("Refund quota impossible (%s, lots=%s)", project_id, lot_ids)
+        db.rollback()
+
+
 def _run_analysis_job(
     project_id: str,
     org_id: str,
@@ -349,10 +366,12 @@ def _run_analysis_job(
                 _persist_scope(db, project_id, commun_reqs, "_commun", also_null=True)
         except ClaudeRateLimitError as e:
             logger.warning(f"Rate limit Anthropic projet {project_id}: {e}")
+            _refund_lots(db, org_id, project_id, [s["lot_id"] for s in lot_specs])
             _fail_analysis(project_id, "Limite Anthropic atteinte. Relancez dans une minute.", "rate_limit")
             return
         except Exception as e:
             logger.error(f"Erreur analyse IA (tronc commun) {project_id}: {e}", exc_info=True)
+            _refund_lots(db, org_id, project_id, [s["lot_id"] for s in lot_specs])
             _fail_analysis(project_id, "Erreur lors de l'analyse IA. Relancez l'analyse.", str(e))
             return
 
@@ -375,15 +394,17 @@ def _run_analysis_job(
         failed_lots = []
         try:
             with ThreadPoolExecutor(max_workers=2) as pool:
-                futures = [pool.submit(_one_lot, spec) for spec in lot_specs]
-                for fut in futures:
+                futures = [(pool.submit(_one_lot, spec), spec) for spec in lot_specs]
+                for fut, spec in futures:
                     try:
                         results.append(fut.result(timeout=1200))
                     except ClaudeRateLimitError:
                         failed_lots.append("rate_limit")
+                        _refund_lots(db, org_id, project_id, [spec["lot_id"]])
                     except Exception as e:
                         logger.error("Analyse lot échouée: %s", e, exc_info=True)
                         failed_lots.append(str(e))
+                        _refund_lots(db, org_id, project_id, [spec["lot_id"]])
         except Exception as e:
             logger.error("Pool lots: %s", e, exc_info=True)
 
@@ -418,6 +439,9 @@ def _run_analysis_job(
                            failed_lots=failed_lots)
     except Exception as e:
         logger.error(f"Analyse {project_id} : échec de finalisation: {e}", exc_info=True)
+        # Rien n'a été livré → tout est remboursé (idempotent : les lots
+        # déjà remboursés plus haut sont des no-ops).
+        _refund_lots(db, org_id, project_id, [s["lot_id"] for s in lot_specs])
         _fail_analysis(project_id, "Erreur lors de l'enregistrement des résultats. Relancez l'analyse.", str(e))
     finally:
         db.close()

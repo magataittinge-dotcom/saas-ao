@@ -149,3 +149,30 @@ def consume(
     )
     db.add(row)
     return row
+
+
+def refund(
+    db: Session,
+    org: Organization,
+    kind: str,
+    project_id: Optional[str] = None,
+    lot: Optional[str] = None,
+) -> int:
+    """Rembourse 1 unité après un échec TECHNIQUE (panne API/5xx/crédit
+    épuisé) : supprime la consommation la plus récente correspondante — la
+    relance ne re-paie donc pas. Jamais appelé pour un DCE vide/illisible
+    (l'IA a tourné : l'unité reste due). Retourne 1 si remboursé, 0 sinon
+    (idempotent : rien à rembourser → no-op)."""
+    q = db.query(QuotaConsumption).filter(
+        QuotaConsumption.organization_id == org.id,
+        QuotaConsumption.kind == kind,
+    )
+    if project_id is not None:
+        q = q.filter(QuotaConsumption.project_id == project_id)
+    if lot is not None:
+        q = q.filter(QuotaConsumption.lot == lot)
+    row = q.order_by(QuotaConsumption.created_at.desc()).first()
+    if row is None:
+        return 0
+    db.delete(row)
+    return 1
