@@ -1,3 +1,6 @@
+import asyncio
+import logging
+import threading
 from datetime import datetime
 from urllib.parse import quote
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -6,7 +9,7 @@ from slowapi.util import get_remote_address
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
-from database import get_db
+from database import SessionLocal, get_db
 from models.user import User
 from models.project import Project, ProjectDocument
 from models.memoire import MemoireTechnique
@@ -27,6 +30,8 @@ from services.maps_service import generate_location_map
 from services.document_tagger import get_documents_for_lot
 from services import pipeline_tracker, quota
 from services.audit_logger import log_action
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -128,7 +133,7 @@ def get_memoire_preflight(
     }
 
 
-@router.post("/{project_id}/memoire/generate", response_model=MemoireResponse)
+@router.post("/{project_id}/memoire/generate")
 @limiter.limit("3/minute")
 async def generate_memoire(
     request: Request,
@@ -137,36 +142,28 @@ async def generate_memoire(
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ):
+    """Lance la génération en TÂCHE DE FOND — même architecture que l'analyse
+    détachée : POST → {"status": "started"} immédiat, run en thread démon qui
+    survit à la navigation, au reload et à la coupure HTTP/proxy. Suivi via
+    /processing-status + SSE ; notification memoire_ready à la fin ; échec →
+    statut error + relance, jamais de régression d'étape."""
     project = _get_project_or_404(project_id, user.organization_id, db)
-
-    # Fetch all context needed
     org = db.query(Organization).filter(Organization.id == user.organization_id).first()
-    memoire_cfg = db.query(MemoireConfig).filter(MemoireConfig.organization_id == user.organization_id).first()
+
     all_docs = db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).all()
     docs = get_documents_for_lot(all_docs, project.selected_lot)
-    refs = db.query(Reference).filter(
-        Reference.organization_id == user.organization_id,
-        Reference.is_reference == True,
-    ).all()
-    # C9a — sélection du pre-flight : si fournie, seules ces références
-    # partent au générateur (les ids étrangers sont ignorés par le scope org).
-    if payload.reference_ids is not None:
-        wanted = set(payload.reference_ids)
-        refs = [r for r in refs if r.id in wanted]
-    _CATEGORY_ORDER = {"technique": 0, "planning": 1, "offre": 2, "criteres_notation": 3, "candidature": 4}
-    compliance_items_raw = (
-        db.query(ComplianceItem)
-        .filter(ComplianceItem.project_id == project_id)
-        .all()
-    )
-    compliance_items = sorted(compliance_items_raw, key=lambda c: _CATEGORY_ORDER.get(c.category, 5))
-
     if not docs:
         raise HTTPException(status_code=400, detail="Aucun document DCE uploadé")
 
-    # ── Quota (C1) : vérifié AVANT la génération (blocage doux 402) ; l'unité
-    # n'est décomptée qu'au succès — « 1 mémoire PAR LOT généré ».
+    # ── Quota (C1) : blocage doux 402 AVANT lancement ; l'unité n'est
+    # décomptée qu'AU SUCCÈS, dans le job — « 1 mémoire PAR LOT généré ».
     quota.check_quota(db, org, "memoire")
+
+    # Anti double-run : une génération déjà en cours sur ce projet → 409
+    # (AVANT toute écriture : un 409 ne modifie rien, ne consomme rien).
+    thread_name = f"synorix-memoire-{project_id[:12]}"
+    if any(t.name == thread_name and t.is_alive() for t in threading.enumerate()):
+        raise HTTPException(status_code=409, detail="Une génération est déjà en cours pour ce projet.")
 
     variables = payload.model_dump(
         exclude_none=True,
@@ -176,8 +173,10 @@ async def generate_memoire(
 
     # C9a — case « mettre à jour mon profil » : propage les overrides dans la
     # couche stable entreprise (MemoireConfig). Sans la case, ils restent
-    # LOCAUX à ce mémoire.
+    # LOCAUX à ce mémoire. Écriture immédiate, hors run.
     if profile_overrides and payload.update_profile:
+        memoire_cfg = db.query(MemoireConfig).filter(
+            MemoireConfig.organization_id == user.organization_id).first()
         if not memoire_cfg:
             memoire_cfg = MemoireConfig(organization_id=user.organization_id)
             db.add(memoire_cfg)
@@ -185,38 +184,87 @@ async def generate_memoire(
         for key, value in profile_overrides.items():
             setattr(memoire_cfg, _CFG_FIELD_MAP.get(key, key), value)
 
-    # Check for reference template (imported mémoire)
-    ref_template = db.query(MemoireTemplate).filter(
-        MemoireTemplate.organization_id == user.organization_id,
-    ).first()
-    ref_template_text = None
-    if ref_template and ref_template.content_json:
-        # Flatten content_json to text for style reference
-        cj = ref_template.content_json
-        parts = [cj.get("preambule", "")]
-        for section in ("partie_a", "partie_b", "partie_c"):
-            sec = cj.get(section, {})
-            if isinstance(sec, dict):
-                parts.extend(sec.values())
-        ref_template_text = "\n\n".join(str(p) for p in parts if p)
+    # État persistant : un reload retrouve « génération en cours ». L'étape
+    # ne bouge pas ici — elle n'avance qu'au succès, dans le job.
+    project.status = "en_cours"
+    project.processing_status = "generating"
+    project.processing_detail = ""
+    db.commit()
 
-    # ── Pipeline tracking for memoire generation ───────────────────────────
     pipeline_tracker.start_pipeline(project_id, "memoire")
     pipeline_tracker.start_step(project_id, "preparing")
     pipeline_tracker.complete_step(project_id, "preparing")
-    pipeline_tracker.start_step(project_id, "generating")
 
-    # Lot 7 T3 — enrichissement réglementaire, UNIQUEMENT si RAG_ENRICHMENT
-    # (env, défaut false). Flag off → chemin strictement inchangé (testé).
-    reglementaire_block = None
-    from config import get_settings as _gs
-    if _gs().RAG_ENRICHMENT:
-        from services.rag.enrichment import build_reglementaire_block
-        reglementaire_block = build_reglementaire_block(db, compliance_items)
+    # ── Run DÉTACHÉ (thread démon) avec sa propre session DB ────────────────
+    thread = threading.Thread(
+        target=_run_memoire_job,
+        args=(project_id, user.organization_id, user.id, variables,
+              profile_overrides, payload.reference_ids),
+        daemon=True,
+        name=thread_name,
+    )
+    thread.start()
 
-    generator = MemoireGenerator()
+    return {"status": "started", "project_id": project_id, "lot": project.selected_lot}
+
+
+def _run_memoire_job(
+    project_id: str, org_id: str, user_id: str, variables: dict,
+    profile_overrides: dict | None, reference_ids: list | None,
+) -> None:
+    """Job de génération détaché — session DB propre, tout le contexte est
+    rechargé par id (jamais d'objets ORM partagés entre threads)."""
+    db = SessionLocal()
     try:
-        content = await generator.generate(
+        project = db.query(Project).filter(Project.id == project_id).first()
+        org = db.query(Organization).filter(Organization.id == org_id).first()
+        memoire_cfg = db.query(MemoireConfig).filter(
+            MemoireConfig.organization_id == org_id).first()
+        all_docs = db.query(ProjectDocument).filter(
+            ProjectDocument.project_id == project_id).all()
+        docs = get_documents_for_lot(all_docs, project.selected_lot)
+        refs = db.query(Reference).filter(
+            Reference.organization_id == org_id,
+            Reference.is_reference == True,
+        ).all()
+        # C9a — sélection du pre-flight : si fournie, seules ces références
+        # partent au générateur (ids étrangers ignorés par le scope org).
+        if reference_ids is not None:
+            wanted = set(reference_ids)
+            refs = [r for r in refs if r.id in wanted]
+        _CATEGORY_ORDER = {"technique": 0, "planning": 1, "offre": 2, "criteres_notation": 3, "candidature": 4}
+        compliance_items_raw = (
+            db.query(ComplianceItem)
+            .filter(ComplianceItem.project_id == project_id)
+            .all()
+        )
+        compliance_items = sorted(compliance_items_raw, key=lambda c: _CATEGORY_ORDER.get(c.category, 5))
+
+        # Check for reference template (imported mémoire)
+        ref_template = db.query(MemoireTemplate).filter(
+            MemoireTemplate.organization_id == org_id,
+        ).first()
+        ref_template_text = None
+        if ref_template and ref_template.content_json:
+            cj = ref_template.content_json
+            parts = [cj.get("preambule", "")]
+            for section in ("partie_a", "partie_b", "partie_c"):
+                sec = cj.get(section, {})
+                if isinstance(sec, dict):
+                    parts.extend(sec.values())
+            ref_template_text = "\n\n".join(str(p) for p in parts if p)
+
+        # Lot 7 T3 — enrichissement réglementaire, UNIQUEMENT si RAG_ENRICHMENT
+        # (env, défaut false). Flag off → chemin strictement inchangé (testé).
+        reglementaire_block = None
+        from config import get_settings as _gs
+        if _gs().RAG_ENRICHMENT:
+            from services.rag.enrichment import build_reglementaire_block
+            reglementaire_block = build_reglementaire_block(db, compliance_items)
+
+        pipeline_tracker.start_step(project_id, "generating")
+        generator = MemoireGenerator()
+        content = asyncio.run(generator.generate(
             organization=org,
             memoire_config=memoire_cfg,
             project_name=project.name,
@@ -231,66 +279,79 @@ async def generate_memoire(
             project_id=project_id,
             profile_overrides=profile_overrides,
             reglementaire_block=reglementaire_block,
-        )
+        ))
         pipeline_tracker.complete_step(project_id, "generating")
         pipeline_tracker.start_step(project_id, "finalizing")
-    except Exception as e:
-        import logging as _logging
-        _logging.getLogger(__name__).error(f"Erreur génération mémoire projet {project_id}: {e}", exc_info=True)
-        pipeline_tracker.fail_pipeline(project_id, str(e))
-        raise HTTPException(status_code=500, detail="Erreur lors de la génération du mémoire. Veuillez réessayer.")
 
-    # Upsert mémoire
-    existing = db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project_id).first()
-    if existing:
-        existing.content_json = content
-        existing.version += 1
-        existing.variables = variables
-        existing.profile_overrides = profile_overrides
-        existing.generated_at = datetime.utcnow()
-        memoire = existing
-    else:
-        memoire = MemoireTechnique(
-            project_id=project_id,
-            content_json=content,
-            variables=variables,
-            profile_overrides=profile_overrides,
+        # Upsert mémoire
+        existing = db.query(MemoireTechnique).filter(
+            MemoireTechnique.project_id == project_id).first()
+        if existing:
+            existing.content_json = content
+            existing.version += 1
+            existing.variables = variables
+            existing.profile_overrides = profile_overrides
+            existing.generated_at = datetime.utcnow()
+            memoire = existing
+        else:
+            memoire = MemoireTechnique(
+                project_id=project_id,
+                content_json=content,
+                variables=variables,
+                profile_overrides=profile_overrides,
+            )
+            db.add(memoire)
+
+        # Génération réussie → décompte de l'unité (1 mémoire = 1 lot).
+        quota.consume(db, org, "memoire", project_id=project_id, lot=project.selected_lot)
+
+        # C23 — notification sobre « mémoire prêt » (in-app + email best-effort).
+        from services.notifications import notify as _notify
+        _notify(
+            db, org_id, "memoire_ready",
+            titre=f"Mémoire technique prêt — {project.name}",
+            corps=f"Le mémoire du projet « {project.name} »"
+                  + (f" ({project.selected_lot_name})" if project.selected_lot_name else "")
+                  + " est généré. Relisez-le avant export.",
+            send_email=True,
         )
-        db.add(memoire)
 
-    # Génération réussie → décompte de l'unité (1 mémoire = 1 lot).
-    quota.consume(db, org, "memoire", project_id=project_id, lot=project.selected_lot)
+        # Mark steps 4+5 complete, advance to step 6 (export)
+        steps = dict(project.completed_steps or {})
+        steps["4"] = True
+        steps["5"] = True
+        project.completed_steps = steps
+        if project.current_step < 6:
+            project.current_step = 6
+        project.status = "en_cours"
+        project.processing_status = "ready"
+        project.processing_detail = ""
+        db.commit()
+        pipeline_tracker.complete_pipeline(project_id)
 
-    # C23 — notification sobre « mémoire prêt » (in-app + email best-effort).
-    from services.notifications import notify as _notify
-    _notify(
-        db, user.organization_id, "memoire_ready",
-        titre=f"Mémoire technique prêt — {project.name}",
-        corps=f"Le mémoire du projet « {project.name} »"
-              + (f" ({project.selected_lot_name})" if project.selected_lot_name else "")
-              + " est généré. Relisez-le avant export.",
-        send_email=True,
-    )
-
-    pipeline_tracker.complete_pipeline(project_id)
-
-    # Mark steps 4+5 complete, advance to step 6 (export)
-    steps = dict(project.completed_steps or {})
-    steps["4"] = True
-    steps["5"] = True
-    project.completed_steps = steps
-    if project.current_step < 6:
-        project.current_step = 6
-    project.status = "en_cours"
-
-    db.commit()
-    db.refresh(memoire)
-    log_action(
-        db, user, "memoire.generate",
-        target_type="project", target_id=project_id,
-        extra={"version": memoire.version, "lot": project.selected_lot},
-    )
-    return memoire
+        job_user = db.query(User).filter(User.id == user_id).first()
+        if job_user is not None:
+            log_action(
+                db, job_user, "memoire.generate",
+                target_type="project", target_id=project_id,
+                extra={"version": memoire.version, "lot": project.selected_lot},
+            )
+    except Exception as e:
+        logger.error(f"Erreur génération mémoire projet {project_id}: {e}", exc_info=True)
+        db.rollback()
+        pipeline_tracker.fail_pipeline(project_id, str(e))
+        try:
+            p = db.query(Project).filter(Project.id == project_id).first()
+            if p is not None:
+                # Jamais de régression d'étape : l'utilisateur retrouve son
+                # écran mémoire avec un statut d'erreur et un bouton relancer.
+                p.processing_status = "error"
+                p.processing_detail = "La génération du mémoire a échoué. Relancez la génération."
+                db.commit()
+        except Exception:
+            logger.exception("Impossible d'enregistrer l'échec mémoire %s", project_id)
+    finally:
+        db.close()
 
 
 @router.post("/{project_id}/memoire/rewrite-passage")

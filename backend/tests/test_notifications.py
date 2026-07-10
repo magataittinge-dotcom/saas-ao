@@ -213,6 +213,10 @@ def test_memoire_ready_emitted_on_generation(client, db_session, test_org, monke
 
     resp = client.post("/api/projects/p-notif/memoire/generate", json={})
     assert resp.status_code == 200, resp.text
+    import threading
+    for t in threading.enumerate():
+        if t.name.startswith("synorix-memoire-"):
+            t.join(timeout=30)
 
     notifs = db_session.query(Notification).filter(
         Notification.type == "memoire_ready",

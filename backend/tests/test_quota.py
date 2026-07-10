@@ -224,6 +224,14 @@ def _mock_generator_success(monkeypatch):
     monkeypatch.setattr(memoire_mod.MemoireGenerator, "generate", _fake_generate)
 
 
+def _join_memoire():
+    """Génération détachée : attendre la fin du job avant les asserts."""
+    import threading
+    for t in threading.enumerate():
+        if t.name.startswith("synorix-memoire-"):
+            t.join(timeout=30)
+
+
 def test_memoire_counts_one_unit_per_lot(
     client, db_session, test_org, no_rate_limit, monkeypatch,
 ):
@@ -234,12 +242,14 @@ def test_memoire_counts_one_unit_per_lot(
 
     resp1 = client.post("/api/projects/proj-q3/memoire/generate", json={})
     assert resp1.status_code == 200, resp1.text
+    _join_memoire()
 
     # Deuxième lot du même AO → 2e unité.
     project.selected_lot = "lot2"
     db_session.commit()
     resp2 = client.post("/api/projects/proj-q3/memoire/generate", json={})
     assert resp2.status_code == 200, resp2.text
+    _join_memoire()
 
     rows = db_session.query(QuotaConsumption).filter(
         QuotaConsumption.organization_id == test_org.id,
@@ -276,13 +286,20 @@ def test_memoire_failure_does_not_consume(
         raise RuntimeError("claude down")
     monkeypatch.setattr(memoire_mod.MemoireGenerator, "generate", _boom)
 
+    # Contrat détaché : POST → "started", l'échec arrive dans le job de fond
+    # → statut error, et surtout AUCUNE unité consommée.
     resp = client.post("/api/projects/proj-q5/memoire/generate", json={})
-    assert resp.status_code == 500
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "started"
+    _join_memoire()
     used = db_session.query(QuotaConsumption).filter(
         QuotaConsumption.organization_id == test_org.id,
         QuotaConsumption.kind == "memoire",
     ).count()
     assert used == 0
+    db_session.expire_all()
+    from models.project import Project as _P
+    assert db_session.get(_P, "proj-q5").processing_status == "error"
 
 
 def test_business_generates_beyond_40(
@@ -296,3 +313,4 @@ def test_business_generates_beyond_40(
 
     resp = client.post("/api/projects/proj-q6/memoire/generate", json={})
     assert resp.status_code == 200, resp.text
+    _join_memoire()

@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useCallback } from 'react'
+import { useState, useRef, useMemo, useCallback, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, Link } from 'react-router-dom'
@@ -720,10 +720,13 @@ export default function StepMemoire({ project }: Props) {
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [, setGenSuccess] = useState(false)
   const [genError, setGenError] = useState<string | null>(null)
+  // Run DÉTACHÉ : `running` couvre le lancement local ; après un reload,
+  // project.processing_status === 'generating' reprend le relais (même
+  // architecture que l'analyse).
+  const [running, setRunning] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set())
   const [activeSection, setActiveSection] = useState('preambule')
-  const abortRef = useRef<AbortController | null>(null)
   const docRef = useRef<HTMLDivElement | null>(null)
 
   // Fetch existing mémoire
@@ -786,7 +789,7 @@ export default function StepMemoire({ project }: Props) {
 
   const { mutate: generate, isPending: isGenerating } = useMutation({
     mutationFn: () =>
-      api.post<MemoireTechnique>(`/projects/${project.id}/memoire/generate`, {
+      api.post<{ status: string }>(`/projects/${project.id}/memoire/generate`, {
         nb_ouvriers: variables.nb_ouvriers ? parseInt(variables.nb_ouvriers) : undefined,
         delai: variables.delai || undefined,
         chef_chantier_nom: variables.chef_chantier_nom || undefined,
@@ -801,17 +804,16 @@ export default function StepMemoire({ project }: Props) {
         include_organigramme: preflightRef.current.include_organigramme || undefined,
         gantt_phases: preflightRef.current.gantt_phases || undefined,
         annexe_document_ids: preflightRef.current.annexe_document_ids || undefined,
-      }, { timeout: 600_000 }),
-    onSuccess: (res) => {
+      }, { timeout: 60_000 }),
+    onSuccess: () => {
+      // Contrat détaché : le POST rend "started" immédiatement, le run
+      // continue côté serveur (survit navigation/reload/proxy).
       setGenError(null)
-      setEditedContent(null)
-      queryClient.setQueryData(['memoire', project.id], res.data)
+      setGenSuccess(false)
+      setRunning(true)
       queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
-      setGenSuccess(true)
-      setShowForm(false)
     },
     onError: (err) => {
-      if (abortRef.current?.signal.aborted) return
       setGenSuccess(false)
       const msg = axios.isAxiosError(err)
         ? (err.response?.data?.detail ?? 'Erreur lors de la generation')
@@ -820,11 +822,32 @@ export default function StepMemoire({ project }: Props) {
     },
   })
 
-  // SSE drives the modal during generation. Disabled when not generating
-  // so we don't keep an idle stream open while the user reads the result.
+  // Le run est détaché : l'état vivant est porté par processing_status
+  // (reprise après reload) + le flux SSE (progression temps réel).
+  const isRunning = isGenerating || running || project.processing_status === 'generating'
+
   const memoireSse = useProgressStream(project.id, {
-    enabled: isGenerating,
+    enabled: isRunning,
+    onComplete: () => {
+      setRunning(false)
+      setEditedContent(null)
+      setGenSuccess(true)
+      setShowForm(false)
+      queryClient.invalidateQueries({ queryKey: ['memoire', project.id] })
+      queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
+    },
   })
+
+  // Échec du run détaché → statut error explicite + relance possible,
+  // jamais d'attente infinie ni de régression d'étape.
+  useEffect(() => {
+    if (memoireSse.phase === 'error') {
+      setRunning(false)
+      setGenError(memoireSse.detail || 'La génération du mémoire a échoué. Relancez la génération.')
+      queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memoireSse.phase])
 
   const { mutate: saveEdits, isPending: isSaving } = useMutation({
     mutationFn: (content: MemoireContent) =>
@@ -840,11 +863,6 @@ export default function StepMemoire({ project }: Props) {
     const parsed = parseMarkdownToContent(raw, displayContent!)
     setEditedContent(parsed)
     saveEdits(parsed)
-  }
-
-  const handleCancel = () => {
-    abortRef.current?.abort()
-    setGenError('Generation annulee.')
   }
 
   const handleTocNavigate = useCallback((sectionId: string) => {
@@ -893,7 +911,7 @@ export default function StepMemoire({ project }: Props) {
     return (
       <>
         <SubscriptionWall open={showPaywall} onClose={() => setShowPaywall(false)} feature="memoire" />
-        {isGenerating && (
+        {isRunning && (
           <ProgressDisplay
             variant="modal"
             title="Synorix IA rédige votre mémoire"
@@ -902,7 +920,6 @@ export default function StepMemoire({ project }: Props) {
             progress={memoireSse.progress}
             detail={memoireSse.detail || 'Préparation du contexte…'}
             phase={memoireSse.phase}
-            onCancel={handleCancel}
           />
         )}
 
@@ -1074,12 +1091,14 @@ export default function StepMemoire({ project }: Props) {
           </div>
 
           {/* Error */}
-          {genError && (
+          {(genError || (!isRunning && project.processing_status === 'error')) && (
             <p
               className="text-sm rounded-lg px-3 py-2"
               style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.20)', color: '#EF4444' }}
             >
-              {genError}
+              {genError
+                ?? project.processing_detail
+                ?? 'La génération du mémoire a échoué. Relancez la génération.'}
             </p>
           )}
 
@@ -1091,7 +1110,7 @@ export default function StepMemoire({ project }: Props) {
               setGenError(null)
               generate()
             }}
-            disabled={isGenerating || !variables.nb_ouvriers || !variables.delai}
+            disabled={isRunning || !variables.nb_ouvriers || !variables.delai}
             className="signature-btn disabled:opacity-40"
             style={{ fontFamily: F, padding: '12px 24px' }}
           >
@@ -1110,7 +1129,7 @@ export default function StepMemoire({ project }: Props) {
   return (
     <>
       <SubscriptionWall open={showPaywall} onClose={() => setShowPaywall(false)} feature="memoire" />
-      {isGenerating && (
+      {isRunning && (
         <ProgressDisplay
           variant="modal"
           title="Synorix IA rédige votre mémoire"
@@ -1119,7 +1138,6 @@ export default function StepMemoire({ project }: Props) {
           progress={memoireSse.progress}
           detail={memoireSse.detail || 'Préparation du contexte…'}
           phase={memoireSse.phase}
-          onCancel={handleCancel}
         />
       )}
 
@@ -1135,6 +1153,16 @@ export default function StepMemoire({ project }: Props) {
       )}
 
       <div className="space-y-4 pb-20" style={{ fontFamily: F }}>
+
+        {/* Échec d'une régénération détachée : signalé sans quitter le doc */}
+        {genError && (
+          <p
+            className="text-sm rounded-lg px-3 py-2"
+            style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.20)', color: '#EF4444' }}
+          >
+            {genError}
+          </p>
+        )}
 
         {/* ── Title bar ──────────────────────────────────────────── */}
         <div className="flex items-center justify-between flex-wrap gap-3">

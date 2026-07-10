@@ -101,6 +101,14 @@ def _mock_generator(monkeypatch, captured):
     monkeypatch.setattr(memoire_mod.MemoireGenerator, "generate", _fake)
 
 
+def _join():
+    """Génération détachée : attendre la fin du job avant les asserts."""
+    import threading
+    for t in threading.enumerate():
+        if t.name.startswith("synorix-memoire-"):
+            t.join(timeout=30)
+
+
 def test_flag_off_path_unchanged(client, db_session, test_org, monkeypatch):
     """Défaut : build_reglementaire_block N'EST PAS appelé, aucun bloc passé."""
     import routers.memoire as memoire_mod
@@ -118,6 +126,7 @@ def test_flag_off_path_unchanged(client, db_session, test_org, monkeypatch):
 
     resp = client.post("/api/projects/proj-ragoff/memoire/generate", json={})
     assert resp.status_code == 200, resp.text
+    _join()
     assert captured.get("reglementaire_block") is None
 
 
@@ -137,4 +146,5 @@ def test_flag_on_injects_block(client, db_session, test_org, monkeypatch):
 
     resp = client.post("/api/projects/proj-ragon/memoire/generate", json={})
     assert resp.status_code == 200, resp.text
+    _join()
     assert "R2191-32" in (captured.get("reglementaire_block") or "")

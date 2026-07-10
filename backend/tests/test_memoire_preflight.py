@@ -19,6 +19,14 @@ from models.reference import Reference
 _DUMMY_CONTENT = {"preambule": "x", "partie_a": {}, "partie_b": {}, "partie_c": {}}
 
 
+def _join():
+    """Génération détachée : attendre la fin du job avant les asserts."""
+    import threading
+    for t in threading.enumerate():
+        if t.name.startswith("synorix-memoire-"):
+            t.join(timeout=30)
+
+
 @pytest.fixture(autouse=True)
 def no_rate_limit(monkeypatch):
     """generate_memoire est limité à 3/min — sans ceci le 4e test du fichier
@@ -130,6 +138,7 @@ def test_local_overrides_do_not_touch_org_profile(client, db_session, test_org, 
         "profile_overrides": {"materiel": "3 nacelles + échafaudage parapluie"},
     })
     assert resp.status_code == 200, resp.text
+    _join()
 
     # Le generator a bien reçu l'override…
     assert captured["profile_overrides"] == {"materiel": "3 nacelles + échafaudage parapluie"}
@@ -157,6 +166,7 @@ def test_update_profile_checkbox_propagates(client, db_session, test_org, monkey
         "update_profile": True,
     })
     assert resp.status_code == 200, resp.text
+    _join()
 
     db_session.expire_all()
     cfg = db_session.query(MemoireConfig).filter(
@@ -196,6 +206,7 @@ def test_reference_selection_respected(client, db_session, test_org, monkeypatch
         "reference_ids": facade_ids,
     })
     assert resp.status_code == 200, resp.text
+    _join()
 
     sent_ids = captured["reference_ids_received"]
     assert len(sent_ids) == 3
@@ -218,4 +229,5 @@ def test_foreign_reference_ids_ignored(client, db_session, test_org, monkeypatch
     })
     # Aucune référence valide → génération quand même (sans références volées)
     assert resp.status_code == 200
+    _join()
     assert captured["reference_ids_received"] == []

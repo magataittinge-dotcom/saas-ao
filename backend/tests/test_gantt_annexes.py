@@ -116,6 +116,10 @@ def test_generate_stores_gantt_and_annexes(client, db_session, test_org, monkeyp
         "annexe_document_ids": ["doc-a", "doc-b"],
     })
     assert resp.status_code == 200, resp.text
+    import threading
+    for t in threading.enumerate():
+        if t.name.startswith("synorix-memoire-"):
+            t.join(timeout=30)
 
     memoire = db_session.query(MemoireTechnique).filter(
         MemoireTechnique.project_id == "proj-bonus2",
