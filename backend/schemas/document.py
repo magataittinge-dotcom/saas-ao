@@ -34,6 +34,8 @@ class ProjectDocumentResponse(BaseModel):
     file_name: str
     file_size: Optional[int] = None
     page_count: Optional[int] = None
+    # Audit écart #3 — warning d'extraction par fichier (scanné/corrompu/.doc).
+    extraction_warning: Optional[str] = None
     pdf_preview_url: Optional[str] = None
     related_lots: Optional[List[str]] = None
     uploaded_at: datetime

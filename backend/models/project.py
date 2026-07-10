@@ -104,6 +104,9 @@ class ProjectDocument(Base):
     file_url = Column(String(500), nullable=False)
     file_name = Column(String(255), nullable=False)
     extracted_text = Column(Text, nullable=True)
+    # Audit écart #3 — plus d'échec d'extraction silencieux : message UI par
+    # fichier (scanné / corrompu / .doc ancien), posé par la phase différée.
+    extraction_warning = Column(String(300), nullable=True)
     file_size = Column(Integer, nullable=True)
     page_count = Column(Integer, nullable=True)
     pdf_preview_url = Column(String(500), nullable=True)  # URL du PDF converti pour prévisualisation

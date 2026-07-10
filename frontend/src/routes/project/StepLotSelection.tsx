@@ -369,6 +369,20 @@ export default function StepLotSelection({ project }: Props) {
 
   const isBackendBusy = procStatus?.status === 'extracting_text' || procStatus?.status === 'extracting_zip'
 
+  // Audit écart #3 — documents illisibles (scanné / corrompu / .doc ancien)
+  // signalés PAR FICHIER : la phase différée n'est plus jamais silencieuse.
+  const { data: extractionInfo } = useQuery({
+    queryKey: ['extraction-warnings', project.id, isBackendBusy],
+    queryFn: async () => {
+      const { data } = await api.get<{ warnings?: { file_name: string; warning: string }[] }>(
+        `/projects/${project.id}/extraction-status`,
+      )
+      return data
+    },
+    enabled: !isBackendBusy,
+  })
+  const extractionWarnings = extractionInfo?.warnings ?? []
+
   useEffect(() => {
     if (!isBackendBusy) {
       if (waitingForExtraction) {
@@ -658,6 +672,25 @@ export default function StepLotSelection({ project }: Props) {
               <span className="text-sm font-medium block" style={{ color: '#0EA5E9' }}>Extraction des documents en cours...</span>
               {processingDetail && <span className="text-xs block mt-0.5" style={{ color: '#94A3B8' }}>{processingDetail}</span>}
             </div>
+          </div>
+        )}
+
+        {/* Documents illisibles — signalés par fichier, jamais silencieux */}
+        {extractionWarnings.length > 0 && (
+          <div className="p-4 rounded-xl mb-4" style={{ background: 'rgba(180,83,9,0.06)', border: '1px solid rgba(180,83,9,0.20)' }}>
+            <div className="flex items-center gap-2 mb-1.5">
+              <AlertTriangle size={16} style={{ color: '#B45309' }} />
+              <span className="text-sm font-semibold" style={{ color: '#B45309' }}>
+                {extractionWarnings.length} document{extractionWarnings.length > 1 ? 's' : ''} illisible{extractionWarnings.length > 1 ? 's' : ''} — exigences non extraites de ce{extractionWarnings.length > 1 ? 's' : ''} fichier{extractionWarnings.length > 1 ? 's' : ''}
+              </span>
+            </div>
+            <ul className="space-y-0.5 pl-6">
+              {extractionWarnings.map((w) => (
+                <li key={w.file_name} className="text-xs" style={{ color: '#92400E' }}>
+                  <span className="font-medium">{w.file_name}</span> — {w.warning}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 

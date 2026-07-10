@@ -902,6 +902,7 @@ def _extract_all_parallel(project_id: str, docs_info: list) -> None:
         """Extract text for a small file. Runs in thread pool."""
         extracted_text = ""
         page_count = None
+        extraction_warning = None
         # Libellé de sous-phase : les formats sans granularité page
         # (docx/xlsx lourds) changent au moins le libellé — jamais muet.
         try:
@@ -937,7 +938,7 @@ def _extract_all_parallel(project_id: str, docs_info: list) -> None:
                     _publish_partial(
                         detail=f"Indexation : {filename[:50]} — page {done_pages}/{total_pages}")
 
-                result_text, result_pages = processor.extract(
+                result_text, result_pages, extraction_warning = processor.extract_ex(
                     content, filename, on_page=_on_page)
                 if result_text:
                     extracted_text = result_text.replace("\x00", "")
@@ -953,6 +954,7 @@ def _extract_all_parallel(project_id: str, docs_info: list) -> None:
                 doc = db_inner.query(ProjectDocument).filter(ProjectDocument.id == doc_id).first()
                 if doc and doc.extracted_text is None:
                     doc.extracted_text = extracted_text
+                    doc.extraction_warning = extraction_warning
                     if page_count is not None:
                         doc.page_count = page_count
                     db_inner.commit()
@@ -1045,9 +1047,10 @@ def _extract_all_parallel(project_id: str, docs_info: list) -> None:
                 if not file_path.exists():
                     return
                 content = file_path.read_bytes()
-                result_text, result_pages = processor.extract(content, filename)
+                result_text, result_pages, result_warning = processor.extract_ex(content, filename)
                 if result_text:
                     doc.extracted_text = result_text.replace("\x00", "")
+                doc.extraction_warning = result_warning
                 if result_pages is not None:
                     doc.page_count = result_pages
                 db_inner.commit()
@@ -1221,6 +1224,7 @@ def _extract_text_from_url_background(doc_id: str, file_url: str, filename: str)
     _log = _logging.getLogger(__name__)
     extracted_text = ""
     page_count = None
+    extraction_warning = None
     try:
         if file_url.startswith("/uploads/"):
             path = UPLOADS_ROOT / file_url.removeprefix("/uploads/")
@@ -1232,7 +1236,7 @@ def _extract_text_from_url_background(doc_id: str, file_url: str, filename: str)
             # S3-backed file — extraction would need a download step we don't yet support.
             _log.warning(f"Extraction texte ignorée (URL non locale): {file_url}")
             return
-        result_text, result_pages = processor.extract(content, filename)
+        result_text, result_pages, extraction_warning = processor.extract_ex(content, filename)
         if result_text:
             extracted_text = result_text.replace("\x00", "")
         page_count = result_pages
@@ -1246,6 +1250,7 @@ def _extract_text_from_url_background(doc_id: str, file_url: str, filename: str)
             doc = db.query(ProjectDocument).filter(ProjectDocument.id == doc_id).first()
             if doc:
                 doc.extracted_text = extracted_text
+                doc.extraction_warning = extraction_warning
                 if page_count is not None:
                     doc.page_count = page_count
                 db.commit()
@@ -1613,10 +1618,20 @@ def get_extraction_status(
         ProjectDocument.project_id == project_id,
         ProjectDocument.extracted_text.isnot(None),
     ).count()
+    # Audit écart #3 — les échecs de la phase différée remontent à l'UI,
+    # par fichier (document scanné, corrompu, .doc ancien…).
+    warned = db.query(ProjectDocument).filter(
+        ProjectDocument.project_id == project_id,
+        ProjectDocument.extraction_warning.isnot(None),
+    ).order_by(ProjectDocument.file_name).all()
     return {
         "total": total,
         "extracted": extracted,
         "ready": extracted >= total,
+        "warnings": [
+            {"file_name": d.file_name, "warning": d.extraction_warning}
+            for d in warned
+        ],
     }
 
 
