@@ -49,23 +49,23 @@ export default function CandidatureSectionVault({ items, onPickFromVault, onOpen
 
   return (
     <section
-      className="bg-white rounded-lg overflow-hidden"
-      style={{ border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', fontFamily: F }}
+      className="bg-ds-bg rounded-lg overflow-hidden"
+      style={{ border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', fontFamily: F }}
     >
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid #F1F5F9' }}>
+      <header className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="flex items-center gap-3 min-w-0">
           <div
             className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: '#F0F9FF' }}
+            style={{ background: '#0F2B33' }}
           >
-            <FolderOpen size={18} style={{ color: '#0EA5E9' }} />
+            <FolderOpen size={18} style={{ color: '#22D3EE' }} />
           </div>
           <div className="min-w-0">
-            <h2 className="text-base font-bold" style={{ color: '#0F172A' }}>
+            <h2 className="text-base font-bold" style={{ color: '#E7EAEE' }}>
               Pièces du coffre-fort
             </h2>
-            <p className="text-xs mt-0.5" style={{ color: '#64748B' }}>
+            <p className="text-xs mt-0.5" style={{ color: '#9AA3AE' }}>
               {present}/{items.length} fournies — sélectionnez une pièce existante de votre coffre-fort
             </p>
           </div>
@@ -74,7 +74,7 @@ export default function CandidatureSectionVault({ items, onPickFromVault, onOpen
           type="button"
           onClick={onOpenVault}
           className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-sky-50 shrink-0"
-          style={{ border: '1px solid #0EA5E9', color: '#0EA5E9' }}
+          style={{ border: '1px solid #22D3EE', color: '#22D3EE' }}
         >
           <Lock size={13} />
           Ouvrir le coffre-fort
@@ -84,10 +84,10 @@ export default function CandidatureSectionVault({ items, onPickFromVault, onOpen
       {/* Categories */}
       <div className="px-6 py-2">
         {CATEGORY_ORDER.filter((cat) => grouped[cat].length > 0).map((cat) => (
-          <div key={cat} className="py-3" style={{ borderBottom: '1px solid #F8FAFC' }}>
+          <div key={cat} className="py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
             <div
               className="text-[11px] font-semibold uppercase tracking-wider mb-2"
-              style={{ color: '#94A3B8' }}
+              style={{ color: '#6B7280' }}
             >
               {CATEGORY_LABELS[cat]}
             </div>
@@ -110,24 +110,24 @@ function VaultRow({ item, onPick }: { item: ChecklistItem; onPick: () => void })
 
   return (
     <li
-      className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-slate-50"
-      style={{ background: '#FAFBFC' }}
+      className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-ds-bg-2"
+      style={{ background: '#121417' }}
     >
       <span className="shrink-0">{icon}</span>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium truncate" style={{ color: '#1E293B' }}>
+        <p className="text-sm font-medium truncate" style={{ color: '#E7EAEE' }}>
           {item.details || item.document_type_required}
         </p>
         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
           <span className="text-[11px]" style={{ color }}>{label}</span>
           {item.lot && (
             <span className="text-[11px] px-1.5 rounded-full"
-              style={{ background: 'rgba(14,165,233,0.08)', color: '#0284C7' }}>
+              style={{ background: 'rgba(34,211,238,0.08)', color: '#67E8F9' }}>
               {item.lot.replace(/^lot/i, 'Lot ')}
             </span>
           )}
           {isLinked && (
-            <span className="text-[11px] flex items-center gap-1" style={{ color: '#64748B' }}>
+            <span className="text-[11px] flex items-center gap-1" style={{ color: '#9AA3AE' }}>
               <FileText size={11} />
               Lié au coffre-fort
             </span>
@@ -140,7 +140,7 @@ function VaultRow({ item, onPick }: { item: ChecklistItem; onPick: () => void })
           type="button"
           onClick={onPick}
           className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-colors hover:opacity-90 shrink-0"
-          style={{ background: '#0EA5E9' }}
+          style={{ background: '#22D3EE' }}
         >
           Choisir
         </button>
@@ -148,8 +148,8 @@ function VaultRow({ item, onPick }: { item: ChecklistItem; onPick: () => void })
         <button
           type="button"
           onClick={onPick}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-slate-100 shrink-0"
-          style={{ border: '1px solid #E2E8F0', color: '#64748B' }}
+          className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-ds-bg-2 shrink-0"
+          style={{ border: '1px solid rgba(255,255,255,0.06)', color: '#9AA3AE' }}
         >
           Remplacer
         </button>
@@ -162,34 +162,34 @@ function statusFor(status: ChecklistItem['status']): { icon: JSX.Element; label:
   switch (status) {
     case 'present':
       return {
-        icon: <CheckCircle2 size={16} style={{ color: '#10B981' }} />,
+        icon: <CheckCircle2 size={16} style={{ color: '#34D399' }} />,
         label: 'Conforme',
-        color: '#10B981',
+        color: '#34D399',
       }
     case 'expire':
       return {
-        icon: <AlertCircle size={16} style={{ color: '#EF4444' }} />,
+        icon: <AlertCircle size={16} style={{ color: '#F87171' }} />,
         label: 'Expiré — à mettre à jour',
-        color: '#EF4444',
+        color: '#F87171',
       }
     case 'expiration_proche':
       return {
-        icon: <Clock size={16} style={{ color: '#64748B' }} />,
+        icon: <Clock size={16} style={{ color: '#9AA3AE' }} />,
         label: 'Expire bientôt',
-        color: '#64748B',
+        color: '#9AA3AE',
       }
     case 'warning':
       // C10 — présente mais problème (doc à vérifier / non classé / date illisible)
       return {
-        icon: <AlertCircle size={16} style={{ color: '#B45309' }} />,
+        icon: <AlertCircle size={16} style={{ color: '#FBBF24' }} />,
         label: 'Présente — à vérifier',
-        color: '#B45309',
+        color: '#FBBF24',
       }
     default:
       return {
-        icon: <AlertCircle size={16} style={{ color: '#EF4444' }} />,
+        icon: <AlertCircle size={16} style={{ color: '#F87171' }} />,
         label: 'Manquant',
-        color: '#EF4444',
+        color: '#F87171',
       }
   }
 }

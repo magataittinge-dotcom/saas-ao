@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
  * GlassButton — bouton premium glassmorphism avec glow cyan au survol.
  *
  * Style : fond verre (backdrop-blur + fond semi-transparent), bordure subtile,
- * et un halo cyan (#0EA5E9) doux qui s'intensifie au hover.
+ * et un halo cyan (#22D3EE) doux qui s'intensifie au hover.
  * Pensé pour le SaaS BTP (palette ds-cyan, light mode).
  */
 const glassButton = cva(
@@ -27,9 +27,9 @@ const glassButton = cva(
       variant: {
         // verre clair translucide — usage par défaut
         glass: [
-          'bg-white/60 text-ds-text-1b',
+          'bg-ds-bg/60 text-ds-text-1b',
           'border-ds-cyan/15',
-          'hover:bg-white/80 hover:border-ds-cyan/40',
+          'hover:bg-ds-bg/80 hover:border-ds-cyan/40',
         ],
         // verre teinté cyan — call-to-action premium
         primary: [
@@ -39,9 +39,9 @@ const glassButton = cva(
         ],
         // verre neutre slate — action secondaire
         ghost: [
-          'bg-slate-500/5 text-ds-text-2',
+          'bg-ds-bg-20/5 text-ds-text-2',
           'border-transparent shadow-none',
-          'hover:bg-slate-500/10 hover:text-ds-text-1b hover:shadow-glow-sm',
+          'hover:bg-ds-bg-20/10 hover:text-ds-text-1b hover:shadow-glow-sm',
         ],
       },
       size: {

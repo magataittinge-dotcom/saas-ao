@@ -33,42 +33,42 @@ export default function PdfSourceViewer({ fileUrl, fileName, initialPage, onClos
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4"
       style={{ background: 'rgba(15,23,42,0.55)' }} onClick={onClose}>
       <div
-        className="bg-white rounded-xl w-full max-w-4xl h-[88vh] flex flex-col overflow-hidden"
+        className="bg-ds-bg rounded-xl w-full max-w-4xl h-[88vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         style={{ boxShadow: '0 20px 40px rgba(0,0,0,0.20)' }}
       >
         {/* Toolbar */}
-        <div className="flex items-center gap-3 px-4 py-2.5 shrink-0" style={{ borderBottom: '1px solid #F1F5F9' }}>
-          <p className="text-sm font-semibold truncate flex-1" style={{ color: '#0F172A' }}>{fileName}</p>
+        <div className="flex items-center gap-3 px-4 py-2.5 shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <p className="text-sm font-semibold truncate flex-1" style={{ color: '#E7EAEE' }}>{fileName}</p>
           {numPages && (
-            <span className="inline-flex items-center gap-1 text-xs" style={{ color: '#64748B' }}>
+            <span className="inline-flex items-center gap-1 text-xs" style={{ color: '#9AA3AE' }}>
               <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1}
-                className="p-1 rounded disabled:opacity-30 hover:bg-slate-100">
+                className="p-1 rounded disabled:opacity-30 hover:bg-ds-bg-2">
                 <ChevronLeft size={14} />
               </button>
               page {page} / {numPages}
               <button onClick={() => setPage(p => Math.min(numPages, p + 1))} disabled={page >= numPages}
-                className="p-1 rounded disabled:opacity-30 hover:bg-slate-100">
+                className="p-1 rounded disabled:opacity-30 hover:bg-ds-bg-2">
                 <ChevronRight size={14} />
               </button>
             </span>
           )}
           <a href={fileUrl} target="_blank" rel="noreferrer" title="Ouvrir dans un onglet"
-            className="p-1.5 rounded hover:bg-slate-100" style={{ color: '#64748B' }}>
+            className="p-1.5 rounded hover:bg-ds-bg-2" style={{ color: '#9AA3AE' }}>
             <ExternalLink size={15} />
           </a>
-          <button onClick={onClose} className="p-1.5 rounded hover:bg-slate-100" style={{ color: '#64748B' }}>
+          <button onClick={onClose} className="p-1.5 rounded hover:bg-ds-bg-2" style={{ color: '#9AA3AE' }}>
             <X size={16} />
           </button>
         </div>
 
         {/* Document */}
-        <div className="flex-1 overflow-auto flex justify-center py-4" style={{ background: '#F1F5F9' }}>
+        <div className="flex-1 overflow-auto flex justify-center py-4" style={{ background: '#121417', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.06)' }}>
           {failed ? (
             <div className="self-center text-center">
-              <p className="text-sm" style={{ color: '#64748B' }}>Impossible d'afficher ce PDF ici.</p>
+              <p className="text-sm" style={{ color: '#9AA3AE' }}>Impossible d'afficher ce PDF ici.</p>
               <a href={fileUrl} target="_blank" rel="noreferrer"
-                className="text-sm font-medium underline" style={{ color: '#0EA5E9' }}>
+                className="text-sm font-medium underline" style={{ color: '#22D3EE' }}>
                 Ouvrir dans un onglet
               </a>
             </div>
@@ -77,7 +77,7 @@ export default function PdfSourceViewer({ fileUrl, fileName, initialPage, onClos
               file={fileUrl}
               onLoadSuccess={({ numPages: n }) => setNumPages(n)}
               onLoadError={() => setFailed(true)}
-              loading={<Loader2 size={22} className="animate-spin self-center" style={{ color: '#0EA5E9' }} />}
+              loading={<Loader2 size={22} className="animate-spin self-center" style={{ color: '#22D3EE' }} />}
             >
               <Page pageNumber={page} width={780} renderAnnotationLayer renderTextLayer={false} />
             </Document>

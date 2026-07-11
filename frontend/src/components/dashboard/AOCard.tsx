@@ -9,13 +9,13 @@ import type { Project } from '@/types'
 import { PIPELINE_STEPS } from './PipelineRail'
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string; accent: string }> = {
-  brouillon:  { label: 'Brouillon',            cls: 'pill-muted',   accent: '#64748B' },
-  en_cours:   { label: 'En cours',             cls: 'pill-cyan',    accent: '#0EA5E9' },
-  analyzed:   { label: 'Analysé',              cls: 'pill-cyan',    accent: '#0EA5E9' },
-  sans_suite: { label: 'Analysé — sans suite', cls: 'pill-muted',   accent: '#94A3B8' },
-  soumis:     { label: 'Déposé',               cls: 'pill-muted',   accent: '#475569' },
-  gagné:      { label: 'Gagné',                cls: 'pill-gagne',   accent: '#047857' },
-  perdu:      { label: 'Perdu',                cls: 'pill-danger',  accent: '#EF4444' },
+  brouillon:  { label: 'Brouillon',            cls: 'pill-muted',   accent: '#9AA3AE' },
+  en_cours:   { label: 'En cours',             cls: 'pill-cyan',    accent: '#22D3EE' },
+  analyzed:   { label: 'Analysé',              cls: 'pill-cyan',    accent: '#22D3EE' },
+  sans_suite: { label: 'Analysé — sans suite', cls: 'pill-muted',   accent: '#6B7280' },
+  soumis:     { label: 'Déposé',               cls: 'pill-muted',   accent: '#9AA3AE' },
+  gagné:      { label: 'Gagné',                cls: 'pill-gagne',   accent: '#34D399' },
+  perdu:      { label: 'Perdu',                cls: 'pill-danger',  accent: '#F87171' },
 }
 
 interface Props {
@@ -48,22 +48,22 @@ export function AOCard({ project, onDelete }: Props) {
   const stepIndex = Math.min(Math.max(project.current_step, 1), PIPELINE_STEPS.length)
   const progress = ((stepIndex - 1) / (PIPELINE_STEPS.length - 1)) * 100
   const status = STATUS_CONFIG[project.status] ?? STATUS_CONFIG.brouillon
-  const accentColor = isUrgent ? '#0EA5E9' : status.accent
+  const accentColor = isUrgent ? '#22D3EE' : status.accent
 
   return (
     <div
       className="glass-card p-5 cursor-pointer flex flex-col gap-4 relative overflow-hidden"
       style={{
-        borderColor: isUrgent ? 'rgba(14,165,233,0.30)' : undefined,
+        borderColor: isUrgent ? 'rgba(34,211,238,0.30)' : undefined,
       }}
       onClick={() => navigate(`/projects/${project.id}`)}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = isUrgent ? 'rgba(14,165,233,0.45)' : 'rgba(14,165,233,0.15)'
+        e.currentTarget.style.borderColor = isUrgent ? 'rgba(34,211,238,0.45)' : 'rgba(34,211,238,0.15)'
         e.currentTarget.style.transform = 'translateY(-2px)'
-        e.currentTarget.style.boxShadow = `0 4px 12px rgba(0,0,0,0.08), 0 0 0 1px rgba(14,165,233,0.10)`
+        e.currentTarget.style.boxShadow = `0 4px 12px rgba(0,0,0,0.08), 0 0 0 1px rgba(34,211,238,0.10)`
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = isUrgent ? 'rgba(14,165,233,0.30)' : ''
+        e.currentTarget.style.borderColor = isUrgent ? 'rgba(34,211,238,0.30)' : ''
         e.currentTarget.style.transform = 'translateY(0)'
         e.currentTarget.style.boxShadow = ''
       }}
@@ -100,12 +100,12 @@ export function AOCard({ project, onDelete }: Props) {
       )}
 
       {/* Metadata: date + lot */}
-      <div className="flex items-center gap-3 text-xs -mt-2 relative" style={{ color: '#475569' }}>
+      <div className="flex items-center gap-3 text-xs -mt-2 relative" style={{ color: '#9AA3AE' }}>
         <span>
           {new Date(project.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
         </span>
         {project.selected_lot_name && (
-          <span className="truncate" style={{ color: '#0284C7' }}>
+          <span className="truncate" style={{ color: '#67E8F9' }}>
             {project.selected_lot_name}
           </span>
         )}
@@ -135,7 +135,7 @@ export function AOCard({ project, onDelete }: Props) {
               'flex items-center gap-1.5 text-xs',
               isUrgent ? 'font-semibold' : 'text-ds-text-3',
             )}
-            style={isUrgent ? { color: '#0284C7' } : undefined}
+            style={isUrgent ? { color: '#67E8F9' } : undefined}
           >
             <Clock size={11} />
             {days === 0
@@ -156,7 +156,7 @@ export function AOCard({ project, onDelete }: Props) {
               onClick={(e) => { e.stopPropagation(); setStatus('soumis') }}
               title="Marquer cet AO comme déposé (date enregistrée)"
               className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-50"
-              style={{ border: '1px solid #E2E8F0', color: '#475569' }}
+              style={{ border: '1px solid rgba(255,255,255,0.06)', color: '#9AA3AE' }}
             >
               <Send size={11} /> Déposé
             </button>
@@ -167,7 +167,7 @@ export function AOCard({ project, onDelete }: Props) {
                 disabled={statusPending}
                 onClick={(e) => { e.stopPropagation(); setStatus('gagné') }}
                 className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-50"
-                style={{ border: '1px solid rgba(16,185,129,0.30)', color: '#047857' }}
+                style={{ border: '1px solid rgba(52,211,153,0.30)', color: '#34D399' }}
               >
                 <Trophy size={11} /> Gagné
               </button>
@@ -175,7 +175,7 @@ export function AOCard({ project, onDelete }: Props) {
                 disabled={statusPending}
                 onClick={(e) => { e.stopPropagation(); setStatus('perdu') }}
                 className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-50"
-                style={{ border: '1px solid #E2E8F0', color: '#64748B' }}
+                style={{ border: '1px solid rgba(255,255,255,0.06)', color: '#9AA3AE' }}
               >
                 <X size={11} /> Perdu
               </button>
@@ -183,9 +183,9 @@ export function AOCard({ project, onDelete }: Props) {
           )}
           <button
             className="flex items-center gap-1 text-xs font-medium transition-colors"
-            style={{ color: '#0EA5E9' }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = '#0284C7')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = '#0EA5E9')}
+            style={{ color: '#22D3EE' }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#67E8F9')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = '#22D3EE')}
             onClick={(e) => { e.stopPropagation(); navigate(`/projects/${project.id}`) }}
           >
             Continuer

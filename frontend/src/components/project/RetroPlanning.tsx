@@ -39,37 +39,37 @@ export default function RetroPlanning({ projectId }: Props) {
   if (!data || data.steps.length === 0) return null
 
   return (
-    <div className="rounded-lg px-5 py-4" style={{ background: '#FFFFFF', border: '1px solid #E2E8F0' }}>
+    <div className="rounded-lg px-5 py-4" style={{ background: '#1A1D21', border: '1px solid rgba(255,255,255,0.06)' }}>
       <div className="flex items-center gap-2 mb-3">
-        <CalendarClock size={16} style={{ color: '#0EA5E9' }} />
-        <h3 className="text-sm font-bold" style={{ color: '#0F172A' }}>Rétro-planning</h3>
+        <CalendarClock size={16} style={{ color: '#22D3EE' }} />
+        <h3 className="text-sm font-bold" style={{ color: '#E7EAEE' }}>Rétro-planning</h3>
       </div>
       <ol className="relative ml-2">
         {data.steps.map((step, i) => (
           <li key={step.id} className="relative pl-6 pb-4 last:pb-0">
             {i < data.steps.length - 1 && (
-              <span className="absolute left-[5px] top-4 bottom-0 w-px" style={{ background: '#E2E8F0' }} />
+              <span className="absolute left-[5px] top-4 bottom-0 w-px" style={{ background: '#232730' }} />
             )}
             <span
               className="absolute left-0 top-1 w-[11px] h-[11px] rounded-full flex items-center justify-center"
               style={step.passed
-                ? { background: '#E2E8F0' }
+                ? { background: '#232730' }
                 : step.id === 'deadline'
-                  ? { background: '#0F172A' }
-                  : { background: '#0EA5E9' }}
+                  ? { background: '#E7EAEE' }
+                  : { background: '#22D3EE' }}
             >
-              {step.passed && <Check size={8} style={{ color: '#64748B' }} />}
+              {step.passed && <Check size={8} style={{ color: '#9AA3AE' }} />}
             </span>
             <p className="text-sm font-medium leading-tight"
-              style={{ color: step.passed ? '#94A3B8' : '#0F172A', textDecoration: step.passed ? 'line-through' : undefined }}>
+              style={{ color: step.passed ? '#6B7280' : '#E7EAEE', textDecoration: step.passed ? 'line-through' : undefined }}>
               {step.label}
             </p>
-            <p className="text-xs mt-0.5" style={{ color: step.passed ? '#CBD5E1' : '#64748B' }}>
+            <p className="text-xs mt-0.5" style={{ color: step.passed ? '#4B5563' : '#9AA3AE' }}>
               {formatFr(step.date)}{step.heure && ` à ${step.heure}`}
               {step.passed && ' — passée'}
             </p>
             {step.note && !step.passed && (
-              <p className="text-[11px] italic mt-0.5" style={{ color: '#94A3B8' }}>{step.note}</p>
+              <p className="text-[11px] italic mt-0.5" style={{ color: '#6B7280' }}>{step.note}</p>
             )}
           </li>
         ))}

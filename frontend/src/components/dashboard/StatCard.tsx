@@ -81,17 +81,17 @@ export function StatCard({ icon: Icon, label, value, suffix = '', ring, delay = 
       />
 
       <div className="relative flex items-start justify-between">
-        <div className="stat-icon-bg" style={{ background: 'rgba(14,165,233,0.08)' }}>
+        <div className="stat-icon-bg" style={{ background: 'rgba(34,211,238,0.08)' }}>
           <Icon size={20} className="text-ds-cyan" />
         </div>
 
         {ring !== undefined && (
           <div className="relative h-11 w-11 shrink-0">
             <svg viewBox="0 0 40 40" className="h-11 w-11 -rotate-90">
-              <circle cx="20" cy="20" r={R} fill="none" stroke="#F1F5F9" strokeWidth="3.5" />
+              <circle cx="20" cy="20" r={R} fill="none" stroke="#232730" strokeWidth="3.5" />
               <circle
                 cx="20" cy="20" r={R} fill="none"
-                stroke="#0EA5E9" strokeWidth="3.5" strokeLinecap="round"
+                stroke="#22D3EE" strokeWidth="3.5" strokeLinecap="round"
                 strokeDasharray={C}
                 strokeDashoffset={C * (1 - frac)}
                 style={{ transition: reduced ? undefined : 'stroke-dashoffset 0.9s cubic-bezier(0.4,0,0.2,1)' }}
@@ -101,7 +101,7 @@ export function StatCard({ icon: Icon, label, value, suffix = '', ring, delay = 
         )}
       </div>
 
-      <p className="mt-3 text-3xl font-bold tabular-nums text-ds-text">
+      <p className="edge-data mt-3 text-3xl font-bold tabular-nums text-ds-text">
         {count}{suffix}
       </p>
       <p className="mt-0.5 text-sm text-ds-text-2">{label}</p>

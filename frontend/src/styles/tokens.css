@@ -1,137 +1,164 @@
 /* ═══════════════════════════════════════════════════════════════
-   SYNORIX DESIGN TOKENS
-   Light Mode — Clean White Admin
-   Palette: #FFFFFF bg · Cyan #0EA5E9 · Emerald #10B981 · Violet #8B5CF6
+   SYNORIX EDGE — DESIGN TOKENS
+   « Engineered glass at dusk, éclairé cyan »
+   Surfaces graphite (luminance seule) · hairlines 1px · la LUMIÈRE
+   cyan (#22D3EE) est l'unique accent : l'état interactif se signale
+   par la ligne d'horizon (liseré 2px en bas) + glow doux, jamais
+   par un aplat. Profondeur par la lumière, pas par les drop-shadows.
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  /* ── Card style ───────────────────────────────────────────── */
-  --glass-opacity: 1;
-  --glass-blur: 0px;
-  --glass-border-opacity: 1;
-  --glass-saturate: 100%;
-  --glass-hover-opacity: 1;
-  --glass-hover-border: 1;
+  /* ── Surfaces (luminance-only, graphite) ─────────────────────── */
+  --edge-void:     #0A0B0D;   /* fond app */
+  --edge-graphite: #121417;   /* panneaux */
+  --edge-panel:    #1A1D21;   /* cartes */
+  --edge-slate:    #232730;   /* surélevé / hover */
 
-  /* ── Shadows ──────────────────────────────────────────────────── */
-  --shadow-card: 0px 1px 3px rgba(0,0,0,0.06), 0px 1px 2px rgba(0,0,0,0.04);
-  --shadow-card-hover: 0px 4px 12px rgba(0,0,0,0.08), 0px 0px 0px 1px rgba(14,165,233,0.12);
-  --shadow-horizon: 0px 1px 3px rgba(0,0,0,0.06), 0px 1px 2px rgba(0,0,0,0.04);
-  --shadow-horizon-hover: 0px 4px 12px rgba(0,0,0,0.08), 0 0 0 1px rgba(14,165,233,0.12);
+  /* ── Hairlines (jamais de border épaisse) ────────────────────── */
+  --edge-hairline:       rgba(255, 255, 255, 0.06);
+  --edge-hairline-hover: rgba(255, 255, 255, 0.10);
 
-  /* ── Card backgrounds ──────────────────────────────────────── */
-  --card-navy: #FFFFFF;
-  --card-navy-alt: #F8FAFC;
+  /* ── La lumière = le cyan ────────────────────────────────────── */
+  --edge-lumen:     #22D3EE;
+  --edge-lumen-400: #22D3EE;
+  --edge-lumen-300: #67E8F9;
+  --edge-lumen-500: #06B6D4;
+  --edge-glow:      0 8px 24px -12px rgba(34, 211, 238, 0.35);
+  --edge-horizon:   inset 0 -2px 0 0 var(--edge-lumen);
 
-  /* ── Text hierarchy ────────────────────────────────────────── */
-  --text-primary: #0F172A;
-  --text-secondary: #64748B;
-  --text-tertiary: #94A3B8;
-  --text-muted: #CBD5E1;
+  /* ── Texte (AA sur --edge-panel pour text / text-2) ──────────── */
+  --edge-text:   #E7EAEE;
+  --edge-text-2: #9AA3AE;
+  --edge-text-3: #6B7280;   /* méta uniquement — jamais du texte de lecture */
 
-  /* ── Border radius ─────────────────────────────────────────── */
-  --radius-card: 16px;
-  --radius-lg: 16px;
-  --radius-md: 12px;
-  --radius-sm: 8px;
+  /* ── États métier ────────────────────────────────────────────── */
+  --edge-success: #34D399;
+  --edge-warning: #FBBF24;
+  --edge-danger:  #F87171;
 
-  /* ── Accent palette ────────────────────────────────────────── */
-  --accent-cyan: #0EA5E9;
-  --accent-cyan-light: #38BDF8;
-  --accent-teal: #10B981;
-  --accent-violet: #8B5CF6;
-  --accent-green: #10B981;
-  --accent-amber: #F59E0B;
-  --accent-red: #EF4444;
+  /* ── Lueur radiale des panneaux (éclairés par le bas) ────────── */
+  --edge-panel-light: radial-gradient(120% 80% at 50% 100%, rgba(34, 211, 238, 0.05), transparent 60%);
 
-  /* ── Background gradients (very subtle on light) ──────────── */
-  --bg-gradient-1: radial-gradient(ellipse 80% 80% at 20% 80%, rgba(14,165,233,0.03) 0%, transparent 50%);
-  --bg-gradient-2: radial-gradient(ellipse 60% 60% at 80% 20%, rgba(16,185,129,0.02) 0%, transparent 50%);
-  --bg-gradient-3: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(139,92,246,0.01) 0%, transparent 60%);
+  /* ── Motion ──────────────────────────────────────────────────── */
+  --edge-ease: cubic-bezier(0.15, 0.83, 0.66, 1);
+
+  /* ── Radius : 10px cartes · 8px contrôles ────────────────────── */
+  --radius-card: 10px;
+  --radius-lg:   10px;
+  --radius-md:   10px;
+  --radius-sm:   8px;
+
+  /* ── Aliases legacy (anciens tokens light → Edge) ────────────── */
+  --card-navy:      var(--edge-panel);
+  --card-navy-alt:  var(--edge-graphite);
+  --text-primary:   var(--edge-text);
+  --text-secondary: var(--edge-text-2);
+  --text-tertiary:  var(--edge-text-3);
+  --text-muted:     #4B5563;
+  --accent-cyan:       var(--edge-lumen);
+  --accent-cyan-light: var(--edge-lumen-300);
+  --accent-teal:   var(--edge-success);
+  --accent-green:  var(--edge-success);
+  --accent-violet: var(--edge-lumen);   /* violet banni — retombe sur la lumière */
+  --accent-amber:  var(--edge-warning);
+  --accent-red:    var(--edge-danger);
+
+  --shadow-card:        inset 0 0 0 1px var(--edge-hairline);
+  --shadow-card-hover:  inset 0 0 0 1px var(--edge-hairline-hover), var(--edge-glow);
+  --shadow-horizon:       inset 0 0 0 1px var(--edge-hairline);
+  --shadow-horizon-hover: inset 0 0 0 1px var(--edge-hairline-hover), var(--edge-glow);
+
+  --bg-gradient-1: none;
+  --bg-gradient-2: none;
+  --bg-gradient-3: none;
 }
 
-/* ── Glass Card — now solid white card ──────────────────────── */
+/* ── Carte Edge — panneau éclairé par le bas, hairline 1px ────── */
 .glass-card {
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
+  background: var(--edge-panel-light), var(--edge-panel);
+  border: none;
   border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: inset 0 0 0 1px var(--edge-hairline);
+  transition: box-shadow 0.18s var(--edge-ease);
 }
 
 .glass-card:hover {
-  border-color: #CBD5E1;
-  box-shadow: var(--shadow-card-hover);
+  box-shadow: inset 0 0 0 1px var(--edge-hairline-hover), var(--edge-glow);
 }
 
-/* ── Glass Stat card ─────────────────────────────────────────── */
+/* ── Stat card ────────────────────────────────────────────────── */
 .glass-stat {
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
+  background: var(--edge-panel-light), var(--edge-panel);
+  border: none;
   border-radius: var(--radius-card);
-  box-shadow: var(--shadow-horizon);
+  box-shadow: inset 0 0 0 1px var(--edge-hairline);
   overflow: hidden;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: box-shadow 0.18s var(--edge-ease), transform 0.18s var(--edge-ease);
 }
 
 .glass-stat:hover {
-  border-color: #CBD5E1;
-  box-shadow: var(--shadow-horizon-hover);
+  box-shadow: inset 0 0 0 1px var(--edge-hairline-hover), var(--edge-glow);
   transform: translateY(-1px);
 }
 
-/* ── Glass Sidebar — white with right border ─────────────────── */
+/* ── Sidebar — void, hairline droite ──────────────────────────── */
 .glass-sidebar {
-  background: #FFFFFF;
-  border-right: 1px solid #E2E8F0;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--edge-void);
+  border-right: 1px solid var(--edge-hairline);
+  transition: transform 0.3s var(--edge-ease), width 0.3s var(--edge-ease);
 }
 
-/* Mobile: full-width sidebar overlay */
 @media (max-width: 767px) {
   .glass-sidebar {
-    background: #FFFFFF;
+    background: var(--edge-void);
     width: 260px;
-    box-shadow: 8px 0 32px rgba(0,0,0,0.08);
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.45);
   }
 }
 
-/* ── Glass Header — white with bottom border ─────────────────── */
+/* ── Header — graphite translucide, hairline basse ────────────── */
 .glass-header {
-  background: #FFFFFF;
-  border-bottom: 1px solid #E2E8F0;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: rgba(10, 11, 13, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--edge-hairline);
+  transition: background 0.18s var(--edge-ease);
 }
 
-/* ── Glass Input — light input ──────────────────────────────── */
+/* ── Input — void inset, focus = horizon cyan ─────────────────── */
 .glass-input {
-  background: #F8FAFC;
-  border: 1px solid #E2E8F0;
+  background: var(--edge-void);
+  border: none;
+  box-shadow: inset 0 0 0 1px var(--edge-hairline);
   border-radius: var(--radius-sm);
-  color: #0F172A;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--edge-text);
+  transition: box-shadow 0.18s var(--edge-ease);
 }
+
+.glass-input::placeholder { color: var(--edge-text-3); }
 
 .glass-input:focus {
-  background: #FFFFFF;
-  border-color: #0EA5E9;
   outline: none;
-  box-shadow: 0 0 0 3px rgba(14,165,233, 0.12);
+  box-shadow: inset 0 0 0 1px var(--edge-hairline-hover),
+              var(--edge-horizon),
+              var(--edge-glow);
 }
 
-/* ── Glass Button ────────────────────────────────────────────── */
+/* ── Bouton neutre ────────────────────────────────────────────── */
 .glass-btn {
-  background: #F1F5F9;
-  border: 1px solid #E2E8F0;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--edge-graphite);
+  border: none;
+  box-shadow: inset 0 0 0 1px var(--edge-hairline);
+  color: var(--edge-text-2);
+  transition: box-shadow 0.18s var(--edge-ease), color 0.18s var(--edge-ease);
 }
 
 .glass-btn:hover {
-  background: #E2E8F0;
-  border-color: #CBD5E1;
+  box-shadow: inset 0 0 0 1px var(--edge-hairline-hover), var(--edge-horizon), var(--edge-glow);
+  color: var(--edge-text);
 }
 
-/* ── Nav item (Light) ───────────────────────────────────────── */
+/* ── Nav item — l'actif porte la ligne d'horizon ──────────────── */
 .glass-nav {
   display: flex;
   align-items: center;
@@ -140,20 +167,21 @@
   border-radius: var(--radius-sm);
   font-size: 0.875rem;
   font-weight: 500;
-  color: #64748B;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--edge-text-2);
+  transition: color 0.18s var(--edge-ease), background 0.18s var(--edge-ease), box-shadow 0.18s var(--edge-ease);
   position: relative;
   cursor: pointer;
 }
 
 .glass-nav:hover {
-  background: #F1F5F9;
-  color: #0F172A;
+  background: var(--edge-slate);
+  color: var(--edge-text);
 }
 
 .glass-nav.active {
-  background: rgba(14,165,233,0.10);
-  color: #0EA5E9;
+  background: var(--edge-panel);
+  color: var(--edge-text);
+  box-shadow: inset 0 0 0 1px var(--edge-hairline), var(--edge-horizon), var(--edge-glow);
 }
 
 /* ── Badge ────────────────────────────────────────────────────── */
@@ -165,14 +193,14 @@
   border-radius: 999px;
   font-size: 0.75rem;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: background 0.18s ease;
 }
 
-/* ── Auth Glass (light modal) ───────────────────────────────── */
+/* ── Modale auth ──────────────────────────────────────────────── */
 .glass-auth {
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  border-radius: 24px;
-  box-shadow: 0px 20px 50px rgba(0,0,0,0.08), 0 0 0 1px rgba(14,165,233,0.06);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--edge-panel-light), var(--edge-panel);
+  border: none;
+  border-radius: 16px;
+  box-shadow: inset 0 0 0 1px var(--edge-hairline), 0 24px 60px rgba(0, 0, 0, 0.5);
+  transition: box-shadow 0.18s var(--edge-ease);
 }

@@ -39,7 +39,7 @@ const BOTTOM_ITEMS = [
 ]
 
 const PLAN_PILL: Record<string, { label: string; pillClass: string }> = {
-  free:     { label: 'Free',     pillClass: 'bg-[#F1F5F9] text-[#64748B]' },
+  free:     { label: 'Free',     pillClass: 'bg-[#232730] text-[#9AA3AE]' },
   pro:      { label: 'Pro',      pillClass: 'pill-pro' },
   business: { label: 'Business', pillClass: 'pill-entreprise' },
 }
@@ -90,32 +90,18 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
 
   const renderItem = ({ to, icon: Icon, label }: { to: string; icon: typeof LayoutDashboard; label: string }) => (
     <div key={to} className="relative group">
+      {/* Edge : l'état actif = ligne d'horizon cyan (glass-nav.active),
+          hover en CSS — plus aucun style inline ni handler JS. */}
       <NavLink to={to}
-        className={() => cn('glass-nav touch-target', !expanded && 'justify-center px-0')}
-        style={({ isActive }) => isActive ? { background: 'rgba(14,165,233,0.10)', color: '#0EA5E9' } : undefined}
-        onMouseEnter={(e) => {
-          if (e.currentTarget.getAttribute('aria-current') !== 'page') {
-            e.currentTarget.style.background = '#F1F5F9'
-            e.currentTarget.style.color = '#0F172A'
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (e.currentTarget.getAttribute('aria-current') !== 'page') {
-            e.currentTarget.style.background = 'transparent'
-            e.currentTarget.style.color = ''
-          }
-        }}
+        className={({ isActive }) =>
+          cn('glass-nav touch-target', isActive && 'active', !expanded && 'justify-center px-0')}
       >
         {({ isActive }) => (
           <>
-            {isActive && (
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] rounded-r-full"
-                style={{ height: '60%', background: '#0EA5E9' }} />
-            )}
             <span className="relative shrink-0">
-              <Icon size={18} style={{ color: isActive ? '#0EA5E9' : undefined }} />
+              <Icon size={18} style={{ color: isActive ? '#22D3EE' : undefined }} />
               {to === '/projects' && urgentCount > 0 && !expanded && (
-                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full" style={{ background: '#EF4444' }} />
+                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full" style={{ background: '#F87171' }} />
               )}
             </span>
             {expanded && (
@@ -124,7 +110,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
             {expanded && to === '/projects' && urgentCount > 0 && (
               <span
                 className="px-1.5 py-0.5 rounded-full text-[10px] font-bold leading-none shrink-0"
-                style={{ background: 'rgba(239,68,68,0.10)', color: '#DC2626' }}
+                style={{ background: 'rgba(248,113,113,0.10)', color: '#F87171' }}
                 title={`${urgentCount} AO avec une échéance sous 7 jours`}
               >
                 {urgentCount}
@@ -162,12 +148,12 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
       >
         {/* ── Logo ─────────────────────────────────── */}
         <div className="h-16 flex items-center shrink-0 overflow-hidden"
-          style={{ borderBottom: '1px solid #E2E8F0' }}>
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
           <div className={cn('flex items-center gap-2.5 transition-all duration-300 flex-1', expanded ? 'px-4' : 'px-0 justify-center w-full')}>
             <div className="logo-synorix"><span className="logo-synorix-text">S</span></div>
             {expanded && (
               <span className="font-black text-xl tracking-tight whitespace-nowrap font-display"
-                style={{ color: '#0F172A' }}>
+                style={{ color: '#E7EAEE' }}>
                 Synorix
               </span>
             )}
@@ -176,7 +162,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
             <button
               onClick={onMobileClose}
               className="p-2 mr-2 rounded-lg md:hidden touch-target"
-              style={{ color: '#94A3B8' }}
+              style={{ color: '#6B7280' }}
             >
               <X size={20} />
             </button>
@@ -188,12 +174,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
           <div className="relative group">
             <button
               onClick={() => navigate('/projects/new')}
-              className={cn(
-                'w-full flex items-center justify-center gap-2 rounded-lg py-2 text-[13px] font-semibold text-white transition-all touch-target',
-              )}
-              style={{ background: 'linear-gradient(135deg, #0F172A 0%, #0369A1 100%)' }}
-              onMouseEnter={(e) => (e.currentTarget.style.filter = 'brightness(1.12)')}
-              onMouseLeave={(e) => (e.currentTarget.style.filter = '')}
+              className="signature-btn w-full justify-center py-2 text-[13px] touch-target"
             >
               <Plus size={16} className="shrink-0" />
               {expanded && <span className="whitespace-nowrap">Nouvel AO</span>}
@@ -208,7 +189,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
             <div key={section.label} className="mb-1">
               {expanded && (
                 <div className="px-2 pt-3 pb-1">
-                  <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#94A3B8' }}>
+                  <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#6B7280' }}>
                     {section.label}
                   </span>
                 </div>
@@ -222,7 +203,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
         </nav>
 
         {/* ── Équipe + Paramètres (bas) ─────────────── */}
-        <div className="px-2 py-1 space-y-0.5" style={{ borderTop: '1px solid #E2E8F0' }}>
+        <div className="px-2 py-1 space-y-0.5" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
           {BOTTOM_ITEMS.map(renderItem)}
         </div>
 
@@ -230,7 +211,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
         {expanded && <QuotaGauge />}
 
         {/* ── Plan badge ── */}
-        <div className="border-t border-[#E2E8F0]">
+        <div className="border-t border-[#232730]">
           {expanded ? (
             <div className="flex items-center gap-2 px-4 h-10">
               <span className={cn('px-2 py-0.5 rounded-full text-[10px] font-semibold leading-none', pill.pillClass)}>
@@ -239,7 +220,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
               {planKey === 'free' && (
                 <button
                   onClick={() => navigate('/settings/billing')}
-                  className="text-[10px] text-[#0EA5E9] hover:text-[#0284C7] transition-colors ml-auto"
+                  className="text-[10px] text-[#22D3EE] hover:text-[#67E8F9] transition-colors ml-auto"
                 >
                   Upgrade
                 </button>
@@ -256,22 +237,26 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
         </div>
 
         {/* ── User + Logout ─────────────────────── */}
-        <div className="border-t border-[#E2E8F0] p-2">
+        <div className="border-t border-[#232730] p-2">
           <div className={cn('flex items-center gap-2.5 rounded-lg p-2 transition-all duration-200', expanded ? '' : 'justify-center')}>
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0"
-              style={{ background: 'linear-gradient(135deg, #0F172A, #0369A1)' }}>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0"
+              style={{
+                background: 'radial-gradient(120% 80% at 50% 100%, rgba(34,211,238,0.18), transparent 65%), #121417',
+                color: '#E7EAEE',
+                boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.10)',
+              }}>
               {initials}
             </div>
             {expanded && (
               <div className="flex-1 min-w-0">
-                <p className="text-[12px] font-medium text-[#0F172A] truncate">{user?.name || 'Utilisateur'}</p>
-                <p className="text-[10px] text-[#94A3B8] truncate">{user?.email || ''}</p>
+                <p className="text-[12px] font-medium text-[#E7EAEE] truncate">{user?.name || 'Utilisateur'}</p>
+                <p className="text-[10px] text-[#6B7280] truncate">{user?.email || ''}</p>
               </div>
             )}
             {expanded && (
               <button onClick={handleLogout}
-                className="p-1.5 rounded-md transition-colors hover:bg-[#F1F5F9] touch-target"
-                style={{ color: '#94A3B8' }}
+                className="p-1.5 rounded-md transition-colors hover:bg-[#232730] touch-target"
+                style={{ color: '#6B7280' }}
                 title="Déconnexion"
               >
                 <LogOut size={14} />
@@ -282,7 +267,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
             <div className="relative group">
               <button onClick={handleLogout}
                 className="w-full flex justify-center py-1.5 transition-colors touch-target"
-                style={{ color: '#94A3B8' }}
+                style={{ color: '#6B7280' }}
               >
                 <LogOut size={14} />
               </button>
@@ -298,7 +283,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
 function Tooltip({ label }: { label: string }) {
   return (
     <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 px-2.5 py-1.5 text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50 hidden md:block"
-      style={{ color: '#0F172A', background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
+      style={{ color: '#E7EAEE', background: '#1A1D21', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
       {label}
     </div>
   )

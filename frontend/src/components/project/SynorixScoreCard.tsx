@@ -21,16 +21,16 @@ interface ScorePayload {
 }
 
 const VERDICT_STYLE = {
-  go:        { label: 'Go',        bg: 'rgba(16,185,129,0.10)', color: '#047857', border: 'rgba(16,185,129,0.25)' },
-  vigilance: { label: 'Vigilance', bg: 'rgba(245,158,11,0.10)', color: '#B45309', border: 'rgba(245,158,11,0.25)' },
-  no_go:     { label: 'No-Go',     bg: 'rgba(239,68,68,0.10)',  color: '#DC2626', border: 'rgba(239,68,68,0.25)' },
+  go:        { label: 'Go',        bg: 'rgba(52,211,153,0.10)', color: '#34D399', border: 'rgba(52,211,153,0.25)' },
+  vigilance: { label: 'Vigilance', bg: 'rgba(245,158,11,0.10)', color: '#FBBF24', border: 'rgba(245,158,11,0.25)' },
+  no_go:     { label: 'No-Go',     bg: 'rgba(248,113,113,0.10)',  color: '#F87171', border: 'rgba(248,113,113,0.25)' },
 }
 
 function StatutIcon({ statut }: { statut: Composante['statut'] }) {
-  if (statut === 'ok') return <Check size={14} style={{ color: '#047857' }} />
-  if (statut === 'warning') return <TriangleAlert size={14} style={{ color: '#B45309' }} />
-  if (statut === 'ko') return <X size={14} style={{ color: '#DC2626' }} />
-  return <Minus size={14} style={{ color: '#94A3B8' }} />
+  if (statut === 'ok') return <Check size={14} style={{ color: '#34D399' }} />
+  if (statut === 'warning') return <TriangleAlert size={14} style={{ color: '#FBBF24' }} />
+  if (statut === 'ko') return <X size={14} style={{ color: '#F87171' }} />
+  return <Minus size={14} style={{ color: '#6B7280' }} />
 }
 
 interface Props {
@@ -59,13 +59,13 @@ export default function SynorixScoreCard({ projectId, onOpenSource }: Props) {
   const v = VERDICT_STYLE[data.verdict]
 
   return (
-    <div className="rounded-lg" style={{ background: '#FFFFFF', border: '1px solid #E2E8F0' }}>
+    <div className="rounded-lg" style={{ background: '#1A1D21', border: '1px solid rgba(255,255,255,0.06)' }}>
       <button
         onClick={() => setOpen(o => !o)}
         className="w-full flex items-center gap-3 px-5 py-3.5 text-left"
       >
-        <Gauge size={18} style={{ color: '#0EA5E9' }} />
-        <span className="text-sm font-bold" style={{ color: '#0F172A' }}>Synorix Score</span>
+        <Gauge size={18} style={{ color: '#22D3EE' }} />
+        <span className="text-sm font-bold" style={{ color: '#E7EAEE' }}>Synorix Score</span>
         <span
           className="px-2.5 py-0.5 rounded-full text-xs font-bold"
           style={{ background: v.bg, color: v.color, border: `1px solid ${v.border}` }}
@@ -79,23 +79,23 @@ export default function SynorixScoreCard({ projectId, onOpenSource }: Props) {
         )}
         <span className="flex-1" />
         <ChevronDown size={16} className={open ? 'rotate-180 transition-transform' : 'transition-transform'}
-          style={{ color: '#94A3B8' }} />
+          style={{ color: '#6B7280' }} />
       </button>
 
       {open && (
-        <div style={{ borderTop: '1px solid #F1F5F9' }}>
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
           {data.composantes.map((comp, i) => (
             <div key={comp.id} className="px-5 py-2.5 flex items-start gap-3"
-              style={i < data.composantes.length - 1 ? { borderBottom: '1px solid #F8FAFC' } : undefined}>
+              style={i < data.composantes.length - 1 ? { borderBottom: '1px solid rgba(255,255,255,0.06)' } : undefined}>
               <span className="mt-0.5 shrink-0"><StatutIcon statut={comp.statut} /></span>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold" style={{ color: '#334155' }}>{comp.label}</p>
-                <p className="text-xs mt-0.5" style={{ color: '#64748B' }}>
+                <p className="text-xs font-semibold" style={{ color: '#C9CFD6' }}>{comp.label}</p>
+                <p className="text-xs mt-0.5" style={{ color: '#9AA3AE' }}>
                   {comp.explication}
                   {comp.action === 'completer_profil' && (
                     <>
                       {' '}
-                      <Link to="/company" className="font-medium underline" style={{ color: '#0EA5E9' }}>
+                      <Link to="/company" className="font-medium underline" style={{ color: '#22D3EE' }}>
                         Compléter mon profil
                       </Link>
                     </>
@@ -104,7 +104,7 @@ export default function SynorixScoreCard({ projectId, onOpenSource }: Props) {
               </div>
               {comp.source && (
                 <button onClick={() => onOpenSource(comp.source!)} title={`Source — ${comp.source.document}`}
-                  className="shrink-0 p-1 rounded" style={{ color: '#94A3B8' }}>
+                  className="shrink-0 p-1 rounded" style={{ color: '#6B7280' }}>
                   <ExternalLink size={12} />
                 </button>
               )}

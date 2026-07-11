@@ -47,12 +47,12 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick }: 
                 className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all duration-300"
                 style={
                   isCompleted && !isActive
-                    ? { background: '#0EA5E9', borderColor: '#0EA5E9', color: '#fff' }
+                    ? { background: '#22D3EE', borderColor: '#22D3EE', color: '#fff' }
                     : isActive && isCompleted
-                    ? { background: '#0EA5E9', borderColor: '#0EA5E9', color: '#fff' }
+                    ? { background: '#22D3EE', borderColor: '#22D3EE', color: '#fff' }
                     : isActive
-                    ? { background: '#0EA5E9', borderColor: '#0EA5E9', color: '#fff' }
-                    : { background: '#F1F5F9', borderColor: '#CBD5E1', color: '#475569' }
+                    ? { background: '#22D3EE', borderColor: '#22D3EE', color: '#fff' }
+                    : { background: '#232730', borderColor: '#4B5563', color: '#9AA3AE' }
                 }
               >
                 {isCompleted ? <Check size={15} strokeWidth={2.5} /> : step.number}
@@ -62,9 +62,9 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick }: 
               <span
                 className="text-xs whitespace-nowrap font-medium transition-colors"
                 style={
-                  isActive    ? { color: '#0EA5E9' }
-                  : isCompleted ? { color: '#0284C7' }
-                  : { color: '#94A3B8' }
+                  isActive    ? { color: '#22D3EE' }
+                  : isCompleted ? { color: '#67E8F9' }
+                  : { color: '#6B7280' }
                 }
               >
                 {step.label}
@@ -77,10 +77,10 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick }: 
                 className="flex-1 h-0.5 mx-2 mt-[-1.25rem] rounded-full transition-all duration-500"
                 style={
                   isCompleted
-                    ? { background: 'linear-gradient(90deg, #0EA5E9, #0284C7)' }
+                    ? { background: 'linear-gradient(90deg, #22D3EE, #67E8F9)' }
                     : isActive
-                    ? { background: 'linear-gradient(90deg, rgba(14,165,233,0.40), #E2E8F0)' }
-                    : { background: '#E2E8F0' }
+                    ? { background: 'linear-gradient(90deg, rgba(34,211,238,0.40), #E2E8F0)' }
+                    : { background: '#232730' }
                 }
               />
             )}

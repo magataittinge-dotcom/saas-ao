@@ -47,10 +47,10 @@ export default function Header({ onMenuToggle }: Props) {
     <header
       className="sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 h-14"
       style={{
-        background: 'rgba(255,255,255,0.85)',
+        background: 'rgba(10,11,13,0.85)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
-        borderBottom: '1px solid #F1F5F9',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
       }}
     >
       {/* Left side: hamburger + breadcrumb */}
@@ -58,15 +58,15 @@ export default function Header({ onMenuToggle }: Props) {
         <button
           onClick={onMenuToggle}
           className="p-2 rounded-lg md:hidden touch-target shrink-0"
-          style={{ color: '#94A3B8' }}
+          style={{ color: '#6B7280' }}
         >
           <Menu size={20} />
         </button>
 
         <div className="flex items-center gap-1.5 text-sm min-w-0" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-          <span className="hidden sm:inline font-medium" style={{ color: '#0EA5E9' }}>Synorix</span>
-          <span className="hidden sm:inline" style={{ color: '#CBD5E1' }}>&gt;</span>
-          <span className="font-medium truncate" style={{ color: '#0F172A' }}>
+          <span className="hidden sm:inline font-medium" style={{ color: '#22D3EE' }}>Synorix</span>
+          <span className="hidden sm:inline" style={{ color: '#4B5563' }}>&gt;</span>
+          <span className="font-medium truncate" style={{ color: '#E7EAEE' }}>
             {label || parent || 'Tableau de bord'}
           </span>
         </div>
@@ -79,14 +79,14 @@ export default function Header({ onMenuToggle }: Props) {
           onClick={(e) => { if (e.target === e.currentTarget) setMobileSearchOpen(false) }}
         >
           <div className="w-full max-w-sm rounded-2xl p-4"
-            style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', boxShadow: '0 8px 24px rgba(0,0,0,0.10)' }}>
+            style={{ background: '#1A1D21', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 8px 24px rgba(0,0,0,0.10)' }}>
             <div className="flex items-center gap-2 mb-3">
-              <Sparkles size={16} style={{ color: '#0EA5E9' }} />
-              <span className="text-sm font-medium" style={{ color: '#0F172A' }}>Recherche intelligente</span>
+              <Sparkles size={16} style={{ color: '#22D3EE' }} />
+              <span className="text-sm font-medium" style={{ color: '#E7EAEE' }}>Recherche intelligente</span>
               <button
                 onClick={() => setMobileSearchOpen(false)}
                 className="ml-auto p-1.5 rounded-lg touch-target"
-                style={{ color: '#94A3B8' }}
+                style={{ color: '#6B7280' }}
               >
                 <X size={18} />
               </button>
@@ -95,7 +95,7 @@ export default function Header({ onMenuToggle }: Props) {
               type="text"
               placeholder="Recherche intelligente..."
               className="w-full px-4 py-3 text-sm rounded-xl outline-none"
-              style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#0F172A' }}
+              style={{ background: '#232730', border: '1px solid rgba(255,255,255,0.06)', color: '#E7EAEE' }}
               autoFocus
             />
           </div>
@@ -108,13 +108,16 @@ export default function Header({ onMenuToggle }: Props) {
         <NotificationBell />
         {/* Search — desktop */}
         <div className="relative hidden sm:block">
-          <Sparkles size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#0EA5E9' }} />
+          <Sparkles size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#22D3EE' }} />
           <input type="text" placeholder="Recherche intelligente..."
             className="w-52 pl-9 pr-3 py-2 text-sm rounded-full outline-none transition-all duration-200"
             style={{
-              background: searchFocused ? '#FFFFFF' : '#F1F5F9',
-              border: searchFocused ? '1px solid #0EA5E9' : '1px solid transparent',
-              color: '#0F172A',
+              background: searchFocused ? '#1A1D21' : '#0A0B0D',
+              border: 'none',
+              boxShadow: searchFocused
+                ? 'inset 0 0 0 1px rgba(255,255,255,0.10), inset 0 -2px 0 0 #22D3EE, 0 8px 24px -12px rgba(34,211,238,0.35)'
+                : 'inset 0 0 0 1px rgba(255,255,255,0.06)',
+              color: '#E7EAEE',
               fontFamily: "'DM Sans', sans-serif",
             }}
             onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)} />
@@ -123,26 +126,30 @@ export default function Header({ onMenuToggle }: Props) {
         <button
           onClick={() => setMobileSearchOpen(true)}
           className="p-2 rounded-full sm:hidden touch-target"
-          style={{ color: '#94A3B8' }}
+          style={{ color: '#6B7280' }}
           title="Rechercher"
         >
           <Search size={18} />
         </button>
 
-        <div className="w-px h-6 hidden sm:block" style={{ background: '#E2E8F0' }} />
+        <div className="w-px h-6 hidden sm:block" style={{ background: '#232730' }} />
 
         {/* User info + Avatar */}
         <div className="flex items-center gap-2.5">
           <div className="hidden sm:block text-right">
-            <p className="text-sm font-medium leading-tight" style={{ color: '#0F172A', fontFamily: "'DM Sans', sans-serif" }}>
+            <p className="text-sm font-medium leading-tight" style={{ color: '#E7EAEE', fontFamily: "'DM Sans', sans-serif" }}>
               {displayName}
             </p>
-            <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#94A3B8' }}>
+            <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#6B7280' }}>
               Chef de projet
             </p>
           </div>
-          <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white cursor-default shrink-0"
-            style={{ background: '#0EA5E9' }}>
+          <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold cursor-default shrink-0"
+            style={{
+              background: 'radial-gradient(120% 80% at 50% 100%, rgba(34,211,238,0.18), transparent 65%), #121417',
+              color: '#E7EAEE',
+              boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.10)',
+            }}>
             {initials}
           </div>
         </div>

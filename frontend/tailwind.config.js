@@ -18,35 +18,50 @@ export default {
         mono:    ['"JetBrains Mono"', 'Menlo', 'monospace'],
       },
       colors: {
-        // Design system palette — light mode SaaS
+        // ── SYNORIX EDGE — surfaces graphite, lumière cyan ─────────
+        edge: {
+          void:     '#0A0B0D',
+          graphite: '#121417',
+          panel:    '#1A1D21',
+          slate:    '#232730',
+          lumen:    '#22D3EE',
+          'lumen-300': '#67E8F9',
+          'lumen-500': '#06B6D4',
+          text:     '#E7EAEE',
+          'text-2': '#9AA3AE',
+          'text-3': '#6B7280',
+          success:  '#34D399',
+          warning:  '#FBBF24',
+          danger:   '#F87171',
+        },
+        // Aliases legacy ds-* → Edge (les écrans token-first basculent seuls)
         ds: {
-          bg:        '#FFFFFF',
-          'bg-2':    '#F8FAFC',
-          'bg-3':    '#F1F5F9',
-          'bg-elevated': '#FFFFFF',
-          sidebar:   '#FFFFFF',
-          // Text hierarchy
-          text:      '#0F172A',
-          'text-1b': '#1E293B',
-          'text-2':  '#64748B',
-          'text-3':  '#94A3B8',
-          'text-muted': '#94A3B8',
-          'text-dim':   '#CBD5E1',
-          // Primary palette (cyan + slate + red + emerald only)
-          cyan:      '#0EA5E9',
-          'cyan-light': '#38BDF8',
-          'cyan-dark': '#0284C7',
-          accent:    '#0EA5E9',
-          // Semantic — strict 4-role: cyan (info/AI), slate (neutral/warning), red (danger), emerald (Gagné/Conforme only)
-          success:   '#0EA5E9',
-          warning:   '#64748B',
-          danger:    '#EF4444',
-          'danger-light': '#DC2626',
-          // Emerald reserved for Gagné/Conforme ONLY
-          'gagne':   '#10B981',
-          // Borders
-          'border-subtle': '#E2E8F0',
-          'border-hover':  '#CBD5E1',
+          bg:        '#1A1D21',            // surface carte (ex-blanc)
+          'bg-2':    '#232730',            // hover / zone subtile
+          'bg-3':    '#232730',
+          'bg-elevated': '#232730',
+          sidebar:   '#0A0B0D',
+          // Text hierarchy (AA sur panel pour text / text-2)
+          text:      '#E7EAEE',
+          'text-1b': '#C9CFD6',
+          'text-2':  '#9AA3AE',
+          'text-3':  '#6B7280',
+          'text-muted': '#6B7280',
+          'text-dim':   '#4B5563',
+          // La lumière — accent unique
+          cyan:      '#22D3EE',
+          'cyan-light': '#67E8F9',
+          'cyan-dark': '#67E8F9',          // sur dark, l'emphase = PLUS lumineux
+          accent:    '#22D3EE',
+          // États métier (lisibles sur dark, conventions conservées)
+          success:   '#34D399',
+          warning:   '#FBBF24',
+          danger:    '#F87171',
+          'danger-light': '#F87171',
+          'gagne':   '#34D399',
+          // Hairlines (jamais de border épaisse)
+          'border-subtle': 'rgba(255,255,255,0.06)',
+          'border-hover':  'rgba(255,255,255,0.10)',
         },
         // shadcn/ui vars — keep for compatibility
         border:     'hsl(var(--border))',
@@ -91,16 +106,19 @@ export default {
         '3xl': '1.25rem',
       },
       backgroundImage: {
-        'gradient-signature': 'linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0369A1 100%)',
-        'gradient-cyan':      'linear-gradient(90deg, #0EA5E9, #0284C7)',
-        'gradient-subtle':    'linear-gradient(135deg, rgba(14,165,233,0.04), rgba(14,165,233,0.08))',
+        'gradient-signature': 'radial-gradient(120% 80% at 50% 100%, rgba(34,211,238,0.08), transparent 60%), linear-gradient(180deg, #121417, #1A1D21)',
+        'gradient-cyan':      'linear-gradient(90deg, #06B6D4, #22D3EE)',
+        'gradient-subtle':    'linear-gradient(135deg, rgba(34,211,238,0.05), rgba(34,211,238,0.10))',
+        'panel-light':        'radial-gradient(120% 80% at 50% 100%, rgba(34,211,238,0.05), transparent 60%)',
       },
       boxShadow: {
-        'glow-cyan':   '0 0 12px rgba(14,165,233,0.15)',
-        'glow-sm':     '0 0 8px rgba(14,165,233,0.10)',
-        'card':        '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
-        'card-hover':  '0 4px 12px rgba(0,0,0,0.08), 0 0 0 1px rgba(14,165,233,0.08)',
-        'glass':       '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
+        'glow-cyan':   '0 0 12px rgba(34,211,238,0.18)',
+        'glow-sm':     '0 0 8px rgba(34,211,238,0.12)',
+        'card':        'inset 0 0 0 1px rgba(255,255,255,0.06)',
+        'card-hover':  'inset 0 0 0 1px rgba(255,255,255,0.10), 0 8px 24px -12px rgba(34,211,238,0.35)',
+        'glass':       'inset 0 0 0 1px rgba(255,255,255,0.06)',
+        'hairline':    'inset 0 0 0 1px rgba(255,255,255,0.06)',
+        'horizon':     'inset 0 -2px 0 0 #22D3EE, 0 8px 24px -12px rgba(34,211,238,0.35)',
       },
       keyframes: {
         'accordion-down': {

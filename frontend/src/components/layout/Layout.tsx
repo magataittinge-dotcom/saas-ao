@@ -11,11 +11,11 @@ export default function Layout() {
   const closeMobile = useCallback(() => setMobileOpen(false), [])
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: '#FFFFFF' }}>
+    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--edge-void)' }}>
       <Sidebar mobileOpen={mobileOpen} onMobileClose={closeMobile} />
       <div className="flex flex-col flex-1 overflow-hidden min-w-0 relative z-10">
         <Header onMenuToggle={toggleMobile} />
-        <main className="flex-1 overflow-y-auto px-3 sm:px-4 py-5 flex flex-col" style={{ background: '#F8FAFC' }}>
+        <main className="flex-1 overflow-y-auto px-3 sm:px-4 py-5 flex flex-col" style={{ background: 'var(--edge-void)' }}>
           <div className="flex-1">
             <Outlet />
           </div>

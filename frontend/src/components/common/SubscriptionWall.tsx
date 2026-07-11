@@ -15,11 +15,11 @@ const PLANS = [
     name: 'Pro',
     price: '299',
     icon: Zap,
-    color: '#0EA5E9',
-    colorLight: '#38BDF8',
-    bg: 'rgba(14,165,233,0.08)',
-    border: 'rgba(14,165,233,0.25)',
-    gradient: 'linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%)',
+    color: '#22D3EE',
+    colorLight: '#67E8F9',
+    bg: 'rgba(34,211,238,0.08)',
+    border: 'rgba(34,211,238,0.25)',
+    gradient: 'linear-gradient(135deg, #22D3EE 0%, #67E8F9 100%)',
     features: [
       'Analyse IA illimitée',
       'Matrice de conformité automatique',
@@ -35,8 +35,8 @@ const PLANS = [
     name: 'Business',
     price: '499',
     icon: Crown,
-    color: '#0F172A',
-    colorLight: '#64748B',
+    color: '#E7EAEE',
+    colorLight: '#9AA3AE',
     bg: 'rgba(15,23,42,0.06)',
     border: 'rgba(15,23,42,0.20)',
     gradient: 'linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0369A1 100%)',
@@ -109,16 +109,16 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis' }
         style={{
           background: 'rgba(17,28,68,0.95)',
           backdropFilter: 'blur(32px) saturate(200%)',
-          border: '1px solid rgba(14,165,233,0.15)',
+          border: '1px solid rgba(34,211,238,0.15)',
           borderRadius: '24px',
-          boxShadow: '0 0 80px rgba(14,165,233,0.08), 0 24px 60px rgba(0,0,0,0.10)',
+          boxShadow: '0 0 80px rgba(34,211,238,0.08), 0 24px 60px rgba(0,0,0,0.10)',
           maxHeight: '95vh',
         }}
       >
         {/* Close */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-lg transition-colors hover:bg-[#F1F5F9] z-10 text-ds-text-2"
+          className="absolute top-4 right-4 p-1.5 rounded-lg transition-colors hover:bg-[#232730] z-10 text-ds-text-2"
         >
           <X size={18} />
         </button>
@@ -128,9 +128,9 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis' }
           <div
             className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3"
             style={{
-              background: 'linear-gradient(135deg, rgba(14,165,233,0.20), rgba(14,165,233,0.10))',
-              border: '1px solid rgba(14,165,233,0.25)',
-              boxShadow: '0 0 30px rgba(14,165,233,0.15)',
+              background: 'linear-gradient(135deg, rgba(34,211,238,0.20), rgba(34,211,238,0.10))',
+              border: '1px solid rgba(34,211,238,0.25)',
+              boxShadow: '0 0 30px rgba(34,211,238,0.15)',
             }}
           >
             <Sparkles size={22} className="text-ds-cyan" />

@@ -51,10 +51,10 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div
       className="rounded-xl px-3 py-2.5 text-center"
-      style={{ background: '#F8FAFC', border: '1px solid #F1F5F9' }}
+      style={{ background: '#232730', border: '1px solid rgba(255,255,255,0.06)' }}
     >
-      <p className="text-base font-bold" style={{ color: '#0F172A', fontFamily: F }}>{value}</p>
-      <p className="text-[11px] mt-0.5" style={{ color: '#64748B' }}>{label}</p>
+      <p className="text-base font-bold" style={{ color: '#E7EAEE', fontFamily: F }}>{value}</p>
+      <p className="text-[11px] mt-0.5" style={{ color: '#9AA3AE' }}>{label}</p>
     </div>
   )
 }
@@ -116,8 +116,8 @@ function OabCalculator() {
   return (
     <div className="glass-card p-6 flex flex-col">
       <div className="flex items-center gap-3 mb-1">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#F0F9FF' }}>
-          <Gavel size={18} style={{ color: '#0EA5E9' }} />
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#0F2B33' }}>
+          <Gavel size={18} style={{ color: '#22D3EE' }} />
         </div>
         <div>
           <h2 className="text-base font-bold text-ds-text" style={{ fontFamily: F }}>Offre anormalement basse</h2>
@@ -148,8 +148,8 @@ function OabCalculator() {
                 {offres.length > 1 && (
                   <button
                     type="button" onClick={() => removeOffre(i)}
-                    className="shrink-0 p-2 rounded-lg transition-colors hover:bg-slate-100"
-                    style={{ cursor: 'pointer', color: '#94A3B8' }}
+                    className="shrink-0 p-2 rounded-lg transition-colors hover:bg-ds-bg-2"
+                    style={{ cursor: 'pointer', color: '#6B7280' }}
                     aria-label={`Retirer l'offre ${i + 1}`}
                   >
                     <Trash2 size={14} />
@@ -160,7 +160,7 @@ function OabCalculator() {
             <button
               type="button" onClick={addOffre}
               className="inline-flex items-center gap-1.5 text-xs font-semibold transition-colors"
-              style={{ color: '#0EA5E9', cursor: 'pointer' }}
+              style={{ color: '#22D3EE', cursor: 'pointer' }}
             >
               <Plus size={13} /> Ajouter une offre
             </button>
@@ -183,18 +183,18 @@ function OabCalculator() {
         </button>
 
         {error && (
-          <p className="text-xs font-medium" style={{ color: '#DC2626' }} role="alert">{error}</p>
+          <p className="text-xs font-medium" style={{ color: '#F87171' }} role="alert">{error}</p>
         )}
       </div>
 
       {result && (
-        <div className="mt-5 pt-5 space-y-4" style={{ borderTop: '1px solid #F1F5F9' }}>
+        <div className="mt-5 pt-5 space-y-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wide text-ds-text-3">Résultat</span>
             <StatusBadge label={GAUGE[result.gauge].label} variant={GAUGE[result.gauge].variant} />
           </div>
 
-          <p className="text-sm leading-relaxed" style={{ color: '#334155' }}>
+          <p className="text-sm leading-relaxed" style={{ color: '#C9CFD6' }}>
             {result.est_oab ? (
               <>Votre offre se situe <strong>sous le seuil de détection</strong> de l'offre anormalement basse.
               L'acheteur <strong>peut vous demander des justifications</strong> (art. L2152-5 CCP) — ce n'est pas un rejet automatique.</>
@@ -271,8 +271,8 @@ function RetenueCalculator() {
   return (
     <div className="glass-card p-6 flex flex-col">
       <div className="flex items-center gap-3 mb-1">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#F0F9FF' }}>
-          <Coins size={18} style={{ color: '#0EA5E9' }} />
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#0F2B33' }}>
+          <Coins size={18} style={{ color: '#22D3EE' }} />
         </div>
         <div>
           <h2 className="text-base font-bold text-ds-text" style={{ fontFamily: F }}>Retenue de garantie</h2>
@@ -316,13 +316,13 @@ function RetenueCalculator() {
         <button
           type="button" onClick={() => setShowAdvanced((s) => !s)}
           className="text-xs font-semibold transition-colors"
-          style={{ color: '#0EA5E9', cursor: 'pointer' }}
+          style={{ color: '#22D3EE', cursor: 'pointer' }}
         >
           {showAdvanced ? '− Masquer' : '+ Options avancées'} (pénalités, intérêts moratoires)
         </button>
 
         {showAdvanced && (
-          <div className="grid grid-cols-2 gap-3 rounded-xl p-3" style={{ background: '#F8FAFC' }}>
+          <div className="grid grid-cols-2 gap-3 rounded-xl p-3" style={{ background: '#232730' }}>
             <Field id="rg-jours" label="Jours de retard">
               <input id="rg-jours" type="number" min={0} className="input-dark"
                 value={joursRetard} onChange={(e) => setJoursRetard(e.target.value)} />
@@ -351,33 +351,33 @@ function RetenueCalculator() {
         </button>
 
         {error && (
-          <p className="text-xs font-medium" style={{ color: '#DC2626' }} role="alert">{error}</p>
+          <p className="text-xs font-medium" style={{ color: '#F87171' }} role="alert">{error}</p>
         )}
       </div>
 
       {result && (
-        <div className="mt-5 pt-5 space-y-4" style={{ borderTop: '1px solid #F1F5F9' }}>
-          <div className="text-center rounded-xl p-4" style={{ background: '#F0F9FF', border: '1px solid #E0F2FE' }}>
+        <div className="mt-5 pt-5 space-y-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="text-center rounded-xl p-4" style={{ background: '#0F2B33', border: '1px solid #12404B' }}>
             <p className="text-[11px] uppercase tracking-wide font-semibold text-ds-text-3">Montant TTC du marché</p>
-            <p className="text-2xl font-bold mt-1" style={{ color: '#0F172A', fontFamily: F }}>
+            <p className="text-2xl font-bold mt-1" style={{ color: '#E7EAEE', fontFamily: F }}>
               {formatMontant(result.montant_ttc)}
             </p>
           </div>
 
-          <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid #F1F5F9' }}>
+          <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
             <table className="w-full text-sm">
-              <thead style={{ background: '#F8FAFC' }}>
+              <thead style={{ background: '#232730' }}>
                 <tr>
                   {['Poste', 'Montant', 'Base', 'Détail'].map((h) => (
                     <th key={h} className="text-left text-[11px] font-semibold uppercase tracking-wide px-3 py-2 text-ds-text-2">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y" style={{ borderColor: '#F1F5F9' }}>
+              <tbody className="divide-y" style={{ borderColor: '#232730' }}>
                 {result.postes.map((p, i) => (
                   <tr key={i}>
                     <td className="px-3 py-2.5 font-medium text-ds-text">{p.poste}</td>
-                    <td className="px-3 py-2.5 font-semibold whitespace-nowrap" style={{ color: '#0284C7' }}>{formatMontant(p.montant)}</td>
+                    <td className="px-3 py-2.5 font-semibold whitespace-nowrap" style={{ color: '#67E8F9' }}>{formatMontant(p.montant)}</td>
                     <td className="px-3 py-2.5 text-ds-text-3">{p.base}</td>
                     <td className="px-3 py-2.5 text-ds-text-2 text-xs">{p.detail}</td>
                   </tr>
@@ -399,7 +399,7 @@ function RetenueCalculator() {
           ))}
 
           <div className="flex items-center gap-1.5 text-[11px] text-ds-text-3">
-            <ShieldCheck size={12} style={{ color: '#94A3B8' }} />
+            <ShieldCheck size={12} style={{ color: '#6B7280' }} />
             Calcul indicatif — l'assiette et les plafonds définitifs dépendent des clauses du CCAP.
           </div>
         </div>
@@ -413,7 +413,7 @@ export default function Tools() {
   return (
     <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
       <div className="flex items-center gap-3">
-        <Calculator size={24} style={{ color: '#0EA5E9' }} />
+        <Calculator size={24} style={{ color: '#22D3EE' }} />
         <div>
           <h1 className="text-2xl font-bold text-ds-text">Calculateurs</h1>
           <p className="text-sm text-ds-text-2">Outils d'aide à la décision — marchés publics. Calcul instantané, aucune donnée enregistrée.</p>

@@ -17,10 +17,10 @@ export default function LegalFooter() {
   return (
     <footer
       className="border-t mt-8"
-      style={{ background: '#FFFFFF', borderColor: '#F1F5F9' }}
+      style={{ background: '#1A1D21', borderColor: '#232730' }}
     >
       <div className="max-w-6xl mx-auto px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <span className="text-xs" style={{ color: '#94A3B8' }}>
+        <span className="text-xs" style={{ color: '#6B7280' }}>
           © {new Date().getFullYear()} Synorix — Tous droits réservés.
         </span>
         <nav className="flex flex-wrap items-center gap-x-4 gap-y-1.5 justify-center">
@@ -29,9 +29,9 @@ export default function LegalFooter() {
               key={l.to}
               to={l.to}
               className="text-xs transition-colors"
-              style={{ color: '#64748B' }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#0EA5E9' }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = '#64748B' }}
+              style={{ color: '#9AA3AE' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#22D3EE' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = '#9AA3AE' }}
             >
               {l.label}
             </Link>

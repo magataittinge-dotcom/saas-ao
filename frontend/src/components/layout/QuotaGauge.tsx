@@ -16,9 +16,9 @@ interface QuotaStatus {
 }
 
 function gaugeColor(used: number, limit: number): string {
-  if (used >= limit) return '#EF4444'
-  if (used / limit >= 0.8) return '#F59E0B'
-  return '#0EA5E9'
+  if (used >= limit) return '#F87171'
+  if (used / limit >= 0.8) return '#FBBF24'
+  return '#22D3EE'
 }
 
 function CounterRow({ label, counter }: { label: string; counter: QuotaCounter }) {
@@ -27,11 +27,11 @@ function CounterRow({ label, counter }: { label: string; counter: QuotaCounter }
   const pct = Math.min(100, (counter.used / counter.limit) * 100)
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[10px] w-14 shrink-0" style={{ color: '#94A3B8' }}>{label}</span>
-      <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: '#E2E8F0' }}>
+      <span className="text-[10px] w-14 shrink-0" style={{ color: '#6B7280' }}>{label}</span>
+      <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: '#232730' }}>
         <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
       </div>
-      <span className="text-[10px] font-semibold tabular-nums shrink-0" style={{ color }}>
+      <span className="edge-data text-[10px] font-semibold tabular-nums shrink-0" style={{ color }}>
         {counter.used}/{counter.limit}
       </span>
     </div>
@@ -61,10 +61,10 @@ export default function QuotaGauge() {
     <button
       onClick={() => navigate('/settings/billing')}
       title="Voir mon abonnement"
-      className="w-full text-left px-4 py-2 space-y-1.5 transition-colors hover:bg-[#F1F5F9]"
-      style={{ borderTop: '1px solid #E2E8F0' }}
+      className="w-full text-left px-4 py-2 space-y-1.5 transition-colors hover:bg-[#232730]"
+      style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
     >
-      <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#94A3B8' }}>
+      <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#6B7280' }}>
         {data.plan === 'free' ? 'Essai gratuit' : 'Quota mensuel'}
       </span>
       <CounterRow label="Analyses" counter={data.analyses} />

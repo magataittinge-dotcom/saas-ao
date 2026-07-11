@@ -53,10 +53,10 @@ export default function VaultSavePrompt({ suggestion, onDone }: Props) {
   return (
     <div
       className="flex items-center gap-3 rounded-xl px-4 py-2.5 mt-3"
-      style={{ background: 'rgba(14,165,233,0.05)', border: '1px solid rgba(14,165,233,0.15)' }}
+      style={{ background: 'rgba(34,211,238,0.05)', border: '1px solid rgba(34,211,238,0.15)' }}
     >
-      <Archive size={16} className="shrink-0" style={{ color: '#0EA5E9' }} />
-      <p className="flex-1 text-xs" style={{ color: '#475569' }}>
+      <Archive size={16} className="shrink-0" style={{ color: '#22D3EE' }} />
+      <p className="flex-1 text-xs" style={{ color: '#9AA3AE' }}>
         {saved ? (
           <>« {suggestion.fileName} » enregistré dans votre coffre-fort ({typeLabel}).</>
         ) : (
@@ -72,14 +72,14 @@ export default function VaultSavePrompt({ suggestion, onDone }: Props) {
             onClick={save}
             disabled={busy}
             className="px-2.5 py-1 rounded-md text-xs font-semibold text-white disabled:opacity-60"
-            style={{ background: '#0EA5E9' }}
+            style={{ background: '#22D3EE' }}
           >
             {busy ? 'Enregistrement…' : 'Enregistrer'}
           </button>
           <button
             onClick={dismiss}
-            className="px-2 py-1 rounded-md text-xs font-medium hover:bg-[#F1F5F9]"
-            style={{ color: '#94A3B8' }}
+            className="px-2 py-1 rounded-md text-xs font-medium hover:bg-[#232730]"
+            style={{ color: '#6B7280' }}
           >
             Non merci
           </button>

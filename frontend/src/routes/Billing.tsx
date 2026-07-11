@@ -13,11 +13,11 @@ const PLANS = [
     name: 'Pro',
     price: '299',
     icon: Zap,
-    color: '#0EA5E9',
-    colorLight: '#38BDF8',
-    bg: 'rgba(14,165,233,0.08)',
-    border: 'rgba(14,165,233,0.25)',
-    gradient: 'linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%)',
+    color: '#22D3EE',
+    colorLight: '#67E8F9',
+    bg: 'rgba(34,211,238,0.08)',
+    border: 'rgba(34,211,238,0.25)',
+    gradient: 'linear-gradient(135deg, #22D3EE 0%, #67E8F9 100%)',
     features: [
       'Analyse IA illimitée',
       'Matrice de conformité automatique',
@@ -33,8 +33,8 @@ const PLANS = [
     name: 'Business',
     price: '499',
     icon: Crown,
-    color: '#0F172A',
-    colorLight: '#64748B',
+    color: '#E7EAEE',
+    colorLight: '#9AA3AE',
     bg: 'rgba(15,23,42,0.06)',
     border: 'rgba(15,23,42,0.20)',
     gradient: 'linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0369A1 100%)',
@@ -52,9 +52,9 @@ const PLANS = [
 ] as const
 
 const PLAN_BADGES: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  pro:      { label: 'Pro',      color: '#0284C7', bg: 'rgba(14,165,233,0.10)',  border: 'rgba(14,165,233,0.25)' },
-  business: { label: 'Business', color: '#0F172A', bg: 'rgba(15,23,42,0.08)', border: 'rgba(15,23,42,0.20)' },
-  free:     { label: 'Gratuit',  color: '#64748B', bg: '#F8FAFC', border: '#E2E8F0' },
+  pro:      { label: 'Pro',      color: '#67E8F9', bg: 'rgba(34,211,238,0.10)',  border: 'rgba(34,211,238,0.25)' },
+  business: { label: 'Business', color: '#E7EAEE', bg: 'rgba(15,23,42,0.08)', border: 'rgba(15,23,42,0.20)' },
+  free:     { label: 'Gratuit',  color: '#9AA3AE', bg: '#232730', border: '#232730' },
 }
 
 export default function Billing() {
@@ -152,7 +152,7 @@ export default function Billing() {
       <div className="flex items-center gap-3">
         <div
           className="w-10 h-10 rounded-xl flex items-center justify-center"
-          style={{ background: 'rgba(14,165,233,0.10)', border: '1px solid rgba(14,165,233,0.18)' }}
+          style={{ background: 'rgba(34,211,238,0.10)', border: '1px solid rgba(34,211,238,0.18)' }}
         >
           <CreditCard size={18} className="text-ds-cyan" />
         </div>
@@ -167,8 +167,8 @@ export default function Billing() {
         <div
           className="flex items-center gap-3 px-5 py-4 rounded-2xl animate-fade-in"
           style={{
-            background: 'rgba(14,165,233,0.08)',
-            border: '1px solid rgba(14,165,233,0.25)',
+            background: 'rgba(34,211,238,0.08)',
+            border: '1px solid rgba(34,211,238,0.25)',
           }}
         >
           <Loader2 size={20} className="animate-spin text-ds-cyan" />
@@ -184,8 +184,8 @@ export default function Billing() {
         <div
           className="flex items-center gap-3 px-5 py-4 rounded-2xl animate-fade-in"
           style={{
-            background: 'rgba(14,165,233,0.08)',
-            border: '1px solid rgba(14,165,233,0.25)',
+            background: 'rgba(34,211,238,0.08)',
+            border: '1px solid rgba(34,211,238,0.25)',
           }}
         >
           <CheckCircle2 size={20} className="text-ds-cyan" />
@@ -206,7 +206,7 @@ export default function Billing() {
       <div className="glass-card overflow-hidden">
         <div
           className="flex items-center gap-3 px-6 py-4"
-          style={{ borderBottom: '1px solid rgba(14,165,233,0.08)', background: 'rgba(14,165,233,0.02)' }}
+          style={{ borderBottom: '1px solid rgba(34,211,238,0.08)', background: 'rgba(34,211,238,0.02)' }}
         >
           <Sparkles size={15} className="text-ds-cyan" />
           <h2 className="text-sm font-semibold text-ds-text">Mon abonnement</h2>
@@ -240,20 +240,20 @@ export default function Billing() {
                 disabled={portalLoading}
                 className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
                 style={{
-                  background: '#F8FAFC',
-                  border: '1px solid #E2E8F0',
-                  color: '#475569',
+                  background: '#232730',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  color: '#9AA3AE',
                   cursor: 'pointer',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#F1F5F9'
-                  e.currentTarget.style.color = '#0F172A'
-                  e.currentTarget.style.borderColor = '#CBD5E1'
+                  e.currentTarget.style.background = '#232730'
+                  e.currentTarget.style.color = '#E7EAEE'
+                  e.currentTarget.style.borderColor = '#4B5563'
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#F8FAFC'
-                  e.currentTarget.style.color = '#475569'
-                  e.currentTarget.style.borderColor = '#E2E8F0'
+                  e.currentTarget.style.background = '#232730'
+                  e.currentTarget.style.color = '#9AA3AE'
+                  e.currentTarget.style.borderColor = '#232730'
                 }}
               >
                 {portalLoading ? (
@@ -273,7 +273,7 @@ export default function Billing() {
         <div className="glass-card overflow-hidden">
           <div
             className="flex items-center gap-3 px-6 py-4"
-            style={{ borderBottom: '1px solid rgba(14,165,233,0.08)', background: 'rgba(14,165,233,0.02)' }}
+            style={{ borderBottom: '1px solid rgba(34,211,238,0.08)', background: 'rgba(34,211,238,0.02)' }}
           >
             <Sparkles size={15} className="text-ds-cyan" />
             <h2 className="text-sm font-semibold text-ds-text">Choisir un plan</h2>
@@ -366,7 +366,7 @@ export default function Billing() {
       <div className="glass-card overflow-hidden">
         <div
           className="flex items-center gap-3 px-6 py-4"
-          style={{ borderBottom: '1px solid rgba(14,165,233,0.08)', background: 'rgba(14,165,233,0.02)' }}
+          style={{ borderBottom: '1px solid rgba(34,211,238,0.08)', background: 'rgba(34,211,238,0.02)' }}
         >
           <Download size={15} className="text-ds-cyan" />
           <h2 className="text-sm font-semibold text-ds-text">Historique de facturation</h2>

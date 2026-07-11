@@ -9,7 +9,7 @@ const plans = [
     users: '1 utilisateur',
     target: 'Découverte',
     icon: Sparkles,
-    color: '#64748B',
+    color: '#9AA3AE',
     features: [
       { text: '1 AO par mois', included: true },
       { text: 'Upload DCE', included: true },
@@ -27,7 +27,7 @@ const plans = [
     users: '1-2 utilisateurs',
     target: 'PME BTP (CA < 10M)',
     icon: Zap,
-    color: '#0EA5E9',
+    color: '#22D3EE',
     features: [
       { text: '15 AO par mois', included: true },
       { text: 'Analyse IA illimitée', included: true },
@@ -46,7 +46,7 @@ const plans = [
     users: '5+ utilisateurs',
     target: 'ETI BTP (CA > 10M)',
     icon: Crown,
-    color: '#0F172A',
+    color: '#E7EAEE',
     popular: true,
     features: [
       { text: 'AO illimités', included: true },
@@ -63,13 +63,13 @@ const plans = [
 
 export default function Pricing() {
   return (
-    <div className="min-h-screen py-16 px-6 relative" style={{ background: '#F8FAFC' }}>
+    <div className="min-h-screen py-16 px-6 relative" style={{ background: '#232730' }}>
       <div className="max-w-5xl mx-auto relative z-10">
         <div className="text-center mb-14">
-          <h1 className="text-4xl font-extrabold mb-4" style={{ color: '#0F172A', fontFamily: 'DM Sans, system-ui, sans-serif' }}>
+          <h1 className="text-4xl font-extrabold mb-4" style={{ color: '#E7EAEE', fontFamily: 'DM Sans, system-ui, sans-serif' }}>
             Tarifs simples et transparents
           </h1>
-          <p className="text-lg" style={{ color: '#64748B' }}>
+          <p className="text-lg" style={{ color: '#9AA3AE' }}>
             Economisez 2 jours de travail par AO. Rentabilisé en 1 réponse.
           </p>
         </div>
@@ -83,7 +83,7 @@ export default function Pricing() {
                 className="relative rounded-2xl"
                 style={
                   plan.popular
-                    ? { background: 'linear-gradient(135deg, #0EA5E9, #0369A1)', padding: '1px' }
+                    ? { background: 'linear-gradient(135deg, #22D3EE, #0369A1)', padding: '1px' }
                     : {}
                 }
               >
@@ -95,8 +95,8 @@ export default function Pricing() {
                 <div
                   className="rounded-2xl p-7 h-full flex flex-col"
                   style={{
-                    background: '#FFFFFF',
-                    border: plan.popular ? 'none' : '1px solid #E2E8F0',
+                    background: '#1A1D21',
+                    border: plan.popular ? 'none' : '1px solid rgba(255,255,255,0.06)',
                     boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                   }}
                 >
@@ -107,18 +107,18 @@ export default function Pricing() {
                       <Icon size={17} style={{ color: plan.color }} />
                     </div>
                     <div>
-                      <h2 className="text-base font-bold" style={{ color: '#0F172A' }}>{plan.name}</h2>
-                      <p className="text-xs" style={{ color: '#94A3B8' }}>{plan.target}</p>
+                      <h2 className="text-base font-bold" style={{ color: '#E7EAEE' }}>{plan.name}</h2>
+                      <p className="text-xs" style={{ color: '#6B7280' }}>{plan.target}</p>
                     </div>
                   </div>
 
                   {/* Price */}
                   <div className="mb-5">
-                    <span className="text-4xl font-extrabold" style={{ color: '#0F172A', fontFamily: 'DM Sans, system-ui, sans-serif' }}>
+                    <span className="text-4xl font-extrabold" style={{ color: '#E7EAEE', fontFamily: 'DM Sans, system-ui, sans-serif' }}>
                       {plan.price}€
                     </span>
-                    <span className="text-sm ml-1" style={{ color: '#94A3B8' }}>/mois HT</span>
-                    <p className="text-xs mt-1" style={{ color: '#94A3B8' }}>{plan.users}</p>
+                    <span className="text-sm ml-1" style={{ color: '#6B7280' }}>/mois HT</span>
+                    <p className="text-xs mt-1" style={{ color: '#6B7280' }}>{plan.users}</p>
                   </div>
 
                   {/* Features */}
@@ -126,11 +126,11 @@ export default function Pricing() {
                     {plan.features.map((f) => (
                       <li key={f.text} className="flex items-center gap-2.5 text-sm">
                         {f.included ? (
-                          <CheckCircle2 size={15} className="shrink-0" style={{ color: '#0EA5E9' }} />
+                          <CheckCircle2 size={15} className="shrink-0" style={{ color: '#22D3EE' }} />
                         ) : (
-                          <X size={15} className="shrink-0" style={{ color: '#CBD5E1' }} />
+                          <X size={15} className="shrink-0" style={{ color: '#4B5563' }} />
                         )}
-                        <span style={{ color: f.included ? '#334155' : '#94A3B8' }}>{f.text}</span>
+                        <span style={{ color: f.included ? '#C9CFD6' : '#6B7280' }}>{f.text}</span>
                       </li>
                     ))}
                   </ul>
@@ -142,24 +142,24 @@ export default function Pricing() {
                     style={
                       plan.popular
                         ? {}
-                        : { background: '#F1F5F9', color: '#64748B', border: '1px solid #E2E8F0' }
+                        : { background: '#232730', color: '#9AA3AE', border: '1px solid rgba(255,255,255,0.06)' }
                     }
                     onMouseEnter={(e) => {
                       if (!plan.popular) {
-                        e.currentTarget.style.borderColor = '#CBD5E1'
-                        e.currentTarget.style.color = '#0F172A'
-                        e.currentTarget.style.background = '#E2E8F0'
+                        e.currentTarget.style.borderColor = '#4B5563'
+                        e.currentTarget.style.color = '#E7EAEE'
+                        e.currentTarget.style.background = '#232730'
                       } else {
-                        e.currentTarget.style.background = '#0284C7'
+                        e.currentTarget.style.background = '#67E8F9'
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (!plan.popular) {
-                        e.currentTarget.style.borderColor = '#E2E8F0'
-                        e.currentTarget.style.color = '#64748B'
-                        e.currentTarget.style.background = '#F1F5F9'
+                        e.currentTarget.style.borderColor = '#232730'
+                        e.currentTarget.style.color = '#9AA3AE'
+                        e.currentTarget.style.background = '#232730'
                       } else {
-                        e.currentTarget.style.background = '#0EA5E9'
+                        e.currentTarget.style.background = '#22D3EE'
                       }
                     }}
                   >
@@ -171,7 +171,7 @@ export default function Pricing() {
           })}
         </div>
 
-        <p className="text-center text-sm mt-10" style={{ color: '#94A3B8' }}>
+        <p className="text-center text-sm mt-10" style={{ color: '#6B7280' }}>
           Sans engagement · Résiliable à tout moment · Support inclus
         </p>
       </div>

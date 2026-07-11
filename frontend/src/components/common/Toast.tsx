@@ -12,31 +12,31 @@ export interface ToastData {
 const VARIANT_CONFIG: Record<ToastVariant, { icon: typeof CheckCircle2; color: string; bg: string; border: string; barColor: string }> = {
   success: {
     icon: CheckCircle2,
-    color: '#0284C7',
-    bg: 'rgba(14,165,233,0.08)',
-    border: 'rgba(14,165,233,0.20)',
-    barColor: '#0EA5E9',
+    color: '#67E8F9',
+    bg: 'rgba(34,211,238,0.08)',
+    border: 'rgba(34,211,238,0.20)',
+    barColor: '#22D3EE',
   },
   error: {
     icon: XCircle,
-    color: '#DC2626',
-    bg: 'rgba(239,68,68,0.08)',
-    border: 'rgba(239,68,68,0.20)',
-    barColor: '#EF4444',
+    color: '#F87171',
+    bg: 'rgba(248,113,113,0.08)',
+    border: 'rgba(248,113,113,0.20)',
+    barColor: '#F87171',
   },
   info: {
     icon: Info,
-    color: '#0284C7',
-    bg: 'rgba(14,165,233,0.08)',
-    border: 'rgba(14,165,233,0.20)',
-    barColor: '#0EA5E9',
+    color: '#67E8F9',
+    bg: 'rgba(34,211,238,0.08)',
+    border: 'rgba(34,211,238,0.20)',
+    barColor: '#22D3EE',
   },
   warning: {
     icon: AlertTriangle,
-    color: '#475569',
-    bg: 'rgba(100,116,139,0.08)',
-    border: 'rgba(100,116,139,0.20)',
-    barColor: '#64748B',
+    color: '#9AA3AE',
+    bg: 'rgba(154,163,174,0.08)',
+    border: 'rgba(154,163,174,0.20)',
+    barColor: '#9AA3AE',
   },
 }
 
@@ -75,14 +75,14 @@ function ToastItem({ toast, onRemove }: { toast: ToastData; onRemove: (id: strin
         <p className="text-sm text-white/90 flex-1">{toast.message}</p>
         <button
           onClick={dismiss}
-          className="p-1 rounded-lg transition-colors hover:bg-white/10"
-          style={{ color: '#64748B' }}
+          className="p-1 rounded-lg transition-colors hover:bg-ds-bg/10"
+          style={{ color: '#9AA3AE' }}
         >
           <X size={14} />
         </button>
       </div>
       {/* Progress bar */}
-      <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: '#F1F5F9' }}>
+      <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: '#232730' }}>
         <div
           className="h-full"
           style={{

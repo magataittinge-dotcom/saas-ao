@@ -56,30 +56,30 @@ export default function CandidatureSectionTemplates({ projectId, items, onUpload
 
   return (
     <section
-      className="bg-white rounded-lg overflow-hidden"
-      style={{ border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', fontFamily: F }}
+      className="bg-ds-bg rounded-lg overflow-hidden"
+      style={{ border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', fontFamily: F }}
     >
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid #F1F5F9' }}>
+      <header className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="flex items-center gap-3 min-w-0">
           <div
             className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: '#F0F9FF' }}
+            style={{ background: '#0F2B33' }}
           >
-            <FileText size={18} style={{ color: '#0EA5E9' }} />
+            <FileText size={18} style={{ color: '#22D3EE' }} />
           </div>
           <div className="min-w-0">
-            <h2 className="text-base font-bold" style={{ color: '#0F172A' }}>
+            <h2 className="text-base font-bold" style={{ color: '#E7EAEE' }}>
               Documents à compléter et signer
             </h2>
-            <p className="text-xs mt-0.5" style={{ color: '#64748B' }}>
+            <p className="text-xs mt-0.5" style={{ color: '#9AA3AE' }}>
               {present}/{items.length} complétés — téléchargez la trame (ou le formulaire officiel), complétez et signez, puis réimportez la version finale
             </p>
           </div>
         </div>
       </header>
 
-      <ul className="divide-y" style={{ borderColor: '#F1F5F9' }}>
+      <ul className="divide-y" style={{ borderColor: '#232730' }}>
         {sorted.map((item) => (
           <TemplateRow
             key={item.id}
@@ -144,35 +144,35 @@ function TemplateRow({
       {/* Status icon */}
       <span className="shrink-0 mt-0.5">
         {isPresent
-          ? <CheckCircle2 size={18} style={{ color: '#10B981' }} />
+          ? <CheckCircle2 size={18} style={{ color: '#34D399' }} />
           : isWarning
-            ? <AlertCircle size={18} style={{ color: '#B45309' }} />
-            : <AlertCircle size={18} style={{ color: hasTemplate ? '#64748B' : '#EF4444' }} />}
+            ? <AlertCircle size={18} style={{ color: '#FBBF24' }} />
+            : <AlertCircle size={18} style={{ color: hasTemplate ? '#9AA3AE' : '#F87171' }} />}
       </span>
 
       {/* Body */}
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2 flex-wrap">
-          <span className="text-sm font-semibold" style={{ color: '#0F172A' }}>{label}</span>
+          <span className="text-sm font-semibold" style={{ color: '#E7EAEE' }}>{label}</span>
           {isPresent ? (
-            <span className="text-[11px]" style={{ color: '#10B981' }}>Complété</span>
+            <span className="text-[11px]" style={{ color: '#34D399' }}>Complété</span>
           ) : isWarning ? (
-            <span className="text-[11px] font-medium" style={{ color: '#B45309' }}>
+            <span className="text-[11px] font-medium" style={{ color: '#FBBF24' }}>
               ⚠️ Présente — à vérifier
             </span>
           ) : hasTemplate ? (
-            <span className="text-[11px]" style={{ color: '#64748B' }}>À compléter</span>
+            <span className="text-[11px]" style={{ color: '#9AA3AE' }}>À compléter</span>
           ) : officialUrl ? (
             // Type (b) : formulaire standard — normal qu'il ne soit pas au DCE.
-            <span className="text-[11px]" style={{ color: '#64748B' }}>Formulaire standard (Cerfa)</span>
+            <span className="text-[11px]" style={{ color: '#9AA3AE' }}>Formulaire standard (Cerfa)</span>
           ) : (
             // Type (a) spécifique au DCE mais introuvable → à réclamer, pas une erreur.
-            <span className="text-[11px]" style={{ color: '#64748B' }}>À demander au maître d'ouvrage</span>
+            <span className="text-[11px]" style={{ color: '#9AA3AE' }}>À demander au maître d'ouvrage</span>
           )}
         </div>
         {/* C12 — confirmation de signature (AE, DC1, DC2) */}
         {isSignable && onToggleSignature && (
-          <label className="flex items-center gap-2 mt-2 text-xs cursor-pointer" style={{ color: '#475569' }}>
+          <label className="flex items-center gap-2 mt-2 text-xs cursor-pointer" style={{ color: '#9AA3AE' }}>
             <input
               type="checkbox"
               checked={item.signature_confirmed ?? false}
@@ -180,22 +180,22 @@ function TemplateRow({
             />
             Je confirme avoir signé ce document
             {!item.signature_confirmed && (
-              <span style={{ color: '#94A3B8' }}>— requis pour compter conforme</span>
+              <span style={{ color: '#6B7280' }}>— requis pour compter conforme</span>
             )}
           </label>
         )}
         {item.details && (
-          <p className="text-xs mt-1 leading-relaxed" style={{ color: '#64748B' }}>
+          <p className="text-xs mt-1 leading-relaxed" style={{ color: '#9AA3AE' }}>
             {item.details}
           </p>
         )}
         {item.source_in_rc && (
-          <p className="text-[11px] mt-1 italic" style={{ color: '#94A3B8' }}>
+          <p className="text-[11px] mt-1 italic" style={{ color: '#6B7280' }}>
             « {item.source_in_rc} »
           </p>
         )}
         {error && (
-          <p className="text-[11px] mt-1.5" style={{ color: '#EF4444' }}>{error}</p>
+          <p className="text-[11px] mt-1.5" style={{ color: '#F87171' }}>{error}</p>
         )}
       </div>
 
@@ -207,8 +207,8 @@ function TemplateRow({
             href={downloadHref}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-slate-100"
-            style={{ border: '1px solid #E2E8F0', color: '#475569' }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-ds-bg-2"
+            style={{ border: '1px solid rgba(255,255,255,0.06)', color: '#9AA3AE' }}
           >
             <Download size={13} />
             Télécharger la trame
@@ -218,8 +218,8 @@ function TemplateRow({
             href={officialUrl}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-slate-100"
-            style={{ border: '1px solid #E2E8F0', color: '#475569' }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-ds-bg-2"
+            style={{ border: '1px solid rgba(255,255,255,0.06)', color: '#9AA3AE' }}
             title="Formulaire officiel sur economie.gouv.fr (DAJ)"
           >
             <ExternalLink size={13} />
@@ -231,8 +231,8 @@ function TemplateRow({
             href={completedHref}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-slate-100"
-            style={{ border: '1px solid #E2E8F0', color: '#475569' }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-ds-bg-2"
+            style={{ border: '1px solid rgba(255,255,255,0.06)', color: '#9AA3AE' }}
           >
             <FileText size={13} />
             Voir version finale
@@ -243,7 +243,7 @@ function TemplateRow({
           onClick={handlePick}
           disabled={uploading}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-60"
-          style={{ background: isPresent ? '#475569' : '#0EA5E9' }}
+          style={{ background: isPresent ? '#9AA3AE' : '#22D3EE' }}
         >
           {uploading
             ? <><Loader2 size={13} className="animate-spin" /> Envoi...</>

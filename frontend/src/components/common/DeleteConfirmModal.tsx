@@ -34,11 +34,11 @@ export default function DeleteConfirmModal({
         style={{
           background: 'rgba(0,0,0,0.30)',
           backdropFilter: 'none',
-          border: '1px solid #E2E8F0',
+          border: '1px solid rgba(255,255,255,0.06)',
           boxShadow: '0 24px 48px rgba(0,0,0,0.5)',
         }}
       >
-        <h3 className="text-base font-semibold text-center" style={{ color: '#0F172A' }}>
+        <h3 className="text-base font-semibold text-center" style={{ color: '#E7EAEE' }}>
           {title}
         </h3>
 
@@ -47,7 +47,7 @@ export default function DeleteConfirmModal({
             onClick={onCancel}
             disabled={isDeleting}
             className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"
-            style={{ background: '#E2E8F0', color: '#64748B', border: '1px solid #E2E8F0' }}
+            style={{ background: '#232730', color: '#9AA3AE', border: '1px solid rgba(255,255,255,0.06)' }}
           >
             Annuler
           </button>
@@ -55,7 +55,7 @@ export default function DeleteConfirmModal({
             onClick={handleConfirm}
             disabled={isDeleting}
             className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-white transition-all flex items-center justify-center gap-2"
-            style={{ background: '#DC2626' }}
+            style={{ background: '#F87171' }}
           >
             {isDeleting ? (
               <><Loader2 size={14} className="animate-spin" /> Suppression...</>

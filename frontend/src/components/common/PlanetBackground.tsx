@@ -14,8 +14,8 @@ export default function PlanetBackground() {
       <div
         className="absolute inset-0 rounded-full"
         style={{
-          background: 'radial-gradient(circle at 35% 35%, rgba(14,165,233,0.30), rgba(30,58,138,0.20) 50%, transparent 70%)',
-          boxShadow: '0 0 120px 60px rgba(14,165,233,0.15), inset 0 0 80px 20px rgba(14,165,233,0.08)',
+          background: 'radial-gradient(circle at 35% 35%, rgba(34,211,238,0.30), rgba(30,58,138,0.20) 50%, transparent 70%)',
+          boxShadow: '0 0 120px 60px rgba(34,211,238,0.15), inset 0 0 80px 20px rgba(34,211,238,0.08)',
           animation: 'planet-rotate 60s linear infinite',
         }}
       >
@@ -26,11 +26,11 @@ export default function PlanetBackground() {
             background: `conic-gradient(
               from 0deg,
               transparent 0deg,
-              rgba(14,165,233,0.06) 30deg,
+              rgba(34,211,238,0.06) 30deg,
               transparent 60deg,
               rgba(0,212,170,0.04) 120deg,
               transparent 150deg,
-              rgba(14,165,233,0.05) 200deg,
+              rgba(34,211,238,0.05) 200deg,
               transparent 240deg,
               rgba(6,182,212,0.04) 300deg,
               transparent 360deg
@@ -57,7 +57,7 @@ export default function PlanetBackground() {
               style={{
                 top: `${top}%`,
                 height: '1px',
-                background: `linear-gradient(90deg, transparent 10%, rgba(14,165,233,0.15) 30%, rgba(0,212,170,0.10) 50%, rgba(14,165,233,0.15) 70%, transparent 90%)`,
+                background: `linear-gradient(90deg, transparent 10%, rgba(34,211,238,0.15) 30%, rgba(0,212,170,0.10) 50%, rgba(34,211,238,0.15) 70%, transparent 90%)`,
               }}
             />
           ))}
@@ -69,7 +69,7 @@ export default function PlanetBackground() {
         className="absolute rounded-full"
         style={{
           inset: '-30px',
-          border: '1px solid rgba(14,165,233,0.10)',
+          border: '1px solid rgba(34,211,238,0.10)',
           animation: 'planet-rotate 80s linear infinite reverse',
         }}
       />
@@ -78,7 +78,7 @@ export default function PlanetBackground() {
         className="absolute rounded-full"
         style={{
           inset: '-60px',
-          border: '1px solid rgba(14,165,233,0.05)',
+          border: '1px solid rgba(34,211,238,0.05)',
           animation: 'planet-rotate 120s linear infinite',
         }}
       />
@@ -90,8 +90,8 @@ export default function PlanetBackground() {
           width: '6px',
           height: '6px',
           borderRadius: '50%',
-          background: '#0EA5E9',
-          boxShadow: '0 0 12px rgba(14,165,233,0.6)',
+          background: '#22D3EE',
+          boxShadow: '0 0 12px rgba(34,211,238,0.6)',
           top: '-30px',
           left: '50%',
           transformOrigin: '0 430px',

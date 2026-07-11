@@ -38,7 +38,7 @@ export default function Company() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
-        <Building size={24} style={{ color: '#0EA5E9' }} />
+        <Building size={24} style={{ color: '#22D3EE' }} />
         <div>
           <h1 className="text-2xl font-bold text-ds-text">Mon entreprise</h1>
           <p className="text-sm text-ds-text-2">
@@ -48,16 +48,16 @@ export default function Company() {
       </div>
 
       {/* Onglets */}
-      <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid #E2E8F0' }}>
+      <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
         {TABS.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
             className="flex-1 px-3 py-2.5 text-sm font-medium transition-colors"
             style={{
-              background: tab === t.id ? 'rgba(14,165,233,0.10)' : '#FFFFFF',
-              color: tab === t.id ? '#0284C7' : '#64748B',
-              borderRight: '1px solid #E2E8F0',
+              background: tab === t.id ? 'rgba(34,211,238,0.10)' : '#1A1D21',
+              color: tab === t.id ? '#67E8F9' : '#9AA3AE',
+              borderRight: '1px solid rgba(255,255,255,0.06)',
             }}
           >
             {t.label}
@@ -76,7 +76,7 @@ export default function Company() {
         <div className="grid sm:grid-cols-2 gap-3">
           <Link to="/vault"
             className="glass-card p-4 flex items-center gap-3 hover:border-sky-300 transition-colors no-underline">
-            <Archive size={18} style={{ color: '#0EA5E9' }} />
+            <Archive size={18} style={{ color: '#22D3EE' }} />
             <div>
               <p className="text-sm font-semibold text-ds-text">Certifications & attestations</p>
               <p className="text-xs text-ds-text-2">Qualibat, RGE, CACES… dans votre coffre-fort</p>
@@ -84,7 +84,7 @@ export default function Company() {
           </Link>
           <Link to="/references"
             className="glass-card p-4 flex items-center gap-3 hover:border-sky-300 transition-colors no-underline">
-            <Award size={18} style={{ color: '#0EA5E9' }} />
+            <Award size={18} style={{ color: '#22D3EE' }} />
             <div>
               <p className="text-sm font-semibold text-ds-text">Mes références chantiers</p>
               <p className="text-xs text-ds-text-2">Citées dans les mémoires, classées par pertinence</p>
@@ -150,7 +150,7 @@ function OrganizationIdentityForm() {
           )}
 
           {key === 'address' && GMAPS_KEY && watchedAddress.trim().length > 5 && !mapError && (
-            <div className="mt-3 rounded-lg overflow-hidden border border-[#E2E8F0]">
+            <div className="mt-3 rounded-lg overflow-hidden border border-[#232730]">
               <img
                 src={staticMapUrl(watchedAddress)}
                 alt="Aperçu carte"
@@ -159,7 +159,7 @@ function OrganizationIdentityForm() {
                 onError={() => setMapError(true)}
               />
               <div className="flex items-center gap-1.5 px-3 py-2 text-[11px] text-ds-text-3"
-                style={{ background: '#F8FAFC' }}>
+                style={{ background: '#232730' }}>
                 <MapPin size={12} />
                 Aperçu de la carte insérée dans vos mémoires techniques
               </div>

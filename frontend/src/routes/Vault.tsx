@@ -56,14 +56,14 @@ export default function Vault() {
           type="button"
           onClick={() => navigate(returnTo)}
           className="flex items-center gap-2 text-sm font-medium transition-colors hover:underline"
-          style={{ color: '#0EA5E9' }}
+          style={{ color: '#22D3EE' }}
         >
           <ArrowLeft size={15} />
           Retour à la vérification
         </button>
       )}
       <div className="flex items-center gap-3">
-        <Archive size={24} style={{ color: '#0EA5E9' }} />
+        <Archive size={24} style={{ color: '#22D3EE' }} />
         <div>
           <h1 className="text-2xl font-bold text-ds-text">Coffre-fort documentaire</h1>
           <p className="text-sm text-ds-text-2">{documents.length} documents stockés</p>
@@ -85,11 +85,11 @@ export default function Vault() {
         className="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors"
         style={
           isDragActive
-            ? { borderColor: '#0EA5E9', background: 'rgba(14,165,233,0.05)' }
+            ? { borderColor: '#22D3EE', background: 'rgba(34,211,238,0.05)' }
             : { borderColor: 'rgba(71,85,105,0.6)', background: 'transparent' }
         }
         onMouseEnter={(e) => {
-          if (!isDragActive) (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(100,116,139,0.8)'
+          if (!isDragActive) (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(154,163,174,0.8)'
         }}
         onMouseLeave={(e) => {
           if (!isDragActive) (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(71,85,105,0.6)'
@@ -114,7 +114,7 @@ export default function Vault() {
             return (
               <div className="rounded-xl p-3"
                 style={{ background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.20)' }}>
-                <h2 className="flex items-center gap-2 text-sm font-semibold mb-2" style={{ color: '#B45309' }}>
+                <h2 className="flex items-center gap-2 text-sm font-semibold mb-2" style={{ color: '#FBBF24' }}>
                   <Tag size={14} />
                   Non classés ({unclassified.length}) — à classer pour être utilisables dans vos candidatures
                 </h2>

@@ -124,16 +124,16 @@ export default function Projects() {
               <span className="hidden sm:inline">Tri :</span>
             </div>
             <div className="flex rounded-lg overflow-hidden"
-              style={{ border: '1px solid #E2E8F0' }}>
+              style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
               {SORT_OPTIONS.map((opt) => (
                 <button
                   key={opt.key}
                   onClick={() => setSort(opt.key)}
                   className="px-3 py-1.5 text-xs font-medium transition-colors touch-target"
                   style={{
-                    background: sort === opt.key ? 'rgba(14,165,233,0.12)' : 'transparent',
-                    color: sort === opt.key ? '#0EA5E9' : '#64748B',
-                    borderRight: '1px solid #E2E8F0',
+                    background: sort === opt.key ? 'rgba(34,211,238,0.12)' : 'transparent',
+                    color: sort === opt.key ? '#22D3EE' : '#9AA3AE',
+                    borderRight: '1px solid rgba(255,255,255,0.06)',
                   }}
                 >
                   {opt.label}
@@ -149,16 +149,16 @@ export default function Projects() {
               <span className="hidden sm:inline">Filtre :</span>
             </div>
             <div className="flex rounded-lg overflow-hidden"
-              style={{ border: '1px solid #E2E8F0' }}>
+              style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
               {STATUS_OPTIONS.map((opt) => (
                 <button
                   key={opt.key}
                   onClick={() => setFilter(opt.key)}
                   className="px-3 py-1.5 text-xs font-medium transition-colors touch-target"
                   style={{
-                    background: filter === opt.key ? 'rgba(14,165,233,0.12)' : 'transparent',
-                    color: filter === opt.key ? '#0EA5E9' : '#64748B',
-                    borderRight: '1px solid #E2E8F0',
+                    background: filter === opt.key ? 'rgba(34,211,238,0.12)' : 'transparent',
+                    color: filter === opt.key ? '#22D3EE' : '#9AA3AE',
+                    borderRight: '1px solid rgba(255,255,255,0.06)',
                   }}
                 >
                   {opt.label}
@@ -175,11 +175,11 @@ export default function Projects() {
       ) : projects.length === 0 ? (
         <div
           className="glass-card p-16 flex flex-col items-center gap-5 text-center"
-          style={{ borderStyle: 'dashed', borderColor: 'rgba(14,165,233,0.15)' }}
+          style={{ borderStyle: 'dashed', borderColor: 'rgba(34,211,238,0.15)' }}
         >
           <div
             className="w-14 h-14 rounded-2xl flex items-center justify-center"
-            style={{ background: 'rgba(14,165,233,0.10)' }}
+            style={{ background: 'rgba(34,211,238,0.10)' }}
           >
             <Plus size={28} className="text-ds-cyan" />
           </div>

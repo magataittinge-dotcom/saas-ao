@@ -132,33 +132,33 @@ export function AnalysisProgress({
       <div
         className="flex flex-col items-center gap-6 min-w-72 p-10 rounded-2xl"
         style={{
-          background: '#FFFFFF',
-          border: '1px solid rgba(14,165,233,0.20)',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(14,165,233,0.10)',
+          background: '#1A1D21',
+          border: '1px solid rgba(34,211,238,0.20)',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(34,211,238,0.10)',
         }}
       >
         {/* Radial progress */}
         <div className="relative w-48 h-48">
           <svg className="w-full h-full -rotate-90" viewBox="0 0 200 200">
-            <circle cx="100" cy="100" r={RADIUS} fill="none" stroke="rgba(100,116,139,0.20)" strokeWidth="10" />
+            <circle cx="100" cy="100" r={RADIUS} fill="none" stroke="rgba(154,163,174,0.20)" strokeWidth="10" />
             <circle
               cx="100"
               cy="100"
               r={RADIUS}
               fill="none"
-              stroke={showCheck ? '#0EA5E9' : '#0EA5E9'}
+              stroke={showCheck ? '#22D3EE' : '#22D3EE'}
               strokeWidth="10"
               strokeLinecap="round"
               strokeDasharray={CIRCUMFERENCE}
               strokeDashoffset={offset}
-              style={{ transition: 'stroke-dashoffset 0.4s ease, stroke 0.3s ease', filter: `drop-shadow(0 0 8px ${showCheck ? '#0EA5E9' : '#0EA5E9'})` }}
+              style={{ transition: 'stroke-dashoffset 0.4s ease, stroke 0.3s ease', filter: `drop-shadow(0 0 8px ${showCheck ? '#22D3EE' : '#22D3EE'})` }}
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
             {showCheck ? (
               <div
                 className="flex items-center justify-center w-16 h-16 rounded-full"
-                style={{ background: 'rgba(14,165,233,0.15)' }}
+                style={{ background: 'rgba(34,211,238,0.15)' }}
               >
                 <Check size={36} className="text-ds-cyan" strokeWidth={2.5} />
               </div>
@@ -192,8 +192,8 @@ export function AnalysisProgress({
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all duration-200"
             style={{
               color: 'rgba(148,163,184,0.8)',
-              background: 'rgba(100,116,139,0.10)',
-              border: '1px solid rgba(100,116,139,0.20)',
+              background: 'rgba(154,163,174,0.10)',
+              border: '1px solid rgba(154,163,174,0.20)',
               opacity: isSlow ? 1 : 0.5,
             }}
           >

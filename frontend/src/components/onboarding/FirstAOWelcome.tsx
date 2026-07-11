@@ -69,7 +69,7 @@ export default function FirstAOWelcome() {
   return (
     <div className="max-w-xl mx-auto flex flex-col items-center text-center pt-10 animate-fade-in">
       <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-        style={{ background: 'rgba(14,165,233,0.10)' }}>
+        style={{ background: 'rgba(34,211,238,0.10)' }}>
         <Sparkles size={22} className="text-ds-cyan" />
       </div>
       <h1 className="text-2xl font-bold text-ds-text mb-1">
@@ -98,14 +98,14 @@ export default function FirstAOWelcome() {
             </button>
           </div>
           <button onClick={() => setSiretDone(true)}
-            className="text-xs mt-3 hover:underline" style={{ color: '#94A3B8' }}>
+            className="text-xs mt-3 hover:underline" style={{ color: '#6B7280' }}>
             Passer cette étape
           </button>
         </>
       ) : (
         <>
           {siretMsg && (
-            <p className="text-xs mb-3 max-w-md" style={{ color: '#B45309' }}>{siretMsg}</p>
+            <p className="text-xs mb-3 max-w-md" style={{ color: '#FBBF24' }}>{siretMsg}</p>
           )}
           <p className="text-sm text-ds-text-2 mb-6">
             Votre profil se complétera au fil de vos réponses — commencez directement.
@@ -114,8 +114,8 @@ export default function FirstAOWelcome() {
             {...getRootProps()}
             className="w-full border-2 border-dashed rounded-2xl px-8 py-14 cursor-pointer transition-colors"
             style={isDragActive
-              ? { borderColor: '#0EA5E9', background: 'rgba(14,165,233,0.05)' }
-              : { borderColor: '#CBD5E1', background: '#FFFFFF' }}
+              ? { borderColor: '#22D3EE', background: 'rgba(34,211,238,0.05)' }
+              : { borderColor: '#4B5563', background: '#1A1D21' }}
           >
             <input {...getInputProps()} />
             {isCreating ? (

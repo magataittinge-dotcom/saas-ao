@@ -42,7 +42,7 @@ function CardLogo({ type }: { type: string }) {
     )
   }
   return (
-    <div className="w-8 h-5 rounded" style={{ background: '#94A3B8' }} />
+    <div className="w-8 h-5 rounded" style={{ background: '#6B7280' }} />
   )
 }
 
@@ -61,7 +61,7 @@ export default function PaymentCard({
         borderRadius: '20px',
         background: CARD_GRADIENTS[cardType] ?? CARD_GRADIENTS.default,
         perspective: '1000px',
-        boxShadow: '14px 17px 40px 4px rgba(0,0,0,0.30), 0 0 20px rgba(14,165,233,0.1)',
+        boxShadow: '14px 17px 40px 4px rgba(0,0,0,0.30), 0 0 20px rgba(34,211,238,0.1)',
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'perspective(800px) rotateY(2deg) scale(1.01)'

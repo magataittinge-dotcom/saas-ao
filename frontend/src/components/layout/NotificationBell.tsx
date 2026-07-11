@@ -63,14 +63,14 @@ export default function NotificationBell() {
       <button
         onClick={() => setOpen(o => !o)}
         className="relative p-2 rounded-full touch-target"
-        style={{ color: '#94A3B8' }}
+        style={{ color: '#6B7280' }}
         title="Notifications"
       >
         <Bell size={18} />
         {unread > 0 && (
           <span
             className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold text-white flex items-center justify-center"
-            style={{ background: '#0EA5E9' }}
+            style={{ background: '#22D3EE' }}
           >
             {unread > 9 ? '9+' : unread}
           </span>
@@ -80,19 +80,19 @@ export default function NotificationBell() {
       {open && (
         <div
           className="absolute right-0 top-full mt-2 w-80 rounded-xl overflow-hidden z-50"
-          style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', boxShadow: '0 8px 24px rgba(0,0,0,0.10)' }}
+          style={{ background: '#1A1D21', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 8px 24px rgba(0,0,0,0.10)' }}
         >
-          <div className="flex items-center justify-between px-4 py-2.5" style={{ borderBottom: '1px solid #F1F5F9' }}>
-            <span className="text-sm font-bold" style={{ color: '#0F172A' }}>Notifications</span>
+          <div className="flex items-center justify-between px-4 py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <span className="text-sm font-bold" style={{ color: '#E7EAEE' }}>Notifications</span>
             {unread > 0 && (
-              <button onClick={() => markAllRead()} className="text-xs hover:underline" style={{ color: '#0EA5E9' }}>
+              <button onClick={() => markAllRead()} className="text-xs hover:underline" style={{ color: '#22D3EE' }}>
                 Tout marquer lu
               </button>
             )}
           </div>
           <div className="max-h-96 overflow-y-auto">
             {(data?.items ?? []).length === 0 ? (
-              <p className="px-4 py-6 text-center text-sm" style={{ color: '#94A3B8' }}>
+              <p className="px-4 py-6 text-center text-sm" style={{ color: '#6B7280' }}>
                 Aucune notification
               </p>
             ) : (
@@ -100,21 +100,21 @@ export default function NotificationBell() {
                 <button
                   key={n.id}
                   onClick={() => !n.read && markRead(n.id)}
-                  className="w-full text-left px-4 py-3 transition-colors hover:bg-[#F8FAFC]"
-                  style={{ borderBottom: '1px solid #F8FAFC' }}
+                  className="w-full text-left px-4 py-3 transition-colors hover:bg-[#232730]"
+                  style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
                 >
                   <div className="flex items-start gap-2">
                     {!n.read && (
-                      <span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: '#0EA5E9' }} />
+                      <span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: '#22D3EE' }} />
                     )}
                     <div className="min-w-0">
-                      <p className="text-sm leading-snug" style={{ color: n.read ? '#64748B' : '#0F172A', fontWeight: n.read ? 400 : 600 }}>
+                      <p className="text-sm leading-snug" style={{ color: n.read ? '#9AA3AE' : '#E7EAEE', fontWeight: n.read ? 400 : 600 }}>
                         {n.titre}
                       </p>
                       {n.corps && (
-                        <p className="text-xs mt-0.5 line-clamp-2" style={{ color: '#94A3B8' }}>{n.corps}</p>
+                        <p className="text-xs mt-0.5 line-clamp-2" style={{ color: '#6B7280' }}>{n.corps}</p>
                       )}
-                      <p className="text-[10px] mt-1" style={{ color: '#CBD5E1' }}>{timeAgo(n.created_at)}</p>
+                      <p className="text-[10px] mt-1" style={{ color: '#4B5563' }}>{timeAgo(n.created_at)}</p>
                     </div>
                   </div>
                 </button>

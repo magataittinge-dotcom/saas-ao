@@ -277,7 +277,7 @@ export default function Dashboard() {
           <section className="glass-card overflow-hidden">
             <header className="flex items-center gap-2.5 px-5 py-4 border-b border-ds-border-subtle">
               <h2 className="text-[15px] font-semibold text-ds-text">Analysés</h2>
-              <span className="pill text-[11px]" style={{ background: '#F1F5F9', color: '#64748B' }}>
+              <span className="pill text-[11px]" style={{ background: '#232730', color: '#9AA3AE' }}>
                 {analysesSansSuite.length}
               </span>
               <span className="text-xs text-ds-text-3">analyse terminée, à vous de décider</span>
@@ -300,7 +300,7 @@ export default function Dashboard() {
                     onClick={() => markSansSuite(p.id)}
                     title="Classer cet AO « Analysé — sans suite » : décision prise, il quitte le tableau de bord"
                     className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-ds-text-2 hover:bg-ds-bg-2 transition-colors cursor-pointer"
-                    style={{ border: '1px solid #E2E8F0' }}
+                    style={{ border: '1px solid rgba(255,255,255,0.06)' }}
                   >
                     <FolderX size={13} /> Sans suite
                   </button>
@@ -327,7 +327,7 @@ export default function Dashboard() {
             {(s.projects_gagnes > 0 || s.taux_succes > 0) && (
               <div className="flex items-center justify-between px-2 py-1.5 mb-1 text-xs">
                 <span className="text-ds-text-3">Taux de réussite</span>
-                <span className="font-semibold text-ds-text">{s.taux_succes} %</span>
+                <span className="edge-data font-semibold text-ds-text">{s.taux_succes} %</span>
               </div>
             )}
             {upcoming.length === 0 ? (
@@ -348,8 +348,8 @@ export default function Dashboard() {
                         <div
                           className={`text-center shrink-0 w-11 py-1 rounded-lg ${near ? 'bg-ds-cyan/10 shadow-glow-sm' : 'bg-ds-bg-2'}`}
                         >
-                          <p className={`text-sm font-bold leading-none ${near ? 'text-ds-cyan-dark' : 'text-ds-text'}`}>{day}</p>
-                          <p className="text-[10px] uppercase mt-0.5 text-ds-text-3">{month}</p>
+                          <p className={`edge-data text-sm font-bold leading-none ${near ? 'text-ds-cyan-dark' : 'text-ds-text'}`}>{day}</p>
+                          <p className="edge-data text-[10px] uppercase mt-0.5 text-ds-text-3">{month}</p>
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-ds-text truncate">{p.name}</p>
@@ -386,7 +386,7 @@ export default function Dashboard() {
           </section>
 
           {/* Note Synorix — positive, premium silencieux */}
-          <section className="glass-card p-4 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(14,165,233,0.04), rgba(14,165,233,0.08))' }}>
+          <section className="glass-card p-4 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(34,211,238,0.04), rgba(34,211,238,0.08))' }}>
             <div className="flex items-center gap-2 mb-2">
               <Sparkles size={15} className="text-ds-cyan" />
               <h3 className="text-sm font-bold text-ds-cyan-dark">Synorix</h3>

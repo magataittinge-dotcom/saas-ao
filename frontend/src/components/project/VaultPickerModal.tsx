@@ -78,27 +78,27 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-lg w-full max-w-xl max-h-[80vh] flex flex-col overflow-hidden"
+        className="bg-ds-bg rounded-lg w-full max-w-xl max-h-[80vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         style={{ boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}
       >
         {/* Header */}
-        <header className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid #F1F5F9' }}>
+        <header className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
           <div className="min-w-0">
-            <h3 className="text-base font-bold" style={{ color: '#0F172A' }}>
+            <h3 className="text-base font-bold" style={{ color: '#E7EAEE' }}>
               Choisir une pièce du coffre-fort
             </h3>
-            <p className="text-xs mt-0.5 truncate" style={{ color: '#64748B' }}>
+            <p className="text-xs mt-0.5 truncate" style={{ color: '#9AA3AE' }}>
               Pour : {item.details || item.document_type_required}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg transition-colors hover:bg-slate-100 shrink-0"
+            className="p-1.5 rounded-lg transition-colors hover:bg-ds-bg-2 shrink-0"
             aria-label="Fermer"
           >
-            <X size={18} style={{ color: '#64748B' }} />
+            <X size={18} style={{ color: '#9AA3AE' }} />
           </button>
         </header>
 
@@ -120,16 +120,16 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
             disabled={uploading}
             onClick={() => fileInputRef.current?.click()}
             className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-            style={{ background: '#0EA5E9' }}
+            style={{ background: '#22D3EE' }}
           >
             {uploading
               ? <><Loader2 size={15} className="animate-spin" /> Import…</>
               : <><Upload size={15} /> Téléverser un fichier depuis mon ordinateur</>}
           </button>
           <div className="flex items-center gap-3 my-3">
-            <span className="flex-1 h-px" style={{ background: '#F1F5F9' }} />
-            <span className="text-[11px] uppercase tracking-wider" style={{ color: '#94A3B8' }}>ou choisir au coffre-fort</span>
-            <span className="flex-1 h-px" style={{ background: '#F1F5F9' }} />
+            <span className="flex-1 h-px" style={{ background: '#232730' }} />
+            <span className="text-[11px] uppercase tracking-wider" style={{ color: '#6B7280' }}>ou choisir au coffre-fort</span>
+            <span className="flex-1 h-px" style={{ background: '#232730' }} />
           </div>
         </div>
 
@@ -137,20 +137,20 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
         <div className="px-6">
           <div
             className="flex items-center gap-2 px-3 py-2 rounded-lg"
-            style={{ border: '1px solid #E2E8F0' }}
+            style={{ border: '1px solid rgba(255,255,255,0.06)' }}
           >
-            <Search size={14} style={{ color: '#94A3B8' }} />
+            <Search size={14} style={{ color: '#6B7280' }} />
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Rechercher par nom de fichier"
               className="flex-1 text-sm outline-none bg-transparent"
-              style={{ color: '#0F172A' }}
+              style={{ color: '#E7EAEE' }}
             />
           </div>
           {error && (
-            <p className="text-xs mt-2 flex items-center gap-1" style={{ color: '#EF4444' }}>
+            <p className="text-xs mt-2 flex items-center gap-1" style={{ color: '#F87171' }}>
               <AlertCircle size={12} />
               {error}
             </p>
@@ -161,7 +161,7 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
           {isLoading ? (
             <div className="flex items-center justify-center py-10">
-              <Loader2 size={20} className="animate-spin" style={{ color: '#0EA5E9' }} />
+              <Loader2 size={20} className="animate-spin" style={{ color: '#22D3EE' }} />
             </div>
           ) : (
             <>
@@ -200,12 +200,12 @@ function Group({
 }) {
   return (
     <div>
-      <h4 className="text-[11px] font-semibold uppercase tracking-wider mb-2" style={{ color: '#94A3B8' }}>
+      <h4 className="text-[11px] font-semibold uppercase tracking-wider mb-2" style={{ color: '#6B7280' }}>
         {title}
       </h4>
       {docs.length === 0 ? (
         emptyText ? (
-          <p className="text-xs py-2" style={{ color: '#94A3B8' }}>{emptyText}</p>
+          <p className="text-xs py-2" style={{ color: '#6B7280' }}>{emptyText}</p>
         ) : null
       ) : (
         <ul className="space-y-1.5">
@@ -213,15 +213,15 @@ function Group({
             <li
               key={doc.id}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg"
-              style={{ background: '#FAFBFC' }}
+              style={{ background: '#121417' }}
             >
-              <FileText size={16} style={{ color: '#64748B' }} className="shrink-0" />
+              <FileText size={16} style={{ color: '#9AA3AE' }} className="shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate" style={{ color: '#1E293B' }}>
+                <p className="text-sm font-medium truncate" style={{ color: '#E7EAEE' }}>
                   {doc.file_name}
                 </p>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-[11px]" style={{ color: '#94A3B8' }}>{doc.type}</span>
+                  <span className="text-[11px]" style={{ color: '#6B7280' }}>{doc.type}</span>
                   <StatusPill status={doc.status} />
                 </div>
               </div>
@@ -230,7 +230,7 @@ function Group({
                 disabled={linkingId !== null}
                 onClick={() => onLink(doc)}
                 className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-60 shrink-0"
-                style={{ background: '#0EA5E9' }}
+                style={{ background: '#22D3EE' }}
               >
                 {linkingId === doc.id
                   ? <span className="flex items-center gap-1"><Loader2 size={12} className="animate-spin" /> Liaison...</span>
@@ -247,10 +247,10 @@ function Group({
 function StatusPill({ status }: { status: Document['status'] }) {
   const cfg =
     status === 'expired'
-      ? { label: 'Expiré', color: '#EF4444', bg: '#FEF2F2' }
+      ? { label: 'Expiré', color: '#F87171', bg: '#3A1D1D' }
       : status === 'expiring_soon'
-      ? { label: 'Expire bientôt', color: '#64748B', bg: '#F8FAFC' }
-      : { label: 'Valide', color: '#10B981', bg: '#ECFDF5' }
+      ? { label: 'Expire bientôt', color: '#9AA3AE', bg: '#232730' }
+      : { label: 'Valide', color: '#34D399', bg: '#0F3527' }
   return (
     <span
       className="text-[10px] font-medium px-1.5 py-0.5 rounded"
