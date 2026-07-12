@@ -12,6 +12,7 @@ from database import get_db
 from config import get_settings
 from models.user import User
 from models.organization import Organization
+from schemas.auth import SyncRequest
 from services import insee_service
 
 logger = logging.getLogger(__name__)
@@ -135,30 +136,29 @@ def get_me(user: User = Depends(get_auth_user), db: Session = Depends(get_db)):
 
 @router.post("/sync")
 def sync_onboarding(
-    payload: dict,
+    payload: SyncRequest,
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ):
-    """Post-signup: set organization name, SIRET, plan.
+    """Post-signup: set organization name + SIRET (JAMAIS le plan).
 
     C2 — le SIRET est vérifié via l'API Sirene et pré-remplit le profil.
     Aucun échec Sirene ne bloque l'inscription (fallback saisie manuelle) ;
     seule règle dure : 1 SIRET = 1 essai gratuit (le doublon garde son compte
-    mais perd l'essai)."""
+    mais perd l'essai). Le plan n'est modifiable QUE par les webhooks Stripe
+    (R2 : sinon self-upgrade gratuit)."""
     org = db.query(Organization).filter(Organization.id == user.organization_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Organisation introuvable")
 
-    if payload.get("organization_name"):
-        org.name = payload["organization_name"]
-    if payload.get("plan") and payload["plan"] in ("free", "pro", "business"):
-        org.plan = payload["plan"]
+    if payload.organization_name:
+        org.name = payload.organization_name
 
     siret_warning = None
-    if payload.get("siret"):
+    if payload.siret:
         siret_warning = _apply_siret(
-            org, payload["siret"], db,
-            name_provided=bool(payload.get("organization_name")),
+            org, payload.siret, db,
+            name_provided=bool(payload.organization_name),
         )
 
     db.commit()

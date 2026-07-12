@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import hmac
 import shutil
@@ -11,6 +12,21 @@ from config import get_settings
 settings = get_settings()
 
 UPLOADS_ROOT = Path(__file__).parent.parent / "uploads"
+
+
+def _safe_filename(raw: str) -> str:
+    """Réduit un nom fourni par le client à un basename sûr — neutralise le
+    path-traversal (``../``, chemins absolus, séparateurs Windows, NUL).
+
+    Le contenu est toujours rangé sous ``{prefix}/{uuid}-{nom}`` : ce nom ne
+    sert qu'à la lisibilité et à conserver l'extension. Sans cette réduction,
+    un ``../../evil.pdf`` forgé (trivial en requête directe) échapperait au
+    répertoire prévu car ``mkdir(parents=True)`` crée les segments."""
+    name = Path((raw or "").replace("\\", "/")).name
+    name = name.replace("\x00", "").strip()
+    if name in ("", ".", ".."):
+        return "file"
+    return name
 
 # URLs signées à durée limitée (C22) — liens coffre-fort / documents.
 SIGNED_URL_TTL = 15 * 60  # 15 minutes
@@ -58,10 +74,12 @@ class FileStorage:
         prefix: str,
         content_type: Optional[str] = None,
     ) -> str:
-        key = f"{prefix}/{uuid.uuid4()}-{filename}"
+        key = f"{prefix}/{uuid.uuid4()}-{_safe_filename(filename)}"
         if self._use_s3:
             return await self._upload_s3(content, key, content_type)
-        return self._upload_local(content, key)
+        # to_thread : l'écriture disque (jusqu'à ~1,5 Go pour un plan) est
+        # synchrone — jamais dans l'event-loop (piège WSL2, cf. chemin ZIP).
+        return await asyncio.to_thread(self._upload_local, content, key)
 
     async def upload_stream(
         self,
@@ -71,10 +89,10 @@ class FileStorage:
         content_type: Optional[str] = None,
     ) -> str:
         """Persist a file-like object without ever loading the whole payload into memory."""
-        key = f"{prefix}/{uuid.uuid4()}-{filename}"
+        key = f"{prefix}/{uuid.uuid4()}-{_safe_filename(filename)}"
         if self._use_s3:
             return await self._upload_s3_stream(fileobj, key, content_type)
-        return self._upload_local_stream(fileobj, key)
+        return await asyncio.to_thread(self._upload_local_stream, fileobj, key)
 
     async def _upload_s3(self, content: bytes, key: str, content_type: Optional[str]) -> str:
         import boto3

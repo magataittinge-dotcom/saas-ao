@@ -214,13 +214,6 @@ def _ensure_schema_columns():
                 },
             )
 
-        # ── Wipe checklist_items (decision validée : re-run propre) ───────
-        if insp.has_table("checklist_items"):
-            with engine.begin() as conn:
-                deleted = conn.execute(text("DELETE FROM checklist_items")).rowcount
-                if deleted:
-                    logger.info(f"Wiped {deleted} checklist_items rows for re-run")
-
         # ── Postgres-only: extend checklist_status ENUM with non_applicable ─
         if is_postgres:
             try:
