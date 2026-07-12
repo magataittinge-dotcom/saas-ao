@@ -74,6 +74,15 @@ def create_checkout_session(
     if not org:
         raise HTTPException(status_code=404, detail="Organisation introuvable")
 
+    # Une org déjà abonnée ne repasse pas par un checkout (double
+    # souscription Stripe = double facturation) : elle gère son plan via le
+    # portail. Changement de plan = portail, pas nouvelle session.
+    if (org.plan or "free") in ("pro", "business"):
+        raise HTTPException(
+            status_code=409,
+            detail="Vous avez déjà un abonnement actif. Gérez-le depuis le portail de facturation.",
+        )
+
     billing = get_billing_provider()
 
     # Get or create a billing-provider customer
@@ -262,6 +271,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         if customer_id and data_object.get("status") == "active":
             org = db.query(Organization).filter(Organization.stripe_customer_id == customer_id).first()
             if org:
+                old_plan = org.plan
                 items = (data_object.get("items") or {}).get("data") or []
                 if items:
                     product_id = (items[0].get("price") or {}).get("product")
@@ -270,6 +280,13 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                             org.plan = plan_name
                             break
                 org.stripe_subscription_id = data_object.get("id")
+                # Changement de plan → nouvelle ancre de quotas : les
+                # consommations de la période précédente (illimité business)
+                # ne bloquent pas le nouveau plan (downgrade business→pro
+                # sinon = 402 immédiat). Même plan → ancre inchangée (pas de
+                # fenêtre offerte à chaque événement Stripe).
+                if org.plan != old_plan:
+                    org.subscription_started_at = datetime.utcnow()
                 db.commit()
 
     return {"received": True}
