@@ -48,15 +48,8 @@ _HEARTBEAT_INTERVAL_S = 25.0
 _QUEUE_TIMEOUT_S = 1.0  # poll the queue with this timeout to allow heartbeat ticks
 
 
-def _get_project_or_404(project_id: str, org_id: str, db: Session) -> Project:
-    p = db.query(Project).filter(
-        Project.id == project_id,
-        Project.organization_id == org_id,
-        Project.deleted_at.is_(None),
-    ).first()
-    if not p:
-        raise HTTPException(status_code=404, detail="Projet introuvable")
-    return p
+# R11 — source UNIQUE (filtre org + soft-delete) ; fini les 7 copies.
+from services.project_access import get_owned_project as _get_project_or_404
 
 
 def _format_event(event_type: str, payload: dict) -> bytes:

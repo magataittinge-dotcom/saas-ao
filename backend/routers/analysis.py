@@ -26,6 +26,7 @@ from services.document_tagger import (
     get_documents_for_lot, extract_excel_sheet_for_lot, _normalize_lot_num,
 )
 from services import pipeline_tracker, quota
+from services.project_status import ensure_relaunchable
 from typing import List
 
 logger = logging.getLogger(__name__)
@@ -51,6 +52,7 @@ async def trigger_analysis(
     fois et partagé ; seul le spécifique (CCTP/DPGF filtrés) est analysé
     par lot. body optionnel : {"lots": ["lot1", "lot2"]}."""
     project = _get_project_or_404(project_id, user.organization_id, db)
+    ensure_relaunchable(project)  # R12 — pas de relance sur projet clôturé
     all_docs = db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).all()
     docs_total = len(all_docs)
 
@@ -829,11 +831,5 @@ def get_synorix_score(
     return result
 
 
-def _get_project_or_404(project_id: str, org_id: str, db: Session) -> Project:
-    project = db.query(Project).filter(
-        Project.id == project_id,
-        Project.organization_id == org_id,
-    ).first()
-    if not project:
-        raise HTTPException(status_code=404, detail="Projet introuvable")
-    return project
+# R11 — source UNIQUE (filtre org + soft-delete) ; fini les 7 copies.
+from services.project_access import get_owned_project as _get_project_or_404

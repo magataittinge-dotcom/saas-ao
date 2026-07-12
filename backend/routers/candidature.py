@@ -313,14 +313,8 @@ def patch_checklist_item(
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
-def _get_project_or_404(project_id: str, org_id: str, db: Session) -> Project:
-    project = db.query(Project).filter(
-        Project.id == project_id,
-        Project.organization_id == org_id,
-    ).first()
-    if not project:
-        raise HTTPException(status_code=404, detail="Projet introuvable")
-    return project
+# R11 — source UNIQUE (filtre org + soft-delete) ; fini les 7 copies.
+from services.project_access import get_owned_project as _get_project_or_404
 
 
 def _get_checklist_item_or_404(item_id: str, project_id: str, db: Session) -> ChecklistItem:

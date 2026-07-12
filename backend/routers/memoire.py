@@ -31,6 +31,7 @@ from services.maps_service import generate_location_map
 from services.document_tagger import get_documents_for_lot
 from services import pipeline_tracker, quota
 from services.audit_logger import log_action
+from services.project_status import ensure_relaunchable
 
 logger = logging.getLogger(__name__)
 
@@ -149,6 +150,7 @@ async def generate_memoire(
     /processing-status + SSE ; notification memoire_ready à la fin ; échec →
     statut error + relance, jamais de régression d'étape."""
     project = _get_project_or_404(project_id, user.organization_id, db)
+    ensure_relaunchable(project)  # R12 — pas de relance sur projet clôturé
     org = db.query(Organization).filter(Organization.id == user.organization_id).first()
 
     all_docs = db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).all()
@@ -600,11 +602,5 @@ def update_memoire(
     return memoire
 
 
-def _get_project_or_404(project_id: str, org_id: str, db: Session) -> Project:
-    project = db.query(Project).filter(
-        Project.id == project_id,
-        Project.organization_id == org_id,
-    ).first()
-    if not project:
-        raise HTTPException(status_code=404, detail="Projet introuvable")
-    return project
+# R11 — source UNIQUE (filtre org + soft-delete) ; fini les 7 copies.
+from services.project_access import get_owned_project as _get_project_or_404
