@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+from sqlalchemy import or_, update as _sql_update
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -100,10 +101,24 @@ async def trigger_analysis(
                 "Passez au plan Business (illimité) ou attendez le renouvellement de votre période."
             )
         raise HTTPException(status_code=402, detail=detail)
-    # Anti double-run : une analyse déjà en cours sur ce projet → 409 —
-    # AVANT toute consommation : un double-clic ne coûte jamais d'unité.
+
     thread_name = f"synorix-analysis-{project_id[:12]}"
-    if any(t.name == thread_name and t.is_alive() for t in threading.enumerate()):
+
+    # Anti double-run ATOMIQUE (R3) : réserve le créneau par une écriture
+    # conditionnelle sur la ligne projet. Sur Postgres, le verrou de ligne
+    # sérialise les workers concurrents — un double-clic réparti sur 2
+    # workers ne peut plus lancer 2 runs. 0 ligne mise à jour = déjà en
+    # cours → 409, AVANT toute consommation (rollback si 402/503 ensuite).
+    claimed = db.execute(
+        _sql_update(Project)
+        .where(
+            Project.id == project_id,
+            or_(Project.processing_status.is_(None),
+                Project.processing_status != "analyzing"),
+        )
+        .values(processing_status="analyzing")
+    ).rowcount
+    if not claimed:
         raise HTTPException(status_code=409, detail="Une analyse est déjà en cours pour ce projet.")
 
     # ── Garde pré-vol IA (audit risque #4) : jamais de run condamné d'avance
@@ -112,14 +127,21 @@ async def trigger_analysis(
     try:
         await asyncio.to_thread(ensure_ai_service_available)
     except AIServiceUnavailable:
+        db.rollback()  # relâche le créneau réservé + le verrou de ligne
         raise HTTPException(
             status_code=503,
             detail="Service IA momentanément indisponible — réessayez dans quelques minutes.",
         )
 
+    # Verrou org (anti-TOCTOU R3) : check_quota + consume sérialisés pour
+    # l'org — deux projets concurrents ne dépassent plus la limite. Les
+    # lignes consommées sont retenues par id pour un refund exact (R4).
+    quota.advisory_org_lock(db, org.id)
+    consumed_rows = {}
     for spec in lot_specs:
         quota.check_quota(db, org, "analysis")
-        quota.consume(db, org, "analysis", project_id=project_id, lot=spec["lot_id"])
+        consumed_rows[spec["lot_id"]] = quota.consume(
+            db, org, "analysis", project_id=project_id, lot=spec["lot_id"])
 
     # Update step before analysis — current_step ne RÉGRESSE plus jamais :
     # un échec d'analyse laisse le projet à l'étape analyse avec un statut
@@ -128,7 +150,10 @@ async def trigger_analysis(
     project.status = "en_cours"
     project.processing_status = "analyzing"
     project.processing_detail = ""
-    db.commit()
+    db.commit()  # persiste le créneau + les consommations, relâche les verrous
+
+    # ids des consommations de CE run (dispo après commit) → refund exact.
+    consumed_ids = {lot: row.id for lot, row in consumed_rows.items()}
 
     pipeline_tracker.start_pipeline(project_id, "analysis")
     pipeline_tracker.start_step(project_id, "preparation")
@@ -140,7 +165,7 @@ async def trigger_analysis(
     thread = threading.Thread(
         target=_run_analysis_job,
         args=(project_id, org_id, pass1_text, lot_specs,
-              docs_sent, docs_total, truncated_files),
+              docs_sent, docs_total, truncated_files, consumed_ids),
         daemon=True,
         name=thread_name,
     )
@@ -321,20 +346,21 @@ def _requirements_from_rows(rows) -> list:
     } for r in rows]
 
 
-def _refund_lots(db, org_id: str, project_id: str, lot_ids: list) -> None:
-    """Échec TECHNIQUE (panne API/5xx/crédit) : rembourse les unités
-    décomptées au lancement — la relance ne re-paie pas. Idempotent (un lot
-    déjà remboursé est un no-op) ; jamais appelé quand l'IA a tourné mais
-    que le DCE n'a rien donné (no_requirements : l'unité reste due)."""
-    org = db.query(Organization).filter(Organization.id == org_id).first()
-    if org is None:
+def _refund_lots(db, consumed_ids: dict, lot_ids: list) -> None:
+    """Échec TECHNIQUE (panne API/5xx/crédit) : rembourse EXACTEMENT les
+    unités décomptées par CE run pour les lots donnés, par id (R4) — jamais
+    « la ligne la plus récente », donc jamais l'unité livrée d'un autre run.
+    Idempotent (un lot déjà remboursé = id absent) ; jamais appelé quand
+    l'IA a tourné mais que le DCE n'a rien donné (no_requirements : due)."""
+    ids = [consumed_ids.get(lot_id) for lot_id in lot_ids]
+    ids = [i for i in ids if i]
+    if not ids:
         return
     try:
-        for lot_id in lot_ids:
-            quota.refund(db, org, "analysis", project_id=project_id, lot=lot_id)
+        quota.refund_ids(db, ids)
         db.commit()
     except Exception:
-        logger.exception("Refund quota impossible (%s, lots=%s)", project_id, lot_ids)
+        logger.exception("Refund quota impossible (lots=%s)", lot_ids)
         db.rollback()
 
 
@@ -346,6 +372,7 @@ def _run_analysis_job(
     docs_sent: int,
     docs_total: int,
     truncated_files: list,
+    consumed_ids: dict,
 ) -> None:
     """Analyse multi-lots MUTUALISÉE — thread démon, session DB propre.
 
@@ -390,12 +417,12 @@ def _run_analysis_job(
                 _persist_scope(db, project_id, commun_reqs, "_commun", also_null=True)
         except ClaudeRateLimitError as e:
             logger.warning(f"Rate limit Anthropic projet {project_id}: {e}")
-            _refund_lots(db, org_id, project_id, [s["lot_id"] for s in lot_specs])
+            _refund_lots(db, consumed_ids, [s["lot_id"] for s in lot_specs])
             _fail_analysis(project_id, "Limite Anthropic atteinte. Relancez dans une minute.", "rate_limit")
             return
         except Exception as e:
             logger.error(f"Erreur analyse IA (tronc commun) {project_id}: {e}", exc_info=True)
-            _refund_lots(db, org_id, project_id, [s["lot_id"] for s in lot_specs])
+            _refund_lots(db, consumed_ids, [s["lot_id"] for s in lot_specs])
             _fail_analysis(project_id, "Erreur lors de l'analyse IA. Relancez l'analyse.", str(e))
             return
 
@@ -416,6 +443,7 @@ def _run_analysis_job(
 
         results = []
         failed_lots = []
+        failed_lot_ids = set()
         try:
             with ThreadPoolExecutor(max_workers=2) as pool:
                 futures = [(pool.submit(_one_lot, spec), spec) for spec in lot_specs]
@@ -424,13 +452,26 @@ def _run_analysis_job(
                         results.append(fut.result(timeout=1200))
                     except ClaudeRateLimitError:
                         failed_lots.append("rate_limit")
-                        _refund_lots(db, org_id, project_id, [spec["lot_id"]])
+                        failed_lot_ids.add(spec["lot_id"])
+                        _refund_lots(db, consumed_ids, [spec["lot_id"]])
                     except Exception as e:
                         logger.error("Analyse lot échouée: %s", e, exc_info=True)
                         failed_lots.append(str(e))
-                        _refund_lots(db, org_id, project_id, [spec["lot_id"]])
+                        failed_lot_ids.add(spec["lot_id"])
+                        _refund_lots(db, consumed_ids, [spec["lot_id"]])
         except Exception as e:
+            # Exception au niveau du pool (submit/__exit__) : les lots ni
+            # aboutis ni déjà remboursés restent consommés sans livraison —
+            # on les rembourse et on les signale (invariant « consommé ⇒
+            # livré ou remboursé »), plus jamais avalé en silence.
             logger.error("Pool lots: %s", e, exc_info=True)
+            done_ids = {rs["lot_id"] for rs, _ in results}
+            orphaned = [s["lot_id"] for s in lot_specs
+                        if s["lot_id"] not in done_ids and s["lot_id"] not in failed_lot_ids]
+            for lot_id in orphaned:
+                failed_lots.append(str(e))
+                failed_lot_ids.add(lot_id)
+            _refund_lots(db, consumed_ids, orphaned)
 
         if not results and failed_lots:
             _fail_analysis(project_id,
@@ -444,11 +485,16 @@ def _run_analysis_job(
         pipeline_tracker.start_step(project_id, "finalizing")
 
         # ── Persistance par lot + finalisation ──────────────────────────────
+        # delivered_lots : chaque lot dont la compliance est PERSISTÉE (donc
+        # livrée). En cas de crash finalize, on ne rembourse QUE les lots non
+        # livrés (R4/R6) — un lot déjà en base et consultable reste dû.
         all_requirements = list(commun_reqs)
+        delivered_lots = set()
         for spec, r2 in results:
             reqs2 = _dedup_against(r2.get("requirements", []), commun_reqs)
             _anchor_requirements_safe(db, project_id, reqs2)
             _persist_scope(db, project_id, reqs2, spec["lot_id"])
+            delivered_lots.add(spec["lot_id"])
             all_requirements.extend(reqs2)
             logger.info("Analyse %s : lot %s → %d exigences spécifiques",
                         project_id, spec["lot_id"], len(reqs2))
@@ -463,9 +509,14 @@ def _run_analysis_job(
                            failed_lots=failed_lots)
     except Exception as e:
         logger.error(f"Analyse {project_id} : échec de finalisation: {e}", exc_info=True)
-        # Rien n'a été livré → tout est remboursé (idempotent : les lots
-        # déjà remboursés plus haut sont des no-ops).
-        _refund_lots(db, org_id, project_id, [s["lot_id"] for s in lot_specs])
+        # Refund EXACT : uniquement les lots NON livrés et pas déjà remboursés
+        # (fini le blanket « tout rembourser » qui offrait les lots livrés et
+        # pouvait supprimer l'unité d'un run historique, cf. R4).
+        _delivered = locals().get("delivered_lots", set())
+        _failed = locals().get("failed_lot_ids", set())
+        undelivered = [s["lot_id"] for s in lot_specs
+                       if s["lot_id"] not in _delivered and s["lot_id"] not in _failed]
+        _refund_lots(db, consumed_ids, undelivered)
         _fail_analysis(project_id, "Erreur lors de l'enregistrement des résultats. Relancez l'analyse.", str(e))
     finally:
         db.close()

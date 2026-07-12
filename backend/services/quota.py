@@ -18,10 +18,25 @@ from datetime import datetime
 from typing import Optional
 
 from fastapi import HTTPException
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from models.organization import Organization
 from models.quota_consumption import QuotaConsumption
+
+
+def advisory_org_lock(db: Session, org_id: str) -> None:
+    """Sérialise `check_quota` + `consume` pour une org (anti-TOCTOU R3) :
+    deux requêtes concurrentes ne peuvent plus compter toutes deux 39/40
+    puis consommer 41/40.
+
+    Verrou consultatif transactionnel Postgres — relâché automatiquement au
+    commit/rollback. No-op sur SQLite (connexion unique via StaticPool =
+    déjà sérialisé) et sur tout autre backend."""
+    bind = db.get_bind()
+    if bind.dialect.name == "postgresql":
+        db.execute(text("SELECT pg_advisory_xact_lock(hashtext(:k))"),
+                   {"k": f"quota:{org_id}"})
 
 # limit None = illimité ; monthly False = décompte à vie (essai free)
 PLAN_LIMITS: dict = {
@@ -176,3 +191,19 @@ def refund(
         return 0
     db.delete(row)
     return 1
+
+
+def refund_ids(db: Session, consumption_ids) -> int:
+    """Rembourse EXACTEMENT les unités décomptées par un run donné, par id
+    (R4). Contrairement à `refund` (« la plus récente »), ne peut jamais
+    supprimer la consommation d'un AUTRE run : seul l'id passé est effacé.
+    Idempotent (un id déjà supprimé n'est pas re-compté). Retourne le nombre
+    de lignes réellement supprimées ; l'appelant committe."""
+    ids = [i for i in (consumption_ids or []) if i]
+    if not ids:
+        return 0
+    return (
+        db.query(QuotaConsumption)
+        .filter(QuotaConsumption.id.in_(ids))
+        .delete(synchronize_session=False)
+    )
