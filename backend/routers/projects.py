@@ -709,6 +709,24 @@ async def upload_project_document(
                 db.commit()
                 _pt.fail_pipeline(project_id, str(e.detail))
                 raise
+            except Exception as e:
+                # R9 — tout échec NON-HTTP (disque plein, MemoryError, échec du
+                # commit bulk) laissait le projet coincé 'extracting_zip' pour
+                # toujours. On repasse en 'error' (relançable) et on 500 proprement.
+                import logging as _logging
+                _logging.getLogger(__name__).error(
+                    "Extraction ZIP échouée %s: %s", project_id, e, exc_info=True)
+                db.rollback()
+                p = db.query(Project).filter(Project.id == project_id).first()
+                if p:
+                    p.processing_status = "error"
+                    p.processing_detail = "Échec du traitement de l'archive — réessayez."
+                    db.commit()
+                _pt.fail_pipeline(project_id, "zip_extraction_failed")
+                raise HTTPException(
+                    status_code=500,
+                    detail="Échec du traitement de l'archive ZIP — réessayez.",
+                ) from e
             print(f"[TIMING] _handle_zip_upload ({len(docs)} docs): {_time.monotonic()-_t1:.2f}s (total: {_time.monotonic()-_t0:.2f}s)", flush=True)
 
             _pt.complete_step(project_id, "extracting_zip")

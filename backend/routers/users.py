@@ -1,4 +1,5 @@
 import logging
+import shutil
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -16,7 +17,10 @@ from models.memoire_config import MemoireConfig
 from models.memoire_template import MemoireTemplate
 from models.compliance_item import ComplianceItem
 from models.checklist_item import ChecklistItem
+from models.quota_consumption import QuotaConsumption
+from models.notification import Notification
 from routers.auth import get_auth_user
+from services.file_storage import UPLOADS_ROOT
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -80,23 +84,33 @@ def delete_my_account(
         db.query(ProjectDocument).filter(ProjectDocument.project_id.in_(project_ids)).delete(synchronize_session=False)
         db.query(Project).filter(Project.id.in_(project_ids)).delete(synchronize_session=False)
 
-    # Delete organization-level data
+    # Delete organization-level data (R6 : QuotaConsumption + Notification
+    # étaient OUBLIÉS — leur FK vers organizations empêchait la suppression
+    # de l'org sur Postgres → 500, droit à l'oubli cassé pour toute org
+    # ayant consommé 1 unité ou reçu 1 notification).
     db.query(MemoireConfig).filter(MemoireConfig.organization_id == org_id).delete(synchronize_session=False)
     db.query(MemoireTemplate).filter(MemoireTemplate.organization_id == org_id).delete(synchronize_session=False)
     db.query(Reference).filter(Reference.organization_id == org_id).delete(synchronize_session=False)
     db.query(Document).filter(Document.organization_id == org_id).delete(synchronize_session=False)
     db.query(TeamMember).filter(TeamMember.organization_id == org_id).delete(synchronize_session=False)
+    db.query(QuotaConsumption).filter(QuotaConsumption.organization_id == org_id).delete(synchronize_session=False)
+    db.query(Notification).filter(Notification.organization_id == org_id).delete(synchronize_session=False)
 
-    # Delete other users in the same org
-    db.query(User).filter(User.organization_id == org_id, User.id != user.id).delete(synchronize_session=False)
-
-    # Delete requesting user
-    db.delete(user)
+    # Delete ALL users of the org (demandeur inclus) par filtre — robuste
+    # même si l'objet `user` provient d'une autre session que `db`.
+    db.query(User).filter(User.organization_id == org_id).delete(synchronize_session=False)
 
     # Delete organization
     db.query(Organization).filter(Organization.id == org_id).delete(synchronize_session=False)
 
     db.commit()
+
+    # R6 — purge des fichiers disque (best-effort, après le commit DB) : plus
+    # aucune donnée perso résiduelle sur le VPS (uploads projets + coffre).
+    for pid in project_ids:
+        shutil.rmtree(UPLOADS_ROOT / "projects" / pid, ignore_errors=True)
+    shutil.rmtree(UPLOADS_ROOT / "organizations" / org_id, ignore_errors=True)
+
     logger.info(f"RGPD: compte supprimé — user={user.email}, org={org_id}, projets={len(project_ids)}")
     return {"deleted": True, "projects_deleted": len(project_ids)}
 
