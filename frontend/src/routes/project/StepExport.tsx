@@ -397,8 +397,8 @@ export default function StepExport({ project }: Props) {
           <button
             onClick={() => exportZip()}
             disabled={isExportingZip}
-            className="mt-2 px-3 py-1.5 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
-            style={{ background: '#FBBF24' }}
+            className="mt-2 px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50"
+            style={{ background: '#FBBF24', color: '#0A0B0D' }}
           >
             {isExportingZip ? 'Export…' : 'Exporter quand même'}
           </button>

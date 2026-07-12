@@ -54,8 +54,8 @@ export default function DeleteConfirmModal({
           <button
             onClick={handleConfirm}
             disabled={isDeleting}
-            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium text-white transition-all flex items-center justify-center gap-2"
-            style={{ background: '#F87171' }}
+            className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2"
+            style={{ background: 'rgba(248,113,113,0.14)', color: '#F87171', boxShadow: 'inset 0 0 0 1px rgba(248,113,113,0.30)' }}
           >
             {isDeleting ? (
               <><Loader2 size={14} className="animate-spin" /> Suppression...</>

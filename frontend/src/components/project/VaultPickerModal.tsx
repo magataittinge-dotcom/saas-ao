@@ -119,8 +119,7 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
             type="button"
             disabled={uploading}
             onClick={() => fileInputRef.current?.click()}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-            style={{ background: '#22D3EE' }}
+            className="edge-cta w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-60"
           >
             {uploading
               ? <><Loader2 size={15} className="animate-spin" /> Import…</>
@@ -229,8 +228,7 @@ function Group({
                 type="button"
                 disabled={linkingId !== null}
                 onClick={() => onLink(doc)}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-60 shrink-0"
-                style={{ background: '#22D3EE' }}
+                className="edge-cta px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-60 shrink-0"
               >
                 {linkingId === doc.id
                   ? <span className="flex items-center gap-1"><Loader2 size={12} className="animate-spin" /> Liaison...</span>

@@ -178,8 +178,7 @@ function FullscreenEditor({
           <button
             onClick={() => onSave(raw)}
             disabled={isSaving}
-            className="flex items-center gap-2 py-2 px-4 text-sm font-bold text-white rounded-lg transition-colors"
-            style={{ background: '#22D3EE' }}
+            className="edge-cta flex items-center gap-2 py-2 px-4 text-sm font-bold rounded-lg"
           >
             {saveSuccess ? (
               <><CheckCircle2 size={14} style={{ color: '#BBF7D0' }} />Sauvegardé</>
@@ -409,8 +408,7 @@ function SuggestionCard({
             {suggestion.description}
           </p>
           <button
-            className="mt-3 text-xs font-bold px-4 py-1.5 rounded-lg text-white transition-colors hover:opacity-90"
-            style={{ background: '#22D3EE' }}
+            className="edge-cta mt-3 text-xs font-bold px-4 py-1.5 rounded-lg"
           >
             Accepter
           </button>

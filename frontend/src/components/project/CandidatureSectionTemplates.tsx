@@ -242,8 +242,7 @@ function TemplateRow({
           type="button"
           onClick={handlePick}
           disabled={uploading}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-60"
-          style={{ background: isPresent ? '#9AA3AE' : '#22D3EE' }}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-60 ${isPresent ? 'btn-glass' : 'edge-cta'}`}
         >
           {uploading
             ? <><Loader2 size={13} className="animate-spin" /> Envoi...</>

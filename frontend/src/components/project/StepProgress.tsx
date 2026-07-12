@@ -46,13 +46,11 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick }: 
               <div
                 className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all duration-300"
                 style={
-                  isCompleted && !isActive
-                    ? { background: '#22D3EE', borderColor: '#22D3EE', color: '#fff' }
-                    : isActive && isCompleted
-                    ? { background: '#22D3EE', borderColor: '#22D3EE', color: '#fff' }
+                  isCompleted
+                    ? { background: '#22D3EE', borderColor: '#22D3EE', color: '#0A0B0D' }
                     : isActive
-                    ? { background: '#22D3EE', borderColor: '#22D3EE', color: '#fff' }
-                    : { background: '#232730', borderColor: '#4B5563', color: '#9AA3AE' }
+                    ? { background: '#121417', borderColor: '#22D3EE', color: '#22D3EE', boxShadow: '0 8px 24px -12px rgba(34,211,238,0.35)' }
+                    : { background: '#232730', borderColor: 'rgba(255,255,255,0.10)', color: '#9AA3AE' }
                 }
               >
                 {isCompleted ? <Check size={15} strokeWidth={2.5} /> : step.number}
@@ -79,7 +77,7 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick }: 
                   isCompleted
                     ? { background: 'linear-gradient(90deg, #22D3EE, #67E8F9)' }
                     : isActive
-                    ? { background: 'linear-gradient(90deg, rgba(34,211,238,0.40), #E2E8F0)' }
+                    ? { background: 'linear-gradient(90deg, rgba(34,211,238,0.40), #232730)' }
                     : { background: '#232730' }
                 }
               />

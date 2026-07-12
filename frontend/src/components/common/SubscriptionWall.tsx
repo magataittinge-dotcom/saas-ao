@@ -19,7 +19,6 @@ const PLANS = [
     colorLight: '#67E8F9',
     bg: 'rgba(34,211,238,0.08)',
     border: 'rgba(34,211,238,0.25)',
-    gradient: 'linear-gradient(135deg, #22D3EE 0%, #67E8F9 100%)',
     features: [
       'Analyse IA illimitée',
       'Matrice de conformité automatique',
@@ -39,7 +38,6 @@ const PLANS = [
     colorLight: '#9AA3AE',
     bg: 'rgba(15,23,42,0.06)',
     border: 'rgba(15,23,42,0.20)',
-    gradient: 'linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0369A1 100%)',
     popular: true,
     features: [
       'Tout le plan Pro, plus :',
@@ -107,11 +105,11 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis' }
       <div
         className="relative w-full max-w-2xl animate-fade-in"
         style={{
-          background: 'rgba(17,28,68,0.95)',
-          backdropFilter: 'blur(32px) saturate(200%)',
-          border: '1px solid rgba(34,211,238,0.15)',
+          background: 'var(--edge-panel-light), var(--edge-panel)',
+          backdropFilter: 'blur(32px) saturate(140%)',
+          border: '1px solid rgba(255,255,255,0.06)',
           borderRadius: '24px',
-          boxShadow: '0 0 80px rgba(34,211,238,0.08), 0 24px 60px rgba(0,0,0,0.10)',
+          boxShadow: '0 0 80px rgba(34,211,238,0.08), 0 24px 60px rgba(0,0,0,0.45)',
           maxHeight: '95vh',
         }}
       >
@@ -162,9 +160,9 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis' }
                   <span
                     className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-xs font-semibold px-3 py-0.5 rounded-full"
                     style={{
-                      background: plan.gradient,
-                      color: '#fff',
-                      boxShadow: `0 2px 10px rgba(2,105,161,0.35)`,
+                      background: '#22D3EE',
+                      color: '#0A0B0D',
+                      boxShadow: '0 8px 24px -12px rgba(34,211,238,0.55)',
                     }}
                   >
                     Populaire
@@ -184,7 +182,7 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis' }
                 </div>
 
                 <div className="mb-3">
-                  <span className="text-3xl font-bold text-white">{plan.price}€</span>
+                  <span className="edge-data text-3xl font-bold text-ds-text">{plan.price}€</span>
                   <span className="text-sm text-ds-text-3">/mois HT</span>
                 </div>
 
@@ -200,15 +198,7 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis' }
                 <button
                   onClick={() => handleSubscribe(plan.id)}
                   disabled={loading === plan.id}
-                  className="w-full py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-2"
-                  style={{
-                    background: plan.gradient,
-                    color: '#fff',
-                    border: 'none',
-                    boxShadow: `0 4px 16px ${plan.color}30`,
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.filter = 'brightness(1.1)'; e.currentTarget.style.transform = 'translateY(-1px)' }}
-                  onMouseLeave={(e) => { e.currentTarget.style.filter = ''; e.currentTarget.style.transform = '' }}
+                  className="edge-cta w-full py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
                 >
                   {loading === plan.id ? (
                     <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />

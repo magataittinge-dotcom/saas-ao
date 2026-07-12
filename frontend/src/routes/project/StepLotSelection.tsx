@@ -187,8 +187,7 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) 
               <button
                 type="button"
                 onClick={saveEdit}
-                className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ background: '#22D3EE', color: '#FFFFFF' }}
+                className="edge-cta w-8 h-8 rounded-lg flex items-center justify-center"
                 title="Enregistrer"
               >
                 <CheckIcon size={14} />
@@ -333,8 +332,7 @@ function AddLotForm({ onAdd, onCancel }: AddLotFormProps) {
         />
       </div>
       <button type="submit" disabled={!num}
-        className="px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors disabled:opacity-40 shrink-0"
-        style={{ background: '#22D3EE' }}>
+        className="edge-cta px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-40 shrink-0">
         Ajouter
       </button>
       <button type="button" onClick={onCancel}
@@ -701,7 +699,7 @@ export default function StepLotSelection({ project }: Props) {
               Sélection du lot à analyser
             </h2>
             {lots.length > 0 && (
-              <span className="text-xs font-bold text-white px-3 py-1 rounded-full" style={{ background: '#22D3EE' }}>
+              <span className="pill-cyan text-xs font-bold px-3 py-1 rounded-full">
                 {lots.length} lot{lots.length > 1 ? 's' : ''} détecté{lots.length > 1 ? 's' : ''}
               </span>
             )}
@@ -842,10 +840,7 @@ export default function StepLotSelection({ project }: Props) {
             <button
               onClick={handleLaunch}
               disabled={isAnalyzing || isSuccess}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{ background: '#22D3EE' }}
-              onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.background = '#67E8F9' }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = '#22D3EE' }}
+              className="edge-cta flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Sparkles size={16} />
               {selectedLotIds.length > 1

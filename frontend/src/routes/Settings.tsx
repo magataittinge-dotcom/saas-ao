@@ -138,15 +138,7 @@ export default function Settings() {
         <div className="space-y-2">
           <a
             href="/settings/billing"
-            className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 no-underline"
-            style={{
-              background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0369A1 100%)',
-              color: '#fff',
-              border: 'none',
-              cursor: 'pointer',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.filter = 'brightness(1.08)')}
-            onMouseLeave={(e) => (e.currentTarget.style.filter = '')}
+            className="edge-cta w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium no-underline"
           >
             <span>Gérer mon abonnement</span>
             <ChevronRight size={16} />
@@ -156,12 +148,12 @@ export default function Settings() {
             href="/settings/billing"
             className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm text-ds-text-2 transition-all duration-200 hover:text-ds-text no-underline"
             style={{
-              background: 'rgba(248,250,252,1)',
-              border: '1px solid rgba(255,255,255,0.06)',
+              background: 'var(--edge-graphite)',
+              boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.06)',
               cursor: 'pointer',
             }}
             onMouseEnter={(e) => (e.currentTarget.style.background = '#232730')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(248,250,252,1)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--edge-graphite)')}
           >
             <span>Historique de facturation</span>
             <ChevronRight size={16} />

@@ -10,8 +10,6 @@ const ITEMS = [
     key: 'projects_en_cours' as keyof DashboardStats,
     label: 'AO en cours',
     icon: FolderOpen,
-    iconBg: 'linear-gradient(135deg, #22D3EE 0%, #22D3EE 100%)',
-    iconGlow: 'rgba(34,211,238,0.35)',
     accentColor: '#22D3EE',
     suffix: '',
   },
@@ -19,8 +17,6 @@ const ITEMS = [
     key: 'projects_soumis_ce_mois' as keyof DashboardStats,
     label: 'Soumis ce mois',
     icon: Send,
-    iconBg: 'linear-gradient(135deg, #22D3EE 0%, #67E8F9 100%)',
-    iconGlow: 'rgba(34,211,238,0.35)',
     accentColor: '#22D3EE',
     suffix: '',
   },
@@ -28,17 +24,13 @@ const ITEMS = [
     key: 'projects_gagnes' as keyof DashboardStats,
     label: 'Marchés gagnés',
     icon: Trophy,
-    iconBg: 'linear-gradient(135deg, #0F172A 0%, #0369A1 100%)',
-    iconGlow: 'rgba(34,211,238,0.25)',
-    accentColor: '#22D3EE',
+    accentColor: '#34D399',
     suffix: '',
   },
   {
     key: 'taux_succes' as keyof DashboardStats,
     label: 'Taux de succès',
     icon: TrendingUp,
-    iconBg: 'linear-gradient(135deg, #64748B 0%, #475569 100%)',
-    iconGlow: 'rgba(154,163,174,0.25)',
     accentColor: '#9AA3AE',
     suffix: '%',
   },
@@ -47,7 +39,7 @@ const ITEMS = [
 export function StatsBar({ stats }: Props) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-      {ITEMS.map(({ key, label, icon: Icon, iconBg, iconGlow, accentColor, suffix }, i) => {
+      {ITEMS.map(({ key, label, icon: Icon, accentColor, suffix }, i) => {
         const value = stats[key] ?? 0
 
         return (
@@ -69,18 +61,21 @@ export function StatsBar({ stats }: Props) {
             />
 
             <div className="flex items-start justify-between relative">
-              {/* Icon */}
+              {/* Icon — puce graphite éclairée, icône teintée (Edge) */}
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                style={{ background: iconBg, boxShadow: `0 4px 16px ${iconGlow}` }}
+                style={{
+                  background: 'radial-gradient(120% 80% at 50% 100%, rgba(34,211,238,0.10), transparent 65%), var(--edge-graphite)',
+                  boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.06)',
+                }}
               >
-                <Icon size={17} className="text-white" />
+                <Icon size={17} style={{ color: accentColor }} />
               </div>
 
               {/* Value */}
               <div className="text-right">
                 <p
-                  className="text-2xl font-bold leading-none text-white font-mono"
+                  className="edge-data text-2xl font-bold leading-none text-ds-text"
                   style={{ letterSpacing: '-0.02em' }}
                 >
                   {value}{suffix}

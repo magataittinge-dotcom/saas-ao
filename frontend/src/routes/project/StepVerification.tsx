@@ -428,8 +428,8 @@ function WorkflowRow({
         type="button"
         disabled={busy !== null}
         onClick={() => inputRef.current?.click()}
-        className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-        style={{ background: '#FBBF24' }}
+        className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-opacity hover:opacity-90 disabled:opacity-60"
+        style={{ background: '#FBBF24', color: '#0A0B0D' }}
       >
         {busy === 'up' ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
         {done || warn ? 'Remplacer' : 'Importer remplie'}

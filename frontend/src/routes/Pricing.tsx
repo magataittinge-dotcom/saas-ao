@@ -83,12 +83,15 @@ export default function Pricing() {
                 className="relative rounded-2xl"
                 style={
                   plan.popular
-                    ? { background: 'linear-gradient(135deg, #22D3EE, #0369A1)', padding: '1px' }
+                    ? { background: 'linear-gradient(135deg, #22D3EE, rgba(34,211,238,0.20))', padding: '1px' }
                     : {}
                 }
               >
                 {plan.popular && (
-                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10 px-4 py-1 rounded-full text-xs font-semibold text-white signature-gradient">
+                  <div
+                    className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10 px-4 py-1 rounded-full text-xs font-semibold"
+                    style={{ background: '#22D3EE', color: '#0A0B0D', boxShadow: '0 8px 24px -12px rgba(34,211,238,0.55)' }}
+                  >
                     Recommandé
                   </div>
                 )}
@@ -149,8 +152,6 @@ export default function Pricing() {
                         e.currentTarget.style.borderColor = '#4B5563'
                         e.currentTarget.style.color = '#E7EAEE'
                         e.currentTarget.style.background = '#232730'
-                      } else {
-                        e.currentTarget.style.background = '#67E8F9'
                       }
                     }}
                     onMouseLeave={(e) => {
@@ -158,8 +159,6 @@ export default function Pricing() {
                         e.currentTarget.style.borderColor = '#232730'
                         e.currentTarget.style.color = '#9AA3AE'
                         e.currentTarget.style.background = '#232730'
-                      } else {
-                        e.currentTarget.style.background = '#22D3EE'
                       }
                     }}
                   >

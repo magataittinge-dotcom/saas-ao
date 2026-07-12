@@ -114,7 +114,7 @@ class ErrorBoundary extends React.Component<
           </pre>
           <button
             onClick={() => { this.setState({ error: null }); window.location.reload() }}
-            style={{ marginTop: 20, padding: '8px 16px', background: '#22D3EE', color: 'white', border: 'none', borderRadius: 8, cursor: 'pointer' }}
+            style={{ marginTop: 20, padding: '8px 16px', background: '#22D3EE', color: '#0A0B0D', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}
           >
             Recharger
           </button>

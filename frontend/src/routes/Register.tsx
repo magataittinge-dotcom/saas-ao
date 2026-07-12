@@ -34,7 +34,8 @@ const clerkAppearance = {
     },
     formButtonPrimary: {
       background: '#22D3EE',
-      fontWeight: '500',
+      color: '#0A0B0D',
+      fontWeight: '600',
       borderRadius: '12px',
     },
     footerActionLink: { color: '#22D3EE' },
@@ -52,21 +53,20 @@ const clerkAppearance = {
 
 export default function Register() {
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 py-10" style={{ background: '#232730' }}>
+    <div className="min-h-screen flex items-center justify-center p-4 py-10" style={{ background: '#0A0B0D' }}>
       {/* Single centered container — fixed width matching Clerk form */}
       <div className="relative w-full flex flex-col items-center animate-fade-in" style={{ maxWidth: '420px' }}>
         {/* Logo + tagline */}
         <div className="flex flex-col items-center gap-3 mb-8">
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #0F172A 0%, #0C4A6E 40%, #67E8F9 100%)' }}>
-            <Sparkles size={24} className="text-white" />
-          </div>
-          <span className="text-3xl font-extrabold tracking-tight"
             style={{
-              background: 'linear-gradient(135deg, #0F172A 0%, #0C4A6E 40%, #67E8F9 100%)',
-              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-              fontFamily: 'DM Sans, system-ui, sans-serif',
+              background: 'radial-gradient(120% 80% at 50% 100%, rgba(34,211,238,0.22), transparent 65%), #121417',
+              boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.10), 0 8px 24px -12px rgba(34,211,238,0.35)',
             }}>
+            <Sparkles size={24} style={{ color: '#22D3EE' }} />
+          </div>
+          <span className="text-gradient text-3xl font-extrabold tracking-tight"
+            style={{ fontFamily: 'DM Sans, system-ui, sans-serif' }}>
             SYNORIX
           </span>
           <p className="text-sm text-center font-sans" style={{ color: '#9AA3AE' }}>

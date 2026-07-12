@@ -130,8 +130,7 @@ export default function ClassifyDocumentModal({ document: doc, onClose }: Props)
             Annuler
           </button>
           <button onClick={onSubmit} disabled={isPending}
-            className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-60"
-            style={{ background: '#22D3EE' }}>
+            className="edge-cta px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-60">
             {isPending ? 'Enregistrement…' : 'Enregistrer'}
           </button>
         </div>

@@ -456,10 +456,7 @@ export default function StepUpload({ project }: Props) {
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); open() }}
-            className="px-6 py-2.5 rounded-lg text-sm font-semibold text-white transition-colors"
-            style={{ background: '#22D3EE' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#67E8F9' }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = '#22D3EE' }}
+            className="edge-cta px-6 py-2.5 rounded-lg text-sm font-semibold"
           >
             Parcourir les fichiers
           </button>

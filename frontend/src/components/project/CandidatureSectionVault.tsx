@@ -139,8 +139,7 @@ function VaultRow({ item, onPick }: { item: ChecklistItem; onPick: () => void })
         <button
           type="button"
           onClick={onPick}
-          className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-colors hover:opacity-90 shrink-0"
-          style={{ background: '#22D3EE' }}
+          className="edge-cta px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0"
         >
           Choisir
         </button>

@@ -130,8 +130,7 @@ export default function RewritePassageBar({ projectId, selection, onApply }: Pro
               </button>
               <button
                 onClick={() => { onApply(diff.start, diff.end, diff.rewritten); setDiff(null) }}
-                className="px-4 py-2 rounded-lg text-sm font-semibold text-white"
-                style={{ background: '#22D3EE' }}>
+                className="edge-cta px-4 py-2 rounded-lg text-sm font-semibold">
                 Accepter la réécriture
               </button>
             </div>

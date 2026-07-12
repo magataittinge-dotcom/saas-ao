@@ -110,7 +110,7 @@ export default function Legal() {
               className="w-7 h-7 rounded flex items-center justify-center"
               style={{ background: 'linear-gradient(135deg, #22D3EE, #67E8F9)' }}
             >
-              <span className="text-white font-black text-[11px]">S</span>
+              <span className="font-black text-[11px]" style={{ color: '#0A0B0D' }}>S</span>
             </div>
             <span className="text-sm font-semibold" style={{ color: '#E7EAEE' }}>
               Synorix
@@ -189,7 +189,7 @@ export default function Legal() {
           {error && (
             <div
               className="rounded-lg p-4"
-              style={{ background: '#3A1D1D', border: '1px solid #FECACA', color: '#F87171' }}
+              style={{ background: '#3A1D1D', border: '1px solid rgba(248,113,113,0.30)', color: '#F87171' }}
             >
               <p className="text-sm font-semibold">Impossible de charger le document</p>
               <p className="text-xs mt-1">{error}</p>

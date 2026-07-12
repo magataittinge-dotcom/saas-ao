@@ -71,8 +71,7 @@ export default function VaultSavePrompt({ suggestion, onDone }: Props) {
           <button
             onClick={save}
             disabled={busy}
-            className="px-2.5 py-1 rounded-md text-xs font-semibold text-white disabled:opacity-60"
-            style={{ background: '#22D3EE' }}
+            className="edge-cta px-2.5 py-1 rounded-md text-xs font-semibold disabled:opacity-60"
           >
             {busy ? 'Enregistrement…' : 'Enregistrer'}
           </button>
