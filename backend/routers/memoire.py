@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from fastapi.responses import Response
+from sqlalchemy import or_, update as _sql_update
 from sqlalchemy.orm import Session
 
 from database import SessionLocal, get_db
@@ -159,10 +160,22 @@ async def generate_memoire(
     # décomptée qu'AU SUCCÈS, dans le job — « 1 mémoire PAR LOT généré ».
     quota.check_quota(db, org, "memoire")
 
-    # Anti double-run : une génération déjà en cours sur ce projet → 409
-    # (AVANT toute écriture : un 409 ne modifie rien, ne consomme rien).
     thread_name = f"synorix-memoire-{project_id[:12]}"
-    if any(t.name == thread_name and t.is_alive() for t in threading.enumerate()):
+
+    # Anti double-run ATOMIQUE (R3) : réservation conditionnelle sur la ligne
+    # projet. Le verrou de ligne Postgres sérialise les workers — deux
+    # générations concurrentes ne peuvent plus consommer 2 unités pour un
+    # seul mémoire. 0 ligne = déjà en cours → 409, avant toute écriture.
+    claimed = db.execute(
+        _sql_update(Project)
+        .where(
+            Project.id == project_id,
+            or_(Project.processing_status.is_(None),
+                Project.processing_status != "generating"),
+        )
+        .values(processing_status="generating")
+    ).rowcount
+    if not claimed:
         raise HTTPException(status_code=409, detail="Une génération est déjà en cours pour ce projet.")
 
     # ── Garde pré-vol IA (audit risque #4) : jamais de run condamné d'avance
@@ -171,6 +184,7 @@ async def generate_memoire(
     try:
         await asyncio.to_thread(ensure_ai_service_available)
     except AIServiceUnavailable:
+        db.rollback()  # relâche le créneau réservé + le verrou de ligne
         raise HTTPException(
             status_code=503,
             detail="Service IA momentanément indisponible — réessayez dans quelques minutes.",

@@ -1,5 +1,6 @@
 import asyncio
 import hashlib
+import json
 import logging
 import threading
 from pathlib import Path
@@ -142,6 +143,8 @@ async def trigger_analysis(
         quota.check_quota(db, org, "analysis")
         consumed_rows[spec["lot_id"]] = quota.consume(
             db, org, "analysis", project_id=project_id, lot=spec["lot_id"])
+    db.flush()  # attribue les ids des consommations (dispo sans commit)
+    consumed_ids = {lot: row.id for lot, row in consumed_rows.items()}
 
     # Update step before analysis — current_step ne RÉGRESSE plus jamais :
     # un échec d'analyse laisse le projet à l'étape analyse avec un statut
@@ -150,10 +153,10 @@ async def trigger_analysis(
     project.status = "en_cours"
     project.processing_status = "analyzing"
     project.processing_detail = ""
-    db.commit()  # persiste le créneau + les consommations, relâche les verrous
-
-    # ids des consommations de CE run (dispo après commit) → refund exact.
-    consumed_ids = {lot: row.id for lot, row in consumed_rows.items()}
+    # R5 — trace les unités du run EN COURS : si le process meurt avant la
+    # livraison, la réconciliation au boot les recréditera exactement.
+    project.active_run_consumptions = json.dumps(list(consumed_ids.values()))
+    db.commit()  # persiste créneau + consommations + trace, relâche les verrous
 
     pipeline_tracker.start_pipeline(project_id, "analysis")
     pipeline_tracker.start_step(project_id, "preparation")
@@ -281,6 +284,7 @@ def _fail_analysis(project_id: str, user_message: str, tracker_reason: str) -> N
         if project:
             project.processing_status = "error"
             project.processing_detail = user_message
+            project.active_run_consumptions = None  # R5 — run terminé (échec)
             db.commit()
     finally:
         db.close()
@@ -619,6 +623,7 @@ def _finalize_analysis(
     if project.status in ("brouillon", "en_cours"):
         project.status = "analyzed"
     project.processing_status = "ready"
+    project.active_run_consumptions = None  # R5 — run livré : plus rien à recréditer
     warnings_ui = []
     if truncated_files:
         warnings_ui.append(

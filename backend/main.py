@@ -133,6 +133,16 @@ def _ensure_schema_columns():
                     ))
                 logger.info("Added column projects.deleted_at (+index)")
 
+        # ── projects.active_run_consumptions (R5 — réconciliation orphelins) ─
+        if insp.has_table("projects"):
+            existing = {c["name"] for c in insp.get_columns("projects")}
+            if "active_run_consumptions" not in existing:
+                with engine.begin() as conn:
+                    conn.execute(text(
+                        "ALTER TABLE projects ADD COLUMN active_run_consumptions TEXT"
+                    ))
+                logger.info("Added column projects.active_run_consumptions")
+
         # ── documents.deleted_at (soft-delete) ─────────────────────────────
         if insp.has_table("documents"):
             existing = {c["name"] for c in insp.get_columns("documents")}
@@ -429,6 +439,24 @@ def _migrate_pg_enum_to_check(table, column, enum_type, allowed, check_name, ren
 
 
 _ensure_schema_columns()
+
+
+def _reconcile_orphans_at_boot():
+    """R5 — au démarrage, rembourse et rouvre les runs laissés 'analyzing'/
+    'generating' par un crash process. Ne bloque jamais le démarrage."""
+    try:
+        from database import SessionLocal
+        from services.run_reconciliation import reconcile_orphan_runs
+        db = SessionLocal()
+        try:
+            reconcile_orphan_runs(db)
+        finally:
+            db.close()
+    except Exception as exc:
+        logger.warning("Réconciliation des runs orphelins ignorée: %s", exc)
+
+
+_reconcile_orphans_at_boot()
 
 # ── Rate limiter ─────────────────────────────────────────────────────────────
 limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
