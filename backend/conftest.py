@@ -6,13 +6,24 @@ and config.py are evaluated at import time with the current env.
 """
 import os
 import sys
+import tempfile
 from pathlib import Path
 
 _BACKEND = Path(__file__).parent
 sys.path.insert(0, str(_BACKEND))
 
-# Force in-memory SQLite + satisfy pydantic-settings required fields.
-os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+# R15 — SQLite de test sur FICHIER (plus `:memory:`+StaticPool). Le StaticPool
+# partageait UNE seule connexion entre le thread de test et les threads
+# détachés (synorix-extract-*) : usage concurrent d'une même connexion SQLite
+# → rollback croisé, flaky. Un fichier + pool normal donne une connexion PAR
+# thread (comme en prod), + WAL + busy_timeout (cf. database.py).
+_TEST_DB = Path(tempfile.gettempdir()) / "synorix_test_suite.db"
+for _suffix in ("", "-wal", "-shm", "-journal"):
+    try:
+        Path(str(_TEST_DB) + _suffix).unlink()
+    except FileNotFoundError:
+        pass
+os.environ["DATABASE_URL"] = f"sqlite:///{_TEST_DB}"
 os.environ.setdefault("SECRET_KEY", "test-secret-key")
 os.environ.setdefault("ANTHROPIC_API_KEY", "test-anthropic-key")
 os.environ.setdefault("FRONTEND_URL", "http://localhost:3000")
@@ -50,11 +61,16 @@ def _reset_schema():
     yield
     # Durcissement anti-flakiness : les endpoints d'upload lancent des threads
     # démons ("synorix-*") qui écrivent en base ; sans join, ils survivent au
-    # test et percutent le drop_all du test suivant.
+    # test et percutent le drop_all du test suivant. Join ASSERTÉ (R15) : un
+    # thread encore vivant après le délai est un vrai problème, on le révèle.
     import threading
+    _straggler = None
     for t in threading.enumerate():
         if t.name.startswith("synorix-") and t.is_alive():
-            t.join(timeout=15)
+            t.join(timeout=30)
+            if t.is_alive():
+                _straggler = t.name
+    assert _straggler is None, f"thread de fond non terminé après 30s: {_straggler}"
 
 
 @pytest.fixture

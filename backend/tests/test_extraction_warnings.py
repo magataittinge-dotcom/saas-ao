@@ -168,6 +168,7 @@ def test_zip_deferred_extraction_warning_surfaces(
     for t in threading.enumerate():
         if t.name.startswith("synorix-extract-"):
             t.join(timeout=30)
+            assert not t.is_alive(), f"thread d'extraction non terminé: {t.name}"
 
     db_session.expire_all()
     warned = db_session.query(ProjectDocument).filter(
