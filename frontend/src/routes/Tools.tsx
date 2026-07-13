@@ -1,26 +1,15 @@
 import { useState } from 'react'
 import {
-  Calculator, Gavel, Coins, Plus, Trash2, Loader2, ShieldCheck,
+  Calculator, Coins, Loader2, ShieldCheck,
 } from 'lucide-react'
 import { api } from '@/services/api'
 import { formatMontant } from '@/lib/utils'
-import { StatusBadge } from '@/components/common/StatusBadge'
 import AiTip from '@/components/common/AiTip'
 
 const F = "'DM Sans', sans-serif"
 
-// ── Contrat backend (POST /api/calculators/*) ───────────────────────────────
-interface OabResult {
-  m1: number
-  m2: number
-  seuil_oab_euros: number
-  marge_avant_oab: number
-  gauge: 'vert' | 'orange' | 'rouge'
-  est_oab: boolean
-  rappel_juridique: string
-  avertissements: string[]
-  sources_nbk: string[]
-}
+// ── Contrat backend (POST /api/calculators/retenue-garantie) ─────────────────
+// NB — le calculateur OAB a été retiré (frontière chiffrage FERME, CLAUDE.md).
 interface Poste {
   poste: string
   montant: number
@@ -33,13 +22,6 @@ interface RetenueResult {
   avertissements: string[]
 }
 
-type BadgeVariant = 'success' | 'warning' | 'danger'
-const GAUGE: Record<OabResult['gauge'], { variant: BadgeVariant; label: string }> = {
-  vert:   { variant: 'success', label: '✓ Offre dans la norme' },
-  orange: { variant: 'warning', label: 'Point de vigilance' },
-  rouge:  { variant: 'danger',  label: 'Sous le seuil de détection' },
-}
-
 function apiError(e: unknown): string {
   const status = (e as { response?: { status?: number } })?.response?.status
   if (status === 422) return 'Vérifiez les valeurs saisies (montants strictement positifs).'
@@ -47,18 +29,6 @@ function apiError(e: unknown): string {
 }
 
 // ── Petits éléments d'affichage cohérents avec le design system ─────────────
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div
-      className="rounded-xl px-3 py-2.5 text-center"
-      style={{ background: '#232730', border: '1px solid rgba(255,255,255,0.06)' }}
-    >
-      <p className="text-base font-bold" style={{ color: '#E7EAEE', fontFamily: F }}>{value}</p>
-      <p className="text-[11px] mt-0.5" style={{ color: '#9AA3AE' }}>{label}</p>
-    </div>
-  )
-}
-
 function Field({
   id, label, hint, children,
 }: { id: string; label: string; hint?: string; children: React.ReactNode }) {
@@ -73,159 +43,7 @@ function Field({
   )
 }
 
-// ── Outil 1 — Calculateur OAB ────────────────────────────────────────────────
-function OabCalculator() {
-  const [prixCandidat, setPrixCandidat] = useState('')
-  const [offres, setOffres] = useState<string[]>(['', '', ''])
-  const [seuil, setSeuil] = useState('0.9')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [result, setResult] = useState<OabResult | null>(null)
-
-  const prixNum = Number(prixCandidat)
-  const valid = prixCandidat !== '' && prixNum > 0
-
-  const setOffre = (i: number, v: string) =>
-    setOffres((o) => o.map((x, idx) => (idx === i ? v : x)))
-  const addOffre = () => setOffres((o) => [...o, ''])
-  const removeOffre = (i: number) => setOffres((o) => o.filter((_, idx) => idx !== i))
-
-  async function calculer() {
-    if (!valid) {
-      setError('Saisissez le montant de votre offre (€ HT, positif).')
-      return
-    }
-    setLoading(true)
-    setError(null)
-    try {
-      const prix_offres = offres.map(Number).filter((n) => Number.isFinite(n) && n > 0)
-      const { data } = await api.post<OabResult>('/calculators/oab', {
-        prix_candidat: prixNum,
-        prix_offres,
-        seuil_oab: Number(seuil) > 0 ? Number(seuil) : 0.9,
-      })
-      setResult(data)
-    } catch (e) {
-      setError(apiError(e))
-      setResult(null)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <div className="glass-card p-6 flex flex-col">
-      <div className="flex items-center gap-3 mb-1">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#0F2B33' }}>
-          <Gavel size={18} style={{ color: '#22D3EE' }} />
-        </div>
-        <div>
-          <h2 className="text-base font-bold text-ds-text" style={{ fontFamily: F }}>Offre anormalement basse</h2>
-          <p className="text-xs text-ds-text-2">Seuil de détection — double moyenne (art. L2152-5 CCP)</p>
-        </div>
-      </div>
-
-      <div className="space-y-4 mt-4">
-        <Field id="oab-candidat" label="Montant de votre offre (€ HT)">
-          <input
-            id="oab-candidat" type="number" min={0} inputMode="decimal"
-            className="input-dark" placeholder="ex : 85000"
-            value={prixCandidat} onChange={(e) => setPrixCandidat(e.target.value)}
-          />
-        </Field>
-
-        <Field id="oab-offres" label="Offres concurrentes (€ HT)" hint="Connues après ouverture des plis. Laissez vide pour une estimation sur votre seule offre.">
-          <div className="space-y-2">
-            {offres.map((o, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <input
-                  id={i === 0 ? 'oab-offres' : undefined}
-                  type="number" min={0} inputMode="decimal"
-                  className="input-dark" placeholder={`Offre ${i + 1}`}
-                  value={o} onChange={(e) => setOffre(i, e.target.value)}
-                  aria-label={`Offre concurrente ${i + 1}`}
-                />
-                {offres.length > 1 && (
-                  <button
-                    type="button" onClick={() => removeOffre(i)}
-                    className="shrink-0 p-2 rounded-lg transition-colors hover:bg-ds-bg-2"
-                    style={{ cursor: 'pointer', color: '#6B7280' }}
-                    aria-label={`Retirer l'offre ${i + 1}`}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                )}
-              </div>
-            ))}
-            <button
-              type="button" onClick={addOffre}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold transition-colors"
-              style={{ color: '#22D3EE', cursor: 'pointer' }}
-            >
-              <Plus size={13} /> Ajouter une offre
-            </button>
-          </div>
-        </Field>
-
-        <Field id="oab-seuil" label="Seuil de détection (fraction de M2)" hint="Défaut 0,90 (art. L2152-5).">
-          <input
-            id="oab-seuil" type="number" min={0} max={1} step={0.05} inputMode="decimal"
-            className="input-dark w-32" value={seuil} onChange={(e) => setSeuil(e.target.value)}
-          />
-        </Field>
-
-        <button
-          onClick={calculer} disabled={loading}
-          className="btn-primary w-full flex items-center justify-center gap-2"
-          style={{ cursor: loading ? 'not-allowed' : 'pointer' }}
-        >
-          {loading ? <><Loader2 size={15} className="animate-spin" /> Calcul…</> : 'Calculer le seuil OAB'}
-        </button>
-
-        {error && (
-          <p className="text-xs font-medium" style={{ color: '#F87171' }} role="alert">{error}</p>
-        )}
-      </div>
-
-      {result && (
-        <div className="mt-5 pt-5 space-y-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wide text-ds-text-3">Résultat</span>
-            <StatusBadge label={GAUGE[result.gauge].label} variant={GAUGE[result.gauge].variant} />
-          </div>
-
-          <p className="text-sm leading-relaxed" style={{ color: '#C9CFD6' }}>
-            {result.est_oab ? (
-              <>Votre offre se situe <strong>sous le seuil de détection</strong> de l'offre anormalement basse.
-              L'acheteur <strong>peut vous demander des justifications</strong> (art. L2152-5 CCP) — ce n'est pas un rejet automatique.</>
-            ) : (
-              <>Votre offre se situe <strong>au-dessus du seuil de détection</strong> (art. L2152-5 CCP).
-              Aucun risque d'offre anormalement basse signalé.</>
-            )}
-          </p>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            <Stat label="Moyenne M1" value={formatMontant(result.m1)} />
-            <Stat label="Moyenne M2" value={formatMontant(result.m2)} />
-            <Stat label="Seuil OAB" value={formatMontant(result.seuil_oab_euros)} />
-            <Stat label="Marge au seuil" value={formatMontant(result.marge_avant_oab)} />
-          </div>
-
-          <div className="space-y-2">
-            {result.rappel_juridique && (
-              <AiTip tip={{ id: 'oab-juridique', variant: 'info', text: result.rappel_juridique }} onDismiss={() => {}} />
-            )}
-            {result.avertissements.map((a, i) => (
-              <AiTip key={i} tip={{ id: `oab-warn-${i}`, variant: 'warning', text: a }} onDismiss={() => {}} />
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── Outil 2 — Calculateur retenue de garantie ────────────────────────────────
+// ── Calculateur retenue de garantie ──────────────────────────────────────────
 function RetenueCalculator() {
   const [montantHt, setMontantHt] = useState('')
   const [tauxRg, setTauxRg] = useState('0.05')
@@ -420,8 +238,7 @@ export default function Tools() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        <OabCalculator />
+      <div className="max-w-2xl">
         <RetenueCalculator />
       </div>
     </div>

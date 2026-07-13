@@ -1,44 +1,17 @@
 """Service des calculateurs déterministes (différenciateurs, 0 LLM, 0 coût).
 
 Façade async exposant les calculs purs de `services/calculators/` (retenue de
-garantie, OAB) sous une API stable consommée par `routers/calculators.py`.
+garantie) sous une API stable consommée par `routers/calculators.py`.
 Les calculateurs sont **autonomes** (Pydantic Input/Output + `compute()`), sans
 dépendance à `synorix/` (système B archivé hors repo).
 
-Branchement futur possible :
-    @router.post("/{project_id}/synorix/oab")
-    async def oab_endpoint(project_id: int, body: OabBody):
-        return await compute_oab(prix_candidat=body.prix_candidat,
-                                 prix_offres=body.prix_offres)
+NB — `compute_oab` a été retiré avec le calculateur OAB (frontière chiffrage
+FERME, CLAUDE.md) : Synorix ne commente ni ne conseille jamais les prix.
 """
 
 from __future__ import annotations
 
-from services.calculators import oab as _oab
 from services.calculators import retenue_garantie as _rg
-
-
-async def compute_oab(
-    *,
-    prix_candidat: float,
-    prix_offres: list[float] | None = None,
-    seuil_oab: float = 0.9,
-    project_id: int = 0,  # accepté pour compat. d'API (non utilisé par le calcul)
-) -> dict:
-    """Risque d'Offre Anormalement Basse (double moyenne L2152-5 CCP).
-
-    Retourne un dict : m1, m2, seuil_oab_euros, marge_avant_oab, gauge
-    (vert/orange/rouge), est_oab, rappel_juridique, avertissements, sources_nbk.
-    DÉTERMINISTE — 0 appel LLM, 0 coût.
-    """
-    out = _oab.compute(
-        _oab.Input(
-            prix_candidat=prix_candidat,
-            prix_offres=prix_offres or [],
-            seuil_oab=seuil_oab,
-        )
-    )
-    return out.model_dump()
 
 
 async def compute_retenue_garantie(

@@ -6,35 +6,7 @@ et retournent des dicts exploitables par un futur endpoint. Aucun appel API.
 
 import pytest
 
-from services.synorix_calc import compute_oab, compute_retenue_garantie
-
-
-@pytest.mark.asyncio
-async def test_compute_oab_flags_low_offer():
-    """Offre basse → est_oab True, gauge rouge, double moyenne correcte."""
-    res = await compute_oab(prix_candidat=70.0, prix_offres=[70, 100, 105, 110, 300])
-    # M1 = 137 ; 1.2*M1 = 164.4 → 300 exclue ; M2 = 96.25 ; seuil = 0.9*96.25
-    assert res["m1"] == 137.0
-    assert res["m2"] == 96.25
-    assert res["est_oab"] is True
-    assert res["gauge"] == "rouge"
-    assert "Verchéenne" in res["rappel_juridique"]
-
-
-@pytest.mark.asyncio
-async def test_compute_oab_safe_offer_vert():
-    """Offre dans la moyenne → pas d'OAB, gauge vert."""
-    res = await compute_oab(prix_candidat=105.0, prix_offres=[100, 105, 110])
-    assert res["est_oab"] is False
-    assert res["gauge"] == "vert"
-
-
-@pytest.mark.asyncio
-async def test_compute_oab_no_competitors_warns():
-    """Aucune offre concurrente → avertissement [À COMPLÉTER], pas de crash."""
-    res = await compute_oab(prix_candidat=100.0, prix_offres=[])
-    assert res["m1"] == 100.0
-    assert any("À COMPLÉTER" in a for a in res["avertissements"])
+from services.synorix_calc import compute_retenue_garantie
 
 
 @pytest.mark.asyncio

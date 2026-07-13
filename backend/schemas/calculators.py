@@ -1,33 +1,15 @@
-"""Schémas Pydantic des calculateurs déterministes (OAB, retenue de garantie).
+"""Schémas Pydantic des calculateurs déterministes (retenue de garantie).
 
 Validation STRICTE des entrées (bornes, signes) — ces endpoints sont du calcul
 pur (0 appel IA). Les réponses sont les dicts produits par services.synorix_calc
 (source unique de vérité = skills Synorix testées), non redéclarés ici pour
 éviter toute divergence de schéma.
+
+NB — le schéma OABRequest a été retiré avec le calculateur OAB (frontière
+chiffrage FERME, CLAUDE.md).
 """
 
-from pydantic import BaseModel, Field, field_validator
-
-
-class OABRequest(BaseModel):
-    """Entrée du calcul d'Offre Anormalement Basse (double moyenne L2152-5 CCP)."""
-
-    prix_candidat: float = Field(..., gt=0, le=1e12, description="Prix de l'offre du candidat (€ HT).")
-    prix_offres: list[float] = Field(
-        default_factory=list,
-        max_length=200,
-        description="Toutes les offres acceptables (€ HT), candidat inclus. Peut être vide.",
-    )
-    seuil_oab: float = Field(0.9, gt=0, le=1, description="Seuil OAB (fraction de M2). Défaut 0,9.")
-
-    @field_validator("prix_offres")
-    @classmethod
-    def _offres_positives(cls, v: list[float]) -> list[float]:
-        if any(p <= 0 for p in v):
-            raise ValueError("Toutes les offres doivent être strictement positives.")
-        if any(p > 1e12 for p in v):
-            raise ValueError("Offre hors bornes (> 1e12).")
-        return v
+from pydantic import BaseModel, Field
 
 
 class RetenueGarantieRequest(BaseModel):

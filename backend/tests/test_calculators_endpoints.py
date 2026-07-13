@@ -23,52 +23,14 @@ def client():
         app.dependency_overrides.clear()
 
 
-# ── OAB ─────────────────────────────────────────────────────────────────────
+# ── OAB retiré du produit (frontière chiffrage FERME) ────────────────────────
 
-def test_oab_nominal_low_offer_flagged(client):
-    r = client.post("/api/calculators/oab", json={
-        "prix_candidat": 70.0,
-        "prix_offres": [70, 100, 105, 110, 300],
-    })
-    assert r.status_code == 200, r.text
-    d = r.json()
-    assert d["m1"] == 137.0
-    assert d["m2"] == 96.25
-    assert d["est_oab"] is True
-    assert d["gauge"] == "rouge"
-    assert "Verchéenne" in d["rappel_juridique"]
-
-
-def test_oab_safe_offer_vert(client):
-    r = client.post("/api/calculators/oab", json={
-        "prix_candidat": 105.0, "prix_offres": [100, 105, 110],
-    })
-    assert r.status_code == 200
-    assert r.json()["est_oab"] is False
-    assert r.json()["gauge"] == "vert"
-
-
-def test_oab_limit_no_competitors_warns(client):
-    """Cas limite : aucune offre concurrente → avertissement, pas d'erreur."""
-    r = client.post("/api/calculators/oab", json={"prix_candidat": 100.0})
-    assert r.status_code == 200
-    d = r.json()
-    assert d["m1"] == 100.0
-    assert any("À COMPLÉTER" in a for a in d["avertissements"])
-
-
-def test_oab_rejects_invalid(client):
-    # prix_candidat <= 0
-    assert client.post("/api/calculators/oab", json={"prix_candidat": 0}).status_code == 422
-    assert client.post("/api/calculators/oab", json={"prix_candidat": -5}).status_code == 422
-    # offre négative dans la liste
-    assert client.post("/api/calculators/oab", json={
-        "prix_candidat": 100, "prix_offres": [100, -1]
-    }).status_code == 422
-    # seuil hors [0,1]
-    assert client.post("/api/calculators/oab", json={
-        "prix_candidat": 100, "seuil_oab": 1.5
-    }).status_code == 422
+def test_oab_route_removed_returns_404(client):
+    """Le calculateur OAB est RETIRÉ (CLAUDE.md : Synorix ne commente ni ne
+    conseille JAMAIS les prix/chiffrage). La route ne doit plus exister —
+    404 même authentifié."""
+    r = client.post("/api/calculators/oab", json={"prix_candidat": 70.0})
+    assert r.status_code == 404, r.text
 
 
 # ── Retenue de garantie ───────────────────────────────────────────────────────
@@ -108,5 +70,5 @@ def test_calculators_require_auth():
     """Sans auth, l'endpoint ne doit pas être ouvertement accessible."""
     app.dependency_overrides.clear()
     c = TestClient(app)
-    r = c.post("/api/calculators/oab", json={"prix_candidat": 100.0})
+    r = c.post("/api/calculators/retenue-garantie", json={"montant_ht": 100000.0})
     assert r.status_code in (401, 403), f"attendu 401/403, reçu {r.status_code}"

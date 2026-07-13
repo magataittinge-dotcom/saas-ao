@@ -1,36 +1,22 @@
 """Endpoints des calculateurs DÉTERMINISTES (différenciateurs Synorix).
 
 Calcul pur (0 appel IA, 0 coût) — délègue à services.synorix_calc, qui réutilise
-la logique testée des skills Synorix (#95 OAB double moyenne L2152-5, #24 retenue
-de garantie CCAG-Travaux Art.19). Endpoints authentifiés, montés en AJOUT (aucun
-router existant ni le cœur IA n'est modifié).
+la logique testée des skills Synorix (#24 retenue de garantie CCAG-Travaux Art.19).
+Endpoints authentifiés, montés en AJOUT (aucun router existant ni le cœur IA
+n'est modifié).
+
+NB — le calculateur OAB (offre anormalement basse) a été RETIRÉ : frontière
+chiffrage FERME (CLAUDE.md), Synorix ne commente ni ne conseille jamais les prix.
 """
 
 from fastapi import APIRouter, Depends
 
 from models.user import User
 from routers.auth import get_auth_user
-from schemas.calculators import OABRequest, RetenueGarantieRequest
-from services.synorix_calc import compute_oab, compute_retenue_garantie
+from schemas.calculators import RetenueGarantieRequest
+from services.synorix_calc import compute_retenue_garantie
 
 router = APIRouter()
-
-
-@router.post("/oab")
-async def calculate_oab(
-    payload: OABRequest,
-    user: User = Depends(get_auth_user),
-) -> dict:
-    """Risque d'Offre Anormalement Basse (double moyenne L2152-5 CCP).
-
-    Renvoie : m1, m2, seuil_oab_euros, marge_avant_oab, gauge (vert/orange/rouge),
-    est_oab (bool), rappel_juridique, avertissements, sources_nbk.
-    """
-    return await compute_oab(
-        prix_candidat=payload.prix_candidat,
-        prix_offres=payload.prix_offres,
-        seuil_oab=payload.seuil_oab,
-    )
 
 
 @router.post("/retenue-garantie")
