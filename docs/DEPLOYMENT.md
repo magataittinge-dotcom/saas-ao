@@ -357,7 +357,16 @@ RestartSec=10
 WantedBy=multi-user.target
 ```
 
-### 9.2 Worker Celery (si activé)
+### 9.2 Worker Celery + Beat
+
+Le scan quotidien (expirations coffre, deadlines J-3/J-1, relances 30 j)
+exige **deux** unités : le **worker** exécute les tâches, le **beat** les
+planifie. Sans beat, `check_all_expirations` n'est jamais déclenchée.
+
+`-A tasks` résout l'app exposée par `backend/tasks/__init__.py` (R13 : ce
+fichier était vide, la commande ne trouvait aucune app).
+
+**Worker** — `/etc/systemd/system/synorix-celery-worker.service` :
 
 ```ini
 [Unit]
@@ -375,6 +384,34 @@ Restart=always
 
 [Install]
 WantedBy=multi-user.target
+```
+
+**Beat** (planificateur) — `/etc/systemd/system/synorix-celery-beat.service` :
+
+```ini
+[Unit]
+Description=Synorix Celery beat (planificateur du scan quotidien)
+After=network.target redis-server.service synorix-celery-worker.service
+
+[Service]
+Type=simple
+User=synorix
+Group=synorix
+WorkingDirectory=/srv/synorix/backend
+EnvironmentFile=/srv/synorix/backend/.env
+ExecStart=/srv/synorix/backend/venv/bin/celery -A tasks beat -l info \
+    --schedule /srv/synorix/backend/celerybeat-schedule
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Activation :
+
+```bash
+sudo systemctl enable --now synorix-celery-worker synorix-celery-beat
+sudo systemctl status synorix-celery-beat   # doit être active (running)
 ```
 
 ---
