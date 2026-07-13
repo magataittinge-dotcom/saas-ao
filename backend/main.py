@@ -41,266 +41,27 @@ from routers.file_serve import router as file_serve_router
 
 settings = get_settings()
 
-# Create tables
-Base.metadata.create_all(bind=engine)
+# ── Schéma : alembic est la source unique (R14) ───────────────────────────────
+# Plus de DDL ad hoc au boot. Prod (postgres) : on EXIGE alembic à head
+# (fail fast). Dev/test (sqlite ou DEBUG) : create_all de commodité.
+from alembic.config import Config as _AlembicConfig
+from alembic.script import ScriptDirectory as _ScriptDirectory
+from alembic.runtime.migration import MigrationContext as _MigrationContext
 
 
-def _ensure_schema_columns():
-    """Idempotent runtime migrations for columns added after initial deploy."""
-    from sqlalchemy import inspect, text
-    from models.document import DOCUMENT_TYPES
-    from models.project import PROJECT_DOC_TYPES
-
-    try:
-        insp = inspect(engine)
-        is_postgres = engine.dialect.name == "postgresql"
-
-        # ── project_documents.is_user_completed (legacy migration) ────────
-        if insp.has_table("project_documents"):
-            existing = {c["name"] for c in insp.get_columns("project_documents")}
-            if "is_user_completed" not in existing:
-                with engine.begin() as conn:
-                    conn.execute(text(
-                        "ALTER TABLE project_documents "
-                        "ADD COLUMN is_user_completed BOOLEAN NOT NULL DEFAULT FALSE"
-                    ))
-                logger.info("Added column project_documents.is_user_completed")
-
-        # ── checklist_items: source_kind + template/completed FKs ─────────
-        if insp.has_table("checklist_items"):
-            existing = {c["name"] for c in insp.get_columns("checklist_items")}
-            with engine.begin() as conn:
-                if "source_kind" not in existing:
-                    conn.execute(text(
-                        "ALTER TABLE checklist_items "
-                        "ADD COLUMN source_kind VARCHAR(20) NOT NULL DEFAULT 'vault'"
-                    ))
-                    if is_postgres:
-                        conn.execute(text(
-                            "ALTER TABLE checklist_items ADD CONSTRAINT "
-                            "checklist_items_source_kind_check "
-                            "CHECK (source_kind IN ('vault', 'dce_template'))"
-                        ))
-                    logger.info("Added column checklist_items.source_kind")
-                if "template_project_doc_id" not in existing:
-                    conn.execute(text(
-                        "ALTER TABLE checklist_items "
-                        "ADD COLUMN template_project_doc_id VARCHAR "
-                        "REFERENCES project_documents(id)"
-                    ))
-                    logger.info("Added column checklist_items.template_project_doc_id")
-                if "completed_project_doc_id" not in existing:
-                    conn.execute(text(
-                        "ALTER TABLE checklist_items "
-                        "ADD COLUMN completed_project_doc_id VARCHAR "
-                        "REFERENCES project_documents(id)"
-                    ))
-                    logger.info("Added column checklist_items.completed_project_doc_id")
-
-        # ── references.attestation_document_id ────────────────────────────
-        if insp.has_table("references"):
-            existing = {c["name"] for c in insp.get_columns("references")}
-            if "attestation_document_id" not in existing:
-                with engine.begin() as conn:
-                    conn.execute(text(
-                        "ALTER TABLE \"references\" "
-                        "ADD COLUMN attestation_document_id VARCHAR "
-                        "REFERENCES documents(id)"
-                    ))
-                logger.info("Added column references.attestation_document_id")
-            if "deleted_at" not in existing:
-                with engine.begin() as conn:
-                    conn.execute(text(
-                        'ALTER TABLE "references" ADD COLUMN deleted_at TIMESTAMP'
-                    ))
-                    conn.execute(text(
-                        'CREATE INDEX IF NOT EXISTS '
-                        'ix_references_deleted_at ON "references" (deleted_at)'
-                    ))
-                logger.info("Added column references.deleted_at (+index)")
-
-        # ── projects.deleted_at (soft-delete) ──────────────────────────────
-        if insp.has_table("projects"):
-            existing = {c["name"] for c in insp.get_columns("projects")}
-            if "deleted_at" not in existing:
-                with engine.begin() as conn:
-                    conn.execute(text(
-                        "ALTER TABLE projects ADD COLUMN deleted_at TIMESTAMP"
-                    ))
-                    conn.execute(text(
-                        "CREATE INDEX IF NOT EXISTS "
-                        "ix_projects_deleted_at ON projects (deleted_at)"
-                    ))
-                logger.info("Added column projects.deleted_at (+index)")
-
-        # ── projects.active_run_consumptions (R5 — réconciliation orphelins) ─
-        if insp.has_table("projects"):
-            existing = {c["name"] for c in insp.get_columns("projects")}
-            if "active_run_consumptions" not in existing:
-                with engine.begin() as conn:
-                    conn.execute(text(
-                        "ALTER TABLE projects ADD COLUMN active_run_consumptions TEXT"
-                    ))
-                logger.info("Added column projects.active_run_consumptions")
-
-        # ── documents.deleted_at (soft-delete) ─────────────────────────────
-        if insp.has_table("documents"):
-            existing = {c["name"] for c in insp.get_columns("documents")}
-            if "deleted_at" not in existing:
-                with engine.begin() as conn:
-                    conn.execute(text(
-                        "ALTER TABLE documents ADD COLUMN deleted_at TIMESTAMP"
-                    ))
-                    conn.execute(text(
-                        "CREATE INDEX IF NOT EXISTS "
-                        "ix_documents_deleted_at ON documents (deleted_at)"
-                    ))
-                logger.info("Added column documents.deleted_at (+index)")
-
-        # ── organizations.billing_provider / billing_country ──────────────
-        # Pluggable billing provider — added Apr 2026 so we can migrate
-        # the billing entity (Stripe FR → Stripe UAE in 2027) without code
-        # changes. Existing rows default to ('stripe', COUNTRY_CODE).
-        if insp.has_table("organizations"):
-            existing = {c["name"] for c in insp.get_columns("organizations")}
-            from config import get_locale_config as _glc
-            default_country = _glc().country_code
-            if "billing_provider" not in existing:
-                with engine.begin() as conn:
-                    conn.execute(text(
-                        "ALTER TABLE organizations "
-                        "ADD COLUMN billing_provider VARCHAR(32) "
-                        "NOT NULL DEFAULT 'stripe'"
-                    ))
-                    conn.execute(text(
-                        "CREATE INDEX IF NOT EXISTS "
-                        "ix_organizations_billing_provider ON organizations (billing_provider)"
-                    ))
-                logger.info("Added column organizations.billing_provider (+index)")
-            if "billing_country" not in existing:
-                with engine.begin() as conn:
-                    conn.execute(text(
-                        "ALTER TABLE organizations "
-                        "ADD COLUMN billing_country VARCHAR(2) "
-                        f"NOT NULL DEFAULT '{default_country}'"
-                    ))
-                logger.info(f"Added column organizations.billing_country default={default_country!r}")
-            # FK indexes used by webhook lookups (already added in night perf
-            # work for org-scoped ones; this covers the customer/sub IDs).
-            if "stripe_customer_id" in existing:
-                with engine.begin() as conn:
-                    conn.execute(text(
-                        "CREATE INDEX IF NOT EXISTS "
-                        "ix_organizations_stripe_customer_id "
-                        "ON organizations (stripe_customer_id)"
-                    ))
-            if "stripe_subscription_id" in existing:
-                with engine.begin() as conn:
-                    conn.execute(text(
-                        "CREATE INDEX IF NOT EXISTS "
-                        "ix_organizations_stripe_subscription_id "
-                        "ON organizations (stripe_subscription_id)"
-                    ))
-
-        # ── Postgres-only: convert native ENUMs to VARCHAR + CHECK ────────
-        if is_postgres:
-            _migrate_pg_enum_to_check(
-                table="documents",
-                column="type",
-                enum_type="document_type",
-                allowed=DOCUMENT_TYPES,
-                check_name="documents_type_check",
-                renames={"dc1": "autre", "dc2": "autre"},   # vault dc1/dc2 retired
-            )
-            _migrate_pg_enum_to_check(
-                table="project_documents",
-                column="type",
-                enum_type="project_doc_type",
-                allowed=PROJECT_DOC_TYPES,
-                check_name="project_documents_type_check",
-                renames={
-                    "acte_engagement": "acte_engagement_template",
-                    "dpgf": "dpgf_template",
-                },
-            )
-
-        # ── Postgres-only: extend checklist_status ENUM with non_applicable ─
-        if is_postgres:
-            try:
-                with engine.begin() as conn:
-                    conn.execute(text(
-                        "ALTER TYPE checklist_status ADD VALUE IF NOT EXISTS 'non_applicable'"
-                    ))
-            except Exception as exc:
-                logger.warning("ALTER TYPE checklist_status skipped: %s", exc)
-
-            # project_status gains 'analyzed' — set on a project once the
-            # compliance items extracted by the AI are committed.
-            try:
-                with engine.begin() as conn:
-                    conn.execute(text(
-                        "ALTER TYPE project_status ADD VALUE IF NOT EXISTS 'analyzed'"
-                    ))
-            except Exception as exc:
-                logger.warning("ALTER TYPE project_status skipped: %s", exc)
-
-        # ── Performance indexes — additive, idempotent (CREATE INDEX IF NOT EXISTS) ─
-        _ensure_performance_indexes(insp)
-
-        # ── One-shot: re-tag project_documents using the new detector ─────
-        # Bump the version when the detector gains rules that should re-evaluate
-        # historical rows. v2: adds DCE-XX corps d'état CCTP recognition.
-        # v3: adds diagnostic / notice / dt / pgc_sps / planning types and
-        # fixes AE detection for prefixed filenames ("2829 - AE.pdf").
-        # v4: sanitize file_name from CP437/CP850 control char leftovers
-        # (U+0090, U+0082) — original bytes are gone, but at least display is clean.
-        if insp.has_table("project_documents"):
-            _backfill_project_doc_types(version="v3")
-            _backfill_filename_encoding(version="v4")
-
-    except Exception as e:
-        logger.warning(f"Schema migration skipped: {e}")
-
-
-def _ensure_performance_indexes(insp) -> None:
-    """Create FK + hot-path indexes idempotently (no-op if they already exist).
-
-    Postgres does NOT auto-index FKs. This costs us heavily on filtered queries
-    like `Document.organization_id == org_id`. SQLAlchemy index=True helps on
-    fresh DBs (via Base.metadata.create_all) but does nothing on tables that
-    pre-exist without those indexes — so we add them here too.
-    """
-    from sqlalchemy import text
-
-    # (table, column, index_name) tuples — index_name kept short for Postgres.
-    indexes = [
-        ("projects", "organization_id", "ix_projects_organization_id"),
-        ("projects", "status", "ix_projects_status"),
-        ("project_documents", "project_id", "ix_project_documents_project_id"),
-        ("project_documents", "type", "ix_project_documents_type"),
-        ("documents", "organization_id", "ix_documents_organization_id"),
-        ("documents", "type", "ix_documents_type"),
-        ("documents", "expiry_date", "ix_documents_expiry_date"),
-        ("references", "organization_id", "ix_references_organization_id"),
-        ("checklist_items", "project_id", "ix_checklist_items_project_id"),
-        ("checklist_items", "linked_document_id", "ix_checklist_items_linked_document_id"),
-        ("checklist_items", "template_project_doc_id", "ix_checklist_items_template_doc_id"),
-        ("checklist_items", "completed_project_doc_id", "ix_checklist_items_completed_doc_id"),
-        ("compliance_items", "project_id", "ix_compliance_items_project_id"),
-        ("team_members", "organization_id", "ix_team_members_organization_id"),
-    ]
-    for table, column, name in indexes:
-        if not insp.has_table(table):
-            continue
-        try:
-            with engine.begin() as conn:
-                # Postgres needs quoted identifiers for "references" (reserved keyword).
-                t_q = f'"{table}"' if table == "references" else table
-                conn.execute(text(
-                    f"CREATE INDEX IF NOT EXISTS {name} ON {t_q} ({column})"
-                ))
-        except Exception as exc:
-            logger.warning("perf index %s skipped: %s", name, exc)
+def _assert_migrations_current() -> None:
+    """Refuse de démarrer si la base n'est pas à la head alembic (R14).
+    Le déploiement doit lancer `alembic upgrade head` (base vierge) ou avoir
+    migré/stampé une base existante avant le boot — cf. docs/DEPLOYMENT.md."""
+    cfg = _AlembicConfig(str(Path(__file__).parent / "alembic.ini"))
+    head = _ScriptDirectory.from_config(cfg).get_current_head()
+    with engine.connect() as conn:
+        current = _MigrationContext.configure(conn).get_current_revision()
+    if current != head:
+        raise RuntimeError(
+            f"Schéma non à jour (alembic à {current!r}, head {head!r}). "
+            "Lancez `alembic upgrade head` avant de démarrer l'API."
+        )
 
 
 def _backfill_project_doc_types(version: str):
@@ -398,47 +159,31 @@ def _backfill_filename_encoding(version: str) -> None:
         logger.warning(f"Backfill {version} skipped: {e}")
 
 
-def _migrate_pg_enum_to_check(table, column, enum_type, allowed, check_name, renames):
-    """Convert a Postgres native ENUM column to VARCHAR + CHECK constraint.
-    Idempotent : no-op if the column is already VARCHAR.
-    Applies the `renames` map before adding the new CHECK constraint."""
-    from sqlalchemy import text
-
-    with engine.begin() as conn:
-        is_enum = conn.execute(text("""
-            SELECT 1 FROM information_schema.columns
-            WHERE table_name = :t AND column_name = :c AND udt_name = :u
-        """), {"t": table, "c": column, "u": enum_type}).scalar()
-
-        if is_enum:
-            conn.execute(text(
-                f'ALTER TABLE "{table}" ALTER COLUMN "{column}" '
-                f'TYPE VARCHAR(64) USING "{column}"::text'
-            ))
-            logger.info(f"Converted {table}.{column} from ENUM {enum_type} to VARCHAR")
-
-        for old_value, new_value in renames.items():
-            res = conn.execute(text(
-                f'UPDATE "{table}" SET "{column}" = :new WHERE "{column}" = :old'
-            ), {"new": new_value, "old": old_value})
-            if res.rowcount:
-                logger.info(f"Renamed {res.rowcount} {table}.{column} '{old_value}' → '{new_value}'")
-
-        # Drop legacy ENUM type if no other column references it.
-        conn.execute(text(f'DROP TYPE IF EXISTS {enum_type} CASCADE'))
-
-        # (Re)create the CHECK constraint with current allowed values.
-        conn.execute(text(
-            f'ALTER TABLE "{table}" DROP CONSTRAINT IF EXISTS {check_name}'
-        ))
-        allowed_sql = "', '".join(allowed)
-        conn.execute(text(
-            f'ALTER TABLE "{table}" ADD CONSTRAINT {check_name} '
-            f"CHECK (\"{column}\" IN ('{allowed_sql}'))"
-        ))
+def _run_data_backfills() -> None:
+    """One-shots de DONNÉES (pas du schéma), idempotents via marqueurs :
+    re-tag des types de documents + nettoyage d'encodage des noms de fichiers.
+    Distincts des migrations de schéma, désormais 100 % alembic (R14)."""
+    from sqlalchemy import inspect
+    try:
+        if inspect(engine).has_table("project_documents"):
+            _backfill_project_doc_types(version="v3")
+            _backfill_filename_encoding(version="v4")
+    except Exception as exc:
+        logger.warning("Backfills de données ignorés: %s", exc)
 
 
-_ensure_schema_columns()
+def _prepare_schema() -> None:
+    """Boot — R14 : prod (postgres, hors DEBUG) EXIGE alembic à head (fail
+    fast) ; dev/test (sqlite ou DEBUG) crée le schéma via create_all. Plus
+    aucun DDL ad hoc ici."""
+    if engine.dialect.name == "postgresql" and not settings.DEBUG:
+        _assert_migrations_current()
+    else:
+        Base.metadata.create_all(bind=engine)
+    _run_data_backfills()
+
+
+_prepare_schema()
 
 
 def _reconcile_orphans_at_boot():

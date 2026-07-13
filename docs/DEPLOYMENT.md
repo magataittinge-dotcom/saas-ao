@@ -436,9 +436,12 @@ sudo -u deploy backend/venv/bin/pip install -r backend/requirements.txt --quiet
 echo "→ Frontend build"
 ( cd frontend && sudo -u deploy npm ci --quiet && sudo -u deploy npm run build )
 
-echo "→ DB migrations (alembic)"
-sudo -u synorix backend/venv/bin/alembic -c backend/alembic.ini upgrade head || \
-    echo "Alembic not yet initialized — runtime _ensure_schema_columns will handle it."
+echo "→ DB migrations (alembic — source UNIQUE du schéma depuis R14)"
+# L'API refuse de démarrer si la base n'est pas à la head (fail fast).
+# Base VIERGE : `upgrade head` crée tout le schéma.
+# Base PRÉ-EXISTANTE jamais stampée : faire une fois `alembic stamp head`
+#   (le schéma existe déjà via l'ancien runtime) AVANT ce déploiement.
+sudo -u synorix backend/venv/bin/alembic -c backend/alembic.ini upgrade head
 
 echo "→ Restart services"
 sudo systemctl restart synorix-api

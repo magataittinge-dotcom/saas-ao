@@ -82,8 +82,8 @@ def test_boot_migration_preserves_checklist_items(db_session):
     db_session.commit()
     cid = ci.id
 
-    # (re)démarrage simulé : la routine schema ne doit RIEN effacer.
-    main._ensure_schema_columns()
+    # (re)démarrage simulé : la préparation du schéma ne doit RIEN effacer.
+    main._prepare_schema()
 
     assert db_session.query(ChecklistItem).filter_by(id=cid).first() is not None, (
         "un redémarrage ne doit jamais effacer les checklist_items "

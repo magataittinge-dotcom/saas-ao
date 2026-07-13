@@ -4,9 +4,10 @@ We mirror the runtime engine: the URL comes from `config.get_settings()`
 (read from the .env file, same as the rest of the app), and the metadata
 comes from `database.Base` so that autogenerate works out of the box.
 
-Reminder: the legacy `_ensure_schema_columns()` in main.py is still
-called at startup as a *fallback* for dev environments that haven't run
-`alembic upgrade head`. Production should rely on alembic.
+R14 : alembic est la source UNIQUE du schéma. main.py ne fait plus de DDL
+ad hoc — en prod il exige seulement que la base soit à la head (fail fast) ;
+en dev/test il crée le schéma via `create_all`. Toute évolution de schéma
+passe par une nouvelle révision alembic.
 """
 import os
 import sys
@@ -37,6 +38,22 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
+# `rag_chunks` (corpus RAG pgvector) n'est PAS un modèle ORM : il est créé en
+# DDL brut par la révision 0003 (extension pgvector, index HNSW, FTS français,
+# type vector(N) non mappé par SQLAlchemy). On l'exclut donc de l'autogenerate
+# et d'`alembic check` — sinon il apparaît en faux « removed table ». Sa gestion
+# reste 100 % alembic (0003), la source unique est préservée.
+_RAW_TABLES = {"rag_chunks"}
+
+
+def _include_object(obj, name, type_, reflected, compare_to):
+    if type_ == "table" and name in _RAW_TABLES:
+        return False
+    if type_ == "index" and getattr(obj, "table", None) is not None \
+            and obj.table.name in _RAW_TABLES:
+        return False
+    return True
+
 
 def run_migrations_offline() -> None:
     url = config.get_main_option("sqlalchemy.url")
@@ -47,6 +64,7 @@ def run_migrations_offline() -> None:
         dialect_opts={"paramstyle": "named"},
         compare_type=True,
         compare_server_default=True,
+        include_object=_include_object,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -64,6 +82,7 @@ def run_migrations_online() -> None:
             target_metadata=target_metadata,
             compare_type=True,
             compare_server_default=True,
+            include_object=_include_object,
         )
         with context.begin_transaction():
             context.run_migrations()
