@@ -126,6 +126,29 @@ def get_auth_user(
     return _sync_clerk_user(clerk_user_id, db)
 
 
+def get_auth_user_short(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer),
+) -> User:
+    """Variante de get_auth_user à session COURTE — pour les endpoints à réponse
+    longue (SSE). Une session yield-ée par Depends(get_db) resterait ouverte
+    jusqu'à la fin de la réponse, donc TOUT le flux → une connexion bloquée par
+    client. Ici on ouvre/ferme immédiatement et on renvoie un User détaché
+    (colonnes chargées : organization_id/id/email restent lisibles)."""
+    from database import SessionLocal
+    payload = _decode_clerk_token(credentials.credentials)
+    clerk_user_id = payload.get("sub")
+    if not clerk_user_id:
+        raise HTTPException(status_code=401, detail="Token invalide: sub manquant")
+    db = SessionLocal()
+    try:
+        user = _sync_clerk_user(clerk_user_id, db)
+        db.refresh(user)
+        db.expunge(user)
+        return user
+    finally:
+        db.close()
+
+
 # ── Routes ────────────────────────────────────────────────────────────────────
 
 @router.get("/me")

@@ -32,12 +32,11 @@ from typing import AsyncIterator
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
-from sqlalchemy.orm import Session
 
-from database import get_db
+from database import SessionLocal
 from models.project import Project
 from models.user import User
-from routers.auth import get_auth_user
+from routers.auth import get_auth_user_short
 from services import pipeline_tracker, progress_bus
 
 logger = logging.getLogger(__name__)
@@ -62,14 +61,20 @@ def _format_event(event_type: str, payload: dict) -> bytes:
 async def progress_stream(
     project_id: str,
     request: Request,
-    user: User = Depends(get_auth_user),
-    db: Session = Depends(get_db),
+    user: User = Depends(get_auth_user_short),
 ):
     """Long-lived SSE stream of progress events for a single project.
 
     Authorisation: project must belong to the user's organisation.
     """
-    _get_project_or_404(project_id, user.organization_id, db)
+    # Contrôle d'accès via une session COURTE, relâchée AVANT le stream : une
+    # session Depends(get_db) resterait ouverte TOUT le flux (long) → 1 connexion
+    # bloquée par client → pool épuisé. Le stream ensuite ne touche pas la DB.
+    _db = SessionLocal()
+    try:
+        _get_project_or_404(project_id, user.organization_id, _db)
+    finally:
+        _db.close()
 
     # Subscribe BEFORE we yield the initial state so we don't miss any
     # events that arrive between the snapshot and the first iteration.

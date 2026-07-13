@@ -119,8 +119,10 @@ def client(test_user):
     def _override_get_auth_user():
         return test_user
 
+    from routers.auth import get_auth_user_short
     app.dependency_overrides[get_db] = _override_get_db
     app.dependency_overrides[get_auth_user] = _override_get_auth_user
+    app.dependency_overrides[get_auth_user_short] = _override_get_auth_user
     try:
         yield TestClient(app)
     finally:

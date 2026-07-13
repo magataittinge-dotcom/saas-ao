@@ -2,7 +2,9 @@ import asyncio
 import io
 import json
 import logging
+import os
 import re
+import tempfile
 import unicodedata
 import zipfile
 from datetime import datetime
@@ -277,95 +279,111 @@ def export_zip(
     OFFER_COMPLETED_TYPES = {"dpgf_template", "acte_engagement_template"}
 
     warnings: list[str] = []
-    buf = io.BytesIO()
+    # T5 — l'archive est assemblée sur DISQUE (fichier temp), pas en RAM :
+    # plusieurs livrables volumineux × exports concurrents saturaient la mémoire.
+    tmp = tempfile.NamedTemporaryFile(prefix="synorix_zip_", suffix=".zip", delete=False)
+    tmp_path = tmp.name
     seen_names: dict[str, int] = {}
 
     from services.docx_exporter import build_memoire_docx
 
-    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+    try:
+        with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as zf:
 
-        # ── 01_Candidature: vault documents linked by checklist ───────────
-        # C13b — numérotation = ordre du RC, convention de nommage appliquée.
-        piece_counter = 0
-        for ci in checklist_items:
-            doc = vault_by_id.get(ci.linked_document_id) if ci.linked_document_id else None
-            if not doc:
-                continue
-            piece_counter += 1
-            _add_file_to_zip(
-                zf, doc.file_url, _piece_arcname(piece_counter, doc.file_name),
-                f"{root}/01_Candidature", seen_names,
-            )
-
-        # ── User-completed project documents (DC1/DC2 rempli, AE signé) ───
-        for doc in project_docs:
-            if not getattr(doc, "is_user_completed", False):
-                continue
-            doc_type = doc.type or "autre"
-            folder_sub = "02_Offre" if doc_type in OFFER_COMPLETED_TYPES else "01_Candidature"
-            if folder_sub == "01_Candidature":
+            # ── 01_Candidature: vault documents linked by checklist ───────────
+            # C13b — numérotation = ordre du RC, convention de nommage appliquée.
+            piece_counter = 0
+            for ci in checklist_items:
+                doc = vault_by_id.get(ci.linked_document_id) if ci.linked_document_id else None
+                if not doc:
+                    continue
                 piece_counter += 1
-                arcname = _piece_arcname(piece_counter, doc.file_name)
-            else:
-                arcname = doc.file_name
-            _add_file_to_zip(zf, doc.file_url, arcname, f"{root}/{folder_sub}", seen_names)
-
-        # ── 02_Offre: mémoire technique ───────────────────────────────────
-        # C13a — le PDF est la version dépôt par défaut ; conversion
-        # impossible → fallback DOCX (jamais de ZIP sans mémoire).
-        if memoire:
-            from routers.memoire import build_project_memoire_docx
-            docx_bytes = build_project_memoire_docx(project, memoire, org, db)
-            try:
-                pdf_bytes = docx_to_pdf(docx_bytes)
-                zf.writestr(f"{root}/02_Offre/Memoire_technique.pdf", pdf_bytes)
-            except PdfConversionError as exc:
-                logger.warning("PDF mémoire indisponible pour le ZIP : %s", exc)
-                warnings.append(
-                    "Mémoire fourni en Word (conversion PDF indisponible sur ce serveur)"
+                _add_file_to_zip(
+                    zf, doc.file_url, _piece_arcname(piece_counter, doc.file_name),
+                    f"{root}/01_Candidature", seen_names,
                 )
-                zf.writestr(f"{root}/02_Offre/Memoire_technique.docx", docx_bytes)
-        else:
-            warnings.append("Mémoire technique non généré")
 
-        # ── 3_ANNEXES : pièces du coffre sélectionnées au pre-flight ───────
-        # (BONUS Lot 5) — ownership org : seuls les documents de l'org sortent.
-        annexe_ids = list(((memoire.variables if memoire else None) or {}).get(
-            "annexe_document_ids") or [])
-        if annexe_ids:
-            annexe_docs = db.query(Document).filter(
-                Document.id.in_(annexe_ids),
-                Document.organization_id == user.organization_id,
-                Document.deleted_at.is_(None),
-            ).all()
-            for doc in annexe_docs:
-                _add_file_to_zip(zf, doc.file_url, doc.file_name, f"{root}/3_ANNEXES", seen_names)
+            # ── User-completed project documents (DC1/DC2 rempli, AE signé) ───
+            for doc in project_docs:
+                if not getattr(doc, "is_user_completed", False):
+                    continue
+                doc_type = doc.type or "autre"
+                folder_sub = "02_Offre" if doc_type in OFFER_COMPLETED_TYPES else "01_Candidature"
+                if folder_sub == "01_Candidature":
+                    piece_counter += 1
+                    arcname = _piece_arcname(piece_counter, doc.file_name)
+                else:
+                    arcname = doc.file_name
+                _add_file_to_zip(zf, doc.file_url, arcname, f"{root}/{folder_sub}", seen_names)
 
-        # ── 02_Offre: filled DPGF if uploaded ─────────────────────────────
-        if project.dpgf_remplie_url and project.dpgf_remplie_name:
-            _add_file_to_zip(
-                zf, project.dpgf_remplie_url,
-                f"DPGF_remplie_{project.dpgf_remplie_name}",
-                f"{root}/02_Offre", seen_names,
+            # ── 02_Offre: mémoire technique ───────────────────────────────────
+            # C13a — le PDF est la version dépôt par défaut ; conversion
+            # impossible → fallback DOCX (jamais de ZIP sans mémoire).
+            if memoire:
+                from routers.memoire import build_project_memoire_docx
+                docx_bytes = build_project_memoire_docx(project, memoire, org, db)
+                try:
+                    pdf_bytes = docx_to_pdf(docx_bytes)
+                    zf.writestr(f"{root}/02_Offre/Memoire_technique.pdf", pdf_bytes)
+                except PdfConversionError as exc:
+                    logger.warning("PDF mémoire indisponible pour le ZIP : %s", exc)
+                    warnings.append(
+                        "Mémoire fourni en Word (conversion PDF indisponible sur ce serveur)"
+                    )
+                    zf.writestr(f"{root}/02_Offre/Memoire_technique.docx", docx_bytes)
+            else:
+                warnings.append("Mémoire technique non généré")
+
+            # ── 3_ANNEXES : pièces du coffre sélectionnées au pre-flight ───────
+            # (BONUS Lot 5) — ownership org : seuls les documents de l'org sortent.
+            annexe_ids = list(((memoire.variables if memoire else None) or {}).get(
+                "annexe_document_ids") or [])
+            if annexe_ids:
+                annexe_docs = db.query(Document).filter(
+                    Document.id.in_(annexe_ids),
+                    Document.organization_id == user.organization_id,
+                    Document.deleted_at.is_(None),
+                ).all()
+                for doc in annexe_docs:
+                    _add_file_to_zip(zf, doc.file_url, doc.file_name, f"{root}/3_ANNEXES", seen_names)
+
+            # ── 02_Offre: filled DPGF if uploaded ─────────────────────────────
+            if project.dpgf_remplie_url and project.dpgf_remplie_name:
+                _add_file_to_zip(
+                    zf, project.dpgf_remplie_url,
+                    f"DPGF_remplie_{project.dpgf_remplie_name}",
+                    f"{root}/02_Offre", seen_names,
+                )
+            elif any((d.type or "") == "dpgf_template" for d in project_docs):
+                warnings.append("DPGF non remplie")
+
+            # ── Warnings for expected-but-missing user-completed documents ────
+            has_completed_ae = any(
+                (d.type or "") == "acte_engagement_template" and getattr(d, "is_user_completed", False)
+                for d in project_docs
             )
-        elif any((d.type or "") == "dpgf_template" for d in project_docs):
-            warnings.append("DPGF non remplie")
+            if not has_completed_ae and any((d.type or "") == "acte_engagement_template" for d in project_docs):
+                warnings.append("Acte d'engagement non signé")
 
-        # ── Warnings for expected-but-missing user-completed documents ────
-        has_completed_ae = any(
-            (d.type or "") == "acte_engagement_template" and getattr(d, "is_user_completed", False)
-            for d in project_docs
-        )
-        if not has_completed_ae and any((d.type or "") == "acte_engagement_template" for d in project_docs):
-            warnings.append("Acte d'engagement non signé")
+            # ── Ensure 3 folders exist (even if empty) ────────────────────────
+            for sub in ("01_Candidature", "02_Offre", "03_Technique"):
+                folder_path = f"{root}/{sub}/"
+                if folder_path not in {info.filename for info in zf.filelist}:
+                    zf.writestr(folder_path, "")
 
-        # ── Ensure 3 folders exist (even if empty) ────────────────────────
-        for sub in ("01_Candidature", "02_Offre", "03_Technique"):
-            folder_path = f"{root}/{sub}/"
-            if folder_path not in {info.filename for info in zf.filelist}:
-                zf.writestr(folder_path, "")
+        tmp.flush()
+        tmp.close()
+    except BaseException:
+        try:
+            tmp.close()
+        except Exception:
+            pass
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
 
-    buf.seek(0)
     zip_filename = f"{root}.zip"
     ascii_zip = zip_filename.encode("ascii", errors="replace").decode("ascii")
     utf8_zip = quote(zip_filename, safe="")
@@ -382,10 +400,26 @@ def export_zip(
             "project_name": project.name,
             "lot": project.selected_lot,
             "warnings_count": len(warnings),
-            "size_bytes": buf.getbuffer().nbytes,
+            "size_bytes": os.path.getsize(tmp_path),
         },
     )
-    return StreamingResponse(buf, media_type="application/zip", headers=headers)
+
+    def _stream_and_cleanup():
+        """Streame l'archive par blocs depuis le disque puis la supprime."""
+        try:
+            with open(tmp_path, "rb") as fh:
+                while True:
+                    chunk = fh.read(65536)
+                    if not chunk:
+                        break
+                    yield chunk
+        finally:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+
+    return StreamingResponse(_stream_and_cleanup(), media_type="application/zip", headers=headers)
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────

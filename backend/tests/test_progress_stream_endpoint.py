@@ -48,8 +48,10 @@ def _client_as(user):
     def _override_auth():
         return user
 
+    from routers.auth import get_auth_user_short
     app.dependency_overrides[get_db] = _override_db
     app.dependency_overrides[get_auth_user] = _override_auth
+    app.dependency_overrides[get_auth_user_short] = _override_auth
     return TestClient(app)
 
 
