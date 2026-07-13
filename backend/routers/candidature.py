@@ -7,6 +7,7 @@ Candidature checklist endpoints.
 * PUT    /{project_id}/checklist/{item_id}/link               — link an existing vault doc
                                                                 (source_kind='vault')
 """
+import asyncio
 import logging
 import uuid
 from pathlib import Path
@@ -191,7 +192,8 @@ async def upload_completed_template(
     if doc_type == "dpgf_template" and ext in (".xlsx", ".xlsm", ".xls", ".ods"):
         from services.dpgf_checker import check_dpgf
         try:
-            report = check_dpgf(abs_path)
+            # R8 — parse openpyxl/xlrd hors event-loop (règle WSL2).
+            report = await asyncio.to_thread(check_dpgf, abs_path)
         except Exception as exc:
             logger.warning("Contrôle DPGF impossible pour %s : %s", safe_name, exc)
             report = None

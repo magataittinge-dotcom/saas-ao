@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import mimetypes
 import re
@@ -159,7 +160,9 @@ async def view_file(
 
     # Si c'est un PDF avec un texte à surligner
     if full_path.suffix.lower() == '.pdf' and highlight and page:
-        highlighted_path = PdfHighlighter.highlight_text_in_pdf(
+        # R8 — surlignage PyMuPDF déporté hors event-loop (règle WSL2).
+        highlighted_path = await asyncio.to_thread(
+            PdfHighlighter.highlight_text_in_pdf,
             pdf_path=full_path,
             page_number=page,
             search_text=highlight,

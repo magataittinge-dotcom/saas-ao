@@ -1,3 +1,4 @@
+import asyncio
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from pydantic import BaseModel, field_validator
@@ -161,7 +162,8 @@ async def import_memoire(
 
     content = await file.read()
     processor = DocumentProcessor()
-    text, _ = processor.extract(content, filename)
+    # R8 — extraction docx/pdf (PyMuPDF/python-docx) hors event-loop (WSL2).
+    text, _ = await asyncio.to_thread(processor.extract, content, filename)
 
     if not text or len(text.strip()) < 100:
         raise HTTPException(status_code=422, detail="Impossible d'extraire le texte du document")

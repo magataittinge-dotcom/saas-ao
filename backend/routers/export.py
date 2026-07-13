@@ -1,3 +1,4 @@
+import asyncio
 import io
 import json
 import logging
@@ -541,7 +542,8 @@ async def upload_filled_dpgf(
     local_path = _resolve_local_path(file_url)
     verification = {"valid": True, "warnings": [], "total_ht": None, "nb_lignes": 0, "nb_lignes_remplies": 0, "nb_lignes_vides": 0}
     if local_path and local_path.exists():
-        verification = check_dpgf(local_path)
+        # R8 — parse openpyxl/xlrd hors event-loop (règle WSL2).
+        verification = await asyncio.to_thread(check_dpgf, local_path)
 
     # Save to project
     project.dpgf_remplie_url = file_url
