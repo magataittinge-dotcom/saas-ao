@@ -3,7 +3,7 @@ import re
 import time as _time_mod
 from datetime import datetime
 from pathlib import Path
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
@@ -420,12 +420,31 @@ def health_check():
 
 
 @app.get("/api/metrics")
-def metrics():
+@limiter.exempt  # endpoint ops interne, protégé par jeton (S3.5)
+def metrics(request: Request):
     """Lightweight metrics endpoint, JSON only (no Prometheus exposition).
 
     Use it for the night/morning ops report. Wire to Prometheus later by
     placing a sidecar that scrapes this and rewrites to text/exposition.
+
+    Sécurité (S3.5) : agrégats PLATEFORME (cross-org) → jamais public.
+      • METRICS_TOKEN configuré → bearer valide exigé (comparaison constante) ;
+      • non configuré + prod → 404 (fail-closed) ; + DEBUG → toléré (dev/ops).
     """
+    import hmac as _hmac
+
+    # get_settings() (et non le `settings` capté à l'import) : certains tests
+    # font get_settings.cache_clear() → l'instance module deviendrait périmée.
+    _s = get_settings()
+    token = _s.METRICS_TOKEN
+    if token:
+        auth = request.headers.get("authorization", "")
+        provided = auth[7:] if auth[:7].lower() == "bearer " else ""
+        if not _hmac.compare_digest(provided, token):
+            raise HTTPException(status_code=403, detail="Accès réservé (ops).")
+    elif not _s.DEBUG:
+        # Aucun jeton en prod → on n'expose rien.
+        raise HTTPException(status_code=404, detail="Not found")
     from sqlalchemy import func as _func
     from services.cache import org_cache as _cache
     from models.organization import Organization as _Org

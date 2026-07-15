@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     SMTP_FROM: str = ""
 
+    # Ops — jeton d'accès à /api/metrics (agrégats plateforme, jamais public).
+    # Vide + prod → endpoint fermé (404). Vide + DEBUG → toléré (S3.5).
+    METRICS_TOKEN: str = ""
+
     # CORS
     FRONTEND_URL: str = "http://localhost:3000"
 

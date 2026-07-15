@@ -186,8 +186,13 @@ STRIPE_SECRET_KEY=sk_live_XXX
 STRIPE_WEBHOOK_SECRET=whsec_XXX
 GOOGLE_MAPS_API_KEY=AIzaSyB...
 FRONTEND_URL=https://synorix.fr
+METRICS_TOKEN=$(openssl rand -hex 32)  # ops : accès /api/metrics (S3.5) — sans lui, endpoint fermé (404)
 SENTRY_DSN=https://...@sentry.io/...   # optional, P1
 ```
+
+> `/api/metrics` expose des agrégats **plateforme** (cross-org). Il n'est
+> jamais public : en prod, sans `METRICS_TOKEN` il renvoie 404 ; avec, il exige
+> `Authorization: Bearer $METRICS_TOKEN`. Scrape ops/Prometheus → passer ce header.
 
 ```bash
 chown synorix:synorix /srv/synorix/backend/.env
