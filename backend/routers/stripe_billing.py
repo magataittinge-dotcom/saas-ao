@@ -158,7 +158,22 @@ def verify_session(
     if session.get("payment_status") != "paid":
         return {"plan": "free", "updated": False}
 
+    # 🔒 Ownership : la session DOIT être liée à l'org du JWT. Sans ce contrôle,
+    # un session_id payé d'une autre org (fuite via success_url ?session_id=…)
+    # upgradait l'org appelante sans paiement. La liaison est posée à la création
+    # du checkout (metadata.organization_id + client_reference_id = org.id).
     metadata = session.get("metadata") or {}
+    session_org = metadata.get("organization_id") or session.get("client_reference_id")
+    if session_org != user.organization_id:
+        logger.warning(
+            "verify-session refusée : session %s liée à org=%r, appelant org=%r",
+            session_id, session_org, user.organization_id,
+        )
+        raise HTTPException(
+            status_code=403,
+            detail="Cette session de paiement n'appartient pas à votre organisation.",
+        )
+
     plan = metadata.get("plan")
 
     if not plan and session.get("subscription"):
