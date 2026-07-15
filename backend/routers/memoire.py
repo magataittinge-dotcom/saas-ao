@@ -4,8 +4,6 @@ import threading
 from datetime import datetime
 from urllib.parse import quote
 from fastapi import APIRouter, Depends, HTTPException, Request
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from fastapi.responses import Response
 from sqlalchemy import or_, update as _sql_update
 from sqlalchemy.orm import Session
@@ -36,7 +34,7 @@ from services.project_status import ensure_relaunchable
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
+from services.rate_limit import limiter  # S1.2 — limiter partagé (org-keyed)
 
 
 @router.get("/{project_id}/memoire", response_model=MemoireResponse)

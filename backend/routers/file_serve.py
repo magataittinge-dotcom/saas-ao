@@ -14,6 +14,7 @@ from models.document import Document
 from routers.auth import get_auth_user
 from services.file_storage import SIGNED_URL_TTL, sign_file_path, verify_file_signature
 from services.pdf_highlighter import PdfHighlighter
+from services.rate_limit import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -116,6 +117,7 @@ def sign_file_url(
 
 
 @router.get("/view/{file_path:path}")
+@limiter.exempt  # sert des fichiers signés (une page = N images) : hors limite globale (S1.2)
 async def view_file(
     file_path: str,
     org: str = Query(None, description="Organisation liée par la signature"),

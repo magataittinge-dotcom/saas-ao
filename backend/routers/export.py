@@ -11,8 +11,9 @@ from datetime import datetime
 from pathlib import Path as FilePath
 from urllib.parse import quote
 import mimetypes
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from fastapi.responses import StreamingResponse, FileResponse
+from services.rate_limit import limiter
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -171,7 +172,9 @@ def get_export_summary(
 
 
 @router.get("/{project_id}/export/docx")
+@limiter.limit("20/minute")
 def export_docx(
+    request: Request,
     project_id: str,
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
@@ -202,7 +205,9 @@ def export_docx(
 
 
 @router.get("/{project_id}/export/zip")
+@limiter.limit("10/minute")
 def export_zip(
+    request: Request,
     project_id: str,
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),

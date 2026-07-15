@@ -6,9 +6,9 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from config import get_settings
 from database import Base, engine
@@ -204,7 +204,10 @@ def _reconcile_orphans_at_boot():
 _reconcile_orphans_at_boot()
 
 # ── Rate limiter ─────────────────────────────────────────────────────────────
-limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
+# Limiter PARTAGÉ (S1.2) : clé par org (non spoofable), stockage Redis en prod
+# (cross-worker), et SlowAPIMiddleware installé plus bas — sans lui les limites
+# globales ne s'appliquent JAMAIS (l'ancien default_limits était mort).
+from services.rate_limit import limiter
 
 app = FastAPI(
     title="SaaS AO BTP API",
@@ -216,6 +219,8 @@ app = FastAPI(
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+# Sans ce middleware, `default_limits` ne s'applique à aucune route (S1.2).
+app.add_middleware(SlowAPIMiddleware)
 
 
 # ── Global exception handler — never leak stack traces in prod ───────────────
@@ -374,6 +379,7 @@ _APP_BOOTED_AT = datetime.utcnow()
 
 
 @app.get("/api/health")
+@limiter.exempt  # sonde LB : jamais throttlée (S1.2)
 def health_check():
     """Liveness + readiness probe.
 

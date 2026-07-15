@@ -17,8 +17,6 @@ from fastapi import (
     APIRouter, Depends, File, Form, HTTPException, Request, UploadFile,
 )
 from pydantic import BaseModel
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -37,7 +35,7 @@ _COMPLETED_ALLOWED_EXTENSIONS = {".pdf", ".docx", ".xlsx", ".xls"}
 _COMPLETED_MAX_SIZE = 50 * 1024 * 1024  # 50 MB
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
+from services.rate_limit import limiter  # S1.2 — limiter partagé (org-keyed)
 
 
 @router.post("/{project_id}/checklist/regenerate")

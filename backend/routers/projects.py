@@ -7,8 +7,6 @@ import io as _io
 import threading
 from typing import IO, List, Optional, Any
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, UploadFile, File, Form
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
@@ -122,7 +120,7 @@ def _copy_zip_member_bounded(
     return written
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
+from services.rate_limit import limiter  # S1.2 — limiter partagé (org-keyed)
 
 # C14 — transitions de statut autorisées. Prêt (workflow) → soumis (dépôt
 # daté) → gagné/perdu (terminaux). sans_suite (B7) est réouvrable ; gagné

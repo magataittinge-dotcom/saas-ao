@@ -10,8 +10,6 @@ import logging
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
@@ -24,7 +22,7 @@ from services.billing import BillingError, get_billing_provider
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
+from services.rate_limit import limiter  # S1.2 — limiter partagé (org-keyed)
 settings = get_settings()
 
 # ── Product IDs (Stripe test mode) — provider-agnostic mapping in DB later ─
@@ -140,7 +138,9 @@ def create_portal_session(
 
 
 @router.get("/verify-session")
+@limiter.limit("20/minute")
 def verify_session(
+    request: Request,
     session_id: str,
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),

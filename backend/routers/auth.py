@@ -10,6 +10,7 @@ from starlette.requests import Request as StarletteRequest
 
 from database import get_db
 from config import get_settings
+from services.rate_limit import limiter
 from models.user import User
 from models.organization import Organization
 from schemas.auth import SyncRequest
@@ -116,6 +117,7 @@ def _sync_clerk_user(clerk_user_id: str, db: Session) -> User:
 # ── Main dependency — used by all protected routes ────────────────────────────
 
 def get_auth_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(bearer),
     db: Session = Depends(get_db),
 ) -> User:
@@ -123,10 +125,15 @@ def get_auth_user(
     clerk_user_id = payload.get("sub")
     if not clerk_user_id:
         raise HTTPException(status_code=401, detail="Token invalide: sub manquant")
-    return _sync_clerk_user(clerk_user_id, db)
+    user = _sync_clerk_user(clerk_user_id, db)
+    # Clé de rate-limit par org (S1.2) — non spoofable (liée au JWT validé),
+    # contrairement à l'IP derrière un proxy. Lue par services.rate_limit.
+    request.state.rl_key = f"org:{user.organization_id}"
+    return user
 
 
 def get_auth_user_short(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(bearer),
 ) -> User:
     """Variante de get_auth_user à session COURTE — pour les endpoints à réponse
@@ -144,6 +151,7 @@ def get_auth_user_short(
         user = _sync_clerk_user(clerk_user_id, db)
         db.refresh(user)
         db.expunge(user)
+        request.state.rl_key = f"org:{user.organization_id}"
         return user
     finally:
         db.close()
@@ -158,7 +166,9 @@ def get_me(user: User = Depends(get_auth_user), db: Session = Depends(get_db)):
 
 
 @router.post("/sync")
+@limiter.limit("10/minute")
 def sync_onboarding(
+    request: Request,
     payload: SyncRequest,
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),

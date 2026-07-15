@@ -5,8 +5,6 @@ import logging
 import threading
 from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException, Request
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from sqlalchemy import or_, update as _sql_update
 from sqlalchemy.orm import Session
 
@@ -34,7 +32,7 @@ logger = logging.getLogger(__name__)
 UPLOADS_ROOT = Path(__file__).parent.parent / "uploads"
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
+from services.rate_limit import limiter  # S1.2 — limiter partagé (org-keyed)
 
 
 @router.post("/{project_id}/analyze")

@@ -1,6 +1,7 @@
 from datetime import date, datetime
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form
+from services.rate_limit import limiter
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -77,7 +78,9 @@ def list_expiring_soon(
 
 
 @router.post("", response_model=DocumentResponse)
+@limiter.limit("30/minute")
 async def upload_document(
+    request: Request,
     file: UploadFile = File(...),
     type: str = Form("autre"),
     issued_date: Optional[str] = Form(None),

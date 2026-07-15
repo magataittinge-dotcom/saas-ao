@@ -32,6 +32,7 @@ os.environ.setdefault("CLERK_JWKS_URL", "https://example.clerk.accounts.dev/.wel
 os.environ.setdefault("DEBUG", "true")
 
 import pytest  # noqa: E402
+from fastapi import Request  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
 
 # Importing main triggers Base.metadata.create_all against the test SQLite engine.
@@ -41,6 +42,18 @@ from main import app  # noqa: E402
 from models.organization import Organization  # noqa: E402
 from models.user import User  # noqa: E402
 from routers.auth import get_auth_user  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _rate_limit_off():
+    """Désactive le rate limiting par défaut en test (S1.2) — sinon les tests
+    qui enchaînent beaucoup d'appels (uploads multiples, boucles) heurteraient
+    les nouvelles limites. Le test dédié (test_s1_rate_limit) le réactive."""
+    from services.rate_limit import limiter
+    prev = limiter.enabled
+    limiter.enabled = False
+    yield
+    limiter.enabled = prev
 
 
 @pytest.fixture(autouse=True)
@@ -116,7 +129,9 @@ def client(test_user):
         finally:
             session.close()
 
-    def _override_get_auth_user():
+    def _override_get_auth_user(request: Request):
+        # Pose la clé de rate-limit par org, comme le vrai get_auth_user (S1.2).
+        request.state.rl_key = f"org:{test_user.organization_id}"
         return test_user
 
     from routers.auth import get_auth_user_short

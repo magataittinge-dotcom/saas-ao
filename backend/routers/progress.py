@@ -38,6 +38,7 @@ from models.project import Project
 from models.user import User
 from routers.auth import get_auth_user_short
 from services import pipeline_tracker, progress_bus
+from services.rate_limit import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +59,7 @@ def _format_event(event_type: str, payload: dict) -> bytes:
 
 
 @router.get("/{project_id}/progress-stream")
+@limiter.exempt  # SSE long-lived : hors limite globale (S1.2)
 async def progress_stream(
     project_id: str,
     request: Request,

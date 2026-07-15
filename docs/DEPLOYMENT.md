@@ -214,12 +214,20 @@ WorkingDirectory=/srv/synorix/backend
 EnvironmentFile=/srv/synorix/backend/.env
 ExecStart=/srv/synorix/backend/venv/bin/uvicorn main:app \
   --host 127.0.0.1 --port 8000 \
-  --workers 4 --proxy-headers --forwarded-allow-ips '*' \
+  --workers 4 --proxy-headers --forwarded-allow-ips 127.0.0.1 \
   --access-log --log-config /srv/synorix/backend/log_config.json
 Restart=always
 RestartSec=5
 KillSignal=SIGQUIT
 TimeoutStopSec=30
+
+# ⚠️ SÉCURITÉ (S1.2) : `--forwarded-allow-ips 127.0.0.1` — JAMAIS `*`.
+# Avec `*`, uvicorn dérive l'IP client du X-Forwarded-For fourni par le client,
+# donc n'importe qui peut spoofer son IP (X-Forwarded-For rotatif) et contourner
+# le rate limiting keyé par IP. Ne faire confiance qu'à l'IP du reverse proxy
+# local (nginx sur 127.0.0.1). Le rate limiting des routes authentifiées est
+# désormais keyé par org (non spoofable), mais les routes publiques restent
+# keyées IP — d'où l'importance de cette restriction.
 
 # Hardening
 NoNewPrivileges=true
