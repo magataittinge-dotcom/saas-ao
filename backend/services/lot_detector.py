@@ -212,12 +212,11 @@ def _extract_pdf_text_limited(path: Path, max_pages: int = 30) -> str:
         doc.close()
         return "\n".join(parts)
     except Exception:
-        # Fallback to PyPDF2 if fitz not available
+        # Fallback to pypdf if fitz not available (PyPDF2 est EOL — S3.6).
         try:
-            import PyPDF2
-            import io
+            import pypdf
             with open(str(path), 'rb') as f:
-                reader = PyPDF2.PdfReader(f)
+                reader = pypdf.PdfReader(f)
                 parts = []
                 for i in range(min(len(reader.pages), max_pages)):
                     t = reader.pages[i].extract_text()
