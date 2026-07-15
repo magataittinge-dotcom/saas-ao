@@ -1,3 +1,4 @@
+import tempfile
 from datetime import date, datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form
@@ -13,6 +14,7 @@ from schemas.document import DocumentResponse, DocumentUpdateRequest
 from routers.auth import get_auth_user
 from services.audit_logger import log_action
 from services.file_storage import FileStorage
+from services import upload_validation
 from services.vault_classifier import (
     category_for_type,
     compute_document_status,
@@ -88,13 +90,55 @@ async def upload_document(
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ):
-    content = await file.read()
-    file_url = await storage.upload(
-        content,
-        file.filename,
-        f"organizations/{user.organization_id}/vault",
-        file.content_type,
+    # ── Validation d'entrée (S2.4) : extension → streaming capé → magic bytes ──
+    ext = upload_validation.extension_of(file.filename or "")
+    if ext not in upload_validation.VAULT_ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Type de fichier non autorisé : {ext or '(aucune extension)'}",
+        )
+
+    # Rejet rapide de l'évident via Content-Length (le corps multipart est un
+    # majorant du fichier — l'écart de bordure est négligeable).
+    cl = request.headers.get("content-length")
+    if cl and cl.isdigit() and int(cl) > upload_validation.VAULT_MAX_UPLOAD_SIZE:
+        raise HTTPException(status_code=413, detail="Fichier trop volumineux (max 50 Mo).")
+
+    # Streaming vers un spool (RAM puis disque) avec cap COURANT : l'ancien
+    # `await file.read()` chargeait tout le fichier en mémoire (DoS mémoire).
+    spool = tempfile.SpooledTemporaryFile(
+        max_size=upload_validation.VAULT_SPOOL_THRESHOLD, mode="w+b",
     )
+    total = 0
+    head = b""
+    try:
+        while True:
+            chunk = await file.read(upload_validation.VAULT_CHUNK_SIZE)
+            if not chunk:
+                break
+            if not head:
+                head = chunk[:1024]
+            total += len(chunk)
+            if total > upload_validation.VAULT_MAX_UPLOAD_SIZE:
+                raise HTTPException(status_code=413, detail="Fichier trop volumineux (max 50 Mo).")
+            spool.write(chunk)
+
+        # Contrôle du type réel : le contenu doit correspondre à l'extension.
+        if not upload_validation.sniff_matches_extension(head, ext):
+            raise HTTPException(
+                status_code=400,
+                detail="Le contenu du fichier ne correspond pas à son extension.",
+            )
+
+        spool.seek(0)
+        file_url = await storage.upload_stream(
+            spool,
+            file.filename,
+            f"organizations/{user.organization_id}/vault",
+            file.content_type,
+        )
+    finally:
+        spool.close()
 
     exp_date = date.fromisoformat(expiry_date) if expiry_date else None
     iss_date = date.fromisoformat(issued_date) if issued_date else None
@@ -122,7 +166,7 @@ async def upload_document(
     log_action(
         db, user, "vault.upload",
         target_type="document", target_id=doc.id,
-        extra={"type": type, "file_name": file.filename, "size": len(content)},
+        extra={"type": type, "file_name": file.filename, "size": total},
     )
     return doc
 
