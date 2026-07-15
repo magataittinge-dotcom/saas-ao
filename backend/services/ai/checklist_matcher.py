@@ -18,7 +18,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from models.document import Document
-from models.project import ProjectDocument
+from models.project import Project, ProjectDocument
 import logging
 
 logger = logging.getLogger(__name__)
@@ -237,10 +237,21 @@ def match_requirement_to_checklist_item(
     base["document_type_required"] = detected_type
 
     if vault_by_type is None:
+        # Filtre org (S2.3) : borne la recherche au coffre de l'org DU PROJET.
+        # Sans org résolvable → aucun candidat (fail-closed, jamais cross-org).
+        org_id = (
+            db.query(Project.organization_id).filter(Project.id == project_id).scalar()
+            if project_id else None
+        )
         candidates = (
             db.query(Document)
-            .filter(Document.type == detected_type)
+            .filter(
+                Document.type == detected_type,
+                Document.organization_id == org_id,
+                Document.deleted_at.is_(None),
+            )
             .all()
+            if org_id else []
         )
     else:
         candidates = vault_by_type.get(detected_type, [])

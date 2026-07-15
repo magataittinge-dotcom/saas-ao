@@ -37,6 +37,25 @@ _UUID_RE = re.compile(
 )
 
 
+def _resolve_within_uploads(file_path: str) -> tuple[Path, str]:
+    """Résout ``file_path`` sous UPLOADS_ROOT en garantissant le containment,
+    et retourne ``(chemin_absolu_résolu, chemin_relatif_CANONIQUE)`` (sans ``..``).
+
+    Le contrôle d'accès (``_authorize_path``) DOIT statuer sur ce chemin
+    canonique : un ``../`` non normalisé permet d'être autorisé via un préfixe
+    possédé (``parts[0]``) tout en résolvant vers le fichier d'une AUTRE org,
+    resté sous uploads/ — la seule garde de containment ne suffit donc pas (S2.3).
+    """
+    root = UPLOADS_ROOT.resolve()
+    try:
+        full = (root / file_path).resolve()
+    except Exception:
+        raise HTTPException(status_code=403, detail="Chemin invalide")
+    if full != root and root not in full.parents:
+        raise HTTPException(status_code=403, detail="Accès interdit")
+    return full, full.relative_to(root).as_posix()
+
+
 def _authorize_path(file_path: str, org_id: str, db: Session) -> None:
     """Verify the organization owns the file at the given relative path.
 
@@ -108,7 +127,10 @@ def sign_file_url(
 
     Le front appelle cet endpoint (Bearer) puis utilise l'URL retournée pour
     les accès navigateur directs (href, window.open, visionneuse PDF)."""
-    rel = unquote(path.removeprefix("/uploads/").lstrip("/"))
+    rel_raw = unquote(path.removeprefix("/uploads/").lstrip("/"))
+    # Normaliser AVANT le contrôle d'accès (S2.3) : sinon un `../` autorisé via
+    # un préfixe possédé pourrait faire minter une URL vers une autre org.
+    _full, rel = _resolve_within_uploads(rel_raw)
     _authorize_path(rel, user.organization_id, db)
     return {
         "url": sign_file_path(rel, org_id=user.organization_id),
@@ -141,19 +163,11 @@ async def view_file(
             status_code=403,
             detail="Lien invalide ou expiré — rechargez la page pour obtenir un nouveau lien.",
         )
-    _authorize_path(file_path, org, db)
-
-    full_path = UPLOADS_ROOT / file_path
-
-    # Path traversal defence
-    try:
-        full_path = full_path.resolve()
-        if not str(full_path).startswith(str(UPLOADS_ROOT.resolve())):
-            raise HTTPException(status_code=403, detail="Accès interdit")
-    except HTTPException:
-        raise
-    except Exception:
-        raise HTTPException(status_code=403, detail="Chemin invalide")
+    # Normaliser (résoudre les `..`) AVANT le contrôle d'accès (S2.3) : la garde
+    # de containment seule laissait un `projects/<mien>/../../<autre>/x.pdf`
+    # autorisé via mon préfixe résoudre vers le fichier d'une AUTRE org.
+    full_path, canonical_rel = _resolve_within_uploads(file_path)
+    _authorize_path(canonical_rel, org, db)
 
     if not full_path.exists() or not full_path.is_file():
         raise HTTPException(status_code=404, detail="Fichier introuvable")

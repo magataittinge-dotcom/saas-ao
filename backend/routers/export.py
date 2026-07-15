@@ -64,7 +64,13 @@ def get_export_detail(
     for item in checklist_items:
         doc_name = None
         if item.linked_document_id:
-            doc = db.query(Document).filter(Document.id == item.linked_document_id).first()
+            # Filtre org (S2.3) : ne jamais exposer le nom d'un Document d'une
+            # autre org via un linked_document_id périmé/forgé.
+            doc = db.query(Document).filter(
+                Document.id == item.linked_document_id,
+                Document.organization_id == user.organization_id,
+                Document.deleted_at.is_(None),
+            ).first()
             if doc:
                 doc_name = doc.file_name
         checklist_export.append(ChecklistExportItem(
@@ -254,7 +260,13 @@ def export_zip(
     # Collect coffre-fort documents linked via checklist
     linked_doc_ids = {ci.linked_document_id for ci in checklist_items if ci.linked_document_id}
     vault_docs = (
-        db.query(Document).filter(Document.id.in_(linked_doc_ids)).all()
+        # Filtre org (S2.3) : seuls les Documents de l'org appelante entrent
+        # dans le ZIP, même si un linked_document_id pointe ailleurs.
+        db.query(Document).filter(
+            Document.id.in_(linked_doc_ids),
+            Document.organization_id == user.organization_id,
+            Document.deleted_at.is_(None),
+        ).all()
         if linked_doc_ids else []
     )
     vault_by_id = {d.id: d for d in vault_docs}
