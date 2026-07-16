@@ -482,6 +482,9 @@ sudo -u synorix backend/venv/bin/alembic -c backend/alembic.ini upgrade head
 
 echo "→ Restart services"
 sudo systemctl restart synorix-api
+# O6 (audit prod) : worker et beat chargent le code Python à leur démarrage —
+# sans restart, ils exécutent l'ANCIEN code sur le schéma fraîchement migré.
+sudo systemctl restart synorix-celery-worker synorix-celery-beat
 sudo systemctl reload nginx
 echo "→ Health check"
 sleep 3
