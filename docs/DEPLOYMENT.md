@@ -155,10 +155,19 @@ sudo -u deploy backend/venv/bin/pip install --upgrade pip
 sudo -u deploy backend/venv/bin/pip install -r backend/requirements.txt
 
 # Frontend build
+# ⚠️ Vite fige import.meta.env AU BUILD : .env.production DOIT exister AVANT
+# `npm run build`. VITE_CLERK_PUBLISHABLE_KEY est REQUISE (src/main.tsx lève
+# une erreur au démarrage sans elle → page blanche). VITE_API_URL reste VIDE
+# en prod (= même origine, nginx proxifie /api/).
 sudo -u deploy bash -c '
   cd /srv/synorix/frontend
   curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
   apt install -y nodejs
+  cat > .env.production <<EOF
+VITE_CLERK_PUBLISHABLE_KEY=pk_live_XXXXXXXX
+VITE_API_URL=
+VITE_GOOGLE_MAPS_API_KEY=
+EOF
   npm ci
   npm run build
 '
@@ -547,6 +556,7 @@ EOF
 - [ ] DNS A `www.synorix.fr` → IP VPS validé
 - [ ] SSL Let's Encrypt installé
 - [ ] `.env` rempli avec toutes les vraies valeurs (pas de `sk_test_...`)
+- [ ] `frontend/.env.production` avec `VITE_CLERK_PUBLISHABLE_KEY=pk_live_...` posé AVANT `npm run build` (sinon page blanche)
 - [ ] Stripe webhook configuré sur `https://synorix.fr/api/stripe/webhook`
 - [ ] Clerk JWKS_URL pointe vers la prod (pas le dev clerk.accounts.dev)
 - [ ] firewall ufw active (22, 80, 443 only)
