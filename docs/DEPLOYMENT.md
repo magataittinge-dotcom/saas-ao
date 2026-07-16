@@ -223,8 +223,19 @@ WorkingDirectory=/srv/synorix/backend
 EnvironmentFile=/srv/synorix/backend/.env
 ExecStart=/srv/synorix/backend/venv/bin/uvicorn main:app \
   --host 127.0.0.1 --port 8000 \
-  --workers 4 --proxy-headers --forwarded-allow-ips 127.0.0.1 \
+  --workers 1 --proxy-headers --forwarded-allow-ips 127.0.0.1 \
   --access-log --log-config /srv/synorix/backend/log_config.json
+
+# ⚠️ ARCHITECTURE (audit prod R3) : --workers 1 OBLIGATOIRE en l'état.
+# La progression vit en mémoire du process (services/progress_bus.py,
+# services/pipeline_tracker.py) et l'analyse/génération tournent en threads
+# démons DANS le worker web (routers/analysis.py:168, routers/memoire.py:224).
+# Avec N workers : barre SSE muette ~(N-1)/N du temps (le GET /progress-stream
+# ne voit pas les événements d'un autre worker), et la réconciliation au boot
+# d'un worker peut abattre les runs VIVANTS des autres
+# (services/run_reconciliation.py:11-16 documente cette hypothèse mono-process).
+# Ne remonter --workers qu'APRÈS le portage progression → Redis pub/sub
+# et jobs longs → Celery.
 Restart=always
 RestartSec=5
 KillSignal=SIGQUIT
