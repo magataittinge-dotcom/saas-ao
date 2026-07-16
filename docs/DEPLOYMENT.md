@@ -187,8 +187,12 @@ STRIPE_WEBHOOK_SECRET=whsec_XXX
 GOOGLE_MAPS_API_KEY=AIzaSyB...
 FRONTEND_URL=https://synorix.fr
 METRICS_TOKEN=$(openssl rand -hex 32)  # ops : accès /api/metrics (S3.5) — sans lui, endpoint fermé (404)
-SENTRY_DSN=https://...@sentry.io/...   # optional, P1
 ```
+
+> Sentry n'est **pas encore câblé** (backlog O4) : ne pas ajouter `SENTRY_DSN`
+> tant que `sentry-sdk` n'est pas intégré à `main.py`. Les clés inconnues dans
+> le `.env` sont désormais ignorées au boot (R1), mais la règle reste : le
+> `.env` ne contient que des variables que le code lit réellement.
 
 > `/api/metrics` expose des agrégats **plateforme** (cross-org). Il n'est
 > jamais public : en prod, sans `METRICS_TOKEN` il renvoie 404 ; avec, il exige

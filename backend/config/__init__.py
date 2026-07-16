@@ -60,6 +60,10 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+        # R1 (audit prod) : une clé de .env sans champ déclaré (SENTRY_DSN,
+        # TELEGRAM_*, …) ne doit JAMAIS empêcher le boot — le défaut
+        # pydantic-settings v2 est extra='forbid' (ValidationError).
+        extra = "ignore"
 
 
 @lru_cache
