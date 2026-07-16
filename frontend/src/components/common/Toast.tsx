@@ -12,31 +12,31 @@ export interface ToastData {
 const VARIANT_CONFIG: Record<ToastVariant, { icon: typeof CheckCircle2; color: string; bg: string; border: string; barColor: string }> = {
   success: {
     icon: CheckCircle2,
-    color: '#0284C7',
-    bg: 'rgba(14,165,233,0.08)',
-    border: 'rgba(14,165,233,0.20)',
-    barColor: '#0EA5E9',
+    color: '#C3CCDC',
+    bg: 'rgba(228,233,242,0.08)',
+    border: 'rgba(228,233,242,0.20)',
+    barColor: '#E4E9F2',
   },
   error: {
     icon: XCircle,
-    color: '#DC2626',
+    color: '#F58E86',
     bg: 'rgba(239,68,68,0.08)',
     border: 'rgba(239,68,68,0.20)',
-    barColor: '#EF4444',
+    barColor: '#F58E86',
   },
   info: {
     icon: Info,
-    color: '#0284C7',
-    bg: 'rgba(14,165,233,0.08)',
-    border: 'rgba(14,165,233,0.20)',
-    barColor: '#0EA5E9',
+    color: '#C3CCDC',
+    bg: 'rgba(228,233,242,0.08)',
+    border: 'rgba(228,233,242,0.20)',
+    barColor: '#E4E9F2',
   },
   warning: {
     icon: AlertTriangle,
-    color: '#475569',
-    bg: 'rgba(100,116,139,0.08)',
-    border: 'rgba(100,116,139,0.20)',
-    barColor: '#64748B',
+    color: '#C7CEDA',
+    bg: 'rgba(120,130,149,0.08)',
+    border: 'rgba(120,130,149,0.20)',
+    barColor: '#9BA4B5',
   },
 }
 
@@ -75,14 +75,14 @@ function ToastItem({ toast, onRemove }: { toast: ToastData; onRemove: (id: strin
         <p className="text-sm text-white/90 flex-1">{toast.message}</p>
         <button
           onClick={dismiss}
-          className="p-1 rounded-lg transition-colors hover:bg-white/10"
-          style={{ color: '#64748B' }}
+          className="p-1 rounded-lg transition-colors hover:bg-ds-surface/10"
+          style={{ color: '#9BA4B5' }}
         >
           <X size={14} />
         </button>
       </div>
       {/* Progress bar */}
-      <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: '#F1F5F9' }}>
+      <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: '#1C222D' }}>
         <div
           className="h-full"
           style={{

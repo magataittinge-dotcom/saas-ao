@@ -104,7 +104,7 @@ export default function ProgressDisplay({
   const renderProgress = Math.round(Math.max(0, Math.min(displayProgress, 100)))
   const offset = CIRCUMFERENCE * (1 - renderProgress / 100)
 
-  const accentColor = isError ? '#EF4444' : '#0EA5E9'
+  const accentColor = isError ? '#F58E86' : '#E4E9F2'
 
   // Inline-mode: small page-level block. Modal: fullscreen overlay portal.
   const body = (
@@ -117,9 +117,9 @@ export default function ProgressDisplay({
       style={
         variant === 'modal'
           ? {
-              background: '#FFFFFF',
-              border: '1px solid rgba(14,165,233,0.15)',
-              boxShadow: '0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(14,165,233,0.08)',
+              background: '#151A23',
+              border: '1px solid rgba(228,233,242,0.15)',
+              boxShadow: '0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(228,233,242,0.08)',
             }
           : undefined
       }
@@ -138,7 +138,7 @@ export default function ProgressDisplay({
             cy={VIEWBOX / 2}
             r={RADIUS}
             fill="none"
-            stroke="rgba(100,116,139,0.12)"
+            stroke="rgba(120,130,149,0.12)"
             strokeWidth={STROKE}
           />
           <circle
@@ -252,18 +252,18 @@ export default function ProgressDisplay({
                       <div
                         className="absolute inset-0 rounded-full"
                         style={{
-                          border: '2px solid #0EA5E9',
+                          border: '2px solid rgba(255,255,255,.40)',
                           borderTopColor: 'transparent',
                           animation: 'spin 1s linear infinite',
                         }}
                       />
                     </div>
                   ) : Icon ? (
-                    <Icon size={14} style={{ color: '#94A3B8' }} />
+                    <Icon size={14} style={{ color: '#788295' }} />
                   ) : (
                     <div
                       className="w-2.5 h-2.5 rounded-full"
-                      style={{ background: 'rgba(100,116,139,0.3)' }}
+                      style={{ background: 'rgba(120,130,149,0.3)' }}
                     />
                   )}
                 </div>
@@ -272,10 +272,10 @@ export default function ProgressDisplay({
                   style={{
                     color:
                       stepStatus === 'completed'
-                        ? '#94A3B8'
+                        ? '#788295'
                         : stepStatus === 'in_progress'
-                          ? '#0F172A'
-                          : '#475569',
+                          ? '#F4F6FA'
+                          : '#C7CEDA',
                     fontWeight: stepStatus === 'in_progress' ? 600 : 400,
                   }}
                 >
@@ -293,9 +293,9 @@ export default function ProgressDisplay({
           onClick={onCancel}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all duration-200 mt-2"
           style={{
-            color: 'rgba(148,163,184,0.8)',
-            background: 'rgba(100,116,139,0.08)',
-            border: '1px solid rgba(100,116,139,0.15)',
+            color: 'rgba(155,164,181,0.8)',
+            background: 'rgba(120,130,149,0.08)',
+            border: '1px solid rgba(120,130,149,0.15)',
           }}
         >
           <X size={14} /> Annuler

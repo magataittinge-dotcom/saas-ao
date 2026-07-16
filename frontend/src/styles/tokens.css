@@ -1,178 +1,287 @@
 /* ═══════════════════════════════════════════════════════════════
-   SYNORIX DESIGN TOKENS
-   Light Mode — Clean White Admin
-   Palette: #FFFFFF bg · Cyan #0EA5E9 · Emerald #10B981 · Violet #8B5CF6
+   SYNORIX DESIGN TOKENS — « LUMEN »
+   Verre technique au crépuscule : graphite bleuté, filets lumineux,
+   zéro couleur de marque — la lumière porte les états.
+   Statuts métier (seule exception chromatique) : vert / ambre / corail.
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  /* ── Card style ───────────────────────────────────────────── */
+  /* ── Fonds (graphite bleuté « dusk ») ─────────────────────── */
+  --bg-deep: #0A0C11;      /* body / sidebar */
+  --bg: #0F1218;           /* contenu */
+  --surface: #151A23;      /* cartes */
+  --surface-2: #1C222D;    /* cartes imbriquées, inputs, hover */
+  --surface-3: #232B38;    /* état actif */
+
+  /* ── Filets lumineux ──────────────────────────────────────── */
+  --line: rgba(186, 205, 234, .13);
+  --line-strong: rgba(186, 205, 234, .23);
+
+  /* ── Écritures (blanc-gris) ───────────────────────────────── */
+  --ink: #F4F6FA;
+  --ink-2: #C7CEDA;
+  --ink-3: #9BA4B5;
+  --ink-4: #788295;
+
+  /* ── Lumière (remplace l'accent cyan) ─────────────────────── */
+  --lum: #E4E9F2;
+  --lum-bright: #FFFFFF;
+  --lum-dim: #9FA9BC;
+  --glow-white: rgba(255, 255, 255, .22);
+
+  /* ── Statuts métier — seule exception chromatique ─────────── */
+  --ok: #6EE7A8;    --ok-bg: rgba(110, 231, 168, .09);   --ok-line: rgba(110, 231, 168, .22);
+  --warn: #F5C26B;  --warn-bg: rgba(245, 194, 107, .09); --warn-line: rgba(245, 194, 107, .22);
+  --bad: #F58E86;   --bad-bg: rgba(245, 142, 134, .10);  --bad-line: rgba(245, 142, 134, .24);
+
+  /* ── Ombres & reliefs ─────────────────────────────────────── */
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, .5), 0 16px 40px -20px rgba(0, 0, 0, .7);
+  --shadow-card-hover: 0 1px 2px rgba(0, 0, 0, .5), 0 20px 48px -20px rgba(0, 0, 0, .8), 0 0 0 1px var(--line-strong);
+  --shadow-horizon: var(--shadow-card);
+  --shadow-horizon-hover: var(--shadow-card-hover);
+  --edge-light: inset 0 1px 0 rgba(255, 255, 255, .06);
+  /* éclairage par le bas — la signature Lumen */
+  --bottom-lit: radial-gradient(130% 115% at 50% 128%, rgba(255, 255, 255, .07), transparent 56%);
+
+  /* ── Compat anciens tokens (remappés Lumen) ───────────────── */
   --glass-opacity: 1;
   --glass-blur: 0px;
   --glass-border-opacity: 1;
   --glass-saturate: 100%;
   --glass-hover-opacity: 1;
   --glass-hover-border: 1;
-
-  /* ── Shadows ──────────────────────────────────────────────────── */
-  --shadow-card: 0px 1px 3px rgba(0,0,0,0.06), 0px 1px 2px rgba(0,0,0,0.04);
-  --shadow-card-hover: 0px 4px 12px rgba(0,0,0,0.08), 0px 0px 0px 1px rgba(14,165,233,0.12);
-  --shadow-horizon: 0px 1px 3px rgba(0,0,0,0.06), 0px 1px 2px rgba(0,0,0,0.04);
-  --shadow-horizon-hover: 0px 4px 12px rgba(0,0,0,0.08), 0 0 0 1px rgba(14,165,233,0.12);
-
-  /* ── Card backgrounds ──────────────────────────────────────── */
-  --card-navy: #FFFFFF;
-  --card-navy-alt: #F8FAFC;
-
-  /* ── Text hierarchy ────────────────────────────────────────── */
-  --text-primary: #0F172A;
-  --text-secondary: #64748B;
-  --text-tertiary: #94A3B8;
-  --text-muted: #CBD5E1;
-
-  /* ── Border radius ─────────────────────────────────────────── */
-  --radius-card: 16px;
-  --radius-lg: 16px;
-  --radius-md: 12px;
+  --card-navy: var(--surface);
+  --card-navy-alt: var(--surface-2);
+  --text-primary: var(--ink);
+  --text-secondary: var(--ink-3);
+  --text-tertiary: var(--ink-4);
+  --text-muted: #5C6678;
+  --radius-card: 12px;
+  --radius-lg: 12px;
+  --radius-md: 10px;
   --radius-sm: 8px;
-
-  /* ── Accent palette ────────────────────────────────────────── */
-  --accent-cyan: #0EA5E9;
-  --accent-cyan-light: #38BDF8;
-  --accent-teal: #10B981;
-  --accent-violet: #8B5CF6;
-  --accent-green: #10B981;
-  --accent-amber: #F59E0B;
-  --accent-red: #EF4444;
-
-  /* ── Background gradients (very subtle on light) ──────────── */
-  --bg-gradient-1: radial-gradient(ellipse 80% 80% at 20% 80%, rgba(14,165,233,0.03) 0%, transparent 50%);
-  --bg-gradient-2: radial-gradient(ellipse 60% 60% at 80% 20%, rgba(16,185,129,0.02) 0%, transparent 50%);
-  --bg-gradient-3: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(139,92,246,0.01) 0%, transparent 60%);
+  --accent-cyan: var(--lum);
+  --accent-cyan-light: var(--lum-bright);
+  --accent-teal: var(--ok);
+  --accent-violet: var(--lum);       /* violet éradiqué */
+  --accent-green: var(--ok);
+  --accent-amber: var(--warn);
+  --accent-red: var(--bad);
+  --bg-gradient-1: radial-gradient(1100px 460px at 50% -150px, rgba(255,255,255,.06), transparent 62%);
+  --bg-gradient-2: none;
+  --bg-gradient-3: none;
 }
 
-/* ── Glass Card — now solid white card ──────────────────────── */
+/* ── Cartes ──────────────────────────────────────────────────── */
 .glass-card {
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
+  background-color: var(--surface);
+  background-image: var(--bottom-lit);
+  border: 1px solid var(--line);
   border-radius: var(--radius-card);
-  box-shadow: var(--shadow-card);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-card), var(--edge-light);
+  transition: border-color .2s cubic-bezier(.4, 0, .2, 1),
+              box-shadow .2s cubic-bezier(.4, 0, .2, 1),
+              transform .2s cubic-bezier(.4, 0, .2, 1);
 }
-
 .glass-card:hover {
-  border-color: #CBD5E1;
-  box-shadow: var(--shadow-card-hover);
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-card-hover), var(--edge-light);
 }
 
-/* ── Glass Stat card ─────────────────────────────────────────── */
 .glass-stat {
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
+  background-color: var(--surface);
+  background-image: var(--bottom-lit);
+  border: 1px solid var(--line);
   border-radius: var(--radius-card);
-  box-shadow: var(--shadow-horizon);
+  box-shadow: var(--shadow-card), var(--edge-light);
   overflow: hidden;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: border-color .2s cubic-bezier(.4, 0, .2, 1),
+              box-shadow .2s cubic-bezier(.4, 0, .2, 1),
+              transform .2s cubic-bezier(.4, 0, .2, 1);
 }
-
 .glass-stat:hover {
-  border-color: #CBD5E1;
-  box-shadow: var(--shadow-horizon-hover);
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-card-hover), var(--edge-light);
   transform: translateY(-1px);
 }
 
-/* ── Glass Sidebar — white with right border ─────────────────── */
+/* ── Sidebar ─────────────────────────────────────────────────── */
 .glass-sidebar {
-  background: #FFFFFF;
-  border-right: 1px solid #E2E8F0;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--bg-deep);
+  border-right: 1px solid var(--line);
+  transition: transform .3s cubic-bezier(.4, 0, .2, 1), width .3s cubic-bezier(.4, 0, .2, 1);
 }
-
-/* Mobile: full-width sidebar overlay */
 @media (max-width: 767px) {
   .glass-sidebar {
-    background: #FFFFFF;
+    background: var(--bg-deep);
     width: 260px;
-    box-shadow: 8px 0 32px rgba(0,0,0,0.08);
+    box-shadow: 8px 0 32px rgba(0, 0, 0, .6);
   }
 }
 
-/* ── Glass Header — white with bottom border ─────────────────── */
+/* ── Header — porte la ligne d'horizon ───────────────────────── */
 .glass-header {
-  background: #FFFFFF;
-  border-bottom: 1px solid #E2E8F0;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: rgba(10, 12, 17, .55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--line);
+  position: relative;
+  transition: all .2s cubic-bezier(.4, 0, .2, 1);
+}
+.glass-header::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.5) 30%, rgba(255,255,255,.5) 60%, transparent);
+  box-shadow: 0 0 12px rgba(255,255,255,.22);
+  pointer-events: none;
 }
 
-/* ── Glass Input — light input ──────────────────────────────── */
+/* ── Inputs ──────────────────────────────────────────────────── */
 .glass-input {
-  background: #F8FAFC;
-  border: 1px solid #E2E8F0;
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
-  color: #0F172A;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--ink);
+  transition: all .2s cubic-bezier(.4, 0, .2, 1);
 }
-
 .glass-input:focus {
-  background: #FFFFFF;
-  border-color: #0EA5E9;
+  background: var(--surface-2);
+  border-color: rgba(255, 255, 255, .45);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(14,165,233, 0.12);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, .10), 0 0 20px -6px rgba(255, 255, 255, .35);
 }
 
-/* ── Glass Button ────────────────────────────────────────────── */
+/* ── Boutons verre ───────────────────────────────────────────── */
 .glass-btn {
-  background: #F1F5F9;
-  border: 1px solid #E2E8F0;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--surface-2);
+  background-image: var(--bottom-lit);
+  border: 1px solid var(--line-strong);
+  transition: all .2s cubic-bezier(.4, 0, .2, 1);
 }
-
 .glass-btn:hover {
-  background: #E2E8F0;
-  border-color: #CBD5E1;
+  background-color: var(--surface-3);
+  border-color: var(--line-strong);
 }
 
-/* ── Nav item (Light) ───────────────────────────────────────── */
+/* ── Nav item ────────────────────────────────────────────────── */
 .glass-nav {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 0.75rem;
+  gap: .75rem;
+  padding: .5rem .75rem;
   border-radius: var(--radius-sm);
-  font-size: 0.875rem;
+  font-size: .875rem;
   font-weight: 500;
-  color: #64748B;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--ink-3);
+  transition: all .2s cubic-bezier(.4, 0, .2, 1);
   position: relative;
   cursor: pointer;
 }
-
 .glass-nav:hover {
-  background: #F1F5F9;
-  color: #0F172A;
+  background: rgba(228, 233, 242, .05);
+  color: var(--ink);
 }
-
 .glass-nav.active {
-  background: rgba(14,165,233,0.10);
-  color: #0EA5E9;
+  background: var(--surface-2);
+  background-image: var(--bottom-lit);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  box-shadow: var(--edge-light);
 }
 
-/* ── Badge ────────────────────────────────────────────────────── */
+/* ── Badge ───────────────────────────────────────────────────── */
 .glass-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.125rem 0.625rem;
+  gap: .25rem;
+  padding: .125rem .625rem;
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: .75rem;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: all .2s ease;
 }
 
-/* ── Auth Glass (light modal) ───────────────────────────────── */
+/* ── Auth (modal) ────────────────────────────────────────────── */
 .glass-auth {
-  background: #FFFFFF;
-  border: 1px solid #E2E8F0;
-  border-radius: 24px;
-  box-shadow: 0px 20px 50px rgba(0,0,0,0.08), 0 0 0 1px rgba(14,165,233,0.06);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--surface);
+  background-image: var(--bottom-lit);
+  border: 1px solid var(--line-strong);
+  border-radius: 20px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .7), var(--edge-light);
+  transition: all .2s cubic-bezier(.4, 0, .2, 1);
+}
+
+/* ── Utilitaires Lumen ───────────────────────────────────────── */
+/* étiquette mono technique (labels de cartes, en-têtes de table) */
+.microlabel {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+
+/* la ligne d'horizon — utilisable seule */
+.horizon-line {
+  position: relative;
+}
+.horizon-line::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.5) 30%, rgba(255,255,255,.5) 60%, transparent);
+  box-shadow: 0 0 12px rgba(255,255,255,.22);
+  pointer-events: none;
+}
+
+/* trait lumineux en haut d'une carte « live » */
+.top-lit {
+  position: relative;
+  overflow: hidden;
+}
+.top-lit::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 24%; right: 24%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent);
+  box-shadow: 0 0 8px rgba(255,255,255,.25);
+  pointer-events: none;
+}
+
+/* grille technique en fondu (héros, zones d'accueil) */
+.blueprint-grid {
+  position: relative;
+}
+.blueprint-grid::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
+  background-size: 48px 48px;
+  -webkit-mask-image: radial-gradient(110% 55% at 50% 0%, black 20%, transparent 72%);
+  mask-image: radial-gradient(110% 55% at 50% 0%, black 20%, transparent 72%);
+}
+
+/* avancement 6 étapes — remplace les % mensongers */
+.steps-track { display: inline-flex; gap: 3px; }
+.steps-track i {
+  width: 15px; height: 3px;
+  border-radius: 1.5px;
+  background: rgba(186, 205, 234, .15);
+}
+.steps-track i.done { background: linear-gradient(180deg, #DFE5F0, #9FA9BC); }
+.steps-track i.active { background: rgba(223, 229, 240, .45); }
+
+/* données chiffrées : mono tabulaire */
+.num-mono {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
 }

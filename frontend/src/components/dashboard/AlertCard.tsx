@@ -17,10 +17,10 @@ export function AlertCard({ alerts }: Props) {
   return (
     <div
       className="glass-card p-4"
-      style={{ borderColor: 'rgba(100,116,139,0.20)' }}
+      style={{ borderColor: 'rgba(120,130,149,0.20)' }}
     >
       <h2 className="font-semibold text-ds-text mb-3 flex items-center gap-2">
-        <AlertTriangle size={18} style={{ color: '#64748B' }} />
+        <AlertTriangle size={18} style={{ color: '#9BA4B5' }} />
         Alertes
       </h2>
       <div className="space-y-2">
@@ -30,8 +30,8 @@ export function AlertCard({ alerts }: Props) {
             className="flex items-center gap-2 text-sm py-1.5 px-3 rounded-md"
             style={
               alert.severity === 'red'
-                ? { background: 'rgba(239,68,68,0.10)', color: '#DC2626', border: '1px solid rgba(239,68,68,0.20)' }
-                : { background: 'rgba(100,116,139,0.08)', color: '#475569', border: '1px solid rgba(100,116,139,0.20)' }
+                ? { background: 'rgba(239,68,68,0.10)', color: '#F58E86', border: '1px solid rgba(239,68,68,0.20)' }
+                : { background: 'rgba(120,130,149,0.08)', color: '#C7CEDA', border: '1px solid rgba(120,130,149,0.20)' }
             }
           >
             {alert.severity === 'red' ? <AlertTriangle size={14} /> : <Clock size={14} />}

@@ -71,7 +71,7 @@ export default function Project() {
           'sticky top-0 z-20 glass-card p-5 mb-6 transition-all duration-200',
           stepperStuck && 'rounded-none -mx-6 px-12',
         )}
-        style={stepperStuck ? { background: '#FFFFFF', borderBottom: '1px solid #E2E8F0', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' } : undefined}
+        style={stepperStuck ? { background: '#151A23', borderBottom: '1px solid rgba(186,205,234,.13)', boxShadow: '0 1px 3px rgba(0,0,0,.45)' } : undefined}
       >
         <StepProgress
           currentStep={project.current_step}

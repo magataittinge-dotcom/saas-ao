@@ -13,40 +13,44 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans:    ['"DM Sans"', 'system-ui', 'sans-serif'],
-        display: ['"DM Sans"', 'system-ui', 'sans-serif'],
-        mono:    ['"JetBrains Mono"', 'Menlo', 'monospace'],
+        sans:    ['Geist', 'system-ui', 'sans-serif'],
+        display: ['Geist', 'system-ui', 'sans-serif'],
+        mono:    ['"Geist Mono"', 'Menlo', 'monospace'],
       },
       colors: {
-        // Design system palette — light mode SaaS
+        // Design system palette — LUMEN (verre technique au crépuscule)
         ds: {
-          bg:        '#FFFFFF',
-          'bg-2':    '#F8FAFC',
-          'bg-3':    '#F1F5F9',
-          'bg-elevated': '#FFFFFF',
-          sidebar:   '#FFFFFF',
-          // Text hierarchy
-          text:      '#0F172A',
-          'text-1b': '#1E293B',
-          'text-2':  '#64748B',
-          'text-3':  '#94A3B8',
-          'text-muted': '#94A3B8',
-          'text-dim':   '#CBD5E1',
-          // Primary palette (cyan + slate + red + emerald only)
-          cyan:      '#0EA5E9',
-          'cyan-light': '#38BDF8',
-          'cyan-dark': '#0284C7',
-          accent:    '#0EA5E9',
-          // Semantic — strict 4-role: cyan (info/AI), slate (neutral/warning), red (danger), emerald (Gagné/Conforme only)
-          success:   '#0EA5E9',
-          warning:   '#64748B',
-          danger:    '#EF4444',
-          'danger-light': '#DC2626',
-          // Emerald reserved for Gagné/Conforme ONLY
-          'gagne':   '#10B981',
-          // Borders
-          'border-subtle': '#E2E8F0',
-          'border-hover':  '#CBD5E1',
+          bg:        '#0F1218',
+          'bg-2':    '#10141B',
+          'bg-3':    '#151A23',
+          'bg-elevated': '#1C222D',
+          sidebar:   '#0A0C11',
+          surface:   '#151A23',
+          'surface-2': '#1C222D',
+          'surface-3': '#232B38',
+          // Text hierarchy — blanc-gris
+          text:      '#F4F6FA',
+          'text-1b': '#E8EBF2',
+          'text-2':  '#9BA4B5',
+          'text-3':  '#788295',
+          'text-muted': '#788295',
+          'text-dim':   '#5C6678',
+          // « cyan » historique = désormais la lumière argentée (zéro couleur de marque)
+          cyan:      '#E4E9F2',
+          'cyan-light': '#FFFFFF',
+          'cyan-dark': '#C3CCDC',
+          accent:    '#E4E9F2',
+          lum:       '#E4E9F2',
+          'lum-dim': '#9FA9BC',
+          // Statuts métier — seule exception chromatique
+          success:   '#6EE7A8',
+          warning:   '#F5C26B',
+          danger:    '#F58E86',
+          'danger-light': '#FF9E96',
+          'gagne':   '#6EE7A8',
+          // Filets
+          'border-subtle': 'rgba(186,205,234,.13)',
+          'border-hover':  'rgba(186,205,234,.23)',
         },
         // shadcn/ui vars — keep for compatibility
         border:     'hsl(var(--border))',
@@ -91,16 +95,20 @@ export default {
         '3xl': '1.25rem',
       },
       backgroundImage: {
-        'gradient-signature': 'linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0369A1 100%)',
-        'gradient-cyan':      'linear-gradient(90deg, #0EA5E9, #0284C7)',
-        'gradient-subtle':    'linear-gradient(135deg, rgba(14,165,233,0.04), rgba(14,165,233,0.08))',
+        'gradient-signature': 'linear-gradient(135deg, #1C222D 0%, #232B38 55%, #3A4556 100%)',
+        'gradient-cyan':      'linear-gradient(90deg, #9FA9BC, #E4E9F2)',
+        'gradient-subtle':    'linear-gradient(135deg, rgba(228,233,242,0.04), rgba(228,233,242,0.08))',
+        'gradient-lumen':     'linear-gradient(180deg, #FFFFFF 0%, #E2E7F0 100%)',
+        'gradient-silver-text': 'linear-gradient(180deg, #FFFFFF 30%, #A2AEC4 100%)',
+        'bottom-lit':         'radial-gradient(130% 115% at 50% 128%, rgba(255,255,255,.07), transparent 56%)',
       },
       boxShadow: {
-        'glow-cyan':   '0 0 12px rgba(14,165,233,0.15)',
-        'glow-sm':     '0 0 8px rgba(14,165,233,0.10)',
-        'card':        '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
-        'card-hover':  '0 4px 12px rgba(0,0,0,0.08), 0 0 0 1px rgba(14,165,233,0.08)',
-        'glass':       '0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)',
+        'glow-cyan':   '0 0 12px rgba(255,255,255,0.16)',
+        'glow-sm':     '0 0 8px rgba(255,255,255,0.10)',
+        'card':        '0 1px 2px rgba(0,0,0,0.5), 0 16px 40px -20px rgba(0,0,0,0.7)',
+        'card-hover':  '0 1px 2px rgba(0,0,0,0.5), 0 20px 48px -20px rgba(0,0,0,0.8), 0 0 0 1px rgba(186,205,234,.23)',
+        'glass':       '0 1px 2px rgba(0,0,0,0.5), 0 16px 40px -20px rgba(0,0,0,0.7)',
+        'edge-light':  'inset 0 1px 0 rgba(255,255,255,.06)',
       },
       keyframes: {
         'accordion-down': {

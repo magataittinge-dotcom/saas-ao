@@ -137,14 +137,14 @@ function ImportProgress({ isImporting }: { isImporting: boolean }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div
         className="rounded-2xl shadow-2xl p-10 flex flex-col items-center gap-5 min-w-64"
-        style={{ background: '#FFFFFF', border: '1px solid rgba(100,116,139,0.2)' }}
+        style={{ background: '#151A23', border: '1px solid rgba(120,130,149,0.2)' }}
       >
         <div className="relative w-40 h-40">
           <svg className="w-full h-full -rotate-90" viewBox="0 0 160 160">
-            <circle cx="80" cy="80" r={RADIUS} fill="none" stroke="rgba(100,116,139,0.2)" strokeWidth="10" />
+            <circle cx="80" cy="80" r={RADIUS} fill="none" stroke="rgba(120,130,149,0.2)" strokeWidth="10" />
             <circle
               cx="80" cy="80" r={RADIUS} fill="none"
-              stroke="#0EA5E9" strokeWidth="10" strokeLinecap="round"
+              stroke="#E4E9F2" strokeWidth="10" strokeLinecap="round"
               strokeDasharray={CIRC} strokeDashoffset={offset}
               style={{ transition: 'stroke-dashoffset 0.35s ease' }}
             />
@@ -217,15 +217,15 @@ function ImportDialog({ onClose, onImported }: ImportDialogProps) {
       <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm">
         <div
           className="rounded-2xl shadow-2xl w-full max-w-md mx-4"
-          style={{ background: '#FFFFFF', border: '1px solid rgba(100,116,139,0.2)' }}
+          style={{ background: '#151A23', border: '1px solid rgba(120,130,149,0.2)' }}
         >
           {/* Header */}
           <div
             className="flex items-center justify-between px-6 py-4"
-            style={{ borderBottom: '1px solid rgba(100,116,139,0.15)' }}
+            style={{ borderBottom: '1px solid rgba(120,130,149,0.15)' }}
           >
             <div className="flex items-center gap-2">
-              <Sparkles size={18} style={{ color: '#0EA5E9' }} />
+              <Sparkles size={18} style={{ color: '#E4E9F2' }} />
               <h2 className="font-semibold text-ds-text">Importer un mémoire existant</h2>
             </div>
             <button onClick={onClose} className="text-ds-text-2 hover:text-ds-text transition-colors">
@@ -256,15 +256,15 @@ function ImportDialog({ onClose, onImported }: ImportDialogProps) {
               )}
               style={{
                 borderColor: dragOver
-                  ? '#0EA5E9'
+                  ? '#E4E9F2'
                   : file
-                  ? '#0EA5E9'
-                  : 'rgba(100,116,139,0.35)',
+                  ? '#E4E9F2'
+                  : 'rgba(120,130,149,0.35)',
                 background: dragOver
-                  ? 'rgba(14,165,233,0.08)'
+                  ? 'rgba(228,233,242,0.08)'
                   : file
                   ? 'rgba(0,212,170,0.08)'
-                  : '#F8FAFC',
+                  : '#141922',
               }}
             >
               <input
@@ -276,8 +276,8 @@ function ImportDialog({ onClose, onImported }: ImportDialogProps) {
               />
               {file ? (
                 <div className="flex flex-col items-center gap-2">
-                  <CheckCircle2 size={28} style={{ color: '#0284C7' }} />
-                  <p className="text-sm font-medium" style={{ color: '#0284C7' }}>{file.name}</p>
+                  <CheckCircle2 size={28} style={{ color: '#C3CCDC' }} />
+                  <p className="text-sm font-medium" style={{ color: '#C3CCDC' }}>{file.name}</p>
                   <p className="text-xs text-ds-text-3">{(file.size / 1024).toFixed(0)} Ko</p>
                 </div>
               ) : (
@@ -300,7 +300,7 @@ function ImportDialog({ onClose, onImported }: ImportDialogProps) {
           {/* Footer */}
           <div
             className="flex items-center justify-end gap-3 px-6 py-4"
-            style={{ borderTop: '1px solid rgba(100,116,139,0.15)' }}
+            style={{ borderTop: '1px solid rgba(120,130,149,0.15)' }}
           >
             <button
               onClick={onClose}
@@ -345,23 +345,23 @@ function Section({
   return (
     <div
       className="rounded-xl overflow-hidden"
-      style={{ border: '1px solid rgba(100,116,139,0.2)' }}
+      style={{ border: '1px solid rgba(120,130,149,0.2)' }}
     >
       <button
         onClick={onToggle}
         className="w-full flex items-center justify-between px-5 py-4 transition-colors text-left"
-        style={{ background: '#F1F5F9' }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = '#F1F5F9')}
-        onMouseLeave={(e) => (e.currentTarget.style.background = '#F1F5F9')}
+        style={{ background: '#1C222D' }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = '#1C222D')}
+        onMouseLeave={(e) => (e.currentTarget.style.background = '#1C222D')}
       >
         <div className="flex items-center gap-3">
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center"
             style={{
-              background: complete ? 'rgba(14,165,233,0.10)' : 'rgba(14,165,233,0.15)',
+              background: complete ? 'rgba(228,233,242,0.10)' : 'rgba(228,233,242,0.15)',
             }}
           >
-            <Icon size={16} style={{ color: complete ? '#0EA5E9' : '#0EA5E9' }} />
+            <Icon size={16} style={{ color: complete ? '#E4E9F2' : '#E4E9F2' }} />
           </div>
           <span className="font-medium text-ds-text">{section.label}</span>
         </div>
@@ -370,10 +370,10 @@ function Section({
             className="text-xs font-medium px-2 py-0.5 rounded-full"
             style={
               complete
-                ? { background: 'rgba(14,165,233,0.10)', color: '#0284C7' }
+                ? { background: 'rgba(228,233,242,0.10)', color: '#C3CCDC' }
                 : filled > 0
-                ? { background: 'rgba(100,116,139,0.08)', color: '#64748B' }
-                : { background: 'rgba(100,116,139,0.15)', color: '#64748B' }
+                ? { background: 'rgba(120,130,149,0.08)', color: '#9BA4B5' }
+                : { background: 'rgba(120,130,149,0.15)', color: '#9BA4B5' }
             }
           >
             {filled}/{total}
@@ -389,8 +389,8 @@ function Section({
         <div
           className="px-5 pb-5 pt-2 space-y-4"
           style={{
-            background: '#F8FAFC',
-            borderTop: '1px solid rgba(100,116,139,0.15)',
+            background: '#141922',
+            borderTop: '1px solid rgba(120,130,149,0.15)',
           }}
         >
           {children}
@@ -508,7 +508,7 @@ export default function MemoireConfig() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
-          <FileText size={24} style={{ color: '#0EA5E9' }} className="shrink-0" />
+          <FileText size={24} style={{ color: '#E4E9F2' }} className="shrink-0" />
           <div>
             <h1 className="text-2xl font-bold text-ds-text">Mémoire Technique</h1>
             <p className="text-sm text-ds-text-2">
@@ -535,12 +535,12 @@ export default function MemoireConfig() {
           }}
         >
           <div className="flex items-center gap-2">
-            <CheckCircle2 size={18} style={{ color: '#0284C7' }} />
-            <p className="text-sm font-medium" style={{ color: '#0284C7' }}>
+            <CheckCircle2 size={18} style={{ color: '#C3CCDC' }} />
+            <p className="text-sm font-medium" style={{ color: '#C3CCDC' }}>
               {importBanner.count}/18 champs pré-remplis par l'IA — vérifiez et complétez avant de sauvegarder
             </p>
           </div>
-          <button onClick={() => setImportBanner(null)} style={{ color: '#0284C7' }} className="opacity-70 hover:opacity-100 transition-opacity">
+          <button onClick={() => setImportBanner(null)} style={{ color: '#C3CCDC' }} className="opacity-70 hover:opacity-100 transition-opacity">
             <X size={16} />
           </button>
         </div>
@@ -554,20 +554,20 @@ export default function MemoireConfig() {
         </div>
         <div
           className="h-2 rounded-full overflow-hidden"
-          style={{ background: 'rgba(100,116,139,0.2)' }}
+          style={{ background: 'rgba(120,130,149,0.2)' }}
         >
           <div
             className="h-full rounded-full transition-all duration-500"
             style={{
               width: `${pct}%`,
               background: pct === 100
-                ? '#0EA5E9'
-                : `linear-gradient(to right, #0EA5E9, ${pct > 60 ? '#0EA5E9' : '#64748B'})`,
+                ? '#E4E9F2'
+                : `linear-gradient(to right, #E4E9F2, ${pct > 60 ? '#E4E9F2' : '#9BA4B5'})`,
             }}
           />
         </div>
         {pct === 100 && (
-          <p className="text-xs font-medium mt-2 flex items-center gap-1" style={{ color: '#0284C7' }}>
+          <p className="text-xs font-medium mt-2 flex items-center gap-1" style={{ color: '#C3CCDC' }}>
             <CheckCircle2 size={13} /> Profil mémoire complet — la génération sera optimale
           </p>
         )}
@@ -631,7 +631,7 @@ export default function MemoireConfig() {
               ))}
               <button onClick={() => set('chiffre_affaires', [...ca, { annee: '', montant: '' }])}
                 className="flex items-center gap-1.5 text-xs font-medium mt-1 transition-colors"
-                style={{ color: '#0EA5E9' }}
+                style={{ color: '#E4E9F2' }}
                 onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.8')}
                 onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
               >
@@ -654,7 +654,7 @@ export default function MemoireConfig() {
                 <div
                   key={i}
                   className="grid grid-cols-3 gap-2 items-start rounded-lg p-3"
-                  style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(100,116,139,0.15)' }}
+                  style={{ background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(120,130,149,0.15)' }}
                 >
                   <div>
                     <p className="text-xs text-ds-text-3 mb-1">Poste</p>
@@ -681,7 +681,7 @@ export default function MemoireConfig() {
               ))}
               <button onClick={() => set('postes_cles', [...postes, { poste: '', nom: '', role: '' }])}
                 className="flex items-center gap-1.5 text-xs font-medium transition-colors"
-                style={{ color: '#0EA5E9' }}
+                style={{ color: '#E4E9F2' }}
                 onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.8')}
                 onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
               >
@@ -743,8 +743,8 @@ export default function MemoireConfig() {
       <div
         className="fixed bottom-0 left-0 right-0 z-30 backdrop-blur px-6 py-3"
         style={{
-          background: 'rgba(15,23,42,0.92)',
-          borderTop: '1px solid rgba(100,116,139,0.2)',
+          background: 'rgba(0,0,0,0.92)',
+          borderTop: '1px solid rgba(120,130,149,0.2)',
         }}
       >
         <div className="max-w-3xl mx-auto flex items-center justify-between">
@@ -759,7 +759,7 @@ export default function MemoireConfig() {
             className="btn-primary flex items-center gap-2 font-semibold py-2.5 px-6 disabled:opacity-60"
           >
             {saveSuccess ? (
-              <><CheckCircle2 size={16} style={{ color: '#0284C7' }} />Sauvegardé</>
+              <><CheckCircle2 size={16} style={{ color: '#C3CCDC' }} />Sauvegardé</>
             ) : (
               <><Save size={16} />{isSaving ? 'Sauvegarde...' : 'Sauvegarder'}</>
             )}

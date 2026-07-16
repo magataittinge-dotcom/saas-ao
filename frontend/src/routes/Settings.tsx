@@ -4,9 +4,9 @@ import { useAuthStore } from '@/stores/authStore'
 import PaymentCard from '@/components/common/PaymentCard'
 
 const PLAN_LABELS: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  pro:      { label: 'Pro',      color: '#0284C7', bg: 'rgba(14,165,233,0.10)',  border: 'rgba(14,165,233,0.25)' },
-  business: { label: 'Business', color: '#0F172A', bg: 'rgba(15,23,42,0.08)',   border: 'rgba(15,23,42,0.20)' },
-  free:     { label: 'Gratuit',  color: '#64748B', bg: '#F8FAFC', border: '#E2E8F0' },
+  pro:      { label: 'Pro',      color: '#C3CCDC', bg: 'rgba(228,233,242,0.10)',  border: 'rgba(228,233,242,0.25)' },
+  business: { label: 'Business', color: '#F4F6FA', bg: '#232B38',   border: 'rgba(186,205,234,.23)' },
+  free:     { label: 'Gratuit',  color: '#9BA4B5', bg: '#141922', border: 'rgba(186,205,234,.13)' },
 }
 
 function SectionCard({ icon, title, children }: {
@@ -18,11 +18,11 @@ function SectionCard({ icon, title, children }: {
     <div className="glass-card overflow-hidden">
       <div
         className="flex items-center gap-3 px-6 py-4"
-        style={{ borderBottom: '1px solid rgba(14,165,233,0.08)', background: 'rgba(14,165,233,0.02)' }}
+        style={{ borderBottom: '1px solid rgba(228,233,242,0.08)', background: 'rgba(228,233,242,0.02)' }}
       >
         <div
           className="w-8 h-8 rounded-lg flex items-center justify-center"
-          style={{ background: 'rgba(14,165,233,0.10)', border: '1px solid rgba(14,165,233,0.18)' }}
+          style={{ background: 'rgba(228,233,242,0.10)', border: '1px solid rgba(228,233,242,0.18)' }}
         >
           {icon}
         </div>
@@ -35,7 +35,7 @@ function SectionCard({ icon, title, children }: {
 
 function InfoRow({ label, value }: { label: string; value?: ReactNode }) {
   return (
-    <div className="flex items-center justify-between py-2.5" style={{ borderBottom: '1px solid #F1F5F9' }}>
+    <div className="flex items-center justify-between py-2.5" style={{ borderBottom: '1px solid rgba(186,205,234,.13)' }}>
       <span className="text-sm text-ds-text-2">{label}</span>
       <span className="text-sm font-medium text-ds-text">{value ?? <span className="text-ds-text-3 italic">—</span>}</span>
     </div>
@@ -56,7 +56,7 @@ export default function Settings() {
       <div className="flex items-center gap-3">
         <div
           className="w-10 h-10 rounded-xl flex items-center justify-center"
-          style={{ background: 'rgba(14,165,233,0.10)', border: '1px solid rgba(14,165,233,0.18)' }}
+          style={{ background: 'rgba(228,233,242,0.10)', border: '1px solid rgba(228,233,242,0.18)' }}
         >
           <SettingsIcon size={18} className="text-ds-blue" />
         </div>
@@ -76,7 +76,7 @@ export default function Settings() {
             value={
               <span
                 className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium text-ds-blue-light"
-                style={{ background: 'rgba(14,165,233,0.10)', border: '1px solid rgba(14,165,233,0.20)' }}
+                style={{ background: 'rgba(228,233,242,0.10)', border: '1px solid rgba(228,233,242,0.20)' }}
               >
                 <Shield size={10} />
                 {user?.role ?? 'admin'}
@@ -139,8 +139,8 @@ export default function Settings() {
             href="/billing"
             className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 no-underline"
             style={{
-              background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 50%, #0369A1 100%)',
-              color: '#fff',
+              background: 'linear-gradient(135deg, #1C222D 0%, #232B38 55%, #3A4556 100%)',
+              color: '#F4F6FA',
               border: 'none',
               cursor: 'pointer',
             }}
@@ -155,12 +155,12 @@ export default function Settings() {
             href="/billing"
             className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm text-ds-text-2 transition-all duration-200 hover:text-ds-text no-underline"
             style={{
-              background: 'rgba(248,250,252,1)',
-              border: '1px solid #E2E8F0',
+              background: '#1C222D',
+              border: '1px solid rgba(186,205,234,.13)',
               cursor: 'pointer',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = '#F1F5F9')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(248,250,252,1)')}
+            onMouseEnter={(e) => (e.currentTarget.style.background = '#1C222D')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = '#1C222D')}
           >
             <span>Historique de facturation</span>
             <ChevronRight size={16} />
