@@ -135,7 +135,7 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) 
             : 'hover:bg-[#0F1218]',
         )}
         style={{
-          background: selected ? 'rgba(228,233,242,0.04)' : '#F4F6FA',
+          background: selected ? 'rgba(228,233,242,0.06)' : '#151A23',
           border: selected ? '2px solid #E4E9F2' : '1px solid rgba(186,205,234,.13)',
         }}
       >
@@ -320,8 +320,8 @@ function AddLotForm({ onAdd, onCancel }: AddLotFormProps) {
         />
       </div>
       <button type="submit" disabled={!num}
-        className="px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors disabled:opacity-40 shrink-0"
-        style={{ background: '#E9EDF5' }}>
+        className="px-4 py-2 rounded-lg text-sm font-semibold text-[#0F1218] transition-colors disabled:opacity-40 shrink-0"
+        style={{ background: 'linear-gradient(180deg, #FFFFFF, #E2E7F0)' }}>
         Ajouter
       </button>
       <button type="button" onClick={onCancel}
@@ -634,7 +634,7 @@ export default function StepLotSelection({ project }: Props) {
               Sélection du lot à analyser
             </h2>
             {lots.length > 0 && (
-              <span className="text-xs font-bold text-white px-3 py-1 rounded-full" style={{ background: '#E9EDF5' }}>
+              <span className="text-xs font-bold text-[#0F1218] px-3 py-1 rounded-full" style={{ background: '#E9EDF5' }}>
                 {lots.length} lot{lots.length > 1 ? 's' : ''} détecté{lots.length > 1 ? 's' : ''}
               </span>
             )}
@@ -747,7 +747,7 @@ export default function StepLotSelection({ project }: Props) {
         <div
           className="sticky bottom-0 mt-6 -mx-3 sm:-mx-4 px-5 py-3.5 flex items-center justify-between"
           style={{
-            background: 'rgba(255,255,255,0.90)',
+            background: 'rgba(10,12,17,0.92)',
             backdropFilter: 'blur(8px)',
             WebkitBackdropFilter: 'blur(8px)',
             borderTop: '1px solid rgba(186,205,234,.13)',
@@ -775,8 +775,8 @@ export default function StepLotSelection({ project }: Props) {
             <button
               onClick={handleLaunch}
               disabled={isAnalyzing || isSuccess}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              style={{ background: '#E9EDF5' }}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold text-[#0F1218] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ background: 'linear-gradient(180deg, #FFFFFF, #E2E7F0)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.9), 0 4px 18px -6px rgba(255,255,255,.30)' }}
               onMouseEnter={(e) => { if (!e.currentTarget.disabled) e.currentTarget.style.background = '#C3CCDC' }}
               onMouseLeave={(e) => { e.currentTarget.style.background = '#E4E9F2' }}
             >

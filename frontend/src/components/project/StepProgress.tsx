@@ -47,11 +47,11 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick }: 
                 className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all duration-300"
                 style={
                   isCompleted && !isActive
-                    ? { background: '#E4E9F2', borderColor: 'rgba(255,255,255,.40)', color: '#F4F6FA' }
+                    ? { background: 'linear-gradient(180deg, #FFFFFF, #C9D2E0)', borderColor: 'rgba(255,255,255,.45)', color: '#0F1218' }
                     : isActive && isCompleted
-                    ? { background: '#E4E9F2', borderColor: 'rgba(255,255,255,.40)', color: '#F4F6FA' }
+                    ? { background: 'linear-gradient(180deg, #FFFFFF, #C9D2E0)', borderColor: 'rgba(255,255,255,.45)', color: '#0F1218' }
                     : isActive
-                    ? { background: '#E4E9F2', borderColor: 'rgba(255,255,255,.40)', color: '#F4F6FA' }
+                    ? { background: 'linear-gradient(180deg, #FFFFFF, #C9D2E0)', borderColor: 'rgba(255,255,255,.45)', color: '#0F1218' }
                     : { background: '#1C222D', borderColor: 'rgba(186,205,234,.23)', color: '#C7CEDA' }
                 }
               >

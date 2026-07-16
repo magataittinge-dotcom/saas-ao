@@ -182,7 +182,7 @@ function TemplateRow({
           type="button"
           onClick={handlePick}
           disabled={uploading}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-60"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#0F1218] transition-colors hover:opacity-90 disabled:opacity-60"
           style={{ background: isPresent ? '#C7CEDA' : '#E4E9F2' }}
         >
           {uploading

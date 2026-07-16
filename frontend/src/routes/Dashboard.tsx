@@ -237,7 +237,7 @@ export default function Dashboard() {
               </p>
               <button
                 onClick={() => navigate('/projects/new')}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-semibold transition-colors"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-[#0F1218] text-sm font-semibold transition-colors"
                 style={{ background: '#E9EDF5' }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = '#C3CCDC' }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = '#E4E9F2' }}

@@ -379,7 +379,7 @@ export default function StepUpload({ project }: Props) {
           style={{
             border: '2px dashed',
             borderColor: isDragActive ? '#E4E9F2' : 'rgba(186,205,234,.13)',
-            background: isDragActive ? 'rgba(228,233,242,0.04)' : '#F4F6FA',
+            background: isDragActive ? 'rgba(228,233,242,0.06)' : '#151A23',
             padding: '48px 24px',
           }}
           onMouseEnter={(e) => {
@@ -423,7 +423,7 @@ export default function StepUpload({ project }: Props) {
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); open() }}
-            className="px-6 py-2.5 rounded-lg text-sm font-semibold text-white transition-colors"
+            className="px-6 py-2.5 rounded-lg text-sm font-semibold text-[#0F1218] transition-colors"
             style={{ background: '#E9EDF5' }}
             onMouseEnter={(e) => { e.currentTarget.style.background = '#C3CCDC' }}
             onMouseLeave={(e) => { e.currentTarget.style.background = '#E4E9F2' }}
@@ -597,7 +597,7 @@ export default function StepUpload({ project }: Props) {
         <div
           className="sticky bottom-0 mt-6 -mx-3 sm:-mx-4 px-5 py-3.5 flex items-center justify-between"
           style={{
-            background: 'rgba(255,255,255,0.90)',
+            background: 'rgba(10,12,17,0.92)',
             backdropFilter: 'blur(8px)',
             WebkitBackdropFilter: 'blur(8px)',
             borderTop: '1px solid rgba(186,205,234,.13)',

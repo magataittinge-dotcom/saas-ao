@@ -175,7 +175,7 @@ function Group({
                 type="button"
                 disabled={linkingId !== null}
                 onClick={() => onLink(doc)}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-60 shrink-0"
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-[#0F1218] transition-colors hover:opacity-90 disabled:opacity-60 shrink-0"
                 style={{ background: '#E9EDF5' }}
               >
                 {linkingId === doc.id
