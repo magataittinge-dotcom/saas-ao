@@ -1,5 +1,10 @@
+from pydantic import model_validator
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+
+# Valeur d'exemple de backend/.env.example — ne doit jamais tourner en prod
+# (SECRET_KEY signe les URLs de fichiers : un secret public = URLs forgeables).
+_SECRET_KEY_PLACEHOLDER = "your-secret-key-here-generate-with-openssl-rand-hex-32"
 
 
 class Settings(BaseSettings):
@@ -56,6 +61,41 @@ class Settings(BaseSettings):
 
     # CORS
     FRONTEND_URL: str = "http://localhost:3000"
+
+    @model_validator(mode="after")
+    def _fail_fast_prod_config(self) -> "Settings":
+        """O1 (audit prod) — en production (DEBUG=False), les variables dont
+        l'oubli casse l'app SILENCIEUSEMENT au premier usage doivent faire
+        échouer le BOOT, avec la liste complète de ce qui manque."""
+        if self.DEBUG:
+            return self
+        problems: list[str] = []
+        if self.SECRET_KEY == _SECRET_KEY_PLACEHOLDER or len(self.SECRET_KEY) < 32:
+            problems.append(
+                "SECRET_KEY : valeur d'exemple ou trop courte — générer avec `openssl rand -hex 32`"
+            )
+        if not self.CLERK_JWKS_URL:
+            problems.append(
+                "CLERK_JWKS_URL manquante — toute authentification échouerait (500) à la première requête"
+            )
+        if not self.CLERK_SECRET_KEY:
+            problems.append(
+                "CLERK_SECRET_KEY manquante — le sync utilisateur échouerait (502)"
+            )
+        if not self.STRIPE_WEBHOOK_SECRET:
+            problems.append(
+                "STRIPE_WEBHOOK_SECRET manquant — les paiements ne seraient jamais appliqués (webhook 500)"
+            )
+        if "localhost" in self.FRONTEND_URL or "127.0.0.1" in self.FRONTEND_URL:
+            problems.append(
+                "FRONTEND_URL pointe sur localhost — CORS bloquerait le domaine réel et les redirections Stripe seraient cassées"
+            )
+        if problems:
+            raise ValueError(
+                "Configuration de production invalide (DEBUG=false) :\n- "
+                + "\n- ".join(problems)
+            )
+        return self
 
     class Config:
         env_file = ".env"
