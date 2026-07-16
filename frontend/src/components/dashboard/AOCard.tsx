@@ -4,7 +4,9 @@ import { daysUntil } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import type { Project } from '@/types'
 
-const STEP_LABELS = ['Upload DCE', 'Analyse IA', 'Candidature', 'Mémoire', 'Export']
+const STEP_LABELS = ['Upload DCE', 'Sélection lots', 'Analyse IA', 'Candidature', 'Mémoire', 'Export']
+const TOTAL_STEPS = 6
+const TERMINAL_STATUSES = new Set(['soumis', 'gagné', 'perdu'])
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string; accent: string }> = {
   brouillon: { label: 'Brouillon', cls: 'pill-muted',   accent: '#9BA4B5' },
@@ -21,9 +23,17 @@ interface Props {
 
 export function AOCard({ project, onDelete }: Props) {
   const navigate = useNavigate()
+  const isTerminal = TERMINAL_STATUSES.has(project.status)
   const days = project.deadline ? daysUntil(project.deadline) : null
-  const isUrgent = days !== null && days <= 7
-  const progress = ((project.current_step - 1) / 4) * 100
+  const isUrgent = !isTerminal && days !== null && days <= 7
+  const doneSteps = isTerminal
+    ? TOTAL_STEPS
+    : Math.min(
+        project.completed_steps
+          ? Object.values(project.completed_steps).filter(Boolean).length
+          : project.current_step - 1,
+        TOTAL_STEPS,
+      )
   const status = STATUS_CONFIG[project.status] ?? STATUS_CONFIG.brouillon
   const accentColor = isUrgent ? '#F58E86' : status.accent
 
@@ -88,25 +98,35 @@ export function AOCard({ project, onDelete }: Props) {
         )}
       </div>
 
-      {/* Progress */}
+      {/* Avancement — 6 étapes */}
       <div className="relative">
         <div className="flex justify-between text-xs mb-1.5">
-          <span className="text-ds-text-3">{STEP_LABELS[project.current_step - 1]}</span>
+          <span className="text-ds-text-3">
+            {isTerminal ? 'Dossier complet' : STEP_LABELS[project.current_step - 1]}
+          </span>
           <span
             className="text-ds-text-2 font-medium"
-            style={{ fontFamily: "'Geist Mono', monospace" }}
+            style={{ fontFamily: "'Geist Mono', monospace", fontVariantNumeric: 'tabular-nums' }}
           >
-            {Math.round(progress)}%
+            {doneSteps}/{TOTAL_STEPS}
           </span>
         </div>
-        <div className="progress-track h-1.5">
-          <div className="progress-bar-gradient h-full" style={{ width: `${progress}%` }} />
+        <div className="steps-track w-full" style={{ display: 'flex' }}>
+          {Array.from({ length: TOTAL_STEPS }, (_, i) => (
+            <i
+              key={i}
+              className={
+                i < doneSteps ? 'done' : !isTerminal && i === project.current_step - 1 ? 'active' : ''
+              }
+              style={{ flex: 1, width: 'auto' }}
+            />
+          ))}
         </div>
       </div>
 
       {/* Footer */}
       <div className="flex items-center justify-between relative">
-        {project.deadline ? (
+        {project.deadline && !isTerminal ? (
           <div
             className={cn(
               'flex items-center gap-1.5 text-xs',

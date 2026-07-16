@@ -501,7 +501,7 @@ function DocumentView({
   const c = content.partie_c as Record<string, string>
 
   const partAItems: [string, string][] = [
-    ['implantation', '1. Implantation geographique'], ['historique', '2. Historique'],
+    ['implantation', '1. Implantation géographique'], ['historique', '2. Historique'],
     ['engagement_qualitatif', '3. Engagement qualitatif'], ['activites', '4. Nos activites'],
     ['organigramme', '5. Organigramme'], ['roles_missions', "6. Roles et missions de l'equipe d'encadrement"],
     ['moyens_informatiques', '7. Moyens informatiques'], ['vehicules', '8. Vehicules'],
@@ -542,18 +542,18 @@ function DocumentView({
           </div>
           <div className="text-right">
             <p className="text-lg font-bold" style={{ color: '#E4E9F2' }}>
-              MEMOIRE JUSTIFICATIF
+              MÉMOIRE JUSTIFICATIF
             </p>
             <p className="text-sm mt-1" style={{ color: '#C7CEDA' }}>{project.name}</p>
             <p className="text-xs mt-1" style={{ color: '#788295' }}>
-              Reference : MT-SYN-{new Date().getFullYear()}-001
+              Référence : MT-SYN-{new Date().getFullYear()}-001
             </p>
           </div>
         </div>
 
         {/* PRÉAMBULE */}
         <div id="preambule">
-          <PartHeading>PREAMBULE</PartHeading>
+          <PartHeading>PRÉAMBULE</PartHeading>
           <div id="preambule-intro" />
           <div id="preambule-contexte" />
           <MdContent text={content.preambule ?? ''} />
@@ -561,7 +561,7 @@ function DocumentView({
 
         {/* PARTIE A */}
         <div id="partie-a">
-          <PartHeading>PARTIE A — PRESENTATION GENERALE</PartHeading>
+          <PartHeading>PARTIE A — PRÉSENTATION GÉNÉRALE</PartHeading>
           {partAItems.map(([key, label]) =>
             a?.[key] ? (
               <div key={key} id={`sec-${key}`} className="mt-6">
@@ -574,7 +574,7 @@ function DocumentView({
 
         {/* PARTIE B */}
         <div id="partie-b">
-          <PartHeading>PARTIE B — PRESENTATION DE LA PRESTATION</PartHeading>
+          <PartHeading>PARTIE B — PRÉSENTATION DE LA PRESTATION</PartHeading>
           {partBItems.map(([key, label]) =>
             b?.[key] ? (
               <div key={key} id={`sec-${key}`} className="mt-6">
@@ -870,11 +870,11 @@ export default function StepMemoire({ project }: Props) {
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
               <h1 className="text-xl font-bold" style={{ color: '#F4F6FA' }}>
-                Memoire Technique — {lotName}
+                Mémoire technique — {lotName}
               </h1>
               <p className="text-xs mt-1" style={{ color: '#788295' }}>
                 {hasMemoire
-                  ? `v${memoire.version} — Generee le ${new Date(memoire.generated_at).toLocaleDateString('fr-FR')} par Synorix AI`
+                  ? `v${memoire.version} — Générée le ${new Date(memoire.generated_at).toLocaleDateString('fr-FR')} par Synorix AI`
                   : 'Generez un memoire technique complet adapte a votre projet'}
               </p>
             </div>
@@ -1095,7 +1095,7 @@ export default function StepMemoire({ project }: Props) {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold" style={{ color: '#F4F6FA' }}>
-              Memoire Technique — {lotName}
+              Mémoire technique — {lotName}
             </h1>
             <span
               className="text-xs font-medium px-2.5 py-1 rounded-full"
@@ -1134,7 +1134,7 @@ export default function StepMemoire({ project }: Props) {
 
         {/* Subtitle version line */}
         <p className="text-xs" style={{ color: '#788295' }}>
-          v{memoire!.version} — Generee le {new Date(memoire!.generated_at).toLocaleDateString('fr-FR')} par Synorix AI
+          v{memoire!.version} — Générée le {new Date(memoire!.generated_at).toLocaleDateString('fr-FR')} par Synorix AI
         </p>
 
         {/* ── 3-column layout ────────────────────────────────────── */}

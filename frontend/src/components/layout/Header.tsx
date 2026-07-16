@@ -107,8 +107,8 @@ export default function Header({ onMenuToggle }: Props) {
           <input type="text" placeholder="Recherche intelligente..."
             className="w-52 pl-9 pr-3 py-2 text-sm rounded-full outline-none transition-all duration-200"
             style={{
-              background: searchFocused ? '#F4F6FA' : '#1C222D',
-              border: searchFocused ? '1px solid #E4E9F2' : '1px solid transparent',
+              background: searchFocused ? '#232B38' : '#1C222D',
+              border: searchFocused ? '1px solid rgba(255,255,255,.45)' : '1px solid rgba(186,205,234,.13)',
               color: '#F4F6FA',
               fontFamily: "'Geist', sans-serif",
             }}
@@ -145,8 +145,8 @@ export default function Header({ onMenuToggle }: Props) {
               Chef de projet
             </p>
           </div>
-          <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white cursor-default shrink-0"
-            style={{ background: '#E9EDF5' }}>
+          <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold cursor-default shrink-0"
+            style={{ background: '#1C222D', border: '1px solid rgba(186,205,234,.23)', color: '#E4E9F2' }}>
             {initials}
           </div>
         </div>

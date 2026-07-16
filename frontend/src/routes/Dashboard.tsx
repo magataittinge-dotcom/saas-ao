@@ -266,7 +266,15 @@ export default function Dashboard() {
 
               {/* Table rows */}
               {active.slice(0, 8).map((p, i) => {
-                const progress = ((p.current_step - 1) / 5) * 100
+                const doneSteps = ['soumis', 'gagné', 'perdu'].includes(p.status)
+                  ? 6
+                  : Math.min(
+                      p.completed_steps
+                        ? Object.values(p.completed_steps).filter(Boolean).length
+                        : p.current_step - 1,
+                      6,
+                    )
+                const progress = (doneSteps / 6) * 100
                 const status = STATUS_MAP[p.status] ?? STATUS_MAP.brouillon
                 const days = p.deadline ? daysUntil(p.deadline) : null
                 const deadlineColor = days !== null && days <= 3
@@ -322,8 +330,8 @@ export default function Dashboard() {
                           style={{ width: `${progress}%` }}
                         />
                       </div>
-                      <span className="text-[11px] font-semibold tabular-nums w-[32px] text-right" style={{ color: progressColor }}>
-                        {Math.round(progress)}%
+                      <span className="text-[11px] font-semibold tabular-nums w-[32px] text-right" style={{ color: progressColor, fontFamily: "'Geist Mono', monospace" }}>
+                        {doneSteps}/6
                       </span>
                     </div>
 
