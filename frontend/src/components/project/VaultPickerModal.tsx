@@ -4,7 +4,7 @@ import { X, FileText, Search, Loader2, AlertCircle, Upload } from 'lucide-react'
 import { useDocuments } from '@/hooks/useDocuments'
 import type { ChecklistItem, Document } from '@/types'
 
-const F = "'DM Sans', sans-serif"
+const F = "'Geist Sans', sans-serif"
 
 interface Props {
   item: ChecklistItem

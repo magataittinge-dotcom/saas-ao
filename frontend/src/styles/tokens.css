@@ -1,206 +1,310 @@
 /* ═══════════════════════════════════════════════════════════════
-   SYNORIX EDGE — DESIGN TOKENS
-   « Engineered glass at dusk, éclairé cyan »
-   Surfaces graphite (luminance seule) · hairlines 1px · la LUMIÈRE
-   cyan (#22D3EE) est l'unique accent : l'état interactif se signale
-   par la ligne d'horizon (liseré 2px en bas) + glow doux, jamais
-   par un aplat. Profondeur par la lumière, pas par les drop-shadows.
+   SYNORIX DESIGN TOKENS — « LUMEN »
+   Verre technique au crépuscule : graphite bleuté, filets lumineux,
+   zéro couleur de marque — la lumière porte les états.
+   Statuts métier (seule exception chromatique) : vert / ambre / corail.
+   Typo : Geist Sans (UI) · Geist Mono (données) — self-hosted (@fontsource).
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  /* ── Surfaces (luminance-only, graphite) ─────────────────────── */
-  --edge-void:     #0A0B0D;   /* fond app */
-  --edge-graphite: #121417;   /* panneaux */
-  --edge-panel:    #1A1D21;   /* cartes */
-  --edge-slate:    #232730;   /* surélevé / hover */
+  /* ── Fonds (graphite bleuté « dusk ») ─────────────────────── */
+  --bg-deep: #0A0C11;      /* body / sidebar */
+  --bg: #0F1218;           /* contenu */
+  --surface: #151A23;      /* cartes */
+  --surface-2: #1C222D;    /* cartes imbriquées, inputs, hover */
+  --surface-3: #232B38;    /* état actif */
 
-  /* ── Hairlines (jamais de border épaisse) ────────────────────── */
-  --edge-hairline:       rgba(255, 255, 255, 0.06);
-  --edge-hairline-hover: rgba(255, 255, 255, 0.10);
+  /* ── Filets lumineux ──────────────────────────────────────── */
+  --line: rgba(186, 205, 234, .13);
+  --line-strong: rgba(186, 205, 234, .23);
 
-  /* ── La lumière = le cyan ────────────────────────────────────── */
-  --edge-lumen:     #22D3EE;
-  --edge-lumen-400: #22D3EE;
-  --edge-lumen-300: #67E8F9;
-  --edge-lumen-500: #06B6D4;
-  --edge-glow:      0 8px 24px -12px rgba(34, 211, 238, 0.35);
-  --edge-horizon:   inset 0 -2px 0 0 var(--edge-lumen);
+  /* ── Écritures (blanc-gris) ───────────────────────────────── */
+  --ink: #F4F6FA;
+  --ink-2: #C7CEDA;
+  --ink-3: #9BA4B5;
+  --ink-4: #788295;
 
-  /* ── Texte (AA sur --edge-panel pour text / text-2) ──────────── */
-  --edge-text:   #E7EAEE;
-  --edge-text-2: #9AA3AE;
-  --edge-text-3: #6B7280;   /* méta uniquement — jamais du texte de lecture */
+  /* ── Lumière (remplace l'accent cyan) ─────────────────────── */
+  --lum: #E4E9F2;
+  --lum-bright: #FFFFFF;
+  --lum-dim: #9FA9BC;
+  --glow-white: rgba(255, 255, 255, .22);
 
-  /* ── États métier ────────────────────────────────────────────── */
-  --edge-success: #34D399;
-  --edge-warning: #FBBF24;
-  --edge-danger:  #F87171;
+  /* ── Statuts métier — seule exception chromatique ─────────── */
+  --ok: #6EE7A8;    --ok-bg: rgba(110, 231, 168, .09);   --ok-line: rgba(110, 231, 168, .22);
+  --warn: #F5C26B;  --warn-bg: rgba(245, 194, 107, .09); --warn-line: rgba(245, 194, 107, .22);
+  --bad: #F58E86;   --bad-bg: rgba(245, 142, 134, .10);  --bad-line: rgba(245, 142, 134, .24);
 
-  /* ── Lueur radiale des panneaux (éclairés par le bas) ────────── */
-  --edge-panel-light: radial-gradient(120% 80% at 50% 100%, rgba(34, 211, 238, 0.05), transparent 60%);
+  /* ── Ombres & reliefs ─────────────────────────────────────── */
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, .5), 0 16px 40px -20px rgba(0, 0, 0, .7);
+  --shadow-card-hover: 0 1px 2px rgba(0, 0, 0, .5), 0 20px 48px -20px rgba(0, 0, 0, .8), 0 0 0 1px var(--line-strong);
+  --shadow-horizon: var(--shadow-card);
+  --shadow-horizon-hover: var(--shadow-card-hover);
+  --edge-light: inset 0 1px 0 rgba(255, 255, 255, .06);
+  /* éclairage par le bas — la signature Lumen */
+  --bottom-lit: radial-gradient(130% 115% at 50% 128%, rgba(255, 255, 255, .07), transparent 56%);
 
-  /* ── Motion ──────────────────────────────────────────────────── */
-  --edge-ease: cubic-bezier(0.15, 0.83, 0.66, 1);
-
-  /* ── Radius : 10px cartes · 8px contrôles ────────────────────── */
-  --radius-card: 10px;
-  --radius-lg:   10px;
-  --radius-md:   10px;
-  --radius-sm:   8px;
-
-  /* ── Aliases legacy (anciens tokens light → Edge) ────────────── */
-  --card-navy:      var(--edge-panel);
-  --card-navy-alt:  var(--edge-graphite);
-  --text-primary:   var(--edge-text);
-  --text-secondary: var(--edge-text-2);
-  --text-tertiary:  var(--edge-text-3);
-  --text-muted:     #4B5563;
-  --accent-cyan:       var(--edge-lumen);
-  --accent-cyan-light: var(--edge-lumen-300);
-  --accent-teal:   var(--edge-success);
-  --accent-green:  var(--edge-success);
-  --accent-violet: var(--edge-lumen);   /* violet banni — retombe sur la lumière */
-  --accent-amber:  var(--edge-warning);
-  --accent-red:    var(--edge-danger);
-
-  --shadow-card:        inset 0 0 0 1px var(--edge-hairline);
-  --shadow-card-hover:  inset 0 0 0 1px var(--edge-hairline-hover), var(--edge-glow);
-  --shadow-horizon:       inset 0 0 0 1px var(--edge-hairline);
-  --shadow-horizon-hover: inset 0 0 0 1px var(--edge-hairline-hover), var(--edge-glow);
-
-  --bg-gradient-1: none;
+  /* ── Compat anciens tokens (remappés Lumen) ───────────────── */
+  --glass-opacity: 1;
+  --glass-blur: 0px;
+  --glass-border-opacity: 1;
+  --glass-saturate: 100%;
+  --glass-hover-opacity: 1;
+  --glass-hover-border: 1;
+  --card-navy: var(--surface);
+  --card-navy-alt: var(--surface-2);
+  --text-primary: var(--ink);
+  --text-secondary: var(--ink-3);
+  --text-tertiary: var(--ink-4);
+  --text-muted: #5C6678;
+  --radius-card: 12px;
+  --radius-lg: 12px;
+  --radius-md: 10px;
+  --radius-sm: 8px;
+  --accent-cyan: var(--lum);
+  --accent-cyan-light: var(--lum-bright);
+  --accent-teal: var(--ok);
+  --accent-violet: var(--lum);       /* violet éradiqué */
+  --accent-green: var(--ok);
+  --accent-amber: var(--warn);
+  --accent-red: var(--bad);
+  --bg-gradient-1: radial-gradient(1100px 460px at 50% -150px, rgba(255,255,255,.06), transparent 62%);
   --bg-gradient-2: none;
   --bg-gradient-3: none;
+
+  /* ── Compat tokens Edge (refactor-v2) — remappés Lumen ────── */
+  --edge-void:     var(--bg-deep);
+  --edge-graphite: var(--bg);
+  --edge-panel:    var(--surface);
+  --edge-slate:    var(--surface-2);
+  --edge-hairline:       var(--line);
+  --edge-hairline-hover: var(--line-strong);
+  --edge-lumen:     var(--lum);
+  --edge-lumen-300: var(--lum-bright);
+  --edge-lumen-400: var(--lum);
+  --edge-lumen-500: var(--lum-dim);
+  --edge-glow:    0 8px 24px -12px rgba(255, 255, 255, .30);
+  --edge-horizon: inset 0 -2px 0 0 var(--lum);
+  --edge-text:   var(--ink);
+  --edge-text-2: var(--ink-3);
+  --edge-text-3: var(--ink-4);
+  --edge-success: var(--ok);
+  --edge-warning: var(--warn);
+  --edge-danger:  var(--bad);
+  --edge-panel-light: var(--bottom-lit);
+  --edge-ease: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ── Carte Edge — panneau éclairé par le bas, hairline 1px ────── */
+/* ── Cartes ──────────────────────────────────────────────────── */
 .glass-card {
-  background: var(--edge-panel-light), var(--edge-panel);
-  border: none;
+  background-color: var(--surface);
+  background-image: var(--bottom-lit);
+  border: 1px solid var(--line);
   border-radius: var(--radius-card);
-  box-shadow: inset 0 0 0 1px var(--edge-hairline);
-  transition: box-shadow 0.18s var(--edge-ease);
+  box-shadow: var(--shadow-card), var(--edge-light);
+  transition: border-color .2s cubic-bezier(.4, 0, .2, 1),
+              box-shadow .2s cubic-bezier(.4, 0, .2, 1),
+              transform .2s cubic-bezier(.4, 0, .2, 1);
 }
-
 .glass-card:hover {
-  box-shadow: inset 0 0 0 1px var(--edge-hairline-hover), var(--edge-glow);
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-card-hover), var(--edge-light);
 }
 
-/* ── Stat card ────────────────────────────────────────────────── */
 .glass-stat {
-  background: var(--edge-panel-light), var(--edge-panel);
-  border: none;
+  background-color: var(--surface);
+  background-image: var(--bottom-lit);
+  border: 1px solid var(--line);
   border-radius: var(--radius-card);
-  box-shadow: inset 0 0 0 1px var(--edge-hairline);
+  box-shadow: var(--shadow-card), var(--edge-light);
   overflow: hidden;
-  transition: box-shadow 0.18s var(--edge-ease), transform 0.18s var(--edge-ease);
+  transition: border-color .2s cubic-bezier(.4, 0, .2, 1),
+              box-shadow .2s cubic-bezier(.4, 0, .2, 1),
+              transform .2s cubic-bezier(.4, 0, .2, 1);
 }
-
 .glass-stat:hover {
-  box-shadow: inset 0 0 0 1px var(--edge-hairline-hover), var(--edge-glow);
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-card-hover), var(--edge-light);
   transform: translateY(-1px);
 }
 
-/* ── Sidebar — void, hairline droite ──────────────────────────── */
+/* ── Sidebar ─────────────────────────────────────────────────── */
 .glass-sidebar {
-  background: var(--edge-void);
-  border-right: 1px solid var(--edge-hairline);
-  transition: transform 0.3s var(--edge-ease), width 0.3s var(--edge-ease);
+  background: var(--bg-deep);
+  border-right: 1px solid var(--line);
+  transition: transform .3s cubic-bezier(.4, 0, .2, 1), width .3s cubic-bezier(.4, 0, .2, 1);
 }
-
 @media (max-width: 767px) {
   .glass-sidebar {
-    background: var(--edge-void);
+    background: var(--bg-deep);
     width: 260px;
-    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.45);
+    box-shadow: 8px 0 32px rgba(0, 0, 0, .6);
   }
 }
 
-/* ── Header — graphite translucide, hairline basse ────────────── */
+/* ── Header — porte la ligne d'horizon ───────────────────────── */
 .glass-header {
-  background: rgba(10, 11, 13, 0.85);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--edge-hairline);
-  transition: background 0.18s var(--edge-ease);
+  background: rgba(10, 12, 17, .55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--line);
+  position: relative;
+  transition: all .2s cubic-bezier(.4, 0, .2, 1);
+}
+.glass-header::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.5) 30%, rgba(255,255,255,.5) 60%, transparent);
+  box-shadow: 0 0 12px rgba(255,255,255,.22);
+  pointer-events: none;
 }
 
-/* ── Input — void inset, focus = horizon cyan ─────────────────── */
+/* ── Inputs ──────────────────────────────────────────────────── */
 .glass-input {
-  background: var(--edge-void);
-  border: none;
-  box-shadow: inset 0 0 0 1px var(--edge-hairline);
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
-  color: var(--edge-text);
-  transition: box-shadow 0.18s var(--edge-ease);
+  color: var(--ink);
+  transition: all .2s cubic-bezier(.4, 0, .2, 1);
 }
-
-.glass-input::placeholder { color: var(--edge-text-3); }
-
 .glass-input:focus {
+  background: var(--surface-2);
+  border-color: rgba(255, 255, 255, .45);
   outline: none;
-  box-shadow: inset 0 0 0 1px var(--edge-hairline-hover),
-              var(--edge-horizon),
-              var(--edge-glow);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, .10), 0 0 20px -6px rgba(255, 255, 255, .35);
 }
 
-/* ── Bouton neutre ────────────────────────────────────────────── */
+/* ── Boutons verre ───────────────────────────────────────────── */
 .glass-btn {
-  background: var(--edge-graphite);
-  border: none;
-  box-shadow: inset 0 0 0 1px var(--edge-hairline);
-  color: var(--edge-text-2);
-  transition: box-shadow 0.18s var(--edge-ease), color 0.18s var(--edge-ease);
+  background: var(--surface-2);
+  background-image: var(--bottom-lit);
+  border: 1px solid var(--line-strong);
+  transition: all .2s cubic-bezier(.4, 0, .2, 1);
 }
-
 .glass-btn:hover {
-  box-shadow: inset 0 0 0 1px var(--edge-hairline-hover), var(--edge-horizon), var(--edge-glow);
-  color: var(--edge-text);
+  background-color: var(--surface-3);
+  border-color: var(--line-strong);
 }
 
-/* ── Nav item — l'actif porte la ligne d'horizon ──────────────── */
+/* ── Nav item ────────────────────────────────────────────────── */
 .glass-nav {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 0.75rem;
+  gap: .75rem;
+  padding: .5rem .75rem;
   border-radius: var(--radius-sm);
-  font-size: 0.875rem;
+  font-size: .875rem;
   font-weight: 500;
-  color: var(--edge-text-2);
-  transition: color 0.18s var(--edge-ease), background 0.18s var(--edge-ease), box-shadow 0.18s var(--edge-ease);
+  color: var(--ink-3);
+  transition: all .2s cubic-bezier(.4, 0, .2, 1);
   position: relative;
   cursor: pointer;
 }
-
 .glass-nav:hover {
-  background: var(--edge-slate);
-  color: var(--edge-text);
+  background: rgba(228, 233, 242, .05);
+  color: var(--ink);
 }
-
 .glass-nav.active {
-  background: var(--edge-panel);
-  color: var(--edge-text);
-  box-shadow: inset 0 0 0 1px var(--edge-hairline), var(--edge-horizon), var(--edge-glow);
+  background: var(--surface-2);
+  background-image: var(--bottom-lit);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  box-shadow: var(--edge-light);
 }
 
-/* ── Badge ────────────────────────────────────────────────────── */
+/* ── Badge ───────────────────────────────────────────────────── */
 .glass-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  padding: 0.125rem 0.625rem;
+  gap: .25rem;
+  padding: .125rem .625rem;
   border-radius: 999px;
-  font-size: 0.75rem;
+  font-size: .75rem;
   font-weight: 500;
-  transition: background 0.18s ease;
+  transition: all .2s ease;
 }
 
-/* ── Modale auth ──────────────────────────────────────────────── */
+/* ── Auth (modal) ────────────────────────────────────────────── */
 .glass-auth {
-  background: var(--edge-panel-light), var(--edge-panel);
-  border: none;
-  border-radius: 16px;
-  box-shadow: inset 0 0 0 1px var(--edge-hairline), 0 24px 60px rgba(0, 0, 0, 0.5);
-  transition: box-shadow 0.18s var(--edge-ease);
+  background: var(--surface);
+  background-image: var(--bottom-lit);
+  border: 1px solid var(--line-strong);
+  border-radius: 20px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .7), var(--edge-light);
+  transition: all .2s cubic-bezier(.4, 0, .2, 1);
+}
+
+/* ── Utilitaires Lumen ───────────────────────────────────────── */
+/* étiquette mono technique (labels de cartes, en-têtes de table) */
+.microlabel {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+
+/* la ligne d'horizon — utilisable seule */
+.horizon-line {
+  position: relative;
+}
+.horizon-line::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.5) 30%, rgba(255,255,255,.5) 60%, transparent);
+  box-shadow: 0 0 12px rgba(255,255,255,.22);
+  pointer-events: none;
+}
+
+/* trait lumineux en haut d'une carte « live » */
+.top-lit {
+  position: relative;
+  overflow: hidden;
+}
+.top-lit::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 24%; right: 24%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent);
+  box-shadow: 0 0 8px rgba(255,255,255,.25);
+  pointer-events: none;
+}
+
+/* grille technique en fondu (héros, zones d'accueil) */
+.blueprint-grid {
+  position: relative;
+}
+.blueprint-grid::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(rgba(255,255,255,.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.05) 1px, transparent 1px);
+  background-size: 48px 48px;
+  -webkit-mask-image: radial-gradient(110% 55% at 50% 0%, black 20%, transparent 72%);
+  mask-image: radial-gradient(110% 55% at 50% 0%, black 20%, transparent 72%);
+}
+
+/* avancement 6 étapes — remplace les % mensongers */
+.steps-track { display: inline-flex; gap: 3px; }
+.steps-track i {
+  width: 15px; height: 3px;
+  border-radius: 1.5px;
+  background: rgba(186, 205, 234, .15);
+}
+.steps-track i.done { background: linear-gradient(180deg, #DFE5F0, #9FA9BC); }
+.steps-track i.active { background: rgba(223, 229, 240, .45); }
+
+/* données chiffrées : mono tabulaire */
+.num-mono {
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
 }

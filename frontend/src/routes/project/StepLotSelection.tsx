@@ -29,7 +29,7 @@ const ANALYSIS_STEPS_FOR_DISPLAY: StepDescriptor[] = [
 import { cn } from '@/lib/utils'
 import { AiTipsBlock, type TipData } from '@/components/common/AiTip'
 
-const F = "'DM Sans', sans-serif"
+const F = "'Geist Sans', sans-serif"
 
 interface Props { project: Project }
 

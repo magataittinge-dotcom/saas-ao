@@ -6,7 +6,7 @@ import { api } from '@/services/api'
 import { formatMontant } from '@/lib/utils'
 import AiTip from '@/components/common/AiTip'
 
-const F = "'DM Sans', sans-serif"
+const F = "'Geist Sans', sans-serif"
 
 // ── Contrat backend (POST /api/calculators/retenue-garantie) ─────────────────
 // NB — le calculateur OAB a été retiré (frontière chiffrage FERME, CLAUDE.md).

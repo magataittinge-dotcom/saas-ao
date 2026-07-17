@@ -25,7 +25,7 @@ const MEMOIRE_GEN_STEPS: StepDescriptor[] = [
   { key: 'finalizing', label: 'Finalisation',                    estimated_s: 5 },
 ]
 
-const F = "'DM Sans', sans-serif"
+const F = "'Geist Sans', sans-serif"
 
 // ─── Section definitions for TOC ─────────────────────────────────────────────
 

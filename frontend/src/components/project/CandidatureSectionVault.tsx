@@ -4,7 +4,7 @@ import {
 } from 'lucide-react'
 import type { ChecklistItem } from '@/types'
 
-const F = "'DM Sans', sans-serif"
+const F = "'Geist Sans', sans-serif"
 
 type VaultCategory = 'administratif' | 'assurances' | 'financier' | 'technique'
 

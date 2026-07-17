@@ -11,7 +11,7 @@ import VaultPickerModal from '@/components/project/VaultPickerModal'
 import { RequirementListSkeleton } from '@/components/skeletons'
 import type { Project, ChecklistItem, Document } from '@/types'
 
-const F = "'DM Sans', sans-serif"
+const F = "'Geist Sans', sans-serif"
 
 interface Props { project: Project }
 

@@ -165,7 +165,7 @@ export default function Landing() {
   return (
     <div
       className="min-h-screen w-full overflow-x-hidden"
-      style={{ background: '#050608', color: '#232730', fontFamily: '"DM Sans", system-ui, sans-serif' }}
+      style={{ background: '#050608', color: '#232730', fontFamily: '"Geist Sans", system-ui, sans-serif' }}
     >
       <style>{KEYFRAMES}</style>
 
@@ -228,7 +228,7 @@ export default function Landing() {
               </div>
               <span
                 className="font-extrabold text-lg tracking-tight"
-                style={{ fontFamily: '"DM Sans", system-ui, sans-serif', color: '#E7EAEE' }}
+                style={{ fontFamily: '"Geist Sans", system-ui, sans-serif', color: '#E7EAEE' }}
               >
                 Synorix
               </span>
@@ -341,7 +341,7 @@ export default function Landing() {
           {/* Title */}
           <h1
             className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] mb-6 max-w-4xl"
-            style={{ fontFamily: '"DM Sans", system-ui, sans-serif', animation: 'fade-up 0.6s ease-out 0.1s both' }}
+            style={{ fontFamily: '"Geist Sans", system-ui, sans-serif', animation: 'fade-up 0.6s ease-out 0.1s both' }}
           >
             Ne perdez plus de{' '}
             <br className="hidden sm:block" />
@@ -453,7 +453,7 @@ export default function Landing() {
                     style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}
                   >
                     <div className="text-[10px] text-[#9AA3AE] mb-1">{s.label}</div>
-                    <div className="text-xl font-bold" style={{ color: s.color, fontFamily: '"JetBrains Mono", monospace' }}>{s.val}</div>
+                    <div className="text-xl font-bold" style={{ color: s.color, fontFamily: '"Geist Mono", monospace' }}>{s.val}</div>
                   </div>
                 ))}
               </div>
@@ -494,7 +494,7 @@ export default function Landing() {
               <span
                 key={i}
                 className="inline-block text-lg font-semibold text-[#C9CFD6] mx-10 sm:mx-16"
-                style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}
+                style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}
               >
                 {name}
               </span>
@@ -511,7 +511,7 @@ export default function Landing() {
           <div className="text-center mb-16">
             <h2
               className="text-3xl sm:text-4xl font-bold mb-4"
-              style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}
+              style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}
             >
               Une IA experte en{' '}
               <span style={{ background: 'linear-gradient(90deg, #22D3EE, #67E8F9)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
@@ -535,7 +535,7 @@ export default function Landing() {
                   <Search size={18} style={{ color: '#22D3EE' }} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-[#232730] mb-1" style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}>Analyse DCE intelligente</h3>
+                  <h3 className="text-lg font-semibold text-[#232730] mb-1" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Analyse DCE intelligente</h3>
                   <p className="text-sm text-[#9AA3AE] leading-relaxed">Multi-pass sur RC, CCTP, DPGF. Chaque exigence est extraite avec sa source, sa page, et sa priorité.</p>
                 </div>
               </div>
@@ -560,7 +560,7 @@ export default function Landing() {
               <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: 'rgba(0,212,170,0.12)' }}>
                 <Layers size={18} style={{ color: '#67E8F9' }} />
               </div>
-              <h3 className="text-base font-semibold text-[#232730] mb-2" style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}>Détection des lots</h3>
+              <h3 className="text-base font-semibold text-[#232730] mb-2" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Détection des lots</h3>
               <p className="text-sm text-[#9AA3AE] leading-relaxed">L'IA identifie tous les lots depuis le DPGF, RC et noms de fichiers. Badge de confiance pour chaque détection.</p>
             </div>
 
@@ -572,7 +572,7 @@ export default function Landing() {
               <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: 'rgba(139,92,246,0.12)' }}>
                 <Shield size={18} style={{ color: '#22D3EE' }} />
               </div>
-              <h3 className="text-base font-semibold text-[#232730] mb-2" style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}>Coffre-fort documents</h3>
+              <h3 className="text-base font-semibold text-[#232730] mb-2" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Coffre-fort documents</h3>
               <p className="text-sm text-[#9AA3AE] leading-relaxed">Centralisez décennale, URSSAF, Kbis. Alerte avant expiration. Lié automatiquement à la checklist candidature.</p>
             </div>
 
@@ -586,7 +586,7 @@ export default function Landing() {
                   <FileText size={18} style={{ color: '#22D3EE' }} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-[#232730] mb-1" style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}>Mémoire technique 5/5</h3>
+                  <h3 className="text-lg font-semibold text-[#232730] mb-1" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Mémoire technique 5/5</h3>
                   <p className="text-sm text-[#9AA3AE] leading-relaxed">Claude Opus génère ~20 pages adaptées à vos références, votre équipe, et chaque critère de notation du marché.</p>
                 </div>
               </div>
@@ -610,7 +610,7 @@ export default function Landing() {
               <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: 'rgba(245,158,11,0.12)' }}>
                 <Download size={18} style={{ color: '#9AA3AE' }} />
               </div>
-              <h3 className="text-base font-semibold text-[#232730] mb-2" style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}>Export ZIP pro</h3>
+              <h3 className="text-base font-semibold text-[#232730] mb-2" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Export ZIP pro</h3>
               <p className="text-sm text-[#9AA3AE] leading-relaxed">Mémoire .docx, compliance Excel, dossier complet. Prêt à déposer en un clic sur la plateforme de l'acheteur.</p>
             </div>
           </div>
@@ -624,7 +624,7 @@ export default function Landing() {
         <div className="max-w-4xl mx-auto">
           <h2
             className="text-3xl sm:text-4xl font-bold text-center mb-4"
-            style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}
+            style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}
           >
             De l'analyse au dépôt en{' '}
             <span style={{ background: 'linear-gradient(90deg, #22D3EE, #67E8F9)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
@@ -658,7 +658,7 @@ export default function Landing() {
             <div>
               <h3
                 className="text-xl font-semibold text-[#232730] mb-3"
-                style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}
+                style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}
               >
                 {activeTabData.num}. {activeTabData.title}
               </h3>
@@ -692,7 +692,7 @@ export default function Landing() {
             <div key={s.label}>
               <div
                 className="text-4xl sm:text-5xl font-bold mb-2"
-                style={{ color: s.color, fontFamily: '"JetBrains Mono", monospace' }}
+                style={{ color: s.color, fontFamily: '"Geist Mono", monospace' }}
               >
                 {s.value}
               </div>
@@ -709,7 +709,7 @@ export default function Landing() {
         <div className="max-w-4xl mx-auto">
           <h2
             className="text-3xl sm:text-4xl font-bold text-center mb-4"
-            style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}
+            style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}
           >
             Des prix simples, un{' '}
             <span style={{ background: 'linear-gradient(90deg, #22D3EE, #67E8F9)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
@@ -741,12 +741,12 @@ export default function Landing() {
                 )}
                 <h3
                   className="text-xl font-bold text-[#232730] mb-2"
-                  style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}
+                  style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}
                 >
                   {plan.name}
                 </h3>
                 <div className="flex items-baseline gap-1 mb-6">
-                  <span className="text-4xl font-bold text-white" style={{ fontFamily: '"JetBrains Mono", monospace' }}>{plan.price}€</span>
+                  <span className="text-4xl font-bold text-white" style={{ fontFamily: '"Geist Mono", monospace' }}>{plan.price}€</span>
                   <span className="text-sm text-[#9AA3AE]">/mois</span>
                 </div>
                 <ul className="space-y-3 mb-8">
@@ -788,7 +788,7 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto">
           <h2
             className="text-3xl sm:text-4xl font-bold text-center mb-14"
-            style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}
+            style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}
           >
             Ce qu'en disent nos utilisateurs
           </h2>
@@ -831,7 +831,7 @@ export default function Landing() {
         <div className="relative z-10">
           <h2
             className="text-3xl sm:text-5xl font-bold mb-6"
-            style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}
+            style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}
           >
             Prêt à gagner plus de{' '}
             <span style={{ background: 'linear-gradient(90deg, #22D3EE, #67E8F9)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
@@ -863,7 +863,7 @@ export default function Landing() {
       <footer className="border-t border-white/[0.06] py-16 px-4" style={{ background: '#050608' }}>
         <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-10">
           <div>
-            <h4 className="text-sm font-semibold text-[#232730] mb-4" style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}>Produit</h4>
+            <h4 className="text-sm font-semibold text-[#232730] mb-4" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Produit</h4>
             <ul className="space-y-2.5 text-sm text-[#9AA3AE]">
               <li><button onClick={() => scrollTo('features')} className="hover:text-white transition-colors bg-transparent border-none cursor-pointer text-[#9AA3AE] text-sm p-0">Fonctionnalités</button></li>
               <li><button onClick={() => scrollTo('pricing')} className="hover:text-white transition-colors bg-transparent border-none cursor-pointer text-[#9AA3AE] text-sm p-0">Tarifs</button></li>
@@ -871,7 +871,7 @@ export default function Landing() {
             </ul>
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-[#232730] mb-4" style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}>Ressources</h4>
+            <h4 className="text-sm font-semibold text-[#232730] mb-4" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Ressources</h4>
             <ul className="space-y-2.5 text-sm text-[#9AA3AE]">
               <li>Documentation</li>
               <li>Blog</li>
@@ -879,7 +879,7 @@ export default function Landing() {
             </ul>
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-[#232730] mb-4" style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}>Légal</h4>
+            <h4 className="text-sm font-semibold text-[#232730] mb-4" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Légal</h4>
             <ul className="space-y-2.5 text-sm text-[#9AA3AE]">
               <li><Link to="/legal/mentions-legales" className="hover:text-white transition-colors">Mentions légales</Link></li>
               <li><Link to="/legal/cgu" className="hover:text-white transition-colors">CGU</Link></li>
@@ -889,7 +889,7 @@ export default function Landing() {
             </ul>
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-[#232730] mb-4" style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}>Contact</h4>
+            <h4 className="text-sm font-semibold text-[#232730] mb-4" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Contact</h4>
             <ul className="space-y-2.5 text-sm text-[#9AA3AE]">
               <li><a href="mailto:contact@synorix.tech" className="hover:text-white transition-colors">contact@synorix.tech</a></li>
               <li><a href="mailto:support@synorix.tech" className="hover:text-white transition-colors">support@synorix.tech</a></li>

@@ -19,7 +19,7 @@ const clerkAppearance = {
       borderRadius: '20px',
       boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
     },
-    headerTitle: { color: '#E7EAEE', fontFamily: 'DM Sans, system-ui, sans-serif' },
+    headerTitle: { color: '#E7EAEE', fontFamily: 'Geist Sans, system-ui, sans-serif' },
     headerSubtitle: { color: '#9AA3AE' },
     socialButtonsBlockButton: {
       backgroundColor: '#232730',
@@ -66,7 +66,7 @@ export default function Login() {
             <Sparkles size={24} style={{ color: '#22D3EE' }} />
           </div>
           <span className="text-gradient text-3xl font-extrabold tracking-tight"
-            style={{ fontFamily: 'DM Sans, system-ui, sans-serif' }}>
+            style={{ fontFamily: 'Geist Sans, system-ui, sans-serif' }}>
             SYNORIX
           </span>
           <p className="text-sm text-center font-sans" style={{ color: '#9AA3AE' }}>

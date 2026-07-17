@@ -24,7 +24,7 @@ const ANALYSIS_STEPS: StepDescriptor[] = [
   { key: 'finalizing',      label: 'Finalisation',                          estimated_s: 5 },
 ]
 
-const F = "'DM Sans', sans-serif"
+const F = "'Geist Sans', sans-serif"
 
 const CATEGORY_LABELS: Record<ComplianceCategory, string> = {
   candidature:       'Candidature',
@@ -632,7 +632,7 @@ function ExigenceSection({
             >
               <span
                 className="shrink-0 mt-0.5 text-[11px] tabular-nums w-7 text-right"
-                style={{ color: '#4B5563', fontFamily: '"JetBrains Mono", monospace' }}
+                style={{ color: '#4B5563', fontFamily: '"Geist Mono", monospace' }}
               >
                 {idx + 1}
               </span>

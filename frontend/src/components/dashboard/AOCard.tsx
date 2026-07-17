@@ -117,7 +117,7 @@ export function AOCard({ project, onDelete }: Props) {
           <span className="text-ds-text-3">{PIPELINE_STEPS[stepIndex - 1]}</span>
           <span
             className="text-ds-text-2 font-medium"
-            style={{ fontFamily: '"JetBrains Mono", monospace' }}
+            style={{ fontFamily: '"Geist Mono", monospace' }}
           >
             {Math.round(progress)}%
           </span>

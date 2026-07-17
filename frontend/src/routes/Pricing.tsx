@@ -66,7 +66,7 @@ export default function Pricing() {
     <div className="min-h-screen py-16 px-6 relative" style={{ background: '#232730' }}>
       <div className="max-w-5xl mx-auto relative z-10">
         <div className="text-center mb-14">
-          <h1 className="text-4xl font-extrabold mb-4" style={{ color: '#E7EAEE', fontFamily: 'DM Sans, system-ui, sans-serif' }}>
+          <h1 className="text-4xl font-extrabold mb-4" style={{ color: '#E7EAEE', fontFamily: 'Geist Sans, system-ui, sans-serif' }}>
             Tarifs simples et transparents
           </h1>
           <p className="text-lg" style={{ color: '#9AA3AE' }}>
@@ -117,7 +117,7 @@ export default function Pricing() {
 
                   {/* Price */}
                   <div className="mb-5">
-                    <span className="text-4xl font-extrabold" style={{ color: '#E7EAEE', fontFamily: 'DM Sans, system-ui, sans-serif' }}>
+                    <span className="text-4xl font-extrabold" style={{ color: '#E7EAEE', fontFamily: 'Geist Sans, system-ui, sans-serif' }}>
                       {plan.price}€
                     </span>
                     <span className="text-sm ml-1" style={{ color: '#6B7280' }}>/mois HT</span>

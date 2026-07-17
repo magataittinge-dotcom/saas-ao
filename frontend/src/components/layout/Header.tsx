@@ -63,7 +63,7 @@ export default function Header({ onMenuToggle }: Props) {
           <Menu size={20} />
         </button>
 
-        <div className="flex items-center gap-1.5 text-sm min-w-0" style={{ fontFamily: "'DM Sans', sans-serif" }}>
+        <div className="flex items-center gap-1.5 text-sm min-w-0" style={{ fontFamily: "'Geist Sans', sans-serif" }}>
           <span className="hidden sm:inline font-medium" style={{ color: '#22D3EE' }}>Synorix</span>
           <span className="hidden sm:inline" style={{ color: '#4B5563' }}>&gt;</span>
           <span className="font-medium truncate" style={{ color: '#E7EAEE' }}>
@@ -118,7 +118,7 @@ export default function Header({ onMenuToggle }: Props) {
                 ? 'inset 0 0 0 1px rgba(255,255,255,0.10), inset 0 -2px 0 0 #22D3EE, 0 8px 24px -12px rgba(34,211,238,0.35)'
                 : 'inset 0 0 0 1px rgba(255,255,255,0.06)',
               color: '#E7EAEE',
-              fontFamily: "'DM Sans', sans-serif",
+              fontFamily: "'Geist Sans', sans-serif",
             }}
             onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)} />
         </div>
@@ -137,7 +137,7 @@ export default function Header({ onMenuToggle }: Props) {
         {/* User info + Avatar */}
         <div className="flex items-center gap-2.5">
           <div className="hidden sm:block text-right">
-            <p className="text-sm font-medium leading-tight" style={{ color: '#E7EAEE', fontFamily: "'DM Sans', sans-serif" }}>
+            <p className="text-sm font-medium leading-tight" style={{ color: '#E7EAEE', fontFamily: "'Geist Sans', sans-serif" }}>
               {displayName}
             </p>
             <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#6B7280' }}>

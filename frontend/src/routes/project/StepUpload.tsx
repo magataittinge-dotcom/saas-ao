@@ -24,7 +24,7 @@ const UPLOAD_STEPS: StepDescriptor[] = [
   { key: 'extracting_text', label: 'Indexation des documents', estimated_s: 60 },
 ]
 
-const F = "'DM Sans', sans-serif"
+const F = "'Geist Sans', sans-serif"
 
 type Phase = 'idle' | 'uploading' | 'processing' | 'done'
 

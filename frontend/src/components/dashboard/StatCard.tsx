@@ -52,7 +52,7 @@ interface StatCardProps {
 
 /**
  * Carte de statistique premium Synorix — compteur animé, anneau de progression
- * optionnel, halo cyan discret au survol. Charte : glass-card + ds-cyan + DM Sans.
+ * optionnel, halo cyan discret au survol. Charte : glass-card + ds-cyan + Geist Sans.
  */
 export function StatCard({ icon: Icon, label, value, suffix = '', ring, delay = 0, className }: StatCardProps) {
   const count = useCountUp(value)

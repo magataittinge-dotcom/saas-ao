@@ -13,7 +13,7 @@ import type { Project } from '@/types'
 import DocumentViewer, { type ViewableDocument } from '@/components/project/DocumentViewer'
 import { DocumentRowSkeleton } from '@/components/skeletons'
 
-const F = "'DM Sans', sans-serif"
+const F = "'Geist Sans', sans-serif"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
