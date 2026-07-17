@@ -277,7 +277,7 @@ export default function Dashboard() {
           <section className="glass-card overflow-hidden">
             <header className="flex items-center gap-2.5 px-5 py-4 border-b border-ds-border-subtle">
               <h2 className="text-[15px] font-semibold text-ds-text">Analysés</h2>
-              <span className="pill text-[11px]" style={{ background: '#232730', color: '#9AA3AE' }}>
+              <span className="pill pill-muted text-[11px]">
                 {analysesSansSuite.length}
               </span>
               <span className="text-xs text-ds-text-3">analyse terminée, à vous de décider</span>
@@ -300,7 +300,7 @@ export default function Dashboard() {
                     onClick={() => markSansSuite(p.id)}
                     title="Classer cet AO « Analysé — sans suite » : décision prise, il quitte le tableau de bord"
                     className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-ds-text-2 hover:bg-ds-bg-2 transition-colors cursor-pointer"
-                    style={{ border: '1px solid rgba(255,255,255,0.06)' }}
+                    style={{ border: '1px solid var(--line)' }}
                   >
                     <FolderX size={13} /> Sans suite
                   </button>
@@ -386,7 +386,7 @@ export default function Dashboard() {
           </section>
 
           {/* Note Synorix — positive, premium silencieux */}
-          <section className="glass-card p-4 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(34,211,238,0.04), rgba(34,211,238,0.08))' }}>
+          <section className="glass-card p-4 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(228,233,242,0.04), rgba(228,233,242,0.08))' }}>
             <div className="flex items-center gap-2 mb-2">
               <Sparkles size={15} className="text-ds-cyan" />
               <h3 className="text-sm font-bold text-ds-cyan-dark">Synorix</h3>

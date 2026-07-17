@@ -19,9 +19,9 @@ interface PipelineRailProps {
 }
 
 /**
- * Rail de progression du pipeline AO — 6 segments.
- * Étapes franchies remplies en cyan, étape courante mise en valeur (glow),
- * suivantes en neutre. Animation douce de remplissage.
+ * Rail de progression du pipeline AO — 6 segments (langage steps-track Lumen).
+ * Étapes franchies remplies en lumière argentée, étape courante mise en valeur
+ * (glow blanc), suivantes en neutre. Animation douce de remplissage.
  */
 export function PipelineRail({ currentStep, showLabel = true, className }: PipelineRailProps) {
   const step = Math.max(1, Math.min(PIPELINE_STEPS.length, currentStep))

@@ -52,7 +52,7 @@ interface StatCardProps {
 
 /**
  * Carte de statistique premium Synorix — compteur animé, anneau de progression
- * optionnel, halo cyan discret au survol. Charte : glass-card + ds-cyan + Geist Sans.
+ * optionnel, halo lumineux discret au survol. Charte Lumen : glass-card + top-lit.
  */
 export function StatCard({ icon: Icon, label, value, suffix = '', ring, delay = 0, className }: StatCardProps) {
   const count = useCountUp(value)
@@ -66,32 +66,30 @@ export function StatCard({ icon: Icon, label, value, suffix = '', ring, delay = 
   return (
     <div
       className={cn(
-        'glass-card group relative overflow-hidden p-5 animate-fade-in',
+        'glass-card top-lit group relative overflow-hidden p-5 animate-fade-in',
         'transition-transform duration-200 ease-smooth hover:-translate-y-0.5',
         className,
       )}
       style={{ animationDelay: reduced ? undefined : `${delay * 0.06}s` }}
     >
-      {/* liseré d'accent cyan en haut */}
-      <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-cyan opacity-80" />
-      {/* halo cyan diffus, intensifié au survol */}
+      {/* halo lumineux diffus, intensifié au survol */}
       <div
         className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-ds-cyan opacity-[0.06] blur-2xl transition-opacity duration-300 group-hover:opacity-[0.16]"
         aria-hidden
       />
 
       <div className="relative flex items-start justify-between">
-        <div className="stat-icon-bg" style={{ background: 'rgba(34,211,238,0.08)' }}>
+        <div className="stat-icon-bg" style={{ background: 'rgba(228,233,242,0.08)' }}>
           <Icon size={20} className="text-ds-cyan" />
         </div>
 
         {ring !== undefined && (
           <div className="relative h-11 w-11 shrink-0">
             <svg viewBox="0 0 40 40" className="h-11 w-11 -rotate-90">
-              <circle cx="20" cy="20" r={R} fill="none" stroke="#232730" strokeWidth="3.5" />
+              <circle cx="20" cy="20" r={R} fill="none" stroke="#1C222D" strokeWidth="3.5" />
               <circle
                 cx="20" cy="20" r={R} fill="none"
-                stroke="#22D3EE" strokeWidth="3.5" strokeLinecap="round"
+                stroke="#E4E9F2" strokeWidth="3.5" strokeLinecap="round"
                 strokeDasharray={C}
                 strokeDashoffset={C * (1 - frac)}
                 style={{ transition: reduced ? undefined : 'stroke-dashoffset 0.9s cubic-bezier(0.4,0,0.2,1)' }}

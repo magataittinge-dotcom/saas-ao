@@ -4,14 +4,14 @@ import { cn } from '@/lib/utils'
 
 interface DeadlinePillProps {
   deadline?: string
-  /** Met en avant l'échéance la plus proche (glow cyan). */
+  /** Met en avant l'échéance la plus proche (glow lumineux). */
   emphasized?: boolean
   className?: string
 }
 
 /**
  * Chip d'échéance — informatif et positif, jamais alarmiste (règle Synorix).
- * Proche (≤ 7 j) = mis en valeur en cyan ; plus lointain = slate neutre.
+ * Proche (≤ 7 j) = mis en valeur en lumière ; plus lointain = graphite neutre.
  * Aucune couleur rouge anxiogène.
  */
 export function DeadlinePill({ deadline, emphasized, className }: DeadlinePillProps) {
