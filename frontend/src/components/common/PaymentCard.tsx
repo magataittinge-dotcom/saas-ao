@@ -6,10 +6,10 @@ interface PaymentCardProps {
 }
 
 const CARD_GRADIENTS: Record<string, string> = {
-  visa: 'linear-gradient(135deg, #1A1F71, #2D3BB0, #4B6CB7)',
-  mastercard: 'linear-gradient(135deg, #CC2131, #EB001B, #F79E1B)',
-  amex: 'linear-gradient(135deg, #006FCF, #0055A5)',
-  default: 'linear-gradient(135deg, #2563EB, #1E40AF)',
+  visa: 'linear-gradient(135deg, #151A23, #232B38, #3A4556)',
+  mastercard: 'linear-gradient(135deg, #151A23, #232B38, #3A4556)',
+  amex: 'linear-gradient(135deg, #151A23, #232B38, #3A4556)',
+  default: 'linear-gradient(135deg, #151A23, #232B38, #3A4556)',
 }
 
 function CardLogo({ type }: { type: string }) {
@@ -42,7 +42,7 @@ function CardLogo({ type }: { type: string }) {
     )
   }
   return (
-    <div className="w-8 h-5 rounded" style={{ background: '#94A3B8' }} />
+    <div className="w-8 h-5 rounded" style={{ background: '#788295' }} />
   )
 }
 
@@ -61,7 +61,7 @@ export default function PaymentCard({
         borderRadius: '20px',
         background: CARD_GRADIENTS[cardType] ?? CARD_GRADIENTS.default,
         perspective: '1000px',
-        boxShadow: '14px 17px 40px 4px rgba(0,0,0,0.30), 0 0 20px rgba(14,165,233,0.1)',
+        boxShadow: '14px 17px 40px 4px rgba(0,0,0,0.30), 0 0 20px rgba(228,233,242,0.1)',
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.transform = 'perspective(800px) rotateY(2deg) scale(1.01)'
@@ -74,7 +74,7 @@ export default function PaymentCard({
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: 'linear-gradient(135deg, #CBD5E1 0%, transparent 50%, #F1F5F9 100%)',
+          background: 'linear-gradient(135deg, #5C6678 0%, transparent 50%, #1C222D 100%)',
         }}
       />
       {/* Animated shine */}
@@ -84,7 +84,7 @@ export default function PaymentCard({
         <div
           className="absolute -inset-full"
           style={{
-            background: 'linear-gradient(135deg, transparent 40%, #F1F5F9 50%, transparent 60%)',
+            background: 'linear-gradient(135deg, transparent 40%, #1C222D 50%, transparent 60%)',
             animation: 'card-shine 6s ease-in-out infinite',
           }}
         />
@@ -101,7 +101,7 @@ export default function PaymentCard({
         <div
           className="absolute inset-0 rounded-md"
           style={{
-            background: 'repeating-linear-gradient(90deg, transparent, transparent 4px, rgba(0,0,0,0.08) 4px, rgba(0,0,0,0.08) 5px)',
+            background: 'repeating-linear-gradient(90deg, transparent, transparent 4px, rgba(0,0,0,.5) 4px, rgba(0,0,0,.5) 5px)',
           }}
         />
       </div>
@@ -125,7 +125,7 @@ export default function PaymentCard({
       {/* Holder name */}
       <div
         className="absolute bottom-5 left-6 text-sm uppercase text-white/70 tracking-wider"
-        style={{ fontFamily: '"DM Sans", system-ui, sans-serif' }}
+        style={{ fontFamily: "'Geist', system-ui, sans-serif" }}
       >
         {holderName}
       </div>

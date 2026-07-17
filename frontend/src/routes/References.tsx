@@ -21,7 +21,7 @@ export default function References() {
     <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Building2 size={24} style={{ color: '#0EA5E9' }} />
+          <Building2 size={24} style={{ color: '#E4E9F2' }} />
           <div>
             <h1 className="text-2xl font-bold text-ds-text">Références Chantiers</h1>
             <p className="text-sm text-ds-text-2">{references.length} références</p>
@@ -38,7 +38,7 @@ export default function References() {
 
       <div className="glass-card overflow-hidden overflow-x-auto">
         <table className="w-full text-sm min-w-[640px]">
-          <thead style={{ background: '#F8FAFC', borderBottom: '1px solid rgba(100,116,139,0.2)' }}>
+          <thead style={{ background: '#141922', borderBottom: '1px solid rgba(120,130,149,0.2)' }}>
             <tr>
               {['Année', 'Intitulé', 'Maître d\'ouvrage', 'Lot', 'Montant HT', 'Statut'].map((h) => (
                 <th key={h} className="text-left text-xs font-semibold text-ds-text-2 uppercase tracking-wide px-4 py-3">
@@ -47,7 +47,7 @@ export default function References() {
               ))}
             </tr>
           </thead>
-          <tbody style={{ borderColor: 'rgba(100,116,139,0.1)' }} className="divide-y divide-current">
+          <tbody style={{ borderColor: 'rgba(120,130,149,0.1)' }} className="divide-y divide-current">
             {isLoading ? (
               <ReferenceTableSkeleton count={5} />
             ) : references.length === 0 ? (
@@ -59,7 +59,7 @@ export default function References() {
             ) : (
               references.map((ref) => (
                 <tr key={ref.id} className="transition-colors" style={{ cursor: 'pointer' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(14,165,233,0.05)')}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(228,233,242,0.05)')}
                   onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                 >
                   <td className="px-4 py-3 text-ds-text-2">{ref.annee}</td>
@@ -72,10 +72,10 @@ export default function References() {
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold border ${
                       ref.statut === 'gagné'
-                        ? 'bg-[#ECFDF5] text-[#047857] border-[#A7F3D0]'
+                        ? 'bg-[rgba(110,231,168,.09)] text-[#6EE7A8] border-[rgba(110,231,168,.22)]'
                         : ref.statut === 'perdu'
-                        ? 'bg-[#FEF2F2] text-[#B91C1C] border-[#FECACA]'
-                        : 'bg-[#ECFEFF] text-[#0E7490] border-[#A5F3FC]'
+                        ? 'bg-[rgba(245,142,134,.10)] text-[#FF9E96] border-[rgba(245,142,134,.24)]'
+                        : 'bg-[rgba(228,233,242,.07)] text-[#C3CCDC] border-[rgba(228,233,242,.25)]'
                     }`}>
                       {ref.statut}
                     </span>

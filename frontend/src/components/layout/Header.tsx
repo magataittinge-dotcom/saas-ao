@@ -44,10 +44,10 @@ export default function Header({ onMenuToggle }: Props) {
     <header
       className="sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 h-14"
       style={{
-        background: 'rgba(255,255,255,0.85)',
+        background: 'rgba(10,12,17,.55)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
-        borderBottom: '1px solid #F1F5F9',
+        borderBottom: '1px solid rgba(186,205,234,.13)',
       }}
     >
       {/* Left side: hamburger + breadcrumb */}
@@ -55,15 +55,15 @@ export default function Header({ onMenuToggle }: Props) {
         <button
           onClick={onMenuToggle}
           className="p-2 rounded-lg md:hidden touch-target shrink-0"
-          style={{ color: '#94A3B8' }}
+          style={{ color: '#788295' }}
         >
           <Menu size={20} />
         </button>
 
-        <div className="flex items-center gap-1.5 text-sm min-w-0" style={{ fontFamily: "'DM Sans', sans-serif" }}>
-          <span className="hidden sm:inline font-medium" style={{ color: '#0EA5E9' }}>Synorix</span>
-          <span className="hidden sm:inline" style={{ color: '#CBD5E1' }}>&gt;</span>
-          <span className="font-medium truncate" style={{ color: '#0F172A' }}>
+        <div className="flex items-center gap-1.5 text-sm min-w-0" style={{ fontFamily: "'Geist', sans-serif" }}>
+          <span className="hidden sm:inline font-medium" style={{ color: '#E4E9F2' }}>Synorix</span>
+          <span className="hidden sm:inline" style={{ color: '#5C6678' }}>&gt;</span>
+          <span className="font-medium truncate" style={{ color: '#F4F6FA' }}>
             {label || parent || 'Tableau de bord'}
           </span>
         </div>
@@ -72,18 +72,18 @@ export default function Header({ onMenuToggle }: Props) {
       {/* Mobile search overlay */}
       {mobileSearchOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 sm:hidden"
-          style={{ background: 'rgba(0,0,0,0.20)' }}
+          style={{ background: 'rgba(0,0,0,.55)' }}
           onClick={(e) => { if (e.target === e.currentTarget) setMobileSearchOpen(false) }}
         >
           <div className="w-full max-w-sm rounded-2xl p-4"
-            style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', boxShadow: '0 8px 24px rgba(0,0,0,0.10)' }}>
+            style={{ background: '#151A23', border: '1px solid rgba(186,205,234,.13)', boxShadow: '0 8px 24px rgba(0,0,0,.55)' }}>
             <div className="flex items-center gap-2 mb-3">
-              <Sparkles size={16} style={{ color: '#0EA5E9' }} />
-              <span className="text-sm font-medium" style={{ color: '#0F172A' }}>Recherche intelligente</span>
+              <Sparkles size={16} style={{ color: '#E4E9F2' }} />
+              <span className="text-sm font-medium" style={{ color: '#F4F6FA' }}>Recherche intelligente</span>
               <button
                 onClick={() => setMobileSearchOpen(false)}
                 className="ml-auto p-1.5 rounded-lg touch-target"
-                style={{ color: '#94A3B8' }}
+                style={{ color: '#788295' }}
               >
                 <X size={18} />
               </button>
@@ -92,7 +92,7 @@ export default function Header({ onMenuToggle }: Props) {
               type="text"
               placeholder="Recherche intelligente..."
               className="w-full px-4 py-3 text-sm rounded-xl outline-none"
-              style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', color: '#0F172A' }}
+              style={{ background: '#141922', border: '1px solid rgba(186,205,234,.13)', color: '#F4F6FA' }}
               autoFocus
             />
           </div>
@@ -103,14 +103,14 @@ export default function Header({ onMenuToggle }: Props) {
       <div className="flex items-center gap-3">
         {/* Search — desktop */}
         <div className="relative hidden sm:block">
-          <Sparkles size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#0EA5E9' }} />
+          <Sparkles size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#E4E9F2' }} />
           <input type="text" placeholder="Recherche intelligente..."
             className="w-52 pl-9 pr-3 py-2 text-sm rounded-full outline-none transition-all duration-200"
             style={{
-              background: searchFocused ? '#FFFFFF' : '#F1F5F9',
-              border: searchFocused ? '1px solid #0EA5E9' : '1px solid transparent',
-              color: '#0F172A',
-              fontFamily: "'DM Sans', sans-serif",
+              background: searchFocused ? '#232B38' : '#1C222D',
+              border: searchFocused ? '1px solid rgba(255,255,255,.45)' : '1px solid rgba(186,205,234,.13)',
+              color: '#F4F6FA',
+              fontFamily: "'Geist', sans-serif",
             }}
             onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)} />
         </div>
@@ -118,7 +118,7 @@ export default function Header({ onMenuToggle }: Props) {
         <button
           onClick={() => setMobileSearchOpen(true)}
           className="p-2 rounded-full sm:hidden touch-target"
-          style={{ color: '#94A3B8' }}
+          style={{ color: '#788295' }}
           title="Rechercher"
         >
           <Search size={18} />
@@ -126,27 +126,27 @@ export default function Header({ onMenuToggle }: Props) {
 
         {/* Notifications */}
         <button className="relative p-2 rounded-full transition-colors touch-target" title="Notifications"
-          style={{ color: '#94A3B8' }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = '#F1F5F9'; e.currentTarget.style.color = '#0F172A' }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#94A3B8' }}>
+          style={{ color: '#788295' }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = '#1C222D'; e.currentTarget.style.color = '#F4F6FA' }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#788295' }}>
           <Bell size={18} />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full" style={{ background: '#EF4444' }} />
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full" style={{ background: '#F58E86' }} />
         </button>
 
-        <div className="w-px h-6 hidden sm:block" style={{ background: '#E2E8F0' }} />
+        <div className="w-px h-6 hidden sm:block" style={{ background: 'rgba(186,205,234,.13)' }} />
 
         {/* User info + Avatar */}
         <div className="flex items-center gap-2.5">
           <div className="hidden sm:block text-right">
-            <p className="text-sm font-medium leading-tight" style={{ color: '#0F172A', fontFamily: "'DM Sans', sans-serif" }}>
+            <p className="text-sm font-medium leading-tight" style={{ color: '#F4F6FA', fontFamily: "'Geist', sans-serif" }}>
               {displayName}
             </p>
-            <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#94A3B8' }}>
+            <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#788295' }}>
               Chef de projet
             </p>
           </div>
-          <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white cursor-default shrink-0"
-            style={{ background: '#0EA5E9' }}>
+          <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold cursor-default shrink-0"
+            style={{ background: '#1C222D', border: '1px solid rgba(186,205,234,.23)', color: '#E4E9F2' }}>
             {initials}
           </div>
         </div>

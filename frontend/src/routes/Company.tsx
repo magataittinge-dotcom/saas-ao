@@ -54,7 +54,7 @@ export default function Company() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
-        <Building size={24} style={{ color: '#0EA5E9' }} />
+        <Building size={24} style={{ color: '#E4E9F2' }} />
         <div>
           <h1 className="text-2xl font-bold text-ds-text">Mon Entreprise</h1>
           <p className="text-sm text-ds-text-2">Ces informations seront utilisées dans vos mémoires techniques</p>
@@ -70,11 +70,11 @@ export default function Company() {
         <div className="w-full progress-track rounded-full h-2">
           <div
             className="h-2 rounded-full transition-all"
-            style={{ width: `${completionPct}%`, background: 'linear-gradient(90deg, #0EA5E9, #0284C7)' }}
+            style={{ width: `${completionPct}%`, background: 'linear-gradient(90deg, #9FA9BC, #E4E9F2)' }}
           />
         </div>
         {completionPct < 80 && (
-          <p className="text-xs mt-2" style={{ color: '#475569' }}>
+          <p className="text-xs mt-2" style={{ color: '#C7CEDA' }}>
             ⚠️ Un profil complet permet à l'IA de générer des mémoires techniques de meilleure qualité
           </p>
         )}
@@ -101,7 +101,7 @@ export default function Company() {
 
             {/* Map preview under address field */}
             {key === 'address' && GMAPS_KEY && watchedAddress.trim().length > 5 && !mapError && (
-              <div className="mt-3 rounded-lg overflow-hidden border border-[#E2E8F0]">
+              <div className="mt-3 rounded-lg overflow-hidden border border-[rgba(186,205,234,.13)]">
                 <img
                   src={staticMapUrl(watchedAddress)}
                   alt="Aperçu carte"
@@ -110,7 +110,7 @@ export default function Company() {
                   onError={() => setMapError(true)}
                 />
                 <div className="flex items-center gap-1.5 px-3 py-2 text-[11px] text-ds-text-3"
-                  style={{ background: '#F8FAFC' }}>
+                  style={{ background: '#141922' }}>
                   <MapPin size={12} />
                   Aperçu de la carte insérée dans vos mémoires techniques
                 </div>

@@ -54,7 +54,7 @@ export default function Vault() {
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
       <div className="flex items-center gap-3">
-        <Archive size={24} style={{ color: '#0EA5E9' }} />
+        <Archive size={24} style={{ color: '#E4E9F2' }} />
         <div>
           <h1 className="text-2xl font-bold text-ds-text">Coffre-fort documentaire</h1>
           <p className="text-sm text-ds-text-2">{documents.length} documents stockés</p>
@@ -76,11 +76,11 @@ export default function Vault() {
         className="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors"
         style={
           isDragActive
-            ? { borderColor: '#0EA5E9', background: 'rgba(14,165,233,0.05)' }
+            ? { borderColor: 'rgba(255,255,255,.40)', background: 'rgba(228,233,242,0.05)' }
             : { borderColor: 'rgba(71,85,105,0.6)', background: 'transparent' }
         }
         onMouseEnter={(e) => {
-          if (!isDragActive) (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(100,116,139,0.8)'
+          if (!isDragActive) (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(120,130,149,0.8)'
         }}
         onMouseLeave={(e) => {
           if (!isDragActive) (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(71,85,105,0.6)'

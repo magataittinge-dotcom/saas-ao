@@ -23,15 +23,15 @@ export function FileCard({ document, onDelete }: Props) {
 
   return (
     <div
-      className="flex items-center justify-between p-3 rounded-lg border transition-all duration-150 hover:border-sky-500/20"
-      style={{ background: 'rgba(248,250,252,1)', borderColor: 'rgba(255,255,255,0.07)' }}
+      className="flex items-center justify-between p-3 rounded-lg border transition-all duration-150 hover:border-white/20"
+      style={{ background: '#1C222D', borderColor: 'rgba(255,255,255,0.07)' }}
     >
       <div className="flex items-center gap-3 min-w-0">
         <div
           className="p-2 rounded-md shrink-0"
-          style={{ background: 'rgba(14,165,233,0.10)' }}
+          style={{ background: 'rgba(228,233,242,0.10)' }}
         >
-          <FileText size={18} style={{ color: '#0EA5E9' }} />
+          <FileText size={18} style={{ color: '#E4E9F2' }} />
         </div>
         <div className="min-w-0">
           <p className="text-sm font-medium text-ds-text truncate">

@@ -14,7 +14,7 @@ import { StatCardGridSkeleton, ProjectListSkeleton } from '@/components/skeleton
 import { daysUntil } from '@/lib/utils'
 import type { Project, DashboardStats } from '@/types'
 
-const F = "'DM Sans', sans-serif"
+const F = "'Geist', sans-serif"
 
 /* ── Empty fallback ──────────────────────────────────────────── */
 const EMPTY_STATS: DashboardStats = {
@@ -54,12 +54,12 @@ function fmtDate(d: Date) {
 
 /* ── Status config ───────────────────────────────────────────── */
 const STATUS_MAP: Record<string, { label: string; color: string; bg: string }> = {
-  brouillon: { label: 'Brouillon', color: '#475569', bg: '#F8FAFC' },
-  en_cours:  { label: 'En cours',  color: '#0E7490', bg: '#ECFEFF' },
-  analyzed:  { label: 'Analysé',   color: '#0E7490', bg: '#ECFEFF' },
-  soumis:    { label: 'Soumis',    color: '#475569', bg: '#F8FAFC' },
-  gagné:     { label: 'Gagné',     color: '#047857', bg: '#ECFDF5' },
-  perdu:     { label: 'Perdu',     color: '#B91C1C', bg: '#FEF2F2' },
+  brouillon: { label: 'Brouillon', color: '#C7CEDA', bg: '#141922' },
+  en_cours:  { label: 'En cours',  color: '#C3CCDC', bg: 'rgba(228,233,242,.07)' },
+  analyzed:  { label: 'Analysé',   color: '#C3CCDC', bg: 'rgba(228,233,242,.07)' },
+  soumis:    { label: 'Soumis',    color: '#C7CEDA', bg: '#141922' },
+  gagné:     { label: 'Gagné',     color: '#6EE7A8', bg: 'rgba(110,231,168,.09)' },
+  perdu:     { label: 'Perdu',     color: '#FF9E96', bg: 'rgba(245,142,134,.10)' },
 }
 
 /* ── Stat cards config ───────────────────────────────────────── */
@@ -67,10 +67,10 @@ const STAT_CARDS: {
   key: keyof DashboardStats; label: string; icon: typeof BarChart3; suffix: string
   accent: string; iconBg: string
 }[] = [
-  { key: 'projects_en_cours',       label: 'AO en cours',      icon: BarChart3,   suffix: '', accent: '#0EA5E9', iconBg: 'rgba(14,165,233,0.08)' },
-  { key: 'taux_succes',             label: 'Taux conformité',  icon: ShieldCheck, suffix: '%', accent: '#0EA5E9', iconBg: 'rgba(14,165,233,0.08)' },
-  { key: 'projects_gagnes',         label: 'AO gagnés',        icon: Trophy,      suffix: '', accent: '#0EA5E9', iconBg: 'rgba(14,165,233,0.08)' },
-  { key: 'projects_soumis_ce_mois', label: 'Soumis ce mois',   icon: Send,        suffix: '', accent: '#64748B', iconBg: 'rgba(100,116,139,0.08)' },
+  { key: 'projects_en_cours',       label: 'AO en cours',      icon: BarChart3,   suffix: '', accent: '#E4E9F2', iconBg: 'rgba(228,233,242,0.08)' },
+  { key: 'taux_succes',             label: 'Taux conformité',  icon: ShieldCheck, suffix: '%', accent: '#E4E9F2', iconBg: 'rgba(228,233,242,0.08)' },
+  { key: 'projects_gagnes',         label: 'AO gagnés',        icon: Trophy,      suffix: '', accent: '#E4E9F2', iconBg: 'rgba(228,233,242,0.08)' },
+  { key: 'projects_soumis_ce_mois', label: 'Soumis ce mois',   icon: Send,        suffix: '', accent: '#9BA4B5', iconBg: 'rgba(120,130,149,0.08)' },
 ]
 
 /* ── Quick actions config ────────────────────────────────────── */
@@ -137,17 +137,17 @@ export default function Dashboard() {
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
         <div>
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold" style={{ color: '#0F172A' }}>
+            <h1 className="text-2xl font-bold" style={{ color: '#F4F6FA' }}>
               Bonjour, {firstName}
             </h1>
             <span className="ai-badge">IA active</span>
           </div>
           <div className="flex items-center gap-4 mt-1.5">
-            <span className="inline-flex items-center gap-1.5 text-sm" style={{ color: '#64748B' }}>
-              <CalendarDays size={14} style={{ color: '#94A3B8' }} />
+            <span className="inline-flex items-center gap-1.5 text-sm" style={{ color: '#9BA4B5' }}>
+              <CalendarDays size={14} style={{ color: '#788295' }} />
               {fmtDate(new Date())}
             </span>
-            <span className="inline-flex items-center gap-1 text-sm font-medium" style={{ color: '#0EA5E9' }}>
+            <span className="inline-flex items-center gap-1 text-sm font-medium" style={{ color: '#E4E9F2' }}>
               <TrendingUp size={14} />
               +12% vs mois dernier
             </span>
@@ -186,21 +186,21 @@ export default function Dashboard() {
         {/* ──── LEFT: Projets récents ────────────────────────── */}
         <div
           className="rounded-xl overflow-hidden"
-          style={{ background: '#FFFFFF', border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+          style={{ background: '#151A23', border: '1px solid rgba(186,205,234,.13)', boxShadow: '0 1px 3px rgba(0,0,0,.4)' }}
         >
           {/* Card header */}
-          <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #F1F5F9' }}>
+          <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid rgba(186,205,234,.13)' }}>
             <div className="flex items-center gap-2.5">
-              <h2 className="text-[15px] font-semibold" style={{ color: '#0F172A' }}>Projets récents</h2>
+              <h2 className="text-[15px] font-semibold" style={{ color: '#F4F6FA' }}>Projets récents</h2>
               {active.length > 0 && (
                 <span
                   className="text-[11px] font-semibold rounded-full px-2 py-0.5"
-                  style={{ color: '#0EA5E9', background: 'rgba(14,165,233,0.10)' }}
+                  style={{ color: '#E4E9F2', background: 'rgba(228,233,242,0.10)' }}
                 >
                   {active.length}
                 </span>
               )}
-              <span className="text-xs hidden sm:inline" style={{ color: '#94A3B8' }}>
+              <span className="text-xs hidden sm:inline" style={{ color: '#788295' }}>
                 Appels d&apos;offres actifs
               </span>
             </div>
@@ -208,9 +208,9 @@ export default function Dashboard() {
               <button
                 onClick={() => navigate('/projects')}
                 className="text-xs font-medium flex items-center gap-1 transition-colors"
-                style={{ color: '#0EA5E9' }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = '#0284C7' }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = '#0EA5E9' }}
+                style={{ color: '#E4E9F2' }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = '#C3CCDC' }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = '#E4E9F2' }}
               >
                 Voir tout <ChevronRight size={14} />
               </button>
@@ -225,22 +225,22 @@ export default function Dashboard() {
             <div className="p-10 text-center">
               <div
                 className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3"
-                style={{ background: 'rgba(14,165,233,0.08)' }}
+                style={{ background: 'rgba(228,233,242,0.08)' }}
               >
-                <Plus size={20} style={{ color: '#0EA5E9' }} />
+                <Plus size={20} style={{ color: '#E4E9F2' }} />
               </div>
-              <p className="text-sm font-semibold mb-1" style={{ color: '#0F172A' }}>
+              <p className="text-sm font-semibold mb-1" style={{ color: '#F4F6FA' }}>
                 Aucun appel d&apos;offres en cours
               </p>
-              <p className="text-xs mb-5" style={{ color: '#94A3B8' }}>
+              <p className="text-xs mb-5" style={{ color: '#788295' }}>
                 Créez votre premier AO pour commencer l&apos;analyse IA
               </p>
               <button
                 onClick={() => navigate('/projects/new')}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-semibold transition-colors"
-                style={{ background: '#0EA5E9' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#0284C7' }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = '#0EA5E9' }}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-[#0F1218] text-sm font-semibold transition-colors"
+                style={{ background: '#E9EDF5' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#C3CCDC' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = '#E4E9F2' }}
               >
                 <Plus size={14} /> Créer mon premier AO
               </button>
@@ -251,8 +251,8 @@ export default function Dashboard() {
               <div
                 className="hidden md:grid items-center gap-3 px-5 py-2 text-[11px] font-semibold uppercase tracking-wider"
                 style={{
-                  color: '#94A3B8',
-                  borderBottom: '1px solid #F1F5F9',
+                  color: '#788295',
+                  borderBottom: '1px solid rgba(186,205,234,.13)',
                   gridTemplateColumns: '2fr 1fr 90px 140px 70px 32px',
                 }}
               >
@@ -266,33 +266,41 @@ export default function Dashboard() {
 
               {/* Table rows */}
               {active.slice(0, 8).map((p, i) => {
-                const progress = ((p.current_step - 1) / 5) * 100
+                const doneSteps = ['soumis', 'gagné', 'perdu'].includes(p.status)
+                  ? 6
+                  : Math.min(
+                      p.completed_steps
+                        ? Object.values(p.completed_steps).filter(Boolean).length
+                        : p.current_step - 1,
+                      6,
+                    )
+                const progress = (doneSteps / 6) * 100
                 const status = STATUS_MAP[p.status] ?? STATUS_MAP.brouillon
                 const days = p.deadline ? daysUntil(p.deadline) : null
                 const deadlineColor = days !== null && days <= 3
-                  ? '#EF4444'
+                  ? '#F58E86'
                   : days !== null && days <= 7
-                    ? '#64748B'
-                    : '#94A3B8'
-                const progressColor = '#0EA5E9'
+                    ? '#9BA4B5'
+                    : '#788295'
+                const progressColor = '#E4E9F2'
 
                 return (
                   <div
                     key={p.id}
                     className="grid items-center gap-3 px-5 py-3.5 cursor-pointer transition-colors"
                     style={{
-                      borderBottom: i < Math.min(active.length, 8) - 1 ? '1px solid #F8FAFC' : 'none',
+                      borderBottom: i < Math.min(active.length, 8) - 1 ? '1px solid rgba(186,205,234,.10)' : 'none',
                       gridTemplateColumns: '2fr 1fr 90px 140px 70px 32px',
                     }}
                     onClick={() => navigate(`/projects/${p.id}`)}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = '#FAFBFC' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#0F1218' }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
                   >
                     {/* Project name + client */}
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold truncate" style={{ color: '#0F172A' }}>{p.name}</p>
+                      <p className="text-sm font-semibold truncate" style={{ color: '#F4F6FA' }}>{p.name}</p>
                       {p.maitre_ouvrage && (
-                        <p className="text-xs truncate flex items-center gap-1 mt-0.5" style={{ color: '#94A3B8' }}>
+                        <p className="text-xs truncate flex items-center gap-1 mt-0.5" style={{ color: '#788295' }}>
                           <MapPin size={10} className="shrink-0" />
                           {p.maitre_ouvrage}
                         </p>
@@ -300,7 +308,7 @@ export default function Dashboard() {
                     </div>
 
                     {/* Lot */}
-                    <span className="text-xs truncate" style={{ color: '#64748B' }}>
+                    <span className="text-xs truncate" style={{ color: '#9BA4B5' }}>
                       {p.selected_lot_name ?? '—'}
                     </span>
 
@@ -316,14 +324,14 @@ export default function Dashboard() {
 
                     {/* Progress bar + score */}
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 h-1.5 rounded-full" style={{ background: '#F1F5F9' }}>
+                      <div className="flex-1 h-1.5 rounded-full" style={{ background: '#1C222D' }}>
                         <div
                           className="h-full progress-fill"
                           style={{ width: `${progress}%` }}
                         />
                       </div>
-                      <span className="text-[11px] font-semibold tabular-nums w-[32px] text-right" style={{ color: progressColor }}>
-                        {Math.round(progress)}%
+                      <span className="text-[11px] font-semibold tabular-nums w-[32px] text-right" style={{ color: progressColor, fontFamily: "'Geist Mono', monospace" }}>
+                        {doneSteps}/6
                       </span>
                     </div>
 
@@ -337,10 +345,10 @@ export default function Dashboard() {
                     {/* Action menu */}
                     <button
                       className="p-1 rounded-md transition-colors"
-                      style={{ color: '#CBD5E1' }}
+                      style={{ color: '#5C6678' }}
                       onClick={(e) => { e.stopPropagation() }}
-                      onMouseEnter={(e) => { e.currentTarget.style.color = '#64748B'; e.currentTarget.style.background = '#F1F5F9' }}
-                      onMouseLeave={(e) => { e.currentTarget.style.color = '#CBD5E1'; e.currentTarget.style.background = 'transparent' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = '#9BA4B5'; e.currentTarget.style.background = '#1C222D' }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = '#5C6678'; e.currentTarget.style.background = 'transparent' }}
                     >
                       <MoreHorizontal size={16} />
                     </button>
@@ -351,12 +359,12 @@ export default function Dashboard() {
           )}
 
           {active.length > 8 && (
-            <div className="px-5 py-3" style={{ borderTop: '1px solid #F1F5F9' }}>
+            <div className="px-5 py-3" style={{ borderTop: '1px solid rgba(186,205,234,.13)' }}>
               <button
                 onClick={() => navigate('/projects')}
                 className="flex items-center justify-center gap-2 w-full py-2 rounded-lg text-sm font-medium transition-colors"
-                style={{ color: '#0EA5E9' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#F8FAFC' }}
+                style={{ color: '#E4E9F2' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#141922' }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
               >
                 Voir les {active.length} projets <ArrowRight size={14} />
@@ -371,11 +379,11 @@ export default function Dashboard() {
           {/* ── Actions rapides ───────────────────────────────── */}
           <div
             className="rounded-xl p-4"
-            style={{ background: '#FFFFFF', border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+            style={{ background: '#151A23', border: '1px solid rgba(186,205,234,.13)', boxShadow: '0 1px 3px rgba(0,0,0,.4)' }}
           >
             <div className="flex items-center gap-2 mb-3">
-              <Sparkles size={14} style={{ color: '#0EA5E9' }} />
-              <h3 className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#94A3B8' }}>
+              <Sparkles size={14} style={{ color: '#E4E9F2' }} />
+              <h3 className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#788295' }}>
                 Actions rapides
               </h3>
             </div>
@@ -384,21 +392,21 @@ export default function Dashboard() {
                 key={a.title}
                 onClick={() => navigate(a.to)}
                 className="flex items-center gap-3 w-full text-left py-3 px-2 transition-colors rounded-lg"
-                style={{ borderTop: i > 0 ? '1px solid #F8FAFC' : 'none' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = '#FAFBFC' }}
+                style={{ borderTop: i > 0 ? '1px solid rgba(186,205,234,.10)' : 'none' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#0F1218' }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
               >
                 <div
                   className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ background: '#F1F5F9' }}
+                  style={{ background: '#1C222D' }}
                 >
-                  <a.icon size={16} style={{ color: '#64748B' }} />
+                  <a.icon size={16} style={{ color: '#9BA4B5' }} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold" style={{ color: '#0F172A' }}>{a.title}</p>
-                  <p className="text-xs" style={{ color: '#94A3B8' }}>{a.desc}</p>
+                  <p className="text-sm font-semibold" style={{ color: '#F4F6FA' }}>{a.title}</p>
+                  <p className="text-xs" style={{ color: '#788295' }}>{a.desc}</p>
                 </div>
-                <ChevronRight size={14} style={{ color: '#CBD5E1' }} className="shrink-0" />
+                <ChevronRight size={14} style={{ color: '#5C6678' }} className="shrink-0" />
               </button>
             ))}
           </div>
@@ -406,16 +414,16 @@ export default function Dashboard() {
           {/* ── Deadlines proches ─────────────────────────────── */}
           <div
             className="rounded-xl p-4"
-            style={{ background: '#FFFFFF', border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+            style={{ background: '#151A23', border: '1px solid rgba(186,205,234,.13)', boxShadow: '0 1px 3px rgba(0,0,0,.4)' }}
           >
             <div className="flex items-center gap-2 mb-3">
-              <AlertTriangle size={14} style={{ color: '#EF4444' }} />
-              <h3 className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#94A3B8' }}>
+              <AlertTriangle size={14} style={{ color: '#F58E86' }} />
+              <h3 className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#788295' }}>
                 Deadlines proches
               </h3>
             </div>
             {upcoming.length === 0 ? (
-              <p className="text-sm py-3" style={{ color: '#CBD5E1' }}>Aucune deadline proche</p>
+              <p className="text-sm py-3" style={{ color: '#5C6678' }}>Aucune deadline proche</p>
             ) : (
               <div className="space-y-0.5">
                 {upcoming.map((p) => {
@@ -430,22 +438,22 @@ export default function Dashboard() {
                       key={p.id}
                       onClick={() => navigate(`/projects/${p.id}`)}
                       className="flex items-center gap-3 w-full text-left py-2.5 px-2 rounded-lg transition-colors"
-                      onMouseEnter={(e) => { e.currentTarget.style.background = '#FAFBFC' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = '#0F1218' }}
                       onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
                     >
                       {/* Date block */}
                       <div
                         className="text-center shrink-0 w-10 py-1 rounded-lg"
-                        style={{ background: isUrgent ? 'rgba(239,68,68,0.06)' : '#F8FAFC' }}
+                        style={{ background: isUrgent ? 'rgba(239,68,68,0.06)' : '#141922' }}
                       >
-                        <p className="text-sm font-bold leading-none" style={{ color: isUrgent ? '#EF4444' : '#0F172A' }}>{day}</p>
-                        <p className="text-[10px] uppercase mt-0.5" style={{ color: '#94A3B8' }}>{month}</p>
+                        <p className="text-sm font-bold leading-none" style={{ color: isUrgent ? '#F58E86' : '#F4F6FA' }}>{day}</p>
+                        <p className="text-[10px] uppercase mt-0.5" style={{ color: '#788295' }}>{month}</p>
                       </div>
 
                       {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold truncate" style={{ color: '#0F172A' }}>{p.name}</p>
-                        <p className="text-xs" style={{ color: '#94A3B8' }}>
+                        <p className="text-sm font-semibold truncate" style={{ color: '#F4F6FA' }}>{p.name}</p>
+                        <p className="text-xs" style={{ color: '#788295' }}>
                           {dlDate.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                         </p>
                       </div>
@@ -454,7 +462,7 @@ export default function Dashboard() {
                       {isUrgent && (
                         <span
                           className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full"
-                          style={{ color: '#EF4444', background: 'rgba(239,68,68,0.10)' }}
+                          style={{ color: '#F58E86', background: 'rgba(239,68,68,0.10)' }}
                         >
                           Urgent
                         </span>
@@ -462,7 +470,7 @@ export default function Dashboard() {
                       {!isUrgent && isWarn && (
                         <span
                           className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full"
-                          style={{ color: '#475569', background: 'rgba(100,116,139,0.08)' }}
+                          style={{ color: '#C7CEDA', background: 'rgba(120,130,149,0.08)' }}
                         >
                           J-{p._days}
                         </span>
@@ -475,9 +483,9 @@ export default function Dashboard() {
             <button
               onClick={() => navigate('/projects')}
               className="flex items-center gap-1 w-full justify-center mt-3 pt-3 text-xs font-medium transition-colors"
-              style={{ color: '#0EA5E9', borderTop: '1px solid #F8FAFC' }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#0284C7' }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = '#0EA5E9' }}
+              style={{ color: '#E4E9F2', borderTop: '1px solid rgba(186,205,234,.10)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#C3CCDC' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = '#E4E9F2' }}
             >
               Consulter le calendrier complet <ChevronRight size={12} />
             </button>
@@ -487,31 +495,31 @@ export default function Dashboard() {
           <div
             className="rounded-xl p-4 relative overflow-hidden"
             style={{
-              background: 'linear-gradient(135deg, rgba(14,165,233,0.04), rgba(14,165,233,0.08))',
-              border: '1px solid rgba(14,165,233,0.12)',
+              background: 'linear-gradient(135deg, rgba(228,233,242,0.04), rgba(228,233,242,0.08))',
+              border: '1px solid rgba(228,233,242,0.12)',
             }}
           >
             <div className="flex items-center gap-2 mb-3">
-              <Bot size={16} style={{ color: '#0EA5E9' }} />
-              <h3 className="text-sm font-bold" style={{ color: '#0EA5E9' }}>
+              <Bot size={16} style={{ color: '#E4E9F2' }} />
+              <h3 className="text-sm font-bold" style={{ color: '#E4E9F2' }}>
                 Intelligence Synorix
               </h3>
             </div>
-            <p className="text-[13px] italic leading-relaxed mb-4" style={{ color: '#475569' }}>
+            <p className="text-[13px] italic leading-relaxed mb-4" style={{ color: '#C7CEDA' }}>
               {active.length > 0
                 ? `Vous avez ${active.length} AO actif${active.length > 1 ? 's' : ''}. ${upcoming.length > 0 ? `Attention, ${upcoming.length} deadline${upcoming.length > 1 ? 's' : ''} proche${upcoming.length > 1 ? 's' : ''}.` : 'Aucune deadline urgente.'} Continuez sur votre lancée !`
                 : "Créez votre premier appel d'offres pour que l'IA analyse votre dossier et optimise vos chances de succès."
               }
             </p>
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#94A3B8' }}>
+              <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#788295' }}>
                 Score d&apos;optimisation
               </span>
-              <span className="text-lg font-bold" style={{ color: '#0EA5E9' }}>
+              <span className="text-lg font-bold" style={{ color: '#E4E9F2' }}>
                 {aiScore}/100
               </span>
             </div>
-            <div className="h-1.5 rounded-full mt-2" style={{ background: '#F1F5F9' }}>
+            <div className="h-1.5 rounded-full mt-2" style={{ background: '#1C222D' }}>
               <div
                 className="h-full progress-fill"
                 style={{ width: `${aiScore}%` }}
@@ -533,12 +541,16 @@ function StatCard({ icon: Icon, label, value, suffix, accent, iconBg }: {
   return (
     <div
       className="rounded-xl p-5 relative overflow-hidden"
-      style={{ background: '#FFFFFF', border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+      style={{ background: '#151A23', border: '1px solid rgba(186,205,234,.13)', boxShadow: '0 1px 3px rgba(0,0,0,.4)' }}
     >
-      {/* Top accent bar */}
+      {/* Trait lumineux — signature Lumen */}
       <div
-        className="absolute top-0 left-0 right-0 h-[3px]"
-        style={{ background: accent }}
+        className="absolute top-0 h-px"
+        style={{
+          left: '24%', right: '24%',
+          background: 'linear-gradient(90deg, transparent, rgba(255,255,255,.7), transparent)',
+          boxShadow: '0 0 8px rgba(255,255,255,.25)',
+        }}
       />
       <div className="flex items-start justify-between">
         <div
@@ -550,16 +562,16 @@ function StatCard({ icon: Icon, label, value, suffix, accent, iconBg }: {
         {value > 0 && (
           <span
             className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md"
-            style={{ color: '#0EA5E9', background: 'rgba(14,165,233,0.08)' }}
+            style={{ color: '#E4E9F2', background: 'rgba(228,233,242,0.08)' }}
           >
             +{Math.min(value, 5)}
           </span>
         )}
       </div>
-      <p className="text-3xl font-bold mt-3" style={{ color: '#0F172A', fontFamily: F }}>
+      <p className="text-3xl font-bold mt-3" style={{ color: '#F4F6FA', fontFamily: F }}>
         {count}{suffix}
       </p>
-      <p className="text-sm mt-0.5" style={{ color: '#64748B' }}>{label}</p>
+      <p className="text-sm mt-0.5" style={{ color: '#9BA4B5' }}>{label}</p>
     </div>
   )
 }

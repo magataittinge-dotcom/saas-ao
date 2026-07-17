@@ -125,14 +125,14 @@ export default function DocumentViewer({ projectId, documents, initialIndex, onC
           width: '88vw',
           height: '92vh',
           background: '#0D1117',
-          border: '1px solid rgba(14,165,233,0.12)',
-          boxShadow: '0 25px 60px rgba(0,0,0,0.6), 0 0 50px rgba(14,165,233,0.06)',
+          border: '1px solid rgba(228,233,242,0.12)',
+          boxShadow: '0 25px 60px rgba(0,0,0,0.6), 0 0 50px rgba(228,233,242,0.06)',
         }}
       >
         {/* ── Header ──────────────────────────────────────────────── */}
         <div
           className="flex items-center justify-between px-5 py-3 shrink-0"
-          style={{ borderBottom: '1px solid rgba(14,165,233,0.10)', background: 'rgba(14,165,233,0.03)' }}
+          style={{ borderBottom: '1px solid rgba(228,233,242,0.10)', background: 'rgba(228,233,242,0.03)' }}
         >
           <div className="flex items-center gap-3 min-w-0 flex-1">
             {/* Prev/Next document nav */}
@@ -160,7 +160,7 @@ export default function DocumentViewer({ projectId, documents, initialIndex, onC
               </button>
             </div>
 
-            <div className="w-px h-5 shrink-0" style={{ background: '#E2E8F0' }} />
+            <div className="w-px h-5 shrink-0" style={{ background: 'rgba(186,205,234,.13)' }} />
 
             {/* File icon + name */}
             <div className="flex items-center gap-2 min-w-0">
@@ -180,7 +180,7 @@ export default function DocumentViewer({ projectId, documents, initialIndex, onC
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={handleDownload}
-              className="p-1.5 rounded-lg hover:bg-[#F1F5F9] transition-colors text-ds-text-dim"
+              className="p-1.5 rounded-lg hover:bg-[#1C222D] transition-colors text-ds-text-dim"
               title="Télécharger"
             >
               <Download size={16} />
@@ -216,7 +216,7 @@ export default function DocumentViewer({ projectId, documents, initialIndex, onC
               <button
                 onClick={handleDownload}
                 className="flex items-center gap-2 text-xs font-medium px-4 py-2 rounded-lg text-ds-accent"
-                style={{ border: '1px solid rgba(14,165,233,0.30)' }}
+                style={{ border: '1px solid rgba(228,233,242,0.30)' }}
               >
                 <Download size={14} /> Télécharger à la place
               </button>
@@ -228,7 +228,7 @@ export default function DocumentViewer({ projectId, documents, initialIndex, onC
               src={blobUrl}
               className="w-full h-full border-0"
               title={doc.name}
-              style={{ background: '#fff' }}
+              style={{ background: '#151A23' }}
             />
           )}
 
@@ -246,7 +246,7 @@ export default function DocumentViewer({ projectId, documents, initialIndex, onC
             <div className="flex flex-col items-center gap-5 text-center px-8">
               <div
                 className="w-16 h-16 rounded-2xl flex items-center justify-center"
-                style={{ background: 'rgba(14,165,233,0.10)', border: '1px solid rgba(14,165,233,0.20)' }}
+                style={{ background: 'rgba(228,233,242,0.10)', border: '1px solid rgba(228,233,242,0.20)' }}
               >
                 <FileText size={32} className="text-ds-accent" />
               </div>
@@ -260,8 +260,8 @@ export default function DocumentViewer({ projectId, documents, initialIndex, onC
                 onClick={handleDownload}
                 className="flex items-center gap-2 text-sm font-medium px-5 py-2.5 rounded-lg transition-colors text-ds-accent"
                 style={{
-                  background: 'rgba(14,165,233,0.12)',
-                  border: '1px solid rgba(14,165,233,0.25)',
+                  background: 'rgba(228,233,242,0.12)',
+                  border: '1px solid rgba(228,233,242,0.25)',
                 }}
               >
                 <Download size={16} /> Télécharger le fichier

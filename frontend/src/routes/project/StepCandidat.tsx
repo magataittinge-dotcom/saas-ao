@@ -11,7 +11,7 @@ import VaultPickerModal from '@/components/project/VaultPickerModal'
 import { RequirementListSkeleton } from '@/components/skeletons'
 import type { Project, ChecklistItem, Document } from '@/types'
 
-const F = "'DM Sans', sans-serif"
+const F = "'Geist', sans-serif"
 
 interface Props { project: Project }
 
@@ -79,10 +79,10 @@ export default function StepCandidat({ project }: Props) {
 
   if (items.length === 0) return (
     <div
-      className="bg-white rounded-lg p-12 text-center"
-      style={{ border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', fontFamily: F }}
+      className="bg-ds-surface rounded-lg p-12 text-center"
+      style={{ border: '1px solid rgba(186,205,234,.13)', boxShadow: '0 1px 3px rgba(0,0,0,.4)', fontFamily: F }}
     >
-      <p className="text-sm" style={{ color: '#94A3B8' }}>
+      <p className="text-sm" style={{ color: '#788295' }}>
         Aucun document requis détecté dans le DCE
       </p>
     </div>
@@ -94,31 +94,31 @@ export default function StepCandidat({ project }: Props) {
     <div
       className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-3 gap-4"
       style={{
-        background: 'rgba(255,255,255,0.85)',
+        background: 'rgba(10,12,17,.55)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
-        borderTop: '1px solid #F1F5F9',
+        borderTop: '1px solid rgba(186,205,234,.13)',
         fontFamily: F,
       }}
     >
       <div className="flex items-center gap-3">
-        <span className="text-xs font-bold uppercase tracking-wide" style={{ color: '#64748B' }}>
+        <span className="text-xs font-bold uppercase tracking-wide" style={{ color: '#9BA4B5' }}>
           Complétion dossier
         </span>
-        <div className="rounded-full overflow-hidden" style={{ width: 120, height: 6, background: '#F1F5F9' }}>
+        <div className="rounded-full overflow-hidden" style={{ width: 120, height: 6, background: '#1C222D' }}>
           <div
             className="h-full transition-all duration-500"
-            style={{ width: `${pct}%`, background: '#0EA5E9' }}
+            style={{ width: `${pct}%`, background: '#E9EDF5' }}
           />
         </div>
-        <span className="text-sm font-bold" style={{ color: '#0EA5E9' }}>{pct}%</span>
+        <span className="text-sm font-bold" style={{ color: '#E4E9F2' }}>{pct}%</span>
       </div>
 
       <div className="flex items-center gap-3">
         <button
           type="button"
-          className="text-sm font-medium px-4 py-2 rounded-lg transition-colors hover:bg-slate-50"
-          style={{ color: '#64748B' }}
+          className="text-sm font-medium px-4 py-2 rounded-lg transition-colors hover:bg-ds-surface-2"
+          style={{ color: '#9BA4B5' }}
         >
           Sauvegarder le brouillon
         </button>
@@ -152,14 +152,14 @@ export default function StepCandidat({ project }: Props) {
       {/* Title bar */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-black">
-          <span style={{ color: '#0F172A' }}>VÉRIFICATION </span>
-          <span style={{ color: '#0EA5E9' }}>CANDIDATURE</span>
+          <span style={{ color: '#F4F6FA' }}>VÉRIFICATION </span>
+          <span style={{ color: '#E4E9F2' }}>CANDIDATURE</span>
         </h1>
         <button
           type="button"
           onClick={() => navigate('/vault')}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-sky-50"
-          style={{ border: '1px solid #0EA5E9', color: '#0EA5E9' }}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-white/5"
+          style={{ border: '1px solid rgba(255,255,255,.40)', color: '#E4E9F2' }}
         >
           <Lock size={14} />
           Accéder au coffre-fort
@@ -182,15 +182,15 @@ export default function StepCandidat({ project }: Props) {
 
       {missing > 0 && (
         <div
-          className="bg-white rounded-lg px-5 py-4 flex items-start gap-3"
-          style={{ border: '1px solid #FEE2E2', background: '#FEF2F2' }}
+          className="bg-ds-surface rounded-lg px-5 py-4 flex items-start gap-3"
+          style={{ border: '1px solid rgba(245,142,134,.16)', background: 'rgba(245,142,134,.10)' }}
         >
-          <AlertTriangle size={18} style={{ color: '#EF4444' }} className="mt-0.5 shrink-0" />
+          <AlertTriangle size={18} style={{ color: '#F58E86' }} className="mt-0.5 shrink-0" />
           <div>
-            <p className="text-sm font-semibold" style={{ color: '#991B1B' }}>
+            <p className="text-sm font-semibold" style={{ color: '#FF9E96' }}>
               {missing} pièce{missing > 1 ? 's' : ''} manquante{missing > 1 ? 's' : ''}
             </p>
-            <p className="text-xs mt-1 leading-relaxed" style={{ color: '#7F1D1D' }}>
+            <p className="text-xs mt-1 leading-relaxed" style={{ color: '#FF9E96' }}>
               Une candidature incomplète sera automatiquement rejetée par l&apos;acheteur.
               Complétez chaque ligne avant validation.
             </p>
@@ -230,13 +230,13 @@ function Stat({
   value: string
   tone: 'primary' | 'neutral'
 }) {
-  const accent = tone === 'primary' ? '#0EA5E9' : '#475569'
+  const accent = tone === 'primary' ? '#E4E9F2' : '#C7CEDA'
   return (
     <div
-      className="bg-white rounded-lg px-5 py-4"
-      style={{ border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+      className="bg-ds-surface rounded-lg px-5 py-4"
+      style={{ border: '1px solid rgba(186,205,234,.13)', boxShadow: '0 1px 3px rgba(0,0,0,.4)' }}
     >
-      <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#94A3B8' }}>
+      <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#788295' }}>
         {label}
       </p>
       <p className="text-2xl font-black mt-1" style={{ color: accent }}>

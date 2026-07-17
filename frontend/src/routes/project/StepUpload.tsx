@@ -22,7 +22,7 @@ const UPLOAD_STEPS: StepDescriptor[] = [
   { key: 'extracting_text', label: 'Indexation des documents', estimated_s: 60 },
 ]
 
-const F = "'DM Sans', sans-serif"
+const F = "'Geist', sans-serif"
 
 type Phase = 'idle' | 'uploading' | 'processing' | 'done'
 
@@ -37,22 +37,22 @@ function detectDocType(filename: string): ProjectDocumentType {
 }
 
 const TYPE_BADGE: Record<ProjectDocumentType, { color: string; bg: string; border: string }> = {
-  rc:              { color: '#0EA5E9', bg: 'rgba(14,165,233,0.10)', border: 'rgba(14,165,233,0.20)' },
-  cctp:           { color: '#0E7490', bg: 'rgba(14,165,233,0.08)', border: 'rgba(14,165,233,0.20)' },
-  ccap:           { color: '#0EA5E9', bg: 'rgba(14,165,233,0.10)', border: 'rgba(14,165,233,0.20)' },
-  dpgf:           { color: '#475569', bg: 'rgba(100,116,139,0.08)', border: 'rgba(100,116,139,0.20)' },
-  acte_engagement: { color: '#0284C7', bg: 'rgba(14,165,233,0.10)', border: 'rgba(14,165,233,0.20)' },
-  plan:           { color: '#64748B', bg: '#F1F5F9', border: '#E2E8F0' },
-  autre:          { color: '#94A3B8', bg: 'transparent', border: 'transparent' },
+  rc:              { color: '#E4E9F2', bg: 'rgba(228,233,242,0.10)', border: 'rgba(228,233,242,0.20)' },
+  cctp:           { color: '#C3CCDC', bg: 'rgba(228,233,242,0.08)', border: 'rgba(228,233,242,0.20)' },
+  ccap:           { color: '#E4E9F2', bg: 'rgba(228,233,242,0.10)', border: 'rgba(228,233,242,0.20)' },
+  dpgf:           { color: '#C7CEDA', bg: 'rgba(120,130,149,0.08)', border: 'rgba(120,130,149,0.20)' },
+  acte_engagement: { color: '#C3CCDC', bg: 'rgba(228,233,242,0.10)', border: 'rgba(228,233,242,0.20)' },
+  plan:           { color: '#9BA4B5', bg: '#1C222D', border: 'rgba(186,205,234,.13)' },
+  autre:          { color: '#788295', bg: 'transparent', border: 'transparent' },
 }
 
 function FileIcon({ filename }: { filename: string }) {
   const ext = filename.split('.').pop()?.toLowerCase() ?? ''
-  if (ext === 'pdf') return <FileText size={18} className="shrink-0" style={{ color: '#EF4444' }} />
-  if (ext === 'docx' || ext === 'doc') return <FileText size={18} className="shrink-0" style={{ color: '#3B82F6' }} />
-  if (ext === 'xlsx' || ext === 'xls' || ext === 'ods') return <FileSpreadsheet size={18} className="shrink-0" style={{ color: '#0EA5E9' }} />
-  if (ext === 'zip') return <FileArchive size={18} className="shrink-0" style={{ color: '#64748B' }} />
-  return <File size={18} className="shrink-0" style={{ color: '#94A3B8' }} />
+  if (ext === 'pdf') return <FileText size={18} className="shrink-0" style={{ color: '#F58E86' }} />
+  if (ext === 'docx' || ext === 'doc') return <FileText size={18} className="shrink-0" style={{ color: '#E4E9F2' }} />
+  if (ext === 'xlsx' || ext === 'xls' || ext === 'ods') return <FileSpreadsheet size={18} className="shrink-0" style={{ color: '#E4E9F2' }} />
+  if (ext === 'zip') return <FileArchive size={18} className="shrink-0" style={{ color: '#9BA4B5' }} />
+  return <File size={18} className="shrink-0" style={{ color: '#788295' }} />
 }
 
 function formatSize(bytes?: number): string {
@@ -345,8 +345,8 @@ export default function StepUpload({ project }: Props) {
     <>
       {/* Upload overlay */}
       {showOverlay && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(15,23,42,0.60)', backdropFilter: 'blur(4px)' }}>
-          <div className="rounded-2xl p-8 max-w-sm w-full mx-4" style={{ background: '#FFFFFF', border: '1px solid #F1F5F9', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.60)', backdropFilter: 'blur(4px)' }}>
+          <div className="rounded-2xl p-8 max-w-sm w-full mx-4" style={{ background: '#151A23', border: '1px solid rgba(186,205,234,.13)', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
             <ProgressDisplay
               variant="inline"
               steps={UPLOAD_STEPS}
@@ -374,24 +374,24 @@ export default function StepUpload({ project }: Props) {
           {...getRootProps()}
           className={cn(
             'rounded-2xl text-center cursor-pointer transition-all duration-200 mt-4',
-            isDragActive ? 'ring-2 ring-[#0EA5E9]' : '',
+            isDragActive ? 'ring-2 ring-[#E4E9F2]' : '',
           )}
           style={{
             border: '2px dashed',
-            borderColor: isDragActive ? '#0EA5E9' : '#E2E8F0',
-            background: isDragActive ? 'rgba(14,165,233,0.04)' : '#FFFFFF',
+            borderColor: isDragActive ? '#E4E9F2' : 'rgba(186,205,234,.13)',
+            background: isDragActive ? 'rgba(228,233,242,0.06)' : '#151A23',
             padding: '48px 24px',
           }}
           onMouseEnter={(e) => {
             if (!isDragActive) {
-              e.currentTarget.style.borderColor = '#CBD5E1'
-              e.currentTarget.style.background = '#FAFBFC'
+              e.currentTarget.style.borderColor = '#5C6678'
+              e.currentTarget.style.background = '#0F1218'
             }
           }}
           onMouseLeave={(e) => {
             if (!isDragActive) {
-              e.currentTarget.style.borderColor = '#E2E8F0'
-              e.currentTarget.style.background = '#FFFFFF'
+              e.currentTarget.style.borderColor = 'rgba(186,205,234,.13)'
+              e.currentTarget.style.background = '#F4F6FA'
             }
           }}
         >
@@ -400,38 +400,38 @@ export default function StepUpload({ project }: Props) {
           <div className="flex justify-center mb-4">
             <div
               className="w-14 h-14 rounded-2xl flex items-center justify-center"
-              style={{ background: isDragActive ? 'rgba(14,165,233,0.12)' : 'rgba(14,165,233,0.08)' }}
+              style={{ background: isDragActive ? 'rgba(228,233,242,0.12)' : 'rgba(228,233,242,0.08)' }}
             >
-              <CloudUpload size={28} style={{ color: '#0EA5E9' }} />
+              <CloudUpload size={28} style={{ color: '#E4E9F2' }} />
             </div>
           </div>
 
-          <p className="text-lg font-semibold mb-1" style={{ color: '#0F172A' }}>
+          <p className="text-lg font-semibold mb-1" style={{ color: '#F4F6FA' }}>
             {isDragActive ? 'Déposez les fichiers ici...' : 'Glissez vos fichiers DCE ici'}
           </p>
-          <p className="text-sm mb-5" style={{ color: '#94A3B8' }}>
+          <p className="text-sm mb-5" style={{ color: '#788295' }}>
             Analysez automatiquement vos pièces écrites grâce à l&apos;IA
           </p>
 
           {/* Separator */}
           <div className="flex items-center gap-4 max-w-xs mx-auto mb-5">
-            <div className="flex-1 h-px" style={{ background: '#E2E8F0' }} />
-            <span className="text-xs font-semibold uppercase" style={{ color: '#CBD5E1' }}>ou</span>
-            <div className="flex-1 h-px" style={{ background: '#E2E8F0' }} />
+            <div className="flex-1 h-px" style={{ background: 'rgba(186,205,234,.13)' }} />
+            <span className="text-xs font-semibold uppercase" style={{ color: '#5C6678' }}>ou</span>
+            <div className="flex-1 h-px" style={{ background: 'rgba(186,205,234,.13)' }} />
           </div>
 
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); open() }}
-            className="px-6 py-2.5 rounded-lg text-sm font-semibold text-white transition-colors"
-            style={{ background: '#0EA5E9' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#0284C7' }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = '#0EA5E9' }}
+            className="px-6 py-2.5 rounded-lg text-sm font-semibold text-[#0F1218] transition-colors"
+            style={{ background: '#E9EDF5' }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = '#C3CCDC' }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = '#E4E9F2' }}
           >
             Parcourir les fichiers
           </button>
 
-          <p className="text-xs mt-4" style={{ color: '#CBD5E1' }}>
+          <p className="text-xs mt-4" style={{ color: '#5C6678' }}>
             Formats acceptés : .pdf .docx .xlsx .ods .zip — jusqu&apos;à 2 Go
           </p>
         </div>
@@ -443,34 +443,34 @@ export default function StepUpload({ project }: Props) {
             style={
               largeFileNotice.tone === 'orange'
                 ? { background: 'rgba(249,115,22,0.06)', border: '1px solid rgba(249,115,22,0.25)' }
-                : { background: 'rgba(14,165,233,0.06)', border: '1px solid rgba(14,165,233,0.20)' }
+                : { background: 'rgba(228,233,242,0.06)', border: '1px solid rgba(228,233,242,0.20)' }
             }
           >
             <Clock
               size={16}
-              style={{ color: largeFileNotice.tone === 'orange' ? '#F97316' : '#0EA5E9' }}
+              style={{ color: largeFileNotice.tone === 'orange' ? '#F5C26B' : '#E4E9F2' }}
               className="shrink-0 mt-0.5"
             />
-            <p className="text-sm" style={{ color: '#0F172A' }}>{largeFileNotice.message}</p>
+            <p className="text-sm" style={{ color: '#F4F6FA' }}>{largeFileNotice.message}</p>
           </div>
         )}
 
         {/* ── Upload errors ───────────────────────────────── */}
         {uploadErrors.length > 0 && (
           <div className="rounded-xl p-4 mt-4" style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)' }}>
-            <p className="text-sm font-semibold mb-1" style={{ color: '#EF4444' }}>Erreurs lors de l&apos;upload :</p>
+            <p className="text-sm font-semibold mb-1" style={{ color: '#F58E86' }}>Erreurs lors de l&apos;upload :</p>
             {uploadErrors.map((err, i) => (
-              <p key={i} className="text-xs" style={{ color: '#EF4444' }}>• {err}</p>
+              <p key={i} className="text-xs" style={{ color: '#F58E86' }}>• {err}</p>
             ))}
           </div>
         )}
 
         {/* ── ZIP warnings ────────────────────────────────── */}
         {uploadWarnings.length > 0 && (
-          <div className="rounded-xl p-4 mt-4" style={{ background: 'rgba(100,116,139,0.06)', border: '1px solid rgba(100,116,139,0.15)' }}>
-            <p className="text-sm font-semibold mb-1" style={{ color: '#475569' }}>Certains fichiers n&apos;ont pas pu être extraits :</p>
+          <div className="rounded-xl p-4 mt-4" style={{ background: 'rgba(120,130,149,0.06)', border: '1px solid rgba(120,130,149,0.15)' }}>
+            <p className="text-sm font-semibold mb-1" style={{ color: '#C7CEDA' }}>Certains fichiers n&apos;ont pas pu être extraits :</p>
             {uploadWarnings.map((w, i) => (
-              <p key={i} className="text-xs" style={{ color: '#64748B' }}>• {w}</p>
+              <p key={i} className="text-xs" style={{ color: '#9BA4B5' }}>• {w}</p>
             ))}
           </div>
         )}
@@ -480,10 +480,10 @@ export default function StepUpload({ project }: Props) {
           <div className="mt-6">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <h3 className="text-[15px] font-semibold" style={{ color: '#0F172A' }}>Fichiers importés</h3>
+                <h3 className="text-[15px] font-semibold" style={{ color: '#F4F6FA' }}>Fichiers importés</h3>
                 <span
                   className="text-[11px] font-semibold px-2 py-0.5 rounded-full"
-                  style={{ color: '#64748B', background: '#F1F5F9' }}
+                  style={{ color: '#9BA4B5', background: '#1C222D' }}
                 >
                   {documents.length}
                 </span>
@@ -492,9 +492,9 @@ export default function StepUpload({ project }: Props) {
                 <button
                   onClick={() => documents.forEach((d) => deleteDoc(d.id))}
                   className="text-xs font-medium transition-colors"
-                  style={{ color: '#EF4444' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = '#DC2626' }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = '#EF4444' }}
+                  style={{ color: '#F58E86' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.color = '#F58E86' }}
+                  onMouseLeave={(e) => { e.currentTarget.style.color = '#F58E86' }}
                 >
                   Tout supprimer
                 </button>
@@ -503,14 +503,14 @@ export default function StepUpload({ project }: Props) {
 
             <div
               className="rounded-xl overflow-hidden"
-              style={{ background: '#FFFFFF', border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+              style={{ background: '#151A23', border: '1px solid rgba(186,205,234,.13)', boxShadow: '0 1px 3px rgba(0,0,0,.4)' }}
             >
               {/* Table header */}
               <div
                 className="hidden sm:grid items-center gap-3 px-5 py-2.5 text-[11px] font-semibold uppercase tracking-wider"
                 style={{
-                  color: '#94A3B8',
-                  borderBottom: '1px solid #F1F5F9',
+                  color: '#788295',
+                  borderBottom: '1px solid rgba(186,205,234,.13)',
                   gridTemplateColumns: '2fr 80px 130px 40px',
                 }}
               >
@@ -529,20 +529,20 @@ export default function StepUpload({ project }: Props) {
                     key={doc.id}
                     className="grid items-center gap-3 px-5 py-3 transition-colors"
                     style={{
-                      borderBottom: i < documents.length - 1 ? '1px solid #F8FAFC' : 'none',
+                      borderBottom: i < documents.length - 1 ? '1px solid rgba(186,205,234,.10)' : 'none',
                       gridTemplateColumns: '2fr 80px 130px 40px',
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = '#FAFBFC' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#0F1218' }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
                   >
                     {/* Filename */}
                     <div className="flex items-center gap-3 min-w-0">
                       <FileIcon filename={doc.file_name} />
-                      <span className="text-sm truncate" style={{ color: '#0F172A' }}>{doc.file_name}</span>
+                      <span className="text-sm truncate" style={{ color: '#F4F6FA' }}>{doc.file_name}</span>
                     </div>
 
                     {/* Size */}
-                    <span className="text-sm" style={{ color: '#94A3B8' }}>
+                    <span className="text-sm" style={{ color: '#788295' }}>
                       {formatSize(doc.file_size)}
                     </span>
 
@@ -553,7 +553,7 @@ export default function StepUpload({ project }: Props) {
                         onChange={(e) => updateDocType(doc.id, e.target.value as ProjectDocumentType)}
                         className="appearance-none text-[11px] font-semibold rounded-full pl-2.5 pr-6 py-1 cursor-pointer outline-none"
                         style={{
-                          color: isFilled ? '#FFFFFF' : badge.color,
+                          color: isFilled ? '#F4F6FA' : badge.color,
                           background: isFilled ? badge.bg : badge.bg,
                           border: `1px solid ${isFilled ? 'transparent' : badge.border}`,
                         }}
@@ -562,16 +562,16 @@ export default function StepUpload({ project }: Props) {
                           <option key={value} value={value}>{l.split(' — ')[0]}</option>
                         ))}
                       </select>
-                      <ChevronRight size={10} className="absolute right-2 top-1/2 -translate-y-1/2 rotate-90 pointer-events-none" style={{ color: isFilled ? '#FFFFFF' : badge.color }} />
+                      <ChevronRight size={10} className="absolute right-2 top-1/2 -translate-y-1/2 rotate-90 pointer-events-none" style={{ color: isFilled ? '#F4F6FA' : badge.color }} />
                     </div>
 
                     {/* Delete */}
                     <button
                       onClick={() => deleteDoc(doc.id)}
                       className="p-1.5 rounded-md transition-colors"
-                      style={{ color: '#CBD5E1' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.color = '#EF4444'; e.currentTarget.style.background = 'rgba(239,68,68,0.06)' }}
-                      onMouseLeave={(e) => { e.currentTarget.style.color = '#CBD5E1'; e.currentTarget.style.background = 'transparent' }}
+                      style={{ color: '#5C6678' }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = '#F58E86'; e.currentTarget.style.background = 'rgba(239,68,68,0.06)' }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = '#5C6678'; e.currentTarget.style.background = 'transparent' }}
                     >
                       <Trash2 size={14} />
                     </button>
@@ -586,7 +586,7 @@ export default function StepUpload({ project }: Props) {
         {nextError && (
           <div
             className="flex items-start gap-2 p-4 rounded-xl text-sm mt-4"
-            style={{ color: '#EF4444', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)' }}
+            style={{ color: '#F58E86', background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)' }}
           >
             <AlertCircle size={16} className="shrink-0 mt-0.5" />
             <span>{nextError}</span>
@@ -597,15 +597,15 @@ export default function StepUpload({ project }: Props) {
         <div
           className="sticky bottom-0 mt-6 -mx-3 sm:-mx-4 px-5 py-3.5 flex items-center justify-between"
           style={{
-            background: 'rgba(255,255,255,0.90)',
+            background: 'rgba(10,12,17,0.92)',
             backdropFilter: 'blur(8px)',
             WebkitBackdropFilter: 'blur(8px)',
-            borderTop: '1px solid #F1F5F9',
+            borderTop: '1px solid rgba(186,205,234,.13)',
           }}
         >
           <div className="flex items-center gap-2">
-            <CheckCircle2 size={16} style={{ color: hasDocuments ? '#0EA5E9' : '#CBD5E1' }} />
-            <span className="text-sm" style={{ color: hasDocuments ? '#64748B' : '#CBD5E1' }}>
+            <CheckCircle2 size={16} style={{ color: hasDocuments ? '#E4E9F2' : '#5C6678' }} />
+            <span className="text-sm" style={{ color: hasDocuments ? '#9BA4B5' : '#5C6678' }}>
               {hasDocuments
                 ? "Tous les fichiers ont été vérifiés pour l'intégrité."
                 : 'Importez des fichiers pour continuer.'
@@ -616,9 +616,9 @@ export default function StepUpload({ project }: Props) {
             <button
               onClick={() => navigate(-1)}
               className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-              style={{ color: '#64748B', border: '1px solid #E2E8F0' }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#CBD5E1'; e.currentTarget.style.color = '#0F172A' }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#E2E8F0'; e.currentTarget.style.color = '#64748B' }}
+              style={{ color: '#9BA4B5', border: '1px solid rgba(186,205,234,.13)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#5C6678'; e.currentTarget.style.color = '#F4F6FA' }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(186,205,234,.13)'; e.currentTarget.style.color = '#9BA4B5' }}
             >
               Annuler
             </button>

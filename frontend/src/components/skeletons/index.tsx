@@ -12,16 +12,16 @@
 import Skeleton from '@/components/common/Skeleton'
 
 const CARD = {
-  background: '#FFFFFF',
-  border: '1px solid #F1F5F9',
-  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+  background: '#151A23',
+  border: '1px solid rgba(186,205,234,.13)',
+  boxShadow: '0 1px 3px rgba(0,0,0,.4)',
 } as const
 
 /* ── Stat card (Dashboard 4 top tiles) — h-[110px] ─────────────────── */
 export function StatCardSkeleton() {
   return (
     <div className="rounded-xl p-5 relative overflow-hidden h-[110px]" style={CARD}>
-      <div className="absolute top-0 left-0 right-0 h-[3px]" style={{ background: '#F1F5F9' }} />
+      <div className="absolute top-0 left-0 right-0 h-[3px]" style={{ background: '#1C222D' }} />
       <div className="flex items-start justify-between">
         <Skeleton className="h-10 w-10 rounded-lg" />
       </div>
@@ -48,7 +48,7 @@ export function ProjectRowSkeleton() {
       className="grid items-center gap-3 px-5 py-3.5"
       style={{
         gridTemplateColumns: '2fr 1fr 90px 140px 70px 32px',
-        borderBottom: '1px solid #F8FAFC',
+        borderBottom: '1px solid rgba(186,205,234,.10)',
       }}
     >
       {/* Name + client */}
@@ -167,7 +167,7 @@ export function RequirementCardSkeleton() {
         </div>
         <Skeleton className="h-5 w-16 rounded-full shrink-0" />
       </div>
-      <div className="flex items-center gap-2 pt-2" style={{ borderTop: '1px solid #F8FAFC' }}>
+      <div className="flex items-center gap-2 pt-2" style={{ borderTop: '1px solid rgba(186,205,234,.10)' }}>
         <Skeleton className="h-3 w-32" />
       </div>
     </div>
@@ -217,7 +217,7 @@ export function MemoireSkeleton() {
 /* ── References table row ─────────────────────────────────────────── */
 export function ReferenceRowSkeleton() {
   return (
-    <tr style={{ borderBottom: '1px solid #F1F5F9' }}>
+    <tr style={{ borderBottom: '1px solid rgba(186,205,234,.13)' }}>
       {Array.from({ length: 6 }).map((_, i) => (
         <td key={i} className="px-4 py-3">
           <Skeleton className="h-3.5" style={{ width: i === 1 ? '80%' : '60%' }} />

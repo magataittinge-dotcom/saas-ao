@@ -4,7 +4,7 @@ import {
 } from 'lucide-react'
 import type { ChecklistItem } from '@/types'
 
-const F = "'DM Sans', sans-serif"
+const F = "'Geist', sans-serif"
 
 const TEMPLATE_LABELS: Record<string, string> = {
   dc1_template: 'Formulaire DC1',
@@ -30,30 +30,30 @@ export default function CandidatureSectionTemplates({ projectId, items, onUpload
 
   return (
     <section
-      className="bg-white rounded-lg overflow-hidden"
-      style={{ border: '1px solid #F1F5F9', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', fontFamily: F }}
+      className="bg-ds-surface rounded-lg overflow-hidden"
+      style={{ border: '1px solid rgba(186,205,234,.13)', boxShadow: '0 1px 3px rgba(0,0,0,.4)', fontFamily: F }}
     >
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid #F1F5F9' }}>
+      <header className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid rgba(186,205,234,.13)' }}>
         <div className="flex items-center gap-3 min-w-0">
           <div
             className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: '#F0F9FF' }}
+            style={{ background: 'rgba(228,233,242,.07)' }}
           >
-            <FileText size={18} style={{ color: '#0EA5E9' }} />
+            <FileText size={18} style={{ color: '#E4E9F2' }} />
           </div>
           <div className="min-w-0">
-            <h2 className="text-base font-bold" style={{ color: '#0F172A' }}>
+            <h2 className="text-base font-bold" style={{ color: '#F4F6FA' }}>
               Formulaires à compléter (DCE)
             </h2>
-            <p className="text-xs mt-0.5" style={{ color: '#64748B' }}>
+            <p className="text-xs mt-0.5" style={{ color: '#9BA4B5' }}>
               {present}/{items.length} complétés — téléchargez le modèle vierge, complétez-le, puis ré-uploadez la version finale
             </p>
           </div>
         </div>
       </header>
 
-      <ul className="divide-y" style={{ borderColor: '#F1F5F9' }}>
+      <ul className="divide-y" style={{ borderColor: '#1C222D' }}>
         {items.map((item) => (
           <TemplateRow
             key={item.id}
@@ -113,42 +113,42 @@ function TemplateRow({
       {/* Status icon */}
       <span className="shrink-0 mt-0.5">
         {isPresent
-          ? <CheckCircle2 size={18} style={{ color: '#10B981' }} />
-          : <AlertCircle size={18} style={{ color: hasTemplate ? '#F59E0B' : '#EF4444' }} />}
+          ? <CheckCircle2 size={18} style={{ color: '#6EE7A8' }} />
+          : <AlertCircle size={18} style={{ color: hasTemplate ? '#F5C26B' : '#F58E86' }} />}
       </span>
 
       {/* Body */}
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2 flex-wrap">
-          <span className="text-sm font-semibold" style={{ color: '#0F172A' }}>{label}</span>
+          <span className="text-sm font-semibold" style={{ color: '#F4F6FA' }}>{label}</span>
           {!hasTemplate && (
-            <span className="text-[11px]" style={{ color: '#EF4444' }}>
+            <span className="text-[11px]" style={{ color: '#F58E86' }}>
               Modèle non trouvé dans le DCE
             </span>
           )}
           {hasTemplate && !isPresent && (
-            <span className="text-[11px]" style={{ color: '#F59E0B' }}>
+            <span className="text-[11px]" style={{ color: '#F5C26B' }}>
               À compléter
             </span>
           )}
           {isPresent && (
-            <span className="text-[11px]" style={{ color: '#10B981' }}>
+            <span className="text-[11px]" style={{ color: '#6EE7A8' }}>
               Complété
             </span>
           )}
         </div>
         {item.details && (
-          <p className="text-xs mt-1 leading-relaxed" style={{ color: '#64748B' }}>
+          <p className="text-xs mt-1 leading-relaxed" style={{ color: '#9BA4B5' }}>
             {item.details}
           </p>
         )}
         {item.source_in_rc && (
-          <p className="text-[11px] mt-1 italic" style={{ color: '#94A3B8' }}>
+          <p className="text-[11px] mt-1 italic" style={{ color: '#788295' }}>
             « {item.source_in_rc} »
           </p>
         )}
         {error && (
-          <p className="text-[11px] mt-1.5" style={{ color: '#EF4444' }}>{error}</p>
+          <p className="text-[11px] mt-1.5" style={{ color: '#F58E86' }}>{error}</p>
         )}
       </div>
 
@@ -159,8 +159,8 @@ function TemplateRow({
             href={downloadHref}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-slate-100"
-            style={{ border: '1px solid #E2E8F0', color: '#475569' }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-ds-surface-2"
+            style={{ border: '1px solid rgba(186,205,234,.13)', color: '#C7CEDA' }}
           >
             <Download size={13} />
             Modèle vierge
@@ -171,8 +171,8 @@ function TemplateRow({
             href={completedHref}
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-slate-100"
-            style={{ border: '1px solid #E2E8F0', color: '#475569' }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-ds-surface-2"
+            style={{ border: '1px solid rgba(186,205,234,.13)', color: '#C7CEDA' }}
           >
             <FileText size={13} />
             Voir version finale
@@ -182,8 +182,8 @@ function TemplateRow({
           type="button"
           onClick={handlePick}
           disabled={uploading}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-colors hover:opacity-90 disabled:opacity-60"
-          style={{ background: isPresent ? '#475569' : '#0EA5E9' }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-[#0F1218] transition-colors hover:opacity-90 disabled:opacity-60"
+          style={{ background: isPresent ? '#C7CEDA' : '#E4E9F2' }}
         >
           {uploading
             ? <><Loader2 size={13} className="animate-spin" /> Envoi...</>
