@@ -13,7 +13,7 @@ function Skeleton({ className, style }: { className?: string; style?: CSSPropert
   return (
     <div
       className={cn('rounded-md skeleton-shimmer', className)}
-      style={{ background: '#232730', ...style }}
+      style={{ background: '#1C222D', ...style }}
     />
   )
 }
@@ -53,7 +53,7 @@ export function SkeletonCard({ className, children }: { className?: string; chil
     <div
       className={cn('rounded-xl p-5', className)}
       style={{
-        background: '#1A1D21',
+        background: '#151A23',
         border: '1px solid rgba(255,255,255,0.06)',
         boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
       }}

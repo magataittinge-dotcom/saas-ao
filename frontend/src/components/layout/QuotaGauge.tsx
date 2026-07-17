@@ -16,9 +16,9 @@ interface QuotaStatus {
 }
 
 function gaugeColor(used: number, limit: number): string {
-  if (used >= limit) return '#F87171'
-  if (used / limit >= 0.8) return '#FBBF24'
-  return '#22D3EE'
+  if (used >= limit) return '#F58E86'
+  if (used / limit >= 0.8) return '#F5C26B'
+  return '#E4E9F2'
 }
 
 function CounterRow({ label, counter }: { label: string; counter: QuotaCounter }) {
@@ -27,8 +27,8 @@ function CounterRow({ label, counter }: { label: string; counter: QuotaCounter }
   const pct = Math.min(100, (counter.used / counter.limit) * 100)
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[10px] w-14 shrink-0" style={{ color: '#6B7280' }}>{label}</span>
-      <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: '#232730' }}>
+      <span className="text-[10px] w-14 shrink-0" style={{ color: '#788295' }}>{label}</span>
+      <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: '#1C222D' }}>
         <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
       </div>
       <span className="edge-data text-[10px] font-semibold tabular-nums shrink-0" style={{ color }}>
@@ -61,10 +61,10 @@ export default function QuotaGauge() {
     <button
       onClick={() => navigate('/settings/billing')}
       title="Voir mon abonnement"
-      className="w-full text-left px-4 py-2 space-y-1.5 transition-colors hover:bg-[#232730]"
+      className="w-full text-left px-4 py-2 space-y-1.5 transition-colors hover:bg-[#1C222D]"
       style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
     >
-      <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#6B7280' }}>
+      <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#788295' }}>
         {data.plan === 'free' ? 'Essai gratuit' : 'Quota mensuel'}
       </span>
       <CounterRow label="Analyses" counter={data.analyses} />

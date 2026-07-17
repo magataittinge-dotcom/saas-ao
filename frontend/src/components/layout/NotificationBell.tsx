@@ -63,14 +63,14 @@ export default function NotificationBell() {
       <button
         onClick={() => setOpen(o => !o)}
         className="relative p-2 rounded-full touch-target"
-        style={{ color: '#6B7280' }}
+        style={{ color: '#788295' }}
         title="Notifications"
       >
         <Bell size={18} />
         {unread > 0 && (
           <span
             className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold flex items-center justify-center edge-data"
-            style={{ background: '#22D3EE', color: '#0A0B0D' }}
+            style={{ background: '#E4E9F2', color: '#0A0C11' }}
           >
             {unread > 9 ? '9+' : unread}
           </span>
@@ -80,19 +80,19 @@ export default function NotificationBell() {
       {open && (
         <div
           className="absolute right-0 top-full mt-2 w-80 rounded-xl overflow-hidden z-50"
-          style={{ background: '#1A1D21', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 8px 24px rgba(0,0,0,0.10)' }}
+          style={{ background: '#151A23', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 8px 24px rgba(0,0,0,0.10)' }}
         >
           <div className="flex items-center justify-between px-4 py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            <span className="text-sm font-bold" style={{ color: '#E7EAEE' }}>Notifications</span>
+            <span className="text-sm font-bold" style={{ color: '#F4F6FA' }}>Notifications</span>
             {unread > 0 && (
-              <button onClick={() => markAllRead()} className="text-xs hover:underline" style={{ color: '#22D3EE' }}>
+              <button onClick={() => markAllRead()} className="text-xs hover:underline" style={{ color: '#E4E9F2' }}>
                 Tout marquer lu
               </button>
             )}
           </div>
           <div className="max-h-96 overflow-y-auto">
             {(data?.items ?? []).length === 0 ? (
-              <p className="px-4 py-6 text-center text-sm" style={{ color: '#6B7280' }}>
+              <p className="px-4 py-6 text-center text-sm" style={{ color: '#788295' }}>
                 Aucune notification
               </p>
             ) : (
@@ -100,21 +100,21 @@ export default function NotificationBell() {
                 <button
                   key={n.id}
                   onClick={() => !n.read && markRead(n.id)}
-                  className="w-full text-left px-4 py-3 transition-colors hover:bg-[#232730]"
+                  className="w-full text-left px-4 py-3 transition-colors hover:bg-[#1C222D]"
                   style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
                 >
                   <div className="flex items-start gap-2">
                     {!n.read && (
-                      <span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: '#22D3EE' }} />
+                      <span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: '#E4E9F2' }} />
                     )}
                     <div className="min-w-0">
-                      <p className="text-sm leading-snug" style={{ color: n.read ? '#9AA3AE' : '#E7EAEE', fontWeight: n.read ? 400 : 600 }}>
+                      <p className="text-sm leading-snug" style={{ color: n.read ? '#9BA4B5' : '#F4F6FA', fontWeight: n.read ? 400 : 600 }}>
                         {n.titre}
                       </p>
                       {n.corps && (
-                        <p className="text-xs mt-0.5 line-clamp-2" style={{ color: '#6B7280' }}>{n.corps}</p>
+                        <p className="text-xs mt-0.5 line-clamp-2" style={{ color: '#788295' }}>{n.corps}</p>
                       )}
-                      <p className="text-[10px] mt-1" style={{ color: '#4B5563' }}>{timeAgo(n.created_at)}</p>
+                      <p className="text-[10px] mt-1" style={{ color: '#5C6678' }}>{timeAgo(n.created_at)}</p>
                     </div>
                   </div>
                 </button>

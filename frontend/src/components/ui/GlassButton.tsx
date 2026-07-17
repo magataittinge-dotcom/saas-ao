@@ -4,11 +4,11 @@ import { Loader2, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 /**
- * GlassButton — bouton premium glassmorphism avec glow cyan au survol.
+ * GlassButton — bouton verre avec halo lumineux au survol (Lumen).
  *
  * Style : fond verre (backdrop-blur + fond semi-transparent), bordure subtile,
- * et un halo cyan (#22D3EE) doux qui s'intensifie au hover.
- * Pensé pour le SaaS BTP (palette ds-cyan, light mode).
+ * et un halo argenté (--lum) doux qui s'intensifie au hover.
+ * Entièrement token-driven (palette ds-*, thème sombre Lumen).
  */
 const glassButton = cva(
   // base — verre, glow doux permanent, transition fluide

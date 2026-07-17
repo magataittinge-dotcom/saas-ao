@@ -23,24 +23,24 @@ const VARIANT_CONFIG: Record<TipVariant, {
 }> = {
   info: {
     icon: Lightbulb,
-    bg: 'rgba(34,211,238,0.06)',
-    border: 'rgba(34,211,238,0.20)',
-    iconColor: '#22D3EE',
-    textColor: '#E7EAEE',
+    bg: 'rgba(228,233,242,0.06)',
+    border: 'rgba(228,233,242,0.20)',
+    iconColor: '#E4E9F2',
+    textColor: '#F4F6FA',
   },
   warning: {
     icon: AlertTriangle,
-    bg: 'rgba(248,113,113,0.06)',
-    border: 'rgba(248,113,113,0.20)',
-    iconColor: '#F87171',
+    bg: 'rgba(245,142,134,0.06)',
+    border: 'rgba(245,142,134,0.20)',
+    iconColor: '#F58E86',
     textColor: '#991B1B',
   },
   success: {
     icon: CheckCircle2,
-    bg: 'rgba(34,211,238,0.06)',
-    border: 'rgba(34,211,238,0.20)',
-    iconColor: '#22D3EE',
-    textColor: '#E7EAEE',
+    bg: 'rgba(228,233,242,0.06)',
+    border: 'rgba(228,233,242,0.20)',
+    iconColor: '#E4E9F2',
+    textColor: '#F4F6FA',
   },
 }
 
@@ -71,7 +71,7 @@ export default function AiTip({ tip, onDismiss }: Props) {
       </p>
       <button
         onClick={handleDismiss}
-        className="shrink-0 p-0.5 rounded hover:bg-[#232730] transition-colors"
+        className="shrink-0 p-0.5 rounded hover:bg-[#1C222D] transition-colors"
         style={{ color: cfg.iconColor, opacity: 0.5 }}
       >
         <X size={12} />

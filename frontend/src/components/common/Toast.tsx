@@ -12,31 +12,31 @@ export interface ToastData {
 const VARIANT_CONFIG: Record<ToastVariant, { icon: typeof CheckCircle2; color: string; bg: string; border: string; barColor: string }> = {
   success: {
     icon: CheckCircle2,
-    color: '#67E8F9',
-    bg: 'rgba(34,211,238,0.08)',
-    border: 'rgba(34,211,238,0.20)',
-    barColor: '#22D3EE',
+    color: '#C3CCDC',
+    bg: 'rgba(228,233,242,0.08)',
+    border: 'rgba(228,233,242,0.20)',
+    barColor: '#E4E9F2',
   },
   error: {
     icon: XCircle,
-    color: '#F87171',
-    bg: 'rgba(248,113,113,0.08)',
-    border: 'rgba(248,113,113,0.20)',
-    barColor: '#F87171',
+    color: '#F58E86',
+    bg: 'rgba(245,142,134,0.08)',
+    border: 'rgba(245,142,134,0.20)',
+    barColor: '#F58E86',
   },
   info: {
     icon: Info,
-    color: '#67E8F9',
-    bg: 'rgba(34,211,238,0.08)',
-    border: 'rgba(34,211,238,0.20)',
-    barColor: '#22D3EE',
+    color: '#C3CCDC',
+    bg: 'rgba(228,233,242,0.08)',
+    border: 'rgba(228,233,242,0.20)',
+    barColor: '#E4E9F2',
   },
   warning: {
     icon: AlertTriangle,
-    color: '#9AA3AE',
-    bg: 'rgba(154,163,174,0.08)',
-    border: 'rgba(154,163,174,0.20)',
-    barColor: '#9AA3AE',
+    color: '#C7CEDA',
+    bg: 'rgba(120,130,149,0.08)',
+    border: 'rgba(120,130,149,0.20)',
+    barColor: '#9BA4B5',
   },
 }
 
@@ -76,13 +76,13 @@ function ToastItem({ toast, onRemove }: { toast: ToastData; onRemove: (id: strin
         <button
           onClick={dismiss}
           className="p-1 rounded-lg transition-colors hover:bg-ds-bg/10"
-          style={{ color: '#9AA3AE' }}
+          style={{ color: '#9BA4B5' }}
         >
           <X size={14} />
         </button>
       </div>
       {/* Progress bar */}
-      <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: '#232730' }}>
+      <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: '#1C222D' }}>
         <div
           className="h-full"
           style={{

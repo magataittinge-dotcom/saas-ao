@@ -104,17 +104,17 @@ class ErrorBoundary extends React.Component<
   render() {
     if (this.state.error) {
       return (
-        <div style={{ padding: 40, color: '#F87171', background: '#0D1117', minHeight: '100vh', fontFamily: 'monospace' }}>
+        <div style={{ padding: 40, color: '#F58E86', background: '#0F1218', minHeight: '100vh', fontFamily: 'monospace' }}>
           <h1 style={{ fontSize: 20, marginBottom: 16 }}>Erreur React</h1>
           <pre style={{ whiteSpace: 'pre-wrap', fontSize: 14, color: '#FCA5A5' }}>
             {this.state.error.message}
           </pre>
-          <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12, color: '#6B7280', marginTop: 12 }}>
+          <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12, color: '#788295', marginTop: 12 }}>
             {this.state.error.stack}
           </pre>
           <button
             onClick={() => { this.setState({ error: null }); window.location.reload() }}
-            style={{ marginTop: 20, padding: '8px 16px', background: '#22D3EE', color: '#0A0B0D', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}
+            style={{ marginTop: 20, padding: '8px 16px', background: '#E4E9F2', color: '#0A0C11', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}
           >
             Recharger
           </button>

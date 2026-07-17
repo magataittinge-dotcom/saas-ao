@@ -32,9 +32,9 @@ export function FileCard({ document, onDelete, onEdit }: Props) {
       <div className="flex items-center gap-3 min-w-0">
         <div
           className="p-2 rounded-md shrink-0"
-          style={{ background: 'rgba(34,211,238,0.10)' }}
+          style={{ background: 'rgba(228,233,242,0.10)' }}
         >
-          <FileText size={18} style={{ color: '#22D3EE' }} />
+          <FileText size={18} style={{ color: '#E4E9F2' }} />
         </div>
         <div className="min-w-0">
           <p className="text-sm font-medium text-ds-text truncate">
@@ -57,7 +57,7 @@ export function FileCard({ document, onDelete, onEdit }: Props) {
             <button
               onClick={() => onEdit(document)}
               className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold transition-colors"
-              style={{ color: '#22D3EE', background: 'rgba(34,211,238,0.10)' }}
+              style={{ color: '#E4E9F2', background: 'rgba(228,233,242,0.10)' }}
             >
               <Tag size={12} /> Classer
             </button>

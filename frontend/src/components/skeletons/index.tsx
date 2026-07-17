@@ -12,7 +12,7 @@
 import Skeleton from '@/components/common/Skeleton'
 
 const CARD = {
-  background: '#1A1D21',
+  background: '#151A23',
   border: '1px solid rgba(255,255,255,0.06)',
   boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
 } as const
@@ -21,7 +21,7 @@ const CARD = {
 export function StatCardSkeleton() {
   return (
     <div className="rounded-xl p-5 relative overflow-hidden h-[110px]" style={CARD}>
-      <div className="absolute top-0 left-0 right-0 h-[3px]" style={{ background: '#232730' }} />
+      <div className="absolute top-0 left-0 right-0 h-[3px]" style={{ background: '#1C222D' }} />
       <div className="flex items-start justify-between">
         <Skeleton className="h-10 w-10 rounded-lg" />
       </div>

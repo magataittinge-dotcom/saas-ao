@@ -15,10 +15,10 @@ const PLANS = [
     name: 'Pro',
     price: '299',
     icon: Zap,
-    color: '#22D3EE',
-    colorLight: '#67E8F9',
-    bg: 'rgba(34,211,238,0.08)',
-    border: 'rgba(34,211,238,0.25)',
+    color: '#E4E9F2',
+    colorLight: '#FFFFFF',
+    bg: 'rgba(228,233,242,0.08)',
+    border: 'rgba(228,233,242,0.25)',
     features: [
       'Analyse IA illimitée',
       'Matrice de conformité automatique',
@@ -34,10 +34,10 @@ const PLANS = [
     name: 'Business',
     price: '499',
     icon: Crown,
-    color: '#E7EAEE',
-    colorLight: '#9AA3AE',
-    bg: 'rgba(15,23,42,0.06)',
-    border: 'rgba(15,23,42,0.20)',
+    color: '#F4F6FA',
+    colorLight: '#9BA4B5',
+    bg: 'rgba(0,0,0,0.45)',
+    border: 'rgba(186,205,234,0.23)',
     popular: true,
     features: [
       'Tout le plan Pro, plus :',
@@ -109,14 +109,14 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis' }
           backdropFilter: 'blur(32px) saturate(140%)',
           border: '1px solid rgba(255,255,255,0.06)',
           borderRadius: '24px',
-          boxShadow: '0 0 80px rgba(34,211,238,0.08), 0 24px 60px rgba(0,0,0,0.45)',
+          boxShadow: '0 0 80px rgba(228,233,242,0.08), 0 24px 60px rgba(0,0,0,0.45)',
           maxHeight: '95vh',
         }}
       >
         {/* Close */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-lg transition-colors hover:bg-[#232730] z-10 text-ds-text-2"
+          className="absolute top-4 right-4 p-1.5 rounded-lg transition-colors hover:bg-[#1C222D] z-10 text-ds-text-2"
         >
           <X size={18} />
         </button>
@@ -126,9 +126,9 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis' }
           <div
             className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3"
             style={{
-              background: 'linear-gradient(135deg, rgba(34,211,238,0.20), rgba(34,211,238,0.10))',
-              border: '1px solid rgba(34,211,238,0.25)',
-              boxShadow: '0 0 30px rgba(34,211,238,0.15)',
+              background: 'linear-gradient(135deg, rgba(228,233,242,0.20), rgba(228,233,242,0.10))',
+              border: '1px solid rgba(228,233,242,0.25)',
+              boxShadow: '0 0 30px rgba(228,233,242,0.15)',
             }}
           >
             <Sparkles size={22} className="text-ds-cyan" />
@@ -160,9 +160,9 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis' }
                   <span
                     className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-xs font-semibold px-3 py-0.5 rounded-full"
                     style={{
-                      background: '#22D3EE',
-                      color: '#0A0B0D',
-                      boxShadow: '0 8px 24px -12px rgba(34,211,238,0.55)',
+                      background: '#E4E9F2',
+                      color: '#0A0C11',
+                      boxShadow: '0 8px 24px -12px rgba(228,233,242,0.55)',
                     }}
                   >
                     Populaire
