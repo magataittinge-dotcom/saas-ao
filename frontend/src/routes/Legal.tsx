@@ -92,27 +92,27 @@ export default function Legal() {
   }, [activeSlug])
 
   return (
-    <div style={{ background: '#1A1D21', minHeight: '100vh', fontFamily: F }}>
+    <div style={{ background: '#151A23', minHeight: '100vh', fontFamily: F }}>
       {/* Top bar with back link */}
-      <div className="border-b" style={{ borderColor: '#232730', background: '#1A1D21' }}>
+      <div className="border-b" style={{ borderColor: '#1C222D', background: '#151A23' }}>
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link
             to="/"
             className="inline-flex items-center gap-2 text-sm font-medium transition-colors"
-            style={{ color: '#9AA3AE' }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = '#22D3EE' }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = '#9AA3AE' }}
+            style={{ color: '#9BA4B5' }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = '#E4E9F2' }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = '#9BA4B5' }}
           >
             <ArrowLeft size={16} /> Retour à l&apos;accueil
           </Link>
           <div className="flex items-center gap-2">
             <div
               className="w-7 h-7 rounded flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #22D3EE, #67E8F9)' }}
+              style={{ background: 'linear-gradient(135deg, #E4E9F2, #FFFFFF)' }}
             >
-              <span className="font-black text-[11px]" style={{ color: '#0A0B0D' }}>S</span>
+              <span className="font-black text-[11px]" style={{ color: '#0A0C11' }}>S</span>
             </div>
-            <span className="text-sm font-semibold" style={{ color: '#E7EAEE' }}>
+            <span className="text-sm font-semibold" style={{ color: '#F4F6FA' }}>
               Synorix
             </span>
           </div>
@@ -124,8 +124,8 @@ export default function Legal() {
         {/* Sidebar */}
         <aside className="lg:sticky lg:top-6 self-start">
           <div className="flex items-center gap-2 mb-4">
-            <FileText size={16} style={{ color: '#22D3EE' }} />
-            <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#6B7280' }}>
+            <FileText size={16} style={{ color: '#E4E9F2' }} />
+            <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#788295' }}>
               Documents légaux
             </h2>
           </div>
@@ -138,12 +138,12 @@ export default function Legal() {
                   to={`/legal/${doc.slug}`}
                   className="block rounded-lg px-3 py-2.5 transition-colors"
                   style={{
-                    background: active ? 'rgba(34,211,238,0.08)' : 'transparent',
+                    background: active ? 'rgba(228,233,242,0.08)' : 'transparent',
                     border: '1px solid',
-                    borderColor: active ? 'rgba(34,211,238,0.18)' : 'transparent',
+                    borderColor: active ? 'rgba(228,233,242,0.18)' : 'transparent',
                   }}
                   onMouseEnter={(e) => {
-                    if (!active) e.currentTarget.style.background = '#232730'
+                    if (!active) e.currentTarget.style.background = '#1C222D'
                   }}
                   onMouseLeave={(e) => {
                     if (!active) e.currentTarget.style.background = 'transparent'
@@ -151,23 +151,23 @@ export default function Legal() {
                 >
                   <p
                     className="text-sm font-semibold"
-                    style={{ color: active ? '#22D3EE' : '#E7EAEE' }}
+                    style={{ color: active ? '#E4E9F2' : '#F4F6FA' }}
                   >
                     {doc.label}
                   </p>
-                  <p className="text-xs mt-0.5" style={{ color: '#6B7280' }}>
+                  <p className="text-xs mt-0.5" style={{ color: '#788295' }}>
                     {doc.description}
                   </p>
                 </Link>
               )
             })}
           </nav>
-          <p className="text-xs mt-6 leading-relaxed" style={{ color: '#6B7280' }}>
+          <p className="text-xs mt-6 leading-relaxed" style={{ color: '#788295' }}>
             Pour toute question juridique, contactez-nous à{' '}
             <a
               href="mailto:contact@synorix.tech"
               className="font-medium"
-              style={{ color: '#22D3EE' }}
+              style={{ color: '#E4E9F2' }}
             >
               contact@synorix.tech
             </a>
@@ -179,17 +179,17 @@ export default function Legal() {
         <article className="legal-prose">
           {isLoading && (
             <div className="space-y-3 animate-pulse">
-              <div className="h-8 rounded" style={{ background: '#232730', width: '60%' }} />
-              <div className="h-4 rounded" style={{ background: '#232730', width: '40%' }} />
-              <div className="h-3 rounded mt-6" style={{ background: '#232730' }} />
-              <div className="h-3 rounded" style={{ background: '#232730' }} />
-              <div className="h-3 rounded" style={{ background: '#232730', width: '80%' }} />
+              <div className="h-8 rounded" style={{ background: '#1C222D', width: '60%' }} />
+              <div className="h-4 rounded" style={{ background: '#1C222D', width: '40%' }} />
+              <div className="h-3 rounded mt-6" style={{ background: '#1C222D' }} />
+              <div className="h-3 rounded" style={{ background: '#1C222D' }} />
+              <div className="h-3 rounded" style={{ background: '#1C222D', width: '80%' }} />
             </div>
           )}
           {error && (
             <div
               className="rounded-lg p-4"
-              style={{ background: '#3A1D1D', border: '1px solid rgba(248,113,113,0.30)', color: '#F87171' }}
+              style={{ background: 'rgba(245,142,134,0.09)', border: '1px solid rgba(245,142,134,0.30)', color: '#F58E86' }}
             >
               <p className="text-sm font-semibold">Impossible de charger le document</p>
               <p className="text-xs mt-1">{error}</p>
