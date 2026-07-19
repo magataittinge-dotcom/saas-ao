@@ -23,7 +23,7 @@ const plans = [
   {
     id: 'pro',
     name: 'Pro',
-    price: '299',
+    price: '349',
     users: '1-2 utilisateurs',
     target: 'PME BTP (CA < 10M)',
     icon: Zap,
@@ -42,7 +42,7 @@ const plans = [
   {
     id: 'business',
     name: 'Business',
-    price: '499',
+    price: '599',
     users: '5+ utilisateurs',
     target: 'ETI BTP (CA > 10M)',
     icon: Crown,

@@ -48,7 +48,7 @@ export default function Settings() {
 
   const plan     = organization?.plan ?? 'free'
   const planCfg  = PLAN_LABELS[plan] ?? PLAN_LABELS.free
-  const planPrice = plan === 'pro' ? '299€' : plan === 'business' ? '499€' : '0€'
+  const planPrice = plan === 'pro' ? '349€' : plan === 'business' ? '599€' : '0€'
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
