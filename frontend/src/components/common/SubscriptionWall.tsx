@@ -13,7 +13,7 @@ const PLANS = [
   {
     id: 'pro',
     name: 'Pro',
-    price: '299',
+    price: '349',
     icon: Zap,
     color: '#E4E9F2',
     colorLight: '#FFFFFF',
@@ -32,7 +32,7 @@ const PLANS = [
   {
     id: 'business',
     name: 'Business',
-    price: '499',
+    price: '599',
     icon: Crown,
     color: '#F4F6FA',
     colorLight: '#9BA4B5',
