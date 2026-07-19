@@ -78,7 +78,7 @@ export default function ProfileFreeTextCard() {
             className="glass-input w-full py-2.5 text-sm"
           />
           <div className="flex items-center justify-between gap-3">
-            {error && <p className="text-xs" style={{ color: '#FBBF24' }}>{error}</p>}
+            {error && <p className="text-xs" style={{ color: '#F5C26B' }}>{error}</p>}
             <button
               onClick={() => structure()}
               disabled={structuring || text.trim().length < 10}
