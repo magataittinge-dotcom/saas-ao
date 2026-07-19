@@ -3,73 +3,73 @@ import { Sparkles } from 'lucide-react'
 
 const clerkAppearance = {
   variables: {
-    colorPrimary: '#22D3EE',
-    colorBackground: '#1A1D21',
-    colorText: '#E7EAEE',
-    colorTextSecondary: '#9AA3AE',
-    colorInputBackground: '#232730',
-    colorInputText: '#E7EAEE',
+    colorPrimary: '#E4E9F2',
+    colorBackground: '#151A23',
+    colorText: '#F4F6FA',
+    colorTextSecondary: '#9BA4B5',
+    colorInputBackground: '#1C222D',
+    colorInputText: '#F4F6FA',
     borderRadius: '12px',
   },
   elements: {
     rootBox: 'w-full',
     card: {
-      backgroundColor: '#1A1D21',
-      border: '1px solid rgba(255,255,255,0.06)',
+      backgroundColor: '#151A23',
+      border: '1px solid rgba(186,205,234,.13)',
       borderRadius: '20px',
       boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
     },
-    headerTitle: { color: '#E7EAEE', fontFamily: 'Geist Sans, system-ui, sans-serif' },
-    headerSubtitle: { color: '#9AA3AE' },
+    headerTitle: { color: '#F4F6FA', fontFamily: 'Geist Sans, system-ui, sans-serif' },
+    headerSubtitle: { color: '#9BA4B5' },
     socialButtonsBlockButton: {
-      backgroundColor: '#232730',
-      border: '1px solid rgba(255,255,255,0.06)',
-      color: '#E7EAEE',
+      backgroundColor: '#1C222D',
+      border: '1px solid rgba(186,205,234,.13)',
+      color: '#F4F6FA',
     },
-    formFieldLabel: { color: '#9AA3AE' },
+    formFieldLabel: { color: '#9BA4B5' },
     formFieldInput: {
-      backgroundColor: '#232730',
-      border: '1px solid rgba(255,255,255,0.06)',
-      color: '#E7EAEE',
+      backgroundColor: '#1C222D',
+      border: '1px solid rgba(186,205,234,.13)',
+      color: '#F4F6FA',
     },
     formButtonPrimary: {
-      background: '#22D3EE',
-      color: '#0A0B0D',
+      background: '#E4E9F2',
+      color: '#0A0C11',
       fontWeight: '600',
       borderRadius: '12px',
     },
-    footerActionLink: { color: '#22D3EE' },
+    footerActionLink: { color: '#E4E9F2' },
     footer: { backgroundColor: 'transparent' },
     footerAction: { backgroundColor: 'transparent' },
-    dividerLine: { backgroundColor: '#232730' },
-    dividerText: { color: '#6B7280' },
-    identityPreview: { backgroundColor: '#232730', border: '1px solid rgba(255,255,255,0.06)' },
-    identityPreviewText: { color: '#E7EAEE' },
-    identityPreviewEditButton: { color: '#22D3EE' },
-    formFieldAction: { color: '#22D3EE' },
-    alert: { backgroundColor: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.15)', color: '#F87171' },
+    dividerLine: { backgroundColor: '#1C222D' },
+    dividerText: { color: '#788295' },
+    identityPreview: { backgroundColor: '#1C222D', border: '1px solid rgba(186,205,234,.13)' },
+    identityPreviewText: { color: '#F4F6FA' },
+    identityPreviewEditButton: { color: '#E4E9F2' },
+    formFieldAction: { color: '#E4E9F2' },
+    alert: { backgroundColor: 'rgba(245,142,134,0.08)', border: '1px solid rgba(245,142,134,0.15)', color: '#F58E86' },
   },
 } as const
 
 export default function Login() {
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#0A0B0D' }}>
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#0A0C11' }}>
       {/* Single centered container — fixed width matching Clerk form */}
       <div className="relative w-full flex flex-col items-center animate-fade-in" style={{ maxWidth: '420px' }}>
         {/* Logo + tagline */}
         <div className="flex flex-col items-center gap-3 mb-8">
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
             style={{
-              background: 'radial-gradient(120% 80% at 50% 100%, rgba(34,211,238,0.22), transparent 65%), #121417',
-              boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.10), 0 8px 24px -12px rgba(34,211,238,0.35)',
+              background: 'radial-gradient(120% 80% at 50% 100%, rgba(228,233,242,0.22), transparent 65%), #0F1218',
+              boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.10), 0 8px 24px -12px rgba(228,233,242,0.35)',
             }}>
-            <Sparkles size={24} style={{ color: '#22D3EE' }} />
+            <Sparkles size={24} style={{ color: '#E4E9F2' }} />
           </div>
           <span className="text-gradient text-3xl font-extrabold tracking-tight"
             style={{ fontFamily: 'Geist Sans, system-ui, sans-serif' }}>
             SYNORIX
           </span>
-          <p className="text-sm text-center font-sans" style={{ color: '#9AA3AE' }}>
+          <p className="text-sm text-center font-sans" style={{ color: '#9BA4B5' }}>
             Répondez aux appels d'offres BTP 10× plus vite grâce à l'IA
           </p>
         </div>
@@ -82,7 +82,7 @@ export default function Login() {
           appearance={clerkAppearance}
         />
 
-        <p className="text-center text-xs mt-6 font-sans" style={{ color: '#6B7280' }}>
+        <p className="text-center text-xs mt-6 font-sans" style={{ color: '#788295' }}>
           Synorix · Réponses aux AO BTP automatisées par IA
         </p>
 
@@ -98,9 +98,9 @@ export default function Login() {
               key={to}
               href={to}
               className="text-[11px] transition-colors"
-              style={{ color: '#6B7280' }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#22D3EE' }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = '#6B7280' }}
+              style={{ color: '#788295' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#E4E9F2' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = '#788295' }}
             >
               {label}
             </a>
