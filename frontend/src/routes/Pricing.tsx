@@ -9,7 +9,7 @@ const plans = [
     users: '1 utilisateur',
     target: 'Découverte',
     icon: Sparkles,
-    color: '#9AA3AE',
+    color: '#9BA4B5',
     features: [
       { text: '1 AO par mois', included: true },
       { text: 'Upload DCE', included: true },
@@ -27,7 +27,7 @@ const plans = [
     users: '1-2 utilisateurs',
     target: 'PME BTP (CA < 10M)',
     icon: Zap,
-    color: '#22D3EE',
+    color: '#E4E9F2',
     features: [
       { text: '15 AO par mois', included: true },
       { text: 'Analyse IA illimitée', included: true },
@@ -46,7 +46,7 @@ const plans = [
     users: '5+ utilisateurs',
     target: 'ETI BTP (CA > 10M)',
     icon: Crown,
-    color: '#E7EAEE',
+    color: '#F4F6FA',
     popular: true,
     features: [
       { text: 'AO illimités', included: true },
@@ -63,13 +63,13 @@ const plans = [
 
 export default function Pricing() {
   return (
-    <div className="min-h-screen py-16 px-6 relative" style={{ background: '#232730' }}>
+    <div className="min-h-screen py-16 px-6 relative" style={{ background: '#1C222D' }}>
       <div className="max-w-5xl mx-auto relative z-10">
         <div className="text-center mb-14">
-          <h1 className="text-4xl font-extrabold mb-4" style={{ color: '#E7EAEE', fontFamily: 'Geist Sans, system-ui, sans-serif' }}>
+          <h1 className="text-4xl font-extrabold mb-4" style={{ color: '#F4F6FA', fontFamily: 'Geist Sans, system-ui, sans-serif' }}>
             Tarifs simples et transparents
           </h1>
-          <p className="text-lg" style={{ color: '#9AA3AE' }}>
+          <p className="text-lg" style={{ color: '#9BA4B5' }}>
             Economisez 2 jours de travail par AO. Rentabilisé en 1 réponse.
           </p>
         </div>
@@ -83,14 +83,14 @@ export default function Pricing() {
                 className="relative rounded-2xl"
                 style={
                   plan.popular
-                    ? { background: 'linear-gradient(135deg, #22D3EE, rgba(34,211,238,0.20))', padding: '1px' }
+                    ? { background: 'linear-gradient(135deg, #E4E9F2, rgba(228,233,242,0.20))', padding: '1px' }
                     : {}
                 }
               >
                 {plan.popular && (
                   <div
                     className="absolute -top-3.5 left-1/2 -translate-x-1/2 z-10 px-4 py-1 rounded-full text-xs font-semibold"
-                    style={{ background: '#22D3EE', color: '#0A0B0D', boxShadow: '0 8px 24px -12px rgba(34,211,238,0.55)' }}
+                    style={{ background: '#E4E9F2', color: '#0A0C11', boxShadow: '0 8px 24px -12px rgba(228,233,242,0.55)' }}
                   >
                     Recommandé
                   </div>
@@ -98,8 +98,8 @@ export default function Pricing() {
                 <div
                   className="rounded-2xl p-7 h-full flex flex-col"
                   style={{
-                    background: '#1A1D21',
-                    border: plan.popular ? 'none' : '1px solid rgba(255,255,255,0.06)',
+                    background: '#151A23',
+                    border: plan.popular ? 'none' : '1px solid rgba(186,205,234,.13)',
                     boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
                   }}
                 >
@@ -110,18 +110,18 @@ export default function Pricing() {
                       <Icon size={17} style={{ color: plan.color }} />
                     </div>
                     <div>
-                      <h2 className="text-base font-bold" style={{ color: '#E7EAEE' }}>{plan.name}</h2>
-                      <p className="text-xs" style={{ color: '#6B7280' }}>{plan.target}</p>
+                      <h2 className="text-base font-bold" style={{ color: '#F4F6FA' }}>{plan.name}</h2>
+                      <p className="text-xs" style={{ color: '#788295' }}>{plan.target}</p>
                     </div>
                   </div>
 
                   {/* Price */}
                   <div className="mb-5">
-                    <span className="text-4xl font-extrabold" style={{ color: '#E7EAEE', fontFamily: 'Geist Sans, system-ui, sans-serif' }}>
+                    <span className="text-4xl font-extrabold" style={{ color: '#F4F6FA', fontFamily: 'Geist Sans, system-ui, sans-serif' }}>
                       {plan.price}€
                     </span>
-                    <span className="text-sm ml-1" style={{ color: '#6B7280' }}>/mois HT</span>
-                    <p className="text-xs mt-1" style={{ color: '#6B7280' }}>{plan.users}</p>
+                    <span className="text-sm ml-1" style={{ color: '#788295' }}>/mois HT</span>
+                    <p className="text-xs mt-1" style={{ color: '#788295' }}>{plan.users}</p>
                   </div>
 
                   {/* Features */}
@@ -129,11 +129,11 @@ export default function Pricing() {
                     {plan.features.map((f) => (
                       <li key={f.text} className="flex items-center gap-2.5 text-sm">
                         {f.included ? (
-                          <CheckCircle2 size={15} className="shrink-0" style={{ color: '#22D3EE' }} />
+                          <CheckCircle2 size={15} className="shrink-0" style={{ color: '#E4E9F2' }} />
                         ) : (
-                          <X size={15} className="shrink-0" style={{ color: '#4B5563' }} />
+                          <X size={15} className="shrink-0" style={{ color: '#5C6678' }} />
                         )}
-                        <span style={{ color: f.included ? '#C9CFD6' : '#6B7280' }}>{f.text}</span>
+                        <span style={{ color: f.included ? '#E8EBF2' : '#788295' }}>{f.text}</span>
                       </li>
                     ))}
                   </ul>
@@ -145,20 +145,20 @@ export default function Pricing() {
                     style={
                       plan.popular
                         ? {}
-                        : { background: '#232730', color: '#9AA3AE', border: '1px solid rgba(255,255,255,0.06)' }
+                        : { background: '#1C222D', color: '#9BA4B5', border: '1px solid rgba(186,205,234,.13)' }
                     }
                     onMouseEnter={(e) => {
                       if (!plan.popular) {
-                        e.currentTarget.style.borderColor = '#4B5563'
-                        e.currentTarget.style.color = '#E7EAEE'
-                        e.currentTarget.style.background = '#232730'
+                        e.currentTarget.style.borderColor = '#5C6678'
+                        e.currentTarget.style.color = '#F4F6FA'
+                        e.currentTarget.style.background = '#1C222D'
                       }
                     }}
                     onMouseLeave={(e) => {
                       if (!plan.popular) {
-                        e.currentTarget.style.borderColor = '#232730'
-                        e.currentTarget.style.color = '#9AA3AE'
-                        e.currentTarget.style.background = '#232730'
+                        e.currentTarget.style.borderColor = '#1C222D'
+                        e.currentTarget.style.color = '#9BA4B5'
+                        e.currentTarget.style.background = '#1C222D'
                       }
                     }}
                   >
@@ -170,7 +170,7 @@ export default function Pricing() {
           })}
         </div>
 
-        <p className="text-center text-sm mt-10" style={{ color: '#6B7280' }}>
+        <p className="text-center text-sm mt-10" style={{ color: '#788295' }}>
           Sans engagement · Résiliable à tout moment · Support inclus
         </p>
       </div>
