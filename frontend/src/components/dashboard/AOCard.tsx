@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Clock, ArrowRight, Send, Trash2, Trophy, X } from 'lucide-react'
+import { AlertTriangle, Clock, ArrowRight, Send, Trash2, Trophy, X } from 'lucide-react'
 import { api } from '@/services/api'
 import { daysUntil } from '@/lib/utils'
 import { cn } from '@/lib/utils'
@@ -9,13 +9,13 @@ import type { Project } from '@/types'
 import { PIPELINE_STEPS } from './PipelineRail'
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string; accent: string }> = {
-  brouillon:  { label: 'Brouillon',            cls: 'pill-muted',   accent: '#9AA3AE' },
-  en_cours:   { label: 'En cours',             cls: 'pill-cyan',    accent: '#22D3EE' },
-  analyzed:   { label: 'Analysé',              cls: 'pill-cyan',    accent: '#22D3EE' },
-  sans_suite: { label: 'Analysé — sans suite', cls: 'pill-muted',   accent: '#6B7280' },
-  soumis:     { label: 'Déposé',               cls: 'pill-muted',   accent: '#9AA3AE' },
-  gagné:      { label: 'Gagné',                cls: 'pill-gagne',   accent: '#34D399' },
-  perdu:      { label: 'Perdu',                cls: 'pill-danger',  accent: '#F87171' },
+  brouillon:  { label: 'Brouillon',            cls: 'pill-muted',   accent: '#9BA4B5' },
+  en_cours:   { label: 'En cours',             cls: 'pill-cyan',    accent: '#E4E9F2' },
+  analyzed:   { label: 'Analysé',              cls: 'pill-cyan',    accent: '#E4E9F2' },
+  sans_suite: { label: 'Analysé — sans suite', cls: 'pill-muted',   accent: '#788295' },
+  soumis:     { label: 'Déposé',               cls: 'pill-muted',   accent: '#C7CEDA' },
+  gagné:      { label: 'Gagné',                cls: 'pill-gagne',   accent: '#6EE7A8' },
+  perdu:      { label: 'Perdu',                cls: 'pill-danger',  accent: '#F58E86' },
 }
 
 interface Props {
@@ -48,22 +48,22 @@ export function AOCard({ project, onDelete }: Props) {
   const stepIndex = Math.min(Math.max(project.current_step, 1), PIPELINE_STEPS.length)
   const progress = ((stepIndex - 1) / (PIPELINE_STEPS.length - 1)) * 100
   const status = STATUS_CONFIG[project.status] ?? STATUS_CONFIG.brouillon
-  const accentColor = isUrgent ? '#22D3EE' : status.accent
+  const accentColor = isUrgent ? '#F58E86' : status.accent
 
   return (
     <div
       className="glass-card p-5 cursor-pointer flex flex-col gap-4 relative overflow-hidden"
       style={{
-        borderColor: isUrgent ? 'rgba(34,211,238,0.30)' : undefined,
+        borderColor: isUrgent ? 'rgba(240,68,56,0.25)' : undefined,
       }}
       onClick={() => navigate(`/projects/${project.id}`)}
       onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = isUrgent ? 'rgba(34,211,238,0.45)' : 'rgba(34,211,238,0.15)'
+        e.currentTarget.style.borderColor = isUrgent ? 'rgba(240,68,56,0.35)' : 'rgba(228,233,242,0.15)'
         e.currentTarget.style.transform = 'translateY(-2px)'
-        e.currentTarget.style.boxShadow = `0 4px 12px rgba(0,0,0,0.08), 0 0 0 1px rgba(34,211,238,0.10)`
+        e.currentTarget.style.boxShadow = `0 4px 12px rgba(0,0,0,.5), 0 0 0 1px ${isUrgent ? 'rgba(240,68,56,0.15)' : 'rgba(228,233,242,0.10)'}`
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = isUrgent ? 'rgba(34,211,238,0.30)' : ''
+        e.currentTarget.style.borderColor = isUrgent ? 'rgba(240,68,56,0.25)' : ''
         e.currentTarget.style.transform = 'translateY(0)'
         e.currentTarget.style.boxShadow = ''
       }}
@@ -100,12 +100,12 @@ export function AOCard({ project, onDelete }: Props) {
       )}
 
       {/* Metadata: date + lot */}
-      <div className="flex items-center gap-3 text-xs -mt-2 relative" style={{ color: '#9AA3AE' }}>
+      <div className="flex items-center gap-3 text-xs -mt-2 relative" style={{ color: '#C7CEDA' }}>
         <span>
           {new Date(project.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
         </span>
         {project.selected_lot_name && (
-          <span className="truncate" style={{ color: '#67E8F9' }}>
+          <span className="truncate" style={{ color: '#C3CCDC' }}>
             {project.selected_lot_name}
           </span>
         )}
@@ -117,13 +117,19 @@ export function AOCard({ project, onDelete }: Props) {
           <span className="text-ds-text-3">{PIPELINE_STEPS[stepIndex - 1]}</span>
           <span
             className="text-ds-text-2 font-medium"
-            style={{ fontFamily: '"Geist Mono", monospace' }}
+            style={{ fontFamily: '"Geist Mono", monospace', fontVariantNumeric: 'tabular-nums' }}
           >
             {Math.round(progress)}%
           </span>
         </div>
-        <div className="progress-track h-1.5">
-          <div className="progress-bar-gradient h-full" style={{ width: `${progress}%` }} />
+        <div className="steps-track w-full" style={{ display: 'flex' }}>
+          {PIPELINE_STEPS.map((_, i) => (
+            <i
+              key={i}
+              className={i < stepIndex - 1 ? 'done' : i === stepIndex - 1 ? 'active' : ''}
+              style={{ flex: 1, width: 'auto' }}
+            />
+          ))}
         </div>
       </div>
 
@@ -135,9 +141,9 @@ export function AOCard({ project, onDelete }: Props) {
               'flex items-center gap-1.5 text-xs',
               isUrgent ? 'font-semibold' : 'text-ds-text-3',
             )}
-            style={isUrgent ? { color: '#67E8F9' } : undefined}
+            style={isUrgent ? { color: '#F58E86' } : undefined}
           >
-            <Clock size={11} />
+            {isUrgent ? <AlertTriangle size={11} /> : <Clock size={11} />}
             {days === 0
               ? "Échéance aujourd'hui"
               : days !== null && days < 0
@@ -156,7 +162,7 @@ export function AOCard({ project, onDelete }: Props) {
               onClick={(e) => { e.stopPropagation(); setStatus('soumis') }}
               title="Marquer cet AO comme déposé (date enregistrée)"
               className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-50"
-              style={{ border: '1px solid rgba(255,255,255,0.06)', color: '#9AA3AE' }}
+              style={{ border: '1px solid rgba(186,205,234,.13)', color: '#9BA4B5' }}
             >
               <Send size={11} /> Déposé
             </button>
@@ -167,7 +173,7 @@ export function AOCard({ project, onDelete }: Props) {
                 disabled={statusPending}
                 onClick={(e) => { e.stopPropagation(); setStatus('gagné') }}
                 className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-50"
-                style={{ border: '1px solid rgba(52,211,153,0.30)', color: '#34D399' }}
+                style={{ border: '1px solid rgba(110,231,168,0.30)', color: '#6EE7A8' }}
               >
                 <Trophy size={11} /> Gagné
               </button>
@@ -175,7 +181,7 @@ export function AOCard({ project, onDelete }: Props) {
                 disabled={statusPending}
                 onClick={(e) => { e.stopPropagation(); setStatus('perdu') }}
                 className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-50"
-                style={{ border: '1px solid rgba(255,255,255,0.06)', color: '#9AA3AE' }}
+                style={{ border: '1px solid rgba(186,205,234,.13)', color: '#9BA4B5' }}
               >
                 <X size={11} /> Perdu
               </button>
@@ -183,9 +189,9 @@ export function AOCard({ project, onDelete }: Props) {
           )}
           <button
             className="flex items-center gap-1 text-xs font-medium transition-colors"
-            style={{ color: '#22D3EE' }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = '#67E8F9')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = '#22D3EE')}
+            style={{ color: '#E4E9F2' }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#C3CCDC')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = '#E4E9F2')}
             onClick={(e) => { e.stopPropagation(); navigate(`/projects/${project.id}`) }}
           >
             Continuer
