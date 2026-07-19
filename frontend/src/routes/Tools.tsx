@@ -89,8 +89,8 @@ function RetenueCalculator() {
   return (
     <div className="glass-card p-6 flex flex-col">
       <div className="flex items-center gap-3 mb-1">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#0F2B33' }}>
-          <Coins size={18} style={{ color: '#22D3EE' }} />
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'rgba(228,233,242,0.08)' }}>
+          <Coins size={18} style={{ color: '#E4E9F2' }} />
         </div>
         <div>
           <h2 className="text-base font-bold text-ds-text" style={{ fontFamily: F }}>Retenue de garantie</h2>
@@ -134,13 +134,13 @@ function RetenueCalculator() {
         <button
           type="button" onClick={() => setShowAdvanced((s) => !s)}
           className="text-xs font-semibold transition-colors"
-          style={{ color: '#22D3EE', cursor: 'pointer' }}
+          style={{ color: '#E4E9F2', cursor: 'pointer' }}
         >
           {showAdvanced ? '− Masquer' : '+ Options avancées'} (pénalités, intérêts moratoires)
         </button>
 
         {showAdvanced && (
-          <div className="grid grid-cols-2 gap-3 rounded-xl p-3" style={{ background: '#232730' }}>
+          <div className="grid grid-cols-2 gap-3 rounded-xl p-3" style={{ background: '#1C222D' }}>
             <Field id="rg-jours" label="Jours de retard">
               <input id="rg-jours" type="number" min={0} className="input-dark"
                 value={joursRetard} onChange={(e) => setJoursRetard(e.target.value)} />
@@ -169,33 +169,33 @@ function RetenueCalculator() {
         </button>
 
         {error && (
-          <p className="text-xs font-medium" style={{ color: '#F87171' }} role="alert">{error}</p>
+          <p className="text-xs font-medium" style={{ color: '#F58E86' }} role="alert">{error}</p>
         )}
       </div>
 
       {result && (
-        <div className="mt-5 pt-5 space-y-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          <div className="text-center rounded-xl p-4" style={{ background: '#0F2B33', border: '1px solid #12404B' }}>
+        <div className="mt-5 pt-5 space-y-4" style={{ borderTop: '1px solid rgba(186,205,234,.13)' }}>
+          <div className="text-center rounded-xl p-4" style={{ background: '#151A23', border: '1px solid rgba(186,205,234,.13)' }}>
             <p className="text-[11px] uppercase tracking-wide font-semibold text-ds-text-3">Montant TTC du marché</p>
-            <p className="text-2xl font-bold mt-1" style={{ color: '#E7EAEE', fontFamily: F }}>
+            <p className="text-2xl font-bold mt-1" style={{ color: '#F4F6FA', fontFamily: F }}>
               {formatMontant(result.montant_ttc)}
             </p>
           </div>
 
-          <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid rgba(186,205,234,.13)' }}>
             <table className="w-full text-sm">
-              <thead style={{ background: '#232730' }}>
+              <thead style={{ background: '#1C222D' }}>
                 <tr>
                   {['Poste', 'Montant', 'Base', 'Détail'].map((h) => (
                     <th key={h} className="text-left text-[11px] font-semibold uppercase tracking-wide px-3 py-2 text-ds-text-2">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y" style={{ borderColor: '#232730' }}>
+              <tbody className="divide-y" style={{ borderColor: '#1C222D' }}>
                 {result.postes.map((p, i) => (
                   <tr key={i}>
                     <td className="px-3 py-2.5 font-medium text-ds-text">{p.poste}</td>
-                    <td className="px-3 py-2.5 font-semibold whitespace-nowrap" style={{ color: '#67E8F9' }}>{formatMontant(p.montant)}</td>
+                    <td className="px-3 py-2.5 font-semibold whitespace-nowrap" style={{ color: '#F4F6FA' }}>{formatMontant(p.montant)}</td>
                     <td className="px-3 py-2.5 text-ds-text-3">{p.base}</td>
                     <td className="px-3 py-2.5 text-ds-text-2 text-xs">{p.detail}</td>
                   </tr>
@@ -217,7 +217,7 @@ function RetenueCalculator() {
           ))}
 
           <div className="flex items-center gap-1.5 text-[11px] text-ds-text-3">
-            <ShieldCheck size={12} style={{ color: '#6B7280' }} />
+            <ShieldCheck size={12} style={{ color: '#788295' }} />
             Calcul indicatif — l'assiette et les plafonds définitifs dépendent des clauses du CCAP.
           </div>
         </div>
@@ -231,7 +231,7 @@ export default function Tools() {
   return (
     <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
       <div className="flex items-center gap-3">
-        <Calculator size={24} style={{ color: '#22D3EE' }} />
+        <Calculator size={24} style={{ color: '#E4E9F2' }} />
         <div>
           <h1 className="text-2xl font-bold text-ds-text">Calculateurs</h1>
           <p className="text-sm text-ds-text-2">Outils d'aide à la décision — marchés publics. Calcul instantané, aucune donnée enregistrée.</p>
