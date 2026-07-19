@@ -47,10 +47,10 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick }: 
                 className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold border-2 transition-all duration-300"
                 style={
                   isCompleted
-                    ? { background: '#22D3EE', borderColor: '#22D3EE', color: '#0A0B0D' }
+                    ? { background: 'linear-gradient(180deg, #FFFFFF, #C9D2E0)', borderColor: 'rgba(255,255,255,.45)', color: '#0F1218' }
                     : isActive
-                    ? { background: '#121417', borderColor: '#22D3EE', color: '#22D3EE', boxShadow: '0 8px 24px -12px rgba(34,211,238,0.35)' }
-                    : { background: '#232730', borderColor: 'rgba(255,255,255,0.10)', color: '#9AA3AE' }
+                    ? { background: 'linear-gradient(180deg, #FFFFFF, #C9D2E0)', borderColor: 'rgba(255,255,255,.45)', color: '#0F1218' }
+                    : { background: '#1C222D', borderColor: 'rgba(186,205,234,.23)', color: '#C7CEDA' }
                 }
               >
                 {isCompleted ? <Check size={15} strokeWidth={2.5} /> : step.number}
@@ -60,9 +60,9 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick }: 
               <span
                 className="text-xs whitespace-nowrap font-medium transition-colors"
                 style={
-                  isActive    ? { color: '#22D3EE' }
-                  : isCompleted ? { color: '#67E8F9' }
-                  : { color: '#6B7280' }
+                  isActive    ? { color: '#E4E9F2' }
+                  : isCompleted ? { color: '#C3CCDC' }
+                  : { color: '#788295' }
                 }
               >
                 {step.label}
@@ -75,10 +75,10 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick }: 
                 className="flex-1 h-0.5 mx-2 mt-[-1.25rem] rounded-full transition-all duration-500"
                 style={
                   isCompleted
-                    ? { background: 'linear-gradient(90deg, #22D3EE, #67E8F9)' }
+                    ? { background: 'linear-gradient(90deg, #9FA9BC, #E4E9F2)' }
                     : isActive
-                    ? { background: 'linear-gradient(90deg, rgba(34,211,238,0.40), #232730)' }
-                    : { background: '#232730' }
+                    ? { background: 'linear-gradient(90deg, rgba(228,233,242,0.40), rgba(186,205,234,.13))' }
+                    : { background: 'rgba(186,205,234,.13)' }
                 }
               />
             )}
