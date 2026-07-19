@@ -74,7 +74,7 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
       role="dialog"
       aria-modal="true"
       className="fixed inset-0 z-[100] flex items-center justify-center px-4 select-none"
-      style={{ background: 'rgba(15, 23, 42, 0.45)', fontFamily: F }}
+      style={{ background: 'rgba(0,0,0,0.60)', fontFamily: F }}
       onClick={onClose}
     >
       <div
@@ -83,12 +83,12 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
         style={{ boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}
       >
         {/* Header */}
-        <header className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <header className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(186,205,234,.13)' }}>
           <div className="min-w-0">
-            <h3 className="text-base font-bold" style={{ color: '#E7EAEE' }}>
+            <h3 className="text-base font-bold" style={{ color: '#F4F6FA' }}>
               Choisir une pièce du coffre-fort
             </h3>
-            <p className="text-xs mt-0.5 truncate" style={{ color: '#9AA3AE' }}>
+            <p className="text-xs mt-0.5 truncate" style={{ color: '#9BA4B5' }}>
               Pour : {item.details || item.document_type_required}
             </p>
           </div>
@@ -98,7 +98,7 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
             className="p-1.5 rounded-lg transition-colors hover:bg-ds-bg-2 shrink-0"
             aria-label="Fermer"
           >
-            <X size={18} style={{ color: '#9AA3AE' }} />
+            <X size={18} style={{ color: '#9BA4B5' }} />
           </button>
         </header>
 
@@ -126,9 +126,9 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
               : <><Upload size={15} /> Téléverser un fichier depuis mon ordinateur</>}
           </button>
           <div className="flex items-center gap-3 my-3">
-            <span className="flex-1 h-px" style={{ background: '#232730' }} />
-            <span className="text-[11px] uppercase tracking-wider" style={{ color: '#6B7280' }}>ou choisir au coffre-fort</span>
-            <span className="flex-1 h-px" style={{ background: '#232730' }} />
+            <span className="flex-1 h-px" style={{ background: '#1C222D' }} />
+            <span className="text-[11px] uppercase tracking-wider" style={{ color: '#788295' }}>ou choisir au coffre-fort</span>
+            <span className="flex-1 h-px" style={{ background: '#1C222D' }} />
           </div>
         </div>
 
@@ -136,20 +136,20 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
         <div className="px-6">
           <div
             className="flex items-center gap-2 px-3 py-2 rounded-lg"
-            style={{ border: '1px solid rgba(255,255,255,0.06)' }}
+            style={{ border: '1px solid rgba(186,205,234,.13)' }}
           >
-            <Search size={14} style={{ color: '#6B7280' }} />
+            <Search size={14} style={{ color: '#788295' }} />
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Rechercher par nom de fichier"
               className="flex-1 text-sm outline-none bg-transparent"
-              style={{ color: '#E7EAEE' }}
+              style={{ color: '#F4F6FA' }}
             />
           </div>
           {error && (
-            <p className="text-xs mt-2 flex items-center gap-1" style={{ color: '#F87171' }}>
+            <p className="text-xs mt-2 flex items-center gap-1" style={{ color: '#F58E86' }}>
               <AlertCircle size={12} />
               {error}
             </p>
@@ -160,7 +160,7 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
           {isLoading ? (
             <div className="flex items-center justify-center py-10">
-              <Loader2 size={20} className="animate-spin" style={{ color: '#22D3EE' }} />
+              <Loader2 size={20} className="animate-spin" style={{ color: '#E4E9F2' }} />
             </div>
           ) : (
             <>
@@ -199,12 +199,12 @@ function Group({
 }) {
   return (
     <div>
-      <h4 className="text-[11px] font-semibold uppercase tracking-wider mb-2" style={{ color: '#6B7280' }}>
+      <h4 className="text-[11px] font-semibold uppercase tracking-wider mb-2" style={{ color: '#788295' }}>
         {title}
       </h4>
       {docs.length === 0 ? (
         emptyText ? (
-          <p className="text-xs py-2" style={{ color: '#6B7280' }}>{emptyText}</p>
+          <p className="text-xs py-2" style={{ color: '#788295' }}>{emptyText}</p>
         ) : null
       ) : (
         <ul className="space-y-1.5">
@@ -212,15 +212,15 @@ function Group({
             <li
               key={doc.id}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg"
-              style={{ background: '#121417' }}
+              style={{ background: '#0F1218' }}
             >
-              <FileText size={16} style={{ color: '#9AA3AE' }} className="shrink-0" />
+              <FileText size={16} style={{ color: '#9BA4B5' }} className="shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate" style={{ color: '#E7EAEE' }}>
+                <p className="text-sm font-medium truncate" style={{ color: '#F4F6FA' }}>
                   {doc.file_name}
                 </p>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-[11px]" style={{ color: '#6B7280' }}>{doc.type}</span>
+                  <span className="text-[11px]" style={{ color: '#788295' }}>{doc.type}</span>
                   <StatusPill status={doc.status} />
                 </div>
               </div>
@@ -245,10 +245,10 @@ function Group({
 function StatusPill({ status }: { status: Document['status'] }) {
   const cfg =
     status === 'expired'
-      ? { label: 'Expiré', color: '#F87171', bg: '#3A1D1D' }
+      ? { label: 'Expiré', color: '#F58E86', bg: 'rgba(245,142,134,0.10)' }
       : status === 'expiring_soon'
-      ? { label: 'Expire bientôt', color: '#9AA3AE', bg: '#232730' }
-      : { label: 'Valide', color: '#34D399', bg: '#0F3527' }
+      ? { label: 'Expire bientôt', color: '#9BA4B5', bg: '#1C222D' }
+      : { label: 'Valide', color: '#6EE7A8', bg: 'rgba(110,231,168,0.10)' }
   return (
     <span
       className="text-[10px] font-medium px-1.5 py-0.5 rounded"

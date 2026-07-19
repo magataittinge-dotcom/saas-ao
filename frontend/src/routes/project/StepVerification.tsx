@@ -139,8 +139,8 @@ export default function StepVerification({ project }: Props) {
 
   if (isLoading) return (
     <div style={{ fontFamily: F }}>
-      <p className="flex items-center gap-2 text-sm mb-4" style={{ color: '#9AA3AE' }}>
-        <Loader2 size={15} className="animate-spin" style={{ color: '#22D3EE' }} />
+      <p className="flex items-center gap-2 text-sm mb-4" style={{ color: '#9BA4B5' }}>
+        <Loader2 size={15} className="animate-spin" style={{ color: '#E4E9F2' }} />
         Préparation de votre checklist…
       </p>
       <RequirementListSkeleton count={5} />
@@ -153,9 +153,9 @@ export default function StepVerification({ project }: Props) {
   if (items.length === 0) return (
     <div
       className="bg-ds-bg rounded-lg p-12 text-center"
-      style={{ border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', fontFamily: F }}
+      style={{ border: '1px solid rgba(186,205,234,.13)', boxShadow: '0 1px 3px rgba(0,0,0,.4)', fontFamily: F }}
     >
-      <p className="text-sm" style={{ color: '#6B7280' }}>
+      <p className="text-sm" style={{ color: '#788295' }}>
         La checklist des pièces apparaîtra automatiquement une fois le DCE analysé.
       </p>
     </div>
@@ -167,31 +167,31 @@ export default function StepVerification({ project }: Props) {
     <div
       className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-3 gap-4"
       style={{
-        background: 'rgba(10,11,13,0.85)',
+        background: 'rgba(10,12,17,0.92)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
-        borderTop: '1px solid rgba(255,255,255,0.06)',
+        borderTop: '1px solid rgba(186,205,234,.13)',
         fontFamily: F,
       }}
     >
       <div className="flex items-center gap-3">
-        <span className="text-xs font-bold uppercase tracking-wide" style={{ color: '#9AA3AE' }}>
+        <span className="text-xs font-bold uppercase tracking-wide" style={{ color: '#9BA4B5' }}>
           Complétion dossier
         </span>
-        <div className="rounded-full overflow-hidden" style={{ width: 120, height: 6, background: '#232730' }}>
+        <div className="rounded-full overflow-hidden" style={{ width: 120, height: 6, background: '#1C222D' }}>
           <div
             className="h-full transition-all duration-500"
-            style={{ width: `${pct}%`, background: '#22D3EE' }}
+            style={{ width: `${pct}%`, background: '#E4E9F2' }}
           />
         </div>
-        <span className="text-sm font-bold" style={{ color: '#22D3EE' }}>{pct}%</span>
+        <span className="text-sm font-bold" style={{ color: '#E4E9F2' }}>{pct}%</span>
       </div>
 
       <div className="flex items-center gap-3">
         <button
           type="button"
           className="text-sm font-medium px-4 py-2 rounded-lg transition-colors hover:bg-ds-bg-2"
-          style={{ color: '#9AA3AE' }}
+          style={{ color: '#9BA4B5' }}
         >
           Sauvegarder le brouillon
         </button>
@@ -225,8 +225,8 @@ export default function StepVerification({ project }: Props) {
       {/* Title bar */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-black">
-          <span style={{ color: '#E7EAEE' }}>VÉRIFICATION </span>
-          <span style={{ color: '#22D3EE' }}>CANDIDATURE</span>
+          <span style={{ color: '#F4F6FA' }}>VÉRIFICATION </span>
+          <span style={{ color: '#E4E9F2' }}>CANDIDATURE</span>
         </h1>
         <div className="flex items-center gap-3">
           {/* Régénération DISCRÈTE à la demande (ex. après ajout de pièces au
@@ -238,7 +238,7 @@ export default function StepVerification({ project }: Props) {
               await refresh()
             }}
             className="flex items-center gap-1.5 text-xs font-medium transition-colors hover:underline"
-            style={{ color: '#6B7280' }}
+            style={{ color: '#788295' }}
             title="Recalculer la checklist depuis les exigences analysées"
           >
             <RefreshCw size={13} />
@@ -248,7 +248,7 @@ export default function StepVerification({ project }: Props) {
             type="button"
             onClick={openVaultPage}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors hover:bg-sky-50"
-            style={{ border: '1px solid #22D3EE', color: '#22D3EE' }}
+            style={{ border: '1px solid #E4E9F2', color: '#E4E9F2' }}
           >
             <Lock size={14} />
             Accéder au coffre-fort
@@ -278,14 +278,14 @@ export default function StepVerification({ project }: Props) {
       {missing > 0 && (
         <div
           className="bg-ds-bg rounded-lg px-5 py-4 flex items-start gap-3"
-          style={{ border: '1px solid #42201F', background: '#3A1D1D' }}
+          style={{ border: '1px solid rgba(245,142,134,0.22)', background: 'rgba(245,142,134,0.09)' }}
         >
-          <AlertTriangle size={18} style={{ color: '#F87171' }} className="mt-0.5 shrink-0" />
+          <AlertTriangle size={18} style={{ color: '#F58E86' }} className="mt-0.5 shrink-0" />
           <div>
-            <p className="text-sm font-semibold" style={{ color: '#991B1B' }}>
+            <p className="text-sm font-semibold" style={{ color: '#F58E86' }}>
               {missing} pièce{missing > 1 ? 's' : ''} manquante{missing > 1 ? 's' : ''}
             </p>
-            <p className="text-xs mt-1 leading-relaxed" style={{ color: '#7F1D1D' }}>
+            <p className="text-xs mt-1 leading-relaxed" style={{ color: 'rgba(245,142,134,0.85)' }}>
               Une candidature incomplète sera automatiquement rejetée par l&apos;acheteur.
               Complétez chaque ligne avant validation.
             </p>
@@ -348,15 +348,15 @@ function WorkflowSection({
   return (
     <section
       className="bg-ds-bg rounded-lg overflow-hidden"
-      style={{ border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', fontFamily: F }}
+      style={{ border: '1px solid rgba(186,205,234,.13)', boxShadow: '0 1px 3px rgba(0,0,0,.4)', fontFamily: F }}
     >
-      <header className="flex items-center gap-3 px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: '#3A2F14' }}>
-          <FileSpreadsheet size={18} style={{ color: '#FBBF24' }} />
+      <header className="flex items-center gap-3 px-6 py-4" style={{ borderBottom: '1px solid rgba(186,205,234,.13)' }}>
+        <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(245,194,107,0.10)' }}>
+          <FileSpreadsheet size={18} style={{ color: '#F5C26B' }} />
         </div>
         <div className="min-w-0">
-          <h2 className="text-base font-bold" style={{ color: '#E7EAEE' }}>Bordereaux de prix (DPGF / BPU)</h2>
-          <p className="text-xs mt-0.5" style={{ color: '#6B7280' }}>
+          <h2 className="text-base font-bold" style={{ color: '#F4F6FA' }}>Bordereaux de prix (DPGF / BPU)</h2>
+          <p className="text-xs mt-0.5" style={{ color: '#788295' }}>
             Téléchargez la trame, remplissez-la puis ré-importez-la — contrôle automatique des lignes.
           </p>
         </div>
@@ -388,16 +388,16 @@ function WorkflowRow({
   }
 
   return (
-    <li className="flex items-center gap-3 px-6 py-3 flex-wrap" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-      <FileSpreadsheet size={15} style={{ color: '#FBBF24' }} className="shrink-0" />
+    <li className="flex items-center gap-3 px-6 py-3 flex-wrap" style={{ borderTop: '1px solid rgba(186,205,234,.13)' }}>
+      <FileSpreadsheet size={15} style={{ color: '#F5C26B' }} className="shrink-0" />
       <div className="flex-1 min-w-[200px]">
-        <p className="text-sm" style={{ color: '#C9CFD6' }}>{item.details}</p>
-        <span className="text-xs" style={{ color: done ? '#16A34A' : warn ? '#FBBF24' : '#6B7280' }}>
+        <p className="text-sm" style={{ color: '#E8EBF2' }}>{item.details}</p>
+        <span className="text-xs" style={{ color: done ? '#6EE7A8' : warn ? '#F5C26B' : '#788295' }}>
           {done ? '✓ Rempli et vérifié' : warn ? '⚠️ À corriger (lignes sans prix)' : 'À remplir'}
         </span>
       </div>
       {item.lot && (
-        <span className="text-[11px] px-1.5 rounded-full shrink-0" style={{ background: 'rgba(34,211,238,0.08)', color: '#67E8F9' }}>
+        <span className="text-[11px] px-1.5 rounded-full shrink-0" style={{ background: 'rgba(228,233,242,0.08)', color: '#C3CCDC' }}>
           {item.lot.replace(/^lot/i, 'Lot ')}
         </span>
       )}
@@ -418,7 +418,7 @@ function WorkflowRow({
           disabled={busy !== null}
           onClick={() => run('dl', () => onDownload(item))}
           className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-amber-50 disabled:opacity-60"
-          style={{ border: '1px solid rgba(255,255,255,0.06)', color: '#9AA3AE' }}
+          style={{ border: '1px solid rgba(186,205,234,.13)', color: '#9BA4B5' }}
         >
           {busy === 'dl' ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
           Télécharger la trame
@@ -429,7 +429,7 @@ function WorkflowRow({
         disabled={busy !== null}
         onClick={() => inputRef.current?.click()}
         className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-opacity hover:opacity-90 disabled:opacity-60"
-        style={{ background: '#FBBF24', color: '#0A0B0D' }}
+        style={{ background: 'linear-gradient(180deg, #FFFFFF, #E2E7F0)', color: '#0F1218' }}
       >
         {busy === 'up' ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
         {done || warn ? 'Remplacer' : 'Importer remplie'}
@@ -444,30 +444,30 @@ function SynorixJalonSection({ items }: { items: ChecklistItem[] }) {
   return (
     <section
       className="bg-ds-bg rounded-lg overflow-hidden"
-      style={{ border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', fontFamily: F }}
+      style={{ border: '1px solid rgba(186,205,234,.13)', boxShadow: '0 1px 3px rgba(0,0,0,.4)', fontFamily: F }}
     >
-      <header className="flex items-center gap-3 px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: '#0F2B33' }}>
-          <Sparkles size={18} style={{ color: '#22D3EE' }} />
+      <header className="flex items-center gap-3 px-6 py-4" style={{ borderBottom: '1px solid rgba(186,205,234,.13)' }}>
+        <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(228,233,242,0.08)' }}>
+          <Sparkles size={18} style={{ color: '#E4E9F2' }} />
         </div>
         <div className="min-w-0">
-          <h2 className="text-base font-bold" style={{ color: '#E7EAEE' }}>Généré par Synorix</h2>
-          <p className="text-xs mt-0.5" style={{ color: '#6B7280' }}>
+          <h2 className="text-base font-bold" style={{ color: '#F4F6FA' }}>Généré par Synorix</h2>
+          <p className="text-xs mt-0.5" style={{ color: '#788295' }}>
             Produit automatiquement à l&apos;étape suivante — aucune pièce à fournir ici.
           </p>
         </div>
       </header>
       <ul>
         {items.map((i) => (
-          <li key={i.id} className="flex items-center gap-3 px-6 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-            <Sparkles size={15} style={{ color: '#22D3EE' }} className="shrink-0" />
-            <span className="text-sm flex-1 min-w-0" style={{ color: '#C9CFD6' }}>{i.details}</span>
+          <li key={i.id} className="flex items-center gap-3 px-6 py-3" style={{ borderTop: '1px solid rgba(186,205,234,.13)' }}>
+            <Sparkles size={15} style={{ color: '#E4E9F2' }} className="shrink-0" />
+            <span className="text-sm flex-1 min-w-0" style={{ color: '#E8EBF2' }}>{i.details}</span>
             {i.lot && (
-              <span className="text-[11px] px-1.5 rounded-full shrink-0" style={{ background: 'rgba(34,211,238,0.08)', color: '#67E8F9' }}>
+              <span className="text-[11px] px-1.5 rounded-full shrink-0" style={{ background: 'rgba(228,233,242,0.08)', color: '#C3CCDC' }}>
                 {i.lot.replace(/^lot/i, 'Lot ')}
               </span>
             )}
-            <span className="text-xs shrink-0" style={{ color: '#6B7280' }}>Étape Mémoire</span>
+            <span className="text-xs shrink-0" style={{ color: '#788295' }}>Étape Mémoire</span>
           </li>
         ))}
       </ul>
@@ -482,13 +482,13 @@ function Stat({
   value: string
   tone: 'primary' | 'neutral'
 }) {
-  const accent = tone === 'primary' ? '#22D3EE' : '#9AA3AE'
+  const accent = tone === 'primary' ? '#E4E9F2' : '#9BA4B5'
   return (
     <div
       className="bg-ds-bg rounded-lg px-5 py-4"
-      style={{ border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+      style={{ border: '1px solid rgba(186,205,234,.13)', boxShadow: '0 1px 3px rgba(0,0,0,.4)' }}
     >
-      <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#6B7280' }}>
+      <p className="text-[11px] font-semibold uppercase tracking-wider" style={{ color: '#788295' }}>
         {label}
       </p>
       <p className="text-2xl font-black mt-1" style={{ color: accent }}>
