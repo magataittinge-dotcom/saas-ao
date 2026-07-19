@@ -67,7 +67,7 @@ const PROFILE_FIELDS: { key: keyof PreflightProfil; label: string; multiline?: b
 ]
 
 const inputClass =
-  'w-full rounded-lg border px-2.5 py-1.5 text-sm bg-ds-bg text-[#F4F6FA] focus:outline-none focus:ring-2 focus:ring-sky-200'
+  'w-full rounded-lg border px-2.5 py-1.5 text-sm bg-ds-bg text-[#F4F6FA] focus:outline-none focus:ring-2 focus:ring-[rgba(228,233,242,0.30)]'
 const inputStyle = { borderColor: '#1C222D' }
 
 /**

@@ -47,7 +47,7 @@ export default function Header({ onMenuToggle }: Props) {
     <header
       className="sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 h-14"
       style={{
-        background: 'rgba(10,11,13,0.85)',
+        background: 'rgba(10,12,17,0.92)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
         borderBottom: '1px solid rgba(255,255,255,0.06)',

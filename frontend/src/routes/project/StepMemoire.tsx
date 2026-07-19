@@ -281,7 +281,7 @@ function ProfileSummary({ stats }: { stats: { filled: number; total: number; nom
               </p>
               <Link
                 to="/company"
-                className="inline-flex items-center gap-1.5 text-xs font-medium mt-3 px-3.5 py-1.5 rounded-lg transition-colors hover:bg-sky-50"
+                className="inline-flex items-center gap-1.5 text-xs font-medium mt-3 px-3.5 py-1.5 rounded-lg transition-colors hover:bg-white/5"
                 style={{ border: '1px solid #E4E9F2', color: '#E4E9F2' }}
               >
                 Completer le profil →
@@ -489,7 +489,7 @@ function TocSidebar({
                       <button
                         key={child.id}
                         onClick={() => onNavigate(child.id)}
-                        className="w-full text-left py-1 px-4 text-xs transition-colors hover:text-cyan-500"
+                        className="w-full text-left py-1 px-4 text-xs transition-colors hover:text-[#E4E9F2]"
                         style={{
                           color: isChildActive ? '#E4E9F2' : '#9BA4B5',
                           fontWeight: isChildActive ? 600 : 400,
@@ -984,7 +984,7 @@ export default function StepMemoire({ project }: Props) {
                   type="number"
                   value={variables.nb_ouvriers}
                   onChange={(e) => setVariables((v) => ({ ...v, nb_ouvriers: e.target.value }))}
-                  className="w-full py-2.5 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+                  className="w-full py-2.5 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(228,233,242,0.30)]"
                   style={{ border: '1px solid rgba(186,205,234,.13)', color: '#F4F6FA', fontFamily: F }}
                   placeholder="Ex: 4"
                 />
@@ -997,7 +997,7 @@ export default function StepMemoire({ project }: Props) {
                   type="text"
                   value={variables.delai}
                   onChange={(e) => setVariables((v) => ({ ...v, delai: e.target.value }))}
-                  className="w-full py-2.5 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+                  className="w-full py-2.5 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(228,233,242,0.30)]"
                   style={{ border: '1px solid rgba(186,205,234,.13)', color: '#F4F6FA', fontFamily: F }}
                   placeholder="Ex: 3 mois"
                 />
@@ -1012,7 +1012,7 @@ export default function StepMemoire({ project }: Props) {
                   type="text"
                   value={variables.chef_chantier_nom}
                   onChange={(e) => setVariables((v) => ({ ...v, chef_chantier_nom: e.target.value }))}
-                  className="w-full py-2.5 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+                  className="w-full py-2.5 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(228,233,242,0.30)]"
                   style={{ border: '1px solid rgba(186,205,234,.13)', color: '#F4F6FA', fontFamily: F }}
                   placeholder="Ex: Jean Dupont"
                 />
@@ -1023,7 +1023,7 @@ export default function StepMemoire({ project }: Props) {
                   type="text"
                   value={variables.chef_chantier_qualification}
                   onChange={(e) => setVariables((v) => ({ ...v, chef_chantier_qualification: e.target.value }))}
-                  className="w-full py-2.5 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+                  className="w-full py-2.5 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(228,233,242,0.30)]"
                   style={{ border: '1px solid rgba(186,205,234,.13)', color: '#F4F6FA', fontFamily: F }}
                   placeholder="Ex: 15 ans d'experience, CACES R482"
                 />
@@ -1038,7 +1038,7 @@ export default function StepMemoire({ project }: Props) {
                   type="text"
                   value={variables.conducteur_travaux_nom}
                   onChange={(e) => setVariables((v) => ({ ...v, conducteur_travaux_nom: e.target.value }))}
-                  className="w-full py-2.5 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+                  className="w-full py-2.5 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(228,233,242,0.30)]"
                   style={{ border: '1px solid rgba(186,205,234,.13)', color: '#F4F6FA', fontFamily: F }}
                   placeholder="Ex: Marie Martin"
                 />
@@ -1049,7 +1049,7 @@ export default function StepMemoire({ project }: Props) {
                   type="text"
                   value={variables.conducteur_travaux_qualification}
                   onChange={(e) => setVariables((v) => ({ ...v, conducteur_travaux_qualification: e.target.value }))}
-                  className="w-full py-2.5 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+                  className="w-full py-2.5 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(228,233,242,0.30)]"
                   style={{ border: '1px solid rgba(186,205,234,.13)', color: '#F4F6FA', fontFamily: F }}
                   placeholder="Ex: Ingenieur BTP, 10 ans ITE/ravalement"
                 />
@@ -1065,7 +1065,7 @@ export default function StepMemoire({ project }: Props) {
                 value={variables.materiel_specifique}
                 onChange={(e) => setVariables((v) => ({ ...v, materiel_specifique: e.target.value }))}
                 rows={2}
-                className="w-full py-2.5 px-3 text-sm rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+                className="w-full py-2.5 px-3 text-sm rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[rgba(228,233,242,0.30)]"
                 style={{ border: '1px solid rgba(186,205,234,.13)', color: '#F4F6FA', fontFamily: F }}
                 placeholder="Ex: echafaudage tubulaire R200, nacelle articulee 20m..."
               />
@@ -1081,7 +1081,7 @@ export default function StepMemoire({ project }: Props) {
                 value={variables.particularites}
                 onChange={(e) => setVariables((v) => ({ ...v, particularites: e.target.value }))}
                 rows={2}
-                className="w-full py-2.5 px-3 text-sm rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+                className="w-full py-2.5 px-3 text-sm rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[rgba(228,233,242,0.30)]"
                 style={{ border: '1px solid rgba(186,205,234,.13)', color: '#F4F6FA', fontFamily: F }}
                 placeholder="Ex: site occupe, horaires restreints 8h-17h..."
               />

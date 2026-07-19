@@ -558,7 +558,7 @@ export default function StepExport({ project }: Props) {
                   <p className="text-xs" style={{ color: '#9BA4B5' }}>Le mémoire technique n&apos;a pas encore été généré.</p>
                   <button
                     onClick={() => navigate(`/projects/${project.id}/memoire`)}
-                    className="mt-2 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors hover:bg-sky-50"
+                    className="mt-2 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors hover:bg-white/5"
                     style={{ border: '1px solid #E4E9F2', color: '#E4E9F2' }}
                   >
                     Aller à l&apos;étape Mémoire →
@@ -591,7 +591,7 @@ export default function StepExport({ project }: Props) {
                   </div>
                   <button
                     onClick={handleDownloadDpgf}
-                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors shrink-0 hover:bg-sky-50"
+                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors shrink-0 hover:bg-white/5"
                     style={{ border: '1px solid #E4E9F2', color: '#E4E9F2' }}
                   >
                     <Download size={13} /> Télécharger
@@ -785,7 +785,7 @@ export default function StepExport({ project }: Props) {
           <button
             onClick={() => exportPdf()}
             disabled={isExportingPdf || !detail.has_memoire}
-            className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg transition-colors hover:bg-sky-50 disabled:opacity-40"
+            className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg transition-colors hover:bg-white/5 disabled:opacity-40"
             style={{ color: '#E4E9F2' }}
           >
             {isExportingPdf ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
@@ -794,14 +794,14 @@ export default function StepExport({ project }: Props) {
           <button
             onClick={() => exportDocx()}
             disabled={isExportingDocx || !detail.has_memoire}
-            className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg transition-colors hover:bg-sky-50 disabled:opacity-40"
+            className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg transition-colors hover:bg-white/5 disabled:opacity-40"
             style={{ color: '#9BA4B5' }}
           >
             {isExportingDocx ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
             Word (retouche)
           </button>
           <button
-            className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg transition-colors hover:bg-sky-50"
+            className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg transition-colors hover:bg-white/5"
             style={{ color: '#E4E9F2' }}
           >
             <Mail size={14} />

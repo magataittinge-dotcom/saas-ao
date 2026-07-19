@@ -75,7 +75,7 @@ export default function Company() {
       {tab === 'certifs' && (
         <div className="grid sm:grid-cols-2 gap-3">
           <Link to="/vault"
-            className="glass-card p-4 flex items-center gap-3 hover:border-sky-300 transition-colors no-underline">
+            className="glass-card p-4 flex items-center gap-3 hover:border-[rgba(228,233,242,0.25)] transition-colors no-underline">
             <Archive size={18} style={{ color: '#E4E9F2' }} />
             <div>
               <p className="text-sm font-semibold text-ds-text">Certifications & attestations</p>
@@ -83,7 +83,7 @@ export default function Company() {
             </div>
           </Link>
           <Link to="/references"
-            className="glass-card p-4 flex items-center gap-3 hover:border-sky-300 transition-colors no-underline">
+            className="glass-card p-4 flex items-center gap-3 hover:border-[rgba(228,233,242,0.25)] transition-colors no-underline">
             <Award size={18} style={{ color: '#E4E9F2' }} />
             <div>
               <p className="text-sm font-semibold text-ds-text">Mes références chantiers</p>

@@ -152,7 +152,7 @@ export default function ProgressDisplay({
             cy={VIEWBOX / 2}
             r={RADIUS}
             fill="none"
-            stroke="rgba(154,163,174,0.12)"
+            stroke="rgba(120,130,149,0.12)"
             strokeWidth={STROKE}
           />
           <circle
@@ -277,7 +277,7 @@ export default function ProgressDisplay({
                   ) : (
                     <div
                       className="w-2.5 h-2.5 rounded-full"
-                      style={{ background: 'rgba(154,163,174,0.3)' }}
+                      style={{ background: 'rgba(120,130,149,0.3)' }}
                     />
                   )}
                 </div>
@@ -307,9 +307,9 @@ export default function ProgressDisplay({
           onClick={onCancel}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all duration-200 mt-2"
           style={{
-            color: 'rgba(148,163,184,0.8)',
-            background: 'rgba(154,163,174,0.08)',
-            border: '1px solid rgba(154,163,174,0.15)',
+            color: '#9BA4B5',
+            background: 'rgba(120,130,149,0.08)',
+            border: '1px solid rgba(120,130,149,0.15)',
           }}
         >
           <X size={14} /> Annuler
