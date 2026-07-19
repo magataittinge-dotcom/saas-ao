@@ -5,9 +5,9 @@ import { useAuthStore } from '@/stores/authStore'
 import PaymentCard from '@/components/common/PaymentCard'
 
 const PLAN_LABELS: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  pro:      { label: 'Pro',      color: '#67E8F9', bg: 'rgba(34,211,238,0.10)',  border: 'rgba(34,211,238,0.25)' },
-  business: { label: 'Business', color: '#E7EAEE', bg: 'rgba(15,23,42,0.08)',   border: 'rgba(15,23,42,0.20)' },
-  free:     { label: 'Gratuit',  color: '#9AA3AE', bg: '#232730', border: '#232730' },
+  pro:      { label: 'Pro',      color: '#E4E9F2', bg: 'rgba(228,233,242,0.10)',  border: 'rgba(228,233,242,0.25)' },
+  business: { label: 'Business', color: '#F4F6FA', bg: 'rgba(0,0,0,0.45)',   border: 'rgba(186,205,234,0.23)' },
+  free:     { label: 'Gratuit',  color: '#9BA4B5', bg: '#1C222D', border: '#1C222D' },
 }
 
 function SectionCard({ icon, title, children }: {
@@ -19,11 +19,11 @@ function SectionCard({ icon, title, children }: {
     <div className="glass-card overflow-hidden">
       <div
         className="flex items-center gap-3 px-6 py-4"
-        style={{ borderBottom: '1px solid rgba(34,211,238,0.08)', background: 'rgba(34,211,238,0.02)' }}
+        style={{ borderBottom: '1px solid rgba(228,233,242,0.08)', background: 'rgba(228,233,242,0.02)' }}
       >
         <div
           className="w-8 h-8 rounded-lg flex items-center justify-center"
-          style={{ background: 'rgba(34,211,238,0.10)', border: '1px solid rgba(34,211,238,0.18)' }}
+          style={{ background: 'rgba(228,233,242,0.10)', border: '1px solid rgba(228,233,242,0.18)' }}
         >
           {icon}
         </div>
@@ -36,7 +36,7 @@ function SectionCard({ icon, title, children }: {
 
 function InfoRow({ label, value }: { label: string; value?: ReactNode }) {
   return (
-    <div className="flex items-center justify-between py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+    <div className="flex items-center justify-between py-2.5" style={{ borderBottom: '1px solid rgba(186,205,234,.13)' }}>
       <span className="text-sm text-ds-text-2">{label}</span>
       <span className="text-sm font-medium text-ds-text">{value ?? <span className="text-ds-text-3 italic">—</span>}</span>
     </div>
@@ -57,7 +57,7 @@ export default function Settings() {
       <div className="flex items-center gap-3">
         <div
           className="w-10 h-10 rounded-xl flex items-center justify-center"
-          style={{ background: 'rgba(34,211,238,0.10)', border: '1px solid rgba(34,211,238,0.18)' }}
+          style={{ background: 'rgba(228,233,242,0.10)', border: '1px solid rgba(228,233,242,0.18)' }}
         >
           <SettingsIcon size={18} className="text-ds-cyan" />
         </div>
@@ -77,7 +77,7 @@ export default function Settings() {
             value={
               <span
                 className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium text-ds-cyan-dark"
-                style={{ background: 'rgba(34,211,238,0.10)', border: '1px solid rgba(34,211,238,0.20)' }}
+                style={{ background: 'rgba(228,233,242,0.10)', border: '1px solid rgba(228,233,242,0.20)' }}
               >
                 <Shield size={10} />
                 {user?.role ?? 'admin'}
@@ -149,10 +149,10 @@ export default function Settings() {
             className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm text-ds-text-2 transition-all duration-200 hover:text-ds-text no-underline"
             style={{
               background: 'var(--edge-graphite)',
-              boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.06)',
+              boxShadow: 'inset 0 0 0 1px rgba(186,205,234,.13)',
               cursor: 'pointer',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = '#232730')}
+            onMouseEnter={(e) => (e.currentTarget.style.background = '#1C222D')}
             onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--edge-graphite)')}
           >
             <span>Historique de facturation</span>
