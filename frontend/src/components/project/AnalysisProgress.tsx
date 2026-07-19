@@ -126,39 +126,39 @@ export function AnalysisProgress({
       style={{
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
         zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'rgba(8,11,18,0.85)', backdropFilter: 'none',
+        background: 'rgba(10,12,17,0.85)', backdropFilter: 'none',
       }}
     >
       <div
         className="flex flex-col items-center gap-6 min-w-72 p-10 rounded-2xl"
         style={{
-          background: '#1A1D21',
-          border: '1px solid rgba(34,211,238,0.20)',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(34,211,238,0.10)',
+          background: '#151A23',
+          border: '1px solid rgba(228,233,242,0.20)',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(228,233,242,0.10)',
         }}
       >
         {/* Radial progress */}
         <div className="relative w-48 h-48">
           <svg className="w-full h-full -rotate-90" viewBox="0 0 200 200">
-            <circle cx="100" cy="100" r={RADIUS} fill="none" stroke="rgba(154,163,174,0.20)" strokeWidth="10" />
+            <circle cx="100" cy="100" r={RADIUS} fill="none" stroke="rgba(120,130,149,0.20)" strokeWidth="10" />
             <circle
               cx="100"
               cy="100"
               r={RADIUS}
               fill="none"
-              stroke={showCheck ? '#22D3EE' : '#22D3EE'}
+              stroke={showCheck ? '#E4E9F2' : '#E4E9F2'}
               strokeWidth="10"
               strokeLinecap="round"
               strokeDasharray={CIRCUMFERENCE}
               strokeDashoffset={offset}
-              style={{ transition: 'stroke-dashoffset 0.4s ease, stroke 0.3s ease', filter: `drop-shadow(0 0 8px ${showCheck ? '#22D3EE' : '#22D3EE'})` }}
+              style={{ transition: 'stroke-dashoffset 0.4s ease, stroke 0.3s ease', filter: `drop-shadow(0 0 8px ${showCheck ? '#E4E9F2' : '#E4E9F2'})` }}
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
             {showCheck ? (
               <div
                 className="flex items-center justify-center w-16 h-16 rounded-full"
-                style={{ background: 'rgba(34,211,238,0.15)' }}
+                style={{ background: 'rgba(228,233,242,0.15)' }}
               >
                 <Check size={36} className="text-ds-cyan" strokeWidth={2.5} />
               </div>
@@ -191,9 +191,9 @@ export function AnalysisProgress({
             onClick={onCancel}
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all duration-200"
             style={{
-              color: 'rgba(148,163,184,0.8)',
-              background: 'rgba(154,163,174,0.10)',
-              border: '1px solid rgba(154,163,174,0.20)',
+              color: '#9BA4B5',
+              background: 'rgba(120,130,149,0.10)',
+              border: '1px solid rgba(120,130,149,0.20)',
               opacity: isSlow ? 1 : 0.5,
             }}
           >

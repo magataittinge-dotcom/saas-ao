@@ -293,19 +293,19 @@ export default function StepAnalysis({ project }: Props) {
     <div
       className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-3 gap-4"
       style={{
-        background: 'rgba(10,11,13,0.85)',
+        background: 'rgba(10,12,17,0.92)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
-        borderTop: '1px solid rgba(255,255,255,0.06)',
+        borderTop: '1px solid rgba(186,205,234,.13)',
       }}
     >
       <div className="flex items-center gap-3 min-w-0">
-        <CheckCircle2 size={20} className="shrink-0" style={{ color: '#22D3EE' }} />
+        <CheckCircle2 size={20} className="shrink-0" style={{ color: '#E4E9F2' }} />
         <div className="min-w-0">
-          <p className="text-sm font-semibold truncate" style={{ color: '#E7EAEE', fontFamily: F }}>
+          <p className="text-sm font-semibold truncate" style={{ color: '#F4F6FA', fontFamily: F }}>
             Analyse complétée — {items.length} exigences identifiées
           </p>
-          <p className="text-sm truncate" style={{ color: '#9AA3AE', fontFamily: F }}>
+          <p className="text-sm truncate" style={{ color: '#9BA4B5', fontFamily: F }}>
             {obligatoireCount > 0
               ? `L'IA a identifié ${obligatoireCount} clauses obligatoires parmi ${items.length} exigences`
               : `${items.length} exigences extraites du dossier`}
@@ -316,7 +316,7 @@ export default function StepAnalysis({ project }: Props) {
       <div className="flex items-center gap-3 shrink-0">
         <button
           className="px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors hover:bg-ds-bg-2"
-          style={{ border: '1px solid rgba(255,255,255,0.06)', color: '#9AA3AE', fontFamily: F }}
+          style={{ border: '1px solid rgba(186,205,234,.13)', color: '#9BA4B5', fontFamily: F }}
         >
           Générer Rapport PDF
         </button>
@@ -346,23 +346,23 @@ export default function StepAnalysis({ project }: Props) {
       {/* ── LIGNE 1 : Title + AI badge | Doc count ──────────────── */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <h1 className="text-xl font-bold" style={{ color: '#E7EAEE' }}>
+          <h1 className="text-xl font-bold" style={{ color: '#F4F6FA' }}>
             Analyse du Dossier
           </h1>
           <span className="ai-badge">IA active</span>
         </div>
 
-        <div className="edge-data flex items-center gap-2 text-xs" style={{ color: '#9AA3AE' }}>
+        <div className="edge-data flex items-center gap-2 text-xs" style={{ color: '#9BA4B5' }}>
           {lotFilterInfo ? (
             <>
               <span>
-                <span className="font-semibold" style={{ color: '#67E8F9' }}>{lotFilterInfo.included.length}</span>
+                <span className="font-semibold" style={{ color: '#F4F6FA' }}>{lotFilterInfo.included.length}</span>
                 /{lotTotal} docs analysés
               </span>
               <button
                 onClick={() => setShowLotDetails(v => !v)}
                 className="font-medium hover:underline"
-                style={{ color: '#22D3EE' }}
+                style={{ color: '#E4E9F2' }}
               >
                 {showLotDetails ? 'Masquer' : 'Détails'}
               </button>
@@ -377,18 +377,18 @@ export default function StepAnalysis({ project }: Props) {
       {showLotDetails && lotFilterInfo && (
         <div
           className="rounded-lg px-4 py-2.5 flex flex-wrap gap-x-4 gap-y-1 text-xs -mt-2"
-          style={{ background: '#0F2B33', border: '1px solid rgba(34,211,238,0.25)' }}
+          style={{ background: '#1C222D', border: '1px solid rgba(186,205,234,.13)' }}
         >
           {lotFilterInfo.included.map(doc => (
             <span key={doc.id} className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#22D3EE' }} />
-              <span style={{ color: '#C9CFD6' }}>{doc.file_name}</span>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#E4E9F2' }} />
+              <span style={{ color: '#E8EBF2' }}>{doc.file_name}</span>
             </span>
           ))}
           {lotFilterInfo.excluded.map(doc => (
             <span key={doc.id} className="flex items-center gap-1.5 opacity-40">
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#6B7280' }} />
-              <span style={{ color: '#9AA3AE' }}>{doc.file_name}</span>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#788295' }} />
+              <span style={{ color: '#9BA4B5' }}>{doc.file_name}</span>
             </span>
           ))}
         </div>
@@ -398,11 +398,11 @@ export default function StepAnalysis({ project }: Props) {
       {infos && (
         <div
           className="bg-ds-bg rounded-xl p-5"
-          style={{ border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+          style={{ border: '1px solid rgba(186,205,234,.13)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
         >
           {/* ROW 1 : Objet du marché */}
           {infos.objet && (
-            <p className="text-base font-semibold mb-3" style={{ color: '#E7EAEE' }}>
+            <p className="text-base font-semibold mb-3" style={{ color: '#F4F6FA' }}>
               {infos.objet}
             </p>
           )}
@@ -411,16 +411,16 @@ export default function StepAnalysis({ project }: Props) {
           <div className="flex items-start justify-between gap-6">
             <div className="flex items-center gap-6">
               <div>
-                <p className="text-xs font-medium uppercase mb-0.5" style={{ color: '#6B7280' }}>Client</p>
-                <p className="text-sm font-medium" style={{ color: '#E7EAEE' }}>{infos.maitre_ouvrage || '—'}</p>
+                <p className="text-xs font-medium uppercase mb-0.5" style={{ color: '#788295' }}>Client</p>
+                <p className="text-sm font-medium" style={{ color: '#F4F6FA' }}>{infos.maitre_ouvrage || '—'}</p>
               </div>
               <div>
-                <p className="text-xs font-medium uppercase mb-0.5" style={{ color: '#6B7280' }}>Architecte</p>
-                <p className="text-sm font-medium" style={{ color: '#E7EAEE' }}>{infos.maitre_oeuvre || '—'}</p>
+                <p className="text-xs font-medium uppercase mb-0.5" style={{ color: '#788295' }}>Architecte</p>
+                <p className="text-sm font-medium" style={{ color: '#F4F6FA' }}>{infos.maitre_oeuvre || '—'}</p>
               </div>
               <div>
-                <p className="text-xs font-medium uppercase mb-0.5" style={{ color: '#6B7280' }}>Lot</p>
-                <p className="text-sm font-medium" style={{ color: '#E7EAEE' }}>{project.selected_lot_name || infos.lots?.join(', ') || '—'}</p>
+                <p className="text-xs font-medium uppercase mb-0.5" style={{ color: '#788295' }}>Lot</p>
+                <p className="text-sm font-medium" style={{ color: '#F4F6FA' }}>{project.selected_lot_name || infos.lots?.join(', ') || '—'}</p>
               </div>
             </div>
 
@@ -429,35 +429,35 @@ export default function StepAnalysis({ project }: Props) {
                 {prixPct > 0 && (
                   <div
                     className="rounded-lg px-3 py-2"
-                    style={{ background: '#1A1D21', border: '1px solid rgba(255,255,255,0.06)' }}
+                    style={{ background: '#151A23', border: '1px solid rgba(186,205,234,.13)' }}
                   >
-                    <p className="text-xs mb-0.5" style={{ color: '#9AA3AE' }}>Critère prix</p>
-                    <p className="text-lg font-bold leading-none" style={{ color: '#F87171' }}>{prixPct}%</p>
-                    <div className="mt-1.5 rounded-full overflow-hidden" style={{ width: 60, height: 4, background: '#42201F' }}>
-                      <div className="h-full rounded-full" style={{ width: `${prixPct}%`, background: '#F87171' }} />
+                    <p className="text-xs mb-0.5" style={{ color: '#9BA4B5' }}>Critère prix</p>
+                    <p className="text-lg font-bold leading-none" style={{ color: '#F58E86' }}>{prixPct}%</p>
+                    <div className="mt-1.5 rounded-full overflow-hidden" style={{ width: 60, height: 4, background: '#1C222D' }}>
+                      <div className="h-full rounded-full" style={{ width: `${prixPct}%`, background: '#F58E86' }} />
                     </div>
                   </div>
                 )}
                 {techPct > 0 && (
                   <div
                     className="rounded-lg px-3 py-2"
-                    style={{ background: '#1A1D21', border: '1px solid rgba(255,255,255,0.06)' }}
+                    style={{ background: '#151A23', border: '1px solid rgba(186,205,234,.13)' }}
                   >
-                    <p className="text-xs mb-0.5" style={{ color: '#9AA3AE' }}>Critère technique</p>
-                    <p className="text-lg font-bold leading-none" style={{ color: '#22D3EE' }}>{techPct}%</p>
-                    <div className="mt-1.5 rounded-full overflow-hidden" style={{ width: 60, height: 4, background: '#12404B' }}>
-                      <div className="h-full rounded-full" style={{ width: `${techPct}%`, background: '#22D3EE' }} />
+                    <p className="text-xs mb-0.5" style={{ color: '#9BA4B5' }}>Critère technique</p>
+                    <p className="text-lg font-bold leading-none" style={{ color: '#E4E9F2' }}>{techPct}%</p>
+                    <div className="mt-1.5 rounded-full overflow-hidden" style={{ width: 60, height: 4, background: '#1C222D' }}>
+                      <div className="h-full rounded-full" style={{ width: `${techPct}%`, background: '#E4E9F2' }} />
                     </div>
                   </div>
                 )}
                 {/* Conseil IA tooltip */}
                 <div className="relative group">
-                  <Info size={15} className="cursor-help" style={{ color: '#22D3EE' }} />
+                  <Info size={15} className="cursor-help" style={{ color: '#E4E9F2' }} />
                   <div
                     className="absolute right-0 top-full mt-1.5 z-10 bg-ds-bg rounded-lg p-3 w-56 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all pointer-events-none"
-                    style={{ border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                    style={{ border: '1px solid rgba(186,205,234,.13)', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
                   >
-                    <p className="text-xs italic" style={{ color: '#9AA3AE' }}>
+                    <p className="text-xs italic" style={{ color: '#9BA4B5' }}>
                       Soignez le mémoire technique ! Points de vigilance identifiés.
                     </p>
                   </div>
@@ -510,19 +510,19 @@ export default function StepAnalysis({ project }: Props) {
 
       {/* ── SEARCH BAR ──────────────────────────────────────────── */}
       <div className="relative">
-        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: '#6B7280' }} />
+        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: '#788295' }} />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Rechercher une clause ou une exigence..."
           className="w-full pl-10 pr-10 py-2.5 text-sm rounded-lg outline-none"
-          style={{ background: '#1A1D21', border: '1px solid rgba(255,255,255,0.06)', color: '#E7EAEE', fontFamily: F }}
+          style={{ background: '#151A23', border: '1px solid rgba(186,205,234,.13)', color: '#F4F6FA', fontFamily: F }}
         />
-        <Sparkles size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2" style={{ color: '#22D3EE' }} />
+        <Sparkles size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2" style={{ color: '#E4E9F2' }} />
       </div>
 
       {/* ── ONGLETS ─────────────────────────────────────────────── */}
-      <div className="flex items-center gap-6 pb-px" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="flex items-center gap-6 pb-px" style={{ borderBottom: '1px solid rgba(186,205,234,.13)' }}>
         <TabButton
           label={`Tout (${items.length})`}
           active={activeFilter === 'all'}
@@ -540,7 +540,7 @@ export default function StepAnalysis({ project }: Props) {
 
       {/* ── Exigences ───────────────────────────────────────────── */}
       {filtered.length === 0 ? (
-        <p className="text-center text-sm py-12" style={{ color: '#6B7280', fontFamily: F }}>
+        <p className="text-center text-sm py-12" style={{ color: '#788295', fontFamily: F }}>
           Aucune exigence trouvée
         </p>
       ) : (
@@ -572,11 +572,11 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
     <button
       onClick={onClick}
       className={`pb-3 text-sm transition-colors relative whitespace-nowrap ${active ? 'font-semibold' : 'font-medium'}`}
-      style={{ color: active ? '#22D3EE' : '#9AA3AE', fontFamily: F }}
+      style={{ color: active ? '#E4E9F2' : '#9BA4B5', fontFamily: F }}
     >
       {label}
       {active && (
-        <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full" style={{ background: '#22D3EE' }} />
+        <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full" style={{ background: '#E4E9F2' }} />
       )}
     </button>
   )
@@ -604,19 +604,19 @@ function ExigenceSection({
   return (
     <div
       className="bg-ds-bg rounded-xl"
-      style={{ border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
+      style={{ border: '1px solid rgba(186,205,234,.13)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
     >
       <button
         onClick={() => setOpen(o => !o)}
         className="w-full flex items-center justify-between px-5 py-3.5 text-left"
       >
-        <h3 className="text-base font-bold" style={{ color: '#E7EAEE', fontFamily: F }}>
+        <h3 className="text-base font-bold" style={{ color: '#F4F6FA', fontFamily: F }}>
           {CATEGORY_LABELS[category]}{' '}
-          <span className="font-medium text-sm" style={{ color: '#6B7280' }}>({items.length})</span>
+          <span className="font-medium text-sm" style={{ color: '#788295' }}>({items.length})</span>
         </h3>
         <span
           className="text-xs font-medium transition-transform"
-          style={{ color: '#22D3EE', transform: open ? 'rotate(180deg)' : undefined }}
+          style={{ color: '#E4E9F2', transform: open ? 'rotate(180deg)' : undefined }}
         >
           ▾
         </span>
@@ -628,19 +628,19 @@ function ExigenceSection({
             <div
               key={item.id}
               className="flex items-start gap-2.5 py-2 flex-wrap sm:flex-nowrap"
-              style={idx < items.length - 1 ? { borderBottom: '1px solid rgba(255,255,255,0.06)' } : undefined}
+              style={idx < items.length - 1 ? { borderBottom: '1px solid rgba(186,205,234,.13)' } : undefined}
             >
               <span
                 className="shrink-0 mt-0.5 text-[11px] tabular-nums w-7 text-right"
-                style={{ color: '#4B5563', fontFamily: '"Geist Mono", monospace' }}
+                style={{ color: '#5C6678', fontFamily: '"Geist Mono", monospace' }}
               >
                 {idx + 1}
               </span>
 
-              <p className="flex-1 min-w-[240px] text-sm leading-snug" style={{ color: '#C9CFD6' }}>
+              <p className="flex-1 min-w-[240px] text-sm leading-snug" style={{ color: '#E8EBF2' }}>
                 {item.exigence_text}
                 {item.suggestion_ia && (
-                  <span className="block text-xs mt-0.5 italic" style={{ color: '#67E8F9' }}>
+                  <span className="block text-xs mt-0.5 italic" style={{ color: '#C3CCDC' }}>
                     💡 {item.suggestion_ia}
                   </span>
                 )}
@@ -651,7 +651,7 @@ function ExigenceSection({
                   <button
                     onClick={() => onOpenSource(item)}
                     className="flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium transition-opacity hover:opacity-70 hover:underline whitespace-nowrap"
-                    style={{ background: '#0F2B33', color: '#67E8F9' }}
+                    style={{ background: '#1C222D', color: '#E4E9F2', border: '1px solid rgba(186,205,234,.13)' }}
                     title={`Voir dans ${item.source_document} — passage surligné`}
                   >
                     <FileText size={11} />
@@ -662,14 +662,14 @@ function ExigenceSection({
                 {item.priority === 'obligatoire' ? (
                   <span
                     className="px-2 py-0.5 rounded-md text-xs font-medium whitespace-nowrap"
-                    style={{ background: '#3A1D1D', color: '#F87171' }}
+                    style={{ background: 'rgba(245,142,134,0.10)', color: '#F58E86' }}
                   >
                     Obligatoire
                   </span>
                 ) : (
                   <span
                     className="px-2 py-0.5 rounded-md text-xs font-medium whitespace-nowrap"
-                    style={{ background: 'rgba(154,163,174,0.08)', color: '#9AA3AE' }}
+                    style={{ background: 'rgba(120,130,149,0.08)', color: '#9BA4B5' }}
                   >
                     Souhaitée
                   </span>
