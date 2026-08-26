@@ -1,38 +1,41 @@
 /* ═══════════════════════════════════════════════════════════════
-   SYNORIX DESIGN TOKENS — « LUMEN »
+   SYNORIX DESIGN TOKENS — « LUMEN 2.0 »
    Verre technique au crépuscule : graphite bleuté, filets lumineux,
    zéro couleur de marque — la lumière porte les états.
+   Palette mesurée pixel par pixel sur le visage IA (référence de marque).
+   Le cast bleu monte avec la luminance : +5 dans les noirs, +24 dans les argentés.
+   Ambre #D9A441 : verbatim DCE + succès (aligné identité). Statuts métier : vert/ambre/corail conservés (décision 25/08).
    Statuts métier (seule exception chromatique) : vert / ambre / corail.
    Typo : Geist Sans (UI) · Geist Mono (données) — self-hosted (@fontsource).
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
   /* ── Fonds (graphite bleuté « dusk ») ─────────────────────── */
-  --bg-deep: #0A0C11;      /* body / sidebar */
-  --bg: #0F1218;           /* contenu */
-  --surface: #151A23;      /* cartes */
-  --surface-2: #1C222D;    /* cartes imbriquées, inputs, hover */
-  --surface-3: #232B38;    /* état actif */
+  --bg-deep: #05080B;      /* body / sidebar */
+  --bg: #080C0F;           /* contenu */
+  --surface: #0E1318;      /* cartes */
+  --surface-2: #141A21;    /* cartes imbriquées, inputs, hover */
+  --surface-3: #1A222C;    /* état actif */
 
   /* ── Filets lumineux ──────────────────────────────────────── */
   --line: rgba(186, 205, 234, .13);
   --line-strong: rgba(186, 205, 234, .23);
 
   /* ── Écritures (blanc-gris) ───────────────────────────────── */
-  --ink: #F4F6FA;
-  --ink-2: #C7CEDA;
-  --ink-3: #9BA4B5;
-  --ink-4: #788295;
+  --ink: #E9EEF4;
+  --ink-2: #C6D0DB;
+  --ink-3: #7E8E9E;
+  --ink-4: #6A7486;
 
   /* ── Lumière (remplace l'accent cyan) ─────────────────────── */
-  --lum: #E4E9F2;
+  --lum: #D5DEE8;
   --lum-bright: #FFFFFF;
-  --lum-dim: #9FA9BC;
+  --lum-dim: #909EAC;
   --glow-white: rgba(255, 255, 255, .22);
 
   /* ── Statuts métier — seule exception chromatique ─────────── */
   --ok: #6EE7A8;    --ok-bg: rgba(110, 231, 168, .09);   --ok-line: rgba(110, 231, 168, .22);
-  --warn: #F5C26B;  --warn-bg: rgba(245, 194, 107, .09); --warn-line: rgba(245, 194, 107, .22);
+  --warn: #D9A441;  --warn-bg: rgba(217, 164, 65, .09); --warn-line: rgba(217, 164, 65, .22);
   --bad: #F58E86;   --bad-bg: rgba(245, 142, 134, .10);  --bad-line: rgba(245, 142, 134, .24);
 
   /* ── Ombres & reliefs ─────────────────────────────────────── */
@@ -203,7 +206,7 @@
   cursor: pointer;
 }
 .glass-nav:hover {
-  background: rgba(228, 233, 242, .05);
+  background: rgba(213, 222, 232, .05);
   color: var(--ink);
 }
 .glass-nav.active {
@@ -300,8 +303,8 @@
   border-radius: 1.5px;
   background: rgba(186, 205, 234, .15);
 }
-.steps-track i.done { background: linear-gradient(180deg, #DFE5F0, #9FA9BC); }
-.steps-track i.active { background: rgba(223, 229, 240, .45); }
+.steps-track i.done { background: linear-gradient(180deg, #D5DEE8, #909EAC); }
+.steps-track i.active { background: rgba(213, 222, 232, .45); }
 
 /* données chiffrées : mono tabulaire */
 .num-mono {
