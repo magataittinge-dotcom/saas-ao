@@ -24,12 +24,12 @@
 
 .glass-card:hover {
   border-color: var(--line-strong);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.55), 0 0 0 1px rgba(213,222,232,.08);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,.08);
 }
 
 /* ── Gradient Text ────────────────────────────────────────────── */
 .text-gradient {
-  background: linear-gradient(180deg, #FFFFFF 30%, #909EAC 100%);
+  background: linear-gradient(180deg, #FFFFFF 30%, #98999C 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -37,20 +37,21 @@
 
 /* ── Buttons — le primaire est le « bouton lumière » ──────────── */
 .btn-primary {
-  background: linear-gradient(180deg, #FFFFFF 0%, #D5DEE8 100%);
-  color: #080C0F;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 4px 18px -6px rgba(255,255,255,.30);
+  background: linear-gradient(180deg, #FFFFFF 0%, #ECEDEF 50%, #C9CACD 100%);
+  color: #121213;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.95), inset 0 -2px 0 rgba(255,255,255,.50),
+              0 1px 2px rgba(0,0,0,.55), 0 8px 24px -8px rgba(255,255,255,.55);
   font-weight: 600;
   border-radius: 0.75rem;
   padding: 0.625rem 1.25rem;
   font-size: 0.875rem;
   border: none;
   cursor: pointer;
-  transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+  transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
               transform  0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-  font-family: 'Geist Sans', system-ui, sans-serif;
+  overflow: hidden;
+  font-family: 'Inter Variable', 'Geist Sans', system-ui, sans-serif;
 }
 
 .btn-primary::before {
@@ -62,13 +63,26 @@
   pointer-events: none;
 }
 
-.btn-primary:hover {
-  background: linear-gradient(180deg, #FFFFFF 0%, #C4D0DE 100%);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 6px 22px -6px rgba(255,255,255,.38);
-  transform: translateY(-1px);
+/* glint de verre : un reflet traverse au survol */
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  top: -30%; bottom: -30%;
+  left: -55%; width: 45%;
+  background: linear-gradient(105deg, transparent, rgba(255,255,255,.85), transparent);
+  transform: skewX(-16deg) translateX(-40%);
+  opacity: 0;
+  pointer-events: none;
 }
 
-.btn-primary:active  { transform: translateY(0); }
+.btn-primary:hover {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.95), inset 0 -2px 0 rgba(255,255,255,.50),
+              0 1px 2px rgba(0,0,0,.55), 0 12px 32px -8px rgba(255,255,255,.65);
+  transform: translateY(-1px);
+}
+.btn-primary:hover::after { animation: sheen-sweep .8s ease forwards; }
+
+.btn-primary:active  { transform: translateY(0) scale(.985); }
 .btn-primary:disabled {
   opacity: 0.45;
   cursor: not-allowed;
@@ -107,7 +121,7 @@
   cursor: pointer;
   transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
               border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  font-family: 'Geist Sans', system-ui, sans-serif;
+  font-family: 'Inter Variable', 'Geist Sans', system-ui, sans-serif;
 }
 .btn-destructive:hover {
   background: rgba(245,142,134,.16);
@@ -153,16 +167,16 @@
 /* .edge-cta : rendu « bouton lumière » SANS imposer taille/rayon/typo —
    se compose avec les utilitaires Tailwind de dimension déjà présents. */
 .edge-cta {
-  background: linear-gradient(180deg, #FFFFFF 0%, #D5DEE8 100%);
-  color: #080C0F;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 4px 18px -6px rgba(255,255,255,.30);
-  transition: background 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+  background: linear-gradient(180deg, #FFFFFF 0%, #ECEDEF 50%, #C9CACD 100%);
+  color: #121213;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.95), inset 0 -2px 0 rgba(255,255,255,.50),
+              0 1px 2px rgba(0,0,0,.55), 0 6px 20px -8px rgba(255,255,255,.45);
+  transition: box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
               transform  0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .edge-cta:hover:not(:disabled) {
-  background: linear-gradient(180deg, #FFFFFF 0%, #C4D0DE 100%);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 6px 22px -6px rgba(255,255,255,.38);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.95), inset 0 -2px 0 rgba(255,255,255,.50),
+              0 1px 2px rgba(0,0,0,.55), 0 10px 28px -8px rgba(255,255,255,.60);
   transform: translateY(-1px);
 }
 .edge-cta:active:not(:disabled) { transform: translateY(0); }
@@ -210,7 +224,7 @@
   padding: 0.625rem 0.875rem;
   width: 100%;
   outline: none;
-  font-family: 'Geist Sans', system-ui, sans-serif;
+  font-family: 'Inter Variable', 'Geist Sans', system-ui, sans-serif;
   transition: border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
               box-shadow   0.2s cubic-bezier(0.4, 0, 0.2, 1),
               background   0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -232,13 +246,13 @@
 }
 
 .progress-bar-gradient {
-  background: linear-gradient(90deg, #909EAC, #D5DEE8);
+  background: linear-gradient(90deg, #98999C, #E8E9EB);
   border-radius: 999px;
   transition: width 0.7s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .progress-bar-success {
-  background: linear-gradient(90deg, #909EAC, #D5DEE8);
+  background: linear-gradient(90deg, #98999C, #E8E9EB);
   border-radius: 999px;
   transition: width 0.7s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -253,16 +267,16 @@
   font-size: 0.75rem;
   font-weight: 500;
   border: 1px solid transparent;
-  font-family: 'Geist Sans', system-ui, sans-serif;
+  font-family: 'Inter Variable', 'Geist Sans', system-ui, sans-serif;
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
-.pill-success { background: rgba(213,222,232,0.08);  color: var(--ink-2); border-color: var(--line-strong); }
+.pill-success { background: rgba(255,255,255,0.08);  color: var(--ink-2); border-color: var(--line-strong); }
 .pill-gagne   { background: var(--ok-bg);  color: var(--ok); border-color: var(--ok-line); }
 .pill-conforme { background: var(--ok-bg);  color: var(--ok); border-color: var(--ok-line); }
 .pill-warning { background: var(--warn-bg); color: var(--warn); border-color: var(--warn-line); }
 .pill-danger  { background: var(--bad-bg);   color: var(--bad); border-color: var(--bad-line); }
-.pill-cyan    { background: rgba(213,222,232,0.08);   color: var(--lum); border-color: var(--line-strong); }
+.pill-cyan    { background: rgba(255,255,255,0.08);   color: var(--lum); border-color: var(--line-strong); }
 .pill-muted   { background: var(--surface-2);  color: var(--ink-3); border-color: var(--line); }
 
 /* ── Tables ───────────────────────────────────────────────────── */
@@ -276,14 +290,14 @@
   color: var(--ink-3);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  font-family: 'Geist Sans', system-ui, sans-serif;
+  font-family: 'Inter Variable', 'Geist Sans', system-ui, sans-serif;
 }
 .table-dark tbody tr {
   border-bottom: 1px solid var(--surface-2);
   transition: background 0.15s ease;
 }
 .table-dark tbody tr:nth-child(even) { background: rgba(255,255,255,.015); }
-.table-dark tbody tr:hover { background: rgba(213,222,232,.05); }
+.table-dark tbody tr:hover { background: rgba(255,255,255,.05); }
 .table-dark tbody td { padding: 0.875rem 1rem; color: var(--ink); }
 
 /* ── Sidebar Nav Items ────────────────────────────────────────── */
@@ -323,7 +337,7 @@
   transform: translateY(-50%);
   width: 2px;
   height: 60%;
-  background: linear-gradient(180deg, #FFFFFF, #909EAC);
+  background: linear-gradient(180deg, #FFFFFF, #98999C);
   box-shadow: 0 0 8px rgba(255,255,255,.5);
   border-radius: 0 999px 999px 0;
 }
@@ -331,7 +345,7 @@
 /* ── Avatar Ring ──────────────────────────────────────────────── */
 .avatar-ring  {
   padding: 2px;
-  background: linear-gradient(180deg, #FFFFFF 30%, #909EAC 100%);
+  background: linear-gradient(180deg, #FFFFFF 30%, #98999C 100%);
   border-radius: 50%;
 }
 .avatar-inner {
@@ -341,7 +355,7 @@
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-family: 'Geist Sans', system-ui, sans-serif;
+  font-family: 'Inter Variable', 'Geist Sans', system-ui, sans-serif;
 }
 
 /* ── Divider ──────────────────────────────────────────────────── */
@@ -349,8 +363,8 @@
 
 /* ── Glow utilities (lumière blanche) ────────────────────────── */
 .glow-cyan  { box-shadow: 0 0 12px rgba(255,255,255,.16); }
-.glow-sm    { box-shadow: 0 0 8px rgba(213,222,232, 0.10); }
-.glow-blue  { box-shadow: 0 0 12px rgba(213,222,232,.10); }
+.glow-sm    { box-shadow: 0 0 8px rgba(255,255,255, 0.10); }
+.glow-blue  { box-shadow: 0 0 12px rgba(255,255,255,.10); }
 .glow-blue-strong { box-shadow: 0 0 20px rgba(255,255,255,.16); }
 
 /* ── Card Premium ─────────────────────────────────────────────── */
@@ -413,11 +427,11 @@
 /* ── Scrollbar ────────────────────────────────────────────────── */
 ::-webkit-scrollbar          { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track    { background: transparent; }
-::-webkit-scrollbar-thumb    { background: rgba(186,205,234,.25); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(186,205,234,.4); }
+::-webkit-scrollbar-thumb    { background: rgba(255,255,255,.25); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.4); }
 
 /* ── Selection ────────────────────────────────────────────────── */
-::selection { background: rgba(213,222,232,.25); color: #E9EEF4; }
+::selection { background: rgba(255,255,255,.25); color: #F7F8F8; }
 
 /* ── Dropzone ─────────────────────────────────────────────────── */
 @keyframes dash-march {
@@ -430,18 +444,18 @@
 }
 
 .dropzone-active {
-  background: rgba(213,222,232,.05);
+  background: rgba(255,255,255,.05);
   border-color: var(--lum) !important;
   animation: dropzone-pulse 1.5s ease-in-out infinite;
 }
 
 /* ── Synorix signature elements ───────────────────────────────── */
 .signature-gradient {
-  background: linear-gradient(135deg, #141A21 0%, #1A222C 55%, #39434D 100%);
+  background: linear-gradient(135deg, #1E1E21 0%, #29292B 55%, #3A3A3E 100%);
 }
 
 .progress-fill {
-  background: linear-gradient(90deg, #909EAC 0%, #D5DEE8 100%);
+  background: linear-gradient(90deg, #98999C 0%, #E8E9EB 100%);
   border-radius: 999px;
   transition: width 0.8s ease-out;
 }
@@ -474,26 +488,42 @@
   50% { opacity: 0.4; }
 }
 
-/* Le CTA signature : bouton lumière compact. */
+/* Le CTA signature : pilule de verre poli, glint au survol. */
 .signature-btn {
-  background: linear-gradient(180deg, #FFFFFF 0%, #D5DEE8 100%);
-  color: #080C0F;
-  padding: 8px 16px;
-  border-radius: 8px;
+  background: linear-gradient(180deg, #FFFFFF 0%, #ECEDEF 50%, #C9CACD 100%);
+  color: #121213;
+  padding: 9px 18px;
+  border-radius: 10px;
   font-weight: 600;
   font-size: 14px;
   border: none;
-  box-shadow: 0 1px 3px rgba(255,255,255,.16);
-  transition: all 0.15s;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.95), inset 0 -2px 0 rgba(255,255,255,.50),
+              0 1px 2px rgba(0,0,0,.55), 0 8px 24px -8px rgba(255,255,255,.55);
+  transition: box-shadow .2s cubic-bezier(.4,0,.2,1), transform .2s cubic-bezier(.4,0,.2,1);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  position: relative;
+  overflow: hidden;
+}
+.signature-btn::after {
+  content: '';
+  position: absolute;
+  top: -30%; bottom: -30%;
+  left: -55%; width: 45%;
+  background: linear-gradient(105deg, transparent, rgba(255,255,255,.85), transparent);
+  transform: skewX(-16deg) translateX(-40%);
+  opacity: 0;
+  pointer-events: none;
 }
 .signature-btn:hover {
-  background: linear-gradient(180deg, #FFFFFF 0%, #C4D0DE 100%);
-  box-shadow: 0 6px 22px -6px rgba(255,255,255,.38);
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.95), inset 0 -2px 0 rgba(255,255,255,.50),
+              0 1px 2px rgba(0,0,0,.55), 0 12px 32px -8px rgba(255,255,255,.65);
 }
+.signature-btn:hover::after { animation: sheen-sweep .8s ease forwards; }
+.signature-btn:active { transform: translateY(0) scale(.985); }
 .signature-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
@@ -502,7 +532,7 @@
 .logo-synorix {
   width: 36px; height: 36px;
   border-radius: 12px;
-  background: linear-gradient(160deg, #141A21 0%, #080C0F 100%);
+  background: linear-gradient(160deg, #1E1E21 0%, #121213 100%);
   border: 1px solid rgba(255,255,255,0.18);
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,0.18),
@@ -524,7 +554,7 @@
 }
 .logo-synorix-text {
   color: white;
-  font-family: 'Geist Sans', sans-serif;
+  font-family: 'Inter Variable', 'Geist Sans', sans-serif;
   font-weight: 700;
   font-size: 18px;
   position: relative;
@@ -538,7 +568,7 @@
 }
 
 .pill-entreprise {
-  background: linear-gradient(135deg, #141A21 0%, #1A222C 55%, #39434D 100%);
+  background: linear-gradient(135deg, #1E1E21 0%, #29292B 55%, #3A3A3E 100%);
   color: white;
   border: 1px solid rgba(255,255,255,0.1);
   padding: 2px 10px;
@@ -547,7 +577,7 @@
   font-weight: 600;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 1px 2px rgba(213,222,232,.22);
+  box-shadow: 0 1px 2px rgba(255,255,255,.22);
 }
 .pill-entreprise::before {
   content: '';
@@ -567,7 +597,7 @@
   border-radius: 6px;
   font-size: 11px;
   font-weight: 600;
-  box-shadow: 0 1px 2px rgba(213,222,232,.22);
+  box-shadow: 0 1px 2px rgba(255,255,255,.22);
 }
 
 /* ── Animations ───────────────────────────────────────────────── */
@@ -635,9 +665,9 @@
 .skeleton-shimmer {
   background-image: linear-gradient(
     90deg,
-    rgba(20, 26, 33, 0)    0%,
-    rgba(26, 34, 44, 0.9)  50%,
-    rgba(20, 26, 33, 0)    100%
+    rgba(30, 30, 33, 0)    0%,
+    rgba(41, 41, 43, 0.9)  50%,
+    rgba(30, 30, 33, 0)    100%
   );
   background-size: 200% 100%;
   animation: skeleton-shimmer 1.5s ease-in-out infinite;
@@ -668,25 +698,25 @@
 /* ── shadcn/ui base (Lumen dark) ──────────────────────────────── */
 @layer base {
   :root {
-    --background:          207 30% 4%;
-    --foreground:          213 33% 94%;
-    --card:                210 26% 7%;
-    --card-foreground:     213 33% 94%;
-    --popover:             210 26% 7%;
-    --popover-foreground:  213 33% 94%;
-    --primary:             211 29% 87%;
-    --primary-foreground:  207 30% 4%;
-    --secondary:           211 25% 10%;
-    --secondary-foreground:213 33% 94%;
-    --muted:               211 25% 10%;
-    --muted-foreground:    210 14% 56%;
-    --accent:              213 26% 14%;
-    --accent-foreground:   213 33% 94%;
+    --background:          240 3% 7%;
+    --foreground:          180 7% 97%;
+    --card:                240 4% 10%;
+    --card-foreground:     180 7% 97%;
+    --popover:             240 4% 10%;
+    --popover-foreground:  180 7% 97%;
+    --primary:             220 7% 92%;
+    --primary-foreground:  240 3% 7%;
+    --secondary:           240 5% 12%;
+    --secondary-foreground:180 7% 97%;
+    --muted:               240 5% 12%;
+    --muted-foreground:    240 1% 59%;
+    --accent:              240 3% 14%;
+    --accent-foreground:   180 7% 97%;
     --destructive:         4 82% 74%;
-    --destructive-foreground: 207 30% 4%;
-    --border:              212 20% 17%;
-    --input:               212 20% 17%;
-    --ring:                210 14% 62%;
+    --destructive-foreground: 240 3% 7%;
+    --border:              0 0% 14%;
+    --input:               0 0% 14%;
+    --ring:                225 2% 60%;
     --radius:              0.625rem;
   }
 }
@@ -700,7 +730,7 @@
     background-image: radial-gradient(1100px 460px at 50% -150px, rgba(255,255,255,.05), transparent 62%);
     background-repeat: no-repeat;
     color: var(--ink-2);
-    font-family: 'Geist Sans', system-ui, sans-serif;
+    font-family: 'Inter Variable', 'Geist Sans', system-ui, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
     font-size: 0.875rem;
     line-height: 1.65;
@@ -709,7 +739,7 @@
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: 'Geist Sans', system-ui, sans-serif;
+    font-family: 'Inter Variable', 'Geist Sans', system-ui, sans-serif;
     letter-spacing: -0.01em;
   }
 
@@ -742,7 +772,7 @@
 /* Legal documents — typography for /legal markdown content */
 .legal-prose {
   color: var(--ink);
-  font-family: 'Geist Sans', system-ui, sans-serif;
+  font-family: 'Inter Variable', 'Geist Sans', system-ui, sans-serif;
   line-height: 1.7;
   font-size: 15px;
 }

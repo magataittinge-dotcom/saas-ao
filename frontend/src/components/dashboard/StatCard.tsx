@@ -66,7 +66,7 @@ export function StatCard({ icon: Icon, label, value, suffix = '', ring, delay = 
   return (
     <div
       className={cn(
-        'glass-card top-lit group relative overflow-hidden p-5 animate-fade-in',
+        'glass-card top-lit sheen group relative overflow-hidden p-5 animate-fade-in',
         'transition-transform duration-200 ease-smooth hover:-translate-y-0.5',
         className,
       )}
@@ -74,32 +74,36 @@ export function StatCard({ icon: Icon, label, value, suffix = '', ring, delay = 
     >
       {/* halo lumineux diffus, intensifié au survol */}
       <div
-        className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-ds-cyan opacity-[0.06] blur-2xl transition-opacity duration-300 group-hover:opacity-[0.16]"
+        className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-ds-cyan opacity-[0.10] blur-2xl transition-opacity duration-300 group-hover:opacity-[0.22]"
         aria-hidden
       />
 
       <div className="relative flex items-start justify-between">
-        <div className="stat-icon-bg" style={{ background: 'rgba(228,233,242,0.08)' }}>
+        <div className="stat-icon-bg" style={{ background: 'rgba(255,255,255,0.10)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.12)' }}>
           <Icon size={20} className="text-ds-cyan" />
         </div>
 
         {ring !== undefined && (
           <div className="relative h-11 w-11 shrink-0">
             <svg viewBox="0 0 40 40" className="h-11 w-11 -rotate-90">
-              <circle cx="20" cy="20" r={R} fill="none" stroke="#1C222D" strokeWidth="3.5" />
+              <circle cx="20" cy="20" r={R} fill="none" stroke="#29292B" strokeWidth="3.5" />
               <circle
                 cx="20" cy="20" r={R} fill="none"
-                stroke="#E4E9F2" strokeWidth="3.5" strokeLinecap="round"
+                stroke="#E8E9EB" strokeWidth="3.5" strokeLinecap="round"
                 strokeDasharray={C}
                 strokeDashoffset={C * (1 - frac)}
-                style={{ transition: reduced ? undefined : 'stroke-dashoffset 0.9s cubic-bezier(0.4,0,0.2,1)' }}
+                style={{
+                  transition: reduced ? undefined : 'stroke-dashoffset 0.9s cubic-bezier(0.4,0,0.2,1)',
+                  filter: 'drop-shadow(0 0 4px rgba(255,255,255,.35))',
+                }}
               />
             </svg>
           </div>
         )}
       </div>
 
-      <p className="edge-data mt-3 text-3xl font-bold tabular-nums text-ds-text">
+      {/* chiffre argenté — le reflet métallique du visage (T3.5) */}
+      <p className="edge-data mt-3 bg-gradient-silver-text bg-clip-text text-3xl font-bold tabular-nums text-transparent">
         {count}{suffix}
       </p>
       <p className="mt-0.5 text-sm text-ds-text-2">{label}</p>

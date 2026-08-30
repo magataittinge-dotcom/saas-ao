@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
   Loader2, Search, FileText,
-  CheckCircle2, Sparkles, Info,
+  CheckCircle2, Sparkles,
 } from 'lucide-react'
 import { api, getSignedFileUrl } from '@/services/api'
 import CriticalBanner, { type FieldSource } from '@/components/project/CriticalBanner'
@@ -24,7 +24,7 @@ const ANALYSIS_STEPS: StepDescriptor[] = [
   { key: 'finalizing',      label: 'Finalisation',                          estimated_s: 5 },
 ]
 
-const F = "'Geist Sans', sans-serif"
+const F = "'Inter Variable', 'Geist Sans', sans-serif"
 
 const CATEGORY_LABELS: Record<ComplianceCategory, string> = {
   candidature:       'Candidature',
@@ -293,30 +293,23 @@ export default function StepAnalysis({ project }: Props) {
     <div
       className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-3 gap-4"
       style={{
-        background: 'rgba(10,12,17,0.92)',
+        background: 'rgba(9,9,10,0.92)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
-        borderTop: '1px solid rgba(186,205,234,.13)',
+        borderTop: '1px solid rgba(255,255,255,.07)',
       }}
     >
-      <div className="flex items-center gap-3 min-w-0">
-        <CheckCircle2 size={20} className="shrink-0" style={{ color: '#E4E9F2' }} />
-        <div className="min-w-0">
-          <p className="text-sm font-semibold truncate" style={{ color: '#F4F6FA', fontFamily: F }}>
-            Analyse complétée — {items.length} exigences identifiées
-          </p>
-          <p className="text-sm truncate" style={{ color: '#9BA4B5', fontFamily: F }}>
-            {obligatoireCount > 0
-              ? `L'IA a identifié ${obligatoireCount} clauses obligatoires parmi ${items.length} exigences`
-              : `${items.length} exigences extraites du dossier`}
-          </p>
-        </div>
+      <div className="flex items-center gap-2.5 min-w-0">
+        <CheckCircle2 size={16} className="shrink-0" style={{ color: '#E8E9EB' }} />
+        <p className="num-mono truncate text-xs" style={{ color: '#959597', fontFamily: F }}>
+          {items.length} exigences · {obligatoireCount} obligatoires
+        </p>
       </div>
 
       <div className="flex items-center gap-3 shrink-0">
         <button
-          className="px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors hover:bg-ds-bg-2"
-          style={{ border: '1px solid rgba(186,205,234,.13)', color: '#9BA4B5', fontFamily: F }}
+          className="glass-btn px-5 py-2.5 rounded-lg text-sm font-semibold"
+          style={{ color: '#C2C3C6', fontFamily: F }}
         >
           Générer Rapport PDF
         </button>
@@ -343,26 +336,25 @@ export default function StepAnalysis({ project }: Props) {
   return (
     <div className="space-y-4 pb-20" style={{ fontFamily: F }}>
 
-      {/* ── LIGNE 1 : Title + AI badge | Doc count ──────────────── */}
+      {/* ── LIGNE 1 : Title | Doc count ─────────────────────────── */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <h1 className="text-xl font-bold" style={{ color: '#F4F6FA' }}>
-            Analyse du Dossier
+          <h1 className="font-display tracking-tight text-xl font-bold" style={{ color: '#F7F8F8' }}>
+            Analyse du dossier
           </h1>
-          <span className="ai-badge">IA active</span>
         </div>
 
-        <div className="edge-data flex items-center gap-2 text-xs" style={{ color: '#9BA4B5' }}>
+        <div className="edge-data flex items-center gap-2 text-xs" style={{ color: '#959597' }}>
           {lotFilterInfo ? (
             <>
               <span>
-                <span className="font-semibold" style={{ color: '#F4F6FA' }}>{lotFilterInfo.included.length}</span>
+                <span className="font-semibold" style={{ color: '#F7F8F8' }}>{lotFilterInfo.included.length}</span>
                 /{lotTotal} docs analysés
               </span>
               <button
                 onClick={() => setShowLotDetails(v => !v)}
                 className="font-medium hover:underline"
-                style={{ color: '#E4E9F2' }}
+                style={{ color: '#E8E9EB' }}
               >
                 {showLotDetails ? 'Masquer' : 'Détails'}
               </button>
@@ -377,96 +369,82 @@ export default function StepAnalysis({ project }: Props) {
       {showLotDetails && lotFilterInfo && (
         <div
           className="rounded-lg px-4 py-2.5 flex flex-wrap gap-x-4 gap-y-1 text-xs -mt-2"
-          style={{ background: '#1C222D', border: '1px solid rgba(186,205,234,.13)' }}
+          style={{ background: '#1E1E21', border: '1px solid rgba(255,255,255,.07)' }}
         >
           {lotFilterInfo.included.map(doc => (
             <span key={doc.id} className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#E4E9F2' }} />
-              <span style={{ color: '#E8EBF2' }}>{doc.file_name}</span>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#E8E9EB' }} />
+              <span style={{ color: '#D8D9DB' }}>{doc.file_name}</span>
             </span>
           ))}
           {lotFilterInfo.excluded.map(doc => (
             <span key={doc.id} className="flex items-center gap-1.5 opacity-40">
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#788295' }} />
-              <span style={{ color: '#9BA4B5' }}>{doc.file_name}</span>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#6B6C6F' }} />
+              <span style={{ color: '#959597' }}>{doc.file_name}</span>
             </span>
           ))}
         </div>
       )}
 
-      {/* ── CARTE RÉCAP ─────────────────────────────────────────── */}
-      {infos && (
-        <div
-          className="bg-ds-bg rounded-xl p-5"
-          style={{ border: '1px solid rgba(186,205,234,.13)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
-        >
-          {/* ROW 1 : Objet du marché */}
-          {infos.objet && (
-            <p className="text-base font-semibold mb-3" style={{ color: '#F4F6FA' }}>
-              {infos.objet}
+      {/* ── HÉROS DE SYNTHÈSE — le fait, puis le contexte ───────── */}
+      <div className="glass-card top-lit blueprint-grid sheen relative overflow-hidden px-6 py-5">
+        <div className="relative flex flex-wrap items-start justify-between gap-x-8 gap-y-5">
+          {/* Le résultat de l'analyse, en chiffres */}
+          <div className="min-w-0">
+            <p className="microlabel mb-2.5">
+              Analyse terminée{project.selected_lot_name ? ` — ${project.selected_lot_name}` : ''}
             </p>
-          )}
-
-          {/* ROW 2 : Client/Architecte/Lot à gauche — Critères à droite */}
-          <div className="flex items-start justify-between gap-6">
-            <div className="flex items-center gap-6">
-              <div>
-                <p className="text-xs font-medium uppercase mb-0.5" style={{ color: '#788295' }}>Client</p>
-                <p className="text-sm font-medium" style={{ color: '#F4F6FA' }}>{infos.maitre_ouvrage || '—'}</p>
-              </div>
-              <div>
-                <p className="text-xs font-medium uppercase mb-0.5" style={{ color: '#788295' }}>Architecte</p>
-                <p className="text-sm font-medium" style={{ color: '#F4F6FA' }}>{infos.maitre_oeuvre || '—'}</p>
-              </div>
-              <div>
-                <p className="text-xs font-medium uppercase mb-0.5" style={{ color: '#788295' }}>Lot</p>
-                <p className="text-sm font-medium" style={{ color: '#F4F6FA' }}>{project.selected_lot_name || infos.lots?.join(', ') || '—'}</p>
+            <div className="flex flex-wrap items-end gap-3">
+              <span className="num-mono bg-gradient-silver-text bg-clip-text text-5xl font-bold leading-none text-transparent">
+                {items.length}
+              </span>
+              <div className="pb-0.5">
+                <p className="text-sm font-semibold" style={{ color: '#F7F8F8' }}>exigences identifiées</p>
+                <p className="mt-0.5 text-xs" style={{ color: '#959597' }}>
+                  <span className="font-semibold" style={{ color: 'var(--warn)' }}>{obligatoireCount} obligatoires</span>
+                  {' · '}{items.length - obligatoireCount} souhaitées
+                </p>
               </div>
             </div>
-
-            {(prixPct > 0 || techPct > 0) && (
-              <div className="flex items-center gap-4 shrink-0">
-                {prixPct > 0 && (
-                  <div
-                    className="rounded-lg px-3 py-2"
-                    style={{ background: '#151A23', border: '1px solid rgba(186,205,234,.13)' }}
-                  >
-                    <p className="text-xs mb-0.5" style={{ color: '#9BA4B5' }}>Critère prix</p>
-                    <p className="text-lg font-bold leading-none" style={{ color: '#F58E86' }}>{prixPct}%</p>
-                    <div className="mt-1.5 rounded-full overflow-hidden" style={{ width: 60, height: 4, background: '#1C222D' }}>
-                      <div className="h-full rounded-full" style={{ width: `${prixPct}%`, background: '#F58E86' }} />
-                    </div>
-                  </div>
-                )}
-                {techPct > 0 && (
-                  <div
-                    className="rounded-lg px-3 py-2"
-                    style={{ background: '#151A23', border: '1px solid rgba(186,205,234,.13)' }}
-                  >
-                    <p className="text-xs mb-0.5" style={{ color: '#9BA4B5' }}>Critère technique</p>
-                    <p className="text-lg font-bold leading-none" style={{ color: '#E4E9F2' }}>{techPct}%</p>
-                    <div className="mt-1.5 rounded-full overflow-hidden" style={{ width: 60, height: 4, background: '#1C222D' }}>
-                      <div className="h-full rounded-full" style={{ width: `${techPct}%`, background: '#E4E9F2' }} />
-                    </div>
-                  </div>
-                )}
-                {/* Conseil IA tooltip */}
-                <div className="relative group">
-                  <Info size={15} className="cursor-help" style={{ color: '#E4E9F2' }} />
-                  <div
-                    className="absolute right-0 top-full mt-1.5 z-10 bg-ds-bg rounded-lg p-3 w-56 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all pointer-events-none"
-                    style={{ border: '1px solid rgba(186,205,234,.13)', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
-                  >
-                    <p className="text-xs italic" style={{ color: '#9BA4B5' }}>
-                      Soignez le mémoire technique ! Points de vigilance identifiés.
-                    </p>
-                  </div>
-                </div>
-              </div>
+            {infos?.objet && (
+              <p className="mt-4 max-w-xl text-sm font-medium leading-snug" style={{ color: '#D8D9DB' }}>
+                {infos.objet}
+              </p>
+            )}
+            {(infos?.maitre_ouvrage || infos?.maitre_oeuvre) && (
+              <p className="mt-1.5 text-xs leading-relaxed" style={{ color: '#6B6C6F' }}>
+                {infos?.maitre_ouvrage && <>Client&nbsp;: <span style={{ color: '#959597' }}>{infos.maitre_ouvrage}</span></>}
+                {infos?.maitre_ouvrage && infos?.maitre_oeuvre && ' · '}
+                {infos?.maitre_oeuvre && <>Maîtrise d&apos;œuvre&nbsp;: <span style={{ color: '#959597' }}>{infos.maitre_oeuvre}</span></>}
+              </p>
             )}
           </div>
+
+          {/* Les critères de jugement — la boussole de la réponse */}
+          {(prixPct > 0 || techPct > 0) && (
+            <div className="w-full shrink-0 sm:w-64">
+              <p className="microlabel mb-2">Critères de jugement</p>
+              <div className="flex h-2 overflow-hidden rounded-full" style={{ background: 'var(--surface-2)' }}>
+                {prixPct > 0 && <div title={`Prix ${prixPct} %`} style={{ width: `${prixPct}%`, background: '#FFFFFF' }} />}
+                {techPct > 0 && <div title={`Technique ${techPct} %`} style={{ width: `${techPct}%`, background: '#98999C' }} />}
+              </div>
+              <div className="mt-2 flex items-center justify-between text-xs">
+                <span style={{ color: '#959597' }}>
+                  Prix <span className="num-mono font-bold" style={{ color: '#F7F8F8' }}>{prixPct}&nbsp;%</span>
+                </span>
+                <span style={{ color: '#959597' }}>
+                  Technique <span className="num-mono font-bold" style={{ color: '#F7F8F8' }}>{techPct}&nbsp;%</span>
+                </span>
+              </div>
+              <p className="mt-2.5 text-[11px] italic leading-relaxed" style={{ color: '#6B6C6F' }}>
+                {techPct >= prixPct
+                  ? 'La valeur technique pèse autant que le prix : le mémoire fera la différence.'
+                  : 'Le prix domine la notation : ajustez votre offre financière en priorité.'}
+              </p>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* ── C6 : viewer PDF intégré (source à la bonne page, excerpt surligné) ── */}
       {viewer && (
@@ -510,19 +488,19 @@ export default function StepAnalysis({ project }: Props) {
 
       {/* ── SEARCH BAR ──────────────────────────────────────────── */}
       <div className="relative">
-        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: '#788295' }} />
+        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: '#6B6C6F' }} />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Rechercher une clause ou une exigence..."
-          className="w-full pl-10 pr-10 py-2.5 text-sm rounded-lg outline-none"
-          style={{ background: '#151A23', border: '1px solid rgba(186,205,234,.13)', color: '#F4F6FA', fontFamily: F }}
+          className="glass-input w-full pl-10 pr-10 py-2.5 text-sm"
+          style={{ fontFamily: F }}
         />
-        <Sparkles size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2" style={{ color: '#E4E9F2' }} />
+        <Sparkles size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2" style={{ color: '#E8E9EB' }} />
       </div>
 
       {/* ── ONGLETS ─────────────────────────────────────────────── */}
-      <div className="flex items-center gap-6 pb-px" style={{ borderBottom: '1px solid rgba(186,205,234,.13)' }}>
+      <div className="flex items-center gap-6 pb-px" style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
         <TabButton
           label={`Tout (${items.length})`}
           active={activeFilter === 'all'}
@@ -540,7 +518,7 @@ export default function StepAnalysis({ project }: Props) {
 
       {/* ── Exigences ───────────────────────────────────────────── */}
       {filtered.length === 0 ? (
-        <p className="text-center text-sm py-12" style={{ color: '#788295', fontFamily: F }}>
+        <p className="text-center text-sm py-12" style={{ color: '#6B6C6F', fontFamily: F }}>
           Aucune exigence trouvée
         </p>
       ) : (
@@ -572,11 +550,11 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
     <button
       onClick={onClick}
       className={`pb-3 text-sm transition-colors relative whitespace-nowrap ${active ? 'font-semibold' : 'font-medium'}`}
-      style={{ color: active ? '#E4E9F2' : '#9BA4B5', fontFamily: F }}
+      style={{ color: active ? '#E8E9EB' : '#959597', fontFamily: F }}
     >
       {label}
       {active && (
-        <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full" style={{ background: '#E4E9F2' }} />
+        <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full" style={{ background: '#E8E9EB' }} />
       )}
     </button>
   )
@@ -602,21 +580,18 @@ function ExigenceSection({
   const [open, setOpen] = useState(defaultOpen)
 
   return (
-    <div
-      className="bg-ds-bg rounded-xl"
-      style={{ border: '1px solid rgba(186,205,234,.13)', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}
-    >
+    <div className="glass-card overflow-hidden">
       <button
         onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-5 py-3.5 text-left"
+        className="w-full flex items-center justify-between px-5 py-3.5 text-left transition-colors hover:bg-ds-bg-2"
       >
-        <h3 className="text-base font-bold" style={{ color: '#F4F6FA', fontFamily: F }}>
+        <h3 className="text-base font-bold" style={{ color: '#F7F8F8', fontFamily: F }}>
           {CATEGORY_LABELS[category]}{' '}
-          <span className="font-medium text-sm" style={{ color: '#788295' }}>({items.length})</span>
+          <span className="font-medium text-sm" style={{ color: '#6B6C6F' }}>({items.length})</span>
         </h3>
         <span
           className="text-xs font-medium transition-transform"
-          style={{ color: '#E4E9F2', transform: open ? 'rotate(180deg)' : undefined }}
+          style={{ color: '#E8E9EB', transform: open ? 'rotate(180deg)' : undefined }}
         >
           ▾
         </span>
@@ -628,19 +603,19 @@ function ExigenceSection({
             <div
               key={item.id}
               className="flex items-start gap-2.5 py-2 flex-wrap sm:flex-nowrap"
-              style={idx < items.length - 1 ? { borderBottom: '1px solid rgba(186,205,234,.13)' } : undefined}
+              style={idx < items.length - 1 ? { borderBottom: '1px solid rgba(255,255,255,.07)' } : undefined}
             >
               <span
                 className="shrink-0 mt-0.5 text-[11px] tabular-nums w-7 text-right"
-                style={{ color: '#5C6678', fontFamily: '"Geist Mono", monospace' }}
+                style={{ color: '#55565A', fontFamily: '"Geist Mono", monospace' }}
               >
                 {idx + 1}
               </span>
 
-              <p className="flex-1 min-w-[240px] text-sm leading-snug" style={{ color: '#E8EBF2' }}>
+              <p className="flex-1 min-w-[240px] text-sm leading-snug" style={{ color: '#D8D9DB' }}>
                 {item.exigence_text}
                 {item.suggestion_ia && (
-                  <span className="block text-xs mt-0.5 italic" style={{ color: '#C3CCDC' }}>
+                  <span className="block text-xs mt-0.5 italic" style={{ color: '#B4B5B8' }}>
                     💡 {item.suggestion_ia}
                   </span>
                 )}
@@ -651,7 +626,7 @@ function ExigenceSection({
                   <button
                     onClick={() => onOpenSource(item)}
                     className="flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium transition-opacity hover:opacity-70 hover:underline whitespace-nowrap"
-                    style={{ background: '#1C222D', color: '#E4E9F2', border: '1px solid rgba(186,205,234,.13)' }}
+                    style={{ background: '#1E1E21', color: '#E8E9EB', border: '1px solid rgba(255,255,255,.07)' }}
                     title={`Voir dans ${item.source_document} — passage surligné`}
                   >
                     <FileText size={11} />
@@ -660,16 +635,17 @@ function ExigenceSection({
                   </button>
                 )}
                 {item.priority === 'obligatoire' ? (
+                  // Ambre = clause du DCE à respecter (le corail reste aux vraies alertes)
                   <span
                     className="px-2 py-0.5 rounded-md text-xs font-medium whitespace-nowrap"
-                    style={{ background: 'rgba(245,142,134,0.10)', color: '#F58E86' }}
+                    style={{ background: 'var(--warn-bg)', color: 'var(--warn)' }}
                   >
                     Obligatoire
                   </span>
                 ) : (
                   <span
                     className="px-2 py-0.5 rounded-md text-xs font-medium whitespace-nowrap"
-                    style={{ background: 'rgba(120,130,149,0.08)', color: '#9BA4B5' }}
+                    style={{ background: 'rgba(149,149,151,0.08)', color: '#959597' }}
                   >
                     Souhaitée
                   </span>

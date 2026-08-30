@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, X } from 'lucide-react'
+import { X } from 'lucide-react'
+import { useCompanionStore } from '@/stores/companionStore'
+import CompanionOrb from '@/components/ui/CompanionOrb'
 
 export interface ProgressStage {
   upTo: number
@@ -36,6 +38,11 @@ interface Props {
   preparation?: { extracted: number; total: number } | null
 }
 
+/**
+ * Modale d'analyse — le Compagnon travaille au centre de l'anneau :
+ * boucle neuronale pendant l'analyse, vague ambre au succès.
+ * Pilote le companionStore global (le header et le stepper suivent).
+ */
 export function AnalysisProgress({
   isAnalyzing,
   isSuccess,
@@ -53,7 +60,16 @@ export function AnalysisProgress({
   const slowTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const prepDone = !preparation || preparation.extracted >= preparation.total
 
-  // ── Slow detection: show hint after SLOW_THRESHOLD_S at 99% ───────────────
+  // ── Le Compagnon suit l'analyse (état global : header + stepper) ──────────
+  useEffect(() => {
+    if (isAnalyzing) useCompanionStore.getState().analyse()
+  }, [isAnalyzing])
+  useEffect(() => {
+    if (isSuccess) useCompanionStore.getState().succeed()
+  }, [isSuccess])
+  useEffect(() => () => { useCompanionStore.getState().idle() }, [])
+
+  // ── Slow detection: show hint after SLOW_THRESHOLD_S ──────────────────────
   useEffect(() => {
     if (!isAnalyzing) {
       setIsSlow(false)
@@ -111,13 +127,13 @@ export function AnalysisProgress({
     setProgress(100)
     setMessage('Terminé !')
     const t1 = setTimeout(() => setShowCheck(true), 200)
-    const t2 = setTimeout(() => onComplete(), 1400)
+    const t2 = setTimeout(() => onComplete(), 2400)
     return () => { clearTimeout(t1); clearTimeout(t2) }
   }, [isSuccess, onComplete])
 
   if (!isAnalyzing && !isSuccess) return null
 
-  const RADIUS = 80
+  const RADIUS = 100
   const CIRCUMFERENCE = 2 * Math.PI * RADIUS
   const offset = CIRCUMFERENCE * (1 - progress / 100)
 
@@ -126,53 +142,45 @@ export function AnalysisProgress({
       style={{
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
         zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'rgba(10,12,17,0.85)', backdropFilter: 'none',
+        background: 'rgba(9,9,10,0.85)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
       }}
     >
       <div
-        className="flex flex-col items-center gap-6 min-w-72 p-10 rounded-2xl"
+        className="flex flex-col items-center gap-5 min-w-72 p-10 rounded-2xl top-lit"
         style={{
-          background: '#151A23',
-          border: '1px solid rgba(228,233,242,0.20)',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(228,233,242,0.10)',
+          background: '#18181A',
+          backgroundImage: 'var(--bottom-lit)',
+          border: '1px solid var(--line-strong)',
+          boxShadow: '0 24px 64px rgba(0,0,0,0.6), var(--edge-light)',
         }}
       >
-        {/* Radial progress */}
-        <div className="relative w-48 h-48">
-          <svg className="w-full h-full -rotate-90" viewBox="0 0 200 200">
-            <circle cx="100" cy="100" r={RADIUS} fill="none" stroke="rgba(120,130,149,0.20)" strokeWidth="10" />
+        {/* Le Compagnon au travail, ceint de l'anneau de progression */}
+        <div className="relative h-56 w-56">
+          <svg className="h-full w-full -rotate-90" viewBox="0 0 224 224">
+            <circle cx="112" cy="112" r={RADIUS} fill="none" stroke="rgba(255,255,255,.06)" strokeWidth="5" />
             <circle
-              cx="100"
-              cy="100"
+              cx="112"
+              cy="112"
               r={RADIUS}
               fill="none"
-              stroke={showCheck ? '#E4E9F2' : '#E4E9F2'}
-              strokeWidth="10"
+              stroke="#E8E9EB"
+              strokeWidth="5"
               strokeLinecap="round"
               strokeDasharray={CIRCUMFERENCE}
               strokeDashoffset={offset}
-              style={{ transition: 'stroke-dashoffset 0.4s ease, stroke 0.3s ease', filter: `drop-shadow(0 0 8px ${showCheck ? '#E4E9F2' : '#E4E9F2'})` }}
+              style={{
+                transition: 'stroke-dashoffset 0.4s ease',
+                filter: 'drop-shadow(0 0 6px rgba(255,255,255,.45))',
+              }}
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            {showCheck ? (
-              <div
-                className="flex items-center justify-center w-16 h-16 rounded-full"
-                style={{ background: 'rgba(228,233,242,0.15)' }}
-              >
-                <Check size={36} className="text-ds-cyan" strokeWidth={2.5} />
-              </div>
-            ) : (
-              <span
-                className="text-4xl font-bold font-mono text-ds-text"
-              >
-                {progress}%
-              </span>
-            )}
+            <CompanionOrb state={showCheck ? 'succes' : 'analyse'} size={172} zoom={1.02} />
           </div>
         </div>
 
-        <div className="text-center space-y-1">
+        <div className="space-y-1 text-center">
+          <p className="num-mono text-2xl font-bold text-ds-text">{progress}%</p>
           <p className="text-base font-semibold text-ds-text">{message}</p>
           {!showCheck && (
             <p className="text-sm text-ds-text-2">
@@ -189,11 +197,11 @@ export function AnalysisProgress({
         {!showCheck && onCancel && (
           <button
             onClick={onCancel}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all duration-200"
+            className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm transition-all duration-200"
             style={{
-              color: '#9BA4B5',
-              background: 'rgba(120,130,149,0.10)',
-              border: '1px solid rgba(120,130,149,0.20)',
+              color: '#959597',
+              background: 'rgba(149,149,151,0.10)',
+              border: '1px solid rgba(149,149,151,0.20)',
               opacity: isSlow ? 1 : 0.5,
             }}
           >

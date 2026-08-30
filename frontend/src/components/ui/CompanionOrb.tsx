@@ -126,26 +126,40 @@ export default function CompanionOrb({
     startClip(q[0])
   }, [state, showPosterOnly, startClip])
 
-  // Une fois le crossfade terminé, on démonte le calque arrière
+  // Micro-vie en veille : toutes les 15 à 30 s, le compagnon ouvre les yeux,
+  // observe, puis se rendort — les clips Higgsfield deviennent ses gestes.
   useEffect(() => {
-    if (!slots.ready) return
-    const t = window.setTimeout(() => {
-      setSlots((s) => {
-        if (!s.ready) return s
-        if (s.front === 'a' && s.b !== null) return { ...s, b: null }
-        if (s.front === 'b' && s.a !== null) return { ...s, a: null }
-        return s
-      })
-    }, 340)
+    if (showPosterOnly || state !== 'veille') return
+    let t = 0
+    const schedule = () => {
+      t = window.setTimeout(() => {
+        queueRef.current = ['reveil', 'sommeil', 'veille']
+        startClip('reveil')
+        schedule()
+      }, 15000 + Math.random() * 15000)
+    }
+    schedule()
     return () => window.clearTimeout(t)
-  }, [slots.ready, slots.front])
+  }, [state, showPosterOnly, startClip])
 
+  // Bascule ATOMIQUE : en blend « screen », deux calques superposés
+  // additionnent leur lumière (= flash). Dès que le calque avant est décodé,
+  // il devient visible ET l'arrière est démonté dans le même rendu —
+  // les deux visages ne coexistent jamais à l'écran.
   const handleCanPlay = useCallback(
     (slot: 'a' | 'b') => (e: SyntheticEvent<HTMLVideoElement>) => {
       if (slotsRef.current.front !== slot) return
       startedRef.current = true
       e.currentTarget.play().catch(() => {})
-      setSlots((s) => (s.front === slot && !s.ready ? { ...s, ready: true } : s))
+      setSlots((s) => {
+        if (s.front !== slot || s.ready) return s
+        return {
+          front: s.front,
+          a: s.front === 'a' ? s.a : null,
+          b: s.front === 'b' ? s.b : null,
+          ready: true,
+        }
+      })
     },
     [],
   )
@@ -198,8 +212,9 @@ export default function CompanionOrb({
         style={{
           ...layer,
           zIndex: isFront ? 2 : 1,
-          opacity: isFront ? (slots.ready ? 1 : 0) : slots.ready ? 0 : 1,
-          transition: 'opacity .26s ease',
+          // cut franc, poses raccordées — aucune addition de lumière possible
+          opacity: isFront && !slots.ready ? 0 : 1,
+          transition: 'none',
         }}
       />
     )
@@ -228,7 +243,7 @@ export default function CompanionOrb({
         {showPosterOnly ? (
           <img src={posterFor(state)} alt="" draggable={false} style={layer} />
         ) : (
-          <>
+          <div className="absolute inset-0">
             {/* poster de fond avant le premier décodage */}
             <img
               src={POSTER_CLOSED}
@@ -237,12 +252,12 @@ export default function CompanionOrb({
               style={{
                 ...layer,
                 opacity: startedRef.current ? 0 : 1,
-                transition: 'opacity .24s ease',
+                transition: 'none',
               }}
             />
             {renderVideo('a')}
             {renderVideo('b')}
-          </>
+          </div>
         )}
       </div>
 

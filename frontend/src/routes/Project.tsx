@@ -1,7 +1,9 @@
 import { useRef, useState, useEffect } from 'react'
 import { useParams, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { MapPin } from 'lucide-react'
 import { useProject } from '@/hooks/useProject'
 import { StepProgress } from '@/components/project/StepProgress'
+import { DeadlinePill } from '@/components/dashboard/DeadlinePill'
 import { StepperSkeleton } from '@/components/skeletons'
 import Skeleton from '@/components/common/Skeleton'
 import StepUpload       from './project/StepUpload'
@@ -54,24 +56,35 @@ export default function Project() {
   }
 
   return (
-    <div className="animate-fade-in">
-      {/* Project header */}
-      <div className="mb-4">
-        <h1 className="text-ds-text text-xl font-bold">{project.name}</h1>
-        {project.maitre_ouvrage && (
-          <p className="text-sm text-ds-text-2 mt-0.5">{project.maitre_ouvrage}</p>
+    <div className="animate-fade-in max-w-6xl mx-auto">
+      {/* ── Bandeau contexte AO — qui, quoi, pour quand (R1) ───────── */}
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="microlabel mb-1">Appel d&apos;offres</p>
+          <h1 className="font-display tracking-tight text-ds-text text-[22px] font-bold leading-tight truncate">{project.name}</h1>
+          {project.maitre_ouvrage && (
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-ds-text-2 truncate">
+              <MapPin size={13} className="shrink-0 text-ds-text-3" />
+              {project.maitre_ouvrage}
+            </p>
+          )}
+        </div>
+        {project.deadline && (
+          <div className="shrink-0 pt-1">
+            <DeadlinePill deadline={project.deadline} emphasized />
+          </div>
         )}
       </div>
 
       <div ref={sentinelRef} className="h-px" />
 
-      {/* Sticky stepper */}
+      {/* Sticky stepper — fin, une seule lumière */}
       <div
         className={cn(
-          'sticky top-0 z-20 glass-card p-5 mb-6 transition-all duration-200',
+          'sticky top-0 z-20 glass-card px-5 py-3.5 mb-6 transition-all duration-200',
           stepperStuck && 'rounded-none -mx-6 px-12',
         )}
-        style={stepperStuck ? { background: '#151A23', borderBottom: '1px solid rgba(186,205,234,.13)', boxShadow: '0 1px 3px rgba(0,0,0,.4)' } : undefined}
+        style={stepperStuck ? { background: 'rgba(18,18,19,0.92)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', borderBottom: '1px solid var(--line)', boxShadow: '0 8px 24px rgba(0,0,0,.4)' } : undefined}
       >
         <StepProgress
           currentStep={project.current_step}

@@ -1,12 +1,14 @@
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Plus, ChevronRight, ArrowRight, CalendarDays, MapPin, Sparkles,
+  Plus, ChevronRight, ArrowRight, CalendarDays, MapPin,
   BarChart3, ShieldCheck, Trophy, Send, FolderX,
   FolderOpen, Building2, Award, FileStack, Archive, Calculator,
   type LucideIcon,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
+import { useCompanionStore } from '@/stores/companionStore'
+import CompanionOrb from '@/components/ui/CompanionOrb'
 import QuotaGauge from '@/components/layout/QuotaGauge'
 import FirstAOWelcome from '@/components/onboarding/FirstAOWelcome'
 import { api } from '@/services/api'
@@ -50,6 +52,7 @@ const RUBRIQUES: { icon: LucideIcon; label: string; to: string }[] = [
 export default function Dashboard() {
   const navigate = useNavigate()
   const { user, organization } = useAuthStore()
+  const companionState = useCompanionStore((st) => st.state)
 
   const { data: projects = [], isLoading: pLoad } = useQuery({
     queryKey: ['projects'],
@@ -146,7 +149,7 @@ export default function Dashboard() {
         || organization?.trial_granted === false)
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 animate-fade-in">
+    <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
 
       {/* C15 — essai utilisé : CTA upgrade sobre, jamais bloquant */}
       {consumedFreeTrial && (
@@ -166,10 +169,8 @@ export default function Dashboard() {
       {/* ── EN-TÊTE ──────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold text-ds-text">Bonjour, {firstName}</h1>
-            <span className="ai-badge">IA active</span>
-          </div>
+          {/* badge « IA active » retiré — le Compagnon vivant à droite le remplace (T3.5) */}
+          <h1 className="font-display tracking-tight text-2xl font-bold text-ds-text">Bonjour, {firstName}</h1>
           <span className="mt-1.5 inline-flex items-center gap-1.5 text-sm text-ds-text-2">
             <CalendarDays size={14} className="text-ds-text-3" />
             {fmtDateLong(new Date())}
@@ -200,11 +201,11 @@ export default function Dashboard() {
       )}
 
       {/* ── 2 COLONNES ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-5 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-5 items-start">
 
         {/* ─── GAUCHE : deux zones (B7) ────────────────────────────── */}
         <div className="space-y-5">
-        <section className="glass-card overflow-hidden">
+        <section className="glass-card sheen overflow-hidden">
           <header className="flex items-center justify-between px-5 py-4 border-b border-ds-border-subtle">
             <div className="flex items-center gap-2.5">
               <h2 className="text-[15px] font-semibold text-ds-text">En cours de réponse</h2>
@@ -274,7 +275,7 @@ export default function Dashboard() {
 
         {/* ── Zone « Analysés » : analyse faite, pas encore de suite ── */}
         {analysesSansSuite.length > 0 && (
-          <section className="glass-card overflow-hidden">
+          <section className="glass-card sheen overflow-hidden">
             <header className="flex items-center gap-2.5 px-5 py-4 border-b border-ds-border-subtle">
               <h2 className="text-[15px] font-semibold text-ds-text">Analysés</h2>
               <span className="pill pill-muted text-[11px]">
@@ -314,8 +315,31 @@ export default function Dashboard() {
         {/* ─── DROITE ─────────────────────────────────────────────── */}
         <div className="flex flex-col gap-4">
 
+          {/* ── LE COMPAGNON — présence permanente du bureau d'études IA (T3.5) ── */}
+          <section className="glass-card top-lit blueprint-grid sheen relative overflow-hidden p-5">
+            <div className="mb-1 flex items-center justify-between">
+              <span className="microlabel">Compagnon Synorix</span>
+              <span className="microlabel" style={{ color: 'var(--lum-dim)' }}>
+                {companionState === 'analyse' ? 'analyse' : companionState === 'succes' ? 'terminé' : 'en veille'}
+              </span>
+            </div>
+            <div className="relative mx-auto w-fit">
+              {/* halo doux permanent derrière le visage */}
+              <span
+                aria-hidden
+                className="pointer-events-none absolute -inset-8 rounded-full"
+                style={{
+                  background: 'radial-gradient(50% 50% at 50% 50%, rgba(255,255,255,.18), transparent 70%)',
+                  animation: 'halo-breathe 6s ease-in-out infinite',
+                }}
+              />
+              <CompanionOrb state={companionState} size={296} zoom={1.02} />
+            </div>
+            <p className="mt-3 text-center text-[13px] leading-relaxed text-ds-text-2">{synorixNote}</p>
+          </section>
+
           {/* Zone Piloter : jauge quota + échéances < 7 jours (B7) */}
-          <section className="glass-card p-4">
+          <section className="glass-card sheen p-4">
             <div className="flex items-center gap-2 mb-3">
               <CalendarDays size={14} className="text-ds-cyan" />
               <h3 className="text-[11px] font-semibold uppercase tracking-wider text-ds-text-3">Piloter</h3>
@@ -367,7 +391,7 @@ export default function Dashboard() {
           </section>
 
           {/* Accès rapide aux rubriques */}
-          <section className="glass-card p-4">
+          <section className="glass-card sheen p-4">
             <h3 className="text-[11px] font-semibold uppercase tracking-wider text-ds-text-3 mb-3">Accès rapide</h3>
             <div className="grid grid-cols-3 gap-2">
               {RUBRIQUES.map((r) => (
@@ -385,14 +409,7 @@ export default function Dashboard() {
             </div>
           </section>
 
-          {/* Note Synorix — positive, premium silencieux */}
-          <section className="glass-card p-4 relative overflow-hidden" style={{ background: 'linear-gradient(135deg, rgba(228,233,242,0.04), rgba(228,233,242,0.08))' }}>
-            <div className="flex items-center gap-2 mb-2">
-              <Sparkles size={15} className="text-ds-cyan" />
-              <h3 className="text-sm font-bold text-ds-cyan-dark">Synorix</h3>
-            </div>
-            <p className="text-[13px] leading-relaxed text-ds-text-1b">{synorixNote}</p>
-          </section>
+          {/* Note Synorix : désormais portée par le Compagnon, en haut de colonne (T3.5) */}
         </div>
       </div>
     </div>

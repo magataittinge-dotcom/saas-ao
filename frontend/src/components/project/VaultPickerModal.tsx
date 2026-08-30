@@ -4,7 +4,7 @@ import { X, FileText, Search, Loader2, AlertCircle, Upload } from 'lucide-react'
 import { useDocuments } from '@/hooks/useDocuments'
 import type { ChecklistItem, Document } from '@/types'
 
-const F = "'Geist Sans', sans-serif"
+const F = "'Inter Variable', 'Geist Sans', sans-serif"
 
 interface Props {
   item: ChecklistItem
@@ -78,17 +78,17 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
       onClick={onClose}
     >
       <div
-        className="bg-ds-bg rounded-lg w-full max-w-xl max-h-[80vh] flex flex-col overflow-hidden"
+        className="glass-card rounded-lg w-full max-w-xl max-h-[80vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         style={{ boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}
       >
         {/* Header */}
-        <header className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(186,205,234,.13)' }}>
+        <header className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
           <div className="min-w-0">
-            <h3 className="text-base font-bold" style={{ color: '#F4F6FA' }}>
+            <h3 className="text-base font-bold" style={{ color: '#F7F8F8' }}>
               Choisir une pièce du coffre-fort
             </h3>
-            <p className="text-xs mt-0.5 truncate" style={{ color: '#9BA4B5' }}>
+            <p className="text-xs mt-0.5 truncate" style={{ color: '#959597' }}>
               Pour : {item.details || item.document_type_required}
             </p>
           </div>
@@ -98,7 +98,7 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
             className="p-1.5 rounded-lg transition-colors hover:bg-ds-bg-2 shrink-0"
             aria-label="Fermer"
           >
-            <X size={18} style={{ color: '#9BA4B5' }} />
+            <X size={18} style={{ color: '#959597' }} />
           </button>
         </header>
 
@@ -126,9 +126,9 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
               : <><Upload size={15} /> Téléverser un fichier depuis mon ordinateur</>}
           </button>
           <div className="flex items-center gap-3 my-3">
-            <span className="flex-1 h-px" style={{ background: '#1C222D' }} />
-            <span className="text-[11px] uppercase tracking-wider" style={{ color: '#788295' }}>ou choisir au coffre-fort</span>
-            <span className="flex-1 h-px" style={{ background: '#1C222D' }} />
+            <span className="flex-1 h-px" style={{ background: '#1E1E21' }} />
+            <span className="text-[11px] uppercase tracking-wider" style={{ color: '#6B6C6F' }}>ou choisir au coffre-fort</span>
+            <span className="flex-1 h-px" style={{ background: '#1E1E21' }} />
           </div>
         </div>
 
@@ -136,16 +136,16 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
         <div className="px-6">
           <div
             className="flex items-center gap-2 px-3 py-2 rounded-lg"
-            style={{ border: '1px solid rgba(186,205,234,.13)' }}
+            style={{ border: '1px solid rgba(255,255,255,.07)' }}
           >
-            <Search size={14} style={{ color: '#788295' }} />
+            <Search size={14} style={{ color: '#6B6C6F' }} />
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Rechercher par nom de fichier"
               className="flex-1 text-sm outline-none bg-transparent"
-              style={{ color: '#F4F6FA' }}
+              style={{ color: '#F7F8F8' }}
             />
           </div>
           {error && (
@@ -160,7 +160,7 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
           {isLoading ? (
             <div className="flex items-center justify-center py-10">
-              <Loader2 size={20} className="animate-spin" style={{ color: '#E4E9F2' }} />
+              <Loader2 size={20} className="animate-spin" style={{ color: '#E8E9EB' }} />
             </div>
           ) : (
             <>
@@ -199,12 +199,12 @@ function Group({
 }) {
   return (
     <div>
-      <h4 className="text-[11px] font-semibold uppercase tracking-wider mb-2" style={{ color: '#788295' }}>
+      <h4 className="text-[11px] font-semibold uppercase tracking-wider mb-2" style={{ color: '#6B6C6F' }}>
         {title}
       </h4>
       {docs.length === 0 ? (
         emptyText ? (
-          <p className="text-xs py-2" style={{ color: '#788295' }}>{emptyText}</p>
+          <p className="text-xs py-2" style={{ color: '#6B6C6F' }}>{emptyText}</p>
         ) : null
       ) : (
         <ul className="space-y-1.5">
@@ -212,15 +212,15 @@ function Group({
             <li
               key={doc.id}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg"
-              style={{ background: '#0F1218' }}
+              style={{ background: '#121213' }}
             >
-              <FileText size={16} style={{ color: '#9BA4B5' }} className="shrink-0" />
+              <FileText size={16} style={{ color: '#959597' }} className="shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate" style={{ color: '#F4F6FA' }}>
+                <p className="text-sm font-medium truncate" style={{ color: '#F7F8F8' }}>
                   {doc.file_name}
                 </p>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-[11px]" style={{ color: '#788295' }}>{doc.type}</span>
+                  <span className="text-[11px]" style={{ color: '#6B6C6F' }}>{doc.type}</span>
                   <StatusPill status={doc.status} />
                 </div>
               </div>
@@ -247,7 +247,7 @@ function StatusPill({ status }: { status: Document['status'] }) {
     status === 'expired'
       ? { label: 'Expiré', color: '#F58E86', bg: 'rgba(245,142,134,0.10)' }
       : status === 'expiring_soon'
-      ? { label: 'Expire bientôt', color: '#9BA4B5', bg: '#1C222D' }
+      ? { label: 'Expire bientôt', color: '#959597', bg: '#1E1E21' }
       : { label: 'Valide', color: '#6EE7A8', bg: 'rgba(110,231,168,0.10)' }
   return (
     <span

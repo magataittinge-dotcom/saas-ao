@@ -29,7 +29,7 @@ const ANALYSIS_STEPS_FOR_DISPLAY: StepDescriptor[] = [
 import { cn } from '@/lib/utils'
 import { AiTipsBlock, type TipData } from '@/components/common/AiTip'
 
-const F = "'Geist Sans', sans-serif"
+const F = "'Inter Variable', 'Geist Sans', sans-serif"
 
 interface Props { project: Project }
 
@@ -45,7 +45,7 @@ function ConfidenceWarning({ confidence }: { confidence?: number }) {
   return (
     <span
       className="inline-flex items-center justify-center w-5 h-5 rounded-full"
-      style={{ color: '#788295' }}
+      style={{ color: '#6B6C6F' }}
       title="Cette détection mérite une vérification"
       aria-label="Cette détection mérite une vérification"
     >
@@ -58,6 +58,7 @@ function ConfidenceWarning({ confidence }: { confidence?: number }) {
 
 const SOURCE_LABELS: Record<string, string> = {
   excel:       'DPGF',
+  rc_table:    'RC',
   rc_text:     'RC',
   filename:    'Fichier',
   ia_fallback: 'Complété par IA',
@@ -65,17 +66,29 @@ const SOURCE_LABELS: Record<string, string> = {
 
 function SourcesIndicator({ sources }: { sources?: string[] }) {
   if (!sources || sources.length === 0) return null
-  const regular = sources.filter(s => s !== 'ia_fallback').map(s => SOURCE_LABELS[s] ?? s)
+  // Chips dédupliqués, jamais d'identifiant technique brut à l'écran.
+  const regular = [...new Set(
+    sources.filter(s => s !== 'ia_fallback').map(s => SOURCE_LABELS[s]).filter(Boolean),
+  )]
   const fromIA = sources.includes('ia_fallback')
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs" style={{ color: '#788295' }}>
-      {regular.join('  ')}
+    <span className="inline-flex items-center gap-1.5 text-xs" style={{ color: '#6B6C6F' }}>
+      {regular.map(l => (
+        <span
+          key={l}
+          className="num-mono rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+          style={{ background: 'var(--surface-2)', color: '#98999C', boxShadow: 'inset 0 0 0 1px var(--line)' }}
+          title="Pièce du DCE où ce lot a été détecté"
+        >
+          {l}
+        </span>
+      ))}
       {fromIA && (
         // Badge distinct : lot ajouté/complété par le filet IA (à vérifier
         // d'un coup d'œil, contrairement aux détections déterministes).
         <span
           className="px-1.5 py-0.5 rounded-full font-medium"
-          style={{ background: 'rgba(245,158,11,0.10)', color: '#F5C26B', border: '1px solid rgba(245,158,11,0.25)' }}
+          style={{ background: 'rgba(245,158,11,0.10)', color: '#D9A441', border: '1px solid rgba(245,158,11,0.25)' }}
           title="Ce lot a été complété par l'IA à partir du règlement de consultation — vérifiez son intitulé"
         >
           {SOURCE_LABELS.ia_fallback}
@@ -103,6 +116,22 @@ function isGenericLotLabel(label: string): boolean {
   return /^Lot\s+[0-9A-Za-z]+\s*$/i.test(trimmed)
 }
 
+/** « Lot 5 — Revêtement de façade » → { num: '05', title: 'Revêtement de façade' } */
+function splitLotLabel(label: string): { num: string | null; title: string } {
+  const m = label.trim().match(/^lot\s+(\d{1,3}[A-Za-z]?)\s*(?:[—–:-]\s*)?(.*)$/i)
+  if (!m) return { num: null, title: label.trim() }
+  const title = m[2]?.trim()
+  return { num: m[1].padStart(2, '0'), title: title || label.trim() }
+}
+
+/** Les descriptions issues du RC concatènent parfois les lots suivants
+ *  (« … Ossature bois 02 Etanchéité 03 Menuiseries… ») : on coupe au
+ *  premier numéro de lot suivant pour n'afficher que CE lot. */
+function cleanLotDescription(desc: string): string {
+  const cut = desc.search(/\s0?\d{1,2}\s+[A-ZÉÈÀÂÎÔÛ]/)
+  return cut > 8 ? desc.slice(0, cut).trim() : desc
+}
+
 function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) {
   // We deliberately do NOT show a Synorix-internal sequential number
   // (e.g. "LOT 06") next to the real DCE label — it confused users by
@@ -110,6 +139,7 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) 
   // with the correct DCE number ("Lot 5 — …") when available.
   const displayedLabel = lot.user_label?.trim() || lot.nom
   const isGeneric = !lot.user_label && isGenericLotLabel(displayedLabel)
+  const { num: lotNum, title: lotTitle } = splitLotLabel(displayedLabel)
 
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState(lot.user_label ?? '')
@@ -142,27 +172,42 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) 
         type="button"
         onClick={onSelect}
         className={cn(
-          'w-full flex items-center gap-4 p-5 rounded-xl text-left transition-all duration-200 cursor-pointer',
-          selected
-            ? 'shadow-sm'
-            : 'hover:bg-edge-slate',
+          'w-full flex items-center gap-4 px-4 py-3.5 rounded-xl text-left transition-all duration-200 cursor-pointer',
+          selected ? '' : 'bg-ds-bg-3 hover:bg-ds-bg-elevated',
         )}
         style={{
-          background: selected ? 'rgba(228,233,242,0.06)' : '#151A23',
-          border: selected ? '2px solid #E4E9F2' : '1px solid rgba(186,205,234,.13)',
+          background: selected ? 'rgba(255,255,255,0.05)' : undefined,
+          border: '1px solid',
+          borderColor: selected ? 'rgba(255,255,255,.55)' : 'var(--line)',
+          boxShadow: selected
+            ? '0 0 0 1px rgba(255,255,255,.30), 0 12px 32px -16px rgba(255,255,255,.30)'
+            : 'var(--edge-light)',
         }}
       >
-        {/* Radio */}
-        <div
-          className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all"
-          style={
-            selected
-              ? { borderColor: 'rgba(255,255,255,.40)', background: '#E4E9F2' }
-              : { borderColor: '#5C6678' }
-          }
-        >
-          {selected && <div className="w-2 h-2 rounded-full bg-ds-bg" />}
-        </div>
+        {/* Numéro de lot — la poignée visuelle ; radio pour les entrées sans numéro */}
+        {lotNum ? (
+          <span
+            className="num-mono shrink-0 rounded-lg px-2.5 py-1.5 text-[13px] font-bold tracking-wide transition-all"
+            style={
+              selected
+                ? { background: 'linear-gradient(180deg, #FFFFFF, #D4D5D8)', color: '#121213', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.9)' }
+                : { background: 'var(--surface-2)', color: '#98999C', boxShadow: 'inset 0 0 0 1px var(--line)' }
+            }
+          >
+            LOT {lotNum}
+          </span>
+        ) : (
+          <div
+            className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all"
+            style={
+              selected
+                ? { borderColor: 'rgba(255,255,255,.40)', background: '#E8E9EB' }
+                : { borderColor: '#55565A' }
+            }
+          >
+            {selected && <div className="w-2 h-2 rounded-full bg-ds-bg" />}
+          </div>
+        )}
 
         {/* Content */}
         <div className="flex-1 min-w-0">
@@ -187,7 +232,7 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) 
               <button
                 type="button"
                 onClick={saveEdit}
-                className="edge-cta w-8 h-8 rounded-lg flex items-center justify-center"
+                className="glass-btn text-ds-text w-8 h-8 rounded-lg flex items-center justify-center"
                 title="Enregistrer"
               >
                 <CheckIcon size={14} />
@@ -196,7 +241,7 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) 
                 type="button"
                 onClick={cancelEdit}
                 className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ background: '#1C222D', color: '#9BA4B5' }}
+                style={{ background: '#1E1E21', color: '#959597' }}
                 title="Annuler"
               >
                 <X size={14} />
@@ -206,21 +251,23 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) 
             <>
               <div className="flex items-center gap-2 flex-wrap">
                 <span
-                  className="text-base font-semibold"
+                  className="text-[15px] font-semibold"
                   style={{
-                    color: isGeneric ? '#788295' : '#F4F6FA',
+                    color: isGeneric ? '#6B6C6F' : '#F7F8F8',
                     fontStyle: isGeneric ? 'italic' : 'normal',
                   }}
                 >
-                  {displayedLabel}
-                  {isGeneric && (
-                    <span style={{ color: '#788295' }}> — Description à compléter</span>
-                  )}
+                  {isGeneric ? (
+                    <>
+                      {displayedLabel}
+                      <span style={{ color: '#6B6C6F' }}> — Description à compléter</span>
+                    </>
+                  ) : lotNum ? lotTitle : displayedLabel}
                 </span>
                 {lot._manual && (
                   <span
                     className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                    style={{ color: '#E4E9F2', background: 'rgba(228,233,242,0.08)' }}
+                    style={{ color: '#E8E9EB', background: 'rgba(255,255,255,0.08)' }}
                   >
                     Manuel
                   </span>
@@ -230,8 +277,8 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) 
                     type="button"
                     onClick={startEdit}
                     className="inline-flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded transition-colors"
-                    style={{ color: '#9BA4B5', background: 'transparent' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = '#1C222D' }}
+                    style={{ color: '#959597', background: 'transparent' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = '#1E1E21' }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
                     title="Renommer ce lot"
                   >
@@ -239,19 +286,19 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) 
                   </button>
                 )}
               </div>
-              {lot.description_long && (
+              {lot.description_long && cleanLotDescription(lot.description_long) !== (lotNum ? lotTitle : displayedLabel) && (
                 <p
-                  className="text-xs mt-1 line-clamp-2"
-                  style={{ color: '#9BA4B5' }}
+                  className="text-xs mt-1 line-clamp-1"
+                  style={{ color: '#6B6C6F' }}
                   title={lot.description_long}
                 >
-                  {lot.description_long}
+                  {cleanLotDescription(lot.description_long)}
                 </p>
               )}
               {lot.tranches && lot.tranches.length > 0 && (
                 <span
                   className="inline-flex items-center gap-1 text-xs font-medium mt-1 px-2 py-0.5 rounded-full"
-                  style={{ color: '#E4E9F2', background: 'rgba(228,233,242,0.08)' }}
+                  style={{ color: '#E8E9EB', background: 'rgba(255,255,255,0.08)' }}
                   title={lot.tranches.join('\n')}
                 >
                   {lot.tranches.length} tranche{lot.tranches.length > 1 ? 's' : ''}
@@ -310,34 +357,34 @@ function AddLotForm({ onAdd, onCancel }: AddLotFormProps) {
     <form
       onSubmit={handleSubmit}
       className="flex items-end gap-3 p-4 rounded-xl"
-      style={{ background: '#1C222D', border: '1px solid rgba(186,205,234,.13)' }}
+      style={{ background: '#1E1E21', border: '1px solid rgba(255,255,255,.07)' }}
     >
       <div className="flex flex-col gap-1">
-        <label className="text-xs font-medium" style={{ color: '#9BA4B5' }}>N° lot</label>
+        <label className="text-xs font-medium" style={{ color: '#959597' }}>N° lot</label>
         <input
           type="number" min={1} max={30} placeholder="1"
           value={num} onChange={(e) => setNum(e.target.value)}
           className="w-16 text-sm rounded-lg px-2.5 py-2 outline-none"
-          style={{ background: '#151A23', border: '1px solid rgba(186,205,234,.13)', color: '#F4F6FA' }}
+          style={{ background: '#18181A', border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8' }}
           required
         />
       </div>
       <div className="flex flex-col gap-1 flex-1">
-        <label className="text-xs font-medium" style={{ color: '#9BA4B5' }}>Intitulé (optionnel)</label>
+        <label className="text-xs font-medium" style={{ color: '#959597' }}>Intitulé (optionnel)</label>
         <input
           type="text" placeholder="ex : Gros œuvre"
           value={label} onChange={(e) => setLabel(e.target.value)} maxLength={60}
           className="text-sm rounded-lg px-2.5 py-2 outline-none"
-          style={{ background: '#151A23', border: '1px solid rgba(186,205,234,.13)', color: '#F4F6FA' }}
+          style={{ background: '#18181A', border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8' }}
         />
       </div>
       <button type="submit" disabled={!num}
-        className="edge-cta px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-40 shrink-0">
+        className="glass-btn text-ds-text px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-40 shrink-0">
         Ajouter
       </button>
       <button type="button" onClick={onCancel}
         className="px-3 py-2 text-sm shrink-0 transition-colors"
-        style={{ color: '#9BA4B5' }}>
+        style={{ color: '#959597' }}>
         Annuler
       </button>
     </form>
@@ -646,7 +693,7 @@ export default function StepLotSelection({ project }: Props) {
       {/* Lot detection overlay (inline circle wrapped in our own portal) */}
       {detectPhase !== 'idle' && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.60)', backdropFilter: 'blur(4px)' }}>
-          <div className="rounded-2xl p-8 max-w-sm w-full mx-4" style={{ background: '#151A23', border: '1px solid rgba(186,205,234,.13)', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
+          <div className="rounded-2xl p-8 max-w-sm w-full mx-4" style={{ background: '#18181A', border: '1px solid rgba(255,255,255,.07)', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
             <ProgressDisplay
               variant="inline"
               steps={LOT_DETECTION_STEPS}
@@ -664,27 +711,27 @@ export default function StepLotSelection({ project }: Props) {
 
         {/* Backend busy */}
         {isBackendBusy && (
-          <div className="flex items-center gap-3 p-4 rounded-xl mb-4" style={{ background: 'rgba(228,233,242,0.05)', border: '1px solid rgba(228,233,242,0.12)' }}>
-            <Loader2 size={18} className="animate-spin" style={{ color: '#E4E9F2' }} />
+          <div className="flex items-center gap-3 p-4 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)' }}>
+            <Loader2 size={18} className="animate-spin" style={{ color: '#E8E9EB' }} />
             <div>
-              <span className="text-sm font-medium block" style={{ color: '#E4E9F2' }}>Extraction des documents en cours...</span>
-              {processingDetail && <span className="text-xs block mt-0.5" style={{ color: '#788295' }}>{processingDetail}</span>}
+              <span className="text-sm font-medium block" style={{ color: '#E8E9EB' }}>Extraction des documents en cours...</span>
+              {processingDetail && <span className="text-xs block mt-0.5" style={{ color: '#6B6C6F' }}>{processingDetail}</span>}
             </div>
           </div>
         )}
 
         {/* Documents illisibles — signalés par fichier, jamais silencieux */}
         {extractionWarnings.length > 0 && (
-          <div className="p-4 rounded-xl mb-4" style={{ background: 'rgba(245,194,107,0.09)', border: '1px solid rgba(245,194,107,0.22)' }}>
+          <div className="p-4 rounded-xl mb-4" style={{ background: 'rgba(217,164,65,0.09)', border: '1px solid rgba(217,164,65,0.22)' }}>
             <div className="flex items-center gap-2 mb-1.5">
-              <AlertTriangle size={16} style={{ color: '#F5C26B' }} />
-              <span className="text-sm font-semibold" style={{ color: '#F5C26B' }}>
+              <AlertTriangle size={16} style={{ color: '#D9A441' }} />
+              <span className="text-sm font-semibold" style={{ color: '#D9A441' }}>
                 {extractionWarnings.length} document{extractionWarnings.length > 1 ? 's' : ''} illisible{extractionWarnings.length > 1 ? 's' : ''} — exigences non extraites de ce{extractionWarnings.length > 1 ? 's' : ''} fichier{extractionWarnings.length > 1 ? 's' : ''}
               </span>
             </div>
             <ul className="space-y-0.5 pl-6">
               {extractionWarnings.map((w) => (
-                <li key={w.file_name} className="text-xs" style={{ color: '#F5C26B' }}>
+                <li key={w.file_name} className="text-xs" style={{ color: '#D9A441' }}>
                   <span className="font-medium">{w.file_name}</span> — {w.warning}
                 </li>
               ))}
@@ -695,7 +742,7 @@ export default function StepLotSelection({ project }: Props) {
         {/* ── TITLE + BADGE ───────────────────────────────── */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
           <div className="flex items-center gap-3 flex-wrap">
-            <h2 className="text-2xl font-bold" style={{ color: '#F4F6FA' }}>
+            <h2 className="font-display tracking-tight text-2xl font-bold" style={{ color: '#F7F8F8' }}>
               Sélection du lot à analyser
             </h2>
             {lots.length > 0 && (
@@ -704,28 +751,21 @@ export default function StepLotSelection({ project }: Props) {
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1.5 text-sm" style={{ color: '#788295' }}>
+          <div className="flex items-center gap-1.5 text-sm" style={{ color: '#6B6C6F' }}>
             <FileArchive size={14} />
             Source : {project.name}
           </div>
         </div>
 
-        {/* ── ACTION REQUISE ──────────────────────────────── */}
-        <div className="flex items-start gap-3 p-4 rounded-xl mb-5" style={{ background: 'rgba(228,233,242,0.04)', border: '1px solid rgba(228,233,242,0.12)' }}>
-          <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(228,233,242,0.10)' }}>
-            <Zap size={16} style={{ color: '#E4E9F2' }} />
-          </div>
-          <div>
-            <p className="text-sm font-semibold" style={{ color: '#C3CCDC' }}>Action requise</p>
-            <p className="text-sm mt-0.5" style={{ color: '#9BA4B5' }}>
-              {hasMultiLots
-                ? "L'intelligence artificielle a segmenté les documents du marché. Sélectionnez le lot sur lequel votre entreprise va répondre pour lancer l'analyse de conformité technique."
-                : lots.length === 1
-                  ? 'Un seul lot a été détecté. Confirmez ou ajoutez des lots manuellement.'
-                  : "Cet appel d'offres semble être mono-lot. Vous pouvez lancer l'analyse ou ajouter les lots manuellement."}
-            </p>
-          </div>
-        </div>
+        {/* ── Consigne — une ligne, pas un pavé ───────────── */}
+        <p className="mb-5 flex items-center gap-2 text-sm" style={{ color: '#959597' }}>
+          <Zap size={14} className="shrink-0" style={{ color: '#E8E9EB' }} />
+          {hasMultiLots
+            ? 'Sélectionnez le lot sur lequel votre entreprise répond — l’analyse de conformité se lance ensuite.'
+            : lots.length === 1
+              ? 'Un seul lot a été détecté. Confirmez ou ajoutez des lots manuellement.'
+              : "Cet appel d'offres semble être mono-lot. Vous pouvez lancer l'analyse ou ajouter les lots manuellement."}
+        </p>
 
         {/* AiTips */}
         <div className="mb-5">
@@ -734,11 +774,11 @@ export default function StepLotSelection({ project }: Props) {
 
         {/* Excel error */}
         {errorLots.length > 0 && (
-          <div className="flex items-start gap-3 p-4 rounded-xl mb-5" style={{ background: 'rgba(120,130,149,0.06)', border: '1px solid rgba(120,130,149,0.15)' }}>
-            <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: '#9BA4B5' }} />
+          <div className="flex items-start gap-3 p-4 rounded-xl mb-5" style={{ background: 'rgba(149,149,151,0.06)', border: '1px solid rgba(149,149,151,0.15)' }}>
+            <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: '#959597' }} />
             <div>
-              <p className="text-sm font-semibold" style={{ color: '#9BA4B5' }}>Fichier(s) Excel protégé(s) par mot de passe</p>
-              {errorLots.map(l => <p key={l.id} className="text-xs mt-0.5" style={{ color: '#9BA4B5' }}>{l.nom}</p>)}
+              <p className="text-sm font-semibold" style={{ color: '#959597' }}>Fichier(s) Excel protégé(s) par mot de passe</p>
+              {errorLots.map(l => <p key={l.id} className="text-xs mt-0.5" style={{ color: '#959597' }}>{l.nom}</p>)}
             </div>
           </div>
         )}
@@ -764,19 +804,19 @@ export default function StepLotSelection({ project }: Props) {
             ))}
           </div>
         ) : !lotsInitialized && (lotsLoading || detectPhase === 'detecting' || isBackendBusy) ? (
-          <div className="flex items-center gap-3 p-5 rounded-xl" style={{ background: 'rgba(228,233,242,0.04)', border: '1px solid rgba(228,233,242,0.12)' }}>
-            <Loader2 size={20} className="animate-spin" style={{ color: '#E4E9F2' }} />
+          <div className="flex items-center gap-3 p-5 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)' }}>
+            <Loader2 size={20} className="animate-spin" style={{ color: '#E8E9EB' }} />
             <div>
-              <p className="text-sm font-semibold" style={{ color: '#F4F6FA' }}>Détection des lots en cours...</p>
-              <p className="text-xs mt-0.5" style={{ color: '#788295' }}>Analyse des documents du DCE.</p>
+              <p className="text-sm font-semibold" style={{ color: '#F7F8F8' }}>Détection des lots en cours...</p>
+              <p className="text-xs mt-0.5" style={{ color: '#6B6C6F' }}>Analyse des documents du DCE.</p>
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-3 p-5 rounded-xl" style={{ background: '#1C222D', border: '1px solid rgba(186,205,234,.13)' }}>
-            <Layers size={20} style={{ color: '#E4E9F2' }} />
+          <div className="flex items-center gap-3 p-5 rounded-xl" style={{ background: '#1E1E21', border: '1px solid rgba(255,255,255,.07)' }}>
+            <Layers size={20} style={{ color: '#E8E9EB' }} />
             <div>
-              <p className="text-sm font-semibold" style={{ color: '#F4F6FA' }}>Marché unique (pas de lots)</p>
-              <p className="text-xs mt-0.5" style={{ color: '#788295' }}>L&apos;IA analysera l&apos;intégralité du DCE sans filtre par lot.</p>
+              <p className="text-sm font-semibold" style={{ color: '#F7F8F8' }}>Marché unique (pas de lots)</p>
+              <p className="text-xs mt-0.5" style={{ color: '#6B6C6F' }}>L&apos;IA analysera l&apos;intégralité du DCE sans filtre par lot.</p>
             </div>
           </div>
         )}
@@ -791,9 +831,9 @@ export default function StepLotSelection({ project }: Props) {
             type="button"
             onClick={() => setShowAddForm(true)}
             className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed text-sm font-medium mt-4 transition-colors"
-            style={{ borderColor: '#1C222D', color: '#788295' }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#5C6678'; e.currentTarget.style.color = '#9BA4B5'; e.currentTarget.style.background = '#1C222D' }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#1C222D'; e.currentTarget.style.color = '#788295'; e.currentTarget.style.background = 'transparent' }}
+            style={{ borderColor: '#1E1E21', color: '#6B6C6F' }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#55565A'; e.currentTarget.style.color = '#959597'; e.currentTarget.style.background = '#1E1E21' }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#1E1E21'; e.currentTarget.style.color = '#6B6C6F'; e.currentTarget.style.background = 'transparent' }}
           >
             <Plus size={16} />
             Ajouter un lot manuellement
@@ -812,17 +852,17 @@ export default function StepLotSelection({ project }: Props) {
         <div
           className="sticky bottom-0 mt-6 -mx-3 sm:-mx-4 px-5 py-3.5 flex items-center justify-between"
           style={{
-            background: 'rgba(10,12,17,0.92)',
+            background: 'rgba(9,9,10,0.92)',
             backdropFilter: 'blur(8px)',
             WebkitBackdropFilter: 'blur(8px)',
-            borderTop: '1px solid rgba(186,205,234,.13)',
+            borderTop: '1px solid rgba(255,255,255,.07)',
           }}
         >
           <div className="flex items-center gap-2">
-            <CheckCircle2 size={16} style={{ color: selectedId !== 'all' && selectedName ? '#E4E9F2' : '#5C6678' }} />
-            <span className="text-sm" style={{ color: '#9BA4B5' }}>
+            <CheckCircle2 size={16} style={{ color: selectedId !== 'all' && selectedName ? '#E8E9EB' : '#55565A' }} />
+            <span className="text-sm" style={{ color: '#959597' }}>
               {selectedId !== 'all' && selectedName
-                ? <>Lot sélectionné : <strong style={{ color: '#F4F6FA' }}>{selectedName}</strong></>
+                ? <>Lot sélectionné : <strong style={{ color: '#F7F8F8' }}>{selectedName}</strong></>
                 : 'Tous les lots sélectionnés'
               }
             </span>
@@ -831,9 +871,9 @@ export default function StepLotSelection({ project }: Props) {
             <button
               onClick={() => navigate(`/projects/${project.id}/upload`)}
               className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-              style={{ color: '#9BA4B5', border: '1px solid rgba(186,205,234,.13)' }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#5C6678'; e.currentTarget.style.color = '#F4F6FA' }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(186,205,234,.13)'; e.currentTarget.style.color = '#9BA4B5' }}
+              style={{ color: '#959597', border: '1px solid rgba(255,255,255,.07)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#55565A'; e.currentTarget.style.color = '#F7F8F8' }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,.07)'; e.currentTarget.style.color = '#959597' }}
             >
               Annuler
             </button>
