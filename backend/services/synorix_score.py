@@ -2,8 +2,12 @@
 Synorix Score go/no-go (C18) — déterministe, 0 € API, AUCUN LLM.
 
 Croisement factuel : exigences extraites du DCE × profil de l'entreprise
-(Mon entreprise + coffre-fort). Cinq composantes, chacune ok/warning/ko/
+(Mon entreprise + coffre-fort). Quatre composantes, chacune ok/warning/ko/
 non_evaluable + explication factuelle + source.
+
+1.7 — Aucun critère de prix : la composante « pondération prix / technique »
+(qui commentait le poids du prix) est retirée ; la fiche de décision montre
+des conditions vérifiées et laisse la décision au patron.
 
 Règles d'honnêteté :
   • Profil incomplet → composante "non_evaluable", EXCLUE du score (jamais
@@ -17,7 +21,7 @@ from datetime import date
 from typing import List, Optional
 
 # Poids des composantes dans le score /100 (pondération simple).
-_WEIGHTS = {"ca": 25, "qualifications": 25, "ponderation": 20, "delai": 20, "penalites": 10}
+_WEIGHTS = {"ca": 25, "qualifications": 25, "delai": 20, "penalites": 10}
 _STATUS_POINTS = {"ok": 1.0, "warning": 0.5, "ko": 0.0}
 
 _QUAL_KEYWORDS = {
@@ -166,7 +170,7 @@ def _eval_qualifications(compliance_items, vault_docs) -> dict:
     if missing:
         return _comp(
             "qualifications", label, "ko",
-            f"Exigée(s) mais absente(s) de votre coffre-fort : {', '.join(missing)}.",
+            f"Exigée(s), pas encore dans votre coffre-fort : {', '.join(missing)}.",
             first_source,
         )
     if warning_quals:
@@ -183,27 +187,6 @@ def _eval_qualifications(compliance_items, vault_docs) -> dict:
     )
 
 
-def _eval_ponderation(criteres_jugement) -> dict:
-    label = "Pondération prix / technique"
-    if not criteres_jugement:
-        return _comp("ponderation", label, "non_evaluable",
-                     "Critères de notation non identifiés dans le RC.")
-    total = sum(c.get("poids", 0) for c in criteres_jugement) or 100
-    prix = sum(c.get("poids", 0) for c in criteres_jugement if re.search(r'prix', c.get("nom", ""), re.IGNORECASE))
-    technique_pct = round((total - prix) / total * 100)
-    if technique_pct >= 50:
-        return _comp("ponderation", label, "ok",
-                     f"La technique pèse {technique_pct} % : le mémoire peut faire la "
-                     "différence — favorable aux PME techniques.")
-    if technique_pct >= 30:
-        return _comp("ponderation", label, "warning",
-                     f"La technique ne pèse que {technique_pct} % : le prix sera "
-                     "déterminant dans la notation.")
-    return _comp("ponderation", label, "ko",
-                 f"La technique ne pèse que {technique_pct} % : ce marché se "
-                 "jouera essentiellement sur le prix.")
-
-
 def _eval_delai(critical_fields, today: Optional[date]) -> dict:
     label = "Délai de remise restant"
     remise = ((critical_fields or {}).get("date_limite_remise") or {}).get("value") or {}
@@ -218,7 +201,7 @@ def _eval_delai(critical_fields, today: Optional[date]) -> dict:
     days = (deadline - (today or date.today())).days
     source = ((critical_fields or {}).get("date_limite_remise") or {}).get("source")
     if days < 0:
-        return _comp("delai", label, "ko", "La date limite de remise est dépassée.", source)
+        return _comp("delai", label, "ko", "La date limite de remise est passée.", source)
     if days < 7:
         return _comp("delai", label, "ko",
                      f"Il reste {days} jour(s) — très court pour un dossier complet.", source)
@@ -246,7 +229,7 @@ def _eval_penalites(critical_fields) -> dict:
     if heavy:
         detail = f"{retard}" + (f", plafond {plafond}" if plafond else ", sans plafond identifié")
         return _comp("penalites", label, "warning",
-                     f"Pénalités lourdes au contrat : {detail}.", source)
+                     f"Pénalités élevées au contrat : {detail}.", source)
     return _comp("penalites", label, "ok",
                  f"Pénalités contractuelles : {retard}, plafond {plafond}.", source)
 
@@ -265,7 +248,6 @@ def build_score(
     composantes = [
         _eval_ca(compliance_items, memoire_config, infos_marche),
         _eval_qualifications(compliance_items, vault_docs),
-        _eval_ponderation(criteres_jugement),
         _eval_delai(critical_fields, today),
         _eval_penalites(critical_fields),
     ]

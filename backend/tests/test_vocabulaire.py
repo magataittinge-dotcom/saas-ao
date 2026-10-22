@@ -14,6 +14,7 @@ FICHIERS = sorted((RACINE / "routers").glob("*.py")) + [
     RACINE / "services" / "notifications.py",
     RACINE / "services" / "quota.py",
     RACINE / "services" / "pipeline_tracker.py",
+    RACINE / "services" / "synorix_score.py",  # textes de la fiche de décision (1.7)
 ]
 
 INTERDITS = [

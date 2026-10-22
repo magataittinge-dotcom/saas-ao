@@ -9,6 +9,7 @@ import {
 import { api, getSignedFileUrl } from '@/services/api'
 import CriticalBanner, { type FieldSource } from '@/components/project/CriticalBanner'
 import TresorerieCard from '@/components/project/TresorerieCard'
+import SynorixScoreCard from '@/components/project/SynorixScoreCard'
 import RetroPlanning from '@/components/project/RetroPlanning'
 import PdfSourceViewer from '@/components/project/PdfSourceViewer'
 import ProgressDisplay, { type StepDescriptor } from '@/components/common/ProgressDisplay'
@@ -455,6 +456,9 @@ export default function StepAnalysis({ project }: Props) {
 
       {/* ── BANDEAU CRITIQUE (C5) — deadline, visite, critères, pénalités ── */}
       <CriticalBanner projectId={project.id} onOpenSource={openFieldSource} />
+
+      {/* ── FICHE DE DÉCISION (1.7) — conditions vérifiées, puis « On y va » / « On passe » ── */}
+      <SynorixScoreCard project={project} onOpenSource={openFieldSource} onYAller={handleValidate} enCours={isValidating} />
 
       {/* ── TRÉSORERIE (C19) + RÉTRO-PLANNING (C20) ── */}
       <div className="grid gap-4 lg:grid-cols-[1fr,320px] items-start">

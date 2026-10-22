@@ -133,22 +133,15 @@ def test_no_qualification_required():
     assert _comp(result, "qualifications")["statut"] == "ok"
 
 
-# ─── Composante pondération prix/technique ───────────────────────────────────
+# ─── 1.7 : aucun critère de prix ─────────────────────────────────────────────
 
-def test_ponderation_technique_favorable():
-    criteres = [{"nom": "Prix", "poids": 40}, {"nom": "Valeur technique", "poids": 60}]
-    comp = _comp(_build(criteres=criteres), "ponderation")
-    assert comp["statut"] == "ok"
-    assert "60" in comp["explication"]
-
-
-def test_ponderation_prix_dominant():
+def test_aucun_critere_de_prix():
+    """La fiche de décision ne juge jamais le poids du prix (règle produit)."""
     criteres = [{"nom": "Prix", "poids": 80}, {"nom": "Valeur technique", "poids": 20}]
-    assert _comp(_build(criteres=criteres), "ponderation")["statut"] == "ko"
-
-
-def test_ponderation_absent_neutral():
-    assert _comp(_build(criteres=None), "ponderation")["statut"] == "non_evaluable"
+    result = _build(criteres=criteres, cf=_cf(FUTURE_30))
+    assert "ponderation" not in {c["id"] for c in result["composantes"]}
+    for comp in result["composantes"]:
+        assert "prix" not in (comp["explication"] or "").lower()
 
 
 # ─── Composante délai restant ────────────────────────────────────────────────
@@ -201,7 +194,7 @@ def test_non_evaluable_components_excluded_from_score():
         criteres=[{"nom": "Prix", "poids": 40}, {"nom": "Technique", "poids": 60}],
         cf=_cf(FUTURE_30),
     )
-    # ca + qualifications non évaluables ; ponderation/delai/penalites ok
+    # ca + qualifications non évaluables ; delai/penalites ok
     assert result["score"] == 100
     assert result["verdict"] == "go"
     assert sum(1 for c in result["composantes"] if c["statut"] == "non_evaluable") == 2
@@ -254,5 +247,5 @@ def test_endpoint_synorix_score(client, db_session, test_org):
     body = resp.json()
     assert body["verdict"] in ("go", "vigilance", "no_go")
     assert {c["id"] for c in body["composantes"]} == {
-        "ca", "qualifications", "ponderation", "delai", "penalites",
+        "ca", "qualifications", "delai", "penalites",
     }
