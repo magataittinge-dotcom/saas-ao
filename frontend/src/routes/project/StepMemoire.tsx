@@ -12,7 +12,6 @@ import axios from 'axios'
 import { api } from '@/services/api'
 import MemoirePreflight, { type PreflightSelection } from '@/components/project/MemoirePreflight'
 import RewritePassageBar, { type PassageSelection } from '@/components/project/RewritePassageBar'
-import { useAuthStore } from '@/stores/authStore'
 import ProgressDisplay, { type StepDescriptor } from '@/components/common/ProgressDisplay'
 import { useProgressStream } from '@/hooks/useProgressStream'
 import SubscriptionWall from '@/components/common/SubscriptionWall'
@@ -592,8 +591,8 @@ interface Props { project: Project }
 export default function StepMemoire({ project }: Props) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { organization } = useAuthStore()
   const [showPaywall, setShowPaywall] = useState(false)
+  const [paywallMessage, setPaywallMessage] = useState<string | null>(null)
   const [variables, setVariables] = useState({
     nb_ouvriers: '',
     delai: '',
@@ -723,7 +722,14 @@ export default function StepMemoire({ project }: Props) {
       const msg = axios.isAxiosError(err)
         ? (err.response?.data?.detail ?? 'Erreur lors de la génération')
         : 'Erreur lors de la génération'
-      setGenError(typeof msg === 'string' ? msg : JSON.stringify(msg))
+      const texte = typeof msg === 'string' ? msg : JSON.stringify(msg)
+      // 1.2 — quota appliqué par le serveur : son refus ouvre le choix d'une offre
+      if (axios.isAxiosError(err) && err.response?.status === 402) {
+        setPaywallMessage(texte)
+        setShowPaywall(true)
+        return
+      }
+      setGenError(texte)
     },
   })
 
@@ -820,7 +826,7 @@ export default function StepMemoire({ project }: Props) {
   if (!hasMemoire || showForm) {
     return (
       <>
-        <SubscriptionWall open={showPaywall} onClose={() => setShowPaywall(false)} feature="memoire" />
+        <SubscriptionWall open={showPaywall} onClose={() => setShowPaywall(false)} feature="memoire" message={paywallMessage} />
         {isRunning && (
           <ProgressDisplay
             variant="modal"
@@ -1031,8 +1037,6 @@ export default function StepMemoire({ project }: Props) {
           {/* Generate button */}
           <button
             onClick={() => {
-              const plan = organization?.plan ?? 'free'
-              if (plan === 'free') { setShowPaywall(true); return }
               setGenError(null)
               generate()
             }}
@@ -1054,7 +1058,7 @@ export default function StepMemoire({ project }: Props) {
 
   return (
     <>
-      <SubscriptionWall open={showPaywall} onClose={() => setShowPaywall(false)} feature="memoire" />
+      <SubscriptionWall open={showPaywall} onClose={() => setShowPaywall(false)} feature="memoire" message={paywallMessage} />
       {isRunning && (
         <ProgressDisplay
           variant="modal"

@@ -8,6 +8,8 @@ interface Props {
   open: boolean
   onClose: () => void
   feature?: 'analysis' | 'memoire'
+  /** Refus du serveur (402) à afficher tel quel : c'est lui qui applique le quota. */
+  message?: string | null
 }
 
 const FEATURE_LABELS: Record<string, string> = {
@@ -15,7 +17,7 @@ const FEATURE_LABELS: Record<string, string> = {
   memoire: 'La génération du mémoire technique',
 }
 
-export default function SubscriptionWall({ open, onClose, feature = 'analysis' }: Props) {
+export default function SubscriptionWall({ open, onClose, feature = 'analysis', message }: Props) {
   const [loading, setLoading] = useState<string | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
 
@@ -99,9 +101,8 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis' }
           <h2 className="text-lg font-bold text-ds-text">
             Passez au niveau supérieur
           </h2>
-          <p className="text-sm text-ds-text-2 mt-1.5 max-w-md mx-auto">
-            {FEATURE_LABELS[feature] ?? 'Cette fonctionnalité'} demande une offre active.
-            Choisissez celle qui suit votre rythme.
+          <p role="status" className="text-sm text-ds-text-2 mt-1.5 max-w-lg mx-auto">
+            {message ?? `${FEATURE_LABELS[feature] ?? 'Cette fonctionnalité'} demande une offre active. Choisissez celle qui suit votre rythme.`}
           </p>
         </div>
 

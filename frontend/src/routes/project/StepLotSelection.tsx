@@ -9,7 +9,6 @@ import {
 } from 'lucide-react'
 import axios from 'axios'
 import { api } from '@/services/api'
-import { useAuthStore } from '@/stores/authStore'
 import SubscriptionWall from '@/components/common/SubscriptionWall'
 import ProgressDisplay, { type StepDescriptor } from '@/components/common/ProgressDisplay'
 import { useProgressStream } from '@/hooks/useProgressStream'
@@ -396,8 +395,8 @@ function AddLotForm({ onAdd, onCancel }: AddLotFormProps) {
 export default function StepLotSelection({ project }: Props) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { organization } = useAuthStore()
   const [showPaywall, setShowPaywall] = useState(false)
+  const [paywallMessage, setPaywallMessage] = useState<string | null>(null)
   const [processingDetail, setProcessingDetail] = useState('')
   const [waitingForExtraction, setWaitingForExtraction] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -626,8 +625,6 @@ export default function StepLotSelection({ project }: Props) {
   }
 
   const handleLaunch = async () => {
-    const plan = organization?.plan ?? 'free'
-    if (plan === 'free') { setShowPaywall(true); return }
     setAnalysisError(null)
     const abort = new AbortController()
     abortRef.current = abort
@@ -666,7 +663,14 @@ export default function StepLotSelection({ project }: Props) {
       const msg = axios.isAxiosError(err)
         ? (err.response?.data?.detail ?? "Erreur lors de l'analyse")
         : "Erreur lors de l'analyse"
-      setAnalysisError(typeof msg === 'string' ? msg : JSON.stringify(msg))
+      const texte = typeof msg === 'string' ? msg : JSON.stringify(msg)
+      // 1.2 — quota appliqué par le serveur : son refus ouvre le choix d'une offre
+      if (axios.isAxiosError(err) && err.response?.status === 402) {
+        setPaywallMessage(texte)
+        setShowPaywall(true)
+        return
+      }
+      setAnalysisError(texte)
     }
   }
 
@@ -675,7 +679,7 @@ export default function StepLotSelection({ project }: Props) {
      ════════════════════════════════════════════════════════════════ */
   return (
     <>
-      <SubscriptionWall open={showPaywall} onClose={() => setShowPaywall(false)} feature="analysis" />
+      <SubscriptionWall open={showPaywall} onClose={() => setShowPaywall(false)} feature="analysis" message={paywallMessage} />
 
       {isAnalyzing && (
         <ProgressDisplay
