@@ -20,8 +20,10 @@ import PoidsMemoire from '@/components/project/PoidsMemoire'
 import { MemoireSkeleton } from '@/components/skeletons'
 import type { Project, MemoireTechnique, MemoireContent, Reference } from '@/types'
 import {
-  SEUIL_SECTION_BREVE, referencesRetrouvees, sectionsBreves, type SectionMemoire,
+  SEUIL_SECTION_BREVE, referencesRetrouvees, sectionsBreves,
 } from '@/lib/memoireControles'
+import { depuisMarkdown, versMarkdown } from '@/lib/memoireMarkdown'
+import { SECTIONS_MEMOIRE, type SectionMemoire } from '@/lib/memoireSections'
 
 const MEMOIRE_GEN_STEPS: StepDescriptor[] = [
   { key: 'preparing',  label: 'Préparation du contexte',         estimated_s: 3 },
@@ -81,77 +83,72 @@ const TOC_STRUCTURE: TocSection[] = [
   },
 ]
 
-// ─── Build flat Markdown ───────────────────────────────────────────────────────
-
-function buildFullMarkdown(content: MemoireContent): string {
-  const lines: string[] = []
-  lines.push('# PRÉAMBULE\n')
-  lines.push(content.preambule ?? '')
-  lines.push('\n---\n\n# PARTIE A — PRÉSENTATION GÉNÉRALE\n')
-  const a = content.partie_a as Record<string, string>
-  const aLabels: [string, string][] = [
-    ['implantation', '## 1. Implantation géographique'],
-    ['historique', '## 2. Historique'],
-    ['engagement_qualitatif', '## 3. Engagement qualitatif'],
-    ['activites', '## 4. Nos activités'],
-    ['organigramme', '## 5. Organigramme'],
-    ['roles_missions', "## 6. Rôles et missions de l'équipe d'encadrement"],
-    ['moyens_informatiques', '## 7. Moyens informatiques'],
-    ['vehicules', '## 8. Véhicules'],
-    ['materiel', '## 9. Matériel'],
-    ['references', '## 10. Références chantiers'],
-    ['fournisseurs', '## 11. Fournisseurs'],
-  ]
-  for (const [key, heading] of aLabels) {
-    if (a?.[key]) lines.push(`\n${heading}\n\n${a[key]}`)
-  }
-  lines.push('\n\n---\n\n# PARTIE B — PRÉSENTATION DE LA PRESTATION\n')
-  const b = content.partie_b as Record<string, string>
-  const bLabels: [string, string][] = [
-    ['demarrage', '## 1. Démarrage du chantier'],
-    ['interlocuteur', '## 2. Interlocuteur dédié'],
-    ['qualite_ouvrages', '## 3. Qualité des ouvrages'],
-    ['respect_planning', '## 4. Respect du planning'],
-    ['securite', '## 5. Dispositions relatives à la sécurité'],
-    ['dechets', '## 6. Traitement des déchets'],
-    ['environnement', '## 7. Environnement'],
-  ]
-  for (const [key, heading] of bLabels) {
-    if (b?.[key]) lines.push(`\n${heading}\n\n${b[key]}`)
-  }
-  lines.push('\n\n---\n\n# PARTIE C — MÉTHODOLOGIE MISE EN ŒUVRE\n')
-  const c = content.partie_c as Record<string, string>
-  const cLabels: [string, string][] = [
-    ['methodologie', '## 1. Méthodologie détaillée'],
-    ['effectifs', '## 2. Effectifs dédiés au chantier'],
-    ['materiels', '## 3. Matériels dédiés'],
-    ['hygiene_securite', '## 4. Hygiène et sécurité'],
-    ['mesures_environnementales', '## 5. Mesures environnementales'],
-    ['gpa', '## 6. Garantie de parfait achèvement (GPA)'],
-    ['delai', '## 7. Délai de travaux'],
-  ]
-  for (const [key, heading] of cLabels) {
-    if (c?.[key]) lines.push(`\n${heading}\n\n${c[key]}`)
-  }
-  return lines.join('\n')
-}
-
 // ─── Fullscreen editor ─────────────────────────────────────────────────────────
 
+type EtatEnregistrement = 'enregistre' | 'en_cours' | 'echec'
+
+const DELAI_ENREGISTREMENT_AUTO_MS = 3000
+
 function FullscreenEditor({
-  content, projectId, onSave, onClose, isSaving, saveSuccess,
+  content, projectId, onSave, onClose,
 }: {
   content: MemoireContent
   projectId: string
-  onSave: (raw: string) => void
+  /** Enregistre le texte de l'éditeur ; échoue (promesse rejetée) si le serveur refuse. */
+  onSave: (raw: string) => Promise<void>
   onClose: () => void
-  isSaving: boolean
-  saveSuccess: boolean
 }) {
-  const [raw, setRaw] = useState(() => buildFullMarkdown(content))
+  const [raw, setRaw] = useState(() => versMarkdown(content))
+  // 1.8 — dernier texte confirmé par le serveur : sert à savoir s'il reste des modifications
+  const [enregistre, setEnregistre] = useState(raw)
+  const [etat, setEtat] = useState<EtatEnregistrement>('enregistre')
+  const [heure, setHeure] = useState<Date | null>(null)
+  const [confirmerFermeture, setConfirmerFermeture] = useState(false)
   // C9b — sélection courante dans le textarea (pour la réécriture ciblée)
   const [selection, setSelection] = useState<PassageSelection | null>(null)
   const editorRef = useRef<HTMLTextAreaElement>(null)
+  const onSaveRef = useRef(onSave)
+  onSaveRef.current = onSave
+  const enCoursRef = useRef(false)
+  const modifie = raw !== enregistre
+
+  const enregistrer = useCallback(async (texte: string): Promise<boolean> => {
+    if (enCoursRef.current) return false
+    enCoursRef.current = true
+    setEtat('en_cours')
+    try {
+      await onSaveRef.current(texte)
+      setEnregistre(texte)
+      setHeure(new Date())
+      setEtat('enregistre')
+      return true
+    } catch {
+      setEtat('echec')
+      return false
+    } finally {
+      enCoursRef.current = false
+    }
+  }, [])
+
+  // Enregistrement automatique quelques secondes après la dernière frappe.
+  useEffect(() => {
+    if (raw === enregistre) return
+    const minuteur = setTimeout(() => { void enregistrer(raw) }, DELAI_ENREGISTREMENT_AUTO_MS)
+    return () => clearTimeout(minuteur)
+  }, [raw, enregistre, enregistrer])
+
+  // Fermeture de l'onglet avec des modifications non enregistrées : le navigateur demande confirmation.
+  useEffect(() => {
+    if (!modifie) return
+    const avertir = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', avertir)
+    return () => window.removeEventListener('beforeunload', avertir)
+  }, [modifie])
+
+  const fermer = () => {
+    if (modifie || etat === 'en_cours') setConfirmerFermeture(true)
+    else onClose()
+  }
 
   const captureSelection = () => {
     const el = editorRef.current
@@ -169,29 +166,54 @@ function FullscreenEditor({
     setSelection(null)
   }
 
+  const statut = etat === 'en_cours'
+    ? 'Enregistrement…'
+    : etat === 'echec'
+      ? "L'enregistrement n'a pas abouti. Vos modifications restent ici."
+      : modifie
+        ? 'Modifications en cours'
+        : heure
+          ? `Enregistré à ${heure.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
+          : ''
+
   return (
     <div className="fixed inset-0 z-50 flex flex-col" style={{ background: '#18181A', fontFamily: F }}>
       <div
-        className="flex items-center justify-between px-6 py-3 shrink-0"
+        className="flex items-center justify-between gap-4 px-6 py-3 shrink-0"
         style={{ borderBottom: '1px solid rgba(255,255,255,.07)', background: '#18181A' }}
       >
         <p className="text-sm font-medium" style={{ color: '#F7F8F8' }}>
           Édition du mémoire — format Markdown
         </p>
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => onSave(raw)}
-            disabled={isSaving}
-            className="glass-btn text-ds-text flex items-center gap-2 py-2 px-4 text-sm font-bold rounded-lg"
+          <p
+            role="status"
+            aria-live="polite"
+            className="text-xs"
+            style={{ color: etat === 'echec' ? '#F5C26B' : '#959597' }}
           >
-            {saveSuccess ? (
-              <><CheckCircle2 size={14} style={{ color: '#6EE7A8' }} />Sauvegardé</>
-            ) : (
-              <><Save size={14} />{isSaving ? 'Sauvegarde...' : 'Sauvegarder'}</>
-            )}
+            {statut}
+          </p>
+          {etat === 'echec' && (
+            <button
+              onClick={() => { void enregistrer(raw) }}
+              className="text-xs font-semibold py-1.5 px-3 rounded-lg transition-colors hover:bg-ds-bg-2"
+              style={{ color: '#F7F8F8', border: '1px solid rgba(255,255,255,.12)' }}
+            >
+              Réessayer
+            </button>
+          )}
+          <button
+            onClick={() => { void enregistrer(raw) }}
+            disabled={!modifie || etat === 'en_cours'}
+            className="glass-btn text-ds-text flex items-center gap-2 py-2 px-4 text-sm font-bold rounded-lg disabled:opacity-50"
+          >
+            {!modifie && etat === 'enregistre' && heure
+              ? <><CheckCircle2 size={14} style={{ color: '#6EE7A8' }} />Enregistré</>
+              : <><Save size={14} />Enregistrer</>}
           </button>
           <button
-            onClick={onClose}
+            onClick={fermer}
             className="flex items-center gap-1.5 text-sm py-2 px-3 rounded-lg transition-colors hover:bg-ds-bg-2"
             style={{ color: '#959597', border: '1px solid rgba(255,255,255,.07)' }}
           >
@@ -199,6 +221,40 @@ function FullscreenEditor({
           </button>
         </div>
       </div>
+      {confirmerFermeture && (
+        <div
+          role="alertdialog"
+          aria-label="Modifications non enregistrées"
+          className="flex flex-wrap items-center justify-between gap-3 px-6 py-3 shrink-0"
+          style={{ background: 'rgba(217,164,65,0.08)', borderBottom: '1px solid rgba(217,164,65,0.25)' }}
+        >
+          <p className="text-sm" style={{ color: '#F7F8F8' }}>
+            Des modifications ne sont pas encore enregistrées.
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={async () => { if (await enregistrer(raw)) onClose() }}
+              className="glass-btn text-ds-text py-1.5 px-3 text-sm font-semibold rounded-lg"
+            >
+              Enregistrer et fermer
+            </button>
+            <button
+              onClick={onClose}
+              className="py-1.5 px-3 text-sm rounded-lg transition-colors hover:bg-ds-bg-2"
+              style={{ color: '#D8D9DB', border: '1px solid rgba(255,255,255,.12)' }}
+            >
+              Fermer sans enregistrer
+            </button>
+            <button
+              onClick={() => setConfirmerFermeture(false)}
+              className="py-1.5 px-3 text-sm rounded-lg transition-colors hover:bg-ds-bg-2"
+              style={{ color: '#959597' }}
+            >
+              Continuer la rédaction
+            </button>
+          </div>
+        </div>
+      )}
       {/* C9b — barre de réécriture IA ciblée (agit sur la sélection seule) */}
       <RewritePassageBar projectId={projectId} selection={selection} onApply={applyRewrite} />
       <textarea
@@ -385,33 +441,6 @@ function TocSidebar({
 
 // ─── Document View (center column — "Word page" style) ───────────────────────
 
-const SECTIONS_MEMOIRE: SectionMemoire[] = [
-  { part: 'partie_a', cle: 'implantation', titre: '1. Implantation géographique' },
-  { part: 'partie_a', cle: 'historique', titre: '2. Historique' },
-  { part: 'partie_a', cle: 'engagement_qualitatif', titre: '3. Engagement qualitatif' },
-  { part: 'partie_a', cle: 'activites', titre: '4. Nos activités' },
-  { part: 'partie_a', cle: 'organigramme', titre: '5. Organigramme' },
-  { part: 'partie_a', cle: 'roles_missions', titre: "6. Rôles et missions de l'équipe d'encadrement" },
-  { part: 'partie_a', cle: 'moyens_informatiques', titre: '7. Moyens informatiques' },
-  { part: 'partie_a', cle: 'vehicules', titre: '8. Véhicules' },
-  { part: 'partie_a', cle: 'materiel', titre: '9. Matériel' },
-  { part: 'partie_a', cle: 'references', titre: '10. Références chantiers' },
-  { part: 'partie_a', cle: 'fournisseurs', titre: '11. Fournisseurs' },
-  { part: 'partie_b', cle: 'demarrage', titre: '1. Démarrage du chantier' },
-  { part: 'partie_b', cle: 'interlocuteur', titre: '2. Interlocuteur dédié' },
-  { part: 'partie_b', cle: 'qualite_ouvrages', titre: '3. Qualité des ouvrages' },
-  { part: 'partie_b', cle: 'respect_planning', titre: '4. Respect du planning' },
-  { part: 'partie_b', cle: 'securite', titre: '5. Dispositions relatives à la sécurité' },
-  { part: 'partie_b', cle: 'dechets', titre: '6. Traitement des déchets' },
-  { part: 'partie_b', cle: 'environnement', titre: '7. Environnement' },
-  { part: 'partie_c', cle: 'methodologie', titre: '1. Méthodologie détaillée' },
-  { part: 'partie_c', cle: 'effectifs', titre: '2. Effectifs dédiés au chantier' },
-  { part: 'partie_c', cle: 'materiels', titre: '3. Matériels dédiés' },
-  { part: 'partie_c', cle: 'hygiene_securite', titre: '4. Hygiène et sécurité' },
-  { part: 'partie_c', cle: 'mesures_environnementales', titre: '5. Mesures environnementales' },
-  { part: 'partie_c', cle: 'gpa', titre: '6. Garantie de parfait achèvement (GPA)' },
-  { part: 'partie_c', cle: 'delai', titre: '7. Délai de travaux' },
-]
 
 function DocumentView({
   content, project, docRef,
@@ -578,7 +607,6 @@ export default function StepMemoire({ project }: Props) {
   const [showForm, setShowForm] = useState(false)
   const [showEditor, setShowEditor] = useState(false)
   const [editedContent, setEditedContent] = useState<MemoireContent | null>(null)
-  const [saveSuccess, setSaveSuccess] = useState(false)
   const [, setGenSuccess] = useState(false)
   const [genError, setGenError] = useState<string | null>(null)
   // Run DÉTACHÉ : `running` couvre le lancement local ; après un reload,
@@ -726,20 +754,21 @@ export default function StepMemoire({ project }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [memoireSse.phase])
 
-  const { mutate: saveEdits, isPending: isSaving } = useMutation({
+  const { mutateAsync: saveEdits } = useMutation({
     mutationFn: (content: MemoireContent) =>
       api.patch(`/projects/${project.id}/memoire`, { content_json: content }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['memoire', project.id] })
-      setSaveSuccess(true)
-      setTimeout(() => setSaveSuccess(false), 2500)
     },
   })
 
-  const handleEditorSave = (raw: string) => {
-    const parsed = parseMarkdownToContent(raw, displayContent!)
+  // 1.8 — la vue document n'adopte le texte qu'une fois l'enregistrement
+  // confirmé : si le serveur refuse, elle reste à l'état précédent et le
+  // texte reste dans l'éditeur (message + « Réessayer »).
+  const handleEditorSave = async (raw: string) => {
+    const parsed = depuisMarkdown(raw, displayContent!)
+    await saveEdits(parsed)
     setEditedContent(parsed)
-    saveEdits(parsed)
   }
 
   const handleTocNavigate = useCallback((sectionId: string) => {
@@ -1038,15 +1067,15 @@ export default function StepMemoire({ project }: Props) {
         />
       )}
 
-      {showEditor && displayContent && (
+      {/* Portail : un ancêtre animé (transform) piégeait le « fixed » dans la colonne de contenu */}
+      {showEditor && displayContent && createPortal(
         <FullscreenEditor
           content={displayContent}
           projectId={project.id}
           onSave={handleEditorSave}
           onClose={() => setShowEditor(false)}
-          isSaving={isSaving}
-          saveSuccess={saveSuccess}
-        />
+        />,
+        document.body,
       )}
 
       <div className="space-y-4 pb-20" style={{ fontFamily: F }}>
@@ -1202,78 +1231,4 @@ export default function StepMemoire({ project }: Props) {
       {createPortal(bottomBar, document.body)}
     </>
   )
-}
-
-// ─── Parse markdown → MemoireContent ──────────────────────────────────────────
-
-function parseMarkdownToContent(raw: string, original: MemoireContent): MemoireContent {
-  const KEY_MAP: Record<string, { part: keyof MemoireContent | 'preambule'; key?: string }> = {
-    'PRÉAMBULE':                                    { part: 'preambule' },
-    'Implantation géographique':                    { part: 'partie_a', key: 'implantation' },
-    'Historique':                                   { part: 'partie_a', key: 'historique' },
-    'Engagement qualitatif':                        { part: 'partie_a', key: 'engagement_qualitatif' },
-    'Nos activités':                                { part: 'partie_a', key: 'activites' },
-    'Organigramme':                                 { part: 'partie_a', key: 'organigramme' },
-    "Rôles et missions de l'équipe d'encadrement":  { part: 'partie_a', key: 'roles_missions' },
-    'Moyens informatiques':                         { part: 'partie_a', key: 'moyens_informatiques' },
-    'Véhicules':                                    { part: 'partie_a', key: 'vehicules' },
-    'Matériel':                                     { part: 'partie_a', key: 'materiel' },
-    'Références chantiers':                         { part: 'partie_a', key: 'references' },
-    'Fournisseurs':                                 { part: 'partie_a', key: 'fournisseurs' },
-    'Démarrage du chantier':                        { part: 'partie_b', key: 'demarrage' },
-    'Interlocuteur dédié':                          { part: 'partie_b', key: 'interlocuteur' },
-    'Qualité des ouvrages':                         { part: 'partie_b', key: 'qualite_ouvrages' },
-    'Respect du planning':                          { part: 'partie_b', key: 'respect_planning' },
-    'Dispositions relatives à la sécurité':         { part: 'partie_b', key: 'securite' },
-    'Traitement des déchets':                       { part: 'partie_b', key: 'dechets' },
-    'Environnement':                                { part: 'partie_b', key: 'environnement' },
-    'Méthodologie détaillée':                       { part: 'partie_c', key: 'methodologie' },
-    'Effectifs dédiés au chantier':                 { part: 'partie_c', key: 'effectifs' },
-    'Matériels dédiés':                             { part: 'partie_c', key: 'materiels' },
-    'Hygiène et sécurité':                          { part: 'partie_c', key: 'hygiene_securite' },
-    'Mesures environnementales':                    { part: 'partie_c', key: 'mesures_environnementales' },
-    'Garantie de parfait achèvement (GPA)':         { part: 'partie_c', key: 'gpa' },
-    'Délai de travaux':                             { part: 'partie_c', key: 'delai' },
-  }
-
-  const lines = raw.split('\n')
-  const result: MemoireContent = {
-    preambule: original.preambule,
-    partie_a: { ...original.partie_a },
-    partie_b: { ...original.partie_b },
-    partie_c: { ...original.partie_c },
-  }
-
-  let currentMapping: { part: keyof MemoireContent | 'preambule'; key?: string } | null = null
-  let buffer: string[] = []
-
-  const flush = () => {
-    if (!currentMapping) return
-    const text = buffer.join('\n').trim()
-    if (currentMapping.part === 'preambule') {
-      result.preambule = text
-    } else if (currentMapping.key) {
-      const partObj = result[currentMapping.part] as Record<string, string>
-      partObj[currentMapping.key] = text
-    }
-    buffer = []
-  }
-
-  for (const line of lines) {
-    const headingMatch = line.match(/^#{1,3}\s+(.+)$/)
-    if (headingMatch) {
-      const headingText = headingMatch[1].replace(/^\d+\.\s+/, '').trim()
-      const mapping = Object.entries(KEY_MAP).find(([k]) => headingText === k || headingText.endsWith(k))
-      if (mapping) { flush(); currentMapping = mapping[1]; continue }
-      if (headingText.startsWith('PARTIE') || headingText === 'PRÉAMBULE') {
-        flush()
-        const direct = KEY_MAP[headingText]
-        currentMapping = direct ?? null
-        continue
-      }
-    }
-    if (currentMapping) buffer.push(line)
-  }
-  flush()
-  return result
 }

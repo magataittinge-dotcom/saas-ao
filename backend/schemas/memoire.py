@@ -50,6 +50,25 @@ class MemoireGenerateRequest(BaseModel):
 class MemoireUpdateRequest(BaseModel):
     content_json: Any
 
+    @field_validator("content_json")
+    @classmethod
+    def _memoire_bien_forme(cls, v: Any) -> Any:
+        """1.8 — n'enregistre qu'un mémoire complet et bien formé (préambule
+        texte, parties A/B/C en objets de textes). Un envoi abîmé ou partiel est
+        refusé (422) au lieu d'écraser le mémoire enregistré."""
+        if not isinstance(v, dict):
+            raise ValueError("Le mémoire doit être un objet.")
+        for cle in ("preambule", "partie_a", "partie_b", "partie_c"):
+            if cle not in v:
+                raise ValueError(f"Le mémoire envoyé ne contient pas « {cle} ».")
+        if not isinstance(v["preambule"], str):
+            raise ValueError("Le préambule doit être un texte.")
+        for partie in ("partie_a", "partie_b", "partie_c"):
+            bloc = v[partie]
+            if not isinstance(bloc, dict) or not all(isinstance(t, str) for t in bloc.values()):
+                raise ValueError(f"« {partie} » doit contenir des textes.")
+        return v
+
 
 class PassageRewriteRequest(BaseModel):
     """C9b — réécriture ciblée d'un passage sélectionné dans l'éditeur."""

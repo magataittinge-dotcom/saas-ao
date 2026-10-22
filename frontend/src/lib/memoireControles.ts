@@ -1,12 +1,9 @@
 // Contrôles du Compagnon sur le mémoire généré : uniquement des faits calculés
 // sur le texte, jamais une appréciation inventée (1.3).
 import type { MemoireContent } from '@/types'
+import type { SectionMemoire } from '@/lib/memoireSections'
 
-export interface SectionMemoire {
-  part: 'partie_a' | 'partie_b' | 'partie_c'
-  cle: string
-  titre: string
-}
+export type { SectionMemoire }
 
 export interface SectionBreve extends SectionMemoire {
   mots: number
