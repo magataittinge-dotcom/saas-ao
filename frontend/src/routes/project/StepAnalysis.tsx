@@ -426,11 +426,6 @@ export default function StepAnalysis({ project }: Props) {
                   Technique <span className="num-mono font-bold" style={{ color: '#F7F8F8' }}>{techPct}&nbsp;%</span>
                 </span>
               </div>
-              <p className="mt-2.5 text-[11px] italic leading-relaxed" style={{ color: '#6B6C6F' }}>
-                {techPct >= prixPct
-                  ? 'La valeur technique pèse autant que le prix : le mémoire fera la différence.'
-                  : 'Le prix domine la notation : ajustez votre offre financière en priorité.'}
-              </p>
             </div>
           )}
         </div>

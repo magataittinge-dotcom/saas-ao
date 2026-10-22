@@ -16,6 +16,7 @@ import { useAuthStore } from '@/stores/authStore'
 import ProgressDisplay, { type StepDescriptor } from '@/components/common/ProgressDisplay'
 import { useProgressStream } from '@/hooks/useProgressStream'
 import SubscriptionWall from '@/components/common/SubscriptionWall'
+import PoidsMemoire from '@/components/project/PoidsMemoire'
 import { MemoireSkeleton } from '@/components/skeletons'
 import type { Project, MemoireTechnique, MemoireContent, Reference } from '@/types'
 import {
@@ -825,21 +826,7 @@ export default function StepMemoire({ project }: Props) {
                     </span>
                   )}
                 </div>
-                <div className="flex flex-wrap items-end gap-3">
-                  <span className="num-mono bg-gradient-silver-text bg-clip-text text-5xl font-bold leading-none text-transparent">
-                    {techPct > 0 ? `${techPct} %` : '60 %'}
-                  </span>
-                  <div className="pb-0.5">
-                    <p className="text-sm font-semibold" style={{ color: '#F7F8F8' }}>
-                      de votre note se joue dans ce document
-                    </p>
-                    <p className="mt-0.5 text-xs" style={{ color: '#959597' }}>
-                      {techPct > 0
-                        ? 'pondération hors prix relevée dans le règlement de consultation'
-                        : 'moyenne constatée sur les marchés de travaux'}
-                    </p>
-                  </div>
-                </div>
+                <PoidsMemoire techPct={techPct} />
                 {hasMemoire && (
                   <p className="mt-3 text-xs font-medium leading-relaxed" style={{ color: 'var(--warn)' }}>
                     La régénération remplacera la version actuelle du mémoire.
