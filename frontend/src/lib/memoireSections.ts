@@ -44,3 +44,52 @@ export const SECTIONS_MEMOIRE: readonly SectionMemoire[] = [
   { part: 'partie_c', cle: 'gpa', titre: '6. Garantie de parfait achèvement (GPA)' },
   { part: 'partie_c', cle: 'delai', titre: '7. Délai de travaux' },
 ]
+
+// ── Sommaire (1.9) : construit depuis les vrais titres du document ─────────────
+
+/** Titres des parties tels qu'affichés dans le sommaire (la vue document les met en capitales). */
+export const TITRES_PARTIES_SOMMAIRE: Record<PartieId, string> = {
+  partie_a: 'Partie A — Présentation générale',
+  partie_b: 'Partie B — Présentation de la prestation',
+  partie_c: 'Partie C — Méthodologie mise en œuvre',
+}
+
+export const ID_PARTIE: Record<PartieId, string> = { partie_a: 'partie-a', partie_b: 'partie-b', partie_c: 'partie-c' }
+
+/** Sections reprises en annexe de la vue document (même texte, identifiants propres). */
+export const ANNEXES_MEMOIRE: readonly { cle: 'engagement_qualitatif' | 'references'; titre: string }[] = [
+  { cle: 'engagement_qualitatif', titre: 'Certifications' },
+  { cle: 'references', titre: 'Références similaires' },
+]
+
+export interface EntreeSommaire {
+  id: string
+  titre: string
+  enfants: EntreeSommaire[]
+}
+
+type ContenuMemoire = { preambule?: string } & Partial<Record<PartieId, unknown>>
+
+const redige = (c: ContenuMemoire, part: PartieId, cle: string) => {
+  const v = (c[part] as Record<string, unknown> | undefined)?.[cle]
+  return typeof v === 'string' && v.trim().length > 0
+}
+
+/** Le sommaire du mémoire : chaque entrée mène à la section de même nom (seules les sections rédigées). */
+export function sommaireMemoire(contenu: ContenuMemoire): EntreeSommaire[] {
+  const entrees: EntreeSommaire[] = [{ id: 'preambule', titre: 'Préambule', enfants: [] }]
+  for (const p of PARTIES) {
+    entrees.push({
+      id: ID_PARTIE[p],
+      titre: TITRES_PARTIES_SOMMAIRE[p],
+      enfants: SECTIONS_MEMOIRE
+        .filter((s) => s.part === p && redige(contenu, p, s.cle))
+        .map((s) => ({ id: `sec-${s.cle}`, titre: s.titre, enfants: [] })),
+    })
+  }
+  const annexes = ANNEXES_MEMOIRE
+    .filter((a) => redige(contenu, 'partie_a', a.cle))
+    .map((a) => ({ id: `annexe-${a.cle}`, titre: a.titre, enfants: [] }))
+  if (annexes.length > 0) entrees.push({ id: 'annexes', titre: 'Annexes', enfants: annexes })
+  return entrees
+}

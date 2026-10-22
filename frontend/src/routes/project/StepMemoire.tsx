@@ -24,7 +24,9 @@ import {
   SEUIL_SECTION_BREVE, referencesRetrouvees, sectionsBreves,
 } from '@/lib/memoireControles'
 import { depuisMarkdown, versMarkdown } from '@/lib/memoireMarkdown'
-import { SECTIONS_MEMOIRE, type SectionMemoire } from '@/lib/memoireSections'
+import {
+  ANNEXES_MEMOIRE, SECTIONS_MEMOIRE, sommaireMemoire, type EntreeSommaire, type SectionMemoire,
+} from '@/lib/memoireSections'
 
 const MEMOIRE_GEN_STEPS: StepDescriptor[] = [
   { key: 'preparing',  label: 'Préparation du contexte',         estimated_s: 3 },
@@ -33,56 +35,6 @@ const MEMOIRE_GEN_STEPS: StepDescriptor[] = [
 ]
 
 const F = "'Inter Variable', 'Geist Sans', sans-serif"
-
-// ─── Section definitions for TOC ─────────────────────────────────────────────
-
-interface TocSection {
-  id: string
-  label: string
-  part: keyof MemoireContent | 'preambule'
-  key?: string
-  children?: TocSection[]
-}
-
-const TOC_STRUCTURE: TocSection[] = [
-  {
-    id: 'preambule', label: 'Préambule', part: 'preambule',
-    children: [
-      { id: 'preambule-intro', label: 'Introduction', part: 'preambule' },
-      { id: 'preambule-contexte', label: 'Contexte du projet', part: 'preambule' },
-    ],
-  },
-  {
-    id: 'partie-a', label: 'Partie A : Présentation', part: 'partie_a',
-    children: [
-      { id: 'sec-implantation', label: "L'entreprise", part: 'partie_a', key: 'implantation' },
-      { id: 'sec-organigramme', label: 'Moyens humains', part: 'partie_a', key: 'organigramme' },
-      { id: 'sec-materiel', label: 'Moyens matériels', part: 'partie_a', key: 'materiel' },
-    ],
-  },
-  {
-    id: 'partie-b', label: 'Partie B : Prestation', part: 'partie_b',
-    children: [
-      { id: 'sec-demarrage', label: 'Compréhension du besoin', part: 'partie_b', key: 'demarrage' },
-      { id: 'sec-respect_planning', label: 'Organisation du chantier', part: 'partie_b', key: 'respect_planning' },
-    ],
-  },
-  {
-    id: 'partie-c', label: 'Partie C : Méthodologie', part: 'partie_c',
-    children: [
-      { id: 'sec-methodologie', label: 'Phasage des travaux', part: 'partie_c', key: 'methodologie' },
-      { id: 'sec-mesures_environnementales', label: 'Gestion des nuisances', part: 'partie_c', key: 'mesures_environnementales' },
-      { id: 'sec-hygiene_securite', label: 'Qualité & Environnement', part: 'partie_c', key: 'hygiene_securite' },
-    ],
-  },
-  {
-    id: 'annexes', label: 'Annexes', part: 'partie_a',
-    children: [
-      { id: 'sec-engagement_qualitatif', label: 'Certifications', part: 'partie_a', key: 'engagement_qualitatif' },
-      { id: 'sec-references', label: 'Références similaires', part: 'partie_a', key: 'references' },
-    ],
-  },
-]
 
 // ─── Fullscreen editor ─────────────────────────────────────────────────────────
 
@@ -265,7 +217,8 @@ function FullscreenEditor({
         onSelect={captureSelection}
         className="flex-1 px-8 py-6 text-sm leading-relaxed resize-none focus:outline-none font-mono"
         style={{ background: '#18181A', color: '#F7F8F8', caretColor: '#E8E9EB' }}
-        spellCheck={false}
+        spellCheck
+        lang="fr"
       />
     </div>
   )
@@ -358,17 +311,16 @@ function ProfileSummary({ stats }: { stats: { filled: number; total: number; nom
 // ─── TOC Sidebar ─────────────────────────────────────────────────────────────
 
 function TocSidebar({
-  activeSection, onNavigate,
+  entrees, activeSection, onNavigate,
 }: {
+  entrees: EntreeSommaire[]
   activeSection: string
   onNavigate: (id: string) => void
 }) {
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set(TOC_STRUCTURE.map((s) => s.id)),
-  )
+  const [fermees, setFermees] = useState<Set<string>>(new Set())
 
-  const toggleSection = (id: string) => {
-    setExpandedSections((prev) => {
+  const basculer = (id: string) => {
+    setFermees((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id); else next.add(id)
       return next
@@ -382,51 +334,47 @@ function TocSidebar({
     >
       <p className="microlabel mb-3">Sommaire</p>
 
-      <nav className="space-y-1">
-        {TOC_STRUCTURE.map((section) => {
-          const isOpen = expandedSections.has(section.id)
-          const isActive = activeSection === section.id
+      <nav aria-label="Sommaire du mémoire" className="space-y-1">
+        {entrees.map((section) => {
+          const ouverte = !fermees.has(section.id)
+          const active = activeSection === section.id
           return (
             <div key={section.id}>
               <button
                 onClick={() => {
-                  toggleSection(section.id)
+                  if (section.enfants.length > 0) basculer(section.id)
                   onNavigate(section.id)
                 }}
+                aria-expanded={section.enfants.length > 0 ? ouverte : undefined}
                 className="w-full flex items-center gap-1.5 py-1.5 px-2 rounded text-left transition-colors hover:bg-ds-bg-2"
-                style={{
-                  borderLeft: isActive ? '2px solid #E8E9EB' : '2px solid transparent',
-                }}
+                style={{ borderLeft: active ? '2px solid #E8E9EB' : '2px solid transparent' }}
               >
-                {section.children ? (
-                  isOpen
+                {section.enfants.length > 0 ? (
+                  ouverte
                     ? <ChevronDown size={12} style={{ color: '#6B6C6F' }} />
                     : <ChevronRight size={12} style={{ color: '#6B6C6F' }} />
                 ) : <span style={{ width: 12 }} />}
-                <span
-                  className="text-sm font-semibold"
-                  style={{ color: isActive ? '#E8E9EB' : '#F7F8F8', fontFamily: F }}
-                >
-                  {section.label}
+                <span className="text-sm font-semibold" style={{ color: active ? '#E8E9EB' : '#F7F8F8', fontFamily: F }}>
+                  {section.titre}
                 </span>
               </button>
-              {section.children && isOpen && (
+              {section.enfants.length > 0 && ouverte && (
                 <div className="ml-2 space-y-0.5">
-                  {section.children.map((child) => {
-                    const isChildActive = activeSection === child.id
+                  {section.enfants.map((enfant) => {
+                    const enfantActif = activeSection === enfant.id
                     return (
                       <button
-                        key={child.id}
-                        onClick={() => onNavigate(child.id)}
+                        key={enfant.id}
+                        onClick={() => onNavigate(enfant.id)}
                         className="w-full text-left py-1 px-4 text-xs transition-colors hover:text-[#E8E9EB]"
                         style={{
-                          color: isChildActive ? '#E8E9EB' : '#959597',
-                          fontWeight: isChildActive ? 600 : 400,
-                          borderLeft: isChildActive ? '2px solid #E8E9EB' : '2px solid transparent',
+                          color: enfantActif ? '#E8E9EB' : '#959597',
+                          fontWeight: enfantActif ? 600 : 400,
+                          borderLeft: enfantActif ? '2px solid #E8E9EB' : '2px solid transparent',
                           fontFamily: F,
                         }}
                       >
-                        {child.label}
+                        {enfant.titre}
                       </button>
                     )
                   })}
@@ -443,7 +391,7 @@ function TocSidebar({
 // ─── Document View (center column — "Word page" style) ───────────────────────
 
 
-function DocumentView({
+export function DocumentView({
   content, project, docRef,
 }: {
   content: MemoireContent
@@ -533,18 +481,12 @@ function DocumentView({
         {/* Annexes */}
         <div id="annexes">
           <PartHeading>ANNEXES</PartHeading>
-          {a?.engagement_qualitatif && (
-            <div id="sec-engagement_qualitatif" className="mt-6">
-              <SectionHeading>Certifications</SectionHeading>
-              <MdContent text={a.engagement_qualitatif} />
+          {ANNEXES_MEMOIRE.map(({ cle, titre }) => a?.[cle] ? (
+            <div key={cle} id={`annexe-${cle}`} className="mt-6">
+              <SectionHeading>{titre}</SectionHeading>
+              <MdContent text={a[cle]} />
             </div>
-          )}
-          {a?.references && (
-            <div id="sec-references" className="mt-6">
-              <SectionHeading>Références similaires</SectionHeading>
-              <MdContent text={a.references} />
-            </div>
-          )}
+          ) : null)}
         </div>
 
       </div>
@@ -644,6 +586,8 @@ export default function StepMemoire({ project }: Props) {
   })
 
   const displayContent: MemoireContent | null = editedContent ?? memoire?.content_json ?? null
+  // 1.9 — sommaire tiré des vrais titres (chaque entrée mène à la section de même nom)
+  const sommaire = useMemo(() => (displayContent ? sommaireMemoire(displayContent) : []), [displayContent])
   const criteres = project.criteres_jugement ?? []
 
   // Poids total hors prix : la part de la note que le mémoire peut capter
@@ -924,7 +868,7 @@ export default function StepMemoire({ project }: Props) {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium mb-1.5" style={{ color: '#F7F8F8' }}>
-                  Nombre d&apos;ouvriers dedies <span style={{ color: 'var(--warn)' }}>*</span>
+                  Nombre d&apos;ouvriers dédiés <span style={{ color: 'var(--warn)' }}>*</span>
                 </label>
                 <input
                   type="number"
@@ -932,12 +876,12 @@ export default function StepMemoire({ project }: Props) {
                   onChange={(e) => setVariables((v) => ({ ...v, nb_ouvriers: e.target.value }))}
                   className="w-full py-2 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
                   style={{ background: '#121213', border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
-                  placeholder="Ex: 4"
+                  placeholder="Ex : 4"
                 />
               </div>
               <div>
                 <label className="block text-xs font-medium mb-1.5" style={{ color: '#F7F8F8' }}>
-                  Delai estime <span style={{ color: 'var(--warn)' }}>*</span>
+                  Délai estimé <span style={{ color: 'var(--warn)' }}>*</span>
                 </label>
                 <input
                   type="text"
@@ -945,7 +889,7 @@ export default function StepMemoire({ project }: Props) {
                   onChange={(e) => setVariables((v) => ({ ...v, delai: e.target.value }))}
                   className="w-full py-2 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
                   style={{ background: '#121213', border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
-                  placeholder="Ex: 3 mois"
+                  placeholder="Ex : 3 mois"
                 />
               </div>
             </div>
@@ -960,7 +904,7 @@ export default function StepMemoire({ project }: Props) {
                   onChange={(e) => setVariables((v) => ({ ...v, chef_chantier_nom: e.target.value }))}
                   className="w-full py-2 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
                   style={{ background: '#121213', border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
-                  placeholder="Ex: Jean Dupont"
+                  placeholder="Ex : Jean Dupont"
                 />
               </div>
               <div>
@@ -971,7 +915,7 @@ export default function StepMemoire({ project }: Props) {
                   onChange={(e) => setVariables((v) => ({ ...v, chef_chantier_qualification: e.target.value }))}
                   className="w-full py-2 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
                   style={{ background: '#121213', border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
-                  placeholder="Ex: 15 ans d'experience, CACES R482"
+                  placeholder="Ex : 15 ans d'expérience, CACES R482"
                 />
               </div>
             </div>
@@ -986,7 +930,7 @@ export default function StepMemoire({ project }: Props) {
                   onChange={(e) => setVariables((v) => ({ ...v, conducteur_travaux_nom: e.target.value }))}
                   className="w-full py-2 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
                   style={{ background: '#121213', border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
-                  placeholder="Ex: Marie Martin"
+                  placeholder="Ex : Marie Martin"
                 />
               </div>
               <div>
@@ -997,7 +941,7 @@ export default function StepMemoire({ project }: Props) {
                   onChange={(e) => setVariables((v) => ({ ...v, conducteur_travaux_qualification: e.target.value }))}
                   className="w-full py-2 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
                   style={{ background: '#121213', border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
-                  placeholder="Ex: Ingenieur BTP, 10 ans ITE/ravalement"
+                  placeholder="Ex : ingénieur BTP, 10 ans ITE/ravalement"
                 />
               </div>
             </div>
@@ -1005,7 +949,7 @@ export default function StepMemoire({ project }: Props) {
             {/* Row 4: Matériel spécifique */}
             <div>
               <label className="block text-xs font-medium mb-1.5" style={{ color: '#F7F8F8' }}>
-                Materiel specifique au chantier
+                Matériel spécifique au chantier
               </label>
               <textarea
                 value={variables.materiel_specifique}
@@ -1013,14 +957,14 @@ export default function StepMemoire({ project }: Props) {
                 rows={2}
                 className="w-full py-2 px-3 text-sm rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
                 style={{ background: '#121213', border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
-                placeholder="Ex: echafaudage tubulaire R200, nacelle articulee 20m..."
+                placeholder="Ex : échafaudage tubulaire R200, nacelle articulée 20 m…"
               />
             </div>
 
             {/* Row 5: Contraintes */}
             <div>
               <label className="block text-xs font-medium mb-1.5" style={{ color: '#F7F8F8' }}>
-                Contraintes particulieres
+                Contraintes particulières
                 <span className="font-normal ml-1" style={{ color: '#6B6C6F' }}>(optionnel)</span>
               </label>
               <textarea
@@ -1029,7 +973,7 @@ export default function StepMemoire({ project }: Props) {
                 rows={2}
                 className="w-full py-2 px-3 text-sm rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
                 style={{ background: '#121213', border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
-                placeholder="Ex: site occupe, horaires restreints 8h-17h..."
+                placeholder="Ex : site occupé, horaires restreints 8 h-17 h…"
               />
             </div>
           </div>
@@ -1154,7 +1098,7 @@ export default function StepMemoire({ project }: Props) {
 
             {/* LEFT — Table of Contents */}
             <div className="shrink-0 hidden xl:block">
-              <TocSidebar activeSection={activeSection} onNavigate={handleTocNavigate} />
+              <TocSidebar entrees={sommaire} activeSection={activeSection} onNavigate={handleTocNavigate} />
             </div>
 
             {/* CENTER — Document */}
