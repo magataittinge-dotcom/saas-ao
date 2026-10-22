@@ -1,5 +1,4 @@
 import { useState, useCallback, useMemo } from 'react'
-import { createPortal } from 'react-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -370,7 +369,7 @@ export default function StepExport({ project }: Props) {
   // ── Bottom bar ──────────────────────────────────────────────────────────
   const bottomBar = (
     <div
-      className="fixed bottom-0 left-0 right-0 z-50 flex flex-col items-center px-6 py-3 gap-2"
+      className="sticky -bottom-5 z-30 -mx-3 sm:-mx-4 mt-6 rounded-t-lg flex flex-col items-center px-6 py-3 gap-2"
       style={{
         background: 'rgba(9,9,10,0.92)',
         backdropFilter: 'blur(12px)',
@@ -427,7 +426,7 @@ export default function StepExport({ project }: Props) {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-4 pb-24" style={{ fontFamily: F }}>
+    <div className="space-y-4" style={{ fontFamily: F }}>
 
       {/* ── HÉROS — le verdict : combien de pièces sont prêtes, que reste-t-il ── */}
       <div className="glass-card top-lit blueprint-grid sheen relative overflow-hidden px-5 py-4">
@@ -837,7 +836,7 @@ export default function StepExport({ project }: Props) {
       </div>
 
       {/* ── Sticky bottom bar ───────────────────────────────────── */}
-      {createPortal(bottomBar, document.body)}
+      {bottomBar}
 
       {/* Document viewer modal */}
       {viewerIndex !== null && viewableDocs.length > 0 && (

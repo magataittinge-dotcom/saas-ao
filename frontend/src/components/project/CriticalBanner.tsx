@@ -115,7 +115,7 @@ export default function CriticalBanner({ projectId, onOpenSource }: Props) {
         {heure && <span style={{ color: '#B4B5B8' }}> · {heure}</span>}
         {echeance.etat !== 'sans_date' && (
           <span
-            className="num-mono ml-2 rounded-full px-1.5 py-0.5 align-middle text-[10px] font-bold"
+            className="num-mono ml-2 rounded-full px-1.5 py-0.5 align-middle text-[10px] font-bold whitespace-nowrap"
             style={passed
               ? { background: 'rgba(245,142,134,0.10)', color: '#F58E86' }
               : urgent

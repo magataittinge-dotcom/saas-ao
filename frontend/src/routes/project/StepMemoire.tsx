@@ -756,7 +756,7 @@ export default function StepMemoire({ project }: Props) {
 
   const bottomBar = (
     <div
-      className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-end px-6 py-3 gap-3"
+      className="sticky -bottom-5 z-30 -mx-3 sm:-mx-4 mt-6 rounded-t-lg flex items-center justify-end px-6 py-3 gap-3"
       style={{
         background: 'rgba(9,9,10,0.92)',
         backdropFilter: 'blur(12px)',
@@ -797,7 +797,7 @@ export default function StepMemoire({ project }: Props) {
           />
         )}
 
-        <div className="space-y-4 pb-20" style={{ fontFamily: F }}>
+        <div className="space-y-4" style={{ fontFamily: F }}>
           {/* ── HÉROS — le fait qui motive l'effort : le poids du mémoire dans la note ── */}
           <div className="glass-card top-lit blueprint-grid sheen relative overflow-hidden px-5 py-4">
             <div className="relative grid items-start gap-x-10 gap-y-4 lg:grid-cols-[minmax(0,1fr)_260px]">
@@ -1007,7 +1007,7 @@ export default function StepMemoire({ project }: Props) {
           </button>
         </div>
 
-        {createPortal(bottomBar, document.body)}
+        {bottomBar}
       </>
     )
   }
@@ -1042,7 +1042,7 @@ export default function StepMemoire({ project }: Props) {
         document.body,
       )}
 
-      <div className="space-y-4 pb-20" style={{ fontFamily: F }}>
+      <div className="space-y-4" style={{ fontFamily: F }}>
 
         {/* Échec d'une régénération détachée : signalé sans quitter le doc */}
         {genError && (
@@ -1193,7 +1193,7 @@ export default function StepMemoire({ project }: Props) {
         )}
       </div>
 
-      {createPortal(bottomBar, document.body)}
+      {bottomBar}
     </>
   )
 }

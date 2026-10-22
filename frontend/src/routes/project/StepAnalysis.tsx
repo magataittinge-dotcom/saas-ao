@@ -291,7 +291,7 @@ export default function StepAnalysis({ project }: Props) {
 
   const bottomBar = (
     <div
-      className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-3 gap-4"
+      className="sticky -bottom-5 z-30 -mx-3 sm:-mx-4 mt-6 rounded-t-lg flex items-center justify-between px-6 py-3 gap-4"
       style={{
         background: 'rgba(9,9,10,0.92)',
         backdropFilter: 'blur(12px)',
@@ -328,7 +328,7 @@ export default function StepAnalysis({ project }: Props) {
   // ── Main render ───────────────────────────────────────────────
 
   return (
-    <div className="space-y-3 pb-20" style={{ fontFamily: F }}>
+    <div className="space-y-3" style={{ fontFamily: F }}>
 
       {/* ── Lot details (expanded inline) ───────────────────────── */}
       {showLotDetails && lotFilterInfo && (
@@ -518,7 +518,7 @@ export default function StepAnalysis({ project }: Props) {
       )}
 
       {/* ── Sticky bottom bar ───────────────────────────────────── */}
-      {createPortal(bottomBar, document.body)}
+      {bottomBar}
       {avis && createPortal(
         <div className="fixed bottom-20 left-1/2 z-50 w-full max-w-lg -translate-x-1/2 px-4">
           <EchecAction

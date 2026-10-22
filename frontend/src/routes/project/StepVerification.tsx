@@ -1,5 +1,4 @@
 import { useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Loader2, Lock, AlertTriangle, FileSpreadsheet, Download, Upload, Sparkles, RefreshCw } from 'lucide-react'
@@ -167,7 +166,7 @@ export default function StepVerification({ project }: Props) {
 
   const bottomBar = (
     <div
-      className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-3 gap-4"
+      className="sticky -bottom-5 z-30 -mx-3 sm:-mx-4 mt-6 rounded-t-lg flex items-center justify-between px-6 py-3 gap-4"
       style={{
         background: 'rgba(9,9,10,0.92)',
         backdropFilter: 'blur(12px)',
@@ -215,7 +214,7 @@ export default function StepVerification({ project }: Props) {
   // ── Render ──────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-3 pb-20" style={{ fontFamily: F }}>
+    <div className="space-y-3" style={{ fontFamily: F }}>
 
       {/* Title bar */}
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -340,7 +339,7 @@ export default function StepVerification({ project }: Props) {
         />
       )}
 
-      {createPortal(bottomBar, document.body)}
+      {bottomBar}
     </div>
   )
 }

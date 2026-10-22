@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, FolderOpen, Building2, Archive, Users, LogOut,
-  Settings, X, Calculator, Briefcase, Plus,
+  Settings, X, Calculator, Briefcase, Plus, PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { nomPlan } from '@/lib/offres'
@@ -40,6 +40,8 @@ const BOTTOM_ITEMS = [
   { to: '/settings', icon: Settings, label: 'Paramètres' },
 ]
 
+const CLE_OUVERTURE = 'synorix.barre-laterale'
+
 const PLAN_PILL: Record<string, string> = {
   free:      'bg-[#1C222D] text-[#9BA4B5]',
   essentiel: 'pill-pro',
@@ -53,7 +55,17 @@ interface Props {
 }
 
 export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
-  const [hoverExpanded, setHoverExpanded] = useState(false)
+  // 1.11 — la barre s'ouvre par un bouton (plus au survol : le contenu sautait
+  // au passage de la souris). Préférence gardée dans ce navigateur.
+  const [ouverte, setOuverte] = useState<boolean>(() => {
+    try { return localStorage.getItem(CLE_OUVERTURE) === 'ouverte' } catch { return false }
+  })
+  const basculerOuverture = () => {
+    setOuverte((o) => {
+      try { localStorage.setItem(CLE_OUVERTURE, o ? 'repliee' : 'ouverte') } catch { /* stockage indisponible */ }
+      return !o
+    })
+  }
   const handleLogout = useLogout()
   const navigate = useNavigate()
   const location = useLocation()
@@ -81,7 +93,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
     }
   }, [mobileOpen])
 
-  const expanded = mobileOpen || hoverExpanded
+  const expanded = mobileOpen || ouverte
 
   const renderItem = ({ to, icon: Icon, label }: { to: string; icon: typeof LayoutDashboard; label: string }) => (
     <div key={to} className="relative group">
@@ -129,15 +141,13 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
       )}
 
       <aside
-        onMouseEnter={() => setHoverExpanded(true)}
-        onMouseLeave={() => setHoverExpanded(false)}
         className={cn(
           'glass-sidebar flex flex-col shrink-0 transition-all duration-300 ease-in-out',
           'fixed md:relative z-40',
           mobileOpen
             ? 'translate-x-0 w-[240px]'
             : '-translate-x-full md:translate-x-0',
-          !mobileOpen && (hoverExpanded ? 'md:w-[240px]' : 'md:w-16'),
+          !mobileOpen && (ouverte ? 'md:w-[240px]' : 'md:w-16'),
           'h-full',
         )}
       >
@@ -229,6 +239,21 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
               <Tooltip label={`Plan ${pill.label}`} />
             </div>
           )}
+        </div>
+
+        {/* ── Déplier / replier (bureau) ── */}
+        <div className="hidden md:block px-2 pb-1">
+          <button
+            onClick={basculerOuverture}
+            aria-expanded={ouverte}
+            aria-label={ouverte ? 'Replier la barre latérale' : 'Déplier la barre latérale'}
+            title={ouverte ? 'Replier' : 'Déplier'}
+            className={cn('w-full flex items-center gap-2 rounded-lg py-1.5 text-xs transition-colors hover:bg-[#1C222D]', ouverte ? 'px-2' : 'justify-center')}
+            style={{ color: '#9BA4B5' }}
+          >
+            {ouverte ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
+            {ouverte && <span>Replier</span>}
+          </button>
         </div>
 
         {/* ── User + Logout ─────────────────────── */}
