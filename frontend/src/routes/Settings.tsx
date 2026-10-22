@@ -2,12 +2,13 @@ import { type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Settings as SettingsIcon, User, Building2, CreditCard, ChevronRight, Shield } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
-import PaymentCard from '@/components/common/PaymentCard'
+import { ESSAI_LIBELLE, nomPlan, prixLibelle, quotaLibelle, trouverOffre } from '@/lib/offres'
 
-const PLAN_LABELS: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  pro:      { label: 'Pro',      color: '#E4E9F2', bg: 'rgba(228,233,242,0.10)',  border: 'rgba(228,233,242,0.25)' },
-  business: { label: 'Business', color: '#F4F6FA', bg: 'rgba(0,0,0,0.45)',   border: 'rgba(186,205,234,0.23)' },
-  free:     { label: 'Gratuit',  color: '#9BA4B5', bg: '#1C222D', border: '#1C222D' },
+const PLAN_LABELS: Record<string, { color: string; bg: string; border: string }> = {
+  essentiel: { color: '#E4E9F2', bg: 'rgba(228,233,242,0.10)',  border: 'rgba(228,233,242,0.25)' },
+  pro:       { color: '#E4E9F2', bg: 'rgba(228,233,242,0.10)',  border: 'rgba(228,233,242,0.25)' },
+  business:  { color: '#F4F6FA', bg: 'rgba(0,0,0,0.45)',   border: 'rgba(186,205,234,0.23)' },
+  free:      { color: '#9BA4B5', bg: '#1C222D', border: '#1C222D' },
 }
 
 function SectionCard({ icon, title, children }: {
@@ -48,7 +49,7 @@ export default function Settings() {
 
   const plan     = organization?.plan ?? 'free'
   const planCfg  = PLAN_LABELS[plan] ?? PLAN_LABELS.free
-  const planPrice = plan === 'pro' ? '349€' : plan === 'business' ? '599€' : '0€'
+  const offre    = trouverOffre(plan)
 
   return (
     <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
@@ -115,24 +116,16 @@ export default function Settings() {
                 className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold"
                 style={{ background: planCfg.bg, color: planCfg.color, border: `1px solid ${planCfg.border}` }}
               >
-                {planCfg.label}
+                {nomPlan(plan)}
               </span>
-              <span className="text-sm font-semibold text-ds-text">{planPrice}<span className="text-xs font-normal text-ds-text-3">/mois HT</span></span>
+              {offre && (
+                <span className="text-sm font-semibold text-ds-text">{prixLibelle(offre)}<span className="text-xs font-normal text-ds-text-3">/mois HT</span></span>
+              )}
             </div>
             <p className="text-xs text-ds-text-3">
-              {plan === 'free' ? 'Accès limité — passez à Pro pour débloquer toutes les fonctionnalités' : 'Toutes les fonctionnalités incluses'}
+              {offre ? quotaLibelle(offre) : ESSAI_LIBELLE}
             </p>
           </div>
-        </div>
-
-        {/* Payment card preview */}
-        <div className="mb-5">
-          <PaymentCard
-            cardType="visa"
-            lastFour="4242"
-            holderName="OZDEM BAT"
-            expiryDate="12/27"
-          />
         </div>
 
         <div className="space-y-2">

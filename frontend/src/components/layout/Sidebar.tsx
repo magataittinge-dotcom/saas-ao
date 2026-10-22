@@ -5,6 +5,7 @@ import {
   Settings, X, Calculator, Briefcase, Plus,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
+import { nomPlan } from '@/lib/offres'
 import { useLogout } from '@/hooks/useAuth'
 import { useProjects } from '@/hooks/useProject'
 import { cn } from '@/lib/utils'
@@ -38,10 +39,11 @@ const BOTTOM_ITEMS = [
   { to: '/settings', icon: Settings, label: 'Paramètres' },
 ]
 
-const PLAN_PILL: Record<string, { label: string; pillClass: string }> = {
-  free:     { label: 'Free',     pillClass: 'bg-[#1C222D] text-[#9BA4B5]' },
-  pro:      { label: 'Pro',      pillClass: 'pill-pro' },
-  business: { label: 'Business', pillClass: 'pill-entreprise' },
+const PLAN_PILL: Record<string, string> = {
+  free:      'bg-[#1C222D] text-[#9BA4B5]',
+  essentiel: 'pill-pro',
+  pro:       'pill-pro',
+  business:  'pill-entreprise',
 }
 
 interface Props {
@@ -58,7 +60,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
   const { data: projects = [] } = useProjects()
 
   const planKey = (organization?.plan || 'free') as string
-  const pill = PLAN_PILL[planKey] ?? PLAN_PILL.free
+  const pill = { label: nomPlan(planKey), pillClass: PLAN_PILL[planKey] ?? PLAN_PILL.free }
   const initials = user?.name ? user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() : 'U'
 
   // Badge deadline sur « Mes AO » : au moins un AO actif avec une échéance < 7 j.

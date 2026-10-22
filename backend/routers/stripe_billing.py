@@ -30,6 +30,12 @@ PRODUCTS = {
     "pro": "prod_UFuTbjsjJG2tlq",
     "business": "prod_UFuVeLpu3fDVQp",
 }
+# Offre Essentiel (149 €/mois, grille du 2026-10-22) : produit Stripe créé hors
+# code, renseigné par STRIPE_PRODUCT_ESSENTIEL. Vide = pas encore payable.
+if settings.STRIPE_PRODUCT_ESSENTIEL:
+    PRODUCTS["essentiel"] = settings.STRIPE_PRODUCT_ESSENTIEL
+
+OFFRES_PAYANTES = ("essentiel", "pro", "business")
 
 
 def _get_or_create_customer(org: Organization, user: User) -> str:
@@ -54,7 +60,7 @@ def _get_or_create_customer(org: Organization, user: User) -> str:
 # ── Schemas ───────────────────────────────────────────────────────────────────
 
 class CheckoutRequest(BaseModel):
-    plan: str  # "pro" or "business"
+    plan: str  # "essentiel", "pro" ou "business"
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -65,8 +71,13 @@ def create_checkout_session(
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ):
+    if payload.plan not in OFFRES_PAYANTES:
+        raise HTTPException(status_code=400, detail="Offre inconnue. Choisissez Essentiel, Pro ou Business.")
     if payload.plan not in PRODUCTS:
-        raise HTTPException(status_code=400, detail="Plan invalide. Choisissez 'pro' ou 'business'.")
+        raise HTTPException(
+            status_code=503,
+            detail="Cette offre n'est pas encore ouverte au paiement en ligne. Écrivez-nous pour y souscrire.",
+        )
 
     org = db.query(Organization).filter(Organization.id == user.organization_id).first()
     if not org:
@@ -75,7 +86,7 @@ def create_checkout_session(
     # Une org déjà abonnée ne repasse pas par un checkout (double
     # souscription Stripe = double facturation) : elle gère son plan via le
     # portail. Changement de plan = portail, pas nouvelle session.
-    if (org.plan or "free") in ("pro", "business"):
+    if (org.plan or "free") in OFFRES_PAYANTES:
         raise HTTPException(
             status_code=409,
             detail="Vous avez déjà un abonnement actif. Gérez-le depuis le portail de facturation.",

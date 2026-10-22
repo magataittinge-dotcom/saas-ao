@@ -15,7 +15,7 @@ export interface User {
 
 // ─── Organization ─────────────────────────────────────────────────────────────
 
-export type PlanType = 'pro' | 'business' | 'starter' | 'enterprise' | 'free'
+export type PlanType = 'essentiel' | 'pro' | 'business' | 'starter' | 'enterprise' | 'free'
 
 export interface Organization {
   id: string

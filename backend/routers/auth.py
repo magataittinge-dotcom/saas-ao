@@ -222,7 +222,7 @@ def _apply_siret(org: Organization, raw_siret: str, db: Session, name_provided: 
         return (
             "Ce SIRET est déjà associé à un compte Synorix : l'essai gratuit a "
             "déjà été utilisé pour cette entreprise. Votre compte est créé — "
-            "passez au plan Pro pour lancer vos analyses."
+            "choisissez une offre pour lancer vos analyses."
         )
 
     org.siret = siret

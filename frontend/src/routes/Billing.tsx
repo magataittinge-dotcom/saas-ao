@@ -1,71 +1,34 @@
 import { useEffect, useState, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
-  CreditCard, ArrowRight, Download, Sparkles, Check, Zap, Crown, ExternalLink, CheckCircle2, Loader2,
+  CreditCard, ArrowRight, Download, Sparkles, ExternalLink, CheckCircle2, Loader2,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { api } from '@/services/api'
 import type { Organization } from '@/types'
+import GrilleOffres from '@/components/offres/GrilleOffres'
+import { nomPlan, prixLibelle, trouverOffre } from '@/lib/offres'
 
-const PLANS = [
-  {
-    id: 'pro',
-    name: 'Pro',
-    price: '349',
-    icon: Zap,
-    color: '#E4E9F2',
-    colorLight: '#FFFFFF',
-    bg: 'rgba(228,233,242,0.08)',
-    border: 'rgba(228,233,242,0.25)',
-    features: [
-      'Analyse IA illimitée',
-      'Matrice de conformité automatique',
-      'Checklist candidature',
-      'Génération mémoire technique IA',
-      'Export Word (.docx)',
-      'Coffre-fort documentaire',
-      '5 projets simultanés',
-    ],
-  },
-  {
-    id: 'business',
-    name: 'Business',
-    price: '599',
-    icon: Crown,
-    color: '#F4F6FA',
-    colorLight: '#9BA4B5',
-    bg: 'rgba(0,0,0,0.45)',
-    border: 'rgba(186,205,234,0.23)',
-    popular: true,
-    features: [
-      'Tout le plan Pro, plus :',
-      'Projets illimités',
-      'Templates de mémoire personnalisés',
-      'Multi-utilisateurs (5 comptes)',
-      'Scoring IA des offres',
-      'Support prioritaire',
-      'Historique complet des AO',
-    ],
-  },
-] as const
-
-const PLAN_BADGES: Record<string, { label: string; color: string; bg: string; border: string }> = {
-  pro:      { label: 'Pro',      color: '#E4E9F2', bg: 'rgba(228,233,242,0.10)',  border: 'rgba(228,233,242,0.25)' },
-  business: { label: 'Business', color: '#F4F6FA', bg: 'rgba(0,0,0,0.45)', border: 'rgba(186,205,234,0.23)' },
-  free:     { label: 'Gratuit',  color: '#9BA4B5', bg: '#1C222D', border: '#1C222D' },
+const PLAN_BADGES: Record<string, { color: string; bg: string; border: string }> = {
+  essentiel: { color: '#E4E9F2', bg: 'rgba(228,233,242,0.10)',  border: 'rgba(228,233,242,0.25)' },
+  pro:       { color: '#E4E9F2', bg: 'rgba(228,233,242,0.10)',  border: 'rgba(228,233,242,0.25)' },
+  business:  { color: '#F4F6FA', bg: 'rgba(0,0,0,0.45)', border: 'rgba(186,205,234,0.23)' },
+  free:      { color: '#9BA4B5', bg: '#1C222D', border: '#1C222D' },
 }
 
 export default function Billing() {
   const { organization, setOrganization } = useAuthStore()
   const plan = organization?.plan ?? 'free'
   const badge = PLAN_BADGES[plan] ?? PLAN_BADGES.free
-  const isPaid = plan === 'pro' || plan === 'business'
+  const offreActive = trouverOffre(plan)
+  const isPaid = offreActive !== undefined
 
   const [searchParams, setSearchParams] = useSearchParams()
   const [showSuccess, setShowSuccess] = useState(false)
   const [successPlan, setSuccessPlan] = useState<string | null>(null)
   const [verifying, setVerifying] = useState(false)
   const [loading, setLoading] = useState<string | null>(null)
+  const [erreur, setErreur] = useState<string | null>(null)
   const [portalLoading, setPortalLoading] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const pollCountRef = useRef(0)
@@ -126,10 +89,13 @@ export default function Billing() {
 
   const handleSubscribe = async (planId: string) => {
     setLoading(planId)
+    setErreur(null)
     try {
       const { data } = await api.post('/stripe/create-checkout-session', { plan: planId })
       window.location.href = data.url
-    } catch {
+    } catch (e) {
+      const detail = (e as { response?: { data?: { detail?: unknown } } }).response?.data?.detail
+      setErreur(typeof detail === 'string' ? detail : "Le paiement n'a pas pu démarrer. Réessayez dans un instant.")
       setLoading(null)
     }
   }
@@ -193,7 +159,7 @@ export default function Billing() {
             </p>
             <p className="text-xs text-ds-text-3 mt-0.5">
               {successPlan
-                ? `Votre plan ${successPlan === 'pro' ? 'Pro' : 'Business'} est maintenant actif.`
+                ? `Votre offre ${nomPlan(successPlan)} est maintenant active.`
                 : 'Votre abonnement est maintenant actif.'}
             </p>
           </div>
@@ -217,11 +183,11 @@ export default function Billing() {
                   className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold"
                   style={{ background: badge.bg, color: badge.color, border: `1px solid ${badge.border}` }}
                 >
-                  {badge.label}
+                  {nomPlan(plan)}
                 </span>
-                {isPaid && (
+                {offreActive && (
                   <span className="text-2xl font-bold text-ds-text">
-                    {plan === 'pro' ? '349€' : '599€'}
+                    {prixLibelle(offreActive)}
                     <span className="text-sm font-normal text-ds-text-3">/mois HT</span>
                   </span>
                 )}
@@ -274,75 +240,28 @@ export default function Billing() {
             style={{ borderBottom: '1px solid rgba(228,233,242,0.08)', background: 'rgba(228,233,242,0.02)' }}
           >
             <Sparkles size={15} className="text-ds-cyan" />
-            <h2 className="text-sm font-semibold text-ds-text">Choisir un plan</h2>
+            <h2 className="text-sm font-semibold text-ds-text">Choisir une offre</h2>
           </div>
-          <div className="grid grid-cols-2 gap-4 px-6 py-6">
-            {PLANS.map((p) => {
-              const Icon = p.icon
-              const isLoading = loading === p.id
-              return (
-                <div
-                  key={p.id}
-                  className="relative flex flex-col rounded-2xl p-5 transition-all duration-300 hover:scale-[1.02]"
-                  style={{
-                    background: p.bg,
-                    border: `1px solid ${p.border}`,
-                    boxShadow: `0 0 24px ${p.bg}`,
-                  }}
+          <div className="px-6 py-6">
+            <GrilleOffres
+              compacte
+              action={(offre) => (
+                <button
+                  onClick={() => handleSubscribe(offre.id)}
+                  disabled={loading === offre.id}
+                  className="edge-cta w-full py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
                 >
-                  {'popular' in p && p.popular && (
-                    <span
-                      className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-xs font-semibold px-3 py-0.5 rounded-full"
-                      style={{
-                        background: '#E4E9F2',
-                        color: '#0A0C11',
-                        boxShadow: '0 8px 24px -12px rgba(228,233,242,0.55)',
-                      }}
-                    >
-                      Populaire
-                    </span>
+                  {loading === offre.id ? (
+                    <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  ) : (
+                    <>S'abonner <ArrowRight size={14} /></>
                   )}
-
-                  <div className="flex items-center gap-2 mb-3">
-                    <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center"
-                      style={{ background: `${p.color}20`, border: `1px solid ${p.color}40` }}
-                    >
-                      <Icon size={16} style={{ color: p.color }} />
-                    </div>
-                    <span className="text-sm font-semibold" style={{ color: p.colorLight }}>
-                      {p.name}
-                    </span>
-                  </div>
-
-                  <div className="mb-4">
-                    <span className="text-3xl font-bold text-ds-text">{p.price}€</span>
-                    <span className="text-sm text-ds-text-3">/mois HT</span>
-                  </div>
-
-                  <ul className="space-y-2 mb-5 flex-1">
-                    {p.features.map((feat, i) => (
-                      <li key={i} className="flex items-start gap-2 text-xs">
-                        <Check size={12} className="shrink-0 mt-0.5" style={{ color: p.color }} />
-                        <span className="text-ds-text-2">{feat}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <button
-                    onClick={() => handleSubscribe(p.id)}
-                    disabled={isLoading}
-                    className="edge-cta w-full py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
-                  >
-                    {isLoading ? (
-                      <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                    ) : (
-                      <>S'abonner <ArrowRight size={14} /></>
-                    )}
-                  </button>
-                </div>
-              )
-            })}
+                </button>
+              )}
+            />
+            {erreur && (
+              <p role="alert" className="mt-3 text-sm text-center" style={{ color: '#F5C26B' }}>{erreur}</p>
+            )}
           </div>
           <div className="text-center px-6 pb-5">
             <p className="text-xs text-ds-text-3">

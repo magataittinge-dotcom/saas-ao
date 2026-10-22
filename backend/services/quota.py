@@ -3,12 +3,15 @@ Quotas mensuels (C1) — compteurs + enforcement.
 
 Unité produit : 1 analyse = 1 unité ; 1 mémoire (par lot généré) = 1 unité.
 
-Limites par plan (PRD v3.0) :
-  • free     : 1 AO d'essai offert à la création — 1 analyse + 1 mémoire, À VIE
-               (pas de fenêtre mensuelle : l'essai ne se recharge pas).
-  • pro      : 40 analyses + 40 mémoires par mois (fenêtre ancrée sur la date
-               d'abonnement). Dépassement → blocage doux 402 + upgrade.
-  • business : illimité (fair-use) — jamais bloqué.
+Limites par offre (grille du 2026-10-22 — mêmes chiffres que
+frontend/src/lib/offres.ts, vérifiés par frontend/tests/offres.test.tsx) :
+  • free      : 1 AO d'essai offert à la création — 1 analyse + 1 mémoire, À VIE
+                (pas de fenêtre mensuelle : l'essai ne se recharge pas).
+  • essentiel : 5 analyses + 5 mémoires par mois.
+  • pro       : 40 analyses + 40 mémoires par mois.
+    (fenêtre mensuelle ancrée sur la date d'abonnement ; dépassement →
+    blocage doux 402 + invitation à changer d'offre.)
+  • business  : illimité (usage raisonnable) — jamais bloqué.
 
 Le décompte s'appuie sur le journal QuotaConsumption : compter = filtrer la
 fenêtre courante ; le « reset mensuel » n'est donc jamais un job à exécuter.
@@ -41,21 +44,30 @@ def advisory_org_lock(db: Session, org_id: str) -> None:
 # limit None = illimité ; monthly False = décompte à vie (essai free)
 PLAN_LIMITS: dict = {
     "free": {"analysis": 1, "memoire": 1, "monthly": False},
+    "essentiel": {"analysis": 5, "memoire": 5, "monthly": True},
     "pro": {"analysis": 40, "memoire": 40, "monthly": True},
     "business": {"analysis": None, "memoire": None, "monthly": True},
 }
 
-_UPGRADE_MESSAGES = {
-    "free": (
-        "Votre AO d'essai gratuit est utilisé. "
-        "Passez au plan Pro (40 analyses + 40 mémoires/mois) pour continuer."
-    ),
-    "pro": (
-        "Quota mensuel atteint ({used}/{limit} {label}). "
-        "Passez au plan Business (illimité) ou attendez le renouvellement "
-        "de votre période le {reset_date}."
-    ),
-}
+_NOMS_OFFRES = {"essentiel": "Essentiel", "pro": "Pro", "business": "Business"}
+
+
+def _quota_offre(plan: str) -> str:
+    limits = PLAN_LIMITS[plan]
+    if limits["analysis"] is None:
+        return "illimité"
+    return f"{limits['analysis']} analyses + {limits['memoire']} mémoires/mois"
+
+
+def upgrade_invitation(plan: str) -> str:
+    """Invitation à changer d'offre quand le quota est atteint (402). Les
+    chiffres viennent de PLAN_LIMITS : le message dit ce qui est appliqué."""
+    if plan in ("essentiel", "pro"):
+        superieures = ["pro", "business"] if plan == "essentiel" else ["business"]
+        offres = " ou ".join(f"{_NOMS_OFFRES[o]} ({_quota_offre(o)})" for o in superieures)
+        return f"Passez à l'offre {offres}"
+    offres = ", ".join(f"{_NOMS_OFFRES[o]} ({_quota_offre(o)})" for o in ("essentiel", "pro"))
+    return f"Choisissez une offre pour continuer : {offres} ou Business ({_quota_offre('business')})."
 
 _KIND_LABELS = {"analysis": "analyses", "memoire": "mémoires"}
 
@@ -137,16 +149,14 @@ def check_quota(db: Session, org: Organization, kind: str) -> None:
     plan = org.plan or "free"
     if plan == "free":
         if getattr(org, "trial_granted", True) is False:
-            detail = (
-                "L'essai gratuit a déjà été utilisé pour ce SIRET. "
-                "Passez au plan Pro (40 analyses + 40 mémoires/mois) pour continuer."
-            )
+            detail = "L'essai gratuit a déjà été utilisé pour ce SIRET. " + upgrade_invitation("free")
         else:
-            detail = _UPGRADE_MESSAGES["free"]
+            detail = "Votre AO d'essai gratuit est utilisé. " + upgrade_invitation("free")
     else:
-        detail = _UPGRADE_MESSAGES["pro"].format(
-            used=used, limit=limit, label=_KIND_LABELS[kind],
-            reset_date=_next_reset(_quota_anchor(org)).strftime("%d/%m/%Y"),
+        reset_date = _next_reset(_quota_anchor(org)).strftime("%d/%m/%Y")
+        detail = (
+            f"Quota mensuel atteint ({used}/{limit} {_KIND_LABELS[kind]}). "
+            f"{upgrade_invitation(plan)} ou attendez le renouvellement de votre période le {reset_date}."
         )
     raise HTTPException(status_code=402, detail=detail)
 

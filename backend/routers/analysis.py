@@ -93,13 +93,13 @@ async def trigger_analysis(
             detail = (
                 f"Quota insuffisant : {len(lot_specs)} lot(s) demandés, "
                 f"{remaining} analyse(s) restante(s) sur votre essai gratuit. "
-                "Passez au plan Pro (40 analyses + 40 mémoires/mois) pour continuer."
+                + quota.upgrade_invitation("free")
             )
         else:
             detail = (
                 f"Quota insuffisant : {len(lot_specs)} lot(s) demandés, "
                 f"{remaining} analyse(s) restante(s) ce mois. "
-                "Passez au plan Business (illimité) ou attendez le renouvellement de votre période."
+                f"{quota.upgrade_invitation(org.plan)} ou attendez le renouvellement de votre période."
             )
         raise HTTPException(status_code=402, detail=detail)
 

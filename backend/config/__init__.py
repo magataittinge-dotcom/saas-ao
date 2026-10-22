@@ -44,6 +44,9 @@ class Settings(BaseSettings):
     # Stripe
     STRIPE_SECRET_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
+    # Produit Stripe de l'offre Essentiel (prod_…), créé hors code. Vide = offre
+    # affichée mais pas encore ouverte au paiement en ligne (503 explicite).
+    STRIPE_PRODUCT_ESSENTIEL: str = ""
 
     # Google Maps Static API
     GOOGLE_MAPS_API_KEY: str = ""

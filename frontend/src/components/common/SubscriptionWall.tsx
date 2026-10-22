@@ -1,55 +1,14 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
-import { X, Sparkles, Zap, Crown, Check } from 'lucide-react'
+import { X, Sparkles } from 'lucide-react'
 import { api } from '@/services/api'
+import GrilleOffres from '@/components/offres/GrilleOffres'
 
 interface Props {
   open: boolean
   onClose: () => void
   feature?: 'analysis' | 'memoire'
 }
-
-const PLANS = [
-  {
-    id: 'pro',
-    name: 'Pro',
-    price: '349',
-    icon: Zap,
-    color: '#E4E9F2',
-    colorLight: '#FFFFFF',
-    bg: 'rgba(228,233,242,0.08)',
-    border: 'rgba(228,233,242,0.25)',
-    features: [
-      'Analyse IA illimitée',
-      'Matrice de conformité automatique',
-      'Checklist candidature',
-      'Génération mémoire technique IA',
-      'Export Word (.docx)',
-      'Coffre-fort documentaire',
-      '5 projets simultanés',
-    ],
-  },
-  {
-    id: 'business',
-    name: 'Business',
-    price: '599',
-    icon: Crown,
-    color: '#F4F6FA',
-    colorLight: '#9BA4B5',
-    bg: 'rgba(0,0,0,0.45)',
-    border: 'rgba(186,205,234,0.23)',
-    popular: true,
-    features: [
-      'Tout le plan Pro, plus :',
-      'Projets illimités',
-      'Templates de mémoire personnalisés',
-      'Multi-utilisateurs (5 comptes)',
-      'Scoring IA des offres',
-      'Support prioritaire',
-      'Historique complet des AO',
-    ],
-  },
-] as const
 
 const FEATURE_LABELS: Record<string, string> = {
   analysis: "L'analyse IA de votre DCE",
@@ -58,13 +17,17 @@ const FEATURE_LABELS: Record<string, string> = {
 
 export default function SubscriptionWall({ open, onClose, feature = 'analysis' }: Props) {
   const [loading, setLoading] = useState<string | null>(null)
+  const [erreur, setErreur] = useState<string | null>(null)
 
   const handleSubscribe = async (planId: string) => {
     setLoading(planId)
+    setErreur(null)
     try {
       const { data } = await api.post('/stripe/create-checkout-session', { plan: planId })
       window.location.href = data.url
-    } catch {
+    } catch (e) {
+      const detail = (e as { response?: { data?: { detail?: unknown } } }).response?.data?.detail
+      setErreur(typeof detail === 'string' ? detail : "Le paiement n'a pas pu démarrer. Réessayez dans un instant.")
       setLoading(null)
     }
   }
@@ -103,7 +66,7 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis' }
 
       {/* Modal */}
       <div
-        className="relative w-full max-w-2xl animate-fade-in"
+        className="relative w-full max-w-3xl animate-fade-in overflow-y-auto"
         style={{
           background: 'var(--edge-panel-light), var(--edge-panel)',
           backdropFilter: 'blur(32px) saturate(140%)',
@@ -137,78 +100,32 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis' }
             Passez au niveau supérieur
           </h2>
           <p className="text-sm text-ds-text-2 mt-1.5 max-w-md mx-auto">
-            {FEATURE_LABELS[feature] ?? 'Cette fonctionnalité'} nécessite un abonnement actif.
-            Choisissez le plan adapté à votre activité.
+            {FEATURE_LABELS[feature] ?? 'Cette fonctionnalité'} demande une offre active.
+            Choisissez celle qui suit votre rythme.
           </p>
         </div>
 
-        {/* Plans */}
-        <div className="grid grid-cols-2 gap-4 px-6 py-5">
-          {PLANS.map((plan) => {
-            const Icon = plan.icon
-            return (
-              <div
-                key={plan.id}
-                className="relative flex flex-col rounded-2xl p-4 transition-all duration-300 hover:scale-[1.02]"
-                style={{
-                  background: plan.bg,
-                  border: `1px solid ${plan.border}`,
-                  boxShadow: `0 0 24px ${plan.bg}`,
-                }}
+        {/* Offres — la grille unique (lib/offres.ts) */}
+        <div className="px-6 py-5">
+          <GrilleOffres
+            compacte
+            action={(offre) => (
+              <button
+                onClick={() => handleSubscribe(offre.id)}
+                disabled={loading === offre.id}
+                className="edge-cta w-full py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
               >
-                {'popular' in plan && plan.popular && (
-                  <span
-                    className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-xs font-semibold px-3 py-0.5 rounded-full"
-                    style={{
-                      background: '#E4E9F2',
-                      color: '#0A0C11',
-                      boxShadow: '0 8px 24px -12px rgba(228,233,242,0.55)',
-                    }}
-                  >
-                    Populaire
-                  </span>
+                {loading === offre.id ? (
+                  <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                ) : (
+                  `Choisir ${offre.nom}`
                 )}
-
-                <div className="flex items-center gap-2 mb-2">
-                  <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center"
-                    style={{ background: `${plan.color}20`, border: `1px solid ${plan.color}40` }}
-                  >
-                    <Icon size={16} style={{ color: plan.color }} />
-                  </div>
-                  <span className="text-sm font-semibold" style={{ color: plan.colorLight }}>
-                    {plan.name}
-                  </span>
-                </div>
-
-                <div className="mb-3">
-                  <span className="edge-data text-3xl font-bold text-ds-text">{plan.price}€</span>
-                  <span className="text-sm text-ds-text-3">/mois HT</span>
-                </div>
-
-                <ul className="space-y-1.5 mb-4 flex-1">
-                  {plan.features.map((feat, i) => (
-                    <li key={i} className="flex items-start gap-2 text-xs">
-                      <Check size={12} className="shrink-0 mt-0.5" style={{ color: plan.color }} />
-                      <span className="text-ds-text-2">{feat}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <button
-                  onClick={() => handleSubscribe(plan.id)}
-                  disabled={loading === plan.id}
-                  className="edge-cta w-full py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
-                >
-                  {loading === plan.id ? (
-                    <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                  ) : (
-                    `Choisir ${plan.name}`
-                  )}
-                </button>
-              </div>
-            )
-          })}
+              </button>
+            )}
+          />
+          {erreur && (
+            <p role="alert" className="mt-3 text-sm text-center" style={{ color: '#F5C26B' }}>{erreur}</p>
+          )}
         </div>
 
         {/* Footer */}

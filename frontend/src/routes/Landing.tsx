@@ -2,9 +2,10 @@ import { useState, useCallback, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import {
-  Search, FileText, Layers, Shield, Download, ArrowRight, Check,
-  Menu, X, Star, Play,
+  Search, FileText, Layers, Shield, Download, ArrowRight,
+  Menu, X, Play,
 } from 'lucide-react'
+import GrilleOffres from '@/components/offres/GrilleOffres'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    LANDING PAGE — Synorix
@@ -86,8 +87,8 @@ const KEYFRAMES = `
 // ── Floating feature pills data ──────────────────────────────────────────
 const FLOATING_PILLS = [
   { label: 'Analyse DCE', top: '20%', left: '8%', right: undefined, anim: 'float-pill', dur: '4s', delay: '0s' },
-  { label: 'Mémoire 5/5', top: '14%', left: undefined, right: '12%', anim: 'float-pill-2', dur: '3.5s', delay: '0.5s' },
-  { label: '62 exigences', top: undefined, left: '12%', right: undefined, anim: 'float-pill', dur: '5s', delay: '1s', bottom: '34%' },
+  { label: 'Mémoire technique', top: '14%', left: undefined, right: '12%', anim: 'float-pill-2', dur: '3.5s', delay: '0.5s' },
+  { label: 'Exigences sourcées', top: undefined, left: '12%', right: undefined, anim: 'float-pill', dur: '5s', delay: '1s', bottom: '34%' },
   { label: 'Détection lots', top: undefined, left: undefined, right: '9%', anim: 'float-pill-2', dur: '4.5s', delay: '0.3s', bottom: '28%' },
 ]
 
@@ -101,49 +102,19 @@ const HOW_TABS = [
   {
     id: 'analyse', num: '2', title: 'Analyse',
     desc: "L'IA analyse chaque document en multi-pass : extraction des exigences, détection des lots, critères de jugement, conditions financières. Source et page référencées.",
-    mock: ['62 exigences détectées', 'Conformité: 94%', 'Prix: 40% / Technique: 60%', 'Délai: J-14'],
+    mock: ['62 exigences détectées', 'Chaque exigence avec sa page', 'Prix: 40% / Technique: 60%', 'Délai: J-14'],
   },
   {
     id: 'memoire', num: '3', title: 'Mémoire',
-    desc: 'Claude Opus génère un mémoire technique complet (~20 pages) adapté à votre entreprise, vos références, et chaque critère de notation du marché.',
-    mock: ['Partie A — Présentation', 'Partie B — Prestation', 'Partie C — Méthodologie', 'Scoring: 18.5/20'],
+    desc: 'Synorix rédige un mémoire technique complet (~20 pages) adapté à votre entreprise, vos références, et chaque critère de notation du marché.',
+    mock: ['Partie A — Présentation', 'Partie B — Prestation', 'Partie C — Méthodologie', 'Export Word et PDF'],
   },
   {
     id: 'export', num: '4', title: 'Export',
-    desc: 'Téléchargez le mémoire en .docx, la matrice de conformité Excel, et le dossier complet en ZIP. Prêt à déposer sur la plateforme de l\'acheteur.',
-    mock: ['Mémoire.docx ✓', 'Compliance.xlsx ✓', 'Checklist: 12/12', 'ZIP final prêt'],
+    desc: 'Téléchargez le mémoire en Word ou en PDF, et le dossier complet en ZIP, dans l\'ordre du RC. Prêt à déposer sur la plateforme de l\'acheteur.',
+    mock: ['Mémoire.docx ✓', 'Mémoire.pdf ✓', 'Checklist: 12/12', 'ZIP final prêt'],
   },
 ]
-
-// ── Pricing ──────────────────────────────────────────────────────────────
-const PLANS = [
-  {
-    name: 'Pro', price: '149', popular: false,
-    features: ['Analyse IA illimitée', 'Matrice de conformité', 'Checklist candidature', 'Mémoire technique IA', 'Export Word (.docx)', 'Coffre-fort documentaire', '5 projets simultanés'],
-  },
-  {
-    name: 'Business', price: '349', popular: true,
-    features: ['Tout le plan Pro, plus :', 'Projets illimités', 'Templates personnalisés', 'Multi-utilisateurs (5)', 'Scoring IA des offres', 'Support prioritaire', 'Historique complet'],
-  },
-]
-
-// ── Testimonials ─────────────────────────────────────────────────────────
-const TESTIMONIALS = [
-  { quote: "On a divisé par 3 le temps de réponse aux AO. Le mémoire généré était meilleur que ce qu'on faisait à la main.", name: 'Karim B.', role: 'Directeur commercial', company: 'OZDEM BAT' },
-  { quote: "L'analyse DCE détecte des exigences qu'on ratait systématiquement. On n'a plus de mauvaises surprises à l'ouverture des plis.", name: 'Sophie M.', role: 'Responsable marchés', company: 'Plurial Novilia' },
-  { quote: "Le coffre-fort documentaire et la checklist nous font gagner un temps fou sur la partie administrative.", name: 'Jean-Marc L.', role: 'Gérant', company: 'Sionneau SAS' },
-]
-
-// ── Stats ────────────────────────────────────────────────────────────────
-const STATS = [
-  { value: '60+', label: 'exigences détectées', color: '#E4E9F2' },
-  { value: '10 min', label: 'par mémoire technique', color: '#FFFFFF' },
-  { value: '13', label: 'lots auto-détectés', color: '#E4E9F2' },
-  { value: '5/5', label: 'note technique visée', color: '#9BA4B5' },
-]
-
-// ── Logo clients ─────────────────────────────────────────────────────────
-const CLIENTS = ['Plurial Novilia', 'OZDEM BAT', 'Sionneau', 'CARISO FACADE', 'Reims Habitat']
 
 // ═══════════════════════════════════════════════════════════════════════════
 // COMPONENT
@@ -362,7 +333,7 @@ export default function Landing() {
             className="text-base sm:text-lg text-[#788295] max-w-2xl mx-auto mb-10 leading-relaxed"
             style={{ animation: 'fade-up 0.6s ease-out 0.2s both' }}
           >
-            Synorix analyse vos DCE, détecte chaque exigence, et génère des mémoires techniques notés 5/5. En 10 minutes.
+            Synorix analyse vos DCE, détecte chaque exigence avec sa source, et rédige votre mémoire technique.
           </p>
 
           {/* CTA buttons */}
@@ -394,24 +365,6 @@ export default function Landing() {
             </button>
           </div>
 
-          {/* Social proof */}
-          <div
-            className="flex items-center gap-3 text-sm text-[#9BA4B5]"
-            style={{ animation: 'fade-up 0.6s ease-out 0.4s both' }}
-          >
-            <div className="flex -space-x-2">
-              {[0, 1, 2, 3, 4].map(i => (
-                <div
-                  key={i}
-                  className="w-7 h-7 rounded-full border-2 border-[#0A0C11] flex items-center justify-center text-[9px] font-bold text-white"
-                  style={{ background: `linear-gradient(135deg, ${i % 2 === 0 ? '#E4E9F2' : '#FFFFFF'}, ${i % 2 === 0 ? '#FFFFFF' : '#E4E9F2'})` }}
-                >
-                  {['KB', 'SM', 'JL', 'AR', 'MC'][i]}
-                </div>
-              ))}
-            </div>
-            <span>Utilisé par <strong className="text-[#788295]">+50 entreprises BTP</strong></span>
-          </div>
         </div>
 
         {/* ── Dashboard mockup ── */}
@@ -477,28 +430,6 @@ export default function Landing() {
                 ))}
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════════════════════════════════
-          LOGOS CLIENTS
-          ════════════════════════════════════════════════════════════════ */}
-      <section className="py-12 border-y border-white/[0.04] overflow-hidden">
-        <p className="text-center text-xs text-[#9BA4B5] uppercase tracking-[0.15em] mb-8 font-medium">
-          Ils nous font confiance
-        </p>
-        <div className="relative overflow-hidden" style={{ maskImage: 'linear-gradient(90deg, transparent, black 15%, black 85%, transparent)' }}>
-          <div className="flex whitespace-nowrap" style={{ animation: 'marquee-scroll 25s linear infinite' }}>
-            {[...CLIENTS, ...CLIENTS].map((name, i) => (
-              <span
-                key={i}
-                className="inline-block text-lg font-semibold text-[#E8EBF2] mx-10 sm:mx-16"
-                style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}
-              >
-                {name}
-              </span>
-            ))}
           </div>
         </div>
       </section>
@@ -586,8 +517,8 @@ export default function Landing() {
                   <FileText size={18} style={{ color: '#E4E9F2' }} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-[#1C222D] mb-1" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Mémoire technique 5/5</h3>
-                  <p className="text-sm text-[#9BA4B5] leading-relaxed">Claude Opus génère ~20 pages adaptées à vos références, votre équipe, et chaque critère de notation du marché.</p>
+                  <h3 className="text-lg font-semibold text-[#1C222D] mb-1" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Mémoire technique</h3>
+                  <p className="text-sm text-[#9BA4B5] leading-relaxed">Synorix rédige ~20 pages adaptées à vos références, votre équipe, et chaque critère de notation du marché.</p>
                 </div>
               </div>
               {/* Mini illustration */}
@@ -611,7 +542,7 @@ export default function Landing() {
                 <Download size={18} style={{ color: '#9BA4B5' }} />
               </div>
               <h3 className="text-base font-semibold text-[#1C222D] mb-2" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Export ZIP pro</h3>
-              <p className="text-sm text-[#9BA4B5] leading-relaxed">Mémoire .docx, compliance Excel, dossier complet. Prêt à déposer en un clic sur la plateforme de l'acheteur.</p>
+              <p className="text-sm text-[#9BA4B5] leading-relaxed">Mémoire Word et PDF, dossier complet en ZIP dans l'ordre du RC. Prêt à déposer sur la plateforme de l'acheteur.</p>
             </div>
           </div>
         </div>
@@ -684,138 +615,24 @@ export default function Landing() {
       </section>
 
       {/* ════════════════════════════════════════════════════════════════
-          STATS
-          ════════════════════════════════════════════════════════════════ */}
-      <section className="py-20 px-4" style={{ background: '#0A0C11' }}>
-        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-          {STATS.map(s => (
-            <div key={s.label}>
-              <div
-                className="text-4xl sm:text-5xl font-bold mb-2"
-                style={{ color: s.color, fontFamily: '"Geist Mono", monospace' }}
-              >
-                {s.value}
-              </div>
-              <div className="text-sm text-[#9BA4B5]">{s.label}</div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════════════════════════════════
           PRICING
           ════════════════════════════════════════════════════════════════ */}
       <section id="pricing" className="py-20 sm:py-28 px-4">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <h2
             className="text-3xl sm:text-4xl font-bold text-center mb-4"
             style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}
           >
-            Des prix simples, un{' '}
+            Des prix simples,{' '}
             <span style={{ background: 'linear-gradient(90deg, #E4E9F2, #FFFFFF)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-              ROI immédiat
+              sans engagement
             </span>
           </h2>
           <p className="text-center text-[#9BA4B5] mb-12">
-            1 AO gratuit pour tester — Sans engagement
+            1 AO gratuit pour tester.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {PLANS.map(plan => (
-              <div
-                key={plan.name}
-                className="rounded-2xl p-8 relative transition-all duration-300"
-                style={{
-                  background: '#0F1218',
-                  border: plan.popular ? '1px solid rgba(228,233,242,0.30)' : '1px solid rgba(186,205,234,.13)',
-                  boxShadow: plan.popular ? '0 0 40px rgba(228,233,242,0.08)' : 'none',
-                }}
-              >
-                {plan.popular && (
-                  <div
-                    className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-xs font-semibold text-white"
-                    style={{ background: 'linear-gradient(135deg, #E4E9F2, #FFFFFF)' }}
-                  >
-                    Populaire
-                  </div>
-                )}
-                <h3
-                  className="text-xl font-bold text-[#1C222D] mb-2"
-                  style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}
-                >
-                  {plan.name}
-                </h3>
-                <div className="flex items-baseline gap-1 mb-6">
-                  <span className="text-4xl font-bold text-white" style={{ fontFamily: '"Geist Mono", monospace' }}>{plan.price}€</span>
-                  <span className="text-sm text-[#9BA4B5]">/mois</span>
-                </div>
-                <ul className="space-y-3 mb-8">
-                  {plan.features.map(f => (
-                    <li key={f} className="flex items-center gap-3 text-sm text-[#788295]">
-                      <Check size={14} style={{ color: '#E4E9F2' }} className="shrink-0" />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <button
-                  onClick={() => navigate('/register')}
-                  className="w-full py-3 rounded-xl text-sm font-semibold transition-all"
-                  style={plan.popular
-                    ? { background: '#E4E9F2', color: 'white', boxShadow: '0 0 30px rgba(228,233,242,0.3)' }
-                    : { background: 'transparent', color: '#5C6678', border: '1px solid rgba(255,255,255,0.15)' }
-                  }
-                  onMouseEnter={e => {
-                    if (plan.popular) e.currentTarget.style.boxShadow = '0 0 40px rgba(228,233,242,0.5)'
-                    else e.currentTarget.style.background = 'rgba(186,205,234,.13)'
-                  }}
-                  onMouseLeave={e => {
-                    if (plan.popular) e.currentTarget.style.boxShadow = '0 0 30px rgba(228,233,242,0.3)'
-                    else e.currentTarget.style.background = 'transparent'
-                  }}
-                >
-                  Commencer
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════════════════════════════════
-          TESTIMONIALS
-          ════════════════════════════════════════════════════════════════ */}
-      <section className="py-20 sm:py-28 px-4" style={{ background: '#0A0C11' }}>
-        <div className="max-w-6xl mx-auto">
-          <h2
-            className="text-3xl sm:text-4xl font-bold text-center mb-14"
-            style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}
-          >
-            Ce qu'en disent nos utilisateurs
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {TESTIMONIALS.map((t, i) => (
-              <div
-                key={i}
-                className="rounded-xl p-6 transition-all duration-300 hover:border-white/[0.12]"
-                style={{
-                  background: 'rgba(255,255,255,0.03)',
-                  backdropFilter: 'blur(12px)',
-                  border: '1px solid rgba(186,205,234,.13)',
-                }}
-              >
-                <div className="flex gap-0.5 mb-4">
-                  {[0, 1, 2, 3, 4].map(s => (
-                    <Star key={s} size={14} fill="#9BA4B5" stroke="none" />
-                  ))}
-                </div>
-                <p className="text-sm text-[#5C6678] leading-relaxed mb-5 italic">"{t.quote}"</p>
-                <div>
-                  <div className="text-sm font-semibold text-[#1C222D]">{t.name}</div>
-                  <div className="text-xs text-[#9BA4B5]">{t.role} · {t.company}</div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <GrilleOffres />
         </div>
       </section>
 
