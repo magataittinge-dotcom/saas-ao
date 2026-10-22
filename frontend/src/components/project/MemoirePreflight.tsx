@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Building2, ListChecks } from 'lucide-react'
 import { api } from '@/services/api'
+import { useAuthStore } from '@/stores/authStore'
 
 // ── Types (miroir de GET /memoire/preflight) ─────────────────────────────────
 
@@ -76,6 +77,7 @@ const inputStyle = { borderColor: '#1E1E21' }
  * par défaut ; la case « Mettre à jour mon profil » les propage.
  */
 export default function MemoirePreflight({ projectId, onChange }: Props) {
+  const plan = useAuthStore((st) => st.organization?.plan ?? 'free')
   const { data } = useQuery<PreflightPayload>({
     queryKey: ['memoire-preflight', projectId],
     queryFn: async () => {
@@ -135,9 +137,15 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
     })
   }
 
+  // 1.10 — quota annoncé selon l'offre (l'essai gratuit est à vie, pas « ce mois »)
+  // et durée mesurée : 930 s (~15,5 min) sur le DCE Gueux, Sonnet 4.6
+  // (docs/comparaison-memoire-AB/RESULTAT.md) — pas de chiffre inventé.
   const quotaLabel = data.quota.limit === null
-    ? 'Consommera 1 mémoire — plan illimité'
-    : `Consommera 1 mémoire — ${data.quota.used}/${data.quota.limit} ce mois`
+    ? 'Consommera 1 mémoire — offre illimitée'
+    : plan === 'free'
+      ? `Consommera 1 mémoire — ${data.quota.used}/${data.quota.limit} sur votre essai`
+      : `Consommera 1 mémoire — ${data.quota.used}/${data.quota.limit} ce mois`
+  const dureeLabel = 'Rédaction : environ 15 minutes'
 
   return (
     <div className="space-y-4">
@@ -295,7 +303,7 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
       )}
 
       {/* ── Rappel quota — sobre, avant de consommer ── */}
-      <p className="text-xs text-right" style={{ color: '#959597' }}>{quotaLabel}</p>
+      <p className="text-xs text-right" style={{ color: '#959597' }}>{quotaLabel} · {dureeLabel}</p>
     </div>
   )
 }

@@ -16,6 +16,8 @@
  *   - phase         : pending / in_progress / complete / error
  *   - title         : optional title above the steps list
  *   - onCancel      : optional → renders a Cancel button
+ *   - onArrierePlan : optional → « Continuer en arrière-plan » (traitement serveur détaché, 1.10)
+ *   - avis          : optional → phrase rassurante sous le détail (1.10)
  */
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -41,6 +43,9 @@ interface Props {
   variant?: Variant
   title?: string
   onCancel?: () => void
+  /** Le traitement continue côté serveur : l'utilisateur peut quitter l'attente. */
+  onArrierePlan?: () => void
+  avis?: string
 }
 
 export default function ProgressDisplay({
@@ -52,6 +57,8 @@ export default function ProgressDisplay({
   variant = 'inline',
   title,
   onCancel,
+  onArrierePlan,
+  avis,
 }: Props) {
   const [displayProgress, setDisplayProgress] = useState(0)
   const targetProgressRef = useRef(0)
@@ -236,6 +243,9 @@ export default function ProgressDisplay({
         >
           {isError ? 'Erreur' : detail || currentStep || ''}
         </p>
+        {avis && !isError && (
+          <p className="text-sm text-ds-text-2 max-w-sm mx-auto">{avis}</p>
+        )}
       </div>
 
       {/* Step list (modal only — too heavy for inline) */}
@@ -299,6 +309,17 @@ export default function ProgressDisplay({
             )
           })}
         </div>
+      )}
+
+      {/* Continuer en arrière-plan : le traitement continue côté serveur (1.10) */}
+      {!showCheck && !isError && onArrierePlan && (
+        <button
+          onClick={onArrierePlan}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 mt-2"
+          style={{ color: '#E8EBF2', background: 'rgba(120,130,149,0.10)', border: '1px solid rgba(120,130,149,0.25)' }}
+        >
+          Continuer en arrière-plan
+        </button>
       )}
 
       {/* Cancel button */}

@@ -282,6 +282,8 @@ export default function StepAnalysis({ project }: Props) {
       progress={analysisSse.progress}
       detail={analysisSse.detail || "L'IA lit vos documents et extrait les exigences"}
       phase={analysisSse.phase}
+      avis="Vous pouvez fermer cette page : Synorix vous prévient par e-mail."
+      onArrierePlan={() => navigate('/dashboard')}
     />
   )
 

@@ -792,6 +792,8 @@ export default function StepMemoire({ project }: Props) {
             progress={memoireSse.progress}
             detail={memoireSse.detail || 'Préparation du contexte…'}
             phase={memoireSse.phase}
+            avis="Vous pouvez fermer cette page : Synorix vous prévient par e-mail."
+            onArrierePlan={() => navigate('/dashboard')}
           />
         )}
 
@@ -1024,6 +1026,8 @@ export default function StepMemoire({ project }: Props) {
           progress={memoireSse.progress}
           detail={memoireSse.detail || 'Préparation du contexte…'}
           phase={memoireSse.phase}
+          avis="Vous pouvez fermer cette page : Synorix vous prévient par e-mail."
+          onArrierePlan={() => navigate('/dashboard')}
         />
       )}
 
