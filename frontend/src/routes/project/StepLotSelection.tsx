@@ -172,7 +172,7 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) 
         type="button"
         onClick={onSelect}
         className={cn(
-          'w-full flex items-center gap-4 px-4 py-3.5 rounded-xl text-left transition-all duration-200 cursor-pointer',
+          'w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-left transition-all duration-200 cursor-pointer',
           selected ? '' : 'bg-ds-bg-3 hover:bg-ds-bg-elevated',
         )}
         style={{
@@ -740,9 +740,9 @@ export default function StepLotSelection({ project }: Props) {
         )}
 
         {/* ── TITLE + BADGE ───────────────────────────────── */}
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
           <div className="flex items-center gap-3 flex-wrap">
-            <h2 className="font-display tracking-tight text-2xl font-bold" style={{ color: '#F7F8F8' }}>
+            <h2 className="font-display tracking-tight text-xl font-bold" style={{ color: '#F7F8F8' }}>
               Sélection du lot à analyser
             </h2>
             {lots.length > 0 && (
@@ -758,7 +758,7 @@ export default function StepLotSelection({ project }: Props) {
         </div>
 
         {/* ── Consigne — une ligne, pas un pavé ───────────── */}
-        <p className="mb-5 flex items-center gap-2 text-sm" style={{ color: '#959597' }}>
+        <p className="mb-4 flex items-center gap-2 text-sm" style={{ color: '#959597' }}>
           <Zap size={14} className="shrink-0" style={{ color: '#E8E9EB' }} />
           {hasMultiLots
             ? 'Sélectionnez le lot sur lequel votre entreprise répond — l’analyse de conformité se lance ensuite.'
@@ -785,7 +785,7 @@ export default function StepLotSelection({ project }: Props) {
 
         {/* ── LOT LIST ────────────────────────────────────── */}
         {lots.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {/* All lots option */}
             <LotCard
               lot={{ id: 'all', nom: "Analyser l'ensemble du DCE (tous les lots)" }}

@@ -81,7 +81,7 @@ export default function Project() {
       {/* Sticky stepper — fin, une seule lumière */}
       <div
         className={cn(
-          'sticky top-0 z-20 glass-card px-5 py-3.5 mb-6 transition-all duration-200',
+          'sticky top-0 z-20 glass-card px-4 py-2.5 mb-5 transition-all duration-200',
           stepperStuck && 'rounded-none -mx-6 px-12',
         )}
         style={stepperStuck ? { background: 'rgba(18,18,19,0.92)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', borderBottom: '1px solid var(--line)', boxShadow: '0 8px 24px rgba(0,0,0,.4)' } : undefined}

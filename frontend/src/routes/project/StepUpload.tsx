@@ -543,7 +543,7 @@ export default function StepUpload({ project }: Props) {
 
         {/* ── FILES TABLE ─────────────────────────────────── */}
         {hasDocuments && (
-          <div className="mt-6">
+          <div className="mt-5">
             <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
               <div>
                 <h3 className="text-[15px] font-semibold" style={{ color: '#F7F8F8' }}>Documents du DCE</h3>
@@ -586,7 +586,7 @@ export default function StepUpload({ project }: Props) {
                 return (
                   <div
                     key={doc.id}
-                    className="grid items-center gap-3 px-5 py-3 transition-colors hover:bg-ds-bg-2"
+                    className="grid items-center gap-3 px-5 py-2.5 transition-colors hover:bg-ds-bg-2"
                     style={{
                       borderBottom: i < documents.length - 1 ? '1px solid var(--line)' : 'none',
                       gridTemplateColumns: '2fr 80px 130px 40px',

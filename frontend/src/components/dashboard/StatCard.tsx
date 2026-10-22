@@ -66,7 +66,7 @@ export function StatCard({ icon: Icon, label, value, suffix = '', ring, delay = 
   return (
     <div
       className={cn(
-        'glass-card top-lit sheen group relative overflow-hidden p-5 animate-fade-in',
+        'glass-card top-lit sheen group relative overflow-hidden p-4 animate-fade-in',
         'transition-transform duration-200 ease-smooth hover:-translate-y-0.5',
         className,
       )}
@@ -103,7 +103,7 @@ export function StatCard({ icon: Icon, label, value, suffix = '', ring, delay = 
       </div>
 
       {/* chiffre argenté — le reflet métallique du visage (T3.5) */}
-      <p className="edge-data mt-3 bg-gradient-silver-text bg-clip-text text-3xl font-bold tabular-nums text-transparent">
+      <p className="edge-data mt-2.5 bg-gradient-silver-text bg-clip-text text-3xl font-bold tabular-nums text-transparent">
         {count}{suffix}
       </p>
       <p className="mt-0.5 text-sm text-ds-text-2">{label}</p>

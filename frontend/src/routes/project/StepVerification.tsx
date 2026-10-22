@@ -220,7 +220,7 @@ export default function StepVerification({ project }: Props) {
   // ── Render ──────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-5 pb-20" style={{ fontFamily: F }}>
+    <div className="space-y-3 pb-20" style={{ fontFamily: F }}>
 
       {/* Title bar */}
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -366,7 +366,7 @@ function WorkflowSection({
       className="glass-card rounded-lg overflow-hidden"
       style={{ border: '1px solid rgba(255,255,255,.07)', boxShadow: '0 1px 3px rgba(0,0,0,.4)', fontFamily: F }}
     >
-      <header className="flex items-center gap-3 px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
+      <header className="flex items-center gap-3 px-5 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
         <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(217,164,65,0.10)' }}>
           <FileSpreadsheet size={18} style={{ color: '#D9A441' }} />
         </div>
@@ -404,7 +404,7 @@ function WorkflowRow({
   }
 
   return (
-    <li className="flex items-center gap-3 px-6 py-3 flex-wrap" style={{ borderTop: '1px solid rgba(255,255,255,.07)' }}>
+    <li className="flex items-center gap-3 px-5 py-2.5 flex-wrap" style={{ borderTop: '1px solid rgba(255,255,255,.07)' }}>
       <FileSpreadsheet size={15} style={{ color: '#D9A441' }} className="shrink-0" />
       <div className="flex-1 min-w-[200px]">
         <p className="text-sm" style={{ color: '#D8D9DB' }}>{item.details}</p>
@@ -462,7 +462,7 @@ function SynorixJalonSection({ items }: { items: ChecklistItem[] }) {
       className="glass-card rounded-lg overflow-hidden"
       style={{ border: '1px solid rgba(255,255,255,.07)', boxShadow: '0 1px 3px rgba(0,0,0,.4)', fontFamily: F }}
     >
-      <header className="flex items-center gap-3 px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
+      <header className="flex items-center gap-3 px-5 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
         <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(255,255,255,0.08)' }}>
           <Sparkles size={18} style={{ color: '#E8E9EB' }} />
         </div>
@@ -475,7 +475,7 @@ function SynorixJalonSection({ items }: { items: ChecklistItem[] }) {
       </header>
       <ul>
         {items.map((i) => (
-          <li key={i.id} className="flex items-center gap-3 px-6 py-3" style={{ borderTop: '1px solid rgba(255,255,255,.07)' }}>
+          <li key={i.id} className="flex items-center gap-3 px-5 py-2.5" style={{ borderTop: '1px solid rgba(255,255,255,.07)' }}>
             <Sparkles size={15} style={{ color: '#E8E9EB' }} className="shrink-0" />
             <span className="text-sm flex-1 min-w-0" style={{ color: '#D8D9DB' }}>{i.details}</span>
             {i.lot && (

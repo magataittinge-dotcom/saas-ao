@@ -334,36 +334,7 @@ export default function StepAnalysis({ project }: Props) {
   // ── Main render ───────────────────────────────────────────────
 
   return (
-    <div className="space-y-4 pb-20" style={{ fontFamily: F }}>
-
-      {/* ── LIGNE 1 : Title | Doc count ─────────────────────────── */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <h1 className="font-display tracking-tight text-xl font-bold" style={{ color: '#F7F8F8' }}>
-            Analyse du dossier
-          </h1>
-        </div>
-
-        <div className="edge-data flex items-center gap-2 text-xs" style={{ color: '#959597' }}>
-          {lotFilterInfo ? (
-            <>
-              <span>
-                <span className="font-semibold" style={{ color: '#F7F8F8' }}>{lotFilterInfo.included.length}</span>
-                /{lotTotal} docs analysés
-              </span>
-              <button
-                onClick={() => setShowLotDetails(v => !v)}
-                className="font-medium hover:underline"
-                style={{ color: '#E8E9EB' }}
-              >
-                {showLotDetails ? 'Masquer' : 'Détails'}
-              </button>
-            </>
-          ) : (
-            <span className="font-medium">{items.length} exigences</span>
-          )}
-        </div>
-      </div>
+    <div className="space-y-3 pb-20" style={{ fontFamily: F }}>
 
       {/* ── Lot details (expanded inline) ───────────────────────── */}
       {showLotDetails && lotFilterInfo && (
@@ -386,14 +357,33 @@ export default function StepAnalysis({ project }: Props) {
         </div>
       )}
 
-      {/* ── HÉROS DE SYNTHÈSE — le fait, puis le contexte ───────── */}
-      <div className="glass-card top-lit blueprint-grid sheen relative overflow-hidden px-6 py-5">
-        <div className="relative flex flex-wrap items-start justify-between gap-x-8 gap-y-5">
+      {/* ── HÉROS DE SYNTHÈSE — grille rigide : le fait à gauche, la boussole à droite ── */}
+      <div className="glass-card top-lit blueprint-grid sheen relative overflow-hidden px-5 py-4">
+        <div className="relative grid items-start gap-x-10 gap-y-4 lg:grid-cols-[minmax(0,1fr)_260px]">
           {/* Le résultat de l'analyse, en chiffres */}
           <div className="min-w-0">
-            <p className="microlabel mb-2.5">
-              Analyse terminée{project.selected_lot_name ? ` — ${project.selected_lot_name}` : ''}
-            </p>
+            <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
+              <p className="microlabel">
+                Analyse terminée{project.selected_lot_name ? ` — ${project.selected_lot_name}` : ''}
+              </p>
+              <span className="edge-data flex items-center gap-2 text-xs" style={{ color: '#959597' }}>
+                {lotFilterInfo ? (
+                  <>
+                    <span>
+                      <span className="font-semibold" style={{ color: '#F7F8F8' }}>{lotFilterInfo.included.length}</span>
+                      /{lotTotal} docs analysés
+                    </span>
+                    <button
+                      onClick={() => setShowLotDetails(v => !v)}
+                      className="font-medium hover:underline"
+                      style={{ color: '#E8E9EB' }}
+                    >
+                      {showLotDetails ? 'Masquer' : 'Détails'}
+                    </button>
+                  </>
+                ) : null}
+              </span>
+            </div>
             <div className="flex flex-wrap items-end gap-3">
               <span className="num-mono bg-gradient-silver-text bg-clip-text text-5xl font-bold leading-none text-transparent">
                 {items.length}
@@ -407,12 +397,12 @@ export default function StepAnalysis({ project }: Props) {
               </div>
             </div>
             {infos?.objet && (
-              <p className="mt-4 max-w-xl text-sm font-medium leading-snug" style={{ color: '#D8D9DB' }}>
+              <p className="mt-3.5 max-w-2xl text-sm font-medium leading-snug" style={{ color: '#D8D9DB' }}>
                 {infos.objet}
               </p>
             )}
             {(infos?.maitre_ouvrage || infos?.maitre_oeuvre) && (
-              <p className="mt-1.5 text-xs leading-relaxed" style={{ color: '#6B6C6F' }}>
+              <p className="mt-1.5 max-w-2xl text-xs leading-relaxed" style={{ color: '#6B6C6F' }}>
                 {infos?.maitre_ouvrage && <>Client&nbsp;: <span style={{ color: '#959597' }}>{infos.maitre_ouvrage}</span></>}
                 {infos?.maitre_ouvrage && infos?.maitre_oeuvre && ' · '}
                 {infos?.maitre_oeuvre && <>Maîtrise d&apos;œuvre&nbsp;: <span style={{ color: '#959597' }}>{infos.maitre_oeuvre}</span></>}
@@ -422,7 +412,7 @@ export default function StepAnalysis({ project }: Props) {
 
           {/* Les critères de jugement — la boussole de la réponse */}
           {(prixPct > 0 || techPct > 0) && (
-            <div className="w-full shrink-0 sm:w-64">
+            <div className="min-w-0">
               <p className="microlabel mb-2">Critères de jugement</p>
               <div className="flex h-2 overflow-hidden rounded-full" style={{ background: 'var(--surface-2)' }}>
                 {prixPct > 0 && <div title={`Prix ${prixPct} %`} style={{ width: `${prixPct}%`, background: '#FFFFFF' }} />}

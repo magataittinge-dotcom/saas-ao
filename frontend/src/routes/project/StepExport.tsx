@@ -5,8 +5,8 @@ import { useNavigate } from 'react-router-dom'
 import {
   FileDown, Archive, CheckCircle2, XCircle, Loader2,
   ChevronDown, ChevronRight, AlertTriangle, Upload,
-  ExternalLink, FileSpreadsheet,
-  Download, ClipboardCheck, BookOpen, Grid3X3, Mail,
+  ExternalLink, FileSpreadsheet, FileText, Eye,
+  Download, Mail,
 } from 'lucide-react'
 import { api } from '@/services/api'
 import type { Project } from '@/types'
@@ -95,12 +95,13 @@ const CATEGORY_LABELS: Record<string, string> = {
   criteres_notation: 'Critères de notation',
 }
 
+// Statuts métier : vert = conforme, ambre = à traiter, corail = vraie alerte
 const STATUS_ICON: Record<string, { icon: typeof CheckCircle2; color: string }> = {
-  couvert:     { icon: CheckCircle2, color: '#E8E9EB' },
-  present:     { icon: CheckCircle2, color: '#E8E9EB' },
+  couvert:     { icon: CheckCircle2, color: '#6EE7A8' },
+  present:     { icon: CheckCircle2, color: '#6EE7A8' },
   non_couvert: { icon: XCircle,      color: '#F58E86' },
   manquant:    { icon: XCircle,      color: '#F58E86' },
-  partiel:     { icon: AlertTriangle, color: '#959597' },
+  partiel:     { icon: AlertTriangle, color: '#D9A441' },
   expire:      { icon: AlertTriangle, color: '#F58E86' },
   expiration_proche: { icon: AlertTriangle, color: '#959597' },
   a_generer:   { icon: AlertTriangle, color: '#959597' },
@@ -112,49 +113,17 @@ function StatusIcon({ status }: { status: string }) {
   return <Icon size={15} className="shrink-0" style={{ color: cfg.color }} />
 }
 
-// ─── Summary Card ──────────────────────────────────────────────────────────
+// ─── Hero check (ligne de contrôle compacte du héros) ──────────────────────
 
-function SummaryCard({
-  icon: Icon, label, value, sublabel, ok,
-}: {
-  icon: typeof CheckCircle2
-  label: string
-  value: string
-  sublabel: string
-  ok: boolean
-}) {
+function HeroCheck({ ok, label, value }: { ok: boolean; label: string; value: string }) {
   return (
-    <div
-      className="bg-ds-bg rounded-xl p-5 text-center"
-      style={{ border: '1px solid rgba(255,255,255,.07)', boxShadow: '0 1px 3px rgba(0,0,0,.4)' }}
-    >
-      <div className="flex items-center justify-center mb-3">
-        <div
-          className="w-11 h-11 rounded-xl flex items-center justify-center"
-          style={{ background: 'rgba(255,255,255,0.08)' }}
-        >
-          <Icon size={20} style={{ color: '#E8E9EB' }} />
-        </div>
-      </div>
-      <span
-        className="inline-flex items-center gap-1 text-xs font-medium px-2.5 py-0.5 rounded-full"
-        style={ok
-          ? { background: 'rgba(110,231,168,0.10)', color: '#6EE7A8', border: '1px solid rgba(110,231,168,0.30)' }
-          : { background: 'rgba(149,149,151,0.08)', color: '#959597', border: '1px solid rgba(149,149,151,0.20)' }
-        }
-      >
-        {ok ? (
-          <><CheckCircle2 size={10} /> Vérifié</>
-        ) : (
-          <><AlertTriangle size={10} /> Attention</>
-        )}
-      </span>
-      <p className="text-2xl font-bold mt-2" style={{ color: '#F7F8F8', fontFamily: F }}>
-        {value}
-      </p>
-      <p className="text-xs mt-1" style={{ color: '#959597' }}>{label}</p>
-      <p className="text-xs mt-0.5" style={{ color: '#6B6C6F' }}>{sublabel}</p>
-    </div>
+    <span className="flex items-center gap-1.5 text-xs">
+      {ok
+        ? <CheckCircle2 size={13} className="shrink-0" style={{ color: '#6EE7A8' }} />
+        : <AlertTriangle size={13} className="shrink-0" style={{ color: '#D9A441' }} />}
+      <span style={{ color: '#959597' }}>{label}</span>
+      <span className="num-mono font-semibold" style={{ color: '#F7F8F8' }}>{value}</span>
+    </span>
   )
 }
 
@@ -171,17 +140,17 @@ function AccordionSection({
 }) {
   return (
     <div
-      className="bg-ds-bg rounded-xl overflow-hidden"
+      className="glass-card rounded-lg overflow-hidden"
       style={{ border: '1px solid rgba(255,255,255,.07)', boxShadow: '0 1px 3px rgba(0,0,0,.4)' }}
     >
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-5 py-3.5 text-left transition-colors hover:bg-ds-bg-2"
+        className="w-full flex items-center justify-between px-5 py-3 text-left transition-colors hover:bg-ds-bg-2"
       >
         <div className="flex items-center gap-2.5">
           {ok
-            ? <CheckCircle2 size={16} style={{ color: '#E8E9EB' }} />
-            : <AlertTriangle size={16} style={{ color: '#959597' }} />
+            ? <CheckCircle2 size={16} style={{ color: '#6EE7A8' }} />
+            : <AlertTriangle size={16} style={{ color: '#D9A441' }} />
           }
           <span className="text-sm font-semibold" style={{ color: '#F7F8F8', fontFamily: F }}>
             {title}
@@ -365,6 +334,12 @@ export default function StepExport({ project }: Props) {
     ),
   )
 
+  // ── Faits du héros : l'état du dossier en un chiffre ─────────────────────
+  const lotName = project.selected_lot_name || ''
+  const conformes = score?.conformes ?? detail.checklist_present
+  const totalPieces = score?.total ?? detail.checklist_total
+  const readyForDeposit = !gateBlocked && alertCount === 0
+
   // ── Bottom bar ──────────────────────────────────────────────────────────
   const bottomBar = (
     <div
@@ -425,60 +400,97 @@ export default function StepExport({ project }: Props) {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-6 pb-24" style={{ fontFamily: F }}>
+    <div className="space-y-4 pb-24" style={{ fontFamily: F }}>
 
-      {/* ── Centered title ──────────────────────────────────────── */}
-      <div className="text-center">
-        <h1 className="text-2xl font-bold" style={{ color: '#F7F8F8' }}>
-          Vérification finale &amp; Export
-        </h1>
-        <p className="text-sm mt-2" style={{ color: '#959597' }}>
-          Votre dossier de réponse est complet et prêt pour la signature électronique.
-        </p>
-      </div>
+      {/* ── HÉROS — le verdict : combien de pièces sont prêtes, que reste-t-il ── */}
+      <div className="glass-card top-lit blueprint-grid sheen relative overflow-hidden px-5 py-4">
+        <div className="relative grid items-start gap-x-10 gap-y-4 lg:grid-cols-[minmax(0,1fr)_240px]">
+          {/* L'état du dossier, en un chiffre */}
+          <div className="min-w-0">
+            <p className="microlabel mb-2.5">
+              Export du dossier{lotName ? ` — ${lotName}` : ''}
+            </p>
+            <div className="flex flex-wrap items-end gap-3">
+              <span className="num-mono bg-gradient-silver-text bg-clip-text text-5xl font-bold leading-none text-transparent">
+                {conformes}/{totalPieces}
+              </span>
+              <div className="pb-0.5">
+                <p className="text-sm font-semibold" style={{ color: '#F7F8F8' }}>pièces conformes</p>
+                <p className="mt-0.5 text-xs font-medium" style={{ color: readyForDeposit ? '#6EE7A8' : 'var(--warn)' }}>
+                  {readyForDeposit
+                    ? 'Dossier prêt pour le dépôt'
+                    : gateBlocked
+                      ? `${totalPieces - conformes} pièce${totalPieces - conformes > 1 ? 's' : ''} à corriger avant le dépôt`
+                      : `${alertCount} point${alertCount > 1 ? 's' : ''} de contrôle à vérifier`}
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
+              <HeroCheck
+                ok={complianceOk}
+                label="Exigences couvertes"
+                value={`${detail.compliance_covered}/${detail.compliance_total}`}
+              />
+              <HeroCheck
+                ok={memoireOk}
+                label="Mémoire"
+                value={detail.memoire_info ? `${detail.memoire_info.estimated_pages} pages` : 'non généré'}
+              />
+              <HeroCheck
+                ok={dpgfOk}
+                label="DPGF"
+                value={dpgfLignes > 0 ? `${dpgfLignes} lignes` : detail.has_dpgf ? 'à compléter' : 'absente'}
+              />
+            </div>
+          </div>
 
-      {/* ── 4 Summary Cards ─────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <SummaryCard
-          icon={ClipboardCheck}
-          label="Conformité candidature"
-          value={detail.compliance_total > 0 ? `${Math.round((detail.compliance_covered / detail.compliance_total) * 100)}/100` : '--'}
-          sublabel="Score de pertinence IA"
-          ok={complianceOk}
-        />
-        <SummaryCard
-          icon={BookOpen}
-          label="Mémoire technique"
-          value={memoireOk ? 'PRÊT' : '--'}
-          sublabel={detail.memoire_info ? `${detail.memoire_info.estimated_pages} pages générées` : 'Non généré'}
-          ok={memoireOk}
-        />
-        <SummaryCard
-          icon={Grid3X3}
-          label="DPGF"
-          value={dpgfOk ? 'COMPLET' : detail.has_dpgf ? 'PARTIEL' : '--'}
-          sublabel={dpgfLignes > 0 ? `${dpgfLignes} lignes vérifiées` : 'Aucune DPGF'}
-          ok={dpgfOk}
-        />
-        <SummaryCard
-          icon={AlertTriangle}
-          label="Alertes restantes"
-          value={String(alertCount)}
-          sublabel={alertCount > 0 ? 'Vérification manuelle requise' : 'Aucune alerte'}
-          ok={alertCount === 0}
-        />
-      </div>
-
-      {/* ── Détails des points de contrôle ──────────────────────── */}
-      <div>
-        <div className="flex items-center gap-2 mb-4">
-          <CheckCircle2 size={18} style={{ color: '#E8E9EB' }} />
-          <h2 className="text-base font-semibold" style={{ color: '#F7F8F8', fontFamily: F }}>
-            Détails des points de contrôle
-          </h2>
+          {/* Livrables individuels — le ZIP reste LE CTA, en barre basse */}
+          <div className="min-w-0">
+            <p className="microlabel mb-2">Livrables</p>
+            <div className="space-y-1.5">
+              <button
+                onClick={() => exportPdf()}
+                disabled={isExportingPdf || !detail.has_memoire}
+                className="glass-btn w-full flex items-center gap-2 py-1.5 px-3 text-xs font-semibold rounded-lg disabled:opacity-40"
+                style={{ color: '#D8D9DB' }}
+              >
+                {isExportingPdf ? <Loader2 size={13} className="animate-spin" /> : <FileDown size={13} />}
+                Mémoire PDF (dépôt)
+              </button>
+              <button
+                onClick={() => exportDocx()}
+                disabled={isExportingDocx || !detail.has_memoire}
+                className="w-full flex items-center gap-2 py-1.5 px-3 text-xs font-medium rounded-lg transition-colors hover:bg-ds-bg-2 disabled:opacity-40"
+                style={{ border: '1px solid rgba(255,255,255,.07)', color: '#959597' }}
+              >
+                {isExportingDocx ? <Loader2 size={13} className="animate-spin" /> : <FileDown size={13} />}
+                Mémoire Word (retouche)
+              </button>
+              <button
+                className="w-full flex items-center gap-2 py-1.5 px-3 text-xs font-medium rounded-lg transition-colors hover:bg-ds-bg-2"
+                style={{ border: '1px solid rgba(255,255,255,.07)', color: '#959597' }}
+              >
+                <Mail size={13} />
+                Envoyer par email
+              </button>
+            </div>
+            {detail.naming_convention && (
+              <p className="mt-3 text-[11px] leading-relaxed" style={{ color: '#6B6C6F' }}>
+                Pièces du ZIP nommées selon le RC&nbsp;:{' '}
+                <span className="num-mono" style={{ color: '#959597' }}>
+                  {detail.naming_convention.replace('{lot}', 'Lot').replace('{entreprise}', 'Entreprise').replace('{piece}', 'Pièce')}
+                </span>
+              </p>
+            )}
+          </div>
         </div>
+      </div>
 
-        <div className="space-y-3">
+      {/* ── Points de contrôle ──────────────────────────────────── */}
+      <div>
+        <p className="microlabel mb-3">Points de contrôle</p>
+
+        <div className="space-y-2.5">
 
           {/* 1. Pièces Administratives */}
           <AccordionSection
@@ -487,11 +499,11 @@ export default function StepExport({ project }: Props) {
             expanded={expanded === 'checklist'}
             onToggle={() => toggle('checklist')}
           >
-            <div className="p-4 space-y-1 max-h-[400px] overflow-y-auto">
+            <div className="px-3 py-2 space-y-0.5 max-h-[400px] overflow-y-auto">
               {detail.checklist_items.map((item) => (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between py-2.5 px-3 rounded-lg hover:bg-ds-bg-2 transition-colors"
+                  className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-ds-bg-2 transition-colors"
                 >
                   <div className="flex items-center gap-2.5 flex-1 min-w-0">
                     <StatusIcon status={item.status} />
@@ -526,11 +538,11 @@ export default function StepExport({ project }: Props) {
             expanded={expanded === 'memoire'}
             onToggle={() => toggle('memoire')}
           >
-            <div className="p-4">
+            <div className="p-3.5">
               {detail.memoire_info ? (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2.5 py-2.5 px-3 rounded-lg hover:bg-ds-bg-2 transition-colors">
-                    <CheckCircle2 size={15} style={{ color: '#E8E9EB' }} />
+                    <CheckCircle2 size={15} style={{ color: '#6EE7A8' }} />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium" style={{ color: '#F7F8F8' }}>
                         Mémoire technique v{detail.memoire_info.version}
@@ -558,8 +570,8 @@ export default function StepExport({ project }: Props) {
                   <p className="text-xs" style={{ color: '#959597' }}>Le mémoire technique n&apos;a pas encore été généré.</p>
                   <button
                     onClick={() => navigate(`/projects/${project.id}/memoire`)}
-                    className="mt-2 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors hover:bg-ds-bg-2"
-                    style={{ border: '1px solid #E8E9EB', color: '#E8E9EB' }}
+                    className="glass-btn mt-2 text-xs font-semibold px-3.5 py-1.5 rounded-lg"
+                    style={{ color: '#D8D9DB' }}
                   >
                     Aller à l&apos;étape Mémoire →
                   </button>
@@ -575,7 +587,7 @@ export default function StepExport({ project }: Props) {
             expanded={expanded === 'dpgf'}
             onToggle={() => toggle('dpgf')}
           >
-            <div className="p-4 space-y-4">
+            <div className="p-3.5 space-y-3.5">
               {/* Download original DPGF */}
               {detail.dpgf_info && (
                 <div
@@ -592,7 +604,7 @@ export default function StepExport({ project }: Props) {
                   <button
                     onClick={handleDownloadDpgf}
                     className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors shrink-0 hover:bg-ds-bg-2"
-                    style={{ border: '1px solid #E8E9EB', color: '#E8E9EB' }}
+                    style={{ border: '1px solid rgba(255,255,255,.07)', color: '#C2C3C6' }}
                   >
                     <Download size={13} /> Télécharger
                   </button>
@@ -608,7 +620,7 @@ export default function StepExport({ project }: Props) {
                   className="relative rounded-xl p-4 text-center transition-all cursor-pointer"
                   style={{
                     border: `2px dashed ${dpgfDragging ? '#E8E9EB' : '#55565A'}`,
-                    background: dpgfDragging ? 'rgba(110,231,168,0.08)' : '#121213',
+                    background: dpgfDragging ? 'rgba(255,255,255,0.04)' : '#121213',
                   }}
                   onDragOver={(e) => { e.preventDefault(); setDpgfDragging(true) }}
                   onDragLeave={() => setDpgfDragging(false)}
@@ -651,21 +663,21 @@ export default function StepExport({ project }: Props) {
                 const hasWarnings = v.warnings.length > 0
                 return (
                   <div
-                    className="rounded-xl p-4"
+                    className="rounded-lg p-3.5"
                     style={{
-                      background: isValid ? 'rgba(110,231,168,0.04)' : hasWarnings ? 'rgba(149,149,151,0.04)' : 'rgba(245,142,134,0.04)',
-                      border: `1px solid ${isValid ? 'rgba(110,231,168,0.15)' : hasWarnings ? 'rgba(149,149,151,0.15)' : 'rgba(245,142,134,0.15)'}`,
+                      background: isValid ? 'rgba(110,231,168,0.04)' : hasWarnings ? 'rgba(217,164,65,0.04)' : 'rgba(245,142,134,0.04)',
+                      border: `1px solid ${isValid ? 'rgba(110,231,168,0.15)' : hasWarnings ? 'rgba(217,164,65,0.15)' : 'rgba(245,142,134,0.15)'}`,
                     }}
                   >
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         {isValid
-                          ? <CheckCircle2 size={16} style={{ color: '#E8E9EB' }} />
-                          : <AlertTriangle size={16} style={{ color: hasWarnings ? '#959597' : '#F58E86' }} />
+                          ? <CheckCircle2 size={16} style={{ color: '#6EE7A8' }} />
+                          : <AlertTriangle size={16} style={{ color: hasWarnings ? '#D9A441' : '#F58E86' }} />
                         }
                         <span
                           className="text-xs font-semibold"
-                          style={{ color: isValid ? '#E8E9EB' : hasWarnings ? '#959597' : '#F58E86' }}
+                          style={{ color: isValid ? '#6EE7A8' : hasWarnings ? '#D9A441' : '#F58E86' }}
                         >
                           {isValid ? 'DPGF conforme' : hasWarnings ? 'DPGF avec avertissements' : 'DPGF non conforme'}
                         </span>
@@ -728,7 +740,7 @@ export default function StepExport({ project }: Props) {
             expanded={expanded === 'compliance'}
             onToggle={() => toggle('compliance')}
           >
-            <div className="p-4 space-y-4 max-h-[400px] overflow-y-auto">
+            <div className="p-3.5 space-y-3.5 max-h-[400px] overflow-y-auto">
               {Object.entries(complianceByCategory).map(([cat, items]) => {
                 const covered = items.filter((i) => i.status === 'couvert').length
                 return (
@@ -751,7 +763,7 @@ export default function StepExport({ project }: Props) {
                           {item.priority === 'obligatoire' && (
                             <span
                               className="text-[10px] px-1.5 py-0.5 rounded shrink-0 ml-auto"
-                              style={{ background: 'rgba(245,142,134,0.08)', color: '#F58E86' }}
+                              style={{ background: 'var(--warn-bg)', color: 'var(--warn)' }}
                             >
                               Obligatoire
                             </span>
@@ -767,50 +779,38 @@ export default function StepExport({ project }: Props) {
               )}
             </div>
           </AccordionSection>
-        </div>
-      </div>
 
-      {/* ── Export buttons (centered) ────────────────────────────── */}
-      <div className="text-center mt-8 space-y-3">
-        {/* C13b — convention de nommage du RC appliquée au ZIP */}
-        {detail.naming_convention && (
-          <p className="text-xs" style={{ color: '#959597' }}>
-            <span className="font-semibold" style={{ color: '#F7F8F8' }}>Convention du RC appliquée</span>
-            {' '}— les pièces du ZIP sont nommées{' '}
-            <span className="font-mono">{detail.naming_convention.replace('{lot}', 'Lot').replace('{entreprise}', 'Entreprise').replace('{piece}', 'Pièce')}</span>
-            {' '}et numérotées dans l'ordre du RC.
-          </p>
-        )}
-        <div className="flex items-center justify-center gap-3">
-          <button
-            onClick={() => exportPdf()}
-            disabled={isExportingPdf || !detail.has_memoire}
-            className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg transition-colors hover:bg-ds-bg-2 disabled:opacity-40"
-            style={{ color: '#E8E9EB' }}
+          {/* 5. Contenu du ZIP — chaque pièce jointe, avec aperçu */}
+          <AccordionSection
+            title={`Pièces du dossier ZIP (${detail.project_documents.length})`}
+            ok={detail.project_documents.length > 0}
+            expanded={expanded === 'documents'}
+            onToggle={() => toggle('documents')}
           >
-            {isExportingPdf ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
-            Mémoire PDF (dépôt)
-          </button>
-          <button
-            onClick={() => exportDocx()}
-            disabled={isExportingDocx || !detail.has_memoire}
-            className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg transition-colors hover:bg-ds-bg-2 disabled:opacity-40"
-            style={{ color: '#959597' }}
-          >
-            {isExportingDocx ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />}
-            Word (retouche)
-          </button>
-          <button
-            className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg transition-colors hover:bg-ds-bg-2"
-            style={{ color: '#E8E9EB' }}
-          >
-            <Mail size={14} />
-            Envoyer par email
-          </button>
+            <div className="px-3 py-2 max-h-[360px] overflow-y-auto">
+              {detail.project_documents.map((d, i) => (
+                <button
+                  key={d.id}
+                  onClick={() => setViewerIndex(i)}
+                  className="w-full flex items-center gap-2.5 py-2 px-3 rounded-lg hover:bg-ds-bg-2 transition-colors text-left"
+                >
+                  <FileText size={15} className="shrink-0" style={{ color: '#959597' }} />
+                  <span className="text-sm font-medium truncate flex-1" style={{ color: '#F7F8F8' }}>
+                    {d.file_name}
+                  </span>
+                  <span className="flex items-center gap-1 text-xs shrink-0" style={{ color: '#6B6C6F' }}>
+                    <Eye size={12} /> Aperçu
+                  </span>
+                </button>
+              ))}
+              {detail.project_documents.length === 0 && (
+                <p className="text-xs text-center py-4" style={{ color: '#6B6C6F' }}>
+                  Aucune pièce jointe pour l&apos;instant
+                </p>
+              )}
+            </div>
+          </AccordionSection>
         </div>
-        <p className="text-xs max-w-lg mx-auto" style={{ color: '#6B6C6F' }}>
-          Le dossier compressé (.zip) contient l&apos;ensemble des pièces nommées selon les exigences du règlement de consultation.
-        </p>
       </div>
 
       {/* ── Sticky bottom bar ───────────────────────────────────── */}

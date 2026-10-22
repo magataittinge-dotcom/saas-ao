@@ -149,7 +149,7 @@ export default function Dashboard() {
         || organization?.trial_granted === false)
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
+    <div className="max-w-7xl mx-auto space-y-4 animate-fade-in">
 
       {/* C15 — essai utilisé : CTA upgrade sobre, jamais bloquant */}
       {consumedFreeTrial && (
@@ -185,7 +185,7 @@ export default function Dashboard() {
       {sLoad ? (
         <StatCardGridSkeleton count={4} />
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {statCards.map((c, i) => (
             <StatCard
               key={c.label}
@@ -201,12 +201,12 @@ export default function Dashboard() {
       )}
 
       {/* ── 2 COLONNES ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-5 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 items-start">
 
         {/* ─── GAUCHE : deux zones (B7) ────────────────────────────── */}
-        <div className="space-y-5">
+        <div className="space-y-4">
         <section className="glass-card sheen overflow-hidden">
-          <header className="flex items-center justify-between px-5 py-4 border-b border-ds-border-subtle">
+          <header className="flex items-center justify-between px-5 py-3 border-b border-ds-border-subtle">
             <div className="flex items-center gap-2.5">
               <h2 className="text-[15px] font-semibold text-ds-text">En cours de réponse</h2>
               {active.length > 0 && (
@@ -233,7 +233,7 @@ export default function Dashboard() {
                 <li key={p.id}>
                   <button
                     onClick={() => navigate(`/projects/${p.id}`)}
-                    className={`w-full text-left px-5 py-4 grid grid-cols-[1fr_auto] gap-x-4 gap-y-2.5 items-center hover:bg-ds-bg-2 transition-colors cursor-pointer ${i > 0 ? 'border-t border-ds-bg-3' : ''}`}
+                    className={`w-full text-left px-5 py-3 grid grid-cols-[1fr_auto] gap-x-4 gap-y-2.5 items-center hover:bg-ds-bg-2 transition-colors cursor-pointer ${i > 0 ? 'border-t border-ds-bg-3' : ''}`}
                   >
                     {/* Projet + client */}
                     <div className="min-w-0">
@@ -276,7 +276,7 @@ export default function Dashboard() {
         {/* ── Zone « Analysés » : analyse faite, pas encore de suite ── */}
         {analysesSansSuite.length > 0 && (
           <section className="glass-card sheen overflow-hidden">
-            <header className="flex items-center gap-2.5 px-5 py-4 border-b border-ds-border-subtle">
+            <header className="flex items-center gap-2.5 px-5 py-3 border-b border-ds-border-subtle">
               <h2 className="text-[15px] font-semibold text-ds-text">Analysés</h2>
               <span className="pill pill-muted text-[11px]">
                 {analysesSansSuite.length}
@@ -316,7 +316,7 @@ export default function Dashboard() {
         <div className="flex flex-col gap-4">
 
           {/* ── LE COMPAGNON — présence permanente du bureau d'études IA (T3.5) ── */}
-          <section className="glass-card top-lit blueprint-grid sheen relative overflow-hidden p-5">
+          <section className="glass-card top-lit blueprint-grid sheen relative overflow-hidden p-4">
             <div className="mb-1 flex items-center justify-between">
               <span className="microlabel">Compagnon Synorix</span>
               <span className="microlabel" style={{ color: 'var(--lum-dim)' }}>

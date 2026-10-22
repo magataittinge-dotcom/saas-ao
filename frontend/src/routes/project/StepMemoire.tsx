@@ -4,8 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, Link } from 'react-router-dom'
 import {
   Sparkles, Save, CheckCircle2, ChevronDown,
-  Pencil, X, Download, Building2, BarChart3,
-  ChevronRight, Zap, Eye, MessageSquare, Shield,
+  Pencil, X, Download, Building2,
+  ChevronRight, Zap, Eye, Shield,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import axios from 'axios'
@@ -17,7 +17,7 @@ import ProgressDisplay, { type StepDescriptor } from '@/components/common/Progre
 import { useProgressStream } from '@/hooks/useProgressStream'
 import SubscriptionWall from '@/components/common/SubscriptionWall'
 import { MemoireSkeleton } from '@/components/skeletons'
-import type { Project, MemoireTechnique, MemoireContent, CritereJugement } from '@/types'
+import type { Project, MemoireTechnique, MemoireContent } from '@/types'
 
 const MEMOIRE_GEN_STEPS: StepDescriptor[] = [
   { key: 'preparing',  label: 'Préparation du contexte',         estimated_s: 3 },
@@ -172,7 +172,7 @@ function FullscreenEditor({
         style={{ borderBottom: '1px solid rgba(255,255,255,.07)', background: '#18181A' }}
       >
         <p className="text-sm font-medium" style={{ color: '#F7F8F8' }}>
-          Edition du memoire — format Markdown
+          Édition du mémoire — format Markdown
         </p>
         <div className="flex items-center gap-3">
           <button
@@ -231,7 +231,7 @@ function ProfileSummary({ stats }: { stats: { filled: number; total: number; nom
 
   return (
     <div
-      className="bg-ds-bg rounded-xl p-5"
+      className="glass-card rounded-lg p-4"
       style={{ border: '1px solid rgba(255,255,255,.07)', boxShadow: '0 1px 3px rgba(0,0,0,.4)' }}
     >
       <div className="flex items-start gap-3">
@@ -277,68 +277,18 @@ function ProfileSummary({ stats }: { stats: { filled: number; total: number; nom
                 </span>
               </div>
               <p className="text-xs mt-2.5" style={{ color: '#959597' }}>
-                Completez votre profil pour un memoire personnalise avec vos vraies informations.
+                Complétez votre profil pour un mémoire personnalisé avec vos vraies informations.
               </p>
               <Link
                 to="/company"
-                className="inline-flex items-center gap-1.5 text-xs font-medium mt-3 px-3.5 py-1.5 rounded-lg transition-colors hover:bg-ds-bg-2"
-                style={{ border: '1px solid #E8E9EB', color: '#E8E9EB' }}
+                className="glass-btn inline-flex items-center gap-1.5 text-xs font-semibold mt-3 px-3.5 py-1.5 rounded-lg"
+                style={{ color: '#D8D9DB' }}
               >
-                Completer le profil →
+                Compléter le profil →
               </Link>
             </>
           )}
         </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── Critères display ─────────────────────────────────────────────────────────
-
-function CriteresCard({ criteres }: { criteres: CritereJugement[] }) {
-  if (!criteres?.length) return null
-  return (
-    <div
-      className="bg-ds-bg rounded-xl p-5 space-y-3"
-      style={{ border: '1px solid rgba(255,255,255,.07)', boxShadow: '0 1px 3px rgba(0,0,0,.4)' }}
-    >
-      <div className="flex items-center gap-2.5">
-        <div
-          className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-          style={{ background: 'rgba(255,255,255,0.10)' }}
-        >
-          <BarChart3 size={18} style={{ color: '#E8E9EB' }} />
-        </div>
-        <div>
-          <h3 className="text-sm font-semibold" style={{ color: '#F7F8F8', fontFamily: F }}>
-            Criteres de jugement detectes
-          </h3>
-          <p className="text-[11px] mt-0.5" style={{ color: '#959597' }}>
-            Le memoire sera optimise pour maximiser votre note sur ces criteres
-          </p>
-        </div>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {criteres.map((c) => (
-          <div key={c.nom} className="space-y-1">
-            <span
-              className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-lg"
-              style={{ background: 'rgba(255,255,255,0.10)', color: '#F7F8F8' }}
-            >
-              {c.nom} — {c.poids}%
-            </span>
-            {c.sous_criteres?.length > 0 && (
-              <div className="flex flex-wrap gap-1 pl-2">
-                {c.sous_criteres.map((sc) => (
-                  <span key={sc.nom} className="text-[11px] px-1.5 py-0.5 rounded" style={{ background: '#1E1E21', color: '#6B6C6F' }}>
-                    {sc.nom} {sc.poids}%
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        ))}
       </div>
     </div>
   )
@@ -357,20 +307,20 @@ const DEFAULT_SUGGESTIONS: AiSuggestion[] = [
   {
     id: 'sug-refs',
     icon: Sparkles,
-    title: 'Optimisation des references',
-    description: "Vous n'avez cite que 2 projets similaires. L'ajout d'une reference en genie civil renforcerait votre note technique.",
+    title: 'Optimisation des références',
+    description: "Vous n'avez cité que 2 projets similaires. L'ajout d'une référence en génie civil renforcerait votre note technique.",
   },
   {
     id: 'sug-env',
     icon: Zap,
-    title: 'Risque Environnemental',
-    description: "Le paragraphe sur la gestion des dechets est trop generique. Voulez-vous que je l'adapte aux normes ISO 14001 ?",
+    title: 'Risque environnemental',
+    description: "Le paragraphe sur la gestion des déchets est trop générique. Voulez-vous que je l'adapte aux normes ISO 14001 ?",
   },
   {
     id: 'sug-gantt',
     icon: Eye,
-    title: 'Clarte du phasage',
-    description: 'Le texte suggere un chevauchement complexe en semaine 4. Ajouter un diagramme GANTT pourrait clarifier ce point.',
+    title: 'Clarté du phasage',
+    description: 'Le texte suggère un chevauchement complexe en semaine 4. Ajouter un diagramme GANTT pourrait clarifier ce point.',
   },
 ]
 
@@ -383,7 +333,7 @@ function SuggestionCard({
   const Icon = suggestion.icon
   return (
     <div
-      className="bg-ds-bg rounded-xl p-4 relative"
+      className="glass-card rounded-lg p-3.5 relative"
       style={{ border: '1px solid rgba(255,255,255,.07)', boxShadow: '0 1px 3px rgba(0,0,0,.4)' }}
     >
       <button
@@ -401,14 +351,14 @@ function SuggestionCard({
           <Icon size={14} style={{ color: '#E8E9EB' }} />
         </div>
         <div className="flex-1 min-w-0 pr-4">
-          <p className="text-sm font-bold" style={{ color: '#F7F8F8', fontFamily: F }}>
+          <p className="text-sm font-semibold" style={{ color: '#F7F8F8', fontFamily: F }}>
             {suggestion.title}
           </p>
           <p className="text-xs mt-1 leading-relaxed" style={{ color: '#959597' }}>
             {suggestion.description}
           </p>
           <button
-            className="glass-btn text-ds-text mt-3 text-xs font-bold px-4 py-1.5 rounded-lg"
+            className="glass-btn text-ds-text mt-2.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg"
           >
             Accepter
           </button>
@@ -421,11 +371,10 @@ function SuggestionCard({
 // ─── TOC Sidebar ─────────────────────────────────────────────────────────────
 
 function TocSidebar({
-  activeSection, onNavigate, completionPct,
+  activeSection, onNavigate,
 }: {
   activeSection: string
   onNavigate: (id: string) => void
-  completionPct: number
 }) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
     new Set(TOC_STRUCTURE.map((s) => s.id)),
@@ -441,17 +390,10 @@ function TocSidebar({
 
   return (
     <div
-      className="bg-ds-bg rounded-xl p-4 sticky top-4"
+      className="glass-card rounded-lg p-4 sticky top-4"
       style={{ border: '1px solid rgba(255,255,255,.07)', boxShadow: '0 1px 3px rgba(0,0,0,.4)', width: 220 }}
     >
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold" style={{ color: '#F7F8F8', fontFamily: F }}>
-          Sommaire du document
-        </h3>
-        <span className="text-xs font-medium" style={{ color: '#E8E9EB' }}>
-          {completionPct}% Complet
-        </span>
-      </div>
+      <p className="microlabel mb-3">Sommaire</p>
 
       <nav className="space-y-1">
         {TOC_STRUCTURE.map((section) => {
@@ -525,39 +467,40 @@ function DocumentView({
   const c = content.partie_c as Record<string, string>
 
   const partAItems: [string, string][] = [
-    ['implantation', '1. Implantation geographique'], ['historique', '2. Historique'],
-    ['engagement_qualitatif', '3. Engagement qualitatif'], ['activites', '4. Nos activites'],
-    ['organigramme', '5. Organigramme'], ['roles_missions', "6. Roles et missions de l'equipe d'encadrement"],
-    ['moyens_informatiques', '7. Moyens informatiques'], ['vehicules', '8. Vehicules'],
-    ['materiel', '9. Materiel'], ['references', '10. References chantiers'], ['fournisseurs', '11. Fournisseurs'],
+    ['implantation', '1. Implantation géographique'], ['historique', '2. Historique'],
+    ['engagement_qualitatif', '3. Engagement qualitatif'], ['activites', '4. Nos activités'],
+    ['organigramme', '5. Organigramme'], ['roles_missions', "6. Rôles et missions de l'équipe d'encadrement"],
+    ['moyens_informatiques', '7. Moyens informatiques'], ['vehicules', '8. Véhicules'],
+    ['materiel', '9. Matériel'], ['references', '10. Références chantiers'], ['fournisseurs', '11. Fournisseurs'],
   ]
   const partBItems: [string, string][] = [
-    ['demarrage', '1. Demarrage du chantier'], ['interlocuteur', '2. Interlocuteur dedie'],
-    ['qualite_ouvrages', '3. Qualite des ouvrages'], ['respect_planning', '4. Respect du planning'],
-    ['securite', '5. Dispositions relatives a la securite'], ['dechets', '6. Traitement des dechets'],
+    ['demarrage', '1. Démarrage du chantier'], ['interlocuteur', '2. Interlocuteur dédié'],
+    ['qualite_ouvrages', '3. Qualité des ouvrages'], ['respect_planning', '4. Respect du planning'],
+    ['securite', '5. Dispositions relatives à la sécurité'], ['dechets', '6. Traitement des déchets'],
     ['environnement', '7. Environnement'],
   ]
   const partCItems: [string, string][] = [
-    ['methodologie', '1. Methodologie detaillee'], ['effectifs', '2. Effectifs dedies au chantier'],
-    ['materiels', '3. Materiels dedies'], ['hygiene_securite', '4. Hygiene et securite'],
+    ['methodologie', '1. Méthodologie détaillée'], ['effectifs', '2. Effectifs dédiés au chantier'],
+    ['materiels', '3. Matériels dédiés'], ['hygiene_securite', '4. Hygiène et sécurité'],
     ['mesures_environnementales', '5. Mesures environnementales'],
-    ['gpa', '6. Garantie de parfait achevement (GPA)'], ['delai', '7. Delai de travaux'],
+    ['gpa', '6. Garantie de parfait achèvement (GPA)'], ['delai', '7. Délai de travaux'],
   ]
 
   return (
     <div
       ref={docRef}
-      className="bg-ds-bg rounded-xl overflow-y-auto"
+      className="rounded-lg overflow-y-auto"
       style={{
+        background: '#18181A',
         border: '1px solid rgba(255,255,255,.07)',
-        boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
+        boxShadow: '0 4px 24px rgba(0,0,0,0.30)',
         maxHeight: 'calc(100vh - 200px)',
       }}
     >
       <div className="max-w-3xl mx-auto py-10 px-10 space-y-8" style={{ fontFamily: F }}>
 
         {/* Document header */}
-        <div className="flex items-start justify-between pb-6" style={{ borderBottom: '2px solid #E8E9EB' }}>
+        <div className="flex items-start justify-between pb-6" style={{ borderBottom: '1px solid rgba(255,255,255,.12)' }}>
           <div
             className="w-24 h-12 rounded-lg flex items-center justify-center text-xs font-medium"
             style={{ background: '#1E1E21', border: '1px solid rgba(255,255,255,.07)', color: '#6B6C6F' }}
@@ -566,18 +509,18 @@ function DocumentView({
           </div>
           <div className="text-right">
             <p className="text-lg font-bold" style={{ color: '#E8E9EB' }}>
-              MEMOIRE JUSTIFICATIF
+              MÉMOIRE JUSTIFICATIF
             </p>
             <p className="text-sm mt-1" style={{ color: '#D8D9DB' }}>{project.name}</p>
             <p className="text-xs mt-1" style={{ color: '#6B6C6F' }}>
-              Reference : MT-SYN-{new Date().getFullYear()}-001
+              Référence : MT-SYN-{new Date().getFullYear()}-001
             </p>
           </div>
         </div>
 
         {/* PRÉAMBULE */}
         <div id="preambule">
-          <PartHeading>PREAMBULE</PartHeading>
+          <PartHeading>PRÉAMBULE</PartHeading>
           <div id="preambule-intro" />
           <div id="preambule-contexte" />
           <MdContent text={content.preambule ?? ''} />
@@ -585,7 +528,7 @@ function DocumentView({
 
         {/* PARTIE A */}
         <div id="partie-a">
-          <PartHeading>PARTIE A — PRESENTATION GENERALE</PartHeading>
+          <PartHeading>PARTIE A — PRÉSENTATION GÉNÉRALE</PartHeading>
           {partAItems.map(([key, label]) =>
             a?.[key] ? (
               <div key={key} id={`sec-${key}`} className="mt-6">
@@ -598,7 +541,7 @@ function DocumentView({
 
         {/* PARTIE B */}
         <div id="partie-b">
-          <PartHeading>PARTIE B — PRESENTATION DE LA PRESTATION</PartHeading>
+          <PartHeading>PARTIE B — PRÉSENTATION DE LA PRESTATION</PartHeading>
           {partBItems.map(([key, label]) =>
             b?.[key] ? (
               <div key={key} id={`sec-${key}`} className="mt-6">
@@ -611,7 +554,7 @@ function DocumentView({
 
         {/* PARTIE C */}
         <div id="partie-c">
-          <PartHeading>PARTIE C — METHODOLOGIE MISE EN OEUVRE</PartHeading>
+          <PartHeading>PARTIE C — MÉTHODOLOGIE MISE EN ŒUVRE</PartHeading>
           {partCItems.map(([key, label]) =>
             c?.[key] ? (
               <div key={key} id={`sec-${key}`} className="mt-6">
@@ -633,7 +576,7 @@ function DocumentView({
           )}
           {a?.references && (
             <div id="sec-references" className="mt-6">
-              <SectionHeading>References similaires</SectionHeading>
+              <SectionHeading>Références similaires</SectionHeading>
               <MdContent text={a.references} />
             </div>
           )}
@@ -650,7 +593,7 @@ function DocumentView({
           <div className="flex items-center gap-1.5">
             <Shield size={12} style={{ color: '#E8E9EB' }} />
             <p className="text-xs" style={{ color: '#6B6C6F' }}>
-              Signe numeriquement via Synorix Trust
+              Signé numériquement via Synorix Trust
             </p>
           </div>
         </div>
@@ -754,6 +697,12 @@ export default function StepMemoire({ project }: Props) {
   const displayContent: MemoireContent | null = editedContent ?? memoire?.content_json ?? null
   const criteres = project.criteres_jugement ?? []
 
+  // Poids total hors prix : la part de la note que le mémoire peut capter
+  const techPct = useMemo(
+    () => Math.round(criteres.filter((c) => !c.nom.toLowerCase().includes('prix')).reduce((s, c) => s + c.poids, 0)),
+    [criteres],
+  )
+
   // Compute completion % for the TOC badge
   const completionPct = useMemo(() => {
     if (!displayContent) return 0
@@ -814,8 +763,8 @@ export default function StepMemoire({ project }: Props) {
     onError: (err) => {
       setGenSuccess(false)
       const msg = axios.isAxiosError(err)
-        ? (err.response?.data?.detail ?? 'Erreur lors de la generation')
-        : 'Erreur lors de la generation'
+        ? (err.response?.data?.detail ?? 'Erreur lors de la génération')
+        : 'Erreur lors de la génération'
       setGenError(typeof msg === 'string' ? msg : JSON.stringify(msg))
     },
   })
@@ -879,8 +828,10 @@ export default function StepMemoire({ project }: Props) {
 
   const hasMemoire = !!memoire
   const lotName = project.selected_lot_name || 'Lot unique'
+  const isDocView = hasMemoire && !showForm
 
-  // ── Bottom bar ──────────────────────────────────────────────────
+  // ── Bottom bar ── un seul CTA lumineux par écran : signature en vue
+  // document (c'est la prochaine étape), verre en vue formulaire (Générer prime).
 
   const bottomBar = (
     <div
@@ -895,8 +846,10 @@ export default function StepMemoire({ project }: Props) {
       <button
         onClick={() => navigate(`/projects/${project.id}/export`)}
         disabled={!hasMemoire}
-        className="signature-btn disabled:opacity-40"
-        style={{ fontFamily: F }}
+        className={isDocView
+          ? 'signature-btn disabled:opacity-40'
+          : 'glass-btn flex items-center gap-2 py-2.5 px-5 text-sm font-semibold rounded-lg disabled:opacity-40'}
+        style={{ fontFamily: F, ...(isDocView ? {} : { color: '#C2C3C6' }) }}
       >
         Vérification finale →
       </button>
@@ -922,31 +875,67 @@ export default function StepMemoire({ project }: Props) {
         )}
 
         <div className="space-y-4 pb-20" style={{ fontFamily: F }}>
-          {/* Title bar */}
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div>
-              <h1 className="text-xl font-bold" style={{ color: '#F7F8F8' }}>
-                Memoire Technique — {lotName}
-              </h1>
-              <p className="text-xs mt-1" style={{ color: '#6B6C6F' }}>
-                {hasMemoire
-                  ? `v${memoire.version} — Generee le ${new Date(memoire.generated_at).toLocaleDateString('fr-FR')} par Synorix AI`
-                  : 'Generez un memoire technique complet adapte a votre projet'}
-              </p>
-            </div>
-            {hasMemoire && (
-              <button
-                onClick={() => setShowForm(false)}
-                className="text-sm font-medium px-4 py-2 rounded-lg transition-colors hover:bg-ds-bg-2"
-                style={{ color: '#959597', border: '1px solid rgba(255,255,255,.07)' }}
-              >
-                Annuler
-              </button>
-            )}
-          </div>
+          {/* ── HÉROS — le fait qui motive l'effort : le poids du mémoire dans la note ── */}
+          <div className="glass-card top-lit blueprint-grid sheen relative overflow-hidden px-5 py-4">
+            <div className="relative grid items-start gap-x-10 gap-y-4 lg:grid-cols-[minmax(0,1fr)_260px]">
+              <div className="min-w-0">
+                <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
+                  <p className="microlabel">Mémoire technique — {lotName}</p>
+                  {hasMemoire && (
+                    <span className="flex items-center gap-3">
+                      <span className="edge-data text-xs" style={{ color: '#959597' }}>
+                        v{memoire.version} — {new Date(memoire.generated_at).toLocaleDateString('fr-FR')}
+                      </span>
+                      <button
+                        onClick={() => setShowForm(false)}
+                        className="text-xs font-medium px-3 py-1 rounded-lg transition-colors hover:bg-ds-bg-2"
+                        style={{ color: '#959597', border: '1px solid rgba(255,255,255,.07)' }}
+                      >
+                        Annuler
+                      </button>
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-end gap-3">
+                  <span className="num-mono bg-gradient-silver-text bg-clip-text text-5xl font-bold leading-none text-transparent">
+                    {techPct > 0 ? `${techPct} %` : '60 %'}
+                  </span>
+                  <div className="pb-0.5">
+                    <p className="text-sm font-semibold" style={{ color: '#F7F8F8' }}>
+                      de votre note se joue dans ce document
+                    </p>
+                    <p className="mt-0.5 text-xs" style={{ color: '#959597' }}>
+                      {techPct > 0
+                        ? 'pondération hors prix relevée dans le règlement de consultation'
+                        : 'moyenne constatée sur les marchés de travaux'}
+                    </p>
+                  </div>
+                </div>
+                {hasMemoire && (
+                  <p className="mt-3 text-xs font-medium leading-relaxed" style={{ color: 'var(--warn)' }}>
+                    La régénération remplacera la version actuelle du mémoire.
+                  </p>
+                )}
+              </div>
 
-          {/* Critères de jugement */}
-          <CriteresCard criteres={criteres} />
+              {criteres.length > 0 && (
+                <div className="min-w-0">
+                  <p className="microlabel mb-2">Le mémoire sera optimisé pour</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {criteres.map((c) => (
+                      <span
+                        key={c.nom}
+                        className="num-mono text-[11px] px-2 py-1 rounded-md"
+                        style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,.07)', color: '#C2C3C6' }}
+                      >
+                        {c.nom} {c.poids}&nbsp;%
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Profile summary */}
           <ProfileSummary stats={profileStats ?? null} />
@@ -956,49 +945,43 @@ export default function StepMemoire({ project }: Props) {
 
           {/* Chantier-specific form */}
           <div
-            className="bg-ds-bg rounded-xl p-5 space-y-5"
+            className="glass-card rounded-lg p-5 space-y-4"
             style={{ border: '1px solid rgba(255,255,255,.07)', boxShadow: '0 1px 3px rgba(0,0,0,.4)' }}
           >
             <div>
               <h3 className="text-sm font-semibold" style={{ color: '#F7F8F8', fontFamily: F }}>
-                Informations specifiques a ce chantier
+                Informations spécifiques à ce chantier
               </h3>
               <p className="text-[11px] mt-1" style={{ color: '#959597' }}>
-                Ces informations seront integrees dans le memoire pour ce projet
+                Ces informations seront intégrées dans le mémoire pour ce projet
               </p>
             </div>
-
-            {hasMemoire && (
-              <p className="text-sm font-medium" style={{ color: '#959597' }}>
-                La regeneration remplacera le memoire actuel.
-              </p>
-            )}
 
             {/* Row 1: Ouvriers + Délai */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: '#F7F8F8' }}>
-                  Nombre d&apos;ouvriers dedies <span style={{ color: '#F58E86' }}>*</span>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: '#F7F8F8' }}>
+                  Nombre d&apos;ouvriers dedies <span style={{ color: 'var(--warn)' }}>*</span>
                 </label>
                 <input
                   type="number"
                   value={variables.nb_ouvriers}
                   onChange={(e) => setVariables((v) => ({ ...v, nb_ouvriers: e.target.value }))}
-                  className="w-full py-2.5 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
-                  style={{ border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
+                  className="w-full py-2 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
+                  style={{ background: '#121213', border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
                   placeholder="Ex: 4"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: '#F7F8F8' }}>
-                  Delai estime <span style={{ color: '#F58E86' }}>*</span>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: '#F7F8F8' }}>
+                  Delai estime <span style={{ color: 'var(--warn)' }}>*</span>
                 </label>
                 <input
                   type="text"
                   value={variables.delai}
                   onChange={(e) => setVariables((v) => ({ ...v, delai: e.target.value }))}
-                  className="w-full py-2.5 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
-                  style={{ border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
+                  className="w-full py-2 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
+                  style={{ background: '#121213', border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
                   placeholder="Ex: 3 mois"
                 />
               </div>
@@ -1007,24 +990,24 @@ export default function StepMemoire({ project }: Props) {
             {/* Row 2: Chef de chantier */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: '#F7F8F8' }}>Chef de chantier — nom</label>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: '#F7F8F8' }}>Chef de chantier — nom</label>
                 <input
                   type="text"
                   value={variables.chef_chantier_nom}
                   onChange={(e) => setVariables((v) => ({ ...v, chef_chantier_nom: e.target.value }))}
-                  className="w-full py-2.5 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
-                  style={{ border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
+                  className="w-full py-2 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
+                  style={{ background: '#121213', border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
                   placeholder="Ex: Jean Dupont"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: '#F7F8F8' }}>Qualification</label>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: '#F7F8F8' }}>Qualification</label>
                 <input
                   type="text"
                   value={variables.chef_chantier_qualification}
                   onChange={(e) => setVariables((v) => ({ ...v, chef_chantier_qualification: e.target.value }))}
-                  className="w-full py-2.5 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
-                  style={{ border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
+                  className="w-full py-2 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
+                  style={{ background: '#121213', border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
                   placeholder="Ex: 15 ans d'experience, CACES R482"
                 />
               </div>
@@ -1033,24 +1016,24 @@ export default function StepMemoire({ project }: Props) {
             {/* Row 3: Conducteur de travaux */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: '#F7F8F8' }}>Conducteur de travaux — nom</label>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: '#F7F8F8' }}>Conducteur de travaux — nom</label>
                 <input
                   type="text"
                   value={variables.conducteur_travaux_nom}
                   onChange={(e) => setVariables((v) => ({ ...v, conducteur_travaux_nom: e.target.value }))}
-                  className="w-full py-2.5 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
-                  style={{ border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
+                  className="w-full py-2 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
+                  style={{ background: '#121213', border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
                   placeholder="Ex: Marie Martin"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1.5" style={{ color: '#F7F8F8' }}>Qualification</label>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: '#F7F8F8' }}>Qualification</label>
                 <input
                   type="text"
                   value={variables.conducteur_travaux_qualification}
                   onChange={(e) => setVariables((v) => ({ ...v, conducteur_travaux_qualification: e.target.value }))}
-                  className="w-full py-2.5 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
-                  style={{ border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
+                  className="w-full py-2 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
+                  style={{ background: '#121213', border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
                   placeholder="Ex: Ingenieur BTP, 10 ans ITE/ravalement"
                 />
               </div>
@@ -1058,22 +1041,22 @@ export default function StepMemoire({ project }: Props) {
 
             {/* Row 4: Matériel spécifique */}
             <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: '#F7F8F8' }}>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: '#F7F8F8' }}>
                 Materiel specifique au chantier
               </label>
               <textarea
                 value={variables.materiel_specifique}
                 onChange={(e) => setVariables((v) => ({ ...v, materiel_specifique: e.target.value }))}
                 rows={2}
-                className="w-full py-2.5 px-3 text-sm rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
-                style={{ border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
+                className="w-full py-2 px-3 text-sm rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
+                style={{ background: '#121213', border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
                 placeholder="Ex: echafaudage tubulaire R200, nacelle articulee 20m..."
               />
             </div>
 
             {/* Row 5: Contraintes */}
             <div>
-              <label className="block text-sm font-medium mb-1.5" style={{ color: '#F7F8F8' }}>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: '#F7F8F8' }}>
                 Contraintes particulieres
                 <span className="font-normal ml-1" style={{ color: '#6B6C6F' }}>(optionnel)</span>
               </label>
@@ -1081,8 +1064,8 @@ export default function StepMemoire({ project }: Props) {
                 value={variables.particularites}
                 onChange={(e) => setVariables((v) => ({ ...v, particularites: e.target.value }))}
                 rows={2}
-                className="w-full py-2.5 px-3 text-sm rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
-                style={{ border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
+                className="w-full py-2 px-3 text-sm rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
+                style={{ background: '#121213', border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
                 placeholder="Ex: site occupe, horaires restreints 8h-17h..."
               />
             </div>
@@ -1113,7 +1096,7 @@ export default function StepMemoire({ project }: Props) {
             style={{ fontFamily: F, padding: '12px 24px' }}
           >
             <Sparkles size={18} />
-            {hasMemoire ? 'Regenerer le memoire' : 'Generer le memoire technique'}
+            {hasMemoire ? 'Régénérer le mémoire' : 'Générer le mémoire technique'}
           </button>
         </div>
 
@@ -1162,31 +1145,31 @@ export default function StepMemoire({ project }: Props) {
           </p>
         )}
 
-        {/* ── Title bar ──────────────────────────────────────────── */}
+        {/* ── Barre de titre : un seul rang, tout l'état du document ── */}
         <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-bold" style={{ color: '#F7F8F8' }}>
-              Memoire Technique — {lotName}
+          <div className="flex items-center gap-3 min-w-0">
+            <h1 className="text-xl font-bold truncate" style={{ color: '#F7F8F8' }}>
+              Mémoire technique — {lotName}
             </h1>
             <span
-              className="text-xs font-medium px-2.5 py-1 rounded-full"
-              style={{
-                background: displayContent ? 'rgba(255,255,255,0.10)' : '#1E1E21',
-                color: displayContent ? '#E8E9EB' : '#6B6C6F',
-                border: displayContent ? '1px solid rgba(255,255,255,0.20)' : '1px solid rgba(255,255,255,.07)',
-              }}
+              className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full shrink-0"
+              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,.07)', color: '#C2C3C6' }}
+              title={`Générée le ${new Date(memoire!.generated_at).toLocaleDateString('fr-FR')} par Synorix IA`}
             >
-              {displayContent ? 'Valide' : 'Brouillon'}
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: '#6EE7A8' }} />
+              v{memoire!.version}
+              <span style={{ color: '#55565A' }}>·</span>
+              <span className="num-mono">{completionPct}&nbsp;% rédigé</span>
             </span>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowEditor(true)}
-              className="flex items-center gap-1.5 text-sm font-medium py-2 px-4 rounded-lg transition-colors hover:bg-ds-bg-2"
-              style={{ border: '1px solid rgba(255,255,255,.07)', color: '#959597' }}
+              className="flex items-center gap-1.5 text-sm font-medium py-1.5 px-3.5 rounded-lg transition-colors hover:bg-ds-bg-2"
+              style={{ border: '1px solid rgba(255,255,255,.07)', color: '#C2C3C6' }}
             >
-              <Pencil size={14} /> Modifier
+              <Pencil size={13} /> Modifier
             </button>
             <button
               onClick={() => {
@@ -1194,19 +1177,14 @@ export default function StepMemoire({ project }: Props) {
                 exportToWord(project.id, project.name).finally(() => setIsExporting(false))
               }}
               disabled={isExporting}
-              className="flex items-center gap-1.5 text-sm font-medium py-2 px-4 rounded-lg transition-colors hover:bg-ds-bg-2"
-              style={{ border: '1px solid rgba(255,255,255,.07)', color: '#959597' }}
+              className="glass-btn flex items-center gap-1.5 text-sm font-semibold py-1.5 px-3.5 rounded-lg disabled:opacity-60"
+              style={{ color: '#D8D9DB' }}
             >
-              <Download size={14} />
+              <Download size={13} />
               {isExporting ? 'Export...' : 'Export .docx'}
             </button>
           </div>
         </div>
-
-        {/* Subtitle version line */}
-        <p className="text-xs" style={{ color: '#6B6C6F' }}>
-          v{memoire!.version} — Generee le {new Date(memoire!.generated_at).toLocaleDateString('fr-FR')} par Synorix AI
-        </p>
 
         {/* ── 3-column layout ────────────────────────────────────── */}
         {displayContent && (
@@ -1214,11 +1192,7 @@ export default function StepMemoire({ project }: Props) {
 
             {/* LEFT — Table of Contents */}
             <div className="shrink-0 hidden xl:block">
-              <TocSidebar
-                activeSection={activeSection}
-                onNavigate={handleTocNavigate}
-                completionPct={completionPct}
-              />
+              <TocSidebar activeSection={activeSection} onNavigate={handleTocNavigate} />
             </div>
 
             {/* CENTER — Document */}
@@ -1231,16 +1205,11 @@ export default function StepMemoire({ project }: Props) {
               <div className="sticky top-4 space-y-3">
 
                 {/* Header */}
-                <div className="flex items-center gap-2.5">
-                  <MessageSquare size={18} style={{ color: '#E8E9EB' }} />
-                  <div>
-                    <h3 className="text-base font-bold" style={{ color: '#F7F8F8', fontFamily: F }}>
-                      Assistant Synorix
-                    </h3>
-                    <p className="text-xs" style={{ color: '#6B6C6F' }}>
-                      Analyse en temps reel...
-                    </p>
-                  </div>
+                <div>
+                  <p className="microlabel">Compagnon Synorix</p>
+                  <p className="text-xs mt-1" style={{ color: '#6B6C6F' }}>
+                    Suggestions pour renforcer ce mémoire
+                  </p>
                 </div>
 
                 {/* Suggestion cards */}
@@ -1254,19 +1223,17 @@ export default function StepMemoire({ project }: Props) {
 
                 {/* Focus IA */}
                 <div
-                  className="rounded-xl p-4"
-                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)' }}
+                  className="rounded-lg p-3.5"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,.07)' }}
                 >
-                  <div className="flex items-center gap-2 mb-2">
-                    <Sparkles size={14} style={{ color: '#E8E9EB' }} />
-                    <span className="text-sm font-bold" style={{ color: '#E8E9EB', fontFamily: F }}>
-                      FOCUS IA
-                    </span>
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <Sparkles size={12} style={{ color: '#98999C' }} />
+                    <span className="microlabel">Focus IA</span>
                   </div>
-                  <p className="text-xs italic leading-relaxed" style={{ color: '#959597' }}>
-                    Le memoire technique represente souvent 50-60% de la note finale.
-                    Personnalisez chaque section avec vos references reelles et vos moyens
-                    specifiques pour maximiser votre score.
+                  <p className="text-xs leading-relaxed" style={{ color: '#959597' }}>
+                    Le mémoire technique représente souvent 50-60&nbsp;% de la note finale.
+                    Personnalisez chaque section avec vos références réelles et vos moyens
+                    spécifiques pour maximiser votre score.
                   </p>
                 </div>
               </div>

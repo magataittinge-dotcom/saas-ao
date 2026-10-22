@@ -60,7 +60,7 @@ export default function CandidatureSectionTemplates({ projectId, items, onUpload
       style={{ border: '1px solid rgba(255,255,255,.07)', boxShadow: '0 1px 3px rgba(0,0,0,.4)', fontFamily: F }}
     >
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
+      <header className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
         <div className="flex items-center gap-3 min-w-0">
           <div
             className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
@@ -140,7 +140,7 @@ function TemplateRow({
   }
 
   return (
-    <li className="px-6 py-4 flex items-start gap-4">
+    <li className="px-5 py-3 flex items-start gap-4">
       {/* Status icon */}
       <span className="shrink-0 mt-0.5">
         {isPresent

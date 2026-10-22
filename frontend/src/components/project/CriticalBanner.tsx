@@ -60,15 +60,17 @@ function SourceLink({ source, onOpen }: { source: FieldSource | null; onOpen: (s
   )
 }
 
-/** Tuile bento : un fait du marché, un label micro, une valeur nette. */
-function Tile({ icon, label, accent, children }: {
+/** Tuile bento : un fait du marché, un label micro, une valeur nette.
+ *  `wide` = double largeur pour les contenus bavards (bento asymétrique). */
+function Tile({ icon, label, accent, wide, children }: {
   icon: React.ReactNode
   label: string
   accent?: string
+  wide?: boolean
   children: React.ReactNode
 }) {
   return (
-    <div className="glass-card top-lit px-4 py-3.5">
+    <div className={`glass-card top-lit px-4 py-3 ${wide ? 'sm:col-span-2' : ''}`}>
       <p className="microlabel mb-1.5 flex items-center gap-1.5">
         <span style={{ color: accent ?? '#6B6C6F' }}>{icon}</span>
         {label}
@@ -150,7 +152,12 @@ export default function CriticalBanner({ projectId, onOpenSource }: Props) {
 
   if (f.delai_execution.value) {
     tiles.push(
-      <Tile key="delai" icon={<Clock size={13} />} label="Délai d'exécution">
+      <Tile
+        key="delai"
+        icon={<Clock size={13} />}
+        label="Délai d'exécution"
+        wide={f.delai_execution.value.length > 40}
+      >
         {f.delai_execution.value}
         {' '}<SourceLink source={f.delai_execution.source} onOpen={onOpenSource} />
       </Tile>,
@@ -160,7 +167,7 @@ export default function CriticalBanner({ projectId, onOpenSource }: Props) {
   if (f.penalites.value) {
     const { retard, plafond } = f.penalites.value
     tiles.push(
-      <Tile key="penalites" icon={<Shield size={13} />} label="Pénalités de retard">
+      <Tile key="penalites" icon={<Shield size={13} />} label="Pénalités de retard" wide>
         {retard && <span>{retard}</span>}
         {retard && plafond && <span style={{ color: '#6B6C6F' }}> · </span>}
         {plafond && <span style={{ color: '#B4B5B8' }}>plafond {plafond}</span>}
@@ -178,48 +185,10 @@ export default function CriticalBanner({ projectId, onOpenSource }: Props) {
     )
   }
 
-  const criteres = f.criteres.value
-  const totalPoids = criteres?.reduce((s, c) => s + (c.poids || 0), 0) || 0
+  // Les critères de notation ne sont plus rendus ici : la jauge du héros
+  // de StepAnalysis porte déjà cette information (doublon supprimé — R6).
 
-  if (tiles.length === 0 && !criteres) return null
+  if (tiles.length === 0) return null
 
-  return (
-    <div className="space-y-3">
-      {tiles.length > 0 && (
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{tiles}</div>
-      )}
-
-      {criteres && totalPoids > 0 && (
-        <div className="glass-card px-4 py-3.5">
-          <div className="mb-2 flex items-center gap-1.5">
-            <p className="microlabel">Critères de notation</p>
-            <SourceLink source={f.criteres.source} onOpen={onOpenSource} />
-          </div>
-          <div className="flex h-2 overflow-hidden rounded-full" style={{ background: 'var(--surface-2)' }}>
-            {criteres.map((c, i) => (
-              <div
-                key={i}
-                title={`${c.nom} — ${c.poids} %`}
-                style={{
-                  width: `${(c.poids / totalPoids) * 100}%`,
-                  background: /prix/i.test(c.nom) ? '#FFFFFF' : i % 2 === 0 ? '#E8E9EB' : '#98999C',
-                }}
-              />
-            ))}
-          </div>
-          <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-0.5">
-            {criteres.map((c, i) => (
-              <span key={i} className="text-[11px]" style={{ color: '#959597' }}>
-                <span
-                  className="mr-1 inline-block h-2 w-2 rounded-full align-middle"
-                  style={{ background: /prix/i.test(c.nom) ? '#FFFFFF' : i % 2 === 0 ? '#E8E9EB' : '#98999C' }}
-                />
-                {c.nom} <span className="num-mono font-semibold" style={{ color: '#D8D9DB' }}>{c.poids} %</span>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  )
+  return <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">{tiles}</div>
 }
