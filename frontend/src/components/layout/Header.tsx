@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { Search, Menu, X, Sparkles } from 'lucide-react'
+import { Menu } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useCompanionStore } from '@/stores/companionStore'
 import { useLocation } from 'react-router-dom'
@@ -40,8 +39,6 @@ export default function Header({ onMenuToggle }: Props) {
   const { user } = useAuthStore()
   const companionState = useCompanionStore((s) => s.state)
   const { pathname } = useLocation()
-  const [searchFocused, setSearchFocused] = useState(false)
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false)
 
   const initials = user?.name ? user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() : 'U'
   const displayName = user?.name ?? 'Utilisateur'
@@ -84,36 +81,6 @@ export default function Header({ onMenuToggle }: Props) {
         </div>
       </div>
 
-      {/* Mobile search overlay */}
-      {mobileSearchOpen && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4 sm:hidden"
-          style={{ background: 'rgba(0,0,0,0.20)' }}
-          onClick={(e) => { if (e.target === e.currentTarget) setMobileSearchOpen(false) }}
-        >
-          <div className="w-full max-w-sm rounded-2xl p-4"
-            style={{ background: '#18181A', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 8px 24px rgba(0,0,0,0.10)' }}>
-            <div className="flex items-center gap-2 mb-3">
-              <Sparkles size={16} style={{ color: '#E8E9EB' }} />
-              <span className="text-sm font-medium" style={{ color: '#F7F8F8' }}>Recherche intelligente</span>
-              <button
-                onClick={() => setMobileSearchOpen(false)}
-                className="ml-auto p-1.5 rounded-lg touch-target"
-                style={{ color: '#959597' }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <input
-              type="text"
-              placeholder="Recherche intelligente..."
-              className="w-full px-4 py-3 text-sm rounded-xl outline-none"
-              style={{ background: '#1E1E21', border: '1px solid rgba(255,255,255,0.06)', color: '#F7F8F8' }}
-              autoFocus
-            />
-          </div>
-        </div>
-      )}
-
       {/* Right side */}
       <div className="flex items-center gap-3">
         {/* Compagnon IA — état piloté par companionStore (analyse SSE, etc.) */}
@@ -124,32 +91,6 @@ export default function Header({ onMenuToggle }: Props) {
         />
         {/* Notifications (C23) */}
         <NotificationBell />
-        {/* Search — desktop */}
-        <div className="relative hidden sm:block">
-          <Sparkles size={14} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: '#E8E9EB' }} />
-          <input type="text" placeholder="Recherche intelligente..."
-            className="w-52 pl-9 pr-3 py-2 text-sm rounded-full outline-none transition-all duration-200"
-            style={{
-              background: searchFocused ? '#18181A' : '#09090A',
-              border: 'none',
-              boxShadow: searchFocused
-                ? 'inset 0 0 0 1px rgba(255,255,255,0.10), inset 0 -2px 0 0 #E8E9EB, 0 8px 24px -12px rgba(255,255,255,0.35)'
-                : 'inset 0 0 0 1px rgba(255,255,255,0.06)',
-              color: '#F7F8F8',
-              fontFamily: "'Inter Variable', 'Geist Sans', sans-serif",
-            }}
-            onFocus={() => setSearchFocused(true)} onBlur={() => setSearchFocused(false)} />
-        </div>
-        {/* Mobile search button */}
-        <button
-          onClick={() => setMobileSearchOpen(true)}
-          className="p-2 rounded-full sm:hidden touch-target"
-          style={{ color: '#959597' }}
-          title="Rechercher"
-        >
-          <Search size={18} />
-        </button>
-
         <div className="w-px h-6 hidden sm:block" style={{ background: '#1E1E21' }} />
 
         {/* User info + Avatar */}

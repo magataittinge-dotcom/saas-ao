@@ -190,13 +190,6 @@ export default function StepVerification({ project }: Props) {
       <div className="flex items-center gap-3">
         <button
           type="button"
-          className="text-sm font-medium px-4 py-2 rounded-lg transition-colors hover:bg-ds-bg-2"
-          style={{ color: '#959597' }}
-        >
-          Sauvegarder le brouillon
-        </button>
-        <button
-          type="button"
           onClick={() =>
             isAlreadyDone
               ? navigate(`/projects/${project.id}/memoire`)

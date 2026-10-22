@@ -6,7 +6,7 @@ import {
   FileDown, Archive, CheckCircle2, XCircle, Loader2,
   ChevronDown, ChevronRight, AlertTriangle, Upload,
   ExternalLink, FileSpreadsheet, FileText, Eye,
-  Download, Mail,
+  Download,
 } from 'lucide-react'
 import { api } from '@/services/api'
 import type { Project } from '@/types'
@@ -466,13 +466,6 @@ export default function StepExport({ project }: Props) {
                 {isExportingDocx ? <Loader2 size={13} className="animate-spin" /> : <FileDown size={13} />}
                 Mémoire Word (retouche)
               </button>
-              <button
-                className="w-full flex items-center gap-2 py-1.5 px-3 text-xs font-medium rounded-lg transition-colors hover:bg-ds-bg-2"
-                style={{ border: '1px solid rgba(255,255,255,.07)', color: '#959597' }}
-              >
-                <Mail size={13} />
-                Envoyer par email
-              </button>
             </div>
             {detail.naming_convention && (
               <p className="mt-3 text-[11px] leading-relaxed" style={{ color: '#6B6C6F' }}>
@@ -518,11 +511,6 @@ export default function StepExport({ project }: Props) {
                       )}
                     </div>
                   </div>
-                  {item.status !== 'present' && (
-                    <span className="text-xs font-medium shrink-0 cursor-pointer" style={{ color: '#E8E9EB' }}>
-                      À corriger
-                    </span>
-                  )}
                 </div>
               ))}
               {detail.checklist_items.length === 0 && (

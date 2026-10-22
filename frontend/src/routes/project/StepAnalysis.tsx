@@ -308,12 +308,6 @@ export default function StepAnalysis({ project }: Props) {
 
       <div className="flex items-center gap-3 shrink-0">
         <button
-          className="glass-btn px-5 py-2.5 rounded-lg text-sm font-semibold"
-          style={{ color: '#C2C3C6', fontFamily: F }}
-        >
-          Générer Rapport PDF
-        </button>
-        <button
           onClick={handleValidate}
           disabled={isValidating}
           className="signature-btn"

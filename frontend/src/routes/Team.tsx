@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { Users, Plus } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Users } from 'lucide-react'
 import { api } from '@/services/api'
 import type { TeamMember } from '@/types'
 
@@ -19,10 +20,6 @@ export default function Team() {
           <Users size={24} style={{ color: '#E4E9F2' }} />
           <h1 className="text-2xl font-bold text-ds-text">Équipe</h1>
         </div>
-        <button className="btn-primary flex items-center gap-2 text-sm font-medium py-2 px-4">
-          <Plus size={16} />
-          Ajouter un membre
-        </button>
       </div>
 
       <div className="space-y-3">
@@ -35,8 +32,12 @@ export default function Team() {
             }}
           >
             <Users size={36} className="mx-auto mb-3 opacity-30" />
-            <p>Ajoutez les membres de votre équipe d'encadrement</p>
-            <p className="text-sm mt-1 text-ds-text-3">Ils seront utilisés comme interlocuteurs dans vos mémoires techniques</p>
+            <p>Aucun membre d'équipe pour l'instant.</p>
+            <p className="text-sm mt-1 text-ds-text-3">
+              Votre équipe d'encadrement se décrit dans{' '}
+              <Link to="/company" className="underline underline-offset-2">Mon entreprise</Link>
+              {' '}(Équipe / effectifs).
+            </p>
           </div>
         ) : (
           members.map((member) => (
