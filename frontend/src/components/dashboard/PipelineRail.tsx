@@ -1,14 +1,8 @@
 import { cn } from '@/lib/utils'
+import { ETAPES_AO, avancementAO } from '@/lib/echeance'
 
-/** Étapes réelles du pipeline AO (cf. StepProgress). */
-export const PIPELINE_STEPS = [
-  'Dépôt du DCE',
-  'Lots',
-  'Analyse IA',
-  'Vérification',
-  'Mémoire',
-  'Export',
-] as const
+/** Étapes réelles du pipeline AO (source commune : lib/echeance.ts). */
+export const PIPELINE_STEPS = ETAPES_AO
 
 interface PipelineRailProps {
   /** Étape courante 1→6 (Project.current_step). */
@@ -24,8 +18,7 @@ interface PipelineRailProps {
  * (glow blanc), suivantes en neutre. Animation douce de remplissage.
  */
 export function PipelineRail({ currentStep, showLabel = true, className }: PipelineRailProps) {
-  const step = Math.max(1, Math.min(PIPELINE_STEPS.length, currentStep))
-  const pct = Math.round((step / PIPELINE_STEPS.length) * 100)
+  const { etape: step, total } = avancementAO(currentStep)
 
   return (
     <div className={cn('w-full', className)}>
@@ -51,7 +44,7 @@ export function PipelineRail({ currentStep, showLabel = true, className }: Pipel
       {showLabel && (
         <div className="mt-1.5 flex items-center justify-between">
           <span className="text-xs font-medium text-ds-text-2">{PIPELINE_STEPS[step - 1]}</span>
-          <span className="edge-data text-[11px] font-semibold tabular-nums text-ds-cyan">{pct}%</span>
+          <span className="edge-data text-[11px] font-semibold tabular-nums text-ds-cyan">Étape {step} sur {total}</span>
         </div>
       )}
     </div>

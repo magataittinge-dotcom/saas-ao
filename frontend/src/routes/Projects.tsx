@@ -3,7 +3,7 @@ import { Plus, Search, SlidersHorizontal, ArrowUpDown } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useProjects } from '@/hooks/useProject'
-import { daysUntil } from '@/lib/utils'
+import { echeanceAO, estEnCours, momentLimite } from '@/lib/echeance'
 import { api } from '@/services/api'
 import { AOCard } from '@/components/dashboard/AOCard'
 import DeleteConfirmModal from '@/components/common/DeleteConfirmModal'
@@ -50,16 +50,16 @@ export default function Projects() {
 
     // Status filter
     if (filter === 'active') {
-      list = list.filter((p) => p.status === 'en_cours' || p.status === 'brouillon')
+      list = list.filter((p) => estEnCours(p.status))
     } else if (filter === 'done') {
-      list = list.filter((p) => p.status === 'soumis' || p.status === 'gagné' || p.status === 'perdu')
+      list = list.filter((p) => !estEnCours(p.status))
     }
 
     // Sort
     list.sort((a, b) => {
       if (sort === 'deadline') {
-        const da = a.deadline ? daysUntil(a.deadline) : 9999
-        const db = b.deadline ? daysUntil(b.deadline) : 9999
+        const da = momentLimite(echeanceAO(a))?.getTime() ?? Number.MAX_SAFE_INTEGER
+        const db = momentLimite(echeanceAO(b))?.getTime() ?? Number.MAX_SAFE_INTEGER
         return da - db
       }
       if (sort === 'created_at') {
@@ -71,7 +71,7 @@ export default function Projects() {
     return list
   }, [projects, search, sort, filter])
 
-  const activeCount = projects.filter((p) => p.status === 'en_cours' || p.status === 'brouillon').length
+  const activeCount = projects.filter((p) => estEnCours(p.status)).length
 
   return (
     <div className="space-y-5 animate-fade-in">

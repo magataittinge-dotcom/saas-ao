@@ -4,6 +4,7 @@ import { MapPin } from 'lucide-react'
 import { useProject } from '@/hooks/useProject'
 import { StepProgress } from '@/components/project/StepProgress'
 import { DeadlinePill } from '@/components/dashboard/DeadlinePill'
+import { echeanceAO } from '@/lib/echeance'
 import { StepperSkeleton } from '@/components/skeletons'
 import Skeleton from '@/components/common/Skeleton'
 import StepUpload       from './project/StepUpload'
@@ -69,9 +70,9 @@ export default function Project() {
             </p>
           )}
         </div>
-        {project.deadline && (
+        {echeanceAO(project) && (
           <div className="shrink-0 pt-1">
-            <DeadlinePill deadline={project.deadline} emphasized />
+            <DeadlinePill echeance={echeanceAO(project)} emphasized />
           </div>
         )}
       </div>

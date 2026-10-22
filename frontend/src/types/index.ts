@@ -176,6 +176,8 @@ export interface LotOption {
 }
 
 export interface Project {
+  /** 1.14 — échéance unique (date saisie ou RC, avec l'heure du RC), calculée par le serveur. */
+  echeance?: { date: string; heure: string | null } | null
   id: string
   organization_id: string
   name: string

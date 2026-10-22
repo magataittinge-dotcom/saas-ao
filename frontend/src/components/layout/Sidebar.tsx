@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { nomPlan } from '@/lib/offres'
+import { echeanceAO, estEnCours, etatEcheance } from '@/lib/echeance'
 import { useLogout } from '@/hooks/useAuth'
 import { useProjects } from '@/hooks/useProject'
 import { cn } from '@/lib/utils'
@@ -63,21 +64,13 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
   const pill = { label: nomPlan(planKey), pillClass: PLAN_PILL[planKey] ?? PLAN_PILL.free }
   const initials = user?.name ? user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() : 'U'
 
-  // Badge deadline sur « Mes AO » : au moins un AO actif avec une échéance < 7 j.
-  const urgentCount = useMemo(() => {
-    const closed = new Set(['soumis', 'gagné', 'perdu'])
-    let count = 0
-    for (const p of projects) {
-      if (closed.has(p.status)) continue
-      const raw = p.deadline || p.infos_marche?.date_limite_reponse
-      if (!raw) continue
-      const d = new Date(raw)
-      if (isNaN(d.getTime())) continue
-      const days = (d.getTime() - Date.now()) / 86400000
-      if (days >= 0 && days < 7) count += 1
-    }
-    return count
-  }, [projects])
+  // Badge deadline sur « Mes AO » : AO en cours dont l'échéance est aujourd'hui
+  // ou sous 7 jours — même calcul que tous les écrans (1.14).
+  const urgentCount = useMemo(() => projects.filter((p) => {
+    if (!estEnCours(p.status)) return false
+    const etat = etatEcheance(echeanceAO(p)).etat
+    return etat === 'aujourdhui' || etat === 'proche'
+  }).length, [projects])
 
   useEffect(() => { onMobileClose() }, [location.pathname, onMobileClose])
 

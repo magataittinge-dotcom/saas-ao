@@ -2,8 +2,8 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, Clock, ArrowRight, Send, Trash2, Trophy, X } from 'lucide-react'
 import { api } from '@/services/api'
-import { daysUntil } from '@/lib/utils'
 import { cn } from '@/lib/utils'
+import { avancementAO, echeanceAO, etatEcheance } from '@/lib/echeance'
 import type { Project } from '@/types'
 
 import { PIPELINE_STEPS } from './PipelineRail'
@@ -41,12 +41,10 @@ export function AOCard({ project, onDelete }: Props) {
     && ['brouillon', 'en_cours', 'analyzed'].includes(project.status)
   const isDeposed = project.status === 'soumis'
 
-  const days = project.deadline ? daysUntil(project.deadline) : null
-  const isUrgent = days !== null && days <= 7
-  // 6 étapes réelles (cf. PIPELINE_STEPS) — clamp : jamais > 100 %, jamais
-  // de libellé « undefined » à l'étape Export.
-  const stepIndex = Math.min(Math.max(project.current_step, 1), PIPELINE_STEPS.length)
-  const progress = ((stepIndex - 1) / (PIPELINE_STEPS.length - 1)) * 100
+  // 1.14 — échéance et avancement : les fonctions communes (lib/echeance.ts)
+  const echeance = etatEcheance(echeanceAO(project))
+  const isUrgent = echeance.etat === 'proche' || echeance.etat === 'aujourdhui'
+  const { etape: stepIndex, total: nbEtapes } = avancementAO(project.current_step)
   const status = STATUS_CONFIG[project.status] ?? STATUS_CONFIG.brouillon
   const accentColor = isUrgent ? '#F58E86' : status.accent
 
@@ -119,7 +117,7 @@ export function AOCard({ project, onDelete }: Props) {
             className="text-ds-text-2 font-medium"
             style={{ fontFamily: '"Geist Mono", monospace', fontVariantNumeric: 'tabular-nums' }}
           >
-            {Math.round(progress)}%
+            Étape {stepIndex} sur {nbEtapes}
           </span>
         </div>
         <div className="steps-track w-full" style={{ display: 'flex' }}>
@@ -135,7 +133,7 @@ export function AOCard({ project, onDelete }: Props) {
 
       {/* Footer */}
       <div className="flex items-center justify-between relative">
-        {project.deadline ? (
+        {echeance.etat !== 'sans_date' ? (
           <div
             className={cn(
               'flex items-center gap-1.5 text-xs',
@@ -144,11 +142,7 @@ export function AOCard({ project, onDelete }: Props) {
             style={isUrgent ? { color: '#F58E86' } : undefined}
           >
             {isUrgent ? <AlertTriangle size={11} /> : <Clock size={11} />}
-            {days === 0
-              ? "Échéance aujourd'hui"
-              : days !== null && days < 0
-                ? 'À déposer'
-                : `J-${days}`}
+            {echeance.libelle}
           </div>
         ) : (
           <span />

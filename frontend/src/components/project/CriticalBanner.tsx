@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Calendar, Clock, ExternalLink, HelpCircle, MapPin, Shield } from 'lucide-react'
 import { api } from '@/services/api'
+import { etatEcheance } from '@/lib/echeance'
 
 // ── Types (miroir de services/critical_fields.py) ────────────────────────────
 
@@ -33,12 +34,6 @@ interface Props {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function daysUntil(iso: string): number | null {
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return null
-  return Math.ceil((d.getTime() - Date.now()) / 86400000)
-}
 
 function formatFr(iso: string): string {
   const d = new Date(iso)
@@ -105,9 +100,10 @@ export default function CriticalBanner({ projectId, onOpenSource }: Props) {
 
   if (f.date_limite_remise.value) {
     const { date, heure } = f.date_limite_remise.value
-    const days = daysUntil(date)
-    const passed = days !== null && days < 0
-    const urgent = days !== null && days >= 0 && days < 7
+    // 1.14 — la fonction d'échéance commune, à la minute près (heure du RC comprise)
+    const echeance = etatEcheance({ date, heure })
+    const passed = echeance.etat === 'passee'
+    const urgent = echeance.etat === 'aujourdhui' || echeance.etat === 'proche'
     tiles.push(
       <Tile
         key="remise"
@@ -117,16 +113,16 @@ export default function CriticalBanner({ projectId, onOpenSource }: Props) {
       >
         <span>{formatFr(date)}</span>
         {heure && <span style={{ color: '#B4B5B8' }}> · {heure}</span>}
-        {days !== null && (
+        {echeance.etat !== 'sans_date' && (
           <span
-            className="num-mono ml-2 rounded-full px-1.5 py-0.5 align-middle text-[10px] font-bold uppercase"
+            className="num-mono ml-2 rounded-full px-1.5 py-0.5 align-middle text-[10px] font-bold"
             style={passed
               ? { background: 'rgba(245,142,134,0.10)', color: '#F58E86' }
               : urgent
                 ? { background: 'var(--warn-bg)', color: 'var(--warn)' }
                 : { background: 'rgba(255,255,255,0.10)', color: '#F7F8F8' }}
           >
-            {passed ? 'échue' : `J−${days}`}
+            {echeance.libelle}
           </span>
         )}
         {' '}<SourceLink source={f.date_limite_remise.source} onOpen={onOpenSource} />

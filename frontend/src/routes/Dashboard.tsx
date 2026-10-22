@@ -18,7 +18,7 @@ import { StatCard } from '@/components/dashboard/StatCard'
 import { PipelineRail } from '@/components/dashboard/PipelineRail'
 import { DeadlinePill } from '@/components/dashboard/DeadlinePill'
 import { StatCardGridSkeleton, ProjectListSkeleton } from '@/components/skeletons'
-import { daysUntil } from '@/lib/utils'
+import { echeanceAO, estEnCours, etatEcheance } from '@/lib/echeance'
 import type { Project, DashboardStats } from '@/types'
 
 /* ── Empty fallback ──────────────────────────────────────────────── */
@@ -103,8 +103,8 @@ export default function Dashboard() {
   const firstName = user?.name?.split(' ')[0] ?? 'vous'
 
   // B7 — deux zones : les AO clos (soumis/gagné/perdu/sans_suite) sortent des deux.
-  const activeStatuses = new Set(['brouillon', 'en_cours', 'analyzed'])
-  const activeProjects = projects.filter((p) => activeStatuses.has(p.status))
+  // 1.14 — « en cours » : la définition commune (lib/echeance.ts, comme le serveur).
+  const activeProjects = projects.filter((p) => estEnCours(p.status))
   // « En cours de réponse » : a dépassé l'analyse (candidature/mémoire entamés)
   // ou n'a pas encore atteint l'analyse (dossier en préparation).
   const enCoursReponse = activeProjects.filter(
@@ -116,12 +116,11 @@ export default function Dashboard() {
   )
   const active = enCoursReponse
 
-  // Piloter : uniquement les échéances sous 7 jours (AO actifs)
+  // Piloter : uniquement les échéances à venir sous 7 jours (AO actifs), même calcul partout (1.14)
   const upcoming = activeProjects
-    .filter((p) => p.deadline)
-    .map((p) => ({ ...p, _days: daysUntil(p.deadline!) }))
-    .filter((p) => p._days >= -1 && p._days < 7)
-    .sort((a, b) => a._days - b._days)
+    .map((p) => ({ ...p, _echeance: etatEcheance(echeanceAO(p)) }))
+    .filter((p) => p._echeance.etat === 'aujourdhui' || p._echeance.etat === 'proche')
+    .sort((a, b) => a._echeance.limite!.getTime() - b._echeance.limite!.getTime())
     .slice(0, 4)
 
   // Cartes-stats — 100 % données réelles backend
@@ -134,14 +133,21 @@ export default function Dashboard() {
 
   // Note assistant — positive, basée sur les vrais compteurs
   const next = upcoming[0]
-  const synorixNote = active.length === 0
+  // Pas de « marge » annoncée quand une date de remise est déjà passée (1.14).
+  const datePassee = activeProjects.find((p) => etatEcheance(echeanceAO(p)).etat === 'passee')
+  // « Dans les temps » seulement si le dossier est prêt (étape Export atteinte) — 1.14.
+  const synorixNote = activeProjects.length === 0
     ? "Créez votre premier appel d'offres : l'IA analyse le DCE, prépare la candidature et rédige le mémoire technique."
-    : `${active.length} appel${active.length > 1 ? 's' : ''} d'offres en cours.` +
+    : `${activeProjects.length} appel${activeProjects.length > 1 ? 's' : ''} d'offres en cours.` +
       (next
-        ? next._days <= 0
-          ? ` Échéance du jour : « ${next.name} » — vous êtes dans les temps.`
-          : ` Prochaine échéance dans ${next._days} jour${next._days > 1 ? 's' : ''} : « ${next.name} ».`
-        : ' Aucune échéance imminente, vous avez de la marge.')
+        ? next._echeance.etat === 'aujourdhui'
+          ? next.current_step >= 6
+            ? ` Échéance aujourd'hui : « ${next.name} » — votre dossier est prêt.`
+            : ` Échéance aujourd'hui : « ${next.name} ».`
+          : ` Prochaine échéance dans ${next._echeance.jours} jour${next._echeance.jours! > 1 ? 's' : ''} : « ${next.name} ».`
+        : datePassee
+          ? ` La date de remise de « ${datePassee.name} » est passée.`
+          : ' Aucune échéance imminente, vous avez de la marge.')
 
   // C15 — essai intact (free, trial accordé, 0 unité, 0 projet) → écran
   // central « premier DCE offert » ; essai consommé → dashboard normal.
@@ -265,7 +271,7 @@ export default function Dashboard() {
                       </div>
                     </div>
                     {/* Échéance */}
-                    <DeadlinePill deadline={p.deadline} emphasized={i === 0} />
+                    <DeadlinePill echeance={echeanceAO(p)} emphasized={i === 0} />
                     {/* Rail pipeline (pleine largeur) */}
                     <div className="col-span-2">
                       <PipelineRail currentStep={p.current_step} />
@@ -311,7 +317,7 @@ export default function Dashboard() {
                       <p className="text-xs text-ds-text-3 truncate">{p.maitre_ouvrage}</p>
                     )}
                   </button>
-                  <DeadlinePill deadline={p.deadline} />
+                  <DeadlinePill echeance={echeanceAO(p)} />
                   <button
                     onClick={() => markSansSuite({ id: p.id, name: p.name })}
                     title="Classer cet AO « Analysé — sans suite » : décision prise, il quitte le tableau de bord"
@@ -374,7 +380,8 @@ export default function Dashboard() {
             ) : (
               <ul className="space-y-0.5">
                 {upcoming.map((p, i) => {
-                  const d = new Date(p.deadline!)
+                  const d = p._echeance.limite!
+                  const heure = echeanceAO(p)?.heure
                   const day = d.getDate()
                   const month = d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')
                   const near = i === 0
@@ -392,11 +399,13 @@ export default function Dashboard() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-ds-text truncate">{p.name}</p>
-                          <p className="text-xs text-ds-text-3">
-                            {d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                          </p>
+                          {heure && (
+                            <p className="text-xs text-ds-text-3">
+                              {d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          )}
                         </div>
-                        <DeadlinePill deadline={p.deadline} emphasized={near} />
+                        <DeadlinePill echeance={echeanceAO(p)} emphasized={near} />
                       </button>
                     </li>
                   )
