@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
+import { useUser } from '@clerk/clerk-react'
 import {
   LayoutDashboard, FolderOpen, Building2, Archive, Users, LogOut,
   Settings, X, Calculator, Briefcase, Plus, PanelLeftClose, PanelLeftOpen,
@@ -75,6 +76,11 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
   const planKey = (organization?.plan || 'free') as string
   const pill = { label: nomPlan(planKey), pillClass: PLAN_PILL[planKey] ?? PLAN_PILL.free }
   const initials = user?.name ? user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() : 'U'
+  // Photo du compte Clerk (Google ou importée) ; sans photo, ou si elle ne
+  // charge pas, les initiales restent.
+  const { user: compte } = useUser()
+  const [photoEnEchec, setPhotoEnEchec] = useState<string | null>(null)
+  const photo = compte?.hasImage && compte.imageUrl !== photoEnEchec ? compte.imageUrl : null
 
   // Badge deadline sur « Mes AO » : AO en cours dont l'échéance est aujourd'hui
   // ou sous 7 jours — même calcul que tous les écrans (1.14).
@@ -259,13 +265,15 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
         {/* ── User + Logout ─────────────────────── */}
         <div className="border-t border-[#1C222D] p-2">
           <div className={cn('flex items-center gap-2.5 rounded-lg p-2 transition-all duration-200', expanded ? '' : 'justify-center')}>
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 overflow-hidden"
               style={{
                 background: 'radial-gradient(120% 80% at 50% 100%, rgba(228,233,242,0.18), transparent 65%), #0F1218',
                 color: '#F4F6FA',
                 boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.10)',
               }}>
-              {initials}
+              {photo
+                ? <img src={photo} alt="" className="w-full h-full object-cover" onError={() => setPhotoEnEchec(photo)} />
+                : initials}
             </div>
             {expanded && (
               <div className="flex-1 min-w-0">
