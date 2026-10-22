@@ -16,6 +16,8 @@ import ProgressDisplay, { type StepDescriptor } from '@/components/common/Progre
 import { useProgressStream } from '@/hooks/useProgressStream'
 import SubscriptionWall from '@/components/common/SubscriptionWall'
 import PoidsMemoire from '@/components/project/PoidsMemoire'
+import EchecAction from '@/components/common/EchecAction'
+import { messageErreur } from '@/lib/erreurs'
 import { MemoireSkeleton } from '@/components/skeletons'
 import type { Project, MemoireTechnique, MemoireContent, Reference } from '@/types'
 import {
@@ -613,6 +615,7 @@ export default function StepMemoire({ project }: Props) {
   // architecture que l'analyse).
   const [running, setRunning] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
+  const [echecExport, setEchecExport] = useState<string | null>(null)
   const [activeSection, setActiveSection] = useState('preambule')
   const docRef = useRef<HTMLDivElement | null>(null)
 
@@ -775,6 +778,15 @@ export default function StepMemoire({ project }: Props) {
     const parsed = depuisMarkdown(raw, displayContent!)
     await saveEdits(parsed)
     setEditedContent(parsed)
+  }
+
+  // 1.16 — un export Word qui échoue est dit, avec « Réessayer »
+  const lancerExportWord = () => {
+    setIsExporting(true)
+    setEchecExport(null)
+    exportToWord(project.id, project.name)
+      .catch(async (err) => setEchecExport(await messageErreur(err, "Le téléchargement du mémoire Word n'a pas abouti.")))
+      .finally(() => setIsExporting(false))
   }
 
   const handleTocNavigate = useCallback((sectionId: string) => {
@@ -1121,10 +1133,7 @@ export default function StepMemoire({ project }: Props) {
               <Pencil size={13} /> Modifier
             </button>
             <button
-              onClick={() => {
-                setIsExporting(true)
-                exportToWord(project.id, project.name).finally(() => setIsExporting(false))
-              }}
+              onClick={() => lancerExportWord()}
               disabled={isExporting}
               className="glass-btn flex items-center gap-1.5 text-sm font-semibold py-1.5 px-3.5 rounded-lg disabled:opacity-60"
               style={{ color: '#D8D9DB' }}
@@ -1134,6 +1143,10 @@ export default function StepMemoire({ project }: Props) {
             </button>
           </div>
         </div>
+
+        {echecExport && (
+          <EchecAction message={echecExport} onReessayer={lancerExportWord} onFermer={() => setEchecExport(null)} />
+        )}
 
         {/* ── 3-column layout ────────────────────────────────────── */}
         {displayContent && (

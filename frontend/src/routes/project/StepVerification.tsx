@@ -10,6 +10,8 @@ import CandidatureSectionTemplates from '@/components/project/CandidatureSection
 import VaultPickerModal from '@/components/project/VaultPickerModal'
 import { RequirementListSkeleton } from '@/components/skeletons'
 import type { Project, ChecklistItem, Document } from '@/types'
+import EchecAction from '@/components/common/EchecAction'
+import { messageErreur } from '@/lib/erreurs'
 
 const F = "'Inter Variable', 'Geist Sans', sans-serif"
 
@@ -391,9 +393,18 @@ function WorkflowRow({
   const done = item.status === 'present'
   const warn = item.status === 'warning'
 
-  const run = async (kind: 'dl' | 'up', fn: () => Promise<void>) => {
+  // 1.16 — un téléchargement ou un dépôt qui échoue est dit sur la ligne, avec « Réessayer »
+  const [echec, setEchec] = useState<{ message: string; relancer: () => void } | null>(null)
+  const run = async (kind: 'dl' | 'up', fn: () => Promise<void>, defaut: string) => {
     setBusy(kind)
-    try { await fn() } finally { setBusy(null) }
+    setEchec(null)
+    try {
+      await fn()
+    } catch (err) {
+      setEchec({ message: await messageErreur(err, defaut), relancer: () => { void run(kind, fn, defaut) } })
+    } finally {
+      setBusy(null)
+    }
   }
 
   return (
@@ -417,7 +428,7 @@ function WorkflowRow({
         className="hidden"
         onChange={(e) => {
           const f = e.target.files?.[0]
-          if (f) run('up', () => onUpload(item, f))
+          if (f) void run('up', () => onUpload(item, f), "Le dépôt du bordereau rempli n'a pas abouti.")
           e.target.value = ''
         }}
       />
@@ -425,7 +436,7 @@ function WorkflowRow({
         <button
           type="button"
           disabled={busy !== null}
-          onClick={() => run('dl', () => onDownload(item))}
+          onClick={() => run('dl', () => onDownload(item), "Le téléchargement de la trame n'a pas abouti.")}
           className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-ds-bg-2 disabled:opacity-60"
           style={{ border: '1px solid rgba(255,255,255,.07)', color: '#959597' }}
         >
@@ -443,6 +454,15 @@ function WorkflowRow({
         {busy === 'up' ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
         {done || warn ? 'Remplacer' : 'Importer remplie'}
       </button>
+      {echec && (
+        <div className="basis-full">
+          <EchecAction
+            message={echec.message}
+            onReessayer={() => { const relancer = echec.relancer; setEchec(null); relancer() }}
+            onFermer={() => setEchec(null)}
+          />
+        </div>
+      )}
     </li>
   )
 }

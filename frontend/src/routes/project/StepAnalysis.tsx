@@ -16,6 +16,9 @@ import { useProgressStream } from '@/hooks/useProgressStream'
 import { RequirementListSkeleton } from '@/components/skeletons'
 import type { Project, ComplianceItem, ComplianceCategory, ProjectDocument } from '@/types'
 import { useCompleteStep } from '@/hooks/useProject'
+import EchecAction from '@/components/common/EchecAction'
+import { messageErreur } from '@/lib/erreurs'
+import { PASSAGE_INTROUVABLE, trouverPieceCitee } from '@/lib/pieceCitee'
 
 const ANALYSIS_STEPS: StepDescriptor[] = [
   { key: 'preparation',     label: 'Lecture des documents',                 estimated_s: 2 },
@@ -59,6 +62,9 @@ export default function StepAnalysis({ project }: Props) {
 
   // C6 — viewer PDF intégré (page + excerpt surligné verbatim côté serveur)
   const [viewer, setViewer] = useState<{ url: string; name: string; page: number } | null>(null)
+  // 1.16 — ce qui n'a pas abouti est dit (source introuvable, document qui ne s'ouvre pas, relance)
+  const [avis, setAvis] = useState<{ message: string; relancer?: () => void } | null>(null)
+  const [relanceEnCours, setRelanceEnCours] = useState(false)
 
   const openInViewer = async (
     fileUrl: string, fileName: string, page: number | null, excerpt: string | null,
@@ -77,15 +83,19 @@ export default function StepAnalysis({ project }: Props) {
       } else {
         window.open(url.toString(), '_blank')  // non-PDF : téléchargement
       }
-    } catch (err) {
-      console.error('[StepAnalysis] source inaccessible:', err)
+      setAvis(null)
+    } catch {
+      setAvis({
+        message: "Le document source n'a pas pu s'ouvrir.",
+        relancer: () => { void openInViewer(fileUrl, fileName, page, excerpt) },
+      })
     }
   }
 
   // C5 — ouvrir la source exacte d'un champ du bandeau critique
   const openFieldSource = async (src: FieldSource) => {
     const doc = projectDocs.find(d => d.file_name === src.document)
-    if (!doc) return
+    if (!doc) { setAvis({ message: PASSAGE_INTROUVABLE }); return }
     await openInViewer(
       doc.pdf_preview_url || doc.file_url, doc.file_name, src.page, src.excerpt,
     )
@@ -95,32 +105,10 @@ export default function StepAnalysis({ project }: Props) {
   const openSourceDocument = async (item: ComplianceItem) => {
     if (!item.source_document && !item.source_page) return
 
-    const sourceDoc = (item.source_document || '').toLowerCase().trim()
-    const sourceBase = sourceDoc.replace(/\s*p\.?\s*\d+/gi, '').trim()
-
-    const matchedDoc = projectDocs.find(doc => {
-      const docType = doc.type.toLowerCase()
-      const docName = doc.file_name.toLowerCase()
-
-      if (sourceBase === docType) return true
-      if ((sourceBase === 'rc' || sourceBase === 'règlement de consultation' || sourceBase === 'reglement de consultation')
-          && (docType === 'rc' || docName.includes('règlement') || docName.includes('reglement') || docName.includes('_rc') || docName.includes(' rc'))) return true
-      if ((sourceBase === 'cctp') && (docType === 'cctp' || docName.includes('cctp'))) return true
-      if ((sourceBase === 'ccap') && (docName.includes('ccap'))) return true
-      if ((sourceBase === 'dpgf') && (docType === 'dpgf' || docName.includes('dpgf'))) return true
-      if ((sourceBase === 'ae' || sourceBase === "acte d'engagement" || sourceBase === 'acte_engagement' || sourceBase === 'attri1' || sourceBase === 'attri')
-          && (docType === 'acte_engagement' || docName.includes('engagement') || docName.includes('attri'))) return true
-      if (sourceBase === 'dc1' && docName.includes('dc1')) return true
-      if (sourceBase === 'dc2' && docName.includes('dc2')) return true
-      if (sourceBase === 'bpu' && docName.includes('bpu')) return true
-      if (sourceBase === 'cadre de réponse' && docName.includes('cadre')) return true
-      if (sourceBase.length > 2 && docName.includes(sourceBase)) return true
-
-      return false
-    })
-
-    const doc = matchedDoc || projectDocs[0]
-    if (!doc) return
+    // Jamais de repli sur le premier document du dossier : une pièce
+    // introuvable est dite introuvable (1.16).
+    const doc = trouverPieceCitee(item.source_document, projectDocs)
+    if (!doc) { setAvis({ message: PASSAGE_INTROUVABLE }); return }
 
     // C6 — ouverture dans le viewer intégré (excerpt entier surligné)
     await openInViewer(
@@ -263,14 +251,23 @@ export default function StepAnalysis({ project }: Props) {
         {project.processing_detail || analysisSse.detail
           || "Une erreur est survenue pendant l'analyse. Relancez-la."}
       </p>
+      {avis && <EchecAction message={avis.message} />}
       <button
         onClick={async () => {
-          await api.post(`/projects/${project.id}/analyze`, {}, { timeout: 60_000 })
-          window.location.reload()
+          setAvis(null)
+          setRelanceEnCours(true)
+          try {
+            await api.post(`/projects/${project.id}/analyze`, {}, { timeout: 60_000 })
+            window.location.reload()
+          } catch (err) {
+            setAvis({ message: await messageErreur(err, "La relance de l'analyse n'a pas abouti. Réessayez dans un instant.") })
+            setRelanceEnCours(false)
+          }
         }}
-        className="btn-primary py-2 px-5"
+        disabled={relanceEnCours}
+        className="btn-primary py-2 px-5 disabled:opacity-60"
       >
-        Relancer l'analyse
+        {avis ? 'Réessayer' : "Relancer l'analyse"}
       </button>
     </div>
   )
@@ -516,6 +513,16 @@ export default function StepAnalysis({ project }: Props) {
 
       {/* ── Sticky bottom bar ───────────────────────────────────── */}
       {createPortal(bottomBar, document.body)}
+      {avis && createPortal(
+        <div className="fixed bottom-20 left-1/2 z-50 w-full max-w-lg -translate-x-1/2 px-4">
+          <EchecAction
+            message={avis.message}
+            onReessayer={avis.relancer ? () => { const relancer = avis.relancer!; setAvis(null); relancer() } : undefined}
+            onFermer={() => setAvis(null)}
+          />
+        </div>,
+        document.body,
+      )}
     </div>
   )
 }

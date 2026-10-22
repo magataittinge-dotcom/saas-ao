@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { useDropzone } from 'react-dropzone'
+import { useDropzone, type FileRejection } from 'react-dropzone'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Upload, Archive, Tag, ArrowLeft } from 'lucide-react'
 import { useDocuments, useDeleteDocument } from '@/hooks/useDocuments'
@@ -11,6 +11,8 @@ import { DocumentListSkeleton } from '@/components/skeletons'
 import { useQueryClient } from '@tanstack/react-query'
 import { VAULT_CATEGORY_LABELS, VAULT_CATEGORY_ORDER } from '@/lib/vault'
 import type { Document } from '@/types'
+import EchecAction from '@/components/common/EchecAction'
+import { messageErreur } from '@/lib/erreurs'
 
 export default function Vault() {
   const queryClient = useQueryClient()
@@ -22,29 +24,47 @@ export default function Vault() {
   const { data: documents = [], isLoading } = useDocuments()
   const { mutate: deleteDocument } = useDeleteDocument()
   const [isUploading, setIsUploading] = useState(false)
+  // 1.16 — un dépôt qui n'aboutit pas est dit ; les fichiers restants peuvent être renvoyés
+  const [echec, setEchec] = useState<{ message: string; fichiers: File[] } | null>(null)
   const [editingDoc, setEditingDoc] = useState<Document | null>(null)
 
   const expiringDocs = documents.filter(
     (d) => (d.status === 'expired' || d.status === 'expiring_soon') && d.expiry_date,
   )
 
-  const onDrop = useCallback(
-    async (acceptedFiles: File[]) => {
+  const deposer = useCallback(
+    async (fichiers: File[]) => {
+      if (fichiers.length === 0) return
       setIsUploading(true)
+      setEchec(null)
+      let restants = [...fichiers]
       try {
-        for (const file of acceptedFiles) {
+        for (const file of fichiers) {
           await uploadService.uploadVaultDocument(file, 'autre')
+          restants = restants.filter((f) => f !== file)
         }
-        queryClient.invalidateQueries({ queryKey: ['documents'] })
+      } catch (err) {
+        const nom = restants[0]?.name ?? 'ce document'
+        setEchec({
+          message: await messageErreur(err, `Le dépôt de « ${nom} » au coffre-fort n'a pas abouti.`),
+          fichiers: restants,
+        })
       } finally {
+        queryClient.invalidateQueries({ queryKey: ['documents'] })
         setIsUploading(false)
       }
     },
     [queryClient],
   )
 
+  const onDropRejected = useCallback((refus: FileRejection[]) => {
+    const noms = refus.map((r) => `« ${r.file.name} »`).join(', ')
+    setEchec({ message: `${noms} : seuls les PDF de 20 Mo au plus sont acceptés.`, fichiers: [] })
+  }, [])
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
+    onDrop: (acceptes) => { void deposer(acceptes) },
+    onDropRejected,
     accept: { 'application/pdf': ['.pdf'] },
     maxSize: 20 * 1024 * 1024,
   })
@@ -102,6 +122,14 @@ export default function Vault() {
         </p>
         <p className="text-xs text-ds-text-3 mt-1">PDF — 20 MB max</p>
       </div>
+
+      {echec && (
+        <EchecAction
+          message={echec.message}
+          onReessayer={echec.fichiers.length > 0 ? () => { void deposer(echec.fichiers) } : undefined}
+          onFermer={() => setEchec(null)}
+        />
+      )}
 
       {/* Documents par catégorie — « Non classés » en tête (à traiter) */}
       {isLoading ? (

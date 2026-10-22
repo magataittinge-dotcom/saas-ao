@@ -12,6 +12,8 @@ import { api } from '@/services/api'
 import type { Project } from '@/types'
 import DocumentViewer, { type ViewableDocument } from '@/components/project/DocumentViewer'
 import { DocumentRowSkeleton } from '@/components/skeletons'
+import EchecAction from '@/components/common/EchecAction'
+import { messageErreur } from '@/lib/erreurs'
 
 const F = "'Inter Variable', 'Geist Sans', sans-serif"
 
@@ -202,6 +204,8 @@ export default function StepExport({ project }: Props) {
     },
   })
   const [showGateWarning, setShowGateWarning] = useState(false)
+  // 1.16 — un livrable qui ne se télécharge pas : on le dit, avec « Réessayer »
+  const [echec, setEchec] = useState<{ message: string; relancer: () => void } | null>(null)
 
   const { mutate: exportDocx, isPending: isExportingDocx } = useMutation({
     mutationFn: async () => {
@@ -213,6 +217,11 @@ export default function StepExport({ project }: Props) {
       a.click()
       URL.revokeObjectURL(url)
     },
+    onMutate: () => setEchec(null),
+    onError: async (err) => setEchec({
+      message: await messageErreur(err, "Le téléchargement du mémoire Word n'a pas abouti."),
+      relancer: () => exportDocx(),
+    }),
   })
 
   // C13a — PDF fidèle : la version dépôt (le Word reste pour la retouche)
@@ -228,6 +237,11 @@ export default function StepExport({ project }: Props) {
       a.click()
       URL.revokeObjectURL(url)
     },
+    onMutate: () => setEchec(null),
+    onError: async (err) => setEchec({
+      message: await messageErreur(err, "Le téléchargement du mémoire PDF n'a pas abouti."),
+      relancer: () => exportPdf(),
+    }),
   })
 
   const { mutate: exportZip, isPending: isExportingZip } = useMutation({
@@ -240,21 +254,34 @@ export default function StepExport({ project }: Props) {
       a.click()
       URL.revokeObjectURL(url)
     },
+    onMutate: () => setEchec(null),
+    onError: async (err) => setEchec({
+      message: await messageErreur(err, "Le téléchargement du dossier ZIP n'a pas abouti."),
+      relancer: () => exportZip(),
+    }),
   })
 
   // ── DPGF download ────────────────────────────────────────────────────────
   const handleDownloadDpgf = useCallback(async () => {
     if (!detail?.dpgf_info) return
-    const response = await api.get(
-      `/projects/${project.id}/documents/${detail.dpgf_info.file_id}/download`,
-      { responseType: 'blob' },
-    )
-    const url = window.URL.createObjectURL(new Blob([response.data]))
-    const a = document.createElement('a')
-    a.href = url
-    a.download = detail.dpgf_info.file_name
-    a.click()
-    URL.revokeObjectURL(url)
+    setEchec(null)
+    try {
+      const response = await api.get(
+        `/projects/${project.id}/documents/${detail.dpgf_info.file_id}/download`,
+        { responseType: 'blob' },
+      )
+      const url = window.URL.createObjectURL(new Blob([response.data]))
+      const a = document.createElement('a')
+      a.href = url
+      a.download = detail.dpgf_info.file_name
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      setEchec({
+        message: await messageErreur(err, "Le téléchargement de la DPGF n'a pas abouti."),
+        relancer: () => { void handleDownloadDpgf() },
+      })
+    }
   }, [project.id, detail?.dpgf_info])
 
   // ── DPGF filled upload ───────────────────────────────────────────────────
@@ -478,6 +505,14 @@ export default function StepExport({ project }: Props) {
           </div>
         </div>
       </div>
+
+      {echec && (
+        <EchecAction
+          message={echec.message}
+          onReessayer={() => { const relancer = echec.relancer; setEchec(null); relancer() }}
+          onFermer={() => setEchec(null)}
+        />
+      )}
 
       {/* ── Points de contrôle ──────────────────────────────────── */}
       <div>
