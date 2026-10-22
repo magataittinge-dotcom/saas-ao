@@ -69,7 +69,7 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick }: 
                       : {
                           background: 'transparent',
                           border: '1px solid var(--line)',
-                          color: '#6B6C6F',
+                          color: '#909195',
                         }
                   }
                 >
@@ -82,7 +82,7 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick }: 
                   style={
                     isActive    ? { color: '#F7F8F8', fontWeight: 600 }
                     : isCompleted ? { color: '#98999C', fontWeight: 500 }
-                    : { color: '#55565A', fontWeight: 500 }
+                    : { color: '#909195', fontWeight: 500 }
                   }
                 >
                   {step.label}

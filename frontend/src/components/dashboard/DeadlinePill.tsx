@@ -26,7 +26,7 @@ export function DeadlinePill({ echeance, emphasized, className }: DeadlinePillPr
   return (
     <span
       className={cn(
-        'edge-data inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap transition-all',
+        'edge-data inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap transition-all',
         soon
           ? 'bg-ds-cyan/10 text-ds-cyan-dark'
           : e.etat === 'passee'

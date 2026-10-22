@@ -158,7 +158,7 @@ function OrganizationIdentityForm() {
                 loading="lazy"
                 onError={() => setMapError(true)}
               />
-              <div className="flex items-center gap-1.5 px-3 py-2 text-[11px] text-ds-text-3"
+              <div className="flex items-center gap-1.5 px-3 py-2 text-xs text-ds-text-3"
                 style={{ background: '#1C222D' }}>
                 <MapPin size={12} />
                 Aperçu de la carte insérée dans vos mémoires techniques

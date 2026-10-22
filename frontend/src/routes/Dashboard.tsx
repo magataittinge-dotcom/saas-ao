@@ -231,7 +231,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-2.5">
               <h2 className="text-[15px] font-semibold text-ds-text">En cours de réponse</h2>
               {active.length > 0 && (
-                <span className="pill pill-cyan text-[11px]">{active.length}</span>
+                <span className="pill pill-cyan text-xs">{active.length}</span>
               )}
             </div>
             {active.length > 0 && (
@@ -299,7 +299,7 @@ export default function Dashboard() {
           <section className="glass-card sheen overflow-hidden">
             <header className="flex items-center gap-2.5 px-5 py-3 border-b border-ds-border-subtle">
               <h2 className="text-[15px] font-semibold text-ds-text">Analysés</h2>
-              <span className="pill pill-muted text-[11px]">
+              <span className="pill pill-muted text-xs">
                 {analysesSansSuite.length}
               </span>
               <span className="text-xs text-ds-text-3">analyse terminée, à vous de décider</span>
@@ -363,7 +363,7 @@ export default function Dashboard() {
           <section className="glass-card sheen p-4">
             <div className="flex items-center gap-2 mb-3">
               <CalendarDays size={14} className="text-ds-cyan" />
-              <h3 className="text-[11px] font-semibold uppercase tracking-wider text-ds-text-3">Piloter</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-ds-text-3">Piloter</h3>
             </div>
             <div className="-mx-4 mb-2">
               <QuotaGauge />
@@ -395,7 +395,7 @@ export default function Dashboard() {
                           className={`text-center shrink-0 w-11 py-1 rounded-lg ${near ? 'bg-ds-cyan/10 shadow-glow-sm' : 'bg-ds-bg-2'}`}
                         >
                           <p className={`edge-data text-sm font-bold leading-none ${near ? 'text-ds-cyan-dark' : 'text-ds-text'}`}>{day}</p>
-                          <p className="edge-data text-[10px] uppercase mt-0.5 text-ds-text-3">{month}</p>
+                          <p className="edge-data text-xs uppercase mt-0.5 text-ds-text-3">{month}</p>
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-ds-text truncate">{p.name}</p>
@@ -416,7 +416,7 @@ export default function Dashboard() {
 
           {/* Accès rapide aux rubriques */}
           <section className="glass-card sheen p-4">
-            <h3 className="text-[11px] font-semibold uppercase tracking-wider text-ds-text-3 mb-3">Accès rapide</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-ds-text-3 mb-3">Accès rapide</h3>
             <div className="grid grid-cols-3 gap-2">
               {RUBRIQUES.map((r) => (
                 <button
@@ -427,7 +427,7 @@ export default function Dashboard() {
                   <span className="stat-icon-bg !h-9 !w-9 bg-ds-bg-2 group-hover:bg-ds-cyan/10 transition-colors">
                     <r.icon size={16} className="text-ds-text-2 group-hover:text-ds-cyan transition-colors" />
                   </span>
-                  <span className="text-[11px] font-medium text-ds-text-2 text-center leading-tight">{r.label}</span>
+                  <span className="text-xs font-medium text-ds-text-2 text-center leading-tight">{r.label}</span>
                 </button>
               ))}
             </div>

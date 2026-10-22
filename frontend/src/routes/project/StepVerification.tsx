@@ -156,7 +156,7 @@ export default function StepVerification({ project }: Props) {
       className="glass-card rounded-lg p-12 text-center"
       style={{ border: '1px solid rgba(255,255,255,.07)', boxShadow: '0 1px 3px rgba(0,0,0,.4)', fontFamily: F }}
     >
-      <p className="text-sm" style={{ color: '#6B6C6F' }}>
+      <p className="text-sm" style={{ color: '#909195' }}>
         La checklist des pièces apparaîtra automatiquement une fois le DCE analysé.
       </p>
     </div>
@@ -231,7 +231,7 @@ export default function StepVerification({ project }: Props) {
               await refresh()
             }}
             className="flex items-center gap-1.5 text-xs font-medium transition-colors hover:underline"
-            style={{ color: '#6B6C6F' }}
+            style={{ color: '#909195' }}
             title="Recalculer la checklist depuis les exigences analysées"
           >
             <RefreshCw size={13} />
@@ -366,7 +366,7 @@ function WorkflowSection({
         </div>
         <div className="min-w-0">
           <h2 className="text-base font-bold" style={{ color: '#F7F8F8' }}>Bordereaux de prix (DPGF / BPU)</h2>
-          <p className="text-xs mt-0.5" style={{ color: '#6B6C6F' }}>
+          <p className="text-xs mt-0.5" style={{ color: '#909195' }}>
             Téléchargez la trame, remplissez-la puis ré-importez-la — contrôle automatique des lignes.
           </p>
         </div>
@@ -411,12 +411,12 @@ function WorkflowRow({
       <FileSpreadsheet size={15} style={{ color: '#D9A441' }} className="shrink-0" />
       <div className="flex-1 min-w-[200px]">
         <p className="text-sm" style={{ color: '#D8D9DB' }}>{item.details}</p>
-        <span className="text-xs" style={{ color: done ? '#6EE7A8' : warn ? '#D9A441' : '#6B6C6F' }}>
+        <span className="text-xs" style={{ color: done ? '#6EE7A8' : warn ? '#D9A441' : '#909195' }}>
           {done ? '✓ Rempli et vérifié' : warn ? '⚠️ À corriger (lignes sans prix)' : 'À remplir'}
         </span>
       </div>
       {item.lot && (
-        <span className="text-[11px] px-1.5 rounded-full shrink-0" style={{ background: 'rgba(255,255,255,0.08)', color: '#B4B5B8' }}>
+        <span className="text-xs px-1.5 rounded-full shrink-0" style={{ background: 'rgba(255,255,255,0.08)', color: '#B4B5B8' }}>
           {item.lot.replace(/^lot/i, 'Lot ')}
         </span>
       )}
@@ -480,7 +480,7 @@ function SynorixJalonSection({ items }: { items: ChecklistItem[] }) {
         </div>
         <div className="min-w-0">
           <h2 className="text-base font-bold" style={{ color: '#F7F8F8' }}>Généré par Synorix</h2>
-          <p className="text-xs mt-0.5" style={{ color: '#6B6C6F' }}>
+          <p className="text-xs mt-0.5" style={{ color: '#909195' }}>
             Produit automatiquement à l&apos;étape suivante — aucune pièce à fournir ici.
           </p>
         </div>
@@ -491,11 +491,11 @@ function SynorixJalonSection({ items }: { items: ChecklistItem[] }) {
             <Sparkles size={15} style={{ color: '#E8E9EB' }} className="shrink-0" />
             <span className="text-sm flex-1 min-w-0" style={{ color: '#D8D9DB' }}>{i.details}</span>
             {i.lot && (
-              <span className="text-[11px] px-1.5 rounded-full shrink-0" style={{ background: 'rgba(255,255,255,0.08)', color: '#B4B5B8' }}>
+              <span className="text-xs px-1.5 rounded-full shrink-0" style={{ background: 'rgba(255,255,255,0.08)', color: '#B4B5B8' }}>
                 {i.lot.replace(/^lot/i, 'Lot ')}
               </span>
             )}
-            <span className="text-xs shrink-0" style={{ color: '#6B6C6F' }}>Étape Mémoire</span>
+            <span className="text-xs shrink-0" style={{ color: '#909195' }}>Étape Mémoire</span>
           </li>
         ))}
       </ul>

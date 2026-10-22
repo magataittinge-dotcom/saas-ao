@@ -27,11 +27,11 @@ function CounterRow({ label, counter }: { label: string; counter: QuotaCounter }
   const pct = Math.min(100, (counter.used / counter.limit) * 100)
   return (
     <div className="flex items-center gap-2">
-      <span className="text-[10px] w-14 shrink-0" style={{ color: '#788295' }}>{label}</span>
+      <span className="text-xs w-14 shrink-0" style={{ color: '#788295' }}>{label}</span>
       <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: '#1C222D' }}>
         <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
       </div>
-      <span className="edge-data text-[10px] font-semibold tabular-nums shrink-0" style={{ color }}>
+      <span className="edge-data text-xs font-semibold tabular-nums shrink-0" style={{ color }}>
         {counter.used}/{counter.limit}
       </span>
     </div>
@@ -64,7 +64,7 @@ export default function QuotaGauge() {
       className="w-full text-left px-4 py-2 space-y-1.5 transition-colors hover:bg-[#1C222D]"
       style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
     >
-      <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#788295' }}>
+      <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#788295' }}>
         {data.plan === 'free' ? 'Essai gratuit' : 'Quota mensuel'}
       </span>
       <CounterRow label="Analyses" counter={data.analyses} />

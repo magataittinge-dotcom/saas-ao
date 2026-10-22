@@ -232,7 +232,7 @@ export default function Landing() {
               </Link>
               <Link
                 to="/register"
-                className="text-sm font-semibold text-white px-5 py-2.5 rounded-xl transition-all"
+                className="text-sm font-semibold text-[#0A0C11] px-5 py-2.5 rounded-xl transition-all"
                 style={{
                   background: '#E4E9F2',
                   boxShadow: '0 0 30px rgba(228,233,242,0.3)',
@@ -263,7 +263,7 @@ export default function Landing() {
               ))}
               <div className="flex gap-3 pt-2">
                 <Link to={isSignedIn ? '/dashboard' : '/login'} className="text-sm text-[#788295]">Connexion</Link>
-                <Link to="/register" className="text-sm font-semibold text-white px-4 py-2 rounded-lg" style={{ background: '#E4E9F2' }}>Essai gratuit</Link>
+                <Link to="/register" className="text-sm font-semibold text-[#0A0C11] px-4 py-2 rounded-lg" style={{ background: '#E4E9F2' }}>Essai gratuit</Link>
               </div>
             </div>
           )}
@@ -306,7 +306,7 @@ export default function Landing() {
             }}
           >
             <span>✨</span>
-            <span className="text-[#5C6678]">Propulsé par l'IA la plus avancée</span>
+            <span className="text-[#9BA4B5]">Propulsé par l'IA la plus avancée</span>
           </div>
 
           {/* Title */}
@@ -343,7 +343,7 @@ export default function Landing() {
           >
             <button
               onClick={() => navigate('/register')}
-              className="px-8 py-3.5 rounded-xl text-sm font-semibold text-white flex items-center gap-2 transition-all"
+              className="px-8 py-3.5 rounded-xl text-sm font-semibold text-[#0A0C11] flex items-center gap-2 transition-all"
               style={{
                 background: '#E4E9F2',
                 boxShadow: '0 0 30px rgba(228,233,242,0.3)',
@@ -358,7 +358,7 @@ export default function Landing() {
               style={{
                 background: 'rgba(255,255,255,0.05)',
                 border: '1px solid rgba(255,255,255,0.15)',
-                color: '#5C6678',
+                color: '#9BA4B5',
               }}
             >
               <Play size={14} /> Voir la démo
@@ -387,7 +387,7 @@ export default function Landing() {
               <div className="w-3 h-3 rounded-full" style={{ background: '#9BA4B5' }} />
               <div className="w-3 h-3 rounded-full" style={{ background: '#E4E9F2' }} />
               <div className="flex-1 mx-4 h-6 rounded-md" style={{ background: 'rgba(255,255,255,0.04)', maxWidth: 300 }}>
-                <div className="px-3 py-1 text-[10px] text-[#9BA4B5]">app.synorix.fr/dashboard</div>
+                <div className="px-3 py-1 text-xs text-[#9BA4B5]">app.synorix.fr/dashboard</div>
               </div>
             </div>
             {/* Mock dashboard content */}
@@ -405,7 +405,7 @@ export default function Landing() {
                     className="rounded-lg p-3"
                     style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}
                   >
-                    <div className="text-[10px] text-[#9BA4B5] mb-1">{s.label}</div>
+                    <div className="text-xs text-[#9BA4B5] mb-1">{s.label}</div>
                     <div className="text-xl font-bold" style={{ color: s.color, fontFamily: '"Geist Mono", monospace' }}>{s.val}</div>
                   </div>
                 ))}
@@ -419,13 +419,13 @@ export default function Landing() {
                     style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-[#1C222D] truncate">{name}</span>
-                      <span className="text-[9px] px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(228,233,242,0.12)', color: '#FFFFFF' }}>En cours</span>
+                      <span className="text-xs font-medium text-[#F1F5F9] truncate">{name}</span>
+                      <span className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: 'rgba(228,233,242,0.12)', color: '#FFFFFF' }}>En cours</span>
                     </div>
                     <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(186,205,234,.13)' }}>
                       <div className="h-full rounded-full" style={{ width: `${[65, 40, 85][i]}%`, background: 'linear-gradient(90deg, #E4E9F2, #FFFFFF)' }} />
                     </div>
-                    <div className="text-[10px] text-[#9BA4B5]">Étape {[3, 2, 5][i]}/6 · J-{[14, 7, 3][i]}</div>
+                    <div className="text-xs text-[#9BA4B5]">Étape {[3, 2, 5][i]}/6 · J-{[14, 7, 3][i]}</div>
                   </div>
                 ))}
               </div>
@@ -466,7 +466,7 @@ export default function Landing() {
                   <Search size={18} style={{ color: '#E4E9F2' }} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-[#1C222D] mb-1" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Analyse DCE intelligente</h3>
+                  <h3 className="text-lg font-semibold text-[#F1F5F9] mb-1" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Analyse DCE intelligente</h3>
                   <p className="text-sm text-[#9BA4B5] leading-relaxed">Multi-pass sur RC, CCTP, DPGF. Chaque exigence est extraite avec sa source, sa page, et sa priorité.</p>
                 </div>
               </div>
@@ -474,7 +474,7 @@ export default function Landing() {
               <div className="rounded-lg p-4 space-y-2" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}>
                 {['Attestation décennale — RC p.4', 'Planning détaillé — CCTP §3.2', 'Sous-traitance déclarée — RC p.7'].map((txt, i) => (
                   <div key={i} className="flex items-center gap-3 text-xs">
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-medium" style={{ background: ['rgba(245,142,134,0.12)', 'rgba(245,158,11,0.12)', 'rgba(228,233,242,0.12)'][i], color: ['#F58E86', '#F5C26B', '#FFFFFF'][i] }}>
+                    <span className="px-1.5 py-0.5 rounded text-xs font-medium" style={{ background: ['rgba(245,142,134,0.12)', 'rgba(245,158,11,0.12)', 'rgba(228,233,242,0.12)'][i], color: ['#F58E86', '#F5C26B', '#FFFFFF'][i] }}>
                       {['Critique', 'Important', 'Standard'][i]}
                     </span>
                     <span className="text-[#788295]">{txt}</span>
@@ -491,7 +491,7 @@ export default function Landing() {
               <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: 'rgba(0,212,170,0.12)' }}>
                 <Layers size={18} style={{ color: '#FFFFFF' }} />
               </div>
-              <h3 className="text-base font-semibold text-[#1C222D] mb-2" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Détection des lots</h3>
+              <h3 className="text-base font-semibold text-[#F1F5F9] mb-2" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Détection des lots</h3>
               <p className="text-sm text-[#9BA4B5] leading-relaxed">L'IA identifie tous les lots depuis le DPGF, RC et noms de fichiers. Badge de confiance pour chaque détection.</p>
             </div>
 
@@ -503,7 +503,7 @@ export default function Landing() {
               <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: 'rgba(139,92,246,0.12)' }}>
                 <Shield size={18} style={{ color: '#E4E9F2' }} />
               </div>
-              <h3 className="text-base font-semibold text-[#1C222D] mb-2" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Coffre-fort documents</h3>
+              <h3 className="text-base font-semibold text-[#F1F5F9] mb-2" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Coffre-fort documents</h3>
               <p className="text-sm text-[#9BA4B5] leading-relaxed">Centralisez décennale, URSSAF, Kbis. Alerte avant expiration. Lié automatiquement à la checklist candidature.</p>
             </div>
 
@@ -517,7 +517,7 @@ export default function Landing() {
                   <FileText size={18} style={{ color: '#E4E9F2' }} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-[#1C222D] mb-1" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Mémoire technique</h3>
+                  <h3 className="text-lg font-semibold text-[#F1F5F9] mb-1" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Mémoire technique</h3>
                   <p className="text-sm text-[#9BA4B5] leading-relaxed">Synorix rédige ~20 pages adaptées à vos références, votre équipe, et chaque critère de notation du marché.</p>
                 </div>
               </div>
@@ -527,7 +527,7 @@ export default function Landing() {
                   <div key={i} className="flex items-center gap-3 text-xs">
                     <div className="w-1.5 h-6 rounded-full" style={{ background: ['#E4E9F2', '#FFFFFF', '#E4E9F2'][i] }} />
                     <span className="text-[#788295]">{txt}</span>
-                    <span className="ml-auto text-[10px] text-[#9BA4B5]">{['6 pages', '8 pages', '4 pages'][i]}</span>
+                    <span className="ml-auto text-xs text-[#9BA4B5]">{['6 pages', '8 pages', '4 pages'][i]}</span>
                   </div>
                 ))}
               </div>
@@ -541,7 +541,7 @@ export default function Landing() {
               <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4" style={{ background: 'rgba(245,158,11,0.12)' }}>
                 <Download size={18} style={{ color: '#9BA4B5' }} />
               </div>
-              <h3 className="text-base font-semibold text-[#1C222D] mb-2" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Export ZIP pro</h3>
+              <h3 className="text-base font-semibold text-[#F1F5F9] mb-2" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Export ZIP pro</h3>
               <p className="text-sm text-[#9BA4B5] leading-relaxed">Mémoire Word et PDF, dossier complet en ZIP dans l'ordre du RC. Prêt à déposer sur la plateforme de l'acheteur.</p>
             </div>
           </div>
@@ -588,7 +588,7 @@ export default function Landing() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
             <div>
               <h3
-                className="text-xl font-semibold text-[#1C222D] mb-3"
+                className="text-xl font-semibold text-[#F1F5F9] mb-3"
                 style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}
               >
                 {activeTabData.num}. {activeTabData.title}
@@ -606,7 +606,7 @@ export default function Landing() {
                   style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.04)' }}
                 >
                   <div className="w-2 h-2 rounded-full shrink-0" style={{ background: '#E4E9F2' }} />
-                  <span className="text-[#5C6678]">{line}</span>
+                  <span className="text-[#9BA4B5]">{line}</span>
                 </div>
               ))}
             </div>
@@ -661,7 +661,7 @@ export default function Landing() {
           </p>
           <button
             onClick={() => navigate('/register')}
-            className="px-10 py-4 rounded-xl text-base font-semibold text-white transition-all inline-flex items-center gap-2"
+            className="px-10 py-4 rounded-xl text-base font-semibold text-[#0A0C11] transition-all inline-flex items-center gap-2"
             style={{
               background: '#E4E9F2',
               boxShadow: '0 0 40px rgba(228,233,242,0.35)',
@@ -680,7 +680,7 @@ export default function Landing() {
       <footer className="border-t border-white/[0.06] py-16 px-4" style={{ background: '#0A0C11' }}>
         <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-10">
           <div>
-            <h4 className="text-sm font-semibold text-[#1C222D] mb-4" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Produit</h4>
+            <h4 className="text-sm font-semibold text-[#F1F5F9] mb-4" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Produit</h4>
             <ul className="space-y-2.5 text-sm text-[#9BA4B5]">
               <li><button onClick={() => scrollTo('features')} className="hover:text-white transition-colors bg-transparent border-none cursor-pointer text-[#9BA4B5] text-sm p-0">Fonctionnalités</button></li>
               <li><button onClick={() => scrollTo('pricing')} className="hover:text-white transition-colors bg-transparent border-none cursor-pointer text-[#9BA4B5] text-sm p-0">Tarifs</button></li>
@@ -688,7 +688,7 @@ export default function Landing() {
             </ul>
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-[#1C222D] mb-4" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Ressources</h4>
+            <h4 className="text-sm font-semibold text-[#F1F5F9] mb-4" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Ressources</h4>
             <ul className="space-y-2.5 text-sm text-[#9BA4B5]">
               <li>Documentation</li>
               <li>Blog</li>
@@ -696,7 +696,7 @@ export default function Landing() {
             </ul>
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-[#1C222D] mb-4" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Légal</h4>
+            <h4 className="text-sm font-semibold text-[#F1F5F9] mb-4" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Légal</h4>
             <ul className="space-y-2.5 text-sm text-[#9BA4B5]">
               <li><Link to="/legal/mentions-legales" className="hover:text-white transition-colors">Mentions légales</Link></li>
               <li><Link to="/legal/cgu" className="hover:text-white transition-colors">CGU</Link></li>
@@ -706,7 +706,7 @@ export default function Landing() {
             </ul>
           </div>
           <div>
-            <h4 className="text-sm font-semibold text-[#1C222D] mb-4" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Contact</h4>
+            <h4 className="text-sm font-semibold text-[#F1F5F9] mb-4" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Contact</h4>
             <ul className="space-y-2.5 text-sm text-[#9BA4B5]">
               <li><a href="mailto:contact@synorix.tech" className="hover:text-white transition-colors">contact@synorix.tech</a></li>
               <li><a href="mailto:support@synorix.tech" className="hover:text-white transition-colors">support@synorix.tech</a></li>
@@ -716,7 +716,7 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto mt-12 pt-6 border-t border-white/[0.06] flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #E4E9F2, #FFFFFF)' }}>
-              <span className="text-white font-black text-[10px]">S</span>
+              <span className="text-[#0A0C11] font-black text-xs">S</span>
             </div>
             <span className="text-sm text-[#9BA4B5]">Synorix</span>
           </div>

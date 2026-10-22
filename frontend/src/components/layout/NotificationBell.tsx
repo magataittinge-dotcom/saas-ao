@@ -69,7 +69,7 @@ export default function NotificationBell() {
         <Bell size={18} />
         {unread > 0 && (
           <span
-            className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full text-[10px] font-bold flex items-center justify-center edge-data"
+            className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full text-xs font-bold flex items-center justify-center edge-data"
             style={{ background: '#E4E9F2', color: '#0A0C11' }}
           >
             {unread > 9 ? '9+' : unread}
@@ -114,7 +114,7 @@ export default function NotificationBell() {
                       {n.corps && (
                         <p className="text-xs mt-0.5 line-clamp-2" style={{ color: '#788295' }}>{n.corps}</p>
                       )}
-                      <p className="text-[10px] mt-1" style={{ color: '#5C6678' }}>{timeAgo(n.created_at)}</p>
+                      <p className="text-xs mt-1" style={{ color: '#5C6678' }}>{timeAgo(n.created_at)}</p>
                     </div>
                   </div>
                 </button>

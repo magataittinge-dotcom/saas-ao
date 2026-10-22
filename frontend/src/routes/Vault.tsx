@@ -171,7 +171,7 @@ export default function Vault() {
           {VAULT_CATEGORY_ORDER.map((category) => {
             const catDocs = documents.filter((d) => d.category === category)
             return (
-              <div key={category} className={catDocs.length === 0 ? 'opacity-50' : undefined}>
+              <div key={category}>
                 <h2 className="text-sm font-semibold text-ds-text-2 mb-2">
                   {VAULT_CATEGORY_LABELS[category]}
                   <span className="ml-2 text-xs font-normal text-ds-text-3">({catDocs.length})</span>

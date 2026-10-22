@@ -33,7 +33,7 @@
   --ink: #F7F8F8;
   --ink-2: #C2C3C6;
   --ink-3: #959597;
-  --ink-4: #6B6C6F;
+  --ink-4: #909195;
 
   /* ── Lumière (remplace l'accent cyan) ─────────────────────── */
   --lum: #E8E9EB;
@@ -67,7 +67,7 @@
   --text-primary: var(--ink);
   --text-secondary: var(--ink-3);
   --text-tertiary: var(--ink-4);
-  --text-muted: #55565A;
+  --text-muted: #909195;
   --radius-card: 10px;
   --radius-lg: 12px;
   --radius-md: 10px;
@@ -251,7 +251,7 @@
 /* étiquette mono technique (labels de cartes, en-têtes de table) */
 .microlabel {
   font-family: 'Geist Mono', ui-monospace, monospace;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
   letter-spacing: .12em;
   text-transform: uppercase;

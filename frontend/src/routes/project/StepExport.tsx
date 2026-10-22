@@ -158,8 +158,8 @@ function AccordionSection({
           </span>
         </div>
         {expanded
-          ? <ChevronDown size={16} style={{ color: '#6B6C6F' }} />
-          : <ChevronRight size={16} style={{ color: '#6B6C6F' }} />
+          ? <ChevronDown size={16} style={{ color: '#909195' }} />
+          : <ChevronRight size={16} style={{ color: '#909195' }} />
         }
       </button>
       {expanded && children && (
@@ -494,7 +494,7 @@ export default function StepExport({ project }: Props) {
               </button>
             </div>
             {detail.naming_convention && (
-              <p className="mt-3 text-[11px] leading-relaxed" style={{ color: '#6B6C6F' }}>
+              <p className="mt-3 text-xs leading-relaxed" style={{ color: '#909195' }}>
                 Pièces du ZIP nommées selon le RC&nbsp;:{' '}
                 <span className="num-mono" style={{ color: '#959597' }}>
                   {detail.naming_convention.replace('{lot}', 'Lot').replace('{entreprise}', 'Entreprise').replace('{piece}', 'Pièce')}
@@ -548,7 +548,7 @@ export default function StepExport({ project }: Props) {
                 </div>
               ))}
               {detail.checklist_items.length === 0 && (
-                <p className="text-xs text-center py-4" style={{ color: '#6B6C6F' }}>Aucun document requis détecté</p>
+                <p className="text-xs text-center py-4" style={{ color: '#909195' }}>Aucun document requis détecté</p>
               )}
             </div>
           </AccordionSection>
@@ -582,7 +582,7 @@ export default function StepExport({ project }: Props) {
                       <ExternalLink size={12} /> Voir
                     </button>
                   </div>
-                  <p className="text-xs px-3" style={{ color: '#6B6C6F' }}>
+                  <p className="text-xs px-3" style={{ color: '#909195' }}>
                     Les documents de réponse seront inclus dans le ZIP.
                   </p>
                 </div>
@@ -620,7 +620,7 @@ export default function StepExport({ project }: Props) {
                     <FileSpreadsheet size={16} style={{ color: '#E8E9EB' }} />
                     <div className="min-w-0">
                       <p className="text-xs font-medium truncate" style={{ color: '#F7F8F8' }}>{detail.dpgf_info.file_name}</p>
-                      <p className="text-[11px]" style={{ color: '#959597' }}>DPGF originale du DCE</p>
+                      <p className="text-xs" style={{ color: '#959597' }}>DPGF originale du DCE</p>
                     </div>
                   </div>
                   <button
@@ -641,7 +641,7 @@ export default function StepExport({ project }: Props) {
                 <div
                   className="relative rounded-xl p-4 text-center transition-all cursor-pointer"
                   style={{
-                    border: `2px dashed ${dpgfDragging ? '#E8E9EB' : '#55565A'}`,
+                    border: `2px dashed ${dpgfDragging ? '#E8E9EB' : '#909195'}`,
                     background: dpgfDragging ? 'rgba(255,255,255,0.04)' : '#121213',
                   }}
                   onDragOver={(e) => { e.preventDefault(); setDpgfDragging(true) }}
@@ -652,7 +652,7 @@ export default function StepExport({ project }: Props) {
                     <Loader2 size={20} className="mx-auto animate-spin" style={{ color: '#E8E9EB' }} />
                   ) : (
                     <>
-                      <Upload size={20} className="mx-auto mb-1.5" style={{ color: '#6B6C6F' }} />
+                      <Upload size={20} className="mx-auto mb-1.5" style={{ color: '#909195' }} />
                       <p className="text-xs" style={{ color: '#959597' }}>
                         Glissez votre DPGF remplie ici ou{' '}
                         <label className="cursor-pointer font-medium" style={{ color: '#E8E9EB' }}>
@@ -669,7 +669,7 @@ export default function StepExport({ project }: Props) {
                           />
                         </label>
                       </p>
-                      <p className="text-[10px] mt-0.5" style={{ color: '#6B6C6F' }}>XLSX, XLS, ODS, PDF</p>
+                      <p className="text-xs mt-0.5" style={{ color: '#909195' }}>XLSX, XLS, ODS, PDF</p>
                     </>
                   )}
                 </div>
@@ -704,7 +704,7 @@ export default function StepExport({ project }: Props) {
                           {isValid ? 'DPGF conforme' : hasWarnings ? 'DPGF avec avertissements' : 'DPGF non conforme'}
                         </span>
                       </div>
-                      <span className="text-[11px]" style={{ color: '#6B6C6F' }}>
+                      <span className="text-xs" style={{ color: '#909195' }}>
                         {detail.dpgf_remplie!.file_name}
                       </span>
                     </div>
@@ -712,15 +712,15 @@ export default function StepExport({ project }: Props) {
                     <div className="grid grid-cols-3 gap-2 mb-3">
                       <div className="text-center py-1.5 rounded-lg" style={{ background: '#1E1E21' }}>
                         <p className="text-sm font-bold" style={{ color: '#F7F8F8' }}>{v.nb_lignes}</p>
-                        <p className="text-[10px]" style={{ color: '#6B6C6F' }}>lignes</p>
+                        <p className="text-xs" style={{ color: '#909195' }}>lignes</p>
                       </div>
                       <div className="text-center py-1.5 rounded-lg" style={{ background: '#1E1E21' }}>
                         <p className="text-sm font-bold" style={{ color: '#E8E9EB' }}>{v.nb_lignes_remplies}</p>
-                        <p className="text-[10px]" style={{ color: '#6B6C6F' }}>remplies</p>
+                        <p className="text-xs" style={{ color: '#909195' }}>remplies</p>
                       </div>
                       <div className="text-center py-1.5 rounded-lg" style={{ background: '#1E1E21' }}>
                         <p className="text-sm font-bold" style={{ color: v.nb_lignes_vides > 0 ? '#F58E86' : '#E8E9EB' }}>{v.nb_lignes_vides}</p>
-                        <p className="text-[10px]" style={{ color: '#6B6C6F' }}>vides</p>
+                        <p className="text-xs" style={{ color: '#909195' }}>vides</p>
                       </div>
                     </div>
 
@@ -736,7 +736,7 @@ export default function StepExport({ project }: Props) {
                     {v.warnings.length > 0 && (
                       <div className="space-y-1 mt-2">
                         {v.warnings.map((w, i) => (
-                          <p key={i} className="text-[11px] flex items-start gap-1.5" style={{ color: '#959597' }}>
+                          <p key={i} className="text-xs flex items-start gap-1.5" style={{ color: '#959597' }}>
                             <span className="shrink-0 mt-0.5">&#8226;</span>
                             {w}
                           </p>
@@ -748,7 +748,7 @@ export default function StepExport({ project }: Props) {
               })()}
 
               {!detail.dpgf_info && !detail.dpgf_remplie && (
-                <p className="text-xs" style={{ color: '#6B6C6F' }}>
+                <p className="text-xs" style={{ color: '#909195' }}>
                   Aucun fichier DPGF détecté dans les documents du projet.
                 </p>
               )}
@@ -771,7 +771,7 @@ export default function StepExport({ project }: Props) {
                       <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#959597' }}>
                         {CATEGORY_LABELS[cat] || cat}
                       </span>
-                      <span className="text-[11px] font-medium" style={{ color: covered === items.length ? '#E8E9EB' : '#959597' }}>
+                      <span className="text-xs font-medium" style={{ color: covered === items.length ? '#E8E9EB' : '#959597' }}>
                         {covered}/{items.length}
                       </span>
                     </div>
@@ -784,7 +784,7 @@ export default function StepExport({ project }: Props) {
                           </span>
                           {item.priority === 'obligatoire' && (
                             <span
-                              className="text-[10px] px-1.5 py-0.5 rounded shrink-0 ml-auto"
+                              className="text-xs px-1.5 py-0.5 rounded shrink-0 ml-auto"
                               style={{ background: 'var(--warn-bg)', color: 'var(--warn)' }}
                             >
                               Obligatoire
@@ -797,7 +797,7 @@ export default function StepExport({ project }: Props) {
                 )
               })}
               {detail.compliance_items.length === 0 && (
-                <p className="text-xs text-center py-4" style={{ color: '#6B6C6F' }}>Aucune exigence extraite</p>
+                <p className="text-xs text-center py-4" style={{ color: '#909195' }}>Aucune exigence extraite</p>
               )}
             </div>
           </AccordionSection>
@@ -820,13 +820,13 @@ export default function StepExport({ project }: Props) {
                   <span className="text-sm font-medium truncate flex-1" style={{ color: '#F7F8F8' }}>
                     {d.file_name}
                   </span>
-                  <span className="flex items-center gap-1 text-xs shrink-0" style={{ color: '#6B6C6F' }}>
+                  <span className="flex items-center gap-1 text-xs shrink-0" style={{ color: '#909195' }}>
                     <Eye size={12} /> Aperçu
                   </span>
                 </button>
               ))}
               {detail.project_documents.length === 0 && (
-                <p className="text-xs text-center py-4" style={{ color: '#6B6C6F' }}>
+                <p className="text-xs text-center py-4" style={{ color: '#909195' }}>
                   Aucune pièce jointe pour l&apos;instant
                 </p>
               )}

@@ -127,7 +127,7 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
           </button>
           <div className="flex items-center gap-3 my-3">
             <span className="flex-1 h-px" style={{ background: '#1E1E21' }} />
-            <span className="text-[11px] uppercase tracking-wider" style={{ color: '#6B6C6F' }}>ou choisir au coffre-fort</span>
+            <span className="text-xs uppercase tracking-wider" style={{ color: '#909195' }}>ou choisir au coffre-fort</span>
             <span className="flex-1 h-px" style={{ background: '#1E1E21' }} />
           </div>
         </div>
@@ -138,7 +138,7 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
             className="flex items-center gap-2 px-3 py-2 rounded-lg"
             style={{ border: '1px solid rgba(255,255,255,.07)' }}
           >
-            <Search size={14} style={{ color: '#6B6C6F' }} />
+            <Search size={14} style={{ color: '#909195' }} />
             <input
               type="text"
               value={query}
@@ -199,12 +199,12 @@ function Group({
 }) {
   return (
     <div>
-      <h4 className="text-[11px] font-semibold uppercase tracking-wider mb-2" style={{ color: '#6B6C6F' }}>
+      <h4 className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#909195' }}>
         {title}
       </h4>
       {docs.length === 0 ? (
         emptyText ? (
-          <p className="text-xs py-2" style={{ color: '#6B6C6F' }}>{emptyText}</p>
+          <p className="text-xs py-2" style={{ color: '#909195' }}>{emptyText}</p>
         ) : null
       ) : (
         <ul className="space-y-1.5">
@@ -220,7 +220,7 @@ function Group({
                   {doc.file_name}
                 </p>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-[11px]" style={{ color: '#6B6C6F' }}>{doc.type}</span>
+                  <span className="text-xs" style={{ color: '#909195' }}>{doc.type}</span>
                   <StatusPill status={doc.status} />
                 </div>
               </div>
@@ -251,7 +251,7 @@ function StatusPill({ status }: { status: Document['status'] }) {
       : { label: 'Valide', color: '#6EE7A8', bg: 'rgba(110,231,168,0.10)' }
   return (
     <span
-      className="text-[10px] font-medium px-1.5 py-0.5 rounded"
+      className="text-xs font-medium px-1.5 py-0.5 rounded"
       style={{ color: cfg.color, background: cfg.bg }}
     >
       {cfg.label}

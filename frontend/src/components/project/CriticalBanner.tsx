@@ -48,7 +48,7 @@ function SourceLink({ source, onOpen }: { source: FieldSource | null; onOpen: (s
       onClick={() => onOpen(source)}
       title={`Voir la source — ${source.document}`}
       className="rounded p-0.5 align-middle transition-colors"
-      style={{ color: '#55565A' }}
+      style={{ color: '#909195' }}
     >
       <ExternalLink size={11} />
     </button>
@@ -67,7 +67,7 @@ function Tile({ icon, label, accent, wide, children }: {
   return (
     <div className={`glass-card top-lit px-4 py-3 ${wide ? 'sm:col-span-2' : ''}`}>
       <p className="microlabel mb-1.5 flex items-center gap-1.5">
-        <span style={{ color: accent ?? '#6B6C6F' }}>{icon}</span>
+        <span style={{ color: accent ?? '#909195' }}>{icon}</span>
         {label}
       </p>
       <div className="text-[15px] font-semibold leading-snug" style={{ color: accent ?? '#F7F8F8' }}>
@@ -115,7 +115,7 @@ export default function CriticalBanner({ projectId, onOpenSource }: Props) {
         {heure && <span style={{ color: '#B4B5B8' }}> · {heure}</span>}
         {echeance.etat !== 'sans_date' && (
           <span
-            className="num-mono ml-2 rounded-full px-1.5 py-0.5 align-middle text-[10px] font-bold whitespace-nowrap"
+            className="num-mono ml-2 rounded-full px-1.5 py-0.5 align-middle text-xs font-bold whitespace-nowrap"
             style={passed
               ? { background: 'rgba(245,142,134,0.10)', color: '#F58E86' }
               : urgent
@@ -165,7 +165,7 @@ export default function CriticalBanner({ projectId, onOpenSource }: Props) {
     tiles.push(
       <Tile key="penalites" icon={<Shield size={13} />} label="Pénalités de retard" wide>
         {retard && <span>{retard}</span>}
-        {retard && plafond && <span style={{ color: '#6B6C6F' }}> · </span>}
+        {retard && plafond && <span style={{ color: '#909195' }}> · </span>}
         {plafond && <span style={{ color: '#B4B5B8' }}>plafond {plafond}</span>}
         {' '}<SourceLink source={f.penalites.source} onOpen={onOpenSource} />
       </Tile>,

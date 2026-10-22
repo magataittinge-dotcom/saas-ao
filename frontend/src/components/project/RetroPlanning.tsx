@@ -61,15 +61,15 @@ export default function RetroPlanning({ projectId }: Props) {
               {step.passed && <Check size={8} style={{ color: '#959597' }} />}
             </span>
             <p className="text-sm font-medium leading-tight"
-              style={{ color: step.passed ? '#6B6C6F' : '#F7F8F8', textDecoration: step.passed ? 'line-through' : undefined }}>
+              style={{ color: step.passed ? '#909195' : '#F7F8F8', textDecoration: step.passed ? 'line-through' : undefined }}>
               {step.label}
             </p>
-            <p className="text-xs mt-0.5" style={{ color: step.passed ? '#55565A' : '#959597' }}>
+            <p className="text-xs mt-0.5" style={{ color: step.passed ? '#909195' : '#959597' }}>
               {formatFr(step.date)}{step.heure && ` à ${step.heure}`}
               {step.passed && ' — passée'}
             </p>
             {step.note && !step.passed && (
-              <p className="text-[11px] italic mt-0.5" style={{ color: '#6B6C6F' }}>{step.note}</p>
+              <p className="text-xs italic mt-0.5" style={{ color: '#909195' }}>{step.note}</p>
             )}
           </li>
         ))}

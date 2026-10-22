@@ -116,7 +116,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
             )}
             {expanded && to === '/projects' && urgentCount > 0 && (
               <span
-                className="px-1.5 py-0.5 rounded-full text-[10px] font-bold leading-none shrink-0"
+                className="px-1.5 py-0.5 rounded-full text-xs font-bold leading-none shrink-0"
                 style={{ background: 'rgba(245,142,134,0.10)', color: '#F58E86' }}
                 title={`${urgentCount} AO avec une échéance sous 7 jours`}
               >
@@ -194,7 +194,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
             <div key={section.label} className="mb-1">
               {expanded && (
                 <div className="px-2 pt-3 pb-1">
-                  <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#788295' }}>
+                  <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#788295' }}>
                     {section.label}
                   </span>
                 </div>
@@ -219,13 +219,13 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
         <div className="border-t border-[#1C222D]">
           {expanded ? (
             <div className="flex items-center gap-2 px-4 h-10">
-              <span className={cn('px-2 py-0.5 rounded-full text-[10px] font-semibold leading-none', pill.pillClass)}>
+              <span className={cn('px-2 py-0.5 rounded-full text-xs font-semibold leading-none', pill.pillClass)}>
                 {pill.label}
               </span>
               {planKey === 'free' && (
                 <button
                   onClick={() => navigate('/settings/billing')}
-                  className="text-[10px] text-[#E4E9F2] hover:text-[#FFFFFF] transition-colors ml-auto"
+                  className="text-xs text-[#E4E9F2] hover:text-[#FFFFFF] transition-colors ml-auto"
                 >
                   Choisir une offre
                 </button>
@@ -233,7 +233,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
             </div>
           ) : (
             <div className="relative group flex justify-center h-10 items-center">
-              <span className={cn('px-1.5 py-0.5 rounded text-[9px] font-bold leading-none', pill.pillClass)}>
+              <span className={cn('px-1.5 py-0.5 rounded text-xs font-bold leading-none', pill.pillClass)}>
                 {pill.label.charAt(0)}
               </span>
               <Tooltip label={`Plan ${pill.label}`} />
@@ -259,7 +259,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
         {/* ── User + Logout ─────────────────────── */}
         <div className="border-t border-[#1C222D] p-2">
           <div className={cn('flex items-center gap-2.5 rounded-lg p-2 transition-all duration-200', expanded ? '' : 'justify-center')}>
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0"
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
               style={{
                 background: 'radial-gradient(120% 80% at 50% 100%, rgba(228,233,242,0.18), transparent 65%), #0F1218',
                 color: '#F4F6FA',
@@ -270,7 +270,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
             {expanded && (
               <div className="flex-1 min-w-0">
                 <p className="text-[12px] font-medium text-[#F4F6FA] truncate">{user?.name || 'Utilisateur'}</p>
-                <p className="text-[10px] text-[#788295] truncate">{user?.email || ''}</p>
+                <p className="text-xs text-[#788295] truncate">{user?.email || ''}</p>
               </div>
             )}
             {expanded && (

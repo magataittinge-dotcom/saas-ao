@@ -157,7 +157,7 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
             Profil utilisé pour ce mémoire
           </h3>
           {data.profil.effectif_tranche && (
-            <span className="text-[11px]" style={{ color: '#6B6C6F' }}>{data.profil.effectif_tranche}</span>
+            <span className="text-xs" style={{ color: '#909195' }}>{data.profil.effectif_tranche}</span>
           )}
         </div>
         <div className="grid sm:grid-cols-2 gap-3">
@@ -169,7 +169,7 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
                 <label className="block text-xs font-medium mb-1" style={{ color: '#959597' }}>
                   {label}
                   {key in overrides && (
-                    <span className="ml-1.5 text-[10px] font-semibold" style={{ color: '#D9A441' }}>
+                    <span className="ml-1.5 text-xs font-semibold" style={{ color: '#D9A441' }}>
                       modifié pour ce mémoire
                     </span>
                   )}
@@ -217,7 +217,7 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
             <h3 className="text-sm font-bold" style={{ color: '#F7F8F8' }}>
               Références à citer ({checkedRefs?.size ?? 0} sélectionnées)
             </h3>
-            <span className="text-[11px]" style={{ color: '#6B6C6F' }}>
+            <span className="text-xs" style={{ color: '#909195' }}>
               pré-sélection selon le lot — ajustez librement
             </span>
           </div>
@@ -230,7 +230,7 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
                     onChange={() => toggleRef(ref.id)} />
                   <span className="min-w-0">
                     <span className="block text-sm truncate" style={{ color: '#F7F8F8' }}>{ref.intitule}</span>
-                    <span className="block text-[11px]" style={{ color: '#6B6C6F' }}>
+                    <span className="block text-xs" style={{ color: '#909195' }}>
                       {[ref.lot, ref.maitre_ouvrage, ref.annee].filter(Boolean).join(' · ')}
                     </span>
                   </span>
@@ -246,7 +246,7 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
         <h3 className="text-sm font-bold mb-1" style={{ color: '#F7F8F8' }}>
           Planning prévisionnel (option)
         </h3>
-        <p className="text-xs mb-3" style={{ color: '#6B6C6F' }}>
+        <p className="text-xs mb-3" style={{ color: '#909195' }}>
           Saisissez vos phases : un Gantt sera inséré dans le mémoire. Vide = pas de Gantt.
         </p>
         <div className="space-y-2">
@@ -262,7 +262,7 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
                 onChange={(e) => setGanttPhases(prev =>
                   prev.map((p, j) => j === i ? { ...p, duree_semaines: parseInt(e.target.value) || 0 } : p))} />
               <button onClick={() => setGanttPhases(prev => prev.filter((_, j) => j !== i))}
-                className="text-xs shrink-0" style={{ color: '#6B6C6F' }}>retirer</button>
+                className="text-xs shrink-0" style={{ color: '#909195' }}>retirer</button>
             </div>
           ))}
         </div>
@@ -279,7 +279,7 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
           <h3 className="text-sm font-bold mb-1" style={{ color: '#F7F8F8' }}>
             Annexes du coffre-fort (option)
           </h3>
-          <p className="text-xs mb-2" style={{ color: '#6B6C6F' }}>
+          <p className="text-xs mb-2" style={{ color: '#909195' }}>
             Jointes au ZIP d'export en section 3_ANNEXES.
           </p>
           <ul className="space-y-1 max-h-40 overflow-y-auto">

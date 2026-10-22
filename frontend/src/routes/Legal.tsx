@@ -110,7 +110,7 @@ export default function Legal() {
               className="w-7 h-7 rounded flex items-center justify-center"
               style={{ background: 'linear-gradient(135deg, #E4E9F2, #FFFFFF)' }}
             >
-              <span className="font-black text-[11px]" style={{ color: '#0A0C11' }}>S</span>
+              <span className="font-black text-xs" style={{ color: '#0A0C11' }}>S</span>
             </div>
             <span className="text-sm font-semibold" style={{ color: '#F4F6FA' }}>
               Synorix

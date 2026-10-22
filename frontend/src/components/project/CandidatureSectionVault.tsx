@@ -86,8 +86,8 @@ export default function CandidatureSectionVault({ items, onPickFromVault, onOpen
         {CATEGORY_ORDER.filter((cat) => grouped[cat].length > 0).map((cat) => (
           <div key={cat} className="py-3" style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
             <div
-              className="text-[11px] font-semibold uppercase tracking-wider mb-2"
-              style={{ color: '#6B6C6F' }}
+              className="text-xs font-semibold uppercase tracking-wider mb-2"
+              style={{ color: '#909195' }}
             >
               {CATEGORY_LABELS[cat]}
             </div>
@@ -119,15 +119,15 @@ function VaultRow({ item, onPick }: { item: ChecklistItem; onPick: () => void })
           {item.details || item.document_type_required}
         </p>
         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-          <span className="text-[11px]" style={{ color }}>{label}</span>
+          <span className="text-xs" style={{ color }}>{label}</span>
           {item.lot && (
-            <span className="text-[11px] px-1.5 rounded-full"
+            <span className="text-xs px-1.5 rounded-full"
               style={{ background: 'rgba(255,255,255,0.08)', color: '#B4B5B8' }}>
               {item.lot.replace(/^lot/i, 'Lot ')}
             </span>
           )}
           {isLinked && (
-            <span className="text-[11px] flex items-center gap-1" style={{ color: '#959597' }}>
+            <span className="text-xs flex items-center gap-1" style={{ color: '#959597' }}>
               <FileText size={11} />
               Lié au coffre-fort
             </span>
@@ -189,7 +189,7 @@ function statusFor(status: ChecklistItem['status']): { icon: JSX.Element; label:
       // « Manquant » = à faire, pas une alarme : le corail est réservé
       // au bandeau de synthèse et aux vraies alertes (expiré).
       return {
-        icon: <Circle size={16} style={{ color: '#55565A' }} />,
+        icon: <Circle size={16} style={{ color: '#909195' }} />,
         label: 'À fournir',
         color: '#959597',
       }

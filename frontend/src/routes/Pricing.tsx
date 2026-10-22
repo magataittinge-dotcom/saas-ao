@@ -15,7 +15,7 @@ export default function Pricing() {
 
         <GrilleOffres />
 
-        <p className="text-center text-sm mt-10" style={{ color: '#788295' }}>
+        <p className="text-center text-sm mt-10" style={{ color: '#9BA4B5' }}>
           Sans engagement · Résiliable à tout moment · Support inclus
         </p>
       </div>

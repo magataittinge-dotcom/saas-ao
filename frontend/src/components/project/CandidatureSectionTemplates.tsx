@@ -155,19 +155,19 @@ function TemplateRow({
         <div className="flex items-baseline gap-2 flex-wrap">
           <span className="text-sm font-semibold" style={{ color: '#F7F8F8' }}>{label}</span>
           {isPresent ? (
-            <span className="text-[11px]" style={{ color: '#6EE7A8' }}>Complété</span>
+            <span className="text-xs" style={{ color: '#6EE7A8' }}>Complété</span>
           ) : isWarning ? (
-            <span className="text-[11px] font-medium" style={{ color: '#D9A441' }}>
+            <span className="text-xs font-medium" style={{ color: '#D9A441' }}>
               ⚠️ Présente — à vérifier
             </span>
           ) : hasTemplate ? (
-            <span className="text-[11px]" style={{ color: '#959597' }}>À compléter</span>
+            <span className="text-xs" style={{ color: '#959597' }}>À compléter</span>
           ) : officialUrl ? (
             // Type (b) : formulaire standard — normal qu'il ne soit pas au DCE.
-            <span className="text-[11px]" style={{ color: '#959597' }}>Formulaire standard (Cerfa)</span>
+            <span className="text-xs" style={{ color: '#959597' }}>Formulaire standard (Cerfa)</span>
           ) : (
             // Type (a) spécifique au DCE mais introuvable → à réclamer, pas une erreur.
-            <span className="text-[11px]" style={{ color: '#959597' }}>À demander au maître d'ouvrage</span>
+            <span className="text-xs" style={{ color: '#959597' }}>À demander au maître d'ouvrage</span>
           )}
         </div>
         {/* C12 — confirmation de signature (AE, DC1, DC2) */}
@@ -180,7 +180,7 @@ function TemplateRow({
             />
             Je confirme avoir signé ce document
             {!item.signature_confirmed && (
-              <span style={{ color: '#6B6C6F' }}>— requis pour compter conforme</span>
+              <span style={{ color: '#909195' }}>— requis pour compter conforme</span>
             )}
           </label>
         )}
@@ -190,12 +190,12 @@ function TemplateRow({
           </p>
         )}
         {item.source_in_rc && (
-          <p className="text-[11px] mt-1 italic" style={{ color: '#6B6C6F' }}>
+          <p className="text-xs mt-1 italic" style={{ color: '#909195' }}>
             « {item.source_in_rc} »
           </p>
         )}
         {error && (
-          <p className="text-[11px] mt-1.5" style={{ color: '#F58E86' }}>{error}</p>
+          <p className="text-xs mt-1.5" style={{ color: '#F58E86' }}>{error}</p>
         )}
       </div>
 

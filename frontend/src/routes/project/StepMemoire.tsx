@@ -262,7 +262,7 @@ function ProfileSummary({ stats }: { stats: { filled: number; total: number; nom
             </h3>
             {isComplete && (
               <span
-                className="text-[11px] font-medium px-2 py-0.5 rounded-full"
+                className="text-xs font-medium px-2 py-0.5 rounded-full"
                 style={{ background: 'rgba(255,255,255,0.10)', color: '#E8E9EB', border: '1px solid rgba(255,255,255,0.20)' }}
               >
                 Complet
@@ -351,8 +351,8 @@ function TocSidebar({
               >
                 {section.enfants.length > 0 ? (
                   ouverte
-                    ? <ChevronDown size={12} style={{ color: '#6B6C6F' }} />
-                    : <ChevronRight size={12} style={{ color: '#6B6C6F' }} />
+                    ? <ChevronDown size={12} style={{ color: '#909195' }} />
+                    : <ChevronRight size={12} style={{ color: '#909195' }} />
                 ) : <span style={{ width: 12 }} />}
                 <span className="text-sm font-semibold" style={{ color: active ? '#E8E9EB' : '#F7F8F8', fontFamily: F }}>
                   {section.titre}
@@ -520,7 +520,7 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
 
 function MdContent({ text }: { text: string }) {
   return (
-    <div className="prose prose-sm prose-invert max-w-none prose-headings:font-semibold prose-p:leading-relaxed"
+    <div className="prose prose-sm prose-invert max-w-none prose-headings:font-semibold prose-p:leading-relaxed prose-code:text-xs"
       style={{ color: '#D8D9DB', fontFamily: F }}
     >
       <ReactMarkdown>{text}</ReactMarkdown>
@@ -834,7 +834,7 @@ export default function StepMemoire({ project }: Props) {
                     {criteres.map((c) => (
                       <span
                         key={c.nom}
-                        className="num-mono text-[11px] px-2 py-1 rounded-md"
+                        className="num-mono text-xs px-2 py-1 rounded-md"
                         style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,.07)', color: '#C2C3C6' }}
                       >
                         {c.nom} {c.poids}&nbsp;%
@@ -861,7 +861,7 @@ export default function StepMemoire({ project }: Props) {
               <h3 className="text-sm font-semibold" style={{ color: '#F7F8F8', fontFamily: F }}>
                 Informations spécifiques à ce chantier
               </h3>
-              <p className="text-[11px] mt-1" style={{ color: '#959597' }}>
+              <p className="text-xs mt-1" style={{ color: '#959597' }}>
                 Ces informations seront intégrées dans le mémoire pour ce projet
               </p>
             </div>
@@ -967,7 +967,7 @@ export default function StepMemoire({ project }: Props) {
             <div>
               <label className="block text-xs font-medium mb-1.5" style={{ color: '#F7F8F8' }}>
                 Contraintes particulières
-                <span className="font-normal ml-1" style={{ color: '#6B6C6F' }}>(optionnel)</span>
+                <span className="font-normal ml-1" style={{ color: '#909195' }}>(optionnel)</span>
               </label>
               <textarea
                 value={variables.particularites}
@@ -1067,7 +1067,7 @@ export default function StepMemoire({ project }: Props) {
             >
               <span className="h-1.5 w-1.5 rounded-full" style={{ background: '#6EE7A8' }} />
               v{memoire!.version}
-              <span style={{ color: '#55565A' }}>·</span>
+              <span style={{ color: '#909195' }}>·</span>
               <span className="num-mono">{completionPct}&nbsp;% rédigé</span>
             </span>
           </div>

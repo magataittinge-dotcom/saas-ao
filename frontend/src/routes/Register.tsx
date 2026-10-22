@@ -97,7 +97,7 @@ export default function Register() {
             <a
               key={to}
               href={to}
-              className="text-[11px] transition-colors"
+              className="text-xs transition-colors"
               style={{ color: '#788295' }}
               onMouseEnter={(e) => { e.currentTarget.style.color = '#E4E9F2' }}
               onMouseLeave={(e) => { e.currentTarget.style.color = '#788295' }}

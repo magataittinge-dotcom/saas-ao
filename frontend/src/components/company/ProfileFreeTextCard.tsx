@@ -65,7 +65,7 @@ export default function ProfileFreeTextCard() {
       <div className="flex items-center gap-2">
         <Sparkles size={15} className="text-ds-cyan" />
         <h3 className="text-sm font-semibold text-ds-text">Décrire en langage libre</h3>
-        <span className="text-[11px] text-ds-text-3">l'IA structure, vous validez</span>
+        <span className="text-xs text-ds-text-3">l'IA structure, vous validez</span>
       </div>
 
       {!proposed ? (

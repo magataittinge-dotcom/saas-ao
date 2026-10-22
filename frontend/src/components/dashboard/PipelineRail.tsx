@@ -44,7 +44,7 @@ export function PipelineRail({ currentStep, showLabel = true, className }: Pipel
       {showLabel && (
         <div className="mt-1.5 flex items-center justify-between">
           <span className="text-xs font-medium text-ds-text-2">{PIPELINE_STEPS[step - 1]}</span>
-          <span className="edge-data text-[11px] font-semibold tabular-nums text-ds-cyan">Étape {step} sur {total}</span>
+          <span className="edge-data text-xs font-semibold tabular-nums text-ds-cyan">Étape {step} sur {total}</span>
         </div>
       )}
     </div>

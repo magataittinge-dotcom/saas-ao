@@ -74,7 +74,7 @@ export default function Header({ onMenuToggle }: Props) {
 
         <div className="flex items-center gap-1.5 text-sm min-w-0" style={{ fontFamily: "'Inter Variable', 'Geist Sans', sans-serif" }}>
           <span className="font-display hidden sm:inline font-semibold tracking-tight" style={{ color: '#E8E9EB' }}>Synorix</span>
-          <span className="hidden sm:inline" style={{ color: '#55565A' }}>&gt;</span>
+          <span className="hidden sm:inline" style={{ color: '#909195' }}>&gt;</span>
           <span className="font-medium truncate" style={{ color: '#F7F8F8' }}>
             {label || parent || 'Tableau de bord'}
           </span>
@@ -99,7 +99,7 @@ export default function Header({ onMenuToggle }: Props) {
             <p className="text-sm font-medium leading-tight" style={{ color: '#F7F8F8', fontFamily: "'Inter Variable', 'Geist Sans', sans-serif" }}>
               {displayName}
             </p>
-            <p className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: '#959597' }}>
+            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#959597' }}>
               Chef de projet
             </p>
           </div>

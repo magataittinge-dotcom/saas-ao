@@ -132,7 +132,7 @@ export default function PaymentCard({
 
       {/* Expiry */}
       <div className="absolute bottom-5 right-6">
-        <div className="text-[10px] uppercase text-white/40 mb-0.5">Expires</div>
+        <div className="text-xs uppercase text-white/40 mb-0.5">Expires</div>
         <div
           className="text-sm text-white/80 font-medium font-mono"
         >

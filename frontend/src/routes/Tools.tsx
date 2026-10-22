@@ -38,7 +38,7 @@ function Field({
         {label}
       </label>
       {children}
-      {hint && <p className="text-[11px] mt-1 text-ds-text-3">{hint}</p>}
+      {hint && <p className="text-xs mt-1 text-ds-text-3">{hint}</p>}
     </div>
   )
 }
@@ -176,7 +176,7 @@ function RetenueCalculator() {
       {result && (
         <div className="mt-5 pt-5 space-y-4" style={{ borderTop: '1px solid rgba(186,205,234,.13)' }}>
           <div className="text-center rounded-xl p-4" style={{ background: '#151A23', border: '1px solid rgba(186,205,234,.13)' }}>
-            <p className="text-[11px] uppercase tracking-wide font-semibold text-ds-text-3">Montant TTC du marché</p>
+            <p className="text-xs uppercase tracking-wide font-semibold text-ds-text-3">Montant TTC du marché</p>
             <p className="text-2xl font-bold mt-1" style={{ color: '#F4F6FA', fontFamily: F }}>
               {formatMontant(result.montant_ttc)}
             </p>
@@ -187,7 +187,7 @@ function RetenueCalculator() {
               <thead style={{ background: '#1C222D' }}>
                 <tr>
                   {['Poste', 'Montant', 'Base', 'Détail'].map((h) => (
-                    <th key={h} className="text-left text-[11px] font-semibold uppercase tracking-wide px-3 py-2 text-ds-text-2">{h}</th>
+                    <th key={h} className="text-left text-xs font-semibold uppercase tracking-wide px-3 py-2 text-ds-text-2">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -216,7 +216,7 @@ function RetenueCalculator() {
             <AiTip key={i} tip={{ id: `rg-warn-${i}`, variant: 'warning', text: a }} onDismiss={() => {}} />
           ))}
 
-          <div className="flex items-center gap-1.5 text-[11px] text-ds-text-3">
+          <div className="flex items-center gap-1.5 text-xs text-ds-text-3">
             <ShieldCheck size={12} style={{ color: '#788295' }} />
             Calcul indicatif — l'assiette et les plafonds définitifs dépendent des clauses du CCAP.
           </div>

@@ -40,7 +40,7 @@ export default function TresorerieCard({ projectId, onOpenSource }: Props) {
       <div className="flex items-center gap-2 px-5 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
         <Banknote size={16} style={{ color: '#E8E9EB' }} />
         <h3 className="text-sm font-bold" style={{ color: '#F7F8F8' }}>Trésorerie du marché</h3>
-        <span className="text-[11px]" style={{ color: '#6B6C6F' }}>ce que dit le contrat</span>
+        <span className="text-xs" style={{ color: '#909195' }}>ce que dit le contrat</span>
       </div>
       <div>
         {data.lignes.map((ligne, i) => (
@@ -60,13 +60,13 @@ export default function TresorerieCard({ projectId, onOpenSource }: Props) {
             <div className="flex-1 min-w-0">
               <p className="text-xs" style={{ color: '#959597' }}>{ligne.explication}</p>
               {ligne.formule && (
-                <p className="text-[11px] font-mono mt-1 truncate" style={{ color: '#6B6C6F' }}>
+                <p className="text-xs font-mono mt-1 truncate" style={{ color: '#909195' }}>
                   {ligne.formule}
                 </p>
               )}
             </div>
             {ligne.source && (
-              <ExternalLink size={12} className="shrink-0 mt-1" style={{ color: '#6B6C6F' }} />
+              <ExternalLink size={12} className="shrink-0 mt-1" style={{ color: '#909195' }} />
             )}
           </button>
         ))}

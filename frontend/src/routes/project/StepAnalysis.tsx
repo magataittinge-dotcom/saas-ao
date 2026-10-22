@@ -343,8 +343,8 @@ export default function StepAnalysis({ project }: Props) {
             </span>
           ))}
           {lotFilterInfo.excluded.map(doc => (
-            <span key={doc.id} className="flex items-center gap-1.5 opacity-40">
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#6B6C6F' }} />
+            <span key={doc.id} className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#909195' }} />
               <span style={{ color: '#959597' }}>{doc.file_name}</span>
             </span>
           ))}
@@ -396,7 +396,7 @@ export default function StepAnalysis({ project }: Props) {
               </p>
             )}
             {(infos?.maitre_ouvrage || infos?.maitre_oeuvre) && (
-              <p className="mt-1.5 max-w-2xl text-xs leading-relaxed" style={{ color: '#6B6C6F' }}>
+              <p className="mt-1.5 max-w-2xl text-xs leading-relaxed" style={{ color: '#909195' }}>
                 {infos?.maitre_ouvrage && <>Client&nbsp;: <span style={{ color: '#959597' }}>{infos.maitre_ouvrage}</span></>}
                 {infos?.maitre_ouvrage && infos?.maitre_oeuvre && ' · '}
                 {infos?.maitre_oeuvre && <>Maîtrise d&apos;œuvre&nbsp;: <span style={{ color: '#959597' }}>{infos.maitre_oeuvre}</span></>}
@@ -470,7 +470,7 @@ export default function StepAnalysis({ project }: Props) {
 
       {/* ── SEARCH BAR ──────────────────────────────────────────── */}
       <div className="relative">
-        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: '#6B6C6F' }} />
+        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: '#909195' }} />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -500,7 +500,7 @@ export default function StepAnalysis({ project }: Props) {
 
       {/* ── Exigences ───────────────────────────────────────────── */}
       {filtered.length === 0 ? (
-        <p className="text-center text-sm py-12" style={{ color: '#6B6C6F', fontFamily: F }}>
+        <p className="text-center text-sm py-12" style={{ color: '#909195', fontFamily: F }}>
           Aucune exigence trouvée
         </p>
       ) : (
@@ -579,7 +579,7 @@ function ExigenceSection({
       >
         <h3 className="text-base font-bold" style={{ color: '#F7F8F8', fontFamily: F }}>
           {CATEGORY_LABELS[category]}{' '}
-          <span className="font-medium text-sm" style={{ color: '#6B6C6F' }}>({items.length})</span>
+          <span className="font-medium text-sm" style={{ color: '#909195' }}>({items.length})</span>
         </h3>
         <span
           className="text-xs font-medium transition-transform"
@@ -598,8 +598,8 @@ function ExigenceSection({
               style={idx < items.length - 1 ? { borderBottom: '1px solid rgba(255,255,255,.07)' } : undefined}
             >
               <span
-                className="shrink-0 mt-0.5 text-[11px] tabular-nums w-7 text-right"
-                style={{ color: '#55565A', fontFamily: '"Geist Mono", monospace' }}
+                className="shrink-0 mt-0.5 text-xs tabular-nums w-7 text-right"
+                style={{ color: '#909195', fontFamily: '"Geist Mono", monospace' }}
               >
                 {idx + 1}
               </span>

@@ -61,8 +61,8 @@ export default function RewritePassageBar({ projectId, selection, onApply }: Pro
         className="flex items-center gap-2 px-6 py-2 flex-wrap"
         style={{ borderBottom: '1px solid rgba(255,255,255,.07)', background: '#1E1E21' }}
       >
-        <Sparkles size={13} style={{ color: hasSelection ? '#E8E9EB' : '#55565A' }} />
-        <span className="text-xs" style={{ color: hasSelection ? '#959597' : '#6B6C6F' }}>
+        <Sparkles size={13} style={{ color: hasSelection ? '#E8E9EB' : '#909195' }} />
+        <span className="text-xs" style={{ color: hasSelection ? '#959597' : '#909195' }}>
           {hasSelection
             ? `Réécrire la sélection (${selection!.text.length} car.) :`
             : 'Sélectionnez un passage pour le réécrire avec l\'IA'}
@@ -114,11 +114,11 @@ export default function RewritePassageBar({ projectId, selection, onApply }: Pro
             </div>
             <div className="flex-1 overflow-y-auto grid sm:grid-cols-2 gap-0">
               <div className="p-4" style={{ borderRight: '1px solid rgba(255,255,255,.07)' }}>
-                <p className="text-[11px] font-bold uppercase tracking-wide mb-2" style={{ color: '#6B6C6F' }}>Avant</p>
+                <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: '#909195' }}>Avant</p>
                 <p className="text-sm whitespace-pre-wrap" style={{ color: '#959597' }}>{diff.original}</p>
               </div>
               <div className="p-4" style={{ background: 'rgba(255,255,255,0.03)' }}>
-                <p className="text-[11px] font-bold uppercase tracking-wide mb-2" style={{ color: '#B4B5B8' }}>Après</p>
+                <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: '#B4B5B8' }}>Après</p>
                 <p className="text-sm whitespace-pre-wrap" style={{ color: '#F7F8F8' }}>{diff.rewritten}</p>
               </div>
             </div>
