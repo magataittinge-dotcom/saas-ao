@@ -577,7 +577,7 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
 
 function MdContent({ text }: { text: string }) {
   return (
-    <div className="prose prose-sm max-w-none prose-headings:font-semibold prose-p:leading-relaxed"
+    <div className="prose prose-sm prose-invert max-w-none prose-headings:font-semibold prose-p:leading-relaxed"
       style={{ color: '#D8D9DB', fontFamily: F }}
     >
       <ReactMarkdown>{text}</ReactMarkdown>
