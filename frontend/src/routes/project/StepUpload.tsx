@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils'
 import { AiTipsBlock, type TipData } from '@/components/common/AiTip'
 import VaultSavePrompt, { type VaultSuggestion } from '@/components/vault/VaultSavePrompt'
 import { takePendingUpload } from '@/lib/pendingUpload'
+import DeleteConfirmModal from '@/components/common/DeleteConfirmModal'
 
 const UPLOAD_STEPS: StepDescriptor[] = [
   { key: 'uploading',       label: 'Transfert du dossier',   estimated_s: 30 },
@@ -89,6 +90,8 @@ export default function StepUpload({ project }: Props) {
   const [uploadErrors, setUploadErrors] = useState<string[]>([])
   const [uploadWarnings, setUploadWarnings] = useState<string[]>([])
   const [vaultPrompts, setVaultPrompts] = useState<VaultSuggestion[]>([])
+  // 1.13 — aucune perte en un clic : chaque suppression est confirmée, nommée
+  const [aSupprimer, setASupprimer] = useState<{ tous: true } | { doc: ProjectDocument } | null>(null)
   const [largeFileNotice, setLargeFileNotice] = useState<{ message: string; tone: 'cyan' | 'orange' } | null>(null)
   const [nextError, setNextError] = useState<string | null>(null)
   const [isNavigating, setIsNavigating] = useState(false)
@@ -120,7 +123,7 @@ export default function StepUpload({ project }: Props) {
     return tips
   }, [documents])
 
-  const { mutate: deleteDoc } = useMutation({
+  const { mutateAsync: deleteDoc } = useMutation({
     mutationFn: (docId: string) => api.delete(`/projects/${project.id}/documents/${docId}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['project-documents', project.id] }),
   })
@@ -377,6 +380,23 @@ export default function StepUpload({ project }: Props) {
      ════════════════════════════════════════════════════════════════ */
   return (
     <>
+      {aSupprimer && (
+        <DeleteConfirmModal
+          title={'tous' in aSupprimer
+            ? `Supprimer les ${documents.length} fichiers du DCE ?`
+            : `Supprimer « ${aSupprimer.doc.file_name} » ?`}
+          detail={'tous' in aSupprimer
+            ? 'Les fichiers ne seront plus dans le dossier de cet AO.'
+            : 'Le fichier ne sera plus dans le dossier de cet AO.'}
+          onConfirm={async () => {
+            if ('tous' in aSupprimer) await Promise.all(documents.map((d) => deleteDoc(d.id)))
+            else await deleteDoc(aSupprimer.doc.id)
+            setASupprimer(null)
+          }}
+          onCancel={() => setASupprimer(null)}
+        />
+      )}
+
       {/* Upload overlay */}
       {showOverlay && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.60)', backdropFilter: 'blur(4px)' }}>
@@ -553,7 +573,7 @@ export default function StepUpload({ project }: Props) {
               </div>
               {documents.length > 1 && (
                 <button
-                  onClick={() => documents.forEach((d) => deleteDoc(d.id))}
+                  onClick={() => setASupprimer({ tous: true })}
                   className="text-xs font-medium transition-colors"
                   style={{ color: '#6B6C6F' }}
                   onMouseEnter={(e) => { e.currentTarget.style.color = '#F58E86' }}
@@ -624,7 +644,8 @@ export default function StepUpload({ project }: Props) {
 
                     {/* Delete */}
                     <button
-                      onClick={() => deleteDoc(doc.id)}
+                      onClick={() => setASupprimer({ doc })}
+                      aria-label={`Supprimer ${doc.file_name}`}
                       className="p-1.5 rounded-md transition-colors"
                       style={{ color: '#55565A' }}
                       onMouseEnter={(e) => { e.currentTarget.style.color = '#F58E86'; e.currentTarget.style.background = 'rgba(245,142,134,0.06)' }}

@@ -12,6 +12,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { VAULT_CATEGORY_LABELS, VAULT_CATEGORY_ORDER } from '@/lib/vault'
 import type { Document } from '@/types'
 import EchecAction from '@/components/common/EchecAction'
+import DeleteConfirmModal from '@/components/common/DeleteConfirmModal'
 import { messageErreur } from '@/lib/erreurs'
 
 export default function Vault() {
@@ -22,7 +23,10 @@ export default function Vault() {
   // Vérification), on offre un retour explicite sans perdre le projet.
   const returnTo = searchParams.get('returnTo')
   const { data: documents = [], isLoading } = useDocuments()
-  const { mutate: deleteDocument } = useDeleteDocument()
+  const { mutateAsync: deleteDocument } = useDeleteDocument()
+  // 1.13 — une pièce du coffre-fort ne se supprime pas en un clic
+  const [pieceASupprimer, setPieceASupprimer] = useState<Document | null>(null)
+  const demanderSuppression = (id: string) => setPieceASupprimer(documents.find((d) => d.id === id) ?? null)
   const [isUploading, setIsUploading] = useState(false)
   // 1.16 — un dépôt qui n'aboutit pas est dit ; les fichiers restants peuvent être renvoyés
   const [echec, setEchec] = useState<{ message: string; fichiers: File[] } | null>(null)
@@ -123,6 +127,15 @@ export default function Vault() {
         <p className="text-xs text-ds-text-3 mt-1">PDF — 20 MB max</p>
       </div>
 
+      {pieceASupprimer && (
+        <DeleteConfirmModal
+          title={`Supprimer « ${pieceASupprimer.file_name} » du coffre-fort ?`}
+          detail="La pièce ne sera plus proposée pour vos candidatures."
+          onConfirm={async () => { await deleteDocument(pieceASupprimer.id); setPieceASupprimer(null) }}
+          onCancel={() => setPieceASupprimer(null)}
+        />
+      )}
+
       {echec && (
         <EchecAction
           message={echec.message}
@@ -148,7 +161,7 @@ export default function Vault() {
                 </h2>
                 <div className="space-y-2">
                   {unclassified.map((doc) => (
-                    <FileCard key={doc.id} document={doc} onDelete={deleteDocument} onEdit={setEditingDoc} />
+                    <FileCard key={doc.id} document={doc} onDelete={demanderSuppression} onEdit={setEditingDoc} />
                   ))}
                 </div>
               </div>
@@ -166,7 +179,7 @@ export default function Vault() {
                 {catDocs.length > 0 ? (
                   <div className="space-y-2">
                     {catDocs.map((doc) => (
-                      <FileCard key={doc.id} document={doc} onDelete={deleteDocument} onEdit={setEditingDoc} />
+                      <FileCard key={doc.id} document={doc} onDelete={demanderSuppression} onEdit={setEditingDoc} />
                     ))}
                   </div>
                 ) : (

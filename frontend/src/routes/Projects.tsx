@@ -77,7 +77,7 @@ export default function Projects() {
     <div className="space-y-5 animate-fade-in">
       {deleteTarget && (
         <DeleteConfirmModal
-          title="Supprimer cet appel d'offres ?"
+          title={`Supprimer « ${deleteTarget.name} » ?`}
           onConfirm={() => handleDelete(deleteTarget.id)}
           onCancel={() => setDeleteTarget(null)}
         />

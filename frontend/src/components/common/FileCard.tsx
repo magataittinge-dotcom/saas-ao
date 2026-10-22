@@ -81,6 +81,8 @@ export function FileCard({ document, onDelete, onEdit }: Props) {
         {onDelete && (
           <button
             onClick={() => onDelete(document.id)}
+            aria-label={`Supprimer ${document.file_name}`}
+            title="Supprimer"
             className="p-1.5 text-ds-text-3 hover:text-ds-danger rounded transition-colors"
           >
             <Trash2 size={14} />

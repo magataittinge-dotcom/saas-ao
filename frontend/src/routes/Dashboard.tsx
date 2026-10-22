@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
@@ -64,11 +66,24 @@ export default function Dashboard() {
   })
 
   const queryClient = useQueryClient()
+  // 1.13 — « Sans suite » se défait : l'AO classé peut être rouvert d'un clic
+  const [classe, setClasse] = useState<{ id: string; name: string } | null>(null)
   const { mutate: markSansSuite } = useMutation({
-    mutationFn: async (projectId: string) => {
-      await api.patch(`/projects/${projectId}`, { status: 'sans_suite' })
+    mutationFn: async (p: { id: string; name: string }) => {
+      await api.patch(`/projects/${p.id}`, { status: 'sans_suite' })
+    },
+    onSuccess: (_, p) => {
+      setClasse(p)
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
+    },
+  })
+  const { mutate: reouvrir, isPending: reouverture } = useMutation({
+    mutationFn: async (p: { id: string; name: string }) => {
+      await api.patch(`/projects/${p.id}`, { status: 'analyzed' })
     },
     onSuccess: () => {
+      setClasse(null)
       queryClient.invalidateQueries({ queryKey: ['projects'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
     },
@@ -298,7 +313,7 @@ export default function Dashboard() {
                   </button>
                   <DeadlinePill deadline={p.deadline} />
                   <button
-                    onClick={() => markSansSuite(p.id)}
+                    onClick={() => markSansSuite({ id: p.id, name: p.name })}
                     title="Classer cet AO « Analysé — sans suite » : décision prise, il quitte le tableau de bord"
                     className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-ds-text-2 hover:bg-ds-bg-2 transition-colors cursor-pointer"
                     style={{ border: '1px solid var(--line)' }}
@@ -412,6 +427,33 @@ export default function Dashboard() {
           {/* Note Synorix : désormais portée par le Compagnon, en haut de colonne (T3.5) */}
         </div>
       </div>
+
+      {classe && createPortal(
+        <div
+          role="status"
+          className="fixed bottom-6 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-center gap-3 rounded-xl px-4 py-3 text-sm"
+          style={{ background: '#151A23', border: '1px solid rgba(186,205,234,.18)', boxShadow: '0 12px 32px rgba(0,0,0,0.45)' }}
+        >
+          <p className="flex-1" style={{ color: '#E8EBF2' }}>« {classe.name} » est classé sans suite.</p>
+          <button
+            onClick={() => reouvrir(classe)}
+            disabled={reouverture}
+            className="shrink-0 rounded-md px-2.5 py-1 text-xs font-semibold disabled:opacity-60"
+            style={{ color: '#F7F8F8', border: '1px solid rgba(255,255,255,.14)' }}
+          >
+            Annuler
+          </button>
+          <button
+            onClick={() => setClasse(null)}
+            aria-label="Fermer le message"
+            className="shrink-0 rounded p-0.5 text-xs"
+            style={{ color: '#9BA4B5' }}
+          >
+            ×
+          </button>
+        </div>,
+        document.body,
+      )}
     </div>
   )
 }

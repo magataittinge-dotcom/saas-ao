@@ -10,6 +10,7 @@ import {
 import axios from 'axios'
 import { api } from '@/services/api'
 import SubscriptionWall from '@/components/common/SubscriptionWall'
+import DeleteConfirmModal from '@/components/common/DeleteConfirmModal'
 import ProgressDisplay, { type StepDescriptor } from '@/components/common/ProgressDisplay'
 import { useProgressStream } from '@/hooks/useProgressStream'
 import type { Project, LotOption } from '@/types'
@@ -396,6 +397,8 @@ export default function StepLotSelection({ project }: Props) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [showPaywall, setShowPaywall] = useState(false)
+  // 1.13 — un lot ne disparaît pas de la liste en un clic
+  const [lotARetirer, setLotARetirer] = useState<LotOption | null>(null)
   const [paywallMessage, setPaywallMessage] = useState<string | null>(null)
   const [processingDetail, setProcessingDetail] = useState('')
   const [waitingForExtraction, setWaitingForExtraction] = useState(false)
@@ -680,6 +683,15 @@ export default function StepLotSelection({ project }: Props) {
   return (
     <>
       <SubscriptionWall open={showPaywall} onClose={() => setShowPaywall(false)} feature="analysis" message={paywallMessage} />
+      {lotARetirer && (
+        <DeleteConfirmModal
+          title={`Retirer « ${lotARetirer.user_label || lotARetirer.nom} » de la liste ?`}
+          detail="Vous pourrez l'ajouter de nouveau à la main."
+          libelleConfirmer="Retirer"
+          onConfirm={() => { handleDelete(lotARetirer.id); setLotARetirer(null) }}
+          onCancel={() => setLotARetirer(null)}
+        />
+      )}
 
       {isAnalyzing && (
         <ProgressDisplay
@@ -802,7 +814,7 @@ export default function StepLotSelection({ project }: Props) {
                 lot={lot}
                 selected={selectedIds.has(lot.id)}
                 onSelect={() => toggleLot(lot.id)}
-                onDelete={() => handleDelete(lot.id)}
+                onDelete={() => setLotARetirer(lot)}
                 onRename={(label) => renameLot({ lotId: lot.id, label })}
               />
             ))}
