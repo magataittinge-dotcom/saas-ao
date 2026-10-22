@@ -664,7 +664,7 @@ export default function StepUpload({ project }: Props) {
             <CheckCircle2 size={16} style={{ color: hasDocuments ? '#E8E9EB' : '#55565A' }} />
             <span className="text-sm" style={{ color: hasDocuments ? '#959597' : '#55565A' }}>
               {hasDocuments
-                ? "Tous les fichiers ont été vérifiés pour l'intégrité."
+                ? `${documents.length} fichier${documents.length > 1 ? 's déposés' : ' déposé'} dans le dossier.`
                 : 'Importez des fichiers pour continuer.'
               }
             </span>

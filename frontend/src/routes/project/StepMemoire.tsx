@@ -5,7 +5,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import {
   Sparkles, Save, CheckCircle2, ChevronDown,
   Pencil, X, Download, Building2,
-  ChevronRight, Zap, Eye, Shield,
+  ChevronRight,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import axios from 'axios'
@@ -17,7 +17,10 @@ import ProgressDisplay, { type StepDescriptor } from '@/components/common/Progre
 import { useProgressStream } from '@/hooks/useProgressStream'
 import SubscriptionWall from '@/components/common/SubscriptionWall'
 import { MemoireSkeleton } from '@/components/skeletons'
-import type { Project, MemoireTechnique, MemoireContent } from '@/types'
+import type { Project, MemoireTechnique, MemoireContent, Reference } from '@/types'
+import {
+  SEUIL_SECTION_BREVE, referencesRetrouvees, sectionsBreves, type SectionMemoire,
+} from '@/lib/memoireControles'
 
 const MEMOIRE_GEN_STEPS: StepDescriptor[] = [
   { key: 'preparing',  label: 'Préparation du contexte',         estimated_s: 3 },
@@ -294,80 +297,6 @@ function ProfileSummary({ stats }: { stats: { filled: number; total: number; nom
   )
 }
 
-// ─── AI Suggestion Card (right column) ───────────────────────────────────────
-
-interface AiSuggestion {
-  id: string
-  icon: typeof Sparkles
-  title: string
-  description: string
-}
-
-const DEFAULT_SUGGESTIONS: AiSuggestion[] = [
-  {
-    id: 'sug-refs',
-    icon: Sparkles,
-    title: 'Optimisation des références',
-    description: "Vous n'avez cité que 2 projets similaires. L'ajout d'une référence en génie civil renforcerait votre note technique.",
-  },
-  {
-    id: 'sug-env',
-    icon: Zap,
-    title: 'Risque environnemental',
-    description: "Le paragraphe sur la gestion des déchets est trop générique. Voulez-vous que je l'adapte aux normes ISO 14001 ?",
-  },
-  {
-    id: 'sug-gantt',
-    icon: Eye,
-    title: 'Clarté du phasage',
-    description: 'Le texte suggère un chevauchement complexe en semaine 4. Ajouter un diagramme GANTT pourrait clarifier ce point.',
-  },
-]
-
-function SuggestionCard({
-  suggestion, onDismiss,
-}: {
-  suggestion: AiSuggestion
-  onDismiss: (id: string) => void
-}) {
-  const Icon = suggestion.icon
-  return (
-    <div
-      className="glass-card rounded-lg p-3.5 relative"
-      style={{ border: '1px solid rgba(255,255,255,.07)', boxShadow: '0 1px 3px rgba(0,0,0,.4)' }}
-    >
-      <button
-        onClick={() => onDismiss(suggestion.id)}
-        className="absolute top-3 right-3 p-0.5 rounded transition-colors hover:bg-ds-bg-2"
-        style={{ color: '#55565A' }}
-      >
-        <X size={12} />
-      </button>
-      <div className="flex items-start gap-2.5">
-        <div
-          className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-          style={{ background: 'rgba(255,255,255,0.10)' }}
-        >
-          <Icon size={14} style={{ color: '#E8E9EB' }} />
-        </div>
-        <div className="flex-1 min-w-0 pr-4">
-          <p className="text-sm font-semibold" style={{ color: '#F7F8F8', fontFamily: F }}>
-            {suggestion.title}
-          </p>
-          <p className="text-xs mt-1 leading-relaxed" style={{ color: '#959597' }}>
-            {suggestion.description}
-          </p>
-          <button
-            className="glass-btn text-ds-text mt-2.5 text-xs font-semibold px-3.5 py-1.5 rounded-lg"
-          >
-            Accepter
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ─── TOC Sidebar ─────────────────────────────────────────────────────────────
 
 function TocSidebar({
@@ -455,6 +384,34 @@ function TocSidebar({
 
 // ─── Document View (center column — "Word page" style) ───────────────────────
 
+const SECTIONS_MEMOIRE: SectionMemoire[] = [
+  { part: 'partie_a', cle: 'implantation', titre: '1. Implantation géographique' },
+  { part: 'partie_a', cle: 'historique', titre: '2. Historique' },
+  { part: 'partie_a', cle: 'engagement_qualitatif', titre: '3. Engagement qualitatif' },
+  { part: 'partie_a', cle: 'activites', titre: '4. Nos activités' },
+  { part: 'partie_a', cle: 'organigramme', titre: '5. Organigramme' },
+  { part: 'partie_a', cle: 'roles_missions', titre: "6. Rôles et missions de l'équipe d'encadrement" },
+  { part: 'partie_a', cle: 'moyens_informatiques', titre: '7. Moyens informatiques' },
+  { part: 'partie_a', cle: 'vehicules', titre: '8. Véhicules' },
+  { part: 'partie_a', cle: 'materiel', titre: '9. Matériel' },
+  { part: 'partie_a', cle: 'references', titre: '10. Références chantiers' },
+  { part: 'partie_a', cle: 'fournisseurs', titre: '11. Fournisseurs' },
+  { part: 'partie_b', cle: 'demarrage', titre: '1. Démarrage du chantier' },
+  { part: 'partie_b', cle: 'interlocuteur', titre: '2. Interlocuteur dédié' },
+  { part: 'partie_b', cle: 'qualite_ouvrages', titre: '3. Qualité des ouvrages' },
+  { part: 'partie_b', cle: 'respect_planning', titre: '4. Respect du planning' },
+  { part: 'partie_b', cle: 'securite', titre: '5. Dispositions relatives à la sécurité' },
+  { part: 'partie_b', cle: 'dechets', titre: '6. Traitement des déchets' },
+  { part: 'partie_b', cle: 'environnement', titre: '7. Environnement' },
+  { part: 'partie_c', cle: 'methodologie', titre: '1. Méthodologie détaillée' },
+  { part: 'partie_c', cle: 'effectifs', titre: '2. Effectifs dédiés au chantier' },
+  { part: 'partie_c', cle: 'materiels', titre: '3. Matériels dédiés' },
+  { part: 'partie_c', cle: 'hygiene_securite', titre: '4. Hygiène et sécurité' },
+  { part: 'partie_c', cle: 'mesures_environnementales', titre: '5. Mesures environnementales' },
+  { part: 'partie_c', cle: 'gpa', titre: '6. Garantie de parfait achèvement (GPA)' },
+  { part: 'partie_c', cle: 'delai', titre: '7. Délai de travaux' },
+]
+
 function DocumentView({
   content, project, docRef,
 }: {
@@ -466,25 +423,11 @@ function DocumentView({
   const b = content.partie_b as Record<string, string>
   const c = content.partie_c as Record<string, string>
 
-  const partAItems: [string, string][] = [
-    ['implantation', '1. Implantation géographique'], ['historique', '2. Historique'],
-    ['engagement_qualitatif', '3. Engagement qualitatif'], ['activites', '4. Nos activités'],
-    ['organigramme', '5. Organigramme'], ['roles_missions', "6. Rôles et missions de l'équipe d'encadrement"],
-    ['moyens_informatiques', '7. Moyens informatiques'], ['vehicules', '8. Véhicules'],
-    ['materiel', '9. Matériel'], ['references', '10. Références chantiers'], ['fournisseurs', '11. Fournisseurs'],
-  ]
-  const partBItems: [string, string][] = [
-    ['demarrage', '1. Démarrage du chantier'], ['interlocuteur', '2. Interlocuteur dédié'],
-    ['qualite_ouvrages', '3. Qualité des ouvrages'], ['respect_planning', '4. Respect du planning'],
-    ['securite', '5. Dispositions relatives à la sécurité'], ['dechets', '6. Traitement des déchets'],
-    ['environnement', '7. Environnement'],
-  ]
-  const partCItems: [string, string][] = [
-    ['methodologie', '1. Méthodologie détaillée'], ['effectifs', '2. Effectifs dédiés au chantier'],
-    ['materiels', '3. Matériels dédiés'], ['hygiene_securite', '4. Hygiène et sécurité'],
-    ['mesures_environnementales', '5. Mesures environnementales'],
-    ['gpa', '6. Garantie de parfait achèvement (GPA)'], ['delai', '7. Délai de travaux'],
-  ]
+  const items = (part: SectionMemoire['part']): [string, string][] =>
+    SECTIONS_MEMOIRE.filter((s) => s.part === part).map((s) => [s.cle, s.titre])
+  const partAItems = items('partie_a')
+  const partBItems = items('partie_b')
+  const partCItems = items('partie_c')
 
   return (
     <div
@@ -500,21 +443,12 @@ function DocumentView({
       <div className="max-w-3xl mx-auto py-10 px-10 space-y-8" style={{ fontFamily: F }}>
 
         {/* Document header */}
-        <div className="flex items-start justify-between pb-6" style={{ borderBottom: '1px solid rgba(255,255,255,.12)' }}>
-          <div
-            className="w-24 h-12 rounded-lg flex items-center justify-center text-xs font-medium"
-            style={{ background: '#1E1E21', border: '1px solid rgba(255,255,255,.07)', color: '#6B6C6F' }}
-          >
-            LOGO
-          </div>
+        <div className="flex items-start justify-end pb-6" style={{ borderBottom: '1px solid rgba(255,255,255,.12)' }}>
           <div className="text-right">
             <p className="text-lg font-bold" style={{ color: '#E8E9EB' }}>
               MÉMOIRE JUSTIFICATIF
             </p>
             <p className="text-sm mt-1" style={{ color: '#D8D9DB' }}>{project.name}</p>
-            <p className="text-xs mt-1" style={{ color: '#6B6C6F' }}>
-              Référence : MT-SYN-{new Date().getFullYear()}-001
-            </p>
           </div>
         </div>
 
@@ -582,21 +516,6 @@ function DocumentView({
           )}
         </div>
 
-        {/* Document footer */}
-        <div
-          className="flex items-center justify-between pt-6 mt-8"
-          style={{ borderTop: '1px solid rgba(255,255,255,.07)' }}
-        >
-          <p className="text-xs" style={{ color: '#6B6C6F' }}>
-            Synorix BTP SaaS — Page 1
-          </p>
-          <div className="flex items-center gap-1.5">
-            <Shield size={12} style={{ color: '#E8E9EB' }} />
-            <p className="text-xs" style={{ color: '#6B6C6F' }}>
-              Signé numériquement via Synorix Trust
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   )
@@ -666,7 +585,6 @@ export default function StepMemoire({ project }: Props) {
   // architecture que l'analyse).
   const [running, setRunning] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
-  const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set())
   const [activeSection, setActiveSection] = useState('preambule')
   const docRef = useRef<HTMLDivElement | null>(null)
 
@@ -720,9 +638,20 @@ export default function StepMemoire({ project }: Props) {
     return allSections.length > 0 ? Math.round((filled / allSections.length) * 100) : 0
   }, [displayContent])
 
-  const visibleSuggestions = useMemo(
-    () => DEFAULT_SUGGESTIONS.filter((s) => !dismissedSuggestions.has(s.id)),
-    [dismissedSuggestions],
+  // Compagnon (1.3) : deux contrôles calculés sur le texte, rien d'inventé
+  const { data: references = [] } = useQuery({
+    queryKey: ['references'],
+    queryFn: async () => (await api.get<Reference[]>('/references')).data,
+  })
+  const breves = useMemo(
+    () => (displayContent ? sectionsBreves(displayContent, SECTIONS_MEMOIRE) : []),
+    [displayContent],
+  )
+  const controleRefs = useMemo(
+    () => (displayContent
+      ? referencesRetrouvees(displayContent, references.filter((r) => r.is_reference))
+      : null),
+    [displayContent, references],
   )
 
   // C9a — dernière sélection du pre-flight (overrides locaux, refs, propagation)
@@ -1207,34 +1136,75 @@ export default function StepMemoire({ project }: Props) {
                 {/* Header */}
                 <div>
                   <p className="microlabel">Compagnon Synorix</p>
-                  <p className="text-xs mt-1" style={{ color: '#6B6C6F' }}>
-                    Suggestions pour renforcer ce mémoire
+                  <p className="text-xs mt-1" style={{ color: '#959597' }}>
+                    Deux contrôles faits sur le texte de ce mémoire
                   </p>
                 </div>
 
-                {/* Suggestion cards */}
-                {visibleSuggestions.map((sug) => (
-                  <SuggestionCard
-                    key={sug.id}
-                    suggestion={sug}
-                    onDismiss={(id) => setDismissedSuggestions((s) => new Set(s).add(id))}
-                  />
-                ))}
-
-                {/* Focus IA */}
+                {/* Contrôle 1 — références chantier retrouvées dans le texte */}
                 <div
-                  className="rounded-lg p-3.5"
-                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,.07)' }}
+                  className="glass-card rounded-lg p-3.5"
+                  style={{ border: '1px solid rgba(255,255,255,.07)', boxShadow: '0 1px 3px rgba(0,0,0,.4)' }}
                 >
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <Sparkles size={12} style={{ color: '#98999C' }} />
-                    <span className="microlabel">Focus IA</span>
-                  </div>
-                  <p className="text-xs leading-relaxed" style={{ color: '#959597' }}>
-                    Le mémoire technique représente souvent 50-60&nbsp;% de la note finale.
-                    Personnalisez chaque section avec vos références réelles et vos moyens
-                    spécifiques pour maximiser votre score.
+                  <p className="text-sm font-semibold" style={{ color: '#F7F8F8', fontFamily: F }}>
+                    Références chantier
                   </p>
+                  {controleRefs && controleRefs.retrouvees.length + controleRefs.nonRetrouvees.length > 0 ? (
+                    <>
+                      <p className="text-xs mt-1 leading-relaxed" style={{ color: '#C2C3C6' }}>
+                        {controleRefs.retrouvees.length} de vos {controleRefs.retrouvees.length + controleRefs.nonRetrouvees.length}{' '}
+                        références retrouvées dans le texte.
+                      </p>
+                      {controleRefs.nonRetrouvees.length > 0 && (
+                        <ul className="mt-1.5 space-y-1">
+                          {controleRefs.nonRetrouvees.map((r) => (
+                            <li key={r.id} className="text-xs leading-relaxed" style={{ color: '#959597' }}>
+                              « {r.intitule} » n'y figure pas telle quelle.
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-xs mt-1 leading-relaxed" style={{ color: '#959597' }}>
+                      Aucune référence marquée dans{' '}
+                      <Link to="/references" className="underline underline-offset-2" style={{ color: '#E8E9EB' }}>Mes références</Link>.
+                    </p>
+                  )}
+                </div>
+
+                {/* Contrôle 2 — sections brèves */}
+                <div
+                  className="glass-card rounded-lg p-3.5"
+                  style={{ border: '1px solid rgba(255,255,255,.07)', boxShadow: '0 1px 3px rgba(0,0,0,.4)' }}
+                >
+                  <p className="text-sm font-semibold" style={{ color: '#F7F8F8', fontFamily: F }}>
+                    Sections brèves
+                  </p>
+                  {breves.length === 0 ? (
+                    <p className="text-xs mt-1 leading-relaxed" style={{ color: '#C2C3C6' }}>
+                      Toutes les sections font au moins {SEUIL_SECTION_BREVE} mots.
+                    </p>
+                  ) : (
+                    <>
+                      <p className="text-xs mt-1 leading-relaxed" style={{ color: '#C2C3C6' }}>
+                        {breves.length} section{breves.length > 1 ? 's font' : ' fait'} moins de {SEUIL_SECTION_BREVE} mots, à étoffer si besoin :
+                      </p>
+                      <ul className="mt-1.5 space-y-1">
+                        {breves.map((sb) => (
+                          <li key={`${sb.part}-${sb.cle}`}>
+                            <button
+                              onClick={() => handleTocNavigate(`sec-${sb.cle}`)}
+                              className="text-left text-xs leading-relaxed hover:underline underline-offset-2"
+                              style={{ color: '#E8E9EB' }}
+                            >
+                              {sb.titre} — <span className="num-mono">{sb.mots}</span> mots
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
