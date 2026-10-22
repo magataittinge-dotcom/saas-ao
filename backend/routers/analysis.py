@@ -55,7 +55,7 @@ async def trigger_analysis(
     docs_total = len(all_docs)
 
     if not all_docs:
-        raise HTTPException(status_code=400, detail="Aucun document uploadé pour ce projet")
+        raise HTTPException(status_code=400, detail="Aucun document déposé pour ce projet")
 
     lot_ids = (payload or {}).get("lots") or [project.selected_lot or "all"]
     lot_names = {l.get("id"): l.get("nom") for l in (project.lots_detectes or [])}
@@ -75,7 +75,7 @@ async def trigger_analysis(
     if not pass1_text and not any(s["pass2_text"] for s in lot_specs):
         raise HTTPException(
             status_code=400,
-            detail="Aucun texte extrait des documents. Assurez-vous d'uploader des PDF ou DOCX lisibles.",
+            detail="Aucun texte extrait des documents. Déposez des PDF ou DOCX lisibles.",
         )
 
     logger.info("Analyse projet %s : %d lot(s) %s — tronc commun %d chars",
@@ -659,7 +659,7 @@ def _finalize_analysis(
             + ". La checklist de candidature est prête."
         )
         if failed_lots:
-            corps += f" Attention : {len(failed_lots)} lot(s) en échec — relancez-les."
+            corps += f" {len(failed_lots)} lot(s) à relancer depuis l'écran d'analyse."
         _notify(
             db, org_id, "analysis_ready",
             titre=f"Analyse terminée — {project.name}",

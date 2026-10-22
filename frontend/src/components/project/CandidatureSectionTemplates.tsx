@@ -131,7 +131,7 @@ function TemplateRow({
     try {
       await onUploadCompleted(item, file)
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Échec de l\'upload'
+      const msg = err instanceof Error ? err.message : 'L\'envoi n\'a pas abouti'
       setError(msg)
     } finally {
       setUploading(false)

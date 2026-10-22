@@ -618,7 +618,7 @@ def get_dpgf_check(
     """Get the latest DPGF verification result."""
     project = _get_project_or_404(project_id, user.organization_id, db)
     if not project.dpgf_remplie_url:
-        raise HTTPException(status_code=404, detail="Aucune DPGF remplie uploadée")
+        raise HTTPException(status_code=404, detail="Aucune DPGF remplie déposée")
     return {
         "file_name": project.dpgf_remplie_name,
         "verification": project.dpgf_remplie_check or {},
@@ -634,7 +634,7 @@ def download_filled_dpgf(
     """Download the filled DPGF file."""
     project = _get_project_or_404(project_id, user.organization_id, db)
     if not project.dpgf_remplie_url:
-        raise HTTPException(status_code=404, detail="Aucune DPGF remplie uploadée")
+        raise HTTPException(status_code=404, detail="Aucune DPGF remplie déposée")
 
     file_path = _resolve_local_path(project.dpgf_remplie_url)
     if not file_path or not file_path.exists():

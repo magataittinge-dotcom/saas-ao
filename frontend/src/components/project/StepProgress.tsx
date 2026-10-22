@@ -5,7 +5,7 @@ import { useCompanionStore } from '@/stores/companionStore'
 import CompanionOrb from '@/components/ui/CompanionOrb'
 
 const STEPS = [
-  { number: 1, label: 'Upload DCE',  segment: 'upload' },
+  { number: 1, label: 'Dépôt du DCE', segment: 'upload' },
   { number: 2, label: 'Lots',        segment: 'lots' },
   { number: 3, label: 'Analyse IA',  segment: 'analysis' },
   { number: 4, label: 'Vérification', segment: 'verification' },

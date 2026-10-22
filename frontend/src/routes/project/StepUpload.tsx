@@ -116,7 +116,7 @@ export default function StepUpload({ project }: Props) {
     if (totalSize > 500 * 1024 * 1024) {
       tips.push({ id: 'upload-large', variant: 'warning', text: 'Les fichiers volumineux peuvent prendre quelques minutes a traiter.' })
     }
-    tips.push({ id: 'upload-zip', variant: 'info', text: 'Astuce : uploadez le ZIP complet du DCE pour une detection automatique de tous les documents et lots.' })
+    tips.push({ id: 'upload-zip', variant: 'info', text: 'Astuce : déposez le ZIP complet du DCE pour une détection automatique de tous les documents et lots.' })
     return tips
   }, [documents])
 
@@ -215,24 +215,24 @@ export default function StepUpload({ project }: Props) {
       if (largestSize > 1 * GB) {
         setLargeFileNotice({
           tone: 'orange',
-          message: `Très gros DCE détecté (${mb} Mo). Upload jusqu'à 15 minutes selon votre connexion. Restez sur cette page.`,
+          message: `Très gros DCE détecté (${mb} Mo). Envoi jusqu'à 15 minutes selon votre connexion. Restez sur cette page.`,
         })
       } else if (largestSize > 500 * MB) {
         setLargeFileNotice({
           tone: 'cyan',
-          message: 'Upload volumineux, ~3-7 minutes. Ne fermez pas l\'onglet.',
+          message: 'Envoi volumineux, ~3-7 minutes. Ne fermez pas l\'onglet.',
         })
       } else if (largestSize > 100 * MB) {
         setLargeFileNotice({
           tone: 'cyan',
-          message: 'Upload en cours, ~1-3 minutes.',
+          message: 'Envoi en cours, ~1-3 minutes.',
         })
       } else {
         setLargeFileNotice(null)
       }
       setPhase('uploading')
       setDisplayPct(0)
-      setLabel('Upload des fichiers...')
+      setLabel('Envoi des fichiers…')
       setSublabel('')
       processingStartedRef.current = false
       doneRef.current = false
@@ -515,7 +515,7 @@ export default function StepUpload({ project }: Props) {
         {/* ── Upload errors ───────────────────────────────── */}
         {uploadErrors.length > 0 && (
           <div className="rounded-xl p-4 mt-4" style={{ background: 'rgba(245,142,134,0.06)', border: '1px solid rgba(245,142,134,0.15)' }}>
-            <p className="text-sm font-semibold mb-1" style={{ color: '#F58E86' }}>Erreurs lors de l&apos;upload :</p>
+            <p className="text-sm font-semibold mb-1" style={{ color: '#F58E86' }}>Erreurs lors de l&apos;envoi :</p>
             {uploadErrors.map((err, i) => (
               <p key={i} className="text-xs" style={{ color: '#F58E86' }}>• {err}</p>
             ))}
@@ -684,7 +684,7 @@ export default function StepUpload({ project }: Props) {
               disabled={!hasDocuments || anyUploading || isProcessing || isNavigating}
               className="signature-btn disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              Suivant &gt;
+              Étape suivante : Lots
             </button>
           </div>
         </div>

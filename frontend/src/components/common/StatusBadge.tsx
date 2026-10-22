@@ -32,7 +32,7 @@ export function StatusBadge({ label, variant, className }: Props) {
 export function complianceStatusBadge(status: ComplianceStatus) {
   const map: Record<ComplianceStatus, { label: string; variant: BadgeVariant }> = {
     couvert:     { label: '✅ Couvert',    variant: 'success' },
-    non_couvert: { label: '❌ Manquant',   variant: 'danger'  },
+    non_couvert: { label: 'À couvrir',    variant: 'danger'  },
     partiel:     { label: '⚠️ Partiel',   variant: 'warning' },
     a_generer:   { label: '🔄 À générer', variant: 'info'    },
     expire:      { label: '⏰ Expiré',    variant: 'danger'  },

@@ -224,7 +224,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
                   onClick={() => navigate('/settings/billing')}
                   className="text-[10px] text-[#E4E9F2] hover:text-[#FFFFFF] transition-colors ml-auto"
                 >
-                  Upgrade
+                  Choisir une offre
                 </button>
               )}
             </div>

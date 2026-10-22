@@ -154,7 +154,7 @@ async def generate_memoire(
     all_docs = db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).all()
     docs = get_documents_for_lot(all_docs, project.selected_lot)
     if not docs:
-        raise HTTPException(status_code=400, detail="Aucun document DCE uploadé")
+        raise HTTPException(status_code=400, detail="Aucun document du DCE déposé")
 
     # ── Quota (C1) : blocage doux 402 AVANT lancement ; l'unité n'est
     # décomptée qu'AU SUCCÈS, dans le job — « 1 mémoire PAR LOT généré ».
@@ -565,7 +565,7 @@ def export_memoire_pdf(
     if not soffice_available():
         raise HTTPException(
             status_code=503,
-            detail="Export PDF indisponible sur ce serveur (LibreOffice manquant) — "
+            detail="Export PDF indisponible sur ce serveur (LibreOffice non installé) — "
                    "utilisez l'export Word en attendant.",
         )
     org = db.query(Organization).filter(Organization.id == user.organization_id).first()

@@ -20,7 +20,7 @@ import './index.css'
 const CLERK_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
 if (!CLERK_KEY) {
-  throw new Error('VITE_CLERK_PUBLISHABLE_KEY manquant dans .env')
+  throw new Error('VITE_CLERK_PUBLISHABLE_KEY à renseigner dans .env')
 }
 
 const queryClient = new QueryClient({

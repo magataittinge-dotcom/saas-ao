@@ -203,8 +203,8 @@ export default function StepVerification({ project }: Props) {
           {completeStep.isPending
             ? <><Loader2 size={16} className="animate-spin" /> Validation...</>
             : isAlreadyDone
-            ? <>Aller au mémoire →</>
-            : <>Suivant &gt;</>}
+            ? <>Étape suivante : Mémoire</>
+            : <>Étape suivante : Mémoire</>}
         </button>
       </div>
     </div>
@@ -296,7 +296,7 @@ export default function StepVerification({ project }: Props) {
               <span className="font-semibold" style={{ color: '#F7F8F8' }}>
                 {missing} pièce{missing > 1 ? 's' : ''} à fournir.
               </span>{' '}
-              Une candidature incomplète sera automatiquement rejetée par l&apos;acheteur.
+              Le règlement de consultation demande ces pièces.
             </p>
           </div>
         )}

@@ -247,7 +247,7 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     else:
         # Prod without webhook secret → reject
         logger.error("STRIPE_WEBHOOK_SECRET non configuré en production")
-        raise HTTPException(status_code=500, detail="Configuration webhook manquante")
+        raise HTTPException(status_code=500, detail="Configuration du webhook à renseigner")
 
     # The event from billing.verify_webhook is a plain dict.
     if not isinstance(event, dict):

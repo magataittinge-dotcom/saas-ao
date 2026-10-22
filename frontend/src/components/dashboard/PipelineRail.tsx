@@ -2,7 +2,7 @@ import { cn } from '@/lib/utils'
 
 /** Étapes réelles du pipeline AO (cf. StepProgress). */
 export const PIPELINE_STEPS = [
-  'Upload DCE',
+  'Dépôt du DCE',
   'Lots',
   'Analyse IA',
   'Vérification',

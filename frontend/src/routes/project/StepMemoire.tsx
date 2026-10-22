@@ -816,7 +816,7 @@ export default function StepMemoire({ project }: Props) {
           : 'glass-btn flex items-center gap-2 py-2.5 px-5 text-sm font-semibold rounded-lg disabled:opacity-40'}
         style={{ fontFamily: F, ...(isDocView ? {} : { color: '#C2C3C6' }) }}
       >
-        Vérification finale →
+        Étape suivante : Export
       </button>
     </div>
   )

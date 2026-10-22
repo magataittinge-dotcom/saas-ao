@@ -638,7 +638,7 @@ async def upload_project_document(
                 detail=(
                     f"Fichier trop volumineux ({size_mb} Mo, max 2 Go). "
                     "Pour les DCE > 2 Go, contactez support@synorix.tech "
-                    "pour activer l'upload chunked dédié aux gros marchés."
+                    "pour activer l'envoi par morceaux dédié aux gros marchés."
                 ),
             )
 
@@ -671,7 +671,7 @@ async def upload_project_document(
                     detail=(
                         f"Fichier trop volumineux ({size_mb} Mo, max 2 Go). "
                         "Pour les DCE > 2 Go, contactez support@synorix.tech "
-                        "pour activer l'upload chunked dédié aux gros marchés."
+                        "pour activer l'envoi par morceaux dédié aux gros marchés."
                     ),
                 )
             spool.write(chunk)
@@ -1596,7 +1596,7 @@ def get_processing_status(
 
     # Map legacy DB status to structured format
     step_map = {
-        "uploading":        ("Upload des fichiers", 5),
+        "uploading":        ("Envoi des fichiers", 5),
         "extracting_zip":   ("Extraction de l'archive", 15),
         "extracting_text":  ("Extraction des documents", 10 + int(db_progress * 0.15)),
         "detecting_lots":   ("Détection des lots", 30),
@@ -1668,7 +1668,7 @@ def detect_lots(
     docs = db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).all()
 
     if not docs:
-        raise HTTPException(status_code=400, detail="Aucun document uploadé pour ce projet")
+        raise HTTPException(status_code=400, detail="Aucun document déposé pour ce projet")
 
     # Ensure step 1 is marked complete (covers projects uploaded before this fix)
     if project.current_step <= 1:

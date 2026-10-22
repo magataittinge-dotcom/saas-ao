@@ -124,7 +124,7 @@ def get_auth_user(
     payload = _decode_clerk_token(credentials.credentials)
     clerk_user_id = payload.get("sub")
     if not clerk_user_id:
-        raise HTTPException(status_code=401, detail="Token invalide: sub manquant")
+        raise HTTPException(status_code=401, detail="Jeton invalide : identifiant non fourni")
     user = _sync_clerk_user(clerk_user_id, db)
     # Clé de rate-limit par org (S1.2) — non spoofable (liée au JWT validé),
     # contrairement à l'IP derrière un proxy. Lue par services.rate_limit.
@@ -145,7 +145,7 @@ def get_auth_user_short(
     payload = _decode_clerk_token(credentials.credentials)
     clerk_user_id = payload.get("sub")
     if not clerk_user_id:
-        raise HTTPException(status_code=401, detail="Token invalide: sub manquant")
+        raise HTTPException(status_code=401, detail="Jeton invalide : identifiant non fourni")
     db = SessionLocal()
     try:
         user = _sync_clerk_user(clerk_user_id, db)

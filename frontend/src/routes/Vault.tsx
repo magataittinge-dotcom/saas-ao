@@ -98,7 +98,7 @@ export default function Vault() {
         <input {...getInputProps()} />
         <Upload size={28} className="mx-auto text-ds-text-3 mb-2" />
         <p className="text-sm font-medium text-ds-text">
-          {isUploading ? 'Upload en cours...' : 'Glissez vos documents ici ou cliquez pour parcourir'}
+          {isUploading ? 'Envoi en cours…' : 'Glissez vos documents ici ou cliquez pour parcourir'}
         </p>
         <p className="text-xs text-ds-text-3 mt-1">PDF — 20 MB max</p>
       </div>
@@ -152,7 +152,7 @@ export default function Vault() {
             <div className="text-center py-16 text-ds-text-3">
               <Archive size={40} className="mx-auto mb-3 opacity-30" />
               <p>Votre coffre-fort est vide</p>
-              <p className="text-sm mt-1">Uploadez vos documents administratifs pour les retrouver facilement</p>
+              <p className="text-sm mt-1">Déposez vos documents administratifs pour les retrouver facilement</p>
             </div>
           )}
         </>

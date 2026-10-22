@@ -888,8 +888,8 @@ export default function StepLotSelection({ project }: Props) {
             >
               <Sparkles size={16} />
               {selectedLotIds.length > 1
-                ? `LANCER L'ANALYSE IA (${selectedLotIds.length} LOTS) >`
-                : "LANCER L'ANALYSE IA >"}
+                ? `Lancer l'analyse (${selectedLotIds.length} lots)`
+                : "Lancer l'analyse"}
             </button>
           </div>
         </div>

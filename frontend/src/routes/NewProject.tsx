@@ -178,7 +178,7 @@ export default function NewProject() {
                 )}
               </button>
               <p className="text-xs text-center text-ds-text-3 mt-3">
-                Vous pourrez uploader les documents DCE à l&apos;étape suivante
+                Vous déposerez les documents du DCE à l&apos;étape suivante
               </p>
             </div>
           </form>

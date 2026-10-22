@@ -267,7 +267,7 @@ export default function StepExport({ project }: Props) {
       await api.post(`/projects/${project.id}/dpgf-upload`, fd)
       queryClient.invalidateQueries({ queryKey: ['export-detail', project.id] })
     } catch {
-      setDpgfError("Erreur lors de l'upload de la DPGF")
+      setDpgfError("L'envoi de la DPGF n'a pas abouti.")
     } finally {
       setDpgfUploading(false)
     }
@@ -361,7 +361,7 @@ export default function StepExport({ project }: Props) {
             {nonConformes.slice(0, 6).map((i) => (
               <li key={i.id}>
                 • {i.linked_document_name || i.document_type_required}
-                {' '}({i.status === 'manquant' ? 'manquante'
+                {' '}({i.status === 'manquant' ? 'à fournir'
                   : i.status === 'expire' ? 'expirée'
                   : i.status === 'warning' ? 'à vérifier'
                   : 'signature non confirmée'})
@@ -439,7 +439,7 @@ export default function StepExport({ project }: Props) {
               <HeroCheck
                 ok={dpgfOk}
                 label="DPGF"
-                value={dpgfLignes > 0 ? `${dpgfLignes} lignes` : detail.has_dpgf ? 'à compléter' : 'absente'}
+                value={dpgfLignes > 0 ? `${dpgfLignes} lignes` : detail.has_dpgf ? 'à compléter' : 'aucune dans le DCE'}
               />
             </div>
           </div>

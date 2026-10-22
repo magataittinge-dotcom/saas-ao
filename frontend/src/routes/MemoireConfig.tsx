@@ -235,7 +235,7 @@ function ImportDialog({ onClose, onImported }: ImportDialogProps) {
           {/* Body */}
           <div className="px-6 py-5 space-y-4">
             <p className="text-sm text-ds-text-2">
-              Uploadez un mémoire technique existant (.docx ou .pdf).
+              Déposez un mémoire technique existant (.docx ou .pdf).
               Synorix IA extraira automatiquement toutes les informations et pré-remplira le formulaire.
             </p>
 

@@ -42,7 +42,7 @@ try {
     loader: { '.css': 'empty', '.svg': 'dataurl', '.png': 'dataurl', '.jpg': 'dataurl', '.woff2': 'empty' },
     define: { 'import.meta.env': JSON.stringify({ MODE: 'test', DEV: false, PROD: false, VITE_API_URL: '' }) },
     // Les dépendances CommonJS (react…) appellent require() : on le fournit au module ESM.
-    banner: { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" },
+    banner: { js: "import { createRequire as __creerRequire } from 'node:module'; const require = __creerRequire(import.meta.url);" },
     logLevel: 'error',
   })
   const modules = fichiers.map((f) => path.join(sortie, f.replace(/\.tsx?$/, '.mjs')))

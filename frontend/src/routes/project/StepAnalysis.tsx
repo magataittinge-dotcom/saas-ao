@@ -316,8 +316,8 @@ export default function StepAnalysis({ project }: Props) {
           {isValidating
             ? <><Loader2 size={16} className="animate-spin" /> Validation...</>
             : isStepAlreadyDone
-            ? <><CheckCircle2 size={16} /> Passer à la vérification</>
-            : <><Sparkles size={16} /> Étape Suivante : Vérification</>}
+            ? <><CheckCircle2 size={16} /> Étape suivante : Vérification</>
+            : <><Sparkles size={16} /> Étape suivante : Vérification</>}
         </button>
       </div>
     </div>

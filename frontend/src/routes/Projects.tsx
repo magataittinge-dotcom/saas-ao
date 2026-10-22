@@ -13,7 +13,7 @@ type SortKey = 'deadline' | 'created_at' | 'name'
 type StatusFilter = 'all' | 'active' | 'done'
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
-  { key: 'deadline', label: 'Deadline' },
+  { key: 'deadline', label: 'Date limite' },
   { key: 'created_at', label: 'Date création' },
   { key: 'name', label: 'Nom' },
 ]

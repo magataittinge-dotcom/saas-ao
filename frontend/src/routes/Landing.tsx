@@ -95,7 +95,7 @@ const FLOATING_PILLS = [
 // ── How it works tabs ────────────────────────────────────────────────────
 const HOW_TABS = [
   {
-    id: 'upload', num: '1', title: 'Upload',
+    id: 'upload', num: '1', title: 'Dépôt',
     desc: 'Glissez-déposez votre DCE complet (ZIP, PDF, DOCX). Synorix extrait et identifie automatiquement chaque document : RC, CCTP, DPGF, plans.',
     mock: ['RC — Règlement', 'CCTP — 245 pages', 'DPGF — 12 lots', 'Plans — 8 fichiers'],
   },
@@ -325,7 +325,7 @@ export default function Landing() {
               marchés
             </span>
             <br />
-            à cause d'un dossier incomplet
+            à cause d'une pièce oubliée
           </h1>
 
           {/* Subtitle */}
@@ -563,7 +563,7 @@ export default function Landing() {
             </span>
           </h2>
           <p className="text-center text-[#9BA4B5] mb-12 max-w-lg mx-auto">
-            Uploadez, laissez l'IA travailler, déposez. C'est aussi simple que ça.
+            Déposez le DCE, laissez l'IA travailler, remettez votre offre. C'est aussi simple que ça.
           </p>
 
           {/* Tabs */}
