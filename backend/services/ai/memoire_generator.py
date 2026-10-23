@@ -2,11 +2,13 @@
 
 Génère le mémoire (~20 pages) en plusieurs segments (préambule, parties A/B/C) via
 Claude. Configuration prod = full-Sonnet 4.6 (`_MEMOIRE_SEGMENT_MODELS`) ; Opus 4.7
-reste en fallback. Segments d'un même modèle gardés consécutifs pour le prompt cache.
+reste en fallback. Le préambule part seul (il écrit le prompt cache), les parties
+A, B et C ensuite en parallèle (elles le relisent) — même schéma que l'analyse.
 La densité normative (DTU/Avis Technique) vient du PROMPT + corpus skills, pas du modèle.
 """
 import json
 import asyncio
+import threading
 import time
 import anthropic
 from json_repair import repair_json
@@ -29,16 +31,44 @@ def _safe_update_progress(project_id: str, ratio: float) -> None:
         pass
 
 
+class _AvancementSegments:
+    """Avancement d'ensemble quand plusieurs parties s'écrivent en même temps.
+
+    Chaque partie pèse sa taille attendue ; sa fraction ne fait que monter, donc
+    l'ensemble aussi (de 2 % à 99 %), quel que soit l'ordre des threads."""
+
+    def __init__(self, project_id: str | None, poids: list[int]):
+        self._project_id = project_id
+        self._poids = poids
+        self._fait = [0.0] * len(poids)
+        self._verrou = threading.Lock()
+
+    def rappel(self, i: int):
+        def maj(local: float) -> None:
+            with self._verrou:
+                self._fait[i] = max(self._fait[i], min(local, 1.0))
+                total = sum(p * f for p, f in zip(self._poids, self._fait)) / sum(self._poids)
+            if self._project_id:
+                _safe_update_progress(self._project_id, min(0.02 + total * 0.96, 0.99))
+        return maj
+
+
+def _poids_segment(segment_subkeys: list[str] | None) -> int:
+    """Taille attendue d'une partie, en caractères (sert à l'avancement)."""
+    return 4000 if segment_subkeys is None else max(len(segment_subkeys), 1) * 6000
+
+
 _DETAIL_INSTRUCTION = "Génère un mémoire technique COMPLET et DÉTAILLÉ de 20 à 25 pages. Chaque section doit être exhaustive."
 
 # Skills always loaded for mémoire generation
 _ALWAYS_LOAD_MEMOIRE = ["memoire-technique-expert", "scoring-offres-expert", "redaction-gagnante-btp"]
 
-# ── Découpage de la sortie en appels SÉQUENTIELS (un par "partie") ──────────
+# ── Découpage de la sortie en appels (un par "partie") ──────────────────────
 # Un mémoire complet = 26 sous-sections, ce qui dépasse le max de tokens de
 # sortie du modèle en un seul appel → troncature. On génère une partie par
 # appel ; le contexte stable (système + skills + méthodo + profil + DCE) est
 # identique sur les 4 appels et mis en cache (TTL 5 min) → surcoût ≈ sortie.
+# Le 1er segment part seul et écrit le cache ; les suivants partent ensemble.
 # preambule est une chaîne ; partie_* sont des objets avec ces sous-sections
 # (ordre et clés EXACTEMENT alignés sur prompts.py / le contrat de sortie).
 _MEMOIRE_SEGMENTS: list[tuple[str, list[str] | None]] = [
@@ -458,28 +488,33 @@ class MemoireGenerator:
         # None (flag off / retrieve indisponible) → prompt inchangé À L'OCTET.
         dynamic_block = _append_reglementaire(dynamic_block, reglementaire_block)
 
-        # ── 8. Génération SÉQUENTIELLE, une partie par appel ──────────────────
+        # ── 8. Génération : le 1er segment SEUL, puis les autres EN PARALLÈLE ──
         # Évite la troncature du monobloc (26 sous-sections > max tokens de
-        # sortie). Le préfixe stable est mis en cache → calls 2..N le relisent.
+        # sortie). Le préambule part seul : il écrit le prompt cache du préfixe
+        # stable (système + skills + profil + DCE) ; les parties A, B et C
+        # partent ensuite ensemble et le relisent (cache_read). Même schéma que
+        # l'analyse (dce_analyzer : 1re tranche seule, puis parallèle borné à 3).
+        # Durée ≈ préambule + la plus longue des parties, au lieu de la somme.
         assembled: dict = {}
         seg_model_map = {
             k: _MEMOIRE_SEGMENT_MODELS.get(k, self.MODEL) for k, _ in _MEMOIRE_SEGMENTS
         }
         meta: dict = {
-            "mode": "per-partie-hybride",
+            "mode": "per-partie-parallele",
             "default_model": self.MODEL,
             "models": seg_model_map,
             "segments": [],
             "warnings": [],
         }
         print(f"[Memoire Generator] Modèles par segment : {seg_model_map}", flush=True)
-        n = len(_MEMOIRE_SEGMENTS)
-        for i, (seg_key, seg_subkeys) in enumerate(_MEMOIRE_SEGMENTS):
-            prog_base = 0.02 + (i / n) * 0.96
-            prog_span = (1.0 / n) * 0.96
+        avancement = _AvancementSegments(
+            project_id, [_poids_segment(sub) for _, sub in _MEMOIRE_SEGMENTS])
+
+        async def _lancer(i: int) -> tuple[dict, dict]:
+            seg_key, seg_subkeys = _MEMOIRE_SEGMENTS[i]
             seg_model = seg_model_map[seg_key]
             try:
-                parsed, seg_meta = await asyncio.to_thread(
+                resultat = await asyncio.to_thread(
                     self._sync_call_segment,
                     stable_skills_block,
                     org_block_text,
@@ -488,14 +523,23 @@ class MemoireGenerator:
                     seg_subkeys,
                     seg_model,
                     project_id,
-                    prog_base,
-                    prog_span,
+                    progress_cb=avancement.rappel(i),
                 )
             except anthropic.AuthenticationError:
                 raise
             except Exception as e:  # noqa: BLE001 — ne jamais perdre les bonnes parties
                 logger.error(f"Segment '{seg_key}' échoué (placeholder conservé): {e}")
-                parsed, seg_meta = {}, {"segment": seg_key, "model": seg_model, "error": str(e)}
+                resultat = ({}, {"segment": seg_key, "model": seg_model, "error": str(e)})
+            avancement.rappel(i)(1.0)
+            return resultat
+
+        t_gen = time.monotonic()
+        resultats = [await _lancer(0)]
+        resultats += await asyncio.gather(*(_lancer(i) for i in range(1, len(_MEMOIRE_SEGMENTS))))
+        print(f"[TIMING] Mémoire : {len(resultats)} parties en {time.monotonic() - t_gen:.1f}s "
+              f"(1re seule, puis {len(resultats) - 1} en parallèle)", flush=True)
+
+        for (seg_key, seg_subkeys), (parsed, seg_meta) in zip(_MEMOIRE_SEGMENTS, resultats):
             meta["segments"].append(seg_meta)
 
             if seg_subkeys is None:
@@ -562,6 +606,7 @@ class MemoireGenerator:
         project_id: str | None = None,
         progress_base: float = 0.0,
         progress_span: float = 1.0,
+        progress_cb=None,
     ) -> tuple[dict, dict]:
         """Un appel streaming pour UNE SEULE partie du mémoire, avec `model` dédié.
 
@@ -571,8 +616,8 @@ class MemoireGenerator:
 
         Prompt caching : le préfixe stable (système + skills + profil + bloc DCE
         dynamique) est IDENTIQUE pour toutes les parties et marqué ephemeral. Le
-        cache est lié AU MODÈLE : des segments d'un même modèle, appelés
-        consécutivement, partagent le cache (1 write puis cache_read) ; changer de
+        cache est lié AU MODÈLE : le 1er segment écrit le cache (seul), les
+        segments du même modèle lancés ensuite le relisent (cache_read) ; changer de
         modèle force un nouveau write. Seule la consigne de segment varie (non cachée).
         """
         # System: prompt complet + skills (cachés). Le schéma global du prompt
@@ -609,9 +654,7 @@ class MemoireGenerator:
             {"type": "text", "text": segment_instruction},
         ]
 
-        seg_estimate_chars = (
-            4000 if segment_subkeys is None else max(len(segment_subkeys), 1) * 6000
-        )
+        seg_estimate_chars = _poids_segment(segment_subkeys)
 
         last_error = None
         raw = ""
@@ -636,15 +679,19 @@ class MemoireGenerator:
                 ) as stream:
                     for text in stream.text_stream:
                         collected += text
-                        # Progrès réel mappé sur la bande allouée à cette partie.
-                        if project_id:
+                        # Progrès réel : part de la partie écrite, agrégée par
+                        # l'appelant (parties parallèles) ou mappée sur sa bande.
+                        if project_id or progress_cb:
                             now = time.time()
                             if now - last_publish >= 0.3:
                                 local = min(len(collected) / seg_estimate_chars, 1.0)
-                                _safe_update_progress(
-                                    project_id,
-                                    min(progress_base + local * progress_span, 0.99),
-                                )
+                                if progress_cb:
+                                    progress_cb(local)
+                                else:
+                                    _safe_update_progress(
+                                        project_id,
+                                        min(progress_base + local * progress_span, 0.99),
+                                    )
                                 last_publish = now
 
                 final_message = stream.get_final_message()
