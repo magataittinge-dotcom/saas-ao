@@ -129,3 +129,30 @@ def test_pages_pdf_relues_une_fois_par_empreinte(tmp_path, monkeypatch):
     os.utime(pdf, ns=(os.stat(pdf).st_atime_ns, os.stat(pdf).st_mtime_ns + 1_000_000_000))
     ea.resolve_pages(exigence(), {"cctp.pdf": str(pdf)})
     assert len(ouvertures) == 2
+
+
+def test_cache_des_pages_borne_en_caracteres(tmp_path, monkeypatch):
+    import fitz
+    monkeypatch.setattr(ea, "_PAGES_CACHE_MAX_CARACTERES", 300)
+    ea._PAGES_CACHE.clear()
+    chemins = []
+    for i in range(4):
+        pdf = tmp_path / f"piece{i}.pdf"
+        doc = fitz.open()
+        doc.new_page().insert_text((72, 72), f"Piece {i} : " + "texte " * 20)
+        doc.save(str(pdf))
+        doc.close()
+        chemins.append(str(pdf))
+        ea._pages_normalisees(str(pdf))
+    total = sum(sum(len(p) for p in v) for v in ea._PAGES_CACHE.values())
+    assert total <= 300 or len(ea._PAGES_CACHE) == 1
+    assert any(cle[0] == chemins[-1] for cle in ea._PAGES_CACHE)
+
+
+def test_memo_des_positions_plafonne(monkeypatch):
+    monkeypatch.setattr(ea, "_POSITIONS_MAX_TERMES", 5)
+    mots = [(f"mot{i}", i * 5) for i in range(50)]
+    memo = {}
+    for i in range(12):
+        ea._positions_terme(f"mot{i}", mots, memo)
+    assert len(memo) <= 5

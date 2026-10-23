@@ -128,12 +128,18 @@ def _doc_index(doc_text: str):
     return cached
 
 
-def _positions_terme(terme: str, words: List[Tuple[str, int]], memo: Dict[str, List[int]]) -> List[int]:
+_POSITIONS_MAX_TERMES = 2_000   # par document ; au-delà, le mémo repart de zéro
+
+
+def _positions_terme(terme: str, words: List[Tuple[str, int]], memo: Dict[str, "array"]) -> "array":
     """Indices des mots du document qui CONTIENNENT `terme` (même test que
-    l'ancien balayage : `terme in mot`), calculés une fois par document."""
+    l'ancien balayage : `terme in mot`), calculés une fois par document.
+    Mémo compact (array, 4 octets par position) et plafonné en nombre de termes."""
     pos = memo.get(terme)
     if pos is None:
-        pos = memo[terme] = [j for j, (w, _) in enumerate(words) if terme in w]
+        if len(memo) >= _POSITIONS_MAX_TERMES:
+            memo.clear()
+        pos = memo[terme] = array("I", (j for j, (w, _) in enumerate(words) if terme in w))
     return pos
 
 
@@ -229,7 +235,7 @@ def anchor_excerpt(excerpt: str, doc_text: str) -> Optional[str]:
 # chaque portée d'analyse (tronc commun, puis chaque lot) et chaque relance
 # rouvraient les mêmes PDF et re-normalisaient toutes leurs pages.
 _PAGES_CACHE: "OrderedDict[tuple, List[str]]" = OrderedDict()
-_PAGES_CACHE_MAX = 256   # textes de pages seuls : ~1 octet par caractère
+_PAGES_CACHE_MAX_CARACTERES = 8_000_000   # borné en volume, pas en nombre de fichiers
 
 
 def _pages_normalisees(chemin: str) -> List[str]:
@@ -252,8 +258,10 @@ def _pages_normalisees(chemin: str) -> List[str]:
         return []
     with _cache_verrou:
         _PAGES_CACHE[cle] = pages
-        while len(_PAGES_CACHE) > _PAGES_CACHE_MAX:
-            _PAGES_CACHE.popitem(last=False)
+        total = sum(sum(len(p) for p in v) for v in _PAGES_CACHE.values())
+        while total > _PAGES_CACHE_MAX_CARACTERES and len(_PAGES_CACHE) > 1:
+            _, retirees = _PAGES_CACHE.popitem(last=False)
+            total -= sum(len(p) for p in retirees)
     return pages
 
 
