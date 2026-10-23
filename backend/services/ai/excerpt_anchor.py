@@ -231,37 +231,66 @@ def anchor_excerpt(excerpt: str, doc_text: str) -> Optional[str]:
     return candidate if len(candidate) >= 20 else None
 
 
-# Textes de pages normalisés, par EMPREINTE de fichier (chemin, taille, date) :
-# chaque portée d'analyse (tronc commun, puis chaque lot) et chaque relance
-# rouvraient les mêmes PDF et re-normalisaient toutes leurs pages.
-_PAGES_CACHE: "OrderedDict[tuple, List[str]]" = OrderedDict()
+# Textes de pages par EMPREINTE de fichier (chemin réel, taille, date) : chaque
+# portée d'analyse (tronc commun, puis chaque lot) et chaque relance rouvraient
+# les mêmes PDF. L'extraction du dépôt y dépose aussi les pages qu'elle vient de
+# lire (retenir_pages) : l'analyse ne relit plus le PDF du tout.
+# Entrée : (normalisées ?, textes des pages, TOUTES les pages, vides comprises).
+_PAGES_CACHE: "OrderedDict[tuple, tuple]" = OrderedDict()
 _PAGES_CACHE_MAX_CARACTERES = 8_000_000   # borné en volume, pas en nombre de fichiers
+
+
+def _empreinte(chemin: str) -> Optional[tuple]:
+    try:
+        reel = os.path.realpath(chemin)
+        st = os.stat(reel)
+    except OSError:
+        return None
+    return (reel, st.st_size, st.st_mtime_ns)
+
+
+def _ranger_pages(cle: tuple, entree: tuple) -> None:
+    with _cache_verrou:
+        _PAGES_CACHE[cle] = entree
+        _PAGES_CACHE.move_to_end(cle)
+        total = sum(sum(len(p) for p in v[1]) for v in _PAGES_CACHE.values())
+        while total > _PAGES_CACHE_MAX_CARACTERES and len(_PAGES_CACHE) > 1:
+            _, retiree = _PAGES_CACHE.popitem(last=False)
+            total -= sum(len(p) for p in retiree[1])
+
+
+def retenir_pages(chemin: str, pages: List[str]) -> None:
+    """Garde les textes de TOUTES les pages d'un PDF que l'extraction vient de
+    lire (mêmes appels get_text que resolve_pages) : l'ancrage les reprendra au
+    lieu de rouvrir le fichier. Normalisés plus tard, seulement s'ils servent."""
+    cle = _empreinte(chemin)
+    if cle is not None:
+        _ranger_pages(cle, (False, list(pages)))
 
 
 def _pages_normalisees(chemin: str) -> List[str]:
     import fitz
 
-    try:
-        st = os.stat(chemin)
-    except OSError:
+    cle = _empreinte(chemin)
+    if cle is None:
         return []
-    cle = (chemin, st.st_size, st.st_mtime_ns)
     with _cache_verrou:
-        pages = _PAGES_CACHE.get(cle)
-        if pages is not None:
+        entree = _PAGES_CACHE.get(cle)
+        if entree is not None:
             _PAGES_CACHE.move_to_end(cle)
+    if entree is not None:
+        normalisees, pages = entree
+        if normalisees:
             return pages
+        pages = [_normalize(p) for p in pages]
+        _ranger_pages(cle, (True, pages))
+        return pages
     try:
         with fitz.open(chemin) as doc:
             pages = [_normalize(p.get_text()) for p in doc]
     except Exception:
         return []
-    with _cache_verrou:
-        _PAGES_CACHE[cle] = pages
-        total = sum(sum(len(p) for p in v) for v in _PAGES_CACHE.values())
-        while total > _PAGES_CACHE_MAX_CARACTERES and len(_PAGES_CACHE) > 1:
-            _, retirees = _PAGES_CACHE.popitem(last=False)
-            total -= sum(len(p) for p in retirees)
+    _ranger_pages(cle, (True, pages))
     return pages
 
 

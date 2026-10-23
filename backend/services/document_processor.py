@@ -44,6 +44,7 @@ class DocumentProcessor:
         filename: str,
         max_pages: Optional[int] = None,
         on_page=None,
+        on_pages=None,
     ) -> Tuple[str, Optional[int], Optional[str]]:
         """(texte, pages, warning) — plus AUCUN échec d'extraction silencieux.
 
@@ -53,7 +54,10 @@ class DocumentProcessor:
 
         max_pages: if set, only extract text from the first N pages (PDF only).
         on_page: optional callback (pages_done, total_pages) — progression
-        RÉELLE intra-document pour les gros PDFs (barre d'upload)."""
+        RÉELLE intra-document pour les gros PDFs (barre d'upload).
+        on_pages: optional callback (textes de TOUTES les pages, vides comprises)
+        appelé quand un PDF a été lu en entier — l'ancrage des sources les
+        reprend au lieu de relire le fichier."""
         lower = filename.lower()
 
         # .doc (ancien Word, conteneur OLE2) : accepté à l'upload mais
@@ -66,7 +70,7 @@ class DocumentProcessor:
             return "", None, None
 
         try:
-            text, pages = self._do_extract(content, lower, max_pages, on_page)
+            text, pages = self._do_extract(content, lower, max_pages, on_page, on_pages)
         except Exception as e:
             logger.warning(f"Extraction failed for {filename}: {e}")
             return "", None, _WARN_UNREADABLE
@@ -80,10 +84,10 @@ class DocumentProcessor:
         return text, pages, None
 
     def _do_extract(
-        self, content: bytes, lower: str, max_pages: Optional[int], on_page=None
+        self, content: bytes, lower: str, max_pages: Optional[int], on_page=None, on_pages=None
     ) -> Tuple[str, Optional[int]]:
         if lower.endswith(".pdf"):
-            return self._extract_pdf(content, max_pages, on_page)
+            return self._extract_pdf(content, max_pages, on_page, on_pages)
         elif lower.endswith(".docx"):
             return self._extract_docx(content)
         elif lower.endswith(".xls"):
@@ -95,7 +99,7 @@ class DocumentProcessor:
         return "", None
 
     def _extract_pdf(
-        self, content: bytes, max_pages: Optional[int] = None, on_page=None
+        self, content: bytes, max_pages: Optional[int] = None, on_page=None, on_pages=None
     ) -> Tuple[str, Optional[int]]:
         import fitz  # PyMuPDF — 5-10x faster than PyPDF2
 
@@ -103,8 +107,10 @@ class DocumentProcessor:
         total_pages = len(doc)
         limit = min(max_pages if max_pages else total_pages, total_pages)
         texts = []
+        toutes = []   # une entrée par page, vides comprises (numéros de page exacts)
         for i in range(limit):
             text = doc[i].get_text()
+            toutes.append(text)
             if text:
                 texts.append(text)
             if on_page is not None:
@@ -113,6 +119,11 @@ class DocumentProcessor:
                 except Exception:
                     pass  # la progression ne casse jamais l'extraction
         doc.close()
+        if on_pages is not None and limit == total_pages:
+            try:
+                on_pages(toutes)
+            except Exception:
+                pass  # le cache de l'ancrage ne casse jamais l'extraction
         return "\n\n".join(texts), total_pages
 
     def _extract_docx(self, content: bytes) -> Tuple[str, Optional[int]]:

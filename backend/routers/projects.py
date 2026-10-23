@@ -827,6 +827,7 @@ def _extract_all_parallel(project_id: str, docs_info: list) -> None:
     _tlog = _logging.getLogger("TIMING")
 
     from database import SessionLocal
+    from services.ai.excerpt_anchor import retenir_pages
 
     _KEY_TYPES = {'rc', 'ccap', 'cctp', 'dpgf', 'acte_engagement'}
     _500KB = 500 * 1024  # Aggressive threshold: only tiny PDFs in pool
@@ -958,7 +959,9 @@ def _extract_all_parallel(project_id: str, docs_info: list) -> None:
                         detail=f"Indexation : {filename[:50]} — page {done_pages}/{total_pages}")
 
                 result_text, result_pages, extraction_warning = processor.extract_ex(
-                    content, filename, on_page=_on_page)
+                    content, filename, on_page=_on_page,
+                    # pages gardées pour l'ancrage des sources (pas de relecture du PDF)
+                    on_pages=lambda pages: retenir_pages(str(file_path), pages))
                 if result_text:
                     extracted_text = result_text.replace("\x00", "")
                 page_count = result_pages
@@ -1066,7 +1069,8 @@ def _extract_all_parallel(project_id: str, docs_info: list) -> None:
                 if not file_path.exists():
                     return
                 content = file_path.read_bytes()
-                result_text, result_pages, result_warning = processor.extract_ex(content, filename)
+                result_text, result_pages, result_warning = processor.extract_ex(
+                    content, filename, on_pages=lambda pages: retenir_pages(str(file_path), pages))
                 if result_text:
                     doc.extracted_text = result_text.replace("\x00", "")
                 doc.extraction_warning = result_warning

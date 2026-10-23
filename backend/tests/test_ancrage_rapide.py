@@ -144,9 +144,9 @@ def test_cache_des_pages_borne_en_caracteres(tmp_path, monkeypatch):
         doc.close()
         chemins.append(str(pdf))
         ea._pages_normalisees(str(pdf))
-    total = sum(sum(len(p) for p in v) for v in ea._PAGES_CACHE.values())
+    total = sum(sum(len(p) for p in v[1]) for v in ea._PAGES_CACHE.values())
     assert total <= 300 or len(ea._PAGES_CACHE) == 1
-    assert any(cle[0] == chemins[-1] for cle in ea._PAGES_CACHE)
+    assert any(cle[0] == os.path.realpath(chemins[-1]) for cle in ea._PAGES_CACHE)
 
 
 def test_memo_des_positions_plafonne(monkeypatch):
@@ -156,3 +156,28 @@ def test_memo_des_positions_plafonne(monkeypatch):
     for i in range(12):
         ea._positions_terme(f"mot{i}", mots, memo)
     assert len(memo) <= 5
+
+
+def test_pages_lues_au_depot_reprises_par_l_ancrage_sans_relire_le_pdf(tmp_path, monkeypatch):
+    import fitz
+    from services.document_processor import DocumentProcessor
+    pdf = tmp_path / "ccap.pdf"
+    doc = fitz.open()
+    for texte in ("Article 1 — Objet", "", "Article 3 — La retenue de garantie est fixée à 5 % du montant."):
+        page = doc.new_page()
+        if texte:
+            page.insert_text((72, 72), texte)
+    doc.save(str(pdf))
+    doc.close()
+    ea._PAGES_CACHE.clear()
+    # le dépôt lit le PDF et confie ses pages au cache de l'ancrage
+    texte, pages, _ = DocumentProcessor().extract_ex(
+        pdf.read_bytes(), "ccap.pdf", on_pages=lambda p: ea.retenir_pages(str(pdf), p))
+    assert pages == 3 and "retenue de garantie" in texte
+    ouvertures = []
+    vrai = fitz.open
+    monkeypatch.setattr(fitz, "open", lambda *a, **k: (ouvertures.append(a), vrai(*a, **k))[1])
+    reqs = [{"source_excerpt": "La retenue de garantie est fixée à 5 %", "source_page": 1}]
+    ea.resolve_pages(reqs, {"ccap.pdf": str(pdf)})
+    assert reqs[0]["source_page"] == 3      # page vide comptée : numéro exact
+    assert ouvertures == []                 # aucune relecture du PDF
