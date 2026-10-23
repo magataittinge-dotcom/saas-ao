@@ -18,8 +18,12 @@ Sinon : None — l'ancre est invalide, l'UI n'affiche PAS de bouton source
 (jamais de viewer qui ment). Compteurs loggés.
 """
 import logging
+import os
 import re
+import threading
+from array import array
 import unicodedata
+from collections import OrderedDict
 from typing import Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
@@ -36,15 +40,32 @@ def _norm_char(ch: str) -> str:
     return mapping.get(ch, ch)
 
 
+# Forme normalisée de chaque caractère, calculée une fois : (blanc ?, forme).
+# La normalisation d'un DCE passait ~1 µs par caractère dans NFKD.
+_CHAR_NORM: Dict[str, Tuple[bool, str]] = {}
+
+
+def _char_norm(ch: str) -> Tuple[bool, str]:
+    c = _norm_char(ch)
+    if c.isspace():
+        return True, " "
+    decomposed = unicodedata.normalize("NFKD", c)
+    base = "".join(x for x in decomposed if not unicodedata.combining(x)) or c
+    return False, base.lower()
+
+
 def _normalize_with_map(text: str) -> Tuple[str, List[int]]:
     """Normalisation POSITION-PRÉSERVANTE : retourne (texte normalisé,
     mapping index normalisé → index original)."""
     out: List[str] = []
     idx_map: List[int] = []
     prev_space = True
+    memo = _CHAR_NORM
     for i, ch in enumerate(text):
-        ch = _norm_char(ch)
-        if ch.isspace():
+        r = memo.get(ch)
+        if r is None:
+            r = memo[ch] = _char_norm(ch)
+        if r[0]:
             if prev_space:
                 continue
             out.append(" ")
@@ -52,9 +73,7 @@ def _normalize_with_map(text: str) -> Tuple[str, List[int]]:
             prev_space = True
             continue
         prev_space = False
-        decomposed = unicodedata.normalize("NFKD", ch)
-        base = "".join(c for c in decomposed if not unicodedata.combining(c)) or ch
-        for c in base.lower():
+        for c in r[1]:
             out.append(c)
             idx_map.append(i)
     return "".join(out), idx_map
@@ -79,19 +98,43 @@ def _expand_to_sentence(doc: str, start: int, end: int) -> Tuple[int, int]:
 
 
 # Cache de normalisation par document (l'ancrage de 448 exigences contre
-# les mêmes ~10 docs re-normalisait 50k caractères à chaque appel).
-_DOC_CACHE: dict = {}
+# les mêmes ~10 docs re-normalisait 50k caractères à chaque appel). Clé = le
+# TEXTE lui-même : chaque portée d'analyse relit les textes en base (nouveaux
+# objets) — l'ancienne clé id() ne servait qu'une portée et ne libérait
+# jamais rien (≈ 58 Mo par million de caractères). LRU borné en caractères ;
+# le mapping de positions est un array d'entiers (4 octets par caractère).
+_DOC_CACHE: "OrderedDict[str, tuple]" = OrderedDict()
+_DOC_CACHE_MAX_CARACTERES = 8_000_000   # ≈ 4 DCE complets comme Gueux (1,7 M)
+_cache_verrou = threading.Lock()
 
 
 def _doc_index(doc_text: str):
-    key = id(doc_text)
-    cached = _DOC_CACHE.get(key)
-    if cached is None or cached[0] is not doc_text:
-        norm, idx_map = _normalize_with_map(doc_text)
-        words = [(m.group(0), m.start()) for m in re.finditer(r"\S+", norm)]
-        cached = (doc_text, norm, idx_map, words)
-        _DOC_CACHE[key] = cached
-    return cached[1], cached[2], cached[3]
+    """(texte normalisé, mapping vers l'original, mots normalisés et leur
+    position, positions des termes déjà cherchés) d'un document."""
+    with _cache_verrou:
+        cached = _DOC_CACHE.get(doc_text)
+        if cached is not None:
+            _DOC_CACHE.move_to_end(doc_text)
+            return cached
+    norm, idx_map = _normalize_with_map(doc_text)
+    words = [(m.group(0), m.start()) for m in re.finditer(r"\S+", norm)]
+    cached = (norm, array("I", idx_map), words, {})
+    with _cache_verrou:
+        _DOC_CACHE[doc_text] = cached
+        total = sum(len(k) for k in _DOC_CACHE)
+        while total > _DOC_CACHE_MAX_CARACTERES and len(_DOC_CACHE) > 1:
+            ancien, _ = _DOC_CACHE.popitem(last=False)
+            total -= len(ancien)
+    return cached
+
+
+def _positions_terme(terme: str, words: List[Tuple[str, int]], memo: Dict[str, List[int]]) -> List[int]:
+    """Indices des mots du document qui CONTIENNENT `terme` (même test que
+    l'ancien balayage : `terme in mot`), calculés une fois par document."""
+    pos = memo.get(terme)
+    if pos is None:
+        pos = memo[terme] = [j for j, (w, _) in enumerate(words) if terme in w]
+    return pos
 
 
 def anchor_excerpt(excerpt: str, doc_text: str) -> Optional[str]:
@@ -105,7 +148,7 @@ def anchor_excerpt(excerpt: str, doc_text: str) -> Optional[str]:
         return excerpt
 
     # 2. Normalisé → ré-ancrage sur le passage réel
-    doc_norm, idx_map, _doc_words = _doc_index(doc_text)
+    doc_norm, idx_map, _doc_words, _positions = _doc_index(doc_text)
     exc_norm = _normalize(excerpt)
     if exc_norm and exc_norm in doc_norm:
         pos = doc_norm.find(exc_norm)
@@ -148,16 +191,28 @@ def anchor_excerpt(excerpt: str, doc_text: str) -> Optional[str]:
         return None
     window = max(len(terms) * 2, 12)
     term_set = set(terms)
-    best_score, best_pos = 0.0, None
-    for i in range(0, len(doc_words), max(window // 3, 1)):
-        chunk_words = {w for w, _ in doc_words[i:i + window]}
-        hits = sum(1 for t in term_set
-                   if any(t in w for w in chunk_words))
-        score = hits / len(term_set)
-        if score > best_score:
-            best_score, best_pos = score, i
+    # Fenêtres de `window` mots, toutes les `pas` positions : un terme compte
+    # dans une fenêtre si un de ses mots le contient. Plutôt que de re-tester
+    # chaque terme contre chaque mot de chaque fenêtre, on part des positions
+    # où chaque terme apparaît et on marque les fenêtres qui les couvrent.
+    # Résultat identique (même meilleure fenêtre : la première au score max).
+    pas = max(window // 3, 1)
+    nb_fenetres = (len(doc_words) + pas - 1) // pas
+    hits = [0] * nb_fenetres
+    for t in term_set:
+        couvertes = set()
+        for j in _positions_terme(t, doc_words, _positions):
+            # fenêtres k avec k*pas <= j < k*pas + window
+            couvertes.update(range(max(0, -((window - 1 - j) // pas)), j // pas + 1))
+        for k in couvertes:
+            hits[k] += 1
+    best_hits = max(hits) if hits else 0
+    if best_hits == 0:
+        return None
+    best_score = best_hits / len(term_set)
+    best_pos = hits.index(best_hits) * pas
 
-    if best_pos is None or best_score < _MIN_RECOVER_SCORE:
+    if best_score < _MIN_RECOVER_SCORE:
         return None
 
     norm_start = doc_words[best_pos][1]
@@ -170,21 +225,48 @@ def anchor_excerpt(excerpt: str, doc_text: str) -> Optional[str]:
     return candidate if len(candidate) >= 20 else None
 
 
+# Textes de pages normalisés, par EMPREINTE de fichier (chemin, taille, date) :
+# chaque portée d'analyse (tronc commun, puis chaque lot) et chaque relance
+# rouvraient les mêmes PDF et re-normalisaient toutes leurs pages.
+_PAGES_CACHE: "OrderedDict[tuple, List[str]]" = OrderedDict()
+_PAGES_CACHE_MAX = 256   # textes de pages seuls : ~1 octet par caractère
+
+
+def _pages_normalisees(chemin: str) -> List[str]:
+    import fitz
+
+    try:
+        st = os.stat(chemin)
+    except OSError:
+        return []
+    cle = (chemin, st.st_size, st.st_mtime_ns)
+    with _cache_verrou:
+        pages = _PAGES_CACHE.get(cle)
+        if pages is not None:
+            _PAGES_CACHE.move_to_end(cle)
+            return pages
+    try:
+        with fitz.open(chemin) as doc:
+            pages = [_normalize(p.get_text()) for p in doc]
+    except Exception:
+        return []
+    with _cache_verrou:
+        _PAGES_CACHE[cle] = pages
+        while len(_PAGES_CACHE) > _PAGES_CACHE_MAX:
+            _PAGES_CACHE.popitem(last=False)
+    return pages
+
+
 def resolve_pages(requirements: List[dict], doc_paths: Dict[str, str]) -> int:
     """Corrige source_page : localise la page RÉELLE de chaque excerpt ancré
     (la page estimée par l'IA est souvent fausse → viewer sans surlignage).
-    Une ouverture fitz par document, textes de pages normalisés cachés."""
-    import fitz
-
+    Une ouverture fitz par document (et par empreinte de fichier), textes de
+    pages normalisés cachés."""
     page_cache: Dict[str, List[str]] = {}
 
     def _pages(key: str) -> List[str]:
         if key not in page_cache:
-            try:
-                with fitz.open(doc_paths[key]) as doc:
-                    page_cache[key] = [_normalize(p.get_text()) for p in doc]
-            except Exception:
-                page_cache[key] = []
+            page_cache[key] = _pages_normalisees(doc_paths[key])
         return page_cache[key]
 
     fixed = 0
