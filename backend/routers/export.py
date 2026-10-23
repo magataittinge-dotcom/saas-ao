@@ -14,7 +14,7 @@ import mimetypes
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from fastapi.responses import StreamingResponse, FileResponse
 from services.rate_limit import limiter
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, defer
 
 from database import get_db
 from models.user import User
@@ -56,23 +56,27 @@ def get_export_detail(
         .all()
     )
     memoire = db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project_id).first()
-    project_docs = db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).all()
+    # Textes extraits non lus (seul celui du RC sert, chargé à la demande plus bas).
+    project_docs = (db.query(ProjectDocument)
+                    .options(defer(ProjectDocument.extracted_text))
+                    .filter(ProjectDocument.project_id == project_id).all())
 
-    # Build checklist with linked doc names
+    # Build checklist with linked doc names — une seule requête pour toutes les
+    # pièces liées (avant : une par ligne de checklist).
     from models.document import Document
+    lies = {i.linked_document_id for i in checklist_items if i.linked_document_id}
+    noms_lies = {}
+    if lies:
+        # Filtre org (S2.3) : ne jamais exposer le nom d'un Document d'une
+        # autre org via un linked_document_id périmé/forgé.
+        noms_lies = dict(db.query(Document.id, Document.file_name).filter(
+            Document.id.in_(lies),
+            Document.organization_id == user.organization_id,
+            Document.deleted_at.is_(None),
+        ).all())
     checklist_export = []
     for item in checklist_items:
-        doc_name = None
-        if item.linked_document_id:
-            # Filtre org (S2.3) : ne jamais exposer le nom d'un Document d'une
-            # autre org via un linked_document_id périmé/forgé.
-            doc = db.query(Document).filter(
-                Document.id == item.linked_document_id,
-                Document.organization_id == user.organization_id,
-                Document.deleted_at.is_(None),
-            ).first()
-            if doc:
-                doc_name = doc.file_name
+        doc_name = noms_lies.get(item.linked_document_id) if item.linked_document_id else None
         checklist_export.append(ChecklistExportItem(
             id=item.id,
             document_type_required=item.document_type_required,
@@ -165,7 +169,9 @@ def get_export_summary(
     compliance_items = db.query(ComplianceItem).filter(ComplianceItem.project_id == project_id).all()
     checklist_items = db.query(ChecklistItem).filter(ChecklistItem.project_id == project_id).all()
     memoire = db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project_id).first()
-    project_docs = db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).all()
+    project_docs = (db.query(ProjectDocument)
+                    .options(defer(ProjectDocument.extracted_text))
+                    .filter(ProjectDocument.project_id == project_id).all())
 
     return ExportSummary(
         compliance_total=len(compliance_items),

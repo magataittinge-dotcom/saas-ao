@@ -6,7 +6,7 @@ from urllib.parse import quote
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
 from sqlalchemy import or_, update as _sql_update
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, defer
 
 from database import SessionLocal, get_db
 from models.user import User
@@ -151,7 +151,11 @@ async def generate_memoire(
     ensure_relaunchable(project)  # R12 — pas de relance sur projet clôturé
     org = db.query(Organization).filter(Organization.id == user.organization_id).first()
 
-    all_docs = db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).all()
+    # Route async : ne pas lire ici les textes du DCE (plusieurs Mo, bloquerait la
+    # boucle) — le job les recharge ; seul compte qu'il y ait des pièces pour le lot.
+    all_docs = (db.query(ProjectDocument)
+                .options(defer(ProjectDocument.extracted_text))
+                .filter(ProjectDocument.project_id == project_id).all())
     docs = get_documents_for_lot(all_docs, project.selected_lot)
     if not docs:
         raise HTTPException(status_code=400, detail="Aucun document du DCE déposé")

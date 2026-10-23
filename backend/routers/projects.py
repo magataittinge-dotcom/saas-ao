@@ -7,7 +7,7 @@ import io as _io
 import threading
 from typing import IO, List, Optional, Any
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, UploadFile, File, Form
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, defer
 from pydantic import BaseModel
 
 from database import get_db
@@ -558,7 +558,10 @@ def list_project_documents(
     db: Session = Depends(get_db),
 ):
     _get_project_or_404(project_id, user.organization_id, db)
-    return db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).all()
+    # Le texte extrait (3,3 M caractères sur Gueux) n'est pas renvoyé : ne pas le lire.
+    return (db.query(ProjectDocument)
+            .options(defer(ProjectDocument.extracted_text))
+            .filter(ProjectDocument.project_id == project_id).all())
 
 
 def _convert_to_pdf_background(doc_id: str, file_url: str, filename: str) -> None:
@@ -1665,9 +1668,9 @@ def detect_lots(
     Frontend polls /processing-status for real progress, then re-calls /lots for results.
     """
     project = _get_project_or_404(project_id, user.organization_id, db)
-    docs = db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).all()
-
-    if not docs:
+    # Présence seulement : les textes ne sont lus que si la détection doit tourner
+    # (l'écran Lots rappelle cette route à chaque visite, lots déjà en cache).
+    if not db.query(ProjectDocument.id).filter(ProjectDocument.project_id == project_id).first():
         raise HTTPException(status_code=400, detail="Aucun document déposé pour ce projet")
 
     # Ensure step 1 is marked complete (covers projects uploaded before this fix)
@@ -1684,6 +1687,7 @@ def detect_lots(
         return {"status": "detecting_lots", "progress": project.processing_progress or 0, "detail": project.processing_detail or ""}
 
     # ── Cache miss: launch detection in background ────────────────────────────
+    docs = db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).all()
     project.processing_status = "detecting_lots"
     project.processing_progress = 0
     project.processing_detail = "Démarrage de la détection..."
