@@ -1,0 +1,18 @@
+# Banc d'essai des lecteurs PDF (PyMuPDF, pypdf, pypdfium2, Docling) — jamais en production.
+#
+# À installer dans un venv SÉPARÉ, pas dans backend/venv : Docling est incompatible
+# avec les versions épinglées de l'application (constaté le 23/10/2026) :
+#   - il installe httpx 0.28, avec lequel anthropic==0.31.0 plante
+#     (« Client.__init__() got an unexpected keyword argument 'proxies' ») ;
+#   - avec pydantic 2.8 / pydantic-settings 2.3 de l'application, la conversion
+#     échoue (AttributeError: force_full_page_ocr) ; docling-core exige
+#     pydantic-settings >= 2.14.
+# PyTorch en variante CPU (aucun GPU ici ni sur le VPS ; méthode documentée par Docling) :
+#   python3.12 -m venv ~/.venvs/synorix-banc-pdf
+#   ~/.venvs/synorix-banc-pdf/bin/pip install -r requirements-banc-pdf.txt \
+#       --extra-index-url https://download.pytorch.org/whl/cpu
+docling==2.142.0
+pypdfium2==5.14.0
+pypdf==5.9.0
+PyMuPDF==1.27.2.2
+psutil==7.2.2   # mémoire mesurée pendant le banc d'essai
