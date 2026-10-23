@@ -1,19 +1,21 @@
 import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useDropzone } from 'react-dropzone'
-import { CloudUpload, Loader2, Sparkles } from 'lucide-react'
+import { CloudUpload, Loader2 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { authService } from '@/services/auth'
 import { useCreateProject } from '@/hooks/useProject'
 import { setPendingUpload } from '@/lib/pendingUpload'
 import { messageErreur } from '@/lib/erreurs'
 import EchecAction from '@/components/common/EchecAction'
+import CompanionOrb from '@/components/ui/CompanionOrb'
 
 /**
  * C15 — onboarding wow : UN écran central après l'inscription.
  * SIRET (une seule saisie, Sirene pré-remplit le profil) puis dropzone
  * « Déposez votre premier DCE — il est offert ». Zéro formulaire
  * supplémentaire : le profil se complète au fil de l'eau.
+ * Thème clair « Calque » : il s'affiche sur le tableau de bord.
  */
 export default function FirstAOWelcome() {
   const navigate = useNavigate()
@@ -82,71 +84,70 @@ export default function FirstAOWelcome() {
   const firstName = user?.name?.split(' ')[0]
 
   return (
-    <div className="max-w-xl mx-auto flex flex-col items-center text-center pt-10 animate-fade-in">
-      <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4"
-        style={{ background: 'rgba(228,233,242,0.10)' }}>
-        <Sparkles size={22} className="text-ds-cyan" />
-      </div>
-      <h1 className="text-2xl font-bold text-ds-text mb-1">
+    <div className="mx-auto flex max-w-xl flex-col items-center pt-12 text-center">
+      <CompanionOrb state="veille" size={56} zoom={1.05} fond="clair" className="mb-5" title="Compagnon Synorix" />
+      <h1 className="mb-1.5 text-[28px] font-semibold leading-9 tracking-tight text-encre">
         Bienvenue{firstName ? `, ${firstName}` : ''}
       </h1>
 
       {!siretDone ? (
         <>
-          <p className="text-sm text-ds-text-2 mb-6">
+          <p className="mb-7 text-[15px] text-encre-2">
             Votre SIRET — et c'est tout : le répertoire Sirene remplit le reste de votre profil.
           </p>
-          <div className="w-full flex gap-2">
+          <div className="flex w-full gap-2">
             <input
               value={siret}
               onChange={(e) => setSiret(e.target.value)}
               placeholder="N° SIRET (14 chiffres)"
-              className="glass-input flex-1 py-2.5 text-sm"
+              aria-label="Numéro SIRET"
+              inputMode="numeric"
+              className="h-10 flex-1 rounded-md border border-ligne-champ bg-surface px-3 text-[15px] text-encre placeholder:text-encre-3"
               onKeyDown={(e) => e.key === 'Enter' && submitSiret()}
             />
             <button
               onClick={submitSiret}
               disabled={siretBusy || !siret.trim()}
-              className="btn-primary px-4 disabled:opacity-50"
+              className="h-10 rounded-md bg-encre px-4 text-sm font-semibold text-sur-encre transition-colors hover:bg-encre-survol disabled:opacity-50"
             >
               {siretBusy ? <Loader2 size={16} className="animate-spin" /> : 'Valider'}
             </button>
           </div>
           <button onClick={() => setSiretDone(true)}
-            className="text-xs mt-3 hover:underline" style={{ color: '#788295' }}>
+            className="mt-3 text-[13px] text-encre-3 underline-offset-[3px] hover:text-encre hover:underline">
             Passer cette étape
           </button>
         </>
       ) : (
         <>
           {siretMsg && (
-            <p className="text-xs mb-3 max-w-md" style={{ color: '#F5C26B' }}>{siretMsg}</p>
+            <p className="mb-3 max-w-md text-[13px] text-attention">{siretMsg}</p>
           )}
-          <p className="text-sm text-ds-text-2 mb-6">
+          <p className="mb-7 text-[15px] text-encre-2">
             Votre profil se complétera au fil de vos réponses — commencez directement.
           </p>
           {echec && (
-            <div className="w-full mb-4 text-left">
-              <EchecAction message={echec.message} onReessayer={() => creerAvec(echec.fichier)} />
+            <div className="mb-4 w-full text-left">
+              <EchecAction calque message={echec.message} onReessayer={() => creerAvec(echec.fichier)} />
             </div>
           )}
           <div
             {...getRootProps()}
-            className="w-full border-2 border-dashed rounded-2xl px-8 py-14 cursor-pointer transition-colors"
-            style={isDragActive
-              ? { borderColor: '#E4E9F2', background: 'rgba(228,233,242,0.05)' }
-              : { borderColor: '#5C6678', background: '#151A23' }}
+            className={
+              'w-full cursor-pointer rounded-[10px] border-2 border-dashed px-8 py-14 transition-colors '
+              + (isDragActive ? 'border-prusse-500 bg-prusse-50' : 'border-ligne-forte bg-surface hover:border-ligne-champ')
+            }
           >
             <input {...getInputProps()} />
             {isCreating ? (
-              <Loader2 size={30} className="mx-auto animate-spin text-ds-cyan" />
+              <Loader2 size={28} className="mx-auto animate-spin text-encre-3" />
             ) : (
-              <CloudUpload size={30} className="mx-auto text-ds-cyan" />
+              <CloudUpload size={28} strokeWidth={1.6} className="mx-auto text-encre-3" />
             )}
-            <p className="text-base font-semibold text-ds-text mt-4">
+            <p className="mt-4 text-base font-semibold text-encre">
               Déposez votre premier DCE — il est offert
             </p>
-            <p className="text-xs text-ds-text-3 mt-1.5">
+            <p className="mt-1.5 text-[13px] text-encre-3">
               ZIP complet ou PDF · analyse, vérification et mémoire compris
             </p>
           </div>

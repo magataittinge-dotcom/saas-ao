@@ -696,27 +696,29 @@
 }
 
 /* ── shadcn/ui base (Lumen dark) ──────────────────────────────── */
+/* Couleurs complètes (et non des triplets HSL) : la classe .calque
+   (styles/tokens.css) les redéfinit avec les jetons du thème clair. */
 @layer base {
   :root {
-    --background:          240 3% 7%;
-    --foreground:          180 7% 97%;
-    --card:                240 4% 10%;
-    --card-foreground:     180 7% 97%;
-    --popover:             240 4% 10%;
-    --popover-foreground:  180 7% 97%;
-    --primary:             220 7% 92%;
-    --primary-foreground:  240 3% 7%;
-    --secondary:           240 5% 12%;
-    --secondary-foreground:180 7% 97%;
-    --muted:               240 5% 12%;
-    --muted-foreground:    240 1% 59%;
-    --accent:              240 3% 14%;
-    --accent-foreground:   180 7% 97%;
-    --destructive:         4 82% 74%;
-    --destructive-foreground: 240 3% 7%;
-    --border:              0 0% 14%;
-    --input:               0 0% 14%;
-    --ring:                225 2% 60%;
+    --background:          hsl(240 3% 7%);
+    --foreground:          hsl(180 7% 97%);
+    --card:                hsl(240 4% 10%);
+    --card-foreground:     hsl(180 7% 97%);
+    --popover:             hsl(240 4% 10%);
+    --popover-foreground:  hsl(180 7% 97%);
+    --primary:             hsl(220 7% 92%);
+    --primary-foreground:  hsl(240 3% 7%);
+    --secondary:           hsl(240 5% 12%);
+    --secondary-foreground:hsl(180 7% 97%);
+    --muted:               hsl(240 5% 12%);
+    --muted-foreground:    hsl(240 1% 59%);
+    --accent:              hsl(240 3% 14%);
+    --accent-foreground:   hsl(180 7% 97%);
+    --destructive:         hsl(4 82% 74%);
+    --destructive-foreground: hsl(240 3% 7%);
+    --border:              hsl(0 0% 14%);
+    --input:               hsl(0 0% 14%);
+    --ring:                hsl(225 2% 60%);
     --radius:              0.625rem;
   }
 }

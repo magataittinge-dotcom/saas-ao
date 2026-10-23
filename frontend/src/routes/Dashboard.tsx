@@ -1,24 +1,15 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  Plus, ChevronRight, ArrowRight, CalendarDays, MapPin,
-  BarChart3, ShieldCheck, Trophy, Send, FolderX,
-  FolderOpen, Building2, Award, FileStack, Archive, Calculator,
-  type LucideIcon,
-} from 'lucide-react'
+import { ArrowRight, FolderX, Plus } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useCompanionStore } from '@/stores/companionStore'
 import CompanionOrb from '@/components/ui/CompanionOrb'
-import QuotaGauge from '@/components/layout/QuotaGauge'
 import FirstAOWelcome from '@/components/onboarding/FirstAOWelcome'
 import { api } from '@/services/api'
-import { StatCard } from '@/components/dashboard/StatCard'
-import { PipelineRail } from '@/components/dashboard/PipelineRail'
-import { DeadlinePill } from '@/components/dashboard/DeadlinePill'
-import { StatCardGridSkeleton, ProjectListSkeleton } from '@/components/skeletons'
-import { echeanceAO, estEnCours, etatEcheance } from '@/lib/echeance'
+import { ETAPES_AO, avancementAO, echeanceAO, estEnCours, etatEcheance, type Echeance } from '@/lib/echeance'
+import { cn } from '@/lib/utils'
 import type { Project, DashboardStats } from '@/types'
 
 /* ── Empty fallback ──────────────────────────────────────────────── */
@@ -31,25 +22,34 @@ const EMPTY_STATS: DashboardStats = {
   documents_expirant_bientot: 0,
 }
 
-/* ── Format date longue ──────────────────────────────────────────── */
-function fmtDateLong(d: Date) {
-  return d
-    .toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-    .replace(/^\w/, (c) => c.toUpperCase())
+const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''}`
+
+/* ── Dates : « jeudi 23 octobre », « 27/10 · 12 h », « mardi à 9 h 30 » ── */
+function dateDuJour(d: Date) {
+  return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }).replace(/^\w/, (c) => c.toUpperCase())
+}
+function heure(d: Date) {
+  return d.getMinutes() ? `${d.getHours()} h ${String(d.getMinutes()).padStart(2, '0')}` : `${d.getHours()} h`
 }
 
-/* ── Accès rapide aux rubriques (routes réelles) ─────────────────── */
-const RUBRIQUES: { icon: LucideIcon; label: string; to: string }[] = [
-  { icon: FolderOpen, label: 'Mes AO',            to: '/projects' },
-  { icon: Building2,  label: 'Mon entreprise',    to: '/company' },
-  { icon: Award,      label: 'Mes références',     to: '/references' },
-  { icon: FileStack,  label: 'Profil mémoire',     to: '/company' },
-  { icon: Archive,    label: 'Coffre-fort',        to: '/vault' },
-  { icon: Calculator, label: 'Calculateurs',       to: '/outils' },
-]
+/* ── Ce qu'il reste à faire sur un AO : un verbe, l'étape qui suit ─── */
+function prochaineEtape(p: Project): string {
+  if (p.status === 'analyzed' && p.current_step < 4) return 'Décider : on y va ?'
+  switch (avancementAO(p.current_step).etape) {
+    case 1: return 'Déposer le DCE'
+    case 2: return 'Choisir le lot'
+    case 3: return p.processing_status === 'processing' ? 'Analyse en cours' : "Lancer l'analyse"
+    case 4: return 'Vérifier le dossier'
+    case 5: return 'Rédiger le mémoire'
+    default: return 'Exporter le dossier'
+  }
+}
 
 /* ═══════════════════════════════════════════════════════════════════
-   DASHBOARD
+   TABLEAU DE BORD — thème clair « Calque »
+   Une liste des AO en cours (que faire ensuite), les prochaines dates,
+   le coffre-fort et le bilan. Pas de cartes héros ni d'accès rapides :
+   la navigation est dans la barre latérale.
    ═══════════════════════════════════════════════════════════════════ */
 export default function Dashboard() {
   const navigate = useNavigate()
@@ -60,7 +60,7 @@ export default function Dashboard() {
     queryKey: ['projects'],
     queryFn: async () => { const { data } = await api.get<Project[]>('/projects'); return data },
   })
-  const { data: stats, isLoading: sLoad } = useQuery({
+  const { data: stats } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: async () => { const { data } = await api.get<DashboardStats>('/dashboard/stats'); return data },
   })
@@ -89,7 +89,7 @@ export default function Dashboard() {
     },
   })
 
-  // C15 — quota pour l'écran « premier DCE offert » + CTA upgrade sobre
+  // C15 — quota pour l'écran « premier DCE offert » + rappel sobre de l'offre
   const { data: quotaStatus } = useQuery<{
     plan: string
     analyses: { used: number; limit: number | null }
@@ -102,40 +102,22 @@ export default function Dashboard() {
   const s = stats ?? EMPTY_STATS
   const firstName = user?.name?.split(' ')[0] ?? 'vous'
 
-  // B7 — deux zones : les AO clos (soumis/gagné/perdu/sans_suite) sortent des deux.
   // 1.14 — « en cours » : la définition commune (lib/echeance.ts, comme le serveur).
+  // Les AO clos (soumis/gagné/perdu/sans_suite) sortent du tableau de bord.
   const activeProjects = projects.filter((p) => estEnCours(p.status))
-  // « En cours de réponse » : a dépassé l'analyse (candidature/mémoire entamés)
-  // ou n'a pas encore atteint l'analyse (dossier en préparation).
-  const enCoursReponse = activeProjects.filter(
-    (p) => p.current_step >= 4 || p.status !== 'analyzed',
-  )
-  // « Analysés » : analyse terminée, aucune suite donnée pour l'instant.
-  const analysesSansSuite = activeProjects.filter(
-    (p) => p.status === 'analyzed' && p.current_step < 4,
-  )
-  const active = enCoursReponse
+  const avecEcheance = activeProjects.map((p) => ({ ...p, _echeance: etatEcheance(echeanceAO(p)) }))
+  // La liste : la remise la plus proche d'abord, les AO sans date à la fin.
+  const liste = [...avecEcheance].sort((a, b) =>
+    (a._echeance.limite?.getTime() ?? Infinity) - (b._echeance.limite?.getTime() ?? Infinity))
+  // Prochaines dates : les remises à venir, même calcul partout (1.14)
+  const aVenir = liste.filter((p) => p._echeance.etat === 'aujourdhui' || p._echeance.etat === 'proche' || p._echeance.etat === 'a_venir')
+  const upcoming = aVenir.filter((p) => p._echeance.etat !== 'a_venir')
 
-  // Piloter : uniquement les échéances à venir sous 7 jours (AO actifs), même calcul partout (1.14)
-  const upcoming = activeProjects
-    .map((p) => ({ ...p, _echeance: etatEcheance(echeanceAO(p)) }))
-    .filter((p) => p._echeance.etat === 'aujourdhui' || p._echeance.etat === 'proche')
-    .sort((a, b) => a._echeance.limite!.getTime() - b._echeance.limite!.getTime())
-    .slice(0, 4)
-
-  // Cartes-stats — 100 % données réelles backend
-  const statCards = [
-    { icon: BarChart3,  label: 'AO en cours',     value: s.projects_en_cours },
-    { icon: Send,       label: 'Soumis ce mois',  value: s.projects_soumis_ce_mois },
-    { icon: Trophy,     label: 'AO gagnés',       value: s.projects_gagnes },
-    { icon: ShieldCheck, label: 'Taux de réussite', value: s.taux_succes, suffix: '%', ring: s.taux_succes / 100 },
-  ]
-
-  // Note assistant — positive, basée sur les vrais compteurs
+  // Note du Compagnon — positive, basée sur les vrais compteurs
   const next = upcoming[0]
   // Pas de « marge » annoncée quand une date de remise est déjà passée (1.14).
   const datePassee = activeProjects.find((p) => etatEcheance(echeanceAO(p)).etat === 'passee')
-  // « Dans les temps » seulement si le dossier est prêt (étape Export atteinte) — 1.14.
+  // « Dossier prêt » seulement si l'étape Export est atteinte — 1.14.
   const synorixNote = activeProjects.length === 0
     ? "Créez votre premier appel d'offres : l'IA analyse le DCE, prépare la candidature et rédige le mémoire technique."
     : `${activeProjects.length} appel${activeProjects.length > 1 ? 's' : ''} d'offres en cours.` +
@@ -149,8 +131,15 @@ export default function Dashboard() {
           ? ` La date de remise de « ${datePassee.name} » est passée.`
           : ' Aucune échéance imminente, vous avez de la marge.')
 
+  const prochaine = aVenir[0]?._echeance
+  const resume = [
+    dateDuJour(new Date()),
+    `${activeProjects.length} AO en cours`,
+    prochaine && (prochaine.etat === 'aujourdhui' ? "remise aujourd'hui" : `prochaine remise dans ${pluriel(prochaine.jours!, 'jour')}`),
+  ].filter(Boolean).join(' · ')
+
   // C15 — essai intact (free, trial accordé, 0 unité, 0 projet) → écran
-  // central « premier DCE offert » ; essai consommé → dashboard normal.
+  // central « premier DCE offert » ; essai consommé → tableau de bord normal.
   const freshTrial =
     organization?.plan === 'free'
     && organization?.trial_granted !== false
@@ -169,244 +158,148 @@ export default function Dashboard() {
     && (quotaStatus.analyses.used > 0 || quotaStatus.memoires.used > 0
         || organization?.trial_granted === false)
 
-  return (
-    <div className="max-w-7xl mx-auto space-y-4 animate-fade-in">
+  const decides = s.projects_gagnes > 0 || s.taux_succes > 0
 
-      {/* C15 — essai utilisé : CTA upgrade sobre, jamais bloquant */}
+  return (
+    <div className="mx-auto w-full max-w-[1680px] px-1 pb-4 pt-2 sm:px-4 lg:px-6 xl:px-8">
+
+      {/* C15 — essai utilisé : rappel sobre de l'offre, jamais bloquant */}
       {consumedFreeTrial && (
-        <div className="glass-card px-4 py-3 flex items-center justify-between gap-3">
-          <p className="text-sm text-ds-text-2">
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-y border-ligne py-3">
+          <p className="text-[15px] text-encre-2">
             Votre AO d'essai est utilisé. Le plan Pro couvre 40 analyses et 40 mémoires par mois.
           </p>
           <button
             onClick={() => navigate('/settings/billing')}
-            className="shrink-0 text-sm font-medium text-ds-cyan hover:underline"
+            className="shrink-0 text-sm font-medium text-prusse-700 underline-offset-[3px] hover:underline"
           >
             Voir les plans
           </button>
         </div>
       )}
 
-      {/* ── EN-TÊTE ──────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-        <div>
-          {/* badge « IA active » retiré — le Compagnon vivant à droite le remplace (T3.5) */}
-          <h1 className="font-display tracking-tight text-2xl font-bold text-ds-text">Bonjour, {firstName}</h1>
-          <span className="mt-1.5 inline-flex items-center gap-1.5 text-sm text-ds-text-2">
-            <CalendarDays size={14} className="text-ds-text-3" />
-            {fmtDateLong(new Date())}
-          </span>
+      {/* ── En-tête : bonjour, la journée en une ligne, le Compagnon ── */}
+      <header>
+        <h1 className="text-[28px] font-semibold leading-9 tracking-tight text-encre">Bonjour, {firstName}</h1>
+        <p className="mt-1 text-[15px] text-encre-3">{resume}</p>
+        <div className="mt-6 flex max-w-[72ch] items-center gap-3.5">
+          <CompanionOrb state={companionState} size={44} zoom={1.05} fond="clair" title="Compagnon Synorix" />
+          <p className="text-[15px] leading-6 text-encre-2">{synorixNote}</p>
         </div>
-        <button onClick={() => navigate('/projects/new')} className="signature-btn shrink-0 cursor-pointer">
-          <Plus size={16} strokeWidth={2.5} /> Nouvel AO
-        </button>
-      </div>
+      </header>
 
-      {/* ── CARTES STATS ─────────────────────────────────────────── */}
-      {sLoad ? (
-        <StatCardGridSkeleton count={4} />
-      ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {statCards.map((c, i) => (
-            <StatCard
-              key={c.label}
-              icon={c.icon}
-              label={c.label}
-              value={c.value ?? 0}
-              suffix={c.suffix}
-              ring={c.ring}
-              delay={i}
-            />
-          ))}
-        </div>
-      )}
+      <div className="mt-12 grid grid-cols-1 gap-x-14 gap-y-12 xl:grid-cols-[minmax(0,1fr)_300px] 2xl:grid-cols-[minmax(0,1fr)_340px]">
 
-      {/* ── 2 COLONNES ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4 items-start">
-
-        {/* ─── GAUCHE : deux zones (B7) ────────────────────────────── */}
-        <div className="space-y-4">
-        <section className="glass-card sheen overflow-hidden">
-          <header className="flex items-center justify-between px-5 py-3 border-b border-ds-border-subtle">
-            <div className="flex items-center gap-2.5">
-              <h2 className="text-[15px] font-semibold text-ds-text">En cours de réponse</h2>
-              {active.length > 0 && (
-                <span className="pill pill-cyan text-xs">{active.length}</span>
-              )}
-            </div>
-            {active.length > 0 && (
-              <button
-                onClick={() => navigate('/projects')}
-                className="flex items-center gap-1 text-xs font-medium text-ds-cyan hover:text-ds-cyan-dark transition-colors cursor-pointer"
-              >
-                Voir tout <ChevronRight size={14} />
-              </button>
+        {/* ─── Les AO en cours : que faire ensuite ─────────────────── */}
+        <section aria-labelledby="t-ao" className="min-w-0">
+          <div className="flex items-baseline justify-between gap-4 border-b border-ligne pb-3">
+            <h2 id="t-ao" className="text-lg font-semibold text-encre">
+              Appels d'offres en cours
+              {activeProjects.length > 0 && <span className="ml-2 font-normal tabular-nums text-encre-3">{activeProjects.length}</span>}
+            </h2>
+            {projects.length > 0 && (
+              <Link to="/projects" className="inline-flex items-center gap-1 text-sm font-medium text-prusse-700 underline-offset-[3px] hover:underline">
+                Tous mes AO <ArrowRight size={14} aria-hidden />
+              </Link>
             )}
-          </header>
+          </div>
 
           {pLoad ? (
-            <ProjectListSkeleton count={3} />
-          ) : active.length === 0 ? (
-            <EmptyAO onCreate={() => navigate('/projects/new')} />
-          ) : (
-            <ul>
-              {active.slice(0, 6).map((p, i) => (
-                <li key={p.id}>
-                  <button
-                    onClick={() => navigate(`/projects/${p.id}`)}
-                    className={`w-full text-left px-5 py-3 grid grid-cols-[1fr_auto] gap-x-4 gap-y-2.5 items-center hover:bg-ds-bg-2 transition-colors cursor-pointer ${i > 0 ? 'border-t border-ds-bg-3' : ''}`}
-                  >
-                    {/* Projet + client */}
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-ds-text truncate">{p.name}</p>
-                      <div className="mt-0.5 flex items-center gap-3 text-xs text-ds-text-3">
-                        {p.maitre_ouvrage && (
-                          <span className="inline-flex items-center gap-1 truncate">
-                            <MapPin size={10} className="shrink-0" />{p.maitre_ouvrage}
-                          </span>
-                        )}
-                        {p.selected_lot_name && (
-                          <span className="truncate text-ds-cyan-dark">{p.selected_lot_name}</span>
-                        )}
-                      </div>
-                    </div>
-                    {/* Échéance */}
-                    <DeadlinePill echeance={echeanceAO(p)} emphasized={i === 0} />
-                    {/* Rail pipeline (pleine largeur) */}
-                    <div className="col-span-2">
-                      <PipelineRail currentStep={p.current_step} />
-                    </div>
-                  </button>
+            <ul aria-label="Chargement des appels d'offres">
+              {[0, 1, 2].map((i) => (
+                <li key={i} className="flex items-center gap-6 border-b border-ligne py-4">
+                  <span className="h-4 w-2/5 animate-pulse rounded bg-surface-2" />
+                  <span className="h-4 w-24 animate-pulse rounded bg-surface-2" />
+                  <span className="ml-auto h-4 w-32 animate-pulse rounded bg-surface-2" />
                 </li>
               ))}
             </ul>
-          )}
-
-          {active.length > 6 && (
-            <div className="px-5 py-3 border-t border-ds-border-subtle">
-              <button
-                onClick={() => navigate('/projects')}
-                className="flex items-center justify-center gap-2 w-full py-2 rounded-lg text-sm font-medium text-ds-cyan hover:bg-ds-bg-2 transition-colors cursor-pointer"
-              >
-                Voir les {active.length} appels d'offres <ArrowRight size={14} />
-              </button>
-            </div>
+          ) : liste.length === 0 ? (
+            <EmptyAO onCreate={() => navigate('/projects/new')} />
+          ) : (
+            <table className="w-full border-collapse text-left">
+              <thead>
+                <tr className="text-[13px] text-encre-3">
+                  <th scope="col" className="py-2.5 pr-6 font-medium">Appel d'offres</th>
+                  <th scope="col" className="hidden py-2.5 pr-6 font-medium sm:table-cell">Remise</th>
+                  <th scope="col" className="hidden py-2.5 pr-6 font-medium md:table-cell">Avancement</th>
+                  <th scope="col" className="hidden py-2.5 font-medium sm:table-cell">Prochaine étape</th>
+                </tr>
+              </thead>
+              <tbody>
+                {liste.map((p) => {
+                  const aDecider = p.status === 'analyzed' && p.current_step < 4
+                  return (
+                    <tr key={p.id} className="group border-t border-ligne align-top [&>td]:py-4">
+                      <td className="max-w-0 pr-6">
+                        <Link to={`/projects/${p.id}`} className="block">
+                          <span className="line-clamp-2 text-[15px] font-semibold text-encre group-hover:text-prusse-700">{p.name}</span>
+                          <span className="mt-0.5 block truncate text-sm text-encre-3">
+                            {[p.maitre_ouvrage, p.selected_lot_name || (p.current_step <= 2 ? 'lot à choisir' : null)].filter(Boolean).join(' · ')}
+                          </span>
+                        </Link>
+                        {/* Téléphone : la remise et l'étape suivante sous le nom */}
+                        <span className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm sm:hidden">
+                          <span className="tabular-nums text-encre-2">{p._echeance.etat === 'sans_date' ? 'Date à préciser' : p._echeance.libelle}</span>
+                          <Link to={`/projects/${p.id}`} className="font-medium text-prusse-700">{prochaineEtape(p)}</Link>
+                        </span>
+                      </td>
+                      <td className="hidden w-32 whitespace-nowrap pr-6 sm:table-cell"><Remise e={p._echeance} heureConnue={!!echeanceAO(p)?.heure} /></td>
+                      <td className="hidden w-40 pr-6 md:table-cell"><Avancement etape={p.current_step} /></td>
+                      <td className="hidden w-48 sm:table-cell">
+                        <Link
+                          to={`/projects/${p.id}`}
+                          className="text-sm font-medium text-prusse-700 underline-offset-[3px] hover:underline"
+                        >
+                          {prochaineEtape(p)}
+                        </Link>
+                        {aDecider && (
+                          <button
+                            onClick={() => markSansSuite({ id: p.id, name: p.name })}
+                            title="Classer cet AO « Analysé — sans suite » : décision prise, il quitte le tableau de bord"
+                            className="mt-1 flex items-center gap-1.5 text-[13px] text-encre-3 transition-colors hover:text-encre"
+                          >
+                            <FolderX size={13} strokeWidth={1.6} aria-hidden /> Sans suite
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           )}
         </section>
 
-        {/* ── Zone « Analysés » : analyse faite, pas encore de suite ── */}
-        {analysesSansSuite.length > 0 && (
-          <section className="glass-card sheen overflow-hidden">
-            <header className="flex items-center gap-2.5 px-5 py-3 border-b border-ds-border-subtle">
-              <h2 className="text-[15px] font-semibold text-ds-text">Analysés</h2>
-              <span className="pill pill-muted text-xs">
-                {analysesSansSuite.length}
-              </span>
-              <span className="text-xs text-ds-text-3">analyse terminée, à vous de décider</span>
-            </header>
-            <ul>
-              {analysesSansSuite.slice(0, 4).map((p, i) => (
-                <li key={p.id}
-                  className={`px-5 py-3.5 flex items-center gap-3 ${i > 0 ? 'border-t border-ds-bg-3' : ''}`}>
-                  <button
-                    onClick={() => navigate(`/projects/${p.id}`)}
-                    className="flex-1 min-w-0 text-left cursor-pointer"
-                  >
-                    <p className="text-sm font-semibold text-ds-text truncate">{p.name}</p>
-                    {p.maitre_ouvrage && (
-                      <p className="text-xs text-ds-text-3 truncate">{p.maitre_ouvrage}</p>
-                    )}
-                  </button>
-                  <DeadlinePill echeance={echeanceAO(p)} />
-                  <button
-                    onClick={() => markSansSuite({ id: p.id, name: p.name })}
-                    title="Classer cet AO « Analysé — sans suite » : décision prise, il quitte le tableau de bord"
-                    className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-ds-text-2 hover:bg-ds-bg-2 transition-colors cursor-pointer"
-                    style={{ border: '1px solid var(--line)' }}
-                  >
-                    <FolderX size={13} /> Sans suite
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-        </div>
-
-        {/* ─── DROITE ─────────────────────────────────────────────── */}
-        <div className="flex flex-col gap-4">
-
-          {/* ── LE COMPAGNON — présence permanente du bureau d'études IA (T3.5) ── */}
-          <section className="glass-card top-lit blueprint-grid sheen relative overflow-hidden p-4">
-            <div className="mb-1 flex items-center justify-between">
-              <span className="microlabel">Compagnon Synorix</span>
-              <span className="microlabel" style={{ color: 'var(--lum-dim)' }}>
-                {companionState === 'analyse' ? 'analyse' : companionState === 'succes' ? 'terminé' : 'en veille'}
-              </span>
-            </div>
-            <div className="relative mx-auto w-fit">
-              {/* halo doux permanent derrière le visage */}
-              <span
-                aria-hidden
-                className="pointer-events-none absolute -inset-8 rounded-full"
-                style={{
-                  background: 'radial-gradient(50% 50% at 50% 50%, rgba(255,255,255,.18), transparent 70%)',
-                  animation: 'halo-breathe 6s ease-in-out infinite',
-                }}
-              />
-              <CompanionOrb state={companionState} size={296} zoom={1.02} />
-            </div>
-            <p className="mt-3 text-center text-[13px] leading-relaxed text-ds-text-2">{synorixNote}</p>
-          </section>
-
-          {/* Zone Piloter : jauge quota + échéances < 7 jours (B7) */}
-          <section className="glass-card sheen p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <CalendarDays size={14} className="text-ds-cyan" />
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-ds-text-3">Piloter</h3>
-            </div>
-            <div className="-mx-4 mb-2">
-              <QuotaGauge />
-            </div>
-            {/* C14 — taux de réussite (gagnés / décidés) */}
-            {(s.projects_gagnes > 0 || s.taux_succes > 0) && (
-              <div className="flex items-center justify-between px-2 py-1.5 mb-1 text-xs">
-                <span className="text-ds-text-3">Taux de réussite</span>
-                <span className="edge-data font-semibold text-ds-text">{s.taux_succes} %</span>
-              </div>
-            )}
-            {upcoming.length === 0 ? (
-              <p className="text-sm text-ds-text-3 py-2">Aucune échéance sous 7 jours.</p>
+        {/* ─── À côté : dates, coffre-fort, bilan ──────────────────── */}
+        <aside className="space-y-10">
+          <section aria-labelledby="t-dates">
+            <h2 id="t-dates" className="border-b border-ligne pb-3 text-lg font-semibold text-encre">Prochaines dates</h2>
+            {aVenir.length === 0 ? (
+              <p className="pt-4 text-[15px] text-encre-3">Aucune remise à venir.</p>
             ) : (
-              <ul className="space-y-0.5">
-                {upcoming.map((p, i) => {
+              <ul>
+                {aVenir.slice(0, 5).map((p, i) => {
                   const d = p._echeance.limite!
-                  const heure = echeanceAO(p)?.heure
-                  const day = d.getDate()
-                  const month = d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '')
-                  const near = i === 0
+                  const proche = p._echeance.etat !== 'a_venir'
                   return (
-                    <li key={p.id}>
-                      <button
-                        onClick={() => navigate(`/projects/${p.id}`)}
-                        className="flex items-center gap-3 w-full text-left py-2.5 px-2 rounded-lg hover:bg-ds-bg-2 transition-colors cursor-pointer"
-                      >
-                        <div
-                          className={`text-center shrink-0 w-11 py-1 rounded-lg ${near ? 'bg-ds-cyan/10 shadow-glow-sm' : 'bg-ds-bg-2'}`}
-                        >
-                          <p className={`edge-data text-sm font-bold leading-none ${near ? 'text-ds-cyan-dark' : 'text-ds-text'}`}>{day}</p>
-                          <p className="edge-data text-xs uppercase mt-0.5 text-ds-text-3">{month}</p>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-ds-text truncate">{p.name}</p>
-                          {heure && (
-                            <p className="text-xs text-ds-text-3">
-                              {d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                            </p>
-                          )}
-                        </div>
-                        <DeadlinePill echeance={echeanceAO(p)} emphasized={near} />
-                      </button>
+                    <li key={p.id} className="border-b border-ligne last:border-b-0">
+                      <Link to={`/projects/${p.id}`} className="group flex items-center gap-3.5 py-3">
+                        <span className={cn(
+                          'w-11 shrink-0 rounded-md border py-1 text-center leading-none',
+                          i === 0 && proche ? 'border-encre' : 'border-ligne',
+                        )}>
+                          <span className="block text-lg font-semibold tabular-nums text-encre">{String(d.getDate()).padStart(2, '0')}</span>
+                          <span className="mt-0.5 block text-xs text-encre-3">{d.toLocaleDateString('fr-FR', { month: 'short' })}</span>
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate text-[15px] font-medium text-encre group-hover:text-prusse-700">{p.name}</span>
+                          <span className="block text-sm text-encre-3">
+                            Remise {d.toLocaleDateString('fr-FR', { weekday: 'long' })}
+                            {echeanceAO(p)?.heure ? ` à ${heure(d)}` : ''} · {p._echeance.libelle}
+                          </span>
+                        </span>
+                      </Link>
                     </li>
                   )
                 })}
@@ -414,49 +307,73 @@ export default function Dashboard() {
             )}
           </section>
 
-          {/* Accès rapide aux rubriques */}
-          <section className="glass-card sheen p-4">
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-ds-text-3 mb-3">Accès rapide</h3>
-            <div className="grid grid-cols-3 gap-2">
-              {RUBRIQUES.map((r) => (
-                <button
-                  key={r.to}
-                  onClick={() => navigate(r.to)}
-                  className="group flex flex-col items-center gap-1.5 py-3 px-1 rounded-xl border border-ds-border-subtle hover:border-ds-cyan/40 hover:bg-ds-bg-2 transition-all cursor-pointer"
-                >
-                  <span className="stat-icon-bg !h-9 !w-9 bg-ds-bg-2 group-hover:bg-ds-cyan/10 transition-colors">
-                    <r.icon size={16} className="text-ds-text-2 group-hover:text-ds-cyan transition-colors" />
-                  </span>
-                  <span className="text-xs font-medium text-ds-text-2 text-center leading-tight">{r.label}</span>
-                </button>
-              ))}
-            </div>
+          <section aria-labelledby="t-coffre">
+            <h2 id="t-coffre" className="border-b border-ligne pb-3 text-lg font-semibold text-encre">Coffre-fort</h2>
+            {s.documents_expires === 0 && s.documents_expirant_bientot === 0 ? (
+              <p className="pt-4 text-[15px] text-encre-3">Aucune pièce à renouveler.</p>
+            ) : (
+              <ul className="pt-1">
+                {s.documents_expires > 0 && (
+                  <li>
+                    <Link to="/vault" className="flex items-center gap-2.5 py-2.5 text-[15px] text-encre hover:text-prusse-700">
+                      <span className="size-2 shrink-0 rounded-full bg-attention" aria-hidden />
+                      {pluriel(s.documents_expires, 'pièce')} à renouveler
+                    </Link>
+                  </li>
+                )}
+                {s.documents_expirant_bientot > 0 && (
+                  <li>
+                    <Link to="/vault" className="flex items-center gap-2.5 py-2.5 text-[15px] text-encre hover:text-prusse-700">
+                      <span className="size-2 shrink-0 rounded-full border border-attention" aria-hidden />
+                      {s.documents_expirant_bientot > 1
+                        ? `${s.documents_expirant_bientot} pièces expirent bientôt`
+                        : '1 pièce expire bientôt'}
+                    </Link>
+                  </li>
+                )}
+              </ul>
+            )}
           </section>
 
-          {/* Note Synorix : désormais portée par le Compagnon, en haut de colonne (T3.5) */}
-        </div>
+          <section aria-labelledby="t-bilan">
+            <h2 id="t-bilan" className="border-b border-ligne pb-3 text-lg font-semibold text-encre">Bilan</h2>
+            <dl className="pt-1 text-[15px]">
+              <div className="flex items-baseline justify-between py-2">
+                <dt className="text-encre-3">Soumis ce mois-ci</dt>
+                <dd className="font-medium tabular-nums text-encre">{s.projects_soumis_ce_mois}</dd>
+              </div>
+              <div className="flex items-baseline justify-between py-2">
+                <dt className="text-encre-3">AO gagnés</dt>
+                <dd className="font-medium tabular-nums text-encre">{s.projects_gagnes}</dd>
+              </div>
+              {decides && (
+                <div className="flex items-baseline justify-between py-2">
+                  <dt className="text-encre-3">Taux de réussite</dt>
+                  <dd className="font-medium tabular-nums text-encre">{s.taux_succes} %</dd>
+                </div>
+              )}
+            </dl>
+          </section>
+        </aside>
       </div>
 
       {classe && createPortal(
         <div
           role="status"
-          className="fixed bottom-6 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-center gap-3 rounded-xl px-4 py-3 text-sm"
-          style={{ background: '#151A23', border: '1px solid rgba(186,205,234,.18)', boxShadow: '0 12px 32px rgba(0,0,0,0.45)' }}
+          className="calque fixed bottom-6 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-center gap-3 rounded-[10px] border border-ligne bg-surface px-4 py-3 text-sm shadow-flottant"
         >
-          <p className="flex-1" style={{ color: '#E8EBF2' }}>« {classe.name} » est classé sans suite.</p>
+          <p className="flex-1 text-encre">« {classe.name} » est classé sans suite.</p>
           <button
             onClick={() => reouvrir(classe)}
             disabled={reouverture}
-            className="shrink-0 rounded-md px-2.5 py-1 text-xs font-semibold disabled:opacity-60"
-            style={{ color: '#F7F8F8', border: '1px solid rgba(255,255,255,.14)' }}
+            className="shrink-0 rounded-md border border-ligne-forte px-2.5 py-1 text-[13px] font-semibold text-encre transition-colors hover:bg-surface-2 disabled:opacity-60"
           >
             Annuler
           </button>
           <button
             onClick={() => setClasse(null)}
             aria-label="Fermer le message"
-            className="shrink-0 rounded p-0.5 text-xs"
-            style={{ color: '#9BA4B5' }}
+            className="shrink-0 rounded px-1 text-base leading-none text-encre-3 hover:text-encre"
           >
             ×
           </button>
@@ -467,17 +384,61 @@ export default function Dashboard() {
   )
 }
 
-/* ── État vide AO ────────────────────────────────────────────────── */
+/* ── Remise : la date, puis le délai (J−x) ─────────────────────────── */
+function Remise({ e, heureConnue }: { e: Echeance; heureConnue: boolean }) {
+  if (e.etat === 'sans_date' || !e.limite) return <span className="text-sm text-encre-3">Date à préciser</span>
+  const proche = e.etat === 'proche' || e.etat === 'aujourdhui'
+  return (
+    <>
+      <span className="block text-sm font-medium tabular-nums text-encre">
+        {e.limite.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })}
+        {heureConnue && ` · ${heure(e.limite)}`}
+      </span>
+      <span className={cn(
+        'mt-1 inline-flex h-[22px] items-center rounded px-2 text-[13px] font-medium tabular-nums',
+        proche ? 'bg-attention-fond text-attention' : e.etat === 'passee' ? 'text-encre-3' : 'bg-surface-2 text-encre-2',
+        e.etat === 'passee' && 'px-0',
+      )}>
+        {e.libelle}
+      </span>
+    </>
+  )
+}
+
+/* ── Avancement : 6 étapes, celle en cours en bleu de Prusse ───────── */
+function Avancement({ etape }: { etape: number }) {
+  const a = avancementAO(etape)
+  return (
+    <div role="img" aria-label={a.libelle}>
+      <div className="flex gap-[3px]">
+        {ETAPES_AO.map((nom, i) => (
+          <i
+            key={nom}
+            className={cn(
+              'h-1 w-5 rounded-full',
+              i + 1 < a.etape ? 'bg-encre' : i + 1 === a.etape ? 'bg-prusse-500' : 'bg-ligne',
+            )}
+          />
+        ))}
+      </div>
+      <span className="mt-1.5 block text-sm text-encre-2">{a.nom}</span>
+    </div>
+  )
+}
+
+/* ── État vide : l'action suivante, et ce qu'elle déclenche ────────── */
 function EmptyAO({ onCreate }: { onCreate: () => void }) {
   return (
-    <div className="p-10 text-center">
-      <div className="w-12 h-12 rounded-xl flex items-center justify-center mx-auto mb-3 bg-ds-cyan/10">
-        <Plus size={20} className="text-ds-cyan" />
-      </div>
-      <p className="text-sm font-semibold text-ds-text mb-1">Aucun appel d'offres en cours</p>
-      <p className="text-xs text-ds-text-3 mb-5">Lancez votre premier AO pour démarrer l'analyse IA du DCE.</p>
-      <button onClick={onCreate} className="btn-primary inline-flex items-center gap-2 cursor-pointer">
-        <Plus size={14} /> Créer mon premier AO
+    <div className="py-10">
+      <p className="text-[15px] font-semibold text-encre">Aucun appel d'offres en cours</p>
+      <p className="mt-1 max-w-[60ch] text-[15px] text-encre-3">
+        Déposez le DCE (ZIP ou PDF) : Synorix lit les pièces, repère les lots et prépare l'analyse.
+      </p>
+      <button
+        onClick={onCreate}
+        className="mt-5 inline-flex h-9 items-center gap-2 rounded-md bg-encre px-3.5 text-sm font-semibold text-sur-encre transition-colors hover:bg-encre-survol"
+      >
+        <Plus size={16} strokeWidth={2} aria-hidden /> Nouvel AO
       </button>
     </div>
   )

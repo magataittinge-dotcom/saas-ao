@@ -362,3 +362,107 @@
   font-family: 'Geist Mono', ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   THÈME CLAIR « CALQUE » — LE SEUL ENDROIT OÙ CHANGER UNE COULEUR
+   Le papier calque des bureaux d'études : fond clair et précis,
+   l'encre pour agir, le bleu de Prusse pour la sélection, le
+   surligneur jaune réservé à la preuve (extrait exact du DCE).
+   Référence : .claude/echange/concurrents/04-design.md §3.
+   S'applique à la coquille (barre latérale, en-tête, palette ⌘K)
+   et aux écrans déjà passés en Calque (classe .calque, liste
+   PAGES_CALQUE dans components/layout/Layout.tsx). Les autres
+   écrans gardent Lumen (ci-dessus) en attendant leur passage.
+   Tailwind expose ces valeurs sous des noms courts : bg-papier,
+   text-encre-3, border-ligne, bg-prusse-50… (tailwind.config.js).
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  /* ── Fonds ─────────────────────────────────────────────────── */
+  --calque-papier: #F6F5F1;          /* fond de l'application */
+  --calque-surface: #FFFFFF;         /* barre latérale, listes, menus */
+  --calque-surface-2: #F0EEE8;       /* survol, zones en retrait */
+
+  /* ── Filets ────────────────────────────────────────────────── */
+  --calque-ligne: #E3E0D7;           /* séparations (décoratives) */
+  --calque-ligne-forte: #CBC6BA;     /* bord des boutons secondaires */
+  --calque-ligne-champ: #8B9199;     /* bord des champs : 3,2:1 sur blanc */
+
+  /* ── Encre (texte, action principale) ──────────────────────── */
+  --calque-encre: #16191E;           /* texte principal, bouton principal : 17,6:1 */
+  --calque-encre-survol: #2A2F36;    /* bouton principal au survol */
+  --calque-encre-2: #3C424A;         /* texte secondaire : 10,1:1 */
+  --calque-encre-3: #5F666F;         /* métadonnées, aides : 5,3:1 sur papier */
+  --calque-encre-4: #8B9199;         /* icônes discrètes, désactivé — jamais du texte */
+  --calque-sur-encre: #FFFFFF;       /* texte posé sur l'encre */
+
+  /* ── Bleu de Prusse (sélection, liens, focus) ──────────────── */
+  --calque-prusse-50: #EBF1F7;       /* fond de l'élément sélectionné */
+  --calque-prusse-100: #D6E3EF;
+  --calque-prusse-500: #2B5F93;      /* anneau de focus, progression */
+  --calque-prusse-700: #1F4E79;      /* liens, onglet actif : 8,7:1 */
+
+  /* ── Surligneur — la preuve, et rien d'autre ───────────────── */
+  --calque-surligneur: #FFE066;
+  --calque-surligneur-doux: #FFF2B8;
+
+  /* ── États (sourds ; le rouge brique reste au bloquant formel) ── */
+  --calque-ok: #1D6B45;              --calque-ok-fond: #E5F2EA;
+  --calque-attention: #8A5300;       --calque-attention-fond: #FFF1D6;
+  --calque-bloquant: #A2342C;        --calque-bloquant-fond: #FBE8E6;
+
+  /* ── Profondeur, focus, voile ──────────────────────────────── */
+  --calque-ombre-flottante: 0 8px 24px -8px rgba(22, 25, 30, .18);
+  --calque-focus: 0 0 0 2px var(--calque-surface), 0 0 0 4px var(--calque-prusse-500);
+  --calque-voile: rgba(22, 25, 30, .32);   /* derrière la palette ⌘K et le tiroir mobile */
+  --calque-selection: #D6E3EF;             /* texte sélectionné à la souris */
+
+  /* ── Compagnon sur fond clair : son visage garde sa nuit ───── */
+  --calque-compagnon-fond: #16191E;
+
+  /* ── Barre latérale shadcn/ui (composants/ui/sidebar.tsx) ──── */
+  --sidebar-background: var(--calque-surface);
+  --sidebar-foreground: var(--calque-encre-2);
+  --sidebar-primary: var(--calque-encre);
+  --sidebar-primary-foreground: var(--calque-sur-encre);
+  --sidebar-accent: var(--calque-surface-2);
+  --sidebar-accent-foreground: var(--calque-encre);
+  --sidebar-border: var(--calque-ligne);
+  --sidebar-ring: var(--calque-prusse-500);
+}
+
+/* Sous-arbre en Calque : texte, focus, sélection et barres de défilement
+   prennent le thème clair (le reste de l'application reste en Lumen). */
+.calque {
+  color-scheme: light;
+  color: var(--calque-encre);
+  /* composants shadcn/ui (bouton, palette ⌘K, infobulle, tiroir…) */
+  --background: var(--calque-surface);
+  --foreground: var(--calque-encre);
+  --card: var(--calque-surface);
+  --card-foreground: var(--calque-encre);
+  --popover: var(--calque-surface);
+  --popover-foreground: var(--calque-encre);
+  --primary: var(--calque-encre);
+  --primary-foreground: var(--calque-sur-encre);
+  --secondary: var(--calque-surface-2);
+  --secondary-foreground: var(--calque-encre);
+  --muted: var(--calque-surface-2);
+  --muted-foreground: var(--calque-encre-3);
+  --accent: var(--calque-surface-2);
+  --accent-foreground: var(--calque-encre);
+  --destructive: var(--calque-bloquant);
+  --destructive-foreground: var(--calque-sur-encre);
+  --border: var(--calque-ligne);
+  --input: var(--calque-ligne-champ);
+  --ring: var(--calque-prusse-500);
+}
+.calque :focus-visible {
+  outline: none;
+  box-shadow: var(--calque-focus);
+}
+/* la palette ⌘K est elle-même le contexte : pas d'anneau sur son champ */
+.calque [cmdk-input]:focus-visible { box-shadow: none; }
+.calque ::selection { background: var(--calque-selection); color: var(--calque-encre); }
+.calque ::-webkit-scrollbar-thumb { background: var(--calque-ligne-forte); }
+.calque ::-webkit-scrollbar-thumb:hover { background: var(--calque-encre-4); }
+.calque .chiffres { font-variant-numeric: tabular-nums; }

@@ -1,8 +1,12 @@
-import { Menu } from 'lucide-react'
+import { useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import { useUser } from '@clerk/clerk-react'
+import { ChevronRight, Search } from 'lucide-react'
+import { SidebarTrigger } from '@/components/ui/sidebar'
 import { useAuthStore } from '@/stores/authStore'
 import { useCompanionStore } from '@/stores/companionStore'
-import { useLocation } from 'react-router-dom'
 import NotificationBell from './NotificationBell'
+import { RACCOURCI_PALETTE } from './CommandPalette'
 import CompanionOrb from '@/components/ui/CompanionOrb'
 import type { CompanionState } from '@/components/ui/CompanionOrb'
 
@@ -32,16 +36,22 @@ const COMPANION_LABELS: Record<CompanionState, string> = {
 }
 
 interface Props {
-  onMenuToggle: () => void
+  /** Ouvre la palette ⌘K. */
+  onSearch: () => void
 }
 
-export default function Header({ onMenuToggle }: Props) {
+export default function Header({ onSearch }: Props) {
   const { user } = useAuthStore()
   const companionState = useCompanionStore((s) => s.state)
   const { pathname } = useLocation()
 
   const initials = user?.name ? user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() : 'U'
   const displayName = user?.name ?? 'Utilisateur'
+  // La photo du compte, comme en bas de la barre latérale (1.17) ; sans photo,
+  // ou si elle ne charge pas, les initiales.
+  const { user: compte } = useUser()
+  const [photoEnEchec, setPhotoEnEchec] = useState<string | null>(null)
+  const photo = compte?.hasImage && compte.imageUrl !== photoEnEchec ? compte.imageUrl : null
 
   let parent: string | undefined
   let label = ''
@@ -53,65 +63,54 @@ export default function Header({ onMenuToggle }: Props) {
   }
 
   return (
-    <header
-      className="sticky top-0 z-40 flex items-center justify-between px-4 sm:px-6 h-14"
-      style={{
-        background: 'rgba(9,9,10,0.92)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
-      }}
-    >
-      {/* Left side: hamburger + breadcrumb */}
-      <div className="flex items-center gap-2 min-w-0">
-        <button
-          onClick={onMenuToggle}
-          className="p-2 rounded-lg md:hidden touch-target shrink-0"
-          style={{ color: '#959597' }}
-        >
-          <Menu size={20} />
-        </button>
-
-        <div className="flex items-center gap-1.5 text-sm min-w-0" style={{ fontFamily: "'Inter Variable', 'Geist Sans', sans-serif" }}>
-          <span className="font-display hidden sm:inline font-semibold tracking-tight" style={{ color: '#E8E9EB' }}>Synorix</span>
-          <span className="hidden sm:inline" style={{ color: '#909195' }}>&gt;</span>
-          <span className="font-medium truncate" style={{ color: '#F7F8F8' }}>
-            {label || parent || 'Tableau de bord'}
-          </span>
-        </div>
+    <header className="calque sticky top-0 z-40 flex h-14 shrink-0 items-center justify-between gap-4 border-b border-ligne bg-papier px-4 sm:px-6">
+      {/* Gauche : tiroir (téléphone) + fil d'Ariane */}
+      <div className="flex min-w-0 items-center gap-2">
+        <SidebarTrigger className="size-9 text-encre-3 hover:bg-surface-2 hover:text-encre md:hidden" aria-label="Ouvrir la navigation" />
+        <nav aria-label="Fil d'Ariane" className="flex min-w-0 items-center gap-1.5 text-[15px]">
+          {parent && (
+            <>
+              <Link to="/projects" className="hidden truncate text-encre-3 transition-colors hover:text-encre sm:inline">{parent}</Link>
+              <ChevronRight size={14} className="hidden shrink-0 text-encre-4 sm:block" aria-hidden />
+            </>
+          )}
+          <span className="truncate font-medium text-encre" aria-current="page">{label || 'Tableau de bord'}</span>
+        </nav>
       </div>
 
-      {/* Right side */}
-      <div className="flex items-center gap-3">
+      {/* Droite : recherche ⌘K, Compagnon, notifications, compte */}
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+        <button
+          onClick={onSearch}
+          className="flex h-9 items-center gap-2 rounded-md border border-ligne-forte bg-surface px-3 text-sm text-encre-3 transition-colors hover:border-ligne-champ hover:text-encre-2 sm:w-64"
+          aria-label="Rechercher un appel d'offres ou une page"
+        >
+          <Search size={16} strokeWidth={1.6} className="shrink-0" />
+          <span className="hidden flex-1 text-left sm:inline">Rechercher…</span>
+          <kbd className="hidden rounded border border-ligne bg-surface-2 px-1.5 font-sans text-xs text-encre-3 sm:inline">{RACCOURCI_PALETTE}</kbd>
+        </button>
+
         {/* Compagnon IA — état piloté par companionStore (analyse SSE, etc.) */}
         <CompanionOrb
           state={companionState}
-          size={36}
+          size={30}
+          fond="clair"
           title={COMPANION_LABELS[companionState]}
+          className="mx-1"
         />
         {/* Notifications (C23) */}
         <NotificationBell />
-        <div className="w-px h-6 hidden sm:block" style={{ background: '#1E1E21' }} />
 
-        {/* User info + Avatar */}
-        <div className="flex items-center gap-2.5">
-          <div className="hidden sm:block text-right">
-            <p className="text-sm font-medium leading-tight" style={{ color: '#F7F8F8', fontFamily: "'Inter Variable', 'Geist Sans', sans-serif" }}>
-              {displayName}
-            </p>
-            <p className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#959597' }}>
-              Chef de projet
-            </p>
-          </div>
-          <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold cursor-default shrink-0"
-            style={{
-              background: 'radial-gradient(120% 80% at 50% 100%, rgba(255,255,255,0.18), transparent 65%), #121213',
-              color: '#F7F8F8',
-              boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.10)',
-            }}>
-            {initials}
-          </div>
-        </div>
+        <Link
+          to="/settings"
+          title={displayName}
+          aria-label={`Paramètres du compte — ${displayName}`}
+          className="ml-1 grid size-8 shrink-0 place-items-center overflow-hidden rounded-full border border-ligne bg-surface-2 text-xs font-semibold text-encre-2 transition-shadow hover:shadow-[0_0_0_2px_var(--calque-ligne-forte)]"
+        >
+          {photo
+            ? <img src={photo} alt="" className="h-full w-full object-cover" onError={() => setPhotoEnEchec(photo)} />
+            : initials}
+        </Link>
       </div>
     </header>
   )

@@ -69,40 +69,86 @@ export default {
           warning:  '#D9A441',
           danger:   '#F58E86',
         },
-        // shadcn/ui vars — keep for compatibility
-        border:     'hsl(var(--border))',
-        input:      'hsl(var(--input))',
-        ring:       'hsl(var(--ring))',
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
+        // shadcn/ui — couleurs complètes : Lumen dans index.css, Calque dans .calque (tokens.css)
+        border:     'var(--border)',
+        input:      'var(--input)',
+        ring:       'var(--ring)',
+        background: 'var(--background)',
+        foreground: 'var(--foreground)',
         primary: {
-          DEFAULT:    'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))',
+          DEFAULT:    'var(--primary)',
+          foreground: 'var(--primary-foreground)',
         },
         secondary: {
-          DEFAULT:    'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))',
+          DEFAULT:    'var(--secondary)',
+          foreground: 'var(--secondary-foreground)',
         },
         destructive: {
-          DEFAULT:    'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))',
+          DEFAULT:    'var(--destructive)',
+          foreground: 'var(--destructive-foreground)',
         },
         muted: {
-          DEFAULT:    'hsl(var(--muted))',
-          foreground: 'hsl(var(--muted-foreground))',
+          DEFAULT:    'var(--muted)',
+          foreground: 'var(--muted-foreground)',
         },
         accent: {
-          DEFAULT:    'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))',
+          DEFAULT:    'var(--accent)',
+          foreground: 'var(--accent-foreground)',
         },
         popover: {
-          DEFAULT:    'hsl(var(--popover))',
-          foreground: 'hsl(var(--popover-foreground))',
+          DEFAULT:    'var(--popover)',
+          foreground: 'var(--popover-foreground)',
         },
         card: {
-          DEFAULT:    'hsl(var(--card))',
-          foreground: 'hsl(var(--card-foreground))',
+          DEFAULT:    'var(--card)',
+          foreground: 'var(--card-foreground)',
         },
+        // shadcn/ui Sidebar — valeurs Calque dans styles/tokens.css
+        sidebar: {
+          DEFAULT:              'var(--sidebar-background)',
+          foreground:           'var(--sidebar-foreground)',
+          primary:              'var(--sidebar-primary)',
+          'primary-foreground': 'var(--sidebar-primary-foreground)',
+          accent:               'var(--sidebar-accent)',
+          'accent-foreground':  'var(--sidebar-accent-foreground)',
+          border:               'var(--sidebar-border)',
+          ring:                 'var(--sidebar-ring)',
+        },
+        // Thème clair « Calque » — les valeurs vivent dans styles/tokens.css
+        // (un seul endroit) ; ici, seulement des noms courts.
+        papier: 'var(--calque-papier)',
+        surface: {
+          DEFAULT: 'var(--calque-surface)',
+          2:       'var(--calque-surface-2)',
+        },
+        ligne: {
+          DEFAULT: 'var(--calque-ligne)',
+          forte:   'var(--calque-ligne-forte)',
+          champ:   'var(--calque-ligne-champ)',
+        },
+        encre: {
+          DEFAULT: 'var(--calque-encre)',
+          survol:  'var(--calque-encre-survol)',
+          2:       'var(--calque-encre-2)',
+          3:       'var(--calque-encre-3)',
+          4:       'var(--calque-encre-4)',
+        },
+        'sur-encre': 'var(--calque-sur-encre)',
+        prusse: {
+          50:  'var(--calque-prusse-50)',
+          100: 'var(--calque-prusse-100)',
+          500: 'var(--calque-prusse-500)',
+          700: 'var(--calque-prusse-700)',
+        },
+        surligneur: {
+          DEFAULT: 'var(--calque-surligneur)',
+          doux:    'var(--calque-surligneur-doux)',
+        },
+        ok:        { DEFAULT: 'var(--calque-ok)',        fond: 'var(--calque-ok-fond)' },
+        attention: { DEFAULT: 'var(--calque-attention)', fond: 'var(--calque-attention-fond)' },
+        bloquant:  { DEFAULT: 'var(--calque-bloquant)',  fond: 'var(--calque-bloquant-fond)' },
+        voile: 'var(--calque-voile)',
+        compagnon: 'var(--calque-compagnon-fond)',
       },
       borderRadius: {
         lg:  'var(--radius)',
@@ -126,6 +172,8 @@ export default {
         'card-hover':  '0 1px 2px rgba(0,0,0,0.5), 0 20px 48px -20px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,.23)',
         'glass':       '0 1px 2px rgba(0,0,0,0.5), 0 16px 40px -20px rgba(0,0,0,0.7)',
         'edge-light':  'inset 0 1px 0 rgba(255,255,255,.06)',
+        // Calque : une seule ombre, pour ce qui flotte (menus, palette, tiroir)
+        flottant:      'var(--calque-ombre-flottante)',
       },
       keyframes: {
         'accordion-down': {

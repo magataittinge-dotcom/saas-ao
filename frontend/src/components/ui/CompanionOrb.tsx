@@ -9,6 +9,8 @@ import type { CSSProperties, SyntheticEvent } from 'react'
  * Le composant insère lui-même les clips de transition
  * (réveil / endormissement) selon la continuité des yeux.
  * prefers-reduced-motion ou erreur vidéo → poster statique.
+ * Sur fond clair (thème Calque), le visage garde sa nuit : un disque
+ * d'encre (--calque-compagnon-fond) sur lequel le « screen » opère.
  * ═══════════════════════════════════════════════════════════════
  */
 
@@ -74,6 +76,8 @@ interface CompanionOrbProps {
   zoom?: number
   className?: string
   title?: string
+  /** Fond de la page : « clair » pose le visage sur son disque d'encre. */
+  fond?: 'sombre' | 'clair'
 }
 
 export default function CompanionOrb({
@@ -82,7 +86,9 @@ export default function CompanionOrb({
   zoom = 1.12,
   className = '',
   title,
+  fond = 'sombre',
 }: CompanionOrbProps) {
+  const clair = fond === 'clair'
   const prefersReduced = useMemo(
     () =>
       typeof window !== 'undefined' &&
@@ -232,14 +238,18 @@ export default function CompanionOrb({
         <span
           className="absolute rounded-full animate-pulse-glow pointer-events-none"
           style={{
-            inset: -7,
-            background:
-              'radial-gradient(50% 50% at 50% 50%, rgba(255,255,255,.16), transparent 72%)',
+            inset: clair ? -4 : -7,
+            background: clair
+              ? 'radial-gradient(50% 50% at 50% 50%, var(--calque-prusse-100), transparent 72%)'
+              : 'radial-gradient(50% 50% at 50% 50%, rgba(255,255,255,.16), transparent 72%)',
           }}
         />
       )}
 
-      <div className="absolute inset-0 rounded-full overflow-hidden">
+      <div
+        className="absolute inset-0 rounded-full overflow-hidden"
+        style={clair ? { background: 'var(--calque-compagnon-fond)' } : undefined}
+      >
         {showPosterOnly ? (
           <img src={posterFor(state)} alt="" draggable={false} style={layer} />
         ) : (
@@ -261,10 +271,14 @@ export default function CompanionOrb({
         )}
       </div>
 
-      {/* filet lumineux */}
+      {/* filet lumineux (sur fond clair : le filet du papier) */}
       <span
         className="absolute inset-0 rounded-full pointer-events-none"
-        style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,.12)' }}
+        style={{
+          boxShadow: clair
+            ? '0 0 0 1px var(--calque-ligne)'
+            : 'inset 0 0 0 1px rgba(255,255,255,.12)',
+        }}
       />
     </div>
   )

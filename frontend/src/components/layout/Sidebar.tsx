@@ -3,10 +3,13 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useUser } from '@clerk/clerk-react'
 import {
   LayoutDashboard, FolderOpen, Building2, Archive, Users, LogOut,
-  Settings, X, Calculator, Briefcase, Plus, PanelLeftClose, PanelLeftOpen,
+  Settings, Calculator, Briefcase, Plus, PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react'
+import {
+  Sidebar as BarreShadcn, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupLabel,
+  SidebarHeader, SidebarMenu, SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem, useSidebar,
+} from '@/components/ui/sidebar'
 import { useAuthStore } from '@/stores/authStore'
-import { nomPlan } from '@/lib/offres'
 import { echeanceAO, estEnCours, etatEcheance } from '@/lib/echeance'
 import { useLogout } from '@/hooks/useAuth'
 import { useProjects } from '@/hooks/useProject'
@@ -30,7 +33,6 @@ const SECTIONS: { label: string; items: { to: string; icon: typeof LayoutDashboa
       { to: '/company',        icon: Briefcase,  label: 'Mon entreprise' },
       { to: '/references',     icon: Building2,  label: 'Mes références' },
       { to: '/vault',          icon: Archive,    label: 'Coffre-fort' },
-      
       { to: '/outils',         icon: Calculator, label: 'Calculateurs' },
     ],
   },
@@ -41,40 +43,25 @@ const BOTTOM_ITEMS = [
   { to: '/settings', icon: Settings, label: 'Paramètres' },
 ]
 
-const CLE_OUVERTURE = 'synorix.barre-laterale'
+// Élément actif : fond bleu de Prusse pâle, texte bleu de Prusse (thème Calque).
+const ACTIF = 'data-[active=true]:bg-prusse-50 data-[active=true]:text-prusse-700 data-[active=true]:font-semibold'
+const LIEN = cn('h-9 gap-2.5 px-2.5 text-[15px] font-medium text-encre-2 group-data-[collapsible=icon]:mx-auto [&>svg]:size-[18px] [&>svg]:text-encre-3 data-[active=true]:[&>svg]:text-prusse-700', ACTIF)
 
-const PLAN_PILL: Record<string, string> = {
-  free:      'bg-[#1C222D] text-[#9BA4B5]',
-  essentiel: 'pill-pro',
-  pro:       'pill-pro',
-  business:  'pill-entreprise',
-}
-
-interface Props {
-  mobileOpen: boolean
-  onMobileClose: () => void
-}
-
-export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
+export default function Sidebar() {
   // 1.11 — la barre s'ouvre par un bouton (plus au survol : le contenu sautait
-  // au passage de la souris). Préférence gardée dans ce navigateur.
-  const [ouverte, setOuverte] = useState<boolean>(() => {
-    try { return localStorage.getItem(CLE_OUVERTURE) === 'ouverte' } catch { return false }
-  })
-  const basculerOuverture = () => {
-    setOuverte((o) => {
-      try { localStorage.setItem(CLE_OUVERTURE, o ? 'repliee' : 'ouverte') } catch { /* stockage indisponible */ }
-      return !o
-    })
-  }
+  // au passage de la souris). La préférence est gardée par Layout (localStorage).
+  const { state, setOpen, isMobile, setOpenMobile } = useSidebar()
+  const ouverte = state === 'expanded'
+  const basculerOuverture = () => setOpen(!ouverte)
+  // Le tiroir du téléphone montre toujours la barre dépliée.
+  const deplie = ouverte || isMobile
+
   const handleLogout = useLogout()
   const navigate = useNavigate()
-  const location = useLocation()
-  const { user, organization } = useAuthStore()
+  const { pathname } = useLocation()
+  const { user } = useAuthStore()
   const { data: projects = [] } = useProjects()
 
-  const planKey = (organization?.plan || 'free') as string
-  const pill = { label: nomPlan(planKey), pillClass: PLAN_PILL[planKey] ?? PLAN_PILL.free }
   const initials = user?.name ? user.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() : 'U'
   // Photo du compte Clerk (Google ou importée) ; sans photo, ou si elle ne
   // charge pas, les initiales restent.
@@ -82,237 +69,126 @@ export default function Sidebar({ mobileOpen, onMobileClose }: Props) {
   const [photoEnEchec, setPhotoEnEchec] = useState<string | null>(null)
   const photo = compte?.hasImage && compte.imageUrl !== photoEnEchec ? compte.imageUrl : null
 
-  // Badge deadline sur « Mes AO » : AO en cours dont l'échéance est aujourd'hui
-  // ou sous 7 jours — même calcul que tous les écrans (1.14).
+  // Badge sur « Mes AO » : AO en cours dont l'échéance est aujourd'hui ou sous
+  // 7 jours — même calcul que tous les écrans (1.14).
   const urgentCount = useMemo(() => projects.filter((p) => {
     if (!estEnCours(p.status)) return false
     const etat = etatEcheance(echeanceAO(p)).etat
     return etat === 'aujourdhui' || etat === 'proche'
   }).length, [projects])
 
-  useEffect(() => { onMobileClose() }, [location.pathname, onMobileClose])
+  // Sur téléphone, le tiroir se referme quand on change de page.
+  useEffect(() => { if (isMobile) setOpenMobile(false) }, [pathname, isMobile, setOpenMobile])
 
-  useEffect(() => {
-    if (mobileOpen) {
-      document.body.style.overflow = 'hidden'
-      return () => { document.body.style.overflow = '' }
-    }
-  }, [mobileOpen])
+  const estActif = (to: string) => pathname === to || pathname.startsWith(`${to}/`)
 
-  const expanded = mobileOpen || ouverte
-
-  const renderItem = ({ to, icon: Icon, label }: { to: string; icon: typeof LayoutDashboard; label: string }) => (
-    <div key={to} className="relative group">
-      {/* Edge : l'état actif = ligne d'horizon cyan (glass-nav.active),
-          hover en CSS — plus aucun style inline ni handler JS. */}
-      <NavLink to={to}
-        className={({ isActive }) =>
-          cn('glass-nav touch-target', isActive && 'active', !expanded && 'justify-center px-0')}
-      >
-        {({ isActive }) => (
-          <>
-            <span className="relative shrink-0">
-              <Icon size={18} style={{ color: isActive ? '#E4E9F2' : undefined }} />
-              {to === '/projects' && urgentCount > 0 && !expanded && (
-                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full" style={{ background: '#F58E86' }} />
-              )}
-            </span>
-            {expanded && (
-              <span className="truncate text-[13px] flex-1">{label}</span>
-            )}
-            {expanded && to === '/projects' && urgentCount > 0 && (
-              <span
-                className="px-1.5 py-0.5 rounded-full text-xs font-bold leading-none shrink-0"
-                style={{ background: 'rgba(245,142,134,0.10)', color: '#F58E86' }}
-                title={`${urgentCount} AO avec une échéance sous 7 jours`}
-              >
-                {urgentCount}
-              </span>
-            )}
-          </>
-        )}
-      </NavLink>
-      {!expanded && <Tooltip label={label} />}
-    </div>
+  const lien = ({ to, icon: Icon, label }: { to: string; icon: typeof LayoutDashboard; label: string }) => (
+    <SidebarMenuItem key={to}>
+      <SidebarMenuButton asChild isActive={estActif(to)} tooltip={label} className={LIEN}>
+        <NavLink to={to}>
+          <Icon strokeWidth={1.6} />
+          <span>{label}</span>
+        </NavLink>
+      </SidebarMenuButton>
+      {to === '/projects' && urgentCount > 0 && (
+        <>
+          <SidebarMenuBadge
+            className="right-2 top-2 rounded-full bg-attention-fond px-1.5 text-xs font-semibold tabular-nums text-attention"
+            title={`${urgentCount} AO avec une échéance sous 7 jours`}
+          >
+            {urgentCount}
+          </SidebarMenuBadge>
+          {!deplie && (
+            <span aria-hidden className="pointer-events-none absolute right-3 top-1.5 hidden size-2 rounded-full bg-attention md:block" />
+          )}
+        </>
+      )}
+    </SidebarMenuItem>
   )
 
   return (
-    <>
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 z-30 md:hidden"
-          style={{ background: 'rgba(0,0,0,0.20)' }}
-          onClick={onMobileClose}
-        />
-      )}
-
-      <aside
-        className={cn(
-          'glass-sidebar flex flex-col shrink-0 transition-all duration-300 ease-in-out',
-          'fixed md:relative z-40',
-          mobileOpen
-            ? 'translate-x-0 w-[240px]'
-            : '-translate-x-full md:translate-x-0',
-          !mobileOpen && (ouverte ? 'md:w-[240px]' : 'md:w-16'),
-          'h-full',
-        )}
-      >
-        {/* ── Logo ─────────────────────────────────── */}
-        <div className="h-16 flex items-center shrink-0 overflow-hidden"
-          style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-          <div className={cn('flex items-center gap-2.5 transition-all duration-300 flex-1', expanded ? 'px-4' : 'px-0 justify-center w-full')}>
-            <div className="logo-synorix"><span className="logo-synorix-text">S</span></div>
-            {expanded && (
-              <span className="font-black text-xl tracking-tight whitespace-nowrap font-display"
-                style={{ color: '#F4F6FA' }}>
-                Synorix
-              </span>
-            )}
-          </div>
-          {mobileOpen && (
-            <button
-              onClick={onMobileClose}
-              className="p-2 mr-2 rounded-lg md:hidden touch-target"
-              style={{ color: '#788295' }}
-            >
-              <X size={20} />
-            </button>
-          )}
+    <BarreShadcn collapsible="icon" className="calque border-ligne">
+      {/* ── Marque + [Nouvel AO], hors navigation ─────────────────── */}
+      <SidebarHeader className="gap-4 px-3 pb-2 pt-4 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-2">
+        <div className="flex items-center gap-2.5 px-1.5">
+          <span className="grid size-[26px] shrink-0 place-items-center rounded-md bg-encre text-[13px] font-bold text-sur-encre">S</span>
+          <span className="text-[17px] font-semibold tracking-tight text-encre group-data-[collapsible=icon]:hidden">Synorix</span>
         </div>
-
-        {/* ── [+ Nouvel AO] — bouton primaire hors nav ── */}
-        <div className={cn('pt-3 pb-1', expanded ? 'px-3' : 'px-2')}>
-          <div className="relative group">
-            <button
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              tooltip="Nouvel AO"
               onClick={() => navigate('/projects/new')}
-              className="signature-btn w-full justify-center py-2 text-[13px] touch-target"
+              className="h-9 justify-center gap-2 bg-encre text-sm font-semibold text-sur-encre hover:bg-encre-survol hover:text-sur-encre active:bg-encre-survol active:text-sur-encre group-data-[collapsible=icon]:mx-auto [&>svg]:size-4"
             >
-              <Plus size={16} className="shrink-0" />
-              {expanded && <span className="whitespace-nowrap">Nouvel AO</span>}
-            </button>
-            {!expanded && <Tooltip label="Nouvel AO" />}
+              <Plus strokeWidth={2} />
+              <span>Nouvel AO</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
+
+      {/* ── Travail / Mon capital ─────────────────────────────────── */}
+      <SidebarContent className="gap-1 px-1 group-data-[collapsible=icon]:items-center">
+        {SECTIONS.map((section) => (
+          <SidebarGroup key={section.label} className="py-1.5">
+            <SidebarGroupLabel className="h-7 px-2.5 text-xs font-semibold tracking-wide text-encre-3">
+              {section.label}
+            </SidebarGroupLabel>
+            <SidebarMenu className="gap-0.5">{section.items.map(lien)}</SidebarMenu>
+          </SidebarGroup>
+        ))}
+      </SidebarContent>
+
+      {/* ── Équipe, Paramètres, offre et quota, compte ────────────── */}
+      <SidebarFooter className="gap-0 px-1 pb-3 group-data-[collapsible=icon]:items-center">
+        <SidebarGroup className="py-1">
+          <SidebarMenu className="gap-0.5">{BOTTOM_ITEMS.map(lien)}</SidebarMenu>
+        </SidebarGroup>
+
+        {deplie && (
+          <div className="mx-2 border-t border-ligne pt-1">
+            <QuotaGauge />
           </div>
-        </div>
+        )}
 
-        {/* ── Sections TRAVAIL / MON CAPITAL ────────── */}
-        <nav className="flex-1 py-1 px-2 overflow-y-auto overflow-x-hidden">
-          {SECTIONS.map((section) => (
-            <div key={section.label} className="mb-1">
-              {expanded && (
-                <div className="px-2 pt-3 pb-1">
-                  <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#788295' }}>
-                    {section.label}
-                  </span>
-                </div>
-              )}
-              {!expanded && <div className="pt-3" />}
-              <div className="space-y-0.5">
-                {section.items.map(renderItem)}
-              </div>
-            </div>
-          ))}
-        </nav>
-
-        {/* ── Équipe + Paramètres (bas) ─────────────── */}
-        <div className="px-2 py-1 space-y-0.5" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          {BOTTOM_ITEMS.map(renderItem)}
-        </div>
-
-        {/* ── Jauge quota (C17) — cliquable vers l'abonnement ── */}
-        {expanded && <QuotaGauge />}
-
-        {/* ── Plan badge ── */}
-        <div className="border-t border-[#1C222D]">
-          {expanded ? (
-            <div className="flex items-center gap-2 px-4 h-10">
-              <span className={cn('px-2 py-0.5 rounded-full text-xs font-semibold leading-none', pill.pillClass)}>
-                {pill.label}
-              </span>
-              {planKey === 'free' && (
-                <button
-                  onClick={() => navigate('/settings/billing')}
-                  className="text-xs text-[#E4E9F2] hover:text-[#FFFFFF] transition-colors ml-auto"
-                >
-                  Choisir une offre
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="relative group flex justify-center h-10 items-center">
-              <span className={cn('px-1.5 py-0.5 rounded text-xs font-bold leading-none', pill.pillClass)}>
-                {pill.label.charAt(0)}
-              </span>
-              <Tooltip label={`Plan ${pill.label}`} />
+        <div className={cn('mx-2 flex items-center gap-2.5 border-t border-ligne pt-3', !deplie && 'mx-0 flex-col border-t-0 pt-1')}>
+          <div className="grid size-7 shrink-0 place-items-center overflow-hidden rounded-full border border-ligne bg-surface-2 text-xs font-semibold text-encre-2">
+            {photo
+              ? <img src={photo} alt="" className="h-full w-full object-cover" onError={() => setPhotoEnEchec(photo)} />
+              : initials}
+          </div>
+          {deplie && (
+            <div className="min-w-0 flex-1 leading-tight">
+              <p className="truncate text-sm font-medium text-encre">{user?.name || 'Utilisateur'}</p>
+              <p className="truncate text-xs text-encre-3">{user?.email || ''}</p>
             </div>
           )}
-        </div>
-
-        {/* ── Déplier / replier (bureau) ── */}
-        <div className="hidden md:block px-2 pb-1">
           <button
-            onClick={basculerOuverture}
-            aria-expanded={ouverte}
-            aria-label={ouverte ? 'Replier la barre latérale' : 'Déplier la barre latérale'}
-            title={ouverte ? 'Replier' : 'Déplier'}
-            className={cn('w-full flex items-center gap-2 rounded-lg py-1.5 text-xs transition-colors hover:bg-[#1C222D]', ouverte ? 'px-2' : 'justify-center')}
-            style={{ color: '#9BA4B5' }}
+            onClick={handleLogout}
+            title="Déconnexion"
+            aria-label="Déconnexion"
+            className="grid size-8 shrink-0 place-items-center rounded-md text-encre-3 transition-colors hover:bg-surface-2 hover:text-encre"
           >
-            {ouverte ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
-            {ouverte && <span>Replier</span>}
+            <LogOut size={16} strokeWidth={1.6} />
           </button>
         </div>
 
-        {/* ── User + Logout ─────────────────────── */}
-        <div className="border-t border-[#1C222D] p-2">
-          <div className={cn('flex items-center gap-2.5 rounded-lg p-2 transition-all duration-200', expanded ? '' : 'justify-center')}>
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 overflow-hidden"
-              style={{
-                background: 'radial-gradient(120% 80% at 50% 100%, rgba(228,233,242,0.18), transparent 65%), #0F1218',
-                color: '#F4F6FA',
-                boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.10)',
-              }}>
-              {photo
-                ? <img src={photo} alt="" className="w-full h-full object-cover" onError={() => setPhotoEnEchec(photo)} />
-                : initials}
-            </div>
-            {expanded && (
-              <div className="flex-1 min-w-0">
-                <p className="text-[12px] font-medium text-[#F4F6FA] truncate">{user?.name || 'Utilisateur'}</p>
-                <p className="text-xs text-[#788295] truncate">{user?.email || ''}</p>
-              </div>
-            )}
-            {expanded && (
-              <button onClick={handleLogout}
-                className="p-1.5 rounded-md transition-colors hover:bg-[#1C222D] touch-target"
-                style={{ color: '#788295' }}
-                title="Déconnexion"
-              >
-                <LogOut size={14} />
-              </button>
-            )}
-          </div>
-          {!expanded && (
-            <div className="relative group">
-              <button onClick={handleLogout}
-                className="w-full flex justify-center py-1.5 transition-colors touch-target"
-                style={{ color: '#788295' }}
-              >
-                <LogOut size={14} />
-              </button>
-              <Tooltip label="Déconnexion" />
-            </div>
+        {/* ── Déplier / replier (bureau) ── */}
+        <button
+          onClick={basculerOuverture}
+          aria-expanded={ouverte}
+          aria-label={ouverte ? 'Replier la barre latérale' : 'Déplier la barre latérale'}
+          title={ouverte ? 'Replier' : 'Déplier'}
+          className={cn(
+            'mx-2 mt-2 hidden h-8 items-center gap-2 rounded-md text-sm text-encre-3 transition-colors hover:bg-surface-2 hover:text-encre md:flex',
+            ouverte ? 'px-2' : 'mx-0 w-8 justify-center',
           )}
-        </div>
-      </aside>
-    </>
-  )
-}
-
-function Tooltip({ label }: { label: string }) {
-  return (
-    <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 px-2.5 py-1.5 text-xs whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50 hidden md:block"
-      style={{ color: '#F4F6FA', background: '#151A23', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}>
-      {label}
-    </div>
+        >
+          {ouverte ? <PanelLeftClose size={16} strokeWidth={1.6} /> : <PanelLeftOpen size={16} strokeWidth={1.6} />}
+          {ouverte && <span>Replier</span>}
+        </button>
+      </SidebarFooter>
+    </BarreShadcn>
   )
 }

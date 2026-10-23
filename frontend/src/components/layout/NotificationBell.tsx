@@ -62,37 +62,32 @@ export default function NotificationBell() {
     <div className="relative" ref={panelRef}>
       <button
         onClick={() => setOpen(o => !o)}
-        className="relative p-2 rounded-full touch-target"
-        style={{ color: '#788295' }}
+        className="relative grid size-9 place-items-center rounded-md text-encre-3 transition-colors hover:bg-surface-2 hover:text-encre touch-target"
         title="Notifications"
+        aria-label={unread > 0 ? `Notifications, ${unread} non lues` : 'Notifications'}
+        aria-expanded={open}
       >
-        <Bell size={18} />
+        <Bell size={18} strokeWidth={1.6} />
         {unread > 0 && (
-          <span
-            className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full text-xs font-bold flex items-center justify-center edge-data"
-            style={{ background: '#E4E9F2', color: '#0A0C11' }}
-          >
+          <span className="absolute right-0.5 top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-encre px-1 text-xs font-semibold tabular-nums leading-none text-sur-encre">
             {unread > 9 ? '9+' : unread}
           </span>
         )}
       </button>
 
       {open && (
-        <div
-          className="absolute right-0 top-full mt-2 w-80 rounded-xl overflow-hidden z-50"
-          style={{ background: '#151A23', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 8px 24px rgba(0,0,0,0.10)' }}
-        >
-          <div className="flex items-center justify-between px-4 py-2.5" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            <span className="text-sm font-bold" style={{ color: '#F4F6FA' }}>Notifications</span>
+        <div className="calque absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-[10px] border border-ligne bg-surface shadow-flottant">
+          <div className="flex items-center justify-between border-b border-ligne px-4 py-2.5">
+            <span className="text-sm font-semibold text-encre">Notifications</span>
             {unread > 0 && (
-              <button onClick={() => markAllRead()} className="text-xs hover:underline" style={{ color: '#E4E9F2' }}>
+              <button onClick={() => markAllRead()} className="text-xs text-prusse-700 hover:underline underline-offset-2">
                 Tout marquer lu
               </button>
             )}
           </div>
           <div className="max-h-96 overflow-y-auto">
             {(data?.items ?? []).length === 0 ? (
-              <p className="px-4 py-6 text-center text-sm" style={{ color: '#788295' }}>
+              <p className="px-4 py-6 text-center text-sm text-encre-3">
                 Aucune notification
               </p>
             ) : (
@@ -100,21 +95,20 @@ export default function NotificationBell() {
                 <button
                   key={n.id}
                   onClick={() => !n.read && markRead(n.id)}
-                  className="w-full text-left px-4 py-3 transition-colors hover:bg-[#1C222D]"
-                  style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
+                  className="w-full border-b border-ligne px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-surface-2"
                 >
                   <div className="flex items-start gap-2">
                     {!n.read && (
-                      <span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: '#E4E9F2' }} />
+                      <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-prusse-500" />
                     )}
                     <div className="min-w-0">
-                      <p className="text-sm leading-snug" style={{ color: n.read ? '#9BA4B5' : '#F4F6FA', fontWeight: n.read ? 400 : 600 }}>
+                      <p className={n.read ? 'text-sm leading-snug text-encre-2' : 'text-sm font-semibold leading-snug text-encre'}>
                         {n.titre}
                       </p>
                       {n.corps && (
-                        <p className="text-xs mt-0.5 line-clamp-2" style={{ color: '#788295' }}>{n.corps}</p>
+                        <p className="mt-0.5 line-clamp-2 text-xs text-encre-3">{n.corps}</p>
                       )}
-                      <p className="text-xs mt-1" style={{ color: '#5C6678' }}>{timeAgo(n.created_at)}</p>
+                      <p className="mt-1 text-xs text-encre-3">{timeAgo(n.created_at)}</p>
                     </div>
                   </div>
                 </button>

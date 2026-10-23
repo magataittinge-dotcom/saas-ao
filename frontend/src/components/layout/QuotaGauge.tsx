@@ -1,6 +1,8 @@
-import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/services/api'
+import { nomPlan } from '@/lib/offres'
+import { cn } from '@/lib/utils'
 
 interface QuotaCounter {
   used: number
@@ -15,35 +17,35 @@ interface QuotaStatus {
   memoires: QuotaCounter
 }
 
-function gaugeColor(used: number, limit: number): string {
-  if (used >= limit) return '#F58E86'
-  if (used / limit >= 0.8) return '#F5C26B'
-  return '#E4E9F2'
+/** Jauge : bleu de Prusse, ambre à 80 %, brique quand le quota bloque. */
+function teinte(used: number, limit: number): { texte: string; barre: string } {
+  if (used >= limit) return { texte: 'text-bloquant', barre: 'bg-bloquant' }
+  if (used / limit >= 0.8) return { texte: 'text-attention', barre: 'bg-attention' }
+  return { texte: 'text-encre-2', barre: 'bg-prusse-500' }
 }
 
 function CounterRow({ label, counter }: { label: string; counter: QuotaCounter }) {
   if (counter.limit === null) return null
-  const color = gaugeColor(counter.used, counter.limit)
+  const t = teinte(counter.used, counter.limit)
   const pct = Math.min(100, (counter.used / counter.limit) * 100)
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs w-14 shrink-0" style={{ color: '#788295' }}>{label}</span>
-      <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: '#1C222D' }}>
-        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
+    <div>
+      <div className="flex items-baseline justify-between text-[13px] text-encre-2">
+        <span>{label}</span>
+        <span className={cn('tabular-nums', t.texte)}>{counter.used} / {counter.limit}</span>
       </div>
-      <span className="edge-data text-xs font-semibold tabular-nums shrink-0" style={{ color }}>
-        {counter.used}/{counter.limit}
-      </span>
+      <div className="mt-1 h-1 overflow-hidden rounded-full bg-surface-2">
+        <div className={cn('h-full rounded-full transition-[width] duration-300', t.barre)} style={{ width: `${pct}%` }} />
+      </div>
     </div>
   )
 }
 
 /**
- * Jauge de quota mensuel (C17) — affichée dans la sidebar, cliquable vers
- * la page Facturation. Business (illimité) n'affiche pas de jauge.
+ * Offre et quota mensuel (C17), en pied de barre latérale ; un clic mène à
+ * Paramètres › Abonnement. Business (illimité) n'affiche que son offre.
  */
 export default function QuotaGauge() {
-  const navigate = useNavigate()
   const { data } = useQuery<QuotaStatus>({
     queryKey: ['billing-quota'],
     queryFn: async () => {
@@ -55,20 +57,26 @@ export default function QuotaGauge() {
   })
 
   if (!data) return null
-  if (data.analyses.limit === null && data.memoires.limit === null) return null // illimité
+  const essai = data.plan === 'free'
+  const illimite = data.analyses.limit === null && data.memoires.limit === null
 
   return (
-    <button
-      onClick={() => navigate('/settings/billing')}
+    <Link
+      to="/settings/billing"
       title="Voir mon abonnement"
-      className="w-full text-left px-4 py-2 space-y-1.5 transition-colors hover:bg-[#1C222D]"
-      style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
+      className="block space-y-2 rounded-md px-1.5 py-2.5 transition-colors hover:bg-surface-2"
     >
-      <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#788295' }}>
-        {data.plan === 'free' ? 'Essai gratuit' : 'Quota mensuel'}
-      </span>
-      <CounterRow label="Analyses" counter={data.analyses} />
-      <CounterRow label="Mémoires" counter={data.memoires} />
-    </button>
+      {!illimite && (
+        <>
+          <CounterRow label="Analyses" counter={data.analyses} />
+          <CounterRow label="Mémoires" counter={data.memoires} />
+        </>
+      )}
+      <p className="text-xs text-encre-3">
+        {essai ? 'Essai gratuit' : `Offre ${nomPlan(data.plan)}`}
+        {illimite && ' · illimitée'}
+        {essai && <span className="text-prusse-700"> · Choisir une offre</span>}
+      </p>
+    </Link>
   )
 }
