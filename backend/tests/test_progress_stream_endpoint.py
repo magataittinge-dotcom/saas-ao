@@ -143,3 +143,75 @@ def test_progress_stream_unknown_project_returns_404(db_session, test_user):
         assert resp.status_code == 404
     finally:
         app.dependency_overrides.clear()
+
+
+# ── Flux réel (nuit du 23/10) : livraison, battement de cœur, aucun thread ───
+# Le TestClient ne rend la réponse qu'une fois le flux FINI : les événements sont
+# publiés par un thread décalé, après l'abonnement fait par la route.
+def _publier_plus_tard(pid, evenements, delai=0.5):
+    import threading
+    import time as _time
+
+    def _go():
+        _time.sleep(delai)
+        for type_, donnees in evenements:
+            progress_bus.publish(pid, type_, donnees)
+
+    th = threading.Thread(target=_go, daemon=True)
+    th.start()
+    return th
+
+
+def _evenements(texte):
+    return [l.split(":", 1)[1].strip() for l in texte.splitlines() if l.startswith("event:")]
+
+
+def _projet(db_session, test_org, pid):
+    db_session.add(Project(id=pid, organization_id=test_org.id, name="X"))
+    db_session.commit()
+
+
+def test_le_flux_livre_les_evenements_dans_l_ordre_puis_se_ferme(db_session, test_org, test_user):
+    _projet(db_session, test_org, "p-sse-1")
+    client = _client_as(test_user)
+    try:
+        _publier_plus_tard("p-sse-1", [("progress", {"progress": 40}), ("complete", {"progress": 100})])
+        r = client.get("/api/projects/p-sse-1/progress-stream")
+        assert r.status_code == 200
+        assert _evenements(r.text) == ["init", "progress", "complete"]
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_le_flux_bat_quand_rien_ne_se_passe(db_session, test_org, test_user, monkeypatch):
+    import routers.progress as rp
+    monkeypatch.setattr(rp, "_HEARTBEAT_INTERVAL_S", 0.2)
+    _projet(db_session, test_org, "p-sse-2")
+    client = _client_as(test_user)
+    try:
+        _publier_plus_tard("p-sse-2", [("complete", {"progress": 100})], delai=1.2)
+        evenements = _evenements(client.get("/api/projects/p-sse-2/progress-stream").text)
+        assert evenements[0] == "init" and evenements[-1] == "complete"
+        assert "heartbeat" in evenements
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_un_flux_ouvert_ne_retient_aucun_thread(db_session, test_org, test_user, monkeypatch):
+    """Chaque fenêtre de progression ouverte retenait un thread du pool to_thread
+    (6 threads sur un VPS à 2 vCPU) : au-delà, dépôts, surlignage et vérifications
+    IA attendaient. La file se lit maintenant sans thread."""
+    import asyncio as _asyncio
+
+    async def interdit(*a, **k):
+        raise AssertionError("le flux SSE ne doit pas prendre de thread")
+
+    monkeypatch.setattr(_asyncio, "to_thread", interdit)
+    _projet(db_session, test_org, "p-sse-3")
+    client = _client_as(test_user)
+    try:
+        _publier_plus_tard("p-sse-3", [("progress", {"progress": 10}), ("complete", {"progress": 100})])
+        evenements = _evenements(client.get("/api/projects/p-sse-3/progress-stream").text)
+        assert evenements == ["init", "progress", "complete"]
+    finally:
+        app.dependency_overrides.clear()

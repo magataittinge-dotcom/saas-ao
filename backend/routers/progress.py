@@ -45,7 +45,11 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 _HEARTBEAT_INTERVAL_S = 25.0
-_QUEUE_TIMEOUT_S = 1.0  # poll the queue with this timeout to allow heartbeat ticks
+_QUEUE_TIMEOUT_S = 1.0  # (historique) ancienne attente bloquante sur la file
+# Lecture de la file SANS thread : un flux ouvert par fenêtre de progression ne doit
+# pas immobiliser un thread du pool to_thread (min(32, nCPU+4) : 6 sur un VPS à
+# 2 vCPU). Au-delà, dépôts, surlignage et vérifications IA attendaient leur tour.
+_ATTENTE_FILE_S = 0.2   # délai max de livraison d'un événement
 
 
 # R11 — source UNIQUE (filtre org + soft-delete) ; fini les 7 copies.
@@ -105,11 +109,12 @@ async def progress_stream(
                 if await request.is_disconnected():
                     break
 
-                # Poll the sync queue without blocking the event loop.
+                # File lue sans bloquer la boucle NI prendre de thread.
                 try:
-                    event = await asyncio.to_thread(q.get, True, _QUEUE_TIMEOUT_S)
+                    event = q.get_nowait()
                 except queue.Empty:
                     event = None
+                    await asyncio.sleep(_ATTENTE_FILE_S)
 
                 if event is not None:
                     yield _format_event(event["type"], event["data"])
