@@ -286,10 +286,11 @@ def _scan_ods_cell_content(file_path: str, sheet_names: List[str]) -> List[LotDe
 
 # ─── Tranche detection in Excel (AMÉLIORATION 7) ──────────────────────────────
 
-def _detect_tranches_in_excel(file_path: str) -> List[str]:
+def _detect_tranches_in_excel(file_path: str, wb=None) -> List[str]:
     """
     Scan first 10 rows of an Excel/ODS for tranche-related column headers.
     Returns list like ["Tranche ferme: Existant école", "Tranche optionnelle: Salle polyvalente"].
+    `wb` : classeur déjà ouvert par l'appelant (.xlsx/.xls) — évite de le rouvrir.
     """
     path = Path(file_path)
     suffix = path.suffix.lower()
@@ -298,7 +299,9 @@ def _detect_tranches_in_excel(file_path: str) -> List[str]:
     try:
         if suffix == ".xlsx":
             import openpyxl
-            wb = openpyxl.load_workbook(str(path), read_only=True, data_only=True)
+            ouvert_ici = wb is None
+            if ouvert_ici:
+                wb = openpyxl.load_workbook(str(path), read_only=True, data_only=True)
             for ws in wb.worksheets:
                 for i, row in enumerate(ws.iter_rows(max_row=10, values_only=True)):
                     if i >= 10:
@@ -313,11 +316,13 @@ def _detect_tranches_in_excel(file_path: str) -> List[str]:
                                 tranches.append(label)
                 if tranches:
                     break
-            wb.close()
+            if ouvert_ici:
+                wb.close()
 
         elif suffix == ".xls":
             import xlrd
-            wb = xlrd.open_workbook(str(path))
+            if wb is None:
+                wb = xlrd.open_workbook(str(path))
             for ws in wb.sheets():
                 for row_idx in range(min(10, ws.nrows)):
                     for col_idx in range(ws.ncols):
@@ -362,8 +367,9 @@ def _detect_tranches_in_excel(file_path: str) -> List[str]:
 
 # ─── Excel single-sheet cell content scan ─────────────────────────────────────
 
-def _scan_excel_cell_content_for_lots(file_path: str, sheet_names: List[str]) -> List[LotDetection]:
-    """Scan Excel cell content for embedded lot patterns (≤2 non-ignored sheets)."""
+def _scan_excel_cell_content_for_lots(file_path: str, sheet_names: List[str], wb=None) -> List[LotDetection]:
+    """Scan Excel cell content for embedded lot patterns (≤2 non-ignored sheets).
+    `wb` : classeur déjà ouvert par l'appelant (.xlsx/.xls) — évite de le rouvrir."""
     path = Path(file_path)
     suffix = path.suffix.lower()
     lots: Dict[str, LotDetection] = {}
@@ -371,7 +377,9 @@ def _scan_excel_cell_content_for_lots(file_path: str, sheet_names: List[str]) ->
     try:
         if suffix == ".xlsx":
             import openpyxl
-            wb = openpyxl.load_workbook(str(path), read_only=True, data_only=True)
+            ouvert_ici = wb is None
+            if ouvert_ici:
+                wb = openpyxl.load_workbook(str(path), read_only=True, data_only=True)
             for sheet_name in sheet_names:
                 if _is_ignored_sheet(sheet_name):
                     continue
@@ -395,11 +403,13 @@ def _scan_excel_cell_content_for_lots(file_path: str, sheet_names: List[str]) ->
                                 label = _LOT_CELL_CONTENT.sub('', cell_str).strip(' :—-–')[:60]
                                 nom = f"Lot {raw_id} — {label}" if label else f"Lot {raw_id}"
                                 lots[lot_id] = LotDetection(id=lot_id, nom=nom, confidence=65, sources=["excel"])
-            wb.close()
+            if ouvert_ici:
+                wb.close()
 
         elif suffix == ".xls":
             import xlrd
-            wb = xlrd.open_workbook(str(path))
+            if wb is None:
+                wb = xlrd.open_workbook(str(path))
             for sheet_name in sheet_names:
                 if _is_ignored_sheet(sheet_name):
                     continue
@@ -478,6 +488,9 @@ def detect_lots_from_excel(file_path: str) -> List[Dict]:
 
     suffix = path.suffix.lower()
     sheet_names: List[str] = []
+    # Classeur ouvert UNE fois et transmis aux scans (avant : 3 ouvertures, soit
+    # 3 lectures complètes des chaînes partagées — 44 s sur les 6 DPGF de Gueux).
+    wb = None
 
     # ── Read sheet names ───────────────────────────────────────────────────────
     try:
@@ -499,7 +512,6 @@ def detect_lots_from_excel(file_path: str) -> List[Dict]:
             try:
                 wb = openpyxl.load_workbook(str(path), read_only=True, data_only=True)
                 sheet_names = wb.sheetnames
-                wb.close()
             except Exception as e:
                 err_str = str(e).lower()
                 if "password" in err_str or "encrypted" in err_str or "protected" in err_str or "invalid file" in err_str:
@@ -522,32 +534,36 @@ def detect_lots_from_excel(file_path: str) -> List[Dict]:
 
     logger.info(f"Spreadsheet {path.name} — onglets: {sheet_names}")
 
-    # ── Strategy A: sheet names ────────────────────────────────────────────────
-    lots: Dict[str, LotDetection] = {}
-    for sheet in sheet_names:
-        det = _sheet_to_detection(sheet)
-        if det:
-            lots.setdefault(det.id, det)
+    try:
+        # ── Strategy A: sheet names ────────────────────────────────────────────
+        lots: Dict[str, LotDetection] = {}
+        for sheet in sheet_names:
+            det = _sheet_to_detection(sheet)
+            if det:
+                lots.setdefault(det.id, det)
 
-    # ── Strategy B: cell content scan (≤2 non-ignored sheets) ─────────────────
-    non_ignored = [s for s in sheet_names if not _is_ignored_sheet(s)]
-    if len(non_ignored) <= 2:
-        if suffix == ".ods":
-            cell_dets = _scan_ods_cell_content(file_path, sheet_names)
-        else:
-            cell_dets = _scan_excel_cell_content_for_lots(file_path, sheet_names)
-        for det in cell_dets:
-            lots.setdefault(det.id, det)
+        # ── Strategy B: cell content scan (≤2 non-ignored sheets) ─────────────
+        non_ignored = [s for s in sheet_names if not _is_ignored_sheet(s)]
+        if len(non_ignored) <= 2:
+            if suffix == ".ods":
+                cell_dets = _scan_ods_cell_content(file_path, sheet_names)
+            else:
+                cell_dets = _scan_excel_cell_content_for_lots(file_path, sheet_names, wb=wb)
+            for det in cell_dets:
+                lots.setdefault(det.id, det)
 
-    # ── AMÉLIORATION 7: detect tranches ───────────────────────────────────────
-    tranches = _detect_tranches_in_excel(file_path)
-    if tranches:
-        logger.info(f"Tranches détectées dans {path.name}: {tranches}")
-        # Attach tranches to all detected lots from this file
-        for det in lots.values():
-            det.tranches = tranches
+        # ── AMÉLIORATION 7: detect tranches ───────────────────────────────────
+        tranches = _detect_tranches_in_excel(file_path, wb=wb)
+        if tranches:
+            logger.info(f"Tranches détectées dans {path.name}: {tranches}")
+            # Attach tranches to all detected lots from this file
+            for det in lots.values():
+                det.tranches = tranches
 
-    return [d.to_dict() for d in sorted(lots.values(), key=lambda x: _sort_key(x.id))]
+        return [d.to_dict() for d in sorted(lots.values(), key=lambda x: _sort_key(x.id))]
+    finally:
+        if suffix == ".xlsx" and wb is not None:
+            wb.close()
 
 
 # ─── Text detection ────────────────────────────────────────────────────────────
@@ -784,12 +800,18 @@ def detect_all_lots(
 
     on_progress(pct, detail) is called at each step to report progress.
     """
+    dernier: list = [None]
+
     def _report(pct: int, detail: str) -> None:
-        if on_progress:
-            try:
-                on_progress(pct, detail)
-            except Exception:
-                pass
+        # Rien de neuf (même pourcentage, même libellé) → pas de rappel : le scan
+        # des noms en faisait un par fichier (93 sur Gueux), chacun écrit en base.
+        if not on_progress or dernier[0] == (pct, detail):
+            return
+        dernier[0] = (pct, detail)
+        try:
+            on_progress(pct, detail)
+        except Exception:
+            pass
 
     # ── Step 1: Scan filenames (0% → 5%) — interpolated per file ───────────
     filenames: List[str] = [doc.file_name for doc in documents]

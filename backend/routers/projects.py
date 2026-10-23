@@ -1729,19 +1729,26 @@ def _run_lot_detection_background(project_id: str, docs_data: list, uploads_root
     pipeline_tracker.start_pipeline(project_id, "lot_detection")
     pipeline_tracker.start_step(project_id, "detecting_lots")
 
+    derniere_ecriture = [0.0]
+
     def _update_progress(pct: int, detail: str) -> None:
-        """Callback: write progress to DB (legacy poll) AND push to SSE bus."""
-        db = SessionLocal()
-        try:
-            project = db.query(Project).filter(Project.id == project_id).first()
-            if project and project.processing_status == "detecting_lots":
-                project.processing_progress = pct
-                project.processing_detail = detail
-                db.commit()
-        except Exception as e:
-            _log.warning(f"Lot detection progress update failed: {e}")
-        finally:
-            db.close()
+        """Callback: write progress to DB (legacy poll) AND push to SSE bus.
+        La base n'est écrite qu'au plus toutes les 0,5 s (et toujours à partir
+        de 95 %) : chaque écriture coûte une session, un SELECT et un COMMIT."""
+        import time as _t
+        if pct >= 95 or _t.monotonic() - derniere_ecriture[0] >= 0.5:
+            derniere_ecriture[0] = _t.monotonic()
+            db = SessionLocal()
+            try:
+                project = db.query(Project).filter(Project.id == project_id).first()
+                if project and project.processing_status == "detecting_lots":
+                    project.processing_progress = pct
+                    project.processing_detail = detail
+                    db.commit()
+            except Exception as e:
+                _log.warning(f"Lot detection progress update failed: {e}")
+            finally:
+                db.close()
         # SSE signal — pct is 0-100 from the detector, the step covers
         # 0-100 in pipeline_tracker so we publish ratio = pct / 100.
         try:
