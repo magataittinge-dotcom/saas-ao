@@ -96,6 +96,24 @@ def pdf_avec_page_illisible(pages: list[str], numero: int) -> bytes:
     return octets[:a] + b"null".ljust(b - a) + octets[b:]
 
 
+def images_par_page(octets: bytes) -> list[int]:
+    """Relevé pour les tests : le nombre d'images de chaque page d'un PDF (formulaires
+    compris), lu sous ``VERROU_PDFIUM`` (remplace ``page.get_images()`` de PyMuPDF)."""
+    with VERROU_PDFIUM:
+        pdf = pdfium.PdfDocument(octets)
+        try:
+            nombres = []
+            for index in range(len(pdf)):
+                page = pdf[index]
+                try:
+                    nombres.append(sum(1 for _ in page.get_objects(filter=[pdfium_c.FPDF_PAGEOBJ_IMAGE])))
+                finally:
+                    page.close()
+            return nombres
+        finally:
+            pdf.close()
+
+
 def pdf_texte_masque(visible: str, masque: str) -> bytes:
     """Une page : ``visible`` en haut, ``masque`` en bas, et un détourage qui ne garde que
     la moitié haute de la page. Le texte du bas est dans le PDF mais invisible : le cas des
