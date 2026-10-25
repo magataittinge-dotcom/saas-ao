@@ -427,7 +427,7 @@ OFFER_COMPLETED_TYPES = {"dpgf_template", "acte_engagement_template"}
 
 
 def _plan_du_zip(db: Session, project, org_id: str, *, checklist_items, project_docs,
-                 memoire, docs_par_id: dict) -> PlanZip:
+                 memoire, docs_par_id: dict, nommer: bool = True) -> PlanZip:
     """Ce que le ZIP contient, dans l'ordre : pièces du coffre (ordre du RC,
     chacune UNE fois même liée à deux lignes, jamais expirée), formulaires
     remplis, mémoire, annexes, DPGF remplie. Un fichier absent du serveur
@@ -439,12 +439,14 @@ def _plan_du_zip(db: Session, project, org_id: str, *, checklist_items, project_
 
     org = db.query(Organization).filter(Organization.id == org_id).first()
     org_name = org.name if org else "Entreprise"
+    # C13b — convention de nommage du RC ; inutile quand seul le CONTENU du
+    # plan compte (écran Vérification : nommer=False, le texte du RC n'est pas lu).
     rc_doc = next(
         (d for d in project_docs if (d.type or "") == "rc" and d.extracted_text
          and not d.extracted_text.startswith("[document volumineux")),
         None,
-    )
-    convention = detect_naming_convention(rc_doc.extracted_text) if rc_doc else None   # C13b
+    ) if nommer else None
+    convention = detect_naming_convention(rc_doc.extracted_text) if rc_doc else None
     lot_segment = project.selected_lot or (project.selected_lot_name or "lot").split("—")[0].strip()
     lot_suffix = "_" + _sanitize(project.selected_lot_name) if project.selected_lot_name else ""
     date_str = datetime.utcnow().strftime("%Y%m%d")

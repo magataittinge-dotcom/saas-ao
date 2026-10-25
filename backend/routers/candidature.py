@@ -90,7 +90,7 @@ def get_checklist(
     0 € API) pour que l'utilisateur n'ait JAMAIS à cliquer sur « Générer »."""
     from models.compliance_item import ComplianceItem
 
-    _get_project_or_404(project_id, user.organization_id, db)
+    project = _get_project_or_404(project_id, user.organization_id, db)
 
     has_checklist = db.query(ChecklistItem.id).filter(
         ChecklistItem.project_id == project_id).first() is not None
@@ -112,11 +112,33 @@ def get_checklist(
     from services.checklist_builder import sync_vault_lines_safe
     sync_vault_lines_safe(db, project_id, user.organization_id)
 
-    return (
-        db.query(ChecklistItem)
-        .filter(ChecklistItem.project_id == project_id)
-        .all()
-    )
+    items = db.query(ChecklistItem).filter(ChecklistItem.project_id == project_id).all()
+    return _avec_le_fait_jointe(db, project, items, user.organization_id)
+
+
+def _avec_le_fait_jointe(db: Session, project, items, org_id: str) -> list:
+    """« Jointe » à l'écran Vérification, avec la même règle que l'Export : le
+    plan du ZIP dit ce qui part (routers/export._plan_du_zip, _etat_piece)."""
+    from sqlalchemy.orm import defer
+    from models.memoire import MemoireTechnique
+    from routers.export import _etat_piece, _plan_du_zip
+    project_docs = (db.query(ProjectDocument)
+                    .options(defer(ProjectDocument.extracted_text))
+                    .filter(ProjectDocument.project_id == project.id).all())
+    memoire = db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project.id).first()
+    lies = {i.linked_document_id for i in items if i.linked_document_id}
+    docs_lies = {d.id: d for d in db.query(Document).filter(
+        Document.id.in_(lies), Document.organization_id == org_id,
+        Document.deleted_at.is_(None)).all()} if lies else {}
+    plan = _plan_du_zip(db, project, org_id, checklist_items=items, project_docs=project_docs,
+                        memoire=memoire, docs_par_id=docs_lies, nommer=False)
+    docs_projet = {d.id: d for d in project_docs}
+    reponse = []
+    for item in items:
+        ligne = ChecklistItemResponse.model_validate(item)
+        ligne.jointe, ligne.piece_nom, ligne.valable_jusqu_au = _etat_piece(item, docs_lies, docs_projet, plan)
+        reponse.append(ligne)
+    return reponse
 
 
 @router.post(

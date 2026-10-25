@@ -5,6 +5,7 @@ import {
 import type { ChecklistItem } from '@/types'
 import SignatureLigne from '@/components/project/SignatureLigne'
 import NonConcerneBouton, { estNonConcernee, piecesComptees } from '@/components/project/NonConcerne'
+import { comptePieces } from '@/lib/exportDossier'
 
 const F = "'Inter Variable', 'Geist Sans', sans-serif"
 
@@ -52,7 +53,7 @@ export default function CandidatureSectionTemplates({
 
   // « Non concerné » sort des comptes, comme dans le score du serveur
   const comptees = piecesComptees(items)
-  const present = comptees.filter((i) => i.status === 'present').length
+  const joints = comptees.filter((i) => i.jointe).length
   // AE en tête, puis les formulaires de candidature, puis le reste.
   const sorted = [...items].sort((a, b) => {
     const rank = (i: ChecklistItem) => {
@@ -81,7 +82,7 @@ export default function CandidatureSectionTemplates({
               Documents à compléter
             </h2>
             <p className="text-xs mt-0.5" style={{ color: '#959597' }}>
-              {present}/{comptees.length} complétés — téléchargez la trame (ou le formulaire officiel), complétez-la, puis réimportez la version finale
+              {comptePieces(comptees.length, joints, 'formulaire')} — téléchargez la trame (ou le formulaire officiel), complétez-la, puis réimportez la version finale
             </p>
           </div>
         </div>
@@ -166,8 +167,8 @@ function TemplateRow({
           <span className="text-sm font-semibold" style={{ color: '#F7F8F8' }}>{label}</span>
           {nonConcernee ? (
             <span className="text-xs" style={{ color: '#909195' }}>Non concerné</span>
-          ) : isPresent ? (
-            <span className="text-xs" style={{ color: '#6EE7A8' }}>Complété</span>
+          ) : item.jointe ? (
+            <span className="text-xs" style={{ color: '#6EE7A8' }}>Jointe — {item.piece_nom}</span>
           ) : isWarning ? (
             <span className="text-xs font-medium" style={{ color: '#D9A441' }}>
               ⚠️ Présente — à vérifier

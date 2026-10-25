@@ -1,10 +1,11 @@
 import { useMemo } from 'react'
 import {
-  CheckCircle2, AlertCircle, Circle, Clock, FolderOpen, FileText, Lock,
+  CheckCircle2, AlertCircle, Circle, FolderOpen, FileText, Lock,
 } from 'lucide-react'
 import type { ChecklistItem } from '@/types'
 import SignatureLigne from '@/components/project/SignatureLigne'
 import NonConcerneBouton, { estNonConcernee, piecesComptees } from '@/components/project/NonConcerne'
+import { comptePieces, etatPiece } from '@/lib/exportDossier'
 
 const F = "'Inter Variable', 'Geist Sans', sans-serif"
 
@@ -55,7 +56,7 @@ export default function CandidatureSectionVault({
 
   // « Non concerné » sort des comptes, comme dans le score du serveur
   const comptees = piecesComptees(items)
-  const present = comptees.filter((i) => i.status === 'present').length
+  const jointes = comptees.filter((i) => i.jointe).length
 
   return (
     <section
@@ -76,7 +77,7 @@ export default function CandidatureSectionVault({
               Pièces du coffre-fort
             </h2>
             <p className="text-xs mt-0.5" style={{ color: '#959597' }}>
-              {present}/{comptees.length} fournies — sélectionnez une pièce existante de votre coffre-fort
+              {comptePieces(comptees.length, jointes)} — sélectionnez une pièce existante de votre coffre-fort
             </p>
           </div>
         </div>
@@ -127,7 +128,7 @@ function VaultRow({
   onToggleSignature?: (item: ChecklistItem, confirmed: boolean) => Promise<void>
   onNonConcerne?: (item: ChecklistItem, nonConcerne: boolean) => Promise<void>
 }) {
-  const { icon, label, color } = statusFor(item.status)
+  const { icon, label, color } = statusFor(item)
   const isLinked = !!item.linked_document_id
   const isMissing = item.status === 'manquant' || item.status === 'expire'
 
@@ -149,7 +150,7 @@ function VaultRow({
               {item.lot.replace(/^lot/i, 'Lot ')}
             </span>
           )}
-          {isLinked && (
+          {isLinked && !item.jointe && (
             <span className="text-xs flex items-center gap-1" style={{ color: '#959597' }}>
               <FileText size={11} />
               Lié au coffre-fort
@@ -183,46 +184,11 @@ function VaultRow({
   )
 }
 
-function statusFor(status: ChecklistItem['status']): { icon: JSX.Element; label: string; color: string } {
-  switch (status) {
-    case 'present':
-      return {
-        icon: <CheckCircle2 size={16} style={{ color: '#6EE7A8' }} />,
-        label: 'Conforme',
-        color: '#6EE7A8',
-      }
-    case 'expire':
-      return {
-        icon: <AlertCircle size={16} style={{ color: '#F58E86' }} />,
-        label: 'À renouveler',
-        color: '#F58E86',
-      }
-    case 'expiration_proche':
-      return {
-        icon: <Clock size={16} style={{ color: '#959597' }} />,
-        label: 'Expire bientôt',
-        color: '#959597',
-      }
-    case 'non_applicable':
-      return {
-        icon: <Circle size={16} style={{ color: '#909195' }} />,
-        label: 'Non concerné',
-        color: '#909195',
-      }
-    case 'warning':
-      // C10 — présente mais problème (doc à vérifier / non classé / date illisible)
-      return {
-        icon: <AlertCircle size={16} style={{ color: '#D9A441' }} />,
-        label: 'Présente — à vérifier',
-        color: '#D9A441',
-      }
-    default:
-      // « Manquant » = à faire, pas une alarme : le corail est réservé
-      // au bandeau de synthèse et aux vraies alertes (expiré).
-      return {
-        icon: <Circle size={16} style={{ color: '#909195' }} />,
-        label: 'À fournir',
-        color: '#959597',
-      }
-  }
+// Même règle que l'Export (lib/exportDossier.etatPiece) : « Jointe » est un
+// fait vérifié par le serveur (le fichier part dans le ZIP, valable et daté).
+function statusFor(item: ChecklistItem): { icon: JSX.Element; label: string; color: string } {
+  const { texte, ton } = etatPiece(item)
+  if (ton === 'ok') return { icon: <CheckCircle2 size={16} style={{ color: '#6EE7A8' }} />, label: texte, color: '#6EE7A8' }
+  if (ton === 'attention') return { icon: <AlertCircle size={16} style={{ color: '#D9A441' }} />, label: texte, color: '#D9A441' }
+  return { icon: <Circle size={16} style={{ color: '#909195' }} />, label: texte, color: '#959597' }
 }

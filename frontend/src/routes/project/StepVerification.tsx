@@ -8,6 +8,7 @@ import CandidatureSectionVault from '@/components/project/CandidatureSectionVaul
 import CandidatureSectionTemplates from '@/components/project/CandidatureSectionTemplates'
 import VaultPickerModal from '@/components/project/VaultPickerModal'
 import { piecesComptees } from '@/components/project/NonConcerne'
+import { comptePieces, libelleJointes } from '@/lib/exportDossier'
 import { RequirementListSkeleton } from '@/components/skeletons'
 import type { Project, ChecklistItem, Document } from '@/types'
 import EchecAction from '@/components/common/EchecAction'
@@ -66,10 +67,11 @@ export default function StepVerification({ project }: Props) {
   // Complétion = pièces sous responsabilité de l'entreprise (fournir + completer),
   // hors « Non concerné » (comme le score du serveur).
   const scored = piecesComptees([...vaultItems, ...templateItems])
-  const present = scored.filter((i) => i.status === 'present').length
+  // « Jointe » : fait vérifié par le serveur (plan du ZIP), comme à l'Export
+  const jointes = scored.filter((i) => i.jointe).length
   const missing = scored.filter((i) => i.status === 'manquant').length
   const total = scored.length
-  const pct = total > 0 ? Math.round((present / total) * 100) : 0
+  const pct = total > 0 ? Math.round((jointes / total) * 100) : 0
 
   // ── Mutations ───────────────────────────────────────────────────
   // Rafraîchit la liste ET recalcule le score, sans quitter l'étape.
@@ -296,15 +298,17 @@ export default function StepVerification({ project }: Props) {
             <p className="microlabel mb-1.5">Dossier de candidature</p>
             <div className="flex flex-wrap items-end gap-2.5">
               <span className="num-mono bg-gradient-silver-text bg-clip-text text-4xl font-bold leading-none text-transparent">
-                {present}<span className="text-2xl">/{total}</span>
+                {total}
               </span>
-              <p className="pb-0.5 text-sm font-semibold" style={{ color: '#F7F8F8' }}>pièces réunies</p>
+              <p className="pb-0.5 text-sm font-semibold" style={{ color: '#F7F8F8' }}>{libelleJointes(total, jointes)}</p>
             </div>
             <p className="num-mono mt-2 text-xs" style={{ color: '#959597' }}>
-              Coffre-fort {vaultItems.filter((i) => i.status === 'present').length}/{vaultItems.length}
+              Coffre-fort : {comptePieces(piecesComptees(vaultItems).length, piecesComptees(vaultItems).filter((i) => i.jointe).length)}
               {'  ·  '}
-              Formulaires DCE {templateItems.filter((i) => i.status === 'present').length}/{templateItems.length}
-              {score ? <>{'  ·  '}Conformité {score.conformes}/{score.total}</> : null}
+              Formulaires du DCE : {comptePieces(piecesComptees(templateItems).length, piecesComptees(templateItems).filter((i) => i.jointe).length, 'formulaire')}
+              {score && score.conformes > 0
+                ? <>{'  ·  '}{score.conformes} {score.conformes > 1 ? 'prêtes' : 'prête'} pour le dépôt</>
+                : null}
             </p>
           </div>
         </div>
@@ -314,7 +318,7 @@ export default function StepVerification({ project }: Props) {
             <AlertTriangle size={15} className="mt-0.5 shrink-0" style={{ color: '#F58E86' }} />
             <p className="text-xs leading-relaxed" style={{ color: '#959597' }}>
               <span className="font-semibold" style={{ color: '#F7F8F8' }}>
-                {missing} pièce{missing > 1 ? 's' : ''} à fournir.
+                {missing} pièce{missing > 1 ? 's' : ''} à joindre.
               </span>{' '}
               Le règlement de consultation demande ces pièces.
             </p>

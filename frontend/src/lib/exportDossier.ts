@@ -86,3 +86,22 @@ export function libellePieces(total: number, pretes: number): string {
 export function resumePieces(total: number, pretes: number): string {
   return `${total} ${libellePieces(total, pretes)}`
 }
+
+// ── Écran Vérification (bloc 2, tranche 6) : mêmes faits, aucune fraction ───
+
+/** « pièces demandées, dont 3 jointes » — le nombre total s'affiche à part. */
+export function libelleJointes(total: number, jointes: number): string {
+  const n = total > 1 ? 'pièces demandées' : 'pièce demandée'
+  if (jointes === 0) return n
+  if (total === 1) return `${n}, jointe`
+  return `${n}, dont ${jointes} ${jointes > 1 ? 'jointes' : 'jointe'}`
+}
+
+/** « 4 pièces, dont 2 jointes » ; « 3 formulaires, dont 1 joint ». */
+export function comptePieces(total: number, jointes: number, nom: 'pièce' | 'formulaire' = 'pièce'): string {
+  const n = pluriel(total, nom)
+  const accord = (k: number) => (nom === 'pièce' ? 'jointe' : 'joint') + (k > 1 ? 's' : '')
+  if (jointes === 0) return n
+  if (total === 1) return `${n}, ${accord(1)}`
+  return `${n}, dont ${jointes} ${accord(jointes)}`
+}
