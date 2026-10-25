@@ -8,10 +8,11 @@ Règle ABSOLUE : l'excerpt est cherché VERBATIM sur la page indiquée.
 """
 import io
 
-import fitz
+import fitz   # comptage des rectangles dessinés (get_drawings) : PyMuPDF, jusqu'au retrait du surligneur
 import pytest
 
 from models.project import Project, ProjectDocument
+from tests.pdf_fabrique import ecrire_pdf, pdf_texte
 
 
 PAGE1 = "REGLEMENT DE LA CONSULTATION\nArticle 1 — Objet : restructuration du groupe scolaire de Gueux."
@@ -29,13 +30,9 @@ EXCERPT_ALTERED = "Le candidat devra justifier d'un chiffre d'affaires annuel mi
 
 
 def _make_pdf() -> bytes:
-    doc = fitz.open()
-    for text in (PAGE1, PAGE2, PAGE3):
-        page = doc.new_page()
-        page.insert_text((72, 100), text, fontsize=11)
-    out = doc.tobytes()
-    doc.close()
-    return out
+    # Sans retour à la ligne automatique (comme insert_text) : l'excerpt tient sur
+    # une seule ligne de la page 2, ce qui teste la recherche directe.
+    return pdf_texte([PAGE1, PAGE2, PAGE3], largeur_car=None)
 
 
 def _highlights_per_page(pdf_bytes_or_doc) -> list:
@@ -131,18 +128,13 @@ def test_multiline_excerpt_fully_highlighted():
     from pathlib import Path
 
     with tempfile.TemporaryDirectory() as tmp:
-        pdf_path = Path(tmp) / "doc.pdf"
-        doc = fitz.open()
-        page = doc.new_page()
         long_text = (
             "Les travaux comprennent la depose complete des menuiseries existantes, "
             "la fourniture et la pose de menuiseries aluminium a rupture de pont thermique, "
             "ainsi que les habillages interieurs et exterieurs."
         )
-        rect = fitz.Rect(72, 100, 520, 300)
-        page.insert_textbox(rect, long_text, fontsize=11)
-        doc.save(str(pdf_path))
-        doc.close()
+        # repli automatique à 80 caractères : trois lignes, comme insert_textbox
+        pdf_path = ecrire_pdf(Path(tmp) / "doc.pdf", [long_text])
 
         out = PdfHighlighter.highlight_text_in_pdf(pdf_path, 1, long_text)
         assert out is not None

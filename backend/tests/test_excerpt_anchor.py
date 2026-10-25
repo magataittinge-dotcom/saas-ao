@@ -58,15 +58,13 @@ def test_unanchorable_returns_none():
 def test_resolve_pages_fixes_wrong_ia_page(tmp_path):
     """La page estimée par l'IA est fausse → resolve_pages localise la page
     réelle de l'excerpt ancré (sinon le viewer ouvre une page sans rien)."""
-    import fitz
     from services.ai.excerpt_anchor import resolve_pages
+    from tests.pdf_fabrique import ecrire_pdf
 
-    pdf = tmp_path / "rc.pdf"
-    doc = fitz.open()
-    doc.new_page().insert_text((72, 100), "Page une sans grand interet ici.")
-    doc.new_page().insert_text((72, 100), "Le candidat fournira une attestation de vigilance URSSAF.")
-    doc.save(str(pdf))
-    doc.close()
+    pdf = ecrire_pdf(tmp_path / "rc.pdf", [
+        "Page une sans grand interet ici.",
+        "Le candidat fournira une attestation de vigilance URSSAF.",
+    ])
 
     reqs = [{"source_document": "rc.pdf", "source_page": 1,
              "source_excerpt": "Le candidat fournira une attestation de vigilance URSSAF."}]

@@ -11,6 +11,7 @@ import os
 import random
 
 import services.ai.excerpt_anchor as ea
+from tests.pdf_fabrique import ecrire_pdf
 
 
 def _ancien_balayage(terms, doc_words):
@@ -105,13 +106,9 @@ def test_cache_des_documents_borne_en_caracteres(monkeypatch):
 
 
 def test_pages_pdf_relues_une_fois_par_empreinte(tmp_path, monkeypatch):
-    import fitz
-    pdf = tmp_path / "cctp.pdf"
-    doc = fitz.open()
-    for texte in ("Page de garde du CCTP", "Les fixations sont réalisées par chevilles à frapper agréées."):
-        doc.new_page().insert_text((72, 72), texte)
-    doc.save(str(pdf))
-    doc.close()
+    import fitz   # espion des ouvertures : l'ancrage lit encore le PDF avec PyMuPDF
+    pdf = ecrire_pdf(tmp_path / "cctp.pdf", [
+        "Page de garde du CCTP", "Les fixations sont réalisées par chevilles à frapper agréées."])
     ea._PAGES_CACHE.clear()
     ouvertures = []
     vrai = fitz.open
@@ -132,16 +129,11 @@ def test_pages_pdf_relues_une_fois_par_empreinte(tmp_path, monkeypatch):
 
 
 def test_cache_des_pages_borne_en_caracteres(tmp_path, monkeypatch):
-    import fitz
     monkeypatch.setattr(ea, "_PAGES_CACHE_MAX_CARACTERES", 300)
     ea._PAGES_CACHE.clear()
     chemins = []
     for i in range(4):
-        pdf = tmp_path / f"piece{i}.pdf"
-        doc = fitz.open()
-        doc.new_page().insert_text((72, 72), f"Piece {i} : " + "texte " * 20)
-        doc.save(str(pdf))
-        doc.close()
+        pdf = ecrire_pdf(tmp_path / f"piece{i}.pdf", [f"Piece {i} : " + "texte " * 20])
         chemins.append(str(pdf))
         ea._pages_normalisees(str(pdf))
     total = sum(sum(len(p) for p in v[1]) for v in ea._PAGES_CACHE.values())
@@ -159,16 +151,10 @@ def test_memo_des_positions_plafonne(monkeypatch):
 
 
 def test_pages_lues_au_depot_reprises_par_l_ancrage_sans_relire_le_pdf(tmp_path, monkeypatch):
-    import fitz
+    import fitz   # espion des ouvertures : l'ancrage lit encore le PDF avec PyMuPDF
     from services.document_processor import DocumentProcessor
-    pdf = tmp_path / "ccap.pdf"
-    doc = fitz.open()
-    for texte in ("Article 1 — Objet", "", "Article 3 — La retenue de garantie est fixée à 5 % du montant."):
-        page = doc.new_page()
-        if texte:
-            page.insert_text((72, 72), texte)
-    doc.save(str(pdf))
-    doc.close()
+    pdf = ecrire_pdf(tmp_path / "ccap.pdf", [
+        "Article 1 — Objet", "", "Article 3 — La retenue de garantie est fixée à 5 % du montant."])
     ea._PAGES_CACHE.clear()
     # le dépôt lit le PDF et confie ses pages au cache de l'ancrage
     texte, pages, _ = DocumentProcessor().extract_ex(

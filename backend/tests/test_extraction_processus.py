@@ -8,21 +8,17 @@ remonter l'avancement page par page.
 import os
 import queue
 
-import fitz
 import pytest
 
 from services import extraction_processus as ep
 from services.document_processor import DocumentProcessor
+from tests.pdf_fabrique import ecrire_pdf, pdf_texte
 
 
 def _pdf(chemin, nb=7):
-    doc = fitz.open()
-    for i in range(nb):
-        page = doc.new_page()
-        if i != 2:   # une page vide : les numéros de page doivent rester exacts
-            page.insert_text((72, 72), f"Page {i + 1} — prescriptions du lot 05, façade et ITE.")
-    doc.save(str(chemin))
-    doc.close()
+    # une page vide en 3ᵉ position : les numéros de page doivent rester exacts
+    ecrire_pdf(chemin, ["" if i == 2 else f"Page {i + 1} — prescriptions du lot 05, façade et ITE."
+                        for i in range(nb)])
 
 
 def test_le_pool_rend_le_meme_texte_et_toutes_les_pages(tmp_path, monkeypatch):
@@ -61,11 +57,7 @@ def test_desactive_par_defaut_reste_en_threads(monkeypatch):
 
 
 def _pdf_octets(texte: str) -> bytes:
-    doc = fitz.open()
-    doc.new_page().insert_text((72, 72), texte)
-    octets = doc.tobytes()
-    doc.close()
-    return octets
+    return pdf_texte([texte])
 
 
 def test_depot_zip_extrait_par_le_pool_quand_il_est_active(client, db_session, test_org, monkeypatch, tmp_path):
