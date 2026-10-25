@@ -25,6 +25,7 @@ from models.memoire import MemoireTechnique
 from schemas.export import ExportSummary, ExportDetail, ComplianceExportItem, ChecklistExportItem, MemoireExportInfo, DpgfExportInfo, ProjectDocumentExportItem
 from routers.auth import get_auth_user
 from services.file_storage import FileStorage
+from services.upload_validation import RegleDepot, recevoir_fichier
 from services.dpgf_checker import check_dpgf
 from services.pdf_export import PdfConversionError, docx_to_pdf
 
@@ -562,12 +563,17 @@ def preview_document(
 
 # ── DPGF filled upload + verification ───────────────────────────────────────
 
-_DPGF_EXTENSIONS = {".xlsx", ".xlsm", ".xls", ".ods", ".pdf"}
+_DPGF_EXTENSIONS = frozenset({".xlsx", ".xlsm", ".xls", ".ods", ".pdf"})
+# B8 — ordre de grandeur : un bordereau rempli pèse moins de 5 Mo en tableur,
+# mais sa version signée et scannée en couleur peut dépasser 20 Mo : 50 Mo
+# (plafond inchangé, désormais appliqué avant toute lecture).
+_DPGF_MAX_SIZE = 50 * 1024 * 1024
 _storage = FileStorage()
 
 
 @router.post("/{project_id}/dpgf-upload")
 async def upload_filled_dpgf(
+    request: Request,
     project_id: str,
     file: UploadFile = File(...),
     user: User = Depends(get_auth_user),
@@ -576,24 +582,13 @@ async def upload_filled_dpgf(
     """Upload a filled DPGF and run automatic verification."""
     project = _get_project_or_404(project_id, user.organization_id, db)
 
-    # Validate extension
-    ext = FilePath(file.filename or "").suffix.lower()
-    if ext not in _DPGF_EXTENSIONS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Format non supporté ({ext}). Formats acceptés : {', '.join(_DPGF_EXTENSIONS)}",
+    regle = RegleDepot(_DPGF_EXTENSIONS, _DPGF_MAX_SIZE, "XLSX, XLSM, XLS, ODS ou PDF")
+    with await recevoir_fichier(request, file, regle) as recu:
+        file_url = await _storage.upload_stream(
+            recu.flux, file.filename or f"dpgf_remplie{recu.extension}",
+            prefix=f"projects/{project_id}/dpgf_remplie",
+            content_type=file.content_type,
         )
-
-    content = await file.read()
-    if len(content) > 50 * 1024 * 1024:  # 50 MB
-        raise HTTPException(status_code=400, detail="Fichier trop volumineux (max 50 Mo)")
-
-    # Store file
-    file_url = await _storage.upload(
-        content, file.filename or f"dpgf_remplie{ext}",
-        prefix=f"projects/{project_id}/dpgf_remplie",
-        content_type=file.content_type,
-    )
 
     # Run verification
     local_path = _resolve_local_path(file_url)

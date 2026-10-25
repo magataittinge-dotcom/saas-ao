@@ -1,6 +1,6 @@
 import asyncio
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from pydantic import BaseModel, field_validator
 from sqlalchemy.orm import Session
 
@@ -11,6 +11,7 @@ from schemas.memoire_config import MemoireConfigResponse, MemoireConfigUpdate
 from routers.auth import get_auth_user
 from services.document_processor import DocumentProcessor
 from services.ai.memoire_importer import MemoireImporter
+from services.upload_validation import RegleDepot, recevoir_fichier
 
 router = APIRouter()
 
@@ -149,18 +150,26 @@ def get_memoire_config_stats(
     }
 
 
+# B8 — ordre de grandeur : un mémoire technique de 20 à 60 pages illustré de
+# photos pèse de 2 à 30 Mo en DOCX ou en PDF ; 50 Mo couvre les plus illustrés.
+# Son texte est extrait en mémoire : le plafond borne aussi la mémoire de la
+# requête (avant : aucun plafond).
+_IMPORT_EXTENSIONS = frozenset({".docx", ".pdf"})
+_IMPORT_MAX_SIZE = 50 * 1024 * 1024
+
+
 @router.post("/import")
 async def import_memoire(
+    request: Request,
     file: UploadFile = File(...),
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ):
     """Extract structured data from an existing mémoire technique (.docx or .pdf)."""
     filename = file.filename or ""
-    if not (filename.lower().endswith(".docx") or filename.lower().endswith(".pdf")):
-        raise HTTPException(status_code=400, detail="Seuls les fichiers .docx et .pdf sont acceptés")
-
-    content = await file.read()
+    regle = RegleDepot(_IMPORT_EXTENSIONS, _IMPORT_MAX_SIZE, "DOCX ou PDF")
+    with await recevoir_fichier(request, file, regle) as recu:
+        content = await recu.octets()
     processor = DocumentProcessor()
     # R8 — extraction docx/pdf (PyMuPDF/python-docx) hors event-loop (WSL2).
     text, _ = await asyncio.to_thread(processor.extract, content, filename)

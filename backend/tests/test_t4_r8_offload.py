@@ -135,12 +135,13 @@ def test_upload_filled_dpgf_check_runs_off_loop(db_session, test_org, test_user,
     db_session.commit()
 
     local = tmp_path / "dpgf.xlsx"
-    local.write_bytes(b"fake-xlsx")
+    local.write_bytes(b"PK\x03\x04fake-xlsx")
 
     valid = {"valid": True, "warnings": [], "total_ht": None,
              "nb_lignes": 0, "nb_lignes_remplies": 0, "nb_lignes_vides": 0}
     record = []
-    monkeypatch.setattr(export._storage, "upload", _make_async("/uploads/dpgf.xlsx"))
+    # B8 : la DPGF est stockée en flux, sans tout relire en mémoire
+    monkeypatch.setattr(export._storage, "upload_stream", _make_async("/uploads/dpgf.xlsx"))
     monkeypatch.setattr(export, "_resolve_local_path", lambda url: local)
     monkeypatch.setattr(export, "check_dpgf", _loop_probe(record, valid))
 
@@ -148,7 +149,7 @@ def test_upload_filled_dpgf_check_runs_off_loop(db_session, test_org, test_user,
     try:
         resp = _run(_request(
             "POST", "/api/projects/proj-r8b/dpgf-upload",
-            files={"file": ("dpgf.xlsx", io.BytesIO(b"fake-xlsx"),
+            files={"file": ("dpgf.xlsx", io.BytesIO(b"PK\x03\x04fake-xlsx"),
                             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
         ))
     finally:
@@ -184,7 +185,7 @@ def test_upload_completed_template_check_runs_off_loop(db_session, test_org, tes
     try:
         resp = _run(_request(
             "POST", "/api/projects/proj-r8c/checklist/cli-dpgf/upload-completed",
-            files={"file": ("dpgf.xlsx", io.BytesIO(b"fake-xlsx"),
+            files={"file": ("dpgf.xlsx", io.BytesIO(b"PK\x03\x04fake-xlsx"),
                             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
         ))
     finally:
