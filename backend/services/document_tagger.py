@@ -80,8 +80,7 @@ def assign_document_lots(file_name: str, doc_type: str) -> List[str]:
     # choisi à l'analyse). Jamais « info » : sur Gueux, le CCTP et la DPGF du
     # lot 10 « Plomberie » passaient pour un diagnostic plomb.
     if doc_type in _TYPES_DE_LOT:
-        lot_num = _extract_lot_num_from_filename(file_name)
-        return [lot_num] if lot_num else ['all']
+        return _lot_ou_commun(file_name)
 
     # ── Plan type ─────────────────────────────────────────────────────────────
     if doc_type == 'plan':
@@ -92,13 +91,22 @@ def assign_document_lots(file_name: str, doc_type: str) -> List[str]:
     if _INFO_MOTS.search(mots) or _PLAN_MOTS.search(mots) or _PLAN_EXTENSIONS.search(file_name):
         return ['info']
 
-    # ── Generic lot detection ─────────────────────────────────────────────────
-    lot_num = _extract_lot_num_from_filename(file_name)
-    if lot_num:
-        return [lot_num]
+    # ── Generic lot detection (sinon : commun à tous les lots) ────────────────
+    return _lot_ou_commun(file_name)
 
-    # ── Default: include everywhere ───────────────────────────────────────────
-    return ['all']
+
+def _lot_ou_commun(file_name: str) -> List[str]:
+    """Lot cité par le nom, sinon commun. Le lot 00 / 0 est commun à tous les
+    lots (« lot 00 Généralités » : prescriptions communes ; sur Gueux,
+    126 000 caractères jamais analysés quand il était rattaché au lot « 0 »)."""
+    lot_num = _extract_lot_num_from_filename(file_name)
+    return [lot_num] if lot_num and lot_num != '0' else ['all']
+
+
+def est_commune(tags) -> bool:
+    """Étiquettes d'une pièce commune à tous les lots : aucune, « all », ou le
+    lot 0 (étiquette « 0 » / « 00 » posée avant le bloc 2)."""
+    return not tags or 'all' in tags or any(_normalize_lot_num(t) == '0' for t in tags)
 
 
 # ─── Lot number normalization ──────────────────────────────────────────────────
@@ -138,12 +146,8 @@ def get_documents_for_lot(documents, selected_lot: Optional[str]) -> list:
     for doc in documents:
         tags = doc.related_lots   # list[str] | None
 
-        if tags is None:
-            # Legacy untagged document → include by default
-            result.append(doc)
-            continue
-
-        if 'all' in tags:
+        if tags is None or est_commune(tags):
+            # Non étiquetée (ancienne), « all », ou lot 0 : commune à tous les lots.
             result.append(doc)
             continue
 

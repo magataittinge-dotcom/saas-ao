@@ -21,7 +21,7 @@ from services.ai.api_preflight import AIServiceUnavailable, ensure_ai_service_av
 from services.ai.dce_analyzer import DCEAnalyzer, ClaudeRateLimitError
 from services.ai.checklist_matcher import ChecklistMatcher
 from services.document_tagger import (
-    get_documents_for_lot, _normalize_lot_num,
+    est_commune, get_documents_for_lot, _normalize_lot_num,
 )
 from services.dpgf_ouvrages import est_tableur, texte_ouvrages_du_lot
 from services import pipeline_tracker, quota
@@ -208,8 +208,8 @@ def _envoyable(doc) -> bool:
 
 
 def _commune(doc) -> bool:
-    """Pièce commune à tous les lots (non étiquetée, ou étiquetée « all »)."""
-    return not doc.related_lots or "all" in doc.related_lots
+    """Pièce commune à tous les lots (non étiquetée, « all » ou lot 0)."""
+    return est_commune(doc.related_lots)
 
 
 def _build_texts(all_docs, lot_ids, lot_names, selected_lot, selected_lot_name) -> tuple:
