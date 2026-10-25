@@ -50,6 +50,25 @@ _VAULT_TYPES_FOR: dict[str, list[str]] = {
     "rib": ["rib"],
 }
 
+def type_coffre_pour_piece(type_demande: Optional[str], nom_fichier: str) -> str:
+    """Type du coffre d'un fichier déposé depuis une ligne de checklist (B2 §7 n°4).
+
+    La modale « Choisir une pièce » envoie le type de la LIGNE (typologie des
+    pièces, ex. « qualibat_rge ») : il est traduit en type du coffre (le nom du
+    fichier départage « qualibat » et « rge ») ; un type du coffre est gardé ;
+    sinon le nom du fichier classe la pièce. Jamais un type que la contrainte
+    CHECK refuserait (erreur 500 après stockage)."""
+    from models.document import DOCUMENT_TYPES
+    from services.vault_classifier import detect_vault_type
+    detecte = detect_vault_type(nom_fichier or "")
+    if type_demande in DOCUMENT_TYPES and type_demande != "autre":
+        return type_demande
+    candidats = _VAULT_TYPES_FOR.get(type_demande or "", [])
+    if candidats:
+        return detecte if detecte in candidats else candidats[0]
+    return detecte
+
+
 # Formulaire à compléter / workflow → type de template DCE (ProjectDocument).
 _TEMPLATE_TYPE_FOR: dict[str, str] = {
     "dc1": "dc1_template", "dc2": "dc2_template",
