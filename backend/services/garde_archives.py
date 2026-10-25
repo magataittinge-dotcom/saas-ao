@@ -67,6 +67,14 @@ def _flux(source) -> Iterator[BinaryIO]:
 def _fin_d_archive(f: BinaryIO) -> Tuple[int, int]:
     """(nombre d'entrées, taille du répertoire) annoncés par la fin de l'archive,
     lus sans charger le répertoire (même recherche que zipfile, ZIP64 compris)."""
+    entrees, repertoire, _debut = _fin_et_repertoire(f)
+    return entrees, repertoire
+
+
+def _fin_et_repertoire(f: BinaryIO) -> Tuple[int, int, int]:
+    """(entrées, taille du répertoire, position du répertoire). Le répertoire
+    précède la fin d'archive (ou l'enregistrement ZIP64) : sa position en est
+    déduite, comme zipfile, même si des octets précèdent l'archive."""
     f.seek(0, 2)
     taille = f.tell()
     lu = min(taille, 22 + 65535)
@@ -75,16 +83,63 @@ def _fin_d_archive(f: BinaryIO) -> Tuple[int, int]:
     i = queue.rfind(_FIN)
     if i < 0 or len(queue) < i + 22:
         raise zipfile.BadZipFile("fin d'archive introuvable")
+    position_fin = taille - lu + i
     entrees, repertoire = struct.unpack("<HI", queue[i + 10:i + 16])
     if entrees == 0xFFFF or repertoire == 0xFFFFFFFF:
         j = queue.rfind(_FIN64_REPERE, 0, i)
         if j >= 0 and len(queue) >= j + 16:
-            (position,) = struct.unpack("<Q", queue[j + 8:j + 16])
-            f.seek(position)
+            position_64 = taille - lu + j - 56        # l'enregistrement ZIP64 précède son repère
+            f.seek(max(position_64, 0))
             enregistrement = f.read(56)
+            if enregistrement[:4] != _FIN64:          # repli : la position annoncée par le repère
+                (position_64,) = struct.unpack("<Q", queue[j + 8:j + 16])
+                f.seek(position_64)
+                enregistrement = f.read(56)
             if enregistrement[:4] == _FIN64 and len(enregistrement) >= 48:
                 entrees, repertoire = struct.unpack("<QQ", enregistrement[32:48])
-    return entrees, repertoire
+                return entrees, repertoire, position_64 - repertoire
+    return entrees, repertoire, position_fin - repertoire
+
+
+def annonce_archive(source) -> Tuple[int, int, int]:
+    """(fichiers, octets décompressés annoncés, octets compressés) d'une archive,
+    lus dans sa fin et son répertoire, sans zipfile (qui chargerait tout le
+    répertoire en mémoire). Répertoire au-delà de _MAX_REPERTOIRE : refusé avant
+    lecture. Les dossiers ne comptent pas comme fichiers."""
+    with _flux(source) as f:
+        entrees, repertoire, debut = _fin_et_repertoire(f)
+        if repertoire > _MAX_REPERTOIRE:
+            raise ArchiveDemesuree(
+                f"répertoire de l'archive démesuré ({_mo(repertoire)}, {entrees} entrées ; "
+                f"au plus {_mo(_MAX_REPERTOIRE)})")
+        f.seek(max(debut, 0))
+        cd = f.read(repertoire)
+    fichiers = decompresse = compresse = 0
+    i = 0
+    while i + 46 <= len(cd) and cd[i:i + 4] == b"PK\x01\x02":
+        comp, decomp = struct.unpack_from("<II", cd, i + 20)
+        long_nom, long_extra, long_comm = struct.unpack_from("<HHH", cd, i + 28)
+        nom = cd[i + 46:i + 46 + long_nom]
+        if 0xFFFFFFFF in (comp, decomp):              # tailles ZIP64 dans le champ extra n° 1
+            extra = cd[i + 46 + long_nom:i + 46 + long_nom + long_extra]
+            j = 0
+            while j + 4 <= len(extra):
+                ident, long_champ = struct.unpack_from("<HH", extra, j)
+                if ident == 1:
+                    valeurs, k = extra[j + 4:j + 4 + long_champ], 0
+                    if decomp == 0xFFFFFFFF and k + 8 <= len(valeurs):
+                        (decomp,) = struct.unpack_from("<Q", valeurs, k)
+                        k += 8
+                    if comp == 0xFFFFFFFF and k + 8 <= len(valeurs):
+                        (comp,) = struct.unpack_from("<Q", valeurs, k)
+                    break
+                j += 4 + long_champ
+        if not nom.endswith(b"/"):
+            fichiers += 1
+        decompresse += decomp
+        compresse += comp
+        i += 46 + long_nom + long_extra + long_comm
+    return fichiers, decompresse, compresse
 
 
 def _controler_archive(f: BinaryIO) -> None:
