@@ -61,8 +61,7 @@ def test_storage_is_memory_in_debug():
 
 def test_slowapi_middleware_is_installed():
     from main import app
-    names = [m.cls.__name__ for m in app.user_middleware]
-    assert "SlowAPIMiddleware" in names, (
+    assert any(issubclass(m.cls, SlowAPIMiddleware) for m in app.user_middleware), (
         "SlowAPIMiddleware absent → les limites globales ne s'appliquent pas"
     )
 
@@ -105,3 +104,63 @@ def test_limit_is_isolated_per_org(rl_enabled):
     assert c.get("/ping", headers={"X-Org": "orgA-iso"}).status_code == 429
     # org B a son propre compteur → pas affectée
     assert c.get("/ping", headers={"X-Org": "orgB-iso"}).status_code == 200
+
+
+# ── 5. limite globale sur les routes des routeurs inclus (montée FastAPI) ─────
+
+def _middleware_de_limite():
+    """La classe de middleware de limitage réellement installée par main.py."""
+    from main import app
+    return next(m.cls for m in app.user_middleware if issubclass(m.cls, SlowAPIMiddleware))
+
+
+def test_limite_globale_sur_une_route_d_un_routeur_inclus():
+    """Depuis FastAPI 0.137, `app.routes` est un arbre : un routeur inclus y
+    figure comme un seul objet, sans `endpoint`. slowapi y cherche la route,
+    ne la trouve plus, et une route non trouvée est exemptée : la limite
+    globale (S1.2) ne s'appliquait plus à aucune route incluse. Ici, avec une
+    limite globale de 2/minute, la 3e requête sur une route sans décorateur
+    d'un routeur inclus (comme toutes celles de Synorix) doit renvoyer 429."""
+    from fastapi import APIRouter
+    from slowapi import Limiter
+
+    limite = Limiter(key_func=org_or_ip_key, default_limits=["2/minute"],
+                     headers_enabled=False)
+    mini = FastAPI()
+    mini.state.limiter = limite
+    mini.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    mini.add_middleware(_middleware_de_limite())
+    routeur = APIRouter()
+
+    @routeur.get("/{projet}/resume")
+    def resume(projet: str):
+        return {"projet": projet}
+
+    mini.include_router(routeur, prefix="/api/projets")
+    c = TestClient(mini)
+    codes = [c.get("/api/projets/p1/resume").status_code for _ in range(3)]
+    assert codes == [200, 200, 429], codes
+
+
+def test_chaque_route_de_l_appli_est_vue_par_la_limite_globale():
+    """Aucune route de Synorix n'échappe à la limite globale faute d'être
+    trouvée : pour chaque route de l'appli, la recherche du middleware
+    renvoie un endpoint (une route non trouvée serait exemptée)."""
+    import re
+
+    from fastapi.routing import iter_route_contexts
+
+    from main import app
+    from services.rate_limit import endpoint_de_la_requete
+
+    non_vues = []
+    for route in iter_route_contexts(app.routes):
+        if not route.methods:
+            continue
+        chemin = re.sub(r"\{[^}]+\}", "1", route.path_format)
+        methode = sorted(route.methods - {"HEAD"} or route.methods)[0]
+        scope = {"type": "http", "method": methode, "path": chemin, "root_path": "",
+                 "query_string": b"", "headers": []}
+        if endpoint_de_la_requete(app, scope) is None:
+            non_vues.append(f"{methode} {route.path_format}")
+    assert not non_vues, f"{len(non_vues)} routes exemptées de la limite globale : {non_vues[:5]}"

@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import ctypes
 import io
+import re
 import textwrap
 from pathlib import Path
 from typing import Optional
@@ -80,6 +81,37 @@ def ecrire_pdf(chemin: Path, pages: list[str], **options) -> Path:
     chemin = Path(chemin)
     chemin.write_bytes(pdf_texte(pages, **options))
     return chemin
+
+
+def pdf_avec_page_illisible(pages: list[str], numero: int) -> bytes:
+    """Le PDF de ``pdf_texte(pages)`` dont la page ``numero`` (1 = première) ne se charge
+    plus : son entrée de l'arbre des pages (``/Kids``) devient ``null``, de même longueur
+    (la table des positions reste juste) ; ``/Count`` garde le nombre de pages. PDFium
+    compte toutes les pages et refuse de charger celle-là ; PyMuPDF refuse le document."""
+    octets = pdf_texte(pages)
+    debut = octets.index(b"/Kids[")
+    fin = octets.index(b"]", debut)
+    entree = list(re.finditer(rb"\d+ 0 R", octets[debut:fin]))[numero - 1]
+    a, b = debut + entree.start(), debut + entree.end()
+    return octets[:a] + b"null".ljust(b - a) + octets[b:]
+
+
+def images_par_page(octets: bytes) -> list[int]:
+    """Relevé pour les tests : le nombre d'images de chaque page d'un PDF (formulaires
+    compris), lu sous ``VERROU_PDFIUM`` (remplace ``page.get_images()`` de PyMuPDF)."""
+    with VERROU_PDFIUM:
+        pdf = pdfium.PdfDocument(octets)
+        try:
+            nombres = []
+            for index in range(len(pdf)):
+                page = pdf[index]
+                try:
+                    nombres.append(sum(1 for _ in page.get_objects(filter=[pdfium_c.FPDF_PAGEOBJ_IMAGE])))
+                finally:
+                    page.close()
+            return nombres
+        finally:
+            pdf.close()
 
 
 def pdf_texte_masque(visible: str, masque: str) -> bytes:

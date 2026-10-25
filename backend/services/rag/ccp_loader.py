@@ -18,7 +18,7 @@ import re
 from pathlib import Path
 from typing import List, Optional
 
-import fitz
+from services import pdf_lecture
 
 # « L. 2100-1 » / « R. 2143-3 » / « D. 1414-5 » en début de ligne.
 # ⚠️ La ligne doit AUSSI porter la source légale (Ordonnance/Décret/Loi…) :
@@ -46,6 +46,12 @@ _NOISE_RE = re.compile(
     r"|codes\.droit\.org.*)\s*$"
 )
 
+# pdfium colle aussi les liens de navigation AU BOUT d'une ligne de texte (« … art. 11
+# (VD) Legif. Plan Jp.Judi. Jp.Admin. Juricaf ») : D3381-5, dernier article avant les
+# annexes, les gardait (1 792 articles identiques à PyMuPDF sur 1 793). Seule une suite
+# qui commence par « Legif. » est retirée : « Plan » seul est un mot courant.
+_LIENS_EN_FIN_RE = re.compile(rf"\s+Legif\.(?:\s*{_LIEN_NAV})*\s*$")
+
 # Ligne de source légale qui suit la référence d'article sur la même ligne
 _LEGAL_SOURCE_RE = re.compile(
     r"\s+(Ordonnance|Décret|LOI|Loi|DÉCRET|Arrêté|Décision)\b.*$"
@@ -54,8 +60,8 @@ _LEGAL_SOURCE_RE = re.compile(
 
 def extract_edition_date(pdf_path: Path) -> Optional[str]:
     """« Edition : 2026-06-19 » en page 1 → version du corpus."""
-    with fitz.open(str(pdf_path)) as doc:
-        m = re.search(r"Edition\s*:\s*(\d{4}-\d{2}-\d{2})", doc[0].get_text())
+    premiere_page = pdf_lecture.lire_pages(pdf_path, max_pages=1)[0]
+    m = re.search(r"Edition\s*:\s*(\d{4}-\d{2}-\d{2})", premiere_page)
     return m.group(1) if m else None
 
 
@@ -82,49 +88,47 @@ def load_ccp_articles(pdf_path: Path) -> List[dict]:
             })
         current = None
 
-    with fitz.open(str(pdf_path)) as doc:
-        for page in doc:
-            for raw_line in page.get_text().splitlines():
-                line = raw_line.rstrip()
-                stripped = line.strip()
-                if not stripped:
-                    continue
+    for texte_page in pdf_lecture.lire_pages(pdf_path):
+        for raw_line in texte_page.splitlines():
+            stripped = _LIENS_EN_FIN_RE.sub("", raw_line.strip())
+            if not stripped:
+                continue
 
-                if _is_breadcrumb(stripped):
-                    if stripped.replace(" ", "") != breadcrumb.replace(" ", ""):
-                        # Nouvelle section : l'article courant ne peut pas la
-                        # chevaucher (évite d'absorber tables/annexes).
-                        close_current()
-                        breadcrumb = stripped
-                        sections = []
-                    continue
-
-                if _NOISE_RE.match(stripped):
-                    continue
-
-                m = _ARTICLE_RE.match(stripped)
-                if m and _LEGAL_MARKER_RE.search(m.group(3)):
+            if _is_breadcrumb(stripped):
+                if stripped.replace(" ", "") != breadcrumb.replace(" ", ""):
+                    # Nouvelle section : l'article courant ne peut pas la
+                    # chevaucher (évite d'absorber tables/annexes).
                     close_current()
-                    hierarchie = " › ".join(
-                        [p.strip() for p in breadcrumb.split(" - ")] + sections
-                    )
-                    current = {
-                        "ref": f"{m.group(1)}{m.group(2)}",
-                        "hierarchie": hierarchie,
-                        "lines": [],
-                    }
-                    continue
+                    breadcrumb = stripped
+                    sections = []
+                continue
 
-                if _HEADING_RE.match(stripped):
-                    # Titre de section : ferme l'article courant, met à jour le
-                    # contexte (on ne garde que le dernier niveau rencontré —
-                    # suffisant pour la contextualisation).
-                    close_current()
-                    sections = [stripped]
-                    continue
+            if _NOISE_RE.match(stripped):
+                continue
 
-                if current is not None:
-                    current["lines"].append(stripped)
+            m = _ARTICLE_RE.match(stripped)
+            if m and _LEGAL_MARKER_RE.search(m.group(3)):
+                close_current()
+                hierarchie = " › ".join(
+                    [p.strip() for p in breadcrumb.split(" - ")] + sections
+                )
+                current = {
+                    "ref": f"{m.group(1)}{m.group(2)}",
+                    "hierarchie": hierarchie,
+                    "lines": [],
+                }
+                continue
+
+            if _HEADING_RE.match(stripped):
+                # Titre de section : ferme l'article courant, met à jour le
+                # contexte (on ne garde que le dernier niveau rencontré —
+                # suffisant pour la contextualisation).
+                close_current()
+                sections = [stripped]
+                continue
+
+            if current is not None:
+                current["lines"].append(stripped)
 
     close_current()
     return articles

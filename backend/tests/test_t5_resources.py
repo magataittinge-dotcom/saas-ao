@@ -22,10 +22,14 @@ def test_sse_stream_has_no_request_scoped_db_dependency():
     TOUTE la requête. Sur un flux SSE long, c'est une connexion bloquée par
     client → pool épuisé. progress-stream doit vérifier l'accès via une session
     COURTE (ouverte/fermée), sans dépendre de get_db."""
+    from fastapi.routing import iter_route_contexts
+
     from database import get_db
 
+    # FastAPI ≥ 0.137 : `app.routes` est un arbre (routeurs inclus) ;
+    # `iter_route_contexts` rend la liste aplatie des routes.
     route = next(
-        r for r in app.routes
+        r for r in iter_route_contexts(app.routes)
         if getattr(r, "path", "") == "/api/projects/{project_id}/progress-stream"
     )
 

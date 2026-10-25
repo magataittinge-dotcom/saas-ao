@@ -26,6 +26,8 @@ import unicodedata
 from collections import OrderedDict
 from typing import Dict, List, Optional, Tuple
 
+from services import pdf_lecture
+
 logger = logging.getLogger(__name__)
 
 _MIN_RECOVER_SCORE = 0.55   # ≥ 55 % des termes significatifs retrouvés
@@ -286,8 +288,6 @@ def retenir_pages(chemin: str, pages: List[str]) -> None:
 
 
 def _pages_normalisees(chemin: str) -> List[str]:
-    import fitz
-
     cle = _empreinte(chemin)
     if cle is None:
         return []
@@ -303,8 +303,8 @@ def _pages_normalisees(chemin: str) -> List[str]:
         _ranger_pages(cle, (True, pages))
         return pages
     try:
-        with fitz.open(chemin) as doc:
-            pages = [_normalize(p.get_text()) for p in doc]
+        # le lecteur de l'extraction au dépôt : mêmes pages que celles mises en cache
+        pages = [_normalize(p) for p in pdf_lecture.lire_pages(chemin)]
     except Exception:
         return []
     _ranger_pages(cle, (True, pages))
@@ -327,7 +327,7 @@ def _page_contenant(sonde: str, pages: List[str], page_indiquee) -> Optional[int
 def resolve_pages(requirements: List[dict], doc_paths: Dict[str, str]) -> int:
     """Corrige source_page : localise la page RÉELLE de chaque excerpt ancré
     (la page estimée par l'IA est souvent fausse → viewer sans surlignage).
-    Une ouverture fitz par document (et par empreinte de fichier), textes de
+    Une lecture du PDF par document (et par empreinte de fichier), textes de
     pages normalisés cachés."""
     page_cache: Dict[str, List[str]] = {}
     flux_cache: Dict[str, List[str]] = {}

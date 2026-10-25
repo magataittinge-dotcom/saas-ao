@@ -125,7 +125,10 @@ def test_get_project_or_404_hides_soft_deleted(db_session):
 
 def test_progress_stream_route_registered():
     """Smoke-check that the route is registered and its prefix is /api/projects."""
-    paths = [getattr(r, 'path', None) for r in app.routes]
+    from fastapi.routing import iter_route_contexts
+
+    # FastAPI ≥ 0.137 : `app.routes` est un arbre ; liste aplatie des routes.
+    paths = [r.path for r in iter_route_contexts(app.routes)]
     assert any('/api/projects/{project_id}/progress-stream' == p for p in paths)
 
 

@@ -8,7 +8,7 @@ from fastapi.responses import Response
 from sqlalchemy import or_, update as _sql_update
 from sqlalchemy.orm import Session, defer
 
-from database import SessionLocal, get_db
+from database import SessionLocal, get_db, rendre_connexion
 from models.user import User
 from models.project import Project, ProjectDocument
 from models.memoire import MemoireTechnique
@@ -554,11 +554,13 @@ def export_memoire_docx(
     org = db.query(Organization).filter(Organization.id == user.organization_id).first()
 
     docx_bytes = build_project_memoire_docx(project, memoire, org, db)
-    return _attachment_response(
+    reponse = _attachment_response(
         docx_bytes,
         f"Memoire_Technique_{project.name.replace(' ', '_')}.docx",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     )
+    rendre_connexion(db)
+    return reponse
 
 
 @router.get("/{project_id}/memoire/export-pdf")
@@ -588,11 +590,13 @@ def export_memoire_pdf(
     except PdfConversionError as exc:
         raise HTTPException(status_code=503, detail=f"Export PDF impossible : {exc}")
 
-    return _attachment_response(
+    reponse = _attachment_response(
         pdf_bytes,
         f"Memoire_Technique_{project.name.replace(' ', '_')}.pdf",
         "application/pdf",
     )
+    rendre_connexion(db)
+    return reponse
 
 
 @router.patch("/{project_id}/memoire", response_model=MemoireResponse)
