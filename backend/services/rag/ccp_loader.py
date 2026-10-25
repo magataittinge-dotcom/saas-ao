@@ -34,10 +34,16 @@ _HEADING_RE = re.compile(
     r"^(Livre|LIVRE|Titre|TITRE|Chapitre|Section|Sous-section|Paragraphe)\b"
 )
 
-# Lignes de navigation/bruit à éliminer du texte des articles
+# Lignes de navigation/bruit à éliminer du texte des articles. PyMuPDF rend
+# chaque lien (Legif., Plan, Jp.Judi.…) et les deux moitiés du pied de page
+# (« p.12 », « Code de la commande publique ») sur des lignes séparées ; pdfium
+# tient le pied de page sur une seule ligne et peut réunir les liens. Sans cela,
+# le pied de page entrait dans 377 articles sur 1 793 (plan H §2.8).
+_LIEN_NAV = r"(?:Legif\.|Plan|Jp\.Judi\.|Jp\.Admin\.|Juricaf)"
 _NOISE_RE = re.compile(
-    r"^\s*(Legif\.|Plan|Jp\.Judi\.|Jp\.Admin\.|Juricaf|>.*|service-public\.fr"
-    r"|Code de la commande publique.*|p\.\d+|codes\.droit\.org.*)\s*$"
+    rf"^\s*({_LIEN_NAV}(?:\s*{_LIEN_NAV})*|>.*|service-public\.fr"
+    r"|Code de la commande publique.*|p\.\d+(?:\s+Code de la commande publique.*)?"
+    r"|codes\.droit\.org.*)\s*$"
 )
 
 # Ligne de source légale qui suit la référence d'article sur la même ligne
