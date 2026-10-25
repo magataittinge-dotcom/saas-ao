@@ -2,3 +2,6 @@
 #   pip install -r requirements-dev.txt
 -r requirements.txt
 pyinstrument==5.1.3   # profilage des étapes lentes du parcours (mesure de la nuit du 23/10)
+pytest==9.0.3          # suite de tests (MIT)
+pytest-asyncio==1.4.0  # tests async (Apache-2.0)
+xlwt==1.3.0            # fabrique des .xls de test (BSD) ; jamais utilisé par l'appli
