@@ -32,6 +32,38 @@ logger = logging.getLogger(__name__)
 
 _MIN_RECOVER_SCORE = 0.55   # ≥ 55 % des termes significatifs retrouvés
 _MIN_TERMS = 3
+_MIN_TERMES_COMMUNS = 3     # et au moins 3 termes significatifs en commun
+
+# Mots vides (forme normalisée : minuscules, sans accents). Ils ne comptent pas
+# dans la récupération par termes : sur Gueux, « dans », « pour », « toutes »
+# rapprochaient des passages sans rapport.
+_MOTS_VIDES = frozenset("""
+a ai au aux avec ce ces cet cette ci cela celle celles celui ceux comme dans de des du elle elles en
+entre et est etre eux il ils je la le les leur leurs lors lui ma mais me meme mes moins mon ne ni nos
+notre nous on ou par pas peu plus pour qu que quel quelle quelles quels qui sa sans se selon ses si son
+sont sous sur ta te tes toi ton tous tout toute toutes tres tu un une vos votre vous y
+sera seront doit doivent devra devront peut peuvent pourra pourront ainsi aussi afin dont donc etc
+cas fait faire ete avoir ont present presente presents presentes article articles chaque autre autres
+""".split())
+_MOT = re.compile(r"[^\W_]+")   # mot entier : lettres et chiffres
+# Un terme fait au moins 3 caractères : « ITE », « DTU », « RAL », « feu » comptent ;
+# « s1 », « mm », « 20 » non (à 2 caractères, un extrait réel de Gueux, un
+# classement de réaction au feu, partait dans le CCTP d'un autre lot).
+_TERME_MIN_LONGUEUR = 3
+
+
+def _forme(mot: str) -> str:
+    """Forme de comparaison d'un mot normalisé : ligatures dépliées, pluriel en
+    -s/-x ramené au singulier (« panneaux » → « panneau »)."""
+    mot = mot.replace("œ", "oe").replace("æ", "ae")
+    return mot[:-1] if len(mot) > 3 and mot[-1] in "sx" else mot
+
+
+def _termes(texte_normalise: str) -> List[str]:
+    """Termes significatifs d'un texte normalisé : mots entiers d'au moins
+    _TERME_MIN_LONGUEUR caractères, sans les mots vides, sous leur forme."""
+    return [_forme(m) for m in _MOT.findall(texte_normalise)
+            if len(m) >= _TERME_MIN_LONGUEUR and m not in _MOTS_VIDES]
 
 
 def _norm_char(ch: str) -> str:
@@ -128,16 +160,26 @@ _cache_verrou = threading.Lock()
 
 
 def _doc_index(doc_text: str):
-    """(texte normalisé, mapping vers l'original, mots normalisés et leur
-    position, positions des termes déjà cherchés) d'un document."""
+    """(texte normalisé, mapping vers l'original, (début, fin) de chaque mot
+    entier dans le texte normalisé, indices des mots de chaque forme) d'un
+    document."""
     with _cache_verrou:
         cached = _DOC_CACHE.get(doc_text)
         if cached is not None:
             _DOC_CACHE.move_to_end(doc_text)
             return cached
     norm, idx_map = _normalize_with_map(doc_text)
-    words = [(m.group(0), m.start()) for m in re.finditer(r"\S+", norm)]
-    cached = (norm, array("I", idx_map), words, {})
+    debuts, fins = array("I"), array("I")
+    positions: Dict[str, "array"] = {}
+    for m in _MOT.finditer(norm):
+        forme = _forme(m.group(0))
+        p = positions.get(forme)
+        if p is None:
+            p = positions[forme] = array("I")
+        p.append(len(debuts))
+        debuts.append(m.start())
+        fins.append(m.end())
+    cached = (norm, array("I", idx_map), (debuts, fins), positions)
     with _cache_verrou:
         _DOC_CACHE[doc_text] = cached
         total = sum(len(k) for k in _DOC_CACHE)
@@ -153,7 +195,10 @@ _POSITIONS_MAX_TERMES = 2_000   # par document ; au-delà, le mémo repart de z�
 def _positions_terme(terme: str, words: List[Tuple[str, int]], memo: Dict[str, "array"]) -> "array":
     """Indices des mots du document qui CONTIENNENT `terme` (même test que
     l'ancien balayage : `terme in mot`), calculés une fois par document.
-    Mémo compact (array, 4 octets par position) et plafonné en nombre de termes."""
+    Mémo compact (array, 4 octets par position) et plafonné en nombre de termes.
+
+    L'ancrage ne s'en sert plus (mots entiers, bloc 2) ; gardée tant que
+    tests/test_ancrage_rapide.py la vérifie."""
     pos = memo.get(terme)
     if pos is None:
         if len(memo) >= _POSITIONS_MAX_TERMES:
@@ -173,7 +218,7 @@ def anchor_excerpt(excerpt: str, doc_text: str) -> Optional[str]:
         return excerpt
 
     # 2. Normalisé → ré-ancrage sur le passage réel
-    doc_norm, idx_map, _doc_words, _positions = _doc_index(doc_text)
+    doc_norm, idx_map, (debuts, fins), positions = _doc_index(doc_text)
     exc_norm = _normalize(excerpt)
     if exc_norm and exc_norm in doc_norm:
         pos = doc_norm.find(exc_norm)
@@ -199,50 +244,44 @@ def anchor_excerpt(excerpt: str, doc_text: str) -> Optional[str]:
             if len(candidate) >= 20:
                 return candidate
 
-    terms = [t for t in re.findall(r"[a-z0-9']{4,}", exc_norm)]
-    if len(terms) < _MIN_TERMS:
+    # Termes significatifs : mots ENTIERS (un terme contenu dans un mot ne
+    # compte plus : « pose » n'est pas dans « proposé »), sans les mots vides.
+    terms = _termes(exc_norm)
+    term_set = set(terms)
+    if len(term_set) < _MIN_TERMS:
         return None
 
     # Early-exit : si le doc ENTIER ne contient même pas le seuil de termes,
     # inutile de balayer les fenêtres (c'est le cas de ~90 % des paires
     # excerpt×doc en multi-documents).
-    term_set_global = set(terms)
-    present = sum(1 for t in term_set_global if t in doc_norm)
-    if present / len(term_set_global) < _MIN_RECOVER_SCORE:
+    present = sum(1 for t in term_set if t in positions)
+    if present < _MIN_TERMES_COMMUNS or present / len(term_set) < _MIN_RECOVER_SCORE:
         return None
 
-    doc_words = _doc_words
-    if not doc_words:
-        return None
+    nb_mots = len(debuts)
     window = max(len(terms) * 2, 12)
-    term_set = set(terms)
     # Fenêtres de `window` mots, toutes les `pas` positions : un terme compte
-    # dans une fenêtre si un de ses mots le contient. Plutôt que de re-tester
-    # chaque terme contre chaque mot de chaque fenêtre, on part des positions
-    # où chaque terme apparaît et on marque les fenêtres qui les couvrent.
-    # Résultat identique (même meilleure fenêtre : la première au score max).
+    # dans une fenêtre si un de ses mots y figure. On part des positions où
+    # chaque terme apparaît et on marque les fenêtres qui les couvrent ; la
+    # meilleure fenêtre est la première au score maximal.
     pas = max(window // 3, 1)
-    nb_fenetres = (len(doc_words) + pas - 1) // pas
+    nb_fenetres = (nb_mots + pas - 1) // pas
     hits = [0] * nb_fenetres
     for t in term_set:
         couvertes = set()
-        for j in _positions_terme(t, doc_words, _positions):
+        for j in positions.get(t, ()):
             # fenêtres k avec k*pas <= j < k*pas + window
             couvertes.update(range(max(0, -((window - 1 - j) // pas)), j // pas + 1))
         for k in couvertes:
             hits[k] += 1
     best_hits = max(hits) if hits else 0
-    if best_hits == 0:
+    # Seuil minimal : au moins 3 termes en commun, et 55 % des termes.
+    if best_hits < _MIN_TERMES_COMMUNS or best_hits / len(term_set) < _MIN_RECOVER_SCORE:
         return None
-    best_score = best_hits / len(term_set)
     best_pos = hits.index(best_hits) * pas
 
-    if best_score < _MIN_RECOVER_SCORE:
-        return None
-
-    norm_start = doc_words[best_pos][1]
-    norm_end_word = doc_words[min(best_pos + window - 1, len(doc_words) - 1)]
-    norm_end = norm_end_word[1] + len(norm_end_word[0])
+    norm_start = debuts[best_pos]
+    norm_end = fins[min(best_pos + window - 1, nb_mots - 1)]
     start = idx_map[min(norm_start, len(idx_map) - 1)]
     end = idx_map[min(norm_end - 1, len(idx_map) - 1)] + 1
     s, e = _expand_to_sentence(doc_text, start, end)
