@@ -123,16 +123,20 @@ def serveur(tmp_path):
     env = dict(os.environ,
                DATABASE_URL=f"sqlite:///{tmp_path / 'jetable.db'}",
                TMPDIR=str(tmp_path))
+    # Journal dans un fichier : un tube jamais lu bloquerait le serveur une fois plein.
+    journal = open(tmp_path / "uvicorn.log", "wb")
     proc = subprocess.Popen(
         [sys.executable, "-m", "uvicorn", "appli_banc:app", "--app-dir", str(tmp_path),
          "--host", "127.0.0.1", "--port", str(port), "--log-level", "warning"],
-        cwd=tmp_path, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        cwd=tmp_path, env=env, stdout=subprocess.DEVNULL, stderr=journal)
     base = f"http://127.0.0.1:{port}"
     try:
         limite = time.monotonic() + 90  # imports lents depuis /mnt/c (WSL) à froid
         while True:
             if proc.poll() is not None:
-                pytest.fail(f"uvicorn n'a pas démarré : {proc.stderr.read().decode()[-2000:]}")
+                journal.flush()
+                texte = (tmp_path / "uvicorn.log").read_bytes().decode(errors="replace")
+                pytest.fail(f"uvicorn n'a pas démarré : {texte[-2000:]}")
             try:
                 if httpx.get(f"{base}/sante", timeout=1).status_code == 200:
                     break
@@ -150,6 +154,7 @@ def serveur(tmp_path):
             except subprocess.TimeoutExpired:
                 proc.kill()
                 proc.wait()
+        journal.close()
 
 
 def _envoyer(proc, base: str, route: str, corps) -> dict:
