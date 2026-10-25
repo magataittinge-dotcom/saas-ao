@@ -213,6 +213,7 @@ class Ancrage(NamedTuple):
 _COUPE_PHRASES = re.compile(r"(?<=[.;!?])\s+|\n\s*\n|\n(?=\s*(?:[-•◼]|\d+(?:\.\d+)*[.)]?\s))")
 _PHRASE_MAX = 400
 _PHRASE_MORCEAU = 200
+_ETIQUETTE_MAX = 16   # longueur moyenne des lignes en dessous de laquelle un bloc est fait d'étiquettes
 # Extrait condensé (« … ») ou fait de phrases recollées : morceaux cherchés un à un.
 _COUPE_EXTRAIT = re.compile(r"…|\.\.\.|(?<=[.;!?])\s+(?=[A-ZÀÂÉÈÊÎÔÛÇ«\"])")
 _BONUS_PREFERENCE = 0.03   # pièce désignée par l'IA ou pièce du lot : départage deux scores proches
@@ -231,6 +232,17 @@ def _sans_blancs(texte: str, a: int, b: int) -> Tuple[int, int]:
 
 
 def _morceaux(texte: str, a: int, b: int) -> List[Tuple[int, int]]:
+    lignes = texte[a:b].split("\n")
+    pleines = [x.strip() for x in lignes if x.strip()]
+    if len(pleines) >= 4 and sum(map(len, pleines)) / len(pleines) < _ETIQUETTE_MAX:
+        # Étiquettes de plan ou de carnet, sans ponctuation : une ligne = une phrase
+        # (sinon un paquet d'étiquettes sans rapport réunit assez de termes par hasard).
+        out, pos = [], a
+        for x in lignes:
+            if x.strip():
+                out.append((pos, pos + len(x)))
+            pos += len(x) + 1
+        return out
     if b - a <= _PHRASE_MAX:
         return [(a, b)]
     out, debut = [], a
@@ -244,8 +256,128 @@ def _morceaux(texte: str, a: int, b: int) -> List[Tuple[int, int]]:
     return out
 
 
+# ─── Aimants : passages qui ne sont jamais une source (bloc 2, tranche 3) ────
+# Sur Gueux, 133 extraits sur 410 reposaient sur un aimant, et 10 des 12 sources
+# fausses de l'échantillon jugé à la main en étaient (G2) :
+#   • en-têtes et pieds de page : lignes (chiffres masqués) parmi les 6
+#     premières ou dernières lignes d'au moins la moitié des pages, 3 pages au
+#     moins (les pages sont jointes par « \n\n » à l'extraction) ;
+#   • lignes de sommaire (points ou soulignés de conduite, numéro de page) ;
+#   • tableau des lots (en-tête « N° lot », « numéro lot »… puis au moins 3
+#     rangées numérotées), sauf pour une exigence qui porte sur l'allotissement.
+_LIGNES_DE_BORD = 6
+_PAGES_MIN_BORD = 3
+_SOMMAIRE = re.compile(r"(?:\.{4,}|_{4,}|…{2,}|(?:\. ){3,})\s*\d*\s*$")
+_CHIFFRES = re.compile(r"\d+")
+_LETTRE = re.compile(r"[^\W\d_]")
+_ENTETE_TABLEAU_LOTS = re.compile(
+    r"\bn[°o]?\s*\.?\s*lots?\b|\blots?\s*n[°o]|\bnumeros?\s+(?:de\s+|du\s+)?lots?\b"
+    r"|\bliste\s+des\s+lots\b|\bdesignation\s+des\s+lots\b|\bintitules?\s+des\s+lots?\b")
+_INTITULE_SEUL = re.compile(r"^(?:intitules?|designations?|libelles?)$")
+_RANGEE_LOT = re.compile(r"^(?:lot\s*)?(?:n[°o]\s*)?\d{1,2}[a-z]?(?:$|\s*[-:.)/]?\s+\S)")
+_SUR_LES_LOTS = re.compile(
+    r"\ballot\w*|\blots?\s+(?:separes?|distincts?|suivants?)\b|\bdecompos\w*\s+en\s+(?:\d+\s+)?lots?\b"
+    r"|\b(?:liste|nombre|intitules?|designations?)\s+des\s+lots\b"
+    r"|\b(?:un\s+ou\s+plusieurs|plusieurs|chaque|tous\s+les|l'ensemble\s+des)\s+lots?\b"
+    r"|\blot\s+unique\b|\b\d+\s+lots\b")
+_AIMANTS_CACHE: "OrderedDict[str, tuple]" = OrderedDict()
+
+
+def _forme_ligne(ligne: str) -> str:
+    return _CHIFFRES.sub("#", " ".join(ligne.split()))
+
+
+def _zones_tableau_lots(texte: str) -> List[Tuple[int, int]]:
+    """[(début, fin)] des tableaux des lots : un en-tête, puis au moins 3
+    rangées numérotées ; entre deux rangées, 2 lignes au plus (intitulé, index)."""
+    lignes, pos = [], 0
+    for brut in texte.split("\n"):
+        lignes.append((pos, pos + len(brut), _normalize(brut).strip()))
+        pos += len(brut) + 1
+    zones, i, n = [], 0, len(lignes)
+    while i < n:
+        ligne = lignes[i][2]
+        suivante = next((x[2] for x in lignes[i + 1:i + 3] if x[2]), "")
+        # En-tête du tableau : il nomme la colonne des lots, sans numéro (« LOT N° 7 :
+        # PLOMBERIE » est le titre d'un seul lot, en tête de chaque page de son CCTP).
+        if _CHIFFRES.search(ligne) or not (
+                _ENTETE_TABLEAU_LOTS.search(ligne)
+                or (ligne in ("lot", "lots") and _INTITULE_SEUL.match(suivante))):
+            i += 1
+            continue
+        j, rangees, hors, fin = i + 1, 0, 0, lignes[i][1]
+        while j < n and hors < 3:
+            s = lignes[j][2]
+            if s:
+                if _RANGEE_LOT.match(s):
+                    rangees, hors, fin = rangees + 1, 0, lignes[j][1]
+                else:
+                    hors += 1
+                    if hors == 1 and rangees:
+                        fin = lignes[j][1]   # intitulé ou index de la dernière rangée
+            j += 1
+        if rangees >= 3:
+            zones.append((lignes[i][0], fin))
+            i = j
+        else:
+            i += 1
+    return zones
+
+
+def _aimants(texte: str) -> tuple:
+    """(lignes de bord des pages, zones des tableaux des lots) d'une pièce, en cache."""
+    with _cache_verrou:
+        a = _AIMANTS_CACHE.get(texte)
+        if a is not None:
+            _AIMANTS_CACHE.move_to_end(texte)
+            return a
+    pages = texte.split("\n\n\n")
+    bord = set()
+    if len(pages) >= _PAGES_MIN_BORD:
+        compte: Counter = Counter()
+        for p in pages:
+            ls = [_forme_ligne(x) for x in p.splitlines() if x.strip()]
+            compte.update(set(ls[:_LIGNES_DE_BORD] + ls[-_LIGNES_DE_BORD:]))
+        seuil = max(_PAGES_MIN_BORD, 0.5 * len(pages))
+        bord = {x for x, c in compte.items() if c >= seuil and len(_LETTRE.findall(x)) >= 3}
+    a = (frozenset(bord), tuple(_zones_tableau_lots(texte)))
+    with _cache_verrou:
+        _AIMANTS_CACHE[texte] = a
+        total = sum(len(k) for k in _AIMANTS_CACHE)
+        while total > _UNITES_CACHE_MAX_CARACTERES and len(_AIMANTS_CACHE) > 1:
+            ancien, _ = _AIMANTS_CACHE.popitem(last=False)
+            total -= len(ancien)
+    return a
+
+
+def _aimant_de_page(texte: str, a: int, b: int) -> bool:
+    """Les lignes touchées par [a, b) sont au moins pour moitié des en-têtes,
+    pieds de page ou lignes de sommaire (lignes sans 3 lettres ignorées)."""
+    bord, _zones = _aimants(texte)
+    la = texte.rfind("\n", 0, a) + 1
+    lb = texte.find("\n", b)
+    lignes = [x for x in texte[la:lb if lb >= 0 else len(texte)].splitlines()
+              if len(_LETTRE.findall(x)) >= 3]
+    if not lignes:
+        return False
+    n = sum(1 for x in lignes if _forme_ligne(x) in bord or _SOMMAIRE.search(x.strip()))
+    return 2 * n >= len(lignes)
+
+
+def _dans_tableau_lots(texte: str, a: int, b: int) -> bool:
+    """[a, b) est au moins pour moitié dans un tableau des lots."""
+    _bord, zones = _aimants(texte)
+    dedans = sum(max(0, min(b, zb) - max(a, za)) for za, zb in zones)
+    return 2 * dedans >= max(b - a, 1) and dedans > 0
+
+
+def _est_aimant(texte: str, a: int, b: int, sur_les_lots: bool) -> bool:
+    return _aimant_de_page(texte, a, b) or (not sur_les_lots and _dans_tableau_lots(texte, a, b))
+
+
 def _unites(texte: str) -> list:
-    """Phrases d'une pièce : [(début, fin, termes significatifs)], en cache par texte."""
+    """Phrases d'une pièce : [(début, fin, termes significatifs, aimant de page,
+    dans le tableau des lots)], en cache par texte."""
     with _cache_verrou:
         u = _UNITES_CACHE.get(texte)
         if u is not None:
@@ -258,7 +390,7 @@ def _unites(texte: str) -> list:
         for a, b in _morceaux(texte, pos, fin):
             termes = frozenset(_termes(_normalize(texte[a:b])))
             if termes:
-                out.append((a, b, termes))
+                out.append((a, b, termes, _aimant_de_page(texte, a, b), _dans_tableau_lots(texte, a, b)))
         pos = m.end() if m else len(texte)
     with _cache_verrou:
         _UNITES_CACHE[texte] = out
@@ -274,25 +406,32 @@ class _IndexPhrases:
     qu'il est rare (idf : log(1 + phrases / phrases qui le contiennent))."""
 
     def __init__(self, textes: List[str]):
-        self.unites = []   # (n° de pièce, début, fin, termes)
+        # (n° de pièce, début, fin, termes, aimant de page, dans le tableau des lots)
+        self.unites = []
         df: Counter = Counter()
         for i, texte in enumerate(textes):
-            for a, b, termes in _unites(texte):
-                self.unites.append((i, a, b, termes))
+            for a, b, termes, aimant, tableau in _unites(texte):
+                self.unites.append((i, a, b, termes, aimant, tableau))
                 df.update(termes)
         n = len(self.unites)
         self.idf = {t: math.log(1 + n / c) for t, c in df.items()}
         self.idf_absent = math.log(1 + n) if n else 1.0
         self.inverse: Dict[str, List[int]] = defaultdict(list)
-        for k, (_i, _a, _b, termes) in enumerate(self.unites):
-            for t in termes:
+        for k, u in enumerate(self.unites):
+            for t in u[3]:
                 self.inverse[t].append(k)
 
-    def meilleure(self, termes: List[str], preferees: set) -> Optional[Tuple[int, int, int, float]]:
+    def _ecartee(self, k: int, sur_les_lots: bool) -> bool:
+        _i, _a, _b, _t, aimant, tableau = self.unites[k]
+        return aimant or (tableau and not sur_les_lots)
+
+    def meilleure(self, termes: List[str], preferees: set,
+                  sur_les_lots: bool = False) -> Optional[Tuple[int, int, int, float]]:
         """(n° de pièce, début, fin, score) de la meilleure phrase, ou paire de
         phrases consécutives : au moins 3 termes en commun et 55 % du poids des
-        termes de l'extrait (un terme absent des pièces pèse le plus). À score
-        presque égal, une pièce de `preferees` gagne ; puis l'ordre des pièces."""
+        termes de l'extrait (un terme absent des pièces pèse le plus). Les
+        aimants sont écartés. À score presque égal, une pièce de `preferees`
+        gagne ; puis l'ordre des pièces."""
         q = set(termes)
         if len(q) < _MIN_TERMS:
             return None
@@ -305,10 +444,13 @@ class _IndexPhrases:
                     poids[k] += w
         retenue, cle_max = None, None
         for k, p in poids.items():
-            i, a, b, ts = self.unites[k]
+            if self._ecartee(k, sur_les_lots):
+                continue
+            i, a, b, ts = self.unites[k][:4]
             communs, score, fin = ts & q, p / total, b
-            if k + 1 < len(self.unites) and self.unites[k + 1][0] == i:
-                _, _, b2, ts2 = self.unites[k + 1]
+            if (k + 1 < len(self.unites) and self.unites[k + 1][0] == i
+                    and not self._ecartee(k + 1, sur_les_lots)):
+                _, _, b2, ts2 = self.unites[k + 1][:4]
                 communs2 = (ts | ts2) & q
                 score2 = sum(self.idf[t] for t in communs2) / total - _MALUS_PAIRE
                 if score2 > score:
@@ -321,19 +463,32 @@ class _IndexPhrases:
         return retenue
 
 
-def _ancrer(extrait: str, pieces: List[Tuple[str, str, int]], index) -> Optional[Ancrage]:
+def _occurrences(texte: str, motif: str):
+    k = texte.find(motif)
+    while k >= 0:
+        yield k
+        k = texte.find(motif, k + 1)
+
+
+def _ancrer(extrait: str, pieces: List[Tuple[str, str, int]], index,
+            sur_les_lots: bool = False) -> Optional[Ancrage]:
     """Ancre un extrait sur la meilleure des pièces (nom, texte, rang ; le plus
-    petit rang d'abord). `index()` rend l'index des phrases de ces pièces."""
+    petit rang d'abord). `index()` rend l'index des phrases de ces pièces.
+    Un aimant n'est jamais une source ; le tableau des lots l'est seulement si
+    l'exigence porte sur les lots (`sur_les_lots`)."""
     extrait = (extrait or "").strip()
     if len(extrait) < 10:
         return None
     ordre = sorted(range(len(pieces)), key=lambda i: (pieces[i][2], pieces[i][0]))
+    seulement_aimants = False
 
-    # 1. Exact : le texte existe tel quel
+    # 1. Exact : le texte existe tel quel (première occurrence hors aimant)
     for i in ordre:
         nom, texte, _ = pieces[i]
-        k = texte.find(extrait)
-        if k >= 0:
+        for k in _occurrences(texte, extrait):
+            if _est_aimant(texte, k, k + len(extrait), sur_les_lots):
+                seulement_aimants = True
+                continue
             return Ancrage(nom, k, k + len(extrait), "exact", 1.0)
 
     # 2. Normalisé (apostrophes, retours à la ligne, ligatures) → passage réel
@@ -343,11 +498,18 @@ def _ancrer(extrait: str, pieces: List[Tuple[str, str, int]], index) -> Optional
     for i in ordre:
         nom, texte, _ = pieces[i]
         doc_norm, idx_map = _doc_index(texte)
-        p = doc_norm.find(norm)
-        if p >= 0:
+        for p in _occurrences(doc_norm, norm):
             a, b = _sans_blancs(texte, idx_map[p], idx_map[min(p + len(norm) - 1, len(idx_map) - 1)] + 1)
-            if b > a:
-                return Ancrage(nom, a, b, "normalise", 1.0)
+            if b <= a:
+                continue
+            if _est_aimant(texte, a, b, sur_les_lots):
+                seulement_aimants = True
+                continue
+            return Ancrage(nom, a, b, "normalise", 1.0)
+    # Retrouvé tel quel, mais seulement dans des aimants : l'extrait EST un
+    # aimant (en-tête, sommaire, tableau des lots) → pas de source.
+    if seulement_aimants:
+        return None
 
     # 2bis. Condensation « … » ou phrases recollées : le plus long morceau
     # retrouvé tel quel est étendu à la phrase réelle.
@@ -357,17 +519,16 @@ def _ancrer(extrait: str, pieces: List[Tuple[str, str, int]], index) -> Optional
         for i in ordre:
             nom, texte, _ = pieces[i]
             doc_norm, idx_map = _doc_index(texte)
-            p = doc_norm.find(seg_norm)
-            if p < 0:
-                continue
-            s_, e_ = _expand_to_sentence(texte, idx_map[p], idx_map[min(p + len(seg_norm) - 1, len(idx_map) - 1)] + 1)
-            a, b = _sans_blancs(texte, s_, e_)
-            if b - a >= 20:
-                return Ancrage(nom, a, b, "segment", round(len(seg_norm) / len(norm), 3))
+            for p in _occurrences(doc_norm, seg_norm):
+                s_, e_ = _expand_to_sentence(texte, idx_map[p],
+                                             idx_map[min(p + len(seg_norm) - 1, len(idx_map) - 1)] + 1)
+                a, b = _sans_blancs(texte, s_, e_)
+                if b - a >= 20 and not _est_aimant(texte, a, b, sur_les_lots):
+                    return Ancrage(nom, a, b, "segment", round(len(seg_norm) / len(norm), 3))
 
     # 3. Récupéré : la meilleure phrase de toutes les pièces (termes
-    # significatifs : mots entiers, sans mots vides)
-    r = index().meilleure(_termes(norm), {i for i, p in enumerate(pieces) if p[2] <= 1})
+    # significatifs : mots entiers, sans mots vides), aimants écartés
+    r = index().meilleure(_termes(norm), {i for i, p in enumerate(pieces) if p[2] <= 1}, sur_les_lots)
     if r is None:
         return None
     i, a, b, score = r
@@ -564,7 +725,8 @@ def anchor_requirements(requirements: List[dict], doc_texts: Dict[str, str],
         original = (req.get("source_excerpt") or "").strip()
         designees = _pieces_designees(req.get("source_document"), noms)
         pieces = [(n, t, 0 if n in designees else 1 + rangs.get(n, 0)) for n, t in zip(noms, textes)]
-        ancrage = _ancrer(original, pieces, _index)
+        sur_les_lots = bool(_SUR_LES_LOTS.search(_normalize(req.get("exigence") or "")))
+        ancrage = _ancrer(original, pieces, _index, sur_les_lots)
         if ancrage is None:
             counts["invalide"] += 1
             req["source_excerpt"] = None
