@@ -15,6 +15,7 @@ anthropic==0.31.0
 json-repair==0.30.3
 boto3==1.34.144
 python-docx==1.1.2
+lxml==6.0.2          # lecture du corps Word dans l'ordre (B3) ; déjà tiré par python-docx
 pypdf==5.9.0
 PyMuPDF==1.27.2.2
 openpyxl==3.1.5
