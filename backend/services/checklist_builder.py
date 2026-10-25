@@ -34,6 +34,7 @@ from services.ai.checklist_matcher import (
     _vault_doc_status,
 )
 from services.checklist_typology import ChecklistLine, plan_checklist
+from services.vault_classifier import is_document_expired
 
 logger = logging.getLogger(__name__)
 
@@ -217,6 +218,48 @@ def sync_vault_lines_safe(db: Session, project_id: str, org_id: str) -> None:
         db.rollback()
 
 
+def _cle_ligne(item) -> tuple:
+    """Même pièce, même lot. Les pièces inconnues (« autre ») ne sont jamais
+    fusionnées : leur libellé les distingue."""
+    type_ = item.document_type_required
+    return (type_, item.lot, item.details if type_ == "autre" else None)
+
+
+def _choix_de(item) -> dict:
+    """Ce que l'utilisateur a pu poser sur une ligne (copie détachée de l'ORM)."""
+    return dict(
+        linked_document_id=item.linked_document_id,
+        completed_project_doc_id=item.completed_project_doc_id,
+        signature_confirmed=bool(item.signature_confirmed),
+        status=item.status,
+        details=item.details,
+    )
+
+
+def _reprendre_les_choix(item, ancien: Optional[dict], docs_par_id: dict, completes: set) -> None:
+    """B2 §7 n°2 — la ligne régénérée reprend les choix de celle qu'elle remplace :
+    pièce choisie au coffre (tant qu'elle n'est ni supprimée ni expirée — sinon
+    le choix automatique B1 s'applique), trame déposée et son contrôle,
+    confirmation de signature, « Non concerné »."""
+    if not ancien:
+        return
+    item.signature_confirmed = ancien["signature_confirmed"]
+    if item.source_kind == "vault" and item.document_group != "synorix":
+        doc = docs_par_id.get(ancien["linked_document_id"]) if ancien["linked_document_id"] else None
+        if doc is not None and not is_document_expired(doc):
+            item.linked_document_id = doc.id
+            item.status = _vault_doc_status(doc)
+    elif item.source_kind == "dce_template" and ancien["completed_project_doc_id"] in completes:
+        # la trame déposée reste celle de la ligne, avec son contrôle (DPGF)
+        item.completed_project_doc_id = ancien["completed_project_doc_id"]
+        if ancien["status"] in ("present", "warning"):
+            item.status, item.details = ancien["status"], ancien["details"]
+        else:
+            item.status = "present"
+    if ancien["status"] == "non_applicable":
+        item.status = "non_applicable"
+
+
 def generate_checklist_from_db(db: Session, project_id: str, org_id: str) -> int:
     """(Re)génère la checklist typée du projet. Retourne le nb de lignes."""
     rows = (
@@ -232,17 +275,27 @@ def generate_checklist_from_db(db: Session, project_id: str, org_id: str) -> int
 
     plan = plan_checklist(rows)
     # B1 — un document supprimé du coffre n'est jamais candidat.
-    vault_by_type = _index_vault_by_type(
-        db.query(Document).filter(Document.organization_id == org_id,
-                                  Document.deleted_at.is_(None)).all()
-    )
+    coffre = db.query(Document).filter(Document.organization_id == org_id,
+                                       Document.deleted_at.is_(None)).all()
+    vault_by_type = _index_vault_by_type(coffre)
+
+    # B2 §7 n°2 — « Actualiser » garde les choix : relevés AVANT le
+    # remplacement, puis repris par la ligne qui remplace la même pièce.
+    choix = {_cle_ligne(c): _choix_de(c) for c in
+             db.query(ChecklistItem).filter(ChecklistItem.project_id == project_id).all()}
+    completes = {d.id for d in db.query(ProjectDocument.id).filter(
+        ProjectDocument.project_id == project_id,
+        ProjectDocument.is_user_completed.is_(True))}
 
     # Remplacement idempotent
     db.query(ChecklistItem).filter(ChecklistItem.project_id == project_id).delete(
         synchronize_session=False)
 
+    docs_par_id = {d.id: d for d in coffre}
     for position, line in enumerate(plan.lines):
-        db.add(_line_to_item(line, project_id, db, vault_by_type, position))
+        item = _line_to_item(line, project_id, db, vault_by_type, position)
+        _reprendre_les_choix(item, choix.get(_cle_ligne(item)), docs_par_id, completes)
+        db.add(item)
     db.commit()
 
     logger.info("Checklist %s : %s (entrée=%d exigences)",
