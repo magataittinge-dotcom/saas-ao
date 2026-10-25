@@ -15,8 +15,10 @@ anthropic==0.31.0
 json-repair==0.30.3
 boto3==1.34.144
 python-docx==1.1.2
+lxml==6.0.2          # lecture du corps Word dans l'ordre (B3) ; déjà tiré par python-docx
 pypdf==5.9.0
 PyMuPDF==1.27.2.2
+pypdfium2==5.14.0    # lecteur PDF (Apache-2.0 ou BSD-3-Clause, PDFium BSD-3) : remplace PyMuPDF (AGPL), plan H
 openpyxl==3.1.5
 xlrd==2.0.2          # .xls ancien (BIFF) — audit risque #1
 xlwt==1.3.0          # fixtures de test BIFF uniquement

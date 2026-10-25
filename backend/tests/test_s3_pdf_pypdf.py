@@ -27,14 +27,10 @@ def test_pdf_fallback_extracts_text_via_pypdf(tmp_path, monkeypatch):
     """Le fallback d'extraction (fitz en échec) lit le PDF via pypdf."""
     import fitz
     from services import lot_detector
+    from tests.pdf_fabrique import ecrire_pdf
 
-    # PDF texte minimal créé avec fitz.
-    pdf = tmp_path / "lot.pdf"
-    doc = fitz.open()
-    page = doc.new_page()
-    page.insert_text((72, 72), "LOT 01 GROS OEUVRE")
-    doc.save(str(pdf))
-    doc.close()
+    # PDF texte minimal (fabrique de tests, sans PyMuPDF).
+    pdf = ecrire_pdf(tmp_path / "lot.pdf", ["LOT 01 GROS OEUVRE"])
 
     # Force l'échec de la branche fitz → le fallback pypdf prend le relais.
     def _boom(*a, **k):

@@ -13,7 +13,6 @@ import asyncio
 import io
 from pathlib import Path
 
-import fitz
 import httpx
 from httpx import ASGITransport
 
@@ -22,6 +21,7 @@ from main import app
 from models.checklist_item import ChecklistItem
 from models.project import Project, ProjectDocument
 from routers.auth import get_auth_user
+from tests.pdf_fabrique import pdf_texte
 
 
 # ─── Sonde event-loop ────────────────────────────────────────────────────────
@@ -101,10 +101,7 @@ def test_view_file_highlight_runs_off_loop(db_session, test_org, test_user, monk
     monkeypatch.setattr(fs, "UPLOADS_ROOT", tmp_path)
     target = tmp_path / "projects" / "proj-r8" / "dce" / "RC.pdf"
     target.parent.mkdir(parents=True)
-    doc = fitz.open()
-    doc.new_page().insert_text((72, 100), "Article 1 — objet du marché")
-    target.write_bytes(doc.tobytes())
-    doc.close()
+    target.write_bytes(pdf_texte(["Article 1 — objet du marché"]))
 
     db_session.add(Project(id="proj-r8", organization_id=test_org.id, name="R8"))
     db_session.commit()
@@ -135,12 +132,13 @@ def test_upload_filled_dpgf_check_runs_off_loop(db_session, test_org, test_user,
     db_session.commit()
 
     local = tmp_path / "dpgf.xlsx"
-    local.write_bytes(b"fake-xlsx")
+    local.write_bytes(b"PK\x03\x04fake-xlsx")
 
     valid = {"valid": True, "warnings": [], "total_ht": None,
              "nb_lignes": 0, "nb_lignes_remplies": 0, "nb_lignes_vides": 0}
     record = []
-    monkeypatch.setattr(export._storage, "upload", _make_async("/uploads/dpgf.xlsx"))
+    # B8 : la DPGF est stockée en flux, sans tout relire en mémoire
+    monkeypatch.setattr(export._storage, "upload_stream", _make_async("/uploads/dpgf.xlsx"))
     monkeypatch.setattr(export, "_resolve_local_path", lambda url: local)
     monkeypatch.setattr(export, "check_dpgf", _loop_probe(record, valid))
 
@@ -148,7 +146,7 @@ def test_upload_filled_dpgf_check_runs_off_loop(db_session, test_org, test_user,
     try:
         resp = _run(_request(
             "POST", "/api/projects/proj-r8b/dpgf-upload",
-            files={"file": ("dpgf.xlsx", io.BytesIO(b"fake-xlsx"),
+            files={"file": ("dpgf.xlsx", io.BytesIO(b"PK\x03\x04fake-xlsx"),
                             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
         ))
     finally:
@@ -184,7 +182,7 @@ def test_upload_completed_template_check_runs_off_loop(db_session, test_org, tes
     try:
         resp = _run(_request(
             "POST", "/api/projects/proj-r8c/checklist/cli-dpgf/upload-completed",
-            files={"file": ("dpgf.xlsx", io.BytesIO(b"fake-xlsx"),
+            files={"file": ("dpgf.xlsx", io.BytesIO(b"PK\x03\x04fake-xlsx"),
                             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
         ))
     finally:
