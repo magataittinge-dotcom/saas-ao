@@ -350,6 +350,9 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
+    # Le front lit les pièces écartées du ZIP (export.py) même quand l'API
+    # est sur une autre origine que l'écran (VITE_API_URL en production).
+    expose_headers=["X-Export-Warnings"],
     max_age=600,
 )
 

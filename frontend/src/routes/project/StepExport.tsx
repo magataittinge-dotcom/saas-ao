@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
-  FileDown, Archive, CheckCircle2, XCircle, Loader2,
+  FileDown, Archive, CheckCircle2, Circle, Loader2,
   ChevronDown, ChevronRight, AlertTriangle, Upload,
   ExternalLink, FileSpreadsheet, FileText, Eye,
   Download,
@@ -12,19 +12,17 @@ import type { Project } from '@/types'
 import DocumentViewer, { type ViewableDocument } from '@/components/project/DocumentViewer'
 import { DocumentRowSkeleton } from '@/components/skeletons'
 import EchecAction from '@/components/common/EchecAction'
+import { signatureAConfirmer } from '@/components/project/SignatureLigne'
+import ExigencesDuDossier, { type ExigenceExport } from '@/components/project/ExigencesDuDossier'
+import {
+  etatPiece, libellePieces, lignesDuScore, lireAvertissementsExport, resumeExigences, type GroupeExigences,
+} from '@/lib/exportDossier'
 import { messageErreur } from '@/lib/erreurs'
 
 const F = "'Inter Variable', 'Geist Sans', sans-serif"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-interface ComplianceExportItem {
-  id: string
-  exigence_text: string
-  category: string
-  priority: string
-  status: string
-}
 
 interface ChecklistExportItem {
   id: string
@@ -35,6 +33,20 @@ interface ChecklistExportItem {
   linked_document_id: string | null
   source_kind: string
   signature_confirmed: boolean
+  signature_required: boolean
+  document_group: string
+  // Décision du 25/10 (point 3) : « Jointe » = fait vérifié par le serveur
+  jointe: boolean
+  piece_nom: string | null
+  valable_jusqu_au: string | null
+}
+
+// Exactement ce que le ZIP contient (même plan que l'archive, côté serveur)
+interface PieceZip {
+  dossier: string
+  nom: string
+  genre: string
+  document_projet_id: string | null
 }
 
 interface ProjectDocumentExportItem {
@@ -72,14 +84,16 @@ interface DpgfRemplieInfo {
 
 interface ExportDetail {
   compliance_total: number
-  compliance_covered: number
+  compliance_confirmed: number
+  compliance_with_source: number
   checklist_total: number
   checklist_present: number
   has_memoire: boolean
   has_dpgf: boolean
-  compliance_items: ComplianceExportItem[]
+  compliance_items: ExigenceExport[]
   checklist_items: ChecklistExportItem[]
   project_documents: ProjectDocumentExportItem[]
+  pieces_zip: PieceZip[]
   memoire_info: MemoireExportInfo | null
   dpgf_info: DpgfExportInfo | null
   dpgf_remplie: DpgfRemplieInfo | null
@@ -88,30 +102,18 @@ interface ExportDetail {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-const CATEGORY_LABELS: Record<string, string> = {
-  candidature: 'Candidature',
-  offre: 'Offre',
-  technique: 'Technique',
-  planning: 'Planning',
-  criteres_notation: 'Critères de notation',
+// Pièces : vert = jointe (fait vérifié), ambre = à renouveler ou à confirmer,
+// cercle neutre = à joindre (un travail à faire, pas une alarme).
+function PieceIcon({ ton }: { ton: 'ok' | 'attention' | 'neutre' }) {
+  if (ton === 'ok') return <CheckCircle2 size={15} className="shrink-0" style={{ color: '#6EE7A8' }} />
+  if (ton === 'attention') return <AlertTriangle size={15} className="shrink-0" style={{ color: '#D9A441' }} />
+  return <Circle size={15} className="shrink-0" style={{ color: '#909195' }} />
 }
 
-// Statuts métier : vert = conforme, ambre = à traiter, corail = vraie alerte
-const STATUS_ICON: Record<string, { icon: typeof CheckCircle2; color: string }> = {
-  couvert:     { icon: CheckCircle2, color: '#6EE7A8' },
-  present:     { icon: CheckCircle2, color: '#6EE7A8' },
-  non_couvert: { icon: XCircle,      color: '#F58E86' },
-  manquant:    { icon: XCircle,      color: '#F58E86' },
-  partiel:     { icon: AlertTriangle, color: '#D9A441' },
-  expire:      { icon: AlertTriangle, color: '#F58E86' },
-  expiration_proche: { icon: AlertTriangle, color: '#959597' },
-  a_generer:   { icon: AlertTriangle, color: '#959597' },
-}
-
-function StatusIcon({ status }: { status: string }) {
-  const cfg = STATUS_ICON[status] ?? STATUS_ICON.non_couvert
-  const Icon = cfg.icon
-  return <Icon size={15} className="shrink-0" style={{ color: cfg.color }} />
+const DOSSIERS_ZIP: Record<string, string> = {
+  '01_Candidature': 'Candidature',
+  '02_Offre': 'Offre',
+  '3_ANNEXES': 'Annexes',
 }
 
 // ─── Hero check (ligne de contrôle compacte du héros) ──────────────────────
@@ -205,6 +207,26 @@ export default function StepExport({ project }: Props) {
   const [showGateWarning, setShowGateWarning] = useState(false)
   // 1.16 — un livrable qui ne se télécharge pas : on le dit, avec « Réessayer »
   const [echec, setEchec] = useState<{ message: string; relancer: () => void } | null>(null)
+  // Avertissements du dernier ZIP (pièces écartées, livrables à finaliser)
+  const [avertissementsZip, setAvertissementsZip] = useState<string[] | null>(null)
+
+  // Export « 0/N » (décision du 25/10) : l'utilisateur confirme les exigences,
+  // une à une ou par groupe ; Synorix ne pose jamais « confirmée » tout seul.
+  const { mutate: confirmer, isPending: confirmationEnCours } = useMutation({
+    mutationFn: async (action: { item: ExigenceExport; confirmee: boolean } | { groupe: GroupeExigences }) => {
+      if ('groupe' in action) {
+        await api.post(`/projects/${project.id}/compliance/confirmer-groupe`, { groupe: action.groupe })
+      } else {
+        await api.patch(`/projects/${project.id}/compliance/${action.item.id}`, { confirmee: action.confirmee })
+      }
+    },
+    onMutate: () => setEchec(null),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['export-detail', project.id] }),
+    onError: async (err, action) => setEchec({
+      message: await messageErreur(err, "La confirmation n'a pas été enregistrée."),
+      relancer: () => confirmer(action),
+    }),
+  })
 
   const { mutate: exportDocx, isPending: isExportingDocx } = useMutation({
     mutationFn: async () => {
@@ -252,8 +274,10 @@ export default function StepExport({ project }: Props) {
       a.download = `Dossier_AO_${project.name.replace(/\s+/g, '_')}.zip`
       a.click()
       URL.revokeObjectURL(url)
+      // Pièces écartées et points signalés par le serveur (X-Export-Warnings)
+      setAvertissementsZip(lireAvertissementsExport(response.headers['x-export-warnings']))
     },
-    onMutate: () => setEchec(null),
+    onMutate: () => { setEchec(null); setAvertissementsZip(null) },
     onError: async (err) => setEchec({
       message: await messageErreur(err, "Le téléchargement du dossier ZIP n'a pas abouti."),
       relancer: () => exportZip(),
@@ -309,11 +333,10 @@ export default function StepExport({ project }: Props) {
   // ── Viewable documents for the DocumentViewer ────────────────────────────
   const viewableDocs: ViewableDocument[] = useMemo(() => {
     if (!detail) return []
-    return detail.project_documents.map((d) => ({
-      id: d.id,
-      name: d.file_name,
-      source: 'project' as const,
-    }))
+    // Formulaires remplis du ZIP : documents du projet, ouvrables dans la visionneuse
+    return detail.pieces_zip.flatMap((d) => (d.document_projet_id
+      ? [{ id: d.document_projet_id, name: d.nom, source: 'project' as const }]
+      : []))
   }, [detail])
 
   // ── Loading state ─────────────────────────────────────────────────────────
@@ -329,20 +352,22 @@ export default function StepExport({ project }: Props) {
   }
 
   // ── Computed values ───────────────────────────────────────────────────────
-  const complianceByCategory: Record<string, ComplianceExportItem[]> = {}
-  for (const item of detail.compliance_items) {
-    const cat = item.category || 'offre'
-    if (!complianceByCategory[cat]) complianceByCategory[cat] = []
-    complianceByCategory[cat].push(item)
-  }
-
-  const complianceOk = detail.compliance_total > 0 && detail.compliance_covered === detail.compliance_total
-  const checklistOk = detail.checklist_total > 0 && detail.checklist_present === detail.checklist_total
+  // Export « 0/N » (décision du 25/10) : les exigences ne sont plus un point de
+  // contrôle « couvert / non couvert » — Synorix les relève avec leur source,
+  // l'utilisateur les confirme s'il le souhaite.
+  const resumeDesExigences = resumeExigences(
+    detail.compliance_total, detail.compliance_with_source, detail.compliance_confirmed)
+  const sourcesRetrouvees = detail.compliance_total > 0
+    && detail.compliance_with_source === detail.compliance_total
+  // Pièces : mêmes lignes et même règle que le score du serveur (avant : toutes
+  // les lignes, dont le jalon « mémoire » jamais « présent », d'où un point
+  // de contrôle en défaut pour toujours).
+  const piecesDemandees = lignesDuScore(detail.checklist_items)
+  const checklistOk = !!score && score.total > 0 && score.conformes === score.total
   const memoireOk = detail.has_memoire
   const dpgfOk = detail.has_dpgf && (detail.dpgf_remplie?.verification?.valid ?? false)
 
   const alertCount =
-    (complianceOk ? 0 : 1) +
     (checklistOk ? 0 : 1) +
     (memoireOk ? 0 : 1) +
     (dpgfOk ? 0 : 1)
@@ -352,12 +377,11 @@ export default function StepExport({ project }: Props) {
   // ── Gate ZIP (C10) : X < Y pièces conformes → ambre + avertissement ──────
   const gateBlocked = !!score && score.total > 0 && score.conformes < score.total
   const CONFORME_STATUSES = new Set(['present', 'expiration_proche', 'non_applicable'])
-  const SIGNABLE = new Set(['acte_engagement_template', 'dc1_template', 'dc2_template'])
-  const nonConformes = (detail?.checklist_items ?? []).filter((i) =>
-    i.status !== 'non_applicable' && (
-      !CONFORME_STATUSES.has(i.status)
-      || (i.source_kind === 'dce_template' && SIGNABLE.has(i.document_type_required) && !i.signature_confirmed)
-    ),
+  // Signature : règle serveur (signature_required) — DC1, DC2, DUME et AE
+  // seulement si le RC l'exige ; plus de liste de types « à signer » ici.
+  // Mêmes lignes que le score du serveur : pièces à fournir et à compléter.
+  const nonConformes = lignesDuScore(detail?.checklist_items ?? []).filter((i) =>
+    i.status !== 'non_applicable' && (!CONFORME_STATUSES.has(i.status) || signatureAConfirmer(i)),
   )
 
   // ── Faits du héros : l'état du dossier en un chiffre ─────────────────────
@@ -381,16 +405,16 @@ export default function StepExport({ project }: Props) {
         <div className="w-full max-w-xl rounded-xl px-4 py-3 text-left"
           style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.25)' }}>
           <p className="text-xs font-semibold mb-1" style={{ color: '#D9A441' }}>
-            {score!.conformes}/{score!.total} pièces conformes — à vérifier avant dépôt :
+            {score!.total - score!.conformes} pièce{score!.total - score!.conformes > 1 ? 's' : ''} à finaliser avant le dépôt :
           </p>
           <ul className="text-xs space-y-0.5" style={{ color: '#D9A441' }}>
             {nonConformes.slice(0, 6).map((i) => (
               <li key={i.id}>
-                • {i.linked_document_name || i.document_type_required}
-                {' '}({i.status === 'manquant' ? 'à fournir'
-                  : i.status === 'expire' ? 'expirée'
-                  : i.status === 'warning' ? 'à vérifier'
-                  : 'signature non confirmée'})
+                • {i.details || i.linked_document_name || i.document_type_required}
+                {' '}({i.status === 'manquant' ? 'à joindre'
+                  : i.status === 'expire' ? 'à renouveler'
+                  : i.status === 'warning' ? 'date de validité à confirmer'
+                  : 'signature à confirmer'})
               </li>
             ))}
             {nonConformes.length > 6 && <li>… et {nonConformes.length - 6} autre(s)</li>}
@@ -417,9 +441,7 @@ export default function StepExport({ project }: Props) {
         }}
       >
         {isExportingZip ? <Loader2 size={18} className="animate-spin" /> : <Archive size={18} />}
-        {gateBlocked
-          ? `Télécharger le ZIP (${score!.conformes}/${score!.total} conformes)`
-          : 'Télécharger le dossier ZIP'}
+        Télécharger le dossier ZIP
       </button>
     </div>
   )
@@ -438,25 +460,26 @@ export default function StepExport({ project }: Props) {
             </p>
             <div className="flex flex-wrap items-end gap-3">
               <span className="num-mono bg-gradient-silver-text bg-clip-text text-5xl font-bold leading-none text-transparent">
-                {conformes}/{totalPieces}
+                {totalPieces}
               </span>
               <div className="pb-0.5">
-                <p className="text-sm font-semibold" style={{ color: '#F7F8F8' }}>pièces conformes</p>
+                <p className="text-sm font-semibold" style={{ color: '#F7F8F8' }}>
+                  {libellePieces(totalPieces, conformes)}
+                </p>
                 <p className="mt-0.5 text-xs font-medium" style={{ color: readyForDeposit ? '#6EE7A8' : 'var(--warn)' }}>
                   {readyForDeposit
                     ? 'Dossier prêt pour le dépôt'
                     : gateBlocked
-                      ? `${totalPieces - conformes} pièce${totalPieces - conformes > 1 ? 's' : ''} à corriger avant le dépôt`
+                      ? `${totalPieces - conformes} pièce${totalPieces - conformes > 1 ? 's' : ''} à finaliser avant le dépôt`
                       : `${alertCount} point${alertCount > 1 ? 's' : ''} de contrôle à vérifier`}
                 </p>
               </div>
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
-              <HeroCheck
-                ok={complianceOk}
-                label="Exigences couvertes"
-                value={`${detail.compliance_covered}/${detail.compliance_total}`}
-              />
+              <span className="flex items-center gap-1.5 text-xs" style={{ color: '#959597' }}>
+                <FileText size={13} className="shrink-0" style={{ color: '#959597' }} />
+                {resumeDesExigences}
+              </span>
               <HeroCheck
                 ok={memoireOk}
                 label="Mémoire"
@@ -513,42 +536,62 @@ export default function StepExport({ project }: Props) {
         />
       )}
 
+      {avertissementsZip && avertissementsZip.length > 0 && (
+        <div className="glass-card rounded-lg px-4 py-3" role="status">
+          <p className="text-xs font-semibold" style={{ color: '#F7F8F8' }}>
+            Dossier téléchargé — à noter avant le dépôt
+          </p>
+          <ul className="mt-1.5 space-y-0.5 text-xs" style={{ color: '#959597' }}>
+            {avertissementsZip.map((a) => <li key={a}>• {a}</li>)}
+          </ul>
+          <button
+            type="button"
+            onClick={() => setAvertissementsZip(null)}
+            className="mt-2 text-xs hover:underline"
+            style={{ color: '#909195' }}
+          >
+            Fermer
+          </button>
+        </div>
+      )}
+
       {/* ── Points de contrôle ──────────────────────────────────── */}
       <div>
         <p className="microlabel mb-3">Points de contrôle</p>
 
         <div className="space-y-2.5">
 
-          {/* 1. Pièces Administratives */}
+          {/* 1. Pièces demandées — « Jointe » quand c'est un fait vérifié */}
           <AccordionSection
-            title={`Pièces Administratives (${detail.checklist_present}/${detail.checklist_total})`}
+            title={`Pièces demandées (${piecesDemandees.length})`}
             ok={checklistOk}
             expanded={expanded === 'checklist'}
             onToggle={() => toggle('checklist')}
           >
             <div className="px-3 py-2 space-y-0.5 max-h-[400px] overflow-y-auto">
-              {detail.checklist_items.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-ds-bg-2 transition-colors"
-                >
-                  <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                    <StatusIcon status={item.status} />
+              {piecesDemandees.map((item) => {
+                const etat = etatPiece(item)
+                return (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-2.5 py-2 px-3 rounded-lg hover:bg-ds-bg-2 transition-colors"
+                  >
+                    <PieceIcon ton={etat.ton} />
                     <div className="min-w-0">
                       <p className="text-sm font-medium" style={{ color: '#F7F8F8' }}>
-                        {item.document_type_required}
+                        {item.details || item.document_type_required}
                       </p>
-                      {item.linked_document_name && (
-                        <p className="text-xs truncate" style={{ color: '#959597' }}>
-                          {item.linked_document_name}
-                        </p>
-                      )}
+                      <p className="text-xs truncate" style={{ color: etat.ton === 'attention' ? 'var(--warn)' : '#959597' }}>
+                        {etat.texte}
+                      </p>
                     </div>
                   </div>
-                </div>
-              ))}
-              {detail.checklist_items.length === 0 && (
-                <p className="text-xs text-center py-4" style={{ color: '#909195' }}>Aucun document requis détecté</p>
+                )
+              })}
+              {piecesDemandees.length === 0 && (
+                <p className="text-xs text-center py-4" style={{ color: '#909195' }}>
+                  La liste des pièces apparaît après la lecture du RC
+                </p>
               )}
             </div>
           </AccordionSection>
@@ -755,79 +798,61 @@ export default function StepExport({ project }: Props) {
             </div>
           </AccordionSection>
 
-          {/* 4. Matrice de conformité */}
+          {/* 4. Exigences relevées — confirmées par l'utilisateur (export « 0/N ») */}
           <AccordionSection
-            title={`Matrice de conformité (${detail.compliance_covered}/${detail.compliance_total})`}
-            ok={complianceOk}
+            title={`Exigences relevées (${detail.compliance_total})`}
+            ok={sourcesRetrouvees}
             expanded={expanded === 'compliance'}
             onToggle={() => toggle('compliance')}
           >
-            <div className="p-3.5 space-y-3.5 max-h-[400px] overflow-y-auto">
-              {Object.entries(complianceByCategory).map(([cat, items]) => {
-                const covered = items.filter((i) => i.status === 'couvert').length
-                return (
-                  <div key={cat}>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#959597' }}>
-                        {CATEGORY_LABELS[cat] || cat}
-                      </span>
-                      <span className="text-xs font-medium" style={{ color: covered === items.length ? '#E8E9EB' : '#959597' }}>
-                        {covered}/{items.length}
-                      </span>
-                    </div>
-                    <div className="space-y-1">
-                      {items.map((item) => (
-                        <div key={item.id} className="flex items-start gap-2 py-1.5 px-2 rounded-lg hover:bg-ds-bg-2 transition-colors">
-                          <StatusIcon status={item.status} />
-                          <span className="text-sm leading-relaxed flex-1" style={{ color: '#D8D9DB' }}>
-                            {item.exigence_text}
-                          </span>
-                          {item.priority === 'obligatoire' && (
-                            <span
-                              className="text-xs px-1.5 py-0.5 rounded shrink-0 ml-auto"
-                              style={{ background: 'var(--warn-bg)', color: 'var(--warn)' }}
-                            >
-                              Obligatoire
-                            </span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })}
-              {detail.compliance_items.length === 0 && (
-                <p className="text-xs text-center py-4" style={{ color: '#909195' }}>Aucune exigence extraite</p>
-              )}
+            <div className="p-3.5 max-h-[400px] overflow-y-auto">
+              <ExigencesDuDossier
+                items={detail.compliance_items}
+                onConfirmer={(item, confirmee) => confirmer({ item, confirmee })}
+                onConfirmerGroupe={(groupe) => confirmer({ groupe })}
+                enCours={confirmationEnCours}
+              />
             </div>
           </AccordionSection>
 
-          {/* 5. Contenu du ZIP — chaque pièce jointe, avec aperçu */}
+          {/* 5. Contenu du ZIP — exactement ce qui part (même plan que l'archive) */}
           <AccordionSection
-            title={`Pièces du dossier ZIP (${detail.project_documents.length})`}
-            ok={detail.project_documents.length > 0}
+            title={`Pièces du dossier ZIP (${detail.pieces_zip.length})`}
+            ok={detail.pieces_zip.length > 0}
             expanded={expanded === 'documents'}
             onToggle={() => toggle('documents')}
           >
             <div className="px-3 py-2 max-h-[360px] overflow-y-auto">
-              {detail.project_documents.map((d, i) => (
-                <button
-                  key={d.id}
-                  onClick={() => setViewerIndex(i)}
-                  className="w-full flex items-center gap-2.5 py-2 px-3 rounded-lg hover:bg-ds-bg-2 transition-colors text-left"
-                >
-                  <FileText size={15} className="shrink-0" style={{ color: '#959597' }} />
-                  <span className="text-sm font-medium truncate flex-1" style={{ color: '#F7F8F8' }}>
-                    {d.file_name}
-                  </span>
-                  <span className="flex items-center gap-1 text-xs shrink-0" style={{ color: '#909195' }}>
-                    <Eye size={12} /> Aperçu
-                  </span>
-                </button>
-              ))}
-              {detail.project_documents.length === 0 && (
+              {detail.pieces_zip.map((d) => {
+                const indexApercu = viewableDocs.findIndex((v) => v.id === d.document_projet_id)
+                return (
+                  <div
+                    key={`${d.dossier}/${d.nom}`}
+                    className="w-full flex items-center gap-2.5 py-2 px-3 rounded-lg hover:bg-ds-bg-2 transition-colors"
+                  >
+                    <FileText size={15} className="shrink-0" style={{ color: '#959597' }} />
+                    <span className="text-sm font-medium truncate flex-1" style={{ color: '#F7F8F8' }}>
+                      {d.nom}
+                    </span>
+                    <span className="text-xs shrink-0" style={{ color: '#909195' }}>
+                      {DOSSIERS_ZIP[d.dossier] ?? d.dossier}
+                    </span>
+                    {indexApercu >= 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setViewerIndex(indexApercu)}
+                        className="flex items-center gap-1 text-xs shrink-0 hover:underline"
+                        style={{ color: '#909195' }}
+                      >
+                        <Eye size={12} /> Aperçu
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+              {detail.pieces_zip.length === 0 && (
                 <p className="text-xs text-center py-4" style={{ color: '#909195' }}>
-                  Aucune pièce jointe pour l&apos;instant
+                  Les pièces apparaissent ici dès qu’elles sont jointes au dossier
                 </p>
               )}
             </div>

@@ -1,11 +1,14 @@
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime
+from datetime import date, datetime
 
 
 class ExportSummary(BaseModel):
+    # Export « 0/N » (décision du 25/10) : exigences relevées, avec leur extrait
+    # retrouvé, confirmées par l'utilisateur — jamais « couvertes ».
     compliance_total: int
-    compliance_covered: int
+    compliance_confirmed: int
+    compliance_with_source: int
     checklist_total: int
     checklist_present: int
     has_memoire: bool
@@ -17,7 +20,11 @@ class ComplianceExportItem(BaseModel):
     exigence_text: str
     category: str
     priority: str
-    status: str
+    status: str   # « couvert » = confirmée par l'utilisateur (STATUT_CONFIRMEE)
+    groupe: str   # candidature | offre_technique | execution (services/exigences)
+    source_document: Optional[str] = None
+    source_page: Optional[int] = None
+    source_verifiee: bool = False   # extrait retrouvé mot pour mot dans le DCE
 
     model_config = {"from_attributes": True}
 
@@ -31,8 +38,25 @@ class ChecklistExportItem(BaseModel):
     linked_document_id: Optional[str] = None
     source_kind: str = "vault"
     signature_confirmed: bool = False  # C12 — pour le gate d'export
+    # Signature demandée pour cette pièce (checklist_matcher.signature_requise)
+    signature_required: bool = False
+    # fournir | completer | synorix | workflow — le score ne compte que les deux premiers
+    document_group: str = "fournir"
+    # Décision du 25/10 (point 3) : « Jointe » est un FAIT — le fichier part dans
+    # le ZIP, valable et daté (pièce du coffre) ; avec son nom et sa date de fin.
+    jointe: bool = False
+    piece_nom: Optional[str] = None
+    valable_jusqu_au: Optional[date] = None
 
     model_config = {"from_attributes": True}
+
+
+class PieceZipExport(BaseModel):
+    """Une pièce du ZIP, telle qu'elle y part (même plan que l'archive)."""
+    dossier: str          # 01_Candidature | 02_Offre | 3_ANNEXES
+    nom: str
+    genre: str            # coffre | complete | memoire | dpgf_remplie | annexe
+    document_projet_id: Optional[str] = None   # formulaire rempli : aperçu possible
 
 
 class ProjectDocumentExportItem(BaseModel):
@@ -62,9 +86,10 @@ class DpgfRemplieInfo(BaseModel):
 
 
 class ExportDetail(BaseModel):
-    # Summary counts
+    # Summary counts — voir ExportSummary
     compliance_total: int
-    compliance_covered: int
+    compliance_confirmed: int
+    compliance_with_source: int
     checklist_total: int
     checklist_present: int
     has_memoire: bool
@@ -74,6 +99,7 @@ class ExportDetail(BaseModel):
     compliance_items: list[ComplianceExportItem]
     checklist_items: list[ChecklistExportItem]
     project_documents: list[ProjectDocumentExportItem] = []
+    pieces_zip: list[PieceZipExport] = []   # exactement ce que le ZIP contient
     memoire_info: Optional[MemoireExportInfo] = None
     dpgf_info: Optional[DpgfExportInfo] = None
     dpgf_remplie: Optional[DpgfRemplieInfo] = None

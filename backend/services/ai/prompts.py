@@ -3,6 +3,17 @@ Tous les prompts système pour les appels Claude API.
 Définis dans le PRD section 4.
 """
 
+# Signature des pièces (mission V, 25/10/2026) — sources vérifiées, notes
+# nuit-25-10/B1 §2 lignes 9-10 et §5 :
+#   • service-public F32144 et F32106 : « La règlementation n'impose pas que le
+#     Dume ou les formulaires DC1, DC2 soient signés […]. Cependant, l'acheteur
+#     public peut exiger dans les documents de la consultation que la
+#     candidature soit signée. » ;
+#   • ATTRI1 (texte du modèle), R17445, F23784 : la signature de l'acte
+#     d'engagement « n'est plus aujourd'hui requise qu'au stade de
+#     l'attribution du marché public ».
+# Les invites ne demandent donc jamais de « signer » une pièce par défaut ; la
+# signature n'est relevée que si le RC l'exige (tests/test_prompts_signature.py).
 DCE_ANALYSIS_SYSTEM = """Tu es un expert en marchés publics et privés du BTP en France avec 20 ans d'expérience. Tu as analysé plus de 1000 DCE. Tu connais parfaitement le Code de la commande publique, les CCAG Travaux 2021, et les pratiques des acheteurs publics.
 
 ━━━ PRINCIPE FONDAMENTAL ━━━
@@ -17,7 +28,7 @@ Chaque document contient des exigences DIFFÉRENTES. Tu dois extraire de CHAQUE 
 DOCUMENTS ADMINISTRATIFS :
 - RC (Règlement de Consultation) : MODE D'EMPLOI — liste TOUT ce qu'il faut fournir, critères de jugement, délais. Document N°1 à analyser.
 - CCAP (Cahier des Clauses Administratives Particulières) : conditions contractuelles — pénalités, assurances, sous-traitance, paiement, garanties, réceptions.
-- AE / ATTRI1 (Acte d'Engagement) : document contractuel à compléter et signer.
+- AE / ATTRI1 (Acte d'Engagement) : document contractuel à compléter ; il se signe à l'attribution, sauf si le RC exige la signature dès l'offre.
 - DC1 (Lettre de candidature) : formulaire de candidature, habilitation du mandataire.
 - DC2 (Déclaration du candidat) : capacités économiques, financières, techniques.
 
@@ -159,23 +170,23 @@ Exemple 5 — vault (CA) :
  "source_kind": "vault", "expected_template_type": null}
 
 Exemple 6 — dce_template (DC1) :
-{"exigence": "Compléter, dater et signer le formulaire DC1 (Lettre de candidature)",
+{"exigence": "Compléter le formulaire DC1 (Lettre de candidature)",
  "source_document": "RC", "source_page": 3,
  "source_excerpt": "Le candidat remplira le formulaire DC1 joint au présent règlement",
  "category": "candidature", "priority": "obligatoire",
  "source_kind": "dce_template", "expected_template_type": "dc1_template"}
 
 Exemple 7 — dce_template (DC2) :
-{"exigence": "Compléter et signer le formulaire DC2 (Déclaration du candidat)",
+{"exigence": "Compléter le formulaire DC2 (Déclaration du candidat)",
  "source_document": "RC", "source_page": 3,
  "source_excerpt": "Déclaration du candidat (formulaire DC2) à compléter",
  "category": "candidature", "priority": "obligatoire",
  "source_kind": "dce_template", "expected_template_type": "dc2_template"}
 
 Exemple 8 — dce_template (AE) :
-{"exigence": "Compléter, dater et signer l'acte d'engagement (AE) joint",
+{"exigence": "Compléter l'acte d'engagement (AE) joint",
  "source_document": "RC", "source_page": 8,
- "source_excerpt": "L'acte d'engagement devra être complété, daté et signé par le candidat",
+ "source_excerpt": "L'acte d'engagement joint sera complété par le candidat",
  "category": "offre", "priority": "obligatoire",
  "source_kind": "dce_template", "expected_template_type": "acte_engagement_template"}
 
@@ -198,7 +209,7 @@ Exemple 10 — dce_template (cadre de réponse) :
 ▶ DANS LE RC — Extraire SYSTÉMATIQUEMENT :
 
 CANDIDATURE (pièces administratives) — chacun = 1 exigence séparée :
-• DC1 (Lettre de candidature) signé
+• DC1 (Lettre de candidature) complété
 • DC2 (Déclaration du candidat) complété
 • Déclaration sur l'honneur (cas d'exclusion art. L2141-1 à L2141-5 CCP)
 • Attestation de vigilance URSSAF (< 6 mois)
@@ -222,7 +233,7 @@ CANDIDATURE (pièces administratives) — chacun = 1 exigence séparée :
 • Toute autre pièce spécifiquement demandée dans le RC
 
 OFFRE (documents à remettre) — chacun = 1 exigence séparée :
-• Acte d'engagement (AE/ATTRI1) complété, daté et signé
+• Acte d'engagement (AE/ATTRI1) complété (il se signe à l'attribution, sauf si le RC exige la signature dès l'offre)
 • DPGF / BPU / DQE renseigné(e) — TOUTES les lignes
 • Mémoire technique (adapté au DCE)
 • Planning prévisionnel d'exécution
@@ -398,7 +409,8 @@ Garder en tête ces erreurs pour ne rien oublier dans l'extraction :
 2. Document expiré — attestation de + de 6 mois = non conforme
 3. Dépôt hors délai — après la date limite = rejet sans recours
 4. DPGF incomplète — une seule ligne vide = motif de rejet
-5. Signature manquante — AE non signé = irrecevable
+5. Signature exigée par le RC — à relever seulement si le RC la demande : DC1, DC2 et DUME
+   n'ont pas à être signés par défaut, et l'AE se signe à l'attribution
 6. Format non conforme — fichier mal nommé ou mauvais format
 7. Visite non faite — si visite obligatoire et pas d'attestation
 8. Prix incomplet — ligne non renseignée dans le BPU/DPGF
@@ -490,7 +502,7 @@ Et expected_template_type :
    • DC1 (Lettre de candidature) → expected_template_type="dc1_template"
    • DC2 (Déclaration du candidat) → expected_template_type="dc2_template"
 
-2. Acte d'engagement (AE / ATTRI1) → TOUJOURS source_kind="dce_template", expected_template_type="acte_engagement_template" (à compléter, dater, signer).
+2. Acte d'engagement (AE / ATTRI1) → TOUJOURS source_kind="dce_template", expected_template_type="acte_engagement_template" (à compléter ; il se signe à l'attribution, sauf si le RC exige la signature dès l'offre).
 
 3. DPGF / BPU / DQE → TOUJOURS source_kind="dce_template" (ce sont des tableaux de prix vierges joints au DCE).
    • DPGF → "dpgf_template"
@@ -572,7 +584,7 @@ Exemple 5 — vault (chiffre d'affaires) :
 
 Exemple 6 — dce_template (DC1) :
 {
-  "exigence": "Compléter, dater et signer le formulaire DC1 (Lettre de candidature)",
+  "exigence": "Compléter le formulaire DC1 (Lettre de candidature)",
   "source_document": "RC", "source_page": 3,
   "source_excerpt": "Le candidat remplira le formulaire DC1 joint au présent règlement",
   "category": "candidature", "priority": "obligatoire",
@@ -581,7 +593,7 @@ Exemple 6 — dce_template (DC1) :
 
 Exemple 7 — dce_template (DC2) :
 {
-  "exigence": "Compléter et signer le formulaire DC2 (Déclaration du candidat)",
+  "exigence": "Compléter le formulaire DC2 (Déclaration du candidat)",
   "source_document": "RC", "source_page": 3,
   "source_excerpt": "Déclaration du candidat (formulaire DC2) à compléter",
   "category": "candidature", "priority": "obligatoire",
@@ -590,9 +602,9 @@ Exemple 7 — dce_template (DC2) :
 
 Exemple 8 — dce_template (Acte d'engagement) :
 {
-  "exigence": "Compléter, dater et signer l'acte d'engagement (AE) joint",
+  "exigence": "Compléter l'acte d'engagement (AE) joint",
   "source_document": "RC", "source_page": 8,
-  "source_excerpt": "L'acte d'engagement devra être complété, daté et signé par le candidat",
+  "source_excerpt": "L'acte d'engagement joint sera complété par le candidat",
   "category": "offre", "priority": "obligatoire",
   "source_kind": "dce_template", "expected_template_type": "acte_engagement_template"
 }
@@ -621,7 +633,7 @@ CANDIDATURE (chacun = 1 exigence séparée) :
 DC1, DC2, déclaration sur l'honneur, attestation URSSAF (<6 mois), attestation fiscale (<6 mois), Kbis (<3 mois), assurance décennale, assurance RC pro, attestation Pro BTP, attestation CIBTP, Qualibat/RGE, CACES, amiante SS4, CA 3 derniers exercices, effectifs, liste travaux 5 ans, organigramme, pouvoir signataire, RIB, DUME, toute pièce spécifique.
 
 OFFRE (chacun = 1 exigence séparée) :
-AE/ATTRI1 signé, DPGF/BPU/DQE renseigné, mémoire technique, planning, sous-détails de prix, cadre de réponse, PAQ, SOGED, PPSPS.
+AE/ATTRI1 complété, DPGF/BPU/DQE renseigné, mémoire technique, planning, sous-détails de prix, cadre de réponse, PAQ, SOGED, PPSPS.
 
 CRITÈRES : pondérations exactes en %, sous-critères avec poids.
 MODALITÉS : plateforme dépôt, date limite, format fichiers, nommage, signature électronique, visite site.

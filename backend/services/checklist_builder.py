@@ -64,9 +64,9 @@ def _vault_status(ctype: str, vault_by_type: dict) -> tuple[Optional[str], str]:
     candidates: list[Document] = []
     for t in _VAULT_TYPES_FOR.get(ctype, []):
         candidates += vault_by_type.get(t, [])
-    if not candidates:
+    best = _pick_best_vault_doc(candidates)   # B1 : valable > expirée, jamais supprimée
+    if best is None:
         return None, "manquant"
-    best = _pick_best_vault_doc(candidates)
     return str(best.id), _vault_doc_status(best)
 
 
@@ -130,6 +130,74 @@ def _line_to_item(line: ChecklistLine, project_id: str, db: Session,
     return ChecklistItem(**base)
 
 
+def recaler_lignes_coffre(lines, docs_by_id: dict) -> int:
+    """B1 — recale les pièces du coffre liées sur l'état du document AUJOURD'HUI.
+
+    Le statut d'une ligne est figé quand elle est générée ou liée : une
+    attestation qui expire ensuite, ou un document retiré du coffre, restait
+    « Conforme » à l'écran alors que le ZIP l'écarte. Ne touche ni une ligne
+    « non applicable », ni un formulaire du DCE ; ne change jamais le document
+    lié (le choix reste celui de la génération ou de l'utilisateur) ; un
+    document absent de ``docs_by_id`` (retiré du coffre, ou d'une autre org)
+    n'est plus lié. Modifie les lignes en mémoire, sans commit ; retourne le
+    nombre de lignes modifiées.
+
+    ``docs_by_id`` : documents de l'org du projet, NON supprimés, par id."""
+    changed = 0
+    for line in lines:
+        if (line.source_kind != "vault" or not line.linked_document_id
+                or line.status == "non_applicable"):
+            continue
+        doc = docs_by_id.get(line.linked_document_id)
+        if doc is None:
+            line.linked_document_id = None
+            line.status = "manquant"
+            changed += 1
+            continue
+        status = _vault_doc_status(doc)
+        if line.status != status:
+            line.status = status
+            changed += 1
+    return changed
+
+
+def sync_vault_lines(db: Session, project_id: str, org_id: str) -> int:
+    """Recalage (voir ``recaler_lignes_coffre``) appelé à la lecture de la
+    checklist et du score. Idempotent : n'écrit que ce qui change."""
+    lines = (
+        db.query(ChecklistItem)
+        .filter(ChecklistItem.project_id == project_id,
+                ChecklistItem.source_kind == "vault",
+                ChecklistItem.linked_document_id.isnot(None),
+                ChecklistItem.status != "non_applicable")
+        .all()
+    )
+    if not lines:
+        return 0
+    docs = {
+        d.id: d for d in db.query(Document).filter(
+            Document.id.in_({l.linked_document_id for l in lines}),
+            Document.organization_id == org_id,
+            Document.deleted_at.is_(None),
+        ).all()
+    }
+    changed = recaler_lignes_coffre(lines, docs)
+    if changed:
+        db.commit()
+        logger.info("Checklist %s : %d pièce(s) du coffre recalée(s) sur leur état du jour",
+                    project_id, changed)
+    return changed
+
+
+def sync_vault_lines_safe(db: Session, project_id: str, org_id: str) -> None:
+    """Lecture d'abord : un échec du recalage ne casse jamais l'affichage."""
+    try:
+        sync_vault_lines(db, project_id, org_id)
+    except Exception:
+        logger.exception("Recalage des pièces du coffre impossible (%s)", project_id)
+        db.rollback()
+
+
 def generate_checklist_from_db(db: Session, project_id: str, org_id: str) -> int:
     """(Re)génère la checklist typée du projet. Retourne le nb de lignes."""
     rows = (
@@ -144,8 +212,10 @@ def generate_checklist_from_db(db: Session, project_id: str, org_id: str) -> int
         return 0
 
     plan = plan_checklist(rows)
+    # B1 — un document supprimé du coffre n'est jamais candidat.
     vault_by_type = _index_vault_by_type(
-        db.query(Document).filter(Document.organization_id == org_id).all()
+        db.query(Document).filter(Document.organization_id == org_id,
+                                  Document.deleted_at.is_(None)).all()
     )
 
     # Remplacement idempotent

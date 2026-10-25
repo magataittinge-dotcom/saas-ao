@@ -3,6 +3,7 @@ import {
   CheckCircle2, AlertCircle, Circle, Clock, FolderOpen, FileText, Lock,
 } from 'lucide-react'
 import type { ChecklistItem } from '@/types'
+import SignatureLigne from '@/components/project/SignatureLigne'
 
 const F = "'Inter Variable', 'Geist Sans', sans-serif"
 
@@ -32,9 +33,11 @@ interface Props {
   items: ChecklistItem[]
   onPickFromVault: (item: ChecklistItem) => void
   onOpenVault: () => void
+  /** Confirmation de signature, quand le RC la demande (ex. DUME signé). */
+  onToggleSignature?: (item: ChecklistItem, confirmed: boolean) => Promise<void>
 }
 
-export default function CandidatureSectionVault({ items, onPickFromVault, onOpenVault }: Props) {
+export default function CandidatureSectionVault({ items, onPickFromVault, onOpenVault, onToggleSignature }: Props) {
   const grouped = useMemo(() => {
     const map: Record<VaultCategory, ChecklistItem[]> = {
       administratif: [], assurances: [], financier: [], technique: [],
@@ -93,7 +96,12 @@ export default function CandidatureSectionVault({ items, onPickFromVault, onOpen
             </div>
             <ul className="space-y-1.5">
               {grouped[cat].map((item) => (
-                <VaultRow key={item.id} item={item} onPick={() => onPickFromVault(item)} />
+                <VaultRow
+                  key={item.id}
+                  item={item}
+                  onPick={() => onPickFromVault(item)}
+                  onToggleSignature={onToggleSignature}
+                />
               ))}
             </ul>
           </div>
@@ -103,7 +111,13 @@ export default function CandidatureSectionVault({ items, onPickFromVault, onOpen
   )
 }
 
-function VaultRow({ item, onPick }: { item: ChecklistItem; onPick: () => void }) {
+function VaultRow({
+  item, onPick, onToggleSignature,
+}: {
+  item: ChecklistItem
+  onPick: () => void
+  onToggleSignature?: (item: ChecklistItem, confirmed: boolean) => Promise<void>
+}) {
   const { icon, label, color } = statusFor(item.status)
   const isLinked = !!item.linked_document_id
   const isMissing = item.status === 'manquant' || item.status === 'expire'
@@ -133,6 +147,7 @@ function VaultRow({ item, onPick }: { item: ChecklistItem; onPick: () => void })
             </span>
           )}
         </div>
+        <SignatureLigne item={item} onToggleSignature={onToggleSignature} />
       </div>
 
       {isMissing ? (
@@ -169,7 +184,7 @@ function statusFor(status: ChecklistItem['status']): { icon: JSX.Element; label:
     case 'expire':
       return {
         icon: <AlertCircle size={16} style={{ color: '#F58E86' }} />,
-        label: 'Expiré — à mettre à jour',
+        label: 'À renouveler',
         color: '#F58E86',
       }
     case 'expiration_proche':

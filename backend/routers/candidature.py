@@ -68,7 +68,9 @@ def get_checklist_score(
     Les ⚠️ (warning : présente mais problème) et les expirées ne comptent
     pas conformes ; les non_applicable sortent du dénominateur."""
     from services.ai.checklist_matcher import conformity_score
+    from services.checklist_builder import sync_vault_lines_safe
     _get_project_or_404(project_id, user.organization_id, db)
+    sync_vault_lines_safe(db, project_id, user.organization_id)  # B1 : état du jour
     items = db.query(ChecklistItem).filter(
         ChecklistItem.project_id == project_id,
     ).all()
@@ -104,6 +106,11 @@ def get_checklist(
             except Exception:
                 logger.exception("Génération paresseuse de la checklist échouée (%s)", project_id)
                 db.rollback()
+
+    # B1 — une pièce expirée ou retirée du coffre depuis la génération ne
+    # reste pas « Conforme » à l'écran (le ZIP l'écarte).
+    from services.checklist_builder import sync_vault_lines_safe
+    sync_vault_lines_safe(db, project_id, user.organization_id)
 
     return (
         db.query(ChecklistItem)
@@ -237,9 +244,12 @@ def link_vault_document(
             detail="Cet item attend un template DCE, pas un document du coffre-fort.",
         )
 
+    # B1 — un document supprimé du coffre ne se lie plus (il ne partirait pas
+    # dans le ZIP alors que la ligne le dirait présent).
     doc = db.query(Document).filter(
         Document.id == body.document_id,
         Document.organization_id == user.organization_id,
+        Document.deleted_at.is_(None),
     ).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document du coffre-fort introuvable.")
@@ -260,7 +270,8 @@ class ChecklistItemPatch(BaseModel):
     status: Optional[str] = None  # one of CHECKLIST_STATUSES + 'non_applicable'
     details: Optional[str] = None
     unlink: Optional[bool] = False  # detach linked vault / completed template
-    # C12 — « Je confirme avoir signé » (AE, DC1, DC2)
+    # C12 — « Je confirme avoir signé » : demandé seulement quand
+    # checklist_matcher.signature_requise le dit (RC qui l'exige, DSH)
     signature_confirmed: Optional[bool] = None
 
 

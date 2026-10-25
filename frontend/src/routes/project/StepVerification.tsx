@@ -111,6 +111,15 @@ export default function StepVerification({ project }: Props) {
     await refresh()
   }
 
+  // Confirmation de signature — seulement pour les pièces où le serveur la
+  // demande (signature_required : RC qui l'exige, déclaration sur l'honneur).
+  const handleToggleSignature = async (item: ChecklistItem, confirmed: boolean) => {
+    await api.patch(`/projects/${project.id}/checklist/${item.id}`, {
+      signature_confirmed: confirmed,
+    })
+    await refresh()
+  }
+
   // ── Workflow DPGF/BPU (C12) — SUR la pièce, pas de saut vers Export ──
   const DPGF_FILENAME: Record<string, string> = {
     dpgf_template: 'DPGF.xlsx', bpu_template: 'BPU.xlsx', dqe_template: 'DQE.xlsx',
@@ -307,19 +316,14 @@ export default function StepVerification({ project }: Props) {
         items={vaultItems}
         onPickFromVault={(item) => setPickerItem(item)}
         onOpenVault={openVaultPage}
+        onToggleSignature={handleToggleSignature}
       />
 
       <CandidatureSectionTemplates
         projectId={project.id}
         items={templateItems}
         onUploadCompleted={handleUploadCompleted}
-        onToggleSignature={async (item, confirmed) => {
-          await api.patch(`/projects/${project.id}/checklist/${item.id}`, {
-            signature_confirmed: confirmed,
-          })
-          await refresh()
-          queryClient.invalidateQueries({ queryKey: ['checklist-score', project.id] })
-        }}
+        onToggleSignature={handleToggleSignature}
       />
 
       <WorkflowSection

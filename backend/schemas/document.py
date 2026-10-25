@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from typing import List, Optional
 from datetime import date, datetime
 
@@ -16,6 +16,15 @@ class DocumentResponse(BaseModel):
     uploaded_at: datetime
 
     model_config = {"from_attributes": True}
+
+    @model_validator(mode="after")
+    def _statut_du_jour(self):
+        """Statut jugé à la LECTURE : une pièce passe « expirée » (« À renouveler »)
+        le jour où sa date de fin passe, sans attendre le job quotidien
+        (tasks/check_expiry) — même règle que lui (current_document_status)."""
+        from services.vault_classifier import current_document_status
+        self.status = current_document_status(self)
+        return self
 
 
 class DocumentUpdateRequest(BaseModel):
