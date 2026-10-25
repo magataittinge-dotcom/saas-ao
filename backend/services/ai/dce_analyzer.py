@@ -253,6 +253,21 @@ def _dedup_requirements(reqs: list[dict]) -> list[dict]:
     return out
 
 
+def _contenu_utilisateur(dce_text: str, suffixe: str = "") -> list[dict]:
+    """Message utilisateur d'un appel d'analyse.
+
+    Sans suffixe : un seul bloc, comme avant. Avec suffixe (pièces communes à
+    tous les lots, décision du 26/10) : le bloc du document vient d'abord, marqué
+    pour le cache, et l'en-tête du lot ensuite. Le préfixe système + document est
+    alors identique pour tous les lots : le premier lot écrit le cache, les
+    suivants le lisent au dixième du prix."""
+    texte = f"Voici les documents DCE à analyser :\n\n{dce_text}"
+    if not suffixe:
+        return [{"type": "text", "text": texte}]
+    return [{"type": "text", "text": texte, "cache_control": {"type": "ephemeral"}},
+            {"type": "text", "text": suffixe}]
+
+
 def _build_call_texts(pass_text: str) -> list[str]:
     """Transforme le texte d'une passe en liste de textes d'appels modèle :
     chaque document est chunké, et l'en-tête du document est ré-injecté en tête
@@ -367,6 +382,7 @@ class DCEAnalyzer:
         project_id: str | None = None,
         lot_header: str = "",
         detail_label: str = "Analyse",
+        entete_apres: bool = False,
     ) -> dict:
         """Exécute une passe en découpant chaque document en tranches si besoin,
         puis FUSIONNE et DÉDUPLIQUE les exigences.
@@ -407,12 +423,18 @@ class DCEAnalyzer:
                 )
             return cb
 
+        def _appel(texte: str, etiquette: str, cb):
+            # Pièces communes (entete_apres) : document en premier, en cache,
+            # l'en-tête du lot après ; sinon l'en-tête précède, comme avant.
+            if entete_apres:
+                return self._sync_call(texte, system_prompt, etiquette, skills_ref,
+                                       project_id, progress_cb=cb, suffixe=lot_header)
+            return self._sync_call(lot_header + texte, system_prompt, etiquette, skills_ref,
+                                   project_id, progress_cb=cb)
+
         # Cas nominal : un seul appel (document(s) sous le seuil de tranche).
         if n == 1:
-            return self._sync_call(
-                lot_header + call_texts[0], system_prompt, label, skills_ref,
-                project_id, progress_cb=_tranche_cb(0),
-            )
+            return _appel(call_texts[0], label, _tranche_cb(0))
 
         # Document(s) volumineux → plusieurs tranches.
         logger.warning(
@@ -426,20 +448,13 @@ class DCEAnalyzer:
         # parallèle borné (3) profitent du cache_read. Le chunking
         # anti-troncature est INTACT : mêmes tranches, même dédup.
         subs: dict[int, dict] = {}
-        subs[0] = self._sync_call(
-            lot_header + call_texts[0], system_prompt, f"{label}-tranche1/{n}",
-            skills_ref, project_id, progress_cb=_tranche_cb(0),
-        )
+        subs[0] = _appel(call_texts[0], f"{label}-tranche1/{n}", _tranche_cb(0))
         _tranche_cb(0)(1.0)
         if n > 1:
             from concurrent.futures import ThreadPoolExecutor
             with ThreadPoolExecutor(max_workers=3) as pool:
                 futures = {
-                    pool.submit(
-                        self._sync_call,
-                        lot_header + ct, system_prompt, f"{label}-tranche{i + 1}/{n}",
-                        skills_ref, project_id, _tranche_cb(i),
-                    ): i
+                    pool.submit(_appel, ct, f"{label}-tranche{i + 1}/{n}", _tranche_cb(i)): i
                     for i, ct in enumerate(call_texts[1:], start=1)
                 }
                 for future, i in futures.items():
@@ -517,6 +532,7 @@ class DCEAnalyzer:
         skills_ref: str = "",
         project_id: str | None = None,
         progress_cb=None,  # ratio 0-1 par tranche (agrégé par _run_pass_chunked)
+        suffixe: str = "",  # en-tête du lot APRÈS le document (pièces communes, en cache)
     ) -> dict:
         """Synchronous streaming Claude call with 3 retries — runs in a thread.
 
@@ -550,10 +566,7 @@ class DCEAnalyzer:
                 "cache_control": {"type": "ephemeral"},
             }
 
-        user_content = [{
-            "type": "text",
-            "text": f"Voici les documents DCE à analyser :\n\n{dce_text}",
-        }]
+        user_content = _contenu_utilisateur(dce_text, suffixe)
         last_error = None
 
         # Larger output budget: at 8000 the model truncated systematically

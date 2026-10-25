@@ -115,7 +115,7 @@ async def trigger_analysis(
     )
     docs_sent = max((s["docs_sent"] for s in lot_specs), default=docs_total)
 
-    if not pass1_text and not any(s["pass2_text"] for s in lot_specs):
+    if not pass1_text and not any(s["pass2_text"] or s["pass2_commun"] for s in lot_specs):
         raise HTTPException(
             status_code=400,
             detail="Aucun texte extrait des documents. Déposez des PDF ou DOCX lisibles.",
@@ -324,9 +324,12 @@ def _build_lot_spec(all_docs, lot_id, lot_names, selected_lot, selected_lot_name
                  or (f"Lot {lot_num_norm}" if lot_num_norm else None))
 
     parts: list = []
+    communs: list = []   # pièces communes à tous les lots (lot 00, CCTP sans lot) : préfixe en cache
     for doc in _dedup_by_content(d for d in docs if _envoyable(d)):
         doc_type = doc.type or "autre"
-        if doc_type in _PASS2_TYPES or (doc_type == TYPE_AE and not _commune(doc)):
+        if doc_type in _PASS2_TYPES and _commune(doc):
+            communs.append(_entete(doc) + _safety(doc.extracted_text, doc.file_name, truncated))
+        elif doc_type in _PASS2_TYPES or (doc_type == TYPE_AE and not _commune(doc)):
             parts.append(_entete(doc) + _safety(doc.extracted_text, doc.file_name, truncated))
     ouvrages = texte_ouvrages_du_lot(all_docs, lot_id, UPLOADS_ROOT, lot_label, lots_du_rc)
     if ouvrages:
@@ -344,6 +347,8 @@ def _build_lot_spec(all_docs, lot_id, lot_names, selected_lot, selected_lot_name
         "lot_id": lot_id or "all",
         "lot_label": lot_label,
         "pass2_text": "\n\n".join(parts) if parts else None,
+        # Identique pour tous les lots : envoyé en premier, en cache (décision du 26/10).
+        "pass2_commun": "\n\n".join(communs) if communs else None,
         "lot_header": lot_header,
         "docs_sent": len(docs),
         "truncated": truncated,
@@ -522,16 +527,43 @@ def _run_analysis_job(
         pipeline_tracker.start_step(project_id, "analyzing_pass2")
 
         # ── Spécifique par lot, parallèle borné (2) ─────────────────────────
+        # Pièces communes (Généralités…) : même préfixe pour tous les lots,
+        # référentiels communs, en cache. Le premier lot qui y arrive écrit le
+        # cache seul ; les autres attendent, puis le lisent en parallèle.
+        skills_communs, _ = _build_dce_skills(None)
+        verrou_commun = threading.Lock()
+        cache_ecrit = threading.Event()
+
+        def _partie_commune(spec):
+            def _analyser():
+                return analyzer._run_pass_chunked(
+                    spec["pass2_commun"], DCE_PASS2_SYSTEM, f"passe2-{spec['lot_id']}-commun",
+                    skills_communs, project_id, spec["lot_header"],
+                    f"Analyse technique — {spec['lot_label'] or spec['lot_id']} (pièces communes)",
+                    entete_apres=True,
+                )
+            if not cache_ecrit.is_set():
+                with verrou_commun:
+                    if not cache_ecrit.is_set():
+                        try:
+                            return _analyser()
+                        finally:
+                            cache_ecrit.set()
+            return _analyser()
+
         def _one_lot(spec):
-            if not spec["pass2_text"]:
-                return spec, {"requirements": []}
-            skills_lot, _ = _build_dce_skills(spec["lot_label"])
-            r2 = analyzer._run_pass_chunked(
-                spec["pass2_text"], DCE_PASS2_SYSTEM, f"passe2-{spec['lot_id']}",
-                skills_lot, project_id, spec["lot_header"],
-                f"Analyse technique — {spec['lot_label'] or spec['lot_id']}",
-            )
-            return spec, r2
+            exigences: list = []
+            if spec["pass2_commun"]:
+                exigences.extend(_partie_commune(spec).get("requirements", []))
+            if spec["pass2_text"]:
+                skills_lot, _ = _build_dce_skills(spec["lot_label"])
+                r2 = analyzer._run_pass_chunked(
+                    spec["pass2_text"], DCE_PASS2_SYSTEM, f"passe2-{spec['lot_id']}",
+                    skills_lot, project_id, spec["lot_header"],
+                    f"Analyse technique — {spec['lot_label'] or spec['lot_id']}",
+                )
+                exigences.extend(r2.get("requirements", []))
+            return spec, {"requirements": exigences}
 
         results = []
         failed_lots = []
