@@ -1,6 +1,7 @@
 import re
 import unicodedata
 import logging
+from itertools import islice
 from pathlib import Path
 from dataclasses import dataclass, field
 from typing import List, Dict, Optional, Tuple, Any
@@ -237,12 +238,10 @@ def _extract_pdf_text_limited(path: Path, max_pages: int = 30) -> str:
 # ─── ODS support (AMÉLIORATION 1) ─────────────────────────────────────────────
 
 def _get_ods_sheet_names(file_path: str) -> List[str]:
-    """Return sheet names from an .ods file using odfpy."""
+    """Return sheet names from an .ods file (lu sans odfpy, bloc 2)."""
     try:
-        from odf.opendocument import load as ods_load
-        from odf.table import Table
-        doc = ods_load(file_path)
-        return [sheet.getAttribute("name") for sheet in doc.spreadsheet.getElementsByType(Table)]
+        from services.lecture_ods import onglets_ods
+        return [nom for nom, _lignes in onglets_ods(file_path)]
     except Exception as e:
         logger.error(f"Erreur lecture ODS {file_path}: {e}")
         return []
@@ -252,29 +251,14 @@ def _scan_ods_cell_content(file_path: str, sheet_names: List[str]) -> List[LotDe
     """Scan ODS cell content for lot patterns (mirrors _scan_excel_cell_content_for_lots)."""
     lots: Dict[str, LotDetection] = {}
     try:
-        from odf.opendocument import load as ods_load
-        from odf.table import Table, TableRow, TableCell
-        from odf.text import P
+        from services.lecture_ods import onglets_ods
 
-        doc = ods_load(file_path)
-        for sheet in doc.spreadsheet.getElementsByType(Table):
-            name = sheet.getAttribute("name")
+        for name, lignes in onglets_ods(file_path):
             if _is_ignored_sheet(name):
                 continue
-            row_count = 0
-            for row in sheet.getElementsByType(TableRow):
-                if row_count >= 500:
-                    break
-                row_count += 1
-                col_idx = 0
-                for cell in row.getElementsByType(TableCell):
-                    if col_idx >= 4:
-                        break
-                    col_idx += 1
-                    cell_text = ""
-                    for p in cell.getElementsByType(P):
-                        cell_text += p.firstChild.data if p.firstChild else ""
-                    cell_text = cell_text.strip()
+            for row in islice(lignes, 500):
+                for valeur in row[:4]:
+                    cell_text = valeur.strip() if isinstance(valeur, str) else ""
                     if not cell_text or len(cell_text) > 120:
                         continue
                     m = _LOT_CELL_CONTENT.search(cell_text)
@@ -344,21 +328,13 @@ def _detect_tranches_in_excel(file_path: str, wb=None) -> List[str]:
                     break
 
         elif suffix == ".ods":
-            from odf.opendocument import load as ods_load
-            from odf.table import Table, TableRow, TableCell
-            from odf.text import P
-            doc = ods_load(file_path)
-            for sheet in doc.spreadsheet.getElementsByType(Table):
-                row_count = 0
-                for row in sheet.getElementsByType(TableRow):
-                    if row_count >= 10:
-                        break
-                    row_count += 1
-                    for cell in sheet.getElementsByType(TableCell):
-                        cell_text = ""
-                        for p in cell.getElementsByType(P):
-                            cell_text += p.firstChild.data if p.firstChild else ""
-                        cell_text = cell_text.strip()
+            # Lu sans odfpy (bloc 2). Les cellules de LA ligne : avant, chaque ligne
+            # reparcourait toutes les cellules de l'onglet.
+            from services.lecture_ods import onglets_ods
+            for _nom, lignes in onglets_ods(file_path):
+                for row in islice(lignes, 10):
+                    for valeur in row:
+                        cell_text = valeur.strip() if isinstance(valeur, str) else ""
                         if _TRANCHE_HEADER.search(cell_text) and 3 < len(cell_text) < 80:
                             label = cell_text[:60]
                             if label not in tranches:

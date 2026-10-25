@@ -32,6 +32,7 @@ from typing import Iterable, Iterator, List, Optional, Sequence, Tuple
 
 from models.project import TYPES_GRILLES_DE_PRIX
 from services.garde_archives import controler_tableur
+from services.lecture_ods import onglets_ods
 from services.document_tagger import get_documents_for_lot, rattache_au_lot
 
 logger = logging.getLogger(__name__)
@@ -45,7 +46,6 @@ _ZONE_LUE = 80           # lignes gardées pour deviner la colonne des désignat
 _MAX_COLONNES = 64       # colonnes lues par ligne
 _MAX_DESIGNATION = 200   # caractères gardés par désignation
 _MAX_CSV = 20 * 1024 * 1024
-_MAX_LIGNES_ODS = 20_000  # par onglet : les lignes répétées d'un .ods sont bornées
 
 # En-têtes (texte normalisé : minuscules, sans accents ni ponctuation).
 _QUANTITE = re.compile(r"^(?:q|qt|qte|qtes|qtite|quant|nb|nombre)\b|^quantit")
@@ -98,7 +98,7 @@ def _onglets(chemin: Path) -> Iterator[Tuple[str, Iterator[Sequence]]]:
     elif suffixe == ".xls":
         yield from _onglets_xls(chemin)
     elif suffixe == ".ods":
-        yield from _onglets_ods(chemin)
+        yield from onglets_ods(chemin)
     elif suffixe == ".csv":
         yield from _onglets_csv(chemin)
 
@@ -131,71 +131,6 @@ def _onglets_xls(chemin: Path):
             classeur.unload_sheet(i)
     finally:
         classeur.release_resources()
-
-
-_ODS_T = "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}"
-_ODS_O = "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}"
-_ODS_P = "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}p"
-
-
-def _entier(texte, defaut: int = 1) -> int:
-    try:
-        return max(int(texte), 0)
-    except (TypeError, ValueError):
-        return defaut
-
-
-def _onglets_ods(chemin: Path):
-    """Lecture directe de content.xml (sans odfpy) : ligne par ligne, mémoire bornée."""
-    from lxml import etree
-
-    with zipfile.ZipFile(chemin) as archive, archive.open("content.xml") as flux:
-        nom, lignes = None, []
-        for evenement, el in etree.iterparse(
-                flux, events=("start", "end"), tag=(_ODS_T + "table", _ODS_T + "table-row"),
-                resolve_entities=False, no_network=True, load_dtd=False):
-            if el.tag == _ODS_T + "table":
-                if evenement == "start":
-                    nom, lignes = el.get(_ODS_T + "name") or "", []
-                else:
-                    yield nom, iter(lignes)
-                    nom, lignes = None, []
-                    el.clear()
-                continue
-            if evenement != "end" or nom is None:
-                continue
-            valeurs = _ligne_ods(el)
-            place = _MAX_LIGNES_ODS - len(lignes)
-            if place > 0:
-                if any(v not in (None, "") for v in valeurs):
-                    repetitions = _entier(el.get(_ODS_T + "number-rows-repeated"))
-                    lignes.extend([valeurs] * min(repetitions, place))
-                else:
-                    lignes.append([])   # une ligne vide suffit, même répétée
-            el.clear()
-            parent = el.getparent()
-            while parent is not None and el.getprevious() is not None:
-                del parent[0]
-
-
-def _ligne_ods(ligne) -> list:
-    valeurs: list = []
-    for cellule in ligne:
-        if cellule.tag not in (_ODS_T + "table-cell", _ODS_T + "covered-table-cell"):
-            continue
-        valeur = None
-        if cellule.get(_ODS_O + "value-type") in ("float", "percentage", "currency"):
-            try:
-                valeur = float(cellule.get(_ODS_O + "value"))
-            except (TypeError, ValueError):
-                valeur = None
-        if valeur is None:
-            valeur = "\n".join("".join(p.itertext()) for p in cellule.iter(_ODS_P)) or None
-        repetitions = _entier(cellule.get(_ODS_T + "number-columns-repeated"))
-        valeurs.extend([valeur] * min(repetitions, _MAX_COLONNES - len(valeurs)))
-        if len(valeurs) >= _MAX_COLONNES:
-            break
-    return valeurs
 
 
 def _onglets_csv(chemin: Path):
