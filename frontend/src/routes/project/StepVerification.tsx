@@ -7,6 +7,7 @@ import { useCompleteStep } from '@/hooks/useProject'
 import CandidatureSectionVault from '@/components/project/CandidatureSectionVault'
 import CandidatureSectionTemplates from '@/components/project/CandidatureSectionTemplates'
 import VaultPickerModal from '@/components/project/VaultPickerModal'
+import { piecesComptees } from '@/components/project/NonConcerne'
 import { RequirementListSkeleton } from '@/components/skeletons'
 import type { Project, ChecklistItem, Document } from '@/types'
 import EchecAction from '@/components/common/EchecAction'
@@ -62,8 +63,9 @@ export default function StepVerification({ project }: Props) {
   const vaultItems = groups.fournir
   const templateItems = groups.completer
 
-  // Complétion = pièces sous responsabilité de l'entreprise (fournir + completer).
-  const scored = [...vaultItems, ...templateItems]
+  // Complétion = pièces sous responsabilité de l'entreprise (fournir + completer),
+  // hors « Non concerné » (comme le score du serveur).
+  const scored = piecesComptees([...vaultItems, ...templateItems])
   const present = scored.filter((i) => i.status === 'present').length
   const missing = scored.filter((i) => i.status === 'manquant').length
   const total = scored.length
@@ -116,6 +118,14 @@ export default function StepVerification({ project }: Props) {
   const handleToggleSignature = async (item: ChecklistItem, confirmed: boolean) => {
     await api.patch(`/projects/${project.id}/checklist/${item.id}`, {
       signature_confirmed: confirmed,
+    })
+    await refresh()
+  }
+
+  // « Non concerné » / « Je suis concerné » — persisté, journalisé, réversible
+  const handleNonConcerne = async (item: ChecklistItem, nonConcerne: boolean) => {
+    await api.post(`/projects/${project.id}/checklist/${item.id}/non-concerne`, {
+      non_concerne: nonConcerne,
     })
     await refresh()
   }
@@ -317,6 +327,7 @@ export default function StepVerification({ project }: Props) {
         onPickFromVault={(item) => setPickerItem(item)}
         onOpenVault={openVaultPage}
         onToggleSignature={handleToggleSignature}
+        onNonConcerne={handleNonConcerne}
       />
 
       <CandidatureSectionTemplates
@@ -324,6 +335,7 @@ export default function StepVerification({ project }: Props) {
         items={templateItems}
         onUploadCompleted={handleUploadCompleted}
         onToggleSignature={handleToggleSignature}
+        onNonConcerne={handleNonConcerne}
       />
 
       <WorkflowSection

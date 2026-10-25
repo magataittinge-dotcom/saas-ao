@@ -4,6 +4,7 @@ import {
 } from 'lucide-react'
 import type { ChecklistItem } from '@/types'
 import SignatureLigne from '@/components/project/SignatureLigne'
+import NonConcerneBouton, { estNonConcernee, piecesComptees } from '@/components/project/NonConcerne'
 
 const F = "'Inter Variable', 'Geist Sans', sans-serif"
 
@@ -35,9 +36,13 @@ interface Props {
   onOpenVault: () => void
   /** Confirmation de signature, quand le RC la demande (ex. DUME signé). */
   onToggleSignature?: (item: ChecklistItem, confirmed: boolean) => Promise<void>
+  /** « Non concerné » / « Je suis concerné » (réversible, journalisé). */
+  onNonConcerne?: (item: ChecklistItem, nonConcerne: boolean) => Promise<void>
 }
 
-export default function CandidatureSectionVault({ items, onPickFromVault, onOpenVault, onToggleSignature }: Props) {
+export default function CandidatureSectionVault({
+  items, onPickFromVault, onOpenVault, onToggleSignature, onNonConcerne,
+}: Props) {
   const grouped = useMemo(() => {
     const map: Record<VaultCategory, ChecklistItem[]> = {
       administratif: [], assurances: [], financier: [], technique: [],
@@ -48,7 +53,9 @@ export default function CandidatureSectionVault({ items, onPickFromVault, onOpen
 
   if (items.length === 0) return null
 
-  const present = items.filter((i) => i.status === 'present').length
+  // « Non concerné » sort des comptes, comme dans le score du serveur
+  const comptees = piecesComptees(items)
+  const present = comptees.filter((i) => i.status === 'present').length
 
   return (
     <section
@@ -69,7 +76,7 @@ export default function CandidatureSectionVault({ items, onPickFromVault, onOpen
               Pièces du coffre-fort
             </h2>
             <p className="text-xs mt-0.5" style={{ color: '#959597' }}>
-              {present}/{items.length} fournies — sélectionnez une pièce existante de votre coffre-fort
+              {present}/{comptees.length} fournies — sélectionnez une pièce existante de votre coffre-fort
             </p>
           </div>
         </div>
@@ -101,6 +108,7 @@ export default function CandidatureSectionVault({ items, onPickFromVault, onOpen
                   item={item}
                   onPick={() => onPickFromVault(item)}
                   onToggleSignature={onToggleSignature}
+                  onNonConcerne={onNonConcerne}
                 />
               ))}
             </ul>
@@ -112,11 +120,12 @@ export default function CandidatureSectionVault({ items, onPickFromVault, onOpen
 }
 
 function VaultRow({
-  item, onPick, onToggleSignature,
+  item, onPick, onToggleSignature, onNonConcerne,
 }: {
   item: ChecklistItem
   onPick: () => void
   onToggleSignature?: (item: ChecklistItem, confirmed: boolean) => Promise<void>
+  onNonConcerne?: (item: ChecklistItem, nonConcerne: boolean) => Promise<void>
 }) {
   const { icon, label, color } = statusFor(item.status)
   const isLinked = !!item.linked_document_id
@@ -150,7 +159,8 @@ function VaultRow({
         <SignatureLigne item={item} onToggleSignature={onToggleSignature} />
       </div>
 
-      {isMissing ? (
+      <NonConcerneBouton item={item} onNonConcerne={onNonConcerne} />
+      {estNonConcernee(item) ? null : isMissing ? (
         <button
           type="button"
           onClick={onPick}
@@ -192,6 +202,12 @@ function statusFor(status: ChecklistItem['status']): { icon: JSX.Element; label:
         icon: <Clock size={16} style={{ color: '#959597' }} />,
         label: 'Expire bientôt',
         color: '#959597',
+      }
+    case 'non_applicable':
+      return {
+        icon: <Circle size={16} style={{ color: '#909195' }} />,
+        label: 'Non concerné',
+        color: '#909195',
       }
     case 'warning':
       // C10 — présente mais problème (doc à vérifier / non classé / date illisible)

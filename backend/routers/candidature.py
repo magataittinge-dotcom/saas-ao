@@ -16,7 +16,7 @@ from typing import List, Optional
 from fastapi import (
     APIRouter, Depends, File, Form, HTTPException, Request, UploadFile,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -315,6 +315,61 @@ def patch_checklist_item(
     db.commit()
     db.refresh(item)
     return item
+
+
+class NonConcerneBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    non_concerne: bool
+
+
+@router.post(
+    "/{project_id}/checklist/{item_id}/non-concerne",
+    response_model=ChecklistItemResponse,
+)
+def marquer_non_concerne(
+    project_id: str,
+    item_id: str,
+    body: NonConcerneBody,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """B2 §7 n°8 — « Non concerné » (pièce conditionnelle : DC4 « le cas
+    échéant », habilitation « si groupement »…) : persisté, exclu du score,
+    réversible, journalisé comme la confirmation des exigences. Repris, le
+    statut revient aux faits : pièce du coffre liée, ou trame déposée."""
+    _get_project_or_404(project_id, user.organization_id, db)
+    item = _get_checklist_item_or_404(item_id, project_id, db)
+    if item.document_group == "synorix":
+        raise HTTPException(status_code=400,
+                            detail="Pièce produite par Synorix à l'étape Mémoire.")
+    if body.non_concerne:
+        item.status = "non_applicable"
+    elif item.status == "non_applicable":
+        item.status = _statut_des_faits(item, user.organization_id, db)
+    db.commit()
+    from services.audit_logger import log_action
+    log_action(db, user, "checklist.non_concerne" if body.non_concerne else "checklist.concerne",
+               target_type="checklist_item", target_id=item_id,
+               extra={"project_id": project_id, "piece": item.document_type_required})
+    db.refresh(item)
+    return item
+
+
+def _statut_des_faits(item: ChecklistItem, org_id: str, db: Session) -> str:
+    """Statut d'une pièce d'après ce qui existe vraiment : document du coffre
+    lié (de l'org, non supprimé, jugé à la date du jour) ou trame déposée."""
+    if item.source_kind == "vault":
+        doc = db.query(Document).filter(
+            Document.id == item.linked_document_id,
+            Document.organization_id == org_id,
+            Document.deleted_at.is_(None),
+        ).first() if item.linked_document_id else None
+        return _vault_doc_status(doc) if doc else "manquant"
+    complet = db.query(ProjectDocument.id).filter(
+        ProjectDocument.id == item.completed_project_doc_id,
+        ProjectDocument.project_id == item.project_id,
+    ).first() if item.completed_project_doc_id else None
+    return "present" if complet else "manquant"
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
