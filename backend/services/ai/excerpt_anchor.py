@@ -23,8 +23,9 @@ import re
 import threading
 from array import array
 import unicodedata
-from collections import OrderedDict
-from typing import Dict, List, Optional, Tuple
+import math
+from collections import Counter, OrderedDict, defaultdict
+from typing import Dict, List, NamedTuple, Optional, Tuple
 
 from services import pdf_lecture
 
@@ -160,26 +161,14 @@ _cache_verrou = threading.Lock()
 
 
 def _doc_index(doc_text: str):
-    """(texte normalisé, mapping vers l'original, (début, fin) de chaque mot
-    entier dans le texte normalisé, indices des mots de chaque forme) d'un
-    document."""
+    """(texte normalisé, mapping vers l'original) d'un document, en cache."""
     with _cache_verrou:
         cached = _DOC_CACHE.get(doc_text)
         if cached is not None:
             _DOC_CACHE.move_to_end(doc_text)
             return cached
     norm, idx_map = _normalize_with_map(doc_text)
-    debuts, fins = array("I"), array("I")
-    positions: Dict[str, "array"] = {}
-    for m in _MOT.finditer(norm):
-        forme = _forme(m.group(0))
-        p = positions.get(forme)
-        if p is None:
-            p = positions[forme] = array("I")
-        p.append(len(debuts))
-        debuts.append(m.start())
-        fins.append(m.end())
-    cached = (norm, array("I", idx_map), (debuts, fins), positions)
+    cached = (norm, array("I", idx_map))
     with _cache_verrou:
         _DOC_CACHE[doc_text] = cached
         total = sum(len(k) for k in _DOC_CACHE)
@@ -207,86 +196,211 @@ def _positions_terme(terme: str, words: List[Tuple[str, int]], memo: Dict[str, "
     return pos
 
 
+# ─── Ancrage sur toutes les pièces reçues, score par phrase (bloc 2) ─────────
+
+class Ancrage(NamedTuple):
+    """Où un extrait est ancré : pièce, [début, fin) dans son texte, niveau, score."""
+    piece: str
+    debut: int
+    fin: int
+    niveau: str     # « exact », « normalise », « segment » ou « recupere »
+    score: float    # 1.0 si le texte est retrouvé tel quel ; sinon part pondérée des termes
+
+
+# Phrases d'une pièce : coupure après . ; ! ?, aux lignes vides et avant une
+# puce ou un numéro de liste ; une phrase de plus de 400 caractères est recoupée
+# aux retours à la ligne, en morceaux d'au moins 200 caractères.
+_COUPE_PHRASES = re.compile(r"(?<=[.;!?])\s+|\n\s*\n|\n(?=\s*(?:[-•◼]|\d+(?:\.\d+)*[.)]?\s))")
+_PHRASE_MAX = 400
+_PHRASE_MORCEAU = 200
+# Extrait condensé (« … ») ou fait de phrases recollées : morceaux cherchés un à un.
+_COUPE_EXTRAIT = re.compile(r"…|\.\.\.|(?<=[.;!?])\s+(?=[A-ZÀÂÉÈÊÎÔÛÇ«\"])")
+_BONUS_PREFERENCE = 0.03   # pièce désignée par l'IA ou pièce du lot : départage deux scores proches
+_MALUS_PAIRE = 0.03        # deux phrases consécutives : un peu moins sûres qu'une seule
+_UNITES_CACHE: "OrderedDict[str, list]" = OrderedDict()
+_UNITES_CACHE_MAX_CARACTERES = 8_000_000
+
+
+def _sans_blancs(texte: str, a: int, b: int) -> Tuple[int, int]:
+    """Bornes [a, b) resserrées pour ne commencer ni finir sur un blanc."""
+    while a < b and texte[a].isspace():
+        a += 1
+    while b > a and texte[b - 1].isspace():
+        b -= 1
+    return a, b
+
+
+def _morceaux(texte: str, a: int, b: int) -> List[Tuple[int, int]]:
+    if b - a <= _PHRASE_MAX:
+        return [(a, b)]
+    out, debut = [], a
+    k = texte.find("\n", a, b)
+    while k >= 0:
+        if k - debut >= _PHRASE_MORCEAU:
+            out.append((debut, k))
+            debut = k + 1
+        k = texte.find("\n", k + 1, b)
+    out.append((debut, b))
+    return out
+
+
+def _unites(texte: str) -> list:
+    """Phrases d'une pièce : [(début, fin, termes significatifs)], en cache par texte."""
+    with _cache_verrou:
+        u = _UNITES_CACHE.get(texte)
+        if u is not None:
+            _UNITES_CACHE.move_to_end(texte)
+            return u
+    out = []
+    pos = 0
+    for m in list(_COUPE_PHRASES.finditer(texte)) + [None]:
+        fin = m.start() if m else len(texte)
+        for a, b in _morceaux(texte, pos, fin):
+            termes = frozenset(_termes(_normalize(texte[a:b])))
+            if termes:
+                out.append((a, b, termes))
+        pos = m.end() if m else len(texte)
+    with _cache_verrou:
+        _UNITES_CACHE[texte] = out
+        total = sum(len(k) for k in _UNITES_CACHE)
+        while total > _UNITES_CACHE_MAX_CARACTERES and len(_UNITES_CACHE) > 1:
+            ancien, _ = _UNITES_CACHE.popitem(last=False)
+            total -= len(ancien)
+    return out
+
+
+class _IndexPhrases:
+    """Phrases de toutes les pièces d'un appel. Un terme pèse d'autant plus
+    qu'il est rare (idf : log(1 + phrases / phrases qui le contiennent))."""
+
+    def __init__(self, textes: List[str]):
+        self.unites = []   # (n° de pièce, début, fin, termes)
+        df: Counter = Counter()
+        for i, texte in enumerate(textes):
+            for a, b, termes in _unites(texte):
+                self.unites.append((i, a, b, termes))
+                df.update(termes)
+        n = len(self.unites)
+        self.idf = {t: math.log(1 + n / c) for t, c in df.items()}
+        self.idf_absent = math.log(1 + n) if n else 1.0
+        self.inverse: Dict[str, List[int]] = defaultdict(list)
+        for k, (_i, _a, _b, termes) in enumerate(self.unites):
+            for t in termes:
+                self.inverse[t].append(k)
+
+    def meilleure(self, termes: List[str], preferees: set) -> Optional[Tuple[int, int, int, float]]:
+        """(n° de pièce, début, fin, score) de la meilleure phrase, ou paire de
+        phrases consécutives : au moins 3 termes en commun et 55 % du poids des
+        termes de l'extrait (un terme absent des pièces pèse le plus). À score
+        presque égal, une pièce de `preferees` gagne ; puis l'ordre des pièces."""
+        q = set(termes)
+        if len(q) < _MIN_TERMS:
+            return None
+        total = sum(self.idf.get(t, self.idf_absent) for t in q)
+        poids: Dict[int, float] = defaultdict(float)
+        for t in q:
+            w = self.idf.get(t)
+            if w is not None:
+                for k in self.inverse[t]:
+                    poids[k] += w
+        retenue, cle_max = None, None
+        for k, p in poids.items():
+            i, a, b, ts = self.unites[k]
+            communs, score, fin = ts & q, p / total, b
+            if k + 1 < len(self.unites) and self.unites[k + 1][0] == i:
+                _, _, b2, ts2 = self.unites[k + 1]
+                communs2 = (ts | ts2) & q
+                score2 = sum(self.idf[t] for t in communs2) / total - _MALUS_PAIRE
+                if score2 > score:
+                    communs, score, fin = communs2, score2, b2
+            if len(communs) < _MIN_TERMES_COMMUNS or score < _MIN_RECOVER_SCORE:
+                continue
+            cle = (score + (_BONUS_PREFERENCE if i in preferees else 0.0), -k)
+            if cle_max is None or cle > cle_max:
+                cle_max, retenue = cle, (i, a, fin, score)
+        return retenue
+
+
+def _ancrer(extrait: str, pieces: List[Tuple[str, str, int]], index) -> Optional[Ancrage]:
+    """Ancre un extrait sur la meilleure des pièces (nom, texte, rang ; le plus
+    petit rang d'abord). `index()` rend l'index des phrases de ces pièces."""
+    extrait = (extrait or "").strip()
+    if len(extrait) < 10:
+        return None
+    ordre = sorted(range(len(pieces)), key=lambda i: (pieces[i][2], pieces[i][0]))
+
+    # 1. Exact : le texte existe tel quel
+    for i in ordre:
+        nom, texte, _ = pieces[i]
+        k = texte.find(extrait)
+        if k >= 0:
+            return Ancrage(nom, k, k + len(extrait), "exact", 1.0)
+
+    # 2. Normalisé (apostrophes, retours à la ligne, ligatures) → passage réel
+    norm = _normalize(extrait)
+    if not norm:
+        return None
+    for i in ordre:
+        nom, texte, _ = pieces[i]
+        doc_norm, idx_map = _doc_index(texte)
+        p = doc_norm.find(norm)
+        if p >= 0:
+            a, b = _sans_blancs(texte, idx_map[p], idx_map[min(p + len(norm) - 1, len(idx_map) - 1)] + 1)
+            if b > a:
+                return Ancrage(nom, a, b, "normalise", 1.0)
+
+    # 2bis. Condensation « … » ou phrases recollées : le plus long morceau
+    # retrouvé tel quel est étendu à la phrase réelle.
+    morceaux = [s.strip() for s in _COUPE_EXTRAIT.split(extrait) if len(s.strip()) >= 20]
+    for seg in sorted(morceaux, key=len, reverse=True):
+        seg_norm = _normalize(seg)
+        for i in ordre:
+            nom, texte, _ = pieces[i]
+            doc_norm, idx_map = _doc_index(texte)
+            p = doc_norm.find(seg_norm)
+            if p < 0:
+                continue
+            s_, e_ = _expand_to_sentence(texte, idx_map[p], idx_map[min(p + len(seg_norm) - 1, len(idx_map) - 1)] + 1)
+            a, b = _sans_blancs(texte, s_, e_)
+            if b - a >= 20:
+                return Ancrage(nom, a, b, "segment", round(len(seg_norm) / len(norm), 3))
+
+    # 3. Récupéré : la meilleure phrase de toutes les pièces (termes
+    # significatifs : mots entiers, sans mots vides)
+    r = index().meilleure(_termes(norm), {i for i, p in enumerate(pieces) if p[2] <= 1})
+    if r is None:
+        return None
+    i, a, b, score = r
+    nom, texte, _ = pieces[i]
+    a, b = _sans_blancs(texte, a, b)
+    if b - a < 20:
+        return None
+    return Ancrage(nom, a, b, "recupere", round(score, 3))
+
+
+_INDEX_SEUL: "OrderedDict[str, _IndexPhrases]" = OrderedDict()   # anchor_excerpt : une pièce seule
+
+
+def _index_seul(texte: str) -> _IndexPhrases:
+    with _cache_verrou:
+        idx = _INDEX_SEUL.get(texte)
+        if idx is not None:
+            _INDEX_SEUL.move_to_end(texte)
+            return idx
+    idx = _IndexPhrases([texte])
+    with _cache_verrou:
+        _INDEX_SEUL[texte] = idx
+        while len(_INDEX_SEUL) > 8:
+            _INDEX_SEUL.popitem(last=False)
+    return idx
+
+
 def anchor_excerpt(excerpt: str, doc_text: str) -> Optional[str]:
     """Retourne un extrait VERBATIM du doc correspondant à l'excerpt, ou None."""
-    excerpt = (excerpt or "").strip()
-    if len(excerpt) < 10 or not doc_text:
+    if not doc_text:
         return None
-
-    # 1. Exact
-    if excerpt in doc_text:
-        return excerpt
-
-    # 2. Normalisé → ré-ancrage sur le passage réel
-    doc_norm, idx_map, (debuts, fins), positions = _doc_index(doc_text)
-    exc_norm = _normalize(excerpt)
-    if exc_norm and exc_norm in doc_norm:
-        pos = doc_norm.find(exc_norm)
-        start = idx_map[pos]
-        end = idx_map[min(pos + len(exc_norm) - 1, len(idx_map) - 1)] + 1
-        return doc_text[start:end].strip() or None
-
-    # 3. Récupération par termes significatifs : les segments de l'excerpt
-    # (séparés par « … » de condensation) sont cherchés ; la fenêtre du doc
-    # qui matche le mieux le PREMIER segment substantiel est ré-ancrée puis
-    # étendue à la phrase réelle entière.
-    # 2bis. Condensation « … » : le PLUS LONG segment de l'excerpt est
-    # souvent verbatim — le ré-ancrer puis étendre à la phrase réelle.
-    segments = [s.strip() for s in re.split(r"…|\.\.\.", excerpt) if len(s.strip()) >= 20]
-    for seg in sorted(segments, key=len, reverse=True):
-        seg_norm = _normalize(seg)
-        pos = doc_norm.find(seg_norm)
-        if pos >= 0:
-            start = idx_map[pos]
-            end = idx_map[min(pos + len(seg_norm) - 1, len(idx_map) - 1)] + 1
-            s_, e_ = _expand_to_sentence(doc_text, start, end)
-            candidate = doc_text[s_:e_].strip()
-            if len(candidate) >= 20:
-                return candidate
-
-    # Termes significatifs : mots ENTIERS (un terme contenu dans un mot ne
-    # compte plus : « pose » n'est pas dans « proposé »), sans les mots vides.
-    terms = _termes(exc_norm)
-    term_set = set(terms)
-    if len(term_set) < _MIN_TERMS:
-        return None
-
-    # Early-exit : si le doc ENTIER ne contient même pas le seuil de termes,
-    # inutile de balayer les fenêtres (c'est le cas de ~90 % des paires
-    # excerpt×doc en multi-documents).
-    present = sum(1 for t in term_set if t in positions)
-    if present < _MIN_TERMES_COMMUNS or present / len(term_set) < _MIN_RECOVER_SCORE:
-        return None
-
-    nb_mots = len(debuts)
-    window = max(len(terms) * 2, 12)
-    # Fenêtres de `window` mots, toutes les `pas` positions : un terme compte
-    # dans une fenêtre si un de ses mots y figure. On part des positions où
-    # chaque terme apparaît et on marque les fenêtres qui les couvrent ; la
-    # meilleure fenêtre est la première au score maximal.
-    pas = max(window // 3, 1)
-    nb_fenetres = (nb_mots + pas - 1) // pas
-    hits = [0] * nb_fenetres
-    for t in term_set:
-        couvertes = set()
-        for j in positions.get(t, ()):
-            # fenêtres k avec k*pas <= j < k*pas + window
-            couvertes.update(range(max(0, -((window - 1 - j) // pas)), j // pas + 1))
-        for k in couvertes:
-            hits[k] += 1
-    best_hits = max(hits) if hits else 0
-    # Seuil minimal : au moins 3 termes en commun, et 55 % des termes.
-    if best_hits < _MIN_TERMES_COMMUNS or best_hits / len(term_set) < _MIN_RECOVER_SCORE:
-        return None
-    best_pos = hits.index(best_hits) * pas
-
-    norm_start = debuts[best_pos]
-    norm_end = fins[min(best_pos + window - 1, nb_mots - 1)]
-    start = idx_map[min(norm_start, len(idx_map) - 1)]
-    end = idx_map[min(norm_end - 1, len(idx_map) - 1)] + 1
-    s, e = _expand_to_sentence(doc_text, start, end)
-    candidate = doc_text[s:e].strip()
-    return candidate if len(candidate) >= 20 else None
+    a = _ancrer(excerpt, [("", doc_text, 0)], lambda: _index_seul(doc_text))
+    return doc_text[a.debut:a.fin] if a else None
 
 
 # Textes de pages par EMPREINTE de fichier (chemin réel, taille, date) : chaque
@@ -415,50 +529,51 @@ def resolve_pages(requirements: List[dict], doc_paths: Dict[str, str]) -> int:
     return fixed
 
 
-def anchor_requirements(requirements: List[dict], doc_texts: Dict[str, str]) -> List[dict]:
-    """Ancre chaque requirement sur le texte réel. doc_texts : clé =
-    type/nom de doc (RC, CCAP, CCTP, nom de fichier) → texte extrait.
-    source_excerpt devient un verbatim garanti, ou None (ancre invalide).
+def _pieces_designees(source: Optional[str], noms: List[str]) -> set:
+    """Pièces que désigne l'IA (« CCTP », « RC p. 4 », nom de fichier…)."""
+    s = re.sub(r"\s*p\.?\s*\d+.*$", "", (source or "")).strip().lower()
+    return {n for n in noms if s and (s == n.lower() or s in n.lower() or n.lower() in s)}
 
-    Le doc désigné par l'IA est essayé D'ABORD ; s'il n'ancre pas, TOUS les
-    autres documents sont essayés (source_document est souvent ambigu :
-    « CCTP » alors que le DCE en contient 20+) — et source_document est
-    CORRIGÉ vers le document où l'extrait existe réellement."""
+
+def anchor_requirements(requirements: List[dict], doc_texts: Dict[str, str],
+                        rangs: Optional[Dict[str, int]] = None) -> List[dict]:
+    """Ancre chaque exigence sur le texte réel des pièces.
+
+    doc_texts : nom → texte des pièces que l'IA a reçues pour cette portée ;
+    aucune autre pièce ne peut servir de source. rangs : 0 = pièce propre au
+    lot de l'exigence, 1 = pièce commune (sans rangs : toutes au même rang).
+
+    Toutes les pièces sont comparées (plus de « première pièce qui passe ») :
+    le texte exact ou normalisé gagne, dans la pièce désignée par l'IA, sinon
+    dans une pièce du lot, sinon dans une pièce commune ; à défaut, la
+    meilleure phrase de toutes les pièces (score par phrase). source_excerpt
+    devient un verbatim garanti, ou None (pas de bouton source) ; source_document
+    est CORRIGÉ vers la pièce où l'extrait existe réellement."""
     counts = {"exact_ou_reancre": 0, "recupere": 0, "invalide": 0}
+    rangs = rangs or {}
+    noms = sorted((n for n, t in doc_texts.items() if t), key=lambda n: (rangs.get(n, 0), n))
+    textes = [doc_texts[n] for n in noms]
+    index_partage: List[_IndexPhrases] = []
 
-    def _candidates(source: Optional[str]) -> List[Tuple[str, str]]:
-        s = re.sub(r"\s*p\.?\s*\d+.*$", "", (source or "")).strip().lower()
-        designated = [
-            (key, txt) for key, txt in doc_texts.items()
-            if s and (s == key.lower() or s in key.lower() or key.lower() in s)
-        ]
-        others = [(k, t) for k, t in doc_texts.items() if (k, t) not in designated]
-        return designated + others
+    def _index() -> _IndexPhrases:
+        if not index_partage:
+            index_partage.append(_IndexPhrases(textes))
+        return index_partage[0]
 
     for req in requirements:
         original = (req.get("source_excerpt") or "").strip()
-        anchored = None
-        anchored_in = None
-        exactish = False
-        for key, doc in _candidates(req.get("source_document")):
-            if not doc:
-                continue
-            out = anchor_excerpt(original, doc)
-            if out is not None:
-                anchored, anchored_in = out, key
-                exactish = original in doc or _normalize(out) == _normalize(original)
-                break
-
-        if anchored is None:
+        designees = _pieces_designees(req.get("source_document"), noms)
+        pieces = [(n, t, 0 if n in designees else 1 + rangs.get(n, 0)) for n, t in zip(noms, textes)]
+        ancrage = _ancrer(original, pieces, _index)
+        if ancrage is None:
             counts["invalide"] += 1
             req["source_excerpt"] = None
-        else:
-            counts["exact_ou_reancre" if exactish else "recupere"] += 1
-            req["source_excerpt"] = anchored[:600]
-            # Corrige le doc source si l'extrait vit ailleurs que désigné
-            src = (req.get("source_document") or "")
-            if anchored_in and anchored_in.lower() not in src.lower():
-                req["source_document"] = anchored_in
+            continue
+        counts["exact_ou_reancre" if ancrage.niveau in ("exact", "normalise") else "recupere"] += 1
+        req["source_excerpt"] = doc_texts[ancrage.piece][ancrage.debut:ancrage.fin][:600]
+        # Corrige la pièce source si l'extrait vit ailleurs que désigné
+        if ancrage.piece.lower() not in (req.get("source_document") or "").lower():
+            req["source_document"] = ancrage.piece
 
     total = max(len(requirements), 1)
     valid = counts["exact_ou_reancre"] + counts["recupere"]

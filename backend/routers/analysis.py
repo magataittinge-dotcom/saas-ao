@@ -369,57 +369,45 @@ def _fail_analysis(project_id: str, user_message: str, tracker_reason: str) -> N
         db.close()
 
 
-def _build_anchor_docs(db: Session, project_id: str) -> tuple:
-    """(textes, chemins PDF) des documents sources pour l'ancrage verbatim."""
+def _build_anchor_docs(db: Session, project_id: str, lot: str | None = None) -> tuple:
+    """(textes, chemins PDF, rangs) des pièces où l'ancrage cherche les sources.
+
+    Seules les pièces que l'IA a reçues pour la portée peuvent servir de
+    source (sur Gueux, 73 exigences du lot 05 étaient sourcées dans le CCTP
+    d'un autre lot, que l'IA n'avait pas reçu) :
+      '_commun'       → pièces de la passe 1 (RC, CCAP, AE commun) ;
+      'lotN' ou 'all' → pièces de la passe 2 (get_documents_for_lot) : CCTP, AE
+                        propre au lot, et DPGF du lot, dont les ouvrages partent
+                        à l'IA (son texte sert à retrouver les extraits qui les citent) ;
+      None            → toutes les pièces ancrables.
+    Une pièce remplie par l'entreprise n'est jamais une source.
+    rangs : 0 = pièce propre au lot, 1 = pièce commune (« all », non rattachée)."""
     docs = db.query(ProjectDocument).filter(
-        ProjectDocument.project_id == project_id).all()
-    texts, paths = {}, {}
-    for d in docs:
+        ProjectDocument.project_id == project_id).order_by(ProjectDocument.file_name).all()
+    if lot == "_commun":
+        retenus = [d for d in docs if (d.type or "autre") in _PASS1_TYPES
+                   and ((d.type or "autre") != TYPE_AE or _commune(d))]
+    elif lot:
+        retenus = [d for d in get_documents_for_lot(docs, lot)
+                   if (d.type or "autre") in _PASS2_TYPES or (d.type or "autre") == TYPE_DPGF
+                   or ((d.type or "autre") == TYPE_AE and not _commune(d))]
+    else:
+        retenus = [d for d in docs if (d.type or "autre") in _TYPES_ANCRAGE]
+    cible = _normalize_lot_num(lot) if lot and lot not in ("_commun", "all") else None
+    texts, paths, rangs = {}, {}, {}
+    for d in retenus:
         txt = d.extracted_text or ""
         if len(txt) < 50 or txt.startswith("[document volumineux") or d.is_user_completed:
             continue
-        # Ancrage local, sans IA : le texte de la DPGF y sert à retrouver les
-        # extraits qui citent ses ouvrages.
-        if (d.type or "autre") in _TYPES_ANCRAGE:
-            texts[d.file_name] = txt
-            if d.file_url and d.file_name.lower().endswith(".pdf"):
-                p = UPLOADS_ROOT / d.file_url.removeprefix("/uploads/")
-                if p.exists():
-                    paths[d.file_name] = str(p)
-    return texts, paths
-
-
-def _anchor_and_persist(db: Session, project_id: str, requirements: list) -> None:
-    """Ancrage verbatim (sourcé, jamais halluciné) + correction des pages,
-    PUIS persistance."""
-    from services.ai.excerpt_anchor import anchor_requirements, resolve_pages
-    pipeline_tracker.update_step_progress(project_id, 0.1, detail="Ancrage des sources dans les documents…")
-    try:
-        texts, paths = _build_anchor_docs(db, project_id)
-        anchor_requirements(requirements, texts)
-        pipeline_tracker.update_step_progress(project_id, 0.4, detail="Vérification des pages sources…")
-        resolve_pages(requirements, paths)
-    except Exception:
-        logger.warning("Ancrage des sources échoué (non bloquant)", exc_info=True)
-    _persist_requirements(db, project_id, requirements)
-
-
-def _persist_requirements(db: Session, project_id: str, requirements: list) -> None:
-    """Écrit les exigences (delete + insert) — appelé au fil de l'eau après
-    chaque passe : un crash en passe 2 ne perd pas la passe 1."""
-    db.query(ComplianceItem).filter(ComplianceItem.project_id == project_id).delete()
-    for req in requirements:
-        db.add(ComplianceItem(
-            project_id=project_id,
-            exigence_text=req.get("exigence", ""),
-            source_document=req.get("source_document"),
-            source_page=req.get("source_page") or 1,
-            source_excerpt=req.get("source_excerpt"),
-            category=_safe_category(req.get("category")),
-            priority=_safe_priority(req.get("priority")),
-            status="non_couvert",
-        ))
-    db.commit()
+        texts[d.file_name] = txt
+        propre = cible is not None and any(
+            _normalize_lot_num(str(t)) == cible for t in (d.related_lots or []) if t not in ("all", "info"))
+        rangs[d.file_name] = 0 if propre else 1
+        if d.file_url and d.file_name.lower().endswith(".pdf"):
+            p = UPLOADS_ROOT / d.file_url.removeprefix("/uploads/")
+            if p.exists():
+                paths[d.file_name] = str(p)
+    return texts, paths, rangs
 
 
 def _requirements_from_rows(rows) -> list:
@@ -497,7 +485,7 @@ def _run_analysis_job(
                 infos = r1.get("infos_marche", {})
                 # Ancrage + persistance du tronc commun (scope '_commun' ;
                 # les lignes legacy lot IS NULL sont remplacées ici).
-                _anchor_requirements_safe(db, project_id, commun_reqs)
+                _anchor_requirements_safe(db, project_id, commun_reqs, "_commun")
                 _persist_scope(db, project_id, commun_reqs, "_commun", also_null=True)
         except ClaudeRateLimitError as e:
             logger.warning(f"Rate limit Anthropic projet {project_id}: {e}")
@@ -588,7 +576,7 @@ def _run_analysis_job(
         delivered_lots = set()
         for spec, r2 in results:
             reqs2 = _dedup_against(r2.get("requirements", []), commun_reqs)
-            _anchor_requirements_safe(db, project_id, reqs2)
+            _anchor_requirements_safe(db, project_id, reqs2, spec["lot_id"])
             _persist_scope(db, project_id, reqs2, spec["lot_id"])
             delivered_lots.add(spec["lot_id"])
             all_requirements.extend(reqs2)
@@ -626,11 +614,13 @@ def _dedup_against(new_reqs: list, existing: list) -> list:
             if (r.get("exigence") or "").lower().strip()[:60] not in seen]
 
 
-def _anchor_requirements_safe(db: Session, project_id: str, requirements: list) -> None:
+def _anchor_requirements_safe(db: Session, project_id: str, requirements: list,
+                              lot: str | None = None) -> None:
+    """Ancrage des sources d'une portée ('_commun' ou un lot), non bloquant."""
     from services.ai.excerpt_anchor import anchor_requirements, resolve_pages
     try:
-        texts, paths = _build_anchor_docs(db, project_id)
-        anchor_requirements(requirements, texts)
+        texts, paths, rangs = _build_anchor_docs(db, project_id, lot)
+        anchor_requirements(requirements, texts, rangs)
         resolve_pages(requirements, paths)
     except Exception:
         logger.warning("Ancrage des sources échoué (non bloquant)", exc_info=True)
