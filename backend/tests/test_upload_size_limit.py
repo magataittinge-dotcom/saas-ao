@@ -126,7 +126,7 @@ def test_bad_extension_rejected_before_streaming(
         f"/api/projects/{project.id}/documents",
         files={"file": ("evil.exe", b"MZ\x00" * 256, "application/octet-stream")},
     )
-    assert resp.status_code == 400
+    assert resp.status_code == 415   # B8 : mauvais type → 415, comme tous les dépôts
     assert "Type de fichier non autorisé" in resp.json()["detail"]
 
 

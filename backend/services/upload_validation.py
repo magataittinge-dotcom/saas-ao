@@ -62,7 +62,7 @@ def sniff_matches_extension(head: bytes, ext: str) -> bool:
         return head[:8] == b"\x89PNG\r\n\x1a\n"
     if ext in (".jpg", ".jpeg"):
         return head[:3] == b"\xff\xd8\xff"
-    if ext in (".docx", ".xlsx", ".xlsm", ".ods"):
+    if ext in (".docx", ".xlsx", ".xlsm", ".ods", ".zip"):
         # OOXML et OpenDocument sont des archives ZIP.
         return head[:4] in _ZIP_MAGICS
     if ext in (".doc", ".xls"):
