@@ -5,16 +5,18 @@ and filter documents before AI analysis.
 
 import re
 import logging
+import unicodedata
 from typing import List, Optional
 
-from models.project import TYPE_AE, TYPE_DPGF
+from models.project import DCE_TEMPLATE_TYPES
 
 logger = logging.getLogger(__name__)
 
 # ─── Lot number extraction from filename ──────────────────────────────────────
 
 _LOT_NUM_IN_FNAME = re.compile(
-    r'lot[\s_\-]*[nN°]*[\s_\-]*(\d{1,2}[A-Za-z]?)',
+    # « lot » en début de mot : « ilot 2 » ou « pilote » ne sont pas un lot.
+    r'(?<![^\W\d_])lot[\s_\-]*[nN°]*[\s_\-]*(\d{1,2}[A-Za-z]?)',
     re.IGNORECASE,
 )
 
@@ -32,21 +34,28 @@ def _extract_lot_num_from_filename(filename: str) -> Optional[str]:
 
 # ─── Informational document detection ─────────────────────────────────────────
 
-_INFO_FNAME = re.compile(
-    r'diagno|amiante|plomb|crep\b|crep_|\bdat\b|dat_|carrez|energetique|'
-    r'geotechni|pgc\b|pgc_|ppsps|rict\b|rict_|icpe\b|'
-    r'acousti|vibra|rapport.{0,8}sol|sondage|notice.{0,8}secu',
-    re.IGNORECASE,
-)
+# Motifs en MOTS ENTIERS sur le nom normalisé (_mots_du_nom) : avant, des
+# sous-chaînes (« plomb » dans « Plomberie », « coupe » dans « coupe-feu »).
+_INFO_MOTS = re.compile(
+    r' (?:diag(?:nostics?|nostiques?)?|amiante|plomb|crep|dat|carrez|energetiques?'
+    r'|geotechni(?:que|ques|e)|pgc|ppsps|rict|icpe|acoustiques?|vibrations?|vibratoires?'
+    r'|sondages?) '
+    r'| rapports? (?:de |du |d )?sols? '
+    r'| notices? (?:de |d )?securite ')
+_PLAN_MOTS = re.compile(
+    r' (?:plans?|coupes?(?! feu )|facades?|niveaux?|elevations?|implantations?) '
+    r'| rez de chaussee ')
+_PLAN_EXTENSIONS = re.compile(r'\.(?:dwg|dwf|dxf)$', re.IGNORECASE)
 
-_PLAN_FNAME = re.compile(
-    r'\.dwg$|\.dwf$|\.dxf$|'
-    # "plan"/"plans" but not "planning" — use custom boundary (underscore is \w so \b fails)
-    r'(?<![a-z0-9])plans?(?![a-z])|'
-    r'coupe(?![a-z])|facade|niveau(?![a-z])|'
-    r'rez.{0,4}de.{0,4}chaussee|elevation(?![a-z])|implantation(?![a-z])',
-    re.IGNORECASE,
-)
+# Pièces qui portent les exigences d'un lot : le type décide, jamais le nom.
+_TYPES_DE_LOT = frozenset({"cctp", *DCE_TEMPLATE_TYPES})
+
+
+def _mots_du_nom(file_name: str) -> str:
+    """« Lot05_Façade-ITE.pdf » → « lot05 facade ite pdf », entre deux espaces."""
+    texte = unicodedata.normalize("NFKD", file_name or "")
+    texte = "".join(c for c in texte if not unicodedata.combining(c)).lower()
+    return " " + " ".join(re.sub(r"[^a-z0-9]+", " ", texte).split()) + " "
 
 
 # ─── Main tagging function ─────────────────────────────────────────────────────
@@ -65,11 +74,12 @@ def assign_document_lots(file_name: str, doc_type: str) -> List[str]:
     if doc_type in ('rc', 'ccap'):
         return ['all']
 
-    # ── AE et DPGF (B2) : propres au lot que leur nom cite, sinon communs ─────
-    # (classeur de tous les lots : l'onglet du lot est choisi à l'analyse). Lus
-    # avant les motifs « info » : « DPGF lot 10 Plomberie » n'est pas un
-    # diagnostic plomb (étiqueté « info », donc écarté, sur le DCE de Gueux).
-    if doc_type in (TYPE_AE, TYPE_DPGF):
+    # ── Le type décide avant le nom (bloc 2) ──────────────────────────────────
+    # CCTP et pièces à remplir (AE, DPGF, BPU, DQE, DC1…) : propres au lot que
+    # leur nom cite, sinon communs (classeur de tous les lots : l'onglet est
+    # choisi à l'analyse). Jamais « info » : sur Gueux, le CCTP et la DPGF du
+    # lot 10 « Plomberie » passaient pour un diagnostic plomb.
+    if doc_type in _TYPES_DE_LOT:
         lot_num = _extract_lot_num_from_filename(file_name)
         return [lot_num] if lot_num else ['all']
 
@@ -77,18 +87,10 @@ def assign_document_lots(file_name: str, doc_type: str) -> List[str]:
     if doc_type == 'plan':
         return ['info']
 
-    # ── Informational filename patterns ───────────────────────────────────────
-    if _INFO_FNAME.search(file_name):
+    # ── Autres pièces : motifs de nom, en mots entiers ────────────────────────
+    mots = _mots_du_nom(file_name)
+    if _INFO_MOTS.search(mots) or _PLAN_MOTS.search(mots) or _PLAN_EXTENSIONS.search(file_name):
         return ['info']
-    if _PLAN_FNAME.search(file_name):
-        return ['info']
-
-    # ── CCTP: lot-specific if name contains lot number, else all ──────────────
-    if doc_type == 'cctp':
-        lot_num = _extract_lot_num_from_filename(file_name)
-        if lot_num:
-            return [lot_num]
-        return ['all']
 
     # ── Generic lot detection ─────────────────────────────────────────────────
     lot_num = _extract_lot_num_from_filename(file_name)
