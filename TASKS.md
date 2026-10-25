@@ -112,7 +112,6 @@ Priorité absolue : Adil doit être **« bluffé »**. L'expérience prime sur l
 - [ ] **Auto-remplissage DC1/DC2/DUME** depuis profil (P2) — Fini = un PDF DC1 rempli sans ressaisie sur un profil test.
 - [ ] **API publique v1** (P2) — Fini = appel authentifié par clé API documenté + rate limit testé.
 - [ ] **Landing pages SEO** (P2) — Fini = pages publiques en ligne et indexables.
-- [ ] **Bench DPGF (DECP data.gouv.fr)** (P3) — *lecture de fourchettes de marché, JAMAIS de conseil de prix* — Fini = fourchette informative affichée pour un code CPV test.
 - [ ] **Intégration ERP BTP** (Sage Batigest / Codial / Onaya) (P3) — Fini = export DPGF ouvert sans erreur dans un ERP cible.
 - [ ] **SSO SAML** (plan Entreprise) (P3) — Fini = login SSO test réussi.
 - [ ] **Multi-langue (EN/ES)** (P3 — marché FR prioritaire).
