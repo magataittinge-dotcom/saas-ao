@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from database import get_db
 from models.user import User
-from models.project import Project, ProjectDocument, PROJECT_DOC_TYPES
+from models.project import Project, ProjectDocument, PROJECT_DOC_TYPES, TYPES_PIECES_CLES
 from schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse, ProjectDocumentUpdate
 from schemas.document import ProjectDocumentResponse
 from routers.auth import get_auth_user
@@ -22,12 +22,14 @@ from services.pdf_converter import PdfConverter
 from services.lot_detector import LotDetector
 from services.document_tagger import assign_document_lots
 from services import pipeline_tracker
+from services import upload_validation
 from pathlib import Path as FilePath
 
 UPLOADS_ROOT = FilePath(__file__).parent.parent / "uploads"
 
 # Upload limits — DCE archives can legitimately reach ~1.5 GB on big projects.
 _ALLOWED_EXTENSIONS = {".pdf", ".docx", ".doc", ".xlsx", ".xls", ".zip", ".png", ".jpg", ".jpeg"}
+_FORMATS_DCE = "PDF, DOCX, DOC, XLSX, XLS, ZIP, PNG ou JPG"
 _MAX_UPLOAD_SIZE = 2 * 1024 * 1024 * 1024     # 2 GB
 _UPLOAD_CHUNK_SIZE = 4 * 1024 * 1024          # 4 MB per chunk
 _UPLOAD_SPOOL_THRESHOLD = 10 * 1024 * 1024    # spill to disk past 10 MB
@@ -624,8 +626,13 @@ async def upload_project_document(
     raw_filename = (file.filename or "").strip()
     filename_lower = raw_filename.lower()
     ext = filename_lower[filename_lower.rfind("."):] if "." in filename_lower else ""
+    # Mauvais type : 415, comme tous les dépôts (B8).
     if ext not in _ALLOWED_EXTENSIONS:
-        raise HTTPException(status_code=400, detail=f"Type de fichier non autorisé : {ext}")
+        raise HTTPException(
+            status_code=415,
+            detail=f"Type de fichier non autorisé : {ext or '(aucune extension)'}. "
+                   f"Formats acceptés : {_FORMATS_DCE}.",
+        )
 
     # ── Pre-flight Content-Length check: reject obvious oversize fast ────────
     content_length_hdr = request.headers.get("content-length")
@@ -662,10 +669,13 @@ async def upload_project_document(
             pass
     try:
         total = 0
+        head = b""
         while True:
             chunk = await file.read(_UPLOAD_CHUNK_SIZE)
             if not chunk:
                 break
+            if not head:
+                head = chunk[:1024]
             total += len(chunk)
             if total > _MAX_UPLOAD_SIZE:
                 size_mb = total // (1024 * 1024)
@@ -678,6 +688,14 @@ async def upload_project_document(
                     ),
                 )
             spool.write(chunk)
+        # Contenu réel contrôlé (octets magiques), comme les autres dépôts (B8) :
+        # un exécutable renommé .pdf ou .zip n'entre pas dans le DCE.
+        if not upload_validation.sniff_matches_extension(head, ext):
+            raise HTTPException(
+                status_code=415,
+                detail="Le contenu du fichier ne correspond pas à son extension. "
+                       f"Formats acceptés : {_FORMATS_DCE}.",
+            )
         file_size = total
         spool.seek(0)
         print(f"[TIMING] streamed upload: {_time.monotonic()-_t0:.2f}s ({file_size/1024/1024:.1f} MB)", flush=True)
@@ -829,7 +847,9 @@ def _extract_all_parallel(project_id: str, docs_info: list) -> None:
     from database import SessionLocal
     from services.ai.excerpt_anchor import retenir_pages
 
-    _KEY_TYPES = {'rc', 'ccap', 'cctp', 'dpgf', 'acte_engagement'}
+    # B2 : types uniques (models/project.py) — « dpgf » / « acte_engagement »
+    # ne correspondaient à aucune pièce : AE et DPGF en PDF passaient pour non-clés.
+    _KEY_TYPES = TYPES_PIECES_CLES
     _500KB = 500 * 1024  # Aggressive threshold: only tiny PDFs in pool
 
     # ── Pre-pass: classify and immediately handle big files ───────────────

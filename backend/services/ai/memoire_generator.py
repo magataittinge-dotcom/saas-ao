@@ -15,6 +15,8 @@ from json_repair import repair_json
 from config import get_settings
 from .prompts import MEMOIRE_GENERATION_SYSTEM
 from services.skill_loader import load_skill, load_skills_bundle, load_skill_reference
+from models.project import TYPE_AE, TYPES_GRILLES_DE_PRIX
+from services.dpgf_ouvrages import est_tableur
 import logging
 
 logger = logging.getLogger(__name__)
@@ -282,6 +284,48 @@ def _append_reglementaire(dynamic_block: str, reglementaire_block: str | None) -
     )
 
 
+# ── Extraits du DCE envoyés au mémoire (B2) ──────────────────────────────────
+# Décision de Mohamed (25/10/2026) : jamais le tableur brut à l'IA, jamais une
+# colonne de prix ou de montant ; la DPGF chiffrée par l'entreprise ne part
+# jamais. La DPGF n'entre donc que par la liste de ses ouvrages (lue sans IA,
+# services/dpgf_ouvrages.py), à la place qu'avait son texte brut.
+_PRIORITE_DCE = {"cctp": 0, "rc": 1, TYPE_AE: 2, "plan": 4}   # CCTP d'abord : la méthodologie
+_PRIORITE_OUVRAGES = 3
+_MAX_DCE_CHARS = 90_000
+_MAX_PAR_PIECE = {"rc": 8_000, "cctp": 55_000}
+_MAX_AUTRE_PIECE = 5_000
+_MAX_OUVRAGES = 15_000
+
+
+def texte_dce_pour_memoire(all_docs: list, ouvrages_dpgf: str | None = None) -> str:
+    """Extraits du DCE pour le prompt du mémoire, par priorité et dans un budget.
+
+    Jamais : une grille de prix (DPGF, BPU, DQE), un tableur, une pièce remplie
+    par l'entreprise."""
+    entrees = []   # (priorité, rang, en-tête, texte, plafond)
+    for rang, doc in enumerate(all_docs):
+        type_ = doc.type or "autre"
+        if (not doc.extracted_text or getattr(doc, "is_user_completed", False)
+                or type_ in TYPES_GRILLES_DE_PRIX or est_tableur(doc.file_name)):
+            continue
+        libelle = type_.upper() if type_ != "autre" else "DOCUMENT"
+        entrees.append((_PRIORITE_DCE.get(type_, 5), rang, f"=== {libelle} — {doc.file_name} ===\n",
+                        doc.extracted_text, _MAX_PAR_PIECE.get(type_, _MAX_AUTRE_PIECE)))
+    if ouvrages_dpgf:
+        entrees.append((_PRIORITE_OUVRAGES, -1, "", ouvrages_dpgf, _MAX_OUVRAGES))
+    entrees.sort(key=lambda e: (e[0], e[1]))
+
+    parts, total = [], 0
+    for _priorite, _rang, entete, texte, plafond in entrees:
+        reste = _MAX_DCE_CHARS - total
+        if reste <= 0:
+            break
+        extrait = texte[:min(plafond, reste)]
+        parts.append(entete + extrait)
+        total += len(extrait)
+    return "\n\n".join(parts)
+
+
 class MemoireGenerator:
     def __init__(self):
         self.client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
@@ -306,6 +350,7 @@ class MemoireGenerator:
         project_id: str | None = None,
         profile_overrides: dict | None = None,  # C9a — overrides locaux du pre-flight
         reglementaire_block: str | None = None,  # Lot 7 T3 — RAG_ENRICHMENT
+        ouvrages_dpgf: str | None = None,  # B2 — ouvrages du lot, lus sans IA dans la DPGF
     ) -> dict:
         """Generate a complete mémoire technique using Claude Opus.
 
@@ -387,27 +432,7 @@ class MemoireGenerator:
         ]
 
         # ── 3. DCE text (priority: CCTP first — critical for méthodologie) ─────
-        PRIORITY = {"cctp": 0, "rc": 1, "acte_engagement": 2, "dpgf": 3, "plan": 4, "autre": 5}
-        docs_sorted = sorted(all_docs, key=lambda d: PRIORITY.get(d.type, 5))
-
-        dce_parts = []
-        total_chars = 0
-        MAX_DCE_CHARS = 90_000
-        MAX_PER_DOC = {"rc": 8_000, "cctp": 55_000}
-
-        for doc in docs_sorted:
-            if not doc.extracted_text:
-                continue
-            cap = MAX_PER_DOC.get(doc.type, 5_000)
-            remaining = MAX_DCE_CHARS - total_chars
-            if remaining <= 0:
-                break
-            chunk = doc.extracted_text[:min(cap, remaining)]
-            label = doc.type.upper() if doc.type != "autre" else "DOCUMENT"
-            dce_parts.append(f"=== {label} — {doc.file_name} ===\n{chunk}")
-            total_chars += len(chunk)
-
-        dce_text = "\n\n".join(dce_parts)
+        dce_text = texte_dce_pour_memoire(all_docs, ouvrages_dpgf)
 
         # ── 4. Compliance summary ─────────────────────────────────────────────
         compliance_lines = [

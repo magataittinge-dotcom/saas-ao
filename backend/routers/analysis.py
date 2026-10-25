@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models.organization import Organization
 from models.user import User
-from models.project import Project, ProjectDocument
+from models.project import TYPE_AE, TYPE_DPGF, Project, ProjectDocument
 from models.compliance_item import ComplianceItem
 from models.checklist_item import ChecklistItem
 from models.document import Document
@@ -21,8 +21,9 @@ from services.ai.api_preflight import AIServiceUnavailable, ensure_ai_service_av
 from services.ai.dce_analyzer import DCEAnalyzer, ClaudeRateLimitError
 from services.ai.checklist_matcher import ChecklistMatcher
 from services.document_tagger import (
-    get_documents_for_lot, extract_excel_sheet_for_lot, _normalize_lot_num,
+    get_documents_for_lot, _normalize_lot_num,
 )
+from services.dpgf_ouvrages import est_tableur, texte_ouvrages_du_lot
 from services import pipeline_tracker, quota
 from services.project_status import ensure_relaunchable
 from typing import List
@@ -60,16 +61,12 @@ async def trigger_analysis(
     lot_ids = (payload or {}).get("lots") or [project.selected_lot or "all"]
     lot_names = {l.get("id"): l.get("nom") for l in (project.lots_detectes or [])}
 
-    # ── Tronc commun (pass1 : RC+CCAP+AE — identique quel que soit le lot) ──
-    pass1_text, truncated1 = _build_pass1_text(all_docs)
-
-    # ── Spécifique par lot (pass2 : CCTP+DPGF filtrés) ───────────────────────
-    lot_specs = []
-    truncated_files = list(truncated1)
-    for lot_id in lot_ids:
-        spec = _build_lot_spec(all_docs, lot_id, lot_names, project)
-        truncated_files.extend(spec.pop("truncated"))
-        lot_specs.append(spec)
+    # Textes des passes, construits dans un thread : la liste des ouvrages lit
+    # la DPGF (tableur) sur le disque — jamais dans la boucle d'événements (B2).
+    pass1_text, lot_specs, truncated_files = await asyncio.to_thread(
+        _build_texts, all_docs, lot_ids, lot_names,
+        project.selected_lot, project.selected_lot_name,
+    )
     docs_sent = max((s["docs_sent"] for s in lot_specs), default=docs_total)
 
     if not pass1_text and not any(s["pass2_text"] for s in lot_specs):
@@ -184,9 +181,49 @@ async def trigger_analysis(
 
 
 # ── Construction des textes (tronc commun / spécifique par lot) ──────────────
+#
+# B2 (décision de Mohamed, 25/10/2026) : l'AE part en passe 1 ; la DPGF ne part
+# jamais en tableur brut ni avec une colonne de prix : seule la liste de ses
+# ouvrages (désignation, unité, quantité donnée par l'acheteur), lue sans IA,
+# part en passe 2. Une pièce remplie par l'entreprise (DPGF chiffrée, AE signé)
+# ne part jamais à l'IA.
 
-_PASS1_TYPES = {"rc", "ccap", "acte_engagement"}
-_PASS2_TYPES = {"cctp", "dpgf"}
+_PASS1_TYPES = frozenset({"rc", "ccap", TYPE_AE})   # tronc commun, identique pour tous les lots
+_PASS2_TYPES = frozenset({"cctp"})                  # + l'AE propre au lot, + les ouvrages de la DPGF
+_TYPES_ANCRAGE = frozenset({"rc", "ccap", "cctp", TYPE_AE, TYPE_DPGF})
+_LIBELLES = {TYPE_AE: "AE"}   # en-tête de section lu par l'IA
+
+
+def _entete(doc) -> str:
+    type_ = doc.type or "autre"
+    return f"=== {_LIBELLES.get(type_, type_.upper())} — {doc.file_name} ===\n"
+
+
+def _envoyable(doc) -> bool:
+    """Texte brut qui peut partir à l'IA : ni pièce remplie par l'entreprise, ni
+    tableur (grille de prix), ni texte provisoire."""
+    text = doc.extracted_text or ""
+    return (bool(text) and not getattr(doc, "is_user_completed", False)
+            and not est_tableur(doc.file_name) and not text.startswith("[document volumineux"))
+
+
+def _commune(doc) -> bool:
+    """Pièce commune à tous les lots (non étiquetée, ou étiquetée « all »)."""
+    return not doc.related_lots or "all" in doc.related_lots
+
+
+def _build_texts(all_docs, lot_ids, lot_names, selected_lot, selected_lot_name) -> tuple:
+    """(texte de la passe 1, spécification par lot, fichiers tronqués) — bloquant."""
+    pass1_text, truncated = _build_pass1_text(all_docs)
+    truncated_files = list(truncated)
+    lot_specs = []
+    for lot_id in lot_ids:
+        spec = _build_lot_spec(all_docs, lot_id, lot_names, selected_lot, selected_lot_name)
+        truncated_files.extend(spec.pop("truncated"))
+        lot_specs.append(spec)
+    return pass1_text, lot_specs, truncated_files
+
+
 # Garde-fou anti-pathologique PAR DOCUMENT (~125 tranches). Le chunking
 # anti-troncature couvre 100 % en deçà. Tout dépassement est REMONTÉ à
 # l'utilisateur (processing_detail), jamais silencieux.
@@ -217,42 +254,36 @@ def _safety(text: str, fname: str, truncated: list) -> str:
 
 
 def _build_pass1_text(all_docs) -> tuple:
-    """Texte du tronc commun (RC/CCAP/AE) — identique pour tous les lots."""
+    """Texte du tronc commun (RC/CCAP/AE commun) — identique pour tous les lots.
+    Un AE propre à un lot part avec ce lot (passe 2)."""
     truncated: list = []
     parts = []
-    for doc in _dedup_by_content(all_docs):
+    for doc in _dedup_by_content(d for d in all_docs if _envoyable(d)):
         doc_type = doc.type or "autre"
-        text = doc.extracted_text or ""
-        if doc_type not in _PASS1_TYPES or not text or text.startswith("[document volumineux"):
+        if doc_type not in _PASS1_TYPES or (doc_type == TYPE_AE and not _commune(doc)):
             continue
-        parts.append(f"=== {doc_type.upper()} — {doc.file_name} ===\n{_safety(text, doc.file_name, truncated)}")
+        parts.append(_entete(doc) + _safety(doc.extracted_text, doc.file_name, truncated))
     return "\n\n".join(parts), truncated
 
 
-def _build_lot_spec(all_docs, lot_id, lot_names, project) -> dict:
-    """pass2_text + en-tête de contexte pour UN lot."""
+def _build_lot_spec(all_docs, lot_id, lot_names, selected_lot, selected_lot_name) -> dict:
+    """pass2_text + en-tête de contexte pour UN lot : CCTP, AE propre au lot, et la
+    liste des ouvrages de la DPGF (jamais le tableur brut). Bloquant (DPGF lue)."""
     truncated: list = []
     docs = get_documents_for_lot(all_docs, lot_id)
     lot_num_norm = _normalize_lot_num(lot_id) if lot_id and lot_id != "all" else None
     lot_label = (lot_names.get(lot_id)
-                 or (project.selected_lot_name if lot_id == project.selected_lot else None)
+                 or (selected_lot_name if lot_id == selected_lot else None)
                  or (f"Lot {lot_num_norm}" if lot_num_norm else None))
 
     parts: list = []
-    dpgf_sheet_text = ""
-    for doc in _dedup_by_content(docs):
+    for doc in _dedup_by_content(d for d in docs if _envoyable(d)):
         doc_type = doc.type or "autre"
-        text = doc.extracted_text or ""
-        if doc_type not in _PASS2_TYPES or not text or text.startswith("[document volumineux"):
-            continue
-        if doc_type == "dpgf" and lot_num_norm:
-            sheet_text = _get_dpgf_sheet_text(doc, lot_num_norm)
-            if sheet_text:
-                dpgf_sheet_text = sheet_text
-                parts.append(f"=== DPGF — {doc.file_name} (onglet Lot {lot_num_norm}) ===\n"
-                             f"{_safety(sheet_text, doc.file_name, truncated)}")
-                continue
-        parts.append(f"=== {doc_type.upper()} — {doc.file_name} ===\n{_safety(text, doc.file_name, truncated)}")
+        if doc_type in _PASS2_TYPES or (doc_type == TYPE_AE and not _commune(doc)):
+            parts.append(_entete(doc) + _safety(doc.extracted_text, doc.file_name, truncated))
+    ouvrages = texte_ouvrages_du_lot(all_docs, lot_id, UPLOADS_ROOT, lot_label)
+    if ouvrages:
+        parts.append(ouvrages)
 
     lot_header = ""
     if lot_label:
@@ -261,8 +292,6 @@ def _build_lot_spec(all_docs, lot_id, lot_names, project) -> dict:
             f"Concentre-toi UNIQUEMENT sur les exigences relatives à ce lot. "
             f"Ignore les informations relatives aux autres lots.\n\n"
         )
-        if dpgf_sheet_text:
-            lot_header += f"DPGF DU {lot_label} :\n{dpgf_sheet_text[:3000]}\n\n"
 
     return {
         "lot_id": lot_id or "all",
@@ -297,10 +326,11 @@ def _build_anchor_docs(db: Session, project_id: str) -> tuple:
     texts, paths = {}, {}
     for d in docs:
         txt = d.extracted_text or ""
-        if len(txt) < 50 or txt.startswith("[document volumineux"):
+        if len(txt) < 50 or txt.startswith("[document volumineux") or d.is_user_completed:
             continue
-        if (d.type or "autre") in ("rc", "ccap", "acte_engagement", "cctp", "dpgf",
-                                   "acte_engagement_template", "dpgf_template"):
+        # Ancrage local, sans IA : le texte de la DPGF y sert à retrouver les
+        # extraits qui citent ses ouvrages.
+        if (d.type or "autre") in _TYPES_ANCRAGE:
             texts[d.file_name] = txt
             if d.file_url and d.file_name.lower().endswith(".pdf"):
                 p = UPLOADS_ROOT / d.file_url.removeprefix("/uploads/")
@@ -678,26 +708,6 @@ def _finalize_analysis(
         ", partielle" if partial_analysis else "",
         ", peu d'exigences" if low_requirement_count else "",
     )
-
-
-def _get_dpgf_sheet_text(doc, lot_num_norm: str) -> str:
-    """Try to extract the Excel sheet matching lot_num_norm from a DPGF document."""
-    try:
-        file_url = doc.file_url or ""
-        if not file_url.startswith("/uploads/"):
-            return ""
-        rel = file_url.removeprefix("/uploads/")
-        file_path = UPLOADS_ROOT / rel
-        if not file_path.exists():
-            return ""
-        suffix = file_path.suffix.lower()
-        if suffix not in (".xlsx", ".xls", ".xlsm", ".ods"):
-            return ""
-        text = extract_excel_sheet_for_lot(file_path, lot_num_norm)
-        return text or ""
-    except Exception as e:
-        logger.debug(f"DPGF sheet extraction failed for {doc.file_name}: {e}")
-        return ""
 
 
 def _safe_category(value: str | None) -> str:

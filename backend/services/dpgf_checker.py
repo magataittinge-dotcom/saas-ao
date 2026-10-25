@@ -8,6 +8,8 @@ import re
 from pathlib import Path
 from typing import Optional
 
+from services.garde_archives import controler_tableur
+
 logger = logging.getLogger(__name__)
 
 
@@ -28,6 +30,8 @@ def check_dpgf(file_path: Path) -> dict:
     suffix = file_path.suffix.lower()
 
     try:
+        if suffix in (".xlsx", ".xlsm", ".xls", ".ods"):
+            controler_tableur(file_path)   # bombe de décompression : jamais ouverte
         if suffix in (".xlsx", ".xlsm"):
             return _check_xlsx(file_path)
         elif suffix == ".xls":

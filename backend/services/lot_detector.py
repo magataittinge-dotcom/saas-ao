@@ -497,6 +497,12 @@ def detect_lots_from_excel(file_path: str) -> List[Dict]:
     if not path.exists():
         logger.warning(f"Fichier spreadsheet introuvable : {file_path}")
         return []
+    try:
+        from services.garde_archives import controler_tableur
+        controler_tableur(path)   # bombe de décompression : jamais ouverte
+    except Exception as e:
+        logger.warning(f"Tableur non ouvert pour la détection des lots ({path.name}) : {e}")
+        return []
 
     suffix = path.suffix.lower()
     sheet_names: List[str] = []
