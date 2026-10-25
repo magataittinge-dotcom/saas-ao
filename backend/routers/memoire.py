@@ -310,6 +310,13 @@ def _run_memoire_job(
             from services.rag.enrichment import build_reglementaire_block
             reglementaire_block = build_reglementaire_block(db, compliance_items)
 
+        # B2 — la DPGF n'entre au mémoire que par la liste de ses ouvrages (lue sans
+        # IA, ici dans le thread du job) : jamais son tableur brut ni ses prix.
+        from services.dpgf_ouvrages import texte_ouvrages_du_lot
+        from services.file_storage import UPLOADS_ROOT as _uploads_root
+        ouvrages_dpgf = texte_ouvrages_du_lot(
+            all_docs, project.selected_lot, _uploads_root, project.selected_lot_name)
+
         pipeline_tracker.start_step(project_id, "generating")
         generator = MemoireGenerator()
         content = asyncio.run(generator.generate(
@@ -327,6 +334,7 @@ def _run_memoire_job(
             project_id=project_id,
             profile_overrides=profile_overrides,
             reglementaire_block=reglementaire_block,
+            ouvrages_dpgf=ouvrages_dpgf,
         ))
         # Contenu 100 % placeholders = panne du service IA en plein run
         # (constat audit : crédit épuisé → 26/26 sections vides quand même

@@ -32,6 +32,17 @@ DCE_REFERENCE_TYPES = [
 
 PROJECT_DOC_TYPES = DCE_REFERENCE_TYPES + DCE_TEMPLATE_TYPES
 
+# ── Types de pièces : source unique (B2) ─────────────────────────────────────
+# Les chaînes héritées « acte_engagement » et « dpgf » ne sont pas des types
+# valides (CHECK project_documents_type_check) : le code passe par ces noms.
+TYPE_AE = "acte_engagement_template"
+TYPE_DPGF = "dpgf_template"
+# Grilles de prix : leur texte brut ne part jamais à l'IA (décision de Mohamed,
+# 25/10/2026 : jamais le tableur brut, jamais une colonne de prix ou de montant).
+TYPES_GRILLES_DE_PRIX = frozenset({TYPE_DPGF, "bpu_template", "dqe_template"})
+# Pièces lues dès la première phase d'extraction, quelle que soit leur taille.
+TYPES_PIECES_CLES = frozenset({"rc", "ccap", "cctp", TYPE_AE, TYPE_DPGF})
+
 
 # Pipeline of project.status values. Two distinct semantics share this column:
 #   - business outcomes: "soumis", "gagné", "perdu", "sans_suite" (analysé

@@ -12,7 +12,7 @@ from pydantic import BaseModel
 
 from database import get_db
 from models.user import User
-from models.project import Project, ProjectDocument, PROJECT_DOC_TYPES
+from models.project import Project, ProjectDocument, PROJECT_DOC_TYPES, TYPES_PIECES_CLES
 from schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse, ProjectDocumentUpdate
 from schemas.document import ProjectDocumentResponse
 from routers.auth import get_auth_user
@@ -829,7 +829,9 @@ def _extract_all_parallel(project_id: str, docs_info: list) -> None:
     from database import SessionLocal
     from services.ai.excerpt_anchor import retenir_pages
 
-    _KEY_TYPES = {'rc', 'ccap', 'cctp', 'dpgf', 'acte_engagement'}
+    # B2 : types uniques (models/project.py) — « dpgf » / « acte_engagement »
+    # ne correspondaient à aucune pièce : AE et DPGF en PDF passaient pour non-clés.
+    _KEY_TYPES = TYPES_PIECES_CLES
     _500KB = 500 * 1024  # Aggressive threshold: only tiny PDFs in pool
 
     # ── Pre-pass: classify and immediately handle big files ───────────────
