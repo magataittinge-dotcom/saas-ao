@@ -4,6 +4,8 @@ import posixpath
 import zipfile
 from typing import Iterator, List, Optional, Tuple
 
+from services.garde_archives import controler_archive_office, controler_tableur
+
 logger = logging.getLogger(__name__)
 
 # Seuil « document scanné » : moins de N caractères par page lue en moyenne
@@ -141,6 +143,7 @@ class DocumentProcessor:
         """Vieux format Excel (BIFF, avant 2007) — xlrd (audit risque #1 :
         openpyxl le rejetait en silence). Fallback openpyxl pour les .xls
         qui sont en réalité des xlsx renommés."""
+        controler_tableur(content)   # bombe de décompression : jamais ouverte
         try:
             import xlrd
 
@@ -161,6 +164,7 @@ class DocumentProcessor:
     def _extract_xlsx(self, content: bytes) -> Tuple[str, Optional[int]]:
         import openpyxl
 
+        controler_tableur(content)   # bombe de décompression : jamais ouverte
         wb = openpyxl.load_workbook(io.BytesIO(content), read_only=True)
         lines = []
         for sheet in wb.worksheets:
@@ -242,6 +246,7 @@ def texte_docx(source) -> str:
     avertissement (`extract_ex`) ou en texte vide (`lot_detector`)."""
     if isinstance(source, (bytes, bytearray)):
         source = io.BytesIO(source)
+    controler_archive_office(source)   # répertoire et parties XML jaugés avant ouverture
     with zipfile.ZipFile(source) as archive:
         info = archive.getinfo(_partie_principale(archive))
         if info.file_size > _DOCX_PARTIE_MAX:

@@ -30,6 +30,7 @@ from pathlib import Path
 from typing import Iterable, Iterator, List, Optional, Sequence, Tuple
 
 from models.project import TYPE_DPGF
+from services.garde_archives import controler_tableur
 from services.document_tagger import get_documents_for_lot
 
 logger = logging.getLogger(__name__)
@@ -89,6 +90,8 @@ def _norm(valeur) -> str:
 
 def _onglets(chemin: Path) -> Iterator[Tuple[str, Iterator[Sequence]]]:
     suffixe = chemin.suffix.lower()
+    if suffixe != ".csv":
+        controler_tableur(chemin)   # bombe de décompression : jamais ouverte
     if suffixe in (".xlsx", ".xlsm"):
         yield from _onglets_xlsx(chemin)
     elif suffixe == ".xls":
