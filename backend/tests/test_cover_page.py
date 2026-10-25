@@ -115,6 +115,6 @@ def test_upload_logo_rejects_non_image(client, db_session, test_org, patched_sto
         "/api/organizations/me/logo",
         files={"file": ("virus.exe", b"MZ\x00\x00", "application/octet-stream")},
     )
-    assert resp.status_code == 400
+    assert resp.status_code == 415   # B8 : mauvais type → 415
     db_session.refresh(test_org)
     assert test_org.logo_url is None

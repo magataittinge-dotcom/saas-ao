@@ -26,13 +26,17 @@ from models.project import Project, ProjectDocument
 from models.user import User
 from routers.auth import get_auth_user
 from schemas.compliance import ChecklistItemResponse
+from services.upload_validation import RegleDepot, recevoir_fichier
 
 logger = logging.getLogger(__name__)
 
 UPLOADS_ROOT = Path(__file__).parent.parent / "uploads"
 
-_COMPLETED_ALLOWED_EXTENSIONS = {".pdf", ".docx", ".xlsx", ".xls"}
-_COMPLETED_MAX_SIZE = 50 * 1024 * 1024  # 50 MB
+_COMPLETED_ALLOWED_EXTENSIONS = frozenset({".pdf", ".docx", ".xlsx", ".xls"})
+# B8 — ordre de grandeur : une trame remplie et signée (DC1, DC2, AE, DPGF) est
+# souvent un scan PDF de 10 à 20 pages, jusqu'à 20-30 Mo en couleur à 300 dpi :
+# 50 Mo (plafond inchangé, désormais appliqué avant toute lecture).
+_COMPLETED_MAX_SIZE = 50 * 1024 * 1024
 
 router = APIRouter()
 from services.rate_limit import limiter  # S1.2 — limiter partagé (org-keyed)
@@ -136,17 +140,17 @@ async def upload_completed_template(
     if not safe_name or ".." in safe_name:
         raise HTTPException(status_code=400, detail="Nom de fichier invalide.")
 
-    ext = Path(safe_name).suffix.lower()
-    if ext not in _COMPLETED_ALLOWED_EXTENSIONS:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Type de fichier non autorisé : {ext or '(aucun)'}. "
-                   f"Formats acceptés : PDF, DOCX, XLSX, XLS.",
-        )
-
-    content = await file.read()
-    if len(content) > _COMPLETED_MAX_SIZE:
-        raise HTTPException(status_code=413, detail="Fichier trop volumineux (max 50 Mo).")
+    regle = RegleDepot(_COMPLETED_ALLOWED_EXTENSIONS, _COMPLETED_MAX_SIZE, "PDF, DOCX, XLSX ou XLS")
+    with await recevoir_fichier(request, file, regle) as recu:
+        ext = recu.extension
+        file_size = recu.taille
+        # Store under projects/<id>/completed so file_serve._authorize_path accepts it
+        # (it scopes access by reading the second path segment as the project_id).
+        stored_name = f"{uuid.uuid4()}_{safe_name}"
+        rel_path = Path("projects") / project_id / "completed" / stored_name
+        abs_path = UPLOADS_ROOT / rel_path
+        await recu.enregistrer_sous(abs_path)   # copie hors de la boucle
+    file_url = f"/uploads/{rel_path.as_posix()}"
 
     # Deduce the ProjectDocument.type from the linked template (e.g. 'dc1_template').
     # Fallback to 'autre' when the template reference is missing — covers the rare
@@ -160,21 +164,12 @@ async def upload_completed_template(
         if template:
             doc_type = template.type
 
-    # Store under projects/<id>/completed so file_serve._authorize_path accepts it
-    # (it scopes access by reading the second path segment as the project_id).
-    stored_name = f"{uuid.uuid4()}_{safe_name}"
-    rel_path = Path("projects") / project_id / "completed" / stored_name
-    abs_path = UPLOADS_ROOT / rel_path
-    abs_path.parent.mkdir(parents=True, exist_ok=True)
-    abs_path.write_bytes(content)
-    file_url = f"/uploads/{rel_path.as_posix()}"
-
     pd = ProjectDocument(
         project_id=project_id,
         type=doc_type,
         file_url=file_url,
         file_name=safe_name,
-        file_size=len(content),
+        file_size=file_size,
         is_user_completed=True,
     )
     db.add(pd)

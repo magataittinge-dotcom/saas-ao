@@ -154,7 +154,7 @@ def test_upload_completed_rejects_bad_extension(client, db_session, test_org, tm
         f"/api/projects/{project.id}/checklist/{item.id}/upload-completed",
         files={"file": ("evil.exe", b"MZ...", "application/octet-stream")},
     )
-    assert resp.status_code == 400
+    assert resp.status_code == 415   # B8 : mauvais type → 415
     assert "Type de fichier non autorisé" in resp.json()["detail"]
 
 

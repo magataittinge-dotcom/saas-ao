@@ -43,7 +43,9 @@ _LOT_TABLE_HEADER = re.compile(
 )
 # Table row: numeric or alpha lot id (AMÉLIORATION 6)
 _LOT_TABLE_ROW_NUM   = re.compile(r'^\s*(\d{1,2})\s{1,6}(\S.{1,80})')
-_LOT_TABLE_ROW_ALPHA = re.compile(r'^\s*([A-Z])\s{1,6}(\S.{1,80})')
+# Une lettre suivie d'un tiret est un titre de rubrique de formulaire
+# (« D - Présentation du candidat » du DC1), pas une ligne du tableau des lots.
+_LOT_TABLE_ROW_ALPHA = re.compile(r'^\s*([A-Z])\s{1,6}(?![-–—])(\S.{1,80})')
 # Inline lot patterns with letter support (AMÉLIORATION 6)
 # \b après lot/tranche : « PAR LOTS SEPARES » ne doit pas se décomposer en
 # « Lot » + « S » (fantôme « Lot S » constaté sur le RC Gueux).
@@ -177,23 +179,14 @@ def _best_label(nom_a: str, nom_b: str, prefer_a: bool = True) -> str:
 # ─── DOCX text extraction ──────────────────────────────────────────────────────
 
 def _extract_docx_text(path: Path) -> str:
-    """Extract text from a .docx file including paragraphs and table cells."""
+    """Texte d'un .docx : le même que l'extraction au dépôt (B3) — paragraphes
+    et tableaux dans l'ordre du document, cellules fusionnées lues une fois,
+    cellules séparées par une tabulation."""
     try:
-        from docx import Document
-        doc = Document(str(path))
-        parts: List[str] = []
-        for p in doc.paragraphs:
-            txt = p.text.strip()
-            if txt:
-                parts.append(txt)
-        for table in doc.tables:
-            for row in table.rows:
-                cells = [cell.text.strip() for cell in row.cells if cell.text.strip()]
-                if cells:
-                    parts.append("  ".join(cells))
-        return "\n".join(parts)
+        from services.document_processor import texte_docx
+        return texte_docx(path)
     except Exception as e:
-        logger.debug(f"python-docx extraction failed for {path.name}: {e}")
+        logger.debug(f"Lecture .docx impossible pour {path.name}: {e}")
         return ""
 
 
@@ -631,7 +624,9 @@ def _detect_lots_from_rc_text(text: str, doc_type: str) -> List[LotDetection]:
                 if not lot_id:
                     continue
                 label = m.group(2).strip()[:60]
-                label = re.sub(r'\s{2,}', ' ', label).strip(' -–—')
+                # tout blanc → une espace : la tabulation entre deux cellules
+                # d'un tableau Word (B3) ne reste pas dans l'intitulé
+                label = re.sub(r'\s+', ' ', label).strip(' -–—')
                 if _NOT_A_LOT_LABEL.search(label):
                     continue  # doc général (annexe, prescriptions communes…)
                 nom = f"Lot {raw_id} — {label}" if label else f"Lot {raw_id}"
@@ -675,7 +670,7 @@ def _detect_lots_from_rc_text(text: str, doc_type: str) -> List[LotDetection]:
             lot_id = _lot_id_from_raw(raw_id)
             if not lot_id:
                 continue
-            label = re.sub(r'\s{2,}', ' ', label.strip())[:60].strip(' -–—')
+            label = re.sub(r'\s+', ' ', label.strip())[:60].strip(' -–—')
             if _NOT_A_LOT_LABEL.search(label):
                 continue  # doc général (annexe, prescriptions communes…)
             description = _extract_description_excerpt(text, line_idx, scan_lines)
@@ -700,7 +695,7 @@ def _detect_lots_from_rc_text(text: str, doc_type: str) -> List[LotDetection]:
         after_num = re.sub(
             r'(?i)(?:lot|tranche)\s*[nN°]*\s*[\w]+[\s:\-–—]*', '', raw
         ).strip(' :—-–')
-        label = re.split(r'[.\n]', after_num)[0].strip()[:60]
+        label = re.sub(r'\s+', ' ', re.split(r'[.\n]', after_num)[0]).strip()[:60]
         if _NOT_A_LOT_LABEL.search(label):
             continue  # doc général (annexe, prescriptions communes…)
         nom = f"Lot {raw_id} — {label}" if label else f"Lot {raw_id}"
