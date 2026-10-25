@@ -8,7 +8,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from config import get_settings
 from database import Base, engine
@@ -207,7 +206,7 @@ _reconcile_orphans_at_boot()
 # Limiter PARTAGÉ (S1.2) : clé par org (non spoofable), stockage Redis en prod
 # (cross-worker), et SlowAPIMiddleware installé plus bas — sans lui les limites
 # globales ne s'appliquent JAMAIS (l'ancien default_limits était mort).
-from services.rate_limit import limiter
+from services.rate_limit import LimiteGlobaleMiddleware, limiter
 
 app = FastAPI(
     title="SaaS AO BTP API",
@@ -220,7 +219,9 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # Sans ce middleware, `default_limits` ne s'applique à aucune route (S1.2).
-app.add_middleware(SlowAPIMiddleware)
+# SlowAPIMiddleware dont la recherche de route voit les routeurs inclus
+# (FastAPI ≥ 0.137, cf. services/rate_limit.py).
+app.add_middleware(LimiteGlobaleMiddleware)
 
 
 # ── Global exception handler — never leak stack traces in prod ───────────────
