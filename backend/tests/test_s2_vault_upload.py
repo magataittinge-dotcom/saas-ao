@@ -6,9 +6,10 @@ vérifiait pas le type réel du contenu (un .exe renommé .pdf entrait au coffre
 
 On prouve (rouge→vert) :
   1. cap de taille appliqué EN STREAMING (413 au-delà) ;
-  2. extension hors liste blanche refusée (400) ;
-  3. contenu ne correspondant pas à l'extension (magic bytes) refusé (400) ;
-  4. un vrai PDF passe toujours (contrôle positif).
+  2. extension hors liste blanche refusée (415 depuis B8, comme tous les dépôts) ;
+  3. contenu ne correspondant pas à l'extension (magic bytes) refusé (415) ;
+  4. un vrai PDF passe toujours (contrôle positif) ;
+  5. B8 : le coffre passe par l'utilitaire commun, copie faite hors de la boucle.
 Plus des tests unitaires du renifleur de type.
 """
 import pytest
@@ -44,13 +45,13 @@ def test_oversize_upload_rejected_413(client, patched_vault_storage, monkeypatch
 
 def test_disallowed_extension_rejected(client, patched_vault_storage):
     resp = _upload(client, "malware.exe", b"MZ\x90\x00 fake exe", "application/octet-stream")
-    assert resp.status_code == 400, resp.text
+    assert resp.status_code == 415, resp.text
 
 
 def test_zip_extension_rejected_from_vault(client, patched_vault_storage):
     # Le coffre reçoit des documents unitaires, jamais des archives.
     resp = _upload(client, "archive.zip", b"PK\x03\x04 fake zip", "application/zip")
-    assert resp.status_code == 400, resp.text
+    assert resp.status_code == 415, resp.text
 
 
 # ── 3. magic bytes : contenu ≠ extension ─────────────────────────────────────
@@ -59,7 +60,7 @@ def test_content_not_matching_extension_rejected(client, patched_vault_storage):
     # Un exécutable renommé .pdf : l'extension est autorisée mais le contenu
     # (magic bytes) ne correspond pas → refus.
     resp = _upload(client, "innocent.pdf", b"MZ\x90\x00 this is a PE binary", "application/pdf")
-    assert resp.status_code == 400, resp.text
+    assert resp.status_code == 415, resp.text
 
 
 # ── 4. contrôle positif : un vrai PDF passe ──────────────────────────────────
@@ -73,6 +74,30 @@ def test_valid_png_accepted(client, patched_vault_storage):
     png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
     resp = _upload(client, "scan.png", png, "image/png")
     assert resp.status_code == 200, resp.text
+
+
+# ── 5. B8 : utilitaire commun, copie hors de la boucle ───────────────────────
+
+def test_vault_copy_runs_off_event_loop(client, patched_vault_storage, monkeypatch):
+    import asyncio
+
+    lieux = []
+    copier = uv.copie_plafonnee
+
+    def _sonde(source, plafond):
+        try:
+            asyncio.get_running_loop()
+            lieux.append("boucle")
+        except RuntimeError:
+            lieux.append("thread")
+        return copier(source, plafond)
+
+    monkeypatch.setattr(uv, "copie_plafonnee", _sonde)
+    resp = _upload(client, "Extrait_KBIS.pdf", b"%PDF-1.4 vrai contenu PDF", "application/pdf")
+    assert resp.status_code == 200, resp.text
+    assert lieux == ["thread"]
+    on_disk = patched_vault_storage / resp.json()["file_url"].removeprefix("/uploads/")
+    assert on_disk.read_bytes() == b"%PDF-1.4 vrai contenu PDF"
 
 
 # ── Unitaires : renifleur de type ────────────────────────────────────────────
