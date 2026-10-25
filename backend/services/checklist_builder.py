@@ -90,31 +90,51 @@ def _vault_status(ctype: str, vault_by_type: dict) -> tuple[Optional[str], str]:
     return str(best.id), _vault_doc_status(best)
 
 
-def _template_status(project_id: str, db: Session, template_type: str):
-    """(template_id, completed_id, status) pour un formulaire/DPGF fourni au DCE."""
-    templates = (
+def _piece_du_lot(pieces: list, lot: Optional[str]):
+    """B2 §7 n°3 — la trame (ou la pièce remplie) du BON lot, d'après le
+    rattachement des pièces aux lots (related_lots ; numéros comparés avec
+    document_tagger._normalize_lot_num). Sans lot, ou une seule pièce : celle-ci.
+    Sinon celle du lot, à défaut l'unique pièce commune (« all » ou non
+    rattachée) ; plusieurs pièces et aucune pour ce lot → None : jamais la
+    trame d'un autre lot."""
+    from services.document_tagger import _normalize_lot_num
+    if not pieces:
+        return None
+    if not lot or lot in ("all", "_commun") or len(pieces) == 1:
+        return pieces[0]
+    cible = _normalize_lot_num(lot)
+    du_lot = [p for p in pieces
+              if any(_normalize_lot_num(t) == cible for t in (p.related_lots or []) if t not in ("all", "info"))]
+    if du_lot:
+        return du_lot[0]
+    communes = [p for p in pieces if not p.related_lots or "all" in p.related_lots]
+    return communes[0] if len(communes) == 1 else None
+
+
+def _template_status(project_id: str, db: Session, template_type: str, lot: Optional[str] = None):
+    """(template_id, completed_id, status) pour un formulaire/DPGF fourni au DCE,
+    pour le lot de la ligne (ou le lot sélectionné)."""
+    from sqlalchemy.orm import load_only
+    pieces = (
         db.query(ProjectDocument)
+        .options(load_only(ProjectDocument.id, ProjectDocument.related_lots,
+                           ProjectDocument.is_user_completed))
         .filter(ProjectDocument.project_id == project_id,
-                ProjectDocument.type == template_type,
-                ProjectDocument.is_user_completed.is_(False))
+                ProjectDocument.type == template_type)
         .all()
     )
-    completed = (
-        db.query(ProjectDocument)
-        .filter(ProjectDocument.project_id == project_id,
-                ProjectDocument.type == template_type,
-                ProjectDocument.is_user_completed.is_(True))
-        .all()
-    )
-    if templates and completed:
-        return templates[0].id, completed[0].id, "present"
-    if templates:
-        return templates[0].id, None, "manquant"
+    template = _piece_du_lot([p for p in pieces if not p.is_user_completed], lot)
+    completed = _piece_du_lot([p for p in pieces if p.is_user_completed], lot)
+    if template and completed:
+        return template.id, completed.id, "present"
+    if template:
+        return template.id, None, "manquant"
     return None, None, "manquant"
 
 
 def _line_to_item(line: ChecklistLine, project_id: str, db: Session,
-                  vault_by_type: dict, position: int) -> ChecklistItem:
+                  vault_by_type: dict, position: int,
+                  selected_lot: Optional[str] = None) -> ChecklistItem:
     excerpt = (line.source_excerpt or "")[:490] or None
     suffix = f" ({line.merged_count} exigences du RC regroupées)" if line.merged_count > 1 else ""
     base = dict(
@@ -141,7 +161,8 @@ def _line_to_item(line: ChecklistLine, project_id: str, db: Session,
     # completer / workflow : template DCE si un type est connu, sinon « à compléter »
     tt = _TEMPLATE_TYPE_FOR.get(line.canonical_type)
     if tt:
-        template_id, completed_id, status = _template_status(project_id, db, tt)
+        template_id, completed_id, status = _template_status(
+            project_id, db, tt, line.scope or selected_lot)
         base.update(source_kind="dce_template", document_type_required=tt,
                     template_project_doc_id=template_id,
                     completed_project_doc_id=completed_id, status=status)
@@ -292,8 +313,10 @@ def generate_checklist_from_db(db: Session, project_id: str, org_id: str) -> int
         synchronize_session=False)
 
     docs_par_id = {d.id: d for d in coffre}
+    from models.project import Project
+    selected_lot = db.query(Project.selected_lot).filter(Project.id == project_id).scalar()
     for position, line in enumerate(plan.lines):
-        item = _line_to_item(line, project_id, db, vault_by_type, position)
+        item = _line_to_item(line, project_id, db, vault_by_type, position, selected_lot)
         _reprendre_les_choix(item, choix.get(_cle_ligne(item)), docs_par_id, completes)
         db.add(item)
     db.commit()
