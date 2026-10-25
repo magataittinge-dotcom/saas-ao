@@ -62,6 +62,19 @@ _NOT_A_LOT_LABEL = re.compile(
     r'annexe|prescriptions?\s+communes?|g[eé]n[eé]ralit[eé]s',
     re.IGNORECASE,
 )
+# Colonne d'index de révision des prix accolée à l'intitulé. Le tableau des lots
+# du CCAP, lu rangée par rangée sur une seule ligne (pdfium), donne
+# « 02 - Etanchéité - Couverture BT 49 », « 08 - Peinture – Sol souple 50% BT 46
+# + 50% BT10 » : ce libellé, plus long que celui du RC, gagnait la fusion
+# (_best_label garde le plus long). Index BT (bâtiment) ou TP (travaux publics) :
+# sigle en capitales, numéro, suffixe éventuel (BT16b, TP10a), part en % éventuelle.
+_INDEX_REVISION = (
+    r'(?:\d{1,3}(?:[.,]\d+)?\s*%\s*)?(?:(?i:index|indice)\s+)?'
+    r'(?<![^\W\d_])(?:BT|TP)\s*\d{1,2}[a-z]?'
+)
+_COLONNE_INDEX = re.compile(
+    rf'[\s\-–—:(]*{_INDEX_REVISION}(?:\s*(?:[+/,&]|et)\s*{_INDEX_REVISION})*[\s)]*$'
+)
 _RC_MARKER = re.compile(
     r'r[eè]glement\s+de\s+la\s+consultation|MARCHE\s+PASSE\s+PAR\s+LOTS|'
     r'alloti|lots\s+s[eé]par[eé]s',
@@ -149,6 +162,12 @@ def _lot_id_from_raw(raw: str) -> Optional[str]:
     if re.match(r'^[A-Z]$', raw):
         return f"lot{_alpha_to_num(raw)}"
     return None
+
+
+def _sans_colonne_index(libelle: str) -> str:
+    """« Etanchéité - Couverture BT 49 » → « Etanchéité - Couverture ».
+    À appliquer AVANT la coupe à 60 caractères (sinon « … Metallerie BT 4 »)."""
+    return _COLONNE_INDEX.sub('', libelle)
 
 
 def _has_label_body(nom: str) -> bool:
@@ -623,7 +642,7 @@ def _detect_lots_from_rc_text(text: str, doc_type: str) -> List[LotDetection]:
                 lot_id = _lot_id_from_raw(raw_id)
                 if not lot_id:
                     continue
-                label = m.group(2).strip()[:60]
+                label = _sans_colonne_index(m.group(2).strip())[:60]
                 # tout blanc → une espace : la tabulation entre deux cellules
                 # d'un tableau Word (B3) ne reste pas dans l'intitulé
                 label = re.sub(r'\s+', ' ', label).strip(' -–—')
@@ -670,7 +689,7 @@ def _detect_lots_from_rc_text(text: str, doc_type: str) -> List[LotDetection]:
             lot_id = _lot_id_from_raw(raw_id)
             if not lot_id:
                 continue
-            label = re.sub(r'\s+', ' ', label.strip())[:60].strip(' -–—')
+            label = re.sub(r'\s+', ' ', _sans_colonne_index(label.strip()))[:60].strip(' -–—')
             if _NOT_A_LOT_LABEL.search(label):
                 continue  # doc général (annexe, prescriptions communes…)
             description = _extract_description_excerpt(text, line_idx, scan_lines)
@@ -695,7 +714,7 @@ def _detect_lots_from_rc_text(text: str, doc_type: str) -> List[LotDetection]:
         after_num = re.sub(
             r'(?i)(?:lot|tranche)\s*[nN°]*\s*[\w]+[\s:\-–—]*', '', raw
         ).strip(' :—-–')
-        label = re.sub(r'\s+', ' ', re.split(r'[.\n]', after_num)[0]).strip()[:60]
+        label = re.sub(r'\s+', ' ', _sans_colonne_index(re.split(r'[.\n]', after_num)[0].strip())).strip()[:60]
         if _NOT_A_LOT_LABEL.search(label):
             continue  # doc général (annexe, prescriptions communes…)
         nom = f"Lot {raw_id} — {label}" if label else f"Lot {raw_id}"

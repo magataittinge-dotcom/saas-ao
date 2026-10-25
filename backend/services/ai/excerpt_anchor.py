@@ -83,6 +83,23 @@ def _normalize(text: str) -> str:
     return _normalize_with_map(text)[0]
 
 
+# « Flux alphanumérique » : NFKD, sans accents, minuscules, lettres et chiffres
+# seulement (blancs et ponctuation retirés). C'est la forme de comparaison du
+# futur surligneur (A). Elle sert de sonde à resolve_pages : les écarts de blancs
+# entre lecteurs PDF (« 1 - X » contre « 1- X », mots collés, césure en fin
+# de ligne) ne font plus perdre la page.
+_NON_ALPHANUMERIQUE = re.compile(r"[\W_]+")   # \w = str.isalnum() + « _ »
+
+
+def _flux_normalise(texte_normalise: str) -> str:
+    """Flux d'un texte déjà passé par _normalize (pages du cache de l'ancrage)."""
+    return _NON_ALPHANUMERIQUE.sub("", texte_normalise)
+
+
+def _flux(texte: str) -> str:
+    return _flux_normalise(_normalize(texte))
+
+
 _SENTENCE_BOUNDARY = re.compile(r"(?<=[.;:!?])\s+|\n{2,}")
 
 
@@ -294,17 +311,36 @@ def _pages_normalisees(chemin: str) -> List[str]:
     return pages
 
 
+# Longueurs minimales des sondes : en dessous, trop courtes pour désigner une page.
+_SONDE_NORMALISEE_MIN = 15   # caractères normalisés
+_SONDE_FLUX_MIN = 12         # lettres et chiffres
+
+
+def _page_contenant(sonde: str, pages: List[str], page_indiquee) -> Optional[int]:
+    """La page indiquée si elle contient la sonde, sinon la première page qui la
+    contient (numérotée à partir de 1), sinon None."""
+    if page_indiquee and 1 <= page_indiquee <= len(pages) and sonde in pages[page_indiquee - 1]:
+        return page_indiquee
+    return next((n for n, texte in enumerate(pages, start=1) if sonde in texte), None)
+
+
 def resolve_pages(requirements: List[dict], doc_paths: Dict[str, str]) -> int:
     """Corrige source_page : localise la page RÉELLE de chaque excerpt ancré
     (la page estimée par l'IA est souvent fausse → viewer sans surlignage).
     Une ouverture fitz par document (et par empreinte de fichier), textes de
     pages normalisés cachés."""
     page_cache: Dict[str, List[str]] = {}
+    flux_cache: Dict[str, List[str]] = {}
 
     def _pages(key: str) -> List[str]:
         if key not in page_cache:
             page_cache[key] = _pages_normalisees(doc_paths[key])
         return page_cache[key]
+
+    def _pages_flux(key: str) -> List[str]:
+        if key not in flux_cache:
+            flux_cache[key] = [_flux_normalise(p) for p in _pages(key)]
+        return flux_cache[key]
 
     fixed = 0
     for req in requirements:
@@ -317,19 +353,24 @@ def resolve_pages(requirements: List[dict], doc_paths: Dict[str, str]) -> int:
                     or src.lower() in k.lower()), None)
         if not key:
             continue
-        probe = _normalize(excerpt[:120])
-        if len(probe) < 15:
-            continue
-        pages = _pages(key)
+        debut = excerpt[:120]
         current = req.get("source_page")
-        # La page indiquée matche déjà → rien à faire
-        if current and 1 <= current <= len(pages) and probe in pages[current - 1]:
-            continue
-        for pno, ptxt in enumerate(pages, start=1):
-            if probe in ptxt:
-                req["source_page"] = pno
-                fixed += 1
-                break
+        page = None
+        # 1. Sonde normalisée : la plus précise, elle départage deux passages
+        #    presque identiques (« ; » contre « - »).
+        probe = _normalize(debut)
+        if len(probe) >= _SONDE_NORMALISEE_MIN:
+            page = _page_contenant(probe, _pages(key), current)
+        # 2. Introuvable : sonde en flux alphanumérique (plan H §2.6), insensible
+        #    aux blancs. Sur les 410 extraits réels de Gueux : 399 pages trouvées
+        #    avec le texte pdfium (383 avant), 401 avec le texte PyMuPDF (400).
+        if page is None:
+            probe = _flux(debut)
+            if len(probe) >= _SONDE_FLUX_MIN:
+                page = _page_contenant(probe, _pages_flux(key), current)
+        if page is not None and page != current:
+            req["source_page"] = page
+            fixed += 1
     if fixed:
         logger.info("Ancrage : %d pages sources corrigées (page IA fausse)", fixed)
     return fixed
