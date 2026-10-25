@@ -103,6 +103,19 @@ def _champ_geant(frontiere: str):
     yield f"\r\n--{frontiere}--\r\n".encode()
 
 
+def _en_tete_geant(frontiere: str):
+    """Une partie dont un en-tête fait 300 Mo (GHSA-pp6c-gr5w-3c5g, CVE-2026-42561).
+    Starlette 1.10 accumule les en-têtes de partie sans limite (`on_header_value`) ;
+    seul python-multipart ≥ 0.0.27 les borne."""
+    yield (f"--{frontiere}\r\n"
+           'Content-Disposition: form-data; name="type"\r\n'
+           "X-Banc-Synorix: ").encode()
+    bloc = b"a" * (1024 * 1024)
+    for _ in range(TAILLE_CHAMP_MO):
+        yield bloc
+    yield f"\r\n\r\nautre\r\n--{frontiere}--\r\n".encode()
+
+
 @pytest.fixture
 def serveur(tmp_path):
     (tmp_path / "appli_banc.py").write_text(APPLI.format(backend=str(BACKEND)))
@@ -210,3 +223,8 @@ def _verifier_refus_sans_hausse(proc, base: str, corps) -> None:
 def test_champ_de_300_mo_refuse_sans_hausse_de_memoire(serveur):
     proc, base = serveur
     _verifier_refus_sans_hausse(proc, base, _champ_geant)
+
+
+def test_en_tete_de_partie_de_300_mo_refuse_sans_hausse_de_memoire(serveur):
+    proc, base = serveur
+    _verifier_refus_sans_hausse(proc, base, _en_tete_geant)
