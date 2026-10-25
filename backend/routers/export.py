@@ -229,7 +229,8 @@ def export_zip(
     Never includes originals from the DCE (RC, CCAP, CCTP, blank templates).
 
     Contents:
-      - 01_Candidature/ : vault documents linked via checklist
+      - 01_Candidature/ : vault documents linked via checklist (jamais une
+                          pièce expirée ou supprimée — B1)
                           + ProjectDocuments flagged is_user_completed=True
       - 02_Offre/       : Memoire_technique.docx + DPGF remplie
                           + user-completed offer documents (AE signé, etc.)
@@ -302,6 +303,22 @@ def export_zip(
     OFFER_COMPLETED_TYPES = {"dpgf_template", "acte_engagement_template"}
 
     warnings: list[str] = []
+    # B1 — le dossier n'embarque JAMAIS une pièce du coffre expirée (date de
+    # fin jugée aujourd'hui) ; les supprimées sont déjà écartées par les
+    # requêtes (deleted_at). Chaque pièce écartée est signalée une fois.
+    from services.vault_classifier import effective_expiry_date, is_document_expired
+    ecartees: set[str] = set()
+
+    def _hors_dossier(doc) -> bool:
+        if not is_document_expired(doc):
+            return False
+        if doc.id not in ecartees:
+            ecartees.add(doc.id)
+            fin = effective_expiry_date(doc.type, doc.expiry_date, doc.issued_date)
+            quand = f" (fin de validité le {fin.strftime('%d/%m/%Y')})" if fin else ""
+            warnings.append(f"{doc.file_name} : à renouveler{quand} — laissée hors du dossier")
+        return True
+
     # T5 — l'archive est assemblée sur DISQUE (fichier temp), pas en RAM :
     # plusieurs livrables volumineux × exports concurrents saturaient la mémoire.
     tmp = tempfile.NamedTemporaryFile(prefix="synorix_zip_", suffix=".zip", delete=False)
@@ -318,7 +335,7 @@ def export_zip(
             piece_counter = 0
             for ci in checklist_items:
                 doc = vault_by_id.get(ci.linked_document_id) if ci.linked_document_id else None
-                if not doc:
+                if not doc or _hors_dossier(doc):
                     continue
                 piece_counter += 1
                 _add_file_to_zip(
@@ -368,6 +385,8 @@ def export_zip(
                     Document.deleted_at.is_(None),
                 ).all()
                 for doc in annexe_docs:
+                    if _hors_dossier(doc):
+                        continue
                     _add_file_to_zip(zf, doc.file_url, doc.file_name, f"{root}/3_ANNEXES", seen_names)
 
             # ── 02_Offre: filled DPGF if uploaded ─────────────────────────────

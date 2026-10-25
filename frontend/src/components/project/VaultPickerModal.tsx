@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X, FileText, Search, Loader2, AlertCircle, Upload } from 'lucide-react'
 import { useDocuments } from '@/hooks/useDocuments'
+import { vaultValidityPill, type VaultPillTone } from '@/lib/vault'
 import type { ChecklistItem, Document } from '@/types'
 
 const F = "'Inter Variable', 'Geist Sans', sans-serif"
@@ -221,7 +222,7 @@ function Group({
                 </p>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className="text-xs" style={{ color: '#909195' }}>{doc.type}</span>
-                  <StatusPill status={doc.status} />
+                  <StatusPill doc={doc} />
                 </div>
               </div>
               <button
@@ -242,19 +243,22 @@ function Group({
   )
 }
 
-function StatusPill({ status }: { status: Document['status'] }) {
-  const cfg =
-    status === 'expired'
-      ? { label: 'Expiré', color: '#F58E86', bg: 'rgba(245,142,134,0.10)' }
-      : status === 'expiring_soon'
-      ? { label: 'Expire bientôt', color: '#959597', bg: '#1E1E21' }
-      : { label: 'Valide', color: '#6EE7A8', bg: 'rgba(110,231,168,0.10)' }
+const PILL_TONES: Record<VaultPillTone, { color: string; bg: string }> = {
+  alert: { color: '#F58E86', bg: 'rgba(245,142,134,0.10)' },
+  neutral: { color: '#959597', bg: '#1E1E21' },
+  ok: { color: '#6EE7A8', bg: 'rgba(110,231,168,0.10)' },
+}
+
+// B1 — « Valide » seulement pour une pièce datée (règle commune lib/vault).
+function StatusPill({ doc }: { doc: Document }) {
+  const { label, tone } = vaultValidityPill(doc)
+  const cfg = PILL_TONES[tone]
   return (
     <span
       className="text-xs font-medium px-1.5 py-0.5 rounded"
       style={{ color: cfg.color, background: cfg.bg }}
     >
-      {cfg.label}
+      {label}
     </span>
   )
 }

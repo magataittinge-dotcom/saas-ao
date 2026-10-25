@@ -12,13 +12,18 @@ Branches on each requirement's ``source_kind``:
 The matcher returns dicts ready for ChecklistItem creation. Its caller persists
 them to the DB.
 """
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 
 from sqlalchemy.orm import Session
 
 from models.document import Document
 from models.project import Project, ProjectDocument
+from services.vault_classifier import (
+    current_document_status,
+    effective_expiry_date,
+    is_document_expired,
+)
 import logging
 
 logger = logging.getLogger(__name__)
@@ -61,16 +66,19 @@ def _detect_vault_type(exigence: str) -> Optional[str]:
     return None
 
 
-def _vault_doc_status(vault_doc: Document) -> str:
+def _vault_doc_status(vault_doc: Document, today: Optional[date] = None) -> str:
     """Map Document.status to the CHECKLIST_STATUSES enum.
 
     C10 — « valide » = reconnu ET daté : un document non vérifié (unverified)
-    ou non classé matché sur une exigence donne un ⚠️ "warning", jamais ✓."""
-    if vault_doc.status == "expired":
+    ou non classé matché sur une exigence donne un ⚠️ "warning", jamais ✓.
+    B1 — statut jugé à la date du jour (une date de fin passée compte même
+    si le job quotidien n'a pas encore rafraîchi le statut stocké)."""
+    status = current_document_status(vault_doc, today)
+    if status == "expired":
         return "expire"
-    if vault_doc.status == "expiring_soon":
+    if status == "expiring_soon":
         return "expiration_proche"
-    if vault_doc.status in ("unverified", "unclassified"):
+    if status in ("unverified", "unclassified"):
         return "warning"
     return "present"
 
@@ -118,16 +126,29 @@ def conformity_score(items) -> dict:
     return {"conformes": conformes, "total": len(considered)}
 
 
-def _pick_best_vault_doc(candidates: list[Document]) -> Document:
-    """Prefer non-expired, then most recent expiry."""
-    return sorted(
-        candidates,
-        key=lambda d: (
-            0 if d.status != "expired" else 1,
-            d.expiry_date or date.min,
-        ),
-        reverse=True,
-    )[0]
+def _pick_best_vault_doc(candidates: list[Document],
+                         today: Optional[date] = None) -> Optional[Document]:
+    """B1 — choix automatique d'une pièce du coffre pour une ligne de checklist.
+
+    • jamais un document supprimé du coffre (deleted_at) ;
+    • une pièce encore valable passe TOUJOURS devant une pièce expirée (l'ancien
+      tri décroissant sur « 0 si valable, 1 si expirée » faisait l'inverse :
+      l'expirée gagnait dès qu'une valable existait) ;
+    • à validité égale : la date de fin la plus lointaine, donc une pièce datée
+      devant une pièce sans date ; puis la plus récemment déposée.
+    Retourne None quand aucun candidat ne reste."""
+    live = [d for d in candidates if getattr(d, "deleted_at", None) is None]
+    if not live:
+        return None
+    t = today or date.today()
+
+    def _rang(d):
+        fin = effective_expiry_date(getattr(d, "type", None), getattr(d, "expiry_date", None),
+                                    getattr(d, "issued_date", None))
+        return (not is_document_expired(d, t), fin or date.min,
+                getattr(d, "uploaded_at", None) or datetime.min)
+
+    return max(live, key=_rang)
 
 
 # ── Per-requirement matching ─────────────────────────────────────────────────
@@ -256,8 +277,8 @@ def match_requirement_to_checklist_item(
     else:
         candidates = vault_by_type.get(detected_type, [])
 
-    if candidates:
-        matched = _pick_best_vault_doc(candidates)
+    matched = _pick_best_vault_doc(candidates) if candidates else None
+    if matched is not None:
         base["linked_document_id"] = str(matched.id)
         base["status"] = _vault_doc_status(matched)
 

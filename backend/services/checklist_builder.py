@@ -64,9 +64,9 @@ def _vault_status(ctype: str, vault_by_type: dict) -> tuple[Optional[str], str]:
     candidates: list[Document] = []
     for t in _VAULT_TYPES_FOR.get(ctype, []):
         candidates += vault_by_type.get(t, [])
-    if not candidates:
+    best = _pick_best_vault_doc(candidates)   # B1 : valable > expirée, jamais supprimée
+    if best is None:
         return None, "manquant"
-    best = _pick_best_vault_doc(candidates)
     return str(best.id), _vault_doc_status(best)
 
 
@@ -144,8 +144,10 @@ def generate_checklist_from_db(db: Session, project_id: str, org_id: str) -> int
         return 0
 
     plan = plan_checklist(rows)
+    # B1 — un document supprimé du coffre n'est jamais candidat.
     vault_by_type = _index_vault_by_type(
-        db.query(Document).filter(Document.organization_id == org_id).all()
+        db.query(Document).filter(Document.organization_id == org_id,
+                                  Document.deleted_at.is_(None)).all()
     )
 
     # Remplacement idempotent

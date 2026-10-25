@@ -242,9 +242,12 @@ def link_vault_document(
             detail="Cet item attend un template DCE, pas un document du coffre-fort.",
         )
 
+    # B1 — un document supprimé du coffre ne se lie plus (il ne partirait pas
+    # dans le ZIP alors que la ligne le dirait présent).
     doc = db.query(Document).filter(
         Document.id == body.document_id,
         Document.organization_id == user.organization_id,
+        Document.deleted_at.is_(None),
     ).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document du coffre-fort introuvable.")
