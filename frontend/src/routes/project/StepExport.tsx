@@ -12,6 +12,7 @@ import type { Project } from '@/types'
 import DocumentViewer, { type ViewableDocument } from '@/components/project/DocumentViewer'
 import { DocumentRowSkeleton } from '@/components/skeletons'
 import EchecAction from '@/components/common/EchecAction'
+import { signatureAConfirmer } from '@/components/project/SignatureLigne'
 import { messageErreur } from '@/lib/erreurs'
 
 const F = "'Inter Variable', 'Geist Sans', sans-serif"
@@ -35,6 +36,7 @@ interface ChecklistExportItem {
   linked_document_id: string | null
   source_kind: string
   signature_confirmed: boolean
+  signature_required: boolean
 }
 
 interface ProjectDocumentExportItem {
@@ -352,12 +354,10 @@ export default function StepExport({ project }: Props) {
   // ── Gate ZIP (C10) : X < Y pièces conformes → ambre + avertissement ──────
   const gateBlocked = !!score && score.total > 0 && score.conformes < score.total
   const CONFORME_STATUSES = new Set(['present', 'expiration_proche', 'non_applicable'])
-  const SIGNABLE = new Set(['acte_engagement_template', 'dc1_template', 'dc2_template'])
+  // Signature : règle serveur (signature_required) — DC1, DC2, DUME et AE
+  // seulement si le RC l'exige ; plus de liste de types « à signer » ici.
   const nonConformes = (detail?.checklist_items ?? []).filter((i) =>
-    i.status !== 'non_applicable' && (
-      !CONFORME_STATUSES.has(i.status)
-      || (i.source_kind === 'dce_template' && SIGNABLE.has(i.document_type_required) && !i.signature_confirmed)
-    ),
+    i.status !== 'non_applicable' && (!CONFORME_STATUSES.has(i.status) || signatureAConfirmer(i)),
   )
 
   // ── Faits du héros : l'état du dossier en un chiffre ─────────────────────
@@ -390,7 +390,7 @@ export default function StepExport({ project }: Props) {
                 {' '}({i.status === 'manquant' ? 'à fournir'
                   : i.status === 'expire' ? 'expirée'
                   : i.status === 'warning' ? 'à vérifier'
-                  : 'signature non confirmée'})
+                  : 'signature à confirmer'})
               </li>
             ))}
             {nonConformes.length > 6 && <li>… et {nonConformes.length - 6} autre(s)</li>}

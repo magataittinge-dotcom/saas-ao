@@ -3,8 +3,10 @@ Tests C12 — workflow DPGF complet + confirmations de signature.
 
   • Re-upload d'une DPGF remplie → dpgf_checker valide : lignes remplies → ✓,
     lignes vides → ⚠️ warning avec détail.
-  • Documents à signer (AE, DC1, DC2) : case « Je confirme avoir signé »
-    persistée, reflétée dans le score de conformité.
+  • Confirmation « Je confirme avoir signé » persistée et reflétée dans le
+    score — demandée pour DC1, DC2, DUME et AE seulement si l'extrait du RC
+    l'exige (F32144, F32106 ; AE signé à l'attribution), toujours pour la
+    déclaration sur l'honneur (cf. test_signature_formulaires).
 """
 import io
 
@@ -125,22 +127,28 @@ def test_signature_confirmation_persists(client, db_session, test_org, patched_u
     ).first().signature_confirmed is True
 
 
-def test_score_counts_unsigned_ae_as_non_conforme(db_session, test_org):
+def test_score_ae_non_signe_conforme_sauf_si_le_rc_l_exige(db_session, test_org):
+    """L'AE se signe à l'attribution (ATTRI1, R17445) : sans exigence du RC,
+    il compte conforme sans la case ; si l'extrait du RC l'exige, la case
+    reste demandée."""
     from services.ai.checklist_matcher import conformity_score
 
     class _Item:
-        def __init__(self, status, doc_type="urssaf", signed=False, kind="vault"):
+        def __init__(self, status, doc_type="urssaf", signed=False, kind="vault", extrait=None):
             self.status = status
             self.document_type_required = doc_type
             self.signature_confirmed = signed
             self.source_kind = kind
+            self.source_in_rc = extrait
 
+    exige = "L'acte d'engagement sera daté et signé par le candidat."
     items = [
         _Item("present"),                                                    # vault ✓
-        _Item("present", "acte_engagement_template", signed=False, kind="dce_template"),  # AE non signé
-        _Item("present", "dc1_template", signed=True, kind="dce_template"),  # DC1 signé ✓
+        _Item("present", "acte_engagement_template", kind="dce_template"),   # AE, rien au RC ✓
+        _Item("present", "acte_engagement_template", kind="dce_template", extrait=exige),  # ✗
+        _Item("present", "dc1_template", signed=True, kind="dce_template"),  # DC1 ✓
     ]
-    assert conformity_score(items) == {"conformes": 2, "total": 3}
+    assert conformity_score(items) == {"conformes": 3, "total": 4}
 
 
 def test_score_counts_unsigned_declaration_honneur_as_non_conforme(db_session, test_org):
@@ -163,19 +171,23 @@ def test_score_counts_unsigned_declaration_honneur_as_non_conforme(db_session, t
     assert conformity_score(items) == {"conformes": 1, "total": 2}
 
 
-def test_score_counts_unsigned_dc2_as_non_conforme(db_session, test_org):
-    """DC2 était dans le set signable mais jamais exercé par un test."""
+def test_score_dc2_signature_seulement_si_le_rc_l_exige(db_session, test_org):
+    """DC2 : la réglementation n'impose pas la signature (F32144, F32106) ;
+    la case n'est demandée que si l'extrait du RC l'exige."""
     from services.ai.checklist_matcher import conformity_score
 
     class _Item:
-        def __init__(self, status, doc_type="urssaf", signed=False, kind="vault"):
+        def __init__(self, status, doc_type="urssaf", signed=False, kind="vault", extrait=None):
             self.status = status
             self.document_type_required = doc_type
             self.signature_confirmed = signed
             self.source_kind = kind
+            self.source_in_rc = extrait
 
+    exige = "Le formulaire DC2 dûment complété et signé."
     items = [
-        _Item("present", "dc2_template", signed=False, kind="dce_template"),
-        _Item("present", "dc2_template", signed=True, kind="dce_template"),
+        _Item("present", "dc2_template", signed=False, kind="dce_template"),                  # ✓
+        _Item("present", "dc2_template", signed=False, kind="dce_template", extrait=exige),   # ✗
+        _Item("present", "dc2_template", signed=True, kind="dce_template", extrait=exige),    # ✓
     ]
-    assert conformity_score(items) == {"conformes": 1, "total": 2}
+    assert conformity_score(items) == {"conformes": 2, "total": 3}

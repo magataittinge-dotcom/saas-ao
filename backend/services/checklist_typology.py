@@ -7,7 +7,7 @@ l'un de 4 groupes métier :
 
   • ``fournir``   — pièce à uploader / lier au coffre-fort (attestations,
     assurances, KBIS, qualifications, références…) → matching coffre, ✓/⚠️/✗ ;
-  • ``completer`` — formulaire à compléter puis signer (DC1, DC2, AE, DC4,
+  • ``completer`` — formulaire à compléter (DC1, DC2, AE, DC4,
     déclaration sur l'honneur, attestation de visite) → flux « compléter » ;
   • ``synorix``   — produit PAR Synorix (mémoire technique) → jalon informatif,
     jamais demandé en upload ;
@@ -86,7 +86,7 @@ _RULES: list[tuple[str, str, str, list[str]]] = [
         "dans le mémoire technique les cv",
     ]),
 
-    # ── 2. FORMULAIRES à compléter/signer ───────────────────────────────────
+    # ── 2. FORMULAIRES à compléter ─────────────────────────────────────────
     ("completer", "attestation_visite", "Attestation de visite du site",
         ["visite des lieux", "visite du site", "attestation de visite", "visite obligatoire"]),
     ("completer", "dc1", "DC1 — Lettre de candidature",

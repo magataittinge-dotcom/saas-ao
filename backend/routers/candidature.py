@@ -275,7 +275,8 @@ class ChecklistItemPatch(BaseModel):
     status: Optional[str] = None  # one of CHECKLIST_STATUSES + 'non_applicable'
     details: Optional[str] = None
     unlink: Optional[bool] = False  # detach linked vault / completed template
-    # C12 — « Je confirme avoir signé » (AE, DC1, DC2)
+    # C12 — « Je confirme avoir signé » : demandé seulement quand
+    # checklist_matcher.signature_requise le dit (RC qui l'exige, DSH)
     signature_confirmed: Optional[bool] = None
 
 

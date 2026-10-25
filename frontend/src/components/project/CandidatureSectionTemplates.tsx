@@ -3,6 +3,7 @@ import {
   CheckCircle2, AlertCircle, Download, Upload, FileText, Loader2, ExternalLink,
 } from 'lucide-react'
 import type { ChecklistItem } from '@/types'
+import SignatureLigne from '@/components/project/SignatureLigne'
 
 const F = "'Inter Variable', 'Geist Sans', sans-serif"
 
@@ -19,14 +20,15 @@ const TEMPLATE_LABELS: Record<string, string> = {
   declaration_honneur: 'Déclaration sur l\'honneur',
 }
 
-// C12 — documents exigeant une signature du candidat.
-const SIGNABLE_TYPES = [
+// Ordre d'affichage : AE en tête, puis les formulaires de candidature. La
+// signature ne se déduit plus du type : règle serveur (SignatureLigne).
+const ORDRE_FORMULAIRES = [
   'acte_engagement_template', 'dc1_template', 'dc2_template', 'declaration_honneur',
 ]
 
 // Type (b) — formulaires nationaux standards jamais fournis dans le DCE : on
 // pointe le formulaire officiel (DAJ / economie.gouv.fr, URL stable) que
-// l'utilisateur télécharge, complète/signe, puis réimporte.
+// l'utilisateur télécharge, complète, puis réimporte.
 const OFFICIAL_FORM_URLS: Record<string, string> = {
   dc1_template: 'https://www.economie.gouv.fr/daj/formulaires-declaration-du-candidat',
   dc2_template: 'https://www.economie.gouv.fr/daj/formulaires-declaration-du-candidat',
@@ -45,11 +47,11 @@ export default function CandidatureSectionTemplates({ projectId, items, onUpload
   if (items.length === 0) return null
 
   const present = items.filter((i) => i.status === 'present').length
-  // AE en tête, puis les autres documents à signer, puis le reste.
+  // AE en tête, puis les formulaires de candidature, puis le reste.
   const sorted = [...items].sort((a, b) => {
     const rank = (i: ChecklistItem) => {
-      const idx = SIGNABLE_TYPES.indexOf(i.document_type_required)
-      return idx === -1 ? SIGNABLE_TYPES.length : idx
+      const idx = ORDRE_FORMULAIRES.indexOf(i.document_type_required)
+      return idx === -1 ? ORDRE_FORMULAIRES.length : idx
     }
     return rank(a) - rank(b)
   })
@@ -70,10 +72,10 @@ export default function CandidatureSectionTemplates({ projectId, items, onUpload
           </div>
           <div className="min-w-0">
             <h2 className="text-base font-bold" style={{ color: '#F7F8F8' }}>
-              Documents à compléter et signer
+              Documents à compléter
             </h2>
             <p className="text-xs mt-0.5" style={{ color: '#959597' }}>
-              {present}/{items.length} complétés — téléchargez la trame (ou le formulaire officiel), complétez et signez, puis réimportez la version finale
+              {present}/{items.length} complétés — téléchargez la trame (ou le formulaire officiel), complétez-la, puis réimportez la version finale
             </p>
           </div>
         </div>
@@ -110,7 +112,6 @@ function TemplateRow({
   const isWarning = item.status === 'warning'
   const hasTemplate = !!item.template_project_doc_id
   const officialUrl = OFFICIAL_FORM_URLS[item.document_type_required]
-  const isSignable = SIGNABLE_TYPES.includes(item.document_type_required)
   const label = TEMPLATE_LABELS[item.document_type_required] || item.document_type_required
 
   const downloadHref = item.template_project_doc_id
@@ -170,20 +171,8 @@ function TemplateRow({
             <span className="text-xs" style={{ color: '#959597' }}>À demander au maître d'ouvrage</span>
           )}
         </div>
-        {/* C12 — confirmation de signature (AE, DC1, DC2) */}
-        {isSignable && onToggleSignature && (
-          <label className="flex items-center gap-2 mt-2 text-xs cursor-pointer" style={{ color: '#959597' }}>
-            <input
-              type="checkbox"
-              checked={item.signature_confirmed ?? false}
-              onChange={(e) => onToggleSignature(item, e.target.checked)}
-            />
-            Je confirme avoir signé ce document
-            {!item.signature_confirmed && (
-              <span style={{ color: '#909195' }}>— requis pour compter conforme</span>
-            )}
-          </label>
-        )}
+        {/* Signature : case seulement si elle est demandée, sinon la mention */}
+        <SignatureLigne item={item} onToggleSignature={onToggleSignature} />
         {item.details && (
           <p className="text-xs mt-1 leading-relaxed" style={{ color: '#959597' }}>
             {item.details}
@@ -200,7 +189,7 @@ function TemplateRow({
       </div>
 
       {/* Actions — affordance UNIFORME : Télécharger (trame DCE ou officiel) /
-          Importer rempli / (Signé via la case ci-dessus) */}
+          Importer rempli / (signature via la case ci-dessus, si demandée) */}
       <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
         {hasTemplate && downloadHref ? (
           <a

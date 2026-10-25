@@ -12,6 +12,8 @@ Branches on each requirement's ``source_kind``:
 The matcher returns dicts ready for ChecklistItem creation. Its caller persists
 them to the DB.
 """
+import re
+import unicodedata
 from datetime import date, datetime
 from typing import Optional
 
@@ -88,28 +90,84 @@ def _vault_doc_status(vault_doc: Document, today: Optional[date] = None) -> str:
 # warning/expire/manquant ne le sont pas ; non_applicable sort du total.
 _CONFORME_STATUSES = {"present", "expiration_proche"}
 
-# C12 — templates DCE exigeant une signature : sans confirmation explicite
-# (« Je confirme avoir signé »), la pièce ne compte pas conforme.
-# Doit rester ALIGNÉ avec SIGNABLE_TYPES du front (CandidatureSectionTemplates).
-SIGNABLE_TEMPLATE_TYPES = {
-    "acte_engagement_template", "dc1_template", "dc2_template", "declaration_honneur",
+# ── Signature des pièces (C12 révisé) ────────────────────────────────────────
+# Sources vérifiées le 25/10/2026 (notes nuit-25-10/B1 §2 lignes 9-10, §5) :
+#   • service-public F32144 et F32106 : « La règlementation n'impose pas que le
+#     Dume ou les formulaires DC1, DC2 soient signés […]. Cependant, l'acheteur
+#     public peut exiger dans les documents de la consultation que la
+#     candidature soit signée. »
+#   • acte d'engagement (ATTRI1 ; service-public R17445, F23784) : la signature
+#     « n'est plus aujourd'hui requise qu'au stade de l'attribution du marché
+#     public », sauf si l'acheteur l'exige dès l'offre.
+# → pour ces pièces, « Je confirme avoir signé » n'est demandé que si l'extrait
+#   du document de la consultation rattaché à la ligne (source_in_rc, texte
+#   ancré mot pour mot) exige une signature. La phrase reformulée par l'IA
+#   (exigence_text) n'est PAS lue : ses exemples disent « signer » par défaut.
+#   Le détecteur du RC (bloc 9) remplacera cette lecture de l'extrait.
+SIGNATURE_SI_EXIGEE_TYPES = {
+    "dc1_template", "dc2_template", "dume", "acte_engagement_template",
 }
+# Déclaration sur l'honneur (formulaire du DCE) : confirmation toujours
+# demandée — inchangé, aucune source vérifiée pour une pièce isolée.
+SIGNATURE_TOUJOURS_TYPES = {"declaration_honneur"}
+
+_MOT_SIGNATURE = re.compile(r"\bsign(?:e|ee|es|ees|er|ature|atures|era|eront)\b")
+# Négation dans la même proposition, juste avant le mot (« n'a pas à être
+# signée », « non signé », « sans signature », « ne sont pas tenus de signer »).
+_NEGATION_AVANT = re.compile(
+    r"\b(?:pas|non|sans|aucune?|jamais|nullement|dispensee?s?)\b[^.;:!?]{0,40}$")
+# Signature renvoyée à l'attribution (« sera signé par l'attributaire »,
+# « l'attributaire devra signer », « requise qu'au stade de l'attribution »).
+_ATTRIBUTION_AVANT = re.compile(r"\b(?:attributaire|titulaire|attribution)\b[^.;:!?]{0,40}$")
+_ATTRIBUTION_OU_NEGATION_APRES = re.compile(
+    r"^[^.;:!?]{0,100}?(?:\battributaire\b|\btitulaire\b|\battribution\b|n'est pas|n'est plus"
+    r"|ne sont pas|ne sera pas|ne seront pas"
+    r"|\bpas (?:requise?s?|exigee?s?|obligatoires?|demandee?s?|necessaires?|imposee?s?)\b)")
+
+
+def _normaliser(texte: str) -> str:
+    s = unicodedata.normalize("NFKD", texte.lower().replace("’", "'"))
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    return re.sub(r"\s+", " ", s)
+
+
+def extrait_exige_signature(extrait: Optional[str]) -> bool:
+    """Vrai si l'extrait du document de la consultation EXIGE une signature au
+    dépôt : un mot de la famille « signer » ni nié ni renvoyé à l'attribution."""
+    if not extrait:
+        return False
+    texte = _normaliser(extrait)
+    for m in _MOT_SIGNATURE.finditer(texte):
+        avant, apres = texte[max(0, m.start() - 60):m.start()], texte[m.end():m.end() + 120]
+        if _NEGATION_AVANT.search(avant) or _ATTRIBUTION_AVANT.search(avant):
+            continue
+        if _ATTRIBUTION_OU_NEGATION_APRES.search(apres):
+            continue
+        return True
+    return False
+
+
+def signature_requise(item) -> bool:
+    """La confirmation « Je confirme avoir signé » est-elle demandée pour cette
+    ligne ? Source unique pour le score, l'API et l'écran."""
+    type_ = getattr(item, "document_type_required", "") or ""
+    if type_ in SIGNATURE_TOUJOURS_TYPES:
+        return getattr(item, "source_kind", "") == "dce_template"
+    if type_ in SIGNATURE_SI_EXIGEE_TYPES:
+        return extrait_exige_signature(getattr(item, "source_in_rc", None))
+    return False
 
 
 def _is_conforme(item) -> bool:
     if item.status not in _CONFORME_STATUSES:
         return False
-    if (
-        getattr(item, "source_kind", "") == "dce_template"
-        and getattr(item, "document_type_required", "") in SIGNABLE_TEMPLATE_TYPES
-        and not getattr(item, "signature_confirmed", False)
-    ):
+    if signature_requise(item) and not getattr(item, "signature_confirmed", False):
         return False
     return True
 
 
 # Le score ne compte QUE les pièces dont l'entreprise est responsable :
-# 'fournir' (coffre) + 'completer' (formulaires à signer). Les jalons produits
+# 'fournir' (coffre) + 'completer' (formulaires à compléter). Les jalons produits
 # par Synorix ('synorix') et les pièces à workflow dédié ('workflow', DPGF/BPU)
 # sont hors score.
 _SCORED_GROUPS = {"fournir", "completer"}

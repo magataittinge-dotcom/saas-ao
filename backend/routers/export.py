@@ -64,6 +64,7 @@ def get_export_detail(
     # Build checklist with linked doc names — une seule requête pour toutes les
     # pièces liées (avant : une par ligne de checklist).
     from models.document import Document
+    from services.ai.checklist_matcher import signature_requise
     from services.checklist_builder import recaler_lignes_coffre
     lies = {i.linked_document_id for i in checklist_items if i.linked_document_id}
     docs_lies = {}
@@ -90,6 +91,10 @@ def get_export_detail(
             details=item.details,
             linked_document_name=doc_name,
             linked_document_id=item.linked_document_id,
+            # le gate d'export du front lit ces trois champs (jamais remplis avant)
+            source_kind=item.source_kind or "vault",
+            signature_confirmed=bool(item.signature_confirmed),
+            signature_required=signature_requise(item),
         ))
 
     # Mémoire info
@@ -246,7 +251,7 @@ def export_zip(
                           pièce expirée ou supprimée — B1)
                           + ProjectDocuments flagged is_user_completed=True
       - 02_Offre/       : Memoire_technique.docx + DPGF remplie
-                          + user-completed offer documents (AE signé, etc.)
+                          + user-completed offer documents (AE complété, etc.)
     """
     project = _get_project_or_404(project_id, user.organization_id, db)
 
@@ -356,7 +361,7 @@ def export_zip(
                     f"{root}/01_Candidature", seen_names,
                 )
 
-            # ── User-completed project documents (DC1/DC2 rempli, AE signé) ───
+            # ── User-completed project documents (DC1/DC2, AE complétés) ──────
             for doc in project_docs:
                 if not getattr(doc, "is_user_completed", False):
                     continue
@@ -417,8 +422,10 @@ def export_zip(
                 (d.type or "") == "acte_engagement_template" and getattr(d, "is_user_completed", False)
                 for d in project_docs
             )
+            # L'AE se dépose complété ; sa signature vient à l'attribution
+            # (ATTRI1 ; service-public R17445, F23784) : « non signé » était faux.
             if not has_completed_ae and any((d.type or "") == "acte_engagement_template" for d in project_docs):
-                warnings.append("Acte d'engagement non signé")
+                warnings.append("Acte d'engagement complété : à joindre")
 
             # ── Ensure 3 folders exist (even if empty) ────────────────────────
             for sub in ("01_Candidature", "02_Offre", "03_Technique"):

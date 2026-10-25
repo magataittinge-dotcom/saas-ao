@@ -253,6 +253,9 @@ export interface ChecklistItem {
   details?: string
   source_in_rc?: string
   signature_confirmed?: boolean
+  /** « Je confirme avoir signé » demandé pour cette pièce (règle serveur :
+   *  DC1, DC2, DUME, AE seulement si le RC l'exige ; déclaration sur l'honneur). */
+  signature_required?: boolean
   lot?: string | null
   document_group?: 'fournir' | 'completer' | 'synorix' | 'workflow'
 }

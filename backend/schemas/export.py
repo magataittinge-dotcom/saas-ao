@@ -31,6 +31,8 @@ class ChecklistExportItem(BaseModel):
     linked_document_id: Optional[str] = None
     source_kind: str = "vault"
     signature_confirmed: bool = False  # C12 — pour le gate d'export
+    # Signature demandée pour cette pièce (checklist_matcher.signature_requise)
+    signature_required: bool = False
 
     model_config = {"from_attributes": True}
 

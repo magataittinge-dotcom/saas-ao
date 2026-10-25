@@ -2,7 +2,7 @@ import logging
 from datetime import datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, computed_field, model_validator
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +40,15 @@ class ChecklistItemResponse(BaseModel):
     document_group: str = "fournir"  # fournir | completer | synorix | workflow
 
     model_config = {"from_attributes": True}
+
+    @computed_field
+    @property
+    def signature_required(self) -> bool:
+        """« Je confirme avoir signé » demandé pour cette pièce ? Règle unique
+        côté serveur (checklist_matcher.signature_requise) : DC1, DC2, DUME et
+        AE seulement si l'extrait du RC l'exige."""
+        from services.ai.checklist_matcher import signature_requise
+        return signature_requise(self)
 
 
 SourceKind = Literal["vault", "dce_template"]
