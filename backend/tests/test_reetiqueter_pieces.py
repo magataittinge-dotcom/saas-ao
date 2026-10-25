@@ -41,7 +41,7 @@ def base(db_session, test_org):
     piece("p-actif", "d-plomberie", "Ecole_lot 10 Plomberie Sanitaires_DCE.pdf", "cctp", ["info"],
           texte="y" * 1000)
     piece("p-actif", "d-generalites", "Ecole_lot 00 Généralités_DCE.pdf", "cctp", ["0"])
-    piece("p-actif", "d-notice", "Notice de sécurité.pdf", "autre", ["all"], texte="z" * 300)
+    piece("p-actif", "d-coupes", "Coupes AA BB.pdf", "autre", ["all"], texte="z" * 300)
     piece("p-actif", "d-stable", "CCTP lot 05.pdf", "cctp", ["5"])
     piece("p-actif", "d-entreprise", "DPGF_lot 10 Plomberie.xlsx", "dpgf_template", ["info"],
           entreprise=True)
@@ -64,7 +64,7 @@ def test_comptage_par_defaut_sans_rien_ecrire(script, base):
     assert bilan.inchangees == 1
     assert bilan.changees == 3
     assert (bilan.rendues, bilan.caracteres_rendus) == (1, 1000)   # le CCTP Plomberie
-    assert (bilan.retirees, bilan.caracteres_retires) == (1, 300)  # la notice de sécurité
+    assert (bilan.retirees, bilan.caracteres_retires) == (1, 300)  # « Coupes » : un plan
     assert bilan.autres == 1                                       # lot 00 → commun
     assert bilan.projets_analyses == {"p-actif"}
     assert bilan.ecrites == 0
@@ -77,7 +77,7 @@ def test_ecrire_met_a_jour_les_etiquettes(script, base):
     assert bilan.ecrites == 3
     assert _etiquette(base, "d-plomberie") == ["10"]
     assert _etiquette(base, "d-generalites") == ["all"]
-    assert _etiquette(base, "d-notice") == ["info"]
+    assert _etiquette(base, "d-coupes") == ["info"]
     assert _etiquette(base, "d-entreprise") == ["info"]     # hors périmètre, intacte
     assert _etiquette(base, "d-ailleurs") == ["info"]       # projet supprimé, intact
 

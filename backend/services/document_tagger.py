@@ -38,8 +38,9 @@ _INFO_MOTS = re.compile(
     r' (?:diag(?:nostics?|nostiques?)?|amiante|plomb|crep|dat|carrez|energetiques?'
     r'|geotechni(?:que|ques|e)|pgc|ppsps|rict|icpe|acoustiques?|vibrations?|vibratoires?'
     r'|sondages?) '
-    r'| rapports? (?:de |du |d )?sols? '
-    r'| notices? (?:de |d )?securite ')
+    r'| rapports? (?:de |du |d )?sols? ')
+# Pas de motif « notice de sécurité » (décision du 26/10) : la notice de sécurité
+# incendie sert au chapitre « sécurité » du mémoire, elle reste dans son contexte.
 _PLAN_MOTS = re.compile(
     r' (?:plans?|coupes?(?! feu )|facades?|niveaux?|elevations?|implantations?) '
     r'| rez de chaussee ')

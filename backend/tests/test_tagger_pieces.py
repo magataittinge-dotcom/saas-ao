@@ -43,7 +43,6 @@ def test_le_type_decide_pour_les_pieces_techniques(nom, type_, attendu):
     ("Plan niveau 1.pdf", ["info"]),
     ("Etude acoustique.pdf", ["info"]),
     ("Rapport de sol G2.pdf", ["info"]),
-    ("Notice de sécurité.pdf", ["info"]),
     # … mais un mot qui en contient un autre ne compte plus.
     ("Note Plomberie.pdf", ["all"]),
     ("Portes coupe-feu.pdf", ["all"]),
@@ -57,3 +56,14 @@ def test_motifs_en_mots_entiers_pour_les_autres_pieces(nom, attendu):
 def test_un_plan_reste_info():
     assert assign_document_lots("Lot 05 - Plan de façade.pdf", "plan") == ["info"]
     assert assign_document_lots("Ensemble.dwg", "autre") == ["info"]
+
+
+@pytest.mark.parametrize("nom,type_", [
+    ("Notice de sécurité.pdf", "autre"),
+    ("EQ2501-NOTICE SÉCURITÉ.pdf", "notice"),
+    ("Notice securite incendie ERP.pdf", "notice"),
+])
+def test_la_notice_de_securite_reste_dans_le_contexte_du_memoire(nom, type_):
+    """Décision du 26/10 : une notice de sécurité incendie sert au chapitre
+    « sécurité » du mémoire ; la ranger en « info » la retirerait sans bruit."""
+    assert assign_document_lots(nom, type_) == ["all"]
