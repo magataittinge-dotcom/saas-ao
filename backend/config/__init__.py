@@ -23,6 +23,12 @@ class Settings(BaseSettings):
 
     # Anthropic (Claude API)
     ANTHROPIC_API_KEY: str
+    # B9 — jeu de démonstration de l'analyse DCE (« Commune Test »), pour une
+    # démonstration sans clé valable. DÉSACTIVÉ par défaut, indépendant de
+    # DEBUG : sans ce drapeau, une clé absente, d'exemple ou révoquée fait
+    # échouer l'analyse (unité rendue), jamais de fausse analyse enregistrée.
+    # Activer : SYNORIX_ANALYSE_DEMO=1. Jamais en production.
+    SYNORIX_ANALYSE_DEMO: bool = False
 
     # Voyage AI (embeddings RAG — Phase 1). Optionnel tant que le RAG n'est
     # pas activé ; requis dès l'indexation/recherche vectorielle.
