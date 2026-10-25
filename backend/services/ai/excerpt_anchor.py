@@ -22,6 +22,7 @@ import os
 import re
 import threading
 from array import array
+from bisect import bisect_left, bisect_right
 import unicodedata
 import math
 from collections import Counter, OrderedDict, defaultdict
@@ -232,7 +233,7 @@ def _sans_blancs(texte: str, a: int, b: int) -> Tuple[int, int]:
 
 
 def _morceaux(texte: str, a: int, b: int) -> List[Tuple[int, int]]:
-    lignes = texte[a:b].split("\n")
+    lignes = texte[a:b].split("\n") if texte.count("\n", a, b) >= 3 else ()
     pleines = [x.strip() for x in lignes if x.strip()]
     if len(pleines) >= 4 and sum(map(len, pleines)) / len(pleines) < _ETIQUETTE_MAX:
         # Étiquettes de plan ou de carnet, sans ponctuation : une ligne = une phrase
@@ -267,7 +268,9 @@ def _morceaux(texte: str, a: int, b: int) -> List[Tuple[int, int]]:
 #     rangées numérotées), sauf pour une exigence qui porte sur l'allotissement.
 _LIGNES_DE_BORD = 6
 _PAGES_MIN_BORD = 3
-_SOMMAIRE = re.compile(r"(?:\.{4,}|_{4,}|…{2,}|(?:\. ){3,})\s*\d*\s*$")
+_FIN_DE_LIGNE_TESTEE = 200    # sommaire : seule la fin de la ligne est regardée
+_LIGNE_TABLEAU_MAX = 200      # au-delà, une ligne n'est ni en-tête ni rangée du tableau des lots
+_FIN_LIGNE = re.compile(r"\r\n|[\n\r\x0b\x0c\x1c\x1d\x1e\x85  ]")   # comme str.splitlines
 _CHIFFRES = re.compile(r"\d+")
 _LETTRE = re.compile(r"[^\W\d_]")
 _ENTETE_TABLEAU_LOTS = re.compile(
@@ -280,24 +283,81 @@ _SUR_LES_LOTS = re.compile(
     r"|\b(?:liste|nombre|intitules?|designations?)\s+des\s+lots\b"
     r"|\b(?:un\s+ou\s+plusieurs|plusieurs|chaque|tous\s+les|l'ensemble\s+des)\s+lots?\b"
     r"|\blot\s+unique\b|\b\d+\s+lots\b")
-_AIMANTS_CACHE: "OrderedDict[str, tuple]" = OrderedDict()
+class _Aimants(NamedTuple):
+    """Lignes d'une pièce classées une fois : début de chaque ligne, sommes
+    cumulées des lignes utiles (au moins 3 lettres) et des lignes aimants
+    (bord de page ou sommaire), zones des tableaux des lots et leurs fins."""
+    debuts: "array"
+    fins: "array"
+    utiles: "array"
+    aimants: "array"
+    aimant_ligne: bytearray
+    zones: Tuple[Tuple[int, int], ...]
+    fins_zones: "array"
+
+
+_AIMANTS_CACHE: "OrderedDict[str, _Aimants]" = OrderedDict()
 
 
 def _forme_ligne(ligne: str) -> str:
     return _CHIFFRES.sub("#", " ".join(ligne.split()))
 
 
+def _a_trois_lettres(ligne: str) -> bool:
+    n = 0
+    for _ in _LETTRE.finditer(ligne):
+        n += 1
+        if n == 3:
+            return True
+    return False
+
+
+def _est_ligne_sommaire(ligne: str) -> bool:
+    """Ligne de sommaire : points ou soulignés de conduite, puis un numéro de
+    page éventuel. Sans regex et sur la seule fin de la ligne : temps borné,
+    quelle que soit la longueur de la ligne (une regex revenait en arrière sur
+    toute une suite de points qui n'est pas en fin de ligne)."""
+    fin = ligne.rstrip()[-_FIN_DE_LIGNE_TESTEE:].rstrip("0123456789").rstrip()
+    return fin.endswith(("....", "____", "……", ". . ."))
+
+
+def _lignes(texte: str) -> List[Tuple[int, int]]:
+    """[(début, fin)] des lignes, découpées comme str.splitlines."""
+    out, pos = [], 0
+    for m in _FIN_LIGNE.finditer(texte):
+        out.append((pos, m.start()))
+        pos = m.end()
+    if pos < len(texte):
+        out.append((pos, len(texte)))
+    return out
+
+
 def _zones_tableau_lots(texte: str) -> List[Tuple[int, int]]:
     """[(début, fin)] des tableaux des lots : un en-tête, puis au moins 3
-    rangées numérotées ; entre deux rangées, 2 lignes au plus (intitulé, index)."""
-    lignes, pos = [], 0
+    rangées numérotées ; entre deux rangées, 2 lignes au plus (intitulé, index).
+    Une ligne n'est normalisée que si elle peut servir (temps linéaire)."""
+    brutes, pos = [], 0
     for brut in texte.split("\n"):
-        lignes.append((pos, pos + len(brut), _normalize(brut).strip()))
+        brutes.append((pos, pos + len(brut), brut))
         pos += len(brut) + 1
-    zones, i, n = [], 0, len(lignes)
+    formes: Dict[int, str] = {}
+
+    def forme(k: int) -> str:
+        f = formes.get(k)
+        if f is None:
+            brut = brutes[k][2]
+            # trop longue pour un en-tête ou une rangée : ligne de texte ordinaire
+            f = formes[k] = "\x00" if len(brut) > _LIGNE_TABLEAU_MAX else _normalize(brut).strip()
+        return f
+
+    zones, i, n = [], 0, len(brutes)
     while i < n:
-        ligne = lignes[i][2]
-        suivante = next((x[2] for x in lignes[i + 1:i + 3] if x[2]), "")
+        brut = brutes[i][2]
+        if "lot" not in brut.lower():
+            i += 1
+            continue
+        ligne = forme(i)
+        suivante = next((forme(x) for x in range(i + 1, min(i + 3, n)) if forme(x)), "")
         # En-tête du tableau : il nomme la colonne des lots, sans numéro (« LOT N° 7 :
         # PLOMBERIE » est le titre d'un seul lot, en tête de chaque page de son CCTP).
         if _CHIFFRES.search(ligne) or not (
@@ -305,27 +365,28 @@ def _zones_tableau_lots(texte: str) -> List[Tuple[int, int]]:
                 or (ligne in ("lot", "lots") and _INTITULE_SEUL.match(suivante))):
             i += 1
             continue
-        j, rangees, hors, fin = i + 1, 0, 0, lignes[i][1]
+        j, rangees, hors, fin = i + 1, 0, 0, brutes[i][1]
         while j < n and hors < 3:
-            s = lignes[j][2]
+            s = forme(j)
             if s:
                 if _RANGEE_LOT.match(s):
-                    rangees, hors, fin = rangees + 1, 0, lignes[j][1]
+                    rangees, hors, fin = rangees + 1, 0, brutes[j][1]
                 else:
                     hors += 1
                     if hors == 1 and rangees:
-                        fin = lignes[j][1]   # intitulé ou index de la dernière rangée
+                        fin = brutes[j][1]   # intitulé ou index de la dernière rangée
             j += 1
         if rangees >= 3:
-            zones.append((lignes[i][0], fin))
+            zones.append((brutes[i][0], fin))
             i = j
         else:
             i += 1
     return zones
 
 
-def _aimants(texte: str) -> tuple:
-    """(lignes de bord des pages, zones des tableaux des lots) d'une pièce, en cache."""
+def _aimants(texte: str) -> _Aimants:
+    """Lignes d'une pièce classées une fois (en cache) : chaque candidat ne fait
+    ensuite qu'une recherche dichotomique."""
     with _cache_verrou:
         a = _AIMANTS_CACHE.get(texte)
         if a is not None:
@@ -339,8 +400,20 @@ def _aimants(texte: str) -> tuple:
             ls = [_forme_ligne(x) for x in p.splitlines() if x.strip()]
             compte.update(set(ls[:_LIGNES_DE_BORD] + ls[-_LIGNES_DE_BORD:]))
         seuil = max(_PAGES_MIN_BORD, 0.5 * len(pages))
-        bord = {x for x, c in compte.items() if c >= seuil and len(_LETTRE.findall(x)) >= 3}
-    a = (frozenset(bord), tuple(_zones_tableau_lots(texte)))
+        bord = {x for x, c in compte.items() if c >= seuil and _a_trois_lettres(x)}
+    debuts, fins, utiles, aimants = array("I"), array("I"), array("I", [0]), array("I", [0])
+    aimant_ligne = bytearray()
+    for la, lb in _lignes(texte):
+        x = texte[la:lb]
+        utile = _a_trois_lettres(x)
+        aimant = utile and ((bool(bord) and _forme_ligne(x) in bord) or _est_ligne_sommaire(x))
+        debuts.append(la)
+        fins.append(lb)
+        utiles.append(utiles[-1] + utile)
+        aimants.append(aimants[-1] + aimant)
+        aimant_ligne.append(aimant)
+    zones = tuple(_zones_tableau_lots(texte))
+    a = _Aimants(debuts, fins, utiles, aimants, aimant_ligne, zones, array("I", (zb for _za, zb in zones)))
     with _cache_verrou:
         _AIMANTS_CACHE[texte] = a
         total = sum(len(k) for k in _AIMANTS_CACHE)
@@ -352,23 +425,40 @@ def _aimants(texte: str) -> tuple:
 
 def _aimant_de_page(texte: str, a: int, b: int) -> bool:
     """Les lignes touchées par [a, b) sont au moins pour moitié des en-têtes,
-    pieds de page ou lignes de sommaire (lignes sans 3 lettres ignorées)."""
-    bord, _zones = _aimants(texte)
-    la = texte.rfind("\n", 0, a) + 1
-    lb = texte.find("\n", b)
-    lignes = [x for x in texte[la:lb if lb >= 0 else len(texte)].splitlines()
-              if len(_LETTRE.findall(x)) >= 3]
-    if not lignes:
+    pieds de page ou lignes de sommaire. Une ligne compte si la partie couverte
+    a au moins 3 lettres (le numéro de page d'un sommaire collé à la phrase
+    suivante ne compte pas) ; son statut d'aimant est celui de la ligne entière."""
+    return _aimant_de_page_m(_aimants(texte), texte, a, b)
+
+
+def _aimant_de_page_m(m: _Aimants, texte: str, a: int, b: int) -> bool:
+    if not m.debuts or b <= a:
         return False
-    n = sum(1 for x in lignes if _forme_ligne(x) in bord or _SOMMAIRE.search(x.strip()))
-    return 2 * n >= len(lignes)
+    la = bisect_right(m.debuts, a) - 1
+    lb = bisect_right(m.debuts, min(b - 1, len(texte) - 1)) - 1
+    utiles = aimants = 0
+    for k, x0, x1 in ((la, a, m.fins[la]), (lb, m.debuts[lb], b)) if la != lb else ((la, a, b),):
+        if _a_trois_lettres(texte[max(x0, m.debuts[k]):min(x1, m.fins[k])]):
+            utiles += 1
+            aimants += m.aimant_ligne[k]
+    if lb > la + 1:   # lignes entièrement couvertes : sommes cumulées
+        utiles += m.utiles[lb] - m.utiles[la + 1]
+        aimants += m.aimants[lb] - m.aimants[la + 1]
+    return utiles > 0 and 2 * aimants >= utiles
 
 
 def _dans_tableau_lots(texte: str, a: int, b: int) -> bool:
     """[a, b) est au moins pour moitié dans un tableau des lots."""
-    _bord, zones = _aimants(texte)
-    dedans = sum(max(0, min(b, zb) - max(a, za)) for za, zb in zones)
-    return 2 * dedans >= max(b - a, 1) and dedans > 0
+    return _dans_tableau_lots_m(_aimants(texte), a, b)
+
+
+def _dans_tableau_lots_m(m: _Aimants, a: int, b: int) -> bool:
+    k, dedans = bisect_right(m.fins_zones, a), 0
+    while k < len(m.zones) and m.zones[k][0] < b:
+        za, zb = m.zones[k]
+        dedans += max(0, min(b, zb) - max(a, za))
+        k += 1
+    return dedans > 0 and 2 * dedans >= max(b - a, 1)
 
 
 def _est_aimant(texte: str, a: int, b: int, sur_les_lots: bool) -> bool:
@@ -376,22 +466,45 @@ def _est_aimant(texte: str, a: int, b: int, sur_les_lots: bool) -> bool:
 
 
 def _unites(texte: str) -> list:
-    """Phrases d'une pièce : [(début, fin, termes significatifs, aimant de page,
-    dans le tableau des lots)], en cache par texte."""
+    """Phrases d'une pièce : [(début, fin, termes significatifs)], en cache par
+    texte. Les termes viennent de la normalisation du document, faite une fois
+    (_doc_index). Le classement « aimant » se fait à la demande (_IndexPhrases)."""
     with _cache_verrou:
         u = _UNITES_CACHE.get(texte)
         if u is not None:
             _UNITES_CACHE.move_to_end(texte)
             return u
-    out = []
+    norm, idx_map = _doc_index(texte)
+    # Bornes des phrases, puis leurs termes en une passe sur les mots du texte
+    # normalisé (les phrases se suivent sans se chevaucher) : temps linéaire.
+    bornes = []
     pos = 0
     for m in list(_COUPE_PHRASES.finditer(texte)) + [None]:
         fin = m.start() if m else len(texte)
-        for a, b in _morceaux(texte, pos, fin):
-            termes = frozenset(_termes(_normalize(texte[a:b])))
-            if termes:
-                out.append((a, b, termes, _aimant_de_page(texte, a, b), _dans_tableau_lots(texte, a, b)))
+        if fin - pos <= _PHRASE_MAX and texte.count("\n", pos, fin) < 3:
+            if fin > pos:
+                bornes.append((pos, fin))
+        else:
+            bornes.extend(_morceaux(texte, pos, fin))
         pos = m.end() if m else len(texte)
+    debuts = [bisect_left(idx_map, x) for x, _y in bornes]
+    fins = [bisect_left(idx_map, y) for _x, y in bornes]
+    termes: List[set] = [set() for _ in bornes]
+    formes: Dict[str, str] = {}
+    k, n = 0, len(bornes)
+    for w in _MOT.finditer(norm):
+        x = w.group(0)
+        if len(x) < _TERME_MIN_LONGUEUR or x in _MOTS_VIDES:
+            continue
+        p = w.start()
+        while k < n and fins[k] <= p:
+            k += 1
+        if k < n and debuts[k] <= p:
+            f = formes.get(x)
+            if f is None:
+                f = formes[x] = _forme(x)
+            termes[k].add(f)
+    out = [(x, y, frozenset(t)) for (x, y), t in zip(bornes, termes) if t]
     with _cache_verrou:
         _UNITES_CACHE[texte] = out
         total = sum(len(k) for k in _UNITES_CACHE)
@@ -406,12 +519,14 @@ class _IndexPhrases:
     qu'il est rare (idf : log(1 + phrases / phrases qui le contiennent))."""
 
     def __init__(self, textes: List[str]):
-        # (n° de pièce, début, fin, termes, aimant de page, dans le tableau des lots)
-        self.unites = []
+        self.textes = textes
+        self.unites = []   # (n° de pièce, début, fin, termes)
+        self._aimants: Dict[int, _Aimants] = {}
+        self._drapeaux: Dict[int, Tuple[bool, bool]] = {}   # phrase → (aimant de page, tableau des lots)
         df: Counter = Counter()
         for i, texte in enumerate(textes):
-            for a, b, termes, aimant, tableau in _unites(texte):
-                self.unites.append((i, a, b, termes, aimant, tableau))
+            for a, b, termes in _unites(texte):
+                self.unites.append((i, a, b, termes))
                 df.update(termes)
         n = len(self.unites)
         self.idf = {t: math.log(1 + n / c) for t, c in df.items()}
@@ -422,8 +537,15 @@ class _IndexPhrases:
                 self.inverse[t].append(k)
 
     def _ecartee(self, k: int, sur_les_lots: bool) -> bool:
-        _i, _a, _b, _t, aimant, tableau = self.unites[k]
-        return aimant or (tableau and not sur_les_lots)
+        """La phrase est un aimant (calculé à la demande, une fois par phrase)."""
+        d = self._drapeaux.get(k)
+        if d is None:
+            i, a, b, _t = self.unites[k]
+            m = self._aimants.get(i)
+            if m is None:
+                m = self._aimants[i] = _aimants(self.textes[i])
+            d = self._drapeaux[k] = (_aimant_de_page_m(m, self.textes[i], a, b), _dans_tableau_lots_m(m, a, b))
+        return d[0] or (d[1] and not sur_les_lots)
 
     def meilleure(self, termes: List[str], preferees: set,
                   sur_les_lots: bool = False) -> Optional[Tuple[int, int, int, float]]:
@@ -446,11 +568,11 @@ class _IndexPhrases:
         for k, p in poids.items():
             if self._ecartee(k, sur_les_lots):
                 continue
-            i, a, b, ts = self.unites[k][:4]
+            i, a, b, ts = self.unites[k]
             communs, score, fin = ts & q, p / total, b
             if (k + 1 < len(self.unites) and self.unites[k + 1][0] == i
                     and not self._ecartee(k + 1, sur_les_lots)):
-                _, _, b2, ts2 = self.unites[k + 1][:4]
+                _, _, b2, ts2 = self.unites[k + 1]
                 communs2 = (ts | ts2) & q
                 score2 = sum(self.idf[t] for t in communs2) / total - _MALUS_PAIRE
                 if score2 > score:
