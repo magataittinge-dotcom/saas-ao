@@ -3,7 +3,8 @@
 Décision de Mohamed (25/10/2026) : « AE oui. DPGF : jamais le tableur brut à
 l'IA, et jamais une colonne de prix ou de montant. Synorix extrait sans IA la
 liste des ouvrages du lot (désignation, unité, quantité si l'acheteur la
-donne), plafonnée à environ 300 lignes, et seule cette liste courte part en
+donne), plafonnée à environ 300 lignes [le BPU et le DQE ont le même
+traitement, décision du 25/10], et seule cette liste courte part en
 passe 2 : le mémoire et le planning suivent ainsi les ouvrages du lot. La DPGF
 chiffrée par l'entreprise ne part jamais à l'IA. Sa conformité de forme reste
 vérifiée sans IA. »
@@ -29,7 +30,7 @@ from itertools import chain, islice
 from pathlib import Path
 from typing import Iterable, Iterator, List, Optional, Sequence, Tuple
 
-from models.project import TYPE_DPGF
+from models.project import TYPES_GRILLES_DE_PRIX
 from services.garde_archives import controler_tableur
 from services.document_tagger import get_documents_for_lot, rattache_au_lot
 
@@ -418,14 +419,18 @@ def _onglets_du_lot(chemin: Path, cible: str, libelle_lot: Optional[str]) -> set
 
 # ─── Liste du lot ───────────────────────────────────────────────────────────────
 
+_TYPES_SOURCES = TYPES_GRILLES_DE_PRIX | {"autre"}
+
+
 def _candidats(documents, lot_id: Optional[str], lots_du_rc=None) -> list:
-    """Tableurs de l'acheteur pour ce lot : DPGF, ou tableur sans type reconnu (une
-    DPGF mal nommée). Jamais une pièce remplie par l'entreprise."""
+    """Tableurs de l'acheteur pour ce lot : DPGF, BPU, DQE (même traitement,
+    décision du 25/10), ou tableur sans type reconnu (une DPGF mal nommée).
+    Jamais une pièce remplie par l'entreprise."""
     retenus = []
     for doc in get_documents_for_lot(documents, lot_id, lots_du_rc):
         if getattr(doc, "is_user_completed", False):
             continue   # DPGF chiffrée par l'entreprise : jamais à l'IA
-        if (doc.type or "autre") not in (TYPE_DPGF, "autre"):
+        if (doc.type or "autre") not in _TYPES_SOURCES:
             continue
         if est_tableur(doc.file_name) and (doc.file_url or "").startswith("/uploads/"):
             retenus.append(doc)
@@ -482,8 +487,8 @@ def texte_ouvrages_du_lot(documents, lot_id: Optional[str], racine_uploads: Path
         return ""
     sortie = [
         f"=== {TITRE} ===",
-        "Liste lue sans IA dans la DPGF : désignation, unité, et quantité quand "
-        "l'acheteur la donne. Aucun prix ni montant.",
+        "Liste lue sans IA dans les bordereaux de l'acheteur (DPGF, BPU ou DQE) : "
+        "désignation, unité, et quantité quand l'acheteur la donne. Aucun prix ni montant.",
         "Désignation\tUnité\tQuantité",
     ]
     for nom_fichier, nom_onglet, lignes in blocs:
