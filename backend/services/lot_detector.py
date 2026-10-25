@@ -212,19 +212,13 @@ def _extract_docx_text(path: Path) -> str:
 # ─── PDF text extraction (limited pages) (AMÉLIORATION 8) ─────────────────────
 
 def _extract_pdf_text_limited(path: Path, max_pages: int = 30) -> str:
-    """Extract text from first max_pages of a PDF for lot detection."""
+    """Texte des max_pages premières pages d'un PDF, pour la détection des lots : le
+    lecteur du dépôt (pypdfium2, services/pdf_lecture), pages non vides jointes."""
     try:
-        import fitz  # PyMuPDF
-        doc = fitz.open(str(path))
-        parts = []
-        for page_num in range(min(len(doc), max_pages)):
-            text = doc[page_num].get_text()
-            if text:
-                parts.append(text)
-        doc.close()
-        return "\n".join(parts)
+        from services import pdf_lecture
+        return "\n".join(t for t in pdf_lecture.lire_pages(path, max_pages=max_pages) if t)
     except Exception:
-        # Fallback to pypdf if fitz not available (PyPDF2 est EOL — S3.6).
+        # Repli pypdf si PDFium ne lit pas le fichier (PyPDF2 est EOL — S3.6).
         try:
             import pypdf
             with open(str(path), 'rb') as f:
