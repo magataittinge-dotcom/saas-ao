@@ -37,22 +37,13 @@ def _biff_xls_bytes() -> bytes:
 
 def _scanned_pdf_bytes(pages: int = 2) -> bytes:
     """PDF sans couche texte (pages images/vides) — le cas « CCTP scanné »."""
-    import fitz
-    doc = fitz.open()
-    for _ in range(pages):
-        doc.new_page()
-    return doc.tobytes()
+    from tests.pdf_fabrique import pdf_texte
+    return pdf_texte([""] * pages)
 
 
 def _text_pdf_bytes() -> bytes:
-    import fitz
-    doc = fitz.open()
-    page = doc.new_page()
-    page.insert_text(
-        (72, 72),
-        "Règlement de consultation — article 1 : le candidat fournit un Kbis. " * 4,
-    )
-    return doc.tobytes()
+    from tests.pdf_fabrique import pdf_texte
+    return pdf_texte(["Règlement de consultation — article 1 : le candidat fournit un Kbis. " * 4])
 
 
 # ─── Processeur : extract_ex → (texte, pages, warning) ───────────────────────

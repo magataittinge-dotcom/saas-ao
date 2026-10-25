@@ -13,7 +13,6 @@ import asyncio
 import io
 from pathlib import Path
 
-import fitz
 import httpx
 from httpx import ASGITransport
 
@@ -22,6 +21,7 @@ from main import app
 from models.checklist_item import ChecklistItem
 from models.project import Project, ProjectDocument
 from routers.auth import get_auth_user
+from tests.pdf_fabrique import pdf_texte
 
 
 # ─── Sonde event-loop ────────────────────────────────────────────────────────
@@ -101,10 +101,7 @@ def test_view_file_highlight_runs_off_loop(db_session, test_org, test_user, monk
     monkeypatch.setattr(fs, "UPLOADS_ROOT", tmp_path)
     target = tmp_path / "projects" / "proj-r8" / "dce" / "RC.pdf"
     target.parent.mkdir(parents=True)
-    doc = fitz.open()
-    doc.new_page().insert_text((72, 100), "Article 1 — objet du marché")
-    target.write_bytes(doc.tobytes())
-    doc.close()
+    target.write_bytes(pdf_texte(["Article 1 — objet du marché"]))
 
     db_session.add(Project(id="proj-r8", organization_id=test_org.id, name="R8"))
     db_session.commit()
