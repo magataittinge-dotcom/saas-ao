@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime
+from datetime import date, datetime
 
 
 class ExportSummary(BaseModel):
@@ -42,8 +42,21 @@ class ChecklistExportItem(BaseModel):
     signature_required: bool = False
     # fournir | completer | synorix | workflow — le score ne compte que les deux premiers
     document_group: str = "fournir"
+    # Décision du 25/10 (point 3) : « Jointe » est un FAIT — le fichier part dans
+    # le ZIP, valable et daté (pièce du coffre) ; avec son nom et sa date de fin.
+    jointe: bool = False
+    piece_nom: Optional[str] = None
+    valable_jusqu_au: Optional[date] = None
 
     model_config = {"from_attributes": True}
+
+
+class PieceZipExport(BaseModel):
+    """Une pièce du ZIP, telle qu'elle y part (même plan que l'archive)."""
+    dossier: str          # 01_Candidature | 02_Offre | 3_ANNEXES
+    nom: str
+    genre: str            # coffre | complete | memoire | dpgf_remplie | annexe
+    document_projet_id: Optional[str] = None   # formulaire rempli : aperçu possible
 
 
 class ProjectDocumentExportItem(BaseModel):
@@ -86,6 +99,7 @@ class ExportDetail(BaseModel):
     compliance_items: list[ComplianceExportItem]
     checklist_items: list[ChecklistExportItem]
     project_documents: list[ProjectDocumentExportItem] = []
+    pieces_zip: list[PieceZipExport] = []   # exactement ce que le ZIP contient
     memoire_info: Optional[MemoireExportInfo] = None
     dpgf_info: Optional[DpgfExportInfo] = None
     dpgf_remplie: Optional[DpgfRemplieInfo] = None

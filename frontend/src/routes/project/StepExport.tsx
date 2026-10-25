@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
-  FileDown, Archive, CheckCircle2, XCircle, Loader2,
+  FileDown, Archive, CheckCircle2, Circle, Loader2,
   ChevronDown, ChevronRight, AlertTriangle, Upload,
   ExternalLink, FileSpreadsheet, FileText, Eye,
   Download,
@@ -14,7 +14,9 @@ import { DocumentRowSkeleton } from '@/components/skeletons'
 import EchecAction from '@/components/common/EchecAction'
 import { signatureAConfirmer } from '@/components/project/SignatureLigne'
 import ExigencesDuDossier, { type ExigenceExport } from '@/components/project/ExigencesDuDossier'
-import { lignesDuScore, lireAvertissementsExport, resumeExigences, type GroupeExigences } from '@/lib/exportDossier'
+import {
+  etatPiece, libellePieces, lignesDuScore, lireAvertissementsExport, resumeExigences, type GroupeExigences,
+} from '@/lib/exportDossier'
 import { messageErreur } from '@/lib/erreurs'
 
 const F = "'Inter Variable', 'Geist Sans', sans-serif"
@@ -33,6 +35,18 @@ interface ChecklistExportItem {
   signature_confirmed: boolean
   signature_required: boolean
   document_group: string
+  // Décision du 25/10 (point 3) : « Jointe » = fait vérifié par le serveur
+  jointe: boolean
+  piece_nom: string | null
+  valable_jusqu_au: string | null
+}
+
+// Exactement ce que le ZIP contient (même plan que l'archive, côté serveur)
+interface PieceZip {
+  dossier: string
+  nom: string
+  genre: string
+  document_projet_id: string | null
 }
 
 interface ProjectDocumentExportItem {
@@ -79,6 +93,7 @@ interface ExportDetail {
   compliance_items: ExigenceExport[]
   checklist_items: ChecklistExportItem[]
   project_documents: ProjectDocumentExportItem[]
+  pieces_zip: PieceZip[]
   memoire_info: MemoireExportInfo | null
   dpgf_info: DpgfExportInfo | null
   dpgf_remplie: DpgfRemplieInfo | null
@@ -87,18 +102,18 @@ interface ExportDetail {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-// Statuts métier : vert = conforme, ambre = à traiter, corail = vraie alerte
-const STATUS_ICON: Record<string, { icon: typeof CheckCircle2; color: string }> = {
-  present:     { icon: CheckCircle2, color: '#6EE7A8' },
-  manquant:    { icon: XCircle,      color: '#F58E86' },
-  expire:      { icon: AlertTriangle, color: '#F58E86' },
-  expiration_proche: { icon: AlertTriangle, color: '#959597' },
+// Pièces : vert = jointe (fait vérifié), ambre = à renouveler ou à confirmer,
+// cercle neutre = à joindre (un travail à faire, pas une alarme).
+function PieceIcon({ ton }: { ton: 'ok' | 'attention' | 'neutre' }) {
+  if (ton === 'ok') return <CheckCircle2 size={15} className="shrink-0" style={{ color: '#6EE7A8' }} />
+  if (ton === 'attention') return <AlertTriangle size={15} className="shrink-0" style={{ color: '#D9A441' }} />
+  return <Circle size={15} className="shrink-0" style={{ color: '#909195' }} />
 }
 
-function StatusIcon({ status }: { status: string }) {
-  const cfg = STATUS_ICON[status] ?? STATUS_ICON.manquant
-  const Icon = cfg.icon
-  return <Icon size={15} className="shrink-0" style={{ color: cfg.color }} />
+const DOSSIERS_ZIP: Record<string, string> = {
+  '01_Candidature': 'Candidature',
+  '02_Offre': 'Offre',
+  '3_ANNEXES': 'Annexes',
 }
 
 // ─── Hero check (ligne de contrôle compacte du héros) ──────────────────────
@@ -318,11 +333,10 @@ export default function StepExport({ project }: Props) {
   // ── Viewable documents for the DocumentViewer ────────────────────────────
   const viewableDocs: ViewableDocument[] = useMemo(() => {
     if (!detail) return []
-    return detail.project_documents.map((d) => ({
-      id: d.id,
-      name: d.file_name,
-      source: 'project' as const,
-    }))
+    // Formulaires remplis du ZIP : documents du projet, ouvrables dans la visionneuse
+    return detail.pieces_zip.flatMap((d) => (d.document_projet_id
+      ? [{ id: d.document_projet_id, name: d.nom, source: 'project' as const }]
+      : []))
   }, [detail])
 
   // ── Loading state ─────────────────────────────────────────────────────────
@@ -345,7 +359,11 @@ export default function StepExport({ project }: Props) {
     detail.compliance_total, detail.compliance_with_source, detail.compliance_confirmed)
   const sourcesRetrouvees = detail.compliance_total > 0
     && detail.compliance_with_source === detail.compliance_total
-  const checklistOk = detail.checklist_total > 0 && detail.checklist_present === detail.checklist_total
+  // Pièces : mêmes lignes et même règle que le score du serveur (avant : toutes
+  // les lignes, dont le jalon « mémoire » jamais « présent », d'où un point
+  // de contrôle en défaut pour toujours).
+  const piecesDemandees = lignesDuScore(detail.checklist_items)
+  const checklistOk = !!score && score.total > 0 && score.conformes === score.total
   const memoireOk = detail.has_memoire
   const dpgfOk = detail.has_dpgf && (detail.dpgf_remplie?.verification?.valid ?? false)
 
@@ -387,15 +405,15 @@ export default function StepExport({ project }: Props) {
         <div className="w-full max-w-xl rounded-xl px-4 py-3 text-left"
           style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.25)' }}>
           <p className="text-xs font-semibold mb-1" style={{ color: '#D9A441' }}>
-            {score!.conformes}/{score!.total} pièces conformes — à vérifier avant dépôt :
+            {score!.total - score!.conformes} pièce{score!.total - score!.conformes > 1 ? 's' : ''} à finaliser avant le dépôt :
           </p>
           <ul className="text-xs space-y-0.5" style={{ color: '#D9A441' }}>
             {nonConformes.slice(0, 6).map((i) => (
               <li key={i.id}>
-                • {i.linked_document_name || i.document_type_required}
-                {' '}({i.status === 'manquant' ? 'à fournir'
-                  : i.status === 'expire' ? 'expirée'
-                  : i.status === 'warning' ? 'à vérifier'
+                • {i.details || i.linked_document_name || i.document_type_required}
+                {' '}({i.status === 'manquant' ? 'à joindre'
+                  : i.status === 'expire' ? 'à renouveler'
+                  : i.status === 'warning' ? 'date de validité à confirmer'
                   : 'signature à confirmer'})
               </li>
             ))}
@@ -423,9 +441,7 @@ export default function StepExport({ project }: Props) {
         }}
       >
         {isExportingZip ? <Loader2 size={18} className="animate-spin" /> : <Archive size={18} />}
-        {gateBlocked
-          ? `Télécharger le ZIP (${score!.conformes}/${score!.total} conformes)`
-          : 'Télécharger le dossier ZIP'}
+        Télécharger le dossier ZIP
       </button>
     </div>
   )
@@ -444,15 +460,17 @@ export default function StepExport({ project }: Props) {
             </p>
             <div className="flex flex-wrap items-end gap-3">
               <span className="num-mono bg-gradient-silver-text bg-clip-text text-5xl font-bold leading-none text-transparent">
-                {conformes}/{totalPieces}
+                {totalPieces}
               </span>
               <div className="pb-0.5">
-                <p className="text-sm font-semibold" style={{ color: '#F7F8F8' }}>pièces conformes</p>
+                <p className="text-sm font-semibold" style={{ color: '#F7F8F8' }}>
+                  {libellePieces(totalPieces, conformes)}
+                </p>
                 <p className="mt-0.5 text-xs font-medium" style={{ color: readyForDeposit ? '#6EE7A8' : 'var(--warn)' }}>
                   {readyForDeposit
                     ? 'Dossier prêt pour le dépôt'
                     : gateBlocked
-                      ? `${totalPieces - conformes} pièce${totalPieces - conformes > 1 ? 's' : ''} à corriger avant le dépôt`
+                      ? `${totalPieces - conformes} pièce${totalPieces - conformes > 1 ? 's' : ''} à finaliser avant le dépôt`
                       : `${alertCount} point${alertCount > 1 ? 's' : ''} de contrôle à vérifier`}
                 </p>
               </div>
@@ -543,36 +561,37 @@ export default function StepExport({ project }: Props) {
 
         <div className="space-y-2.5">
 
-          {/* 1. Pièces Administratives */}
+          {/* 1. Pièces demandées — « Jointe » quand c'est un fait vérifié */}
           <AccordionSection
-            title={`Pièces Administratives (${detail.checklist_present}/${detail.checklist_total})`}
+            title={`Pièces demandées (${piecesDemandees.length})`}
             ok={checklistOk}
             expanded={expanded === 'checklist'}
             onToggle={() => toggle('checklist')}
           >
             <div className="px-3 py-2 space-y-0.5 max-h-[400px] overflow-y-auto">
-              {detail.checklist_items.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-ds-bg-2 transition-colors"
-                >
-                  <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                    <StatusIcon status={item.status} />
+              {piecesDemandees.map((item) => {
+                const etat = etatPiece(item)
+                return (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-2.5 py-2 px-3 rounded-lg hover:bg-ds-bg-2 transition-colors"
+                  >
+                    <PieceIcon ton={etat.ton} />
                     <div className="min-w-0">
                       <p className="text-sm font-medium" style={{ color: '#F7F8F8' }}>
-                        {item.document_type_required}
+                        {item.details || item.document_type_required}
                       </p>
-                      {item.linked_document_name && (
-                        <p className="text-xs truncate" style={{ color: '#959597' }}>
-                          {item.linked_document_name}
-                        </p>
-                      )}
+                      <p className="text-xs truncate" style={{ color: etat.ton === 'attention' ? 'var(--warn)' : '#959597' }}>
+                        {etat.texte}
+                      </p>
                     </div>
                   </div>
-                </div>
-              ))}
-              {detail.checklist_items.length === 0 && (
-                <p className="text-xs text-center py-4" style={{ color: '#909195' }}>Aucun document requis détecté</p>
+                )
+              })}
+              {piecesDemandees.length === 0 && (
+                <p className="text-xs text-center py-4" style={{ color: '#909195' }}>
+                  La liste des pièces apparaît après la lecture du RC
+                </p>
               )}
             </div>
           </AccordionSection>
@@ -796,32 +815,44 @@ export default function StepExport({ project }: Props) {
             </div>
           </AccordionSection>
 
-          {/* 5. Contenu du ZIP — chaque pièce jointe, avec aperçu */}
+          {/* 5. Contenu du ZIP — exactement ce qui part (même plan que l'archive) */}
           <AccordionSection
-            title={`Pièces du dossier ZIP (${detail.project_documents.length})`}
-            ok={detail.project_documents.length > 0}
+            title={`Pièces du dossier ZIP (${detail.pieces_zip.length})`}
+            ok={detail.pieces_zip.length > 0}
             expanded={expanded === 'documents'}
             onToggle={() => toggle('documents')}
           >
             <div className="px-3 py-2 max-h-[360px] overflow-y-auto">
-              {detail.project_documents.map((d, i) => (
-                <button
-                  key={d.id}
-                  onClick={() => setViewerIndex(i)}
-                  className="w-full flex items-center gap-2.5 py-2 px-3 rounded-lg hover:bg-ds-bg-2 transition-colors text-left"
-                >
-                  <FileText size={15} className="shrink-0" style={{ color: '#959597' }} />
-                  <span className="text-sm font-medium truncate flex-1" style={{ color: '#F7F8F8' }}>
-                    {d.file_name}
-                  </span>
-                  <span className="flex items-center gap-1 text-xs shrink-0" style={{ color: '#909195' }}>
-                    <Eye size={12} /> Aperçu
-                  </span>
-                </button>
-              ))}
-              {detail.project_documents.length === 0 && (
+              {detail.pieces_zip.map((d) => {
+                const indexApercu = viewableDocs.findIndex((v) => v.id === d.document_projet_id)
+                return (
+                  <div
+                    key={`${d.dossier}/${d.nom}`}
+                    className="w-full flex items-center gap-2.5 py-2 px-3 rounded-lg hover:bg-ds-bg-2 transition-colors"
+                  >
+                    <FileText size={15} className="shrink-0" style={{ color: '#959597' }} />
+                    <span className="text-sm font-medium truncate flex-1" style={{ color: '#F7F8F8' }}>
+                      {d.nom}
+                    </span>
+                    <span className="text-xs shrink-0" style={{ color: '#909195' }}>
+                      {DOSSIERS_ZIP[d.dossier] ?? d.dossier}
+                    </span>
+                    {indexApercu >= 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setViewerIndex(indexApercu)}
+                        className="flex items-center gap-1 text-xs shrink-0 hover:underline"
+                        style={{ color: '#909195' }}
+                      >
+                        <Eye size={12} /> Aperçu
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+              {detail.pieces_zip.length === 0 && (
                 <p className="text-xs text-center py-4" style={{ color: '#909195' }}>
-                  Aucune pièce jointe pour l&apos;instant
+                  Les pièces apparaissent ici dès qu’elles sont jointes au dossier
                 </p>
               )}
             </div>

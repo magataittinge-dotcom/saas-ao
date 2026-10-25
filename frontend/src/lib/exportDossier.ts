@@ -47,3 +47,42 @@ export function lireAvertissementsExport(valeur: unknown): string[] {
     return []
   }
 }
+
+// ── Pièces (décision du 25/10, point 3) ─────────────────────────────────────
+// « Jointe » est un FAIT calculé par le serveur (le fichier part dans le ZIP,
+// valable et daté pour une pièce du coffre) : jamais déduit d'un statut seul.
+
+export interface EtatPieceEntree {
+  status: string
+  jointe?: boolean
+  piece_nom?: string | null
+  valable_jusqu_au?: string | null
+}
+
+const dateFr = (iso: string) => {
+  const [a, m, j] = iso.slice(0, 10).split('-')
+  return `${j}/${m}/${a}`
+}
+
+export function etatPiece(p: EtatPieceEntree): { texte: string; ton: 'ok' | 'attention' | 'neutre' } {
+  if (p.status === 'non_applicable') return { texte: 'Non concerné', ton: 'neutre' }
+  if (p.jointe) {
+    const fin = p.valable_jusqu_au ? ` · valable jusqu’au ${dateFr(p.valable_jusqu_au)}` : ''
+    return { texte: `Jointe — ${p.piece_nom ?? 'pièce du dossier'}${fin}`, ton: 'ok' }
+  }
+  if (p.status === 'expire') return { texte: 'À renouveler', ton: 'attention' }
+  if (p.status === 'warning') return { texte: 'Date de validité à confirmer', ton: 'attention' }
+  return { texte: 'À joindre', ton: 'neutre' }
+}
+
+/** « pièces demandées, dont 3 prêtes » — le nombre total s'affiche à part. */
+export function libellePieces(total: number, pretes: number): string {
+  const n = total > 1 ? 'pièces demandées' : 'pièce demandée'
+  if (pretes === 0) return n
+  if (total === 1) return `${n}, prête`
+  return `${n}, dont ${pretes} ${pretes > 1 ? 'prêtes' : 'prête'}`
+}
+
+export function resumePieces(total: number, pretes: number): string {
+  return `${total} ${libellePieces(total, pretes)}`
+}
