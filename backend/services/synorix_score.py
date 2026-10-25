@@ -20,6 +20,8 @@ import unicodedata
 from datetime import date
 from typing import List, Optional
 
+from services.vault_classifier import current_document_status
+
 # Poids des composantes dans le score /100 (pondération simple).
 _WEIGHTS = {"ca": 25, "qualifications": 25, "delai": 20, "penalites": 10}
 _STATUS_POINTS = {"ok": 1.0, "warning": 0.5, "ko": 0.0}
@@ -161,7 +163,9 @@ def _eval_qualifications(compliance_items, vault_docs) -> dict:
         docs = held.get(qual, [])
         if not docs:
             missing.append(_QUAL_LABELS[qual])
-        elif any(d.status in ("valid", "expiring_soon") for d in docs):
+        # statut jugé à la date du jour (current_document_status), pas le
+        # statut stocké rafraîchi une fois par jour
+        elif any(current_document_status(d) in ("valid", "expiring_soon") for d in docs):
             ok_quals.append(_QUAL_LABELS[qual])
         else:
             warning_quals.append(_QUAL_LABELS[qual])
