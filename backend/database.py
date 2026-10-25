@@ -68,3 +68,15 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def rendre_connexion(db) -> None:
+    """Rend la connexion au pool avant d'envoyer une réponse longue (fichier, flux).
+
+    Depuis FastAPI 0.118, la session de `get_db` n'est fermée qu'après l'envoi
+    complet de la réponse. Derrière nginx sans tampon (`proxy_buffering off`,
+    docs/DEPLOYMENT.md), un téléchargement lent garderait sa connexion du pool
+    jusqu'au bout ; FastAPI 0.111 la rendait avant l'envoi. Les objets déjà
+    chargés restent lisibles ; la fermeture de `get_db` ne fait ensuite rien.
+    """
+    db.close()

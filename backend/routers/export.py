@@ -18,7 +18,7 @@ from fastapi.responses import StreamingResponse, FileResponse
 from services.rate_limit import limiter
 from sqlalchemy.orm import Session, defer
 
-from database import get_db
+from database import get_db, rendre_connexion
 from models.user import User
 from models.project import Project, ProjectDocument
 from models.compliance_item import ComplianceItem, STATUT_CONFIRMEE
@@ -260,6 +260,7 @@ def export_docx(
     filename = f"Memoire_Technique_{project.name.replace(' ', '_')}.docx"
     ascii_name = filename.encode("ascii", errors="replace").decode("ascii")
     utf8_name = quote(filename, safe="")
+    rendre_connexion(db)  # avant l'envoi (FastAPI ≥ 0.118, cf. database.py)
     return StreamingResponse(
         io.BytesIO(docx_bytes),
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -391,6 +392,7 @@ def export_zip(
             except OSError:
                 pass
 
+    rendre_connexion(db)  # avant l'envoi (FastAPI ≥ 0.118, cf. database.py)
     return StreamingResponse(_stream_and_cleanup(), media_type="application/zip", headers=headers)
 
 
@@ -623,11 +625,13 @@ def download_document(
         raise HTTPException(status_code=404, detail="Fichier introuvable sur le serveur")
 
     media_type = mimetypes.guess_type(doc.file_name)[0] or "application/octet-stream"
-    return FileResponse(
+    reponse = FileResponse(
         path=str(file_path),
         media_type=media_type,
         filename=doc.file_name,
     )
+    rendre_connexion(db)  # avant l'envoi (FastAPI ≥ 0.118, cf. database.py)
+    return reponse
 
 
 @router.get("/{project_id}/documents/{doc_id}/preview")
@@ -656,11 +660,13 @@ def preview_document(
         raise HTTPException(status_code=404, detail="Fichier introuvable sur le serveur")
 
     media_type = mimetypes.guess_type(str(file_path))[0] or "application/octet-stream"
-    return FileResponse(
+    reponse = FileResponse(
         path=str(file_path),
         media_type=media_type,
         headers={"Content-Disposition": f"inline; filename=\"{doc.file_name.encode('ascii', errors='replace').decode('ascii')}\"; filename*=UTF-8''{quote(doc.file_name, safe='')}"},
     )
+    rendre_connexion(db)  # avant l'envoi (FastAPI ≥ 0.118, cf. database.py)
+    return reponse
 
 
 # ── DPGF filled upload + verification ───────────────────────────────────────
@@ -745,11 +751,13 @@ def download_filled_dpgf(
 
     filename = project.dpgf_remplie_name or "DPGF_remplie"
     media_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
-    return FileResponse(
+    reponse = FileResponse(
         path=str(file_path),
         media_type=media_type,
         filename=filename,
     )
+    rendre_connexion(db)  # avant l'envoi (FastAPI ≥ 0.118, cf. database.py)
+    return reponse
 
 
 def _resolve_local_path(file_url: str) -> FilePath | None:
