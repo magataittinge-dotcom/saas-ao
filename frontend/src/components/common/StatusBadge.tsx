@@ -31,8 +31,9 @@ export function StatusBadge({ label, variant, className }: Props) {
 
 export function complianceStatusBadge(status: ComplianceStatus) {
   const map: Record<ComplianceStatus, { label: string; variant: BadgeVariant }> = {
-    couvert:     { label: '✅ Couvert',    variant: 'success' },
-    non_couvert: { label: 'À couvrir',    variant: 'danger'  },
+    // « couvert » = confirmée par l'utilisateur (décision du 25/10) : jamais posé par Synorix
+    couvert:     { label: 'Confirmée par vous', variant: 'success' },
+    non_couvert: { label: 'À confirmer',  variant: 'neutral' },
     partiel:     { label: '⚠️ Partiel',   variant: 'warning' },
     a_generer:   { label: '🔄 À générer', variant: 'info'    },
     expire:      { label: '⏰ Expiré',    variant: 'danger'  },

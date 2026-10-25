@@ -4,8 +4,11 @@ from datetime import datetime
 
 
 class ExportSummary(BaseModel):
+    # Export « 0/N » (décision du 25/10) : exigences relevées, avec leur extrait
+    # retrouvé, confirmées par l'utilisateur — jamais « couvertes ».
     compliance_total: int
-    compliance_covered: int
+    compliance_confirmed: int
+    compliance_with_source: int
     checklist_total: int
     checklist_present: int
     has_memoire: bool
@@ -17,7 +20,11 @@ class ComplianceExportItem(BaseModel):
     exigence_text: str
     category: str
     priority: str
-    status: str
+    status: str   # « couvert » = confirmée par l'utilisateur (STATUT_CONFIRMEE)
+    groupe: str   # candidature | offre_technique | execution (services/exigences)
+    source_document: Optional[str] = None
+    source_page: Optional[int] = None
+    source_verifiee: bool = False   # extrait retrouvé mot pour mot dans le DCE
 
     model_config = {"from_attributes": True}
 
@@ -33,6 +40,8 @@ class ChecklistExportItem(BaseModel):
     signature_confirmed: bool = False  # C12 — pour le gate d'export
     # Signature demandée pour cette pièce (checklist_matcher.signature_requise)
     signature_required: bool = False
+    # fournir | completer | synorix | workflow — le score ne compte que les deux premiers
+    document_group: str = "fournir"
 
     model_config = {"from_attributes": True}
 
@@ -64,9 +73,10 @@ class DpgfRemplieInfo(BaseModel):
 
 
 class ExportDetail(BaseModel):
-    # Summary counts
+    # Summary counts — voir ExportSummary
     compliance_total: int
-    compliance_covered: int
+    compliance_confirmed: int
+    compliance_with_source: int
     checklist_total: int
     checklist_present: int
     has_memoire: bool

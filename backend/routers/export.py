@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session, defer
 from database import get_db
 from models.user import User
 from models.project import Project, ProjectDocument
-from models.compliance_item import ComplianceItem
+from models.compliance_item import ComplianceItem, STATUT_CONFIRMEE
 from models.checklist_item import ChecklistItem
 from models.memoire import MemoireTechnique
 from schemas.export import ExportSummary, ExportDetail, ComplianceExportItem, ChecklistExportItem, MemoireExportInfo, DpgfExportInfo, ProjectDocumentExportItem
@@ -43,11 +43,13 @@ def get_export_detail(
     db: Session = Depends(get_db),
 ):
     """Detailed export data for the verification dashboard."""
-    _get_project_or_404(project_id, user.organization_id, db)
+    project = _get_project_or_404(project_id, user.organization_id, db)
 
+    # Exigences du DOSSIER exporté (tronc commun + lot sélectionné), comme
+    # l'écran Analyse — avant : celles de tous les lots du projet.
+    from services.exigences import groupe_de_categorie, requete_exigences_du_dossier
     compliance_items = (
-        db.query(ComplianceItem)
-        .filter(ComplianceItem.project_id == project_id)
+        requete_exigences_du_dossier(db, project)
         .order_by(ComplianceItem.category, ComplianceItem.created_at)
         .all()
     )
@@ -96,6 +98,8 @@ def get_export_detail(
             source_kind=item.source_kind or "vault",
             signature_confirmed=bool(item.signature_confirmed),
             signature_required=signature_requise(item),
+            # le gate d'export compte les mêmes lignes que le score serveur
+            document_group=item.document_group or "fournir",
         ))
 
     # Mémoire info
@@ -153,14 +157,27 @@ def get_export_detail(
     )
     convention = detect_naming_convention(rc_doc.extracted_text) if rc_doc else None
 
+    # Export « 0/N » (décision du 25/10) : N exigences relevées, combien ont
+    # leur extrait retrouvé dans le DCE, M confirmées par l'utilisateur — plus
+    # de « couvertes » (jamais posé par Synorix).
     detail = ExportDetail(
         compliance_total=len(compliance_items),
-        compliance_covered=sum(1 for i in compliance_items if i.status == "couvert"),
+        compliance_confirmed=sum(1 for i in compliance_items if i.status == STATUT_CONFIRMEE),
+        compliance_with_source=sum(1 for i in compliance_items if i.source_excerpt),
         checklist_total=len(checklist_items),
         checklist_present=sum(1 for i in checklist_items if i.status == "present"),
         has_memoire=memoire is not None,
         has_dpgf=dpgf_doc is not None,
-        compliance_items=[ComplianceExportItem.model_validate(i) for i in compliance_items],
+        compliance_items=[
+            ComplianceExportItem(
+                id=i.id, exigence_text=i.exigence_text, category=i.category,
+                priority=i.priority, status=i.status,
+                groupe=groupe_de_categorie(i.category),
+                source_document=i.source_document, source_page=i.source_page,
+                source_verifiee=bool(i.source_excerpt),
+            )
+            for i in compliance_items
+        ],
         checklist_items=checklist_export,
         project_documents=project_docs_export,
         memoire_info=memoire_info,
@@ -183,9 +200,10 @@ def get_export_summary(
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ):
-    _get_project_or_404(project_id, user.organization_id, db)
+    project = _get_project_or_404(project_id, user.organization_id, db)
 
-    compliance_items = db.query(ComplianceItem).filter(ComplianceItem.project_id == project_id).all()
+    from services.exigences import requete_exigences_du_dossier
+    compliance_items = requete_exigences_du_dossier(db, project).all()
     checklist_items = db.query(ChecklistItem).filter(ChecklistItem.project_id == project_id).all()
     memoire = db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project_id).first()
     project_docs = (db.query(ProjectDocument)
@@ -194,7 +212,8 @@ def get_export_summary(
 
     return ExportSummary(
         compliance_total=len(compliance_items),
-        compliance_covered=sum(1 for i in compliance_items if i.status == "couvert"),
+        compliance_confirmed=sum(1 for i in compliance_items if i.status == STATUT_CONFIRMEE),
+        compliance_with_source=sum(1 for i in compliance_items if i.source_excerpt),
         checklist_total=len(checklist_items),
         checklist_present=sum(1 for i in checklist_items if i.status == "present"),
         has_memoire=memoire is not None,
@@ -391,7 +410,7 @@ def export_zip(
                     )
                     zf.writestr(f"{root}/02_Offre/Memoire_technique.docx", docx_bytes)
             else:
-                warnings.append("Mémoire technique non généré")
+                warnings.append("Mémoire technique : à générer à l'étape Mémoire")
 
             # ── 3_ANNEXES : pièces du coffre sélectionnées au pre-flight ───────
             # (BONUS Lot 5) — ownership org : seuls les documents de l'org sortent.
@@ -416,7 +435,7 @@ def export_zip(
                     f"{root}/02_Offre", seen_names,
                 )
             elif any((d.type or "") == "dpgf_template" for d in project_docs):
-                warnings.append("DPGF non remplie")
+                warnings.append("DPGF remplie : à déposer")
 
             # ── Warnings for expected-but-missing user-completed documents ────
             has_completed_ae = any(

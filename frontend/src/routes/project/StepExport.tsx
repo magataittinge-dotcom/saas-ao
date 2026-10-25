@@ -13,19 +13,14 @@ import DocumentViewer, { type ViewableDocument } from '@/components/project/Docu
 import { DocumentRowSkeleton } from '@/components/skeletons'
 import EchecAction from '@/components/common/EchecAction'
 import { signatureAConfirmer } from '@/components/project/SignatureLigne'
+import ExigencesDuDossier, { type ExigenceExport } from '@/components/project/ExigencesDuDossier'
+import { lignesDuScore, lireAvertissementsExport, resumeExigences, type GroupeExigences } from '@/lib/exportDossier'
 import { messageErreur } from '@/lib/erreurs'
 
 const F = "'Inter Variable', 'Geist Sans', sans-serif"
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-interface ComplianceExportItem {
-  id: string
-  exigence_text: string
-  category: string
-  priority: string
-  status: string
-}
 
 interface ChecklistExportItem {
   id: string
@@ -37,6 +32,7 @@ interface ChecklistExportItem {
   source_kind: string
   signature_confirmed: boolean
   signature_required: boolean
+  document_group: string
 }
 
 interface ProjectDocumentExportItem {
@@ -74,12 +70,13 @@ interface DpgfRemplieInfo {
 
 interface ExportDetail {
   compliance_total: number
-  compliance_covered: number
+  compliance_confirmed: number
+  compliance_with_source: number
   checklist_total: number
   checklist_present: number
   has_memoire: boolean
   has_dpgf: boolean
-  compliance_items: ComplianceExportItem[]
+  compliance_items: ExigenceExport[]
   checklist_items: ChecklistExportItem[]
   project_documents: ProjectDocumentExportItem[]
   memoire_info: MemoireExportInfo | null
@@ -90,28 +87,16 @@ interface ExportDetail {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-const CATEGORY_LABELS: Record<string, string> = {
-  candidature: 'Candidature',
-  offre: 'Offre',
-  technique: 'Technique',
-  planning: 'Planning',
-  criteres_notation: 'Critères de notation',
-}
-
 // Statuts métier : vert = conforme, ambre = à traiter, corail = vraie alerte
 const STATUS_ICON: Record<string, { icon: typeof CheckCircle2; color: string }> = {
-  couvert:     { icon: CheckCircle2, color: '#6EE7A8' },
   present:     { icon: CheckCircle2, color: '#6EE7A8' },
-  non_couvert: { icon: XCircle,      color: '#F58E86' },
   manquant:    { icon: XCircle,      color: '#F58E86' },
-  partiel:     { icon: AlertTriangle, color: '#D9A441' },
   expire:      { icon: AlertTriangle, color: '#F58E86' },
   expiration_proche: { icon: AlertTriangle, color: '#959597' },
-  a_generer:   { icon: AlertTriangle, color: '#959597' },
 }
 
 function StatusIcon({ status }: { status: string }) {
-  const cfg = STATUS_ICON[status] ?? STATUS_ICON.non_couvert
+  const cfg = STATUS_ICON[status] ?? STATUS_ICON.manquant
   const Icon = cfg.icon
   return <Icon size={15} className="shrink-0" style={{ color: cfg.color }} />
 }
@@ -207,6 +192,26 @@ export default function StepExport({ project }: Props) {
   const [showGateWarning, setShowGateWarning] = useState(false)
   // 1.16 — un livrable qui ne se télécharge pas : on le dit, avec « Réessayer »
   const [echec, setEchec] = useState<{ message: string; relancer: () => void } | null>(null)
+  // Avertissements du dernier ZIP (pièces écartées, livrables à finaliser)
+  const [avertissementsZip, setAvertissementsZip] = useState<string[] | null>(null)
+
+  // Export « 0/N » (décision du 25/10) : l'utilisateur confirme les exigences,
+  // une à une ou par groupe ; Synorix ne pose jamais « confirmée » tout seul.
+  const { mutate: confirmer, isPending: confirmationEnCours } = useMutation({
+    mutationFn: async (action: { item: ExigenceExport; confirmee: boolean } | { groupe: GroupeExigences }) => {
+      if ('groupe' in action) {
+        await api.post(`/projects/${project.id}/compliance/confirmer-groupe`, { groupe: action.groupe })
+      } else {
+        await api.patch(`/projects/${project.id}/compliance/${action.item.id}`, { confirmee: action.confirmee })
+      }
+    },
+    onMutate: () => setEchec(null),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['export-detail', project.id] }),
+    onError: async (err, action) => setEchec({
+      message: await messageErreur(err, "La confirmation n'a pas été enregistrée."),
+      relancer: () => confirmer(action),
+    }),
+  })
 
   const { mutate: exportDocx, isPending: isExportingDocx } = useMutation({
     mutationFn: async () => {
@@ -254,8 +259,10 @@ export default function StepExport({ project }: Props) {
       a.download = `Dossier_AO_${project.name.replace(/\s+/g, '_')}.zip`
       a.click()
       URL.revokeObjectURL(url)
+      // Pièces écartées et points signalés par le serveur (X-Export-Warnings)
+      setAvertissementsZip(lireAvertissementsExport(response.headers['x-export-warnings']))
     },
-    onMutate: () => setEchec(null),
+    onMutate: () => { setEchec(null); setAvertissementsZip(null) },
     onError: async (err) => setEchec({
       message: await messageErreur(err, "Le téléchargement du dossier ZIP n'a pas abouti."),
       relancer: () => exportZip(),
@@ -331,20 +338,18 @@ export default function StepExport({ project }: Props) {
   }
 
   // ── Computed values ───────────────────────────────────────────────────────
-  const complianceByCategory: Record<string, ComplianceExportItem[]> = {}
-  for (const item of detail.compliance_items) {
-    const cat = item.category || 'offre'
-    if (!complianceByCategory[cat]) complianceByCategory[cat] = []
-    complianceByCategory[cat].push(item)
-  }
-
-  const complianceOk = detail.compliance_total > 0 && detail.compliance_covered === detail.compliance_total
+  // Export « 0/N » (décision du 25/10) : les exigences ne sont plus un point de
+  // contrôle « couvert / non couvert » — Synorix les relève avec leur source,
+  // l'utilisateur les confirme s'il le souhaite.
+  const resumeDesExigences = resumeExigences(
+    detail.compliance_total, detail.compliance_with_source, detail.compliance_confirmed)
+  const sourcesRetrouvees = detail.compliance_total > 0
+    && detail.compliance_with_source === detail.compliance_total
   const checklistOk = detail.checklist_total > 0 && detail.checklist_present === detail.checklist_total
   const memoireOk = detail.has_memoire
   const dpgfOk = detail.has_dpgf && (detail.dpgf_remplie?.verification?.valid ?? false)
 
   const alertCount =
-    (complianceOk ? 0 : 1) +
     (checklistOk ? 0 : 1) +
     (memoireOk ? 0 : 1) +
     (dpgfOk ? 0 : 1)
@@ -356,7 +361,8 @@ export default function StepExport({ project }: Props) {
   const CONFORME_STATUSES = new Set(['present', 'expiration_proche', 'non_applicable'])
   // Signature : règle serveur (signature_required) — DC1, DC2, DUME et AE
   // seulement si le RC l'exige ; plus de liste de types « à signer » ici.
-  const nonConformes = (detail?.checklist_items ?? []).filter((i) =>
+  // Mêmes lignes que le score du serveur : pièces à fournir et à compléter.
+  const nonConformes = lignesDuScore(detail?.checklist_items ?? []).filter((i) =>
     i.status !== 'non_applicable' && (!CONFORME_STATUSES.has(i.status) || signatureAConfirmer(i)),
   )
 
@@ -452,11 +458,10 @@ export default function StepExport({ project }: Props) {
               </div>
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
-              <HeroCheck
-                ok={complianceOk}
-                label="Exigences couvertes"
-                value={`${detail.compliance_covered}/${detail.compliance_total}`}
-              />
+              <span className="flex items-center gap-1.5 text-xs" style={{ color: '#959597' }}>
+                <FileText size={13} className="shrink-0" style={{ color: '#959597' }} />
+                {resumeDesExigences}
+              </span>
               <HeroCheck
                 ok={memoireOk}
                 label="Mémoire"
@@ -511,6 +516,25 @@ export default function StepExport({ project }: Props) {
           onReessayer={() => { const relancer = echec.relancer; setEchec(null); relancer() }}
           onFermer={() => setEchec(null)}
         />
+      )}
+
+      {avertissementsZip && avertissementsZip.length > 0 && (
+        <div className="glass-card rounded-lg px-4 py-3" role="status">
+          <p className="text-xs font-semibold" style={{ color: '#F7F8F8' }}>
+            Dossier téléchargé — à noter avant le dépôt
+          </p>
+          <ul className="mt-1.5 space-y-0.5 text-xs" style={{ color: '#959597' }}>
+            {avertissementsZip.map((a) => <li key={a}>• {a}</li>)}
+          </ul>
+          <button
+            type="button"
+            onClick={() => setAvertissementsZip(null)}
+            className="mt-2 text-xs hover:underline"
+            style={{ color: '#909195' }}
+          >
+            Fermer
+          </button>
+        </div>
       )}
 
       {/* ── Points de contrôle ──────────────────────────────────── */}
@@ -755,50 +779,20 @@ export default function StepExport({ project }: Props) {
             </div>
           </AccordionSection>
 
-          {/* 4. Matrice de conformité */}
+          {/* 4. Exigences relevées — confirmées par l'utilisateur (export « 0/N ») */}
           <AccordionSection
-            title={`Matrice de conformité (${detail.compliance_covered}/${detail.compliance_total})`}
-            ok={complianceOk}
+            title={`Exigences relevées (${detail.compliance_total})`}
+            ok={sourcesRetrouvees}
             expanded={expanded === 'compliance'}
             onToggle={() => toggle('compliance')}
           >
-            <div className="p-3.5 space-y-3.5 max-h-[400px] overflow-y-auto">
-              {Object.entries(complianceByCategory).map(([cat, items]) => {
-                const covered = items.filter((i) => i.status === 'couvert').length
-                return (
-                  <div key={cat}>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#959597' }}>
-                        {CATEGORY_LABELS[cat] || cat}
-                      </span>
-                      <span className="text-xs font-medium" style={{ color: covered === items.length ? '#E8E9EB' : '#959597' }}>
-                        {covered}/{items.length}
-                      </span>
-                    </div>
-                    <div className="space-y-1">
-                      {items.map((item) => (
-                        <div key={item.id} className="flex items-start gap-2 py-1.5 px-2 rounded-lg hover:bg-ds-bg-2 transition-colors">
-                          <StatusIcon status={item.status} />
-                          <span className="text-sm leading-relaxed flex-1" style={{ color: '#D8D9DB' }}>
-                            {item.exigence_text}
-                          </span>
-                          {item.priority === 'obligatoire' && (
-                            <span
-                              className="text-xs px-1.5 py-0.5 rounded shrink-0 ml-auto"
-                              style={{ background: 'var(--warn-bg)', color: 'var(--warn)' }}
-                            >
-                              Obligatoire
-                            </span>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )
-              })}
-              {detail.compliance_items.length === 0 && (
-                <p className="text-xs text-center py-4" style={{ color: '#909195' }}>Aucune exigence extraite</p>
-              )}
+            <div className="p-3.5 max-h-[400px] overflow-y-auto">
+              <ExigencesDuDossier
+                items={detail.compliance_items}
+                onConfirmer={(item, confirmee) => confirmer({ item, confirmee })}
+                onConfirmerGroupe={(groupe) => confirmer({ groupe })}
+                enCours={confirmationEnCours}
+              />
             </div>
           </AccordionSection>
 
