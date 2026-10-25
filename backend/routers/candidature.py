@@ -64,7 +64,9 @@ def get_checklist_score(
     Les ⚠️ (warning : présente mais problème) et les expirées ne comptent
     pas conformes ; les non_applicable sortent du dénominateur."""
     from services.ai.checklist_matcher import conformity_score
+    from services.checklist_builder import sync_vault_lines_safe
     _get_project_or_404(project_id, user.organization_id, db)
+    sync_vault_lines_safe(db, project_id, user.organization_id)  # B1 : état du jour
     items = db.query(ChecklistItem).filter(
         ChecklistItem.project_id == project_id,
     ).all()
@@ -100,6 +102,11 @@ def get_checklist(
             except Exception:
                 logger.exception("Génération paresseuse de la checklist échouée (%s)", project_id)
                 db.rollback()
+
+    # B1 — une pièce expirée ou retirée du coffre depuis la génération ne
+    # reste pas « Conforme » à l'écran (le ZIP l'écarte).
+    from services.checklist_builder import sync_vault_lines_safe
+    sync_vault_lines_safe(db, project_id, user.organization_id)
 
     return (
         db.query(ChecklistItem)

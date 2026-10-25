@@ -64,19 +64,25 @@ def get_export_detail(
     # Build checklist with linked doc names — une seule requête pour toutes les
     # pièces liées (avant : une par ligne de checklist).
     from models.document import Document
+    from services.checklist_builder import recaler_lignes_coffre
     lies = {i.linked_document_id for i in checklist_items if i.linked_document_id}
-    noms_lies = {}
+    docs_lies = {}
     if lies:
         # Filtre org (S2.3) : ne jamais exposer le nom d'un Document d'une
         # autre org via un linked_document_id périmé/forgé.
-        noms_lies = dict(db.query(Document.id, Document.file_name).filter(
+        docs_lies = {d.id: d for d in db.query(Document).filter(
             Document.id.in_(lies),
             Document.organization_id == user.organization_id,
             Document.deleted_at.is_(None),
-        ).all())
+        ).all()}
+    # B1 — pièces du coffre jugées à la date du jour, comme dans le ZIP.
+    # Recalage en mémoire ; écrit après la construction de la réponse (un
+    # commit plus tôt rechargerait chaque ligne une par une).
+    recalees = recaler_lignes_coffre(checklist_items, docs_lies)
     checklist_export = []
     for item in checklist_items:
-        doc_name = noms_lies.get(item.linked_document_id) if item.linked_document_id else None
+        doc = docs_lies.get(item.linked_document_id) if item.linked_document_id else None
+        doc_name = doc.file_name if doc else None
         checklist_export.append(ChecklistExportItem(
             id=item.id,
             document_type_required=item.document_type_required,
@@ -141,7 +147,7 @@ def get_export_detail(
     )
     convention = detect_naming_convention(rc_doc.extracted_text) if rc_doc else None
 
-    return ExportDetail(
+    detail = ExportDetail(
         compliance_total=len(compliance_items),
         compliance_covered=sum(1 for i in compliance_items if i.status == "couvert"),
         checklist_total=len(checklist_items),
@@ -156,6 +162,13 @@ def get_export_detail(
         dpgf_remplie=dpgf_remplie,
         naming_convention=convention["template"] if convention else None,
     )
+    if recalees:
+        try:
+            db.commit()
+        except Exception:
+            logger.exception("Recalage des pièces du coffre non enregistré (%s)", project_id)
+            db.rollback()
+    return detail
 
 
 @router.get("/{project_id}/export/summary", response_model=ExportSummary)

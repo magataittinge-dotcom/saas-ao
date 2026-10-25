@@ -279,3 +279,59 @@ def test_zip_annexes_sans_piece_expiree(client, db_session, test_org, workspace,
     assert any("qualibat_valable" in n for n in annexes), noms
     assert not any("qualibat_expiree" in n for n in noms), noms
     assert any("qualibat_expiree" in a for a in avertissements), avertissements
+
+
+# ─── Lignes déjà générées : l'écran suit l'état du coffre AUJOURD'HUI ───────
+
+def _ligne_liee(db, org_id, pid, doc_id, statut="present", type_="urssaf"):
+    db.add(Project(id=pid, organization_id=org_id, name="AO B1 lecture"))
+    db.add(ChecklistItem(
+        id=f"cli-{pid}", project_id=pid, document_type_required=type_, source_kind="vault",
+        document_group="fournir", linked_document_id=doc_id, status=statut, rc_position=0,
+    ))
+    db.commit()
+    return f"cli-{pid}"
+
+
+def test_piece_expiree_apres_coup_ne_reste_pas_conforme(client, db_session, test_org):
+    """Ligne liée quand la pièce était valable ; sa date de fin est passée
+    depuis : la checklist, le score et le détail d'export disent « expire »,
+    comme le ZIP qui l'écarte."""
+    _doc(db_session, test_org.id, "urssaf_echue", status="valid", expiry=TODAY - timedelta(days=2))
+    pid = "proj-b1-lecture"
+    item_id = _ligne_liee(db_session, test_org.id, pid, "urssaf_echue")
+
+    lignes = client.get(f"/api/projects/{pid}/checklist").json()
+    assert [l["status"] for l in lignes if l["id"] == item_id] == ["expire"]
+    assert client.get(f"/api/projects/{pid}/checklist/score").json() == {"conformes": 0, "total": 1}
+    detail = client.get(f"/api/projects/{pid}/export/detail").json()
+    assert [i["status"] for i in detail["checklist_items"]] == ["expire"]
+    assert detail["checklist_present"] == 0
+
+
+def test_piece_supprimee_apres_coup_n_est_plus_liee(client, db_session, test_org):
+    _doc(db_session, test_org.id, "urssaf_retiree", expiry=TODAY + timedelta(days=90), deleted=True)
+    pid = "proj-b1-retiree"
+    item_id = _ligne_liee(db_session, test_org.id, pid, "urssaf_retiree")
+
+    ligne = next(l for l in client.get(f"/api/projects/{pid}/checklist").json() if l["id"] == item_id)
+    assert ligne["linked_document_id"] is None
+    assert ligne["status"] == "manquant"
+    assert client.get(f"/api/projects/{pid}/checklist/score").json() == {"conformes": 0, "total": 1}
+
+
+def test_ligne_non_applicable_et_piece_valable_ne_bougent_pas(client, db_session, test_org):
+    _doc(db_session, test_org.id, "urssaf_echue", status="expired", expiry=TODAY - timedelta(days=2))
+    pid = "proj-b1-na"
+    item_id = _ligne_liee(db_session, test_org.id, pid, "urssaf_echue", statut="non_applicable")
+    _doc(db_session, test_org.id, "kbis_ok", type_="kbis", expiry=TODAY + timedelta(days=60))
+    db_session.add(ChecklistItem(
+        id="cli-kbis-ok", project_id=pid, document_type_required="kbis", source_kind="vault",
+        document_group="fournir", linked_document_id="kbis_ok", status="present", rc_position=1,
+    ))
+    db_session.commit()
+
+    lignes = {l["id"]: l for l in client.get(f"/api/projects/{pid}/checklist").json()}
+    assert lignes[item_id]["status"] == "non_applicable"
+    assert lignes[item_id]["linked_document_id"] == "urssaf_echue"
+    assert lignes["cli-kbis-ok"]["status"] == "present"
