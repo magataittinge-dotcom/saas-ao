@@ -270,7 +270,8 @@ def _build_lot_spec(all_docs, lot_id, lot_names, selected_lot, selected_lot_name
     """pass2_text + en-tête de contexte pour UN lot : CCTP, AE propre au lot, et la
     liste des ouvrages de la DPGF (jamais le tableur brut). Bloquant (DPGF lue)."""
     truncated: list = []
-    docs = get_documents_for_lot(all_docs, lot_id)
+    lots_du_rc = list(lot_names)   # ids des lots du RC : sous-lots rattachés au lot
+    docs = get_documents_for_lot(all_docs, lot_id, lots_du_rc)
     lot_num_norm = _normalize_lot_num(lot_id) if lot_id and lot_id != "all" else None
     lot_label = (lot_names.get(lot_id)
                  or (selected_lot_name if lot_id == selected_lot else None)
@@ -281,7 +282,7 @@ def _build_lot_spec(all_docs, lot_id, lot_names, selected_lot, selected_lot_name
         doc_type = doc.type or "autre"
         if doc_type in _PASS2_TYPES or (doc_type == TYPE_AE and not _commune(doc)):
             parts.append(_entete(doc) + _safety(doc.extracted_text, doc.file_name, truncated))
-    ouvrages = texte_ouvrages_du_lot(all_docs, lot_id, UPLOADS_ROOT, lot_label)
+    ouvrages = texte_ouvrages_du_lot(all_docs, lot_id, UPLOADS_ROOT, lot_label, lots_du_rc)
     if ouvrages:
         parts.append(ouvrages)
 

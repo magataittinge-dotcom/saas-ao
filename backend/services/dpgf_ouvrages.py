@@ -31,7 +31,7 @@ from typing import Iterable, Iterator, List, Optional, Sequence, Tuple
 
 from models.project import TYPE_DPGF
 from services.garde_archives import controler_tableur
-from services.document_tagger import get_documents_for_lot
+from services.document_tagger import get_documents_for_lot, rattache_au_lot
 
 logger = logging.getLogger(__name__)
 
@@ -418,11 +418,11 @@ def _onglets_du_lot(chemin: Path, cible: str, libelle_lot: Optional[str]) -> set
 
 # ─── Liste du lot ───────────────────────────────────────────────────────────────
 
-def _candidats(documents, lot_id: Optional[str]) -> list:
+def _candidats(documents, lot_id: Optional[str], lots_du_rc=None) -> list:
     """Tableurs de l'acheteur pour ce lot : DPGF, ou tableur sans type reconnu (une
     DPGF mal nommée). Jamais une pièce remplie par l'entreprise."""
     retenus = []
-    for doc in get_documents_for_lot(documents, lot_id):
+    for doc in get_documents_for_lot(documents, lot_id, lots_du_rc):
         if getattr(doc, "is_user_completed", False):
             continue   # DPGF chiffrée par l'entreprise : jamais à l'IA
         if (doc.type or "autre") not in (TYPE_DPGF, "autre"):
@@ -432,31 +432,32 @@ def _candidats(documents, lot_id: Optional[str]) -> list:
     return sorted(retenus, key=lambda d: d.file_name)
 
 
-def _specifique(doc, cible: Optional[str]) -> bool:
-    """La pièce ne concerne que ce lot (étiquette de lot, pas « all »)."""
+def _specifique(doc, cible: Optional[str], lots_du_rc=None) -> bool:
+    """La pièce ne concerne que ce lot, ou l'un de ses sous-lots (pas « all »)."""
     etiquettes = [t for t in (doc.related_lots or []) if t not in ("all", "info")]
-    return cible is not None and any(cle_lot(t) == cible for t in etiquettes)
+    return cible is not None and any(rattache_au_lot(t, cible, lots_du_rc) for t in etiquettes)
 
 
 def texte_ouvrages_du_lot(documents, lot_id: Optional[str], racine_uploads: Path,
-                          libelle_lot: Optional[str] = None) -> str:
+                          libelle_lot: Optional[str] = None, lots_du_rc=None) -> str:
     """Liste des ouvrages du lot, prête à partir à l'IA, ou "" s'il n'y en a pas.
 
     `documents` : pièces du projet (ProjectDocument). `lot_id` : « lot5 », ou
     None / « all » (marché sans lot : toutes les DPGF). `libelle_lot` : intitulé
     du lot (« Lot 05 — Revêtement de façade – ITE »), pour trouver son onglet dans
-    un classeur de plusieurs lots. Bloquant : hors de la boucle d'événements."""
+    un classeur de plusieurs lots. `lots_du_rc` : ids des lots du projet, pour
+    rattacher les sous-lots (« 01a ») au lot 01. Bloquant : hors de la boucle."""
     cible = cle_lot(lot_id)
     blocs: List[Tuple[str, str, List[str]]] = []
     gardees, en_plus = 0, 0
-    for doc in _candidats(documents, lot_id):
+    for doc in _candidats(documents, lot_id, lots_du_rc):
         chemin = racine_uploads / doc.file_url.removeprefix("/uploads/")
         if not chemin.is_file():
             continue
         try:
             # Pièce propre au lot (ou marché sans lot) : tous ses onglets de DPGF.
             # Classeur de plusieurs lots : seulement les onglets de ce lot.
-            choisis = (None if cible is None or _specifique(doc, cible)
+            choisis = (None if cible is None or _specifique(doc, cible, lots_du_rc)
                        else _onglets_du_lot(chemin, cible, libelle_lot))
             if choisis is not None and not choisis:
                 continue

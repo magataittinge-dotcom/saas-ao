@@ -27,6 +27,11 @@ from services.ai.memoire_generator import MemoireGenerator
 from services.docx_exporter import build_memoire_docx
 from services.maps_service import generate_location_map
 from services.document_tagger import get_documents_for_lot
+
+
+def _ids_des_lots(project) -> list:
+    """Ids des lots du RC (« lot1 »…) : les sous-lots « 01a » s'y rattachent."""
+    return [l.get("id") for l in (project.lots_detectes or []) if l.get("id")]
 from services import pipeline_tracker, quota
 from services.audit_logger import log_action
 from services.project_status import ensure_relaunchable
@@ -156,7 +161,7 @@ async def generate_memoire(
     all_docs = (db.query(ProjectDocument)
                 .options(defer(ProjectDocument.extracted_text))
                 .filter(ProjectDocument.project_id == project_id).all())
-    docs = get_documents_for_lot(all_docs, project.selected_lot)
+    docs = get_documents_for_lot(all_docs, project.selected_lot, _ids_des_lots(project))
     if not docs:
         raise HTTPException(status_code=400, detail="Aucun document du DCE déposé")
 
@@ -270,7 +275,7 @@ def _run_memoire_job(
             MemoireConfig.organization_id == org_id).first()
         all_docs = db.query(ProjectDocument).filter(
             ProjectDocument.project_id == project_id).all()
-        docs = get_documents_for_lot(all_docs, project.selected_lot)
+        docs = get_documents_for_lot(all_docs, project.selected_lot, _ids_des_lots(project))
         refs = db.query(Reference).filter(
             Reference.organization_id == org_id,
             Reference.is_reference == True,
@@ -315,7 +320,8 @@ def _run_memoire_job(
         from services.dpgf_ouvrages import texte_ouvrages_du_lot
         from services.file_storage import UPLOADS_ROOT as _uploads_root
         ouvrages_dpgf = texte_ouvrages_du_lot(
-            all_docs, project.selected_lot, _uploads_root, project.selected_lot_name)
+            all_docs, project.selected_lot, _uploads_root, project.selected_lot_name,
+            _ids_des_lots(project))
 
         pipeline_tracker.start_step(project_id, "generating")
         generator = MemoireGenerator()

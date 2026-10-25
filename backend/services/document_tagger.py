@@ -27,9 +27,7 @@ def _extract_lot_num_from_filename(filename: str) -> Optional[str]:
     if not m:
         return None
     raw = m.group(1).strip()
-    if re.match(r'^\d+$', raw):
-        return str(int(raw))   # strip leading zeros
-    return raw                 # alphanumeric like "1A"
+    return re.sub(r'^0+(?=\d)', '', raw)   # « 05 » → « 5 », « 01a » → « 1a »
 
 
 # ─── Informational document detection ─────────────────────────────────────────
@@ -114,25 +112,40 @@ def est_commune(tags) -> bool:
 def _normalize_lot_num(s: str) -> str:
     """
     Normalize a lot identifier to a plain string for comparison.
-    "lot4" → "4", "lot04" → "4", "05" → "5", "1A" → "1A", "lot1A" → "1A"
+    "lot4" → "4", "lot04" → "4", "05" → "5", "1A" → "1a", "lot01a" → "1a"
     """
     s = s.strip().lower()
     if s.startswith('lot'):
         s = s[3:].lstrip('_- ')
-    if re.match(r'^\d+$', s):
-        return str(int(s))
-    return s
+    return re.sub(r'^0+(?=\d)', '', s)   # zéros de tête retirés, sous-lots compris
+
+
+def rattache_au_lot(etiquette: str, cible: str, lots_du_rc=None) -> bool:
+    """L'étiquette d'une pièce désigne-t-elle le lot `cible` (normalisé) ?
+
+    Sous-lots (décision du 25/10) : si le RC ne définit que le lot 01, une pièce
+    « 01a » ou « 01b » se rattache au lot 01 ; si le RC définit lui-même 01a et
+    01b comme des lots, ils restent séparés. `lots_du_rc` : identifiants des
+    lots du projet (« lot1 »…), ou None si inconnus (aucun rattachement)."""
+    t = _normalize_lot_num(etiquette)
+    if t == cible:
+        return True
+    sous_lot = re.fullmatch(r'(\d+)[a-z]', t)
+    if not sous_lot or sous_lot.group(1) != cible or lots_du_rc is None:
+        return False
+    return t not in {_normalize_lot_num(l) for l in lots_du_rc if l}
 
 
 # ─── Document filtering ────────────────────────────────────────────────────────
 
-def get_documents_for_lot(documents, selected_lot: Optional[str]) -> list:
+def get_documents_for_lot(documents, selected_lot: Optional[str], lots_du_rc=None) -> list:
     """
     Filter project documents to those relevant for the selected lot.
 
     Args:
         documents : iterable of ProjectDocument ORM objects
         selected_lot : lot id like "lot4", "lot05", "all", or None
+        lots_du_rc : ids des lots du projet (sous-lots, voir rattache_au_lot)
 
     Returns:
         filtered list — if selected_lot is None/"all", all non-info docs are returned.
@@ -156,7 +169,7 @@ def get_documents_for_lot(documents, selected_lot: Optional[str]) -> list:
             continue
 
         # Check if any tag matches target lot
-        if any(_normalize_lot_num(t) == target for t in tags if t != 'info'):
+        if any(rattache_au_lot(t, target, lots_du_rc) for t in tags if t != 'info'):
             result.append(doc)
 
     return result
