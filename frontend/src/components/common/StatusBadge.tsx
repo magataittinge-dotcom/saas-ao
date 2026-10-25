@@ -45,7 +45,7 @@ export function documentStatusBadge(status: DocumentStatus) {
   const map: Record<DocumentStatus, { label: string; variant: BadgeVariant }> = {
     valid:          { label: '✓ Valide',         variant: 'success' },
     expiring_soon:  { label: '🟠 Expire bientôt',variant: 'warning' },
-    expired:        { label: '✗ Expiré',         variant: 'danger'  },
+    expired:        { label: 'À renouveler',     variant: 'danger'  },
     unverified:     { label: '⚠️ À vérifier',    variant: 'amber'   },
     unclassified:   { label: 'Non classé',       variant: 'neutral' },
   }

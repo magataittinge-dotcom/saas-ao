@@ -8,7 +8,7 @@ export type VaultPillTone = 'ok' | 'neutral' | 'alert'
 export function vaultValidityPill(
   doc: Pick<Document, 'status' | 'expiry_date' | 'issued_date'>,
 ): { label: string; tone: VaultPillTone } {
-  if (doc.status === 'expired') return { label: 'Expiré', tone: 'alert' }
+  if (doc.status === 'expired') return { label: 'À renouveler', tone: 'alert' }
   if (doc.status === 'expiring_soon') return { label: 'Expire bientôt', tone: 'neutral' }
   if (doc.status === 'valid' && (doc.expiry_date || doc.issued_date)) return { label: 'Valide', tone: 'ok' }
   return { label: 'Date de validité à confirmer', tone: 'neutral' }

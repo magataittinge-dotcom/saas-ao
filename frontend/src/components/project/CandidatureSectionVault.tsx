@@ -184,7 +184,7 @@ function statusFor(status: ChecklistItem['status']): { icon: JSX.Element; label:
     case 'expire':
       return {
         icon: <AlertCircle size={16} style={{ color: '#F58E86' }} />,
-        label: 'Expiré — à mettre à jour',
+        label: 'À renouveler',
         color: '#F58E86',
       }
     case 'expiration_proche':
