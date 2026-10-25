@@ -919,7 +919,8 @@ def _extract_all_parallel(project_id: str, docs_info: list) -> None:
     _update_progress(skipped)
 
     # Extraction dans des PROCESSUS séparés (services/extraction_processus.py) :
-    # PyMuPDF garde le GIL, les threads ci-dessous ne font qu'attendre et écrire.
+    # chacun a son propre PDFium (sérialisé par un verrou global dans un processus) ;
+    # les threads ci-dessous ne font qu'attendre et écrire.
     from concurrent.futures.process import BrokenProcessPool
     from services.extraction_processus import creer_pool, extraire_fichier
     pool_proc, file_avancement = creer_pool()
@@ -961,9 +962,10 @@ def _extract_all_parallel(project_id: str, docs_info: list) -> None:
                 pool_actif[0] = False
             except Exception as e:
                 _log.warning(f"Extraction en processus échouée pour {filename} ({e}) : repli ici")
-        content = file_path.read_bytes()
+        # Par le chemin : les gros fichiers sont lus au fil de l'eau, jamais chargés en
+        # entier (8 extractions en parallèle, pièces de plusieurs centaines de Mo).
         return processor.extract_ex(
-            content, filename, on_page=on_page,
+            file_path, filename, on_page=on_page,
             on_pages=lambda pages: retenir_pages(str(file_path), pages))
 
     def _extract_fast(doc_id: str, filename: str) -> None:
@@ -1290,8 +1292,8 @@ async def _create_project_document_from_stream(
 
 
 def _extract_text_from_url_background(doc_id: str, file_url: str, filename: str) -> None:
-    """Background task: read the persisted file from disk and extract text.
-    Reads bytes from disk on demand instead of carrying the upload payload through memory."""
+    """Background task: extract text from the persisted file on disk.
+    Passes the PATH to the processor: the file is read as it goes, never held whole in memory."""
     import logging as _logging
     _log = _logging.getLogger(__name__)
     extracted_text = ""
@@ -1303,12 +1305,11 @@ def _extract_text_from_url_background(doc_id: str, file_url: str, filename: str)
             if not path.exists():
                 _log.error(f"Fichier introuvable pour extraction: {path}")
                 return
-            content = path.read_bytes()
         else:
             # S3-backed file — extraction would need a download step we don't yet support.
             _log.warning(f"Extraction texte ignorée (URL non locale): {file_url}")
             return
-        result_text, result_pages, extraction_warning = processor.extract_ex(content, filename)
+        result_text, result_pages, extraction_warning = processor.extract_ex(path, filename)
         if result_text:
             extracted_text = result_text.replace("\x00", "")
         page_count = result_pages
