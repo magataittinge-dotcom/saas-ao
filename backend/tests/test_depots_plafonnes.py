@@ -312,3 +312,64 @@ def test_copie_hors_de_la_boucle(monkeypatch):
 
     assert asyncio.run(_recevoir()) == (11, b"%PDF-1.4 ok")
     assert lieux == ["thread"]
+
+
+# ── Enregistrer au coffre une pièce du projet (« .read() sans taille ») ──────
+# Avant : `storage.upload(src.read_bytes(), …)` lisait toute la pièce (un plan
+# de DCE peut peser des centaines de Mo) en RAM, dans la boucle d'événements.
+
+def _piece_du_projet(db, racine, taille):
+    chemin = racine / "projects" / "proj-b8" / "dce" / "Attestation_URSSAF.pdf"
+    chemin.parent.mkdir(parents=True, exist_ok=True)
+    chemin.write_bytes(b"%PDF-1.4\n" + b"x" * taille)
+    db.add(ProjectDocument(id="pd-urssaf", project_id="proj-b8", type="autre",
+                           file_url="/uploads/projects/proj-b8/dce/Attestation_URSSAF.pdf",
+                           file_name="Attestation_URSSAF.pdf"))
+    db.commit()
+    return chemin
+
+
+def test_piece_trop_lourde_pour_le_coffre_refusee_sans_lecture(env, monkeypatch):
+    from pathlib import Path
+
+    client, db, org, racine, _ = env
+    chemin = _piece_du_projet(db, racine, 4096)
+    monkeypatch.setattr(uv, "VAULT_MAX_UPLOAD_SIZE", 1024)
+    lus = []
+    lire = Path.read_bytes
+    monkeypatch.setattr(Path, "read_bytes", lambda self: lus.append(self) or lire(self))
+
+    resp = client.post("/api/documents/from-project-doc", json={"project_doc_id": "pd-urssaf"})
+
+    assert resp.status_code == 413, resp.text
+    assert resp.json()["detail"] == "Fichier trop volumineux (max 1 Ko)."
+    assert chemin not in lus
+    assert db.query(DocumentCoffre).count() == 0
+    db.expire_all()
+    assert db.get(ProjectDocument, "pd-urssaf").vault_prompt_dismissed is False
+
+
+def test_piece_copiee_au_coffre_en_flux_hors_de_la_boucle(env, monkeypatch):
+    from services.file_storage import FileStorage
+
+    client, db, org, racine, _ = env
+    chemin = _piece_du_projet(db, racine, 2048)
+    lieux = []
+    copier = FileStorage._upload_local_stream
+
+    def _sonde(self, flux, cle):
+        try:
+            asyncio.get_running_loop()
+            lieux.append("boucle")
+        except RuntimeError:
+            lieux.append("thread")
+        return copier(self, flux, cle)
+
+    monkeypatch.setattr(FileStorage, "_upload_local_stream", _sonde)
+
+    resp = client.post("/api/documents/from-project-doc", json={"project_doc_id": "pd-urssaf"})
+
+    assert resp.status_code == 200, resp.text
+    assert lieux == ["thread"]
+    copie = racine / resp.json()["file_url"].removeprefix("/uploads/")
+    assert copie.read_bytes() == chemin.read_bytes()

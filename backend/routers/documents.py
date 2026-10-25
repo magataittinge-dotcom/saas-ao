@@ -212,11 +212,15 @@ async def save_project_doc_to_vault(
     if not pd.file_url.startswith("/uploads/") or not src.exists():
         raise HTTPException(status_code=404, detail="Fichier source introuvable")
 
-    file_url = await storage.upload(
-        src.read_bytes(),
-        pd.file_name,
-        f"organizations/{user.organization_id}/vault",
-    )
+    # B8 — le coffre garde son plafond de documents unitaires ; la pièce est
+    # copiée en flux, dans un thread : jamais lue en entier en RAM (un plan de
+    # DCE peut peser des centaines de Mo), jamais copiée dans la boucle.
+    if src.stat().st_size > upload_validation.VAULT_MAX_UPLOAD_SIZE:
+        raise upload_validation.refus_trop_volumineux(upload_validation.VAULT_MAX_UPLOAD_SIZE)
+    with open(src, "rb") as flux:
+        file_url = await storage.upload_stream(
+            flux, pd.file_name, f"organizations/{user.organization_id}/vault",
+        )
 
     doc_type = detect_vault_type(pd.file_name)
     category = "unclassified" if doc_type == "autre" else category_for_type(doc_type)

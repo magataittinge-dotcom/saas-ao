@@ -144,6 +144,11 @@ def _taille_lisible(octets: int) -> str:
     return f"{octets // MO} Mo" if octets >= MO else f"{max(octets // 1024, 1)} Ko"
 
 
+def refus_trop_volumineux(plafond: int) -> HTTPException:
+    return HTTPException(
+        status_code=413, detail=f"Fichier trop volumineux (max {_taille_lisible(plafond)}).")
+
+
 def copie_plafonnee(source: BinaryIO, plafond: int) -> Tuple[BinaryIO, int, bytes]:
     """(copie rembobinée, taille, 1ers octets) — lit par morceaux et s'arrête
     au premier morceau qui dépasse `plafond` (_Depassement). Bloquant : à
@@ -183,10 +188,7 @@ async def recevoir_fichier(
             detail=f"Type de fichier non autorisé : {ext or '(aucune extension)'}. "
                    f"Formats acceptés : {regle.formats}.",
         )
-    trop_gros = HTTPException(
-        status_code=413,
-        detail=f"Fichier trop volumineux (max {_taille_lisible(regle.plafond)}).",
-    )
+    trop_gros = refus_trop_volumineux(regle.plafond)
     longueur = request.headers.get("content-length") if request is not None else None
     if longueur and longueur.isdigit() and int(longueur) > regle.plafond + _MARGE_MULTIPART:
         raise trop_gros
