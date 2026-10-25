@@ -6,7 +6,6 @@ alembic==1.13.2
 psycopg2-binary==2.9.9
 pydantic==2.9.2     # FastAPI 0.162 exige >= 2.9.0
 pydantic-settings==2.3.4
-python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
 PyJWT[crypto]==2.15.1   # extra « crypto » = cryptography (RS256) ; >= 2.14 : JWKS non rechargé à chaque kid inconnu
