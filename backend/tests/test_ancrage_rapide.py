@@ -106,13 +106,13 @@ def test_cache_des_documents_borne_en_caracteres(monkeypatch):
 
 
 def test_pages_pdf_relues_une_fois_par_empreinte(tmp_path, monkeypatch):
-    import fitz   # espion des ouvertures : l'ancrage lit encore le PDF avec PyMuPDF
+    from services import pdf_lecture
     pdf = ecrire_pdf(tmp_path / "cctp.pdf", [
         "Page de garde du CCTP", "Les fixations sont réalisées par chevilles à frapper agréées."])
     ea._PAGES_CACHE.clear()
     ouvertures = []
-    vrai = fitz.open
-    monkeypatch.setattr(fitz, "open", lambda *a, **k: (ouvertures.append(a), vrai(*a, **k))[1])
+    vrai = pdf_lecture.lire_pages
+    monkeypatch.setattr(pdf_lecture, "lire_pages", lambda *a, **k: (ouvertures.append(a), vrai(*a, **k))[1])
 
     def exigence():
         return [{"source_excerpt": "Les fixations sont réalisées par chevilles à frapper", "source_page": 1}]
@@ -151,7 +151,7 @@ def test_memo_des_positions_plafonne(monkeypatch):
 
 
 def test_pages_lues_au_depot_reprises_par_l_ancrage_sans_relire_le_pdf(tmp_path, monkeypatch):
-    import fitz   # espion des ouvertures : l'ancrage lit encore le PDF avec PyMuPDF
+    from services import pdf_lecture
     from services.document_processor import DocumentProcessor
     pdf = ecrire_pdf(tmp_path / "ccap.pdf", [
         "Article 1 — Objet", "", "Article 3 — La retenue de garantie est fixée à 5 % du montant."])
@@ -161,8 +161,8 @@ def test_pages_lues_au_depot_reprises_par_l_ancrage_sans_relire_le_pdf(tmp_path,
         pdf.read_bytes(), "ccap.pdf", on_pages=lambda p: ea.retenir_pages(str(pdf), p))
     assert pages == 3 and "retenue de garantie" in texte
     ouvertures = []
-    vrai = fitz.open
-    monkeypatch.setattr(fitz, "open", lambda *a, **k: (ouvertures.append(a), vrai(*a, **k))[1])
+    vrai = pdf_lecture.lire_pages
+    monkeypatch.setattr(pdf_lecture, "lire_pages", lambda *a, **k: (ouvertures.append(a), vrai(*a, **k))[1])
     reqs = [{"source_excerpt": "La retenue de garantie est fixée à 5 %", "source_page": 1}]
     ea.resolve_pages(reqs, {"ccap.pdf": str(pdf)})
     assert reqs[0]["source_page"] == 3      # page vide comptée : numéro exact

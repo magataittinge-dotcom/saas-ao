@@ -30,3 +30,4 @@ python-dotenv==1.0.1
 slowapi==0.1.9
 email-validator==2.2.0
 Pillow==10.4.0
+defusedxml==0.7.1  # openpyxl s'en sert de lui-même : XML des tableurs déposés lus sans entités externes ni bombe (PSF)

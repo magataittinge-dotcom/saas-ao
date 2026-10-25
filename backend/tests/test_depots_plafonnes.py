@@ -20,7 +20,6 @@ import io
 from dataclasses import dataclass
 from typing import Callable
 
-import fitz
 import openpyxl
 import pytest
 from starlette.datastructures import UploadFile
@@ -29,6 +28,7 @@ from models.checklist_item import ChecklistItem
 from models.document import Document as DocumentCoffre
 from models.project import Project, ProjectDocument
 from services import upload_validation as uv
+from tests.pdf_fabrique import pdf_texte
 
 PNG_1PX = (
     b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
@@ -39,12 +39,7 @@ EXECUTABLE = b"MZ\x90\x00" + b"\x00" * 60 + b"PE\x00\x00"
 
 
 def _pdf_avec_texte() -> bytes:
-    doc = fitz.open()
-    doc.new_page().insert_text(
-        (72, 72), "Mémoire technique — méthodologie d'exécution des travaux de gros œuvre. " * 3)
-    contenu = doc.tobytes()
-    doc.close()
-    return contenu
+    return pdf_texte(["Mémoire technique — méthodologie d'exécution des travaux de gros œuvre. " * 3])
 
 
 def _xlsx() -> bytes:

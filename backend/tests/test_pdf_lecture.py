@@ -7,6 +7,7 @@ les pages lourdes (filtre non appliqué, mémoire rendue : §2.3 et §3.3).
 import ctypes
 import gc
 import io
+import os
 import re
 import threading
 from pathlib import Path
@@ -15,8 +16,14 @@ import pypdf
 import pytest
 
 from services import pdf_lecture
-from services.pdf_lecture import PdfIllisible, lire_pages, normaliser_texte_pdfium
-from tests.pdf_fabrique import ecrire_pdf, pdf_avec_annotation, pdf_texte, pdf_texte_masque
+from services.pdf_lecture import PdfIllisible, lire_document, lire_pages, normaliser_texte_pdfium
+from tests.pdf_fabrique import (
+    ecrire_pdf,
+    pdf_avec_annotation,
+    pdf_avec_page_illisible,
+    pdf_texte,
+    pdf_texte_masque,
+)
 
 
 # ─── n° 1 : normalisation vers la forme du texte PyMuPDF ─────────────────────
@@ -96,6 +103,57 @@ def test_pdf_sans_page_code_exact_meme_apres_une_autre_erreur():
     with pytest.raises(PdfIllisible) as erreur:
         lire_pages(sortie.getvalue())
     assert erreur.value.code == pdf_lecture.ERREUR_PAGE
+
+
+def test_page_qui_ne_se_charge_pas_texte_vide_et_numerotee():
+    lu = lire_document(pdf_avec_page_illisible(["Article 1", "Article 2", "Article 3"], 2))
+    assert lu.pages == ["Article 1\n", "", "Article 3\n"]
+    assert lu.illisibles == (2,) and lu.total == 3
+
+
+def test_aucune_page_lisible_document_illisible():
+    with pytest.raises(PdfIllisible) as erreur:
+        lire_document(pdf_avec_page_illisible(["Article 1"], 1))
+    assert erreur.value.code == pdf_lecture.ERREUR_PAGE
+
+
+def test_progression_page_par_page_et_nombre_total_de_pages():
+    octets = pdf_texte(["Article 1", "", "Article 3"])
+    vues = []
+    lu = lire_document(octets, on_page=lambda fait, a_lire: vues.append((fait, a_lire)))
+    assert vues == [(1, 3), (2, 3), (3, 3)] and lu.total == 3 and lu.illisibles == ()
+    vues.clear()
+    lu = lire_document(octets, max_pages=2, on_page=lambda fait, a_lire: vues.append((fait, a_lire)))
+    assert vues == [(1, 2), (2, 2)] and len(lu.pages) == 2 and lu.total == 3
+
+
+def test_gros_fichier_ouvert_par_pdfium_sans_etre_charge(tmp_path, monkeypatch):
+    import builtins
+
+    chemin = ecrire_pdf(tmp_path / "plan.pdf", ["Plan de masse", "Coupe AA"])
+    vrai_open = builtins.open
+    ouvertures = []
+
+    def ouvrir(fichier, *args, **kwargs):
+        if isinstance(fichier, (str, os.PathLike)) and Path(fichier) == chemin:
+            ouvertures.append(fichier)
+        return vrai_open(fichier, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "open", ouvrir)
+    monkeypatch.setattr(Path, "read_bytes", lambda self: pytest.fail("fichier chargé par read_bytes"))
+    assert lire_pages(chemin) == ["Plan de masse\n", "Coupe AA\n"]
+    assert len(ouvertures) == 1                 # petit fichier : lu d'un seul tenant
+    ouvertures.clear()
+    monkeypatch.setattr(pdf_lecture, "SEUIL_LECTURE_EN_UNE_FOIS", 0)   # « gros » fichier
+    assert lire_pages(chemin) == ["Plan de masse\n", "Coupe AA\n"]
+    assert ouvertures == []                     # ouvert et lu par PDFium, jamais par Python
+
+
+def test_chemin_qui_ne_designe_pas_un_fichier(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        lire_pages(tmp_path / "piece_jamais_deposee.pdf")
+    with pytest.raises(FileNotFoundError):
+        lire_pages(tmp_path)
 
 
 # ─── Texte masqué, champs et annotations, pages lourdes ──────────────────────
@@ -198,3 +256,48 @@ def test_pypdfium2_importe_seulement_par_pdf_lecture():
     ]
     assert fautifs == [], f"pypdfium2 importé hors de services/pdf_lecture.py : {fautifs}"
     assert _IMPORT_PDFIUM.search(module.read_text(encoding="utf-8"))
+
+
+# PyMuPDF (AGPL) ne reste que là, jusqu'à son retrait : le surligneur (remplacé au
+# bloc 5 par le sujet A) et la conversion SVG → PNG de l'organigramme et du Gantt (T8).
+_FITZ_PERMIS = {
+    "services/pdf_highlighter.py": None,               # tout le module
+    "services/organigramme.py": "svg_to_png_bytes",    # cette fonction seulement
+    "tests/test_pdf_viewer_highlight.py": None,        # test du surligneur
+}
+
+
+def _imports_pymupdf(source: str) -> list[tuple[int, object]]:
+    """(ligne, fonction englobante ou None) de chaque import de fitz / pymupdf."""
+    import ast
+
+    trouves = []
+
+    def visiter(noeud, fonction):
+        for enfant in ast.iter_child_nodes(noeud):
+            if isinstance(enfant, ast.Import):
+                modules = [alias.name for alias in enfant.names]
+            elif isinstance(enfant, ast.ImportFrom):
+                modules = [enfant.module or ""]
+            else:
+                modules = []
+            if any(m.split(".")[0] in ("fitz", "pymupdf") for m in modules):
+                trouves.append((enfant.lineno, fonction))
+            est_fonction = isinstance(enfant, (ast.FunctionDef, ast.AsyncFunctionDef))
+            visiter(enfant, enfant.name if est_fonction else fonction)
+
+    visiter(ast.parse(source), None)
+    return trouves
+
+
+def test_pymupdf_ne_reste_que_dans_le_surligneur_et_le_svg_png():
+    racine = Path(__file__).resolve().parents[1]
+    fichiers = [p for dossier in ("services", "routers", "tasks", "scripts", "tests")
+                for p in (racine / dossier).rglob("*.py")] + sorted(racine.glob("*.py"))
+    fautifs = []
+    for p in fichiers:
+        relatif = p.relative_to(racine).as_posix()
+        for ligne, fonction in _imports_pymupdf(p.read_text(encoding="utf-8")):
+            if relatif not in _FITZ_PERMIS or _FITZ_PERMIS[relatif] not in (None, fonction):
+                fautifs.append(f"{relatif}:{ligne}")
+    assert fautifs == [], f"PyMuPDF importé hors du surligneur et de svg_to_png_bytes : {fautifs}"

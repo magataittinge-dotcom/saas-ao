@@ -2,13 +2,19 @@
 à pypdfium2 (Apache-2.0 ou BSD-3-Clause).
 
 SEUL module de l'appli qui importe ``pypdfium2`` (garde : tests/test_pdf_lecture.py ; la
-fabrique de PDF des tests l'importe aussi, sous le même verrou). Pas encore branché : l'extraction au dépôt, l'ancrage, les lots et le CCP lisent encore
-avec PyMuPDF (bascule : tranches T6 et T7 du plan H).
+fabrique de PDF des tests l'importe aussi, sous le même verrou). Lecteur de l'extraction
+au dépôt (``document_processor``) ; l'ancrage, les lots et le CCP lisent encore avec
+PyMuPDF (bascule : tranche T7 du plan H).
 
-``lire_pages`` rend le texte de chaque page dans la forme de ``page.get_text()`` de
-PyMuPDF (lignes séparées par « \\n », « \\n » final), pour que le texte stocké et les
-extraits déjà ancrés restent comparables. Une page passe par :
+``lire_document`` / ``lire_pages`` rendent le texte de chaque page dans la forme de
+``page.get_text()`` de PyMuPDF (lignes séparées par « \\n », « \\n » final), pour que le
+texte stocké et les extraits déjà ancrés restent comparables. Une page passe par :
 aplatissement des champs → textpage → filtre du texte masqué → texte → normalisation.
+Un gros fichier donné par son chemin (plus de ``SEUIL_LECTURE_EN_UNE_FOIS``) est ouvert par
+PDFium, qui le lit au fil des pages : il n'est jamais chargé en entier en mémoire (dépôts
+de plusieurs centaines de Mo, extraits à 8 en parallèle, serveur de 4 Go).
+Une page qui ne se charge pas donne un texte vide et figure dans ``illisibles`` ; le
+document n'est déclaré illisible que si aucune page ne se lit.
 
 Threads. Doc pypdfium2 (« Incompatibility with threading ») : « PDFium is inherently not
 thread-safe. It is not allowed to call pdfium functions simultaneously across different
@@ -28,8 +34,7 @@ from __future__ import annotations
 import ctypes
 import os
 import threading
-from pathlib import Path
-from typing import Callable, Optional, TypeVar, Union
+from typing import Callable, NamedTuple, Optional, TypeVar, Union
 
 import pypdfium2 as pdfium
 import pypdfium2.raw as pdfium_c
@@ -39,8 +44,10 @@ __all__ = [
     "ERREUR_MOT_DE_PASSE",
     "ERREUR_PAGE",
     "PdfIllisible",
+    "PdfLu",
     "SEUIL_OBJETS",
     "VERROU_PDFIUM",
+    "lire_document",
     "lire_pages",
     "normaliser_texte_pdfium",
 ]
@@ -51,6 +58,15 @@ VERROU_PDFIUM = threading.RLock()
 # 1,3 million sur Gueux), le filtre du texte masqué n'est pas appliqué (trop cher : H §2.3)
 # et la mémoire est rendue au système après le document (H §3.3).
 SEUIL_OBJETS = 20_000
+
+# Un fichier donné par son chemin est lu d'un seul tenant jusqu'à cette taille ; au-delà,
+# PDFium l'ouvre lui-même et le lit au fil des pages, sans jamais le charger en entier.
+# Mesuré sur les 86 PDF de Gueux sous WSL (/mnt/c) : PDFium multiplie les petites
+# lectures, et chacune y coûte cher — par le chemin seul 93 s, d'un seul tenant 39 s,
+# avec ce seuil 45 s (4 fichiers au-delà) ; sur un disque local, les deux modes se valent
+# (7,3 s contre 6,7 s pour les pièces analysées). La mémoire tenue par les fichiers reste
+# bornée à 16 Mio par lecture en cours (128 Mio pour 8 extractions en parallèle).
+SEUIL_LECTURE_EN_UNE_FOIS = 16 * 1024 * 1024
 
 # Codes d'erreur PDFium (FPDF_ERR_* de fpdfview.h), portés par PdfIllisible.code.
 ERREUR_FORMAT = pdfium_c.FPDF_ERR_FORMAT            # 3 : corrompu, tronqué, ou pas un PDF
@@ -112,51 +128,92 @@ Source = Union[bytes, bytearray, memoryview, str, "os.PathLike[str]"]
 T = TypeVar("T")
 
 
-def lire_pages(source: Source, max_pages: Optional[int] = None) -> list[str]:
-    """Texte de chaque page d'un PDF (octets ou chemin), pages vides comprises (chaîne vide).
+class PdfLu(NamedTuple):
+    """Résultat de ``lire_document``."""
 
-    ``max_pages`` : seulement les N premières pages. Lève ``PdfIllisible`` si PDFium ne
-    sait pas lire le fichier (``code`` 3 : corrompu, tronqué ou pas un PDF ; 4 : mot de
-    passe d'ouverture ; 6 : sans page ou page illisible), ``OSError`` si le chemin ne se
-    lit pas."""
-    octets = _octets(source)          # lecture du fichier hors verrou
+    pages: list[str]               # texte des pages lues, pages vides comprises (chaîne vide)
+    total: int                     # nombre de pages du document (≥ len(pages) si max_pages)
+    illisibles: tuple[int, ...]    # numéros (1 = première) des pages lues qui ne se chargent pas
+
+
+def lire_document(
+    source: Source,
+    max_pages: Optional[int] = None,
+    on_page: Optional[Callable[[int, int], None]] = None,
+) -> PdfLu:
+    """Texte de chaque page d'un PDF (octets, ou chemin : au-delà de 16 Mio, ouvert par PDFium).
+
+    ``max_pages`` : seulement les N premières pages. ``on_page(pages_lues, pages_a_lire)``
+    est appelé après chaque page, hors du verrou (progression de la barre de dépôt).
+    Une page qui ne se charge pas donne un texte vide et son numéro dans ``illisibles``.
+    Lève ``PdfIllisible`` si PDFium ne sait pas lire le document, ou aucune de ses pages
+    (``code`` 3 : corrompu, tronqué ou pas un PDF ; 4 : mot de passe d'ouverture ; 6 : sans
+    page lisible), ``OSError`` si le chemin ne désigne pas un fichier."""
+    chemin, octets = _source(source)
     with VERROU_PDFIUM:
-        pdf, total = _ouvrir(octets)
+        pdf, total = _ouvrir(chemin, octets)
     limite = min(max_pages, total) if max_pages else total
     textes: list[str] = []
+    illisibles: list[int] = []
     lourd = False
     try:
         for index in range(limite):
-            texte, page_lourde = _avec_page(pdf, index, _texte_visible)
+            try:
+                texte, page_lourde = _avec_page(pdf, index, _texte_visible)
+            except PdfIllisible:
+                texte, page_lourde = "", False
+                illisibles.append(index + 1)
             textes.append(texte)
             lourd = lourd or page_lourde
+            if on_page is not None:
+                on_page(index + 1, limite)
+        if limite and len(illisibles) == limite:
+            raise PdfIllisible(ERREUR_PAGE, "aucune page lisible")
     finally:
         with VERROU_PDFIUM:
             pdf.close()
         # `octets` reste référencé jusqu'ici : PDFium lit dans ce tampon jusqu'à la fermeture.
         if lourd:
             _rendre_la_memoire()
-    return textes
+    return PdfLu(textes, total, tuple(illisibles))
 
 
-def _octets(source: Source) -> bytes:
+def lire_pages(source: Source, max_pages: Optional[int] = None) -> list[str]:
+    """Le texte de chaque page (``lire_document(...).pages``) : une entrée par page, pages
+    vides et pages illisibles comprises (chaîne vide)."""
+    return lire_document(source, max_pages).pages
+
+
+def _source(source: Source) -> tuple[Optional[bytes], Optional[bytes]]:
+    """(chemin encodé pour PDFium, None) pour un gros fichier ; (None, octets) sinon."""
     if isinstance(source, bytes):
-        return source
+        return None, source
     if isinstance(source, (bytearray, memoryview)):
-        return bytes(source)
+        return None, bytes(source)
     if isinstance(source, (str, os.PathLike)):
-        return Path(source).read_bytes()
+        chemin = os.fspath(source)
+        if not os.path.isfile(chemin):
+            raise FileNotFoundError(chemin)
+        if os.path.getsize(chemin) <= SEUIL_LECTURE_EN_UNE_FOIS:
+            with open(chemin, "rb") as fichier:
+                return None, fichier.read()
+        return os.fsencode(chemin) + b"\x00", None
     raise TypeError(f"source PDF non prise en charge : {type(source).__name__}")
 
 
-def _ouvrir(octets: bytes) -> tuple[pdfium.PdfDocument, int]:
+def _ouvrir(chemin: Optional[bytes], octets: Optional[bytes]) -> tuple[pdfium.PdfDocument, int]:
     """(document, nombre de pages), sous VERROU_PDFIUM.
 
-    Chargement brut, pour un code d'erreur exact : ``pdfium.PdfDocument(octets)`` lit
-    ``FPDF_GetLastError()`` aussi quand le chargement a RÉUSSI sur un PDF sans page, et
-    rend alors l'erreur précédente du processus (constaté : 4, « mot de passe »). Le
-    document ne garde pas ``octets`` : l'appelant le garde jusqu'à la fermeture."""
-    brut = pdfium_c.FPDF_LoadMemDocument64(octets, len(octets), None)
+    Un chemin est ouvert par ``FPDF_LoadDocument`` : PDFium lit le fichier au fil des
+    pages, sans le charger en entier. Chargement brut, pour un code d'erreur exact :
+    ``pdfium.PdfDocument(…)`` lit ``FPDF_GetLastError()`` aussi quand le chargement a RÉUSSI
+    sur un PDF sans page, et rend alors l'erreur précédente du processus (constaté : 4,
+    « mot de passe »). Le document ne garde pas ``octets`` : l'appelant le garde jusqu'à
+    la fermeture."""
+    if chemin is not None:
+        brut = pdfium_c.FPDF_LoadDocument(chemin, None)
+    else:
+        brut = pdfium_c.FPDF_LoadMemDocument64(octets, len(octets), None)
     if not brut:
         raise PdfIllisible(pdfium_c.FPDF_GetLastError())
     total = pdfium_c.FPDF_GetPageCount(brut)
