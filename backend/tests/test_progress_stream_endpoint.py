@@ -137,12 +137,9 @@ def test_progress_stream_unknown_project_returns_404(db_session, test_user):
     stream — when project doesn't exist, we 404 without ever streaming."""
     client = _client_as(test_user)
     try:
-        # We use a short receive timeout so even if the stream did start
-        # we'd bail fast. But we expect a 404 before any stream begins.
-        resp = client.get(
-            "/api/projects/does-not-exist/progress-stream",
-            timeout=2.0,
-        )
+        # Le 404 arrive avant tout flux. Pas de `timeout=` : le TestClient
+        # l'ignore (transport en mémoire) et Starlette le déprécie (0.46).
+        resp = client.get("/api/projects/does-not-exist/progress-stream")
         assert resp.status_code == 404
     finally:
         app.dependency_overrides.clear()
