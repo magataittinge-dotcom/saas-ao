@@ -12,6 +12,7 @@ Aucun appel réseau : le chargement du JWKS est remplacé par un compteur.
 """
 import base64
 import json
+import logging
 
 import jwt
 import pytest
@@ -53,3 +54,37 @@ def test_jetons_forges_ne_rechargent_pas_le_jwks_a_chaque_requete(jwks_compte):
         with pytest.raises(Exception):  # jeton refusé : seul le nombre d'appels compte ici
             auth._decode_clerk_token(_jeton_forge(f"kid-inconnu-{i}"))
     assert jwks_compte["n"] <= 2, f"{jwks_compte['n']} appels au JWKS de Clerk pour 20 jetons forgés"
+
+
+def _appeler_route_protegee(jeton: str):
+    """Vraie chaîne d'authentification (sans les remplacements du conftest)."""
+    from fastapi.testclient import TestClient
+
+    from main import app
+
+    return TestClient(app, raise_server_exceptions=False).get(
+        "/api/auth/me", headers={"Authorization": f"Bearer {jeton}"})
+
+
+def test_kid_inconnu_renvoie_401_sans_pile_dans_les_journaux(jwks_compte, caplog):
+    """Un jeton forgé est un jeton invalide : 401, pas une 500 avec la pile
+    d'appels (PyJWKClientError n'hérite pas de InvalidTokenError). Rien de
+    l'en-tête choisi par l'attaquant n'arrive dans les journaux."""
+    caplog.set_level(logging.INFO)
+    r = _appeler_route_protegee(_jeton_forge("kid-de-l-attaquant"))
+    assert r.status_code == 401, r.text
+    assert not [x for x in caplog.records if x.exc_info], "pile d'appels dans les journaux"
+    assert "kid-de-l-attaquant" not in caplog.text
+
+
+def test_jwks_injoignable_renvoie_503_sans_pile_dans_les_journaux(jwks_compte, monkeypatch, caplog):
+    """JWKS de Clerk injoignable : le jeton n'est pas en cause, l'authentification
+    est momentanément indisponible (503), sans pile d'appels."""
+    def panne():
+        raise jwt.PyJWKClientConnectionError("Fail to fetch data from the url, err: timed out")
+
+    monkeypatch.setattr(auth._get_jwks_client(), "fetch_data", panne)
+    caplog.set_level(logging.INFO)
+    r = _appeler_route_protegee(_jeton_forge("cle-connue"))
+    assert r.status_code == 503, r.text
+    assert not [x for x in caplog.records if x.exc_info], "pile d'appels dans les journaux"

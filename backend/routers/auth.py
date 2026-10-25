@@ -50,6 +50,19 @@ def _decode_clerk_token(token: str) -> dict:
     except jwt.InvalidTokenError as e:
         logger.warning(f"Auth failed: token invalide — {type(e).__name__}")
         raise HTTPException(status_code=401, detail="Token invalide")
+    except jwt.PyJWKClientConnectionError as e:
+        # JWKS de Clerk injoignable : le jeton n'est pas en cause.
+        logger.warning(f"Auth indisponible : JWKS de Clerk injoignable — {type(e).__name__}")
+        raise HTTPException(
+            status_code=503,
+            detail="Authentification momentanément indisponible. Réessayez dans un instant.",
+        )
+    except jwt.PyJWKClientError as e:
+        # `kid` inconnu (jeton forgé ou clé retirée) : jeton invalide. Cette
+        # exception n'hérite pas de InvalidTokenError ; sans ce bloc, 500 et
+        # pile d'appels dans les journaux, avec le `kid` choisi par l'appelant.
+        logger.warning(f"Auth failed: token invalide — {type(e).__name__}")
+        raise HTTPException(status_code=401, detail="Token invalide")
 
 
 def _fetch_clerk_user(clerk_user_id: str) -> dict:
