@@ -37,6 +37,12 @@ class ClaudeRateLimitError(Exception):
     The router turns this into a 503 (Service Unavailable) with Retry-After
     rather than a confusing 500."""
 
+
+class ClaudeAuthenticationError(Exception):
+    """B9 — clé API refusée (révoquée, invalide) hors DEBUG : l'analyse échoue
+    proprement et l'unité est rendue. Jamais de jeu de démonstration renvoyé
+    comme une vraie analyse."""
+
 # ── Mapping lot keywords → DTU section headers in normes-dtu-btp ────────────
 _DTU_SECTION_KEYWORDS: list[tuple[list[str], str]] = [
     (["façade", "facade", "ravalement", "bardage", "enduit ext"],
@@ -263,7 +269,11 @@ def _build_call_texts(pass_text: str) -> list[str]:
 class DCEAnalyzer:
     def __init__(self):
         key = settings.ANTHROPIC_API_KEY
-        self._demo_mode = not key or key == _PLACEHOLDER_KEY or key.startswith("sk-ant-placeholder")
+        # B9 — jeu de démonstration réservé au développement local (DEBUG) :
+        # hors DEBUG, une clé absente ou d'exemple échoue (401) au lieu de
+        # produire une analyse factice.
+        self._demo_mode = settings.DEBUG and (
+            not key or key == _PLACEHOLDER_KEY or key.startswith("sk-ant-placeholder"))
         if not self._demo_mode:
             self.client = anthropic.Anthropic(
                 api_key=key,
@@ -593,9 +603,15 @@ class DCEAnalyzer:
                 print(f"[TIMING] [{label}] Streaming: {elapsed:.1f}s (attempt {attempt})", flush=True)
                 break
 
-            except anthropic.AuthenticationError:
-                self._demo_mode = True
-                return _DEMO_RESULT
+            except anthropic.AuthenticationError as e:
+                if settings.DEBUG:
+                    # Développement local seulement : jeu de démonstration.
+                    logger.warning("[%s] clé API refusée — jeu de démonstration (DEBUG)", label)
+                    self._demo_mode = True
+                    return _DEMO_RESULT
+                # B9 — hors DEBUG, jamais de _DEMO_RESULT présenté comme une
+                # vraie analyse : l'erreur remonte, le job rend l'unité.
+                raise ClaudeAuthenticationError(f"[{label}] Clé API Anthropic refusée") from e
             except (anthropic.APITimeoutError, anthropic.APIConnectionError) as e:
                 elapsed = time.monotonic() - t0
                 print(f"[DCE Analyzer] [{label}] Tentative {attempt} échouée après {elapsed:.1f}s: {e}", flush=True)

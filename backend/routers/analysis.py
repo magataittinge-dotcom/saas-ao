@@ -18,7 +18,9 @@ from models.document import Document
 from schemas.compliance import ComplianceItemResponse
 from routers.auth import get_auth_user
 from services.ai.api_preflight import AIServiceUnavailable, ensure_ai_service_available
-from services.ai.dce_analyzer import DCEAnalyzer, ClaudeRateLimitError
+from services.ai.dce_analyzer import (
+    DCEAnalyzer, ClaudeAuthenticationError, ClaudeRateLimitError,
+)
 from services.ai.checklist_matcher import ChecklistMatcher
 from services.document_tagger import (
     get_documents_for_lot, extract_excel_sheet_for_lot, _normalize_lot_num,
@@ -274,6 +276,10 @@ def _build_lot_spec(all_docs, lot_id, lot_names, project) -> dict:
     }
 
 
+# B9 — même formule que la garde pré-vol (503) : le service ne peut pas servir.
+_MSG_IA_INDISPONIBLE = "Service IA momentanément indisponible. Relancez l'analyse dans quelques minutes."
+
+
 def _fail_analysis(project_id: str, user_message: str, tracker_reason: str) -> None:
     """Échec du job : statut erreur EXPLICITE, jamais de régression d'étape."""
     from database import SessionLocal
@@ -424,6 +430,13 @@ def _run_analysis_job(
             _refund_lots(db, consumed_ids, [s["lot_id"] for s in lot_specs])
             _fail_analysis(project_id, "Limite Anthropic atteinte. Relancez dans une minute.", "rate_limit")
             return
+        except ClaudeAuthenticationError as e:
+            # B9 — clé refusée : échec propre, unités rendues (plus jamais de
+            # jeu de démonstration enregistré comme une vraie analyse).
+            logger.error("Clé API refusée (analyse %s) : %s", project_id, e)
+            _refund_lots(db, consumed_ids, [s["lot_id"] for s in lot_specs])
+            _fail_analysis(project_id, _MSG_IA_INDISPONIBLE, "auth")
+            return
         except Exception as e:
             logger.error(f"Erreur analyse IA (tronc commun) {project_id}: {e}", exc_info=True)
             _refund_lots(db, consumed_ids, [s["lot_id"] for s in lot_specs])
@@ -458,6 +471,10 @@ def _run_analysis_job(
                         failed_lots.append("rate_limit")
                         failed_lot_ids.add(spec["lot_id"])
                         _refund_lots(db, consumed_ids, [spec["lot_id"]])
+                    except ClaudeAuthenticationError:
+                        failed_lots.append("auth")   # B9
+                        failed_lot_ids.add(spec["lot_id"])
+                        _refund_lots(db, consumed_ids, [spec["lot_id"]])
                     except Exception as e:
                         logger.error("Analyse lot échouée: %s", e, exc_info=True)
                         failed_lots.append(str(e))
@@ -481,6 +498,7 @@ def _run_analysis_job(
             _fail_analysis(project_id,
                            "Limite Anthropic atteinte. Relancez dans une minute."
                            if "rate_limit" in failed_lots else
+                           _MSG_IA_INDISPONIBLE if "auth" in failed_lots else
                            "Erreur lors de l'analyse IA. Relancez l'analyse.",
                            ";".join(failed_lots))
             return
