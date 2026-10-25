@@ -10,28 +10,30 @@ verbatim du texte source (ré-ancré), sinon None (pas de bouton source).
 """
 from services.ai.excerpt_anchor import anchor_excerpt, anchor_requirements
 
+# Document INVENTÉ, de la même forme qu'un règlement de consultation : apostrophes
+# typographiques, retours à la ligne au milieu des phrases, puce « ◼ ».
 DOC = (
-    "RDC Travaux – Ecole élémentaire de GUEUX\n"
-    "Le candidat devra produire dans un dossier\n"
-    "« Candidature » les pièces suivantes :\n"
-    "1/ Une lettre de candidature (DC1 ou équivalent) comportant l’ensemble des indications permettant\n"
-    "d’identifier le candidat ou l’ensemble des membres du groupement.\n"
-    "◼ L’indication des mesures de gestion environnementale que le candidat pourra appliquer lors de\n"
-    "l’exécution du marché.\n"
-    "L’absence de chiffrage d’une ou plusieurs prestations supplémentaires éventuelles emportera la\n"
-    "qualification d’offre irrégulière.\n"
+    "RC Travaux – Groupe scolaire des Tilleuls\n"
+    "Le soumissionnaire remettra dans un pli\n"
+    "« Offre technique » les éléments suivants :\n"
+    "1/ Une note méthodologique (cadre de réponse ou équivalent) décrivant l’ensemble des dispositions permettant\n"
+    "d’organiser le chantier ou l’ensemble des interventions des sous-traitants.\n"
+    "◼ L’indication des dispositions de tri des déchets que le soumissionnaire mettra en œuvre pendant\n"
+    "la durée du chantier.\n"
+    "L’omission d’une ou plusieurs variantes obligatoires dans le cadre de décomposition entraînera le\n"
+    "classement de l’offre comme irrégulière.\n"
 )
 
 
 def test_exact_excerpt_kept():
-    exc = "Le candidat devra produire dans un dossier"
+    exc = "Le soumissionnaire remettra dans un pli"
     assert anchor_excerpt(exc, DOC) == exc
 
 
 def test_normalized_reanchored_to_real_text():
     """Excerpt avec apostrophe droite + espaces simples → ré-ancré sur le
     verbatim RÉEL du PDF (apostrophe ’, retour ligne intra-phrase)."""
-    exc = "Une lettre de candidature (DC1 ou équivalent) comportant l'ensemble des indications permettant d'identifier le"
+    exc = "Une note méthodologique (cadre de réponse ou équivalent) décrivant l'ensemble des dispositions permettant d'organiser le"
     out = anchor_excerpt(exc, DOC)
     assert out is not None
     assert out in DOC                       # verbatim GARANTI
@@ -41,11 +43,11 @@ def test_normalized_reanchored_to_real_text():
 def test_condensed_excerpt_recovered_from_key_terms():
     """« … » de condensation IA → récupération par termes clés : la phrase
     RÉELLE du document est retrouvée et retournée en entier."""
-    exc = "L'indication des mesures de gestion environnementale… lors de l'exécution"
+    exc = "L'indication des dispositions de tri des déchets… pendant la durée du chantier"
     out = anchor_excerpt(exc, DOC)
     assert out is not None
     assert out in DOC
-    assert "gestion environnementale" in out
+    assert "tri des déchets" in out
     assert len(out) >= 60                   # phrase entière, pas un fragment
 
 
@@ -76,7 +78,7 @@ def test_resolve_pages_fixes_wrong_ia_page(tmp_path):
 def test_anchor_requirements_batch(caplog):
     reqs = [
         {"exigence": "a", "source_document": "RC",
-         "source_excerpt": "Le candidat devra produire dans un dossier"},
+         "source_excerpt": "Le soumissionnaire remettra dans un pli"},
         {"exigence": "b", "source_document": "RC",
          "source_excerpt": "phrase inventée sans aucun rapport ni terme commun xyzabc"},
         {"exigence": "c", "source_document": "INCONNU",

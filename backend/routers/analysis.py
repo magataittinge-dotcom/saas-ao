@@ -2,9 +2,12 @@ import asyncio
 import hashlib
 import json
 import logging
+import re
 import threading
 from pathlib import Path
+from typing import Annotated, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 from sqlalchemy import or_, update as _sql_update
 from sqlalchemy.orm import Session
 
@@ -18,7 +21,9 @@ from models.document import Document
 from schemas.compliance import ComplianceItemResponse
 from routers.auth import get_auth_user
 from services.ai.api_preflight import AIServiceUnavailable, ensure_ai_service_available
-from services.ai.dce_analyzer import DCEAnalyzer, ClaudeRateLimitError
+from services.ai.dce_analyzer import (
+    DCEAnalyzer, ClaudeAuthenticationError, ClaudeRateLimitError,
+)
 from services.ai.checklist_matcher import ChecklistMatcher
 from services.document_tagger import (
     est_commune, get_documents_for_lot, _normalize_lot_num,
@@ -26,7 +31,6 @@ from services.document_tagger import (
 from services.dpgf_ouvrages import est_tableur, texte_ouvrages_du_lot
 from services import pipeline_tracker, quota
 from services.project_status import ensure_relaunchable
-from typing import List
 
 logger = logging.getLogger(__name__)
 
@@ -35,13 +39,47 @@ UPLOADS_ROOT = Path(__file__).parent.parent / "uploads"
 router = APIRouter()
 from services.rate_limit import limiter  # S1.2 — limiter partagé (org-keyed)
 
+# B10 — borne d'UNE action : 40 lots (le quota mensuel Pro, PRD : 40 analyses).
+_MAX_LOTS_PAR_ANALYSE = 40
+# Lots ajoutés à la main dans l'écran Lots (AddLotForm : « lot1 » à « lot30 ») :
+# jamais enregistrés dans lots_detectes, mais analysables (filtre par numéro).
+_LOT_AJOUTE_A_LA_MAIN = re.compile(r"^lot(?:[1-9]|[12][0-9]|30)$")
+
+IdentifiantLot = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=64)]
+
+
+class AnalyzeRequest(BaseModel):
+    """B10 — corps de POST /analyze. Absent ou {} : le lot sélectionné.
+
+    Avant : `dict` non validé — {"lots": "lot1"} était parcouru caractère par
+    caractère (4 unités consommées) et un doublon faussait le remboursement."""
+    model_config = ConfigDict(extra="forbid")
+
+    lots: Optional[List[IdentifiantLot]] = Field(
+        default=None, min_length=1, max_length=_MAX_LOTS_PAR_ANALYSE)
+
+    @field_validator("lots")
+    @classmethod
+    def _sans_doublon(cls, lots):
+        if lots is not None and len(set(lots)) != len(lots):
+            raise ValueError("chaque lot ne figure qu'une fois")
+        return lots
+
+
+def _lots_inconnus(project, lot_ids: list) -> list:
+    """Lots demandés qui ne sont ni détectés, ni sélectionnés, ni ajoutables
+    à la main dans l'écran Lots."""
+    connus = {l.get("id") for l in (project.lots_detectes or []) if isinstance(l, dict)}
+    connus.add(project.selected_lot)
+    return [l for l in lot_ids if l not in connus and not _LOT_AJOUTE_A_LA_MAIN.match(l)]
+
 
 @router.post("/{project_id}/analyze")
 @limiter.limit("5/minute")
 async def trigger_analysis(
     request: Request,
     project_id: str,
-    payload: dict | None = None,
+    payload: AnalyzeRequest | None = None,
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ):
@@ -49,7 +87,7 @@ async def trigger_analysis(
 
     Multi-lots mutualisé : le tronc commun (RC/CCAP/AE) est analysé UNE
     fois et partagé ; seul le spécifique (CCTP/DPGF filtrés) est analysé
-    par lot. body optionnel : {"lots": ["lot1", "lot2"]}."""
+    par lot. body optionnel : {"lots": ["lot1", "lot2"]} (AnalyzeRequest)."""
     project = _get_project_or_404(project_id, user.organization_id, db)
     ensure_relaunchable(project)  # R12 — pas de relance sur projet clôturé
     all_docs = db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).all()
@@ -58,7 +96,15 @@ async def trigger_analysis(
     if not all_docs:
         raise HTTPException(status_code=400, detail="Aucun document déposé pour ce projet")
 
-    lot_ids = (payload or {}).get("lots") or [project.selected_lot or "all"]
+    lot_ids = (payload.lots if payload and payload.lots else None) or [project.selected_lot or "all"]
+    inconnus = _lots_inconnus(project, lot_ids) if payload and payload.lots else []
+    if inconnus:
+        # B10 — refusé AVANT tout décompte d'unité.
+        raise HTTPException(
+            status_code=422,
+            detail="Lot inconnu pour ce projet : " + ", ".join(inconnus)
+                   + ". Choisissez les lots dans l'écran Lots.",
+        )
     lot_names = {l.get("id"): l.get("nom") for l in (project.lots_detectes or [])}
 
     # Textes des passes, construits dans un thread : la liste des ouvrages lit
@@ -304,6 +350,10 @@ def _build_lot_spec(all_docs, lot_id, lot_names, selected_lot, selected_lot_name
     }
 
 
+# B9 — même formule que la garde pré-vol (503) : le service ne peut pas servir.
+_MSG_IA_INDISPONIBLE = "Service IA momentanément indisponible. Relancez l'analyse dans quelques minutes."
+
+
 def _fail_analysis(project_id: str, user_message: str, tracker_reason: str) -> None:
     """Échec du job : statut erreur EXPLICITE, jamais de régression d'étape."""
     from database import SessionLocal
@@ -455,6 +505,13 @@ def _run_analysis_job(
             _refund_lots(db, consumed_ids, [s["lot_id"] for s in lot_specs])
             _fail_analysis(project_id, "Limite Anthropic atteinte. Relancez dans une minute.", "rate_limit")
             return
+        except ClaudeAuthenticationError as e:
+            # B9 — clé refusée : échec propre, unités rendues (plus jamais de
+            # jeu de démonstration enregistré comme une vraie analyse).
+            logger.error("Clé API refusée (analyse %s) : %s", project_id, e)
+            _refund_lots(db, consumed_ids, [s["lot_id"] for s in lot_specs])
+            _fail_analysis(project_id, _MSG_IA_INDISPONIBLE, "auth")
+            return
         except Exception as e:
             logger.error(f"Erreur analyse IA (tronc commun) {project_id}: {e}", exc_info=True)
             _refund_lots(db, consumed_ids, [s["lot_id"] for s in lot_specs])
@@ -489,6 +546,10 @@ def _run_analysis_job(
                         failed_lots.append("rate_limit")
                         failed_lot_ids.add(spec["lot_id"])
                         _refund_lots(db, consumed_ids, [spec["lot_id"]])
+                    except ClaudeAuthenticationError:
+                        failed_lots.append("auth")   # B9
+                        failed_lot_ids.add(spec["lot_id"])
+                        _refund_lots(db, consumed_ids, [spec["lot_id"]])
                     except Exception as e:
                         logger.error("Analyse lot échouée: %s", e, exc_info=True)
                         failed_lots.append(str(e))
@@ -512,6 +573,7 @@ def _run_analysis_job(
             _fail_analysis(project_id,
                            "Limite Anthropic atteinte. Relancez dans une minute."
                            if "rate_limit" in failed_lots else
+                           _MSG_IA_INDISPONIBLE if "auth" in failed_lots else
                            "Erreur lors de l'analyse IA. Relancez l'analyse.",
                            ";".join(failed_lots))
             return

@@ -149,3 +149,36 @@ def compute_document_status(doc_type: Optional[str], expiry_date: Optional[date]
     if days_left <= EXPIRING_SOON_DAYS:
         return "expiring_soon"
     return "valid"
+
+
+def _effective_expiry_of(doc) -> Optional[date]:
+    return effective_expiry_date(
+        getattr(doc, "type", None), getattr(doc, "expiry_date", None),
+        getattr(doc, "issued_date", None),
+    )
+
+
+def is_document_expired(doc, today: Optional[date] = None) -> bool:
+    """B1 — la pièce n'est plus valable AUJOURD'HUI.
+
+    La date de fin effective (explicite, ou dérivée de la date d'émission —
+    C11) fait foi : le statut stocké n'est recalculé qu'à l'écriture et une
+    fois par jour (tasks/check_expiry), il peut donc encore dire « valid »
+    pour une attestation dont la date de fin vient de passer. Sans date
+    connue, seul le statut stocké « expired » compte."""
+    effective = _effective_expiry_of(doc)
+    if effective is not None:
+        return effective < (today or date.today())
+    return getattr(doc, "status", None) == "expired"
+
+
+def current_document_status(doc, today: Optional[date] = None) -> str:
+    """Statut du document à la date du jour : la règle du job quotidien,
+    appliquée au moment de la lecture. Un document non classé le reste
+    (jamais de validité, C10) ; sans date connue, le statut stocké."""
+    stored = getattr(doc, "status", None) or "unclassified"
+    if stored == "unclassified" or _effective_expiry_of(doc) is None:
+        return stored
+    return compute_document_status(
+        doc.type, doc.expiry_date, today=today, issued_date=doc.issued_date,
+    )

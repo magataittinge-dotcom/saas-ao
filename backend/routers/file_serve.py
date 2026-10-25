@@ -7,7 +7,7 @@ from urllib.parse import quote, unquote
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
-from database import get_db
+from database import get_db, rendre_connexion
 from models.user import User
 from models.project import Project
 from models.document import Document
@@ -168,6 +168,7 @@ async def view_file(
     # autorisé via mon préfixe résoudre vers le fichier d'une AUTRE org.
     full_path, canonical_rel = _resolve_within_uploads(file_path)
     _authorize_path(canonical_rel, org, db)
+    rendre_connexion(db)  # plus de base ensuite : rien de tenu pendant l'envoi
 
     if not full_path.exists() or not full_path.is_file():
         raise HTTPException(status_code=404, detail="Fichier introuvable")

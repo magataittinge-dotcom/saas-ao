@@ -7,6 +7,13 @@ from database import Base
 COMPLIANCE_STATUSES = ["couvert", "non_couvert", "partiel", "a_generer", "expire"]
 COMPLIANCE_CATEGORIES = ["candidature", "offre", "technique", "planning", "criteres_notation"]
 
+# Décision du 25/10 (export « 0/N ») : « couvert » signifie CONFIRMÉE PAR
+# L'UTILISATEUR. Seul geste qui pose ce statut : routers/compliance.py
+# (confirmer une exigence ou tout un groupe). Jamais posé tout seul, ni par
+# l'analyse, ni par mots-clés (garde-fou : test_export_exigences_confirmees).
+STATUT_CONFIRMEE = "couvert"
+STATUT_A_CONFIRMER = "non_couvert"
+
 
 class ComplianceItem(Base):
     __tablename__ = "compliance_items"

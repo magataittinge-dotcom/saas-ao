@@ -3,7 +3,6 @@ Analyse DÉTACHÉE (fix perte d'état) — le run survit à la navigation, au
 rechargement et à la coupure HTTP ; échec → statut erreur explicite +
 relance ; exigences de la passe 1 persistées au fil de l'eau.
 """
-import asyncio
 import threading
 from datetime import date
 
@@ -108,10 +107,14 @@ def test_double_run_rejected_409(client, db_session, test_org, monkeypatch):
     _make_project(db_session, test_org.id, "proj-det3")
     release = threading.Event()
 
-    async def _slow(self, **kw):
-        await asyncio.to_thread(release.wait, 20)
+    # B9 — on remplace ce que le job appelle VRAIMENT (_run_pass_chunked) :
+    # l'ancien patch visait extract_full_analysis_multi_pass, inutilisé par le
+    # job ; le run partait sur le réseau avec la fausse clé de test et ne
+    # « réussissait » que grâce au repli démo sur AuthenticationError.
+    def _slow(self, *a, **kw):
+        release.wait(20)
         return {"requirements": [dict(REQ)], "criteres_jugement": [], "infos_marche": {}}
-    monkeypatch.setattr(dce_analyzer.DCEAnalyzer, "extract_full_analysis_multi_pass", _slow)
+    monkeypatch.setattr(dce_analyzer.DCEAnalyzer, "_run_pass_chunked", _slow)
     from services.ai import checklist_matcher
     async def _nomatch(self, *a, **kw):
         return []

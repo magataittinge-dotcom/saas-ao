@@ -45,6 +45,27 @@ def test_le_pool_rend_le_meme_texte_et_toutes_les_pages(tmp_path, monkeypatch):
     assert avancements and avancements[-1] == ("doc-1", "cctp.pdf", 7, 7)
 
 
+def test_le_travailleur_ouvre_la_piece_par_son_chemin(tmp_path, monkeypatch):
+    """Plus de lecture du fichier entier en mémoire : un gros PDF est ouvert par PDFium."""
+    import builtins
+    from pathlib import Path
+    from services import pdf_lecture
+    chemin = tmp_path / "cctp.pdf"
+    _pdf(chemin)
+    monkeypatch.setattr(pdf_lecture, "SEUIL_LECTURE_EN_UNE_FOIS", 0)   # « gros » fichier
+    vrai_open = builtins.open
+
+    def ouvrir(fichier, *args, **kwargs):
+        if isinstance(fichier, (str, os.PathLike)) and Path(fichier) == chemin:
+            raise AssertionError("pièce lue par Python")
+        return vrai_open(fichier, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "open", ouvrir)
+    texte, pages, avert, toutes = ep.extraire_fichier(str(chemin), "cctp.pdf", "doc-1")
+    assert pages == 7 and len(toutes) == 7 and toutes[2] == "" and avert is None
+    assert "Page 1 — prescriptions" in texte
+
+
 @pytest.mark.parametrize("valeur, attendu", [("0", 0), ("4", 4), ("n'importe quoi", 0)])
 def test_reglage_du_nombre_de_processus(monkeypatch, valeur, attendu):
     monkeypatch.setenv("SYNORIX_EXTRACTION_PROCESSUS", valeur)

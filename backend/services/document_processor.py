@@ -1,12 +1,21 @@
 import io
 import logging
+import os
 import posixpath
 import zipfile
-from typing import Iterator, List, Optional, Tuple
+from pathlib import Path
+from typing import Iterator, List, Optional, Tuple, Union
+
+from services.pdf_lecture import ERREUR_MOT_DE_PASSE, PdfIllisible, lire_document
 
 from services.garde_archives import controler_archive_office, controler_tableur
 
 logger = logging.getLogger(__name__)
+
+# Une pièce : ses octets, ou le chemin du fichier déposé. Par le chemin, un gros PDF (au-delà
+# de 16 Mio, voir pdf_lecture), un .docx ou un .xlsx est lu au fil de l'eau, sans être chargé
+# en entier (dépôts de plusieurs centaines de Mo, extraits à 8 en parallèle, serveur de 4 Go).
+Source = Union[bytes, str, "os.PathLike[str]"]
 
 # Seuil « document scanné » : moins de N caractères par page lue en moyenne
 # = pas de couche texte exploitable (PDF image). Déterministe, testé.
@@ -24,6 +33,23 @@ _WARN_DOC = (
     "Format .doc (ancien Word) non pris en charge — texte non extrait : "
     "convertissez ce fichier en PDF ou DOCX"
 )
+_WARN_PASSWORD = (
+    "PDF protégé par un mot de passe — texte non extrait : "
+    "déposez une version sans mot de passe"
+)
+_PAGES_ILLISIBLES_CITEES = 8
+
+
+def _warn_pages_illisibles(numeros: Tuple[int, ...]) -> str:
+    """« Page 12 illisible — … » : les pages lues qui ne se chargent pas, nommées."""
+    suite = " — le texte des autres pages est extrait"
+    if len(numeros) == 1:
+        return f"Page {numeros[0]} illisible{suite}"
+    if len(numeros) <= _PAGES_ILLISIBLES_CITEES:
+        liste = ", ".join(str(n) for n in numeros[:-1]) + f" et {numeros[-1]}"
+        return f"Pages {liste} illisibles{suite}"
+    liste = ", ".join(str(n) for n in numeros[:_PAGES_ILLISIBLES_CITEES])
+    return f"Pages {liste}… illisibles ({len(numeros)} pages){suite}"
 
 
 class DocumentProcessor:
@@ -31,7 +57,7 @@ class DocumentProcessor:
 
     def extract(
         self,
-        content: bytes,
+        content: Source,
         filename: str,
         max_pages: Optional[int] = None,
         on_page=None,
@@ -44,7 +70,7 @@ class DocumentProcessor:
 
     def extract_ex(
         self,
-        content: bytes,
+        content: Source,
         filename: str,
         max_pages: Optional[int] = None,
         on_page=None,
@@ -52,9 +78,12 @@ class DocumentProcessor:
     ) -> Tuple[str, Optional[int], Optional[str]]:
         """(texte, pages, warning) — plus AUCUN échec d'extraction silencieux.
 
+        content: les octets de la pièce, ou le chemin du fichier (préféré : lu au fil de
+        l'eau, jamais chargé en entier).
         Le warning est un message UI PAR FICHIER (audit écart #3) : renseigné
         dès qu'un format censé porter du texte n'en a pas livré (scanné,
-        corrompu, .doc ancien). None = extraction saine. Ne lève jamais.
+        corrompu, protégé par un mot de passe, pages illisibles, .doc ancien).
+        None = extraction saine. Ne lève jamais.
 
         max_pages: if set, only extract text from the first N pages (PDF only).
         on_page: optional callback (pages_done, total_pages) — progression
@@ -74,72 +103,64 @@ class DocumentProcessor:
             return "", None, None
 
         try:
-            text, pages = self._do_extract(content, lower, max_pages, on_page, on_pages)
+            text, pages, illisibles = self._do_extract(content, lower, max_pages, on_page, on_pages)
+        except PdfIllisible as e:
+            logger.warning(f"Extraction failed for {filename}: {e}")
+            return "", None, _WARN_PASSWORD if e.code == ERREUR_MOT_DE_PASSE else _WARN_UNREADABLE
         except Exception as e:
             logger.warning(f"Extraction failed for {filename}: {e}")
             return "", None, _WARN_UNREADABLE
 
-        # PDF « scanné » : des pages mais quasi aucun texte → warning explicite.
-        if lower.endswith(".pdf") and pages:
+        if lower.endswith(".pdf"):
+            # Un PDF sans aucune page n'a rien livré : non lisible (plan H §6, n° 1 —
+            # PyMuPDF rendait 0 page sans avertissement pour un PDF tronqué).
+            if not pages:
+                return "", None, _WARN_UNREADABLE
+            # PDF « scanné » : des pages mais quasi aucun texte → warning explicite.
             pages_read = min(max_pages, pages) if max_pages else pages
             if len(text.strip()) < _SCANNED_AVG_CHARS_PER_PAGE * max(pages_read, 1):
                 return text, pages, _WARN_SCANNED
+            if illisibles:
+                return text, pages, _warn_pages_illisibles(illisibles)
 
         return text, pages, None
 
     def _do_extract(
-        self, content: bytes, lower: str, max_pages: Optional[int], on_page=None, on_pages=None
-    ) -> Tuple[str, Optional[int]]:
+        self, content: Source, lower: str, max_pages: Optional[int], on_page=None, on_pages=None
+    ) -> Tuple[str, Optional[int], Tuple[int, ...]]:
+        """(texte, pages, numéros des pages illisibles)."""
         if lower.endswith(".pdf"):
             return self._extract_pdf(content, max_pages, on_page, on_pages)
         elif lower.endswith(".docx"):
-            return self._extract_docx(content)
+            return texte_docx(content), None, ()
         elif lower.endswith(".xls"):
-            return self._extract_xls_biff(content)
+            return self._extract_xls_biff(content), None, ()
         elif lower.endswith((".xlsx", ".ods")):
-            return self._extract_xlsx(content)
+            return self._extract_xlsx(content), None, ()
         elif lower.endswith(".txt"):
-            return self._extract_txt(content)
-        return "", None
+            return _octets(content).decode("utf-8", errors="replace"), None, ()
+        return "", None, ()
 
     def _extract_pdf(
-        self, content: bytes, max_pages: Optional[int] = None, on_page=None, on_pages=None
-    ) -> Tuple[str, Optional[int]]:
-        import fitz  # PyMuPDF — 5-10x faster than PyPDF2
-
-        doc = fitz.open(stream=content, filetype="pdf")
-        total_pages = len(doc)
-        limit = min(max_pages if max_pages else total_pages, total_pages)
-        texts = []
-        toutes = []   # une entrée par page, vides comprises (numéros de page exacts)
-        for i in range(limit):
-            text = doc[i].get_text()
-            toutes.append(text)
-            if text:
-                texts.append(text)
-            if on_page is not None:
-                try:
-                    on_page(i + 1, limit)
-                except Exception:
-                    pass  # la progression ne casse jamais l'extraction
-        doc.close()
-        if on_pages is not None and limit == total_pages:
+        self, content: Source, max_pages: Optional[int] = None, on_page=None, on_pages=None
+    ) -> Tuple[str, int, Tuple[int, ...]]:
+        """PDFium (services/pdf_lecture) : texte au format de PyMuPDF, page par page."""
+        def progression(fait: int, a_lire: int) -> None:
             try:
-                on_pages(toutes)
+                on_page(fait, a_lire)
+            except Exception:
+                pass  # la progression ne casse jamais l'extraction
+
+        lu = lire_document(content, max_pages=max_pages,
+                           on_page=progression if on_page is not None else None)
+        if on_pages is not None and len(lu.pages) == lu.total:
+            try:
+                on_pages(lu.pages)   # une entrée par page, vides comprises (numéros exacts)
             except Exception:
                 pass  # le cache de l'ancrage ne casse jamais l'extraction
-        return "\n\n".join(texts), total_pages
+        return "\n\n".join(t for t in lu.pages if t), lu.total, lu.illisibles
 
-    def _extract_docx(self, content: bytes) -> Tuple[str, Optional[int]]:
-        return texte_docx(content), None
-
-    def _extract_txt(self, content: bytes) -> Tuple[str, Optional[int]]:
-        try:
-            return content.decode("utf-8", errors="replace"), None
-        except Exception:
-            return "", None
-
-    def _extract_xls_biff(self, content: bytes) -> Tuple[str, Optional[int]]:
+    def _extract_xls_biff(self, content: Source) -> str:
         """Vieux format Excel (BIFF, avant 2007) — xlrd (audit risque #1 :
         openpyxl le rejetait en silence). Fallback openpyxl pour les .xls
         qui sont en réalité des xlsx renommés."""
@@ -147,7 +168,7 @@ class DocumentProcessor:
         try:
             import xlrd
 
-            wb = xlrd.open_workbook(file_contents=content)
+            wb = xlrd.open_workbook(file_contents=_octets(content))
             lines = []
             for sheet in wb.sheets():
                 for rx in range(sheet.nrows):
@@ -157,22 +178,41 @@ class DocumentProcessor:
                     )
                     if row_text.strip():
                         lines.append(row_text)
-            return "\n".join(lines), None
+            return "\n".join(lines)
         except Exception:
             return self._extract_xlsx(content)
 
-    def _extract_xlsx(self, content: bytes) -> Tuple[str, Optional[int]]:
+    def _extract_xlsx(self, content: Source) -> str:
         import openpyxl
 
-        controler_tableur(content)   # bombe de décompression : jamais ouverte
-        wb = openpyxl.load_workbook(io.BytesIO(content), read_only=True)
-        lines = []
-        for sheet in wb.worksheets:
-            for row in sheet.iter_rows(values_only=True):
-                row_text = "\t".join(str(c) for c in row if c is not None)
-                if row_text.strip():
-                    lines.append(row_text)
-        return "\n".join(lines), None
+        controler_tableur(content)   # bombe de décompression : jamais ouverte (garde W, bloc 1)
+        # Un objet fichier, jamais un nom : openpyxl refuse un nom en .xls (le repli des
+        # .xls qui sont des .xlsx renommés). read_only : lu au fil de l'eau.
+        if isinstance(content, (bytes, bytearray)):
+            fichier = io.BytesIO(content)
+        else:
+            fichier = open(content, "rb")
+        try:
+            wb = openpyxl.load_workbook(fichier, read_only=True)
+            try:
+                lines = []
+                for sheet in wb.worksheets:
+                    for row in sheet.iter_rows(values_only=True):
+                        row_text = "\t".join(str(c) for c in row if c is not None)
+                        if row_text.strip():
+                            lines.append(row_text)
+                return "\n".join(lines)
+            finally:
+                wb.close()
+        finally:
+            fichier.close()
+
+
+def _octets(content: Source) -> bytes:
+    """Les octets d'une pièce (formats lus en entier : .xls, .txt)."""
+    if isinstance(content, (bytes, bytearray)):
+        return bytes(content)
+    return Path(content).read_bytes()
 
 
 # ─── Word (.docx) : le corps dans l'ordre, tableaux compris (B3) ────────────────

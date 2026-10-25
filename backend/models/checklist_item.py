@@ -39,8 +39,10 @@ class ChecklistItem(Base):
     )
     details = Column(Text, nullable=True)
     source_in_rc = Column(String(500), nullable=True)
-    # C12 — confirmation explicite « Je confirme avoir signé » (AE, DC1, DC2).
-    # Sans confirmation, la pièce ne compte pas conforme dans le score.
+    # C12 — confirmation explicite « Je confirme avoir signé ». Demandée
+    # seulement si checklist_matcher.signature_requise le dit (DC1, DC2, DUME,
+    # AE : si le RC l'exige ; déclaration sur l'honneur : toujours) ; sans elle,
+    # la pièce ne compte alors pas conforme dans le score.
     signature_confirmed = Column(Boolean, nullable=False, default=False, server_default="false")
     # C13b — position de l'exigence dans le RC (ordre de l'analyse) :
     # la numérotation des pièces du ZIP d'export suit cet ordre.

@@ -58,24 +58,22 @@ def _full_docx() -> bytes:
 
 @needs_soffice
 def test_docx_to_pdf_preserves_cover_and_organigramme():
-    import fitz
     from services.pdf_export import docx_to_pdf
+    from services.pdf_lecture import lire_pages
+    from tests.pdf_fabrique import images_par_page
 
     pdf = docx_to_pdf(_full_docx())
     assert pdf[:5] == b"%PDF-"
 
-    doc = fitz.open(stream=pdf, filetype="pdf")
-    try:
-        assert doc.page_count >= 2
-        # Page de garde préservée (titre projet + lot + MOA)
-        page1 = doc[0].get_text()
-        assert "GROUPE SCOLAIRE GUEUX" in page1.upper()
-        assert "Lot 2" in page1
-        assert "Commune de Gueux" in page1
-        # Organigramme (image) préservé quelque part dans le document
-        assert any(doc[i].get_images() for i in range(doc.page_count))
-    finally:
-        doc.close()
+    pages = lire_pages(pdf)
+    assert len(pages) >= 2
+    # Page de garde préservée (titre projet + lot + MOA)
+    page1 = pages[0]
+    assert "GROUPE SCOLAIRE GUEUX" in page1.upper()
+    assert "Lot 2" in page1
+    assert "Commune de Gueux" in page1
+    # Organigramme (image) préservé quelque part dans le document
+    assert any(images_par_page(pdf))
 
 
 def test_soffice_absent_raises_clear_error(monkeypatch):

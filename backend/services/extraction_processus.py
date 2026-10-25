@@ -1,10 +1,11 @@
 """Extraction des pièces du DCE dans des PROCESSUS séparés.
 
-PyMuPDF garde le GIL : en threads, l'extraction n'allait pas plus vite à 8 threads
+Avec PyMuPDF, qui gardait le GIL, l'extraction n'allait pas plus vite à 8 threads
 qu'à 2 (mesuré : 17,2 s contre 19,5 s sur Gueux) et affamait le reste du processus —
-la détection des lots passait de 2,5 s seule à 26-77 s pendant l'extraction de fond,
-et la boucle de l'API ralentissait. Ici, chaque pièce est lue dans un processus de
-travail ; les threads de l'appelant ne font qu'attendre (sans tenir le GIL) et
+la détection des lots passait de 2,5 s seule à 26-77 s pendant l'extraction de fond.
+PDFium (services/pdf_lecture) relâche le GIL mais n'est pas thread-safe : un verrou
+global le sérialise dans un processus. Ici, chaque pièce est lue dans un processus de
+travail, qui a son propre PDFium ; les threads de l'appelant ne font qu'attendre et
 écrire en base.
 
 - Contexte « spawn » (jamais de fork d'un processus qui a des threads).
@@ -44,8 +45,6 @@ def extraire_fichier(chemin: str, nom: str, doc_id: str):
     """Exécuté dans un processus de travail : (texte, pages, avertissement, pages_toutes)."""
     from services.document_processor import DocumentProcessor
 
-    with open(chemin, "rb") as f:
-        contenu = f.read()
     pages_toutes: list = []
     derniere = [0]
 
@@ -57,8 +56,9 @@ def extraire_fichier(chemin: str, nom: str, doc_id: str):
             except Exception:
                 pass  # l'avancement ne casse jamais l'extraction
 
+    # par le chemin : un gros fichier est lu au fil de l'eau, jamais chargé en entier
     texte, pages, avertissement = DocumentProcessor().extract_ex(
-        contenu, nom, on_page=page_lue, on_pages=pages_toutes.extend)
+        chemin, nom, on_page=page_lue, on_pages=pages_toutes.extend)
     return texte, pages, avertissement, (pages_toutes or None)
 
 
