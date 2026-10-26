@@ -7,6 +7,7 @@ visuel est omis.
 from __future__ import annotations
 
 import logging
+from types import SimpleNamespace
 
 from .couleurs import ACCENT_PAR_DEFAUT, Theme, couleur_dominante_logo
 from .modele import Visuel
@@ -20,14 +21,16 @@ def _pret(visuel: Visuel | None, nom: str, visuels: list[Visuel]) -> None:
     if visuel is None:
         return
     try:
-        visuel.png
+        if not visuel.tableau:
+            visuel.png
     except Exception as exc:       # journal sans donnée personnelle
         logger.warning("Visuel %s omis : %s", nom, type(exc).__name__)
         return
     visuels.append(visuel)
 
 
-def construire_visuels(variables: dict, cfg, logo_image: bytes | None = None, team_members=None) -> list[Visuel]:
+def construire_visuels(variables: dict, cfg, logo_image: bytes | None = None, team_members=None,
+                       references=None, profile_overrides: dict | None = None) -> list[Visuel]:
     visuels: list[Visuel] = []
 
     th = Theme(couleur_dominante_logo(logo_image) if logo_image else ACCENT_PAR_DEFAUT)
@@ -45,4 +48,24 @@ def construire_visuels(variables: dict, cfg, logo_image: bytes | None = None, te
             _pret(gantt(variables["gantt_phases"], th), "gantt", visuels)
         except Exception as exc:
             logger.warning("Gantt omis : %s", type(exc).__name__)
+
+    # Moyens humains (C.2) et matériels (C.3) : toujours, dès qu'il y a une donnée saisie
+    try:
+        from . import moyens
+        _pret(moyens.construire_humains(cfg, team_members, variables.get("nb_ouvriers"), th), "moyens humains", visuels)
+        sur = profile_overrides or {}
+        champs = SimpleNamespace(
+            materiel=sur["materiel"] if "materiel" in sur else getattr(cfg, "materiel", None),
+            vehicules=sur["vehicules"] if "vehicules" in sur else getattr(cfg, "vehicules", None))
+        _pret(moyens.construire_materiels(champs, variables.get("materiel_specifique"), th),
+              "moyens matériels", visuels)
+    except Exception as exc:
+        logger.warning("Moyens omis : %s", type(exc).__name__)
+
+    # Tableau des références (A.10)
+    try:
+        from . import references as refs
+        _pret(refs.construire(references, th.accent), "références", visuels)
+    except Exception as exc:
+        logger.warning("Tableau des références omis : %s", type(exc).__name__)
     return visuels

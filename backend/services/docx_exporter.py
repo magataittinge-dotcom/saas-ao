@@ -337,6 +337,10 @@ def _add_part(
             else:
                 _body(doc, text)
             for v in ses_visuels:
+                if v.tableau:
+                    from services.visuels.word import ajouter_tableau
+                    ajouter_tableau(doc, v.tableau, v.legende)
+                    continue
                 try:
                     png = v.png          # un visuel qui ne se rastérise pas disparaît, l'export continue
                 except Exception:

@@ -232,9 +232,10 @@ def test_preflight_lit_aussi_les_membres_de_l_equipe_et_pas_ceux_d_une_autre_org
 def test_construire_visuels_organigramme_si_option_cochee_seulement():
     from services.visuels.assemblage import construire_visuels
     cfg = _cfg(EQUIPE)
-    assert construire_visuels({}, cfg) == []
+    sections = lambda vs: [x.section for x in vs]          # noqa: E731
+    assert ("partie_a", "organigramme") not in sections(construire_visuels({}, cfg))
     v = construire_visuels({"include_organigramme": True}, cfg)
-    assert [x.section for x in v] == [("partie_a", "organigramme")]
+    assert sections(v).count(("partie_a", "organigramme")) == 1
     assert construire_visuels({"include_organigramme": True}, _cfg([], gerant=(None, None))) == []
 
 

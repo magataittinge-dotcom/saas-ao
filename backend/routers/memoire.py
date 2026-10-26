@@ -357,7 +357,7 @@ def _run_memoire_job(
         if existing:
             existing.content_json = content
             existing.version += 1
-            existing.variables = variables
+            existing.variables = _variables_stockees(variables, reference_ids)
             existing.profile_overrides = profile_overrides
             existing.generated_at = datetime.utcnow()
             memoire = existing
@@ -365,7 +365,7 @@ def _run_memoire_job(
             memoire = MemoireTechnique(
                 project_id=project_id,
                 content_json=content,
-                variables=variables,
+                variables=_variables_stockees(variables, reference_ids),
                 profile_overrides=profile_overrides,
             )
             db.add(memoire)
@@ -472,6 +472,30 @@ def _membres_equipe(db, org_id):
     return db.query(TeamMember).filter(TeamMember.organization_id == org_id).all()
 
 
+def _references_du_memoire(db, org_id, variables: dict):
+    """Références de l'organisation pour le tableau : celles choisies au pre-flight si la
+    sélection a été conservée, sinon toutes (comme le générateur). Jamais celles d'une autre org."""
+    refs = db.query(Reference).filter(
+        Reference.organization_id == org_id,
+        Reference.is_reference == True,  # noqa: E712
+        Reference.deleted_at.is_(None),
+    ).all()
+    ids = variables.get("reference_ids")
+    if ids is not None:
+        voulues = set(ids)
+        refs = [r for r in refs if r.id in voulues]
+    return refs
+
+
+def _variables_stockees(variables: dict, reference_ids) -> dict:
+    """Variables rangées avec le mémoire : celles du générateur + la sélection de références
+    (pour le tableau de l'export). Le générateur, lui, reçoit `variables` sans cette clé."""
+    stockees = dict(variables)
+    if reference_ids is not None:
+        stockees["reference_ids"] = list(reference_ids)
+    return stockees
+
+
 def build_project_memoire_docx(project, memoire, org, db) -> bytes:
     """Construit le DOCX complet du mémoire (page de garde, carte,
     organigramme, logo) — source unique pour export-docx, export-pdf et ZIP."""
@@ -501,7 +525,9 @@ def build_project_memoire_docx(project, memoire, org, db) -> bytes:
         MemoireConfig.organization_id == project.organization_id,
     ).first()
     visuels = construire_visuels(memoire.variables or {}, cfg, logo_image,
-                                 _membres_equipe(db, project.organization_id))
+                                 _membres_equipe(db, project.organization_id),
+                                 _references_du_memoire(db, project.organization_id, memoire.variables or {}),
+                                 memoire.profile_overrides or None)
 
     return build_memoire_docx(
         content_json=memoire.content_json,
