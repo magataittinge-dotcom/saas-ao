@@ -527,7 +527,7 @@ def build_project_memoire_docx(project, memoire, org, db) -> bytes:
     visuels = construire_visuels(memoire.variables or {}, cfg, logo_image,
                                  _membres_equipe(db, project.organization_id),
                                  _references_du_memoire(db, project.organization_id, memoire.variables or {}),
-                                 memoire.profile_overrides or None)
+                                 memoire.profile_overrides or None, memoire.content_json)
 
     return build_memoire_docx(
         content_json=memoire.content_json,

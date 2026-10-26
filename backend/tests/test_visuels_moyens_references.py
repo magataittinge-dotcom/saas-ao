@@ -100,7 +100,8 @@ def test_visuels_placés_en_C2_et_C3_et_absents_sans_donnee():
     from services.visuels.assemblage import construire_visuels
     cfg = _cfg(materiel="Échafaudage de pied\nNacelle", postes=POSTES)
     vis = construire_visuels({"nb_ouvriers": 4}, cfg)
-    assert {v.section for v in vis} == {("partie_c", "effectifs"), ("partie_c", "materiels")}
+    assert {v.section for v in vis} == {("partie_c", "effectifs"), ("partie_c", "materiels"),
+                                        ("partie_b", "demarrage")}     # l'échafaudage et la nacelle écrits font un plan
     assert construire_visuels({}, _cfg(gerant="")) == []        # aucune donnée : aucun bloc
 
 

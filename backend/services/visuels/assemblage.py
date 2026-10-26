@@ -30,7 +30,8 @@ def _pret(visuel: Visuel | None, nom: str, visuels: list[Visuel]) -> None:
 
 
 def construire_visuels(variables: dict, cfg, logo_image: bytes | None = None, team_members=None,
-                       references=None, profile_overrides: dict | None = None) -> list[Visuel]:
+                       references=None, profile_overrides: dict | None = None,
+                       content_json: dict | None = None) -> list[Visuel]:
     visuels: list[Visuel] = []
 
     th = Theme(couleur_dominante_logo(logo_image) if logo_image else ACCENT_PAR_DEFAUT)
@@ -41,6 +42,14 @@ def construire_visuels(variables: dict, cfg, logo_image: bytes | None = None, te
             _pret(construire(cfg, team_members, th), "organigramme", visuels)
         except Exception as exc:
             logger.warning("Organigramme omis : %s", type(exc).__name__)
+
+    # Schéma de la méthodologie : intertitres du texte rédigé (aucun appel IA)
+    try:
+        from . import methode
+        texte = ((content_json or {}).get("partie_c") or {}).get("methodologie") or ""
+        _pret(methode.construire(texte, th), "schéma de méthodologie", visuels)
+    except Exception as exc:
+        logger.warning("Schéma de méthodologie omis : %s", type(exc).__name__)
 
     if variables.get("gantt_phases"):
         try:
@@ -59,6 +68,11 @@ def construire_visuels(variables: dict, cfg, logo_image: bytes | None = None, te
             vehicules=sur["vehicules"] if "vehicules" in sur else getattr(cfg, "vehicules", None))
         _pret(moyens.construire_materiels(champs, variables.get("materiel_specifique"), th),
               "moyens matériels", visuels)
+        # Plan d'installation de principe : seulement les installations écrites par l'entreprise
+        from . import installation
+        _pret(installation.construire(champs.materiel, champs.vehicules,
+                                      " \n ".join(str(variables.get(k) or "") for k in ("materiel_specifique", "particularites")), th),
+              "plan d'installation", visuels)
     except Exception as exc:
         logger.warning("Moyens omis : %s", type(exc).__name__)
 
