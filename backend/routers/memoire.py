@@ -285,13 +285,10 @@ def _run_memoire_job(
         if reference_ids is not None:
             wanted = set(reference_ids)
             refs = [r for r in refs if r.id in wanted]
-        _CATEGORY_ORDER = {"technique": 0, "planning": 1, "offre": 2, "criteres_notation": 3, "candidature": 4}
-        compliance_items_raw = (
-            db.query(ComplianceItem)
-            .filter(ComplianceItem.project_id == project_id)
-            .all()
-        )
-        compliance_items = sorted(compliance_items_raw, key=lambda c: _CATEGORY_ORDER.get(c.category, 5))
+        # Tranche A (bloc 3) : toutes les exigences du lot choisi (communes +
+        # propres au lot), pas celles des autres lots ; le générateur les range.
+        from services.exigences import exigences_pour_memoire
+        compliance_items = exigences_pour_memoire(db, project)
 
         # Check for reference template (imported mémoire)
         ref_template = db.query(MemoireTemplate).filter(
