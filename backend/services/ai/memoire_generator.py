@@ -180,6 +180,36 @@ _CORPS_METIER_KEYWORDS: list[tuple[list[str], str]] = [
 ]
 
 
+_ORDRE_CATEGORIES_EXIGENCES = {
+    "technique": 0, "planning": 1, "offre": 2, "criteres_notation": 3, "candidature": 4,
+}
+
+
+def _exigences_compactes(compliance_items: list) -> str:
+    """Toutes les exigences remises, sous un titre par catégorie (plus de préfixe
+    « [TECHNIQUE] » répété sur chaque ligne). Catégories dans l'ordre utile au
+    mémoire, ordre d'origine conservé à l'intérieur (tri stable). Une exigence
+    tient sur une ligne ; « (souhaitée) » seulement quand elle ne l'est pas
+    obligatoirement. Chaîne vide s'il n'y en a aucune."""
+    triees = sorted(
+        compliance_items,
+        key=lambda c: _ORDRE_CATEGORIES_EXIGENCES.get(c.category, 5),
+    )
+    groupes: dict[str, list[str]] = {}
+    for item in triees:
+        texte = " ".join((item.exigence_text or "").split())
+        if not texte:
+            continue
+        if getattr(item, "priority", None) == "souhaitée":
+            texte += " (souhaitée)"
+        groupes.setdefault(item.category or "autre", []).append(f"- {texte}")
+    blocs = [
+        f"{cat.upper()} ({len(lignes)})\n" + "\n".join(lignes)
+        for cat, lignes in groupes.items()
+    ]
+    return "\n\n".join(blocs)
+
+
 def _rank_references_for_lot(references: list, selected_lot_name: str | None) -> list:
     """Sort references so the ones matching the lot's corps de métier come first.
 
@@ -435,11 +465,9 @@ class MemoireGenerator:
         dce_text = texte_dce_pour_memoire(all_docs, ouvrages_dpgf)
 
         # ── 4. Compliance summary ─────────────────────────────────────────────
-        compliance_lines = [
-            f"- [{item.category.upper()}] {item.exigence_text}"
-            for item in compliance_items[:80]
-        ]
-        compliance_summary = "\n".join(compliance_lines)
+        # Toutes les exigences du lot (le routeur fournit communes + propres au
+        # lot) : plus de plafond à 80. Forme compacte, voir _exigences_compactes.
+        compliance_summary = _exigences_compactes(compliance_items)
 
         # ── 5. Critères de jugement block ─────────────────────────────────────
         criteres_block = ""

@@ -50,3 +50,14 @@ def requete_exigences_du_dossier(db: Session, project, lot: Optional[str] = None
             | (ComplianceItem.lot.is_(None))
         )
     return q
+
+
+def exigences_pour_memoire(db: Session, project) -> list:
+    """Exigences remises au générateur de mémoire : tronc commun + celles du lot
+    choisi (et lignes anciennes sans lot), jamais celles des autres lots. Ordre
+    d'origine (création) ; le générateur les range ensuite par catégorie."""
+    return (
+        requete_exigences_du_dossier(db, project)
+        .order_by(ComplianceItem.created_at, ComplianceItem.id)
+        .all()
+    )

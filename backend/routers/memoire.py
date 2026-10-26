@@ -25,7 +25,7 @@ from schemas.memoire import (
 from routers.auth import get_auth_user
 from services.ai.memoire_generator import MemoireGenerator
 from services.docx_exporter import build_memoire_docx
-from services.maps_service import generate_location_map
+from services.maps_service import generate_location_map, lieu_execution
 from services.document_tagger import get_documents_for_lot
 
 
@@ -285,13 +285,10 @@ def _run_memoire_job(
         if reference_ids is not None:
             wanted = set(reference_ids)
             refs = [r for r in refs if r.id in wanted]
-        _CATEGORY_ORDER = {"technique": 0, "planning": 1, "offre": 2, "criteres_notation": 3, "candidature": 4}
-        compliance_items_raw = (
-            db.query(ComplianceItem)
-            .filter(ComplianceItem.project_id == project_id)
-            .all()
-        )
-        compliance_items = sorted(compliance_items_raw, key=lambda c: _CATEGORY_ORDER.get(c.category, 5))
+        # Tranche A (bloc 3) : toutes les exigences du lot choisi (communes +
+        # propres au lot), pas celles des autres lots ; le générateur les range.
+        from services.exigences import exigences_pour_memoire
+        compliance_items = exigences_pour_memoire(db, project)
 
         # Check for reference template (imported mémoire)
         ref_template = db.query(MemoireTemplate).filter(
@@ -472,11 +469,12 @@ def build_project_memoire_docx(project, memoire, org, db) -> bytes:
     org_name = org.name if org else "Entreprise"
 
     # Generate location map (graceful fallback to None)
+    # Carte IGN : le siège, et le CHANTIER seulement si l'analyse en a extrait le
+    # lieu d'exécution — jamais le nom de l'acheteur (bloc 3, tranche B).
     company_address = org.address if org else None
-    project_address = project.maitre_ouvrage  # city/name of client as proxy
     map_image, map_caption = generate_location_map(
         company_address or "",
-        project_address,
+        lieu_execution(project),
     )
 
     # C8a — organigramme si l'option a été cochée au pre-flight (fallback
