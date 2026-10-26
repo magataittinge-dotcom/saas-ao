@@ -91,12 +91,12 @@ apt install -y \
   redis-server \
   nginx certbot python3-certbot-nginx \
   curl git rsync \
-  imagemagick poppler-utils libreoffice fonts-crosextra-carlito
+  imagemagick poppler-utils libreoffice
 # poppler : outils PDF
-# fonts-crosextra-carlito : Carlito, clone libre de Calibri (mêmes largeurs de
-#   lettres). Le Word embarque déjà Carlito (backend/assets/fonts/carlito, OFL) ;
-#   le paquet évite en plus que LibreOffice retombe sur DejaVu pour un autre Word.
-#   Vérifier : `fc-list | grep -i carlito`.
+# Carlito (clone libre de Calibri, mêmes largeurs de lettres) n'a pas besoin de paquet :
+#   backend/assets/fonts/carlito (OFL) est montrée à LibreOffice par un fonts.conf
+#   du sous-processus (services/pdf_export.py). Le Word déclare Calibri, sans police
+#   embarquée. Vérifier : `pdffonts` d'un PDF exporté ne montre ni DejaVu ni Liberation.
 # libreoffice : REQUIS pour l'export PDF du mémoire (C13a — soffice headless,
 #   la version dépôt du ZIP). Vérifier après install : `soffice --version`.
 # imagemagick : redimensionnement Maps statiques

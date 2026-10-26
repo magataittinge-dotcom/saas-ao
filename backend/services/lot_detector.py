@@ -982,7 +982,7 @@ _NUM_LOT = r'(?:\d{1,2}(?:\.\d{1,2})?[a-z]?|[A-Z])'
 # la désignation est ce qui suit.
 _PREFIXE_LOT = re.compile(
     rf'^\s*(?i:lots?)\s*(?P<num>{_NUM_LOT})?(?:\s*(?:,|(?i:et)|&)\s*{_NUM_LOT})*\s*(?:[—–:-]\s*|$)')
-# Repli : « Menuiseries — lot 3 ».
+# Ancien repli « Menuiseries — lot 3 » : plus produit, toujours lu (noms déjà enregistrés).
 _SUFFIXE_REPLI = re.compile(r'\s*[—–-]\s*lot\s+\S+$', re.IGNORECASE)
 _FICHIER_APRES_LOT = re.compile(
     r'(?<![^\W\d_])lot\s*n?°?\s*\d{1,2}(?:\.\d{1,2})?[a-z]?(?:\s*(?:et|&)\s*\d{1,2}[a-z]?)?\b(?P<suite>.*)$',
@@ -1085,8 +1085,10 @@ def _departager_lots_jumeaux(merged: List[LotDetection], documents, onglets) -> 
 
 
 def _noms_sans_doublon(merged: List[LotDetection]) -> None:
-    """Invariant de detect_all_lots : deux lots ne portent jamais la même désignation.
-    Repli sobre pour ceux qui la partagent : « Menuiseries — lot 3 »."""
+    """Invariant de detect_all_lots : jamais deux lots du même nom.
+    Les lots qui partagent une désignation prennent le format de partout dans Synorix,
+    numéro d'abord : « Lot 3 — Menuiseries » (et non « Menuiseries — lot 3 »). Si deux
+    noms restent identiques (même numéro lu dans le nom), l'identifiant les départage."""
     par_designation: Dict[str, List[LotDetection]] = {}
     for d in merged:
         corps = _designation(d.nom)
@@ -1095,7 +1097,14 @@ def _noms_sans_doublon(merged: List[LotDetection]) -> None:
     for lots in par_designation.values():
         if len(lots) > 1:
             for d in lots:
-                d.nom = f"{_designation(d.nom)} — lot {_numero_du_nom(d.nom, d.id)}"
+                d.nom = f"Lot {_numero_du_nom(d.nom, d.id)} — {_designation(d.nom)}"
+    par_nom: Dict[str, List[LotDetection]] = {}
+    for d in merged:
+        par_nom.setdefault(_normalize(d.nom), []).append(d)
+    for lots in par_nom.values():
+        if len(lots) > 1:
+            for d in lots:
+                d.nom = f"{d.nom} ({d.id})"
 
 
 # ─── Main entry point ─────────────────────────────────────────────────────────

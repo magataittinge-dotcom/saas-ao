@@ -38,11 +38,23 @@ def _svg_exemple() -> str:
 
 # ── Coupure par les largeurs réelles ─────────────────────────────────────────
 
+def test_le_rasteriseur_lit_carlito_dans_assets_fonts():
+    """Une seule copie de Carlito dans le dépôt : backend/assets/fonts/carlito (WORD2 point 8)."""
+    from services.visuels import raster
+    assert raster._POLICES == RACINE / "assets" / "fonts" / "carlito"
+    for nom in ("Carlito-Regular.ttf", "Carlito-Bold.ttf"):
+        assert raster._police(nom.endswith("Bold.ttf"), 20).path == str(raster._POLICES / nom)
+
+
+def test_plus_de_copie_de_carlito_dans_les_visuels():
+    assert not (RACINE / "services" / "visuels" / "polices").exists()
+
+
 @pytest.mark.parametrize("gras", [False, True])
 def test_largeur_egale_a_celle_de_la_police(gras):
     from PIL import ImageFont
     police = ImageFont.truetype(
-        str(RACINE / "services/visuels/polices" / ("Carlito-Bold.ttf" if gras else "Carlito-Regular.ttf")), 1000)
+        str(RACINE / "assets/fonts/carlito" / ("Carlito-Bold.ttf" if gras else "Carlito-Regular.ttf")), 1000)
     for texte in ("Conductrice de travaux", "Isolation thermique par l'extérieur", "WWW iii 0123456789"):
         attendu = police.getlength(texte) / 1000 * 10
         assert largeur(texte, 10, gras) == pytest.approx(attendu, rel=0.02), texte

@@ -37,10 +37,10 @@ def _doc(**kw) -> Document:
 
 
 @pytest.mark.parametrize("jour,attendu", [
-    (date(2026, 10, 26), "octobre 2026"),
-    (date(2027, 2, 1), "février 2027"),
-    (date(2027, 8, 15), "août 2027"),
-    (date(2027, 12, 31), "décembre 2027"),
+    (date(2026, 10, 26), "Octobre 2026"),
+    (date(2027, 2, 1), "Février 2027"),
+    (date(2027, 8, 15), "Août 2027"),
+    (date(2027, 12, 31), "Décembre 2027"),
 ])
 def test_date_en_francais(jour, attendu):
     assert docx_exporter._date_fr(jour) == attendu
@@ -49,7 +49,7 @@ def test_date_en_francais(jour, attendu):
 def test_couverture_porte_la_date_francaise_sans_locale(monkeypatch):
     monkeypatch.setattr(docx_exporter, "_aujourdhui", lambda: date(2026, 10, 26))
     textes = [p.text for p in _doc().paragraphs]
-    assert "octobre 2026" in textes
+    assert "Octobre 2026" in textes
     assert not any("October" in t for t in textes)
 
 

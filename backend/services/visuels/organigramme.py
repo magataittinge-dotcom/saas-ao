@@ -65,16 +65,20 @@ def personnes_depuis(cfg, team_members=None) -> list[dict]:
     personnes: list[dict] = []
     vus: set[str] = set()
 
-    def ajouter(nom, poste, infos=None, badges=None, rattache_a=None):
+    def ajouter(nom, poste, infos=None, badges=None, rattache_a=None, categorie=None):
         nom = (nom or "").strip()
         if not nom or _norme(nom) in vus:
             return
         vus.add(_norme(nom))
         personnes.append({"nom": nom, "poste": (poste or "").strip(), "infos": infos or [],
-                          "badges": badges or [], "rattache_a": (rattache_a or "").strip()})
+                          "badges": badges or [], "rattache_a": (rattache_a or "").strip(),
+                          "categorie_imposee": categorie})
 
     if cfg is not None:
-        ajouter(getattr(cfg, "gerant_nom", None), getattr(cfg, "gerant_titre", None) or "Gérant")
+        # Le dirigeant de la fiche « Mon entreprise » est en tête, quel que soit l'intitulé saisi
+        # (« Artisan », « Responsable de l'entreprise »…).
+        ajouter(getattr(cfg, "gerant_nom", None), getattr(cfg, "gerant_titre", None) or "Gérant",
+                categorie=DIRECTION)
         for p in list(getattr(cfg, "postes_cles", None) or []):
             if not isinstance(p, dict):
                 continue
@@ -88,7 +92,7 @@ def personnes_depuis(cfg, team_members=None) -> list[dict]:
             infos.append(f"{m.experience_years} ans d'expérience")
         ajouter(getattr(m, "name", None), getattr(m, "role", None), infos, _certifs(getattr(m, "certifications", None)))
     for p in personnes:
-        p["categorie"] = classer_poste(p["poste"])
+        p["categorie"] = p.pop("categorie_imposee") or classer_poste(p["poste"])
     return personnes
 
 

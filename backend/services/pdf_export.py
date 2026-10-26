@@ -11,6 +11,7 @@ appelants dégradent proprement (503 sur l'endpoint, fallback DOCX dans
 le ZIP) — jamais de crash.
 """
 import logging
+import os
 import shutil
 import subprocess
 import tempfile
@@ -23,12 +24,34 @@ logger = logging.getLogger(__name__)
 
 _CONVERT_TIMEOUT_S = 120
 
+# Carlito (clone métrique libre de Calibri, SIL OFL 1.1) est livrée avec le code.
+# Le Word déclare Calibri ; LibreOffice la remplace par Carlito, de mêmes largeurs,
+# si fontconfig la voit — sans dépendre du paquet système `fonts-crosextra-carlito`.
+DOSSIER_CARLITO = Path(__file__).resolve().parent.parent / "assets" / "fonts" / "carlito"
+
 # Une seule conversion LibreOffice à la fois (VPS 1 vCPU / 4 Go) : verrou de
 # thread pour les threads du même processus, verrou de fichier entre processus
 # (plusieurs workers). Le sommaire exige deux conversions par export ; sans
 # cette file, deux exports simultanés en lanceraient quatre.
 _VERROU_THREAD = threading.Lock()
 _FICHIER_VERROU = Path(tempfile.gettempdir()) / "synorix-soffice.lock"
+
+
+def _ecrire_fontconfig(dossier: Path) -> Path:
+    """fonts.conf du sous-processus seulement : la configuration système, plus
+    le dossier de Carlito. Le reste de la machine n'est pas touché."""
+    conf = dossier / "fonts.conf"
+    conf.write_text(
+        '<?xml version="1.0"?>\n'
+        '<!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">\n'
+        "<fontconfig>\n"
+        '  <include ignore_missing="yes">/etc/fonts/fonts.conf</include>\n'
+        f"  <dir>{DOSSIER_CARLITO}</dir>\n"
+        f"  <cachedir>{dossier / 'fc-cache'}</cachedir>\n"
+        "</fontconfig>\n",
+        encoding="utf-8",
+    )
+    return conf
 
 
 class PdfConversionError(RuntimeError):
@@ -87,9 +110,10 @@ def _convertir(docx_bytes: bytes, timeout: int) -> bytes:
             f"-env:UserInstallation=file://{profile}",
             "--convert-to", "pdf", "--outdir", str(tmp_path), str(docx_path),
         ]
+        env = {**os.environ, "FONTCONFIG_FILE": str(_ecrire_fontconfig(tmp_path))}
         try:
             result = subprocess.run(
-                cmd, capture_output=True, timeout=timeout, check=False,
+                cmd, capture_output=True, timeout=timeout, check=False, env=env,
             )
         except subprocess.TimeoutExpired as exc:
             raise PdfConversionError(

@@ -17,7 +17,6 @@ from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor, Twips
 
 from services import memoire_markdown as md
-from services.docx_polices import embarquer_carlito
 from services.docx_sommaire import inserer_sommaire
 
 # ─── Passages « À compléter » ──────────────────────────────────────────────────
@@ -135,9 +134,11 @@ _MOIS_FR = ("janvier", "février", "mars", "avril", "mai", "juin", "juillet",
 
 
 def _date_fr(jour: date) -> str:
-    """« octobre 2026 ». `strftime("%B")` suit la locale du processus (anglais
-    sur un serveur sans locale française) : on n'y touche pas."""
-    return f"{_MOIS_FR[jour.month - 1]} {jour.year}"
+    """« Octobre 2026 » : majuscule, car le mot ouvre la ligne de la couverture.
+    `strftime("%B")` suit la locale du processus (anglais sur un serveur sans
+    locale française) : on n'y touche pas."""
+    mois = _MOIS_FR[jour.month - 1]
+    return f"{mois[0].upper()}{mois[1:]} {jour.year}"
 
 
 def _aujourdhui() -> date:
@@ -228,7 +229,8 @@ def _setup_doc(org_name: str) -> Document:
     _add_footer_page_numbers(section)
 
     _styles(doc)
-    embarquer_carlito(doc)   # le PDF LibreOffice sort en Carlito même sans le paquet de polices
+    # Pas de police embarquée : le Word déclare Calibri (présente dans tout Word). Le PDF
+    # sort en Carlito grâce à `pdf_export`, qui la montre à LibreOffice.
     return doc
 
 

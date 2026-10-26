@@ -1,8 +1,8 @@
 """Moyens humains et matériels : synoptiques SVG, à partir des seules données saisies.
 
 - humains : les personnes du profil (postes clés + équipe), regroupées par poste, et le
-  nombre d'ouvriers dédiés saisi pour ce mémoire (`nb_ouvriers`) ; le dirigeant n'est pas
-  compté (il n'est pas, par défaut, une ressource du chantier) ;
+  nombre d'ouvriers dédiés saisi pour ce mémoire (`nb_ouvriers`) ; le dirigeant n'entre
+  jamais dans l'effectif, mais il figure sur la ligne « Encadrement » du synoptique ;
 - matériels : les lignes des champs libres `materiel`, `vehicules` et `materiel_specifique`.
   La quantité (« 2 camions benne ») et le statut (« location », « en propre ») ne sont lus
   que s'ils sont écrits dans la ligne ; sinon rien n'est affiché.
@@ -14,7 +14,7 @@ import re
 
 from .couleurs import Theme
 from .modele import Visuel
-from .organigramme import DIRECTION, _norme, personnes_depuis
+from .organigramme import DIRECTION, ENCADREMENT, _norme, personnes_depuis
 from .svg import LARGEUR_PORTRAIT, cercle, chemin, document_svg, pastille, r, t
 from .texte import couper, nettoyer, tenir_sur_une_ligne
 
@@ -123,7 +123,15 @@ def cartes_humaines(cfg, team_members, nb_ouvriers) -> list[dict]:
     return cartes[:MAX_CARTES_HUMAINS]
 
 
-def synoptique_humains(cartes: list[dict], th: Theme) -> tuple[str, str] | None:
+def encadrement(cfg, team_members) -> list[str]:
+    """« Nom (poste) » du dirigeant puis de l'encadrement : ligne d'affichage, jamais comptée
+    dans l'effectif (les cartes de `cartes_humaines` ne contiennent pas le dirigeant)."""
+    personnes = personnes_depuis(cfg, team_members)
+    rang = [p for cat in (DIRECTION, ENCADREMENT) for p in personnes if p["categorie"] == cat]
+    return [f"{p['nom']} ({p['poste']})" if p["poste"] else p["nom"] for p in rang]
+
+
+def synoptique_humains(cartes: list[dict], th: Theme, encadrement: list[str] | None = None) -> tuple[str, str] | None:
     if not cartes:
         return None
     W = LARGEUR_PORTRAIT
@@ -131,8 +139,15 @@ def synoptique_humains(cartes: list[dict], th: Theme) -> tuple[str, str] | None:
     gap = 6.0
     cw = (W - (cols - 1) * gap) / cols
     corps = [t(0, 11, "MOYENS HUMAINS", 8, True, th.accent_fonce)]
-    # toutes les cartes d'une rangée ont la même hauteur
     y = 20.0
+    ligne_encadrement = ""
+    if encadrement:
+        ligne_encadrement = "Encadrement : " + ", ".join(encadrement)
+        for ln in couper(ligne_encadrement, 8.5, W, False, 3):
+            corps.append(t(0, y + 9, ln, 8.5, False, th.texte))
+            y += 10.5
+        y += 6
+    # toutes les cartes d'une rangée ont la même hauteur
     rangs = [cartes[i:i + cols] for i in range(0, len(cartes), cols)]
     for rang in rangs:
         hauteurs = []
@@ -162,6 +177,8 @@ def synoptique_humains(cartes: list[dict], th: Theme) -> tuple[str, str] | None:
         y += h + gap
     bas = y - gap + 4
     alt = "Moyens humains : " + " ; ".join(f"{c['nombre']} {c['role']}" for c in cartes) + "."
+    if ligne_encadrement:
+        alt += " " + ligne_encadrement + "."
     return document_svg(W, bas, "".join(corps), "Moyens humains"), alt
 
 
@@ -213,7 +230,7 @@ def synoptique_materiels(items: list[dict], th: Theme) -> tuple[str, str] | None
 # ── Visuels ─────────────────────────────────────────────────────────────────
 
 def construire_humains(cfg, team_members, nb_ouvriers, th: Theme) -> Visuel | None:
-    res = synoptique_humains(cartes_humaines(cfg, team_members, nb_ouvriers), th)
+    res = synoptique_humains(cartes_humaines(cfg, team_members, nb_ouvriers), th, encadrement(cfg, team_members))
     if not res:
         return None
     svg, alt = res
