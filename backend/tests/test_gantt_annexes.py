@@ -53,9 +53,9 @@ def test_gantt_none_without_phases():
 def test_gantt_png_and_docx_insertion():
     from services.docx_exporter import build_memoire_docx
     from services.gantt import generate_gantt_svg
-    from services.organigramme import svg_to_png_bytes
+    from services.visuels import svg_vers_png
 
-    png = svg_to_png_bytes(generate_gantt_svg(PHASES))
+    png = svg_vers_png(generate_gantt_svg(PHASES))
     assert png[:8] == b"\x89PNG\r\n\x1a\n"
 
     def _media(b):
@@ -63,8 +63,10 @@ def test_gantt_png_and_docx_insertion():
             return len([n for n in z.namelist() if n.startswith("word/media/")])
 
     base = build_memoire_docx(CONTENT, "P", "Org")
-    with_gantt = build_memoire_docx(CONTENT, "P", "Org", gantt_image=png)
-    assert _media(with_gantt) == _media(base) + 1
+    from services.visuels.modele import Visuel
+    with_gantt = build_memoire_docx(CONTENT, "P", "Org", visuels=[
+        Visuel(("partie_c", "methodologie"), generate_gantt_svg(PHASES), "Planning", "Planning", 15.0)])
+    assert _media(with_gantt) == _media(base) + 2
 
 
 # ─── Pre-flight : saisie des phases + sélection d'annexes ────────────────────

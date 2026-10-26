@@ -259,10 +259,9 @@ def test_pypdfium2_importe_seulement_par_pdf_lecture():
 
 
 # PyMuPDF (AGPL) ne reste que là, jusqu'à son retrait : le surligneur (remplacé au
-# bloc 5 par le sujet A) et la conversion SVG → PNG de l'organigramme et du Gantt (T8).
+# bloc 5 par le sujet A). La conversion SVG → PNG des visuels passe par Pillow.
 _FITZ_PERMIS = {
     "services/pdf_highlighter.py": None,               # tout le module
-    "services/organigramme.py": "svg_to_png_bytes",    # cette fonction seulement
     "tests/test_pdf_viewer_highlight.py": None,        # test du surligneur
 }
 
@@ -290,7 +289,7 @@ def _imports_pymupdf(source: str) -> list[tuple[int, object]]:
     return trouves
 
 
-def test_pymupdf_ne_reste_que_dans_le_surligneur_et_le_svg_png():
+def test_pymupdf_ne_reste_que_dans_le_surligneur():
     racine = Path(__file__).resolve().parents[1]
     fichiers = [p for dossier in ("services", "routers", "tasks", "scripts", "tests")
                 for p in (racine / dossier).rglob("*.py")] + sorted(racine.glob("*.py"))
@@ -300,4 +299,4 @@ def test_pymupdf_ne_reste_que_dans_le_surligneur_et_le_svg_png():
         for ligne, fonction in _imports_pymupdf(p.read_text(encoding="utf-8")):
             if relatif not in _FITZ_PERMIS or _FITZ_PERMIS[relatif] not in (None, fonction):
                 fautifs.append(f"{relatif}:{ligne}")
-    assert fautifs == [], f"PyMuPDF importé hors du surligneur et de svg_to_png_bytes : {fautifs}"
+    assert fautifs == [], f"PyMuPDF importé hors du surligneur : {fautifs}"

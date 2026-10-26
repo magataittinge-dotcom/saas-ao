@@ -133,7 +133,7 @@ def get_memoire_preflight(
         "quota": status["memoires"],
         # C8a — l'option organigramme n'est proposée que si le profil équipe
         # permet un rendu réel (jamais d'organigramme vide).
-        "organigramme_available": organigramme_available(cfg),
+        "organigramme_available": organigramme_available(cfg, _membres_equipe(db, user.organization_id)),
         "vault_documents": vault_documents,
     }
 
@@ -354,7 +354,7 @@ def _run_memoire_job(
         if existing:
             existing.content_json = content
             existing.version += 1
-            existing.variables = variables
+            existing.variables = _variables_stockees(variables, reference_ids)
             existing.profile_overrides = profile_overrides
             existing.generated_at = datetime.utcnow()
             memoire = existing
@@ -362,7 +362,7 @@ def _run_memoire_job(
             memoire = MemoireTechnique(
                 project_id=project_id,
                 content_json=content,
-                variables=variables,
+                variables=_variables_stockees(variables, reference_ids),
                 profile_overrides=profile_overrides,
             )
             db.add(memoire)
@@ -463,6 +463,59 @@ async def rewrite_passage_endpoint(
     }
 
 
+def _membres_equipe(db, org_id):
+    """Membres de l'équipe de l'organisation (seconde source de l'organigramme)."""
+    from models.team_member import TeamMember
+    return db.query(TeamMember).filter(TeamMember.organization_id == org_id).all()
+
+
+def _references_du_memoire(db, org_id, variables: dict):
+    """Références de l'organisation pour le tableau : celles choisies au pre-flight si la
+    sélection a été conservée, sinon toutes (comme le générateur). Jamais celles d'une autre org."""
+    refs = db.query(Reference).filter(
+        Reference.organization_id == org_id,
+        Reference.is_reference == True,  # noqa: E712
+        Reference.deleted_at.is_(None),
+    ).all()
+    ids = variables.get("reference_ids")
+    if ids is not None:
+        voulues = set(ids)
+        refs = [r for r in refs if r.id in voulues]
+    return refs
+
+
+def _variables_stockees(variables: dict, reference_ids) -> dict:
+    """Variables rangées avec le mémoire : celles du générateur + la sélection de références
+    (pour le tableau de l'export). Le générateur, lui, reçoit `variables` sans cette clé."""
+    stockees = dict(variables)
+    if reference_ids is not None:
+        stockees["reference_ids"] = list(reference_ids)
+    return stockees
+
+
+def _visuels_du_memoire(project, memoire, db, logo_image) -> list:
+    """Visuels du mémoire (organigramme, Gantt, moyens, références, plan, schéma), tirés des
+    seules données saisies. Sans base ou en cas d'erreur : aucun visuel, l'export continue."""
+    if db is None:
+        return []
+    try:
+        from services.visuels.assemblage import construire_visuels
+        variables = getattr(memoire, "variables", None) or {}
+        cfg = db.query(MemoireConfig).filter(
+            MemoireConfig.organization_id == project.organization_id,
+        ).first()
+        return construire_visuels(
+            variables, cfg, logo_image,
+            _membres_equipe(db, project.organization_id),
+            _references_du_memoire(db, project.organization_id, variables),
+            getattr(memoire, "profile_overrides", None) or None,
+            getattr(memoire, "content_json", None))
+    except Exception as exc:
+        import logging as _logging
+        _logging.getLogger(__name__).warning("Visuels omis : %s", type(exc).__name__)
+        return []
+
+
 def build_project_memoire_docx(project, memoire, org, db) -> bytes:
     """Construit le DOCX complet du mémoire (page de garde, carte,
     organigramme, logo) — source unique pour export-docx, export-pdf et ZIP."""
@@ -477,22 +530,6 @@ def build_project_memoire_docx(project, memoire, org, db) -> bytes:
         lieu_execution(project),
     )
 
-    # C8a — organigramme si l'option a été cochée au pre-flight (fallback
-    # gracieux : données devenues insuffisantes → pas d'image, pas d'erreur).
-    organigramme_image = None
-    if (memoire.variables or {}).get("include_organigramme"):
-        from services.organigramme import generate_organigramme_svg, svg_to_png_bytes
-        cfg = db.query(MemoireConfig).filter(
-            MemoireConfig.organization_id == project.organization_id,
-        ).first()
-        svg = generate_organigramme_svg(cfg)
-        if svg:
-            try:
-                organigramme_image = svg_to_png_bytes(svg)
-            except Exception as e:
-                import logging as _logging
-                _logging.getLogger(__name__).warning(f"Organigramme non rasterisé: {e}")
-
     # C8b — logo pour la page de garde (fallback texte propre si absent/illisible)
     logo_image = None
     if org and org.logo_url and org.logo_url.startswith("/uploads/"):
@@ -504,19 +541,7 @@ def build_project_memoire_docx(project, memoire, org, db) -> bytes:
             except Exception:
                 logo_image = None
 
-    # BONUS — Gantt du phasage si des phases ont été saisies au pre-flight
-    gantt_image = None
-    gantt_phases = (memoire.variables or {}).get("gantt_phases")
-    if gantt_phases:
-        from services.gantt import generate_gantt_svg
-        from services.organigramme import svg_to_png_bytes as _svg_png
-        svg = generate_gantt_svg(gantt_phases)
-        if svg:
-            try:
-                gantt_image = _svg_png(svg)
-            except Exception as e:
-                import logging as _logging
-                _logging.getLogger(__name__).warning(f"Gantt non rasterisé: {e}")
+    visuels = _visuels_du_memoire(project, memoire, db, logo_image)
 
     return build_memoire_docx(
         content_json=memoire.content_json,
@@ -524,8 +549,7 @@ def build_project_memoire_docx(project, memoire, org, db) -> bytes:
         org_name=org_name,
         map_image=map_image,
         map_caption=map_caption,
-        organigramme_image=organigramme_image,
-        gantt_image=gantt_image,
+        visuels=visuels,
         logo_image=logo_image,
         lot_name=project.selected_lot_name,
         maitre_ouvrage=project.maitre_ouvrage,
