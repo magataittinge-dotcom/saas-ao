@@ -235,14 +235,37 @@ async def test_modele_force_par_reglage_sonnet55_sans_reflexion(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_sans_reglage_mapping_inchange_et_rien_ajoute(monkeypatch):
+async def test_sans_reglage_les_4_parties_sont_en_sonnet_55(monkeypatch):
+    """Décision du 26/10 : Sonnet 5.5 par défaut pour le mémoire (0,974 $ contre
+    1,105 $ en 4.6, 181,5 s contre ≈ 480 s sur Gueux) — réflexion coupée
+    (`between_tools`), ni `temperature` ni prefill assistant."""
     from config import get_settings
     monkeypatch.setattr(get_settings(), "MEMOIRE_MODELE", "", raising=False)
     gen = MemoireGenerator()
     side_effect, calls = _build_side_effect()
     monkeypatch.setattr(gen.client.messages, "stream", side_effect)
 
+    result = await _run(gen)
+
+    assert set(_MEMOIRE_SEGMENT_MODELS.values()) == {"claude-sonnet-5-5"}
+    assert [kw["model"] for kw in calls["kwargs"]] == ["claude-sonnet-5-5"] * 4
+    for kw in calls["kwargs"]:
+        assert kw["extra_body"] == {"thinking": {"type": "between_tools"}}
+        assert "temperature" not in kw
+        assert [m["role"] for m in kw["messages"]] == ["user"]      # pas de prefill
+    assert set(result["_generation_meta"]["models"].values()) == {"claude-sonnet-5-5"}
+
+
+@pytest.mark.asyncio
+async def test_reglage_force_sonnet_46_rien_n_est_ajoute(monkeypatch):
+    from config import get_settings
+    monkeypatch.setattr(get_settings(), "MEMOIRE_MODELE", "claude-sonnet-4-6", raising=False)
+    gen = MemoireGenerator()
+    side_effect, calls = _build_side_effect()
+    monkeypatch.setattr(gen.client.messages, "stream", side_effect)
+
     await _run(gen)
 
+    assert [kw["model"] for kw in calls["kwargs"]] == ["claude-sonnet-4-6"] * 4
     for kw in calls["kwargs"]:
         assert "extra_body" not in kw

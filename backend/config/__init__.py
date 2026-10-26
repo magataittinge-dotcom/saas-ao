@@ -36,9 +36,9 @@ class Settings(BaseSettings):
     # Lot 7 T3 — enrichissement réglementaire de la génération mémoire
     # (retrieve top-3 injecté au prompt). Défaut FALSE : chemin inchangé.
     RAG_ENRICHMENT: bool = False
-    # Bloc 3 — modèle unique forcé pour les 4 segments du mémoire (ex.
-    # « claude-sonnet-5-5 » pour le passage payant n° 1). Vide : mapping de
-    # memoire_generator inchangé.
+    # Modèle unique forcé pour les 4 segments du mémoire (ex. « claude-sonnet-4-6 »
+    # pour revenir à l'ancien réglage). Vide : mapping de memoire_generator, soit
+    # Sonnet 5.5 par défaut depuis le 26/10.
     MEMOIRE_MODELE: str = ""
 
     # AWS S3

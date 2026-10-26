@@ -1,10 +1,10 @@
 """Génération du mémoire technique — composition long-form par segments.
 
 Génère le mémoire (~20 pages) en plusieurs segments (préambule, parties A/B/C) via
-Claude. Configuration prod = full-Sonnet 4.6 (`_MEMOIRE_SEGMENT_MODELS`) ; Opus 4.7
+Claude. Configuration prod = full-Sonnet 5.5 (`_MEMOIRE_SEGMENT_MODELS`, forçable par `MEMOIRE_MODELE`) ; Opus 4.7
 reste en fallback. Le préambule part seul (il écrit le prompt cache), les parties
 A, B et C ensuite en parallèle (elles le relisent) — même schéma que l'analyse.
-La densité normative (DTU/Avis Technique) vient du PROMPT + corpus skills, pas du modèle.
+La densité normative vient du PROMPT + corpus skills, mais un DTU n'est cité que s'il est dans le CCTP du lot ou les pièces communes (dtu_autorises.py : liste dans le prompt + garde-fou après génération).
 """
 import json
 import asyncio
@@ -93,17 +93,21 @@ _MEMOIRE_SEGMENTS: list[tuple[str, list[str] | None]] = [
 
 # ── Modèle PAR segment (génération hybride, configurable) ───────────────────
 _MEMOIRE_MODEL_OPUS = "claude-opus-4-7"
-_MEMOIRE_MODEL_SONNET = "claude-sonnet-4-6"
+_MEMOIRE_MODEL_SONNET = "claude-sonnet-5-5"
 
 # Mapping centralisé : réajuster un segment ICI suffit, la logique de génération
-# ne change pas. Full-Sonnet : Sonnet 4.6 est complet, spécifique et sans
-# invention sur tout le périmètre, ~7× moins cher qu'Opus (0,97$ vs 6,71$ sur le
-# DCE Gueux, cf. docs/comparaison-memoire-AB/RESULTAT.md). La densité normative
-# (DTU/Avis Technique) est récupérée par le PROMPT (prompts.py), pas par le
-# modèle — le corpus est déjà fourni via les skills. Fallback = self.MODEL.
-# ⚠️ CACHE : le préfixe stable est caché PAR MODÈLE. Tous les segments en Sonnet
-# → 1 seul cache_write puis cache_read sur les 3 suivants (optimal). Si un jour
-# un segment repasse en Opus, le garder CONSÉCUTIF aux autres du même modèle.
+# ne change pas. Full-Sonnet 5.5 (décision du 26/10) : sur le DCE Gueux, passage
+# payant n° 1 — 0,974 $ contre 1,105 $ en Sonnet 4.6, 181,5 s contre ≈ 480 s, mémoire
+# complet et sans placeholder ; Opus 4.7 coûtait ~7× plus (6,71 $, cf.
+# docs/comparaison-memoire-AB/RESULTAT.md). Sonnet 5.x réfléchit par défaut : la
+# réflexion est coupée par `between_tools` (voir _sync_call_segment). La densité
+# normative est récupérée par le PROMPT (prompts.py) ; les DTU citables sont
+# bornés par la liste autorisée (dtu_autorises.py). Fallback = self.MODEL.
+# `MEMOIRE_MODELE` (env) force un autre modèle unique pour les 4 parties (ex.
+# « claude-sonnet-4-6 » pour revenir à l'ancien réglage).
+# ⚠️ CACHE : le préfixe stable est caché PAR MODÈLE. Tous les segments sur le même
+# modèle → 1 seul cache_write puis cache_read sur les 3 suivants (optimal). Si un
+# jour un segment change de modèle, le garder CONSÉCUTIF aux autres du même modèle.
 _MEMOIRE_SEGMENT_MODELS: dict[str, str] = {
     "preambule": _MEMOIRE_MODEL_SONNET,
     "partie_a": _MEMOIRE_MODEL_SONNET,
