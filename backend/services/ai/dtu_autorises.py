@@ -159,3 +159,34 @@ def dtu_autorises(docs: Iterable, selected_lot: Optional[str] = None,
             vues.add(cle)
             res.setdefault(men.numero, DtuAutorise(men.numero)).sources.append((d.file_name, page))
     return res
+
+
+def _cle_numero(numero: str) -> list[int]:
+    return [int(x) for x in numero.split(".")]
+
+
+def formater_liste_dtu(autorises: dict[str, DtuAutorise], max_sources: int = 3) -> str:
+    """Bloc de prompt (bloc variable) : la liste fermée des DTU citables, avec la
+    pièce et la page où chacun a été lu. Liste vide : aucune citation de DTU."""
+    entete = "━━━ LISTE DES DTU AUTORISÉS (CCTP du lot + pièces communes) ━━━\n"
+    if not autorises:
+        return entete + (
+            "Aucun DTU n'est écrit dans le CCTP du lot ni dans les pièces communes : "
+            "ne cite AUCUN numéro de DTU ; écris « conformément aux règles de l'art »."
+        )
+    lignes = [
+        entete
+        + "Un DTU qui n'est pas dans cette liste ne doit JAMAIS être cité. Être dans la liste "
+        "autorise à citer, pas à tout citer : n'emploie que ceux qui s'appliquent aux ouvrages du lot."
+    ]
+    for numero in sorted(autorises, key=_cle_numero):
+        vus, morceaux = set(), []
+        for piece, page in autorises[numero].sources:
+            if (piece, page) in vus:
+                continue
+            vus.add((piece, page))
+            morceaux.append(f"{piece}, p. {page}" if page else piece)
+        reste = len(morceaux) - max_sources
+        txt = " ; ".join(morceaux[:max_sources]) + (f" ; +{reste}" if reste > 0 else "")
+        lignes.append(f"- {autorises[numero].libelle} — {txt}")
+    return "\n".join(lignes)

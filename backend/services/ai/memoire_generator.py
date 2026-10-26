@@ -16,6 +16,7 @@ from config import get_settings
 from .prompts import MEMOIRE_GENERATION_SYSTEM
 from services.skill_loader import load_skill, load_skills_bundle, load_skill_reference
 from models.project import TYPE_AE, TYPES_GRILLES_DE_PRIX
+from services.ai.dtu_autorises import dtu_autorises, formater_liste_dtu
 from services.dpgf_ouvrages import est_tableur
 import logging
 
@@ -502,8 +503,9 @@ class MemoireGenerator:
             stable_skills_block += (
                 "━━━ RÉFÉRENTIEL MÉTHODOLOGIE BTP (corps de métier détecté depuis le lot) ━━━\n"
                 "Utilise ce référentiel technique comme base pour rédiger la PARTIE C (méthodologie). "
-                "Il contient les normes DTU exactes, les tolérances, les étapes détaillées, "
-                "les autocontrôles et les erreurs fréquentes du corps de métier. "
+                "Il contient les tolérances, les étapes détaillées, les autocontrôles et les "
+                "erreurs fréquentes du corps de métier ; les numéros de DTU qu'il mentionne "
+                "ne sont citables que s'ils figurent dans la LISTE DES DTU AUTORISÉS du message. "
                 "ADAPTE ce contenu au CCTP spécifique du marché — ne recopie pas tel quel.\n\n"
                 f"{methodology_ref}\n\n"
             )
@@ -516,6 +518,10 @@ class MemoireGenerator:
         )
 
         # ── 7. Build DYNAMIC block (uncached — varies per AO) ────────────────
+        # DTU autorisés : lus sans IA dans le CCTP du lot et les pièces communes.
+        # Dans le bloc VARIABLE, jamais dans le préfixe stable (cache par modèle).
+        dtu_ok = dtu_autorises(all_docs)
+        liste_dtu = formater_liste_dtu(dtu_ok)
         dynamic_block = (
             f"MARCHÉ : {project_name}\n"
             f"MAÎTRE D'OUVRAGE : {maitre_ouvrage or 'Non renseigné'}\n"
@@ -525,6 +531,7 @@ class MemoireGenerator:
             f"{json.dumps(variables, ensure_ascii=False, indent=2)}\n\n"
             + (f"━━━ CRITÈRES DE JUGEMENT ━━━\n{criteres_block}\n\n" if criteres_block else "")
             + (f"━━━ EXIGENCES DCE (compliance matrix) ━━━\n{compliance_summary}\n\n" if compliance_summary else "")
+            + f"{liste_dtu}\n\n"
             + f"━━━ DOCUMENTS DCE ━━━\n{dce_text}"
         )
 
