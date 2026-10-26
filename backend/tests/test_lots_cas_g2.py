@@ -72,17 +72,14 @@ RC_TRANCHES = ("REGLEMENT DE LA CONSULTATION\nLe marché n'est pas alloti. Il co
                "tranches optionnelles.\nTranche 1 : rénovation du gymnase\nTranche 2 : création d'un préau\n")
 
 
-@A_CORRIGER
 def test_cas07_marche_non_alloti_a_tranches_aucun_lot():
     assert LD._detect_lots_from_rc_text(RC_TRANCHES, "rc") == []
 
 
-@A_CORRIGER
 def test_cas08_n_est_pas_alloti_ne_mentionne_pas_d_allotissement():
     assert LD.mentions_allotissement(RC_TRANCHES) is False
 
 
-@A_CORRIGER
 def test_cas09_non_alloti_sans_lot_pas_de_filet_ia_payant():
     mention = LD.mentions_allotissement("Le marché n'est pas alloti (lot unique).")
     assert LF.should_trigger([], None, mention)[0] is False
@@ -125,17 +122,14 @@ def test_cas15_nombre_annonce_divisee_en_lots():
     assert LD.extract_announced_lot_count("La consultation est divisée en 9 lots.") == 9
 
 
-@A_CORRIGER
 def test_cas16_nombre_annonce_tranches_et_lots():
     assert LD.extract_announced_lot_count("Le marché comprend 2 tranches et 4 lots.") == 4
 
 
-@A_CORRIGER
 def test_cas17_nombre_annonce_lots_separes():
     assert LD.extract_announced_lot_count("Allotissement : 5 lots séparés") == 5
 
 
-@A_CORRIGER
 def test_cas18_nombre_annonce_decomposition_en_lots():
     assert LD.extract_announced_lot_count("Il est prévu une décomposition en lots : 6 lots.") == 6
 
@@ -257,3 +251,15 @@ def test_rc_vertical_le_texte_apres_le_tableau_n_est_pas_colle_au_dernier_lot():
     rc = ("REGLEMENT DE LA CONSULTATION\nLOT\nINTITULE\n01\nTerrassements\n02\nMaçonnerie\n03\nPeinture –\n"
           "Les variantes ne sont pas autorisées.\nArticle 2\n")
     assert [x.nom for x in LD._detect_lots_from_rc_text(rc, "rc")][-1] == "Lot 03 — Peinture"
+
+
+def test_allotissement_positif_et_negatif():
+    assert LD.mentions_allotissement("Le marché est alloti en 9 lots.") is True
+    assert LD.mentions_allotissement("Le marché n’est pas passé en lot unique : il est alloti.") is True
+    assert LD.mentions_allotissement("Marché non alloti.") is False
+    assert LD.mentions_allotissement("Le marché est passé sans allotissement.") is False
+
+
+def test_une_tranche_mentionnee_avec_des_lots_ne_change_pas_les_lots():
+    rc = "REGLEMENT DE LA CONSULTATION\nLot 1 : Maçonnerie (tranche ferme)\nLot 2 : Couverture\nTranche 3 : préau\n"
+    assert ids(LD._detect_lots_from_rc_text(rc, "rc")) == ["lot1", "lot2"]

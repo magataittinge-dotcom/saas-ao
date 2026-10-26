@@ -48,10 +48,11 @@ _LOT_TABLE_ROW_NUM   = re.compile(r'^\s*(\d{1,2})\s{1,6}(\S.{1,80})')
 # (« D - Présentation du candidat » du DC1), pas une ligne du tableau des lots.
 _LOT_TABLE_ROW_ALPHA = re.compile(r'^\s*([A-Z])\s{1,6}(?![-–—])(\S.{1,80})')
 # Inline lot patterns with letter support (AMÉLIORATION 6)
-# \b après lot/tranche : « PAR LOTS SEPARES » ne doit pas se décomposer en
+# \b après lot : « PAR LOTS SEPARES » ne doit pas se décomposer en
 # « Lot » + « S » (fantôme « Lot S » constaté sur le RC Gueux).
+# Une tranche (ferme, optionnelle) n'est PAS un lot : deux notions distinctes.
 _LOT_LINE = re.compile(
-    r'(?:^|[\s\-–—:])(?:lot|tranche)\b\s*[nN°]*\s*(\d{1,2}[A-Za-z]?|[A-Za-z])\b[^\n]{0,80}',
+    r'(?:^|[\s\-–—:])lot\b\s*[nN°]*\s*(\d{1,2}[A-Za-z]?|[A-Za-z])\b[^\n]{0,80}',
     re.IGNORECASE | re.MULTILINE,
 )
 # Tableau PDF aplati VERTICALEMENT (format réel RC Gueux) :
@@ -780,7 +781,7 @@ def _detect_lots_from_rc_text(text: str, doc_type: str) -> List[LotDetection]:
             continue
 
         after_num = re.sub(
-            r'(?i)(?:lot|tranche)\s*[nN°]*\s*[\w]+[\s:\-–—]*', '', raw
+            r'(?i)lot\s*[nN°]*\s*[\w]+[\s:\-–—]*', '', raw
         ).strip(' :—-–')
         label = re.sub(r'\s+', ' ', _sans_colonne_index(re.split(r'[.\n]', after_num)[0].strip())).strip()[:60]
         if _NOT_A_LOT_LABEL.search(label):
@@ -1039,10 +1040,19 @@ def detect_all_lots(
 _ANNOUNCED_PATTERNS = [
     re.compile(
         r'(?:divis\w+|decompos\w+|allot\w+|repart\w+|compos\w+|decoup\w+|scind\w+)'
-        r'\s+en\s+(\d{1,2})\s+lots?\b'
+        r'\s+en\s+(?P<n>\d{1,2})\s+lots?\b'
     ),
-    re.compile(r'(?:comporte|comprend|constitue\s+de)\s+(\d{1,2})\s+lots?\b'),
-    re.compile(r'(\d{1,2})\s+lots?\s+(?:suivants|designes|definis|ci-(?:dessous|apres))\b'),
+    # « comprend 2 tranches et 4 lots » : le nombre de lots est celui qui suit « et ».
+    re.compile(
+        r'(?:comporte|comprend|constitue\s+de)\s+(?:\d{1,2}\s+tranches?\s+(?:\w+\s+)?et\s+)?'
+        r'(?P<n>\d{1,2})\s+lots?\b'
+    ),
+    re.compile(r'(?P<n>\d{1,2})\s+lots?\s+(?:suivants|designes|definis|separes|distincts|ci-(?:dessous|apres))\b'),
+    # « Allotissement : 5 lots », « décomposition en lots : 6 lots »
+    re.compile(r'allotissement\s*[:\-]\s*(?P<n>\d{1,2})\s+lots?\b'),
+    re.compile(
+        r'(?:decompos\w+|division|repartition|allotissement)\s+en\s+lots?\s*[:\-]\s*(?P<n>\d{1,2})\s+lots?\b'
+    ),
 ]
 
 _ANNOUNCED_MAX = 60  # au-delà, valeur aberrante pour un DCE BTP
@@ -1059,7 +1069,7 @@ def extract_announced_lot_count(text: str) -> Optional[int]:
     for pattern in _ANNOUNCED_PATTERNS:
         m = pattern.search(norm)
         if m:
-            count = int(m.group(1))
+            count = int(m.group('n'))
             if 1 <= count <= _ANNOUNCED_MAX:
                 return count
     return None
@@ -1081,11 +1091,17 @@ def extract_announced_from_docs(documents) -> Optional[int]:
     return None
 
 
+# « n'est pas alloti », « marché non alloti », « sans allotissement » : le marché
+# n'est PAS alloti. Un seul mot (au plus) sépare la négation du verbe.
+_ALLOTISSEMENT_NIE = re.compile(r"\b(?:non|pas|sans|aucun)\s+(?:\w+\s+)?allot\w+")
+
+
 def mentions_allotissement(text: str) -> bool:
-    """Le texte parle-t-il d'un marché alloti ? (déclencheur du filet si 0 lot)"""
+    """Le texte parle-t-il d'un marché alloti ? (déclencheur du filet si 0 lot)
+    Un marché « non alloti » ou « lot unique » n'en parle pas : pas d'appel IA."""
     if not text:
         return False
-    norm = _normalize(text)
+    norm = _ALLOTISSEMENT_NIE.sub(" ", _normalize(text.replace("’", "'")))
     return bool(re.search(r'\ballot\w+|\blots?\s+(?:n\s*°|\d|suivants)\b|\ben\s+\d{1,2}\s+lots?\b', norm))
 
 
