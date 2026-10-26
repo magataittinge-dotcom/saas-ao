@@ -113,6 +113,8 @@ class LotDetection:
     # Confiance du NOM affiché (la fusion garde le nom le mieux sourcé, pas le plus
     # long). None : celle de la détection.
     nom_confidence: Optional[int] = None
+    # « Lot 3 et 4 » : les identifiants cités ensemble par le RC (interne, pas sérialisé).
+    avec: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict:
         d: Dict[str, Any] = {
@@ -846,6 +848,7 @@ def _detect_lots_from_rc_text(text: str, doc_type: str) -> List[LotDetection]:
             lots[lid] = LotDetection(
                 id=lid, nom=nom, confidence=80, sources=["rc_text"],
                 description_long=description,
+                avec=[autre for _, autre in ids_lot] if len(ids_lot) > 1 else [],
             )
 
     if lots:
@@ -936,6 +939,7 @@ def _merge_detections(*source_lists: List[LotDetection]) -> List[LotDetection]:
                     tranches=list(det.tranches),
                     description_long=det.description_long,
                     nom_confidence=conf_nom,
+                    avec=list(det.avec),
                 )
                 rangs[det.id] = rang
                 continue
@@ -959,12 +963,139 @@ def _merge_detections(*source_lists: List[LotDetection]) -> List[LotDetection]:
             if len(det.description_long) > len(existing.description_long):
                 existing.description_long = det.description_long
 
+            for a in det.avec:
+                if a not in existing.avec:
+                    existing.avec.append(a)
+
             # Merge tranches
             for t in det.tranches:
                 if t not in existing.tranches:
                     existing.tranches.append(t)
 
     return sorted(merged.values(), key=lambda x: _sort_key(x.id))
+
+
+# ─── « Lot 3 et 4 » : un lot ou deux, jamais deux lots du même nom ───────────
+
+_NUM_LOT = r'(?:\d{1,2}(?:\.\d{1,2})?[a-z]?|[A-Z])'
+# « Lot 3 — », « Lots 3 et 4 — », « Lot 7.1 — », « Lot A — », « Lot 3 » nu, « Lot — » ;
+# la désignation est ce qui suit.
+_PREFIXE_LOT = re.compile(
+    rf'^\s*(?i:lots?)\s*(?P<num>{_NUM_LOT})?(?:\s*(?:,|(?i:et)|&)\s*{_NUM_LOT})*\s*(?:[—–:-]\s*|$)')
+# Repli : « Menuiseries — lot 3 ».
+_SUFFIXE_REPLI = re.compile(r'\s*[—–-]\s*lot\s+\S+$', re.IGNORECASE)
+_FICHIER_APRES_LOT = re.compile(
+    r'(?<![^\W\d_])lot\s*n?°?\s*\d{1,2}(?:\.\d{1,2})?[a-z]?(?:\s*(?:et|&)\s*\d{1,2}[a-z]?)?\b(?P<suite>.*)$',
+    re.IGNORECASE)
+_MOTS_DE_PIECE = re.compile(
+    r'\b(?:cctp|dpgf|bpu|dqe|ccap|cctg|ccag|ae|dc[12]|bordereau|d[ée]composition|descriptif'
+    r'|prix|unitaires?|global|forfaitaire|pi[èe]ces?|[ée]crites?|ind(?:ice)?\.?\s*\w|v\d+|vf)\b', re.IGNORECASE)
+
+
+def _designation(nom: str) -> str:
+    """« Lot 3 — Menuiseries », « Lots 3 et 4 — Menuiseries », « Menuiseries — lot 3 »
+    → « Menuiseries » ; « Lot 3 » nu → ''."""
+    corps = _PREFIXE_LOT.sub('', nom or '', count=1)
+    return _SUFFIXE_REPLI.sub('', corps).strip()
+
+
+def _numero_du_nom(nom: str, lot_id: str) -> str:
+    m = _PREFIXE_LOT.match(nom or '')
+    return (m.group('num') if m and m.group('num') else lot_id.removeprefix('lot')) or lot_id
+
+
+def _designation_de_fichier(file_name: str) -> str:
+    """Ce qui suit « Lot N » dans le nom d'une pièce, sans les mots de pièce :
+    « CCTP Lot 03 Menuiseries extérieures.pdf » → « Menuiseries extérieures »."""
+    stem = re.sub(r'\.(?:pdf|docx?|xlsx?|ods|odt)$', '', file_name or '', flags=re.IGNORECASE).replace('_', ' ')
+    m = _FICHIER_APRES_LOT.search(stem)
+    if not m:
+        return ''
+    suite = _MOTS_DE_PIECE.sub(' ', m.group('suite'))
+    suite = re.sub(r'\s+', ' ', suite).strip(' -–—,.;:()')
+    return (suite[0].upper() + suite[1:]) if len(re.findall(r'[^\W\d_]', suite)) >= 3 else ''
+
+
+def _departager_lots_jumeaux(merged: List[LotDetection], documents, onglets) -> List[LotDetection]:
+    """« Lot 3 et 4 : Menuiseries » dans le RC. On suit les pièces :
+    - aucune pièce propre à chacun des lots (CCTP, DPGF, BPU… dont le nom ne cite que
+      le lot 3 ou que le lot 4) → UN lot, identifiant du premier numéro, dont le nom
+      dit qu'il couvre les deux ;
+    - chacun a ses pièces → deux lots, aux noms tirés de ces pièces quand ils
+      diffèrent ; sinon le repli de _noms_sans_doublon."""
+    from services import document_tagger as DT
+
+    groupes = []
+    for d in merged:
+        if d.avec:
+            g = {d.id, *d.avec}
+            if g not in groupes:
+                groupes.append(g)
+    if not groupes:
+        return merged
+
+    exclusives: List[tuple] = []   # (numéro normalisé, nom de fichier)
+    for doc in documents:
+        tags = DT.assign_document_lots(doc.file_name, getattr(doc, 'type', 'autre') or 'autre')
+        if len(tags) == 1 and tags[0] not in ('all', 'info'):
+            exclusives.append((DT._normalize_lot_num(tags[0]), doc.file_name))
+
+    for groupe in groupes:
+        membres = sorted((d for d in merged if d.id in groupe), key=lambda x: _sort_key(x.id))
+        if len(membres) < 2:
+            continue
+        noms_pieces: Dict[str, str] = {}
+        avec_pieces = set()
+        for m in membres:
+            cle = DT._normalize_lot_num(m.id)
+            fichiers = [f for n, f in exclusives if n == cle]
+            tabs = [nom for i, nom in onglets if i == m.id]
+            if fichiers or tabs:
+                avec_pieces.add(m.id)
+            noms_pieces[m.id] = next(
+                (x for x in [_designation_de_fichier(f) for f in fichiers] + [_designation(t) for t in tabs] if x), '')
+
+        if len(avec_pieces) == len(membres):
+            # Deux lots (ou plus). Noms des pièces seulement s'ils sont tous là et tous différents.
+            noms = [_normalize(noms_pieces[m.id]) for m in membres]
+            if all(noms) and len(set(noms)) == len(noms):
+                for m in membres:
+                    m.nom = f"Lot {_numero_du_nom(m.nom, m.id)} — {noms_pieces[m.id]}"
+            continue
+
+        # Un seul lot : le premier numéro porte l'identifiant, le nom dit qu'ils sont ensemble.
+        premier, autres = membres[0], membres[1:]
+        numeros = [_numero_du_nom(m.nom, m.id) for m in membres]
+        liste = f"{', '.join(numeros[:-1])} et {numeros[-1]}"
+        corps = _designation(premier.nom)
+        premier.nom = f"Lots {liste} — {corps}" if corps else f"Lots {liste}"
+        for a in autres:
+            premier.confidence = max(premier.confidence, a.confidence)
+            for src in a.sources:
+                if src not in premier.sources:
+                    premier.sources.append(src)
+            for t in a.tranches:
+                if t not in premier.tranches:
+                    premier.tranches.append(t)
+            if len(a.description_long) > len(premier.description_long):
+                premier.description_long = a.description_long
+        premier.avec = []
+        merged = [d for d in merged if not any(d is a for a in autres)]
+    return merged
+
+
+def _noms_sans_doublon(merged: List[LotDetection]) -> None:
+    """Invariant de detect_all_lots : deux lots ne portent jamais la même désignation.
+    Repli sobre pour ceux qui la partagent : « Menuiseries — lot 3 »."""
+    par_designation: Dict[str, List[LotDetection]] = {}
+    for d in merged:
+        corps = _designation(d.nom)
+        if corps:
+            par_designation.setdefault(_normalize(corps), []).append(d)
+    for lots in par_designation.values():
+        if len(lots) > 1:
+            for d in lots:
+                d.nom = f"{_designation(d.nom)} — lot {_numero_du_nom(d.nom, d.id)}"
 
 
 # ─── Main entry point ─────────────────────────────────────────────────────────
@@ -1028,6 +1159,7 @@ def detect_all_lots(
 
     # ── Step 3: Analyse spreadsheets / DPGF (10% → 20%) — per file ────────
     excel_dets: List[LotDetection] = []
+    onglets: List[tuple] = []   # (id, nom) des lots lus dans les onglets / cellules
     spreadsheet_docs = [
         d for d in documents
         if d.file_name.lower().endswith((".xls", ".xlsx", ".ods"))
@@ -1050,6 +1182,7 @@ def detect_all_lots(
                 excel_path = uploads_root / rel
                 raw = detect_lots_from_excel(str(excel_path))
                 for d in raw:
+                    onglets.append((d["id"], d["nom"]))
                     excel_dets.append(LotDetection(
                         id=d["id"], nom=d["nom"],
                         confidence=d.get("confidence", 70),
@@ -1112,6 +1245,9 @@ def detect_all_lots(
     real_lots = [d for d in merged if not d.id.startswith(("lot_sheet_", "lot_nom_"))]
     if real_lots:
         merged = real_lots
+
+    merged = _departager_lots_jumeaux(merged, documents, onglets)
+    _noms_sans_doublon(merged)
 
     return [d.to_dict() for d in merged]
 
