@@ -3,7 +3,8 @@
 Décision de Mohamed (25/10/2026) : « AE oui. DPGF : jamais le tableur brut à
 l'IA, et jamais une colonne de prix ou de montant. Synorix extrait sans IA la
 liste des ouvrages du lot (désignation, unité, quantité si l'acheteur la
-donne), plafonnée à environ 300 lignes, et seule cette liste courte part en
+donne), plafonnée à environ 300 lignes [le BPU et le DQE ont le même
+traitement, décision du 25/10], et seule cette liste courte part en
 passe 2 : le mémoire et le planning suivent ainsi les ouvrages du lot. La DPGF
 chiffrée par l'entreprise ne part jamais à l'IA. Sa conformité de forme reste
 vérifiée sans IA. »
@@ -29,9 +30,10 @@ from itertools import chain, islice
 from pathlib import Path
 from typing import Iterable, Iterator, List, Optional, Sequence, Tuple
 
-from models.project import TYPE_DPGF
+from models.project import TYPES_GRILLES_DE_PRIX
 from services.garde_archives import controler_tableur
-from services.document_tagger import get_documents_for_lot
+from services.lecture_ods import onglets_ods
+from services.document_tagger import get_documents_for_lot, rattache_au_lot
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +46,6 @@ _ZONE_LUE = 80           # lignes gardées pour deviner la colonne des désignat
 _MAX_COLONNES = 64       # colonnes lues par ligne
 _MAX_DESIGNATION = 200   # caractères gardés par désignation
 _MAX_CSV = 20 * 1024 * 1024
-_MAX_LIGNES_ODS = 20_000  # par onglet : les lignes répétées d'un .ods sont bornées
 
 # En-têtes (texte normalisé : minuscules, sans accents ni ponctuation).
 _QUANTITE = re.compile(r"^(?:q|qt|qte|qtes|qtite|quant|nb|nombre)\b|^quantit")
@@ -97,7 +98,7 @@ def _onglets(chemin: Path) -> Iterator[Tuple[str, Iterator[Sequence]]]:
     elif suffixe == ".xls":
         yield from _onglets_xls(chemin)
     elif suffixe == ".ods":
-        yield from _onglets_ods(chemin)
+        yield from onglets_ods(chemin)
     elif suffixe == ".csv":
         yield from _onglets_csv(chemin)
 
@@ -130,71 +131,6 @@ def _onglets_xls(chemin: Path):
             classeur.unload_sheet(i)
     finally:
         classeur.release_resources()
-
-
-_ODS_T = "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}"
-_ODS_O = "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}"
-_ODS_P = "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}p"
-
-
-def _entier(texte, defaut: int = 1) -> int:
-    try:
-        return max(int(texte), 0)
-    except (TypeError, ValueError):
-        return defaut
-
-
-def _onglets_ods(chemin: Path):
-    """Lecture directe de content.xml (sans odfpy) : ligne par ligne, mémoire bornée."""
-    from lxml import etree
-
-    with zipfile.ZipFile(chemin) as archive, archive.open("content.xml") as flux:
-        nom, lignes = None, []
-        for evenement, el in etree.iterparse(
-                flux, events=("start", "end"), tag=(_ODS_T + "table", _ODS_T + "table-row"),
-                resolve_entities=False, no_network=True, load_dtd=False):
-            if el.tag == _ODS_T + "table":
-                if evenement == "start":
-                    nom, lignes = el.get(_ODS_T + "name") or "", []
-                else:
-                    yield nom, iter(lignes)
-                    nom, lignes = None, []
-                    el.clear()
-                continue
-            if evenement != "end" or nom is None:
-                continue
-            valeurs = _ligne_ods(el)
-            place = _MAX_LIGNES_ODS - len(lignes)
-            if place > 0:
-                if any(v not in (None, "") for v in valeurs):
-                    repetitions = _entier(el.get(_ODS_T + "number-rows-repeated"))
-                    lignes.extend([valeurs] * min(repetitions, place))
-                else:
-                    lignes.append([])   # une ligne vide suffit, même répétée
-            el.clear()
-            parent = el.getparent()
-            while parent is not None and el.getprevious() is not None:
-                del parent[0]
-
-
-def _ligne_ods(ligne) -> list:
-    valeurs: list = []
-    for cellule in ligne:
-        if cellule.tag not in (_ODS_T + "table-cell", _ODS_T + "covered-table-cell"):
-            continue
-        valeur = None
-        if cellule.get(_ODS_O + "value-type") in ("float", "percentage", "currency"):
-            try:
-                valeur = float(cellule.get(_ODS_O + "value"))
-            except (TypeError, ValueError):
-                valeur = None
-        if valeur is None:
-            valeur = "\n".join("".join(p.itertext()) for p in cellule.iter(_ODS_P)) or None
-        repetitions = _entier(cellule.get(_ODS_T + "number-columns-repeated"))
-        valeurs.extend([valeur] * min(repetitions, _MAX_COLONNES - len(valeurs)))
-        if len(valeurs) >= _MAX_COLONNES:
-            break
-    return valeurs
 
 
 def _onglets_csv(chemin: Path):
@@ -418,45 +354,50 @@ def _onglets_du_lot(chemin: Path, cible: str, libelle_lot: Optional[str]) -> set
 
 # ─── Liste du lot ───────────────────────────────────────────────────────────────
 
-def _candidats(documents, lot_id: Optional[str]) -> list:
-    """Tableurs de l'acheteur pour ce lot : DPGF, ou tableur sans type reconnu (une
-    DPGF mal nommée). Jamais une pièce remplie par l'entreprise."""
+_TYPES_SOURCES = TYPES_GRILLES_DE_PRIX | {"autre"}
+
+
+def _candidats(documents, lot_id: Optional[str], lots_du_rc=None) -> list:
+    """Tableurs de l'acheteur pour ce lot : DPGF, BPU, DQE (même traitement,
+    décision du 25/10), ou tableur sans type reconnu (une DPGF mal nommée).
+    Jamais une pièce remplie par l'entreprise."""
     retenus = []
-    for doc in get_documents_for_lot(documents, lot_id):
+    for doc in get_documents_for_lot(documents, lot_id, lots_du_rc):
         if getattr(doc, "is_user_completed", False):
             continue   # DPGF chiffrée par l'entreprise : jamais à l'IA
-        if (doc.type or "autre") not in (TYPE_DPGF, "autre"):
+        if (doc.type or "autre") not in _TYPES_SOURCES:
             continue
         if est_tableur(doc.file_name) and (doc.file_url or "").startswith("/uploads/"):
             retenus.append(doc)
     return sorted(retenus, key=lambda d: d.file_name)
 
 
-def _specifique(doc, cible: Optional[str]) -> bool:
-    """La pièce ne concerne que ce lot (étiquette de lot, pas « all »)."""
+def _specifique(doc, cible: Optional[str], lots_du_rc=None) -> bool:
+    """La pièce ne concerne que ce lot, ou l'un de ses sous-lots (pas « all »)."""
     etiquettes = [t for t in (doc.related_lots or []) if t not in ("all", "info")]
-    return cible is not None and any(cle_lot(t) == cible for t in etiquettes)
+    return cible is not None and any(rattache_au_lot(t, cible, lots_du_rc) for t in etiquettes)
 
 
 def texte_ouvrages_du_lot(documents, lot_id: Optional[str], racine_uploads: Path,
-                          libelle_lot: Optional[str] = None) -> str:
+                          libelle_lot: Optional[str] = None, lots_du_rc=None) -> str:
     """Liste des ouvrages du lot, prête à partir à l'IA, ou "" s'il n'y en a pas.
 
     `documents` : pièces du projet (ProjectDocument). `lot_id` : « lot5 », ou
     None / « all » (marché sans lot : toutes les DPGF). `libelle_lot` : intitulé
     du lot (« Lot 05 — Revêtement de façade – ITE »), pour trouver son onglet dans
-    un classeur de plusieurs lots. Bloquant : hors de la boucle d'événements."""
+    un classeur de plusieurs lots. `lots_du_rc` : ids des lots du projet, pour
+    rattacher les sous-lots (« 01a ») au lot 01. Bloquant : hors de la boucle."""
     cible = cle_lot(lot_id)
     blocs: List[Tuple[str, str, List[str]]] = []
     gardees, en_plus = 0, 0
-    for doc in _candidats(documents, lot_id):
+    for doc in _candidats(documents, lot_id, lots_du_rc):
         chemin = racine_uploads / doc.file_url.removeprefix("/uploads/")
         if not chemin.is_file():
             continue
         try:
             # Pièce propre au lot (ou marché sans lot) : tous ses onglets de DPGF.
             # Classeur de plusieurs lots : seulement les onglets de ce lot.
-            choisis = (None if cible is None or _specifique(doc, cible)
+            choisis = (None if cible is None or _specifique(doc, cible, lots_du_rc)
                        else _onglets_du_lot(chemin, cible, libelle_lot))
             if choisis is not None and not choisis:
                 continue
@@ -481,8 +422,8 @@ def texte_ouvrages_du_lot(documents, lot_id: Optional[str], racine_uploads: Path
         return ""
     sortie = [
         f"=== {TITRE} ===",
-        "Liste lue sans IA dans la DPGF : désignation, unité, et quantité quand "
-        "l'acheteur la donne. Aucun prix ni montant.",
+        "Liste lue sans IA dans les bordereaux de l'acheteur (DPGF, BPU ou DQE) : "
+        "désignation, unité, et quantité quand l'acheteur la donne. Aucun prix ni montant.",
         "Désignation\tUnité\tQuantité",
     ]
     for nom_fichier, nom_onglet, lignes in blocs:
