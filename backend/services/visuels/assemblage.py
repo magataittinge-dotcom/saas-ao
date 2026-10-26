@@ -41,11 +41,8 @@ def construire_visuels(variables: dict, cfg, logo_image: bytes | None = None, te
 
     if variables.get("gantt_phases"):
         try:
-            from services.gantt import generate_gantt_svg
-            svg = generate_gantt_svg(variables["gantt_phases"])
-            if svg:
-                _pret(Visuel(("partie_c", "methodologie"), svg, "Planning prévisionnel des travaux",
-                             "Planning prévisionnel des travaux", 15.0), "gantt", visuels)
-        except Exception:
-            logger.warning("Gantt omis : %s", "erreur de construction")
+            from .gantt import construire as gantt
+            _pret(gantt(variables["gantt_phases"], th), "gantt", visuels)
+        except Exception as exc:
+            logger.warning("Gantt omis : %s", type(exc).__name__)
     return visuels
