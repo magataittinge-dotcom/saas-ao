@@ -4,6 +4,8 @@ import {
 } from 'lucide-react'
 import type { ChecklistItem } from '@/types'
 import SignatureLigne from '@/components/project/SignatureLigne'
+import NonConcerneBouton, { estNonConcernee, piecesComptees } from '@/components/project/NonConcerne'
+import { comptePieces } from '@/lib/exportDossier'
 
 const F = "'Inter Variable', 'Geist Sans', sans-serif"
 
@@ -41,12 +43,17 @@ interface Props {
   items: ChecklistItem[]
   onUploadCompleted: (item: ChecklistItem, file: File) => Promise<void>
   onToggleSignature?: (item: ChecklistItem, confirmed: boolean) => Promise<void>
+  onNonConcerne?: (item: ChecklistItem, nonConcerne: boolean) => Promise<void>
 }
 
-export default function CandidatureSectionTemplates({ projectId, items, onUploadCompleted, onToggleSignature }: Props) {
+export default function CandidatureSectionTemplates({
+  projectId, items, onUploadCompleted, onToggleSignature, onNonConcerne,
+}: Props) {
   if (items.length === 0) return null
 
-  const present = items.filter((i) => i.status === 'present').length
+  // « Non concerné » sort des comptes, comme dans le score du serveur
+  const comptees = piecesComptees(items)
+  const joints = comptees.filter((i) => i.jointe).length
   // AE en tête, puis les formulaires de candidature, puis le reste.
   const sorted = [...items].sort((a, b) => {
     const rank = (i: ChecklistItem) => {
@@ -75,7 +82,7 @@ export default function CandidatureSectionTemplates({ projectId, items, onUpload
               Documents à compléter
             </h2>
             <p className="text-xs mt-0.5" style={{ color: '#959597' }}>
-              {present}/{items.length} complétés — téléchargez la trame (ou le formulaire officiel), complétez-la, puis réimportez la version finale
+              {comptePieces(comptees.length, joints, 'formulaire')} — téléchargez la trame (ou le formulaire officiel), complétez-la, puis réimportez la version finale
             </p>
           </div>
         </div>
@@ -89,6 +96,7 @@ export default function CandidatureSectionTemplates({ projectId, items, onUpload
             item={item}
             onUploadCompleted={onUploadCompleted}
             onToggleSignature={onToggleSignature}
+            onNonConcerne={onNonConcerne}
           />
         ))}
       </ul>
@@ -97,13 +105,15 @@ export default function CandidatureSectionTemplates({ projectId, items, onUpload
 }
 
 function TemplateRow({
-  projectId, item, onUploadCompleted, onToggleSignature,
+  projectId, item, onUploadCompleted, onToggleSignature, onNonConcerne,
 }: {
   projectId: string
   item: ChecklistItem
   onUploadCompleted: (item: ChecklistItem, file: File) => Promise<void>
   onToggleSignature?: (item: ChecklistItem, confirmed: boolean) => Promise<void>
+  onNonConcerne?: (item: ChecklistItem, nonConcerne: boolean) => Promise<void>
 }) {
+  const nonConcernee = estNonConcernee(item)
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -155,8 +165,10 @@ function TemplateRow({
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2 flex-wrap">
           <span className="text-sm font-semibold" style={{ color: '#F7F8F8' }}>{label}</span>
-          {isPresent ? (
-            <span className="text-xs" style={{ color: '#6EE7A8' }}>Complété</span>
+          {nonConcernee ? (
+            <span className="text-xs" style={{ color: '#909195' }}>Non concerné</span>
+          ) : item.jointe ? (
+            <span className="text-xs" style={{ color: '#6EE7A8' }}>Jointe — {item.piece_nom}</span>
           ) : isWarning ? (
             <span className="text-xs font-medium" style={{ color: '#D9A441' }}>
               ⚠️ Présente — à vérifier
@@ -164,8 +176,9 @@ function TemplateRow({
           ) : hasTemplate ? (
             <span className="text-xs" style={{ color: '#959597' }}>À compléter</span>
           ) : officialUrl ? (
-            // Type (b) : formulaire standard — normal qu'il ne soit pas au DCE.
-            <span className="text-xs" style={{ color: '#959597' }}>Formulaire standard (Cerfa)</span>
+            // Type (b) : modèle officiel — normal qu'il ne soit pas au DCE. Aucun numéro de formulaire :
+            // service-public (F32144, F32106) classe DC1/DC2/DUME en « Modèle de document ».
+            <span className="text-xs" style={{ color: '#959597' }}>Modèle officiel (ministère de l'Économie)</span>
           ) : (
             // Type (a) spécifique au DCE mais introuvable → à réclamer, pas une erreur.
             <span className="text-xs" style={{ color: '#959597' }}>À demander au maître d'ouvrage</span>
@@ -191,7 +204,8 @@ function TemplateRow({
       {/* Actions — affordance UNIFORME : Télécharger (trame DCE ou officiel) /
           Importer rempli / (signature via la case ci-dessus, si demandée) */}
       <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-        {hasTemplate && downloadHref ? (
+        <NonConcerneBouton item={item} onNonConcerne={onNonConcerne} />
+        {nonConcernee ? null : hasTemplate && downloadHref ? (
           <a
             href={downloadHref}
             target="_blank"
@@ -227,7 +241,7 @@ function TemplateRow({
             Voir version finale
           </a>
         )}
-        <button
+        {!nonConcernee && <button
           type="button"
           onClick={handlePick}
           disabled={uploading}
@@ -236,7 +250,7 @@ function TemplateRow({
           {uploading
             ? <><Loader2 size={13} className="animate-spin" /> Envoi...</>
             : <><Upload size={13} /> {isPresent ? 'Remplacer' : 'Importer rempli'}</>}
-        </button>
+        </button>}
         <input
           ref={fileRef}
           type="file"

@@ -563,7 +563,7 @@ export default function StepExport({ project }: Props) {
 
           {/* 1. Pièces demandées — « Jointe » quand c'est un fait vérifié */}
           <AccordionSection
-            title={`Pièces demandées (${piecesDemandees.length})`}
+            title={`Pièces demandées (${piecesDemandees.filter((p) => p.status !== 'non_applicable').length})`}
             ok={checklistOk}
             expanded={expanded === 'checklist'}
             onToggle={() => toggle('checklist')}

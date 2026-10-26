@@ -16,7 +16,7 @@ from typing import List, Optional
 from fastapi import (
     APIRouter, Depends, File, Form, HTTPException, Request, UploadFile,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -90,7 +90,7 @@ def get_checklist(
     0 € API) pour que l'utilisateur n'ait JAMAIS à cliquer sur « Générer »."""
     from models.compliance_item import ComplianceItem
 
-    _get_project_or_404(project_id, user.organization_id, db)
+    project = _get_project_or_404(project_id, user.organization_id, db)
 
     has_checklist = db.query(ChecklistItem.id).filter(
         ChecklistItem.project_id == project_id).first() is not None
@@ -112,11 +112,33 @@ def get_checklist(
     from services.checklist_builder import sync_vault_lines_safe
     sync_vault_lines_safe(db, project_id, user.organization_id)
 
-    return (
-        db.query(ChecklistItem)
-        .filter(ChecklistItem.project_id == project_id)
-        .all()
-    )
+    items = db.query(ChecklistItem).filter(ChecklistItem.project_id == project_id).all()
+    return _avec_le_fait_jointe(db, project, items, user.organization_id)
+
+
+def _avec_le_fait_jointe(db: Session, project, items, org_id: str) -> list:
+    """« Jointe » à l'écran Vérification, avec la même règle que l'Export : le
+    plan du ZIP dit ce qui part (routers/export._plan_du_zip, _etat_piece)."""
+    from sqlalchemy.orm import defer
+    from models.memoire import MemoireTechnique
+    from routers.export import _etat_piece, _plan_du_zip
+    project_docs = (db.query(ProjectDocument)
+                    .options(defer(ProjectDocument.extracted_text))
+                    .filter(ProjectDocument.project_id == project.id).all())
+    memoire = db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project.id).first()
+    lies = {i.linked_document_id for i in items if i.linked_document_id}
+    docs_lies = {d.id: d for d in db.query(Document).filter(
+        Document.id.in_(lies), Document.organization_id == org_id,
+        Document.deleted_at.is_(None)).all()} if lies else {}
+    plan = _plan_du_zip(db, project, org_id, checklist_items=items, project_docs=project_docs,
+                        memoire=memoire, docs_par_id=docs_lies, nommer=False)
+    docs_projet = {d.id: d for d in project_docs}
+    reponse = []
+    for item in items:
+        ligne = ChecklistItemResponse.model_validate(item)
+        ligne.jointe, ligne.piece_nom, ligne.valable_jusqu_au = _etat_piece(item, docs_lies, docs_projet, plan)
+        reponse.append(ligne)
+    return reponse
 
 
 @router.post(
@@ -315,6 +337,61 @@ def patch_checklist_item(
     db.commit()
     db.refresh(item)
     return item
+
+
+class NonConcerneBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    non_concerne: bool
+
+
+@router.post(
+    "/{project_id}/checklist/{item_id}/non-concerne",
+    response_model=ChecklistItemResponse,
+)
+def marquer_non_concerne(
+    project_id: str,
+    item_id: str,
+    body: NonConcerneBody,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """B2 §7 n°8 — « Non concerné » (pièce conditionnelle : DC4 « le cas
+    échéant », habilitation « si groupement »…) : persisté, exclu du score,
+    réversible, journalisé comme la confirmation des exigences. Repris, le
+    statut revient aux faits : pièce du coffre liée, ou trame déposée."""
+    _get_project_or_404(project_id, user.organization_id, db)
+    item = _get_checklist_item_or_404(item_id, project_id, db)
+    if item.document_group == "synorix":
+        raise HTTPException(status_code=400,
+                            detail="Pièce produite par Synorix à l'étape Mémoire.")
+    if body.non_concerne:
+        item.status = "non_applicable"
+    elif item.status == "non_applicable":
+        item.status = _statut_des_faits(item, user.organization_id, db)
+    db.commit()
+    from services.audit_logger import log_action
+    log_action(db, user, "checklist.non_concerne" if body.non_concerne else "checklist.concerne",
+               target_type="checklist_item", target_id=item_id,
+               extra={"project_id": project_id, "piece": item.document_type_required})
+    db.refresh(item)
+    return item
+
+
+def _statut_des_faits(item: ChecklistItem, org_id: str, db: Session) -> str:
+    """Statut d'une pièce d'après ce qui existe vraiment : document du coffre
+    lié (de l'org, non supprimé, jugé à la date du jour) ou trame déposée."""
+    if item.source_kind == "vault":
+        doc = db.query(Document).filter(
+            Document.id == item.linked_document_id,
+            Document.organization_id == org_id,
+            Document.deleted_at.is_(None),
+        ).first() if item.linked_document_id else None
+        return _vault_doc_status(doc) if doc else "manquant"
+    complet = db.query(ProjectDocument.id).filter(
+        ProjectDocument.id == item.completed_project_doc_id,
+        ProjectDocument.project_id == item.project_id,
+    ).first() if item.completed_project_doc_id else None
+    return "present" if complet else "manquant"
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────

@@ -125,3 +125,17 @@ def test_debug_tolerates_empty_config():
         FRONTEND_URL="http://localhost:3000",
     ))
     assert s.DEBUG is True
+
+
+# ─── Jeu de démonstration de l'analyse (décision de Mohamed du 25/10) ────────
+
+def test_prod_refuse_le_jeu_de_demonstration():
+    """SYNORIX_ANALYSE_DEMO=1 hors DEBUG enregistrerait de fausses analyses
+    (« Commune Test ») comme de vraies : l'API refuse de démarrer."""
+    with pytest.raises(ValidationError, match="SYNORIX_ANALYSE_DEMO"):
+        Settings(**_prod_kwargs(SYNORIX_ANALYSE_DEMO=True))
+
+
+def test_jeu_de_demonstration_tolere_en_debug():
+    s = Settings(**_prod_kwargs(DEBUG=True, SYNORIX_ANALYSE_DEMO=True))
+    assert s.SYNORIX_ANALYSE_DEMO is True

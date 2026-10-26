@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, computed_field, model_validator
@@ -38,6 +38,12 @@ class ChecklistItemResponse(BaseModel):
     signature_confirmed: bool = False
     lot: Optional[str] = None   # NULL = pièce commune ; 'lotN' = pièce du lot
     document_group: str = "fournir"  # fournir | completer | synorix | workflow
+    # « Jointe » : FAIT vérifié sur le plan du ZIP (routers/export._etat_piece),
+    # renseigné par GET /checklist — le fichier part dans le dossier, valable et
+    # daté pour une pièce du coffre ; avec son nom et sa date de fin.
+    jointe: bool = False
+    piece_nom: Optional[str] = None
+    valable_jusqu_au: Optional[date] = None
 
     model_config = {"from_attributes": True}
 

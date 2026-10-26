@@ -89,6 +89,15 @@ async def upload_document(
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ):
+    # Dates lues AVANT tout stockage : une date illisible ne laisse plus de
+    # fichier orphelin derrière une erreur 500 (B2 §7 n°4, B27).
+    try:
+        exp_date = date.fromisoformat(expiry_date) if expiry_date else None
+        iss_date = date.fromisoformat(issued_date) if issued_date else None
+    except ValueError:
+        raise HTTPException(status_code=422,
+                            detail="Date illisible : format attendu AAAA-MM-JJ.")
+
     # ── Validation d'entrée (S2.4, utilitaire commun B8) : extension →
     # Content-Length et taille reçue → copie plafonnée hors de la boucle →
     # octets magiques. Mauvais type : 415, comme tous les dépôts.
@@ -106,13 +115,12 @@ async def upload_document(
             file.content_type,
         )
 
-    exp_date = date.fromisoformat(expiry_date) if expiry_date else None
-    iss_date = date.fromisoformat(issued_date) if issued_date else None
-
     # États honnêtes : « valide » = reconnu ET daté, jamais « fichier reçu ».
-    # Un type explicite du front prime ; sinon classement auto par nom de
-    # fichier ; rien de reconnu → unclassified (aucun badge de validité).
-    doc_type = type if type and type != "autre" else detect_vault_type(file.filename or "")
+    # Un type explicite du front prime — traduit s'il vient d'une ligne de
+    # checklist (« qualibat_rge » → qualibat / rge) ; sinon classement auto par
+    # nom de fichier ; rien de reconnu → unclassified (aucun badge de validité).
+    from services.checklist_builder import type_coffre_pour_piece
+    doc_type = type_coffre_pour_piece(type, file.filename or "")
     category = "unclassified" if doc_type == "autre" else category_for_type(doc_type)
     status = compute_document_status(doc_type, exp_date, issued_date=iss_date)
 

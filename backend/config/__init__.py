@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     # démonstration sans clé valable. DÉSACTIVÉ par défaut, indépendant de
     # DEBUG : sans ce drapeau, une clé absente, d'exemple ou révoquée fait
     # échouer l'analyse (unité rendue), jamais de fausse analyse enregistrée.
-    # Activer : SYNORIX_ANALYSE_DEMO=1. Jamais en production.
+    # Activer : SYNORIX_ANALYSE_DEMO=1 ; refusé au démarrage hors DEBUG.
     SYNORIX_ANALYSE_DEMO: bool = False
 
     # Voyage AI (embeddings RAG — Phase 1). Optionnel tant que le RAG n'est
@@ -98,6 +98,13 @@ class Settings(BaseSettings):
         if "localhost" in self.FRONTEND_URL or "127.0.0.1" in self.FRONTEND_URL:
             problems.append(
                 "FRONTEND_URL pointe sur localhost — CORS bloquerait le domaine réel et les redirections Stripe seraient cassées"
+            )
+        if self.SYNORIX_ANALYSE_DEMO:
+            # Décision de Mohamed du 25/10 : jamais de jeu de démonstration en
+            # production — une clé refusée y enregistrerait de fausses analyses.
+            problems.append(
+                "SYNORIX_ANALYSE_DEMO=1 hors DEBUG — le jeu de démonstration enregistrerait de "
+                "fausses analyses comme de vraies : retirer ce drapeau (réservé au développement local)"
             )
         if problems:
             raise ValueError(

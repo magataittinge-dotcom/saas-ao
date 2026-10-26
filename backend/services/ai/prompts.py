@@ -114,7 +114,7 @@ Et expected_template_type :
 
 ▶ RÈGLES IMPÉRATIVES :
 
-1. DC1 / DC2 → TOUJOURS source_kind="dce_template" (formulaires Cerfa à remplir, JAMAIS un document du coffre-fort).
+1. DC1 / DC2 → TOUJOURS source_kind="dce_template" (modèles officiels du ministère de l'Économie à remplir, JAMAIS un document du coffre-fort).
    • DC1 → expected_template_type="dc1_template"
    • DC2 → expected_template_type="dc2_template"
 2. Acte d'engagement (AE / ATTRI1) → "dce_template" + "acte_engagement_template".
@@ -498,7 +498,7 @@ Et expected_template_type :
 
 ▶ RÈGLES IMPÉRATIVES (priorité absolue, ne jamais dévier) :
 
-1. DC1 / DC2 → TOUJOURS source_kind="dce_template" (ce sont des formulaires Cerfa à remplir, JAMAIS un document du coffre-fort).
+1. DC1 / DC2 → TOUJOURS source_kind="dce_template" (ce sont des modèles officiels du ministère de l'Économie à remplir, JAMAIS un document du coffre-fort).
    • DC1 (Lettre de candidature) → expected_template_type="dc1_template"
    • DC2 (Déclaration du candidat) → expected_template_type="dc2_template"
 

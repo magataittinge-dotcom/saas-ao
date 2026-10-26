@@ -256,6 +256,10 @@ export interface ChecklistItem {
   /** « Je confirme avoir signé » demandé pour cette pièce (règle serveur :
    *  DC1, DC2, DUME, AE seulement si le RC l'exige ; déclaration sur l'honneur). */
   signature_required?: boolean
+  /** « Jointe » : fait vérifié par le serveur sur le plan du ZIP (nom, date de fin). */
+  jointe?: boolean
+  piece_nom?: string | null
+  valable_jusqu_au?: string | null
   lot?: string | null
   document_group?: 'fournir' | 'completer' | 'synorix' | 'workflow'
 }

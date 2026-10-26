@@ -50,22 +50,24 @@ def get_dashboard_stats(user: User = Depends(get_auth_user), db: Session = Depen
     total_decided = int(p_row[3] or 0)
     taux_succes = round(gagnes / total_decided * 100) if total_decided > 0 else 0
 
-    # ── Single query for both document counters ────────────────────────────
-    d_row = db.query(
-        func.sum(case((Document.status == "expired", 1), else_=0)),
-        func.sum(case((Document.status == "expiring_soon", 1), else_=0)),
+    # ── Compteurs du coffre : statut jugé À LA LECTURE (comme le coffre) ────
+    # Une pièce dont la date passe aujourd'hui compte « expirée » sans attendre
+    # le job quotidien (tasks/check_expiry) ; une requête, colonnes légères.
+    from services.vault_classifier import current_document_status
+    statuts = [current_document_status(d) for d in db.query(
+        Document.type, Document.expiry_date, Document.issued_date, Document.status,
     ).filter(
         Document.organization_id == org_id,
         Document.deleted_at.is_(None),
-    ).one()
+    ).all()]
 
     payload = {
         "projects_en_cours": en_cours,
         "projects_soumis_ce_mois": soumis_ce_mois,
         "projects_gagnes": gagnes,
         "taux_succes": taux_succes,
-        "documents_expires": int(d_row[0] or 0),
-        "documents_expirant_bientot": int(d_row[1] or 0),
+        "documents_expires": statuts.count("expired"),
+        "documents_expirant_bientot": statuts.count("expiring_soon"),
     }
     org_cache.set(cache_key, payload, ttl=60)
     return payload
