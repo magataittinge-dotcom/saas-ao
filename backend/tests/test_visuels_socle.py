@@ -46,6 +46,10 @@ def test_le_rasteriseur_lit_carlito_dans_assets_fonts():
         assert raster._police(nom.endswith("Bold.ttf"), 20).path == str(raster._POLICES / nom)
 
 
+def test_plus_de_copie_de_carlito_dans_les_visuels():
+    assert not (RACINE / "services" / "visuels" / "polices").exists()
+
+
 @pytest.mark.parametrize("gras", [False, True])
 def test_largeur_egale_a_celle_de_la_police(gras):
     from PIL import ImageFont
