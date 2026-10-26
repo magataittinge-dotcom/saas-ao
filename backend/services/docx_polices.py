@@ -1,16 +1,14 @@
-"""Embarque Carlito dans le .docx (ECMA-376 §17.8.1, police obfusquée).
+"""Embarque Carlito dans un .docx (ECMA-376 §17.8.1, police obfusquée).
 
-Pourquoi : les styles du mémoire déclarent Calibri. Sur un serveur sans
-`fonts-crosextra-carlito`, LibreOffice sort le PDF en DejaVu Sans (autres
-largeurs de lettres, autres coupures de lignes, autre nombre de pages). Avec
-Carlito dans le fichier, le PDF a les mêmes lignes que dans Word, quelle que
-soit la machine.
+N'est PLUS appelé par l'export du mémoire (point 5 de WORD2) : le Word déclare
+Calibri, présente dans tout Word, et seul le serveur garde Carlito pour le PDF
+(`pdf_export`, via un fonts.conf du sous-processus). Le module reste comme
+référence : `tests/test_word_polices.py` s'en sert pour fabriquer l'ancien Word
+(Carlito embarquée) et prouver que le PDF n'a pas changé.
 
 Carlito : clone métrique libre de Calibri, SIL Open Font License 1.1, drapeau
 d'embarquement `fsType` 0 (installable) — licence dans
-`backend/assets/fonts/carlito/OFL.txt`. Dans Word, la Calibri installée reste
-utilisée ; la police embarquée sert à LibreOffice et aux Word sans Calibri
-(`w:altName`).
+`backend/assets/fonts/carlito/OFL.txt`.
 """
 from __future__ import annotations
 

@@ -1,14 +1,16 @@
-"""Bloc 3 « Le Word dit vrai » — tranche 4 : Carlito embarquée dans le Word.
+"""Polices du Word et du PDF (bloc 3 tranche 4, puis WORD2 point 5).
 
-Avant : le Word déclarait Calibri ; sans `fonts-crosextra-carlito` sur la
-machine, LibreOffice sortait le PDF en DejaVu Sans (autres largeurs de lettres,
-autres coupures de lignes, autre nombre de pages que dans Word).
+Le Word déclare Calibri, présente dans tout Word : il n'embarque aucune police
+(~1,1 Mo de moins). Seul le serveur garde Carlito (clone métrique libre de
+Calibri, SIL OFL 1.1, fsType 0) pour le PDF : `pdf_export` la montre à
+LibreOffice par un fonts.conf du sous-processus, sans paquet système, et
+LibreOffice remplace Calibri par Carlito (mêmes largeurs, mêmes coupures).
 
-Maintenant : Carlito (clone métrique libre de Calibri, SIL OFL 1.1, fsType 0)
-est embarquée dans le .docx. Les styles continuent de déclarer Calibri : Word
-utilise sa Calibri, LibreOffice remplace Calibri par Carlito embarquée.
+Le test de non-régression compare le PDF d'avant (Word avec Carlito embarquée,
+via `docx_polices`, gardé pour cette référence) et celui d'après (Word seul).
 """
 import io
+import re
 import shutil
 import struct
 import subprocess
@@ -16,9 +18,11 @@ import zipfile
 from pathlib import Path
 
 import pytest
+from docx import Document
 from lxml import etree
 
 from services.docx_exporter import build_memoire_docx
+from services.docx_polices import embarquer_carlito
 
 POLICES = Path(__file__).resolve().parent.parent / "assets" / "fonts" / "carlito"
 FICHIERS = ("Carlito-Regular.ttf", "Carlito-Bold.ttf", "Carlito-Italic.ttf", "Carlito-BoldItalic.ttf")
@@ -26,8 +30,9 @@ W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 R = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
 
 needs_soffice = pytest.mark.skipif(
-    not (shutil.which("soffice") or shutil.which("libreoffice")),
-    reason="LibreOffice absent de l'environnement",
+    not (shutil.which("soffice") or shutil.which("libreoffice"))
+    or not (shutil.which("pdffonts") and shutil.which("pdftotext") and shutil.which("pdfinfo")),
+    reason="LibreOffice ou poppler-utils absent de l'environnement",
 )
 
 CONTENU = {
@@ -55,54 +60,107 @@ def test_polices_et_licence_dans_le_depot():
     assert "SIL OPEN FONT LICENSE Version 1.1" in ofl
 
 
-def test_le_word_embarque_les_quatre_graisses_et_declare_toujours_calibri():
+def test_le_word_n_embarque_aucune_police_et_declare_calibri():
     octets = build_memoire_docx(CONTENU, "Chantier fictif", "ENTREPRISE TEST")
     z = zipfile.ZipFile(io.BytesIO(octets))
-    odttf = [n for n in z.namelist() if n.startswith("word/fonts/") and n.endswith(".odttf")]
-    assert len(odttf) == 4
-    assert b"embedTrueTypeFonts" in z.read("word/settings.xml")
+    assert [n for n in z.namelist() if n.startswith("word/fonts/") or n.endswith(".odttf")] == []
+    assert b"embedTrueTypeFonts" not in z.read("word/settings.xml")
     styles = z.read("word/styles.xml").decode("utf-8")
     assert 'w:ascii="Calibri"' in styles and "Carlito" not in styles
-
-    table = etree.fromstring(z.read("word/fontTable.xml"))
-    carlito = [f for f in table.findall(f"{W}font") if f.get(f"{W}name") == "Carlito"]
-    assert len(carlito) == 1
-    assert [c.tag.removeprefix(W) for c in carlito[0] if c.tag.startswith(f"{W}embed")] == [
-        "embedRegular", "embedBold", "embedItalic", "embedBoldItalic"]
-    # Calibri a Carlito pour police de remplacement
-    calibri = [f for f in table.findall(f"{W}font") if f.get(f"{W}name") == "Calibri"]
-    assert calibri and calibri[0].find(f"{W}altName").get(f"{W}val") == "Carlito"
+    table = z.read("word/fontTable.xml").decode("utf-8")
+    assert "Carlito" not in table and "embed" not in table
 
 
-def test_polices_obfusquees_se_relisent_a_l_identique():
-    """ECMA-376 §17.8.1 : les 32 premiers octets sont combinés (XOR) avec la
-    clé GUID, lue à l'envers. On refait l'opération inverse."""
-    octets = build_memoire_docx(CONTENU, "Chantier fictif", "ENTREPRISE TEST")
-    z = zipfile.ZipFile(io.BytesIO(octets))
-    table = etree.fromstring(z.read("word/fontTable.xml"))
-    rels = etree.fromstring(z.read("word/_rels/fontTable.xml.rels"))
-    cibles = {r.get("Id"): r.get("Target") for r in rels}
-    carlito = next(f for f in table.findall(f"{W}font") if f.get(f"{W}name") == "Carlito")
-    for embed, fichier in zip(carlito, FICHIERS):
-        cle = bytes.fromhex(embed.get(f"{W}fontKey").strip("{}").replace("-", ""))[::-1]
-        data = bytearray(z.read("word/" + cibles[embed.get(f"{R}id")]))
-        for i in range(32):
-            data[i] ^= cle[i % 16]
-        assert bytes(data) == (POLICES / fichier).read_bytes()
+def test_le_word_pese_peu_sans_police_embarquee():
+    # Avec les 4 graisses de Carlito embarquées, un Word vide pesait ~1,1 Mo.
+    assert len(build_memoire_docx(CONTENU, "Chantier fictif", "ENTREPRISE TEST")) < 150_000
 
 
-def test_poids_ajoute_au_word_reste_sous_1_5_mo():
-    avec = len(build_memoire_docx(CONTENU, "Chantier fictif", "ENTREPRISE TEST"))
-    assert avec < 1_500_000
+def test_le_fontconfig_du_sous_processus_ajoute_carlito_sans_toucher_au_systeme(tmp_path):
+    from services.pdf_export import DOSSIER_CARLITO, _ecrire_fontconfig
+
+    conf = _ecrire_fontconfig(tmp_path).read_text(encoding="utf-8")
+    assert "/etc/fonts/fonts.conf" in conf          # la configuration système reste prise en compte
+    assert f"<dir>{DOSSIER_CARLITO}</dir>" in conf
+    assert DOSSIER_CARLITO.is_dir() and (DOSSIER_CARLITO / "Carlito-Regular.ttf").is_file()
+
+
+# ── Le PDF ne change pas ─────────────────────────────────────────────────────
+
+def _contenu_long() -> dict:
+    """Mémoire fictif d'environ 20 pages : titres, paragraphes, listes, tableaux."""
+    para = ("Notre entreprise fictive organise le chantier en phases courtes, avec un point hebdomadaire "
+            "sur place, un compte rendu écrit sous vingt-quatre heures et un suivi des réserves tenu à jour "
+            "par le conducteur de travaux. Les approvisionnements sont planifiés à la semaine, les livraisons "
+            "regroupées pour limiter les nuisances, et les zones de stockage balisées dès l'installation. ")
+    tableau = ("| Poste | Effectif | Qualification |\n|---|---|---|\n"
+               "| Conducteur de travaux | 1 | Bac+3 bâtiment |\n| Chef d'équipe | 2 | CAP maçon |\n"
+               "| Ouvrier qualifié | 6 | CAP / BEP |\n| Apprenti | 1 | Bac pro |\n")
+
+    def section(n: int) -> str:
+        return (f"### Point {n}\n\n" + (para * 2 + "\n\n") * 2
+                + "- Premier engagement fictif\n- Second engagement fictif\n\n" + tableau + "\n" + para)
+
+    return {
+        "preambule": para * 3,
+        "partie_a": {k: section(i) for i, k in enumerate(
+            ["implantation", "historique", "engagement_qualitatif", "activites", "roles_missions",
+             "moyens_informatiques", "vehicules", "materiel", "fournisseurs"])},
+        "partie_b": {k: section(i + 20) for i, k in enumerate(
+            ["demarrage", "interlocuteur", "qualite_ouvrages", "respect_planning", "securite", "dechets",
+             "environnement"])},
+        "partie_c": {k: section(i + 40) for i, k in enumerate(
+            ["methodologie", "effectifs", "materiels", "hygiene_securite", "mesures_environnementales",
+             "gpa", "delai"])},
+    }
+
+
+def _polices_pdf(pdf: Path) -> list[str]:
+    sortie = subprocess.run(["pdffonts", str(pdf)], capture_output=True, text=True).stdout
+    return [ligne.split()[0].split("+")[-1] for ligne in sortie.splitlines()[2:] if ligne.strip()]
+
+
+def _nombre_de_pages(pdf: Path) -> int:
+    sortie = subprocess.run(["pdfinfo", str(pdf)], capture_output=True, text=True).stdout
+    return int(re.search(r"^Pages:\s+(\d+)", sortie, re.M).group(1))
+
+
+def _texte_par_page(pdf: Path) -> list[list[str]]:
+    """Mots de chaque page, dans l'ordre. Les points de conduite du sommaire
+    (leur nombre suit la largeur de la ligne, au 1/100 de point près) sont
+    écartés ; ce sont les titres et les numéros de page qui comptent."""
+    texte = subprocess.run(["pdftotext", "-raw", str(pdf), "-"], capture_output=True, text=True).stdout
+    pages = texte.split("\f")
+    if pages and not pages[-1].strip():
+        pages.pop()
+    return [re.sub(r"\.{2,}", " ", p).split() for p in pages]
 
 
 @needs_soffice
-def test_pdf_libreoffice_en_carlito_et_non_en_dejavu(tmp_path):
+def test_le_pdf_ne_change_pas_quand_le_word_n_embarque_plus_carlito(tmp_path):
     from services.pdf_export import docx_to_pdf
 
-    pdf = tmp_path / "m.pdf"
-    pdf.write_bytes(docx_to_pdf(build_memoire_docx(CONTENU, "Chantier fictif", "ENTREPRISE TEST")))
-    sortie = subprocess.run(["pdffonts", str(pdf)], capture_output=True, text=True).stdout
-    noms = [ligne.split()[0].split("+")[-1] for ligne in sortie.splitlines()[2:] if ligne.strip()]
-    assert any(n.startswith("Carlito") for n in noms), sortie
-    assert not any("DejaVu" in n for n in noms), sortie
+    apres_word = build_memoire_docx(_contenu_long(), "Chantier fictif", "ENTREPRISE TEST")
+    doc = Document(io.BytesIO(apres_word))
+    embarquer_carlito(doc)                       # l'ancien Word : Carlito dans le fichier
+    flux = io.BytesIO()
+    doc.save(flux)
+    avant_word = flux.getvalue()
+    assert len(avant_word) > len(apres_word) + 1_000_000      # le poids gagné
+
+    avant, apres = tmp_path / "avant.pdf", tmp_path / "apres.pdf"
+    avant.write_bytes(docx_to_pdf(avant_word))
+    apres.write_bytes(docx_to_pdf(apres_word))
+
+    for pdf in (avant, apres):
+        noms = _polices_pdf(pdf)
+        texte = [n for n in noms if not n.startswith("OpenSymbol")]   # OpenSymbol : puces des listes
+        assert texte and all(n.startswith("Carlito") for n in texte), noms
+        assert not any("DejaVu" in n or "Liberation" in n for n in noms), noms
+
+    assert _nombre_de_pages(apres) == _nombre_de_pages(avant)
+    assert 18 <= _nombre_de_pages(apres) <= 24                  # ≈ 20 pages
+    pages_avant, pages_apres = _texte_par_page(avant), _texte_par_page(apres)
+    assert len(pages_avant) == len(pages_apres)
+    for i, (a, b) in enumerate(zip(pages_avant, pages_apres), start=1):
+        assert a == b, f"le texte de la page {i} a changé"

@@ -17,7 +17,6 @@ from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor, Twips
 
 from services import memoire_markdown as md
-from services.docx_polices import embarquer_carlito
 from services.docx_sommaire import inserer_sommaire
 
 # ─── Passages « À compléter » ──────────────────────────────────────────────────
@@ -228,7 +227,8 @@ def _setup_doc(org_name: str) -> Document:
     _add_footer_page_numbers(section)
 
     _styles(doc)
-    embarquer_carlito(doc)   # le PDF LibreOffice sort en Carlito même sans le paquet de polices
+    # Pas de police embarquée : le Word déclare Calibri (présente dans tout Word). Le PDF
+    # sort en Carlito grâce à `pdf_export`, qui la montre à LibreOffice.
     return doc
 
 
