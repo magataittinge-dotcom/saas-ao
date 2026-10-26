@@ -3,7 +3,7 @@ Organigramme de chantier en SVG (C8a) — déterministe, 0 € API.
 
 Données : gérant + postes_cles du profil (MemoireConfig). Hiérarchie 2-3
 niveaux par mots-clés de poste. Rendu SVG sobre (boîtes nom/poste/rôle),
-rasterisé en PNG via PyMuPDF (déjà en dépendance) pour insertion DOCX.
+rasterisé en PNG par Pillow (services.visuels.raster) pour insertion DOCX.
 
 Règle : jamais d'organigramme vide ou à une seule personne → None, et
 l'option est grisée au pre-flight avec « compléter mon équipe ».
@@ -127,16 +127,10 @@ def generate_organigramme_svg(memoire_config) -> Optional[str]:
 
 
 def svg_to_png_bytes(svg: str, scale: float = 2.0) -> bytes:
-    """SVG → PNG via PyMuPDF (aucune dépendance supplémentaire)."""
-    import fitz
+    """SVG → PNG sans PyMuPDF (Pillow, services.visuels.raster). `scale` = pixels par unité."""
+    from services.visuels.raster import svg_vers_png
 
-    doc = fitz.open(stream=svg.encode("utf-8"), filetype="svg")
-    try:
-        page = doc[0]
-        pix = page.get_pixmap(matrix=fitz.Matrix(scale, scale), alpha=False)
-        return pix.tobytes("png")
-    finally:
-        doc.close()
+    return svg_vers_png(svg, dpi=int(72 * scale))
 
 
 def organigramme_available(memoire_config) -> bool:

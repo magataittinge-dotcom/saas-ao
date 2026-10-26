@@ -4,7 +4,7 @@ Gantt visuel du phasage (BONUS Lot 5) — déterministe, 0 € API.
 Rendu SVG des phases SAISIES par l'utilisateur au pre-flight
 ([{nom, duree_semaines}]) : barres séquentielles sur une échelle en
 semaines. Aucune donnée inventée : pas de phases exploitables → None.
-Rasterisation PNG via services.organigramme.svg_to_png_bytes (PyMuPDF).
+Rasterisation PNG : services.visuels.raster (Pillow).
 """
 import html
 from typing import List, Optional

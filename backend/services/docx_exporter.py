@@ -270,35 +270,71 @@ def _add_map_image(doc: Document, map_image: bytes, caption: str):
     p_cap.paragraph_format.space_after = Pt(12)
 
 
+def _ajouter_visuel(doc: Document, svg: str, png: bytes, largeur_cm: float,
+                    texte_alt: str, legende: str | None = None, paysage: bool = False):
+    """Pose un visuel (SVG vectoriel + PNG de repli + texte alternatif) et sa légende.
+    `paysage` : le visuel occupe une page A4 paysage, puis le document revient en portrait."""
+    from services.visuels.word import inserer_svg_png
+
+    if paysage:
+        _changer_orientation(doc, paysage=True)
+    p_img = doc.add_paragraph()
+    p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_img.paragraph_format.space_before = Pt(8)
+    p_img.paragraph_format.space_after = Pt(4)
+    p_img.paragraph_format.keep_with_next = bool(legende)
+    inserer_svg_png(p_img, svg, png, largeur_cm, texte_alt)
+    if legende:
+        p_cap = doc.add_paragraph()
+        p_cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        r_cap = p_cap.add_run(legende)
+        r_cap.font.name = "Calibri"
+        r_cap.font.size = Pt(9)
+        r_cap.font.italic = True
+        r_cap.font.color.rgb = _GREY_META
+        p_cap.paragraph_format.space_after = Pt(12)
+    if paysage:
+        _changer_orientation(doc, paysage=False)
+
+
+def _changer_orientation(doc: Document, *, paysage: bool):
+    """Nouvelle section (nouvelle page) en A4 paysage ou portrait."""
+    from docx.enum.section import WD_ORIENT, WD_SECTION
+
+    s = doc.add_section(WD_SECTION.NEW_PAGE)
+    portrait_l, portrait_h = Cm(21.0), Cm(29.7)
+    s.orientation = WD_ORIENT.LANDSCAPE if paysage else WD_ORIENT.PORTRAIT
+    s.page_width, s.page_height = (portrait_h, portrait_l) if paysage else (portrait_l, portrait_h)
+    s.different_first_page_header_footer = False   # pas de « première page » sur ces sections
+
+
 def _add_part(
     doc: Document,
     title: str,
     part: dict[str, Any],
     sections: list[tuple[str, str]],
     *,
+    part_key: str = "",
     map_image: bytes | None = None,
     map_caption: str | None = None,
-    organigramme_image: bytes | None = None,
-    gantt_image: bytes | None = None,
+    visuels: list | None = None,
 ):
+    from services.visuels.modele import retirer_gabarits
+
     _h1(doc, title)
     for key, label in sections:
         text = (part or {}).get(key, "")
-        if text and text.strip():
+        ses_visuels = [v for v in (visuels or []) if v.section == (part_key, key)]
+        if (text and text.strip()) or ses_visuels:
             _h2(doc, label)
+            text = retirer_gabarits(text or "", ses_visuels)
             if key == "implantation" and map_image:
                 _body(doc, text, skip_map_placeholder=True)
                 _add_map_image(doc, map_image, map_caption or "")
-            elif key == "effectifs" and organigramme_image:
-                # C8a — organigramme du chantier sous les moyens humains
-                _body(doc, text)
-                _add_map_image(doc, organigramme_image, "Organigramme du chantier")
-            elif key == "methodologie" and gantt_image:
-                # BONUS — Gantt du phasage sous la méthodologie
-                _body(doc, text)
-                _add_map_image(doc, gantt_image, "Planning prévisionnel des travaux")
             else:
                 _body(doc, text)
+            for v in ses_visuels:
+                _ajouter_visuel(doc, v.svg, v.png, v.largeur_cm, v.texte_alt, v.legende, v.paysage)
 
 
 # ─── Point d'entrée public ─────────────────────────────────────────────────────
@@ -310,8 +346,7 @@ def build_memoire_docx(
     *,
     map_image: bytes | None = None,
     map_caption: str | None = None,
-    organigramme_image: bytes | None = None,
-    gantt_image: bytes | None = None,
+    visuels: list | None = None,
     logo_image: bytes | None = None,
     lot_name: str | None = None,
     maitre_ouvrage: str | None = None,
@@ -331,9 +366,9 @@ def build_memoire_docx(
         _h1(doc, "PRÉAMBULE")
         _body(doc, preambule)
 
-    _add_part(doc, "PARTIE A — PRÉSENTATION GÉNÉRALE",       content_json.get("partie_a", {}), _PART_A, map_image=map_image, map_caption=map_caption)
-    _add_part(doc, "PARTIE B — PRÉSENTATION DE LA PRESTATION", content_json.get("partie_b", {}), _PART_B)
-    _add_part(doc, "PARTIE C — MÉTHODOLOGIE MISE EN ŒUVRE",   content_json.get("partie_c", {}), _PART_C, organigramme_image=organigramme_image, gantt_image=gantt_image)
+    _add_part(doc, "PARTIE A — PRÉSENTATION GÉNÉRALE",       content_json.get("partie_a", {}), _PART_A, part_key="partie_a", map_image=map_image, map_caption=map_caption, visuels=visuels)
+    _add_part(doc, "PARTIE B — PRÉSENTATION DE LA PRESTATION", content_json.get("partie_b", {}), _PART_B, part_key="partie_b", visuels=visuels)
+    _add_part(doc, "PARTIE C — MÉTHODOLOGIE MISE EN ŒUVRE",   content_json.get("partie_c", {}), _PART_C, part_key="partie_c", visuels=visuels)
 
     buf = io.BytesIO()
     doc.save(buf)

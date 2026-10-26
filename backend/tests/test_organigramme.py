@@ -89,22 +89,24 @@ CONTENT = {
 
 def test_docx_contains_organigramme_image():
     from services.docx_exporter import build_memoire_docx
-    from services.organigramme import generate_organigramme_svg, svg_to_png_bytes
+    from services.organigramme import generate_organigramme_svg
+    from services.visuels.modele import Visuel
 
     svg = generate_organigramme_svg(_Cfg("Karim Omarov", "Gérant", TEAM))
-    png = svg_to_png_bytes(svg)
 
     without = build_memoire_docx(CONTENT, "Projet X", "BATI FACADE")
     with_org = build_memoire_docx(
-        CONTENT, "Projet X", "BATI FACADE", organigramme_image=png,
+        CONTENT, "Projet X", "BATI FACADE",
+        visuels=[Visuel(("partie_c", "effectifs"), svg, "Organigramme", "Organigramme du chantier", 15.0)],
     )
-    assert _count_media(with_org) == _count_media(without) + 1
+    # le visuel ajoute deux médias : le SVG et son PNG de repli
+    assert _count_media(with_org) == _count_media(without) + 2
 
 
 def test_docx_without_organigramme_unchanged():
     from services.docx_exporter import build_memoire_docx
 
-    out = build_memoire_docx(CONTENT, "Projet X", "BATI FACADE", organigramme_image=None)
+    out = build_memoire_docx(CONTENT, "Projet X", "BATI FACADE", visuels=None)
     assert out[:2] == b"PK"  # docx valide (zip)
 
 

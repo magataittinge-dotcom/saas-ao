@@ -34,7 +34,8 @@ PNG_1PX = (
 def _full_docx() -> bytes:
     """Mémoire réel : page de garde complète + organigramme inséré."""
     from services.docx_exporter import build_memoire_docx
-    from services.organigramme import generate_organigramme_svg, svg_to_png_bytes
+    from services.organigramme import generate_organigramme_svg
+    from services.visuels.modele import Visuel
 
     class _Cfg:
         gerant_nom = "Karim Omarov"
@@ -44,10 +45,11 @@ def _full_docx() -> bytes:
             {"poste": "Chef de chantier", "nom": "Marc Petit", "role": ""},
         ]
 
-    organigramme = svg_to_png_bytes(generate_organigramme_svg(_Cfg()))
+    organigramme = Visuel(("partie_c", "effectifs"), generate_organigramme_svg(_Cfg()),
+                          "Organigramme du chantier", "Organigramme du chantier", 15.0)
     return build_memoire_docx(
         CONTENT, "Groupe scolaire Gueux", "BATI FACADE SARL",
-        organigramme_image=organigramme, logo_image=PNG_1PX,
+        visuels=[organigramme], logo_image=PNG_1PX,
         lot_name="Lot 2 — Ravalement de façades",
         maitre_ouvrage="Commune de Gueux",
         org_address="12 rue des Maçons, 14000 Caen", org_siret="38044894400237",
