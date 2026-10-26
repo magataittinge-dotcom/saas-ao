@@ -243,7 +243,7 @@ _CSP_PROD = (
     "script-src 'self' https://js.stripe.com; "
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
     "font-src 'self' https://fonts.gstatic.com data:; "
-    "img-src 'self' data: blob: https://maps.googleapis.com https://maps.gstatic.com "
+    "img-src 'self' data: blob: "
     "https://img.clerk.com; "  # photo du compte (barre latérale)
     "connect-src 'self' https://api.stripe.com https://*.clerk.accounts.dev "
     "https://clerk.synorix.fr https://*.synorix.fr; "

@@ -58,9 +58,6 @@ class Settings(BaseSettings):
     # affichée mais pas encore ouverte au paiement en ligne (503 explicite).
     STRIPE_PRODUCT_ESSENTIEL: str = ""
 
-    # Google Maps Static API
-    GOOGLE_MAPS_API_KEY: str = ""
-
     # SMTP (C23 — notifications email). Absents → in-app seul, jamais de crash.
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587
