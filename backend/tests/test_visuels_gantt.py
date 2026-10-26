@@ -155,3 +155,13 @@ def test_page_paysage_dans_le_pdf_et_texte_dans_la_page():
     i = next(k for k, tx in enumerate(textes) if "Façades et enduits" in tx)
     assert formats[i] is True                       # la page du Gantt est en paysage
     assert any(not f for f in formats[:i])          # le reste du mémoire reste en portrait
+
+
+def test_le_document_est_en_a4_portrait_et_paysage():
+    from docx import Document
+    from docx.shared import Cm
+    from services.docx_exporter import build_memoire_docx
+    v = g.construire([{"nom": "Gros oeuvre", "duree_semaines": 20}, {"nom": "Façades", "duree_semaines": 12}], TH)
+    doc = Document(io.BytesIO(build_memoire_docx({"partie_c": {"methodologie": "M."}}, "P", "E", visuels=[v])))
+    dims = {(round(s.page_width.cm, 1), round(s.page_height.cm, 1)) for s in doc.sections}
+    assert dims == {(21.0, 29.7), (29.7, 21.0)}            # jamais de Letter

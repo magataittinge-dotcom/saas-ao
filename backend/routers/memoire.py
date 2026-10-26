@@ -25,7 +25,7 @@ from schemas.memoire import (
 from routers.auth import get_auth_user
 from services.ai.memoire_generator import MemoireGenerator
 from services.docx_exporter import build_memoire_docx
-from services.maps_service import generate_location_map
+from services.maps_service import generate_location_map, lieu_execution
 from services.document_tagger import get_documents_for_lot
 
 
@@ -285,13 +285,10 @@ def _run_memoire_job(
         if reference_ids is not None:
             wanted = set(reference_ids)
             refs = [r for r in refs if r.id in wanted]
-        _CATEGORY_ORDER = {"technique": 0, "planning": 1, "offre": 2, "criteres_notation": 3, "candidature": 4}
-        compliance_items_raw = (
-            db.query(ComplianceItem)
-            .filter(ComplianceItem.project_id == project_id)
-            .all()
-        )
-        compliance_items = sorted(compliance_items_raw, key=lambda c: _CATEGORY_ORDER.get(c.category, 5))
+        # Tranche A (bloc 3) : toutes les exigences du lot choisi (communes +
+        # propres au lot), pas celles des autres lots ; le générateur les range.
+        from services.exigences import exigences_pour_memoire
+        compliance_items = exigences_pour_memoire(db, project)
 
         # Check for reference template (imported mémoire)
         ref_template = db.query(MemoireTemplate).filter(
@@ -496,17 +493,41 @@ def _variables_stockees(variables: dict, reference_ids) -> dict:
     return stockees
 
 
+def _visuels_du_memoire(project, memoire, db, logo_image) -> list:
+    """Visuels du mémoire (organigramme, Gantt, moyens, références, plan, schéma), tirés des
+    seules données saisies. Sans base ou en cas d'erreur : aucun visuel, l'export continue."""
+    if db is None:
+        return []
+    try:
+        from services.visuels.assemblage import construire_visuels
+        variables = getattr(memoire, "variables", None) or {}
+        cfg = db.query(MemoireConfig).filter(
+            MemoireConfig.organization_id == project.organization_id,
+        ).first()
+        return construire_visuels(
+            variables, cfg, logo_image,
+            _membres_equipe(db, project.organization_id),
+            _references_du_memoire(db, project.organization_id, variables),
+            getattr(memoire, "profile_overrides", None) or None,
+            getattr(memoire, "content_json", None))
+    except Exception as exc:
+        import logging as _logging
+        _logging.getLogger(__name__).warning("Visuels omis : %s", type(exc).__name__)
+        return []
+
+
 def build_project_memoire_docx(project, memoire, org, db) -> bytes:
     """Construit le DOCX complet du mémoire (page de garde, carte,
     organigramme, logo) — source unique pour export-docx, export-pdf et ZIP."""
     org_name = org.name if org else "Entreprise"
 
     # Generate location map (graceful fallback to None)
+    # Carte IGN : le siège, et le CHANTIER seulement si l'analyse en a extrait le
+    # lieu d'exécution — jamais le nom de l'acheteur (bloc 3, tranche B).
     company_address = org.address if org else None
-    project_address = project.maitre_ouvrage  # city/name of client as proxy
     map_image, map_caption = generate_location_map(
         company_address or "",
-        project_address,
+        lieu_execution(project),
     )
 
     # C8b — logo pour la page de garde (fallback texte propre si absent/illisible)
@@ -520,14 +541,7 @@ def build_project_memoire_docx(project, memoire, org, db) -> bytes:
             except Exception:
                 logo_image = None
 
-    from services.visuels.assemblage import construire_visuels
-    cfg = db.query(MemoireConfig).filter(
-        MemoireConfig.organization_id == project.organization_id,
-    ).first()
-    visuels = construire_visuels(memoire.variables or {}, cfg, logo_image,
-                                 _membres_equipe(db, project.organization_id),
-                                 _references_du_memoire(db, project.organization_id, memoire.variables or {}),
-                                 memoire.profile_overrides or None, memoire.content_json)
+    visuels = _visuels_du_memoire(project, memoire, db, logo_image)
 
     return build_memoire_docx(
         content_json=memoire.content_json,

@@ -185,12 +185,12 @@ def test_organigramme_en_A5_et_gabarit_retire():
     out = build_memoire_docx(contenu, "Projet X", "Entreprise Y", visuels=[visuel])
     paras = _paragraphes(out)
     texte = [re.sub(r"<[^>]+>", "", p) for p in paras]
-    i_titre = next(i for i, t in enumerate(texte) if "5. Organigramme" in t)
+    i_titre = max(i for i, t in enumerate(texte) if "5. Organigramme" in t)   # le corps, après le sommaire
     i_image = next(i for i, p in enumerate(paras) if "svgBlip" in p)
-    i_suivant = next(i for i, t in enumerate(texte) if "6. Rôles et missions" in t)
+    i_suivant = max(i for i, t in enumerate(texte) if "6. Rôles et missions" in t)
     assert i_titre < i_image < i_suivant                      # l'image est dans la section A.5
     assert not any("À COMPLÉTER" in t for t in texte)         # l'instruction du prompt a disparu
-    i_c2 = next(i for i, t in enumerate(texte) if "2. Effectifs" in t)
+    i_c2 = max(i for i, t in enumerate(texte) if "2. Effectifs" in t)
     assert not any("svgBlip" in p for p in paras[i_c2:])      # plus rien en C.2
 
 

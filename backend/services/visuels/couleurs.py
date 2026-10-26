@@ -66,7 +66,8 @@ def couleur_dominante_logo(png: bytes) -> str:
     except Exception:
         return ACCENT_PAR_DEFAUT
     compte: dict[tuple[int, int, int], int] = {}
-    for r, g, b, a in im.getdata():
+    px = im.load()
+    for r, g, b, a in (px[x, y] for y in range(64) for x in range(64)):  # type: ignore[index, misc]
         if a < 128:
             continue
         if max(r, g, b) - min(r, g, b) < 40 or max(r, g, b) > 240 or max(r, g, b) < 30:
@@ -75,4 +76,4 @@ def couleur_dominante_logo(png: bytes) -> str:
         compte[cle] = compte.get(cle, 0) + 1
     if not compte:
         return ACCENT_PAR_DEFAUT
-    return _hex(*max(compte, key=compte.get))
+    return _hex(*max(compte, key=lambda k: compte[k]))

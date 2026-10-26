@@ -32,7 +32,7 @@ def t(x, y, s, taille: float = 9, gras=False, fill="#2B3543", ancre="start", ext
             f'text-anchor="{ancre}"{extra}>{esc(s)}</text>')
 
 
-def r(x, y, w, h, fill="none", stroke="none", sw=0.75, rx=0, extra=""):
+def r(x, y, w, h, fill="none", stroke="none", sw=0.75, rx: float = 0, extra=""):
     return (f'<rect x="{x:.1f}" y="{y:.1f}" width="{w:.1f}" height="{h:.1f}" rx="{rx}" '
             f'fill="{fill}" stroke="{stroke}" stroke-width="{sw}"{extra}/>')
 

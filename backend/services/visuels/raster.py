@@ -111,7 +111,7 @@ def _sous_chemins(d: str) -> list[tuple[list[tuple[float, float]], bool]]:
                     x, y = pts[0]
         else:
             nombres.append(float(nb))
-            k = taille.get(cmd)
+            k = taille.get(cmd or "")
             if k and len(nombres) == k:
                 appliquer(cmd, nombres)
                 nombres = []
@@ -242,7 +242,7 @@ def svg_vers_png(svg: str, dpi: int = DPI_DEFAUT) -> bytes:
     visiter(racine)
     sortie_w = max(1, round(largeur_u * dpi / 72.0))
     sortie_h = max(1, round(hauteur_u * dpi / 72.0))
-    image = image.resize((sortie_w, sortie_h), Image.LANCZOS)
+    image = image.resize((sortie_w, sortie_h), Image.Resampling.LANCZOS)
     buf = io.BytesIO()
     image.save(buf, format="PNG", optimize=True, dpi=(dpi, dpi))
     return buf.getvalue()

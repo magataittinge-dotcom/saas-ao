@@ -166,7 +166,7 @@ def test_tableau_natif_en_A10_avec_entete_repetee_et_sans_tableau_markdown():
     assert len(tbl.rows) == 4 and "Jules-Ferry" in tbl.rows[1].cells[0].text
     assert "w:tblHeader" in xml and "w:cantSplit" in xml
     texte = re.sub(r"<[^>]+>", "|", xml)
-    assert texte.index("10. Références chantiers") < texte.index("Jules-Ferry") < texte.index("11. Fournisseurs")
+    assert texte.rindex("10. Références chantiers") < texte.index("Jules-Ferry") < texte.rindex("11. Fournisseurs")
 
 
 @needs_soffice

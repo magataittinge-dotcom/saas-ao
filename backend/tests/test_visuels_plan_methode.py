@@ -178,11 +178,11 @@ def test_schema_avant_le_gantt_dans_la_methodologie_et_plan_en_B1():
     xml = zipfile.ZipFile(io.BytesIO(out)).read("word/document.xml").decode("utf-8")
     paras = re.findall(r"<w:p[ >].*?</w:p>", xml, re.S)
     texte = [re.sub(r"<[^>]+>", "", p) for p in paras]
-    i_b1 = next(i for i, x in enumerate(texte) if "1. Démarrage du chantier" in x)
-    i_b2 = next(i for i, x in enumerate(texte) if "2. Interlocuteur dédié" in x)
+    i_b1 = max(i for i, x in enumerate(texte) if "1. Démarrage du chantier" in x)
+    i_b2 = max(i for i, x in enumerate(texte) if "2. Interlocuteur dédié" in x)
     assert any("svgBlip" in p for p in paras[i_b1:i_b2])                       # le plan est en B.1
-    i_c1 = next(i for i, x in enumerate(texte) if "1. Méthodologie détaillée" in x)
-    i_c3 = next(i for i, x in enumerate(texte) if "3. Matériels dédiés" in x)
+    i_c1 = max(i for i, x in enumerate(texte) if "1. Méthodologie détaillée" in x)
+    i_c3 = max(i for i, x in enumerate(texte) if "3. Matériels dédiés" in x)
     images_c1 = [i for i, p in enumerate(paras) if "svgBlip" in p and i_c1 < i < i_c3]
     assert len(images_c1) == 2                                                # schéma puis Gantt
     legendes = [x for x in texte if x in ("Schéma de la méthodologie", "Planning prévisionnel des travaux")]
