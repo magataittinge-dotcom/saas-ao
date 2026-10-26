@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, Text, DateTime, ForeignKey, Enum as SAEnum
+from sqlalchemy import Column, String, Integer, Float, Text, DateTime, ForeignKey, Enum as SAEnum
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -24,6 +24,12 @@ class ComplianceItem(Base):
     source_document = Column(Text, nullable=True)
     source_page = Column(Integer, nullable=True)
     source_excerpt = Column(Text, nullable=True)
+    # Ancrage de la source (bloc 2) : extrait d'origine de l'IA, niveau atteint
+    # (exact | normalise | segment | recupere | aucun ; NULL = ligne antérieure)
+    # et score (1.0 si le texte est retrouvé tel quel). Mesure en production.
+    source_excerpt_ia = Column(Text, nullable=True)
+    ancrage_niveau = Column(String(16), nullable=True)
+    ancrage_score = Column(Float, nullable=True)
     # Mutualisation multi-lots : '_commun' (RC/CCAP/AE, partagé) | 'lotN'
     # (spécifique) | NULL (lignes legacy = lot courant)
     lot = Column(Text, nullable=True, index=True)
