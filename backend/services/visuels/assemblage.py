@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 
+from .couleurs import ACCENT_PAR_DEFAUT, Theme, couleur_dominante_logo
 from .modele import Visuel
 
 logger = logging.getLogger(__name__)
@@ -26,18 +27,17 @@ def _pret(visuel: Visuel | None, nom: str, visuels: list[Visuel]) -> None:
     visuels.append(visuel)
 
 
-def construire_visuels(variables: dict, cfg, logo_image: bytes | None = None) -> list[Visuel]:
+def construire_visuels(variables: dict, cfg, logo_image: bytes | None = None, team_members=None) -> list[Visuel]:
     visuels: list[Visuel] = []
+
+    th = Theme(couleur_dominante_logo(logo_image) if logo_image else ACCENT_PAR_DEFAUT)
 
     if variables.get("include_organigramme"):
         try:
-            from services.organigramme import generate_organigramme_svg
-            svg = generate_organigramme_svg(cfg)
-            if svg:
-                _pret(Visuel(("partie_c", "effectifs"), svg, "Organigramme du chantier",
-                             "Organigramme du chantier", 15.0), "organigramme", visuels)
-        except Exception:
-            logger.warning("Organigramme omis : %s", "erreur de construction")
+            from .organigramme import construire
+            _pret(construire(cfg, team_members, th), "organigramme", visuels)
+        except Exception as exc:
+            logger.warning("Organigramme omis : %s", type(exc).__name__)
 
     if variables.get("gantt_phases"):
         try:

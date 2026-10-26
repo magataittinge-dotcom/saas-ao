@@ -53,9 +53,9 @@ def test_gantt_none_without_phases():
 def test_gantt_png_and_docx_insertion():
     from services.docx_exporter import build_memoire_docx
     from services.gantt import generate_gantt_svg
-    from services.organigramme import svg_to_png_bytes
+    from services.visuels import svg_vers_png
 
-    png = svg_to_png_bytes(generate_gantt_svg(PHASES))
+    png = svg_vers_png(generate_gantt_svg(PHASES))
     assert png[:8] == b"\x89PNG\r\n\x1a\n"
 
     def _media(b):

@@ -133,7 +133,7 @@ def get_memoire_preflight(
         "quota": status["memoires"],
         # C8a — l'option organigramme n'est proposée que si le profil équipe
         # permet un rendu réel (jamais d'organigramme vide).
-        "organigramme_available": organigramme_available(cfg),
+        "organigramme_available": organigramme_available(cfg, _membres_equipe(db, user.organization_id)),
         "vault_documents": vault_documents,
     }
 
@@ -466,6 +466,12 @@ async def rewrite_passage_endpoint(
     }
 
 
+def _membres_equipe(db, org_id):
+    """Membres de l'équipe de l'organisation (seconde source de l'organigramme)."""
+    from models.team_member import TeamMember
+    return db.query(TeamMember).filter(TeamMember.organization_id == org_id).all()
+
+
 def build_project_memoire_docx(project, memoire, org, db) -> bytes:
     """Construit le DOCX complet du mémoire (page de garde, carte,
     organigramme, logo) — source unique pour export-docx, export-pdf et ZIP."""
@@ -494,7 +500,8 @@ def build_project_memoire_docx(project, memoire, org, db) -> bytes:
     cfg = db.query(MemoireConfig).filter(
         MemoireConfig.organization_id == project.organization_id,
     ).first()
-    visuels = construire_visuels(memoire.variables or {}, cfg, logo_image)
+    visuels = construire_visuels(memoire.variables or {}, cfg, logo_image,
+                                 _membres_equipe(db, project.organization_id))
 
     return build_memoire_docx(
         content_json=memoire.content_json,
