@@ -252,7 +252,7 @@ def test_group2_with_dce_template_is_downloadable(client, db_session, test_org):
 
 
 def test_group2_standard_form_has_no_dce_template(client, db_session, test_org):
-    """Type (b) : le DC1 (formulaire Cerfa standard) n'est PAS dans le DCE →
+    """Type (b) : le DC1 (modèle officiel standard) n'est PAS dans le DCE →
     aucune trame liée ; l'UI proposera le formulaire officiel."""
     db_session.add(Project(id="proj-g2b", organization_id=test_org.id, name="X",
                            deadline=date.today()))

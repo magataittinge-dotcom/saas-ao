@@ -176,8 +176,9 @@ function TemplateRow({
           ) : hasTemplate ? (
             <span className="text-xs" style={{ color: '#959597' }}>À compléter</span>
           ) : officialUrl ? (
-            // Type (b) : formulaire standard — normal qu'il ne soit pas au DCE.
-            <span className="text-xs" style={{ color: '#959597' }}>Formulaire standard (Cerfa)</span>
+            // Type (b) : modèle officiel — normal qu'il ne soit pas au DCE. Aucun numéro de formulaire :
+            // service-public (F32144, F32106) classe DC1/DC2/DUME en « Modèle de document ».
+            <span className="text-xs" style={{ color: '#959597' }}>Modèle officiel (ministère de l'Économie)</span>
           ) : (
             // Type (a) spécifique au DCE mais introuvable → à réclamer, pas une erreur.
             <span className="text-xs" style={{ color: '#959597' }}>À demander au maître d'ouvrage</span>
