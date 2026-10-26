@@ -32,6 +32,10 @@ def generate_gantt_svg(phases: Optional[List[dict]]) -> Optional[str]:
             cleaned.append({"nom": nom, "duree": duree})
     if not cleaned:
         return None
+    from services.visuels.limites import GANTT_DUREE_MAX, GANTT_MAX_PHASES, GANTT_TOTAL_MAX
+    if (len(cleaned) > GANTT_MAX_PHASES or any(p["duree"] > GANTT_DUREE_MAX for p in cleaned)
+            or sum(p["duree"] for p in cleaned) > GANTT_TOTAL_MAX):
+        return None   # saisie démesurée : pas de visuel plutôt qu'une image géante
 
     total_weeks = sum(p["duree"] for p in cleaned)
     width = _MARGIN * 2 + _LABEL_W + total_weeks * _WEEK_W

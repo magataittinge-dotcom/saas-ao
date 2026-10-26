@@ -23,6 +23,11 @@ _NS = "{http://www.w3.org/2000/svg}"
 _SUREC = 2
 _PX_MAX = 16_000_000
 DPI_DEFAUT = 150
+DPI_MIN = 36
+
+
+class VisuelTropGrand(ValueError):
+    """La toile du visuel dépasse le plafond mémoire, même à la résolution minimale."""
 
 
 @lru_cache(maxsize=8)
@@ -147,8 +152,14 @@ def svg_vers_png(svg: str, dpi: int = DPI_DEFAUT) -> bytes:
     racine = ET.fromstring(svg)
     vb = [float(v) for v in racine.attrib["viewBox"].replace(",", " ").split()]
     largeur_u, hauteur_u = vb[2], vb[3]
-    # Plafond mémoire : pas plus de ~16 Mpx sur la toile suréchantillonnée (48 Mo en RVB)
-    dpi = min(dpi, int(72 * math.sqrt(_PX_MAX / (largeur_u * hauteur_u)) / _SUREC)) or 1
+    # Plafond mémoire : pas plus de ~16 Mpx sur la toile suréchantillonnée (48 Mo en RVB).
+    # Trop grand même à la résolution minimale : pas de PNG (le visuel est omis par l'appelant).
+    if not (0 < largeur_u * hauteur_u < float("inf")):
+        raise VisuelTropGrand("dimensions de visuel invalides")
+    dpi_max = int(72 * math.sqrt(_PX_MAX / (largeur_u * hauteur_u)) / _SUREC)
+    if dpi_max < DPI_MIN:
+        raise VisuelTropGrand(f"visuel trop grand ({largeur_u:.0f} x {hauteur_u:.0f})")
+    dpi = min(dpi, dpi_max)
     echelle = dpi / 72.0 * _SUREC
     W, H = max(1, round(largeur_u * echelle)), max(1, round(hauteur_u * echelle))
     image = Image.new("RGB", (W, H), (255, 255, 255))

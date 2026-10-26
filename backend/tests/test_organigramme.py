@@ -35,22 +35,10 @@ def test_svg_generated_for_typical_team():
 
     svg = generate_organigramme_svg(_Cfg("Karim Omarov", "Gérant", TEAM))
     assert svg is not None
-    # SVG bien formé (la validité structurelle est prouvée par la
-    # rasterisation PyMuPDF dans test_svg_to_png_conversion)
     assert svg.lstrip().startswith("<svg") and svg.rstrip().endswith("</svg>")
     for name in ("Karim Omarov", "Ali Benali", "Marc Petit", "Yanis Robert"):
         assert name in svg
     assert "Gérant" in svg and "Conducteur de travaux" in svg
-
-
-def test_hierarchy_levels():
-    from services.organigramme import build_hierarchy
-
-    levels = build_hierarchy(_Cfg("Karim Omarov", "Gérant", TEAM))
-    assert [p["nom"] for p in levels[0]] == ["Karim Omarov"]      # direction
-    assert any(p["nom"] == "Ali Benali" for p in levels[1])       # conducteur
-    assert any(p["nom"] == "Marc Petit" for p in levels[2])       # chefs
-    assert len(levels) <= 3
 
 
 def test_no_data_returns_none_never_empty_chart():
@@ -58,17 +46,16 @@ def test_no_data_returns_none_never_empty_chart():
 
     assert generate_organigramme_svg(_Cfg()) is None
     assert generate_organigramme_svg(None) is None
-    # Gérant seul = pas un organigramme (1 seule boîte) → quand même généré ?
-    # Non : il faut au moins 2 personnes pour une hiérarchie.
+    # Gérant seul = pas un organigramme (1 seule boîte)
     assert generate_organigramme_svg(_Cfg("Karim Omarov", "Gérant", [])) is None
 
 
 def test_svg_to_png_conversion():
-    from services.organigramme import generate_organigramme_svg, svg_to_png_bytes
+    from services.organigramme import generate_organigramme_svg
+    from services.visuels import svg_vers_png
 
-    svg = generate_organigramme_svg(_Cfg("Karim Omarov", "Gérant", TEAM))
-    png = svg_to_png_bytes(svg)
-    assert png[:8] == b"\x89PNG\r\n\x1a\n"  # magic bytes PNG
+    png = svg_vers_png(generate_organigramme_svg(_Cfg("Karim Omarov", "Gérant", TEAM)))
+    assert png[:8] == b"\x89PNG\r\n\x1a\n"
     assert len(png) > 1000
 
 

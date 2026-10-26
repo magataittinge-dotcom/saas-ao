@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import io
+import logging
 import re
 from datetime import datetime
 from typing import Any
@@ -11,6 +12,8 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
+
+logger = logging.getLogger(__name__)
 
 _MAP_PLACEHOLDER_RE = re.compile(r"\[📍.*?(?:carte|localisation|Google Maps).*?\]", re.IGNORECASE | re.DOTALL)
 
@@ -334,7 +337,12 @@ def _add_part(
             else:
                 _body(doc, text)
             for v in ses_visuels:
-                _ajouter_visuel(doc, v.svg, v.png, v.largeur_cm, v.texte_alt, v.legende, v.paysage)
+                try:
+                    png = v.png          # un visuel qui ne se rastérise pas disparaît, l'export continue
+                except Exception:
+                    logger.warning("Visuel %s omis : PNG de repli impossible", v.section, exc_info=True)
+                    continue
+                _ajouter_visuel(doc, v.svg, png, v.largeur_cm, v.texte_alt, v.legende, v.paysage)
 
 
 # ─── Point d'entrée public ─────────────────────────────────────────────────────

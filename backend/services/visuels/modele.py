@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from functools import cached_property
 
 from .raster import svg_vers_png
+from .texte import nettoyer
 
 
 @dataclass
@@ -17,6 +18,10 @@ class Visuel:
     largeur_cm: float = 17.0
     paysage: bool = False             # posé sur une page A4 paysage (section dédiée)
     gabarits: tuple[str, ...] = field(default_factory=tuple)   # voir `retirer_gabarits`
+
+    def __post_init__(self):
+        self.texte_alt = nettoyer(self.texte_alt)
+        self.legende = nettoyer(self.legende)
 
     @cached_property
     def png(self) -> bytes:

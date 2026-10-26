@@ -15,6 +15,8 @@ from docx.oxml import OxmlElement, parse_xml
 from docx.oxml.ns import nsdecls
 from docx.shared import Cm
 
+from .texte import nettoyer
+
 SVG_EXT_URI = "{96DAC541-7B7A-43D3-8B79-37D633B846F1}"
 NS_ASVG = "http://schemas.microsoft.com/office/drawing/2016/SVG/main"
 
@@ -37,6 +39,7 @@ def inserer_svg_png(paragraphe, svg: str | bytes, png: bytes, largeur_cm: float,
     ext.append(parse_xml(f'<asvg:svgBlip xmlns:asvg="{NS_ASVG}" {nsdecls("r")} r:embed="{rid}"/>'))
     ext_lst.append(ext)
     blip.append(ext_lst)
+    texte_alt = nettoyer(texte_alt)
     if texte_alt:
         forme._inline.docPr.set("descr", texte_alt)
         forme._inline.graphic.graphicData.pic.nvPicPr.cNvPr.set("descr", texte_alt)

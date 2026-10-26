@@ -13,6 +13,19 @@ from .modele import Visuel
 logger = logging.getLogger(__name__)
 
 
+def _pret(visuel: Visuel | None, nom: str, visuels: list[Visuel]) -> None:
+    """Ajoute le visuel à la liste après avoir calculé son PNG de repli : une erreur de
+    rastérisation le fait disparaître ici, jamais dans la construction du Word."""
+    if visuel is None:
+        return
+    try:
+        visuel.png
+    except Exception as exc:       # journal sans donnée personnelle
+        logger.warning("Visuel %s omis : %s", nom, type(exc).__name__)
+        return
+    visuels.append(visuel)
+
+
 def construire_visuels(variables: dict, cfg, logo_image: bytes | None = None) -> list[Visuel]:
     visuels: list[Visuel] = []
 
@@ -21,18 +34,18 @@ def construire_visuels(variables: dict, cfg, logo_image: bytes | None = None) ->
             from services.organigramme import generate_organigramme_svg
             svg = generate_organigramme_svg(cfg)
             if svg:
-                visuels.append(Visuel(("partie_c", "effectifs"), svg, "Organigramme du chantier",
-                                      "Organigramme du chantier", 15.0))
+                _pret(Visuel(("partie_c", "effectifs"), svg, "Organigramme du chantier",
+                             "Organigramme du chantier", 15.0), "organigramme", visuels)
         except Exception:
-            logger.warning("Organigramme omis", exc_info=True)
+            logger.warning("Organigramme omis : %s", "erreur de construction")
 
     if variables.get("gantt_phases"):
         try:
             from services.gantt import generate_gantt_svg
             svg = generate_gantt_svg(variables["gantt_phases"])
             if svg:
-                visuels.append(Visuel(("partie_c", "methodologie"), svg, "Planning prévisionnel des travaux",
-                                      "Planning prévisionnel des travaux", 15.0))
+                _pret(Visuel(("partie_c", "methodologie"), svg, "Planning prévisionnel des travaux",
+                             "Planning prévisionnel des travaux", 15.0), "gantt", visuels)
         except Exception:
-            logger.warning("Gantt omis", exc_info=True)
+            logger.warning("Gantt omis : %s", "erreur de construction")
     return visuels

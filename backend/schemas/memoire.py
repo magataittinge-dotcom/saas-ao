@@ -1,4 +1,5 @@
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
+from services.visuels.limites import GANTT_DUREE_MAX, GANTT_MAX_PHASES, GANTT_TOTAL_MAX
 from typing import List, Optional, Any
 from datetime import datetime
 
@@ -9,6 +10,12 @@ PROFILE_OVERRIDE_FIELDS = {
     "historique", "activites", "organigramme_description",
     "moyens_informatiques", "vehicules", "materiel",
 }
+
+
+class GanttPhase(BaseModel):
+    """Phase du planning saisie au pre-flight, bornée (voir services.visuels.limites)."""
+    nom: str = Field(min_length=1, max_length=200)
+    duree_semaines: int = Field(ge=1, le=GANTT_DUREE_MAX)
 
 
 class MemoireGenerateRequest(BaseModel):
@@ -30,8 +37,15 @@ class MemoireGenerateRequest(BaseModel):
     include_organigramme: bool = False
     # BONUS — phases du Gantt saisies au pre-flight [{nom, duree_semaines}]
     # et annexes du coffre à joindre au ZIP (les deux rangés dans variables)
-    gantt_phases: Optional[List[dict]] = None
+    gantt_phases: Optional[List[GanttPhase]] = Field(default=None, max_length=GANTT_MAX_PHASES)
     annexe_document_ids: Optional[List[str]] = None
+
+    @field_validator("gantt_phases")
+    @classmethod
+    def _total_gantt_borne(cls, v):
+        if v and sum(p.duree_semaines for p in v) > GANTT_TOTAL_MAX:
+            raise ValueError(f"Le planning ne peut pas dépasser {GANTT_TOTAL_MAX} semaines au total.")
+        return v
 
     @field_validator("profile_overrides")
     @classmethod

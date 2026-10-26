@@ -14,7 +14,7 @@ import html
 import math
 
 from .couleurs import Theme
-from .texte import largeur
+from .texte import largeur, nettoyer
 
 POLICE = "Carlito, Calibri, 'Liberation Sans', Arial, sans-serif"
 LARGEUR_PORTRAIT = 482.0   # 17 cm
@@ -23,10 +23,10 @@ BALISES_INTERDITES = ("<pattern", "<foreignobject", "<filter", "<style", "<image
 
 
 def esc(s) -> str:
-    return html.escape(str(s), quote=True)
+    return html.escape(nettoyer(s), quote=True)
 
 
-def t(x, y, s, taille=9, gras=False, fill="#2B3543", ancre="start", extra=""):
+def t(x, y, s, taille: float = 9, gras=False, fill="#2B3543", ancre="start", extra=""):
     poids = ' font-weight="bold"' if gras else ""
     return (f'<text x="{x:.1f}" y="{y:.1f}" font-size="{taille}"{poids} fill="{fill}" '
             f'text-anchor="{ancre}"{extra}>{esc(s)}</text>')
@@ -58,7 +58,7 @@ def document_svg(w: float, h: float, corps: str, titre: str) -> str:
             f'<rect width="{w:.0f}" height="{h:.0f}" fill="#FFFFFF"/>{corps}</svg>')
 
 
-def pastille(x, y, s, th: Theme, fond=None, texte=None, taille=7):
+def pastille(x, y, s, th: Theme, fond=None, texte=None, taille: float = 7):
     """Petite étiquette arrondie ; renvoie (svg, largeur)."""
     w = largeur(s, taille, True) + 9
     fond = fond or th.accent_clair

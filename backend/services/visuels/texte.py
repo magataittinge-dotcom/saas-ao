@@ -9,6 +9,7 @@ Carlito-Regular et Carlito-Bold, licence OFL 1.1).
 from __future__ import annotations
 
 import json
+import re
 from functools import lru_cache
 from pathlib import Path
 
@@ -18,6 +19,15 @@ _ICI = Path(__file__).resolve().parent
 @lru_cache(maxsize=1)
 def _metriques() -> dict:
     return json.loads((_ICI / "carlito-metriques.json").read_text(encoding="utf-8"))
+
+
+_ILLEGAL_XML = re.compile("[\x00-\x08\x0b\x0c\x0e-\x1f\ud800-\udfff\ufffe\uffff]")
+
+
+def nettoyer(texte) -> str:
+    """Texte saisi sans les caractères interdits en XML 1.0 (contrôles autres que tab, LF,
+    CR ; demi-substituts isolés) : ils feraient échouer le SVG et le Word."""
+    return _ILLEGAL_XML.sub("", str(texte if texte is not None else ""))
 
 
 def largeur(texte: str, taille: float, gras: bool = False) -> float:
