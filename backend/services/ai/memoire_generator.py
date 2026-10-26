@@ -16,7 +16,7 @@ from config import get_settings
 from .prompts import MEMOIRE_GENERATION_SYSTEM
 from services.skill_loader import load_skill, load_skills_bundle, load_skill_reference
 from models.project import TYPE_AE, TYPES_GRILLES_DE_PRIX
-from services.ai.dtu_autorises import dtu_autorises, formater_liste_dtu
+from services.ai.dtu_autorises import appliquer_garde_dtu, dtu_autorises, formater_liste_dtu
 from services.dpgf_ouvrages import est_tableur
 import logging
 
@@ -655,6 +655,12 @@ class MemoireGenerator:
 
         if project_id:
             _safe_update_progress(project_id, 0.99)
+        # Garde-fou déterministe : tout DTU cité hors de la liste autorisée est retiré
+        # du texte (jamais remplacé par un autre). Trace = numéros seulement.
+        meta["dtu"] = appliquer_garde_dtu(assembled, set(dtu_ok))
+        if meta["dtu"]["retraits"]:
+            print(f"[Memoire Generator] Garde-fou DTU : {meta['dtu']['retraits']} citation(s) retirée(s) "
+                  f"({', '.join(meta['dtu']['retires'])})", flush=True)
         assembled["_generation_meta"] = meta
         return assembled
 

@@ -35,8 +35,8 @@ _PARTIE = re.compile(r"\s{0,2}-?\s{0,2}(?P<p>P\d(?:-\d)?)(?![A-Za-z0-9])")
 _ARTICLE = re.compile(r"\s{0,2}(?:§|art\.?|article|paragraphe)\s{0,2}\d{1,2}(?:\.\d{1,2}){0,3}", re.IGNORECASE)
 # DTU suivants d'une énumération : « DTU 20.11 et 20.12, 26.1 ».
 _SUITE = re.compile(
-    r"\s{0,3}(?:,|;|/|&|\bet\b|\bou\b)\s{0,3}(?:(?:NF\s{0,3})?D\.?T\.?U\.?\s{0,3})?"
-    r"(?P<num>\d{2}[.\-]\d{1,2})(?![0-9])",
+    r"(?P<sep>\s{0,3}(?:,|;|/|&|\bet\b|\bou\b)\s{0,3})"
+    r"(?P<item>(?:(?:NF\s{0,3})?D\.?T\.?U\.?\s{0,3})?(?P<num>\d{2}[.\-]\d{1,2})(?![0-9]))",
     re.IGNORECASE,
 )
 # Marqueur de page porté par les pièces elles-mêmes (en-tête ou pied de page).
@@ -50,6 +50,7 @@ class MentionDtu:
     fin: int
     partie: Optional[str] = None   # « P1-1 » si le texte la porte
     tete: bool = True              # False : DTU d'une énumération (« et 20.12 »)
+    debut_sep: int = -1            # début du séparateur qui précède (énumération)
 
 
 def _canon(num: str) -> str:
@@ -80,8 +81,8 @@ def trouver_dtu(texte: str) -> list[MentionDtu]:
             s = _SUITE.match(texte, fin)
             if not s:
                 break
+            mentions.append(MentionDtu(_canon(s.group("num")), s.start("item"), s.end(), None, False, s.start("sep")))
             fin = s.end()
-            mentions.append(MentionDtu(_canon(s.group("num")), s.start("num"), fin, None, False))
         pos = max(fin, m.end())
     return mentions
 
@@ -190,3 +191,159 @@ def formater_liste_dtu(autorises: dict[str, DtuAutorise], max_sources: int = 3) 
         txt = " ; ".join(morceaux[:max_sources]) + (f" ; +{reste}" if reste > 0 else "")
         lignes.append(f"- {autorises[numero].libelle} — {txt}")
     return "\n".join(lignes)
+
+
+# ── Garde-fou après génération ───────────────────────────────────────────────
+# Article (ou préposition) qui précède la mention, et mot « norme » éventuel.
+_AVANT = re.compile(
+    r"(?:(?<![\wÀ-ÿ])(?P<art>à la|au|aux|à|du|des|de la|de|le|les|la)\s{1,3})?(?:normes?\s{1,3})?$",
+    re.IGNORECASE,
+)
+_PAREN_SUIVANTE = re.compile(r"\s{0,2}\([^()\n]{0,80}\)")
+_REGLES = "règles de l'art"
+# « **NF DTU 42.1** — réfection de façades ; » : puce qui ne parle que de ce DTU.
+_GLOSE = re.compile(r"\*\*\s{0,2}[—–-]\s{0,2}[^;\n|]{1,160}")
+_SEP_AVANT = re.compile(r"[;,]\s{0,3}$")
+_SEP_APRES = re.compile(r"\s{0,3};")
+_FIN_ITEM = re.compile(r"\s{0,3}(?:\||,|;|\.|\)|\n|$)")
+_PUCE_VIDE = re.compile(r"(?m)^[ \t]*[-*•][ \t]*\n")
+_DOUBLON = re.compile(
+    r"((?:aux |des |les )?règles de l'art)(?:\s*(?:,|;|et|ou)\s+(?:aux |des |les )?règles de l'art)+")
+
+
+def _groupes(mentions: list[MentionDtu]) -> list[list[MentionDtu]]:
+    groupes: list[list[MentionDtu]] = []
+    for men in mentions:
+        if men.tete or not groupes:
+            groupes.append([men])
+        else:
+            groupes[-1].append(men)
+    return groupes
+
+
+def _phrase(texte: str, debut: int) -> tuple[int, str]:
+    """(début de la zone à remplacer, expression de remplacement) d'après ce qui
+    précède la mention : « conformément au NF DTU x » → « conformément aux règles de l'art »."""
+    fenetre = texte[max(0, debut - 30):debut]
+    m = _AVANT.search(fenetre)
+    art = (m.group("art") or "").lower() if m else ""
+    zone = debut - (len(fenetre) - m.start()) if m else debut
+    if art in ("au", "aux", "à", "à la"):
+        return zone, f"aux {_REGLES}"
+    if art in ("du", "des", "de", "de la"):
+        return zone, f"des {_REGLES}"
+    if art in ("le", "les", "la"):
+        return zone, f"les {_REGLES}"
+    avant = texte[:debut].rstrip(" \t")
+    if not avant or avant[-1] in "|:;(•-*\n":
+        return debut, _REGLES
+    return debut, f"les {_REGLES}"
+
+
+def retire_dtu_non_autorises(texte: str, autorises: set[str]) -> tuple[str, list[str]]:
+    """Retire du texte tout DTU hors de `autorises` (numéros canoniques).
+
+    Jamais remplacé par un autre DTU : « conforme au NF DTU 52.2 » devient
+    « conforme aux règles de l'art », « (NF DTU 52.2) » disparaît, un DTU d'une
+    liste est enlevé de la liste. Retourne (texte, numéros retirés dans l'ordre)."""
+    if not texte:
+        return texte, []
+    mentions = trouver_dtu(texte)
+    if not any(men.numero not in autorises for men in mentions):
+        return texte, []
+    retires: list[str] = []
+    morceaux: list[str] = []
+    curseur = 0
+    for g in _groupes(mentions):
+        sortants = [x for x in g if x.numero not in autorises]
+        if not sortants:
+            continue
+        retires.extend(x.numero for x in sortants)
+        debut, fin = g[0].debut, g[-1].fin
+        if len(sortants) < len(g):
+            # Liste mixte : on garde les DTU autorisés, avec leurs séparateurs.
+            neuf = ""
+            for x in g:
+                if x.numero not in autorises:
+                    continue
+                item = texte[x.debut:x.fin]
+                if not neuf:   # le premier DTU gardé devient la tête de la liste
+                    neuf = item if (x.tete or re.search(r"D\.?T\.?U", item, re.IGNORECASE)) else f"NF DTU {item}"
+                else:
+                    neuf += texte[x.debut_sep:x.debut] + item if not x.tete else item
+            # Un commentaire entre parenthèses collé au DTU retiré en fin de liste le suivait.
+            if g[-1].numero not in autorises:
+                p = _PAREN_SUIVANTE.match(texte, fin)
+                if p:
+                    fin = p.end()
+            morceaux.append(texte[curseur:debut])
+            morceaux.append(neuf)
+            curseur = fin
+            continue
+        # Groupe entièrement retiré.
+        if (texte[max(0, debut - 8):debut].rstrip(" \t").endswith("(") and texte[fin:fin + 3].lstrip(" \t").startswith(")")):
+            ouvre = texte.rfind("(", max(0, debut - 8), debut)
+            ferme = texte.find(")", fin, fin + 4)
+            zone = ouvre
+            while zone > curseur and texte[zone - 1] in " \t":
+                zone -= 1
+            morceaux.append(texte[curseur:zone])
+            curseur = ferme + 1
+            continue
+        # Puce en gras avec glose : on enlève toute la puce (et son « ; »).
+        g1 = _GLOSE.match(texte, fin)
+        if g1 and texte[max(0, debut - 2):debut] == "**" and debut - 2 >= curseur:
+            deb, fin2 = debut - 2, g1.end()
+            sep = _SEP_AVANT.search(texte[max(curseur, deb - 6):deb])
+            if sep:
+                deb -= len(sep.group(0))
+            else:
+                s2 = _SEP_APRES.match(texte, fin2)
+                if s2:
+                    fin2 = s2.end()
+            morceaux.append(texte[curseur:deb])
+            curseur = fin2
+            continue
+        # Élément d'une liste (cellule, énumération) : on l'enlève avec sa virgule.
+        sep = _SEP_AVANT.search(texte[max(curseur, debut - 6):debut])
+        if sep and _FIN_ITEM.match(texte, fin):
+            p = _PAREN_SUIVANTE.match(texte, fin)
+            morceaux.append(texte[curseur:debut - len(sep.group(0))])
+            curseur = p.end() if p else fin
+            continue
+        zone, expr = _phrase(texte, debut)
+        zone = max(zone, curseur)
+        morceaux.append(texte[curseur:zone])
+        morceaux.append(expr)
+        curseur = fin
+    morceaux.append(texte[curseur:])
+    out = "".join(morceaux)
+    if any(_REGLES in x for x in morceaux):
+        out = _DOUBLON.sub(lambda mm: mm.group(1), out)
+    out = _PUCE_VIDE.sub("", out)
+    return out, retires
+
+
+def appliquer_garde_dtu(contenu: dict, autorises: set[str]) -> dict:
+    """Applique le garde-fou à tout le texte du mémoire (clés « _… » ignorées).
+
+    Modifie `contenu` en place. Retourne la trace pour `_generation_meta["dtu"]` :
+    numéros seulement, aucun extrait de texte."""
+    retires: list[str] = []
+
+    def _visite(o):
+        if isinstance(o, str):
+            neuf, r = retire_dtu_non_autorises(o, autorises)
+            retires.extend(r)
+            return neuf
+        if isinstance(o, dict):
+            return {k: (v if str(k).startswith("_") else _visite(v)) for k, v in o.items()}
+        if isinstance(o, list):
+            return [_visite(v) for v in o]
+        return o
+
+    for k in list(contenu):
+        if not str(k).startswith("_"):
+            contenu[k] = _visite(contenu[k])
+    return {"autorises": sorted(autorises, key=_cle_numero), "retraits": len(retires),
+            "retires": sorted(set(retires), key=_cle_numero)}
