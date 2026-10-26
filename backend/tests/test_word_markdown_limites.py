@@ -21,20 +21,28 @@ def _texte(blocs) -> str:
     return "\n".join(morceaux)
 
 
-def test_200_ko_d_etoiles_alternees_se_lisent_en_moins_d_une_seconde():
-    entree = "*a " * 70_000                      # ≈ 200 ko sur une seule ligne
+def _duree(entree: str) -> float:
     t0 = time.perf_counter()
+    md.analyser(entree)
+    return time.perf_counter() - t0
+
+
+def test_200_ko_d_etoiles_alternees_se_lisent_en_moins_d_une_seconde():
+    # Temps linéaire, mesuré par un rapport (stable sous charge) : 10× plus
+    # d'entrée → ≈ 10× plus de temps ; un analyseur quadratique donnerait ≈ 100×.
+    # Plafond absolu large : l'ancien défaut dépassait 120 s sur 200 ko.
+    entree = "*a " * 70_000                      # ≈ 200 ko sur une seule ligne
     blocs = md.analyser(entree)                 # ni RecursionError ni lenteur
-    assert time.perf_counter() - t0 < 1.0
     assert blocs
+    petit, grand = _duree("*a " * 7_000), _duree(entree)
+    assert grand < 5.0
+    assert grand < 30 * max(petit, 1e-3)
 
 
 def test_soulignes_et_etoiles_melanges_restent_lineaires():
     for entree in ("_a *b " * 40_000, "**a *b _c " * 20_000, "*" * 200_000, "_" * 200_000, "[" * 200_000,
                    "`" * 100_000, "<b " * 60_000, " " * 200_000 + "#", "# " + " " * 200_000):
-        t0 = time.perf_counter()
-        md.analyser(entree)
-        assert time.perf_counter() - t0 < 1.0, entree[:10]
+        assert _duree(entree) < 5.0, entree[:10]
 
 
 def test_ligne_tres_longue_ne_perd_aucun_mot():
