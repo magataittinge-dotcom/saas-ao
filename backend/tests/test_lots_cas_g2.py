@@ -85,7 +85,6 @@ def test_cas09_non_alloti_sans_lot_pas_de_filet_ia_payant():
     assert LF.should_trigger([], None, mention)[0] is False
 
 
-@A_CORRIGER
 def test_cas10_sous_lots_7_1_et_7_2():
     rc = "REGLEMENT DE LA CONSULTATION\nLot 7.1 : Plomberie\nLot 7.2 : Ventilation\nLot 8 : Électricité\n"
     assert len(LD._detect_lots_from_rc_text(rc, "rc")) == 3
@@ -96,14 +95,12 @@ def test_cas11_lots_par_lettres():
     assert len(LD._detect_lots_from_rc_text(rc, "rc")) == 3
 
 
-@A_CORRIGER
 def test_cas12_lots_sans_numero():
     rc = ("REGLEMENT DE LA CONSULTATION\nLe marché est alloti :\n- Lot Maçonnerie\n- Lot Couverture zinc\n"
           "- Lot Peinture\n")
     assert len(LD._detect_lots_from_rc_text(rc, "rc")) == 3
 
 
-@A_CORRIGER
 def test_cas13_deux_lots_sur_une_ligne():
     rc = ("REGLEMENT DE LA CONSULTATION\nLe marché comporte 3 lots.\nLots 1 et 2 : voir CCTP commun.\n"
           "Lot 3 et 4 : Menuiseries\n")
@@ -136,7 +133,6 @@ def test_cas18_nombre_annonce_decomposition_en_lots():
 
 # ─── Noms de fichiers ────────────────────────────────────────────────────────
 
-@A_CORRIGER
 def test_cas19_ilot_et_pilote_ne_sont_pas_des_lots():
     assert LD._detect_lots_from_filenames(["PLAN ILOT A.pdf", "ARCH PILOTE.pdf", "Notice îlot B.pdf"]) == []
 
@@ -150,7 +146,7 @@ def test_cas19_ilot_et_pilote_ne_sont_pas_des_lots():
     ("cas23", "CCTP Lot 06 Plafonds acoustiques.pdf", "cctp", ["6"]),
     ("cas24", "CCTP Lot 11 Niveau 2 - Electricité.pdf", "cctp", ["11"]),
     ("cas25", "CCTP lot 00 Généralités.pdf", "cctp", ["all"]),
-    pytest.param("cas26", "CCTP Lot 02 et 03 Menuiseries.pdf", "cctp", ["2", "3"], marks=A_CORRIGER),
+    pytest.param("cas26", "CCTP Lot 02 et 03 Menuiseries.pdf", "cctp", ["2", "3"]),
     ("cas27", "CCTP ilot 2 - lot 05 façades.pdf", "cctp", ["5"]),
     ("cas28", "Diagnostic plomb.pdf", "diagnostic", ["info"]),
     ("cas29", "PGC SPS.pdf", "pgc_sps", ["info"]),
@@ -263,3 +259,28 @@ def test_allotissement_positif_et_negatif():
 def test_une_tranche_mentionnee_avec_des_lots_ne_change_pas_les_lots():
     rc = "REGLEMENT DE LA CONSULTATION\nLot 1 : Maçonnerie (tranche ferme)\nLot 2 : Couverture\nTranche 3 : préau\n"
     assert ids(LD._detect_lots_from_rc_text(rc, "rc")) == ["lot1", "lot2"]
+
+
+def test_sous_lots_ont_chacun_leur_identifiant():
+    rc = "REGLEMENT DE LA CONSULTATION\nLot 7.1 : Plomberie\nLot 7.2 : Ventilation\nLot 8 : Électricité\n"
+    d = LD._detect_lots_from_rc_text(rc, "rc")
+    assert ids(d) == ["lot7a", "lot7b", "lot8"]
+    assert [x.nom for x in d][:2] == ["Lot 7.1 — Plomberie", "Lot 7.2 — Ventilation"]
+
+
+def test_deux_lots_sur_une_ligne_portent_la_meme_designation():
+    rc = "REGLEMENT DE LA CONSULTATION\nLot 3 et 4 : Menuiseries\nLot 5 : Peinture\n"
+    d = LD._detect_lots_from_rc_text(rc, "rc")
+    assert [(x.id, x.nom) for x in d] == [("lot3", "Lot 3 — Menuiseries"), ("lot4", "Lot 4 — Menuiseries"),
+                                          ("lot5", "Lot 5 — Peinture")]
+
+
+def test_un_lot_cite_dans_une_phrase_sans_numero_n_est_pas_une_liste():
+    rc = "REGLEMENT DE LA CONSULTATION\nLe lot Maçonnerie est réalisé en entreprise.\nLot unique\n"
+    assert LD._detect_lots_from_rc_text(rc, "rc") == []
+
+
+def test_fichier_sous_lot_et_deux_lots_dans_le_nom():
+    assert DT.assign_document_lots("DPGF Lot 7.1 Plomberie.xlsx", "dpgf_template") == ["7a"]
+    assert DT.assign_document_lots("CCTP Lot 5 & 6.pdf", "cctp") == ["5", "6"]
+    assert DT.assign_document_lots("CCTP Lot 5 et 12 pièces.pdf", "cctp") == ["5", "12"]

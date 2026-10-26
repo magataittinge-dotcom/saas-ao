@@ -16,9 +16,20 @@ logger = logging.getLogger(__name__)
 
 _LOT_NUM_IN_FNAME = re.compile(
     # « lot » en début de mot : « ilot 2 » ou « pilote » ne sont pas un lot.
-    r'(?<![^\W\d_])lot[\s_\-]*[nN°]*[\s_\-]*(\d{1,2}[A-Za-z]?)',
+    r'(?<![^\W\d_])lot[\s_\-]*[nN°]*[\s_\-]*(\d{1,2}(?:\.\d{1,2})?[A-Za-z]?)',
     re.IGNORECASE,
 )
+# « Lot 02 et 03 », « lot 5 & 6 » : le second numéro, juste après le premier.
+_LOT_ET_AUTRE = re.compile(r'\s*(?:et|&)\s*(?:lot\s*)?[nN°]*\s*(\d{1,2}[A-Za-z]?)(?!\d|\.\d)', re.IGNORECASE)
+
+
+def _num_canonique(raw: str) -> str:
+    """« 05 » → « 5 », « 01a » → « 1a », sous-lot « 7.1 » → « 7a » (comme lot_detector)."""
+    raw = raw.strip()
+    sous_lot = re.fullmatch(r'(\d{1,2})\.(\d{1,2})', raw)
+    if sous_lot and 1 <= int(sous_lot.group(2)) <= 26:
+        raw = f"{sous_lot.group(1)}{chr(96 + int(sous_lot.group(2)))}"
+    return re.sub(r'^0+(?=\d)', '', raw)
 
 
 def _extract_lot_num_from_filename(filename: str) -> Optional[str]:
@@ -26,8 +37,19 @@ def _extract_lot_num_from_filename(filename: str) -> Optional[str]:
     m = _LOT_NUM_IN_FNAME.search(filename)
     if not m:
         return None
-    raw = m.group(1).strip()
-    return re.sub(r'^0+(?=\d)', '', raw)   # « 05 » → « 5 », « 01a » → « 1a »
+    return _num_canonique(m.group(1))
+
+
+def _extract_lot_nums_from_filename(filename: str) -> List[str]:
+    """Tous les lots cités : « CCTP Lot 02 et 03 » → ['2', '3']."""
+    m = _LOT_NUM_IN_FNAME.search(filename)
+    if not m:
+        return []
+    nums = [_num_canonique(m.group(1))]
+    suite = _LOT_ET_AUTRE.match(filename, m.end())
+    if suite:
+        nums.append(_num_canonique(suite.group(1)))
+    return nums
 
 
 # ─── Informational document detection ─────────────────────────────────────────
@@ -98,8 +120,8 @@ def _lot_ou_commun(file_name: str) -> List[str]:
     """Lot cité par le nom, sinon commun. Le lot 00 / 0 est commun à tous les
     lots (« lot 00 Généralités » : prescriptions communes ; sur Gueux,
     126 000 caractères jamais analysés quand il était rattaché au lot « 0 »)."""
-    lot_num = _extract_lot_num_from_filename(file_name)
-    return [lot_num] if lot_num and lot_num != '0' else ['all']
+    nums = _extract_lot_nums_from_filename(file_name)
+    return nums if nums and '0' not in nums else ['all']
 
 
 def est_commune(tags) -> bool:

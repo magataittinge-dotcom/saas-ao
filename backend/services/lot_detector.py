@@ -52,7 +52,7 @@ _LOT_TABLE_ROW_ALPHA = re.compile(r'^\s*([A-Z])\s{1,6}(?![-–—])(\S.{1,80})')
 # « Lot » + « S » (fantôme « Lot S » constaté sur le RC Gueux).
 # Une tranche (ferme, optionnelle) n'est PAS un lot : deux notions distinctes.
 _LOT_LINE = re.compile(
-    r'(?:^|[\s\-–—:])lot\b\s*[nN°]*\s*(\d{1,2}[A-Za-z]?|[A-Za-z])\b[^\n]{0,80}',
+    r'(?:^|[\s\-–—:])lot\b\s*[nN°]*\s*(\d{1,2}(?:\.\d{1,2})?[A-Za-z]?|[A-Za-z])\b[^\n]{0,80}',
     re.IGNORECASE | re.MULTILINE,
 )
 # Tableau PDF aplati VERTICALEMENT (format réel RC Gueux) :
@@ -84,8 +84,9 @@ _RC_MARKER = re.compile(
     r'alloti|lots\s+s[eé]par[eé]s',
     re.IGNORECASE,
 )
-_LOT_FNAME = re.compile(r'lot[\s_\-]*(\d{1,2}[A-Za-z]?|[A-Za-z](?!\w))', re.IGNORECASE)
-_LOT_CELL_CONTENT = re.compile(r'\blot\s*n?°?\s*(\d{1,2}[A-Za-z]?)\b', re.IGNORECASE)
+# « lot » en début de mot : « îlot A » ou « pilote » ne sont pas un lot.
+_LOT_FNAME = re.compile(r'(?<![^\W\d_])lot[\s_\-]*(\d{1,2}(?:\.\d{1,2})?[A-Za-z]?|[A-Za-z](?!\w))', re.IGNORECASE)
+_LOT_CELL_CONTENT = re.compile(r'\blot\s*n?°?\s*(\d{1,2}(?:\.\d{1,2})?[A-Za-z]?)\b', re.IGNORECASE)
 # Tranche detection in Excel headers (AMÉLIORATION 7)
 _TRANCHE_HEADER = re.compile(
     r'tranche\s*(ferme|optionnel\w*|condition\w*)?|'
@@ -161,6 +162,9 @@ def _lot_id_from_raw(raw: str) -> Optional[str]:
     """Convert raw lot identifier to canonical lot_id.
     Returns None for invalid/ambiguous IDs (e.g. lowercase single letter from 'lots'→'s')."""
     raw = raw.strip()
+    sous_lot = re.match(r'^(\d{1,2})\.(\d{1,2})$', raw)
+    if sous_lot and 1 <= int(sous_lot.group(2)) <= 26:
+        return f"lot{sous_lot.group(1).lstrip('0') or '0'}{chr(96 + int(sous_lot.group(2)))}"   # 7.1 → lot7a
     if re.match(r'^\d{1,2}[A-Za-z]?$', raw):
         num = raw.lstrip("0") or "0"
         return f"lot{num}"
@@ -199,7 +203,7 @@ def _sans_colonne_index(libelle: str) -> str:
 
 def _has_label_body(nom: str) -> bool:
     """« Lot 06 — Plaquisterie » → True ; « Lot 06 » nu → False."""
-    body = re.sub(r'^lot\s*\d+[a-z]?\s*[—\-–:]?\s*', '', nom or '', flags=re.IGNORECASE).strip()
+    body = re.sub(r'^lot\s*\d+(?:\.\d+)?[a-z]?\s*[—\-–:]?\s*', '', nom or '', flags=re.IGNORECASE).strip()
     return len(body) >= 3
 
 
@@ -210,7 +214,7 @@ def _best_label(nom_a: str, nom_b: str, prefer_a: bool = True) -> str:
     In case of tie, prefer `nom_a` if prefer_a else `nom_b`.
     """
     def _label_body(nom: str) -> str:
-        return re.sub(r'^lot\s*\d+[a-z]?\s*[—\-–:]\s*', '', nom, flags=re.IGNORECASE).strip()
+        return re.sub(r'^lot\s*\d+(?:\.\d+)?[a-z]?\s*[—\-–:]\s*', '', nom, flags=re.IGNORECASE).strip()
 
     body_a = _label_body(nom_a)
     body_b = _label_body(nom_b)
@@ -456,11 +460,11 @@ def _sheet_to_detection(sheet_name: str) -> Optional[LotDetection]:
         return None
 
     # Explicit "Lot N" / "Lot NA" in sheet name
-    m = re.search(r'\blot\s*[nN°]*\s*(\d{1,2}[A-Za-z]?)\b', name, re.IGNORECASE)
+    m = re.search(r'\blot\s*[nN°]*\s*(\d{1,2}(?:\.\d{1,2})?[A-Za-z]?)\b', name, re.IGNORECASE)
     if m:
         raw_id = m.group(1)
         lot_id = _lot_id_from_raw(raw_id)
-        label = re.sub(r'(?i)lot\s*[nN°]*\s*[\d]+[a-z]?[\s:\-–—]*', '', name).strip(' :—-–')[:60]
+        label = re.sub(r'(?i)lot\s*[nN°]*\s*\d+(?:\.\d+)?[a-z]?[\s:\-–—]*', '', name).strip(' :—-–')[:60]
         nom = f"Lot {raw_id} — {label}" if label else f"Lot {raw_id}"
         return LotDetection(id=lot_id, nom=nom, confidence=85, sources=["excel"])
 
@@ -777,27 +781,68 @@ def _detect_lots_from_rc_text(text: str, doc_type: str) -> List[LotDetection]:
         lot_id = _lot_id_from_raw(raw_id)
         if lot_id is None:
             continue
-        if lot_id in lots:
-            continue
+
+        # « Lot 3 et 4 : Menuiseries » : deux lots qui portent la même désignation.
+        reste_apres_numero = raw[re.search(re.escape(raw_id), raw).end():]
+        suite = _LOT_ET_SUIVANT.match(reste_apres_numero)
+        ids_lot = [(raw_id, lot_id)]
+        if suite:
+            autre = _lot_id_from_raw(suite.group(1))
+            if autre and autre != lot_id:
+                ids_lot.append((suite.group(1), autre))
+            raw = raw[:re.search(re.escape(raw_id), raw).end()] + reste_apres_numero[suite.end():]
 
         after_num = re.sub(
-            r'(?i)lot\s*[nN°]*\s*[\w]+[\s:\-–—]*', '', raw
+            r'(?i)lot\s*[nN°]*\s*[\w.]+[\s:\-–—]*', '', raw, count=1
         ).strip(' :—-–')
-        label = re.sub(r'\s+', ' ', _sans_colonne_index(re.split(r'[.\n]', after_num)[0].strip())).strip()[:60]
+        label = re.sub(r'\s+', ' ', _sans_colonne_index(re.split(r'(?<!\d)\.(?!\d)|\n', after_num)[0].strip())).strip()[:60]
         if _NOT_A_LOT_LABEL.search(label):
             continue  # doc général (annexe, prescriptions communes…)
-        nom = f"Lot {raw_id} — {label}" if label else f"Lot {raw_id}"
 
         # Pull a description excerpt from the lines after this match.
         match_line_idx = block.count("\n", 0, m.start())
         description = _extract_description_excerpt(text, match_line_idx, scan_lines)
 
-        lots[lot_id] = LotDetection(
-            id=lot_id, nom=nom, confidence=80, sources=["rc_text"],
-            description_long=description,
-        )
+        for rid, lid in ids_lot:
+            if lid in lots:
+                continue
+            nom = f"Lot {rid} — {label}" if label else f"Lot {rid}"
+            lots[lid] = LotDetection(
+                id=lid, nom=nom, confidence=80, sources=["rc_text"],
+                description_long=description,
+            )
 
-    return list(lots.values())
+    if lots:
+        return list(lots.values())
+
+    # ── Strategy C : lots désignés par leur seul métier, sans numéro ──────────
+    return _lots_sans_numero(scan_lines)
+
+
+# « Lot 3 et 4 » : la suite « et 4 » après le premier numéro.
+_LOT_ET_SUIVANT = re.compile(r'\s+(?:et|&)\s+(\d{1,2}[A-Za-z]?)\b', re.IGNORECASE)
+
+# Ligne de liste : « - Lot Maçonnerie », « Lot Couverture zinc ». Le mot qui suit « Lot »
+# doit commencer par une majuscule (un métier), pas par un article ni « unique ».
+_LOT_SANS_NUMERO = re.compile(
+    r"^[\s\-–—•*·]*(?i:lot)\s+(?!(?i:unique|n\W|\d)\b)([A-ZÀ-ÖØ-Þ][^\n.:;]{2,58})\s*$", re.MULTILINE)
+_MOTS_NON_METIER = re.compile(r"^(?:Le|La|Les|De|Du|Des|Un|Une|Voir|Cf|Selon|Concern)", re.IGNORECASE)
+
+
+def _lots_sans_numero(scan_lines: List[str]) -> List[LotDetection]:
+    """« Lot Maçonnerie », « Lot Couverture zinc » listés sans numéro. Deux au moins :
+    une mention isolée (« le lot Maçonnerie ») est une phrase, pas une liste de lots.
+    L'identifiant vient du métier (lot_nom_<métier>), jamais d'un numéro inventé."""
+    trouves: Dict[str, LotDetection] = {}
+    for m in _LOT_SANS_NUMERO.finditer("\n".join(scan_lines)):
+        label = re.sub(r'\s+', ' ', m.group(1)).strip(' -–—')
+        if _MOTS_NON_METIER.match(label) or _NOT_A_LOT_LABEL.search(label):
+            continue
+        cle = re.sub(r'[^a-z0-9]', '_', _normalize(label))[:30].strip('_')
+        if cle:
+            trouves.setdefault(f"lot_nom_{cle}", LotDetection(
+                id=f"lot_nom_{cle}", nom=f"Lot — {label}", confidence=60, sources=["rc_text"]))
+    return list(trouves.values()) if len(trouves) >= 2 else []
 
 
 # ─── Filename detection ───────────────────────────────────────────────────────
@@ -1027,7 +1072,7 @@ def detect_all_lots(
     _report(95, "Consolidation des lots...")
     merged = _merge_detections(excel_dets, text_dets, filename_dets)
 
-    real_lots = [d for d in merged if not d.id.startswith("lot_sheet_")]
+    real_lots = [d for d in merged if not d.id.startswith(("lot_sheet_", "lot_nom_"))]
     if real_lots:
         merged = real_lots
 
