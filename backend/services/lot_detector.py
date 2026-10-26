@@ -616,7 +616,7 @@ def detect_lots_from_excel(file_path: str) -> List[Dict]:
 
 # ─── Text detection ────────────────────────────────────────────────────────────
 
-_ENTETE_LOT = re.compile(r'^\s*lots?\s*(?:n[°o]?)?\s*$', re.IGNORECASE)
+_ENTETE_LOT = re.compile(r'^\s*(?:(?:num[eé]ro|n[°o]\.?)\s*)?lots?\s*(?:n[°o]\.?)?\s*$', re.IGNORECASE)
 _ENTETE_INTITULE = re.compile(r'^\s*(?:intitul[eé]s?|d[eé]signations?|libell[eé]s?|objet)\b', re.IGNORECASE)
 
 
@@ -641,8 +641,8 @@ def _suite_d_intitule(label: str) -> bool:
 def _paires_verticales(scan_lines: List[str]) -> List[tuple]:
     """(numéro, intitulé, index de la ligne du libellé) du tableau « vertical » des lots.
 
-    Conditions : en-tête « LOT / INTITULE » ; numéros qui se suivent (1, 2, 3…), au
-    moins trois rangées. Tolère, entre deux rangées, un intitulé sur deux lignes et
+    Conditions : en-tête « LOT / INTITULE » ; numéros croissants (un saut est permis
+    si la rangée suit immédiatement), au moins trois rangées. Tolère, entre deux rangées, un intitulé sur deux lignes et
     quelques lignes de saut de page (en-tête ou pied de page, numéro de page) : on
     reprend à la rangée suivante."""
     debut = _entete_vertical(scan_lines)
@@ -681,6 +681,12 @@ def _paires_verticales(scan_lines: List[str]) -> List[tuple]:
         numero, label = int(r[0]), r[1]
         j = i + 2
         suite = suivante(j, numero + 1)
+        if suite is None:
+            # Numéro qui saute (lot 12 absent de la liste : « 11 » puis « 13 ») : accepté
+            # seulement s'il suit immédiatement, sans ligne parasite entre les deux.
+            suivant = rangee(j)
+            if suivant and int(suivant[0]) > numero:
+                suite = j
         if suite is not None and suite > j and _suite_d_intitule(label):
             extra = [l.strip() for l in scan_lines[j:suite] if l.strip()]
             # un intitulé sur deux lignes ; au-delà, ce sont des lignes de saut de page

@@ -317,3 +317,16 @@ def test_tranche_citee_dans_un_classeur_reste_detectee(tmp_path):
     classeur.save(chemin)
     lots = LD.detect_lots_from_excel(str(chemin))
     assert lots[0]["tranches"] == ["Tranche ferme : école", "Tranche optionnelle 1 : préau"]
+
+
+def test_rc_vertical_un_numero_peut_manquer():
+    """Liste de visite obligatoire : 11 puis 13 (le lot 12 n'y figure pas)."""
+    rc = ("REGLEMENT DE LA CONSULTATION\nLOT\nINTITULE\n10\nPlomberie\n11\nChauffage\n13\nPanneaux photovoltaïques\n"
+          " \n- \nMercredi 25 mars à 14h00\n")
+    assert ids(LD._detect_lots_from_rc_text(rc, "rc")) == ["lot10", "lot11", "lot13"]
+
+
+@pytest.mark.parametrize("entete", ["LOT\nINTITULE", "NUMERO LOT\nINTITULE", "N° LOT\nDÉSIGNATION", "Lot n°\nIntitulé du lot"])
+def test_rc_vertical_formes_d_entete(entete):
+    rc = f"REGLEMENT DE LA CONSULTATION\n{entete}\n01\nTerrassements\n02\nMaçonnerie\n03\nÉtanchéité\n"
+    assert ids(LD._detect_lots_from_rc_text(rc, "rc")) == ["lot1", "lot2", "lot3"]
