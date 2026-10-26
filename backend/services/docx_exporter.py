@@ -7,10 +7,13 @@ from datetime import datetime
 from typing import Any
 
 from docx import Document
+from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
+
+from services import memoire_markdown as md
 
 _MAP_PLACEHOLDER_RE = re.compile(r"\[📍.*?(?:carte|localisation|Google Maps).*?\]", re.IGNORECASE | re.DOTALL)
 
@@ -130,14 +133,61 @@ def _setup_doc(org_name: str) -> Document:
 
     _add_footer_page_numbers(section)
 
-    # Police par défaut
-    try:
-        doc.styles["Normal"].font.name = "Calibri"
-        doc.styles["Normal"].font.size = Pt(11)
-    except KeyError:
-        pass
-
+    _styles(doc)
     return doc
+
+
+def _police_style(style, police: str = "Calibri"):
+    """Police posée sur les 4 attributs (ascii, hAnsi, cs, eastAsia) : sinon
+    Word et LibreOffice retombent sur la police du thème (Cambria/Calibri) pour
+    les titres."""
+    rpr = style.element.get_or_add_rPr()
+    rfonts = rpr.find(qn("w:rFonts"))
+    if rfonts is None:
+        rfonts = OxmlElement("w:rFonts")
+        rpr.insert(0, rfonts)
+    for attr in ("w:asciiTheme", "w:hAnsiTheme", "w:cstheme", "w:eastAsiaTheme"):
+        if rfonts.get(qn(attr)) is not None:
+            del rfonts.attrib[qn(attr)]
+    for attr in ("w:ascii", "w:hAnsi", "w:cs", "w:eastAsia"):
+        rfonts.set(qn(attr), police)
+
+
+def _styles(doc: Document):
+    """Styles Word natifs : le patron retouche dans Word sans casser la mise en
+    page (modifier « Titre 2 » change tous les titres 2)."""
+    st = doc.styles
+    normal = st["Normal"]
+    normal.font.size = Pt(11)
+    normal.font.color.rgb = _GREY_TXT
+    normal.paragraph_format.space_after = Pt(4)
+    _police_style(normal)
+    langue = OxmlElement("w:lang")
+    langue.set(qn("w:val"), "fr-FR")
+    normal.element.get_or_add_rPr().append(langue)
+
+    for nom, taille, couleur, avant, apres in (
+        ("Heading 1", 16, _BLUE_H1, 20, 8),
+        ("Heading 2", 13, _BLUE_H2, 12, 4),
+        ("Heading 3", 11.5, _GREY_TXT, 10, 3),
+        ("Heading 4", 11, _GREY_META, 8, 2),
+        ("Heading 5", 11, _GREY_META, 6, 2),
+        ("Heading 6", 11, _GREY_META, 6, 2),
+    ):
+        h = st[nom]
+        h.font.size = Pt(taille)
+        h.font.bold = True
+        h.font.italic = nom in ("Heading 5", "Heading 6")
+        h.font.color.rgb = couleur
+        _police_style(h)
+        h.paragraph_format.space_before = Pt(avant)
+        h.paragraph_format.space_after = Pt(apres)
+        h.paragraph_format.keep_with_next = True
+
+    for nom in ("List Bullet", "List Bullet 2", "List Number", "List Number 2", "Caption"):
+        _police_style(st[nom])
+    for nom in ("List Bullet", "List Bullet 2", "List Number", "List Number 2"):
+        st[nom].paragraph_format.space_after = Pt(2)
 
 
 def _centered_line(doc: Document, text: str, *, size: int, color, bold: bool = False,
@@ -202,52 +252,176 @@ def _cover_page(
 
 
 def _h1(doc: Document, text: str):
-    p = doc.add_heading(text, level=1)
-    run = p.runs[0] if p.runs else p.add_run(text)
-    run.font.color.rgb = _BLUE_H1
-    run.font.name = "Calibri"
-    run.font.size = Pt(16)
-    p.paragraph_format.space_before = Pt(20)
-    p.paragraph_format.space_after  = Pt(8)
+    doc.add_heading(text, level=1)
 
 
 def _h2(doc: Document, text: str):
-    p = doc.add_heading(text, level=2)
-    run = p.runs[0] if p.runs else p.add_run(text)
-    run.font.color.rgb = _BLUE_H2
-    run.font.name = "Calibri"
-    run.font.size = Pt(13)
-    p.paragraph_format.space_before = Pt(12)
-    p.paragraph_format.space_after  = Pt(4)
+    doc.add_heading(text, level=2)
 
 
-def _body(doc: Document, text: str, *, skip_map_placeholder: bool = False):
-    """Ajoute le texte ligne par ligne — gère les puces et le gras **...**."""
-    for line in text.split("\n"):
-        stripped = line.rstrip()
-        if not stripped:
-            continue
+# ─── Corps : Markdown de l'IA → styles Word natifs ─────────────────────────────
 
-        # Skip the map placeholder line — it will be replaced by the actual image
-        if skip_map_placeholder and _MAP_PLACEHOLDER_RE.search(stripped):
-            continue
+_LARGEUR_UTILE_CM = 17.0   # A4 21 cm - 2 × 2 cm de marge
+_TEXTE_TABLEAU_PT = 9.5
 
-        is_bullet = bool(re.match(r"^[-*]\s+", stripped))
-        content = re.sub(r"^[-*]\s+", "", stripped) if is_bullet else stripped
 
-        if is_bullet:
-            p = doc.add_paragraph(style="List Bullet")
+def _ajouter_segments(p, segments: list[md.Segment], *, taille: float | None = None,
+                      couleur: RGBColor | None = None, gras: bool = False):
+    for seg in segments:
+        r = p.add_run(seg.texte)
+        if seg.gras or gras:
+            r.bold = True
+        if seg.italique:
+            r.italic = True
+        if taille is not None:
+            r.font.size = Pt(taille)
+        if couleur is not None:
+            r.font.color.rgb = couleur
+
+
+def _nouvelle_numerotation(doc: Document) -> int | None:
+    """Crée une instance de numérotation qui repart à 1, branchée sur la
+    définition abstraite du style « List Number ». Sans cela, toutes les listes
+    numérotées du document se suivent (1 à 3, puis 4 à 6…)."""
+    try:
+        style_ppr = doc.styles["List Number"].element.pPr
+        num_id_style = style_ppr.numPr.numId.val
+        numbering = doc.part.numbering_part.element
+        abstract_id = None
+        for num in numbering.findall(qn("w:num")):
+            if int(num.get(qn("w:numId"))) == int(num_id_style):
+                abstract_id = num.find(qn("w:abstractNumId")).get(qn("w:val"))
+        if abstract_id is None:
+            return None
+        nouvel_id = max(int(n.get(qn("w:numId"))) for n in numbering.findall(qn("w:num"))) + 1
+        num = OxmlElement("w:num")
+        num.set(qn("w:numId"), str(nouvel_id))
+        ref = OxmlElement("w:abstractNumId")
+        ref.set(qn("w:val"), abstract_id)
+        num.append(ref)
+        override = OxmlElement("w:lvlOverride")
+        override.set(qn("w:ilvl"), "0")
+        start = OxmlElement("w:startOverride")
+        start.set(qn("w:val"), "1")
+        override.append(start)
+        num.append(override)
+        numbering.append(num)
+        return nouvel_id
+    except (KeyError, AttributeError, ValueError):
+        return None
+
+
+def _rendre_liste(doc: Document, liste: md.Liste):
+    num_id = _nouvelle_numerotation(doc) if liste.numerotee else None
+    base = "List Number" if liste.numerotee else "List Bullet"
+    for el in liste.elements:
+        style = f"{base} 2" if el.profondeur else base
+        p = doc.add_paragraph(style=style)
+        if num_id is not None and not el.profondeur:
+            p._p.get_or_add_pPr().get_or_add_numPr().get_or_add_numId().val = num_id
+            p._p.pPr.numPr.get_or_add_ilvl().val = 0
+        _ajouter_segments(p, el.segments)
+
+
+def _largeurs_colonnes(tableau: md.Tableau) -> list[float]:
+    """Largeurs (cm) proportionnelles au contenu, bornées : ni colonne
+    écrasée, ni colonne qui mange la page."""
+    n = len(tableau.entetes)
+    poids = []
+    for j in range(n):
+        textes = [tableau.entetes[j]] + [ligne[j] for ligne in tableau.lignes]
+        longueur = max((sum(len(s.texte) for s in segs) for segs in textes), default=1)
+        poids.append(min(max(longueur, 6), 38))
+    total = sum(poids)
+    return [_LARGEUR_UTILE_CM * w / total for w in poids]
+
+
+def _ombrer(cellule, couleur_hex: str):
+    shd = OxmlElement("w:shd")
+    shd.set(qn("w:val"), "clear")
+    shd.set(qn("w:color"), "auto")
+    shd.set(qn("w:fill"), couleur_hex)
+    cellule._tc.get_or_add_tcPr().append(shd)
+
+
+def _rendre_tableau(doc: Document, tableau: md.Tableau):
+    """Vrai tableau Word : en-tête répété sur chaque page, lignes non coupées."""
+    n = len(tableau.entetes)
+    if n == 0:
+        return
+    largeurs = _largeurs_colonnes(tableau)
+    t = doc.add_table(rows=1, cols=n)
+    t.style = doc.styles["Table Grid"]
+    t.alignment = WD_TABLE_ALIGNMENT.CENTER
+    t.autofit = False
+    tbl_pr = t._tbl.tblPr
+    marges = OxmlElement("w:tblCellMar")
+    for cote, valeur in (("top", 50), ("left", 90), ("bottom", 50), ("right", 90)):
+        e = OxmlElement(f"w:{cote}")
+        e.set(qn("w:w"), str(valeur))
+        e.set(qn("w:type"), "dxa")
+        marges.append(e)
+    tbl_pr.append(marges)
+    bordures = OxmlElement("w:tblBorders")
+    for cote in ("top", "left", "bottom", "right", "insideH", "insideV"):
+        e = OxmlElement(f"w:{cote}")
+        e.set(qn("w:val"), "single")
+        e.set(qn("w:sz"), "4")
+        e.set(qn("w:space"), "0")
+        e.set(qn("w:color"), "D1D5DB")
+        bordures.append(e)
+    tbl_pr.append(bordures)
+    for col, largeur in zip(t.columns, largeurs):
+        col.width = Cm(largeur)
+
+    def remplir(cellule, segments, largeur, *, entete=False):
+        cellule.width = Cm(largeur)
+        p = cellule.paragraphs[0]
+        p.paragraph_format.space_after = Pt(0)
+        _ajouter_segments(
+            p, segments, taille=_TEXTE_TABLEAU_PT, gras=entete,
+            couleur=RGBColor(0xFF, 0xFF, 0xFF) if entete else None,
+        )
+
+    for j, segs in enumerate(tableau.entetes):
+        cellule = t.rows[0].cells[j]
+        remplir(cellule, segs, largeurs[j], entete=True)
+        _ombrer(cellule, "1E40AF")
+    ligne0 = t.rows[0]._tr.get_or_add_trPr()
+    ligne0.append(OxmlElement("w:cantSplit"))
+    ligne0.append(OxmlElement("w:tblHeader"))
+    for k, ligne in enumerate(tableau.lignes):
+        row = t.add_row()
+        row._tr.get_or_add_trPr().append(OxmlElement("w:cantSplit"))
+        for j, segs in enumerate(ligne):
+            remplir(row.cells[j], segs, largeurs[j])
+            if k % 2 == 1:
+                _ombrer(row.cells[j], "F3F4F6")
+    # respiration après le tableau
+    espace = doc.add_paragraph()
+    espace.paragraph_format.space_after = Pt(2)
+
+
+def _body(doc: Document, text: str, *, skip_map_placeholder: bool = False, niveau_base: int = 2):
+    """Convertit le Markdown d'une section en styles Word natifs (titres, listes
+    à puces et numérotées, gras, italique, tableaux). `niveau_base` : niveau du
+    titre qui précède la section ; un `#` de l'IA descend d'un cran dessous."""
+    if skip_map_placeholder:
+        text = "\n".join(
+            ligne for ligne in (text or "").split("\n") if not _MAP_PLACEHOLDER_RE.search(ligne)
+        )
+    for bloc in md.analyser(text or ""):
+        if isinstance(bloc, md.Titre):
+            niveau = min(niveau_base + bloc.niveau, 6)
+            p = doc.add_heading("", level=niveau)
+            _ajouter_segments(p, bloc.segments)
+        elif isinstance(bloc, md.Liste):
+            _rendre_liste(doc, bloc)
+        elif isinstance(bloc, md.Tableau):
+            _rendre_tableau(doc, bloc)
         else:
             p = doc.add_paragraph()
-
-        p.paragraph_format.space_after = Pt(4)
-
-        for part in re.split(r"(\*\*.*?\*\*)", content):
-            r = p.add_run(part[2:-2] if part.startswith("**") and part.endswith("**") else part)
-            r.bold = part.startswith("**") and part.endswith("**")
-            r.font.name = "Calibri"
-            r.font.size = Pt(11)
-            r.font.color.rgb = _GREY_TXT
+            _ajouter_segments(p, bloc.segments)
 
 
 def _add_map_image(doc: Document, map_image: bytes, caption: str):
@@ -329,7 +503,7 @@ def build_memoire_docx(
     preambule = content_json.get("preambule", "")
     if preambule and preambule.strip():
         _h1(doc, "PRÉAMBULE")
-        _body(doc, preambule)
+        _body(doc, preambule, niveau_base=1)
 
     _add_part(doc, "PARTIE A — PRÉSENTATION GÉNÉRALE",       content_json.get("partie_a", {}), _PART_A, map_image=map_image, map_caption=map_caption)
     _add_part(doc, "PARTIE B — PRÉSENTATION DE LA PRESTATION", content_json.get("partie_b", {}), _PART_B)
