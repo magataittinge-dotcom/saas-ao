@@ -32,20 +32,19 @@ def test_cas01_rc_tableau_vertical_temoin():
     assert ids(LD._detect_lots_from_rc_text(RC_VERTICAL, "rc")) == ["lot1", "lot2", "lot3", "lot4"]
 
 
-@A_CORRIGER
 def test_cas02_rc_vertical_description_du_lot_sans_les_lots_suivants():
     d = LD._detect_lots_from_rc_text(RC_VERTICAL, "rc")
     assert d and "02" not in d[0].description_long
 
 
-@A_CORRIGER
 def test_cas03_rc_vertical_intitule_sur_deux_lignes():
     rc = ("REGLEMENT DE LA CONSULTATION\nLOT\nINTITULE\n01\nTerrassements – VRD\n02\nCloisons – Doublages –\n"
           "Faux plafonds\n03\nÉtanchéité\n04\nSerrurerie\n05\nPeinture\n")
-    assert ids(LD._detect_lots_from_rc_text(rc, "rc")) == ["lot1", "lot2", "lot3", "lot4", "lot5"]
+    d = LD._detect_lots_from_rc_text(rc, "rc")
+    assert ids(d) == ["lot1", "lot2", "lot3", "lot4", "lot5"]
+    assert d[1].nom == "Lot 02 — Cloisons – Doublages – Faux plafonds"
 
 
-@A_CORRIGER
 def test_cas04_rc_vertical_coupe_par_un_saut_de_page():
     rc = ("REGLEMENT DE LA CONSULTATION\nLOT\nINTITULE\n01\nTerrassements\n02\nMaçonnerie\n03\nÉtanchéité\n"
           "4417 – RC TRAVAUX\n5\n04\nSerrurerie\n05\nPeinture\n")
@@ -58,13 +57,11 @@ RC_SOMMAIRE = ("REGLEMENT DE LA CONSULTATION\nSOMMAIRE\n1\nOBJET DE LA CONSULTAT
                "Le marché est alloti en 2 lots :\nLot 1 : Maçonnerie\nLot 2 : Couverture\n")
 
 
-@A_CORRIGER
 def test_cas05_sommaire_du_rc_n_est_pas_un_tableau_de_lots():
     d = LD._detect_lots_from_rc_text(RC_SOMMAIRE, "rc")
     assert [x.nom for x in d] == ["Lot 1 — Maçonnerie", "Lot 2 — Couverture"]
 
 
-@A_CORRIGER
 def test_cas06_sommaire_puis_drop_ghosts():
     lots = [x.to_dict() for x in LD._detect_lots_from_rc_text(RC_SOMMAIRE, "rc")]
     annonce = LD.extract_announced_lot_count(RC_SOMMAIRE)
@@ -254,3 +251,9 @@ def test_fusion_a_confiance_egale_le_rc_prime_sur_le_ccap():
     rc.nom_confidence = 95   # posé par detect_all_lots pour une pièce de type RC
     ccap = _det("lot5", "Lot 5 — Peinture intérieure et extérieure", 90, ["rc_table", "rc_text"])
     assert LD._merge_detections([ccap], [rc])[0].nom == "Lot 5 — Peinture"
+
+
+def test_rc_vertical_le_texte_apres_le_tableau_n_est_pas_colle_au_dernier_lot():
+    rc = ("REGLEMENT DE LA CONSULTATION\nLOT\nINTITULE\n01\nTerrassements\n02\nMaçonnerie\n03\nPeinture –\n"
+          "Les variantes ne sont pas autorisées.\nArticle 2\n")
+    assert [x.nom for x in LD._detect_lots_from_rc_text(rc, "rc")][-1] == "Lot 03 — Peinture"

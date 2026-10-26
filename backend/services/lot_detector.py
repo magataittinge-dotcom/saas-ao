@@ -581,6 +581,83 @@ def detect_lots_from_excel(file_path: str) -> List[Dict]:
 
 # ─── Text detection ────────────────────────────────────────────────────────────
 
+_ENTETE_LOT = re.compile(r'^\s*lots?\s*(?:n[°o]?)?\s*$', re.IGNORECASE)
+_ENTETE_INTITULE = re.compile(r'^\s*(?:intitul[eé]s?|d[eé]signations?|libell[eé]s?|objet)\b', re.IGNORECASE)
+
+
+def _entete_vertical(scan_lines: List[str]) -> Optional[int]:
+    """Index de la première ligne qui suit l'en-tête « LOT ⏎ INTITULE » (dans l'un ou
+    l'autre ordre), ou None. Sans cet en-tête, une suite « 1 ⏎ OBJET… ⏎ 2 ⏎ CONDITIONS… »
+    est un sommaire, pas le tableau des lots."""
+    for i in range(len(scan_lines) - 1):
+        a, b = scan_lines[i], scan_lines[i + 1]
+        if (_ENTETE_LOT.match(a) and _ENTETE_INTITULE.match(b)) or \
+                (_ENTETE_INTITULE.match(a) and _ENTETE_LOT.match(b)):
+            return i + 2
+    return None
+
+
+def _suite_d_intitule(label: str) -> bool:
+    """Le libellé se poursuit-il sur la ligne suivante ? Oui s'il finit sur un tiret ou
+    un connecteur (« Cloisons – Doublages – »)."""
+    return bool(re.search(r'(?:[-–—,/&]|\b(?:et|de|du|des|d|à|en))\s*$', label.strip(), re.IGNORECASE))
+
+
+def _paires_verticales(scan_lines: List[str]) -> List[tuple]:
+    """(numéro, intitulé, index de la ligne du libellé) du tableau « vertical » des lots.
+
+    Conditions : en-tête « LOT / INTITULE » ; numéros qui se suivent (1, 2, 3…), au
+    moins trois rangées. Tolère, entre deux rangées, un intitulé sur deux lignes et
+    quelques lignes de saut de page (en-tête ou pied de page, numéro de page) : on
+    reprend à la rangée suivante."""
+    debut = _entete_vertical(scan_lines)
+    if debut is None:
+        return []
+    n = len(scan_lines)
+
+    def rangee(i: int):
+        """(numéro, première ligne du libellé) si la ligne i ouvre une rangée."""
+        if i + 1 >= n:
+            return None
+        m = _LOT_NUM_ALONE.match(scan_lines[i])
+        nxt = scan_lines[i + 1].strip()
+        if m and nxt and not _LOT_NUM_ALONE.match(nxt) and not nxt[0].isdigit() and len(nxt) >= 3:
+            return m.group(1), nxt
+        return None
+
+    def suivante(i: int, attendu: int):
+        """Index de la rangée n° `attendu` dans les 5 lignes à partir de i, ou None."""
+        for j in range(i, min(i + 5, n)):
+            r = rangee(j)
+            if r and int(r[0]) == attendu:
+                return j
+        return None
+
+    i = debut
+    while i < n and rangee(i) is None:
+        i += 1   # lignes d'introduction éventuelles entre l'en-tête et la 1re rangée
+        if i - debut > 6:
+            return []
+    pairs: List[tuple] = []
+    while i < n:
+        r = rangee(i)
+        if r is None:
+            break
+        numero, label = int(r[0]), r[1]
+        j = i + 2
+        suite = suivante(j, numero + 1)
+        if suite is not None and suite > j and _suite_d_intitule(label):
+            extra = [l.strip() for l in scan_lines[j:suite] if l.strip()]
+            # un intitulé sur deux lignes ; au-delà, ce sont des lignes de saut de page
+            if 0 < len(extra) <= 2 and all(not e[0].isdigit() for e in extra):
+                label = f"{label} {extra[0]}"
+        pairs.append((r[0], label, i + 1))
+        if suite is None:
+            break
+        i = suite
+    return pairs if len(pairs) >= 3 else []
+
+
 def _extract_description_excerpt(text: str, line_idx: int, lines: List[str]) -> str:
     """Take a 250-char excerpt after the line at line_idx.
 
@@ -597,7 +674,7 @@ def _extract_description_excerpt(text: str, line_idx: int, lines: List[str]) -> 
                 break
             continue
         # Skip lines that look like the next lot heading.
-        if _LOT_LINE.match(s) or _LOT_TABLE_ROW_NUM.match(s):
+        if _LOT_LINE.match(s) or _LOT_TABLE_ROW_NUM.match(s) or _LOT_NUM_ALONE.match(s):
             break
         chunks.append(s)
         total += len(s)
@@ -675,39 +752,21 @@ def _detect_lots_from_rc_text(text: str, doc_type: str) -> List[LotDetection]:
 
     # ── Strategy A2 : tableau aplati VERTICALEMENT (extraction PDF) ────────────
     # Format réel (RC Gueux) : « LOT ⏎ INTITULE ⏎ 01 ⏎ Démolition… » — le
-    # numéro et l'intitulé sont sur des lignes séparées. On exige ≥ 3 paires
-    # consécutives (numéro seul → ligne texte) pour éviter les faux positifs.
-    pairs: List[tuple] = []
-    i = 0
-    while i < len(scan_lines) - 1:
-        m_num = _LOT_NUM_ALONE.match(scan_lines[i])
-        nxt = scan_lines[i + 1].strip()
-        if (m_num and nxt and not _LOT_NUM_ALONE.match(nxt)
-                and not nxt[0].isdigit() and len(nxt) >= 3):
-            pairs.append((m_num.group(1), nxt, i))
-            i += 2
+    # numéro et l'intitulé sont sur des lignes séparées.
+    for raw_id, label, line_idx in _paires_verticales(scan_lines):
+        lot_id = _lot_id_from_raw(raw_id)
+        if not lot_id:
             continue
-        if pairs and len(pairs) >= 3:
-            break  # fin du bloc tableau
-        if pairs:
-            pairs = []  # séquence interrompue trop tôt
-        i += 1
-
-    if len(pairs) >= 3:
-        for raw_id, label, line_idx in pairs:
-            lot_id = _lot_id_from_raw(raw_id)
-            if not lot_id:
-                continue
-            label = re.sub(r'\s+', ' ', _sans_colonne_index(label.strip()))[:60].strip(' -–—')
-            if _NOT_A_LOT_LABEL.search(label):
-                continue  # doc général (annexe, prescriptions communes…)
-            description = _extract_description_excerpt(text, line_idx, scan_lines)
-            lots.setdefault(lot_id, LotDetection(
-                id=lot_id, nom=f"Lot {raw_id} — {label}", confidence=90,
-                sources=["rc_table", "rc_text"], description_long=description,
-            ))
-        if lots:
-            return list(lots.values())
+        label = re.sub(r'\s+', ' ', _sans_colonne_index(label.strip()))[:60].strip(' -–—')
+        if _NOT_A_LOT_LABEL.search(label):
+            continue  # doc général (annexe, prescriptions communes…)
+        description = _extract_description_excerpt(text, line_idx, scan_lines)
+        lots.setdefault(lot_id, LotDetection(
+            id=lot_id, nom=f"Lot {raw_id} — {label}", confidence=90,
+            sources=["rc_table", "rc_text"], description_long=description,
+        ))
+    if lots:
+        return list(lots.values())
 
     # ── Strategy B : inline "Lot N" / "Lot A" pattern ─────────────────────────
     block = "\n".join(scan_lines)
