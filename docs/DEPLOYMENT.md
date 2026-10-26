@@ -197,7 +197,6 @@ CLERK_SECRET_KEY=sk_live_XXX
 CLERK_JWKS_URL=https://clerk.synorix.fr/.well-known/jwks.json
 STRIPE_SECRET_KEY=sk_live_XXX
 STRIPE_WEBHOOK_SECRET=whsec_XXX
-GOOGLE_MAPS_API_KEY=AIzaSyB...
 FRONTEND_URL=https://synorix.fr
 METRICS_TOKEN=$(openssl rand -hex 32)  # ops : accès /api/metrics (S3.5) — sans lui, endpoint fermé (404)
 ```

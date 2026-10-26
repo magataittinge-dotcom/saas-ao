@@ -712,6 +712,10 @@ def _finalize_analysis(
 
     # Store critères and infos on project
     project.criteres_jugement = criteres_jugement or None
+    # Lieu d'exécution : gardé seulement s'il est sourcé dans le RC ou le CCAP
+    # (contrôle sans IA) ; sinon écarté, la carte ne montre que le siège.
+    from services.lieu_chantier import controler_infos_marche
+    infos_marche = controler_infos_marche(infos_marche, all_docs, project.maitre_ouvrage)
     project.infos_marche = infos_marche or None
 
     # Auto-fill maitre_ouvrage from infos_marche if not already set

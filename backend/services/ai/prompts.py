@@ -78,6 +78,7 @@ DOCUMENTS COMPLÉMENTAIRES :
     "objet": "Reconstruction de la MAS Les Platanes",
     "maitre_ouvrage": "EPSM de Caen",
     "maitre_oeuvre": "Cabinet XYZ Architecture" ou null,
+    "lieu_execution": {"adresse": "12 rue des Écoles, 51390 Gueux", "document": "RC" | "CCAP", "article": "2.1", "extrait": "phrase exacte du document qui donne cette adresse"} ou null,
     "lots": ["Lot 1 - Gros œuvre", "Lot 2 - Charpente"],
     "date_limite_reponse": "2025-04-15" ou null,
     "duree_marche": "12 mois" ou null,
@@ -101,6 +102,12 @@ DOCUMENTS COMPLÉMENTAIRES :
     "assurances_specifiques": ["Décennale 10 ans minimum", "RC Civile > 5M€"] ou []
   }
 }
+
+━━━ LIEU D'EXÉCUTION (infos_marche.lieu_execution) ━━━
+Renseigne lieu_execution UNIQUEMENT si le RC ou le CCAP donne explicitement l'adresse ou la commune du chantier (« lieu d'exécution », « lieu des travaux », « site de l'opération »).
+• "document" : "RC" ou "CCAP", jamais une autre pièce. "article" : le numéro de l'article qui le dit.
+• "extrait" : la phrase EXACTE du document, copiée mot pour mot, qui contient l'adresse ; "adresse" doit s'y retrouver telle quelle.
+• Jamais déduit : ni du nom ou de l'adresse de l'acheteur, ni du siège, ni d'une autre pièce (CCTP, plans, AE). Pas de lieu explicite → null.
 
 ━━━ COMMENT DÉCIDER source_kind + expected_template_type ━━━
 
@@ -468,6 +475,7 @@ Sois concis. Ta réponse doit commencer par { et finir par }.
     "objet": "...",
     "maitre_ouvrage": "...",
     "maitre_oeuvre": "..." ou null,
+    "lieu_execution": {"adresse": "...", "document": "RC" | "CCAP", "article": "...", "extrait": "..."} ou null,
     "lots": ["Lot 1 - ...", "Lot 2 - ..."],
     "date_limite_reponse": "2025-04-15" ou null,
     "date_limite_questions": "2025-04-05" ou null,
@@ -485,6 +493,12 @@ Sois concis. Ta réponse doit commencer par { et finir par }.
     "assurances_specifiques": ["Décennale", "RC > 5M€"] ou []
   }
 }
+
+━━━ LIEU D'EXÉCUTION (infos_marche.lieu_execution) ━━━
+Renseigne lieu_execution UNIQUEMENT si le RC ou le CCAP donne explicitement l'adresse ou la commune du chantier (« lieu d'exécution », « lieu des travaux », « site de l'opération »).
+• "document" : "RC" ou "CCAP", jamais une autre pièce. "article" : le numéro de l'article qui le dit.
+• "extrait" : la phrase EXACTE du document, copiée mot pour mot, qui contient l'adresse ; "adresse" doit s'y retrouver telle quelle.
+• Jamais déduit : ni du nom ou de l'adresse de l'acheteur, ni du siège, ni d'une autre pièce (CCTP, plans, AE). Pas de lieu explicite → null.
 
 ━━━ COMMENT DÉCIDER source_kind + expected_template_type ━━━
 
