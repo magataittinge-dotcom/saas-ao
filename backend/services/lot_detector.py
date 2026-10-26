@@ -88,9 +88,9 @@ _RC_MARKER = re.compile(
 _LOT_FNAME = re.compile(r'(?<![^\W\d_])lot[\s_\-]*(\d{1,2}(?:\.\d{1,2})?[A-Za-z]?|[A-Za-z](?!\w))', re.IGNORECASE)
 _LOT_CELL_CONTENT = re.compile(r'\blot\s*n?°?\s*(\d{1,2}(?:\.\d{1,2})?[A-Za-z]?)\b', re.IGNORECASE)
 # Tranche detection in Excel headers (AMÉLIORATION 7)
+# Le mot « tranche » est obligatoire : « Ferme type F1 » (charpente) n'est pas une tranche.
 _TRANCHE_HEADER = re.compile(
-    r'tranche\s*(ferme|optionnel\w*|condition\w*)?|'
-    r'\b(ferme|optionnel\w*)\b',
+    r'\btranches?\b\s*(?:ferme|optionnel\w*|condition\w*)?',
     re.IGNORECASE,
 )
 # Annexe / allotissement filenames (AMÉLIORATION 5)
@@ -453,6 +453,37 @@ def _scan_excel_cell_content_for_lots(file_path: str, sheet_names: List[str], wb
 
 # ─── Excel / ODS sheet detection ──────────────────────────────────────────────
 
+def _famille(texte: str) -> Optional[int]:
+    """Famille de métier (BTP_FAMILIES) d'un intitulé, ou None. Mots entiers : « ite »
+    n'est plus trouvé dans « electricite »."""
+    norm = _normalize(texte or "")
+    for num, _label, keywords in BTP_FAMILIES:
+        for kw in keywords:
+            fin = r'[a-z]*' if kw.endswith((" ext", " int")) else r'(?:s|x)?(?![a-z0-9])'
+            if re.search(rf'(?<![a-z0-9]){re.escape(kw)}{fin}', norm):
+                return num
+    return None
+
+
+def _rapprocher_onglets(merged: List["LotDetection"]) -> List["LotDetection"]:
+    """Relie un lot désigné par son seul onglet (lot_sheet_*) au lot numéroté du RC qui
+    a le même métier, s'il n'y en a qu'un. Par l'intitulé, jamais par le rang."""
+    numerotes = [d for d in merged if not d.id.startswith(("lot_sheet_", "lot_nom_"))]
+    restants: List[LotDetection] = []
+    for d in merged:
+        if d.id.startswith("lot_sheet_"):
+            fam = _famille(d.nom)
+            cible = [n for n in numerotes if fam is not None and _famille(n.nom) == fam]
+            if len(cible) == 1:
+                for src in d.sources:
+                    if src not in cible[0].sources:
+                        cible[0].sources.append(src)
+                        cible[0].confidence = min(100, cible[0].confidence + 15)
+                continue
+        restants.append(d)
+    return restants
+
+
 def _sheet_to_detection(sheet_name: str) -> Optional[LotDetection]:
     """Map a single sheet name to a LotDetection, or None if irrelevant."""
     name = sheet_name.strip()
@@ -468,14 +499,13 @@ def _sheet_to_detection(sheet_name: str) -> Optional[LotDetection]:
         nom = f"Lot {raw_id} — {label}" if label else f"Lot {raw_id}"
         return LotDetection(id=lot_id, nom=nom, confidence=85, sources=["excel"])
 
-    # BTP keyword match
-    norm = _normalize(name)
-    for lot_num, default_label, keywords in BTP_FAMILIES:
-        for kw in keywords:
-            if kw in norm:
-                lot_id = f"lot{lot_num}"
-                label = name.strip()[:60] if len(name.strip()) > 3 else default_label
-                return LotDetection(id=lot_id, nom=f"Lot {lot_num} — {label}", confidence=70, sources=["excel"])
+    # Onglet nommé par un métier (« Electricité », « Plomberie ») : le RANG de la famille
+    # BTP n'est pas un numéro de lot (avant : Electricité devenait le lot 5 « Façades »).
+    # Lot désigné par son nom ; _rapprocher_onglets le relie au lot du RC qui porte le
+    # même métier.
+    if _famille(name) is not None:
+        safe_key = re.sub(r'[^a-z0-9]', '_', _normalize(name))[:20]
+        return LotDetection(id=f"lot_sheet_{safe_key}", nom=name.strip()[:60], confidence=70, sources=["excel"])
 
     # Synthetic fallback
     if len(name) >= 4 and not name.isdigit():
@@ -1072,6 +1102,7 @@ def detect_all_lots(
     _report(95, "Consolidation des lots...")
     merged = _merge_detections(excel_dets, text_dets, filename_dets)
 
+    merged = _rapprocher_onglets(merged)
     real_lots = [d for d in merged if not d.id.startswith(("lot_sheet_", "lot_nom_"))]
     if real_lots:
         merged = real_lots

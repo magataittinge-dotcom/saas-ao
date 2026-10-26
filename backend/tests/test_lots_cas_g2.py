@@ -164,7 +164,6 @@ def test_cas30_sous_lot_01a_rattache_au_lot_01():
 
 # ─── Classeurs (DPGF) ────────────────────────────────────────────────────────
 
-@A_CORRIGER
 def test_cas31_onglets_nommes_par_metier_sans_numero_invente(tmp_path):
     classeur = openpyxl.Workbook()
     classeur.active.title = "Page de garde"
@@ -176,7 +175,6 @@ def test_cas31_onglets_nommes_par_metier_sans_numero_invente(tmp_path):
     assert not any(i in ("lot5", "lot13") for i in trouves), trouves
 
 
-@A_CORRIGER
 def test_cas32_ferme_de_charpente_n_est_pas_une_tranche(tmp_path):
     classeur = openpyxl.Workbook()
     feuille = classeur.active
@@ -284,3 +282,38 @@ def test_fichier_sous_lot_et_deux_lots_dans_le_nom():
     assert DT.assign_document_lots("DPGF Lot 7.1 Plomberie.xlsx", "dpgf_template") == ["7a"]
     assert DT.assign_document_lots("CCTP Lot 5 & 6.pdf", "cctp") == ["5", "6"]
     assert DT.assign_document_lots("CCTP Lot 5 et 12 pièces.pdf", "cctp") == ["5", "12"]
+
+
+def test_famille_en_mots_entiers():
+    assert LD._famille("Electricité courants forts") == 15
+    assert LD._famille("Façade ITE") == 5
+    assert LD._famille("Maçonnerie") == 2
+
+
+def test_onglet_de_metier_rejoint_le_lot_du_rc_qui_porte_le_meme_metier():
+    rc = LD.LotDetection(id="lot9", nom="Lot 09 — Électricité courants forts", confidence=90,
+                         sources=["rc_table", "rc_text"])
+    onglet = LD._sheet_to_detection("Electricité")
+    assert onglet.id.startswith("lot_sheet_")
+    fusion = LD._rapprocher_onglets(LD._merge_detections([onglet], [rc]))
+    assert ids(fusion) == ["lot9"] and "excel" in fusion[0].sources
+
+
+def test_onglet_de_metier_ambigu_reste_a_part():
+    a = LD.LotDetection(id="lot9", nom="Lot 9 — Électricité", confidence=90, sources=["rc_table", "rc_text"])
+    b = LD.LotDetection(id="lot10", nom="Lot 10 — Électricité courants faibles et éclairage", confidence=90,
+                        sources=["rc_table", "rc_text"])
+    onglet = LD._sheet_to_detection("Electricité")
+    assert any(d.id.startswith("lot_sheet_") for d in LD._rapprocher_onglets(LD._merge_detections([onglet], [a, b])))
+
+
+def test_tranche_citee_dans_un_classeur_reste_detectee(tmp_path):
+    classeur = openpyxl.Workbook()
+    feuille = classeur.active
+    feuille.title = "Lot 02 Maçonnerie"
+    feuille["A1"] = "Tranche ferme : école"
+    feuille["A2"] = "Tranche optionnelle 1 : préau"
+    chemin = tmp_path / "dpgf_tranches.xlsx"
+    classeur.save(chemin)
+    lots = LD.detect_lots_from_excel(str(chemin))
+    assert lots[0]["tranches"] == ["Tranche ferme : école", "Tranche optionnelle 1 : préau"]
