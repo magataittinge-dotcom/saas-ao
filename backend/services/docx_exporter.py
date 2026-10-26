@@ -3,15 +3,15 @@ from __future__ import annotations
 
 import io
 import re
-from datetime import datetime
+from datetime import date
 from typing import Any
 
 from docx import Document
 from docx.enum.table import WD_TABLE_ALIGNMENT
-from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-from docx.shared import Cm, Pt, RGBColor
+from docx.shared import Cm, Pt, RGBColor, Twips
 
 from services import memoire_markdown as md
 
@@ -58,22 +58,60 @@ _PART_C: list[tuple[str, str]] = [
 ]
 
 
+# ─── Date en français, sans dépendre de la locale du système ───────────────────
+
+_MOIS_FR = ("janvier", "février", "mars", "avril", "mai", "juin", "juillet",
+            "août", "septembre", "octobre", "novembre", "décembre")
+
+
+def _date_fr(jour: date) -> str:
+    """« octobre 2026 ». `strftime("%B")` suit la locale du processus (anglais
+    sur un serveur sans locale française) : on n'y touche pas."""
+    return f"{_MOIS_FR[jour.month - 1]} {jour.year}"
+
+
+def _aujourdhui() -> date:
+    return date.today()
+
+
 # ─── Helpers document ──────────────────────────────────────────────────────────
 
-def _page_number_field(para, label: str):
-    """Ajoute un champ Word (PAGE ou NUMPAGES) après un run de label."""
-    run = para.add_run(label)
-    run.font.size = Pt(9)
-    run.font.color.rgb = _GREY_PG
-    fld_begin = OxmlElement("w:fldChar")
-    fld_begin.set(qn("w:fldCharType"), "begin")
+def _champ(para, instruction: str, resultat: str = "1", *, taille: float = 9,
+           couleur: RGBColor = _GREY_PG):
+    """Champ Word complet (begin / instruction / separate / résultat en cache /
+    end), un run par étape, mis en forme comme le texte voisin : le résultat en
+    cache s'affiche tel quel dans LibreOffice, Word le recalcule."""
+    def run(enfant=None, texte: str | None = None):
+        r = para.add_run(texte) if texte is not None else para.add_run()
+        r.font.size = Pt(taille)
+        r.font.color.rgb = couleur
+        if enfant is not None:
+            r._r.append(enfant)
+        return r
+
+    debut = OxmlElement("w:fldChar")
+    debut.set(qn("w:fldCharType"), "begin")
+    run(debut)
     instr = OxmlElement("w:instrText")
-    instr.text = label.strip() if label.strip() in ("PAGE", "NUMPAGES") else label.strip()
-    fld_end = OxmlElement("w:fldChar")
-    fld_end.set(qn("w:fldCharType"), "end")
-    run._r.append(fld_begin)
-    run._r.append(instr)
-    run._r.append(fld_end)
+    instr.set(qn("xml:space"), "preserve")
+    instr.text = f" {instruction} "
+    run(instr)
+    sep = OxmlElement("w:fldChar")
+    sep.set(qn("w:fldCharType"), "separate")
+    run(sep)
+    run(texte=resultat)
+    fin = OxmlElement("w:fldChar")
+    fin.set(qn("w:fldCharType"), "end")
+    run(fin)
+
+
+def _effacer_tabulations_du_style(para):
+    """Les styles En-tête / Pied de page du modèle portent des tabulations
+    (centre 8,25 cm, droite 16,5 cm) qui décalent tout texte après une
+    tabulation : on les efface sur le paragraphe."""
+    ts = para.paragraph_format.tab_stops
+    ts.add_tab_stop(Twips(4680), WD_TAB_ALIGNMENT.CLEAR)
+    ts.add_tab_stop(Twips(9360), WD_TAB_ALIGNMENT.CLEAR)
 
 
 def _add_footer_page_numbers(section):
@@ -81,36 +119,16 @@ def _add_footer_page_numbers(section):
     footer.is_linked_to_previous = False
     para = footer.paragraphs[0]
     para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    _effacer_tabulations_du_style(para)
 
     r_before = para.add_run("Page ")
     r_before.font.size = Pt(9)
     r_before.font.color.rgb = _GREY_PG
-
-    # Champ PAGE
-    for fld_type, instr_text in [("begin", ""), ("", "PAGE"), ("end", "")]:
-        if fld_type:
-            elem = OxmlElement("w:fldChar")
-            elem.set(qn("w:fldCharType"), fld_type)
-            r_before._r.append(elem)
-        elif instr_text:
-            instr = OxmlElement("w:instrText")
-            instr.text = instr_text
-            r_before._r.append(instr)
-
+    _champ(para, "PAGE")
     r_sep = para.add_run(" / ")
     r_sep.font.size = Pt(9)
     r_sep.font.color.rgb = _GREY_PG
-
-    # Champ NUMPAGES
-    for fld_type, instr_text in [("begin", ""), ("", "NUMPAGES"), ("end", "")]:
-        if fld_type:
-            elem = OxmlElement("w:fldChar")
-            elem.set(qn("w:fldCharType"), fld_type)
-            r_sep._r.append(elem)
-        elif instr_text:
-            instr = OxmlElement("w:instrText")
-            instr.text = instr_text
-            r_sep._r.append(instr)
+    _champ(para, "NUMPAGES")
 
 
 def _setup_doc(org_name: str) -> Document:
@@ -121,11 +139,16 @@ def _setup_doc(org_name: str) -> Document:
     section.left_margin   = Cm(2.0)
     section.right_margin  = Cm(2.0)
 
+    # Couverture sans en-tête ni pied : première page distincte, laissée vide.
+    # Les en-têtes / pieds ci-dessous valent pour les pages suivantes.
+    section.different_first_page_header_footer = True
+
     # Header : nom entreprise à droite
     header = section.header
     header.is_linked_to_previous = False
     hp = header.paragraphs[0]
     hp.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    _effacer_tabulations_du_style(hp)
     hr = hp.add_run(org_name)
     hr.font.name = "Calibri"
     hr.font.size = Pt(9)
@@ -246,7 +269,7 @@ def _cover_page(
     if org_siret:
         _centered_line(doc, f"SIRET {org_siret}", size=10, color=_GREY_PG, space_after=2)
 
-    _centered_line(doc, datetime.now().strftime("%B %Y").capitalize(), size=11, color=_GREY_PG)
+    _centered_line(doc, _date_fr(_aujourdhui()), size=11, color=_GREY_PG)
 
     doc.add_page_break()
 
