@@ -4,12 +4,13 @@ Décision du 26/10 : on suit le RC.
 - rien ne sépare les lots 3 et 4 (pas de pièce propre à l'un ni à l'autre) : UN lot,
   d'identifiant stable (le premier numéro), dont le nom dit qu'il couvre les deux ;
 - chacun a ses pièces : DEUX lots, aux noms tirés de leurs pièces ;
-- les pièces ne distinguent pas les noms : repli sobre « Menuiseries — lot 3 ».
-Invariant de detect_all_lots : aucune désignation en double. Textes et noms de fichiers
+- les pièces ne distinguent pas les noms : repli au format de partout, numéro d'abord : « Lot 3 — Menuiseries ».
+Invariant de detect_all_lots : jamais deux lots du même nom (numéro compris). Textes et noms de fichiers
 inventés.
 """
 import importlib
 import inspect
+import re
 from types import SimpleNamespace
 
 from services import lot_detector as LD
@@ -69,26 +70,40 @@ def test_noms_pris_des_pieces_dpgf_et_bpu():
 
 def test_pieces_muettes_sur_le_nom_repli_sobre():
     docs = [rc_doc(), doc("CCTP Lot 03.pdf"), doc("CCTP Lot 04.pdf")]
-    assert sortie(docs) == [("lot1", "Lot 1 — Maçonnerie"), ("lot3", "Menuiseries — lot 3"),
-                            ("lot4", "Menuiseries — lot 4"), ("lot5", "Lot 5 — Peinture")]
+    assert sortie(docs) == [("lot1", "Lot 1 — Maçonnerie"), ("lot3", "Lot 3 — Menuiseries"),
+                            ("lot4", "Lot 4 — Menuiseries"), ("lot5", "Lot 5 — Peinture")]
 
 
 def test_pieces_au_meme_nom_repli_sobre():
     docs = [rc_doc(), doc("CCTP Lot 03 Menuiseries.pdf"), doc("CCTP Lot 04 Menuiseries.pdf")]
-    assert [n for i, n in sortie(docs) if i in ("lot3", "lot4")] == ["Menuiseries — lot 3", "Menuiseries — lot 4"]
+    assert [n for i, n in sortie(docs) if i in ("lot3", "lot4")] == ["Lot 3 — Menuiseries", "Lot 4 — Menuiseries"]
 
 
 def test_une_seule_piece_nommee_repli_aussi():
     docs = [rc_doc(), doc("CCTP Lot 03 Menuiseries extérieures.pdf"), doc("CCTP Lot 04.pdf")]
-    assert [n for i, n in sortie(docs) if i in ("lot3", "lot4")] == ["Menuiseries — lot 3", "Menuiseries — lot 4"]
+    assert [n for i, n in sortie(docs) if i in ("lot3", "lot4")] == ["Lot 3 — Menuiseries", "Lot 4 — Menuiseries"]
 
 
 # ─── Invariant : aucune désignation en double ────────────────────────────────
 
 def test_deux_lots_distincts_du_meme_nom_sont_departages():
     rc = "REGLEMENT DE LA CONSULTATION\nLot 5 : Électricité\nLot 9 : Électricité\nLot 10 : Peinture\n"
-    assert sortie([rc_doc(rc)]) == [("lot5", "Électricité — lot 5"), ("lot9", "Électricité — lot 9"),
+    assert sortie([rc_doc(rc)]) == [("lot5", "Lot 5 — Électricité"), ("lot9", "Lot 9 — Électricité"),
                                     ("lot10", "Lot 10 — Peinture")]
+
+
+def test_deux_lots_de_meme_numero_et_de_meme_designation_restent_distincts():
+    """Garde-fou : si le numéro lu dans le nom est le même, l'identifiant sert de départage."""
+    a = LD.LotDetection(id="lot5", nom="Lot 5 — Électricité", confidence=80)
+    b = LD.LotDetection(id="lot9", nom="Lot 5 — Électricité", confidence=80)
+    LD._noms_sans_doublon([a, b])
+    assert a.nom != b.nom
+    assert {a.nom, b.nom} == {"Lot 5 — Électricité (lot5)", "Lot 5 — Électricité (lot9)"}
+
+
+def test_le_repli_n_utilise_plus_le_format_designation_puis_lot():
+    for _, nom in sortie([rc_doc(), doc("CCTP Lot 03.pdf"), doc("CCTP Lot 04.pdf")]):
+        assert not re.search(r"— lot \S+$", nom), nom       # « Menuiseries — lot 3 » n'existe plus
 
 
 def test_designation_sans_le_prefixe_de_lot():
@@ -131,6 +146,6 @@ def test_aucun_nom_en_double_sur_tous_les_cas_de_g2(monkeypatch):
     textes = sorted(set(vus))
     assert len(textes) >= 8   # le rejeu a bien vu les RC des cas
     for texte in textes:
-        noms = [designation(n) for _, n in sortie([rc_doc(texte)])]
-        remplies = [LD._normalize(n) for n in noms if n]
-        assert len(remplies) == len(set(remplies)), (noms, texte[:60])
+        noms = [n for _, n in sortie([rc_doc(texte)])]
+        normalises = [LD._normalize(n) for n in noms]
+        assert len(normalises) == len(set(normalises)), (noms, texte[:60])
