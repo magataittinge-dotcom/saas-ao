@@ -25,7 +25,7 @@ from schemas.memoire import (
 from routers.auth import get_auth_user
 from services.ai.memoire_generator import MemoireGenerator
 from services.docx_exporter import build_memoire_docx
-from services.maps_service import generate_location_map, lieu_execution
+from services.maps_service import generate_location_map, lieu_execution, lieu_source
 from services.document_tagger import get_documents_for_lot
 
 
@@ -529,6 +529,7 @@ def build_project_memoire_docx(project, memoire, org, db) -> bytes:
     map_image, map_caption = generate_location_map(
         company_address or "",
         lieu_execution(project),
+        source_lieu=lieu_source(project),
     )
 
     # C8b — logo pour la page de garde (fallback texte propre si absent/illisible)

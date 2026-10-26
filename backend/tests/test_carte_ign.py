@@ -172,6 +172,10 @@ def test_carte_trop_ancienne_recomposee(monkeypatch, tmp_path):
 
 # ── Lieu d'exécution : jamais le nom de l'acheteur ──────────────────────────
 
+_LIEU_SOURCE = {"adresse": "3 place du Marché 51390 Gueux", "document": "RC", "article": "2.1",
+                "extrait": "Les travaux ont lieu au 3 place du Marché 51390 Gueux."}
+
+
 def _p(infos, mo="Commune de GUEUX"):
     return SimpleNamespace(infos_marche=infos, maitre_ouvrage=mo)
 
@@ -183,15 +187,16 @@ def test_lieu_execution():
     assert ms.lieu_execution(_p({"lieu_execution": "  "})) is None
     assert ms.lieu_execution(_p({"lieu_execution": 12})) is None
     assert ms.lieu_execution(_p({"lieu_execution": "Commune de GUEUX"})) is None
-    assert ms.lieu_execution(_p({"lieu_execution": "3 place\ndu Marché 51390 Gueux"})) \
-        == "3 place du Marché 51390 Gueux"
+    # ancien format (chaîne, sans source) : jamais utilisé
+    assert ms.lieu_execution(_p({"lieu_execution": "3 place\ndu Marché 51390 Gueux"})) is None
+    assert ms.lieu_execution(_p({"lieu_execution": _LIEU_SOURCE})) == "3 place du Marché 51390 Gueux"
 
 
 def test_export_ne_donne_jamais_le_nom_de_l_acheteur_a_la_carte(monkeypatch):
     import routers.memoire as rm
     vus = []
 
-    def faux(company, project):
+    def faux(company, project, source_lieu=None):
         vus.append((company, project))
         return None, None
 
@@ -204,7 +209,8 @@ def test_export_ne_donne_jamais_le_nom_de_l_acheteur_a_la_carte(monkeypatch):
     org = SimpleNamespace(name="ENTREPRISE TEST", address=SIEGE, logo_url=None, siret=None)
     rm.build_project_memoire_docx(projet, memoire, org, db=None)
     assert vus == [(SIEGE, None)]
-    projet.infos_marche = {"lieu_execution": CHANTIER}
+    projet.infos_marche = {"lieu_execution": {**_LIEU_SOURCE, "adresse": CHANTIER,
+                                               "extrait": f"Les travaux ont lieu au {CHANTIER}."}}
     rm.build_project_memoire_docx(projet, memoire, org, db=None)
     assert vus[-1] == (SIEGE, CHANTIER)
 

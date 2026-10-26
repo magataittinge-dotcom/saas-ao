@@ -33,6 +33,8 @@ from pathlib import Path
 
 import httpx
 
+from services.lieu_chantier import libelle_source, lire_lieu
+
 logger = logging.getLogger(__name__)
 
 _GEOCODAGE_URL = "https://data.geopf.fr/geocodage/search"
@@ -329,31 +331,32 @@ def _format_km(km: float) -> str:
 def lieu_execution(project) -> str | None:
     """Adresse du chantier lue dans ce que l'analyse a extrait du DCE
     (`infos_marche.lieu_execution`), jamais le nom ni l'adresse de l'acheteur.
-    None tant que l'analyse n'extrait pas ce champ : la carte ne montre alors
-    que le siège de l'entreprise."""
-    infos = getattr(project, "infos_marche", None)
-    if not isinstance(infos, dict):
-        return None
-    lieu = infos.get("lieu_execution")
-    if not isinstance(lieu, str) or not lieu.strip():
-        return None
-    lieu = " ".join(lieu.split())
-    mo = " ".join((getattr(project, "maitre_ouvrage", None) or "").lower().split())
-    if mo and lieu.lower() == mo:
-        return None
-    return lieu
+    Seul le lieu SOURCÉ (RC ou CCAP, extrait vérifié) est utilisé : sinon None,
+    et la carte ne montre que le siège de l'entreprise. L'ancien format (simple
+    chaîne, sans source) n'est jamais repris."""
+    lieu = lire_lieu(getattr(project, "infos_marche", None), getattr(project, "maitre_ouvrage", None))
+    return lieu["adresse"] if lieu else None
+
+
+def lieu_source(project) -> str | None:
+    """Source montrable du lieu d'exécution : « RC, art. 2.1 », « CCAP »."""
+    lieu = lire_lieu(getattr(project, "infos_marche", None), getattr(project, "maitre_ouvrage", None))
+    return libelle_source(lieu) if lieu else None
 
 
 # ── Point d'entrée ──────────────────────────────────────────────────────────
 
 def _legende(points_trouves: list[str], company_address: str, project_address: str | None,
-             km: float | None, jour: date) -> str:
+             km: float | None, jour: date, source_lieu: str | None = None) -> str:
     source = f"Source : IGN – Plan IGN v2 (Géoplateforme), extrait du {jour.strftime('%d/%m/%Y')}"
+    chantier = (project_address or "").strip()
+    if source_lieu:
+        chantier = f"{chantier} — {source_lieu}"      # d'où vient l'adresse du chantier
     if "Chantier" in points_trouves and "Siège" in points_trouves:
         tete = (f"Situation de l'entreprise (siège : {company_address.strip()}) et du chantier "
-                f"({(project_address or '').strip()}). Distance à vol d'oiseau : {_format_km(km or 0)}")
+                f"({chantier}). Distance à vol d'oiseau : {_format_km(km or 0)}")
     elif "Chantier" in points_trouves:
-        tete = f"Situation du chantier ({(project_address or '').strip()})"
+        tete = f"Situation du chantier ({chantier})"
     else:
         tete = f"Situation de l'entreprise — {company_address.strip()}"
     return f"{tete}. {source}"
@@ -362,11 +365,13 @@ def _legende(points_trouves: list[str], company_address: str, project_address: s
 def generate_location_map(
     company_address: str,
     project_address: str | None = None,
+    source_lieu: str | None = None,
 ) -> tuple[bytes | None, str | None]:
     """Carte de situation (PNG) et sa légende, ou `(None, None)`.
 
     `project_address` : adresse du CHANTIER (voir `lieu_execution`), jamais le
-    nom de l'acheteur. Sans elle, la carte ne montre que le siège. Ne lève
+    nom de l'acheteur. Sans elle, la carte ne montre que le siège. `source_lieu`
+    (« RC, art. 2.1 ») est citée dans la légende, avec l'adresse. Ne lève
     jamais : panne ou adresse introuvable → pas de carte.
     """
     company_address = (company_address or "").strip()
@@ -374,7 +379,7 @@ def generate_location_map(
     if not company_address and not project_address:
         return None, None
     try:
-        return _generate(company_address, project_address)
+        return _generate(company_address, project_address, source_lieu)
     except _Delai:
         logger.warning("Carte de situation : délai global dépassé, pas de carte")
     except Exception:  # noqa: BLE001 — la carte est un plus : jamais bloquante
@@ -382,7 +387,8 @@ def generate_location_map(
     return None, None
 
 
-def _generate(company_address: str, project_address: str | None) -> tuple[bytes | None, str | None]:
+def _generate(company_address: str, project_address: str | None,
+              source_lieu: str | None = None) -> tuple[bytes | None, str | None]:
     debut = time.monotonic()
     dossier = _cache_dir()
     cle = _cle(_VERSION_CARTE, company_address, project_address or "")
@@ -395,7 +401,7 @@ def _generate(company_address: str, project_address: str | None) -> tuple[bytes 
         if (date.today() - jour).days < _VALIDITE_CARTE_JOURS:
             octets = png.read_bytes()
             return octets, _legende(meta["points"], company_address, project_address,
-                                    meta.get("km"), jour)
+                                    meta.get("km"), jour, source_lieu)
     except (OSError, ValueError, KeyError):
         pass
 
@@ -424,4 +430,4 @@ def _generate(company_address: str, project_address: str | None) -> tuple[bytes 
         _borner(dossier, "carte-*.png", _MAX_CARTES_EN_CACHE)
     except OSError:
         logger.warning("Cache de carte non écrit", exc_info=True)
-    return octets, _legende(libelles, company_address, project_address, km, jour)
+    return octets, _legende(libelles, company_address, project_address, km, jour, source_lieu)
