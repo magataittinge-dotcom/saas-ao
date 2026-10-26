@@ -178,11 +178,17 @@ def _geocoder(adresse: str, debut: float) -> tuple[float, float] | None:
 
 # ── Composition ──────────────────────────────────────────────────────────────
 
+_CARLITO = Path(__file__).resolve().parent.parent / "assets" / "fonts" / "carlito"
+
+
 def _police(taille: int, gras: bool = False):
+    """Carlito du dépôt d'abord (même police que le Word et le PDF, sans paquet
+    système), puis les polices système en secours."""
     from PIL import ImageFont
+    carlito = str(_CARLITO / ("Carlito-Bold.ttf" if gras else "Carlito-Regular.ttf"))
     noms = (
-        ("Carlito-Bold.ttf", "LiberationSans-Bold.ttf", "DejaVuSans-Bold.ttf") if gras
-        else ("Carlito-Regular.ttf", "LiberationSans-Regular.ttf", "DejaVuSans.ttf")
+        (carlito, "LiberationSans-Bold.ttf", "DejaVuSans-Bold.ttf") if gras
+        else (carlito, "LiberationSans-Regular.ttf", "DejaVuSans.ttf")
     )
     for nom in noms:
         try:

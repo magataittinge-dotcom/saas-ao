@@ -219,3 +219,14 @@ def test_plus_aucune_trace_de_google_dans_le_service():
     import inspect
     src = inspect.getsource(ms).lower()
     assert "googleapis" not in src and "google_maps" not in src
+
+
+def test_police_de_la_carte_est_carlito_du_depot_sans_police_systeme():
+    """La légende de la carte est en Carlito, celle du dépôt (assets/fonts/carlito),
+    même si Carlito n'est pas installée sur la machine (cas du VPS sans paquet)."""
+    from services.maps_service import _police
+    for gras in (False, True):
+        police = _police(20, gras=gras)
+        famille, style = police.getname()
+        assert famille == "Carlito", (famille, style)
+        assert ("Bold" in style) == gras
