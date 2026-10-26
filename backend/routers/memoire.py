@@ -279,6 +279,7 @@ def _run_memoire_job(
         refs = db.query(Reference).filter(
             Reference.organization_id == org_id,
             Reference.is_reference == True,
+            Reference.deleted_at.is_(None),
         ).all()
         # C9a — sélection du pre-flight : si fournie, seules ces références
         # partent au générateur (ids étrangers ignorés par le scope org).

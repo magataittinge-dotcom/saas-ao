@@ -231,3 +231,37 @@ def test_foreign_reference_ids_ignored(client, db_session, test_org, monkeypatch
     assert resp.status_code == 200
     _join()
     assert captured["reference_ids_received"] == []
+
+
+def test_deleted_reference_never_sent_to_generator(client, db_session, test_org, monkeypatch):
+    """Une référence supprimée (deleted_at) ne part jamais au générateur, même si
+    le pre-flight l'avait cochée : l'IA ne doit pas citer un chantier retiré."""
+    from datetime import datetime, timezone
+    test_org.plan = "pro"
+    db_session.commit()
+    _setup(db_session, test_org.id)
+    supprimee = Reference(
+        organization_id=test_org.id, intitule="Ravalement façade retirée",
+        lot="Ravalement de façades", annee=2024, montant_ht=90000,
+        deleted_at=datetime.now(timezone.utc),
+    )
+    db_session.add(supprimee)
+    db_session.commit()
+    captured: dict = {}
+    _mock_generator(monkeypatch, captured)
+
+    resp = client.post("/api/projects/proj-c9a/memoire/generate", json={
+        "reference_ids": [supprimee.id],
+    })
+    assert resp.status_code == 200, resp.text
+    _join()
+    assert captured["reference_ids_received"] == []
+
+    captured.clear()
+    db_session.query(MemoireTechnique).delete()
+    db_session.commit()
+    resp = client.post("/api/projects/proj-c9a/memoire/generate", json={})
+    assert resp.status_code == 200, resp.text
+    _join()
+    assert supprimee.id not in captured["reference_ids_received"]
+    assert len(captured["reference_ids_received"]) == 10
