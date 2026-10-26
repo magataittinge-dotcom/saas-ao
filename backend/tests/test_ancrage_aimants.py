@@ -94,18 +94,18 @@ def test_tableau_des_lots_source_d_une_exigence_sur_les_lots():
 # Plan ou carnet : des étiquettes sans ponctuation, une par ligne.
 PLAN = "\n".join(["NGF 95,60", "EU", "ÉCOLE", "ONDULEUR", "ISOLATION", "MUR", "FAÇADE",
                   "ARBRE À PLANTER", "EXISTANT", "COMPLEXE",
-                  "COMPLEXE ITE SUR MUR EXISTANT - ISOLATION 18 CM +", "PLAQUETTE BRIQUE"])
+                  "COMPLEXE ITE SUR MUR ANCIEN - ISOLANT 14 CM +", "PLAQUETTE BRIQUE"])
 
 
 def test_un_paquet_d_etiquettes_n_est_pas_une_source():
     """Les termes épars d'un plan ne se réunissent plus en une fausse « phrase »."""
     exc = "Mettre en œuvre le complexe d'isolation sur le mur existant de la façade de l'école"
-    assert anchor_excerpt(exc, PLAN.replace("COMPLEXE ITE SUR MUR EXISTANT - ISOLATION 18 CM +\n", "")) is None
+    assert anchor_excerpt(exc, PLAN.replace("COMPLEXE ITE SUR MUR ANCIEN - ISOLANT 14 CM +\n", "")) is None
 
 
 def test_une_etiquette_precise_reste_trouvee():
     out = anchor_excerpt("Complexe ITE sur mur existant, isolation de 18 cm", PLAN)
-    assert out is not None and "COMPLEXE ITE SUR MUR EXISTANT" in out
+    assert out is not None and "COMPLEXE ITE SUR MUR ANCIEN" in out
 
 
 def test_un_titre_de_lot_numerote_n_est_pas_un_tableau_des_lots():
