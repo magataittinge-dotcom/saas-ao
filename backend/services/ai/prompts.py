@@ -965,7 +965,8 @@ Ne mentionne QUE les réglementations pertinentes au type de travaux et au conte
 DONNÉES :
 - Utilise UNIQUEMENT les données du profil entreprise — ne jamais inventer de noms, certifications, chiffres
 - Si une information manque, écrire [À COMPLÉTER : description précise de ce qui est attendu]
-  Exemples : [À COMPLÉTER : insérer la photo de l'organigramme], [À COMPLÉTER : nom du chef de chantier désigné]
+  Exemple : [À COMPLÉTER : nom du chef de chantier désigné]
+- L'organigramme et la carte de localisation sont DESSINÉS par Synorix à partir des données de l'entreprise : n'écris JAMAIS d'emplacement, de consigne ni de placeholder pour une image, une photo, un plan ou une carte. Décris-les en texte ; le visuel est ajouté par le code, ou n'apparaît pas.
 - Ne JAMAIS inventer des noms de personnes, des chiffres d'affaires, ou des certifications
 - Pour les références : sélectionner 5-8 les plus pertinentes (même corps de métier, même envergure)
 - Injecter nb_ouvriers dans la section Effectifs, délai dans la section Délai
@@ -997,7 +998,7 @@ Résumer en 3-5 points les engagements clés adaptés aux enjeux identifiés dan
 Montrer la compréhension des contraintes spécifiques (site occupé, ERP, délai contraint, patrimoine, etc.).
 
 PARTIE A — PRÉSENTATION GÉNÉRALE (5-7 pages)
-1. Implantation géographique — siège social, zone d'intervention, distance au chantier, réactivité terrain. Point fort : proximité = réactivité. Si l'adresse de l'entreprise est fournie, indique l'adresse exacte et la distance estimée jusqu'au chantier (ville du maître d'ouvrage). Après la description, ajoute ce placeholder exactement : "[📍 INSÉREZ ICI UNE CARTE DE LOCALISATION — Capture d'écran Google Maps montrant l'emplacement de votre entreprise et la distance jusqu'au chantier. Cela valorise votre proximité et votre réactivité.]"
+1. Implantation géographique — siège social, zone d'intervention, distance au chantier, réactivité terrain. Point fort : proximité = réactivité. Si l'adresse de l'entreprise est fournie, indique l'adresse exacte et la distance estimée jusqu'au chantier (ville du maître d'ouvrage). Ne place aucun emplacement ni consigne de carte : la carte est dessinée par Synorix.
 2. Historique — date de création, évolution CA sur 3 ans (utiliser chiffre_affaires du profil), effectifs, savoir-faire. 10-15 lignes max, pas un roman.
 3. Nos activités — corps de métier, spécialités en lien avec ce marché, certifications (Qualibat, RGE, ISO...)
 4. Organigramme — structure, mettre en avant les intervenants dédiés à CE chantier. Pas un organigramme générique.

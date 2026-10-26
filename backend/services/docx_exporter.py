@@ -3,19 +3,85 @@ from __future__ import annotations
 
 import io
 import re
+from contextvars import ContextVar
+from dataclasses import dataclass, field
 from datetime import date
 from typing import Any
 
 from docx import Document
 from docx.enum.table import WD_TABLE_ALIGNMENT
-from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_COLOR_INDEX, WD_TAB_ALIGNMENT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor, Twips
 
 from services import memoire_markdown as md
 
-_MAP_PLACEHOLDER_RE = re.compile(r"\[📍.*?(?:carte|localisation|Google Maps).*?\]", re.IGNORECASE | re.DOTALL)
+# ─── Passages « À compléter » ──────────────────────────────────────────────────
+#
+# Un « [À COMPLÉTER : X] » restant est une donnée d'entreprise que l'IA n'avait
+# pas : il ne part jamais en silence ni entre crochets, il devient un passage
+# surligné « À compléter : X » et il est compté (l'écran dira « N passages à
+# compléter avant le dépôt »). Même traitement pour un « [📍 … ] » d'un ancien
+# mémoire, dont le prompt demandait une consigne de carte.
+
+_A_COMPLETER_RE = re.compile(
+    r"\[\s*[ÀA]\s*COMPL[ÉE]TER(?:\s+PAR\s+L['’]ENTREPRISE)?\s*(?::\s*([^\]]{0,300}))?\]", re.IGNORECASE,
+)
+_PIN_RE = re.compile(r"\[📍[^\]]{0,600}\]")
+_DEBUT_PASSAGE, _FIN_PASSAGE = "\ue000", "\ue001"   # balises privées, jamais imprimées
+_PASSAGE_RE = re.compile(f"{_DEBUT_PASSAGE}([^{_FIN_PASSAGE}]*){_FIN_PASSAGE}")
+
+
+@dataclass(frozen=True)
+class PassageACompleter:
+    section: str    # titre de la section où il se trouve
+    libelle: str    # ce qui est attendu ; vide si l'IA n'a rien précisé
+
+
+@dataclass
+class ExportDocx:
+    octets: bytes
+    a_completer: list[PassageACompleter] = field(default_factory=list)
+
+    @property
+    def nombre(self) -> int:
+        return len(self.a_completer)
+
+
+_COLLECTE: ContextVar[list[PassageACompleter] | None] = ContextVar("docx_a_completer", default=None)
+_SECTION: ContextVar[str] = ContextVar("docx_section", default="")
+
+
+def _libelle_pin(texte: str) -> str:
+    """« [📍 INSÉREZ ICI UNE CARTE DE LOCALISATION — … ] » → « carte de localisation »."""
+    avant_tiret = texte.strip("[]").split("—")[0]
+    nettoye = re.sub(r"^\W*(?:ins[ée]rez ici\s+)?(?:une?\s+)?", "", avant_tiret, flags=re.IGNORECASE)
+    return nettoye.strip().lower()
+
+
+def _marquer_passages(texte: str, *, retirer_marqueur_carte: bool = False) -> str:
+    """Remplace chaque passage à compléter par une balise privée portant le
+    libellé, et l'enregistre dans l'ordre du document. `retirer_marqueur_carte` :
+    la carte est dessinée, l'ancienne consigne « [📍 … ] » n'a plus lieu d'être."""
+    if retirer_marqueur_carte:
+        texte = _PIN_RE.sub("", texte)
+    collecte = _COLLECTE.get()
+
+    def enregistrer(libelle: str) -> str:
+        libelle = " ".join(libelle.split())
+        if collecte is not None:
+            collecte.append(PassageACompleter(_SECTION.get(), libelle))
+        return f"{_DEBUT_PASSAGE}{libelle}{_FIN_PASSAGE}"
+
+    # un seul balayage, dans l'ordre du texte
+    def remplacer(m: re.Match[str]) -> str:
+        if m.group(0).startswith("[📍"):
+            return enregistrer(_libelle_pin(m.group(0)))
+        return enregistrer(m.group(1) or "")
+
+    return re.sub(f"{_PIN_RE.pattern}|{_A_COMPLETER_RE.pattern}", remplacer, texte, flags=re.IGNORECASE)
+
 
 
 # ─── Couleurs ──────────────────────────────────────────────────────────────────
@@ -279,6 +345,7 @@ def _h1(doc: Document, text: str):
 
 
 def _h2(doc: Document, text: str):
+    _SECTION.set(text)
     doc.add_heading(text, level=2)
 
 
@@ -291,15 +358,32 @@ _TEXTE_TABLEAU_PT = 9.5
 def _ajouter_segments(p, segments: list[md.Segment], *, taille: float | None = None,
                       couleur: RGBColor | None = None, gras: bool = False):
     for seg in segments:
-        r = p.add_run(seg.texte)
-        if seg.gras or gras:
-            r.bold = True
-        if seg.italique:
-            r.italic = True
-        if taille is not None:
-            r.font.size = Pt(taille)
-        if couleur is not None:
-            r.font.color.rgb = couleur
+        position = 0
+        morceaux: list[tuple[str, bool]] = []
+        for m in _PASSAGE_RE.finditer(seg.texte):
+            if m.start() > position:
+                morceaux.append((seg.texte[position:m.start()], False))
+            libelle = m.group(1)
+            morceaux.append((f"À compléter : {libelle}" if libelle else "À compléter", True))
+            position = m.end()
+        if position < len(seg.texte):
+            morceaux.append((seg.texte[position:], False))
+        for texte, a_completer in morceaux:
+            texte = texte.replace(_DEBUT_PASSAGE, "").replace(_FIN_PASSAGE, "")
+            if not texte:
+                continue
+            r = p.add_run(texte)
+            if seg.gras or gras:
+                r.bold = True
+            if seg.italique:
+                r.italic = True
+            if taille is not None:
+                r.font.size = Pt(taille)
+            if a_completer:
+                r.font.highlight_color = WD_COLOR_INDEX.YELLOW
+                r.font.color.rgb = _GREY_TXT      # lisible sur le surlignage, même en en-tête de tableau
+            elif couleur is not None:
+                r.font.color.rgb = couleur
 
 
 def _nouvelle_numerotation(doc: Document) -> int | None:
@@ -429,11 +513,8 @@ def _body(doc: Document, text: str, *, skip_map_placeholder: bool = False, nivea
     """Convertit le Markdown d'une section en styles Word natifs (titres, listes
     à puces et numérotées, gras, italique, tableaux). `niveau_base` : niveau du
     titre qui précède la section ; un `#` de l'IA descend d'un cran dessous."""
-    if skip_map_placeholder:
-        text = "\n".join(
-            ligne for ligne in (text or "").split("\n") if not _MAP_PLACEHOLDER_RE.search(ligne)
-        )
-    for bloc in md.analyser(text or ""):
+    text = _marquer_passages(text or "", retirer_marqueur_carte=skip_map_placeholder)
+    for bloc in md.analyser(text):
         if isinstance(bloc, md.Titre):
             niveau = min(niveau_base + bloc.niveau, 6)
             p = doc.add_heading("", level=niveau)
@@ -525,6 +606,7 @@ def build_memoire_docx(
 
     preambule = content_json.get("preambule", "")
     if preambule and preambule.strip():
+        _SECTION.set("Préambule")
         _h1(doc, "PRÉAMBULE")
         _body(doc, preambule, niveau_base=1)
 
@@ -535,6 +617,21 @@ def build_memoire_docx(
     buf = io.BytesIO()
     doc.save(buf)
     return buf.getvalue()
+
+
+def build_memoire_docx_ex(*args: Any, **kwargs: Any) -> ExportDocx:
+    """Comme `build_memoire_docx` (mêmes paramètres), mais renvoie aussi les
+    passages « À compléter » du document (nombre et libellés, dans l'ordre),
+    pour que l'écran dise « N passages à compléter avant le dépôt »."""
+    collecte: list[PassageACompleter] = []
+    jeton_collecte = _COLLECTE.set(collecte)
+    jeton_section = _SECTION.set("")
+    try:
+        octets = build_memoire_docx(*args, **kwargs)
+    finally:
+        _COLLECTE.reset(jeton_collecte)
+        _SECTION.reset(jeton_section)
+    return ExportDocx(octets, collecte)
 
 
 # ─── Compatibilité avec routers/export.py ──────────────────────────────────────
