@@ -549,8 +549,11 @@ class MemoireGenerator:
         # l'analyse (dce_analyzer : 1re tranche seule, puis parallèle borné à 3).
         # Durée ≈ préambule + la plus longue des parties, au lieu de la somme.
         assembled: dict = {}
+        from config import get_settings
+        modele_force = get_settings().MEMOIRE_MODELE.strip()
         seg_model_map = {
-            k: _MEMOIRE_SEGMENT_MODELS.get(k, self.MODEL) for k, _ in _MEMOIRE_SEGMENTS
+            k: modele_force or _MEMOIRE_SEGMENT_MODELS.get(k, self.MODEL)
+            for k, _ in _MEMOIRE_SEGMENTS
         }
         meta: dict = {
             "mode": "per-partie-parallele",
@@ -724,11 +727,18 @@ class MemoireGenerator:
                 last_publish = time.time()
 
                 # temperature non transmis : déprécié pour claude-opus-4-7 (→ 400).
+                # Sonnet 5.x réfléchit par défaut (`disabled` → 400) : réflexion
+                # coupée par `between_tools`, comme Sonnet 4.6 qui n'en a pas.
+                extra = (
+                    {"extra_body": {"thinking": {"type": "between_tools"}}}
+                    if model.startswith("claude-sonnet-5") else {}
+                )
                 with self.client.messages.stream(
                     model=model,
                     max_tokens=32000,
                     system=system_blocks,
                     messages=[{"role": "user", "content": user_content}],
+                    **extra,
                 ) as stream:
                     for text in stream.text_stream:
                         collected += text

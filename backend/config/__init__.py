@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     # Lot 7 T3 — enrichissement réglementaire de la génération mémoire
     # (retrieve top-3 injecté au prompt). Défaut FALSE : chemin inchangé.
     RAG_ENRICHMENT: bool = False
+    # Bloc 3 — modèle unique forcé pour les 4 segments du mémoire (ex.
+    # « claude-sonnet-5-5 » pour le passage payant n° 1). Vide : mapping de
+    # memoire_generator inchangé.
+    MEMOIRE_MODELE: str = ""
 
     # AWS S3
     AWS_ACCESS_KEY_ID: str = ""

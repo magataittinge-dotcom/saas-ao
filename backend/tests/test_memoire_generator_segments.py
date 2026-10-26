@@ -211,3 +211,38 @@ async def test_graceful_recovery_missing_subsection(monkeypatch):
     # le reste du mémoire est intact
     assert len(result["partie_a"]) == 11
     assert result["preambule"] == "Préambule de test."
+
+
+@pytest.mark.asyncio
+async def test_modele_force_par_reglage_sonnet55_sans_reflexion(monkeypatch):
+    """MEMOIRE_MODELE (vide par défaut) force un seul modèle pour les 4 segments
+    (cache : un seul groupe). Sur Sonnet 5.x, la réflexion est coupée
+    (`thinking: between_tools`, `disabled` → 400) pour rester comparable à
+    Sonnet 4.6 ; sur 4.6 rien n'est ajouté. Passage payant n° 1, bloc 3."""
+    from config import get_settings
+    monkeypatch.setattr(get_settings(), "MEMOIRE_MODELE", "claude-sonnet-5-5", raising=False)
+    gen = MemoireGenerator()
+    side_effect, calls = _build_side_effect()
+    monkeypatch.setattr(gen.client.messages, "stream", side_effect)
+
+    result = await _run(gen)
+
+    assert [kw["model"] for kw in calls["kwargs"]] == ["claude-sonnet-5-5"] * 4
+    for kw in calls["kwargs"]:
+        assert kw["extra_body"] == {"thinking": {"type": "between_tools"}}
+        assert "temperature" not in kw
+    assert set(result["_generation_meta"]["models"].values()) == {"claude-sonnet-5-5"}
+
+
+@pytest.mark.asyncio
+async def test_sans_reglage_mapping_inchange_et_rien_ajoute(monkeypatch):
+    from config import get_settings
+    monkeypatch.setattr(get_settings(), "MEMOIRE_MODELE", "", raising=False)
+    gen = MemoireGenerator()
+    side_effect, calls = _build_side_effect()
+    monkeypatch.setattr(gen.client.messages, "stream", side_effect)
+
+    await _run(gen)
+
+    for kw in calls["kwargs"]:
+        assert "extra_body" not in kw
