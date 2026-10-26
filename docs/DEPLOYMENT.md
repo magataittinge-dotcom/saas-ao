@@ -91,8 +91,12 @@ apt install -y \
   redis-server \
   nginx certbot python3-certbot-nginx \
   curl git rsync \
-  imagemagick poppler-utils libreoffice
+  imagemagick poppler-utils libreoffice fonts-crosextra-carlito
 # poppler : outils PDF
+# fonts-crosextra-carlito : Carlito, clone libre de Calibri (mêmes largeurs de
+#   lettres). Le Word embarque déjà Carlito (backend/assets/fonts/carlito, OFL) ;
+#   le paquet évite en plus que LibreOffice retombe sur DejaVu pour un autre Word.
+#   Vérifier : `fc-list | grep -i carlito`.
 # libreoffice : REQUIS pour l'export PDF du mémoire (C13a — soffice headless,
 #   la version dépôt du ZIP). Vérifier après install : `soffice --version`.
 # imagemagick : redimensionnement Maps statiques
