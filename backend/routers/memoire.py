@@ -25,7 +25,7 @@ from schemas.memoire import (
 from routers.auth import get_auth_user
 from services.ai.memoire_generator import MemoireGenerator
 from services.docx_exporter import build_memoire_docx
-from services.maps_service import generate_location_map
+from services.maps_service import generate_location_map, lieu_execution
 from services.document_tagger import get_documents_for_lot
 
 
@@ -469,11 +469,12 @@ def build_project_memoire_docx(project, memoire, org, db) -> bytes:
     org_name = org.name if org else "Entreprise"
 
     # Generate location map (graceful fallback to None)
+    # Carte IGN : le siège, et le CHANTIER seulement si l'analyse en a extrait le
+    # lieu d'exécution — jamais le nom de l'acheteur (bloc 3, tranche B).
     company_address = org.address if org else None
-    project_address = project.maitre_ouvrage  # city/name of client as proxy
     map_image, map_caption = generate_location_map(
         company_address or "",
-        project_address,
+        lieu_execution(project),
     )
 
     # C8a — organigramme si l'option a été cochée au pre-flight (fallback
