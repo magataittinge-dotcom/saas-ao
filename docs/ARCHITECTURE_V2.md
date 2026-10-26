@@ -53,7 +53,7 @@
 └──┬──────┬──────┬───────────┘         └────────────────────────────┘
    │      │      │
    │      │      └────────────────► Anthropic API (Claude)
-   │      │                          - Haiku 4.5 / Sonnet 4.6 / Opus 4.7
+   │      │                          - Haiku 4.5 / Sonnet 4.6 / Sonnet 5.5 (mémoire) / Opus 4.7
    │      │                          - Streaming via asyncio.to_thread
    │      │
    │      └─► Redis (cache, session-scratch, pub/sub for Coach)
@@ -177,7 +177,7 @@ This is deliberate — the V2.0 success criterion is *ship & be impressive*, not
 | Model | Use | Avg cost / call | Skills assigned |
 |---|---|---|---|
 | **Claude Haiku 4.5** | Lightweight classification, deterministic extraction, fast routing, **reformulation de texte libre du profil** | €0.005–0.02 | Steps 1, validation, low-stakes, profil mémoire vivant (§3.7) |
-| **Claude Sonnet 4.6** | Bulk analysis, extraction-with-reasoning, long-form memo composition | €0.02–0.90 | Steps 2 & 3 (extraction + alerts), **Step 4 memo composition** |
+| **Claude Sonnet 4.6 / 5.5** | Bulk analysis, extraction-with-reasoning (4.6) ; long-form memo composition (5.5) | €0.02–0.90 | Steps 2 & 3 (extraction + alerts), **Step 4 memo composition** |
 | **Claude Opus 4.7** | Targeted paragraph rewrite, high-stakes synthesis, **fallback** | €0.10–0.30 | Réécriture ciblée de paragraphe (éditeur mémoire) + fallback |
 
 > **Synorix Score = déterministe 0 € (Vision V1 FINALE).** Le go/no-go d'éligibilité (PRD §1.7 D1) et le score de conformité étape 5 (« 14/16 », PRD §3.5) sont **calculés sans LLM** sur les données déjà extraites — Opus n'y intervient **pas**. Le Synorix Score qualité mémoire /100 (LLM) est déclassé en V1.5.
@@ -189,12 +189,12 @@ This is deliberate — the V2.0 success criterion is *ship & be impressive*, not
 | 1 — Upload | Haiku 4.5 | €0.02 |
 | 2 — Lots | Sonnet 4.6 | €0.05 |
 | 3 — AI Analysis | Sonnet 4.6 | €0.40 |
-| 4 — Memo | Sonnet 4.6 | ~€0.50† |
+| 4 — Memo | Sonnet 5.5 | ~€0.50† |
 | 5 — Verification | Déterministe 0 € (score conformité, dates, DPGF, signatures) ; Sonnet 4.6 résiduel pour le matching exigences↔pièces | ~€0.02 |
 | 6 — Export | none | €0 |
 | **Total per AO** | | **~€1.0†** |
 
-> † **Mesuré (full-Sonnet).** La génération mémoire tourne sur Sonnet 4.6 (tous segments), pas Opus. Mesure sur le DCE Gueux (gros DCE) : mémoire ≈ **€0.90 en Sonnet vs ~€6 en Opus** (~7× moins cher), cf. `docs/comparaison-memoire-AB/RESULTAT.md`. Coût/AO réel mesuré **~€1**, dominé par la mémoire ; Opus 4.7 n'est utilisé que pour la réécriture ciblée de paragraphe et le Synorix Score.
+> † **Mesuré (full-Sonnet).** La génération mémoire tourne sur Sonnet 5.5 depuis le 26/10 (tous segments, réflexion coupée `between_tools`, réglage `MEMOIRE_MODELE` pour forcer un autre modèle), pas Opus. Passage payant n° 1 sur Gueux : 0,974 $ contre 1,105 $ en Sonnet 4.6, 181,5 s contre ≈ 480 s. Un DTU n'est cité que s'il figure dans le CCTP du lot ou les pièces communes (liste dans le prompt + garde-fou après génération, `services/ai/dtu_autorises.py`). Mesure sur le DCE Gueux (gros DCE) : mémoire ≈ **€0.90 en Sonnet vs ~€6 en Opus** (~7× moins cher), cf. `docs/comparaison-memoire-AB/RESULTAT.md`. Coût/AO réel mesuré **~€1**, dominé par la mémoire ; Opus 4.7 n'est utilisé que pour la réécriture ciblée de paragraphe et le Synorix Score.
 
 À ~40 mémoires/mois sur Pro (€349) → ~€40 de coût IA → **>90 % de marge brute** (Sonnet ~7× moins cher qu'Opus ; le profil mémoire vivant + prompt caching abaissent le coût des mémoires suivants à **< €0,50**).
 
@@ -226,7 +226,7 @@ Frontend connects via `EventSource` and progressively renders.
 ### 3.5 Timeouts
 
 - WSL2 development environment causes blocking-call timeouts. Every Anthropic SDK call wraps in `asyncio.to_thread(...)` to avoid event-loop starvation.
-- Production timeout per call: **120 s** (Haiku/Sonnet standard), **300 s** (memo composition — Sonnet 4.6, long-form).
+- Production timeout per call: **120 s** (Haiku/Sonnet standard), **300 s** (memo composition — Sonnet 5.5, long-form).
 - Retry policy: 1 retry on 5xx and 429, exponential back-off.
 
 ### 3.6 Failure modes

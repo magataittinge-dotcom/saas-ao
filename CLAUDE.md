@@ -33,7 +33,7 @@ Lis le fichier `docs/PRD_SYNORIX_V2.md` pour comprendre le projet complet (PRD c
 
 - **Frontend :** React 18 + TypeScript + Tailwind CSS + shadcn/ui + Zustand + React Router v6
 - **Backend :** FastAPI (Python) + SQLAlchemy + PostgreSQL + Redis + Celery
-- **IA :** Claude API — Haiku 4.5 (routing + reformulation de texte libre du profil), Sonnet 4.6 (extraction, analyse, génération mémoire), Opus 4.7 (réécriture ciblée de paragraphe + fallback)
+- **IA :** Claude API — Haiku 4.5 (routing + reformulation de texte libre du profil), Sonnet 4.6 (extraction, analyse) et Sonnet 5.5 (génération mémoire), Opus 4.7 (réécriture ciblée de paragraphe + fallback)
 - **Stockage :** uploads sur disque du VPS (`backend/uploads/`, servis via `/api/files/view/...` avec contrôle d'ownership) ; object storage Hostinger (S3-compatible) prévu à l'échelle. Stripe (paiement)
 - **Déploiement :** Hostinger VPS (Nginx + FastAPI + Postgres + Redis + Celery)
 
@@ -46,7 +46,7 @@ Architecture cible et réelle (moteur `services/ai`, pipeline 6 étapes, chunkin
 - Toujours écrire du code propre, typé (TypeScript strict, Pydantic pour Python)
 - **Ne jamais hardcoder de clés API ou secrets** — utiliser les variables d'environnement
 - Suivre les conventions de nommage : camelCase (JS/TS), snake_case (Python)
-- Les modèles IA : **Haiku 4.5** pour le routing + la reformulation de texte libre du profil ; **Sonnet 4.6** pour extraction/matching **et génération mémoire** ; **Opus 4.7** pour la réécriture ciblée de paragraphe + fallback. Les **scores (Synorix Score, conformité) sont déterministes** — pas de LLM.
+- Les modèles IA : **Haiku 4.5** pour le routing + la reformulation de texte libre du profil ; **Sonnet 4.6** pour extraction/matching, **Sonnet 5.5** (`claude-sonnet-5-5`, réflexion coupée `between_tools`, réglage `MEMOIRE_MODELE` pour en forcer un autre) pour la **génération mémoire** ; **Opus 4.7** pour la réécriture ciblée de paragraphe + fallback. Les **scores (Synorix Score, conformité) sont déterministes** — pas de LLM.
 - Écrire des tests pour les fonctions critiques (auth, IA, export)
 - Utiliser les schémas Pydantic pour toute validation de données côté backend
 - Les tâches longues (analyse DCE, génération mémoire) sont des tâches Celery asynchrones
@@ -58,7 +58,7 @@ Architecture cible et réelle (moteur `services/ai`, pipeline 6 étapes, chunkin
 - **Phase 1** : Fondations — setup, auth, modèles DB, layout, dashboard statique
 - **Phase 2** : Coffre-fort, profil entreprise, références chantiers
 - **Phase 3** : Cœur — upload DCE, analyse IA, compliance matrix, checklist
-- **Phase 4** : Mémoire technique — génération Sonnet 4.6, éditeur, export .docx
+- **Phase 4** : Mémoire technique — génération Sonnet (aujourd'hui 5.5), éditeur, export .docx
 - **Phase 5** : Finitions — pricing, Stripe, landing page, déploiement
 
 ## Variables d'environnement clés
