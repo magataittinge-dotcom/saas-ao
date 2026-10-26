@@ -38,4 +38,5 @@ def test_les_generalites_entrent_dans_la_passe_2_de_chaque_lot():
             _Piece("CCTP lot 05.pdf", ["5"], texte="CCTP-LOT-5 " * 10)]
     for lot in ("lot5", "lot9"):
         spec = _build_lot_spec(docs, lot, {}, None, None)
-        assert "PRESCRIPTIONS-COMMUNES" in spec["pass2_text"]
+        # partie commune à tous les lots, envoyée en préfixe mis en cache (26/10)
+        assert "PRESCRIPTIONS-COMMUNES" in spec["pass2_commun"]
