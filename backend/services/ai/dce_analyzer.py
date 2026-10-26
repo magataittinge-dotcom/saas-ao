@@ -281,6 +281,31 @@ def _build_call_texts(pass_text: str) -> list[str]:
     return call_texts
 
 
+def fusionner_infos_marche(infos_par_tranche: list) -> dict:
+    """Fusionne les `infos_marche` des tranches de la passe 1 : pour chaque champ,
+    la première valeur non vide l'emporte.
+
+    Exception, `lieu_execution` : il doit encore passer le contrôle sans IA (extrait
+    retrouvé dans le RC/CCAP), que seule la finalisation peut faire (elle a les
+    pièces). Toutes les propositions non vides sont donc gardées, dans l'ordre des
+    tranches, sous `lieu_execution_candidats` ; `controler_infos_marche` retient la
+    première qui passe et retire cette clé. Une valeur invalide en tranche 1 ne
+    cache plus une valeur valide en tranche 3."""
+    infos: dict = {}
+    candidats: list = []
+    for tranche in infos_par_tranche:
+        for k, v in (tranche or {}).items():
+            if v in (None, "", []):
+                continue
+            if k == "lieu_execution":
+                candidats.append(v)
+            if not infos.get(k):
+                infos[k] = v
+    if len(candidats) > 1:
+        infos["lieu_execution_candidats"] = candidats
+    return infos
+
+
 class DCEAnalyzer:
     def __init__(self):
         key = settings.ANTHROPIC_API_KEY
@@ -463,18 +488,15 @@ class DCEAnalyzer:
 
         merged: list[dict] = []
         criteres: list = []
-        infos: dict = {}
         partial = False
         for i in range(n):
             sub = subs.get(i) or {}
             merged.extend(sub.get("requirements", []))
             if not criteres and sub.get("criteres_jugement"):
                 criteres = sub["criteres_jugement"]
-            for k, v in (sub.get("infos_marche") or {}).items():
-                if v not in (None, "", []) and not infos.get(k):
-                    infos[k] = v
             if sub.get("partial_analysis"):
                 partial = True
+        infos = fusionner_infos_marche([(subs.get(i) or {}).get("infos_marche") for i in range(n)])
 
         deduped = _dedup_requirements(merged)
         print(

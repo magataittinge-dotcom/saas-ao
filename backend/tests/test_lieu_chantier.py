@@ -149,3 +149,36 @@ def test_prompt_d_analyse_demande_le_lieu_sourcé_sans_appel_payant():
     assert "Jamais déduit" in regle and "null" in regle
     # la passe technique ne l'extrait pas
     assert "lieu_execution" not in prompts.DCE_PASS2_SYSTEM
+
+
+# ── Fusion des tranches de la passe 1 : le premier lieu qui PASSE le contrôle ──
+
+def test_fusion_trois_tranches_invalide_vide_valide_garde_le_valide():
+    from services.ai.dce_analyzer import fusionner_infos_marche
+    invalide = _brut(extrait="Chantier situé au 14 rue des Lilas, 51390 Gueux.")   # absent du RC
+    tranches = [
+        {"objet": "Rénovation", "lieu_execution": invalide},    # tranche 1 : invalide
+        {"objet": "autre", "lieu_execution": None},             # tranche 2 : vide
+        {"lieu_execution": _brut()},                            # tranche 3 : valide
+    ]
+    infos = fusionner_infos_marche(tranches)
+    assert infos["objet"] == "Rénovation"                       # autres champs : premier non vide, inchangé
+    docs = [SimpleNamespace(type="rc", extracted_text=RC, is_user_completed=False)]
+    sortie = controler_infos_marche(infos, docs)
+    assert sortie["lieu_execution"]["extrait"] == PHRASE
+    assert "lieu_execution_candidats" not in sortie             # jamais persisté
+
+
+def test_fusion_aucune_tranche_valide_siege_seul():
+    from services.ai.dce_analyzer import fusionner_infos_marche
+    tranches = [{"lieu_execution": _brut(document="CCTP")},
+                {"lieu_execution": _brut(adresse="8 avenue de la Gare, 51100 Reims")},
+                {"lieu_execution": ""}]
+    docs = [SimpleNamespace(type="rc", extracted_text=RC, is_user_completed=False)]
+    sortie = controler_infos_marche(fusionner_infos_marche(tranches), docs)
+    assert "lieu_execution" not in sortie and "lieu_execution_candidats" not in sortie
+
+
+def test_fusion_une_seule_tranche_sans_lieu_ne_change_rien():
+    from services.ai.dce_analyzer import fusionner_infos_marche
+    assert fusionner_infos_marche([{"objet": "x"}, {}, None]) == {"objet": "x"}

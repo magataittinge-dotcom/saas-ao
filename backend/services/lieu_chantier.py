@@ -115,14 +115,27 @@ def valider_lieu_execution(brut, pieces: Iterable[tuple[str, str]],
 def controler_infos_marche(infos_marche, documents, maitre_ouvrage: Optional[str] = None):
     """`infos_marche` dont le lieu d'exécution a passé le contrôle (ou a été
     retiré). `documents` : pièces du projet (`type`, `extracted_text`,
-    `is_user_completed`). Une pièce remplie par l'entreprise n'est jamais une source."""
-    if not isinstance(infos_marche, dict) or "lieu_execution" not in infos_marche:
+    `is_user_completed`). Une pièce remplie par l'entreprise n'est jamais une source.
+
+    Après une fusion de tranches (`lieu_execution_candidats`), c'est la PREMIÈRE
+    proposition qui passe le contrôle qui est gardée, pas la première non vide ;
+    la clé des candidats n'est jamais conservée."""
+    if not isinstance(infos_marche, dict) or not (
+            "lieu_execution" in infos_marche or "lieu_execution_candidats" in infos_marche):
         return infos_marche
     pieces = [((d.type or "autre"), d.extracted_text or "") for d in documents
               if not getattr(d, "is_user_completed", False)
               and not (d.extracted_text or "").startswith("[document volumineux")]
-    lieu = valider_lieu_execution(infos_marche.get("lieu_execution"), pieces, maitre_ouvrage)
-    sortie = {k: v for k, v in infos_marche.items() if k != "lieu_execution"}
+    propositions = list(infos_marche.get("lieu_execution_candidats") or [])
+    if not propositions and infos_marche.get("lieu_execution") is not None:
+        propositions = [infos_marche["lieu_execution"]]
+    lieu = None
+    for proposition in propositions:
+        lieu = valider_lieu_execution(proposition, pieces, maitre_ouvrage)
+        if lieu:
+            break
+    sortie = {k: v for k, v in infos_marche.items()
+              if k not in ("lieu_execution", "lieu_execution_candidats")}
     if lieu:
         sortie["lieu_execution"] = lieu
     return sortie
