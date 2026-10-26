@@ -76,6 +76,8 @@ _INDEX_REVISION = (
 _COLONNE_INDEX = re.compile(
     rf'[\s\-–—:(]*{_INDEX_REVISION}(?:\s*(?:[+/,&]|et)\s*{_INDEX_REVISION})*[\s)]*$'
 )
+# Formule de signature « A Paris, le 12 mars 2026 », « À Lyon le … » : jamais une ligne de lot.
+_LIEU_DATE = re.compile(r'^\s*[AÀà]\s+\S.{0,40}?,?\s+le\s+\d', re.IGNORECASE)
 _RC_MARKER = re.compile(
     r'r[eè]glement\s+de\s+la\s+consultation|MARCHE\s+PASSE\s+PAR\s+LOTS|'
     r'alloti|lots\s+s[eé]par[eé]s',
@@ -106,6 +108,9 @@ class LotDetection:
     sources: List[str] = field(default_factory=list)
     tranches: List[str] = field(default_factory=list)  # AMÉLIORATION 7
     description_long: str = ""   # 200-char excerpt around the lot heading
+    # Confiance du NOM affiché (la fusion garde le nom le mieux sourcé, pas le plus
+    # long). None : celle de la détection.
+    nom_confidence: Optional[int] = None
 
     def to_dict(self) -> Dict:
         d: Dict[str, Any] = {
@@ -163,6 +168,26 @@ def _lot_id_from_raw(raw: str) -> Optional[str]:
     if re.match(r'^[A-Z]$', raw):
         return f"lot{_alpha_to_num(raw)}"
     return None
+
+
+def _lignes_alpha_valides(lignes: List[tuple]) -> List[tuple]:
+    """Lots « par lettres » d'un tableau : seule la plus longue suite de lettres qui
+    se suivent (A, B, C…) compte, et au moins deux. Une lettre isolée est un mot :
+    « A Paris, le 12 mars 2026 » (signature) n'est pas la ligne du lot A.
+    `lignes` : (lettre, ligne, détection) dans l'ordre du texte."""
+    meilleure: List[tuple] = []
+    courante: List[tuple] = []
+    for entree in lignes:
+        lettre, ligne = entree[0].upper(), entree[1]
+        if _LIEU_DATE.match(ligne):
+            continue
+        if courante and ord(lettre) == ord(courante[-1][0].upper()) + 1:
+            courante.append(entree)
+        else:
+            courante = [entree]
+        if len(courante) > len(meilleure):
+            meilleure = list(courante)
+    return meilleure if len(meilleure) >= 2 else []
 
 
 def _sans_colonne_index(libelle: str) -> str:
@@ -606,6 +631,7 @@ def _detect_lots_from_rc_text(text: str, doc_type: str) -> List[LotDetection]:
 
     if header_idx is not None:
         consecutive_misses = 0
+        lignes_alpha: List[tuple] = []   # (lettre, lot, ligne) — validées après coup
         for offset, line in enumerate(scan_lines[header_idx + 1:]):
             line_idx = header_idx + 1 + offset
             m_num = _LOT_TABLE_ROW_NUM.match(line)
@@ -626,16 +652,23 @@ def _detect_lots_from_rc_text(text: str, doc_type: str) -> List[LotDetection]:
                     continue  # doc général (annexe, prescriptions communes…)
                 nom = f"Lot {raw_id} — {label}" if label else f"Lot {raw_id}"
                 description = _extract_description_excerpt(text, line_idx, scan_lines)
-                lots.setdefault(lot_id, LotDetection(
+                det = LotDetection(
                     id=lot_id, nom=nom, confidence=90,
                     sources=["rc_table", "rc_text"],
                     description_long=description,
-                ))
+                )
+                if m_alpha:
+                    lignes_alpha.append((raw_id, line, det))
+                else:
+                    lots.setdefault(lot_id, det)
             else:
                 if line.strip():
                     consecutive_misses += 1
                     if consecutive_misses >= 3:
                         break
+
+        for raw_id, _ligne, det in _lignes_alpha_valides(lignes_alpha):
+            lots.setdefault(det.id, det)
 
         if lots:
             return list(lots.values())
@@ -724,16 +757,35 @@ def _detect_lots_from_filenames(filenames: List[str]) -> List[LotDetection]:
 
 # ─── Multi-source merging (AMÉLIORATION 10) ───────────────────────────────────
 
+def _noms_du_rc(dets: List[LotDetection], doc_type: str) -> None:
+    """Le règlement de consultation fait foi pour les noms : à confiance égale, son
+    libellé prime sur celui du CCAP ou d'une autre pièce."""
+    if doc_type == "rc":
+        for d in dets:
+            d.nom_confidence = d.confidence + 5
+
+
+def _rang_nom(nom: str, sources: List[str], confiance: int) -> tuple:
+    """Rang d'un libellé de lot : (nom qui dit quelque chose, vient du RC, confiance
+    de la source). Le plus long ne gagne plus qu'à rang égal : un libellé de CCAP
+    ou de cellule qui s'allonge d'une clause ne prend pas la place du tableau du RC."""
+    return (_has_label_body(nom), "rc_text" in sources, confiance)
+
+
 def _merge_detections(*source_lists: List[LotDetection]) -> List[LotDetection]:
     """
     Merge lot detections from multiple sources.
-    AMÉLIORATION 10: picks the most descriptive name (longest label body).
+    Nom : celui de la source la mieux classée (voir _rang_nom) ; à rang égal, le
+    plus descriptif (libellé le plus long), puis le premier rencontré.
     Confidence: +15 per additional source confirmation (max 100).
     """
     merged: Dict[str, LotDetection] = {}
+    rangs: Dict[str, tuple] = {}   # lot → rang du nom retenu
 
     for source_list in source_lists:
         for det in source_list:
+            conf_nom = det.nom_confidence if det.nom_confidence is not None else det.confidence
+            rang = _rang_nom(det.nom, det.sources, conf_nom)
             if det.id not in merged:
                 merged[det.id] = LotDetection(
                     id=det.id,
@@ -742,38 +794,34 @@ def _merge_detections(*source_lists: List[LotDetection]) -> List[LotDetection]:
                     sources=list(det.sources),
                     tranches=list(det.tranches),
                     description_long=det.description_long,
+                    nom_confidence=conf_nom,
                 )
-            else:
-                existing = merged[det.id]
-                # Capturer AVANT la fusion des sources : sinon rc_text vient
-                # d'être ajouté et le nom Excel existant gagnerait à tort.
-                existing_is_rc = "rc_text" in existing.sources
-                new_is_rc = "rc_text" in det.sources
+                rangs[det.id] = rang
+                continue
 
-                new_sources = [s for s in det.sources if s not in existing.sources]
-                for src in new_sources:
+            existing = merged[det.id]
+            for src in det.sources:
+                if src not in existing.sources:
                     existing.sources.append(src)
                     existing.confidence = min(100, existing.confidence + 15)
 
-                # Le RC est la SOURCE DE VÉRITÉ des noms : un libellé rc_text
-                # non générique prime toujours (conflit réel : Excel mal
-                # étiqueté vs liste officielle du RC). Sinon, le plus
-                # descriptif gagne (AMÉLIORATION 10).
-                if new_is_rc and not existing_is_rc and _has_label_body(det.nom):
-                    existing.nom = det.nom
-                elif existing_is_rc and not new_is_rc and _has_label_body(existing.nom):
-                    pass  # le nom RC existant est conservé
-                else:
-                    existing.nom = _best_label(existing.nom, det.nom, prefer_a=existing_is_rc)
+            # Le RC est la SOURCE DE VÉRITÉ des noms (conflit réel : Excel mal
+            # étiqueté vs liste officielle du RC) ; à rang égal, le plus
+            # descriptif gagne (AMÉLIORATION 10).
+            if rang > rangs[det.id]:
+                existing.nom, rangs[det.id] = det.nom, rang
+                existing.nom_confidence = conf_nom
+            elif rang == rangs[det.id]:
+                existing.nom = _best_label(existing.nom, det.nom, prefer_a=True)
 
-                # Pick the longest description excerpt across sources.
-                if len(det.description_long) > len(existing.description_long):
-                    existing.description_long = det.description_long
+            # Pick the longest description excerpt across sources.
+            if len(det.description_long) > len(existing.description_long):
+                existing.description_long = det.description_long
 
-                # Merge tranches
-                for t in det.tranches:
-                    if t not in existing.tranches:
-                        existing.tranches.append(t)
+            # Merge tranches
+            for t in det.tranches:
+                if t not in existing.tranches:
+                    existing.tranches.append(t)
 
     return sorted(merged.values(), key=lambda x: _sort_key(x.id))
 
@@ -831,6 +879,7 @@ def detect_all_lots(
                 text_to_scan = doc.extracted_text
             if text_to_scan:
                 dets = _detect_lots_from_rc_text(text_to_scan, doc_type)
+                _noms_du_rc(dets, doc_type)
                 text_dets.extend(dets)
     else:
         # No docx — bridge the gap so the bar still progresses.
@@ -911,6 +960,7 @@ def detect_all_lots(
 
         if text_to_scan and not text_to_scan.startswith("[document volumineux"):
             dets = _detect_lots_from_rc_text(text_to_scan, doc_type)
+            _noms_du_rc(dets, doc_type)
             text_dets.extend(dets)
 
     # ── Step 5: Consolidation (95%) ───────────────────────────────────────────
