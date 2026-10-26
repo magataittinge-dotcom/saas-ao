@@ -134,9 +134,11 @@ _MOIS_FR = ("janvier", "février", "mars", "avril", "mai", "juin", "juillet",
 
 
 def _date_fr(jour: date) -> str:
-    """« octobre 2026 ». `strftime("%B")` suit la locale du processus (anglais
-    sur un serveur sans locale française) : on n'y touche pas."""
-    return f"{_MOIS_FR[jour.month - 1]} {jour.year}"
+    """« Octobre 2026 » : majuscule, car le mot ouvre la ligne de la couverture.
+    `strftime("%B")` suit la locale du processus (anglais sur un serveur sans
+    locale française) : on n'y touche pas."""
+    mois = _MOIS_FR[jour.month - 1]
+    return f"{mois[0].upper()}{mois[1:]} {jour.year}"
 
 
 def _aujourdhui() -> date:
