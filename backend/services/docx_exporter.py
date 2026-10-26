@@ -17,6 +17,7 @@ from docx.shared import Cm, Pt, RGBColor, Twips
 
 from services import memoire_markdown as md
 from services.docx_polices import embarquer_carlito
+from services.docx_sommaire import inserer_sommaire
 
 # ─── Passages « À compléter » ──────────────────────────────────────────────────
 #
@@ -339,7 +340,8 @@ def _cover_page(
 
     _centered_line(doc, _date_fr(_aujourdhui()), size=11, color=_GREY_PG)
 
-    doc.add_page_break()
+    # Pas de saut de page ici : le sommaire (ou, à défaut, le premier titre)
+    # démarre sa page par `page_break_before`, sans paragraphe vide en tête.
 
 
 def _h1(doc: Document, text: str):
@@ -606,6 +608,8 @@ def build_memoire_docx(
         org_address=org_address, org_siret=org_siret,
     )
 
+    ancre_sommaire = doc.add_paragraph()   # le sommaire prendra cette place, une fois les titres écrits
+
     preambule = content_json.get("preambule", "")
     if preambule and preambule.strip():
         _SECTION.set("Préambule")
@@ -615,6 +619,8 @@ def build_memoire_docx(
     _add_part(doc, "PARTIE A — PRÉSENTATION GÉNÉRALE",       content_json.get("partie_a", {}), _PART_A, map_image=map_image, map_caption=map_caption)
     _add_part(doc, "PARTIE B — PRÉSENTATION DE LA PRESTATION", content_json.get("partie_b", {}), _PART_B)
     _add_part(doc, "PARTIE C — MÉTHODOLOGIE MISE EN ŒUVRE",   content_json.get("partie_c", {}), _PART_C, organigramme_image=organigramme_image, gantt_image=gantt_image)
+
+    inserer_sommaire(doc, ancre_sommaire._p)
 
     buf = io.BytesIO()
     doc.save(buf)
