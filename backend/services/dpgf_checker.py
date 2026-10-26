@@ -294,31 +294,26 @@ def _check_xls(file_path: Path) -> dict:
 
 
 def _check_ods(file_path: Path) -> dict:
-    from odf.opendocument import load as ods_load
-    from odf.table import Table, TableRow, TableCell
-    from odf.text import P
+    # Lecture sans odfpy (bloc 2) : absent en production, une licence GPL.
+    from services.lecture_ods import onglets_ods
 
-    doc = ods_load(str(file_path))
-    sheets = doc.spreadsheet.getElementsByType(Table)
     results = []
-    for sheet in sheets:
-        sheet_name = sheet.getAttribute("name") or ""
-        rows = []
-        for row_el in sheet.getElementsByType(TableRow):
-            cells = []
-            for cell in row_el.getElementsByType(TableCell):
-                ps = cell.getElementsByType(P)
-                val = " ".join(str(p) for p in ps).strip() if ps else None
-                if val:
-                    # Try to convert to number
-                    f = _to_float(val)
-                    cells.append(f if f is not None else val)
-                else:
-                    cells.append(None)
-            rows.append(cells)
+    for sheet_name, lignes in onglets_ods(file_path):
+        rows = [[_cellule_ods(v) for v in ligne] for ligne in lignes]
         if rows:
             results.append(_analyze_rows(rows, sheet_name))
     return _merge_results(results)
+
+
+def _cellule_ods(valeur):
+    """Nombre tel quel ; texte en une ligne, converti en nombre s'il en est un."""
+    if not isinstance(valeur, str):
+        return valeur
+    texte = " ".join(valeur.split())
+    if not texte:
+        return None
+    nombre = _to_float(texte)
+    return nombre if nombre is not None else texte
 
 
 def _merge_results(results: list[dict]) -> dict:

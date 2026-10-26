@@ -88,6 +88,36 @@ def _check_zip_archive_budget(zf: "zipfile.ZipFile", budget: _ZipBudget) -> None
         )
 
 
+def _verifier_annonce(zip_source, budget: _ZipBudget) -> None:
+    """Anti-zip-bomb AVANT ouverture (bloc 2) : fichiers, taille décompressée et
+    ratio annoncés par la fin et le répertoire de l'archive, lus sans zipfile.
+
+    zipfile charge tout le répertoire à l'ouverture : une archive de quelques
+    dizaines de Mo d'entrées vides pèserait des centaines de Mo en mémoire. Mêmes
+    plafonds et messages que _check_zip_archive_budget, qui reste appliqué après
+    ouverture (budget cumulé des archives imbriquées)."""
+    from services.garde_archives import ArchiveDemesuree, annonce_archive
+    try:
+        fichiers, declares, compresses = annonce_archive(zip_source)
+    except ArchiveDemesuree as e:
+        raise ZipBombError(f"Archive rejetée : {e}.")
+    if budget.files + fichiers > _ZIP_MAX_FILES:
+        raise ZipBombError(
+            f"Archive rejetée : plus de {_ZIP_MAX_FILES} fichiers contenus "
+            "(archives imbriquées comprises)."
+        )
+    if budget.declared_bytes + declares > _ZIP_MAX_TOTAL_UNCOMPRESSED:
+        gb = _ZIP_MAX_TOTAL_UNCOMPRESSED // (1024 ** 3)
+        raise ZipBombError(
+            f"Archive rejetée : taille décompressée annoncée supérieure à {gb} Go."
+        )
+    if declares > _ZIP_RATIO_MIN_DECLARED and declares > _ZIP_MAX_RATIO * max(compresses, 1):
+        raise ZipBombError(
+            "Archive rejetée : ratio de décompression anormal "
+            f"(> {_ZIP_MAX_RATIO}:1) — bombe de décompression suspectée."
+        )
+
+
 def _copy_zip_member_bounded(
     src, dst, declared_size: int, budget: _ZipBudget, on_chunk=None,
 ) -> int:
@@ -1395,6 +1425,8 @@ def _extract_zip_members(
             pass
 
     try:
+        _verifier_annonce(zip_source, budget)   # avant que zipfile ne charge le répertoire
+        zip_source.seek(0)
         zf = zipfile.ZipFile(zip_source, 'r')
     except zipfile.BadZipFile:
         if depth == 0:
@@ -1455,20 +1487,22 @@ def _extract_zip_members(
 
             suffix = FilePath(base).suffix.lower()
 
-            # AMÉLIORATION 2: nested ZIP — read into bytes (rare path, archives are usually <100MB)
+            # AMÉLIORATION 2: nested ZIP — copie bornée dans un fichier temporaire
+            # (RAM au plus 10 Mo, puis disque) : une archive imbriquée de plusieurs
+            # centaines de Mo n'est plus lue en mémoire (bloc 2).
             if suffix == ".zip" and depth < 2:
                 if member.file_size == 0:
                     continue
                 try:
                     # Lecture bornée : un membre .zip qui ment sur sa taille
-                    # déclarée est rejeté avant de saturer la RAM.
-                    inner_buf = _io.BytesIO()
-                    with zf.open(member) as inner_src:
-                        _copy_zip_member_bounded(inner_src, inner_buf, member.file_size, budget)
-                    inner_docs = _extract_zip_members(
-                        inner_buf.getvalue(), project_id, background_tasks, db,
-                        existing_names, used_in_zip, warnings, budget, depth=depth + 1,
-                    )
+                    # déclarée est rejeté avant de saturer le disque.
+                    with tempfile.SpooledTemporaryFile(max_size=_UPLOAD_SPOOL_THRESHOLD) as inner_buf:
+                        with zf.open(member) as inner_src:
+                            _copy_zip_member_bounded(inner_src, inner_buf, member.file_size, budget)
+                        inner_docs = _extract_zip_members(
+                            inner_buf, project_id, background_tasks, db,
+                            existing_names, used_in_zip, warnings, budget, depth=depth + 1,
+                        )
                     created.extend(inner_docs)
                 except ZipBombError:
                     raise

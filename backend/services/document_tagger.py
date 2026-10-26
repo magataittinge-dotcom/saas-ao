@@ -5,16 +5,18 @@ and filter documents before AI analysis.
 
 import re
 import logging
+import unicodedata
 from typing import List, Optional
 
-from models.project import TYPE_AE, TYPE_DPGF
+from models.project import DCE_TEMPLATE_TYPES
 
 logger = logging.getLogger(__name__)
 
 # ─── Lot number extraction from filename ──────────────────────────────────────
 
 _LOT_NUM_IN_FNAME = re.compile(
-    r'lot[\s_\-]*[nN°]*[\s_\-]*(\d{1,2}[A-Za-z]?)',
+    # « lot » en début de mot : « ilot 2 » ou « pilote » ne sont pas un lot.
+    r'(?<![^\W\d_])lot[\s_\-]*[nN°]*[\s_\-]*(\d{1,2}[A-Za-z]?)',
     re.IGNORECASE,
 )
 
@@ -25,28 +27,33 @@ def _extract_lot_num_from_filename(filename: str) -> Optional[str]:
     if not m:
         return None
     raw = m.group(1).strip()
-    if re.match(r'^\d+$', raw):
-        return str(int(raw))   # strip leading zeros
-    return raw                 # alphanumeric like "1A"
+    return re.sub(r'^0+(?=\d)', '', raw)   # « 05 » → « 5 », « 01a » → « 1a »
 
 
 # ─── Informational document detection ─────────────────────────────────────────
 
-_INFO_FNAME = re.compile(
-    r'diagno|amiante|plomb|crep\b|crep_|\bdat\b|dat_|carrez|energetique|'
-    r'geotechni|pgc\b|pgc_|ppsps|rict\b|rict_|icpe\b|'
-    r'acousti|vibra|rapport.{0,8}sol|sondage|notice.{0,8}secu',
-    re.IGNORECASE,
-)
+# Motifs en MOTS ENTIERS sur le nom normalisé (_mots_du_nom) : avant, des
+# sous-chaînes (« plomb » dans « Plomberie », « coupe » dans « coupe-feu »).
+_INFO_MOTS = re.compile(
+    r' (?:diag(?:nostics?|nostiques?)?|amiante|plomb|crep|dat|carrez|energetiques?'
+    r'|geotechni(?:que|ques|e)|pgc|ppsps|rict|icpe|acoustiques?|vibrations?|vibratoires?'
+    r'|sondages?) '
+    r'| rapports? (?:de |du |d )?sols? '
+    r'| notices? (?:de |d )?securite ')
+_PLAN_MOTS = re.compile(
+    r' (?:plans?|coupes?(?! feu )|facades?|niveaux?|elevations?|implantations?) '
+    r'| rez de chaussee ')
+_PLAN_EXTENSIONS = re.compile(r'\.(?:dwg|dwf|dxf)$', re.IGNORECASE)
 
-_PLAN_FNAME = re.compile(
-    r'\.dwg$|\.dwf$|\.dxf$|'
-    # "plan"/"plans" but not "planning" — use custom boundary (underscore is \w so \b fails)
-    r'(?<![a-z0-9])plans?(?![a-z])|'
-    r'coupe(?![a-z])|facade|niveau(?![a-z])|'
-    r'rez.{0,4}de.{0,4}chaussee|elevation(?![a-z])|implantation(?![a-z])',
-    re.IGNORECASE,
-)
+# Pièces qui portent les exigences d'un lot : le type décide, jamais le nom.
+_TYPES_DE_LOT = frozenset({"cctp", *DCE_TEMPLATE_TYPES})
+
+
+def _mots_du_nom(file_name: str) -> str:
+    """« Lot05_Façade-ITE.pdf » → « lot05 facade ite pdf », entre deux espaces."""
+    texte = unicodedata.normalize("NFKD", file_name or "")
+    texte = "".join(c for c in texte if not unicodedata.combining(c)).lower()
+    return " " + " ".join(re.sub(r"[^a-z0-9]+", " ", texte).split()) + " "
 
 
 # ─── Main tagging function ─────────────────────────────────────────────────────
@@ -65,38 +72,39 @@ def assign_document_lots(file_name: str, doc_type: str) -> List[str]:
     if doc_type in ('rc', 'ccap'):
         return ['all']
 
-    # ── AE et DPGF (B2) : propres au lot que leur nom cite, sinon communs ─────
-    # (classeur de tous les lots : l'onglet du lot est choisi à l'analyse). Lus
-    # avant les motifs « info » : « DPGF lot 10 Plomberie » n'est pas un
-    # diagnostic plomb (étiqueté « info », donc écarté, sur le DCE de Gueux).
-    if doc_type in (TYPE_AE, TYPE_DPGF):
-        lot_num = _extract_lot_num_from_filename(file_name)
-        return [lot_num] if lot_num else ['all']
+    # ── Le type décide avant le nom (bloc 2) ──────────────────────────────────
+    # CCTP et pièces à remplir (AE, DPGF, BPU, DQE, DC1…) : propres au lot que
+    # leur nom cite, sinon communs (classeur de tous les lots : l'onglet est
+    # choisi à l'analyse). Jamais « info » : sur Gueux, le CCTP et la DPGF du
+    # lot 10 « Plomberie » passaient pour un diagnostic plomb.
+    if doc_type in _TYPES_DE_LOT:
+        return _lot_ou_commun(file_name)
 
     # ── Plan type ─────────────────────────────────────────────────────────────
     if doc_type == 'plan':
         return ['info']
 
-    # ── Informational filename patterns ───────────────────────────────────────
-    if _INFO_FNAME.search(file_name):
-        return ['info']
-    if _PLAN_FNAME.search(file_name):
+    # ── Autres pièces : motifs de nom, en mots entiers ────────────────────────
+    mots = _mots_du_nom(file_name)
+    if _INFO_MOTS.search(mots) or _PLAN_MOTS.search(mots) or _PLAN_EXTENSIONS.search(file_name):
         return ['info']
 
-    # ── CCTP: lot-specific if name contains lot number, else all ──────────────
-    if doc_type == 'cctp':
-        lot_num = _extract_lot_num_from_filename(file_name)
-        if lot_num:
-            return [lot_num]
-        return ['all']
+    # ── Generic lot detection (sinon : commun à tous les lots) ────────────────
+    return _lot_ou_commun(file_name)
 
-    # ── Generic lot detection ─────────────────────────────────────────────────
+
+def _lot_ou_commun(file_name: str) -> List[str]:
+    """Lot cité par le nom, sinon commun. Le lot 00 / 0 est commun à tous les
+    lots (« lot 00 Généralités » : prescriptions communes ; sur Gueux,
+    126 000 caractères jamais analysés quand il était rattaché au lot « 0 »)."""
     lot_num = _extract_lot_num_from_filename(file_name)
-    if lot_num:
-        return [lot_num]
+    return [lot_num] if lot_num and lot_num != '0' else ['all']
 
-    # ── Default: include everywhere ───────────────────────────────────────────
-    return ['all']
+
+def est_commune(tags) -> bool:
+    """Étiquettes d'une pièce commune à tous les lots : aucune, « all », ou le
+    lot 0 (étiquette « 0 » / « 00 » posée avant le bloc 2)."""
+    return not tags or 'all' in tags or any(_normalize_lot_num(t) == '0' for t in tags)
 
 
 # ─── Lot number normalization ──────────────────────────────────────────────────
@@ -104,25 +112,40 @@ def assign_document_lots(file_name: str, doc_type: str) -> List[str]:
 def _normalize_lot_num(s: str) -> str:
     """
     Normalize a lot identifier to a plain string for comparison.
-    "lot4" → "4", "lot04" → "4", "05" → "5", "1A" → "1A", "lot1A" → "1A"
+    "lot4" → "4", "lot04" → "4", "05" → "5", "1A" → "1a", "lot01a" → "1a"
     """
     s = s.strip().lower()
     if s.startswith('lot'):
         s = s[3:].lstrip('_- ')
-    if re.match(r'^\d+$', s):
-        return str(int(s))
-    return s
+    return re.sub(r'^0+(?=\d)', '', s)   # zéros de tête retirés, sous-lots compris
+
+
+def rattache_au_lot(etiquette: str, cible: str, lots_du_rc=None) -> bool:
+    """L'étiquette d'une pièce désigne-t-elle le lot `cible` (normalisé) ?
+
+    Sous-lots (décision du 25/10) : si le RC ne définit que le lot 01, une pièce
+    « 01a » ou « 01b » se rattache au lot 01 ; si le RC définit lui-même 01a et
+    01b comme des lots, ils restent séparés. `lots_du_rc` : identifiants des
+    lots du projet (« lot1 »…), ou None si inconnus (aucun rattachement)."""
+    t = _normalize_lot_num(etiquette)
+    if t == cible:
+        return True
+    sous_lot = re.fullmatch(r'(\d+)[a-z]', t)
+    if not sous_lot or sous_lot.group(1) != cible or lots_du_rc is None:
+        return False
+    return t not in {_normalize_lot_num(l) for l in lots_du_rc if l}
 
 
 # ─── Document filtering ────────────────────────────────────────────────────────
 
-def get_documents_for_lot(documents, selected_lot: Optional[str]) -> list:
+def get_documents_for_lot(documents, selected_lot: Optional[str], lots_du_rc=None) -> list:
     """
     Filter project documents to those relevant for the selected lot.
 
     Args:
         documents : iterable of ProjectDocument ORM objects
         selected_lot : lot id like "lot4", "lot05", "all", or None
+        lots_du_rc : ids des lots du projet (sous-lots, voir rattache_au_lot)
 
     Returns:
         filtered list — if selected_lot is None/"all", all non-info docs are returned.
@@ -136,12 +159,8 @@ def get_documents_for_lot(documents, selected_lot: Optional[str]) -> list:
     for doc in documents:
         tags = doc.related_lots   # list[str] | None
 
-        if tags is None:
-            # Legacy untagged document → include by default
-            result.append(doc)
-            continue
-
-        if 'all' in tags:
+        if tags is None or est_commune(tags):
+            # Non étiquetée (ancienne), « all », ou lot 0 : commune à tous les lots.
             result.append(doc)
             continue
 
@@ -150,7 +169,7 @@ def get_documents_for_lot(documents, selected_lot: Optional[str]) -> list:
             continue
 
         # Check if any tag matches target lot
-        if any(_normalize_lot_num(t) == target for t in tags if t != 'info'):
+        if any(rattache_au_lot(t, target, lots_du_rc) for t in tags if t != 'info'):
             result.append(doc)
 
     return result
