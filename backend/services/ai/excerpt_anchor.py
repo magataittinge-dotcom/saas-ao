@@ -844,6 +844,9 @@ def anchor_requirements(requirements: List[dict], doc_texts: Dict[str, str],
         return index_partage[0]
 
     for req in requirements:
+        # Extrait d'origine de l'IA gardé (un second ancrage ne l'écrase pas)
+        if "source_excerpt_ia" not in req:
+            req["source_excerpt_ia"] = req.get("source_excerpt")
         original = (req.get("source_excerpt") or "").strip()
         designees = _pieces_designees(req.get("source_document"), noms)
         pieces = [(n, t, 0 if n in designees else 1 + rangs.get(n, 0)) for n, t in zip(noms, textes)]
@@ -852,7 +855,9 @@ def anchor_requirements(requirements: List[dict], doc_texts: Dict[str, str],
         if ancrage is None:
             counts["invalide"] += 1
             req["source_excerpt"] = None
+            req["ancrage_niveau"], req["ancrage_score"] = "aucun", None
             continue
+        req["ancrage_niveau"], req["ancrage_score"] = ancrage.niveau, ancrage.score
         counts["exact_ou_reancre" if ancrage.niveau in ("exact", "normalise") else "recupere"] += 1
         req["source_excerpt"] = doc_texts[ancrage.piece][ancrage.debut:ancrage.fin][:600]
         # Corrige la pièce source si l'extrait vit ailleurs que désigné
