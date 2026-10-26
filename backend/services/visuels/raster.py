@@ -18,7 +18,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
-_POLICES = Path(__file__).resolve().parent / "polices"
+_POLICES = Path(__file__).resolve().parents[2] / "assets" / "fonts" / "carlito"   # seule copie de Carlito du dépôt
 _NS = "{http://www.w3.org/2000/svg}"
 _SUREC = 2
 _PX_MAX = 16_000_000
