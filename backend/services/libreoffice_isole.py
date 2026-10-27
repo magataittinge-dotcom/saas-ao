@@ -392,6 +392,45 @@ def _executer(cmd: list, env: dict, base: Path, delai: float) -> int:
 _DOSSIERS_TMP = ("/tmp", "/var/tmp")
 
 
+def _ouvrir_regulier(chemin: Path) -> Optional[int]:
+    """Descripteur d'un fichier ORDINAIRE du dossier jetable, ou None. Tout ce que soffice laisse dans ce dossier est
+    hostile (il y écrit, supposé compromis) : un lien symbolique ``entree.pdf -> backend/.env`` ferait lire ce fichier
+    par l'API et le rendrait à l'utilisateur comme « PDF » ; un FIFO ferait attendre l'ouverture sans fin. Pas de lien
+    suivi (``O_NOFOLLOW``), pas de blocage (``O_NONBLOCK``), type vérifié sur le descripteur (pas de course)."""
+    try:
+        fd = os.open(chemin, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
+    except OSError:
+        return None
+    try:
+        if stat.S_ISREG(os.fstat(fd).st_mode):
+            return fd
+    except OSError:
+        pass
+    os.close(fd)
+    return None
+
+
+def _lire_sobre(chemin: Path, max_octets: int = 300) -> Optional[str]:
+    """Début d'un petit fichier texte du dossier jetable (état du lanceur, stderr), sans suivre de lien."""
+    fd = _ouvrir_regulier(chemin)
+    if fd is None:
+        return None
+    with os.fdopen(fd, "rb") as f:
+        return f.read(max_octets).decode("utf-8", errors="replace")
+
+
+_ETAT_VALIDE = re.compile(r"^[a-z+\-]+( \([^\n\r]{0,250}\))?$")
+
+
+def _etat_reseau(base: Path) -> str:
+    """Niveau d'isolation écrit par le lanceur, vérifié : soffice peut réécrire ce fichier (il est dans son dossier), le
+    journal n'en reçoit donc que le format attendu (jeton d'isolation, refus éventuels), jamais un contenu quelconque."""
+    texte = _lire_sobre(base / "reseau.txt")
+    if texte is not None and _ETAT_VALIDE.match(texte):
+        return texte
+    return "inconnu"
+
+
 def _sockets_osl_pipe(dossiers=_DOSSIERS_TMP) -> set:
     """Chemins des sockets ``OSL_PIPE_<uid>_…`` de l'utilisateur courant dans ``dossiers`` (motif exact, vrai socket,
     pas un lien, appartenant à cet utilisateur)."""
@@ -479,10 +518,7 @@ def convertir_en_pdf(entree, extension: str = ".docx", destination: Optional[Pat
                 logger.error("LibreOffice non lançable : %s", type(e).__name__)
                 raise _erreur("indisponible") from e
             duree = time.monotonic() - debut
-            try:
-                etat_reseau = (base / "reseau.txt").read_text()
-            except OSError:
-                etat_reseau = "inconnu"
+            etat_reseau = _etat_reseau(base)
             pdf = base / "entree.pdf"
             if code == 97:
                 logger.error("Conversion PDF refusée : isolation exigée, impossible (%s)", etat_reseau)
@@ -493,24 +529,23 @@ def convertir_en_pdf(entree, extension: str = ".docx", destination: Optional[Pat
             if "seccomp" not in etat_reseau.split(" ")[0]:
                 logger.warning("Conversion PDF SANS isolation réseau complète (%s) : sockets Unix du système de "
                                "fichiers joignables ; seuls les réglages du profil protègent", etat_reseau)
-            if code != 0 or not pdf.exists():
-                detail = ""
-                try:
-                    detail = (base / "stderr.txt").read_text(errors="replace")[:200]
-                except OSError:
-                    pass
+            fd_pdf = _ouvrir_regulier(pdf) if code == 0 else None
+            if fd_pdf is None:
+                detail = (_lire_sobre(base / "stderr.txt", 200) or "").replace("\n", " ")
                 logger.error("LibreOffice sans PDF (code %s, %.1f s, réseau %s) : %s", code, duree, etat_reseau, detail)
                 raise _erreur("echec")
-            logger.info("PDF converti en %.1f s (%d Ko, réseau : %s, %s)", duree, pdf.stat().st_size // 1024, etat_reseau,
-                        "tmp privé" if "tmp-prive" in etat_reseau.split(" ")[0].split("+") else "tmp partagé")
-            if destination is None:
-                return pdf.read_bytes()
-            destination = Path(destination)
-            destination.parent.mkdir(parents=True, exist_ok=True)
-            partiel = destination.with_name(destination.name + f".{uuid.uuid4().hex[:8]}.part")
-            shutil.copyfile(pdf, partiel)
-            os.replace(partiel, destination)
-            return destination
+            with os.fdopen(fd_pdf, "rb") as source:
+                logger.info("PDF converti en %.1f s (%d Ko, réseau : %s, %s)", duree, os.fstat(source.fileno()).st_size // 1024,
+                            etat_reseau, "tmp privé" if "tmp-prive" in etat_reseau.split(" ")[0].split("+") else "tmp partagé")
+                if destination is None:
+                    return source.read()
+                destination = Path(destination)
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                partiel = destination.with_name(destination.name + f".{uuid.uuid4().hex[:8]}.part")
+                with open(partiel, "wb") as sortie:
+                    shutil.copyfileobj(source, sortie)
+                os.replace(partiel, destination)
+                return destination
         finally:
             _balayer_sockets_osl_pipe(_DOSSIERS_TMP, sockets_avant)
             shutil.rmtree(base, ignore_errors=True)
