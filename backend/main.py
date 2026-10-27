@@ -37,6 +37,7 @@ from routers import (
     rag,
 )
 from routers.file_serve import router as file_serve_router
+from routers.sources import router as sources_router
 
 settings = get_settings()
 
@@ -381,6 +382,7 @@ app.include_router(notifications.router, prefix="/api/notifications", tags=["not
 app.include_router(progress.router, prefix="/api/projects", tags=["progress"])
 app.include_router(calculators.router, prefix="/api/calculators", tags=["calculators"])
 app.include_router(file_serve_router, prefix="/api/files", tags=["files"])
+app.include_router(sources_router, prefix="/api/sources", tags=["sources"])
 
 
 _APP_BOOTED_AT = datetime.utcnow()

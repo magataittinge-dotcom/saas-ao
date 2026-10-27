@@ -674,7 +674,7 @@ def _persist_scope(db: Session, project_id: str, requirements: list,
             project_id=project_id,
             exigence_text=req.get("exigence", ""),
             source_document=req.get("source_document"),
-            source_page=req.get("source_page") or 1,
+            source_page=_page_source(req.get("source_page")),
             source_excerpt=req.get("source_excerpt"),
             source_excerpt_ia=req.get("source_excerpt_ia"),
             ancrage_niveau=req.get("ancrage_niveau"),
@@ -793,6 +793,19 @@ def _finalize_analysis(
         logger.exception("Notification analysis_ready échouée (non bloquant)")
         db.rollback()
 
+    # Sujet A (« Voir dans le DCE ») — position de chaque source dans son PDF, calculée une
+    # fois ici (un aller-retour par pièce, dans le processus PDFium). Best-effort : un échec
+    # laisse l'exigence sans ancre (repli sur la page citée, calcul au premier clic), jamais
+    # l'analyse en erreur.
+    try:
+        pipeline_tracker.update_step_progress(
+            project_id, 0.95, detail="Positionnement des sources dans le DCE…")
+        from services.ancres_projet import calculer_et_stocker
+        calculer_et_stocker(db, project_id)
+    except Exception:
+        logger.warning("Ancres des sources non calculées (non bloquant)", exc_info=True)
+        db.rollback()
+
     pipeline_tracker.complete_pipeline(project_id)
     logger.info(
         "Analyse %s terminée : %d exigences, %d critères (docs %d/%d%s%s)",
@@ -800,6 +813,19 @@ def _finalize_analysis(
         ", partielle" if partial_analysis else "",
         ", peu d'exigences" if low_requirement_count else "",
     )
+
+
+def _page_source(valeur) -> int | None:
+    """Numéro de page source (à partir de 1) ; NULL si l'analyse n'en a pas donné de valable.
+    Jamais 1 « par défaut » : l'écran dirait « Page citée par l'analyse » pour une page que
+    l'analyse n'a pas citée."""
+    if isinstance(valeur, bool):
+        return None
+    try:
+        page = int(valeur)
+    except (TypeError, ValueError):
+        return None
+    return page if page >= 1 else None
 
 
 def _safe_category(value: str | None) -> str:
