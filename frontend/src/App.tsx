@@ -1,24 +1,28 @@
-import React from 'react'
+import React, { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { useSyncUser } from '@/hooks/useAuth'
-import Layout from '@/components/layout/Layout'
-import Landing from '@/routes/Landing'
-import Login from '@/routes/Login'
-import Register from '@/routes/Register'
-import Pricing from '@/routes/Pricing'
-import Legal from '@/routes/Legal'
-import Dashboard from '@/routes/Dashboard'
-import Projects from '@/routes/Projects'
-import NewProject from '@/routes/NewProject'
-import Project from '@/routes/Project'
-import Vault from '@/routes/Vault'
-import References from '@/routes/References'
-import Company from '@/routes/Company'
-import Team from '@/routes/Team'
-import Settings from '@/routes/Settings'
-import Billing from '@/routes/Billing'
-import Tools from '@/routes/Tools'
+import EcranEnChargement from '@/components/common/EcranEnChargement'
+
+// Un écran = un morceau chargé à la demande (bloc 6) : l'accueil public ne télécharge ni la
+// coquille connectée, ni le Markdown, ni les étapes de l'AO.
+const Layout = lazy(() => import('@/components/layout/Layout'))
+const Landing = lazy(() => import('@/routes/Landing'))
+const Login = lazy(() => import('@/routes/Login'))
+const Register = lazy(() => import('@/routes/Register'))
+const Pricing = lazy(() => import('@/routes/Pricing'))
+const Legal = lazy(() => import('@/routes/Legal'))
+const Dashboard = lazy(() => import('@/routes/Dashboard'))
+const Projects = lazy(() => import('@/routes/Projects'))
+const NewProject = lazy(() => import('@/routes/NewProject'))
+const Project = lazy(() => import('@/routes/Project'))
+const Vault = lazy(() => import('@/routes/Vault'))
+const References = lazy(() => import('@/routes/References'))
+const Company = lazy(() => import('@/routes/Company'))
+const Team = lazy(() => import('@/routes/Team'))
+const Settings = lazy(() => import('@/routes/Settings'))
+const Billing = lazy(() => import('@/routes/Billing'))
+const Tools = lazy(() => import('@/routes/Tools'))
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isSignedIn, isLoaded } = useAuth()
@@ -39,6 +43,7 @@ function AppRoutes() {
   if (!clerkReady) return null
 
   return (
+    <Suspense fallback={<EcranEnChargement />}>
     <Routes>
       {/* Public routes */}
       <Route path="/" element={<Landing />} />
@@ -90,6 +95,7 @@ function AppRoutes() {
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   )
 }
 

@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from 'react'
+import { lazy, Suspense, useRef, useState, useEffect } from 'react'
 import { useParams, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { MapPin } from 'lucide-react'
 import { useProject } from '@/hooks/useProject'
@@ -7,13 +7,16 @@ import { DeadlinePill } from '@/components/dashboard/DeadlinePill'
 import { echeanceAO } from '@/lib/echeance'
 import { StepperSkeleton } from '@/components/skeletons'
 import Skeleton from '@/components/common/Skeleton'
-import StepUpload       from './project/StepUpload'
-import StepLotSelection from './project/StepLotSelection'
-import StepAnalysis     from './project/StepAnalysis'
-import StepVerification from './project/StepVerification'
-import StepMemoire      from './project/StepMemoire'
-import StepExport       from './project/StepExport'
+import EcranEnChargement from '@/components/common/EcranEnChargement'
 import { cn } from '@/lib/utils'
+
+// Chaque étape est un morceau chargé à la demande (bloc 6).
+const StepUpload = lazy(() => import('./project/StepUpload'))
+const StepLotSelection = lazy(() => import('./project/StepLotSelection'))
+const StepAnalysis = lazy(() => import('./project/StepAnalysis'))
+const StepVerification = lazy(() => import('./project/StepVerification'))
+const StepMemoire = lazy(() => import('./project/StepMemoire'))
+const StepExport = lazy(() => import('./project/StepExport'))
 
 const STEP_ROUTES = ['upload', 'lots', 'analysis', 'verification', 'memoire', 'export']
 
@@ -95,6 +98,7 @@ export default function Project() {
       </div>
 
       {/* Step content */}
+      <Suspense fallback={<EcranEnChargement />}>
       <Routes>
         <Route path="/"            element={<Navigate to="upload" replace />} />
         <Route path="upload"       element={<StepUpload       project={project} />} />
@@ -106,6 +110,7 @@ export default function Project() {
         <Route path="memoire"      element={<StepMemoire      project={project} />} />
         <Route path="export"       element={<StepExport       project={project} />} />
       </Routes>
+      </Suspense>
     </div>
   )
 }
