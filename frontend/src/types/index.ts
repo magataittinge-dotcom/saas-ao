@@ -226,7 +226,7 @@ export interface ComplianceItem {
   project_id: string
   exigence_text: string
   source_document: string
-  source_page?: number
+  source_page?: number | null
   source_excerpt?: string
   status: ComplianceStatus
   category: ComplianceCategory

@@ -674,7 +674,7 @@ def _persist_scope(db: Session, project_id: str, requirements: list,
             project_id=project_id,
             exigence_text=req.get("exigence", ""),
             source_document=req.get("source_document"),
-            source_page=req.get("source_page") or 1,
+            source_page=_page_source(req.get("source_page")),
             source_excerpt=req.get("source_excerpt"),
             source_excerpt_ia=req.get("source_excerpt_ia"),
             ancrage_niveau=req.get("ancrage_niveau"),
@@ -800,6 +800,19 @@ def _finalize_analysis(
         ", partielle" if partial_analysis else "",
         ", peu d'exigences" if low_requirement_count else "",
     )
+
+
+def _page_source(valeur) -> int | None:
+    """Numéro de page source (à partir de 1) ; NULL si l'analyse n'en a pas donné de valable.
+    Jamais 1 « par défaut » : l'écran dirait « Page citée par l'analyse » pour une page que
+    l'analyse n'a pas citée."""
+    if isinstance(valeur, bool):
+        return None
+    try:
+        page = int(valeur)
+    except (TypeError, ValueError):
+        return None
+    return page if page >= 1 else None
 
 
 def _safe_category(value: str | None) -> str:
