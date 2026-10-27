@@ -793,6 +793,19 @@ def _finalize_analysis(
         logger.exception("Notification analysis_ready échouée (non bloquant)")
         db.rollback()
 
+    # Sujet A (« Voir dans le DCE ») — position de chaque source dans son PDF, calculée une
+    # fois ici (un aller-retour par pièce, dans le processus PDFium). Best-effort : un échec
+    # laisse l'exigence sans ancre (repli sur la page citée, calcul au premier clic), jamais
+    # l'analyse en erreur.
+    try:
+        pipeline_tracker.update_step_progress(
+            project_id, 0.95, detail="Positionnement des sources dans le DCE…")
+        from services.ancres_projet import calculer_et_stocker
+        calculer_et_stocker(db, project_id)
+    except Exception:
+        logger.warning("Ancres des sources non calculées (non bloquant)", exc_info=True)
+        db.rollback()
+
     pipeline_tracker.complete_pipeline(project_id)
     logger.info(
         "Analyse %s terminée : %d exigences, %d critères (docs %d/%d%s%s)",
