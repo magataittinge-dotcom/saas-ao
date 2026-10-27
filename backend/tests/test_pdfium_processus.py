@@ -128,3 +128,80 @@ def test_resultat_non_transmissible_donne_une_erreur_sans_tuer_l_enfant():
 def test_zero_processus_execute_directement(monkeypatch):
     monkeypatch.setenv("SYNORIX_PDFIUM_PROCESSUS", "0")
     assert pp.executer(t.pid, delai_s=1) == os.getpid()
+
+
+# ─── Attente bornée (équité entre organisations : un gros dépôt ne bloque pas les autres) ───
+
+def _occuper(secondes):
+    fil = threading.Thread(target=lambda: pp.executer(t.dormir, secondes, delai_s=60, attente_s=30))
+    fil.start()
+    time.sleep(0.7)            # laisse l'enfant démarrer et prendre la tâche
+    return fil
+
+
+def test_attente_interactive_bornee_par_defaut(monkeypatch):
+    """Sans `attente_s`, l'appel n'attend PAS indéfiniment : quelques secondes, puis échec propre."""
+    assert 1 <= pp.ATTENTE_INTERACTIF_S <= 10
+    monkeypatch.setenv("SYNORIX_PDFIUM_ATTENTE_S", "1")
+    fil = _occuper(5)
+    debut = time.monotonic()
+    with pytest.raises(pp.TravailPdfiumEchoue) as e:
+        pp.executer(t.pid, delai_s=60)
+    assert e.value.raison == "attente"
+    assert time.monotonic() - debut < 3
+    fil.join(60)
+
+
+def test_attente_extraction_reglable_et_plus_longue(monkeypatch):
+    assert pp.ATTENTE_EXTRACTION_S > pp.ATTENTE_INTERACTIF_S
+    assert pp.attente_extraction_s() == pp.ATTENTE_EXTRACTION_S
+    monkeypatch.setenv("SYNORIX_PDFIUM_ATTENTE_EXTRACTION_S", "42")
+    assert pp.attente_extraction_s() == 42
+
+
+def test_le_delai_d_un_petit_fichier_reste_court(tmp_path):
+    from services import extraction_processus as ep
+    petit = tmp_path / "RC.pdf"
+    petit.write_bytes(b"x" * 200_000)
+    assert ep.delai_extraction_s(str(petit)) <= 60            # un petit fichier ne tient pas le processus 2 min
+    gros = tmp_path / "DT.pdf"
+    with open(gros, "wb") as f:
+        f.truncate(83 * 1024 * 1024)                          # le DT SIEM de Gueux : 83 Mo
+    assert 250 <= ep.delai_extraction_s(str(gros)) <= ep.DELAI_MAX_S
+
+
+def test_extraction_attente_bornee_pendant_un_gros_travail(tmp_path, monkeypatch):
+    from services import extraction_processus as ep
+    monkeypatch.setenv("SYNORIX_PDFIUM_ATTENTE_EXTRACTION_S", "1")
+    chemin = tmp_path / "CCTP.pdf"
+    chemin.write_bytes(b"x")
+    fil = _occuper(5)
+    with pytest.raises(pp.TravailPdfiumEchoue) as e:
+        ep.extraire_en_processus(str(chemin), "CCTP.pdf", "doc")
+    assert e.value.raison == "attente"
+    assert "CCTP.pdf" in ep.avertissement_travail("CCTP.pdf", e.value)
+    fil.join(60)
+
+
+def test_reponse_503_avec_retry_after_pour_une_route():
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from services.pdfium_http import installer_gestionnaire
+
+    app = FastAPI()
+    installer_gestionnaire(app)
+
+    @app.get("/apercu")
+    def apercu():
+        raise pp.TravailPdfiumEchoue("attente", "aucun processus PDF libre en 5 s")
+
+    reponse = TestClient(app).get("/apercu")
+    assert reponse.status_code == 503
+    assert int(reponse.headers["retry-after"]) >= 1
+    corps = reponse.json()["detail"]
+    assert "réessayez" in corps.lower() and "manquant" not in corps and "absent" not in corps
+
+
+def test_l_appli_installe_le_gestionnaire_503():
+    from main import app
+    assert pp.TravailPdfiumEchoue in app.exception_handlers

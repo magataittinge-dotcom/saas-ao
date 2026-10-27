@@ -20,6 +20,20 @@ Celery, LibreOffice et les PDF), toute lecture de fichier déposé se fait donc 
   mémoire résidente dépasse ``SYNORIX_PDFIUM_RSS_MAX_MO`` (glibc ne rend pas tout, même avec
   ``malloc_trim``).
 
+Compromis mémoire contre équité. Un seul processus signifie qu'un gros dépôt (une pièce peut
+tenir le processus jusqu'à 15 minutes) retarde les travaux des autres organisations. On ne
+règle pas cela en ajoutant des processus (chacun peut tenir 1,5 Go : le KVM 1 n'a pas la
+mémoire), mais en BORNANT l'attente : nul n'attend une place indéfiniment. Un travail
+interactif (aperçu, ancre au premier clic) attend ``ATTENTE_INTERACTIF_S`` (5 s, réglable
+``SYNORIX_PDFIUM_ATTENTE_S``) puis lève ``TravailPdfiumEchoue("attente")`` : la route répond
+503 avec ``Retry-After`` (services/pdfium_http.py) et le front réessaie. L'extraction attend
+``ATTENTE_EXTRACTION_S`` (600 s, ``SYNORIX_PDFIUM_ATTENTE_EXTRACTION_S``) puis la pièce est
+signalée à redéposer. Les petites pièces ont un délai court (services/extraction_processus.py :
+30 s + 3 s par Mo), donc une pièce piégée libère vite le processus. Sur un serveur plus gros :
+``SYNORIX_PDFIUM_PROCESSUS=2`` donne un second processus ; il faut alors réserver l'un des deux
+à l'interactif (un jeu de places distinct, non fait ici : l'équité par organisation est hors
+périmètre de cette version, les places sont servies dans l'ordre d'arrivée).
+
 Usage (bloquant : l'appelant asynchrone l'enveloppe dans ``asyncio.to_thread``) ::
 
     resultat = executer(ma_fonction, arg1, arg2, delai_s=30)
@@ -46,7 +60,9 @@ from typing import Any, Callable, Optional
 logger = logging.getLogger(__name__)
 
 __all__ = ["TravailPdfiumEchoue", "executer", "signaler", "arreter", "etat",
-           "AS_MO_DEFAUT", "TACHES_MAX_DEFAUT", "RSS_MAX_MO_DEFAUT"]
+           "attente_interactive_s", "attente_extraction_s",
+           "AS_MO_DEFAUT", "TACHES_MAX_DEFAUT", "RSS_MAX_MO_DEFAUT",
+           "ATTENTE_INTERACTIF_S", "ATTENTE_EXTRACTION_S"]
 
 # Valeurs par défaut. Mesures du banc T9 (outils-pdf/banc_gueux.py, 99 pièces de Gueux) :
 # - un enfant frais occupe 30 Mo de mémoire VIRTUELLE (pypdfium2 + document_processor chargés) ;
@@ -59,6 +75,8 @@ __all__ = ["TravailPdfiumEchoue", "executer", "signaler", "arreter", "etat",
 AS_MO_DEFAUT = 1536
 TACHES_MAX_DEFAUT = 40
 RSS_MAX_MO_DEFAUT = 350
+ATTENTE_INTERACTIF_S = 5          # attente d'une place, travail interactif (aperçu, ancre)
+ATTENTE_EXTRACTION_S = 600        # attente d'une place, extraction au dépôt
 
 
 class TravailPdfiumEchoue(Exception):
@@ -89,6 +107,14 @@ def _entier(nom: str, defaut: int, minimum: int = 0) -> int:
 
 def nombre_de_processus() -> int:
     return _entier("SYNORIX_PDFIUM_PROCESSUS", 1)
+
+
+def attente_interactive_s() -> float:
+    return float(_entier("SYNORIX_PDFIUM_ATTENTE_S", ATTENTE_INTERACTIF_S, 0))
+
+
+def attente_extraction_s() -> float:
+    return float(_entier("SYNORIX_PDFIUM_ATTENTE_EXTRACTION_S", ATTENTE_EXTRACTION_S, 0))
 
 
 def _plafond_as_octets() -> int:
@@ -275,16 +301,18 @@ def executer(
     """``fonction(*args)`` dans le processus pdfium ; son résultat, ou ``TravailPdfiumEchoue``.
 
     Bloquant. ``delai_s`` : durée maximale de l'EXÉCUTION (l'enfant est tué au-delà).
-    ``attente_s`` : durée maximale d'attente d'un processus libre (None : sans limite).
+    ``attente_s`` : durée maximale d'attente d'une place (None : ``attente_interactive_s()``,
+    5 s par défaut). L'attente est TOUJOURS bornée ; l'extraction passe ``attente_extraction_s()``.
     ``sur_progression(objet)`` reçoit, dans le thread de l'appelant, ce que l'enfant
     envoie par ``signaler``. Une exception de ``fonction`` est relancée telle quelle."""
     if nombre_de_processus() == 0:     # exécution directe, sans protection (réglage explicite)
         return fonction(*args)
     etat = _etat_courant()
     try:
-        enfant = etat.places.get(timeout=attente_s) if attente_s is not None else etat.places.get()
+        attente = attente_interactive_s() if attente_s is None else max(0.0, float(attente_s))
+        enfant = etat.places.get(timeout=attente)
     except queue.Empty:
-        raise TravailPdfiumEchoue("attente", f"aucun processus PDF libre en {attente_s:g} s") from None
+        raise TravailPdfiumEchoue("attente", f"aucun processus PDF libre en {attente:g} s") from None
     garder = False
     try:
         if enfant is not None and not enfant.vivant():

@@ -30,10 +30,11 @@ from services import pdfium_processus
 logger = logging.getLogger(__name__)
 
 # Délai de lecture d'une pièce : socle + part proportionnelle à la taille. Mesuré (banc T9) :
-# les 93 pièces de Gueux, dont le DT SIEM de 83 Mo, se lisent chacune en moins de 15 s sur
-# disque local. Le socle couvre un disque lent ; le plafond évite qu'un fichier piégé occupe
-# l'unique processus plus de 15 minutes.
-DELAI_BASE_S = 120.0
+# les 99 pièces de Gueux, dont le DT SIEM de 83 Mo, se lisent chacune en moins de 7 s (disque
+# lent de WSL compris). Le socle court (30 s) empêche qu'un petit fichier piégé tienne l'unique
+# processus longtemps et fasse attendre les autres organisations ; la part par Mo laisse 280 s
+# au DT de 83 Mo ; le plafond borne tout fichier à 15 minutes.
+DELAI_BASE_S = 30.0
 DELAI_PAR_MO_S = 3.0
 DELAI_MAX_S = 900.0
 
@@ -80,12 +81,16 @@ def extraire_en_processus(
     return pdfium_processus.executer(
         extraire_fichier, str(chemin), nom, doc_id,
         delai_s=delai_extraction_s(str(chemin)),
+        attente_s=pdfium_processus.attente_extraction_s(),
         sur_progression=(lambda p: on_page(*p)) if on_page is not None else None,
     )
 
 
 def avertissement_travail(nom: str, echec: "pdfium_processus.TravailPdfiumEchoue") -> str:
     """Avertissement de la pièce quand sa lecture a été interrompue (affiché à côté du fichier)."""
+    if echec.raison == "attente":
+        return (f"« {nom} » : lecture reportée (serveur occupé) — "
+                "texte non extrait de ce fichier, redéposez-le dans quelques minutes")
     cause = "trop longue" if echec.raison == "delai" else "fichier trop lourd ou abîmé"
     return (f"« {nom} » : lecture interrompue ({cause}) — "
             "texte non extrait de ce fichier")

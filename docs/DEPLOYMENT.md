@@ -229,6 +229,8 @@ SYNORIX_PDFIUM_PROCESSUS=1         # nombre d'enfants PDFium : 1 sur 1 vCPU ; 2 
 SYNORIX_PDFIUM_AS_MO=1536          # plafond de mémoire virtuelle d'un enfant (0 = aucun)
 SYNORIX_PDFIUM_TACHES_MAX=40       # l'enfant est remplacé après N tâches
 SYNORIX_PDFIUM_RSS_MAX_MO=350      # ... ou dès que sa mémoire résidente dépasse ce seuil
+SYNORIX_PDFIUM_ATTENTE_S=5         # attente d'un processus libre, travail interactif (aperçu) : puis 503 + Retry-After
+SYNORIX_PDFIUM_ATTENTE_EXTRACTION_S=600   # idem pour l'extraction au dépôt (la pièce est alors à redéposer)
 ```
 
 ---
