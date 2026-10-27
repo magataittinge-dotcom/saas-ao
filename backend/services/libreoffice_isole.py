@@ -54,6 +54,7 @@ import os
 import re
 import shutil
 import signal
+import socket
 import stat
 import subprocess
 import sys
@@ -141,6 +142,32 @@ def _mode_reseau() -> str:
 def _mode_landlock() -> str:
     """``auto`` (défaut) : Landlock si le noyau l'offre ; ``aucun`` : désactivé (diagnostic, tests)."""
     return "aucun" if os.environ.get("SYNORIX_LIBREOFFICE_LANDLOCK", "auto").strip().lower() == "aucun" else "auto"
+
+
+def tmp_prive_possible(base: Path) -> bool:
+    """Le dossier jetable accepte-t-il un socket Unix ? Monté sur ``/tmp``, il reçoit le socket ``OSL_PIPE`` de
+    soffice. MESURÉ (tests/test_libreoffice_tmp_9p.py) : sur le disque 9p de WSL (/mnt/c, appli locale),
+    ``bind`` y échoue (errno 95) et soffice sortait en code 1. La sonde ne laisse rien derrière elle."""
+    # Par le descripteur du dossier : l'adresse reste courte (108 octets au plus pour un socket Unix),
+    # quelle que soit la longueur du chemin du dossier jetable.
+    nom = f".sonde-{uuid.uuid4().hex[:8]}"
+    try:
+        fd = os.open(base, os.O_PATH | os.O_DIRECTORY | os.O_CLOEXEC)
+    except OSError:
+        return False
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    try:
+        s.bind(f"/proc/self/fd/{fd}/{nom}")
+        return True
+    except OSError:
+        return False
+    finally:
+        s.close()
+        try:
+            os.unlink(nom, dir_fd=fd)
+        except OSError:
+            pass
+        os.close(fd)
 
 
 def _mode_tmp() -> str:
@@ -509,7 +536,10 @@ def convertir_en_pdf(entree, extension: str = ".docx", destination: Optional[Pat
             if _mode_landlock() == "auto":
                 cfg["landlock"] = {"regles": regles_landlock(base, binaire), **regles_landlock_tmp(base)}
             if _mode_tmp() == "auto":
-                cfg["tmp_prive"] = str(base / "tmp")
+                if tmp_prive_possible(base):
+                    cfg["tmp_prive"] = str(base / "tmp")
+                else:
+                    logger.info("Dossier jetable sans socket Unix (disque 9p de WSL ?) : /tmp partagé pour soffice")
             cmd = [sys.executable, "-I", "-S", str(_LANCEUR), json.dumps(cfg)]
             debut = time.monotonic()
             try:
