@@ -1,5 +1,7 @@
 """Canal enfant -> parent (bloc 6, revue de sécurité) : le parent ne fait JAMAIS ``pickle.loads`` sur les octets
-d'un enfant PDFium. On part de l'hypothèse qu'un fichier piégé prend le contrôle de l'enfant."""
+d'un enfant PDFium ; le canal est du JSON à schéma explicite (services/canal_enfant.py). On part de l'hypothèse
+qu'un fichier piégé prend le contrôle de l'enfant."""
+import json
 import multiprocessing as mp
 import os
 import pickle
@@ -52,38 +54,106 @@ def test_un_pickle_forge_est_refuse_sans_rien_executer(tmp_path, charge):
     assert not (tmp_path / "x").exists()
 
 
-def test_les_types_de_base_et_les_exceptions_listees_passent():
+def _rss_ko() -> int:
+    with open("/proc/self/statm") as f:
+        return int(f.read().split()[1]) * (os.sysconf("SC_PAGE_SIZE") // 1024)
+
+
+def test_les_types_de_base_les_tuples_les_octets_et_les_exceptions_listees_passent():
     from services.pdf_lecture import PdfIllisible
     from services.pdf_rendu import PageHorsBornes
-    message = ("ok", ("texte", 3, None, [["a", "b"], ["c"]], {"k": [1.5, True, b"\x00\xff"]}, {1, 2}, frozenset({3})), 12)
-    assert canal.decoder(pickle.dumps(message, protocol=4)) == message
+    message = ("ok", ("texte é\ud800", 3, None, [["a", "b"], ["c"]], {"k": [1.5, True, b"\x00\xff"], "vide": {}}, ()), 12)
+    assert canal.decoder(canal.encoder(message)) == message
+    assert type(canal.decoder(canal.encoder(message))[1]) is tuple
     for exc in (ValueError("x"), MemoryError(), FileNotFoundError(2, "absent", "/x"), PdfIllisible(3, "d"),
-                PageHorsBornes("p"), UnicodeDecodeError("utf-8", b"\xff", 0, 1, "m")):
+                PageHorsBornes("p"), OSError("seul")):
         assert canal.exception_autorisee(exc)
-        rendu = canal.decoder(pickle.dumps(("err", exc, 0), protocol=4))[1]
+        rendu = canal.decoder(canal.encoder(("err", exc, 0)))[1]
         assert type(rendu) is type(exc) and rendu.args == exc.args
-    assert canal.decoder(pickle.dumps(("err", PdfIllisible(3, "d"), 0), protocol=4))[1].code == 3
+    assert canal.decoder(canal.encoder(("err", FileNotFoundError(2, "absent", "/x"), 0)))[1].filename == "/x"
+    assert canal.decoder(canal.encoder(("err", PdfIllisible(3, "d"), 0)))[1].code == 3
     assert not canal.exception_autorisee(t.ErreurMaison())
 
 
-def test_un_pickle_mal_forme_ou_en_bombe_est_refuse():
-    for octets in (b"", b"\x80\x04garbage", b"cos\nsystem\n.", pickle.dumps([1])[:-3]):
+@pytest.mark.parametrize("objet", [
+    {1: "cle entière"}, {"$t": 1}, {"a": {1, 2}}, {"a": object()}, t.ErreurMaison("x"), ValueError(["liste"]),
+    ValueError("x" * 5000), ValueError(10 ** 30), {"a": float, "b": 1}, lambda: 1,
+], ids=lambda o: type(o).__name__ + str(id(o) % 7))
+def test_l_encodage_refuse_ce_qui_sort_du_schema(objet):
+    with pytest.raises((TypeError, canal.MessageRefuse)):
+        canal.encoder(("ok", objet, 0))
+
+
+@pytest.mark.parametrize("octets", [
+    b"", b"\x80\x04garbage", b"cos\nsystem\n.", b"\xff\xfe", b"[1,2",
+    json.dumps({"$e": "os.system", "a": ["x"]}).encode(),                    # exception hors liste
+    json.dumps({"$e": "builtins.ValueError", "a": [10 ** 30]}).encode(),     # entier hors 63 bits
+    json.dumps({"$e": "builtins.MemoryError", "a": [[1]]}).encode(),        # argument non scalaire
+    json.dumps({"$e": "builtins.ValueError", "a": ["x"] * 9}).encode(),     # trop d'arguments
+    json.dumps({"$e": "builtins.ValueError", "a": ["x" * 5000]}).encode(),
+    json.dumps({"$b": "pas du base64 !"}).encode(),
+    json.dumps({"$x": 1}).encode(),                                          # balise inconnue
+    json.dumps({"$t": [], "autre": 1}).encode(),                             # balise mélangée à une clé
+    b"[" * 40 + b"]" * 40,                                                   # trop profond
+], ids=lambda o: o[:18].decode("latin1"))
+def test_un_message_hors_schema_est_refuse(octets):
+    with pytest.raises(canal.MessageRefuse):
+        canal.decoder(octets)
+
+
+def test_bombes_de_structures_refusees_avant_toute_construction():
+    for bombe in (b"[" * (canal.STRUCTURES_MAX + 1), b"[" + b"[]," * (canal.STRUCTURES_MAX + 1) + b"[]]",
+                  b"[" + b"1," * (canal.SEPARATEURS_MAX + 1) + b"1]"):
+        debut = time.monotonic()
         with pytest.raises(canal.MessageRefuse):
-            canal.decoder(octets)
-    # 1 octet par liste : l'amplification mémoire est coupée par le décompte d'opcodes
-    bombe = b"\x80\x04" + b"]" * (canal.OPCODES_MAX + 10) + b"."
-    with pytest.raises(canal.MessageRefuse, match="trop d'objets"):
-        canal.decoder(bombe)
+            canal.decoder(bombe)
+        assert time.monotonic() - debut < 0.5
+
+
+def test_bytearray_enorme_refuse_sans_allocation():
+    """``bytearray(10**12)`` tient en une dizaine d'octets : la borne de taille ne l'arrête pas. Il n'est pas du JSON,
+    et rien ne peut le fabriquer dans le schéma (les octets sont du base64 déjà borné)."""
+    class Enorme:
+        def __reduce__(self):
+            return (bytearray, (10 ** 12,))
+    forge = pickle.dumps(("ok", Enorme(), 0), protocol=4)
+    avant = _rss_ko()
+    with pytest.raises(canal.MessageRefuse):
+        canal.decoder(forge)
+    assert _rss_ko() - avant < 50 * 1024          # moins de 50 Mo gagnés (sinon : 1 To demandé)
+    for en_json in (json.dumps({"$b": 10 ** 12}), json.dumps({"$t": 10 ** 12}), json.dumps([0] * 5 + [10 ** 12])):
+        try:
+            canal.decoder(en_json.encode())
+        except canal.MessageRefuse:
+            pass
+    assert _rss_ko() - avant < 50 * 1024
+
+
+def test_des_cles_en_collision_ne_bloquent_pas_le_parent():
+    """Entiers de même hachage (déterministe) dans un ``dict`` : O(n²) avec pickle. Ici : pickle refusé, et en JSON une
+    clé est toujours un ``str`` (hachage aléatoire par processus) : aucune collision fabricable."""
+    n = 30_000
+    collision = {k * (2 ** 61 - 1): 0 for k in range(1, n)}
+    assert len({hash(k) for k in collision}) == 1
+    forge = pickle.dumps(("ok", collision, 0), protocol=4)
+    debut = time.monotonic()
+    with pytest.raises(canal.MessageRefuse):
+        canal.decoder(forge)
+    assert time.monotonic() - debut < 0.1
+    en_json = b'{"$t":["ok",' + json.dumps({str(k * (2 ** 61 - 1)): 0 for k in range(1, n)}).encode() + b',0]}'
+    debut = time.monotonic()
+    assert len(canal.decoder(en_json)[1]) == n - 1
+    assert time.monotonic() - debut < 0.5
 
 
 def test_un_message_plus_gros_que_la_borne_est_refuse_sans_etre_lu(monkeypatch):
-    monkeypatch.setattr(canal, "MESSAGE_MAX_OCTETS_DEFAUT", 1000)
+    monkeypatch.setattr(canal, "MESSAGE_MAX_OCTETS", 1000)
     a, b = mp.Pipe()
-    a.send_bytes(pickle.dumps(b"x" * 5000, protocol=4))
+    a.send_bytes(b'"' + b"x" * 5000 + b'"')
     with pytest.raises(canal.MessageRefuse, match="plus gros"):
         canal.recevoir(b)
     a2, b2 = mp.Pipe()
-    a2.send_bytes(pickle.dumps(b"x" * 100, protocol=4))
+    a2.send_bytes(canal.encoder(b"x" * 100))
     assert canal.recevoir(b2) == b"x" * 100
     with pytest.raises(canal.MessageRefuse):
         canal.encoder(b"x" * 5000)       # l'enfant applique la même borne avant d'envoyer
@@ -118,11 +188,12 @@ def test_un_message_partiel_ne_fait_pas_attendre_au_dela_du_delai():
 
 
 @pytest.mark.parametrize("octets", [
-    pickle.dumps(("inconnu", 1, 0), protocol=4),             # genre inconnu
-    pickle.dumps(("err", "pas une exception", 0), protocol=4),
-    pickle.dumps(("ok", 1), protocol=4),                     # pas 3 éléments
-    pickle.dumps("ok", protocol=4),
-    pickle.dumps(("ok", 1, "x"), protocol=4),                # rss pas un entier
+    b'{"$t":["inconnu",1,0]}',                                # genre inconnu
+    b'{"$t":["err","pas une exception",0]}',
+    b'{"$t":["ok",1]}',                                       # pas 3 éléments
+    b'"ok"',
+    b'{"$t":["ok",1,"x"]}',                                   # rss pas un entier
+    pickle.dumps(("ok", 1, 0), protocol=4),                   # un pickle, même banal : jamais lu
 ])
 def test_une_reponse_hors_protocole_est_refusee(octets):
     with pytest.raises(pp.TravailPdfiumEchoue) as e:
@@ -151,5 +222,5 @@ def test_un_resultat_de_quelques_mo_passe_un_resultat_au_dessus_de_la_borne_est_
     assert len(pp.executer(t.octets, 5, delai_s=60)) == 5 * MO
     avant = pp.executer(t.pid, delai_s=60)
     with pytest.raises(RuntimeError, match="non transmissible"):
-        pp.executer(t.octets, canal.MESSAGE_MAX_OCTETS_DEFAUT // MO + 1, delai_s=60)
+        pp.executer(t.octets, canal.MESSAGE_MAX_OCTETS // MO + 1, delai_s=60)
     assert pp.executer(t.pid, delai_s=60) == avant

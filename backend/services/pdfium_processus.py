@@ -44,8 +44,8 @@ Usage (bloquant : l'appelant asynchrone l'enveloppe dans ``asyncio.to_thread``) 
 
 ``ma_fonction`` est une fonction de NIVEAU MODULE (elle voyage par référence) ; les arguments
 doivent être picklables (sens parent -> enfant : le parent est de confiance). Le RÉSULTAT remonte par
-``services/canal_enfant.py`` : types de base (str, bytes, int, float, bool, None, tuple, list, dict, set)
-et exceptions de sa liste fermée, 32 Mo au plus par message ; l'enfant n'est PAS de confiance (il lit des
+``services/canal_enfant.py`` : du JSON à schéma explicite (str, int, float, bool, None, list, dict à clés str, plus
+tuple, octets et exceptions de sa liste fermée), 16 Mo au plus par message ; l'enfant n'est PAS de confiance (il lit des
 fichiers hostiles), le parent ne fait donc jamais ``pickle.loads`` sur ses octets. Une exception de la
 fonction (de cette liste) est relancée telle quelle chez l'appelant, une autre devient ``RuntimeError`` ; un échec du TRAVAIL (délai, plantage, mémoire) lève ``TravailPdfiumEchoue`` et
 l'API reste debout. Dans l'enfant, ``signaler(objet)`` remonte un avancement vers le
