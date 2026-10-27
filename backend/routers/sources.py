@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from pathlib import Path
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -33,7 +34,7 @@ from models.compliance_item import ComplianceItem
 from models.project import Project, ProjectDocument
 from models.user import User
 from routers.auth import get_auth_user
-from services import ancres_projet, pdf_positions
+from services import ancres_projet, file_storage, pdf_positions
 from services.cache_apercus import cache_par_defaut
 from services.pdf_lecture import PdfIllisible
 from services.pdf_rendu import RenduRefuse, rendre_page_webp
@@ -100,6 +101,41 @@ def _repli(db: Session, item: ComplianceItem) -> dict:
             "niveau": "page", "citation": None}
 
 
+def _url_signee(chemin: Optional[Path], org_id: str) -> Optional[str]:
+    """URL signée à durée limitée (``/api/files/view/...``) d'un fichier sous uploads/ ; le
+    chemin est celui que servirait ``/api/files/sign`` (l'appartenance est revérifiée à chaque
+    lecture par ``file_serve``). Rien du DCE dans l'URL (B26)."""
+    if chemin is None:
+        return None
+    racine = file_storage.UPLOADS_ROOT.resolve()
+    chemin = chemin.resolve()
+    if racine not in chemin.parents or not chemin.is_file():
+        return None
+    return file_storage.sign_file_path(chemin.relative_to(racine).as_posix(), org_id=org_id)
+
+
+def _document_de(db: Session, item: ComplianceItem, ancre: dict, org_id: str) -> Optional[dict]:
+    """Le document à montrer à l'écran : ``url`` = le PDF (celui de la pièce, ou son PDF converti
+    pour un Word ; None s'il n'y en a pas), ``origine`` = la pièce déposée (lien « Ouvrir la
+    pièce »). La pièce est celle de l'ancre, retrouvée DANS le projet de l'exigence ; None si
+    elle n'y est pas."""
+    if not ancre.get("doc_id"):
+        return None
+    piece = (db.query(ProjectDocument)
+             .filter(ProjectDocument.id == ancre["doc_id"],
+                     ProjectDocument.project_id == item.project_id).first())
+    if piece is None:
+        return None
+    origine = None
+    if piece.file_url and not piece.file_url.lower().startswith("http"):
+        origine = _url_signee(file_storage.UPLOADS_ROOT / piece.file_url.removeprefix("/uploads/").lstrip("/"),
+                              org_id)
+    return {"nom": piece.file_name,
+            "url": _url_signee(ancres_projet.chemin_pdf(piece), org_id),
+            "origine": origine,
+            "expire_dans": file_storage.SIGNED_URL_TTL}
+
+
 # ─── A5 : l'ancre ─────────────────────────────────────────────────────────────
 
 @router.get("/{exigence_id}")
@@ -112,7 +148,11 @@ async def lire_ancre(
 ):
     item = _exigence_de_l_org(db, exigence_id, user.organization_id)
     ancre = await asyncio.to_thread(_ancre_de, db, item)
-    return JSONResponse(ancre, headers={"Cache-Control": "private, no-store"})
+    cadre = cadrage_passage(ancre)
+    corps = {**ancre,           # une copie : l'ancre rangée en base ne reçoit jamais ces champs
+             "cadrage": list(cadre) if cadre else None,
+             "document": _document_de(db, item, ancre, user.organization_id)}
+    return JSONResponse(corps, headers={"Cache-Control": "private, no-store"})
 
 
 # ─── A6 : l'aperçu ────────────────────────────────────────────────────────────

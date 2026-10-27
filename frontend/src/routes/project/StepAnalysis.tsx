@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
-  Loader2, Search, FileText,
+  Loader2, Search, Eye,
   CheckCircle2, Sparkles,
 } from 'lucide-react'
 import { api, getSignedFileUrl } from '@/services/api'
@@ -11,7 +11,10 @@ import CriticalBanner, { type FieldSource } from '@/components/project/CriticalB
 import TresorerieCard from '@/components/project/TresorerieCard'
 import SynorixScoreCard from '@/components/project/SynorixScoreCard'
 import RetroPlanning from '@/components/project/RetroPlanning'
-import PdfSourceViewer from '@/components/project/PdfSourceViewer'
+import PanneauSource, { type SelectionSource } from '@/components/project/source/PanneauSource'
+import { reponseDeChamp } from '@/lib/ancre'
+import { precharger, abandonner } from '@/services/sources'
+import { useVisible } from '@/hooks/useVisible'
 import ProgressDisplay, { type StepDescriptor } from '@/components/common/ProgressDisplay'
 import { useProgressStream } from '@/hooks/useProgressStream'
 import { RequirementListSkeleton } from '@/components/skeletons'
@@ -61,61 +64,49 @@ export default function StepAnalysis({ project }: Props) {
     },
   })
 
-  // C6 — viewer PDF intégré (page + excerpt surligné verbatim côté serveur)
-  const [viewer, setViewer] = useState<{ url: string; name: string; page: number } | null>(null)
+  // « Voir dans le DCE » : le panneau à trois vues (Passage, Page, Document), à côté de la liste
+  // sur ordinateur, en feuille qui monte du bas sur téléphone. Le serveur fournit l'ancre.
+  const [selection, setSelection] = useState<SelectionSource | null>(null)
+  const fermerSelection = useCallback(() => setSelection(null), [])
   // 1.16 — ce qui n'a pas abouti est dit (source introuvable, document qui ne s'ouvre pas, relance)
   const [avis, setAvis] = useState<{ message: string; relancer?: () => void } | null>(null)
   const [relanceEnCours, setRelanceEnCours] = useState(false)
 
-  const openInViewer = async (
-    fileUrl: string, fileName: string, page: number | null, excerpt: string | null,
-  ) => {
-    if (fileUrl.startsWith('http')) {
-      window.open(fileUrl, '_blank')
-      return
-    }
+  const nombrePagesDe = (nomPiece: string | null | undefined): number | null =>
+    (nomPiece ? projectDocs.find((d) => d.file_name === nomPiece)?.page_count : null) ?? null
+
+  // C5 — ouvrir la source exacte d'un champ du bandeau critique (ni ancre ni images serveur :
+  // la page citée par l'analyse dans le document, et l'extrait tel quel).
+  const openFieldSource = async (src: FieldSource) => {
+    const doc = projectDocs.find(d => d.file_name === src.document)
+    if (!doc) { setAvis({ message: PASSAGE_INTROUVABLE }); return }
+    if (doc.file_url.startsWith('http')) { window.open(doc.file_url, '_blank'); return }
     try {
-      const signed = await getSignedFileUrl(fileUrl)
-      const url = new URL(signed, window.location.origin)
-      if (page) url.searchParams.set('page', String(page))
-      if (excerpt) url.searchParams.set('highlight', excerpt.slice(0, 300))
-      if (fileUrl.toLowerCase().endsWith('.pdf')) {
-        setViewer({ url: url.toString(), name: fileName, page: page ?? 1 })
-      } else {
-        window.open(url.toString(), '_blank')  // non-PDF : téléchargement
-      }
+      const origine = await getSignedFileUrl(doc.file_url)
+      const pdfRel = [doc.file_url, doc.pdf_preview_url].find((u) => u && u.toLowerCase().endsWith('.pdf')) ?? null
+      const pdf = pdfRel === null ? null : pdfRel === doc.file_url ? origine : await getSignedFileUrl(pdfRel)
+      setSelection({
+        type: 'champ', nombrePages: doc.page_count ?? null,
+        reponse: reponseDeChamp(doc, { page: src.page, excerpt: src.excerpt }, { pdf, origine }),
+      })
       setAvis(null)
     } catch {
       setAvis({
         message: "Le document source n'a pas pu s'ouvrir.",
-        relancer: () => { void openInViewer(fileUrl, fileName, page, excerpt) },
+        relancer: () => { void openFieldSource(src) },
       })
     }
   }
 
-  // C5 — ouvrir la source exacte d'un champ du bandeau critique
-  const openFieldSource = async (src: FieldSource) => {
-    const doc = projectDocs.find(d => d.file_name === src.document)
-    if (!doc) { setAvis({ message: PASSAGE_INTROUVABLE }); return }
-    await openInViewer(
-      doc.pdf_preview_url || doc.file_url, doc.file_name, src.page, src.excerpt,
-    )
-  }
-
-  // Ouvrir le document source dans un nouvel onglet
-  const openSourceDocument = async (item: ComplianceItem) => {
+  // Ouvrir la source d'une exigence : le panneau lit l'ancre auprès du serveur (au premier clic
+  // pour un ancien AO) ; jamais de repli sur une autre pièce du dossier (1.16).
+  const openSourceDocument = (item: ComplianceItem) => {
     if (!item.source_document && !item.source_page) return
-
-    // Jamais de repli sur le premier document du dossier : une pièce
-    // introuvable est dite introuvable (1.16).
-    const doc = trouverPieceCitee(item.source_document, projectDocs)
-    if (!doc) { setAvis({ message: PASSAGE_INTROUVABLE }); return }
-
-    // C6 — ouverture dans le viewer intégré (excerpt entier surligné)
-    await openInViewer(
-      doc.pdf_preview_url || doc.file_url, doc.file_name,
-      item.source_page ?? null, item.source_excerpt ?? null,
-    )
+    setAvis(null)
+    setSelection({
+      type: 'exigence', id: item.id, titre: item.source_document,
+      nombrePages: nombrePagesDe(trouverPieceCitee(item.source_document, projectDocs)?.file_name),
+    })
   }
 
   // Multi-lots : lots analysés disponibles + lot affiché (défaut : lot sélectionné)
@@ -425,16 +416,6 @@ export default function StepAnalysis({ project }: Props) {
         </div>
       </div>
 
-      {/* ── C6 : viewer PDF intégré (source à la bonne page, excerpt surligné) ── */}
-      {viewer && (
-        <PdfSourceViewer
-          fileUrl={viewer.url}
-          fileName={viewer.name}
-          initialPage={viewer.page}
-          onClose={() => setViewer(null)}
-        />
-      )}
-
       {/* Synorix Score retiré de cette page (décision produit) — composant
           et endpoint conservés, réactivables. */}
 
@@ -468,6 +449,11 @@ export default function StepAnalysis({ project }: Props) {
         <RetroPlanning projectId={project.id} />
       </div>
 
+      {/* ── LISTE | PANNEAU « Voir dans le DCE » (ordinateur : côte à côte ; téléphone : feuille) ── */}
+      <div
+        className={selection ? 'grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]' : undefined}
+      >
+      <div className={selection ? 'min-w-0 space-y-3 lg:pb-24' : 'min-w-0 space-y-3'}>
       {/* ── SEARCH BAR ──────────────────────────────────────────── */}
       <div className="relative">
         <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: '#909195' }} />
@@ -511,11 +497,22 @@ export default function StepAnalysis({ project }: Props) {
               category={cat as ComplianceCategory}
               items={catItems}
               onOpenSource={openSourceDocument}
+              selectionId={selection?.type === 'exigence' ? selection.id : null}
               defaultOpen={sectionIdx === 0 || activeFilter !== 'all' || search.trim().length > 0}
             />
           ))}
         </div>
       )}
+
+      </div>
+      {selection && (
+        <PanneauSource
+          key={selection.type === 'exigence' ? selection.id : `champ-${selection.reponse.doc_id}-${selection.reponse.page}`}
+          selection={selection}
+          onFermer={fermerSelection}
+        />
+      )}
+      </div>
 
       {/* ── Sticky bottom bar ───────────────────────────────────── */}
       {bottomBar}
@@ -558,17 +555,19 @@ function ExigenceSection({
   category,
   items,
   onOpenSource,
+  selectionId,
   defaultOpen = false,
 }: {
   category: ComplianceCategory
   items: ComplianceItem[]
   onOpenSource: (item: ComplianceItem) => void
+  selectionId: string | null
   defaultOpen?: boolean
 }) {
   // Section REPLIABLE : avec 400+ exigences, tout-ouvert rend la page
   // interminable. Lignes denses : texte pleine largeur, source + badge
   // sur la même ligne (wrap en mobile), extrait tronqué retiré (le
-  // passage complet vit dans le viewer au clic).
+  // passage complet vit dans le panneau « Voir dans le DCE » au clic).
   const [open, setOpen] = useState(defaultOpen)
 
   return (
@@ -592,61 +591,96 @@ function ExigenceSection({
       {open && (
         <div className="px-5 pb-3">
           {items.map((item, idx) => (
-            <div
+            <ExigenceLigne
               key={item.id}
-              className="flex items-start gap-2.5 py-2 flex-wrap sm:flex-nowrap"
-              style={idx < items.length - 1 ? { borderBottom: '1px solid rgba(255,255,255,.07)' } : undefined}
-            >
-              <span
-                className="shrink-0 mt-0.5 text-xs tabular-nums w-7 text-right"
-                style={{ color: '#909195', fontFamily: '"Geist Mono", monospace' }}
-              >
-                {idx + 1}
-              </span>
-
-              <p className="flex-1 min-w-[240px] text-sm leading-snug" style={{ color: '#D8D9DB' }}>
-                {item.exigence_text}
-                {item.suggestion_ia && (
-                  <span className="block text-xs mt-0.5 italic" style={{ color: '#B4B5B8' }}>
-                    💡 {item.suggestion_ia}
-                  </span>
-                )}
-              </p>
-
-              <div className="flex items-center gap-1.5 shrink-0 ml-auto">
-                {item.source_document && item.source_excerpt && (
-                  <button
-                    onClick={() => onOpenSource(item)}
-                    className="flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-medium transition-opacity hover:opacity-70 hover:underline whitespace-nowrap"
-                    style={{ background: '#1E1E21', color: '#E8E9EB', border: '1px solid rgba(255,255,255,.07)' }}
-                    title={`Voir dans ${item.source_document} — passage surligné`}
-                  >
-                    <FileText size={11} />
-                    {item.source_document}
-                    {item.source_page ? ` p.${item.source_page}` : ''}
-                  </button>
-                )}
-                {item.priority === 'obligatoire' ? (
-                  // Ambre = clause du DCE à respecter (le corail reste aux vraies alertes)
-                  <span
-                    className="px-2 py-0.5 rounded-md text-xs font-medium whitespace-nowrap"
-                    style={{ background: 'var(--warn-bg)', color: 'var(--warn)' }}
-                  >
-                    Obligatoire
-                  </span>
-                ) : (
-                  <span
-                    className="px-2 py-0.5 rounded-md text-xs font-medium whitespace-nowrap"
-                    style={{ background: 'rgba(149,149,151,0.08)', color: '#959597' }}
-                  >
-                    Souhaitée
-                  </span>
-                )}
-              </div>
-            </div>
+              item={item}
+              numero={idx + 1}
+              derniere={idx === items.length - 1}
+              active={item.id === selectionId}
+              onOpenSource={onOpenSource}
+            />
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+// ─── Une ligne d'exigence ────────────────────────────────────────────────────
+
+function ExigenceLigne({
+  item, numero, derniere, active, onOpenSource,
+}: {
+  item: ComplianceItem
+  numero: number
+  derniere: boolean
+  active: boolean
+  onOpenSource: (item: ComplianceItem) => void
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const aUneSource = Boolean(item.source_document && (item.source_excerpt || item.source_page))
+  // Visible à l'écran : l'ancre et la loupe se chargent avant le clic (file bornée, voir services/sources.ts)
+  const entree = useCallback(() => precharger(item.id), [item.id])
+  const sortie = useCallback(() => abandonner(item.id), [item.id])
+  useVisible(ref, aUneSource, entree, sortie)
+
+  return (
+    <div
+      ref={ref}
+      className="exigence-ligne flex items-start gap-x-2.5 gap-y-1 py-2 flex-wrap"
+      aria-current={active ? 'true' : undefined}
+      style={derniere ? undefined : { borderBottom: '1px solid rgba(255,255,255,.07)' }}
+    >
+      <span
+        className="shrink-0 mt-0.5 text-xs tabular-nums w-7 text-right"
+        style={{ color: '#909195', fontFamily: '"Geist Mono", monospace' }}
+      >
+        {numero}
+      </span>
+
+      <p className="flex-1 min-w-[240px] text-sm leading-snug" style={{ color: '#D8D9DB' }}>
+        {item.exigence_text}
+        {item.suggestion_ia && (
+          <span className="block text-xs mt-0.5 italic" style={{ color: '#B4B5B8' }}>
+            💡 {item.suggestion_ia}
+          </span>
+        )}
+      </p>
+
+      <div className="flex min-w-0 max-w-full items-center gap-2 ml-auto flex-wrap justify-end">
+        {aUneSource && (
+          <>
+            <span className="basis-full text-xs sm:basis-auto" style={{ color: '#959597' }}>
+              {item.source_document}{item.source_page ? ` · page ${item.source_page}` : ''}
+            </span>
+            <button
+              type="button"
+              onClick={() => onOpenSource(item)}
+              className="source-voir"
+              aria-label={`Voir dans le DCE : ${item.source_document}${item.source_page ? `, page ${item.source_page}` : ''}`}
+            >
+              <Eye size={16} aria-hidden="true" />
+              Voir dans le DCE
+            </button>
+          </>
+        )}
+        {item.priority === 'obligatoire' ? (
+          // Ambre = clause du DCE à respecter (le corail reste aux vraies alertes)
+          <span
+            className="px-2 py-0.5 rounded-md text-xs font-medium whitespace-nowrap"
+            style={{ background: 'var(--warn-bg)', color: 'var(--warn)' }}
+          >
+            Obligatoire
+          </span>
+        ) : (
+          <span
+            className="px-2 py-0.5 rounded-md text-xs font-medium whitespace-nowrap"
+            style={{ background: 'rgba(149,149,151,0.08)', color: '#959597' }}
+          >
+            Souhaitée
+          </span>
+        )}
+      </div>
     </div>
   )
 }
