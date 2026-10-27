@@ -13,6 +13,12 @@ celery_app.conf.beat_schedule = {
         "task": "tasks.check_expiry.check_all_expirations",
         "schedule": 86400,  # 24 hours
     },
+    # B18 — purge des AO supprimés depuis plus de N jours. Simulation tant que
+    # SYNORIX_PURGE_AO_ACTIVE n'est pas à 1 (comptes journalisés, rien supprimé).
+    "purge-ao-supprimes-daily": {
+        "task": "tasks.purge_ao.purger_ao_supprimes",
+        "schedule": 86400,
+    },
 }
 
 
