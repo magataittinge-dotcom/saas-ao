@@ -44,3 +44,8 @@ test('la coquille connectée garde la barre latérale pendant le chargement d\'u
   const layout = sansCommentaires(lire('src/components/layout/Layout.tsx'))
   assert.ok(/<Suspense fallback=\{<EcranEnChargement[^>]*\/>\}>\s*<Outlet \/>\s*<\/Suspense>/.test(layout))
 })
+
+test('les icônes (lucide-react) sont regroupées en un seul morceau, pas une requête par icône', () => {
+  const config = sansCommentaires(lire('vite.config.ts'))
+  assert.ok(/manualChunks/.test(config) && /node_modules\/lucide-react['"]\)\)\s*return 'icones'/.test(config))
+})
