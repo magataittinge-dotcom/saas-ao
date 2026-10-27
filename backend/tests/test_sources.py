@@ -296,10 +296,10 @@ def test_paliers():
 
 # ─── débit ────────────────────────────────────────────────────────────────────
 
-def test_limite_de_debit_sur_les_deux_routes(client, dossier):
+def test_limite_de_debit_sur_les_routes(client, dossier):
     from services.rate_limit import limiter
     cles = [k for k in limiter._route_limits if k.startswith("routers.sources.")]
-    assert sorted(cles) == ["routers.sources.apercu", "routers.sources.lire_ancre"]
+    assert sorted(cles) == ["routers.sources.apercu", "routers.sources.lire_ancre", "routers.sources.tableau"]
     limiter.enabled = True
     try:
         limiter.reset()

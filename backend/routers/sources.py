@@ -7,6 +7,10 @@ GET /api/sources/{exigence_id}
 GET /api/sources/{exigence_id}/apercu?vue=passage|page&largeur=
     Image WebP : « passage » = loupe recadrée autour des rectangles, « page » = page entière
     (le front pose les rectangles de l'ancre par-dessus).
+GET /api/sources/{exigence_id}/tableau
+    Tableur (DPGF, BPU, DQE) : l'en-tête et une fenêtre de lignes autour de la ligne citée, en
+    texte, tels que le fichier les contient (aucun calcul). Même sécurité ; lecture bornée dans
+    le processus plafonné en mémoire et à délai.
 
 Sécurité by-design :
 - l'exigence doit appartenir à un projet (non supprimé) de l'organisation de l'utilisateur,
@@ -33,7 +37,7 @@ from models.compliance_item import ComplianceItem
 from models.project import Project, ProjectDocument
 from models.user import User
 from routers.auth import get_auth_user
-from services import ancres_projet, pdf_positions
+from services import ancres_projet, pdf_positions, pdfium_processus, tableur_ancre
 from services.cache_apercus import cache_par_defaut
 from services.pdf_lecture import PdfIllisible
 from services.pdf_rendu import RenduRefuse, rendre_page_webp
@@ -46,6 +50,8 @@ router = APIRouter()
 
 LIMITE_ANCRE = "120/minute"
 LIMITE_APERCU = "300/minute"      # le front précharge les passages des exigences visibles
+LIMITE_TABLEAU = "120/minute"
+DELAI_TABLEAU_S = 20              # lecture d'une fenêtre de tableur, dans le processus plafonné
 
 # Largeurs d'image servies (px) : la demande est ramenée au palier supérieur.
 PALIERS_LARGEUR = (480, 720, 960, 1280, 1600)
@@ -93,6 +99,8 @@ def _repli(db: Session, item: ComplianceItem) -> dict:
     """Pas d'ancre calculable (délai, plantage, pièce non PDF) : la page citée par l'analyse
     si elle existe, sinon rien. Non rangé : un prochain clic peut réussir."""
     piece = ancres_projet.piece_de(db, item)
+    if piece is not None and tableur_ancre.est_tableur(piece.file_url):
+        return tableur_ancre.ancre_aucune(piece.id)       # pas de page dans un tableur
     page = item.source_page if item.source_page and item.source_page >= 1 else None
     if piece is None or page is None or ancres_projet.chemin_pdf(piece) is None:
         return ancres_projet.ancre_aucune(piece.id if piece else None)
@@ -188,3 +196,50 @@ async def apercu(
         content=octets, media_type="image/webp",
         headers={"Cache-Control": "private, max-age=86400, immutable",
                  "X-Content-Type-Options": "nosniff"})
+
+
+# ─── Tableur : la fenêtre autour de la ligne citée ────────────────────────────
+
+def _preparer_tableau(db: Session, item: ComplianceItem):
+    """(chemin du tableur, ancre) ; 404 si l'exigence ne cite pas un tableur lisible. Bloquant."""
+    ancre = _ancre_de(db, item)
+    piece = None
+    if ancre.get("format") == "tableur" and ancre.get("feuille") and ancre.get("doc_id"):
+        # la pièce de l'ancre, DANS le projet de l'exigence
+        piece = (db.query(ProjectDocument)
+                 .filter(ProjectDocument.id == ancre["doc_id"],
+                         ProjectDocument.project_id == item.project_id).first())
+    chemin = ancres_projet.chemin_tableur(piece) if piece else None
+    if chemin is None:
+        raise HTTPException(status_code=404, detail="Tableau indisponible")
+    return chemin, ancre
+
+
+@router.get("/{exigence_id}/tableau")
+@limiter.limit(LIMITE_TABLEAU)
+async def tableau(
+    request: Request,
+    exigence_id: str,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """La ligne citée d'un tableur (DPGF, BPU, DQE) avec quelques lignes autour et l'en-tête,
+    en texte, tels que le fichier les contient : aucun calcul, aucun montant mis en avant.
+    Le client ne donne ni chemin, ni feuille, ni numéro de ligne : tout vient de l'ancre."""
+    item = _exigence_de_l_org(db, exigence_id, user.organization_id)
+    chemin, ancre = await asyncio.to_thread(_preparer_tableau, db, item)
+    rendre_connexion(db)         # plus de base ensuite : la lecture peut durer
+    try:
+        fenetre = await asyncio.to_thread(
+            pdfium_processus.executer, tableur_ancre.fenetre, str(chemin), ancre["feuille"],
+            ancre.get("ligne"), delai_s=DELAI_TABLEAU_S)
+    except TravailPdfiumEchoue as e:
+        if e.raison in ("attente", "indisponible"):
+            raise            # 503 + Retry-After (gestionnaire de pdfium_http)
+        raise HTTPException(status_code=404, detail="Tableau indisponible") from None
+    except Exception as e:   # fichier illisible, bombe refusée : le même 404, rien du fichier dans la réponse
+        logger.warning("Tableau illisible (%s)", type(e).__name__)
+        raise HTTPException(status_code=404, detail="Tableau indisponible") from None
+    if fenetre is None:
+        raise HTTPException(status_code=404, detail="Tableau indisponible")
+    return JSONResponse(fenetre, headers={"Cache-Control": "private, no-store"})
