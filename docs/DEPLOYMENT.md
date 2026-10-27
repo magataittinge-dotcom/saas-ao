@@ -400,6 +400,9 @@ deploy/outils/envoyer_front.sh deploy@synorix.tech
 Il lance `npm run build` (tsc, vite, précompression `.gz`/`.br`), envoie `dist/` par rsync dans
 `/srv/synorix/frontend/dist` (dossier de dépôt, non servi), puis lance `publier_front.sh` sur le serveur :
 nouveaux assets d'abord, `index.html` en dernier, anciens assets gardés 7 jours.
+**Garde** : il refuse d'envoyer si le commit du PC (`git rev-parse HEAD`) n'est pas celui du serveur, ou si
+`frontend/` a une modification non commitée (fichier non suivi compris) ; vérifié avant le build et juste
+avant l'envoi. Jamais un front d'une version avec un back d'une autre : déployer le backend d'abord.
 
 **Backend** (`/srv/synorix/deploy.sh`, exécuté par `deploy`) :
 
