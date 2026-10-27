@@ -187,3 +187,19 @@ def pdf_piege(mo: int) -> bytes:
         sortie += b"%010d 00000 n \n" % p
     sortie += b"trailer\n<</Size %d/Root 1 0 R>>\nstartxref\n%d\n%%%%EOF\n" % (len(objets) + 1, xref)
     return bytes(sortie)
+
+
+def pdf_pivote(octets: bytes, angle: int, taille_page: Optional[tuple[float, float]] = None) -> bytes:
+    """Le même PDF dont la première page porte /Rotate ``angle`` (90, 180, 270) ; si
+    ``taille_page`` est donnée, sa MediaBox devient (largeur, hauteur) en points."""
+    with VERROU_PDFIUM:
+        pdf = pdfium.PdfDocument(octets)
+        try:
+            page = pdf[0]
+            page.set_rotation(angle)
+            if taille_page is not None:
+                page.set_mediabox(0, 0, *taille_page)
+            page.close()
+            return _enregistrer(pdf)
+        finally:
+            pdf.close()
