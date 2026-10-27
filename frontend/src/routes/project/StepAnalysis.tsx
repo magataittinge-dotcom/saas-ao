@@ -13,7 +13,7 @@ import SynorixScoreCard from '@/components/project/SynorixScoreCard'
 import RetroPlanning from '@/components/project/RetroPlanning'
 import PanneauSource, { type SelectionSource } from '@/components/project/source/PanneauSource'
 import VueTableau, { enAncreTableur } from '@/components/project/source/VueTableau'
-import { reponseDeChamp } from '@/lib/ancre'
+import { pageCitee, reponseDeChamp } from '@/lib/ancre'
 import { precharger, abandonner } from '@/services/sources'
 import { useVisible } from '@/hooks/useVisible'
 import ProgressDisplay, { type StepDescriptor } from '@/components/common/ProgressDisplay'
@@ -623,6 +623,7 @@ function ExigenceLigne({
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const aUneSource = Boolean(item.source_document && (item.source_excerpt || item.source_page))
+  const page = pageCitee(item)
   // Visible à l'écran : l'ancre et la loupe se chargent avant le clic (file bornée, voir services/sources.ts)
   const entree = useCallback(() => precharger(item.id), [item.id])
   const sortie = useCallback(() => abandonner(item.id), [item.id])
@@ -655,13 +656,13 @@ function ExigenceLigne({
         {aUneSource && (
           <>
             <span className="basis-full text-xs sm:basis-auto" style={{ color: '#959597' }}>
-              {item.source_document}{item.source_page ? ` · page ${item.source_page}` : ''}
+              {item.source_document}{page ? ` · page ${page}` : ''}
             </span>
             <button
               type="button"
               onClick={() => onOpenSource(item)}
               className="source-voir"
-              aria-label={`Voir dans le DCE : ${item.source_document}${item.source_page ? `, page ${item.source_page}` : ''}`}
+              aria-label={`Voir dans le DCE : ${item.source_document}${page ? `, page ${page}` : ''}`}
             >
               <Eye size={16} aria-hidden="true" />
               Voir dans le DCE

@@ -113,6 +113,23 @@ def test_exigence_sans_extrait_niveau_aucun_pas_d_erreur(client, dossier):
     assert r.status_code == 200 and r.json()["niveau"] == "aucun"
 
 
+@pytest.mark.parametrize("extrait", [None, "", "   \n "])
+def test_exigence_sans_extrait_aucune_page_citee_meme_avec_l_ancien_defaut_page_1(client, db_session, dossier, extrait):
+    """Décision 1 du bloc 5 : sans extrait, l'analyse n'a cité aucune page. Les anciens AO portent
+    ``source_page = 1`` (ancien défaut ``or 1``) : la base n'est pas réécrite, l'affichage ne le
+    prend pas pour une page citée. Le bouton ouvre la pièce entière (niveau « aucun », document)."""
+    db_session.add(ComplianceItem(id="e-old", project_id="p-src", exigence_text="x", source_document="cctp.pdf",
+                                  source_page=1, source_excerpt=extrait))
+    db_session.commit()
+    r = client.get("/api/sources/e-old")
+    assert r.status_code == 200
+    corps = r.json()
+    assert corps["niveau"] == "aucun" and corps["page"] is None and corps["rects"] == []
+    assert corps["document"]["nom"] == "cctp.pdf" and corps["document"]["origine"]     # la pièce entière reste ouvrable
+    db_session.expire_all()
+    assert db_session.get(ComplianceItem, "e-old").source_page == 1                  # la base n'est pas réécrite
+
+
 def test_pdf_illisible_repli_sur_la_page_citee_jamais_500(client, db_session, dossier):
     dossier.write_bytes(b"ceci n'est pas un pdf")
     r = client.get("/api/sources/e1")

@@ -155,6 +155,14 @@ export function libelleNiveau(ancre: Pick<Ancre, 'niveau' | 'suite' | 'format'>)
   return 'Pièce citée par l’analyse'
 }
 
+/** La page que l'analyse a citée pour une exigence, ou null. Sans extrait, l'analyse n'a cité aucune
+ *  page : les anciens AO portent `source_page = 1` (ancien défaut, la base n'est pas réécrite) et ce
+ *  1 ne s'affiche pas comme une page citée. Même règle côté serveur (routers/sources.py::_repli). */
+export function pageCitee(item: { source_page?: number | null; source_excerpt?: string | null }): number | null {
+  if (!(item.source_excerpt ?? '').trim()) return null
+  return item.source_page && item.source_page >= 1 ? item.source_page : null
+}
+
 // ─── Citation ────────────────────────────────────────────────────────────────
 
 const ESPACES = /\s+/g

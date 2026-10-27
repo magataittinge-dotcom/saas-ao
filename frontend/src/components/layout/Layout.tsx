@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { Suspense, useState, useCallback } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { cn } from '@/lib/utils'
@@ -7,6 +7,7 @@ import Header from './Header'
 import LegalFooter from './LegalFooter'
 import CommandPalette from './CommandPalette'
 import { ToastContainer } from '@/components/common/Toast'
+import EcranEnChargement from '@/components/common/EcranEnChargement'
 
 // Écrans déjà passés au thème clair « Calque ». La coquille (barre latérale,
 // en-tête, palette ⌘K) l'est partout ; les autres écrans gardent Lumen
@@ -43,7 +44,9 @@ export default function Layout() {
           )}
         >
           <div className="flex-1">
-            <Outlet />
+            <Suspense fallback={<EcranEnChargement clair={calque} />}>
+              <Outlet />
+            </Suspense>
           </div>
           <LegalFooter calque={calque} />
         </main>

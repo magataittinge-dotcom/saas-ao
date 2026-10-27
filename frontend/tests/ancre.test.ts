@@ -3,7 +3,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  aiguiller, centreVertical, citationAffichee, couperContexte, defilementCentre, formatDe, libelleNiveau,
+  aiguiller, centreVertical, citationAffichee, couperContexte, defilementCentre, formatDe, libelleNiveau, pageCitee,
   rectsAffiches, rectsDansLoupe, tournerRectangle, urlExpiree, vueParDefaut, vuesDisponibles,
   type Ancre, type ReponseSource, type Rect,
 } from '@/lib/ancre'
@@ -157,4 +157,13 @@ test('citation : le passage reste entier, seul le contexte est raccourci', () =>
 test('URL signée : valable jusqu\'à une minute avant son expiration', () => {
   assert.equal(urlExpiree(0, 900, 839_000), false)
   assert.equal(urlExpiree(0, 900, 840_000), true)
+})
+
+test('page citée : sans extrait, aucune page (l\'ancien défaut « page 1 » n\'est pas une page citée)', () => {
+  assert.equal(pageCitee({ source_page: 1, source_excerpt: undefined }), null)
+  assert.equal(pageCitee({ source_page: 1, source_excerpt: null }), null)
+  assert.equal(pageCitee({ source_page: 1, source_excerpt: '  \n ' }), null)
+  assert.equal(pageCitee({ source_page: 4, source_excerpt: 'Le titulaire fournit.' }), 4)
+  assert.equal(pageCitee({ source_page: null, source_excerpt: 'Le titulaire fournit.' }), null)
+  assert.equal(pageCitee({ source_page: 0, source_excerpt: 'Le titulaire fournit.' }), null)
 })

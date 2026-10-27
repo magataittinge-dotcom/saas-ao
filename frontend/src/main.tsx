@@ -3,19 +3,24 @@ import ReactDOM from 'react-dom/client'
 import { ClerkProvider } from '@clerk/clerk-react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
-import '@fontsource/geist-sans/400.css'
-import '@fontsource/geist-sans/500.css'
-import '@fontsource/geist-sans/600.css'
-import '@fontsource/geist-sans/700.css'
-import '@fontsource-variable/inter'
-import '@fontsource/space-grotesk/500.css'
-import '@fontsource/space-grotesk/600.css'
-import '@fontsource/space-grotesk/700.css'
-import '@fontsource/geist-mono/400.css'
-import '@fontsource/geist-mono/500.css'
-import '@fontsource/geist-mono/600.css'
+// Polices : latin et latin-ext seulement (français), rien d'inutilisé (bloc 6).
+// Geist Sans : landing, connexion, inscription, tarifs, mentions légales (pas de latin-ext publié).
+import '@fontsource/geist-sans/latin-400.css'
+import '@fontsource/geist-sans/latin-500.css'
+import '@fontsource/geist-sans/latin-600.css'
+import '@fontsource/geist-sans/latin-700.css'
+import './styles/polices.css'
+import '@fontsource/geist-mono/latin-400.css'
+import '@fontsource/geist-mono/latin-ext-400.css'
+import '@fontsource/geist-mono/latin-500.css'
+import '@fontsource/geist-mono/latin-ext-500.css'
+import '@fontsource/geist-mono/latin-600.css'
+import '@fontsource/geist-mono/latin-ext-600.css'
 import './styles/tokens.css'
 import './index.css'
+import { installerRechargementDeploiement } from './lib/rechargementDeploiement'
+
+installerRechargementDeploiement()
 
 const CLERK_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
 
