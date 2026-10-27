@@ -187,14 +187,18 @@ _prepare_schema()
 
 
 def _reconcile_orphans_at_boot():
-    """R5 — au démarrage, rembourse et rouvre les runs laissés 'analyzing'/
-    'generating' par un crash process. Ne bloque jamais le démarrage."""
+    """R5/B6 — au démarrage, rembourse et rouvre les runs laissés 'analyzing'/
+    'generating' par un crash process, et reprend (sans appel payant) les dépôts
+    coupés en 'extracting_zip'/'extracting_text'/'detecting_lots'. Ne bloque jamais
+    le démarrage."""
     try:
         from database import SessionLocal
-        from services.run_reconciliation import reconcile_orphan_runs
+        from services.run_reconciliation import (
+            lancer_extraction_en_fond, reconcile_orphan_runs,
+        )
         db = SessionLocal()
         try:
-            reconcile_orphan_runs(db)
+            reconcile_orphan_runs(db, relancer_extraction=lancer_extraction_en_fond)
         finally:
             db.close()
     except Exception as exc:
