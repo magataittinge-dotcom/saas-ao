@@ -236,15 +236,17 @@ _MOTS_VIDES = frozenset({
 
 # Sigles courants des lots du BTP (décision de Mohamed du 27/10) : la formule
 # entière et son sigle deviennent le même mot, dans le titre de l'article comme
-# dans la désignation du lot (l'équivalence joue donc dans les deux sens). Une
-# formule partielle ne compte pas : « chauffage ventilation » n'est pas « CVC »
-# (climatisation absente). Motifs bornés, sans quantificateur imbriqué.
+# dans la désignation du lot (l'équivalence joue donc dans les deux sens).
+# « Chauffage ventilation » seul vaut CVC (décision du 27/10, bloc 6) : c'est
+# l'intitulé de lot courant, la climatisation est facultative. Les autres
+# formules partielles ne comptent pas. Motifs bornés, sans quantificateur imbriqué.
 # Sources (expansion du sigle ; aucun glossaire FFB/CAPEB/AQC/OPPBTP ne les
 # donne tous, voir le commit) :
 #   VRD : France Compétences, fiche RNCP 38080 « TP - Maçon en voirie et
 #         réseaux divers » (« maçon VRD ») ; AQC, fiche Interfaces A03 « Lot VRD ».
 #   CVC : OQLF, Grand dictionnaire terminologique (2014), « système de
-#         chauffage, de ventilation et de climatisation » → « système CVC ».
+#         chauffage, de ventilation et de climatisation » → « système CVC » ;
+#         marche-public.fr, « Exemples d'allotissement », lot « plomberie – CVC ».
 #   TCE : Légifrance, avis sur les index du bâtiment (JORFTEXT000044213303),
 #         index BT01 « Tous corps d'état » ; AQC, fiche Interfaces A03 « lots TCE ».
 #   CFO / CFA / GO : mots du métier, gardés (décision de Mohamed du 27/10) : ce
@@ -259,7 +261,7 @@ _MOTS_VIDES = frozenset({
 #         Gros œuvre : CSTB, guide « Gros œuvre ».
 _SIGLES = (
     (re.compile(r"\bgros oeuvre\b"), "go"),
-    (re.compile(r"\bchauffage ventilation (?:et )?climatisation\b"), "cvc"),
+    (re.compile(r"\bchauffage ventilation(?: (?:et )?climatisation)?\b"), "cvc"),
     (re.compile(r"\bvoiries? (?:et )?reseaux? divers\b"), "vrd"),
     (re.compile(r"\bcourants? forts?\b"), "cfo"),
     (re.compile(r"\bcourants? faibles?\b"), "cfa"),

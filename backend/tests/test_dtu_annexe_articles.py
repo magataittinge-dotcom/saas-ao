@@ -184,9 +184,23 @@ def test_un_sigle_ne_rattache_pas_a_deux_lots():
     assert rattache_article("LOT CFO", _lot_n("9", "Électricité CFO CFA", ("10", "Plomberie"))) is True
 
 
-def test_le_depliage_exige_la_formule_entiere():
-    # « chauffage ventilation » seul n'est pas « CVC » (climatisation absente) : prudence
-    assert rattache_article("LOT CVC", _lot_n("11", "Chauffage – Ventilation", ("9", "Peinture"))) is False
+def test_chauffage_ventilation_seul_vaut_cvc():
+    # Décision de Mohamed (27/10, bloc 6) : « chauffage ventilation » seul vaut CVC.
+    # Source : marche-public.fr, « Exemples d'allotissement », lot « plomberie – CVC ».
+    autres = ("9", "Peinture")
+    assert rattache_article("LOT CVC", _lot_n("11", "Chauffage – Ventilation", autres)) is True
+    assert rattache_article("LOT CHAUFFAGE VENTILATION", _lot_n("11", "CVC", autres)) is True
+    assert rattache_article("LOT CHAUFFAGE VENTILATION CLIMATISATION",
+                            _lot_n("11", "Chauffage – Ventilation", autres)) is True
+    # un autre métier ne devient pas CVC : plomberie seule, ventilation seule, chauffage seul
+    assert rattache_article("LOT CVC", _lot_n("11", "Plomberie", autres)) is False
+    assert rattache_article("LOT CVC", _lot_n("11", "Ventilation", autres)) is False
+    assert rattache_article("LOT CVC", _lot_n("11", "Chauffage", autres)) is False
+
+
+def test_chauffage_ventilation_ne_rattache_pas_deux_lots():
+    lot = _lot_n("11", "Chauffage – Ventilation", ("12", "CVC"))
+    assert rattache_article("LOT CVC", lot) is False   # « cvc » désigne aussi le lot 12
 
 
 def test_tce_seul_ne_rattache_aucun_lot_de_metier():
