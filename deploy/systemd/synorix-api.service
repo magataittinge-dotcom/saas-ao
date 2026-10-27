@@ -10,7 +10,9 @@ Type=simple
 User=synorix
 Group=synorix
 WorkingDirectory=/srv/synorix/backend
-EnvironmentFile=/srv/synorix/backend/.env
+# Secrets : /etc/synorix/synorix.env (root, 0600), lu par systemd en root ; synorix ne peut pas le lire,
+# l'appli reçoit les variables par son environnement (aucun backend/.env en production).
+EnvironmentFile=/etc/synorix/synorix.env
 # --workers 1 OBLIGATOIRE : progression en mémoire du processus, travaux longs en threads de l'API,
 # réconciliation au démarrage mono-processus (DEPLOYMENT.md §7). 1 vCPU de toute façon.
 # --forwarded-allow-ips 127.0.0.1, JAMAIS « * » : sinon l'IP client se falsifie par X-Forwarded-For.

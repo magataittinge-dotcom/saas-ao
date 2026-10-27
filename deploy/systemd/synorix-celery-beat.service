@@ -9,7 +9,9 @@ Type=simple
 User=synorix
 Group=synorix
 WorkingDirectory=/srv/synorix/backend
-EnvironmentFile=/srv/synorix/backend/.env
+# Secrets : /etc/synorix/synorix.env (root, 0600), lu par systemd en root ; synorix ne peut pas le lire,
+# l'appli reçoit les variables par son environnement (aucun backend/.env en production).
+EnvironmentFile=/etc/synorix/synorix.env
 # Fichier d'état de beat dans /var/lib/synorix-beat (StateDirectory, créé par systemd),
 # pour garder le code en lecture seule.
 StateDirectory=synorix-beat

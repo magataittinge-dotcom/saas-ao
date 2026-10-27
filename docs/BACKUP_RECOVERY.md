@@ -12,7 +12,7 @@
 |---|---|---|---|---|
 | PostgreSQL `synorix` | 100 Mo - 5 Go | RGPD haute | Quotidien (03:00) | Local + restic chiffré hors du VPS |
 | `/srv/synorix/backend/uploads/` | 5 Go - 200 Go | RGPD haute | Quotidien (03:00, même passage) | restic chiffré hors du VPS (dédupliqué) |
-| `/srv/synorix/backend/.env`, mot de passe de restic | <1 Ko | Critique secrets | Manuel | gestionnaire de mots de passe de Mohamed (jamais le dépôt) |
+| `/etc/synorix/synorix.env`, mot de passe de restic | <1 Ko | Critique secrets | Manuel | gestionnaire de mots de passe de Mohamed (jamais le dépôt) |
 | Configuration nginx + systemd | <1 Mo | Faible | Hebdo | Git privé |
 
 ---

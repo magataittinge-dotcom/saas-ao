@@ -31,18 +31,15 @@ chmod 600 /home/deploy/.ssh/authorized_keys
 
 ### 1.2 Sécurisation SSH
 
-`/etc/ssh/sshd_config` :
-```
-PermitRootLogin no
-PasswordAuthentication no
-PubkeyAuthentication yes
-MaxAuthTries 3
-ClientAliveInterval 300
-ClientAliveCountMax 2
-AllowUsers deploy
-```
+Fichier : `deploy/ssh/00-synorix.conf` → `/etc/ssh/sshd_config.d/00-synorix.conf` (clé seulement, jamais
+root, seul `deploy`). Le préfixe « 00 » compte : sshd garde la **première** valeur lue, et Ubuntu 24.04 livre
+`50-cloud-init.conf` avec `PasswordAuthentication yes`. Vérifié avec le sshd de noble, ce fichier de
+cloud-init présent : `sshd -t` OK, valeurs effectives `passwordauthentication no`, `permitrootlogin no`.
+Clé de Mohamed **protégée par une phrase de passe** ; `deploy` garde un sudo **avec mot de passe** (jamais
+`NOPASSWD`). Ne jamais redémarrer ssh sans `sudo sshd -t` d'abord, ni sans une 2e session ouverte ; la
+Console Web d'Hostinger sert de secours.
 ```bash
-systemctl restart ssh
+sudo sshd -t && sudo systemctl restart ssh
 ```
 
 ### 1.3 Firewall
@@ -59,19 +56,11 @@ ufw status
 
 ### 1.4 fail2ban
 
+Fichier : `deploy/fail2ban/synorix.conf` → `/etc/fail2ban/jail.d/synorix.conf` (journal de systemd ;
+5 échecs en 10 min → 1 h de bannissement, doublé à chaque récidive).
 ```bash
-apt update && apt install -y fail2ban
-cat > /etc/fail2ban/jail.local <<'EOF'
-[DEFAULT]
-bantime = 3600
-findtime = 600
-maxretry = 5
-
-[sshd]
-enabled = true
-EOF
-systemctl enable --now fail2ban
-fail2ban-client status sshd
+sudo apt install -y fail2ban && sudo systemctl enable --now fail2ban
+sudo fail2ban-client status sshd
 ```
 
 ### 1.5 Mises à jour automatiques
@@ -175,7 +164,11 @@ Envoi : §10.
 
 ## 6. Variables d'environnement
 
-`/srv/synorix/backend/.env` (chmod 600, owned by `synorix`) :
+`/etc/synorix/synorix.env` (**root, 0600** ; décision du 27/10) : systemd le lit en root avant de lancer les
+services (`EnvironmentFile`), l'utilisateur `synorix` ne peut pas le lire, et il n'y a **aucun
+`backend/.env` en production** (la config ne lit `.env` que s'il existe). Les commandes ponctuelles
+(alembic, simulation de purge) passent par `systemd-run` avec le même fichier, §10. Les valeurs sont
+tapées par Mohamed sur le serveur, jamais dans le dépôt ni dans un journal :
 
 ```
 DEBUG=false
@@ -205,8 +198,9 @@ METRICS_TOKEN=$(openssl rand -hex 32)  # ops : accès /api/metrics (S3.5) — sa
 > `Authorization: Bearer $METRICS_TOKEN`. Scrape ops/Prometheus → passer ce header.
 
 ```bash
-chown synorix:synorix /srv/synorix/backend/.env
-chmod 600 /srv/synorix/backend/.env
+sudo install -d -m 700 /etc/synorix
+sudo install -m 600 /dev/null /etc/synorix/synorix.env
+sudoedit /etc/synorix/synorix.env
 ```
 
 ### Lecture des PDF déposés : un processus isolé (KVM 1)
@@ -357,7 +351,7 @@ Type=simple
 User=synorix
 Group=synorix
 WorkingDirectory=/srv/synorix/backend
-EnvironmentFile=/srv/synorix/backend/.env
+EnvironmentFile=/etc/synorix/synorix.env
 ExecStart=/srv/synorix/backend/venv/bin/python -m services.telegram_bot
 Restart=always
 RestartSec=10
@@ -420,7 +414,8 @@ git pull --ff-only origin main
 echo "→ Dépendances Python"
 backend/venv/bin/pip install -r backend/requirements.txt --quiet
 echo "→ Migrations (alembic, source unique du schéma ; l'API refuse de démarrer hors de la head)"
-sudo -u synorix backend/venv/bin/alembic -c backend/alembic.ini upgrade head
+sudo systemd-run --wait --pipe --quiet -p User=synorix -p EnvironmentFile=/etc/synorix/synorix.env \
+  -p WorkingDirectory=/srv/synorix/backend /srv/synorix/backend/venv/bin/alembic -c alembic.ini upgrade head
 echo "→ Redémarrage (worker et beat aussi : ils chargent le code à leur démarrage)"
 sudo systemctl restart synorix-api synorix-celery-worker synorix-celery-beat
 sudo systemctl reload nginx
