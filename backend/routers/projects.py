@@ -651,6 +651,10 @@ async def upload_project_document(
     _t0 = _time.monotonic()
 
     _get_project_or_404(project_id, user.organization_id, db)
+    # B5 : lecture seule faite -> la connexion retourne au pool pendant la réception du
+    # corps (jusqu'à plusieurs minutes pour un DCE de 380 Mo). Rouverte à la première
+    # écriture ; les objets déjà chargés se rechargent d'eux-mêmes.
+    db.rollback()
 
     # ── Cheap validation: extension first, before reading any bytes ──────────
     raw_filename = (file.filename or "").strip()
@@ -992,6 +996,10 @@ def _extract_all_parallel(project_id: str, docs_info: list) -> None:
             )
         except Exception:
             pass
+        # B5 : lire -> FERMER la session -> lecture longue -> nouvelle session courte pour
+        # écrire. Tenir la session pendant la lecture gardait une connexion du pool par
+        # pièce (8 par dépôt) pendant tout le parse.
+        file_path = None
         try:
             db_inner = SessionLocal()
             try:
@@ -1002,26 +1010,31 @@ def _extract_all_parallel(project_id: str, docs_info: list) -> None:
                     return
                 rel = doc.file_url.removeprefix("/uploads/")
                 file_path = UPLOADS_ROOT / rel
-                if not file_path.exists():
-                    return
-                def _on_page(done_pages: int, total_pages: int) -> None:
-                    # Pas de lock ici : écriture d'une clé propre au thread,
-                    # et _publish_partial prend count_lock lui-même.
-                    page_fractions[doc_id] = done_pages / max(total_pages, 1)
-                    # Le libellé porte la page : un gros PDF seul en fin de
-                    # pool ne fait plus bouger le % — le libellé, si.
-                    _publish_partial(
-                        detail=f"Indexation : {filename[:50]} — page {done_pages}/{total_pages}")
-
-                result_text, result_pages, extraction_warning = _extraire(
-                    file_path, filename, doc_id, on_page=_on_page)
-                if result_text:
-                    extracted_text = result_text.replace("\x00", "")
-                page_count = result_pages
             finally:
                 db_inner.close()
+            if not file_path.exists():
+                return
+
+            def _on_page(done_pages: int, total_pages: int) -> None:
+                # Pas de lock ici : écriture d'une clé propre au thread,
+                # et _publish_partial prend count_lock lui-même.
+                page_fractions[doc_id] = done_pages / max(total_pages, 1)
+                # Le libellé porte la page : un gros PDF seul en fin de
+                # pool ne fait plus bouger le % — le libellé, si.
+                _publish_partial(
+                    detail=f"Indexation : {filename[:50]} — page {done_pages}/{total_pages}")
+
+            result_text, result_pages, extraction_warning = _extraire(
+                file_path, filename, doc_id, on_page=_on_page)
+            if result_text:
+                extracted_text = result_text.replace("\x00", "")
+            page_count = result_pages
         except Exception as e:
             _log.error(f"Fast extraction failed for {filename}: {e}")
+            # Jamais un texte vide enregistré en silence : la pièce porte un message visible.
+            extraction_warning = (
+                f"La lecture de « {filename[:80]} » n'a pas abouti — "
+                "redéposez la pièce ou joignez-en une version lisible.")[:300]
 
         try:
             db_inner = SessionLocal()
@@ -1112,22 +1125,28 @@ def _extract_all_parallel(project_id: str, docs_info: list) -> None:
     def _extract_phase2(doc_id: str, filename: str) -> None:
         """Full text extraction for large PDFs (viewer highlighting)."""
         try:
+            # B5 : session fermée pendant la lecture longue, rouverte pour écrire.
             db_inner = SessionLocal()
             try:
                 doc = db_inner.query(ProjectDocument).filter(ProjectDocument.id == doc_id).first()
                 if not doc or not doc.file_url:
                     return
-                rel = doc.file_url.removeprefix("/uploads/")
-                file_path = UPLOADS_ROOT / rel
-                if not file_path.exists():
-                    return
-                result_text, result_pages, result_warning = _extraire(file_path, filename, doc_id)
-                if result_text:
-                    doc.extracted_text = result_text.replace("\x00", "")
-                doc.extraction_warning = result_warning
-                if result_pages is not None:
-                    doc.page_count = result_pages
-                db_inner.commit()
+                file_path = UPLOADS_ROOT / doc.file_url.removeprefix("/uploads/")
+            finally:
+                db_inner.close()
+            if not file_path.exists():
+                return
+            result_text, result_pages, result_warning = _extraire(file_path, filename, doc_id)
+            db_inner = SessionLocal()
+            try:
+                doc = db_inner.query(ProjectDocument).filter(ProjectDocument.id == doc_id).first()
+                if doc:
+                    if result_text:
+                        doc.extracted_text = result_text.replace("\x00", "")
+                    doc.extraction_warning = result_warning
+                    if result_pages is not None:
+                        doc.page_count = result_pages
+                    db_inner.commit()
             finally:
                 db_inner.close()
         except Exception as e:
@@ -1593,6 +1612,7 @@ async def _handle_zip_upload(
         .all()
     )
     existing_names: set = {row[0].lower().strip() for row in existing_rows}
+    db.commit()   # B5 : rien en attente ; la connexion est rendue pendant l'extraction (6-20 s)
     used_in_zip: set = set()
     warnings: List[str] = []
     budget = _ZipBudget()

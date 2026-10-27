@@ -472,14 +472,21 @@ def _run_analysis_job(
             ComplianceItem.lot == "_commun",
         ).all()
         project = db.query(Project).filter(Project.id == project_id).first()
+        # B5 — lecture finie : valeurs copiées, connexion rendue au pool AVANT la passe 1
+        # (plusieurs minutes d'appels IA). La session se rouvre d'elle-même à l'écriture.
+        commun_reqs_lus = _requirements_from_rows(commun_rows) if commun_rows else None
+        n_commun = len(commun_rows)
+        criteres_lus = (project.criteres_jugement or []) if project else []
+        infos_lus = (project.infos_marche or {}) if project else {}
+        db.rollback()
 
         try:
-            if commun_rows:
+            if commun_reqs_lus is not None:
                 logger.info("Analyse %s : tronc commun RÉUTILISÉ (%d exigences, 0 appel Claude)",
-                            project_id, len(commun_rows))
-                commun_reqs = _requirements_from_rows(commun_rows)
-                criteres = project.criteres_jugement or []
-                infos = project.infos_marche or {}
+                            project_id, n_commun)
+                commun_reqs = commun_reqs_lus
+                criteres = criteres_lus
+                infos = infos_lus
             else:
                 skills1, _ = _build_dce_skills(None)
                 r1 = analyzer._run_pass_chunked(
@@ -653,6 +660,7 @@ def _anchor_requirements_safe(db: Session, project_id: str, requirements: list,
     from services.ai.excerpt_anchor import anchor_requirements, resolve_pages
     try:
         texts, paths, rangs = _build_anchor_docs(db, project_id, lot)
+        db.rollback()   # B5 : lecture finie ; l'ancrage lit des PDF sans tenir de connexion
         anchor_requirements(requirements, texts, rangs)
         resolve_pages(requirements, paths)
     except Exception:
