@@ -235,6 +235,30 @@ SYNORIX_CACHE_APERCUS_DIR=/srv/synorix/backend/cache/apercus   # cache des image
 SYNORIX_CACHE_APERCUS_MO=2048      # plafond du cache, éviction LRU (2 Go = 4 % du disque de 50 Go)
 ```
 
+### LibreOffice : fichiers déposés convertis sans secret ni réseau
+
+Les Word déposés (aperçu de « Voir dans le DCE ») et l'export PDF du mémoire passent par
+`services/libreoffice_isole.py` : environnement en liste blanche (aucune variable du `.env`), profil
+jetable par conversion (B19), **une conversion à la fois** (verrou partagé par l'API et le worker dans
+`cache/libreoffice`), délai, plafond de mémoire, profil LibreOffice qui refuse les liens distants
+(`BlockUntrustedRefererLinks`, mesuré : 9 connexions sortantes sans lui, 0 avec), espace de noms réseau
+vide si le noyau le permet, et filtre seccomp qui refuse `connect()` (IP et sockets Unix : Postgres,
+Redis), `ptrace`, `process_vm_readv/writev`, `pidfd_getfd`, `io_uring` et l'ABI x32. Le niveau obtenu
+est journalisé à chaque conversion (`netns+seccomp`, `seccomp`, `aucune`). L'API se déclare non vidable
+(`PR_SET_DUMPABLE=0`) : un enfant ne peut pas lire `/proc/<api>/environ` ; l'enfant PDFium ne reçoit
+que `PATH`, `LANG`, `LC_ALL`. Réglages facultatifs du `.env` :
+
+```
+SYNORIX_LIBREOFFICE_DIR=/srv/synorix/backend/cache/libreoffice   # verrou + profils jetables (ReadWritePaths)
+SYNORIX_LIBREOFFICE_AS_MO=1536         # plafond de mémoire virtuelle (pic mesuré : 992 Mo, Word de 400 p.)
+SYNORIX_LIBREOFFICE_FICHIER_MO=512     # taille maximale d'un fichier à convertir
+SYNORIX_LIBREOFFICE_DELAI_S=120        # + 2 s par Mo pour un fichier déposé, 600 s au plus
+SYNORIX_LIBREOFFICE_ATTENTE_S=90       # attente du verrou, export (interactif)
+SYNORIX_LIBREOFFICE_ATTENTE_DEPOT_S=900   # attente du verrou, Word déposé (arrière-plan)
+SYNORIX_LIBREOFFICE_RESEAU=auto        # exige | auto | netns | seccomp | aucun ; « exige » en prod une fois vérifié
+SYNORIX_DUMPABLE=                      # 1 = désactive PR_SET_DUMPABLE (diagnostic py-spy seulement)
+```
+
 ---
 
 ## 7. systemd — service uvicorn

@@ -44,8 +44,10 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-# Le « - » tolère un dossier absent (sinon le service refuse de démarrer).
-ReadWritePaths=/srv/synorix/backend/uploads -/srv/synorix/backend/cache -/var/log/synorix
+# cache/ : aperçus de « Voir dans le DCE » et LibreOffice (verrou partagé avec le worker, profils
+# jetables). Obligatoire : sans lui, le service refuse de démarrer (VPS.md, étape 2.3).
+# Le « - » tolère un dossier absent.
+ReadWritePaths=/srv/synorix/backend/uploads /srv/synorix/backend/cache -/var/log/synorix
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectKernelLogs=true

@@ -26,7 +26,8 @@ PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
 # uploads : la purge des AO supprimés (B18) y efface les dossiers des projets.
-ReadWritePaths=/srv/synorix/backend/uploads -/srv/synorix/backend/cache -/var/log/synorix
+# cache/ : même chemin que l'API, pour que le verrou de LibreOffice soit commun.
+ReadWritePaths=/srv/synorix/backend/uploads /srv/synorix/backend/cache -/var/log/synorix
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true
