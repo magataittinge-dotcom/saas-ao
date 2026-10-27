@@ -92,7 +92,8 @@ def test_premier_clic_calcule_et_range_l_ancre_de_toute_la_piece(client, db_sess
     assert ancre["niveau"] == "passage" and ancre["page"] == 2 and ancre["doc_id"] == "d-src"
     assert ancre["rects"] and ancre["citation"]["passage"] == P1
     db_session.expire_all()
-    assert db_session.get(ComplianceItem, "e1").ancre == ancre
+    # la base garde l'ancre seule ; la réponse y ajoute « cadrage » et « document »
+    assert db_session.get(ComplianceItem, "e1").ancre == {k: v for k, v in ancre.items() if k not in ("cadrage", "document")}
     assert db_session.get(ComplianceItem, "e2").ancre["niveau"] == "passage"     # même pièce : calculée aussi
     assert db_session.get(ComplianceItem, "e3").ancre["niveau"] == "page"
     assert db_session.get(ComplianceItem, "e4").ancre is None                  # sans extrait
@@ -292,6 +293,101 @@ def test_cadrage_sans_rectangle_ou_niveau_page_est_none():
 
 def test_paliers():
     assert [sources.palier_largeur(x) for x in (1, 480, 600, 960, 961, 1600, 4000)] == [480, 480, 720, 960, 1280, 1600, 1600]
+
+
+# ─── Voir dans le DCE à l'écran : champs `document` et `cadrage` de la réponse ───
+
+def _sans_requete(url: str) -> tuple[str, dict]:
+    from urllib.parse import parse_qs, urlsplit
+    morceaux = urlsplit(url)
+    return morceaux.path, {k: v[0] for k, v in parse_qs(morceaux.query).items()}
+
+
+def test_la_reponse_porte_l_url_signee_du_document(client, test_org, dossier):
+    from urllib.parse import unquote
+    r = client.get("/api/sources/e1").json()
+    doc = r["document"]
+    assert doc["nom"] == "cctp.pdf" and doc["expire_dans"] == file_storage.SIGNED_URL_TTL
+    chemin, q = _sans_requete(doc["url"])
+    assert chemin == "/api/files/view/projects/p-src/cctp.pdf"
+    # propriété : la signature lie chemin + organisation + expiration, et seulement eux
+    assert set(q) == {"org", "exp", "sig"} and q["org"] == test_org.id
+    assert file_storage.verify_file_signature(unquote(chemin).removeprefix("/api/files/view/"),
+                                              q["org"], q["exp"], q["sig"])
+    assert not file_storage.verify_file_signature("projects/p-src/autre.pdf", q["org"], q["exp"], q["sig"])
+    assert not file_storage.verify_file_signature("projects/p-src/cctp.pdf", "org-B", q["exp"], q["sig"])
+    # rien du DCE dans l'URL (B26) : ni extrait, ni page
+    assert P1[:10] not in doc["url"] and "page=" not in doc["url"] and "highlight" not in doc["url"]
+
+
+def test_l_ancre_rangee_ne_contient_pas_l_url_signee(client, db_session, dossier):
+    client.get("/api/sources/e1")
+    db_session.expire_all()
+    assert "document" not in db_session.get(ComplianceItem, "e1").ancre
+    assert "cadrage" not in db_session.get(ComplianceItem, "e1").ancre
+
+
+def test_le_cadrage_est_celui_de_la_loupe(client, dossier):
+    r = client.get("/api/sources/e1").json()
+    assert r["cadrage"] == list(sources.cadrage_passage(r))
+    assert client.get("/api/sources/e3").json()["cadrage"] is None          # niveau « page »
+    assert client.get("/api/sources/e4").json()["cadrage"] is None          # niveau « aucun »
+
+
+def test_word_converti_le_document_est_son_pdf_et_l_origine_le_word(client, db_session, test_org, dossier):
+    pdf_dir = dossier.parent
+    (pdf_dir / "note.docx").write_bytes(b"PK faux docx")
+    (pdf_dir / "note.pdf").write_bytes(dossier.read_bytes())
+    db_session.add(ProjectDocument(id="d-word", project_id="p-src", type="autre", file_name="note.docx",
+                                   file_url="/uploads/projects/p-src/note.docx",
+                                   pdf_preview_url="/uploads/projects/p-src/note.pdf"))
+    db_session.add(ComplianceItem(id="e-word", project_id="p-src", exigence_text="x", source_document="note.docx",
+                                  source_page=2, source_excerpt=P1))
+    db_session.commit()
+    r = client.get("/api/sources/e-word").json()
+    assert r["niveau"] == "passage" and r["doc_id"] == "d-word"
+    assert r["document"]["nom"] == "note.docx"
+    assert _sans_requete(r["document"]["url"])[0].endswith("/projects/p-src/note.pdf")
+    assert _sans_requete(r["document"]["origine"])[0].endswith("/projects/p-src/note.docx")
+
+
+def test_word_sans_pdf_converti_repli_positif_avec_le_lien_vers_la_piece(client, db_session, dossier):
+    (dossier.parent / "note.docx").write_bytes(b"PK faux docx")
+    db_session.add(ProjectDocument(id="d-word", project_id="p-src", type="autre", file_name="note.docx",
+                                   file_url="/uploads/projects/p-src/note.docx"))
+    db_session.add(ComplianceItem(id="e-word", project_id="p-src", exigence_text="x", source_document="note.docx",
+                                  source_page=2, source_excerpt=P1))
+    db_session.commit()
+    r = client.get("/api/sources/e-word")
+    assert r.status_code == 200
+    corps = r.json()
+    assert corps["niveau"] == "aucun" and corps["cadrage"] is None
+    assert corps["document"]["url"] is None                                  # rien à afficher en PDF
+    assert _sans_requete(corps["document"]["origine"])[0].endswith("/projects/p-src/note.docx")
+    assert client.get("/api/sources/e-word/apercu").status_code == 404       # et pas d'image
+
+
+def test_fichier_absent_du_disque_pas_d_url_et_pas_d_erreur(client, dossier):
+    assert client.get("/api/sources/e4").json()["document"]["nom"] == "cctp.pdf"
+    dossier.unlink()
+    corps = client.get("/api/sources/e1").json()
+    assert corps["niveau"] == "aucun" and corps["document"]["url"] is None and corps["document"]["origine"] is None
+
+
+def test_le_document_vient_du_projet_de_l_exigence_jamais_d_un_autre(client, db_session, test_org, dossier):
+    db_session.add(Project(id="p-autre", organization_id=test_org.id, name="Autre"))
+    db_session.add(ProjectDocument(id="d-autre", project_id="p-autre", type="cctp", file_name="secret.pdf",
+                                   file_url="/uploads/projects/p-src/cctp.pdf"))
+    db_session.get(ComplianceItem, "e1").ancre = {"version": 1, "doc_id": "d-autre", "page": 2, "rotation": 0,
+                                                  "rects": [], "niveau": "page", "citation": None}
+    db_session.commit()
+    assert client.get("/api/sources/e1").json()["document"] is None
+
+
+def test_une_autre_organisation_ne_recoit_aucune_url_signee(client, en_tant_que_b, dossier):
+    assert "url" in client.get("/api/sources/e1").json()["document"]
+    r = en_tant_que_b().get("/api/sources/e1")
+    assert r.status_code == 404 and "sig=" not in r.text
 
 
 # ─── débit ────────────────────────────────────────────────────────────────────
