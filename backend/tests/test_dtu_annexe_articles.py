@@ -249,8 +249,8 @@ def test_un_cctp_inconnu_laisse_le_doute():
 
 
 def test_titre_du_cctp_lu_a_la_ligne_lot_ou_a_l_en_tete():
-    t1 = "DOSSIER DE CONSULTATION\nCAHIER DES CLAUSES TECHNIQUES PARTICULIÈRES\nLOT 03 : MENUISERIES EXTÉRIEURES PVC\nINDICE A"
-    assert titre_cctp(t1, "3") == "MENUISERIES EXTÉRIEURES PVC"
+    t1 = "DOSSIER DE CONSULTATION\nCAHIER DES CLAUSES TECHNIQUES PARTICULIÈRES\nPROJET FICTIF\nLOT 03 : MENUISERIES EXTÉRIEURES BOIS\nINDICE A"
+    assert titre_cctp(t1, "3") == "MENUISERIES EXTÉRIEURES BOIS"
     t2 = "04 – MENUISERIES EXTÉRIEURES ALU / PROJET X / DCE ind. A\nTexte courant"
     assert titre_cctp(t2, "4") == "MENUISERIES EXTÉRIEURES ALU"
     assert titre_cctp("LOT 05 : FAÇADE", "3") is None            # la ligne nomme un autre lot
