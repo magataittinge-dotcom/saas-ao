@@ -12,6 +12,7 @@ import TresorerieCard from '@/components/project/TresorerieCard'
 import SynorixScoreCard from '@/components/project/SynorixScoreCard'
 import RetroPlanning from '@/components/project/RetroPlanning'
 import PanneauSource, { type SelectionSource } from '@/components/project/source/PanneauSource'
+import VueTableau, { enAncreTableur } from '@/components/project/source/VueTableau'
 import { reponseDeChamp } from '@/lib/ancre'
 import { precharger, abandonner } from '@/services/sources'
 import { useVisible } from '@/hooks/useVisible'
@@ -510,6 +511,9 @@ export default function StepAnalysis({ project }: Props) {
           key={selection.type === 'exigence' ? selection.id : `champ-${selection.reponse.doc_id}-${selection.reponse.page}`}
           selection={selection}
           onFermer={fermerSelection}
+          rendreTableur={(reponse) => selection.type === 'exigence'
+            ? <div className="source-vue"><VueTableau exigenceId={selection.id} ancre={enAncreTableur(reponse)} /></div>
+            : null}
         />
       )}
       </div>

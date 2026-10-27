@@ -29,12 +29,15 @@ def _entier(texte, defaut: int = 1) -> int:
         return defaut
 
 
-def onglets_ods(chemin) -> Iterator[Tuple[str, Iterator[list]]]:
+def onglets_ods(chemin, lignes_vides_exactes: bool = False) -> Iterator[Tuple[str, Iterator[list]]]:
     """(nom de l'onglet, lignes de valeurs) d'un .ods, lus dans content.xml.
 
     Valeur d'une cellule : nombre (office:value) ou texte de ses paragraphes.
     Cellules et lignes répétées développées dans des bornes. Bloquant ; la garde
-    contre les bombes (garde_archives) est appelée par l'appelant."""
+    contre les bombes (garde_archives) est appelée par l'appelant.
+
+    ``lignes_vides_exactes`` : une ligne vide répétée n fois donne n lignes vides (numéros de
+    ligne exacts, pour « Voir dans le DCE ») au lieu d'une seule (défaut : économie)."""
     from lxml import etree
 
     with zipfile.ZipFile(chemin) as archive, archive.open("content.xml") as flux:
@@ -58,6 +61,8 @@ def onglets_ods(chemin) -> Iterator[Tuple[str, Iterator[list]]]:
                 if any(v not in (None, "") for v in valeurs):
                     repetitions = _entier(el.get(_ODS_T + "number-rows-repeated"))
                     lignes.extend([valeurs] * min(repetitions, place))
+                elif lignes_vides_exactes:
+                    lignes.extend([[]] * min(_entier(el.get(_ODS_T + "number-rows-repeated")), place))
                 else:
                     lignes.append([])   # une ligne vide suffit, même répétée
             el.clear()
