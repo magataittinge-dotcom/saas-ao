@@ -246,7 +246,15 @@ vide si le noyau le permet, et filtre seccomp qui refuse `connect()` (IP et sock
 Redis), `ptrace`, `process_vm_readv/writev`, `pidfd_getfd`, `io_uring` et l'ABI x32. Le niveau obtenu
 est journalisé à chaque conversion (`netns+seccomp`, `seccomp`, `aucune`). L'API se déclare non vidable
 (`PR_SET_DUMPABLE=0`) : un enfant ne peut pas lire `/proc/<api>/environ` ; l'enfant PDFium ne reçoit
-que `PATH`, `LANG`, `LC_ALL`. Réglages facultatifs du `.env` :
+que `PATH`, `LANG`, `LC_ALL`.
+
+**Landlock** (noyau ≥ 5.13, sans root ; ABI 4 = refus TCP en plus) : LibreOffice ne lit que le système,
+sa configuration, Carlito et le dossier jetable où l'entrée est copiée ; il n'écrit que là. L'enfant PDFium
+(lui aussi sous seccomp) ne lit que Python, le venv, `backend/services` et `backend/uploads`, et n'écrit
+nulle part. Ni l'un ni l'autre ne lit `.env`. Limite : l'enfant PDFium, partagé entre organisations, lit
+encore tout `uploads/` (passer la pièce par descripteur : après Ozcan). Sans Landlock, repli journalisé ;
+avec `SYNORIX_LIBREOFFICE_RESEAU=exige`, conversion refusée. Mesuré : durée inchangée (+1 % sur un Word
+de 400 p.), pages et texte identiques. Réglages facultatifs du `.env` :
 
 ```
 SYNORIX_LIBREOFFICE_DIR=/srv/synorix/backend/cache/libreoffice   # verrou + profils jetables (ReadWritePaths)
@@ -257,6 +265,9 @@ SYNORIX_LIBREOFFICE_ATTENTE_S=90       # attente du verrou, export (interactif)
 SYNORIX_LIBREOFFICE_ATTENTE_DEPOT_S=900   # attente du verrou, Word déposé (arrière-plan)
 SYNORIX_LIBREOFFICE_RESEAU=auto        # exige | auto | netns | seccomp | aucun ; « exige » en prod une fois vérifié
 SYNORIX_DUMPABLE=                      # 1 = désactive PR_SET_DUMPABLE (diagnostic py-spy seulement)
+SYNORIX_LIBREOFFICE_LANDLOCK=auto      # auto | aucun
+SYNORIX_PDFIUM_LANDLOCK=auto           # auto | aucun
+SYNORIX_PDFIUM_LECTURE_DIRS=           # dossiers de pièces en plus de backend/uploads, séparés par « : »
 ```
 
 ---
