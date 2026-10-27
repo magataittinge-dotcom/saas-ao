@@ -42,9 +42,12 @@ Usage (bloquant : l'appelant asynchrone l'enveloppe dans ``asyncio.to_thread``) 
 
     resultat = executer(ma_fonction, arg1, arg2, delai_s=30)
 
-``ma_fonction`` est une fonction de NIVEAU MODULE (elle voyage par référence) ; arguments et
-résultat doivent être picklables. Une exception de la fonction est relancée telle quelle chez
-l'appelant ; un échec du TRAVAIL (délai, plantage, mémoire) lève ``TravailPdfiumEchoue`` et
+``ma_fonction`` est une fonction de NIVEAU MODULE (elle voyage par référence) ; les arguments
+doivent être picklables (sens parent -> enfant : le parent est de confiance). Le RÉSULTAT remonte par
+``services/canal_enfant.py`` : types de base (str, bytes, int, float, bool, None, tuple, list, dict, set)
+et exceptions de sa liste fermée, 32 Mo au plus par message ; l'enfant n'est PAS de confiance (il lit des
+fichiers hostiles), le parent ne fait donc jamais ``pickle.loads`` sur ses octets. Une exception de la
+fonction (de cette liste) est relancée telle quelle chez l'appelant, une autre devient ``RuntimeError`` ; un échec du TRAVAIL (délai, plantage, mémoire) lève ``TravailPdfiumEchoue`` et
 l'API reste debout. Dans l'enfant, ``signaler(objet)`` remonte un avancement vers le
 paramètre ``sur_progression`` de l'appelant.
 
@@ -66,6 +69,8 @@ import threading
 import time
 from pathlib import Path
 from typing import Any, Callable, Optional
+
+from services import canal_enfant
 
 logger = logging.getLogger(__name__)
 
@@ -152,7 +157,7 @@ def signaler(objet: Any) -> None:
     Hors enfant (exécution directe) : ne fait rien. Ne casse jamais le travail."""
     if _conn_enfant is not None:
         try:
-            _conn_enfant.send(("prog", objet, 0))
+            canal_enfant.envoyer(_conn_enfant, ("prog", objet, 0))
         except Exception:  # noqa: BLE001 — l'avancement ne casse jamais le travail
             pass
 
@@ -221,14 +226,14 @@ def _boucle_enfant(conn, plafond_as: int, reglages: Optional[dict] = None) -> No
         resource.setrlimit(resource.RLIMIT_AS, (plafond_as, plafond_as))
     _conn_enfant = conn
     if reglages and reglages.get("landlock"):
-        conn.send(("niveau", _durcir_enfant(reglages), 0))     # lu par le parent avant la 1re réponse
+        canal_enfant.envoyer(conn, ("niveau", _durcir_enfant(reglages), 0))     # lu par le parent avant la 1re réponse
     while True:
         try:
             message = conn.recv()
         except EOFError:
             return
         except Exception as e:  # noqa: BLE001 — fonction introuvable, pickle illisible…
-            conn.send(("err", RuntimeError(f"tâche illisible : {type(e).__name__}"), _rss_ko()))
+            _repondre(conn, "err", RuntimeError(f"tâche illisible : {type(e).__name__}"))
             continue
         if message is None:
             return
@@ -236,20 +241,30 @@ def _boucle_enfant(conn, plafond_as: int, reglages: Optional[dict] = None) -> No
         try:
             resultat = fonction(*args)
         except MemoryError:
-            conn.send(("memoire", None, _rss_ko()))
+            _repondre(conn, "memoire", None)
             continue
         except BaseException as e:  # noqa: BLE001 — tout est renvoyé à l'appelant
-            try:
-                conn.send(("err", e, _rss_ko()))
-            except Exception:  # noqa: BLE001 — exception non picklable
-                conn.send(("err", RuntimeError(f"{type(e).__name__}: {e}"), _rss_ko()))
+            _repondre(conn, "err", e)
             continue
-        try:
-            conn.send(("ok", resultat, _rss_ko()))
-        except MemoryError:
-            conn.send(("memoire", None, _rss_ko()))
-        except Exception as e:  # noqa: BLE001 — résultat non picklable
-            conn.send(("err", RuntimeError(f"résultat non transmissible : {type(e).__name__}"), _rss_ko()))
+        _repondre(conn, "ok", resultat)
+
+
+def _repondre(conn, genre: str, valeur: Any) -> None:
+    """Enfant -> parent : un message ``(genre, valeur, rss_ko)`` par ``canal_enfant.envoyer`` (bloc 6 : le parent
+    ne désérialise QUE ce que ce filtre laisse passer, avec une borne de taille). Ce qui ne passe pas
+    (exception hors liste, résultat non picklable ou trop gros) devient une ``RuntimeError`` claire chez l'appelant."""
+    rss = _rss_ko()
+    try:
+        canal_enfant.envoyer(conn, (genre, valeur, rss))
+        return
+    except MemoryError:
+        repli = ("memoire", None)
+    except Exception as e:  # noqa: BLE001
+        if genre == "err":
+            repli = ("err", RuntimeError(f"{type(valeur).__name__}: {valeur}"[:2000]))
+        else:
+            repli = ("err", RuntimeError(f"résultat non transmissible : {type(e).__name__}"))
+    canal_enfant.envoyer(conn, (repli[0], repli[1], rss))
 
 
 # ─── Côté appelant ────────────────────────────────────────────────────────────
@@ -458,6 +473,7 @@ def executer(
         etat.places.put(enfant if garder else None)
 
 
+_GENRES = frozenset({"ok", "err", "memoire", "niveau", "prog"})      # les seuls genres qu'un enfant envoie
 _SIGNAUX_DE_MEMOIRE = (6, 11, 7)    # SIGABRT, SIGSEGV, SIGBUS : ce que fait du code natif quand malloc échoue
 
 
@@ -512,13 +528,36 @@ def _faire(enfant: _Enfant, fonction, args, delai_s: float, sur_progression) -> 
             if not enfant.vivant():
                 raise _fin_anormale(enfant, f"code de sortie {enfant.processus.exitcode}")
             continue
+        # Lecture d'un message de l'enfant : taille bornée, désérialisation filtrée (services/canal_enfant.py).
+        # Un enfant qui n'envoie qu'une partie du message ferait attendre cette lecture au-delà du délai :
+        # un minuteur le tue alors, ce qui ferme le tuyau et réveille la lecture.
+        minuteur = threading.Timer(max(0.05, echeance - time.monotonic()), enfant.tuer)
+        minuteur.daemon = True
+        minuteur.start()
         try:
-            genre, valeur, rss_ko = enfant.conn.recv()
+            message = canal_enfant.recevoir(enfant.conn)
+        except canal_enfant.MessageRefuse as e:
+            enfant.tuer()      # flux désynchronisé ou enfant hostile : on ne le réutilise jamais
+            raise _EnfantPerdu("plantage", f"réponse de l'enfant refusée ({e.detail})") from None
         except (EOFError, OSError):
+            if time.monotonic() >= echeance:
+                raise _EnfantPerdu("delai", f"plus de {delai_s:g} s") from None
             enfant.processus.join(timeout=2)
             raise _fin_anormale(enfant, f"code de sortie {enfant.processus.exitcode}") from None
+        finally:
+            minuteur.cancel()
+        try:
+            genre, valeur, rss_ko = message
+            conforme = (genre in _GENRES and isinstance(rss_ko, int) and not isinstance(rss_ko, bool)
+                        and (genre != "err" or isinstance(valeur, BaseException))
+                        and (genre != "niveau" or isinstance(valeur, str)))
+        except (TypeError, ValueError):
+            conforme = False
+        if not conforme:
+            enfant.tuer()
+            raise _EnfantPerdu("plantage", "réponse de l'enfant hors protocole")
         if genre == "niveau":
-            _journaliser_niveau(valeur)
+            _journaliser_niveau("".join(c for c in valeur[:200] if c.isprintable()))
             continue
         if genre == "prog":
             if sur_progression is not None:
