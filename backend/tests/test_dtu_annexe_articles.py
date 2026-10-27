@@ -4,7 +4,7 @@ DTU que s'il est rattaché au lot choisi avec certitude (décision de Mohamed du
 from types import SimpleNamespace
 
 from services.ai.dtu_autorises import (
-    DtuAutorise, LotCible, decouper_articles, dtu_autorises, rattache_article,
+    DtuAutorise, LotCible, decouper_articles, dtu_autorises, rattache_article, titre_cctp,
 )
 
 LOTS = [
@@ -212,3 +212,77 @@ def test_dtu_du_lot_gros_oeuvre_lus_par_le_sigle_go():
                         lots_detectes=[{"id": "lot1", "nom": "Lot 01 — Démolition – GO – Charpente bois"},
                                        {"id": "lot5", "nom": "Lot 05 — Revêtement de façade – ITE"}])
     assert {"13.1", "21"} <= set(res)
+
+
+# ── Désignation partagée : le titre du CCTP départage (tranche 2, décision 3) ─
+MEXT = "LOT MENUISERIES EXTÉRIEURES"
+D3, D4 = "Menuiseries extérieures PVC", "Menuiseries extérieures alu – Serrurerie"
+
+
+def _mext(cible, cctp):
+    """Le lot 3 ou 4 est la cible ; `cctp` : titres des CCTP connus, (numéro, titre)."""
+    autre = ("4", D4) if cible == "3" else ("3", D3)
+    return LotCible(cible, D3 if cible == "3" else D4, (autre,), tuple(cctp))
+
+
+def test_un_seul_cctp_dit_menuiseries_exterieures_rattache_ce_lot():
+    cctp = [("3", "MENUISERIES EXTÉRIEURES PVC"), ("4", "SERRURERIE MÉTALLERIE")]
+    assert rattache_article(MEXT, _mext("3", cctp)) is True
+    assert rattache_article(MEXT, _mext("4", cctp)) is False   # l'article est celui du lot 3
+
+
+def test_les_deux_cctp_disent_menuiseries_exterieures_rien_ne_change():
+    cctp = [("3", "MENUISERIES EXTÉRIEURES PVC"), ("4", "MENUISERIES EXTÉRIEURES ALU SERRURERIE")]
+    assert rattache_article(MEXT, _mext("3", cctp)) is False
+    assert rattache_article(MEXT, _mext("4", cctp)) is False
+
+
+def test_aucun_cctp_ne_le_dit_rien_ne_change():
+    cctp = [("3", "PVC"), ("4", "SERRURERIE")]
+    assert rattache_article(MEXT, _mext("3", cctp)) is False
+
+
+def test_un_cctp_inconnu_laisse_le_doute():
+    # le CCTP du lot 4 n'est pas dans le DCE : on ne peut pas dire qu'il ne le dit pas
+    assert rattache_article(MEXT, _mext("3", [("3", "MENUISERIES EXTÉRIEURES PVC")])) is False
+    assert rattache_article(MEXT, _mext("3", [])) is False
+
+
+def test_titre_du_cctp_lu_a_la_ligne_lot_ou_a_l_en_tete():
+    t1 = "DOSSIER DE CONSULTATION\nCAHIER DES CLAUSES TECHNIQUES PARTICULIÈRES\nLOT 03 : MENUISERIES EXTÉRIEURES PVC\nINDICE A"
+    assert titre_cctp(t1, "3") == "MENUISERIES EXTÉRIEURES PVC"
+    t2 = "04 – MENUISERIES EXTÉRIEURES ALU / PROJET X / DCE ind. A\nTexte courant"
+    assert titre_cctp(t2, "4") == "MENUISERIES EXTÉRIEURES ALU"
+    assert titre_cctp("LOT 05 : FAÇADE", "3") is None            # la ligne nomme un autre lot
+    assert titre_cctp("", "3") is None
+
+
+def _cctp(nom, texte, lot):
+    return _doc(nom, texte, type_="cctp", lots=(lot,))
+
+
+def _pieces_mext(texte4):
+    annexe = _doc("annexe.pdf", "ARTICLE 4\nLOT MENUISERIES EXTÉRIEURES\nSelon le NF DTU 36.5.")
+    return [annexe,
+            _cctp("cctp3.pdf", "CCTP\nLOT 03 : MENUISERIES EXTÉRIEURES PVC\nNF DTU 36.5 et DTU 39.", "3"),
+            _cctp("cctp4.pdf", texte4, "4")]
+
+
+def _autorises_mext(texte4, lot):
+    noms = {"lot3": "Lot 03 — " + D3, "lot4": "Lot 04 — " + D4}
+    return dtu_autorises(_pieces_mext(texte4), selected_lot=lot, lot_nom=noms[lot],
+                         lots_detectes=[{"id": k, "nom": v} for k, v in noms.items()])
+
+
+def test_annexe_menuiseries_rattachee_au_seul_lot_dont_le_cctp_la_nomme():
+    texte4 = "CCTP\nLOT 04 : SERRURERIE MÉTALLERIE\nDTU 32.1"
+    # 36.5 est aussi dans le CCTP du lot 3 : on regarde une source de l'annexe
+    res3 = _autorises_mext(texte4, "lot3")
+    assert any(p == "annexe.pdf" for p, _ in res3["36.5"].sources)
+    assert not any(p == "annexe.pdf" for p, _ in _autorises_mext(texte4, "lot4").get("36.5", DtuAutorise("x")).sources)
+
+
+def test_annexe_menuiseries_inchangee_si_les_deux_cctp_la_nomment():
+    texte4 = "CCTP\nLOT 04 : MENUISERIES EXTÉRIEURES ALU SERRURERIE\nDTU 32.1"
+    res3 = _autorises_mext(texte4, "lot3")
+    assert not any(p == "annexe.pdf" for p, _ in res3["36.5"].sources)   # seul le CCTP du lot 3 le donne
