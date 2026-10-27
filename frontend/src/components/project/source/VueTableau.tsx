@@ -39,6 +39,21 @@ interface Props {
   ancre: AncreTableur
 }
 
+/** L'ancre tableur contenue dans la réponse de GET /api/sources/{id} (le panneau n'a que le type
+ *  PDF, `Ancre` : les champs feuille, ligne et cellules ne s'y trouvent que pour un tableur). */
+export function enAncreTableur(reponse: { version: number; doc_id: string | null; niveau: AncreTableur['niveau'] }): AncreTableur {
+  const r = reponse as unknown as Partial<AncreTableur>
+  return {
+    version: reponse.version,
+    format: 'tableur',
+    doc_id: reponse.doc_id,
+    feuille: typeof r.feuille === 'string' ? r.feuille : null,
+    ligne: typeof r.ligne === 'number' ? r.ligne : null,
+    cellules: Array.isArray(r.cellules) ? r.cellules.filter((c): c is string => typeof c === 'string') : [],
+    niveau: reponse.niveau,
+  }
+}
+
 /** Vrai si la colonne `lettre` fait partie des cellules citées par l'ancre. */
 export function celluleCitee(ancre: Pick<AncreTableur, 'cellules'>, lettre: string): boolean {
   return ancre.cellules.includes(lettre)
@@ -116,7 +131,7 @@ export function TableauSource({
                 <th
                   scope="row"
                   className={`edge-data sticky left-0 z-10 h-11 whitespace-nowrap border-b border-ds-border-subtle px-3 py-2 text-left align-top font-normal ${
-                    l.cible ? 'bg-ds-surface-3 text-ds-text shadow-[inset_4px_0_0_#D9A441]' : 'bg-ds-surface text-ds-text-2'
+                    l.cible ? 'bg-ds-surface-3 text-ds-text shadow-[inset_4px_0_0_var(--warn)]' : 'bg-ds-surface text-ds-text-2'
                   }`}
                 >
                   {l.n}

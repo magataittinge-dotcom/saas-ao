@@ -125,7 +125,7 @@ This is deliberate — the V2.0 success criterion is *ship & be impressive*, not
 | Migrations | Alembic | Standard with SQLAlchemy |
 | Validation | Pydantic v2 | Strict mode on every boundary |
 | Background work | Celery + Redis broker | V1.0 keeps it simple — long-running pipeline steps run inline with SSE; Celery for scheduled jobs (follow-ups, expiry alerts) |
-| PDF parsing | pypdfium2 (`services/pdf_lecture.py`, Apache-2.0/BSD-3) | Text of every PDF (deposit, anchoring, lots, CCP); global lock (PDFium is not thread-safe). PyMuPDF (AGPL) remains only in the highlighter and the SVG → PNG conversion, until their replacement |
+| PDF parsing | pypdfium2 (`services/pdf_lecture.py`, Apache-2.0/BSD-3) | Text of every PDF (deposit, anchoring, lots, CCP); global lock (PDFium is not thread-safe). PyMuPDF (AGPL) is removed (server-side highlighter deleted, SVG → PNG via Pillow); guard: `tests/test_pas_de_pymupdf.py`; notices: `THIRD_PARTY_NOTICES` |
 | ZIP extraction | `zipfile` + `chardet` for filename encoding | Handles CP437/Latin-1/UTF-8 (FR-UPL-03) |
 | DOCX generation | `python-docx` + `docxtpl` | Memo `.docx` export |
 | PDF generation | WeasyPrint or `reportlab` | Memo `.pdf` export |

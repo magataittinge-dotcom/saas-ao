@@ -4,10 +4,10 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { renderToStaticMarkup } from 'react-dom/server'
 import {
-  TableauSource, celluleCitee, legende, titreColonne,
+  TableauSource, celluleCitee, enAncreTableur, legende, titreColonne,
   type AncreTableur, type FenetreTableur,
 } from '@/components/project/source/VueTableau'
-import { lire, sansCommentaires } from './outils/sources'
+import { fichiersSource, lire, sansCommentaires } from './outils/sources'
 import { textesAffiches } from './outils/textes'
 
 const FICHIER = 'src/components/project/source/VueTableau.tsx'
@@ -96,4 +96,20 @@ test('textes affichés : positifs, aucun mot interdit', () => {
   assert.ok(textes.includes('Chargement du tableau'))
   assert.ok(textes.includes('Réessayer'))
   assert.ok(!/manquant|incompl[eè]t|\babsente?s?\b|!/i.test(textes + html.replace(/<[^>]+>/g, ' ')))
+})
+
+test('le panneau reçoit la vue tableur : branchée dans StepAnalysis, une seule définition du type', () => {
+  const ecran = sansCommentaires(lire('src/routes/project/StepAnalysis.tsx'))
+  assert.match(ecran, /rendreTableur=\{/)
+  assert.match(ecran, /<VueTableau exigenceId=\{selection\.id\} ancre=\{enAncreTableur\(reponse\)\}/)
+  let definitions = 0
+  for (const f of fichiersSource()) if (/\binterface AncreTableur\b|\btype AncreTableur\b\s*=/.test(lire(f))) definitions++
+  assert.equal(definitions, 1)
+})
+
+test('enAncreTableur lit feuille, ligne et cellules de la réponse du serveur', () => {
+  const a = enAncreTableur({ version: 1, doc_id: 'd1', niveau: 'passage', feuille: 'Lot 05', ligne: 7, cellules: ['B', 3] } as never)
+  assert.deepEqual(a, { version: 1, format: 'tableur', doc_id: 'd1', feuille: 'Lot 05', ligne: 7, cellules: ['B'], niveau: 'passage' })
+  const vide = enAncreTableur({ version: 1, doc_id: null, niveau: 'aucun' })
+  assert.equal(vide.feuille, null) ; assert.equal(vide.ligne, null) ; assert.deepEqual(vide.cellules, [])
 })

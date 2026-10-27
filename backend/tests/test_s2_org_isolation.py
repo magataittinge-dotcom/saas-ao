@@ -83,7 +83,7 @@ def test_view_intra_uploads_traversal_cross_org_blocked(
         asyncio.run(view_file(
             file_path=evil,
             org=test_org.id, exp=qs["exp"][0], sig=qs["sig"][0],
-            page=None, highlight=None, db=db_session,
+            db=db_session,
         ))
     assert exc.value.status_code in (403, 404)
 

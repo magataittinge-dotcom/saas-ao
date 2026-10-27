@@ -92,35 +92,33 @@ def test_memoire_import_parse_runs_off_loop(db_session, test_org, test_user, mon
     assert record == ["worker"], f"extract a tourné sur {record} (attendu ['worker'])"
 
 
-# ─── 2. GET /api/files/view/... → PdfHighlighter.highlight_text_in_pdf ────────
+# ─── 2. GET /api/files/view/... : « highlight » (T11, retrait de PyMuPDF) ─────
 
-def test_view_file_highlight_runs_off_loop(db_session, test_org, test_user, monkeypatch, tmp_path):
+def test_view_file_ignore_le_parametre_highlight(db_session, test_org, test_user, monkeypatch, tmp_path):
+    """L'ancien front envoie encore `&page=1&highlight=...` : le paramètre est ignoré
+    sans erreur et le PDF d'origine est servi tel quel (plus de surlignage serveur)."""
     from routers import file_serve as fs
     from services.file_storage import sign_file_path
 
     monkeypatch.setattr(fs, "UPLOADS_ROOT", tmp_path)
     target = tmp_path / "projects" / "proj-r8" / "dce" / "RC.pdf"
     target.parent.mkdir(parents=True)
-    target.write_bytes(pdf_texte(["Article 1 — objet du marché"]))
+    octets = pdf_texte(["Article 1 — objet du marché"])
+    target.write_bytes(octets)
 
     db_session.add(Project(id="proj-r8", organization_id=test_org.id, name="R8"))
     db_session.commit()
 
-    record = []
-    monkeypatch.setattr(fs.PdfHighlighter, "highlight_text_in_pdf",
-                        _loop_probe(record, target))
-
     signed = sign_file_path("projects/proj-r8/dce/RC.pdf", org_id=test_org.id)
-    url = f"{signed}&page=1&highlight=Article%201"
-
     _override_auth(test_user)
     try:
-        resp = _run(_request("GET", url))
+        resp = _run(_request("GET", f"{signed}&page=1&highlight=Article%201"))
+        sans = _run(_request("GET", signed))
     finally:
         _clear_overrides()
 
     assert resp.status_code == 200, resp.text
-    assert record == ["worker"], f"highlight a tourné sur {record} (attendu ['worker'])"
+    assert resp.content == octets == sans.content
 
 
 # ─── 3. POST /api/projects/{id}/dpgf-upload → check_dpgf ──────────────────────
