@@ -161,3 +161,42 @@ def pdf_avec_annotation(texte_page: str, texte_annotation: Optional[str] = None,
             return _enregistrer(pdf)
         finally:
             pdf.close()
+
+
+def pdf_regle(octets: bytes, rotation: int = 0, cadre: Optional[tuple] = None) -> bytes:
+    """Le PDF ``octets`` avec la page 1 tournée de ``rotation`` degrés (``/Rotate``) et/ou
+    un cadre visible (cropbox ``(gauche, bas, droite, haut)``, en points) : les pages
+    tournées ou rognées des plans (sujet A, positions des passages)."""
+    with VERROU_PDFIUM:
+        pdf = pdfium.PdfDocument(octets)
+        try:
+            page = pdf[0]
+            if rotation:
+                page.set_rotation(rotation)
+            if cadre:
+                page.set_cropbox(*cadre)
+            page.close()
+            return _enregistrer(pdf)
+        finally:
+            pdf.close()
+
+
+def pdf_texte_vertical(horizontal: str, vertical: str) -> bytes:
+    """Une page : ``horizontal`` en haut, ``vertical`` écrit de bas en haut (rotation de
+    90°, les étiquettes verticales des plans) en bas à gauche."""
+    with VERROU_PDFIUM:
+        pdf = pdfium.PdfDocument.new()
+        try:
+            police = pdfium_c.FPDFText_LoadStandardFont(pdf, b"Helvetica")
+            page = pdf.new_page(*A4)
+            pdfium_c.FPDFPage_InsertObject(page, _objet_texte(pdf, police, horizontal, 72, 742))
+            etiquette = pdfium_c.FPDFPageObj_CreateTextObj(pdf, police, 11.0)
+            tampon = (vertical + "\x00").encode("utf-16-le")
+            pdfium_c.FPDFText_SetText(etiquette, ctypes.cast(tampon, ctypes.POINTER(ctypes.c_ushort)))
+            pdfium_c.FPDFPageObj_Transform(etiquette, 0, 1, -1, 0, 100, 200)
+            pdfium_c.FPDFPage_InsertObject(page, etiquette)
+            page.gen_content()
+            page.close()
+            return _enregistrer(pdf)
+        finally:
+            pdf.close()
