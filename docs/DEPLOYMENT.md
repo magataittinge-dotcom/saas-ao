@@ -215,6 +215,22 @@ chown synorix:synorix /srv/synorix/backend/.env
 chmod 600 /srv/synorix/backend/.env
 ```
 
+### Lecture des PDF déposés : un processus isolé (KVM 1)
+
+Toute pièce déposée est lue par PDFium dans un **processus enfant unique** (`services/pdfium_processus.py`),
+jamais dans l'API : recyclé, plafonné en mémoire (`RLIMIT_AS`) et avec un délai par pièce. Une pièce
+piégée devient « non lisible » avec un avertissement qui la nomme ; l'API reste debout. Mesuré sur le
+DCE de démonstration (99 pièces) : l'API reste à 15 Mo, l'enfant monte à 603 Mo résidents sur le plus
+gros plan, et retombe à 25 Mo. Réglages facultatifs du `.env` (valeurs par défaut entre parenthèses) :
+
+```
+SYNORIX_EXTRACTION_PROCESSUS=1     # 0 = extraction dans l'API (diagnostic seulement, sans protection)
+SYNORIX_PDFIUM_PROCESSUS=1         # nombre d'enfants PDFium : 1 sur 1 vCPU ; 2 ou plus si plusieurs cœurs
+SYNORIX_PDFIUM_AS_MO=1536          # plafond de mémoire virtuelle d'un enfant (0 = aucun)
+SYNORIX_PDFIUM_TACHES_MAX=40       # l'enfant est remplacé après N tâches
+SYNORIX_PDFIUM_RSS_MAX_MO=350      # ... ou dès que sa mémoire résidente dépasse ce seuil
+```
+
 ---
 
 ## 7. systemd — service uvicorn

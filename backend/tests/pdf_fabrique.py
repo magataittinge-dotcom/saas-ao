@@ -161,3 +161,29 @@ def pdf_avec_annotation(texte_page: str, texte_annotation: Optional[str] = None,
             return _enregistrer(pdf)
         finally:
             pdf.close()
+
+
+def pdf_piege(mo: int) -> bytes:
+    """PDF « bombe » : un flux de contenu Flate qui se décompresse en ``mo`` Mo de blancs
+    (quelques centaines de Ko sur le disque). Sans plafond, PDFium alloue tout au chargement
+    de la page. Fabriqué à la main : aucune donnée de DCE."""
+    import zlib
+    c = zlib.compressobj(9)
+    bloc = b" " * (1 << 20)
+    flux = b"".join([c.compress(bloc) for _ in range(mo)] + [c.flush()])
+    objets = [
+        b"<</Type/Catalog/Pages 2 0 R>>",
+        b"<</Type/Pages/Kids[3 0 R]/Count 1>>",
+        b"<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]/Contents 4 0 R>>",
+        b"<</Length %d/Filter/FlateDecode>>\nstream\n" % len(flux) + flux + b"\nendstream",
+    ]
+    sortie, positions = bytearray(b"%PDF-1.4\n"), []
+    for i, o in enumerate(objets, 1):
+        positions.append(len(sortie))
+        sortie += b"%d 0 obj\n" % i + o + b"\nendobj\n"
+    xref = len(sortie)
+    sortie += b"xref\n0 %d\n0000000000 65535 f \n" % (len(objets) + 1)
+    for p in positions:
+        sortie += b"%010d 00000 n \n" % p
+    sortie += b"trailer\n<</Size %d/Root 1 0 R>>\nstartxref\n%d\n%%%%EOF\n" % (len(objets) + 1, xref)
+    return bytes(sortie)

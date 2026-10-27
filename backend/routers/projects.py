@@ -875,7 +875,6 @@ def _extract_all_parallel(project_id: str, docs_info: list) -> None:
     _tlog = _logging.getLogger("TIMING")
 
     from database import SessionLocal
-    from services.ai.excerpt_anchor import retenir_pages
 
     # B2 : types uniques (models/project.py) — « dpgf » / « acte_engagement »
     # ne correspondaient à aucune pièce : AE et DPGF en PDF passaient pour non-clés.
@@ -968,55 +967,12 @@ def _extract_all_parallel(project_id: str, docs_info: list) -> None:
 
     _update_progress(skipped)
 
-    # Extraction dans des PROCESSUS séparés (services/extraction_processus.py) :
-    # chacun a son propre PDFium (sérialisé par un verrou global dans un processus) ;
-    # les threads ci-dessous ne font qu'attendre et écrire.
-    from concurrent.futures.process import BrokenProcessPool
-    from services.extraction_processus import creer_pool, extraire_fichier
-    pool_proc, file_avancement = creer_pool()
-    pool_actif = [pool_proc is not None]
-    termines: set = set()   # pièces finies : leurs derniers avancements sont ignorés
-    arret_vidage = threading.Event()
-
-    def _vider_avancement() -> None:
-        import queue as _queue
-        while not arret_vidage.is_set():
-            try:
-                doc_id_p, nom_p, fait, total = file_avancement.get(timeout=0.2)
-            except _queue.Empty:
-                continue
-            except Exception:
-                return
-            if doc_id_p in termines:
-                continue
-            page_fractions[doc_id_p] = fait / max(total, 1)
-            _publish_partial(detail=f"Indexation : {nom_p[:50]} — page {fait}/{total}")
-
-    if pool_proc is not None:
-        threading.Thread(target=_vider_avancement, daemon=True,
-                         name=f"synorix-extract-pages-{project_id}").start()
-
+    # Extraction dans le PROCESSUS pdfium (services/extraction_processus.py), par défaut :
+    # unique, recyclé, plafonné en mémoire, avec un délai par pièce. Les threads ci-dessous
+    # ne font qu'attendre et écrire. SYNORIX_EXTRACTION_PROCESSUS=0 : threads dans l'API.
     def _extraire(file_path, filename: str, doc_id: str, on_page=None):
-        """(texte, pages, avertissement) : dans un processus de travail si possible,
-        sinon ici (repli : pool désactivé, cassé, ou erreur de ce fichier)."""
-        if pool_actif[0]:
-            try:
-                texte, pages, avert, pages_toutes = pool_proc.submit(
-                    extraire_fichier, str(file_path), filename, doc_id).result()
-                if pages_toutes is not None:
-                    # pages gardées pour l'ancrage des sources (pas de relecture du PDF)
-                    retenir_pages(str(file_path), pages_toutes)
-                return texte, pages, avert
-            except BrokenProcessPool as e:
-                _log.warning(f"Pool d'extraction cassé ({e}) : repli en threads")
-                pool_actif[0] = False
-            except Exception as e:
-                _log.warning(f"Extraction en processus échouée pour {filename} ({e}) : repli ici")
-        # Par le chemin : les gros fichiers sont lus au fil de l'eau, jamais chargés en
-        # entier (8 extractions en parallèle, pièces de plusieurs centaines de Mo).
-        return processor.extract_ex(
-            file_path, filename, on_page=on_page,
-            on_pages=lambda pages: retenir_pages(str(file_path), pages))
+        """(texte, pages, avertissement)."""
+        return _extraire_piece(file_path, filename, doc_id, on_page=on_page, retenir=True)
 
     def _extract_fast(doc_id: str, filename: str) -> None:
         """Extract text for a small file. Runs in thread pool."""
@@ -1085,7 +1041,6 @@ def _extract_all_parallel(project_id: str, docs_info: list) -> None:
         with count_lock:
             completed_count[0] += 1
             done = completed_count[0]
-            termines.add(doc_id)
             page_fractions.pop(doc_id, None)  # le fichier compte désormais entier
         _update_progress(done)
 
@@ -1111,95 +1066,121 @@ def _extract_all_parallel(project_id: str, docs_info: list) -> None:
         except Exception:
             pass
 
+    # ── Phase 1: extract only small files in thread pool ─────────────────
+    t0 = _time.monotonic()
     try:
-        # ── Phase 1: extract only small files in thread pool ─────────────────
-        t0 = _time.monotonic()
-        try:
-            if fast_docs:
-                with ThreadPoolExecutor(max_workers=8) as executor:
-                    futures = {
-                        executor.submit(_extract_fast, doc_id, fname): (doc_id, fname)
-                        for doc_id, fname in fast_docs
-                    }
-                    # Global timeout: 60s max for entire phase 1
-                    for future in as_completed(futures, timeout=60):
-                        doc_id, fname = futures[future]
-                        try:
-                            future.result(timeout=0)  # already done from as_completed
-                        except Exception as e:
-                            _log.error(f"Fast extraction error for {fname}: {e}")
-        except TimeoutError:
-            # Global 60s timeout hit — mark remaining as empty
-            _log.warning(f"Phase 1 global timeout (60s) for {project_id}")
-            db_to = SessionLocal()
-            try:
-                remaining = db_to.query(ProjectDocument).filter(
-                    ProjectDocument.project_id == project_id,
-                    ProjectDocument.extracted_text.is_(None),
-                ).all()
-                for doc in remaining:
-                    doc.extracted_text = ""
-                db_to.commit()
-            finally:
-                db_to.close()
-        except Exception as e:
-            _log.error(f"Phase 1 failed for {project_id}: {e}")
-
-        elapsed = _time.monotonic() - t0
-        print(f"[TIMING] Phase 1 pool done: {total_fast} files in {elapsed:.1f}s", flush=True)
-        _mark_ready()
-
-        # ── Phase 2: full extraction of deferred large PDFs (silent) ─────────
-        if not phase2_docs:
-            return
-
-        _log.info(f"Phase 2 starting for {project_id}: {len(phase2_docs)} large PDFs")
-
-        def _extract_phase2(doc_id: str, filename: str) -> None:
-            """Full text extraction for large PDFs (viewer highlighting)."""
-            try:
-                db_inner = SessionLocal()
-                try:
-                    doc = db_inner.query(ProjectDocument).filter(ProjectDocument.id == doc_id).first()
-                    if not doc or not doc.file_url:
-                        return
-                    rel = doc.file_url.removeprefix("/uploads/")
-                    file_path = UPLOADS_ROOT / rel
-                    if not file_path.exists():
-                        return
-                    result_text, result_pages, result_warning = _extraire(file_path, filename, doc_id)
-                    if result_text:
-                        doc.extracted_text = result_text.replace("\x00", "")
-                    doc.extraction_warning = result_warning
-                    if result_pages is not None:
-                        doc.page_count = result_pages
-                    db_inner.commit()
-                finally:
-                    db_inner.close()
-            except Exception as e:
-                _log.error(f"Phase2 extraction failed for {filename}: {e}")
-
-        try:
-            with ThreadPoolExecutor(max_workers=2) as executor:
+        if fast_docs:
+            with ThreadPoolExecutor(max_workers=8) as executor:
                 futures = {
-                    executor.submit(_extract_phase2, doc_id, fname): fname
-                    for doc_id, fname in phase2_docs
+                    executor.submit(_extract_fast, doc_id, fname): (doc_id, fname)
+                    for doc_id, fname in fast_docs
                 }
-                for future in as_completed(futures, timeout=300):
-                    fname = futures[future]
+                # Global timeout: 60s max for entire phase 1
+                for future in as_completed(futures, timeout=60):
+                    doc_id, fname = futures[future]
                     try:
-                        future.result(timeout=0)
+                        future.result(timeout=0)  # already done from as_completed
                     except Exception as e:
-                        _log.warning(f"Phase2 error for {fname}: {e}")
-            _log.info(f"Phase 2 done for {project_id}: {len(phase2_docs)} large PDFs")
-        except TimeoutError:
-            _log.warning(f"Phase 2 global timeout (300s) for {project_id}")
+                        _log.error(f"Fast extraction error for {fname}: {e}")
+    except TimeoutError:
+        # Global 60s timeout hit — mark remaining as empty
+        _log.warning(f"Phase 1 global timeout (60s) for {project_id}")
+        db_to = SessionLocal()
+        try:
+            remaining = db_to.query(ProjectDocument).filter(
+                ProjectDocument.project_id == project_id,
+                ProjectDocument.extracted_text.is_(None),
+            ).all()
+            for doc in remaining:
+                doc.extracted_text = ""
+            db_to.commit()
+        finally:
+            db_to.close()
+    except Exception as e:
+        _log.error(f"Phase 1 failed for {project_id}: {e}")
+
+    elapsed = _time.monotonic() - t0
+    print(f"[TIMING] Phase 1 pool done: {total_fast} files in {elapsed:.1f}s", flush=True)
+    _mark_ready()
+
+    # ── Phase 2: full extraction of deferred large PDFs (silent) ─────────
+    if not phase2_docs:
+        return
+
+    _log.info(f"Phase 2 starting for {project_id}: {len(phase2_docs)} large PDFs")
+
+    def _extract_phase2(doc_id: str, filename: str) -> None:
+        """Full text extraction for large PDFs (viewer highlighting)."""
+        try:
+            db_inner = SessionLocal()
+            try:
+                doc = db_inner.query(ProjectDocument).filter(ProjectDocument.id == doc_id).first()
+                if not doc or not doc.file_url:
+                    return
+                rel = doc.file_url.removeprefix("/uploads/")
+                file_path = UPLOADS_ROOT / rel
+                if not file_path.exists():
+                    return
+                result_text, result_pages, result_warning = _extraire(file_path, filename, doc_id)
+                if result_text:
+                    doc.extracted_text = result_text.replace("\x00", "")
+                doc.extraction_warning = result_warning
+                if result_pages is not None:
+                    doc.page_count = result_pages
+                db_inner.commit()
+            finally:
+                db_inner.close()
         except Exception as e:
-            _log.error(f"Phase2 failed for {project_id}: {e}")
-    finally:
-        arret_vidage.set()
-        if pool_proc is not None:
-            pool_proc.shutdown(wait=True, cancel_futures=True)
+            _log.error(f"Phase2 extraction failed for {filename}: {e}")
+
+    try:
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            futures = {
+                executor.submit(_extract_phase2, doc_id, fname): fname
+                for doc_id, fname in phase2_docs
+            }
+            for future in as_completed(futures, timeout=300):
+                fname = futures[future]
+                try:
+                    future.result(timeout=0)
+                except Exception as e:
+                    _log.warning(f"Phase2 error for {fname}: {e}")
+        _log.info(f"Phase 2 done for {project_id}: {len(phase2_docs)} large PDFs")
+    except TimeoutError:
+        _log.warning(f"Phase 2 global timeout (300s) for {project_id}")
+    except Exception as e:
+        _log.error(f"Phase2 failed for {project_id}: {e}")
+
+
+def _extraire_piece(file_path, filename: str, doc_id: str, on_page=None, retenir: bool = False):
+    """(texte, pages, avertissement) d'une pièce déposée.
+
+    Par défaut dans le processus pdfium (extraction_processus.actif) : si la lecture est
+    interrompue (délai, plafond de mémoire, plantage), la pièce est « non lisible » avec un
+    avertissement qui la nomme, et elle n'est JAMAIS relue dans l'API. Les threads de l'API ne
+    servent qu'avec SYNORIX_EXTRACTION_PROCESSUS=0, ou si le processus ne peut pas démarrer.
+    ``retenir`` : garde les pages lues pour l'ancrage des sources (pas de relecture du PDF)."""
+    import logging as _logging
+    from services import extraction_processus as ep
+    from services.pdfium_processus import TravailPdfiumEchoue
+    from services.ai.excerpt_anchor import retenir_pages
+    _log = _logging.getLogger(__name__)
+    if ep.actif():
+        try:
+            texte, pages, avert, pages_toutes = ep.extraire_en_processus(
+                str(file_path), filename, doc_id, on_page)
+            if retenir and pages_toutes is not None:
+                retenir_pages(str(file_path), pages_toutes)
+            return texte, pages, avert
+        except TravailPdfiumEchoue as e:
+            if e.raison != "indisponible":
+                _log.warning("Lecture interrompue pour %s : %s", filename, e)
+                return "", None, ep.avertissement_travail(filename, e)
+            _log.warning("Processus pdfium indisponible (%s) : extraction dans l'API", e.detail)
+    # Par le chemin : les gros fichiers sont lus au fil de l'eau, jamais chargés en entier.
+    return processor.extract_ex(
+        file_path, filename, on_page=on_page,
+        on_pages=(lambda pages: retenir_pages(str(file_path), pages)) if retenir else None)
 
 
 def _track_extraction_progress(project_id: str, total_needing_text: int) -> None:
@@ -1359,7 +1340,7 @@ def _extract_text_from_url_background(doc_id: str, file_url: str, filename: str)
             # S3-backed file — extraction would need a download step we don't yet support.
             _log.warning(f"Extraction texte ignorée (URL non locale): {file_url}")
             return
-        result_text, result_pages, extraction_warning = processor.extract_ex(path, filename)
+        result_text, result_pages, extraction_warning = _extraire_piece(path, filename, doc_id)
         if result_text:
             extracted_text = result_text.replace("\x00", "")
         page_count = result_pages

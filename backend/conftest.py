@@ -30,6 +30,9 @@ os.environ.setdefault("FRONTEND_URL", "http://localhost:3000")
 os.environ.setdefault("CLERK_SECRET_KEY", "test-clerk-secret")
 os.environ.setdefault("CLERK_JWKS_URL", "https://example.clerk.accounts.dev/.well-known/jwks.json")
 os.environ.setdefault("DEBUG", "true")
+# L'extraction des pièces est en processus par défaut (T9) ; la suite reste en threads (rapide, et
+# les tests qui simulent l'extracteur) : tests/test_extraction_processus.py active le processus.
+os.environ.setdefault("SYNORIX_EXTRACTION_PROCESSUS", "0")
 
 import pytest  # noqa: E402
 from fastapi import Request  # noqa: E402
