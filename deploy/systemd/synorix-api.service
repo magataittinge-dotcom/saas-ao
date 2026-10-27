@@ -1,0 +1,62 @@
+# Synorix — API FastAPI. Source de vérité : deploy/systemd/synorix-api.service du dépôt.
+# Installé en /etc/systemd/system/synorix-api.service (procédure : VPS.md).
+[Unit]
+Description=Synorix API (FastAPI)
+After=network.target postgresql.service redis-server.service
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=synorix
+Group=synorix
+WorkingDirectory=/srv/synorix/backend
+EnvironmentFile=/srv/synorix/backend/.env
+# --workers 1 OBLIGATOIRE : progression en mémoire du processus, travaux longs en threads de l'API,
+# réconciliation au démarrage mono-processus (DEPLOYMENT.md §7). 1 vCPU de toute façon.
+# --forwarded-allow-ips 127.0.0.1, JAMAIS « * » : sinon l'IP client se falsifie par X-Forwarded-For.
+# --timeout-graceful-shutdown 20 : un flux SSE ouvert empêche sinon l'arrêt propre jusqu'au SIGKILL
+# (mesuré au bloc 6 : jamais arrêté en 20 s sans l'option, 5,2 s avec 5).
+ExecStart=/srv/synorix/backend/venv/bin/uvicorn main:app \
+  --host 127.0.0.1 --port 8000 \
+  --workers 1 --proxy-headers --forwarded-allow-ips 127.0.0.1 \
+  --timeout-graceful-shutdown 20 \
+  --access-log --log-config /srv/synorix/backend/log_config.json
+Restart=always
+RestartSec=5
+# B6 : uvicorn ne gère que SIGINT et SIGTERM ; SIGQUIT le tue sans arrêt propre (mesuré au bloc 6).
+# Les travaux en threads coupés par l'arrêt sont repris par la réconciliation au démarrage suivant.
+KillSignal=SIGTERM
+# SIGTERM au seul processus principal ; ses enfants (PDFium, LibreOffice) reçoivent SIGKILL
+# à la fin du délai s'ils restent.
+KillMode=mixed
+TimeoutStopSec=30
+
+# Mémoire (KVM 1 : 4 Go pour Postgres, Redis, API, Celery). Ce groupe compte l'API (~150 Mo),
+# l'enfant PDFium (603 Mo au pic mesuré, recyclé au-delà de 350 Mo, RLIMIT_AS 1,5 Go) et LibreOffice.
+# Au-delà de MemoryHigh, le noyau ralentit et récupère ; à MemoryMax, il tue le plus gros processus
+# du groupe (en pratique l'enfant), et OOMPolicy=continue garde l'API debout.
+MemoryHigh=1800M
+MemoryMax=2200M
+OOMPolicy=continue
+
+# Durcissement
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+# Le « - » tolère un dossier absent (sinon le service refuse de démarrer).
+ReadWritePaths=/srv/synorix/backend/uploads -/srv/synorix/backend/cache -/var/log/synorix
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

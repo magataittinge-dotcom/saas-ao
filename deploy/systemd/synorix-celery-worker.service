@@ -1,0 +1,38 @@
+# Synorix — worker Celery (scan quotidien du coffre-fort, échéances, purge B18).
+# Installé en /etc/systemd/system/synorix-celery-worker.service (procédure : VPS.md).
+[Unit]
+Description=Synorix Celery worker
+After=network.target redis-server.service synorix-api.service
+
+[Service]
+Type=simple
+User=synorix
+Group=synorix
+WorkingDirectory=/srv/synorix/backend
+EnvironmentFile=/srv/synorix/backend/.env
+# -c 1 : 1 vCPU. Enfant remplacé après 50 tâches ou 300 Mo résidents (valeur en Kio).
+ExecStart=/srv/synorix/backend/venv/bin/celery -A tasks worker -l info -c 1 \
+  --max-tasks-per-child 50 --max-memory-per-child 300000
+Restart=always
+RestartSec=5
+# Celery : SIGTERM = arrêt à chaud (finit la tâche en cours).
+KillSignal=SIGTERM
+TimeoutStopSec=60
+MemoryHigh=500M
+MemoryMax=700M
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+# uploads : la purge des AO supprimés (B18) y efface les dossiers des projets.
+ReadWritePaths=/srv/synorix/backend/uploads -/srv/synorix/backend/cache -/var/log/synorix
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

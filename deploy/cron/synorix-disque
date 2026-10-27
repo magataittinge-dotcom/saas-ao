@@ -1,0 +1,4 @@
+# Synorix — alerte disque (50 Go ; un DCE pèse jusqu'à 380 Mo). Installé en /etc/cron.d/synorix-disque.
+# Toutes les heures : au-delà de 80 % d'occupation de /, une ligne « synorix-disque » dans le journal
+# (journalctl -t synorix-disque). Aucune donnée personnelle. Dans un fichier cron, « % » s’écrit « \% ».
+17 * * * * root u=$(df --output=pcent / | tail -1 | tr -dc '0-9'); [ "$u" -ge 80 ] && logger -p user.warning -t synorix-disque "disque / à ${u} \%"

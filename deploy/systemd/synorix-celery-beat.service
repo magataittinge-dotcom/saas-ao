@@ -1,0 +1,33 @@
+# Synorix — Celery beat (planificateur : scan quotidien, purge B18).
+# Installé en /etc/systemd/system/synorix-celery-beat.service (procédure : VPS.md).
+[Unit]
+Description=Synorix Celery beat
+After=network.target redis-server.service synorix-celery-worker.service
+
+[Service]
+Type=simple
+User=synorix
+Group=synorix
+WorkingDirectory=/srv/synorix/backend
+EnvironmentFile=/srv/synorix/backend/.env
+# Fichier d'état de beat dans /var/lib/synorix-beat (StateDirectory, créé par systemd),
+# pour garder le code en lecture seule.
+StateDirectory=synorix-beat
+ExecStart=/srv/synorix/backend/venv/bin/celery -A tasks beat -l info \
+  --schedule /var/lib/synorix-beat/celerybeat-schedule
+Restart=always
+RestartSec=5
+KillSignal=SIGTERM
+MemoryMax=300M
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

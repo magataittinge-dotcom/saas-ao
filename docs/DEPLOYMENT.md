@@ -1,6 +1,7 @@
 # Déploiement Synorix sur VPS Hostinger
 
-**Cible :** Ubuntu Server 24.04 LTS sur Hostinger (KVM 4 ou supérieur recommandé : 4 vCPU / 16 Go RAM / 200 Go SSD).
+**Cible :** Ubuntu Server 24.04 LTS sur Hostinger **KVM 1 (1 vCPU, 4 Go, 50 Go)** — décision du 25/10/2026. Les réglages du dépôt (`deploy/`) sont dimensionnés pour lui : un seul worker, un seul enfant PDFium, Celery à 1, mémoire plafonnée par service, swap de 2 Go.
+**Fichiers de configuration :** `deploy/` est la **source de vérité** (nginx, systemd, Postgres, Redis, journald, sysctl, cron). Cette page explique ; elle ne recopie plus ces fichiers. Procédure de mise en place pas à pas, avec vérification et retour arrière : `.claude/echange/sprint-ozcan/VPS.md` (partie « Procédure du bloc 6 »).
 **Domaine :** `synorix.fr` (ou `.io` / `.com` selon décision Mohamed).
 **Stack :** PostgreSQL 16 + Redis 7 + nginx + uvicorn (FastAPI) + Vite build statique + systemd.
 
@@ -93,13 +94,13 @@ apt install -y \
   curl git rsync \
   imagemagick poppler-utils libreoffice
 # poppler : outils PDF
+# imagemagick : plus appelé par le code (servait aux cartes Google, retirées) ; facultatif.
 # Carlito (clone libre de Calibri, mêmes largeurs de lettres) n'a pas besoin de paquet :
 #   backend/assets/fonts/carlito (OFL) est montrée à LibreOffice par un fonts.conf
 #   du sous-processus (services/pdf_export.py). Le Word déclare Calibri, sans police
 #   embarquée. Vérifier : `pdffonts` d'un PDF exporté ne montre ni DejaVu ni Liberation.
 # libreoffice : REQUIS pour l'export PDF du mémoire (C13a — soffice headless,
 #   la version dépôt du ZIP). Vérifier après install : `soffice --version`.
-# imagemagick : redimensionnement Maps statiques
 ```
 
 ---
@@ -113,12 +114,10 @@ CREATE DATABASE synorix OWNER synorix;
 EOF
 ```
 
-`/etc/postgresql/16/main/postgresql.conf` :
-- `listen_addresses = 'localhost'`
-- `shared_buffers = 4GB` (sur un 16 Go RAM)
-- `work_mem = 32MB`
-- `effective_cache_size = 12GB`
-- `max_connections = 100`
+`/etc/postgresql/16/main/postgresql.conf` : `listen_addresses = 'localhost'`.
+Les réglages de mémoire et de connexions sont dans `deploy/postgres/synorix.conf`, installé en
+`/etc/postgresql/16/main/conf.d/synorix.conf` (KVM 1 : `shared_buffers = 512MB`, `max_connections = 50`,
+`idle_in_transaction_session_timeout = 10min`).
 
 `/etc/postgresql/16/main/pg_hba.conf` : laisser uniquement local/peer + local/scram-sha-256 pour `synorix`.
 
@@ -133,8 +132,8 @@ systemctl restart postgresql
 `/etc/redis/redis.conf` :
 - `bind 127.0.0.1`
 - `requirepass CHANGE_ME_RANDOM_64_CHARS`
-- `maxmemory 1gb`
-- `maxmemory-policy allkeys-lru`
+- dernière ligne : `include /etc/redis/synorix.conf` (`deploy/redis/synorix.conf` : `maxmemory 128mb`,
+  `maxmemory-policy noeviction` — un broker Celery ne doit jamais perdre une tâche en silence).
 
 ```bash
 systemctl restart redis-server
@@ -240,162 +239,60 @@ SYNORIX_CACHE_APERCUS_MO=2048      # plafond du cache, éviction LRU (2 Go = 4 %
 
 ## 7. systemd — service uvicorn
 
-`/etc/systemd/system/synorix-api.service` :
+Fichier : `deploy/systemd/synorix-api.service` → `/etc/systemd/system/synorix-api.service`.
+Les raisons de chaque réglage sont en commentaire dans le fichier. L'essentiel :
 
-```ini
-[Unit]
-Description=Synorix FastAPI backend
-After=network.target postgresql.service redis-server.service
-Requires=postgresql.service
-
-[Service]
-Type=simple
-User=synorix
-Group=synorix
-WorkingDirectory=/srv/synorix/backend
-EnvironmentFile=/srv/synorix/backend/.env
-ExecStart=/srv/synorix/backend/venv/bin/uvicorn main:app \
-  --host 127.0.0.1 --port 8000 \
-  --workers 1 --proxy-headers --forwarded-allow-ips 127.0.0.1 \
-  --access-log --log-config /srv/synorix/backend/log_config.json
-
-# ⚠️ ARCHITECTURE (audit prod R3) : --workers 1 OBLIGATOIRE en l'état.
-# La progression vit en mémoire du process (services/progress_bus.py,
-# services/pipeline_tracker.py) et l'analyse/génération tournent en threads
-# démons DANS le worker web (routers/analysis.py:168, routers/memoire.py:224).
-# Avec N workers : barre SSE muette ~(N-1)/N du temps (le GET /progress-stream
-# ne voit pas les événements d'un autre worker), et la réconciliation au boot
-# d'un worker peut abattre les runs VIVANTS des autres
-# (services/run_reconciliation.py:11-16 documente cette hypothèse mono-process).
-# Ne remonter --workers qu'APRÈS le portage progression → Redis pub/sub
-# et jobs longs → Celery.
-Restart=always
-RestartSec=5
-KillSignal=SIGQUIT
-TimeoutStopSec=30
-
-# ⚠️ SÉCURITÉ (S1.2) : `--forwarded-allow-ips 127.0.0.1` — JAMAIS `*`.
-# Avec `*`, uvicorn dérive l'IP client du X-Forwarded-For fourni par le client,
-# donc n'importe qui peut spoofer son IP (X-Forwarded-For rotatif) et contourner
-# le rate limiting keyé par IP. Ne faire confiance qu'à l'IP du reverse proxy
-# local (nginx sur 127.0.0.1). Le rate limiting des routes authentifiées est
-# désormais keyé par org (non spoofable), mais les routes publiques restent
-# keyées IP — d'où l'importance de cette restriction.
-
-# Hardening
-NoNewPrivileges=true
-PrivateTmp=true
-ProtectSystem=strict
-ProtectHome=true
-ReadWritePaths=/srv/synorix/backend/uploads /var/log/synorix
-ProtectKernelTunables=true
-ProtectKernelModules=true
-ProtectControlGroups=true
-
-[Install]
-WantedBy=multi-user.target
-```
+- `--workers 1` **obligatoire** : la progression vit en mémoire du processus, les travaux longs tournent
+  en threads de l'API, la réconciliation au démarrage suppose un seul processus
+  (`services/run_reconciliation.py`). Ne remonter qu'après le portage progression → Redis et
+  travaux longs → Celery.
+- `--forwarded-allow-ips 127.0.0.1`, **jamais `*`** (sinon l'IP client se falsifie par `X-Forwarded-For`
+  et contourne les limites de débit par IP).
+- `KillSignal=SIGTERM` (B6) : uvicorn ne gère que SIGINT et SIGTERM ; SIGQUIT le tue sans arrêt propre.
+  `--timeout-graceful-shutdown 20` : sans lui, un flux SSE ouvert bloque l'arrêt jusqu'au SIGKILL.
+  Les travaux coupés sont repris par la réconciliation au démarrage suivant (`extracting_text`,
+  `extracting_zip`, `analyzing`, `generating` ; `detecting_lots` revient à `ready`).
+- `MemoryHigh=1800M`, `MemoryMax=2200M`, `OOMPolicy=continue` : le groupe compte l'API, l'enfant PDFium
+  et LibreOffice ; au plafond, le noyau tue l'enfant, l'API reste debout.
+- Durcissement : `ProtectSystem=strict`, `ProtectHome=true`, `PrivateTmp=true` ;
+  `ReadWritePaths` = `uploads`, `cache` (aperçus de « Voir dans le DCE »), `/var/log/synorix`.
 
 ```bash
-systemctl daemon-reload
-systemctl enable --now synorix-api
-journalctl -u synorix-api -f   # check startup
+sudo systemd-analyze verify /etc/systemd/system/synorix-api.service
+sudo systemctl daemon-reload && sudo systemctl enable --now synorix-api
+journalctl -u synorix-api -f   # « Application startup complete »
 ```
 
 ---
 
 ## 8. nginx — reverse proxy + SSL
 
-`/etc/nginx/sites-available/synorix` :
+Fichiers : `deploy/nginx/synorix.conf` → `/etc/nginx/sites-available/synorix`, et ses 3 extraits
+`deploy/nginx/synorix-{proxy,entetes,entetes-statiques}.conf` → `/etc/nginx/snippets/`.
+Essayé avec le nginx 1.24 d'Ubuntu noble (bloc 6). Ce qu'il règle :
 
-```nginx
-# HTTP → HTTPS
-server {
-    listen 80;
-    server_name synorix.fr www.synorix.fr;
-    return 301 https://synorix.fr$request_uri;
-}
-
-# Forced www → apex
-server {
-    listen 443 ssl http2;
-    server_name www.synorix.fr;
-    ssl_certificate     /etc/letsencrypt/live/synorix.fr/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/synorix.fr/privkey.pem;
-    return 301 https://synorix.fr$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name synorix.fr;
-
-    ssl_certificate     /etc/letsencrypt/live/synorix.fr/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/synorix.fr/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_prefer_server_ciphers off;
-    ssl_session_cache shared:SSL:10m;
-
-    client_max_body_size 2200M;   # 2 GB DCE uploads
-    proxy_read_timeout 600s;
-    proxy_send_timeout 600s;
-
-    # SPA frontend
-    root /srv/synorix/frontend/dist;
-    index index.html;
-
-    # API — long-lived SSE streams (/api/projects/.../progress-stream) and
-    # Anthropic streaming both require buffering off. Don't tighten these
-    # without verifying the in-progress modal still ticks in real time.
-    location /api/ {
-        proxy_pass http://127.0.0.1:8000;
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto https;
-        proxy_set_header Connection '';        # required for keep-alive on SSE
-        proxy_buffering off;                   # SSE + Anthropic streaming
-        proxy_cache off;                       # never cache stream responses
-        proxy_read_timeout 600s;               # 10 min — long Opus generations
-        proxy_send_timeout 600s;
-        chunked_transfer_encoding on;
-    }
-
-    # Document entier de « Voir dans le DCE » : plages HTTP (pdf.js charge par morceaux).
-    # FastAPI vérifie la signature et l'appartenance à l'organisation, puis répond SANS corps avec
-    # `X-Accel-Redirect: /_fichiers_internes/<chemin relatif>` (+ Content-Type et
-    # Content-Disposition: inline, conservés par nginx) ; nginx envoie le fichier lui-même, avec
-    # ses plages natives (206). `internal` : cette adresse est INJOIGNABLE depuis l'extérieur.
-    # `alias` se termine par « / » comme la `location`. Réglage côté appli, dans le `.env` :
-    #   SYNORIX_X_ACCEL_PREFIX=/_fichiers_internes
-    # (vide = FastAPI sert le fichier lui-même, plages HTTP comprises : dev.)
-    # Ne PAS ajouter X-Accel-Redirect à `proxy_ignore_headers`.
-    location /_fichiers_internes/ {
-        internal;
-        alias /srv/synorix/backend/uploads/;
-        add_header X-Content-Type-Options nosniff always;
-        add_header Cache-Control "private, no-store" always;
-    }
-
-    # SPA fallback
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Cache long pour les assets
-    location ~* \.(js|css|png|jpg|jpeg|gif|svg|woff2?)$ {
-        expires 30d;
-        add_header Cache-Control "public, immutable";
-    }
-
-    access_log /var/log/nginx/synorix.access.log;
-    error_log  /var/log/nginx/synorix.error.log;
-}
-```
+- **`.mjs` en `application/javascript`** : `mime.types` ne connaît pas `.mjs` ; servi en
+  `application/octet-stream`, le worker de pdf.js serait refusé et « Voir dans le DCE » ne s'ouvrirait pas.
+- **Compression** : le build dépose un `.gz` et un `.br` à côté de chaque fichier ; `gzip_static on`,
+  compression à la volée en repli ; Brotli si `libnginx-mod-http-brotli-static` est installé.
+  L'API n'est pas compressée par nginx (BREACH).
+- **Cache** : `index.html` et routes SPA en `no-cache` ; fichiers à empreinte de `assets/` immuables un an ;
+  jamais de cache sur une 404.
+- **En-têtes de la page** : HSTS, `X-Frame-Options DENY`, `Referrer-Policy`, `Permissions-Policy`,
+  **CSP du front en observation** (`Content-Security-Policy-Report-Only`, rapports sur
+  `POST /api/csp-rapport`). Les en-têtes de l'API restent posés par FastAPI (`main.py`).
+- **X-Accel-Redirect** : FastAPI vérifie la signature et l'organisation, puis répond sans corps avec
+  `X-Accel-Redirect: /_fichiers_internes/<chemin>` ; nginx sert le fichier avec ses plages (206).
+  `location /_fichiers_internes/` est `internal` : 404 de l'extérieur. Côté `.env` :
+  `SYNORIX_X_ACCEL_PREFIX=/_fichiers_internes`. nginx (`www-data`) doit pouvoir lire `uploads/`.
+- **Plafonds de corps** : 2 Go pour le seul dépôt du DCE (`POST /api/projects/{id}/documents`,
+  `routers/projects.py`), 60 Mo ailleurs (dépôts de l'appli à 50 Mo au plus).
+- **Débit** : 20 requêtes/s par IP sur `/api/` (rafale 40), en plus des limites de l'appli.
+- **Racine** : `/srv/synorix/www`, alimentée par `deploy/outils/publier_front.sh` (§10).
 
 ```bash
-ln -s /etc/nginx/sites-available/synorix /etc/nginx/sites-enabled/synorix
-nginx -t && systemctl reload nginx
+sudo nginx -t && sudo systemctl reload nginx
+deploy/outils/verifier_prod.sh https://synorix.fr /srv/synorix/www   # lecture seule, « 0 KO » attendu
 ```
 
 ### SSL Let's Encrypt
@@ -443,46 +340,12 @@ planifie. Sans beat, `check_all_expirations` n'est jamais déclenchée.
 `-A tasks` résout l'app exposée par `backend/tasks/__init__.py` (R13 : ce
 fichier était vide, la commande ne trouvait aucune app).
 
-**Worker** — `/etc/systemd/system/synorix-celery-worker.service` :
-
-```ini
-[Unit]
-Description=Synorix Celery worker
-After=network.target redis-server.service synorix-api.service
-
-[Service]
-Type=simple
-User=synorix
-Group=synorix
-WorkingDirectory=/srv/synorix/backend
-EnvironmentFile=/srv/synorix/backend/.env
-ExecStart=/srv/synorix/backend/venv/bin/celery -A tasks worker -l info -c 2
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
-
-**Beat** (planificateur) — `/etc/systemd/system/synorix-celery-beat.service` :
-
-```ini
-[Unit]
-Description=Synorix Celery beat (planificateur du scan quotidien)
-After=network.target redis-server.service synorix-celery-worker.service
-
-[Service]
-Type=simple
-User=synorix
-Group=synorix
-WorkingDirectory=/srv/synorix/backend
-EnvironmentFile=/srv/synorix/backend/.env
-ExecStart=/srv/synorix/backend/venv/bin/celery -A tasks beat -l info \
-    --schedule /srv/synorix/backend/celerybeat-schedule
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-```
+Fichiers : `deploy/systemd/synorix-celery-worker.service` et `synorix-celery-beat.service`
+→ `/etc/systemd/system/`.
+- **Worker** : `-c 1` (1 vCPU), enfant remplacé après 50 tâches ou 300 Mo, `MemoryMax=700M`.
+  Il exécute aussi la **purge des AO supprimés** (B18, `tasks/purge_ao.py`) : en simulation tant que
+  `SYNORIX_PURGE_AO_ACTIVE` ne vaut pas `1` (comptes seulement, aucun nom) ; délai `SYNORIX_PURGE_AO_JOURS=30`.
+- **Beat** : fichier d'état dans `/var/lib/synorix-beat` (`StateDirectory`), le code reste en lecture seule.
 
 Activation :
 
@@ -510,8 +373,12 @@ git pull --ff-only origin main
 echo "→ Backend deps"
 sudo -u deploy backend/venv/bin/pip install -r backend/requirements.txt --quiet
 
-echo "→ Frontend build"
-( cd frontend && sudo -u deploy npm ci --quiet && sudo -u deploy npm run build )
+echo "→ Frontend build (précompression .gz/.br comprise) puis publication"
+# KVM 1 : build plafonné et en basse priorité pour ne pas affamer l'API.
+( cd frontend && sudo -u deploy npm ci --quiet && \
+  sudo -u deploy env NODE_OPTIONS=--max-old-space-size=1536 nice -n 10 npm run build )
+# Nouveaux assets d'abord, index.html en dernier, anciens assets gardés 7 jours (onglets ouverts).
+sudo -u deploy /srv/synorix/deploy/outils/publier_front.sh
 
 echo "→ DB migrations (alembic — source UNIQUE du schéma depuis R14)"
 # L'API refuse de démarrer si la base n'est pas à la head (fail fast).
@@ -583,7 +450,7 @@ git log --oneline -5
 # Repointer la prod sur le commit précédent
 git checkout <SHA_DU_DERNIER_BON_COMMIT>
 backend/venv/bin/pip install -r backend/requirements.txt --quiet
-( cd frontend && npm ci --quiet && npm run build )
+( cd frontend && npm ci --quiet && npm run build ) && deploy/outils/publier_front.sh
 sudo systemctl restart synorix-api
 sudo systemctl reload nginx
 EOF
