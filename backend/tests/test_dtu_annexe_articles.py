@@ -146,3 +146,69 @@ def test_deja_filtre_ne_refiltre_pas_les_pieces():
     docs = [_doc("cctp.pdf", "NF DTU 41.2", type_="cctp", lots=("5", "5a"))]
     res = dtu_autorises(docs, selected_lot="lot5", lot_nom="Lot 05 — Façade", deja_filtre=True)
     assert list(res) == ["41.2"]
+
+
+# ── Sigles des lots du BTP (décision de Mohamed du 27/10, tranche 1) ────────
+def _lot_n(numero, designation, *autres):
+    return LotCible(numero, designation, tuple(autres))
+
+
+def test_go_et_gros_oeuvre_sont_equivalents_dans_les_deux_sens():
+    lot1 = _lot_n("1", "Démolition – GO – Charpente bois", ("2", "Étanchéité couverture"))
+    assert rattache_article("LOT GROS ŒUVRE", lot1) is True
+    lot_go = _lot_n("1", "Gros œuvre", ("2", "Étanchéité couverture"))
+    assert rattache_article("LOT GO", lot_go) is True
+    assert rattache_article("LOT G.O. ", lot_go) is True
+
+
+def test_chaque_sigle_se_deplie_dans_les_deux_sens():
+    cas = [
+        ("CVC", "Chauffage – Ventilation – Climatisation"),
+        ("VRD", "Voirie et réseaux divers"),
+        ("CFO", "Courants forts"),
+        ("CFA", "Courants faibles"),
+    ]
+    for sigle, long in cas:
+        autres = ("9", "Peinture")
+        assert rattache_article(f"LOT {long.upper()}", _lot_n("5", sigle, autres)) is True, sigle
+        assert rattache_article(f"LOT {sigle}", _lot_n("5", long, autres)) is True, sigle
+    assert rattache_article("LOT V.R.D.", _lot_n("5", "Voirie et réseaux divers", ("9", "Peinture"))) is True
+
+
+def test_un_sigle_ne_rattache_pas_a_deux_lots():
+    lot1 = _lot_n("1", "Démolition – GO", ("7", "Gros œuvre"))
+    assert rattache_article("LOT GROS ŒUVRE", lot1) is False   # « go » désigne aussi le lot 7
+    lot_cfo = _lot_n("9", "Électricité CFO CFA", ("10", "Courants forts"))
+    assert rattache_article("LOT CFO", lot_cfo) is False
+    # sans autre lot qui porte le mot, le rattachement reste possible
+    assert rattache_article("LOT CFO", _lot_n("9", "Électricité CFO CFA", ("10", "Plomberie"))) is True
+
+
+def test_le_depliage_exige_la_formule_entiere():
+    # « chauffage ventilation » seul n'est pas « CVC » (climatisation absente) : prudence
+    assert rattache_article("LOT CVC", _lot_n("11", "Chauffage – Ventilation", ("9", "Peinture"))) is False
+
+
+def test_tce_seul_ne_rattache_aucun_lot_de_metier():
+    autres = ("9", "Peinture")
+    assert rattache_article("LOT TCE", _lot_n("5", "Revêtement de façade – TCE", autres)) is False
+    assert rattache_article("LOT TOUS CORPS D'ÉTAT", _lot_n("5", "Façade ITE", autres)) is False
+    assert rattache_article("TCE", _lot_n("5", "Façade", autres)) is False
+
+
+def test_lot_tce_unique_couvre_tous_les_articles_titres():
+    tce = _lot_n("1", "TCE – Tous corps d'état")           # aucun autre lot au projet
+    assert rattache_article("LOT FAÇADE", tce) is True
+    assert rattache_article("LOT TCE", tce) is True
+    assert rattache_article(None, tce) is False            # article sans titre : toujours non
+    # avec d'autres lots au projet, « TCE » ne prouve plus rien pour un article de métier
+    avec_autres = _lot_n("1", "TCE – Tous corps d'état", ("2", "VRD"))
+    assert rattache_article("LOT FAÇADE", avec_autres) is False
+
+
+def test_dtu_du_lot_gros_oeuvre_lus_par_le_sigle_go():
+    docs = [_doc("annexe.pdf", ANNEXE)]
+    res = dtu_autorises(docs, selected_lot="lot1", lot_nom="Lot 01 — Démolition – GO – Charpente bois",
+                        lots_detectes=[{"id": "lot1", "nom": "Lot 01 — Démolition – GO – Charpente bois"},
+                                       {"id": "lot5", "nom": "Lot 05 — Revêtement de façade – ITE"}])
+    assert {"13.1", "21"} <= set(res)

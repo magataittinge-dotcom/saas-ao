@@ -232,12 +232,46 @@ _MOTS_VIDES = frozenset({
 })
 
 
+# Sigles courants des lots du BTP (décision de Mohamed du 27/10) : la formule
+# entière et son sigle deviennent le même mot, dans le titre de l'article comme
+# dans la désignation du lot (l'équivalence joue donc dans les deux sens). Une
+# formule partielle ne compte pas : « chauffage ventilation » n'est pas « CVC »
+# (climatisation absente). Motifs bornés, sans quantificateur imbriqué.
+# Sources (expansion du sigle ; aucun glossaire FFB/CAPEB/AQC/OPPBTP ne les
+# donne tous, voir le commit) :
+#   VRD : France Compétences, fiche RNCP 38080 « TP - Maçon en voirie et
+#         réseaux divers » (« maçon VRD ») ; AQC, fiche Interfaces A03 « Lot VRD ».
+#   CVC : OQLF, Grand dictionnaire terminologique (2014), « système de
+#         chauffage, de ventilation et de climatisation » → « système CVC ».
+#   TCE : Légifrance, avis sur les index du bâtiment (JORFTEXT000044213303),
+#         index BT01 « Tous corps d'état » ; AQC, fiche Interfaces A03 « lots TCE ».
+#   CFO / CFA : FFB, rubrique « Électricité – Courant fort – Courant faible »
+#         pour les deux familles de travaux ; les sigles CFO et CFA eux-mêmes ne
+#         figurent que dans l'usage du métier (aucun texte d'organisme trouvé).
+#   GO  : « gros œuvre » (CSTB, guide « Gros œuvre ») ; le sigle « GO » lui-même
+#         vient de la décision de Mohamed et des DCE (aucun glossaire trouvé).
+_SIGLES = (
+    (re.compile(r"\bgros oeuvre\b"), "go"),
+    (re.compile(r"\bchauffage ventilation (?:et )?climatisation\b"), "cvc"),
+    (re.compile(r"\bvoiries? (?:et )?reseaux? divers\b"), "vrd"),
+    (re.compile(r"\bcourants? forts?\b"), "cfo"),
+    (re.compile(r"\bcourants? faibles?\b"), "cfa"),
+    (re.compile(r"\btous? corps d etat\b"), "tce"),
+)
+_POINTS_DE_SIGLE = re.compile(r"\b(?:[a-z]\.){2,3}(?![a-z])")   # « V.R.D. » → « vrd »
+
+
 def _mots(texte: str) -> frozenset[str]:
-    """Mots significatifs, sans accents ni casse, au singulier approché (« s » final retiré)."""
+    """Mots significatifs, sans accents ni casse, au singulier approché (« s » final retiré).
+    Les formules à sigle (« gros œuvre » = « GO »…) sont ramenées au sigle."""
     t = unicodedata.normalize("NFKD", texte.lower().replace("œ", "oe").replace("æ", "ae"))
     t = "".join(c for c in t if not unicodedata.combining(c))
+    t = _POINTS_DE_SIGLE.sub(lambda m: m.group(0).replace(".", ""), t)
+    t = " " + " ".join(re.findall(r"[a-z0-9]+", t)) + " "
+    for motif, sigle in _SIGLES:
+        t = motif.sub(sigle, t)
     mots = set()
-    for w in re.findall(r"[a-z0-9]+", t):
+    for w in t.split():
         if w in _MOTS_VIDES or w.isdigit():
             continue
         mots.add(w[:-1] if len(w) > 3 and w.endswith("s") else w)
@@ -255,7 +289,9 @@ def rattache_article(titre: Optional[str], lot: LotCible) -> bool:
     (b) tous ses mots significatifs sont des mots de la désignation du lot
     (mots entiers) ET ne sont pas tous aussi ceux de la désignation d'un autre
     lot. Sans titre, mot hors désignation, deux lots nommés, désignation
-    partagée : non."""
+    partagée : non. Les sigles (GO, CVC, VRD, CFO, CFA, TCE) valent leur formule
+    entière ; un lot TCE unique couvre tous les articles titrés, mais « TCE » seul
+    dans un titre ne rattache à aucun lot de métier."""
     if not titre:
         return False
     t = titre.strip()
@@ -266,7 +302,14 @@ def rattache_article(titre: Optional[str], lot: LotCible) -> bool:
     else:
         t = _NUMEROTATION.sub("", t)   # « 3. FAÇADES » : 3 numérote le titre, ce n'est pas un lot
     mots_titre = _mots(t)
-    if not mots_titre or not mots_titre <= _mots(lot.designation):
+    mots_lot = _mots(lot.designation)
+    if "tce" in mots_lot and not lot.autres:
+        # Lot « tous corps d'état » unique du projet : il couvre tous les métiers,
+        # donc tout article titré lui appartient.
+        return bool(mots_titre)
+    if mots_titre == {"tce"}:
+        return False   # « TCE » seul ne nomme aucun métier : jamais de rattachement
+    if not mots_titre or not mots_titre <= mots_lot:
         return False
     return not any(mots_titre <= _mots(des) for _, des in lot.autres)
 
