@@ -65,5 +65,5 @@ def test_migration_0024_a_la_suite_des_existantes():
     from alembic.config import Config
     from alembic.script import ScriptDirectory
     script = ScriptDirectory.from_config(Config(str(Path(__file__).resolve().parent.parent / "alembic.ini")))
-    assert script.get_current_head() == "0024"
     assert script.get_revision("0024").down_revision == "0023"
+    assert script.get_revision("0025").down_revision == "0024"    # sujet A : colonne `ancre`

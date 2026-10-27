@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, Float, Text, DateTime, ForeignKey, Enum as SAEnum
+from sqlalchemy import Column, String, Integer, Float, JSON, Text, DateTime, ForeignKey, Enum as SAEnum
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -30,6 +30,11 @@ class ComplianceItem(Base):
     source_excerpt_ia = Column(Text, nullable=True)
     ancrage_niveau = Column(String(16), nullable=True)
     ancrage_score = Column(Float, nullable=True)
+    # Ancre de la source DANS le PDF (sujet A, « Voir dans le DCE ») : page, rotation,
+    # rectangles du passage (fractions), niveau passage|page, citation. Calculée à la fin
+    # de l'analyse, ou au premier clic pour un ancien AO (services/pdf_ancre.py).
+    # NULL = pas encore calculée / pièce sans PDF lisible : repli sur la page citée.
+    ancre = Column(JSON, nullable=True)
     # Mutualisation multi-lots : '_commun' (RC/CCAP/AE, partagé) | 'lotN'
     # (spécifique) | NULL (lignes legacy = lot courant)
     lot = Column(Text, nullable=True, index=True)
