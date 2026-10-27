@@ -31,6 +31,7 @@ Le verrou vaut pour un processus : chaque processus de travail a son propre PDFi
 """
 from __future__ import annotations
 
+import contextlib
 import ctypes
 import os
 import threading
@@ -48,6 +49,7 @@ __all__ = [
     "SEUIL_OBJETS",
     "VERROU_PDFIUM",
     "lire_document",
+    "page_aplatie",
     "lire_pages",
     "normaliser_texte_pdfium",
 ]
@@ -182,6 +184,36 @@ def lire_pages(source: Source, max_pages: Optional[int] = None) -> list[str]:
     """Le texte de chaque page (``lire_document(...).pages``) : une entrée par page, pages
     vides et pages illisibles comprises (chaîne vide)."""
     return lire_document(source, max_pages).pages
+
+
+@contextlib.contextmanager
+def page_aplatie(source: Source, index: int):
+    """``(page, total)`` pour la page ``index`` (0 = première), sous ``VERROU_PDFIUM`` pendant
+    tout le bloc ``with``. MÊME ouverture et MÊME aplatissement des champs que la lecture du
+    texte (``lire_document``), pour que le rendu des aperçus montre la page que l'IA a lue.
+    ``IndexError`` si la page n'existe pas ; ``PdfIllisible`` si le document ou la page ne se
+    charge pas. Le bloc ne doit rien garder d'un objet pdfium. Après une page lourde, la
+    mémoire est rendue au système."""
+    chemin, octets = _source(source)
+    lourd = False
+    with VERROU_PDFIUM:
+        pdf, total = _ouvrir(chemin, octets)
+        page = None
+        try:
+            if not 0 <= index < total:
+                raise IndexError(f"page {index + 1} sur {total}")
+            try:
+                page = _charger_page(pdf, index)
+            except pdfium.PdfiumError as e:
+                raise PdfIllisible(ERREUR_PAGE, f"page {index + 1}") from e
+            lourd = pdfium_c.FPDFPage_CountObjects(page) > SEUIL_OBJETS
+            yield page, total
+        finally:
+            if page is not None:
+                page.close()
+            pdf.close()      # `octets` reste référencé jusqu'ici
+    if lourd:
+        _rendre_la_memoire()
 
 
 def _source(source: Source) -> tuple[Optional[bytes], Optional[bytes]]:

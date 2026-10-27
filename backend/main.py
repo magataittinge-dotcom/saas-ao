@@ -218,6 +218,9 @@ app = FastAPI(
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+# Travail PDF impossible (processus occupé, délai, plafond de mémoire) : 503 + Retry-After.
+from services.pdfium_http import installer_gestionnaire as _installer_gestionnaire_pdf  # noqa: E402
+_installer_gestionnaire_pdf(app)
 # Sans ce middleware, `default_limits` ne s'applique à aucune route (S1.2).
 # SlowAPIMiddleware dont la recherche de route voit les routeurs inclus
 # (FastAPI ≥ 0.137, cf. services/rate_limit.py).

@@ -1,16 +1,18 @@
-"""Extraction dans des processus séparés (nuit du 23/10).
+"""Extraction dans le processus pdfium (T9 ; nuit du 23/10 pour l'origine).
 
-PyMuPDF garde le GIL : en threads, 8 threads = 2 threads, et l'extraction de fond
-affamait le reste du processus. Le pool de processus doit rendre exactement le
-même texte que l'extraction classique, toutes les pages (pour l'ancrage), et faire
-remonter l'avancement page par page.
+PDFium n'est pas thread-safe et un PDF piégé peut le faire monter de plusieurs Go : l'extraction
+des pièces déposées passe PAR DÉFAUT dans le processus pdfium (services/pdfium_processus.py),
+plafonné en mémoire et avec un délai. Elle doit rendre exactement le même texte que
+l'extraction classique, toutes les pages (pour l'ancrage), faire remonter l'avancement page par
+page, et refuser proprement une pièce piégée sans faire tomber l'API.
+SYNORIX_EXTRACTION_PROCESSUS=0 revient aux threads.
 """
 import os
-import queue
 
 import pytest
 
 from services import extraction_processus as ep
+from services import pdfium_processus as pp
 from services.document_processor import DocumentProcessor
 from tests.pdf_fabrique import ecrire_pdf, pdf_texte
 
@@ -21,28 +23,28 @@ def _pdf(chemin, nb=7):
                         for i in range(nb)])
 
 
-def test_le_pool_rend_le_meme_texte_et_toutes_les_pages(tmp_path, monkeypatch):
-    monkeypatch.setenv("SYNORIX_EXTRACTION_PROCESSUS", "2")
+@pytest.fixture(autouse=True)
+def _processus_propres(monkeypatch):
+    """La suite tourne en threads (conftest) ; ici on active le processus, repartant à neuf."""
+    monkeypatch.setenv("SYNORIX_EXTRACTION_PROCESSUS", "1")
+    for nom in ("SYNORIX_PDFIUM_PROCESSUS", "SYNORIX_PDFIUM_AS_MO"):
+        monkeypatch.delenv(nom, raising=False)
+    pp.arreter()
+    yield
+    pp.arreter()
+
+
+def test_le_processus_rend_le_meme_texte_et_toutes_les_pages(tmp_path):
     chemin = tmp_path / "cctp.pdf"
     _pdf(chemin)
     attendu = DocumentProcessor().extract_ex(chemin.read_bytes(), "cctp.pdf")
-    pool, file = ep.creer_pool()
-    assert pool is not None, "le pool de processus doit démarrer ici"
-    try:
-        texte, pages, avert, toutes = pool.submit(ep.extraire_fichier, str(chemin), "cctp.pdf", "doc-1").result(timeout=120)
-        pid_travail = pool.submit(os.getpid).result(timeout=60)
-    finally:
-        pool.shutdown(wait=True)
+    avancements = []
+    texte, pages, avert, toutes = ep.extraire_en_processus(
+        str(chemin), "cctp.pdf", "doc-1", on_page=lambda fait, total: avancements.append((fait, total)))
     assert (texte, pages, avert) == attendu
     assert len(toutes) == 7 and toutes[2] == ""
-    assert pid_travail != os.getpid()          # bien un autre processus
-    avancements = []
-    while True:
-        try:
-            avancements.append(file.get(timeout=1))
-        except queue.Empty:
-            break
-    assert avancements and avancements[-1] == ("doc-1", "cctp.pdf", 7, 7)
+    assert pp.executer(os.getpid, delai_s=60) != os.getpid()     # bien un autre processus
+    assert avancements and avancements[-1] == (7, 7)             # avancement page par page
 
 
 def test_le_travailleur_ouvre_la_piece_par_son_chemin(tmp_path, monkeypatch):
@@ -66,22 +68,29 @@ def test_le_travailleur_ouvre_la_piece_par_son_chemin(tmp_path, monkeypatch):
     assert "Page 1 — prescriptions" in texte
 
 
-@pytest.mark.parametrize("valeur, attendu", [("0", 0), ("4", 4), ("n'importe quoi", 0)])
-def test_reglage_du_nombre_de_processus(monkeypatch, valeur, attendu):
+@pytest.mark.parametrize("valeur, attendu", [("0", False), ("1", True), ("4", True), ("n'importe quoi", True)])
+def test_reglage_du_mode_processus(monkeypatch, valeur, attendu):
     monkeypatch.setenv("SYNORIX_EXTRACTION_PROCESSUS", valeur)
-    assert ep.nombre_de_processus() == attendu
+    assert ep.actif() is attendu
 
 
-def test_desactive_par_defaut_reste_en_threads(monkeypatch):
+def test_actif_par_defaut(monkeypatch):
     monkeypatch.delenv("SYNORIX_EXTRACTION_PROCESSUS", raising=False)
-    assert ep.creer_pool() == (None, None)
+    assert ep.actif() is True
+
+
+def test_delai_proportionnel_a_la_taille_et_plafonne(tmp_path):
+    petit = tmp_path / "a.pdf"
+    petit.write_bytes(b"x" * 10)
+    assert ep.delai_extraction_s(str(petit)) == pytest.approx(ep.DELAI_BASE_S, abs=0.01)
+    assert ep.DELAI_BASE_S <= ep.delai_extraction_s(str(tmp_path / "absent.pdf")) <= ep.DELAI_MAX_S
 
 
 def _pdf_octets(texte: str) -> bytes:
     return pdf_texte([texte])
 
 
-def test_depot_zip_extrait_par_le_pool_quand_il_est_active(client, db_session, test_org, monkeypatch, tmp_path):
+def test_depot_zip_extrait_par_le_processus_par_defaut(client, db_session, test_org, monkeypatch, tmp_path):
     import io
     import threading
     import zipfile
@@ -90,10 +99,9 @@ def test_depot_zip_extrait_par_le_pool_quand_il_est_active(client, db_session, t
     import services.ai.excerpt_anchor as ea
     from models.project import Project, ProjectDocument
 
-    monkeypatch.setenv("SYNORIX_EXTRACTION_PROCESSUS", "2")
     monkeypatch.setattr(projects_mod, "UPLOADS_ROOT", tmp_path)
     monkeypatch.setattr(fs_mod, "UPLOADS_ROOT", tmp_path)
-    # le processus principal ne doit RIEN extraire lui-même : tout passe par le pool
+    # le processus principal ne doit RIEN extraire lui-même : tout passe par le processus pdfium
     def interdit(*a, **k):
         raise AssertionError("extraction faite dans le processus principal")
     monkeypatch.setattr(projects_mod.processor, "extract_ex", interdit)
@@ -118,4 +126,65 @@ def test_depot_zip_extrait_par_le_pool_quand_il_est_active(client, db_session, t
         ProjectDocument.project_id == "proj-pool").all()}
     assert "article 1" in textes["RC.pdf"]
     assert "extérieur" in textes["CCTP lot 05.pdf"]
-    assert len(ea._PAGES_CACHE) == 2   # pages gardées pour l'ancrage, via le pool
+    assert len(ea._PAGES_CACHE) == 2   # pages gardées pour l'ancrage, via le processus
+
+
+def test_depot_avec_extraction_en_threads_si_reglage_a_zero(client, db_session, test_org, monkeypatch, tmp_path):
+    import io, threading, zipfile
+    import routers.projects as projects_mod
+    import services.file_storage as fs_mod
+    from models.project import Project, ProjectDocument
+
+    monkeypatch.setenv("SYNORIX_EXTRACTION_PROCESSUS", "0")
+    monkeypatch.setattr(projects_mod, "UPLOADS_ROOT", tmp_path)
+    monkeypatch.setattr(fs_mod, "UPLOADS_ROOT", tmp_path)
+    db_session.add(Project(id="proj-thr", organization_id=test_org.id, name="X"))
+    db_session.commit()
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("RC.pdf", _pdf_octets("Règlement de la consultation — article 7"))
+    resp = client.post("/api/projects/proj-thr/documents",
+                       files={"file": ("dce.zip", buf.getvalue(), "application/zip")})
+    assert resp.status_code == 200, resp.text
+    for th in threading.enumerate():
+        if th.name.startswith("synorix-extract-"):
+            th.join(timeout=120)
+    db_session.expire_all()
+    doc = db_session.query(ProjectDocument).filter(ProjectDocument.project_id == "proj-thr").one()
+    assert "article 7" in doc.extracted_text
+    assert pp.etat()["enfants"] == []          # aucun processus pdfium n'a été lancé
+
+
+def test_piece_piegee_refusee_proprement_et_nommee(client, db_session, test_org, monkeypatch, tmp_path):
+    """PDF de ~300 Ko dont le flux se décompresse en 300 Mo : au-delà du plafond (200 Mo ici),
+    la pièce devient non lisible avec un avertissement qui la nomme, les autres pièces et
+    l'API continuent."""
+    import io, threading, zipfile
+    import routers.projects as projects_mod
+    import services.file_storage as fs_mod
+    from models.project import Project, ProjectDocument
+    from tests.pdf_fabrique import pdf_piege
+
+    monkeypatch.setenv("SYNORIX_PDFIUM_AS_MO", "200")
+    monkeypatch.setattr(projects_mod, "UPLOADS_ROOT", tmp_path)
+    monkeypatch.setattr(fs_mod, "UPLOADS_ROOT", tmp_path)
+    db_session.add(Project(id="proj-piege", organization_id=test_org.id, name="X"))
+    db_session.commit()
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("CCTP lot 01 piege.pdf", pdf_piege(300))
+        zf.writestr("RC.pdf", _pdf_octets("Règlement de la consultation — article 3"))
+    resp = client.post("/api/projects/proj-piege/documents",
+                       files={"file": ("dce.zip", buf.getvalue(), "application/zip")})
+    assert resp.status_code == 200, resp.text
+    for th in threading.enumerate():
+        if th.name.startswith("synorix-extract-"):
+            th.join(timeout=180)
+            assert not th.is_alive(), th.name
+    db_session.expire_all()
+    docs = {d.file_name: d for d in db_session.query(ProjectDocument).filter(
+        ProjectDocument.project_id == "proj-piege").all()}
+    piege = docs["CCTP lot 01 piege.pdf"]
+    assert not piege.extracted_text
+    assert "CCTP lot 01 piege.pdf" in (piege.extraction_warning or "")
+    assert "article 3" in docs["RC.pdf"].extracted_text

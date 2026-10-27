@@ -1,11 +1,12 @@
 import asyncio
 import logging
 import mimetypes
+import os
 import re
 from pathlib import Path
 from urllib.parse import quote, unquote
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from sqlalchemy.orm import Session
 from database import get_db, rendre_connexion
 from models.user import User
@@ -27,6 +28,13 @@ def _content_disposition(filename: str, disposition: str = "inline") -> str:
 
 
 router = APIRouter()
+
+
+def _prefixe_x_accel() -> str:
+    """Préfixe interne nginx (``location`` ``internal`` + ``alias`` sur uploads/), ou "" en dev.
+    Réglage ``SYNORIX_X_ACCEL_PREFIX`` (docs/DEPLOYMENT.md §8) : normalisé en « /préfixe »."""
+    brut = os.environ.get("SYNORIX_X_ACCEL_PREFIX", "").strip().strip("/")
+    return f"/{brut}" if brut else ""
 
 UPLOADS_ROOT = Path(__file__).parent.parent / "uploads"
 
@@ -194,8 +202,16 @@ async def view_file(
                 },
             )
 
-    return FileResponse(
-        path=str(full_path),
-        media_type=content_type,
-        headers={"Content-Disposition": _content_disposition(full_path.name)},
-    )
+    entetes = {"Content-Disposition": _content_disposition(full_path.name, "inline")}
+    prefixe = _prefixe_x_accel()
+    if prefixe:
+        # Production : la signature et l'appartenance sont vérifiées ci-dessus ; nginx envoie le
+        # fichier (plages HTTP natives, sans le faire passer par Python). Chemin CANONIQUE
+        # (sans « .. »), encodé : nginx le décode.
+        return Response(
+            status_code=200,
+            headers={**entetes, "Content-Type": content_type,
+                     "X-Accel-Redirect": f"{prefixe}/{quote(canonical_rel, safe='/')}"},
+        )
+    # Dev : FileResponse (Starlette) gère les plages HTTP (206) et l'en-tête Accept-Ranges.
+    return FileResponse(path=str(full_path), media_type=content_type, headers=entetes)
