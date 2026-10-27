@@ -38,6 +38,7 @@ from routers import (
 )
 from routers.file_serve import router as file_serve_router
 from routers.sources import router as sources_router
+from routers.csp_rapport import router as csp_rapport_router
 
 settings = get_settings()
 
@@ -187,14 +188,18 @@ _prepare_schema()
 
 
 def _reconcile_orphans_at_boot():
-    """R5 — au démarrage, rembourse et rouvre les runs laissés 'analyzing'/
-    'generating' par un crash process. Ne bloque jamais le démarrage."""
+    """R5/B6 — au démarrage, rembourse et rouvre les runs laissés 'analyzing'/
+    'generating' par un crash process, et reprend (sans appel payant) les dépôts
+    coupés en 'extracting_zip'/'extracting_text'/'detecting_lots'. Ne bloque jamais
+    le démarrage."""
     try:
         from database import SessionLocal
-        from services.run_reconciliation import reconcile_orphan_runs
+        from services.run_reconciliation import (
+            lancer_extraction_en_fond, reconcile_orphan_runs,
+        )
         db = SessionLocal()
         try:
-            reconcile_orphan_runs(db)
+            reconcile_orphan_runs(db, relancer_extraction=lancer_extraction_en_fond)
         finally:
             db.close()
     except Exception as exc:
@@ -383,6 +388,7 @@ app.include_router(progress.router, prefix="/api/projects", tags=["progress"])
 app.include_router(calculators.router, prefix="/api/calculators", tags=["calculators"])
 app.include_router(file_serve_router, prefix="/api/files", tags=["files"])
 app.include_router(sources_router, prefix="/api/sources", tags=["sources"])
+app.include_router(csp_rapport_router, prefix="/api", tags=["csp"])  # publique, plafonnée, limitée par IP
 
 
 _APP_BOOTED_AT = datetime.utcnow()

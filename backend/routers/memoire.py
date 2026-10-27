@@ -314,34 +314,48 @@ def _run_memoire_job(
             from services.rag.enrichment import build_reglementaire_block
             reglementaire_block = build_reglementaire_block(db, compliance_items)
 
+        # B5 — tout est lu : on RENDS la connexion au pool avant le travail long (lecture du
+        # tableur DPGF, puis génération, plusieurs minutes). Les objets chargés restent
+        # lisibles (détachés, aucun accès paresseux) ; on rouvre une session courte pour écrire.
+        snap = {
+            "name": project.name,
+            "maitre_ouvrage": project.maitre_ouvrage or "",
+            "selected_lot": project.selected_lot,
+            "selected_lot_name": project.selected_lot_name or "",
+            "criteres_jugement": project.criteres_jugement or [],
+            "lots_detectes": project.lots_detectes or [],
+            "ids_des_lots": _ids_des_lots(project),
+        }
+        db.close()
+
         # B2 — la DPGF n'entre au mémoire que par la liste de ses ouvrages (lue sans
         # IA, ici dans le thread du job) : jamais son tableur brut ni ses prix.
         from services.dpgf_ouvrages import texte_ouvrages_du_lot
         from services.file_storage import UPLOADS_ROOT as _uploads_root
         ouvrages_dpgf = texte_ouvrages_du_lot(
-            all_docs, project.selected_lot, _uploads_root, project.selected_lot_name,
-            _ids_des_lots(project))
+            all_docs, snap["selected_lot"], _uploads_root, snap["selected_lot_name"],
+            snap["ids_des_lots"])
 
         pipeline_tracker.start_step(project_id, "generating")
         generator = MemoireGenerator()
         content = asyncio.run(generator.generate(
             organization=org,
             memoire_config=memoire_cfg,
-            project_name=project.name,
-            maitre_ouvrage=project.maitre_ouvrage or "",
-            selected_lot_name=project.selected_lot_name or "",
+            project_name=snap["name"],
+            maitre_ouvrage=snap["maitre_ouvrage"],
+            selected_lot_name=snap["selected_lot_name"],
             all_docs=docs,
             compliance_items=compliance_items,
             references=refs,
             variables=variables,
-            criteres_jugement=project.criteres_jugement or [],
+            criteres_jugement=snap["criteres_jugement"],
             reference_template_text=ref_template_text,
             project_id=project_id,
             profile_overrides=profile_overrides,
             reglementaire_block=reglementaire_block,
             ouvrages_dpgf=ouvrages_dpgf,
-            selected_lot=project.selected_lot,
-            lots_detectes=project.lots_detectes or [],
+            selected_lot=snap["selected_lot"],
+            lots_detectes=snap["lots_detectes"],
         ))
         # Contenu 100 % placeholders = panne du service IA en plein run
         # (constat audit : crédit épuisé → 26/26 sections vides quand même
@@ -351,6 +365,11 @@ def _run_memoire_job(
                 "Génération vide : toutes les sections ont échoué (service IA indisponible)")
         pipeline_tracker.complete_step(project_id, "generating")
         pipeline_tracker.start_step(project_id, "finalizing")
+
+        # B5 — session courte d'écriture : projet et organisation relus (la session de
+        # lecture a été fermée avant la génération).
+        project = db.query(Project).filter(Project.id == project_id).first()
+        org = db.query(Organization).filter(Organization.id == org_id).first()
 
         # Upsert mémoire
         existing = db.query(MemoireTechnique).filter(
