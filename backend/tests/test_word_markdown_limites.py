@@ -34,7 +34,10 @@ def test_200_ko_d_etoiles_alternees_se_lisent_en_moins_d_une_seconde():
     entree = "*a " * 70_000                      # ≈ 200 ko sur une seule ligne
     blocs = md.analyser(entree)                 # ni RecursionError ni lenteur
     assert blocs
-    petit, grand = _duree("*a " * 7_000), _duree(entree)
+    # Meilleure de 3 mesures : sous une suite chargée, une seule mesure du petit
+    # cas (≈ 0,03 s) peut tomber sur une pause et fausser le rapport (vu : 34).
+    petit = min(_duree("*a " * 7_000) for _ in range(3))
+    grand = min(_duree(entree) for _ in range(3))
     assert grand < 5.0
     assert grand < 30 * max(petit, 1e-3)
 
