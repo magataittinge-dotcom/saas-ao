@@ -6,8 +6,9 @@ Calibri, SIL OFL 1.1, fsType 0) pour le PDF : `pdf_export` la montre à
 LibreOffice par un fonts.conf du sous-processus, sans paquet système, et
 LibreOffice remplace Calibri par Carlito (mêmes largeurs, mêmes coupures).
 
-Le test de non-régression compare le PDF d'avant (Word avec Carlito embarquée,
-via `docx_polices`, gardé pour cette référence) et celui d'après (Word seul).
+Le test du PDF vérifie que le texte est bien en Carlito, sans police embarquée
+dans le Word. (La comparaison avec l'ancien Word à Carlito embarquée, faite lors de
+WORD2, a été retirée avec `docx_polices.py`, supprimé le 27/10 avec l'accord de Mohamed.)
 """
 import io
 import re
@@ -18,11 +19,8 @@ import zipfile
 from pathlib import Path
 
 import pytest
-from docx import Document
-from lxml import etree
 
 from services.docx_exporter import build_memoire_docx
-from services.docx_polices import embarquer_carlito
 
 POLICES = Path(__file__).resolve().parent.parent / "assets" / "fonts" / "carlito"
 FICHIERS = ("Carlito-Regular.ttf", "Carlito-Bold.ttf", "Carlito-Italic.ttf", "Carlito-BoldItalic.ttf")
@@ -137,30 +135,16 @@ def _texte_par_page(pdf: Path) -> list[list[str]]:
 
 
 @needs_soffice
-def test_le_pdf_ne_change_pas_quand_le_word_n_embarque_plus_carlito(tmp_path):
+def test_le_pdf_exporte_utilise_carlito_pour_le_texte(tmp_path):
     from services.pdf_export import docx_to_pdf
 
-    apres_word = build_memoire_docx(_contenu_long(), "Chantier fictif", "ENTREPRISE TEST")
-    doc = Document(io.BytesIO(apres_word))
-    embarquer_carlito(doc)                       # l'ancien Word : Carlito dans le fichier
-    flux = io.BytesIO()
-    doc.save(flux)
-    avant_word = flux.getvalue()
-    assert len(avant_word) > len(apres_word) + 1_000_000      # le poids gagné
+    word = build_memoire_docx(_contenu_long(), "Chantier fictif", "ENTREPRISE TEST")
+    assert not [n for n in zipfile.ZipFile(io.BytesIO(word)).namelist() if n.startswith("word/fonts/")]
+    pdf = tmp_path / "memoire.pdf"
+    pdf.write_bytes(docx_to_pdf(word))
 
-    avant, apres = tmp_path / "avant.pdf", tmp_path / "apres.pdf"
-    avant.write_bytes(docx_to_pdf(avant_word))
-    apres.write_bytes(docx_to_pdf(apres_word))
-
-    for pdf in (avant, apres):
-        noms = _polices_pdf(pdf)
-        texte = [n for n in noms if not n.startswith("OpenSymbol")]   # OpenSymbol : puces des listes
-        assert texte and all(n.startswith("Carlito") for n in texte), noms
-        assert not any("DejaVu" in n or "Liberation" in n for n in noms), noms
-
-    assert _nombre_de_pages(apres) == _nombre_de_pages(avant)
-    assert 18 <= _nombre_de_pages(apres) <= 24                  # ≈ 20 pages
-    pages_avant, pages_apres = _texte_par_page(avant), _texte_par_page(apres)
-    assert len(pages_avant) == len(pages_apres)
-    for i, (a, b) in enumerate(zip(pages_avant, pages_apres), start=1):
-        assert a == b, f"le texte de la page {i} a changé"
+    noms = _polices_pdf(pdf)
+    texte = [n for n in noms if not n.startswith("OpenSymbol")]   # OpenSymbol : puces des listes
+    assert texte and all(n.startswith("Carlito") for n in texte), noms
+    assert not any("DejaVu" in n or "Liberation" in n for n in noms), noms
+    assert 18 <= _nombre_de_pages(pdf) <= 24                      # ≈ 20 pages
