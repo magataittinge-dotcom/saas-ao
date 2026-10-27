@@ -146,10 +146,12 @@ def _page_de(marqueurs: list[tuple[int, int]], positions: list[int], offset: int
 @dataclass(frozen=True)
 class LotCible:
     """Le lot du mémoire : son numéro normalisé (« 5 »), sa désignation
-    (« Revêtement de façade – ITE », sans « Lot 05 — ») et celles des autres lots."""
+    (« Revêtement de façade – ITE », sans « Lot 05 — »), celles des autres lots et les
+    titres des CCTP des lots (pour départager une désignation partagée)."""
     numero: str
     designation: str = ""
     autres: tuple[tuple[str, str], ...] = ()
+    cctp: tuple[tuple[str, str], ...] = ()   # (numéro de lot, titre de son CCTP) des CCTP connus
 
 
 @dataclass(frozen=True)
@@ -232,12 +234,46 @@ _MOTS_VIDES = frozenset({
 })
 
 
+# Sigles courants des lots du BTP (décision de Mohamed du 27/10) : la formule
+# entière et son sigle deviennent le même mot, dans le titre de l'article comme
+# dans la désignation du lot (l'équivalence joue donc dans les deux sens). Une
+# formule partielle ne compte pas : « chauffage ventilation » n'est pas « CVC »
+# (climatisation absente). Motifs bornés, sans quantificateur imbriqué.
+# Sources (expansion du sigle ; aucun glossaire FFB/CAPEB/AQC/OPPBTP ne les
+# donne tous, voir le commit) :
+#   VRD : France Compétences, fiche RNCP 38080 « TP - Maçon en voirie et
+#         réseaux divers » (« maçon VRD ») ; AQC, fiche Interfaces A03 « Lot VRD ».
+#   CVC : OQLF, Grand dictionnaire terminologique (2014), « système de
+#         chauffage, de ventilation et de climatisation » → « système CVC ».
+#   TCE : Légifrance, avis sur les index du bâtiment (JORFTEXT000044213303),
+#         index BT01 « Tous corps d'état » ; AQC, fiche Interfaces A03 « lots TCE ».
+#   CFO / CFA : FFB, rubrique « Électricité – Courant fort – Courant faible »
+#         pour les deux familles de travaux ; les sigles CFO et CFA eux-mêmes ne
+#         figurent que dans l'usage du métier (aucun texte d'organisme trouvé).
+#   GO  : « gros œuvre » (CSTB, guide « Gros œuvre ») ; le sigle « GO » lui-même
+#         vient de la décision de Mohamed et des DCE (aucun glossaire trouvé).
+_SIGLES = (
+    (re.compile(r"\bgros oeuvre\b"), "go"),
+    (re.compile(r"\bchauffage ventilation (?:et )?climatisation\b"), "cvc"),
+    (re.compile(r"\bvoiries? (?:et )?reseaux? divers\b"), "vrd"),
+    (re.compile(r"\bcourants? forts?\b"), "cfo"),
+    (re.compile(r"\bcourants? faibles?\b"), "cfa"),
+    (re.compile(r"\btous? corps d etat\b"), "tce"),
+)
+_POINTS_DE_SIGLE = re.compile(r"\b(?:[a-z]\.){2,3}(?![a-z])")   # « V.R.D. » → « vrd »
+
+
 def _mots(texte: str) -> frozenset[str]:
-    """Mots significatifs, sans accents ni casse, au singulier approché (« s » final retiré)."""
+    """Mots significatifs, sans accents ni casse, au singulier approché (« s » final retiré).
+    Les formules à sigle (« gros œuvre » = « GO »…) sont ramenées au sigle."""
     t = unicodedata.normalize("NFKD", texte.lower().replace("œ", "oe").replace("æ", "ae"))
     t = "".join(c for c in t if not unicodedata.combining(c))
+    t = _POINTS_DE_SIGLE.sub(lambda m: m.group(0).replace(".", ""), t)
+    t = " " + " ".join(re.findall(r"[a-z0-9]+", t)) + " "
+    for motif, sigle in _SIGLES:
+        t = motif.sub(sigle, t)
     mots = set()
-    for w in re.findall(r"[a-z0-9]+", t):
+    for w in t.split():
         if w in _MOTS_VIDES or w.isdigit():
             continue
         mots.add(w[:-1] if len(w) > 3 and w.endswith("s") else w)
@@ -255,7 +291,10 @@ def rattache_article(titre: Optional[str], lot: LotCible) -> bool:
     (b) tous ses mots significatifs sont des mots de la désignation du lot
     (mots entiers) ET ne sont pas tous aussi ceux de la désignation d'un autre
     lot. Sans titre, mot hors désignation, deux lots nommés, désignation
-    partagée : non."""
+    partagée : non, sauf si le titre du CCTP d'un seul des lots qui la partagent la
+    reprend (`_depart_par_cctp`). Les sigles (GO, CVC, VRD, CFO, CFA, TCE) valent leur formule
+    entière ; un lot TCE unique couvre tous les articles titrés, mais « TCE » seul
+    dans un titre ne rattache à aucun lot de métier."""
     if not titre:
         return False
     t = titre.strip()
@@ -266,13 +305,72 @@ def rattache_article(titre: Optional[str], lot: LotCible) -> bool:
     else:
         t = _NUMEROTATION.sub("", t)   # « 3. FAÇADES » : 3 numérote le titre, ce n'est pas un lot
     mots_titre = _mots(t)
-    if not mots_titre or not mots_titre <= _mots(lot.designation):
+    mots_lot = _mots(lot.designation)
+    if "tce" in mots_lot and not lot.autres:
+        # Lot « tous corps d'état » unique du projet : il couvre tous les métiers,
+        # donc tout article titré lui appartient.
+        return bool(mots_titre)
+    if mots_titre == {"tce"}:
+        return False   # « TCE » seul ne nomme aucun métier : jamais de rattachement
+    if not mots_titre or not mots_titre <= mots_lot:
         return False
-    return not any(mots_titre <= _mots(des) for _, des in lot.autres)
+    partageurs = [n for n, des in lot.autres if mots_titre <= _mots(des)]
+    return not partageurs or _depart_par_cctp(mots_titre, lot, partageurs)
+
+
+def _depart_par_cctp(mots_titre: frozenset[str], lot: LotCible, partageurs: list[str]) -> bool:
+    """Désignation partagée par plusieurs lots (« menuiseries extérieures » : PVC et
+    alu). Décision du 27/10 : l'article est au lot choisi si, parmi les lots qui
+    partagent ces mots, le CCTP du lot choisi est le SEUL dont le titre les dit.
+    Il faut connaître un CCTP pour chacun de ces lots : sinon on ne peut pas dire
+    que l'autre ne les dit pas, et rien ne change."""
+    candidats = {_normalize_lot_num(lot.numero)} | {_normalize_lot_num(n) for n in partageurs}
+    titres: dict[str, list[str]] = {}
+    for n, titre in lot.cctp:
+        titres.setdefault(_normalize_lot_num(n), []).append(titre)
+    if any(c not in titres for c in candidats):
+        return False
+    disent = {c for c in candidats if any(mots_titre <= _mots(t) for t in titres[c])}
+    return disent == {_normalize_lot_num(lot.numero)}
+
+
+def titre_cctp(texte: str, numero: str) -> Optional[str]:
+    """Titre d'un CCTP de lot, lu en tête de pièce : la ligne « LOT 03 : MENUISERIES
+    EXTÉRIEURES PVC » (si elle nomme ce lot), sinon l'en-tête de la première ligne
+    (« 03 – MENUISERIES EXTÉRIEURES PVC / projet / indice »). None si illisible."""
+    lignes = [l.strip() for l in (texte or "")[:4000].split("\n") if l.strip()][:40]
+    for l in lignes:
+        m = _LOT_NOM.match(l)
+        if m and _normalize_lot_num(m.group("num")) == _normalize_lot_num(numero) and m.group("des").strip():
+            return m.group("des").strip()
+    if lignes and not _LOT_NOM.match(lignes[0]):   # une ligne « LOT n » d'un autre lot n'est pas un en-tête
+        tete = _NUMEROTATION.sub("", lignes[0].split(" / ")[0].strip(), count=1).strip()
+        if tete and len(tete) <= 100:
+            return tete
+    return None
+
+
+def titres_cctp(docs: Iterable) -> tuple[tuple[str, str], ...]:
+    """(numéro de lot, titre) de chaque CCTP rattaché à UN SEUL lot numéroté.
+    `docs` doit être la liste complète du projet (avant le filtre par lot)."""
+    res = []
+    for d in docs:
+        if getattr(d, "type", None) != "cctp" or not getattr(d, "extracted_text", None):
+            continue
+        tags = {_normalize_lot_num(str(t)) for t in (getattr(d, "related_lots", None) or [])}
+        if len(tags) != 1:
+            continue
+        num = next(iter(tags))
+        if not re.fullmatch(r"\d{1,2}[a-z]?", num) or num == "0":
+            continue
+        titre = titre_cctp(d.extracted_text, num)
+        if titre:
+            res.append((num, titre))
+    return tuple(res)
 
 
 def lot_cible(selected_lot: Optional[str], lot_nom: Optional[str] = None,
-              lots_detectes=None) -> Optional[LotCible]:
+              lots_detectes=None, cctp: tuple = ()) -> Optional[LotCible]:
     """Le lot du mémoire d'après son identifiant (« lot5 »), son nom
     (« Lot 05 — Revêtement de façade – ITE ») et la liste des lots du projet."""
     des, num = "", ""
@@ -294,7 +392,7 @@ def lot_cible(selected_lot: Optional[str], lot_nom: Optional[str] = None,
             des = des or d
         elif n:
             autres.append((n, d))
-    return LotCible(num, des, tuple(autres))
+    return LotCible(num, des, tuple(autres), tuple(cctp))
 
 
 def _plages_du_lot(texte: str, lot: Optional[LotCible]) -> list[tuple[int, int]]:
@@ -321,9 +419,14 @@ def dtu_autorises(docs: Iterable, selected_lot: Optional[str] = None,
     texte extrait ; sans marqueur, la page vaut None (le texte extrait ne porte
     pas de saut de page)."""
     res: dict[str, DtuAutorise] = {}
+    docs = list(docs)
+    # Titres des CCTP de TOUS les lots (avant le filtre) : ils départagent une
+    # désignation partagée. Pièces déjà filtrées : les autres lots sont inconnus,
+    # donc aucun départage.
+    cctp = () if deja_filtre else titres_cctp(docs)
     if selected_lot and not deja_filtre:
-        docs = get_documents_for_lot(list(docs), selected_lot, lots_du_rc)
-    lot = lot_cible(selected_lot, lot_nom, lots_detectes)
+        docs = get_documents_for_lot(docs, selected_lot, lots_du_rc)
+    lot = lot_cible(selected_lot, lot_nom, lots_detectes, cctp)
     for d in _pieces_sources(docs):
         texte = d.extracted_text
         mentions = trouver_dtu(texte)

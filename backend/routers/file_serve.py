@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import mimetypes
 import os
@@ -14,7 +13,6 @@ from models.project import Project
 from models.document import Document
 from routers.auth import get_auth_user
 from services.file_storage import SIGNED_URL_TTL, sign_file_path, verify_file_signature
-from services.pdf_highlighter import PdfHighlighter
 from services.rate_limit import limiter
 
 logger = logging.getLogger(__name__)
@@ -153,11 +151,12 @@ async def view_file(
     org: str = Query(None, description="Organisation liée par la signature"),
     exp: str = Query(None, description="Expiration (epoch)"),
     sig: str = Query(None, description="Signature HMAC"),
-    page: int = Query(None, description="Numéro de page à afficher"),
-    highlight: str = Query(None, description="Texte à surligner dans le PDF"),
     db: Session = Depends(get_db),
 ):
-    """Serve a file inline. Si c'est un PDF avec highlight, surligne le passage en jaune.
+    """Serve a file inline (le PDF est servi tel quel).
+
+    Les anciens paramètres `page` et `highlight` (surlignage serveur, retiré avec
+    PyMuPDF) ne sont plus lus : un client qui les envoie encore n'a pas d'erreur.
 
     Security (C22 — URLs signées à durée limitée):
       • requires a valid, unexpired HMAC signature binding (path, org, exp) —
@@ -182,25 +181,6 @@ async def view_file(
         raise HTTPException(status_code=404, detail="Fichier introuvable")
 
     content_type = mimetypes.guess_type(str(full_path))[0] or "application/octet-stream"
-
-    # Si c'est un PDF avec un texte à surligner
-    if full_path.suffix.lower() == '.pdf' and highlight and page:
-        # R8 — surlignage PyMuPDF déporté hors event-loop (règle WSL2).
-        highlighted_path = await asyncio.to_thread(
-            PdfHighlighter.highlight_text_in_pdf,
-            pdf_path=full_path,
-            page_number=page,
-            search_text=highlight,
-        )
-        if highlighted_path and highlighted_path.exists():
-            return FileResponse(
-                path=str(highlighted_path),
-                media_type="application/pdf",
-                headers={
-                    "Content-Disposition": _content_disposition(full_path.name),
-                    "Cache-Control": "no-cache",
-                },
-            )
 
     entetes = {"Content-Disposition": _content_disposition(full_path.name, "inline")}
     prefixe = _prefixe_x_accel()
