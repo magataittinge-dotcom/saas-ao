@@ -20,13 +20,19 @@ Ce que fait une conversion (``convertir_en_pdf``) :
 - Profil préréglé (``ecrire_profil``) : macros désactivées, aucune mise à jour automatique,
   liens et images distantes jamais rechargés à l'ouverture.
 - Lanceur (services/libreoffice_lanceur.py) : plafond de mémoire (``SYNORIX_LIBREOFFICE_AS_MO``),
-  taille de fichier écrit, mort avec l'API, et SANS RÉSEAU (espace de noms vide, sinon filtre seccomp).
+  taille de fichier écrit, mort avec l'API, et SANS CONNEXION SORTANTE : filtre seccomp qui refuse
+  ``connect()`` (IP et Unix, donc ni Internet ni la base ni Redis) et, quand le noyau l'autorise, espace
+  de noms réseau vide en plus. L'espace de noms SEUL ne suffit pas : il n'isole pas les sockets Unix à
+  chemin (Postgres en authentification « peer »). Niveau obtenu journalisé à chaque conversion.
 - Délai : au-delà, TOUT le groupe de processus est tué (``soffice`` lance ``soffice.bin``).
 
 Réglages (variables d'environnement, relues à chaque conversion) :
 ``SYNORIX_LIBREOFFICE_DIR``, ``_AS_MO`` (1536), ``_FICHIER_MO`` (512), ``_DELAI_S`` (120),
 ``_ATTENTE_S`` (90, travail interactif), ``_ATTENTE_DEPOT_S`` (900, Word déposé en arrière-plan),
 ``_RESEAU`` (``auto`` | ``exige`` | ``aucun``).
+Limite : ces protections arrêtent les fonctions du DOCUMENT (liens, images distantes) et l'abus du réseau
+par du code qui s'exécuterait dans LibreOffice ; elles ne cachent pas les fichiers lisibles par
+l'utilisateur du service (.env, uploads) : seul un utilisateur Unix dédié aux conversions le ferait.
 Aucune donnée du DCE dans les journaux : ni nom de fichier, ni contenu.
 """
 from __future__ import annotations
@@ -361,9 +367,9 @@ def convertir_en_pdf(entree, extension: str = ".docx", destination: Optional[Pat
             if code == 97:
                 logger.error("Conversion PDF refusée : isolation réseau exigée, impossible (%s)", etat_reseau)
                 raise _erreur("reseau")
-            if etat_reseau.startswith("aucune"):
-                logger.warning("Conversion PDF SANS isolation réseau (%s) : seuls les réglages du profil protègent",
-                               etat_reseau)
+            if "seccomp" not in etat_reseau.split(" ")[0]:
+                logger.warning("Conversion PDF SANS isolation réseau complète (%s) : sockets Unix du système de "
+                               "fichiers joignables ; seuls les réglages du profil protègent", etat_reseau)
             if code != 0 or not pdf.exists():
                 detail = ""
                 try:

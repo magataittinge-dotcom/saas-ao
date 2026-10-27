@@ -272,6 +272,63 @@ class _Ecoute:
         return f"http://127.0.0.1:{self.port}"
 
 
+class _EcouteUnix:
+    """Deux sockets Unix ouverts par le test (un à chemin, comme Postgres ou Redis, un abstrait) :
+    ils comptent les connexions reçues."""
+
+    def __init__(self, _dossier=None) -> None:
+        import tempfile
+        self._dir = tempfile.mkdtemp(prefix="sxu", dir="/tmp")     # court : un chemin AF_UNIX tient en 107 octets
+        self.chemin = os.path.join(self._dir, "base.sock")
+        self.abstrait = "synorix-test-" + os.urandom(4).hex()
+
+    def __enter__(self):
+        self.socks = []
+        for adresse in (self.chemin, "\0" + self.abstrait):
+            sk = socket.socket(socket.AF_UNIX)
+            sk.bind(adresse)
+            sk.listen(8)
+            sk.setblocking(False)
+            self.socks.append(sk)
+        return self
+
+    @property
+    def connexions(self) -> int:
+        n = 0
+        for sk in self.socks:
+            while True:
+                try:
+                    c, _ = sk.accept()
+                except (BlockingIOError, OSError):
+                    break
+                c.close()
+                n += 1
+        return n
+
+    def __exit__(self, *exc):
+        for sk in self.socks:
+            sk.close()
+        shutil.rmtree(self._dir, ignore_errors=True)
+
+
+_CLIENT_UNIX = """
+import socket
+for nom, adresse in (("chemin", {chemin!r}), ("abstrait", "\\0" + {abstrait!r})):
+    try:
+        c = socket.socket(socket.AF_UNIX)
+        c.connect(adresse)
+        c.close()
+        print(nom, "connecte")
+    except OSError as e:
+        print(nom, "bloque", type(e).__name__)
+# LibreOffice a besoin de créer, lier et écouter ses propres sockets Unix : cela reste permis
+import os, tempfile
+propre = socket.socket(socket.AF_UNIX)
+propre.bind(os.path.join(tempfile.mkdtemp(), "s"))
+propre.listen(1)
+print("serveur unix ok")
+"""
+
 _CLIENT_TCP = """
 import socket, sys
 try:
@@ -285,10 +342,12 @@ print("unix ok")
 """
 
 
-def _lancer_client(mode: str, port: int, tmp_path) -> tuple[str, str]:
-    """Le lanceur pose la protection `mode`, puis exécute un client TCP : (sortie, état réseau)."""
+def _lancer_client(mode: str, port: int, tmp_path, unix: "_EcouteUnix | None" = None) -> tuple[str, str]:
+    """Le lanceur pose la protection `mode`, puis exécute un client TCP (ou Unix) : (sortie, état réseau)."""
     etat = tmp_path / f"etat-{mode}.txt"
-    cfg = {"cmd": [sys.executable, "-c", _CLIENT_TCP.format(port=port)], "reseau": mode, "fichier_etat": str(etat)}
+    code = (_CLIENT_UNIX.format(chemin=unix.chemin, abstrait=unix.abstrait) if unix is not None
+            else _CLIENT_TCP.format(port=port))
+    cfg = {"cmd": [sys.executable, "-c", code], "reseau": mode, "fichier_etat": str(etat)}
     r = subprocess.run([sys.executable, "-I", "-S", str(Path(lanceur.__file__)), json.dumps(cfg)],
                        capture_output=True, text=True, timeout=30)
     assert r.returncode == 0, r.stderr
@@ -323,6 +382,66 @@ def test_espace_reseau_vide_bloque_toute_connexion(tmp_path):
 
 
 @needs_linux
+def test_temoin_sans_protection_les_sockets_unix_de_la_base_sont_joignables(tmp_path):
+    """Postgres écoute sur un socket Unix et accepte l'utilisateur du service en « peer » : sans
+    protection, un processus du même utilisateur s'y connecte."""
+    with _EcouteUnix(tmp_path) as unix:
+        sortie, _ = _lancer_client("aucun", 0, tmp_path, unix)
+        assert "chemin connecte" in sortie and "abstrait connecte" in sortie, sortie
+        assert unix.connexions == 2
+
+
+@needs_linux
+def test_seccomp_refuse_aussi_connect_vers_un_socket_unix(tmp_path):
+    """Alerte du coordinateur : le repli seccomp ne doit pas laisser joindre Postgres ou Redis par
+    leur socket Unix. connect() est refusé pour toute famille ; créer, lier et écouter un socket
+    Unix reste permis (LibreOffice en a besoin : mesuré, il ne démarre pas si socket(AF_UNIX) est refusé)."""
+    with _EcouteUnix(tmp_path) as unix:
+        sortie, etat = _lancer_client("seccomp", 0, tmp_path, unix)
+        assert etat == "seccomp", etat
+        assert "chemin bloque PermissionError" in sortie and "abstrait bloque PermissionError" in sortie, sortie
+        assert "serveur unix ok" in sortie
+        assert unix.connexions == 0
+
+
+@needs_linux
+def test_le_repli_seccomp_apres_refus_du_netns_ferme_aussi_les_sockets_unix(tmp_path):
+    with _EcouteUnix(tmp_path) as unix:
+        code = textwrap.dedent(f"""
+            import os, sys
+            sys.path.insert(0, {str(BACKEND)!r})
+            def refuse(*a): raise PermissionError(1, "Operation not permitted")
+            os.unshare = refuse
+            from services import libreoffice_lanceur as l
+            print(l.isoler_reseau("auto"))
+        """) + _CLIENT_UNIX.format(chemin=unix.chemin, abstrait=unix.abstrait)
+        r = subprocess.run([sys.executable, "-I", "-c", code], capture_output=True, text=True, timeout=30)
+        assert r.returncode == 0, r.stderr
+        lignes = r.stdout.strip().splitlines()
+        assert lignes[0].startswith("seccomp") and "refus netns:" in lignes[0], lignes[0]
+        assert "chemin bloque PermissionError" in r.stdout and "abstrait bloque PermissionError" in r.stdout
+        assert unix.connexions == 0
+
+
+@needs_linux
+def test_l_espace_reseau_vide_seul_ne_ferme_pas_les_sockets_unix_a_chemin(tmp_path):
+    """Pourquoi le seccomp est TOUJOURS posé en plus : un espace de noms réseau isole les sockets
+    abstraits mais pas ceux du système de fichiers (Postgres, Redis)."""
+    with _EcouteUnix(tmp_path) as unix:
+        sortie, etat = _lancer_client("netns", 0, tmp_path, unix)
+        if not etat.startswith("netns"):
+            pytest.skip(f"espace de noms réseau refusé par ce noyau ({etat})")
+        assert "chemin connecte" in sortie, sortie
+        assert "abstrait bloque" in sortie, sortie
+        assert unix.connexions == 1
+    (tmp_path / "bis").mkdir()
+    with _EcouteUnix(tmp_path / "bis") as unix:
+        sortie, etat = _lancer_client("auto", 0, tmp_path, unix)
+        assert "netns" in etat.split(" ")[0] and "seccomp" in etat.split(" ")[0], etat
+        assert unix.connexions == 0, sortie
+
+
+@needs_linux
 def test_repli_netns_refuse_puis_seccomp_et_journalisation(tmp_path):
     """Noyau qui refuse l'espace de noms (AppArmor d'Ubuntu 24.04) : le filtre seccomp prend le relais
     et l'état dit pourquoi (c'est ce que l'appelant journalise)."""
@@ -348,13 +467,16 @@ def test_repli_netns_refuse_puis_seccomp_et_journalisation(tmp_path):
 
 
 @needs_linux
-def test_isolation_exigee_mais_impossible_refuse_de_lancer(tmp_path):
+@pytest.mark.parametrize("netns_passe", [False, True])
+def test_isolation_exigee_mais_impossible_refuse_de_lancer(tmp_path, netns_passe):
+    """Mode « exige » : sans filtre seccomp on ne convertit pas, même si l'espace réseau vide a été posé
+    (il laisse joindre les sockets Unix à chemin)."""
     code = textwrap.dedent(f"""
         import sys, json
         sys.path.insert(0, {str(BACKEND)!r})
         from services import libreoffice_lanceur as l
         def refuse(): raise OSError(1, "refuse")
-        l.poser_espace_reseau_vide = refuse
+        l.poser_espace_reseau_vide = {"(lambda: None)" if netns_passe else "refuse"}
         l.poser_seccomp = refuse
         sys.argv = ["x", json.dumps({{"cmd": ["/bin/true"], "reseau": "exige", "fichier_etat": {str(tmp_path / "e.txt")!r}}})]
         l.main()
@@ -376,7 +498,13 @@ def test_l_etat_reseau_est_journalise_sans_donnee_perso(tmp_path, monkeypatch, d
     caplog.clear()
     with caplog.at_level("WARNING", logger="services.libreoffice_isole"):
         lo.convertir_en_pdf(b"PK", ".docx")
-    assert any("SANS isolation réseau" in r.getMessage() for r in caplog.records)
+    assert any("SANS isolation réseau complète" in r.getMessage() for r in caplog.records)
+
+    monkeypatch.setenv("SYNORIX_LIBREOFFICE_RESEAU", "netns")     # espace vide seul : pas une isolation complète
+    caplog.clear()
+    with caplog.at_level("WARNING", logger="services.libreoffice_isole"):
+        lo.convertir_en_pdf(b"PK", ".docx")
+    assert any("SANS isolation réseau complète" in r.getMessage() for r in caplog.records)
 
 
 def _profil_sans_reglage(monkeypatch):
