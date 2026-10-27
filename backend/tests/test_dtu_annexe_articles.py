@@ -286,3 +286,17 @@ def test_annexe_menuiseries_inchangee_si_les_deux_cctp_la_nomment():
     texte4 = "CCTP\nLOT 04 : MENUISERIES EXTÉRIEURES ALU SERRURERIE\nDTU 32.1"
     res3 = _autorises_mext(texte4, "lot3")
     assert not any(p == "annexe.pdf" for p, _ in res3["36.5"].sources)   # seul le CCTP du lot 3 le donne
+
+
+# ── GO, CFO, CFA gardés (décision de Mohamed du 27/10, point 1 du bloc 6) ─────
+# Mots du métier lus dans de vrais allotissements (marche-public.fr, « Exemples
+# d'allotissement » : « Electricité CFO-Cfa-SSI », « Gros-Œuvre »). Ce test fige
+# le comportement : aucun changement de règle.
+
+def test_go_cfo_cfa_valent_leur_formule_et_restent_des_mots_du_metier():
+    from services.ai.dtu_autorises import _mots
+    assert _mots("Gros œuvre") == _mots("GO") == frozenset({"go"})
+    assert _mots("Courant fort") == _mots("Courants forts") == _mots("CFO") == frozenset({"cfo"})
+    assert _mots("Courant faible") == _mots("Courants faibles") == _mots("CFA") == frozenset({"cfa"})
+    # « Electricité CFO-Cfa-SSI » : les sigles sont des mots distincts du titre
+    assert _mots("Electricité CFO-Cfa-SSI") == frozenset({"electricite", "cfo", "cfa", "ssi"})

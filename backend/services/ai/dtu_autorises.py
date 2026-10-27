@@ -247,11 +247,16 @@ _MOTS_VIDES = frozenset({
 #         chauffage, de ventilation et de climatisation » → « système CVC ».
 #   TCE : Légifrance, avis sur les index du bâtiment (JORFTEXT000044213303),
 #         index BT01 « Tous corps d'état » ; AQC, fiche Interfaces A03 « lots TCE ».
-#   CFO / CFA : FFB, rubrique « Électricité – Courant fort – Courant faible »
-#         pour les deux familles de travaux ; les sigles CFO et CFA eux-mêmes ne
-#         figurent que dans l'usage du métier (aucun texte d'organisme trouvé).
-#   GO  : « gros œuvre » (CSTB, guide « Gros œuvre ») ; le sigle « GO » lui-même
-#         vient de la décision de Mohamed et des DCE (aucun glossaire trouvé).
+#   CFO / CFA / GO : mots du métier, gardés (décision de Mohamed du 27/10) : ce
+#         sont les intitulés qu'on lit dans de vrais allotissements, pas des règles.
+#         Source : marche-public.fr, « Exemples d'allotissement de marché public »
+#         https://www.marche-public.fr/Marches-publics/Definitions/Entrees/Allotissement-exemples.htm
+#         (consultée le 27/10/2026) : exemple 3, lot « Electricité CFO-Cfa-SSI » ;
+#         exemple 2, lot « plomberie – CVC » ; lots « Gros-Œuvre » / « Gros oeuvre »
+#         aux exemples 1 à 4. Le sigle « GO » seul n'y figure pas : il vient des DCE
+#         eux-mêmes (désignations de lots). Courant fort / courant
+#         faible : FFB, rubrique « Électricité – Courant fort – Courant faible ».
+#         Gros œuvre : CSTB, guide « Gros œuvre ».
 _SIGLES = (
     (re.compile(r"\bgros oeuvre\b"), "go"),
     (re.compile(r"\bchauffage ventilation (?:et )?climatisation\b"), "cvc"),
