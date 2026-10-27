@@ -11,7 +11,11 @@ Celery, LibreOffice et les PDF), toute lecture de fichier déposé se fait donc 
   processus : un clic d'aperçu attend au plus la tâche en cours (une pièce, ou une page), il
   ne coûte pas un second processus. ``0`` = exécution directe dans l'appelant (diagnostic et
   tests, SANS protection) ; ``2`` ou plus pour un serveur à plusieurs cœurs.
-- contexte « spawn » (jamais de fork d'un processus qui a des threads) ;
+- lancé par ``subprocess`` (exec d'un Python neuf : jamais de fork d'un processus qui a des threads)
+  avec un ENVIRONNEMENT MINIMAL (PATH, LANG, LC_ALL) : aucune clé, aucune URL de base ne lui est
+  transmise, alors qu'il lit des fichiers hostiles. Il se déclare aussi « non vidable »
+  (``PR_SET_DUMPABLE = 0``, services/durcissement.py) pour que ses pairs du même utilisateur ne lisent
+  pas son ``/proc/<pid>/environ`` ni sa mémoire ;
 - plafond de mémoire virtuelle ``RLIMIT_AS`` posé dans le processus enfant
   (``SYNORIX_PDFIUM_AS_MO``) : une allocation au-delà échoue dans l'enfant (``MemoryError``
   ou arrêt de l'enfant), l'API ne bouge pas ;
@@ -44,17 +48,22 @@ l'appelant ; un échec du TRAVAIL (délai, plantage, mémoire) lève ``TravailPd
 l'API reste debout. Dans l'enfant, ``signaler(objet)`` remonte un avancement vers le
 paramètre ``sur_progression`` de l'appelant.
 
-ATTENTION (contexte spawn) : tout script qui appelle ce module dans son propre processus doit
-protéger son code par ``if __name__ == "__main__":`` (uvicorn, Celery et pytest le font déjà).
+L'enfant n'est plus un ``multiprocessing.Process`` : le script appelant n'a plus besoin de la garde
+``if __name__ == "__main__":`` et n'est jamais ré-importé dans l'enfant. Les fonctions envoyées doivent
+rester de niveau module, importables depuis le dossier ``backend``.
 """
 from __future__ import annotations
 
+import atexit
 import logging
 import multiprocessing as mp
 import os
 import queue
+import subprocess
+import sys
 import threading
 import time
+from pathlib import Path
 from typing import Any, Callable, Optional
 
 logger = logging.getLogger(__name__)
@@ -149,6 +158,8 @@ def _rss_ko() -> int:
 def _boucle_enfant(conn, plafond_as: int) -> None:
     """Point d'entrée de l'enfant : exécute les tâches reçues, une à la fois."""
     global _conn_enfant
+    from services.durcissement import interdire_lecture_memoire
+    interdire_lecture_memoire()
     # Chargé AVANT le plafond : les bibliothèques sont projetées une fois pour toutes.
     import services.pdf_lecture  # noqa: F401  (pypdfium2 + PDFium)
     import services.document_processor  # noqa: F401  (extraction : docx, tableurs)
@@ -189,14 +200,60 @@ def _boucle_enfant(conn, plafond_as: int) -> None:
 
 # ─── Côté appelant ────────────────────────────────────────────────────────────
 
+_RACINE_BACKEND = Path(__file__).resolve().parent.parent
+
+# Ce que l'enfant reçoit de l'environnement de l'API : RIEN d'autre que ceci (liste blanche).
+_ENV_ENFANT = {"PATH": "/usr/local/bin:/usr/bin:/bin", "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8"}
+
+_AMORCE = (
+    "import sys\n"
+    "sys.path.insert(0, sys.argv[3])\n"
+    "from multiprocessing.connection import Connection\n"
+    "from services import pdfium_processus\n"
+    "pdfium_processus._boucle_enfant(Connection(int(sys.argv[1])), int(sys.argv[2]))\n"
+)
+
+
+class _Lance:
+    """Le processus enfant, avec l'interface de ``multiprocessing.Process`` que ``_Enfant`` utilise."""
+
+    def __init__(self, conn_enfant, plafond_as: int) -> None:
+        fd = conn_enfant.fileno()
+        self._popen = subprocess.Popen(
+            [sys.executable, "-I", "-c", _AMORCE, str(fd), str(plafond_as), str(_RACINE_BACKEND)],
+            env=dict(_ENV_ENFANT), pass_fds=(fd,), stdin=subprocess.DEVNULL, close_fds=True)
+
+    @property
+    def pid(self) -> int:
+        return self._popen.pid
+
+    @property
+    def exitcode(self) -> Optional[int]:
+        return self._popen.returncode        # négatif : tué par ce signal (comme multiprocessing)
+
+    def is_alive(self) -> bool:
+        return self._popen.poll() is None
+
+    def kill(self) -> None:
+        self._popen.kill()
+
+    def join(self, timeout: Optional[float] = None) -> None:
+        try:
+            self._popen.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            pass
+
+
 class _Enfant:
     def __init__(self) -> None:
-        ctx = mp.get_context("spawn")
-        self.conn, enfant_conn = ctx.Pipe(duplex=True)
-        self.processus = ctx.Process(target=_boucle_enfant, args=(enfant_conn, _plafond_as_octets()),
-                                     daemon=True, name="synorix-pdfium")
-        self.processus.start()
-        enfant_conn.close()
+        self.conn, enfant_conn = mp.Pipe(duplex=True)
+        try:
+            self.processus = _Lance(enfant_conn, _plafond_as_octets())
+        except BaseException:
+            self.conn.close()
+            raise
+        finally:
+            enfant_conn.close()
         self.taches = 0
         self.rss_ko = 0
 
@@ -265,6 +322,9 @@ def _arreter_etat(etat: _Etat) -> None:
         etat.enfants.clear()
     for e in enfants:
         e.arreter()
+
+
+atexit.register(lambda: arreter())     # l'enfant n'est plus un daemon de multiprocessing
 
 
 def arreter() -> None:

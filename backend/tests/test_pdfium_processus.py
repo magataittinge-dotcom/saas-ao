@@ -89,6 +89,26 @@ def test_un_arret_natif_sous_plafond_est_dit_memoire_et_sans_plafond_plantage(mo
     assert e.value.raison == "plantage"
 
 
+def test_l_enfant_ne_recoit_aucun_secret_de_l_api(monkeypatch):
+    """L'enfant lit des fichiers hostiles : il ne reçoit que PATH, LANG, LC_ALL (avant : tout l'environnement
+    de l'API, clés Anthropic et Stripe, URL de la base)."""
+    secrets = {"ANTHROPIC_API_KEY": "sk-ant-factice-pdfium", "STRIPE_SECRET_KEY": "sk_live_factice_pdfium",
+               "DATABASE_URL": "url-de-base-factice-pdfium", "SYNORIX_AUTRE": "valeur-factice-pdfium"}
+    for k, v in secrets.items():
+        monkeypatch.setenv(k, v)
+    pp.arreter()
+    env = pp.executer(t.environnement, delai_s=60)
+    assert set(env) <= {"PATH", "LANG", "LC_ALL"}, sorted(env)
+    assert not any(v in str(env) for v in secrets.values())
+
+
+@pytest.mark.skipif(not os.path.exists("/proc/self/environ"), reason="/proc (Linux)")
+def test_l_enfant_est_non_vidable_et_ne_lit_pas_l_environ_de_son_parent(monkeypatch):
+    """PR_SET_DUMPABLE = 0 dans l'enfant. Et même sans durcissement du parent, l'enfant n'a de toute
+    façon aucun secret à protéger (environnement minimal)."""
+    assert pp.executer(t.dumpable, delai_s=60) == 0
+
+
 def test_l_enfant_est_recycle_apres_n_taches(monkeypatch):
     monkeypatch.setenv("SYNORIX_PDFIUM_TACHES_MAX", "3")
     pids = [pp.executer(t.pid, delai_s=60) for _ in range(7)]

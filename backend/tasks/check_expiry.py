@@ -4,6 +4,10 @@ Celery task: daily check of document expirations for all organizations.
 from celery import Celery
 from config import get_settings
 
+from services.durcissement import interdire_lecture_memoire
+
+interdire_lecture_memoire()   # environ du worker illisible par les processus du même utilisateur (hérité par les enfants prefork)
+
 settings = get_settings()
 
 celery_app = Celery("saas_ao", broker=settings.REDIS_URL, backend=settings.REDIS_URL)

@@ -14,6 +14,11 @@ from database import Base, engine
 
 logger = logging.getLogger(__name__)
 
+# /proc/<pid>/environ de l'API (tous les secrets) illisible par LibreOffice et les autres processus du
+# même utilisateur (services/durcissement.py).
+from services.durcissement import interdire_lecture_memoire
+interdire_lecture_memoire()
+
 # Import routers
 from routers import (
     auth,
