@@ -29,6 +29,11 @@ def mourir():
     os.kill(os.getpid(), signal.SIGKILL)
 
 
+def abandonner():
+    """Arrêt natif par SIGABRT : ce que fait PDFium quand malloc échoue sous RLIMIT_AS."""
+    os.abort()
+
+
 def allouer(mo):
     """Alloue ``mo`` Mo : MemoryError si le plafond RLIMIT_AS est posé plus bas."""
     return len(bytearray(mo * 1024 * 1024))

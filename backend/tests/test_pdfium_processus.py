@@ -76,6 +76,19 @@ def test_au_dela_du_plafond_refus_propre(monkeypatch):
     assert pp.executer(t.allouer, 50, delai_s=60) == 50 * MO
 
 
+def test_un_arret_natif_sous_plafond_est_dit_memoire_et_sans_plafond_plantage(monkeypatch):
+    """Une bombe arrêtée par le plafond ne laisse pas de MemoryError : PDFium appelle abort() (SIGABRT).
+    Avant : « plantage » ; maintenant « memoire » quand un plafond est posé (cause probable)."""
+    with pytest.raises(pp.TravailPdfiumEchoue) as e:
+        pp.executer(t.abandonner, delai_s=60)
+    assert e.value.raison == "memoire" and "signal 6" in e.value.detail
+    pp.arreter()
+    monkeypatch.setenv("SYNORIX_PDFIUM_AS_MO", "0")          # aucun plafond : rien ne dit que c'est la mémoire
+    with pytest.raises(pp.TravailPdfiumEchoue) as e:
+        pp.executer(t.abandonner, delai_s=60)
+    assert e.value.raison == "plantage"
+
+
 def test_l_enfant_est_recycle_apres_n_taches(monkeypatch):
     monkeypatch.setenv("SYNORIX_PDFIUM_TACHES_MAX", "3")
     pids = [pp.executer(t.pid, delai_s=60) for _ in range(7)]

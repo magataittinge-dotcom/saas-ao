@@ -82,8 +82,9 @@ ATTENTE_EXTRACTION_S = 600        # attente d'une place, extraction au dépôt
 class TravailPdfiumEchoue(Exception):
     """Le TRAVAIL a échoué (pas la fonction : ses exceptions sont relancées telles quelles).
 
-    ``raison`` : ``"delai"`` (tué au bout de ``delai_s``), ``"memoire"`` (plafond atteint),
-    ``"plantage"`` (l'enfant s'est arrêté), ``"attente"`` (aucun processus libre à temps),
+    ``raison`` : ``"delai"`` (tué au bout de ``delai_s``), ``"memoire"`` (plafond atteint, ou arrêt natif par
+    signal avec un plafond posé : voir ``_fin_anormale``), ``"plantage"`` (l'enfant s'est arrêté),
+    ``"attente"`` (aucun processus libre à temps),
     ``"indisponible"`` (impossible de lancer l'enfant). ``detail`` : phrase pour les journaux
     (jamais de contenu du DCE)."""
 
@@ -341,6 +342,21 @@ def executer(
         etat.places.put(enfant if garder else None)
 
 
+_SIGNAUX_DE_MEMOIRE = (6, 11, 7)    # SIGABRT, SIGSEGV, SIGBUS : ce que fait du code natif quand malloc échoue
+
+
+def _fin_anormale(enfant: _Enfant, detail: str) -> "_EnfantPerdu":
+    """L'enfant est mort sans réponse. Un PDF « bombe » arrêté par ``RLIMIT_AS`` ne laisse pas
+    d'``MemoryError`` (le code natif de PDFium appelle ``abort``) : l'enfant meurt par SIGABRT, SIGSEGV
+    ou SIGBUS. Avec un plafond posé, on dit alors « memoire » (cause PROBABLE, jamais prouvée : un
+    vrai défaut de PDFium donnerait le même signal), sinon « plantage ». Les deux se traitent pareil
+    (pièce non lisible, jamais relue dans l'API) ; la différence sert aux journaux."""
+    code = enfant.processus.exitcode
+    if code is not None and -code in _SIGNAUX_DE_MEMOIRE and _plafond_as_octets() > 0:
+        return _EnfantPerdu("memoire", f"arrêt natif (signal {-code}) sous le plafond de mémoire")
+    return _EnfantPerdu("plantage", detail)
+
+
 def _a_recycler(enfant: _Enfant) -> bool:
     trop_de_taches = enfant.taches >= _entier("SYNORIX_PDFIUM_TACHES_MAX", TACHES_MAX_DEFAUT, 1)
     trop_de_memoire = enfant.rss_ko >= _entier("SYNORIX_PDFIUM_RSS_MAX_MO", RSS_MAX_MO_DEFAUT, 1) * 1024
@@ -370,13 +386,13 @@ def _faire(enfant: _Enfant, fonction, args, delai_s: float, sur_progression) -> 
             raise _EnfantPerdu("delai", f"plus de {delai_s:g} s")
         if not enfant.conn.poll(min(restant, 1.0)):
             if not enfant.vivant():
-                raise _EnfantPerdu("plantage", f"code de sortie {enfant.processus.exitcode}")
+                raise _fin_anormale(enfant, f"code de sortie {enfant.processus.exitcode}")
             continue
         try:
             genre, valeur, rss_ko = enfant.conn.recv()
         except (EOFError, OSError):
             enfant.processus.join(timeout=2)
-            raise _EnfantPerdu("plantage", f"code de sortie {enfant.processus.exitcode}") from None
+            raise _fin_anormale(enfant, f"code de sortie {enfant.processus.exitcode}") from None
         if genre == "prog":
             if sur_progression is not None:
                 try:
