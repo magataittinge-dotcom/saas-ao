@@ -354,7 +354,7 @@ def _cle_numero(numero: str) -> list[int]:
 def formater_liste_dtu(autorises: dict[str, DtuAutorise], max_sources: int = 3) -> str:
     """Bloc de prompt (bloc variable) : la liste fermée des DTU citables, avec la
     pièce et la page où chacun a été lu. Liste vide : aucune citation de DTU."""
-    entete = "━━━ LISTE DES DTU AUTORISÉS (CCTP du lot + pièces communes) ━━━\n"
+    entete = "━━━ LISTE DES DTU AUTORISÉS (CCTP du lot + articles du lot des pièces communes) ━━━\n"
     if not autorises:
         return entete + (
             "Aucun DTU n'est écrit dans le CCTP du lot ni dans les pièces communes : "
@@ -532,3 +532,34 @@ def appliquer_garde_dtu(contenu: dict, autorises: set[str]) -> dict:
             contenu[k] = _visite(contenu[k])
     return {"autorises": sorted(autorises, key=_cle_numero), "retraits": len(retires),
             "retires": sorted(set(retires), key=_cle_numero)}
+
+
+# ── Point d'entrée unique (DEC-2, décision de Mohamed du 27/10) ─────────────
+@dataclass(frozen=True)
+class RegleDtu:
+    """La règle DTU d'un mémoire : la liste fermée des DTU citables, la consigne qui
+    la donne au modèle et le garde-fou déterministe sur sa sortie. Utilisée par le
+    générateur ET par la réécriture de paragraphe : une seule règle."""
+    autorises: dict
+
+    def numeros(self) -> set[str]:
+        return set(self.autorises)
+
+    def consigne(self) -> str:
+        return formater_liste_dtu(self.autorises)
+
+    def garde_texte(self, texte: str) -> tuple[str, list[str]]:
+        """(texte sans DTU hors liste, numéros retirés)."""
+        return retire_dtu_non_autorises(texte, self.numeros())
+
+    def garde_contenu(self, contenu: dict) -> dict:
+        """Garde-fou sur tout un mémoire (en place) ; trace = numéros seulement."""
+        return appliquer_garde_dtu(contenu, self.numeros())
+
+
+def regle_dtu(docs: Iterable, selected_lot: Optional[str] = None,
+              selected_lot_name: Optional[str] = None, lots_detectes=None,
+              lots_du_rc=None, deja_filtre: bool = False) -> RegleDtu:
+    """La règle DTU du lot choisi, lue sans IA dans `docs` (voir `dtu_autorises`)."""
+    return RegleDtu(dtu_autorises(docs, selected_lot, lots_du_rc, lot_nom=selected_lot_name,
+                                  lots_detectes=lots_detectes, deja_filtre=deja_filtre))

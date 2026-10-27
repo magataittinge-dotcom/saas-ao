@@ -4,7 +4,7 @@ Génère le mémoire (~20 pages) en plusieurs segments (préambule, parties A/B/
 Claude. Configuration prod = full-Sonnet 5.5 (`_MEMOIRE_SEGMENT_MODELS`, forçable par `MEMOIRE_MODELE`) ; Opus 4.7
 reste en fallback. Le préambule part seul (il écrit le prompt cache), les parties
 A, B et C ensuite en parallèle (elles le relisent) — même schéma que l'analyse.
-La densité normative vient du PROMPT + corpus skills, mais un DTU n'est cité que s'il est dans le CCTP du lot ou les pièces communes (dtu_autorises.py : liste dans le prompt + garde-fou après génération).
+La densité normative vient du PROMPT + corpus skills, mais un DTU n'est cité que s'il est dans le CCTP du lot ou dans un article du lot des pièces communes (dtu_autorises.py, regle_dtu : même règle que la réécriture de paragraphe : liste dans le prompt + garde-fou après génération).
 """
 import json
 import asyncio
@@ -16,7 +16,7 @@ from config import get_settings
 from .prompts import MEMOIRE_GENERATION_SYSTEM
 from services.skill_loader import load_skill, load_skills_bundle, load_skill_reference
 from models.project import TYPE_AE, TYPES_GRILLES_DE_PRIX
-from services.ai.dtu_autorises import appliquer_garde_dtu, dtu_autorises, formater_liste_dtu
+from services.ai.dtu_autorises import formater_liste_dtu, regle_dtu  # noqa: F401  (formater_liste_dtu ré-exporté)
 from services.dpgf_ouvrages import est_tableur
 import logging
 
@@ -527,9 +527,10 @@ class MemoireGenerator:
         # DTU autorisés : lus sans IA dans le CCTP du lot et les pièces communes.
         # Dans le bloc VARIABLE, jamais dans le préfixe stable (cache par modèle).
         # Pièces du lot 00 : seuls les articles rattachés au lot comptent (décision du 27/10).
-        dtu_ok = dtu_autorises(all_docs, selected_lot, lot_nom=selected_lot_name,
-                               lots_detectes=lots_detectes, deja_filtre=True)
-        liste_dtu = formater_liste_dtu(dtu_ok)
+        # Même règle que la réécriture de paragraphe (regle_dtu, décision du 27/10).
+        regle = regle_dtu(all_docs, selected_lot, selected_lot_name,
+                          lots_detectes=lots_detectes, deja_filtre=True)
+        liste_dtu = regle.consigne()
         dynamic_block = (
             f"MARCHÉ : {project_name}\n"
             f"MAÎTRE D'OUVRAGE : {maitre_ouvrage or 'Non renseigné'}\n"
@@ -665,7 +666,7 @@ class MemoireGenerator:
             _safe_update_progress(project_id, 0.99)
         # Garde-fou déterministe : tout DTU cité hors de la liste autorisée est retiré
         # du texte (jamais remplacé par un autre). Trace = numéros seulement.
-        meta["dtu"] = appliquer_garde_dtu(assembled, set(dtu_ok))
+        meta["dtu"] = regle.garde_contenu(assembled)
         if meta["dtu"]["retraits"]:
             print(f"[Memoire Generator] Garde-fou DTU : {meta['dtu']['retraits']} citation(s) retirée(s) "
                   f"({', '.join(meta['dtu']['retires'])})", flush=True)
