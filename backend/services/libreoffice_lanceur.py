@@ -6,6 +6,11 @@ Il pose, dans le processus qui va devenir ``soffice``, ce que Python ne sait pas
 - ``PR_SET_PDEATHSIG`` : si l'API meurt, ``soffice`` meurt avec elle ;
 - ``RLIMIT_AS`` (mémoire virtuelle, héritée par ``soffice.bin``), ``RLIMIT_FSIZE`` (taille d'un
   fichier écrit : le PDF), ``RLIMIT_CORE`` à 0 ;
+- FICHIERS EN LISTE BLANCHE par Landlock (``services/landlock.py``, règles données par ``cfg["landlock"]``,
+  posées APRÈS le réseau et juste avant l'``exec``) : du code natif exécuté dans LibreOffice ne lit ni ``.env``
+  ni ``uploads/``. Landlock ne filtre pas ``connect()`` vers un socket Unix à chemin avant l'ABI 9 : c'est le
+  seccomp ci-dessous qui ferme ``/run/postgresql`` et ``/run/redis`` ; Landlock ferme les fichiers (et, dès l'ABI 4,
+  le TCP). Niveau écrit dans le fichier d'état : ``netns+seccomp+landlock``, ou ``… (landlock: absent (raison))``.
 - SANS RÉSEAU NI SOCKET VERS L'EXTÉRIEUR, par deux protections empilées :
   1. un espace de noms réseau VIDE (``unshare(CLONE_NEWUSER | CLONE_NEWNET)``) : aucune interface,
      même pas ``lo``. Refusé sur Ubuntu 24.04 quand AppArmor restreint les espaces de noms
@@ -28,7 +33,7 @@ Il pose, dans le processus qui va devenir ``soffice``, ce que Python ne sait pas
 
 Le résultat est écrit dans le fichier d'état (``reseau=netns+seccomp`` …) pour que l'appelant
 le journalise, puis ``soffice`` prend la place du lanceur (``execve``). Bibliothèque standard seule.
-Code de sortie 97 : mode ``exige`` mais le filtre seccomp n'a pas pu être posé.
+Code de sortie 97 : mode ``exige`` mais le filtre seccomp (ou Landlock, s'il est demandé) n'a pas pu être posé.
 """
 import ctypes
 import json
@@ -163,6 +168,21 @@ def isoler_reseau(mode: str) -> str:
     return ("+".join(actives) if actives else "aucune") + (f" (refus {', '.join(refus)})" if refus else "")
 
 
+def poser_landlock(cfg_landlock: dict, commande: str) -> str:
+    """Pose les règles Landlock (liste blanche) ; renvoie ``"landlock"`` ou la raison de l'absence
+    (``"landlock: absent"``…). Le programme lancé (``commande``) reste lisible et exécutable."""
+    try:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        import landlock                                     # importé AVANT la restriction
+        regles = [(chemin, int(droits)) for chemin, droits in cfg_landlock.get("regles", [])]
+        regles.append((commande, landlock.LECTURE_EXEC))
+        landlock.restreindre(regles)
+        return "landlock"
+    except Exception as e:                                  # noqa: BLE001 — jamais d'échec muet : l'état le dit
+        raison = getattr(e, "strerror", None) or type(e).__name__
+        return f"landlock: absent ({raison})"
+
+
 def main() -> None:
     cfg = json.loads(sys.argv[1])
     try:
@@ -174,13 +194,27 @@ def main() -> None:
         if valeur and valeur > 0:
             resource.setrlimit(ressource, (valeur, valeur))
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
-    etat = isoler_reseau(cfg.get("reseau", "auto"))
-    try:
-        with open(cfg["fichier_etat"], "w") as f:
-            f.write(etat)
+    try:                                                    # ouvert AVANT Landlock : le fichier d'état peut être hors zone
+        fichier_etat = open(cfg["fichier_etat"], "w")
     except OSError:
-        pass
-    if cfg.get("reseau") == "exige" and "seccomp" not in etat.split(" ")[0]:
+        fichier_etat = None
+    etat = isoler_reseau(cfg.get("reseau", "auto"))
+    landlock_ok = True
+    if cfg.get("landlock"):
+        resultat = poser_landlock(cfg["landlock"], cfg["cmd"][0])
+        landlock_ok = resultat == "landlock"
+        jeton, _, reste = etat.partition(" ")
+        if landlock_ok:
+            etat = ("landlock" if jeton == "aucune" else jeton + "+landlock") + (" " + reste if reste else "")
+        else:
+            etat = etat + f" ({resultat})"
+    if fichier_etat is not None:
+        try:
+            fichier_etat.write(etat)
+            fichier_etat.close()
+        except OSError:
+            pass
+    if cfg.get("reseau") == "exige" and ("seccomp" not in etat.split(" ")[0] or not landlock_ok):
         os._exit(CODE_ISOLATION_IMPOSSIBLE)
     os.execv(cfg["cmd"][0], cfg["cmd"])
 
