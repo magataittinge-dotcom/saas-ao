@@ -1,9 +1,19 @@
 """DTU autorisés dans le mémoire — lus SANS IA dans le DCE.
 
 Décision du 26/10 : le mémoire ne cite un DTU que s'il figure dans le CCTP du
-lot choisi ou dans les pièces communes (lot 00 / communes à tous les lots).
-Un DTU trouvé seulement ailleurs (RC, CCTP d'un autre lot, référentiel des
-skills, connaissance générale du modèle) n'est pas cité.
+lot choisi ou dans les pièces communes (lot 00). Un DTU trouvé seulement
+ailleurs (RC, CCTP d'un autre lot, référentiel des skills, connaissance
+générale du modèle) n'est pas cité.
+
+Décision de Mohamed du 27/10 (DEC-1) : une pièce du lot 00 (annexe aux
+prescriptions communes, souvent un catalogue de tous les corps de métier) est
+découpée par article ; un article n'autorise ses DTU que s'il est rattaché au
+lot choisi avec certitude. Article ambigu, sans titre, ou pièce non découpable :
+ses DTU ne sont pas autorisés, le mémoire ne cite que ceux du CCTP du lot.
+
+Une seule règle partout où l'IA écrit le mémoire (DEC-2, décision du 27/10) :
+`regle_dtu` est le point d'entrée unique, utilisé par le générateur et par la
+réécriture de paragraphe (consigne dans le prompt + garde-fou déterministe).
 
 Ce module est pur : il lit du texte, ne touche ni la base ni le réseau, et ne
 journalise aucun extrait du DCE. Tous les motifs sont bornés (espaces ≤ 3, pas
@@ -12,6 +22,7 @@ de quantificateur imbriqué) : temps linéaire, pas de ReDoS.
 from __future__ import annotations
 
 import re
+import unicodedata
 from bisect import bisect_right
 from dataclasses import dataclass, field
 from typing import Iterable, Optional
@@ -131,24 +142,198 @@ def _page_de(marqueurs: list[tuple[int, int]], positions: list[int], offset: int
     return marqueurs[i][1] if i >= 0 else 1   # avant le 1er marqueur : en-tête de la page 1
 
 
+# ── Découpe par article et rattachement au lot (DEC-1, décision du 27/10) ───
+@dataclass(frozen=True)
+class LotCible:
+    """Le lot du mémoire : son numéro normalisé (« 5 »), sa désignation
+    (« Revêtement de façade – ITE », sans « Lot 05 — ») et celles des autres lots."""
+    numero: str
+    designation: str = ""
+    autres: tuple[tuple[str, str], ...] = ()
+
+
+@dataclass(frozen=True)
+class Article:
+    titre: Optional[str]   # None : sans titre exploitable (ou entrée de sommaire)
+    debut: int
+    fin: int
+
+
+_LOT_NOM = re.compile(
+    r"^\s{0,3}lot\s{0,3}(?:n°\s{0,2})?0*(?P<num>\d{1,2}[a-z]?)\b\s{0,3}[—–:\-]?\s{0,3}(?P<des>[^\n]{0,200})$",
+    re.IGNORECASE)
+_MAJ = "A-ZÉÈÊËÀÂÎÏÔÛÙÇŒ"
+# Niveau 1 : « ARTICLE 4 », « ART. 4 – FAÇADES », « Article 4.2 : ... ».
+_ART_TETE = re.compile(
+    r"^[ \t]{0,6}(?:ARTICLE|ART\.?)[ \t]{0,3}(?:n°[ \t]{0,2})?\d{1,3}(?:\.\d{1,2}){0,2}[ \t]{0,3}"
+    r"(?:[-–—:.)][ \t]{0,3})?(?P<titre>[^\n]{0,120})$", re.IGNORECASE | re.MULTILINE)
+# Niveau 2 : ligne de titre de lot (« LOT 05 – FAÇADES », « LOT GROS ŒUVRE »).
+_LOT_TITRE = re.compile(r"^[ \t]{0,6}(?:LOT|Lot)\b[^\n]{1,100}$", re.MULTILINE)
+# Niveau 3 : titre numéroté en majuscules (« 3. FAÇADES ET ITE »).
+_NUM_TITRE = re.compile(
+    rf"^[ \t]{{0,6}}\d{{1,2}}(?:\.\d{{1,2}}){{0,2}}[ \t]{{0,2}}[-–—.)]?[ \t]{{1,3}}"
+    rf"[{_MAJ}][{_MAJ}0-9 '’\-–/,&()+]{{2,80}}$", re.MULTILINE)
+_POINTILLES = re.compile(r"\.{4,}|…{2,}|(?:\. ){4,}")
+
+
+def _titre_propre(brut: str) -> Optional[str]:
+    """Titre exploitable, ou None : vide, entrée de sommaire (points de conduite),
+    ligne de prose (point final, trop longue) ou marqueur de page."""
+    t = (brut or "").strip()
+    if not t or _POINTILLES.search(t) or _PAGE.search(t):
+        return None
+    if len(t) > 100 or len(t.split()) > 12 or t[-1] in ".;:,":
+        return None
+    if re.match(r"(?:POSTE|ARTICLE|ART\.)\b", t, re.IGNORECASE):
+        return None
+    return t
+
+
+def _ligne_suivante(texte: str, pos: int) -> Optional[str]:
+    """Première ligne non vide après `pos` (les marqueurs de page sont sautés)."""
+    for ligne in texte[pos + 1:pos + 400].split("\n"):
+        ligne = ligne.strip()
+        if ligne and not _PAGE.search(ligne):
+            return ligne
+    return None
+
+
+def decouper_articles(texte: str) -> list[Article]:
+    """Découpe une pièce en articles, du plus fiable au moins fiable : « ARTICLE N »
+    / « ART. N » ; à défaut, lignes « LOT … » ; à défaut, titres numérotés en
+    majuscules. Un seul niveau est retenu (les sous-titres d'un article ne le
+    coupent pas). Le texte avant le premier titre n'est dans aucun article.
+    Pièce sans titre reconnaissable : liste vide (non découpable)."""
+    if not texte:
+        return []
+    tetes: list[tuple[int, Optional[str]]] = []   # (début, titre)
+    for m in _ART_TETE.finditer(texte):
+        reste = m.group("titre")
+        if reste.strip():
+            titre = _titre_propre(reste)
+        elif _POINTILLES.search(reste):
+            titre = None
+        else:
+            titre = _titre_propre(_ligne_suivante(texte, m.end()) or "")
+        tetes.append((m.start(), titre))
+    if not tetes:
+        for m in _LOT_TITRE.finditer(texte):
+            tetes.append((m.start(), _titre_propre(m.group(0))))
+    if not tetes:
+        for m in _NUM_TITRE.finditer(texte):
+            tetes.append((m.start(), _titre_propre(m.group(0))))
+    return [Article(t, d, tetes[i + 1][0] if i + 1 < len(tetes) else len(texte))
+            for i, (d, t) in enumerate(tetes)]
+
+
+_MOTS_VIDES = frozenset({
+    "le", "la", "les", "l", "un", "une", "de", "du", "des", "d", "et", "ou", "en", "au", "aux", "a",
+    "lot", "lots", "travaux", "ouvrages", "article", "art", "poste", "n", "no",
+})
+
+
+def _mots(texte: str) -> frozenset[str]:
+    """Mots significatifs, sans accents ni casse, au singulier approché (« s » final retiré)."""
+    t = unicodedata.normalize("NFKD", texte.lower().replace("œ", "oe").replace("æ", "ae"))
+    t = "".join(c for c in t if not unicodedata.combining(c))
+    mots = set()
+    for w in re.findall(r"[a-z0-9]+", t):
+        if w in _MOTS_VIDES or w.isdigit():
+            continue
+        mots.add(w[:-1] if len(w) > 3 and w.endswith("s") else w)
+    return frozenset(mots)
+
+
+_NUMEROS_TITRE = re.compile(r"(?<![A-Za-z0-9])0*(\d{1,2}[a-z]?)(?![A-Za-z0-9])", re.IGNORECASE)
+_NUMEROTATION = re.compile(r"^\d{1,2}(?:\.\d{1,2}){0,2}[ \t]{0,2}[-–—.)]?[ \t]{1,3}")
+
+
+def rattache_article(titre: Optional[str], lot: LotCible) -> bool:
+    """Le titre de l'article désigne-t-il le lot choisi AVEC CERTITUDE ?
+
+    Oui si : (a) il nomme le numéro du lot (« LOT 05 ») et aucun autre numéro ; ou
+    (b) tous ses mots significatifs sont des mots de la désignation du lot
+    (mots entiers) ET ne sont pas tous aussi ceux de la désignation d'un autre
+    lot. Sans titre, mot hors désignation, deux lots nommés, désignation
+    partagée : non."""
+    if not titre:
+        return False
+    t = titre.strip()
+    if re.match(r"LOT\b", t, re.IGNORECASE):
+        nums = {_normalize_lot_num(n) for n in _NUMEROS_TITRE.findall(t)}
+        if nums:
+            return nums == {_normalize_lot_num(lot.numero)}
+    else:
+        t = _NUMEROTATION.sub("", t)   # « 3. FAÇADES » : 3 numérote le titre, ce n'est pas un lot
+    mots_titre = _mots(t)
+    if not mots_titre or not mots_titre <= _mots(lot.designation):
+        return False
+    return not any(mots_titre <= _mots(des) for _, des in lot.autres)
+
+
+def lot_cible(selected_lot: Optional[str], lot_nom: Optional[str] = None,
+              lots_detectes=None) -> Optional[LotCible]:
+    """Le lot du mémoire d'après son identifiant (« lot5 »), son nom
+    (« Lot 05 — Revêtement de façade – ITE ») et la liste des lots du projet."""
+    des, num = "", ""
+    m = _LOT_NOM.match(lot_nom or "")
+    if m:
+        num, des = _normalize_lot_num(m.group("num")), m.group("des").strip()
+    if selected_lot:
+        num = _normalize_lot_num(selected_lot)
+    if not num:
+        return None
+    autres = []
+    for l in lots_detectes or []:
+        if not isinstance(l, dict):
+            continue
+        mm = _LOT_NOM.match(l.get("nom") or "")
+        n = _normalize_lot_num(mm.group("num")) if mm else _normalize_lot_num(str(l.get("id") or ""))
+        d = mm.group("des").strip() if mm else ""
+        if n == num:
+            des = des or d
+        elif n:
+            autres.append((n, d))
+    return LotCible(num, des, tuple(autres))
+
+
+def _plages_du_lot(texte: str, lot: Optional[LotCible]) -> list[tuple[int, int]]:
+    """Plages d'une pièce du lot 00 qui appartiennent à un article rattaché au lot."""
+    if lot is None:
+        return []
+    return [(a.debut, a.fin) for a in decouper_articles(texte) if rattache_article(a.titre, lot)]
+
+
 def dtu_autorises(docs: Iterable, selected_lot: Optional[str] = None,
-                  lots_du_rc=None) -> dict[str, DtuAutorise]:
+                  lots_du_rc=None, *, lot_nom: Optional[str] = None,
+                  lots_detectes=None, deja_filtre: bool = False) -> dict[str, DtuAutorise]:
     """{numéro canonique → DtuAutorise} lu dans les pièces autorisées.
 
+    Le CCTP du lot garde tous ses DTU. Une pièce du lot 00 (quel que soit son
+    type) n'en donne que dans les articles rattachés avec certitude au lot
+    (`rattache_article`, décision du 27/10) ; sans lot connu, elle n'en donne aucun.
+
     Avec `selected_lot` (« lot5 »…), les pièces des autres lots sont écartées ici
-    même (get_documents_for_lot) ; sans lui, `docs` doit déjà être filtré.
+    même (get_documents_for_lot) sauf si `deja_filtre` ; sans lui, `docs` doit
+    déjà être filtré. `lot_nom` et `lots_detectes` servent au rattachement.
 
     La page vient des marqueurs « Page N / M » que la pièce porte dans son
     texte extrait ; sans marqueur, la page vaut None (le texte extrait ne porte
     pas de saut de page)."""
     res: dict[str, DtuAutorise] = {}
-    if selected_lot:
+    if selected_lot and not deja_filtre:
         docs = get_documents_for_lot(list(docs), selected_lot, lots_du_rc)
+    lot = lot_cible(selected_lot, lot_nom, lots_detectes)
     for d in _pieces_sources(docs):
         texte = d.extracted_text
         mentions = trouver_dtu(texte)
         if not mentions:
             continue
+        if _est_lot_zero(getattr(d, "related_lots", None)):
+            plages = _plages_du_lot(texte, lot)
+            mentions = [m for m in mentions if any(a <= m.debut < b for a, b in plages)]
+            if not mentions:
+                continue
         marqueurs = [(m.start(), int(m.group(1))) for m in _PAGE.finditer(texte)]
         positions = [p for p, _ in marqueurs]
         vues: set[tuple[str, Optional[int]]] = set()
@@ -169,7 +354,7 @@ def _cle_numero(numero: str) -> list[int]:
 def formater_liste_dtu(autorises: dict[str, DtuAutorise], max_sources: int = 3) -> str:
     """Bloc de prompt (bloc variable) : la liste fermée des DTU citables, avec la
     pièce et la page où chacun a été lu. Liste vide : aucune citation de DTU."""
-    entete = "━━━ LISTE DES DTU AUTORISÉS (CCTP du lot + pièces communes) ━━━\n"
+    entete = "━━━ LISTE DES DTU AUTORISÉS (CCTP du lot + articles du lot des pièces communes) ━━━\n"
     if not autorises:
         return entete + (
             "Aucun DTU n'est écrit dans le CCTP du lot ni dans les pièces communes : "
@@ -347,3 +532,34 @@ def appliquer_garde_dtu(contenu: dict, autorises: set[str]) -> dict:
             contenu[k] = _visite(contenu[k])
     return {"autorises": sorted(autorises, key=_cle_numero), "retraits": len(retires),
             "retires": sorted(set(retires), key=_cle_numero)}
+
+
+# ── Point d'entrée unique (DEC-2, décision de Mohamed du 27/10) ─────────────
+@dataclass(frozen=True)
+class RegleDtu:
+    """La règle DTU d'un mémoire : la liste fermée des DTU citables, la consigne qui
+    la donne au modèle et le garde-fou déterministe sur sa sortie. Utilisée par le
+    générateur ET par la réécriture de paragraphe : une seule règle."""
+    autorises: dict
+
+    def numeros(self) -> set[str]:
+        return set(self.autorises)
+
+    def consigne(self) -> str:
+        return formater_liste_dtu(self.autorises)
+
+    def garde_texte(self, texte: str) -> tuple[str, list[str]]:
+        """(texte sans DTU hors liste, numéros retirés)."""
+        return retire_dtu_non_autorises(texte, self.numeros())
+
+    def garde_contenu(self, contenu: dict) -> dict:
+        """Garde-fou sur tout un mémoire (en place) ; trace = numéros seulement."""
+        return appliquer_garde_dtu(contenu, self.numeros())
+
+
+def regle_dtu(docs: Iterable, selected_lot: Optional[str] = None,
+              selected_lot_name: Optional[str] = None, lots_detectes=None,
+              lots_du_rc=None, deja_filtre: bool = False) -> RegleDtu:
+    """La règle DTU du lot choisi, lue sans IA dans `docs` (voir `dtu_autorises`)."""
+    return RegleDtu(dtu_autorises(docs, selected_lot, lots_du_rc, lot_nom=selected_lot_name,
+                                  lots_detectes=lots_detectes, deja_filtre=deja_filtre))

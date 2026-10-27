@@ -50,7 +50,8 @@ def test_temps_lineaire_sans_redos():
 def test_seules_les_pieces_cctp_du_lot_et_les_pieces_communes():
     docs = [
         _doc("cctp lot 5.pdf", "Pose selon NF DTU 41.2.", lots=("5",)),
-        _doc("annexe 00.pdf", "Annexe commune : NF DTU 20.1 P1-1.", type_="autre", lots=("0",)),
+        _doc("annexe 00.pdf", "ARTICLE 4\nLOT FAÇADE\nAnnexe commune : NF DTU 20.1 P1-1.",
+             type_="autre", lots=("0",)),
         _doc("diag.pdf", "Diagnostic cite DTU 12.1.", type_="diagnostic", lots=("all",)),
         _doc("notice.pdf", "Notice cite DTU 14.1.", type_="notice", lots=None),
         _doc("rc.pdf", "Le RC cite le DTU 59.1.", type_="rc", lots=("all",)),
@@ -58,7 +59,7 @@ def test_seules_les_pieces_cctp_du_lot_et_les_pieces_communes():
         _doc("dpgf.xlsx", "ligne DTU 21", type_="dpgf_template", lots=("5",)),
         _doc("rempli.pdf", "DTU 13.1", lots=("5",), is_user_completed=True),
     ]
-    res = dtu_autorises(docs)
+    res = dtu_autorises(docs, selected_lot="lot5", lot_nom="Lot 05 — Façade")
     assert sorted(res) == ["20.1", "41.2"]
 
 
@@ -66,9 +67,10 @@ def test_avec_le_lot_les_cctp_des_autres_lots_sont_ecartes():
     docs = [
         _doc("cctp lot 5.pdf", "NF DTU 41.2", lots=("5",)),
         _doc("cctp lot 9.pdf", "Elec : DTU 70.1.", lots=("9",)),
-        _doc("commun.pdf", "NF DTU 20.1", lots=("00",), type_="autre"),
+        _doc("commun.pdf", "ARTICLE 4\nLOT FAÇADE\nNF DTU 20.1", lots=("00",), type_="autre"),
     ]
-    assert sorted(dtu_autorises(docs, selected_lot="lot5")) == ["20.1", "41.2"]
+    res = dtu_autorises(docs, selected_lot="lot5", lot_nom="Lot 05 — Façade")
+    assert sorted(res) == ["20.1", "41.2"]
 
 
 def test_piece_et_page_quand_le_texte_porte_un_pied_de_page():

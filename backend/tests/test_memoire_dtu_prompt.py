@@ -16,12 +16,12 @@ def _docs():
         SimpleNamespace(type="cctp", file_name="cctp lot 5.pdf", related_lots=["5"],
                         extracted_text="Pied de page / Page 1 / 2 \nRien.\nPied de page / Page 2 / 2 \nPose selon NF DTU 41.2."),
         SimpleNamespace(type="autre", file_name="annexe 00.pdf", related_lots=["0"],
-                        extracted_text="Voir NF DTU 20.1 P1-1."),
+                        extracted_text="ARTICLE 4\nLOT FAÇADE\nVoir NF DTU 20.1 P1-1."),
     ]
 
 
 def test_liste_formatee_avec_piece_et_page():
-    bloc = formater_liste_dtu(dtu_autorises(_docs()))
+    bloc = formater_liste_dtu(dtu_autorises(_docs(), selected_lot="lot5", lot_nom="Lot 05 - Façade"))
     assert "NF DTU 20.1" in bloc and "NF DTU 41.2" in bloc
     assert "cctp lot 5.pdf" in bloc and "p. 2" in bloc
     assert "annexe 00.pdf" in bloc

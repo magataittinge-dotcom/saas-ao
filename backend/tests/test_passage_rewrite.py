@@ -36,7 +36,7 @@ def _mock_opus(monkeypatch, result="Passage réécrit plus techniquement."):
     import services.ai.passage_rewriter as pr
     calls = {"n": 0, "kwargs": None}
 
-    def fake(passage, action, instruction):
+    def fake(passage, action, instruction, consigne_dtu=""):
         calls["n"] += 1
         calls["kwargs"] = {"passage": passage, "action": action, "instruction": instruction}
         return result
