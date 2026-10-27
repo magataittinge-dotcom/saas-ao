@@ -27,12 +27,19 @@ Ce que fait une conversion (``convertir_en_pdf``) :
 - Landlock (services/landlock.py, règles : ``regles_landlock``) : liste blanche des fichiers lisibles et
   du seul dossier inscriptible ; ``.env`` et ``uploads/`` sont refusés (les sockets de la base et de Redis le sont
   par le seccomp).
+- ``/tmp`` : soffice y crée son socket ``OSL_PIPE_<uid>_…`` (codé en dur, ``TMPDIR`` n'y change rien) ; sous systemd
+  (``PrivateTmp=true``) c'est le ``/tmp`` de l'API, où elle range ses temporaires. Niveau « privé » : le lanceur monte
+  le dossier jetable sur ``/tmp`` dans un espace de noms de montage (quand l'espace de noms utilisateur est permis) et
+  Landlock ne donne aucun droit sur le vrai ``/tmp``. Niveau « partagé » (repli, AppArmor d'Ubuntu 24.04) : ``MAKE_SOCK |
+  REMOVE_FILE`` sans ``READ_DIR`` (mesuré : ``MAKE_SOCK`` seul fait échouer soffice, qui efface le socket avant de le
+  créer) ; il ne liste rien, ne lit rien, mais peut effacer un fichier dont il connaît le nom exact (ceux de l'API sont
+  aléatoires). L'API balaie ensuite le socket laissé (``_balayer_sockets_osl_pipe``). Le niveau est journalisé.
 - Délai : au-delà, TOUT le groupe de processus est tué (``soffice`` lance ``soffice.bin``).
 
 Réglages (variables d'environnement, relues à chaque conversion) :
 ``SYNORIX_LIBREOFFICE_DIR``, ``_AS_MO`` (1536), ``_FICHIER_MO`` (512), ``_DELAI_S`` (120),
 ``_ATTENTE_S`` (90, travail interactif), ``_ATTENTE_DEPOT_S`` (900, Word déposé en arrière-plan),
-``_RESEAU`` (``auto`` | ``exige`` | ``aucun``), ``_LANDLOCK`` (``auto`` | ``aucun``).
+``_RESEAU`` (``auto`` | ``exige`` | ``aucun``), ``_LANDLOCK`` (``auto`` | ``aucun``), ``_TMP`` (``auto`` | ``partage``).
 Avec ``_RESEAU=exige``, la conversion est refusée si le filtre seccomp ou Landlock ne peut pas être posé.
 Limite : sans Landlock (noyau < 5.13 ou désactivé), les fichiers lisibles par l'utilisateur du service
 (.env, uploads) restent lisibles par du code natif exécuté dans LibreOffice ; le niveau journalisé
@@ -44,8 +51,10 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import shutil
 import signal
+import stat
 import subprocess
 import sys
 import threading
@@ -134,6 +143,11 @@ def _mode_landlock() -> str:
     return "aucun" if os.environ.get("SYNORIX_LIBREOFFICE_LANDLOCK", "auto").strip().lower() == "aucun" else "auto"
 
 
+def _mode_tmp() -> str:
+    """``auto`` (défaut) : ``/tmp`` privé si le noyau le permet ; ``partage`` : jamais (diagnostic, tests du repli)."""
+    return "partage" if os.environ.get("SYNORIX_LIBREOFFICE_TMP", "auto").strip().lower() == "partage" else "auto"
+
+
 def regles_landlock(base: Path, binaire: Optional[str] = None) -> list:
     """Règles Landlock de LibreOffice, en LISTE BLANCHE (mesurées : outils-libre/trace_lo.py, un préchargement
     qui journalise les ``open`` d'un vrai soffice pendant la conversion d'un mémoire, d'un Word avec image,
@@ -165,11 +179,22 @@ def regles_landlock(base: Path, binaire: Optional[str] = None) -> list:
             regles.append((str(programme.parent), L.LECTURE_EXEC))
     regles.append((str(base), L.LECTURE | L.ECRITURE))
     regles.append(("/dev/null", L.READ_FILE | L.WRITE_FILE))
-    # LibreOffice crée le socket Unix de son canal interne (OSL_PIPE_…) dans /tmp (ou /var/tmp), chemin
-    # fixé dans sal : il ne peut ni lire ni écrire un fichier ordinaire là, seulement créer et retirer un socket.
-    for tmp in ("/tmp", "/var/tmp"):
-        regles.append((tmp, L.READ_DIR | L.MAKE_SOCK | L.REMOVE_FILE))
+    # /tmp : voir regles_landlock_tmp (le lanceur choisit selon qu'il a pu monter un /tmp privé)
     return [[c, int(d)] for c, d in regles]
+
+
+def regles_landlock_tmp(base: Path) -> dict:
+    """Droits sur ``/tmp``, donnés au lanceur qui choisit (il sait seul si le montage privé a réussi) :
+
+    - ``tmp_prive`` : le dossier jetable monté sur ``/tmp`` (lecture et écriture) ; le vrai ``/tmp`` n'a AUCUN droit ;
+    - ``tmp_partage`` (repli) : ``MAKE_SOCK | REMOVE_FILE`` sur ``/tmp`` — pas ``READ_DIR``, pas ``READ_FILE`` : soffice
+      crée son socket ``OSL_PIPE_…`` et l'efface (``unlink`` avant ``bind``, mesuré), sans rien lister ni lire. ``/var/tmp``
+      seulement si ``/tmp`` n'est pas inscriptible (sal y bascule alors)."""
+    L = landlock
+    partage = [["/tmp", int(L.MAKE_SOCK | L.REMOVE_FILE)]]
+    if not os.access("/tmp", os.W_OK):
+        partage.append(["/var/tmp", int(L.MAKE_SOCK | L.REMOVE_FILE)])
+    return {"tmp_prive": [[str(base / "tmp"), int(L.LECTURE | L.ECRITURE)]], "tmp_partage": partage}
 
 
 def dossier_travail() -> Path:
@@ -364,6 +389,47 @@ def _executer(cmd: list, env: dict, base: Path, delai: float) -> int:
     return code
 
 
+_DOSSIERS_TMP = ("/tmp", "/var/tmp")
+
+
+def _sockets_osl_pipe(dossiers=_DOSSIERS_TMP) -> set:
+    """Chemins des sockets ``OSL_PIPE_<uid>_…`` de l'utilisateur courant dans ``dossiers`` (motif exact, vrai socket,
+    pas un lien, appartenant à cet utilisateur)."""
+    uid = os.getuid()
+    motif = re.compile(rf"^OSL_PIPE_{uid}_[A-Za-z0-9_.-]+$")
+    trouves = set()
+    for dossier in dossiers:
+        try:
+            noms = os.listdir(dossier)
+        except OSError:
+            continue
+        for nom in noms:
+            if not motif.match(nom):
+                continue
+            chemin = os.path.join(dossier, nom)
+            try:
+                st = os.lstat(chemin)
+            except OSError:
+                continue
+            if stat.S_ISSOCK(st.st_mode) and st.st_uid == uid:
+                trouves.add(chemin)
+    return trouves
+
+
+def _balayer_sockets_osl_pipe(dossiers, avant: set) -> int:
+    """Efface les sockets ``OSL_PIPE_<uid>_…`` apparus depuis ``avant`` (pris au début de la conversion, sous le
+    verrou : une seule conversion à la fois). Niveau « /tmp partagé » : soffice a pu être tué (délai) avant d'effacer son
+    socket. Jamais un autre fichier, jamais un socket plus ancien. Renvoie le nombre d'effacés."""
+    n = 0
+    for chemin in _sockets_osl_pipe(dossiers) - avant:
+        try:
+            os.unlink(chemin)
+            n += 1
+        except OSError:
+            pass
+    return n
+
+
 def convertir_en_pdf(entree, extension: str = ".docx", destination: Optional[Path] = None, *,
                      delai: Optional[float] = None, attente: Optional[float] = None):
     """Convertit ``entree`` (octets ou chemin) en PDF. Renvoie les octets du PDF, ou, avec
@@ -380,6 +446,7 @@ def convertir_en_pdf(entree, extension: str = ".docx", destination: Optional[Pat
     with _UneConversionALaFois(racine, attente):
         _balayer_anciens(racine)
         base = racine / f"conv-{uuid.uuid4().hex}"
+        sockets_avant = _sockets_osl_pipe()
         try:
             (base / "tmp").mkdir(parents=True)
             fichier = base / f"entree{extension.lower()}"
@@ -401,7 +468,9 @@ def convertir_en_pdf(entree, extension: str = ".docx", destination: Optional[Pat
                 "fichier_etat": str(base / "reseau.txt"),
             }
             if _mode_landlock() == "auto":
-                cfg["landlock"] = {"regles": regles_landlock(base, binaire)}
+                cfg["landlock"] = {"regles": regles_landlock(base, binaire), **regles_landlock_tmp(base)}
+            if _mode_tmp() == "auto":
+                cfg["tmp_prive"] = str(base / "tmp")
             cmd = [sys.executable, "-I", "-S", str(_LANCEUR), json.dumps(cfg)]
             debut = time.monotonic()
             try:
@@ -432,7 +501,8 @@ def convertir_en_pdf(entree, extension: str = ".docx", destination: Optional[Pat
                     pass
                 logger.error("LibreOffice sans PDF (code %s, %.1f s, réseau %s) : %s", code, duree, etat_reseau, detail)
                 raise _erreur("echec")
-            logger.info("PDF converti en %.1f s (%d Ko, réseau : %s)", duree, pdf.stat().st_size // 1024, etat_reseau)
+            logger.info("PDF converti en %.1f s (%d Ko, réseau : %s, %s)", duree, pdf.stat().st_size // 1024, etat_reseau,
+                        "tmp privé" if "tmp-prive" in etat_reseau.split(" ")[0].split("+") else "tmp partagé")
             if destination is None:
                 return pdf.read_bytes()
             destination = Path(destination)
@@ -442,4 +512,5 @@ def convertir_en_pdf(entree, extension: str = ".docx", destination: Optional[Pat
             os.replace(partiel, destination)
             return destination
         finally:
+            _balayer_sockets_osl_pipe(_DOSSIERS_TMP, sockets_avant)
             shutil.rmtree(base, ignore_errors=True)

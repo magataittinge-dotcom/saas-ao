@@ -253,7 +253,11 @@ sa configuration, Carlito et le dossier jetable où l'entrée est copiée ; il n
 (lui aussi sous seccomp) ne lit que Python, le venv, `backend/services` et `backend/uploads`, et n'écrit
 nulle part. Ni l'un ni l'autre ne lit `.env`. Limite : l'enfant PDFium, partagé entre organisations, lit
 encore tout `uploads/` (passer la pièce par descripteur : après Ozcan). Sans Landlock, repli journalisé ;
-avec `SYNORIX_LIBREOFFICE_RESEAU=exige`, conversion refusée. Mesuré : durée inchangée (+1 % sur un Word
+avec `SYNORIX_LIBREOFFICE_RESEAU=exige`, conversion refusée. `/tmp` : soffice y crée son socket `OSL_PIPE_<uid>_…` (codé en dur). Quand l'espace de noms utilisateur est
+permis, le dossier jetable est monté sur `/tmp` (niveau « tmp privé », journalisé) : le `/tmp` de l'API, sous
+`PrivateTmp=true`, n'est ni listé ni lu ni effacé. Sinon (AppArmor d'Ubuntu 24.04, repli probable du VPS) : « tmp partagé »,
+`MAKE_SOCK | REMOVE_FILE` sans `READ_DIR` ; LibreOffice ne liste ni ne lit rien dans `/tmp` mais peut effacer un fichier dont il
+connaît le nom exact (ceux de l'API sont aléatoires) ; l'API balaie le socket laissé. Mesuré : durée inchangée (+1 % sur un Word
 de 400 p.), pages et texte identiques. Réglages facultatifs du `.env` :
 
 ```
@@ -266,6 +270,7 @@ SYNORIX_LIBREOFFICE_ATTENTE_DEPOT_S=900   # attente du verrou, Word déposé (ar
 SYNORIX_LIBREOFFICE_RESEAU=auto        # exige | auto | netns | seccomp | aucun ; « exige » en prod une fois vérifié
 SYNORIX_DUMPABLE=                      # 1 = désactive PR_SET_DUMPABLE (diagnostic py-spy seulement)
 SYNORIX_LIBREOFFICE_LANDLOCK=auto      # auto | aucun
+SYNORIX_LIBREOFFICE_TMP=auto           # auto (/tmp privé si l'espace de noms de montage est permis) | partage (repli)
 SYNORIX_PDFIUM_LANDLOCK=auto           # auto | aucun
 SYNORIX_PDFIUM_LECTURE_DIRS=           # dossiers de pièces en plus de backend/uploads, séparés par « : »
 ```
