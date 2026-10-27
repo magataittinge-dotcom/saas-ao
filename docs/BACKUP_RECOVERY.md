@@ -1,6 +1,6 @@
 # Backup & recovery — Synorix
 
-**Dernière mise à jour :** 2026-04-30
+**Dernière mise à jour :** 2026-10-27 (restic chiffré hors du VPS, à la place de S3 en clair)
 **Cible RPO (Recovery Point Objective) :** ≤ 24 h (perte max d'1 jour de données)
 **Cible RTO (Recovery Time Objective) :** ≤ 1 h (temps max pour rétablir le service)
 
@@ -10,74 +10,28 @@
 
 | Source | Volume | Sensibilité | Périodicité | Cible |
 |---|---|---|---|---|
-| PostgreSQL `synorix` | 100 Mo - 5 Go | RGPD haute | Quotidien (03:00) | Local + S3 |
-| `/srv/synorix/backend/uploads/` | 5 Go - 200 Go | RGPD haute | Quotidien (03:30) | Local + S3 |
-| `/srv/synorix/backend/.env` | <1 Ko | Critique secrets | Manuel + 1Password | 1Password |
+| PostgreSQL `synorix` | 100 Mo - 5 Go | RGPD haute | Quotidien (03:00) | Local + restic chiffré hors du VPS |
+| `/srv/synorix/backend/uploads/` | 5 Go - 200 Go | RGPD haute | Quotidien (03:00, même passage) | restic chiffré hors du VPS (dédupliqué) |
+| `/srv/synorix/backend/.env`, mot de passe de restic | <1 Ko | Critique secrets | Manuel | gestionnaire de mots de passe de Mohamed (jamais le dépôt) |
 | Configuration nginx + systemd | <1 Mo | Faible | Hebdo | Git privé |
 
 ---
 
-## 2. Script de backup
+## 2. Sauvegarde quotidienne
 
-`/srv/synorix/scripts/backup.sh` :
+Script : `deploy/sauvegarde/synorix-sauvegarde.sh` → `/usr/local/sbin/synorix-sauvegarde` ; lancé par
+`deploy/systemd/synorix-sauvegarde.timer` (03:00, rattrapé au démarrage). Il fait :
+1. `pg_dump -Fc` de la base, relu par `pg_restore --list` avant de remplacer le précédent
+   (`/var/backups/synorix/synorix.dump`, root, 0700) ;
+2. `restic backup` du dump et de `uploads/` vers le dépôt distant (chiffré côté serveur, dédupliqué) ;
+3. `restic forget --keep-daily 7 --keep-weekly 4 --keep-monthly 6 --prune`, puis `restic check`
+   (échantillon de 1/20 des données le dimanche) ;
+4. une ligne dans le journal : `journalctl -t synorix-sauvegarde`.
 
-```bash
-#!/usr/bin/env bash
-set -euo pipefail
-
-BACKUP_ROOT="/var/backups/synorix"
-mkdir -p "$BACKUP_ROOT"/{db,uploads,logs}
-
-DATE=$(date +"%Y%m%d-%H%M")
-DB_FILE="$BACKUP_ROOT/db/synorix-$DATE.sql.gz"
-UPLOADS_FILE="$BACKUP_ROOT/uploads/uploads-$DATE.tar.gz"
-
-# 1. Database dump (consistent online backup, bzip2 compression)
-sudo -u postgres pg_dump -d synorix --format=custom --compress=9 \
-    --file "${DB_FILE%.gz}" 2>/dev/null
-gzip -9 "${DB_FILE%.gz}"
-echo "✓ DB backup: $DB_FILE ($(du -h $DB_FILE | cut -f1))"
-
-# 2. Uploads (incremental tar with sparse handling)
-tar --use-compress-program='gzip -9' \
-    -cf "$UPLOADS_FILE" \
-    -C /srv/synorix/backend uploads/
-echo "✓ Uploads backup: $UPLOADS_FILE ($(du -h $UPLOADS_FILE | cut -f1))"
-
-# 3. Rotation: keep 7 daily backups, then weekly for 4 weeks, then monthly.
-find "$BACKUP_ROOT/db" -name "synorix-*.sql.gz" -mtime +7 -delete
-find "$BACKUP_ROOT/uploads" -name "uploads-*.tar.gz" -mtime +7 -delete
-
-# 4. Off-site sync to S3 (eu-west-3)
-if command -v aws >/dev/null && [ -n "${AWS_BACKUP_BUCKET:-}" ]; then
-    aws s3 sync "$BACKUP_ROOT/db"      "s3://$AWS_BACKUP_BUCKET/db/" \
-        --storage-class STANDARD_IA --exact-timestamps
-    aws s3 sync "$BACKUP_ROOT/uploads" "s3://$AWS_BACKUP_BUCKET/uploads/" \
-        --storage-class STANDARD_IA --exact-timestamps
-    echo "✓ Off-site S3 sync done"
-fi
-
-# 5. Healthy completion notification (optional Telegram)
-if [ -n "${TELEGRAM_BOT_TOKEN:-}" ] && [ -n "${TELEGRAM_CHAT_ID:-}" ]; then
-    curl -s -o /dev/null -X POST \
-        "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-        -d chat_id="${TELEGRAM_CHAT_ID}" \
-        -d text="✓ Synorix backup OK — $(du -sh $BACKUP_ROOT | cut -f1)"
-fi
-```
-
-```bash
-chmod +x /srv/synorix/scripts/backup.sh
-chown root:root /srv/synorix/scripts/backup.sh
-```
-
-### Cron
-
-`/etc/cron.d/synorix-backup` :
-
-```cron
-30 3 * * * root /srv/synorix/scripts/backup.sh >>/var/log/synorix/backup.log 2>&1
-```
+Réglages : `/etc/synorix/sauvegarde.env` (root 0600) — `RESTIC_REPOSITORY`, `RESTIC_PASSWORD_FILE`,
+`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` (clé d'application B2 limitée à un seul compartiment).
+Essayé en local le 27/10/2026 (restic 0.16.4, Postgres 16) : deux passages, restauration du dump et d'une
+pièce, base restaurée relue.
 
 ---
 
@@ -88,31 +42,26 @@ chown root:root /srv/synorix/scripts/backup.sh
 ### 3.1 Restaurer la DB
 
 ```bash
-# 1. Récupérer le dernier dump depuis S3
-aws s3 cp s3://synorix-backups/db/synorix-LATEST.sql.gz /tmp/
-
-# 2. Préparer une DB vierge (l'install DEPLOYMENT.md §3 a déjà créé l'user)
-sudo -u postgres dropdb synorix || true
-sudo -u postgres createdb synorix --owner synorix
-
-# 3. Restaurer
-gunzip -c /tmp/synorix-LATEST.sql.gz | \
-    sudo -u postgres pg_restore --dbname=synorix --no-owner --no-acl \
-        --verbose 2>&1 | tail -30
-
-# 4. Vérifier
-sudo -u postgres psql synorix -c '\dt' | head
+sudo -i                                   # restic lit /etc/synorix/sauvegarde.env (root)
+set -a; . /etc/synorix/sauvegarde.env; set +a
+restic snapshots --tag synorix            # choisir l'instantané (latest par défaut)
+restic restore latest --target /root/restauration --include /var/backups/synorix/synorix.dump
+pg_restore --list /root/restauration/var/backups/synorix/synorix.dump | grep -c "TABLE DATA"
+# Base vierge (le rôle synorix existe déjà, DEPLOYMENT.md §3), extension vector d'abord
+sudo -u postgres dropdb --if-exists synorix
+sudo -u postgres createdb -O synorix synorix
+sudo -u postgres psql -d synorix -c "CREATE EXTENSION IF NOT EXISTS vector"
+sudo -u postgres pg_restore -d synorix --no-owner --role=synorix /root/restauration/var/backups/synorix/synorix.dump
 sudo -u postgres psql synorix -c 'SELECT count(*) FROM organizations;'
 ```
 
 ### 3.2 Restaurer les uploads
 
 ```bash
-aws s3 cp s3://synorix-backups/uploads/uploads-LATEST.tar.gz /tmp/
-mkdir -p /srv/synorix/backend/uploads
-tar -xzf /tmp/uploads-LATEST.tar.gz -C /srv/synorix/backend/
+restic restore latest --target /root/restauration --include /srv/synorix/backend/uploads
+rsync -a /root/restauration/srv/synorix/backend/uploads/ /srv/synorix/backend/uploads/
 chown -R synorix:synorix /srv/synorix/backend/uploads
-ls -la /srv/synorix/backend/uploads/projects/ | head
+rm -rf /root/restauration
 ```
 
 ### 3.3 Vérification globale
@@ -206,7 +155,7 @@ echo "Décisions à acter : ..."
 
 ---
 
-## 7. Anti-ransomware : versionnage S3 + MFA delete
+## 7. Anti-ransomware : versionnage S3 + MFA delete (à revoir pour B2 : verrouillage des objets, depuis le passage à restic du 27/10/2026)
 
 Sur le bucket `synorix-backups` (AWS console) :
 

@@ -85,34 +85,47 @@ dpkg-reconfigure -plow unattended-upgrades
 
 ## 2. Installation des dépendances
 
+Noms vérifiés dans Ubuntu 24.04 (noble) le 27/10/2026. **Pas de Node sur le serveur** : le front est
+construit sur le PC de Mohamed et envoyé par rsync (§10 ; noble ne fournit que Node 18).
+
 ```bash
 apt install -y \
-  build-essential python3.12 python3.12-venv python3-pip \
-  postgresql-16 postgresql-contrib-16 \
+  python3.12-venv \
+  postgresql-16 postgresql-16-pgvector postgresql-contrib \
   redis-server \
-  nginx certbot python3-certbot-nginx \
-  curl git rsync \
-  imagemagick poppler-utils libreoffice
-# poppler : outils PDF
-# imagemagick : plus appelé par le code (servait aux cartes Google, retirées) ; facultatif.
-# Carlito (clone libre de Calibri, mêmes largeurs de lettres) n'a pas besoin de paquet :
-#   backend/assets/fonts/carlito (OFL) est montrée à LibreOffice par un fonts.conf
-#   du sous-processus (services/pdf_export.py). Le Word déclare Calibri, sans police
-#   embarquée. Vérifier : `pdffonts` d'un PDF exporté ne montre ni DejaVu ni Liberation.
-# libreoffice : REQUIS pour l'export PDF du mémoire (C13a — soffice headless,
-#   la version dépôt du ZIP). Vérifier après install : `soffice --version`.
+  nginx libnginx-mod-http-brotli-static certbot python3-certbot-nginx \
+  libreoffice-core-nogui libreoffice-writer-nogui libreoffice-calc-nogui fonts-crosextra-carlito \
+  poppler-utils restic fail2ban rsync git curl
 ```
+- `postgresql-16-pgvector` : **requis**, la migration 0003 crée l'extension `vector` (corpus RAG).
+- LibreOffice sans interface graphique (Writer pour les Word, Calc pour les tableurs) : export PDF du
+  mémoire et aperçu des Word déposés. Vérifier : `soffice --version`.
+- Carlito (métriques de Calibri) : le code montre à LibreOffice la copie du dépôt
+  (`backend/assets/fonts/carlito`, OFL) par un `fonts.conf` ; le paquet sert de secours.
+  Vérifier : `pdffonts` d'un PDF exporté ne montre ni DejaVu ni Liberation.
+- `poppler-utils` : `pdffonts` et `pdfinfo`, pour les vérifications (le code n'en dépend pas).
+- `restic` : sauvegardes chiffrées hors du VPS (§11). `libnginx-mod-http-brotli-static` : fichiers `.br`
+  du build (§8).
+- Aucune dépendance Python ne se compile : toutes s'installent depuis des wheels (pas de `build-essential`).
 
 ---
 
 ## 3. Base de données
 
+Le mot de passe est tapé par Mohamed au clavier (`\password`), jamais écrit dans un fichier :
 ```bash
-sudo -u postgres psql <<EOF
-CREATE USER synorix WITH PASSWORD 'CHANGE_ME_USE_OPENSSL_RAND_HEX_32';
-CREATE DATABASE synorix OWNER synorix;
-EOF
+sudo -u postgres createuser --no-superuser --no-createdb --no-createrole synorix
+sudo -u postgres psql -c "\password synorix"
+sudo -u postgres createdb -O synorix synorix
+# L'extension vector demande un superutilisateur : créée UNE fois ici, la migration 0003
+# (CREATE EXTENSION IF NOT EXISTS) passe ensuite avec le rôle synorix, qui ne l'est pas.
+sudo -u postgres psql -d synorix -c "CREATE EXTENSION IF NOT EXISTS vector"
 ```
+Prouvé sur une base jetable (27/10/2026, Postgres 16, pgvector 0.6.0, rôle sans superutilisateur) :
+sans cette ligne, `alembic upgrade head` échoue à la migration 0003 (« permission denied to create
+extension vector ») ; avec elle, les 25 migrations passent (0025 head, 16 tables + `alembic_version`,
+schéma identique aux modèles hors `rag_chunks`, créée en SQL), puis l'API démarre (`/api/health` :
+`db: up`).
 
 `/etc/postgresql/16/main/postgresql.conf` : `listen_addresses = 'localhost'`.
 Les réglages de mémoire et de connexions sont dans `deploy/postgres/synorix.conf`, installé en
@@ -146,35 +159,17 @@ systemctl restart redis-server
 ## 5. Code source + virtualenv
 
 ```bash
-# /srv/synorix appartient à deploy mais est exécuté par synorix
-mkdir -p /srv/synorix
-chown deploy:synorix /srv/synorix
-cd /srv/synorix
-sudo -u deploy git clone git@github.com:magataittinge-dotcom/saas-ao.git .
-
-# venv Python
-sudo -u deploy python3.12 -m venv backend/venv
-sudo -u deploy backend/venv/bin/pip install --upgrade pip
-sudo -u deploy backend/venv/bin/pip install -r backend/requirements.txt
-
-# Frontend build
-# ⚠️ Vite fige import.meta.env AU BUILD : .env.production DOIT exister AVANT
-# `npm run build`. VITE_CLERK_PUBLISHABLE_KEY est REQUISE (src/main.tsx lève
-# une erreur au démarrage sans elle → page blanche). VITE_API_URL reste VIDE
-# en prod (= même origine, nginx proxifie /api/).
-sudo -u deploy bash -c '
-  cd /srv/synorix/frontend
-  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-  apt install -y nodejs
-  cat > .env.production <<EOF
-VITE_CLERK_PUBLISHABLE_KEY=pk_live_XXXXXXXX
-VITE_API_URL=
-VITE_GOOGLE_MAPS_API_KEY=
-EOF
-  npm ci
-  npm run build
-'
+# /srv/synorix appartient à deploy ; le code est lu (pas écrit) par synorix
+sudo install -d -o deploy -g synorix -m 750 /srv/synorix
+# clé de déploiement GitHub en lecture seule, propre au serveur (§10)
+sudo -u deploy git clone git@github.com:magataittinge-dotcom/saas-ao.git /srv/synorix
+sudo -u deploy python3.12 -m venv /srv/synorix/backend/venv
+sudo -u deploy /srv/synorix/backend/venv/bin/pip install -r /srv/synorix/backend/requirements.txt
 ```
+Front : **aucun Node sur le serveur**. `frontend/.env.production` vit sur le PC de Mohamed (ignoré par
+git) : Vite fige `import.meta.env` au build. `VITE_CLERK_PUBLISHABLE_KEY` (clé publique de Clerk) est
+requise, sinon page blanche ; `VITE_API_URL` reste vide (même origine, nginx mandate `/api/`).
+Envoi : §10.
 
 ---
 
@@ -396,63 +391,59 @@ sudo systemctl status synorix-celery-beat   # doit être active (running)
 
 ---
 
-## 10. Script de déploiement
+## 10. Déploiement d'une version
 
-`/srv/synorix/deploy.sh` (exécuté par `deploy`) :
+**Code** : le serveur clone le dépôt privé avec sa **propre clé de déploiement GitHub, en lecture
+seule** (`~deploy/.ssh/github_synorix`, déclarée dans le dépôt : Settings → Deploy keys, sans
+« Allow write access »). Une clé compromise ne donne accès qu'en lecture à ce seul dépôt.
+
+**Front** : construit sur le PC de Mohamed, jamais sur le serveur :
+```bash
+# depuis le dépôt, sur le PC (frontend/.env.production doit exister, ignoré par git)
+deploy/outils/envoyer_front.sh deploy@synorix.tech --simulation
+deploy/outils/envoyer_front.sh deploy@synorix.tech
+```
+Il lance `npm run build` (tsc, vite, précompression `.gz`/`.br`), envoie `dist/` par rsync dans
+`/srv/synorix/frontend/dist` (dossier de dépôt, non servi), puis lance `publier_front.sh` sur le serveur :
+nouveaux assets d'abord, `index.html` en dernier, anciens assets gardés 7 jours.
+
+**Backend** (`/srv/synorix/deploy.sh`, exécuté par `deploy`) :
 
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
 cd /srv/synorix
-
-echo "→ Pull main"
+echo "→ Code"
 git fetch origin
 git checkout main
 git pull --ff-only origin main
-
-echo "→ Backend deps"
-sudo -u deploy backend/venv/bin/pip install -r backend/requirements.txt --quiet
-
-echo "→ Frontend build (précompression .gz/.br comprise) puis publication"
-# KVM 1 : build plafonné et en basse priorité pour ne pas affamer l'API.
-( cd frontend && sudo -u deploy npm ci --quiet && \
-  sudo -u deploy env NODE_OPTIONS=--max-old-space-size=1536 nice -n 10 npm run build )
-# Nouveaux assets d'abord, index.html en dernier, anciens assets gardés 7 jours (onglets ouverts).
-sudo -u deploy /srv/synorix/deploy/outils/publier_front.sh
-
-echo "→ DB migrations (alembic — source UNIQUE du schéma depuis R14)"
-# L'API refuse de démarrer si la base n'est pas à la head (fail fast).
-# Base VIERGE : `upgrade head` crée tout le schéma.
-# Base PRÉ-EXISTANTE jamais stampée : faire une fois `alembic stamp head`
-#   (le schéma existe déjà via l'ancien runtime) AVANT ce déploiement.
+echo "→ Dépendances Python"
+backend/venv/bin/pip install -r backend/requirements.txt --quiet
+echo "→ Migrations (alembic, source unique du schéma ; l'API refuse de démarrer hors de la head)"
 sudo -u synorix backend/venv/bin/alembic -c backend/alembic.ini upgrade head
-
-echo "→ Restart services"
-sudo systemctl restart synorix-api
-# O6 (audit prod) : worker et beat chargent le code Python à leur démarrage —
-# sans restart, ils exécutent l'ANCIEN code sur le schéma fraîchement migré.
-sudo systemctl restart synorix-celery-worker synorix-celery-beat
+echo "→ Redémarrage (worker et beat aussi : ils chargent le code à leur démarrage)"
+sudo systemctl restart synorix-api synorix-celery-worker synorix-celery-beat
 sudo systemctl reload nginx
-echo "→ Health check"
 sleep 3
-curl -fsS https://synorix.tech/api/health | jq .
-echo "✓ Deployed"
+curl -fsS https://synorix.tech/api/health
+echo "✓ Déployé"
 ```
-
-```bash
-chmod +x /srv/synorix/deploy.sh
-```
-
-Puis sur ton poste local :
-```bash
-ssh deploy@synorix.tech /srv/synorix/deploy.sh
-```
+Ordre d'une mise à jour : `ssh deploy@synorix.tech /srv/synorix/deploy.sh`, puis `envoyer_front.sh`.
+Branche : `main`, après fusion de la branche de travail avec l'accord de Mohamed (décision du 27/10).
 
 ---
 
-## 11. Backup automatique
+## 11. Sauvegardes
 
-Voir `BACKUP_RECOVERY.md` pour le détail. Cron quotidien à 03:00, rotation 7 jours, S3 sync hebdo.
+Chaque nuit (`synorix-sauvegarde.timer`, 03:00) : `deploy/sauvegarde/synorix-sauvegarde.sh` fait un
+`pg_dump` de la base (vérifié lisible avant de remplacer le précédent), puis envoie la base et `uploads/`
+**chiffrées par restic** vers un dépôt **hors du VPS** (Backblaze B2, région UE). Rétention : 7 jours,
+4 semaines, 6 mois ; `restic check` chaque jour, échantillon des données le dimanche. Identifiants dans
+`/etc/synorix/sauvegarde.env` et mot de passe de restic dans `/etc/synorix/restic-mdp` (root, 0600, tapés
+sur le serveur ; **une copie du mot de passe de restic hors du serveur**, sinon les sauvegardes sont
+illisibles). Essayé en local le 27/10/2026 : deux passages (le second n'envoie rien de plus), restauration
+du dump (17 tables avec données) et d'une pièce (identique), base restaurée relue. Restauration :
+`BACKUP_RECOVERY.md`.
 
 ---
 
@@ -480,23 +471,16 @@ Ajouter `SENTRY_DSN` dans `.env` ; le SDK Sentry sera initialisé dans `main.py`
 
 ## 13. Procédure de rollback
 
-Si une release casse la prod :
-
 ```bash
-ssh deploy@synorix.tech <<'EOF'
-cd /srv/synorix
-# Lister les 5 dernières releases
-git log --oneline -5
-# Repointer la prod sur le commit précédent
+ssh deploy@synorix.tech
+cd /srv/synorix && git log --oneline -5
 git checkout <SHA_DU_DERNIER_BON_COMMIT>
 backend/venv/bin/pip install -r backend/requirements.txt --quiet
-( cd frontend && npm ci --quiet && npm run build ) && deploy/outils/publier_front.sh
-sudo systemctl restart synorix-api
-sudo systemctl reload nginx
-EOF
+sudo systemctl restart synorix-api synorix-celery-worker synorix-celery-beat
 ```
-
-> Si la régression vient d'une migration DB destructive (rare avec notre `_ensure_schema_columns` additif), restaurer depuis `BACKUP_RECOVERY.md` §3.
+Puis, sur le PC : `git checkout <même SHA>` et `deploy/outils/envoyer_front.sh deploy@synorix.tech`.
+Si la régression vient d'une migration : `alembic downgrade <révision>` (essayé pour 0024 et 0025), ou
+restauration de la sauvegarde (`BACKUP_RECOVERY.md` §3).
 
 ---
 

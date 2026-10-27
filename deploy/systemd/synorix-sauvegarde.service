@@ -1,0 +1,13 @@
+# Synorix — sauvegarde quotidienne (deploy/sauvegarde/synorix-sauvegarde.sh). Lancée par le minuteur.
+[Unit]
+Description=Synorix : sauvegarde de la base et des pièces (restic, copie hors du VPS)
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/synorix-sauvegarde
+Nice=10
+IOSchedulingClass=idle
+# Au plus 1 Go : la sauvegarde ne doit jamais affamer l'API sur le KVM 1.
+MemoryMax=1G

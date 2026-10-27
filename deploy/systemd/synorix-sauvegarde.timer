@@ -1,0 +1,11 @@
+# Synorix — chaque nuit à 03:00 ; rattrapée au démarrage si le serveur était éteint (Persistent).
+[Unit]
+Description=Synorix : sauvegarde quotidienne
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+RandomizedDelaySec=15min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
