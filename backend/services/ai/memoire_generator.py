@@ -386,6 +386,8 @@ class MemoireGenerator:
         profile_overrides: dict | None = None,  # C9a — overrides locaux du pre-flight
         reglementaire_block: str | None = None,  # Lot 7 T3 — RAG_ENRICHMENT
         ouvrages_dpgf: str | None = None,  # B2 — ouvrages du lot, lus sans IA dans la DPGF
+        selected_lot: str | None = None,   # « lot5 » : sert au rattachement des articles du lot 00
+        lots_detectes: list | None = None,  # lots du projet [{id, nom}] (désignations des autres lots)
     ) -> dict:
         """Generate a complete mémoire technique using Claude Opus.
 
@@ -524,7 +526,9 @@ class MemoireGenerator:
         # ── 7. Build DYNAMIC block (uncached — varies per AO) ────────────────
         # DTU autorisés : lus sans IA dans le CCTP du lot et les pièces communes.
         # Dans le bloc VARIABLE, jamais dans le préfixe stable (cache par modèle).
-        dtu_ok = dtu_autorises(all_docs)
+        # Pièces du lot 00 : seuls les articles rattachés au lot comptent (décision du 27/10).
+        dtu_ok = dtu_autorises(all_docs, selected_lot, lot_nom=selected_lot_name,
+                               lots_detectes=lots_detectes, deja_filtre=True)
         liste_dtu = formater_liste_dtu(dtu_ok)
         dynamic_block = (
             f"MARCHÉ : {project_name}\n"

@@ -339,6 +339,8 @@ def _run_memoire_job(
             profile_overrides=profile_overrides,
             reglementaire_block=reglementaire_block,
             ouvrages_dpgf=ouvrages_dpgf,
+            selected_lot=project.selected_lot,
+            lots_detectes=project.lots_detectes or [],
         ))
         # Contenu 100 % placeholders = panne du service IA en plein run
         # (constat audit : crédit épuisé → 26/26 sections vides quand même
