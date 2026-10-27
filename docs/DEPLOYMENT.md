@@ -2,7 +2,7 @@
 
 **Cible :** Ubuntu Server 24.04 LTS sur Hostinger **KVM 1 (1 vCPU, 4 Go, 50 Go)** — décision du 25/10/2026. Les réglages du dépôt (`deploy/`) sont dimensionnés pour lui : un seul worker, un seul enfant PDFium, Celery à 1, mémoire plafonnée par service, swap de 2 Go.
 **Fichiers de configuration :** `deploy/` est la **source de vérité** (nginx, systemd, Postgres, Redis, journald, sysctl, cron). Cette page explique ; elle ne recopie plus ces fichiers. Procédure de mise en place pas à pas, avec vérification et retour arrière : `.claude/echange/sprint-ozcan/VPS.md` (partie « Procédure du bloc 6 »).
-**Domaine :** `synorix.fr` (ou `.io` / `.com` selon décision Mohamed).
+**Domaine :** `synorix.tech` (ou `.io` / `.com` selon décision Mohamed).
 **Stack :** PostgreSQL 16 + Redis 7 + nginx + uvicorn (FastAPI) + Vite build statique + systemd.
 
 > Pré-requis : DNS A pointant vers l'IP du VPS, SSH key Mohamed déjà uploadée chez Hostinger.
@@ -193,10 +193,10 @@ AWS_SECRET_ACCESS_KEY=...
 AWS_S3_BUCKET=synorix-prod
 AWS_REGION=eu-west-3
 CLERK_SECRET_KEY=sk_live_XXX
-CLERK_JWKS_URL=https://clerk.synorix.fr/.well-known/jwks.json
+CLERK_JWKS_URL=https://clerk.synorix.tech/.well-known/jwks.json
 STRIPE_SECRET_KEY=sk_live_XXX
 STRIPE_WEBHOOK_SECRET=whsec_XXX
-FRONTEND_URL=https://synorix.fr
+FRONTEND_URL=https://synorix.tech
 METRICS_TOKEN=$(openssl rand -hex 32)  # ops : accès /api/metrics (S3.5) — sans lui, endpoint fermé (404)
 ```
 
@@ -332,14 +332,14 @@ Essayé avec le nginx 1.24 d'Ubuntu noble (bloc 6). Ce qu'il règle :
 
 ```bash
 sudo nginx -t && sudo systemctl reload nginx
-deploy/outils/verifier_prod.sh https://synorix.fr /srv/synorix/www   # lecture seule, « 0 KO » attendu
+deploy/outils/verifier_prod.sh https://synorix.tech /srv/synorix/www   # lecture seule, « 0 KO » attendu
 ```
 
 ### SSL Let's Encrypt
 
 ```bash
-certbot --nginx -d synorix.fr -d www.synorix.fr \
-  --email contact@synorix.fr --agree-tos --redirect
+certbot --nginx -d synorix.tech -d www.synorix.tech \
+  --email "<ton adresse qui reçoit vraiment>" --agree-tos --redirect
 # Renouvellement automatique installé par défaut
 systemctl status snap.certbot.renew.timer
 ```
@@ -435,7 +435,7 @@ sudo systemctl restart synorix-celery-worker synorix-celery-beat
 sudo systemctl reload nginx
 echo "→ Health check"
 sleep 3
-curl -fsS https://synorix.fr/api/health | jq .
+curl -fsS https://synorix.tech/api/health | jq .
 echo "✓ Deployed"
 ```
 
@@ -445,7 +445,7 @@ chmod +x /srv/synorix/deploy.sh
 
 Puis sur ton poste local :
 ```bash
-ssh deploy@synorix.fr /srv/synorix/deploy.sh
+ssh deploy@synorix.tech /srv/synorix/deploy.sh
 ```
 
 ---
@@ -463,7 +463,7 @@ Voir `BACKUP_RECOVERY.md` pour le détail. Cron quotidien à 03:00, rotation 7 j
 `/etc/cron.d/synorix-uptime` :
 
 ```cron
-* * * * * synorix /usr/bin/curl -fsS https://synorix.fr/api/health > /dev/null || echo "[$(date)] Synorix DOWN" | mail -s "ALERT Synorix down" mohamed@synorix.fr
+* * * * * synorix /usr/bin/curl -fsS https://synorix.tech/api/health > /dev/null || echo "[$(date)] Synorix DOWN" | mail -s "ALERT Synorix down" "<ton adresse qui reçoit vraiment>"
 ```
 
 ### 12.2 Logs
@@ -483,7 +483,7 @@ Ajouter `SENTRY_DSN` dans `.env` ; le SDK Sentry sera initialisé dans `main.py`
 Si une release casse la prod :
 
 ```bash
-ssh deploy@synorix.fr <<'EOF'
+ssh deploy@synorix.tech <<'EOF'
 cd /srv/synorix
 # Lister les 5 dernières releases
 git log --oneline -5
@@ -502,18 +502,18 @@ EOF
 
 ## 14. Checklist pré-mise en prod
 
-- [ ] DNS A `synorix.fr` → IP VPS validé
-- [ ] DNS A `www.synorix.fr` → IP VPS validé
+- [ ] DNS A `synorix.tech` → IP VPS validé
+- [ ] DNS A `www.synorix.tech` → IP VPS validé
 - [ ] SSL Let's Encrypt installé
 - [ ] `.env` rempli avec toutes les vraies valeurs (pas de `sk_test_...`)
 - [ ] `frontend/.env.production` avec `VITE_CLERK_PUBLISHABLE_KEY=pk_live_...` posé AVANT `npm run build` (sinon page blanche)
-- [ ] Stripe webhook configuré sur `https://synorix.fr/api/stripe/webhook`
+- [ ] Stripe webhook configuré sur `https://synorix.tech/api/stripe/webhook`
 - [ ] Clerk JWKS_URL pointe vers la prod (pas le dev clerk.accounts.dev)
 - [ ] firewall ufw active (22, 80, 443 only)
 - [ ] fail2ban actif
 - [ ] Service `synorix-api` démarre au boot (`systemctl is-enabled synorix-api`)
 - [ ] Cron de backup fonctionnel (`crontab -l -u synorix`)
-- [ ] Health check `https://synorix.fr/api/health` → `{"status":"ok","db":"up"}`
+- [ ] Health check `https://synorix.tech/api/health` → `{"status":"ok","db":"up"}`
 - [ ] Endpoint `/api/metrics` retourne du JSON
 - [ ] Mention légale + politique RGPD publiées
 - [ ] DPA Anthropic signé

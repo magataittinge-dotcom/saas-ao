@@ -57,10 +57,10 @@ def _prod_kwargs(**over):
         SECRET_KEY="a" * 64,
         DATABASE_URL="postgresql://synorix:pwd@localhost:5432/synorix",
         ANTHROPIC_API_KEY="sk-ant-prod",
-        CLERK_JWKS_URL="https://clerk.synorix.fr/.well-known/jwks.json",
+        CLERK_JWKS_URL="https://clerk.synorix.tech/.well-known/jwks.json",
         CLERK_SECRET_KEY="sk_live_x",
         STRIPE_WEBHOOK_SECRET="whsec_x",
-        FRONTEND_URL="https://synorix.fr",
+        FRONTEND_URL="https://synorix.tech",
     )
     base.update(over)
     return base

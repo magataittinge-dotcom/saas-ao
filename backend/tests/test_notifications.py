@@ -87,7 +87,7 @@ def test_smtp_configured_sends_email(db_session, test_org, test_user, monkeypatc
         titre="Échéance demain", corps="x", send_email=True,
     )
     db_session.commit()
-    assert sent["to"] == ["test@synorix.fr"]
+    assert sent["to"] == ["test@example.com"]
     assert "Échéance demain" in sent["subject"]
 
 

@@ -114,13 +114,13 @@ proxy_send_timeout   600s;
 Les plans Free/Pro plafonnent les requêtes à **100 Mo**. Pour autoriser 2 Go,
 soit passer en plan Business (500 Mo) / Enterprise (5 Go), soit exclure
 `/api/projects/*/documents` de Cloudflare via une Page Rule **Bypass Cache &
-Disable Performance** ou un sous-domaine direct (`api-direct.synorix.fr`).
+Disable Performance** ou un sous-domaine direct (`api-direct.synorix.tech`).
 
 ### Vérification
 
 ```bash
 # Doit renvoyer 413 immédiatement, sans transférer le corps
-curl -X POST https://api.synorix.fr/api/projects/<id>/documents \
+curl -X POST https://api.synorix.tech/api/projects/<id>/documents \
   -H "Content-Length: 3221225472" \
   -F "file=@small.pdf"
 ```

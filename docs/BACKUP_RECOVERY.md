@@ -122,8 +122,8 @@ ls -la /srv/synorix/backend/uploads/projects/ | head
 systemctl restart synorix-api
 
 # Tests fonctionnels
-curl -fsS https://synorix.fr/api/health | jq .
-curl -fsS https://synorix.fr/api/metrics | jq '.orgs_total, .projects_total'
+curl -fsS https://synorix.tech/api/health | jq .
+curl -fsS https://synorix.tech/api/metrics | jq '.orgs_total, .projects_total'
 ```
 
 ---
@@ -169,7 +169,7 @@ Avec le soft-delete ajouté en Phase 2.2, c'est instantané :
 
 ```bash
 # Via API (si l'utilisateur peut encore se loguer)
-curl -X POST https://synorix.fr/api/projects/PROJECT_ID/restore \
+curl -X POST https://synorix.tech/api/projects/PROJECT_ID/restore \
     -H "Authorization: Bearer $TOKEN"
 
 # Via SQL (depuis la machine ops)
@@ -189,7 +189,7 @@ Pour un projet purgé du soft-delete (delta > 30 j, P1) : restaurer depuis le du
 
 ```bash
 # 1. Provisionner un VPS staging Hostinger (KVM 2 suffit)
-ssh root@staging.synorix.fr
+ssh root@staging.synorix.tech
 
 # 2. Suivre DEPLOYMENT.md §1-7 (jusqu'à env vars)
 # 3. Lancer la restauration §3 ci-dessus
@@ -234,7 +234,7 @@ Sur le bucket `synorix-backups` (AWS console) :
 
 | Rôle | Personne | Contact |
 |---|---|---|
-| Tech lead | Mohamed | mohamed@synorix.fr |
+| Tech lead | Mohamed | contact@synorix.tech (boîte à créer : aucun MX au 27/10/2026) |
 | Hébergeur | Hostinger | https://www.hostinger.fr/contact |
 | Anthropic API | support | support@anthropic.com |
 | Stripe | support | https://support.stripe.com |

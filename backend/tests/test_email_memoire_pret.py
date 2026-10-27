@@ -52,7 +52,7 @@ def test_memoire_pret_envoie_un_email(client, db_session, test_org, test_user, m
 
     reglages = get_settings()
     monkeypatch.setattr(reglages, "SMTP_HOST", "smtp.recette.invalid")
-    monkeypatch.setattr(reglages, "SMTP_FROM", "noreply@synorix.fr")
+    monkeypatch.setattr(reglages, "SMTP_FROM", "noreply@example.com")
     monkeypatch.setattr(smtplib, "SMTP", _SmtpSimule)
     _SmtpSimule.envoyes = []
 
@@ -71,5 +71,5 @@ def test_memoire_pret_envoie_un_email(client, db_session, test_org, test_user, m
     assert len(_SmtpSimule.envoyes) == 1
     msg = _SmtpSimule.envoyes[0]
     assert msg["Subject"] == "Mémoire technique prêt — Groupe scolaire"
-    assert msg["To"] == "test@synorix.fr"
+    assert msg["To"] == "test@example.com"
     assert "est généré" in msg.get_content()

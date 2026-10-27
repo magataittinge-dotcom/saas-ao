@@ -113,7 +113,7 @@ def main() -> int:
 
     db = SessionLocal()
     db.add(Organization(id="demo1-org", name="DEMO1"))
-    user = User(id="demo1-user", email="demo1@synorix.fr", name="Demo",
+    user = User(id="demo1-user", email="demo1@example.com", name="Demo",
                 organization_id="demo1-org")
     db.add(user)
     db.commit()

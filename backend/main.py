@@ -260,7 +260,7 @@ _CSP_PROD = (
     "img-src 'self' data: blob: "
     "https://img.clerk.com; "  # photo du compte (barre latérale)
     "connect-src 'self' https://api.stripe.com https://*.clerk.accounts.dev "
-    "https://clerk.synorix.fr https://*.synorix.fr; "
+    "https://clerk.synorix.tech https://*.synorix.tech; "
     "frame-src 'self' https://js.stripe.com https://hooks.stripe.com; "
     "object-src 'none'; base-uri 'self'; form-action 'self'; "
     "frame-ancestors 'none'; upgrade-insecure-requests"

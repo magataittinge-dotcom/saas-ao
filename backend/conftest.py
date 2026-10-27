@@ -118,7 +118,7 @@ def test_org(db_session):
 def test_user(db_session, test_org):
     user = User(
         id="user-test-1",
-        email="test@synorix.fr",
+        email="test@example.com",
         name="Test User",
         organization_id=test_org.id,
     )

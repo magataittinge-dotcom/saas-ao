@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Synorix — vérifications de la prod, en LECTURE SEULE (requêtes HTTP, aucune écriture).
-# Usage : deploy/outils/verifier_prod.sh [https://synorix.fr] [/srv/synorix/www]
+# Usage : deploy/outils/verifier_prod.sh [https://synorix.tech] [/srv/synorix/www]
 # Chaque ligne commence par OK ou KO. Code de sortie : nombre de KO.
 set -uo pipefail
-URL=${1:-https://synorix.fr}
+URL=${1:-https://synorix.tech}
 WWW=${2:-/srv/synorix/www}
 ko=0
 ok() { echo "OK  $*"; }

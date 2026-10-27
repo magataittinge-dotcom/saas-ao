@@ -387,7 +387,7 @@ export default function Landing() {
               <div className="w-3 h-3 rounded-full" style={{ background: '#9BA4B5' }} />
               <div className="w-3 h-3 rounded-full" style={{ background: '#E4E9F2' }} />
               <div className="flex-1 mx-4 h-6 rounded-md" style={{ background: 'rgba(255,255,255,0.04)', maxWidth: 300 }}>
-                <div className="px-3 py-1 text-xs text-[#9BA4B5]">app.synorix.fr/dashboard</div>
+                <div className="px-3 py-1 text-xs text-[#9BA4B5]">synorix.tech/dashboard</div>
               </div>
             </div>
             {/* Mock dashboard content */}
