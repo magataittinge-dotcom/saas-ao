@@ -104,6 +104,14 @@
   --edge-danger:  var(--bad);
   --edge-panel-light: var(--bottom-lit);
   --edge-ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ── « Voir dans le DCE » : le surlignage de la preuve (passage cité) ─────
+     --source-surligne : rectangle posé sur la page (papier clair, en multiplication) ;
+     --source-mark-* : le passage dans la citation lisible, sur le fond du panneau. */
+  --source-surligne: rgba(255, 213, 0, .42);
+  --source-surligne-bord: var(--warn);
+  --source-mark-fond: color-mix(in srgb, var(--warn) 30%, transparent);
+  --source-mark-texte: var(--ink);
 }
 
 /* ── Cartes ──────────────────────────────────────────────────── */
@@ -436,6 +444,10 @@
   color-scheme: light;
   color: var(--calque-encre);
   /* composants shadcn/ui (bouton, palette ⌘K, infobulle, tiroir…) */
+  --source-surligne: color-mix(in srgb, var(--calque-surligneur) 60%, transparent);
+  --source-surligne-bord: var(--calque-attention);
+  --source-mark-fond: var(--calque-surligneur);
+  --source-mark-texte: var(--calque-encre);
   --background: var(--calque-surface);
   --foreground: var(--calque-encre);
   --card: var(--calque-surface);

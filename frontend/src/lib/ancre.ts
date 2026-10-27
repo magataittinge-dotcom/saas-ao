@@ -188,3 +188,29 @@ export function citationAffichee(c: Citation, max = 160): CitationAffichee {
 export function urlExpiree(recuA: number, expireDans: number, maintenant: number, marge = 60): boolean {
   return maintenant >= recuA + (expireDans - marge) * 1000
 }
+
+// ─── Source d'un champ du bandeau (date limite, visite, critères…) ─────────────
+
+export interface ChampSource {
+  page: number | null
+  excerpt: string | null
+}
+
+/** La réponse du panneau pour un champ du bandeau : pas d'ancre calculée (le serveur n'en a que pour
+ *  les exigences), donc la page citée par l'analyse et l'extrait tel quel, sans surlignage. Les
+ *  vues « image » n'existent pas pour elle ; le document s'affiche à la page citée. */
+export function reponseDeChamp(
+  piece: { id: string; file_name: string },
+  champ: ChampSource,
+  urls: { pdf: string | null; origine: string | null },
+): ReponseSource {
+  const page = champ.page && champ.page >= 1 ? champ.page : null
+  const extrait = (champ.excerpt ?? '').trim()
+  return {
+    version: 1, doc_id: piece.id, page, rotation: 0, rects: [],
+    niveau: page ? 'page' : 'aucun',
+    citation: extrait ? { avant: '', passage: extrait, apres: '' } : null,
+    cadrage: null,
+    document: { nom: piece.file_name, url: urls.pdf, origine: urls.origine, expire_dans: 900 },
+  }
+}

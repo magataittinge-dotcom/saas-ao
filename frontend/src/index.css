@@ -852,3 +852,143 @@
   color: var(--ink-2);
   margin: 16px 0;
 }
+
+/* ── « Voir dans le DCE » : panneau à trois vues (Passage, Page, Document) ───────────────────────
+   Ordinateur : panneau collant à côté de la liste. Sous 1024 px : feuille qui monte du bas
+   (90 % de la hauteur), voile derrière, animation coupée en mouvement réduit.
+   Cibles tactiles de 44 px au moins. Aucune couleur en dur : jetons Lumen et --source-*. */
+.source-panneau {
+  display: flex; flex-direction: column; overflow: hidden;
+  background-color: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card), var(--edge-light);
+  color: var(--ink-2);
+  min-width: 0;
+}
+.source-panneau:focus { outline: none; }
+.source-panneau:focus-visible { outline: 2px solid var(--lum); outline-offset: -2px; }
+@media (min-width: 1024px) {
+  /* sous l'en-tête et le bandeau d'étapes collant (≈ 6,5 rem), au-dessus de la barre du bas */
+  .source-panneau {
+    position: sticky; top: 6.5rem; height: calc(100svh - 16rem); min-height: 22rem;
+    scroll-margin: 6.5rem 0 5rem;
+  }
+  .source-poignee, .source-voile { display: none; }
+}
+@media (max-width: 1023px) {
+  .source-voile { position: fixed; inset: 0; z-index: 65; background: rgba(0, 0, 0, .60); }
+  .source-panneau {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 70;
+    height: 90dvh; max-height: 90dvh;
+    border-radius: 20px 20px 0 0; border-bottom: 0;
+  }
+}
+@media (max-width: 1023px) and (prefers-reduced-motion: no-preference) {
+  .source-panneau { animation: source-monte .28s cubic-bezier(.2, .8, .2, 1) both; }
+  .source-voile { animation: source-voile .2s ease both; }
+}
+@keyframes source-monte { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes source-voile { from { opacity: 0; } to { opacity: 1; } }
+
+.source-poignee { width: 40px; height: 5px; border-radius: 3px; background: var(--line-strong); margin: 0 auto 8px; }
+.source-tete { padding: 12px 16px 0; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+.source-titre-ligne { display: flex; align-items: flex-start; gap: 8px; }
+.source-piece {
+  margin: 0; font-size: 1rem; font-weight: 600; color: var(--ink); line-height: 1.35;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.source-meta { margin: 2px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; font-size: .8125rem; color: var(--ink-3); }
+.source-niveau { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--ink-2); }
+
+.source-rond, .source-bouton, .source-onglet, .source-ouvrir, .source-feuille-bouton {
+  min-height: 44px; font: inherit;
+}
+.source-rond {
+  flex-shrink: 0; width: 44px; min-width: 44px; display: inline-grid; place-items: center;
+  border-radius: 999px; border: 1px solid var(--line-strong); background: var(--surface-2); color: var(--ink);
+  cursor: pointer; transition: background .15s ease, border-color .15s ease;
+}
+.source-rond:hover:not(:disabled) { background: var(--surface-3); }
+.source-rond:disabled { opacity: .4; cursor: not-allowed; }
+.source-bouton {
+  display: inline-flex; align-items: center; justify-content: center; padding: 8px 16px;
+  border-radius: 10px; border: 1px solid var(--line-strong); background: var(--surface-2);
+  color: var(--ink); font-size: .875rem; font-weight: 600; cursor: pointer;
+}
+.source-bouton:hover { background: var(--surface-3); }
+
+.source-onglets { display: flex; gap: 6px; margin-top: 10px; padding-bottom: 8px; }
+.source-onglet {
+  padding: 6px 16px; border-radius: 10px; border: 1px solid transparent; background: transparent;
+  color: var(--ink-3); font-size: .9375rem; font-weight: 600; cursor: pointer;
+}
+.source-onglet:hover { color: var(--ink); }
+.source-onglet[aria-selected="true"] { background: var(--surface-2); border-color: var(--line-strong); color: var(--ink); }
+
+.source-corps {
+  flex: 1; min-height: 0; overflow: auto; position: relative;
+  background: var(--bg); overscroll-behavior: contain;
+  touch-action: pan-x pan-y pinch-zoom;
+}
+.source-vue { padding: 12px 16px 16px; min-width: 0; }
+.source-vide {
+  min-height: 12rem; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; text-align: center; padding: 24px; color: var(--ink-2); font-size: 1rem; line-height: 1.5;
+}
+.source-vide p { margin: 0; max-width: 30rem; }
+.source-note, .source-suite p { margin: 8px 0; font-size: .9375rem; color: var(--ink-2); }
+.source-suite { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: 12px; }
+.source-sous-titre { margin: 16px 0 8px; font-size: .8125rem; font-weight: 600; letter-spacing: .02em; color: var(--ink-3); }
+
+/* La citation lisible : 16 px au moins, dite telle quelle aux lecteurs d'écran */
+.source-citation {
+  margin: 0; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+}
+.source-citation blockquote { margin: 0; font-size: 1rem; line-height: 1.6; color: var(--ink); overflow-wrap: anywhere; }
+.source-citation .source-ctx { color: var(--ink-3); }
+.source-citation mark {
+  background: var(--source-mark-fond); color: var(--source-mark-texte);
+  padding: 1px 2px; border-radius: 3px; box-decoration-break: clone; -webkit-box-decoration-break: clone;
+}
+.source-citation figcaption { margin-top: 8px; font-size: .8125rem; color: var(--ink-3); }
+
+/* La page (image ou canevas) et ses rectangles */
+.source-feuille {
+  position: relative; width: 100%; background: var(--lum-bright); border-radius: 6px;
+  box-shadow: var(--shadow-card); overflow: hidden; min-height: 4rem;
+}
+.source-feuille img, .source-feuille canvas { display: block; width: 100% !important; height: auto !important; }
+.source-feuille-bouton {
+  display: block; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; text-align: inherit;
+}
+.source-feuille-bouton:focus-visible { outline: 2px solid var(--lum); outline-offset: 2px; border-radius: 6px; }
+.source-surligne {
+  position: absolute; background: var(--source-surligne); mix-blend-mode: multiply; border-radius: 2px;
+  pointer-events: none;
+}
+.source-surligne[data-premier] { box-shadow: 0 0 0 2px var(--source-surligne-bord); }
+.source-squelette { width: 100%; min-height: 10rem; background: var(--surface-2); }
+.source-document { min-width: 0; }
+
+.source-pied {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; flex-shrink: 0;
+  padding: 10px 16px; border-top: 1px solid var(--line);
+  padding-bottom: max(10px, env(safe-area-inset-bottom));
+}
+.source-pages { display: inline-flex; align-items: center; gap: 8px; }
+.source-pages-texte { font-size: .875rem; color: var(--ink-2); font-variant-numeric: tabular-nums; min-width: 6.5rem; text-align: center; }
+.source-ouvrir {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; margin-left: auto;
+  padding: 8px 16px; border-radius: 10px; font-size: .875rem; font-weight: 600; text-decoration: none;
+}
+.source-vide .source-ouvrir { margin-left: 0; }
+
+/* Lignes de la liste : l'exigence ouverte dans le panneau */
+.exigence-ligne[aria-current="true"] { background: var(--surface-2); box-shadow: inset 2px 0 0 var(--lum); }
+.source-voir {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 14px; border-radius: 10px;
+  border: 1px solid var(--line-strong); background: var(--surface-2); color: var(--ink);
+  font-size: .875rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.source-voir:hover { background: var(--surface-3); }
