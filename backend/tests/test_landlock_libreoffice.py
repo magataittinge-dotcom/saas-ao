@@ -23,7 +23,11 @@ from services import libreoffice_isole as lo
 from services import libreoffice_lanceur as lanceur
 
 BACKEND = Path(lo.__file__).resolve().parent.parent
-needs_landlock = pytest.mark.skipif(landlock.abi_version() < 1, reason="Landlock absent de ce noyau")
+# Le dépôt sur un disque 9p (WSL /mnt/c) rend Landlock indisponible (tests/test_landlock_9p.py) : ces tests
+# vérifient Landlock POSÉ, ils ne valent que sur ext4 & co (copies de travail, CI, VPS).
+needs_landlock = pytest.mark.skipif(
+    landlock.abi_version() < 1 or landlock.type_systeme_fichiers(str(Path(__file__).resolve().parent)) == "9p",
+    reason="Landlock absent de ce noyau, ou dépôt sur un disque 9p (WSL)")
 needs_soffice = pytest.mark.skipif(not (shutil.which("soffice") or shutil.which("libreoffice")),
                                    reason="LibreOffice absent de l'environnement")
 

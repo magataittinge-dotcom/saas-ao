@@ -16,7 +16,11 @@ from services import pdfium_processus as pp
 from tests import pdfium_taches as t
 from tests.pdf_fabrique import ecrire_pdf
 
-needs_landlock = pytest.mark.skipif(landlock.abi_version() < 1, reason="Landlock absent de ce noyau")
+# Le dépôt sur un disque 9p (WSL /mnt/c) rend Landlock indisponible (tests/test_landlock_9p.py) : ces tests
+# vérifient Landlock POSÉ, ils ne valent que sur ext4 & co (copies de travail, CI, VPS).
+needs_landlock = pytest.mark.skipif(
+    landlock.abi_version() < 1 or landlock.type_systeme_fichiers(str(Path(__file__).resolve().parent)) == "9p",
+    reason="Landlock absent de ce noyau, ou dépôt sur un disque 9p (WSL)")
 TESTS = str(Path(__file__).resolve().parent)
 
 

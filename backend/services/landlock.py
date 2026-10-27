@@ -65,6 +65,35 @@ def abi_version() -> int:
     return int(version) if version > 0 else 0
 
 
+# Systèmes de fichiers où une règle Landlock est inopérante. MESURÉ (bloc 6, tests/test_landlock_9p.py) :
+# sous WSL, /mnt/c est monté en 9p (drvfs) ; l'enfant PDFium restreint n'y lisait plus rien des dossiers
+# autorisés (PermissionError), alors que les mêmes règles marchent sur ext4. Le VPS est sur ext4.
+_SANS_LANDLOCK = frozenset({"9p"})
+
+
+def type_systeme_fichiers(chemin: str, mountinfo: Optional[str] = None) -> str:
+    """Type du système de fichiers qui porte ``chemin`` (point de montage le plus long de
+    ``/proc/self/mountinfo``) ; ``""`` s'il est introuvable."""
+    if mountinfo is None:
+        try:
+            with open("/proc/self/mountinfo", encoding="utf-8", errors="replace") as f:
+                mountinfo = f.read()
+        except OSError:
+            return ""
+    chemin = os.path.realpath(chemin) if os.path.isabs(chemin) else chemin
+    meilleur, type_fs = -1, ""
+    for ligne in mountinfo.splitlines():
+        champs, _, apres = ligne.partition(" - ")
+        champs = champs.split()
+        if len(champs) < 5 or not apres:
+            continue
+        point = champs[4].replace("\\040", " ").replace("\\011", "\t").replace("\\134", "\\")
+        dedans = chemin == point or chemin.startswith(point.rstrip("/") + "/")
+        if dedans and len(point) > meilleur:
+            meilleur, type_fs = len(point), apres.split()[0]
+    return type_fs
+
+
 def _droits_connus(abi: int) -> int:
     droits = _DROITS_ABI1
     if abi >= 2:
@@ -83,6 +112,12 @@ def restreindre(regles: Iterable[tuple[str, int]], *, reseau_tcp: bool = True) -
     abi = abi_version()
     if abi < 1:
         raise LandlockIndisponible(errno.ENOSYS, "Landlock indisponible")
+    regles = list(regles)
+    for chemin, _droits in regles:
+        type_fs = type_systeme_fichiers(chemin) if os.path.exists(chemin) else ""
+        if type_fs in _SANS_LANDLOCK:
+            # jamais une restriction posée à moitié : l'appelant se replie et le journal le dit
+            raise LandlockIndisponible(errno.EOPNOTSUPP, f"règles inopérantes sur un système de fichiers {type_fs}")
     libc = _libc()
     traite = _droits_connus(abi)
     avec_reseau = reseau_tcp and abi >= 4
