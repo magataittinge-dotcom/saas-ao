@@ -22,6 +22,8 @@ venv/
 # Node / project
 node_modules/
 uploads/
+# Cache disque des aperçus « Voir dans le DCE » (services/cache_apercus.py) : généré, jamais versionné
+backend/cache/
 *.db
 .claude/
 
