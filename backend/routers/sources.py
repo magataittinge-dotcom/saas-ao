@@ -102,7 +102,11 @@ def _repli(db: Session, item: ComplianceItem) -> dict:
     piece = ancres_projet.piece_de(db, item)
     if piece is not None and tableur_ancre.est_tableur(piece.file_url):
         return tableur_ancre.ancre_aucune(piece.id)       # pas de page dans un tableur
-    page = item.source_page if item.source_page and item.source_page >= 1 else None
+    # Sans extrait, l'analyse n'a cité aucune page : les anciens AO portent ``source_page = 1``
+    # (ancien défaut ``or 1``, la base n'est pas réécrite) et ce 1 n'est pas une page citée. Le
+    # bouton ouvre alors la pièce entière, au début (niveau « aucun »).
+    cite = (item.source_excerpt or "").strip() != ""
+    page = item.source_page if cite and item.source_page and item.source_page >= 1 else None
     if piece is None or page is None or ancres_projet.chemin_pdf(piece) is None:
         return ancres_projet.ancre_aucune(piece.id if piece else None)
     return {"version": 1, "doc_id": piece.id, "page": page, "rotation": 0, "rects": [],
