@@ -129,6 +129,12 @@ test('libellés de situation : toujours positifs', () => {
   }
 })
 
+test('libellés de situation d’un tableur : ligne et feuille, jamais « page »', () => {
+  assert.equal(libelleNiveau({ niveau: 'passage', format: 'tableur' }), 'Ligne retrouvée dans la feuille')
+  assert.equal(libelleNiveau({ niveau: 'page', format: 'tableur' }), 'Feuille citée par l’analyse')
+  assert.equal(libelleNiveau({ niveau: 'aucun', format: 'tableur' }), 'Pièce citée par l’analyse')
+})
+
 // ─── citation ───
 
 test('contexte coupé au mot : « avant » garde sa fin, « après » son début', () => {

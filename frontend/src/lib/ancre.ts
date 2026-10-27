@@ -145,9 +145,13 @@ export function vueParDefaut(vues: readonly VueSource[]): VueSource | null {
 }
 
 /** Texte de situation sous le nom de la pièce. Toujours positif. */
-export function libelleNiveau(ancre: Pick<Ancre, 'niveau' | 'suite'>): string {
-  if (ancre.niveau === 'passage') return ancre.suite ? 'Passage retrouvé, sur deux pages' : 'Passage retrouvé dans la page'
-  if (ancre.niveau === 'page') return 'Page citée par l’analyse'
+export function libelleNiveau(ancre: Pick<Ancre, 'niveau' | 'suite' | 'format'>): string {
+  const tableur = formatDe(ancre) === 'tableur'
+  if (ancre.niveau === 'passage') {
+    if (tableur) return 'Ligne retrouvée dans la feuille'
+    return ancre.suite ? 'Passage retrouvé, sur deux pages' : 'Passage retrouvé dans la page'
+  }
+  if (ancre.niveau === 'page') return tableur ? 'Feuille citée par l’analyse' : 'Page citée par l’analyse'
   return 'Pièce citée par l’analyse'
 }
 
