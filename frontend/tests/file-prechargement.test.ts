@@ -159,3 +159,56 @@ test('débit réel : 400 exigences affichées ne dépassent ni 50 ancres ni 120 
   assert.equal(depart('a'), 100)                              // la minute suivante : encore 50
   assert.equal(depart('p'), 240)
 })
+
+// ─── réglages réels et branchement sur l'écran ───
+
+test('le budget de préchargement reste sous la moitié des limites du serveur (lues dans routers/sources.py)', async () => {
+  const { lire } = await import('./outils/sources')
+  const { BUDGET_PRECHARGEMENT, REQUETES_SIMULTANEES } = await import('@/services/sources')
+  const serveur = lire('../backend/routers/sources.py')
+  const limite = (nom: string) => Number(new RegExp(`${nom}\\s*=\\s*"(\\d+)/minute"`).exec(serveur)?.[1])
+  assert.equal(limite('LIMITE_ANCRE'), 120)
+  assert.equal(limite('LIMITE_APERCU'), 300)
+  assert.ok(BUDGET_PRECHARGEMENT.ancre <= limite('LIMITE_ANCRE') / 2)
+  assert.ok(BUDGET_PRECHARGEMENT.apercu <= limite('LIMITE_APERCU') / 2)
+  assert.ok(REQUETES_SIMULTANEES <= 4)
+})
+
+test('chaque ligne d’exigence précharge sa source quand elle devient visible, et l’abandonne en sortant', async () => {
+  const { lire, sansCommentaires } = await import('./outils/sources')
+  const code = sansCommentaires(lire('src/routes/project/StepAnalysis.tsx'))
+  assert.match(code, /useVisible\(ref,\s*aUneSource,\s*entree,\s*sortie\)/)
+  assert.match(code, /precharger\(item\.id\)/)
+  assert.match(code, /abandonner\(item\.id\)/)
+  const hook = sansCommentaires(lire('src/hooks/useVisible.ts'))
+  assert.match(hook, /new IntersectionObserver/)
+  assert.match(hook, /setTimeout/, 'délai : un défilement rapide ne lance pas de requêtes')
+})
+
+test('le préchargement réel consomme UN départ du budget par ancre (pas deux : la file compte, le clic note)', async () => {
+  const { api } = await import('@/services/api')
+  const { precharger, BUDGET_PRECHARGEMENT } = await import('@/services/sources')
+  const appels: string[] = []
+  const origine = api.get
+  ;(api as unknown as { get: unknown }).get = async (url: string) => {
+    appels.push(url)
+    return { data: { niveau: 'aucun', rects: [], document: null } }
+  }
+  try {
+    for (let i = 0; i < BUDGET_PRECHARGEMENT.ancre + 20; i++) precharger(`lot-test-${i}`)
+    await new Promise((r) => setTimeout(r, 50))
+  } finally {
+    ;(api as unknown as { get: unknown }).get = origine
+  }
+  assert.equal(appels.length, BUDGET_PRECHARGEMENT.ancre)
+})
+
+test('la suite d’une tâche (loupe d’une ancre reçue) passe avant les nouvelles ancres en attente', async () => {
+  const b = banc({ simultanees: 1, ancre: 100, apercu: 100 })
+  b.file.ajouter(b.tache('a0', 'ancre'))
+  b.file.ajouter(b.tache('a1', 'ancre'))
+  b.file.ajouter(b.tache('a2', 'ancre'))
+  b.file.ajouter({ ...b.tache('p0', 'apercu'), suite: true })
+  await b.terminer('a0')
+  assert.deepEqual(b.lancees, ['a0', 'p0'])
+})

@@ -17,6 +17,8 @@ export interface TachePrechargement {
   cle: string
   categorie: Categorie
   executer: () => Promise<unknown>
+  /** Suite d'une tâche déjà faite (la loupe d'une ancre reçue) : passe avant les nouvelles. */
+  suite?: boolean
 }
 
 export interface OptionsFile {
@@ -50,7 +52,11 @@ export interface FilePrechargement {
 
 export function creerFile(options: OptionsFile): FilePrechargement {
   const maintenant = options.maintenant ?? Date.now
-  const planifier = options.planifier ?? ((fn, ms) => setTimeout(fn, ms))
+  // le réveil n'empêche pas un processus Node (tests) de s'arrêter ; sans effet dans le navigateur
+  const planifier = options.planifier ?? ((fn, ms) => {
+    const minuteur = setTimeout(fn, ms) as unknown as { unref?: () => void }
+    minuteur.unref?.()
+  })
   const attenteMax = options.attenteMax ?? 200
 
   const attente: TachePrechargement[] = []
@@ -104,7 +110,7 @@ export function creerFile(options: OptionsFile): FilePrechargement {
     ajouter(tache) {
       if (vues.has(tache.cle)) return
       vues.add(tache.cle)
-      attente.push(tache)
+      if (tache.suite) attente.unshift(tache); else attente.push(tache)
       while (attente.length > attenteMax) {          // les plus anciennes sont écartées, relançables
         const ecartee = attente.shift()!
         vues.delete(ecartee.cle)

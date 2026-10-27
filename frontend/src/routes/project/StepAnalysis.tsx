@@ -13,6 +13,8 @@ import SynorixScoreCard from '@/components/project/SynorixScoreCard'
 import RetroPlanning from '@/components/project/RetroPlanning'
 import PanneauSource, { type SelectionSource } from '@/components/project/source/PanneauSource'
 import { reponseDeChamp } from '@/lib/ancre'
+import { precharger, abandonner } from '@/services/sources'
+import { useVisible } from '@/hooks/useVisible'
 import ProgressDisplay, { type StepDescriptor } from '@/components/common/ProgressDisplay'
 import { useProgressStream } from '@/hooks/useProgressStream'
 import { RequirementListSkeleton } from '@/components/skeletons'
@@ -617,6 +619,11 @@ function ExigenceLigne({
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const aUneSource = Boolean(item.source_document && (item.source_excerpt || item.source_page))
+  // Visible à l'écran : l'ancre et la loupe se chargent avant le clic (file bornée, voir services/sources.ts)
+  const entree = useCallback(() => precharger(item.id), [item.id])
+  const sortie = useCallback(() => abandonner(item.id), [item.id])
+  useVisible(ref, aUneSource, entree, sortie)
+
   return (
     <div
       ref={ref}

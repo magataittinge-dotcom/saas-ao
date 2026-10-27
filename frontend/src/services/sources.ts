@@ -21,11 +21,15 @@ export function largeurPourConteneur(px: number, densite = 1): number {
   return PALIERS_LARGEUR.find((p) => voulue <= p) ?? PALIERS_LARGEUR[PALIERS_LARGEUR.length - 1]
 }
 
-// Le serveur limite à 120 ancres et 300 aperçus par minute et par organisation : le
-// préchargement n'en prend que la moitié ou moins (d'autres onglets, d'autres personnes).
+// Le serveur limite à 120 ancres et 300 aperçus par minute et par organisation
+// (backend/routers/sources.py : LIMITE_ANCRE, LIMITE_APERCU) : le préchargement n'en prend que
+// la moitié ou moins (d'autres onglets, d'autres personnes de l'organisation partagent le plafond).
+export const BUDGET_PRECHARGEMENT = { ancre: 50, apercu: 120 } as const
+export const REQUETES_SIMULTANEES = 3
+
 export const file: FilePrechargement = creerFile({
-  simultanees: 3,
-  parMinute: { ancre: 50, apercu: 120 },
+  simultanees: REQUETES_SIMULTANEES,
+  parMinute: { ...BUDGET_PRECHARGEMENT },
   attenteMax: 150,
 })
 
@@ -50,11 +54,12 @@ function noterRefus(err: unknown): void {
 }
 
 /** L'ancre d'une exigence : cache d'abord, sinon une requête. L'URL signée du document étant à
- *  durée limitée, une entrée trop ancienne est relue. */
-export function obtenirAncre(id: string): Promise<ReponseSource> {
+ *  durée limitée, une entrée trop ancienne est relue. `dansLaFile` : appel de la file de
+ *  préchargement, qui a déjà compté son départ ; un clic (faux) le note lui-même au budget. */
+export function obtenirAncre(id: string, dansLaFile = false): Promise<ReponseSource> {
   const connue = ancres.get(id)
   if (connue && !urlExpiree(connue.recuA, connue.expireDans, Date.now())) return connue.promesse
-  file.noter('ancre')
+  if (!dansLaFile) file.noter('ancre')
   const entree: EntreeAncre = {
     recuA: Date.now(),
     expireDans: 900,
@@ -69,11 +74,11 @@ export function obtenirAncre(id: string): Promise<ReponseSource> {
 }
 
 /** L'image d'une exigence (loupe du passage ou page entière), au palier de largeur demandé. */
-export function obtenirApercu(id: string, vue: VueApercu, largeur: number): Promise<Blob> {
+export function obtenirApercu(id: string, vue: VueApercu, largeur: number, dansLaFile = false): Promise<Blob> {
   const cle = `${id}|${vue}|${largeur}`
   const connu = apercus.get(cle)
   if (connu) return connu
-  file.noter('apercu')
+  if (!dansLaFile) file.noter('apercu')
   const promesse = api
     .get<Blob>(`/sources/${encodeURIComponent(id)}/apercu`, { params: { vue, largeur }, responseType: 'blob' })
     .then(({ data }) => data)
@@ -91,12 +96,13 @@ export function precharger(id: string): void {
     cle: `ancre:${id}`,
     categorie: 'ancre',
     executer: async () => {
-      const ancre = await obtenirAncre(id)
+      const ancre = await obtenirAncre(id, true)
       if (ancre.niveau === 'aucun' || ancre.format === 'tableur') return
       file.ajouter({
         cle: `apercu:${id}`,
         categorie: 'apercu',
-        executer: () => obtenirApercu(id, 'passage', LARGEUR_LOUPE),
+        suite: true,
+        executer: () => obtenirApercu(id, 'passage', LARGEUR_LOUPE, true),
       })
     },
   })
