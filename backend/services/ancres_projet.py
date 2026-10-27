@@ -23,14 +23,17 @@ from sqlalchemy.orm import Session
 from models.compliance_item import ComplianceItem
 from models.project import ProjectDocument
 from services import file_storage
+from services import tableur_ancre
 from services.pdf_ancre import VERSION, calculer_ancres
 from services.pdf_lecture import PdfIllisible
 
 logger = logging.getLogger(__name__)
 
 DELAI_PAR_PIECE_S = 120      # ouverture + toutes les exigences d'une pièce (Carnet de 17 Mo : ~5 s)
+DELAI_TABLEUR_S = 60         # lecture bornée d'un tableur + toutes les exigences de la pièce
 
-__all__ = ["DELAI_PAR_PIECE_S", "ancre_aucune", "calculer_et_stocker", "calculer_pour", "piece_de", "chemin_pdf", "trouver_piece"]
+__all__ = ["DELAI_PAR_PIECE_S", "DELAI_TABLEUR_S", "ancre_aucune", "calculer_et_stocker", "calculer_pour", "piece_de",
+           "chemin_pdf", "chemin_tableur", "trouver_piece"]
 
 
 # ─── Quelle pièce ? ───────────────────────────────────────────────────────────
@@ -82,6 +85,15 @@ def chemin_pdf(piece: ProjectDocument) -> Optional[Path]:
     return None
 
 
+def chemin_tableur(piece: ProjectDocument) -> Optional[Path]:
+    """Le tableur (.xlsx, .xlsm, .xls, .ods) de cette pièce, s'il est sur le disque, sous uploads/."""
+    if not tableur_ancre.est_tableur(piece.file_url):
+        return None
+    racine = file_storage.UPLOADS_ROOT.resolve()
+    chemin = (file_storage.UPLOADS_ROOT / piece.file_url.removeprefix("/uploads/").lstrip("/")).resolve()
+    return chemin if racine in chemin.parents and chemin.is_file() else None
+
+
 def piece_de(db: Session, exigence: ComplianceItem) -> Optional[ProjectDocument]:
     pieces = db.query(ProjectDocument).filter(ProjectDocument.project_id == exigence.project_id).all()
     return trouver_piece(exigence.source_document, pieces)
@@ -130,20 +142,27 @@ def calculer_et_stocker(
         return bilan
     pieces = db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).all()
 
-    par_piece: dict[str, tuple[ProjectDocument, Path, list[ComplianceItem]]] = {}
+    # pièce -> (pièce, chemin, exigences, fonction de calcul, délai) : un PDF passe par PDFium, un
+    # tableur par sa lecture bornée (même processus plafonné en mémoire, avec un délai)
+    par_piece: dict[str, tuple[ProjectDocument, Path, list[ComplianceItem], object, int]] = {}
     for e in a_faire:
         piece = trouver_piece(e.source_document, pieces)
-        chemin = chemin_pdf(piece) if piece else None
+        if piece is None:
+            continue
+        chemin = chemin_tableur(piece)
+        travail = (tableur_ancre.calculer_ancres, DELAI_TABLEUR_S)
+        if chemin is None:
+            chemin = chemin_pdf(piece)
+            travail = (calculer_ancres, DELAI_PAR_PIECE_S)
         if chemin is not None:
-            par_piece.setdefault(piece.id, (piece, chemin, []))[2].append(e)
+            par_piece.setdefault(piece.id, (piece, chemin, [], *travail))[2].append(e)
     db.commit()     # plus de transaction ouverte pendant les calculs
 
-    for piece, chemin, lignes in par_piece.values():
+    for piece, chemin, lignes, fonction, delai in par_piece.values():
         bilan["pieces"] += 1
         demandes = [{"id": e.id, "page": e.source_page, "extrait": e.source_excerpt} for e in lignes]
         try:
-            ancres = pdfium_processus.executer(
-                calculer_ancres, str(chemin), piece.id, demandes, delai_s=DELAI_PAR_PIECE_S)
+            ancres = pdfium_processus.executer(fonction, str(chemin), piece.id, demandes, delai_s=delai)
         except pdfium_processus.TravailPdfiumEchoue as e:
             if e.raison in lever:
                 raise
@@ -163,7 +182,8 @@ def calculer_et_stocker(
             if ancre is None:
                 # pièce lue, mais ni passage ni page valable : on le range (pas de recalcul à
                 # chaque clic) ; l'écran n'a rien à montrer au-delà du texte de l'exigence
-                ancre = ancre_aucune(piece.id)
+                ancre = (tableur_ancre.ancre_aucune(piece.id) if fonction is tableur_ancre.calculer_ancres
+                         else ancre_aucune(piece.id))
             e.ancre = ancre
             bilan["ancres"] += 1
             bilan[{"passage": "passage", "page": "page"}.get(ancre["niveau"], "aucune")] += 1
