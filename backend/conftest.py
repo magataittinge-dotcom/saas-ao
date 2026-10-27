@@ -26,6 +26,10 @@ for _suffix in ("", "-wal", "-shm", "-journal"):
 os.environ["DATABASE_URL"] = f"sqlite:///{_TEST_DB}"
 # LibreOffice : verrou et dossiers jetables dans le dossier temporaire de la session de test
 # (jamais backend/cache/libreoffice).
+# Landlock désactivé par défaut dans la suite (les faux soffice sont des scripts Python hors du venv autorisé) ;
+# les tests dédiés le réactivent (tests/test_landlock_libreoffice.py).
+os.environ.setdefault("SYNORIX_LIBREOFFICE_LANDLOCK", "aucun")
+os.environ.setdefault("SYNORIX_PDFIUM_LANDLOCK", "aucun")      # les tests dédiés l'activent (tests/test_pdfium_landlock.py)
 os.environ.setdefault("SYNORIX_LIBREOFFICE_DIR", str(Path(tempfile.gettempdir()) / "synorix_libreoffice_tests"))
 os.environ.setdefault("SECRET_KEY", "test-secret-key")
 os.environ.setdefault("ANTHROPIC_API_KEY", "test-anthropic-key")

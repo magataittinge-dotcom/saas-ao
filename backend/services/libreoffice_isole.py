@@ -24,15 +24,19 @@ Ce que fait une conversion (``convertir_en_pdf``) :
   ``connect()`` (IP et Unix, donc ni Internet ni la base ni Redis) et, quand le noyau l'autorise, espace
   de noms réseau vide en plus. L'espace de noms SEUL ne suffit pas : il n'isole pas les sockets Unix à
   chemin (Postgres en authentification « peer »). Niveau obtenu journalisé à chaque conversion.
+- Landlock (services/landlock.py, règles : ``regles_landlock``) : liste blanche des fichiers lisibles et
+  du seul dossier inscriptible ; ``.env`` et ``uploads/`` sont refusés (les sockets de la base et de Redis le sont
+  par le seccomp).
 - Délai : au-delà, TOUT le groupe de processus est tué (``soffice`` lance ``soffice.bin``).
 
 Réglages (variables d'environnement, relues à chaque conversion) :
 ``SYNORIX_LIBREOFFICE_DIR``, ``_AS_MO`` (1536), ``_FICHIER_MO`` (512), ``_DELAI_S`` (120),
 ``_ATTENTE_S`` (90, travail interactif), ``_ATTENTE_DEPOT_S`` (900, Word déposé en arrière-plan),
-``_RESEAU`` (``auto`` | ``exige`` | ``aucun``).
-Limite : ces protections arrêtent les fonctions du DOCUMENT (liens, images distantes) et l'abus du réseau
-par du code qui s'exécuterait dans LibreOffice ; elles ne cachent pas les fichiers lisibles par
-l'utilisateur du service (.env, uploads) : seul un utilisateur Unix dédié aux conversions le ferait.
+``_RESEAU`` (``auto`` | ``exige`` | ``aucun``), ``_LANDLOCK`` (``auto`` | ``aucun``).
+Avec ``_RESEAU=exige``, la conversion est refusée si le filtre seccomp ou Landlock ne peut pas être posé.
+Limite : sans Landlock (noyau < 5.13 ou désactivé), les fichiers lisibles par l'utilisateur du service
+(.env, uploads) restent lisibles par du code natif exécuté dans LibreOffice ; le niveau journalisé
+(« landlock: absent ») le dit.
 Aucune donnée du DCE dans les journaux : ni nom de fichier, ni contenu.
 """
 from __future__ import annotations
@@ -49,6 +53,8 @@ import time
 import uuid
 from pathlib import Path
 from typing import Optional
+
+from services import landlock
 
 logger = logging.getLogger(__name__)
 
@@ -121,6 +127,49 @@ def delai_depot_s(taille_octets: int) -> float:
 def _mode_reseau() -> str:
     mode = os.environ.get("SYNORIX_LIBREOFFICE_RESEAU", "auto").strip().lower()
     return mode if mode in ("auto", "exige", "aucun", "netns", "seccomp") else "auto"
+
+
+def _mode_landlock() -> str:
+    """``auto`` (défaut) : Landlock si le noyau l'offre ; ``aucun`` : désactivé (diagnostic, tests)."""
+    return "aucun" if os.environ.get("SYNORIX_LIBREOFFICE_LANDLOCK", "auto").strip().lower() == "aucun" else "auto"
+
+
+def regles_landlock(base: Path, binaire: Optional[str] = None) -> list:
+    """Règles Landlock de LibreOffice, en LISTE BLANCHE (mesurées : outils-libre/trace_lo.py, un préchargement
+    qui journalise les ``open`` d'un vrai soffice pendant la conversion d'un mémoire, d'un Word avec image,
+    d'un tableur et d'un ODT) :
+
+    - lecture et exécution : ``/usr`` (installation de LibreOffice ``/usr/lib/libreoffice``, bibliothèques,
+      polices ``/usr/share/fonts``, ``/usr/lib/ssl``), ``/lib*``, ``/bin``, ``/sbin`` ;
+    - lecture : la configuration que LibreOffice lit au démarrage (``/etc/libreoffice``, ``/etc/fonts``,
+      ``/etc/ld.so.*``, ``passwd``, ``group``, ``nsswitch.conf``, ``localtime``, ``alternatives``, ``dconf``,
+      ``gnutls``, ``gcrypt``, ``gnupg``, ``cups/client.conf``), le cache de polices, Carlito livrée avec
+      le code, ``/proc`` et ``/sys`` (état du processus et du matériel), ``/dev/urandom``, ``random``, ``zero`` ;
+    - écriture : le SEUL dossier jetable de la conversion (``base`` : fichier d'entrée copié, profil, sortie,
+      ``TMPDIR``, ``fonts.conf``) et ``/dev/null``.
+    Refusé : tout le reste, dont ``backend/.env`` et ``uploads/`` (le fichier d'entrée est DÉJÀ copié dans ``base``,
+    aucun chemin d'upload n'est ouvert) et les fichiers de ``/run/postgresql`` et ``/run/redis``. Landlock ne
+    filtre pas ``connect()`` vers ces sockets (avant l'ABI 9) : c'est le filtre seccomp qui le refuse."""
+    L = landlock
+    lecture_exec = ["/usr", "/lib", "/lib64", "/bin", "/sbin"]
+    lecture = ["/etc/fonts", "/etc/libreoffice", "/etc/ld.so.cache", "/etc/ld.so.conf", "/etc/ld.so.conf.d",
+               "/etc/passwd", "/etc/group", "/etc/nsswitch.conf", "/etc/localtime", "/etc/alternatives",
+               "/etc/dconf", "/etc/gnutls", "/etc/gcrypt", "/etc/gnupg", "/etc/cups/client.conf",
+               "/var/cache/fontconfig", str(DOSSIER_CARLITO), "/proc", "/sys",
+               "/dev/urandom", "/dev/random", "/dev/zero"]
+    regles = [(c, L.LECTURE_EXEC) for c in lecture_exec]
+    regles += [(c, L.LECTURE) for c in lecture]
+    if binaire:                          # LibreOffice installé hors de /usr (archive officielle dans /opt…)
+        programme = Path(os.path.realpath(binaire)).parent
+        if programme.name == "program" and not str(programme).startswith("/usr/"):
+            regles.append((str(programme.parent), L.LECTURE_EXEC))
+    regles.append((str(base), L.LECTURE | L.ECRITURE))
+    regles.append(("/dev/null", L.READ_FILE | L.WRITE_FILE))
+    # LibreOffice crée le socket Unix de son canal interne (OSL_PIPE_…) dans /tmp (ou /var/tmp), chemin
+    # fixé dans sal : il ne peut ni lire ni écrire un fichier ordinaire là, seulement créer et retirer un socket.
+    for tmp in ("/tmp", "/var/tmp"):
+        regles.append((tmp, L.READ_DIR | L.MAKE_SOCK | L.REMOVE_FILE))
+    return [[c, int(d)] for c, d in regles]
 
 
 def dossier_travail() -> Path:
@@ -351,6 +400,8 @@ def convertir_en_pdf(entree, extension: str = ".docx", destination: Optional[Pat
                 "reseau": reglage_reseau,
                 "fichier_etat": str(base / "reseau.txt"),
             }
+            if _mode_landlock() == "auto":
+                cfg["landlock"] = {"regles": regles_landlock(base, binaire)}
             cmd = [sys.executable, "-I", "-S", str(_LANCEUR), json.dumps(cfg)]
             debut = time.monotonic()
             try:
@@ -365,8 +416,11 @@ def convertir_en_pdf(entree, extension: str = ".docx", destination: Optional[Pat
                 etat_reseau = "inconnu"
             pdf = base / "entree.pdf"
             if code == 97:
-                logger.error("Conversion PDF refusée : isolation réseau exigée, impossible (%s)", etat_reseau)
+                logger.error("Conversion PDF refusée : isolation exigée, impossible (%s)", etat_reseau)
                 raise _erreur("reseau")
+            if _mode_landlock() == "auto" and "landlock" not in etat_reseau.split(" ")[0]:
+                logger.warning("Conversion PDF SANS Landlock (%s) : les fichiers du serveur lisibles par l'utilisateur "
+                               "du service (.env, uploads) le sont aussi par LibreOffice", etat_reseau)
             if "seccomp" not in etat_reseau.split(" ")[0]:
                 logger.warning("Conversion PDF SANS isolation réseau complète (%s) : sockets Unix du système de "
                                "fichiers joignables ; seuls les réglages du profil protègent", etat_reseau)
