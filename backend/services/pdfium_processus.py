@@ -55,6 +55,7 @@ rester de niveau module, importables depuis le dossier ``backend``.
 from __future__ import annotations
 
 import atexit
+import json
 import logging
 import multiprocessing as mp
 import os
@@ -132,6 +133,15 @@ def _plafond_as_octets() -> int:
     return _entier("SYNORIX_PDFIUM_AS_MO", AS_MO_DEFAUT) * 1024 * 1024
 
 
+def _reglages_enfant() -> dict:
+    """Ce que le parent décide pour l'enfant (l'enfant n'a pas d'environnement : tout passe par ici).
+    ``SYNORIX_PDFIUM_LANDLOCK`` : ``auto`` (défaut) ou ``aucun`` ; ``SYNORIX_PDFIUM_LECTURE_DIRS`` : dossiers de
+    pièces en plus de ``backend/uploads`` (séparés par ``:``)."""
+    actif = os.environ.get("SYNORIX_PDFIUM_LANDLOCK", "auto").strip().lower() != "aucun"
+    dossiers = [d for d in os.environ.get("SYNORIX_PDFIUM_LECTURE_DIRS", "").split(":") if d.strip()]
+    return {"landlock": actif, "lecture": [str(_RACINE_BACKEND / "uploads"), *dossiers]}
+
+
 # ─── Côté enfant ──────────────────────────────────────────────────────────────
 
 _conn_enfant = None   # dans l'enfant : sa moitié du tuyau
@@ -155,7 +165,49 @@ def _rss_ko() -> int:
         return 0
 
 
-def _boucle_enfant(conn, plafond_as: int) -> None:
+def _regles_landlock_enfant(lecture: list) -> list:
+    """Règles Landlock de l'enfant, en LISTE BLANCHE (lecture seule partout, aucune écriture hors ``/dev/null``) :
+    système et bibliothèques (``/usr``, ``/lib*``), l'installation de Python et son venv (``sys.prefix`` et
+    voisins), le CODE de ``backend/services`` (jamais tout ``backend/`` : il contient ``.env``), la
+    configuration de chargement de bibliothèques, ``/proc`` (sa propre mémoire résidente) et les dossiers
+    de PIÈCES ``lecture`` (``backend/uploads``). Limite connue : ces dossiers couvrent TOUTES les organisations
+    — l'enfant est partagé entre elles, une règle Landlock ne se resserre pas tâche par tâche ; seule la
+    transmission du fichier par descripteur (au lieu du chemin) le permettrait."""
+    from services import landlock as L
+    racines = {sys.prefix, sys.base_prefix, sys.exec_prefix, "/usr", "/lib", "/lib64"}
+    racine_backend = str(_RACINE_BACKEND)
+    racines |= {p for p in sys.path if p and os.path.isdir(p) and os.path.realpath(p) != os.path.realpath(racine_backend)}
+    regles = [(r, L.LECTURE_EXEC) for r in sorted(racines)]
+    regles.append((str(_RACINE_BACKEND / "services"), L.LECTURE))
+    regles += [(c, L.LECTURE) for c in ("/etc/ld.so.cache", "/etc/ld.so.conf", "/etc/ld.so.conf.d", "/etc/localtime",
+                                        "/etc/passwd", "/etc/group", "/etc/nsswitch.conf", "/etc/mime.types", "/proc",
+                                        "/dev/urandom", "/dev/random", "/dev/zero")]
+    regles += [(c, L.LECTURE) for c in lecture]
+    regles.append(("/dev/null", L.READ_FILE | L.WRITE_FILE))
+    return regles
+
+
+def _durcir_enfant(reglages: dict) -> str:
+    """Pose le filtre seccomp (aucun connect : ni la base ni Redis par leur socket Unix ; aucun ptrace) puis
+    Landlock. Renvoie le niveau obtenu, pour le journal du parent. Ne lève jamais : l'absence d'une protection
+    est dite, pas cachée."""
+    niveaux, refus = [], []
+    try:
+        from services import libreoffice_lanceur
+        libreoffice_lanceur.poser_seccomp()
+        niveaux.append("seccomp")
+    except Exception as e:  # noqa: BLE001
+        refus.append("seccomp: " + (getattr(e, "strerror", None) or type(e).__name__))
+    try:
+        from services import landlock
+        landlock.restreindre(_regles_landlock_enfant(reglages.get("lecture", [])))
+        niveaux.append("landlock")
+    except Exception as e:  # noqa: BLE001
+        refus.append("landlock: absent (" + (getattr(e, "strerror", None) or type(e).__name__) + ")")
+    return ("+".join(niveaux) or "aucune") + (f" ({'; '.join(refus)})" if refus else "")
+
+
+def _boucle_enfant(conn, plafond_as: int, reglages: Optional[dict] = None) -> None:
     """Point d'entrée de l'enfant : exécute les tâches reçues, une à la fois."""
     global _conn_enfant
     from services.durcissement import interdire_lecture_memoire
@@ -168,6 +220,8 @@ def _boucle_enfant(conn, plafond_as: int) -> None:
         import resource
         resource.setrlimit(resource.RLIMIT_AS, (plafond_as, plafond_as))
     _conn_enfant = conn
+    if reglages and reglages.get("landlock"):
+        conn.send(("niveau", _durcir_enfant(reglages), 0))     # lu par le parent avant la 1re réponse
     while True:
         try:
             message = conn.recv()
@@ -210,17 +264,19 @@ _AMORCE = (
     "sys.path.insert(0, sys.argv[3])\n"
     "from multiprocessing.connection import Connection\n"
     "from services import pdfium_processus\n"
-    "pdfium_processus._boucle_enfant(Connection(int(sys.argv[1])), int(sys.argv[2]))\n"
+    "import json\n"
+    "pdfium_processus._boucle_enfant(Connection(int(sys.argv[1])), int(sys.argv[2]), json.loads(sys.argv[4]))\n"
 )
 
 
 class _Lance:
     """Le processus enfant, avec l'interface de ``multiprocessing.Process`` que ``_Enfant`` utilise."""
 
-    def __init__(self, conn_enfant, plafond_as: int) -> None:
+    def __init__(self, conn_enfant, plafond_as: int, reglages: dict) -> None:
         fd = conn_enfant.fileno()
         self._popen = subprocess.Popen(
-            [sys.executable, "-I", "-c", _AMORCE, str(fd), str(plafond_as), str(_RACINE_BACKEND)],
+            [sys.executable, "-I", "-c", _AMORCE, str(fd), str(plafond_as), str(_RACINE_BACKEND),
+             json.dumps(reglages)],
             env=dict(_ENV_ENFANT), pass_fds=(fd,), stdin=subprocess.DEVNULL, close_fds=True)
 
     @property
@@ -248,7 +304,7 @@ class _Enfant:
     def __init__(self) -> None:
         self.conn, enfant_conn = mp.Pipe(duplex=True)
         try:
-            self.processus = _Lance(enfant_conn, _plafond_as_octets())
+            self.processus = _Lance(enfant_conn, _plafond_as_octets(), _reglages_enfant())
         except BaseException:
             self.conn.close()
             raise
@@ -417,6 +473,14 @@ def _fin_anormale(enfant: _Enfant, detail: str) -> "_EnfantPerdu":
     return _EnfantPerdu("plantage", detail)
 
 
+def _journaliser_niveau(niveau: str) -> None:
+    """Niveau d'isolation de l'enfant (sans donnée du DCE) ; un avertissement s'il manque une protection."""
+    if niveau.startswith("seccomp+landlock") and "(" not in niveau:
+        logger.info("Processus PDF isolé : %s", niveau)
+    else:
+        logger.warning("Processus PDF isolé INCOMPLÈTEMENT : %s", niveau)
+
+
 def _a_recycler(enfant: _Enfant) -> bool:
     trop_de_taches = enfant.taches >= _entier("SYNORIX_PDFIUM_TACHES_MAX", TACHES_MAX_DEFAUT, 1)
     trop_de_memoire = enfant.rss_ko >= _entier("SYNORIX_PDFIUM_RSS_MAX_MO", RSS_MAX_MO_DEFAUT, 1) * 1024
@@ -453,6 +517,9 @@ def _faire(enfant: _Enfant, fonction, args, delai_s: float, sur_progression) -> 
         except (EOFError, OSError):
             enfant.processus.join(timeout=2)
             raise _fin_anormale(enfant, f"code de sortie {enfant.processus.exitcode}") from None
+        if genre == "niveau":
+            _journaliser_niveau(valeur)
+            continue
         if genre == "prog":
             if sur_progression is not None:
                 try:

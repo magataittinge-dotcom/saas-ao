@@ -70,3 +70,32 @@ def lire_environ_du_parent():
             return f.read().decode(errors="replace")
     except OSError as e:
         return "refuse:" + type(e).__name__
+
+
+def lire_fichier(chemin):
+    try:
+        with open(chemin, "rb") as f:
+            f.read(1)
+        return "LU"
+    except OSError:
+        return "refuse"
+
+
+def ecrire_fichier(chemin):
+    try:
+        with open(chemin, "w") as f:
+            f.write("x")
+        return "ECRIT"
+    except OSError:
+        return "refuse"
+
+
+def connecter_unix(chemin):
+    import socket
+    try:
+        s = socket.socket(socket.AF_UNIX)
+        s.connect(chemin)
+        s.close()
+        return "connecte"
+    except OSError as e:
+        return "bloque " + type(e).__name__
