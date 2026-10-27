@@ -13,6 +13,7 @@ from models.user import User
 from models.project import Project, ProjectDocument
 from models.memoire import MemoireTechnique
 from models.compliance_item import ComplianceItem
+from services.ai.dtu_autorises import regle_dtu
 from models.organization import Organization
 from models.team_member import TeamMember
 from models.reference import Reference
@@ -339,6 +340,8 @@ def _run_memoire_job(
             profile_overrides=profile_overrides,
             reglementaire_block=reglementaire_block,
             ouvrages_dpgf=ouvrages_dpgf,
+            selected_lot=project.selected_lot,
+            lots_detectes=project.lots_detectes or [],
         ))
         # Contenu 100 % placeholders = panne du service IA en plein run
         # (constat audit : crédit épuisé → 26/26 sections vides quand même
@@ -436,11 +439,18 @@ async def rewrite_passage_endpoint(
     Usage loggé par org (compteur simple, pas de quota V1)."""
     from services.ai.passage_rewriter import rewrite_passage
 
-    _get_project_or_404(project_id, user.organization_id, db)
+    project = _get_project_or_404(project_id, user.organization_id, db)
+
+    # Même règle DTU que la génération (décision du 27/10) : liste fermée du lot dans
+    # la consigne, garde-fou déterministe sur la sortie. Lue ici, hors du thread SDK.
+    docs = db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).all()
+    regle = await asyncio.to_thread(
+        regle_dtu, docs, project.selected_lot, project.selected_lot_name,
+        project.lots_detectes or [], _ids_des_lots(project))
 
     try:
         rewritten = await rewrite_passage(
-            payload.passage, payload.action, payload.instruction,
+            payload.passage, payload.action, payload.instruction, regle,
         )
     except Exception as e:
         import logging as _logging
