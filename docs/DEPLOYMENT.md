@@ -231,6 +231,7 @@ SYNORIX_PDFIUM_TACHES_MAX=40       # l'enfant est remplacé après N tâches
 SYNORIX_PDFIUM_RSS_MAX_MO=350      # ... ou dès que sa mémoire résidente dépasse ce seuil
 SYNORIX_PDFIUM_ATTENTE_S=5         # attente d'un processus libre, travail interactif (aperçu) : puis 503 + Retry-After
 SYNORIX_PDFIUM_ATTENTE_EXTRACTION_S=600   # idem pour l'extraction au dépôt (la pièce est alors à redéposer)
+SYNORIX_X_ACCEL_PREFIX=/_fichiers_internes   # document entier servi par nginx (§8) ; vide en dev
 SYNORIX_CACHE_APERCUS_DIR=/srv/synorix/backend/cache/apercus   # cache des images d'aperçu (hors webroot)
 SYNORIX_CACHE_APERCUS_MO=2048      # plafond du cache, éviction LRU (2 Go = 4 % du disque de 50 Go)
 ```
@@ -358,6 +359,22 @@ server {
         proxy_read_timeout 600s;               # 10 min — long Opus generations
         proxy_send_timeout 600s;
         chunked_transfer_encoding on;
+    }
+
+    # Document entier de « Voir dans le DCE » : plages HTTP (pdf.js charge par morceaux).
+    # FastAPI vérifie la signature et l'appartenance à l'organisation, puis répond SANS corps avec
+    # `X-Accel-Redirect: /_fichiers_internes/<chemin relatif>` (+ Content-Type et
+    # Content-Disposition: inline, conservés par nginx) ; nginx envoie le fichier lui-même, avec
+    # ses plages natives (206). `internal` : cette adresse est INJOIGNABLE depuis l'extérieur.
+    # `alias` se termine par « / » comme la `location`. Réglage côté appli, dans le `.env` :
+    #   SYNORIX_X_ACCEL_PREFIX=/_fichiers_internes
+    # (vide = FastAPI sert le fichier lui-même, plages HTTP comprises : dev.)
+    # Ne PAS ajouter X-Accel-Redirect à `proxy_ignore_headers`.
+    location /_fichiers_internes/ {
+        internal;
+        alias /srv/synorix/backend/uploads/;
+        add_header X-Content-Type-Options nosniff always;
+        add_header Cache-Control "private, no-store" always;
     }
 
     # SPA fallback
