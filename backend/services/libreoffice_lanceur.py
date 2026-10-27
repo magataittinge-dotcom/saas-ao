@@ -11,6 +11,13 @@ Il pose, dans le processus qui va devenir ``soffice``, ce que Python ne sait pas
   ni ``uploads/``. Landlock ne filtre pas ``connect()`` vers un socket Unix à chemin avant l'ABI 9 : c'est le
   seccomp ci-dessous qui ferme ``/run/postgresql`` et ``/run/redis`` ; Landlock ferme les fichiers (et, dès l'ABI 4,
   le TCP). Niveau écrit dans le fichier d'état : ``netns+seccomp+landlock``, ou ``… (landlock: absent (raison))``.
+- /tmp PRIVÉ (``cfg["tmp_prive"]``) : soffice crée son socket ``OSL_PIPE_<uid>_…`` dans ``/tmp`` (chemin codé en
+  dur dans sal, ``TMPDIR`` n'y change rien) ; sous systemd (``PrivateTmp=true``) c'est le ``/tmp`` de l'API. Quand l'espace
+  de noms utilisateur est permis, le lanceur y ajoute un espace de noms de MONTAGE et monte le dossier jetable de
+  la conversion sur ``/tmp`` : le vrai ``/tmp`` n'est plus visible, plus aucun droit Landlock n'y est accordé. Sinon (AppArmor
+  d'Ubuntu 24.04 : repli probable du VPS), Landlock accorde ``cfg["landlock"]["tmp_partage"]`` (``MAKE_SOCK | REMOVE_FILE``,
+  sans ``READ_DIR`` : soffice efface le socket avant de le créer, EACCES sans ``REMOVE_FILE`` — mesuré) et l'API balaie le
+  socket laissé. Niveau écrit dans le fichier d'état : jeton ``tmp-prive`` (absent = partagé).
 - SANS RÉSEAU NI SOCKET VERS L'EXTÉRIEUR, par deux protections empilées :
   1. un espace de noms réseau VIDE (``unshare(CLONE_NEWUSER | CLONE_NEWNET)``) : aucune interface,
      même pas ``lo``. Refusé sur Ubuntu 24.04 quand AppArmor restreint les espaces de noms
@@ -43,6 +50,7 @@ import resource
 import signal
 import struct
 import sys
+from typing import Optional
 
 CODE_ISOLATION_IMPOSSIBLE = 97
 
@@ -128,8 +136,13 @@ def poser_seccomp() -> None:
 
 
 def poser_espace_reseau_vide() -> None:
+    """Espace de noms utilisateur + réseau (vide) + MONTAGE (le montage ne change rien tant qu'on ne monte
+    rien : il sert à ``poser_tmp_prive``). Refusé : ``OSError`` (aucun des trois n'est alors posé)."""
     uid, gid = os.getuid(), os.getgid()
-    os.unshare(os.CLONE_NEWUSER | os.CLONE_NEWNET)
+    try:
+        os.unshare(os.CLONE_NEWUSER | os.CLONE_NEWNET | os.CLONE_NEWNS)
+    except OSError:
+        os.unshare(os.CLONE_NEWUSER | os.CLONE_NEWNET)      # sans montage privé : /tmp restera partagé
     # Les identifiants restent les nôtres (sinon « nobody » : HOME ne nous appartiendrait plus).
     for chemin, texte in (("/proc/self/setgroups", "deny"),
                           ("/proc/self/uid_map", f"{uid} {uid} 1"),
@@ -141,7 +154,21 @@ def poser_espace_reseau_vide() -> None:
             pass    # l'espace réseau est déjà vide ; seul l'affichage des identifiants change
 
 
-def isoler_reseau(mode: str) -> str:
+_MS_BIND, _MS_REC, _MS_PRIVATE = 4096, 16384, 1 << 18
+
+
+def poser_tmp_prive(source: str) -> None:
+    """Monte ``source`` (dossier jetable de la conversion) sur ``/tmp``, dans l'espace de noms de montage posé par
+    ``poser_espace_reseau_vide``. Rien ne se propage hors de cet espace : l'API voit toujours son ``/tmp``. Lève
+    ``OSError`` si le noyau refuse (pas d'espace de montage, montage interdit)."""
+    libc = ctypes.CDLL(None, use_errno=True)
+    for cible, source_montage, drapeaux in ((b"/", b"none", _MS_REC | _MS_PRIVATE), (b"/tmp", source.encode(), _MS_BIND)):
+        if libc.mount(source_montage, cible, None, ctypes.c_ulong(drapeaux), None) != 0:
+            e = ctypes.get_errno()
+            raise OSError(e, f"mount {cible.decode()}: {os.strerror(e)}")
+
+
+def isoler_reseau(mode: str, tmp_prive: Optional[str] = None) -> str:
     """Pose les protections réseau demandées ; renvoie le NIVEAU obtenu (journalisé par l'appelant) :
 
     - ``netns+seccomp`` : espace réseau vide + connect() refusé (le meilleur) ;
@@ -149,7 +176,8 @@ def isoler_reseau(mode: str) -> str:
     - ``netns`` : espace réseau vide SEUL (mode ``netns`` explicite : les sockets Unix à chemin
       restent joignables) ;
     - ``aucune``.
-    Suivi de ``(refus …)`` si une protection demandée a été refusée par le noyau."""
+    ``tmp_prive`` : dossier à monter sur ``/tmp`` une fois l'espace de noms posé ; le jeton ``tmp-prive`` s'ajoute alors
+    après ``netns``. Suivi de ``(refus …)`` si une protection demandée a été refusée par le noyau."""
     if mode == "aucun":
         return "aucune (désactivée par réglage)"
     actives, refus = [], []
@@ -159,6 +187,13 @@ def isoler_reseau(mode: str) -> str:
             actives.append("netns")
         except (OSError, AttributeError) as e:
             refus.append("netns:" + (getattr(e, "strerror", None) or type(e).__name__))
+        else:
+            if tmp_prive:
+                try:
+                    poser_tmp_prive(tmp_prive)
+                    actives.append("tmp-prive")
+                except OSError as e:
+                    refus.append("tmp:" + (getattr(e, "strerror", None) or type(e).__name__))
     if mode in ("auto", "exige", "seccomp"):
         try:
             poser_seccomp()
@@ -168,13 +203,17 @@ def isoler_reseau(mode: str) -> str:
     return ("+".join(actives) if actives else "aucune") + (f" (refus {', '.join(refus)})" if refus else "")
 
 
-def poser_landlock(cfg_landlock: dict, commande: str) -> str:
+def poser_landlock(cfg_landlock: dict, commande: str, tmp_prive: bool = False) -> str:
     """Pose les règles Landlock (liste blanche) ; renvoie ``"landlock"`` ou la raison de l'absence
-    (``"landlock: absent"``…). Le programme lancé (``commande``) reste lisible et exécutable."""
+    (``"landlock: absent"``…). Le programme lancé (``commande``) reste lisible et exécutable. ``/tmp`` : le
+    dossier jetable monté dessus (``tmp_prive``), sinon les droits du vrai ``/tmp`` (``tmp_partage``)."""
     try:
         sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
         import landlock                                     # importé AVANT la restriction
         regles = [(chemin, int(droits)) for chemin, droits in cfg_landlock.get("regles", [])]
+        # Landlock juge le fichier atteint à travers le montage : la règle porte sur le dossier monté lui-même
+        regles += [(chemin, int(droits)) for chemin, droits
+                   in cfg_landlock.get("tmp_prive" if tmp_prive else "tmp_partage", [])]
         regles.append((commande, landlock.LECTURE_EXEC))
         landlock.restreindre(regles)
         return "landlock"
@@ -198,10 +237,10 @@ def main() -> None:
         fichier_etat = open(cfg["fichier_etat"], "w")
     except OSError:
         fichier_etat = None
-    etat = isoler_reseau(cfg.get("reseau", "auto"))
+    etat = isoler_reseau(cfg.get("reseau", "auto"), cfg.get("tmp_prive"))
     landlock_ok = True
     if cfg.get("landlock"):
-        resultat = poser_landlock(cfg["landlock"], cfg["cmd"][0])
+        resultat = poser_landlock(cfg["landlock"], cfg["cmd"][0], "tmp-prive" in etat.split(" ")[0].split("+"))
         landlock_ok = resultat == "landlock"
         jeton, _, reste = etat.partition(" ")
         if landlock_ok:
