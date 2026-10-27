@@ -184,9 +184,23 @@ def test_un_sigle_ne_rattache_pas_a_deux_lots():
     assert rattache_article("LOT CFO", _lot_n("9", "Électricité CFO CFA", ("10", "Plomberie"))) is True
 
 
-def test_le_depliage_exige_la_formule_entiere():
-    # « chauffage ventilation » seul n'est pas « CVC » (climatisation absente) : prudence
-    assert rattache_article("LOT CVC", _lot_n("11", "Chauffage – Ventilation", ("9", "Peinture"))) is False
+def test_chauffage_ventilation_seul_vaut_cvc():
+    # Décision de Mohamed (27/10, bloc 6) : « chauffage ventilation » seul vaut CVC.
+    # Source : marche-public.fr, « Exemples d'allotissement », lot « plomberie – CVC ».
+    autres = ("9", "Peinture")
+    assert rattache_article("LOT CVC", _lot_n("11", "Chauffage – Ventilation", autres)) is True
+    assert rattache_article("LOT CHAUFFAGE VENTILATION", _lot_n("11", "CVC", autres)) is True
+    assert rattache_article("LOT CHAUFFAGE VENTILATION CLIMATISATION",
+                            _lot_n("11", "Chauffage – Ventilation", autres)) is True
+    # un autre métier ne devient pas CVC : plomberie seule, ventilation seule, chauffage seul
+    assert rattache_article("LOT CVC", _lot_n("11", "Plomberie", autres)) is False
+    assert rattache_article("LOT CVC", _lot_n("11", "Ventilation", autres)) is False
+    assert rattache_article("LOT CVC", _lot_n("11", "Chauffage", autres)) is False
+
+
+def test_chauffage_ventilation_ne_rattache_pas_deux_lots():
+    lot = _lot_n("11", "Chauffage – Ventilation", ("12", "CVC"))
+    assert rattache_article("LOT CVC", lot) is False   # « cvc » désigne aussi le lot 12
 
 
 def test_tce_seul_ne_rattache_aucun_lot_de_metier():
@@ -286,3 +300,17 @@ def test_annexe_menuiseries_inchangee_si_les_deux_cctp_la_nomment():
     texte4 = "CCTP\nLOT 04 : MENUISERIES EXTÉRIEURES ALU SERRURERIE\nDTU 32.1"
     res3 = _autorises_mext(texte4, "lot3")
     assert not any(p == "annexe.pdf" for p, _ in res3["36.5"].sources)   # seul le CCTP du lot 3 le donne
+
+
+# ── GO, CFO, CFA gardés (décision de Mohamed du 27/10, point 1 du bloc 6) ─────
+# Mots du métier lus dans de vrais allotissements (marche-public.fr, « Exemples
+# d'allotissement » : « Electricité CFO-Cfa-SSI », « Gros-Œuvre »). Ce test fige
+# le comportement : aucun changement de règle.
+
+def test_go_cfo_cfa_valent_leur_formule_et_restent_des_mots_du_metier():
+    from services.ai.dtu_autorises import _mots
+    assert _mots("Gros œuvre") == _mots("GO") == frozenset({"go"})
+    assert _mots("Courant fort") == _mots("Courants forts") == _mots("CFO") == frozenset({"cfo"})
+    assert _mots("Courant faible") == _mots("Courants faibles") == _mots("CFA") == frozenset({"cfa"})
+    # « Electricité CFO-Cfa-SSI » : les sigles sont des mots distincts du titre
+    assert _mots("Electricité CFO-Cfa-SSI") == frozenset({"electricite", "cfo", "cfa", "ssi"})

@@ -22,7 +22,7 @@ import pytest
 from docx import Document
 from pypdf import PdfReader
 
-from services import pdf_export
+from services import libreoffice_isole, pdf_export
 from services.docx_exporter import build_memoire_docx
 from services.docx_sommaire import completer_sommaire
 
@@ -115,22 +115,20 @@ def test_une_seule_conversion_libreoffice_a_la_fois(monkeypatch, tmp_path):
     """Deux exports simultanés (VPS 1 vCPU) : les conversions s'enchaînent."""
     actifs, pic = [0], [0]
     verrou = threading.Lock()
-    reel = subprocess.run
+    reel = libreoffice_isole._executer
 
-    def surveille(cmd, *a, **kw):
-        if "--convert-to" not in cmd:
-            return reel(cmd, *a, **kw)
+    def surveille(*a, **kw):
         with verrou:
             actifs[0] += 1
             pic[0] = max(pic[0], actifs[0])
         try:
             time.sleep(0.2)
-            return reel(cmd, *a, **kw)
+            return reel(*a, **kw)
         finally:
             with verrou:
                 actifs[0] -= 1
 
-    monkeypatch.setattr(pdf_export.subprocess, "run", surveille)
+    monkeypatch.setattr(libreoffice_isole, "_executer", surveille)
     octets = build_memoire_docx({"preambule": "Texte fictif.", "partie_a": {}}, "P", "E")
     fils = [threading.Thread(target=pdf_export.docx_to_pdf, args=(octets,)) for _ in range(3)]
     for f in fils:

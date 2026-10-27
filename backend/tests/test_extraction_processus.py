@@ -188,3 +188,15 @@ def test_piece_piegee_refusee_proprement_et_nommee(client, db_session, test_org,
     assert not piege.extracted_text
     assert "CCTP lot 01 piege.pdf" in (piege.extraction_warning or "")
     assert "article 3" in docs["RC.pdf"].extracted_text
+
+
+def test_une_bombe_pdf_arretee_par_le_plafond_ressort_memoire(tmp_path, monkeypatch):
+    """PDF de 400 Ko dont le flux se décompresse en 400 Mo, plafond de 300 Mo : « memoire »
+    (avant : « plantage », l'enfant meurt par SIGABRT sans MemoryError)."""
+    from tests.test_pdf_bombe_pypdf import _pdf_bombe
+    monkeypatch.setenv("SYNORIX_PDFIUM_AS_MO", "300")
+    bombe = tmp_path / "bombe.pdf"
+    _pdf_bombe(bombe)
+    with pytest.raises(pp.TravailPdfiumEchoue) as e:
+        ep.extraire_en_processus(str(bombe), "bombe.pdf", "d")
+    assert e.value.raison == "memoire", e.value

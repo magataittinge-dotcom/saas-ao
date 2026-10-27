@@ -76,6 +76,39 @@ def test_au_dela_du_plafond_refus_propre(monkeypatch):
     assert pp.executer(t.allouer, 50, delai_s=60) == 50 * MO
 
 
+def test_un_arret_natif_sous_plafond_est_dit_memoire_et_sans_plafond_plantage(monkeypatch):
+    """Une bombe arrêtée par le plafond ne laisse pas de MemoryError : PDFium appelle abort() (SIGABRT).
+    Avant : « plantage » ; maintenant « memoire » quand un plafond est posé (cause probable)."""
+    with pytest.raises(pp.TravailPdfiumEchoue) as e:
+        pp.executer(t.abandonner, delai_s=60)
+    assert e.value.raison == "memoire" and "signal 6" in e.value.detail
+    pp.arreter()
+    monkeypatch.setenv("SYNORIX_PDFIUM_AS_MO", "0")          # aucun plafond : rien ne dit que c'est la mémoire
+    with pytest.raises(pp.TravailPdfiumEchoue) as e:
+        pp.executer(t.abandonner, delai_s=60)
+    assert e.value.raison == "plantage"
+
+
+def test_l_enfant_ne_recoit_aucun_secret_de_l_api(monkeypatch):
+    """L'enfant lit des fichiers hostiles : il ne reçoit que PATH, LANG, LC_ALL (avant : tout l'environnement
+    de l'API, clés Anthropic et Stripe, URL de la base)."""
+    secrets = {"ANTHROPIC_API_KEY": "sk-ant-factice-pdfium", "STRIPE_SECRET_KEY": "sk_live_factice_pdfium",
+               "DATABASE_URL": "url-de-base-factice-pdfium", "SYNORIX_AUTRE": "valeur-factice-pdfium"}
+    for k, v in secrets.items():
+        monkeypatch.setenv(k, v)
+    pp.arreter()
+    env = pp.executer(t.environnement, delai_s=60)
+    assert set(env) <= {"PATH", "LANG", "LC_ALL"}, sorted(env)
+    assert not any(v in str(env) for v in secrets.values())
+
+
+@pytest.mark.skipif(not os.path.exists("/proc/self/environ"), reason="/proc (Linux)")
+def test_l_enfant_est_non_vidable_et_ne_lit_pas_l_environ_de_son_parent(monkeypatch):
+    """PR_SET_DUMPABLE = 0 dans l'enfant. Et même sans durcissement du parent, l'enfant n'a de toute
+    façon aucun secret à protéger (environnement minimal)."""
+    assert pp.executer(t.dumpable, delai_s=60) == 0
+
+
 def test_l_enfant_est_recycle_apres_n_taches(monkeypatch):
     monkeypatch.setenv("SYNORIX_PDFIUM_TACHES_MAX", "3")
     pids = [pp.executer(t.pid, delai_s=60) for _ in range(7)]

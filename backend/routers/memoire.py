@@ -647,7 +647,9 @@ def export_memoire_pdf(
     try:
         pdf_bytes = docx_to_pdf(docx_bytes)
     except PdfConversionError as exc:
-        raise HTTPException(status_code=503, detail=f"Export PDF impossible : {exc}")
+        # message écrit pour l'utilisateur (services/libreoffice_isole.py), réessai proposé
+        raise HTTPException(status_code=503, detail=str(exc),
+                            headers={"Retry-After": str(exc.retry_apres_s)})
 
     reponse = _attachment_response(
         pdf_bytes,

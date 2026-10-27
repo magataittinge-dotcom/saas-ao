@@ -246,25 +246,22 @@ def _extract_docx_text(path: Path) -> str:
 
 def _extract_pdf_text_limited(path: Path, max_pages: int = 30) -> str:
     """Texte des max_pages premières pages d'un PDF, pour la détection des lots : le
-    lecteur du dépôt (pypdfium2, services/pdf_lecture), pages non vides jointes."""
+    lecteur du dépôt (pypdfium2, services/pdf_lecture), pages non vides jointes.
+
+    Fichier DÉPOSÉ : lu dans le processus pdfium (plafond de mémoire, délai), pas dans l'API. Si ce
+    travail échoue (délai, mémoire, plantage, attente), le texte est vide : on ne relit jamais dans
+    l'API un PDF qui vient de faire tomber le processus. PDFium ne lit pas le fichier : repli pypdf,
+    lui aussi dans le processus (PyPDF2 est EOL — S3.6)."""
+    from services import extraction_processus
+    from services.pdfium_processus import TravailPdfiumEchoue
     try:
-        from services import pdf_lecture
-        return "\n".join(t for t in pdf_lecture.lire_pages(path, max_pages=max_pages) if t)
-    except Exception:
-        # Repli pypdf si PDFium ne lit pas le fichier (PyPDF2 est EOL — S3.6).
-        try:
-            import pypdf
-            with open(str(path), 'rb') as f:
-                reader = pypdf.PdfReader(f)
-                parts = []
-                for i in range(min(len(reader.pages), max_pages)):
-                    t = reader.pages[i].extract_text()
-                    if t:
-                        parts.append(t)
-                return "\n".join(parts)
-        except Exception as e2:
-            logger.debug(f"PDF extraction failed for {path.name}: {e2}")
-            return ""
+        return "\n".join(t for t in extraction_processus.pages_pdf(path, max_pages) if t)
+    except TravailPdfiumEchoue as e:
+        logger.warning("Lecture des premières pages interrompue (%s)", e.raison)
+        return ""
+    except Exception as e2:
+        logger.debug("PDF extraction failed for %s: %s", path.name, e2)
+        return ""
 
 
 # ─── ODS support (AMÉLIORATION 1) ─────────────────────────────────────────────

@@ -1,14 +1,15 @@
-import subprocess
-import tempfile
-import shutil
-from pathlib import Path
 import logging
+from pathlib import Path
+
+from services import libreoffice_isole
+from services.libreoffice_isole import PdfConversionError
 
 logger = logging.getLogger(__name__)
 
 
 class PdfConverter:
-    """Convertit les fichiers DOCX, XLSX, DOC, XLS en PDF via LibreOffice."""
+    """Convertit les fichiers DOCX, XLSX, DOC, XLS en PDF via LibreOffice (services/libreoffice_isole.py :
+    profil jetable, environnement minimal, une conversion à la fois, délai, plafond de mémoire, sans réseau)."""
 
     CONVERTIBLE_EXTENSIONS = {'.docx', '.doc', '.xlsx', '.xls', '.odt', '.ods', '.pptx', '.ppt'}
 
@@ -20,74 +21,40 @@ class PdfConverter:
     @staticmethod
     def convert_to_pdf(source_path: Path, output_dir: Path) -> Path | None:
         """
-        Convertit un fichier en PDF via LibreOffice.
-        Retourne le Path du PDF généré, ou None si échec.
+        Convertit un fichier déposé en PDF (``<nom sans extension>.pdf`` dans ``output_dir``).
+        Retourne le Path du PDF généré, ou None si échec (cause journalisée, jamais de contenu).
+        Travail de fond : attend sa place jusqu'à ``SYNORIX_LIBREOFFICE_ATTENTE_DEPOT_S``.
         """
+        source_path = Path(source_path)
         if not source_path.exists():
-            logger.error(f"Fichier source introuvable: {source_path}")
+            logger.error("Fichier source introuvable pour la conversion PDF")
             return None
-
-        output_dir.mkdir(parents=True, exist_ok=True)
-
         try:
-            with tempfile.TemporaryDirectory() as tmpdir:
-                tmp_source = Path(tmpdir) / source_path.name
-                shutil.copy2(source_path, tmp_source)
-
-                result = subprocess.run(
-                    [
-                        'libreoffice',
-                        '--headless',
-                        '--norestore',
-                        '--convert-to', 'pdf',
-                        '--outdir', str(output_dir),
-                        str(tmp_source),
-                    ],
-                    capture_output=True,
-                    text=True,
-                    timeout=120,
-                )
-
-                if result.returncode != 0:
-                    logger.error(f"LibreOffice conversion failed: {result.stderr}")
-                    return None
-
-                pdf_name = tmp_source.stem + '.pdf'
-                pdf_path = output_dir / pdf_name
-
-                if pdf_path.exists():
-                    logger.info(f"PDF généré: {pdf_path} ({pdf_path.stat().st_size} bytes)")
-                    return pdf_path
-
-                # Fallback : chercher par stem dans output_dir
-                for f in output_dir.glob("*.pdf"):
-                    if f.stem == source_path.stem or f.stem == tmp_source.stem:
-                        logger.info(f"PDF trouvé: {f}")
-                        return f
-
-                logger.error(f"PDF introuvable après conversion dans {output_dir}")
-                return None
-
-        except subprocess.TimeoutExpired:
-            logger.error(f"Timeout lors de la conversion de {source_path}")
+            taille = source_path.stat().st_size
+            return libreoffice_isole.convertir_en_pdf(
+                source_path, source_path.suffix,
+                Path(output_dir) / (source_path.stem + ".pdf"),
+                delai=libreoffice_isole.delai_depot_s(taille),
+                attente=libreoffice_isole.attente_depot_s(),
+            )
+        except PdfConversionError as e:
+            logger.error("Conversion PDF d'un fichier déposé impossible (%s)", e.raison)
             return None
-        except Exception as e:
-            logger.error(f"Erreur conversion PDF: {e}")
+        except Exception as e:  # noqa: BLE001 — un travail de fond ne lève jamais
+            logger.error("Erreur conversion PDF : %s", type(e).__name__)
             return None
 
     @staticmethod
     def convert_bytes_to_pdf(content: bytes, filename: str, output_dir: Path) -> Path | None:
-        """
-        Convertit des bytes en PDF.
-        Écrit le fichier temporairement, convertit, retourne le Path du PDF.
-        """
-        output_dir.mkdir(parents=True, exist_ok=True)
-
-        with tempfile.NamedTemporaryFile(suffix=Path(filename).suffix, delete=False) as tmp:
-            tmp.write(content)
-            tmp_path = Path(tmp.name)
-
+        """Convertit des octets en PDF ; retourne le Path du PDF (``<nom>.pdf``), ou None."""
         try:
-            return PdfConverter.convert_to_pdf(tmp_path, output_dir)
-        finally:
-            tmp_path.unlink(missing_ok=True)
+            pdf = libreoffice_isole.convertir_en_pdf(
+                content, Path(filename).suffix or ".docx",
+                Path(output_dir) / (Path(filename).stem + ".pdf"),
+                delai=libreoffice_isole.delai_depot_s(len(content)),
+                attente=libreoffice_isole.attente_depot_s(),
+            )
+            return pdf
+        except PdfConversionError as e:
+            logger.error("Conversion PDF impossible (%s)", e.raison)
+            return None

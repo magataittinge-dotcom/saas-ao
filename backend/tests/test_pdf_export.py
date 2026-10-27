@@ -79,9 +79,10 @@ def test_docx_to_pdf_preserves_cover_and_organigramme():
 
 
 def test_soffice_absent_raises_clear_error(monkeypatch):
+    import services.libreoffice_isole as lo
     import services.pdf_export as pdf_mod
 
-    monkeypatch.setattr(pdf_mod, "_soffice_binary", lambda: None)
+    monkeypatch.setattr(lo, "_soffice_binary", lambda: None)
     with pytest.raises(pdf_mod.PdfConversionError) as exc:
         pdf_mod.docx_to_pdf(b"PK fake docx")
     assert "LibreOffice" in str(exc.value)
@@ -109,9 +110,9 @@ def test_export_pdf_endpoint(client, db_session, test_org):
 
 
 def test_export_pdf_503_when_soffice_missing(client, db_session, test_org, monkeypatch):
-    import services.pdf_export as pdf_mod
+    import services.libreoffice_isole as lo
 
-    monkeypatch.setattr(pdf_mod, "_soffice_binary", lambda: None)
+    monkeypatch.setattr(lo, "_soffice_binary", lambda: None)
     _setup_memoire(db_session, test_org.id, pid="proj-pdf2")
 
     resp = client.get("/api/projects/proj-pdf2/memoire/export-pdf")

@@ -739,8 +739,11 @@ def _pages_normalisees(chemin: str) -> List[str]:
         _ranger_pages(cle, (True, pages))
         return pages
     try:
-        # le lecteur de l'extraction au dépôt : mêmes pages que celles mises en cache
-        pages = [_normalize(p) for p in pdf_lecture.lire_pages(chemin)]
+        # le lecteur de l'extraction au dépôt : mêmes pages que celles mises en cache. Fichier déposé :
+        # lu dans le processus pdfium (plafond, délai) ; en cas d'échec du travail, aucune page (jamais
+        # de relecture dans l'API).
+        from services import extraction_processus
+        pages = [_normalize(p) for p in extraction_processus.pages_pdf(chemin)]
     except Exception:
         return []
     _ranger_pages(cle, (True, pages))

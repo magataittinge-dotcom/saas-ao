@@ -29,6 +29,11 @@ def mourir():
     os.kill(os.getpid(), signal.SIGKILL)
 
 
+def abandonner():
+    """Arrêt natif par SIGABRT : ce que fait PDFium quand malloc échoue sous RLIMIT_AS."""
+    os.abort()
+
+
 def allouer(mo):
     """Alloue ``mo`` Mo : MemoryError si le plafond RLIMIT_AS est posé plus bas."""
     return len(bytearray(mo * 1024 * 1024))
@@ -46,3 +51,22 @@ def compter(n):
 
 def non_transmissible():
     return lambda: 1
+
+
+def environnement():
+    """L'environnement tel que le voit l'enfant."""
+    return dict(os.environ)
+
+
+def dumpable():
+    import ctypes
+    return ctypes.CDLL(None).prctl(3, 0, 0, 0, 0)       # PR_GET_DUMPABLE
+
+
+def lire_environ_du_parent():
+    """Ce que verrait un code hostile qui s'exécuterait dans l'enfant : l'environ de l'API."""
+    try:
+        with open(f"/proc/{os.getppid()}/environ", "rb") as f:
+            return f.read().decode(errors="replace")
+    except OSError as e:
+        return "refuse:" + type(e).__name__

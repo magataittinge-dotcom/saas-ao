@@ -24,6 +24,9 @@ for _suffix in ("", "-wal", "-shm", "-journal"):
     except FileNotFoundError:
         pass
 os.environ["DATABASE_URL"] = f"sqlite:///{_TEST_DB}"
+# LibreOffice : verrou et dossiers jetables dans le dossier temporaire de la session de test
+# (jamais backend/cache/libreoffice).
+os.environ.setdefault("SYNORIX_LIBREOFFICE_DIR", str(Path(tempfile.gettempdir()) / "synorix_libreoffice_tests"))
 os.environ.setdefault("SECRET_KEY", "test-secret-key")
 os.environ.setdefault("ANTHROPIC_API_KEY", "test-anthropic-key")
 os.environ.setdefault("FRONTEND_URL", "http://localhost:3000")

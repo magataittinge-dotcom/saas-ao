@@ -86,6 +86,49 @@ def extraire_en_processus(
     )
 
 
+def lire_pages_pdf(chemin: str, max_pages: Optional[int]) -> list:
+    """Exécuté dans le processus pdfium : textes des pages d'un PDF (toutes, ou les ``max_pages``
+    premières). PDFium d'abord ; pour les premières pages seulement, ``pypdf`` en repli si PDFium
+    ne lit pas le fichier (décompression plafonnée à 75 Mo par pypdf >= 6, et le processus a de
+    toute façon son plafond de mémoire). Lève ``PdfIllisible`` sans repli possible."""
+    from services import pdf_lecture
+    try:
+        if max_pages is None:
+            return list(pdf_lecture.lire_pages(chemin))
+        return list(pdf_lecture.lire_pages(chemin, max_pages=max_pages))
+    except Exception:
+        if max_pages is None:
+            raise
+    import pypdf
+    with open(chemin, "rb") as f:
+        lecteur = pypdf.PdfReader(f)
+        pages = []
+        for i in range(min(len(lecteur.pages), max_pages)):
+            pages.append(lecteur.pages[i].extract_text() or "")
+        return pages
+
+
+def pages_pdf(chemin, max_pages: Optional[int] = None) -> list:
+    """Textes des pages d'un PDF DÉPOSÉ, lus hors de l'API (``lire_pages_pdf`` dans le processus
+    pdfium : plafond de mémoire, délai). Lève ``pdfium_processus.TravailPdfiumEchoue`` (délai,
+    mémoire, plantage, attente) : l'appelant ne relit JAMAIS le fichier dans l'API.
+    ``SYNORIX_EXTRACTION_PROCESSUS=0`` : lecture directe (diagnostic, tests)."""
+    if not actif():
+        return lire_pages_pdf(str(chemin), max_pages)
+    return pdfium_processus.executer(
+        lire_pages_pdf, str(chemin), max_pages,
+        delai_s=delai_extraction_s(str(chemin)),
+        attente_s=pdfium_processus.attente_extraction_s())
+
+
+def texte_pdf(chemin, nom: str) -> str:
+    """Texte complet d'un PDF déposé (import d'un mémoire existant), lu dans le processus pdfium."""
+    return pdfium_processus.executer(
+        extraire_fichier, str(chemin), nom, "",
+        delai_s=delai_extraction_s(str(chemin)),
+        attente_s=pdfium_processus.attente_interactive_s())[0]
+
+
 def avertissement_travail(nom: str, echec: "pdfium_processus.TravailPdfiumEchoue") -> str:
     """Avertissement de la pièce quand sa lecture a été interrompue (affiché à côté du fichier)."""
     if echec.raison == "attente":

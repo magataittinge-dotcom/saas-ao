@@ -236,25 +236,32 @@ _MOTS_VIDES = frozenset({
 
 # Sigles courants des lots du BTP (décision de Mohamed du 27/10) : la formule
 # entière et son sigle deviennent le même mot, dans le titre de l'article comme
-# dans la désignation du lot (l'équivalence joue donc dans les deux sens). Une
-# formule partielle ne compte pas : « chauffage ventilation » n'est pas « CVC »
-# (climatisation absente). Motifs bornés, sans quantificateur imbriqué.
+# dans la désignation du lot (l'équivalence joue donc dans les deux sens).
+# « Chauffage ventilation » seul vaut CVC (décision du 27/10, bloc 6) : c'est
+# l'intitulé de lot courant, la climatisation est facultative. Les autres
+# formules partielles ne comptent pas. Motifs bornés, sans quantificateur imbriqué.
 # Sources (expansion du sigle ; aucun glossaire FFB/CAPEB/AQC/OPPBTP ne les
 # donne tous, voir le commit) :
 #   VRD : France Compétences, fiche RNCP 38080 « TP - Maçon en voirie et
 #         réseaux divers » (« maçon VRD ») ; AQC, fiche Interfaces A03 « Lot VRD ».
 #   CVC : OQLF, Grand dictionnaire terminologique (2014), « système de
-#         chauffage, de ventilation et de climatisation » → « système CVC ».
+#         chauffage, de ventilation et de climatisation » → « système CVC » ;
+#         marche-public.fr, « Exemples d'allotissement », lot « plomberie – CVC ».
 #   TCE : Légifrance, avis sur les index du bâtiment (JORFTEXT000044213303),
 #         index BT01 « Tous corps d'état » ; AQC, fiche Interfaces A03 « lots TCE ».
-#   CFO / CFA : FFB, rubrique « Électricité – Courant fort – Courant faible »
-#         pour les deux familles de travaux ; les sigles CFO et CFA eux-mêmes ne
-#         figurent que dans l'usage du métier (aucun texte d'organisme trouvé).
-#   GO  : « gros œuvre » (CSTB, guide « Gros œuvre ») ; le sigle « GO » lui-même
-#         vient de la décision de Mohamed et des DCE (aucun glossaire trouvé).
+#   CFO / CFA / GO : mots du métier, gardés (décision de Mohamed du 27/10) : ce
+#         sont les intitulés qu'on lit dans de vrais allotissements, pas des règles.
+#         Source : marche-public.fr, « Exemples d'allotissement de marché public »
+#         https://www.marche-public.fr/Marches-publics/Definitions/Entrees/Allotissement-exemples.htm
+#         (consultée le 27/10/2026) : exemple 3, lot « Electricité CFO-Cfa-SSI » ;
+#         exemple 2, lot « plomberie – CVC » ; lots « Gros-Œuvre » / « Gros oeuvre »
+#         aux exemples 1 à 4. Le sigle « GO » seul n'y figure pas : il vient des DCE
+#         eux-mêmes (désignations de lots). Courant fort / courant
+#         faible : FFB, rubrique « Électricité – Courant fort – Courant faible ».
+#         Gros œuvre : CSTB, guide « Gros œuvre ».
 _SIGLES = (
     (re.compile(r"\bgros oeuvre\b"), "go"),
-    (re.compile(r"\bchauffage ventilation (?:et )?climatisation\b"), "cvc"),
+    (re.compile(r"\bchauffage ventilation(?: (?:et )?climatisation)?\b"), "cvc"),
     (re.compile(r"\bvoiries? (?:et )?reseaux? divers\b"), "vrd"),
     (re.compile(r"\bcourants? forts?\b"), "cfo"),
     (re.compile(r"\bcourants? faibles?\b"), "cfa"),

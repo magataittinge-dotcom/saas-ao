@@ -9,7 +9,9 @@ from models.user import User
 from models.memoire_config import MemoireConfig
 from schemas.memoire_config import MemoireConfigResponse, MemoireConfigUpdate
 from routers.auth import get_auth_user
+from services import extraction_processus
 from services.document_processor import DocumentProcessor
+from services.pdfium_processus import TravailPdfiumEchoue
 from services.ai.memoire_importer import MemoireImporter
 from services.upload_validation import RegleDepot, recevoir_fichier
 
@@ -158,6 +160,23 @@ _IMPORT_EXTENSIONS = frozenset({".docx", ".pdf"})
 _IMPORT_MAX_SIZE = 50 * 1024 * 1024
 
 
+def _texte_pdf_importe(content: bytes, filename: str) -> str:
+    """Texte d'un PDF d'import lu dans le processus pdfium ; un échec du travail devient un 422/503
+    en clair (le fichier n'est jamais relu dans l'API)."""
+    import tempfile
+    with tempfile.NamedTemporaryFile(suffix=".pdf") as tmp:
+        tmp.write(content)
+        tmp.flush()
+        try:
+            return extraction_processus.texte_pdf(tmp.name, filename)
+        except TravailPdfiumEchoue as e:
+            if e.raison == "attente":
+                raise HTTPException(status_code=503, detail="Le serveur lit d'autres documents. Réessayez dans quelques instants.",
+                                    headers={"Retry-After": "5"}) from None
+            raise HTTPException(status_code=422, detail="Ce PDF n'a pas pu être lu (fichier très volumineux ou non standard). "
+                                                       "Le format Word est accepté.") from None
+
+
 @router.post("/import")
 async def import_memoire(
     request: Request,
@@ -171,8 +190,12 @@ async def import_memoire(
     with await recevoir_fichier(request, file, regle) as recu:
         content = await recu.octets()
     processor = DocumentProcessor()
-    # R8 — extraction docx/pdf (PyMuPDF/python-docx) hors event-loop (WSL2).
-    text, _ = await asyncio.to_thread(processor.extract, content, filename)
+    # R8 — extraction docx/pdf hors event-loop (WSL2). Un PDF déposé est lu dans le processus pdfium
+    # (plafond de mémoire, délai), pas dans l'API.
+    if filename.lower().endswith(".pdf") and extraction_processus.actif():
+        text = await asyncio.to_thread(_texte_pdf_importe, content, filename)
+    else:
+        text, _ = await asyncio.to_thread(processor.extract, content, filename)
 
     if not text or len(text.strip()) < 100:
         raise HTTPException(status_code=422, detail="Impossible d'extraire le texte du document")
