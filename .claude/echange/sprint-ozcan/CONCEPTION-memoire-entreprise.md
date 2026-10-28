@@ -1,6 +1,6 @@
 # Cerveau de l'entreprise — conception (bloc 7, nuit du 27 au 28/10/2026)
 
-Aucun code. Aucun appel payant. Aucune nouvelle recherche web : les concurrents viennent de `nuit-25-10/C-autogenai-et-concurrents.md` et `D-memoire-technique.md`. Les chiffres de coût sont des **estimations sur les jetons** (§5), à calibrer à la première tranche du bloc 8. Ce document ne décide rien : il attend ta validation (questions en §9).
+Aucun code. Aucun appel payant. Aucune nouvelle recherche web : les concurrents viennent de `nuit-25-10/C-autogenai-et-concurrents.md` et `D-memoire-technique.md`. Les chiffres de coût sont des **estimations sur les jetons** (§5), à calibrer à la première tranche du bloc 8. Les 12 questions du §9 sont **tranchées** (réponses de Mohamed, 28/10/2026) ; le §9 consigne les décisions.
 
 ## 1. En bref
 
@@ -9,7 +9,7 @@ Aucun code. Aucun appel payant. Aucune nouvelle recherche web : les concurrents 
 - **Décision d'architecture principale** : les tables actuelles (`team_members`, `references`, `documents`, champs de `organizations`) **restent la vérité** lue par le générateur de mémoire. Le graphe s'ajoute à côté, avec un pont vers ces lignes. Pas de bascule générale.
 - Les paragraphes des anciens mémoires deviennent une **bibliothèque** : le mémoire part d'eux, dit d'où vient chaque partie, et propose « Votre version / Version Synorix ».
 - **Coût d'extraction** : environ 0,08 € pour un ancien mémoire de 40 pages, 0,005 € pour un CV, **environ 0,47 € pour l'import complet de la maquette** (31 documents), 2,8 € pour dix ans d'historique (Haiku 4.5). Négligeable face à 349 €/mois.
-- **RGPD** : le patron est responsable de traitement, Synorix sous-traitant. Trois points à régler avant tout CV réel : Voyage AI n'est pas dans la liste publiée des sous-traitants, la politique annonce 30 jours de sauvegarde alors que le script en garde environ 6 mois, et il manque un contrat de sous-traitance (§6).
+- **RGPD** : le patron est responsable de traitement, Synorix sous-traitant. Voyage AI est ajouté à la politique de confidentialité et la rétention des sauvegardes y est alignée sur 6 mois (fait le 28/10). Restent : le contrat de sous-traitance (T9) et l'avenant Anthropic (action de Mohamed) (§6).
 - **Graphe au téléphone** : 300 à 600 nœuds, WebGL 1 sans bibliothèque (le module du visage coûte 0,39 ms par image), positions calculées sur le serveur (§7).
 - **Bloc 8** : 10 tranches, environ **31 jours-agent** (§8). Le cœur utile (import, vérification, suppression) en fait environ 16.
 
@@ -35,8 +35,8 @@ Les 10 captures ont toutes été regardées. Reprendre le comportement et la str
 
 | # | Maquette | Conception | Pourquoi |
 |---|---|---|---|
-| 1 | Cerveau en points, forme imposée | **Question 1.** Ma recommandation : graphe à forme libre, groupes posés sur les six ancres de ton visage, visage en filigrane | Une forme de cerveau ou de visage impose des positions et fait perdre la lisibilité dès 300 nœuds. |
-| 2 | « Cerveau » remplace « Mon entreprise » et « Mes références » dans la barre latérale | Il remplace aussi « Bibliothèque ». « Coffre-fort » reste | **Question 2** : la règle de barre latérale de `CLAUDE.md` et du PRD v3.0 (MON CAPITAL : Mon entreprise, Mes références, Coffre-fort, Bibliothèque) est à modifier. |
+| 1 | Cerveau en points, forme imposée | **Décidé (Q1)** : graphe à forme libre, groupes posés sur les six ancres de ton visage, visage en filigrane | Une forme de cerveau ou de visage impose des positions et fait perdre la lisibilité dès 300 nœuds. |
+| 2 | « Cerveau » remplace « Mon entreprise » et « Mes références » dans la barre latérale | Il remplace aussi « Bibliothèque ». « Coffre-fort » reste | **Décidé (Q2)** : `CLAUDE.md` et le PRD v3.0 (MON CAPITAL : Mon entreprise, Mes références, Coffre-fort, Bibliothèque) sont mis à jour ; anciennes adresses redirigées. |
 | 3 | « 0 parties sur 6 vérifiées » | « 6 parties à vérifier » | Même défaut que le « 0/N » de l'export, que tu as interdit le 25/10. Formulation positive. |
 | 4 | « Tout est juste » sur chaque partie | Gardé, mais **sans effet sur les faits en contradiction ni sur les faits mal ancrés** : ceux-là se traitent un par un | Un bouton qui valide 126 paragraphes sans lecture est le piège du « Couvert automatique » que tu as refusé. |
 | 5 | « Vos mots 71 % » | Défini : part des phrases de la version retenue **identiques à une phrase de la bibliothèque** (comparaison de texte, pas d'IA) | Un chiffre affiché doit se recalculer. |
@@ -50,7 +50,7 @@ Les 10 captures ont toutes été regardées. Reprendre le comportement et la str
 **1. Dépôt en vrac.** PDF, Word, Excel, photos, dossier entier. Contrôles existants : type et taille, octets magiques, garde anti-zip-bomb. Chaque fichier entre dans le coffre-fort (hors webroot, URL signée) et reçoit une empreinte pour éviter les doublons.
 
 **2. Synorix lit et range** (tâche Celery détachée, avancement par `progress_bus`, reprise après coupure par la réconciliation existante). Dans l'ordre :
-1. **Texte sans IA** : pdfium isolé, python-docx, tableurs (garde existante). Les scans passent par un OCR local (question 4).
+1. **Texte sans IA** : pdfium isolé, python-docx, tableurs (garde existante). Les scans passent par un OCR local (Q4 : comparatif RapidOCR / Tesseract d'abord, T2).
 2. **Type du document** sans IA (nom, mots-clés, `vault_classifier`) ; Haiku seulement pour les « autre ».
 3. **Masquage RGPD avant tout envoi** : numéro de sécurité sociale, IBAN, e-mails, téléphones, dates de naissance remplacés par des étiquettes (§6).
 4. **Extraction** par type de document, schéma Pydantic strict, Haiku 4.5. Garde déterministe après le modèle : toute valeur dont les termes ne se retrouvent pas **mot pour mot** dans le texte source est écartée (même méthode que `profile_structurer.py`). Le texte exact et la page sont ancrés avec `excerpt_anchor`.
@@ -91,7 +91,7 @@ Constats sur l'existant :
 | `kb_import_file` | un fichier du dépôt | `import_id`, `document_id` → `documents` (coffre-fort), type détecté, pages, état, empreinte |
 | `kb_node` | un élément du graphe | `org_id`, `kind` (personne, chantier, client, technique, materiel, qualification, ao), libellé, libellé normalisé, `attrs` JSONB validé par Pydantic selon `kind`, `statut` (proposé / validé / rejeté / archivé), `fusionne_dans`, **pont `ref_table` + `ref_id`**, position `x`, `y`, `fts` |
 | `kb_edge` | un lien | `org_id`, `src_id`, `dst_id`, `rel` parmi une liste fermée (travaille sur, a pour client, emploie, détient, prouvé par, cité dans…), `origine` (import / saisie / ao) |
-| `kb_fact` | **la source de chaque fait** | `org_id`, `node_id`, `champ`, `valeur` JSONB, `valeur_norm`, `statut` (proposé / validé / contesté / rejeté), `source_type` (document / saisie / ao_retouche / existant), `document_id`, `page`, `debut`, `fin`, `project_id` |
+| `kb_fact` | **la source de chaque fait** | `org_id`, `node_id`, `champ`, `valeur` JSONB, `valeur_norm`, `statut` (proposé / validé / contesté / rejeté), `source_type` (document / saisie / ao_retouche / existant), `document_id`, `page`, `debut`, `fin`, `project_id`, `source_supprimee_le` |
 | `kb_paragraph` | un paragraphe de la bibliothèque | `org_id`, texte, empreinte, `theme_node_id`, origine, `document_id` + section ou `project_id`, `remplace_id` (version précédente), `embedding vector(1024)`, `fts` |
 | `kb_paragraph_use` | où il a servi | `paragraph_id`, `project_id`, section, choix (votre version / Synorix / mélange), date |
 
@@ -100,7 +100,12 @@ Le style (`kb_style`) est un JSONB sur l'entreprise : une ligne par entreprise, 
 ### Règles qui tiennent le modèle
 
 - **Isolation entre entreprises au niveau de la base** : `kb_node` a une contrainte unique `(org_id, id)`, et `kb_edge`, `kb_fact`, `kb_paragraph` y pointent par clé étrangère composite `(org_id, …)`. Un lien d'une entreprise vers un nœud d'une autre est **impossible**, pas seulement testé. Tests cross-org systématiques sur chaque route (règle du projet).
-- **Aucun fait sans source** : contrainte `CHECK` : `source_type = 'saisie'` ou `document_id` renseigné. Pour un CV, on stocke page et position, pas l'extrait : la vue relit le document au moment de l'affichage, pour ne pas dupliquer de données personnelles.
+- **Aucun fait sans source** : contrainte `CHECK` par type de source (corrigée le 28/10 : la version « saisie ou `document_id` » refusait trois cas légitimes) :
+  - `document` : `document_id` renseigné **ou** `source_supprimee_le` renseigné (source supprimée : `document_id` est alors NULL, la mention « source supprimée le … » s'affiche) ;
+  - `saisie` : aucune exigence de document ;
+  - `existant` (reprise 0028) : `ref_table` + `ref_id` du nœud renseignés (la ligne d'origine de `team_members`, `references` ou `documents` est la source) ;
+  - `ao_retouche` : `project_id` renseigné, `document_id` NULL accepté.
+  Dans tous les cas, `source_supprimee_le` n'est jamais renseigné sans que `document_id` soit NULL. Le fait garde sa valeur validée quand la source disparaît (suppression du CV d'origine, Q6) ; Pour un CV, on stocke page et position, pas l'extrait : la vue relit le document au moment de l'affichage, pour ne pas dupliquer de données personnelles.
 - **Trancher une fois** : index unique partiel — un seul fait `validé` par `(node_id, champ)` pour les champs à valeur unique. Les valeurs refusées restent (`rejeté`) pour ne pas être reproposées au prochain import.
 - **Paragraphes hors graphe** : un thème (« Gestion des déchets · 9 paragraphes ») est un nœud ; les paragraphes sont des lignes de `kb_paragraph`. Le graphe reste de 300 à 600 nœuds même avec 3 000 paragraphes. La maquette (333 éléments, 740 liens pour 31 documents) donne environ 11 nœuds et 24 liens par document.
 - **Embeddings** : seulement sur les paragraphes validés, et **les noms de personnes remplacés par une étiquette avant l'envoi** (question 5).
@@ -118,20 +123,20 @@ La reprise de 0028 évite le « Cerveau vide » pour les comptes déjà actifs e
 
 ## 5. Coût d'extraction (estimé, aucun appel payant)
 
-**Hypothèses** : 1 page ≈ 800 jetons (français, marge comprise) ; deux passes de lecture sur un ancien mémoire (classement des paragraphes, puis éléments cités) ; sortie en JSON ; réflexion coupée. Tarifs lus dans le dépôt : Haiku 4.5 à 1 $ / 5 $ le million (`profile_structurer.py`), Sonnet 4.6 à 3 $ / 15 $ (`CLAUDE.md`). **1 $ = 0,92 €** (hypothèse). Marge d'erreur : ±30 %.
+**Hypothèses** : 1 page ≈ 800 jetons (français, marge comprise) ; deux passes de lecture sur un ancien mémoire (classement des paragraphes, puis éléments cités) ; sortie en JSON ; réflexion coupée. Tarifs lus dans le dépôt : Haiku 4.5 à 1 $ / 5 $ le million (`profile_structurer.py`), Sonnet 4.6 à 3 $ / 15 $ (`CLAUDE.md`). **Sonnet 5.5 et Haiku 5.5 : aucun tarif dans le dépôt, coûts « à vérifier »** ; à relever sur la grille officielle avant le bloc 8. **1 $ = 0,92 €** (hypothèse). Marge d'erreur : ±30 %.
 
-| Document | Entrée / sortie (jetons) | Haiku 4.5 | Sonnet 4.6 |
-|---|---|---|---|
-| Ancien mémoire, 40 pages | 64 800 / 4 000 | **0,078 €** | 0,234 € |
-| Moyens humains et matériels, 6 pages | 5 600 / 3 000 | 0,019 € | 0,057 € |
-| CV, 2 pages | 2 400 / 500 | **0,005 €** | 0,014 € |
-| Liste de références, 38 lignes | 3 800 / 2 600 | 0,016 € | 0,046 € |
-| Attestation ou Kbis, 2 pages | 2 400 / 250 | 0,003 € | 0,010 € |
-| Page scannée lue par vision Haiku (repli) | 1 600 / 700 | 0,005 € | — |
+| Document | Entrée / sortie (jetons) | Haiku 4.5 | Sonnet 4.6 | Sonnet 5.5 | Haiku 5.5 |
+|---|---|---|---|---|---|
+| Ancien mémoire, 40 pages | 64 800 / 4 000 | **0,078 €** | 0,234 € | à vérifier | à vérifier |
+| Moyens humains et matériels, 6 pages | 5 600 / 3 000 | 0,019 € | 0,057 € | à vérifier | à vérifier |
+| CV, 2 pages | 2 400 / 500 | **0,005 €** | 0,014 € | à vérifier | à vérifier |
+| Liste de références, 38 lignes | 3 800 / 2 600 | 0,016 € | 0,046 € | à vérifier | à vérifier |
+| Attestation ou Kbis, 2 pages | 2 400 / 250 | 0,003 € | 0,010 € | à vérifier | à vérifier |
+| Page scannée lue par vision Haiku (repli) | 1 600 / 700 | 0,005 € | — | à vérifier | à vérifier |
 
 **Import complet de la maquette** (4 mémoires de 40 pages, 1 moyens humains, 14 CV, 1 liste, 6 attestations, 5 autres ; 330 000 jetons en entrée, 33 000 en sortie, 15 000 de rapprochement) :
 - **Haiku 4.5 : 0,47 €** ; avec l'API par lot (rabais de 50 %, délai plus long) : 0,24 € ;
-- Sonnet 4.6 : 1,41 € ;
+- Sonnet 4.6 : 1,41 € ; Sonnet 5.5 et Haiku 5.5 : à vérifier ;
 - embeddings Voyage des paragraphes validés : environ 0,005 € (tarif à confirmer, ordre de grandeur 0,18 $ le million de jetons).
 
 **Gros import** (dix ans : 30 mémoires, 30 CV, 60 pièces) : 2,8 € en Haiku, 8,4 € en Sonnet.
@@ -139,7 +144,7 @@ La reprise de 0028 évite le « Cerveau vide » pour les comptes déjà actifs e
 Conséquences :
 - **L'import ne consomme aucune unité de quota** (1 lot = 1 mémoire = 1 unité). Il faut seulement un plafond contre l'abus : 200 documents et 1 500 pages par dépôt, et un budget d'environ 5 € par mois et par entreprise (question 9).
 - **Haiku par défaut** : la garde « mot pour mot » compense sa moindre finesse ; Sonnet seulement en reprise d'un document dont la garde a écarté trop de valeurs.
-- **Étalonnage au bloc 8** : le coût réel est enregistré à chaque appel, comme `profile_structurer.py` le fait déjà. Un essai sur 5 documents inventés, moins de 1 € (question 11).
+- **Étalonnage au bloc 8** : le coût réel est enregistré à chaque appel, comme `profile_structurer.py` le fait déjà. Un essai sur 5 documents inventés, **1 € au plus, coût réel enregistré, sur Haiku 4.5 ET Haiku 5.5** (Q11).
 
 ## 6. RGPD des CV et des salariés
 
@@ -151,7 +156,7 @@ Conséquences :
 - Liste fermée de ce qui est extrait d'un CV : nom, rôle, années d'expérience, chantiers cités, habilitations, diplômes. **Jamais** : date de naissance, adresse, téléphone, e-mail personnel, situation familiale, photo, numéro de sécurité sociale, IBAN, aptitude médicale (donnée de santé, art. 9).
 - **Masquage avant envoi à l'IA**, par expressions régulières : ces champs ne quittent pas le serveur.
 - Pas de reconnaissance de visage, ni sur les CV ni sur les photos de chantier.
-- Par défaut, **le CV d'origine est supprimé après validation** ; seuls les faits validés restent, avec la mention « CV supprimé le … » (question 6).
+- Par défaut, **le CV d'origine est supprimé après validation** (case « garder dans le coffre-fort », Q6) ; seuls les faits validés restent, avec la mention « source supprimée le … » (`kb_fact.source_supprimee_le`, §4).
 
 **Suppression (art. 17).**
 - « Supprimer cette personne » efface le nœud, ses faits, ses liens, et les extraits des paragraphes qui la citent sont marqués à revoir.
@@ -161,12 +166,12 @@ Conséquences :
 - Le journal d'audit enregistre l'action et l'identifiant, **jamais le nom** (règle : logs sans données personnelles).
 
 **Sous-traitants et transferts (art. 28, 44-46).**
-- La politique de confidentialité publiée liste Hostinger (France), Stripe (Irlande), Anthropic (États-Unis, DPF) et Clerk (États-Unis, DPF). **Voyage AI n'y figure pas.** Aujourd'hui Voyage ne reçoit que des textes réglementaires publics, donc rien de personnel ; avec des paragraphes d'entreprise, il en recevrait. Deux remèdes cumulables : remplacer les noms par des étiquettes avant l'embedding, et ajouter Voyage à la liste (question 5).
+- La politique de confidentialité publiée liste Hostinger (France), Stripe (Irlande), Anthropic (États-Unis, DPF) et Clerk (États-Unis, DPF). **Voyage AI n'y figure pas.** Aujourd'hui Voyage ne reçoit que des textes réglementaires publics, donc rien de personnel ; avec des paragraphes d'entreprise, il en recevrait. **Décidé (Q5)** : noms remplacés par des étiquettes avant l'embedding ; Voyage ajouté à la politique (fait le 28/10, texte seulement) ; reste le contrat de sous-traitance (T9).
 - Anthropic reçoit les textes extraits (masqués). La politique dit que l'API n'entraîne pas de modèles ; **action pour toi** : signer l'avenant de traitement des données d'Anthropic et vérifier la durée de conservation côté API, que je n'ai pas pu confirmer.
 
 **Sécurité (art. 32).** Coffre-fort hors webroot, URLs signées de courte durée, isolation entre entreprises testée, chiffrement des sauvegardes (déjà en place).
 
-**Écart à corriger.** La politique annonce « sauvegardes quotidiennes chiffrées, rétention 30 jours ». Le script `deploy/sauvegarde/synorix-sauvegarde.sh` garde 7 jours, 4 semaines et 6 mois (`restic forget --keep-daily 7 --keep-weekly 4 --keep-monthly 6`). Une personne supprimée reste donc dans les sauvegardes jusqu'à six mois. Soit on aligne le texte (« jusqu'à 6 mois, jamais restaurées sauf sinistre »), soit on raccourcit le script (question 10).
+**Écart à corriger.** La politique annonce « sauvegardes quotidiennes chiffrées, rétention 30 jours ». Le script `deploy/sauvegarde/synorix-sauvegarde.sh` garde 7 jours, 4 semaines et 6 mois (`restic forget --keep-daily 7 --keep-weekly 4 --keep-monthly 6`). Une personne supprimée reste donc dans les sauvegardes jusqu'à six mois. **Décidé (Q10)** : texte aligné (« conservées jusqu'à 6 mois, jamais restaurées sauf sinistre »), fait le 28/10 dans `politique-confidentialite.md` ; le script ne change pas.
 
 **Analyse d'impact (art. 35).** Probablement non requise (petit volume, pas de donnée sensible, pas de suivi), mais à faire confirmer avec le reste.
 
@@ -189,38 +194,32 @@ Une tranche = un test vert = un commit. Estimation en jours-agent (hypothèse : 
 | # | Tranche | Contenu | Jours |
 |---|---|---|---|
 | T1 | Socle de données | Migrations 0026-0028, modèles, contraintes composites, reprise de l'existant, tests cross-org | 3 |
-| T2 | Dépôt et lecture | Écran Déposer, tâche Celery, texte par type, OCR local, masquage RGPD, progression | 4 |
+| T2 | Dépôt et lecture | Écran Déposer, tâche Celery, texte par type, **comparatif OCR en premier** (RapidOCR, 98,4 % mesuré le 25/10, contre Tesseract : mêmes pages, mémoire mesurée à l'échelle d'un KVM 1 ; vision Haiku en repli seulement, avec accord), masquage RGPD, progression | 4 |
 | T3 | Extraction | Schémas par type, Haiku, garde « mot pour mot », rapprochement, contradictions, coût enregistré, étalonnage | 4 |
 | T4 | « Voici ce que j'ai compris » | Écran, trancher une fois, validation qui écrit dans les tables actuelles, **suppression réelle d'une personne** | 3 |
 | T5 | Bibliothèque et style | Paragraphes, embeddings masqués, recherche hybride filtrée, thèmes, usage, mesure du style | 3 |
 | T6 | Votre version / Version Synorix | Récupération dans la bibliothèque, comparaison de phrases, raisons, origine par partie, « vos mots », drapeau éteint par défaut | 4 |
 | T7 | Enrichissement après AO | Retouches proposées, nœud AO, référence proposée si gagné | 2 |
 | T8 | Vue Cerveau | Route graphe, positions, rendu WebGL et repli, fiche, recherche | 4 |
-| T9 | Données et RGPD | « Tout supprimer », page « Vos données », modèle de note aux salariés, contrat de sous-traitance, alignement des sauvegardes | 2 |
+| T9 | Données et RGPD | « Tout supprimer », page « Vos données », modèle de note aux salariés, contrat de sous-traitance (avec Voyage AI), case « J'ai informé mes salariés » bloquante | 2 |
 | T10 | Téléphone et recette | Tiroir, onglet, mesures sur appareil, recette sur corpus inventé | 2 |
 | | **Total** | | **31** |
 
-**Ordre recommandé** : T1 → T2 → T3 → T4 (avec la suppression) → T8 → T5 → T6 → T7 → T9 → T10. T8 vient tôt : il rend visible ce que T1-T4 ont compris et sert à les valider ; il dépend de ta réponse à la question 1 et des jetons du bloc 10.
+**Ordre décidé (Q12) : blocs 9, 10, 11, puis 12 avant Ozcan ; le bloc 8 commence juste après. Prototype du graphe (demi-journée, captures clair, nuit, téléphone) avant T8.** Ordre interne recommandé : T1 → T2 → T3 → T4 (avec la suppression) → T8 → T5 → T6 → T7 → T9 → T10. T8 vient tôt : il rend visible ce que T1-T4 ont compris et sert à les valider ; il dépend de ta réponse à la question 1 et des jetons du bloc 10.
 **Valeur minimale** : T1-T4 et T9 (**environ 16 jours**) donnent « je dépose, je vérifie, tout est sourcé et supprimable ». T5-T7 (9 jours) apportent le gain sur le mémoire. T8 (4 jours) apporte la vue.
 **Risques** : T6 touche `memoire_generator.py`, le fichier le plus sensible du produit (drapeau éteint, test « octet pour octet »). L'OCR demande un paquet système sur le VPS. Aucune de ces tranches n'est prête pour le test d'Ozcan du 4/11.
 
-## 9. Mes questions, avec ma recommandation
+## 9. Décisions de Mohamed (28/10/2026)
 
-1. **Vue Cerveau : cerveau en points de la maquette, ou graphe inscrit dans ton visage ?**
-   *Recommandation* : ni l'un ni l'autre tel quel. **Graphe à forme libre**, dont chacun des six groupes démarre près de l'une des six ancres de ton visage (`stats.json`, `ancres`), et **ton visage en points très pâle derrière**, tiré de `points.bin` (aucun autre visage). Le graphe garde sa lisibilité, et on voit tout de même qu'il est dans ton visage. Une forme de cerveau n'est pas ton visage et impose les positions. Prototype d'une demi-journée à faire avant T8 pour trancher sur pixels.
-2. **Barre latérale** : « Cerveau » remplace-t-il « Mon entreprise », « Mes références » **et** « Bibliothèque » (Coffre-fort reste) ? Cela modifie `CLAUDE.md` et le PRD v3.0.
-   *Recommandation* : oui. Les trois deviennent des filtres dans le Cerveau, avec redirection des anciennes adresses.
-3. **Source de vérité** : les tables actuelles restent la vérité et le graphe est un pont, ou le graphe devient la vérité ?
-   *Recommandation* : le pont. Aucune bascule, le générateur ne change pas, retour arrière facile.
-4. **Documents scannés** : OCR local Tesseract (Apache 2.0, 0 €, rien ne sort du serveur) ou vision Haiku (0,005 € la page) ?
-   *Recommandation* : Tesseract d'abord, vision Haiku seulement en repli sur une page illisible, après accord du patron.
-5. **Embeddings des textes de l'entreprise** : on les envoie à Voyage (États-Unis, absent de la liste des sous-traitants) ?
-   *Recommandation* : oui, **après remplacement des noms de personnes par des étiquettes**, et ajout de Voyage à la politique de confidentialité et au contrat.
-6. **CV d'origine** : conservé ou supprimé après validation ?
-   *Recommandation* : supprimé par défaut, avec une case « garder dans le coffre-fort ».
-7. **Avenant de traitement Anthropic** : à signer et à vérifier (durée de conservation de l'API). *Recommandation* : à faire avant le premier CV réel. C'est une action pour toi, que je ne peux pas vérifier d'ici.
-8. **Information des salariés** : case obligatoire au premier dépôt de CV (« J'ai informé mes salariés ») avec modèle de note ? *Recommandation* : oui, bloquante, la responsabilité restant au patron.
-9. **Plafonds d'import** : l'import hors quota, avec 200 documents et 1 500 pages par dépôt et environ 5 € par mois et par entreprise ? *Recommandation* : oui, avec un message simple quand le plafond est atteint (« Il reste X documents à lire ce mois-ci »).
-10. **Sauvegardes** : aligner le texte de la politique (« jusqu'à 6 mois ») ou raccourcir le script à 30 jours ? *Recommandation* : aligner le texte. Garder 6 mois protège d'un sinistre silencieux, et les sauvegardes ne sont jamais restaurées sauf sinistre.
-11. **Calibrage** : j'autorise un essai payant d'au plus **1 €** sur 5 documents inventés (pas de vrais DCE ni de vrais CV) au début de T3 pour mesurer les jetons ? *Recommandation* : oui, avec le coût réel enregistré.
-12. **Ordre** : on garde les blocs 9 à 11 avant le bloc 8, comme prévu ? *Recommandation* : oui. Le bloc 8 (31 jours) ne sera pas prêt pour Ozcan ; les blocs 9 et 10 le sont, et le bloc 11 prépare la vue Cerveau (visage, jetons).
+1. **Vue** : graphe à forme libre, six groupes sur les six ancres du visage, visage en points très pâle derrière (`points.bin`). Prototype d'une demi-journée avant T8, captures clair, nuit et téléphone.
+2. **Barre latérale** : le Cerveau remplace Mon entreprise, Mes références et Bibliothèque ; Coffre-fort reste ; redirection des anciennes adresses ; `CLAUDE.md` et le PRD mis à jour (au bloc 8).
+3. **Source de vérité** : les tables actuelles restent la vérité, le graphe est un pont.
+4. **Scans** : OCR local ; comparer d'abord RapidOCR (98,4 % le 25/10) et Tesseract sur les mêmes pages, mémoire mesurée à l'échelle d'un KVM 1. Vision Haiku en repli seulement, avec accord.
+5. **Voyage** : oui, noms remplacés par des étiquettes avant l'envoi ; ajouté à la politique (fait) et au contrat (T9).
+6. **CV d'origine** : supprimé par défaut, case « garder dans le coffre-fort ».
+7. **Avenant Anthropic** : Mohamed s'en occupe.
+8. **Information des salariés** : case bloquante.
+9. **Plafonds d'import** : oui (200 documents, 1 500 pages par dépôt, environ 5 € par mois et par entreprise, hors quota).
+10. **Sauvegardes** : texte aligné sur 6 mois (fait).
+11. **Calibrage** : 1 € au plus, documents inventés, coût réel enregistré ; Haiku 5.5 étalonné aussi.
+12. **Ordre** : blocs 9, 10, 11, 12, puis bloc 8.

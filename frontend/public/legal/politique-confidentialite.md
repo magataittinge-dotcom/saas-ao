@@ -84,6 +84,7 @@ Service. Tous sont engagés contractuellement à respecter le RGPD.
 | **Stripe Payments Europe Ltd** | Paiement | Irlande (UE) | RGPD + PCI-DSS |
 | **Anthropic, PBC** | API d'intelligence artificielle (Claude) | États-Unis | DPF (EU-US Data Privacy Framework) |
 | **Clerk Inc.** | Authentification (gestion des comptes utilisateurs) | États-Unis | DPF + SOC 2 |
+| **Voyage AI** | Recherche sémantique dans les textes (représentations vectorielles) | États-Unis | Encadrement du transfert précisé au contrat de sous-traitance |
 
 ### 6.1 Transferts hors UE
 
@@ -92,6 +93,11 @@ les transferts de données associés sont encadrés par le **EU-US Data
 Privacy Framework (DPF)**, certifiant un niveau de protection adéquat
 au sens de la décision d'adéquation de la Commission européenne du
 10 juillet 2023.
+
+Voyage AI, également établi aux États-Unis, ne reçoit que des textes
+dont les noms de personnes ont été remplacés par des étiquettes avant
+l'envoi. L'encadrement de ce transfert est précisé au contrat de
+sous-traitance.
 
 ### 6.2 Engagement IA
 
@@ -110,7 +116,7 @@ appropriées pour garantir la sécurité des données :
 - Authentification forte via Clerk (gestion des sessions, tokens JWT)
 - Cloisonnement strict par organisation (isolation logique multi-tenant)
 - Journalisation des accès (audit log)
-- Sauvegardes quotidiennes chiffrées avec rétention 30 jours
+- Sauvegardes quotidiennes chiffrées, conservées jusqu'à 6 mois et jamais restaurées sauf sinistre
 - Mises à jour de sécurité régulières
 - Politique de gestion des mots de passe (Clerk)
 - Accès aux données restreint aux personnes habilitées
