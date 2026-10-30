@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
+import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
 /* ── prefers-reduced-motion ─────────────────────────────────────── */
@@ -52,7 +53,7 @@ interface StatCardProps {
 
 /**
  * Carte de statistique premium Synorix — compteur animé, anneau de progression
- * optionnel, halo lumineux discret au survol. Charte Lumen : glass-card + top-lit.
+ * optionnel. Surface Card du socle, couleurs par jetons.
  */
 export function StatCard({ icon: Icon, label, value, suffix = '', ring, delay = 0, className }: StatCardProps) {
   const count = useCountUp(value)
@@ -64,49 +65,35 @@ export function StatCard({ icon: Icon, label, value, suffix = '', ring, delay = 
   const frac = ring === undefined ? 0 : Math.max(0, Math.min(1, ring))
 
   return (
-    <div
-      className={cn(
-        'glass-card top-lit sheen group relative overflow-hidden p-4 animate-fade-in',
-        'transition-transform duration-200 ease-smooth hover:-translate-y-0.5',
-        className,
-      )}
+    <Card
+      className={cn('group relative overflow-hidden p-4 animate-fade-in', className)}
       style={{ animationDelay: reduced ? undefined : `${delay * 0.06}s` }}
     >
-      {/* halo lumineux diffus, intensifié au survol */}
-      <div
-        className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-ds-cyan opacity-[0.10] blur-2xl transition-opacity duration-300 group-hover:opacity-[0.22]"
-        aria-hidden
-      />
-
       <div className="relative flex items-start justify-between">
-        <div className="stat-icon-bg" style={{ background: 'rgba(255,255,255,0.10)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.12)' }}>
-          <Icon size={20} className="text-ds-cyan" />
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-tint">
+          <Icon size={20} className="text-accent-text" aria-hidden />
         </div>
 
         {ring !== undefined && (
           <div className="relative h-11 w-11 shrink-0">
-            <svg viewBox="0 0 40 40" className="h-11 w-11 -rotate-90">
-              <circle cx="20" cy="20" r={R} fill="none" stroke="#29292B" strokeWidth="3.5" />
+            <svg viewBox="0 0 40 40" className="h-11 w-11 -rotate-90" aria-hidden>
+              <circle cx="20" cy="20" r={R} fill="none" className="stroke-surface-2" strokeWidth="3.5" />
               <circle
                 cx="20" cy="20" r={R} fill="none"
-                stroke="#E8E9EB" strokeWidth="3.5" strokeLinecap="round"
+                className="stroke-accent-ui" strokeWidth="3.5" strokeLinecap="round"
                 strokeDasharray={C}
                 strokeDashoffset={C * (1 - frac)}
-                style={{
-                  transition: reduced ? undefined : 'stroke-dashoffset 0.9s cubic-bezier(0.4,0,0.2,1)',
-                  filter: 'drop-shadow(0 0 4px rgba(255,255,255,.35))',
-                }}
+                style={{ transition: reduced ? undefined : 'stroke-dashoffset 0.9s cubic-bezier(0.4,0,0.2,1)' }}
               />
             </svg>
           </div>
         )}
       </div>
 
-      {/* chiffre argenté — le reflet métallique du visage (T3.5) */}
-      <p className="edge-data mt-2.5 bg-gradient-silver-text bg-clip-text text-3xl font-bold tabular-nums text-transparent">
+      <p className="mt-2.5 font-mono text-3xl font-bold tabular-nums text-fg">
         {count}{suffix}
       </p>
-      <p className="mt-0.5 text-sm text-ds-text-2">{label}</p>
-    </div>
+      <p className="mt-0.5 text-sm text-fg-2">{label}</p>
+    </Card>
   )
 }
