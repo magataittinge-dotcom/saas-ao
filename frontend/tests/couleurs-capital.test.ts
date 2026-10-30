@@ -21,6 +21,11 @@ export const ECRANS: Record<string, string[]> = {
   'Nouvel AO': [
     'src/routes/NewProject.tsx',
   ],
+  'Coffre-fort': [
+    'src/routes/Vault.tsx',
+    'src/components/vault/ClassifyDocumentModal.tsx',
+    'src/components/vault/VaultSavePrompt.tsx',
+  ],
 }
 
 const PALETTE = 'slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black'

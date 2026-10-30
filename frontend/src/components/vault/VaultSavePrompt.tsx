@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Archive } from 'lucide-react'
 import { api } from '@/services/api'
 import { DOC_TYPE_LABELS } from '@/lib/vault'
+import { Button } from '@/components/ui/button'
 
 export interface VaultSuggestion {
   docId: string
@@ -51,12 +52,9 @@ export default function VaultSavePrompt({ suggestion, onDone }: Props) {
   const typeLabel = DOC_TYPE_LABELS[suggestion.type] ?? suggestion.type
 
   return (
-    <div
-      className="flex items-center gap-3 rounded-xl px-4 py-2.5 mt-3"
-      style={{ background: 'rgba(228,233,242,0.05)', border: '1px solid rgba(228,233,242,0.15)' }}
-    >
-      <Archive size={16} className="shrink-0" style={{ color: '#E4E9F2' }} />
-      <p className="flex-1 text-xs" style={{ color: '#9BA4B5' }}>
+    <div className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-bord-2 bg-surface-1 px-4 py-2.5">
+      <Archive size={16} className="shrink-0 text-accent-text" aria-hidden />
+      <p className="min-w-0 flex-1 text-xs text-fg-2">
         {saved ? (
           <>« {suggestion.fileName} » enregistré dans votre coffre-fort ({typeLabel}).</>
         ) : (
@@ -68,20 +66,12 @@ export default function VaultSavePrompt({ suggestion, onDone }: Props) {
       </p>
       {!saved && (
         <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={save}
-            disabled={busy}
-            className="edge-cta px-2.5 py-1 rounded-md text-xs font-semibold disabled:opacity-60"
-          >
+          <Button size="sm" onClick={save} disabled={busy} className="h-8 text-xs">
             {busy ? 'Enregistrement…' : 'Enregistrer'}
-          </button>
-          <button
-            onClick={dismiss}
-            className="px-2 py-1 rounded-md text-xs font-medium hover:bg-[#1C222D]"
-            style={{ color: '#788295' }}
-          >
+          </Button>
+          <Button size="sm" variant="ghost" onClick={dismiss} className="h-8 text-xs">
             Non merci
-          </button>
+          </Button>
         </div>
       )}
     </div>

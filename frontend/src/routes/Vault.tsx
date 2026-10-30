@@ -14,6 +14,10 @@ import type { Document } from '@/types'
 import EchecAction from '@/components/common/EchecAction'
 import DeleteConfirmModal from '@/components/common/DeleteConfirmModal'
 import { messageErreur } from '@/lib/erreurs'
+import { cn } from '@/lib/utils'
+
+// Une ligne de pièce (nom, puis statut et actions) passe à la ligne sous 640 px : pas de défilement horizontal à 390 px.
+const LISTE_PIECES = 'space-y-2 [&>div]:flex-wrap [&>div>div:last-child]:max-w-full [&>div>div:last-child]:flex-wrap sm:[&>div]:flex-nowrap sm:[&>div>div:last-child]:flex-nowrap'
 
 export default function Vault() {
   const queryClient = useQueryClient()
@@ -74,23 +78,22 @@ export default function Vault() {
   })
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-fade-in">
+    <div className="mx-auto max-w-4xl animate-fade-in space-y-6">
       {returnTo && (
         <button
           type="button"
           onClick={() => navigate(returnTo)}
-          className="flex items-center gap-2 text-sm font-medium transition-colors hover:underline"
-          style={{ color: '#E4E9F2' }}
+          className="inline-flex items-center gap-2 rounded-xs text-sm font-medium text-accent-text transition-colors duration-base ease-lien hover:underline [@media(pointer:coarse)]:min-h-11"
         >
-          <ArrowLeft size={15} />
+          <ArrowLeft size={15} aria-hidden />
           Retour à la vérification
         </button>
       )}
       <div className="flex items-center gap-3">
-        <Archive size={24} style={{ color: '#E4E9F2' }} />
+        <Archive size={24} className="text-accent-text" aria-hidden />
         <div>
-          <h1 className="text-2xl font-bold text-ds-text">Coffre-fort documentaire</h1>
-          <p className="text-sm text-ds-text-2">{documents.length} documents stockés</p>
+          <h1 className="font-display text-h6 text-fg">Coffre-fort documentaire</h1>
+          <p className="text-sm text-fg-2">{documents.length} documents stockés</p>
         </div>
       </div>
 
@@ -106,25 +109,17 @@ export default function Vault() {
       {/* Upload zone */}
       <div
         {...getRootProps()}
-        className="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors"
-        style={
-          isDragActive
-            ? { borderColor: '#E4E9F2', background: 'rgba(228,233,242,0.05)' }
-            : { borderColor: 'rgba(186,205,234,.23)', background: 'transparent' }
-        }
-        onMouseEnter={(e) => {
-          if (!isDragActive) (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(120,130,149,0.8)'
-        }}
-        onMouseLeave={(e) => {
-          if (!isDragActive) (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(186,205,234,.23)'
-        }}
+        className={cn(
+          'cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-colors duration-base ease-lien',
+          isDragActive ? 'border-accent-ring bg-accent-tint' : 'border-input hover:border-fg-3 hover:bg-surface-1',
+        )}
       >
         <input {...getInputProps()} />
-        <Upload size={28} className="mx-auto text-ds-text-3 mb-2" />
-        <p className="text-sm font-medium text-ds-text">
+        <Upload size={28} className="mx-auto mb-2 text-fg-3" aria-hidden />
+        <p className="text-sm font-medium text-fg">
           {isUploading ? 'Envoi en cours…' : 'Glissez vos documents ici ou cliquez pour parcourir'}
         </p>
-        <p className="text-xs text-ds-text-3 mt-1">PDF — 20 MB max</p>
+        <p className="mt-1 text-xs text-fg-3">PDF — 20 MB max</p>
       </div>
 
       {pieceASupprimer && (
@@ -138,6 +133,7 @@ export default function Vault() {
 
       {echec && (
         <EchecAction
+          calque
           message={echec.message}
           onReessayer={echec.fichiers.length > 0 ? () => { void deposer(echec.fichiers) } : undefined}
           onFermer={() => setEchec(null)}
@@ -153,13 +149,12 @@ export default function Vault() {
             const unclassified = documents.filter((d) => d.category === 'unclassified')
             if (unclassified.length === 0) return null
             return (
-              <div className="rounded-xl p-3"
-                style={{ background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.20)' }}>
-                <h2 className="flex items-center gap-2 text-sm font-semibold mb-2" style={{ color: '#F5C26B' }}>
-                  <Tag size={14} />
+              <div className="rounded-xl border border-warning-border bg-warning-bg p-3">
+                <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-warning">
+                  <Tag size={14} aria-hidden />
                   Non classés ({unclassified.length}) — à classer pour être utilisables dans vos candidatures
                 </h2>
-                <div className="space-y-2">
+                <div className={LISTE_PIECES}>
                   {unclassified.map((doc) => (
                     <FileCard key={doc.id} document={doc} onDelete={demanderSuppression} onEdit={setEditingDoc} />
                   ))}
@@ -172,28 +167,28 @@ export default function Vault() {
             const catDocs = documents.filter((d) => d.category === category)
             return (
               <div key={category}>
-                <h2 className="text-sm font-semibold text-ds-text-2 mb-2">
+                <h2 className="mb-2 text-sm font-semibold text-fg-2">
                   {VAULT_CATEGORY_LABELS[category]}
-                  <span className="ml-2 text-xs font-normal text-ds-text-3">({catDocs.length})</span>
+                  <span className="ml-2 text-xs font-normal text-fg-3">({catDocs.length})</span>
                 </h2>
                 {catDocs.length > 0 ? (
-                  <div className="space-y-2">
+                  <div className={LISTE_PIECES}>
                     {catDocs.map((doc) => (
                       <FileCard key={doc.id} document={doc} onDelete={demanderSuppression} onEdit={setEditingDoc} />
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-ds-text-3 pb-1">Aucun document</p>
+                  <p className="pb-1 text-xs text-fg-3">Aucun document</p>
                 )}
               </div>
             )
           })}
 
           {documents.length === 0 && (
-            <div className="text-center py-16 text-ds-text-3">
-              <Archive size={40} className="mx-auto mb-3 opacity-30" />
+            <div className="py-16 text-center text-fg-3">
+              <Archive size={40} className="mx-auto mb-3 text-fg-disabled" aria-hidden />
               <p>Votre coffre-fort est vide</p>
-              <p className="text-sm mt-1">Déposez vos documents administratifs pour les retrouver facilement</p>
+              <p className="mt-1 text-sm">Déposez vos documents administratifs pour les retrouver facilement</p>
             </div>
           )}
         </>
