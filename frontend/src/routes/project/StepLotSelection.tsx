@@ -45,7 +45,7 @@ function ConfidenceWarning({ confidence }: { confidence?: number }) {
   return (
     <span
       className="inline-flex items-center justify-center w-5 h-5 rounded-full"
-      style={{ color: '#909195' }}
+      style={{ color: 'var(--text-3)' }}
       title="Cette détection mérite une vérification"
       aria-label="Cette détection mérite une vérification"
     >
@@ -72,12 +72,12 @@ function SourcesIndicator({ sources }: { sources?: string[] }) {
   )]
   const fromIA = sources.includes('ia_fallback')
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs" style={{ color: '#909195' }}>
+    <span className="inline-flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-3)' }}>
       {regular.map(l => (
         <span
           key={l}
           className="num-mono rounded px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide"
-          style={{ background: 'var(--surface-2)', color: '#98999C', boxShadow: 'inset 0 0 0 1px var(--line)' }}
+          style={{ background: 'var(--surface-2)', color: 'var(--text-3)', boxShadow: 'inset 0 0 0 1px var(--line)' }}
           title="Pièce du DCE où ce lot a été détecté"
         >
           {l}
@@ -88,7 +88,7 @@ function SourcesIndicator({ sources }: { sources?: string[] }) {
         // d'un coup d'œil, contrairement aux détections déterministes).
         <span
           className="px-1.5 py-0.5 rounded-full font-medium"
-          style={{ background: 'rgba(245,158,11,0.10)', color: '#D9A441', border: '1px solid rgba(245,158,11,0.25)' }}
+          style={{ background: 'color-mix(in srgb, var(--warning-fg) 10%, transparent)', color: 'var(--warning-fg)', border: '1px solid color-mix(in srgb, var(--warning-fg) 25%, transparent)' }}
           title="Ce lot a été complété par l'IA à partir du règlement de consultation — vérifiez son intitulé"
         >
           {SOURCE_LABELS.ia_fallback}
@@ -176,11 +176,11 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) 
           selected ? '' : 'bg-ds-bg-3 hover:bg-ds-bg-elevated',
         )}
         style={{
-          background: selected ? 'rgba(255,255,255,0.05)' : undefined,
+          background: selected ? 'var(--accent-tint)' : undefined,
           border: '1px solid',
-          borderColor: selected ? 'rgba(255,255,255,.55)' : 'var(--line)',
+          borderColor: selected ? 'var(--accent-ring)' : 'var(--line)',
           boxShadow: selected
-            ? '0 0 0 1px rgba(255,255,255,.30), 0 12px 32px -16px rgba(255,255,255,.30)'
+            ? '0 0 0 1px var(--accent-ring)'
             : 'var(--edge-light)',
         }}
       >
@@ -190,8 +190,8 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) 
             className="num-mono shrink-0 rounded-lg px-2.5 py-1.5 text-[13px] font-bold tracking-wide transition-all"
             style={
               selected
-                ? { background: 'linear-gradient(180deg, #FFFFFF, #D4D5D8)', color: '#121213', boxShadow: 'inset 0 1px 0 rgba(255,255,255,.9)' }
-                : { background: 'var(--surface-2)', color: '#98999C', boxShadow: 'inset 0 0 0 1px var(--line)' }
+                ? { background: 'var(--accent-fill-solid)', color: 'var(--on-accent)' }
+                : { background: 'var(--surface-2)', color: 'var(--text-3)', boxShadow: 'inset 0 0 0 1px var(--line)' }
             }
           >
             LOT {lotNum}
@@ -201,11 +201,11 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) 
             className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all"
             style={
               selected
-                ? { borderColor: 'rgba(255,255,255,.40)', background: '#E8E9EB' }
-                : { borderColor: '#909195' }
+                ? { borderColor: 'var(--accent-ring)', background: 'var(--accent-fill-solid)' }
+                : { borderColor: 'var(--text-3)' }
             }
           >
-            {selected && <div className="w-2 h-2 rounded-full bg-ds-bg" />}
+            {selected && <div className="w-2 h-2 rounded-full bg-accent-on" />}
           </div>
         )}
 
@@ -241,7 +241,7 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) 
                 type="button"
                 onClick={cancelEdit}
                 className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ background: '#1E1E21', color: '#959597' }}
+                style={{ background: 'var(--surface-1)', color: 'var(--text-3)' }}
                 title="Annuler"
               >
                 <X size={14} />
@@ -253,21 +253,21 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) 
                 <span
                   className="text-[15px] font-semibold"
                   style={{
-                    color: isGeneric ? '#909195' : '#F7F8F8',
+                    color: isGeneric ? 'var(--text-3)' : 'var(--text-1)',
                     fontStyle: isGeneric ? 'italic' : 'normal',
                   }}
                 >
                   {isGeneric ? (
                     <>
                       {displayedLabel}
-                      <span style={{ color: '#909195' }}> — Description à compléter</span>
+                      <span style={{ color: 'var(--text-3)' }}> — Description à compléter</span>
                     </>
                   ) : lotNum ? lotTitle : displayedLabel}
                 </span>
                 {lot._manual && (
                   <span
                     className="text-xs font-semibold px-1.5 py-0.5 rounded"
-                    style={{ color: '#E8E9EB', background: 'rgba(255,255,255,0.08)' }}
+                    style={{ color: 'var(--text-1)', background: 'color-mix(in srgb, var(--text-1) 8%, transparent)' }}
                   >
                     Manuel
                   </span>
@@ -277,8 +277,8 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) 
                     type="button"
                     onClick={startEdit}
                     className="inline-flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded transition-colors"
-                    style={{ color: '#959597', background: 'transparent' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = '#1E1E21' }}
+                    style={{ color: 'var(--text-3)', background: 'transparent' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-1)' }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
                     title="Renommer ce lot"
                   >
@@ -289,7 +289,7 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) 
               {lot.description_long && cleanLotDescription(lot.description_long) !== (lotNum ? lotTitle : displayedLabel) && (
                 <p
                   className="text-xs mt-1 line-clamp-1"
-                  style={{ color: '#909195' }}
+                  style={{ color: 'var(--text-3)' }}
                   title={lot.description_long}
                 >
                   {cleanLotDescription(lot.description_long)}
@@ -298,7 +298,7 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) 
               {lot.tranches && lot.tranches.length > 0 && (
                 <span
                   className="inline-flex items-center gap-1 text-xs font-medium mt-1 px-2 py-0.5 rounded-full"
-                  style={{ color: '#E8E9EB', background: 'rgba(255,255,255,0.08)' }}
+                  style={{ color: 'var(--text-1)', background: 'color-mix(in srgb, var(--text-1) 8%, transparent)' }}
                   title={lot.tranches.join('\n')}
                 >
                   {lot.tranches.length} tranche{lot.tranches.length > 1 ? 's' : ''}
@@ -321,7 +321,7 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) 
           type="button"
           onClick={(e) => { e.stopPropagation(); onDelete() }}
           className="absolute top-3 right-3 w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
-          style={{ color: '#F58E86', background: 'rgba(245,142,134,0.06)' }}
+          style={{ color: 'var(--danger-fg)', background: 'color-mix(in srgb, var(--danger-fg) 6%, transparent)' }}
           title="Supprimer ce lot"
         >
           <X size={13} />
@@ -357,25 +357,25 @@ function AddLotForm({ onAdd, onCancel }: AddLotFormProps) {
     <form
       onSubmit={handleSubmit}
       className="flex items-end gap-3 p-4 rounded-xl"
-      style={{ background: '#1E1E21', border: '1px solid rgba(255,255,255,.07)' }}
+      style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)' }}
     >
       <div className="flex flex-col gap-1">
-        <label className="text-xs font-medium" style={{ color: '#959597' }}>N° lot</label>
+        <label className="text-xs font-medium" style={{ color: 'var(--text-3)' }}>N° lot</label>
         <input
           type="number" min={1} max={30} placeholder="1"
           value={num} onChange={(e) => setNum(e.target.value)}
           className="w-16 text-sm rounded-lg px-2.5 py-2 outline-none"
-          style={{ background: '#18181A', border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8' }}
+          style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)', color: 'var(--text-1)' }}
           required
         />
       </div>
       <div className="flex flex-col gap-1 flex-1">
-        <label className="text-xs font-medium" style={{ color: '#959597' }}>Intitulé (optionnel)</label>
+        <label className="text-xs font-medium" style={{ color: 'var(--text-3)' }}>Intitulé (optionnel)</label>
         <input
           type="text" placeholder="ex : Gros œuvre"
           value={label} onChange={(e) => setLabel(e.target.value)} maxLength={60}
           className="text-sm rounded-lg px-2.5 py-2 outline-none"
-          style={{ background: '#18181A', border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8' }}
+          style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)', color: 'var(--text-1)' }}
         />
       </div>
       <button type="submit" disabled={!num}
@@ -384,7 +384,7 @@ function AddLotForm({ onAdd, onCancel }: AddLotFormProps) {
       </button>
       <button type="button" onClick={onCancel}
         className="px-3 py-2 text-sm shrink-0 transition-colors"
-        style={{ color: '#959597' }}>
+        style={{ color: 'var(--text-3)' }}>
         Annuler
       </button>
     </form>
@@ -708,8 +708,8 @@ export default function StepLotSelection({ project }: Props) {
 
       {/* Lot detection overlay (inline circle wrapped in our own portal) */}
       {detectPhase !== 'idle' && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(0,0,0,0.60)', backdropFilter: 'blur(4px)' }}>
-          <div className="rounded-2xl p-8 max-w-sm w-full mx-4" style={{ background: '#18181A', border: '1px solid rgba(255,255,255,.07)', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'var(--scrim)', backdropFilter: 'blur(4px)' }}>
+          <div className="rounded-2xl p-8 max-w-sm w-full mx-4" style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)', boxShadow: '0 20px 60px color-mix(in srgb, var(--surface-dark) 15%, transparent)' }}>
             <ProgressDisplay
               variant="inline"
               steps={LOT_DETECTION_STEPS}
@@ -727,27 +727,27 @@ export default function StepLotSelection({ project }: Props) {
 
         {/* Backend busy */}
         {isBackendBusy && (
-          <div className="flex items-center gap-3 p-4 rounded-xl mb-4" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)' }}>
-            <Loader2 size={18} className="animate-spin" style={{ color: '#E8E9EB' }} />
+          <div className="flex items-center gap-3 p-4 rounded-xl mb-4" style={{ background: 'color-mix(in srgb, var(--text-1) 5%, transparent)', border: '1px solid var(--border-2)' }}>
+            <Loader2 size={18} className="animate-spin" style={{ color: 'var(--text-1)' }} />
             <div>
-              <span className="text-sm font-medium block" style={{ color: '#E8E9EB' }}>Extraction des documents en cours...</span>
-              {processingDetail && <span className="text-xs block mt-0.5" style={{ color: '#909195' }}>{processingDetail}</span>}
+              <span className="text-sm font-medium block" style={{ color: 'var(--text-1)' }}>Extraction des documents en cours...</span>
+              {processingDetail && <span className="text-xs block mt-0.5" style={{ color: 'var(--text-3)' }}>{processingDetail}</span>}
             </div>
           </div>
         )}
 
         {/* Documents illisibles — signalés par fichier, jamais silencieux */}
         {extractionWarnings.length > 0 && (
-          <div className="p-4 rounded-xl mb-4" style={{ background: 'rgba(217,164,65,0.09)', border: '1px solid rgba(217,164,65,0.22)' }}>
+          <div className="p-4 rounded-xl mb-4" style={{ background: 'color-mix(in srgb, var(--warning-fg) 9%, transparent)', border: '1px solid color-mix(in srgb, var(--warning-fg) 22%, transparent)' }}>
             <div className="flex items-center gap-2 mb-1.5">
-              <AlertTriangle size={16} style={{ color: '#D9A441' }} />
-              <span className="text-sm font-semibold" style={{ color: '#D9A441' }}>
+              <AlertTriangle size={16} style={{ color: 'var(--warning-fg)' }} />
+              <span className="text-sm font-semibold" style={{ color: 'var(--warning-fg)' }}>
                 {extractionWarnings.length} document{extractionWarnings.length > 1 ? 's' : ''} illisible{extractionWarnings.length > 1 ? 's' : ''} — exigences non extraites de ce{extractionWarnings.length > 1 ? 's' : ''} fichier{extractionWarnings.length > 1 ? 's' : ''}
               </span>
             </div>
             <ul className="space-y-0.5 pl-6">
               {extractionWarnings.map((w) => (
-                <li key={w.file_name} className="text-xs" style={{ color: '#D9A441' }}>
+                <li key={w.file_name} className="text-xs" style={{ color: 'var(--warning-fg)' }}>
                   <span className="font-medium">{w.file_name}</span> — {w.warning}
                 </li>
               ))}
@@ -758,7 +758,7 @@ export default function StepLotSelection({ project }: Props) {
         {/* ── TITLE + BADGE ───────────────────────────────── */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
           <div className="flex items-center gap-3 flex-wrap">
-            <h2 className="font-display tracking-tight text-xl font-bold" style={{ color: '#F7F8F8' }}>
+            <h2 className="font-display tracking-tight text-xl font-bold" style={{ color: 'var(--text-1)' }}>
               Sélection du lot à analyser
             </h2>
             {lots.length > 0 && (
@@ -767,15 +767,15 @@ export default function StepLotSelection({ project }: Props) {
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1.5 text-sm" style={{ color: '#909195' }}>
+          <div className="flex items-center gap-1.5 text-sm" style={{ color: 'var(--text-3)' }}>
             <FileArchive size={14} />
             Source : {project.name}
           </div>
         </div>
 
         {/* ── Consigne — une ligne, pas un pavé ───────────── */}
-        <p className="mb-4 flex items-center gap-2 text-sm" style={{ color: '#959597' }}>
-          <Zap size={14} className="shrink-0" style={{ color: '#E8E9EB' }} />
+        <p className="mb-4 flex items-center gap-2 text-sm" style={{ color: 'var(--text-3)' }}>
+          <Zap size={14} className="shrink-0" style={{ color: 'var(--text-1)' }} />
           {hasMultiLots
             ? 'Sélectionnez le lot sur lequel votre entreprise répond — l’analyse de conformité se lance ensuite.'
             : lots.length === 1
@@ -790,11 +790,11 @@ export default function StepLotSelection({ project }: Props) {
 
         {/* Excel error */}
         {errorLots.length > 0 && (
-          <div className="flex items-start gap-3 p-4 rounded-xl mb-5" style={{ background: 'rgba(149,149,151,0.06)', border: '1px solid rgba(149,149,151,0.15)' }}>
-            <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: '#959597' }} />
+          <div className="flex items-start gap-3 p-4 rounded-xl mb-5" style={{ background: 'color-mix(in srgb, var(--text-3) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--text-3) 15%, transparent)' }}>
+            <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: 'var(--text-3)' }} />
             <div>
-              <p className="text-sm font-semibold" style={{ color: '#959597' }}>Fichier(s) Excel protégé(s) par mot de passe</p>
-              {errorLots.map(l => <p key={l.id} className="text-xs mt-0.5" style={{ color: '#959597' }}>{l.nom}</p>)}
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-3)' }}>Fichier(s) Excel protégé(s) par mot de passe</p>
+              {errorLots.map(l => <p key={l.id} className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>{l.nom}</p>)}
             </div>
           </div>
         )}
@@ -820,19 +820,19 @@ export default function StepLotSelection({ project }: Props) {
             ))}
           </div>
         ) : !lotsInitialized && (lotsLoading || detectPhase === 'detecting' || isBackendBusy) ? (
-          <div className="flex items-center gap-3 p-5 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)' }}>
-            <Loader2 size={20} className="animate-spin" style={{ color: '#E8E9EB' }} />
+          <div className="flex items-center gap-3 p-5 rounded-xl" style={{ background: 'color-mix(in srgb, var(--text-1) 4%, transparent)', border: '1px solid var(--border-2)' }}>
+            <Loader2 size={20} className="animate-spin" style={{ color: 'var(--text-1)' }} />
             <div>
-              <p className="text-sm font-semibold" style={{ color: '#F7F8F8' }}>Détection des lots en cours...</p>
-              <p className="text-xs mt-0.5" style={{ color: '#909195' }}>Analyse des documents du DCE.</p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>Détection des lots en cours...</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>Analyse des documents du DCE.</p>
             </div>
           </div>
         ) : (
-          <div className="flex items-center gap-3 p-5 rounded-xl" style={{ background: '#1E1E21', border: '1px solid rgba(255,255,255,.07)' }}>
-            <Layers size={20} style={{ color: '#E8E9EB' }} />
+          <div className="flex items-center gap-3 p-5 rounded-xl" style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)' }}>
+            <Layers size={20} style={{ color: 'var(--text-1)' }} />
             <div>
-              <p className="text-sm font-semibold" style={{ color: '#F7F8F8' }}>Marché unique (pas de lots)</p>
-              <p className="text-xs mt-0.5" style={{ color: '#909195' }}>L&apos;IA analysera l&apos;intégralité du DCE sans filtre par lot.</p>
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>Marché unique (pas de lots)</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>L&apos;IA analysera l&apos;intégralité du DCE sans filtre par lot.</p>
             </div>
           </div>
         )}
@@ -847,9 +847,9 @@ export default function StepLotSelection({ project }: Props) {
             type="button"
             onClick={() => setShowAddForm(true)}
             className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed text-sm font-medium mt-4 transition-colors"
-            style={{ borderColor: '#1E1E21', color: '#909195' }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#909195'; e.currentTarget.style.color = '#959597'; e.currentTarget.style.background = '#1E1E21' }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#1E1E21'; e.currentTarget.style.color = '#909195'; e.currentTarget.style.background = 'transparent' }}
+            style={{ borderColor: 'var(--surface-1)', color: 'var(--text-3)' }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--text-3)'; e.currentTarget.style.color = 'var(--text-3)'; e.currentTarget.style.background = 'var(--surface-1)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--surface-1)'; e.currentTarget.style.color = 'var(--text-3)'; e.currentTarget.style.background = 'transparent' }}
           >
             <Plus size={16} />
             Ajouter un lot manuellement
@@ -858,7 +858,7 @@ export default function StepLotSelection({ project }: Props) {
 
         {/* Error */}
         {analysisError && (
-          <div className="flex items-start gap-2 p-4 rounded-xl text-sm mt-4" style={{ color: '#F58E86', background: 'rgba(245,142,134,0.06)', border: '1px solid rgba(245,142,134,0.15)' }}>
+          <div className="flex items-start gap-2 p-4 rounded-xl text-sm mt-4" style={{ color: 'var(--danger-fg)', background: 'color-mix(in srgb, var(--danger-fg) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--danger-fg) 15%, transparent)' }}>
             <AlertCircle size={16} className="shrink-0 mt-0.5" />
             <span>{analysisError}</span>
           </div>
@@ -868,17 +868,17 @@ export default function StepLotSelection({ project }: Props) {
         <div
           className="sticky bottom-0 mt-6 -mx-3 sm:-mx-4 px-5 py-3.5 flex items-center justify-between"
           style={{
-            background: 'rgba(9,9,10,0.92)',
+            background: 'color-mix(in srgb, var(--surface-0) 92%, transparent)',
             backdropFilter: 'blur(8px)',
             WebkitBackdropFilter: 'blur(8px)',
-            borderTop: '1px solid rgba(255,255,255,.07)',
+            borderTop: '1px solid var(--border-1)',
           }}
         >
           <div className="flex items-center gap-2">
-            <CheckCircle2 size={16} style={{ color: selectedId !== 'all' && selectedName ? '#E8E9EB' : '#909195' }} />
-            <span className="text-sm" style={{ color: '#959597' }}>
+            <CheckCircle2 size={16} style={{ color: selectedId !== 'all' && selectedName ? 'var(--text-1)' : 'var(--text-3)' }} />
+            <span className="text-sm" style={{ color: 'var(--text-3)' }}>
               {selectedId !== 'all' && selectedName
-                ? <>Lot sélectionné : <strong style={{ color: '#F7F8F8' }}>{selectedName}</strong></>
+                ? <>Lot sélectionné : <strong style={{ color: 'var(--text-1)' }}>{selectedName}</strong></>
                 : 'Tous les lots sélectionnés'
               }
             </span>
@@ -887,9 +887,9 @@ export default function StepLotSelection({ project }: Props) {
             <button
               onClick={() => navigate(`/projects/${project.id}/upload`)}
               className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-              style={{ color: '#959597', border: '1px solid rgba(255,255,255,.07)' }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#909195'; e.currentTarget.style.color = '#F7F8F8' }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,.07)'; e.currentTarget.style.color = '#959597' }}
+              style={{ color: 'var(--text-3)', border: '1px solid var(--border-1)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--text-3)'; e.currentTarget.style.color = 'var(--text-1)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-1)'; e.currentTarget.style.color = 'var(--text-3)' }}
             >
               Annuler
             </button>

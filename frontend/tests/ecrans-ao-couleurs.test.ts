@@ -53,6 +53,10 @@ const TRANCHES: Record<string, string[]> = {
     'src/components/project/ExigencesDuDossier.tsx',
     'src/components/project/DocumentViewer.tsx',
   ],
+  'dépôt du DCE et choix des lots': [
+    'src/routes/project/StepUpload.tsx',
+    'src/routes/project/StepLotSelection.tsx',
+  ],
 }
 
 // hex (3, 4, 6 ou 8 chiffres), fonctions rgb/hsl, classes Tailwind de palette fixe (bg-slate-900, text-white/90…)
