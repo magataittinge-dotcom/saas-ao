@@ -65,10 +65,10 @@ export default function Project() {
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="microlabel mb-1">Appel d&apos;offres</p>
-          <h1 className="font-display tracking-tight text-ds-text text-[22px] font-bold leading-tight truncate">{project.name}</h1>
+          <h1 className="font-display tracking-tight text-fg text-[22px] font-bold leading-tight truncate">{project.name}</h1>
           {project.maitre_ouvrage && (
-            <p className="mt-1 flex items-center gap-1.5 text-sm text-ds-text-2 truncate">
-              <MapPin size={13} className="shrink-0 text-ds-text-3" />
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-fg-2 truncate">
+              <MapPin size={13} className="shrink-0 text-fg-3" />
               {project.maitre_ouvrage}
             </p>
           )}
@@ -86,9 +86,9 @@ export default function Project() {
       <div
         className={cn(
           'sticky top-0 z-20 glass-card px-4 py-2.5 mb-5 transition-all duration-200',
-          stepperStuck && 'rounded-none -mx-6 px-12',
+          stepperStuck && 'rounded-none -mx-3 px-6 sm:-mx-4 sm:px-8',
         )}
-        style={stepperStuck ? { background: 'rgba(18,18,19,0.92)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', borderBottom: '1px solid var(--line)', boxShadow: '0 8px 24px rgba(0,0,0,.4)' } : undefined}
+        style={stepperStuck ? { background: 'var(--glass-fill)', backdropFilter: 'blur(var(--blur-sm))', WebkitBackdropFilter: 'blur(var(--blur-sm))', borderBottom: '1px solid var(--border-1)', boxShadow: 'var(--shadow-card)' } : undefined}
       >
         <StepProgress
           currentStep={project.current_step}

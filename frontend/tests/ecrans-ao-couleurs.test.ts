@@ -57,6 +57,10 @@ const TRANCHES: Record<string, string[]> = {
     'src/routes/project/StepUpload.tsx',
     'src/routes/project/StepLotSelection.tsx',
   ],
+  'en-tête de l\'AO et fil d\'étapes': [
+    'src/routes/Project.tsx',
+    'src/components/project/StepProgress.tsx',
+  ],
 }
 
 // hex (3, 4, 6 ou 8 chiffres), fonctions rgb/hsl, classes Tailwind de palette fixe (bg-slate-900, text-white/90…)
@@ -84,4 +88,13 @@ test('les routes /projects/:id/… suivent le thème ; la liste, Nouvel AO reste
   assert.equal(estThemee('/projects'), true)
   assert.equal(estThemee('/projects/new'), false)
   assert.equal(estThemee('/vault'), false)
+})
+
+test('le fil d\'étapes tient à 390 px : ronds de 44 px, seul le nom de l\'étape active est montré au téléphone', () => {
+  const code = sansCommentaires(lire('src/components/project/StepProgress.tsx'))
+  assert.match(code, /max-sm:w-11 max-sm:h-11/)
+  assert.match(code, /isActive \? 'block' : 'hidden sm:block'/)
+  assert.match(code, /aria-current=\{isActive \? 'step' : undefined\}/)
+  // le bandeau collant ne déborde pas de la page (marges négatives = padding de <main>)
+  assert.doesNotMatch(sansCommentaires(lire('src/routes/Project.tsx')), /-mx-6/)
 })

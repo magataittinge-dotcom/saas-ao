@@ -190,7 +190,7 @@ export default function StepVerification({ project }: Props) {
 
   const bottomBar = (
     <div
-      className="sticky -bottom-5 z-30 -mx-3 sm:-mx-4 mt-6 rounded-t-lg flex items-center justify-between px-6 py-3 gap-4"
+      className="sticky -bottom-5 z-30 -mx-3 sm:-mx-4 mt-6 rounded-t-lg flex flex-wrap items-center justify-between px-6 py-3 gap-x-4 gap-y-2"
       style={{
         background: 'color-mix(in srgb, var(--surface-0) 92%, transparent)',
         backdropFilter: 'blur(12px)',

@@ -473,7 +473,7 @@ export default function StepAnalysis({ project }: Props) {
       </div>
 
       {/* ── ONGLETS ─────────────────────────────────────────────── */}
-      <div className="flex items-center gap-6 pb-px" style={{ borderBottom: '1px solid var(--border-1)' }}>
+      <div className="flex items-center gap-6 pb-px overflow-x-auto" style={{ borderBottom: '1px solid var(--border-1)' }}>
         <TabButton
           label={`Tout (${items.length})`}
           active={activeFilter === 'all'}
