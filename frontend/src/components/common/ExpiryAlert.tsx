@@ -19,8 +19,8 @@ export function ExpiryAlert({ expiryDate, documentName }: Props) {
       className="flex items-center gap-2 rounded-md px-3 py-2 text-sm"
       style={
         isExpired || isUrgent
-          ? { background: 'color-mix(in srgb, var(--danger-fg) 10%, transparent)', color: 'var(--danger-fg)', border: '1px solid color-mix(in srgb, var(--danger-fg) 25%, transparent)' }
-          : { background: 'color-mix(in srgb, var(--text-3) 8%, transparent)', color: 'var(--text-3)', border: '1px solid color-mix(in srgb, var(--text-3) 20%, transparent)' }
+          ? { background: 'var(--danger-bg)', color: 'var(--danger-fg)', border: '1px solid var(--danger-border)' }
+          : { background: 'var(--surface-1)', color: 'var(--text-2)', border: '1px solid var(--border-2)' }
       }
     >
       {isExpired || isUrgent ? <AlertTriangle size={16} /> : <Clock size={16} />}
