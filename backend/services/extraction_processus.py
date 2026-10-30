@@ -2,7 +2,7 @@
 
 Par défaut (T9, sprint Ozcan), toute pièce déposée est lue hors de l'API : PDFium n'est pas
 thread-safe, un PDF piégé peut le faire monter de plusieurs Go (rapport G : 330 Ko → 6 Go) et
-un plantage natif emporterait l'API. Le processus est UNIQUE (KVM 1 : 1 vCPU, 4 Go), recyclé,
+un plantage natif emporterait l'API. Le processus est UNIQUE par défaut (valeur du code ; 2 sur le KVM 2 de production, 2 vCPU et 8 Go, posé par l'unité systemd), recyclé,
 plafonné en mémoire (``RLIMIT_AS``) et chaque pièce a un délai. Les threads de l'appelant ne
 font qu'attendre et écrire en base.
 

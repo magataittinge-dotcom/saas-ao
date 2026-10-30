@@ -88,7 +88,7 @@ External integrations:
 
 ### Single-VPS V1.0 deployment
 
-V1.0 ships on **one Hostinger KVM1 VPS** (Ubuntu 24.04). All services on the same host:
+V1.0 ships on **one Hostinger KVM 2 VPS** (Ubuntu 24.04 — 2 vCPU, 8 GB RAM, 100 GB disk; the settings live in `deploy/`, procedure in `docs/DEPLOYMENT.md`). All services on the same host:
 
 - Nginx + FastAPI + Postgres + Redis + object-storage proxy
 - Vertical scaling first; horizontal scaling deferred to V1.5
@@ -985,14 +985,14 @@ Every Anthropic SDK call wraps in `asyncio.to_thread` — even though the SDK ex
 
 ### 8.9 Postgres tuning
 
-V1.0 — sized for KVM2 (16 GB RAM total, shared with FastAPI + Redis + Celery + transient PDFium spikes):
+V1.0 — sized for the KVM 2 (8 GB RAM total, shared with FastAPI + Redis + Celery + transient PDFium spikes; source of truth: `deploy/postgres/synorix.conf`):
 
-- `shared_buffers = 2 GB` (~12% of RAM, leaves headroom for analysis spikes)
-- `effective_cache_size = 6 GB`
-- `work_mem = 32 MB`
-- `maintenance_work_mem = 512 MB`
+- `shared_buffers = 1 GB` (~12% of RAM, leaves headroom for analysis spikes)
+- `effective_cache_size = 4 GB`
+- `work_mem = 16 MB`
+- `maintenance_work_mem = 256 MB`
 - `random_page_cost = 1.1` (SSD)
-- Connection pooler: PgBouncer (transaction-pooling), 50 conns
+- `max_connections = 80` (one API process: no connection pooler in V1.0)
 
 ### 8.10 Cost guard
 
@@ -1067,15 +1067,15 @@ Every log line is JSON, includes:
 
 ### 10.1 V1.0 — Single VPS
 
-**Host:** Hostinger KVM2 — Ubuntu 24.04, 6 vCPU, 16 GB RAM, 200 GB SSD.
+**Host:** Hostinger KVM 2 — Ubuntu 24.04, 2 vCPU, 8 GB RAM, 100 GB disk (decision of 2026-10-30; the KVM 1 — 1 vCPU, 4 GB, 50 GB — was the target of 2026-10-25).
 
-**Rationale:** V1.0 co-hosts Nginx + FastAPI (4 workers) + Postgres + Redis + Celery worker + Celery beat on a single VPS. Postgres alone consumes ~4 GB (`shared_buffers` + `effective_cache_size`). A single Sonnet 4.6 analysis on a 5 GB ZIP can spike to 3–4 GB transient RAM during PyMuPDF extraction. KVM1 (8 GB) would force serialised processing under load; KVM2 absorbs 2–3 concurrent analyses comfortably. The ~10 €/month delta is negligible vs the migration cost under customer pressure.
+**Rationale:** V1.0 co-hosts Nginx + FastAPI (one uvicorn process, `--workers 1`: progress state is in memory and long jobs run in threads) + Postgres + Redis + Celery worker + Celery beat on a single VPS. The memory budget is the sum of the `MemoryMax` ceilings in `deploy/systemd/` (7 100 MB of 8 192 MB, checked by `backend/tests/test_deploy_kvm2.py`): API group 3 200 MB (at most two PDFium child processes and one LibreOffice conversion), Postgres about 1 900 MB, worker 800 MB, Redis 300 MB. PDF reading and Word-to-PDF conversion are serialised on purpose; the API stays up when a child process is killed.
 
 **Services on the host:**
 
 ```
 nginx                     :80, :443  →  reverse proxy, TLS
-fastapi (gunicorn+uvicorn):8000      →  4 workers (= CPU count)
+fastapi (uvicorn)           :8000      →  1 process (--workers 1, see deploy/systemd/synorix-api.service)
 postgres                  :5432      →  primary DB
 redis                     :6379      →  cache + Celery broker
 celery-worker             —          →  scheduled jobs (followups, expiry alerts)
@@ -1285,7 +1285,7 @@ Integration of 8 validated NotebookLM notebooks (193 sources) — see [NOTEBOOKS
 
 - **7.7** — Split Anthropic API key into PROD (IP-locked) and DEV (capped) for WSL2 dev.
 - **7.7** — Added Stripe webhook IP allowlist at Nginx level.
-- **10.1** — Upgraded V1.0 host from Hostinger KVM1 to KVM2 (6 vCPU / 16 GB RAM).
+- **10.1** — Upgraded V1.0 host from Hostinger KVM1 to KVM2. *Corrected 2026-10-30:* the KVM 2 is 2 vCPU / 8 GB RAM / 100 GB (the first note said 6 vCPU / 16 GB, which was wrong).
 - **10.5** — Consolidated frontend onto the VPS (Vercel deferred to V1.5).
 - **10.3** — Rewrote backup strategy: off-account provider (Backblaze B2), `age` encryption, automated monthly restoration drill.
 - **8.10** — Daily cost guard raised from €5 to €15 to accommodate clustered AO deadlines; soft warning at 70%, Coach explainer on block.

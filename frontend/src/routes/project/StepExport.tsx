@@ -12,13 +12,13 @@ import type { Project } from '@/types'
 import DocumentViewer, { type ViewableDocument } from '@/components/project/DocumentViewer'
 import { DocumentRowSkeleton } from '@/components/skeletons'
 import EchecAction from '@/components/common/EchecAction'
-import { signatureAConfirmer } from '@/components/project/SignatureLigne'
+import { phraseSourceSignature, signatureAConfirmer } from '@/components/project/SignatureLigne'
 import ExigencesDuDossier, { type ExigenceExport } from '@/components/project/ExigencesDuDossier'
 import {
   etatPiece, lignesDuScore, lireAvertissementsExport, resumeExigences, type GroupeExigences,
 } from '@/lib/exportDossier'
 import { messageErreur } from '@/lib/erreurs'
-import { suiteComptes } from '@/lib/statutPiece'
+import { noteDepot, suiteComptes } from '@/lib/statutPiece'
 import { libellePassagesACompleter } from '@/lib/passagesACompleter'
 import { echeanceAO } from '@/lib/echeance'
 
@@ -45,6 +45,13 @@ interface ChecklistExportItem {
   // Lecture du RC (serveur) : statuts « Si concerné », « Facultatif », « Pour l'attribution »
   obligation?: 'obligatoire' | 'si_concerne' | 'facultatif'
   phase?: 'depot' | 'attribution'
+  // « Déposé le … par … » et source de la signature lue dans le RC (comme l'écran des pièces)
+  depose_le?: string | null
+  depose_par?: string | null
+  source_document?: string | null
+  source_page?: number | null
+  source_article?: string | null
+  source_exigence_id?: string | null
 }
 
 // Exactement ce que le ZIP contient (même plan que l'archive, côté serveur)
@@ -596,6 +603,8 @@ export default function StepExport({ project }: Props) {
                         {item.details || item.document_type_required}
                       </p>
                       <span className={etat.statut.classe}>{etat.texte}</span>
+                      {noteDepot(item) && <p className="piece-note">{noteDepot(item)}</p>}
+                      {phraseSourceSignature(item) && <p className="piece-note">{phraseSourceSignature(item)}</p>}
                     </div>
                   </div>
                 )

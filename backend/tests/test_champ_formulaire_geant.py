@@ -6,7 +6,8 @@ limite, et AVANT l'authentification (FastAPI lit le corps avant de résoudre
 les dépendances, donc avant `get_auth_user`). Toutes les routes multipart
 étaient exposées. Mesure de l'agent W sur Starlette 0.37.2 : un champ de
 300 Mo faisait monter le serveur de +901 Mo et coûtait 73 s de CPU, sur un
-serveur de production à 1 vCPU et 4 Go (Hostinger KVM 1).
+serveur de production visé à l'époque (1 vCPU et 4 Go, Hostinger KVM 1 ; le KVM 2 retenu
+le 30/10/2026 a 2 vCPU et 8 Go : le champ géant reste à refuser).
 
 Le test lance un vrai uvicorn, en sous-processus, qui sert les deux vraies
 routes de dépôt de Synorix (coffre-fort et pièces du DCE), sans importer

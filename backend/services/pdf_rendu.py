@@ -2,7 +2,7 @@
 
 ``rendre_page_webp(chemin, page_index, largeur_px, cadrage=None)`` :
 - s'exécute dans le processus pdfium (``pdfium_processus.executer`` : plafond de mémoire, délai,
-  un seul processus sur le KVM 1) : l'API ne rend jamais un PDF déposé elle-même ;
+  un à deux processus sur le KVM 2) : l'API ne rend jamais un PDF déposé elle-même ;
 - ouvre et aplatit la page exactement comme la lecture du texte (``pdf_lecture.page_aplatie``) ;
 - ne dessine pas les champs de formulaire (``may_draw_forms=False``) : ils sont déjà aplatis ;
 - respecte la rotation de la page (/Rotate) : l'image est celle que voit l'utilisateur ;

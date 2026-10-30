@@ -3,7 +3,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { renderToStaticMarkup } from 'react-dom/server'
-import SignatureLigne, { libelleSourceRc, regleSignature } from '@/components/project/SignatureLigne'
+import SignatureLigne, { libelleSourceRc, phraseSourceSignature, regleSignature } from '@/components/project/SignatureLigne'
 import { lire } from './outils/sources'
 import type { ChecklistItem } from '@/types'
 
@@ -70,4 +70,17 @@ test('StepVerification ouvre le panneau « Voir dans le DCE » sur l’exigence 
   const code = lire('src/routes/project/StepVerification.tsx')
   assert.ok(code.includes("type: 'exigence', id: item.source_exigence_id"))
   assert.ok(code.includes('<PanneauSource'))
+})
+
+test('l’écran Export cite la même phrase de source et le même « Déposé le … par … » que l’écran des pièces', () => {
+  const item = ligne({
+    signature_required: true, source_document: 'RC.pdf', source_page: 7,
+    source_article: 'Article 5.2 — Présentation des candidatures',
+  })
+  assert.equal(phraseSourceSignature(item),
+    'Le règlement de la consultation demande une signature. Source : RC.pdf — Article 5.2 — Présentation des candidatures, page 7')
+  assert.equal(phraseSourceSignature({ ...item, signature_required: false }), null)
+  assert.equal(phraseSourceSignature({ ...item, document_type_required: 'declaration_honneur' }), null)
+  const code = lire('src/routes/project/StepExport.tsx')
+  assert.ok(code.includes('noteDepot(item)') && code.includes('phraseSourceSignature(item)'))
 })

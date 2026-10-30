@@ -2,11 +2,12 @@
 
 Pourquoi. PDFium (pypdfium2) tourne en code natif : un PDF piégé de 330 Ko a déjà fait monter
 l'API au-delà de 6 Go (rapport G), un plan vectoriel lu monte à ~585 Mo, un plantage natif
-emporte tout le processus qui lit. Sur le KVM 1 (1 vCPU, 4 Go pour Postgres, Redis, l'API,
+emporte tout le processus qui lit. Sur le KVM 2 (2 vCPU, 8 Go pour Postgres, Redis, l'API,
 Celery, LibreOffice et les PDF), toute lecture de fichier déposé se fait donc ici :
 
-- UN SEUL processus pdfium au total par défaut (``SYNORIX_PDFIUM_PROCESSUS=1``). Avec un seul
-  cœur, un 2e processus ne va pas plus vite ; il double seulement la mémoire. L'extraction au
+- UN SEUL processus pdfium au total par défaut (``SYNORIX_PDFIUM_PROCESSUS=1``, valeur prudente du
+  code). Le KVM 2 de production (2 vCPU) en pose 2 dans synorix-api.service : un 2e processus y
+  travaille vraiment en parallèle ; sur un seul cœur, il ne ferait que doubler la mémoire. L'extraction au
   dépôt, le rendu des aperçus de « Voir dans le DCE » et le calcul des ancres PARTAGENT ce
   processus : un clic d'aperçu attend au plus la tâche en cours (une pièce, ou une page), il
   ne coûte pas un second processus. ``0`` = exécution directe dans l'appelant (diagnostic et
@@ -26,8 +27,8 @@ Celery, LibreOffice et les PDF), toute lecture de fichier déposé se fait donc 
 
 Compromis mémoire contre équité. Un seul processus signifie qu'un gros dépôt (une pièce peut
 tenir le processus jusqu'à 15 minutes) retarde les travaux des autres organisations. On ne
-règle pas cela en ajoutant des processus (chacun peut tenir 1,5 Go : le KVM 1 n'a pas la
-mémoire), mais en BORNANT l'attente : nul n'attend une place indéfiniment. Un travail
+règle pas cela en ajoutant des processus (chacun peut tenir 1,5 Go : le budget de 8 Go du KVM 2
+ne laisse la place qu'à deux), mais en BORNANT l'attente : nul n'attend une place indéfiniment. Un travail
 interactif (aperçu, ancre au premier clic) attend ``ATTENTE_INTERACTIF_S`` (5 s, réglable
 ``SYNORIX_PDFIUM_ATTENTE_S``) puis lève ``TravailPdfiumEchoue("attente")`` : la route répond
 503 avec ``Retry-After`` (services/pdfium_http.py) et le front réessaie. L'extraction attend
@@ -83,8 +84,8 @@ __all__ = ["TravailPdfiumEchoue", "executer", "signaler", "arreter", "etat",
 # - un enfant frais occupe 30 Mo de mémoire VIRTUELLE (pypdfium2 + document_processor chargés) ;
 # - la pièce la plus lourde (plan vectoriel ARCH 12) le monte à 622 Mo virtuels, 603 Mo résidents ;
 # - un PDF « bombe » de 1,5 Mo sur disque (1,5 Go de flux) fait avorter un enfant plafonné à 1,5 Go.
-# Plafond par défaut : 1536 Mo, soit 2,5 fois la pièce la plus lourde mesurée. Sur le KVM 1
-# (4 Go : Postgres, Redis, API, Celery, LibreOffice), un enfant ne peut ainsi jamais tenir
+# Plafond par défaut : 1536 Mo, soit 2,5 fois la pièce la plus lourde mesurée. Sur le KVM 2
+# (8 Go : Postgres, Redis, API, Celery, LibreOffice), un enfant ne peut ainsi jamais tenir
 # plus de 1,5 Go, la bombe est refusée proprement, et la marge couvre les plans plus gros.
 # Réglable : SYNORIX_PDFIUM_AS_MO (0 = aucun plafond, déconseillé).
 AS_MO_DEFAUT = 1536
