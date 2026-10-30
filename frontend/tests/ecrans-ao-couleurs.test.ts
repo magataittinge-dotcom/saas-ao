@@ -48,12 +48,17 @@ const TRANCHES: Record<string, string[]> = {
     'src/components/project/RewritePassageBar.tsx',
     'src/components/project/PoidsMemoire.tsx',
   ],
+  'export (ZIP, Word, PDF, visionneuse de pièce)': [
+    'src/routes/project/StepExport.tsx',
+    'src/components/project/ExigencesDuDossier.tsx',
+    'src/components/project/DocumentViewer.tsx',
+  ],
 }
 
 // hex (3, 4, 6 ou 8 chiffres), fonctions rgb/hsl, classes Tailwind de palette fixe (bg-slate-900, text-white/90…)
 const COULEUR_EN_DUR = new RegExp(
   [
-    String.raw`#[0-9A-Fa-f]{8}\b`, String.raw`#[0-9A-Fa-f]{6}\b`, String.raw`#[0-9A-Fa-f]{3,4}\b(?![\w-])`,
+    String.raw`(?<![&\w])#[0-9A-Fa-f]{8}\b`, String.raw`(?<![&\w])#[0-9A-Fa-f]{6}\b`, String.raw`(?<![&\w])#[0-9A-Fa-f]{3,4}\b(?![\w-])`,
     String.raw`\brgba?\(`, String.raw`\bhsla?\(`,
     String.raw`(?<![\w-])(?:[a-z-]+:)*(?:bg|text|border|ring|from|to|via|fill|stroke|divide|outline|shadow|placeholder|decoration|accent|caret)-(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)(?:-\d+)?(?![\w-])`,
   ].join('|'),

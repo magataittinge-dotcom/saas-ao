@@ -116,7 +116,7 @@ export default function DocumentViewer({ projectId, documents, initialIndex, onC
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
-      style={{ background: 'rgba(0,0,0,0.88)', backdropFilter: 'none' }}
+      style={{ background: 'var(--scrim)', backdropFilter: 'none' }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
@@ -124,15 +124,15 @@ export default function DocumentViewer({ projectId, documents, initialIndex, onC
         style={{
           width: '88vw',
           height: '92vh',
-          background: '#121213',
-          border: '1px solid rgba(255,255,255,0.12)',
-          boxShadow: '0 25px 60px rgba(0,0,0,0.6), 0 0 50px rgba(255,255,255,0.06)',
+          background: 'var(--surface-0)',
+          border: '1px solid var(--border-2)',
+          boxShadow: '0 25px 60px color-mix(in srgb, var(--surface-dark) 60%, transparent), 0 0 50px color-mix(in srgb, var(--text-1) 6%, transparent)',
         }}
       >
         {/* ── Header ──────────────────────────────────────────────── */}
         <div
           className="flex items-center justify-between px-5 py-3 shrink-0"
-          style={{ borderBottom: '1px solid rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.03)' }}
+          style={{ borderBottom: '1px solid var(--border-2)', background: 'color-mix(in srgb, var(--text-1) 3%, transparent)' }}
         >
           <div className="flex items-center gap-3 min-w-0 flex-1">
             {/* Prev/Next document nav */}
@@ -160,7 +160,7 @@ export default function DocumentViewer({ projectId, documents, initialIndex, onC
               </button>
             </div>
 
-            <div className="w-px h-5 shrink-0" style={{ background: '#1E1E21' }} />
+            <div className="w-px h-5 shrink-0" style={{ background: 'var(--surface-1)' }} />
 
             {/* File icon + name */}
             <div className="flex items-center gap-2 min-w-0">
@@ -180,14 +180,14 @@ export default function DocumentViewer({ projectId, documents, initialIndex, onC
           <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={handleDownload}
-              className="p-1.5 rounded-lg hover:bg-[#1E1E21] transition-colors text-ds-text-dim"
+              className="p-1.5 rounded-lg hover:bg-surface-1 transition-colors text-ds-text-dim"
               title="Télécharger"
             >
               <Download size={16} />
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg hover:bg-red-500/10 transition-colors text-ds-text-dim"
+              className="p-1.5 rounded-lg hover:bg-danger-bg transition-colors text-ds-text-dim"
               title="Fermer (Echap)"
             >
               <X size={18} />
@@ -196,7 +196,7 @@ export default function DocumentViewer({ projectId, documents, initialIndex, onC
         </div>
 
         {/* ── Content ─────────────────────────────────────────────── */}
-        <div className="flex-1 overflow-auto flex items-center justify-center" style={{ background: '#09090A' }}>
+        <div className="flex-1 overflow-auto flex items-center justify-center" style={{ background: 'var(--surface-0)' }}>
           {loading && (
             <div className="flex flex-col items-center gap-3">
               <Loader2 size={28} className="animate-spin text-ds-accent" />
@@ -208,7 +208,7 @@ export default function DocumentViewer({ projectId, documents, initialIndex, onC
             <div className="flex flex-col items-center gap-4 text-center px-8">
               <div
                 className="w-14 h-14 rounded-2xl flex items-center justify-center"
-                style={{ background: 'rgba(245,142,134,0.10)' }}
+                style={{ background: 'color-mix(in srgb, var(--danger-fg) 10%, transparent)' }}
               >
                 <FileText size={28} className="text-ds-danger" />
               </div>
@@ -216,7 +216,7 @@ export default function DocumentViewer({ projectId, documents, initialIndex, onC
               <button
                 onClick={handleDownload}
                 className="flex items-center gap-2 text-xs font-medium px-4 py-2 rounded-lg text-ds-accent"
-                style={{ border: '1px solid rgba(255,255,255,0.30)' }}
+                style={{ border: '1px solid var(--border-2)' }}
               >
                 <Download size={14} /> Télécharger à la place
               </button>
@@ -228,7 +228,7 @@ export default function DocumentViewer({ projectId, documents, initialIndex, onC
               src={blobUrl}
               className="w-full h-full border-0"
               title={doc.name}
-              style={{ background: '#fff' }}
+              style={{ background: 'var(--surface-1)' }}
             />
           )}
 
@@ -246,7 +246,7 @@ export default function DocumentViewer({ projectId, documents, initialIndex, onC
             <div className="flex flex-col items-center gap-5 text-center px-8">
               <div
                 className="w-16 h-16 rounded-2xl flex items-center justify-center"
-                style={{ background: 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.20)' }}
+                style={{ background: 'color-mix(in srgb, var(--text-1) 10%, transparent)', border: '1px solid var(--border-2)' }}
               >
                 <FileText size={32} className="text-ds-accent" />
               </div>
@@ -260,8 +260,8 @@ export default function DocumentViewer({ projectId, documents, initialIndex, onC
                 onClick={handleDownload}
                 className="flex items-center gap-2 text-sm font-medium px-5 py-2.5 rounded-lg transition-colors text-ds-accent"
                 style={{
-                  background: 'rgba(255,255,255,0.12)',
-                  border: '1px solid rgba(255,255,255,0.25)',
+                  background: 'color-mix(in srgb, var(--text-1) 12%, transparent)',
+                  border: '1px solid var(--border-2)',
                 }}
               >
                 <Download size={16} /> Télécharger le fichier

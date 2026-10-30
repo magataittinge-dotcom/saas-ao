@@ -33,14 +33,14 @@ export default function ExigencesDuDossier({
 }) {
   if (items.length === 0) {
     return (
-      <p className="text-xs text-center py-4" style={{ color: '#909195' }}>
+      <p className="text-xs text-center py-4" style={{ color: 'var(--text-3)' }}>
         Les exigences apparaissent après l&apos;analyse du DCE
       </p>
     )
   }
   return (
     <div className="space-y-3.5">
-      <p className="text-xs" style={{ color: '#909195' }}>
+      <p className="text-xs" style={{ color: 'var(--text-3)' }}>
         Cochez les exigences que vous avez vérifiées, ou confirmez tout un groupe.
       </p>
       {GROUPES_EXIGENCES.map(({ id, label }) => {
@@ -51,8 +51,8 @@ export default function ExigencesDuDossier({
           <section key={id}>
             <div className="flex items-center justify-between gap-3 mb-2">
               <p className="min-w-0 text-xs">
-                <span className="font-semibold uppercase tracking-wide" style={{ color: '#959597' }}>{label}</span>
-                <span className="ml-2" style={{ color: '#909195' }}>{compteGroupe(duGroupe.length, confirmees)}</span>
+                <span className="font-semibold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>{label}</span>
+                <span className="ml-2" style={{ color: 'var(--text-3)' }}>{compteGroupe(duGroupe.length, confirmees)}</span>
               </p>
               {confirmees < duGroupe.length && (
                 <button
@@ -60,7 +60,7 @@ export default function ExigencesDuDossier({
                   disabled={enCours}
                   onClick={() => onConfirmerGroupe(id)}
                   className="glass-btn shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium disabled:opacity-50"
-                  style={{ color: '#D8D9DB' }}
+                  style={{ color: 'var(--text-2)' }}
                 >
                   Tout confirmer
                 </button>
@@ -77,12 +77,12 @@ export default function ExigencesDuDossier({
                     onChange={(e) => onConfirmer(item, e.target.checked)}
                     aria-label="Confirmée par vous"
                   />
-                  <span className="text-sm leading-relaxed flex-1" style={{ color: '#D8D9DB' }}>
+                  <span className="text-sm leading-relaxed flex-1" style={{ color: 'var(--text-2)' }}>
                     {item.exigence_text}
                   </span>
                   <span
                     className="text-xs shrink-0 whitespace-nowrap"
-                    style={{ color: item.source_verifiee ? '#959597' : 'var(--warn)' }}
+                    style={{ color: item.source_verifiee ? 'var(--text-3)' : 'var(--warn)' }}
                   >
                     {item.source_verifiee
                       ? `${item.source_document ?? 'DCE'}${item.source_page ? ` p.${item.source_page}` : ''}`

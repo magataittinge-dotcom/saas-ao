@@ -110,9 +110,9 @@ interface ExportDetail {
 // Pièces : vert = jointe (fait vérifié), ambre = à renouveler ou à confirmer,
 // cercle neutre = à joindre (un travail à faire, pas une alarme).
 function PieceIcon({ ton }: { ton: 'ok' | 'attention' | 'neutre' }) {
-  if (ton === 'ok') return <CheckCircle2 size={15} className="shrink-0" style={{ color: '#6EE7A8' }} />
-  if (ton === 'attention') return <AlertTriangle size={15} className="shrink-0" style={{ color: '#D9A441' }} />
-  return <Circle size={15} className="shrink-0" style={{ color: '#909195' }} />
+  if (ton === 'ok') return <CheckCircle2 size={15} className="shrink-0" style={{ color: 'var(--success-fg)' }} />
+  if (ton === 'attention') return <AlertTriangle size={15} className="shrink-0" style={{ color: 'var(--warning-fg)' }} />
+  return <Circle size={15} className="shrink-0" style={{ color: 'var(--text-3)' }} />
 }
 
 const DOSSIERS_ZIP: Record<string, string> = {
@@ -127,10 +127,10 @@ function HeroCheck({ ok, label, value }: { ok: boolean; label: string; value: st
   return (
     <span className="flex items-center gap-1.5 text-xs">
       {ok
-        ? <CheckCircle2 size={13} className="shrink-0" style={{ color: '#6EE7A8' }} />
-        : <AlertTriangle size={13} className="shrink-0" style={{ color: '#D9A441' }} />}
-      <span style={{ color: '#959597' }}>{label}</span>
-      <span className="num-mono font-semibold" style={{ color: '#F7F8F8' }}>{value}</span>
+        ? <CheckCircle2 size={13} className="shrink-0" style={{ color: 'var(--success-fg)' }} />
+        : <AlertTriangle size={13} className="shrink-0" style={{ color: 'var(--warning-fg)' }} />}
+      <span style={{ color: 'var(--text-3)' }}>{label}</span>
+      <span className="num-mono font-semibold" style={{ color: 'var(--text-1)' }}>{value}</span>
     </span>
   )
 }
@@ -149,7 +149,7 @@ function AccordionSection({
   return (
     <div
       className="glass-card rounded-lg overflow-hidden"
-      style={{ border: '1px solid rgba(255,255,255,.07)', boxShadow: '0 1px 3px rgba(0,0,0,.4)' }}
+      style={{ border: '1px solid var(--border-1)', boxShadow: 'var(--shadow-card)' }}
     >
       <button
         onClick={onToggle}
@@ -157,20 +157,20 @@ function AccordionSection({
       >
         <div className="flex items-center gap-2.5">
           {ok
-            ? <CheckCircle2 size={16} style={{ color: '#6EE7A8' }} />
-            : <AlertTriangle size={16} style={{ color: '#D9A441' }} />
+            ? <CheckCircle2 size={16} style={{ color: 'var(--success-fg)' }} />
+            : <AlertTriangle size={16} style={{ color: 'var(--warning-fg)' }} />
           }
-          <span className="text-sm font-semibold" style={{ color: '#F7F8F8', fontFamily: F }}>
+          <span className="text-sm font-semibold" style={{ color: 'var(--text-1)', fontFamily: F }}>
             {title}
           </span>
         </div>
         {expanded
-          ? <ChevronDown size={16} style={{ color: '#909195' }} />
-          : <ChevronRight size={16} style={{ color: '#909195' }} />
+          ? <ChevronDown size={16} style={{ color: 'var(--text-3)' }} />
+          : <ChevronRight size={16} style={{ color: 'var(--text-3)' }} />
         }
       </button>
       {expanded && children && (
-        <div style={{ borderTop: '1px solid rgba(255,255,255,.07)' }}>
+        <div style={{ borderTop: '1px solid var(--border-1)' }}>
           {children}
         </div>
       )}
@@ -401,19 +401,19 @@ export default function StepExport({ project }: Props) {
     <div
       className="sticky -bottom-5 z-30 -mx-3 sm:-mx-4 mt-6 rounded-t-lg flex flex-col items-center px-6 py-3 gap-2"
       style={{
-        background: 'rgba(9,9,10,0.92)',
+        background: 'color-mix(in srgb, var(--surface-0) 92%, transparent)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
-        borderTop: '1px solid rgba(255,255,255,.07)',
+        borderTop: '1px solid var(--border-1)',
       }}
     >
       {gateBlocked && showGateWarning && (
         <div className="w-full max-w-xl rounded-xl px-4 py-3 text-left"
-          style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.25)' }}>
-          <p className="text-xs font-semibold mb-1" style={{ color: '#D9A441' }}>
+          style={{ background: 'color-mix(in srgb, var(--warning-fg) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--warning-fg) 25%, transparent)' }}>
+          <p className="text-xs font-semibold mb-1" style={{ color: 'var(--warning-fg)' }}>
             {score!.total - score!.conformes} pièce{score!.total - score!.conformes > 1 ? 's' : ''} à finaliser avant le dépôt :
           </p>
-          <ul className="text-xs space-y-0.5" style={{ color: '#D9A441' }}>
+          <ul className="text-xs space-y-0.5" style={{ color: 'var(--warning-fg)' }}>
             {nonConformes.slice(0, 6).map((i) => (
               <li key={i.id}>
                 • {i.details || i.linked_document_name || i.document_type_required}
@@ -429,7 +429,7 @@ export default function StepExport({ project }: Props) {
             onClick={() => exportZip()}
             disabled={isExportingZip}
             className="mt-2 px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50"
-            style={{ background: 'rgba(217,164,65,0.10)', color: '#D9A441', border: '1px solid rgba(217,164,65,0.25)' }}
+            style={{ background: 'color-mix(in srgb, var(--warning-fg) 10%, transparent)', color: 'var(--warning-fg)', border: '1px solid color-mix(in srgb, var(--warning-fg) 25%, transparent)' }}
           >
             {isExportingZip ? 'Export…' : 'Exporter quand même'}
           </button>
@@ -442,8 +442,8 @@ export default function StepExport({ project }: Props) {
         style={{
           fontFamily: F, padding: '12px 32px', fontSize: '16px', borderRadius: '12px',
           ...(gateBlocked
-            ? { background: 'linear-gradient(135deg, #D9A441, #D9A441)', boxShadow: '0 2px 8px rgba(245,158,11,0.30)' }
-            : { boxShadow: '0 2px 8px rgba(255,255,255,0.30)' }),
+            ? { background: 'var(--warning-bg)', color: 'var(--warning-fg)', border: '1px solid var(--warning-border)', boxShadow: 'none' }
+            : {}),
         }}
       >
         {isExportingZip ? <Loader2 size={18} className="animate-spin" /> : <Archive size={18} />}
@@ -469,10 +469,10 @@ export default function StepExport({ project }: Props) {
                 {totalPieces - conformes}
               </span>
               <div className="pb-0.5">
-                <p className="text-sm font-semibold" style={{ color: '#F7F8F8' }}>
+                <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>
                   {suiteComptes(totalPieces - conformes, conformes)}
                 </p>
-                <p className="mt-0.5 text-xs font-medium" style={{ color: readyForDeposit ? '#6EE7A8' : 'var(--warn)' }}>
+                <p className="mt-0.5 text-xs font-medium" style={{ color: readyForDeposit ? 'var(--success-fg)' : 'var(--warn)' }}>
                   {readyForDeposit
                     ? 'Dossier prêt pour le dépôt'
                     : gateBlocked
@@ -482,8 +482,8 @@ export default function StepExport({ project }: Props) {
               </div>
             </div>
             <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
-              <span className="flex items-center gap-1.5 text-xs" style={{ color: '#959597' }}>
-                <FileText size={13} className="shrink-0" style={{ color: '#959597' }} />
+              <span className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-3)' }}>
+                <FileText size={13} className="shrink-0" style={{ color: 'var(--text-3)' }} />
                 {resumeDesExigences}
               </span>
               <HeroCheck
@@ -507,7 +507,7 @@ export default function StepExport({ project }: Props) {
                 onClick={() => exportPdf()}
                 disabled={isExportingPdf || !detail.has_memoire}
                 className="glass-btn w-full flex items-center gap-2 py-1.5 px-3 text-xs font-semibold rounded-lg disabled:opacity-40"
-                style={{ color: '#D8D9DB' }}
+                style={{ color: 'var(--text-2)' }}
               >
                 {isExportingPdf ? <Loader2 size={13} className="animate-spin" /> : <FileDown size={13} />}
                 Mémoire PDF (dépôt)
@@ -516,16 +516,16 @@ export default function StepExport({ project }: Props) {
                 onClick={() => exportDocx()}
                 disabled={isExportingDocx || !detail.has_memoire}
                 className="w-full flex items-center gap-2 py-1.5 px-3 text-xs font-medium rounded-lg transition-colors hover:bg-ds-bg-2 disabled:opacity-40"
-                style={{ border: '1px solid rgba(255,255,255,.07)', color: '#959597' }}
+                style={{ border: '1px solid var(--border-1)', color: 'var(--text-3)' }}
               >
                 {isExportingDocx ? <Loader2 size={13} className="animate-spin" /> : <FileDown size={13} />}
                 Mémoire Word (retouche)
               </button>
             </div>
             {detail.naming_convention && (
-              <p className="mt-3 text-xs leading-relaxed" style={{ color: '#909195' }}>
+              <p className="mt-3 text-xs leading-relaxed" style={{ color: 'var(--text-3)' }}>
                 Pièces du ZIP nommées selon le RC&nbsp;:{' '}
-                <span className="num-mono" style={{ color: '#959597' }}>
+                <span className="num-mono" style={{ color: 'var(--text-3)' }}>
                   {detail.naming_convention.replace('{lot}', 'Lot').replace('{entreprise}', 'Entreprise').replace('{piece}', 'Pièce')}
                 </span>
               </p>
@@ -544,17 +544,17 @@ export default function StepExport({ project }: Props) {
 
       {avertissementsZip && avertissementsZip.length > 0 && (
         <div className="glass-card rounded-lg px-4 py-3" role="status">
-          <p className="text-xs font-semibold" style={{ color: '#F7F8F8' }}>
+          <p className="text-xs font-semibold" style={{ color: 'var(--text-1)' }}>
             Dossier téléchargé — à noter avant le dépôt
           </p>
-          <ul className="mt-1.5 space-y-0.5 text-xs" style={{ color: '#959597' }}>
+          <ul className="mt-1.5 space-y-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
             {avertissementsZip.map((a) => <li key={a}>• {a}</li>)}
           </ul>
           <button
             type="button"
             onClick={() => setAvertissementsZip(null)}
             className="mt-2 text-xs hover:underline"
-            style={{ color: '#909195' }}
+            style={{ color: 'var(--text-3)' }}
           >
             Fermer
           </button>
@@ -584,7 +584,7 @@ export default function StepExport({ project }: Props) {
                   >
                     <PieceIcon ton={etat.ton} />
                     <div className="min-w-0">
-                      <p className="text-sm font-medium" style={{ color: '#F7F8F8' }}>
+                      <p className="text-sm font-medium" style={{ color: 'var(--text-1)' }}>
                         {item.details || item.document_type_required}
                       </p>
                       <span className={etat.statut.classe}>{etat.texte}</span>
@@ -593,7 +593,7 @@ export default function StepExport({ project }: Props) {
                 )
               })}
               {piecesDemandees.length === 0 && (
-                <p className="text-xs text-center py-4" style={{ color: '#909195' }}>
+                <p className="text-xs text-center py-4" style={{ color: 'var(--text-3)' }}>
                   La liste des pièces apparaît après la lecture du RC
                 </p>
               )}
@@ -611,12 +611,12 @@ export default function StepExport({ project }: Props) {
               {detail.memoire_info ? (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2.5 py-2.5 px-3 rounded-lg hover:bg-ds-bg-2 transition-colors">
-                    <CheckCircle2 size={15} style={{ color: '#6EE7A8' }} />
+                    <CheckCircle2 size={15} style={{ color: 'var(--success-fg)' }} />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium" style={{ color: '#F7F8F8' }}>
+                      <p className="text-sm font-medium" style={{ color: 'var(--text-1)' }}>
                         Mémoire technique v{detail.memoire_info.version}
                       </p>
-                      <p className="text-xs" style={{ color: '#959597' }}>
+                      <p className="text-xs" style={{ color: 'var(--text-3)' }}>
                         {detail.memoire_info.estimated_pages} pages, {detail.memoire_info.sections_count} sections — généré le{' '}
                         {new Date(detail.memoire_info.generated_at).toLocaleDateString('fr-FR')}
                       </p>
@@ -624,23 +624,23 @@ export default function StepExport({ project }: Props) {
                     <button
                       onClick={() => navigate(`/projects/${project.id}/memoire`)}
                       className="flex items-center gap-1 text-xs font-medium shrink-0 transition-colors"
-                      style={{ color: '#E8E9EB' }}
+                      style={{ color: 'var(--text-1)' }}
                     >
                       <ExternalLink size={12} /> Voir
                     </button>
                   </div>
-                  <p className="text-xs px-3" style={{ color: '#909195' }}>
+                  <p className="text-xs px-3" style={{ color: 'var(--text-3)' }}>
                     Les documents de réponse seront inclus dans le ZIP.
                   </p>
                 </div>
               ) : (
                 <div className="text-center py-4">
-                  <AlertTriangle size={16} className="mx-auto mb-2" style={{ color: '#959597' }} />
-                  <p className="text-xs" style={{ color: '#959597' }}>Le mémoire technique n&apos;a pas encore été généré.</p>
+                  <AlertTriangle size={16} className="mx-auto mb-2" style={{ color: 'var(--text-3)' }} />
+                  <p className="text-xs" style={{ color: 'var(--text-3)' }}>Le mémoire technique n&apos;a pas encore été généré.</p>
                   <button
                     onClick={() => navigate(`/projects/${project.id}/memoire`)}
                     className="glass-btn mt-2 text-xs font-semibold px-3.5 py-1.5 rounded-lg"
-                    style={{ color: '#D8D9DB' }}
+                    style={{ color: 'var(--text-2)' }}
                   >
                     Aller à l&apos;étape Mémoire →
                   </button>
@@ -661,19 +661,19 @@ export default function StepExport({ project }: Props) {
               {detail.dpgf_info && (
                 <div
                   className="flex items-center justify-between p-3 rounded-lg"
-                  style={{ background: '#1E1E21' }}
+                  style={{ background: 'var(--surface-1)' }}
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <FileSpreadsheet size={16} style={{ color: '#E8E9EB' }} />
+                    <FileSpreadsheet size={16} style={{ color: 'var(--text-1)' }} />
                     <div className="min-w-0">
-                      <p className="text-xs font-medium truncate" style={{ color: '#F7F8F8' }}>{detail.dpgf_info.file_name}</p>
-                      <p className="text-xs" style={{ color: '#959597' }}>DPGF originale du DCE</p>
+                      <p className="text-xs font-medium truncate" style={{ color: 'var(--text-1)' }}>{detail.dpgf_info.file_name}</p>
+                      <p className="text-xs" style={{ color: 'var(--text-3)' }}>DPGF originale du DCE</p>
                     </div>
                   </div>
                   <button
                     onClick={handleDownloadDpgf}
                     className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors shrink-0 hover:bg-ds-bg-2"
-                    style={{ border: '1px solid rgba(255,255,255,.07)', color: '#C2C3C6' }}
+                    style={{ border: '1px solid var(--border-1)', color: 'var(--text-2)' }}
                   >
                     <Download size={13} /> Télécharger
                   </button>
@@ -682,27 +682,27 @@ export default function StepExport({ project }: Props) {
 
               {/* Upload filled DPGF */}
               <div>
-                <p className="text-xs font-medium mb-2" style={{ color: '#F7F8F8' }}>
+                <p className="text-xs font-medium mb-2" style={{ color: 'var(--text-1)' }}>
                   Déposer votre DPGF remplie
                 </p>
                 <div
                   className="relative rounded-xl p-4 text-center transition-all cursor-pointer"
                   style={{
-                    border: `2px dashed ${dpgfDragging ? '#E8E9EB' : '#909195'}`,
-                    background: dpgfDragging ? 'rgba(255,255,255,0.04)' : '#121213',
+                    border: `2px dashed ${dpgfDragging ? 'var(--text-1)' : 'var(--text-3)'}`,
+                    background: dpgfDragging ? 'color-mix(in srgb, var(--text-1) 4%, transparent)' : 'var(--surface-0)',
                   }}
                   onDragOver={(e) => { e.preventDefault(); setDpgfDragging(true) }}
                   onDragLeave={() => setDpgfDragging(false)}
                   onDrop={onDpgfDrop}
                 >
                   {dpgfUploading ? (
-                    <Loader2 size={20} className="mx-auto animate-spin" style={{ color: '#E8E9EB' }} />
+                    <Loader2 size={20} className="mx-auto animate-spin" style={{ color: 'var(--text-1)' }} />
                   ) : (
                     <>
-                      <Upload size={20} className="mx-auto mb-1.5" style={{ color: '#909195' }} />
-                      <p className="text-xs" style={{ color: '#959597' }}>
+                      <Upload size={20} className="mx-auto mb-1.5" style={{ color: 'var(--text-3)' }} />
+                      <p className="text-xs" style={{ color: 'var(--text-3)' }}>
                         Glissez votre DPGF remplie ici ou{' '}
-                        <label className="cursor-pointer font-medium" style={{ color: '#E8E9EB' }}>
+                        <label className="cursor-pointer font-medium" style={{ color: 'var(--text-1)' }}>
                           parcourir
                           <input
                             type="file"
@@ -716,12 +716,12 @@ export default function StepExport({ project }: Props) {
                           />
                         </label>
                       </p>
-                      <p className="text-xs mt-0.5" style={{ color: '#909195' }}>XLSX, XLS, ODS, PDF</p>
+                      <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>XLSX, XLS, ODS, PDF</p>
                     </>
                   )}
                 </div>
                 {dpgfError && (
-                  <p className="text-xs mt-1.5" style={{ color: '#F58E86' }}>{dpgfError}</p>
+                  <p className="text-xs mt-1.5" style={{ color: 'var(--danger-fg)' }}>{dpgfError}</p>
                 )}
               </div>
 
@@ -734,47 +734,47 @@ export default function StepExport({ project }: Props) {
                   <div
                     className="rounded-lg p-3.5"
                     style={{
-                      background: isValid ? 'rgba(110,231,168,0.04)' : hasWarnings ? 'rgba(217,164,65,0.04)' : 'rgba(245,142,134,0.04)',
-                      border: `1px solid ${isValid ? 'rgba(110,231,168,0.15)' : hasWarnings ? 'rgba(217,164,65,0.15)' : 'rgba(245,142,134,0.15)'}`,
+                      background: isValid ? 'color-mix(in srgb, var(--success-fg) 4%, transparent)' : hasWarnings ? 'color-mix(in srgb, var(--warning-fg) 4%, transparent)' : 'color-mix(in srgb, var(--danger-fg) 4%, transparent)',
+                      border: `1px solid ${isValid ? 'color-mix(in srgb, var(--success-fg) 15%, transparent)' : hasWarnings ? 'color-mix(in srgb, var(--warning-fg) 15%, transparent)' : 'color-mix(in srgb, var(--danger-fg) 15%, transparent)'}`,
                     }}
                   >
                     <div className="flex items-center justify-between mb-3">
                       <div className="flex items-center gap-2">
                         {isValid
-                          ? <CheckCircle2 size={16} style={{ color: '#6EE7A8' }} />
-                          : <AlertTriangle size={16} style={{ color: hasWarnings ? '#D9A441' : '#F58E86' }} />
+                          ? <CheckCircle2 size={16} style={{ color: 'var(--success-fg)' }} />
+                          : <AlertTriangle size={16} style={{ color: hasWarnings ? 'var(--warning-fg)' : 'var(--danger-fg)' }} />
                         }
                         <span
                           className="text-xs font-semibold"
-                          style={{ color: isValid ? '#6EE7A8' : hasWarnings ? '#D9A441' : '#F58E86' }}
+                          style={{ color: isValid ? 'var(--success-fg)' : hasWarnings ? 'var(--warning-fg)' : 'var(--danger-fg)' }}
                         >
                           {isValid ? 'DPGF conforme' : hasWarnings ? 'DPGF avec avertissements' : 'DPGF non conforme'}
                         </span>
                       </div>
-                      <span className="text-xs" style={{ color: '#909195' }}>
+                      <span className="text-xs" style={{ color: 'var(--text-3)' }}>
                         {detail.dpgf_remplie!.file_name}
                       </span>
                     </div>
 
                     <div className="grid grid-cols-3 gap-2 mb-3">
-                      <div className="text-center py-1.5 rounded-lg" style={{ background: '#1E1E21' }}>
-                        <p className="text-sm font-bold" style={{ color: '#F7F8F8' }}>{v.nb_lignes}</p>
-                        <p className="text-xs" style={{ color: '#909195' }}>lignes</p>
+                      <div className="text-center py-1.5 rounded-lg" style={{ background: 'var(--surface-1)' }}>
+                        <p className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>{v.nb_lignes}</p>
+                        <p className="text-xs" style={{ color: 'var(--text-3)' }}>lignes</p>
                       </div>
-                      <div className="text-center py-1.5 rounded-lg" style={{ background: '#1E1E21' }}>
-                        <p className="text-sm font-bold" style={{ color: '#E8E9EB' }}>{v.nb_lignes_remplies}</p>
-                        <p className="text-xs" style={{ color: '#909195' }}>remplies</p>
+                      <div className="text-center py-1.5 rounded-lg" style={{ background: 'var(--surface-1)' }}>
+                        <p className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>{v.nb_lignes_remplies}</p>
+                        <p className="text-xs" style={{ color: 'var(--text-3)' }}>remplies</p>
                       </div>
-                      <div className="text-center py-1.5 rounded-lg" style={{ background: '#1E1E21' }}>
-                        <p className="text-sm font-bold" style={{ color: v.nb_lignes_vides > 0 ? '#F58E86' : '#E8E9EB' }}>{v.nb_lignes_vides}</p>
-                        <p className="text-xs" style={{ color: '#909195' }}>vides</p>
+                      <div className="text-center py-1.5 rounded-lg" style={{ background: 'var(--surface-1)' }}>
+                        <p className="text-sm font-bold" style={{ color: v.nb_lignes_vides > 0 ? 'var(--danger-fg)' : 'var(--text-1)' }}>{v.nb_lignes_vides}</p>
+                        <p className="text-xs" style={{ color: 'var(--text-3)' }}>vides</p>
                       </div>
                     </div>
 
                     {v.total_ht != null && (
-                      <div className="flex items-center justify-between py-2 px-3 rounded-lg mb-2" style={{ background: '#1E1E21' }}>
-                        <span className="text-xs" style={{ color: '#959597' }}>Total HT</span>
-                        <span className="text-sm font-bold tabular-nums font-mono" style={{ color: '#F7F8F8' }}>
+                      <div className="flex items-center justify-between py-2 px-3 rounded-lg mb-2" style={{ background: 'var(--surface-1)' }}>
+                        <span className="text-xs" style={{ color: 'var(--text-3)' }}>Total HT</span>
+                        <span className="text-sm font-bold tabular-nums font-mono" style={{ color: 'var(--text-1)' }}>
                           {v.total_ht.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
                         </span>
                       </div>
@@ -783,7 +783,7 @@ export default function StepExport({ project }: Props) {
                     {v.warnings.length > 0 && (
                       <div className="space-y-1 mt-2">
                         {v.warnings.map((w, i) => (
-                          <p key={i} className="text-xs flex items-start gap-1.5" style={{ color: '#959597' }}>
+                          <p key={i} className="text-xs flex items-start gap-1.5" style={{ color: 'var(--text-3)' }}>
                             <span className="shrink-0 mt-0.5">&#8226;</span>
                             {w}
                           </p>
@@ -795,7 +795,7 @@ export default function StepExport({ project }: Props) {
               })()}
 
               {!detail.dpgf_info && !detail.dpgf_remplie && (
-                <p className="text-xs" style={{ color: '#909195' }}>
+                <p className="text-xs" style={{ color: 'var(--text-3)' }}>
                   Aucun fichier DPGF détecté dans les documents du projet.
                 </p>
               )}
@@ -834,11 +834,11 @@ export default function StepExport({ project }: Props) {
                     key={`${d.dossier}/${d.nom}`}
                     className="w-full flex items-center gap-2.5 py-2 px-3 rounded-lg hover:bg-ds-bg-2 transition-colors"
                   >
-                    <FileText size={15} className="shrink-0" style={{ color: '#959597' }} />
-                    <span className="text-sm font-medium truncate flex-1" style={{ color: '#F7F8F8' }}>
+                    <FileText size={15} className="shrink-0" style={{ color: 'var(--text-3)' }} />
+                    <span className="text-sm font-medium truncate flex-1" style={{ color: 'var(--text-1)' }}>
                       {d.nom}
                     </span>
-                    <span className="text-xs shrink-0" style={{ color: '#909195' }}>
+                    <span className="text-xs shrink-0" style={{ color: 'var(--text-3)' }}>
                       {DOSSIERS_ZIP[d.dossier] ?? d.dossier}
                     </span>
                     {indexApercu >= 0 && (
@@ -846,7 +846,7 @@ export default function StepExport({ project }: Props) {
                         type="button"
                         onClick={() => setViewerIndex(indexApercu)}
                         className="flex items-center gap-1 text-xs shrink-0 hover:underline"
-                        style={{ color: '#909195' }}
+                        style={{ color: 'var(--text-3)' }}
                       >
                         <Eye size={12} /> Aperçu
                       </button>
@@ -855,7 +855,7 @@ export default function StepExport({ project }: Props) {
                 )
               })}
               {detail.pieces_zip.length === 0 && (
-                <p className="text-xs text-center py-4" style={{ color: '#909195' }}>
+                <p className="text-xs text-center py-4" style={{ color: 'var(--text-3)' }}>
                   Les pièces apparaissent ici dès qu’elles sont jointes au dossier
                 </p>
               )}
