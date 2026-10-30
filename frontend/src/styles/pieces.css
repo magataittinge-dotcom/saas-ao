@@ -70,3 +70,67 @@
   line-height: 1.4;
   color: var(--carte-discret);
 }
+
+/* ── Carte « L'AO en 30 secondes » ──────────────────────────── */
+.carte-ao-30s {
+  background: var(--carte-fond);
+  border: 1px solid var(--carte-filet);
+  border-radius: 10px;
+  padding: 1rem 1.125rem;
+  color: var(--carte-texte);
+}
+.carte-ao-30s__titre {
+  margin: 0 0 .75rem;
+  font-size: .75rem;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--carte-discret);
+}
+.carte-ao-30s__faits {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: .75rem 1.5rem;
+  margin: 0;
+}
+@media (min-width: 640px) {
+  .carte-ao-30s__faits { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.carte-ao-30s__fait {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.carte-ao-30s__fait--large { grid-column: 1 / -1; }
+.carte-ao-30s__libelle {
+  margin: 0;
+  font-size: .75rem;
+  line-height: 1.3;
+  color: var(--carte-discret);
+}
+.carte-ao-30s__valeur {
+  margin: .125rem 0 0;
+  font-size: .875rem;
+  line-height: 1.4;
+  font-weight: 500;
+  color: var(--carte-titre);
+}
+.carte-ao-30s__valeur--action { color: var(--piece-action); }
+.carte-ao-30s__reste {
+  margin-left: .375rem;
+  font-weight: 400;
+  color: var(--carte-discret);
+}
+/* Lien « Voir dans le DCE » : cible tactile d'au moins 44 px */
+.carte-ao-30s__source {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 .25rem;
+  font-size: .75rem;
+  color: var(--carte-discret);
+  text-decoration: underline;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}

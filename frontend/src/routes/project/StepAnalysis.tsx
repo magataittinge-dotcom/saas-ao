@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import { api, getSignedFileUrl } from '@/services/api'
 import CriticalBanner, { type FieldSource } from '@/components/project/CriticalBanner'
+import CarteAO30s from '@/components/project/CarteAO30s'
 import TresorerieCard from '@/components/project/TresorerieCard'
 import SynorixScoreCard from '@/components/project/SynorixScoreCard'
 import RetroPlanning from '@/components/project/RetroPlanning'
@@ -321,6 +322,9 @@ export default function StepAnalysis({ project }: Props) {
 
   return (
     <div className="space-y-3" style={{ fontFamily: F }}>
+
+      {/* ── L'AO EN 30 SECONDES — le résumé calculé depuis l'analyse (aucun appel IA) ── */}
+      <CarteAO30s project={project} onOpenSource={openFieldSource} />
 
       {/* ── Lot details (expanded inline) ───────────────────────── */}
       {showLotDetails && lotFilterInfo && (
