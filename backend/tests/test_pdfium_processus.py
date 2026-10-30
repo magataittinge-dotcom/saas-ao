@@ -238,3 +238,73 @@ def test_reponse_503_avec_retry_after_pour_une_route():
 def test_l_appli_installe_le_gestionnaire_503():
     from main import app
     assert pp.TravailPdfiumEchoue in app.exception_handlers
+
+
+# ─── Un processus réservé à l'interactif (KVM 2 : 2 processus) ───
+
+ERREURS_LOT: list = []
+
+
+def _lot(secondes):
+    try:
+        return pp.executer(t.dormir, secondes, delai_s=60, attente_s=30, lot=True)
+    except BaseException as e:  # noqa: BLE001 — remonté par le test, pas perdu dans le fil
+        ERREURS_LOT.append(repr(e))
+
+
+def test_un_lot_qui_sature_ne_prend_pas_les_deux_processus(monkeypatch):
+    """N=2 : deux travaux de lot en même temps -> un seul s'exécute (l'autre attend la porte), donc un
+    travail interactif trouve toujours un processus libre. Ancien code : les deux lots prenaient les deux
+    processus et l'interactif échouait en « attente »."""
+    monkeypatch.setenv("SYNORIX_PDFIUM_PROCESSUS", "2")
+    ERREURS_LOT.clear()
+    lots = [threading.Thread(target=_lot, args=(4,)) for _ in range(2)]
+    [f.start() for f in lots]
+    time.sleep(1.5)                                  # le premier lot tient un processus, le second attend la porte
+    debut = time.monotonic()
+    assert pp.executer(t.ajouter, 2, 3, delai_s=60, attente_s=1) == 5     # interactif : passe tout de suite
+    assert time.monotonic() - debut < 1.0
+    [f.join(60) for f in lots]
+    assert ERREURS_LOT == []
+
+
+def test_l_interactif_peut_prendre_n_importe_quel_processus_libre(monkeypatch):
+    """Sans lot en cours, deux travaux interactifs s'exécutent en parallèle sur les deux processus."""
+    monkeypatch.setenv("SYNORIX_PDFIUM_PROCESSUS", "2")
+    pids, debut = [], time.monotonic()
+    fils = [threading.Thread(target=lambda: pids.append(pp.executer(t.dormir, 1.5, delai_s=60, attente_s=30)))
+            for _ in range(2)]
+    [f.start() for f in fils]
+    [f.join(60) for f in fils]
+    assert pids == ["reveille", "reveille"]
+    assert time.monotonic() - debut < 3.0            # parallèles (sérialisés : >= 3 s + démarrages)
+    assert len(pp.etat()["enfants"]) == 2
+
+
+def test_un_processus_seul_est_partage_entre_lot_et_interactif(monkeypatch):
+    """N=1 : rien à réserver. Le lot s'exécute (pas d'interblocage) et l'interactif attend sa place, borné."""
+    monkeypatch.setenv("SYNORIX_PDFIUM_PROCESSUS", "1")
+    fil = threading.Thread(target=_lot, args=(3,))
+    fil.start()
+    time.sleep(1.0)
+    with pytest.raises(pp.TravailPdfiumEchoue) as e:
+        pp.executer(t.pid, delai_s=60, attente_s=0.2)
+    assert e.value.raison == "attente"
+    fil.join(60)
+    assert pp.executer(t.ajouter, 1, 1, delai_s=60, lot=True) == 2
+
+
+def test_la_porte_de_lot_est_rendue_apres_un_echec_ou_une_attente_expiree(monkeypatch):
+    monkeypatch.setenv("SYNORIX_PDFIUM_PROCESSUS", "2")
+    with pytest.raises(pp.TravailPdfiumEchoue) as e:
+        pp.executer(t.dormir, 30, delai_s=1, lot=True)             # tué au délai
+    assert e.value.raison == "delai"
+    fil = threading.Thread(target=_lot, args=(3,))
+    fil.start()
+    time.sleep(1.0)
+    with pytest.raises(pp.TravailPdfiumEchoue) as e:               # la porte est tenue : attente bornée
+        pp.executer(t.pid, delai_s=60, attente_s=0.3, lot=True)
+    assert e.value.raison == "attente"
+    fil.join(60)
+    for _ in range(3):                                             # rien n'a fui : la porte laisse passer à nouveau
+        assert pp.executer(t.ajouter, 1, 2, delai_s=60, attente_s=5, lot=True) == 3

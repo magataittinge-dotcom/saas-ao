@@ -81,7 +81,7 @@ def extraire_en_processus(
     return pdfium_processus.executer(
         extraire_fichier, str(chemin), nom, doc_id,
         delai_s=delai_extraction_s(str(chemin)),
-        attente_s=pdfium_processus.attente_extraction_s(),
+        attente_s=pdfium_processus.attente_extraction_s(), lot=True,
         sur_progression=(lambda p: on_page(*p)) if on_page is not None else None,
     )
 
@@ -118,7 +118,7 @@ def pages_pdf(chemin, max_pages: Optional[int] = None) -> list:
     return pdfium_processus.executer(
         lire_pages_pdf, str(chemin), max_pages,
         delai_s=delai_extraction_s(str(chemin)),
-        attente_s=pdfium_processus.attente_extraction_s())
+        attente_s=pdfium_processus.attente_extraction_s(), lot=True)
 
 
 def texte_pdf(chemin, nom: str) -> str:

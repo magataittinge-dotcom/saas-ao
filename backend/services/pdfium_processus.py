@@ -35,9 +35,13 @@ interactif (aperçu, ancre au premier clic) attend ``ATTENTE_INTERACTIF_S`` (5 s
 ``ATTENTE_EXTRACTION_S`` (600 s, ``SYNORIX_PDFIUM_ATTENTE_EXTRACTION_S``) puis la pièce est
 signalée à redéposer. Les petites pièces ont un délai court (services/extraction_processus.py :
 30 s + 3 s par Mo), donc une pièce piégée libère vite le processus. Sur un serveur plus gros :
-``SYNORIX_PDFIUM_PROCESSUS=2`` donne un second processus ; il faut alors réserver l'un des deux
-à l'interactif (un jeu de places distinct, non fait ici : l'équité par organisation est hors
-périmètre de cette version, les places sont servies dans l'ordre d'arrivée).
+``SYNORIX_PDFIUM_PROCESSUS=2`` donne un second processus, et l'un des deux est RÉSERVÉ à l'interactif : les
+travaux de lot (``lot=True`` : extraction au dépôt, lecture pour l'analyse) passent par une porte de N-1 places
+(``_Etat.lot``) avant de prendre un processus, alors qu'un travail interactif (aperçu, rendu de page, ancre au
+premier clic) prend n'importe quel processus libre. Un gros dépôt ou une analyse en lot ne peut donc jamais
+occuper les deux processus. Avec N=1 (défaut du code) la porte compte 1 : lot et interactif se partagent l'unique
+processus, comme avant, et l'interactif attend au plus ``ATTENTE_INTERACTIF_S``. L'équité par organisation est
+hors périmètre : les places sont servies dans l'ordre d'arrivée.
 
 Usage (bloquant : l'appelant asynchrone l'enveloppe dans ``asyncio.to_thread``) ::
 
@@ -360,7 +364,7 @@ class _Enfant:
 
 class _Etat:
     """Les « places » : une par processus autorisé. Une place tient un ``_Enfant`` ou None
-    (pas encore lancé, ou recyclé : il est relancé à la demande)."""
+    (pas encore lancé, ou recyclé : il est relancé à la demande). ``lot`` : la porte des travaux de lot."""
 
     def __init__(self) -> None:
         self.pid = os.getpid()
@@ -368,6 +372,10 @@ class _Etat:
         self.places: "queue.LifoQueue[Optional[_Enfant]]" = queue.LifoQueue()
         for _ in range(self.nombre):
             self.places.put(None)
+        # Porte des travaux de LOT (extraction au dépôt, lecture d'analyse) : au plus N-1 à la fois, pour
+        # qu'une place reste toujours libre à l'interactif. Avec N=1 la porte compte 1 : lot et interactif
+        # se partagent l'unique processus (rien à réserver).
+        self.lot = threading.BoundedSemaphore(max(1, self.nombre - 1))
         self.enfants: set = set()
         self.verrou = threading.Lock()
 
@@ -429,6 +437,7 @@ def executer(
     *args: Any,
     delai_s: float,
     attente_s: Optional[float] = None,
+    lot: bool = False,
     sur_progression: Optional[Callable[[Any], None]] = None,
 ) -> Any:
     """``fonction(*args)`` dans le processus pdfium ; son résultat, ou ``TravailPdfiumEchoue``.
@@ -437,14 +446,27 @@ def executer(
     ``attente_s`` : durée maximale d'attente d'une place (None : ``attente_interactive_s()``,
     5 s par défaut). L'attente est TOUJOURS bornée ; l'extraction passe ``attente_extraction_s()``.
     ``sur_progression(objet)`` reçoit, dans le thread de l'appelant, ce que l'enfant
-    envoie par ``signaler``. Une exception de ``fonction`` est relancée telle quelle."""
+    envoie par ``signaler``. Une exception de ``fonction`` est relancée telle quelle.
+
+    ``lot=True`` : travail de lot (extraction d'un dépôt, lecture pour l'analyse). Il passe par la porte
+    ``etat.lot`` (N-1 à la fois) avant de prendre une place ; un travail interactif (``lot=False``, défaut :
+    aperçu, ancre, rendu de page) prend n'importe quelle place libre, donc un lot ne peut jamais occuper tous
+    les processus. Avec un seul processus, la porte laisse passer le lot : il n'y a rien à réserver."""
     if nombre_de_processus() == 0:     # exécution directe, sans protection (réglage explicite)
         return fonction(*args)
     etat = _etat_courant()
+    attente = attente_interactive_s() if attente_s is None else max(0.0, float(attente_s))
+    limite = time.monotonic() + attente
+    porte = False
+    if lot:
+        porte = etat.lot.acquire(timeout=attente)
+        if not porte:
+            raise TravailPdfiumEchoue("attente", f"aucune place de lot libre en {attente:g} s")
     try:
-        attente = attente_interactive_s() if attente_s is None else max(0.0, float(attente_s))
-        enfant = etat.places.get(timeout=attente)
+        enfant = etat.places.get(timeout=max(0.0, limite - time.monotonic()))
     except queue.Empty:
+        if porte:
+            etat.lot.release()
         raise TravailPdfiumEchoue("attente", f"aucun processus PDF libre en {attente:g} s") from None
     garder = False
     try:
@@ -472,6 +494,8 @@ def executer(
         if enfant is not None and not garder:
             _oublier(etat, enfant)
         etat.places.put(enfant if garder else None)
+        if porte:
+            etat.lot.release()
 
 
 _GENRES = frozenset({"ok", "err", "memoire", "niveau", "prog"})      # les seuls genres qu'un enfant envoie
