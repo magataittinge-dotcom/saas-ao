@@ -1,4 +1,5 @@
 // Projets INVENTÉS pour les tests de « Synorix Intelligence » (aucun texte de DCE client).
+import type { FicheAction } from '@/lib/intelligence/action'
 import type { Project } from '@/types'
 
 /** Vendredi 23 octobre 2026, 9 h (heure locale). */
@@ -13,3 +14,7 @@ export function projet(id: string, over: Partial<Project> = {}): Project {
 
 /** Remise le `date` (AAAA-MM-JJ) à 12 h. */
 export const remise = (date: string) => ({ echeance: { date, heure: '12h00' } })
+
+/** Tous les textes affichés d'une fiche, pour les contrôles de ton. */
+export const textesFiche = (f: FicheAction) =>
+  [f.etiquette, f.titre, f.meta, f.statut?.texte, f.quand, f.texte, f.cta?.libelle, f.second?.libelle].filter(Boolean) as string[]

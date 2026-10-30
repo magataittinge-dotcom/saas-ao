@@ -4,10 +4,10 @@ import assert from 'node:assert/strict'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import {
-  classerParUrgence, ficheDepuisProjet, ficheVide, lienEtape, prochaineAction, quandRemise, verbeEtape, versEtape, type FicheAction,
+  classerParUrgence, ficheDepuisProjet, ficheVide, lienEtape, prochaineAction, quandRemise, verbeEtape, versEtape,
 } from '@/lib/intelligence/action'
 import ProchaineAction from '@/components/intelligence/ProchaineAction'
-import { MAINTENANT, projet, remise } from './outils/projetsFactices'
+import { MAINTENANT, projet, remise, textesFiche } from './outils/projetsFactices'
 
 const ids = (l: { id: string }[]) => l.map((p) => p.id)
 
@@ -103,9 +103,6 @@ test('la fiche vide propose le premier geste : un nouvel AO', () => {
   assert.equal(f.cta?.vers, '/projects/new')
   assert.equal(f.titre, 'Aucun appel d’offres en cours')
 })
-
-/** Tous les textes d'une fiche, pour les contrôles de ton. */
-export const textesFiche = (f: FicheAction) => [f.etiquette, f.titre, f.meta, f.statut?.texte, f.quand, f.texte, f.cta?.libelle, f.second?.libelle].filter(Boolean) as string[]
 
 test('ton : jamais « manquant / incomplet / absent », jamais de point d’exclamation, jamais de prix ni de conseil de prix', () => {
   const fiches: FicheAction[] = [ficheVide()]
