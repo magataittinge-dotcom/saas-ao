@@ -581,9 +581,9 @@ export default function StepLotSelection({ project }: Props) {
     const tips: TipData[] = []
     const lowConfidence = lots.filter(l => (l.confidence ?? 100) < 50)
     if (lowConfidence.length > 0) {
-      tips.push({ id: 'lots-low-conf', variant: 'warning', text: `Certains lots ont une confiance faible — verifiez les noms et numeros.` })
+      tips.push({ id: 'lots-low-conf', variant: 'warning', text: `Certains lots ont une confiance faible — vérifiez les noms et numéros.` })
     }
-    tips.push({ id: 'lots-info', variant: 'info', text: `Verifiez que tous les lots qui vous interessent sont bien detectes. Vous pouvez en ajouter manuellement.` })
+    tips.push({ id: 'lots-info', variant: 'info', text: `Vérifiez que tous les lots qui vous intéressent sont bien détectés. Vous pouvez en ajouter manuellement.` })
     return tips
   }, [lots])
   const selectedName = lots.find(l => l.id === selectedId)?.nom ?? null

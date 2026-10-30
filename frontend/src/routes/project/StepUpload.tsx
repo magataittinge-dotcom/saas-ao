@@ -117,7 +117,7 @@ export default function StepUpload({ project }: Props) {
     const tips: TipData[] = []
     const totalSize = documents.reduce((s, d) => s + (d.file_size || 0), 0)
     if (totalSize > 500 * 1024 * 1024) {
-      tips.push({ id: 'upload-large', variant: 'warning', text: 'Les fichiers volumineux peuvent prendre quelques minutes a traiter.' })
+      tips.push({ id: 'upload-large', variant: 'warning', text: 'Les fichiers volumineux peuvent prendre quelques minutes à traiter.' })
     }
     tips.push({ id: 'upload-zip', variant: 'info', text: 'Astuce : déposez le ZIP complet du DCE pour une détection automatique de tous les documents et lots.' })
     return tips
