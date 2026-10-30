@@ -98,3 +98,12 @@ test('le fil d\'étapes tient à 390 px : ronds de 44 px, seul le nom de l\'éta
   // le bandeau collant ne déborde pas de la page (marges négatives = padding de <main>)
   assert.doesNotMatch(sansCommentaires(lire('src/routes/Project.tsx')), /-mx-6/)
 })
+
+test('la page d\'un AO donne 44 px aux boutons, liens-boutons et cases à cocher sous 768 px (zone étendue pour les icônes)', () => {
+  const css = sansCommentaires(lire('src/styles/pieces.css'))
+  assert.match(css, /@media \(max-width: 767px\)[\s\S]*\.page-ao :is\(button[\s\S]*min-height: 44px/)
+  assert.match(css, /\.page-ao :is\(a\.glass-btn[\s\S]*min-height: 44px/)
+  assert.match(css, /\.page-ao label:has\(> input\[type='checkbox'\][\s\S]*min-height: 44px/)
+  assert.match(css, /\.cible-etendue::after[\s\S]*max\(100%, 44px\)/)
+  assert.match(lire('src/routes/Project.tsx'), /className="page-ao /)
+})

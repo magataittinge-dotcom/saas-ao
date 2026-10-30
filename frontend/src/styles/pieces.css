@@ -173,6 +173,9 @@
     min-height: 44px;
   }
   .page-ao button:not(.cible-libre) { min-width: 44px; }
+  .page-ao :is(a.glass-btn, a.btn-primary, a.signature-btn):not(.cible-libre) { min-height: 44px; }
+  /* case à cocher : toute la ligne répond au doigt */
+  .page-ao label:has(> input[type='checkbox'], > input[type='radio']):not(.cible-libre) { min-height: 44px; display: flex; align-items: center; }
 }
 .cible-etendue { position: relative; }
 .cible-etendue::after {
