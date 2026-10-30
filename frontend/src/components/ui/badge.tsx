@@ -31,3 +31,27 @@ function Badge({ className, variant, ...props }: BadgeProps) {
 }
 
 export { Badge, badgeVariants }
+
+// Pastille d'état posée sur une icône (compteur ou simple point) : le fond de la surface en liseré
+// la détache de l'icône. `valeur` absent = point.
+const tonsPastille = {
+  warning: "bg-warning-bg text-warning border-warning-border",
+  accent: "bg-accent-tint text-accent-text border-accent-tint-2",
+  success: "bg-success-bg text-success border-success-border",
+  danger: "bg-danger-bg text-danger border-danger-border",
+} as const
+
+function Pastille({ valeur, ton = "warning", className, ...props }: { valeur?: number | string; ton?: keyof typeof tonsPastille } & React.HTMLAttributes<HTMLSpanElement>) {
+  return valeur === undefined ? (
+    <span aria-hidden className={cn("block size-2.5 rounded-full border", tonsPastille[ton], className)} {...props} />
+  ) : (
+    <span
+      className={cn("flex h-[18px] min-w-[18px] items-center justify-center rounded-pilule border px-1 text-xs font-semibold leading-none tabular-nums", tonsPastille[ton], className)}
+      {...props}
+    >
+      {valeur}
+    </span>
+  )
+}
+
+export { Pastille }

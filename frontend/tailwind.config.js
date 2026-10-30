@@ -209,6 +209,7 @@ export default {
         'cta':         'var(--shadow-cta)',
         'halo':        'var(--shadow-halo)',
         'nav':         'var(--ring-nav)',
+        'btn':         'var(--shadow-btn)',
       },
       keyframes: {
         'accordion-down': {

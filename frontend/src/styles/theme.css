@@ -83,6 +83,7 @@
   /* Ombres teintées par l'accent (identiques dans les deux thèmes) */
   --shadow-cta: inset 4px 4px 8px rgba(255, 255, 255, .3), inset -4px -4px 8px rgba(255, 255, 255, .3), 0 8px 16px rgba(0, 140, 248, .5);
   --shadow-halo: 0 8px 32px 4px rgba(0, 140, 248, .5);
+  --shadow-btn: inset 0 1px 0 rgba(255, 255, 255, .22);   /* reflet interne des boutons pleins */
 }
 @media (min-width: 1200px) { :root { --gutter: 120px; } }
 @media (max-width: 809px) {

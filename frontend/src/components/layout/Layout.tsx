@@ -1,59 +1,53 @@
-import { Suspense, useState, useCallback } from 'react'
+import { Suspense, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { cn } from '@/lib/utils'
+import { TooltipProvider } from '@/components/ui/tooltip'
 import Sidebar from './Sidebar'
 import Header from './Header'
+import BarreOnglets from './BarreOnglets'
+import BandeauNouveau from './BandeauNouveau'
 import LegalFooter from './LegalFooter'
 import CommandPalette from './CommandPalette'
 import { ToastContainer } from '@/components/common/Toast'
 import EcranEnChargement from '@/components/common/EcranEnChargement'
 
-// Écrans refaits sur les jetons clair / nuit : ils suivent le thème choisi. La coquille
-// (barre latérale, en-tête, palette Ctrl K) le suit partout ; les autres écrans restent
-// en nuit (data-theme="dark" sur <main>) jusqu'à leur passage — phase C, un écran à la fois.
-const PAGES_CALQUE = ['/dashboard']
-
-const CLE_OUVERTURE = 'synorix.barre-laterale'
+// Écrans refaits sur les jetons clair / nuit : ils suivent le thème choisi. La coquille (barre d'icônes,
+// en-tête, onglets du bas, palette Ctrl K) le suit partout ; les autres écrans restent en nuit
+// (data-theme="dark" sur <main>) jusqu'à leur passage — phase C, un écran à la fois :
+// ajouter ici la route de l'écran dès qu'il ne contient plus de couleur écrite en dur.
+export const PAGES_THEMEES = ['/dashboard', '/projects', '/design']
+const estThemee = (pathname: string) => PAGES_THEMEES.some((p) => pathname === p) || pathname === '/design'
 
 export default function Layout() {
   const { pathname } = useLocation()
-  const calque = PAGES_CALQUE.includes(pathname)
-
-  // 1.11 — la barre latérale s'ouvre par un bouton ; préférence gardée dans
-  // ce navigateur (repliée par défaut, comme avant).
-  const [ouverte, setOuverte] = useState<boolean>(() => {
-    try { return localStorage.getItem(CLE_OUVERTURE) === 'ouverte' } catch { return false }
-  })
-  const changerOuverture = useCallback((o: boolean) => {
-    setOuverte(o)
-    try { localStorage.setItem(CLE_OUVERTURE, o ? 'ouverte' : 'repliee') } catch { /* stockage indisponible */ }
-  }, [])
-
+  const themee = estThemee(pathname)
   const [palette, setPalette] = useState(false)
 
   return (
-    <SidebarProvider open={ouverte} onOpenChange={changerOuverture} className="h-svh min-h-0 overflow-hidden">
-      <Sidebar />
-      <SidebarInset className="min-w-0 overflow-hidden">
+    <TooltipProvider delayDuration={150}>
+      {/* barre d'icônes flottante (bureau) : 16 px de marge + 64 px + 16 px d'air = 96 px à gauche */}
+      <div className="flex h-svh min-h-0 flex-col overflow-hidden bg-surface-0 min-[769px]:pl-24">
+        <Sidebar />
+        <BandeauNouveau />
         <Header onSearch={() => setPalette(true)} />
         <main
           className={cn(
             'flex flex-1 flex-col overflow-y-auto px-3 py-5 sm:px-4',
-            calque ? 'calque bg-papier' : 'bg-surface-0',
+            themee ? 'bg-surface-0' : 'bg-surface-0 text-fg-2',
           )}
-          data-theme={calque ? undefined : 'dark'}
+          data-theme={themee ? undefined : 'dark'}
         >
           <div className="flex-1">
-            <Suspense fallback={<EcranEnChargement clair={calque} />}>
+            <Suspense fallback={<EcranEnChargement clair={themee} />}>
               <Outlet />
             </Suspense>
           </div>
-          <LegalFooter calque={calque} />
+          <LegalFooter calque={themee} />
         </main>
-      </SidebarInset>
+        <BarreOnglets />
+      </div>
       <CommandPalette open={palette} onOpenChange={setPalette} />
       <ToastContainer />
-    </SidebarProvider>
+    </TooltipProvider>
   )
 }

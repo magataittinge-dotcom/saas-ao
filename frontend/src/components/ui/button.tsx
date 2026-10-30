@@ -14,7 +14,7 @@ const buttonVariants = cva(
       variant: {
         // principal : dégradé accent-700 → accent-600 (nuit : accent-600), texte blanc
         default:
-          "bg-accent-fill text-accent-on shadow-[inset_0_1px_0_rgba(255,255,255,.22)] hover:[background-image:var(--accent-fill-hover)]",
+          "bg-accent-fill text-accent-on shadow-btn hover:[background-image:var(--accent-fill-hover)]",
         // signature : pilule, reflets internes et halo teinté (SYSTEME-DESIGN §7, CTA)
         signature:
           "rounded-pilule bg-accent-fill px-6 text-accent-on shadow-cta hover:[background-image:var(--accent-fill-hover)] motion-safe:hover:-translate-y-px",

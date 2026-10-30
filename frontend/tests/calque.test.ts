@@ -38,6 +38,10 @@ test('Calque : chaque couleur de texte atteint 4,5:1 sur les fonds où elle se p
 const FICHIERS_CALQUE = [
   'src/components/layout/Layout.tsx',
   'src/components/layout/Sidebar.tsx',
+  'src/components/layout/BarreOnglets.tsx',
+  'src/components/layout/BandeauNouveau.tsx',
+  'src/components/layout/BasculeTheme.tsx',
+  'src/components/layout/navigation.ts',
   'src/components/layout/Header.tsx',
   'src/components/layout/CommandPalette.tsx',
   'src/components/layout/QuotaGauge.tsx',
@@ -67,30 +71,45 @@ test('les couleurs Calque de Tailwind renvoient toutes à un jeton défini dans 
   }
 })
 
-test("l'avatar en haut à droite montre la photo du compte, et les initiales sans photo", () => {
-  const code = sansCommentaires(lire('src/components/layout/Header.tsx'))
+test("l'avatar de la barre d'icônes montre la photo du compte, et les initiales sans photo", () => {
+  const code = sansCommentaires(lire('src/components/layout/Sidebar.tsx'))
   assert.match(code, /const \{ user: compte \} = useUser\(\)/)
   assert.match(code, /const photo = compte\?\.hasImage && compte\.imageUrl !== photoEnEchec \? compte\.imageUrl : null/)
   assert.match(code, /\{photo\s*\?\s*<img src=\{photo\} alt="" [^>]*onError=\{\(\) => setPhotoEnEchec\(photo\)\} \/>\s*:\s*initials\}/)
 })
 
-test('la palette ⌘K s\'ouvre au clavier et mène partout où mène la barre latérale', () => {
+test('la palette Ctrl K s\'ouvre au clavier et mène partout où mène la navigation (barre d\'icônes, onglets, tiroir)', () => {
   const palette = sansCommentaires(lire('src/components/layout/CommandPalette.tsx'))
   assert.match(palette, /e\.key\.toLowerCase\(\) === 'k' && \(e\.metaKey \|\| e\.ctrlKey\)/)
   assert.match(palette, /aller\(`\/projects\/\$\{p\.id\}`\)/)
-  const barre = sansCommentaires(lire('src/components/layout/Sidebar.tsx'))
-  const routes = [...barre.matchAll(/to: '(\/[\w/-]+)'/g)].map((m) => m[1])
+  const nav = sansCommentaires(lire('src/components/layout/navigation.ts'))
+  const routes = [...new Set([...nav.matchAll(/to: '(\/[\w/-]+)'/g)].map((m) => m[1]))]
   assert.ok(routes.length >= 8)
   const sansAcces = routes.filter((r) => !palette.includes(`'${r}'`))
   assert.deepEqual(sansAcces, [])
-  // le bouton de l'en-tête ouvre la palette (et n'est pas l'ancienne « recherche » sans action)
+  // le bouton de l'en-tête ouvre la palette
   const entete = sansCommentaires(lire('src/components/layout/Header.tsx'))
   assert.match(entete, /onClick=\{onSearch\}/)
 })
 
-test('barre latérale shadcn : préférence en localStorage, aucun cookie posé', () => {
-  assert.ok(!sansCommentaires(lire('src/components/ui/sidebar.tsx')).includes('document.cookie'))
+test('coquille : barre d\'icônes flottante, onglets du bas au téléphone (cibles 44 px, place du Cerveau), bandeau, bascule, bouton rond', () => {
+  const rail = sansCommentaires(lire('src/components/layout/Sidebar.tsx'))
+  assert.match(rail, /max-\[768px\]:hidden/, 'barre d\'icônes masquée au téléphone')
+  assert.match(rail, /<Pastille/)
+  const onglets = sansCommentaires(lire('src/components/layout/BarreOnglets.tsx'))
+  assert.match(onglets, /max-\[768px\]:flex/)
+  assert.match(onglets, /min-h-14/, 'onglets de 56 px')
+  const nav = sansCommentaires(lire('src/components/layout/navigation.ts'))
+  assert.deepEqual([...new Set([...nav.matchAll(/label: '([^']+)'/g)].map((m) => m[1]).filter((l) => ['Accueil', 'Mes AO', 'Coffre-fort'].includes(l)))].sort(), ['Accueil', 'Coffre-fort', 'Mes AO'])
+  assert.match(nav, /ONGLET_CERVEAU/)
+  assert.match(onglets, /Compte/)
+  const entete = sansCommentaires(lire('src/components/layout/Header.tsx'))
+  assert.match(entete, /<BasculeTheme \/>/)
+  assert.match(entete, /aria-label="Nouvel AO"/)
+  assert.match(entete, /rounded-full/)
   const layout = sansCommentaires(lire('src/components/layout/Layout.tsx'))
-  assert.match(layout, /localStorage\.setItem\(CLE_OUVERTURE/)
-  assert.match(layout, /const PAGES_CALQUE = \['\/dashboard'\]/)
+  assert.match(layout, /<BandeauNouveau \/>/)
+  assert.match(layout, /export const PAGES_THEMEES = \['\/dashboard', '\/projects', '\/design'\]/)
+  assert.match(layout, /data-theme=\{themee \? undefined : 'dark'\}/)
+  assert.doesNotMatch(sansCommentaires(lire('src/components/layout/BandeauNouveau.tsx')), /!/, 'aucun point d\'exclamation')
 })
