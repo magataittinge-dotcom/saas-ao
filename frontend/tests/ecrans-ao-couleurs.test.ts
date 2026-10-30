@@ -24,6 +24,24 @@ const TRANCHES: Record<string, string[]> = {
     'src/components/project/source/VueTableau.tsx',
     'src/components/project/source/VuesSource.tsx',
   ],
+  'pièces (vérification, coffre-fort, modèles du DCE, composants communs)': [
+    'src/routes/project/StepVerification.tsx',
+    'src/components/project/CandidatureSectionVault.tsx',
+    'src/components/project/CandidatureSectionTemplates.tsx',
+    'src/components/project/VaultPickerModal.tsx',
+    'src/components/project/NonConcerne.tsx',
+    'src/components/project/SignatureLigne.tsx',
+    'src/components/common/StatusBadge.tsx',
+    'src/components/common/FileCard.tsx',
+    'src/components/common/ExpiryAlert.tsx',
+    'src/components/common/DeleteConfirmModal.tsx',
+    'src/components/common/AiTip.tsx',
+    'src/components/common/Toast.tsx',
+    'src/components/common/Skeleton.tsx',
+    'src/components/common/SubscriptionWall.tsx',
+    'src/components/common/EcranEnChargement.tsx',
+    'src/styles/pieces.css',
+  ],
 }
 
 // hex (3, 4, 6 ou 8 chiffres), fonctions rgb/hsl, classes Tailwind de palette fixe (bg-slate-900, text-white/90…)

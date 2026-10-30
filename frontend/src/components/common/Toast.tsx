@@ -12,31 +12,31 @@ export interface ToastData {
 const VARIANT_CONFIG: Record<ToastVariant, { icon: typeof CheckCircle2; color: string; bg: string; border: string; barColor: string }> = {
   success: {
     icon: CheckCircle2,
-    color: '#C3CCDC',
-    bg: 'rgba(228,233,242,0.08)',
-    border: 'rgba(228,233,242,0.20)',
-    barColor: '#E4E9F2',
+    color: 'var(--text-2)',
+    bg: 'var(--surface-pop)',
+    border: 'var(--border-2)',
+    barColor: 'var(--text-1)',
   },
   error: {
     icon: XCircle,
-    color: '#F58E86',
-    bg: 'rgba(245,142,134,0.08)',
-    border: 'rgba(245,142,134,0.20)',
-    barColor: '#F58E86',
+    color: 'var(--danger-fg)',
+    bg: 'var(--surface-pop)',
+    border: 'color-mix(in srgb, var(--danger-fg) 20%, transparent)',
+    barColor: 'var(--danger-fg)',
   },
   info: {
     icon: Info,
-    color: '#C3CCDC',
-    bg: 'rgba(228,233,242,0.08)',
-    border: 'rgba(228,233,242,0.20)',
-    barColor: '#E4E9F2',
+    color: 'var(--text-2)',
+    bg: 'var(--surface-pop)',
+    border: 'var(--border-2)',
+    barColor: 'var(--text-1)',
   },
   warning: {
     icon: AlertTriangle,
-    color: '#C7CEDA',
-    bg: 'rgba(120,130,149,0.08)',
-    border: 'rgba(120,130,149,0.20)',
-    barColor: '#9BA4B5',
+    color: 'var(--text-2)',
+    bg: 'var(--surface-pop)',
+    border: 'color-mix(in srgb, var(--text-3) 20%, transparent)',
+    barColor: 'var(--text-3)',
   },
 }
 
@@ -72,17 +72,17 @@ function ToastItem({ toast, onRemove }: { toast: ToastData; onRemove: (id: strin
     >
       <div className="flex items-center gap-3 px-4 py-3">
         <Icon size={18} style={{ color: cfg.color }} className="shrink-0" />
-        <p className="text-sm text-white/90 flex-1">{toast.message}</p>
+        <p className="text-sm text-fg flex-1">{toast.message}</p>
         <button
           onClick={dismiss}
           className="p-1 rounded-lg transition-colors hover:bg-ds-bg/10"
-          style={{ color: '#9BA4B5' }}
+          style={{ color: 'var(--text-3)' }}
         >
           <X size={14} />
         </button>
       </div>
       {/* Progress bar */}
-      <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: '#1C222D' }}>
+      <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: 'var(--surface-1)' }}>
         <div
           className="h-full"
           style={{

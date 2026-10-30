@@ -23,24 +23,24 @@ const VARIANT_CONFIG: Record<TipVariant, {
 }> = {
   info: {
     icon: Lightbulb,
-    bg: 'rgba(228,233,242,0.06)',
-    border: 'rgba(228,233,242,0.20)',
-    iconColor: '#E4E9F2',
-    textColor: '#F4F6FA',
+    bg: 'color-mix(in srgb, var(--text-1) 6%, transparent)',
+    border: 'var(--border-2)',
+    iconColor: 'var(--text-1)',
+    textColor: 'var(--text-1)',
   },
   warning: {
     icon: AlertTriangle,
-    bg: 'rgba(245,142,134,0.06)',
-    border: 'rgba(245,142,134,0.20)',
-    iconColor: '#F58E86',
-    textColor: '#991B1B',
+    bg: 'color-mix(in srgb, var(--danger-fg) 6%, transparent)',
+    border: 'color-mix(in srgb, var(--danger-fg) 20%, transparent)',
+    iconColor: 'var(--danger-fg)',
+    textColor: 'var(--danger-fg)',
   },
   success: {
     icon: CheckCircle2,
-    bg: 'rgba(228,233,242,0.06)',
-    border: 'rgba(228,233,242,0.20)',
-    iconColor: '#E4E9F2',
-    textColor: '#F4F6FA',
+    bg: 'color-mix(in srgb, var(--text-1) 6%, transparent)',
+    border: 'var(--border-2)',
+    iconColor: 'var(--text-1)',
+    textColor: 'var(--text-1)',
   },
 }
 
@@ -71,7 +71,7 @@ export default function AiTip({ tip, onDismiss }: Props) {
       </p>
       <button
         onClick={handleDismiss}
-        className="shrink-0 p-0.5 rounded hover:bg-[#1C222D] transition-colors"
+        className="shrink-0 p-0.5 rounded hover:bg-surface-1 transition-colors"
         style={{ color: cfg.iconColor, opacity: 0.5 }}
       >
         <X size={12} />

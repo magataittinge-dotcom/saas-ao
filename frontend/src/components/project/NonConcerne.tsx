@@ -27,7 +27,7 @@ export default function NonConcerneBouton({
       type="button"
       onClick={() => { void onNonConcerne(item, !nc) }}
       className="shrink-0 text-xs font-medium hover:underline"
-      style={{ color: '#909195' }}
+      style={{ color: 'var(--text-3)' }}
     >
       {nc ? 'Je suis concerné' : 'Non concerné'}
     </button>

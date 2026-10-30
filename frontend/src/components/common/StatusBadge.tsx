@@ -4,12 +4,12 @@ import type { ComplianceStatus, DocumentStatus, ProjectStatus } from '@/types'
 type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'amber'
 
 const variantStyles: Record<BadgeVariant, React.CSSProperties> = {
-  success: { background: 'rgba(110,231,168,0.10)', color: '#6EE7A8',  border: '1px solid rgba(110,231,168,0.22)' },
-  warning: { background: 'rgba(245,194,107,0.09)', color: '#F5C26B',  border: '1px solid rgba(245,194,107,0.22)' },
-  danger:  { background: 'rgba(245,142,134,0.10)',  color: '#F58E86',  border: '1px solid rgba(245,142,134,0.20)'  },
-  info:    { background: 'rgba(228,233,242,0.10)', color: '#C3CCDC',  border: '1px solid rgba(228,233,242,0.20)' },
-  neutral: { background: '#1C222D', color: '#9BA4B5',  border: '1px solid rgba(186,205,234,.13)'},
-  amber:   { background: 'rgba(245,158,11,0.10)', color: '#F5C26B',  border: '1px solid rgba(245,158,11,0.25)' },
+  success: { background: 'color-mix(in srgb, var(--success-fg) 10%, transparent)', color: 'var(--success-fg)',  border: '1px solid color-mix(in srgb, var(--success-fg) 22%, transparent)' },
+  warning: { background: 'color-mix(in srgb, var(--warning-fg) 9%, transparent)', color: 'var(--warning-fg)',  border: '1px solid color-mix(in srgb, var(--warning-fg) 22%, transparent)' },
+  danger:  { background: 'color-mix(in srgb, var(--danger-fg) 10%, transparent)',  color: 'var(--danger-fg)',  border: '1px solid color-mix(in srgb, var(--danger-fg) 20%, transparent)'  },
+  info:    { background: 'color-mix(in srgb, var(--text-1) 10%, transparent)', color: 'var(--text-2)',  border: '1px solid var(--border-2)' },
+  neutral: { background: 'var(--surface-1)', color: 'var(--text-3)',  border: '1px solid var(--border-2)'},
+  amber:   { background: 'color-mix(in srgb, var(--warning-fg) 10%, transparent)', color: 'var(--warning-fg)',  border: '1px solid color-mix(in srgb, var(--warning-fg) 25%, transparent)' },
 }
 
 interface Props {
