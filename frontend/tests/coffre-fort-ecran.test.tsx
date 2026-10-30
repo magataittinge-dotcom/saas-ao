@@ -54,6 +54,13 @@ test('la fenêtre de classement est le Dialog du socle, avec des étiquettes ass
   }
 })
 
+test('les lignes de pièce passent à la ligne et leurs boutons font 44 px sur écran tactile', () => {
+  const code = sansCommentaires(lire('src/routes/Vault.tsx'))
+  assert.match(code, /LISTE_PIECES = '[^']*\[@media\(pointer:coarse\)\]:\[&_button\]:min-h-11/)
+  assert.match(code, /LISTE_PIECES = '[^']*\[&>div\]:flex-wrap/)
+  assert.equal((code.match(/className=\{LISTE_PIECES\}/g) ?? []).length, 2, 'les deux listes (Non classés, catégories)')
+})
+
 test('/vault suit le thème clair / nuit', () => {
   assert.match(sansCommentaires(lire('src/components/layout/Layout.tsx')), /PAGES_THEMEES = \[[^\]]*'\/vault'/)
 })

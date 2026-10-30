@@ -16,8 +16,9 @@ import DeleteConfirmModal from '@/components/common/DeleteConfirmModal'
 import { messageErreur } from '@/lib/erreurs'
 import { cn } from '@/lib/utils'
 
-// Une ligne de pièce (nom, puis statut et actions) passe à la ligne sous 640 px : pas de défilement horizontal à 390 px.
-const LISTE_PIECES = 'space-y-2 [&>div]:flex-wrap [&>div>div:last-child]:max-w-full [&>div>div:last-child]:flex-wrap sm:[&>div]:flex-nowrap sm:[&>div>div:last-child]:flex-nowrap'
+// Une ligne de pièce (nom, puis statut et actions) passe à la ligne sous 640 px : pas de défilement horizontal à 390 px ;
+// ses boutons d'action font 44 px sur écran tactile.
+const LISTE_PIECES = 'space-y-2 [@media(pointer:coarse)]:[&_button]:min-h-11 [@media(pointer:coarse)]:[&_button]:min-w-11 [&>div]:flex-wrap [&>div>div:last-child]:max-w-full [&>div>div:last-child]:flex-wrap sm:[&>div]:flex-nowrap sm:[&>div>div:last-child]:flex-nowrap'
 
 export default function Vault() {
   const queryClient = useQueryClient()
