@@ -16,7 +16,7 @@ import mimetypes
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from fastapi.responses import StreamingResponse, FileResponse
 from services.rate_limit import limiter
-from sqlalchemy.orm import Session, defer
+from sqlalchemy.orm import Session, defer, joinedload
 
 from database import get_db, rendre_connexion
 from models.user import User
@@ -59,6 +59,7 @@ def get_export_detail(
     )
     checklist_items = (
         db.query(ChecklistItem)
+        .options(joinedload(ChecklistItem.deposant))   # « Déposé par … » sans requête par ligne
         .filter(ChecklistItem.project_id == project_id)
         .all()
     )
@@ -112,6 +113,10 @@ def get_export_detail(
             document_group=item.document_group or "fournir",
             jointe=jointe, piece_nom=piece_nom, valable_jusqu_au=valable_jusqu_au,
             obligation=lire_obligation(item), phase=lire_phase(item),
+            # « Déposé le … par … » et source de la signature lue dans le RC (bloc 9)
+            depose_le=item.depose_le, depose_par=item.depose_par,
+            source_document=item.source_document, source_page=item.source_page,
+            source_article=item.source_article, source_exigence_id=item.source_exigence_id,
         ))
 
     # Mémoire info

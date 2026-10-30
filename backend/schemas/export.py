@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_serializer
 from typing import Optional
 from datetime import date, datetime
 
@@ -50,8 +50,23 @@ class ChecklistExportItem(BaseModel):
     # Statuts positifs (bloc 9) : lecture du RC, checklist_matcher.lire_obligation / lire_phase
     obligation: str = "obligatoire"   # obligatoire | si_concerne | facultatif
     phase: str = "depot"              # depot | attribution
+    # « Déposé le … par … » : instant UTC (sérialisé avec « Z ») et nom de l'auteur du geste,
+    # comme GET /checklist (schemas/compliance.ChecklistItemResponse).
+    depose_le: Optional[datetime] = None
+    depose_par: Optional[str] = None
+    # D'où la ligne a été lue dans le RC (document, page, article, exigence d'origine) :
+    # la source de la signature demandée, citée à l'écran d'export.
+    source_document: Optional[str] = None
+    source_page: Optional[int] = None
+    source_article: Optional[str] = None
+    source_exigence_id: Optional[str] = None
 
     model_config = {"from_attributes": True}
+
+    @field_serializer("depose_le")
+    def _depose_le_utc(self, v: Optional[datetime]) -> Optional[str]:
+        # colonne naïve = UTC ; le « Z » laisse l'écran dater dans le fuseau de Paris
+        return None if v is None else v.replace(tzinfo=None).isoformat() + "Z"
 
 
 class PieceZipExport(BaseModel):

@@ -62,6 +62,15 @@ export function signatureAConfirmer(
   return !!item.signature_required && !item.signature_confirmed
 }
 
+/** La phrase qui cite d'où vient la signature demandée (ou null quand rien n'est lu dans le RC). */
+export function phraseSourceSignature(
+  item: Pick<ChecklistItem, 'document_type_required' | 'signature_required' | 'source_document' | 'source_page' | 'source_article'>,
+): string | null {
+  if (!item.signature_required || item.document_type_required === 'declaration_honneur') return null
+  const source = libelleSourceRc(item)
+  return source ? `Le règlement de la consultation demande une signature. Source : ${source}` : null
+}
+
 export default function SignatureLigne({
   item, onToggleSignature, onOpenSource,
 }: {
@@ -82,7 +91,7 @@ export default function SignatureLigne({
   }
   if (mention.kind === 'rien' || !onToggleSignature) return null
   // « case » : le RC (ou la déclaration sur l'honneur) demande une signature
-  const source = item.document_type_required === 'declaration_honneur' ? null : libelleSourceRc(item)
+  const phrase = phraseSourceSignature(item)
   return (
     <div className="piece-signature">
       <label className="piece-signature__case">
@@ -94,9 +103,9 @@ export default function SignatureLigne({
         Je confirme avoir signé ce document
         {!item.signature_confirmed && <span className="piece-note">— requis pour compter conforme</span>}
       </label>
-      {source && (
+      {phrase && (
         <p className="piece-note">
-          Le règlement de la consultation demande une signature. Source : {source}
+          {phrase}
           {onOpenSource && item.source_exigence_id && (
             <button type="button" className="piece-source" onClick={() => onOpenSource(item)}>
               Voir dans le DCE
