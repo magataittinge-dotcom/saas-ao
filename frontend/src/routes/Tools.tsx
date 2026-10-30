@@ -89,8 +89,8 @@ function RetenueCalculator() {
   return (
     <div className="glass-card p-6 flex flex-col">
       <div className="flex items-center gap-3 mb-1">
-        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'rgba(228,233,242,0.08)' }}>
-          <Coins size={18} style={{ color: '#E4E9F2' }} />
+        <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'var(--surface-glass-1)' }}>
+          <Coins size={18} style={{ color: 'var(--text-1)' }} />
         </div>
         <div>
           <h2 className="text-base font-bold text-ds-text" style={{ fontFamily: F }}>Retenue de garantie</h2>
@@ -134,7 +134,7 @@ function RetenueCalculator() {
         <button
           type="button" onClick={() => setShowAdvanced((s) => !s)}
           className="text-xs font-semibold transition-colors"
-          style={{ color: '#E4E9F2', cursor: 'pointer' }}
+          style={{ color: 'var(--text-1)', cursor: 'pointer' }}
         >
           {showAdvanced ? '− Masquer' : '+ Options avancées'} (pénalités, intérêts moratoires)
         </button>
@@ -231,10 +231,10 @@ export default function Tools() {
   return (
     <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
       <div className="flex items-center gap-3">
-        <Calculator size={24} style={{ color: '#E4E9F2' }} />
+        <Calculator size={24} style={{ color: 'var(--text-1)' }} />
         <div>
-          <h1 className="text-2xl font-bold text-ds-text">Calculateurs</h1>
-          <p className="text-sm text-ds-text-2">Outils d'aide à la décision — marchés publics. Calcul instantané, aucune donnée enregistrée.</p>
+          <h1 className="text-2xl font-bold text-ds-text">Retenue de garantie</h1>
+          <p className="text-sm text-ds-text-2">Retenue, pénalités et intérêts moratoires — CCAG-Travaux art. 19. Calcul instantané, aucune donnée enregistrée.</p>
         </div>
       </div>
 
