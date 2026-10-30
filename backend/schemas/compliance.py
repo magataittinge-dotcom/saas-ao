@@ -2,7 +2,7 @@ import logging
 from datetime import date, datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field, computed_field, model_validator
+from pydantic import BaseModel, Field, computed_field, field_serializer, model_validator
 
 logger = logging.getLogger(__name__)
 
@@ -44,8 +44,36 @@ class ChecklistItemResponse(BaseModel):
     jointe: bool = False
     piece_nom: Optional[str] = None
     valable_jusqu_au: Optional[date] = None
+    # « Déposé le … par … » : instant UTC (sérialisé avec « Z ») et nom de l'auteur.
+    depose_le: Optional[datetime] = None
+    depose_par: Optional[str] = None
+    # D'où la ligne a été lue dans le RC : document, page, article, exigence d'origine.
+    source_document: Optional[str] = None
+    source_page: Optional[int] = None
+    source_article: Optional[str] = None
+    source_exigence_id: Optional[str] = None
 
     model_config = {"from_attributes": True}
+
+    @field_serializer("depose_le")
+    def _depose_le_utc(self, v: Optional[datetime]) -> Optional[str]:
+        # colonne naïve = UTC ; le « Z » laisse l'écran dater dans le fuseau de Paris
+        return None if v is None else v.replace(tzinfo=None).isoformat() + "Z"
+
+    @computed_field
+    @property
+    def obligation(self) -> str:
+        """« obligatoire » | « si_concerne » | « facultatif » (lecture du RC,
+        checklist_matcher.lire_obligation)."""
+        from services.ai.checklist_matcher import lire_obligation
+        return lire_obligation(self)
+
+    @computed_field
+    @property
+    def phase(self) -> str:
+        """« depot » | « attribution » (checklist_matcher.lire_phase)."""
+        from services.ai.checklist_matcher import lire_phase
+        return lire_phase(self)
 
     @computed_field
     @property

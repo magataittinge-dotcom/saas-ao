@@ -6,7 +6,7 @@ import assert from 'node:assert/strict'
 import { renderToStaticMarkup } from 'react-dom/server'
 import CandidatureSectionVault from '@/components/project/CandidatureSectionVault'
 import CandidatureSectionTemplates from '@/components/project/CandidatureSectionTemplates'
-import { comptePieces, libelleJointes } from '@/lib/exportDossier'
+import { libelleComptes, suiteComptes } from '@/lib/statutPiece'
 import type { ChecklistItem } from '@/types'
 import { textesAffiches } from './outils/textes'
 
@@ -16,7 +16,7 @@ const ligne = (over: Partial<ChecklistItem>): ChecklistItem => ({
 })
 const sansBalises = (html: string) => html.replace(/<[^>]+>/g, ' ')
 
-test('pièce du coffre : « Jointe — nom · valable jusqu’au … », jamais « Conforme »', () => {
+test('pièce du coffre : « Prêt — valable jusqu’au … » et le nom du fichier, jamais « Conforme »', () => {
   const html = renderToStaticMarkup(
     <CandidatureSectionVault
       items={[
@@ -26,13 +26,14 @@ test('pièce du coffre : « Jointe — nom · valable jusqu’au … », jamais 
       onPickFromVault={() => {}} onOpenVault={() => {}}
     />,
   )
-  assert.ok(html.includes('Jointe — kbis.pdf · valable jusqu’au 01/03/2027'), html)
+  assert.ok(html.includes('Prêt — valable jusqu’au 01/03/2027'), html)
+  assert.ok(html.includes('kbis.pdf'), html)
   assert.ok(!html.includes('Conforme'))
-  assert.ok(sansBalises(html).includes('2 pièces, dont 1 jointe'), sansBalises(html))
+  assert.ok(sansBalises(html).includes('1 pièce à joindre · 1 prête'), sansBalises(html))
   assert.ok(!/\d+\s*\/\s*\d+/.test(sansBalises(html).replace('01/03/2027', '')), 'aucune fraction')
 })
 
-test('formulaire : « Jointe — nom », jamais « Complété »', () => {
+test('formulaire : « Prêt » et le nom du fichier, jamais « Complété »', () => {
   const html = renderToStaticMarkup(
     <CandidatureSectionTemplates
       projectId="p"
@@ -41,17 +42,18 @@ test('formulaire : « Jointe — nom », jamais « Complété »', () => {
       onUploadCompleted={async () => {}}
     />,
   )
-  assert.ok(html.includes('Jointe — DC1_rempli.pdf'), html)
+  assert.ok(html.includes('DC1_rempli.pdf'), html)
+  assert.ok(sansBalises(html).includes('Prêt'), html)
   assert.ok(!html.includes('Complété'), html)
-  assert.ok(sansBalises(html).includes('1 formulaire, joint'), sansBalises(html))
+  assert.ok(sansBalises(html).includes('0 formulaire à joindre · 1 prêt'), sansBalises(html))
 })
 
 test('comptes sans fraction', () => {
-  assert.equal(comptePieces(4, 0), '4 pièces')
-  assert.equal(comptePieces(4, 2), '4 pièces, dont 2 jointes')
-  assert.equal(comptePieces(3, 1, 'formulaire'), '3 formulaires, dont 1 joint')
-  assert.equal(libelleJointes(5, 3), 'pièces demandées, dont 3 jointes')
-  assert.equal(libelleJointes(1, 1), 'pièce demandée, jointe')
+  assert.equal(libelleComptes(4, 0), '4 pièces à joindre · 0 prête')
+  assert.equal(libelleComptes(2, 2), '2 pièces à joindre · 2 prêtes')
+  assert.equal(libelleComptes(1, 1, 'formulaire'), '1 formulaire à joindre · 1 prêt')
+  assert.equal(suiteComptes(3, 5), 'pièces à joindre · 5 prêtes')
+  assert.equal(suiteComptes(1, 0), 'pièce à joindre · 0 prête')
 })
 
 test('l’écran Vérification ne dit plus « pièces réunies » ni « Conformité x/y »', () => {

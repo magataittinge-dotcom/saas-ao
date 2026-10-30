@@ -158,6 +158,61 @@ def signature_requise(item) -> bool:
     return False
 
 
+# ── Obligation et phase des pièces (bloc 9, statuts positifs) ───────────────
+# Lecture déterministe de l'extrait du document de la consultation rattaché à la
+# ligne (source_in_rc, ancré mot pour mot) : jamais de la phrase reformulée par
+# l'IA. Sources : DC4 « un par sous-traitant » (service-public F32144) → pièce
+# « si concerné » par nature. Prudence : un doute reste « obligatoire » et « au
+# dépôt » (mieux vaut une pièce de trop à joindre qu'une pièce oubliée).
+SI_CONCERNE_TYPES = {"dc4"}
+_SI_CONCERNE = re.compile(
+    r"\ble cas echeant\b|\bsi applicable\b|\bs'il y a lieu\b|\bsi necessaire\b"
+    r"|\ben cas de (?:groupement|sous-traitance|cotraitance|co-traitance)\b"
+    r"|\bsi le candidat (?:est|a recours|recourt|envisage|se presente en groupement)\b")
+_FACULTATIF = re.compile(r"\b(?:facultati(?:f|ve)s?|optionnel(?:le)?s?)\b")
+_NIE_AVANT_FACULTATIF = re.compile(r"\b(?:pas|non|jamais)\s+$")
+_ATTRIBUTION_PIECE = re.compile(
+    r"\battributaire\b|\bauquel (?:il )?est envisage d'attribuer\b|\bcandidat retenu\b"
+    r"|\bavant la notification\b|\bapres l'attribution\b|\blors de l'attribution\b")
+_DEPOT_EXPLICITE = re.compile(
+    r"\bavec (?:leur|son|votre|l') ?(?:offre|candidature)\b|\bau (?:moment du )?depot\b"
+    r"|\blors du depot\b|\bdans (?:leur|son) (?:offre|pli)\b|\bremis(?:e|es)? avec\b")
+_SIGNATURE_SEULE = re.compile(r"\bsign(?:e|ee|es|ees|er|ature|atures)\b")
+
+
+def lire_obligation(item) -> str:
+    """« obligatoire » | « si_concerne » | « facultatif » — d'après le type de
+    pièce (DC4) puis l'extrait du RC. Source unique pour l'API et l'écran."""
+    if (getattr(item, "document_type_required", "") or "") in SI_CONCERNE_TYPES:
+        return "si_concerne"
+    extrait = getattr(item, "source_in_rc", None)
+    if not extrait:
+        return "obligatoire"
+    texte = _normaliser(extrait)
+    for m in _FACULTATIF.finditer(texte):
+        if not _NIE_AVANT_FACULTATIF.search(texte[max(0, m.start() - 12):m.start()]):
+            return "facultatif"
+    if _SI_CONCERNE.search(texte):
+        return "si_concerne"
+    return "obligatoire"
+
+
+def lire_phase(item) -> str:
+    """« depot » | « attribution » — la pièce est remise par l'attributaire
+    seulement quand l'extrait le dit sans mentionner le dépôt. Une phrase qui ne
+    parle que de la signature à l'attribution ne déplace pas la remise."""
+    extrait = getattr(item, "source_in_rc", None)
+    if not extrait:
+        return "depot"
+    texte = _normaliser(extrait)
+    if _DEPOT_EXPLICITE.search(texte) or not _ATTRIBUTION_PIECE.search(texte):
+        return "depot"
+    for phrase in re.split(r"[.;!?]", texte):
+        if _ATTRIBUTION_PIECE.search(phrase) and not _SIGNATURE_SEULE.search(phrase):
+            return "attribution"
+    return "depot"
+
+
 def _is_conforme(item) -> bool:
     if item.status not in _CONFORME_STATUSES:
         return False

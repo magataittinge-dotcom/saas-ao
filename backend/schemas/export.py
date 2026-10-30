@@ -47,6 +47,9 @@ class ChecklistExportItem(BaseModel):
     jointe: bool = False
     piece_nom: Optional[str] = None
     valable_jusqu_au: Optional[date] = None
+    # Statuts positifs (bloc 9) : lecture du RC, checklist_matcher.lire_obligation / lire_phase
+    obligation: str = "obligatoire"   # obligatoire | si_concerne | facultatif
+    phase: str = "depot"              # depot | attribution
 
     model_config = {"from_attributes": True}
 

@@ -1,6 +1,6 @@
 import { FileText, Trash2, ExternalLink, Tag, Pencil } from 'lucide-react'
-import { formatDate } from '@/lib/utils'
 import { DOC_TYPE_LABELS } from '@/lib/vault'
+import { noteValidite, statutDocument } from '@/lib/statutPiece'
 import { getSignedFileUrl } from '@/services/api'
 import { StatusBadge, documentStatusBadge } from './StatusBadge'
 import type { Document } from '@/types'
@@ -13,6 +13,8 @@ interface Props {
 
 export function FileCard({ document, onDelete, onEdit }: Props) {
   const badge = documentStatusBadge(document.status)
+  const statut = statutDocument(document)
+  const note = noteValidite(document.type)
   const isUnclassified = document.status === 'unclassified'
 
   const openFile = async () => {
@@ -43,15 +45,13 @@ export function FileCard({ document, onDelete, onEdit }: Props) {
           {!isUnclassified && (
             <p className="text-xs text-ds-text-2 truncate">{document.file_name}</p>
           )}
-          {document.expiry_date && (
-            <p className="text-xs text-ds-text-3">
-              Expire le {formatDate(document.expiry_date)}
-            </p>
-          )}
+          {!isUnclassified && note && <p className="piece-note">{note}</p>}
         </div>
       </div>
       <div className="flex items-center gap-2 ml-2 shrink-0">
-        <StatusBadge label={badge.label} variant={badge.variant} />
+        {isUnclassified
+          ? <StatusBadge label={badge.label} variant={badge.variant} />
+          : <span className={statut.classe}>{statut.texte}</span>}
         {onEdit && (
           isUnclassified ? (
             <button

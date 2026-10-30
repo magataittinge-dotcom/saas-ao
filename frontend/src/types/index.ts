@@ -260,6 +260,19 @@ export interface ChecklistItem {
   jointe?: boolean
   piece_nom?: string | null
   valable_jusqu_au?: string | null
+  /** « Déposé le … par … » : instant UTC (avec « Z ») et nom de l'auteur du geste. */
+  depose_le?: string | null
+  depose_par?: string | null
+  /** Source de la lecture dans le RC : document, page, article (intitulé qui précède
+   *  l'extrait) et exigence d'origine (pour « Voir dans le DCE »). */
+  source_document?: string | null
+  source_page?: number | null
+  source_article?: string | null
+  source_exigence_id?: string | null
+  /** Lecture du RC (serveur) : pièce demandée à tous, « si concerné » ou facultative. */
+  obligation?: 'obligatoire' | 'si_concerne' | 'facultatif'
+  /** Lecture du RC (serveur) : remise au dépôt ou par l'attributaire. */
+  phase?: 'depot' | 'attribution'
   lot?: string | null
   document_group?: 'fournir' | 'completer' | 'synorix' | 'workflow'
 }

@@ -1,6 +1,7 @@
 import uuid
+from datetime import datetime
 from sqlalchemy import (
-    Boolean, Column, Integer, String, Text, ForeignKey,
+    Boolean, Column, DateTime, Integer, String, Text, ForeignKey,
     CheckConstraint, Enum as SAEnum,
 )
 from sqlalchemy.orm import relationship
@@ -53,6 +54,17 @@ class ChecklistItem(Base):
     # à signer) | 'synorix' (produit par Synorix, jalon) | 'workflow' (DPGF/BPU).
     # Le score de conformité ne compte que 'fournir' + 'completer'.
     document_group = Column(String(20), nullable=False, default="fournir", server_default="fournir")
+    # « Déposé le … par … » (bloc 9) : instant (UTC) et auteur du geste qui a posé
+    # la pièce (choix au coffre ou formulaire rempli déposé) ; effacés au retrait.
+    depose_le = Column(DateTime, nullable=True)
+    depose_par_id = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    # D'où l'extrait source_in_rc a été lu (bloc 9, tranche 4) : document cité, page, article
+    # qui porte le passage (lu dans le texte du document, jamais deviné) et exigence d'origine
+    # (le panneau « Voir dans le DCE » s'y ancre).
+    source_document = Column(Text, nullable=True)
+    source_page = Column(Integer, nullable=True)
+    source_article = Column(String(200), nullable=True)
+    source_exigence_id = Column(String, ForeignKey("compliance_items.id", ondelete="SET NULL"), nullable=True)
 
     # Relationships
     project = relationship("Project", back_populates="checklist_items")
@@ -63,3 +75,17 @@ class ChecklistItem(Base):
     completed_project_doc = relationship(
         "ProjectDocument", foreign_keys=[completed_project_doc_id]
     )
+    deposant = relationship("User", foreign_keys=[depose_par_id])
+
+    @property
+    def depose_par(self):
+        """Nom de l'auteur du dépôt (lu par le schéma de réponse)."""
+        return self.deposant.name if self.deposant is not None else None
+
+    def marquer_depose(self, user) -> None:
+        self.depose_le = datetime.utcnow()
+        self.depose_par_id = user.id
+
+    def effacer_depot(self) -> None:
+        self.depose_le = None
+        self.depose_par_id = None

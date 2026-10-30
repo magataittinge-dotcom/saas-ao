@@ -15,9 +15,11 @@ import EchecAction from '@/components/common/EchecAction'
 import { signatureAConfirmer } from '@/components/project/SignatureLigne'
 import ExigencesDuDossier, { type ExigenceExport } from '@/components/project/ExigencesDuDossier'
 import {
-  etatPiece, libellePieces, lignesDuScore, lireAvertissementsExport, resumeExigences, type GroupeExigences,
+  etatPiece, lignesDuScore, lireAvertissementsExport, resumeExigences, type GroupeExigences,
 } from '@/lib/exportDossier'
 import { messageErreur } from '@/lib/erreurs'
+import { suiteComptes } from '@/lib/statutPiece'
+import { echeanceAO } from '@/lib/echeance'
 
 const F = "'Inter Variable', 'Geist Sans', sans-serif"
 
@@ -39,6 +41,9 @@ interface ChecklistExportItem {
   jointe: boolean
   piece_nom: string | null
   valable_jusqu_au: string | null
+  // Lecture du RC (serveur) : statuts « Si concerné », « Facultatif », « Pour l'attribution »
+  obligation?: 'obligatoire' | 'si_concerne' | 'facultatif'
+  phase?: 'depot' | 'attribution'
 }
 
 // Exactement ce que le ZIP contient (même plan que l'archive, côté serveur)
@@ -362,6 +367,7 @@ export default function StepExport({ project }: Props) {
   // Pièces : mêmes lignes et même règle que le score du serveur (avant : toutes
   // les lignes, dont le jalon « mémoire » jamais « présent », d'où un point
   // de contrôle en défaut pour toujours).
+  const echeance = echeanceAO(project)?.date?.slice(0, 10) ?? null
   const piecesDemandees = lignesDuScore(detail.checklist_items)
   const checklistOk = !!score && score.total > 0 && score.conformes === score.total
   const memoireOk = detail.has_memoire
@@ -460,11 +466,11 @@ export default function StepExport({ project }: Props) {
             </p>
             <div className="flex flex-wrap items-end gap-3">
               <span className="num-mono bg-gradient-silver-text bg-clip-text text-5xl font-bold leading-none text-transparent">
-                {totalPieces}
+                {totalPieces - conformes}
               </span>
               <div className="pb-0.5">
                 <p className="text-sm font-semibold" style={{ color: '#F7F8F8' }}>
-                  {libellePieces(totalPieces, conformes)}
+                  {suiteComptes(totalPieces - conformes, conformes)}
                 </p>
                 <p className="mt-0.5 text-xs font-medium" style={{ color: readyForDeposit ? '#6EE7A8' : 'var(--warn)' }}>
                   {readyForDeposit
@@ -570,7 +576,7 @@ export default function StepExport({ project }: Props) {
           >
             <div className="px-3 py-2 space-y-0.5 max-h-[400px] overflow-y-auto">
               {piecesDemandees.map((item) => {
-                const etat = etatPiece(item)
+                const etat = etatPiece(item, echeance)
                 return (
                   <div
                     key={item.id}
@@ -581,9 +587,7 @@ export default function StepExport({ project }: Props) {
                       <p className="text-sm font-medium" style={{ color: '#F7F8F8' }}>
                         {item.details || item.document_type_required}
                       </p>
-                      <p className="text-xs truncate" style={{ color: etat.ton === 'attention' ? 'var(--warn)' : '#959597' }}>
-                        {etat.texte}
-                      </p>
+                      <span className={etat.statut.classe}>{etat.texte}</span>
                     </div>
                   </div>
                 )

@@ -4,28 +4,22 @@
 // ZIP contient (pieces_zip) et n'affiche plus aucune fraction « x/y ».
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { etatPiece, resumePieces } from '@/lib/exportDossier'
+import { etatPiece } from '@/lib/exportDossier'
 import { lire } from './outils/sources'
 import { textesAffiches } from './outils/textes'
 
-test('« Jointe » avec le nom et la date de validité, seulement si c’est un fait', () => {
-  assert.deepEqual(
-    etatPiece({ status: 'present', jointe: true, piece_nom: 'kbis.pdf', valable_jusqu_au: '2027-03-01' }),
-    { texte: 'Jointe — kbis.pdf · valable jusqu’au 01/03/2027', ton: 'ok' })
-  assert.deepEqual(etatPiece({ status: 'present', jointe: true, piece_nom: 'DC1.pdf', valable_jusqu_au: null }),
-    { texte: 'Jointe — DC1.pdf', ton: 'ok' })
-  // « present » sans fait vérifiable (fichier parti du serveur…) : jamais « Jointe »
+test('« Prêt — valable jusqu’au … » seulement si c’est un fait, sinon « À joindre »', () => {
+  assert.equal(
+    etatPiece({ status: 'present', jointe: true, piece_nom: 'kbis.pdf', valable_jusqu_au: '2027-03-01' }).texte,
+    'Prêt — valable jusqu’au 01/03/2027')
+  assert.equal(etatPiece({ status: 'present', jointe: true, piece_nom: 'DC1.pdf', valable_jusqu_au: null }).texte, 'Prêt')
+  assert.equal(etatPiece({ status: 'present', jointe: true }).ton, 'ok')
+  // « present » sans fait vérifiable (fichier parti du serveur…) : jamais « Prêt »
   assert.equal(etatPiece({ status: 'present', jointe: false }).texte, 'À joindre')
   assert.equal(etatPiece({ status: 'expire', jointe: false }).texte, 'À renouveler')
   assert.equal(etatPiece({ status: 'warning', jointe: false }).texte, 'Date de validité à confirmer')
   assert.equal(etatPiece({ status: 'manquant', jointe: false }).texte, 'À joindre')
   assert.equal(etatPiece({ status: 'non_applicable', jointe: false }).texte, 'Non concerné')
-})
-
-test('résumé des pièces : jamais de fraction', () => {
-  assert.equal(resumePieces(5, 0), '5 pièces demandées')
-  assert.equal(resumePieces(5, 3), '5 pièces demandées, dont 3 prêtes')
-  assert.equal(resumePieces(1, 1), '1 pièce demandée, prête')
 })
 
 test('l’écran Export : plus de « pièces conformes x/y », liste du ZIP = pieces_zip', () => {
