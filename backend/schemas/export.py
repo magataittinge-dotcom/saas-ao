@@ -76,6 +76,8 @@ class MemoireExportInfo(BaseModel):
     generated_at: datetime
     sections_count: int
     estimated_pages: int
+    # Passages « [À COMPLÉTER : … ] » restant dans le texte : l'écran dit « N passages à compléter ».
+    passages_a_completer: int = 0
 
 
 class DpgfExportInfo(BaseModel):

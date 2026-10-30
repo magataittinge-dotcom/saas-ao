@@ -30,6 +30,7 @@ from services.document_tagger import (
 )
 from services.dpgf_ouvrages import est_tableur, texte_ouvrages_du_lot
 from services import pipeline_tracker, quota
+from services.chrono import chrono, chronometre
 from services.project_status import ensure_relaunchable
 
 logger = logging.getLogger(__name__)
@@ -442,6 +443,7 @@ def _refund_lots(db, consumed_ids: dict, lot_ids: list) -> None:
         db.rollback()
 
 
+@chronometre("analyse", lot=lambda a: [s.get("lot_id") for s in a.get("lot_specs") or []])
 def _run_analysis_job(
     project_id: str,
     org_id: str,
@@ -547,6 +549,10 @@ def _run_analysis_job(
             return _analyser()
 
         def _one_lot(spec):
+            with chrono("analyse_lot", project_id, spec["lot_id"]):
+                return _analyser_un_lot(spec)
+
+        def _analyser_un_lot(spec):
             exigences: list = []
             if spec["pass2_commun"]:
                 exigences.extend(_partie_commune(spec).get("requirements", []))

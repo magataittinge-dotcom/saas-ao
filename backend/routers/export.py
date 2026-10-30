@@ -24,6 +24,8 @@ from models.project import Project, ProjectDocument
 from models.compliance_item import ComplianceItem, STATUT_CONFIRMEE
 from models.checklist_item import ChecklistItem
 from models.memoire import MemoireTechnique
+from services.chrono import chronometre, lot_du_projet
+from services.docx_exporter import compter_passages_a_completer
 from schemas.export import ExportSummary, ExportDetail, ComplianceExportItem, ChecklistExportItem, MemoireExportInfo, DpgfExportInfo, PieceZipExport, ProjectDocumentExportItem
 from routers.auth import get_auth_user
 from services.file_storage import FileStorage
@@ -130,6 +132,7 @@ def get_export_detail(
             generated_at=memoire.generated_at,
             sections_count=sections,
             estimated_pages=estimated_pages,
+            passages_a_completer=compter_passages_a_completer(cj),
         )
 
     # DPGF info
@@ -238,6 +241,7 @@ def get_export_summary(
 
 @router.get("/{project_id}/export/docx")
 @limiter.limit("20/minute")
+@chronometre("export", lot=lot_du_projet)
 def export_docx(
     request: Request,
     project_id: str,
@@ -272,6 +276,7 @@ def export_docx(
 
 @router.get("/{project_id}/export/zip")
 @limiter.limit("10/minute")
+@chronometre("export", lot=lot_du_projet)
 def export_zip(
     request: Request,
     project_id: str,

@@ -19,6 +19,7 @@ import {
 } from '@/lib/exportDossier'
 import { messageErreur } from '@/lib/erreurs'
 import { suiteComptes } from '@/lib/statutPiece'
+import { libellePassagesACompleter } from '@/lib/passagesACompleter'
 import { echeanceAO } from '@/lib/echeance'
 
 const F = "'Inter Variable', 'Geist Sans', sans-serif"
@@ -66,6 +67,7 @@ interface MemoireExportInfo {
   generated_at: string
   sections_count: number
   estimated_pages: number
+  passages_a_completer: number
 }
 
 interface DpgfExportInfo {
@@ -491,6 +493,12 @@ export default function StepExport({ project }: Props) {
                 label="Mémoire"
                 value={detail.memoire_info ? `${detail.memoire_info.estimated_pages} pages` : 'non généré'}
               />
+              {detail.memoire_info && libellePassagesACompleter(detail.memoire_info.passages_a_completer) && (
+                <span className="flex min-w-0 items-center gap-1.5 text-xs font-medium" style={{ color: 'var(--warning-fg)' }}>
+                  <AlertTriangle size={13} className="shrink-0" />
+                  {libellePassagesACompleter(detail.memoire_info.passages_a_completer)}
+                </span>
+              )}
               <HeroCheck
                 ok={dpgfOk}
                 label="DPGF"
@@ -629,6 +637,12 @@ export default function StepExport({ project }: Props) {
                       <ExternalLink size={12} /> Voir
                     </button>
                   </div>
+                  {libellePassagesACompleter(detail.memoire_info.passages_a_completer) && (
+                    <p className="flex items-center gap-1.5 text-xs font-medium px-3" style={{ color: 'var(--warning-fg)' }}>
+                      <AlertTriangle size={13} className="shrink-0" />
+                      {libellePassagesACompleter(detail.memoire_info.passages_a_completer)}
+                    </p>
+                  )}
                   <p className="text-xs px-3" style={{ color: 'var(--text-3)' }}>
                     Les documents de réponse seront inclus dans le ZIP.
                   </p>

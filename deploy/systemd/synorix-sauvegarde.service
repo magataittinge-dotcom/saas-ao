@@ -9,5 +9,5 @@ Type=oneshot
 ExecStart=/usr/local/sbin/synorix-sauvegarde
 Nice=10
 IOSchedulingClass=idle
-# Au plus 1 Go : la sauvegarde ne doit jamais affamer l'API sur le KVM 1.
+# Au plus 1 Go : la sauvegarde ne doit jamais affamer l'API sur le KVM 2 (le budget laisse 1 092 Mo de marge, voir synorix-api.service).
 MemoryMax=1G

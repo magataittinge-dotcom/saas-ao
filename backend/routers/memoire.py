@@ -25,6 +25,7 @@ from schemas.memoire import (
 )
 from routers.auth import get_auth_user
 from services.ai.memoire_generator import MemoireGenerator
+from services.chrono import chronometre, lot_du_projet
 from services.docx_exporter import build_memoire_docx
 from services.maps_service import generate_location_map, lieu_execution, lieu_source
 from services.document_tagger import get_documents_for_lot
@@ -262,6 +263,7 @@ def _memoire_content_all_placeholders(content: dict) -> bool:
     )
 
 
+@chronometre("memoire", lot=lot_du_projet)
 def _run_memoire_job(
     project_id: str, org_id: str, user_id: str, variables: dict,
     profile_overrides: dict | None, reference_ids: list | None,
@@ -600,6 +602,7 @@ def _attachment_response(content: bytes, filename: str, media_type: str) -> Resp
 
 
 @router.get("/{project_id}/memoire/export-docx")
+@chronometre("export", lot=lot_du_projet)
 def export_memoire_docx(
     project_id: str,
     user: User = Depends(get_auth_user),
@@ -623,6 +626,7 @@ def export_memoire_docx(
 
 
 @router.get("/{project_id}/memoire/export-pdf")
+@chronometre("export", lot=lot_du_projet)
 def export_memoire_pdf(
     project_id: str,
     user: User = Depends(get_auth_user),
