@@ -1,0 +1,352 @@
+/* ═══════════════════════════════════════════════════════════════
+   SYNORIX — JETONS DU SYSTÈME DE DESIGN (clair + nuit)
+   Source des valeurs : .claude/echange/sprint-ozcan/design-insyder/
+   SYSTEME-DESIGN.md §3 à §9 (mesuré / dérivé, avec la preuve).
+   Seule différence avec la référence : l'accent est bleu (teinte 251,7°).
+
+   Le thème se lit sur l'attribut data-theme de <html> (posé avant l'affichage
+   par public/theme-init.js). Un sous-arbre peut forcer l'autre thème avec son
+   propre data-theme (les écrans pas encore refaits restent en nuit).
+
+   Règles de lecture :
+   - clair par défaut (aucun attribut) ; nuit sous [data-theme="dark"] ;
+   - texte d'accent = --accent-text, interface = --accent-ui, remplissage = --accent-fill ;
+   - jamais d'aplat accent-500 avec du texte, jamais de texte foncé sur un accent vif ;
+   - toute autre couleur du produit renvoie à un jeton de ce fichier.
+   Les anciens noms (--bg, --ink, --calque-*, ds-*, edge-*) sont des alias,
+   définis en bas : ils suivent le thème sans rien changer d'autre.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Jetons identiques dans les deux thèmes ──────────────────── */
+:root {
+  /* Accent bleu — échelle SYSTEME-DESIGN §3.3 (teinte 251,7°, paliers 500 et 600 ajustés au contraste) */
+  --accent-50:  #eff7ff;
+  --accent-100: #e2effe;
+  --accent-200: #aed3fd;
+  --accent-300: #69b1ff;
+  --accent-400: #4ba3ff;
+  --accent-500: #008cf8;
+  --accent-600: #0078d6;
+  --accent-700: #0067ba;
+  --accent-800: #004e8e;
+  --accent-900: #003361;
+  --on-accent: #ffffff;
+
+  /* Verre (SYSTEME-DESIGN §5) */
+  --surface-glass-1: rgba(255, 255, 255, .10);
+  --surface-glass-2: rgba(255, 255, 255, .13);
+  --surface-glass-3: rgba(255, 255, 255, .16);
+  --blur-xs: 5px;
+  --blur-sm: 10px;
+  --blur-md: 16px;
+  --blur-lg: 20px;      /* saturation 1,5 */
+  --blur-xl: 28px;      /* saturation 1,8 */
+
+  /* Polices : Bricolage Grotesque (titres), Inter (interface et texte), Geist Mono (données) */
+  --font-display: 'Bricolage Grotesque', 'Inter Variable', system-ui, sans-serif;
+  --font-ui: 'Inter Variable', Inter, system-ui, sans-serif;
+  --font-text: 'Inter Variable', Inter, system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, Menlo, monospace;
+
+  /* Échelle typographique (bureau) : taille, interligne, approche */
+  --text-h1: 60px;  --text-h1-line: 72px;    --text-h1-track: -1.4px;
+  --text-h2: 48px;  --text-h2-line: 57.6px;  --text-h2-track: -1px;
+  --text-h3: 40px;  --text-h3-line: 48px;    --text-h3-track: -1px;
+  --text-h5: 28px;  --text-h5-line: 33.6px;  --text-h5-track: 0;
+  --text-h6: 24px;  --text-h6-line: 28.8px;  --text-h6-track: 0;
+  --text-lead: 20px;   --text-lead-line: 26px;
+  --text-ui: 16px;     --text-ui-line: 20.8px;
+  --text-long: 18px;   --text-long-line: 30.6px;
+  --text-small: 14px;  --text-small-line: 23.8px;
+  --text-micro: 12px;  --text-micro-line: 16px;
+
+  /* Espacement (base 10 px), conteneurs, points de rupture (repères : une variable ne sert pas dans @media) */
+  --space-4: 4px;   --space-8: 8px;   --space-10: 10px;  --space-12: 12px;  --space-16: 16px;
+  --space-20: 20px; --space-30: 30px; --space-40: 40px;  --space-50: 50px;  --space-100: 100px; --space-200: 200px;
+  --container: 1200px;  --container-large: 1260px;  --container-read: 760px;
+  --gutter: 16px;       /* 120 px sur bureau, voir le media query ci-dessous */
+  --bp-tab: 810px;      --bp-desk: 1200px;
+
+  /* Rayons */
+  --radius-xs: 4px;  --radius-sm: 8px;  --radius-md: 12px;  --radius-lg: 16px;
+  --radius-xl: 20px; --radius-2xl: 30px; --radius-pill: 9999px;  --radius-nav: 10px;
+  --radius: 12px;    /* shadcn : lg = 12, md = 10, sm = 8 */
+
+  /* Mouvement (SYSTEME-DESIGN §8) */
+  --dur-instant: 80ms;   --dur-fast: 100ms;   --dur-base: 150ms;     --dur-pop: 280ms;
+  --dur-link: 400ms;     --dur-morph: 450ms;  --dur-reveal-sm: 600ms; --dur-reveal-lg: 1000ms;
+  --ease-reveal: cubic-bezier(.35, .8, .15, 1);
+  --ease-pop: cubic-bezier(.34, 1.56, .64, 1);
+  --ease-expo: cubic-bezier(.16, 1, .3, 1);
+  --ease-link: cubic-bezier(.44, 0, .56, 1);
+
+  /* Ombres teintées par l'accent (identiques dans les deux thèmes) */
+  --shadow-cta: inset 4px 4px 8px rgba(255, 255, 255, .3), inset -4px -4px 8px rgba(255, 255, 255, .3), 0 8px 16px rgba(0, 140, 248, .5);
+  --shadow-halo: 0 8px 32px 4px rgba(0, 140, 248, .5);
+  --shadow-btn: inset 0 1px 0 rgba(255, 255, 255, .22);   /* reflet interne des boutons pleins */
+}
+@media (min-width: 1200px) { :root { --gutter: 120px; } }
+@media (max-width: 809px) {
+  :root {
+    --text-h1: 44px;  --text-h1-line: 52.8px;
+    --text-h2: 34px;  --text-h2-line: 40.8px;
+    --text-h3: 32px;  --text-h3-line: 38.4px;
+    --text-h5: 20px;  --text-h5-line: 24px;
+    --text-h6: 20px;  --text-h6-line: 24px;
+  }
+}
+
+/* ── Clair (défaut) ──────────────────────────────────────────── */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  --surface-0: #ffffff;
+  --surface-1: #edf1f4;
+  --surface-2: #dde5ed;
+  --surface-dark: #111111;
+  --surface-pop: #ffffff;           /* menus, infobulles, fenêtres */
+
+  --text-1: #1d1d1d;
+  --text-2: #4d585f;
+  --text-3: #5c676f;
+  --text-disabled: #bababa;         /* exempt de contraste (élément désactivé) */
+  --text-inverse: #ffffff;
+
+  --border-1: rgba(0, 0, 0, .08);
+  --border-2: rgba(0, 0, 0, .10);
+  --border-field: #7a828a;          /* bord des champs et contrôles : 3:1 minimum sur toute surface */
+  --ring-nav: 0 0 0 4px rgba(221, 229, 237, .7);
+
+  --accent-text: var(--accent-700);
+  --accent-ui: var(--accent-600);
+  --accent-ring: var(--accent-600);
+  --accent-fill: linear-gradient(110deg, var(--accent-700), var(--accent-600));
+  --accent-fill-solid: var(--accent-600);
+  --accent-fill-hover: linear-gradient(110deg, var(--accent-800), var(--accent-700));
+  --accent-tint: var(--accent-50);
+  --accent-tint-2: var(--accent-100);
+
+  --info-bg: #edf5fc;     --info-border: #b3d7fc;     --info-fg: #2c68c8;
+  --success-bg: #edfbec;  --success-border: #a3f7a9;  --success-fg: #107c41;
+  --warning-bg: #fff8e8;  --warning-border: #ffe4ab;  --warning-fg: #9f5c18;
+  --danger-bg: #fef0ef;   --danger-border: #feacad;   --danger-fg: #cd2165;
+  --danger-solid: #cd2165;
+
+  --glass-fill: rgba(255, 255, 255, .88);
+  --glass-border: rgba(0, 0, 0, .08);
+  --scrim: rgba(17, 17, 17, .32);
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, .06), 0 1px 1px rgba(0, 0, 0, .04);
+  --shadow-pop: 0 10px 36px rgba(0, 0, 0, .18), inset 0 1px 0 rgba(255, 255, 255, .8);
+  --shadow-toast: 0 4px 16px rgba(0, 0, 0, .10);
+  --edge-light: inset 0 1px 0 rgba(255, 255, 255, .8);
+  --bottom-lit: none;
+
+  --highlight: #ffe066;         /* le surligneur de la preuve (extrait du DCE), et rien d'autre */
+  --highlight-soft: #fff2b8;
+  --highlight-text: #1d1d1d;
+}
+
+/* ── Mouvement réduit : plus de translation ni d'apparition animée, tout est instantané
+   (les ressorts, glints et défilements du système de référence ignorent cette préférence : nous non). */
+@media (prefers-reduced-motion: reduce) {
+  *:not(.animate-spin), *:not(.animate-spin)::before, *:not(.animate-spin)::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Nuit (dérivée, SYSTEME-DESIGN §3.4 ; surface-0 neutre #111111, décision du 30/10) ── */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --surface-0: #111111;
+  --surface-1: #1d1d1d;
+  --surface-2: #292929;
+  --surface-dark: #000000;
+  --surface-pop: #1d1d1d;
+
+  --text-1: #ffffff;
+  --text-2: #bababa;
+  --text-3: #859198;
+  --text-disabled: #555761;
+  --text-inverse: #111111;
+
+  --border-1: rgba(255, 255, 255, .14);
+  --border-2: rgba(255, 255, 255, .20);
+  --border-field: #7b858c;
+  --ring-nav: 0 0 0 4px rgba(255, 255, 255, .14);
+
+  --accent-text: var(--accent-300);
+  --accent-ui: var(--accent-500);
+  --accent-ring: var(--accent-300);
+  --accent-fill: linear-gradient(110deg, var(--accent-600), var(--accent-600));   /* plein, mais toujours une image : même propriété dans les deux thèmes */
+  --accent-fill-solid: var(--accent-600);
+  --accent-fill-hover: linear-gradient(110deg, var(--accent-700), var(--accent-700));
+  --accent-tint: #183144;
+  --accent-tint-2: #143e5f;
+
+  --info-bg: #233061;     --info-border: #1f4399;     --info-fg: #6eabfa;
+  --success-bg: #1a4d40;  --success-border: #136a4d;  --success-fg: #4dd470;
+  --warning-bg: #5c3721;  --warning-border: #934c1a;  --warning-fg: #ffbe62;
+  --danger-bg: #612241;   --danger-border: #901d56;   --danger-fg: #fc7d97;
+  --danger-solid: #b31a57;
+
+  --glass-fill: rgba(29, 29, 29, .82);
+  --glass-border: rgba(255, 255, 255, .14);
+  --scrim: rgba(0, 0, 0, .6);
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, .5), 0 16px 40px -20px rgba(0, 0, 0, .7);
+  --shadow-pop: 0 10px 36px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .12);
+  --shadow-toast: 0 4px 16px rgba(0, 0, 0, .4);
+  --edge-light: inset 0 1px 0 rgba(255, 255, 255, .07);
+  --bottom-lit: radial-gradient(130% 115% at 50% 128%, rgba(255, 255, 255, .06), transparent 56%);
+
+  --highlight: #5e4b00;
+  --highlight-soft: #3d3200;
+  --highlight-text: #ffffff;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ALIAS DES ANCIENS NOMS (période de transition, jusqu'à la fin de la phase C)
+   Ils sont redéclarés dans chaque portée de thème : une variable qui
+   renvoie à une autre est figée là où elle est déclarée.
+   ═══════════════════════════════════════════════════════════════ */
+:root,
+[data-theme] {
+  /* Lumen */
+  --bg-deep: var(--surface-0);
+  --bg: var(--surface-0);
+  --surface: var(--surface-1);
+  --surface-3: var(--surface-2);
+  --line: var(--border-1);
+  --line-strong: var(--border-2);
+  --ink: var(--text-1);
+  --ink-2: var(--text-2);
+  --ink-3: var(--text-3);
+  --ink-4: var(--text-3);
+  --lum: var(--accent-text);
+  --lum-bright: var(--text-1);
+  --lum-dim: var(--text-3);
+  --glow-white: rgba(0, 140, 248, .30);
+  --ok: var(--success-fg);   --ok-bg: var(--success-bg);   --ok-line: var(--success-border);
+  --warn: var(--warning-fg); --warn-bg: var(--warning-bg); --warn-line: var(--warning-border);
+  --bad: var(--danger-fg);   --bad-bg: var(--danger-bg);   --bad-line: var(--danger-border);
+  --shadow-card-hover: var(--shadow-card), 0 0 0 1px var(--border-2);
+  --shadow-horizon: var(--shadow-card);
+  --shadow-horizon-hover: var(--shadow-card-hover);
+  --card-navy: var(--surface-1);
+  --card-navy-alt: var(--surface-2);
+  --text-primary: var(--text-1);
+  --text-secondary: var(--text-2);
+  --text-tertiary: var(--text-3);
+  --text-muted: var(--text-3);
+  --radius-card: var(--radius-lg);
+  --accent-cyan: var(--accent-text);
+  --accent-cyan-light: var(--text-1);
+  --accent-teal: var(--success-fg);
+  --accent-violet: var(--accent-text);
+  --accent-green: var(--success-fg);
+  --accent-amber: var(--warning-fg);
+  --accent-red: var(--danger-fg);
+  --bg-gradient-1: none;
+  --bg-gradient-2: none;
+  --bg-gradient-3: none;
+  --glass-opacity: 1;
+  --glass-blur: 0px;
+  --glass-border-opacity: 1;
+  --glass-saturate: 100%;
+  --glass-hover-opacity: 1;
+  --glass-hover-border: 1;
+
+  /* Edge (refactor-v2) */
+  --edge-void: var(--surface-0);
+  --edge-graphite: var(--surface-0);
+  --edge-panel: var(--surface-1);
+  --edge-slate: var(--surface-2);
+  --edge-hairline: var(--border-1);
+  --edge-hairline-hover: var(--border-2);
+  --edge-lumen: var(--accent-text);
+  --edge-lumen-300: var(--text-1);
+  --edge-lumen-400: var(--accent-text);
+  --edge-lumen-500: var(--text-3);
+  --edge-glow: 0 8px 24px -12px rgba(0, 140, 248, .35);
+  --edge-horizon: inset 0 -2px 0 0 var(--accent-ui);
+  --edge-text: var(--text-1);
+  --edge-text-2: var(--text-2);
+  --edge-text-3: var(--text-3);
+  --edge-success: var(--success-fg);
+  --edge-warning: var(--warning-fg);
+  --edge-danger: var(--danger-fg);
+  --edge-panel-light: var(--bottom-lit);
+  --edge-ease: var(--ease-link);
+
+  /* Calque (thème clair du 23/10) */
+  --calque-papier: var(--surface-0);
+  --calque-surface: var(--surface-1);
+  --calque-surface-2: var(--surface-2);
+  --calque-ligne: var(--border-1);
+  --calque-ligne-forte: var(--border-2);
+  --calque-ligne-champ: var(--border-field);
+  --calque-encre: var(--text-1);
+  --calque-encre-survol: var(--text-2);
+  --calque-encre-2: var(--text-2);
+  --calque-encre-3: var(--text-3);
+  --calque-encre-4: var(--text-3);
+  --calque-sur-encre: var(--text-inverse);
+  --calque-prusse-50: var(--accent-tint);
+  --calque-prusse-100: var(--accent-tint-2);
+  --calque-prusse-500: var(--accent-ui);
+  --calque-prusse-700: var(--accent-text);
+  --calque-surligneur: var(--highlight);
+  --calque-surligneur-doux: var(--highlight-soft);
+  --calque-ok: var(--success-fg);               --calque-ok-fond: var(--success-bg);
+  --calque-attention: var(--warning-fg);        --calque-attention-fond: var(--warning-bg);
+  --calque-bloquant: var(--danger-fg);          --calque-bloquant-fond: var(--danger-bg);
+  --calque-ombre-flottante: var(--shadow-pop);
+  --calque-focus: 0 0 0 2px var(--surface-0), 0 0 0 4px var(--accent-ring);
+  --calque-voile: var(--scrim);
+  --calque-selection: var(--accent-tint-2);
+  --calque-compagnon-fond: #111111;
+
+  /* « Voir dans le DCE » : le surlignage de la preuve */
+  --source-surligne: color-mix(in srgb, var(--highlight) 60%, transparent);
+  --source-surligne-bord: var(--warning-fg);
+  --source-mark-fond: var(--highlight);
+  --source-mark-texte: var(--highlight-text);
+
+  /* shadcn/ui */
+  --background: var(--surface-0);
+  --foreground: var(--text-1);
+  --card: var(--surface-1);
+  --card-foreground: var(--text-1);
+  --popover: var(--surface-pop);
+  --popover-foreground: var(--text-1);
+  --primary: var(--accent-fill-solid);
+  --primary-foreground: var(--on-accent);
+  --secondary: var(--surface-1);
+  --secondary-foreground: var(--text-1);
+  --muted: var(--surface-1);
+  --muted-foreground: var(--text-3);
+  --accent: var(--surface-1);
+  --accent-foreground: var(--text-1);
+  --destructive: var(--danger-solid);
+  --destructive-foreground: #ffffff;
+  --border: var(--border-1);
+  --input: var(--border-field);
+  --ring: var(--accent-ring);
+
+  /* Barre latérale shadcn/ui */
+  --sidebar-background: var(--surface-0);
+  --sidebar-foreground: var(--text-2);
+  --sidebar-primary: var(--accent-fill-solid);
+  --sidebar-primary-foreground: var(--on-accent);
+  --sidebar-accent: var(--surface-1);
+  --sidebar-accent-foreground: var(--text-1);
+  --sidebar-border: var(--border-1);
+  --sidebar-ring: var(--accent-ring);
+}

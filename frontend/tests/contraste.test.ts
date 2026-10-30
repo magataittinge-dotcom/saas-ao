@@ -4,6 +4,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { fichiersSource, lire, sansCommentaires } from './outils/sources'
+import { contrasteJetons, type Theme } from './outils/jetons'
 
 /** Luminance relative WCAG 2 d'une couleur #RRGGBB. */
 function luminance(hex: string): number {
@@ -19,36 +20,19 @@ function contraste(a: string, b: string): number {
   return (clair + 0.05) / (sombre + 0.05)
 }
 
-const JETONS = lire('src/styles/tokens.css')
-const CONFIG = lire('tailwind.config.js')
-const CSS = ['src/index.css', 'src/styles/tokens.css']
+const CSS = ['src/index.css', 'src/styles/tokens.css', 'src/styles/theme.css']
 
-function jeton(nom: string): string {
-  const m = JETONS.match(new RegExp(`--${nom}:\\s*(#[0-9A-Fa-f]{6})`))
-  assert.ok(m, `jeton --${nom} introuvable`)
-  return m[1]
-}
-
-/** Valeurs #RRGGBB des clés `cles` du thème Tailwind (clés citées ou non). */
-function couleursConfig(cles: RegExp): string[] {
-  return [...CONFIG.matchAll(/^\s*'?([\w-]+)'?:\s*'(#[0-9A-Fa-f]{6})'/gm)]
-    .filter((m) => cles.test(m[1]))
-    .map((m) => m[2])
-}
-
-test('chaque gris de texte dépasse 4,5:1 sur chaque fond de l\'application', () => {
-  const fonds = new Set([
-    ...['bg-deep', 'bg', 'surface', 'surface-2', 'surface-3'].map(jeton),
-    ...couleursConfig(/^(bg|bg-2|bg-3|bg-elevated|sidebar|surface|surface-2|surface-3|void|graphite|panel|slate)$/),
-  ])
-  const textes = new Set([
-    ...['ink', 'ink-2', 'ink-3', 'ink-4', 'text-muted'].map(jeton),
-    ...couleursConfig(/^text(-[\w]+)?$/),
-  ])
-  assert.ok(fonds.size >= 5 && textes.size >= 4)
-  const faibles = [...textes].flatMap((t) => [...fonds]
-    .filter((f) => contraste(t, f) < 4.5)
-    .map((f) => `${t} sur ${f} : ${contraste(t, f).toFixed(2)}:1`))
+test('chaque gris de texte dépasse 4,5:1 sur chaque fond de l\'application, en clair comme en nuit', () => {
+  // anciens noms (alias des jetons du système) : fonds Lumen / Edge, écritures ink / text
+  const fonds = ['--bg-deep', '--bg', '--surface', '--surface-2', '--surface-3', '--edge-void', '--edge-graphite', '--edge-panel', '--edge-slate']
+  const textes = ['--ink', '--ink-2', '--ink-3', '--ink-4', '--text-muted', '--text-primary', '--text-secondary', '--text-tertiary', '--edge-text', '--edge-text-2', '--edge-text-3']
+  const faibles: string[] = []
+  for (const theme of ['light', 'dark'] as Theme[]) {
+    for (const t of textes) for (const f of fonds) {
+      const { minimum } = contrasteJetons(theme, t, f)
+      if (minimum < 4.5) faibles.push(`${theme} ${t} sur ${f} : ${minimum.toFixed(2)}:1`)
+    }
+  }
   assert.deepEqual(faibles, [])
 })
 

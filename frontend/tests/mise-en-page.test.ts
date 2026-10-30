@@ -20,10 +20,9 @@ test('les barres d\'action des étapes 3 à 6 sont collées au bas du contenu, p
   }
 })
 
-test('la barre latérale s\'ouvre par un bouton, plus au survol', () => {
+test('la barre d\'icônes est fixe et flottante : rien ne s\'ouvre au survol, le contenu ne saute pas', () => {
   const code = sansCommentaires(lire('src/components/layout/Sidebar.tsx'))
-  assert.ok(!/onMouseEnter=\{\(\) => setHoverExpanded/.test(code))
   assert.ok(!code.includes('hoverExpanded'))
-  assert.match(code, /aria-expanded=\{ouverte\}/)
-  assert.match(code, /Déplier la barre latérale/)
+  assert.ok(!/onMouseEnter/.test(code))
+  assert.match(code, /fixed bottom-4 left-4 top-4/)
 })
