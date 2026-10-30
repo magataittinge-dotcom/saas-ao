@@ -608,29 +608,38 @@ def _add_part(
 ):
     from services.visuels.modele import retirer_gabarits
 
-    _h1(doc, title)
+    part = part or {}
+    # Les sections qui ont du contenu (texte ou visuel), dans l'ordre. Aucune : le titre de la partie
+    # ne s'imprime pas non plus (sinon « PARTIE B » sortait seul, suivi de rien).
+    a_ecrire = []
     for key, label in sections:
-        text = (part or {}).get(key, "")
+        text = part.get(key, "")
         ses_visuels = [v for v in (visuels or []) if v.section == (part_key, key)]
         if (text and text.strip()) or ses_visuels:
-            _h2(doc, label)
-            text = retirer_gabarits(text or "", ses_visuels)
-            if key == "implantation" and map_image:
-                _body(doc, text, skip_map_placeholder=True)
-                _add_map_image(doc, map_image, map_caption or "")
-            else:
-                _body(doc, text)
-            for v in ses_visuels:
-                if v.tableau:
-                    from services.visuels.word import ajouter_tableau
-                    ajouter_tableau(doc, v.tableau, v.legende)
-                    continue
-                try:
-                    png = v.png          # un visuel qui ne se rastérise pas disparaît, l'export continue
-                except Exception:
-                    logger.warning("Visuel %s omis : PNG de repli impossible", v.section, exc_info=True)
-                    continue
-                _ajouter_visuel(doc, v.svg, png, v.largeur_cm, v.texte_alt, v.legende, v.paysage)
+            a_ecrire.append((key, label, text, ses_visuels))
+    if not a_ecrire:
+        return
+
+    _h1(doc, title)
+    for key, label, text, ses_visuels in a_ecrire:
+        _h2(doc, label)
+        text = retirer_gabarits(text or "", ses_visuels)
+        if key == "implantation" and map_image:
+            _body(doc, text, skip_map_placeholder=True)
+            _add_map_image(doc, map_image, map_caption or "")
+        else:
+            _body(doc, text)
+        for v in ses_visuels:
+            if v.tableau:
+                from services.visuels.word import ajouter_tableau
+                ajouter_tableau(doc, v.tableau, v.legende)
+                continue
+            try:
+                png = v.png          # un visuel qui ne se rastérise pas disparaît, l'export continue
+            except Exception:
+                logger.warning("Visuel %s omis : PNG de repli impossible", v.section, exc_info=True)
+                continue
+            _ajouter_visuel(doc, v.svg, png, v.largeur_cm, v.texte_alt, v.legende, v.paysage)
 
 
 # ─── Point d'entrée public ─────────────────────────────────────────────────────
