@@ -70,9 +70,8 @@ Identité = **cyan + slate + rouge + émeraude (réservée)**. NE PAS introduire
 | `DeleteConfirmModal` | Modal confirmation suppression | — |
 | `ExpiryAlert` | Alerte expiration document (coffre-fort) | — |
 | `FileCard` | Carte fichier (vault) | — |
-| `PaymentCard` / `SubscriptionWall` | Paiement / paywall | — |
+| `SubscriptionWall` | Paywall | — |
 | `Skeleton` (+ `skeletons/index.tsx`) | États de chargement shimmer | — |
-| `PlanetBackground` | Fond décoratif (landing/auth) | — |
 
 ### `components/layout/`
 `Layout` (shell sidebar+header+outlet), `Sidebar` (nav 9 items, `nav-item`), `Header` (breadcrumb `ROUTE_LABELS` + recherche), `LegalFooter`.
