@@ -142,35 +142,35 @@ export function AnalysisProgress({
       style={{
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
         zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'rgba(9,9,10,0.85)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
+        background: 'color-mix(in srgb, var(--surface-0) 85%, transparent)', backdropFilter: 'blur(4px)', WebkitBackdropFilter: 'blur(4px)',
       }}
     >
       <div
         className="flex flex-col items-center gap-5 min-w-72 p-10 rounded-2xl top-lit"
         style={{
-          background: '#18181A',
+          background: 'var(--surface-1)',
           backgroundImage: 'var(--bottom-lit)',
           border: '1px solid var(--line-strong)',
-          boxShadow: '0 24px 64px rgba(0,0,0,0.6), var(--edge-light)',
+          boxShadow: 'var(--shadow-pop)',
         }}
       >
         {/* Le Compagnon au travail, ceint de l'anneau de progression */}
         <div className="relative h-56 w-56">
           <svg className="h-full w-full -rotate-90" viewBox="0 0 224 224">
-            <circle cx="112" cy="112" r={RADIUS} fill="none" stroke="rgba(255,255,255,.06)" strokeWidth="5" />
+            <circle cx="112" cy="112" r={RADIUS} fill="none" stroke="var(--border-1)" strokeWidth="5" />
             <circle
               cx="112"
               cy="112"
               r={RADIUS}
               fill="none"
-              stroke="#E8E9EB"
+              stroke="var(--text-1)"
               strokeWidth="5"
               strokeLinecap="round"
               strokeDasharray={CIRCUMFERENCE}
               strokeDashoffset={offset}
               style={{
                 transition: 'stroke-dashoffset 0.4s ease',
-                filter: 'drop-shadow(0 0 6px rgba(255,255,255,.45))',
+                filter: 'drop-shadow(0 0 6px color-mix(in srgb, var(--text-1) 45%, transparent))',
               }}
             />
           </svg>
@@ -199,9 +199,9 @@ export function AnalysisProgress({
             onClick={onCancel}
             className="flex items-center gap-2 rounded-lg px-4 py-2 text-sm transition-all duration-200"
             style={{
-              color: '#959597',
-              background: 'rgba(149,149,151,0.10)',
-              border: '1px solid rgba(149,149,151,0.20)',
+              color: 'var(--text-3)',
+              background: 'color-mix(in srgb, var(--text-3) 10%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--text-3) 20%, transparent)',
               opacity: isSlow ? 1 : 0.5,
             }}
           >

@@ -28,15 +28,15 @@ export function FileCard({ document, onDelete, onEdit }: Props) {
 
   return (
     <div
-      className="flex items-center justify-between p-3 rounded-lg border transition-all duration-150 bg-[#151A23] hover:bg-[#1C222D] hover:border-[rgba(228,233,242,0.20)]"
-      style={{ borderColor: 'rgba(186,205,234,.13)' }}
+      className="flex items-center justify-between p-3 rounded-lg border transition-all duration-150 bg-surface-1 hover:bg-surface-1 hover:border-bord-2"
+      style={{ borderColor: 'var(--border-2)' }}
     >
       <div className="flex items-center gap-3 min-w-0">
         <div
           className="p-2 rounded-md shrink-0"
-          style={{ background: 'rgba(228,233,242,0.10)' }}
+          style={{ background: 'color-mix(in srgb, var(--text-1) 10%, transparent)' }}
         >
-          <FileText size={18} style={{ color: '#E4E9F2' }} />
+          <FileText size={18} style={{ color: 'var(--text-1)' }} />
         </div>
         <div className="min-w-0">
           <p className="text-sm font-medium text-ds-text truncate">
@@ -57,7 +57,7 @@ export function FileCard({ document, onDelete, onEdit }: Props) {
             <button
               onClick={() => onEdit(document)}
               className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold transition-colors"
-              style={{ color: '#E4E9F2', background: 'rgba(228,233,242,0.10)' }}
+              style={{ color: 'var(--text-1)', background: 'color-mix(in srgb, var(--text-1) 10%, transparent)' }}
             >
               <Tag size={12} /> Classer
             </button>

@@ -164,8 +164,8 @@ export default function StepVerification({ project }: Props) {
 
   if (isLoading) return (
     <div style={{ fontFamily: F }}>
-      <p className="flex items-center gap-2 text-sm mb-4" style={{ color: '#959597' }}>
-        <Loader2 size={15} className="animate-spin" style={{ color: '#E8E9EB' }} />
+      <p className="flex items-center gap-2 text-sm mb-4" style={{ color: 'var(--text-3)' }}>
+        <Loader2 size={15} className="animate-spin" style={{ color: 'var(--text-1)' }} />
         Préparation de votre checklist…
       </p>
       <RequirementListSkeleton count={5} />
@@ -178,9 +178,9 @@ export default function StepVerification({ project }: Props) {
   if (items.length === 0) return (
     <div
       className="glass-card rounded-lg p-12 text-center"
-      style={{ border: '1px solid rgba(255,255,255,.07)', boxShadow: '0 1px 3px rgba(0,0,0,.4)', fontFamily: F }}
+      style={{ border: '1px solid var(--border-1)', boxShadow: 'var(--shadow-card)', fontFamily: F }}
     >
-      <p className="text-sm" style={{ color: '#909195' }}>
+      <p className="text-sm" style={{ color: 'var(--text-3)' }}>
         La checklist des pièces apparaîtra automatiquement une fois le DCE analysé.
       </p>
     </div>
@@ -190,26 +190,26 @@ export default function StepVerification({ project }: Props) {
 
   const bottomBar = (
     <div
-      className="sticky -bottom-5 z-30 -mx-3 sm:-mx-4 mt-6 rounded-t-lg flex items-center justify-between px-6 py-3 gap-4"
+      className="sticky -bottom-5 z-30 -mx-3 sm:-mx-4 mt-6 rounded-t-lg flex flex-wrap items-center justify-between px-6 py-3 gap-x-4 gap-y-2"
       style={{
-        background: 'rgba(9,9,10,0.92)',
+        background: 'color-mix(in srgb, var(--surface-0) 92%, transparent)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
-        borderTop: '1px solid rgba(255,255,255,.07)',
+        borderTop: '1px solid var(--border-1)',
         fontFamily: F,
       }}
     >
       <div className="flex items-center gap-3">
-        <span className="text-xs font-bold uppercase tracking-wide" style={{ color: '#959597' }}>
+        <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
           Complétion dossier
         </span>
-        <div className="rounded-full overflow-hidden" style={{ width: 120, height: 6, background: '#1E1E21' }}>
+        <div className="rounded-full overflow-hidden" style={{ width: 120, height: 6, background: 'var(--surface-1)' }}>
           <div
             className="h-full transition-all duration-500"
-            style={{ width: `${pct}%`, background: '#E8E9EB' }}
+            style={{ width: `${pct}%`, background: 'var(--text-1)' }}
           />
         </div>
-        <span className="text-sm font-bold" style={{ color: '#E8E9EB' }}>{pct}%</span>
+        <span className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>{pct}%</span>
       </div>
 
       <div className="flex items-center gap-3">
@@ -246,7 +246,7 @@ export default function StepVerification({ project }: Props) {
 
       {/* Title bar */}
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="font-display tracking-tight text-xl font-bold" style={{ color: '#F7F8F8' }}>
+        <h1 className="font-display tracking-tight text-xl font-bold" style={{ color: 'var(--text-1)' }}>
           Vérification de la candidature
         </h1>
         <div className="flex items-center gap-3">
@@ -259,7 +259,7 @@ export default function StepVerification({ project }: Props) {
               await refresh()
             }}
             className="flex items-center gap-1.5 text-xs font-medium transition-colors hover:underline"
-            style={{ color: '#909195' }}
+            style={{ color: 'var(--text-3)' }}
             title="Recalculer la checklist depuis les exigences analysées"
           >
             <RefreshCw size={13} />
@@ -269,7 +269,7 @@ export default function StepVerification({ project }: Props) {
             type="button"
             onClick={openVaultPage}
             className="glass-btn flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium"
-            style={{ color: '#C2C3C6' }}
+            style={{ color: 'var(--text-2)' }}
           >
             <Lock size={14} />
             Accéder au coffre-fort
@@ -286,16 +286,16 @@ export default function StepVerification({ project }: Props) {
               <circle cx="40" cy="40" r="34" fill="none" stroke="var(--surface-2)" strokeWidth="6" />
               <circle
                 cx="40" cy="40" r="34" fill="none"
-                stroke="#E8E9EB" strokeWidth="6" strokeLinecap="round"
+                stroke="var(--text-1)" strokeWidth="6" strokeLinecap="round"
                 strokeDasharray={2 * Math.PI * 34}
                 strokeDashoffset={(2 * Math.PI * 34) * (1 - pct / 100)}
                 style={{
                   transition: 'stroke-dashoffset .6s cubic-bezier(.4,0,.2,1)',
-                  filter: 'drop-shadow(0 0 5px rgba(255,255,255,.4))',
+                  filter: 'drop-shadow(0 0 5px color-mix(in srgb, var(--text-1) 40%, transparent))',
                 }}
               />
             </svg>
-            <span className="num-mono absolute inset-0 flex items-center justify-center text-sm font-bold" style={{ color: '#F7F8F8' }}>
+            <span className="num-mono absolute inset-0 flex items-center justify-center text-sm font-bold" style={{ color: 'var(--text-1)' }}>
               {pct}%
             </span>
           </div>
@@ -307,9 +307,9 @@ export default function StepVerification({ project }: Props) {
               <span className="num-mono bg-gradient-silver-text bg-clip-text text-4xl font-bold leading-none text-transparent">
                 {aJoindre}
               </span>
-              <p className="pb-0.5 text-sm font-semibold" style={{ color: '#F7F8F8' }}>{suiteComptes(aJoindre, pretes)}</p>
+              <p className="pb-0.5 text-sm font-semibold" style={{ color: 'var(--text-1)' }}>{suiteComptes(aJoindre, pretes)}</p>
             </div>
-            <p className="num-mono mt-2 text-xs" style={{ color: '#959597' }}>
+            <p className="num-mono mt-2 text-xs" style={{ color: 'var(--text-3)' }}>
               Coffre-fort : {libelleComptes(comptesCoffre.aJoindre, comptesCoffre.pretes)}
               {'  ·  '}
               Formulaires du DCE : {libelleComptes(comptesFormulaires.aJoindre, comptesFormulaires.pretes, 'formulaire')}
@@ -320,8 +320,8 @@ export default function StepVerification({ project }: Props) {
         {aJoindre > 0 && (
           <div className="relative mt-4 flex items-start gap-2.5 pt-3.5" style={{ borderTop: '1px solid var(--line)' }}>
             <AlertTriangle size={15} className="mt-0.5 shrink-0" style={{ color: 'var(--piece-action)' }} />
-            <p className="text-xs leading-relaxed" style={{ color: '#959597' }}>
-              <span className="font-semibold" style={{ color: '#F7F8F8' }}>
+            <p className="text-xs leading-relaxed" style={{ color: 'var(--text-3)' }}>
+              <span className="font-semibold" style={{ color: 'var(--text-1)' }}>
                 {aJoindre} pièce{aJoindre > 1 ? 's' : ''} à joindre.
               </span>{' '}
               Le règlement de consultation demande ces pièces.
@@ -394,15 +394,15 @@ function WorkflowSection({
   return (
     <section
       className="glass-card rounded-lg overflow-hidden"
-      style={{ border: '1px solid rgba(255,255,255,.07)', boxShadow: '0 1px 3px rgba(0,0,0,.4)', fontFamily: F }}
+      style={{ border: '1px solid var(--border-1)', boxShadow: 'var(--shadow-card)', fontFamily: F }}
     >
-      <header className="flex items-center gap-3 px-5 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
-        <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(217,164,65,0.10)' }}>
-          <FileSpreadsheet size={18} style={{ color: '#D9A441' }} />
+      <header className="flex items-center gap-3 px-5 py-3" style={{ borderBottom: '1px solid var(--border-1)' }}>
+        <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'color-mix(in srgb, var(--warning-fg) 10%, transparent)' }}>
+          <FileSpreadsheet size={18} style={{ color: 'var(--warning-fg)' }} />
         </div>
         <div className="min-w-0">
-          <h2 className="text-base font-bold" style={{ color: '#F7F8F8' }}>Bordereaux de prix (DPGF / BPU)</h2>
-          <p className="text-xs mt-0.5" style={{ color: '#909195' }}>
+          <h2 className="text-base font-bold" style={{ color: 'var(--text-1)' }}>Bordereaux de prix (DPGF / BPU)</h2>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
             Téléchargez la trame, remplissez-la puis ré-importez-la — contrôle automatique des lignes.
           </p>
         </div>
@@ -443,16 +443,16 @@ function WorkflowRow({
   }
 
   return (
-    <li className="flex items-center gap-3 px-5 py-2.5 flex-wrap" style={{ borderTop: '1px solid rgba(255,255,255,.07)' }}>
-      <FileSpreadsheet size={15} style={{ color: '#D9A441' }} className="shrink-0" />
+    <li className="flex items-center gap-3 px-5 py-2.5 flex-wrap" style={{ borderTop: '1px solid var(--border-1)' }}>
+      <FileSpreadsheet size={15} style={{ color: 'var(--warning-fg)' }} className="shrink-0" />
       <div className="flex-1 min-w-[200px]">
-        <p className="text-sm" style={{ color: '#D8D9DB' }}>{item.details}</p>
-        <span className="text-xs" style={{ color: done ? '#6EE7A8' : warn ? '#D9A441' : '#909195' }}>
+        <p className="text-sm" style={{ color: 'var(--text-2)' }}>{item.details}</p>
+        <span className="text-xs" style={{ color: done ? 'var(--success-fg)' : warn ? 'var(--warning-fg)' : 'var(--text-3)' }}>
           {done ? '✓ Rempli et vérifié' : warn ? '⚠️ À corriger (lignes sans prix)' : 'À remplir'}
         </span>
       </div>
       {item.lot && (
-        <span className="text-xs px-1.5 rounded-full shrink-0" style={{ background: 'rgba(255,255,255,0.08)', color: '#B4B5B8' }}>
+        <span className="text-xs px-1.5 rounded-full shrink-0" style={{ background: 'color-mix(in srgb, var(--text-1) 8%, transparent)', color: 'var(--text-2)' }}>
           {item.lot.replace(/^lot/i, 'Lot ')}
         </span>
       )}
@@ -473,7 +473,7 @@ function WorkflowRow({
           disabled={busy !== null}
           onClick={() => run('dl', () => onDownload(item), "Le téléchargement de la trame n'a pas abouti.")}
           className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-ds-bg-2 disabled:opacity-60"
-          style={{ border: '1px solid rgba(255,255,255,.07)', color: '#959597' }}
+          style={{ border: '1px solid var(--border-1)', color: 'var(--text-3)' }}
         >
           {busy === 'dl' ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
           Télécharger la trame
@@ -484,7 +484,7 @@ function WorkflowRow({
         disabled={busy !== null}
         onClick={() => inputRef.current?.click()}
         className="glass-btn shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-60"
-        style={{ color: '#D8D9DB' }}
+        style={{ color: 'var(--text-2)' }}
       >
         {busy === 'up' ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
         {done || warn ? 'Remplacer' : 'Importer remplie'}
@@ -508,30 +508,30 @@ function SynorixJalonSection({ items }: { items: ChecklistItem[] }) {
   return (
     <section
       className="glass-card rounded-lg overflow-hidden"
-      style={{ border: '1px solid rgba(255,255,255,.07)', boxShadow: '0 1px 3px rgba(0,0,0,.4)', fontFamily: F }}
+      style={{ border: '1px solid var(--border-1)', boxShadow: 'var(--shadow-card)', fontFamily: F }}
     >
-      <header className="flex items-center gap-3 px-5 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
-        <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(255,255,255,0.08)' }}>
-          <Sparkles size={18} style={{ color: '#E8E9EB' }} />
+      <header className="flex items-center gap-3 px-5 py-3" style={{ borderBottom: '1px solid var(--border-1)' }}>
+        <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'color-mix(in srgb, var(--text-1) 8%, transparent)' }}>
+          <Sparkles size={18} style={{ color: 'var(--text-1)' }} />
         </div>
         <div className="min-w-0">
-          <h2 className="text-base font-bold" style={{ color: '#F7F8F8' }}>Généré par Synorix</h2>
-          <p className="text-xs mt-0.5" style={{ color: '#909195' }}>
+          <h2 className="text-base font-bold" style={{ color: 'var(--text-1)' }}>Généré par Synorix</h2>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
             Produit automatiquement à l&apos;étape suivante — rien à joindre ici.
           </p>
         </div>
       </header>
       <ul>
         {items.map((i) => (
-          <li key={i.id} className="flex items-center gap-3 px-5 py-2.5" style={{ borderTop: '1px solid rgba(255,255,255,.07)' }}>
-            <Sparkles size={15} style={{ color: '#E8E9EB' }} className="shrink-0" />
-            <span className="text-sm flex-1 min-w-0" style={{ color: '#D8D9DB' }}>{i.details}</span>
+          <li key={i.id} className="flex items-center gap-3 px-5 py-2.5" style={{ borderTop: '1px solid var(--border-1)' }}>
+            <Sparkles size={15} style={{ color: 'var(--text-1)' }} className="shrink-0" />
+            <span className="text-sm flex-1 min-w-0" style={{ color: 'var(--text-2)' }}>{i.details}</span>
             {i.lot && (
-              <span className="text-xs px-1.5 rounded-full shrink-0" style={{ background: 'rgba(255,255,255,0.08)', color: '#B4B5B8' }}>
+              <span className="text-xs px-1.5 rounded-full shrink-0" style={{ background: 'color-mix(in srgb, var(--text-1) 8%, transparent)', color: 'var(--text-2)' }}>
                 {i.lot.replace(/^lot/i, 'Lot ')}
               </span>
             )}
-            <span className="text-xs shrink-0" style={{ color: '#909195' }}>Étape Mémoire</span>
+            <span className="text-xs shrink-0" style={{ color: 'var(--text-3)' }}>Étape Mémoire</span>
           </li>
         ))}
       </ul>

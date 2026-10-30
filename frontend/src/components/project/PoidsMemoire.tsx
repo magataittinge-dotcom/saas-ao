@@ -3,7 +3,7 @@
 export default function PoidsMemoire({ techPct }: { techPct: number }) {
   if (techPct <= 0) {
     return (
-      <p className="text-sm font-semibold" style={{ color: '#F7F8F8' }}>
+      <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>
         Aucune pondération relevée dans le règlement de consultation.
       </p>
     )
@@ -14,10 +14,10 @@ export default function PoidsMemoire({ techPct }: { techPct: number }) {
         {techPct}&nbsp;%
       </span>
       <div className="pb-0.5">
-        <p className="text-sm font-semibold" style={{ color: '#F7F8F8' }}>
+        <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>
           de votre note se joue dans ce document
         </p>
-        <p className="mt-0.5 text-xs" style={{ color: '#959597' }}>
+        <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
           pondération hors prix relevée dans le règlement de consultation
         </p>
       </div>

@@ -69,29 +69,29 @@ export default function CandidatureSectionTemplates({
   return (
     <section
       className="glass-card rounded-lg overflow-hidden"
-      style={{ border: '1px solid rgba(255,255,255,.07)', boxShadow: '0 1px 3px rgba(0,0,0,.4)', fontFamily: F }}
+      style={{ border: '1px solid var(--border-1)', boxShadow: 'var(--shadow-card)', fontFamily: F }}
     >
       {/* Header */}
-      <header className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
+      <header className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '1px solid var(--border-1)' }}>
         <div className="flex items-center gap-3 min-w-0">
           <div
             className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: 'rgba(255,255,255,0.08)' }}
+            style={{ background: 'color-mix(in srgb, var(--text-1) 8%, transparent)' }}
           >
-            <FileText size={18} style={{ color: '#E8E9EB' }} />
+            <FileText size={18} style={{ color: 'var(--text-1)' }} />
           </div>
           <div className="min-w-0">
-            <h2 className="text-base font-bold" style={{ color: '#F7F8F8' }}>
+            <h2 className="text-base font-bold" style={{ color: 'var(--text-1)' }}>
               Documents à compléter
             </h2>
-            <p className="text-xs mt-0.5" style={{ color: '#959597' }}>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
               {libelleComptes(aJoindre, pretes, 'formulaire')} — téléchargez la trame (ou le formulaire officiel), complétez-la, puis réimportez la version finale
             </p>
           </div>
         </div>
       </header>
 
-      <ul className="divide-y" style={{ borderColor: '#1E1E21' }}>
+      <ul className="divide-y" style={{ borderColor: 'var(--surface-1)' }}>
         {sorted.map((item) => (
           <TemplateRow
             key={item.id}
@@ -164,19 +164,19 @@ function TemplateRow({
       {/* Body */}
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2 flex-wrap">
-          <span className="text-sm font-semibold" style={{ color: '#F7F8F8' }}>{label}</span>
+          <span className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>{label}</span>
           <span className={statut.classe}>{statut.texte}</span>
           {item.jointe && item.piece_nom ? (
-            <span className="text-xs" style={{ color: '#959597' }}>{item.piece_nom}</span>
+            <span className="text-xs" style={{ color: 'var(--text-3)' }}>{item.piece_nom}</span>
           ) : nonConcernee || isWarning ? null : hasTemplate ? (
-            <span className="text-xs" style={{ color: '#959597' }}>Trame du DCE à compléter</span>
+            <span className="text-xs" style={{ color: 'var(--text-3)' }}>Trame du DCE à compléter</span>
           ) : officialUrl ? (
             // Type (b) : modèle officiel — normal qu'il ne soit pas au DCE. Aucun numéro de formulaire :
             // service-public (F32144, F32106) classe DC1/DC2/DUME en « Modèle de document ».
-            <span className="text-xs" style={{ color: '#959597' }}>Modèle officiel (ministère de l'Économie)</span>
+            <span className="text-xs" style={{ color: 'var(--text-3)' }}>Modèle officiel (ministère de l'Économie)</span>
           ) : (
             // Type (a) spécifique au DCE mais introuvable → à réclamer, pas une erreur.
-            <span className="text-xs" style={{ color: '#959597' }}>À demander au maître d'ouvrage</span>
+            <span className="text-xs" style={{ color: 'var(--text-3)' }}>À demander au maître d'ouvrage</span>
           )}
         </div>
         {/* Signature : case seulement si elle est demandée, sinon la mention */}
@@ -184,17 +184,17 @@ function TemplateRow({
                   onOpenSource={onOpenSource} />
         {depot && <p className="piece-note">{depot}</p>}
         {item.details && (
-          <p className="text-xs mt-1 leading-relaxed" style={{ color: '#959597' }}>
+          <p className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--text-3)' }}>
             {item.details}
           </p>
         )}
         {item.source_in_rc && (
-          <p className="text-xs mt-1 italic" style={{ color: '#909195' }}>
+          <p className="text-xs mt-1 italic" style={{ color: 'var(--text-3)' }}>
             « {item.source_in_rc} »
           </p>
         )}
         {error && (
-          <p className="text-xs mt-1.5" style={{ color: '#F58E86' }}>{error}</p>
+          <p className="text-xs mt-1.5" style={{ color: 'var(--danger-fg)' }}>{error}</p>
         )}
       </div>
 
@@ -208,7 +208,7 @@ function TemplateRow({
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-ds-bg-2"
-            style={{ border: '1px solid rgba(255,255,255,.07)', color: '#959597' }}
+            style={{ border: '1px solid var(--border-1)', color: 'var(--text-3)' }}
           >
             <Download size={13} />
             Télécharger la trame
@@ -219,7 +219,7 @@ function TemplateRow({
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-ds-bg-2"
-            style={{ border: '1px solid rgba(255,255,255,.07)', color: '#959597' }}
+            style={{ border: '1px solid var(--border-1)', color: 'var(--text-3)' }}
             title="Formulaire officiel sur economie.gouv.fr (DAJ)"
           >
             <ExternalLink size={13} />
@@ -232,7 +232,7 @@ function TemplateRow({
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-ds-bg-2"
-            style={{ border: '1px solid rgba(255,255,255,.07)', color: '#959597' }}
+            style={{ border: '1px solid var(--border-1)', color: 'var(--text-3)' }}
           >
             <FileText size={13} />
             Voir version finale

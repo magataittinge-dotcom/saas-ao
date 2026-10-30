@@ -32,17 +32,17 @@ export function DeleteConfirmContenu({
       aria-labelledby="confirmation-suppression-titre"
       className="rounded-2xl p-6 max-w-sm w-full mx-4 space-y-5"
       style={{
-        background: '#121519',
-        border: '1px solid rgba(255,255,255,0.06)',
-        boxShadow: '0 24px 48px rgba(0,0,0,0.5)',
+        background: 'var(--surface-1)',
+        border: '1px solid var(--border-1)',
+        boxShadow: 'var(--shadow-pop)',
       }}
     >
       <div className="space-y-2 text-center">
-        <h3 id="confirmation-suppression-titre" className="text-base font-semibold" style={{ color: '#F4F6FA' }}>
+        <h3 id="confirmation-suppression-titre" className="text-base font-semibold" style={{ color: 'var(--text-1)' }}>
           {title}
         </h3>
-        {detail && <p className="text-sm" style={{ color: '#9BA4B5' }}>{detail}</p>}
-        {erreur && <p role="alert" className="text-sm" style={{ color: '#F5C26B' }}>{erreur}</p>}
+        {detail && <p className="text-sm" style={{ color: 'var(--text-3)' }}>{detail}</p>}
+        {erreur && <p role="alert" className="text-sm" style={{ color: 'var(--warning-fg)' }}>{erreur}</p>}
       </div>
 
       <div className="flex gap-3">
@@ -51,7 +51,7 @@ export function DeleteConfirmContenu({
           disabled={enCours}
           autoFocus
           className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"
-          style={{ background: '#1C222D', color: '#E8EBF2', border: '1px solid rgba(255,255,255,0.06)' }}
+          style={{ background: 'var(--surface-1)', color: 'var(--text-1)', border: '1px solid var(--border-1)' }}
         >
           Annuler
         </button>
@@ -59,7 +59,7 @@ export function DeleteConfirmContenu({
           onClick={onConfirmer}
           disabled={enCours}
           className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2"
-          style={{ background: 'rgba(245,142,134,0.14)', color: '#F58E86', boxShadow: 'inset 0 0 0 1px rgba(245,142,134,0.30)' }}
+          style={{ background: 'color-mix(in srgb, var(--danger-fg) 14%, transparent)', color: 'var(--danger-fg)', boxShadow: 'inset 0 0 0 1px color-mix(in srgb, var(--danger-fg) 30%, transparent)' }}
         >
           {enCours ? (
             <><Loader2 size={14} className="animate-spin" /> Suppression…</>
@@ -105,7 +105,7 @@ export default function DeleteConfirmModal({
   return createPortal(
     <div
       className="fixed inset-0 z-[60] flex items-center justify-center"
-      style={{ background: 'rgba(0,0,0,0.55)' }}
+      style={{ background: 'var(--scrim)' }}
       onClick={(e) => { if (e.target === e.currentTarget && !isDeleting) onCancel() }}
     >
       <DeleteConfirmContenu

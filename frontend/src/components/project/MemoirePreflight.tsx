@@ -68,8 +68,8 @@ const PROFILE_FIELDS: { key: keyof PreflightProfil; label: string; multiline?: b
 ]
 
 const inputClass =
-  'w-full rounded-lg border px-2.5 py-1.5 text-sm bg-ds-bg text-[#F7F8F8] focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]'
-const inputStyle = { borderColor: '#1E1E21' }
+  'w-full rounded-lg border px-2.5 py-1.5 text-sm bg-ds-bg text-fg focus:outline-none focus:ring-2 focus:ring-accent-ring'
+const inputStyle = { borderColor: 'var(--surface-1)' }
 
 /**
  * C9a — pre-flight preview : ce que le mémoire utilisera, éditable AVANT de
@@ -150,14 +150,14 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
   return (
     <div className="space-y-4">
       {/* ── Profil condensé éditable ── */}
-      <div className="rounded-lg p-4" style={{ background: '#18181A', border: '1px solid rgba(255,255,255,.07)' }}>
+      <div className="rounded-lg p-4" style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)' }}>
         <div className="flex items-center gap-2 mb-3">
-          <Building2 size={15} style={{ color: '#E8E9EB' }} />
-          <h3 className="text-sm font-bold" style={{ color: '#F7F8F8' }}>
+          <Building2 size={15} style={{ color: 'var(--text-1)' }} />
+          <h3 className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>
             Profil utilisé pour ce mémoire
           </h3>
           {data.profil.effectif_tranche && (
-            <span className="text-xs" style={{ color: '#909195' }}>{data.profil.effectif_tranche}</span>
+            <span className="text-xs" style={{ color: 'var(--text-3)' }}>{data.profil.effectif_tranche}</span>
           )}
         </div>
         <div className="grid sm:grid-cols-2 gap-3">
@@ -166,10 +166,10 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
             const value = key in overrides ? overrides[key] : original
             return (
               <div key={key} className={multiline ? 'sm:col-span-2' : undefined}>
-                <label className="block text-xs font-medium mb-1" style={{ color: '#959597' }}>
+                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-3)' }}>
                   {label}
                   {key in overrides && (
-                    <span className="ml-1.5 text-xs font-semibold" style={{ color: '#D9A441' }}>
+                    <span className="ml-1.5 text-xs font-semibold" style={{ color: 'var(--warning-fg)' }}>
                       modifié pour ce mémoire
                     </span>
                   )}
@@ -185,7 +185,7 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
             )
           })}
         </div>
-        <label className="flex items-center gap-2 mt-3 text-xs cursor-pointer" style={{ color: '#959597' }}>
+        <label className="flex items-center gap-2 mt-3 text-xs cursor-pointer" style={{ color: 'var(--text-3)' }}>
           <input type="checkbox" checked={updateProfile}
             onChange={(e) => setUpdateProfile(e.target.checked)} />
           Mettre à jour mon profil avec ces modifications (sinon elles restent locales à ce mémoire)
@@ -194,7 +194,7 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
         {/* C8a — option organigramme (grisée si l'équipe du profil est vide) */}
         <label
           className={`flex items-center gap-2 mt-2 text-xs ${data.organigramme_available ? 'cursor-pointer' : 'opacity-60'}`}
-          style={{ color: '#959597' }}
+          style={{ color: 'var(--text-3)' }}
         >
           <input type="checkbox"
             disabled={!data.organigramme_available}
@@ -202,7 +202,7 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
             onChange={(e) => setIncludeOrganigramme(e.target.checked)} />
           Inclure un organigramme du chantier dans le mémoire
           {!data.organigramme_available && (
-            <a href="/company" className="underline" style={{ color: '#E8E9EB' }}>
+            <a href="/company" className="underline" style={{ color: 'var(--text-1)' }}>
               compléter mon équipe
             </a>
           )}
@@ -211,26 +211,26 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
 
       {/* ── Références pré-sélectionnées par pertinence ── */}
       {data.references.length > 0 && (
-        <div className="rounded-lg p-4" style={{ background: '#18181A', border: '1px solid rgba(255,255,255,.07)' }}>
+        <div className="rounded-lg p-4" style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)' }}>
           <div className="flex items-center gap-2 mb-3">
-            <ListChecks size={15} style={{ color: '#E8E9EB' }} />
-            <h3 className="text-sm font-bold" style={{ color: '#F7F8F8' }}>
+            <ListChecks size={15} style={{ color: 'var(--text-1)' }} />
+            <h3 className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>
               Références à citer ({checkedRefs?.size ?? 0} sélectionnées)
             </h3>
-            <span className="text-xs" style={{ color: '#909195' }}>
+            <span className="text-xs" style={{ color: 'var(--text-3)' }}>
               pré-sélection selon le lot — ajustez librement
             </span>
           </div>
           <ul className="space-y-1 max-h-56 overflow-y-auto">
             {data.references.map((ref) => (
               <li key={ref.id}>
-                <label className="flex items-start gap-2.5 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-[#1E1E21]">
+                <label className="flex items-start gap-2.5 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-surface-1">
                   <input type="checkbox" className="mt-0.5"
                     checked={checkedRefs?.has(ref.id) ?? false}
                     onChange={() => toggleRef(ref.id)} />
                   <span className="min-w-0">
-                    <span className="block text-sm truncate" style={{ color: '#F7F8F8' }}>{ref.intitule}</span>
-                    <span className="block text-xs" style={{ color: '#909195' }}>
+                    <span className="block text-sm truncate" style={{ color: 'var(--text-1)' }}>{ref.intitule}</span>
+                    <span className="block text-xs" style={{ color: 'var(--text-3)' }}>
                       {[ref.lot, ref.maitre_ouvrage, ref.annee].filter(Boolean).join(' · ')}
                     </span>
                   </span>
@@ -242,11 +242,11 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
       )}
 
       {/* ── Gantt du phasage (option — phases saisies, jamais inventées) ── */}
-      <div className="rounded-lg p-4" style={{ background: '#18181A', border: '1px solid rgba(255,255,255,.07)' }}>
-        <h3 className="text-sm font-bold mb-1" style={{ color: '#F7F8F8' }}>
+      <div className="rounded-lg p-4" style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)' }}>
+        <h3 className="text-sm font-bold mb-1" style={{ color: 'var(--text-1)' }}>
           Planning prévisionnel (option)
         </h3>
-        <p className="text-xs mb-3" style={{ color: '#909195' }}>
+        <p className="text-xs mb-3" style={{ color: 'var(--text-3)' }}>
           Saisissez vos phases : un Gantt sera inséré dans le mémoire. Vide = pas de Gantt.
         </p>
         <div className="space-y-2">
@@ -262,30 +262,30 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
                 onChange={(e) => setGanttPhases(prev =>
                   prev.map((p, j) => j === i ? { ...p, duree_semaines: parseInt(e.target.value) || 0 } : p))} />
               <button onClick={() => setGanttPhases(prev => prev.filter((_, j) => j !== i))}
-                className="text-xs shrink-0" style={{ color: '#909195' }}>retirer</button>
+                className="text-xs shrink-0" style={{ color: 'var(--text-3)' }}>retirer</button>
             </div>
           ))}
         </div>
         <button
           onClick={() => setGanttPhases(prev => [...prev, { nom: '', duree_semaines: 0 }])}
-          className="mt-2 text-xs font-medium" style={{ color: '#E8E9EB' }}>
+          className="mt-2 text-xs font-medium" style={{ color: 'var(--text-1)' }}>
           + Ajouter une phase
         </button>
       </div>
 
       {/* ── Annexes du coffre-fort (jointes au ZIP d'export) ── */}
       {data.vault_documents.length > 0 && (
-        <div className="rounded-lg p-4" style={{ background: '#18181A', border: '1px solid rgba(255,255,255,.07)' }}>
-          <h3 className="text-sm font-bold mb-1" style={{ color: '#F7F8F8' }}>
+        <div className="rounded-lg p-4" style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)' }}>
+          <h3 className="text-sm font-bold mb-1" style={{ color: 'var(--text-1)' }}>
             Annexes du coffre-fort (option)
           </h3>
-          <p className="text-xs mb-2" style={{ color: '#909195' }}>
+          <p className="text-xs mb-2" style={{ color: 'var(--text-3)' }}>
             Jointes au ZIP d'export en section 3_ANNEXES.
           </p>
           <ul className="space-y-1 max-h-40 overflow-y-auto">
             {data.vault_documents.map((doc) => (
               <li key={doc.id}>
-                <label className="flex items-center gap-2 px-1 py-1 text-sm cursor-pointer" style={{ color: '#F7F8F8' }}>
+                <label className="flex items-center gap-2 px-1 py-1 text-sm cursor-pointer" style={{ color: 'var(--text-1)' }}>
                   <input type="checkbox"
                     checked={checkedAnnexes.has(doc.id)}
                     onChange={() => setCheckedAnnexes(prev => {
@@ -303,7 +303,7 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
       )}
 
       {/* ── Rappel quota — sobre, avant de consommer ── */}
-      <p className="text-xs text-right" style={{ color: '#959597' }}>{quotaLabel} · {dureeLabel}</p>
+      <p className="text-xs text-right" style={{ color: 'var(--text-3)' }}>{quotaLabel} · {dureeLabel}</p>
     </div>
   )
 }

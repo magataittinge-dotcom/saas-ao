@@ -130,12 +130,12 @@ function FullscreenEditor({
           : ''
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: '#18181A', fontFamily: F }}>
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'var(--surface-1)', fontFamily: F }}>
       <div
         className="flex items-center justify-between gap-4 px-6 py-3 shrink-0"
-        style={{ borderBottom: '1px solid rgba(255,255,255,.07)', background: '#18181A' }}
+        style={{ borderBottom: '1px solid var(--border-1)', background: 'var(--surface-1)' }}
       >
-        <p className="text-sm font-medium" style={{ color: '#F7F8F8' }}>
+        <p className="text-sm font-medium" style={{ color: 'var(--text-1)' }}>
           Édition du mémoire — format Markdown
         </p>
         <div className="flex items-center gap-3">
@@ -143,7 +143,7 @@ function FullscreenEditor({
             role="status"
             aria-live="polite"
             className="text-xs"
-            style={{ color: etat === 'echec' ? '#F5C26B' : '#959597' }}
+            style={{ color: etat === 'echec' ? 'var(--warning-fg)' : 'var(--text-3)' }}
           >
             {statut}
           </p>
@@ -151,7 +151,7 @@ function FullscreenEditor({
             <button
               onClick={() => { void enregistrer(raw) }}
               className="text-xs font-semibold py-1.5 px-3 rounded-lg transition-colors hover:bg-ds-bg-2"
-              style={{ color: '#F7F8F8', border: '1px solid rgba(255,255,255,.12)' }}
+              style={{ color: 'var(--text-1)', border: '1px solid var(--border-2)' }}
             >
               Réessayer
             </button>
@@ -162,13 +162,13 @@ function FullscreenEditor({
             className="glass-btn text-ds-text flex items-center gap-2 py-2 px-4 text-sm font-bold rounded-lg disabled:opacity-50"
           >
             {!modifie && etat === 'enregistre' && heure
-              ? <><CheckCircle2 size={14} style={{ color: '#6EE7A8' }} />Enregistré</>
+              ? <><CheckCircle2 size={14} style={{ color: 'var(--success-fg)' }} />Enregistré</>
               : <><Save size={14} />Enregistrer</>}
           </button>
           <button
             onClick={fermer}
             className="flex items-center gap-1.5 text-sm py-2 px-3 rounded-lg transition-colors hover:bg-ds-bg-2"
-            style={{ color: '#959597', border: '1px solid rgba(255,255,255,.07)' }}
+            style={{ color: 'var(--text-3)', border: '1px solid var(--border-1)' }}
           >
             <X size={14} /> Fermer
           </button>
@@ -179,9 +179,9 @@ function FullscreenEditor({
           role="alertdialog"
           aria-label="Modifications non enregistrées"
           className="flex flex-wrap items-center justify-between gap-3 px-6 py-3 shrink-0"
-          style={{ background: 'rgba(217,164,65,0.08)', borderBottom: '1px solid rgba(217,164,65,0.25)' }}
+          style={{ background: 'color-mix(in srgb, var(--warning-fg) 8%, transparent)', borderBottom: '1px solid color-mix(in srgb, var(--warning-fg) 25%, transparent)' }}
         >
-          <p className="text-sm" style={{ color: '#F7F8F8' }}>
+          <p className="text-sm" style={{ color: 'var(--text-1)' }}>
             Des modifications ne sont pas encore enregistrées.
           </p>
           <div className="flex items-center gap-2">
@@ -194,14 +194,14 @@ function FullscreenEditor({
             <button
               onClick={onClose}
               className="py-1.5 px-3 text-sm rounded-lg transition-colors hover:bg-ds-bg-2"
-              style={{ color: '#D8D9DB', border: '1px solid rgba(255,255,255,.12)' }}
+              style={{ color: 'var(--text-2)', border: '1px solid var(--border-2)' }}
             >
               Fermer sans enregistrer
             </button>
             <button
               onClick={() => setConfirmerFermeture(false)}
               className="py-1.5 px-3 text-sm rounded-lg transition-colors hover:bg-ds-bg-2"
-              style={{ color: '#959597' }}
+              style={{ color: 'var(--text-3)' }}
             >
               Continuer la rédaction
             </button>
@@ -216,7 +216,7 @@ function FullscreenEditor({
         onChange={(e) => { setRaw(e.target.value); setSelection(null) }}
         onSelect={captureSelection}
         className="flex-1 px-8 py-6 text-sm leading-relaxed resize-none focus:outline-none font-mono"
-        style={{ background: '#18181A', color: '#F7F8F8', caretColor: '#E8E9EB' }}
+        style={{ background: 'var(--surface-1)', color: 'var(--text-1)', caretColor: 'var(--text-1)' }}
         spellCheck
         lang="fr"
       />
@@ -246,24 +246,24 @@ function ProfileSummary({ stats }: { stats: { filled: number; total: number; nom
   return (
     <div
       className="glass-card rounded-lg p-4"
-      style={{ border: '1px solid rgba(255,255,255,.07)', boxShadow: '0 1px 3px rgba(0,0,0,.4)' }}
+      style={{ border: '1px solid var(--border-1)', boxShadow: 'var(--shadow-card)' }}
     >
       <div className="flex items-start gap-3">
         <div
           className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-          style={{ background: isComplete ? 'rgba(255,255,255,0.10)' : 'rgba(149,149,151,0.08)' }}
+          style={{ background: isComplete ? 'color-mix(in srgb, var(--text-1) 10%, transparent)' : 'color-mix(in srgb, var(--text-3) 8%, transparent)' }}
         >
-          <Building2 size={18} style={{ color: isComplete ? '#E8E9EB' : '#959597' }} />
+          <Building2 size={18} style={{ color: isComplete ? 'var(--text-1)' : 'var(--text-3)' }} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2.5">
-            <h3 className="text-sm font-semibold" style={{ color: '#F7F8F8', fontFamily: F }}>
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--text-1)', fontFamily: F }}>
               Profil de votre entreprise
             </h3>
             {isComplete && (
               <span
                 className="text-xs font-medium px-2 py-0.5 rounded-full"
-                style={{ background: 'rgba(255,255,255,0.10)', color: '#E8E9EB', border: '1px solid rgba(255,255,255,0.20)' }}
+                style={{ background: 'color-mix(in srgb, var(--text-1) 10%, transparent)', color: 'var(--text-1)', border: '1px solid var(--border-2)' }}
               >
                 Complet
               </span>
@@ -272,31 +272,31 @@ function ProfileSummary({ stats }: { stats: { filled: number; total: number; nom
 
           {isComplete ? (
             <div className="flex items-center gap-3 mt-2">
-              <span className="text-sm" style={{ color: '#959597' }}>{stats.nom_entreprise || 'Entreprise'}</span>
-              <Link to="/company" className="text-xs hover:underline" style={{ color: '#E8E9EB' }}>
+              <span className="text-sm" style={{ color: 'var(--text-3)' }}>{stats.nom_entreprise || 'Entreprise'}</span>
+              <Link to="/company" className="text-xs hover:underline" style={{ color: 'var(--text-1)' }}>
                 Modifier →
               </Link>
             </div>
           ) : (
             <>
               <div className="mt-3 flex items-center gap-3">
-                <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: '#1E1E21' }}>
+                <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: 'var(--surface-1)' }}>
                   <div
                     className="h-full rounded-full transition-all duration-500"
-                    style={{ width: `${pct}%`, background: pct < 30 ? '#959597' : pct < 70 ? '#E8E9EB' : '#E8E9EB' }}
+                    style={{ width: `${pct}%`, background: pct < 30 ? 'var(--text-3)' : pct < 70 ? 'var(--text-1)' : 'var(--text-1)' }}
                   />
                 </div>
-                <span className="text-xs font-medium shrink-0" style={{ color: '#959597' }}>
+                <span className="text-xs font-medium shrink-0" style={{ color: 'var(--text-3)' }}>
                   {stats.filled}/{stats.total}
                 </span>
               </div>
-              <p className="text-xs mt-2.5" style={{ color: '#959597' }}>
+              <p className="text-xs mt-2.5" style={{ color: 'var(--text-3)' }}>
                 Complétez votre profil pour un mémoire personnalisé avec vos vraies informations.
               </p>
               <Link
                 to="/company"
                 className="glass-btn inline-flex items-center gap-1.5 text-xs font-semibold mt-3 px-3.5 py-1.5 rounded-lg"
-                style={{ color: '#D8D9DB' }}
+                style={{ color: 'var(--text-2)' }}
               >
                 Compléter le profil →
               </Link>
@@ -330,7 +330,7 @@ function TocSidebar({
   return (
     <div
       className="glass-card rounded-lg p-4 sticky top-4"
-      style={{ border: '1px solid rgba(255,255,255,.07)', boxShadow: '0 1px 3px rgba(0,0,0,.4)', width: 220 }}
+      style={{ border: '1px solid var(--border-1)', boxShadow: 'var(--shadow-card)', width: 220 }}
     >
       <p className="microlabel mb-3">Sommaire</p>
 
@@ -347,14 +347,14 @@ function TocSidebar({
                 }}
                 aria-expanded={section.enfants.length > 0 ? ouverte : undefined}
                 className="w-full flex items-center gap-1.5 py-1.5 px-2 rounded text-left transition-colors hover:bg-ds-bg-2"
-                style={{ borderLeft: active ? '2px solid #E8E9EB' : '2px solid transparent' }}
+                style={{ borderLeft: active ? '2px solid var(--text-1)' : '2px solid transparent' }}
               >
                 {section.enfants.length > 0 ? (
                   ouverte
-                    ? <ChevronDown size={12} style={{ color: '#909195' }} />
-                    : <ChevronRight size={12} style={{ color: '#909195' }} />
+                    ? <ChevronDown size={12} style={{ color: 'var(--text-3)' }} />
+                    : <ChevronRight size={12} style={{ color: 'var(--text-3)' }} />
                 ) : <span style={{ width: 12 }} />}
-                <span className="text-sm font-semibold" style={{ color: active ? '#E8E9EB' : '#F7F8F8', fontFamily: F }}>
+                <span className="text-sm font-semibold" style={{ color: active ? 'var(--text-1)' : 'var(--text-1)', fontFamily: F }}>
                   {section.titre}
                 </span>
               </button>
@@ -366,11 +366,11 @@ function TocSidebar({
                       <button
                         key={enfant.id}
                         onClick={() => onNavigate(enfant.id)}
-                        className="w-full text-left py-1 px-4 text-xs transition-colors hover:text-[#E8E9EB]"
+                        className="w-full text-left py-1 px-4 text-xs transition-colors hover:text-fg"
                         style={{
-                          color: enfantActif ? '#E8E9EB' : '#959597',
+                          color: enfantActif ? 'var(--text-1)' : 'var(--text-3)',
                           fontWeight: enfantActif ? 600 : 400,
-                          borderLeft: enfantActif ? '2px solid #E8E9EB' : '2px solid transparent',
+                          borderLeft: enfantActif ? '2px solid var(--text-1)' : '2px solid transparent',
                           fontFamily: F,
                         }}
                       >
@@ -413,21 +413,21 @@ export function DocumentView({
       ref={docRef}
       className="rounded-lg overflow-y-auto"
       style={{
-        background: '#18181A',
-        border: '1px solid rgba(255,255,255,.07)',
-        boxShadow: '0 4px 24px rgba(0,0,0,0.30)',
+        background: 'var(--surface-1)',
+        border: '1px solid var(--border-1)',
+        boxShadow: 'var(--shadow-pop)',
         maxHeight: 'calc(100vh - 200px)',
       }}
     >
       <div className="max-w-3xl mx-auto py-10 px-10 space-y-8" style={{ fontFamily: F }}>
 
         {/* Document header */}
-        <div className="flex items-start justify-end pb-6" style={{ borderBottom: '1px solid rgba(255,255,255,.12)' }}>
+        <div className="flex items-start justify-end pb-6" style={{ borderBottom: '1px solid var(--border-2)' }}>
           <div className="text-right">
-            <p className="text-lg font-bold" style={{ color: '#E8E9EB' }}>
+            <p className="text-lg font-bold" style={{ color: 'var(--text-1)' }}>
               MÉMOIRE JUSTIFICATIF
             </p>
-            <p className="text-sm mt-1" style={{ color: '#D8D9DB' }}>{project.name}</p>
+            <p className="text-sm mt-1" style={{ color: 'var(--text-2)' }}>{project.name}</p>
           </div>
         </div>
 
@@ -499,8 +499,8 @@ function PartHeading({ children }: { children: React.ReactNode }) {
     <h2
       className="text-xl font-bold pb-2 mb-4"
       style={{
-        color: '#F7F8F8',
-        borderLeft: '3px solid #E8E9EB',
+        color: 'var(--text-1)',
+        borderLeft: '3px solid var(--text-1)',
         paddingLeft: 12,
         fontFamily: F,
       }}
@@ -512,7 +512,7 @@ function PartHeading({ children }: { children: React.ReactNode }) {
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-lg font-semibold mb-2" style={{ color: '#E8E9EB', fontFamily: F }}>
+    <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-1)', fontFamily: F }}>
       {children}
     </h3>
   )
@@ -521,7 +521,7 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
 function MdContent({ text }: { text: string }) {
   return (
     <div className="prose prose-sm prose-invert max-w-none prose-headings:font-semibold prose-p:leading-relaxed prose-code:text-xs"
-      style={{ color: '#D8D9DB', fontFamily: F }}
+      style={{ color: 'var(--text-2)', fontFamily: F }}
     >
       <ReactMarkdown>{text}</ReactMarkdown>
     </div>
@@ -758,10 +758,10 @@ export default function StepMemoire({ project }: Props) {
     <div
       className="sticky -bottom-5 z-30 -mx-3 sm:-mx-4 mt-6 rounded-t-lg flex items-center justify-end px-6 py-3 gap-3"
       style={{
-        background: 'rgba(9,9,10,0.92)',
+        background: 'color-mix(in srgb, var(--surface-0) 92%, transparent)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
-        borderTop: '1px solid rgba(255,255,255,.07)',
+        borderTop: '1px solid var(--border-1)',
       }}
     >
       <button
@@ -770,7 +770,7 @@ export default function StepMemoire({ project }: Props) {
         className={isDocView
           ? 'signature-btn disabled:opacity-40'
           : 'glass-btn flex items-center gap-2 py-2.5 px-5 text-sm font-semibold rounded-lg disabled:opacity-40'}
-        style={{ fontFamily: F, ...(isDocView ? {} : { color: '#C2C3C6' }) }}
+        style={{ fontFamily: F, ...(isDocView ? {} : { color: 'var(--text-2)' }) }}
       >
         Étape suivante : Export
       </button>
@@ -806,13 +806,13 @@ export default function StepMemoire({ project }: Props) {
                   <p className="microlabel">Mémoire technique — {lotName}</p>
                   {hasMemoire && (
                     <span className="flex items-center gap-3">
-                      <span className="edge-data text-xs" style={{ color: '#959597' }}>
+                      <span className="edge-data text-xs" style={{ color: 'var(--text-3)' }}>
                         v{memoire.version} — {new Date(memoire.generated_at).toLocaleDateString('fr-FR')}
                       </span>
                       <button
                         onClick={() => setShowForm(false)}
                         className="text-xs font-medium px-3 py-1 rounded-lg transition-colors hover:bg-ds-bg-2"
-                        style={{ color: '#959597', border: '1px solid rgba(255,255,255,.07)' }}
+                        style={{ color: 'var(--text-3)', border: '1px solid var(--border-1)' }}
                       >
                         Annuler
                       </button>
@@ -835,7 +835,7 @@ export default function StepMemoire({ project }: Props) {
                       <span
                         key={c.nom}
                         className="num-mono text-xs px-2 py-1 rounded-md"
-                        style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,.07)', color: '#C2C3C6' }}
+                        style={{ background: 'color-mix(in srgb, var(--text-1) 6%, transparent)', border: '1px solid var(--border-1)', color: 'var(--text-2)' }}
                       >
                         {c.nom} {c.poids}&nbsp;%
                       </span>
@@ -855,13 +855,13 @@ export default function StepMemoire({ project }: Props) {
           {/* Chantier-specific form */}
           <div
             className="glass-card rounded-lg p-5 space-y-4"
-            style={{ border: '1px solid rgba(255,255,255,.07)', boxShadow: '0 1px 3px rgba(0,0,0,.4)' }}
+            style={{ border: '1px solid var(--border-1)', boxShadow: 'var(--shadow-card)' }}
           >
             <div>
-              <h3 className="text-sm font-semibold" style={{ color: '#F7F8F8', fontFamily: F }}>
+              <h3 className="text-sm font-semibold" style={{ color: 'var(--text-1)', fontFamily: F }}>
                 Informations spécifiques à ce chantier
               </h3>
-              <p className="text-xs mt-1" style={{ color: '#959597' }}>
+              <p className="text-xs mt-1" style={{ color: 'var(--text-3)' }}>
                 Ces informations seront intégrées dans le mémoire pour ce projet
               </p>
             </div>
@@ -869,28 +869,28 @@ export default function StepMemoire({ project }: Props) {
             {/* Row 1: Ouvriers + Délai */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: '#F7F8F8' }}>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-1)' }}>
                   Nombre d&apos;ouvriers dédiés <span style={{ color: 'var(--warn)' }}>*</span>
                 </label>
                 <input
                   type="number"
                   value={variables.nb_ouvriers}
                   onChange={(e) => setVariables((v) => ({ ...v, nb_ouvriers: e.target.value }))}
-                  className="w-full py-2 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
-                  style={{ background: '#121213', border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
+                  className="w-full py-2 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-ring"
+                  style={{ background: 'var(--surface-0)', border: '1px solid var(--border-field)', color: 'var(--text-1)', fontFamily: F }}
                   placeholder="Ex : 4"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: '#F7F8F8' }}>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-1)' }}>
                   Délai estimé <span style={{ color: 'var(--warn)' }}>*</span>
                 </label>
                 <input
                   type="text"
                   value={variables.delai}
                   onChange={(e) => setVariables((v) => ({ ...v, delai: e.target.value }))}
-                  className="w-full py-2 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
-                  style={{ background: '#121213', border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
+                  className="w-full py-2 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-ring"
+                  style={{ background: 'var(--surface-0)', border: '1px solid var(--border-field)', color: 'var(--text-1)', fontFamily: F }}
                   placeholder="Ex : 3 mois"
                 />
               </div>
@@ -899,24 +899,24 @@ export default function StepMemoire({ project }: Props) {
             {/* Row 2: Chef de chantier */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: '#F7F8F8' }}>Chef de chantier — nom</label>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-1)' }}>Chef de chantier — nom</label>
                 <input
                   type="text"
                   value={variables.chef_chantier_nom}
                   onChange={(e) => setVariables((v) => ({ ...v, chef_chantier_nom: e.target.value }))}
-                  className="w-full py-2 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
-                  style={{ background: '#121213', border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
+                  className="w-full py-2 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-ring"
+                  style={{ background: 'var(--surface-0)', border: '1px solid var(--border-field)', color: 'var(--text-1)', fontFamily: F }}
                   placeholder="Ex : Jean Dupont"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: '#F7F8F8' }}>Qualification</label>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-1)' }}>Qualification</label>
                 <input
                   type="text"
                   value={variables.chef_chantier_qualification}
                   onChange={(e) => setVariables((v) => ({ ...v, chef_chantier_qualification: e.target.value }))}
-                  className="w-full py-2 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
-                  style={{ background: '#121213', border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
+                  className="w-full py-2 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-ring"
+                  style={{ background: 'var(--surface-0)', border: '1px solid var(--border-field)', color: 'var(--text-1)', fontFamily: F }}
                   placeholder="Ex : 15 ans d'expérience, CACES R482"
                 />
               </div>
@@ -925,24 +925,24 @@ export default function StepMemoire({ project }: Props) {
             {/* Row 3: Conducteur de travaux */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: '#F7F8F8' }}>Conducteur de travaux — nom</label>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-1)' }}>Conducteur de travaux — nom</label>
                 <input
                   type="text"
                   value={variables.conducteur_travaux_nom}
                   onChange={(e) => setVariables((v) => ({ ...v, conducteur_travaux_nom: e.target.value }))}
-                  className="w-full py-2 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
-                  style={{ background: '#121213', border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
+                  className="w-full py-2 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-ring"
+                  style={{ background: 'var(--surface-0)', border: '1px solid var(--border-field)', color: 'var(--text-1)', fontFamily: F }}
                   placeholder="Ex : Marie Martin"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1.5" style={{ color: '#F7F8F8' }}>Qualification</label>
+                <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-1)' }}>Qualification</label>
                 <input
                   type="text"
                   value={variables.conducteur_travaux_qualification}
                   onChange={(e) => setVariables((v) => ({ ...v, conducteur_travaux_qualification: e.target.value }))}
-                  className="w-full py-2 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
-                  style={{ background: '#121213', border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
+                  className="w-full py-2 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-ring"
+                  style={{ background: 'var(--surface-0)', border: '1px solid var(--border-field)', color: 'var(--text-1)', fontFamily: F }}
                   placeholder="Ex : ingénieur BTP, 10 ans ITE/ravalement"
                 />
               </div>
@@ -950,31 +950,31 @@ export default function StepMemoire({ project }: Props) {
 
             {/* Row 4: Matériel spécifique */}
             <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: '#F7F8F8' }}>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-1)' }}>
                 Matériel spécifique au chantier
               </label>
               <textarea
                 value={variables.materiel_specifique}
                 onChange={(e) => setVariables((v) => ({ ...v, materiel_specifique: e.target.value }))}
                 rows={2}
-                className="w-full py-2 px-3 text-sm rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
-                style={{ background: '#121213', border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
+                className="w-full py-2 px-3 text-sm rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-accent-ring"
+                style={{ background: 'var(--surface-0)', border: '1px solid var(--border-field)', color: 'var(--text-1)', fontFamily: F }}
                 placeholder="Ex : échafaudage tubulaire R200, nacelle articulée 20 m…"
               />
             </div>
 
             {/* Row 5: Contraintes */}
             <div>
-              <label className="block text-xs font-medium mb-1.5" style={{ color: '#F7F8F8' }}>
+              <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-1)' }}>
                 Contraintes particulières
-                <span className="font-normal ml-1" style={{ color: '#909195' }}>(optionnel)</span>
+                <span className="font-normal ml-1" style={{ color: 'var(--text-3)' }}>(optionnel)</span>
               </label>
               <textarea
                 value={variables.particularites}
                 onChange={(e) => setVariables((v) => ({ ...v, particularites: e.target.value }))}
                 rows={2}
-                className="w-full py-2 px-3 text-sm rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[rgba(255,255,255,0.30)]"
-                style={{ background: '#121213', border: '1px solid rgba(255,255,255,.07)', color: '#F7F8F8', fontFamily: F }}
+                className="w-full py-2 px-3 text-sm rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-accent-ring"
+                style={{ background: 'var(--surface-0)', border: '1px solid var(--border-field)', color: 'var(--text-1)', fontFamily: F }}
                 placeholder="Ex : site occupé, horaires restreints 8 h-17 h…"
               />
             </div>
@@ -984,7 +984,7 @@ export default function StepMemoire({ project }: Props) {
           {(genError || (!isRunning && project.processing_status === 'error')) && (
             <p
               className="text-sm rounded-lg px-3 py-2"
-              style={{ background: 'rgba(245,142,134,0.08)', border: '1px solid rgba(245,142,134,0.20)', color: '#F58E86' }}
+              style={{ background: 'color-mix(in srgb, var(--danger-fg) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--danger-fg) 20%, transparent)', color: 'var(--danger-fg)' }}
             >
               {genError
                 ?? project.processing_detail
@@ -1048,7 +1048,7 @@ export default function StepMemoire({ project }: Props) {
         {genError && (
           <p
             className="text-sm rounded-lg px-3 py-2"
-            style={{ background: 'rgba(245,142,134,0.08)', border: '1px solid rgba(245,142,134,0.20)', color: '#F58E86' }}
+            style={{ background: 'color-mix(in srgb, var(--danger-fg) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--danger-fg) 20%, transparent)', color: 'var(--danger-fg)' }}
           >
             {genError}
           </p>
@@ -1057,17 +1057,17 @@ export default function StepMemoire({ project }: Props) {
         {/* ── Barre de titre : un seul rang, tout l'état du document ── */}
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <h1 className="text-xl font-bold truncate" style={{ color: '#F7F8F8' }}>
+            <h1 className="text-xl font-bold truncate" style={{ color: 'var(--text-1)' }}>
               Mémoire technique — {lotName}
             </h1>
             <span
               className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full shrink-0"
-              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,.07)', color: '#C2C3C6' }}
+              style={{ background: 'color-mix(in srgb, var(--text-1) 6%, transparent)', border: '1px solid var(--border-1)', color: 'var(--text-2)' }}
               title={`Générée le ${new Date(memoire!.generated_at).toLocaleDateString('fr-FR')} par Synorix IA`}
             >
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: '#6EE7A8' }} />
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: 'var(--success-fg)' }} />
               v{memoire!.version}
-              <span style={{ color: '#909195' }}>·</span>
+              <span style={{ color: 'var(--text-3)' }}>·</span>
               <span className="num-mono">{completionPct}&nbsp;% rédigé</span>
             </span>
           </div>
@@ -1076,7 +1076,7 @@ export default function StepMemoire({ project }: Props) {
             <button
               onClick={() => setShowEditor(true)}
               className="flex items-center gap-1.5 text-sm font-medium py-1.5 px-3.5 rounded-lg transition-colors hover:bg-ds-bg-2"
-              style={{ border: '1px solid rgba(255,255,255,.07)', color: '#C2C3C6' }}
+              style={{ border: '1px solid var(--border-1)', color: 'var(--text-2)' }}
             >
               <Pencil size={13} /> Modifier
             </button>
@@ -1084,7 +1084,7 @@ export default function StepMemoire({ project }: Props) {
               onClick={() => lancerExportWord()}
               disabled={isExporting}
               className="glass-btn flex items-center gap-1.5 text-sm font-semibold py-1.5 px-3.5 rounded-lg disabled:opacity-60"
-              style={{ color: '#D8D9DB' }}
+              style={{ color: 'var(--text-2)' }}
             >
               <Download size={13} />
               {isExporting ? 'Export...' : 'Export .docx'}
@@ -1117,7 +1117,7 @@ export default function StepMemoire({ project }: Props) {
                 {/* Header */}
                 <div>
                   <p className="microlabel">Compagnon Synorix</p>
-                  <p className="text-xs mt-1" style={{ color: '#959597' }}>
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-3)' }}>
                     Deux contrôles faits sur le texte de ce mémoire
                   </p>
                 </div>
@@ -1125,21 +1125,21 @@ export default function StepMemoire({ project }: Props) {
                 {/* Contrôle 1 — références chantier retrouvées dans le texte */}
                 <div
                   className="glass-card rounded-lg p-3.5"
-                  style={{ border: '1px solid rgba(255,255,255,.07)', boxShadow: '0 1px 3px rgba(0,0,0,.4)' }}
+                  style={{ border: '1px solid var(--border-1)', boxShadow: 'var(--shadow-card)' }}
                 >
-                  <p className="text-sm font-semibold" style={{ color: '#F7F8F8', fontFamily: F }}>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--text-1)', fontFamily: F }}>
                     Références chantier
                   </p>
                   {controleRefs && controleRefs.retrouvees.length + controleRefs.nonRetrouvees.length > 0 ? (
                     <>
-                      <p className="text-xs mt-1 leading-relaxed" style={{ color: '#C2C3C6' }}>
+                      <p className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--text-2)' }}>
                         {controleRefs.retrouvees.length} de vos {controleRefs.retrouvees.length + controleRefs.nonRetrouvees.length}{' '}
                         références retrouvées dans le texte.
                       </p>
                       {controleRefs.nonRetrouvees.length > 0 && (
                         <ul className="mt-1.5 space-y-1">
                           {controleRefs.nonRetrouvees.map((r) => (
-                            <li key={r.id} className="text-xs leading-relaxed" style={{ color: '#959597' }}>
+                            <li key={r.id} className="text-xs leading-relaxed" style={{ color: 'var(--text-3)' }}>
                               « {r.intitule} » n'y figure pas telle quelle.
                             </li>
                           ))}
@@ -1147,9 +1147,9 @@ export default function StepMemoire({ project }: Props) {
                       )}
                     </>
                   ) : (
-                    <p className="text-xs mt-1 leading-relaxed" style={{ color: '#959597' }}>
+                    <p className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--text-3)' }}>
                       Aucune référence marquée dans{' '}
-                      <Link to="/references" className="underline underline-offset-2" style={{ color: '#E8E9EB' }}>Mes références</Link>.
+                      <Link to="/references" className="underline underline-offset-2" style={{ color: 'var(--text-1)' }}>Mes références</Link>.
                     </p>
                   )}
                 </div>
@@ -1157,18 +1157,18 @@ export default function StepMemoire({ project }: Props) {
                 {/* Contrôle 2 — sections brèves */}
                 <div
                   className="glass-card rounded-lg p-3.5"
-                  style={{ border: '1px solid rgba(255,255,255,.07)', boxShadow: '0 1px 3px rgba(0,0,0,.4)' }}
+                  style={{ border: '1px solid var(--border-1)', boxShadow: 'var(--shadow-card)' }}
                 >
-                  <p className="text-sm font-semibold" style={{ color: '#F7F8F8', fontFamily: F }}>
+                  <p className="text-sm font-semibold" style={{ color: 'var(--text-1)', fontFamily: F }}>
                     Sections brèves
                   </p>
                   {breves.length === 0 ? (
-                    <p className="text-xs mt-1 leading-relaxed" style={{ color: '#C2C3C6' }}>
+                    <p className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--text-2)' }}>
                       Toutes les sections font au moins {SEUIL_SECTION_BREVE} mots.
                     </p>
                   ) : (
                     <>
-                      <p className="text-xs mt-1 leading-relaxed" style={{ color: '#C2C3C6' }}>
+                      <p className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--text-2)' }}>
                         {breves.length} section{breves.length > 1 ? 's font' : ' fait'} moins de {SEUIL_SECTION_BREVE} mots, à étoffer si besoin :
                       </p>
                       <ul className="mt-1.5 space-y-1">
@@ -1177,7 +1177,7 @@ export default function StepMemoire({ project }: Props) {
                             <button
                               onClick={() => handleTocNavigate(`sec-${sb.cle}`)}
                               className="text-left text-xs leading-relaxed hover:underline underline-offset-2"
-                              style={{ color: '#E8E9EB' }}
+                              style={{ color: 'var(--text-1)' }}
                             >
                               {sb.titre} — <span className="num-mono">{sb.mots}</span> mots
                             </button>

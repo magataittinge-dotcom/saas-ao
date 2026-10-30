@@ -60,7 +60,7 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis', 
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(6,9,15,0.90)',
+          background: 'color-mix(in srgb, var(--surface-0) 90%, transparent)',
           backdropFilter: 'none',
         }}
         onClick={onClose}
@@ -72,16 +72,16 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis', 
         style={{
           background: 'var(--edge-panel-light), var(--edge-panel)',
           backdropFilter: 'blur(32px) saturate(140%)',
-          border: '1px solid rgba(255,255,255,0.06)',
+          border: '1px solid var(--border-1)',
           borderRadius: '24px',
-          boxShadow: '0 0 80px rgba(228,233,242,0.08), 0 24px 60px rgba(0,0,0,0.45)',
+          boxShadow: '0 0 80px color-mix(in srgb, var(--text-1) 8%, transparent), 0 24px 60px color-mix(in srgb, var(--surface-dark) 45%, transparent)',
           maxHeight: '95vh',
         }}
       >
         {/* Close */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-lg transition-colors hover:bg-[#1C222D] z-10 text-ds-text-2"
+          className="absolute top-4 right-4 p-1.5 rounded-lg transition-colors hover:bg-surface-1 z-10 text-ds-text-2"
         >
           <X size={18} />
         </button>
@@ -91,9 +91,9 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis', 
           <div
             className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3"
             style={{
-              background: 'linear-gradient(135deg, rgba(228,233,242,0.20), rgba(228,233,242,0.10))',
-              border: '1px solid rgba(228,233,242,0.25)',
-              boxShadow: '0 0 30px rgba(228,233,242,0.15)',
+              background: 'linear-gradient(135deg, color-mix(in srgb, var(--text-1) 20%, transparent), color-mix(in srgb, var(--text-1) 10%, transparent))',
+              border: '1px solid var(--border-2)',
+              boxShadow: '0 0 30px color-mix(in srgb, var(--text-1) 15%, transparent)',
             }}
           >
             <Sparkles size={22} className="text-ds-cyan" />
@@ -117,7 +117,7 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis', 
                 className="edge-cta w-full py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
               >
                 {loading === offre.id ? (
-                  <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  <span className="w-4 h-4 rounded-full border-2 border-accent-on/30 border-t-accent-on animate-spin" />
                 ) : (
                   `Choisir ${offre.nom}`
                 )}
@@ -125,7 +125,7 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis', 
             )}
           />
           {erreur && (
-            <p role="alert" className="mt-3 text-sm text-center" style={{ color: '#F5C26B' }}>{erreur}</p>
+            <p role="alert" className="mt-3 text-sm text-center" style={{ color: 'var(--warning-fg)' }}>{erreur}</p>
           )}
         </div>
 

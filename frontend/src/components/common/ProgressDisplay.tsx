@@ -125,7 +125,7 @@ export default function ProgressDisplay({
   const renderProgress = Math.round(Math.max(0, Math.min(displayProgress, 100)))
   const offset = CIRCUMFERENCE * (1 - renderProgress / 100)
 
-  const accentColor = isError ? '#F58E86' : '#E4E9F2'
+  const accentColor = isError ? 'var(--danger-fg)' : 'var(--text-1)'
 
   // Inline-mode: small page-level block. Modal: fullscreen overlay portal.
   const body = (
@@ -138,9 +138,9 @@ export default function ProgressDisplay({
       style={
         variant === 'modal'
           ? {
-              background: '#151A23',
-              border: '1px solid rgba(228,233,242,0.15)',
-              boxShadow: '0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(228,233,242,0.08)',
+              background: 'var(--surface-1)',
+              border: '1px solid var(--border-2)',
+              boxShadow: 'var(--shadow-pop)',
             }
           : undefined
       }
@@ -159,7 +159,7 @@ export default function ProgressDisplay({
             cy={VIEWBOX / 2}
             r={RADIUS}
             fill="none"
-            stroke="rgba(120,130,149,0.12)"
+            stroke="color-mix(in srgb, var(--text-3) 12%, transparent)"
             strokeWidth={STROKE}
           />
           <circle
@@ -185,7 +185,7 @@ export default function ProgressDisplay({
               style={{
                 width: variant === 'modal' ? 64 : 56,
                 height: variant === 'modal' ? 64 : 56,
-                background: 'rgba(110,231,168,0.15)',
+                background: 'color-mix(in srgb, var(--success-fg) 15%, transparent)',
                 animation: 'scale-in 0.3s ease forwards',
               }}
             >
@@ -197,7 +197,7 @@ export default function ProgressDisplay({
               style={{
                 width: variant === 'modal' ? 64 : 56,
                 height: variant === 'modal' ? 64 : 56,
-                background: 'rgba(245,142,134,0.15)',
+                background: 'color-mix(in srgb, var(--danger-fg) 15%, transparent)',
               }}
             >
               <AlertTriangle size={variant === 'modal' ? 32 : 28} className="text-ds-danger" strokeWidth={2} />
@@ -267,7 +267,7 @@ export default function ProgressDisplay({
                   {stepStatus === 'completed' ? (
                     <div
                       className="w-5 h-5 rounded-full flex items-center justify-center"
-                      style={{ background: 'rgba(110,231,168,0.15)' }}
+                      style={{ background: 'color-mix(in srgb, var(--success-fg) 15%, transparent)' }}
                     >
                       <Check size={12} className="text-ds-success" strokeWidth={3} />
                     </div>
@@ -276,18 +276,18 @@ export default function ProgressDisplay({
                       <div
                         className="absolute inset-0 rounded-full"
                         style={{
-                          border: '2px solid #E4E9F2',
+                          border: '2px solid var(--text-1)',
                           borderTopColor: 'transparent',
                           animation: 'spin 1s linear infinite',
                         }}
                       />
                     </div>
                   ) : Icon ? (
-                    <Icon size={14} style={{ color: '#788295' }} />
+                    <Icon size={14} style={{ color: 'var(--text-3)' }} />
                   ) : (
                     <div
                       className="w-2.5 h-2.5 rounded-full"
-                      style={{ background: 'rgba(120,130,149,0.3)' }}
+                      style={{ background: 'color-mix(in srgb, var(--text-3) 30%, transparent)' }}
                     />
                   )}
                 </div>
@@ -296,10 +296,10 @@ export default function ProgressDisplay({
                   style={{
                     color:
                       stepStatus === 'completed'
-                        ? '#788295'
+                        ? 'var(--text-3)'
                         : stepStatus === 'in_progress'
-                          ? '#F4F6FA'
-                          : '#9BA4B5',
+                          ? 'var(--text-1)'
+                          : 'var(--text-3)',
                     fontWeight: stepStatus === 'in_progress' ? 600 : 400,
                   }}
                 >
@@ -316,7 +316,7 @@ export default function ProgressDisplay({
         <button
           onClick={onArrierePlan}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 mt-2"
-          style={{ color: '#E8EBF2', background: 'rgba(120,130,149,0.10)', border: '1px solid rgba(120,130,149,0.25)' }}
+          style={{ color: 'var(--text-1)', background: 'color-mix(in srgb, var(--text-3) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--text-3) 25%, transparent)' }}
         >
           Continuer en arrière-plan
         </button>
@@ -328,9 +328,9 @@ export default function ProgressDisplay({
           onClick={onCancel}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all duration-200 mt-2"
           style={{
-            color: '#9BA4B5',
-            background: 'rgba(120,130,149,0.08)',
-            border: '1px solid rgba(120,130,149,0.15)',
+            color: 'var(--text-3)',
+            background: 'color-mix(in srgb, var(--text-3) 8%, transparent)',
+            border: '1px solid color-mix(in srgb, var(--text-3) 15%, transparent)',
           }}
         >
           <X size={14} /> Annuler
@@ -344,7 +344,7 @@ export default function ProgressDisplay({
       <div
         className="fixed inset-0 z-[9999] flex items-center justify-center"
         style={{
-          background: 'rgba(6,9,15,0.92)',
+          background: 'color-mix(in srgb, var(--surface-0) 92%, transparent)',
         }}
       >
         {body}

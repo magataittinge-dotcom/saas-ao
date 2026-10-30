@@ -16,7 +16,7 @@ import EcranEnChargement from '@/components/common/EcranEnChargement'
 // (data-theme="dark" sur <main>) jusqu'à leur passage — phase C, un écran à la fois :
 // ajouter ici la route de l'écran dès qu'il ne contient plus de couleur écrite en dur.
 export const PAGES_THEMEES = ['/dashboard', '/projects', '/design']
-const estThemee = (pathname: string) => PAGES_THEMEES.some((p) => pathname === p) || pathname === '/design'
+export const estThemee = (pathname: string) => PAGES_THEMEES.some((p) => pathname === p) || pathname === '/design' || /^\/projects\/(?!new(\/|$))[^/]+/.test(pathname) // la page d'un AO : /projects/:id/…
 
 export default function Layout() {
   const { pathname } = useLocation()

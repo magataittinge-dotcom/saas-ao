@@ -62,22 +62,22 @@ export default function CandidatureSectionVault({
   return (
     <section
       className="glass-card rounded-lg overflow-hidden"
-      style={{ border: '1px solid rgba(255,255,255,.07)', boxShadow: '0 1px 3px rgba(0,0,0,.4)', fontFamily: F }}
+      style={{ border: '1px solid var(--border-1)', boxShadow: 'var(--shadow-card)', fontFamily: F }}
     >
       {/* Header */}
-      <header className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
+      <header className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '1px solid var(--border-1)' }}>
         <div className="flex items-center gap-3 min-w-0">
           <div
             className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: 'rgba(255,255,255,0.08)' }}
+            style={{ background: 'color-mix(in srgb, var(--text-1) 8%, transparent)' }}
           >
-            <FolderOpen size={18} style={{ color: '#E8E9EB' }} />
+            <FolderOpen size={18} style={{ color: 'var(--text-1)' }} />
           </div>
           <div className="min-w-0">
-            <h2 className="text-base font-bold" style={{ color: '#F7F8F8' }}>
+            <h2 className="text-base font-bold" style={{ color: 'var(--text-1)' }}>
               Pièces du coffre-fort
             </h2>
-            <p className="text-xs mt-0.5" style={{ color: '#959597' }}>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
               {libelleComptes(aJoindre, pretes)} — sélectionnez une pièce existante de votre coffre-fort
             </p>
           </div>
@@ -86,7 +86,7 @@ export default function CandidatureSectionVault({
           type="button"
           onClick={onOpenVault}
           className="glass-btn flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium shrink-0"
-          style={{ color: '#C2C3C6' }}
+          style={{ color: 'var(--text-2)' }}
         >
           <Lock size={13} />
           Ouvrir le coffre-fort
@@ -96,10 +96,10 @@ export default function CandidatureSectionVault({
       {/* Categories */}
       <div className="px-5 py-1.5">
         {CATEGORY_ORDER.filter((cat) => grouped[cat].length > 0).map((cat) => (
-          <div key={cat} className="py-3" style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
+          <div key={cat} className="py-3" style={{ borderBottom: '1px solid var(--border-1)' }}>
             <div
               className="text-xs font-semibold uppercase tracking-wider mb-2"
-              style={{ color: '#909195' }}
+              style={{ color: 'var(--text-3)' }}
             >
               {CATEGORY_LABELS[cat]}
             </div>
@@ -143,28 +143,28 @@ function VaultRow({
   return (
     <li
       className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-ds-bg-2"
-      style={{ background: '#121213' }}
+      style={{ background: 'var(--surface-0)' }}
     >
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium truncate" style={{ color: '#F7F8F8' }}>
+        <p className="text-sm font-medium truncate" style={{ color: 'var(--text-1)' }}>
           {item.details || item.document_type_required}
         </p>
         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
           <span className={statut.classe}>{statut.texte}</span>
           {item.lot && (
             <span className="text-xs px-1.5 rounded-full"
-              style={{ background: 'rgba(255,255,255,0.08)', color: '#B4B5B8' }}>
+              style={{ background: 'color-mix(in srgb, var(--text-1) 8%, transparent)', color: 'var(--text-2)' }}>
               {item.lot.replace(/^lot/i, 'Lot ')}
             </span>
           )}
           {item.jointe && item.piece_nom && (
-            <span className="text-xs flex items-center gap-1" style={{ color: '#959597' }}>
+            <span className="text-xs flex items-center gap-1" style={{ color: 'var(--text-3)' }}>
               <FileText size={11} />
               {item.piece_nom}
             </span>
           )}
           {isLinked && !item.jointe && (
-            <span className="text-xs flex items-center gap-1" style={{ color: '#959597' }}>
+            <span className="text-xs flex items-center gap-1" style={{ color: 'var(--text-3)' }}>
               <FileText size={11} />
               Lié au coffre-fort
             </span>
@@ -185,7 +185,7 @@ function VaultRow({
           type="button"
           onClick={onPick}
           className="glass-btn px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0"
-          style={{ color: '#D8D9DB' }}
+          style={{ color: 'var(--text-2)' }}
         >
           Choisir
         </button>
@@ -194,7 +194,7 @@ function VaultRow({
           type="button"
           onClick={onPick}
           className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-ds-bg-2 shrink-0"
-          style={{ border: '1px solid rgba(255,255,255,.07)', color: '#959597' }}
+          style={{ border: '1px solid var(--border-1)', color: 'var(--text-3)' }}
         >
           Remplacer
         </button>

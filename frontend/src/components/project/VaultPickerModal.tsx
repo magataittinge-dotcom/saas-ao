@@ -75,21 +75,21 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
       role="dialog"
       aria-modal="true"
       className="fixed inset-0 z-[100] flex items-center justify-center px-4 select-none"
-      style={{ background: 'rgba(0,0,0,0.60)', fontFamily: F }}
+      style={{ background: 'var(--scrim)', fontFamily: F }}
       onClick={onClose}
     >
       <div
         className="glass-card rounded-lg w-full max-w-xl max-h-[80vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
-        style={{ boxShadow: '0 20px 40px rgba(0,0,0,0.15)' }}
+        style={{ boxShadow: 'var(--shadow-pop)' }}
       >
         {/* Header */}
-        <header className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
+        <header className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border-1)' }}>
           <div className="min-w-0">
-            <h3 className="text-base font-bold" style={{ color: '#F7F8F8' }}>
+            <h3 className="text-base font-bold" style={{ color: 'var(--text-1)' }}>
               Choisir une pièce du coffre-fort
             </h3>
-            <p className="text-xs mt-0.5 truncate" style={{ color: '#959597' }}>
+            <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--text-3)' }}>
               Pour : {item.details || item.document_type_required}
             </p>
           </div>
@@ -99,7 +99,7 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
             className="p-1.5 rounded-lg transition-colors hover:bg-ds-bg-2 shrink-0"
             aria-label="Fermer"
           >
-            <X size={18} style={{ color: '#959597' }} />
+            <X size={18} style={{ color: 'var(--text-3)' }} />
           </button>
         </header>
 
@@ -127,9 +127,9 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
               : <><Upload size={15} /> Téléverser un fichier depuis mon ordinateur</>}
           </button>
           <div className="flex items-center gap-3 my-3">
-            <span className="flex-1 h-px" style={{ background: '#1E1E21' }} />
-            <span className="text-xs uppercase tracking-wider" style={{ color: '#909195' }}>ou choisir au coffre-fort</span>
-            <span className="flex-1 h-px" style={{ background: '#1E1E21' }} />
+            <span className="flex-1 h-px" style={{ background: 'var(--surface-1)' }} />
+            <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>ou choisir au coffre-fort</span>
+            <span className="flex-1 h-px" style={{ background: 'var(--surface-1)' }} />
           </div>
         </div>
 
@@ -137,20 +137,20 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
         <div className="px-6">
           <div
             className="flex items-center gap-2 px-3 py-2 rounded-lg"
-            style={{ border: '1px solid rgba(255,255,255,.07)' }}
+            style={{ border: '1px solid var(--border-1)' }}
           >
-            <Search size={14} style={{ color: '#909195' }} />
+            <Search size={14} style={{ color: 'var(--text-3)' }} />
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Rechercher par nom de fichier"
               className="flex-1 text-sm outline-none bg-transparent"
-              style={{ color: '#F7F8F8' }}
+              style={{ color: 'var(--text-1)' }}
             />
           </div>
           {error && (
-            <p className="text-xs mt-2 flex items-center gap-1" style={{ color: '#F58E86' }}>
+            <p className="text-xs mt-2 flex items-center gap-1" style={{ color: 'var(--danger-fg)' }}>
               <AlertCircle size={12} />
               {error}
             </p>
@@ -161,7 +161,7 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
         <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
           {isLoading ? (
             <div className="flex items-center justify-center py-10">
-              <Loader2 size={20} className="animate-spin" style={{ color: '#E8E9EB' }} />
+              <Loader2 size={20} className="animate-spin" style={{ color: 'var(--text-1)' }} />
             </div>
           ) : (
             <>
@@ -200,12 +200,12 @@ function Group({
 }) {
   return (
     <div>
-      <h4 className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#909195' }}>
+      <h4 className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-3)' }}>
         {title}
       </h4>
       {docs.length === 0 ? (
         emptyText ? (
-          <p className="text-xs py-2" style={{ color: '#909195' }}>{emptyText}</p>
+          <p className="text-xs py-2" style={{ color: 'var(--text-3)' }}>{emptyText}</p>
         ) : null
       ) : (
         <ul className="space-y-1.5">
@@ -213,15 +213,15 @@ function Group({
             <li
               key={doc.id}
               className="flex items-center gap-3 px-3 py-2.5 rounded-lg"
-              style={{ background: '#121213' }}
+              style={{ background: 'var(--surface-0)' }}
             >
-              <FileText size={16} style={{ color: '#959597' }} className="shrink-0" />
+              <FileText size={16} style={{ color: 'var(--text-3)' }} className="shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate" style={{ color: '#F7F8F8' }}>
+                <p className="text-sm font-medium truncate" style={{ color: 'var(--text-1)' }}>
                   {doc.file_name}
                 </p>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs" style={{ color: '#909195' }}>{doc.type}</span>
+                  <span className="text-xs" style={{ color: 'var(--text-3)' }}>{doc.type}</span>
                   <StatusPill doc={doc} />
                 </div>
               </div>
@@ -244,9 +244,9 @@ function Group({
 }
 
 const PILL_TONES: Record<VaultPillTone, { color: string; bg: string }> = {
-  alert: { color: '#F58E86', bg: 'rgba(245,142,134,0.10)' },
-  neutral: { color: '#959597', bg: '#1E1E21' },
-  ok: { color: '#6EE7A8', bg: 'rgba(110,231,168,0.10)' },
+  alert: { color: 'var(--danger-fg)', bg: 'color-mix(in srgb, var(--danger-fg) 10%, transparent)' },
+  neutral: { color: 'var(--text-3)', bg: 'var(--surface-1)' },
+  ok: { color: 'var(--success-fg)', bg: 'color-mix(in srgb, var(--success-fg) 10%, transparent)' },
 }
 
 // B1 — « Valide » seulement pour une pièce datée (règle commune lib/vault).
