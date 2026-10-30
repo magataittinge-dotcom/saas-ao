@@ -1,0 +1,147 @@
+/* Synorix Intelligence — visage, bulles, fiche « prochaine action ».
+   Couleurs : uniquement des variables sémantiques AVEC repli (le socle les fournira ; le repli suit data-theme).
+   Mouvement : le visage est la seule chose qui bouge en continu ; le reste est court (0,18 s) et coupé en mouvement réduit. */
+
+.syx {
+  /* Noms alignés sur le socle (theme.css) ; les replis ne servent qu'avant son intégration. */
+  --syx-scene-fond: var(--surface-0, #ffffff);
+  --syx-surface: var(--surface-pop, #ffffff);
+  --syx-surface-2: var(--surface-1, #edf1f4);
+  --syx-texte: var(--text-1, #1d1d1d);
+  --syx-texte-2: var(--text-2, #4d585f);
+  --syx-ligne: var(--border-1, rgba(0, 0, 0, .12));
+  --syx-ligne-forte: var(--border-field, #7a828a);
+  --syx-accent: var(--accent-500, #008cf8);
+  --syx-accent-doux: color-mix(in srgb, var(--accent-500, #008cf8) 16%, transparent);
+  --syx-lien: var(--accent-text, #0067ba);
+  --syx-bouton: var(--accent-fill-solid, #0078d6);
+  --syx-sur-bouton: var(--on-accent, #ffffff);
+  --syx-attention: var(--warning-fg, #9f5c18);
+  --syx-attention-texte: var(--warning-fg, #9f5c18);
+  --syx-attention-doux: var(--warning-bg, #fff8e8);
+  --syx-halo: color-mix(in srgb, var(--accent-500, #008cf8) 14%, transparent);
+  --syx-ombre: 0 1px 2px rgba(0, 0, 0, .08), 0 4px 14px rgba(0, 0, 0, .06);
+  color: var(--syx-texte);
+}
+:root[data-theme="dark"] .syx, :root[data-theme="nuit"] .syx {
+  --syx-scene-fond: var(--surface-0, #111111);
+  --syx-surface: var(--surface-pop, #1d1d1d);
+  --syx-surface-2: var(--surface-1, #292929);
+  --syx-texte: var(--text-1, #ffffff);
+  --syx-texte-2: var(--text-2, #bababa);
+  --syx-ligne: var(--border-1, rgba(255, 255, 255, .14));
+  --syx-ligne-forte: var(--border-field, #7b858c);
+  --syx-lien: var(--accent-text, #69b1ff);
+  --syx-attention: var(--warning-fg, #ffbe62);
+  --syx-attention-texte: var(--warning-fg, #ffbe62);
+  --syx-attention-doux: var(--warning-bg, #5c3721);
+  --syx-halo: color-mix(in srgb, var(--accent-500, #008cf8) 22%, transparent);
+  --syx-ombre: 0 1px 2px rgba(0, 0, 0, .4), 0 6px 20px rgba(0, 0, 0, .35);
+}
+
+.syx-entete { margin-bottom: 16px; }
+.syx-titre { margin: 0; font-size: 24px; line-height: 1.2; font-weight: 650; letter-spacing: -.01em; color: var(--syx-texte); }
+.syx-sous-titre { margin: 6px 0 0; font-size: 15px; line-height: 1.5; color: var(--syx-texte-2); max-width: 64ch; }
+
+/* ── Scène : le visage et ses fils ── */
+.syx-zone { position: relative; }
+.syx-scene {
+  position: relative; height: 520px; border-radius: 28px; overflow: hidden; isolation: isolate;
+  background: var(--syx-scene-fond); border: 1px solid var(--syx-ligne);
+}
+.syx-grille {
+  position: absolute; inset: 0; opacity: .5;
+  background-image: linear-gradient(var(--syx-ligne) 1px, transparent 1px), linear-gradient(90deg, var(--syx-ligne) 1px, transparent 1px);
+  background-size: 48px 48px;
+  -webkit-mask-image: radial-gradient(closest-side, #000 20%, transparent 100%); mask-image: radial-gradient(closest-side, #000 20%, transparent 100%);
+}
+.syx-halo { position: absolute; inset: 0; background: radial-gradient(closest-side, var(--syx-halo), transparent 78%); }
+.syx-repli, .syx-points, .syx-fils { position: absolute; inset: 0; width: 100%; height: 100%; }
+.syx-repli {
+  object-fit: contain; padding: 4% 0; opacity: .92; transition: opacity .7s ease;
+  -webkit-mask-image: radial-gradient(circle closest-side, #000 70%, transparent 100%); mask-image: radial-gradient(circle closest-side, #000 70%, transparent 100%);
+}
+:root:not([data-theme="nuit"]):not([data-theme="dark"]) .syx-repli { filter: invert(1) hue-rotate(180deg) saturate(1.3); mix-blend-mode: multiply; }
+:root[data-theme="nuit"] .syx-repli, :root[data-theme="dark"] .syx-repli { mix-blend-mode: screen; }
+.syx-repli-ferme { opacity: 0; animation: syx-clin 6.2s infinite; }
+.syx-points { opacity: 0; transition: opacity .7s ease; }
+.syx-fils { pointer-events: none; opacity: 0; transition: opacity .7s ease; }
+.syx-scene[data-mode="webgl"] .syx-points, .syx-scene[data-mode="webgl"] .syx-fils { opacity: 1; }
+.syx-scene[data-mode="webgl"] .syx-repli { opacity: 0; animation: none; }
+@keyframes syx-clin { 0%, 93%, 100% { opacity: 0; } 95.5%, 98% { opacity: .92; } }
+
+/* ── Bulles ── */
+.syx-bulles { position: absolute; inset: 0; pointer-events: none; }
+.syx-bulle {
+  position: absolute; top: var(--y); display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 0; margin: 0;
+  border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; pointer-events: auto;
+}
+.syx-bulle[data-cote="g"] { left: var(--x); }
+.syx-bulle[data-cote="d"] { right: var(--x); flex-direction: row-reverse; }
+.syx-pastille {
+  display: inline-flex; align-items: center; gap: 8px; padding: 8px 8px 8px 13px; border-radius: 999px; white-space: nowrap;
+  background: var(--syx-surface); border: 1px solid var(--syx-ligne); color: var(--syx-texte);
+  font-size: 14px; font-weight: 600; box-shadow: var(--syx-ombre);
+  transition: border-color .18s ease, background-color .18s ease;
+}
+.syx-bulle:hover .syx-pastille { border-color: var(--syx-ligne-forte); }
+.syx-bulle[aria-pressed="true"] .syx-pastille { border-color: var(--syx-accent); background: var(--syx-surface-2); }
+.syx-bulle:focus-visible { outline: none; }
+.syx-bulle:focus-visible .syx-pastille { outline: 2px solid var(--syx-lien); outline-offset: 3px; }
+.syx-bulle[data-vide="oui"] .syx-pastille { color: var(--syx-texte-2); font-weight: 500; }
+.syx-pastille .syx-point { width: 8px; height: 8px; border-radius: 50%; background: var(--syx-accent); flex: 0 0 auto; }
+.syx-bulle[data-ton="attention"] .syx-point { background: var(--syx-attention); }
+.syx-bulle[data-vide="oui"] .syx-point { background: transparent; box-shadow: inset 0 0 0 1.5px var(--syx-ligne-forte); }
+.syx-compte {
+  min-width: 26px; padding: 2px 8px; border-radius: 999px; background: var(--syx-surface-2); text-align: center;
+  font-size: 13px; font-weight: 650; font-variant-numeric: tabular-nums; color: var(--syx-texte);
+}
+.syx-bulle[data-ton="attention"] .syx-compte { background: var(--syx-attention-doux); color: var(--syx-attention-texte); }
+.syx-noeud { display: block; width: var(--t); height: var(--t); border-radius: 50%; flex: 0 0 auto; background: var(--syx-accent); box-shadow: 0 0 0 5px var(--syx-accent-doux); }
+.syx-bulle[data-ton="attention"] .syx-noeud { background: var(--syx-attention); box-shadow: 0 0 0 5px var(--syx-attention-doux); }
+.syx-bulle[data-vide="oui"] .syx-noeud { opacity: .45; }
+:root[data-theme="nuit"] .syx-noeud, :root[data-theme="dark"] .syx-noeud { box-shadow: 0 0 0 5px var(--syx-accent-doux), 0 0 26px var(--syx-accent-doux); }
+
+/* ── Fiche « prochaine action » ── */
+.syx-fiche {
+  max-width: 680px; margin: 14px auto 0; padding: 22px 24px; border-radius: 20px;
+  background: var(--syx-surface); border: 1px solid var(--syx-ligne); box-shadow: var(--syx-ombre);
+}
+.syx-etiquette { margin: 0 0 6px; font-size: 13px; font-weight: 600; letter-spacing: .02em; color: var(--syx-texte-2); }
+.syx-fiche-titre { margin: 0; font-size: 20px; line-height: 1.3; font-weight: 650; color: var(--syx-texte); }
+.syx-meta { margin: 4px 0 0; font-size: 14px; color: var(--syx-texte-2); }
+.syx-etat { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+.syx-statut {
+  display: inline-flex; align-items: center; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 13px; font-weight: 600;
+  background: var(--syx-surface-2); color: var(--syx-texte);
+}
+.syx-statut[data-ton="attention"] { background: var(--syx-attention-doux); color: var(--syx-attention-texte); }
+.syx-quand { font-size: 14px; font-weight: 600; color: var(--syx-texte); }
+.syx-texte { margin: 12px 0 0; max-width: 62ch; font-size: 16px; line-height: 1.55; color: var(--syx-texte); }
+.syx-boutons { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 22px; margin-top: 18px; }
+.syx-cta {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 12px;
+  background: var(--syx-bouton); color: var(--syx-sur-bouton); font-size: 15px; font-weight: 600; text-decoration: none;
+  transition: filter .18s ease;
+}
+.syx-cta:hover { filter: brightness(1.08); }
+.syx-lien { display: inline-flex; align-items: center; min-height: 44px; font-size: 15px; font-weight: 600; color: var(--syx-lien); text-underline-offset: 3px; }
+.syx-cta:focus-visible, .syx-lien:focus-visible { outline: 2px solid var(--syx-lien); outline-offset: 3px; }
+
+/* ── Téléphone : le visage au-dessus, les bulles en grille 2 × 3, marge basse pour le bouton « + » ── */
+@media (max-width: 760px) {
+  .syx-scene { height: 340px; border-radius: 22px; }
+  .syx-bulles {
+    position: static; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;
+    margin: 10px 0 28px; scroll-margin-bottom: 112px; pointer-events: auto;
+  }
+  .syx-bulle, .syx-bulle[data-cote="g"], .syx-bulle[data-cote="d"] { position: static; width: 100%; flex-direction: row; }
+  .syx-noeud { display: none; }
+  .syx-pastille { width: 100%; min-height: 48px; white-space: normal; font-size: 13.5px; padding: 9px 8px 9px 12px; line-height: 1.25; }
+  .syx-pastille .syx-compte { margin-left: auto; }
+  .syx-fiche { padding: 18px; margin-top: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .syx-repli-ferme { animation: none; }
+  .syx-repli, .syx-points, .syx-fils, .syx-pastille, .syx-cta { transition: none; }
+}
