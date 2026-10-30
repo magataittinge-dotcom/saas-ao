@@ -3,29 +3,30 @@
 
    Un seul fichier. Aucune couleur en dur dans le JSX : les composants
    posent ces classes, et seules les variables ci-dessous portent la teinte.
-   Une phase suivante branchera ces variables sur les nouveaux jetons de
-   design : il suffira de changer le bloc « Teintes » ci-dessous.
+   Les variables ci-dessous sont branchées sur les jetons clair / nuit.
 
    Règle : l'ambre (--warn) est réservé à ce qui demande une action
    (À joindre, À renouveler, Date de validité à confirmer).
    ═══════════════════════════════════════════════════════════════ */
 
-:root {
-  /* ── Teintes (aujourd'hui : les variables du projet, cf. tokens.css) ── */
-  --piece-action: var(--warn);
-  --piece-action-fond: var(--warn-bg);
-  --piece-action-filet: var(--warn-line);
-  --piece-pret: var(--ok);
-  --piece-pret-fond: var(--ok-bg);
-  --piece-pret-filet: var(--ok-line);
-  --piece-neutre: var(--ink-3);
+:root,
+[data-theme='light'],
+[data-theme='dark'] {
+  /* ── Teintes : branchées sur les jetons du système (styles/theme.css), clair et nuit ── */
+  --piece-action: var(--warning-fg);
+  --piece-action-fond: var(--warning-bg);
+  --piece-action-filet: var(--warning-border);
+  --piece-pret: var(--success-fg);
+  --piece-pret-fond: var(--success-bg);
+  --piece-pret-filet: var(--success-border);
+  --piece-neutre: var(--text-3);
   --piece-neutre-fond: var(--surface-2);
-  --piece-neutre-filet: var(--line);
-  --carte-fond: var(--surface);
-  --carte-filet: var(--line);
-  --carte-titre: var(--ink);
-  --carte-texte: var(--ink-2);
-  --carte-discret: var(--ink-3);
+  --piece-neutre-filet: var(--border-1);
+  --carte-fond: var(--surface-1);
+  --carte-filet: var(--border-1);
+  --carte-titre: var(--text-1);
+  --carte-texte: var(--text-2);
+  --carte-discret: var(--text-3);
 }
 
 /* ── Statut d'une pièce ─────────────────────────────────────── */
@@ -75,7 +76,7 @@
 .carte-ao-30s {
   background: var(--carte-fond);
   border: 1px solid var(--carte-filet);
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   padding: 1rem 1.125rem;
   color: var(--carte-texte);
 }
@@ -161,4 +162,25 @@
   background: none;
   border: 0;
   cursor: pointer;
+}
+
+/* ── Page d'un AO : cibles tactiles (téléphone) ─────────────────
+   Sous 768 px, chaque bouton et champ de la page d'un AO mesure au moins 44 px.
+   `.cible-libre` sort un contrôle de la règle (case à cocher, puce intégrée à une ligne) ;
+   `.cible-etendue` garde la taille visuelle mais étend la zone qui répond au doigt à 44 px. */
+@media (max-width: 767px) {
+  .page-ao :is(button, [role='button'], select, input:not([type='checkbox'], [type='radio'], [type='file'], [type='hidden'])):not(.cible-libre) {
+    min-height: 44px;
+  }
+  .page-ao button:not(.cible-libre) { min-width: 44px; }
+}
+.cible-etendue { position: relative; }
+.cible-etendue::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
 }

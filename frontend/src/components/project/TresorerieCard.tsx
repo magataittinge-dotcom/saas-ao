@@ -36,11 +36,11 @@ export default function TresorerieCard({ projectId, onOpenSource }: Props) {
   if (!data || data.lignes.length === 0) return null
 
   return (
-    <div className="rounded-lg" style={{ background: '#18181A', border: '1px solid rgba(255,255,255,.07)' }}>
-      <div className="flex items-center gap-2 px-5 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
-        <Banknote size={16} style={{ color: '#E8E9EB' }} />
-        <h3 className="text-sm font-bold" style={{ color: '#F7F8F8' }}>Trésorerie du marché</h3>
-        <span className="text-xs" style={{ color: '#909195' }}>ce que dit le contrat</span>
+    <div className="rounded-lg" style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)' }}>
+      <div className="flex items-center gap-2 px-5 py-3" style={{ borderBottom: '1px solid var(--border-1)' }}>
+        <Banknote size={16} style={{ color: 'var(--text-1)' }} />
+        <h3 className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>Trésorerie du marché</h3>
+        <span className="text-xs" style={{ color: 'var(--text-3)' }}>ce que dit le contrat</span>
       </div>
       <div>
         {data.lignes.map((ligne, i) => (
@@ -48,25 +48,25 @@ export default function TresorerieCard({ projectId, onOpenSource }: Props) {
             key={ligne.id}
             onClick={() => ligne.source && onOpenSource(ligne.source)}
             disabled={!ligne.source}
-            className="w-full text-left px-5 py-3 flex items-start gap-4 transition-colors enabled:hover:bg-[#1E1E21] disabled:cursor-default"
-            style={i < data.lignes.length - 1 ? { borderBottom: '1px solid rgba(255,255,255,.07)' } : undefined}
+            className="w-full text-left px-5 py-3 flex items-start gap-4 transition-colors enabled:hover:bg-surface-1 disabled:cursor-default"
+            style={i < data.lignes.length - 1 ? { borderBottom: '1px solid var(--border-1)' } : undefined}
           >
             <div className="w-40 shrink-0">
-              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: '#959597' }}>
+              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
                 {ligne.label}
               </p>
-              <p className="text-sm font-semibold mt-0.5" style={{ color: '#F7F8F8' }}>{ligne.valeur}</p>
+              <p className="text-sm font-semibold mt-0.5" style={{ color: 'var(--text-1)' }}>{ligne.valeur}</p>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs" style={{ color: '#959597' }}>{ligne.explication}</p>
+              <p className="text-xs" style={{ color: 'var(--text-3)' }}>{ligne.explication}</p>
               {ligne.formule && (
-                <p className="text-xs font-mono mt-1 truncate" style={{ color: '#909195' }}>
+                <p className="text-xs font-mono mt-1 truncate" style={{ color: 'var(--text-3)' }}>
                   {ligne.formule}
                 </p>
               )}
             </div>
             {ligne.source && (
-              <ExternalLink size={12} className="shrink-0 mt-1" style={{ color: '#909195' }} />
+              <ExternalLink size={12} className="shrink-0 mt-1" style={{ color: 'var(--text-3)' }} />
             )}
           </button>
         ))}

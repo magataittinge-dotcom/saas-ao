@@ -69,12 +69,12 @@ export default function SynorixScoreCard({ project, onOpenSource, onYAller, enCo
 
   return (
     <section className="glass-card overflow-hidden" aria-labelledby="fiche-decision-titre">
-      <header className="px-5 pt-4 pb-3" style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
+      <header className="px-5 pt-4 pb-3" style={{ borderBottom: '1px solid var(--border-1)' }}>
         <p className="microlabel">Décision</p>
-        <h2 id="fiche-decision-titre" className="mt-1 text-base font-semibold" style={{ color: '#F7F8F8' }}>
+        <h2 id="fiche-decision-titre" className="mt-1 text-base font-semibold" style={{ color: 'var(--text-1)' }}>
           On y va ?
         </h2>
-        <p className="mt-0.5 text-xs" style={{ color: '#959597' }}>
+        <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
           Les conditions relevées dans le DCE, comparées à votre profil. La décision vous appartient.
         </p>
       </header>
@@ -84,24 +84,24 @@ export default function SynorixScoreCard({ project, onOpenSource, onYAller, enCo
           <li
             key={comp.id}
             className="px-5 py-2.5 flex items-start gap-3"
-            style={i < data.composantes.length - 1 ? { borderBottom: '1px solid rgba(255,255,255,.07)' } : undefined}
+            style={i < data.composantes.length - 1 ? { borderBottom: '1px solid var(--border-1)' } : undefined}
           >
             <span className="mt-0.5 shrink-0">
               {comp.statut === 'ok'
-                ? <Check size={14} style={{ color: '#6EE7A8' }} />
-                : <CircleDot size={14} style={{ color: '#D9A441' }} />}
+                ? <Check size={14} style={{ color: 'var(--success-fg)' }} />
+                : <CircleDot size={14} style={{ color: 'var(--warning-fg)' }} />}
             </span>
             <div className="flex-1 min-w-0">
               <p className="text-xs">
-                <span className="font-semibold" style={{ color: '#D8D9DB' }}>{comp.label}</span>
-                <span style={{ color: comp.statut === 'ok' ? '#6EE7A8' : '#D9A441' }}> · {libelleStatut(comp)}</span>
+                <span className="font-semibold" style={{ color: 'var(--text-2)' }}>{comp.label}</span>
+                <span style={{ color: comp.statut === 'ok' ? 'var(--success-fg)' : 'var(--warning-fg)' }}> · {libelleStatut(comp)}</span>
               </p>
-              <p className="text-xs mt-0.5" style={{ color: '#959597' }}>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
                 {comp.explication}
                 {comp.action === 'completer_profil' && (
                   <>
                     {' '}
-                    <Link to="/company" className="font-medium underline" style={{ color: '#E8E9EB' }}>
+                    <Link to="/company" className="font-medium underline" style={{ color: 'var(--text-1)' }}>
                       Compléter mon profil
                     </Link>
                   </>
@@ -114,7 +114,7 @@ export default function SynorixScoreCard({ project, onOpenSource, onYAller, enCo
                 title={`Source — ${comp.source.document}`}
                 aria-label={`Voir la source : ${comp.source.document}`}
                 className="shrink-0 p-1 rounded"
-                style={{ color: '#959597' }}
+                style={{ color: 'var(--text-3)' }}
               >
                 <ExternalLink size={12} />
               </button>
@@ -123,21 +123,21 @@ export default function SynorixScoreCard({ project, onOpenSource, onYAller, enCo
         ))}
       </ul>
 
-      <footer className="px-5 py-3.5 flex flex-wrap items-center gap-3" style={{ borderTop: '1px solid rgba(255,255,255,.07)' }}>
+      <footer className="px-5 py-3.5 flex flex-wrap items-center gap-3" style={{ borderTop: '1px solid var(--border-1)' }}>
         {decidePasser ? (
           <>
-            <p className="text-sm flex-1" style={{ color: '#D8D9DB' }}>Vous avez classé cet AO sans suite.</p>
+            <p className="text-sm flex-1" style={{ color: 'var(--text-2)' }}>Vous avez classé cet AO sans suite.</p>
             <button
               onClick={() => changerStatut('analyzed')}
               disabled={changement}
               className="text-xs font-semibold px-3 py-1.5 rounded-lg disabled:opacity-60"
-              style={{ color: '#F7F8F8', border: '1px solid rgba(255,255,255,.14)' }}
+              style={{ color: 'var(--text-1)', border: '1px solid var(--border-2)' }}
             >
               Rouvrir l'AO
             </button>
           </>
         ) : decideAller ? (
-          <p className="text-sm" style={{ color: '#D8D9DB' }}>Vous avez décidé d'y aller.</p>
+          <p className="text-sm" style={{ color: 'var(--text-2)' }}>Vous avez décidé d'y aller.</p>
         ) : (
           <>
             <button onClick={onYAller} disabled={enCours || changement} className="signature-btn disabled:opacity-60">
@@ -147,11 +147,11 @@ export default function SynorixScoreCard({ project, onOpenSource, onYAller, enCo
               onClick={() => changerStatut('sans_suite')}
               disabled={enCours || changement}
               className="glass-btn px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-60"
-              style={{ color: '#C2C3C6' }}
+              style={{ color: 'var(--text-2)' }}
             >
               On passe
             </button>
-            <p className="text-xs" style={{ color: '#959597' }}>
+            <p className="text-xs" style={{ color: 'var(--text-3)' }}>
               « On passe » classe l'AO sans suite ; vous pourrez le rouvrir.
             </p>
           </>

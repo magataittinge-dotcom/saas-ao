@@ -286,15 +286,15 @@ export default function StepAnalysis({ project }: Props) {
     <div
       className="sticky -bottom-5 z-30 -mx-3 sm:-mx-4 mt-6 rounded-t-lg flex items-center justify-between px-6 py-3 gap-4"
       style={{
-        background: 'rgba(9,9,10,0.92)',
+        background: 'color-mix(in srgb, var(--surface-0) 92%, transparent)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
-        borderTop: '1px solid rgba(255,255,255,.07)',
+        borderTop: '1px solid var(--border-1)',
       }}
     >
       <div className="flex items-center gap-2.5 min-w-0">
-        <CheckCircle2 size={16} className="shrink-0" style={{ color: '#E8E9EB' }} />
-        <p className="num-mono truncate text-xs" style={{ color: '#959597', fontFamily: F }}>
+        <CheckCircle2 size={16} className="shrink-0" style={{ color: 'var(--text-1)' }} />
+        <p className="num-mono truncate text-xs" style={{ color: 'var(--text-3)', fontFamily: F }}>
           {items.length} exigences · {obligatoireCount} obligatoires
         </p>
       </div>
@@ -330,18 +330,18 @@ export default function StepAnalysis({ project }: Props) {
       {showLotDetails && lotFilterInfo && (
         <div
           className="rounded-lg px-4 py-2.5 flex flex-wrap gap-x-4 gap-y-1 text-xs -mt-2"
-          style={{ background: '#1E1E21', border: '1px solid rgba(255,255,255,.07)' }}
+          style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)' }}
         >
           {lotFilterInfo.included.map(doc => (
             <span key={doc.id} className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#E8E9EB' }} />
-              <span style={{ color: '#D8D9DB' }}>{doc.file_name}</span>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--text-1)' }} />
+              <span style={{ color: 'var(--text-2)' }}>{doc.file_name}</span>
             </span>
           ))}
           {lotFilterInfo.excluded.map(doc => (
             <span key={doc.id} className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: '#909195' }} />
-              <span style={{ color: '#959597' }}>{doc.file_name}</span>
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--text-3)' }} />
+              <span style={{ color: 'var(--text-3)' }}>{doc.file_name}</span>
             </span>
           ))}
         </div>
@@ -356,17 +356,17 @@ export default function StepAnalysis({ project }: Props) {
               <p className="microlabel">
                 Analyse terminée{project.selected_lot_name ? ` — ${project.selected_lot_name}` : ''}
               </p>
-              <span className="edge-data flex items-center gap-2 text-xs" style={{ color: '#959597' }}>
+              <span className="edge-data flex items-center gap-2 text-xs" style={{ color: 'var(--text-3)' }}>
                 {lotFilterInfo ? (
                   <>
                     <span>
-                      <span className="font-semibold" style={{ color: '#F7F8F8' }}>{lotFilterInfo.included.length}</span>
+                      <span className="font-semibold" style={{ color: 'var(--text-1)' }}>{lotFilterInfo.included.length}</span>
                       /{lotTotal} docs analysés
                     </span>
                     <button
                       onClick={() => setShowLotDetails(v => !v)}
-                      className="font-medium hover:underline"
-                      style={{ color: '#E8E9EB' }}
+                      className="cible-libre cible-etendue font-medium hover:underline"
+                      style={{ color: 'var(--text-1)' }}
                     >
                       {showLotDetails ? 'Masquer' : 'Détails'}
                     </button>
@@ -379,23 +379,23 @@ export default function StepAnalysis({ project }: Props) {
                 {items.length}
               </span>
               <div className="pb-0.5">
-                <p className="text-sm font-semibold" style={{ color: '#F7F8F8' }}>exigences identifiées</p>
-                <p className="mt-0.5 text-xs" style={{ color: '#959597' }}>
+                <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>exigences identifiées</p>
+                <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
                   <span className="font-semibold" style={{ color: 'var(--warn)' }}>{obligatoireCount} obligatoires</span>
                   {' · '}{items.length - obligatoireCount} souhaitées
                 </p>
               </div>
             </div>
             {infos?.objet && (
-              <p className="mt-3.5 max-w-2xl text-sm font-medium leading-snug" style={{ color: '#D8D9DB' }}>
+              <p className="mt-3.5 max-w-2xl text-sm font-medium leading-snug" style={{ color: 'var(--text-2)' }}>
                 {infos.objet}
               </p>
             )}
             {(infos?.maitre_ouvrage || infos?.maitre_oeuvre) && (
-              <p className="mt-1.5 max-w-2xl text-xs leading-relaxed" style={{ color: '#909195' }}>
-                {infos?.maitre_ouvrage && <>Client&nbsp;: <span style={{ color: '#959597' }}>{infos.maitre_ouvrage}</span></>}
+              <p className="mt-1.5 max-w-2xl text-xs leading-relaxed" style={{ color: 'var(--text-3)' }}>
+                {infos?.maitre_ouvrage && <>Client&nbsp;: <span style={{ color: 'var(--text-3)' }}>{infos.maitre_ouvrage}</span></>}
                 {infos?.maitre_ouvrage && infos?.maitre_oeuvre && ' · '}
-                {infos?.maitre_oeuvre && <>Maîtrise d&apos;œuvre&nbsp;: <span style={{ color: '#959597' }}>{infos.maitre_oeuvre}</span></>}
+                {infos?.maitre_oeuvre && <>Maîtrise d&apos;œuvre&nbsp;: <span style={{ color: 'var(--text-3)' }}>{infos.maitre_oeuvre}</span></>}
               </p>
             )}
           </div>
@@ -405,15 +405,15 @@ export default function StepAnalysis({ project }: Props) {
             <div className="min-w-0">
               <p className="microlabel mb-2">Critères de jugement</p>
               <div className="flex h-2 overflow-hidden rounded-full" style={{ background: 'var(--surface-2)' }}>
-                {prixPct > 0 && <div title={`Prix ${prixPct} %`} style={{ width: `${prixPct}%`, background: '#FFFFFF' }} />}
-                {techPct > 0 && <div title={`Technique ${techPct} %`} style={{ width: `${techPct}%`, background: '#98999C' }} />}
+                {prixPct > 0 && <div title={`Prix ${prixPct} %`} style={{ width: `${prixPct}%`, background: 'var(--text-1)' }} />}
+                {techPct > 0 && <div title={`Technique ${techPct} %`} style={{ width: `${techPct}%`, background: 'var(--text-3)' }} />}
               </div>
               <div className="mt-2 flex items-center justify-between text-xs">
-                <span style={{ color: '#959597' }}>
-                  Prix <span className="num-mono font-bold" style={{ color: '#F7F8F8' }}>{prixPct}&nbsp;%</span>
+                <span style={{ color: 'var(--text-3)' }}>
+                  Prix <span className="num-mono font-bold" style={{ color: 'var(--text-1)' }}>{prixPct}&nbsp;%</span>
                 </span>
-                <span style={{ color: '#959597' }}>
-                  Technique <span className="num-mono font-bold" style={{ color: '#F7F8F8' }}>{techPct}&nbsp;%</span>
+                <span style={{ color: 'var(--text-3)' }}>
+                  Technique <span className="num-mono font-bold" style={{ color: 'var(--text-1)' }}>{techPct}&nbsp;%</span>
                 </span>
               </div>
             </div>
@@ -461,7 +461,7 @@ export default function StepAnalysis({ project }: Props) {
       <div className={selection ? 'min-w-0 space-y-3 lg:pb-24' : 'min-w-0 space-y-3'}>
       {/* ── SEARCH BAR ──────────────────────────────────────────── */}
       <div className="relative">
-        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: '#909195' }} />
+        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }} />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -469,11 +469,11 @@ export default function StepAnalysis({ project }: Props) {
           className="glass-input w-full pl-10 pr-10 py-2.5 text-sm"
           style={{ fontFamily: F }}
         />
-        <Sparkles size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2" style={{ color: '#E8E9EB' }} />
+        <Sparkles size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-1)' }} />
       </div>
 
       {/* ── ONGLETS ─────────────────────────────────────────────── */}
-      <div className="flex items-center gap-6 pb-px" style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
+      <div className="flex items-center gap-6 pb-px" style={{ borderBottom: '1px solid var(--border-1)' }}>
         <TabButton
           label={`Tout (${items.length})`}
           active={activeFilter === 'all'}
@@ -491,7 +491,7 @@ export default function StepAnalysis({ project }: Props) {
 
       {/* ── Exigences ───────────────────────────────────────────── */}
       {filtered.length === 0 ? (
-        <p className="text-center text-sm py-12" style={{ color: '#909195', fontFamily: F }}>
+        <p className="text-center text-sm py-12" style={{ color: 'var(--text-3)', fontFamily: F }}>
           Aucune exigence trouvée
         </p>
       ) : (
@@ -547,11 +547,11 @@ function TabButton({ label, active, onClick }: { label: string; active: boolean;
     <button
       onClick={onClick}
       className={`pb-3 text-sm transition-colors relative whitespace-nowrap ${active ? 'font-semibold' : 'font-medium'}`}
-      style={{ color: active ? '#E8E9EB' : '#959597', fontFamily: F }}
+      style={{ color: active ? 'var(--text-1)' : 'var(--text-3)', fontFamily: F }}
     >
       {label}
       {active && (
-        <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full" style={{ background: '#E8E9EB' }} />
+        <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full" style={{ background: 'var(--text-1)' }} />
       )}
     </button>
   )
@@ -584,13 +584,13 @@ function ExigenceSection({
         onClick={() => setOpen(o => !o)}
         className="w-full flex items-center justify-between px-5 py-3.5 text-left transition-colors hover:bg-ds-bg-2"
       >
-        <h3 className="text-base font-bold" style={{ color: '#F7F8F8', fontFamily: F }}>
+        <h3 className="text-base font-bold" style={{ color: 'var(--text-1)', fontFamily: F }}>
           {CATEGORY_LABELS[category]}{' '}
-          <span className="font-medium text-sm" style={{ color: '#909195' }}>({items.length})</span>
+          <span className="font-medium text-sm" style={{ color: 'var(--text-3)' }}>({items.length})</span>
         </h3>
         <span
           className="text-xs font-medium transition-transform"
-          style={{ color: '#E8E9EB', transform: open ? 'rotate(180deg)' : undefined }}
+          style={{ color: 'var(--text-1)', transform: open ? 'rotate(180deg)' : undefined }}
         >
           ▾
         </span>
@@ -638,19 +638,19 @@ function ExigenceLigne({
       ref={ref}
       className="exigence-ligne flex items-start gap-x-2.5 gap-y-1 py-2 flex-wrap"
       aria-current={active ? 'true' : undefined}
-      style={derniere ? undefined : { borderBottom: '1px solid rgba(255,255,255,.07)' }}
+      style={derniere ? undefined : { borderBottom: '1px solid var(--border-1)' }}
     >
       <span
         className="shrink-0 mt-0.5 text-xs tabular-nums w-7 text-right"
-        style={{ color: '#909195', fontFamily: '"Geist Mono", monospace' }}
+        style={{ color: 'var(--text-3)', fontFamily: '"Geist Mono", monospace' }}
       >
         {numero}
       </span>
 
-      <p className="flex-1 min-w-[240px] text-sm leading-snug" style={{ color: '#D8D9DB' }}>
+      <p className="flex-1 min-w-[240px] text-sm leading-snug" style={{ color: 'var(--text-2)' }}>
         {item.exigence_text}
         {item.suggestion_ia && (
-          <span className="block text-xs mt-0.5 italic" style={{ color: '#B4B5B8' }}>
+          <span className="block text-xs mt-0.5 italic" style={{ color: 'var(--text-2)' }}>
             💡 {item.suggestion_ia}
           </span>
         )}
@@ -659,7 +659,7 @@ function ExigenceLigne({
       <div className="flex min-w-0 max-w-full items-center gap-2 ml-auto flex-wrap justify-end">
         {aUneSource && (
           <>
-            <span className="basis-full text-xs sm:basis-auto" style={{ color: '#959597' }}>
+            <span className="basis-full text-xs sm:basis-auto" style={{ color: 'var(--text-3)' }}>
               {item.source_document}{page ? ` · page ${page}` : ''}
             </span>
             <button
@@ -684,7 +684,7 @@ function ExigenceLigne({
         ) : (
           <span
             className="px-2 py-0.5 rounded-md text-xs font-medium whitespace-nowrap"
-            style={{ background: 'rgba(149,149,151,0.08)', color: '#959597' }}
+            style={{ background: 'color-mix(in srgb, var(--text-3) 8%, transparent)', color: 'var(--text-3)' }}
           >
             Souhaitée
           </span>

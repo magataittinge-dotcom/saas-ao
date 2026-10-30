@@ -47,8 +47,8 @@ function SourceLink({ source, onOpen }: { source: FieldSource | null; onOpen: (s
     <button
       onClick={() => onOpen(source)}
       title={`Voir la source — ${source.document}`}
-      className="rounded p-0.5 align-middle transition-colors"
-      style={{ color: '#909195' }}
+      className="cible-libre cible-etendue rounded p-0.5 align-middle transition-colors"
+      style={{ color: 'var(--text-3)' }}
     >
       <ExternalLink size={11} />
     </button>
@@ -67,10 +67,10 @@ function Tile({ icon, label, accent, wide, children }: {
   return (
     <div className={`glass-card top-lit px-4 py-3 ${wide ? 'sm:col-span-2' : ''}`}>
       <p className="microlabel mb-1.5 flex items-center gap-1.5">
-        <span style={{ color: accent ?? '#909195' }}>{icon}</span>
+        <span style={{ color: accent ?? 'var(--text-3)' }}>{icon}</span>
         {label}
       </p>
-      <div className="text-[15px] font-semibold leading-snug" style={{ color: accent ?? '#F7F8F8' }}>
+      <div className="text-[15px] font-semibold leading-snug" style={{ color: accent ?? 'var(--text-1)' }}>
         {children}
       </div>
     </div>
@@ -109,18 +109,18 @@ export default function CriticalBanner({ projectId, onOpenSource }: Props) {
         key="remise"
         icon={<Calendar size={13} />}
         label="Remise des offres"
-        accent={passed ? '#F58E86' : urgent ? '#D9A441' : undefined}
+        accent={passed ? 'var(--danger-fg)' : urgent ? 'var(--warning-fg)' : undefined}
       >
         <span>{formatFr(date)}</span>
-        {heure && <span style={{ color: '#B4B5B8' }}> · {heure}</span>}
+        {heure && <span style={{ color: 'var(--text-2)' }}> · {heure}</span>}
         {echeance.etat !== 'sans_date' && (
           <span
             className="num-mono ml-2 rounded-full px-1.5 py-0.5 align-middle text-xs font-bold whitespace-nowrap"
             style={passed
-              ? { background: 'rgba(245,142,134,0.10)', color: '#F58E86' }
+              ? { background: 'color-mix(in srgb, var(--danger-fg) 10%, transparent)', color: 'var(--danger-fg)' }
               : urgent
                 ? { background: 'var(--warn-bg)', color: 'var(--warn)' }
-                : { background: 'rgba(255,255,255,0.10)', color: '#F7F8F8' }}
+                : { background: 'color-mix(in srgb, var(--text-1) 10%, transparent)', color: 'var(--text-1)' }}
           >
             {echeance.libelle}
           </span>
@@ -138,7 +138,7 @@ export default function CriticalBanner({ projectId, onOpenSource }: Props) {
         key="visite"
         icon={<MapPin size={13} />}
         label={`Visite ${oblig ? 'obligatoire' : 'facultative'}`}
-        accent={oblig && !visite.date ? '#D9A441' : undefined}
+        accent={oblig && !visite.date ? 'var(--warning-fg)' : undefined}
       >
         {visite.date ? formatFr(visite.date) : (oblig ? 'À planifier' : 'Possible')}
         {' '}<SourceLink source={f.visite_site.source} onOpen={onOpenSource} />
@@ -165,8 +165,8 @@ export default function CriticalBanner({ projectId, onOpenSource }: Props) {
     tiles.push(
       <Tile key="penalites" icon={<Shield size={13} />} label="Pénalités de retard" wide>
         {retard && <span>{retard}</span>}
-        {retard && plafond && <span style={{ color: '#909195' }}> · </span>}
-        {plafond && <span style={{ color: '#B4B5B8' }}>plafond {plafond}</span>}
+        {retard && plafond && <span style={{ color: 'var(--text-3)' }}> · </span>}
+        {plafond && <span style={{ color: 'var(--text-2)' }}>plafond {plafond}</span>}
         {' '}<SourceLink source={f.penalites.source} onOpen={onOpenSource} />
       </Tile>,
     )

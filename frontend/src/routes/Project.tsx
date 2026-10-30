@@ -60,7 +60,7 @@ export default function Project() {
   }
 
   return (
-    <div className="animate-fade-in max-w-6xl mx-auto">
+    <div className="page-ao animate-fade-in max-w-6xl mx-auto">
       {/* ── Bandeau contexte AO — qui, quoi, pour quand (R1) ───────── */}
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
