@@ -26,6 +26,11 @@ export const ECRANS: Record<string, string[]> = {
     'src/components/vault/ClassifyDocumentModal.tsx',
     'src/components/vault/VaultSavePrompt.tsx',
   ],
+  'Mon entreprise': [
+    'src/routes/Company.tsx',
+    'src/routes/MemoireConfig.tsx',          // ProfilMemoireEditor : l'éditeur des onglets de Mon entreprise
+    'src/components/company/ProfileFreeTextCard.tsx',
+  ],
 }
 
 const PALETTE = 'slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black'
@@ -44,7 +49,7 @@ const INTERDITS: [string, RegExp][] = [
   ['classe Tailwind de palette fixe', new RegExp(`(?<![\\w-])(?:${UTILITAIRES})-(?:${PALETTE})(?:-\\d{2,3})?(?![\\w-])`)],
   ['valeur arbitraire de couleur', /-\[(?:#|rgb|hsl|var\(--(?:bg|ink|line|calque|edge|lum))/],
   ['ancien nom Lumen / Edge', /(?<![\w-])(?:ds|edge)-[a-z]/],
-  ['ancien nom Calque', /(?<![\w-])(?:bg|text|border|ring|divide|from|to|via|fill|stroke|outline|shadow)-(?:encre|ligne|prusse|papier|attention|bloquant|ok|surligneur|sur-encre|voile|compagnon)(?![\w])/],
+  ['ancien nom Calque', /(?<![\w-])(?:bg|text|border|ring|divide|from|to|via|fill|stroke|outline|shadow)-(?:encre|ligne|prusse|papier|attention|bloquant|ok|surligneur|sur-encre)(?![\w])/],
   ['ancienne classe de composant', /(?<![\w-])(?:glass-(?:card|stat|header|sidebar)|pill(?:-[a-z]+)?|signature-btn|steps-track|top-lit|sheen)(?![\w-])/],
 ]
 

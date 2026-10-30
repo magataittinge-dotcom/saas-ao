@@ -7,6 +7,10 @@ import { useAuthStore } from '@/stores/authStore'
 import { api } from '@/services/api'
 import { ProfilMemoireEditor } from './MemoireConfig'
 import ProfileFreeTextCard from '@/components/company/ProfileFreeTextCard'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Input, Textarea } from '@/components/ui/input'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { Organization } from '@/types'
 
 const GMAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
@@ -36,71 +40,67 @@ export default function Company() {
   const [tab, setTab] = useState<TabId>('identite')
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex items-center gap-3">
-        <Building size={24} style={{ color: '#E4E9F2' }} />
+        <Building size={24} className="text-accent-text" aria-hidden />
         <div>
-          <h1 className="text-2xl font-bold text-ds-text">Mon entreprise</h1>
-          <p className="text-sm text-ds-text-2">
+          <h1 className="font-display text-h6 text-fg">Mon entreprise</h1>
+          <p className="text-sm text-fg-2">
             Votre profil vivant — renseigné une fois, réutilisé par chaque mémoire technique
           </p>
         </div>
       </div>
 
-      {/* Onglets */}
-      <div className="flex rounded-lg overflow-hidden" style={{ border: '1px solid rgba(186,205,234,.13)' }}>
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className="flex-1 px-3 py-2.5 text-sm font-medium transition-colors"
-            style={{
-              background: tab === t.id ? 'rgba(228,233,242,0.10)' : '#151A23',
-              color: tab === t.id ? '#F4F6FA' : '#9BA4B5',
-              borderRight: '1px solid rgba(186,205,234,.13)',
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {/* Onglets : Identité / Moyens / Certifications (le libellé long passe à la ligne au téléphone) */}
+      <Tabs value={tab} onValueChange={(v) => setTab(v as TabId)}>
+        <TabsList className="flex w-full overflow-visible rounded-xl">
+          {TABS.map((t) => (
+            <TabsTrigger key={t.id} value={t.id} className="h-auto min-h-9 flex-1 whitespace-normal rounded-lg px-2 py-1.5 text-center leading-tight [@media(pointer:coarse)]:min-h-11">
+              {t.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-      {/* C7 — texte libre → Haiku structure → validation avant écriture */}
-      <ProfileFreeTextCard />
+        <TabsContent value={tab} className="mt-6 space-y-6">
+          {/* C7 — texte libre → Haiku structure → validation avant écriture */}
+          <ProfileFreeTextCard />
 
-      {/* Identité : coordonnées légales de l'org (Sirene) + section entreprise */}
-      {tab === 'identite' && <OrganizationIdentityForm />}
+          {/* Identité : coordonnées légales de l'org (Sirene) + section entreprise */}
+          {tab === 'identite' && <OrganizationIdentityForm />}
 
-      {/* Certifications & références : accès coffre-fort + références */}
-      {tab === 'certifs' && (
-        <div className="grid sm:grid-cols-2 gap-3">
-          <Link to="/vault"
-            className="glass-card p-4 flex items-center gap-3 hover:border-[rgba(228,233,242,0.25)] transition-colors no-underline">
-            <Archive size={18} style={{ color: '#E4E9F2' }} />
-            <div>
-              <p className="text-sm font-semibold text-ds-text">Certifications & attestations</p>
-              <p className="text-xs text-ds-text-2">Qualibat, RGE, CACES… dans votre coffre-fort</p>
+          {/* Certifications & références : accès coffre-fort + références */}
+          {tab === 'certifs' && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Link to="/vault" className={LIEN_CARTE}>
+                <Archive size={18} className="text-accent-text" aria-hidden />
+                <div>
+                  <p className="text-sm font-semibold text-fg">Certifications & attestations</p>
+                  <p className="text-xs text-fg-2">Qualibat, RGE, CACES… dans votre coffre-fort</p>
+                </div>
+              </Link>
+              <Link to="/references" className={LIEN_CARTE}>
+                <Award size={18} className="text-accent-text" aria-hidden />
+                <div>
+                  <p className="text-sm font-semibold text-fg">Mes références chantiers</p>
+                  <p className="text-xs text-fg-2">Citées dans les mémoires, classées par pertinence</p>
+                </div>
+              </Link>
             </div>
-          </Link>
-          <Link to="/references"
-            className="glass-card p-4 flex items-center gap-3 hover:border-[rgba(228,233,242,0.25)] transition-colors no-underline">
-            <Award size={18} style={{ color: '#E4E9F2' }} />
-            <div>
-              <p className="text-sm font-semibold text-ds-text">Mes références chantiers</p>
-              <p className="text-xs text-ds-text-2">Citées dans les mémoires, classées par pertinence</p>
-            </div>
-          </Link>
-        </div>
-      )}
+          )}
 
-      {/* Profil mémoire — sections filtrées par onglet, une seule source de vérité */}
-      <ProfilMemoireEditor
-        visibleSections={TAB_SECTIONS[tab]}
-        showImport={tab === 'certifs'}
-      />
+          {/* Profil mémoire — sections filtrées par onglet, une seule source de vérité */}
+          <ProfilMemoireEditor
+            visibleSections={TAB_SECTIONS[tab]}
+            showImport={tab === 'certifs'}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
+
+// Carte-lien : la surface de carte du socle, survol et focus comme une carte interactive.
+const LIEN_CARTE = 'flex items-center gap-3 rounded-carte bg-surface-1 p-4 text-fg no-underline transition-[background-color,box-shadow] duration-base ease-lien hover:bg-surface-2 hover:shadow-card'
 
 // ─── Identité légale (Organization — pré-remplie par Sirene) ─────────────────
 
@@ -131,53 +131,45 @@ function OrganizationIdentityForm() {
   ]
 
   return (
-    <form onSubmit={handleSubmit((data) => save(data))} className="glass-card p-6 space-y-5">
-      <p className="text-xs text-ds-text-3">
-        Coordonnées légales — pré-remplies depuis le répertoire Sirene à l'inscription.
-      </p>
-      {fields.map(({ key, label, multiline }) => (
-        <div key={key}>
-          <label className="block text-sm font-medium text-ds-text mb-1">{label}</label>
-          {multiline ? (
-            <textarea
-              {...register(key)}
-              rows={4}
-              className="glass-input w-full py-2.5 text-sm"
-              style={{ resize: 'vertical' }}
-            />
-          ) : (
-            <input {...register(key)} className="glass-input w-full py-2.5 text-sm" />
-          )}
+    <Card className="p-6">
+      <form onSubmit={handleSubmit((data) => save(data))} className="space-y-5">
+        <p className="text-xs text-fg-3">
+          Coordonnées légales — pré-remplies depuis le répertoire Sirene à l'inscription.
+        </p>
+        {fields.map(({ key, label, multiline }) => (
+          <div key={key}>
+            <label htmlFor={`org-${key}`} className="mb-1 block text-sm font-medium text-fg">{label}</label>
+            {multiline ? (
+              <Textarea id={`org-${key}`} {...register(key)} rows={4} className="resize-y py-2.5" />
+            ) : (
+              <Input id={`org-${key}`} {...register(key)} className="py-2.5" />
+            )}
 
-          {key === 'address' && GMAPS_KEY && watchedAddress.trim().length > 5 && !mapError && (
-            <div className="mt-3 rounded-lg overflow-hidden border border-[#1C222D]">
-              <img
-                src={staticMapUrl(watchedAddress)}
-                alt="Aperçu carte"
-                className="w-full h-auto"
-                loading="lazy"
-                onError={() => setMapError(true)}
-              />
-              <div className="flex items-center gap-1.5 px-3 py-2 text-xs text-ds-text-3"
-                style={{ background: '#1C222D' }}>
-                <MapPin size={12} />
-                Aperçu de la carte insérée dans vos mémoires techniques
+            {key === 'address' && GMAPS_KEY && watchedAddress.trim().length > 5 && !mapError && (
+              <div className="mt-3 overflow-hidden rounded-lg border border-bord-2">
+                <img
+                  src={staticMapUrl(watchedAddress)}
+                  alt="Aperçu carte"
+                  className="h-auto w-full"
+                  loading="lazy"
+                  onError={() => setMapError(true)}
+                />
+                <div className="flex items-center gap-1.5 bg-surface-0 px-3 py-2 text-xs text-fg-3">
+                  <MapPin size={12} aria-hidden />
+                  Aperçu de la carte insérée dans vos mémoires techniques
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      ))}
+            )}
+          </div>
+        ))}
 
-      <div className="flex justify-end pt-2">
-        <button
-          type="submit"
-          disabled={isPending}
-          className="btn-primary flex items-center gap-2 py-2 px-5 disabled:opacity-60"
-        >
-          <Save size={16} />
-          {isPending ? 'Enregistrement...' : 'Enregistrer'}
-        </button>
-      </div>
-    </form>
+        <div className="flex justify-end pt-2">
+          <Button type="submit" disabled={isPending}>
+            <Save size={16} aria-hidden />
+            {isPending ? 'Enregistrement...' : 'Enregistrer'}
+          </Button>
+        </div>
+      </form>
+    </Card>
   )
 }

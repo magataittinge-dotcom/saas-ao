@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { cloneElement, isValidElement, useId, useState, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   Building,
@@ -20,6 +20,10 @@ import axios from 'axios'
 import { api } from '@/services/api'
 import { cn } from '@/lib/utils'
 import { MemoireSkeleton } from '@/components/skeletons'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Input, Textarea } from '@/components/ui/input'
 import type { MemoireConfig, CAEntry, PosteCle } from '@/types'
 
 // ─── Section definitions ───────────────────────────────────────────────────────
@@ -79,6 +83,10 @@ const FIELD_LABELS: Record<string, string> = {
   fournisseurs_principaux: 'Fournisseurs principaux',
 }
 
+// Boutons d'édition des listes (année, poste) : lien d'accent, retrait discret ; cibles 44 px au téléphone.
+const BOUTON_AJOUT = 'inline-flex items-center gap-1.5 rounded-xs text-xs font-medium text-accent-text transition-colors duration-base ease-lien hover:underline [@media(pointer:coarse)]:min-h-11'
+const BOUTON_RETRAIT = 'grid size-9 shrink-0 place-items-center rounded-md text-fg-3 transition-colors duration-base ease-lien hover:bg-surface-0 hover:text-danger [@media(pointer:coarse)]:size-11'
+
 // ─── Helper: count filled fields ──────────────────────────────────────────────
 
 function countFilled(data: Partial<MemoireConfig>, fieldIds: string[]): [number, number] {
@@ -133,33 +141,30 @@ function ImportProgress({ isImporting }: { isImporting: boolean }) {
   const offset = CIRC * (1 - progress / 100)
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div
-        className="rounded-2xl shadow-2xl p-10 flex flex-col items-center gap-5 min-w-64"
-        style={{ background: '#151A23', border: '1px solid rgba(120,130,149,0.2)' }}
-      >
-        <div className="relative w-40 h-40">
-          <svg className="w-full h-full -rotate-90" viewBox="0 0 160 160">
-            <circle cx="80" cy="80" r={RADIUS} fill="none" stroke="rgba(120,130,149,0.2)" strokeWidth="10" />
+    <div role="status" aria-live="polite" className="fixed inset-0 z-50 flex items-center justify-center bg-voile backdrop-blur-sm">
+      <div className="flex min-w-64 flex-col items-center gap-5 rounded-2xl border border-bord-2 bg-surface-pop p-10 shadow-pop">
+        <div className="relative h-40 w-40">
+          <svg className="h-full w-full -rotate-90" viewBox="0 0 160 160" aria-hidden>
+            <circle cx="80" cy="80" r={RADIUS} fill="none" className="stroke-surface-2" strokeWidth="10" />
             <circle
               cx="80" cy="80" r={RADIUS} fill="none"
-              stroke="#E4E9F2" strokeWidth="10" strokeLinecap="round"
+              className="stroke-accent-ui" strokeWidth="10" strokeLinecap="round"
               strokeDasharray={CIRC} strokeDashoffset={offset}
               style={{ transition: 'stroke-dashoffset 0.35s ease' }}
             />
           </svg>
           <div className="absolute inset-0 flex items-center justify-center">
-            <span className="text-3xl font-bold text-ds-text">{progress}%</span>
+            <span className="font-display text-3xl font-bold text-fg">{progress}%</span>
           </div>
         </div>
-        <div className="text-center space-y-1">
-          <p className="text-base font-semibold text-ds-text">
+        <div className="space-y-1 text-center">
+          <p className="text-base font-semibold text-fg">
             {progress < 20 ? 'Lecture du document...' :
              progress < 60 ? 'Analyse par Synorix IA...' :
              progress < 90 ? 'Extraction des informations...' :
              'Finalisation...'}
           </p>
-          <p className="text-sm text-ds-text-2">L'IA extrait vos données (~15s)</p>
+          <p className="text-sm text-fg-2">L'IA extrait vos données (~15s)</p>
         </div>
       </div>
     </div>
@@ -213,34 +218,42 @@ function ImportDialog({ onClose, onImported }: ImportDialogProps) {
   return (
     <>
       <ImportProgress isImporting={isPending} />
-      <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div
+        className="fixed inset-0 z-40 flex items-center justify-center bg-voile backdrop-blur-sm"
+        onKeyDown={(e) => { if (e.key === 'Escape') onClose() }}
+      >
         <div
-          className="rounded-2xl shadow-2xl w-full max-w-md mx-4"
-          style={{ background: '#151A23', border: '1px solid rgba(120,130,149,0.2)' }}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="import-titre"
+          className="mx-4 w-full max-w-md rounded-2xl border border-bord-2 bg-surface-pop shadow-pop"
         >
-          {/* Header */}
-          <div
-            className="flex items-center justify-between px-6 py-4"
-            style={{ borderBottom: '1px solid rgba(120,130,149,0.15)' }}
-          >
+          {/* En-tête */}
+          <div className="flex items-center justify-between border-b border-bord px-6 py-4">
             <div className="flex items-center gap-2">
-              <Sparkles size={18} style={{ color: '#E4E9F2' }} />
-              <h2 className="font-semibold text-ds-text">Importer un mémoire existant</h2>
+              <Sparkles size={18} className="text-accent-text" aria-hidden />
+              <h2 id="import-titre" className="font-semibold text-fg">Importer un mémoire existant</h2>
             </div>
-            <button onClick={onClose} className="text-ds-text-2 hover:text-ds-text transition-colors">
-              <X size={18} />
+            <button
+              onClick={onClose}
+              aria-label="Fermer"
+              className="grid size-9 place-items-center rounded-md text-fg-2 transition-colors duration-base ease-lien hover:bg-surface-1 hover:text-fg [@media(pointer:coarse)]:size-11"
+            >
+              <X size={18} aria-hidden />
             </button>
           </div>
 
-          {/* Body */}
-          <div className="px-6 py-5 space-y-4">
-            <p className="text-sm text-ds-text-2">
+          {/* Corps */}
+          <div className="space-y-4 px-6 py-5">
+            <p className="text-sm text-fg-2">
               Déposez un mémoire technique existant (.docx ou .pdf).
               Synorix IA extraira automatiquement toutes les informations et pré-remplira le formulaire.
             </p>
 
-            {/* Drop zone */}
+            {/* Zone de dépôt */}
             <div
+              role="button"
+              tabIndex={0}
               onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
               onDragLeave={() => setDragOver(false)}
               onDrop={(e) => {
@@ -250,21 +263,11 @@ function ImportDialog({ onClose, onImported }: ImportDialogProps) {
                 if (f) handleFile(f)
               }}
               onClick={() => fileInputRef.current?.click()}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click() } }}
               className={cn(
-                'border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors',
+                'cursor-pointer rounded-xl border-2 border-dashed p-8 text-center transition-colors duration-base ease-lien',
+                dragOver || file ? 'border-accent-ring bg-accent-tint' : 'border-input bg-surface-1 hover:border-fg-3',
               )}
-              style={{
-                borderColor: dragOver
-                  ? '#E4E9F2'
-                  : file
-                  ? '#E4E9F2'
-                  : 'rgba(120,130,149,0.35)',
-                background: dragOver
-                  ? 'rgba(228,233,242,0.08)'
-                  : file
-                  ? 'rgba(228,233,242,0.08)'
-                  : '#1C222D',
-              }}
             >
               <input
                 ref={fileInputRef}
@@ -275,46 +278,35 @@ function ImportDialog({ onClose, onImported }: ImportDialogProps) {
               />
               {file ? (
                 <div className="flex flex-col items-center gap-2">
-                  <CheckCircle2 size={28} style={{ color: '#6EE7A8' }} />
-                  <p className="text-sm font-medium" style={{ color: '#F4F6FA' }}>{file.name}</p>
-                  <p className="text-xs text-ds-text-3">{(file.size / 1024).toFixed(0)} Ko</p>
+                  <CheckCircle2 size={28} className="text-success" aria-hidden />
+                  <p className="text-sm font-medium text-fg">{file.name}</p>
+                  <p className="text-xs text-fg-3">{(file.size / 1024).toFixed(0)} Ko</p>
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-2">
-                  <Upload size={28} className="text-ds-text-3 opacity-50" />
-                  <p className="text-sm font-medium text-ds-text-2">Glissez votre fichier ici</p>
-                  <p className="text-xs text-ds-text-3">ou cliquez pour parcourir • .docx, .pdf</p>
+                  <Upload size={28} className="text-fg-3" aria-hidden />
+                  <p className="text-sm font-medium text-fg-2">Glissez votre fichier ici</p>
+                  <p className="text-xs text-fg-3">ou cliquez pour parcourir • .docx, .pdf</p>
                 </div>
               )}
             </div>
 
             {error && (
-              <p className="text-sm text-red-400 rounded-lg px-3 py-2"
-                style={{ background: 'rgba(245,142,134,0.1)', border: '1px solid rgba(245,142,134,0.3)' }}>
+              <p role="alert" className="rounded-lg border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
                 {error}
               </p>
             )}
           </div>
 
-          {/* Footer */}
-          <div
-            className="flex items-center justify-end gap-3 px-6 py-4"
-            style={{ borderTop: '1px solid rgba(120,130,149,0.15)' }}
-          >
-            <button
-              onClick={onClose}
-              className="btn-glass text-sm px-4 py-2"
-            >
+          {/* Pied */}
+          <div className="flex items-center justify-end gap-3 border-t border-bord px-6 py-4">
+            <Button variant="outline" onClick={onClose}>
               Annuler
-            </button>
-            <button
-              onClick={() => file && doImport(file)}
-              disabled={!file || isPending}
-              className="btn-primary flex items-center gap-2 text-sm font-semibold py-2 px-5 disabled:opacity-60"
-            >
-              <Sparkles size={15} />
+            </Button>
+            <Button onClick={() => file && doImport(file)} disabled={!file || isPending}>
+              <Sparkles size={15} aria-hidden />
               {isPending ? "Extraction en cours..." : "Importer et pré-remplir"}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -342,60 +334,37 @@ function Section({
   const [filled, total] = countFilled(data, section.fields)
   const Icon = section.icon
   const complete = filled === total
+  const panneauId = useId()
 
   if (hidden) return null
 
   return (
-    <div
-      className="rounded-xl overflow-hidden"
-      style={{ border: '1px solid rgba(120,130,149,0.2)' }}
-    >
+    <div className="overflow-hidden rounded-xl border border-bord-2">
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-5 py-4 transition-colors text-left"
-        style={{ background: '#1C222D' }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = '#1C222D')}
-        onMouseLeave={(e) => (e.currentTarget.style.background = '#1C222D')}
+        aria-expanded={isOpen}
+        aria-controls={panneauId}
+        className="flex w-full items-center justify-between bg-surface-1 px-5 py-4 text-left transition-colors duration-base ease-lien hover:bg-surface-2"
       >
         <div className="flex items-center gap-3">
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{
-              background: complete ? 'rgba(228,233,242,0.10)' : 'rgba(228,233,242,0.15)',
-            }}
-          >
-            <Icon size={16} style={{ color: complete ? '#E4E9F2' : '#E4E9F2' }} />
+          <div className="flex size-8 items-center justify-center rounded-lg bg-accent-tint">
+            <Icon size={16} className="text-accent-text" aria-hidden />
           </div>
-          <span className="font-medium text-ds-text">{section.label}</span>
+          <span className="font-medium text-fg">{section.label}</span>
         </div>
         <div className="flex items-center gap-3">
-          <span
-            className="text-xs font-medium px-2 py-0.5 rounded-full"
-            style={
-              complete
-                ? { background: 'rgba(228,233,242,0.10)', color: '#F4F6FA' }
-                : filled > 0
-                ? { background: 'rgba(120,130,149,0.08)', color: '#9BA4B5' }
-                : { background: 'rgba(120,130,149,0.15)', color: '#9BA4B5' }
-            }
-          >
+          <Badge variant={complete ? 'success' : filled > 0 ? 'accent' : 'neutral'} className="tabular-nums">
             {filled}/{total}
-          </span>
+          </Badge>
           {isOpen
-            ? <ChevronUp size={16} className="text-ds-text-2" />
-            : <ChevronDown size={16} className="text-ds-text-2" />
+            ? <ChevronUp size={16} className="text-fg-2" aria-hidden />
+            : <ChevronDown size={16} className="text-fg-2" aria-hidden />
           }
         </div>
       </button>
 
       {isOpen && (
-        <div
-          className="px-5 pb-5 pt-2 space-y-4"
-          style={{
-            background: '#1C222D',
-            borderTop: '1px solid rgba(120,130,149,0.15)',
-          }}
-        >
+        <div id={panneauId} className="space-y-4 border-t border-bord bg-surface-1 px-5 pb-5 pt-4">
           {children}
         </div>
       )}
@@ -403,14 +372,18 @@ function Section({
   )
 }
 
-function Field({ label, optional, children }: { label: string; optional?: boolean; children: React.ReactNode }) {
+// Champ : l'étiquette est reliée au champ (id) ; `groupe` = plusieurs champs sous un même intitulé (pas de « for »).
+function Field({ label, optional, groupe, children }: { label: string; optional?: boolean; groupe?: boolean; children: React.ReactElement | React.ReactNode }) {
+  const id = useId()
+  const enfant = !groupe && isValidElement(children) ? cloneElement(children as React.ReactElement<{ id?: string }>, { id }) : children
+  const Tete = groupe ? 'span' : 'label'
   return (
     <div>
-      <label className="flex items-center justify-between text-sm font-medium text-ds-text-2 mb-1">
+      <Tete {...(groupe ? {} : { htmlFor: id })} className="mb-1 flex items-center justify-between text-sm font-medium text-fg-2">
         <span>{label}</span>
-        {optional && <span className="text-xs font-normal text-ds-text-3">optionnel</span>}
-      </label>
-      {children}
+        {optional && <span className="text-xs font-normal text-fg-3">optionnel</span>}
+      </Tete>
+      {enfant}
     </div>
   )
 }
@@ -509,7 +482,7 @@ export function ProfilMemoireEditor({
   ]
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 pb-24 animate-fade-in">
+    <div className="mx-auto max-w-3xl animate-fade-in space-y-6">
       {/* Import dialog */}
       {showImportDialog && (
         <ImportDialog
@@ -520,67 +493,61 @@ export function ProfilMemoireEditor({
 
       {/* Import d'un mémoire de référence (onglet Certifications & références) */}
       {showImport && (
-        <div className="flex items-center justify-between gap-4">
-          <p className="text-sm text-ds-text-2">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <p className="text-sm text-fg-2">
             Un mémoire déjà rédigé ? Importez-le : l'IA pré-remplit votre profil.
           </p>
-          <button
-            onClick={() => setShowImportDialog(true)}
-            className="btn-glass flex items-center gap-2 text-sm font-medium py-2 px-4 shrink-0"
-          >
-            <Upload size={15} />
+          <Button variant="outline" onClick={() => setShowImportDialog(true)} className="shrink-0">
+            <Upload size={15} aria-hidden />
             Importer un mémoire
-          </button>
+          </Button>
         </div>
       )}
 
       {/* Import success banner */}
       {importBanner && (
-        <div
-          className="flex items-center justify-between rounded-xl px-4 py-3"
-          style={{
-            background: 'rgba(228,233,242,0.10)',
-            border: '1px solid rgba(228,233,242,0.25)',
-          }}
-        >
+        <div role="status" className="flex items-center justify-between gap-3 rounded-xl border border-accent-tint-2 bg-accent-tint px-4 py-3">
           <div className="flex items-center gap-2">
-            <CheckCircle2 size={18} style={{ color: '#E4E9F2' }} />
-            <p className="text-sm font-medium" style={{ color: '#F4F6FA' }}>
+            <CheckCircle2 size={18} className="shrink-0 text-accent-text" aria-hidden />
+            <p className="text-sm font-medium text-fg">
               {importBanner.count}/18 champs pré-remplis par l'IA — vérifiez et complétez avant de sauvegarder
             </p>
           </div>
-          <button onClick={() => setImportBanner(null)} style={{ color: '#9BA4B5' }} className="opacity-70 hover:opacity-100 transition-opacity">
-            <X size={16} />
+          <button
+            onClick={() => setImportBanner(null)}
+            aria-label="Fermer le message"
+            className="grid size-9 shrink-0 place-items-center rounded-md text-fg-2 transition-colors duration-base ease-lien hover:bg-surface-0 hover:text-fg [@media(pointer:coarse)]:size-11"
+          >
+            <X size={16} aria-hidden />
           </button>
         </div>
       )}
 
-      {/* Progress bar */}
-      <div className="glass-card p-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-ds-text-2">Configuration complétée à {pct}%</span>
-          <span className="text-xs text-ds-text-3">{totalFilled}/{totalFields} champs</span>
+      {/* Avancement du profil */}
+      <Card className="p-4">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-sm font-medium text-fg-2">Configuration complétée à {pct}%</span>
+          <span className="text-xs text-fg-3">{totalFilled}/{totalFields} champs</span>
         </div>
         <div
-          className="h-2 rounded-full overflow-hidden"
-          style={{ background: 'rgba(120,130,149,0.2)' }}
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={pct}
+          aria-label="Avancement du profil mémoire"
+          className="h-2 overflow-hidden rounded-full bg-surface-2"
         >
           <div
-            className="h-full rounded-full transition-all duration-500"
-            style={{
-              width: `${pct}%`,
-              background: pct === 100
-                ? '#E4E9F2'
-                : `linear-gradient(to right, #E4E9F2, ${pct > 60 ? '#E4E9F2' : '#9FA9BC'})`,
-            }}
+            className={cn('h-full rounded-full transition-[width] duration-morph ease-lien', pct === 100 ? 'bg-success' : 'bg-accent-ui')}
+            style={{ width: `${pct}%` }}
           />
         </div>
         {pct === 100 && (
-          <p className="text-xs font-medium mt-2 flex items-center gap-1" style={{ color: '#6EE7A8' }}>
-            <CheckCircle2 size={13} /> Profil mémoire complet — la génération sera optimale
+          <p className="mt-2 flex items-center gap-1 text-xs font-medium text-success">
+            <CheckCircle2 size={13} aria-hidden /> Profil mémoire complet — la génération sera optimale
           </p>
         )}
-      </div>
+      </Card>
 
       {/* Accordion sections */}
       <div className="space-y-3">
@@ -588,63 +555,58 @@ export function ProfilMemoireEditor({
         {/* ENTREPRISE */}
         <Section section={SECTIONS[0]} data={form} isOpen={openSections.has('entreprise')} onToggle={() => toggleSection('entreprise')} hidden={!shown('entreprise')}>
           <Field label={FIELD_LABELS.nom_entreprise}>
-            <input type="text" className="glass-input w-full py-2.5 text-sm" placeholder="Ex: SARL DUPONT BTP"
+            <Input type="text" className="py-2.5" placeholder="Ex: SARL DUPONT BTP"
               value={form.nom_entreprise ?? ''} onChange={(e) => set('nom_entreprise', e.target.value)} />
           </Field>
           <div className="grid grid-cols-2 gap-4">
             <Field label={FIELD_LABELS.date_creation} optional>
-              <input type="text" className="glass-input w-full py-2.5 text-sm" placeholder="Ex: 2005"
+              <Input type="text" className="py-2.5" placeholder="Ex: 2005"
                 value={form.date_creation ?? ''} onChange={(e) => set('date_creation', e.target.value)} />
             </Field>
             <Field label={FIELD_LABELS.gerant_nom}>
-              <input type="text" className="glass-input w-full py-2.5 text-sm" placeholder="Jean Dupont"
+              <Input type="text" className="py-2.5" placeholder="Jean Dupont"
                 value={form.gerant_nom ?? ''} onChange={(e) => set('gerant_nom', e.target.value)} />
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <Field label={FIELD_LABELS.gerant_titre} optional>
-              <input type="text" className="glass-input w-full py-2.5 text-sm" placeholder="Gérant, PDG, Directeur..."
+              <Input type="text" className="py-2.5" placeholder="Gérant, PDG, Directeur..."
                 value={form.gerant_titre ?? ''} onChange={(e) => set('gerant_titre', e.target.value)} />
             </Field>
             <Field label={FIELD_LABELS.zone_intervention} optional>
-              <input type="text" className="glass-input w-full py-2.5 text-sm" placeholder="Ex: Île-de-France, PACA..."
+              <Input type="text" className="py-2.5" placeholder="Ex: Île-de-France, PACA..."
                 value={form.zone_intervention ?? ''} onChange={(e) => set('zone_intervention', e.target.value)} />
             </Field>
           </div>
           <Field label={FIELD_LABELS.historique} optional>
-            <textarea className="glass-input w-full py-2.5 text-sm" rows={4} placeholder="Fondée en 2005, notre entreprise..."
-              style={{ resize: 'vertical' }}
+            <Textarea className="resize-y py-2.5" rows={4} placeholder="Fondée en 2005, notre entreprise..."
               value={form.historique ?? ''} onChange={(e) => set('historique', e.target.value)} />
           </Field>
           <Field label={FIELD_LABELS.activites}>
-            <textarea className="glass-input w-full py-2.5 text-sm" rows={3} placeholder="Maçonnerie, gros œuvre, rénovation..."
-              style={{ resize: 'vertical' }}
+            <Textarea className="resize-y py-2.5" rows={3} placeholder="Maçonnerie, gros œuvre, rénovation..."
               value={form.activites ?? ''} onChange={(e) => set('activites', e.target.value)} />
           </Field>
 
-          <Field label={FIELD_LABELS.chiffre_affaires} optional>
+          <Field label={FIELD_LABELS.chiffre_affaires} optional groupe>
             <div className="space-y-2">
               {ca.map((entry, i) => (
                 <div key={i} className="flex gap-2 items-center">
-                  <input type="text" className="glass-input w-full py-2.5 text-sm w-24" placeholder="Année"
+                  <Input type="text" aria-label="Année" className="w-24 py-2.5" placeholder="Année"
                     value={entry.annee}
                     onChange={(e) => set('chiffre_affaires', ca.map((r, j) => j === i ? { ...r, annee: e.target.value } : r))} />
-                  <input type="text" className="glass-input w-full py-2.5 text-sm" placeholder="Ex: 1 200 000 €"
+                  <Input type="text" aria-label="Montant" className="py-2.5" placeholder="Ex: 1 200 000 €"
                     value={entry.montant}
                     onChange={(e) => set('chiffre_affaires', ca.map((r, j) => j === i ? { ...r, montant: e.target.value } : r))} />
                   {ca.length > 1 && (
                     <button onClick={() => set('chiffre_affaires', ca.filter((_, j) => j !== i))}
-                      className="text-ds-text-3 hover:text-red-400 transition-colors shrink-0"><Trash2 size={14} /></button>
+                      aria-label="Retirer cette année" className={BOUTON_RETRAIT}><Trash2 size={14} aria-hidden /></button>
                   )}
                 </div>
               ))}
-              <button onClick={() => set('chiffre_affaires', [...ca, { annee: '', montant: '' }])}
-                className="flex items-center gap-1.5 text-xs font-medium mt-1 transition-colors"
-                style={{ color: '#E4E9F2' }}
-                onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.8')}
-                onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+              <button type="button" onClick={() => set('chiffre_affaires', [...ca, { annee: '', montant: '' }])}
+                className={cn(BOUTON_AJOUT, 'mt-1')}
               >
-                <Plus size={13} /> Ajouter une année
+                <Plus size={13} aria-hidden /> Ajouter une année
               </button>
             </div>
           </Field>
@@ -653,48 +615,43 @@ export function ProfilMemoireEditor({
         {/* ÉQUIPE */}
         <Section section={SECTIONS[1]} data={form} isOpen={openSections.has('equipe')} onToggle={() => toggleSection('equipe')} hidden={!shown('equipe')}>
           <Field label={FIELD_LABELS.organigramme_description} optional>
-            <textarea className="glass-input w-full py-2.5 text-sm" rows={3} placeholder="1 gérant + 2 conducteurs de travaux + 8 ouvriers..."
-              style={{ resize: 'vertical' }}
+            <Textarea className="resize-y py-2.5" rows={3} placeholder="1 gérant + 2 conducteurs de travaux + 8 ouvriers..."
               value={form.organigramme_description ?? ''} onChange={(e) => set('organigramme_description', e.target.value)} />
           </Field>
-          <Field label={FIELD_LABELS.postes_cles} optional>
+          <Field label={FIELD_LABELS.postes_cles} optional groupe>
             <div className="space-y-3">
               {postes.map((poste, i) => (
                 <div
                   key={i}
-                  className="grid grid-cols-3 gap-2 items-start rounded-lg p-3"
-                  style={{ background: '#151A23', border: '1px solid rgba(120,130,149,0.15)' }}
+                  className="grid grid-cols-1 items-start gap-2 rounded-lg border border-bord bg-surface-0 p-3 sm:grid-cols-3"
                 >
                   <div>
-                    <p className="text-xs text-ds-text-3 mb-1">Poste</p>
-                    <input type="text" className="glass-input w-full py-2.5 text-sm" value={poste.poste}
+                    <p className="mb-1 text-xs text-fg-3">Poste</p>
+                    <Input type="text" aria-label={`Poste ${i + 1} : intitulé`} className="py-2.5" value={poste.poste}
                       onChange={(e) => set('postes_cles', postes.map((p, j) => j === i ? { ...p, poste: e.target.value } : p))} />
                   </div>
                   <div>
-                    <p className="text-xs text-ds-text-3 mb-1">Nom</p>
-                    <input type="text" className="glass-input w-full py-2.5 text-sm" placeholder="Jean Dupont" value={poste.nom}
+                    <p className="mb-1 text-xs text-fg-3">Nom</p>
+                    <Input type="text" aria-label={`Poste ${i + 1} : nom`} className="py-2.5" placeholder="Jean Dupont" value={poste.nom}
                       onChange={(e) => set('postes_cles', postes.map((p, j) => j === i ? { ...p, nom: e.target.value } : p))} />
                   </div>
                   <div className="flex gap-2 items-start">
                     <div className="flex-1">
-                      <p className="text-xs text-ds-text-3 mb-1">Rôle / missions</p>
-                      <input type="text" className="glass-input w-full py-2.5 text-sm" placeholder="Supervision..." value={poste.role}
+                      <p className="mb-1 text-xs text-fg-3">Rôle / missions</p>
+                      <Input type="text" aria-label={`Poste ${i + 1} : rôle et missions`} className="py-2.5" placeholder="Supervision..." value={poste.role}
                         onChange={(e) => set('postes_cles', postes.map((p, j) => j === i ? { ...p, role: e.target.value } : p))} />
                     </div>
                     {postes.length > 1 && (
                       <button onClick={() => set('postes_cles', postes.filter((_, j) => j !== i))}
-                        className="mt-6 text-ds-text-3 hover:text-red-400 transition-colors shrink-0"><Trash2 size={14} /></button>
+                        aria-label="Retirer ce poste" className={cn(BOUTON_RETRAIT, 'mt-6')}><Trash2 size={14} aria-hidden /></button>
                     )}
                   </div>
                 </div>
               ))}
               <button onClick={() => set('postes_cles', [...postes, { poste: '', nom: '', role: '' }])}
-                className="flex items-center gap-1.5 text-xs font-medium transition-colors"
-                style={{ color: '#E4E9F2' }}
-                onMouseEnter={(e) => (e.currentTarget.style.opacity = '0.8')}
-                onMouseLeave={(e) => (e.currentTarget.style.opacity = '1')}
+                className={BOUTON_AJOUT}
               >
-                <Plus size={13} /> Ajouter un poste
+                <Plus size={13} aria-hidden /> Ajouter un poste
               </button>
             </div>
           </Field>
@@ -704,8 +661,7 @@ export function ProfilMemoireEditor({
         <Section section={SECTIONS[2]} data={form} isOpen={openSections.has('moyens')} onToggle={() => toggleSection('moyens')} hidden={!shown('moyens')}>
           {(['moyens_informatiques', 'vehicules', 'materiel'] as const).map((field) => (
             <Field key={field} label={FIELD_LABELS[field]} optional>
-              <textarea className="glass-input w-full py-2.5 text-sm" rows={3}
-                style={{ resize: 'vertical' }}
+              <Textarea className="resize-y py-2.5" rows={3}
                 placeholder={
                   field === 'moyens_informatiques' ? 'AutoCAD, MS Project, tablettes chantier...' :
                   field === 'vehicules' ? '2 camions benne 3.5T, 1 nacelle 12m...' :
@@ -721,8 +677,7 @@ export function ProfilMemoireEditor({
         <Section section={SECTIONS[3]} data={form} isOpen={openSections.has('methodologie')} onToggle={() => toggleSection('methodologie')} hidden={!shown('methodologie')}>
           {(['demarche_qualite', 'procedure_demarrage', 'gestion_securite', 'traitement_dechets', 'mesures_environnementales'] as const).map((field) => (
             <Field key={field} label={FIELD_LABELS[field]} optional>
-              <textarea className="glass-input w-full py-2.5 text-sm" rows={4}
-                style={{ resize: 'vertical' }}
+              <Textarea className="resize-y py-2.5" rows={4}
                 placeholder={
                   field === 'demarche_qualite' ? "Notre démarche qualité repose sur..." :
                   field === 'procedure_demarrage' ? "Dès réception de l'ordre de service, nous..." :
@@ -739,8 +694,7 @@ export function ProfilMemoireEditor({
         {/* FOURNISSEURS */}
         <Section section={SECTIONS[4]} data={form} isOpen={openSections.has('fournisseurs')} onToggle={() => toggleSection('fournisseurs')} hidden={!shown('fournisseurs')}>
           <Field label={FIELD_LABELS.fournisseurs_principaux} optional>
-            <textarea className="glass-input w-full py-2.5 text-sm" rows={4}
-              style={{ resize: 'vertical' }}
+            <Textarea className="resize-y py-2.5" rows={4}
               placeholder="Lafarge Holcim (béton), Point P (matériaux), Kiloutou (location matériel)..."
               value={form.fournisseurs_principaux ?? ''}
               onChange={(e) => set('fournisseurs_principaux', e.target.value)} />
@@ -748,31 +702,21 @@ export function ProfilMemoireEditor({
         </Section>
       </div>
 
-      {/* Sticky save bar */}
-      <div
-        className="fixed bottom-0 left-0 right-0 z-30 backdrop-blur px-6 py-3"
-        style={{
-          background: 'rgba(10,12,17,0.92)',
-          borderTop: '1px solid rgba(120,130,149,0.2)',
-        }}
-      >
-        <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <p className="text-sm text-ds-text-2">
+      {/* Barre d'enregistrement : reste en bas de la zone de défilement (au-dessus des onglets du téléphone) */}
+      <div className="sticky bottom-0 z-20 -mx-3 border-t border-bord-2 bg-[var(--glass-fill)] px-3 py-3 backdrop-blur sm:-mx-4 sm:px-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-fg-2">
             {pct === 100
               ? 'Toutes les sections sont renseignées'
               : `${totalFields - totalFilled} champ${totalFields - totalFilled > 1 ? 's' : ''} restant${totalFields - totalFilled > 1 ? 's' : ''}`}
           </p>
-          <button
-            onClick={() => save()}
-            disabled={isSaving}
-            className="btn-primary flex items-center gap-2 font-semibold py-2.5 px-6 disabled:opacity-60"
-          >
+          <Button onClick={() => save()} disabled={isSaving} size="lg" className="px-6">
             {saveSuccess ? (
-              <><CheckCircle2 size={16} style={{ color: '#6EE7A8' }} />Sauvegardé</>
+              <><CheckCircle2 size={16} aria-hidden />Sauvegardé</>
             ) : (
-              <><Save size={16} />{isSaving ? 'Sauvegarde...' : 'Sauvegarder'}</>
+              <><Save size={16} aria-hidden />{isSaving ? 'Sauvegarde...' : 'Sauvegarder'}</>
             )}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
