@@ -5,7 +5,7 @@ import {
 import type { ChecklistItem } from '@/types'
 import SignatureLigne from '@/components/project/SignatureLigne'
 import NonConcerneBouton, { estNonConcernee, piecesComptees } from '@/components/project/NonConcerne'
-import { comptesPieces, libelleComptes, statutPiece } from '@/lib/statutPiece'
+import { comptesPieces, libelleComptes, noteDepot, statutPiece } from '@/lib/statutPiece'
 
 const F = "'Inter Variable', 'Geist Sans', sans-serif"
 
@@ -119,6 +119,7 @@ function TemplateRow({
 }) {
   const nonConcernee = estNonConcernee(item)
   const statut = statutPiece(item, echeance)
+  const depot = noteDepot(item)
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -177,6 +178,7 @@ function TemplateRow({
         </div>
         {/* Signature : case seulement si elle est demandée, sinon la mention */}
         <SignatureLigne item={item} onToggleSignature={onToggleSignature} />
+        {depot && <p className="piece-note">{depot}</p>}
         {item.details && (
           <p className="text-xs mt-1 leading-relaxed" style={{ color: '#959597' }}>
             {item.details}

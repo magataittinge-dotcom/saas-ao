@@ -3,7 +3,7 @@ import { FolderOpen, FileText, Lock } from 'lucide-react'
 import type { ChecklistItem } from '@/types'
 import SignatureLigne from '@/components/project/SignatureLigne'
 import NonConcerneBouton, { estNonConcernee, piecesComptees } from '@/components/project/NonConcerne'
-import { comptesPieces, libelleComptes, noteValidite, statutPiece } from '@/lib/statutPiece'
+import { comptesPieces, libelleComptes, noteDepot, noteValidite, statutPiece } from '@/lib/statutPiece'
 
 const F = "'Inter Variable', 'Geist Sans', sans-serif"
 
@@ -132,6 +132,7 @@ function VaultRow({
 }) {
   const statut = statutPiece(item, echeance)
   const note = noteValidite(item.document_type_required)
+  const depot = noteDepot(item)
   const isLinked = !!item.linked_document_id
   // Rien de prêt dans le dossier : « Choisir » ; une pièce prête ou à confirmer : « Remplacer »
   const isMissing = statut.code !== 'pret' && statut.code !== 'a-confirmer'
@@ -167,6 +168,7 @@ function VaultRow({
           )}
         </div>
         {note && statut.action && <p className="piece-note">{note}</p>}
+        {depot && <p className="piece-note">{depot}</p>}
         {item.source_in_rc && ['si-concerne', 'facultatif', 'attribution'].includes(statut.code) && (
           <p className="piece-note">Lu dans le RC : « {item.source_in_rc} »</p>
         )}

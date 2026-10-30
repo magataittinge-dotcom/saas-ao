@@ -206,6 +206,7 @@ async def upload_completed_template(
     db.flush()  # need pd.id before updating item
 
     item.completed_project_doc_id = pd.id
+    item.marquer_depose(user)
     item.status = "present"
     if item.details:
         item.details = f"Template complété : {safe_name}"
@@ -278,6 +279,7 @@ def link_vault_document(
         raise HTTPException(status_code=404, detail="Document du coffre-fort introuvable.")
 
     item.linked_document_id = doc.id
+    item.marquer_depose(user)
     item.status = _vault_doc_status(doc)
     db.commit()
     db.refresh(item)
@@ -332,6 +334,7 @@ def patch_checklist_item(
     if payload.unlink:
         item.linked_document_id = None
         item.completed_project_doc_id = None
+        item.effacer_depot()
         if item.status == "present":
             item.status = "manquant"
 

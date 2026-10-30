@@ -254,6 +254,8 @@ def _choix_de(item) -> dict:
         signature_confirmed=bool(item.signature_confirmed),
         status=item.status,
         details=item.details,
+        depose_le=item.depose_le,
+        depose_par_id=item.depose_par_id,
     )
 
 
@@ -270,9 +272,12 @@ def _reprendre_les_choix(item, ancien: Optional[dict], docs_par_id: dict, comple
         if doc is not None and not is_document_expired(doc):
             item.linked_document_id = doc.id
             item.status = _vault_doc_status(doc)
+            if doc.id == ancien["linked_document_id"]:   # le choix repris garde son dépôt
+                item.depose_le, item.depose_par_id = ancien["depose_le"], ancien["depose_par_id"]
     elif item.source_kind == "dce_template" and ancien["completed_project_doc_id"] in completes:
         # la trame déposée reste celle de la ligne, avec son contrôle (DPGF)
         item.completed_project_doc_id = ancien["completed_project_doc_id"]
+        item.depose_le, item.depose_par_id = ancien["depose_le"], ancien["depose_par_id"]
         if ancien["status"] in ("present", "warning"):
             item.status, item.details = ancien["status"], ancien["details"]
         else:

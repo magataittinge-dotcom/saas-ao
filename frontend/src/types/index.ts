@@ -260,6 +260,9 @@ export interface ChecklistItem {
   jointe?: boolean
   piece_nom?: string | null
   valable_jusqu_au?: string | null
+  /** « Déposé le … par … » : instant UTC (avec « Z ») et nom de l'auteur du geste. */
+  depose_le?: string | null
+  depose_par?: string | null
   /** Lecture du RC (serveur) : pièce demandée à tous, « si concerné » ou facultative. */
   obligation?: 'obligatoire' | 'si_concerne' | 'facultatif'
   /** Lecture du RC (serveur) : remise au dépôt ou par l'attributaire. */

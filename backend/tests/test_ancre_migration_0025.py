@@ -32,7 +32,7 @@ def _executer(engine, fonction):
 def test_0025_suit_0024_et_c_est_la_head():
     script = ScriptDirectory.from_config(Config(str(BACKEND / "alembic.ini")))
     assert script.get_revision("0025").down_revision == "0024"
-    assert script.get_current_head() == "0025"
+    assert "0025" in {r.revision for r in script.walk_revisions()}   # les suivantes la prolongent
     assert len(script.get_heads()) == 1
 
 

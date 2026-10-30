@@ -134,3 +134,20 @@ export function statutDocument(
   }
   return fait('a-confirmer', 'Date de validité à confirmer', true)
 }
+
+/**
+ * « Déposé le 12/11/2026 par Fatima B. » — la date et l'auteur du geste qui a posé
+ * la pièce (choix au coffre, formulaire rempli déposé), lus sur la ligne. Date dans
+ * le fuseau de Paris (l'instant arrive en UTC). Rien tant que personne n'a rien posé.
+ */
+export function noteDepot(
+  d: { depose_le?: string | null; depose_par?: string | null },
+): string | null {
+  if (!d.depose_le) return null
+  const instant = new Date(d.depose_le)
+  if (Number.isNaN(instant.getTime())) return null
+  const jour = new Intl.DateTimeFormat('fr-FR', {
+    timeZone: 'Europe/Paris', day: '2-digit', month: '2-digit', year: 'numeric',
+  }).format(instant)
+  return d.depose_par ? `Déposé le ${jour} par ${d.depose_par}` : `Déposé le ${jour}`
+}
