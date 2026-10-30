@@ -23,6 +23,7 @@ const Team = lazy(() => import('@/routes/Team'))
 const Settings = lazy(() => import('@/routes/Settings'))
 const Billing = lazy(() => import('@/routes/Billing'))
 const Tools = lazy(() => import('@/routes/Tools'))
+const Design = lazy(() => import('@/routes/Design'))
 
 // Écrans publics (accueil, tarifs, mentions, connexion) : pas encore refaits sur les jetons clair / nuit,
 // ils restent en nuit quel que soit le thème choisi (retirer ce cadre écran par écran, phase C).
@@ -88,6 +89,8 @@ function AppRoutes() {
         <Route path="/vault" element={<Vault />} />
         <Route path="/references" element={<References />} />
         <Route path="/outils" element={<Tools />} />
+        {/* Page de référence du système de design : interne, volontairement absente du menu */}
+        <Route path="/design" element={<Design />} />
         {/* B6 — le profil mémoire vit dans Mon entreprise ; redirect propre */}
         <Route path="/memoire-config" element={<Navigate to="/company" replace />} />
         <Route path="/company" element={<Company />} />

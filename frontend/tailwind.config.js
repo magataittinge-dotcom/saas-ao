@@ -212,6 +212,10 @@ export default {
         'btn':         'var(--shadow-btn)',
       },
       keyframes: {
+        deplacer: {
+          from: { transform: 'translateX(0)' },
+          to:   { transform: 'translateX(120px)' },
+        },
         'accordion-down': {
           from: { height: '0' },
           to:   { height: 'var(--radix-accordion-content-height)' },
