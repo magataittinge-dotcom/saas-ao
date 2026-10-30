@@ -112,7 +112,7 @@ def test_pdf_sommaire_rempli_titres_et_numeros_justes(tmp_path):
 
 @needs_soffice
 def test_une_seule_conversion_libreoffice_a_la_fois(monkeypatch, tmp_path):
-    """Deux exports simultanés (VPS 1 vCPU) : les conversions s'enchaînent."""
+    """Deux exports simultanés (VPS 2 vCPU) : les conversions s'enchaînent."""
     actifs, pic = [0], [0]
     verrou = threading.Lock()
     reel = libreoffice_isole._executer

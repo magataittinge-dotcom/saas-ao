@@ -221,7 +221,7 @@ SYNORIX_PDFIUM_ATTENTE_S=5         # attente d'un processus libre, travail inter
 SYNORIX_PDFIUM_ATTENTE_EXTRACTION_S=600   # idem pour l'extraction au dépôt (la pièce est alors à redéposer)
 SYNORIX_X_ACCEL_PREFIX=/_fichiers_internes   # document entier servi par nginx (§8) ; vide en dev
 SYNORIX_CACHE_APERCUS_DIR=/srv/synorix/backend/cache/apercus   # cache des images d'aperçu (hors webroot)
-SYNORIX_CACHE_APERCUS_MO=2048      # plafond du cache, éviction LRU (2 Go = 4 % du disque de 50 Go)
+SYNORIX_CACHE_APERCUS_MO=2048      # plafond du cache, éviction LRU (2 Go = 2 % du disque de 100 Go)
 ```
 
 ### LibreOffice : fichiers déposés convertis sans secret ni réseau
@@ -508,9 +508,10 @@ restauration de la sauvegarde (`BACKUP_RECOVERY.md` §3).
 
 | Phase | Clients | VPS | Coût mensuel |
 |---|---|---|---|
-| MVP / 1ʳᵉ year | 0-50 payants | KVM 4 (4vCPU, 16 Go) | ~30 € |
-| Croissance | 50-200 | KVM 8 (8vCPU, 32 Go) | ~60 € |
-| Scale-up | 200-500 | 2× KVM 8 + load balancer (HAProxy ou Cloudflare) | ~150 € |
-| Au-delà | 500+ | Migrer Hetzner Cloud / OVH Public Cloud avec auto-scale | ~variable |
+| MVP / 1ʳᵉ année | 0-50 payants | KVM 2 (2 vCPU, 8 Go, 100 Go) — cible actuelle | tarif Hostinger en vigueur |
+| Croissance | 50-200 | KVM 4 (4 vCPU, 16 Go) | ~30 € |
+| Montée en charge | 200-500 | KVM 8 (8 vCPU, 32 Go) | ~60 € |
+| Scale-up | 500+ | 2× KVM 8 + load balancer (HAProxy ou Cloudflare) | ~150 € |
+| Au-delà | 1 000+ | Migrer Hetzner Cloud / OVH Public Cloud avec auto-scale | ~variable |
 
 Le bottleneck principal sera **Anthropic API quota / coûts**, pas les ressources serveur.

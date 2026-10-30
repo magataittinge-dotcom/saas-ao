@@ -161,3 +161,17 @@ def test_aucune_unite_ne_vise_encore_le_kvm_1():
     for f in (DEPLOY / "systemd").glob("*.service"):
         texte = f.read_text(encoding="utf-8")
         assert "Mémoire (KVM 1" not in texte and "pour le KVM 1" not in texte, f.name
+
+
+def test_les_docs_et_commentaires_disent_le_kvm_2_pas_le_kvm_1_ni_un_serveur_imaginaire():
+    """L'architecture et les commentaires de code décrivent le serveur réel : 2 vCPU, 8 Go, 100 Go."""
+    racine = DEPLOY.parent
+    archi = (racine / "docs" / "ARCHITECTURE_V2.md").read_text(encoding="utf-8")
+    # la seule trace de « 6 vCPU » est la correction datée du journal des changements
+    assert archi.count("6 vCPU") == 1 and "which was wrong" in archi
+    assert "2 vCPU, 8 GB RAM, 100 GB" in archi
+    # docstrings du code : plus de « sur le KVM 1 » au présent
+    for nom in ("pdfium_processus", "libreoffice_isole", "extraction_processus", "cache_apercus", "pdf_rendu"):
+        texte = (racine / "backend" / "services" / f"{nom}.py").read_text(encoding="utf-8")
+        assert "sur le KVM 1" not in texte and "(KVM 1" not in texte, nom
+    assert "pour le 1 vCPU" not in (DEPLOY / "nginx" / "synorix.conf").read_text(encoding="utf-8")

@@ -79,7 +79,7 @@ DOSSIER_CARLITO = _RACINE_BACKEND / "assets" / "fonts" / "carlito"
 # Valeurs par défaut. Mesures (outils-libre/mesure_lo.py, KVM-like) : le mémoire de Gueux (100 Ko)
 # monte à 578 Mo de mémoire virtuelle, un tableur de 60 000 lignes à 672 Mo, un Word de 400 pages et
 # 192 Mo d'images à 992 Mo ; à 800 Mo ce dernier échoue (code 0 mais aucun PDF). 1536 Mo laisse
-# ≥ 1,5 fois le pire cas mesuré, et un seul LibreOffice tourne à la fois sur un KVM 1 (4 Go).
+# ≥ 1,5 fois le pire cas mesuré, et un seul LibreOffice tourne à la fois sur le KVM 2 (2 vCPU, 8 Go ; budget dans deploy/systemd/synorix-api.service).
 AS_MO_DEFAUT = 1536
 FICHIER_MO_DEFAUT = 512
 DELAI_S_DEFAUT = 120

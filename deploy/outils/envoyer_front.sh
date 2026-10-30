@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Synorix — construit le front SUR LE PC de Mohamed et l'envoie au serveur (1 vCPU et 4 Go : jamais de
+# Synorix — construit le front SUR LE PC de Mohamed et l'envoie au serveur (KVM 2 : 2 vCPU et 8 Go, mais jamais de
 # build sur le VPS ; Ubuntu 24.04 n'y fournit que Node 18).
 # Usage, depuis le dépôt : deploy/outils/envoyer_front.sh deploy@synorix.tech [--simulation]
 # 1. npm run build (tsc + vite + précompression .gz/.br) avec frontend/.env.production, qui doit exister

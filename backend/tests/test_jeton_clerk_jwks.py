@@ -5,7 +5,7 @@ correctif incomplet) : jusqu'à PyJWT 2.14, `PyJWKClient` rechargeait le jeu de
 clés de Clerk pour chaque `kid` inconnu. Le `kid` est lu dans l'en-tête du
 jeton, avant toute vérification : sans compte, n'importe qui pouvait faire
 partir un appel bloquant vers Clerk (délai 30 s) par requête, dans un fil du
-pool de l'API (un seul processus sur le KVM 1). PyJWT 2.15.1 : au plus un
+pool de l'API (un seul processus sur le KVM 2). PyJWT 2.15.1 : au plus un
 rechargement forcé par 30 s.
 
 Aucun appel réseau : le chargement du JWKS est remplacé par un compteur.

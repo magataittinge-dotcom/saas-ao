@@ -9,9 +9,9 @@ disque du cache. Le contrôle d'accès reste à la route : le cache ne sait rien
 - Dossier HORS webroot : ``backend/cache/apercus`` par défaut (``SYNORIX_CACHE_APERCUS_DIR``),
   jamais servi directement par nginx (seulement par la route, après le contrôle d'appartenance).
 - Plafond total ``SYNORIX_CACHE_APERCUS_MO`` (défaut 2 048 Mo). Justification : le disque du
-  KVM 1 fait 50 Go, dont jusqu'à ~8 Go de DCE (20 AO mesurés = 7,67 Go), la base, les journaux et
+  KVM 2 fait 100 Go, dont jusqu'à ~8 Go de DCE (20 AO mesurés = 7,67 Go), la base, les journaux et
   les sauvegardes ; un passage consulté pèse ~30 Ko (A, §5), soit ~70 000 vues pour 2 Go — de quoi
-  garder les aperçus de plusieurs dizaines d'AO — pour 4 % du disque.
+  garder les aperçus de plusieurs dizaines d'AO — pour 2 % du disque.
 - Éviction LRU : la lecture « touche » l'entrée (date de modification) ; au-delà du plafond, les
   plus anciennes sont supprimées jusqu'à 90 % du plafond (pas de balayage à chaque écriture).
 - Écritures atomiques : fichier temporaire dans le même dossier puis ``os.replace`` — un lecteur

@@ -1,6 +1,6 @@
 """Processus pdfium (T9) : isolé, plafonné en mémoire, avec un délai, recyclé.
 
-Un seul processus par défaut (KVM 1 : 1 vCPU, 4 Go pour tout) ; un travail qui dépasse le
+Un seul processus par défaut (valeur du code ; 2 sur le KVM 2 de production, posé par l'unité systemd) ; un travail qui dépasse le
 délai ou le plafond, ou qui fait planter l'enfant, lève TravailPdfiumEchoue : l'API reste debout.
 """
 import os
