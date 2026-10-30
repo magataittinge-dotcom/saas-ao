@@ -23,6 +23,7 @@ from services.lot_detector import LotDetector
 from services.document_tagger import assign_document_lots
 from services import pipeline_tracker
 from services import upload_validation
+from services.chrono import chronometre
 from pathlib import Path as FilePath
 
 UPLOADS_ROOT = FilePath(__file__).parent.parent / "uploads"
@@ -634,6 +635,7 @@ def _convert_to_pdf_background(doc_id: str, file_url: str, filename: str) -> Non
 
 @router.post("/{project_id}/documents")
 @limiter.limit("10/minute")
+@chronometre("depot")
 async def upload_project_document(
     request: Request,
     project_id: str,
@@ -860,6 +862,7 @@ def _mark_step_1_complete(project: Project, db: Session) -> None:
     db.commit()
 
 
+@chronometre("lecture")
 def _extract_all_parallel(project_id: str, docs_info: list) -> None:
     """
     2-phase parallel text extraction.
@@ -1824,6 +1827,7 @@ def detect_lots(
     return {"status": "detecting_lots", "progress": 0, "detail": "Démarrage de la détection..."}
 
 
+@chronometre("lots")
 def _run_lot_detection_background(project_id: str, docs_data: list, uploads_root_str: str) -> None:
     """Background thread: run lot detection with real progress updates to DB
     AND to the SSE bus via pipeline_tracker."""
