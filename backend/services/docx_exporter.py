@@ -685,6 +685,25 @@ def build_memoire_docx(
     return buf.getvalue()
 
 
+def compter_passages_a_completer(content_json: dict[str, Any] | None) -> int:
+    """Nombre de passages « À compléter » du mémoire, SANS construire le Word (pas de carte ni de visuels :
+    l'écran d'export l'appelle à chaque ouverture). Mêmes sections et même règle que l'export : le préambule
+    et les sections des parties A, B, C. Seuls les « [À COMPLÉTER : … ] » sont comptés ; l'ancienne consigne
+    « [📍 … ] » d'un vieux mémoire ne l'est pas (l'export la retire quand la carte est dessinée)."""
+    cj = content_json or {}
+    textes: list[str] = []
+    if isinstance(cj.get("preambule"), str):
+        textes.append(cj["preambule"])
+    for cle, sections in (("partie_a", _PART_A), ("partie_b", _PART_B), ("partie_c", _PART_C)):
+        partie = cj.get(cle)
+        if not isinstance(partie, dict):
+            continue
+        for sous_cle, _ in sections:
+            if isinstance(partie.get(sous_cle), str):
+                textes.append(partie[sous_cle])
+    return sum(len(_A_COMPLETER_RE.findall(t)) for t in textes)
+
+
 def build_memoire_docx_ex(*args: Any, **kwargs: Any) -> ExportDocx:
     """Comme `build_memoire_docx` (mêmes paramètres), mais renvoie aussi les
     passages « À compléter » du document (nombre et libellés, dans l'ordre),

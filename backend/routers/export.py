@@ -24,6 +24,7 @@ from models.project import Project, ProjectDocument
 from models.compliance_item import ComplianceItem, STATUT_CONFIRMEE
 from models.checklist_item import ChecklistItem
 from models.memoire import MemoireTechnique
+from services.docx_exporter import compter_passages_a_completer
 from schemas.export import ExportSummary, ExportDetail, ComplianceExportItem, ChecklistExportItem, MemoireExportInfo, DpgfExportInfo, PieceZipExport, ProjectDocumentExportItem
 from routers.auth import get_auth_user
 from services.file_storage import FileStorage
@@ -130,6 +131,7 @@ def get_export_detail(
             generated_at=memoire.generated_at,
             sections_count=sections,
             estimated_pages=estimated_pages,
+            passages_a_completer=compter_passages_a_completer(cj),
         )
 
     # DPGF info
