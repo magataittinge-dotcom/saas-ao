@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
+import type { ThemeForce } from '@/lib/themeEcran'
 import { X, CheckCircle2, AlertTriangle, Info, XCircle } from 'lucide-react'
 
 export type ToastVariant = 'success' | 'error' | 'info' | 'warning'
@@ -103,7 +104,8 @@ export function toast(message: string, variant: ToastVariant = 'info') {
   toastListener?.({ id, message, variant })
 }
 
-export function ToastContainer() {
+/** `theme` : thème forcé de l'écran affiché (voir lib/themeEcran.ts) ; la zone est hors de <main>. */
+export function ToastContainer({ theme }: { theme?: ThemeForce }) {
   const [toasts, setToasts] = useState<ToastData[]>([])
 
   useEffect(() => {
@@ -118,7 +120,7 @@ export function ToastContainer() {
   if (toasts.length === 0) return null
 
   return (
-    <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2">
+    <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2" data-theme={theme}>
       {toasts.map((t) => (
         <ToastItem key={t.id} toast={t} onRemove={remove} />
       ))}

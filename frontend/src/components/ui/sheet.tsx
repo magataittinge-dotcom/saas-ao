@@ -6,6 +6,7 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { useThemeEcran } from "@/lib/themeEcran"
 
 const Sheet = SheetPrimitive.Root
 
@@ -20,6 +21,7 @@ const SheetOverlay = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof SheetPrimitive.Overlay>
 >(({ className, ...props }, ref) => (
   <SheetPrimitive.Overlay
+    data-theme={useThemeEcran()}
     className={cn(
       "fixed inset-0 z-50 bg-voile backdrop-blur-[5px] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       className
@@ -61,6 +63,7 @@ const SheetContent = React.forwardRef<
     <SheetOverlay />
     <SheetPrimitive.Content
       ref={ref}
+      data-theme={useThemeEcran()}
       className={cn(sheetVariants({ side }), className)}
       {...props}
     >

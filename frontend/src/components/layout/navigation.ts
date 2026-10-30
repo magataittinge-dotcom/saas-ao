@@ -20,7 +20,7 @@ export const CAPITAL: Entree[] = [
   { to: '/company', icon: Briefcase, label: 'Mon entreprise' },
   { to: '/references', icon: Building2, label: 'Mes références' },
   { to: '/vault', icon: Archive, label: 'Coffre-fort' },
-  { to: '/outils', icon: Calculator, label: 'Calculateurs' },
+  { to: '/outils', icon: Calculator, label: 'Retenue de garantie' },
 ]
 
 export const COMPTE: Entree[] = [
@@ -42,7 +42,7 @@ export const ONGLET_CERVEAU: (Entree & { disponible: boolean }) | null = null
 export const ENTREES_TIROIR: Entree[] = [
   { to: '/company', icon: Briefcase, label: 'Mon entreprise' },
   { to: '/references', icon: Building2, label: 'Mes références' },
-  { to: '/outils', icon: Calculator, label: 'Calculateurs' },
+  { to: '/outils', icon: Calculator, label: 'Retenue de garantie' },
   { to: '/team', icon: Users, label: 'Équipe' },
   { to: '/settings', icon: Settings, label: 'Paramètres' },
 ]

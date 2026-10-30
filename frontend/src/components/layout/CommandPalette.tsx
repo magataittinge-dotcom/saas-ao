@@ -16,7 +16,7 @@ const PAGES = [
   { to: '/company',          icon: Briefcase,       label: 'Mon entreprise' },
   { to: '/references',       icon: Building2,       label: 'Mes références' },
   { to: '/vault',            icon: Archive,         label: 'Coffre-fort' },
-  { to: '/outils',           icon: Calculator,      label: 'Calculateurs' },
+  { to: '/outils',           icon: Calculator,      label: 'Retenue de garantie' },
   { to: '/team',             icon: Users,           label: 'Équipe' },
   { to: '/settings',         icon: Settings,        label: 'Paramètres' },
   { to: '/settings/billing', icon: CreditCard,      label: 'Abonnement' },

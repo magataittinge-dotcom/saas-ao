@@ -1,6 +1,7 @@
 import { Suspense, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
+import { ThemeEcranProvider, type ThemeForce } from '@/lib/themeEcran'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import Sidebar from './Sidebar'
 import Header from './Header'
@@ -22,6 +23,8 @@ export default function Layout() {
   const { pathname } = useLocation()
   const themee = estThemee(pathname)
   const [palette, setPalette] = useState(false)
+  // Écran en nuit forcée : les fenêtres, infobulles et notifications (portails hors de <main>) la suivent.
+  const themeEcran: ThemeForce = themee ? undefined : 'dark'
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -37,17 +40,19 @@ export default function Layout() {
           )}
           data-theme={themee ? undefined : 'dark'}
         >
-          <div className="flex-1">
-            <Suspense fallback={<EcranEnChargement clair={themee} />}>
-              <Outlet />
-            </Suspense>
-          </div>
-          <LegalFooter calque={themee} />
+          <ThemeEcranProvider value={themeEcran}>
+            <div className="flex-1">
+              <Suspense fallback={<EcranEnChargement clair={themee} />}>
+                <Outlet />
+              </Suspense>
+            </div>
+            <LegalFooter calque={themee} />
+          </ThemeEcranProvider>
         </main>
         <BarreOnglets />
       </div>
       <CommandPalette open={palette} onOpenChange={setPalette} />
-      <ToastContainer />
+      <ToastContainer theme={themeEcran} />
     </TooltipProvider>
   )
 }

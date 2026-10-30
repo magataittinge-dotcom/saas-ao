@@ -31,6 +31,7 @@
   --accent-800: #004e8e;
   --accent-900: #003361;
   --on-accent: #ffffff;
+  --reflet-accent: rgba(255, 255, 255, .22);   /* liseré clair en haut d'un aplat d'accent (boutons, logo) : identique en clair et en nuit */
 
   /* Verre (SYSTEME-DESIGN §5) */
   --surface-glass-1: rgba(255, 255, 255, .10);
