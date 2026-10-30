@@ -48,6 +48,9 @@ const FICHIERS_CALQUE = [
   'src/components/layout/NotificationBell.tsx',
   'src/components/layout/LegalFooter.tsx',
   'src/routes/Dashboard.tsx',
+  'src/routes/Projects.tsx',
+  'src/components/dashboard/AOCard.tsx',
+  'src/routes/Design.tsx',
   'src/components/onboarding/FirstAOWelcome.tsx',
 ]
 

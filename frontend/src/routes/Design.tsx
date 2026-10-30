@@ -161,7 +161,7 @@ export default function Design() {
         </nav>
       </header>
 
-      <Section id="couleurs" titre="Couleurs" note="Accent bleu (teinte 251,7°), nuit neutre #111111. Le texte d’accent est accent-700 en clair et accent-300 en nuit ; jamais de texte foncé sur un accent vif.">
+      <Section id="couleurs" titre="Couleurs" note="Accent bleu (teinte 251,7°), nuit neutre (surface-0 gris très foncé, sans teinte). Le texte d’accent est accent-700 en clair et accent-300 en nuit ; jamais de texte foncé sur un accent vif.">
         <Cote>
           <div className="space-y-5">
             {PALETTES.map(([nom, jetons]) => (
