@@ -81,7 +81,7 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
       <div
         className="glass-card rounded-lg w-full max-w-xl max-h-[80vh] flex flex-col overflow-hidden"
         onClick={(e) => e.stopPropagation()}
-        style={{ boxShadow: '0 20px 40px color-mix(in srgb, var(--surface-dark) 15%, transparent)' }}
+        style={{ boxShadow: 'var(--shadow-pop)' }}
       >
         {/* Header */}
         <header className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border-1)' }}>

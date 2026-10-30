@@ -34,7 +34,7 @@ export function DeleteConfirmContenu({
       style={{
         background: 'var(--surface-1)',
         border: '1px solid var(--border-1)',
-        boxShadow: '0 24px 48px color-mix(in srgb, var(--surface-dark) 50%, transparent)',
+        boxShadow: 'var(--shadow-pop)',
       }}
     >
       <div className="space-y-2 text-center">

@@ -151,7 +151,7 @@ export function AnalysisProgress({
           background: 'var(--surface-1)',
           backgroundImage: 'var(--bottom-lit)',
           border: '1px solid var(--line-strong)',
-          boxShadow: '0 24px 64px color-mix(in srgb, var(--surface-dark) 60%, transparent), var(--edge-light)',
+          boxShadow: 'var(--shadow-pop)',
         }}
       >
         {/* Le Compagnon au travail, ceint de l'anneau de progression */}

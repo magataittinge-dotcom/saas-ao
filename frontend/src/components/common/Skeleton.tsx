@@ -55,7 +55,7 @@ export function SkeletonCard({ className, children }: { className?: string; chil
       style={{
         background: 'var(--surface-1)',
         border: '1px solid var(--border-1)',
-        boxShadow: '0 1px 3px color-mix(in srgb, var(--surface-dark) 4%, transparent)',
+        boxShadow: 'var(--shadow-card)',
       }}
     >
       {children ?? (

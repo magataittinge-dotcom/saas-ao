@@ -69,7 +69,7 @@ export default function CandidatureSectionTemplates({
   return (
     <section
       className="glass-card rounded-lg overflow-hidden"
-      style={{ border: '1px solid var(--border-1)', boxShadow: '0 1px 3px color-mix(in srgb, var(--surface-dark) 40%, transparent)', fontFamily: F }}
+      style={{ border: '1px solid var(--border-1)', boxShadow: 'var(--shadow-card)', fontFamily: F }}
     >
       {/* Header */}
       <header className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '1px solid var(--border-1)' }}>

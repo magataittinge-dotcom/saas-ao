@@ -42,6 +42,12 @@ const TRANCHES: Record<string, string[]> = {
     'src/components/common/EcranEnChargement.tsx',
     'src/styles/pieces.css',
   ],
+  'mémoire (éditeur, contrôle avant génération, réécriture ciblée)': [
+    'src/routes/project/StepMemoire.tsx',
+    'src/components/project/MemoirePreflight.tsx',
+    'src/components/project/RewritePassageBar.tsx',
+    'src/components/project/PoidsMemoire.tsx',
+  ],
 }
 
 // hex (3, 4, 6 ou 8 chiffres), fonctions rgb/hsl, classes Tailwind de palette fixe (bg-slate-900, text-white/90…)

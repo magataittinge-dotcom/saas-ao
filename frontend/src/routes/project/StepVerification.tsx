@@ -178,7 +178,7 @@ export default function StepVerification({ project }: Props) {
   if (items.length === 0) return (
     <div
       className="glass-card rounded-lg p-12 text-center"
-      style={{ border: '1px solid var(--border-1)', boxShadow: '0 1px 3px color-mix(in srgb, var(--surface-dark) 40%, transparent)', fontFamily: F }}
+      style={{ border: '1px solid var(--border-1)', boxShadow: 'var(--shadow-card)', fontFamily: F }}
     >
       <p className="text-sm" style={{ color: 'var(--text-3)' }}>
         La checklist des pièces apparaîtra automatiquement une fois le DCE analysé.
@@ -394,7 +394,7 @@ function WorkflowSection({
   return (
     <section
       className="glass-card rounded-lg overflow-hidden"
-      style={{ border: '1px solid var(--border-1)', boxShadow: '0 1px 3px color-mix(in srgb, var(--surface-dark) 40%, transparent)', fontFamily: F }}
+      style={{ border: '1px solid var(--border-1)', boxShadow: 'var(--shadow-card)', fontFamily: F }}
     >
       <header className="flex items-center gap-3 px-5 py-3" style={{ borderBottom: '1px solid var(--border-1)' }}>
         <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'color-mix(in srgb, var(--warning-fg) 10%, transparent)' }}>
@@ -508,7 +508,7 @@ function SynorixJalonSection({ items }: { items: ChecklistItem[] }) {
   return (
     <section
       className="glass-card rounded-lg overflow-hidden"
-      style={{ border: '1px solid var(--border-1)', boxShadow: '0 1px 3px color-mix(in srgb, var(--surface-dark) 40%, transparent)', fontFamily: F }}
+      style={{ border: '1px solid var(--border-1)', boxShadow: 'var(--shadow-card)', fontFamily: F }}
     >
       <header className="flex items-center gap-3 px-5 py-3" style={{ borderBottom: '1px solid var(--border-1)' }}>
         <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'color-mix(in srgb, var(--text-1) 8%, transparent)' }}>

@@ -184,3 +184,6 @@
   height: max(100%, 44px);
   transform: translate(-50%, -50%);
 }
+
+/* Champs de la page d'un AO : bord de champ du système (3:1 sur le fond, clair et nuit) */
+.page-ao .glass-input { border-color: var(--border-field); }

@@ -140,7 +140,7 @@ export default function ProgressDisplay({
           ? {
               background: 'var(--surface-1)',
               border: '1px solid var(--border-2)',
-              boxShadow: '0 24px 64px color-mix(in srgb, var(--surface-dark) 60%, transparent), 0 0 0 1px color-mix(in srgb, var(--text-1) 8%, transparent)',
+              boxShadow: 'var(--shadow-pop)',
             }
           : undefined
       }
