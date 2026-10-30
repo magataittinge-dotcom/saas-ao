@@ -121,7 +121,7 @@ def _avec_le_fait_jointe(db: Session, project, items, org_id: str) -> list:
     plan du ZIP dit ce qui part (routers/export._plan_du_zip, _etat_piece)."""
     from sqlalchemy.orm import defer
     from models.memoire import MemoireTechnique
-    from routers.export import _etat_piece, _plan_du_zip
+    from routers.export import _etat_piece, _fin_validite_liee, _plan_du_zip
     project_docs = (db.query(ProjectDocument)
                     .options(defer(ProjectDocument.extracted_text))
                     .filter(ProjectDocument.project_id == project.id).all())
@@ -137,6 +137,7 @@ def _avec_le_fait_jointe(db: Session, project, items, org_id: str) -> list:
     for item in items:
         ligne = ChecklistItemResponse.model_validate(item)
         ligne.jointe, ligne.piece_nom, ligne.valable_jusqu_au = _etat_piece(item, docs_lies, docs_projet, plan)
+        ligne.valable_jusqu_au = ligne.valable_jusqu_au or _fin_validite_liee(item, docs_lies)
         reponse.append(ligne)
     return reponse
 

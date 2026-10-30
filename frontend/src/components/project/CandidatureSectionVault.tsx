@@ -1,11 +1,9 @@
 import { useMemo } from 'react'
-import {
-  CheckCircle2, AlertCircle, Circle, FolderOpen, FileText, Lock,
-} from 'lucide-react'
+import { FolderOpen, FileText, Lock } from 'lucide-react'
 import type { ChecklistItem } from '@/types'
 import SignatureLigne from '@/components/project/SignatureLigne'
 import NonConcerneBouton, { estNonConcernee, piecesComptees } from '@/components/project/NonConcerne'
-import { comptePieces, etatPiece } from '@/lib/exportDossier'
+import { comptesPieces, libelleComptes, noteValidite, statutPiece } from '@/lib/statutPiece'
 
 const F = "'Inter Variable', 'Geist Sans', sans-serif"
 
@@ -39,10 +37,12 @@ interface Props {
   onToggleSignature?: (item: ChecklistItem, confirmed: boolean) => Promise<void>
   /** « Non concerné » / « Je suis concerné » (réversible, journalisé). */
   onNonConcerne?: (item: ChecklistItem, nonConcerne: boolean) => Promise<void>
+  /** Date limite de remise (AAAA-MM-JJ) : « À renouveler avant le dépôt ». */
+  echeance?: string | null
 }
 
 export default function CandidatureSectionVault({
-  items, onPickFromVault, onOpenVault, onToggleSignature, onNonConcerne,
+  items, onPickFromVault, onOpenVault, onToggleSignature, onNonConcerne, echeance,
 }: Props) {
   const grouped = useMemo(() => {
     const map: Record<VaultCategory, ChecklistItem[]> = {
@@ -56,7 +56,7 @@ export default function CandidatureSectionVault({
 
   // « Non concerné » sort des comptes, comme dans le score du serveur
   const comptees = piecesComptees(items)
-  const jointes = comptees.filter((i) => i.jointe).length
+  const { aJoindre, pretes } = comptesPieces(comptees, echeance)
 
   return (
     <section
@@ -77,7 +77,7 @@ export default function CandidatureSectionVault({
               Pièces du coffre-fort
             </h2>
             <p className="text-xs mt-0.5" style={{ color: '#959597' }}>
-              {comptePieces(comptees.length, jointes)} — sélectionnez une pièce existante de votre coffre-fort
+              {libelleComptes(aJoindre, pretes)} — sélectionnez une pièce existante de votre coffre-fort
             </p>
           </div>
         </div>
@@ -110,6 +110,7 @@ export default function CandidatureSectionVault({
                   onPick={() => onPickFromVault(item)}
                   onToggleSignature={onToggleSignature}
                   onNonConcerne={onNonConcerne}
+                  echeance={echeance}
                 />
               ))}
             </ul>
@@ -121,33 +122,41 @@ export default function CandidatureSectionVault({
 }
 
 function VaultRow({
-  item, onPick, onToggleSignature, onNonConcerne,
+  item, onPick, onToggleSignature, onNonConcerne, echeance,
 }: {
   item: ChecklistItem
+  echeance?: string | null
   onPick: () => void
   onToggleSignature?: (item: ChecklistItem, confirmed: boolean) => Promise<void>
   onNonConcerne?: (item: ChecklistItem, nonConcerne: boolean) => Promise<void>
 }) {
-  const { icon, label, color } = statusFor(item)
+  const statut = statutPiece(item, echeance)
+  const note = noteValidite(item.document_type_required)
   const isLinked = !!item.linked_document_id
-  const isMissing = item.status === 'manquant' || item.status === 'expire'
+  // Rien de prêt dans le dossier : « Choisir » ; une pièce prête ou à confirmer : « Remplacer »
+  const isMissing = statut.code !== 'pret' && statut.code !== 'a-confirmer'
 
   return (
     <li
       className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-ds-bg-2"
       style={{ background: '#121213' }}
     >
-      <span className="shrink-0">{icon}</span>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium truncate" style={{ color: '#F7F8F8' }}>
           {item.details || item.document_type_required}
         </p>
         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-          <span className="text-xs" style={{ color }}>{label}</span>
+          <span className={statut.classe}>{statut.texte}</span>
           {item.lot && (
             <span className="text-xs px-1.5 rounded-full"
               style={{ background: 'rgba(255,255,255,0.08)', color: '#B4B5B8' }}>
               {item.lot.replace(/^lot/i, 'Lot ')}
+            </span>
+          )}
+          {item.jointe && item.piece_nom && (
+            <span className="text-xs flex items-center gap-1" style={{ color: '#959597' }}>
+              <FileText size={11} />
+              {item.piece_nom}
             </span>
           )}
           {isLinked && !item.jointe && (
@@ -157,6 +166,10 @@ function VaultRow({
             </span>
           )}
         </div>
+        {note && statut.action && <p className="piece-note">{note}</p>}
+        {item.source_in_rc && ['si-concerne', 'facultatif', 'attribution'].includes(statut.code) && (
+          <p className="piece-note">Lu dans le RC : « {item.source_in_rc} »</p>
+        )}
         <SignatureLigne item={item} onToggleSignature={onToggleSignature} />
       </div>
 
@@ -182,13 +195,4 @@ function VaultRow({
       )}
     </li>
   )
-}
-
-// Même règle que l'Export (lib/exportDossier.etatPiece) : « Jointe » est un
-// fait vérifié par le serveur (le fichier part dans le ZIP, valable et daté).
-function statusFor(item: ChecklistItem): { icon: JSX.Element; label: string; color: string } {
-  const { texte, ton } = etatPiece(item)
-  if (ton === 'ok') return { icon: <CheckCircle2 size={16} style={{ color: '#6EE7A8' }} />, label: texte, color: '#6EE7A8' }
-  if (ton === 'attention') return { icon: <AlertCircle size={16} style={{ color: '#D9A441' }} />, label: texte, color: '#D9A441' }
-  return { icon: <Circle size={16} style={{ color: '#909195' }} />, label: texte, color: '#959597' }
 }

@@ -260,6 +260,10 @@ export interface ChecklistItem {
   jointe?: boolean
   piece_nom?: string | null
   valable_jusqu_au?: string | null
+  /** Lecture du RC (serveur) : pièce demandée à tous, « si concerné » ou facultative. */
+  obligation?: 'obligatoire' | 'si_concerne' | 'facultatif'
+  /** Lecture du RC (serveur) : remise au dépôt ou par l'attributaire. */
+  phase?: 'depot' | 'attribution'
   lot?: string | null
   document_group?: 'fournir' | 'completer' | 'synorix' | 'workflow'
 }

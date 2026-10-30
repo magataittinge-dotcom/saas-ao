@@ -49,6 +49,21 @@ class ChecklistItemResponse(BaseModel):
 
     @computed_field
     @property
+    def obligation(self) -> str:
+        """« obligatoire » | « si_concerne » | « facultatif » (lecture du RC,
+        checklist_matcher.lire_obligation)."""
+        from services.ai.checklist_matcher import lire_obligation
+        return lire_obligation(self)
+
+    @computed_field
+    @property
+    def phase(self) -> str:
+        """« depot » | « attribution » (checklist_matcher.lire_phase)."""
+        from services.ai.checklist_matcher import lire_phase
+        return lire_phase(self)
+
+    @computed_field
+    @property
     def signature_required(self) -> bool:
         """« Je confirme avoir signé » demandé pour cette pièce ? Règle unique
         côté serveur (checklist_matcher.signature_requise) : DC1, DC2, DUME et

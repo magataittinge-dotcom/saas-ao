@@ -1,0 +1,72 @@
+/* ═══════════════════════════════════════════════════════════════
+   PIÈCES ET « L'AO EN 30 SECONDES » — classes sémantiques (bloc 9)
+
+   Un seul fichier. Aucune couleur en dur dans le JSX : les composants
+   posent ces classes, et seules les variables ci-dessous portent la teinte.
+   Une phase suivante branchera ces variables sur les nouveaux jetons de
+   design : il suffira de changer le bloc « Teintes » ci-dessous.
+
+   Règle : l'ambre (--warn) est réservé à ce qui demande une action
+   (À joindre, À renouveler, Date de validité à confirmer).
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  /* ── Teintes (aujourd'hui : les variables du projet, cf. tokens.css) ── */
+  --piece-action: var(--warn);
+  --piece-action-fond: var(--warn-bg);
+  --piece-action-filet: var(--warn-line);
+  --piece-pret: var(--ok);
+  --piece-pret-fond: var(--ok-bg);
+  --piece-pret-filet: var(--ok-line);
+  --piece-neutre: var(--ink-3);
+  --piece-neutre-fond: var(--surface-2);
+  --piece-neutre-filet: var(--line);
+  --carte-fond: var(--surface);
+  --carte-filet: var(--line);
+  --carte-titre: var(--ink);
+  --carte-texte: var(--ink-2);
+  --carte-discret: var(--ink-3);
+}
+
+/* ── Statut d'une pièce ─────────────────────────────────────── */
+.statut-piece {
+  display: inline-flex;
+  align-items: center;
+  gap: .375rem;
+  font-size: .75rem;
+  line-height: 1.25;
+  font-weight: 500;
+  color: var(--piece-neutre);
+}
+.statut-piece::before {
+  content: '';
+  flex: none;
+  width: .4375rem;
+  height: .4375rem;
+  border-radius: 9999px;
+  background: currentColor;
+}
+.statut-piece--a-joindre,
+.statut-piece--a-renouveler,
+.statut-piece--a-confirmer { color: var(--piece-action); }
+.statut-piece--pret { color: var(--piece-pret); }
+.statut-piece--si-concerne,
+.statut-piece--facultatif,
+.statut-piece--attribution,
+.statut-piece--non-concerne { color: var(--piece-neutre); }
+/* Statuts qui n'appellent aucune action : un cercle vide plutôt qu'un point plein */
+.statut-piece--si-concerne::before,
+.statut-piece--facultatif::before,
+.statut-piece--attribution::before,
+.statut-piece--non-concerne::before {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px currentColor;
+}
+
+/* Ligne d'information sous un statut (source dans le RC, durée de validité, auteur du dépôt) */
+.piece-note {
+  margin-top: .25rem;
+  font-size: .75rem;
+  line-height: 1.4;
+  color: var(--carte-discret);
+}

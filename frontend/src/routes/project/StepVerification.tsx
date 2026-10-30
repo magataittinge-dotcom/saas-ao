@@ -8,7 +8,8 @@ import CandidatureSectionVault from '@/components/project/CandidatureSectionVaul
 import CandidatureSectionTemplates from '@/components/project/CandidatureSectionTemplates'
 import VaultPickerModal from '@/components/project/VaultPickerModal'
 import { piecesComptees } from '@/components/project/NonConcerne'
-import { comptePieces, libelleJointes } from '@/lib/exportDossier'
+import { comptesPieces, libelleComptes, suiteComptes } from '@/lib/statutPiece'
+import { echeanceAO } from '@/lib/echeance'
 import { RequirementListSkeleton } from '@/components/skeletons'
 import type { Project, ChecklistItem, Document } from '@/types'
 import EchecAction from '@/components/common/EchecAction'
@@ -36,16 +37,6 @@ export default function StepVerification({ project }: Props) {
     },
   })
 
-  // C10 — score de conformité (les ⚠️ ne comptent pas conformes)
-  const { data: score } = useQuery<{ conformes: number; total: number }>({
-    queryKey: ['checklist-score', project.id, items],
-    queryFn: async () => {
-      const { data } = await api.get(`/projects/${project.id}/checklist/score`)
-      return data
-    },
-    enabled: items.length > 0,
-  })
-
   const [pickerItem, setPickerItem] = useState<ChecklistItem | null>(null)
 
   // Typologie 4 groupes (document_group) : à fournir / à compléter / produit
@@ -67,11 +58,13 @@ export default function StepVerification({ project }: Props) {
   // Complétion = pièces sous responsabilité de l'entreprise (fournir + completer),
   // hors « Non concerné » (comme le score du serveur).
   const scored = piecesComptees([...vaultItems, ...templateItems])
-  // « Jointe » : fait vérifié par le serveur (plan du ZIP), comme à l'Export
-  const jointes = scored.filter((i) => i.jointe).length
-  const missing = scored.filter((i) => i.status === 'manquant').length
-  const total = scored.length
-  const pct = total > 0 ? Math.round((jointes / total) * 100) : 0
+  // « Prêt » : fait vérifié par le serveur (plan du ZIP), comme à l'Export. Les pièces
+  // « Si concerné », « Facultatif » et « Pour l'attribution » ne sont pas à joindre maintenant.
+  const echeance = echeanceAO(project)?.date?.slice(0, 10) ?? null
+  const { aJoindre, pretes } = comptesPieces(scored, echeance)
+  const comptesCoffre = comptesPieces(piecesComptees(vaultItems), echeance)
+  const comptesFormulaires = comptesPieces(piecesComptees(templateItems), echeance)
+  const pct = aJoindre + pretes > 0 ? Math.round((pretes / (aJoindre + pretes)) * 100) : 0
 
   // ── Mutations ───────────────────────────────────────────────────
   // Rafraîchit la liste ET recalcule le score, sans quitter l'étape.
@@ -298,27 +291,24 @@ export default function StepVerification({ project }: Props) {
             <p className="microlabel mb-1.5">Dossier de candidature</p>
             <div className="flex flex-wrap items-end gap-2.5">
               <span className="num-mono bg-gradient-silver-text bg-clip-text text-4xl font-bold leading-none text-transparent">
-                {total}
+                {aJoindre}
               </span>
-              <p className="pb-0.5 text-sm font-semibold" style={{ color: '#F7F8F8' }}>{libelleJointes(total, jointes)}</p>
+              <p className="pb-0.5 text-sm font-semibold" style={{ color: '#F7F8F8' }}>{suiteComptes(aJoindre, pretes)}</p>
             </div>
             <p className="num-mono mt-2 text-xs" style={{ color: '#959597' }}>
-              Coffre-fort : {comptePieces(piecesComptees(vaultItems).length, piecesComptees(vaultItems).filter((i) => i.jointe).length)}
+              Coffre-fort : {libelleComptes(comptesCoffre.aJoindre, comptesCoffre.pretes)}
               {'  ·  '}
-              Formulaires du DCE : {comptePieces(piecesComptees(templateItems).length, piecesComptees(templateItems).filter((i) => i.jointe).length, 'formulaire')}
-              {score && score.conformes > 0
-                ? <>{'  ·  '}{score.conformes} {score.conformes > 1 ? 'prêtes' : 'prête'} pour le dépôt</>
-                : null}
+              Formulaires du DCE : {libelleComptes(comptesFormulaires.aJoindre, comptesFormulaires.pretes, 'formulaire')}
             </p>
           </div>
         </div>
 
-        {missing > 0 && (
+        {aJoindre > 0 && (
           <div className="relative mt-4 flex items-start gap-2.5 pt-3.5" style={{ borderTop: '1px solid var(--line)' }}>
-            <AlertTriangle size={15} className="mt-0.5 shrink-0" style={{ color: '#F58E86' }} />
+            <AlertTriangle size={15} className="mt-0.5 shrink-0" style={{ color: 'var(--piece-action)' }} />
             <p className="text-xs leading-relaxed" style={{ color: '#959597' }}>
               <span className="font-semibold" style={{ color: '#F7F8F8' }}>
-                {missing} pièce{missing > 1 ? 's' : ''} à joindre.
+                {aJoindre} pièce{aJoindre > 1 ? 's' : ''} à joindre.
               </span>{' '}
               Le règlement de consultation demande ces pièces.
             </p>
@@ -332,6 +322,7 @@ export default function StepVerification({ project }: Props) {
         onOpenVault={openVaultPage}
         onToggleSignature={handleToggleSignature}
         onNonConcerne={handleNonConcerne}
+        echeance={echeance}
       />
 
       <CandidatureSectionTemplates
@@ -340,6 +331,7 @@ export default function StepVerification({ project }: Props) {
         onUploadCompleted={handleUploadCompleted}
         onToggleSignature={handleToggleSignature}
         onNonConcerne={handleNonConcerne}
+        echeance={echeance}
       />
 
       <WorkflowSection
@@ -501,7 +493,7 @@ function SynorixJalonSection({ items }: { items: ChecklistItem[] }) {
         <div className="min-w-0">
           <h2 className="text-base font-bold" style={{ color: '#F7F8F8' }}>Généré par Synorix</h2>
           <p className="text-xs mt-0.5" style={{ color: '#909195' }}>
-            Produit automatiquement à l&apos;étape suivante — aucune pièce à fournir ici.
+            Produit automatiquement à l&apos;étape suivante — rien à joindre ici.
           </p>
         </div>
       </header>

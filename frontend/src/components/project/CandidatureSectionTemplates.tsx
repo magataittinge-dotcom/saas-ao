@@ -1,11 +1,11 @@
 import { useRef, useState } from 'react'
 import {
-  CheckCircle2, AlertCircle, Download, Upload, FileText, Loader2, ExternalLink,
+  Download, Upload, FileText, Loader2, ExternalLink,
 } from 'lucide-react'
 import type { ChecklistItem } from '@/types'
 import SignatureLigne from '@/components/project/SignatureLigne'
 import NonConcerneBouton, { estNonConcernee, piecesComptees } from '@/components/project/NonConcerne'
-import { comptePieces } from '@/lib/exportDossier'
+import { comptesPieces, libelleComptes, statutPiece } from '@/lib/statutPiece'
 
 const F = "'Inter Variable', 'Geist Sans', sans-serif"
 
@@ -44,16 +44,18 @@ interface Props {
   onUploadCompleted: (item: ChecklistItem, file: File) => Promise<void>
   onToggleSignature?: (item: ChecklistItem, confirmed: boolean) => Promise<void>
   onNonConcerne?: (item: ChecklistItem, nonConcerne: boolean) => Promise<void>
+  /** Date limite de remise (AAAA-MM-JJ). */
+  echeance?: string | null
 }
 
 export default function CandidatureSectionTemplates({
-  projectId, items, onUploadCompleted, onToggleSignature, onNonConcerne,
+  projectId, items, onUploadCompleted, onToggleSignature, onNonConcerne, echeance,
 }: Props) {
   if (items.length === 0) return null
 
   // « Non concerné » sort des comptes, comme dans le score du serveur
   const comptees = piecesComptees(items)
-  const joints = comptees.filter((i) => i.jointe).length
+  const { aJoindre, pretes } = comptesPieces(comptees, echeance)
   // AE en tête, puis les formulaires de candidature, puis le reste.
   const sorted = [...items].sort((a, b) => {
     const rank = (i: ChecklistItem) => {
@@ -82,7 +84,7 @@ export default function CandidatureSectionTemplates({
               Documents à compléter
             </h2>
             <p className="text-xs mt-0.5" style={{ color: '#959597' }}>
-              {comptePieces(comptees.length, joints, 'formulaire')} — téléchargez la trame (ou le formulaire officiel), complétez-la, puis réimportez la version finale
+              {libelleComptes(aJoindre, pretes, 'formulaire')} — téléchargez la trame (ou le formulaire officiel), complétez-la, puis réimportez la version finale
             </p>
           </div>
         </div>
@@ -97,6 +99,7 @@ export default function CandidatureSectionTemplates({
             onUploadCompleted={onUploadCompleted}
             onToggleSignature={onToggleSignature}
             onNonConcerne={onNonConcerne}
+            echeance={echeance}
           />
         ))}
       </ul>
@@ -105,8 +108,9 @@ export default function CandidatureSectionTemplates({
 }
 
 function TemplateRow({
-  projectId, item, onUploadCompleted, onToggleSignature, onNonConcerne,
+  projectId, item, onUploadCompleted, onToggleSignature, onNonConcerne, echeance,
 }: {
+  echeance?: string | null
   projectId: string
   item: ChecklistItem
   onUploadCompleted: (item: ChecklistItem, file: File) => Promise<void>
@@ -114,6 +118,7 @@ function TemplateRow({
   onNonConcerne?: (item: ChecklistItem, nonConcerne: boolean) => Promise<void>
 }) {
   const nonConcernee = estNonConcernee(item)
+  const statut = statutPiece(item, echeance)
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -152,29 +157,15 @@ function TemplateRow({
 
   return (
     <li className="px-5 py-3 flex items-start gap-4">
-      {/* Status icon */}
-      <span className="shrink-0 mt-0.5">
-        {isPresent
-          ? <CheckCircle2 size={18} style={{ color: '#6EE7A8' }} />
-          : isWarning
-            ? <AlertCircle size={18} style={{ color: '#D9A441' }} />
-            : <AlertCircle size={18} style={{ color: hasTemplate ? '#959597' : '#D9A441' }} />}
-      </span>
-
       {/* Body */}
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2 flex-wrap">
           <span className="text-sm font-semibold" style={{ color: '#F7F8F8' }}>{label}</span>
-          {nonConcernee ? (
-            <span className="text-xs" style={{ color: '#909195' }}>Non concerné</span>
-          ) : item.jointe ? (
-            <span className="text-xs" style={{ color: '#6EE7A8' }}>Jointe — {item.piece_nom}</span>
-          ) : isWarning ? (
-            <span className="text-xs font-medium" style={{ color: '#D9A441' }}>
-              ⚠️ Présente — à vérifier
-            </span>
-          ) : hasTemplate ? (
-            <span className="text-xs" style={{ color: '#959597' }}>À compléter</span>
+          <span className={statut.classe}>{statut.texte}</span>
+          {item.jointe && item.piece_nom ? (
+            <span className="text-xs" style={{ color: '#959597' }}>{item.piece_nom}</span>
+          ) : nonConcernee || isWarning ? null : hasTemplate ? (
+            <span className="text-xs" style={{ color: '#959597' }}>Trame du DCE à compléter</span>
           ) : officialUrl ? (
             // Type (b) : modèle officiel — normal qu'il ne soit pas au DCE. Aucun numéro de formulaire :
             // service-public (F32144, F32106) classe DC1/DC2/DUME en « Modèle de document ».

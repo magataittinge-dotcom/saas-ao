@@ -1,17 +1,17 @@
 import type { Document, DocumentType, VaultCategory } from '@/types'
+import { statutDocument } from '@/lib/statutPiece'
 
 export type VaultPillTone = 'ok' | 'neutral' | 'alert'
 
 /** B1 — pastille de validité d'une pièce du coffre (modale « Choisir »).
- *  « Valide » seulement pour une pièce reconnue ET datée (C10, cf.
- *  vault_classifier côté serveur) : sans date, la validité reste à confirmer. */
+ *  « Prêt » seulement pour une pièce reconnue ET datée (C10, cf.
+ *  vault_classifier côté serveur) : sans date, la validité reste à confirmer.
+ *  Mots communs avec les pièces d'un dossier (lib/statutPiece). */
 export function vaultValidityPill(
   doc: Pick<Document, 'status' | 'expiry_date' | 'issued_date'>,
 ): { label: string; tone: VaultPillTone } {
-  if (doc.status === 'expired') return { label: 'À renouveler', tone: 'alert' }
-  if (doc.status === 'expiring_soon') return { label: 'Expire bientôt', tone: 'neutral' }
-  if (doc.status === 'valid' && (doc.expiry_date || doc.issued_date)) return { label: 'Valide', tone: 'ok' }
-  return { label: 'Date de validité à confirmer', tone: 'neutral' }
+  const s = statutDocument(doc)
+  return { label: s.texte, tone: s.code === 'pret' ? 'ok' : s.action ? 'alert' : 'neutral' }
 }
 
 // Ordre d'affichage des sections du coffre-fort (« Non classés » traité à part, en tête).

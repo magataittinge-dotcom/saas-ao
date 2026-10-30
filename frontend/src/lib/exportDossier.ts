@@ -4,6 +4,8 @@
 // et « dont M confirmées par vous » seulement si M > 0. Synorix ne pose jamais
 // « confirmée » tout seul : seul le geste de l'utilisateur.
 
+import { statutPiece, type EntreeStatutPiece, type StatutPiece } from '@/lib/statutPiece'
+
 const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''}`
 
 export function resumeExigences(total: number, avecSource: number, confirmees: number): string {
@@ -48,60 +50,17 @@ export function lireAvertissementsExport(valeur: unknown): string[] {
   }
 }
 
-// ── Pièces (décision du 25/10, point 3) ─────────────────────────────────────
-// « Jointe » est un FAIT calculé par le serveur (le fichier part dans le ZIP,
-// valable et daté pour une pièce du coffre) : jamais déduit d'un statut seul.
+// ── Pièces (décision du 25/10, point 3 ; statuts positifs au bloc 9) ─────────
+// La règle des statuts vit dans lib/statutPiece.ts (fonction pure). « Prêt » est
+// un FAIT calculé par le serveur (le fichier part dans le ZIP, valable et daté
+// pour une pièce du coffre) : jamais déduit d'un statut seul.
 
-export interface EtatPieceEntree {
-  status: string
-  jointe?: boolean
-  piece_nom?: string | null
-  valable_jusqu_au?: string | null
-}
+export type EtatPieceEntree = EntreeStatutPiece
 
-const dateFr = (iso: string) => {
-  const [a, m, j] = iso.slice(0, 10).split('-')
-  return `${j}/${m}/${a}`
-}
-
-export function etatPiece(p: EtatPieceEntree): { texte: string; ton: 'ok' | 'attention' | 'neutre' } {
-  if (p.status === 'non_applicable') return { texte: 'Non concerné', ton: 'neutre' }
-  if (p.jointe) {
-    const fin = p.valable_jusqu_au ? ` · valable jusqu’au ${dateFr(p.valable_jusqu_au)}` : ''
-    return { texte: `Jointe — ${p.piece_nom ?? 'pièce du dossier'}${fin}`, ton: 'ok' }
-  }
-  if (p.status === 'expire') return { texte: 'À renouveler', ton: 'attention' }
-  if (p.status === 'warning') return { texte: 'Date de validité à confirmer', ton: 'attention' }
-  return { texte: 'À joindre', ton: 'neutre' }
-}
-
-/** « pièces demandées, dont 3 prêtes » — le nombre total s'affiche à part. */
-export function libellePieces(total: number, pretes: number): string {
-  const n = total > 1 ? 'pièces demandées' : 'pièce demandée'
-  if (pretes === 0) return n
-  if (total === 1) return `${n}, prête`
-  return `${n}, dont ${pretes} ${pretes > 1 ? 'prêtes' : 'prête'}`
-}
-
-export function resumePieces(total: number, pretes: number): string {
-  return `${total} ${libellePieces(total, pretes)}`
-}
-
-// ── Écran Vérification (bloc 2, tranche 6) : mêmes faits, aucune fraction ───
-
-/** « pièces demandées, dont 3 jointes » — le nombre total s'affiche à part. */
-export function libelleJointes(total: number, jointes: number): string {
-  const n = total > 1 ? 'pièces demandées' : 'pièce demandée'
-  if (jointes === 0) return n
-  if (total === 1) return `${n}, jointe`
-  return `${n}, dont ${jointes} ${jointes > 1 ? 'jointes' : 'jointe'}`
-}
-
-/** « 4 pièces, dont 2 jointes » ; « 3 formulaires, dont 1 joint ». */
-export function comptePieces(total: number, jointes: number, nom: 'pièce' | 'formulaire' = 'pièce'): string {
-  const n = pluriel(total, nom)
-  const accord = (k: number) => (nom === 'pièce' ? 'jointe' : 'joint') + (k > 1 ? 's' : '')
-  if (jointes === 0) return n
-  if (total === 1) return `${n}, ${accord(1)}`
-  return `${n}, dont ${jointes} ${accord(jointes)}`
+export function etatPiece(
+  p: EtatPieceEntree, echeance?: string | null,
+): { texte: string; ton: 'ok' | 'attention' | 'neutre'; statut: StatutPiece } {
+  const statut = statutPiece(p, echeance)
+  const ton = statut.code === 'pret' ? 'ok' : statut.action ? 'attention' : 'neutre'
+  return { texte: statut.texte, ton, statut }
 }

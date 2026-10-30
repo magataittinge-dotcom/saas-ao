@@ -36,17 +36,17 @@ export function complianceStatusBadge(status: ComplianceStatus) {
     non_couvert: { label: 'À confirmer',  variant: 'neutral' },
     partiel:     { label: '⚠️ Partiel',   variant: 'warning' },
     a_generer:   { label: '🔄 À générer', variant: 'info'    },
-    expire:      { label: '⏰ Expiré',    variant: 'danger'  },
+    expire:      { label: 'À renouveler', variant: 'amber'  },
   }
   return map[status]
 }
 
 export function documentStatusBadge(status: DocumentStatus) {
   const map: Record<DocumentStatus, { label: string; variant: BadgeVariant }> = {
-    valid:          { label: '✓ Valide',         variant: 'success' },
-    expiring_soon:  { label: '🟠 Expire bientôt',variant: 'warning' },
-    expired:        { label: 'À renouveler',     variant: 'danger'  },
-    unverified:     { label: '⚠️ À vérifier',    variant: 'amber'   },
+    valid:          { label: 'Prêt',             variant: 'success' },
+    expiring_soon:  { label: 'Prêt',             variant: 'success' },
+    expired:        { label: 'À renouveler',     variant: 'amber'   },
+    unverified:     { label: 'Date de validité à confirmer', variant: 'amber' },
     unclassified:   { label: 'Non classé',       variant: 'neutral' },
   }
   return map[status] ?? map.unclassified

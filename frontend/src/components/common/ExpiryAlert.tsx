@@ -27,8 +27,8 @@ export function ExpiryAlert({ expiryDate, documentName }: Props) {
       <span>
         <span className="font-medium">{documentName}</span>{' '}
         {isExpired
-          ? `expiré depuis ${Math.abs(days)} jours (${formatDate(expiryDate)})`
-          : `expire dans ${days} jour${days > 1 ? 's' : ''} — ${formatDate(expiryDate)}`}
+          ? `à renouveler — fin de validité le ${formatDate(expiryDate)}`
+          : `à renouveler d’ici ${days} jour${days > 1 ? 's' : ''} — valable jusqu’au ${formatDate(expiryDate)}`}
       </span>
     </div>
   )

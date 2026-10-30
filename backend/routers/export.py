@@ -69,7 +69,7 @@ def get_export_detail(
     # Build checklist with linked doc names — une seule requête pour toutes les
     # pièces liées (avant : une par ligne de checklist).
     from models.document import Document
-    from services.ai.checklist_matcher import signature_requise
+    from services.ai.checklist_matcher import lire_obligation, lire_phase, signature_requise
     from services.checklist_builder import recaler_lignes_coffre
     lies = {i.linked_document_id for i in checklist_items if i.linked_document_id}
     docs_lies = {}
@@ -94,6 +94,7 @@ def get_export_detail(
         doc = docs_lies.get(item.linked_document_id) if item.linked_document_id else None
         doc_name = doc.file_name if doc else None
         jointe, piece_nom, valable_jusqu_au = _etat_piece(item, docs_lies, docs_projet, plan)
+        valable_jusqu_au = valable_jusqu_au or _fin_validite_liee(item, docs_lies)
         checklist_export.append(ChecklistExportItem(
             id=item.id,
             document_type_required=item.document_type_required,
@@ -108,6 +109,7 @@ def get_export_detail(
             # le gate d'export compte les mêmes lignes que le score serveur
             document_group=item.document_group or "fournir",
             jointe=jointe, piece_nom=piece_nom, valable_jusqu_au=valable_jusqu_au,
+            obligation=lire_obligation(item), phase=lire_phase(item),
         ))
 
     # Mémoire info
@@ -566,6 +568,18 @@ def _etat_piece(item, docs_par_id: dict, docs_projet: dict, plan: PlanZip):
     if complet and complet.id in plan.projet_joint and item.status == "present":
         return True, complet.file_name, None
     return False, None, None
+
+
+def _fin_validite_liee(item, docs_par_id: dict):
+    """Date de fin de validité de la pièce du coffre liée, jointe ou non : pour
+    dire « À renouveler — fin de validité le … » (jamais un fichier absent)."""
+    if (item.source_kind or "vault") != "vault" or not item.linked_document_id:
+        return None
+    doc = docs_par_id.get(item.linked_document_id)
+    if not doc:
+        return None
+    from services.vault_classifier import effective_expiry_date
+    return effective_expiry_date(doc.type, doc.expiry_date, doc.issued_date)
 
 
 def _chemin_local(file_url: Optional[str]) -> Optional[FilePath]:
