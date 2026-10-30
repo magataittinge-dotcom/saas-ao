@@ -1,4 +1,6 @@
 import { AlertTriangle, Clock } from 'lucide-react'
+import { Card } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 
 interface Alert {
   id: string
@@ -11,34 +13,32 @@ interface Props {
   alerts: Alert[]
 }
 
+// Alertes : « à traiter » = ton warning, « à surveiller » = neutre. Aucune couleur écrite ici (jetons).
 export function AlertCard({ alerts }: Props) {
   if (alerts.length === 0) return null
 
   return (
-    <div
-      className="glass-card p-4"
-      style={{ borderColor: 'rgba(120,130,149,0.20)' }}
-    >
-      <h2 className="font-semibold text-ds-text mb-3 flex items-center gap-2">
-        <AlertTriangle size={18} style={{ color: '#9BA4B5' }} />
+    <Card className="p-4">
+      <h2 className="mb-3 flex items-center gap-2 font-semibold text-fg">
+        <AlertTriangle size={18} className="text-fg-3" aria-hidden />
         Alertes
       </h2>
       <div className="space-y-2">
         {alerts.map((alert) => (
           <div
             key={alert.id}
-            className="flex items-center gap-2 text-sm py-1.5 px-3 rounded-md"
-            style={
+            className={cn(
+              'flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm',
               alert.severity === 'red'
-                ? { background: 'rgba(245,142,134,0.10)', color: '#F58E86', border: '1px solid rgba(245,142,134,0.20)' }
-                : { background: 'rgba(120,130,149,0.08)', color: '#9BA4B5', border: '1px solid rgba(120,130,149,0.20)' }
-            }
+                ? 'border-warning-border bg-warning-bg text-warning'
+                : 'border-bord-2 bg-surface-0 text-fg-2',
+            )}
           >
-            {alert.severity === 'red' ? <AlertTriangle size={14} /> : <Clock size={14} />}
+            {alert.severity === 'red' ? <AlertTriangle size={14} aria-hidden /> : <Clock size={14} aria-hidden />}
             {alert.message}
           </div>
         ))}
       </div>
-    </div>
+    </Card>
   )
 }

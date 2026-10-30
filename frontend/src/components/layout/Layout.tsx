@@ -15,7 +15,7 @@ import EcranEnChargement from '@/components/common/EcranEnChargement'
 // en-tête, onglets du bas, palette Ctrl K) le suit partout ; les autres écrans restent en nuit
 // (data-theme="dark" sur <main>) jusqu'à leur passage — phase C, un écran à la fois :
 // ajouter ici la route de l'écran dès qu'il ne contient plus de couleur écrite en dur.
-export const PAGES_THEMEES = ['/dashboard', '/projects', '/design']
+export const PAGES_THEMEES = ['/dashboard', '/projects', '/design', '/projects/new', '/vault', '/company']
 export const estThemee = (pathname: string) => PAGES_THEMEES.some((p) => pathname === p) || pathname === '/design' || /^\/projects\/(?!new(\/|$))[^/]+/.test(pathname) // la page d'un AO : /projects/:id/…
 
 export default function Layout() {

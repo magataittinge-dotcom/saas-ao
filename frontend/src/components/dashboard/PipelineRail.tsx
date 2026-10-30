@@ -13,9 +13,8 @@ interface PipelineRailProps {
 }
 
 /**
- * Rail de progression du pipeline AO — 6 segments (langage steps-track Lumen).
- * Étapes franchies remplies en lumière argentée, étape courante mise en valeur
- * (glow blanc), suivantes en neutre. Animation douce de remplissage.
+ * Rail de progression du pipeline AO — 6 segments. Étapes franchies en encre,
+ * étape courante en accent, suivantes en neutre (jetons, clair et nuit).
  */
 export function PipelineRail({ currentStep, showLabel = true, className }: PipelineRailProps) {
   const { etape: step, total } = avancementAO(currentStep)
@@ -31,10 +30,10 @@ export function PipelineRail({ currentStep, showLabel = true, className }: Pipel
             <span
               key={n}
               className={cn(
-                'h-1.5 flex-1 rounded-full transition-all duration-700 ease-smooth',
-                done && 'bg-gradient-cyan',
-                active && 'bg-gradient-cyan shadow-glow-sm',
-                !done && !active && 'bg-ds-bg-3',
+                'h-1.5 flex-1 rounded-full transition-colors duration-morph ease-lien',
+                done && 'bg-fg',
+                active && 'bg-accent-ui',
+                !done && !active && 'bg-fg-disabled',
               )}
               style={{ transitionDelay: `${i * 50}ms` }}
             />
@@ -43,8 +42,8 @@ export function PipelineRail({ currentStep, showLabel = true, className }: Pipel
       </div>
       {showLabel && (
         <div className="mt-1.5 flex items-center justify-between">
-          <span className="text-xs font-medium text-ds-text-2">{PIPELINE_STEPS[step - 1]}</span>
-          <span className="edge-data text-xs font-semibold tabular-nums text-ds-cyan">Étape {step} sur {total}</span>
+          <span className="text-xs font-medium text-fg-2">{PIPELINE_STEPS[step - 1]}</span>
+          <span className="font-mono text-xs font-semibold tabular-nums text-accent-text">Étape {step} sur {total}</span>
         </div>
       )}
     </div>

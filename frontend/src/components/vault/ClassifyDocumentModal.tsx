@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import { createPortal } from 'react-dom'
-import { X } from 'lucide-react'
 import { useUpdateDocument } from '@/hooks/useDocuments'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input, classeChamp } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
 import {
   CATEGORY_TYPES, DOC_TYPE_LABELS, VAULT_CATEGORY_LABELS, VAULT_CATEGORY_ORDER,
 } from '@/lib/vault'
@@ -12,9 +14,9 @@ interface Props {
   onClose: () => void
 }
 
-const inputClass =
-  'w-full rounded-lg border px-3 py-2 text-sm bg-ds-bg text-[#F4F6FA] focus:outline-none focus:ring-2 focus:ring-[rgba(228,233,242,0.30)]'
-const inputStyle = { borderColor: '#1C222D' }
+// Listes natives : le bord, les états et la hauteur des champs du socle.
+const selectClass = cn(classeChamp, 'h-10 [@media(pointer:coarse)]:h-11')
+const etiquette = 'mb-1 block text-xs font-medium text-fg-2'
 
 /**
  * Classement / modification manuelle d'un document du coffre-fort
@@ -54,28 +56,22 @@ export default function ClassifyDocumentModal({ document: doc, onClose }: Props)
     )
   }
 
-  return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.60)' }} onClick={onClose}>
-      <div className="w-full max-w-md rounded-2xl bg-ds-bg p-5 space-y-4 shadow-xl"
-        onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-start justify-between">
-          <div className="min-w-0">
-            <h2 className="text-base font-bold text-[#F4F6FA]">
-              {isUnclassified ? 'Classer le document' : 'Modifier le document'}
-            </h2>
-            <p className="text-xs text-[#788295] truncate">{doc.file_name}</p>
-          </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[#1C222D]" style={{ color: '#788295' }}>
-            <X size={16} />
-          </button>
-        </div>
+  return (
+    <Dialog open onOpenChange={(ouvert) => { if (!ouvert) onClose() }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader className="min-w-0 pr-8">
+          <DialogTitle className="text-base font-bold text-fg">
+            {isUnclassified ? 'Classer le document' : 'Modifier le document'}
+          </DialogTitle>
+          <DialogDescription className="truncate text-xs text-fg-3">{doc.file_name}</DialogDescription>
+        </DialogHeader>
 
         <div className="space-y-3">
           <div>
-            <label className="block text-xs font-medium text-[#9BA4B5] mb-1">Catégorie</label>
+            <label htmlFor="classer-categorie" className={etiquette}>Catégorie</label>
             <select
-              className={inputClass} style={inputStyle}
+              id="classer-categorie"
+              className={selectClass}
               value={category}
               onChange={(e) => onCategoryChange(e.target.value as Exclude<VaultCategory, 'unclassified'>)}
             >
@@ -86,9 +82,10 @@ export default function ClassifyDocumentModal({ document: doc, onClose }: Props)
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-[#9BA4B5] mb-1">Type de document</label>
+            <label htmlFor="classer-type" className={etiquette}>Type de document</label>
             <select
-              className={inputClass} style={inputStyle}
+              id="classer-type"
+              className={selectClass}
               value={type}
               onChange={(e) => setType(e.target.value as DocumentType)}
             >
@@ -100,42 +97,34 @@ export default function ClassifyDocumentModal({ document: doc, onClose }: Props)
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs font-medium text-[#9BA4B5] mb-1">Date d'émission</label>
-              <input type="date" className={inputClass} style={inputStyle}
-                value={issuedDate} onChange={(e) => setIssuedDate(e.target.value)} />
+              <label htmlFor="classer-emission" className={etiquette}>Date d'émission</label>
+              <Input id="classer-emission" type="date" value={issuedDate} onChange={(e) => setIssuedDate(e.target.value)} />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[#9BA4B5] mb-1">Valide jusqu'au</label>
-              <input type="date" className={inputClass} style={inputStyle}
-                value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
+              <label htmlFor="classer-validite" className={etiquette}>Valide jusqu'au</label>
+              <Input id="classer-validite" type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} />
             </div>
           </div>
 
           {!expiryDate && type !== 'autre' && (
-            <p className="text-xs" style={{ color: '#F5C26B' }}>
+            <p className="text-xs text-warning">
               Sans date de validité, le document restera « ⚠️ À vérifier ».
             </p>
           )}
           {error && (
-            <p className="text-xs" style={{ color: '#F58E86' }}>
+            <p role="alert" className="text-xs text-danger">
               Enregistrement impossible — réessayez.
             </p>
           )}
         </div>
 
-        <div className="flex justify-end gap-2 pt-1">
-          <button onClick={onClose}
-            className="px-3 py-2 rounded-lg text-sm font-medium hover:bg-[#1C222D]"
-            style={{ color: '#9BA4B5' }}>
-            Annuler
-          </button>
-          <button onClick={onSubmit} disabled={isPending}
-            className="edge-cta px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-60">
+        <DialogFooter className="gap-2 pt-3 sm:space-x-0">
+          <Button variant="ghost" onClick={onClose}>Annuler</Button>
+          <Button onClick={onSubmit} disabled={isPending}>
             {isPending ? 'Enregistrement…' : 'Enregistrer'}
-          </button>
-        </div>
-      </div>
-    </div>,
-    window.document.body,
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

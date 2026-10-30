@@ -6,6 +6,9 @@ import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { ArrowLeft, Briefcase, Calendar, User, AlertCircle } from 'lucide-react'
 import { useCreateProject } from '@/hooks/useProject'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 
 const schema = z.object({
   name:           z.string().min(3, 'Nom du projet requis'),
@@ -15,7 +18,8 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>
 
-function FieldGroup({ label, hint, error, children }: {
+function FieldGroup({ id, label, hint, error, children }: {
+  id: string
   label: string
   hint?: string
   error?: string
@@ -23,13 +27,13 @@ function FieldGroup({ label, hint, error, children }: {
 }) {
   return (
     <div className="space-y-1.5">
-      <label className="flex items-center justify-between text-sm font-medium text-ds-text">
+      <label htmlFor={id} className="flex items-center justify-between text-sm font-medium text-fg">
         <span>{label}</span>
-        {hint && <span className="text-xs font-normal text-ds-text-3">{hint}</span>}
+        {hint && <span className="text-xs font-normal text-fg-3">{hint}</span>}
       </label>
       {children}
       {error && (
-        <p className="text-xs flex items-center gap-1 text-ds-danger-light">
+        <p id={`${id}-erreur`} role="alert" className="flex items-center gap-1 text-xs text-danger">
           {error}
         </p>
       )}
@@ -65,125 +69,116 @@ export default function NewProject() {
   }
 
   return (
-    <div className="max-w-lg mx-auto animate-fade-in">
+    <div className="mx-auto max-w-lg animate-fade-in">
       <button
         onClick={() => navigate(-1)}
-        className="flex items-center gap-1.5 text-sm text-ds-text-3 hover:text-ds-text mb-6 transition-all duration-200"
+        className="mb-6 inline-flex items-center gap-1.5 rounded-xs text-sm text-fg-3 transition-colors duration-base ease-lien hover:text-fg [@media(pointer:coarse)]:min-h-11"
       >
-        <ArrowLeft size={15} />
+        <ArrowLeft size={15} aria-hidden />
         Retour
       </button>
 
-      <div
-        className="glass-card overflow-hidden"
-        style={{ boxShadow: '0 0 60px rgba(228,233,242,0.06), 0 24px 48px rgba(0,0,0,0.40)' }}
-      >
-        {/* Card header */}
-        <div
-          className="px-8 pt-8 pb-6"
-          style={{ borderBottom: '1px solid rgba(228,233,242,0.08)' }}
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-              style={{
-                background: 'linear-gradient(135deg, rgba(228,233,242,0.15), rgba(159,169,188,0.10))',
-                border: '1px solid rgba(228,233,242,0.20)',
-              }}
-            >
-              <Briefcase size={18} className="text-ds-cyan" />
+      <Card className="overflow-hidden shadow-card">
+        {/* En-tête de la carte */}
+        <div className="border-b border-bord px-8 pb-6 pt-8">
+          <div className="mb-3 flex items-center gap-3">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-tint">
+              <Briefcase size={18} className="text-accent-text" aria-hidden />
             </div>
             <div>
-              <h1 className="text-ds-text leading-tight">Nouvel appel d&apos;offres</h1>
-              <p className="text-sm text-ds-text-2 mt-0.5">Remplissez les informations de base pour démarrer</p>
+              <h1 className="font-display text-h6 leading-tight text-fg">Nouvel appel d&apos;offres</h1>
+              <p className="mt-0.5 text-sm text-fg-2">Remplissez les informations de base pour démarrer</p>
             </div>
           </div>
         </div>
 
-        {/* Form */}
+        {/* Formulaire */}
         <div className="px-8 py-6">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <FieldGroup
+              id="nom-projet"
               label="Nom du projet *"
               error={errors.name?.message}
             >
-              <input
+              <Input
+                id="nom-projet"
                 {...register('name')}
-                className="glass-input w-full py-2.5 text-sm"
+                aria-invalid={errors.name ? true : undefined}
+                aria-describedby={errors.name ? 'nom-projet-erreur' : undefined}
+                className="py-2.5"
                 placeholder="Ex : Construction 42 logements — Charleville"
                 autoFocus
               />
             </FieldGroup>
 
             <FieldGroup
+              id="maitre-ouvrage"
               label="Maître d'ouvrage"
               hint="optionnel"
             >
               <div className="relative">
                 <User
                   size={14}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-ds-text-3"
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-fg-3"
+                  aria-hidden
                 />
-                <input
+                <Input
+                  id="maitre-ouvrage"
                   {...register('maitre_ouvrage')}
-                  className="glass-input w-full py-2.5 text-sm pl-9"
+                  className="py-2.5 pl-9"
                   placeholder="Ex : Commune de Charleville-Mézières"
                 />
               </div>
             </FieldGroup>
 
             <FieldGroup
+              id="date-limite"
               label="Date limite de réponse"
               hint="optionnel"
             >
               <div className="relative">
                 <Calendar
                   size={14}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none text-ds-text-3"
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-fg-3"
+                  aria-hidden
                 />
-                <input
+                <Input
+                  id="date-limite"
                   {...register('deadline')}
                   type="date"
-                  className="glass-input w-full py-2.5 text-sm pl-9"
+                  className="py-2.5 pl-9"
                 />
               </div>
             </FieldGroup>
 
             {apiError && (
               <div
-                className="flex items-start gap-2 p-3 rounded-lg text-sm text-ds-danger-light"
-                style={{ background: 'rgba(245,142,134,0.10)', border: '1px solid rgba(245,142,134,0.25)' }}
+                role="alert"
+                className="flex items-start gap-2 rounded-lg border border-danger-border bg-danger-bg p-3 text-sm text-danger"
               >
-                <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                <AlertCircle size={16} className="mt-0.5 shrink-0" aria-hidden />
                 <span>{apiError}</span>
               </div>
             )}
 
             <div className="pt-2">
-              <button
-                type="submit"
-                disabled={isPending}
-                className="btn-primary w-full py-3 flex items-center justify-center gap-2"
-              >
+              <Button type="submit" disabled={isPending} size="lg" className="w-full">
                 {isPending ? (
                   <>
-                    <span
-                      className="w-4 h-4 rounded-full border-2 border-transparent animate-spin"
-                      style={{ borderTopColor: 'rgba(255,255,255,0.8)' }}
-                    />
+                    <span className="size-4 animate-spin rounded-full border-2 border-accent-on/40 border-t-accent-on" aria-hidden />
                     Création en cours…
                   </>
                 ) : (
                   'Créer le projet →'
                 )}
-              </button>
-              <p className="text-xs text-center text-ds-text-3 mt-3">
+              </Button>
+              <p className="mt-3 text-center text-xs text-fg-3">
                 Vous déposerez les documents du DCE à l&apos;étape suivante
               </p>
             </div>
           </form>
         </div>
-      </div>
+      </Card>
     </div>
   )
 }

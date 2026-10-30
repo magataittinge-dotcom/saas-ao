@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Check, Loader2, Sparkles, X } from 'lucide-react'
 import { api } from '@/services/api'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Textarea } from '@/components/ui/input'
 
 const FIELD_LABELS: Record<string, string> = {
   activites: 'Activités principales',
@@ -61,37 +64,39 @@ export default function ProfileFreeTextCard() {
   })
 
   return (
-    <div className="glass-card p-4 space-y-3">
-      <div className="flex items-center gap-2">
-        <Sparkles size={15} className="text-ds-cyan" />
-        <h3 className="text-sm font-semibold text-ds-text">Décrire en langage libre</h3>
-        <span className="text-xs text-ds-text-3">l'IA structure, vous validez</span>
+    <Card className="space-y-3 p-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <Sparkles size={15} className="text-accent-text" aria-hidden />
+        <h3 className="text-sm font-semibold text-fg">Décrire en langage libre</h3>
+        <span className="text-xs text-fg-3">l'IA structure, vous validez</span>
       </div>
 
       {!proposed ? (
         <>
-          <textarea
+          <Textarea
             rows={3}
             value={text}
             onChange={(e) => setText(e.target.value)}
+            aria-label="Décrire votre entreprise en langage libre"
             placeholder="Ex. : On est une boîte de ravalement à Caen, 8 compagnons, 3 camions benne, 2 échafaudages MDS…"
-            className="glass-input w-full py-2.5 text-sm"
+            className="resize-y py-2.5 text-sm"
           />
           <div className="flex items-center justify-between gap-3">
-            {error && <p className="text-xs" style={{ color: '#F5C26B' }}>{error}</p>}
-            <button
+            {error && <p role="alert" className="text-xs text-warning">{error}</p>}
+            <Button
               onClick={() => structure()}
               disabled={structuring || text.trim().length < 10}
-              className="btn-primary ml-auto flex items-center gap-2 py-2 px-4 text-sm disabled:opacity-50"
+              size="sm"
+              className="ml-auto"
             >
-              {structuring ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+              {structuring ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <Sparkles size={14} aria-hidden />}
               Structurer
-            </button>
+            </Button>
           </div>
         </>
       ) : (
         <>
-          <p className="text-xs text-ds-text-2">
+          <p className="text-xs text-fg-2">
             Vérifiez et ajustez avant d'appliquer — seuls les champs cochés seront écrits dans votre profil.
           </p>
           <div className="space-y-2">
@@ -99,7 +104,8 @@ export default function ProfileFreeTextCard() {
               <div key={key} className="flex items-start gap-2.5">
                 <input
                   type="checkbox"
-                  className="mt-1.5"
+                  className="mt-1.5 size-4 accent-accent-ui"
+                  aria-label={`Inclure « ${FIELD_LABELS[key] ?? key} »`}
                   checked={included.has(key)}
                   onChange={() => setIncluded(prev => {
                     const next = new Set(prev)
@@ -108,38 +114,32 @@ export default function ProfileFreeTextCard() {
                     return next
                   })}
                 />
-                <div className="flex-1 min-w-0">
-                  <label className="block text-xs font-medium text-ds-text-2 mb-0.5">
+                <div className="min-w-0 flex-1">
+                  <label htmlFor={`structure-${key}`} className="mb-0.5 block text-xs font-medium text-fg-2">
                     {FIELD_LABELS[key] ?? key}
                   </label>
-                  <textarea
+                  <Textarea
+                    id={`structure-${key}`}
                     rows={2}
                     value={value}
                     onChange={(e) => setProposed(prev => ({ ...prev!, [key]: e.target.value }))}
-                    className="glass-input w-full py-1.5 text-sm"
+                    className="min-h-0 py-1.5 text-sm"
                   />
                 </div>
               </div>
             ))}
           </div>
           <div className="flex justify-end gap-2 pt-1">
-            <button
-              onClick={() => setProposed(null)}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm text-ds-text-2 hover:bg-ds-bg-2"
-            >
-              <X size={14} /> Annuler
-            </button>
-            <button
-              onClick={() => apply()}
-              disabled={applying || included.size === 0}
-              className="btn-primary flex items-center gap-2 py-2 px-4 text-sm disabled:opacity-50"
-            >
-              {applying ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+            <Button variant="ghost" size="sm" onClick={() => setProposed(null)}>
+              <X size={14} aria-hidden /> Annuler
+            </Button>
+            <Button size="sm" onClick={() => apply()} disabled={applying || included.size === 0}>
+              {applying ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <Check size={14} aria-hidden />}
               Appliquer au profil ({included.size})
-            </button>
+            </Button>
           </div>
         </>
       )}
-    </div>
+    </Card>
   )
 }

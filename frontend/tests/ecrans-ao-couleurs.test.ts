@@ -83,11 +83,11 @@ for (const [ecran, fichiers] of Object.entries(TRANCHES)) {
   })
 }
 
-test('les routes /projects/:id/… suivent le thème ; la liste, Nouvel AO restent comme avant', () => {
+test('les routes /projects/:id/… suivent le thème, comme la liste, Nouvel AO, le coffre-fort et Mon entreprise', () => {
   for (const p of ['/projects/p1', '/projects/p1/upload', '/projects/abc-123/analysis', '/projects/p1/export']) assert.equal(estThemee(p), true, p)
   assert.equal(estThemee('/projects'), true)
-  assert.equal(estThemee('/projects/new'), false)
-  assert.equal(estThemee('/vault'), false)
+  for (const p of ['/projects/new', '/vault', '/company']) assert.equal(estThemee(p), true, p)
+  assert.equal(estThemee('/settings'), false)
 })
 
 test('le fil d\'étapes tient à 390 px : ronds de 44 px, seul le nom de l\'étape active est montré au téléphone', () => {

@@ -8,14 +8,17 @@ import { useCreateProject } from '@/hooks/useProject'
 import { setPendingUpload } from '@/lib/pendingUpload'
 import { messageErreur } from '@/lib/erreurs'
 import EchecAction from '@/components/common/EchecAction'
-import CompanionOrb from '@/components/ui/CompanionOrb'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
 
 /**
  * C15 — onboarding wow : UN écran central après l'inscription.
  * SIRET (une seule saisie, Sirene pré-remplit le profil) puis dropzone
  * « Déposez votre premier DCE — il est offert ». Zéro formulaire
  * supplémentaire : le profil se complète au fil de l'eau.
- * Thème clair « Calque » : il s'affiche sur le tableau de bord.
+ * Il s'affiche sur le tableau de bord, en clair comme en nuit (jetons du système). Le visage est celui de
+ * public/visage (poster), jamais un autre.
  */
 export default function FirstAOWelcome() {
   const navigate = useNavigate()
@@ -85,45 +88,47 @@ export default function FirstAOWelcome() {
 
   return (
     <div className="mx-auto flex max-w-xl flex-col items-center pt-12 text-center">
-      <CompanionOrb state="veille" size={56} zoom={1.05} fond="clair" className="mb-5" title="Compagnon Synorix" />
-      <h1 className="mb-1.5 text-[28px] font-semibold leading-9 tracking-tight text-encre">
+      <img
+        src="/visage/tete-ouverte-poster.webp"
+        alt=""
+        width={56}
+        height={56}
+        className="mb-5 size-14 rounded-full bg-surface-1 object-cover"
+      />
+      <h1 className="mb-1.5 font-display text-h5 text-fg">
         Bienvenue{firstName ? `, ${firstName}` : ''}
       </h1>
 
       {!siretDone ? (
         <>
-          <p className="mb-7 text-[15px] text-encre-2">
+          <p className="mb-7 text-[15px] text-fg-2">
             Votre SIRET — et c'est tout : le répertoire Sirene remplit le reste de votre profil.
           </p>
           <div className="flex w-full gap-2">
-            <input
+            <Input
               value={siret}
               onChange={(e) => setSiret(e.target.value)}
               placeholder="N° SIRET (14 chiffres)"
               aria-label="Numéro SIRET"
               inputMode="numeric"
-              className="h-10 flex-1 rounded-md border border-ligne-champ bg-surface px-3 text-[15px] text-encre placeholder:text-encre-3"
+              className="flex-1 text-[15px]"
               onKeyDown={(e) => e.key === 'Enter' && submitSiret()}
             />
-            <button
-              onClick={submitSiret}
-              disabled={siretBusy || !siret.trim()}
-              className="h-10 rounded-md bg-encre px-4 text-sm font-semibold text-sur-encre transition-colors hover:bg-encre-survol disabled:opacity-50"
-            >
-              {siretBusy ? <Loader2 size={16} className="animate-spin" /> : 'Valider'}
-            </button>
+            <Button onClick={submitSiret} disabled={siretBusy || !siret.trim()}>
+              {siretBusy ? <Loader2 size={16} className="animate-spin" aria-hidden /> : 'Valider'}
+            </Button>
           </div>
           <button onClick={() => setSiretDone(true)}
-            className="mt-3 text-[13px] text-encre-3 underline-offset-[3px] hover:text-encre hover:underline">
+            className="mt-3 inline-flex items-center rounded-xs text-[13px] text-fg-3 underline-offset-[3px] transition-colors duration-base ease-lien hover:text-fg hover:underline [@media(pointer:coarse)]:min-h-11">
             Passer cette étape
           </button>
         </>
       ) : (
         <>
           {siretMsg && (
-            <p className="mb-3 max-w-md text-[13px] text-attention">{siretMsg}</p>
+            <p className="mb-3 max-w-md text-[13px] text-warning">{siretMsg}</p>
           )}
-          <p className="mb-7 text-[15px] text-encre-2">
+          <p className="mb-7 text-[15px] text-fg-2">
             Votre profil se complétera au fil de vos réponses — commencez directement.
           </p>
           {echec && (
@@ -133,21 +138,21 @@ export default function FirstAOWelcome() {
           )}
           <div
             {...getRootProps()}
-            className={
-              'w-full cursor-pointer rounded-[10px] border-2 border-dashed px-8 py-14 transition-colors '
-              + (isDragActive ? 'border-prusse-500 bg-prusse-50' : 'border-ligne-forte bg-surface hover:border-ligne-champ')
-            }
+            className={cn(
+              'w-full cursor-pointer rounded-xl border-2 border-dashed px-8 py-14 transition-colors duration-base ease-lien',
+              isDragActive ? 'border-accent-ring bg-accent-tint' : 'border-input bg-surface-1 hover:border-fg-3',
+            )}
           >
             <input {...getInputProps()} />
             {isCreating ? (
-              <Loader2 size={28} className="mx-auto animate-spin text-encre-3" />
+              <Loader2 size={28} className="mx-auto animate-spin text-fg-3" aria-hidden />
             ) : (
-              <CloudUpload size={28} strokeWidth={1.6} className="mx-auto text-encre-3" />
+              <CloudUpload size={28} strokeWidth={1.6} className="mx-auto text-fg-3" aria-hidden />
             )}
-            <p className="mt-4 text-base font-semibold text-encre">
+            <p className="mt-4 text-base font-semibold text-fg">
               Déposez votre premier DCE — il est offert
             </p>
-            <p className="mt-1.5 text-[13px] text-encre-3">
+            <p className="mt-1.5 text-[13px] text-fg-3">
               ZIP complet ou PDF · analyse, vérification et mémoire compris
             </p>
           </div>
