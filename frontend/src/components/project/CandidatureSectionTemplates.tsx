@@ -43,13 +43,14 @@ interface Props {
   items: ChecklistItem[]
   onUploadCompleted: (item: ChecklistItem, file: File) => Promise<void>
   onToggleSignature?: (item: ChecklistItem, confirmed: boolean) => Promise<void>
+  onOpenSource?: (item: ChecklistItem) => void
   onNonConcerne?: (item: ChecklistItem, nonConcerne: boolean) => Promise<void>
   /** Date limite de remise (AAAA-MM-JJ). */
   echeance?: string | null
 }
 
 export default function CandidatureSectionTemplates({
-  projectId, items, onUploadCompleted, onToggleSignature, onNonConcerne, echeance,
+  projectId, items, onUploadCompleted, onToggleSignature, onOpenSource, onNonConcerne, echeance,
 }: Props) {
   if (items.length === 0) return null
 
@@ -98,6 +99,7 @@ export default function CandidatureSectionTemplates({
             item={item}
             onUploadCompleted={onUploadCompleted}
             onToggleSignature={onToggleSignature}
+                  onOpenSource={onOpenSource}
             onNonConcerne={onNonConcerne}
             echeance={echeance}
           />
@@ -108,13 +110,14 @@ export default function CandidatureSectionTemplates({
 }
 
 function TemplateRow({
-  projectId, item, onUploadCompleted, onToggleSignature, onNonConcerne, echeance,
+  projectId, item, onUploadCompleted, onToggleSignature, onOpenSource, onNonConcerne, echeance,
 }: {
   echeance?: string | null
   projectId: string
   item: ChecklistItem
   onUploadCompleted: (item: ChecklistItem, file: File) => Promise<void>
   onToggleSignature?: (item: ChecklistItem, confirmed: boolean) => Promise<void>
+  onOpenSource?: (item: ChecklistItem) => void
   onNonConcerne?: (item: ChecklistItem, nonConcerne: boolean) => Promise<void>
 }) {
   const nonConcernee = estNonConcernee(item)
@@ -177,7 +180,8 @@ function TemplateRow({
           )}
         </div>
         {/* Signature : case seulement si elle est demandée, sinon la mention */}
-        <SignatureLigne item={item} onToggleSignature={onToggleSignature} />
+        <SignatureLigne item={item} onToggleSignature={onToggleSignature}
+                  onOpenSource={onOpenSource} />
         {depot && <p className="piece-note">{depot}</p>}
         {item.details && (
           <p className="text-xs mt-1 leading-relaxed" style={{ color: '#959597' }}>

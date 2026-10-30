@@ -47,6 +47,11 @@ class ChecklistItemResponse(BaseModel):
     # « Déposé le … par … » : instant UTC (sérialisé avec « Z ») et nom de l'auteur.
     depose_le: Optional[datetime] = None
     depose_par: Optional[str] = None
+    # D'où la ligne a été lue dans le RC : document, page, article, exigence d'origine.
+    source_document: Optional[str] = None
+    source_page: Optional[int] = None
+    source_article: Optional[str] = None
+    source_exigence_id: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

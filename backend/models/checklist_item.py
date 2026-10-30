@@ -58,6 +58,13 @@ class ChecklistItem(Base):
     # la pièce (choix au coffre ou formulaire rempli déposé) ; effacés au retrait.
     depose_le = Column(DateTime, nullable=True)
     depose_par_id = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    # D'où l'extrait source_in_rc a été lu (bloc 9, tranche 4) : document cité, page, article
+    # qui porte le passage (lu dans le texte du document, jamais deviné) et exigence d'origine
+    # (le panneau « Voir dans le DCE » s'y ancre).
+    source_document = Column(Text, nullable=True)
+    source_page = Column(Integer, nullable=True)
+    source_article = Column(String(200), nullable=True)
+    source_exigence_id = Column(String, ForeignKey("compliance_items.id", ondelete="SET NULL"), nullable=True)
 
     # Relationships
     project = relationship("Project", back_populates="checklist_items")

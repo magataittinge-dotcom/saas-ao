@@ -215,6 +215,10 @@ class ChecklistLine:
     text: str                     # exigence représentative (la plus riche)
     source_excerpt: Optional[str]
     merged_count: int = 1
+    # D'où l'extrait a été lu (bloc 9) : exigence d'origine, document cité, page.
+    source_exigence_id: Optional[str] = None
+    source_document: Optional[str] = None
+    source_page: Optional[int] = None
 
 
 @dataclass
@@ -287,11 +291,17 @@ def plan_checklist(rows) -> ChecklistPlan:
             line.merged_count += 1
             if not line.source_excerpt and excerpt:
                 line.source_excerpt = excerpt
+                line.source_exigence_id = getattr(r, "id", None)
+                line.source_document = getattr(r, "source_document", None)
+                line.source_page = getattr(r, "source_page", None)
             return
 
         line = ChecklistLine(
             scope=scope, group=cls.group, canonical_type=ctype,
             label=cls.label, text=text, source_excerpt=excerpt,
+            source_exigence_id=getattr(r, "id", None) if excerpt else None,
+            source_document=getattr(r, "source_document", None) if excerpt else None,
+            source_page=getattr(r, "source_page", None) if excerpt else None,
         )
         if ctype != "autre":
             index[key] = len(plan.lines)

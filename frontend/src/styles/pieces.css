@@ -134,3 +134,31 @@
   border: 0;
   cursor: pointer;
 }
+
+/* ── Signature lue dans le RC (bloc 9, tranche 4) ───────────── */
+.piece-signature { margin-top: .375rem; }
+.piece-signature__case {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .5rem;
+  min-height: 44px;
+  font-size: .75rem;
+  color: var(--carte-texte);
+  cursor: pointer;
+}
+.piece-signature__case input { width: 1.125rem; height: 1.125rem; }
+/* Lien « Voir dans le DCE » : cible tactile d'au moins 44 px */
+.piece-source {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-left: .5rem;
+  padding: 0 .25rem;
+  font-size: .75rem;
+  color: var(--carte-texte);
+  text-decoration: underline;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}

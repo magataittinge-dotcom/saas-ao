@@ -35,6 +35,7 @@ interface Props {
   onOpenVault: () => void
   /** Confirmation de signature, quand le RC la demande (ex. DUME signé). */
   onToggleSignature?: (item: ChecklistItem, confirmed: boolean) => Promise<void>
+  onOpenSource?: (item: ChecklistItem) => void
   /** « Non concerné » / « Je suis concerné » (réversible, journalisé). */
   onNonConcerne?: (item: ChecklistItem, nonConcerne: boolean) => Promise<void>
   /** Date limite de remise (AAAA-MM-JJ) : « À renouveler avant le dépôt ». */
@@ -42,7 +43,7 @@ interface Props {
 }
 
 export default function CandidatureSectionVault({
-  items, onPickFromVault, onOpenVault, onToggleSignature, onNonConcerne, echeance,
+  items, onPickFromVault, onOpenVault, onToggleSignature, onOpenSource, onNonConcerne, echeance,
 }: Props) {
   const grouped = useMemo(() => {
     const map: Record<VaultCategory, ChecklistItem[]> = {
@@ -109,6 +110,7 @@ export default function CandidatureSectionVault({
                   item={item}
                   onPick={() => onPickFromVault(item)}
                   onToggleSignature={onToggleSignature}
+                  onOpenSource={onOpenSource}
                   onNonConcerne={onNonConcerne}
                   echeance={echeance}
                 />
@@ -122,12 +124,13 @@ export default function CandidatureSectionVault({
 }
 
 function VaultRow({
-  item, onPick, onToggleSignature, onNonConcerne, echeance,
+  item, onPick, onToggleSignature, onOpenSource, onNonConcerne, echeance,
 }: {
   item: ChecklistItem
   echeance?: string | null
   onPick: () => void
   onToggleSignature?: (item: ChecklistItem, confirmed: boolean) => Promise<void>
+  onOpenSource?: (item: ChecklistItem) => void
   onNonConcerne?: (item: ChecklistItem, nonConcerne: boolean) => Promise<void>
 }) {
   const statut = statutPiece(item, echeance)
@@ -172,7 +175,8 @@ function VaultRow({
         {item.source_in_rc && ['si-concerne', 'facultatif', 'attribution'].includes(statut.code) && (
           <p className="piece-note">Lu dans le RC : « {item.source_in_rc} »</p>
         )}
-        <SignatureLigne item={item} onToggleSignature={onToggleSignature} />
+        <SignatureLigne item={item} onToggleSignature={onToggleSignature}
+                  onOpenSource={onOpenSource} />
       </div>
 
       <NonConcerneBouton item={item} onNonConcerne={onNonConcerne} />

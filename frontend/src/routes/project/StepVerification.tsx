@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Loader2, Lock, AlertTriangle, FileSpreadsheet, Download, Upload, Sparkles, RefreshCw } from 'lucide-react'
@@ -7,6 +7,7 @@ import { useCompleteStep } from '@/hooks/useProject'
 import CandidatureSectionVault from '@/components/project/CandidatureSectionVault'
 import CandidatureSectionTemplates from '@/components/project/CandidatureSectionTemplates'
 import VaultPickerModal from '@/components/project/VaultPickerModal'
+import PanneauSource, { type SelectionSource } from '@/components/project/source/PanneauSource'
 import { piecesComptees } from '@/components/project/NonConcerne'
 import { comptesPieces, libelleComptes, suiteComptes } from '@/lib/statutPiece'
 import { echeanceAO } from '@/lib/echeance'
@@ -38,6 +39,15 @@ export default function StepVerification({ project }: Props) {
   })
 
   const [pickerItem, setPickerItem] = useState<ChecklistItem | null>(null)
+
+  // « Voir dans le DCE » : le passage du RC d'où la signature (ou la condition) a été lue.
+  // Le panneau est celui de l'analyse : il lit l'ancre de l'exigence d'origine côté serveur.
+  const [selection, setSelection] = useState<SelectionSource | null>(null)
+  const fermerSelection = useCallback(() => setSelection(null), [])
+  const ouvrirSource = useCallback((item: ChecklistItem) => {
+    if (!item.source_exigence_id) return
+    setSelection({ type: 'exigence', id: item.source_exigence_id, titre: item.source_document ?? undefined })
+  }, [])
 
   // Typologie 4 groupes (document_group) : à fournir / à compléter / produit
   // par Synorix / workflow dédié. Le score ne compte que fournir + completer.
@@ -228,7 +238,11 @@ export default function StepVerification({ project }: Props) {
   // ── Render ──────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-3" style={{ fontFamily: F }}>
+    <div
+      className={selection ? 'grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]' : undefined}
+      style={{ fontFamily: F }}
+    >
+    <div className="min-w-0 space-y-3">
 
       {/* Title bar */}
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -321,6 +335,7 @@ export default function StepVerification({ project }: Props) {
         onPickFromVault={(item) => setPickerItem(item)}
         onOpenVault={openVaultPage}
         onToggleSignature={handleToggleSignature}
+        onOpenSource={ouvrirSource}
         onNonConcerne={handleNonConcerne}
         echeance={echeance}
       />
@@ -330,6 +345,7 @@ export default function StepVerification({ project }: Props) {
         items={templateItems}
         onUploadCompleted={handleUploadCompleted}
         onToggleSignature={handleToggleSignature}
+        onOpenSource={ouvrirSource}
         onNonConcerne={handleNonConcerne}
         echeance={echeance}
       />
@@ -352,6 +368,14 @@ export default function StepVerification({ project }: Props) {
       )}
 
       {bottomBar}
+    </div>
+    {selection && (
+      <PanneauSource
+        key={selection.type === 'exigence' ? selection.id : 'champ'}
+        selection={selection}
+        onFermer={fermerSelection}
+      />
+    )}
     </div>
   )
 }

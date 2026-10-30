@@ -142,6 +142,9 @@ def _line_to_item(line: ChecklistLine, project_id: str, db: Session,
         document_type_required=line.canonical_type,
         details=(line.label + suffix)[:490],
         source_in_rc=excerpt,
+        source_document=line.source_document if excerpt else None,
+        source_page=line.source_page if excerpt else None,
+        source_exigence_id=line.source_exigence_id if excerpt else None,
         rc_position=position,
         lot=line.scope,
         document_group=line.group,
@@ -239,6 +242,32 @@ def sync_vault_lines_safe(db: Session, project_id: str, org_id: str) -> None:
         db.rollback()
 
 
+def _lecteurs_rc(db: Session, project_id: str, lignes) -> dict:
+    """Un lecteur par document cité par les lignes (texte lu une fois) : id de la pièce → LecteurRc."""
+    from services.ancres_projet import trouver_piece
+    from services.rc_article import LecteurRc
+    citees = {l.source_document for l in lignes if l.source_excerpt and l.source_document}
+    if not citees:
+        return {}
+    pieces = db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).all()
+    lecteurs: dict = {}
+    for nom in citees:
+        piece = trouver_piece(nom, pieces)
+        if piece is not None and piece.extracted_text:
+            lecteurs.setdefault(piece.id, (piece, LecteurRc(piece.extracted_text)))
+    return {"pieces": [p for p, _ in lecteurs.values()], "lecteurs": {i: l for i, (_, l) in lecteurs.items()}}
+
+
+def _article_de(line, lecteurs: dict) -> Optional[str]:
+    """Article qui précède l'extrait dans le document cité ; None si rien n'est lu (jamais deviné)."""
+    if not lecteurs or not line.source_excerpt or not line.source_document:
+        return None
+    from services.ancres_projet import trouver_piece
+    piece = trouver_piece(line.source_document, lecteurs["pieces"])
+    lecteur = lecteurs["lecteurs"].get(piece.id) if piece is not None else None
+    return lecteur.article_avant(line.source_excerpt) if lecteur else None
+
+
 def _cle_ligne(item) -> tuple:
     """Même pièce, même lot. Les pièces inconnues (« autre ») ne sont jamais
     fusionnées : leur libellé les distingue."""
@@ -320,8 +349,10 @@ def generate_checklist_from_db(db: Session, project_id: str, org_id: str) -> int
     docs_par_id = {d.id: d for d in coffre}
     from models.project import Project
     selected_lot = db.query(Project.selected_lot).filter(Project.id == project_id).scalar()
+    lecteurs = _lecteurs_rc(db, project_id, plan.lines)
     for position, line in enumerate(plan.lines):
         item = _line_to_item(line, project_id, db, vault_by_type, position, selected_lot)
+        item.source_article = _article_de(line, lecteurs)
         _reprendre_les_choix(item, choix.get(_cle_ligne(item)), docs_par_id, completes)
         db.add(item)
     db.commit()
