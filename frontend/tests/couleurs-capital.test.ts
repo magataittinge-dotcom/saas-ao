@@ -18,6 +18,9 @@ export const ECRANS: Record<string, string[]> = {
     'src/components/dashboard/PipelineRail.tsx',
     'src/components/dashboard/StatCard.tsx',
   ],
+  'Nouvel AO': [
+    'src/routes/NewProject.tsx',
+  ],
 }
 
 const PALETTE = 'slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black'

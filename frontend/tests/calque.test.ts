@@ -112,7 +112,7 @@ test('coquille : barre d\'icônes flottante, onglets du bas au téléphone (cibl
   assert.match(entete, /rounded-full/)
   const layout = sansCommentaires(lire('src/components/layout/Layout.tsx'))
   assert.match(layout, /<BandeauNouveau \/>/)
-  assert.match(layout, /export const PAGES_THEMEES = \['\/dashboard', '\/projects', '\/design'\]/)
+  assert.match(layout, /export const PAGES_THEMEES = \['\/dashboard', '\/projects', '\/design'(, '[^']+')*\]/)
   assert.match(layout, /data-theme=\{themee \? undefined : 'dark'\}/)
   assert.doesNotMatch(sansCommentaires(lire('src/components/layout/BandeauNouveau.tsx')), /!/, 'aucun point d\'exclamation')
 })
