@@ -16,6 +16,10 @@ test('l\'entrée /outils porte le libellé « Retenue de garantie » partout', (
   assert.match(sansCommentaires(lire('src/routes/Tools.tsx')), /<h1[^>]*>Retenue de garantie<\/h1>/)
 })
 
+test('la carte du calcul s\'appelle « Calculer ma retenue » (le h1 garde « Retenue de garantie »)', () => {
+  assert.match(sansCommentaires(lire('src/routes/Tools.tsx')), /<h2[^>]*>Calculer ma retenue<\/h2>/)
+})
+
 test('Tools.tsx : plus de #E4E9F2 en dur', () => {
   assert.doesNotMatch(lire('src/routes/Tools.tsx'), /#E4E9F2/i)
 })

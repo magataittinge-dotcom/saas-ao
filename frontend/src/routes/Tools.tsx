@@ -93,7 +93,7 @@ function RetenueCalculator() {
           <Coins size={18} style={{ color: 'var(--text-1)' }} />
         </div>
         <div>
-          <h2 className="text-base font-bold text-ds-text" style={{ fontFamily: F }}>Retenue de garantie</h2>
+          <h2 className="text-base font-bold text-ds-text" style={{ fontFamily: F }}>Calculer ma retenue</h2>
           <p className="text-xs text-ds-text-2">Retenue, pénalités & intérêts moratoires (CCAG-Travaux Art.19)</p>
         </div>
       </div>
