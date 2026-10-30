@@ -12,16 +12,24 @@ WorkingDirectory=/srv/synorix/backend
 # Secrets : /etc/synorix/synorix.env (root, 0600), lu par systemd en root ; synorix ne peut pas le lire,
 # l'appli reçoit les variables par son environnement (aucun backend/.env en production).
 EnvironmentFile=/etc/synorix/synorix.env
-# -c 1 : 1 vCPU. Enfant remplacé après 50 tâches ou 300 Mo résidents (valeur en Kio).
-ExecStart=/srv/synorix/backend/venv/bin/celery -A tasks worker -l info -c 1 \
+# -c 2 (KVM 2, 2 vCPU) : les tâches (scan quotidien, échéances, purge B18) sont légères, mais un long scan ne bloque
+# plus les échéances. Pas plus : le travail lourd (analyse, mémoire) vit dans les fils de l'API, pas ici.
+# Enfant remplacé après 50 tâches ou 300 Mo résidents (valeur en Kio).
+ExecStart=/srv/synorix/backend/venv/bin/celery -A tasks worker -l info -c 2 \
   --max-tasks-per-child 50 --max-memory-per-child 300000
 Restart=always
 RestartSec=5
 # Celery : SIGTERM = arrêt à chaud (finit la tâche en cours).
 KillSignal=SIGTERM
 TimeoutStopSec=60
-MemoryHigh=500M
-MemoryMax=700M
+# Mémoire : parent ~100 Mo + 2 enfants x 300 Mo (recyclés au-delà) = 700 Mo au pic. MemoryHigh 700 = ce pic ;
+# MemoryMax 800 le borne (budget total : voir synorix-api.service).
+MemoryHigh=700M
+MemoryMax=800M
+# Au plus 1 cœur sur 2 : le worker ne prend jamais la place de l'API ni de Postgres.
+CPUQuota=100%
+# Parent + 2 enfants + fils de Celery et de SQLAlchemy : 128 laisse une grande marge.
+TasksMax=128
 
 NoNewPrivileges=true
 PrivateTmp=true

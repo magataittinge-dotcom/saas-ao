@@ -20,7 +20,10 @@ ExecStart=/srv/synorix/backend/venv/bin/celery -A tasks beat -l info \
 Restart=always
 RestartSec=5
 KillSignal=SIGTERM
-MemoryMax=300M
+# Planificateur seul (~60 Mo, il ne fait qu'envoyer des tâches) : 200 Mo suffisent.
+MemoryMax=200M
+CPUQuota=20%
+TasksMax=32
 
 NoNewPrivileges=true
 PrivateTmp=true

@@ -1,6 +1,6 @@
 # Déploiement Synorix sur VPS Hostinger
 
-**Cible :** Ubuntu Server 24.04 LTS sur Hostinger **KVM 1 (1 vCPU, 4 Go, 50 Go)** — décision du 25/10/2026. Les réglages du dépôt (`deploy/`) sont dimensionnés pour lui : un seul worker, un seul enfant PDFium, Celery à 1, mémoire plafonnée par service, swap de 2 Go.
+**Cible :** Ubuntu Server 24.04 LTS sur Hostinger **KVM 2 (2 vCPU, 8 Go, 100 Go)** — décision du 30/10/2026 (le KVM 1 : 1 vCPU, 4 Go, 50 Go, était la cible du 25/10). Les réglages du dépôt (`deploy/`) sont dimensionnés pour lui : une API à un seul processus, deux enfants PDFium, Celery à 2, mémoire plafonnée par service (somme des plafonds 7100 Mo sur 8192, détail et calcul dans `deploy/systemd/synorix-api.service`, vérifié par `backend/tests/test_deploy_kvm2.py`), swap de 2 Go.
 **Fichiers de configuration :** `deploy/` est la **source de vérité** (nginx, systemd, Postgres, Redis, journald, sysctl, cron). Cette page explique ; elle ne recopie plus ces fichiers. Procédure de mise en place pas à pas, avec vérification et retour arrière : `.claude/echange/sprint-ozcan/VPS.md` (partie « Procédure du bloc 6 »).
 **Domaine :** `synorix.tech` (ou `.io` / `.com` selon décision Mohamed).
 **Stack :** PostgreSQL 16 + Redis 7 + nginx + uvicorn (FastAPI) + Vite build statique + systemd.
@@ -118,7 +118,7 @@ schéma identique aux modèles hors `rag_chunks`, créée en SQL), puis l'API d�
 
 `/etc/postgresql/16/main/postgresql.conf` : `listen_addresses = 'localhost'`.
 Les réglages de mémoire et de connexions sont dans `deploy/postgres/synorix.conf`, installé en
-`/etc/postgresql/16/main/conf.d/synorix.conf` (KVM 1 : `shared_buffers = 512MB`, `max_connections = 50`,
+`/etc/postgresql/16/main/conf.d/synorix.conf` (KVM 2 : `shared_buffers = 1GB`, `max_connections = 80`, `work_mem = 16MB`,
 `idle_in_transaction_session_timeout = 10min`).
 
 `/etc/postgresql/16/main/pg_hba.conf` : laisser uniquement local/peer + local/scram-sha-256 pour `synorix`.
@@ -134,7 +134,7 @@ systemctl restart postgresql
 `/etc/redis/redis.conf` :
 - `bind 127.0.0.1`
 - `requirepass CHANGE_ME_RANDOM_64_CHARS`
-- dernière ligne : `include /etc/redis/synorix.conf` (`deploy/redis/synorix.conf` : `maxmemory 128mb`,
+- dernière ligne : `include /etc/redis/synorix.conf` (`deploy/redis/synorix.conf` : `maxmemory 256mb`,
   `maxmemory-policy noeviction` — un broker Celery ne doit jamais perdre une tâche en silence).
 
 ```bash
@@ -203,9 +203,9 @@ sudo install -m 600 /dev/null /etc/synorix/synorix.env
 sudoedit /etc/synorix/synorix.env
 ```
 
-### Lecture des PDF déposés : un processus isolé (KVM 1)
+### Lecture des PDF déposés : des processus isolés (KVM 2)
 
-Toute pièce déposée est lue par PDFium dans un **processus enfant unique** (`services/pdfium_processus.py`),
+Toute pièce déposée est lue par PDFium dans un **processus enfant** (2 sur le KVM 2, réglé par l'unité systemd ; 1 par défaut dans le code) (`services/pdfium_processus.py`),
 jamais dans l'API : recyclé, plafonné en mémoire (`RLIMIT_AS`) et avec un délai par pièce. Une pièce
 piégée devient « non lisible » avec un avertissement qui la nomme ; l'API reste debout. Mesuré sur le
 DCE de démonstration (99 pièces) : l'API reste à 15 Mo, l'enfant monte à 603 Mo résidents sur le plus
@@ -213,7 +213,7 @@ gros plan, et retombe à 25 Mo. Réglages facultatifs du `.env` (valeurs par dé
 
 ```
 SYNORIX_EXTRACTION_PROCESSUS=1     # 0 = extraction dans l'API (diagnostic seulement, sans protection)
-SYNORIX_PDFIUM_PROCESSUS=1         # nombre d'enfants PDFium : 1 sur 1 vCPU ; 2 ou plus si plusieurs cœurs
+SYNORIX_PDFIUM_PROCESSUS=1         # nombre d'enfants PDFium : 1 par défaut ; 2 sur le KVM 2 (posé dans synorix-api.service)
 SYNORIX_PDFIUM_AS_MO=1536          # plafond de mémoire virtuelle d'un enfant (0 = aucun)
 SYNORIX_PDFIUM_TACHES_MAX=40       # l'enfant est remplacé après N tâches
 SYNORIX_PDFIUM_RSS_MAX_MO=350      # ... ou dès que sa mémoire résidente dépasse ce seuil
@@ -281,8 +281,8 @@ Les raisons de chaque réglage sont en commentaire dans le fichier. L'essentiel 
   `--timeout-graceful-shutdown 20` : sans lui, un flux SSE ouvert bloque l'arrêt jusqu'au SIGKILL.
   Les travaux coupés sont repris par la réconciliation au démarrage suivant (`extracting_text`,
   `extracting_zip`, `analyzing`, `generating` ; `detecting_lots` revient à `ready`).
-- `MemoryHigh=1800M`, `MemoryMax=2200M`, `OOMPolicy=continue` : le groupe compte l'API, l'enfant PDFium
-  et LibreOffice ; au plafond, le noyau tue l'enfant, l'API reste debout.
+- `MemoryHigh=2800M`, `MemoryMax=3200M`, `OOMPolicy=continue`, `CPUQuota=150%`, `TasksMax=512` : le groupe compte l'API,
+  les deux enfants PDFium et LibreOffice ; au plafond, le noyau tue un enfant, l'API reste debout.
 - Durcissement : `ProtectSystem=strict`, `ProtectHome=true`, `PrivateTmp=true` ;
   `ReadWritePaths` = `uploads`, `cache` (aperçus de « Voir dans le DCE »), `/var/log/synorix`.
 
@@ -371,7 +371,7 @@ fichier était vide, la commande ne trouvait aucune app).
 
 Fichiers : `deploy/systemd/synorix-celery-worker.service` et `synorix-celery-beat.service`
 → `/etc/systemd/system/`.
-- **Worker** : `-c 1` (1 vCPU), enfant remplacé après 50 tâches ou 300 Mo, `MemoryMax=700M`.
+- **Worker** : `-c 2` (2 vCPU), enfant remplacé après 50 tâches ou 300 Mo, `MemoryHigh=700M`, `MemoryMax=800M`, `CPUQuota=100%`.
   Il exécute aussi la **purge des AO supprimés** (B18, `tasks/purge_ao.py`) : en simulation tant que
   `SYNORIX_PURGE_AO_ACTIVE` ne vaut pas `1` (comptes seulement, aucun nom) ; délai `SYNORIX_PURGE_AO_JOURS=30`.
 - **Beat** : fichier d'état dans `/var/lib/synorix-beat` (`StateDirectory`), le code reste en lecture seule.
