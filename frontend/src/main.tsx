@@ -1,8 +1,10 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import ReactDOM from 'react-dom/client'
 import { ClerkProvider } from '@clerk/clerk-react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
+import { apparenceDepuisPage } from './lib/clerkApparence'
+import { useTheme } from './lib/theme'
 // Polices : latin et latin-ext seulement (français), rien d'inutilisé (bloc 6).
 // Geist Sans : landing, connexion, inscription, tarifs, mentions légales (pas de latin-ext publié).
 import '@fontsource/geist-sans/latin-400.css'
@@ -38,12 +40,22 @@ const queryClient = new QueryClient({
   },
 })
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <ClerkProvider publishableKey={CLERK_KEY} afterSignInUrl="/dashboard" afterSignUpUrl="/dashboard">
+// Clerk suit le thème clair / nuit : l'apparence est recalculée à chaque bascule (lib/clerkApparence.ts).
+function Racine() {
+  const [theme] = useTheme()
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- le thème est la seule entrée : les jetons sont lus sur <html>
+  const appearance = useMemo(() => apparenceDepuisPage(), [theme])
+  return (
+    <ClerkProvider publishableKey={CLERK_KEY} afterSignInUrl="/dashboard" afterSignUpUrl="/dashboard" appearance={appearance}>
       <QueryClientProvider client={queryClient}>
         <App />
       </QueryClientProvider>
     </ClerkProvider>
+  )
+}
+
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode>
+    <Racine />
   </React.StrictMode>,
 )
