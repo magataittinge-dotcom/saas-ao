@@ -17,6 +17,7 @@ export const ECRANS: Record<string, string[]> = {
     'src/components/dashboard/DeadlinePill.tsx',
     'src/components/dashboard/PipelineRail.tsx',
     'src/components/dashboard/StatCard.tsx',
+    'src/components/onboarding/FirstAOWelcome.tsx',   // l'écran « premier DCE offert » s'affiche sur le tableau de bord
   ],
   'Nouvel AO': [
     'src/routes/NewProject.tsx',

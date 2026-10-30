@@ -6,6 +6,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import Dashboard from '@/routes/Dashboard'
+import FirstAOWelcome from '@/components/onboarding/FirstAOWelcome'
 import { PROJETS_DEMO, STATS_DEMO } from '@/lib/intelligence/demo'
 import type { Project } from '@/types'
 import { lire, sansCommentaires } from './outils/sources'
@@ -45,3 +46,16 @@ test("le tableau de bord n'importe plus l'ancien Compagnon (le visage est celui 
   assert.match(code, /import SynorixIntelligence from '@\/components\/intelligence\/SynorixIntelligence'/)
   assert.doesNotMatch(code, /CompanionOrb|companionStore/)
 })
+
+test("l'écran « premier DCE offert » (affiché sur le tableau de bord) : champ et bouton du socle, visage de public/visage", () => {
+  const html = renderToStaticMarkup(
+    <QueryClientProvider client={new QueryClient()}><MemoryRouter><FirstAOWelcome /></MemoryRouter></QueryClientProvider>)
+  assert.ok(/<h1[^>]*>Bienvenue<\/h1>/.test(html))
+  assert.ok(html.includes('Votre SIRET — et c&#x27;est tout : le répertoire Sirene remplit le reste de votre profil.'))
+  const champ = html.match(/<input[^>]*aria-label="Numéro SIRET"[^>]*>/)?.[0] ?? ''
+  assert.ok(champ.includes('border-input'), 'champ du socle')
+  const valider = html.match(/<button[^>]*>Valider<\/button>/)?.[0] ?? ''
+  assert.ok(valider.includes('bg-accent-fill'), 'bouton du socle')
+  assert.ok(html.includes('src="/visage/tete-ouverte-poster.webp"'), 'le visage est celui de public/visage')
+  assert.ok(!/<video|tete-veille|\.webm/.test(html), 'plus de clip vidéo')
+}) 
