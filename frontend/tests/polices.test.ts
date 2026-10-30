@@ -33,9 +33,28 @@ function plages(valeur: string): (cp: number) => boolean {
 test('le français s\'affiche : accents, œ, €, guillemets « », apostrophe et points de suspension typographiques', () => {
   const css = lire('src/styles/polices.css')
   const blocs = [...css.matchAll(/@font-face\s*\{([^}]*)\}/g)].map((m) => m[1])
-  assert.equal(blocs.length, 2, 'Inter : latin et latin-ext')
+  assert.equal(blocs.length, 3, 'Inter : latin et latin-ext ; Bricolage Grotesque : latin')
   const latin = blocs.find((b) => /inter-latin-wght-normal/.test(b))!
   const couvre = plages(latin.match(/unicode-range:\s*([^;]+);/)![1])
   for (const c of 'éèêëàâäçîïôöùûüÿÉÈÀÇœŒ€«»’…°²×·–—') assert.ok(couvre(c.codePointAt(0)!), `${c} (U+${c.codePointAt(0)!.toString(16)})`)
   assert.ok(/inter-latin-ext-wght-normal/.test(css))
+  // titres : Bricolage Grotesque, wght seul (pas d'axe opsz, +36 ko inutiles), latin seulement
+  const bricolage = blocs.find((b) => /Bricolage Grotesque/.test(b))!
+  assert.match(bricolage, /bricolage-grotesque-latin-wght-normal\.woff2/)
+  assert.doesNotMatch(css, /bricolage-grotesque-latin-(opsz|wdth|standard)|bricolage-grotesque-(latin-ext|vietnamese)/)
+  const couvreTitres = plages(bricolage.match(/unicode-range:\s*([^;]+);/)![1])
+  for (const c of 'éèêëàâäçîïôöùûüÿÉÈÀÇœŒ€«»’…°') assert.ok(couvreTitres(c.codePointAt(0)!), `titres : ${c}`)
 })
+
+test('Bricolage Grotesque : auto-hébergée (OFL-1.1, gratuite), déclarée dans package.json, 2 fichiers préchargés sans réseau tiers', () => {
+  const pkg = JSON.parse(lire('package.json'))
+  assert.match(pkg.dependencies['@fontsource-variable/bricolage-grotesque'], /5\.3\.0/)
+  const html = lire('index.html')
+  const preloads = [...html.matchAll(/<link rel="preload" as="font"[^>]*>/g)].map((m) => m[0])
+  assert.equal(preloads.length, 2)
+  for (const p of preloads) assert.match(p, /type="font\/woff2"[^>]*crossorigin|crossorigin[^>]*type="font\/woff2"/)
+  assert.ok(preloads.some((p) => /inter-latin-wght-normal/.test(p)) && preloads.some((p) => /bricolage-grotesque-latin-wght-normal/.test(p)))
+  assert.doesNotMatch(html, /fonts\.(googleapis|gstatic)/)
+  assert.match(polices(), /font-display:\s*swap/)
+})
+function polices() { return lire('src/styles/polices.css') }

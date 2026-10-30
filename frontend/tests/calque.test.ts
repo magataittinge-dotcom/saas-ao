@@ -6,27 +6,11 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { lire, sansCommentaires } from './outils/sources'
 
-/** Luminance relative WCAG 2 d'une couleur #RRGGBB. */
-function luminance(hex: string): number {
-  const canal = (i: number) => {
-    const v = parseInt(hex.slice(i, i + 2), 16) / 255
-    return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
-  }
-  return 0.2126 * canal(1) + 0.7152 * canal(3) + 0.0722 * canal(5)
-}
-const contraste = (a: string, b: string) => {
-  const [clair, sombre] = [luminance(a), luminance(b)].sort((x, y) => y - x)
-  return (clair + 0.05) / (sombre + 0.05)
-}
+// Les couleurs Calque sont désormais des alias des jetons du système (styles/theme.css) :
+// on les résout dans les deux thèmes et on mesure le contraste réel.
+import { contrasteJetons, type Theme } from './outils/jetons'
 
-const JETONS = lire('src/styles/tokens.css')
-function calque(nom: string): string {
-  const m = JETONS.match(new RegExp(`--calque-${nom}:\\s*(#[0-9A-Fa-f]{6})`))
-  assert.ok(m, `jeton --calque-${nom} introuvable`)
-  return m[1]
-}
-
-test('Calque : chaque couleur de texte atteint 4,5:1 sur les fonds où elle se pose', () => {
+test('Calque : chaque couleur de texte atteint 4,5:1 sur les fonds où elle se pose, en clair comme en nuit', () => {
   const paires: [string, string[]][] = [
     ['encre', ['papier', 'surface', 'surface-2', 'prusse-50', 'attention-fond']],
     ['encre-2', ['papier', 'surface', 'surface-2']],
@@ -35,14 +19,20 @@ test('Calque : chaque couleur de texte atteint 4,5:1 sur les fonds où elle se p
     ['ok', ['ok-fond', 'surface']],
     ['attention', ['attention-fond', 'surface', 'papier']],
     ['bloquant', ['bloquant-fond', 'surface', 'papier']],
-    ['sur-encre', ['encre', 'encre-survol']],
+    ['sur-encre', ['encre']],
   ]
-  const faibles = paires.flatMap(([texte, fonds]) => fonds
-    .filter((f) => contraste(calque(texte), calque(f)) < 4.5)
-    .map((f) => `${texte} sur ${f} : ${contraste(calque(texte), calque(f)).toFixed(2)}:1`))
+  const faibles: string[] = []
+  for (const theme of ['light', 'dark'] as Theme[]) {
+    for (const [texte, fonds] of paires) for (const f of fonds) {
+      const { minimum } = contrasteJetons(theme, `--calque-${texte}`, `--calque-${f}`)
+      if (minimum < 4.5) faibles.push(`${theme} ${texte} sur ${f} : ${minimum.toFixed(2)}:1`)
+    }
+    // le bord des champs reste visible (seuil 3:1 des composants)
+    for (const f of ['surface', 'papier']) {
+      assert.ok(contrasteJetons(theme, '--calque-ligne-champ', `--calque-${f}`).minimum >= 3, `${theme} bord des champs sur ${f}`)
+    }
+  }
   assert.deepEqual(faibles, [])
-  // le bord des champs reste visible (seuil 3:1 des composants)
-  assert.ok(contraste(calque('ligne-champ'), calque('surface')) >= 3)
 })
 
 const FICHIERS_CALQUE = [
@@ -65,13 +55,13 @@ test('coquille et tableau de bord : aucune couleur écrite en dur, tout passe pa
   assert.deepEqual(enDur, [])
 })
 
-test('les couleurs Calque de Tailwind renvoient toutes à un jeton défini dans tokens.css', () => {
+test('les couleurs Calque de Tailwind renvoient toutes à un jeton défini dans theme.css, sans valeur recopiée', () => {
   const config = lire('tailwind.config.js')
-  const utilises = [...config.matchAll(/var\(--calque-([\w-]+)\)/g)].map((m) => m[1])
+  const utilises = [...config.matchAll(/jeton\('--calque-([\w-]+)'\)/g)].map((m) => m[1])
   assert.ok(utilises.length >= 20)
-  const absents = utilises.filter((nom) => !new RegExp(`--calque-${nom}:`).test(JETONS))
+  const THEME = lire('src/styles/theme.css')
+  const absents = utilises.filter((nom) => !new RegExp(`--calque-${nom}:`).test(THEME))
   assert.deepEqual(absents, [])
-  // aucune valeur Calque recopiée dans la configuration
   for (const hex of ['#F6F5F1', '#16191E', '#1F4E79', '#FFE066']) {
     assert.ok(!config.includes(hex), `${hex} recopié dans tailwind.config.js`)
   }

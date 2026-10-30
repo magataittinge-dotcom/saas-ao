@@ -24,6 +24,12 @@ const Settings = lazy(() => import('@/routes/Settings'))
 const Billing = lazy(() => import('@/routes/Billing'))
 const Tools = lazy(() => import('@/routes/Tools'))
 
+// Écrans publics (accueil, tarifs, mentions, connexion) : pas encore refaits sur les jetons clair / nuit,
+// ils restent en nuit quel que soit le thème choisi (retirer ce cadre écran par écran, phase C).
+function Nuit({ children }: { children: React.ReactNode }) {
+  return <div data-theme="dark" className="min-h-svh bg-surface-0 text-fg-2">{children}</div>
+}
+
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isSignedIn, isLoaded } = useAuth()
   if (!isLoaded) return null
@@ -46,15 +52,15 @@ function AppRoutes() {
     <Suspense fallback={<EcranEnChargement />}>
     <Routes>
       {/* Public routes */}
-      <Route path="/" element={<Landing />} />
-      <Route path="/pricing" element={<Pricing />} />
-      <Route path="/legal" element={<Legal />} />
-      <Route path="/legal/:slug" element={<Legal />} />
+      <Route path="/" element={<Nuit><Landing /></Nuit>} />
+      <Route path="/pricing" element={<Nuit><Pricing /></Nuit>} />
+      <Route path="/legal" element={<Nuit><Legal /></Nuit>} />
+      <Route path="/legal/:slug" element={<Nuit><Legal /></Nuit>} />
       <Route
         path="/login/*"
         element={
           <PublicRoute>
-            <Login />
+            <Nuit><Login /></Nuit>
           </PublicRoute>
         }
       />
@@ -62,7 +68,7 @@ function AppRoutes() {
         path="/register/*"
         element={
           <PublicRoute>
-            <Register />
+            <Nuit><Register /></Nuit>
           </PublicRoute>
         }
       />

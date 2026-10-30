@@ -1,118 +1,9 @@
 /* ═══════════════════════════════════════════════════════════════
-   SYNORIX DESIGN TOKENS — « LUMEN 3.0 · LINEAR GRADE »
-   3.0 (30/08) : neutres exacts mesurés sur Linear dark (#09090A/#121213/
-   #1A1B1C/#29292B), filets blancs 7-12 %, Inter Variable, radius 6/10.
-   2.2 (29/08) : un cran de lumière — surfaces nettement détachées du fond
-   (feedback « tout se ressemble ») + titres en Space Grotesk (display).
-   2.1 (29/08) : toute la gamme tirée vers le bleu acier du verre —
-   le cast bleu du visage porté par les fonds, surfaces, écritures et filets.
-   Verre technique au crépuscule : graphite bleuté, filets lumineux,
-   zéro couleur de marque — la lumière porte les états.
-   Palette mesurée pixel par pixel sur le visage IA (référence de marque).
-   Le cast bleu monte avec la luminance : +5 dans les noirs, +24 dans les argentés.
-   Ambre #D9A441 : verbatim DCE + succès (aligné identité). Statuts métier : vert/ambre/corail conservés (décision 25/08).
-   T3.5 (29/08) : lumière poussée — filets, edge-light, bottom-lit, glows renforcés
-   pour retrouver le contraste spéculaire du visage (feedback « trop fade »).
-   Statuts métier (seule exception chromatique) : vert / ambre / corail.
-   Typo : Geist Sans (UI) · Geist Mono (données) — self-hosted (@fontsource).
+   SYNORIX — CLASSES DE COMPOSANTS HÉRITÉES (glass-*, pill, nav…)
+   Les couleurs vivent dans styles/theme.css (jetons clair + nuit) ;
+   ce fichier ne garde que des classes qui les lisent. Les anciens
+   noms de variables (--bg, --ink, --calque-*) y sont des alias.
    ═══════════════════════════════════════════════════════════════ */
-
-:root {
-  /* ── Fonds (graphite bleuté « dusk ») ─────────────────────── */
-  --bg-deep: #09090A;      /* body / sidebar */
-  --bg: #121213;           /* contenu */
-  --surface: #18181A;      /* cartes */
-  --surface-2: #1E1E21;    /* cartes imbriquées, inputs, hover */
-  --surface-3: #29292B;    /* état actif */
-
-  /* ── Filets lumineux (T3.5 : intensité poussée — le verre accroche la lumière) ── */
-  --line: rgba(255, 255, 255, .07);
-  --line-strong: rgba(255, 255, 255, .12);
-
-  /* ── Écritures (blanc-gris) ───────────────────────────────── */
-  --ink: #F7F8F8;
-  --ink-2: #C2C3C6;
-  --ink-3: #959597;
-  --ink-4: #909195;
-
-  /* ── Lumière (remplace l'accent cyan) ─────────────────────── */
-  --lum: #E8E9EB;
-  --lum-bright: #FFFFFF;
-  --lum-dim: #98999C;
-  --glow-white: rgba(255, 255, 255, .30);
-
-  /* ── Statuts métier — seule exception chromatique ─────────── */
-  --ok: #6EE7A8;    --ok-bg: rgba(110, 231, 168, .09);   --ok-line: rgba(110, 231, 168, .22);
-  --warn: #D9A441;  --warn-bg: rgba(217, 164, 65, .09); --warn-line: rgba(217, 164, 65, .22);
-  --bad: #F58E86;   --bad-bg: rgba(245, 142, 134, .10);  --bad-line: rgba(245, 142, 134, .24);
-
-  /* ── Ombres & reliefs ─────────────────────────────────────── */
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, .5), 0 16px 40px -20px rgba(0, 0, 0, .7);
-  --shadow-card-hover: 0 1px 2px rgba(0, 0, 0, .5), 0 20px 48px -20px rgba(0, 0, 0, .8), 0 0 0 1px var(--line-strong);
-  --shadow-horizon: var(--shadow-card);
-  --shadow-horizon-hover: var(--shadow-card-hover);
-  --edge-light: inset 0 1px 0 rgba(255, 255, 255, .07);
-  /* éclairage par le bas — la signature Lumen */
-  --bottom-lit: radial-gradient(130% 115% at 50% 128%, rgba(255, 255, 255, .08), transparent 56%);
-
-  /* ── Compat anciens tokens (remappés Lumen) ───────────────── */
-  --glass-opacity: 1;
-  --glass-blur: 0px;
-  --glass-border-opacity: 1;
-  --glass-saturate: 100%;
-  --glass-hover-opacity: 1;
-  --glass-hover-border: 1;
-  --card-navy: var(--surface);
-  --card-navy-alt: var(--surface-2);
-  --text-primary: var(--ink);
-  --text-secondary: var(--ink-3);
-  --text-tertiary: var(--ink-4);
-  --text-muted: #909195;
-  --radius-card: 10px;
-  --radius-lg: 12px;
-  --radius-md: 10px;
-  --radius-sm: 6px;
-  --accent-cyan: var(--lum);
-  --accent-cyan-light: var(--lum-bright);
-  --accent-teal: var(--ok);
-  --accent-violet: var(--lum);       /* violet éradiqué */
-  --accent-green: var(--ok);
-  --accent-amber: var(--warn);
-  --accent-red: var(--bad);
-  --bg-gradient-1: radial-gradient(1100px 460px at 50% -150px, rgba(255,255,255,.05), transparent 62%);
-  --bg-gradient-2: none;
-  --bg-gradient-3: none;
-
-  /* ── Compat tokens Edge (refactor-v2) — remappés Lumen ────── */
-  --edge-void:     var(--bg-deep);
-  --edge-graphite: var(--bg);
-  --edge-panel:    var(--surface);
-  --edge-slate:    var(--surface-2);
-  --edge-hairline:       var(--line);
-  --edge-hairline-hover: var(--line-strong);
-  --edge-lumen:     var(--lum);
-  --edge-lumen-300: var(--lum-bright);
-  --edge-lumen-400: var(--lum);
-  --edge-lumen-500: var(--lum-dim);
-  --edge-glow:    0 8px 24px -12px rgba(255, 255, 255, .30);
-  --edge-horizon: inset 0 -2px 0 0 var(--lum);
-  --edge-text:   var(--ink);
-  --edge-text-2: var(--ink-3);
-  --edge-text-3: var(--ink-4);
-  --edge-success: var(--ok);
-  --edge-warning: var(--warn);
-  --edge-danger:  var(--bad);
-  --edge-panel-light: var(--bottom-lit);
-  --edge-ease: cubic-bezier(0.4, 0, 0.2, 1);
-
-  /* ── « Voir dans le DCE » : le surlignage de la preuve (passage cité) ─────
-     --source-surligne : rectangle posé sur la page (papier clair, en multiplication) ;
-     --source-mark-* : le passage dans la citation lisible, sur le fond du panneau. */
-  --source-surligne: rgba(255, 213, 0, .42);
-  --source-surligne-bord: var(--warn);
-  --source-mark-fond: color-mix(in srgb, var(--warn) 30%, transparent);
-  --source-mark-texte: var(--ink);
-}
 
 /* ── Cartes ──────────────────────────────────────────────────── */
 .glass-card {
@@ -149,7 +40,7 @@
 
 /* ── Sidebar ─────────────────────────────────────────────────── */
 .glass-sidebar {
-  background: linear-gradient(180deg, var(--bg-deep) 0%, #081019 100%);
+  background: var(--surface-0);
   border-right: 1px solid var(--line);
   transition: transform .3s cubic-bezier(.4, 0, .2, 1), width .3s cubic-bezier(.4, 0, .2, 1);
 }
@@ -157,13 +48,13 @@
   .glass-sidebar {
     background: var(--bg-deep);
     width: 260px;
-    box-shadow: 8px 0 32px rgba(0, 0, 0, .6);
+    box-shadow: 8px 0 32px var(--scrim);
   }
 }
 
 /* ── Header — porte la ligne d'horizon ───────────────────────── */
 .glass-header {
-  background: rgba(9, 9, 10, .55);
+  background: var(--glass-fill);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   border-bottom: 1px solid var(--line);
@@ -175,8 +66,8 @@
   position: absolute;
   left: 0; right: 0; bottom: -1px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.5) 30%, rgba(255,255,255,.5) 60%, transparent);
-  box-shadow: 0 0 12px rgba(255,255,255,.30);
+  background: linear-gradient(90deg, transparent, var(--accent-ui) 30%, var(--accent-ui) 60%, transparent);
+  box-shadow: 0 0 12px var(--glow-white);
   pointer-events: none;
 }
 
@@ -190,9 +81,9 @@
 }
 .glass-input:focus {
   background: var(--surface-2);
-  border-color: rgba(255, 255, 255, .45);
+  border-color: var(--accent-ring);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, .10), 0 0 20px -6px rgba(255, 255, 255, .35);
+  box-shadow: 0 0 0 3px var(--accent-tint-2);
 }
 
 /* ── Boutons verre ───────────────────────────────────────────── */
@@ -222,7 +113,7 @@
   cursor: pointer;
 }
 .glass-nav:hover {
-  background: rgba(255, 255, 255, .05);
+  background: color-mix(in srgb, var(--text-1) 6%, transparent);
   color: var(--ink);
 }
 .glass-nav.active {
@@ -251,7 +142,7 @@
   background-image: var(--bottom-lit);
   border: 1px solid var(--line-strong);
   border-radius: 20px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, .7), var(--edge-light);
+  box-shadow: var(--shadow-pop);
   transition: all .2s cubic-bezier(.4, 0, .2, 1);
 }
 
@@ -275,8 +166,8 @@
   position: absolute;
   left: 0; right: 0; bottom: -1px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.5) 30%, rgba(255,255,255,.5) 60%, transparent);
-  box-shadow: 0 0 12px rgba(255,255,255,.30);
+  background: linear-gradient(90deg, transparent, var(--accent-ui) 30%, var(--accent-ui) 60%, transparent);
+  box-shadow: 0 0 12px var(--glow-white);
   pointer-events: none;
 }
 
@@ -291,11 +182,11 @@
   position: absolute;
   top: 0; left: 10%; right: 10%;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.75), transparent);
+  background: linear-gradient(90deg, transparent, var(--accent-ui), transparent);
   background-size: 46% 100%;
   background-repeat: no-repeat;
   background-position: -40% 0;
-  filter: drop-shadow(0 0 6px rgba(255,255,255,.35));
+  filter: drop-shadow(0 0 6px var(--glow-white));
   animation: top-lit-travel 11s ease-in-out infinite alternate;
   pointer-events: none;
 }
@@ -314,7 +205,7 @@
   position: absolute;
   top: -30%; bottom: -30%;
   left: -60%; width: 55%;
-  background: linear-gradient(105deg, transparent, rgba(255,255,255,.16), transparent);
+  background: linear-gradient(105deg, transparent, color-mix(in srgb, var(--text-1) 14%, transparent), transparent);
   transform: skewX(-16deg) translateX(-40%);
   opacity: 0;
   pointer-events: none;
@@ -348,8 +239,8 @@
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(rgba(255,255,255,.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,.07) 1px, transparent 1px);
+    linear-gradient(color-mix(in srgb, var(--text-1) 7%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--text-1) 7%, transparent) 1px, transparent 1px);
   background-size: 48px 48px;
   -webkit-mask-image: radial-gradient(110% 55% at 50% 0%, black 20%, transparent 72%);
   mask-image: radial-gradient(110% 55% at 50% 0%, black 20%, transparent 72%);
@@ -360,10 +251,10 @@
 .steps-track i {
   width: 15px; height: 3px;
   border-radius: 1.5px;
-  background: rgba(255, 255, 255, .06);
+  background: color-mix(in srgb, var(--text-1) 10%, transparent);
 }
-.steps-track i.done { background: linear-gradient(180deg, #E8E9EB, #98999C); }
-.steps-track i.active { background: rgba(255, 255, 255, .45); }
+.steps-track i.done { background: linear-gradient(180deg, var(--accent-ui), var(--accent-text)); }
+.steps-track i.active { background: color-mix(in srgb, var(--text-1) 45%, transparent); }
 
 /* données chiffrées : mono tabulaire */
 .num-mono {
@@ -371,110 +262,17 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   THÈME CLAIR « CALQUE » — LE SEUL ENDROIT OÙ CHANGER UNE COULEUR
-   Le papier calque des bureaux d'études : fond clair et précis,
-   l'encre pour agir, le bleu de Prusse pour la sélection, le
-   surligneur jaune réservé à la preuve (extrait exact du DCE).
-   Référence : .claude/echange/concurrents/04-design.md §3.
-   S'applique à la coquille (barre latérale, en-tête, palette ⌘K)
-   et aux écrans déjà passés en Calque (classe .calque, liste
-   PAGES_CALQUE dans components/layout/Layout.tsx). Les autres
-   écrans gardent Lumen (ci-dessus) en attendant leur passage.
-   Tailwind expose ces valeurs sous des noms courts : bg-papier,
-   text-encre-3, border-ligne, bg-prusse-50… (tailwind.config.js).
-   ═══════════════════════════════════════════════════════════════ */
-:root {
-  /* ── Fonds ─────────────────────────────────────────────────── */
-  --calque-papier: #F6F5F1;          /* fond de l'application */
-  --calque-surface: #FFFFFF;         /* barre latérale, listes, menus */
-  --calque-surface-2: #F0EEE8;       /* survol, zones en retrait */
-
-  /* ── Filets ────────────────────────────────────────────────── */
-  --calque-ligne: #E3E0D7;           /* séparations (décoratives) */
-  --calque-ligne-forte: #CBC6BA;     /* bord des boutons secondaires */
-  --calque-ligne-champ: #8B9199;     /* bord des champs : 3,2:1 sur blanc */
-
-  /* ── Encre (texte, action principale) ──────────────────────── */
-  --calque-encre: #16191E;           /* texte principal, bouton principal : 17,6:1 */
-  --calque-encre-survol: #2A2F36;    /* bouton principal au survol */
-  --calque-encre-2: #3C424A;         /* texte secondaire : 10,1:1 */
-  --calque-encre-3: #5F666F;         /* métadonnées, aides : 5,3:1 sur papier */
-  --calque-encre-4: #8B9199;         /* icônes discrètes, désactivé — jamais du texte */
-  --calque-sur-encre: #FFFFFF;       /* texte posé sur l'encre */
-
-  /* ── Bleu de Prusse (sélection, liens, focus) ──────────────── */
-  --calque-prusse-50: #EBF1F7;       /* fond de l'élément sélectionné */
-  --calque-prusse-100: #D6E3EF;
-  --calque-prusse-500: #2B5F93;      /* anneau de focus, progression */
-  --calque-prusse-700: #1F4E79;      /* liens, onglet actif : 8,7:1 */
-
-  /* ── Surligneur — la preuve, et rien d'autre ───────────────── */
-  --calque-surligneur: #FFE066;
-  --calque-surligneur-doux: #FFF2B8;
-
-  /* ── États (sourds ; le rouge brique reste au bloquant formel) ── */
-  --calque-ok: #1D6B45;              --calque-ok-fond: #E5F2EA;
-  --calque-attention: #8A5300;       --calque-attention-fond: #FFF1D6;
-  --calque-bloquant: #A2342C;        --calque-bloquant-fond: #FBE8E6;
-
-  /* ── Profondeur, focus, voile ──────────────────────────────── */
-  --calque-ombre-flottante: 0 8px 24px -8px rgba(22, 25, 30, .18);
-  --calque-focus: 0 0 0 2px var(--calque-surface), 0 0 0 4px var(--calque-prusse-500);
-  --calque-voile: rgba(22, 25, 30, .32);   /* derrière la palette ⌘K et le tiroir mobile */
-  --calque-selection: #D6E3EF;             /* texte sélectionné à la souris */
-
-  /* ── Compagnon sur fond clair : son visage garde sa nuit ───── */
-  --calque-compagnon-fond: #16191E;
-
-  /* ── Barre latérale shadcn/ui (composants/ui/sidebar.tsx) ──── */
-  --sidebar-background: var(--calque-surface);
-  --sidebar-foreground: var(--calque-encre-2);
-  --sidebar-primary: var(--calque-encre);
-  --sidebar-primary-foreground: var(--calque-sur-encre);
-  --sidebar-accent: var(--calque-surface-2);
-  --sidebar-accent-foreground: var(--calque-encre);
-  --sidebar-border: var(--calque-ligne);
-  --sidebar-ring: var(--calque-prusse-500);
+/* ── Base commune : focus, sélection, barres de défilement ──────
+   Focus visible partout : anneau 2 px de l'accent, décalage 2 px. */
+:focus-visible {
+  outline: 2px solid var(--accent-ring);
+  outline-offset: 2px;
 }
-
-/* Sous-arbre en Calque : texte, focus, sélection et barres de défilement
-   prennent le thème clair (le reste de l'application reste en Lumen). */
-.calque {
-  color-scheme: light;
-  color: var(--calque-encre);
-  /* composants shadcn/ui (bouton, palette ⌘K, infobulle, tiroir…) */
-  --source-surligne: color-mix(in srgb, var(--calque-surligneur) 60%, transparent);
-  --source-surligne-bord: var(--calque-attention);
-  --source-mark-fond: var(--calque-surligneur);
-  --source-mark-texte: var(--calque-encre);
-  --background: var(--calque-surface);
-  --foreground: var(--calque-encre);
-  --card: var(--calque-surface);
-  --card-foreground: var(--calque-encre);
-  --popover: var(--calque-surface);
-  --popover-foreground: var(--calque-encre);
-  --primary: var(--calque-encre);
-  --primary-foreground: var(--calque-sur-encre);
-  --secondary: var(--calque-surface-2);
-  --secondary-foreground: var(--calque-encre);
-  --muted: var(--calque-surface-2);
-  --muted-foreground: var(--calque-encre-3);
-  --accent: var(--calque-surface-2);
-  --accent-foreground: var(--calque-encre);
-  --destructive: var(--calque-bloquant);
-  --destructive-foreground: var(--calque-sur-encre);
-  --border: var(--calque-ligne);
-  --input: var(--calque-ligne-champ);
-  --ring: var(--calque-prusse-500);
-}
-.calque :focus-visible {
-  outline: none;
-  box-shadow: var(--calque-focus);
-}
-/* la palette ⌘K est elle-même le contexte : pas d'anneau sur son champ */
-.calque [cmdk-input]:focus-visible { box-shadow: none; }
-.calque ::selection { background: var(--calque-selection); color: var(--calque-encre); }
-.calque ::-webkit-scrollbar-thumb { background: var(--calque-ligne-forte); }
-.calque ::-webkit-scrollbar-thumb:hover { background: var(--calque-encre-4); }
-.calque .chiffres { font-variant-numeric: tabular-nums; }
+/* la palette Ctrl K est elle-même le contexte : pas d'anneau sur son champ */
+[cmdk-input]:focus-visible { outline: none; }
+::selection { background: var(--accent-tint-2); color: var(--text-1); }
+::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: var(--radius-pill); }
+::-webkit-scrollbar-thumb:hover { background: var(--text-disabled); }
+/* classe de marquage héritée (écrans passés en Calque) : les jetons font déjà le travail */
+.calque { color: var(--text-1); }
+.chiffres { font-variant-numeric: tabular-nums; }

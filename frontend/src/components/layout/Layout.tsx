@@ -9,9 +9,9 @@ import CommandPalette from './CommandPalette'
 import { ToastContainer } from '@/components/common/Toast'
 import EcranEnChargement from '@/components/common/EcranEnChargement'
 
-// Écrans déjà passés au thème clair « Calque ». La coquille (barre latérale,
-// en-tête, palette ⌘K) l'est partout ; les autres écrans gardent Lumen
-// (sombre) jusqu'à leur passage.
+// Écrans refaits sur les jetons clair / nuit : ils suivent le thème choisi. La coquille
+// (barre latérale, en-tête, palette Ctrl K) le suit partout ; les autres écrans restent
+// en nuit (data-theme="dark" sur <main>) jusqu'à leur passage — phase C, un écran à la fois.
 const PAGES_CALQUE = ['/dashboard']
 
 const CLE_OUVERTURE = 'synorix.barre-laterale'
@@ -40,8 +40,9 @@ export default function Layout() {
         <main
           className={cn(
             'flex flex-1 flex-col overflow-y-auto px-3 py-5 sm:px-4',
-            calque ? 'calque bg-papier' : 'bg-[var(--edge-void)]',
+            calque ? 'calque bg-papier' : 'bg-surface-0',
           )}
+          data-theme={calque ? undefined : 'dark'}
         >
           <div className="flex-1">
             <Suspense fallback={<EcranEnChargement clair={calque} />}>
