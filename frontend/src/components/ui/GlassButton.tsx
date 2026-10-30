@@ -14,11 +14,11 @@ const glassButton = cva(
   // base — verre, glow doux permanent, transition fluide
   [
     'relative inline-flex items-center justify-center gap-2 select-none',
-    'rounded-xl font-medium whitespace-nowrap',
+    'rounded-xl font-medium whitespace-nowrap [@media(pointer:coarse)]:min-h-11',
     'border backdrop-blur-md',
     'shadow-glow-sm transition-all duration-300 ease-smooth',
-    'hover:-translate-y-0.5 hover:shadow-glow-cyan',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ds-cyan/40 focus-visible:ring-offset-2',
+    'motion-safe:hover:-translate-y-0.5 hover:shadow-glow-cyan',
+    
     'active:translate-y-0 active:shadow-glow-sm',
     'disabled:pointer-events-none disabled:opacity-50 disabled:translate-y-0 disabled:shadow-none',
   ],
@@ -27,21 +27,21 @@ const glassButton = cva(
       variant: {
         // verre clair translucide — usage par défaut
         glass: [
-          'bg-ds-bg/60 text-ds-text-1b',
-          'border-ds-cyan/15',
-          'hover:bg-ds-bg/80 hover:border-ds-cyan/40',
+          'bg-[var(--glass-fill)] text-fg-2',
+          'border-bord-2',
+          'hover:bg-surface-1 hover:border-accent-ui',
         ],
         // verre teinté cyan — call-to-action premium
         primary: [
-          'bg-ds-cyan/10 text-ds-cyan-dark',
-          'border-ds-cyan/25',
-          'hover:bg-ds-cyan/20 hover:border-ds-cyan/50 hover:text-ds-cyan-dark',
+          'bg-accent-tint text-accent-text',
+          'border-accent-tint-2',
+          'hover:bg-accent-tint-2 hover:border-accent-ui',
         ],
         // verre neutre slate — action secondaire
         ghost: [
-          'bg-ds-bg-20/5 text-ds-text-2',
+          'bg-transparent text-fg-2',
           'border-transparent shadow-none',
-          'hover:bg-ds-bg-20/10 hover:text-ds-text-1b hover:shadow-glow-sm',
+          'hover:bg-surface-1 hover:text-fg hover:shadow-glow-sm',
         ],
       },
       size: {
@@ -99,7 +99,7 @@ export const GlassButton = forwardRef<HTMLButtonElement, GlassButtonProps>(
         {/* reflet de verre — fin liseré lumineux en haut */}
         <span
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-px rounded-t-xl bg-gradient-to-r from-transparent via-white/70 to-transparent"
+          className="pointer-events-none absolute inset-x-0 top-0 h-px rounded-t-xl bg-gradient-to-r from-transparent via-accent-tint-2 to-transparent"
         />
         {loading && <Loader2 size={iconSize} className="animate-spin" />}
         {showLeft && <Icon size={iconSize} />}

@@ -85,9 +85,17 @@ export function contraste(avant: string, fond: string): number {
   return (h + 0.05) / (l + 0.05)
 }
 
-/** Contraste d'un jeton (ou de chaque palier d'un dégradé) sur un jeton de surface, dans un thème. */
-export function contrasteJetons(theme: Theme, texte: string, fond: string): { minimum: number; detail: string } {
-  const fonds = couleurs(valeur(theme, fond))
+/** Couleur translucide posée sur une couleur opaque → hexadécimal. */
+export function composer(couleur: string, sur: string): string {
+  const s = analyser(sur)
+  const [r, g, b] = compose(analyser(couleur), [s[0], s[1], s[2]])
+  return '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')
+}
+
+/** Contraste d'un jeton (ou de chaque palier d'un dégradé) sur un jeton de surface, dans un thème.
+ *  `sur` : surface sous un fond translucide (verre, bordure). */
+export function contrasteJetons(theme: Theme, texte: string, fond: string, sur?: string): { minimum: number; detail: string } {
+  const fonds = couleurs(valeur(theme, fond)).map((f) => (analyser(f)[3] < 1 && sur ? composer(f, valeur(theme, sur)) : f))
   const textes = couleurs(valeur(theme, texte))
   const mesures = fonds.flatMap((f) => textes.map((t) => contraste(t, f)))
   return { minimum: Math.min(...mesures), detail: mesures.map((m) => m.toFixed(2)).join(' / ') }

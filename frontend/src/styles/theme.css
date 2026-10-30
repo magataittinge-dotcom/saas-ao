@@ -147,6 +147,18 @@
   --highlight-text: #1d1d1d;
 }
 
+/* ── Mouvement réduit : plus de translation ni d'apparition animée, tout est instantané
+   (les ressorts, glints et défilements du système de référence ignorent cette préférence : nous non). */
+@media (prefers-reduced-motion: reduce) {
+  *:not(.animate-spin), *:not(.animate-spin)::before, *:not(.animate-spin)::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* ── Nuit (dérivée, SYSTEME-DESIGN §3.4 ; surface-0 neutre #111111, décision du 30/10) ── */
 [data-theme="dark"] {
   color-scheme: dark;
@@ -171,9 +183,9 @@
   --accent-text: var(--accent-300);
   --accent-ui: var(--accent-500);
   --accent-ring: var(--accent-300);
-  --accent-fill: var(--accent-600);
+  --accent-fill: linear-gradient(110deg, var(--accent-600), var(--accent-600));   /* plein, mais toujours une image : même propriété dans les deux thèmes */
   --accent-fill-solid: var(--accent-600);
-  --accent-fill-hover: var(--accent-700);
+  --accent-fill-hover: linear-gradient(110deg, var(--accent-700), var(--accent-700));
   --accent-tint: #183144;
   --accent-tint-2: #143e5f;
 

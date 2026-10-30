@@ -69,7 +69,7 @@ test('les surfaces, textes et l\'échelle d\'accent sont ceux de SYSTEME-DESIGN 
   assert.match(valeur('light', '--accent-fill'), /^linear-gradient\(110deg, #0067ba, #0078d6\)$/)
   assert.equal(valeur('dark', '--accent-text'), '#69b1ff')
   assert.equal(valeur('dark', '--accent-ui'), '#008cf8')
-  assert.equal(valeur('dark', '--accent-fill'), '#0078d6')
+  assert.match(valeur('dark', '--accent-fill'), /^linear-gradient\(110deg, #0078d6, #0078d6\)$/)
 })
 
 // ── Contrastes ───────────────────────────────────────────────────
@@ -110,6 +110,15 @@ test('contraste : texte 4,5:1 et interface 3:1 sur chaque surface, dans les deux
     }
   }
   if (process.env.JETONS_TABLEAU) console.log(lignes.join('\n'))
+  assert.deepEqual(echecs, [])
+})
+
+test('contraste : le texte posé sur du verre (infobulle, en-tête, toast) se lit quelle que soit la surface dessous', () => {
+  const echecs: string[] = []
+  for (const theme of THEMES) for (const sur of SURFACES) for (const texte of ['--text-1', '--text-2']) {
+    const { minimum } = contrasteJetons(theme, texte, '--glass-fill', sur)
+    if (minimum < 4.5) echecs.push(`${theme} ${texte} sur verre/${sur} : ${minimum.toFixed(2)}:1`)
+  }
   assert.deepEqual(echecs, [])
 })
 
