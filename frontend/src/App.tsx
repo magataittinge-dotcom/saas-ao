@@ -23,6 +23,7 @@ const Team = lazy(() => import('@/routes/Team'))
 const Settings = lazy(() => import('@/routes/Settings'))
 const Billing = lazy(() => import('@/routes/Billing'))
 const Tools = lazy(() => import('@/routes/Tools'))
+const IntelligenceDemo = lazy(() => import('@/routes/IntelligenceDemo')) // démonstration interne, non liée au menu
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isSignedIn, isLoaded } = useAuth()
@@ -66,6 +67,8 @@ function AppRoutes() {
           </PublicRoute>
         }
       />
+
+      <Route path="/intelligence-demo" element={<PrivateRoute><IntelligenceDemo /></PrivateRoute>} />
 
       {/* Private routes — with layout */}
       <Route

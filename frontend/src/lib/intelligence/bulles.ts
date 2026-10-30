@@ -3,7 +3,7 @@
 // aucun changement côté serveur, aucun appel IA. Libellés positifs, sans conseil de prix.
 import { avancementAO, echeanceAO, estEnCours, etatEcheance, type Echeance } from '@/lib/echeance'
 import type { DashboardStats, Project } from '@/types'
-import { aDecider, classerParUrgence, ficheDepuisProjet, libelleRemise, type FicheAction } from './action'
+import { aDecider, classerParUrgence, ficheDepuisProjet, ficheVide, libelleRemise, prochaineAction, type FicheAction } from './action'
 
 export type IdBulle = 'decision' | 'remise' | 'lot' | 'memoire' | 'piece' | 'expirent'
 
@@ -134,4 +134,17 @@ export function calculerBulles(
   }
 
   return [decision, remise, lot, memoire, piece, expirent]
+}
+
+/** La fiche à montrer : celle de la bulle choisie, sinon la prochaine action (ou la fiche vide sans AO en cours). */
+export function ficheAffichee(
+  choix: string | null,
+  bulles: readonly Bulle[],
+  projets: readonly Project[],
+  maintenant: Date = new Date(),
+): FicheAction {
+  const choisie = choix ? bulles.find((b) => b.id === choix) : undefined
+  if (choisie) return choisie.fiche
+  const p = prochaineAction(projets, maintenant)
+  return p ? ficheDepuisProjet(p, maintenant) : ficheVide()
 }
