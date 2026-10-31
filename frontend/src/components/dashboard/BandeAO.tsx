@@ -63,7 +63,7 @@ export default function BandeAO({ projets, total, chargement, onSansSuite, onNou
             <p className="text-[15px] font-semibold text-fg">Aucun appel d'offres en cours</p>
             <p className="mt-0.5 max-w-[60ch] text-[15px] text-fg-3">Choisissez un avis ci-dessous, ou déposez le DCE (ZIP ou PDF) : Synorix lit les pièces, repère les lots et prépare l'analyse.</p>
           </div>
-          <Button variant="outline" onClick={onNouveau}>Nouvel AO</Button>
+          <Button variant="outline" onClick={onNouveau}>Nouvel appel d'offres</Button>
         </div>
       ) : (
         <ul className="grid gap-3 pt-4 md:grid-cols-3">

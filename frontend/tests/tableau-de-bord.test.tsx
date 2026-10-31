@@ -58,10 +58,10 @@ test('la bande garde trois AO au plus, la remise la plus proche d\'abord, et por
   assert.deepEqual(aoDeLaBande(clos), [])
 })
 
-test("sans AO : la bande garde son texte, et le bouton « Nouvel AO » est présent", () => {
+test("sans AO : la bande garde son texte, et le bouton « Nouvel appel d'offres » est présent", () => {
   const html = rendre([])
   assert.ok(html.includes('Aucun appel d&#x27;offres en cours'))
-  assert.ok(/<button[^>]*>Nouvel AO<\/button>/.test(html))
+  assert.ok(/<button[^>]*>Nouvel appel d&#x27;offres<\/button>/.test(html))
   assert.ok(!/bg-encre|sur-encre/.test(html), 'plus d\'encre sombre écrite en dur')
 })
 

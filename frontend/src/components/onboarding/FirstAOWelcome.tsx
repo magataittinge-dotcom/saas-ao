@@ -1,16 +1,10 @@
-import { useCallback, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useDropzone } from 'react-dropzone'
-import { CloudUpload, Loader2 } from 'lucide-react'
+import { useState } from 'react'
+import { Loader2 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { authService } from '@/services/auth'
-import { useCreateProject } from '@/hooks/useProject'
-import { setPendingUpload } from '@/lib/pendingUpload'
-import { messageErreur } from '@/lib/erreurs'
-import EchecAction from '@/components/common/EchecAction'
+import ZoneDepotAO from './ZoneDepotAO'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { cn } from '@/lib/utils'
 
 /**
  * C15 — onboarding wow : UN écran central après l'inscription.
@@ -21,16 +15,12 @@ import { cn } from '@/lib/utils'
  * public/visage (poster), jamais un autre.
  */
 export default function FirstAOWelcome() {
-  const navigate = useNavigate()
   const { organization, setOrganization, user } = useAuthStore()
-  const { mutate: createProject, isPending: isCreating } = useCreateProject()
 
   const [siret, setSiret] = useState('')
   const [siretBusy, setSiretBusy] = useState(false)
   const [siretMsg, setSiretMsg] = useState<string | null>(null)
   const [siretDone, setSiretDone] = useState(!!organization?.siret)
-  // 1.16 — la création de l'AO peut échouer : on le dit, et on garde le fichier pour réessayer
-  const [echec, setEchec] = useState<{ message: string; fichier: File } | null>(null)
 
   const submitSiret = async () => {
     if (!siret.trim()) return
@@ -49,40 +39,6 @@ export default function FirstAOWelcome() {
       setSiretBusy(false)
     }
   }
-
-  const creerAvec = useCallback((file: File) => {
-    setEchec(null)
-    // Nom de l'AO dérivé du fichier — zéro formulaire, renommable ensuite.
-    const name = file.name.replace(/\.(zip|pdf|docx|xlsx|xls)$/i, '').replace(/[_-]+/g, ' ').trim()
-      || 'Mon premier AO'
-    createProject({ name }, {
-      onSuccess: (project) => {
-        setPendingUpload(file)
-        navigate(`/projects/${project.id}/upload`)
-      },
-      onError: async (err) => {
-        setEchec({
-          message: await messageErreur(err, "La création de l'AO n'a pas abouti. Votre fichier est conservé : réessayez."),
-          fichier: file,
-        })
-      },
-    })
-  }, [createProject, navigate])
-
-  const onDrop = useCallback((files: File[]) => {
-    const file = files[0]
-    if (!file || isCreating) return
-    creerAvec(file)
-  }, [creerAvec, isCreating])
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    multiple: false,
-    accept: {
-      'application/zip': ['.zip'],
-      'application/pdf': ['.pdf'],
-    },
-  })
 
   const firstName = user?.name?.split(' ')[0]
 
@@ -131,31 +87,10 @@ export default function FirstAOWelcome() {
           <p className="mb-7 text-[15px] text-fg-2">
             Votre profil se complétera au fil de vos réponses — commencez directement.
           </p>
-          {echec && (
-            <div className="mb-4 w-full text-left">
-              <EchecAction calque message={echec.message} onReessayer={() => creerAvec(echec.fichier)} />
-            </div>
-          )}
-          <div
-            {...getRootProps()}
-            className={cn(
-              'w-full cursor-pointer rounded-xl border-2 border-dashed px-8 py-14 transition-colors duration-base ease-lien',
-              isDragActive ? 'border-accent-ring bg-accent-tint' : 'border-input bg-surface-1 hover:border-fg-3',
-            )}
-          >
-            <input {...getInputProps()} />
-            {isCreating ? (
-              <Loader2 size={28} className="mx-auto animate-spin text-fg-3" aria-hidden />
-            ) : (
-              <CloudUpload size={28} strokeWidth={1.6} className="mx-auto text-fg-3" aria-hidden />
-            )}
-            <p className="mt-4 text-base font-semibold text-fg">
-              Déposez votre premier DCE — il est offert
-            </p>
-            <p className="mt-1.5 text-[13px] text-fg-3">
-              ZIP complet ou PDF · analyse, vérification et mémoire compris
-            </p>
-          </div>
+          <ZoneDepotAO
+            titre="Déposez votre premier DCE — il est offert"
+            precision="ZIP complet ou PDF · analyse, vérification et mémoire compris"
+          />
         </>
       )}
     </div>

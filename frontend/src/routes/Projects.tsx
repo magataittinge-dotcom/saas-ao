@@ -102,13 +102,6 @@ export default function Projects() {
               : `${projects.length} projet${projects.length > 1 ? 's' : ''} · ${activeCount} en cours`}
           </p>
         </div>
-        <button
-          onClick={() => navigate('/projects/new')}
-          className="signature-btn touch-target shrink-0"
-        >
-          <Plus size={16} />
-          Nouvel AO
-        </button>
       </div>
 
       {/* Synorix Intelligence : le visage, six bulles, la prochaine action — le haut de Mes AO */}

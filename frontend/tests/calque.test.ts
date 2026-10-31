@@ -95,7 +95,7 @@ test('la palette Ctrl K s\'ouvre au clavier et mène partout où mène la naviga
   assert.match(entete, /onClick=\{onSearch\}/)
 })
 
-test('coquille : barre d\'icônes flottante, onglets du bas au téléphone (cibles 44 px, place du Cerveau), bandeau, bascule, bouton rond', () => {
+test('coquille : barre d\'icônes flottante, onglets du bas au téléphone (cibles 44 px, place du Cerveau), bandeau, bascule, bouton « Nouvel appel d\'offres »', () => {
   const rail = sansCommentaires(lire('src/components/layout/Sidebar.tsx'))
   assert.match(rail, /max-\[768px\]:hidden/, 'barre d\'icônes masquée au téléphone')
   assert.match(rail, /<Pastille/)
@@ -108,7 +108,7 @@ test('coquille : barre d\'icônes flottante, onglets du bas au téléphone (cibl
   assert.match(onglets, /Compte/)
   const entete = sansCommentaires(lire('src/components/layout/Header.tsx'))
   assert.match(entete, /<BasculeTheme \/>/)
-  assert.match(entete, /aria-label="Nouvel AO"/)
+  assert.match(entete, /Nouvel appel d&apos;offres/)
   assert.match(entete, /rounded-full/)
   const layout = sansCommentaires(lire('src/components/layout/Layout.tsx'))
   assert.match(layout, /<BandeauNouveau \/>/)

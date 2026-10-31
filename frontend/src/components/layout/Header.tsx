@@ -1,6 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ChevronRight, Plus, Search } from 'lucide-react'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useCompanionStore } from '@/stores/companionStore'
 import { useTheme } from '@/lib/theme'
 import NotificationBell from './NotificationBell'
@@ -40,8 +39,8 @@ interface Props {
   onSearch: () => void
 }
 
-// En-tête : fil d'Ariane, recherche Ctrl K, bascule soleil / lune, Compagnon, notifications, bouton rond
-// « Nouvel AO ». Verre dépoli (flou 16 px) sur bureau ; plein au téléphone (≤ 3 flous simultanés).
+// En-tête : fil d'Ariane, recherche Ctrl K, bascule soleil / lune, Compagnon, notifications, bouton
+// « Nouvel appel d'offres » (le texte se réduit au « + » sous 640 px). Verre dépoli (flou 16 px) sur bureau ; plein au téléphone (≤ 3 flous simultanés).
 export default function Header({ onSearch }: Props) {
   const companionState = useCompanionStore((s) => s.state)
   const { pathname } = useLocation()
@@ -93,19 +92,14 @@ export default function Header({ onSearch }: Props) {
         />
         <NotificationBell />
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              onClick={() => navigate('/projects/new')}
-              aria-label="Nouvel AO"
-              className="ml-1 grid size-11 shrink-0 place-items-center rounded-full bg-accent-fill text-accent-on shadow-btn transition-[transform,box-shadow] duration-pop ease-pop hover:[background-image:var(--accent-fill-hover)] hover:shadow-cta active:scale-95 motion-safe:hover:rotate-90"
-            >
-              <Plus size={22} strokeWidth={1.5} absoluteStrokeWidth aria-hidden />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">Nouvel AO</TooltipContent>
-        </Tooltip>
+        <button
+          type="button"
+          onClick={() => navigate('/projects/new')}
+          className="ml-1 inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-accent-fill text-sm font-semibold text-accent-on shadow-btn transition-[transform,box-shadow] duration-pop ease-pop hover:[background-image:var(--accent-fill-hover)] hover:shadow-cta active:scale-95 max-sm:w-11 sm:px-5"
+        >
+          <Plus size={20} strokeWidth={1.5} absoluteStrokeWidth aria-hidden />
+          <span className="max-sm:sr-only">Nouvel appel d&apos;offres</span>
+        </button>
       </div>
     </header>
   )
