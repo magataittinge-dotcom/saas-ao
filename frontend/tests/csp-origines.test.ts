@@ -10,6 +10,7 @@ import { fichiersSource, lire, sansCommentaires } from './outils/sources'
 const CONNUES: Record<string, string> = {
   'www.economie.gouv.fr': 'lien <a> vers les formulaires DC1/DC2 : navigation, aucune CSP',
   'maps.googleapis.com': 'image de carte (img-src), seulement si VITE_GOOGLE_MAPS_API_KEY est renseignée (Company.tsx)',
+  'api-adresse.data.gouv.fr': 'connexion (connect-src) : recherche d\'une commune ou d\'un code postal dans la veille, sans jeton de connexion',
   'www.w3.org': 'espace de noms XML d\'un SVG, jamais chargé',
 }
 
