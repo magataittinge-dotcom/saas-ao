@@ -682,7 +682,7 @@ export default function StepExport({ project }: Props) {
               {/* Upload filled DPGF */}
               <div>
                 <p className="text-xs font-medium mb-2" style={{ color: 'var(--text-1)' }}>
-                  Déposer votre <Sigle code="DPGF" /> rempli
+                  Déposer votre <Sigle code="DPGF" /> remplie
                 </p>
                 <div
                   className="relative rounded-xl p-4 text-center transition-all cursor-pointer"
@@ -700,7 +700,7 @@ export default function StepExport({ project }: Props) {
                     <>
                       <Upload size={20} className="mx-auto mb-1.5" style={{ color: 'var(--text-3)' }} />
                       <p className="text-xs" style={{ color: 'var(--text-3)' }}>
-                        Glissez votre <Sigle code="DPGF" /> rempli ici ou{' '}
+                        Glissez votre <Sigle code="DPGF" /> remplie ici ou{' '}
                         <label className="cursor-pointer font-medium" style={{ color: 'var(--text-1)' }}>
                           parcourir
                           <input
