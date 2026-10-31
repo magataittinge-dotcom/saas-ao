@@ -118,7 +118,8 @@ export default function Projects() {
               placeholder="Rechercher un projet..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="glass-input w-full py-2.5 pl-9 pr-3 text-sm"
+              className="glass-input min-h-11 w-full py-2.5 pl-9 pr-3 text-sm"
+              style={{ borderColor: 'var(--border-field)' }}
             />
           </div>
 

@@ -138,3 +138,11 @@ test("l'écran « premier DCE offert » (affiché sur le tableau de bord) : cham
   assert.ok(html.includes('src="/visage/tete-ouverte-poster.webp"'), 'le visage est celui de public/visage')
   assert.ok(!/<video|tete-veille|\.webm/.test(html), 'plus de clip vidéo')
 }) 
+
+test('Mes AO : le champ de recherche fait 44 px de haut et garde un contour à 3:1 (bord des champs)', () => {
+  const src = sansCommentaires(lire('src/routes/Projects.tsx'))
+  const champ = src.match(/<input[^>]*placeholder="Rechercher un projet\.\.\."[\s\S]*?\/>/)?.[0]
+  assert.ok(champ, 'le champ de recherche existe')
+  assert.match(champ!, /min-h-11/, 'hauteur minimale 44 px')
+  assert.match(champ!, /var\(--border-field\)/, 'contour « bord des champs » (3:1 minimum)')
+})
