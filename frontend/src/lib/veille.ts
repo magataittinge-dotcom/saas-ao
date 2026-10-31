@@ -173,3 +173,102 @@ export function rechercheDifferee<T>(
     },
   }
 }
+
+// ── Préférences, requêtes et visites (contrat /api/veille) ────────────────────────────────────
+export type FiltresAvis = {
+  metiers: string[]
+  delai_jours: 7 | 15 | 30 | null
+  procedures: string[]
+  mots_cles: string
+}
+export type TriAvis = 'date_limite' | 'date_parution'
+
+export const FILTRES_PAR_DEFAUT: FiltresAvis = { metiers: [], delai_jours: null, procedures: [], mots_cles: '' }
+
+/** Vrai quand un filtre au moins est posé (la zone n'est pas un filtre). */
+export const aDesFiltres = (f: FiltresAvis) =>
+  f.metiers.length > 0 || f.procedures.length > 0 || f.delai_jours !== null || f.mots_cles.trim() !== ''
+
+/** Paramètres de requête communs à /comptes et /avis : les listes sont séparées par des virgules, les valeurs vides omises. */
+export function paramsFiltres(f: FiltresAvis): Record<string, string | number> {
+  const p: Record<string, string | number> = {}
+  if (f.metiers.length) p.metiers = f.metiers.join(',')
+  if (f.procedures.length) p.procedures = f.procedures.join(',')
+  if (f.delai_jours !== null) p.delai_jours = f.delai_jours
+  const q = f.mots_cles.trim()
+  if (q) p.q = q
+  return p
+}
+
+/** Paramètres de /avis : la zone est obligatoire (une zone vide donne une réponse vide, jamais d'appel inutile). */
+export function paramsAvis(
+  departements: readonly string[], f: FiltresAvis, tri: TriAvis, curseur: string | null, limite = 20,
+): Record<string, string | number> {
+  const p: Record<string, string | number> = { ...paramsFiltres(f), departements: departements.join(','), tri, limite }
+  if (curseur) p.curseur = curseur
+  return p
+}
+
+/** La visite se pose à la sortie de l'accueil si la dernière date de plus de 24 h (ou n'existe pas). */
+export const DELAI_VISITE_MS = 24 * 3600 * 1000
+export function doitPoserVisite(derniereVisite: string | null, maintenant: Date = new Date()): boolean {
+  if (!derniereVisite) return true
+  const t = Date.parse(derniereVisite)
+  if (!Number.isFinite(t)) return true
+  return maintenant.getTime() - t > DELAI_VISITE_MS
+}
+
+/** Départements voisins proches de la zone, à proposer quand elle ne donne rien : les plus proches d'abord, hors zone. */
+export function departementsVoisins(
+  selection: readonly string[],
+  points: readonly DepartementPoint[] = DEPARTEMENTS,
+  max = 6,
+  rayonKm = 130,
+): string[] {
+  const choisis = points.filter((p) => selection.includes(p.code))
+  if (choisis.length === 0) return []
+  return points
+    .filter((p) => !selection.includes(p.code))
+    .map((p) => ({ code: p.code, d: Math.min(...choisis.map((c) => distanceKm(c, p))) }))
+    .filter((p) => p.d <= rayonKm)
+    .sort((a, b) => a.d - b.d)
+    .slice(0, max)
+    .map((p) => p.code)
+}
+
+/** Sauvegarde différée (500 ms) : la dernière valeur seule part ; `vider` l'envoie tout de suite (sortie de l'écran). */
+export const DELAI_SAUVEGARDE_MS = 500
+export interface SauvegardeDifferee<T> {
+  planifier: (valeur: T) => void
+  /** Envoie sans attendre ce qui est en attente. */
+  vider: () => void
+  annuler: () => void
+}
+export function sauvegardeDifferee<T>(envoyer: (v: T) => void, delai = DELAI_SAUVEGARDE_MS): SauvegardeDifferee<T> {
+  let minuterie: ReturnType<typeof setTimeout> | null = null
+  let attente: { v: T } | null = null
+  const annuler = () => { if (minuterie) clearTimeout(minuterie); minuterie = null; attente = null }
+  const vider = () => {
+    if (minuterie) clearTimeout(minuterie)
+    minuterie = null
+    const a = attente
+    attente = null
+    if (a) envoyer(a.v)
+  }
+  return {
+    annuler, vider,
+    planifier(v) {
+      if (minuterie) clearTimeout(minuterie)
+      attente = { v }
+      minuterie = setTimeout(vider, delai)
+    },
+  }
+}
+
+/** « Élargir » : d'abord retirer les filtres ; sans filtre à retirer, ajouter les départements voisins ; sinon rien. */
+export type EtapeElargir = { type: 'filtres' } | { type: 'voisins'; ajout: string[] } | null
+export function etapeElargir(filtres: FiltresAvis, selection: readonly string[], points: readonly DepartementPoint[] = DEPARTEMENTS): EtapeElargir {
+  if (aDesFiltres(filtres)) return { type: 'filtres' }
+  const ajout = departementsVoisins(selection, points)
+  return ajout.length ? { type: 'voisins', ajout } : null
+}
