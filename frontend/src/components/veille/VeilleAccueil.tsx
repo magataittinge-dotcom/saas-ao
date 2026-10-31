@@ -13,14 +13,14 @@ import { SOURCE_VEILLE } from '@/services/veille'
 
 const NOMS: Readonly<Record<string, string>> = Object.fromEntries(DEPARTEMENTS.map((d) => [d.code, d.nom]))
 
-/** « Actualisé le 31/10 à 08 h 12 » (heure locale). */
-function libelleActualisation(iso: string | null): string | null {
+/** « Données BOAMP du 31/10 à 08:12 » (heure locale) — décision du 1/11 : en petit, à côté de la source. */
+export function libelleActualisation(iso: string | null): string | null {
   if (!iso) return null
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return null
   const jour = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
-  const h = d.getMinutes() ? `${d.getHours()} h ${String(d.getMinutes()).padStart(2, '0')}` : `${d.getHours()} h`
-  return `Actualisé le ${jour} à ${h}`
+  const heure = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  return `Données BOAMP du ${jour} à ${heure}`
 }
 
 export default function VeilleAccueil() {
