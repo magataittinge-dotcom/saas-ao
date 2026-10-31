@@ -57,13 +57,14 @@ def test_id_boamp_est_unique(db_session):
 
 
 def test_un_avis_garde_ses_listes_json(db_session):
-    db_session.add(_avis(id_boamp="26-000002", departements=["44", "2A"], metiers=["couverture"],
+    db_session.add(_avis(id_boamp="26-000002", departements=["44", "2A"], metiers=["couverture"], ids_lies=["26-000002", "26-000001"],
                          codes_cpv=["45261000"], descripteurs=[{"code": "74", "libelle": "Couverture"}]))
     db_session.commit()
     db_session.expire_all()
     from models.avis_veille import AvisVeille
     relu = db_session.query(AvisVeille).filter_by(id_boamp="26-000002").one()
     assert relu.departements == ["44", "2A"] and relu.metiers == ["couverture"]
+    assert relu.ids_lies == ["26-000002", "26-000001"]
     assert relu.created_at and relu.synchronise_at
 
 

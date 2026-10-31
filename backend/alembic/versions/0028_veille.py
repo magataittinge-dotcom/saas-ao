@@ -36,6 +36,7 @@ def upgrade() -> None:
             "avis_veille",
             sa.Column("id", sa.String(), primary_key=True),
             sa.Column("id_boamp", sa.String(40), nullable=False),
+            sa.Column("ids_lies", sa.JSON(), nullable=False),
             sa.Column("objet", sa.Text(), nullable=False),
             sa.Column("acheteur", sa.String(500), nullable=False, server_default=""),
             sa.Column("departements", sa.JSON(), nullable=False),

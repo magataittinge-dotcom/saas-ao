@@ -16,7 +16,10 @@ class AvisVeille(Base):
     __tablename__ = "avis_veille"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    id_boamp = Column(String(40), nullable=False, unique=True, index=True)   # idweb BOAMP, ex. "26-105108"
+    id_boamp = Column(String(40), nullable=False, unique=True, index=True)   # idweb BOAMP de la version courante, ex. "26-105108"
+    # idweb de toutes les versions du même avis (origine + avis corrigés) : l'API garde les anciennes
+    # versions, elles ne doivent ni recréer la ligne ni écraser la version courante.
+    ids_lies = Column(JSON, nullable=False, default=list)
     objet = Column(Text, nullable=False)
     acheteur = Column(String(500), nullable=False, default="")
     departements = Column(JSON, nullable=False, default=list)                # ["44", "49"]

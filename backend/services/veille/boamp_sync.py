@@ -256,6 +256,16 @@ def _debut(db, aujourdhui: date, depuis: date | None) -> date:
     return max(plancher, dernier.date() - timedelta(days=1))   # un jour de chevauchement
 
 
+def _index_connus(db) -> dict:
+    """idweb (courant ou ancien) → ligne, pour retrouver un avis déjà connu sous une autre version."""
+    from models.avis_veille import AvisVeille
+    index: dict = {}
+    for ligne in db.query(AvisVeille).all():
+        for identifiant in [ligne.id_boamp, *(ligne.ids_lies or [])]:
+            index[identifiant] = ligne
+    return index
+
+
 def synchroniser(db, client: ClientBoamp | None = None, depuis: date | None = None, limite: int | None = None,
                  simulation: bool = False, aujourdhui: date | None = None) -> Resultat:
     """Un passage de synchronisation. `simulation` : lit l'API et la base, n'écrit rien, compte."""
@@ -269,6 +279,7 @@ def synchroniser(db, client: ClientBoamp | None = None, depuis: date | None = No
     client = client or ClientBoamp()
     maintenant = datetime.utcnow()
     vus: set[str] = set()
+    connus = _index_connus(db)
     try:
         jour = debut
         while jour <= aujourdhui and (limite is None or resultat.retenus < limite):
@@ -280,24 +291,33 @@ def synchroniser(db, client: ClientBoamp | None = None, depuis: date | None = No
                     continue
                 if limite is not None and resultat.retenus >= limite:
                     break
-                vus.add(champs["id_boamp"])
-                resultat.retenus += 1
                 annonce_lie = champs.pop("_annonce_lie")
                 corrige = champs.pop("_corrige")
-                ligne = db.query(AvisVeille).filter_by(id_boamp=champs["id_boamp"]).first()
-                if ligne is None and corrige and annonce_lie:
-                    # avis corrigé : il remplace la ligne de l'avis d'origine
-                    ligne = db.query(AvisVeille).filter(AvisVeille.id_boamp.in_(annonce_lie)).first()
+                ligne = connus.get(champs["id_boamp"])
+                if ligne is not None and champs["id_boamp"] != ligne.id_boamp:
+                    resultat.ignores += 1              # ancienne version, déjà remplacée par un avis corrigé
+                    continue
+                if ligne is None and corrige:
+                    # avis corrigé : il porte son propre idweb et pointe la version qu'il remplace
+                    ligne = next((connus[a] for a in annonce_lie if a in connus), None)
+                vus.add(champs["id_boamp"])
+                resultat.retenus += 1
+                lies = [champs["id_boamp"], *annonce_lie]
                 if ligne is None:
                     resultat.crees += 1
+                    ligne = AvisVeille(**champs, ids_lies=lies, synchronise_at=maintenant)
                     if not simulation:
-                        db.add(AvisVeille(**champs, synchronise_at=maintenant))
+                        db.add(ligne)
                 else:
                     resultat.mis_a_jour += 1
                     if not simulation:
+                        lies = list(dict.fromkeys([*(ligne.ids_lies or []), ligne.id_boamp, *lies]))
                         for cle, valeur in champs.items():
                             setattr(ligne, cle, valeur)
+                        ligne.ids_lies = lies
                         ligne.synchronise_at = maintenant
+                for identifiant in lies:
+                    connus[identifiant] = ligne
                 if not simulation:
                     db.flush()
             if not simulation:

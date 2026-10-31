@@ -189,6 +189,27 @@ def test_un_avis_corrige_remplace_la_ligne_de_l_avis_d_origine(db_session):
     assert ligne.id_boamp == "26-900150" and ligne.date_limite == date(2026, 11, 20)
 
 
+def test_rejouer_une_fenetre_avec_avis_d_origine_et_avis_corrige_ne_cree_pas_de_doublon(db_session):
+    # L'API garde l'avis d'origine ET l'avis corrigé : une fenêtre qui les relit tous deux ne doit ni
+    # recréer l'origine, ni écraser le corrigé par l'origine.
+    jours = {
+        "2026-10-29": [enreg("26-900100", datelimitereponse="2026-11-10T12:00:00+00:00", objet="Version d'origine")],
+        "2026-10-30": [enreg("26-900150", etat="RECTIFICATIF", annonce_lie=["26-900100"], dateparution="2026-10-30",
+                             datelimitereponse="2026-11-20T12:00:00+00:00", objet="Version corrigée")],
+    }
+    for _ in range(3):
+        synchroniser(db_session, client(jours), depuis=date(2026, 10, 29), aujourdhui=AUJOURDHUI)
+        (ligne,) = _lignes(db_session)
+        assert (ligne.id_boamp, ligne.objet, ligne.date_limite) == ("26-900150", "Version corrigée", date(2026, 11, 20))
+        assert set(ligne.ids_lies) == {"26-900100", "26-900150"}
+    # un second correctif pointant l'avis corrigé (et non l'origine) trouve toujours la même ligne
+    jours["2026-10-31"] = [enreg("26-900190", etat="RECTIFICATIF", annonce_lie=["26-900150"], dateparution="2026-10-31",
+                                 datelimitereponse="2026-11-25T12:00:00+00:00", objet="Deuxième correctif")]
+    synchroniser(db_session, client(jours), depuis=date(2026, 10, 29), aujourdhui=AUJOURDHUI)
+    (ligne,) = _lignes(db_session)
+    assert (ligne.id_boamp, ligne.date_limite) == ("26-900190", date(2026, 11, 25))
+
+
 def test_avis_sans_date_limite_ou_sans_departement_valide_ou_hors_travaux_ignores(db_session):
     jours = {"2026-10-30": [
         enreg("26-900201", datelimitereponse=None),
