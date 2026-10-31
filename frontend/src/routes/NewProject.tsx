@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import ZoneDepotAO from '@/components/onboarding/ZoneDepotAO'
+import { Sigle } from '@/components/common/Sigle'
 
 // /projects/new : l'écran de dépôt. Plus de formulaire « Nom du projet » : on dépose le dossier de l'acheteur,
 // le nom de l'AO est tiré du nom du fichier et se modifie ensuite (S2).
@@ -23,7 +24,7 @@ export default function NewProject() {
       </p>
 
       <ZoneDepotAO
-        titre="Déposez le dossier de l'acheteur (DCE)"
+        titre={<>Déposez le <Sigle code="DCE" /></>}
         precision="ZIP complet ou PDF · le nom de l'AO vient du nom du fichier"
       />
     </div>

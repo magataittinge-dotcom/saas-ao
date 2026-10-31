@@ -20,7 +20,7 @@ const PROPRIETES_TECHNIQUES = new Set([
   'queryKey', 'mode', 'part', 'cle', 'icon', 'pillClass', 'bg', 'border', 'background', 'fontFamily',
   'boxShadow', 'responseType', 'contentType', 'method', 'anim', 'dur', 'delay', 'top', 'left', 'right', 'bottom',
 ])
-const APPELS_TECHNIQUES = /^(api\.(get|post|patch|put|delete)|navigate|fetch|setSearchParams|useQuery|invalidateQueries|getElementById|querySelector(All)?|addEventListener|removeEventListener|createElement|setAttribute|getItem|setItem|removeItem|startsWith|endsWith|includes|split|replace|match|test|format|toLocaleDateString|toLocaleTimeString|Intl\.\w+|new Date|require|import)$/
+const APPELS_TECHNIQUES = /^(developper|nomSigle|api\.(get|post|patch|put|delete)|navigate|fetch|setSearchParams|useQuery|invalidateQueries|getElementById|querySelector(All)?|addEventListener|removeEventListener|createElement|setAttribute|getItem|setItem|removeItem|startsWith|endsWith|includes|split|replace|match|test|format|toLocaleDateString|toLocaleTimeString|Intl\.\w+|new Date|require|import)$/
 
 /** Un mot seul en minuscules (« free », « upload », « deadline ») passé à une fonction,
  *  en valeur par défaut ou dans un tableau : une clé technique, pas un texte affiché. */

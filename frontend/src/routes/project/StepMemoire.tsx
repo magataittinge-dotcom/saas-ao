@@ -691,7 +691,7 @@ export default function StepMemoire({ project }: Props) {
                         className="text-xs font-medium px-3 py-1 rounded-lg transition-colors hover:bg-ds-bg-2"
                         style={{ color: 'var(--text-3)', border: '1px solid var(--border-1)' }}
                       >
-                        Annuler
+                        Retour
                       </button>
                     </span>
                   )}

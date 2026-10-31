@@ -41,11 +41,11 @@ test('la ligne dit combien de pièces sont à joindre et qu\'elles ne seront pas
   for (const n of [1, 2, 12]) assert.doesNotMatch(phrasePiecesAJoindre(n)!, /manquant|incomplet|absent|erreur|attention/i)
 })
 
-test('l\'export a un seul bouton principal ; PDF seul et Word seul sont sous « Autres formats » ; les points de contrôle sont repliés', () => {
+test('l\'export a un seul bouton principal ; PDF seul et Word seul sont sous « Autres formats » ; « Avant d\'envoyer » est replié', () => {
   const code = sansCommentaires(lire('src/routes/project/StepExport.tsx'))
   assert.equal((code.match(/signature-btn/g) ?? []).length, 1, 'un seul bouton principal')
   assert.ok(code.includes('Télécharger le dossier'))
-  assert.doesNotMatch(code, /Exporter quand même|showGateWarning|Télécharger le dossier ZIP|Livrables/)
+  assert.doesNotMatch(code, /Exporter quand même|showGateWarning|Télécharger le dossier ZIP|Livrables|Points de contrôle/)
   assert.doesNotMatch(code, /var\(--warning-bg\)/, 'plus de bouton orange')
   assert.match(code, /<PiecesAJoindre pieces=\{nonConformes\} \/>/)
   // « Autres formats » : un repli fermé qui contient les deux sorties, et seulement elles
@@ -53,8 +53,8 @@ test('l\'export a un seul bouton principal ; PDF seul et Word seul sont sous « 
   assert.ok(code.includes('Autres formats'))
   assert.ok(autres.indexOf('Mémoire PDF') > 0 && autres.indexOf('Mémoire Word') > autres.indexOf('Mémoire PDF'))
   assert.ok(code.indexOf('Télécharger le dossier') < code.indexOf('Autres formats'))
-  // les points de contrôle sont dans un repli fermé
-  const iPoints = code.indexOf('Points de contrôle')
-  assert.ok(/<details(?![^>]*\bopen\b)[^>]*>\s*<summary[^>]*>\s*Points de contrôle/.test(code), 'Points de contrôle dans un <details> fermé')
+  // « Avant d'envoyer » (ex-« Points de contrôle », S4) est dans un repli fermé
+  const iPoints = code.indexOf('Avant d&apos;envoyer')
+  assert.ok(/<details(?![^>]*\bopen\b)[^>]*>\s*<summary[^>]*>\s*Avant d&apos;envoyer/.test(code), '« Avant d\'envoyer » dans un <details> fermé')
   assert.ok(iPoints > 0)
 })

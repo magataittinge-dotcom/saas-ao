@@ -19,6 +19,8 @@ import {
   etatPiece, lignesDuScore, lireAvertissementsExport, resumeExigences, type GroupeExigences,
 } from '@/lib/exportDossier'
 import { messageErreur } from '@/lib/erreurs'
+import { Sigle } from '@/components/common/Sigle'
+import { developper } from '@/lib/lexique'
 import { noteDepot, suiteComptes } from '@/lib/statutPiece'
 import { libellePassagesACompleter } from '@/lib/passagesACompleter'
 import { echeanceAO } from '@/lib/echeance'
@@ -133,7 +135,7 @@ const DOSSIERS_ZIP: Record<string, string> = {
 
 // ─── Hero check (ligne de contrôle compacte du héros) ──────────────────────
 
-function HeroCheck({ ok, label, value }: { ok: boolean; label: string; value: string }) {
+function HeroCheck({ ok, label, value }: { ok: boolean; label: React.ReactNode; value: React.ReactNode }) {
   return (
     <span className="flex items-center gap-1.5 text-xs">
       {ok
@@ -150,7 +152,7 @@ function HeroCheck({ ok, label, value }: { ok: boolean; label: string; value: st
 function AccordionSection({
   title, ok, expanded, onToggle, children,
 }: {
-  title: string
+  title: React.ReactNode
   ok: boolean
   expanded: boolean
   onToggle: () => void
@@ -315,7 +317,7 @@ export default function StepExport({ project }: Props) {
       URL.revokeObjectURL(url)
     } catch (err) {
       setEchec({
-        message: await messageErreur(err, "Le téléchargement de la DPGF n'a pas abouti."),
+        message: await messageErreur(err, `Le téléchargement du ${developper('DPGF')} n'a pas abouti.`),
         relancer: () => { void handleDownloadDpgf() },
       })
     }
@@ -331,7 +333,7 @@ export default function StepExport({ project }: Props) {
       await api.post(`/projects/${project.id}/dpgf-upload`, fd)
       queryClient.invalidateQueries({ queryKey: ['export-detail', project.id] })
     } catch {
-      setDpgfError("L'envoi de la DPGF n'a pas abouti.")
+      setDpgfError(`L'envoi du ${developper('DPGF')} n'a pas abouti.`)
     } finally {
       setDpgfUploading(false)
     }
@@ -501,8 +503,8 @@ export default function StepExport({ project }: Props) {
               )}
               <HeroCheck
                 ok={dpgfOk}
-                label="DPGF"
-                value={dpgfLignes > 0 ? `${dpgfLignes} lignes` : detail.has_dpgf ? 'à compléter' : 'aucune dans le DCE'}
+                label={<Sigle code="DPGF" majuscule />}
+                value={dpgfLignes > 0 ? `${dpgfLignes} lignes` : detail.has_dpgf ? 'à compléter' : <>aucun dans le <Sigle code="DCE" /></>}
               />
             </div>
           </div>
@@ -511,7 +513,7 @@ export default function StepExport({ project }: Props) {
           <div className="min-w-0">
             {detail.naming_convention && (
               <p className="mt-3 text-xs leading-relaxed" style={{ color: 'var(--text-3)' }}>
-                Pièces du ZIP nommées selon le RC&nbsp;:{' '}
+                Pièces du ZIP nommées selon le <Sigle code="RC" />&nbsp;:{' '}
                 <span className="num-mono" style={{ color: 'var(--text-3)' }}>
                   {detail.naming_convention.replace('{lot}', 'Lot').replace('{entreprise}', 'Entreprise').replace('{piece}', 'Pièce')}
                 </span>
@@ -548,10 +550,10 @@ export default function StepExport({ project }: Props) {
         </div>
       )}
 
-      {/* ── Points de contrôle ──────────────────────────────────── */}
+      {/* ── Avant d'envoyer ──────────────────────────────────── */}
       <details className="group">
         <summary className="microlabel mb-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden [@media(pointer:coarse)]:min-h-11">
-          Points de contrôle
+          Avant d&apos;envoyer
         </summary>
 
         <div className="space-y-2.5">
@@ -585,7 +587,7 @@ export default function StepExport({ project }: Props) {
               })}
               {piecesDemandees.length === 0 && (
                 <p className="text-xs text-center py-4" style={{ color: 'var(--text-3)' }}>
-                  La liste des pièces apparaît après la lecture du RC
+                  La liste des pièces apparaît après la lecture du <Sigle code="RC" />
                 </p>
               )}
             </div>
@@ -648,7 +650,7 @@ export default function StepExport({ project }: Props) {
 
           {/* 3. Analyse du Bordereau de Prix (DPGF) */}
           <AccordionSection
-            title="Analyse du Bordereau de Prix (DPGF)"
+            title={<>Analyse du <Sigle code="DPGF" /></>}
             ok={dpgfOk}
             expanded={expanded === 'dpgf'}
             onToggle={() => toggle('dpgf')}
@@ -664,7 +666,7 @@ export default function StepExport({ project }: Props) {
                     <FileSpreadsheet size={16} style={{ color: 'var(--text-1)' }} />
                     <div className="min-w-0">
                       <p className="text-xs font-medium truncate" style={{ color: 'var(--text-1)' }}>{detail.dpgf_info.file_name}</p>
-                      <p className="text-xs" style={{ color: 'var(--text-3)' }}>DPGF originale du DCE</p>
+                      <p className="text-xs" style={{ color: 'var(--text-3)' }}><Sigle code="DPGF" majuscule /> d&apos;origine, dans le <Sigle code="DCE" /></p>
                     </div>
                   </div>
                   <button
@@ -680,7 +682,7 @@ export default function StepExport({ project }: Props) {
               {/* Upload filled DPGF */}
               <div>
                 <p className="text-xs font-medium mb-2" style={{ color: 'var(--text-1)' }}>
-                  Déposer votre DPGF remplie
+                  Déposer votre <Sigle code="DPGF" /> rempli
                 </p>
                 <div
                   className="relative rounded-xl p-4 text-center transition-all cursor-pointer"
@@ -698,7 +700,7 @@ export default function StepExport({ project }: Props) {
                     <>
                       <Upload size={20} className="mx-auto mb-1.5" style={{ color: 'var(--text-3)' }} />
                       <p className="text-xs" style={{ color: 'var(--text-3)' }}>
-                        Glissez votre DPGF remplie ici ou{' '}
+                        Glissez votre <Sigle code="DPGF" /> rempli ici ou{' '}
                         <label className="cursor-pointer font-medium" style={{ color: 'var(--text-1)' }}>
                           parcourir
                           <input
@@ -745,7 +747,7 @@ export default function StepExport({ project }: Props) {
                           className="text-xs font-semibold"
                           style={{ color: isValid ? 'var(--success-fg)' : hasWarnings ? 'var(--warning-fg)' : 'var(--danger-fg)' }}
                         >
-                          {isValid ? 'DPGF conforme' : hasWarnings ? 'DPGF avec avertissements' : 'DPGF non conforme'}
+                          <Sigle code="DPGF" majuscule />{isValid ? ' conforme' : hasWarnings ? ' avec avertissements' : ' non conforme'}
                         </span>
                       </div>
                       <span className="text-xs" style={{ color: 'var(--text-3)' }}>
@@ -793,7 +795,7 @@ export default function StepExport({ project }: Props) {
 
               {!detail.dpgf_info && !detail.dpgf_remplie && (
                 <p className="text-xs" style={{ color: 'var(--text-3)' }}>
-                  Aucun fichier DPGF détecté dans les documents du projet.
+                  Aucun fichier <Sigle code="DPGF" /> détecté dans les documents du projet.
                 </p>
               )}
             </div>

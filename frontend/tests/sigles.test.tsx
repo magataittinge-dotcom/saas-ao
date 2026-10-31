@@ -9,13 +9,8 @@ import { PorteeSigles, Sigle } from '../src/components/common/Sigle'
 import { fichiersSource, lire } from './outils/sources'
 import { textesAffiches } from './outils/textes'
 
-// Fichiers réservés à l'agent SIMPLIF-A (parcours d'un AO) : leurs sigles nus sont convertis à l'intégration.
-// Retirer un fichier de cette liste dès qu'il est converti : le test le vérifie alors.
-export const RESERVES = [
-  'src/routes/NewProject.tsx',
-  'src/routes/project/StepMemoire.tsx',
-  'src/routes/project/StepExport.tsx',
-]
+// Plus aucun fichier exempté : tous les écrans passent par <Sigle> ou par la forme développée.
+const RESERVES: string[] = []
 const SOURCES_DU_LEXIQUE = ['src/lib/lexique.ts', 'src/components/common/Sigle.tsx']
 
 test('chaque entrée du lexique porte son développement, une explication d’une ligne et une source reconnue', () => {
@@ -57,8 +52,15 @@ test('aucun sigle du lexique n’est affiché sans son développement', () => {
   assert.deepEqual(fautes, [])
 })
 
-test('les fichiers réservés sont les seuls à garder des sigles nus (liste à vider à l’intégration)', () => {
-  for (const f of RESERVES) assert.ok(fichiersSource().includes(f), `${f} existe`)
+test('aucun fichier n’est exempté de la règle des sigles', () => {
+  assert.deepEqual(RESERVES, [])
+})
+
+test('le dépôt du dossier et l’export passent par <Sigle> et par la forme développée des messages', () => {
+  assert.match(lire('src/routes/NewProject.tsx'), /<Sigle code="DCE" \/>/)
+  const export_ = lire('src/routes/project/StepExport.tsx')
+  assert.match(export_, /label=\{<Sigle code="DPGF" majuscule \/>\}/, 'première apparition de la DPGF : développée')
+  assert.match(export_, /developper\('DPGF'\)/, 'messages d’erreur : forme développée')
 })
 
 test('le composant : développé une fois par écran, abrégé ensuite, toujours développé sans écran', () => {

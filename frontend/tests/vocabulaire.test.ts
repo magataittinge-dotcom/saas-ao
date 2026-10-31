@@ -2,7 +2,7 @@
 // franglais, aucun cri dans les textes affichés de l'application.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { fichiersSource } from './outils/sources'
+import { fichiersSource, lire } from './outils/sources'
 import { textesAffiches } from './outils/textes'
 import { ETAPES_AO } from '../src/lib/echeance'
 
@@ -51,8 +51,7 @@ test("une seule formule pour passer à l'étape suivante, qui nomme la bonne ét
 })
 
 // S4 — Renommages (simplification) : les mots du patron, ni plus ni moins.
-// Livrables et Points de contrôle vivent dans StepExport (réservé à SIMPLIF-A) : renommés à l'intégration.
-const RESERVES_S4 = ['src/routes/NewProject.tsx', 'src/routes/project/StepMemoire.tsx', 'src/routes/project/StepExport.tsx']
+const RESERVES_S4: string[] = []
 const ANCIENS_MOTS: [RegExp, string][] = [
   [/^Synorix Intelligence$/, '« Synorix Intelligence » → « À faire maintenant »'],
   [/^Type détecté$/i, '« TYPE DÉTECTÉ » → « Reconnu comme »'],
@@ -83,6 +82,7 @@ test('S4 : les nouveaux libellés sont à l\'écran', () => {
     ['src/components/common/FileCard.tsx', 'Ranger'],
     ['src/components/vault/ClassifyDocumentModal.tsx', 'Ranger le document'],
     ['src/components/company/ProfileFreeTextCard.tsx', 'Décrire avec vos mots'],
+    ['src/routes/project/StepExport.tsx', 'Avant d&apos;envoyer'],
   ]
   for (const [f, mot] of attendus) {
     assert.ok(textesAffiches(f).some((t) => t.texte.includes(mot)), `${f} : « ${mot} »`)
@@ -103,4 +103,11 @@ test('S4 : « Retour » à la place d\'« Annuler » quand le bouton ne défait 
   const textes = textesAffiches('src/routes/project/StepUpload.tsx').map((t) => t.texte.trim())
   assert.ok(textes.includes('Retour'))
   assert.ok(!textes.includes('Annuler'))
+})
+
+test('S4 : « Retour » aussi sur le mémoire — fermer le formulaire de régénération ne défait rien', () => {
+  const code = lire('src/routes/project/StepMemoire.tsx')
+  // le bouton ne fait que replier le formulaire : aucune mutation, aucune suppression
+  assert.match(code, /onClick=\{\(\) => setShowForm\(false\)\}[^>]*>\s*Retour\s*<\/button>/)
+  assert.ok(!textesAffiches('src/routes/project/StepMemoire.tsx').some((t) => t.texte.trim() === 'Annuler'))
 })
