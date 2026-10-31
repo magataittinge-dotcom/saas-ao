@@ -33,11 +33,13 @@ test('l’assemblage : titre, visage (poster + deux canvas), six bulles, fiche �
   assert.match(html, /class="syx-scene"[^>]*aria-hidden="true"/)
 })
 
-test('sans AO ni pièce : la fiche propose un nouvel AO, les six bulles restent', () => {
+test('sans AO ni pièce : le visage reste, les bulles se cachent, une ligne « Rien d’urgent » (décision du 1/11)', () => {
   const html = rendre({ projects: [], stats: null })
   assert.match(html, /Aucun appel d’offres en cours/)
   assert.match(html, /href="\/projects\/new"[^>]*>Nouvel AO/)
-  assert.equal((html.match(/data-vide="oui"/g) ?? []).length, 6)
+  assert.equal((html.match(/data-bulle="/g) ?? []).length, 0, 'aucune bulle quand tout est à 0')
+  assert.match(html, /class="syx-scene"/, 'le visage reste affiché')
+  assert.match(html, /data-rien-d-urgent[^>]*>Rien d’urgent\. Prochaine étape : <a[^>]*href="\/projects\/new"[^>]*>Nouvel AO<\/a>\./)
 })
 
 test('le prénom est facultatif ; le niveau du titre aussi', () => {

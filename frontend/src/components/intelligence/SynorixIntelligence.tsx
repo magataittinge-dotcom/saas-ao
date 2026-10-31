@@ -4,6 +4,7 @@
 //   <SynorixIntelligence projects={projects} stats={stats} prenom={firstName} />
 import './intelligence.css'
 import { useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { calculerBulles, ficheAffichee, ORDRE_BULLES } from '@/lib/intelligence/bulles'
 import type { DashboardStats, Project } from '@/types'
 import Visage from './Visage'
@@ -34,6 +35,8 @@ export default function SynorixIntelligence({ projects, stats, prenom, maintenan
   const fiche = useMemo(() => ficheAffichee(choix, bulles, projects, maintenant ?? new Date()), [choix, bulles, projects, maintenant])
   const indexChoix = choix ? ORDRE_BULLES.indexOf(choix as (typeof ORDRE_BULLES)[number]) : -1
   const Titre = niveauTitre === 1 ? 'h1' : 'h2'
+  // Décision du 1/11 : quand tout est à 0, le visage reste ; seules les bulles se cachent, remplacées par une ligne.
+  const rienDUrgent = bulles.every((b) => b.vide)
 
   return (
     <section className="syx" aria-labelledby="syx-titre" data-synorix-intelligence>
@@ -46,7 +49,13 @@ export default function SynorixIntelligence({ projects, stats, prenom, maintenan
       </header>
       <div className="syx-zone" ref={zoneRef}>
         <Visage zoneRef={zoneRef} tons={tons} choix={indexChoix} accepterLogiciel={accepterLogiciel} surMode={surMode} />
-        <BullesAttention bulles={bulles} choix={choix} onChoisir={setChoix} />
+        {rienDUrgent ? (
+          <p className="syx-calme" data-rien-d-urgent>
+            Rien d’urgent. Prochaine étape : {fiche.cta ? <Link to={fiche.cta.vers}>{fiche.cta.libelle}</Link> : fiche.titre}.
+          </p>
+        ) : (
+          <BullesAttention bulles={bulles} choix={choix} onChoisir={setChoix} />
+        )}
       </div>
       <ProchaineAction fiche={fiche} />
     </section>
