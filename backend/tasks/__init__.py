@@ -9,8 +9,10 @@ jamais. On ré-exporte ici l'app et la tâche définies dans tasks.check_expiry.
 """
 from tasks.check_expiry import celery_app, check_all_expirations
 from tasks.purge_ao import purger_ao_supprimes_tache  # B18 — enregistre la tâche de purge
+from tasks.veille_boamp import synchroniser_veille_tache  # veille BOAMP — enregistre la tâche des 6 h
 
 # Nom conventionnel scruté par `celery -A tasks` (find_app).
 app = celery_app
 
-__all__ = ["app", "celery_app", "check_all_expirations", "purger_ao_supprimes_tache"]
+__all__ = ["app", "celery_app", "check_all_expirations", "purger_ao_supprimes_tache",
+           "synchroniser_veille_tache"]

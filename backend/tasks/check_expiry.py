@@ -23,6 +23,11 @@ celery_app.conf.beat_schedule = {
         "task": "tasks.purge_ao.purger_ao_supprimes",
         "schedule": 86400,
     },
+    # Veille — avis de marché du BOAMP (données publiques), toutes les 6 heures.
+    "veille-boamp-6h": {
+        "task": "tasks.veille_boamp.synchroniser_veille",
+        "schedule": 21600,
+    },
 }
 
 
