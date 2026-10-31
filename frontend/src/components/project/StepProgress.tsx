@@ -7,8 +7,8 @@ import CompanionOrb from '@/components/ui/CompanionOrb'
 const STEPS = [
   { number: 1, label: 'Dépôt du dossier', segment: 'upload' },
   { number: 2, label: 'Lots',        segment: 'lots' },
-  { number: 3, label: 'Analyse IA',  segment: 'analysis' },
-  { number: 4, label: 'Vérification', segment: 'verification' },
+  { number: 3, label: 'Décider',  segment: 'analysis' },
+  { number: 4, label: 'Pièces', segment: 'verification' },
   { number: 5, label: 'Mémoire',     segment: 'memoire' },
   { number: 6, label: 'Export',      segment: 'export' },
 ]

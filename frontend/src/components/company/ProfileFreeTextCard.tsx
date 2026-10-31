@@ -67,7 +67,7 @@ export default function ProfileFreeTextCard() {
     <Card className="space-y-3 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <Sparkles size={15} className="text-accent-text" aria-hidden />
-        <h3 className="text-sm font-semibold text-fg">Décrire en langage libre</h3>
+        <h3 className="text-sm font-semibold text-fg">Décrire avec vos mots</h3>
         <span className="text-xs text-fg-3">l'IA structure, vous validez</span>
       </div>
 
@@ -77,7 +77,7 @@ export default function ProfileFreeTextCard() {
             rows={3}
             value={text}
             onChange={(e) => setText(e.target.value)}
-            aria-label="Décrire votre entreprise en langage libre"
+            aria-label="Décrire votre entreprise avec vos mots"
             placeholder="Ex. : On est une boîte de ravalement à Caen, 8 compagnons, 3 camions benne, 2 échafaudages MDS…"
             className="resize-y py-2.5 text-sm"
           />

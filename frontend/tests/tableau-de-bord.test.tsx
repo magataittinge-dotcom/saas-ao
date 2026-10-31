@@ -116,7 +116,9 @@ test('la veille sans zone : « Choisissez une zone sur la carte », la carte et 
 test('Mes AO : Synorix Intelligence en haut, la liste des AO dessous', () => {
   const html = renderToStaticMarkup(<QueryClientProvider client={client(PROJETS_DEMO)}><MemoryRouter><Projects /></MemoryRouter></QueryClientProvider>)
   assert.ok(html.includes('data-synorix-intelligence'), 'l\'intelligence est sur Mes AO')
-  assert.ok(/<h2[^>]*id="syx-titre"[^>]*>Synorix Intelligence<\/h2>/.test(html))
+  assert.ok(/<h2[^>]*id="syx-titre"[^>]*>À faire maintenant<\/h2>/.test(html))
+  assert.ok((html.match(/Bonjour/g) ?? []).length <= 1, 'un seul « Bonjour » sur Mes AO (celui de l\'intelligence)')
+  assert.ok(!/Bonjour/.test(sansCommentaires(lire('src/routes/Projects.tsx'))), 'l\'en-tête de Mes AO ne salue pas une seconde fois')
   assert.equal((html.match(/data-bulle="/g) ?? []).length, 6, 'six bulles')
   assert.ok(html.includes('src="/visage/tete-ouverte-poster.webp"'))
   assert.equal((html.match(/<h1[\s>]/g) ?? []).length, 1)

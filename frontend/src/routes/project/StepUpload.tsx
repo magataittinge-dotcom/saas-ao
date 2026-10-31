@@ -596,7 +596,7 @@ export default function StepUpload({ project }: Props) {
               >
                 <span className="microlabel">Nom du fichier</span>
                 <span className="microlabel">Taille</span>
-                <span className="microlabel">Type détecté</span>
+                <span className="microlabel">Reconnu comme</span>
                 <span />
               </div>
 
@@ -699,7 +699,7 @@ export default function StepUpload({ project }: Props) {
               onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--text-3)'; e.currentTarget.style.color = 'var(--text-1)' }}
               onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-1)'; e.currentTarget.style.color = 'var(--text-3)' }}
             >
-              Annuler
+              Retour
             </button>
             <button
               onClick={handleNext}

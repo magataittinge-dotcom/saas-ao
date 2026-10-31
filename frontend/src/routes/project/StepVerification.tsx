@@ -248,7 +248,7 @@ export default function StepVerification({ project }: Props) {
       {/* Title bar */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="font-display tracking-tight text-xl font-bold" style={{ color: 'var(--text-1)' }}>
-          Vérification de la candidature
+          Pièces de la candidature
         </h1>
         <div className="flex items-center gap-3">
           {/* Régénération DISCRÈTE à la demande (ex. après ajout de pièces au

@@ -2,7 +2,7 @@
 // éléments = var(--jeton) ; le texte reste lisible sur la carte et sur le bouton.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { construireApparence } from '../src/lib/clerkApparence'
+import { construireApparence, localisationFr } from '../src/lib/clerkApparence'
 import { contraste, valeur, type Theme } from './outils/jetons'
 import { lire, sansCommentaires } from './outils/sources'
 
@@ -45,4 +45,30 @@ test('Clerk : les éléments passent par var(--jeton), le ClerkProvider reçoit 
   const main = sansCommentaires(lire('src/main.tsx'))
   assert.match(main, /appearance=\{appearance\}/)
   assert.match(main, /\[theme\]/)
+})
+
+// S4 — L'écran de connexion en français : objet de traduction maison (aucune dépendance de plus).
+test('Clerk en français : l\'écran de connexion et d\'inscription ne montre plus un mot d\'anglais', () => {
+  const l = localisationFr as Record<string, any>
+  assert.equal(l.locale, 'fr-FR')
+  assert.equal(l.signIn.start.title, 'Se connecter à Synorix')
+  assert.equal(l.signIn.start.actionLink, 'Créer un compte')
+  assert.equal(l.signUp.start.actionLink, 'Se connecter')
+  assert.equal(l.socialButtonsBlockButton, 'Continuer avec {{provider|titleize}}')
+  assert.equal(l.formFieldLabel__emailAddress, 'Adresse e-mail')
+  assert.equal(l.formFieldLabel__password, 'Mot de passe')
+  assert.equal(l.formFieldAction__forgotPassword, 'Mot de passe oublié ?')
+  assert.equal(l.formButtonPrimary, 'Continuer')
+  assert.equal(l.dividerText, 'ou')
+  assert.equal(l.userButton.action__signOut, 'Se déconnecter')
+  // Aucune valeur anglaise courante, quelle que soit la profondeur.
+  const valeurs: string[] = []
+  const parcourir = (o: unknown) => {
+    if (typeof o === 'string') valeurs.push(o)
+    else if (o && typeof o === 'object') Object.values(o).forEach(parcourir)
+  }
+  parcourir(l)
+  const anglais = /\b(Sign in|Sign up|Continue|Password|Email|Forgot|Don't|Already|Back|Create|Welcome)\b/
+  assert.deepEqual(valeurs.filter((v) => anglais.test(v)), [])
+  assert.match(sansCommentaires(lire('src/main.tsx')), /localization=\{localisationFr\}/)
 })

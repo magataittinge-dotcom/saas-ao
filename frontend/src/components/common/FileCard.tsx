@@ -59,7 +59,7 @@ export function FileCard({ document, onDelete, onEdit }: Props) {
               className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold transition-colors"
               style={{ color: 'var(--text-1)', background: 'color-mix(in srgb, var(--text-1) 10%, transparent)' }}
             >
-              <Tag size={12} /> Classer
+              <Tag size={12} /> Ranger
             </button>
           ) : (
             <button

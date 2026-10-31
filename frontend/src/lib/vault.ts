@@ -31,7 +31,7 @@ export const VAULT_CATEGORY_LABELS: Record<VaultCategory, string> = {
   qualifications: 'Qualifications',
   references_moyens: 'Références & moyens',
   autres: 'Autres',
-  unclassified: 'Non classés',
+  unclassified: 'À ranger',
 }
 
 // Types proposés par catégorie dans la modale de classement.

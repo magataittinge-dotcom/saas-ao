@@ -38,7 +38,7 @@ export default function SynorixIntelligence({ projects, stats, prenom, maintenan
   return (
     <section className="syx" aria-labelledby="syx-titre" data-synorix-intelligence>
       <header className="syx-entete">
-        <Titre className="syx-titre" id="syx-titre">Synorix Intelligence</Titre>
+        <Titre className="syx-titre" id="syx-titre">À faire maintenant</Titre>
         <p className="syx-sous-titre">
           {prenom ? <strong>Bonjour {prenom}</strong> : null}{prenom ? ' · ' : ''}{jourDuJour(maintenant ?? new Date())}.
           {' '}Ce qui bouge dans vos appels d’offres, et ce qu’il faut faire maintenant.

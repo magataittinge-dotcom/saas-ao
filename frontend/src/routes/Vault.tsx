@@ -153,7 +153,7 @@ export default function Vault() {
               <div className="rounded-xl border border-warning-border bg-warning-bg p-3">
                 <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-warning">
                   <Tag size={14} aria-hidden />
-                  Non classés ({unclassified.length}) — à classer pour être utilisables dans vos candidatures
+                  À ranger ({unclassified.length}) — rangez-les pour les utiliser dans vos candidatures
                 </h2>
                 <div className={LISTE_PIECES}>
                   {unclassified.map((doc) => (
