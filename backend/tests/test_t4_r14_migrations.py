@@ -52,12 +52,17 @@ def test_baseline_covers_every_orm_table():
     from database import Base
 
     src = (BACKEND / "alembic/versions/0001_baseline.py").read_text(encoding="utf-8")
+    # Tables créées APRÈS la baseline (R14) : leur migration les crée, ex. 0028_veille.
+    suivantes = "".join(
+        p.read_text(encoding="utf-8") for p in sorted((BACKEND / "alembic/versions").glob("00[0-9][0-9]_*.py"))
+        if not p.name.startswith("0001_")
+    )
     raw_tables = {"rag_chunks"}
     for table in Base.metadata.tables:
         if table in raw_tables:
             continue
-        assert f"create_table('{table}'" in src, (
-            f"table ORM '{table}' absente de la baseline 0001 — schéma incomplet"
+        assert f"create_table('{table}'" in src or f'create_table(\n            "{table}"' in suivantes, (
+            f"table ORM '{table}' absente de la baseline 0001 et des migrations suivantes — schéma incomplet"
         )
 
 

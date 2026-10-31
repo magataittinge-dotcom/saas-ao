@@ -12,6 +12,8 @@ from .memoire_config import MemoireConfig
 from .audit_log import AuditLog
 from .quota_consumption import QuotaConsumption
 from .notification import Notification
+from .avis_veille import AvisVeille
+from .preferences_veille import PreferencesVeille
 
 # R14 — MemoireConfig était OMIS ici : `import models` (utilisé par alembic
 # env.py) ne l'enregistrait donc pas avec Base.metadata, alors que l'app le
@@ -34,4 +36,6 @@ __all__ = [
     "AuditLog",
     "QuotaConsumption",
     "Notification",
+    "AvisVeille",
+    "PreferencesVeille",
 ]
