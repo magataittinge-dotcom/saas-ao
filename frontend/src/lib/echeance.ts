@@ -74,7 +74,7 @@ export const STATUTS_EN_COURS: readonly string[] = ['brouillon', 'en_cours', 'an
 export const estEnCours = (statut: string) => STATUTS_EN_COURS.includes(statut)
 
 // ── Avancement : en étapes, la même mesure partout ──
-export const ETAPES_AO = ['Dépôt du DCE', 'Lots', 'Analyse IA', 'Vérification', 'Mémoire', 'Export'] as const
+export const ETAPES_AO = ['Dépôt du dossier', 'Lots', 'Analyse IA', 'Vérification', 'Mémoire', 'Export'] as const
 
 export function avancementAO(etapeCourante: number) {
   const etape = Math.min(Math.max(Math.round(etapeCourante) || 1, 1), ETAPES_AO.length)

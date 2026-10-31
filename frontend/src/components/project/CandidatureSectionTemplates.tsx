@@ -10,15 +10,15 @@ import { comptesPieces, libelleComptes, noteDepot, statutPiece } from '@/lib/sta
 const F = "'Inter Variable', 'Geist Sans', sans-serif"
 
 const TEMPLATE_LABELS: Record<string, string> = {
-  dc1_template: 'Formulaire DC1 — Lettre de candidature',
-  dc2_template: 'Formulaire DC2 — Déclaration du candidat',
+  dc1_template: 'Lettre de candidature (DC1)',
+  dc2_template: 'Déclaration du candidat (DC2)',
   acte_engagement_template: 'Acte d\'engagement',
-  dpgf_template: 'DPGF',
+  dpgf_template: 'Tableau des prix (DPGF)',
   bpu_template: 'Bordereau de prix unitaires',
   dqe_template: 'Détail quantitatif estimatif',
   cadre_reponse: 'Cadre de réponse',
   attestation_visite_template: 'Attestation de visite',
-  dc4: 'DC4 — Déclaration de sous-traitance',
+  dc4: 'Déclaration de sous-traitance (DC4)',
   declaration_honneur: 'Déclaration sur l\'honneur',
 }
 
@@ -169,7 +169,7 @@ function TemplateRow({
           {item.jointe && item.piece_nom ? (
             <span className="text-xs" style={{ color: 'var(--text-3)' }}>{item.piece_nom}</span>
           ) : nonConcernee || isWarning ? null : hasTemplate ? (
-            <span className="text-xs" style={{ color: 'var(--text-3)' }}>Trame du DCE à compléter</span>
+            <span className="text-xs" style={{ color: 'var(--text-3)' }}>Modèle de l’acheteur à compléter</span>
           ) : officialUrl ? (
             // Type (b) : modèle officiel — normal qu'il ne soit pas au DCE. Aucun numéro de formulaire :
             // service-public (F32144, F32106) classe DC1/DC2/DUME en « Modèle de document ».

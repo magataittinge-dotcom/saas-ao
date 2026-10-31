@@ -26,10 +26,10 @@ export function CarteAO30sVue({
                 <button
                   type="button"
                   className="carte-ao-30s__source"
-                  aria-label={`Voir dans le DCE : ${f.libelle}`}
+                  aria-label={`Voir dans le dossier : ${f.libelle}`}
                   onClick={() => onOpenSource(f.source as SourceFait)}
                 >
-                  Voir dans le DCE
+                  Voir dans le dossier
                 </button>
               )}
             </dd>

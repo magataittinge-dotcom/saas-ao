@@ -142,7 +142,7 @@ export function construireCarteAO(e: EntreeCarte): FaitCarte[] {
       source: champs?.visite_site?.source ?? null,
     })
   } else if (visite) {
-    faits.push({ id: 'visite', libelle: 'Visite du site', valeur: 'Non mentionnée dans le DCE' })
+    faits.push({ id: 'visite', libelle: 'Visite du site', valeur: 'Non mentionnée dans le dossier' })
   }
 
   if (e.pieces && e.pieces.length > 0) {
@@ -171,7 +171,7 @@ export function construireCarteAO(e: EntreeCarte): FaitCarte[] {
     const { relevees, aConfirmer } = e.conditions
     faits.push({
       id: 'decision', libelle: 'Fiche de décision',
-      valeur: `${relevees} ${relevees > 1 ? 'conditions relevées' : 'condition relevée'} dans le DCE`,
+      valeur: `${relevees} ${relevees > 1 ? 'conditions relevées' : 'condition relevée'} dans le dossier`,
       reste: aConfirmer > 0 ? `${aConfirmer} à confirmer par vous` : undefined,
     })
   }

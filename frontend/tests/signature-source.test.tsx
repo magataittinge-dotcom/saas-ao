@@ -22,14 +22,14 @@ test('la source dit le document, l’article et la page', () => {
   assert.equal(libelleSourceRc({ source_document: null, source_article: null, source_page: null }), null)
 })
 
-test('signature demandée par le RC : case, source citée, lien « Voir dans le DCE » renvoyant à l’exigence', () => {
+test('signature demandée par le RC : case, source citée, lien « Voir dans le dossier » renvoyant à l’exigence', () => {
   const html = rendre(ligne({
     signature_required: true, source_document: 'RC.pdf', source_page: 7,
     source_article: 'Article 5.2 — Présentation des candidatures', source_exigence_id: 'ex-1',
   }))
   assert.ok(html.includes('Je confirme avoir signé ce document'))
   assert.ok(html.includes('Source : RC.pdf — Article 5.2 — Présentation des candidatures, page 7'))
-  assert.ok(html.includes('class="piece-source"') && html.includes('Voir dans le DCE'))
+  assert.ok(html.includes('class="piece-source"') && html.includes('Voir dans le dossier'))
 })
 
 test('sans exigence d’origine retrouvable, la source est citée mais sans lien', () => {

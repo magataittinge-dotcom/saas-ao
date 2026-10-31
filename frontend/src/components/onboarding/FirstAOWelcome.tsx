@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { Sigle } from '@/components/common/Sigle'
 import { useNavigate } from 'react-router-dom'
 import { useDropzone } from 'react-dropzone'
 import { CloudUpload, Loader2 } from 'lucide-react'
@@ -150,7 +151,7 @@ export default function FirstAOWelcome() {
               <CloudUpload size={28} strokeWidth={1.6} className="mx-auto text-fg-3" aria-hidden />
             )}
             <p className="mt-4 text-base font-semibold text-fg">
-              Déposez votre premier DCE — il est offert
+              Déposez votre premier <Sigle code="DCE" /> — il est offert
             </p>
             <p className="mt-1.5 text-[13px] text-fg-3">
               ZIP complet ou PDF · analyse, vérification et mémoire compris

@@ -13,7 +13,7 @@ const ATTRIBUTS_TECHNIQUES = new Set([
   'className', 'style', 'key', 'id', 'to', 'href', 'type', 'name', 'role', 'target', 'rel', 'htmlFor', 'path',
   'src', 'accept', 'method', 'action', 'autoComplete', 'inputMode', 'pattern', 'form', 'variant', 'feature',
   'size', 'fill', 'stroke', 'd', 'viewBox', 'xmlns', 'strokeWidth', 'strokeLinecap', 'strokeLinejoin',
-  'currentStep', 'phase', 'state',
+  'currentStep', 'phase', 'state', 'code',
 ])
 const PROPRIETES_TECHNIQUES = new Set([
   'id', 'key', 'segment', 'variant', 'type', 'status', 'kind', 'color', 'className', 'to', 'href', 'path',

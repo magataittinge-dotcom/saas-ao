@@ -57,9 +57,9 @@ function ConfidenceWarning({ confidence }: { confidence?: number }) {
 // ─── Sources indicator ────────────────────────────────────────────────────────
 
 const SOURCE_LABELS: Record<string, string> = {
-  excel:       'DPGF',
-  rc_table:    'RC',
-  rc_text:     'RC',
+  excel:       'Tableau des prix',
+  rc_table:    'Règlement',
+  rc_text:     'Règlement',
   filename:    'Fichier',
   ia_fallback: 'Complété par IA',
 }
@@ -78,7 +78,7 @@ function SourcesIndicator({ sources }: { sources?: string[] }) {
           key={l}
           className="num-mono rounded px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide"
           style={{ background: 'var(--surface-2)', color: 'var(--text-3)', boxShadow: 'inset 0 0 0 1px var(--line)' }}
-          title="Pièce du DCE où ce lot a été détecté"
+          title="Pièce du dossier où ce lot a été détecté"
         >
           {l}
         </span>
@@ -804,7 +804,7 @@ export default function StepLotSelection({ project }: Props) {
           <div className="space-y-2">
             {/* All lots option */}
             <LotCard
-              lot={{ id: 'all', nom: "Analyser l'ensemble du DCE (tous les lots)" }}
+              lot={{ id: 'all', nom: "Analyser l'ensemble du dossier (tous les lots)" }}
               selected={selectedIds.has('all')}
               onSelect={() => toggleLot('all')}
             />
@@ -824,7 +824,7 @@ export default function StepLotSelection({ project }: Props) {
             <Loader2 size={20} className="animate-spin" style={{ color: 'var(--text-1)' }} />
             <div>
               <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>Détection des lots en cours...</p>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>Analyse des documents du DCE.</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>Analyse des documents du dossier.</p>
             </div>
           </div>
         ) : (
@@ -832,7 +832,7 @@ export default function StepLotSelection({ project }: Props) {
             <Layers size={20} style={{ color: 'var(--text-1)' }} />
             <div>
               <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>Marché unique (pas de lots)</p>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>L&apos;IA analysera l&apos;intégralité du DCE sans filtre par lot.</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>L&apos;IA analysera l&apos;intégralité du dossier sans filtre par lot.</p>
             </div>
           </div>
         )}

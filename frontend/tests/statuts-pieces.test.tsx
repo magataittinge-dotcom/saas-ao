@@ -102,7 +102,7 @@ test('le rendu pose les classes sémantiques, sans mot négatif', () => {
   )
   for (const c of ['statut-piece--a-joindre', 'statut-piece--pret', 'statut-piece--si-concerne']) assert.ok(html.includes(c), c)
   assert.ok(html.includes('Attestation URSSAF : valable 6 mois (Code du travail, art. D8222-5)'))
-  assert.ok(html.includes('Lu dans le RC : « Le cas échéant'))
+  assert.match(html.replace(/<[^>]+>/g, ''), /Lu dans le règlement de la consultation \(RC\) : « Le cas échéant/)
   assert.ok(html.includes('1 pièce à joindre · 1 prête'))
   assert.ok(!/À fournir|Expiré|manquant|incomplet|absent/i.test(html.replace(/class="[^"]*"/g, '')))
 })

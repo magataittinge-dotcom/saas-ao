@@ -108,7 +108,7 @@ export default function Dashboard() {
   const datePassee = activeProjects.find((p) => etatEcheance(echeanceAO(p)).etat === 'passee')
   // « Dossier prêt » seulement si l'étape Export est atteinte — 1.14.
   const synorixNote = activeProjects.length === 0
-    ? "Créez votre premier appel d'offres : l'IA analyse le DCE, prépare la candidature et rédige le mémoire technique."
+    ? "Créez votre premier appel d'offres : l'IA analyse le dossier de l'acheteur, prépare la candidature et rédige le mémoire technique."
     : `${activeProjects.length} appel${activeProjects.length > 1 ? 's' : ''} d'offres en cours.` +
       (next
         ? next._echeance.etat === 'aujourdhui'

@@ -27,9 +27,9 @@ export const ESSAI = { ao: 1, analyses: 1, memoires: 1 } as const
 
 /** Ce que comprend chaque offre : les trois donnent accès aux mêmes fonctions, seuls les quotas changent. */
 export const INCLUS: readonly string[] = [
-  'Analyse du DCE, chaque exigence avec sa source',
+  'Analyse du dossier, chaque exigence avec sa source',
   'Mémoire technique rédigé, export Word et PDF',
-  "Dossier complet en ZIP, dans l'ordre du RC",
+  "Dossier complet en ZIP, dans l'ordre du règlement de la consultation",
   'Coffre-fort documentaire, alerte avant expiration',
 ]
 

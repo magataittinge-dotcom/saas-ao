@@ -269,7 +269,7 @@ export default function StepAnalysis({ project }: Props) {
   if (items.length === 0 || (analysisRunning && analysisSse.phase !== 'complete')) return (
     <ProgressDisplay
       variant="modal"
-      title="Analyse du DCE par l'IA"
+      title="Analyse du dossier par l'IA"
       steps={ANALYSIS_STEPS}
       currentStep={analysisSse.step}
       progress={analysisSse.progress}
@@ -666,10 +666,10 @@ function ExigenceLigne({
               type="button"
               onClick={() => onOpenSource(item)}
               className="source-voir"
-              aria-label={`Voir dans le DCE : ${item.source_document}${page ? `, page ${page}` : ''}`}
+              aria-label={`Voir dans le dossier : ${item.source_document}${page ? `, page ${page}` : ''}`}
             >
               <Eye size={16} aria-hidden="true" />
-              Voir dans le DCE
+              Voir dans le dossier
             </button>
           </>
         )}

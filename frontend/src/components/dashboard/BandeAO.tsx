@@ -1,6 +1,7 @@
 // « Vos AO en cours » : au plus trois AO, la remise et la prochaine action de chacun. L'AO le plus urgent porte
 // le bouton principal. Aucun appel IA : tout se calcule sur les AO que l'écran reçoit déjà.
 import { Link } from 'react-router-dom'
+import { Sigle } from '@/components/common/Sigle'
 import { ArrowRight, FolderX } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DeadlinePill } from '@/components/dashboard/DeadlinePill'
@@ -11,7 +12,7 @@ import type { Project } from '@/types'
 export function prochaineEtape(p: Project): string {
   if (p.status === 'analyzed' && p.current_step < 4) return 'Décider : on y va ?'
   switch (avancementAO(p.current_step).etape) {
-    case 1: return 'Déposer le DCE'
+    case 1: return "Déposer le dossier de l'acheteur"
     case 2: return 'Choisir le lot'
     case 3: return p.processing_status === 'processing' ? 'Analyse en cours' : "Lancer l'analyse"
     case 4: return 'Vérifier le dossier'
@@ -61,7 +62,7 @@ export default function BandeAO({ projets, total, chargement, onSansSuite, onNou
         <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 py-4">
           <div>
             <p className="text-[15px] font-semibold text-fg">Aucun appel d'offres en cours</p>
-            <p className="mt-0.5 max-w-[60ch] text-[15px] text-fg-3">Choisissez un avis ci-dessous, ou déposez le DCE (ZIP ou PDF) : Synorix lit les pièces, repère les lots et prépare l'analyse.</p>
+            <p className="mt-0.5 max-w-[60ch] text-[15px] text-fg-3">Choisissez un avis ci-dessous, ou déposez le <Sigle code="DCE" /> en ZIP ou PDF : Synorix lit les pièces, repère les lots et prépare l'analyse.</p>
           </div>
           <Button variant="outline" onClick={onNouveau}>Nouvel AO</Button>
         </div>

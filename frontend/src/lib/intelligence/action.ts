@@ -36,7 +36,7 @@ export const aDecider = (p: Pick<Project, 'status' | 'current_step'>): boolean =
 export function verbeEtape(p: Pick<Project, 'status' | 'current_step' | 'processing_status'>): string {
   if (aDecider(p)) return 'Décider : on y va ?'
   switch (avancementAO(p.current_step).etape) {
-    case 1: return 'Déposer le DCE'
+    case 1: return "Déposer le dossier de l'acheteur"
     case 2: return 'Choisir le lot'
     case 3: return enAttente(p) ? 'Analyse en cours' : "Lancer l'analyse"
     case 4: return 'Vérifier le dossier'

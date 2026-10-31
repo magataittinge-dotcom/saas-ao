@@ -18,7 +18,7 @@ export type MentionSignature =
 
 /** Règles générales, quand le RC ne dit rien de la signature (sources vérifiées, B1 §5). */
 const REGLE_SANS_SIGNATURE = 'Aucune signature n’est exigée au dépôt, sauf si le règlement de la consultation la demande (service-public F32144, F32106).'
-const REGLE_ATTRIBUTION = 'L’acte d’engagement est signé par l’attributaire (modèle ATTRI1 ; service-public R17445).'
+const REGLE_ATTRIBUTION = 'L’acte d’engagement est signé par l’attributaire (modèle facultatif du ministère de l’économie ; service-public R17445).'
 
 /** « RC — Article 5.2 — Présentation des candidatures, page 7 » : où la ligne a été lue. */
 export function libelleSourceRc(
@@ -26,7 +26,7 @@ export function libelleSourceRc(
 ): string | null {
   const doc = (item.source_document ?? '').trim()
   if (!doc && !item.source_article) return null
-  const morceaux = [doc || 'RC', item.source_article, item.source_page ? `page ${item.source_page}` : null]
+  const morceaux = [doc || 'Règlement de la consultation', item.source_article, item.source_page ? `page ${item.source_page}` : null]
   return morceaux.filter(Boolean).join(' — ').replace(/ — page /, ', page ')
 }
 
@@ -108,7 +108,7 @@ export default function SignatureLigne({
           {phrase}
           {onOpenSource && item.source_exigence_id && (
             <button type="button" className="piece-source" onClick={() => onOpenSource(item)}>
-              Voir dans le DCE
+              Voir dans le dossier
             </button>
           )}
         </p>

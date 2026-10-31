@@ -1,4 +1,5 @@
 import { GROUPES_EXIGENCES, compteGroupe, type GroupeExigences } from '@/lib/exportDossier'
+import { Sigle } from '@/components/common/Sigle'
 
 // Exigences du dossier, par groupe, avec leur source et la confirmation de
 // l'utilisateur (décision du 25/10, export « 0/N »). « Confirmée » n'est
@@ -34,7 +35,7 @@ export default function ExigencesDuDossier({
   if (items.length === 0) {
     return (
       <p className="text-xs text-center py-4" style={{ color: 'var(--text-3)' }}>
-        Les exigences apparaissent après l&apos;analyse du DCE
+        Les exigences apparaissent après l&apos;analyse du <Sigle code="DCE" />
       </p>
     )
   }
@@ -85,8 +86,8 @@ export default function ExigencesDuDossier({
                     style={{ color: item.source_verifiee ? 'var(--text-3)' : 'var(--warn)' }}
                   >
                     {item.source_verifiee
-                      ? `${item.source_document ?? 'DCE'}${item.source_page ? ` p.${item.source_page}` : ''}`
-                      : 'À vérifier dans le DCE'}
+                      ? `${item.source_document ?? 'Dossier'}${item.source_page ? ` p.${item.source_page}` : ''}`
+                      : 'À vérifier dans le dossier'}
                   </span>
                   {item.priority === 'obligatoire' && (
                     <span

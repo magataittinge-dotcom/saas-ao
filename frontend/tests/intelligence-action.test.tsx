@@ -64,7 +64,7 @@ test('un AO qui attend seulement la fin de l’analyse passe après ceux où l�
 
 test('chaque étape mène à son écran, avec le bon verbe', () => {
   const cas: [Parameters<typeof projet>[1], string, string][] = [
-    [{ current_step: 1 }, 'Déposer le DCE', '/projects/x/upload'],
+    [{ current_step: 1 }, "Déposer le dossier de l'acheteur", '/projects/x/upload'],
     [{ current_step: 2 }, 'Choisir le lot', '/projects/x/lots'],
     [{ current_step: 3 }, "Lancer l'analyse", '/projects/x/analysis'],
     [{ current_step: 3, status: 'analyzed' }, 'Décider : on y va ?', '/projects/x/analysis'],

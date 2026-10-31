@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Sigle } from '@/components/common/Sigle'
 import {
   Calculator, Coins, Loader2, ShieldCheck,
 } from 'lucide-react'
@@ -94,7 +95,7 @@ function RetenueCalculator() {
         </div>
         <div>
           <h2 className="text-base font-bold text-ds-text" style={{ fontFamily: F }}>Calculer ma retenue</h2>
-          <p className="text-xs text-ds-text-2">Retenue, pénalités & intérêts moratoires (CCAG-Travaux Art.19)</p>
+          <p className="text-xs text-ds-text-2">Retenue, pénalités et intérêts moratoires, selon l'article 19 des <Sigle code="CCAG" /> Travaux</p>
         </div>
       </div>
 
@@ -145,7 +146,7 @@ function RetenueCalculator() {
               <input id="rg-jours" type="number" min={0} className="input-dark"
                 value={joursRetard} onChange={(e) => setJoursRetard(e.target.value)} />
             </Field>
-            <Field id="rg-div" label="Diviseur pénalités" hint="1/3000 (CCAG-T)">
+            <Field id="rg-div" label="Diviseur pénalités" hint="1/3000, clauses générales des marchés de travaux">
               <input id="rg-div" type="number" min={1} className="input-dark"
                 value={diviseur} onChange={(e) => setDiviseur(e.target.value)} />
             </Field>
@@ -208,7 +209,7 @@ function RetenueCalculator() {
             tip={{
               id: 'rg-caution',
               variant: 'info',
-              text: "La retenue de garantie peut être remplacée par une caution personnelle et solidaire ou une garantie à première demande, à votre initiative (art. 19 CCAG-Travaux / CCP R2191-36).",
+              text: "La retenue de garantie peut être remplacée par une caution personnelle et solidaire ou une garantie à première demande, à votre initiative (art. 19 des clauses administratives générales des marchés de travaux / CCP R2191-36).",
             }}
             onDismiss={() => {}}
           />
@@ -218,7 +219,7 @@ function RetenueCalculator() {
 
           <div className="flex items-center gap-1.5 text-xs text-ds-text-3">
             <ShieldCheck size={12} style={{ color: '#788295' }} />
-            Calcul indicatif — l'assiette et les plafonds définitifs dépendent des clauses du CCAP.
+            Calcul indicatif — l'assiette et les plafonds définitifs dépendent des <Sigle code="CCAP" />.
           </div>
         </div>
       )}
@@ -234,7 +235,7 @@ export default function Tools() {
         <Calculator size={24} style={{ color: 'var(--text-1)' }} />
         <div>
           <h1 className="text-2xl font-bold text-ds-text">Retenue de garantie</h1>
-          <p className="text-sm text-ds-text-2">Retenue, pénalités et intérêts moratoires — CCAG-Travaux art. 19. Calcul instantané, aucune donnée enregistrée.</p>
+          <p className="text-sm text-ds-text-2">Retenue, pénalités et intérêts moratoires, selon l'article 19 des <Sigle code="CCAG" /> Travaux. Calcul instantané, aucune donnée enregistrée.</p>
         </div>
       </div>
 

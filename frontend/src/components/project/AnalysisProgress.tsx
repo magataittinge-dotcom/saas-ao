@@ -18,7 +18,7 @@ const DEFAULT_STAGES: ProgressStage[] = [
 ]
 
 export const MEMOIRE_STAGES: ProgressStage[] = [
-  { upTo: 5,  message: 'Lecture des documents DCE...', msPerStep: 300 },
+  { upTo: 5,  message: 'Lecture des documents de l\'acheteur...', msPerStep: 300 },
   { upTo: 15, message: 'Analyse du contexte projet...', msPerStep: 800 },
   { upTo: 70, message: 'Rédaction par Synorix IA...', msPerStep: 1800 },
   { upTo: 90, message: 'Structuration des sections...', msPerStep: 2200 },
@@ -49,7 +49,7 @@ export function AnalysisProgress({
   onComplete,
   onCancel,
   stages = DEFAULT_STAGES,
-  subtitle = "L'IA analyse vos documents DCE...",
+  subtitle = "L'IA analyse les documents de l'acheteur...",
   preparation = null,
 }: Props) {
   const [progress, setProgress] = useState(0)

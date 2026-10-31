@@ -116,7 +116,7 @@ function TableContrastes() {
 const ECHELLE: [string, string, string][] = [
   ['h1', 'text-h1', 'Réponse aux appels d’offres'],
   ['h2', 'text-h2', 'Un dossier complet'],
-  ['h3', 'text-h3', 'Analyse du DCE'],
+  ['h3', 'text-h3', 'Analyse du dossier'],
   ['h5', 'text-h5', 'Pièces de candidature'],
   ['h6', 'text-h6', 'Mémoire technique'],
 ]
@@ -190,7 +190,7 @@ export default function Design() {
               </div>
             ))}
             <p className="text-lead text-fg">Texte d’introduction, Inter 20 / 26, graisse 500.</p>
-            <p className="text-long text-fg-2">Texte long, Inter 18 / 30,6. Le DCE est lu pièce par pièce ; chaque exigence garde sa source.</p>
+            <p className="text-long text-fg-2">Texte long, Inter 18 / 30,6. Le dossier est lu pièce par pièce ; chaque exigence garde sa source.</p>
             <p className="text-sm text-fg-2">Petit texte, 14 px. Les montants et références utilisent la classe <span className="edge-data text-fg">edge-data</span> : 1 234,50 € · lot 03.</p>
             <p className="text-micro text-fg-3">Légende, 12 px.</p>
           </div>
@@ -311,7 +311,7 @@ export default function Design() {
           </Dialog>
           <Sheet>
             <SheetTrigger asChild><Button variant="outline">Tiroir</Button></SheetTrigger>
-            <SheetContent side="right"><SheetHeader><SheetTitle className="font-display">Voir dans le DCE</SheetTitle><SheetDescription>Le passage cité est surligné dans la pièce.</SheetDescription></SheetHeader></SheetContent>
+            <SheetContent side="right"><SheetHeader><SheetTitle className="font-display">Voir dans le dossier</SheetTitle><SheetDescription>Le passage cité est surligné dans la pièce.</SheetDescription></SheetHeader></SheetContent>
           </Sheet>
         </div>
       </Section>

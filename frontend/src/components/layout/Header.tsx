@@ -25,7 +25,7 @@ const ROUTE_LABELS: Record<string, { parent?: string; label: string }> = {
   '/settings/billing': { label: 'Abonnement' },
   '/design':         { label: 'Système de design' },
 }
-const STEP_LABELS: Record<string, string> = { upload: 'Dépôt du DCE', lots: 'Sélection lots', analysis: 'Analyse IA', verification: 'Vérification', candidature: 'Vérification', memoire: 'Mémoire', export: 'Export' }
+const STEP_LABELS: Record<string, string> = { upload: 'Dépôt du dossier', lots: 'Sélection lots', analysis: 'Analyse IA', verification: 'Vérification', candidature: 'Vérification', memoire: 'Mémoire', export: 'Export' }
 
 const COMPANION_LABELS: Record<CompanionState, string> = {
   veille:  'Compagnon Synorix — en veille',
