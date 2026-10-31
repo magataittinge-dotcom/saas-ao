@@ -30,7 +30,7 @@ export default function CarteAvis({ avis, libellesMetiers, nomsDepartements, onC
   return (
     <article aria-labelledby={idTitre} data-avis={avis.id} className="rounded-lg bg-surface-1 p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
-        <h3 id={idTitre} className="line-clamp-3 min-w-0 text-[15px] font-semibold leading-snug text-fg">{avis.objet}</h3>
+        <h4 id={idTitre} className="line-clamp-3 min-w-0 text-[15px] font-semibold leading-snug text-fg">{avis.objet}</h4>
         {avis.nouveau && <Badge variant="accent" className="shrink-0">Nouveau</Badge>}
       </div>
       <p className="mt-1 text-sm text-fg-2">{avis.acheteur}</p>

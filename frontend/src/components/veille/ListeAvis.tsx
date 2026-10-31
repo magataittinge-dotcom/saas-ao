@@ -41,7 +41,7 @@ export default function ListeAvis(p: PropsListeAvis) {
   const filtre = aDesFiltres(p.filtres)
   return (
     <section aria-labelledby="titre-avis" className="min-w-0">
-      <h2 id="titre-avis" className="text-lg font-semibold text-fg">Avis ouverts</h2>
+      <h3 id="titre-avis" className="text-base font-semibold text-fg">Avis ouverts</h3>
       <p className="mt-1 text-sm text-fg-2" role="status" aria-live="polite">
         {p.zoneVide
           ? 'Choisissez une zone pour voir les avis.'

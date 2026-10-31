@@ -1,13 +1,16 @@
 import { useState, useMemo } from 'react'
 import { Plus, Search, SlidersHorizontal, ArrowUpDown } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useProjects } from '@/hooks/useProject'
+import { useAuthStore } from '@/stores/authStore'
+import SynorixIntelligence from '@/components/intelligence/SynorixIntelligence'
 import { echeanceAO, estEnCours, momentLimite } from '@/lib/echeance'
 import { api } from '@/services/api'
 import { AOCard } from '@/components/dashboard/AOCard'
 import DeleteConfirmModal from '@/components/common/DeleteConfirmModal'
 import { ProjectCardGridSkeleton } from '@/components/skeletons'
+import type { DashboardStats } from '@/types'
 
 type SortKey = 'deadline' | 'created_at' | 'name'
 type StatusFilter = 'all' | 'active' | 'done'
@@ -28,6 +31,12 @@ export default function Projects() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { data: projects = [], isLoading } = useProjects()
+  const { user } = useAuthStore()
+  const { data: stats } = useQuery({
+    queryKey: ['dashboard-stats'],
+    queryFn: async () => { const { data } = await api.get<DashboardStats>('/dashboard/stats'); return data },
+  })
+  const prenom = user?.name?.split(' ')[0] ?? 'vous'
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState<SortKey>('deadline')
@@ -101,6 +110,9 @@ export default function Projects() {
           Nouvel AO
         </button>
       </div>
+
+      {/* Synorix Intelligence : le visage, six bulles, la prochaine action — le haut de Mes AO */}
+      <SynorixIntelligence projects={projects} stats={stats} prenom={prenom} />
 
       {/* Search + Filters bar */}
       {projects.length > 0 && (

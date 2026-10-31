@@ -26,11 +26,13 @@ export function useVeille() {
 
   // ── Préférences : lues une fois à l'arrivée, puis l'état local fait foi ──
   const prefs = useQuery({ queryKey: CLES_VEILLE.preferences, queryFn: lirePreferences, staleTime: Infinity, refetchOnWindowFocus: false })
-  const [zone, setZoneEtat] = useState<ZoneVeille>({ selection: [], ville: null })
-  const [filtres, setFiltresEtat] = useState<FiltresAvis>(FILTRES_PAR_DEFAUT)
-  const [tri, setTriEtat] = useState<TriAvis>('date_limite')
-  const [hydrate, setHydrate] = useState(false)
-  const derniereEnvoyee = useRef<string>('')
+  // Retour sur l'accueil : les préférences déjà en mémoire servent tout de suite (pas de carte vide qui clignote).
+  const enMemoire = qc.getQueryData<PreferencesVeille>(CLES_VEILLE.preferences)
+  const [zone, setZoneEtat] = useState<ZoneVeille>(() => ({ selection: enMemoire?.departements ?? [], ville: enMemoire?.ville ?? null }))
+  const [filtres, setFiltresEtat] = useState<FiltresAvis>(() => enMemoire?.filtres ?? FILTRES_PAR_DEFAUT)
+  const [tri, setTriEtat] = useState<TriAvis>(() => enMemoire?.tri ?? 'date_limite')
+  const [hydrate, setHydrate] = useState(!!enMemoire)
+  const derniereEnvoyee = useRef<string>(enMemoire ? JSON.stringify(corps(enMemoire.departements, enMemoire.ville, enMemoire.filtres, enMemoire.tri)) : '')
 
   useEffect(() => {
     if (hydrate || !prefs.data) return
