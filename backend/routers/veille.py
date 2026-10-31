@@ -135,7 +135,10 @@ def _avis_sortie(avis: AvisVeille, nouveau: bool) -> dict:
 
 def _est_nouveau(avis: AvisVeille, derniere_visite: Optional[datetime], user: User, maintenant: datetime) -> bool:
     if derniere_visite is not None:
-        return avis.date_parution > derniere_visite.date()
+        # Paru après la dernière visite, ou arrivé dans Synorix après elle (le BOAMP publie deux fois
+        # par jour : la date de parution seule ne distingue pas le matin de l'après-midi).
+        cree_apres = avis.created_at is not None and avis.created_at > derniere_visite
+        return avis.date_parution > derniere_visite.date() or cree_apres
     cree = getattr(user, "created_at", None)
     return bool(cree and maintenant - cree < timedelta(hours=24))
 

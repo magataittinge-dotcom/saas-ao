@@ -64,6 +64,8 @@ def _avis(db, idweb, departements=("44",), jours=10, metiers=("couverture",), pr
                        date_parution=parution or AUJOURD - timedelta(days=1), date_limite=AUJOURD + timedelta(days=jours),
                        procedure=procedure, procedure_libelle="Procédure Ouverte", famille="FNS", metiers=list(metiers),
                        url_avis=f"https://www.boamp.fr/pages/avis/?q=idweb:{idweb}", url_dossier=url_dossier)
+    # Arrivé dans Synorix le jour de sa parution (comme en réel : synchronisation le jour même).
+    ligne.created_at = datetime.combine(ligne.date_parution, datetime.min.time())
     db.add(ligne)
     db.commit()
     return ligne
@@ -256,6 +258,14 @@ def test_nouveau_selon_la_derniere_visite(client, db_session, test_user):
     assert nouveaux() == {"n_ancien": False, "n_recent": True}                  # parus depuis la dernière visite
     client.post("/api/veille/visite")
     assert nouveaux() == {"n_ancien": False, "n_recent": False}
+    # Le BOAMP publie deux fois par jour : un avis paru le jour de la visite mais arrivé dans Synorix
+    # après elle (synchronisation suivante) est « nouveau » lui aussi.
+    _avis(db_session, "n_apres_visite", parution=AUJOURD)
+    db_session.query(AvisVeille).filter_by(id_boamp="n_apres_visite").update(
+        {"created_at": datetime.utcnow() + timedelta(seconds=5)})
+    db_session.commit()
+    assert nouveaux()["n_apres_visite"] is True
+    assert nouveaux()["n_recent"] is False
 
 
 def test_nouveau_pour_un_compte_de_moins_de_24_heures(client, db_session, test_user):
