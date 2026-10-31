@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Sigle } from '@/components/common/Sigle'
 import { Link } from 'react-router-dom'
 import { Check, CircleDot, ExternalLink } from 'lucide-react'
 import { api } from '@/services/api'
@@ -23,7 +24,7 @@ const CONDITIONS_DE_PROFIL = new Set(['ca', 'qualifications'])
 
 /** Libellés calmes (1.7) : jamais de verdict alarmant, la décision reste au patron. */
 export function libelleStatut(c: Pick<Composante, 'id' | 'statut'>): string {
-  if (c.statut === 'ok') return CONDITIONS_DE_PROFIL.has(c.id) ? 'Correspond à votre profil' : 'Relevé dans le DCE'
+  if (c.statut === 'ok') return CONDITIONS_DE_PROFIL.has(c.id) ? 'Correspond à votre profil' : 'Relevé dans le dossier'
   return 'À confirmer par vous'
 }
 
@@ -75,7 +76,7 @@ export default function SynorixScoreCard({ project, onOpenSource, onYAller, enCo
           On y va ?
         </h2>
         <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
-          Les conditions relevées dans le DCE, comparées à votre profil. La décision vous appartient.
+          Les conditions relevées dans le <Sigle code="DCE" />, comparées à votre profil. La décision vous appartient.
         </p>
       </header>
 

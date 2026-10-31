@@ -61,7 +61,7 @@ export default function ClassifyDocumentModal({ document: doc, onClose }: Props)
       <DialogContent className="max-w-md">
         <DialogHeader className="min-w-0 pr-8">
           <DialogTitle className="text-base font-bold text-fg">
-            {isUnclassified ? 'Classer le document' : 'Modifier le document'}
+            {isUnclassified ? 'Ranger le document' : 'Modifier le document'}
           </DialogTitle>
           <DialogDescription className="truncate text-xs text-fg-3">{doc.file_name}</DialogDescription>
         </DialogHeader>

@@ -49,7 +49,7 @@ test('la carte résume l’AO depuis l’analyse déjà en base, fait par fait',
   assert.equal(f.criteres.source?.document, 'RC')
   assert.equal(f.delai.valeur, '6 mois à compter de l’ordre de service')
   assert.equal(f.delai.source?.document, 'CCAP')
-  assert.equal(f.decision.valeur, '5 conditions relevées dans le DCE')
+  assert.equal(f.decision.valeur, '5 conditions relevées dans le dossier')
   assert.equal(f.decision.reste, '2 à confirmer par vous')
 })
 
@@ -84,7 +84,7 @@ test('visite facultative ou non mentionnée', () => {
   })).visite
   assert.equal(v('facultative').valeur, 'Facultative')
   assert.equal(v('facultative').action, false)
-  assert.equal(v('non_mentionnee').valeur, 'Non mentionnée dans le DCE')
+  assert.equal(v('non_mentionnee').valeur, 'Non mentionnée dans le dossier')
 })
 
 test('les critères de l’AO servent de repli quand le RC n’a pas été lu', () => {
@@ -103,7 +103,7 @@ test('le rendu : titre, source cliquable, classes sémantiques, aucune couleur e
   assert.ok(html.includes('L’AO en 30 secondes'))
   assert.ok(html.includes('carte-ao-30s__fait--large'))
   assert.ok(html.includes('carte-ao-30s__valeur--action'))
-  assert.ok(html.includes('aria-label="Voir dans le DCE : Remise des offres"'))
+  assert.ok(html.includes('aria-label="Voir dans le dossier : Remise des offres"'))
   assert.ok(!/style=|#[0-9a-f]{3,8}\b/i.test(html), 'aucun style en ligne ni couleur')
   for (const code of ['CarteAO30s.tsx', '../../lib/carteAO.ts']) {
     const src = code.startsWith('..') ? lire('src/lib/carteAO.ts') : lire(`src/components/project/${code}`)

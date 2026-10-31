@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'react'
+import { PorteeSigles, Sigle } from '@/components/common/Sigle'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import {
@@ -86,7 +87,7 @@ const KEYFRAMES = `
 
 // ── Floating feature pills data ──────────────────────────────────────────
 const FLOATING_PILLS = [
-  { label: 'Analyse DCE', top: '20%', left: '8%', right: undefined, anim: 'float-pill', dur: '4s', delay: '0s' },
+  { label: 'Analyse du dossier', top: '20%', left: '8%', right: undefined, anim: 'float-pill', dur: '4s', delay: '0s' },
   { label: 'Mémoire technique', top: '14%', left: undefined, right: '12%', anim: 'float-pill-2', dur: '3.5s', delay: '0.5s' },
   { label: 'Exigences sourcées', top: undefined, left: '12%', right: undefined, anim: 'float-pill', dur: '5s', delay: '1s', bottom: '34%' },
   { label: 'Détection lots', top: undefined, left: undefined, right: '9%', anim: 'float-pill-2', dur: '4.5s', delay: '0.3s', bottom: '28%' },
@@ -96,8 +97,8 @@ const FLOATING_PILLS = [
 const HOW_TABS = [
   {
     id: 'upload', num: '1', title: 'Dépôt',
-    desc: 'Glissez-déposez votre DCE complet (ZIP, PDF, DOCX). Synorix extrait et identifie automatiquement chaque document : RC, CCTP, DPGF, plans.',
-    mock: ['RC — Règlement', 'CCTP — 245 pages', 'DPGF — 12 lots', 'Plans — 8 fichiers'],
+    desc: 'Glissez-déposez le dossier complet de l\'acheteur (ZIP, PDF, DOCX). Synorix extrait et identifie automatiquement chaque document : règlement de la consultation, clauses techniques, tableau des prix, plans.',
+    mock: ['Règlement de la consultation', 'Clauses techniques — 245 pages', 'Tableau des prix — 12 lots', 'Plans — 8 fichiers'],
   },
   {
     id: 'analyse', num: '2', title: 'Analyse',
@@ -111,7 +112,7 @@ const HOW_TABS = [
   },
   {
     id: 'export', num: '4', title: 'Export',
-    desc: 'Téléchargez le mémoire en Word ou en PDF, et le dossier complet en ZIP, dans l\'ordre du RC. Prêt à déposer sur la plateforme de l\'acheteur.',
+    desc: 'Téléchargez le mémoire en Word ou en PDF, et le dossier complet en ZIP, dans l\'ordre du règlement de la consultation. Prêt à déposer sur la plateforme de l\'acheteur.',
     mock: ['Mémoire.docx ✓', 'Mémoire.pdf ✓', 'Checklist: 12/12', 'ZIP final prêt'],
   },
 ]
@@ -134,6 +135,7 @@ export default function Landing() {
   const activeTabData = useMemo(() => HOW_TABS.find(t => t.id === activeTab)!, [activeTab])
 
   return (
+    <PorteeSigles>
     <div
       className="min-h-screen w-full overflow-x-hidden"
       style={{ background: '#0A0C11', color: '#F1F5F9', fontFamily: '"Geist Sans", system-ui, sans-serif' }}
@@ -333,7 +335,7 @@ export default function Landing() {
             className="text-base sm:text-lg text-[#788295] max-w-2xl mx-auto mb-10 leading-relaxed"
             style={{ animation: 'fade-up 0.6s ease-out 0.2s both' }}
           >
-            Synorix analyse vos DCE, détecte chaque exigence avec sa source, et rédige votre mémoire technique.
+            Synorix lit le <Sigle code="DCE" />, détecte chaque exigence avec sa source, et rédige votre mémoire technique.
           </p>
 
           {/* CTA buttons */}
@@ -466,13 +468,13 @@ export default function Landing() {
                   <Search size={18} style={{ color: '#E4E9F2' }} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-[#F1F5F9] mb-1" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Analyse DCE intelligente</h3>
-                  <p className="text-sm text-[#9BA4B5] leading-relaxed">Multi-pass sur RC, CCTP, DPGF. Chaque exigence est extraite avec sa source, sa page, et sa priorité.</p>
+                  <h3 className="text-lg font-semibold text-[#F1F5F9] mb-1" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Lecture intelligente du dossier</h3>
+                  <p className="text-sm text-[#9BA4B5] leading-relaxed">Plusieurs lectures du <Sigle code="RC" />, des <Sigle code="CCTP" /> et du <Sigle code="DPGF" />. Chaque exigence est extraite avec sa source, sa page, et sa priorité.</p>
                 </div>
               </div>
               {/* Mini illustration */}
               <div className="rounded-lg p-4 space-y-2" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}>
-                {['Attestation décennale — RC p.4', 'Planning détaillé — CCTP §3.2', 'Sous-traitance déclarée — RC p.7'].map((txt, i) => (
+                {['Attestation décennale — règlement p.4', 'Planning détaillé — clauses techniques §3.2', 'Sous-traitance déclarée — règlement p.7'].map((txt, i) => (
                   <div key={i} className="flex items-center gap-3 text-xs">
                     <span className="px-1.5 py-0.5 rounded text-xs font-medium" style={{ background: ['rgba(245,142,134,0.12)', 'rgba(245,158,11,0.12)', 'rgba(228,233,242,0.12)'][i], color: ['#F58E86', '#F5C26B', '#FFFFFF'][i] }}>
                       {['Critique', 'Important', 'Standard'][i]}
@@ -492,7 +494,7 @@ export default function Landing() {
                 <Layers size={18} style={{ color: '#FFFFFF' }} />
               </div>
               <h3 className="text-base font-semibold text-[#F1F5F9] mb-2" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Détection des lots</h3>
-              <p className="text-sm text-[#9BA4B5] leading-relaxed">L'IA identifie tous les lots depuis le DPGF, RC et noms de fichiers. Badge de confiance pour chaque détection.</p>
+              <p className="text-sm text-[#9BA4B5] leading-relaxed">L'IA identifie tous les lots depuis le <Sigle code="DPGF" />, le <Sigle code="RC" /> et les noms de fichiers. Badge de confiance pour chaque détection.</p>
             </div>
 
             {/* Small 2: Coffre-fort */}
@@ -542,7 +544,7 @@ export default function Landing() {
                 <Download size={18} style={{ color: '#9BA4B5' }} />
               </div>
               <h3 className="text-base font-semibold text-[#F1F5F9] mb-2" style={{ fontFamily: '"Geist Sans", system-ui, sans-serif' }}>Export ZIP pro</h3>
-              <p className="text-sm text-[#9BA4B5] leading-relaxed">Mémoire Word et PDF, dossier complet en ZIP dans l'ordre du RC. Prêt à déposer sur la plateforme de l'acheteur.</p>
+              <p className="text-sm text-[#9BA4B5] leading-relaxed">Mémoire Word et PDF, dossier complet en ZIP dans l'ordre du <Sigle code="RC" />. Prêt à déposer sur la plateforme de l'acheteur.</p>
             </div>
           </div>
         </div>
@@ -563,7 +565,7 @@ export default function Landing() {
             </span>
           </h2>
           <p className="text-center text-[#9BA4B5] mb-12 max-w-lg mx-auto">
-            Déposez le DCE, laissez l'IA travailler, remettez votre offre. C'est aussi simple que ça.
+            Déposez le <Sigle code="DCE" />, laissez l'IA travailler, remettez votre offre. C'est aussi simple que ça.
           </p>
 
           {/* Tabs */}
@@ -724,5 +726,6 @@ export default function Landing() {
         </div>
       </footer>
     </div>
+    </PorteeSigles>
   )
 }

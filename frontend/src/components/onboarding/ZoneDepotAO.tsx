@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useDropzone } from 'react-dropzone'
@@ -10,7 +11,7 @@ import EchecAction from '@/components/common/EchecAction'
 import { cn } from '@/lib/utils'
 
 interface Props {
-  titre: string
+  titre: ReactNode
   precision: string
   className?: string
 }

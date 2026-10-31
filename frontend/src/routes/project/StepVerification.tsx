@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
+import { Sigle } from '@/components/common/Sigle'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Loader2, Lock, AlertTriangle, FileSpreadsheet, Download, Upload, Sparkles, RefreshCw } from 'lucide-react'
@@ -181,7 +182,7 @@ export default function StepVerification({ project }: Props) {
       style={{ border: '1px solid var(--border-1)', boxShadow: 'var(--shadow-card)', fontFamily: F }}
     >
       <p className="text-sm" style={{ color: 'var(--text-3)' }}>
-        La checklist des pièces apparaîtra automatiquement une fois le DCE analysé.
+        La checklist des pièces apparaîtra automatiquement une fois le <Sigle code="DCE" /> analysé.
       </p>
     </div>
   )
@@ -247,7 +248,7 @@ export default function StepVerification({ project }: Props) {
       {/* Title bar */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="font-display tracking-tight text-xl font-bold" style={{ color: 'var(--text-1)' }}>
-          Vérification de la candidature
+          Pièces de la candidature
         </h1>
         <div className="flex items-center gap-3">
           {/* Régénération DISCRÈTE à la demande (ex. après ajout de pièces au
@@ -312,7 +313,7 @@ export default function StepVerification({ project }: Props) {
             <p className="num-mono mt-2 text-xs" style={{ color: 'var(--text-3)' }}>
               Coffre-fort : {libelleComptes(comptesCoffre.aJoindre, comptesCoffre.pretes)}
               {'  ·  '}
-              Formulaires du DCE : {libelleComptes(comptesFormulaires.aJoindre, comptesFormulaires.pretes, 'formulaire')}
+              Formulaires de l’acheteur : {libelleComptes(comptesFormulaires.aJoindre, comptesFormulaires.pretes, 'formulaire')}
             </p>
           </div>
         </div>
@@ -401,7 +402,7 @@ function WorkflowSection({
           <FileSpreadsheet size={18} style={{ color: 'var(--warning-fg)' }} />
         </div>
         <div className="min-w-0">
-          <h2 className="text-base font-bold" style={{ color: 'var(--text-1)' }}>Bordereaux de prix (DPGF / BPU)</h2>
+          <h2 className="text-base font-bold" style={{ color: 'var(--text-1)' }}><Sigle code="DPGF" majuscule /> et <Sigle code="BPU" /></h2>
           <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
             Téléchargez la trame, remplissez-la puis ré-importez-la — contrôle automatique des lignes.
           </p>

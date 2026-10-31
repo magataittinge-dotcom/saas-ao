@@ -20,7 +20,7 @@ test('les données de démonstration donnent les six bulles de la maquette, sans
 
 test('l’assemblage : titre, visage (poster + deux canvas), six bulles, fiche « prochaine action »', () => {
   const html = rendre()
-  assert.match(html, /<h2[^>]*>Synorix Intelligence<\/h2>/)
+  assert.match(html, /<h2[^>]*>À faire maintenant<\/h2>/)
   assert.match(html, /<strong>Bonjour Mohamed<\/strong> · vendredi 23 octobre\./)
   assert.match(html, /src="\/visage\/tete-ouverte-poster\.webp"/)
   assert.match(html, /src="\/visage\/tete-fermee-poster\.webp"/)
@@ -42,7 +42,7 @@ test('sans AO ni pièce : la fiche propose un nouvel AO, les six bulles restent'
 
 test('le prénom est facultatif ; le niveau du titre aussi', () => {
   assert.doesNotMatch(rendre({ prenom: undefined }), /Bonjour/)
-  assert.match(rendre({ niveauTitre: 1 }), /<h1[^>]*>Synorix Intelligence<\/h1>/)
+  assert.match(rendre({ niveauTitre: 1 }), /<h1[^>]*>À faire maintenant<\/h1>/)
 })
 
 test('la fiche affichée suit la bulle choisie, puis revient à la prochaine action', () => {

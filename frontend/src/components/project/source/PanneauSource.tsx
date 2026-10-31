@@ -134,7 +134,7 @@ export function PanneauSourceVue({
   const largeurPage = largeurPourConteneur(largeurCorps || 600, typeof window !== 'undefined' ? window.devicePixelRatio : 1)
 
   const lien = reponse ? lienPiece(reponse) : null
-  const nom = reponse?.document?.nom ?? titre ?? 'Extrait du DCE'
+  const nom = reponse?.document?.nom ?? titre ?? 'Extrait du dossier'
   const lienOuvrir = lien && (
     <a href={lien} target="_blank" rel="noreferrer" className="edge-cta source-ouvrir">
       <ExternalLink size={16} aria-hidden="true" /> Ouvrir la pièce
@@ -170,7 +170,7 @@ export function PanneauSourceVue({
                 </p>
               )}
             </div>
-            <button type="button" className="source-rond" onClick={onFermer} aria-label="Fermer l'extrait du DCE">
+            <button type="button" className="source-rond" onClick={onFermer} aria-label="Fermer l'extrait du dossier">
               <X size={18} aria-hidden="true" />
             </button>
           </div>

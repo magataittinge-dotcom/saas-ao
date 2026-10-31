@@ -1,5 +1,5 @@
 // Phase C — Coffre-fort : l'écran suit le thème, les catégories et les textes ne changent pas, la zone de dépôt et
-// le bloc « Non classés » lisent les jetons ; la fenêtre de classement est le Dialog du socle (focus piégé,
+// le bloc « À ranger » lisent les jetons ; la fenêtre de classement est le Dialog du socle (focus piégé,
 // Échap, étiquettes associées).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -22,7 +22,7 @@ function rendre(documents: Document[], url = '/vault') {
     <QueryClientProvider client={client}><MemoryRouter initialEntries={[url]}><Vault /></MemoryRouter></QueryClientProvider>)
 }
 
-test('le coffre-fort rend son titre, la zone de dépôt du socle et le bloc « Non classés » en jetons', () => {
+test('le coffre-fort rend son titre, la zone de dépôt du socle et le bloc « À ranger » en jetons', () => {
   const html = rendre([doc('a', {}), doc('b', { category: 'unclassified', status: 'unclassified', type: 'autre' })])
   assert.ok(/<h1[^>]*>Coffre-fort documentaire<\/h1>/.test(html), 'un seul h1')
   assert.ok(html.includes('2 documents stockés'))
@@ -30,8 +30,8 @@ test('le coffre-fort rend son titre, la zone de dépôt du socle et le bloc « N
   assert.ok(html.includes('PDF — 20 MB max'))
   const zone = html.match(/<div[^>]*border-dashed[^>]*>/)?.[0] ?? ''
   assert.ok(zone.includes('border-input'), 'bord de zone à 3:1 (jeton de champ)')
-  assert.ok(html.includes('Non classés (1) — à classer pour être utilisables dans vos candidatures'))
-  assert.ok(/<div[^>]*border-warning-border[^>]*bg-warning-bg[^>]*>/.test(html), 'bloc « Non classés » en jetons warning')
+  assert.ok(html.includes('À ranger (1) — rangez-les pour les utiliser dans vos candidatures'))
+  assert.ok(/<div[^>]*border-warning-border[^>]*bg-warning-bg[^>]*>/.test(html), 'bloc « À ranger » en jetons warning')
 })
 
 test('coffre-fort vide : le message positif est conservé', () => {
@@ -58,7 +58,7 @@ test('les lignes de pièce passent à la ligne et leurs boutons font 44 px sur �
   const code = sansCommentaires(lire('src/routes/Vault.tsx'))
   assert.match(code, /LISTE_PIECES = '[^']*\[@media\(pointer:coarse\)\]:\[&_button\]:min-h-11/)
   assert.match(code, /LISTE_PIECES = '[^']*\[&>div\]:flex-wrap/)
-  assert.equal((code.match(/className=\{LISTE_PIECES\}/g) ?? []).length, 2, 'les deux listes (Non classés, catégories)')
+  assert.equal((code.match(/className=\{LISTE_PIECES\}/g) ?? []).length, 2, 'les deux listes (À ranger, catégories)')
 })
 
 test('/vault suit le thème clair / nuit', () => {

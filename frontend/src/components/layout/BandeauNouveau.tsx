@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 // dans ce navigateur (une nouvelle nouveauté a un nouvel identifiant et revient). Texte sobre, sans point d'exclamation.
 const NOUVEAUTE = {
   id: 'source-surlignee-2026-10',
-  texte: 'Chaque exigence s’ouvre sur sa source : le passage du DCE est surligné dans la pièce.',
+  texte: 'Chaque exigence s’ouvre sur sa source : le passage du dossier de l’acheteur est surligné dans la pièce.',
   lien: { to: '/projects', libelle: 'Ouvrir un appel d’offres' },
 }
 const CLE = `synorix.bandeau.${NOUVEAUTE.id}`

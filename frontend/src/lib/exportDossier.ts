@@ -9,11 +9,11 @@ import { statutPiece, type EntreeStatutPiece, type StatutPiece } from '@/lib/sta
 const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''}`
 
 export function resumeExigences(total: number, avecSource: number, confirmees: number): string {
-  if (total === 0) return "Les exigences apparaissent après l'analyse du DCE"
+  if (total === 0) return "Les exigences apparaissent après l'analyse du dossier"
   let texte = `${pluriel(total, 'exigence')} ${total > 1 ? 'relevées' : 'relevée'}`
   if (avecSource >= total) texte += total > 1 ? ', chacune avec sa source' : ', avec sa source'
   if (confirmees > 0) texte += `, dont ${confirmees} ${confirmees > 1 ? 'confirmées' : 'confirmée'} par vous`
-  if (avecSource < total) texte += ` · ${total - avecSource} à vérifier dans le DCE`
+  if (avecSource < total) texte += ` · ${total - avecSource} à vérifier dans le dossier`
   return texte
 }
 

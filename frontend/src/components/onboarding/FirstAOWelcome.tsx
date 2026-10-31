@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Sigle } from '@/components/common/Sigle'
 import { Loader2 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { authService } from '@/services/auth'
@@ -88,7 +89,7 @@ export default function FirstAOWelcome() {
             Votre profil se complétera au fil de vos réponses — commencez directement.
           </p>
           <ZoneDepotAO
-            titre="Déposez votre premier DCE — il est offert"
+            titre={<>Déposez votre premier <Sigle code="DCE" /> — il est offert</>}
             precision="ZIP complet ou PDF · analyse, vérification et mémoire compris"
           />
         </>

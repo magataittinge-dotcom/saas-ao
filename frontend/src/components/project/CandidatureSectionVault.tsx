@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { Sigle } from '@/components/common/Sigle'
 import { FolderOpen, FileText, Lock } from 'lucide-react'
 import type { ChecklistItem } from '@/types'
 import SignatureLigne from '@/components/project/SignatureLigne'
@@ -173,7 +174,7 @@ function VaultRow({
         {note && statut.action && <p className="piece-note">{note}</p>}
         {depot && <p className="piece-note">{depot}</p>}
         {item.source_in_rc && ['si-concerne', 'facultatif', 'attribution'].includes(statut.code) && (
-          <p className="piece-note">Lu dans le RC : « {item.source_in_rc} »</p>
+          <p className="piece-note">Lu dans le <Sigle code="RC" /> : « {item.source_in_rc} »</p>
         )}
         <SignatureLigne item={item} onToggleSignature={onToggleSignature}
                   onOpenSource={onOpenSource} />

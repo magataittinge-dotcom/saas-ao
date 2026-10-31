@@ -1,3 +1,4 @@
+import { LEXIQUE } from '@/lib/lexique'
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -82,7 +83,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
         )}
         <CommandSeparator />
         <CommandGroup heading="Aller à">
-          <CommandItem value="Nouvel AO déposer un DCE" onSelect={() => aller('/projects/new')}>
+          <CommandItem value={`Nouvel AO déposer un dossier ${LEXIQUE.DCE.sigle}`} onSelect={() => aller('/projects/new')}>
             <Plus className="text-encre-4" />
             Nouvel AO
           </CommandItem>

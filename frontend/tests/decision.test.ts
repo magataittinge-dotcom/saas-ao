@@ -5,10 +5,10 @@ import assert from 'node:assert/strict'
 import { libelleStatut } from '@/components/project/SynorixScoreCard'
 import { lire, sansCommentaires } from './outils/sources'
 
-test('libellés calmes : « Correspond à votre profil », « Relevé dans le DCE », « À confirmer par vous »', () => {
+test('libellés calmes : « Correspond à votre profil », « Relevé dans le dossier », « À confirmer par vous »', () => {
   assert.equal(libelleStatut({ id: 'ca', statut: 'ok' }), 'Correspond à votre profil')
   assert.equal(libelleStatut({ id: 'qualifications', statut: 'ok' }), 'Correspond à votre profil')
-  assert.equal(libelleStatut({ id: 'delai', statut: 'ok' }), 'Relevé dans le DCE')
+  assert.equal(libelleStatut({ id: 'delai', statut: 'ok' }), 'Relevé dans le dossier')
   for (const statut of ['warning', 'ko', 'non_evaluable'] as const) {
     assert.equal(libelleStatut({ id: 'ca', statut }), 'À confirmer par vous')
   }

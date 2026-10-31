@@ -31,7 +31,7 @@ export const VAULT_CATEGORY_LABELS: Record<VaultCategory, string> = {
   qualifications: 'Qualifications',
   references_moyens: 'Références & moyens',
   autres: 'Autres',
-  unclassified: 'Non classés',
+  unclassified: 'À ranger',
 }
 
 // Types proposés par catégorie dans la modale de classement.
@@ -47,7 +47,7 @@ export const CATEGORY_TYPES: Record<Exclude<VaultCategory, 'unclassified'>, Docu
 export const DOC_TYPE_LABELS: Record<string, string> = {
   urssaf: 'Attestation URSSAF', kbis: 'KBIS', decennale: 'Décennale',
   rc_civile: 'RC Civile', qualibat: 'Qualibat RGE', pro_btp: 'PRO BTP',
-  cibtp: 'CIBTP', fiscal: 'Attestation fiscale', dc1: 'DC1', dc2: 'DC2',
+  cibtp: 'CIBTP', fiscal: 'Attestation fiscale', dc1: 'Lettre de candidature (DC1)', dc2: 'Déclaration du candidat (DC2)',
   rib: 'RIB', caces: 'CACES', amiante_ss4: 'Amiante SS4',
   declaration_honneur: "Déclaration sur l'honneur", pouvoir: 'Pouvoir habilité',
   organigramme_doc: 'Organigramme', chiffre_affaires: "Chiffre d'affaires",

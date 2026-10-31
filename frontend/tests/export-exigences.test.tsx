@@ -15,8 +15,8 @@ test('résumé des exigences : jamais de fraction, « confirmées » seulement s
   assert.equal(resumeExigences(12, 12, 3), '12 exigences relevées, chacune avec sa source, dont 3 confirmées par vous')
   assert.equal(resumeExigences(1, 1, 1), '1 exigence relevée, avec sa source, dont 1 confirmée par vous')
   // extrait non retrouvé dans le DCE : on ne prétend pas « chacune avec sa source »
-  assert.equal(resumeExigences(12, 10, 0), '12 exigences relevées · 2 à vérifier dans le DCE')
-  assert.equal(resumeExigences(0, 0, 0), "Les exigences apparaissent après l'analyse du DCE")
+  assert.equal(resumeExigences(12, 10, 0), '12 exigences relevées · 2 à vérifier dans le dossier')
+  assert.equal(resumeExigences(0, 0, 0), "Les exigences apparaissent après l'analyse du dossier")
   for (const t of [resumeExigences(12, 12, 0), resumeExigences(5, 4, 2)]) assert.ok(!/\d\s*\/\s*\d/.test(t), t)
 })
 
@@ -46,13 +46,13 @@ test('un bouton « Tout confirmer » par groupe qui a des exigences à confirmer
   assert.ok(!/\d\s*\/\s*\d/.test(html.replace(/<[^>]+>/g, ' ')), 'aucune fraction affichée')
 })
 
-test('chaque exigence montre sa source, ou « à vérifier dans le DCE »', () => {
+test('chaque exigence montre sa source, ou « à vérifier dans le dossier »', () => {
   const html = rendu([
     exigence({ id: 'a', source_document: 'RC', source_page: 7 }),
     exigence({ id: 'b', source_verifiee: false }),
   ])
   assert.ok(html.includes('RC p.7'), html)
-  assert.ok(html.includes('À vérifier dans le DCE'), html)
+  assert.ok(html.includes('À vérifier dans le dossier'), html)
   assert.equal(html.split('type="checkbox"').length - 1, 2)
 })
 

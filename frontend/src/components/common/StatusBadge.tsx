@@ -47,7 +47,7 @@ export function documentStatusBadge(status: DocumentStatus) {
     expiring_soon:  { label: 'Prêt',             variant: 'success' },
     expired:        { label: 'À renouveler',     variant: 'amber'   },
     unverified:     { label: 'Date de validité à confirmer', variant: 'amber' },
-    unclassified:   { label: 'Non classé',       variant: 'neutral' },
+    unclassified:   { label: 'À ranger',         variant: 'neutral' },
   }
   return map[status] ?? map.unclassified
 }

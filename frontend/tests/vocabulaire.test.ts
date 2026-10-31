@@ -4,6 +4,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { fichiersSource } from './outils/sources'
 import { textesAffiches } from './outils/textes'
+import { ETAPES_AO } from '../src/lib/echeance'
 
 export const INTERDITS: [RegExp, string][] = [
   [/manquant/i, '« manquant »'],
@@ -35,7 +36,7 @@ test('aucun mot interdit, franglais ni capitales criées dans les textes affich�
 test("une seule formule pour passer à l'étape suivante, qui nomme la bonne étape", () => {
   const suites: [string, string][] = [
     ['src/routes/project/StepUpload.tsx', 'Lots'],
-    ['src/routes/project/StepAnalysis.tsx', 'Vérification'],
+    ['src/routes/project/StepAnalysis.tsx', 'Pièces'],
     ['src/routes/project/StepVerification.tsx', 'Mémoire'],
     ['src/routes/project/StepMemoire.tsx', 'Export'],
   ]
@@ -47,4 +48,59 @@ test("une seule formule pour passer à l'étape suivante, qui nomme la bonne ét
   }
   const lancement = textesAffiches('src/routes/project/StepLotSelection.tsx').map((t) => t.texte)
   assert.ok(lancement.includes("Lancer l'analyse"))
+})
+
+// S4 — Renommages (simplification) : les mots du patron, ni plus ni moins.
+// Livrables et Points de contrôle vivent dans StepExport (réservé à SIMPLIF-A) : renommés à l'intégration.
+const RESERVES_S4 = ['src/routes/NewProject.tsx', 'src/routes/project/StepMemoire.tsx', 'src/routes/project/StepExport.tsx']
+const ANCIENS_MOTS: [RegExp, string][] = [
+  [/^Synorix Intelligence$/, '« Synorix Intelligence » → « À faire maintenant »'],
+  [/^Type détecté$/i, '« TYPE DÉTECTÉ » → « Reconnu comme »'],
+  [/^Non classés?\b/, '« Non classé » → « À ranger »'],
+  [/^Classer( le document)?$/, '« Classer » → « Ranger »'],
+  [/langage libre/, '« langage libre » → « avec vos mots »'],
+  [/^Livrables$/, '« Livrables » → « Ce que vous déposez »'],
+  [/^Points de contrôle$/, '« Points de contrôle » → « Avant d\'envoyer »'],
+]
+
+test('S4 : les anciens libellés ont disparu des écrans (hors fichiers réservés)', () => {
+  const fautes: string[] = []
+  for (const f of fichiersSource()) {
+    if (RESERVES_S4.includes(f)) continue
+    for (const t of textesAffiches(f)) {
+      for (const [re, nom] of ANCIENS_MOTS) if (re.test(t.texte.trim())) fautes.push(`${f}:${t.ligne} ${nom}`)
+    }
+  }
+  assert.deepEqual(fautes, [])
+})
+
+test('S4 : les nouveaux libellés sont à l\'écran', () => {
+  const attendus: [string, string][] = [
+    ['src/components/intelligence/SynorixIntelligence.tsx', 'À faire maintenant'],
+    ['src/routes/project/StepUpload.tsx', 'Reconnu comme'],
+    ['src/components/common/StatusBadge.tsx', 'À ranger'],
+    ['src/lib/vault.ts', 'À ranger'],
+    ['src/components/common/FileCard.tsx', 'Ranger'],
+    ['src/components/vault/ClassifyDocumentModal.tsx', 'Ranger le document'],
+    ['src/components/company/ProfileFreeTextCard.tsx', 'Décrire avec vos mots'],
+  ]
+  for (const [f, mot] of attendus) {
+    assert.ok(textesAffiches(f).some((t) => t.texte.includes(mot)), `${f} : « ${mot} »`)
+  }
+})
+
+test('S4 : les étapes s\'appellent Dépôt du dossier, Lots, Décider, Pièces, Mémoire, Export — partout pareil', () => {
+  assert.deepEqual([...ETAPES_AO], ['Dépôt du dossier', 'Lots', 'Décider', 'Pièces', 'Mémoire', 'Export'])
+  for (const f of ['src/components/project/StepProgress.tsx', 'src/components/layout/Header.tsx']) {
+    const textes = textesAffiches(f).map((t) => t.texte)
+    assert.ok(textes.includes('Décider') && textes.includes('Pièces'), `${f} : Décider et Pièces`)
+    assert.ok(!textes.includes('Analyse IA') && !textes.includes('Vérification'), `${f} : plus d'ancien nom d'étape`)
+  }
+  assert.ok(textesAffiches('src/routes/project/StepVerification.tsx').some((t) => t.texte.includes('Pièces de la candidature')))
+})
+
+test('S4 : « Retour » à la place d\'« Annuler » quand le bouton ne défait rien (dépôt du dossier)', () => {
+  const textes = textesAffiches('src/routes/project/StepUpload.tsx').map((t) => t.texte.trim())
+  assert.ok(textes.includes('Retour'))
+  assert.ok(!textes.includes('Annuler'))
 })

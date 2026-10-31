@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { Sigle } from '@/components/common/Sigle'
 import { createPortal } from 'react-dom'
 import { useDropzone } from 'react-dropzone'
 import { useNavigate } from 'react-router-dom'
@@ -66,10 +67,10 @@ function formatSize(bytes?: number): string {
 }
 
 const DOC_TYPES: { value: ProjectDocumentType; label: string }[] = [
-  { value: 'rc',              label: 'RC — Règlement de Consultation' },
-  { value: 'cctp',            label: 'CCTP — Cahier des Clauses Techniques' },
-  { value: 'ccap',            label: 'CCAP — Cahier des Clauses Administratives' },
-  { value: 'dpgf',            label: 'DPGF — Décomposition Prix' },
+  { value: 'rc',              label: 'Règlement de la consultation (RC)' },
+  { value: 'cctp',            label: 'Clauses techniques (CCTP)' },
+  { value: 'ccap',            label: 'Clauses administratives (CCAP)' },
+  { value: 'dpgf',            label: 'Tableau des prix (DPGF)' },
   { value: 'acte_engagement', label: "Acte d'Engagement" },
   { value: 'plan',            label: 'Plans' },
   { value: 'autre',           label: 'Autre' },
@@ -119,7 +120,7 @@ export default function StepUpload({ project }: Props) {
     if (totalSize > 500 * 1024 * 1024) {
       tips.push({ id: 'upload-large', variant: 'warning', text: 'Les fichiers volumineux peuvent prendre quelques minutes à traiter.' })
     }
-    tips.push({ id: 'upload-zip', variant: 'info', text: 'Astuce : déposez le ZIP complet du DCE pour une détection automatique de tous les documents et lots.' })
+    tips.push({ id: 'upload-zip', variant: 'info', text: 'Astuce : déposez le ZIP complet du dossier de l\'acheteur pour une détection automatique de tous les documents et lots.' })
     return tips
   }, [documents])
 
@@ -218,7 +219,7 @@ export default function StepUpload({ project }: Props) {
       if (largestSize > 1 * GB) {
         setLargeFileNotice({
           tone: 'orange',
-          message: `Très gros DCE détecté (${mb} Mo). Envoi jusqu'à 15 minutes selon votre connexion. Restez sur cette page.`,
+          message: `Dossier très volumineux détecté (${mb} Mo). Envoi jusqu'à 15 minutes selon votre connexion. Restez sur cette page.`,
         })
       } else if (largestSize > 500 * MB) {
         setLargeFileNotice({
@@ -383,7 +384,7 @@ export default function StepUpload({ project }: Props) {
       {aSupprimer && (
         <DeleteConfirmModal
           title={'tous' in aSupprimer
-            ? `Supprimer les ${documents.length} fichiers du DCE ?`
+            ? `Supprimer les ${documents.length} fichiers du dossier ?`
             : `Supprimer « ${aSupprimer.doc.file_name} » ?`}
           detail={'tous' in aSupprimer
             ? 'Les fichiers ne seront plus dans le dossier de cet AO.'
@@ -455,7 +456,7 @@ export default function StepUpload({ project }: Props) {
             </div>
 
             <p className="relative text-lg font-semibold mb-1" style={{ color: 'var(--text-1)' }}>
-              {isDragActive ? 'Déposez les fichiers ici…' : 'Déposez le DCE complet'}
+              {isDragActive ? 'Déposez les fichiers ici…' : <>Déposez le <Sigle code="DCE" /> complet</>}
             </p>
             <p className="relative text-sm mb-6" style={{ color: 'var(--text-3)' }}>
               Le ZIP entier suffit — Synorix identifie chaque pièce et chaque lot automatiquement.
@@ -566,7 +567,7 @@ export default function StepUpload({ project }: Props) {
           <div className="mt-5">
             <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
               <div>
-                <h3 className="text-[15px] font-semibold" style={{ color: 'var(--text-1)' }}>Documents du DCE</h3>
+                <h3 className="text-[15px] font-semibold" style={{ color: 'var(--text-1)' }}>Documents du <Sigle code="DCE" /></h3>
                 <p className="num-mono mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
                   {documents.length} fichier{documents.length > 1 ? 's' : ''} · {formatSize(totalBytes)}
                 </p>
@@ -595,7 +596,7 @@ export default function StepUpload({ project }: Props) {
               >
                 <span className="microlabel">Nom du fichier</span>
                 <span className="microlabel">Taille</span>
-                <span className="microlabel">Type détecté</span>
+                <span className="microlabel">Reconnu comme</span>
                 <span />
               </div>
 
@@ -698,7 +699,7 @@ export default function StepUpload({ project }: Props) {
               onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--text-3)'; e.currentTarget.style.color = 'var(--text-1)' }}
               onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-1)'; e.currentTarget.style.color = 'var(--text-3)' }}
             >
-              Annuler
+              Retour
             </button>
             <button
               onClick={handleNext}

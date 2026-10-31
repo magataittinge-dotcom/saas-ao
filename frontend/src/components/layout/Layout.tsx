@@ -11,6 +11,7 @@ import LegalFooter from './LegalFooter'
 import CommandPalette from './CommandPalette'
 import { ToastContainer } from '@/components/common/Toast'
 import EcranEnChargement from '@/components/common/EcranEnChargement'
+import { PorteeSigles } from '@/components/common/Sigle'
 
 // Écrans refaits sur les jetons clair / nuit : ils suivent le thème choisi. La coquille (barre d'icônes,
 // en-tête, onglets du bas, palette Ctrl K) le suit partout ; les autres écrans restent en nuit
@@ -42,9 +43,12 @@ export default function Layout() {
         >
           <ThemeEcranProvider value={themeEcran}>
             <div className="flex-1">
-              <Suspense fallback={<EcranEnChargement clair={themee} />}>
-                <Outlet />
-              </Suspense>
+              {/* un écran = une adresse : les sigles y sont développés une fois (lib/lexique.ts) */}
+              <PorteeSigles cle={pathname}>
+                <Suspense fallback={<EcranEnChargement clair={themee} />}>
+                  <Outlet />
+                </Suspense>
+              </PorteeSigles>
             </div>
             <LegalFooter calque={themee} />
           </ThemeEcranProvider>

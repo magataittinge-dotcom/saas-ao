@@ -28,7 +28,7 @@ test('chaque écran qui supprime passe par une confirmation nommée', () => {
   const ecrans: [string, RegExp][] = [
     ['src/routes/Projects.tsx', /title=\{`Supprimer « \$\{deleteTarget\.name\} » \?`\}/],
     ['src/routes/project/StepUpload.tsx', /`Supprimer « \$\{aSupprimer\.doc\.file_name\} » \?`/],
-    ['src/routes/project/StepUpload.tsx', /`Supprimer les \$\{documents\.length\} fichiers du DCE \?`/],
+    ['src/routes/project/StepUpload.tsx', /`Supprimer les \$\{documents\.length\} fichiers du dossier \?`/],
     ['src/routes/Vault.tsx', /`Supprimer « \$\{pieceASupprimer\.file_name\} » du coffre-fort \?`/],
     ['src/routes/project/StepLotSelection.tsx', /`Retirer « \$\{lotARetirer\.user_label \|\| lotARetirer\.nom\} » de la liste \?`/],
   ]
