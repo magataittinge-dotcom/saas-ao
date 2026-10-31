@@ -71,14 +71,8 @@ const inputClass =
   'w-full rounded-lg border px-2.5 py-1.5 text-sm bg-ds-bg text-fg focus:outline-none focus:ring-2 focus:ring-accent-ring'
 const inputStyle = { borderColor: 'var(--surface-1)' }
 
-/**
- * C9a — pre-flight preview : ce que le mémoire utilisera, éditable AVANT de
- * consommer 1 unité de quota. Les modifications sont locales à ce mémoire
- * par défaut ; la case « Mettre à jour mon profil » les propage.
- */
-export default function MemoirePreflight({ projectId, onChange }: Props) {
-  const plan = useAuthStore((st) => st.organization?.plan ?? 'free')
-  const { data } = useQuery<PreflightPayload>({
+function usePreflight(projectId: string) {
+  return useQuery<PreflightPayload>({
     queryKey: ['memoire-preflight', projectId],
     queryFn: async () => {
       const { data } = await api.get(`/projects/${projectId}/memoire/preflight`)
@@ -86,6 +80,34 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
     },
     staleTime: 30_000,
   })
+}
+
+/**
+ * Rappel du quota, avant de consommer l'unité — affiché près du bouton « Rédiger le mémoire », même quand
+ * le pré-contrôle est replié (même requête, même cache que le pré-contrôle).
+ * 1.10 — quota annoncé selon l'offre (l'essai gratuit est à vie, pas « ce mois ») et durée mesurée :
+ * 930 s (~15,5 min) sur le DCE Gueux, Sonnet 4.6 (docs/comparaison-memoire-AB/RESULTAT.md) — pas de chiffre inventé.
+ */
+export function QuotaMemoire({ projectId }: { projectId: string }) {
+  const plan = useAuthStore((st) => st.organization?.plan ?? 'free')
+  const { data } = usePreflight(projectId)
+  if (!data) return null
+  const quotaLabel = data.quota.limit === null
+    ? 'Consommera 1 mémoire — offre illimitée'
+    : plan === 'free'
+      ? `Consommera 1 mémoire — ${data.quota.used}/${data.quota.limit} sur votre essai`
+      : `Consommera 1 mémoire — ${data.quota.used}/${data.quota.limit} ce mois`
+  const dureeLabel = 'Rédaction : environ 15 minutes'
+  return <p className="text-xs" style={{ color: 'var(--text-3)' }}>{quotaLabel} · {dureeLabel}</p>
+}
+
+/**
+ * C9a — pre-flight preview : ce que le mémoire utilisera, éditable AVANT de
+ * consommer 1 unité de quota. Les modifications sont locales à ce mémoire
+ * par défaut ; la case « Mettre à jour mon profil » les propage.
+ */
+export default function MemoirePreflight({ projectId, onChange }: Props) {
+  const { data } = usePreflight(projectId)
 
   const [overrides, setOverrides] = useState<Record<string, string>>({})
   const [checkedRefs, setCheckedRefs] = useState<Set<string> | null>(null)
@@ -136,16 +158,6 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
       return next
     })
   }
-
-  // 1.10 — quota annoncé selon l'offre (l'essai gratuit est à vie, pas « ce mois »)
-  // et durée mesurée : 930 s (~15,5 min) sur le DCE Gueux, Sonnet 4.6
-  // (docs/comparaison-memoire-AB/RESULTAT.md) — pas de chiffre inventé.
-  const quotaLabel = data.quota.limit === null
-    ? 'Consommera 1 mémoire — offre illimitée'
-    : plan === 'free'
-      ? `Consommera 1 mémoire — ${data.quota.used}/${data.quota.limit} sur votre essai`
-      : `Consommera 1 mémoire — ${data.quota.used}/${data.quota.limit} ce mois`
-  const dureeLabel = 'Rédaction : environ 15 minutes'
 
   return (
     <div className="space-y-4">
@@ -301,9 +313,6 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
           </ul>
         </div>
       )}
-
-      {/* ── Rappel quota — sobre, avant de consommer ── */}
-      <p className="text-xs text-right" style={{ color: 'var(--text-3)' }}>{quotaLabel} · {dureeLabel}</p>
     </div>
   )
 }
