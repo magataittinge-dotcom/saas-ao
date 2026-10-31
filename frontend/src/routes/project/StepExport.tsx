@@ -13,6 +13,7 @@ import DocumentViewer, { type ViewableDocument } from '@/components/project/Docu
 import { DocumentRowSkeleton } from '@/components/skeletons'
 import EchecAction from '@/components/common/EchecAction'
 import { phraseSourceSignature, signatureAConfirmer } from '@/components/project/SignatureLigne'
+import PiecesAJoindre from '@/components/project/PiecesAJoindre'
 import ExigencesDuDossier, { type ExigenceExport } from '@/components/project/ExigencesDuDossier'
 import {
   etatPiece, lignesDuScore, lireAvertissementsExport, resumeExigences, type GroupeExigences,
@@ -218,7 +219,6 @@ export default function StepExport({ project }: Props) {
       return data
     },
   })
-  const [showGateWarning, setShowGateWarning] = useState(false)
   // 1.16 — un livrable qui ne se télécharge pas : on le dit, avec « Réessayer »
   const [echec, setEchec] = useState<{ message: string; relancer: () => void } | null>(null)
   // Avertissements du dernier ZIP (pièces écartées, livrables à finaliser)
@@ -405,7 +405,7 @@ export default function StepExport({ project }: Props) {
   const totalPieces = score?.total ?? detail.checklist_total
   const readyForDeposit = !gateBlocked && alertCount === 0
 
-  // ── Bottom bar ──────────────────────────────────────────────────────────
+  // ── Bottom bar ── un seul bouton principal ; l'avertissement des pièces est une ligne au-dessus
   const bottomBar = (
     <div
       className="sticky -bottom-5 z-30 -mx-3 sm:-mx-4 mt-6 rounded-t-lg flex flex-col items-center px-6 py-3 gap-2"
@@ -416,48 +416,41 @@ export default function StepExport({ project }: Props) {
         borderTop: '1px solid var(--border-1)',
       }}
     >
-      {gateBlocked && showGateWarning && (
-        <div className="w-full max-w-xl rounded-xl px-4 py-3 text-left"
-          style={{ background: 'color-mix(in srgb, var(--warning-fg) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--warning-fg) 25%, transparent)' }}>
-          <p className="text-xs font-semibold mb-1" style={{ color: 'var(--warning-fg)' }}>
-            {score!.total - score!.conformes} pièce{score!.total - score!.conformes > 1 ? 's' : ''} à finaliser avant le dépôt :
-          </p>
-          <ul className="text-xs space-y-0.5" style={{ color: 'var(--warning-fg)' }}>
-            {nonConformes.slice(0, 6).map((i) => (
-              <li key={i.id}>
-                • {i.details || i.linked_document_name || i.document_type_required}
-                {' '}({i.status === 'manquant' ? 'à joindre'
-                  : i.status === 'expire' ? 'à renouveler'
-                  : i.status === 'warning' ? 'date de validité à confirmer'
-                  : 'signature à confirmer'})
-              </li>
-            ))}
-            {nonConformes.length > 6 && <li>… et {nonConformes.length - 6} autre(s)</li>}
-          </ul>
-          <button
-            onClick={() => exportZip()}
-            disabled={isExportingZip}
-            className="mt-2 px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50"
-            style={{ background: 'color-mix(in srgb, var(--warning-fg) 10%, transparent)', color: 'var(--warning-fg)', border: '1px solid color-mix(in srgb, var(--warning-fg) 25%, transparent)' }}
-          >
-            {isExportingZip ? 'Export…' : 'Exporter quand même'}
-          </button>
-        </div>
-      )}
+      {gateBlocked && <PiecesAJoindre pieces={nonConformes} />}
       <button
-        onClick={() => (gateBlocked ? setShowGateWarning(s => !s) : exportZip())}
+        onClick={() => exportZip()}
         disabled={isExportingZip}
         className="signature-btn disabled:opacity-40"
-        style={{
-          fontFamily: F, padding: '12px 32px', fontSize: '16px', borderRadius: '12px',
-          ...(gateBlocked
-            ? { background: 'var(--warning-bg)', color: 'var(--warning-fg)', border: '1px solid var(--warning-border)', boxShadow: 'none' }
-            : {}),
-        }}
+        style={{ fontFamily: F, padding: '12px 32px', fontSize: '16px', borderRadius: '12px' }}
       >
         {isExportingZip ? <Loader2 size={18} className="animate-spin" /> : <Archive size={18} />}
-        Télécharger le dossier ZIP
+        Télécharger le dossier
       </button>
+      <details className="text-center">
+        <summary className="cursor-pointer text-xs underline underline-offset-2 [@media(pointer:coarse)]:min-h-11" style={{ color: 'var(--text-3)' }}>
+          Autres formats
+        </summary>
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+          <button
+            onClick={() => exportPdf()}
+            disabled={isExportingPdf || !detail.has_memoire}
+            className="glass-btn flex items-center gap-2 py-1.5 px-3 text-xs font-semibold rounded-lg disabled:opacity-40"
+            style={{ color: 'var(--text-2)' }}
+          >
+            {isExportingPdf ? <Loader2 size={13} className="animate-spin" /> : <FileDown size={13} />}
+            Mémoire PDF (dépôt)
+          </button>
+          <button
+            onClick={() => exportDocx()}
+            disabled={isExportingDocx || !detail.has_memoire}
+            className="flex items-center gap-2 py-1.5 px-3 text-xs font-medium rounded-lg transition-colors hover:bg-ds-bg-2 disabled:opacity-40"
+            style={{ border: '1px solid var(--border-1)', color: 'var(--text-3)' }}
+          >
+            {isExportingDocx ? <Loader2 size={13} className="animate-spin" /> : <FileDown size={13} />}
+            Mémoire Word (retouche)
+          </button>
+        </div>
+      </details>
     </div>
   )
 
@@ -514,29 +507,8 @@ export default function StepExport({ project }: Props) {
             </div>
           </div>
 
-          {/* Livrables individuels — le ZIP reste LE CTA, en barre basse */}
+          {/* Convention de nommage du RC : le ZIP s'y conforme */}
           <div className="min-w-0">
-            <p className="microlabel mb-2">Livrables</p>
-            <div className="space-y-1.5">
-              <button
-                onClick={() => exportPdf()}
-                disabled={isExportingPdf || !detail.has_memoire}
-                className="glass-btn w-full flex items-center gap-2 py-1.5 px-3 text-xs font-semibold rounded-lg disabled:opacity-40"
-                style={{ color: 'var(--text-2)' }}
-              >
-                {isExportingPdf ? <Loader2 size={13} className="animate-spin" /> : <FileDown size={13} />}
-                Mémoire PDF (dépôt)
-              </button>
-              <button
-                onClick={() => exportDocx()}
-                disabled={isExportingDocx || !detail.has_memoire}
-                className="w-full flex items-center gap-2 py-1.5 px-3 text-xs font-medium rounded-lg transition-colors hover:bg-ds-bg-2 disabled:opacity-40"
-                style={{ border: '1px solid var(--border-1)', color: 'var(--text-3)' }}
-              >
-                {isExportingDocx ? <Loader2 size={13} className="animate-spin" /> : <FileDown size={13} />}
-                Mémoire Word (retouche)
-              </button>
-            </div>
             {detail.naming_convention && (
               <p className="mt-3 text-xs leading-relaxed" style={{ color: 'var(--text-3)' }}>
                 Pièces du ZIP nommées selon le RC&nbsp;:{' '}
@@ -577,8 +549,10 @@ export default function StepExport({ project }: Props) {
       )}
 
       {/* ── Points de contrôle ──────────────────────────────────── */}
-      <div>
-        <p className="microlabel mb-3">Points de contrôle</p>
+      <details className="group">
+        <summary className="microlabel mb-3 cursor-pointer list-none [&::-webkit-details-marker]:hidden [@media(pointer:coarse)]:min-h-11">
+          Points de contrôle
+        </summary>
 
         <div className="space-y-2.5">
 
@@ -885,7 +859,7 @@ export default function StepExport({ project }: Props) {
             </div>
           </AccordionSection>
         </div>
-      </div>
+      </details>
 
       {/* ── Sticky bottom bar ───────────────────────────────────── */}
       {bottomBar}

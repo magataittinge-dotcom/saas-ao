@@ -64,3 +64,11 @@ export function etatPiece(
   const ton = statut.code === 'pret' ? 'ok' : statut.action ? 'attention' : 'neutre'
   return { texte: statut.texte, ton, statut }
 }
+
+/** S6 — la ligne au-dessus de « Télécharger le dossier » : les pièces non conformes ne partent pas dans le ZIP. */
+export function phrasePiecesAJoindre(n: number): string | null {
+  if (n <= 0) return null
+  return n === 1
+    ? '1 pièce est à joindre. Elle ne sera pas dans le dossier.'
+    : `${n} pièces sont à joindre. Elles ne seront pas dans le dossier.`
+}

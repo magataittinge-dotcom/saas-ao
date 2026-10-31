@@ -4,8 +4,8 @@
 // ZIP contient (pieces_zip) et n'affiche plus aucune fraction « x/y ».
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { etatPiece } from '@/lib/exportDossier'
-import { lire } from './outils/sources'
+import { etatPiece, phrasePiecesAJoindre } from '@/lib/exportDossier'
+import { lire, sansCommentaires } from './outils/sources'
 import { textesAffiches } from './outils/textes'
 
 test('« Prêt — valable jusqu’au … » seulement si c’est un fait, sinon « À joindre »', () => {
@@ -30,4 +30,31 @@ test('l’écran Export : plus de « pièces conformes x/y », liste du ZIP = pi
   const code = lire('src/routes/project/StepExport.tsx')
   assert.ok(code.includes('detail.pieces_zip'), 'la liste du ZIP vient de pieces_zip')
   assert.ok(!code.includes('detail.project_documents'), 'plus les documents du DCE dans la liste du ZIP')
+})
+
+// ── S6 — Export à un seul bouton : l'avertissement des pièces est une ligne au-dessus du bouton ──
+
+test('la ligne dit combien de pièces sont à joindre et qu\'elles ne seront pas dans le dossier', () => {
+  assert.equal(phrasePiecesAJoindre(6), '6 pièces sont à joindre. Elles ne seront pas dans le dossier.')
+  assert.equal(phrasePiecesAJoindre(1), '1 pièce est à joindre. Elle ne sera pas dans le dossier.')
+  assert.equal(phrasePiecesAJoindre(0), null)
+  for (const n of [1, 2, 12]) assert.doesNotMatch(phrasePiecesAJoindre(n)!, /manquant|incomplet|absent|erreur|attention/i)
+})
+
+test('l\'export a un seul bouton principal ; PDF seul et Word seul sont sous « Autres formats » ; les points de contrôle sont repliés', () => {
+  const code = sansCommentaires(lire('src/routes/project/StepExport.tsx'))
+  assert.equal((code.match(/signature-btn/g) ?? []).length, 1, 'un seul bouton principal')
+  assert.ok(code.includes('Télécharger le dossier'))
+  assert.doesNotMatch(code, /Exporter quand même|showGateWarning|Télécharger le dossier ZIP|Livrables/)
+  assert.doesNotMatch(code, /var\(--warning-bg\)/, 'plus de bouton orange')
+  assert.match(code, /<PiecesAJoindre pieces=\{nonConformes\} \/>/)
+  // « Autres formats » : un repli fermé qui contient les deux sorties, et seulement elles
+  const autres = code.slice(code.indexOf('Autres formats'))
+  assert.ok(code.includes('Autres formats'))
+  assert.ok(autres.indexOf('Mémoire PDF') > 0 && autres.indexOf('Mémoire Word') > autres.indexOf('Mémoire PDF'))
+  assert.ok(code.indexOf('Télécharger le dossier') < code.indexOf('Autres formats'))
+  // les points de contrôle sont dans un repli fermé
+  const iPoints = code.indexOf('Points de contrôle')
+  assert.ok(/<details(?![^>]*\bopen\b)[^>]*>\s*<summary[^>]*>\s*Points de contrôle/.test(code), 'Points de contrôle dans un <details> fermé')
+  assert.ok(iPoints > 0)
 })
