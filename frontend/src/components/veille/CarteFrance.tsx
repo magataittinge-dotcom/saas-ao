@@ -2,6 +2,9 @@
 // clic = choisir (plusieurs possibles), molette et glisser = zoom et déplacement, flèches du clavier = passer d'un
 // département à l'autre (un seul arrêt de tabulation, tabindex itinérant). Légère inclinaison à la souris,
 // coupée si le système demande de réduire les animations et sur téléphone.
+// Les bulles qui se chevauchent à l'écran (Paris et la petite couronne) forment une seule bulle : clic ou Entrée =
+// zoom sur le groupe, puis les bulles redeviennent individuelles. Les départements du groupe restent choisissables
+// (contour, flèches du clavier).
 //
 //   <CarteFrance comptes={{ '69': 12 }} selection={['69']} onSelection={(codes) => …} />
 import './carte-france.css'
@@ -9,8 +12,9 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Minus, Plus, RotateCcw } from 'lucide-react'
 import { DEPARTEMENTS, ENCARTS, PAYS_VOISINS, VIEWBOX, type Departement } from './donnees/departements'
 import {
-  basculerSelection, chiffreBulle, deplacer, estZoome, libelleDepartement, rayonBulle, voisinDansLaDirection, zoomer,
-  type Cadre, type Direction,
+  basculerSelection, cadreSurGroupe, chiffreBulle, cleGroupe, deplacer, estGroupe, estZoome, libelleDepartement, libelleGroupe,
+  rayonAffiche, regrouperBulles, voisinDansLaDirection, zoomer,
+  type BulleDep, type Cadre, type Direction, type GroupeBulles,
 } from '@/lib/carteFrance'
 import { useMedia } from '@/hooks/useMedia'
 import { useMouvementReduit } from '@/components/intelligence/useMouvementReduit'
@@ -22,6 +26,8 @@ export interface PropsCarteFrance {
   selection: readonly string[]
   onSelection: (codes: string[]) => void
   className?: string
+  /** Point de départ (tests, rendu serveur) : largeur affichée connue, cadre déjà zoomé. */
+  initial?: { largeur?: number; cadre?: Cadre }
 }
 
 /** Nom d'un encart, coupé en deux lignes quand il est long (la case est étroite). */
@@ -42,13 +48,15 @@ export interface PropsDepartementCarte {
   echelle: number            // pixels d'écran par unité du dessin
   /** Bulles un peu plus petites sur téléphone (la zone tactile reste de 44 px). */
   compact?: boolean
+  /** Sa bulle est absorbée par celle d'un groupe : seul le contour reste. */
+  groupee?: boolean
   focalisable: boolean       // le seul arrêt de tabulation de la carte
   onChoisir: (code: string, origine: 'clic' | 'clavier') => void
   onSurvol: (code: string | null) => void
 }
 
-export function DepartementCarteVue({ dep, compte, choisi, echelle, compact, focalisable, onChoisir, onSurvol }: PropsDepartementCarte) {
-  const r = rayonBulle(compte) * (compact ? 0.78 : 1)
+export function DepartementCarteVue({ dep, compte, choisi, echelle, compact, groupee, focalisable, onChoisir, onSurvol }: PropsDepartementCarte) {
+  const r = rayonAffiche(compte, compact)
   const k = 1 / echelle
   return (
     <g
@@ -67,7 +75,7 @@ export function DepartementCarteVue({ dep, compte, choisi, echelle, compact, foc
       onBlur={() => onSurvol(null)}
     >
       <path className="cf-forme" d={dep.d} />
-      {compte > 0 && (
+      {compte > 0 && !groupee && (
         <g transform={`translate(${dep.cx} ${dep.cy}) scale(${k})`}>
           <circle className="cf-zone" r={Math.max(r, 22)} />
           <g className="cf-bulle-g" data-rayon={r}>
@@ -81,11 +89,53 @@ export function DepartementCarteVue({ dep, compte, choisi, echelle, compact, foc
 }
 const DepartementCarte = memo(DepartementCarteVue)
 
-export default function CarteFrance({ comptes, selection, onSelection, className }: PropsCarteFrance) {
+/* ── Un groupe de départements : une seule bulle, clic ou Entrée = zoomer dessus ───────────── */
+export interface PropsGroupeCarte {
+  groupe: GroupeBulles
+  noms: readonly string[]
+  choisi: boolean            // l'un de ses départements est choisi
+  echelle: number
+  onZoomer: (groupe: GroupeBulles, origine: 'clic' | 'clavier') => void
+  onSurvol: (cle: string | null) => void
+}
+
+export function GroupeCarteVue({ groupe, noms, choisi, echelle, onZoomer, onSurvol }: PropsGroupeCarte) {
+  const cle = cleGroupe(groupe.codes)
+  const k = 1 / echelle
+  return (
+    <g
+      role="button"
+      tabIndex={0}
+      aria-label={libelleGroupe(noms, groupe.compte)}
+      data-groupe={cle}
+      data-choisi={choisi ? '' : undefined}
+      className="cf-groupe"
+      onClick={() => onZoomer(groupe, 'clic')}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onZoomer(groupe, 'clavier') } }}
+      onPointerEnter={() => onSurvol(cle)}
+      onPointerLeave={() => onSurvol(null)}
+      onFocus={() => onSurvol(cle)}
+      onBlur={() => onSurvol(null)}
+    >
+      <g transform={`translate(${groupe.cx} ${groupe.cy}) scale(${k})`}>
+        <circle className="cf-zone" r={Math.max(groupe.rayon, 22)} />
+        <g className="cf-bulle-g" data-rayon={groupe.rayon}>
+          <circle className="cf-bulle" r={groupe.rayon} />
+          <text className="cf-chiffre">{chiffreBulle(groupe.compte)}</text>
+        </g>
+      </g>
+    </g>
+  )
+}
+const GroupeCarte = memo(GroupeCarteVue)
+
+const DUREE_ZOOM = 320   // ms
+
+export default function CarteFrance({ comptes, selection, onSelection, className, initial }: PropsCarteFrance) {
   const telephone = useMedia(REQUETE_TELEPHONE)
   const reduit = useMouvementReduit()
-  const [cadre, setCadre] = useState<Cadre>(PLEIN)
-  const [largeur, setLargeur] = useState(0)
+  const [cadre, setCadre] = useState<Cadre>(initial?.cadre ?? PLEIN)
+  const [largeur, setLargeur] = useState(initial?.largeur ?? 0)
   const [survol, setSurvol] = useState<string | null>(null)
   const [focus, setFocus] = useState<string>(() => {
     const premier = DEPARTEMENTS.find((d) => (comptes[d.code] ?? 0) > 0) ?? DEPARTEMENTS[0]
@@ -100,6 +150,7 @@ export default function CarteFrance({ comptes, selection, onSelection, className
   const clicApresGlisse = useRef(false)
   const cadreRef = useRef(cadre)
   cadreRef.current = cadre
+  const animation = useRef<number | null>(null)
 
   // Largeur affichée → échelle (pixels par unité) : le cadre garde les proportions du dessin entier.
   useEffect(() => {
@@ -113,12 +164,36 @@ export default function CarteFrance({ comptes, selection, onSelection, className
   }, [])
   const echelle = largeur > 0 ? largeur / cadre.w : 1
 
+  const arreterAnimation = useCallback(() => {
+    if (animation.current !== null) { cancelAnimationFrame(animation.current); animation.current = null }
+  }, [])
+  useEffect(() => arreterAnimation, [arreterAnimation])
+
+  // Glisse le cadre vers la cible (320 ms) ; d'un coup si le système demande de réduire les animations.
+  const aller = useCallback((cible: Cadre) => {
+    arreterAnimation()
+    const depart = cadreRef.current
+    if (reduit || typeof requestAnimationFrame === 'undefined') { setCadre(cible); return }
+    const t0 = performance.now()
+    const pas = (t: number) => {
+      const p = Math.min((t - t0) / DUREE_ZOOM, 1)
+      const e = 1 - Math.pow(1 - p, 3)
+      setCadre({
+        x: depart.x + (cible.x - depart.x) * e, y: depart.y + (cible.y - depart.y) * e,
+        w: depart.w + (cible.w - depart.w) * e, h: depart.h + (cible.h - depart.h) * e,
+      })
+      animation.current = p < 1 ? requestAnimationFrame(pas) : null
+    }
+    animation.current = requestAnimationFrame(pas)
+  }, [reduit, arreterAnimation])
+
   // Molette : zoom autour du pointeur. Écouteur natif : React attache « wheel » en passif.
   useEffect(() => {
     const el = svg.current
     if (!el) return
     const surMolette = (e: WheelEvent) => {
       e.preventDefault()
+      arreterAnimation()
       const r = el.getBoundingClientRect()
       const fx = (e.clientX - r.left) / r.width
       const fy = (e.clientY - r.top) / r.height
@@ -127,7 +202,7 @@ export default function CarteFrance({ comptes, selection, onSelection, className
     }
     el.addEventListener('wheel', surMolette, { passive: false })
     return () => el.removeEventListener('wheel', surMolette)
-  }, [])
+  }, [arreterAnimation])
 
   const choisir = useCallback((code: string, origine: 'clic' | 'clavier') => {
     // Le clic qui suit un glisser n'est pas un choix (le clavier n'est jamais concerné).
@@ -139,6 +214,7 @@ export default function CarteFrance({ comptes, selection, onSelection, className
   // Glisser : le cadre suit le doigt ou la souris, seulement une fois le seuil passé (un simple clic reste un clic).
   const surAppui = (e: React.PointerEvent<SVGSVGElement>) => {
     if (e.button !== 0) return
+    arreterAnimation()
     geste.current = { id: e.pointerId, x0: e.clientX, y0: e.clientY, cadre: cadreRef.current, actif: false }
   }
   const surMouvement = (e: React.PointerEvent<SVGSVGElement>) => {
@@ -191,20 +267,44 @@ export default function CarteFrance({ comptes, selection, onSelection, className
     svg.current?.querySelector<SVGGElement>(`[data-code="${suivant}"]`)?.focus()
   }
 
-  const zoomCentre = (facteur: number) => setCadre((c) => zoomer(c, facteur, 0.5, 0.5, PLEIN))
+  const zoomCentre = (facteur: number) => { arreterAnimation(); setCadre((c) => zoomer(c, facteur, 0.5, 0.5, PLEIN)) }
   const zoome = estZoome(cadre, PLEIN)
   useEffect(() => { if (zoome && plan.current) plan.current.style.transform = '' }, [zoome])
 
-  const survolDep = survol ? DEPARTEMENTS.find((d) => d.code === survol) : undefined
-  const infobulle = useMemo(() => {
-    if (!survolDep || largeur <= 0) return null
-    const px = (survolDep.cx - cadre.x) * echelle
-    const py = (survolDep.cy - cadre.y) * echelle
-    if (px < -20 || py < -20 || px > largeur + 20) return null
-    return { gauche: Math.min(Math.max(px, 70), largeur - 70), haut: Math.max(py, 36), texte: libelleDepartement(survolDep.nom, comptes[survolDep.code] ?? 0) }
-  }, [survolDep, cadre, echelle, largeur, comptes])
-
+  const nomsDe = useCallback((codes: readonly string[]) => codes.map((c) => DEPARTEMENTS.find((d) => d.code === c)?.nom ?? c), [])
   const choisis = useMemo(() => new Set(selection), [selection])
+
+  // Bulles qui se chevauchent à l'écran → un groupe (tant que la largeur affichée est inconnue, aucun groupe).
+  const bulles = useMemo<BulleDep[]>(
+    () => DEPARTEMENTS.filter((d) => (comptes[d.code] ?? 0) > 0).map((d) => ({ code: d.code, cx: d.cx, cy: d.cy, compte: comptes[d.code] })),
+    [comptes],
+  )
+  const groupes = useMemo(
+    () => (largeur > 0 ? regrouperBulles(bulles, echelle, { compact: telephone }).filter(estGroupe) : []),
+    [bulles, echelle, largeur, telephone],
+  )
+  const groupees = useMemo(() => new Set(groupes.flatMap((g) => g.codes)), [groupes])
+
+  const infobulle = useMemo(() => {
+    if (!survol || largeur <= 0) return null
+    const groupe = groupes.find((g) => cleGroupe(g.codes) === survol)
+    const survolDep = groupe ? undefined : DEPARTEMENTS.find((d) => d.code === survol)
+    const cible = groupe ?? survolDep
+    if (!cible) return null
+    const texte = groupe ? libelleGroupe(nomsDe(groupe.codes), groupe.compte) : libelleDepartement(survolDep!.nom, comptes[survolDep!.code] ?? 0)
+    const px = (cible.cx - cadre.x) * echelle
+    const py = (cible.cy - cadre.y) * echelle
+    if (px < -20 || py < -20 || px > largeur + 20) return null
+    const demi = Math.min(groupe ? 150 : 70, largeur / 2)   // le texte d'un groupe est long : il passe à la ligne (300 px au plus)
+    return { gauche: Math.min(Math.max(px, demi), largeur - demi), haut: Math.max(py, 36), texte }
+  }, [survol, groupes, cadre, echelle, largeur, comptes, nomsDe])
+
+  const zoomerSurGroupe = useCallback((g: GroupeBulles, origine: 'clic' | 'clavier') => {
+    if (origine === 'clic' && clicApresGlisse.current) { clicApresGlisse.current = false; return }
+    // Au clavier, le groupe disparaît sous le zoom : le focus passe à son premier département (son contour reste dans la page).
+    if (origine === 'clavier') { setFocus(g.codes[0]); svg.current?.querySelector<SVGGElement>(`[data-code="${g.codes[0]}"]`)?.focus() }
+    aller(cadreSurGroupe(bulles, g.codes, largeur, PLEIN, { compact: telephone }))
+  }, [bulles, largeur, telephone, aller])
 
   return (
     <div ref={racine} className={['cf', className].filter(Boolean).join(' ')} data-compact={telephone ? '' : undefined} onPointerLeave={surSortie}>
@@ -240,8 +340,20 @@ export default function CarteFrance({ comptes, selection, onSelection, className
               choisi={choisis.has(d.code)}
               echelle={echelle}
               compact={telephone}
+              groupee={groupees.has(d.code)}
               focalisable={d.code === focus}
               onChoisir={choisir}
+              onSurvol={setSurvol}
+            />
+          ))}
+          {groupes.map((g) => (
+            <GroupeCarte
+              key={cleGroupe(g.codes)}
+              groupe={g}
+              noms={nomsDe(g.codes)}
+              choisi={g.codes.some((c) => choisis.has(c))}
+              echelle={echelle}
+              onZoomer={zoomerSurGroupe}
               onSurvol={setSurvol}
             />
           ))}
@@ -251,7 +363,7 @@ export default function CarteFrance({ comptes, selection, onSelection, className
       <div className="cf-outils">
         <button type="button" className="cf-outil" aria-label="Zoomer sur la carte" onClick={() => zoomCentre(1.6)}><Plus size={18} aria-hidden /></button>
         <button type="button" className="cf-outil" aria-label="Dézoomer" onClick={() => zoomCentre(1 / 1.6)} disabled={!zoome}><Minus size={18} aria-hidden /></button>
-        <button type="button" className="cf-outil" aria-label="Recentrer la carte" onClick={() => setCadre(PLEIN)} disabled={!zoome}><RotateCcw size={16} aria-hidden /></button>
+        <button type="button" className="cf-outil" aria-label="Recentrer la carte" onClick={() => { arreterAnimation(); setCadre(PLEIN) }} disabled={!zoome}><RotateCcw size={16} aria-hidden /></button>
       </div>
     </div>
   )

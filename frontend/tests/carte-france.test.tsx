@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { ReactElement } from 'react'
-import CarteFrance, { DepartementCarteVue } from '@/components/veille/CarteFrance'
+import CarteFrance, { DepartementCarteVue, GroupeCarteVue } from '@/components/veille/CarteFrance'
 import { DEPARTEMENTS, VIEWBOX } from '@/components/veille/donnees/departements'
 import {
   ZOOM_MAX, basculerSelection, cadreSurGroupe, chiffreBulle, cleGroupe, deplacer, estGroupe, libelleGroupe, rayonAffiche, regrouperBulles,
@@ -231,4 +231,70 @@ test('cadreSurGroupe : le cadre montre tout le groupe et défait ses bulles, san
   // groupe inconnu ou largeur inconnue : rien ne bouge
   assert.deepEqual(cadreSurGroupe(bulles, ['zz'], 600, PLEIN), PLEIN)
   assert.deepEqual(cadreSurGroupe(bulles, groupe.codes, 0, PLEIN), PLEIN)
+})
+
+/* ── Rendu du groupe : une bulle, un nom lu, clic ou Entrée = zoom ───────────────────────── */
+const LIBELLE_COURONNE = '115 avis ouverts dans 4 départements : Paris, Hauts-de-Seine, Seine-Saint-Denis, Val-de-Marne'
+const rendre = (props: Partial<React.ComponentProps<typeof CarteFrance>> = {}) =>
+  renderToStaticMarkup(<CarteFrance comptes={COMPTES_COURONNE} selection={[]} onSelection={() => {}} initial={{ largeur: 600 }} {...props} />)
+
+test('à 600 px, Paris et la petite couronne sont un seul bouton avec le total, les contours restent choisissables', () => {
+  const html = rendre()
+  assert.equal((html.match(/data-groupe="/g) ?? []).length, 1, 'un seul groupe')
+  assert.ok(html.includes(`aria-label="${LIBELLE_COURONNE}"`))
+  assert.ok(html.includes('data-groupe="75+92+93+94"'))
+  assert.equal((html.match(/class="cf-bulle"/g) ?? []).length, 2, 'la bulle du groupe et celle du Rhône, pas six')
+  // les quatre départements gardent leur bouton (nom et nombre d'avis) pour la souris et le clavier, mais plus de bulle
+  for (const [code, nom, n] of [['75', 'Paris', 40], ['92', 'Hauts-de-Seine', 25], ['93', 'Seine-Saint-Denis', 30], ['94', 'Val-de-Marne', 20]] as const) {
+    assert.ok(html.includes(`aria-label="${nom}, ${n} avis"`), nom)
+    assert.ok(new RegExp(`data-code="${code}"`).test(html))
+  }
+  assert.ok(html.includes('aria-label="Rhône, 71 avis"'))
+  assert.equal((html.match(/data-choisi/g) ?? []).length, 0, 'rien de choisi')
+  assert.equal((html.match(/role="button"/g) ?? []).length, DEPARTEMENTS.length + 1, 'un bouton par département + le groupe')
+})
+
+test('sans largeur connue (premier rendu), aucune bulle n’est regroupée', () => {
+  const html = rendre({ initial: undefined })
+  assert.equal((html.match(/data-groupe="/g) ?? []).length, 0)
+  assert.equal((html.match(/class="cf-bulle"/g) ?? []).length, 5)
+})
+
+test('un département choisi dans un groupe : le groupe porte data-choisi', () => {
+  assert.equal((rendre({ selection: ['92'] }).match(/data-choisi/g) ?? []).length, 1)
+  assert.equal((rendre({ selection: ['69'] }).match(/data-choisi/g) ?? []).length, 0, 'Rhône n’est pas dans le groupe')
+})
+
+test('après le zoom sur le groupe (cadre obtenu par cadreSurGroupe), les cinq bulles sont individuelles', () => {
+  const bulles = bullesDe(COMPTES_COURONNE)
+  const cadre = cadreSurGroupe(bulles, ['75', '92', '93', '94'], 600, PLEIN)
+  assert.notDeepEqual(cadre, PLEIN, 'le cadre a changé')
+  const html = rendre({ initial: { largeur: 600, cadre } })
+  assert.equal((html.match(/data-groupe="/g) ?? []).length, 0)
+  assert.equal((html.match(/class="cf-bulle"/g) ?? []).length, 5, 'quatre bulles pour la couronne + le Rhône')
+  assert.ok(html.includes(`viewBox="${cadre.x} ${cadre.y} ${cadre.w} ${cadre.h}"`))
+})
+
+test('le groupe : clic, Entrée et Espace demandent le zoom (pas la sélection) ; une autre touche ne fait rien', () => {
+  const groupe = regrouperBulles(bullesDe(COMPTES_COURONNE), echelle600).find(estGroupe)!
+  const recus: string[] = []
+  const el = GroupeCarteVue({
+    groupe, noms: ['Paris', 'Hauts-de-Seine', 'Seine-Saint-Denis', 'Val-de-Marne'], choisi: true, echelle: echelle600,
+    onZoomer: (g, origine) => recus.push(`${g.codes.join('+')}:${origine}`), onSurvol: () => {},
+  }) as ReactElement<{ onClick: () => void; onKeyDown: (e: { key: string; preventDefault: () => void }) => void; 'aria-label': string; tabIndex: number; 'data-choisi'?: string }>
+  assert.equal(el.props['aria-label'], LIBELLE_COURONNE)
+  assert.equal(el.props.tabIndex, 0, 'atteignable au clavier')
+  assert.equal(el.props['data-choisi'], '')
+  el.props.onClick()
+  el.props.onKeyDown({ key: 'Enter', preventDefault: () => {} })
+  el.props.onKeyDown({ key: ' ', preventDefault: () => {} })
+  el.props.onKeyDown({ key: 'a', preventDefault: () => {} })
+  assert.deepEqual(recus, ['75+92+93+94:clic', '75+92+93+94:clavier', '75+92+93+94:clavier'])
+})
+
+test('le groupe respecte le mouvement réduit et reste fait de jetons (aucune couleur en dur)', () => {
+  const code = sansCommentaires(lire('src/components/veille/CarteFrance.tsx'))
+  assert.match(code, /if \(reduit \|\| typeof requestAnimationFrame === 'undefined'\) \{ setCadre\(cible\); return \}/, 'zoom d’un coup si mouvement réduit')
+  const css = lire('src/components/veille/carte-france.css')
+  assert.match(css, /\.cf-groupe\[data-choisi\] \.cf-bulle/)
 })
