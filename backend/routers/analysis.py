@@ -67,6 +67,14 @@ class AnalyzeRequest(BaseModel):
         return lots
 
 
+def conserver_source_avis(avant, apres):
+    """L'analyse réécrit `infos_marche` ; l'origine de l'AO (veille : `source_avis`) doit survivre."""
+    source = avant.get("source_avis") if isinstance(avant, dict) else None
+    if not source:
+        return apres
+    return {**(apres or {}), "source_avis": source}
+
+
 def _lots_inconnus(project, lot_ids: list) -> list:
     """Lots demandés qui ne sont ni détectés, ni sélectionnés, ni ajoutables
     à la main dans l'écran Lots."""
@@ -730,7 +738,7 @@ def _finalize_analysis(
     # (contrôle sans IA) ; sinon écarté, la carte ne montre que le siège.
     from services.lieu_chantier import controler_infos_marche
     infos_marche = controler_infos_marche(infos_marche, all_docs, project.maitre_ouvrage)
-    project.infos_marche = infos_marche or None
+    project.infos_marche = conserver_source_avis(project.infos_marche, infos_marche) or None
 
     # Auto-fill maitre_ouvrage from infos_marche if not already set
     if infos_marche and infos_marche.get("maitre_ouvrage") and not project.maitre_ouvrage:
