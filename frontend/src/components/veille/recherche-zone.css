@@ -1,0 +1,60 @@
+/* Recherche de zone : jetons du système seulement (clair et nuit). */
+.rz { display: flex; flex-direction: column; gap: 12px; position: relative; }
+.rz-recherche { position: relative; display: flex; flex-direction: column; gap: 6px; }
+.rz-etiquette { font: 500 14px/20px var(--font-ui); color: var(--text-2); }
+.rz-champ { position: relative; display: flex; align-items: center; }
+.rz-loupe { position: absolute; left: 12px; color: var(--text-3); pointer-events: none; }
+.rz-saisie {
+  width: 100%; min-height: 44px; padding: 0 44px 0 38px;
+  border: 1px solid var(--border-field); border-radius: var(--radius-sm);
+  background: var(--surface-0); color: var(--text-1); font: 400 16px/24px var(--font-text);
+}
+.rz-saisie::placeholder { color: var(--text-3); }
+.rz-saisie:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: 1px; border-color: var(--accent-ring); }
+.rz-vider {
+  position: absolute; right: 0; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center;
+  color: var(--text-2); border-radius: var(--radius-sm);
+}
+.rz-vider:hover { color: var(--text-1); }
+.rz-vider:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: -2px; }
+
+.rz-menu {
+  position: absolute; z-index: 5; top: 100%; left: 0; right: 0; margin-top: 4px;
+  border: 1px solid var(--border-1); border-radius: var(--radius-md);
+  background: var(--surface-pop); box-shadow: var(--shadow-pop); overflow: hidden;
+}
+.rz-liste { list-style: none; margin: 0; padding: 4px; max-height: 320px; overflow-y: auto; }
+.rz-groupe { display: block; padding: 10px 12px 2px; font: 500 12px/16px var(--font-ui); color: var(--text-3); text-transform: none; }
+.rz-option {
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; column-gap: 12px;
+  min-height: 44px; padding: 10px 12px; border-radius: var(--radius-sm); cursor: pointer; color: var(--text-1);
+}
+.rz-option:hover, .rz-option[aria-selected="true"] { background: var(--surface-1); }
+.rz-option[aria-selected="true"] { outline: 2px solid var(--accent-ring); outline-offset: -2px; }
+.rz-libelle { font: 500 15px/22px var(--font-ui); }
+.rz-detail { font: 400 14px/22px var(--font-text); color: var(--text-2); }
+.rz-etat { margin: 0; padding: 10px 16px 12px; font: 400 14px/20px var(--font-text); color: var(--text-2); border-top: 1px solid var(--border-1); }
+
+.rz-rayon { margin: 0; padding: 0; border: 0; min-width: 0; }
+.rz-rayons { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.rz-rayon-bouton {
+  min-height: 44px; padding: 0 14px; border: 1px solid var(--border-field); border-radius: var(--radius-pill);
+  background: var(--surface-0); color: var(--text-1); font: 500 14px/20px var(--font-ui);
+  transition: background var(--dur-base) var(--ease-link);
+}
+.rz-rayon-bouton:hover { background: var(--surface-1); }
+.rz-rayon-bouton[aria-checked="true"] { background: var(--accent-fill-solid); border-color: var(--accent-fill-solid); color: var(--on-accent); }
+.rz-rayon-bouton:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: 2px; }
+
+.rz-zone { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.rz-puces { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.rz-puce {
+  display: inline-flex; align-items: center; gap: 2px; min-height: 36px; padding: 0 2px 0 12px;
+  border-radius: var(--radius-pill); background: var(--accent-tint-2); color: var(--accent-text); font: 500 14px/20px var(--font-ui);
+}
+.rz-puce-x { width: 44px; height: 44px; margin: -4px -2px -4px 0; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-pill); color: inherit; }
+.rz-puce-x:hover { background: var(--surface-glass-3); }
+.rz-puce-x:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: -4px; }
+.rz-effacer { min-height: 44px; padding: 0 4px; color: var(--accent-text); font: 500 14px/20px var(--font-ui); text-underline-offset: 3px; }
+.rz-effacer:hover { text-decoration: underline; }
+.rz-effacer:focus-visible { outline: 2px solid var(--accent-ring); outline-offset: 2px; }
