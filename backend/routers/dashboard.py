@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import datetime
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func, case
@@ -26,7 +26,8 @@ def get_dashboard_stats(user: User = Depends(get_auth_user), db: Session = Depen
     if cached is not None:
         return cached
 
-    now = date.today()
+    # Même horloge que `depose_at` (UTC) : en heure locale, un dépôt entre 0 h et 1 h le 1er du mois sortait du compteur.
+    now = datetime.utcnow().date()
     first_of_month = now.replace(day=1)
 
     # ── 1 query, 4 aggregates: avoids 4 round-trips against the same scan ───
