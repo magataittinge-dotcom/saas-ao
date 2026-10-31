@@ -124,10 +124,11 @@ def test_une_attribution_est_ignoree(db_session):
 def test_la_requete_ne_demande_que_les_avis_de_marche_de_travaux_a_date_limite_a_venir(db_session):
     requetes = []
     synchroniser(db_session, client({}, requetes), depuis=date(2026, 10, 30), aujourdhui=AUJOURDHUI)
-    assert len(requetes) == 2                                                # 30 et 31 octobre
+    assert len(requetes) == 4                                                # 30 et 31 octobre : avis, puis annulations
     where = requetes[0].url.params["where"]
     assert "nature='APPEL_OFFRE'" in where and "ATTRIBUTION" not in where
     assert "datelimitereponse>=date'2026-10-31'" in where and "type_marche='TRAVAUX'" in where
+    assert requetes[1].url.params["where"] == "nature='ANNULATION' AND dateparution=date'2026-10-30'"
     assert requetes[0].headers["user-agent"] == "Synorix/veille"
     assert requetes[0].url.params["limit"] == "100"
 
@@ -159,13 +160,13 @@ def test_pagination_au_dela_de_100_avis(db_session):
     requetes = []
     resultat = synchroniser(db_session, client(jours, requetes), depuis=date(2026, 10, 30), aujourdhui=date(2026, 10, 30))
     assert resultat.crees == 130 and len(_lignes(db_session)) == 130
-    assert [r.url.params["offset"] for r in requetes] == ["0", "100"]
+    assert [r.url.params["offset"] for r in requetes] == ["0", "100", "0", "100"]   # avis, puis annulations
 
 
 def test_premier_passage_remonte_a_45_jours_puis_reprend_au_dernier_passage(db_session):
     requetes = []
     synchroniser(db_session, client({}, requetes), aujourdhui=AUJOURDHUI)
-    assert len(requetes) == 46
+    assert len(requetes) == 92                                               # 46 jours × (avis + annulations)
     assert "dateparution=date'2026-09-16'" in requetes[0].url.params["where"]
 
     from models.avis_veille import AvisVeille
@@ -176,7 +177,7 @@ def test_premier_passage_remonte_a_45_jours_puis_reprend_au_dernier_passage(db_s
     requetes.clear()
     synchroniser(db_session, client({}, requetes), aujourdhui=AUJOURDHUI)
     assert "dateparution=date'2026-10-28'" in requetes[0].url.params["where"]      # J-1 de chevauchement
-    assert len(requetes) == 4
+    assert len(requetes) == 8
 
 
 def test_un_avis_corrige_remplace_la_ligne_de_l_avis_d_origine(db_session):
@@ -271,3 +272,43 @@ def test_une_ligne_deja_connue_est_mise_a_jour_sans_doublon_si_la_date_limite_ch
                  depuis=date(2026, 10, 30), aujourdhui=AUJOURDHUI)
     (ligne,) = _lignes(db_session)
     assert ligne.date_limite == date(2026, 12, 1)
+
+
+def test_un_avis_d_annulation_retire_l_avis_d_origine(db_session):
+    # Un avis d'annulation (nature ANNULATION, sans date limite) porte son propre idweb et pointe l'avis
+    # annulé par `annonce_lie` (observé sur l'API le 1/11/2026 : 17 en 45 jours).
+    synchroniser(db_session, client({"2026-10-29": [enreg("26-900200"), enreg("26-900201")]}),
+                 depuis=date(2026, 10, 29), aujourdhui=AUJOURDHUI)
+    assert len(_lignes(db_session)) == 2
+    annulation = enreg("26-900260", nature="ANNULATION", annonce_lie=["26-900200"], dateparution="2026-10-30",
+                       datelimitereponse=None)
+    resultat = synchroniser(db_session, client({"2026-10-30": [annulation]}), depuis=date(2026, 10, 30),
+                            aujourdhui=AUJOURDHUI)
+    assert [l.id_boamp for l in _lignes(db_session)] == ["26-900201"]
+    assert resultat.annules == 1 and resultat.crees == 0
+
+
+def test_un_avis_de_marche_a_l_etat_annulation_retire_l_origine_sans_etre_cree(db_session):
+    # Second cas observé : un avis de marché republié à l'état ANNULATION (13 en 45 jours), avec sa date
+    # limite encore à venir : il ne doit ni être servi, ni laisser l'avis d'origine dans la liste.
+    jours = {
+        "2026-10-29": [enreg("26-900300", datelimitereponse="2026-11-20T12:00:00+00:00")],
+        "2026-10-30": [enreg("26-900350", etat="ANNULATION", annonce_lie=["26-900300"], dateparution="2026-10-30",
+                             datelimitereponse="2026-11-20T12:00:00+00:00")],
+    }
+    for _ in range(2):                                   # rejouable : la fenêtre relit l'origine et l'annulation
+        resultat = synchroniser(db_session, client(jours), depuis=date(2026, 10, 29), aujourdhui=AUJOURDHUI)
+        assert _lignes(db_session) == []
+    assert resultat.annules == 1
+    # même chose si l'annulation est lue avant l'origine dans le même passage (idweb plus petit)
+    jours = {"2026-10-30": [enreg("26-900400", etat="ANNULATION", annonce_lie=["26-900450"]), enreg("26-900450")]}
+    synchroniser(db_session, client(jours), depuis=date(2026, 10, 30), aujourdhui=AUJOURDHUI)
+    assert _lignes(db_session) == []
+
+
+def test_l_annulation_est_comptee_mais_rien_n_est_retire_en_simulation(db_session):
+    synchroniser(db_session, client({"2026-10-29": [enreg("26-900500")]}), depuis=date(2026, 10, 29), aujourdhui=AUJOURDHUI)
+    annulation = enreg("26-900560", nature="ANNULATION", annonce_lie=["26-900500"], dateparution="2026-10-30")
+    resultat = synchroniser(db_session, client({"2026-10-30": [annulation]}), depuis=date(2026, 10, 30),
+                            aujourdhui=AUJOURDHUI, simulation=True)
+    assert resultat.annules == 1 and len(_lignes(db_session)) == 1

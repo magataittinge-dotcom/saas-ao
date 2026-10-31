@@ -5,6 +5,8 @@ Champs réellement lus : voir `.claude/echange/sprint-ozcan/veille/BOAMP-API.md`
   * seulement les avis de marché (`nature = APPEL_OFFRE`) de travaux, avec une date limite à venir ;
   * un avis corrigé (nature APPEL_OFFRE, etat RECTIFICATIF) porte son propre idweb et pointe l'avis
     d'origine par `annonce_lie` : il remplace la ligne d'origine ;
+  * une annulation (nature ANNULATION, ou avis de marché à l'état ANNULATION) porte aussi son propre idweb
+    et pointe l'avis annulé par `annonce_lie` : la ligne annulée est retirée, rien n'est créé ;
   * upsert par `id_boamp`, rejouable sans doublon ; les avis dont la date limite est passée sont supprimés.
 Aucune donnée n'est stockée hors des champs du contrat. Aucun secret : l'API est publique.
 """
@@ -56,6 +58,7 @@ class Resultat:
     crees: int = 0
     mis_a_jour: int = 0
     ignores: int = 0
+    annules: int = 0
     supprimes_expires: int = 0
 
     def en_dict(self) -> dict:
@@ -139,6 +142,17 @@ def _date(valeur: Any) -> date | None:
         return date.fromisoformat(str(valeur)[:10])
     except ValueError:
         return None
+
+
+def cibles_annulation(enreg: dict) -> list[str] | None:
+    """Les idweb qu'un avis d'annulation retire (le sien et ceux qu'il pointe), ou None si ce n'en est pas un.
+
+    Deux formes observées sur l'API (1/11/2026, 45 jours) : `nature='ANNULATION'` (17, sans date limite) et
+    avis de marché `nature='APPEL_OFFRE'` + `etat='ANNULATION'` (13, date limite encore à venir)."""
+    if enreg.get("nature") != "ANNULATION" and str(enreg.get("etat") or "").upper() != "ANNULATION":
+        return None
+    propre = [str(enreg["idweb"]).strip()] if enreg.get("idweb") else []
+    return list(dict.fromkeys([*propre, *(str(a) for a in _liste(enreg.get("annonce_lie")))]))
 
 
 def convertir(enreg: dict, aujourdhui: date) -> dict | None:
@@ -241,6 +255,19 @@ class ClientBoamp:
                 return
             offset += PAGE
 
+    def annulations_du_jour(self, jour: date) -> Iterator[dict]:
+        """Les avis d'annulation parus ce jour (ils n'ont pas de date limite : requête à part)."""
+        where = f"nature='ANNULATION' AND dateparution=date'{jour.isoformat()}'"
+        offset = 0
+        while offset + PAGE <= 10000:
+            corps = self._demander({"where": where, "select": "idweb,nature,etat,annonce_lie", "order_by": "idweb",
+                                    "limit": PAGE, "offset": offset})
+            resultats = corps.get("results") or []
+            yield from resultats
+            if len(resultats) < PAGE:
+                return
+            offset += PAGE
+
 
 # ── Synchronisation ────────────────────────────────────────────────────────────────────────────
 
@@ -279,14 +306,34 @@ def synchroniser(db, client: ClientBoamp | None = None, depuis: date | None = No
     client = client or ClientBoamp()
     maintenant = datetime.utcnow()
     vus: set[str] = set()
+    annules: set[str] = set()
     connus = _index_connus(db)
+
+    def retirer(cibles: list[str]) -> None:
+        """Une annulation : la ligne connue sous l'un de ces idweb disparaît, et ces idweb ne seront pas recréés."""
+        annules.update(cibles)
+        for cible in cibles:
+            ligne = connus.get(cible)
+            if ligne is None:
+                continue
+            resultat.annules += 1
+            for identifiant in [ligne.id_boamp, *(ligne.ids_lies or [])]:
+                connus.pop(identifiant, None)
+            if not simulation:
+                db.delete(ligne)
+                db.flush()
+
     try:
         jour = debut
         while jour <= aujourdhui and (limite is None or resultat.retenus < limite):
             for enreg in client.avis_du_jour(jour, aujourdhui):
                 resultat.lus += 1
+                cibles = cibles_annulation(enreg)
+                if cibles is not None:
+                    retirer(cibles)
+                    continue
                 champs = convertir(enreg, aujourdhui)
-                if champs is None or champs["id_boamp"] in vus:
+                if champs is None or champs["id_boamp"] in vus or champs["id_boamp"] in annules:
                     resultat.ignores += 1
                     continue
                 if limite is not None and resultat.retenus >= limite:
@@ -320,6 +367,10 @@ def synchroniser(db, client: ClientBoamp | None = None, depuis: date | None = No
                     connus[identifiant] = ligne
                 if not simulation:
                     db.flush()
+            for enreg in client.annulations_du_jour(jour):
+                cibles = cibles_annulation(enreg)
+                if cibles is not None:
+                    retirer(cibles)
             if not simulation:
                 db.commit()
             jour += timedelta(days=1)

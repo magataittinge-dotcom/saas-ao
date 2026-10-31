@@ -16,7 +16,7 @@ from models.user import User
 from routers.auth import get_auth_user
 from services.cache import org_cache
 
-AUJOURD = date.today()
+AUJOURD = datetime.utcnow().date()      # l'horloge des routes (derniere_visite, created_at) est en UTC
 
 
 @pytest.fixture(autouse=True)
