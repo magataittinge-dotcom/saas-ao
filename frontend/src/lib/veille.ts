@@ -272,3 +272,33 @@ export function etapeElargir(filtres: FiltresAvis, selection: readonly string[],
   const ajout = departementsVoisins(selection, points)
   return ajout.length ? { type: 'voisins', ajout } : null
 }
+
+// ── Affichage d'un avis ──────────────────────────────────────────────────────────────────────
+/** Le lien d'un avis n'est suivi que s'il est en http(s) : jamais de « javascript: » venu d'une source externe. */
+export function urlSure(url: string | null | undefined): string | null {
+  if (!url) return null
+  try {
+    const u = new URL(url)
+    return u.protocol === 'https:' || u.protocol === 'http:' ? u.toString() : null
+  } catch { return null }
+}
+
+export const PROCEDURES_LIBELLES: readonly { code: string; libelle: string }[] = [
+  { code: 'adaptee', libelle: 'Adaptée' },
+  { code: 'ouvert', libelle: 'Ouvert' },
+  { code: 'restreint', libelle: 'Restreint' },
+  { code: 'negociee', libelle: 'Négociée' },
+  { code: 'dialogue', libelle: 'Dialogue' },
+  { code: 'autre', libelle: 'Autre' },
+]
+
+export const DELAIS_JOURS: readonly (7 | 15 | 30 | null)[] = [7, 15, 30, null]
+
+/** « 12/11 » depuis « 2026-11-12 » (jour et mois du tableau de bord). */
+export const jourMois = (iso: string | null) => {
+  const m = iso?.match(/^\d{4}-(\d{2})-(\d{2})/)
+  return m ? `${m[2]}/${m[1]}` : ''
+}
+
+/** Ajoute la valeur à la liste, ou la retire si elle y est (puces de filtre à bascule). */
+export const basculerValeur = (liste: readonly string[], v: string): string[] => (liste.includes(v) ? liste.filter((x) => x !== v) : [...liste, v])

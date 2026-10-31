@@ -123,7 +123,8 @@ export function useVeille() {
     chargePlus: avisQuery.isFetchingNextPage,
     creerAO: creer.mutateAsync,
     creationEnCours: creer.isPending ? (creer.variables ?? null) : null,
-    creationEnErreur: creer.isError,
+    /** Identifiant de l'avis dont la dernière création n'a pas abouti. */
+    creationEnErreurPour: creer.isError ? (creer.variables ?? null) : null,
     elargir,
   }
 }
