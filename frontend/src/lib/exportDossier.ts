@@ -65,10 +65,18 @@ export function etatPiece(
   return { texte: statut.texte, ton, statut }
 }
 
-/** S6 — la ligne au-dessus de « Télécharger le dossier » : les pièces non conformes ne partent pas dans le ZIP. */
+/** S6 — la ligne au-dessus de « Télécharger le dossier » : les pièces non prêtes (à joindre, ou jointes mais à
+ *  confirmer : date, signature) ne partent pas dans le ZIP. Décision du 1/11 : « à joindre ou à confirmer ». */
 export function phrasePiecesAJoindre(n: number): string | null {
   if (n <= 0) return null
   return n === 1
-    ? '1 pièce est à joindre. Elle ne sera pas dans le dossier.'
-    : `${n} pièces sont à joindre. Elles ne seront pas dans le dossier.`
+    ? '1 pièce à joindre ou à confirmer. Elle ne sera pas dans le dossier.'
+    : `${n} pièces à joindre ou à confirmer. Elles ne seront pas dans le dossier.`
+}
+
+/** Le héros de l'export : ce qu'il reste à faire, en une ligne, sans couleur d'alarme (un travail à faire, pas une alerte). */
+export function ligneEtatDossier(aFaire: number, alertes: number, pret: boolean): string {
+  if (pret) return 'Dossier prêt pour le dépôt'
+  if (aFaire > 0) return `${aFaire} pièce${aFaire > 1 ? 's' : ''} à joindre ou à confirmer avant le dépôt`
+  return `${alertes} point${alertes > 1 ? 's' : ''} de contrôle à vérifier`
 }

@@ -4,7 +4,7 @@
 // ZIP contient (pieces_zip) et n'affiche plus aucune fraction « x/y ».
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { etatPiece, phrasePiecesAJoindre } from '@/lib/exportDossier'
+import { etatPiece, ligneEtatDossier, phrasePiecesAJoindre } from '@/lib/exportDossier'
 import { lire, sansCommentaires } from './outils/sources'
 import { textesAffiches } from './outils/textes'
 
@@ -35,8 +35,8 @@ test('l’écran Export : plus de « pièces conformes x/y », liste du ZIP = pi
 // ── S6 — Export à un seul bouton : l'avertissement des pièces est une ligne au-dessus du bouton ──
 
 test('la ligne dit combien de pièces sont à joindre et qu\'elles ne seront pas dans le dossier', () => {
-  assert.equal(phrasePiecesAJoindre(6), '6 pièces sont à joindre. Elles ne seront pas dans le dossier.')
-  assert.equal(phrasePiecesAJoindre(1), '1 pièce est à joindre. Elle ne sera pas dans le dossier.')
+  assert.equal(phrasePiecesAJoindre(6), '6 pièces à joindre ou à confirmer. Elles ne seront pas dans le dossier.')
+  assert.equal(phrasePiecesAJoindre(1), '1 pièce à joindre ou à confirmer. Elle ne sera pas dans le dossier.')
   assert.equal(phrasePiecesAJoindre(0), null)
   for (const n of [1, 2, 12]) assert.doesNotMatch(phrasePiecesAJoindre(n)!, /manquant|incomplet|absent|erreur|attention/i)
 })
@@ -57,4 +57,14 @@ test('l\'export a un seul bouton principal ; PDF seul et Word seul sont sous « 
   const iPoints = code.indexOf('Avant d&apos;envoyer')
   assert.ok(/<details(?![^>]*\bopen\b)[^>]*>\s*<summary[^>]*>\s*Avant d&apos;envoyer/.test(code), '« Avant d\'envoyer » dans un <details> fermé')
   assert.ok(iPoints > 0)
+})
+
+test('le héros de l’export dit ce qu’il reste à faire, sans couleur d’alarme (décision du 1/11)', () => {
+  assert.equal(ligneEtatDossier(0, 0, true), 'Dossier prêt pour le dépôt')
+  assert.equal(ligneEtatDossier(3, 0, false), '3 pièces à joindre ou à confirmer avant le dépôt')
+  assert.equal(ligneEtatDossier(1, 2, false), '1 pièce à joindre ou à confirmer avant le dépôt')
+  assert.equal(ligneEtatDossier(0, 2, false), '2 points de contrôle à vérifier')
+  const src = sansCommentaires(lire('src/routes/project/StepExport.tsx'))
+  assert.ok(!/finaliser avant le dépôt/.test(src))
+  assert.ok(!/var\(--warn\)/.test(src), 'plus de texte orange sur l’écran Export')
 })

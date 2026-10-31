@@ -12,7 +12,7 @@ const PIECES = [
 
 test('l\'avertissement garde la liste des pièces à joindre, sans fenêtre, sans orange, sans second bouton', () => {
   const html = renderToStaticMarkup(<PiecesAJoindre pieces={PIECES} />)
-  assert.ok(html.includes('3 pièces sont à joindre. Elles ne seront pas dans le dossier.'))
+  assert.ok(html.includes('3 pièces à joindre ou à confirmer. Elles ne seront pas dans le dossier.'))
   // la liste complète reste là, chacune avec son état en mots positifs
   for (const t of ['Attestation de vigilance URSSAF', 'à joindre', 'kbis-2025.pdf', 'à renouveler',
     'Lettre de candidature (DC1)', 'date de validité à confirmer']) assert.ok(html.includes(t), t)

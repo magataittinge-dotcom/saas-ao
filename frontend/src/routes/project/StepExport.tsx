@@ -16,7 +16,7 @@ import { phraseSourceSignature, signatureAConfirmer } from '@/components/project
 import PiecesAJoindre from '@/components/project/PiecesAJoindre'
 import ExigencesDuDossier, { type ExigenceExport } from '@/components/project/ExigencesDuDossier'
 import {
-  etatPiece, lignesDuScore, lireAvertissementsExport, resumeExigences, type GroupeExigences,
+  etatPiece, ligneEtatDossier, lignesDuScore, lireAvertissementsExport, resumeExigences, type GroupeExigences,
 } from '@/lib/exportDossier'
 import { messageErreur } from '@/lib/erreurs'
 import { Sigle } from '@/components/common/Sigle'
@@ -476,12 +476,8 @@ export default function StepExport({ project }: Props) {
                 <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>
                   {suiteComptes(totalPieces - conformes, conformes)}
                 </p>
-                <p className="mt-0.5 text-xs font-medium" style={{ color: readyForDeposit ? 'var(--success-fg)' : 'var(--warn)' }}>
-                  {readyForDeposit
-                    ? 'Dossier prêt pour le dépôt'
-                    : gateBlocked
-                      ? `${totalPieces - conformes} pièce${totalPieces - conformes > 1 ? 's' : ''} à finaliser avant le dépôt`
-                      : `${alertCount} point${alertCount > 1 ? 's' : ''} de contrôle à vérifier`}
+                <p className="mt-0.5 text-xs font-medium" style={{ color: readyForDeposit ? 'var(--success-fg)' : 'var(--text-2)' }}>
+                  {ligneEtatDossier(gateBlocked ? totalPieces - conformes : 0, alertCount, readyForDeposit)}
                 </p>
               </div>
             </div>
