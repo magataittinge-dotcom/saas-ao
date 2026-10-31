@@ -20,7 +20,7 @@
   --cf-mer: var(--surface-0);
   --cf-voisin: var(--surface-1);
   --cf-terre: var(--surface-2);
-  --cf-actif: var(--accent-tint);
+  --cf-actif: color-mix(in srgb, var(--accent-tint) 45%, var(--surface-2));   /* la bulle garde 3:1 sur le département */
   --cf-survol: var(--accent-tint-2);
   --cf-choisi: var(--accent-tint-2);
 }

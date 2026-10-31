@@ -100,6 +100,11 @@ test('les flèches du clavier mènent au département voisin dans la bonne direc
   assert.equal(voisinDansLaDirection(points, 'xx', 'haut'), null)
 })
 
+test('en nuit, le département qui compte des avis reste assez sombre pour que la bulle y garde 3:1 (mesuré : 3,13)', () => {
+  const css = lire('src/components/veille/carte-france.css')
+  assert.match(css, /\[data-theme="dark"\] \.cf \{[^}]*--cf-actif: color-mix\(in srgb, var\(--accent-tint\) 45%, var\(--surface-2\)\)/)
+})
+
 test('la carte ne contient aucune couleur écrite en dur (jetons seulement)', () => {
   const css = lire('src/components/veille/carte-france.css').replace(/\/\*[\s\S]*?\*\//g, '')
   assert.doesNotMatch(css, /#[0-9a-fA-F]{3,8}\b/, 'pas de couleur hexadécimale')
