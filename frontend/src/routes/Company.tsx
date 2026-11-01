@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useDonneesEntreprise } from '@/components/entreprise/useDonneesEntreprise'
-import CerveauEntreprise from '@/components/entreprise/CerveauEntreprise'
+import SceneVisage from '@/components/entreprise/SceneVisage'
+import { ContexteVisage } from '@/components/entreprise/ContexteVisage'
+import type { VisageAnimeRef } from '@/components/entreprise/VisageAnime'
 import RubriquesEntreprise from '@/components/entreprise/RubriquesEntreprise'
 import FormIdentite from '@/components/entreprise/FormIdentite'
 import FormMoyens from '@/components/entreprise/FormMoyens'
@@ -27,27 +29,36 @@ export default function Company() {
   const [rubrique, setRubrique] = useState<RubriqueId>(demandee ?? 'identite')
   useEffect(() => { if (demandee) setRubrique(demandee) }, [demandee])
   const donnees = useDonneesEntreprise()
+  const visage = useRef<VisageAnimeRef>(null)
+  // Choisir une rubrique (carte ou bulle) : elle s'ouvre et le visage joue l'éclair.
+  const choisir = (r: RubriqueId) => { setRubrique(r); visage.current?.eclair() }
+  const actions = useRef({ eclair: () => visage.current?.eclair() }).current
 
   return (
+    <ContexteVisage.Provider value={actions}>
     <div className="mx-auto max-w-6xl space-y-6">
-      <CerveauEntreprise
-        titre="Mon entreprise"
-        sousTitre="Votre profil vivant, renseigné une fois, réutilisé par chaque mémoire technique"
-      />
+      <header>
+        <h1 className="font-display text-h5 text-fg">Mon entreprise</h1>
+        <p className="mt-1.5 text-sm text-fg-2">Votre profil vivant, renseigné une fois, réutilisé par chaque mémoire technique</p>
+      </header>
       {!donnees.profilCharge ? (
         <MemoireSkeleton />
       ) : (
+        <>
+        <SceneVisage ref={visage} donnees={donnees} onChoisir={choisir} />
         <RubriquesEntreprise
           donnees={donnees}
           rubrique={rubrique}
-          onChoisir={setRubrique}
+          onChoisir={choisir}
           panneaux={{
             identite: <><DecrireAvecVosMots /><FormIdentite donnees={donnees} /></>,
             moyens: <><DecrireAvecVosMots /><FormMoyens donnees={donnees} /></>,
             certifications: <FormCertifications donnees={donnees} />,
           }}
         />
+        </>
       )}
     </div>
+    </ContexteVisage.Provider>
   )
 }

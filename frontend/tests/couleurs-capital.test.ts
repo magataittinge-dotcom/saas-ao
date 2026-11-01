@@ -30,8 +30,9 @@ export const ECRANS: Record<string, string[]> = {
   'Mon entreprise': [
     'src/routes/Company.tsx',
     'src/components/company/ProfileFreeTextCard.tsx',
-    'src/components/entreprise/CerveauEntreprise.tsx',
-    'src/components/entreprise/CerveauEffets.tsx',
+    'src/components/entreprise/SceneVisage.tsx',
+    'src/components/entreprise/VisageAnime.tsx',
+    'src/components/entreprise/FilsVisage.tsx',
     'src/components/entreprise/RubriquesEntreprise.tsx',
     'src/components/entreprise/FormIdentite.tsx',
     'src/components/entreprise/FormMoyens.tsx',

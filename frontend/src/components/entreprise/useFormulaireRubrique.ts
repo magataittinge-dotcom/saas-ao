@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useVisage } from './ContexteVisage'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { api } from '@/services/api'
@@ -20,6 +21,7 @@ export function useFormulaireRubrique(
   listes?: { enregistrer: () => Promise<void>; invalider: string[] },
 ) {
   const queryClient = useQueryClient()
+  const visage = useVisage()
   const setOrganization = useAuthStore((s) => s.setOrganization)
   const [brouillon, setBrouillon] = useState<Brouillon>(() => brouillonDepuis(rubrique, donnees))
   const [reussi, setReussi] = useState(false)
@@ -47,6 +49,7 @@ export function useFormulaireRubrique(
       for (const cle of listesRef.current?.invalider ?? []) queryClient.invalidateQueries({ queryKey: [cle] })
       setErreur(null)
       setReussi(true)
+      visage.eclair() // enregistrer : le visage joue l'éclair
       setTimeout(() => setReussi(false), 2500)
     },
     onError: (e) => {
