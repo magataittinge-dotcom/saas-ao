@@ -20,6 +20,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from models.depot_entreprise import CoutIA, LectureDepot
+from models.document import Document
 
 USAGE = "depot_entreprise"
 MESSAGES = {
@@ -76,10 +77,16 @@ def raison_de_report(db: Session, org_id: str, avec_file: bool = True) -> Option
 
 def reprendre_differees(db: Session, org_id: str) -> int:
     """Relance, dans l'ordre d'arrivée, les lectures différées dont la place est revenue. Rend le nombre relancé."""
-    from services import depot_extraction
+    from services import depot_extraction, depot_lecture
     relancees = 0
     for lecture in db.query(LectureDepot).filter(
             LectureDepot.organization_id == org_id, LectureDepot.etat == "differee").order_by(LectureDepot.created_at).all():
+        doc = db.query(Document).filter(Document.id == lecture.document_id, Document.organization_id == org_id).first()
+        if doc is None or doc.deleted_at is not None:
+            # supprimé du coffre-fort pendant l'attente : jamais relancé, son texte ne part pas
+            lecture.etat, lecture.message, lecture.terminee_le = "ecartee", depot_lecture.MESSAGE_ECARTEE, datetime.utcnow()
+            db.commit()
+            continue
         if raison_de_report(db, org_id) is not None:
             break
         lecture.etat, lecture.message = "en_lecture", None

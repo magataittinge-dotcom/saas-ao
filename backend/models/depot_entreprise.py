@@ -12,7 +12,7 @@ from datetime import datetime
 from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from database import Base
 
-ETATS_LECTURE = ("en_lecture", "lu", "coffre_seul", "ocr_requis", "echec")
+ETATS_LECTURE = ("en_lecture", "differee", "lu", "coffre_seul", "ocr_requis", "echec", "ecartee")
 STATUTS_PROPOSITION = ("proposee", "validee", "ecartee")
 
 

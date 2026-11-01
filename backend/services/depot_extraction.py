@@ -676,7 +676,11 @@ def traiter_lecture(lecture_id: str) -> None:
             return
         case = case_par_id(lecture.case_depot)
         doc = db.get(Document, lecture.document_id)
-        if case is None or doc is None or doc.organization_id != lecture.organization_id:
+        if doc is None or doc.deleted_at is not None or doc.organization_id != lecture.organization_id:
+            # pièce absente, supprimée du coffre-fort ou d'une autre entreprise : rien ne part au modèle, état terminal
+            _terminer(db, lecture, "ecartee", depot_lecture.MESSAGE_ECARTEE)
+            return
+        if case is None:
             _terminer(db, lecture, "echec", depot_lecture.MESSAGE_ECHEC)
             return
         chemin = _chemin(doc)

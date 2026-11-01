@@ -33,6 +33,7 @@ MAX_CARACTERES_DOCX = 400_000
 
 MESSAGE_OCR = "Image ou scan : lisible seulement avec un OCR."
 MESSAGE_ECHEC = "Ce fichier n'a pas pu être lu."
+MESSAGE_ECARTEE = "Ce fichier a été retiré du coffre-fort : sa lecture est annulée."
 
 _ENTETES_PERSONNELS = re.compile(
     r"\b(?:nom|noms|prenom|prenoms|matricule|nir|secu|securite|adresse|naissance|ne|nee|telephone|tel|mobile|portable|"
