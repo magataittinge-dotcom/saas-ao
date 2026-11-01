@@ -51,3 +51,11 @@ def test_points_bin_reste_sans_cache_comme_avant():
 def test_aucun_autre_location_ne_compresse_les_binaires():
     conf = _sans_commentaires(CONF)
     assert conf.count("application/octet-stream") == 1
+
+
+def test_images_du_cerveau_entreprise_un_jour_de_cache():
+    """Décision 7 du 1er/11 : /entreprise/*.webp (cerveau de « Mon entreprise ») sort du no-cache de location /."""
+    bloc = _bloc(_sans_commentaires(CONF), "location /entreprise/")
+    assert 'add_header Cache-Control "public, max-age=86400";' in bloc
+    assert "synorix-entetes-statiques.conf" in bloc and "try_files $uri =404;" in bloc
+    assert "gzip" not in bloc
