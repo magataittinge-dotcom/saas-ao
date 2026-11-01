@@ -134,3 +134,34 @@ def test_kbis_domicile_personnel_du_dirigeant_masque_mais_pas_le_siege():
 def test_autres_formes_d_etat_civil_masquees(ligne):
     r = _m(ligne)
     assert "1980" not in r.texte and "Lyon" not in r.texte and "Exemples" not in r.texte
+
+
+# ── revue de sécurité du 2/11 : libellé et valeur sur deux lignes (tableaux de PDF), lieu après toutes les formes,
+#    « domicilié », « adresse personnelle ». Valeurs inventées.
+
+@pytest.mark.parametrize("texte", [
+    "Date et lieu de naissance\nLe 12/09/1978 à Riom (63)",
+    "Lieu de naissance :\nRiom (63)",
+    "Date de naissance : 12/09/1978 à Riom (63)",
+    "Date de naissance\n12/09/1978 à Riom",
+    "Naissance le 12/09/1978 à Riom",
+])
+def test_etat_civil_sur_deux_lignes_ou_avec_lieu_masque(texte):
+    r = _m(texte)
+    assert "1978" not in r.texte and "Riom" not in r.texte and "[DATE_NAISSANCE]" in r.texte
+
+
+@pytest.mark.parametrize("texte", [
+    "Domicilié à 8 allée des Volcans Inventés 63200 Riom",
+    "domiciliée au 8 allée des Volcans Inventés 63200 Riom",
+    "Adresse personnelle : 8 allée des Volcans Inventés 63200 Riom",
+    "Domicile personnel\n8 allée des Volcans Inventés 63200 Riom",
+])
+def test_domicile_formes_voisines_et_sur_deux_lignes_masque(texte):
+    r = _m(texte)
+    assert "Volcans" not in r.texte and "63200" not in r.texte and "[ADRESSE]" in r.texte
+
+
+def test_domiciliation_de_l_entreprise_non_masquee():
+    r = _m("Domiciliation : 14 rue des Essais Imaginaires 63000 Clermont-Ferrand")
+    assert "14 rue des Essais Imaginaires" in r.texte
