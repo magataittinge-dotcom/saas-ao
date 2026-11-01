@@ -198,8 +198,7 @@ test('la colonne de la carte reste collée sous l’en-tête à partir de lg (le
   const src = sansCommentaires(lire('src/components/veille/VeilleAccueil.tsx'))
   assert.ok(/lg:sticky lg:top-4 lg:self-start/.test(src))
   assert.ok(!/\bsticky\b/.test(src.replace(/lg:sticky/g, '')), 'jamais collée au téléphone')
-  assert.ok(src.includes('lg:max-w-[max(22rem,calc((100svh_-_30rem)/1.09))]'), 'la carte entière tient dans la hauteur de l’écran')
-  assert.ok(/lg:max-w-\[max\(22rem,calc\(\(100svh_-_30rem\)\/1\.09\)\)\]/.test(src), 'la carte entière tient dans la hauteur de l’écran')
+  assert.ok(!/max-w-\[/.test(src), 'la carte est à pleine largeur : plus bornée par la hauteur de l’écran (décision du 1er/11, le sud coupé est accepté)')
 })
 
 test('les filtres collés sont relâchés avant la dernière carte : parent flow-root raccourci de 16 rem, espace rendu par le bloc suivant', () => {
