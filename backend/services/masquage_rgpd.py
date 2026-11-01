@@ -39,7 +39,9 @@ _IBAN = re.compile(r"(?<![A-Za-z0-9])[A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]{4}){2,7}(?:[ ]
 _EMAIL = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
 _TEL = re.compile(r"(?<![\d.])(?:\+33\s?\(?0?\)?|0033\s?|0)[1-9](?:[ .\-]?\d{2}){4}(?!\d)")
 # Le lieu qui suit la date (« … à Riom (63) ») est masqué avec elle, dans TOUTES les formes (revue du 2/11).
-_LIEU = r"(?:\s+[àa]\s+[A-ZÀ-Ý][\wÀ-ÿ'’\-]+(?:[ \-][A-ZÀ-Ý][\wÀ-ÿ'’\-]+)*(?:\s*\(\w{2,3}\))?)?"
+# Séparateurs admis avant le lieu : espace, virgule, tiret (« …1978, Riom », « …1978 - Riom », 2e revue du 2/11).
+_LIEU = (r"(?:[^\S\n]*[,\-–—]?[^\S\n]*(?:[àa][^\S\n]+)?[A-ZÀ-Ý][\wÀ-ÿ'’\-]+(?:[ \-][A-ZÀ-Ý][\wÀ-ÿ'’\-]+)*"
+         r"(?:[^\S\n]*\(\w{2,3}\))?)?")
 _NAISSANCE = re.compile(
     rf"(?:\bn[ée]e?\s+(?:[àa]\s+[A-ZÀ-Ý][\wÀ-ÿ'’\- ]{{1,40}}?\s+)?le\s+{_DATE}{_LIEU}"
     rf"|\bdate\s+(?:et\s+lieu\s+)?de\s+naissance\s*[:\-]?\s*(?:le\s+)?{_DATE}{_LIEU}"
@@ -50,7 +52,7 @@ _NAISSANCE = re.compile(
 # Essai réel du 2/11/2026 : ces deux lignes partaient au modèle en clair.
 # Revue de sécurité du 2/11 : dans un tableau de PDF, le libellé et sa valeur tombent souvent sur DEUX lignes
 # (« Date et lieu de naissance » puis « Le 12/09/1978 à Riom ») : un libellé seul sur sa ligne masque la ligne suivante.
-_VALEUR_DE_LIGNE = r"[ \t]*[:\-]?[ \t]*(?:[^\s:\-][^\n]*|\n[ \t]*[^\n]+)"
+_VALEUR_DE_LIGNE = r"[^\S\n]*[:\-–—]*[^\S\n]*(?:[^\s:\-–—][^\n]*|\n\s*[^\n]+)"
 _LIEU_NAISSANCE = re.compile(
     r"\b(?:date\s+et\s+lieu\s+de\s+naissance|lieu\s+de\s+naissance|date\s+de\s+naissance|naissance)\b"
     + _VALEUR_DE_LIGNE, re.IGNORECASE)
@@ -106,6 +108,9 @@ def _iban_valide(brut: str) -> bool:
     return int(nombre) % 97 == 1
 
 
+_ESPACES_SPECIAUX = str.maketrans({"\u00a0": " ", "\u202f": " ", "\u2007": " ", "\u2009": " "})
+
+
 @dataclass
 class TexteMasque:
     texte: str
@@ -131,7 +136,9 @@ def masquer(texte: str, personnes: bool = False) -> TexteMasque:
             return f"[{etiquette}]"
         return motif.sub(_sub, texte)
 
-    t = texte or ""
+    # Espaces insécables et retours chariot ramenés à l'espace et au saut de ligne avant tout motif : un « :\u00a0» ou
+    # un « \r\n » ne doit jamais faire manquer un libellé (2e revue de sécurité du 2/11).
+    t = (texte or "").replace("\r\n", "\n").replace("\r", "\n").translate(_ESPACES_SPECIAUX)
     t = remplacer(_IBAN, "IBAN", t, accepte=_iban_valide)
     t = remplacer(_EMAIL, "EMAIL", t)
     t = remplacer(_NAISSANCE, "DATE_NAISSANCE", t)          # d'abord la date seule (« né le …, 12 ans d'expérience »)

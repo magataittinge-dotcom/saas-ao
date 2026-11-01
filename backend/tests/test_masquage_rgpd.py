@@ -165,3 +165,29 @@ def test_domicile_formes_voisines_et_sur_deux_lignes_masque(texte):
 def test_domiciliation_de_l_entreprise_non_masquee():
     r = _m("Domiciliation : 14 rue des Essais Imaginaires 63000 Clermont-Ferrand")
     assert "14 rue des Essais Imaginaires" in r.texte
+
+
+# ── 2e revue de sécurité du 2/11 : séparateurs, espaces insécables, retours chariot. Valeurs inventées.
+
+@pytest.mark.parametrize("texte", [
+    "Date de naissance : 12/09/1978, Riom (63)",
+    "Date de naissance : 12/09/1978 - Riom",
+    "Date et lieu de naissance : Le 12/09/1978 à Riom",
+    "Date et lieu de naissance\r\nLe 12/09/1978 à Riom",
+    "Lieu de naissance :: Riom",
+    "Lieu de naissance – Riom",
+    "Lieu de naissance\n\n  Riom (63)",
+])
+def test_etat_civil_separateurs_et_espaces_speciaux(texte):
+    r = _m(texte)
+    assert "1978" not in r.texte and "Riom" not in r.texte
+
+
+@pytest.mark.parametrize("texte", [
+    "Domicile personnel : 8 allée des Volcans Inventés 63200 Riom",
+    "Domicile personnel\r\n8 allée des Volcans Inventés 63200 Riom",
+    "Adresse personnelle – 8 allée des Volcans Inventés 63200 Riom",
+])
+def test_domicile_separateurs_et_espaces_speciaux(texte):
+    r = _m(texte)
+    assert "Volcans" not in r.texte and "63200" not in r.texte
