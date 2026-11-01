@@ -130,6 +130,18 @@ def _largeurs(ws: Worksheet, largeurs: list) -> None:
         ws.column_dimensions[ws.cell(1, i).column_letter].width = l
 
 
+def _hauteur_ligne(textes: list, largeurs: list) -> float:
+    """Hauteur (points) d'une ligne dont les cellules passent à la ligne : LibreOffice et Excel ne recalculent pas toujours
+    la hauteur d'une cellule à retours à la ligne, et le texte se chevaucherait. ~1,15 caractère de Calibri 10 par unité de
+    largeur de colonne ; 13 points par ligne, plus 4 de marge."""
+    lignes = 1
+    for texte, largeur in zip(textes, largeurs):
+        if isinstance(texte, str) and texte:
+            utile = max(1.0, largeur * 1.15)
+            lignes = max(lignes, sum(max(1, -(-len(par) // int(utile))) for par in texte.split("\n")))
+    return min(409.0, 13.0 * lignes + 4)
+
+
 def _date_iso(brut: Any) -> Optional[date]:
     try:
         return date.fromisoformat(str(brut)) if brut else None
@@ -148,19 +160,27 @@ def _feuille_information(wb: Workbook, st: _Style, pris: set, titre: str, lignes
     noms = ("Information", "Valeur") + (("Échéance",) if avec_echeance else ())
     _entete_classeur(ws, st, donnees, bordereau, len(noms))
     _intitules(ws, st, noms)
+    largeurs = [38, 78] + ([14] if avec_echeance else [])
     for i, l in enumerate(lignes, start=_ENTETES_COLONNES + 1):
-        _poser(ws.cell(i, 1), l.get("libelle") or "", font=st.gras, alignment=Alignment(vertical="top", wrap_text=True, indent=1),
+        libelle = l.get("libelle") or ""
+        if libelle.isdigit():                                    # un effectif reste un nombre (pas de « nombre en texte »)
+            libelle = int(libelle)
+        _poser(ws.cell(i, 1), libelle, font=st.gras, alignment=Alignment(vertical="top", horizontal="left", wrap_text=True, indent=1),
                border=st.bordure)
         _poser(ws.cell(i, 2), l["valeur"], font=st.texte, alignment=st.haut, border=st.bordure)
+        ws.row_dimensions[i].height = _hauteur_ligne([str(libelle), l["valeur"]], largeurs)
         if avec_echeance:
             fin = _date_iso(l.get("fin"))
             c = ws.cell(i, 3)
             if fin is not None:
                 c.value, c.number_format = fin, FORMAT_DATE
             c.font, c.alignment, c.border = st.texte, st.haut_centre, st.bordure
-    _largeurs(ws, [38, 78] + ([14] if avec_echeance else []))
+    _largeurs(ws, largeurs)
     _mise_en_page(ws, paysage=False, colonnes=len(noms))
     return ws
+
+
+LARGEURS_REFERENCES = [6, 36, 19, 72, 18]
 
 
 def _feuille_references(wb: Workbook, st: _Style, pris: set, ref: dict, donnees: dict, bordereau: dict) -> Worksheet:
@@ -184,6 +204,7 @@ def _feuille_references(wb: Workbook, st: _Style, pris: set, ref: dict, donnees:
         if x.get("montant_valeur") is not None:
             c.value, c.number_format = float(x["montant_valeur"]), FORMAT_EUROS
         c.font, c.alignment, c.border = st.gras, st.haut_droite, st.bordure
+        ws.row_dimensions[ligne].height = _hauteur_ligne([str(x['numero']), client, "", chantier], LARGEURS_REFERENCES)
     total = ref["total"]
     ligne += 1
     n = total["chantiers"]
@@ -200,7 +221,7 @@ def _feuille_references(wb: Workbook, st: _Style, pris: set, ref: dict, donnees:
         ws.cell(ligne, 5).number_format = FORMAT_EUROS
     ligne += 1
     _poser(ws.cell(ligne, 1), ref["note"], font=st.note, alignment=Alignment(vertical="top"))
-    _largeurs(ws, [6, 36, 19, 72, 18])
+    _largeurs(ws, LARGEURS_REFERENCES)
     _mise_en_page(ws, paysage=True, colonnes=len(noms))
     return ws
 

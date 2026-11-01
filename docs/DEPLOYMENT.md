@@ -222,6 +222,8 @@ SYNORIX_PDFIUM_ATTENTE_EXTRACTION_S=600   # idem pour l'extraction au dépôt (l
 SYNORIX_X_ACCEL_PREFIX=/_fichiers_internes   # document entier servi par nginx (§8) ; vide en dev
 SYNORIX_CACHE_APERCUS_DIR=/srv/synorix/backend/cache/apercus   # cache des images d'aperçu (hors webroot)
 SYNORIX_CACHE_APERCUS_MO=2048      # plafond du cache, éviction LRU (2 Go = 2 % du disque de 100 Go)
+SYNORIX_CACHE_FICHES_DIR=/srv/synorix/backend/cache/fiches   # pages d'aperçu des fiches « Mon entreprise » (hors webroot)
+SYNORIX_CACHE_FICHES_MO=256        # plafond à part, éviction LRU (une fiche = 1 à 5 pages de ~100 Ko)
 ```
 
 ### LibreOffice : fichiers déposés convertis sans secret ni réseau
