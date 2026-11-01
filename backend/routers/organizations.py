@@ -75,7 +75,8 @@ def update_my_organization(
     if not org:
         raise HTTPException(status_code=404, detail="Organisation introuvable")
 
-    for field, value in payload.model_dump(exclude_none=True).items():
+    # Seuls les champs envoyés sont écrits ; un champ envoyé à null est effacé (le capital social, par exemple).
+    for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(org, field, value)
 
     db.commit()

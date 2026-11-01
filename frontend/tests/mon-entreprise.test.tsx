@@ -181,6 +181,11 @@ test('charge utile : les champs existants partent vers les mêmes routes, avec l
   assert.deepEqual(Object.keys(c.profil!).sort(), [...CHAMPS_PROFIL.identite.filter((k) => !['metiers', 'departements_intervention'].includes(k)), 'nom_entreprise'].sort())
   assert.equal(c.profil!.gerant_nom, 'Camille Démo')
   assert.deepEqual(c.profil!.chiffre_affaires, CONFIG.chiffre_affaires)
+  // Capital social : un nombre part tel quel ; vidé alors qu'il était renseigné, il part à null (la route efface) ; jamais saisi, il ne part pas
+  const avecCapital = { ...DONNEES, organisation: { ...ORG, capital_social: 40000 } }
+  assert.equal(chargeUtile('identite', brouillonDepuis('identite', avecCapital), avecCapital).organisation!.capital_social, 40000)
+  assert.equal(chargeUtile('identite', { ...brouillonDepuis('identite', avecCapital), organisation: { ...brouillonDepuis('identite', avecCapital).organisation, capital_social: '' as unknown as number } }, avecCapital).organisation!.capital_social, null)
+  assert.ok(!('capital_social' in chargeUtile('identite', brouillonDepuis('identite', DONNEES), DONNEES).organisation!))
   // Moyens : le profil seulement (PUT /memoire-config), rien pour l'organisation
   const m = chargeUtile('moyens', brouillonDepuis('moyens', DONNEES), DONNEES)
   assert.equal(m.organisation, null)

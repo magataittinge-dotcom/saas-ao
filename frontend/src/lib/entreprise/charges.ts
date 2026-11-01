@@ -102,7 +102,8 @@ export function chargeUtile(rubrique: RubriqueId, b: Brouillon, d: DonneesEntrep
     if (ORGANISATION_NEUVE.includes(k) && !renseigne(v) && !renseigne(d.organisation?.[k])) continue // champs de la migration 0029 : seulement renseignés ou déjà présents
     if (NOMBRES_ORGANISATION.includes(k)) {
       const n = typeof v === 'number' ? v : Number(v)
-      if (v !== '' && v !== null && v !== undefined && Number.isFinite(n)) organisation[k] = n // la route ne sait pas effacer un nombre
+      if (v !== '' && v !== null && v !== undefined && Number.isFinite(n)) organisation[k] = n
+      else organisation[k] = null // vidé à l'écran alors qu'il était renseigné : null efface (PATCH exclude_unset)
       continue
     }
     organisation[k] = v ?? ''

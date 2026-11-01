@@ -142,6 +142,14 @@ def test_organisation_bornes_refusees(deux, corps):
     assert _client(deux[0]).patch("/api/organizations/me", json=corps).status_code == 422
 
 
+def test_organisation_capital_social_effacable_par_null_et_champ_omis_intact(deux):
+    c = _client(deux[0])
+    c.patch("/api/organizations/me", json={"capital_social": 40000, "greffe_rcs": "Reims"})
+    assert c.patch("/api/organizations/me", json={"capital_social": None}).status_code == 200
+    corps = c.get("/api/organizations/me").json()
+    assert corps["capital_social"] is None and corps["greffe_rcs"] == "Reims", "null efface ; un champ non envoyé reste"
+
+
 def test_organisation_champ_vide_accepte_pour_effacer(deux):
     c = _client(deux[0])
     c.patch("/api/organizations/me", json={"email_contact": "x@exemple.fr", "telephone": "0231000000"})
