@@ -73,7 +73,7 @@ def etat_case(db: Session, org_id: str, case: CaseDepot) -> dict:
     fichiers = [_fichier(l, nom, en_attente.get(l.id, 0)) for l, nom in lectures]
     total = sum(f["propositions"] for f in fichiers)
     etats = [f["etat"] for f in fichiers]
-    notes = [f["message"] for f in fichiers if f["message"] and f["etat"] in ("coffre_seul", "ocr_requis", "echec")]
+    notes = [f["message"] for f in fichiers if f["message"] and f["etat"] in ("coffre_seul", "ocr_requis", "echec")]   # « differee » a sa phrase dans le libellé
     plafond = next((f for f in fichiers if f["plafond_atteint"]), None)
 
     if not fichiers:
@@ -82,6 +82,9 @@ def etat_case(db: Session, org_id: str, case: CaseDepot) -> dict:
         etat, libelle, vers_verifier = "en_lecture", LIBELLE_EN_LECTURE, False
     elif total > 0:
         etat, libelle, vers_verifier = "lu", libelle_lu(total), True
+    elif "differee" in etats:
+        raison = next(f["message"] for f in fichiers if f["etat"] == "differee")
+        etat, libelle, vers_verifier = "differee", f"{LIBELLE_COFFRE} · {raison}", False
     elif "lu" in etats:
         etat, libelle, vers_verifier = "traite", "Lu · informations traitées", False
     elif "ocr_requis" in etats:
@@ -101,4 +104,6 @@ def etat_case(db: Session, org_id: str, case: CaseDepot) -> dict:
 
 def etats(db: Session, org_id: str, rubrique: Optional[str] = None) -> list[dict]:
     reprendre_lectures_abandonnees(db, org_id)
+    from services import depot_budget
+    depot_budget.reprendre_differees(db, org_id)     # la place est peut-être revenue (nouveau jour, nouveau mois, file vidée)
     return [etat_case(db, org_id, c) for c in cases_de(rubrique)]

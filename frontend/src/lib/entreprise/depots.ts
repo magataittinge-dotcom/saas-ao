@@ -18,7 +18,8 @@ export interface CaseDefinition {
   max_fichiers: number
 }
 
-export type EtatLecture = 'vide' | 'en_lecture' | 'lu' | 'traite' | 'coffre_seul' | 'ocr_requis' | 'echec'
+// « differee » : plafond de lecture atteint (appels du jour, dépense du mois, file) ; le fichier est au coffre-fort, la lecture reprendra.
+export type EtatLecture = 'vide' | 'en_lecture' | 'lu' | 'traite' | 'coffre_seul' | 'differee' | 'ocr_requis' | 'echec'
 
 export interface FichierCase {
   lecture_id: string

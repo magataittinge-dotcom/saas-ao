@@ -37,7 +37,7 @@ from models.qualification import Qualification
 from models.reference import Reference
 from schemas.profil_entreprise import LigneEffectif, LigneHabilitation, LigneMoyen
 from schemas.qualification import QualificationCreate
-from services import couts_ia, depot_lecture, file_storage, masquage_rgpd
+from services import couts_ia, depot_budget, depot_lecture, file_storage, masquage_rgpd
 from services.ai import depot_extracteur
 from services.ai.profile_structurer import _norm, _value_grounded_in_text
 from services.depot_cases import CaseDepot, case_par_id
@@ -694,8 +694,18 @@ def traiter_lecture(lecture_id: str) -> None:
         if not lu.lisible:
             _terminer(db, lecture, "coffre_seul", lu.message, lu=lu)
             return
-        nb = _extraire(db, lecture, case, doc, lu)
-        _terminer(db, lecture, "lu", lu.message if lu.plafond_atteint else None, nb, lu)
+        nb, arret, appels = _extraire(db, lecture, case, doc, lu)
+        if arret is not None and appels == 0:
+            # le plafond a été atteint (par une autre lecture) avant le premier appel : la lecture est différée, pas perdue
+            _terminer(db, lecture, "differee", depot_budget.MESSAGES[arret], 0, lu)
+            lecture.terminee_le = None
+            db.commit()
+            return
+        message = lu.message if lu.plafond_atteint else None
+        if arret is not None:
+            suite = "demain" if arret == "jour" else "le mois prochain"
+            message = f"Lecture partielle : plafond atteint. Redéposez le fichier {suite} pour lire la suite."
+        _terminer(db, lecture, "lu", message, nb, lu)
         logger.info("depot : lecture terminée (case=%s, propositions=%d, plafond=%s)", case.id, nb, lu.plafond_atteint)
     except Exception as exc:    # jamais de contenu : le type de l'erreur et l'identifiant suffisent
         logger.error("depot : lecture %s en échec (%s)", lecture_id[:8], type(exc).__name__, exc_info=False)
@@ -710,8 +720,8 @@ def traiter_lecture(lecture_id: str) -> None:
         db.close()
 
 
-def _extraire(db, lecture: LectureDepot, case: CaseDepot, doc: Document, lu: Lecture) -> int:
-    """Masque, découpe, appelle le modèle, garde, compare, enregistre. Rend le nombre de propositions."""
+def _extraire(db, lecture: LectureDepot, case: CaseDepot, doc: Document, lu: Lecture) -> tuple[int, Optional[str], int]:
+    """Masque, découpe, appelle le modèle, garde, compare, enregistre. Rend (propositions, raison d'arrêt, appels faits)."""
     masquees: list[Unite] = []
     noms: set = set()
     for u in lu.unites:
@@ -720,7 +730,12 @@ def _extraire(db, lecture: LectureDepot, case: CaseDepot, doc: Document, lu: Lec
         noms |= set(m.noms)
     morceaux = decouper(masquees)[:MAX_MORCEAUX]
     sorties: list[dict] = []
+    arret: Optional[str] = None
     for morceau in morceaux:
+        # Le plafond du jour ou du mois peut être atteint entre deux appels d'une lecture longue : on s'arrête là.
+        arret = depot_budget.raison_de_report(db, lecture.organization_id, avec_file=False)
+        if arret is not None:
+            break
         champs, usage = depot_extracteur.extraire(case.extracteur, morceau)
         couts_ia.enregistrer(db, lecture.organization_id, USAGE_COUT, depot_extracteur.MODELE, usage, lecture.id)
         sorties.append(champs)
@@ -738,7 +753,7 @@ def _extraire(db, lecture: LectureDepot, case: CaseDepot, doc: Document, lu: Lec
             source_fichier=_source_fichier(case, doc), source_page=unite.page if unite else None,
             source_lieu=unite.lieu if unite else None, extrait=extrait, statut="proposee"))
     db.commit()
-    return len(brouillons)
+    return len(brouillons), arret, len(sorties)
 
 
 def _source_fichier(case: CaseDepot, doc: Document) -> str:

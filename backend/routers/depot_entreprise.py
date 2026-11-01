@@ -27,7 +27,7 @@ from models.depot_entreprise import LectureDepot
 from models.document import Document
 from models.user import User
 from routers.auth import get_auth_user
-from services import depot_cases, depot_controles, depot_extraction, depot_validation, upload_validation
+from services import depot_budget, depot_cases, depot_controles, depot_extraction, depot_validation, upload_validation
 from services.audit_logger import log_action
 from services.depot_etat import etats
 from services.file_storage import FileStorage
@@ -40,7 +40,7 @@ storage = FileStorage()
 
 _REGLE = upload_validation.RegleDepot(
     frozenset(depot_cases.EXTENSIONS), depot_cases.PLAFOND_OCTETS, depot_cases.FORMATS_LISIBLES)
-_ETATS_QUI_BLOQUENT_LE_REDEPOT = ("en_lecture", "lu", "coffre_seul", "ocr_requis")
+_ETATS_QUI_BLOQUENT_LE_REDEPOT = ("en_lecture", "differee", "lu", "coffre_seul", "ocr_requis")
 
 
 def _sha256(flux) -> str:
@@ -103,6 +103,7 @@ async def deposer(
             detail=f"{depot_cases.MAX_FICHIERS_PAR_ENVOI} fichiers au plus par envoi.")
 
     org_id = user.organization_id
+    depot_budget.reprendre_differees(db, org_id)     # les fichiers plus anciens passent avant ceux-ci
     resultats: list[dict] = []
     total_octets = 0
     a_lire: list[str] = []
@@ -149,9 +150,13 @@ async def deposer(
         )
         db.add(doc)
         db.flush()
+        # Plafonds de la lecture (appels du jour, dépense du mois, file) : au-delà, le fichier reste au coffre-fort,
+        # sans lecture, et sera lu quand la place reviendra.
+        raison = depot_budget.raison_de_report(db, org_id)
         lecture = LectureDepot(
             organization_id=org_id, document_id=doc.id, case_depot=case.id, rubrique=case.rubrique,
-            sha256=empreinte, etat="en_lecture")
+            sha256=empreinte, etat="differee" if raison else "en_lecture",
+            message=depot_budget.MESSAGES[raison] if raison else None)
         db.add(lecture)
         db.commit()
         # Jamais le nom du fichier dans le journal : un CV ou une liste du personnel peut porter un nom de personne.
@@ -160,7 +165,8 @@ async def deposer(
         resultats.append({
             "nom": nom, "accepte": True, "deja_depose": False, "document_id": doc.id,
             "lecture_id": lecture.id, "etat": lecture.etat})
-        a_lire.append(lecture.id)
+        if not raison:
+            a_lire.append(lecture.id)
 
     # La lecture est détachée (fil « synorix-depot-* ») : la réponse part tout de suite avec l'état « En lecture… » ;
     # le front interroge l'état de la case. Une seule lecture à la fois par entreprise.
