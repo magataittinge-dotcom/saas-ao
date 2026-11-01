@@ -28,6 +28,12 @@ celery_app.conf.beat_schedule = {
         "task": "tasks.veille_boamp.synchroniser_veille",
         "schedule": 21600,
     },
+    # Dépôt par rubrique — reprise des lectures reportées (plafond du jour / du mois / file pleine), toutes les heures,
+    # dans la limite des plafonds de chaque entreprise (services/depot_budget.py).
+    "depot-lectures-differees-1h": {
+        "task": "tasks.depot_lectures.reprendre_lectures_differees",
+        "schedule": 3600,
+    },
 }
 
 

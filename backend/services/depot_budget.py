@@ -6,8 +6,11 @@ Trois plafonds, vérifiés AVANT de lancer une lecture (et avant chaque appel d'
 - lectures en attente par entreprise (`DEPOT_LECTURES_EN_ATTENTE`, 10 par défaut) : la file est bornée.
 Jours et mois sont comptés en UTC. Au-delà, le fichier entre quand même au coffre-fort, sans lecture : l'état est
 « Déposé dans le coffre-fort · lecture automatique reprise demain » (ou « le mois prochain », ou « dès qu'une place se
-libère »). La lecture reprend d'elle-même quand la place revient, à la prochaine ouverture de l'écran ou au prochain dépôt
-(aucun planificateur : rien ne tourne la nuit). Un redépôt identique ne compte pas : il ne crée aucune lecture.
+libère »). La lecture reprend d'elle-même quand la place revient : à la prochaine ouverture de l'écran, au prochain
+dépôt, et toutes les heures par la tâche Celery beat `tasks.depot_lectures.reprendre_lectures_differees` (qui lit
+jusqu'au bout dans la tâche : `reprendre_differees(..., synchrone=True)`). Une lecture est PRISE par un UPDATE conditionnel
+(`etat = 'differee'`) : si l'API et le beat reprennent la même en même temps, un seul la lance. Un redépôt identique ne
+compte pas : il ne crée aucune lecture.
 Les valeurs par défaut sont des décisions à valider par Mohamed.
 """
 from __future__ import annotations
@@ -75,22 +78,78 @@ def raison_de_report(db: Session, org_id: str, avec_file: bool = True) -> Option
     return None
 
 
-def reprendre_differees(db: Session, org_id: str) -> int:
-    """Relance, dans l'ordre d'arrivée, les lectures différées dont la place est revenue. Rend le nombre relancé."""
+def _prendre(db: Session, lecture_id: str, org_id: str) -> bool:
+    """Prise ATOMIQUE d'une lecture différée : l'UPDATE ne touche la ligne que si elle est encore « differee » (et de CETTE
+    entreprise). Une seule reprise (API ou beat) voit « 1 ligne touchée » ; l'autre n'a rien à lancer."""
+    touchees = db.query(LectureDepot).filter(
+        LectureDepot.id == lecture_id, LectureDepot.organization_id == org_id, LectureDepot.etat == "differee",
+    ).update({"etat": "en_lecture", "message": None}, synchronize_session=False)
+    db.commit()
+    return touchees == 1
+
+
+def _lire_ici(db: Session, lecture_id: str, org_id: str) -> None:
+    """Lit dans le fil courant (tâche Celery), une lecture à la fois par entreprise (même verrou que les fils détachés).
+    Une erreur inattendue ne laisse pas la lecture « en_lecture » pour toujours : elle passe en « echec », puis remonte."""
+    from services import depot_extraction, depot_lecture
+    with depot_extraction._verrou(org_id):
+        try:
+            depot_extraction.traiter_lecture(lecture_id)
+        except Exception:
+            db.rollback()
+            db.query(LectureDepot).filter(LectureDepot.id == lecture_id, LectureDepot.organization_id == org_id,
+                                          LectureDepot.etat == "en_lecture").update(
+                {"etat": "echec", "message": depot_lecture.MESSAGE_ECHEC, "terminee_le": datetime.utcnow()},
+                synchronize_session=False)
+            db.commit()
+            raise
+
+
+def reprendre_differees(db: Session, org_id: str, *, synchrone: bool = False) -> int:
+    """Relance, dans l'ordre d'arrivée, les lectures différées de CETTE entreprise dont la place est revenue. Rend le nombre
+    relancé. ``synchrone=False`` (API) : chaque lecture part dans un fil détaché. ``synchrone=True`` (tâche Celery) : elle
+    va jusqu'au bout dans le fil appelant, une à la fois."""
     from services import depot_extraction, depot_lecture
     relancees = 0
-    for lecture in db.query(LectureDepot).filter(
-            LectureDepot.organization_id == org_id, LectureDepot.etat == "differee").order_by(LectureDepot.created_at).all():
-        doc = db.query(Document).filter(Document.id == lecture.document_id, Document.organization_id == org_id).first()
+    a_voir = db.query(LectureDepot.id, LectureDepot.document_id).filter(
+        LectureDepot.organization_id == org_id, LectureDepot.etat == "differee").order_by(LectureDepot.created_at).all()
+    for lecture_id, document_id in a_voir:
+        doc = db.query(Document).filter(Document.id == document_id, Document.organization_id == org_id).first()
         if doc is None or doc.deleted_at is not None:
             # supprimé du coffre-fort pendant l'attente : jamais relancé, son texte ne part pas
-            lecture.etat, lecture.message, lecture.terminee_le = "ecartee", depot_lecture.MESSAGE_ECARTEE, datetime.utcnow()
+            db.query(LectureDepot).filter(LectureDepot.id == lecture_id, LectureDepot.organization_id == org_id,
+                                          LectureDepot.etat == "differee").update(
+                {"etat": "ecartee", "message": depot_lecture.MESSAGE_ECARTEE, "terminee_le": datetime.utcnow()},
+                synchronize_session=False)
             db.commit()
             continue
         if raison_de_report(db, org_id) is not None:
             break
-        lecture.etat, lecture.message = "en_lecture", None
-        db.commit()
-        depot_extraction.lancer(lecture.id, org_id)
+        if not _prendre(db, lecture_id, org_id):
+            continue                                   # l'autre processus (API ou beat) l'a prise entre-temps
+        if synchrone:
+            _lire_ici(db, lecture_id, org_id)
+        else:
+            depot_extraction.lancer(lecture_id, org_id)
         relancees += 1
     return relancees
+
+
+def reprendre_pour_toutes_les_entreprises(db: Session) -> dict:
+    """Tâche horaire : pour chaque entreprise ayant des lectures différées, reprend ce que les plafonds permettent.
+    Une entreprise en erreur n'arrête pas les autres. Rend des comptes seulement (jamais de texte, de nom ni d'identifiant)."""
+    import logging
+    journal = logging.getLogger("tasks.depot_lectures")
+    organisations = [o for (o,) in db.query(LectureDepot.organization_id).filter(
+        LectureDepot.etat == "differee").distinct().order_by(LectureDepot.organization_id).all()]
+    relancees = erreurs = 0
+    for org_id in organisations:
+        try:
+            relancees += reprendre_differees(db, org_id, synchrone=True)
+        except Exception as exc:                       # le type de l'erreur suffit ; pas de trace (elle pourrait porter du contenu)
+            db.rollback()
+            erreurs += 1
+            journal.error("depot : reprise horaire en échec pour une entreprise (%s)", type(exc).__name__)
+    journal.info("depot : reprise horaire (%d entreprise(s), %d lecture(s) relancée(s), %d erreur(s))",
+                 len(organisations), relancees, erreurs)
+    return {"organisations": len(organisations), "relancees": relancees, "erreurs": erreurs}
