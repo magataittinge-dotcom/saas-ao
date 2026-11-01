@@ -192,7 +192,7 @@ function Fiche({ rubrique }: { rubrique: RubriqueFiche }) {
       </nav>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,15.5rem)_minmax(0,1fr)_minmax(0,19rem)] lg:items-start xl:gap-8" data-trois-zones>
-        <div className="order-3 lg:order-none"><ZoneContenu rubrique={rubrique} donnees={data.donnees} libres={bordereau.lignes_libres} /></div>
+        <div className="order-3 lg:order-none"><ZoneContenu rubrique={rubrique} donnees={data.donnees} libres={bordereau.lignes_libres} apresValidation={() => { void client.invalidateQueries({ queryKey: cleFiche(rubrique) }) }} /></div>
 
         <section aria-labelledby="zone-apercu" data-zone="apercu" className="order-1 min-w-0 space-y-3 lg:order-none">
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">

@@ -6,6 +6,7 @@ import assert from 'node:assert/strict'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type { CaseDefinition } from '@/lib/entreprise/depots'
 import FichePreview from '@/components/fiche/FichePreview'
 import FicheEntreprise from '@/routes/FicheEntreprise'
 import { estThemee } from '@/components/layout/Layout'
@@ -198,9 +199,14 @@ const reponse = (donnees: FicheDonnees, b = bordereau()): FicheReponse => ({
   sections_libres: ['01', '02', '03', '04', '05', '06', '07'], palette: paletteFiche(b.couleur), donnees,
 })
 
-function ecran(donnees: FicheDonnees) {
+function caseDepot(id: string, rubrique: CaseDefinition['rubrique'], nom: string): CaseDefinition {
+  return { id, rubrique, nom, contenu: 'Un document inventé.', usage: 'Synorix le lit et propose.', formats: ['pdf'], plafond_mo: 20, plusieurs_fichiers: true, max_fichiers: 10 }
+}
+
+function ecran(donnees: FicheDonnees, cases?: CaseDefinition[]) {
   const client = new QueryClient()
   client.setQueryData(['fiche-entreprise', donnees.rubrique], reponse(donnees))
+  if (cases) client.setQueryData(['depots', 'cases'], cases)
   return renderToStaticMarkup(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[`/entreprise/fiche/${donnees.rubrique}`]}>
@@ -249,9 +255,22 @@ test('zone 1 : une phrase par fiche, les sections avec « Prête » ou « À ren
   assert.match(html, /href="\/company\?rubrique=moyens&amp;champ=effectifs"/)
   assert.match(html, /aria-label="Renseigner : Véhicules"/)
   assert.match(html, /aria-label="Modifier : Matériel"/)
-  // l'emplacement de la zone de dépôt est réservé, vide, pour le coordinateur
-  const source = lire('src/components/fiche/ZoneContenu.tsx')
-  assert.ok(source.includes('{/* ZONE-DEPOT : branchée par le coordinateur (phase B) */}'))
+  // la zone de dépôt (phase B) : les cases de la rubrique, branchées sous les sections ; la validation recharge la fiche
+  const source = sansCommentaires(lire('src/components/fiche/ZoneContenu.tsx'))
+  assert.match(source, /<CasesDepot rubrique=\{rubrique\} apresValidation=\{apresValidation\} disposition="colonne" \/>/)
+  assert.ok(!lire('src/components/fiche/ZoneContenu.tsx').includes('ZONE-DEPOT'), 'plus d\'emplacement vide')
+  assert.match(sansCommentaires(lire('src/routes/FicheEntreprise.tsx')), /apresValidation=\{\(\) => \{ void client\.invalidateQueries\(\{ queryKey: cleFiche\(rubrique\) \}\) \}\}/)
+  const avecCases = ecran(moyens, [
+    caseDepot('materiel', 'moyens', 'Liste du matériel ou inventaire'), caseDepot('personnel', 'moyens', 'Organigramme ou liste du personnel'),
+    caseDepot('fiche_moyens', 'moyens', 'Fiche des moyens déjà faite (PDF ou Word)'), caseDepot('kbis', 'identite', 'Extrait Kbis'),
+  ])
+  const zone1 = avecCases.slice(avecCases.indexOf('data-zone="contenu"'))
+  assert.match(zone1, /data-depots="moyens"/, 'les cases de dépôt sont dans la zone 1')
+  assert.ok(zone1.indexOf('data-sections-fiche') < zone1.indexOf('data-depots="moyens"'), 'sous la liste des sections')
+  for (const nom of ['Liste du matériel ou inventaire', 'Organigramme ou liste du personnel', 'Fiche des moyens déjà faite (PDF ou Word)']) assert.ok(zone1.includes(nom), nom)
+  assert.ok(!zone1.includes('Extrait Kbis'), 'seulement les cases de la rubrique de la fiche')
+  const grille = zone1.match(/<div data-disposition="colonne" class="([^"]*)"/)
+  assert.ok(grille && !/grid-cols/.test(grille[1]), 'zone étroite : une case sous l\'autre à toutes les largeurs')
   // une phrase, ton sobre, pour chacune des trois fiches
   for (const r of ['identite', 'moyens', 'certifications'] as const) assert.ok(A_QUOI_SERT[r].length > 60 && !/!|manquant|incomplet|absent/i.test(A_QUOI_SERT[r]))
   assert.equal(new Set(Object.values(A_QUOI_SERT)).size, 3)

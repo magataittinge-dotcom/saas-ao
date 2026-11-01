@@ -1,11 +1,19 @@
 // Zone 1, « Ce qu'il y a dans la fiche » : à quoi elle sert, ses sections avec « Prête » ou « À renseigner », et le lien qui
-// ouvre le bon champ de Mon entreprise. L'état se lit au mot et à l'icône, jamais à la couleur seule.
+// ouvre le bon champ de Mon entreprise. L'état se lit au mot et à l'icône, jamais à la couleur seule. Puis les cases de
+// dépôt de la rubrique (les mêmes que dans Mon entreprise) : ce qui est validé entre dans le profil, et l'aperçu se refait.
 import { Link } from 'react-router-dom'
 import { CheckCircle2, CircleDashed } from 'lucide-react'
+import CasesDepot from '@/components/entreprise/CasesDepot'
 import { A_QUOI_SERT, LIBELLE_ETAT, contenuDeLaFiche } from '@/lib/fichePage'
 import type { FicheDonnees, LigneLibre, RubriqueFiche } from '@/lib/fiche'
 
-export default function ZoneContenu({ rubrique, donnees, libres }: { rubrique: RubriqueFiche; donnees: FicheDonnees; libres: LigneLibre[] }) {
+export default function ZoneContenu({ rubrique, donnees, libres, apresValidation }: {
+  rubrique: RubriqueFiche
+  donnees: FicheDonnees
+  libres: LigneLibre[]
+  /** Des propositions viennent d'entrer dans le profil : la page recharge les données de la fiche (l'aperçu suit). */
+  apresValidation?: () => void
+}) {
   const lignes = contenuDeLaFiche(rubrique, donnees, libres)
   return (
     <section aria-labelledby="zone-contenu" data-zone="contenu" className="min-w-0 space-y-4">
@@ -35,7 +43,7 @@ export default function ZoneContenu({ rubrique, donnees, libres }: { rubrique: R
           )
         })}
       </ul>
-      {/* ZONE-DEPOT : branchée par le coordinateur (phase B) */}
+      <CasesDepot rubrique={rubrique} apresValidation={apresValidation} disposition="colonne" />
     </section>
   )
 }

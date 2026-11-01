@@ -184,8 +184,12 @@ export function EncartCompris({ propositions, coches, onBasculer, onValider, onT
   )
 }
 
-/** Les cases de la rubrique, côte à côte : trois pour l'identité et les moyens, deux pour les certifications. */
-export function GrilleCases({ rubrique, cases, etats, envoi, erreurs, onFichiers, onVerifier, titre = 'Déposer vos documents' }: {
+/**
+ * Les cases de la rubrique, côte à côte : trois pour l'identité et les moyens, deux pour les certifications. En
+ * disposition « colonne » (la zone étroite de la page de fiche), l'une sous l'autre à toutes les largeurs.
+ */
+export type DispositionCases = 'grille' | 'colonne'
+export function GrilleCases({ rubrique, cases, etats, envoi, erreurs, onFichiers, onVerifier, titre = 'Déposer vos documents', disposition = 'grille' }: {
   rubrique: RubriqueId
   cases: CaseDefinition[]
   etats: CaseEtat[]
@@ -194,6 +198,7 @@ export function GrilleCases({ rubrique, cases, etats, envoi, erreurs, onFichiers
   onFichiers: (caseId: string, fichiers: File[]) => void
   onVerifier: () => void
   titre?: ReactNode
+  disposition?: DispositionCases
 }) {
   const definitions = casesDeLaRubrique(cases, rubrique)
   return (
@@ -202,7 +207,7 @@ export function GrilleCases({ rubrique, cases, etats, envoi, erreurs, onFichiers
         <h3 className="font-display text-base font-semibold text-fg">{titre}</h3>
         <p className="mt-0.5 text-sm text-fg-2">Chaque case a son rôle : un fichier déposé ici n'est jamais pris pour autre chose. Il entre dans votre coffre-fort, puis Synorix vous propose ce qu'il y a lu.</p>
       </div>
-      <div className={cn('grid gap-3.5', definitions.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-3')}>
+      <div data-disposition={disposition} className={cn('grid gap-3.5', disposition === 'grille' && (definitions.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-3'))}>
         {definitions.map((d) => (
           <CaseDepotVue
             key={d.id}
@@ -223,7 +228,12 @@ const CLES_PROFIL_A_RECHARGER = ['memoire-config', 'team', 'references', 'docume
  * Mon entreprise et la page de la fiche l'emploient telle quelle. `apresValidation` est appelé quand des informations
  * viennent d'entrer dans le profil (le formulaire de la rubrique se recharge de lui-même : ses sources sont rechargées).
  */
-export default function CasesDepot({ rubrique, apresValidation }: { rubrique: RubriqueId; apresValidation?: () => void }) {
+export default function CasesDepot({ rubrique, apresValidation, disposition = 'grille' }: {
+  rubrique: RubriqueId
+  apresValidation?: () => void
+  /** « colonne » : les cases l'une sous l'autre (zone étroite de la page de fiche). */
+  disposition?: DispositionCases
+}) {
   const queryClient = useQueryClient()
   const setOrganization = useAuthStore((s) => s.setOrganization)
   const [envoi, setEnvoi] = useState<Record<string, boolean>>({})
@@ -310,7 +320,7 @@ export default function CasesDepot({ rubrique, apresValidation }: { rubrique: Ru
     <div className="space-y-5">
       <GrilleCases
         rubrique={rubrique} cases={definitions.data} etats={etats.data ?? []} envoi={envoi} erreurs={erreurs}
-        onFichiers={deposer} onVerifier={verifier}
+        onFichiers={deposer} onVerifier={verifier} disposition={disposition}
       />
       {liste.length > 0 ? (
         <EncartCompris

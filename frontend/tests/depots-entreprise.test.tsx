@@ -149,7 +149,7 @@ test('aucune occurrence de « manquant », « incomplet » ni « absent » dans 
 
 test('composant réutilisable tel quel : pour seule entrée la rubrique, rien qui suppose la page Mon entreprise', () => {
   const src = sansCommentaires(lire('src/components/entreprise/CasesDepot.tsx'))
-  assert.match(src, /export default function CasesDepot\(\{ rubrique, apresValidation \}: \{ rubrique: RubriqueId; apresValidation\?: \(\) => void \}\)/)
+  assert.match(src, /export default function CasesDepot\(\{ rubrique, apresValidation, disposition = 'grille' \}: \{\s*rubrique: RubriqueId\s*apresValidation\?: \(\) => void\s*disposition\?: DispositionCases\s*\}\)/)
   for (const interdit of ['routes/Company', 'useFormulaireRubrique', 'useDonneesEntreprise', 'ContexteVisage', 'react-router']) assert.ok(!src.includes(interdit), interdit)
 })
 
