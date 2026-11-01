@@ -36,7 +36,7 @@ export default function Layout() {
         <Header onSearch={() => setPalette(true)} />
         <main
           className={cn(
-            'flex flex-1 flex-col overflow-y-auto px-3 py-5 sm:px-4',
+            'relative flex flex-1 flex-col overflow-y-auto px-3 py-5 sm:px-4',
             themee ? 'bg-surface-0' : 'bg-surface-0 text-fg-2',
           )}
           data-theme={themee ? undefined : 'dark'}

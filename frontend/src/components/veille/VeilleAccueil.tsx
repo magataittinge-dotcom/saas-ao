@@ -42,7 +42,11 @@ export default function VeilleAccueil() {
       <div className="mt-6 grid grid-cols-1 gap-x-10 gap-y-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
         <div className="min-w-0 space-y-4 lg:sticky lg:top-4 lg:self-start">
           <RechercheZone selection={v.zone.selection} ville={v.zone.ville} onZone={v.setZone} />
-          <CarteFrance comptes={v.comptes} selection={v.zone.selection} onSelection={(codes) => v.setZone({ selection: codes, ville: null })} />
+          {/* Colonne collée : la carte entière doit tenir dans la hauteur de l'écran (sinon le sud est coupé tant qu'on descend).
+              Largeur max = (hauteur d'écran − 30 rem de recherche, puces et mentions) / 1,09 (rapport hauteur/largeur de la carte), jamais sous 22 rem. */}
+          <div className="lg:mx-auto lg:max-w-[max(22rem,calc((100svh_-_30rem)/1.09))]">
+            <CarteFrance comptes={v.comptes} selection={v.zone.selection} onSelection={(codes) => v.setZone({ selection: codes, ville: null })} />
+          </div>
           <p className="text-[13px] text-fg-3">
             {v.totalComptes > 0 ? `${v.totalComptes} avis ouverts en France` : v.chargeEnCours ? 'Chargement de la carte…' : 'Aucun avis ouvert pour ces filtres'}
             {actualisation ? ` · ${actualisation}` : ''}
