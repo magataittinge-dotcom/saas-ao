@@ -68,3 +68,13 @@ def test_court_signale_toujours_la_coupure_par_points_de_suspension():
     sans_phrase = fd._court("mot " * 40, 30)
     assert sans_phrase.endswith(" …") and len(sans_phrase) <= 32
     assert not fd._court("a. " * 5, 100).endswith("…")
+
+
+def test_validite_sur_fiche_valable_tant_que_non_echue():
+    from datetime import date, timedelta
+    from services import fiches_donnees as fd
+    jour = date(2026, 11, 1)
+    assert fd._validite(None, jour) == "À confirmer"
+    assert fd._validite(jour + timedelta(days=20), jour) == "valable jusqu'au 21/11/2026"
+    assert fd._validite(jour + timedelta(days=1), jour) == "valable jusqu'au 02/11/2026"
+    assert fd._validite(jour - timedelta(days=1), jour) == "À renouveler (échue le 31/10/2026)"

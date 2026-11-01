@@ -165,7 +165,8 @@ def test_word_references_tableau_total_note_et_sections(db_session, entreprise):
     assert "Montants exprimés en euros hors taxes" in texte and "« sous-traitance »" in texte
     # Qualifications, assurances, habilitations avec leur validité.
     assert "QUALIFICATIONS ET LABELS" in texte and "Qualibat" in texte and "valable jusqu'au" in texte
-    assert "Assurance décennale" in texte and "À renouveler avant le 21/11/2026" in texte
+    assert "Assurance décennale" in texte and "valable jusqu'au 21/11/2026" in texte      # échéance dans 20 jours : encore valable pour l'acheteur
+    assert "À renouveler avant" not in texte
     assert "Sauveteurs secouristes du travail (SST)" in texte and "4 personnes" in texte
     # Le total du tableau est la somme des lignes.
     assert d["references"]["total"]["montant"] == "1 037 825 € HT"

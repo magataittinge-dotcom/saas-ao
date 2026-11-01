@@ -13,7 +13,7 @@ sur les prix : le tableau des références reprend les montants saisis, il ne le
 from __future__ import annotations
 
 import re
-from datetime import date, timedelta
+from datetime import date
 from typing import Any, Optional
 
 from sqlalchemy.orm import Session
@@ -164,12 +164,12 @@ def _court(texte: str, limite: int = MAX_TEXTE_SECTION) -> str:
 
 
 def _validite(fin: Optional[date], jour: date) -> str:
+    """Validité d'une pièce telle qu'un acheteur la lit : une pièce non échue est « valable jusqu'au … », même si
+    elle expire bientôt (le rappel « à renouveler » est celui du coffre-fort et de Mon entreprise, pas de la fiche)."""
     if fin is None:
         return "À confirmer"
     if fin < jour:
         return f"À renouveler (échue le {date_fr(fin)})"
-    if fin <= jour + timedelta(days=60):
-        return f"À renouveler avant le {date_fr(fin)}"
     return f"valable jusqu'au {date_fr(fin)}"
 
 
