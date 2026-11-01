@@ -41,7 +41,8 @@ PAGES_MAX = 20                  # une fiche fait 1 à 5 pages ; au-delà, les 20
 FORMATS = ("pdf", "docx", "xlsx")
 PLAFOND_MO_DEFAUT = 256
 _RACINE_BACKEND = Path(__file__).resolve().parents[1]
-_ETATS_MAX = 64
+ETATS_MAX_PAR_ENTREPRISE = 8     # états retenus par entreprise (LRU) : une entreprise ne peut pas évincer celles des autres
+ETATS_TERMINES_MAX = 512         # plafond global de sécurité, sur les seules entrées terminées (prêt, erreur)
 MESSAGE_INDISPONIBLE = "Aperçu simplifié : le rendu exact est indisponible pour le moment."
 
 
@@ -150,15 +151,35 @@ class _Entreprise:
 
 _verrou = threading.Lock()
 _entreprises: dict[str, _Entreprise] = {}
-_etats: "OrderedDict[str, dict]" = OrderedDict()      # empreinte -> {org, rubrique, etat, message}
+# org_id -> {empreinte -> {rubrique, etat, message, ordre}}, du plus ancien au plus récent. Une table PAR entreprise : l'éviction
+# ne touche que celle de l'entreprise qui demande, et jamais une entrée « en cours » (une entreprise en a au plus deux : celle
+# qui tourne et celle qui attend) ; le plafond global ne porte que sur les entrées terminées.
+_etats: "dict[str, OrderedDict[str, dict]]" = {}
+_ordre = 0
 LANCEMENTS: list[str] = []                             # empreintes réellement lancées (observé par les tests)
 
 
 def _noter(emp: str, org_id: str, rubrique: str, etat: str, message: str = "") -> None:
-    _etats[emp] = {"org": org_id, "rubrique": rubrique, "etat": etat, "message": message}
-    _etats.move_to_end(emp)
-    while len(_etats) > _ETATS_MAX:
-        _etats.popitem(last=False)
+    """Note l'état d'une empreinte pour son entreprise (appelé sous ``_verrou``) puis borne les tables."""
+    global _ordre
+    _ordre += 1
+    table = _etats.setdefault(org_id, OrderedDict())
+    table[emp] = {"rubrique": rubrique, "etat": etat, "message": message, "ordre": _ordre}
+    table.move_to_end(emp)
+    for ancien in [e for e, v in table.items() if v["etat"] != "en_cours"]:         # les plus anciennes terminées d'abord
+        if len(table) <= ETATS_MAX_PAR_ENTREPRISE:
+            break
+        del table[ancien]
+    termines = [(v["ordre"], o, e) for o, t in _etats.items() for e, v in t.items() if v["etat"] != "en_cours"]
+    if len(termines) > ETATS_TERMINES_MAX:
+        for _, o, e in sorted(termines)[: len(termines) - ETATS_TERMINES_MAX]:
+            del _etats[o][e]
+    for o in [o for o, t in _etats.items() if not t]:
+        del _etats[o]
+
+
+def _etat_de(org_id: str, emp: str) -> Optional[dict]:
+    return _etats.get(org_id, {}).get(emp)
 
 
 def demander_apercu(org_id: str, rubrique: str, format_: str, donnees: dict, bordereau: dict, pal: dict,
@@ -173,8 +194,8 @@ def demander_apercu(org_id: str, rubrique: str, format_: str, donnees: dict, bor
         return {"etat": "indisponible", "empreinte": emp, "message": MESSAGE_INDISPONIBLE}
     travail = _Travail(emp, org_id, rubrique, format_, donnees, bordereau, pal, logo_png)
     with _verrou:
-        connu = _etats.get(emp)
-        if connu and connu["org"] == org_id and connu["etat"] == "en_cours":
+        connu = _etat_de(org_id, emp)
+        if connu and connu["etat"] == "en_cours":
             return {"etat": "en_cours", "empreinte": emp}               # la même demande tourne ou attend déjà
         entreprise = _entreprises.setdefault(org_id, _Entreprise())
         _noter(emp, org_id, rubrique, "en_cours")
@@ -230,8 +251,8 @@ def etat_apercu(org_id: str, rubrique: str, emp: str) -> Optional[dict]:
     if meta is not None:
         return {"etat": "pret", "pages": int(meta["pages"]), "message": ""}
     with _verrou:
-        connu = _etats.get(emp)
-    if connu is None or connu["org"] != org_id or connu["rubrique"] != rubrique:
+        connu = _etat_de(org_id, emp)
+    if connu is None or connu["rubrique"] != rubrique:
         return None
     if connu["etat"] == "pret":                      # noté prêt mais évincé du cache depuis : à redemander
         return {"etat": "erreur", "pages": 0, "message": "L'aperçu a expiré : il va être régénéré."}

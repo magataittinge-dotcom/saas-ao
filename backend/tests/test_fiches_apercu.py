@@ -356,3 +356,97 @@ def test_reel_parcours_complet_par_la_route(client, deux_entreprises, tmp_path, 
     r = client.get(f"{BASE}/identite/apercu/{emp}/pages/1")
     assert r.status_code == 200 and Image.open(io.BytesIO(r.content)).size[0] == rendu.LARGEUR_PX
     rendu.oublier_tout()
+
+
+# ─── Table des états : plafond PAR entreprise, jamais d'éviction d'un « en cours » (revue du coordinateur) ───
+
+@pytest.fixture
+def fabrique_a_marqueur(simule, monkeypatch):
+    """Fabrication simulée sans base : le PDF porte le marqueur des données ; celui qui finit par « B » attend ``porte``."""
+    porte, entree = threading.Event(), threading.Event()
+
+    def faux_fabriquer(format_, donnees, bordereau, pal, logo):
+        return b"%PDF " + donnees["marqueur"].encode(), "application/pdf"
+
+    def rendre(pdf, largeur, pages_max=20):
+        if pdf.endswith(b"BLOQUE"):
+            entree.set()
+            assert porte.wait(15)
+        return 1, [_webp(1)]
+
+    monkeypatch.setattr(rendu, "fabriquer", faux_fabriquer)
+    monkeypatch.setattr(rendu, "rendre_document_webp", rendre)
+    yield porte, entree
+    porte.set()
+
+
+def _demande(org, marqueur):
+    return rendu.demander_apercu(org, "moyens", "pdf", {"marqueur": marqueur}, {"titre": marqueur}, {}, None)
+
+
+def _fin_des_fils(delai=10.0):
+    fin = time.monotonic() + delai
+    while rendu._entreprises and time.monotonic() < fin:
+        time.sleep(0.01)
+    assert not rendu._entreprises
+
+
+def test_100_demandes_de_a_n_evincent_pas_l_etat_de_b(fabrique_a_marqueur):
+    porte, entree = fabrique_a_marqueur
+    eb = _demande("org-b", "BLOQUE")["empreinte"]
+    assert entree.wait(5)
+    for i in range(100):
+        _demande("org-a", f"a{i}")
+    assert rendu.etat_apercu("org-b", "moyens", eb)["etat"] == "en_cours"        # toujours là, toujours en cours
+    porte.set()
+    fin = time.monotonic() + 10
+    while rendu.etat_apercu("org-b", "moyens", eb)["etat"] != "pret" and time.monotonic() < fin:
+        time.sleep(0.02)
+    assert rendu.etat_apercu("org-b", "moyens", eb) == {"etat": "pret", "pages": 1, "message": ""}
+    _fin_des_fils()
+
+
+def test_une_entree_en_cours_n_est_jamais_evincee(fabrique_a_marqueur):
+    porte, entree = fabrique_a_marqueur
+    e1 = _demande("org-a", "BLOQUE")["empreinte"]                                   # la plus ancienne, en cours
+    assert entree.wait(5)
+    for i in range(100):
+        _demande("org-a", f"a{i}")
+    assert rendu.etat_apercu("org-a", "moyens", e1)["etat"] == "en_cours"
+    porte.set()
+    _fin_des_fils()
+
+
+def test_la_table_d_une_entreprise_reste_bornee_et_les_plus_anciennes_terminees_partent(fabrique_a_marqueur):
+    porte, _ = fabrique_a_marqueur
+    premiere = None
+    for i in range(30):
+        e = _demande("org-a", f"a{i}")["empreinte"]
+        premiere = premiere or e
+        fin = time.monotonic() + 10
+        while rendu.etat_apercu("org-a", "moyens", e) and rendu.etat_apercu("org-a", "moyens", e)["etat"] == "en_cours" \
+                and time.monotonic() < fin:
+            time.sleep(0.005)
+    _fin_des_fils()
+    assert len(rendu._etats["org-a"]) <= rendu.ETATS_MAX_PAR_ENTREPRISE == 8
+    assert e in rendu._etats["org-a"]                                               # la plus récente reste
+    assert premiere not in rendu._etats["org-a"]                                    # la plus ancienne terminée est partie
+
+
+def test_plafond_global_de_securite_sur_les_seules_entrees_terminees(fabrique_a_marqueur, monkeypatch):
+    porte, entree = fabrique_a_marqueur
+    monkeypatch.setattr(rendu, "ETATS_TERMINES_MAX", 6)
+    en_cours = _demande("org-z", "BLOQUE")["empreinte"]
+    assert entree.wait(5)
+    for k in range(10):
+        org = f"org-{k}"
+        _demande(org, f"x{k}")
+    # attendre que les autres entreprises aient terminé (celle de z reste bloquée)
+    fin = time.monotonic() + 10
+    while any(o != "org-z" for o in rendu._entreprises) and time.monotonic() < fin:
+        time.sleep(0.01)
+    termines = sum(1 for t in rendu._etats.values() for v in t.values() if v["etat"] != "en_cours")
+    assert termines <= 6
+    assert rendu.etat_apercu("org-z", "moyens", en_cours)["etat"] == "en_cours"
+    porte.set()
+    _fin_des_fils()
