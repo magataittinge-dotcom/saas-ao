@@ -1,4 +1,4 @@
-# Synorix — Celery beat (planificateur : scan quotidien, purge B18).
+# Synorix — Celery beat (planificateur : scan quotidien, purge B18, veille BOAMP, reprise horaire des lectures de dépôt).
 # Installé en /etc/systemd/system/synorix-celery-beat.service (procédure : VPS.md).
 [Unit]
 Description=Synorix Celery beat
