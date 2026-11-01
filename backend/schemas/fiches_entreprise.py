@@ -24,6 +24,11 @@ _COULEUR_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
 _CONTROLE_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f￾￿]")
 
 
+def retirer_controles(texte: str) -> str:
+    """Retire les caractères de contrôle (jamais valides en XML), sans toucher aux espaces."""
+    return _CONTROLE_RE.sub("", texte)
+
+
 def nettoyer(texte: Optional[str]) -> Optional[str]:
     """Retire les caractères de contrôle (jamais valides en XML) et rogne les blancs."""
     if texte is None:

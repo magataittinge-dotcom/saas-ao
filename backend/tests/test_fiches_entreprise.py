@@ -103,7 +103,7 @@ def test_get_moyens_donnees_et_defauts(client, deux_entreprises):
     assert [s["id"] for s in d["sections"]] == ["01", "02", "03", "04", "05", "06", "07"]
     sec = {s["id"]: s for s in d["sections"]}
     assert sec["02"]["texte"].startswith("Logiciel de métrés")
-    assert any(l["valeur"] == "Camille Martin" for l in sec["01"]["lignes"])
+    assert any(l["valeur"] == "Conducteur de travaux — Camille Martin" for l in sec["01"]["lignes"])
     assert any("Extrait Kbis" in l["libelle"] for l in sec["07"]["lignes"])
     assert {l["libelle"]: l["valeur"] for l in d["lignes_cles"]}["Zone d'intervention"] == "Marne et Aube"
     assert j["palette"]["bandeau"].startswith("#")

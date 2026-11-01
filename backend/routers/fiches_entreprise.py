@@ -7,12 +7,15 @@ par le serveur, jamais lu du corps ni de l'adresse) : aucune fiche d'une autre e
 """
 import asyncio
 import io
+import re
+import unicodedata
 from typing import Optional
+from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile
 from sqlalchemy.orm import Session
 
-from database import get_db
+from database import get_db, rendre_connexion
 from models.fiche_entreprise import FicheEntreprise
 from models.organization import Organization
 from models.user import User
@@ -21,6 +24,7 @@ from schemas.fiches_entreprise import (
     COULEUR_PAR_DEFAUT, RUBRIQUES, SECTIONS, BordereauIn,
 )
 from services import fiches_donnees as donnees_fiche
+from services import fiches_entreprise as generation
 from services import fiches_logo
 from services.file_storage import FileStorage, sign_file_path
 from services.rate_limit import limiter
@@ -196,3 +200,50 @@ def retirer_logo(
     logo, origine = logo_de_la_fiche(org, fiche)
     return {"logo_url": _url_signee(org.id, logo), "logo_origine": origine}
 
+
+def _nom_de_fichier(rubrique: str, societe: str, extension: str) -> str:
+    nu = unicodedata.normalize("NFKD", societe or "").encode("ascii", "ignore").decode("ascii")
+    nu = re.sub(r"[^A-Za-z0-9]+", "_", nu).strip("_")[:40]
+    return f"{donnees_fiche.NOMS_FICHIER[rubrique]}{'_' + nu if nu else ''}.{extension}"
+
+
+@router.post("/{rubrique}/generer")
+@limiter.limit("10/minute")
+def generer_fiche(
+    request: Request,
+    rubrique: str,
+    format_: str = Query("pdf", alias="format", pattern="^(pdf|docx)$"),
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """Word ou PDF de la fiche, produit sur le serveur à partir des données et du bordereau ENREGISTRÉS de
+    l'entreprise de l'utilisateur (même mise en page que l'aperçu). Le fichier est renvoyé dans la réponse :
+    il n'est ni stocké ni accessible par une adresse."""
+    _rubrique_ou_404(rubrique)
+    org = _org_ou_404(db, user)
+    if format_ == "pdf" and not generation.soffice_available():
+        raise HTTPException(
+            status_code=503,
+            detail="Le PDF est indisponible sur ce serveur pour le moment — téléchargez la version Word.",
+        )
+    fiche = _fiche(db, org.id, rubrique)
+    bordereau = bordereau_effectif(org, fiche, rubrique)
+    donnees = donnees_fiche.assembler(db, org.id, rubrique)
+    logo, _origine = logo_de_la_fiche(org, fiche)
+    logo_png = fiches_logo.en_png(fiches_logo.lire_local(logo)) if logo else None
+    rendre_connexion(db)       # plus de base ensuite : la conversion PDF peut durer
+    docx = generation.generer_docx(donnees, bordereau, donnees_fiche.palette(bordereau["couleur"]), logo_png)
+    if format_ == "docx":
+        contenu, type_ = docx, generation.TYPE_DOCX
+    else:
+        try:
+            contenu, type_ = generation.generer_pdf(docx), generation.TYPE_PDF
+        except generation.PdfConversionError as exc:
+            raise HTTPException(status_code=503, detail=str(exc),
+                                headers={"Retry-After": str(exc.retry_apres_s)})
+    nom = _nom_de_fichier(rubrique, donnees["societe"]["nom"], format_)
+    return Response(
+        content=contenu, media_type=type_,
+        headers={"Content-Disposition": f"attachment; filename=\"{nom}\"; filename*=UTF-8''{quote(nom, safe='')}",
+                 "Cache-Control": "private, no-store"},
+    )

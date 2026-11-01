@@ -275,10 +275,20 @@ def _identite_ligne(societe: dict) -> list:
     return [x for x in lignes if x["valeur"]]
 
 
-def _section(numero: str, titre: str, lignes: list, texte: str = "") -> dict:
+def _disposition(lignes: list) -> str:
+    """« etroit » : libellés courts (quantités, années) ; « large » : libellé puis valeur ; « empile » : libellé
+    long (intitulé d'une qualification) au-dessus de sa valeur."""
+    longueur = max((len(x["libelle"]) for x in lignes), default=0)
+    if longueur <= 6:
+        return "etroit"
+    return "large" if longueur <= 24 else "empile"
+
+
+def _section(numero: str, titre: str, lignes: list, texte: str = "", disposition: str = "") -> dict:
+    lignes = [x for x in lignes if x["valeur"] or x["libelle"]]
     return {
-        "id": numero, "titre": titre, "lignes": [x for x in lignes if x["valeur"] or x["libelle"]],
-        "texte": texte, "vide": not lignes and not texte,
+        "id": numero, "titre": titre, "lignes": lignes, "texte": texte, "vide": not lignes and not texte,
+        "disposition": disposition or _disposition(lignes),
     }
 
 
@@ -356,9 +366,11 @@ def _moyens(db: Session, org: Organization, cfg: Optional[MemoireConfig], jour: 
     # 01 Moyens humains : effectifs en nombres (jamais de nom de salarié), puis postes de direction.
     humains = [_ligne(str(e["effectif"]), _CATEGORIES_EFFECTIF.get(e["categorie"], e["categorie"].capitalize())
                       + (f" — {e['specialite']}" if e["specialite"] else "")) for e in effectifs]
-    cles = [_ligne(_t(p.get("poste")) or _t(p.get("role")), _t(p.get("nom"))) for p in postes[:6]]
+    # Postes de direction saisis (un poste, un nom) : une ligne de texte, sans libellé, pour garder la colonne
+    # des nombres étroite.
+    cles = [_ligne("", f"{_t(p.get('poste')) or _t(p.get('role'))} — {_t(p.get('nom'))}".lstrip(" —")) for p in postes[:6]]
     if not cles:
-        cles = [_ligne(_t(m.role), _t(m.name) + (f" ({_t(m.specialite)})" if _t(m.specialite) else ""))
+        cles = [_ligne("", f"{_t(m.role)} — {_t(m.name)}" + (f" ({_t(m.specialite)})" if _t(m.specialite) else ""))
                 for m in equipe[:6]]
     # 02
     informatique = _court(_t(_g(cfg, "moyens_informatiques") or _g(org, "moyens_informatiques")))
@@ -552,7 +564,9 @@ def _certifications(db: Session, org: Organization, cfg: Optional[MemoireConfig]
     habilitations = [_ligne(h["libelle"], f"{h['nombre']} personne" + ("s" if h["nombre"] > 1 else "")
                             + (f" — {_validite(h['fin'], jour)}" if h["fin"] else ""))
                      for h in _habilitations(cfg)]
-    habilitations += [ligne_document(d) for d in documents if d.type in _TYPES_HABILITATION and d.id not in relies]
+    deja = {h["type"] for h in _habilitations(cfg)}          # « caces » déclaré en nombre : pas de seconde ligne
+    habilitations += [ligne_document(d) for d in documents
+                      if d.type in _TYPES_HABILITATION and d.id not in relies and d.type not in deja]
 
     total = tableau["total"]
     tuiles = [
@@ -563,9 +577,9 @@ def _certifications(db: Session, org: Organization, cfg: Optional[MemoireConfig]
     return {
         "tuiles": tuiles, "lignes_cles": [],
         "sections": [
-            _section("01", "Qualifications et labels", qualifications),
-            _section("02", "Assurances", assurances),
-            _section("03", "Habilitations", habilitations),
+            _section("01", "Qualifications et labels", qualifications, disposition="empile"),
+            _section("02", "Assurances", assurances, disposition="empile"),
+            _section("03", "Habilitations", habilitations, disposition="empile"),
         ],
         "references": tableau,
     }
@@ -578,7 +592,9 @@ def pages_estimees(rubrique: str, donnees: dict) -> int:
     if rubrique != "certifications":
         return 1
     n = len((donnees.get("references") or {}).get("lignes", []))
-    return 1 + max(0, -(-(n - 8) // 12)) if n > 8 else 1
+    # Mesuré sur des PDF réels (0 à 60 références) : 1 page jusqu'à 6 références (les sections suivent le
+    # tableau), puis une page de plus par tranche de 14.
+    return 1 + -(-(n - 6) // 14) if n > 6 else 1
 
 
 def assembler(db: Session, org_id: str, rubrique: str, *, jour: Optional[date] = None) -> dict:
