@@ -54,7 +54,7 @@ export default function Sidebar() {
       aria-label="Navigation principale"
       className="fixed bottom-4 left-4 top-4 z-40 flex w-[76px] flex-col items-center gap-1 overflow-y-auto rounded-section bg-surface-1 px-1 py-3 shadow-nav max-[768px]:hidden"
     >
-      <Link to="/dashboard" aria-label="Synorix — accueil" className="mb-2 grid size-10 shrink-0 place-items-center rounded-pilule bg-accent-fill font-display text-lg font-semibold text-accent-on">
+      <Link to="/dashboard" aria-label="Synorix — accueil" className="mb-2 grid size-11 shrink-0 place-items-center rounded-pilule bg-accent-fill font-display text-lg font-semibold text-accent-on">
         S
       </Link>
 
