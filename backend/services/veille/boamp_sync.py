@@ -280,7 +280,8 @@ def _debut(db, aujourdhui: date, depuis: date | None) -> date:
     dernier = db.query(func.max(AvisVeille.synchronise_at)).scalar()
     if dernier is None:
         return plancher
-    return max(plancher, dernier.date() - timedelta(days=1))   # un jour de chevauchement
+    # un jour de chevauchement ; borné par `aujourdhui` (horloge figée en test, ou décalage d'horloge)
+    return max(plancher, min(dernier.date(), aujourdhui) - timedelta(days=1))
 
 
 def _index_connus(db) -> dict:
