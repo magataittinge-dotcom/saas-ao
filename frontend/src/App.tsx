@@ -19,6 +19,7 @@ const Project = lazy(() => import('@/routes/Project'))
 const Vault = lazy(() => import('@/routes/Vault'))
 const References = lazy(() => import('@/routes/References'))
 const Company = lazy(() => import('@/routes/Company'))
+const FicheEntreprise = lazy(() => import('@/routes/FicheEntreprise'))
 const Team = lazy(() => import('@/routes/Team'))
 const Settings = lazy(() => import('@/routes/Settings'))
 const Billing = lazy(() => import('@/routes/Billing'))
@@ -97,6 +98,7 @@ function AppRoutes() {
         {/* B6 — le profil mémoire vit dans Mon entreprise ; redirect propre */}
         <Route path="/memoire-config" element={<Navigate to="/company" replace />} />
         <Route path="/company" element={<Company />} />
+        <Route path="/entreprise/fiche/:rubrique" element={<FicheEntreprise />} />
         <Route path="/team" element={<Team />} />
         <Route path="/settings" element={<Settings />} />
         {/* B4 — billing = sous-onglet de Paramètres ; /billing conservé en redirect */}
