@@ -1,4 +1,4 @@
-import { cloneElement, isValidElement, useId, useState } from 'react'
+import { cloneElement, isValidElement, useEffect, useId, useRef, useState } from 'react'
 import { CheckCircle2, ChevronDown, Save } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -61,10 +61,32 @@ export function Groupe({ titre, aide, children }: { titre: string; aide?: string
   )
 }
 
-/** Barre d'enregistrement : un seul « Enregistrer » par rubrique, collé en bas de la zone de défilement. */
+/**
+ * Barre d'enregistrement : un seul « Enregistrer » par rubrique, collé en bas de la zone de défilement (<main>).
+ * Dernière de son formulaire, elle reprend sa place dans le flux une fois la page descendue au maximum : rien n'est
+ * recouvert. Pendant le défilement, un champ qui prend le focus (Tab, scrollIntoView) est ramené au-dessus d'elle :
+ * `scroll-padding-bottom` de <main> suit sa hauteur (même principe que la barre d'une étape d'AO, `BarreEtape`).
+ */
 export function PiedEnregistrer({ enCours, reussi, erreur }: { enCours: boolean; reussi: boolean; erreur: string | null }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const barre = ref.current
+    const defilant = barre?.closest('main') as HTMLElement | null
+    if (!barre || !defilant) return
+    const regler = () => {
+      const h = barre.getBoundingClientRect().height
+      defilant.style.scrollPaddingBottom = h > 0 ? `${Math.ceil(h) + 8}px` : ''
+    }
+    regler()
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(regler)
+    observer?.observe(barre)
+    return () => {
+      observer?.disconnect()
+      defilant.style.scrollPaddingBottom = ''
+    }
+  }, [])
   return (
-    <div className="sticky bottom-0 z-20 -mx-4 mt-2 border-t border-bord-2 bg-[var(--glass-fill)] px-4 py-3 backdrop-blur sm:-mx-5 sm:px-5">
+    <div ref={ref} data-pied-enregistrer="" className="sticky bottom-0 z-20 -mx-4 mt-2 border-t border-bord-2 bg-[var(--glass-fill)] px-4 py-3 backdrop-blur sm:-mx-5 sm:px-5">
       <div className="flex flex-wrap items-center justify-end gap-3">
         <p role={erreur ? 'alert' : 'status'} className={cn('text-sm', erreur ? 'text-danger' : 'text-fg-2')}>
           {erreur ?? (reussi ? 'Modifications enregistrées' : '')}

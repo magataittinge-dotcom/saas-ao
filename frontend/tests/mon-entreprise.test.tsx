@@ -159,6 +159,17 @@ test('Certifications : un client particulier n\'est nommé que par ses initiales
   assert.equal(initialesClient(''), '')
 })
 
+test('barre « Enregistrer » : collée en bas, dernière du formulaire, et <main> reçoit un scroll-padding à sa hauteur (le champ qui prend le focus n\'est pas recouvert)', () => {
+  const src = sansCommentaires(lire('src/components/entreprise/champs.tsx'))
+  const pied = src.slice(src.indexOf('export function PiedEnregistrer'))
+  assert.ok(/sticky bottom-0/.test(pied) && /closest\('main'\)/.test(pied) && /scrollPaddingBottom = h > 0/.test(pied) && /ResizeObserver/.test(pied))
+  assert.ok(/defilant\.style\.scrollPaddingBottom = ''/.test(pied), 'remis à zéro au démontage')
+  for (const f of ['FormIdentite', 'FormMoyens', 'FormCertifications']) {
+    const form = sansCommentaires(lire(`src/components/entreprise/${f}.tsx`))
+    assert.ok(/<PiedEnregistrer [^>]*\/>\s*<\/form>/.test(form), `${f} : la barre est le dernier élément du formulaire`)
+  }
+})
+
 test('Identité : étiquettes associées aux champs, SIRET en lecture seule, le reste à la demande (« Afficher plus »)', () => {
   const html = rendre(<QueryClientProvider client={new QueryClient()}><MemoryRouter><FormIdentite donnees={DONNEES} /></MemoryRouter></QueryClientProvider>, true)
   assert.ok(html.includes('value="Entreprise de démonstration"'), 'le nom vient de l\'organisation')
