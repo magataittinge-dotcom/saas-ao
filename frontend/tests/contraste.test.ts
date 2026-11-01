@@ -49,7 +49,8 @@ test('aucun texte sous 12 px', () => {
     const code = sansCommentaires(lire(f))
     for (const m of code.matchAll(/text-\[(\d*\.?\d+)(px|rem)\]|fontSize:\s*'?(\d*\.?\d+)(px|rem|em)?'?/g)) {
       const px = m[1] !== undefined ? enPx(m[1], m[2]) : enPx(m[3], m[4])
-      if (px < 12) petits.push(`${f} : ${m[0]}`)
+      // seule exception : le nom sous l'icône de la barre de navigation, 11 px (PROPOSITION § 2 ; contraste mesuré dans navigation.test.tsx)
+      if (px < 12 && !(f === 'src/components/layout/Sidebar.tsx' && px === 11)) petits.push(`${f} : ${m[0]}`)
     }
   }
   for (const f of CSS) {

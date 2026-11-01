@@ -11,11 +11,11 @@ import { QuotaRond } from './QuotaGauge'
 import { useUrgents } from './useUrgents'
 import BasculeTheme from './BasculeTheme'
 
-// Onglets du bas (téléphone, ≤ 768 px) : Accueil, Mes AO, Coffre-fort, Compte. Dernier élément de la colonne
-// (jamais posés par-dessus le contenu : les barres d'action collées en bas restent visibles). Cibles de 56 px de haut. « Compte » ouvre un tiroir : le reste des entrées, le thème, le quota.
+// Onglets du bas (téléphone, ≤ 768 px) : Accueil, Mes AO, Mon entreprise, Coffre-fort, Compte (la photo). Dernier élément de la colonne
+// (jamais posés par-dessus le contenu : les barres d'action collées en bas restent visibles). Cibles de 56 px de haut. « Compte » ouvre un tiroir : Paramètres, le thème, le quota, la déconnexion.
 // Place prévue pour « Cerveau » (bloc 8) : voir ONGLET_CERVEAU dans navigation.ts.
 
-const ONGLET = 'relative flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-xs font-medium transition-colors duration-base'
+const ONGLET = 'relative flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-center text-xs font-medium leading-tight transition-colors duration-base'
 
 export default function BarreOnglets() {
   const { pathname } = useLocation()

@@ -31,8 +31,8 @@ export default function Layout() {
 
   return (
     <TooltipProvider delayDuration={150}>
-      {/* barre d'icônes flottante (bureau) : 16 px de marge + 64 px + 16 px d'air = 96 px à gauche */}
-      <div className="flex h-svh min-h-0 flex-col overflow-hidden bg-surface-0 min-[769px]:pl-24">
+      {/* barre d'icônes flottante (bureau) : 16 px de marge + 76 px + 16 px d'air = 108 px à gauche */}
+      <div className="flex h-svh min-h-0 flex-col overflow-hidden bg-surface-0 min-[769px]:pl-[108px]">
         <Sidebar />
         <BandeauNouveau />
         <Header onSearch={() => setPalette(true)} />

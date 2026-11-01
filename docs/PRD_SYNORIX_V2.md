@@ -72,7 +72,7 @@ Synorix's wedge is the **automated generation of personalised, deposit-grade tec
 ### 1.6 V2.0 Scope at a Glance
 
 - **6-step Pipeline AO** — Upload → Lots → AI Analysis → Memo → Verification → Export
-- **Sidebar permanente** — bouton `[+ Nouvel AO]` + 2 groupes (**TRAVAIL** : Dashboard, Mes AO · **MON CAPITAL** : Mon entreprise, Mes références, Coffre-fort, Bibliothèque) + jauge quota → Paramètres > Abonnement. **Le pipeline n'apparaît jamais dans la sidebar.**
+- **Barre de navigation permanente (5 entrées, chacune avec son nom sous l'icône)** — Accueil, Mes AO, Mon entreprise, Coffre-fort, Paramètres ; bouton `[+ Nouvel AO]` hors nav ; jauge quota → Paramètres > Abonnement. Équipe et Mes références sont des accès de Mon entreprise ; Retenue de garantie n'est plus dans la barre. **Le pipeline n'apparaît jamais dans la barre.**
 - **Synorix Coach** — level-3 strategic chatbot (bulle flottante)
 - **86 modular skills V1** — each grounded in real BTP expertise from 8 validated NotebookLM notebooks (193 curated sources) <!-- v2.1 - notebooks 17/5/26 -->
 - **Multi-model AI stack** — Haiku 4.5 (routing + **reformulation de texte libre du profil**) / Sonnet 4.6 (extraction, analyse **et génération mémoire**) / Opus 4.7 (réécriture ciblée + fallback) — measured cost **~€1 per complete tender response** (1er mémoire ≤ €1, suivants < €0,50 via profil mémoire vivant + prompt caching)
@@ -824,10 +824,13 @@ Synorix's left rail is **permanent** across all pages — même à l'intérieur 
 
 **Structure (haut → bas) :**
 
-- **`[+ Nouvel AO]`** — bouton primaire, **hors navigation**, tout en haut.
-- **TRAVAIL** — Dashboard · Mes AO (badge deadlines).
-- **MON CAPITAL** — Mon entreprise (le **profil mémoire vivant** vit ICI) · Mes références · Coffre-fort (badge expiration) · Bibliothèque (import d'anciens mémoires via `memoire_importer`).
-- **Jauge quota** (« 32/40 ») en bas, cliquable → **Paramètres > Abonnement & Facturation** (le billing vit dans **Paramètres**, *pas* en premier niveau de la sidebar).
+- **`[+ Nouvel AO]`** — bouton primaire, **hors navigation** (en-tête de chaque écran).
+- **Cinq entrées, chacune avec son nom écrit sous l'icône** (11 px, visible sans survol, donc sur tablette aussi ; barre de 76 px) : **Accueil** (`/dashboard`) · **Mes AO** (badge deadlines) · **Mon entreprise** (le **profil mémoire vivant** vit ICI ; **Cerveau** viendra à sa place au bloc 8) · **Coffre-fort** (badge expiration) · **Paramètres**. Source unique : `components/layout/navigation.ts` (barre, onglets du bas, palette Ctrl K).
+- **Équipe** et **Mes références** ne sont plus des entrées : ce sont des accès de Mon entreprise. Leurs adresses `/team` et `/references` redirigent vers `/company?rubrique=moyens` et `/company?rubrique=certifications`.
+- **Retenue de garantie** n'est plus dans la barre : la page `/outils` reste accessible depuis la carte de trésorerie de l'analyse (où le chiffre du CCAP est déjà affiché), Paramètres > Outils et la palette Ctrl K.
+- **Jauge quota** (« 32/40 ») en bas, cliquable → **Paramètres > Abonnement & Facturation** (le billing vit dans **Paramètres**, *pas* en premier niveau de la barre).
+- **Menu du compte** (la photo) : Paramètres, Abonnement, **Déconnexion** (plus dans la barre).
+- **Téléphone** (≤ 768 px) : 4 onglets (Accueil, Mes AO, Mon entreprise, Coffre-fort) + Compte (la photo), dont le tiroir liste Paramètres, le thème, le quota et la déconnexion.
 
 Il n'y a **pas** d'entrée « mémoire technique » séparée : le profil qui alimente le mémoire est un **onglet de Mon entreprise** (§4.2). Le Synorix Coach (§5) est une **bulle flottante**, pas une entrée de navigation.
 
@@ -1222,7 +1225,7 @@ V2.0 ships when **all four** of the following are true:
 |---|---|
 | Refactor of legacy 9 project skills → 86 modular skills | In progress — 8 NotebookLM notebooks validated 2026-05-17 (193 sources) <!-- v2.1 - notebooks 17/5/26 --> |
 | 6-step pipeline UI (Upload → Lots → Analyse → Mémoire → **Vérification** → Export) | To do |
-| Sidebar V1 FINALE (TRAVAIL / MON CAPITAL + jauge quota) | To do |
+| Barre de navigation V1 FINALE (5 entrées avec leur nom + jauge quota) | Done (S1, 1/11/2026) |
 | Synorix Coach (bulle flottante) | To do |
 | **Différenciateurs déterministes 0 € (§1.7 : Score go/no-go, trésorerie CCAP, rétro-planning, stats, retenue de garantie)** <!-- v3.0 --> | To do |
 | **Quotas + enforcement (Pro 40/40, Business fair-use)** <!-- v3.0 --> | To do |
@@ -1419,7 +1422,7 @@ Alignement chirurgical du PRD sur la **vision produit V1 FINALE** (session du 20
 
 - **Métadonnées** — version 3.0, statut « Vision V1 FINALE », supersedes toute vision antérieure contradictoire.
 - **§1.4 / §1.6 / §3.4 / §6 / §7.1** — Pricing **€299/€499 → €349/€599**. Quotas **30/120 AO → 40 analyses + 40 mémoires (Pro) / illimité fair-use (Business)**. Unité « 1 lot = 1 mémoire = 1 unité ». Paiement **Stripe carte uniquement en V1** (SEPA déclassé — migration d'entité). Suppression de la facturation à l'AO supplémentaire.
-- **§1.6 / §4** — Sidebar refondue : bouton `[+ Nouvel AO]`, groupes **TRAVAIL / MON CAPITAL**, jauge quota → Paramètres > Abonnement, billing hors premier niveau, **pipeline jamais dans la sidebar**.
+- **§1.6 / §4** — Sidebar refondue : bouton `[+ Nouvel AO]`, groupes **TRAVAIL / MON CAPITAL**, jauge quota → Paramètres > Abonnement, billing hors premier niveau, **pipeline jamais dans la sidebar**. *(Remplacé le 1/11/2026 : barre à 5 entrées, voir §4.)*
 - **§4.2** — « Mon entreprise » = **profil mémoire vivant** (3 onglets Identité / Moyens / Certifications) ; plus d'entrée « mémoire technique » séparée ; reformulation texte libre via **Haiku**. **§4.4** — « Bibliothèque » = import d'anciens mémoires, distincte du profil.
 - **§1.7** — Différenciateurs recentrés sur **5 briques déterministes 0 €** (Synorix Score go/no-go, traduction trésorerie CCAP, rétro-planning, stats gagné/perdu, calculateur retenue de garantie). **Frontière chiffrage** actée : **OAB retiré du produit**, Synorix ne conseille jamais le prix.
 - **§3.5** — Étape 5 « Vérification » recentrée sur un **score de conformité déterministe** (« 14/16 », 0 € API, gate ZIP non-bloquant) + contrôles déterministes (validité dates, DPGF, signatures) et 3 états par pièce. Le **Synorix Score qualité mémoire /100 (LLM)** est déclassé en V1.5 (les deux surfaces). Critère de succès §8 ajusté (notation humaine d'Adil).
