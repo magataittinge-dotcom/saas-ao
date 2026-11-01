@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useDonneesEntreprise } from '@/components/entreprise/useDonneesEntreprise'
 import CerveauEntreprise from '@/components/entreprise/CerveauEntreprise'
 import RubriquesEntreprise from '@/components/entreprise/RubriquesEntreprise'
@@ -8,7 +9,7 @@ import FormCertifications from '@/components/entreprise/FormCertifications'
 import ProfileFreeTextCard from '@/components/company/ProfileFreeTextCard'
 import { AfficherPlus } from '@/components/entreprise/champs'
 import { MemoireSkeleton } from '@/components/skeletons'
-import type { RubriqueId } from '@/lib/entreprise/avancement'
+import { rubriqueDepuisRecherche, type RubriqueId } from '@/lib/entreprise/avancement'
 
 // Texte libre → l'IA structure → l'utilisateur valide avant toute écriture (C7). Repliée : la saisie guidée vient d'abord.
 const DecrireAvecVosMots = () => (
@@ -21,7 +22,10 @@ const DecrireAvecVosMots = () => (
 // Certifications et références). Un formulaire et un « Enregistrer » par rubrique ; chaque donnée reste dans
 // sa table actuelle (organisation, profil mémoire, équipe, références, coffre-fort).
 export default function Company() {
-  const [rubrique, setRubrique] = useState<RubriqueId>('identite')
+  // /company?rubrique=moyens (Équipe) ou =certifications (Mes références) ouvre la colonne demandée, même si l'écran est déjà affiché.
+  const demandee = rubriqueDepuisRecherche(useLocation().search)
+  const [rubrique, setRubrique] = useState<RubriqueId>(demandee ?? 'identite')
+  useEffect(() => { if (demandee) setRubrique(demandee) }, [demandee])
   const donnees = useDonneesEntreprise()
 
   return (

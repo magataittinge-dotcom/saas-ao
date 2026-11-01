@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from '@clerk/clerk-react'
 import { useSyncUser } from '@/hooks/useAuth'
 import EcranEnChargement from '@/components/common/EcranEnChargement'
+import { REDIRECTIONS_ENTREPRISE } from '@/lib/entreprise/redirections'
 
 // Un écran = un morceau chargé à la demande (bloc 6) : l'accueil public ne télécharge ni la
 // coquille connectée, ni le Markdown, ni les étapes de l'AO.
@@ -17,10 +18,8 @@ const Projects = lazy(() => import('@/routes/Projects'))
 const NewProject = lazy(() => import('@/routes/NewProject'))
 const Project = lazy(() => import('@/routes/Project'))
 const Vault = lazy(() => import('@/routes/Vault'))
-const References = lazy(() => import('@/routes/References'))
 const Company = lazy(() => import('@/routes/Company'))
 const FicheEntreprise = lazy(() => import('@/routes/FicheEntreprise'))
-const Team = lazy(() => import('@/routes/Team'))
 const Settings = lazy(() => import('@/routes/Settings'))
 const Billing = lazy(() => import('@/routes/Billing'))
 const Tools = lazy(() => import('@/routes/Tools'))
@@ -91,7 +90,6 @@ function AppRoutes() {
         <Route path="/projects/new" element={<NewProject />} />
         <Route path="/projects/:id/*" element={<Project />} />
         <Route path="/vault" element={<Vault />} />
-        <Route path="/references" element={<References />} />
         <Route path="/outils" element={<Tools />} />
         {/* Page de référence du système de design : interne, volontairement absente du menu */}
         <Route path="/design" element={<Design />} />
@@ -99,7 +97,8 @@ function AppRoutes() {
         <Route path="/memoire-config" element={<Navigate to="/company" replace />} />
         <Route path="/company" element={<Company />} />
         <Route path="/entreprise/fiche/:rubrique" element={<FicheEntreprise />} />
-        <Route path="/team" element={<Team />} />
+        {/* Équipe et Mes références sont des accès de Mon entreprise : mêmes adresses, rubrique correspondante */}
+        {Object.entries(REDIRECTIONS_ENTREPRISE).map(([de, vers]) => <Route key={de} path={de} element={<Navigate to={vers} replace />} />)}
         <Route path="/settings" element={<Settings />} />
         {/* B4 — billing = sous-onglet de Paramètres ; /billing conservé en redirect */}
         <Route path="/settings/billing" element={<Billing />} />

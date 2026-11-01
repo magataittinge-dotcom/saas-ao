@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { Banknote, ExternalLink } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { ArrowRight, Banknote, ExternalLink } from 'lucide-react'
 import { api } from '@/services/api'
 import type { FieldSource } from './CriticalBanner'
 
@@ -70,6 +71,12 @@ export default function TresorerieCard({ projectId, onOpenSource }: Props) {
             )}
           </button>
         ))}
+      </div>
+      {/* « Retenue de garantie » n'est plus dans la barre : le chiffre du contrat est ici, le calcul est un lien plus loin */}
+      <div className="px-5 py-3" style={{ borderTop: '1px solid var(--border-1)' }}>
+        <Link to="/outils" className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium underline-offset-2 hover:underline" style={{ color: 'var(--text-1)' }}>
+          Calculer ma retenue de garantie <ArrowRight size={14} aria-hidden />
+        </Link>
       </div>
     </div>
   )

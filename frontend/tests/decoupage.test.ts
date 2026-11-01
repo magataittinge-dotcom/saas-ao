@@ -12,10 +12,11 @@ test('App.tsx : aucun écran importé en dur, tous en React.lazy, sous un Suspen
   const durs = importsStatiques(app).filter((s) => /^@\/(routes|components\/layout)\//.test(s))
   assert.deepEqual(durs, [], `importés en dur : ${durs.join(', ')}`)
   const ecrans = ['Landing', 'Login', 'Register', 'Pricing', 'Legal', 'Dashboard', 'Projects', 'NewProject',
-    'Project', 'Vault', 'References', 'Company', 'Team', 'Settings', 'Billing', 'Tools']
+    'Project', 'Vault', 'Company', 'Settings', 'Billing', 'Tools']
   for (const e of ecrans) {
     assert.ok(new RegExp(`const ${e} = lazy\\(\\(\\) => import\\('@/routes/${e}'\\)\\)`).test(app), `${e} n'est pas en lazy`)
   }
+  // Team et References ne sont plus routées : /team et /references redirigent vers Mon entreprise (lib/entreprise/redirections.ts)
   assert.ok(/const Layout = lazy\(\(\) => import\('@\/components\/layout\/Layout'\)\)/.test(app), 'Layout (coquille connectée) en lazy')
   assert.ok(/<Suspense\b/.test(app))
 })

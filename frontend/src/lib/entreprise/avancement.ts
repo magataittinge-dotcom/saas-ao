@@ -13,6 +13,12 @@ export const RUBRIQUES: { id: RubriqueId; titre: string; court: string }[] = [
 
 export const estRubrique = (v: unknown): v is RubriqueId => RUBRIQUES.some((r) => r.id === v)
 
+/** La rubrique demandée par l'adresse (`/company?rubrique=moyens`), ou null si le paramètre manque ou n'est pas une rubrique. */
+export function rubriqueDepuisRecherche(recherche: string): RubriqueId | null {
+  const v = new URLSearchParams(recherche).get('rubrique')
+  return estRubrique(v) ? v : null
+}
+
 /** Pièce du coffre-fort, réduite à ce qui compte ici. */
 export interface PieceCoffre { id?: string; file_name?: string; type: string; status?: string }
 

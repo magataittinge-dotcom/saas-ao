@@ -9,8 +9,9 @@ test('aucune occurrence de « Calculateurs » dans frontend/src (hors commentair
   assert.deepEqual(fautifs, [])
 })
 
-test('l\'entrée /outils porte le libellé « Retenue de garantie » partout', () => {
-  for (const f of ['src/components/layout/navigation.ts', 'src/components/layout/CommandPalette.tsx', 'src/components/layout/Header.tsx']) {
+test('l\'accès /outils porte le libellé « Retenue de garantie » partout', () => {
+  // la palette Ctrl K lit navigation.ts (ACCES_PALETTE) ; la barre n'a plus cette entrée (S1)
+  for (const f of ['src/components/layout/navigation.ts', 'src/components/layout/Header.tsx']) {
     assert.match(sansCommentaires(lire(f)), /'\/outils'[^\n]*Retenue de garantie/, f)
   }
   assert.match(sansCommentaires(lire('src/routes/Tools.tsx')), /<h1[^>]*>Retenue de garantie<\/h1>/)

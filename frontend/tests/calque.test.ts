@@ -9,6 +9,7 @@ import { lire, sansCommentaires } from './outils/sources'
 // Les couleurs Calque sont désormais des alias des jetons du système (styles/theme.css) :
 // on les résout dans les deux thèmes et on mesure le contraste réel.
 import { contrasteJetons, type Theme } from './outils/jetons'
+import { ACCES_PALETTE, BARRE, ENTREES_TIROIR, ONGLETS_TEL } from '@/components/layout/navigation'
 
 test('Calque : chaque couleur de texte atteint 4,5:1 sur les fonds où elle se pose, en clair comme en nuit', () => {
   const paires: [string, string[]][] = [
@@ -85,11 +86,11 @@ test('la palette Ctrl K s\'ouvre au clavier et mène partout où mène la naviga
   const palette = sansCommentaires(lire('src/components/layout/CommandPalette.tsx'))
   assert.match(palette, /e\.key\.toLowerCase\(\) === 'k' && \(e\.metaKey \|\| e\.ctrlKey\)/)
   assert.match(palette, /aller\(`\/projects\/\$\{p\.id\}`\)/)
-  const nav = sansCommentaires(lire('src/components/layout/navigation.ts'))
-  const routes = [...new Set([...nav.matchAll(/to: '(\/[\w/-]+)'/g)].map((m) => m[1]))]
+  // la palette lit navigation.ts : tout ce que la barre, les onglets et le tiroir proposent y est
+  assert.match(palette, /ACCES_PALETTE/)
+  const routes = [...BARRE, ...ONGLETS_TEL, ...ENTREES_TIROIR].map((e) => e.to)
   assert.ok(routes.length >= 8)
-  const sansAcces = routes.filter((r) => !palette.includes(`'${r}'`))
-  assert.deepEqual(sansAcces, [])
+  assert.deepEqual(routes.filter((r) => !ACCES_PALETTE.some((p) => p.to === r)), [])
   // le bouton de l'en-tête ouvre la palette
   const entete = sansCommentaires(lire('src/components/layout/Header.tsx'))
   assert.match(entete, /onClick=\{onSearch\}/)

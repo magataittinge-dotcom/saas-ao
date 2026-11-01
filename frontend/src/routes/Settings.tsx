@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { Settings as SettingsIcon, User, Building2, CreditCard, ChevronRight, Shield } from 'lucide-react'
+import { Settings as SettingsIcon, User, Building2, CreditCard, ChevronRight, Shield, Calculator } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { ESSAI_LIBELLE, nomPlan, prixLibelle, quotaLibelle, trouverOffre } from '@/lib/offres'
 
@@ -152,6 +152,18 @@ export default function Settings() {
             <ChevronRight size={16} />
           </a>
         </div>
+      </SectionCard>
+
+      {/* ── Outils ──────────────────────────────────────────────────────── */}
+      <SectionCard icon={<Calculator size={15} className="text-ds-cyan" />} title="Outils">
+        <Link
+          to="/outils"
+          className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm text-ds-text-2 transition-colors duration-200 hover:text-ds-text no-underline"
+          style={{ background: 'var(--edge-graphite)', boxShadow: 'inset 0 0 0 1px rgba(186,205,234,.13)' }}
+        >
+          <span>Retenue de garantie</span>
+          <ChevronRight size={16} />
+        </Link>
       </SectionCard>
     </div>
   )
