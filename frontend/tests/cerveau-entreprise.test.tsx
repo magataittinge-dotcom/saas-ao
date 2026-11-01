@@ -119,3 +119,11 @@ test('chargement à la demande : la page n\'importe pas les effets, elle les cha
   assert.match(sansCommentaires(lire('src/components/entreprise/CerveauEffets.tsx')), /from '\.\/moteurCerveau'/)
   assert.doesNotMatch(sansCommentaires(lire('src/components/entreprise/CerveauEntreprise.tsx')), /cerveauEffets/, 'le calcul des effets reste hors du morceau de la page')
 })
+
+test('un voile opaque à gauche passe entre les particules et le titre (un pixel d’étoile ne traverse plus le sous-titre)', () => {
+  const src = lire('src/components/entreprise/CerveauEntreprise.tsx')
+  const voile = src.match(/data-voile className="([^"]+)"/)?.[1] ?? ''
+  assert.match(voile, /\bfrom-surface-0\b/, 'opaque sous le texte')
+  assert.match(voile, /via-surface-0\/80/, 'fondu progressif')
+  assert.match(voile, /w-\[48%\]/, 'large comme le bloc de texte')
+})

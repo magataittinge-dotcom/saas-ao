@@ -87,8 +87,9 @@ export default function CerveauEntreprise({ titre, sousTitre }: { titre: string;
           className={cn('absolute inset-0 size-full object-cover', effetsMontes && 'will-change-transform')}
           style={{ objectPosition: `${POSITION_IMAGE.x * 100}% ${POSITION_IMAGE.y * 100}%` }}
         />
-        {/* voile à gauche : le titre garde son contraste sur le ciel étoilé (à partir de lg, où il passe sur l'image) */}
-        <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 hidden w-[34%] bg-gradient-to-r from-surface-0/85 to-transparent lg:block" />
+        {/* voile à gauche : le titre et le sous-titre gardent leur contraste sur le ciel étoilé (à partir de lg, où ils passent
+            sur l'image). Opaque sous le texte (les particules passent dessous), fondu jusqu'à 48 % de la largeur. */}
+        <div aria-hidden="true" data-voile className="pointer-events-none absolute inset-y-0 left-0 hidden w-[48%] bg-gradient-to-r from-surface-0 via-surface-0/80 to-transparent lg:block" />
         {effetsMontes && (
           <Suspense fallback={null}>
             <CerveauEffets scene={scene} zone={carte} image={image} tactile={tactile} tourne={boucleDoitTourner({ mouvementReduit, aLEcran, ongletVisible })} />
