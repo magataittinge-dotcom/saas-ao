@@ -1,6 +1,6 @@
 // Mon entreprise — l'avancement de chaque rubrique, calculé depuis les données déjà chargées (aucun appel).
 // Une « information » est un renseignement dont une pièce ou un critère courant a besoin (liste de référence :
-// INFORMATIONS-ENTREPRISE.md, niveau « indispensable »). Le décompte ne dit jamais « manquant » : « n informations sur m ».
+// INFORMATIONS-ENTREPRISE.md, niveau « indispensable » : 12 + 9 + 13 = 34). Le décompte ne dit jamais « manquant » : « n informations sur m ».
 import type { CAEntry, LigneEffectif, LigneHabilitation, LigneMoyen, MemoireConfig, Organization, PosteCle, Qualification, Reference, TeamMember } from '@/types'
 
 export type RubriqueId = 'identite' | 'moyens' | 'certifications'
@@ -62,6 +62,8 @@ const aUnPosteNomme = (p: unknown): boolean => Array.isArray(p) && (p as PosteCl
 /** Une référence prête à citer : intitulé, maître d'ouvrage, lieu, montant et année renseignés. */
 export const referenceRenseignee = (r: Partial<Reference>): boolean =>
   texte(r.intitule) && texte(r.maitre_ouvrage) && texte(r.adresse) && nombre(r.montant_ht) && nombre(r.annee)
+/** Au moins une référence porte l'information (chaque information d'une référence compte pour une, comme dans l'étude). */
+const uneReference = (d: DonneesEntreprise, porte: (r: Partial<Reference>) => boolean): boolean => (d.references ?? []).some(porte)
 
 export const INFORMATIONS: Information[] = [
   // ── Identité ──
@@ -94,7 +96,14 @@ export const INFORMATIONS: Information[] = [
   { id: 'C19', rubrique: 'certifications', libelle: 'Extrait Kbis', niveau: 'indispensable', rempli: (d) => aPiece(d, 'kbis') },
   { id: 'C20', rubrique: 'certifications', libelle: 'Attestation de vigilance URSSAF', niveau: 'indispensable', rempli: (d) => aPiece(d, 'urssaf') },
   { id: 'C21', rubrique: 'certifications', libelle: 'Attestation de régularité fiscale', niveau: 'indispensable', rempli: (d) => aPiece(d, 'fiscal') },
-  { id: 'C07', rubrique: 'certifications', libelle: 'Références de chantiers', niveau: 'indispensable', rempli: (d) => (d.references ?? []).some(referenceRenseignee) },
+  // ── Références (C07 à C17 : sept informations indispensables de l'étude, une par colonne) ──
+  { id: 'C07', rubrique: 'certifications', libelle: 'Référence : intitulé du chantier', niveau: 'indispensable', rempli: (d) => uneReference(d, (r) => texte(r.intitule)) },
+  { id: 'C08', rubrique: 'certifications', libelle: "Référence : maître d'ouvrage", niveau: 'indispensable', rempli: (d) => uneReference(d, (r) => texte(r.maitre_ouvrage)) },
+  { id: 'C12', rubrique: 'certifications', libelle: 'Référence : lieu du chantier', niveau: 'indispensable', rempli: (d) => uneReference(d, (r) => texte(r.adresse)) },
+  { id: 'C13', rubrique: 'certifications', libelle: 'Référence : nature des travaux', niveau: 'indispensable', rempli: (d) => uneReference(d, (r) => texte(r.description)) },
+  { id: 'C15', rubrique: 'certifications', libelle: 'Référence : montant HT', niveau: 'indispensable', rempli: (d) => uneReference(d, (r) => nombre(r.montant_ht)) },
+  { id: 'C16', rubrique: 'certifications', libelle: 'Référence : année de réalisation', niveau: 'indispensable', rempli: (d) => uneReference(d, (r) => nombre(r.annee)) },
+  { id: 'C17', rubrique: 'certifications', libelle: "Référence : mode d'intervention", niveau: 'indispensable', rempli: (d) => uneReference(d, (r) => texte(r.mode_intervention)) },
 ]
 
 export interface Avancement { rempli: number; total: number }
