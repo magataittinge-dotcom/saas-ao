@@ -5,10 +5,10 @@ import assert from 'node:assert/strict'
 import { lire, sansCommentaires } from './outils/sources'
 
 test('la barre latérale montre la photo du compte, et les initiales sans photo', () => {
-  const code = sansCommentaires(lire('src/components/layout/Sidebar.tsx'))
+  const code = sansCommentaires(lire('src/components/layout/MenuCompte.tsx'))
   assert.match(code, /const \{ user: compte \} = useUser\(\)/)
   // imageUrl donne toujours une image (avatar générique de Clerk) : seul
   // hasImage dit si le compte a une vraie photo
   assert.match(code, /const photo = compte\?\.hasImage && compte\.imageUrl !== photoEnEchec \? compte\.imageUrl : null/)
-  assert.match(code, /\{photo\s*\?\s*<img src=\{photo\} alt="" [^>]*onError=\{\(\) => setPhotoEnEchec\(photo\)\} \/>\s*:\s*initials\}/)
+  assert.match(code, /\{photo\s*\?\s*<img src=\{photo\} alt="" [^>]*onError=\{\(\) => setPhotoEnEchec\(photo\)\} \/>\s*:\s*initiales\}/)
 })

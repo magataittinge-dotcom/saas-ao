@@ -75,10 +75,10 @@ test('les couleurs Calque de Tailwind renvoient toutes à un jeton défini dans 
 })
 
 test("l'avatar de la barre d'icônes montre la photo du compte, et les initiales sans photo", () => {
-  const code = sansCommentaires(lire('src/components/layout/Sidebar.tsx'))
+  const code = sansCommentaires(lire('src/components/layout/MenuCompte.tsx'))
   assert.match(code, /const \{ user: compte \} = useUser\(\)/)
   assert.match(code, /const photo = compte\?\.hasImage && compte\.imageUrl !== photoEnEchec \? compte\.imageUrl : null/)
-  assert.match(code, /\{photo\s*\?\s*<img src=\{photo\} alt="" [^>]*onError=\{\(\) => setPhotoEnEchec\(photo\)\} \/>\s*:\s*initials\}/)
+  assert.match(code, /\{photo\s*\?\s*<img src=\{photo\} alt="" [^>]*onError=\{\(\) => setPhotoEnEchec\(photo\)\} \/>\s*:\s*initiales\}/)
 })
 
 test('la palette Ctrl K s\'ouvre au clavier et mène partout où mène la navigation (barre d\'icônes, onglets, tiroir)', () => {
