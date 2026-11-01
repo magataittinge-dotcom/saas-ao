@@ -49,11 +49,14 @@ export default function ListeAvis(p: PropsListeAvis) {
             : p.total > 0 ? `${p.total} avis ouvert${p.total > 1 ? 's' : ''} dans cette zone` : ''}
       </p>
 
-      <div className="mt-4">
+      {/* À partir de lg, les filtres restent collés en haut de la zone qui défile (<main>) : fond opaque, la liste passe dessous.
+          -top-5 annule le py-5 de <main> (le décalage du sticky part du bord intérieur) : collés sous l'en-tête, sans interstice
+          où une carte apparaîtrait. Au téléphone ils défilent avec la liste. Aucun défilement interne ici : une seule barre. */}
+      <div data-filtres-colles className="mt-4 bg-surface-0 pb-3 lg:sticky lg:-top-5 lg:z-10 lg:pt-3">
         <FiltresVeille filtres={p.filtres} onFiltres={p.onFiltres} tri={p.tri} onTri={p.onTri} metiers={p.metiers} />
       </div>
 
-      <div className="mt-5">
+      <div className="mt-2">
         {p.zoneVide ? (
           <div className="rounded-lg bg-surface-1 px-5 py-8">
             <p className="text-[15px] font-semibold text-fg">Choisissez une zone sur la carte</p>

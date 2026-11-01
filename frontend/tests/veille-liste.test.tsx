@@ -160,3 +160,44 @@ test('les puces de procédure et de métier basculent ; chaque geste remonte son
   assert.match(code, /onFiltres\(\{ mots_cles: v \}\)/)
   assert.match(code, /setTimeout\(\(\) => onChange\(local\.slice\(0, 120\)\), 400\)/, 'mots-clés : 400 ms et 120 caractères au plus')
 })
+
+// DEFIL — une seule barre de défilement (celle de <main>), filtres et carte collés à partir de lg.
+// Cause mesurée : les éléments `sr-only` (position: absolute) des cartes n'avaient aucun ancêtre positionné ; leur bloc
+// conteneur était la fenêtre, donc hors du clip de <main> : le document défilait en plus (barre collée à celle de la page).
+
+test('la liste n’a aucun défilement interne : ni overflow ni hauteur maximale dans ListeAvis, FiltresVeille et VeilleAccueil', () => {
+  for (const f of ['ListeAvis', 'FiltresVeille', 'VeilleAccueil']) {
+    const src = sansCommentaires(lire(`src/components/veille/${f}.tsx`))
+    assert.ok(!/overflow-(y-)?(auto|scroll)|\bmax-h-|\boverflow-hidden/.test(src), `${f} : pas de défilement interne`)
+  }
+})
+
+test('les filtres sont collés en haut seulement à partir de lg, sur fond opaque, sans jamais masquer une carte', () => {
+  const html = renderToStaticMarkup(<ListeAvis {...base({ avis: [avis('1'), avis('2')], total: 2 })} />)
+  const m = /<div([^>]*data-filtres-colles[^>]*)>/.exec(html)
+  assert.ok(m, 'bloc des filtres repéré')
+  const classes = /class="([^"]*)"/.exec(m![1])![1].split(/\s+/)
+  assert.ok(classes.some((c) => /(^|:)sticky$/.test(c)), 'sticky présent')
+  assert.ok(!classes.includes('sticky'), 'jamais collé sans préfixe : au téléphone, les filtres défilent avec la liste')
+  assert.ok(classes.filter((c) => /sticky$/.test(c)).every((c) => c.startsWith('lg:')), 'sticky seulement à partir de lg')
+  assert.ok(classes.includes('lg:-top-5'), 'collé sous l’en-tête : -top-5 annule le py-5 de <main>, sans interstice où une carte apparaîtrait')
+  assert.ok(classes.includes('bg-surface-0'), 'fond opaque : les cartes qui passent dessous ne transparaissent pas')
+  assert.ok(classes.some((c) => /^(lg:)?z-\d+$/.test(c)), 'au-dessus des cartes')
+  // les cartes viennent après le bloc, dans le même flux : rien n'est retiré du flux
+  assert.ok(html.indexOf('data-filtres-colles') < html.indexOf('<article'))
+})
+
+test('<main> est le bloc conteneur des éléments en position absolue : le document ne défile plus à côté de lui', () => {
+  const src = sansCommentaires(lire('src/components/layout/Layout.tsx'))
+  const main = /<main[\s\S]*?>/.exec(src)![0]
+  assert.ok(/'[^']*\brelative\b[^']*overflow-y-auto|overflow-y-auto[^']*\brelative\b/.test(main), 'main porte relative avec overflow-y-auto')
+  assert.ok(/h-svh[^"]*overflow-hidden/.test(src), 'la coquille reste à hauteur d’écran')
+})
+
+test('la colonne de la carte reste collée sous l’en-tête à partir de lg (le conteneur qui défile est son ancêtre, sans overflow intermédiaire)', () => {
+  const src = sansCommentaires(lire('src/components/veille/VeilleAccueil.tsx'))
+  assert.ok(/lg:sticky lg:top-4 lg:self-start/.test(src))
+  assert.ok(!/\bsticky\b/.test(src.replace(/lg:sticky/g, '')), 'jamais collée au téléphone')
+  assert.ok(src.includes('lg:max-w-[max(22rem,calc((100svh_-_30rem)/1.09))]'), 'la carte entière tient dans la hauteur de l’écran')
+  assert.ok(/lg:max-w-\[max\(22rem,calc\(\(100svh_-_30rem\)\/1\.09\)\)\]/.test(src), 'la carte entière tient dans la hauteur de l’écran')
+})
