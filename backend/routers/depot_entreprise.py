@@ -4,7 +4,7 @@
 - GET  /api/entreprise/depots/etat    : l'état de chaque case (`?rubrique=`) ;
 - POST /api/entreprise/depots/{case}  : dépôt de un à dix fichiers dans UNE case.
 
-Un fichier entre au coffre-fort avec sa rubrique et son type de pièce, puis (D2) Synorix le lit et PROPOSE des
+Un fichier entre au coffre-fort avec sa rubrique et son type de pièce, puis Synorix le lit (tâche détachée) et PROPOSE des
 informations : rien n'entre dans le profil avant validation. Chaque requête est filtrée par l'organisation de
 l'utilisateur authentifié, jamais lue du corps.
 """
@@ -23,7 +23,7 @@ from models.depot_entreprise import LectureDepot
 from models.document import Document
 from models.user import User
 from routers.auth import get_auth_user
-from services import depot_cases, depot_controles, upload_validation
+from services import depot_cases, depot_controles, depot_extraction, upload_validation
 from services.audit_logger import log_action
 from services.depot_etat import etats
 from services.file_storage import FileStorage
@@ -143,7 +143,7 @@ async def deposer(
         db.flush()
         lecture = LectureDepot(
             organization_id=org_id, document_id=doc.id, case_depot=case.id, rubrique=case.rubrique,
-            sha256=empreinte, etat="coffre_seul")
+            sha256=empreinte, etat="en_lecture")
         db.add(lecture)
         db.commit()
         # Jamais le nom du fichier dans le journal : un CV ou une liste du personnel peut porter un nom de personne.
@@ -153,5 +153,17 @@ async def deposer(
             "nom": nom, "accepte": True, "deja_depose": False, "document_id": doc.id,
             "lecture_id": lecture.id, "etat": lecture.etat})
         a_lire.append(lecture.id)
+
+    # La lecture est détachée (fil « synorix-depot-* ») : la réponse part tout de suite avec l'état « En lecture… » ;
+    # le front interroge l'état de la case. Une seule lecture à la fois par entreprise.
+    for lecture_id in a_lire:
+        try:
+            depot_extraction.lancer(lecture_id, org_id)
+        except Exception as exc:
+            logger.error("depot : lecture non lancée (%s)", type(exc).__name__)
+            lecture = db.get(LectureDepot, lecture_id)
+            if lecture is not None:
+                lecture.etat, lecture.message = "echec", "La lecture n'a pas pu démarrer. Redéposez le fichier."
+                db.commit()
 
     return {"case": case.id, "resultats": resultats}

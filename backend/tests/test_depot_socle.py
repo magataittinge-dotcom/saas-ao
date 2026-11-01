@@ -14,9 +14,16 @@ from alembic.script import ScriptDirectory
 from models.depot_entreprise import LectureDepot
 from models.document import DOCUMENT_TYPES, Document
 from tests import depot_fabrique as fab
-from tests.depot_fabrique import BASE, coffre, deux_orgs, deposer  # noqa: F401 (fixtures)
+from tests.depot_fabrique import (BASE, attendre_les_lectures, coffre, deux_orgs, deposer, deposer_et_lire,  # noqa: F401
+                                  modele)
 
 BACKEND = Path(__file__).resolve().parent.parent
+
+
+@pytest.fixture(autouse=True)
+def _modele_vide(modele):
+    """Ces tests regardent le dépôt, pas la lecture : le modèle simulé ne propose rien (aucun appel payant)."""
+    modele({})
 
 
 # ── les huit cases ──────────────────────────────────────────────────────────
@@ -183,12 +190,12 @@ def test_case_inconnue_404_et_rubrique_inconnue_422(client, coffre):
 
 # ── état des cases ──────────────────────────────────────────────────────────
 
-def test_etat_apres_depot_sans_lecture_deposé_dans_le_coffre(client, coffre):
-    deposer(client, "kbis", ("kbis.pdf", fab.pdf("Kbis inventé")))
+def test_etat_apres_depot_et_lecture_sans_rien_a_proposer_deposé_dans_le_coffre(client, coffre):
+    deposer_et_lire(client, "kbis", ("kbis.pdf", fab.pdf(fab.TEXTE_KBIS)))
     cases = {c["id"]: c for c in client.get(f"{BASE}/etat?rubrique=identite").json()["cases"]}
     assert set(cases) == {"kbis", "decennale", "rc"}
     assert cases["kbis"]["etat"] == "coffre_seul" and cases["kbis"]["libelle_etat"] == "Déposé dans le coffre-fort"
-    assert cases["kbis"]["fichiers"][0]["nom"] == "kbis.pdf"
+    assert cases["kbis"]["fichiers"][0]["nom"] == "kbis.pdf" and cases["kbis"]["vers_verifier"] is False
     assert cases["decennale"]["etat"] == "vide" and cases["decennale"]["libelle_etat"] is None
 
 

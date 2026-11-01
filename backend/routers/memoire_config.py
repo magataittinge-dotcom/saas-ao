@@ -54,6 +54,9 @@ async def structure_text(
             status_code=502,
             detail="Structuration indisponible — réessayez dans un instant.",
         )
+    # Coût réel de l'appel (registre `couts_ia`) : une ligne, des nombres seulement.
+    from services import couts_ia
+    couts_ia.enregistrer(db, user.organization_id, "structure_texte", "claude-haiku-4-5-20251001", usage)
     return {"proposed": proposed, "usage": usage}
 
 

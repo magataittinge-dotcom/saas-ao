@@ -45,8 +45,10 @@ def reprendre_lectures_abandonnees(db: Session, org_id: str, fils_vivants: bool 
 
 
 def _fichier(l: LectureDepot, nom: str, en_attente: int) -> dict:
+    # Lu sans rien à proposer : pour le patron, c'est « Déposé dans le coffre-fort ».
+    etat = "coffre_seul" if l.etat == "lu" and not l.nb_propositions else l.etat
     return {
-        "lecture_id": l.id, "document_id": l.document_id, "nom": nom, "etat": l.etat, "message": l.message,
+        "lecture_id": l.id, "document_id": l.document_id, "nom": nom, "etat": etat, "message": l.message,
         "propositions": en_attente, "pages_lues": l.pages_lues, "pages_total": l.pages_total,
         "plafond_atteint": bool(l.plafond_atteint),
         "depose_le": l.created_at.isoformat() if l.created_at else None,

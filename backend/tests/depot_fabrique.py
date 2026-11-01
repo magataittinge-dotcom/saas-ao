@@ -144,3 +144,84 @@ def deposer(client, case: str, *fichiers: tuple[str, bytes], type_mime: str = "a
         files=[("fichiers", (nom, contenu, type_mime)) for nom, contenu in fichiers],
     )
 
+
+# ── Modèle simulé : aucun appel payant ───────────────────────────────────────
+
+class ModeleSimule:
+    """Remplace `depot_extracteur._call_haiku`. `reponses[extracteur]` est un dict, ou une fonction (texte) -> dict.
+    Chaque appel est noté : (extracteur, texte reçu) — le texte reçu est celui qui PART chez le fournisseur."""
+
+    def __init__(self, reponses: dict, pause: float = 0.0):
+        from services.ai import depot_extracteur
+        self.reponses = reponses
+        self.pause = pause
+        self.appels: list[tuple[str, str]] = []
+        self._par_prompt = {depot_extracteur.prompt_systeme(e): e for e in depot_extracteur._PROMPTS}
+        import threading
+        self._verrou = threading.Lock()
+        self.en_cours = 0
+        self.max_en_cours = 0
+
+    def __call__(self, systeme: str, texte: str):
+        import time
+        extracteur = self._par_prompt[systeme]
+        with self._verrou:
+            self.appels.append((extracteur, texte))
+            self.en_cours += 1
+            self.max_en_cours = max(self.max_en_cours, self.en_cours)
+        try:
+            if self.pause:
+                time.sleep(self.pause)
+            reponse = self.reponses.get(extracteur, {})
+            champs = reponse(texte) if callable(reponse) else reponse
+            return dict(champs), {"input_tokens": (len(systeme) + len(texte)) // 4, "output_tokens": 220}
+        finally:
+            with self._verrou:
+                self.en_cours -= 1
+
+    @property
+    def textes_envoyes(self) -> str:
+        return "\n".join(t for _, t in self.appels)
+
+
+@pytest.fixture
+def modele(monkeypatch):
+    """`modele(reponses)` installe le modèle simulé et le rend."""
+    from services.ai import depot_extracteur
+
+    def _installer(reponses: dict, pause: float = 0.0) -> ModeleSimule:
+        faux = ModeleSimule(reponses, pause)
+        monkeypatch.setattr(depot_extracteur, "_call_haiku", faux)
+        return faux
+
+    return _installer
+
+
+def attendre_les_lectures() -> None:
+    import threading
+    for fil in threading.enumerate():
+        if fil.name.startswith("synorix-depot-"):
+            fil.join(60)
+
+
+def deposer_et_lire(client, case: str, *fichiers: tuple[str, bytes]) -> list[dict]:
+    reponse = deposer(client, case, *fichiers)
+    assert reponse.status_code == 200, reponse.text
+    attendre_les_lectures()
+    return reponse.json()["resultats"]
+
+
+def etat_de(client, case: str) -> dict:
+    return next(c for c in client.get(f"{BASE}/etat").json()["cases"] if c["id"] == case)
+
+
+KBIS_COMPLET = {
+    "forme_juridique": "Société par actions simplifiée", "capital_social": 40000, "greffe_rcs": "REIMS",
+    "adresse_siege": "12 avenue du Port 51100 REIMS", "annee_creation": 2011, "date_extrait": "2026-10-12",
+    "gerant_nom": "Camille MARTIN", "gerant_titre": "Président",
+}
+DECENNALE_COMPLETE = {
+    "assureur": "Mutuelle du Bâtiment Champagne", "numero_contrat": "BAT-2026-00457",
+    "activites_garanties": "maçonnerie, gros oeuvre, ravalement de façades",
+    "date_debut": "2026-01-01", "date_fin": "2026-12-31",
+}
