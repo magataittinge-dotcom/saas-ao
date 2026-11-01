@@ -5,6 +5,14 @@ import type { FamilleQualification, Qualification, Reference } from '@/types'
 import { AfficherPlus, BOUTON_AJOUT, BOUTON_RETIRER_TEXTE, ChampNombre, Field, Select } from './champs'
 
 const CARTE = 'space-y-3 rounded-lg border border-bord bg-surface-0 p-3'
+const CIVILITES = new Set(['m', 'm.', 'mr', 'mme', 'mlle', 'mle', 'monsieur', 'madame', 'mademoiselle', 'dr', 'me', 'pr'])
+
+/** Aperçu des initiales que le serveur écrira pour un particulier (même règle que `services/nom_client.py`). */
+export function initialesClient(nom: string | undefined | null): string {
+  return (nom ?? '').trim().split(/\s+/).filter(Boolean).map((mot) => (
+    CIVILITES.has(mot.toLowerCase()) ? mot : mot.split('-').filter(Boolean).map((p) => p[0].toUpperCase() + '.').join('-')
+  )).join(' ')
+}
 const GRILLE = 'grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(11rem,1fr))]'
 
 // ─── Qualifications, labels, certifications de management, assurances (table qualifications) ───
@@ -109,6 +117,19 @@ export function EditeurReferences({ lignes, modifier, ajouter, retirer }: {
                 <Field label="Adresse du client"><Input aria-label={`Référence ${i + 1} : adresse du client`} maxLength={500} value={v.client_adresse ?? ''} onChange={(e) => modifier(l.cle, { client_adresse: e.target.value })} /></Field>
               </div>
             </AfficherPlus>
+            {v.client_type === 'particulier' && (
+              <div className="space-y-1">
+                <label className="flex min-h-9 items-center gap-2 text-sm text-fg [@media(pointer:coarse)]:min-h-11">
+                  <input
+                    type="checkbox" className="size-4 accent-[var(--accent-ui)]"
+                    checked={v.client_nom_complet === true}
+                    onChange={(e) => modifier(l.cle, { client_nom_complet: e.target.checked })}
+                  />
+                  Afficher le nom complet du client sur les fiches et dans le mémoire
+                </label>
+                <p className="text-xs text-fg-3">Sans cette case, un particulier n'apparaît que par ses initiales ({initialesClient(v.maitre_ouvrage) || 'M. D.'}). Demandez-lui son accord avant de cocher.</p>
+              </div>
+            )}
             <button type="button" onClick={() => retirer(l.cle)} className={BOUTON_RETIRER_TEXTE} aria-label={`Retirer la référence ${i + 1}`}><Trash2 size={14} aria-hidden /> Retirer</button>
           </div>
         )

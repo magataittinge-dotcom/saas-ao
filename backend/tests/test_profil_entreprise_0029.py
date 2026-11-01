@@ -245,6 +245,15 @@ def test_reference_nouveaux_champs_et_bornes(deux):
         assert c.patch(f"/api/references/{ref['id']}", json=mauvais).status_code == 422, mauvais
 
 
+def test_reference_particulier_nom_complet_faux_par_defaut_puis_coche(deux):
+    c = _client(deux[0])
+    ref = c.post("/api/references", json={"intitule": "Extension (exemple)", "maitre_ouvrage": "Mme Dubois", "client_type": "particulier"}).json()
+    assert ref["client_nom_complet"] is False
+    assert c.patch(f"/api/references/{ref['id']}", json={"client_nom_complet": True}).json()["client_nom_complet"] is True
+    assert c.get("/api/references").json()[0]["client_nom_complet"] is True
+    assert c.patch(f"/api/references/{ref['id']}", json={"client_nom_complet": "oui"}).status_code == 422
+
+
 def test_cross_org_reference_nouveaux_champs(deux):
     ua, ub = deux
     ref = _client(ua).post("/api/references", json={"intitule": "R", "client_type": "particulier"}).json()

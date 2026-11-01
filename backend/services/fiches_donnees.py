@@ -24,6 +24,7 @@ from models.organization import Organization
 from models.reference import Reference
 from models.team_member import TeamMember
 from schemas.fiches_entreprise import COULEUR_PAR_DEFAUT, nettoyer
+from services.nom_client import nom_client_affiche
 
 MOIS_FR = (
     "janvier", "février", "mars", "avril", "mai", "juin",
@@ -521,9 +522,10 @@ def _tableau_references(db: Session, org_id: str) -> dict:
     for i, r in enumerate(_references(db, org_id), start=1):
         mode = _g(r, "mode_intervention")
         particulier = _g(r, "client_type") == "particulier"
-        client = _t(r.maitre_ouvrage)
-        if client:
-            clients.add(client.lower())
+        if _t(r.maitre_ouvrage):
+            clients.add(_t(r.maitre_ouvrage).lower())           # un donneur d'ordre, même réduit à ses initiales
+        # Un particulier n'apparaît que par ses initiales, sauf accord coché (RGPD, migration 0031).
+        client = _t(nom_client_affiche(_t(r.maitre_ouvrage), _g(r, "client_type"), _g(r, "client_nom_complet")))
         if mode == "sous_traitance":
             nb_sous += 1
         if r.montant_ht is not None:

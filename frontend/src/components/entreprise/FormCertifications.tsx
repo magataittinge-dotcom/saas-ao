@@ -17,7 +17,7 @@ import { useLignesEditables } from './useLignesEditables'
 const VARIANTE: Record<EtatPiece, 'success' | 'warning' | 'neutral'> = { au_coffre: 'success', a_renouveler: 'warning', a_joindre: 'neutral' }
 const LIEN = 'inline-flex items-center gap-1.5 text-sm font-medium text-accent-text hover:underline'
 const CHAMPS_QUALIFICATION: (keyof Qualification)[] = ['famille', 'intitule', 'organisme', 'numero', 'perimetre', 'date_obtention', 'date_fin', 'document_id']
-const CHAMPS_REFERENCE: (keyof Reference)[] = ['intitule', 'maitre_ouvrage', 'adresse', 'description', 'montant_ht', 'annee', 'mode_intervention', 'maitre_oeuvre', 'lot', 'client_type', 'client_adresse']
+const CHAMPS_REFERENCE: (keyof Reference)[] = ['intitule', 'maitre_ouvrage', 'adresse', 'description', 'montant_ht', 'annee', 'mode_intervention', 'maitre_oeuvre', 'lot', 'client_type', 'client_adresse', 'client_nom_complet']
 /** Pièces du coffre-fort listées ici : celles qui n'ont pas leur propre éditeur (qualification et assurances se déclarent plus haut). */
 const PIECES_ADMINISTRATIVES = PIECES_SUIVIES.filter((p) => ['C19', 'C20', 'C21'].includes(p.id))
 

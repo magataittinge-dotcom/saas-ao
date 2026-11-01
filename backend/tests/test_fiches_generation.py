@@ -153,8 +153,9 @@ def test_word_references_tableau_total_note_et_sections(db_session, entreprise):
     assert premiere[0].text == "01" and premiere[1].text == "Ville de Reims"
     assert premiere[2].text.strip() == "EN DIRECT" and premiere[4].text == "18 000 € HT"
     assert tableau.rows[2].cells[2].text.strip() == "SOUS-TRAITANCE"
-    particulier = next(r for r in tableau.rows[1:-1] if "Mme Dubois" in r.cells[1].text)
+    particulier = next(r for r in tableau.rows[1:-1] if "Mme D." in r.cells[1].text)   # initiales : nom complet non coché (0031)
     assert "PARTICULIER" in particulier.cells[1].text and "4 rue des Roses" in particulier.cells[1].text
+    assert all("Dubois" not in r.cells[1].text for r in tableau.rows)
     total = tableau.rows[-1]
     assert "TOTAL" in total.cells[0].text and "20 chantiers" in total.cells[0].text
     assert "dont 8 en sous-traitance" in total.cells[0].text

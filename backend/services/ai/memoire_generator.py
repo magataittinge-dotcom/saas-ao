@@ -18,6 +18,7 @@ from services.skill_loader import load_skill, load_skills_bundle, load_skill_ref
 from models.project import TYPE_AE, TYPES_GRILLES_DE_PRIX
 from services.ai.dtu_autorises import formater_liste_dtu, regle_dtu  # noqa: F401  (formater_liste_dtu ré-exporté)
 from services.dpgf_ouvrages import est_tableur
+from services.nom_client import nom_client_affiche
 import logging
 
 logger = logging.getLogger(__name__)
@@ -459,7 +460,8 @@ class MemoireGenerator:
         ref_list = [
             {
                 "intitule": r.intitule,
-                "maitre_ouvrage": r.maitre_ouvrage,
+                # Un client particulier n'entre dans le prompt que par ses initiales, sauf accord coché (RGPD, 0031).
+                "maitre_ouvrage": nom_client_affiche(r.maitre_ouvrage, getattr(r, "client_type", None), getattr(r, "client_nom_complet", False)) or None,
                 "lot": r.lot,
                 "montant_ht": r.montant_ht,
                 "annee": r.annee,

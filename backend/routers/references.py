@@ -29,6 +29,7 @@ class ReferenceCreate(BaseModel):
     client_type: Optional[ClientType] = None
     client_adresse: Optional[str] = Field(default=None, max_length=500)
     mode_intervention: Optional[ModeIntervention] = None
+    client_nom_complet: bool = False  # migration 0031 : nom du particulier en clair seulement si coché
 
 
 class ReferenceResponse(BaseModel):
@@ -47,6 +48,7 @@ class ReferenceResponse(BaseModel):
     client_type: Optional[str] = None
     client_adresse: Optional[str] = None
     mode_intervention: Optional[str] = None
+    client_nom_complet: bool = False
 
     model_config = {"from_attributes": True}
 
@@ -95,6 +97,7 @@ class ReferenceUpdate(BaseModel):
     client_type: Optional[ClientType] = None
     client_adresse: Optional[str] = Field(default=None, max_length=500)
     mode_intervention: Optional[ModeIntervention] = None
+    client_nom_complet: Optional[bool] = None
 
 
 @router.patch("/{ref_id}", response_model=ReferenceResponse)

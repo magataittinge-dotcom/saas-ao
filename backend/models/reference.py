@@ -28,6 +28,8 @@ class Reference(Base):
     client_type = Column(String(16), nullable=True)          # public | prive_pro | particulier
     client_adresse = Column(String(500), nullable=True)
     mode_intervention = Column(String(16), nullable=True)    # direct | sous_traitance | cotraitance
+    # Migration 0031 : un client particulier n'apparaît que par ses initiales, sauf si l'entreprise coche le nom complet.
+    client_nom_complet = Column(Boolean, nullable=False, default=False, server_default="false")
     attestation_document_id = Column(String, ForeignKey("documents.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     deleted_at = Column(DateTime, nullable=True, index=True)  # soft-delete

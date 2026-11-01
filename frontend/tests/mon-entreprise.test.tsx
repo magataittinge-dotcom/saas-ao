@@ -10,6 +10,7 @@ import FormIdentite from '@/components/entreprise/FormIdentite'
 import FormMoyens from '@/components/entreprise/FormMoyens'
 import FormCertifications from '@/components/entreprise/FormCertifications'
 import RubriquesEntreprise, { gabaritColonnes, lienFiche } from '@/components/entreprise/RubriquesEntreprise'
+import { initialesClient } from '@/components/entreprise/EditeursCertifications'
 import { INFORMATIONS, RUBRIQUES, aRenseigner, avancement, etatPiece, libelleAvancement, referenceRenseignee, type DonneesEntreprise } from '@/lib/entreprise/avancement'
 import { CHAMPS_ORGANISATION, CHAMPS_PROFIL, brouillonDepuis, chargeUtile } from '@/lib/entreprise/charges'
 import { lignesDepuis, planVide, planifier } from '@/lib/entreprise/liste'
@@ -144,6 +145,18 @@ test('Certifications : pièces du coffre-fort en positif, qualifications et assu
   for (const t of ['Qualifications professionnelles', 'Assurances', 'Références de chantiers', 'Ajouter une qualification', 'Ajouter une assurance', 'Ajouter une référence', 'Assureur inventé']) assert.ok(html.includes(t), t)
   assert.ok(html.includes('École (exemple)') && html.includes('Nature des travaux réalisés') && html.includes('Montant HT'))
   assert.ok(!/manquant|incomplet|absent/i.test(html))
+  assert.ok(!html.includes('Afficher le nom complet'), 'client public : pas de case « nom complet »')
+})
+
+test('Certifications : un client particulier n\'est nommé que par ses initiales, sauf case cochée (RGPD, 0031)', () => {
+  const particulier = { ...DONNEES, references: [{ id: 'r2', intitule: 'Extension (exemple)', maitre_ouvrage: 'Mme Dubois', client_type: 'particulier' as const }] }
+  const html = rendre(<QueryClientProvider client={new QueryClient()}><MemoryRouter><FormCertifications donnees={particulier} /></MemoryRouter></QueryClientProvider>, true)
+  assert.ok(html.includes('Afficher le nom complet du client sur les fiches et dans le mémoire'))
+  assert.ok(html.includes('initiales (Mme D.)'), 'aperçu des initiales que le serveur écrira')
+  assert.ok(!/checked/.test(html), 'décochée par défaut')
+  assert.equal(initialesClient('Jean-Pierre Martin'), 'J.-P. M.')
+  assert.equal(initialesClient('M. Ali Ben Salah'), 'M. A. B. S.')
+  assert.equal(initialesClient(''), '')
 })
 
 test('Identité : étiquettes associées aux champs, SIRET en lecture seule, le reste à la demande (« Afficher plus »)', () => {

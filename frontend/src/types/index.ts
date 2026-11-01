@@ -127,6 +127,8 @@ export interface Reference {
   client_type?: 'public' | 'prive_pro' | 'particulier'
   client_adresse?: string
   mode_intervention?: 'direct' | 'sous_traitance' | 'cotraitance'
+  /** Migration 0031 : un particulier n'apparaît que par ses initiales sur les fiches et dans le mémoire, sauf si coché. */
+  client_nom_complet?: boolean
   created_at: string
 }
 
