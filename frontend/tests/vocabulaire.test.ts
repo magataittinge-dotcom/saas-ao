@@ -43,7 +43,8 @@ test("une seule formule pour passer à l'étape suivante, qui nomme la bonne ét
   const anciennes = ['Suivant &gt;', 'Passer à la vérification', 'Étape Suivante', 'Aller au mémoire', 'Vérification finale']
   for (const [f, etape] of suites) {
     const textes = textesAffiches(f).map((t) => t.texte)
-    assert.ok(textes.some((t) => t.includes(`Étape suivante : ${etape}`)), `${f} : « Étape suivante : ${etape} »`)
+    // S10 : le bouton est BoutonSuite (« Étape suivante » sur ordinateur, « Suivant » au téléphone, puis « : étape »)
+    assert.ok(textes.some((t) => t.includes(`Étape suivante : ${etape}`)) || lire(f).includes(`<BoutonSuite\n          etape="${etape}"`) || lire(f).includes(`<BoutonSuite etape="${etape}"`), `${f} : « Étape suivante : ${etape} »`)
     for (const a of anciennes) assert.ok(!textes.some((t) => t.includes(a)), `${f} contient encore « ${a} »`)
   }
   const lancement = textesAffiches('src/routes/project/StepLotSelection.tsx').map((t) => t.texte)

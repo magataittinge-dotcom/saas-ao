@@ -3,12 +3,13 @@ import { createPortal } from 'react-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
-  Loader2, Search, Eye,
+  Search, Eye,
   CheckCircle2, Sparkles,
 } from 'lucide-react'
 import { api, getSignedFileUrl } from '@/services/api'
 import CriticalBanner, { type FieldSource } from '@/components/project/CriticalBanner'
 import CarteAO30s from '@/components/project/CarteAO30s'
+import BarreEtape, { ActionsBarre, BilanBarre, BoutonSuite } from '@/components/project/BarreEtape'
 import TresorerieCard from '@/components/project/TresorerieCard'
 import SynorixScoreCard from '@/components/project/SynorixScoreCard'
 import RetroPlanning from '@/components/project/RetroPlanning'
@@ -280,40 +281,32 @@ export default function StepAnalysis({ project }: Props) {
     />
   )
 
-  // ── Bottom bar (portalled) ────────────────────────────────────
+  // ── Barre du bas (composant commun : une ligne au téléphone) ───────
 
   const bottomBar = (
-    <div
-      className="sticky -bottom-5 z-30 -mx-3 sm:-mx-4 mt-6 rounded-t-lg flex items-center justify-between px-6 py-3 gap-4"
-      style={{
-        background: 'color-mix(in srgb, var(--surface-0) 92%, transparent)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        borderTop: '1px solid var(--border-1)',
-      }}
-    >
-      <div className="flex items-center gap-2.5 min-w-0">
-        <CheckCircle2 size={16} className="shrink-0" style={{ color: 'var(--text-1)' }} />
-        <p className="num-mono truncate text-xs" style={{ color: 'var(--text-3)', fontFamily: F }}>
-          {items.length} exigences · {obligatoireCount} obligatoires
-        </p>
-      </div>
-
-      <div className="flex items-center gap-3 shrink-0">
-        <button
+    <BarreEtape>
+      <BilanBarre
+        bureau={<>
+          <CheckCircle2 size={16} className="shrink-0" style={{ color: 'var(--text-1)' }} />
+          <p className="num-mono truncate text-xs" style={{ color: 'var(--text-3)', fontFamily: F }}>
+            {items.length} exigences · {obligatoireCount} obligatoires
+          </p>
+        </>}
+        tel={<>
+          <CheckCircle2 size={16} className="shrink-0" style={{ color: 'var(--text-1)' }} />
+          <p className="num-mono truncate text-xs" style={{ color: 'var(--text-3)', fontFamily: F }}>{items.length} exigences</p>
+        </>}
+      />
+      <ActionsBarre>
+        <BoutonSuite
+          etape="Pièces"
           onClick={handleValidate}
-          disabled={isValidating}
-          className="signature-btn"
-          style={{ fontFamily: F }}
-        >
-          {isValidating
-            ? <><Loader2 size={16} className="animate-spin" /> Validation...</>
-            : isStepAlreadyDone
-            ? <><CheckCircle2 size={16} /> Étape suivante : Pièces</>
-            : <><Sparkles size={16} /> Étape suivante : Pièces</>}
-        </button>
-      </div>
-    </div>
+          enCours={isValidating}
+          enCoursLibelle="Validation..."
+          icone={isStepAlreadyDone ? CheckCircle2 : Sparkles}
+        />
+      </ActionsBarre>
+    </BarreEtape>
   )
 
   const infos = project.infos_marche
