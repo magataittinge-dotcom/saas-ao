@@ -7,7 +7,8 @@ import protégé. Rien n'est recopié en base : le bordereau (titre, logo, ligne
 ``fiches_entreprise``, les données restent à leur place.
 
 Règles d'écriture (règles produit) : jamais « manquant », « incomplet » ni « absent » ; une rubrique ou une
-valeur sans donnée n'est pas listée, une section sans ligne imprime « Précisions sur demande » ; aucun avis
+valeur sans donnée n'est pas listée (ni libellé seul, ni tiret, ni « À renseigner » : un document remis à un
+acheteur n'a pas de trous), une section sans ligne imprime « Précisions sur demande » ; aucun avis
 sur les prix : le tableau des références reprend les montants saisis, il ne les commente pas.
 """
 from __future__ import annotations
@@ -290,7 +291,7 @@ def _disposition(lignes: list) -> str:
 
 
 def _section(numero: str, titre: str, lignes: list, texte: str = "", disposition: str = "") -> dict:
-    lignes = [x for x in lignes if x["valeur"] or x["libelle"]]
+    lignes = [x for x in lignes if x["valeur"]]           # une ligne sans valeur n'est jamais imprimée
     return {
         "id": numero, "titre": titre, "lignes": lignes, "texte": texte, "vide": not lignes and not texte,
         "disposition": disposition or _disposition(lignes),
@@ -298,7 +299,13 @@ def _section(numero: str, titre: str, lignes: list, texte: str = "", disposition
 
 
 def _tuile(valeur: Any, libelle: str) -> dict:
-    return {"valeur": str(valeur) if valeur not in (None, "", 0) else "—", "libelle": libelle}
+    """Une tuile de chiffre clé ; sans valeur (vide ou zéro) elle est écartée par ``_garder_tuiles`` : ni tiret, ni zéro."""
+    return {"valeur": str(valeur) if valeur not in (None, "", 0) else "", "libelle": libelle}
+
+
+def _garder_tuiles(tuiles: list) -> list:
+    """Une tuile sans valeur disparaît : un document remis à un acheteur n'a ni « — » ni zéro creux."""
+    return [t for t in tuiles if t["valeur"]]
 
 
 # ─── Rubrique Moyens ───────────────────────────────────────────────────────────
@@ -396,7 +403,8 @@ def _moyens(db: Session, org: Organization, cfg: Optional[MemoireConfig], jour: 
             qualite.append(_ligne(libelle, _court(_t(brut), 260)))
     for q in _qualifications_declarees(db, org.id):
         if _g(q, "famille") == "systeme_management":
-            qualite.append(_ligne(_t(q.intitule), _t(q.organisme) or ""))
+            # « ISO 9001 — organisme » ; sans organisme, l'intitulé seul : jamais un libellé sans valeur.
+            qualite.append(_ligne(_t(q.intitule), _t(q.organisme)) if _t(q.organisme) else _ligne("", _t(q.intitule)))
     # 07 Documents sur demande
     documents = _documents(db, org.id)
     sur_demande = []
@@ -423,12 +431,12 @@ def _moyens(db: Session, org: Organization, cfg: Optional[MemoireConfig], jour: 
     chefs = sum(e["effectif"] for e in effectifs if e["categorie"] == "chef_equipe")
     nb_vehicules = sum(v["quantite"] for v in vehicules)
     nb_materiel = sum(m["quantite"] for m in materiel if not m["unite"])
-    tuiles = [
+    tuiles = _garder_tuiles([
         _tuile(total_effectif, "personnes" if effectifs else "personnes clés"),
         _tuile(chefs, "chefs d'équipe"),
         _tuile(nb_vehicules, "véhicules"),
         _tuile(nb_materiel or len(materiel), "matériels"),
-    ]
+    ])
     lignes_cles = [_ligne("Activités", _court(_t(_g(cfg, "activites") or _g(org, "activites")), 300)),
                    _ligne("Zone d'intervention", _t(_g(cfg, "zone_intervention")))]
     return {"tuiles": tuiles, "lignes_cles": [x for x in lignes_cles if x["valeur"]], "sections": sections,
@@ -491,13 +499,13 @@ def _identite(db: Session, org: Organization, cfg: Optional[MemoireConfig], jour
     derniere = next((e for e in exercices if e["montant"]), None)
     effectif = next((_entier(e["effectif"]) for e in exercices if e["effectif"] not in (None, "")), 0)
     annee_creation = re.search(r"(?:19|20)\d{2}", creation)
-    tuiles = [
+    tuiles = _garder_tuiles([
         _tuile(effectif, "effectif moyen"),
         _tuile(euros(derniere["valeur"], ht=False) if derniere and derniere["valeur"] is not None else
                (derniere["montant"] if derniere else ""), f"CA HT {derniere['annee']}" if derniere and derniere["annee"] else "CA HT"),
         _tuile(annee_creation.group(0) if annee_creation else "", "création"),
         _tuile(nb_refs, "chantiers référencés"),
-    ]
+    ])
     return {
         "tuiles": tuiles, "lignes_cles": [],
         "sections": [
@@ -575,11 +583,11 @@ def _certifications(db: Session, org: Organization, cfg: Optional[MemoireConfig]
                       if d.type in _TYPES_HABILITATION and d.id not in relies and d.type not in deja]
 
     total = tableau["total"]
-    tuiles = [
+    tuiles = _garder_tuiles([
         _tuile(total["chantiers"], "chantiers"), _tuile(total["montant"], "montant cumulé"),
         _tuile(total["sous_traitance"] if any(l["intervention"] for l in tableau["lignes"]) else "", "en sous-traitance"),
         _tuile(total["donneurs_ordre"], "donneurs d'ordre"),
-    ]
+    ])
     return {
         "tuiles": tuiles, "lignes_cles": [],
         "sections": [

@@ -7,7 +7,7 @@
 import { Link } from 'react-router-dom'
 import { ImagePlus, Plus, X } from 'lucide-react'
 import {
-  INFOBULLE_ABREGE, INTERVENTIONS, MAX_LIGNES_LIBRES, VIDE_SECTION, estAbrege, lignesDeSection, pageEstimee, variablesFiche,
+  INFOBULLE_ABREGE, INTERVENTIONS, MAX_LIGNES_LIBRES, VIDE_SECTION, estAbrege, lignesDeSection, pageEstimee, tuilesAffichees, variablesFiche,
   type FicheBordereau, type FicheDonnees, type FicheReference, type FicheSection, type LigneLibre, type PaletteFiche,
 } from '@/lib/fiche'
 
@@ -163,9 +163,11 @@ function LigneIdentite({ lignes }: { lignes: FicheDonnees['identite_ligne'] }) {
 }
 
 function Tuiles({ tuiles }: { tuiles: FicheDonnees['tuiles'] }) {
+  const visibles = tuilesAffichees(tuiles)
+  if (visibles.length === 0) return null
   return (
-    <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4" data-tuiles>
-      {tuiles.map((t) => (
+    <ul className={`mt-3 grid grid-cols-2 gap-2 ${visibles.length >= 4 ? 'sm:grid-cols-4' : visibles.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`} data-tuiles>
+      {visibles.map((t) => (
         <li key={t.libelle} className="border-l-[3px] border-[color:var(--f-accent)] bg-[var(--f-pale)] px-3 py-2">
           <p className="text-[22px] font-bold leading-none text-[color:var(--f-accent-texte)] [overflow-wrap:anywhere]">{t.valeur}</p>
           <p className={`${CAPITALES} mt-1 text-[12px] font-bold tracking-[0.06em] text-[color:var(--f-discret)]`}>{t.libelle}</p>
@@ -293,7 +295,7 @@ function TableauReferences({ tableau }: { tableau: NonNullable<FicheDonnees['ref
                 <tr key={r.numero} className="border-b border-[color:var(--f-filet)] align-top" data-ligne-reference>
                   <td className="px-2.5 py-2 font-bold text-[color:var(--f-accent-texte)]">{String(r.numero).padStart(2, '0')}</td>
                   <td className="px-2.5 py-2">
-                    <strong className="text-[color:var(--f-encre)]">{r.client || '—'}</strong>{r.particulier && <Particulier />}
+                    <strong className="text-[color:var(--f-encre)]">{r.client}</strong>{r.particulier && <Particulier />}
                     {r.client_adresse && <span className="block text-[12px] text-[color:var(--f-discret)]">{r.client_adresse}</span>}
                   </td>
                   <td className="px-2.5 py-2">{r.intervention && <Pastille mode={r.intervention} />}</td>
@@ -302,7 +304,7 @@ function TableauReferences({ tableau }: { tableau: NonNullable<FicheDonnees['ref
                     {r.lieu && <span className="block text-[12px] text-[color:var(--f-discret)]">{r.lieu}</span>}
                     {r.travaux && <Texte t={r.travaux} className="block text-[12px]" />}
                   </td>
-                  <td className="whitespace-nowrap px-2.5 py-2 text-right font-bold text-[color:var(--f-encre)]">{r.montant || '—'}</td>
+                  <td className="whitespace-nowrap px-2.5 py-2 text-right font-bold text-[color:var(--f-encre)]">{r.montant}</td>
                 </tr>
               ))}
             </tbody>
@@ -315,8 +317,8 @@ function TableauReferences({ tableau }: { tableau: NonNullable<FicheDonnees['ref
           {tableau.lignes.map((r) => (
             <li key={r.numero} className="border-b border-[color:var(--f-filet)] pb-2">
               <p className="flex items-baseline justify-between gap-2">
-                <span><span className="mr-2 font-bold text-[color:var(--f-accent-texte)]">{String(r.numero).padStart(2, '0')}</span><strong className="text-[color:var(--f-encre)]">{r.client || '—'}</strong>{r.particulier && <Particulier />}</span>
-                <strong className="whitespace-nowrap text-[color:var(--f-encre)]">{r.montant || '—'}</strong>
+                <span><span className="mr-2 font-bold text-[color:var(--f-accent-texte)]">{String(r.numero).padStart(2, '0')}</span><strong className="text-[color:var(--f-encre)]">{r.client}</strong>{r.particulier && <Particulier />}</span>
+                <strong className="whitespace-nowrap text-[color:var(--f-encre)]">{r.montant}</strong>
               </p>
               {r.client_adresse && <p className="text-[12px] text-[color:var(--f-discret)]">{r.client_adresse}</p>}
               <p className="mt-1">{r.intervention && <Pastille mode={r.intervention} />}</p>
@@ -333,7 +335,7 @@ function TableauReferences({ tableau }: { tableau: NonNullable<FicheDonnees['ref
           <strong className="ml-2 text-[color:var(--f-accent-texte)]">{total.chantiers} chantier{pluriel}</strong>
           {total.sous_traitance > 0 && <span className="ml-2 text-[12px] text-[color:var(--f-discret)]">dont {total.sous_traitance} en sous-traitance</span>}
         </span>
-        <strong className="text-[15px] text-[color:var(--f-accent-texte)]">{total.montant || '—'}</strong>
+        <strong className="text-[15px] text-[color:var(--f-accent-texte)]">{total.montant}</strong>
       </p>
       <p className="mt-2 text-[12px] italic text-[color:var(--f-discret)]">{tableau.note}</p>
     </section>

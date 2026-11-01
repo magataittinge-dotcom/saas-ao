@@ -341,3 +341,77 @@ def test_generation_debit_limite(client, deux_entreprises):
         limiter.enabled = False
         limiter.reset()
     assert codes[:10] == [200] * 10 and 429 in codes[10:]
+
+
+# ─── Une fiche sans trous (T3) ─────────────────────────────────────────────────
+
+def _profil_clairseme():
+    """Presque rien de renseigné : un dirigeant, une zone, quelques chiffres à zéro."""
+    from types import SimpleNamespace
+    return SimpleNamespace(
+        nom_entreprise="", date_creation="", gerant_nom="Camille Démo", gerant_titre="", zone_intervention="Calvados",
+        historique="", activites="", chiffre_affaires=[], organigramme_description="", postes_cles=[],
+        moyens_informatiques="", vehicules="", materiel="", demarche_qualite="", procedure_demarrage="",
+        gestion_securite="", traitement_dechets="", mesures_environnementales="", fournisseurs_principaux="",
+        metiers=[], departements_intervention=[], effectifs_par_categorie=[], habilitations=[], materiel_liste=[],
+        vehicules_liste=[], sous_traitance_partenaires="", sous_traitance_part_pct=None, sav_garantie="",
+    )
+
+
+@pytest.mark.parametrize("rubrique", ["identite", "moyens", "certifications"])
+def test_fiche_clairsemee_aucune_ligne_vide_aucun_tiret_aucune_tuile_creuse(db_session, rubrique):
+    org = fab.creer_entreprise(db_session)
+    org.forme_juridique = org.email_contact = org.telephone = org.greffe_rcs = ""
+    org.capital_social = None
+    org.siret = ""
+    d = fab.donnees(db_session, org, rubrique, cfg=_profil_clairseme(), references=[])
+    # données : aucune ligne sans valeur, aucune tuile sans valeur
+    for section in d["sections"]:
+        assert all(l["valeur"].strip() for l in section["lignes"]), (rubrique, section["id"], section["lignes"])
+    assert all(t["valeur"].strip() and t["valeur"] not in ("—", "0") for t in d["tuiles"]), d["tuiles"]
+    assert all(l["valeur"].strip() for l in d["lignes_cles"] + d["identite_ligne"])
+    # Word : relu, sans tiret seul, sans « À renseigner », sans libellé laissé seul
+    b = fab.bordereau(rubrique, lignes_libres=[{"section": "01", "libelle": "Libellé seul", "valeur": "  "},
+                                                {"section": "01", "libelle": "Précision", "valeur": "Texte inventé"}])
+    octets = gen.generer_docx(d, b, fd.palette(b["couleur"]))
+    texte = _textes(octets)
+    assert "Libellé seul" not in texte and "Texte inventé" in texte
+    assert "À renseigner" not in texte and "à renseigner" not in texte.lower()
+    for mot in ("manquant", "incomplet", "absent"):
+        assert mot not in texte.lower()
+    doc = Document(io.BytesIO(octets))
+    paragraphes = [p.text.strip() for t in doc.tables for row in t.rows for c in row.cells for p in c.paragraphs]
+    assert "—" not in paragraphes and "-" not in paragraphes, "aucun tiret seul"
+    # la phrase de l'aperçu (« N informations à renseigner … ») n'est jamais imprimée dans le fichier
+    assert "informations à renseigner" not in texte and "Mon entreprise pour compléter" not in texte
+
+
+def test_tuiles_sans_valeur_disparaissent_et_le_bloc_s_efface_quand_il_n_en_reste_aucune(db_session):
+    org = fab.creer_entreprise(db_session)
+    d = fab.donnees(db_session, org, "moyens", cfg=_profil_clairseme(), references=[])
+    assert d["tuiles"] == [] or all(t["valeur"] for t in d["tuiles"])
+    d["tuiles"] = []
+    b = fab.bordereau("moyens")
+    texte = _textes(gen.generer_docx(d, b, fd.palette(b["couleur"])))         # ne lève pas : pas de tuile, pas de bloc
+    assert "Précisions sur demande" in texte
+
+
+def test_tableau_des_references_sans_client_ni_montant_n_imprime_aucun_tiret(db_session):
+    org = fab.creer_entreprise(db_session)
+    refs = [SimpleNamespace_ref(intitule="Chantier inventé", maitre_ouvrage="", montant_ht=None)]
+    d = fab.donnees(db_session, org, "certifications", references=refs)
+    b = fab.bordereau("certifications")
+    octets = gen.generer_docx(d, b, fd.palette(b["couleur"]))
+    doc = Document(io.BytesIO(octets))
+    cellules = [c.text.strip() for t in doc.tables for row in t.rows for c in row.cells]
+    assert "—" not in cellules
+    assert any("Chantier inventé" in c for c in cellules)
+
+
+def SimpleNamespace_ref(**kw):
+    from types import SimpleNamespace
+    base = dict(id="r-x", intitule="", maitre_ouvrage="", adresse="", annee=2025, montant_ht=None, lot="", description="",
+                mode_intervention=None, client_type="public", client_adresse="", client_nom_complet=False,
+                statut="gagné", is_reference=True)
+    base.update(kw)
+    return SimpleNamespace(**base)

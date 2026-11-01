@@ -161,6 +161,19 @@ export function variablesFiche(p: PaletteFiche): Record<string, string> {
 /** Lignes d'une section : celles des données, puis les lignes libres du bordereau pour cette section. */
 export function lignesDeSection(section: FicheSection, libres: LigneLibre[]): FicheLigne[] {
   return [...section.lignes, ...libres.filter((l) => l.section === section.id).map(({ libelle, valeur }) => ({ libelle, valeur }))]
+    .filter(aUneValeur)
+}
+
+/** Une ligne sans valeur n'est jamais imprimée : ni libellé seul, ni tiret, ni « À renseigner » (comme dans le PDF et le Word). */
+export const aUneValeur = (l: { valeur: string }): boolean => l.valeur.trim() !== '' && l.valeur.trim() !== '—'
+
+/** Les tuiles de chiffres clés qui portent un chiffre ; une tuile sans valeur disparaît. */
+export const tuilesAffichees = (tuiles: FicheTuile[]): FicheTuile[] => tuiles.filter((t) => t.valeur.trim() !== '' && t.valeur.trim() !== '—')
+
+/** « 3 informations à renseigner dans Mon entreprise pour compléter cette fiche » ; chaîne vide quand il n'en reste aucune. */
+export function phraseARenseigner(n: number): { avant: string; lien: string; apres: string } | null {
+  if (!(n > 0)) return null
+  return { avant: `${n} information${n > 1 ? 's' : ''} à renseigner dans `, lien: 'Mon entreprise', apres: ' pour compléter cette fiche' }
 }
 
 export function pageEstimee(donnees: FicheDonnees, numero = 1): string {

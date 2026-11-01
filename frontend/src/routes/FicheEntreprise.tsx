@@ -9,6 +9,9 @@ import { api } from '@/services/api'
 import { messageErreur } from '@/lib/erreurs'
 import { toast } from '@/components/common/Toast'
 import FichePreview from '@/components/fiche/FichePreview'
+import PhraseARenseigner from '@/components/fiche/PhraseARenseigner'
+import { useDonneesEntreprise } from '@/components/entreprise/useDonneesEntreprise'
+import { aRenseigner } from '@/lib/entreprise/avancement'
 import EcranEnChargement from '@/components/common/EcranEnChargement'
 import { Button } from '@/components/ui/button'
 import {
@@ -46,6 +49,9 @@ function Fiche({ rubrique }: { rubrique: RubriqueFiche }) {
   const [brouillon, setBrouillon] = useState<FicheBordereau | null>(null)
   const [edition, setEdition] = useState(false)
   const [format, setFormat] = useState<Format>('pdf')
+  // Le compte est celui des cartes de Mon entreprise (informations indispensables de la rubrique encore à saisir).
+  const donneesEntreprise = useDonneesEntreprise()
+  const aSaisir = donneesEntreprise.profilCharge ? aRenseigner(donneesEntreprise, rubrique).length : 0
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: cleFiche(rubrique),
@@ -163,6 +169,8 @@ function Fiche({ rubrique }: { rubrique: RubriqueFiche }) {
       {enregistrement.isError && (
         <p role="alert" className="text-sm text-fg-2">Le bordereau n'a pas pu être enregistré. Vérifiez la couleur (#RRGGBB) et la longueur des textes.</p>
       )}
+
+      <PhraseARenseigner n={aSaisir} rubrique={rubrique} />
 
       <FichePreview
         donnees={data.donnees} bordereau={bordereau} palette={paletteFiche(bordereau.couleur)}

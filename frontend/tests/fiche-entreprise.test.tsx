@@ -9,8 +9,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import FichePreview from '@/components/fiche/FichePreview'
 import FicheEntreprise from '@/routes/FicheEntreprise'
 import { estThemee } from '@/components/layout/Layout'
+import PhraseARenseigner from '@/components/fiche/PhraseARenseigner'
 import {
-  bordereauModifie, lignesDeSection, pageEstimee, paletteFiche, variablesFiche,
+  bordereauModifie, lignesDeSection, pageEstimee, paletteFiche, phraseARenseigner, tuilesAffichees, variablesFiche,
   type FicheBordereau, type FicheDonnees, type FicheReponse, type FicheSection,
   estAbrege,
 } from '@/lib/fiche'
@@ -233,4 +234,59 @@ test('les actions passent par l\'API : enregistrement, logo et génération (blo
   assert.match(code, /`\/entreprise\/fiches\/\$\{rubrique\}\/logo`/)
   assert.match(code, /`\/entreprise\/fiches\/\$\{rubrique\}\/generer`[\s\S]*responseType: 'blob'/)
   assert.match(code, /params: \{ format \}/)
+})
+
+
+// ── Une fiche sans trous (T3) ───────────────────────────────────
+
+test('aperçu : une ligne sans valeur n\'est pas imprimée, une tuile sans valeur disparaît, aucun tiret seul', () => {
+  const creux: FicheDonnees = {
+    ...moyens,
+    tuiles: [{ valeur: '12', libelle: 'personnes' }, { valeur: '—', libelle: 'véhicules' }, { valeur: '', libelle: 'matériels' }],
+    sections: [
+      section('01', 'Moyens humains', [['Forme juridique', ''], ['Capital', '  '], ['Effectif', '12']]),
+      section('02', 'Matériel', [['Libellé seul', '']]),
+    ],
+  }
+  const html = rendre(creux, bordereau({ lignes_libres: [{ section: '01', libelle: 'Libre sans valeur', valeur: ' ' }, { section: '01', libelle: 'Libre', valeur: 'Valeur inventée' }] }))
+  assert.equal((html.match(/<li class="border-l-\[3px\]/g) ?? []).length, 1, 'seule la tuile à valeur reste')
+  assert.ok(!html.includes('véhicules') && !html.includes('matériels'))
+  for (const t of ['Forme juridique', 'Capital', 'Libellé seul', 'Libre sans valeur']) assert.ok(!html.includes(t), `${t} n'est pas imprimé`)
+  assert.ok(html.includes('Effectif') && html.includes('Valeur inventée'))
+  assert.ok(html.includes('Précisions sur demande'), 'une section sans aucune ligne garde sa phrase neutre')
+  assert.ok(!/>—</.test(html) && !html.includes('À renseigner'), 'ni tiret seul ni « À renseigner » sur la feuille')
+  assert.deepEqual(tuilesAffichees(creux.tuiles).map((t) => t.libelle), ['personnes'])
+  // aucune tuile : le bloc n'existe pas
+  assert.ok(!rendre({ ...creux, tuiles: [{ valeur: '—', libelle: 'x' }] }).includes('data-tuiles'))
+  // le tableau des références n'imprime pas de tiret pour un client ou un montant vide
+  const refs = rendre({ ...certifications, references: { ...certifications.references!, lignes: [{ ...certifications.references!.lignes[0], client: '', montant: '' }], total: { ...certifications.references!.total, chantiers: 1, montant: '' } } })
+  assert.ok(!/>—</.test(refs))
+})
+
+test('phrase « N informations à renseigner dans Mon entreprise pour compléter cette fiche » : lien vers la rubrique, absente à 0', () => {
+  assert.equal(phraseARenseigner(0), null)
+  assert.equal(phraseARenseigner(-2), null)
+  assert.deepEqual(phraseARenseigner(1), { avant: '1 information à renseigner dans ', lien: 'Mon entreprise', apres: ' pour compléter cette fiche' })
+  const html = renderToStaticMarkup(<MemoryRouter><PhraseARenseigner n={3} rubrique="moyens" /></MemoryRouter>)
+  assert.match(html, /3 informations à renseigner dans <a[^>]*href="\/company\?rubrique=moyens"[^>]*>Mon entreprise<\/a> pour compléter cette fiche/)
+  assert.equal(renderToStaticMarkup(<MemoryRouter><PhraseARenseigner n={0} rubrique="identite" /></MemoryRouter>), '')
+  assert.ok(!/manquant|incomplet|absent/i.test(html))
+  // elle est dans l'écran, au-dessus de l'aperçu, et nulle part dans le fichier (c'est le serveur qui imprime)
+  const code = sansCommentaires(lire('src/routes/FicheEntreprise.tsx'))
+  assert.ok(code.indexOf('<PhraseARenseigner') > 0 && code.indexOf('<PhraseARenseigner') < code.indexOf('<FichePreview'))
+  assert.doesNotMatch(sansCommentaires(lire('src/components/fiche/FichePreview.tsx')), /PhraseARenseigner|à renseigner/)
+})
+
+test('l\'écran : le compte est celui des cartes de Mon entreprise (informations indispensables encore à saisir)', () => {
+  const client = new QueryClient()
+  client.setQueryData(['fiche-entreprise', 'moyens'], reponse(moyens))
+  client.setQueryData(['memoire-config'], { id: 'c1', organization_id: 'o1', gestion_securite: 'PPSPS inventé' })
+  for (const cle of ['team', 'references', 'documents', 'qualifications']) client.setQueryData([cle], [])
+  const html = renderToStaticMarkup(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={['/entreprise/fiche/moyens']}>
+        <Routes><Route path="/entreprise/fiche/:rubrique" element={<FicheEntreprise />} /></Routes>
+      </MemoryRouter>
+    </QueryClientProvider>)
+  assert.match(html, /8 informations à renseigner dans <a[^>]*href="\/company\?rubrique=moyens"[^>]*>Mon entreprise<\/a> pour compléter cette fiche/)
 })

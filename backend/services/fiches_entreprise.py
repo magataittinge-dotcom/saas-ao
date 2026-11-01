@@ -182,7 +182,7 @@ def lignes_effectives(section: dict, lignes_libres: list[dict]) -> list[dict]:
     """Lignes de la section, puis les lignes libres du bordereau pour cette section."""
     libres = [{"libelle": _s(l.get("libelle")), "valeur": _s(l.get("valeur"))}
               for l in lignes_libres if l.get("section") == section["id"]]
-    return list(section["lignes"]) + libres
+    return list(section["lignes"]) + [l for l in libres if l["valeur"].strip()]    # jamais de ligne sans valeur
 
 
 def _banniere(doc, bordereau: dict, societe: dict, pal: dict, logo_png: Optional[bytes]) -> None:
@@ -229,6 +229,8 @@ def _ligne_identite(doc, donnees: dict, pal: dict) -> None:
 
 def _tuiles(doc, donnees: dict, pal: dict) -> None:
     n = len(donnees["tuiles"])
+    if n == 0:                                       # aucune tuile à valeur : le bloc n'existe pas
+        return
     largeur = LARGEUR_CM / n
     t = _table(doc, 1, n, [largeur] * n)
     _marges_table(t, 0.22, 0.3, 0.22, 0.2)
@@ -335,7 +337,7 @@ def _tableau_references(doc, ref: dict, pal: dict) -> None:
         c = ligne.cells
         _run(_premier_para(c[0]), f"{x['numero']:02d}", taille=9, gras=True, couleur=pal["accent_texte"])
         p = _premier_para(c[1])
-        _run(p, x["client"] or "—", taille=9, gras=True, couleur=pal["encre"])
+        _run(p, x["client"], taille=9, gras=True, couleur=pal["encre"])
         if x["particulier"]:
             _run(p, "  PARTICULIER", taille=6.5, gras=True, couleur=pal["discret"], espace=0.6, fond="#eef1f5")
         if x["client_adresse"]:
@@ -355,7 +357,7 @@ def _tableau_references(doc, ref: dict, pal: dict) -> None:
             _run(_para(c[3]), x["lieu"], taille=8, couleur=pal["discret"])
         if x["travaux"]:
             _run(_para(c[3]), x["travaux"], taille=8.5)
-        _run(_premier_para(c[4], align=WD_ALIGN_PARAGRAPH.RIGHT), x["montant"] or "—", taille=9, gras=True,
+        _run(_premier_para(c[4], align=WD_ALIGN_PARAGRAPH.RIGHT), x["montant"], taille=9, gras=True,
              couleur=pal["encre"])
     total = ref["total"]
     ligne = t.add_row()
@@ -370,7 +372,7 @@ def _tableau_references(doc, ref: dict, pal: dict) -> None:
          espace=0.8)
     if total["sous_traitance"]:
         _run(p, f"  ·  dont {total['sous_traitance']} en sous-traitance", taille=8.5, couleur=pal["discret"])
-    _run(_premier_para(ligne.cells[4], align=WD_ALIGN_PARAGRAPH.RIGHT), total["montant"] or "—", taille=10,
+    _run(_premier_para(ligne.cells[4], align=WD_ALIGN_PARAGRAPH.RIGHT), total["montant"], taille=10,
          gras=True, couleur=pal["accent_texte"])
     p = _para(doc, avant=6, apres=8)
     _run(p, ref["note"], taille=8, italique=True, couleur=pal["discret"])
