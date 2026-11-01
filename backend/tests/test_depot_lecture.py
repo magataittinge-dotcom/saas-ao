@@ -333,12 +333,12 @@ def test_image_et_pdf_scanne_lisibles_seulement_avec_un_ocr_sans_appel_au_modele
     assert db_session.query(Document).count() == 2        # les deux sont au coffre-fort
 
 
-def test_ancien_format_word_reste_au_coffre_avec_un_message(client, coffre, modele):
+def test_ancien_format_word_refuse_sans_rien_lire(client, coffre, db_session, modele):
     m = modele({})
     ole2 = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\x00" * 512
-    deposer_et_lire(client, "fiche_moyens", ("ancienne-fiche.doc", ole2))
-    case = etat_de(client, "fiche_moyens")
-    assert case["libelle_etat"] == "Déposé dans le coffre-fort" and ".docx" in case["note"] and m.appels == []
+    res = deposer_et_lire(client, "fiche_moyens", ("ancienne-fiche.doc", ole2))[0]
+    assert res["accepte"] is False and res["statut"] == 415 and ".docx" in res["detail"]
+    assert etat_de(client, "fiche_moyens")["etat"] == "vide" and m.appels == [] and db_session.query(Document).count() == 0
 
 
 def test_rien_a_extraire_deposé_dans_le_coffre_fort(client, coffre, modele):

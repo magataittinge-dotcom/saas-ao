@@ -11,9 +11,12 @@ from typing import Optional
 
 RUBRIQUES = ("identite", "moyens", "certifications")
 
-# Formats acceptés partout : PDF, Word, Excel, JPEG, PNG. Les anciens formats Word/Excel (.doc, .xls) sont reçus ;
-# un .doc n'est pas lisible sans LibreOffice : il entre au coffre-fort avec un message.
-EXTENSIONS = (".pdf", ".docx", ".doc", ".xlsx", ".xls", ".jpg", ".jpeg", ".png")
+# Formats acceptés partout : PDF, Word (.docx), Excel (.xlsx), JPEG, PNG. Les anciens formats OLE2 (.doc, .xls) sont
+# REFUSÉS : ils peuvent porter des macros VBA et des objets embarqués qu'on ne sait pas analyser ; on demande de les
+# enregistrer au format moderne (revue de sécurité du coordinateur).
+EXTENSIONS = (".pdf", ".docx", ".xlsx", ".jpg", ".jpeg", ".png")
+ANCIENS_FORMATS = (".doc", ".xls")
+MESSAGE_ANCIEN_FORMAT = "Enregistrez le fichier au format .docx (ou .xlsx) puis redéposez-le."
 FORMATS_LISIBLES = "PDF, Word, Excel, JPEG ou PNG"
 MESSAGE_FORMAT = "Ce fichier n'est pas un PDF, un Word, un Excel ou une image JPEG/PNG."
 PLAFOND_OCTETS = 20 * 1024 * 1024

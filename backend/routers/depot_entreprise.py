@@ -108,6 +108,10 @@ async def deposer(
     a_lire: list[str] = []
     for fichier in fichiers:
         nom = (fichier.filename or "").strip() or "fichier"
+        if upload_validation.extension_of(nom) in depot_cases.ANCIENS_FORMATS:
+            # .doc et .xls : refusés quel que soit leur contenu (pas de requalification silencieuse d'un zip renommé)
+            resultats.append(_refus(nom, HTTPException(status_code=415, detail=depot_cases.MESSAGE_ANCIEN_FORMAT)))
+            continue
         try:
             # request=None : le Content-Length est celui de TOUS les fichiers de l'envoi, pas d'un seul.
             with await upload_validation.recevoir_fichier(None, fichier, _REGLE) as recu:

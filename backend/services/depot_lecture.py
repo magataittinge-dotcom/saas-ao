@@ -3,8 +3,7 @@
 - PDF  : pdfium dans le processus isolé (`extraction_processus.pages_pdf`), page par page : chaque proposition
   garde le numéro de sa page. Au plus `PLAFOND_PAGES_LUES` pages ; au-delà, le plafond est ATTEINT et affiché
   (« Lu jusqu'à la page 40 »), jamais de troncature silencieuse.
-- Word : `texte_docx` (garde anti-bombe de décompression). Un .doc (ancien format) n'est pas lisible sans
-  LibreOffice : il reste au coffre-fort, avec un message.
+- Word : `texte_docx` (garde anti-bombe de décompression). Les anciens .doc et .xls sont refusés au dépôt.
 - Excel : une feuille = un lieu ; lecture bornée (lignes, colonnes, cellules) par la garde existante. Pour les cases
   « personnes », les colonnes de noms, d'adresses, de dates de naissance, de téléphones et de numéros personnels sont
   retirées DÈS LA LECTURE : leur contenu ne quitte même pas ce module.
@@ -32,7 +31,6 @@ MAX_FEUILLES = 20
 MAX_LIGNES_PAR_FEUILLE = 5000
 MAX_CARACTERES_DOCX = 400_000
 
-MESSAGE_DOC = "Ancien format Word (.doc) : enregistrez-le en .docx ou en PDF pour que Synorix le lise."
 MESSAGE_OCR = "Image ou scan : lisible seulement avec un OCR."
 MESSAGE_ECHEC = "Ce fichier n'a pas pu être lu."
 
@@ -80,10 +78,8 @@ def lire_fichier(chemin: Path, extension: str, personnes: bool = False,
             return _lire_pdf(chemin, plafond_pages)
         if extension == ".docx":
             return _lire_docx(chemin)
-        if extension in (".xlsx", ".xls"):
+        if extension == ".xlsx":
             return _lire_tableur(chemin, personnes)
-        if extension == ".doc":
-            return Lecture(message=MESSAGE_DOC)
         if extension in (".png", ".jpg", ".jpeg"):
             return _lire_image(chemin)
     except Exception as exc:   # jamais le contenu dans le journal : seulement le type de l'erreur
