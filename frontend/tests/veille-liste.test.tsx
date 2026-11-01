@@ -201,3 +201,13 @@ test('la colonne de la carte reste collée sous l’en-tête à partir de lg (le
   assert.ok(src.includes('lg:max-w-[max(22rem,calc((100svh_-_30rem)/1.09))]'), 'la carte entière tient dans la hauteur de l’écran')
   assert.ok(/lg:max-w-\[max\(22rem,calc\(\(100svh_-_30rem\)\/1\.09\)\)\]/.test(src), 'la carte entière tient dans la hauteur de l’écran')
 })
+
+test('les filtres collés sont relâchés avant la dernière carte : parent flow-root raccourci de 16 rem, espace rendu par le bloc suivant', () => {
+  const avec = renderToStaticMarkup(<ListeAvis {...base({ avis: [avis('1'), avis('2')], total: 2, aPlus: true })} />)
+  assert.ok(/<div class="lg:flow-root"><div data-filtres-colles/.test(avec), 'le bloc collé est l’enfant direct du parent flow-root')
+  assert.equal((avec.match(/lg:-mb-64/g) ?? []).length, 1, 'la liste raccourcit son parent de 16 rem')
+  assert.equal((avec.match(/lg:pt-64/g) ?? []).length, 1, 'le bloc suivant (bouton, source) rend exactement les 16 rem')
+  assert.ok(avec.indexOf('lg:-mb-64') < avec.indexOf('<article') && avec.indexOf('lg:pt-64') > avec.lastIndexOf('</article>'))
+  const sans = renderToStaticMarkup(<ListeAvis {...base()} />)
+  assert.ok(!sans.includes('lg:-mb-64') && !sans.includes('lg:pt-64'), 'sans avis, rien n’est raccourci (états vides)')
+})

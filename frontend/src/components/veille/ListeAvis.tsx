@@ -4,6 +4,7 @@
 //   <ListeAvis avis={…} total={…} zoneVide={…} … />
 import { Fragment, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import CarteAvis from './CarteAvis'
 import FiltresVeille from './FiltresVeille'
 import { SOURCE_VEILLE, type AvisVeille } from '@/services/veille'
@@ -100,6 +101,7 @@ function BoutonSuite({ chargePlus, nbAvis, onSuite }: { chargePlus: boolean; nbA
 export default function ListeAvis(p: PropsListeAvis) {
   const libellesMetiers = Object.fromEntries(p.metiers.map((m) => [m.code, m.libelle]))
   const filtre = aDesFiltres(p.filtres)
+  const aDesAvis = p.avis.length > 0
   return (
     <section aria-labelledby="titre-avis" className="min-w-0">
       <h3 id="titre-avis" className="text-base font-semibold text-fg">Avis ouverts</h3>
@@ -112,64 +114,71 @@ export default function ListeAvis(p: PropsListeAvis) {
 
       {/* À partir de lg, les filtres restent collés en haut de la zone qui défile (<main>) : fond opaque, la liste passe dessous.
           -top-5 annule le py-5 de <main> (le décalage du sticky part du bord intérieur) : collés sous l'en-tête, sans interstice
-          où une carte apparaîtrait. Au téléphone ils défilent avec la liste. Aucun défilement interne ici : une seule barre. */}
-      <div data-filtres-colles className="mt-4 bg-surface-0 pb-3 lg:sticky lg:-top-5 lg:z-10 lg:pt-3">
-        <FiltresVeille filtres={p.filtres} onFiltres={p.onFiltres} tri={p.tri} onTri={p.onTri} metiers={p.metiers} />
+          où une carte apparaîtrait. Au téléphone ils défilent avec la liste. Aucun défilement interne ici : une seule barre.
+          Le bloc ne peut pas sortir de son parent (flow-root) : la marge basse négative de la liste (-mb-64) raccourcit ce parent de
+          16 rem, les filtres sont donc relâchés avant la fin de la liste et la dernière carte reste entièrement visible en bas de
+          page ; le pt-64 du bloc suivant rend exactement l'espace retiré. */}
+      <div className="lg:flow-root">
+        <div data-filtres-colles className="mt-4 bg-surface-0 pb-3 lg:sticky lg:-top-5 lg:z-10 lg:pt-3">
+          <FiltresVeille filtres={p.filtres} onFiltres={p.onFiltres} tri={p.tri} onTri={p.onTri} metiers={p.metiers} />
+        </div>
+
+        <div className={cn('mt-2', aDesAvis && 'lg:-mb-64')}>
+          {p.zoneVide ? (
+            <div className="rounded-lg bg-surface-1 px-5 py-8">
+              <p className="text-[15px] font-semibold text-fg">Choisissez une zone sur la carte</p>
+              <p className="mt-1 max-w-[56ch] text-[15px] text-fg-2">
+                Touchez un département, ou saisissez un département, une ville ou un code postal : les avis ouverts de la zone s'affichent ici.
+              </p>
+            </div>
+          ) : p.enErreur ? (
+            <div className="rounded-lg bg-surface-1 px-5 py-8" role="status">
+              <p className="text-[15px] font-semibold text-fg">Les avis ne se chargent pas pour le moment</p>
+              <p className="mt-1 text-[15px] text-fg-2">Réessayez dans un instant : votre zone et vos filtres sont conservés.</p>
+            </div>
+          ) : p.enCours && p.avis.length === 0 ? (
+            <ul aria-label="Chargement des avis" className="space-y-3">
+              {[0, 1, 2].map((i) => <li key={i} className="h-36 animate-pulse rounded-lg bg-surface-1" />)}
+            </ul>
+          ) : p.avis.length === 0 ? (
+            <div className="rounded-lg bg-surface-1 px-5 py-8">
+              <p className="text-[15px] font-semibold text-fg">Aucun avis ouvert dans cette zone pour ces filtres</p>
+              {p.peutElargir && (
+                <Fragment>
+                  <p className="mt-1 max-w-[56ch] text-[15px] text-fg-2">
+                    {filtre ? 'Élargir retire les filtres.' : 'Élargir ajoute les départements voisins.'}
+                  </p>
+                  <Button variant="outline" onClick={p.onElargir} className="mt-4">Élargir</Button>
+                </Fragment>
+              )}
+            </div>
+          ) : (
+            <ol className="space-y-3">
+              {p.avis.map((a) => (
+                <li key={a.id}>
+                  <CarteAvis
+                    avis={a}
+                    libellesMetiers={libellesMetiers}
+                    nomsDepartements={p.nomsDepartements}
+                    onCreerAO={p.onCreerAO}
+                    enCreation={p.creationEnCours === a.id}
+                    creationEnErreur={p.creationEnErreurPour === a.id}
+                  />
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
       </div>
 
-      <div className="mt-2">
-        {p.zoneVide ? (
-          <div className="rounded-lg bg-surface-1 px-5 py-8">
-            <p className="text-[15px] font-semibold text-fg">Choisissez une zone sur la carte</p>
-            <p className="mt-1 max-w-[56ch] text-[15px] text-fg-2">
-              Touchez un département, ou saisissez un département, une ville ou un code postal : les avis ouverts de la zone s'affichent ici.
-            </p>
-          </div>
-        ) : p.enErreur ? (
-          <div className="rounded-lg bg-surface-1 px-5 py-8" role="status">
-            <p className="text-[15px] font-semibold text-fg">Les avis ne se chargent pas pour le moment</p>
-            <p className="mt-1 text-[15px] text-fg-2">Réessayez dans un instant : votre zone et vos filtres sont conservés.</p>
-          </div>
-        ) : p.enCours && p.avis.length === 0 ? (
-          <ul aria-label="Chargement des avis" className="space-y-3">
-            {[0, 1, 2].map((i) => <li key={i} className="h-36 animate-pulse rounded-lg bg-surface-1" />)}
-          </ul>
-        ) : p.avis.length === 0 ? (
-          <div className="rounded-lg bg-surface-1 px-5 py-8">
-            <p className="text-[15px] font-semibold text-fg">Aucun avis ouvert dans cette zone pour ces filtres</p>
-            {p.peutElargir && (
-              <Fragment>
-                <p className="mt-1 max-w-[56ch] text-[15px] text-fg-2">
-                  {filtre ? 'Élargir retire les filtres.' : 'Élargir ajoute les départements voisins.'}
-                </p>
-                <Button variant="outline" onClick={p.onElargir} className="mt-4">Élargir</Button>
-              </Fragment>
-            )}
-          </div>
-        ) : (
-          <ol className="space-y-3">
-            {p.avis.map((a) => (
-              <li key={a.id}>
-                <CarteAvis
-                  avis={a}
-                  libellesMetiers={libellesMetiers}
-                  nomsDepartements={p.nomsDepartements}
-                  onCreerAO={p.onCreerAO}
-                  enCreation={p.creationEnCours === a.id}
-                  creationEnErreur={p.creationEnErreurPour === a.id}
-                />
-              </li>
-            ))}
-          </ol>
-        )}
+      <div className={cn(aDesAvis && 'lg:pt-64')}>
         {p.aPlus && (
           <div className="mt-4 flex justify-center">
             <BoutonSuite chargePlus={!!p.chargePlus} nbAvis={p.avis.length} onSuite={p.onVoirPlus} />
           </div>
         )}
+        <p className="mt-6 text-[13px] text-fg-3">Source : {p.source ?? SOURCE_VEILLE}</p>
       </div>
-
-      <p className="mt-6 text-[13px] text-fg-3">Source : {p.source ?? SOURCE_VEILLE}</p>
     </section>
   )
 }
