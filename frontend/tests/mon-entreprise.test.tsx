@@ -1,5 +1,5 @@
-// Mon entreprise (T2, T3) — trois rubriques (colonnes à l'ordinateur, onglets au téléphone), avancement calculé depuis
-// les données chargées, un seul formulaire et un seul « Enregistrer » par rubrique, charge utile identique à l'ancienne.
+// Mon entreprise (T2, T3) — trois cartes égales, le formulaire de la rubrique choisie en pleine largeur dessous, avancement
+// calculé depuis les données chargées, un seul formulaire et un seul « Enregistrer » par rubrique, charge utile identique à l'ancienne.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -9,7 +9,8 @@ import Company from '@/routes/Company'
 import FormIdentite from '@/components/entreprise/FormIdentite'
 import FormMoyens from '@/components/entreprise/FormMoyens'
 import FormCertifications from '@/components/entreprise/FormCertifications'
-import RubriquesEntreprise, { gabaritColonnes, lienFiche } from '@/components/entreprise/RubriquesEntreprise'
+import RubriquesEntreprise from '@/components/entreprise/RubriquesEntreprise'
+import { LIBELLE_FICHE, lienFiche } from '@/lib/fiche'
 import { initialesClient } from '@/components/entreprise/EditeursCertifications'
 import { INFORMATIONS, RUBRIQUES, aRenseigner, avancement, etatPiece, libelleAvancement, referenceRenseignee, type DonneesEntreprise } from '@/lib/entreprise/avancement'
 import { CHAMPS_ORGANISATION, CHAMPS_PROFIL, brouillonDepuis, chargeUtile } from '@/lib/entreprise/charges'
@@ -39,7 +40,7 @@ function rendre(el: React.ReactElement, large: boolean): string {
 }
 
 const compte = (html: string, motif: RegExp) => (html.match(motif) ?? []).length
-const panneaux = { identite: <i>identité</i>, moyens: <i>moyens</i>, certifications: <i>certifs</i> }
+const panneaux = { identite: () => <i>identité</i>, moyens: () => <i>moyens</i>, certifications: () => <i>certifs</i> }
 
 function pageCompany(large: boolean): string {
   const client = new QueryClient()
@@ -54,10 +55,10 @@ function pageCompany(large: boolean): string {
 /* ── avancement ─────────────────────────────────────────────── */
 
 test('avancement : calculé en fonction pure depuis les données chargées', () => {
-  assert.deepEqual(avancement(DONNEES, 'identite'), { rempli: 8, total: 12 })
-  assert.deepEqual(avancement({ ...DONNEES, profil: { ...CONFIG, activites: '  ' } }, 'identite'), { rempli: 7, total: 12 })
-  assert.deepEqual(avancement({}, 'identite'), { rempli: 0, total: 12 })
-  assert.deepEqual([avancement({}, 'moyens').total, avancement({}, 'certifications').total], [9, 13], '12 + 9 + 13 = 34 informations indispensables (étude § 1)')
+  assert.deepEqual(avancement(DONNEES, 'identite'), { rempli: 7, total: 10 })
+  assert.deepEqual(avancement({ ...DONNEES, profil: { ...CONFIG, activites: '  ' } }, 'identite'), { rempli: 6, total: 10 })
+  assert.deepEqual(avancement({}, 'identite'), { rempli: 0, total: 10 })
+  assert.deepEqual([avancement({}, 'moyens').total, avancement({}, 'certifications').total], [9, 15], '10 + 9 + 15 = 34 informations indispensables (étude § 1) : le chiffre d\'affaires et l\'effectif moyen (I20, I23) sont dans Certifications et références')
   assert.equal(INFORMATIONS.filter((i) => i.niveau === 'indispensable').length, 34, 'la jauge compte les 34 indispensables de l\'étude')
   assert.equal(libelleAvancement({ rempli: 11, total: 14 }), '11 informations sur 14')
   assert.equal(libelleAvancement({ rempli: 1, total: 14 }), '1 information sur 14')
@@ -68,12 +69,12 @@ test('avancement : les pièces du coffre comptent tant qu\'elles ne sont pas à 
   assert.equal(etatPiece(DONNEES.documents, ['kbis']), 'au_coffre')
   assert.equal(etatPiece(DONNEES.documents, ['urssaf']), 'a_renouveler')
   assert.equal(etatPiece(DONNEES.documents, ['fiscal']), 'a_joindre')
-  assert.equal(avancement(DONNEES, 'certifications').rempli, 6, 'Kbis + intitulé, maître d\'ouvrage, lieu, montant et année de la référence (ni nature des travaux ni mode d\'intervention)')
+  assert.equal(avancement(DONNEES, 'certifications').rempli, 7, 'Kbis + intitulé, maître d\'ouvrage, lieu, montant et année de la référence (ni nature des travaux ni mode d\'intervention)')
   assert.deepEqual(aRenseigner(DONNEES, 'certifications').filter((l) => l.startsWith('Référence')), ['Référence : nature des travaux', "Référence : mode d'intervention"])
-  assert.equal(avancement({ ...DONNEES, references: [{ ...DONNEES.references![0], description: 'Façades', mode_intervention: 'direct' }] }, 'certifications').rempli, 8)
-  assert.equal(avancement({ ...DONNEES, references: [] }, 'certifications').rempli, 1, 'sans référence, aucune des sept informations n\'est comptée')
+  assert.equal(avancement({ ...DONNEES, references: [{ ...DONNEES.references![0], description: 'Façades', mode_intervention: 'direct' }] }, 'certifications').rempli, 9)
+  assert.equal(avancement({ ...DONNEES, references: [] }, 'certifications').rempli, 2, 'sans référence, aucune des sept informations n\'est comptée')
   const declare = { ...DONNEES, qualifications: [{ famille: 'assurance' as const, intitule: 'Décennale' }, { famille: 'assurance' as const, intitule: 'Responsabilité civile' }, { famille: 'qualification' as const, intitule: 'Qualibat 7112' }] }
-  assert.equal(avancement(declare, 'certifications').rempli, 9, 'qualification et assurances déclarées comptent comme les pièces du coffre')
+  assert.equal(avancement(declare, 'certifications').rempli, 10, 'qualification et assurances déclarées comptent comme les pièces du coffre')
   assert.equal(referenceRenseignee({ intitule: 'x' }), false)
   assert.ok(aRenseigner(DONNEES, 'certifications').includes('Attestation de régularité fiscale'))
   assert.ok(!aRenseigner(DONNEES, 'certifications').includes('Extrait Kbis'))
@@ -87,31 +88,40 @@ test('avancement : chaque information a une rubrique connue et un identifiant un
 
 /* ── trois rubriques ─────────────────────────────────────────── */
 
-test('ordinateur : trois colonnes, la choisie s\'élargit, les autres se resserrent et gardent titre, avancement et « Fiche »', () => {
-  assert.equal(gabaritColonnes('identite'), '2.3fr 0.85fr 0.85fr')
-  assert.equal(gabaritColonnes('moyens'), '0.85fr 2.3fr 0.85fr')
-  assert.equal(gabaritColonnes('certifications'), '0.85fr 0.85fr 2.3fr')
+test('trois cartes égales : titre, numéro, jauge, quatre faits clés, nombre d\'informations et « Fiche à télécharger » ; la choisie a un bord accent', () => {
   const html = rendre(<MemoryRouter><RubriquesEntreprise donnees={DONNEES} rubrique="moyens" onChoisir={() => {}} panneaux={panneaux} /></MemoryRouter>, true)
-  assert.match(html, /grid-template-columns:0\.85fr 2\.3fr 0\.85fr/)
-  assert.equal(compte(html, /<h2/g), 3)
-  assert.equal(compte(html, /aria-expanded="true"/g), 1)
-  assert.equal(compte(html, /aria-expanded="false"/g), 2)
-  assert.match(html, /<h2[^>]*><button[^>]*aria-expanded="true"[^>]*>Moyens humains et matériels<\/button><\/h2>/)
-  for (const r of RUBRIQUES) assert.ok(html.includes(`href="/entreprise/fiche/${r.id}"`), `lien Fiche ${r.id}`)
-  assert.equal(lienFiche('certifications'), '/entreprise/fiche/certifications')
-  assert.ok(html.includes('informations sur 9'), 'avancement affiché')
-  assert.equal(compte(html, /<i>moyens<\/i>/g), 1, 'seul le formulaire de la rubrique choisie est monté')
-  assert.equal(compte(html, /<i>identité<\/i>/g), 0)
-  assert.match(html, /motion-safe:transition-\[grid-template-columns\]/, 'mouvement réduit : pas d\'animation de largeur')
-})
-
-test('téléphone : des onglets (rôle tablist), un seul panneau monté', () => {
-  const html = rendre(<MemoryRouter><RubriquesEntreprise donnees={DONNEES} rubrique="identite" onChoisir={() => {}} panneaux={panneaux} /></MemoryRouter>, false)
   assert.match(html, /role="tablist"/)
   assert.equal(compte(html, /role="tab"/g), 3)
-  assert.equal(compte(html, /<i>identité<\/i>/g), 1)
-  assert.equal(compte(html, /<i>moyens<\/i>/g), 0)
-  assert.ok(html.includes('/entreprise/fiche/identite'), 'la Fiche de la rubrique choisie')
+  assert.equal(compte(html, /aria-selected="true"/g), 1)
+  assert.equal(compte(html, /aria-selected="false"/g), 2)
+  assert.match(html, /<button[^>]*aria-selected="true"[^>]*>Moyens humains et matériels<\/button>/)
+  assert.match(html, /md:grid-cols-3/, 'une rangée de trois cartes égales (une colonne sous 768 px)')
+  assert.ok(!/grid-template-columns/.test(html), 'plus de colonne qui s\'élargit')
+  for (const n of ['01 / 03', '02 / 03', '03 / 03']) assert.ok(html.includes(n), n)
+  for (const r of RUBRIQUES) assert.ok(html.includes(`href="/entreprise/fiche/${r.id}"`), `lien ${r.id}`)
+  assert.equal(compte(html, new RegExp(`${LIBELLE_FICHE} <`, 'g')), 3, '« Fiche à télécharger » sur chaque carte')
+  assert.ok(!/>Fiche </.test(html) && !/aria-label="Fiche /.test(html), '« Fiche » seul n\'existe plus')
+  assert.equal(lienFiche('certifications'), '/entreprise/fiche/certifications')
+  assert.ok(html.includes('informations sur 9') && html.includes('informations sur 10') && html.includes('informations sur 15'), 'avancement affiché')
+  assert.equal(compte(html, /<li /g), 12, 'quatre faits clés par carte')
+  assert.ok(html.includes('Raison sociale') && html.includes('Entreprise de démonstration') && html.includes('Renseigné'))
+  assert.match(html, /<span class="[^"]*text-accent-text[^"]*">À renseigner<\/span>/, '« À renseigner » en accent')
+  assert.equal(compte(html, /border-accent-ui/g) >= 1, true, 'bord accent sur la carte choisie')
+  assert.ok(!/text-danger|border-danger/.test(html), 'jamais de rouge sur une carte')
+  assert.equal(compte(html, /<i>moyens<\/i>/g), 1, 'seul le formulaire de la rubrique choisie est monté')
+  assert.equal(compte(html, /<i>identité<\/i>/g), 0)
+  assert.ok(html.indexOf('role="tablist"') < html.indexOf('<i>moyens</i>'), 'le formulaire est sous les cartes')
+})
+
+test('cartes : tabindex itinérant et clavier (flèches, Début, Fin) ; mêmes cartes au téléphone', () => {
+  for (const large of [true, false]) {
+    const html = rendre(<MemoryRouter><RubriquesEntreprise donnees={DONNEES} rubrique="identite" onChoisir={() => {}} panneaux={panneaux} /></MemoryRouter>, large)
+    assert.equal(compte(html, /role="tab"/g), 3)
+    assert.equal(compte(html, /tabindex="0"/g), 1, 'une seule carte dans l\'ordre de tabulation')
+    assert.equal(compte(html, /tabindex="-1"/g), 2)
+  }
+  const code = sansCommentaires(lire('src/components/entreprise/RubriquesEntreprise.tsx'))
+  for (const k of ['ArrowRight', 'ArrowLeft', 'Home', 'End']) assert.ok(code.includes(`'${k}'`), k)
 })
 
 /* ── un seul formulaire, un seul Enregistrer ─────────────────── */
@@ -142,7 +152,7 @@ test('Certifications : pièces du coffre-fort en positif, qualifications et assu
   const html = rendre(<QueryClientProvider client={client}><MemoryRouter><FormCertifications donnees={{ ...DONNEES, qualifications: [{ id: 'q1', famille: 'assurance', intitule: 'Décennale', organisme: 'Assureur inventé' }] }} /></MemoryRouter></QueryClientProvider>, true)
   assert.ok(html.includes('Au coffre-fort') && html.includes('À renouveler') && html.includes('À joindre'))
   assert.ok(html.includes('href="/vault"'))
-  for (const t of ['Qualifications professionnelles', 'Assurances', 'Références de chantiers', 'Ajouter une qualification', 'Ajouter une assurance', 'Ajouter une référence', 'Assureur inventé']) assert.ok(html.includes(t), t)
+  for (const t of ['Qualifications', 'Assurances', 'Références', 'Chiffres demandés dans la', 'Ajouter une qualification', 'Ajouter une assurance', 'Ajouter une référence', 'Assureur inventé']) assert.ok(html.includes(t), t)
   assert.ok(html.includes('École (exemple)') && html.includes('Nature des travaux réalisés') && html.includes('Montant HT'))
   assert.ok(!/manquant|incomplet|absent/i.test(html))
   assert.ok(!html.includes('Afficher le nom complet'), 'client public : pas de case « nom complet »')
@@ -159,18 +169,101 @@ test('Certifications : un client particulier n\'est nommé que par ses initiales
   assert.equal(initialesClient(''), '')
 })
 
-test('barre « Enregistrer » : collée en bas, dernière du formulaire, et <main> reçoit un scroll-padding à sa hauteur (le champ qui prend le focus n\'est pas recouvert)', () => {
-  const src = sansCommentaires(lire('src/components/entreprise/champs.tsx'))
-  const pied = src.slice(src.indexOf('export function PiedEnregistrer'))
-  assert.ok(/sticky bottom-0/.test(pied) && /closest\('main'\)/.test(pied) && /scrollPaddingBottom = h > 0/.test(pied) && /ResizeObserver/.test(pied))
-  assert.ok(/defilant\.style\.scrollPaddingBottom = ''/.test(pied), 'remis à zéro au démontage')
+test('« Enregistrer » vit dans l\'en-tête du formulaire ; la version collée apparaît seulement après avoir défilé sous l\'en-tête et ne masque jamais un champ', () => {
+  const code = sansCommentaires(lire('src/components/entreprise/CadreFormulaire.tsx'))
+  assert.match(code, /IntersectionObserver/)
+  assert.match(code, /rootMargin: '100000px 0px -99% 0px'/, 'la zone observée est la bande au-dessus de <main>')
+  assert.match(code, /setColle\(e\.isIntersecting && e\.intersectionRatio >= 0\.99\)/, 'collée seulement quand l\'en-tête est sorti par le haut')
+  assert.match(code, /sticky -top-5/, 'collée au bord de la zone de défilement, malgré le retrait de 20 px de <main>')
+  assert.match(code, /closest\('main'\)/)
+  assert.match(code, /scrollPaddingTop = `\$\{Math\.ceil\(barre\.current\.getBoundingClientRect\(\)\.height\) \+ 8\}px`/, 'scroll-padding-top de <main> à la hauteur de la barre')
+  assert.match(code, /defilant\.style\.scrollPaddingTop = ''/, 'remis à zéro au démontage')
+  assert.doesNotMatch(code, /fixed bottom-0|sticky bottom-0|scrollPaddingBottom/, 'plus de barre collée en bas')
+  assert.doesNotMatch(sansCommentaires(lire('src/components/entreprise/champs.tsx')), /PiedEnregistrer|scrollPaddingBottom/)
+  // au repos (rendu serveur), la barre collée n'existe pas : un seul « Enregistrer », dans l'en-tête
+  const html = rendre(<QueryClientProvider client={new QueryClient()}><MemoryRouter><FormIdentite donnees={DONNEES} /></MemoryRouter></QueryClientProvider>, true)
+  assert.ok(!html.includes('data-barre-collee'))
+  assert.ok(html.indexOf('>Enregistrer<') < html.indexOf('Coordonnées légales'), 'les boutons sont au-dessus des champs')
+  assert.match(html, /<button[^>]*type="submit"[^>]*form="[^"]+"/, 'le bouton de l\'en-tête soumet le formulaire en dessous')
   for (const f of ['FormIdentite', 'FormMoyens', 'FormCertifications']) {
-    const form = sansCommentaires(lire(`src/components/entreprise/${f}.tsx`))
-    assert.ok(/<PiedEnregistrer [^>]*\/>\s*<\/form>/.test(form), `${f} : la barre est le dernier élément du formulaire`)
+    assert.match(sansCommentaires(lire(`src/components/entreprise/${f}.tsx`)), /<CadreFormulaire[\s\S]*<\/CadreFormulaire>/, f)
   }
 })
 
-test('Identité : étiquettes associées aux champs, SIRET en lecture seule, le reste à la demande (« Afficher plus »)', () => {
+test('formulaire pleine largeur : en-tête (titre, explication, « Fiche à télécharger », « Enregistrer »), puis « Décrire avec vos mots », puis les champs', () => {
+  const html = pageCompany(true)
+  assert.match(html, /<h2[^>]*>Identité<\/h2>/)
+  assert.ok(html.includes('Qui vous êtes : ce que l&#x27;acheteur lit en premier'))
+  assert.ok(html.indexOf('role="tablist"') < html.indexOf('<form'), 'le formulaire est sous les cartes dans le DOM')
+  const iFiche = html.indexOf(LIBELLE_FICHE, html.indexOf('<h2'))
+  const iEnreg = html.indexOf('>Enregistrer<')
+  const iMots = html.indexOf('Décrire avec vos mots')
+  const iForm = html.indexOf('<form')
+  assert.ok(iFiche > 0 && iFiche < iEnreg && iEnreg < iMots && iMots < iForm, 'ordre : Fiche à télécharger, Enregistrer, Décrire avec vos mots, champs')
+  assert.match(html, /role="tabpanel"/)
+  assert.ok(!html.includes('animate-fade-in motion-reduce:animate-none"><div class="flex flex-col'), 'plus de colonne étroite')
+})
+
+test('« Fiche à télécharger » partout, jamais « Fiche » seul ; jamais « manquant », « incomplet » ni « absent »', () => {
+  for (const rubrique of ['identite', 'moyens', 'certifications'] as const) {
+    const client = new QueryClient()
+    client.setQueryData(['memoire-config'], CONFIG); client.setQueryData(['team'], []); client.setQueryData(['references'], DONNEES.references); client.setQueryData(['documents'], DONNEES.documents)
+    useAuthStore.setState({ organization: ORG })
+    const html = rendre(<QueryClientProvider client={client}><MemoryRouter initialEntries={[`/company?rubrique=${rubrique}`]}><Company /></MemoryRouter></QueryClientProvider>, true)
+    assert.ok(compte(html, new RegExp(LIBELLE_FICHE, 'g')) >= 4, `${rubrique} : trois cartes et l'en-tête du formulaire`)
+    assert.ok(!/>Fiche\b(?! à télécharger)/.test(html), 'aucun « Fiche » seul')
+    assert.ok(!/aria-label="Fiche /.test(html))
+    assert.ok(!/manquant|incomplet|absent/i.test(html), rubrique)
+  }
+  const sources = ['src/components/entreprise/RubriquesEntreprise.tsx', 'src/components/entreprise/CadreFormulaire.tsx', 'src/components/entreprise/SceneVisage.tsx', 'src/routes/FicheEntreprise.tsx', 'src/components/layout/Header.tsx']
+  for (const f of sources) assert.doesNotMatch(sansCommentaires(lire(f)), />\s*Fiche\s*(<|\{)|'Fiche'|"Fiche"/, f)
+})
+
+test('états sous les champs : « Renseigné », la source (Sirene) ou « À renseigner » en accent, jamais de rouge', () => {
+  const html = rendre(<QueryClientProvider client={new QueryClient()}><MemoryRouter><FormIdentite donnees={DONNEES} /></MemoryRouter></QueryClientProvider>, true)
+  assert.ok(html.includes('Prérempli depuis le répertoire Sirene'), 'nom, forme juridique et siège : la source Sirene')
+  assert.ok(html.includes('Vérifié au répertoire Sirene'), 'SIRET vérifié')
+  assert.equal(compte(html, /data-etat="rempli"/g) >= 5, true)
+  assert.equal(compte(html, /data-etat="a-renseigner"/g) >= 3, true, 'forme juridique, e-mail, téléphone… à renseigner')
+  assert.match(html, /data-etat="a-renseigner"[^>]*><span class="[^"]*text-accent-text[^"]*">À renseigner<\/span>/)
+  assert.ok(!/data-etat="a-renseigner"[^>]*(danger|red)/.test(html) && !/À renseigner<\/span>[^<]*<[^>]*danger/.test(html) && !/class="[^"]*(text-danger|text-red)[^"]*"[^>]*>(<span[^>]*>)?À renseigner/.test(html), 'un champ vide n\'est pas une erreur')
+  // un profil vide : tout est « À renseigner »
+  const vide = rendre(<QueryClientProvider client={new QueryClient()}><MemoryRouter><FormMoyens donnees={{}} /></MemoryRouter></QueryClientProvider>, true)
+  assert.ok(compte(vide, /data-etat="a-renseigner"/g) >= 6)
+  assert.ok(!/manquant|incomplet|absent/i.test(vide))
+})
+
+test('groupes : sous-titres en capitales, champs en deux colonnes, indispensables d\'abord', () => {
+  const rendu = (el: React.ReactElement) => rendre(<QueryClientProvider client={new QueryClient()}><MemoryRouter>{el}</MemoryRouter></QueryClientProvider>, true)
+  const identite = rendu(<FormIdentite donnees={DONNEES} />)
+  const moyens = rendu(<FormMoyens donnees={DONNEES} />)
+  const certifs = rendu(<FormCertifications donnees={DONNEES} />)
+  const ordre = (html: string, titres: string[]) => {
+    const positions = titres.map((t) => html.indexOf(`>${t}</h3>`) > 0 ? html.indexOf(`>${t}</h3>`) : html.indexOf(`>${t}`))
+    assert.ok(positions.every((p) => p > 0), `sous-titres présents : ${titres.join(', ')}`)
+    assert.deepEqual([...positions].sort((a, b) => a - b), positions, 'dans cet ordre')
+  }
+  ordre(identite, ['Coordonnées légales', 'Dirigeant et contacts', 'Activités et zone'])
+  ordre(moyens, ['Équipe', 'Matériel et véhicules', 'Sécurité, qualité, environnement'])
+  ordre(certifs, ['Qualifications', 'Références', 'Chiffres demandés dans la'])
+  for (const html of [identite, moyens, certifs]) {
+    assert.match(html, /uppercase/, 'sous-titres en capitales')
+    assert.match(html, /md:grid-cols-2/, 'deux colonnes')
+    assert.match(html, /aria-expanded="false"[^>]*>Afficher les informations utiles et en option/)
+  }
+  assert.ok(!identite.includes('Date de création') && !moyens.includes('Démarche qualité') && !certifs.includes('Certifications de management'), 'utile et option : repliés')
+})
+
+test('le chiffre d\'affaires et l\'effectif des exercices sont dans Certifications et références, plus dans Identité', () => {
+  const rendu = (el: React.ReactElement) => rendre(<QueryClientProvider client={new QueryClient()}><MemoryRouter>{el}</MemoryRouter></QueryClientProvider>, true)
+  const identite = rendu(<FormIdentite donnees={DONNEES} />)
+  const certifs = rendu(<FormCertifications donnees={DONNEES} />)
+  assert.ok(!identite.includes('Effectif moyen annuel') && !identite.includes('Ajouter une année'))
+  assert.ok(certifs.includes('aria-label="Effectif moyen annuel"') && certifs.includes('Ajouter une année') && certifs.includes('value="1 100 000 €"'))
+  assert.ok(INFORMATIONS.filter((i) => ['I20', 'I23'].includes(i.id)).every((i) => i.rubrique === 'certifications'))
+})
+
+test('Identité : étiquettes associées aux champs, SIRET en lecture seule, le reste à la demande', () => {
   const html = rendre(<QueryClientProvider client={new QueryClient()}><MemoryRouter><FormIdentite donnees={DONNEES} /></MemoryRouter></QueryClientProvider>, true)
   assert.ok(html.includes('value="Entreprise de démonstration"'), 'le nom vient de l\'organisation')
   assert.ok(!html.includes('Ancien nom'), 'le nom du profil n\'est pas montré')
@@ -178,7 +271,7 @@ test('Identité : étiquettes associées aux champs, SIRET en lecture seule, le 
     assert.ok(html.includes(label), label)
   }
   assert.match(html, /readOnly=""|readonly=""/)
-  assert.match(html, /aria-expanded="false"[^>]*>Afficher plus/)
+  assert.match(html, /aria-expanded="false"[^>]*>Afficher les informations utiles et en option/)
   assert.ok(!html.includes('Historique et parcours'), 'replié tant qu\'on ne le demande pas')
   assert.equal(compte(html, /for="[^"]+"/g) >= 6, true)
 })
@@ -191,7 +284,7 @@ test('charge utile : les champs existants partent vers les mêmes routes, avec l
   assert.deepEqual(c.organisation, { name: ORG.name, address: ORG.address, presentation: ORG.presentation }, 'les champs neufs vides ne partent pas')
   assert.deepEqual(Object.keys(c.profil!).sort(), [...CHAMPS_PROFIL.identite.filter((k) => !['metiers', 'departements_intervention'].includes(k)), 'nom_entreprise'].sort())
   assert.equal(c.profil!.gerant_nom, 'Camille Démo')
-  assert.deepEqual(c.profil!.chiffre_affaires, CONFIG.chiffre_affaires)
+  assert.ok(!('chiffre_affaires' in c.profil!), 'le chiffre d\'affaires part avec Certifications et références')
   // Capital social : un nombre part tel quel ; vidé alors qu'il était renseigné, il part à null (la route efface) ; jamais saisi, il ne part pas
   const avecCapital = { ...DONNEES, organisation: { ...ORG, capital_social: 40000 } }
   assert.equal(chargeUtile('identite', brouillonDepuis('identite', avecCapital), avecCapital).organisation!.capital_social, 40000)
@@ -204,8 +297,8 @@ test('charge utile : les champs existants partent vers les mêmes routes, avec l
   assert.deepEqual(Object.keys(m.profil!).sort(), [...anciens].sort(), 'un profil sans nouvelle information envoie exactement les anciens champs')
   assert.deepEqual(m.profil!.postes_cles, CONFIG.postes_cles)
   assert.equal(m.profil!.materiel, 'Échafaudages')
-  // Certifications : ni organisation ni profil (qualifications et références ont leurs routes)
-  assert.deepEqual(chargeUtile('certifications', brouillonDepuis('certifications', DONNEES), DONNEES), { organisation: null, profil: null })
+  // Certifications : le chiffre d'affaires (profil) seulement ; qualifications et références ont leurs routes
+  assert.deepEqual(chargeUtile('certifications', brouillonDepuis('certifications', DONNEES), DONNEES), { organisation: null, profil: { chiffre_affaires: CONFIG.chiffre_affaires } })
 })
 
 test('le nom est unique : la surcharge du profil suit le nom saisi ; un nom vide n\'est jamais envoyé', () => {
@@ -221,7 +314,7 @@ test('le nom est unique : la surcharge du profil suit le nom saisi ; un nom vide
 test('profil vide : les listes ont leurs lignes par défaut (3 années, 4 postes) comme avant', () => {
   const b = brouillonDepuis('moyens', { organisation: ORG, profil: {} })
   assert.equal(b.profil.postes_cles?.length, 4)
-  assert.equal(brouillonDepuis('identite', {}).profil.chiffre_affaires?.length, 3)
+  assert.equal(brouillonDepuis('certifications', {}).profil.chiffre_affaires?.length, 3)
 })
 
 /* ── sources ─────────────────────────────────────────────────── */
@@ -230,12 +323,6 @@ test('le nom du profil (nom_entreprise) n\'est plus affiché : il n\'apparaît q
   for (const f of ['FormIdentite', 'FormMoyens', 'FormCertifications', 'RubriquesEntreprise']) {
     assert.doesNotMatch(sansCommentaires(lire(`src/components/entreprise/${f}.tsx`)), /nom_entreprise/, f)
   }
-})
-
-test('la barre d\'enregistrement reste dans la zone de défilement (sticky), jamais fixed sous les onglets du téléphone', () => {
-  const code = sansCommentaires(lire('src/components/entreprise/champs.tsx'))
-  assert.match(code, /sticky bottom-0/)
-  assert.doesNotMatch(code, /fixed bottom-0/)
 })
 
 test('/company suit le thème clair / nuit', () => {
@@ -248,12 +335,13 @@ test('charge utile : les nouveaux champs partent quand ils sont renseignés, les
   const b = brouillonDepuis('identite', DONNEES)
   Object.assign(b.organisation, { forme_juridique: 'SARL', capital_social: '10000', telephone: '02 31 00 00 00', email_contact: 'a@exemple.fr' })
   b.profil.metiers = ['facade_ite']
-  b.profil.chiffre_affaires = [{ annee: '2025', montant: '1 100 000 €', effectif_moyen: 9 }]
+  const ca = brouillonDepuis('certifications', DONNEES)
+  ca.profil.chiffre_affaires = [{ annee: '2025', montant: '1 100 000 €', effectif_moyen: 9 }]
   const c = chargeUtile('identite', b, DONNEES)
   assert.equal(c.organisation!.forme_juridique, 'SARL')
   assert.equal(c.organisation!.capital_social, 10000, 'nombre, pas texte')
   assert.deepEqual(c.profil!.metiers, ['facade_ite'])
-  assert.equal((c.profil!.chiffre_affaires as { effectif_moyen: number }[])[0].effectif_moyen, 9)
+  assert.equal((chargeUtile('certifications', ca, DONNEES).profil!.chiffre_affaires as { effectif_moyen: number }[])[0].effectif_moyen, 9)
 
   const m = brouillonDepuis('moyens', DONNEES)
   m.profil.materiel_liste = [{ quantite: 2, designation: ' Échafaudage ' }, { quantite: 1, designation: '   ' }]
@@ -314,8 +402,8 @@ test('Moyens : les listes, les effectifs et les personnes clés s\'affichent, sa
   assert.ok(!html.includes('Ouvriers et compagnons'), 'l\'utile est replié')
 })
 
-test('Identité : forme juridique, e-mail, téléphone et effectif moyen en tête, le reste replié', () => {
+test('Identité : forme juridique, e-mail et téléphone en tête, le reste replié', () => {
   const html = rendre(<QueryClientProvider client={new QueryClient()}><MemoryRouter><FormIdentite donnees={DONNEES} /></MemoryRouter></QueryClientProvider>, true)
-  for (const t of ['Forme juridique', 'E-mail de l&#x27;entreprise', 'Téléphone', 'Effectif moyen annuel', 'À renseigner']) assert.ok(html.includes(t), t)
+  for (const t of ['Forme juridique', 'E-mail de l&#x27;entreprise', 'Téléphone', 'À renseigner']) assert.ok(html.includes(t), t)
   for (const t of ['Capital social', 'Métiers exercés', 'Ville du greffe']) assert.ok(!html.includes(t), `${t} replié`)
 })

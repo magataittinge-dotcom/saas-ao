@@ -1,6 +1,6 @@
 // Mon entreprise — l'avancement de chaque rubrique, calculé depuis les données déjà chargées (aucun appel).
 // Une « information » est un renseignement dont une pièce ou un critère courant a besoin (liste de référence :
-// INFORMATIONS-ENTREPRISE.md, niveau « indispensable » : 12 + 9 + 13 = 34). Le décompte ne dit jamais « manquant » : « n informations sur m ».
+// INFORMATIONS-ENTREPRISE.md, niveau « indispensable » : 10 + 9 + 15 = 34). Le décompte ne dit jamais « manquant » : « n informations sur m ».
 import type { CAEntry, LigneEffectif, LigneHabilitation, LigneMoyen, MemoireConfig, Organization, PosteCle, Qualification, Reference, TeamMember } from '@/types'
 
 export type RubriqueId = 'identite' | 'moyens' | 'certifications'
@@ -77,8 +77,6 @@ export const INFORMATIONS: Information[] = [
   { id: 'I12', rubrique: 'identite', libelle: 'Téléphone', niveau: 'indispensable', rempli: (d) => texte(d.organisation?.telephone) },
   { id: 'I16', rubrique: 'identite', libelle: 'Activités principales', niveau: 'indispensable', rempli: (d) => texte(d.profil?.activites) },
   { id: 'I18', rubrique: 'identite', libelle: "Zone d'intervention", niveau: 'indispensable', rempli: (d) => texte(d.profil?.zone_intervention) },
-  { id: 'I20', rubrique: 'identite', libelle: "Chiffre d'affaires des derniers exercices", niveau: 'indispensable', rempli: (d) => aUneAnneeRenseignee(d.profil?.chiffre_affaires) },
-  { id: 'I23', rubrique: 'identite', libelle: 'Effectif moyen annuel', niveau: 'indispensable', rempli: (d) => Array.isArray(d.profil?.chiffre_affaires) && (d.profil!.chiffre_affaires as CAEntry[]).some((e) => nombre(e?.effectif_moyen)) },
   // ── Moyens humains et matériels ──
   { id: 'M02', rubrique: 'moyens', libelle: 'Postes clés', niveau: 'indispensable', rempli: (d) => aUnPosteNomme(d.profil?.postes_cles) },
   { id: 'M03', rubrique: 'moyens', libelle: 'Personne clé : spécialité et expérience', niveau: 'indispensable', rempli: (d) => (d.equipe ?? []).some((m) => texte(m.name) && texte(m.specialite) && nombre(m.experience_years)) },
@@ -96,6 +94,9 @@ export const INFORMATIONS: Information[] = [
   { id: 'C19', rubrique: 'certifications', libelle: 'Extrait Kbis', niveau: 'indispensable', rempli: (d) => aPiece(d, 'kbis') },
   { id: 'C20', rubrique: 'certifications', libelle: 'Attestation de vigilance URSSAF', niveau: 'indispensable', rempli: (d) => aPiece(d, 'urssaf') },
   { id: 'C21', rubrique: 'certifications', libelle: 'Attestation de régularité fiscale', niveau: 'indispensable', rempli: (d) => aPiece(d, 'fiscal') },
+  // ── Chiffres demandés par le DC2 (I20 et I23 : dans la rubrique Certifications et références, avec ses preuves) ──
+  { id: 'I20', rubrique: 'certifications', libelle: "Chiffre d'affaires des derniers exercices", niveau: 'indispensable', rempli: (d) => aUneAnneeRenseignee(d.profil?.chiffre_affaires) },
+  { id: 'I23', rubrique: 'certifications', libelle: 'Effectif moyen annuel', niveau: 'indispensable', rempli: (d) => Array.isArray(d.profil?.chiffre_affaires) && (d.profil!.chiffre_affaires as CAEntry[]).some((e) => nombre(e?.effectif_moyen)) },
   // ── Références (C07 à C17 : sept informations indispensables de l'étude, une par colonne) ──
   { id: 'C07', rubrique: 'certifications', libelle: 'Référence : intitulé du chantier', niveau: 'indispensable', rempli: (d) => uneReference(d, (r) => texte(r.intitule)) },
   { id: 'C08', rubrique: 'certifications', libelle: "Référence : maître d'ouvrage", niveau: 'indispensable', rempli: (d) => uneReference(d, (r) => texte(r.maitre_ouvrage)) },

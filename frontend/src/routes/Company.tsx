@@ -11,6 +11,7 @@ import FormCertifications from '@/components/entreprise/FormCertifications'
 import ProfileFreeTextCard from '@/components/company/ProfileFreeTextCard'
 import { AfficherPlus } from '@/components/entreprise/champs'
 import { MemoireSkeleton } from '@/components/skeletons'
+import { useMouvementReduit } from '@/components/intelligence/useMouvementReduit'
 import { rubriqueDepuisRecherche, type RubriqueId } from '@/lib/entreprise/avancement'
 
 // Texte libre → l'IA structure → l'utilisateur valide avant toute écriture (C7). Repliée : la saisie guidée vient d'abord.
@@ -21,44 +22,54 @@ const DecrireAvecVosMots = () => (
 )
 
 // « Mon entreprise » : le profil vivant, en trois rubriques (Identité, Moyens humains et matériels,
-// Certifications et références). Un formulaire et un « Enregistrer » par rubrique ; chaque donnée reste dans
+// Certifications et références). Le visage de Synorix et six bulles en haut, trois cartes égales, puis le formulaire de la
+// rubrique choisie en pleine largeur. Un formulaire et un « Enregistrer » par rubrique ; chaque donnée reste dans
 // sa table actuelle (organisation, profil mémoire, équipe, références, coffre-fort).
 export default function Company() {
-  // /company?rubrique=moyens (Équipe) ou =certifications (Mes références) ouvre la colonne demandée, même si l'écran est déjà affiché.
+  // /company?rubrique=moyens (Équipe) ou =certifications (Mes références) ouvre la rubrique demandée, même si l'écran est déjà affiché.
   const demandee = rubriqueDepuisRecherche(useLocation().search)
   const [rubrique, setRubrique] = useState<RubriqueId>(demandee ?? 'identite')
   useEffect(() => { if (demandee) setRubrique(demandee) }, [demandee])
   const donnees = useDonneesEntreprise()
+  const mouvementReduit = useMouvementReduit()
   const visage = useRef<VisageAnimeRef>(null)
+  const actions = useRef({ eclair: () => visage.current?.eclair() }).current
+  const [aDefiler, setADefiler] = useState(0)
+
   // Choisir une rubrique (carte ou bulle) : elle s'ouvre et le visage joue l'éclair.
   const choisir = (r: RubriqueId) => { setRubrique(r); visage.current?.eclair() }
-  const actions = useRef({ eclair: () => visage.current?.eclair() }).current
+  // Une bulle ramène en plus le formulaire à l'écran (il est sous les cartes).
+  const choisirDepuisBulle = (r: RubriqueId) => { choisir(r); setADefiler((n) => n + 1) }
+  useEffect(() => {
+    if (aDefiler === 0) return
+    document.querySelector('[role="tabpanel"]')?.scrollIntoView({ behavior: mouvementReduit ? 'auto' : 'smooth', block: 'start' })
+  }, [aDefiler, mouvementReduit])
 
   return (
     <ContexteVisage.Provider value={actions}>
-    <div className="mx-auto max-w-6xl space-y-6">
-      <header>
-        <h1 className="font-display text-h5 text-fg">Mon entreprise</h1>
-        <p className="mt-1.5 text-sm text-fg-2">Votre profil vivant, renseigné une fois, réutilisé par chaque mémoire technique</p>
-      </header>
-      {!donnees.profilCharge ? (
-        <MemoireSkeleton />
-      ) : (
-        <>
-        <SceneVisage ref={visage} donnees={donnees} onChoisir={choisir} />
-        <RubriquesEntreprise
-          donnees={donnees}
-          rubrique={rubrique}
-          onChoisir={choisir}
-          panneaux={{
-            identite: <><DecrireAvecVosMots /><FormIdentite donnees={donnees} /></>,
-            moyens: <><DecrireAvecVosMots /><FormMoyens donnees={donnees} /></>,
-            certifications: <FormCertifications donnees={donnees} />,
-          }}
-        />
-        </>
-      )}
-    </div>
+      <div className="mx-auto max-w-6xl space-y-6">
+        <header>
+          <h1 className="font-display text-h5 text-fg">Mon entreprise</h1>
+          <p className="mt-1.5 text-sm text-fg-2">Votre profil vivant, renseigné une fois, réutilisé par chaque mémoire technique</p>
+        </header>
+        {!donnees.profilCharge ? (
+          <MemoireSkeleton />
+        ) : (
+          <>
+            <SceneVisage ref={visage} donnees={donnees} onChoisir={choisirDepuisBulle} />
+            <RubriquesEntreprise
+              donnees={donnees}
+              rubrique={rubrique}
+              onChoisir={choisir}
+              panneaux={{
+                identite: (ids) => <FormIdentite donnees={donnees} avant={<DecrireAvecVosMots />} idPanneau={ids.panneau} idOnglet={ids.onglet} />,
+                moyens: (ids) => <FormMoyens donnees={donnees} avant={<DecrireAvecVosMots />} idPanneau={ids.panneau} idOnglet={ids.onglet} />,
+                certifications: (ids) => <FormCertifications donnees={donnees} idPanneau={ids.panneau} idOnglet={ids.onglet} />,
+              }}
+            />
+          </>
+        )}
+      </div>
     </ContexteVisage.Provider>
   )
 }

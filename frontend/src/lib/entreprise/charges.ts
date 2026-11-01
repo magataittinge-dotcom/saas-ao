@@ -12,7 +12,7 @@ export const CHAMPS_ORGANISATION: Record<RubriqueId, (keyof Organization)[]> = {
 
 /** Champs du profil (memoire_config) écrits par chaque rubrique. `nom_entreprise` n'y figure plus : le nom vient de l'organisation. */
 export const CHAMPS_PROFIL: Record<RubriqueId, (keyof MemoireConfig)[]> = {
-  identite: ['date_creation', 'gerant_nom', 'gerant_titre', 'zone_intervention', 'historique', 'activites', 'chiffre_affaires', 'metiers', 'departements_intervention'],
+  identite: ['date_creation', 'gerant_nom', 'gerant_titre', 'zone_intervention', 'historique', 'activites', 'metiers', 'departements_intervention'],
   moyens: [
     'organigramme_description', 'postes_cles', 'moyens_informatiques', 'vehicules', 'materiel',
     'demarche_qualite', 'procedure_demarrage', 'gestion_securite', 'traitement_dechets', 'mesures_environnementales',
@@ -20,7 +20,7 @@ export const CHAMPS_PROFIL: Record<RubriqueId, (keyof MemoireConfig)[]> = {
     'effectifs_par_categorie', 'habilitations', 'materiel_liste', 'vehicules_liste',
     'sous_traitance_partenaires', 'sous_traitance_part_pct', 'sav_garantie',
   ],
-  certifications: [],
+  certifications: ['chiffre_affaires'],
 }
 
 /** Champs ajoutés par la migration 0029 : listes (vides par défaut) et nombres. Ils ne partent que renseignés ou déjà présents. */

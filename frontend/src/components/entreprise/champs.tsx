@@ -1,8 +1,8 @@
-import { cloneElement, isValidElement, useEffect, useId, useRef, useState } from 'react'
-import { CheckCircle2, ChevronDown, Save } from 'lucide-react'
+import { cloneElement, isValidElement, useId, useState } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
 import { Input, classeChamp } from '@/components/ui/input'
+import { A_RENSEIGNER } from '@/lib/entreprise/synthese'
 
 // Briques communes aux trois formulaires de « Mon entreprise » (reprises de l'ancien éditeur du profil).
 
@@ -12,22 +12,41 @@ export const BOUTON_AJOUT = 'inline-flex items-center gap-1.5 rounded-xs text-xs
 export const BOUTON_RETIRER_TEXTE = 'inline-flex items-center gap-1.5 rounded-xs text-xs font-medium text-fg-3 transition-colors duration-base ease-lien hover:text-danger [@media(pointer:coarse)]:min-h-11'
 export const BOUTON_RETRAIT = 'grid size-9 shrink-0 place-items-center rounded-md text-fg-3 transition-colors duration-base ease-lien hover:bg-surface-0 hover:text-danger [@media(pointer:coarse)]:size-11'
 
-/** Champ : l'étiquette est reliée au champ (id) ; `groupe` = plusieurs champs sous un même intitulé (pas de « for »). */
-export function Field({ label, aide, groupe, children }: { label: string; aide?: string; groupe?: boolean; children: React.ReactElement | React.ReactNode }) {
+/** Libellé de la rubrique Sirene : le nom, le SIRET, la forme juridique et le siège viennent du répertoire à l'inscription. */
+export const SOURCE_SIRENE = 'Prérempli depuis le répertoire Sirene'
+
+/**
+ * Champ : l'étiquette est reliée au champ (id) ; `groupe` = plusieurs champs sous un même intitulé (pas de « for »).
+ * `rempli` ajoute l'état du champ en petit sous lui : « Renseigné » (ou sa source), ou « À renseigner » en accent. Jamais de
+ * rouge : un champ vide n'est pas une erreur. `aide` s'ajoute à cet état.
+ */
+export function Field({ label, aide, groupe, rempli, source, children }: { label: string; aide?: string; groupe?: boolean; rempli?: boolean; source?: string; children: React.ReactElement | React.ReactNode }) {
   const id = useId()
   const enfant = !groupe && isValidElement(children) ? cloneElement(children as React.ReactElement<{ id?: string }>, { id }) : children
   const Tete = groupe ? 'span' : 'label'
   return (
-    <div>
+    <div className="min-w-0">
       <Tete {...(groupe ? {} : { htmlFor: id })} className="mb-1 block text-sm font-medium text-fg-2">{label}</Tete>
       {enfant}
-      {aide && <p className="mt-1 text-xs text-fg-3">{aide}</p>}
+      {rempli === undefined ? (
+        aide && <p className="mt-1 text-xs text-fg-3">{aide}</p>
+      ) : (
+        <p data-etat={rempli ? 'rempli' : 'a-renseigner'} className="mt-1 text-xs text-fg-3">
+          {rempli ? (source ?? 'Renseigné') : <span className="font-medium text-accent-text">{A_RENSEIGNER}</span>}
+          {aide ? ` · ${aide}` : ''}
+        </p>
+      )}
     </div>
   )
 }
 
+/** Un bloc qui occupe les deux colonnes d'un groupe (liste, texte long, carte). */
+export function Pleine({ children }: { children: React.ReactNode }) {
+  return <div className="min-w-0 md:col-span-2">{children}</div>
+}
+
 /** Le reste d'un groupe, déplié à la demande : l'indispensable s'affiche d'abord. */
-export function AfficherPlus({ libelle = 'Afficher plus', libelleOuvert = 'Afficher moins', children }: { libelle?: string; libelleOuvert?: string; children: React.ReactNode }) {
+export function AfficherPlus({ libelle = 'Afficher les informations utiles et en option', libelleOuvert = 'Masquer les informations utiles et en option', children }: { libelle?: string; libelleOuvert?: string; children: React.ReactNode }) {
   const [ouvert, setOuvert] = useState(false)
   const id = useId()
   return (
@@ -42,60 +61,22 @@ export function AfficherPlus({ libelle = 'Afficher plus', libelleOuvert = 'Affic
         {ouvert ? libelleOuvert : libelle}
         <ChevronDown size={15} className={cn('transition-transform duration-base ease-lien motion-reduce:transition-none', ouvert && 'rotate-180')} aria-hidden />
       </button>
-      {ouvert && <div id={id} className="mt-4 space-y-4">{children}</div>}
+      {ouvert && <div id={id} className="mt-5 space-y-8">{children}</div>}
     </div>
   )
 }
 
-/** Titre d'un groupe de champs d'une rubrique. */
-export function Groupe({ titre, aide, children }: { titre: string; aide?: string; children: React.ReactNode }) {
+/** Un groupe de champs de la rubrique : sous-titre en capitales, champs en deux colonnes (une seule sous 768 px). */
+export function Groupe({ titre, aide, children }: { titre: React.ReactNode; aide?: string; children: React.ReactNode }) {
   const id = useId()
   return (
     <section aria-labelledby={id} className="min-w-0 space-y-4">
-      <div>
-        <h3 id={id} className="font-display text-base font-semibold text-fg">{titre}</h3>
-        {aide && <p className="mt-0.5 text-xs text-fg-3">{aide}</p>}
+      <div className="border-b border-bord-2 pb-2">
+        <h3 id={id} className="text-xs font-semibold uppercase tracking-[0.06em] text-fg-3">{titre}</h3>
+        {aide && <p className="mt-1 text-xs text-fg-3">{aide}</p>}
       </div>
-      {children}
+      <div className="grid gap-x-6 gap-y-4 md:grid-cols-2">{children}</div>
     </section>
-  )
-}
-
-/**
- * Barre d'enregistrement : un seul « Enregistrer » par rubrique, collé en bas de la zone de défilement (<main>).
- * Dernière de son formulaire, elle reprend sa place dans le flux une fois la page descendue au maximum : rien n'est
- * recouvert. Pendant le défilement, un champ qui prend le focus (Tab, scrollIntoView) est ramené au-dessus d'elle :
- * `scroll-padding-bottom` de <main> suit sa hauteur (même principe que la barre d'une étape d'AO, `BarreEtape`).
- */
-export function PiedEnregistrer({ enCours, reussi, erreur }: { enCours: boolean; reussi: boolean; erreur: string | null }) {
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const barre = ref.current
-    const defilant = barre?.closest('main') as HTMLElement | null
-    if (!barre || !defilant) return
-    const regler = () => {
-      const h = barre.getBoundingClientRect().height
-      defilant.style.scrollPaddingBottom = h > 0 ? `${Math.ceil(h) + 8}px` : ''
-    }
-    regler()
-    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(regler)
-    observer?.observe(barre)
-    return () => {
-      observer?.disconnect()
-      defilant.style.scrollPaddingBottom = ''
-    }
-  }, [])
-  return (
-    <div ref={ref} data-pied-enregistrer="" className="sticky bottom-0 z-20 -mx-4 mt-2 border-t border-bord-2 bg-[var(--glass-fill)] px-4 py-3 backdrop-blur sm:-mx-5 sm:px-5">
-      <div className="flex flex-wrap items-center justify-end gap-3">
-        <p role={erreur ? 'alert' : 'status'} className={cn('text-sm', erreur ? 'text-danger' : 'text-fg-2')}>
-          {erreur ?? (reussi ? 'Modifications enregistrées' : '')}
-        </p>
-        <Button type="submit" disabled={enCours} className="px-6">
-          {reussi && !enCours ? <><CheckCircle2 size={16} aria-hidden />Enregistré</> : <><Save size={16} aria-hidden />{enCours ? 'Enregistrement...' : 'Enregistrer'}</>}
-        </Button>
-      </div>
-    </div>
   )
 }
 

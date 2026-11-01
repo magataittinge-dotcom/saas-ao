@@ -48,7 +48,7 @@ const sauf = (e: Effectifs, c: CategorieEffectif) => e.filter((l) => l.categorie
 export function EffectifSimple({ valeur, categorie, libelle, onChange }: { valeur: Effectifs; categorie: CategorieEffectif; libelle: string; onChange: (e: Effectifs) => void }) {
   const ligne = partie(valeur, categorie)[0]
   return (
-    <Field label={libelle}>
+    <Field label={libelle} rempli={typeof ligne?.effectif === 'number'}>
       <ChampNombre max={999} valeur={ligne?.effectif} onChange={(v) => onChange(v === null ? sauf(valeur, categorie) : [...sauf(valeur, categorie), { categorie, specialite: null, effectif: v }])} />
     </Field>
   )
@@ -59,7 +59,7 @@ export function EffectifParSpecialite({ valeur, categorie, libelle, exemple, onC
   const lignes = partie(valeur, categorie)
   const remplacer = (nouvelles: Effectifs) => onChange([...sauf(valeur, categorie), ...nouvelles])
   return (
-    <Field label={libelle} groupe>
+    <Field label={libelle} groupe rempli={lignes.some((l) => typeof l.effectif === 'number')}>
       <div className="space-y-2">
         {lignes.map((l, i) => (
           <div key={i} className="flex items-center gap-2">
@@ -88,7 +88,7 @@ const AUTRES: { type: TypeHabilitation; libelle: string }[] = [
 export function HabilitationSst({ valeur, onChange }: { valeur: Habilitations; onChange: (h: Habilitations) => void }) {
   const ligne = valeur.find((h) => h.type === 'sst')
   return (
-    <Field label="Secouristes du travail (SST) : nombre">
+    <Field label="Secouristes du travail (SST) : nombre" rempli={typeof ligne?.nombre === 'number'}>
       <ChampNombre max={999} valeur={ligne?.nombre} onChange={(v) => onChange(v === null ? valeur.filter((h) => h.type !== 'sst') : [...valeur.filter((h) => h.type !== 'sst'), { type: 'sst', nombre: v, libelle: null, valide_jusqu: ligne?.valide_jusqu ?? null }])} />
     </Field>
   )
@@ -124,7 +124,7 @@ export function EditeurHabilitations({ valeur, onChange }: { valeur: Habilitatio
 
 export function EditeurMoyens({ libelle, valeur, maximum, exemple, onChange }: { libelle: string; valeur: LigneMoyen[]; maximum: number; exemple: string; onChange: (l: LigneMoyen[]) => void }) {
   return (
-    <Field label={libelle} groupe>
+    <Field label={libelle} groupe rempli={valeur.some((l) => l.designation.trim() !== '')}>
       <div className="space-y-2">
         {valeur.map((l, i) => (
           <div key={i} className="flex items-center gap-2">
