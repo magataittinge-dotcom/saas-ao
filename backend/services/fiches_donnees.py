@@ -174,8 +174,13 @@ def _validite(fin: Optional[date], jour: date) -> str:
     return f"valable jusqu'au {date_fr(fin)}"
 
 
-def _ligne(libelle: str, valeur: str) -> dict:
-    return {"libelle": libelle, "valeur": valeur}
+def _ligne(libelle: str, valeur: str, fin: Optional[date] = None) -> dict:
+    """Une ligne de fiche. ``fin`` (échéance d'une pièce, en ISO) n'existe que pour les pièces datées : le tableur
+    en fait une colonne triable ; le Word et l'aperçu lisent ``valeur``, qui la porte déjà en toutes lettres."""
+    ligne = {"libelle": libelle, "valeur": valeur}
+    if fin is not None:
+        ligne["fin"] = fin.isoformat()
+    return ligne
 
 
 def _liste_json(valeur: Any) -> list:
@@ -413,7 +418,8 @@ def _moyens(db: Session, org: Organization, cfg: Optional[MemoireConfig], jour: 
         if d.type in _PIECES_SUR_DEMANDE and d.type not in vus:
             vus.add(d.type)
             sur_demande.append(_ligne(_TYPES_DOCUMENT[d.type],
-                                      "disponible" + (f" — {_validite(d.expiry_date, jour)}" if d.expiry_date else "")))
+                                      "disponible" + (f" — {_validite(d.expiry_date, jour)}" if d.expiry_date else ""),
+                                      d.expiry_date))
     if not sur_demande:
         sur_demande = [_ligne("Pièces administratives", "Kbis, attestations URSSAF et fiscale, assurances")]
 
@@ -548,10 +554,12 @@ def _tableau_references(db: Session, org_id: str) -> dict:
             "particulier": particulier, "intervention": mode if mode in INTERVENTIONS else None,
             "chantier": _t(r.intitule), "lieu": lieu, "travaux": _court(_t(_g(r, "description") or r.lot), 220),
             "montant": euros(r.montant_ht) if r.montant_ht is not None else "",
+            "montant_valeur": float(r.montant_ht) if r.montant_ht is not None else None,   # le tableur en fait un nombre
         })
     return {
         "lignes": lignes,
-        "total": {"chantiers": len(lignes), "montant": euros(total) if lignes else "", "sous_traitance": nb_sous,
+        "total": {"chantiers": len(lignes), "montant": euros(total) if lignes else "",
+                  "montant_valeur": total if lignes else None, "sous_traitance": nb_sous,
                   "donneurs_ordre": len(clients)},
         "note": NOTE_REFERENCES,
     }
@@ -566,17 +574,18 @@ def _certifications(db: Session, org: Organization, cfg: Optional[MemoireConfig]
     def ligne_declaree(q) -> dict:
         details = " · ".join(x for x in (_t(q.organisme), f"n° {_t(q.numero)}" if _t(q.numero) else "",
                                          _t(q.perimetre)) if x)
-        return _ligne(_t(q.intitule), " — ".join(x for x in (details, _validite(q.date_fin, jour)) if x))
+        return _ligne(_t(q.intitule), " — ".join(x for x in (details, _validite(q.date_fin, jour)) if x), q.date_fin)
 
     def ligne_document(d: Document) -> dict:
-        return _ligne(_TYPES_DOCUMENT[d.type], _validite(d.expiry_date, jour) if d.expiry_date else "À confirmer")
+        return _ligne(_TYPES_DOCUMENT[d.type], _validite(d.expiry_date, jour) if d.expiry_date else "À confirmer",
+                      d.expiry_date)
 
     qualifications = [ligne_declaree(q) for q in declarees if _g(q, "famille") in ("qualification", "rge", "systeme_management")]
     qualifications += [ligne_document(d) for d in documents if d.type in _TYPES_QUALIFICATION and d.id not in relies]
     assurances = [ligne_declaree(q) for q in declarees if _g(q, "famille") == "assurance"]
     assurances += [ligne_document(d) for d in documents if d.type in _TYPES_ASSURANCE and d.id not in relies]
     habilitations = [_ligne(h["libelle"], f"{h['nombre']} personne" + ("s" if h["nombre"] > 1 else "")
-                            + (f" — {_validite(h['fin'], jour)}" if h["fin"] else ""))
+                            + (f" — {_validite(h['fin'], jour)}" if h["fin"] else ""), h["fin"])
                      for h in _habilitations(cfg)]
     deja = {h["type"] for h in _habilitations(cfg)}          # « caces » déclaré en nombre : pas de seconde ligne
     habilitations += [ligne_document(d) for d in documents

@@ -25,6 +25,7 @@ from schemas.fiches_entreprise import (
 )
 from services import fiches_donnees as donnees_fiche
 from services import fiches_entreprise as generation
+from services import fiches_excel
 from services import fiches_logo
 from services.file_storage import FileStorage, sign_file_path
 from services.rate_limit import limiter
@@ -207,16 +208,39 @@ def _nom_de_fichier(rubrique: str, societe: str, extension: str) -> str:
     return f"{donnees_fiche.NOMS_FICHIER[rubrique]}{'_' + nu if nu else ''}.{extension}"
 
 
+def _preparer(db: Session, org: Organization, rubrique: str):
+    """Tout ce qu'il faut pour fabriquer la fiche, relu dans la base (état ENREGISTRÉ) : données assemblées,
+    bordereau effectif, palette et logo en PNG. Rend la connexion avant de revenir : plus de base ensuite, une
+    conversion peut durer."""
+    fiche = _fiche(db, org.id, rubrique)
+    bordereau = bordereau_effectif(org, fiche, rubrique)
+    donnees = donnees_fiche.assembler(db, org.id, rubrique)
+    logo, _origine = logo_de_la_fiche(org, fiche)
+    logo_png = fiches_logo.en_png(fiches_logo.lire_local(logo)) if logo else None
+    rendre_connexion(db)
+    return donnees, bordereau, donnees_fiche.palette(bordereau["couleur"]), logo_png
+
+
+def fabriquer(format_: str, donnees: dict, bordereau: dict, pal: dict, logo_png: Optional[bytes]) -> tuple[bytes, str]:
+    """(octets, type MIME) de la fiche dans le format demandé ; ``PdfConversionError`` si le PDF est indisponible."""
+    if format_ == "xlsx":
+        return fiches_excel.generer_xlsx(donnees, bordereau, pal), fiches_excel.TYPE_XLSX
+    docx = generation.generer_docx(donnees, bordereau, pal, logo_png)
+    if format_ == "docx":
+        return docx, generation.TYPE_DOCX
+    return generation.generer_pdf(docx), generation.TYPE_PDF
+
+
 @router.post("/{rubrique}/generer")
 @limiter.limit("10/minute")
 def generer_fiche(
     request: Request,
     rubrique: str,
-    format_: str = Query("pdf", alias="format", pattern="^(pdf|docx)$"),
+    format_: str = Query("pdf", alias="format", pattern="^(pdf|docx|xlsx)$"),
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ):
-    """Word ou PDF de la fiche, produit sur le serveur à partir des données et du bordereau ENREGISTRÉS de
+    """Word, PDF ou Excel de la fiche, produit sur le serveur à partir des données et du bordereau ENREGISTRÉS de
     l'entreprise de l'utilisateur (même mise en page que l'aperçu). Le fichier est renvoyé dans la réponse :
     il n'est ni stocké ni accessible par une adresse."""
     _rubrique_ou_404(rubrique)
@@ -226,21 +250,11 @@ def generer_fiche(
             status_code=503,
             detail="Le PDF est indisponible sur ce serveur pour le moment — téléchargez la version Word.",
         )
-    fiche = _fiche(db, org.id, rubrique)
-    bordereau = bordereau_effectif(org, fiche, rubrique)
-    donnees = donnees_fiche.assembler(db, org.id, rubrique)
-    logo, _origine = logo_de_la_fiche(org, fiche)
-    logo_png = fiches_logo.en_png(fiches_logo.lire_local(logo)) if logo else None
-    rendre_connexion(db)       # plus de base ensuite : la conversion PDF peut durer
-    docx = generation.generer_docx(donnees, bordereau, donnees_fiche.palette(bordereau["couleur"]), logo_png)
-    if format_ == "docx":
-        contenu, type_ = docx, generation.TYPE_DOCX
-    else:
-        try:
-            contenu, type_ = generation.generer_pdf(docx), generation.TYPE_PDF
-        except generation.PdfConversionError as exc:
-            raise HTTPException(status_code=503, detail=str(exc),
-                                headers={"Retry-After": str(exc.retry_apres_s)})
+    donnees, bordereau, pal, logo_png = _preparer(db, org, rubrique)
+    try:
+        contenu, type_ = fabriquer(format_, donnees, bordereau, pal, logo_png)
+    except generation.PdfConversionError as exc:
+        raise HTTPException(status_code=503, detail=str(exc), headers={"Retry-After": str(exc.retry_apres_s)})
     nom = _nom_de_fichier(rubrique, donnees["societe"]["nom"], format_)
     return Response(
         content=contenu, media_type=type_,
