@@ -61,6 +61,9 @@ class Document(Base):
         String(40), nullable=False, default="unclassified", server_default="unclassified",
         index=True,
     )
+    # Migration 0032 — pièce déposée dans une case de « Mon entreprise » : sa rubrique et la case (NULL = dépôt hors cases).
+    rubrique_entreprise = Column(String(16), nullable=True)
+    case_depot = Column(String(24), nullable=True)
     uploaded_at = Column(DateTime, default=datetime.utcnow)
     deleted_at = Column(DateTime, nullable=True, index=True)  # soft-delete
 

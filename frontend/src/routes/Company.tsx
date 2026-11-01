@@ -9,6 +9,7 @@ import FormIdentite from '@/components/entreprise/FormIdentite'
 import FormMoyens from '@/components/entreprise/FormMoyens'
 import FormCertifications from '@/components/entreprise/FormCertifications'
 import ProfileFreeTextCard from '@/components/company/ProfileFreeTextCard'
+import CasesDepot from '@/components/entreprise/CasesDepot'
 import { AfficherPlus } from '@/components/entreprise/champs'
 import { MemoireSkeleton } from '@/components/skeletons'
 import { useMouvementReduit } from '@/components/intelligence/useMouvementReduit'
@@ -17,10 +18,16 @@ import { champDepuisRecherche } from '@/lib/entreprise/champsFiche'
 import { useFocusChamp } from '@/components/entreprise/useFocusChamp'
 
 // Texte libre → l'IA structure → l'utilisateur valide avant toute écriture (C7). Repliée : la saisie guidée vient d'abord.
-const DecrireAvecVosMots = () => (
-  <AfficherPlus libelle="Décrire avec vos mots" libelleOuvert="Masquer">
-    <ProfileFreeTextCard />
-  </AfficherPlus>
+// Sous « Décrire avec vos mots », les cases de dépôt de la rubrique : un document par case, Synorix lit et propose, le patron valide.
+const DecrireEtDeposer = ({ rubrique }: { rubrique: RubriqueId }) => (
+  <div className="space-y-6">
+    {rubrique !== 'certifications' && (
+      <AfficherPlus libelle="Décrire avec vos mots" libelleOuvert="Masquer">
+        <ProfileFreeTextCard />
+      </AfficherPlus>
+    )}
+    <CasesDepot rubrique={rubrique} />
+  </div>
 )
 
 // « Mon entreprise » : le profil vivant, en trois rubriques (Identité, Moyens humains et matériels,
@@ -67,9 +74,9 @@ export default function Company() {
               rubrique={rubrique}
               onChoisir={choisir}
               panneaux={{
-                identite: (ids) => <FormIdentite donnees={donnees} avant={<DecrireAvecVosMots />} idPanneau={ids.panneau} idOnglet={ids.onglet} />,
-                moyens: (ids) => <FormMoyens donnees={donnees} avant={<DecrireAvecVosMots />} idPanneau={ids.panneau} idOnglet={ids.onglet} />,
-                certifications: (ids) => <FormCertifications donnees={donnees} idPanneau={ids.panneau} idOnglet={ids.onglet} />,
+                identite: (ids) => <FormIdentite donnees={donnees} avant={<DecrireEtDeposer rubrique="identite" />} idPanneau={ids.panneau} idOnglet={ids.onglet} />,
+                moyens: (ids) => <FormMoyens donnees={donnees} avant={<DecrireEtDeposer rubrique="moyens" />} idPanneau={ids.panneau} idOnglet={ids.onglet} />,
+                certifications: (ids) => <FormCertifications donnees={donnees} avant={<DecrireEtDeposer rubrique="certifications" />} idPanneau={ids.panneau} idOnglet={ids.onglet} />,
               }}
             />
           </>

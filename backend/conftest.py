@@ -152,3 +152,15 @@ def client(test_user):
         yield TestClient(app)
     finally:
         app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+def _depot_ia_jamais_reelle(monkeypatch):
+    """Aucun appel payant en test : l'extraction du dépôt par rubrique refuse de parler au fournisseur. Les tests du
+    dépôt installent un modèle simulé (tests/depot_fabrique.py : `modele`)."""
+    from services.ai import depot_extracteur
+
+    def _interdit(systeme, texte):
+        raise AssertionError("appel IA réel interdit en test : utilisez la fixture `modele`")
+
+    monkeypatch.setattr(depot_extracteur, "_call_haiku", _interdit)
