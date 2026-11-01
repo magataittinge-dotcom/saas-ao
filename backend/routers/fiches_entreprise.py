@@ -5,9 +5,11 @@ jamais copiées) et un bordereau modifiable : titre, sous-titre, contact, couleu
 logo. Toutes les routes travaillent sur l'entreprise de l'utilisateur authentifié (``organization_id`` posé
 par le serveur, jamais lu du corps ni de l'adresse) : aucune fiche d'une autre entreprise n'est atteignable.
 """
+import asyncio
+import io
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -19,9 +21,15 @@ from schemas.fiches_entreprise import (
     COULEUR_PAR_DEFAUT, RUBRIQUES, SECTIONS, BordereauIn,
 )
 from services import fiches_donnees as donnees_fiche
+from services import fiches_logo
+from services.file_storage import FileStorage, sign_file_path
+from services.rate_limit import limiter
+from services.upload_validation import RegleDepot, recevoir_fichier
 
 router = APIRouter()
 
+# Logo : PNG ou JPEG, 2 Mo au plus. Le contenu réel est ensuite jugé par Pillow (services/fiches_logo.py).
+_REGLE_LOGO = RegleDepot(frozenset({".png", ".jpg", ".jpeg"}), fiches_logo.MAX_OCTETS, "PNG ou JPEG")
 
 
 def _rubrique_ou_404(rubrique: str) -> str:
@@ -65,13 +73,30 @@ def bordereau_effectif(org: Organization, fiche: Optional[FicheEntreprise], rubr
     }
 
 
+def logo_de_la_fiche(org: Organization, fiche: Optional[FicheEntreprise]) -> tuple[Optional[str], Optional[str]]:
+    """(url « /uploads/… », origine) du logo imprimé : celui de la fiche, sinon le logo de l'entreprise."""
+    if fiche is not None and fiches_logo.existe(fiche.logo_path):
+        return fiche.logo_path, "fiche"
+    if fiches_logo.existe(org.logo_url):
+        return org.logo_url, "entreprise"
+    return None, None
+
+
+def _url_signee(org_id: str, url: Optional[str]) -> Optional[str]:
+    """URL signée à durée limitée (15 min), liée à l'entreprise : jamais le chemin disque."""
+    rel = fiches_logo.chemin_relatif(url)
+    return sign_file_path(rel, org_id=org_id) if rel else None
+
+
 def _reponse(db: Session, org: Organization, rubrique: str) -> dict:
     fiche = _fiche(db, org.id, rubrique)
     bordereau = bordereau_effectif(org, fiche, rubrique)
+    logo, origine = logo_de_la_fiche(org, fiche)
     return {
         "rubrique": rubrique,
         "libelle": donnees_fiche.LIBELLES_RUBRIQUE[rubrique],
-        "bordereau": {**bordereau, "enregistre": fiche is not None, "logo_url": None},
+        "bordereau": {**bordereau, "enregistre": fiche is not None, "logo_url": _url_signee(org.id, logo),
+                      "logo_origine": origine},
         "valeurs_par_defaut": valeurs_par_defaut(org, rubrique),
         "sections_libres": list(SECTIONS[rubrique]),
         "palette": donnees_fiche.palette(bordereau["couleur"]),
@@ -118,4 +143,56 @@ def enregistrer_bordereau(
     fiche.lignes_libres = [l.model_dump() for l in payload.lignes_libres]
     db.commit()
     return _reponse(db, org, rubrique)
+
+
+@router.post("/{rubrique}/logo")
+@limiter.limit("10/minute")
+async def deposer_logo(
+    request: Request,
+    rubrique: str,
+    file: UploadFile = File(...),
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """Logo de la fiche : PNG ou JPEG de 2 Mo au plus, vérifié par son contenu, recréé en WebP (512 px
+    au plus, métadonnées perdues), rangé sous un nom aléatoire hors webroot, servi par URL signée."""
+    _rubrique_ou_404(rubrique)
+    org = _org_ou_404(db, user)
+    with await recevoir_fichier(request, file, _REGLE_LOGO) as recu:
+        octets = await recu.octets()
+    try:
+        webp = await asyncio.to_thread(fiches_logo.reencoder_en_webp, octets)
+    except fiches_logo.LogoRefuse as exc:
+        raise HTTPException(status_code=415, detail=str(exc))
+    url = await FileStorage().upload_stream(
+        io.BytesIO(webp), "logo.webp", f"organizations/{org.id}/fiches", "image/webp",
+    )
+    fiche = _fiche(db, org.id, rubrique)
+    ancien = fiche.logo_path if fiche is not None else None
+    if fiche is None:
+        fiche = FicheEntreprise(organization_id=org.id, rubrique=rubrique)
+        db.add(fiche)
+    fiche.logo_path = url
+    db.commit()
+    if ancien and ancien != url:
+        fiches_logo.supprimer_local(ancien)
+    return {"logo_url": _url_signee(org.id, url), "logo_origine": "fiche"}
+
+
+@router.delete("/{rubrique}/logo")
+def retirer_logo(
+    rubrique: str,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """Retire le logo propre à la fiche : l'aperçu reprend le logo de l'entreprise, s'il y en a un."""
+    _rubrique_ou_404(rubrique)
+    org = _org_ou_404(db, user)
+    fiche = _fiche(db, org.id, rubrique)
+    if fiche is not None and fiche.logo_path:
+        ancien, fiche.logo_path = fiche.logo_path, None
+        db.commit()
+        fiches_logo.supprimer_local(ancien)
+    logo, origine = logo_de_la_fiche(org, fiche)
+    return {"logo_url": _url_signee(org.id, logo), "logo_origine": origine}
 
