@@ -99,3 +99,38 @@ def test_les_journaux_ne_recoivent_que_des_nombres():
     r = _m("jean@exemple.fr 06 12 34 56 78", personnes=True)
     assert r.comptes == {"EMAIL": 1, "TELEPHONE": 1}
     assert "jean" not in str(r.comptes)
+
+
+# ── Kbis : l'état civil et le domicile du dirigeant (essai réel du 2/11, décision 9) ────────────────────────────
+# Sur un vrai Kbis, la ligne « Date et lieu de naissance Le 12/09/1978 à Riom (63) » et la ligne « Domicile
+# personnel … » partaient au modèle en clair : la case Kbis n'est pas une case « personnes » (l'adresse du siège
+# doit rester lisible). Valeurs inventées.
+
+KBIS_GERANT = """Adresse du siège 14 rue des Essais Imaginaires 63000 Clermont-Ferrand
+Gérant
+Nom, prénoms DUMONTEIL Arnaud Pierre
+Date et lieu de naissance Le 12/09/1978 à Riom (63)
+Nationalité Française
+Domicile personnel 8 allée des Volcans Inventés 63200 Riom
+Adresse de l'établissement 14 rue des Essais Imaginaires 63000 Clermont-Ferrand"""
+
+
+def test_kbis_date_et_lieu_de_naissance_du_dirigeant_masques():
+    r = _m(KBIS_GERANT)
+    assert "12/09/1978" not in r.texte and "Riom (63)" not in r.texte
+    assert "[DATE_NAISSANCE]" in r.texte
+
+
+def test_kbis_domicile_personnel_du_dirigeant_masque_mais_pas_le_siege():
+    r = _m(KBIS_GERANT)
+    assert "Volcans" not in r.texte and "63200" not in r.texte
+    assert "Domicile personnel [ADRESSE]" in r.texte
+    assert r.texte.count("14 rue des Essais Imaginaires 63000 Clermont-Ferrand") == 2      # siège et établissement
+
+
+@pytest.mark.parametrize("ligne", ["Né le 3 mars 1980 à Lyon", "Date de naissance : 03/03/1980",
+                                   "Lieu de naissance : Lyon (69)", "Naissance le 03/03/1980",
+                                   "Demeurant 3 chemin des Exemples 69000 Lyon"])
+def test_autres_formes_d_etat_civil_masquees(ligne):
+    r = _m(ligne)
+    assert "1980" not in r.texte and "Lyon" not in r.texte and "Exemples" not in r.texte

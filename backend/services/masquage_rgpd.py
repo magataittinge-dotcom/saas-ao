@@ -7,6 +7,8 @@ Sont remplacés par une étiquette :
 - adresses e-mail                              -> [EMAIL]
 - téléphones français (fixe, mobile, +33)      -> [TELEPHONE]
 - dates de naissance (« né le … », « date de naissance … ») -> [DATE_NAISSANCE]
+- lignes « Date et lieu de naissance … » et « Lieu de naissance … » (Kbis) -> [DATE_NAISSANCE], jusqu'à la fin de la ligne
+- lignes « Domicile personnel … », « Demeurant … », « Résidant à … » -> le libellé suivi de [ADRESSE]
 Et, pour les cases qui parlent de PERSONNES (organigramme, liste du personnel, CV), en plus :
 - adresses postales personnelles               -> [ADRESSE]
 - civilité + nom, « Prénom NOM », « NOM Prénom » -> [NOM]
@@ -36,8 +38,16 @@ _EMAIL = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
 _TEL = re.compile(r"(?<![\d.])(?:\+33\s?\(?0?\)?|0033\s?|0)[1-9](?:[ .\-]?\d{2}){4}(?!\d)")
 _NAISSANCE = re.compile(
     rf"(?:\bn[ée]e?\s+(?:[àa]\s+[A-ZÀ-Ý][\wÀ-ÿ'’\- ]{{1,40}}?\s+)?le\s+{_DATE}"
-    rf"|\bdate\s+de\s+naissance\s*[:\-]?\s*{_DATE}"
-    rf"|\bnaissance\s*[:\-]?\s*{_DATE})", re.IGNORECASE)
+    rf"(?:\s+[àa]\s+[A-ZÀ-Ý][\wÀ-ÿ'’\-]+(?:[ \-][A-ZÀ-Ý][\wÀ-ÿ'’\-]+)*(?:\s*\(\w{{2,3}}\))?)?"
+    rf"|\bdate\s+de\s+naissance\s*[:\-]?\s*(?:le\s+)?{_DATE}"
+    rf"|\bnaissance\s*[:\-]?\s*(?:le\s+)?{_DATE})", re.IGNORECASE)
+# Kbis, statuts, procès-verbaux : l'état civil et le domicile du dirigeant tiennent sur UNE ligne (« Date et lieu de
+# naissance Le 12/09/1978 à Riom (63) », « Domicile personnel 8 allée … 63200 Riom »). Ces lignes sont masquées
+# jusqu'au bout, pour TOUTES les cases (la case Kbis n'est pas une case « personnes » : l'adresse du siège y reste).
+# Essai réel du 2/11/2026 : ces deux lignes partaient au modèle en clair.
+_LIEU_NAISSANCE = re.compile(r"\b(?:date\s+et\s+)?lieu\s+de\s+naissance\b[^\n]*", re.IGNORECASE)
+_DOMICILE = re.compile(r"\b(domicile(?:\s+personnel)?|demeurant(?:\s+(?:à|au|aux))?|r[ée]sidant\s+(?:à|au|aux))"
+                       r"(?:\s*[:\-]\s*|\s+)[^\n]+", re.IGNORECASE)
 
 _VOIE = (r"rue|avenue|av\.?|boulevard|bd\.?|chemin|impasse|all[ée]e|place|route|square|quai|cours|passage|lotissement|r[ée]sidence|hameau|lieu[- ]dit")
 _VILLE = r"[A-ZÀ-Ý][\wÀ-ÿ'’\-]+(?:[ \-][A-ZÀ-Ý][\wÀ-ÿ'’\-]+)*"
@@ -115,7 +125,9 @@ def masquer(texte: str, personnes: bool = False) -> TexteMasque:
     t = texte or ""
     t = remplacer(_IBAN, "IBAN", t, accepte=_iban_valide)
     t = remplacer(_EMAIL, "EMAIL", t)
+    t = remplacer(_LIEU_NAISSANCE, "DATE_NAISSANCE", t)
     t = remplacer(_NAISSANCE, "DATE_NAISSANCE", t)
+    t = _DOMICILE.sub(lambda m: _compter(comptes, "ADRESSE", f"{m.group(1)} [ADRESSE]"), t)
     t = remplacer(_NIR, "NIR", t)
     t = remplacer(_TEL, "TELEPHONE", t)
     if personnes:
@@ -125,6 +137,11 @@ def masquer(texte: str, personnes: bool = False) -> TexteMasque:
         t = remplacer(_PRENOM_NOM, "NOM", t, accepte=_pas_un_intitule, garde_noms=True)
         t = remplacer(_NOM_PRENOM, "NOM", t, accepte=_pas_un_intitule, garde_noms=True)
     return TexteMasque(t, comptes, frozenset(noms))
+
+
+def _compter(comptes: dict, etiquette: str, remplacement: str) -> str:
+    comptes[etiquette] = comptes.get(etiquette, 0) + 1
+    return remplacement
 
 
 def _pas_un_intitule(morceau: str) -> bool:
