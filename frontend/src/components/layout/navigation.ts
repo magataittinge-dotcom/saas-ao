@@ -47,4 +47,7 @@ export const ENTREES_TIROIR: Entree[] = [
   { to: '/settings', icon: Settings, label: 'Paramètres' },
 ]
 
-export const estActif = (pathname: string, to: string) => pathname === to || pathname.startsWith(`${to}/`)
+/** Les pages de « Mon entreprise » hors de /company (fiches à télécharger) gardent son entrée active. */
+const SOUS_PAGES: Readonly<Record<string, readonly string[]>> = { '/company': ['/entreprise/'] }
+export const estActif = (pathname: string, to: string) =>
+  pathname === to || pathname.startsWith(`${to}/`) || (SOUS_PAGES[to] ?? []).some((p) => pathname.startsWith(p))

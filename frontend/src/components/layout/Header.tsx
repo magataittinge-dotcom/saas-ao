@@ -8,7 +8,7 @@ import { RACCOURCI_PALETTE } from './CommandPalette'
 import CompanionOrb from '@/components/ui/CompanionOrb'
 import type { CompanionState } from '@/components/ui/CompanionOrb'
 
-const ROUTE_LABELS: Record<string, { parent?: string; label: string }> = {
+const ROUTE_LABELS: Record<string, { parent?: string; parentTo?: string; label: string }> = {
   '/dashboard':      { label: 'Tableau de bord' },
   '/projects':       { label: 'Mes AO' },
   '/projects/new':   { parent: 'Mes AO', label: 'Nouvel AO' },
@@ -17,6 +17,7 @@ const ROUTE_LABELS: Record<string, { parent?: string; label: string }> = {
   '/outils':         { label: 'Retenue de garantie' },
   '/memoire-config': { label: 'Mon entreprise' },
   '/company':        { label: 'Mon entreprise' },
+  '/entreprise/fiche': { parent: 'Mon entreprise', parentTo: '/company', label: 'Fiche à télécharger' },
   '/team':           { label: 'Équipe' },
   '/settings':       { label: 'Paramètres' },
   '/pricing':        { label: 'Facturation' },
@@ -48,12 +49,13 @@ export default function Header({ onSearch }: Props) {
   const [theme] = useTheme()
 
   let parent: string | undefined
+  let parentTo = '/projects'
   let label = ''
   const projectMatch = pathname.match(/^\/projects\/[^/]+\/(\w+)/)
   if (projectMatch) { parent = 'Mes AO'; label = STEP_LABELS[projectMatch[1]] ?? 'Projet' }
   else {
     const match = Object.entries(ROUTE_LABELS).sort((a, b) => b[0].length - a[0].length).find(([r]) => pathname.startsWith(r))
-    if (match) { parent = match[1].parent; label = match[1].label }
+    if (match) { parent = match[1].parent; parentTo = match[1].parentTo ?? '/projects'; label = match[1].label }
   }
 
   return (
@@ -61,7 +63,7 @@ export default function Header({ onSearch }: Props) {
       <nav aria-label="Fil d'Ariane" className="flex min-w-0 items-center gap-1.5 text-[15px]">
         {parent && (
           <>
-            <Link to="/projects" className="hidden truncate text-fg-3 transition-colors hover:text-fg sm:inline">{parent}</Link>
+            <Link to={parentTo} className="hidden truncate text-fg-3 transition-colors hover:text-fg sm:inline">{parent}</Link>
             <ChevronRight size={14} className="hidden shrink-0 text-fg-3 sm:block" aria-hidden />
           </>
         )}
