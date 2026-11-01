@@ -1,8 +1,8 @@
-// La liste des avis de la zone choisie : filtres au-dessus, une carte par avis, « Voir plus » (curseur),
-// états vides positifs, mention de la source.
+// La liste des avis de la zone choisie : filtres au-dessus (collés en haut à partir de lg), une carte par avis, « Afficher plus »
+// (curseur ; la suite se charge aussi toute seule quand le bouton entre dans la zone visible), états vides positifs, source.
 //
 //   <ListeAvis avis={…} total={…} zoneVide={…} … />
-import { Fragment } from 'react'
+import { Fragment, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import CarteAvis from './CarteAvis'
 import FiltresVeille from './FiltresVeille'
@@ -34,6 +34,67 @@ export interface PropsListeAvis {
   /** Avis dont la dernière création n'a pas abouti. */
   creationEnErreurPour?: string | null
   source?: string | null
+}
+
+/** Plus proche ancêtre qui défile (overflow-y auto ou scroll) ; null = la fenêtre. Dans l'appli, c'est <main>. */
+export function ancetreDefilant(el: Element | null, overflowDe: (e: Element) => string = (e) => getComputedStyle(e).overflowY): Element | null {
+  for (let n = el?.parentElement ?? null; n; n = n.parentElement) {
+    if (/auto|scroll/.test(overflowDe(n))) return n
+  }
+  return null
+}
+
+export interface EtatSuite {
+  aPlus: boolean
+  chargePlus: boolean
+}
+
+/** Garde contre le double chargement : l'observateur peut se déclencher plusieurs fois avant que « chargement en cours »
+ * ne soit rendu ; un verrou local ferme la porte dès le premier appel, `relacher` la rouvre à l'arrivée de la page. */
+export function creerDeclencheurSuite(lire: () => EtatSuite, charger: () => void) {
+  let verrou = false
+  return {
+    demander() {
+      const e = lire()
+      if (verrou || !e.aPlus || e.chargePlus) return
+      verrou = true
+      charger()
+    },
+    relacher() { verrou = false },
+  }
+}
+
+/** Observe `cible` dans `racine` et appelle `surVisible` à chaque entrée dans la zone visible. Renvoie le nettoyage,
+ * ou null sans IntersectionObserver (rendu serveur, vieux navigateur) : le bouton reste alors le repli. */
+export function observerSuite(cible: Element, racine: Element | null, surVisible: () => void, Observateur: typeof IntersectionObserver | null | undefined): (() => void) | null {
+  if (typeof Observateur !== 'function') return null
+  const obs = new Observateur((entrees) => { if (entrees.some((e) => e.isIntersecting)) surVisible() }, { root: racine, rootMargin: '0px 0px 200px 0px' })
+  obs.observe(cible)
+  return () => obs.disconnect()
+}
+
+/** « Afficher plus » : un vrai bouton (clavier, repli), observé par un IntersectionObserver dont la racine est le conteneur qui défile. */
+function BoutonSuite({ chargePlus, nbAvis, onSuite }: { chargePlus: boolean; nbAvis: number; onSuite: () => void }) {
+  const ref = useRef<HTMLButtonElement>(null)
+  const etat = useRef<EtatSuite>({ aPlus: true, chargePlus })
+  etat.current = { aPlus: true, chargePlus }
+  const rappel = useRef(onSuite)
+  rappel.current = onSuite
+  const declencheur = useRef<ReturnType<typeof creerDeclencheurSuite> | null>(null)
+  if (!declencheur.current) declencheur.current = creerDeclencheurSuite(() => etat.current, () => rappel.current())
+  const garde = declencheur.current
+  // fin d'un chargement (réussi ou non) : le verrou s'ouvre
+  useEffect(() => { if (!chargePlus) garde.relacher() }, [chargePlus, garde])
+  // nouvelle page : on ré-observe, l'état courant est réévalué (le bouton est-il encore dans la zone visible ?)
+  useEffect(() => {
+    const b = ref.current
+    if (!b) return undefined
+    const fin = observerSuite(b, ancetreDefilant(b), () => garde.demander(), typeof IntersectionObserver === 'undefined' ? null : IntersectionObserver)
+    return fin ?? undefined
+  }, [nbAvis, garde])
+  return (
+    <Button ref={ref} data-suite variant="outline" onClick={() => garde.demander()} disabled={chargePlus}>{chargePlus ? 'Chargement…' : 'Afficher plus'}</Button>
+  )
 }
 
 export default function ListeAvis(p: PropsListeAvis) {
@@ -103,7 +164,7 @@ export default function ListeAvis(p: PropsListeAvis) {
         )}
         {p.aPlus && (
           <div className="mt-4 flex justify-center">
-            <Button variant="outline" onClick={p.onVoirPlus} disabled={p.chargePlus}>{p.chargePlus ? 'Chargement…' : 'Voir plus'}</Button>
+            <BoutonSuite chargePlus={!!p.chargePlus} nbAvis={p.avis.length} onSuite={p.onVoirPlus} />
           </div>
         )}
       </div>

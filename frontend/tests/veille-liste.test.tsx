@@ -1,5 +1,5 @@
 // B5 — la liste des avis : cartes, pastille « Nouveau », J−x, liens externes sûrs, filtres, états vides, « Élargir »,
-// « Voir plus », source. Les avis sont inventés (acheteurs et objets fictifs).
+// « Afficher plus », source. Les avis sont inventés (acheteurs et objets fictifs).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { isValidElement, type ReactElement, type ReactNode } from 'react'
@@ -121,9 +121,9 @@ test('zone sans avis : message positif et bouton « Élargir » ; il dit ce qu�
   assert.equal(appels, 1)
 })
 
-test('« Voir plus » seulement quand le serveur a donné un curseur ; chargement et erreur en termes positifs', () => {
-  assert.ok(renderToStaticMarkup(<ListeAvis {...base({ avis: [avis('1')], total: 40, aPlus: true })} />).includes('Voir plus'))
-  assert.ok(!renderToStaticMarkup(<ListeAvis {...base({ avis: [avis('1')], total: 1, aPlus: false })} />).includes('Voir plus'))
+test('« Afficher plus » seulement quand le serveur a donné un curseur ; chargement et erreur en termes positifs', () => {
+  assert.ok(renderToStaticMarkup(<ListeAvis {...base({ avis: [avis('1')], total: 40, aPlus: true })} />).includes('Afficher plus'))
+  assert.ok(!renderToStaticMarkup(<ListeAvis {...base({ avis: [avis('1')], total: 1, aPlus: false })} />).includes('Afficher plus'))
   assert.ok(renderToStaticMarkup(<ListeAvis {...base({ avis: [avis('1')], total: 40, aPlus: true, chargePlus: true })} />).includes('Chargement…'))
   const chargement = renderToStaticMarkup(<ListeAvis {...base({ enCours: true })} />)
   assert.ok(chargement.includes('Chargement des avis') && !chargement.includes('Aucun avis ouvert'))
