@@ -17,6 +17,7 @@ class TeamMember(Base):
     experience_years = Column(Integer, nullable=True)
     certifications = Column(String(500), nullable=True)
     cv_url = Column(String(500), nullable=True)
+    experience_resume = Column(String(1000), nullable=True)  # migration 0029
 
     # Relationships
     organization = relationship("Organization", back_populates="team_members")

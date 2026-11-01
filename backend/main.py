@@ -23,6 +23,7 @@ interdire_lecture_memoire()
 from routers import (
     auth,
     organizations,
+    qualifications,
     users,
     documents,
     references,
@@ -378,6 +379,7 @@ app.include_router(organizations.router, prefix="/api/organizations", tags=["org
 app.include_router(users.router, prefix="/api/users", tags=["users"])
 app.include_router(documents.router, prefix="/api/documents", tags=["documents"])
 app.include_router(references.router, prefix="/api/references", tags=["references"])
+app.include_router(qualifications.router, prefix="/api/qualifications", tags=["qualifications"])
 app.include_router(projects.router, prefix="/api/projects", tags=["projects"])
 app.include_router(analysis.router, prefix="/api/projects", tags=["analysis"])
 app.include_router(compliance.router, prefix="/api/projects", tags=["compliance"])

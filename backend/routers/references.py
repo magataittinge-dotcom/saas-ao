@@ -2,12 +2,13 @@ from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from database import get_db
 from models.user import User
 from models.reference import Reference
 from routers.auth import get_auth_user
+from schemas.profil_entreprise import ClientType, ModeIntervention
 from services.audit_logger import log_action
 
 router = APIRouter()
@@ -23,6 +24,11 @@ class ReferenceCreate(BaseModel):
     annee: Optional[int] = None
     statut: str = "en_cours"
     is_reference: bool = True
+    # Migration 0029
+    description: Optional[str] = Field(default=None, max_length=1500)
+    client_type: Optional[ClientType] = None
+    client_adresse: Optional[str] = Field(default=None, max_length=500)
+    mode_intervention: Optional[ModeIntervention] = None
 
 
 class ReferenceResponse(BaseModel):
@@ -37,6 +43,10 @@ class ReferenceResponse(BaseModel):
     annee: Optional[int]
     statut: str
     is_reference: bool
+    description: Optional[str] = None
+    client_type: Optional[str] = None
+    client_adresse: Optional[str] = None
+    mode_intervention: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -81,6 +91,10 @@ class ReferenceUpdate(BaseModel):
     annee: Optional[int] = None
     statut: Optional[str] = None
     is_reference: Optional[bool] = None
+    description: Optional[str] = Field(default=None, max_length=1500)
+    client_type: Optional[ClientType] = None
+    client_adresse: Optional[str] = Field(default=None, max_length=500)
+    mode_intervention: Optional[ModeIntervention] = None
 
 
 @router.patch("/{ref_id}", response_model=ReferenceResponse)

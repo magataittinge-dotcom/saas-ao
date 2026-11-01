@@ -21,6 +21,14 @@ export interface Organization {
   id: string
   name: string
   siret?: string
+  siret_verified?: boolean
+  naf_code?: string
+  effectif_tranche?: string
+  forme_juridique?: string
+  capital_social?: number
+  greffe_rcs?: string
+  email_contact?: string
+  telephone?: string
   address?: string
   logo_url?: string
   presentation?: string
@@ -96,6 +104,7 @@ export interface TeamMember {
   experience_years?: number
   certifications?: string
   cv_url?: string
+  experience_resume?: string
 }
 
 // ─── References ───────────────────────────────────────────────────────────────
@@ -114,7 +123,26 @@ export interface Reference {
   annee?: number
   statut: ReferenceStatus
   is_reference: boolean
+  description?: string
+  client_type?: 'public' | 'prive_pro' | 'particulier'
+  client_adresse?: string
+  mode_intervention?: 'direct' | 'sous_traitance' | 'cotraitance'
   created_at: string
+}
+
+export type FamilleQualification = 'qualification' | 'rge' | 'systeme_management' | 'assurance'
+
+export interface Qualification {
+  id: string
+  organization_id: string
+  famille: FamilleQualification
+  intitule: string
+  organisme?: string | null
+  numero?: string | null
+  perimetre?: string | null
+  date_obtention?: string | null
+  date_fin?: string | null
+  document_id?: string | null
 }
 
 // ─── Projects ─────────────────────────────────────────────────────────────────
@@ -361,7 +389,20 @@ export interface PaginatedResponse<T> {
 export interface CAEntry {
   annee: string
   montant: string
+  montant_domaine?: string | null
+  exercice_debut?: string | null
+  exercice_fin?: string | null
+  effectif_moyen?: number | null
 }
+
+export type CategorieEffectif = 'encadrement' | 'chef_equipe' | 'ouvrier' | 'administratif' | 'apprenti'
+export interface LigneEffectif { categorie: CategorieEffectif; specialite?: string | null; effectif: number }
+
+export type TypeHabilitation = 'sst' | 'caces' | 'habilitation_electrique' | 'amiante_ss3' | 'amiante_ss4' | 'travail_hauteur' | 'autre'
+export interface LigneHabilitation { type: TypeHabilitation; libelle?: string | null; nombre: number; valide_jusqu?: string | null }
+
+/** Une ligne de matériel ou de véhicules. */
+export interface LigneMoyen { quantite: number; designation: string; unite?: string | null; famille?: string | null }
 
 export interface PosteCle {
   poste: string
@@ -391,6 +432,15 @@ export interface MemoireConfig {
   traitement_dechets?: string
   mesures_environnementales?: string
   fournisseurs_principaux?: string
+  metiers?: string[]
+  departements_intervention?: string[]
+  effectifs_par_categorie?: LigneEffectif[]
+  habilitations?: LigneHabilitation[]
+  materiel_liste?: LigneMoyen[]
+  vehicules_liste?: LigneMoyen[]
+  sous_traitance_partenaires?: string
+  sous_traitance_part_pct?: number
+  sav_garantie?: string
   updated_at?: string
   created_at?: string
 }

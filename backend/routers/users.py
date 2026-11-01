@@ -3,7 +3,7 @@ import shutil
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from database import get_db
 from models.user import User
@@ -11,6 +11,7 @@ from models.team_member import TeamMember
 from models.organization import Organization
 from models.project import Project, ProjectDocument
 from models.reference import Reference
+from models.qualification import Qualification
 from models.document import Document
 from models.memoire import MemoireTechnique
 from models.memoire_config import MemoireConfig
@@ -32,6 +33,17 @@ class TeamMemberCreate(BaseModel):
     specialite: Optional[str] = None
     experience_years: Optional[int] = None
     certifications: Optional[str] = None
+    experience_resume: Optional[str] = Field(default=None, max_length=1000)  # migration 0029
+
+
+class TeamMemberUpdate(BaseModel):
+    """Modification d'une personne clé : seuls les champs envoyés changent."""
+    name: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    role: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    specialite: Optional[str] = Field(default=None, max_length=255)
+    experience_years: Optional[int] = Field(default=None, ge=0, le=80)
+    certifications: Optional[str] = Field(default=None, max_length=500)
+    experience_resume: Optional[str] = Field(default=None, max_length=1000)
 
 
 class TeamMemberResponse(BaseModel):
@@ -43,6 +55,7 @@ class TeamMemberResponse(BaseModel):
     experience_years: Optional[int]
     certifications: Optional[str]
     cv_url: Optional[str]
+    experience_resume: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -60,6 +73,28 @@ def create_team_member(
 ):
     member = TeamMember(organization_id=user.organization_id, **payload.model_dump())
     db.add(member)
+    db.commit()
+    db.refresh(member)
+    return member
+
+
+@router.patch("/team/{member_id}", response_model=TeamMemberResponse)
+def update_team_member(
+    member_id: str,
+    payload: TeamMemberUpdate,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    member = db.query(TeamMember).filter(
+        TeamMember.id == member_id,
+        TeamMember.organization_id == user.organization_id,
+    ).first()
+    if not member:
+        raise HTTPException(status_code=404, detail="Membre introuvable")
+    for champ, valeur in payload.model_dump(exclude_unset=True).items():
+        if valeur is None and champ in {"name", "role"}:
+            continue  # colonnes obligatoires : un null n'efface pas
+        setattr(member, champ, valeur)
     db.commit()
     db.refresh(member)
     return member
@@ -91,6 +126,8 @@ def delete_my_account(
     db.query(MemoireConfig).filter(MemoireConfig.organization_id == org_id).delete(synchronize_session=False)
     db.query(MemoireTemplate).filter(MemoireTemplate.organization_id == org_id).delete(synchronize_session=False)
     db.query(Reference).filter(Reference.organization_id == org_id).delete(synchronize_session=False)
+    # 0029 : les qualifications pointent vers documents et organizations (FK) — à supprimer avant eux.
+    db.query(Qualification).filter(Qualification.organization_id == org_id).delete(synchronize_session=False)
     db.query(Document).filter(Document.organization_id == org_id).delete(synchronize_session=False)
     db.query(TeamMember).filter(TeamMember.organization_id == org_id).delete(synchronize_session=False)
     db.query(QuotaConsumption).filter(QuotaConsumption.organization_id == org_id).delete(synchronize_session=False)
