@@ -103,7 +103,7 @@ test('un seul bouton principal, pas d\'« Étape suivante » grisé, pas d\'« E
   const code = sansCommentaires(lire('src/routes/project/StepMemoire.tsx'))
   assert.doesNotMatch(code, /Export \.docx|lancerExportWord|exportToWord/, 'plus d\'export Word sur l\'écran Mémoire')
   // l'étape suivante n'existe plus que sur le document rédigé, où elle est active
-  assert.match(code, /Étape suivante : Export/)
+  assert.match(code, /<BoutonSuite\s+etape="Export"/)  // « Étape suivante : Export » (« Suivant : Export » au téléphone)
   assert.doesNotMatch(code, /disabled=\{!hasMemoire\}/)
 })
 

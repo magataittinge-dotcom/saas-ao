@@ -68,6 +68,10 @@
   box-shadow: var(--shadow-cta);
 }
 .signature-btn:hover:not(:disabled) { box-shadow: var(--shadow-cta); }
+/* Le CTA de l'export, plus large sur ordinateur ; au téléphone (≤ 768 px) il garde la taille compacte de la barre d'une ligne. */
+@media (min-width: 769px) {
+  .signature-btn.cta-grand { padding: 12px 32px; font-size: 16px; border-radius: 12px; }
+}
 
 .btn-glass {
   background: var(--surface-1);

@@ -8,6 +8,7 @@ import {
   Sparkles, FileArchive, Pencil, Check as CheckIcon,
 } from 'lucide-react'
 import axios from 'axios'
+import BarreEtape, { ActionsBarre, BilanBarre, BoutonSecondaire } from '@/components/project/BarreEtape'
 import { api } from '@/services/api'
 import SubscriptionWall from '@/components/common/SubscriptionWall'
 import DeleteConfirmModal from '@/components/common/DeleteConfirmModal'
@@ -864,47 +865,41 @@ export default function StepLotSelection({ project }: Props) {
           </div>
         )}
 
-        {/* ── BOTTOM BAR ──────────────────────────────────── */}
-        <div
-          className="sticky bottom-0 mt-6 -mx-3 sm:-mx-4 px-5 py-3.5 flex items-center justify-between"
-          style={{
-            background: 'color-mix(in srgb, var(--surface-0) 92%, transparent)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            borderTop: '1px solid var(--border-1)',
-          }}
-        >
-          <div className="flex items-center gap-2">
-            <CheckCircle2 size={16} style={{ color: selectedId !== 'all' && selectedName ? 'var(--text-1)' : 'var(--text-3)' }} />
-            <span className="text-sm" style={{ color: 'var(--text-3)' }}>
-              {selectedId !== 'all' && selectedName
-                ? <>Lot sélectionné : <strong style={{ color: 'var(--text-1)' }}>{selectedName}</strong></>
-                : 'Tous les lots sélectionnés'
-              }
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate(`/projects/${project.id}/upload`)}
-              className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-              style={{ color: 'var(--text-3)', border: '1px solid var(--border-1)' }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--text-3)'; e.currentTarget.style.color = 'var(--text-1)' }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-1)'; e.currentTarget.style.color = 'var(--text-3)' }}
-            >
-              Annuler
-            </button>
+        {/* ── Barre du bas (composant commun : une ligne au téléphone) ── */}
+        <BarreEtape>
+          <BilanBarre
+            className="gap-2"
+            bureau={<>
+              <CheckCircle2 size={16} style={{ color: selectedId !== 'all' && selectedName ? 'var(--text-1)' : 'var(--text-3)' }} />
+              <span className="text-sm" style={{ color: 'var(--text-3)' }}>
+                {selectedId !== 'all' && selectedName
+                  ? <>Lot sélectionné : <strong style={{ color: 'var(--text-1)' }}>{selectedName}</strong></>
+                  : 'Tous les lots sélectionnés'
+                }
+              </span>
+            </>}
+            tel={<>
+              <CheckCircle2 size={16} className="shrink-0" style={{ color: selectedId !== 'all' && selectedName ? 'var(--text-1)' : 'var(--text-3)' }} />
+              <span className="truncate text-xs" style={{ color: 'var(--text-3)' }}>
+                {selectedLotIds.length > 1 ? `${selectedLotIds.length} lots` : selectedId !== 'all' && selectedName ? selectedName : 'Tous les lots'}
+              </span>
+            </>}
+          />
+          <ActionsBarre>
+            <BoutonSecondaire libelle="Annuler" icone={X} onClick={() => navigate(`/projects/${project.id}/upload`)} />
             <button
               onClick={handleLaunch}
               disabled={isAnalyzing || isSuccess}
-              className="edge-cta flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+              className="edge-cta flex items-center gap-2 whitespace-nowrap px-6 py-2.5 rounded-lg text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed max-[768px]:px-4 [@media(pointer:coarse)]:min-h-11"
             >
-              <Sparkles size={16} />
-              {selectedLotIds.length > 1
-                ? `Lancer l'analyse (${selectedLotIds.length} lots)`
-                : "Lancer l'analyse"}
+              <Sparkles size={16} aria-hidden />
+              <span>
+                {"Lancer l'analyse"}
+                {selectedLotIds.length > 1 && <span className="max-[768px]:hidden">{` (${selectedLotIds.length} lots)`}</span>}
+              </span>
             </button>
-          </div>
-        </div>
+          </ActionsBarre>
+        </BarreEtape>
       </div>
     </>
   )

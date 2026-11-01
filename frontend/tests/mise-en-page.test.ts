@@ -15,8 +15,8 @@ const ETAPES = [
   'src/routes/project/StepExport.tsx',
 ]
 
-// Les étapes dont la barre est migrée vers le composant commun (S10 : T1 = Analyse, T2 = les autres).
-const ETAPES_MIGREES = ['src/routes/project/StepAnalysis.tsx']
+// Les six étapes d'un AO passent par le composant commun (S10).
+const ETAPES_MIGREES = ['src/routes/project/StepUpload.tsx', 'src/routes/project/StepLotSelection.tsx', ...ETAPES]
 
 test('les barres d\'action des étapes 3 à 6 sont collées au bas du contenu, pas en travers de l\'écran', () => {
   for (const f of ETAPES) {
@@ -30,12 +30,40 @@ test('les barres d\'action des étapes 3 à 6 sont collées au bas du contenu, p
   assert.match(commun, /sticky -bottom-5 z-30/)
 })
 
-test('S10 : chaque étape migrée passe par BarreEtape, sans barre collée écrite à la main', () => {
+test('S10 : chaque étape passe par BarreEtape, sans barre collée écrite à la main', () => {
   for (const f of ETAPES_MIGREES) {
     const code = sansCommentaires(lire(f))
     assert.match(code, /<BarreEtape[\s>]/, f)
     assert.ok(!/sticky -?bottom-/.test(code), `${f} : une barre collée écrite à la main`)
   }
+})
+
+test('S10 : dans la barre, les boutons secondaires sont des BoutonSecondaire (icône + aria-label) ; seul le principal est un bouton nu', () => {
+  const barre = (f: string) => {
+    const code = sansCommentaires(lire(f))
+    const debut = code.indexOf('<BarreEtape')
+    return code.slice(debut, code.indexOf('</BarreEtape>', debut))
+  }
+  for (const f of ETAPES_MIGREES.filter((x) => !x.endsWith('StepExport.tsx'))) {
+    const nus = barre(f).match(/<button\b[^>]*>/g) ?? []
+    // seul « Lancer l'analyse » est écrit à la main (edge-cta, texte fixe) ; les autres passent par BoutonSuite / BoutonSecondaire
+    assert.ok(nus.every((b) => /edge-cta/.test(b)), `${f} : un bouton nu dans la barre : ${nus.join(' ')}`)
+  }
+  assert.match(barre('src/routes/project/StepUpload.tsx'), /<BoutonSecondaire libelle="Retour"/)
+  assert.match(barre('src/routes/project/StepLotSelection.tsx'), /<BoutonSecondaire libelle="Annuler"/)
+})
+
+test('S10 : sur l\'export, une ligne au téléphone — « Télécharger », menu « … » pour les autres formats, avertissement au-dessus de la barre', () => {
+  const code = sansCommentaires(lire('src/routes/project/StepExport.tsx'))
+  assert.match(code, /<span className="hidden max-\[768px\]:inline">Télécharger<\/span>/)
+  assert.match(code, /<MenuPlus libelle="Autres formats">/)
+  assert.match(code, /<details className="text-center max-\[768px\]:hidden">/, 'le repli « Autres formats » reste sur ordinateur')
+  assert.match(code, /<div className="contents max-\[768px\]:hidden"><PiecesAJoindre/, 'dans la barre sur ordinateur')
+  assert.match(code, /className="mt-6 hidden max-\[768px\]:block"/, 'et au-dessus de la barre au téléphone')
+  assert.ok(code.indexOf('{avertissementTel}') < code.indexOf('{bottomBar}'))
+  // le grand bouton de l'ordinateur est une classe réservée aux écrans larges, plus un style en ligne
+  assert.match(lire('src/index.css'), /@media \(min-width: 769px\) \{\s*\.signature-btn\.cta-grand/)
+  assert.doesNotMatch(code, /padding: '12px 32px'/)
 })
 
 test('S10 : la barre du téléphone a une règle de hauteur (56 px), une seule ligne et une marge basse', () => {
