@@ -14,6 +14,7 @@ from .quota_consumption import QuotaConsumption
 from .notification import Notification
 from .avis_veille import AvisVeille
 from .preferences_veille import PreferencesVeille
+from .fiche_entreprise import FicheEntreprise
 
 # R14 — MemoireConfig était OMIS ici : `import models` (utilisé par alembic
 # env.py) ne l'enregistrait donc pas avec Base.metadata, alors que l'app le
@@ -38,4 +39,5 @@ __all__ = [
     "Notification",
     "AvisVeille",
     "PreferencesVeille",
+    "FicheEntreprise",
 ]

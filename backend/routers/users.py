@@ -14,6 +14,7 @@ from models.reference import Reference
 from models.document import Document
 from models.memoire import MemoireTechnique
 from models.memoire_config import MemoireConfig
+from models.fiche_entreprise import FicheEntreprise
 from models.memoire_template import MemoireTemplate
 from models.compliance_item import ComplianceItem
 from models.checklist_item import ChecklistItem
@@ -89,6 +90,7 @@ def delete_my_account(
     # de l'org sur Postgres → 500, droit à l'oubli cassé pour toute org
     # ayant consommé 1 unité ou reçu 1 notification).
     db.query(MemoireConfig).filter(MemoireConfig.organization_id == org_id).delete(synchronize_session=False)
+    db.query(FicheEntreprise).filter(FicheEntreprise.organization_id == org_id).delete(synchronize_session=False)
     db.query(MemoireTemplate).filter(MemoireTemplate.organization_id == org_id).delete(synchronize_session=False)
     db.query(Reference).filter(Reference.organization_id == org_id).delete(synchronize_session=False)
     db.query(Document).filter(Document.organization_id == org_id).delete(synchronize_session=False)
