@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, DateTime, JSON, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, String, Integer, DateTime, JSON, ForeignKey, UniqueConstraint
 from database import Base
 
 
@@ -40,6 +40,17 @@ class MemoireConfig(Base):
 
     # Section Fournisseurs
     fournisseurs_principaux = Column(String, nullable=True)
+
+    # Migration 0029 — informations demandées par les pièces et critères courants (listes typées en JSON).
+    metiers = Column(JSON, nullable=True)                     # codes de services/veille/metiers.py
+    departements_intervention = Column(JSON, nullable=True)   # codes de départements
+    effectifs_par_categorie = Column(JSON, nullable=True)     # [{categorie, specialite, effectif}] — des nombres, jamais de nom
+    habilitations = Column(JSON, nullable=True)               # [{type, libelle, nombre, valide_jusqu}] — par type, pas par personne
+    materiel_liste = Column(JSON, nullable=True)              # [{quantite, designation, unite, famille}]
+    vehicules_liste = Column(JSON, nullable=True)
+    sous_traitance_partenaires = Column(String, nullable=True)
+    sous_traitance_part_pct = Column(Integer, nullable=True)
+    sav_garantie = Column(String, nullable=True)
 
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     created_at = Column(DateTime, default=datetime.utcnow)

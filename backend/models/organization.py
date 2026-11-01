@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Boolean, Column, String, DateTime, Text, Enum as SAEnum
+from sqlalchemy import BigInteger, Boolean, Column, String, DateTime, Text, Enum as SAEnum
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -49,6 +49,13 @@ class Organization(Base):
     trial_granted = Column(Boolean, nullable=False, default=True, server_default="1")
     naf_code = Column(String(10), nullable=True)
     effectif_tranche = Column(String(80), nullable=True)
+
+    # Identité légale déclarée par l'entreprise (migration 0029) — jamais de TVA ni d'effectif stockés : calculés.
+    forme_juridique = Column(String(80), nullable=True)
+    capital_social = Column(BigInteger, nullable=True)  # euros
+    greffe_rcs = Column(String(80), nullable=True)
+    email_contact = Column(String(255), nullable=True)
+    telephone = Column(String(30), nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)
 

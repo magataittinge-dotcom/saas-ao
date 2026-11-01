@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, ForeignKey, Enum as SAEnum
+from sqlalchemy import Column, String, Text, Integer, Float, Boolean, DateTime, ForeignKey, Enum as SAEnum
 from sqlalchemy.orm import relationship
 from database import Base
 
@@ -23,6 +23,11 @@ class Reference(Base):
         default="en_cours",
     )
     is_reference = Column(Boolean, default=True)
+    # Migration 0029 : `description` est déjà lue par memoire_generator (getattr) — vide, elle reste None.
+    description = Column(Text, nullable=True)
+    client_type = Column(String(16), nullable=True)          # public | prive_pro | particulier
+    client_adresse = Column(String(500), nullable=True)
+    mode_intervention = Column(String(16), nullable=True)    # direct | sous_traitance | cotraitance
     attestation_document_id = Column(String, ForeignKey("documents.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     deleted_at = Column(DateTime, nullable=True, index=True)  # soft-delete
