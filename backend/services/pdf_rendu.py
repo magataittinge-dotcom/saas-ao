@@ -23,7 +23,7 @@ from typing import Optional, Sequence
 from services import pdfium_processus
 from services.pdf_lecture import PdfIllisible, page_aplatie
 
-__all__ = ["rendre_page_webp", "RenduRefuse", "PageHorsBornes", "RenduTropGrand",
+__all__ = ["rendre_page_webp", "rendre_document_webp", "RenduRefuse", "PageHorsBornes", "RenduTropGrand",
            "PIXELS_MAX", "LARGEUR_MAX_PX", "DELAI_RENDU_S", "PdfIllisible"]
 
 LARGEUR_MIN_PX = 16
@@ -114,3 +114,29 @@ def _rendre_page(chemin: str, page_index: int, largeur_px: int, cadre: tuple) ->
         return tampon.getvalue()
     finally:
         image.close()
+
+
+DELAI_DOCUMENT_S = 120.0   # un document de quelques pages : ~1 s par page mesuré sur les fiches
+
+
+def rendre_document_webp(pdf: bytes, largeur_px: int, pages_max: int = 20) -> tuple[int, list[bytes]]:
+    """``(nombre total de pages, images WebP des ``pages_max`` premières)`` d'un PDF fourni EN OCTETS (document
+    produit par nous, jamais déposé : les fiches). Un seul aller-retour vers le processus pdfium ; le PDF
+    voyage dans la demande, donc l'enfant n'a besoin d'aucun dossier lisible de plus (Landlock inchangé).
+    Bloquant. Mêmes erreurs que ``rendre_page_webp``."""
+    _verifier(0, largeur_px, None)
+    if not isinstance(pdf, (bytes, bytearray)) or not pdf:
+        raise PdfIllisible(None, "document vide")
+    return pdfium_processus.executer(
+        _rendre_document, bytes(pdf), int(largeur_px), int(max(1, pages_max)), delai_s=DELAI_DOCUMENT_S,
+        attente_s=15.0)
+
+
+def _rendre_document(pdf: bytes, largeur_px: int, pages_max: int) -> tuple[int, list[bytes]]:
+    """Exécuté DANS le processus pdfium."""
+    try:
+        with page_aplatie(pdf, 0) as (_page, total):
+            pass
+    except IndexError:
+        raise PageHorsBornes("document sans page") from None
+    return total, [_rendre_page(pdf, i, largeur_px, (0.0, 0.0, 1.0, 1.0)) for i in range(min(total, pages_max))]

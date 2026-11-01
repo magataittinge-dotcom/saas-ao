@@ -13,6 +13,8 @@ import { AfficherPlus } from '@/components/entreprise/champs'
 import { MemoireSkeleton } from '@/components/skeletons'
 import { useMouvementReduit } from '@/components/intelligence/useMouvementReduit'
 import { rubriqueDepuisRecherche, type RubriqueId } from '@/lib/entreprise/avancement'
+import { champDepuisRecherche } from '@/lib/entreprise/champsFiche'
+import { useFocusChamp } from '@/components/entreprise/useFocusChamp'
 
 // Texte libre → l'IA structure → l'utilisateur valide avant toute écriture (C7). Repliée : la saisie guidée vient d'abord.
 const DecrireAvecVosMots = () => (
@@ -27,11 +29,14 @@ const DecrireAvecVosMots = () => (
 // sa table actuelle (organisation, profil mémoire, équipe, références, coffre-fort).
 export default function Company() {
   // /company?rubrique=moyens (Équipe) ou =certifications (Mes références) ouvre la rubrique demandée, même si l'écran est déjà affiché.
-  const demandee = rubriqueDepuisRecherche(useLocation().search)
+  const { search } = useLocation()
+  const demandee = rubriqueDepuisRecherche(search)
   const [rubrique, setRubrique] = useState<RubriqueId>(demandee ?? 'identite')
   useEffect(() => { if (demandee) setRubrique(demandee) }, [demandee])
   const donnees = useDonneesEntreprise()
   const mouvementReduit = useMouvementReduit()
+  // /company?rubrique=moyens&champ=materiel (liens « Renseigner » de la fiche à télécharger) : le champ prend le focus.
+  useFocusChamp(champDepuisRecherche(search), rubrique, donnees.profilCharge, mouvementReduit)
   const visage = useRef<VisageAnimeRef>(null)
   const actions = useRef({ eclair: () => visage.current?.eclair() }).current
   const [aDefiler, setADefiler] = useState(0)

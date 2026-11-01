@@ -133,6 +133,10 @@ class CacheApercus:
             pass
         return octets
 
+    def existe(self, cle: str) -> bool:
+        """L'entrée est-elle là ? Sans la lire ni la « toucher » (les fiches en testent plusieurs à chaque sondage)."""
+        return self._chemin(cle).is_file()
+
     def ecrire(self, cle: str, octets: bytes) -> bool:
         """Écrit l'entrée de façon atomique. False si elle dépasse à elle seule le plafond."""
         taille = len(octets)

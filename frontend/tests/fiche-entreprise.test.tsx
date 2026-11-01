@@ -10,6 +10,12 @@ import FichePreview from '@/components/fiche/FichePreview'
 import FicheEntreprise from '@/routes/FicheEntreprise'
 import { estThemee } from '@/components/layout/Layout'
 import PhraseARenseigner from '@/components/fiche/PhraseARenseigner'
+import ApercuPages from '@/components/fiche/ApercuPages'
+import ZoneBordereau from '@/components/fiche/ZoneBordereau'
+import { RAISON_PDF_INDISPONIBLE } from '@/routes/FicheEntreprise'
+import { ETAT_INITIAL, MESSAGE_INDISPONIBLE, type EtatApercu } from '@/lib/apercuFiche'
+import { A_QUOI_SERT, contenuDeLaFiche, sectionPrete } from '@/lib/fichePage'
+import { CHAMPS, CHAMP_DE_SECTION, champDepuisRecherche, intituleCorrespond, lienSection } from '@/lib/entreprise/champsFiche'
 import {
   bordereauModifie, lignesDeSection, pageEstimee, paletteFiche, phraseARenseigner, tuilesAffichees, variablesFiche,
   type FicheBordereau, type FicheDonnees, type FicheReponse, type FicheSection,
@@ -203,20 +209,173 @@ function ecran(donnees: FicheDonnees) {
     </QueryClientProvider>)
 }
 
-test('l\'écran : un seul h1, les trois fiches, le choix PDF ou Word, l\'aperçu et le téléchargement', () => {
+test('l\'écran : un seul h1, les trois fiches, les trois zones, le choix PDF / Word / Excel et le téléchargement', () => {
   const html = ecran(moyens)
   assert.equal((html.match(/<h1/g) ?? []).length, 1)
   assert.ok(html.includes('Fiche à télécharger — Moyens humains et matériels'))
   for (const t of ['Identité', 'Moyens', 'Références']) assert.ok(html.includes(`>${t}</a>`), t)
   assert.match(html, /<a(?=[^>]*aria-current="page")(?=[^>]*href="\/entreprise\/fiche\/moyens")[^>]*>/)
   assert.ok(html.includes('href="/entreprise/fiche/certifications"') && html.includes('href="/entreprise/fiche/identite"'))
-  assert.ok(html.includes('name="format-fiche"') && html.includes('value="pdf"') && html.includes('value="docx"'))
+  assert.ok(html.includes('name="format-fiche"') && ['pdf', 'docx', 'xlsx'].every((v) => html.includes(`value="${v}"`)))
   assert.match(html, /<input(?=[^>]*value="pdf")(?=[^>]*checked)[^>]*>/)
-  assert.ok(html.includes('>PDF<') && html.includes('>Word<'))
-  assert.ok(html.includes('Télécharger en PDF') && html.includes('Modifier le bordereau'))
-  assert.match(html, /<button[^>]*disabled=""[^>]*>[\s\S]*?Bordereau enregistré/)
-  assert.ok(html.includes('aria-label="Aperçu de la fiche"'))
+  assert.ok(html.includes('>PDF<') && html.includes('>Word<') && html.includes('>Excel<'))
+  assert.ok(html.includes('Télécharger la fiche') && !html.includes('Modifier le bordereau') && !html.includes('Enregistrer le bordereau'))
   assert.ok(html.includes('href="/company"') && html.includes('Mon entreprise'))
+})
+
+test('l\'écran : trois zones, dans l\'ordre du DOM contenu → aperçu → bordereau, chacune avec son titre', () => {
+  const html = ecran(moyens)
+  const zones = ['data-zone="contenu"', 'data-zone="apercu"', 'data-zone="bordereau"'].map((z) => html.indexOf(z))
+  assert.ok(zones.every((i) => i > 0) && zones[0] < zones[1] && zones[1] < zones[2], 'contenu, aperçu, bordereau')
+  assert.ok(html.indexOf("Ce qu&#x27;il y a dans la fiche") > 0 && html.includes('>Aperçu</h2>') && html.includes('>Bordereau et téléchargement</h2>'))
+  assert.match(html, /<section[^>]*aria-labelledby="zone-contenu"/)
+  // téléphone : l'aperçu d'abord, puis le bordereau (bouton), puis le contenu ; ordinateur : trois colonnes
+  assert.match(html, /data-trois-zones[^>]*>/)
+  assert.match(html, /class="[^"]*lg:grid-cols-\[[^"]*"[^>]*data-trois-zones/)
+  assert.match(html, /<div class="order-3 lg:order-none">/)
+  assert.match(html, /<section[^>]*data-zone="apercu"[^>]*class="order-1 /)
+})
+
+test('zone 1 : une phrase par fiche, les sections avec « Prête » ou « À renseigner » et un lien vers le bon champ', () => {
+  const html = ecran(moyens)
+  assert.ok(html.includes('Les grandes entreprises demandent vos moyens et vos références avant de vous confier un chantier en sous-traitance. Cette fiche se remet telle quelle.'))
+  assert.equal((html.match(/data-section="/g) ?? []).length, 7)
+  // Moyens : « Véhicules » n'a aucune ligne, les six autres en ont
+  assert.match(html, /data-section="04" data-etat="a_renseigner"/)
+  assert.match(html, /data-section="01" data-etat="prete"/)
+  assert.equal((html.match(/data-etat="a_renseigner"/g) ?? []).length, 1)
+  assert.ok(html.includes('>Prête<') && html.includes('>À renseigner<'))
+  assert.match(html, /href="\/company\?rubrique=moyens&amp;champ=materiel"/)
+  assert.match(html, /href="\/company\?rubrique=moyens&amp;champ=effectifs"/)
+  assert.match(html, /aria-label="Renseigner : Véhicules"/)
+  assert.match(html, /aria-label="Modifier : Matériel"/)
+  // l'emplacement de la zone de dépôt est réservé, vide, pour le coordinateur
+  const source = lire('src/components/fiche/ZoneContenu.tsx')
+  assert.ok(source.includes('{/* ZONE-DEPOT : branchée par le coordinateur (phase B) */}'))
+  // une phrase, ton sobre, pour chacune des trois fiches
+  for (const r of ['identite', 'moyens', 'certifications'] as const) assert.ok(A_QUOI_SERT[r].length > 60 && !/!|manquant|incomplet|absent/i.test(A_QUOI_SERT[r]))
+  assert.equal(new Set(Object.values(A_QUOI_SERT)).size, 3)
+})
+
+test('zone 1 : une ligne libre rend une section « Prête » ; le tableau des références compte pour la fiche Références', () => {
+  const vide = section('04', 'Véhicules', [])
+  assert.equal(sectionPrete(vide, []), false)
+  assert.equal(sectionPrete(vide, [{ section: '04', libelle: 'Camion', valeur: 'Benne 3,5 t' }]), true)
+  assert.equal(sectionPrete(vide, [{ section: '03', libelle: 'Camion', valeur: 'Benne' }]), false)
+  assert.equal(sectionPrete(vide, [{ section: '04', libelle: 'Camion', valeur: ' ' }]), false)
+  assert.equal(sectionPrete({ ...vide, texte: 'Un texte', vide: false }, []), true)
+  const lignes = contenuDeLaFiche('certifications', certifications, [])
+  assert.deepEqual(lignes.map((l) => [l.cle, l.etat]), [['references', 'prete'], ['01', 'prete']])
+  assert.equal(lignes[0].lien, '/company?rubrique=certifications&champ=references')
+  const sans = contenuDeLaFiche('certifications', { ...certifications, references: { ...certifications.references!, lignes: [] } }, [])
+  assert.equal(sans[0].etat, 'a_renseigner')
+})
+
+test('liens « champ » : chaque section de chaque fiche mène à un champ connu, dans la bonne rubrique', () => {
+  for (const r of ['identite', 'moyens', 'certifications'] as const) {
+    for (const [numero, champ] of Object.entries(CHAMP_DE_SECTION[r])) {
+      assert.ok(champ in CHAMPS, `${r} ${numero} : champ « ${champ} » inconnu`)
+      const lien = lienSection(r, numero)
+      assert.match(lien, new RegExp(`^/company\\?rubrique=${CHAMPS[champ].rubrique}&champ=${champ}$`))
+      assert.equal(champDepuisRecherche(lien.slice(lien.indexOf('?'))), champ)
+    }
+  }
+  assert.equal(lienSection('moyens', '99'), '/company?rubrique=moyens')          // section sans champ connu : la rubrique
+  assert.equal(champDepuisRecherche('?rubrique=identite&champ=materiel'), null)    // champ d'une autre rubrique
+  assert.equal(champDepuisRecherche('?rubrique=moyens&champ=inconnu'), null)
+  assert.equal(champDepuisRecherche('?rubrique=moyens'), null)
+})
+
+test('liens « champ » : Mon entreprise donne le focus au champ demandé (étiquette ou titre de groupe, sans toucher aux formulaires)', () => {
+  const company = sansCommentaires(lire('src/routes/Company.tsx'))
+  assert.match(company, /useFocusChamp\(champDepuisRecherche\(search\), rubrique, donnees\.profilCharge, mouvementReduit\)/)
+  const hook = sansCommentaires(lire('src/components/entreprise/useFocusChamp.ts'))
+  assert.match(hook, /scrollIntoView/)
+  assert.match(hook, /\.focus\(\{ preventScroll: true \}\)/)
+  // les intitulés visés existent bien dans les formulaires (si un libellé change, ce test le dit)
+  const formulaires = ['FormIdentite', 'FormMoyens', 'FormCertifications'].map((f) => lire(`src/components/entreprise/${f}.tsx`)).join('\n')
+  for (const [id, c] of Object.entries(CHAMPS)) {
+    const intitule = c.label ?? c.groupe!
+    assert.ok(formulaires.includes(`"${intitule}`) || formulaires.includes(`'${intitule}`) || formulaires.includes(`${intitule}`), `${id} : « ${intitule} » introuvable dans les formulaires`)
+  }
+  assert.equal(intituleCorrespond('Nom du dirigeant ', CHAMPS.dirigeant, 'label'), true)
+  assert.equal(intituleCorrespond('Chiffres demandés dans la DC2', CHAMPS.chiffres, 'groupe'), true)
+  assert.equal(intituleCorrespond('Équipe : le détail', CHAMPS.effectifs, 'groupe'), true)      // l'ordre du DOM fait gagner le premier
+  assert.equal(intituleCorrespond('Équipe : le détail', CHAMPS.habilitations, 'groupe'), true)
+  assert.equal(intituleCorrespond('Équipe', CHAMPS.habilitations, 'groupe'), false)
+})
+
+test('zone 3 : logo (zone de dépôt visible), titre, sous-titre, contact, couleur, formats expliqués, lignes libres, bouton', () => {
+  const html = ecran(moyens)
+  assert.match(html, /data-depot-logo/)
+  assert.ok(html.includes('Déposer votre logo ici') && html.includes('PNG ou JPEG, 2 Mo au plus'))
+  for (const id of ['fiche-titre', 'fiche-sous-titre', 'fiche-contact', 'fiche-couleur']) assert.ok(html.includes(`id="${id}"`), id)
+  assert.ok(html.includes('à envoyer tel quel') && html.includes('pour modifier avant d’envoyer') && html.includes('le tableau, pour trier ou compléter'))
+  assert.match(html, /<h3[^>]*>Lignes libres<\/h3>/)
+  assert.match(html, /<button[^>]*data-telecharger[^>]*>[\s\S]*?Télécharger la fiche[\s\S]*?· PDF/)
+  assert.match(html, /accept="image\/png,image\/jpeg"/)
+})
+
+test('zone 3 : le PDF est grisé avec sa raison quand le rendu exact est indisponible ; Word et Excel restent offerts', () => {
+  const html = renderToStaticMarkup(
+    <ZoneBordereau
+      bordereau={bordereau()} onChange={() => {}} logoSrc={null} logoEnCours={false} onLogo={() => {}} onRetirerLogo={() => {}}
+      sections={[{ id: '01', titre: 'Moyens humains' }]} format="docx" onFormat={() => {}}
+      pdfIndisponible={RAISON_PDF_INDISPONIBLE} onTelecharger={() => {}} enTelechargement={false}
+    />)
+  assert.match(html, /<input(?=[^>]*value="pdf")(?=[^>]*disabled)[^>]*>/)
+  assert.ok(html.includes(RAISON_PDF_INDISPONIBLE))
+  assert.doesNotMatch(html, /<input(?=[^>]*value="docx")(?=[^>]*disabled)[^>]*>/)
+  assert.doesNotMatch(html, /<input(?=[^>]*value="xlsx")(?=[^>]*disabled)[^>]*>/)
+  assert.match(html, /<input(?=[^>]*value="docx")(?=[^>]*checked)[^>]*>/)
+  assert.ok(html.includes('· Word'))
+})
+
+test('aperçu : pages en images (alt « Page n sur N de la fiche », lazy à partir de la page 2), anciennes pages voilées pendant la mise à jour', () => {
+  const pret: EtatApercu = { phase: 'pret', empreinte: 'a'.repeat(64), pages: 2, message: '', empreinteAffichee: 'a'.repeat(64) }
+  const pages = [{ numero: 1, src: 'blob:p1' }, { numero: 2, src: 'blob:p2' }]
+  const rendreApercu = (etat: EtatApercu, enRetard = false) => renderToStaticMarkup(
+    <MemoryRouter><ApercuPages etat={etat} pages={pages} enRetard={enRetard} donnees={moyens} bordereau={bordereau()} palette={paletteFiche('#008cf8')} logoSrc={null} /></MemoryRouter>)
+  const html = rendreApercu(pret)
+  assert.match(html, /<img[^>]*src="blob:p1"[^>]*alt="Page 1 sur 2 de la fiche"/)
+  assert.match(html, /alt="Page 2 sur 2 de la fiche"/)
+  assert.match(html, /<img(?=[^>]*alt="Page 2 sur 2)(?=[^>]*loading="lazy")[^>]*>/)
+  assert.match(html, /<img(?=[^>]*alt="Page 1 sur 2)(?=[^>]*loading="eager")[^>]*>/)
+  assert.ok(!html.includes('Mise à jour de l&#x27;aperçu') && !html.includes('opacity-50'))
+  // mise à jour : les pages restent là, voilées, avec la mention
+  const maj = rendreApercu({ ...pret, phase: 'maj' })
+  assert.ok(maj.includes('alt="Page 1 sur 2 de la fiche"') && maj.includes('opacity-50') && maj.includes('Mise à jour de l&#x27;aperçu…') && maj.includes('aria-busy="true"'))
+  assert.ok(rendreApercu(pret, true).includes('opacity-50'), 'un enregistrement en attente voile aussi')
+  // le statut annoncé aux lecteurs d'écran est dans la zone Aperçu (aria-live), pas dans le voile
+  assert.match(ecran(moyens), /aria-live="polite" data-statut-apercu/)
+})
+
+test('aperçu : sans rendu exact, l\'aperçu HTML simplifié et sa ligne d\'explication', () => {
+  const html = renderToStaticMarkup(
+    <MemoryRouter><ApercuPages etat={{ ...ETAT_INITIAL, phase: 'indisponible', message: MESSAGE_INDISPONIBLE }} pages={[]} enRetard={false} donnees={moyens} bordereau={bordereau()} palette={paletteFiche('#008cf8')} logoSrc={null} /></MemoryRouter>)
+  assert.ok(html.includes('Aperçu simplifié : le rendu exact est indisponible pour le moment.'))
+  assert.ok(html.includes('aria-label="Aperçu de la fiche"') && html.includes('MOYENS DE L&#x27;ENTREPRISE'))
+  const erreur = renderToStaticMarkup(
+    <MemoryRouter><ApercuPages etat={{ ...ETAT_INITIAL, phase: 'erreur', message: 'La conversion tarde.' }} pages={[]} enRetard={false} donnees={moyens} bordereau={bordereau()} palette={paletteFiche('#008cf8')} logoSrc={null} /></MemoryRouter>)
+  assert.ok(erreur.includes('Aperçu simplifié') && erreur.includes('La conversion tarde.'))
+})
+
+test('aucune occurrence de « manquant », « incomplet » ou « absent » dans la page de fiche', () => {
+  for (const f of ['src/routes/FicheEntreprise.tsx', 'src/components/fiche/ZoneContenu.tsx', 'src/components/fiche/ZoneBordereau.tsx',
+    'src/components/fiche/ApercuPages.tsx', 'src/lib/fichePage.ts', 'src/lib/apercuFiche.ts', 'src/lib/entreprise/champsFiche.ts']) {
+    assert.doesNotMatch(lire(f), /manquant|incomplet|absent/i, f)
+  }
+  assert.doesNotMatch(ecran(moyens) + ecran(certifications) + ecran({ ...moyens, rubrique: 'identite' }), /manquant|incomplet|absent/i)
+})
+
+test('l\'aperçu et le téléchargement partent de l\'état enregistré : enregistrement automatique à 800 ms, le fichier attend l\'enregistrement', () => {
+  const code = sansCommentaires(lire('src/routes/FicheEntreprise.tsx'))
+  assert.match(code, /DELAI_ENREGISTREMENT_MS = 800/)
+  assert.match(code, /setTimeout\(\(\) => \{ dernierEnvoye\.current = cle; enregistrement\.mutate\(brouillon\) \}, DELAI_ENREGISTREMENT_MS\)/)
+  assert.match(code, /await enregistrement\.mutateAsync\(brouillon\)/)
+  assert.ok(code.indexOf('mutateAsync(brouillon)') < code.indexOf('/generer'))
+  assert.doesNotMatch(code, /Enregistrer le bordereau|Modifier le bordereau/)
+  assert.match(code, /planifier\(format, premier\.current \? 0 : undefined\)/)
 })
 
 test('l\'écran suit le thème clair / nuit et sa route est déclarée (lazy)', () => {
@@ -273,7 +432,7 @@ test('phrase « N informations à renseigner dans Mon entreprise pour compléter
   assert.ok(!/manquant|incomplet|absent/i.test(html))
   // elle est dans l'écran, au-dessus de l'aperçu, et nulle part dans le fichier (c'est le serveur qui imprime)
   const code = sansCommentaires(lire('src/routes/FicheEntreprise.tsx'))
-  assert.ok(code.indexOf('<PhraseARenseigner') > 0 && code.indexOf('<PhraseARenseigner') < code.indexOf('<FichePreview'))
+  assert.ok(code.indexOf('<PhraseARenseigner') > 0 && code.indexOf('<PhraseARenseigner') < code.indexOf('<ApercuPages'))
   assert.doesNotMatch(sansCommentaires(lire('src/components/fiche/FichePreview.tsx')), /PhraseARenseigner|à renseigner/)
 })
 

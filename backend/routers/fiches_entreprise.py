@@ -13,6 +13,7 @@ from typing import Optional
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Response, UploadFile
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from database import get_db, rendre_connexion
@@ -25,6 +26,8 @@ from schemas.fiches_entreprise import (
 )
 from services import fiches_donnees as donnees_fiche
 from services import fiches_entreprise as generation
+from services import fiches_excel  # noqa: F401
+from services import fiches_rendu
 from services import fiches_logo
 from services.file_storage import FileStorage, sign_file_path
 from services.rate_limit import limiter
@@ -207,16 +210,29 @@ def _nom_de_fichier(rubrique: str, societe: str, extension: str) -> str:
     return f"{donnees_fiche.NOMS_FICHIER[rubrique]}{'_' + nu if nu else ''}.{extension}"
 
 
+def _preparer(db: Session, org: Organization, rubrique: str):
+    """Tout ce qu'il faut pour fabriquer la fiche, relu dans la base (état ENREGISTRÉ) : données assemblées,
+    bordereau effectif, palette et logo en PNG. Rend la connexion avant de revenir : plus de base ensuite, une
+    conversion peut durer."""
+    fiche = _fiche(db, org.id, rubrique)
+    bordereau = bordereau_effectif(org, fiche, rubrique)
+    donnees = donnees_fiche.assembler(db, org.id, rubrique)
+    logo, _origine = logo_de_la_fiche(org, fiche)
+    logo_png = fiches_logo.en_png(fiches_logo.lire_local(logo)) if logo else None
+    rendre_connexion(db)
+    return donnees, bordereau, donnees_fiche.palette(bordereau["couleur"]), logo_png
+
+
 @router.post("/{rubrique}/generer")
 @limiter.limit("10/minute")
 def generer_fiche(
     request: Request,
     rubrique: str,
-    format_: str = Query("pdf", alias="format", pattern="^(pdf|docx)$"),
+    format_: str = Query("pdf", alias="format", pattern="^(pdf|docx|xlsx)$"),
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ):
-    """Word ou PDF de la fiche, produit sur le serveur à partir des données et du bordereau ENREGISTRÉS de
+    """Word, PDF ou Excel de la fiche, produit sur le serveur à partir des données et du bordereau ENREGISTRÉS de
     l'entreprise de l'utilisateur (même mise en page que l'aperçu). Le fichier est renvoyé dans la réponse :
     il n'est ni stocké ni accessible par une adresse."""
     _rubrique_ou_404(rubrique)
@@ -226,24 +242,81 @@ def generer_fiche(
             status_code=503,
             detail="Le PDF est indisponible sur ce serveur pour le moment — téléchargez la version Word.",
         )
-    fiche = _fiche(db, org.id, rubrique)
-    bordereau = bordereau_effectif(org, fiche, rubrique)
-    donnees = donnees_fiche.assembler(db, org.id, rubrique)
-    logo, _origine = logo_de_la_fiche(org, fiche)
-    logo_png = fiches_logo.en_png(fiches_logo.lire_local(logo)) if logo else None
-    rendre_connexion(db)       # plus de base ensuite : la conversion PDF peut durer
-    docx = generation.generer_docx(donnees, bordereau, donnees_fiche.palette(bordereau["couleur"]), logo_png)
-    if format_ == "docx":
-        contenu, type_ = docx, generation.TYPE_DOCX
-    else:
-        try:
-            contenu, type_ = generation.generer_pdf(docx), generation.TYPE_PDF
-        except generation.PdfConversionError as exc:
-            raise HTTPException(status_code=503, detail=str(exc),
-                                headers={"Retry-After": str(exc.retry_apres_s)})
+    donnees, bordereau, pal, logo_png = _preparer(db, org, rubrique)
+    try:
+        contenu, type_ = fiches_rendu.fabriquer(format_, donnees, bordereau, pal, logo_png)
+    except generation.PdfConversionError as exc:
+        raise HTTPException(status_code=503, detail=str(exc), headers={"Retry-After": str(exc.retry_apres_s)})
     nom = _nom_de_fichier(rubrique, donnees["societe"]["nom"], format_)
     return Response(
         content=contenu, media_type=type_,
         headers={"Content-Disposition": f"attachment; filename=\"{nom}\"; filename*=UTF-8''{quote(nom, safe='')}",
                  "Cache-Control": "private, no-store"},
     )
+
+
+# ─── Aperçu : les pages du VRAI document, en images ─────────────────────────────
+
+_EMPREINTE_RE = re.compile(r"^[0-9a-f]{64}$")
+CACHE_PAGE = "private, max-age=86400"     # l'empreinte ne change jamais de contenu : la page est immuable
+
+
+def _empreinte_ou_404(empreinte: str) -> str:
+    if not _EMPREINTE_RE.match(empreinte):
+        raise HTTPException(status_code=404, detail="Aperçu introuvable")
+    return empreinte
+
+
+@router.post("/{rubrique}/apercu")
+@limiter.limit("30/minute")
+def demander_apercu(
+    request: Request,
+    rubrique: str,
+    format_: str = Query("pdf", alias="format", pattern="^(pdf|docx|xlsx)$"),
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """Lance (ou retrouve) l'aperçu de la fiche, produit à partir des données et du bordereau ENREGISTRÉS : le même
+    fichier que le téléchargement. 200 ``pret`` si les pages sont en cache ; 202 ``en_cours`` sinon (la génération
+    tourne en tâche de fond, une à la fois par entreprise, la dernière demande gagne) ; 200 ``indisponible`` si le
+    rendu exact ne peut pas être fait (le front montre alors l'aperçu simplifié)."""
+    _rubrique_ou_404(rubrique)
+    org = _org_ou_404(db, user)
+    donnees, bordereau, pal, logo_png = _preparer(db, org, rubrique)
+    reponse = fiches_rendu.demander_apercu(org.id, rubrique, format_, donnees, bordereau, pal, logo_png)
+    return JSONResponse(reponse, status_code=202 if reponse["etat"] == "en_cours" else 200)
+
+
+@router.get("/{rubrique}/apercu/{empreinte}")
+def etat_apercu(
+    rubrique: str,
+    empreinte: str,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """``{etat: en_cours|pret|erreur, pages, message}``. Une empreinte que l'entreprise n'a pas demandée : 404."""
+    _rubrique_ou_404(rubrique)
+    org = _org_ou_404(db, user)
+    rendre_connexion(db)
+    etat = fiches_rendu.etat_apercu(org.id, rubrique, _empreinte_ou_404(empreinte))
+    if etat is None:
+        raise HTTPException(status_code=404, detail="Aperçu introuvable")
+    return etat
+
+
+@router.get("/{rubrique}/apercu/{empreinte}/pages/{numero}")
+def page_apercu(
+    rubrique: str,
+    empreinte: str,
+    numero: int,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """Image WebP de la page ``numero`` (1 = première) d'un aperçu prêt de l'entreprise ; sinon 404."""
+    _rubrique_ou_404(rubrique)
+    org = _org_ou_404(db, user)
+    rendre_connexion(db)
+    octets = fiches_rendu.page_apercu(org.id, rubrique, _empreinte_ou_404(empreinte), numero)
+    if octets is None:
+        raise HTTPException(status_code=404, detail="Page introuvable")
+    return Response(content=octets, media_type="image/webp", headers={"Cache-Control": CACHE_PAGE})
