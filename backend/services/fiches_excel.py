@@ -1,10 +1,10 @@
 """Fiches « Mon entreprise » en Excel (openpyxl) : le même contenu que le Word, en tableaux à trier ou à compléter.
 
-Une feuille par section (``donnees["sections"]``) ; pour les références, une feuille « Références » (N° · Client /
-donneur d'ordre · Intervention · Chantier et travaux réalisés · Montant HT, puis ligne TOTAL) ; une feuille
-« Chiffres clés » reprend les tuiles et les lignes d'en-tête. Identité et Moyens : tableau à deux colonnes
-(Information · Valeur) ; une troisième colonne « Échéance » (date ``jj/mm/aaaa``) s'ajoute quand la section porte des
-pièces datées. Chaque feuille ouvre sur deux lignes d'en-tête (société et SIRET, titre du bordereau), puis la ligne
+Identité et Moyens : UNE SEULE feuille « Fiche » (en-tête du classeur, « Chiffres clés », puis chaque section l'une sous
+l'autre sous son intitulé), tableau à deux colonnes (Information · Valeur) ; une troisième colonne « Échéance » (date
+``jj/mm/aaaa``) s'ajoute quand une ligne porte une date. Références (rubrique « certifications ») : une feuille par
+section (``donnees["sections"]``), une feuille « Références » (N° · Client / donneur d'ordre · Intervention · Chantier et
+travaux réalisés · Montant HT, puis ligne TOTAL) et une feuille « Chiffres clés » (tuiles et lignes d'en-tête). Chaque feuille ouvre sur deux lignes d'en-tête (société et SIRET, titre du bordereau), puis la ligne
 des intitulés de colonnes, figée (``freeze_panes``) et répétée à l'impression (A4, ajusté à la largeur d'une page,
 paysage pour les références).
 
@@ -37,6 +37,8 @@ FORMAT_DATE = "DD/MM/YYYY"
 POLICE = "Calibri"
 _DEBUTS_DANGEREUX = ("=", "+", "-", "@", "\t", "\r")
 _INTERDITS_FEUILLE = re.compile(r"[\\/*?:\[\]]")
+# Rubriques dont l'Excel tient sur UNE feuille « Fiche » ; la rubrique des références garde une feuille par section.
+RUBRIQUES_FEUILLE_UNIQUE = ("identite", "moyens")
 _ENTETES_COLONNES = 3          # ligne des intitulés ; les données commencent à la suivante
 
 
@@ -149,19 +151,13 @@ def _date_iso(brut: Any) -> Optional[date]:
         return None
 
 
-def _feuille_information(wb: Workbook, st: _Style, pris: set, titre: str, lignes: list, donnees: dict,
-                         bordereau: dict) -> Optional[Worksheet]:
-    """Tableau à deux colonnes (Information · Valeur), plus « Échéance » si une ligne porte une date."""
-    lignes = [l for l in lignes if str(l.get("valeur", "")).strip()]
-    if not lignes:
-        return None
-    ws = wb.create_sheet(_nom_feuille(titre, pris))
-    avec_echeance = any(_date_iso(l.get("fin")) for l in lignes)
-    noms = ("Information", "Valeur") + (("Échéance",) if avec_echeance else ())
-    _entete_classeur(ws, st, donnees, bordereau, len(noms))
-    _intitules(ws, st, noms)
-    largeurs = [38, 78] + ([14] if avec_echeance else [])
-    for i, l in enumerate(lignes, start=_ENTETES_COLONNES + 1):
+def _lignes_non_vides(lignes: list) -> list:
+    return [l for l in lignes if str(l.get("valeur", "")).strip()]
+
+
+def _ecrire_lignes(ws: Worksheet, st: _Style, lignes: list, debut: int, avec_echeance: bool, largeurs: list) -> int:
+    """Écrit les lignes Information · Valeur (· Échéance) à partir de la ligne ``debut`` ; renvoie la ligne suivante."""
+    for i, l in enumerate(lignes, start=debut):
         libelle = l.get("libelle") or ""
         if libelle.isdigit():                                    # un effectif reste un nombre (pas de « nombre en texte »)
             libelle = int(libelle)
@@ -175,6 +171,57 @@ def _feuille_information(wb: Workbook, st: _Style, pris: set, titre: str, lignes
             if fin is not None:
                 c.value, c.number_format = fin, FORMAT_DATE
             c.font, c.alignment, c.border = st.texte, st.haut_centre, st.bordure
+    return debut + len(lignes)
+
+
+def _a_echeance(lignes: list) -> bool:
+    return any(_date_iso(l.get("fin")) for l in lignes)
+
+
+def _feuille_information(wb: Workbook, st: _Style, pris: set, titre: str, lignes: list, donnees: dict,
+                         bordereau: dict) -> Optional[Worksheet]:
+    """Tableau à deux colonnes (Information · Valeur), plus « Échéance » si une ligne porte une date."""
+    lignes = _lignes_non_vides(lignes)
+    if not lignes:
+        return None
+    ws = wb.create_sheet(_nom_feuille(titre, pris))
+    avec_echeance = _a_echeance(lignes)
+    noms = ("Information", "Valeur") + (("Échéance",) if avec_echeance else ())
+    _entete_classeur(ws, st, donnees, bordereau, len(noms))
+    _intitules(ws, st, noms)
+    largeurs = [38, 78] + ([14] if avec_echeance else [])
+    _ecrire_lignes(ws, st, lignes, _ENTETES_COLONNES + 1, avec_echeance, largeurs)
+    _largeurs(ws, largeurs)
+    _mise_en_page(ws, paysage=False, colonnes=len(noms))
+    return ws
+
+
+def _titre_de_section(ws: Worksheet, st: _Style, ligne: int, titre: str, colonnes: int) -> None:
+    """Ligne de titre d'une section dans la feuille unique : bandeau pâle sur toute la largeur du tableau."""
+    for col in range(1, colonnes + 1):
+        c = ws.cell(ligne, col)
+        c.fill, c.font = st.total_fond, st.total_police
+        c.alignment = Alignment(vertical="center", horizontal="left", indent=1 if col == 1 else 0)
+    _poser(ws.cell(ligne, 1), titre)
+    ws.row_dimensions[ligne].height = 22
+
+
+def _feuille_unique(wb: Workbook, st: _Style, blocs: list, donnees: dict, bordereau: dict) -> Optional[Worksheet]:
+    """Une seule feuille « Fiche » : les blocs (titre, lignes) l'un sous l'autre, sans ligne vide entre eux."""
+    blocs = [(t, _lignes_non_vides(l)) for t, l in blocs]
+    blocs = [(t, l) for t, l in blocs if l]
+    if not blocs:
+        return None
+    ws = wb.create_sheet("Fiche")
+    avec_echeance = any(_a_echeance(l) for _, l in blocs)
+    noms = ("Information", "Valeur") + (("Échéance",) if avec_echeance else ())
+    _entete_classeur(ws, st, donnees, bordereau, len(noms))
+    _intitules(ws, st, noms)
+    largeurs = [38, 78] + ([14] if avec_echeance else [])
+    ligne = _ENTETES_COLONNES + 1
+    for titre, lignes in blocs:
+        _titre_de_section(ws, st, ligne, titre, len(noms))
+        ligne = _ecrire_lignes(ws, st, lignes, ligne + 1, avec_echeance, largeurs)
     _largeurs(ws, largeurs)
     _mise_en_page(ws, paysage=False, colonnes=len(noms))
     return ws
@@ -238,14 +285,18 @@ def generer_xlsx(donnees: dict, bordereau: dict, pal: dict) -> bytes:
              "valeur": int(t["valeur"]) if str(t["valeur"]).isdigit() else t["valeur"]}      # un nombre reste un nombre
             for t in donnees.get("tuiles") or []]
     cles += list(donnees.get("lignes_cles") or [])
-    _feuille_information(wb, st, pris, "Chiffres clés", cles, donnees, bordereau)
-    ref = donnees.get("references")
-    if ref and ref.get("lignes"):
-        _feuille_references(wb, st, pris, ref, donnees, bordereau)
-    for section in donnees.get("sections") or []:
-        _feuille_information(wb, st, pris, f"{section['id']} {section['titre']}",
-                             ([{"libelle": "", "valeur": section["texte"]}] if section.get("texte") else [])
-                             + lignes_effectives(section, lignes_libres), donnees, bordereau)
+    sections = [(f"{section['id']} {section['titre']}",
+                 ([{"libelle": "", "valeur": section["texte"]}] if section.get("texte") else [])
+                 + lignes_effectives(section, lignes_libres)) for section in donnees.get("sections") or []]
+    if donnees.get("rubrique") in RUBRIQUES_FEUILLE_UNIQUE:
+        _feuille_unique(wb, st, [("Chiffres clés", cles)] + sections, donnees, bordereau)
+    else:
+        _feuille_information(wb, st, pris, "Chiffres clés", cles, donnees, bordereau)
+        ref = donnees.get("references")
+        if ref and ref.get("lignes"):
+            _feuille_references(wb, st, pris, ref, donnees, bordereau)
+        for titre, lignes in sections:
+            _feuille_information(wb, st, pris, titre, lignes, donnees, bordereau)
     if not wb.sheetnames:                       # une fiche sans aucune donnée : une feuille, pas de classeur vide
         ws = wb.create_sheet("Fiche")
         _entete_classeur(ws, st, donnees, bordereau, 2)
