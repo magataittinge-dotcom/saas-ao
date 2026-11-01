@@ -2,11 +2,14 @@ import { cloneElement, isValidElement, useId, useState } from 'react'
 import { CheckCircle2, ChevronDown, Save } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { Input, classeChamp } from '@/components/ui/input'
 
 // Briques communes aux trois formulaires de « Mon entreprise » (reprises de l'ancien éditeur du profil).
 
 // Boutons d'édition des listes (année, poste) : lien d'accent, retrait discret ; cibles 44 px au téléphone.
 export const BOUTON_AJOUT = 'inline-flex items-center gap-1.5 rounded-xs text-xs font-medium text-accent-text transition-colors duration-base ease-lien hover:underline [@media(pointer:coarse)]:min-h-11'
+/** « Retirer » avec son mot, sous une carte de liste. */
+export const BOUTON_RETIRER_TEXTE = 'inline-flex items-center gap-1.5 rounded-xs text-xs font-medium text-fg-3 transition-colors duration-base ease-lien hover:text-danger [@media(pointer:coarse)]:min-h-11'
 export const BOUTON_RETRAIT = 'grid size-9 shrink-0 place-items-center rounded-md text-fg-3 transition-colors duration-base ease-lien hover:bg-surface-0 hover:text-danger [@media(pointer:coarse)]:size-11'
 
 /** Champ : l'étiquette est reliée au champ (id) ; `groupe` = plusieurs champs sous un même intitulé (pas de « for »). */
@@ -72,4 +75,32 @@ export function PiedEnregistrer({ enCours, reussi, erreur }: { enCours: boolean;
       </div>
     </div>
   )
+}
+
+/** Liste déroulante native, au même style que les champs. */
+export function Select({ children, className, ...props }: React.ComponentProps<'select'>) {
+  return <select className={cn(classeChamp, 'h-10 py-1 [@media(pointer:coarse)]:h-11', className)} {...props}>{children}</select>
+}
+
+/** Champ nombre : vide = aucune valeur (null), sinon un entier. */
+export function ChampNombre({ valeur, onChange, min = 0, max, ...props }: { valeur: number | null | undefined; onChange: (v: number | null) => void; min?: number; max?: number } & Omit<React.ComponentProps<'input'>, 'value' | 'onChange' | 'min' | 'max'>) {
+  return (
+    <Input
+      type="number" inputMode="numeric" min={min} max={max} step={1}
+      value={valeur ?? ''}
+      onChange={(e) => onChange(e.target.value === '' ? null : Math.trunc(Number(e.target.value)))}
+      {...props}
+    />
+  )
+}
+
+/** Lecture d'une erreur d'enregistrement : le message du serveur, ou la première valeur refusée. */
+export function messageErreur(detail: unknown): string {
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail) && detail.length) {
+    const premier = detail[0] as { loc?: unknown[]; msg?: string }
+    const champ = Array.isArray(premier.loc) ? String(premier.loc[premier.loc.length - 1] ?? '') : ''
+    return `Une valeur n'est pas acceptée${champ ? ` (${champ})` : ''}${premier.msg ? ` : ${premier.msg}` : ''}.`
+  }
+  return "L'enregistrement n'a pas abouti. Réessayez dans un instant."
 }

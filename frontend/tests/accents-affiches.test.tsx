@@ -8,7 +8,7 @@ import { FORMES_SANS_ACCENT } from './outils/accents'
 
 // Formes techniques (pas affichées telles quelles) : clé de statut, classe CSS, noms de fichiers
 // exportés (volontairement en ASCII : un nom de fichier sans accent passe partout).
-const TECHNIQUES = [/^echec$/, /statut-piece/, /Memoire_Technique_/]
+const TECHNIQUES = [/^echec$/, /statut-piece/, /Memoire_Technique_/, /^\/references$/, /^systeme_management$/, /^chef_equipe$/]
 
 test('aucun texte affiché ne contient une forme française sans accent', () => {
   const fautes: string[] = []

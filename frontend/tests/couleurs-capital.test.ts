@@ -38,6 +38,8 @@ export const ECRANS: Record<string, string[]> = {
     'src/components/entreprise/FormCertifications.tsx',
     'src/components/entreprise/ImportMemoire.tsx',
     'src/components/entreprise/champs.tsx',
+    'src/components/entreprise/ListesMoyens.tsx',
+    'src/components/entreprise/EditeursCertifications.tsx',
   ],
 }
 
