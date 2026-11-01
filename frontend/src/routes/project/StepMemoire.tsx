@@ -11,6 +11,7 @@ import ReactMarkdown from 'react-markdown'
 import axios from 'axios'
 import { api } from '@/services/api'
 import FormulaireMemoire from '@/components/project/FormulaireMemoire'
+import BarreEtape, { ActionsBarre, BoutonSuite } from '@/components/project/BarreEtape'
 import { type PreflightSelection } from '@/components/project/MemoirePreflight'
 import { VARIABLES_VIDES, corpsGeneration } from '@/lib/memoireGeneration'
 import RewritePassageBar, { type PassageSelection } from '@/components/project/RewritePassageBar'
@@ -635,23 +636,15 @@ export default function StepMemoire({ project }: Props) {
   // Sur l'écran de préparation il n'y a plus d'« Étape suivante » grisé : le seul bouton est « Rédiger le mémoire ».
 
   const bottomBar = (
-    <div
-      className="sticky -bottom-5 z-30 -mx-3 sm:-mx-4 mt-6 rounded-t-lg flex items-center justify-end px-6 py-3 gap-3"
-      style={{
-        background: 'color-mix(in srgb, var(--surface-0) 92%, transparent)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        borderTop: '1px solid var(--border-1)',
-      }}
-    >
-      <button
-        onClick={() => navigate(`/projects/${project.id}/export`)}
-        className="signature-btn"
-        style={{ fontFamily: F }}
-      >
-        Étape suivante : Export
-      </button>
-    </div>
+    <BarreEtape className="justify-end gap-3">
+      <ActionsBarre className="max-[768px]:w-full">
+        <BoutonSuite
+          etape="Export"
+          onClick={() => navigate(`/projects/${project.id}/export`)}
+          className="max-[768px]:flex-1 max-[768px]:justify-center"
+        />
+      </ActionsBarre>
+    </BarreEtape>
   )
 
   // ── Generation form (no mémoire yet or regenerate) ─────────────

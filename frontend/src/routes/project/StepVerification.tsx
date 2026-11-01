@@ -7,6 +7,7 @@ import { api } from '@/services/api'
 import { useCompleteStep } from '@/hooks/useProject'
 import CandidatureSectionVault from '@/components/project/CandidatureSectionVault'
 import CandidatureSectionTemplates from '@/components/project/CandidatureSectionTemplates'
+import BarreEtape, { ActionsBarre, BilanBarre, BoutonSuite } from '@/components/project/BarreEtape'
 import VaultPickerModal from '@/components/project/VaultPickerModal'
 import PanneauSource, { type SelectionSource } from '@/components/project/source/PanneauSource'
 import { piecesComptees } from '@/components/project/NonConcerne'
@@ -187,35 +188,38 @@ export default function StepVerification({ project }: Props) {
     </div>
   )
 
-  // ── Bottom bar ──────────────────────────────────────────────────
+  // ── Barre du bas (composant commun : une ligne au téléphone) ──────
 
   const bottomBar = (
-    <div
-      className="sticky -bottom-5 z-30 -mx-3 sm:-mx-4 mt-6 rounded-t-lg flex flex-wrap items-center justify-between px-6 py-3 gap-x-4 gap-y-2"
-      style={{
-        background: 'color-mix(in srgb, var(--surface-0) 92%, transparent)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        borderTop: '1px solid var(--border-1)',
-        fontFamily: F,
-      }}
-    >
-      <div className="flex items-center gap-3">
-        <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
-          Complétion dossier
-        </span>
-        <div className="rounded-full overflow-hidden" style={{ width: 120, height: 6, background: 'var(--surface-1)' }}>
-          <div
-            className="h-full transition-all duration-500"
-            style={{ width: `${pct}%`, background: 'var(--text-1)' }}
-          />
-        </div>
-        <span className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>{pct}%</span>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
+    <BarreEtape className="flex-wrap gap-x-4 gap-y-2">
+      <BilanBarre
+        className="gap-3"
+        bureau={<>
+          <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
+            Complétion dossier
+          </span>
+          <div className="h-1.5 w-[120px] overflow-hidden rounded-full" style={{ background: 'var(--surface-1)' }}>
+            <div
+              className="h-full transition-all duration-500"
+              style={{ width: `${pct}%`, background: 'var(--text-1)' }}
+            />
+          </div>
+          <span className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>{pct}%</span>
+        </>}
+        tel={<>
+          <span className="sr-only">Complétion dossier</span>
+          <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full" style={{ background: 'var(--surface-1)' }}>
+            <div
+              className="h-full transition-all duration-500"
+              style={{ width: `${pct}%`, background: 'var(--text-1)' }}
+            />
+          </div>
+          <span className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>{pct}%</span>
+        </>}
+      />
+      <ActionsBarre>
+        <BoutonSuite
+          etape="Mémoire"
           onClick={() =>
             isAlreadyDone
               ? navigate(`/projects/${project.id}/memoire`)
@@ -223,17 +227,11 @@ export default function StepVerification({ project }: Props) {
                   onSuccess: () => navigate(`/projects/${project.id}/memoire`),
                 })
           }
-          disabled={completeStep.isPending}
-          className="signature-btn"
-        >
-          {completeStep.isPending
-            ? <><Loader2 size={16} className="animate-spin" /> Validation...</>
-            : isAlreadyDone
-            ? <>Étape suivante : Mémoire</>
-            : <>Étape suivante : Mémoire</>}
-        </button>
-      </div>
-    </div>
+          enCours={completeStep.isPending}
+          enCoursLibelle="Validation..."
+        />
+      </ActionsBarre>
+    </BarreEtape>
   )
 
   // ── Render ──────────────────────────────────────────────────────

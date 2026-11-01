@@ -15,6 +15,7 @@ import ProgressDisplay, { type StepDescriptor } from '@/components/common/Progre
 import { useProgressStream } from '@/hooks/useProgressStream'
 import type { Project, ProjectDocument, ProjectDocumentType } from '@/types'
 import { cn } from '@/lib/utils'
+import BarreEtape, { ActionsBarre, BilanBarre, BoutonSecondaire, BoutonSuite } from '@/components/project/BarreEtape'
 import { AiTipsBlock, type TipData } from '@/components/common/AiTip'
 import VaultSavePrompt, { type VaultSuggestion } from '@/components/vault/VaultSavePrompt'
 import { takePendingUpload } from '@/lib/pendingUpload'
@@ -672,44 +673,35 @@ export default function StepUpload({ project }: Props) {
           </div>
         )}
 
-        {/* ── BOTTOM BAR ──────────────────────────────────── */}
-        <div
-          className="sticky bottom-0 mt-6 -mx-3 sm:-mx-4 px-5 py-3.5 flex items-center justify-between"
-          style={{
-            background: 'color-mix(in srgb, var(--surface-0) 92%, transparent)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            borderTop: '1px solid var(--border-1)',
-          }}
-        >
-          <div className="flex items-center gap-2">
-            <CheckCircle2 size={16} style={{ color: hasDocuments ? 'var(--text-1)' : 'var(--text-3)' }} />
-            <span className="text-sm" style={{ color: hasDocuments ? 'var(--text-3)' : 'var(--text-3)' }}>
-              {hasDocuments
-                ? `${documents.length} fichier${documents.length > 1 ? 's déposés' : ' déposé'} dans le dossier.`
-                : 'Importez des fichiers pour continuer.'
-              }
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate(-1)}
-              className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-              style={{ color: 'var(--text-3)', border: '1px solid var(--border-1)' }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--text-3)'; e.currentTarget.style.color = 'var(--text-1)' }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--border-1)'; e.currentTarget.style.color = 'var(--text-3)' }}
-            >
-              Retour
-            </button>
-            <button
+        {/* ── Barre du bas (composant commun : une ligne au téléphone) ── */}
+        <BarreEtape>
+          <BilanBarre
+            className="gap-2"
+            bureau={<>
+              <CheckCircle2 size={16} style={{ color: hasDocuments ? 'var(--text-1)' : 'var(--text-3)' }} />
+              <span className="text-sm" style={{ color: 'var(--text-3)' }}>
+                {hasDocuments
+                  ? `${documents.length} fichier${documents.length > 1 ? 's déposés' : ' déposé'} dans le dossier.`
+                  : 'Importez des fichiers pour continuer.'
+                }
+              </span>
+            </>}
+            tel={<>
+              <CheckCircle2 size={16} className="shrink-0" style={{ color: hasDocuments ? 'var(--text-1)' : 'var(--text-3)' }} />
+              <span className="truncate text-xs" style={{ color: 'var(--text-3)' }}>
+                {hasDocuments ? `${documents.length} fichier${documents.length > 1 ? 's' : ''}` : 'Aucun fichier'}
+              </span>
+            </>}
+          />
+          <ActionsBarre>
+            <BoutonSecondaire libelle="Retour" onClick={() => navigate(-1)} />
+            <BoutonSuite
+              etape="Lots"
               onClick={handleNext}
               disabled={!hasDocuments || anyUploading || isProcessing || isNavigating}
-              className="signature-btn disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Étape suivante : Lots
-            </button>
-          </div>
-        </div>
+            />
+          </ActionsBarre>
+        </BarreEtape>
       </div>
     </>
   )

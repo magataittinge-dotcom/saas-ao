@@ -14,6 +14,7 @@ import { DocumentRowSkeleton } from '@/components/skeletons'
 import EchecAction from '@/components/common/EchecAction'
 import { phraseSourceSignature, signatureAConfirmer } from '@/components/project/SignatureLigne'
 import PiecesAJoindre from '@/components/project/PiecesAJoindre'
+import BarreEtape, { MenuPlus } from '@/components/project/BarreEtape'
 import ExigencesDuDossier, { type ExigenceExport } from '@/components/project/ExigencesDuDossier'
 import {
   etatPiece, ligneEtatDossier, lignesDuScore, lireAvertissementsExport, resumeExigences, type GroupeExigences,
@@ -407,28 +408,49 @@ export default function StepExport({ project }: Props) {
   const totalPieces = score?.total ?? detail.checklist_total
   const readyForDeposit = !gateBlocked && alertCount === 0
 
-  // ── Bottom bar ── un seul bouton principal ; l'avertissement des pièces est une ligne au-dessus
+  // ── Barre du bas ── un seul bouton principal ; l'avertissement des pièces est une ligne au-dessus.
+  // Téléphone : une ligne [Télécharger][…] ; l'avertissement passe au-dessus de la barre (avertissementTel), les
+  // autres formats dans le menu « … ».
   const bottomBar = (
-    <div
-      className="sticky -bottom-5 z-30 -mx-3 sm:-mx-4 mt-6 rounded-t-lg flex flex-col items-center px-6 py-3 gap-2"
-      style={{
-        background: 'color-mix(in srgb, var(--surface-0) 92%, transparent)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-        borderTop: '1px solid var(--border-1)',
-      }}
-    >
-      {gateBlocked && <PiecesAJoindre pieces={nonConformes} />}
+    <BarreEtape className="flex-col justify-start gap-2">
+      {gateBlocked && <div className="contents max-[768px]:hidden"><PiecesAJoindre pieces={nonConformes} /></div>}
       <button
         onClick={() => exportZip()}
         disabled={isExportingZip}
-        className="signature-btn disabled:opacity-40"
-        style={{ fontFamily: F, padding: '12px 32px', fontSize: '16px', borderRadius: '12px' }}
+        className="signature-btn cta-grand disabled:opacity-40 max-[768px]:flex-1 max-[768px]:justify-center max-[768px]:whitespace-nowrap [@media(pointer:coarse)]:min-h-11"
+        style={{ fontFamily: F }}
       >
-        {isExportingZip ? <Loader2 size={18} className="animate-spin" /> : <Archive size={18} />}
-        Télécharger le dossier
+        {isExportingZip ? <Loader2 size={18} className="animate-spin" aria-hidden /> : <Archive size={18} aria-hidden />}
+        <span className="max-[768px]:hidden">Télécharger le dossier</span>
+        <span className="hidden max-[768px]:inline">Télécharger</span>
       </button>
-      <details className="text-center">
+      <MenuPlus libelle="Autres formats">
+        {(fermer) => (
+          <>
+            <button
+              role="menuitem"
+              onClick={() => { fermer(); exportPdf() }}
+              disabled={isExportingPdf || !detail.has_memoire}
+              className="flex min-h-11 items-center gap-2 rounded-lg px-3 text-left text-sm font-medium hover:bg-ds-bg-2 disabled:opacity-40"
+              style={{ color: 'var(--text-1)' }}
+            >
+              {isExportingPdf ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <FileDown size={14} aria-hidden />}
+              Mémoire PDF (dépôt)
+            </button>
+            <button
+              role="menuitem"
+              onClick={() => { fermer(); exportDocx() }}
+              disabled={isExportingDocx || !detail.has_memoire}
+              className="flex min-h-11 items-center gap-2 rounded-lg px-3 text-left text-sm font-medium hover:bg-ds-bg-2 disabled:opacity-40"
+              style={{ color: 'var(--text-2)' }}
+            >
+              {isExportingDocx ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <FileDown size={14} aria-hidden />}
+              Mémoire Word (retouche)
+            </button>
+          </>
+        )}
+      </MenuPlus>
+      <details className="text-center max-[768px]:hidden">
         <summary className="cursor-pointer text-xs underline underline-offset-2 [@media(pointer:coarse)]:min-h-11" style={{ color: 'var(--text-3)' }}>
           Autres formats
         </summary>
@@ -453,8 +475,15 @@ export default function StepExport({ project }: Props) {
           </button>
         </div>
       </details>
-    </div>
+    </BarreEtape>
   )
+
+  // L'avertissement des pièces, au téléphone : dans le contenu, au-dessus de la barre d'une seule ligne.
+  const avertissementTel = gateBlocked ? (
+    <div className="mt-6 hidden max-[768px]:block">
+      <PiecesAJoindre pieces={nonConformes} />
+    </div>
+  ) : null
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -860,6 +889,7 @@ export default function StepExport({ project }: Props) {
       </details>
 
       {/* ── Sticky bottom bar ───────────────────────────────────── */}
+      {avertissementTel}
       {bottomBar}
 
       {/* Document viewer modal */}
