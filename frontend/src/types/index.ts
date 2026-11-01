@@ -21,6 +21,9 @@ export interface Organization {
   id: string
   name: string
   siret?: string
+  siret_verified?: boolean
+  naf_code?: string
+  effectif_tranche?: string
   address?: string
   logo_url?: string
   presentation?: string

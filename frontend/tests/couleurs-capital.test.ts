@@ -29,10 +29,15 @@ export const ECRANS: Record<string, string[]> = {
   ],
   'Mon entreprise': [
     'src/routes/Company.tsx',
-    'src/routes/MemoireConfig.tsx',          // ProfilMemoireEditor : l'éditeur des onglets de Mon entreprise
     'src/components/company/ProfileFreeTextCard.tsx',
     'src/components/entreprise/CerveauEntreprise.tsx',
     'src/components/entreprise/CerveauEffets.tsx',
+    'src/components/entreprise/RubriquesEntreprise.tsx',
+    'src/components/entreprise/FormIdentite.tsx',
+    'src/components/entreprise/FormMoyens.tsx',
+    'src/components/entreprise/FormCertifications.tsx',
+    'src/components/entreprise/ImportMemoire.tsx',
+    'src/components/entreprise/champs.tsx',
   ],
 }
 
