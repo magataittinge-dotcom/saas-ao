@@ -12,6 +12,7 @@ import { estThemee } from '@/components/layout/Layout'
 import {
   bordereauModifie, lignesDeSection, pageEstimee, paletteFiche, variablesFiche,
   type FicheBordereau, type FicheDonnees, type FicheReponse, type FicheSection,
+  estAbrege,
 } from '@/lib/fiche'
 import { lire, sansCommentaires } from './outils/sources'
 
@@ -100,6 +101,18 @@ test('aperçu Références : tableau, pastilles, total, note, particulier avec s
   assert.ok(html.includes('Montants exprimés en euros hors taxes.'))
   assert.ok(html.includes('data-cartes-references'), 'téléphone : une carte par chantier')
   assert.ok(html.includes('Qualibat') && html.includes('data-section="01"'))
+})
+
+test('texte abrégé par le serveur (« … ») : infobulle « Texte abrégé, modifiable dans Mon entreprise », rien sur les autres', () => {
+  const abrege = { ...moyens, lignes_cles: [{ libelle: 'Activités', valeur: 'Gros œuvre, rénovation et façades de bâtiments anciens …' }], sections: moyens.sections.map((s, i) => i === 1 ? { ...s, texte: 'Tablettes et logiciel …' } : s) }
+  const html = rendre(abrege)
+  assert.equal((html.match(/data-abrege=""/g) ?? []).length, 2, 'les deux textes abrégés, et seulement eux')
+  assert.equal((html.match(/title="Texte abrégé, modifiable dans Mon entreprise"/g) ?? []).length, 2)
+  assert.ok(html.includes('anciens …</span>'))
+  const refs = rendre({ ...certifications, references: { ...certifications.references!, lignes: [{ ...certifications.references!.lignes[0], travaux: 'Gros œuvre …' }] } })
+  assert.equal((refs.match(/data-abrege=""/g) ?? []).length, 2, 'tableau (ordinateur) et carte (téléphone) de la même référence')
+  assert.equal((rendre(moyens).match(/data-abrege/g) ?? []).length, 0)
+  assert.ok(estAbrege('fin …') && !estAbrege('fin.') && !estAbrege(''))
 })
 
 test('sans référence : un message pour l\'aperçu, ni tableau ni total', () => {

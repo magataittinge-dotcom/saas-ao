@@ -55,3 +55,16 @@ def test_fiche_references_initiales_par_defaut_nom_complet_si_coche(db_session):
     # Le compte des donneurs d'ordre ne change pas avec l'affichage.
     deux = fab.donnees(db_session, org, "certifications", references=[_reference(), _reference(client_nom_complet=True)])
     assert deux["references"]["total"]["donneurs_ordre"] == 1
+
+
+# ─── Textes abrégés sur les fiches : la coupure se voit toujours (« … »), décision du 1er/11 ───
+
+def test_court_signale_toujours_la_coupure_par_points_de_suspension():
+    from services import fiches_donnees as fd
+    assert fd._court("Court.", 20) == "Court."
+    phrase = "Première phrase assez longue. Seconde phrase. Troisième phrase qui dépasse la limite."
+    coupe = fd._court(phrase, 45)
+    assert coupe == "Première phrase assez longue …"   # coupé à la fin de phrase, point remplacé par la marque
+    sans_phrase = fd._court("mot " * 40, 30)
+    assert sans_phrase.endswith(" …") and len(sans_phrase) <= 32
+    assert not fd._court("a. " * 5, 100).endswith("…")

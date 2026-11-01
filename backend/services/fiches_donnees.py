@@ -147,16 +147,20 @@ def _t(valeur: Any) -> str:
     return nettoyer(str(valeur)) or ""
 
 
+MARQUE_ABREGE = " …"          # toute coupure se voit ; l'aperçu y accroche l'infobulle « texte abrégé »
+
+
 def _court(texte: str, limite: int = MAX_TEXTE_SECTION) -> str:
-    """Un texte long est repris jusqu'à ``limite`` caractères, coupé à la fin d'une phrase si possible."""
+    """Un texte long est repris jusqu'à ``limite`` caractères, coupé à la fin d'une phrase si possible.
+    Une coupure se termine toujours par « … » (décision du 1er/11) : le texte entier reste dans Mon entreprise."""
     texte = re.sub(r"\s*\n\s*", " ", texte).strip()
     if len(texte) <= limite:
         return texte
     coupe = texte[:limite]
     fin = max(coupe.rfind(". "), coupe.rfind("; "))
     if fin >= limite * 0.5:
-        return coupe[: fin + 1]
-    return coupe.rsplit(" ", 1)[0].rstrip(",;: ") + " …"
+        return coupe[:fin].rstrip(",;: ") + MARQUE_ABREGE
+    return coupe.rsplit(" ", 1)[0].rstrip(",;: ") + MARQUE_ABREGE
 
 
 def _validite(fin: Optional[date], jour: date) -> str:

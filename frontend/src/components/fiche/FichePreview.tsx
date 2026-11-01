@@ -7,7 +7,7 @@
 import { Link } from 'react-router-dom'
 import { ImagePlus, Plus, X } from 'lucide-react'
 import {
-  INTERVENTIONS, MAX_LIGNES_LIBRES, VIDE_SECTION, lignesDeSection, pageEstimee, variablesFiche,
+  INFOBULLE_ABREGE, INTERVENTIONS, MAX_LIGNES_LIBRES, VIDE_SECTION, estAbrege, lignesDeSection, pageEstimee, variablesFiche,
   type FicheBordereau, type FicheDonnees, type FicheReference, type FicheSection, type LigneLibre, type PaletteFiche,
 } from '@/lib/fiche'
 
@@ -29,6 +29,12 @@ interface Props {
 }
 
 const CAPITALES = 'uppercase tracking-[0.18em]'
+
+/** Un texte du profil ; abrégé par le serveur (« … »), il porte l'infobulle « Texte abrégé, modifiable dans Mon entreprise ». */
+function Texte({ t, className }: { t: string; className?: string }) {
+  const abrege = estAbrege(t)
+  return <span className={className} title={abrege ? INFOBULLE_ABREGE : undefined} data-abrege={abrege ? '' : undefined}>{t}</span>
+}
 const CHAMP = 'w-full rounded-xs border-b border-dashed border-current bg-transparent px-1 py-0.5 outline-offset-2 placeholder:text-current placeholder:opacity-60'
 
 export default function FichePreview({ donnees, bordereau, palette, logoSrc, edition }: Props) {
@@ -49,7 +55,7 @@ export default function FichePreview({ donnees, bordereau, palette, logoSrc, edi
             {donnees.lignes_cles.map((l) => (
               <div key={l.libelle} className="contents">
                 <dt className={`${CAPITALES} pt-0.5 text-[12px] font-bold text-[color:var(--f-accent-texte)] tracking-[0.08em]`}>{l.libelle}</dt>
-                <dd className="text-[13px]">{l.valeur}</dd>
+                <dd className="text-[13px]"><Texte t={l.valeur} /></dd>
               </div>
             ))}
           </dl>
@@ -181,7 +187,7 @@ function Section({ section, libres, edition }: { section: FicheSection; libres: 
         <span className="text-[16px] font-bold text-[color:var(--f-accent-texte)]">{section.id}</span>
         <span className={`${CAPITALES} text-[12px] font-bold tracking-[0.08em] text-[color:var(--f-encre)]`}>{section.titre}</span>
       </h3>
-      {section.texte && <p className="my-1 text-[12.5px]">{section.texte}</p>}
+      {section.texte && <p className="my-1 text-[12.5px]"><Texte t={section.texte} /></p>}
       {lignes.length > 0 && (
         <ul className="space-y-1">
           {lignes.map((l, i) => (
@@ -192,7 +198,7 @@ function Section({ section, libres, edition }: { section: FicheSection; libres: 
                     : `shrink-0 font-bold ${etroit ? 'w-[3.2rem] text-[color:var(--f-accent-texte)]' : 'w-[7.5rem] text-[color:var(--f-encre)]'}`
                 }>{l.libelle}</span>
               )}
-              {l.valeur && <span className={section.disposition === 'empile' ? 'block text-[12px] text-[color:var(--f-discret)]' : 'min-w-0 [overflow-wrap:anywhere]'}>{l.valeur}</span>}
+              {l.valeur && <Texte t={l.valeur} className={section.disposition === 'empile' ? 'block text-[12px] text-[color:var(--f-discret)]' : 'min-w-0 [overflow-wrap:anywhere]'} />}
             </li>
           ))}
         </ul>
@@ -294,7 +300,7 @@ function TableauReferences({ tableau }: { tableau: NonNullable<FicheDonnees['ref
                   <td className="px-2.5 py-2">
                     <strong className="text-[color:var(--f-encre)]">{r.chantier}</strong>
                     {r.lieu && <span className="block text-[12px] text-[color:var(--f-discret)]">{r.lieu}</span>}
-                    {r.travaux && <span className="block text-[12px]">{r.travaux}</span>}
+                    {r.travaux && <Texte t={r.travaux} className="block text-[12px]" />}
                   </td>
                   <td className="whitespace-nowrap px-2.5 py-2 text-right font-bold text-[color:var(--f-encre)]">{r.montant || '—'}</td>
                 </tr>
@@ -316,7 +322,7 @@ function TableauReferences({ tableau }: { tableau: NonNullable<FicheDonnees['ref
               <p className="mt-1">{r.intervention && <Pastille mode={r.intervention} />}</p>
               <p className="mt-1"><strong className="text-[color:var(--f-encre)]">{r.chantier}</strong></p>
               {r.lieu && <p className="text-[12px] text-[color:var(--f-discret)]">{r.lieu}</p>}
-              {r.travaux && <p className="text-[12px]">{r.travaux}</p>}
+              {r.travaux && <p className="text-[12px]"><Texte t={r.travaux} /></p>}
             </li>
           ))}
         </ol>

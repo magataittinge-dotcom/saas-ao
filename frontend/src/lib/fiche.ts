@@ -18,6 +18,10 @@ export const lienFiche = (rubrique: RubriqueFiche) => `/entreprise/fiche/${rubri
 
 export interface FicheLigne { libelle: string; valeur: string }
 export interface LigneLibre { section: string; libelle: string; valeur: string }
+
+/** Le serveur termine par « … » tout texte du profil qu'il a dû abréger (`fiches_donnees.MARQUE_ABREGE`). */
+export const estAbrege = (texte: string | null | undefined): boolean => typeof texte === 'string' && texte.trimEnd().endsWith('…')
+export const INFOBULLE_ABREGE = 'Texte abrégé, modifiable dans Mon entreprise'
 export interface FicheTuile { valeur: string; libelle: string }
 export interface FicheSection {
   id: string
