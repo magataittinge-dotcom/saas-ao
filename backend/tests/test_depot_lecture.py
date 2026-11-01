@@ -126,6 +126,15 @@ def test_attestation_propose_l_assurance_et_sa_date_de_validite(client, coffre, 
     assert "contrat" not in (props["qualification"].libelle or "").lower() or True
 
 
+def test_attestation_l_extrait_d_origine_est_la_ligne_du_contrat_pas_celle_des_activites(client, coffre, db_session, modele):
+    """Essai réel du 2/11 : l'extrait montré sous « Assurance » était la ligne des activités garanties (la plus longue),
+    alors que le patron vérifie d'abord le numéro de contrat."""
+    modele({"assurance": DECENNALE_COMPLETE})
+    deposer_et_lire(client, "decennale", ("attestation.pdf", fab.pdf(fab.TEXTE_DECENNALE)))
+    q = next(p for p in _propositions(db_session) if p.champ == "qualification")
+    assert "BAT-2026-00457" in q.extrait and q.source_page == 1
+
+
 def test_date_de_validite_inventee_ecartee(client, coffre, db_session, modele):
     modele({"assurance": {**DECENNALE_COMPLETE, "date_fin": "2027-12-31", "date_debut": "2026-02-01"}})
     deposer_et_lire(client, "decennale", ("attestation.pdf", fab.pdf(fab.TEXTE_DECENNALE)))

@@ -374,7 +374,9 @@ def _propositions_assurance(case: CaseDepot, v: dict, norm: str, ctx: _Contexte)
     }
     sortie: list[_Brouillon] = []
     if any(champs[c] for c in ("organisme", "numero", "perimetre", "date_fin")):
-        ancre = " ".join(str(champs[c]) for c in ("organisme", "numero", "perimetre") if champs[c])
+        # L'extrait montré est la ligne du contrat (numéro, puis assureur) : c'est ce que le patron vérifie d'abord.
+        # Les activités garanties, plus longues, ne servent d'ancre qu'à défaut (essai réel du 2/11).
+        ancre = champs["numero"] or champs["organisme"] or champs["perimetre"] or ""
         b = _qualification(ctx, champs, "Assurance", ancre or intitule)
         if b:
             sortie.append(b)
