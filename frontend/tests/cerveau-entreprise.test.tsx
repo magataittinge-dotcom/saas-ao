@@ -7,10 +7,10 @@ import { readFileSync, statSync } from 'node:fs'
 import path from 'node:path'
 import { renderToStaticMarkup } from 'react-dom/server'
 import CerveauEntreprise from '@/components/entreprise/CerveauEntreprise'
+import { IMAGES_ORDINATEUR, IMAGES_TACTILE, boucleDoitTourner, doitMonterEffets, imagesParSeconde } from '@/lib/entreprise/cerveau'
 import {
-  IMAGES_ORDINATEUR, IMAGES_TACTILE, REPERES, boucleDoitTourner, cadrageCover, doitMonterEffets, eclatEtincelle, faireAlea,
-  faireEclair, faireEtincelles, faireRegulateur, imagesParSeconde, lireRvb, pointDansBoite, positionSouris, rgba, suivre,
-} from '@/lib/entreprise/cerveau'
+  REPERES, cadrageCover, eclatEtincelle, faireAlea, faireEclair, faireEtincelles, faireRegulateur, lireRvb, pointDansBoite, positionSouris, rgba, suivre,
+} from '@/lib/entreprise/cerveauEffets'
 import { RACINE, lire, sansCommentaires } from './outils/sources'
 
 const html = renderToStaticMarkup(<CerveauEntreprise titre="Mon entreprise" sousTitre="Profil vivant" />)
@@ -117,4 +117,5 @@ test('chargement à la demande : la page n\'importe pas les effets, elle les cha
   assert.doesNotMatch(carte, /from '\.\/(CerveauEffets|moteurCerveau)'/)
   for (const f of ['src/routes/Company.tsx']) assert.doesNotMatch(sansCommentaires(lire(f)), /moteurCerveau|CerveauEffets/)
   assert.match(sansCommentaires(lire('src/components/entreprise/CerveauEffets.tsx')), /from '\.\/moteurCerveau'/)
+  assert.doesNotMatch(sansCommentaires(lire('src/components/entreprise/CerveauEntreprise.tsx')), /cerveauEffets/, 'le calcul des effets reste hors du morceau de la page')
 })

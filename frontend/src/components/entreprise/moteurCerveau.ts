@@ -3,12 +3,13 @@
 // Mécanique reprise de la maquette « cerveau » : étincelles qui scintillent, éclairs qui tremblent à gauche
 // et à droite, lueur qui respire, balayage lumineux, parallaxe à la souris. Aucune image calculée hors écran :
 // la boucle est pilotée de l'extérieur (regler) et s'arrête d'elle-même.
+import { IMAGE, imagesParSeconde } from '@/lib/entreprise/cerveau'
 import {
-  BLEU_REPLI, PARALLAXE, REPERES, IMAGE, TREMBLEMENT_MS,
+  BLEU_REPLI, PARALLAXE, REPERES, TREMBLEMENT_MS,
   cadrageCover, eclaircir, eclatEtincelle, faireAlea, faireEclair, faireEtincelles, faireRegulateur,
-  imagesParSeconde, lireRvb, pointDansBoite, positionBalayage, positionSouris, respiration, rgba, suivre,
+  lireRvb, pointDansBoite, positionBalayage, positionSouris, respiration, rgba, suivre,
   type Eclair, type Rvb,
-} from '@/lib/entreprise/cerveau'
+} from '@/lib/entreprise/cerveauEffets'
 
 export interface OptionsMoteur {
   canvas: HTMLCanvasElement
