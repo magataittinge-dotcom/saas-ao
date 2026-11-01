@@ -269,3 +269,17 @@ async def test_reglage_force_sonnet_46_rien_n_est_ajoute(monkeypatch):
     assert [kw["model"] for kw in calls["kwargs"]] == ["claude-sonnet-4-6"] * 4
     for kw in calls["kwargs"]:
         assert "extra_body" not in kw
+
+
+@pytest.mark.asyncio
+async def test_company_block_sans_cle_vide_dans_le_prefixe_cache(monkeypatch):
+    """Décision 8 du 1er/11 : les clés vides du profil ne gonflent plus le préfixe mis en cache."""
+    gen = MemoireGenerator()
+    side_effect, calls = _build_side_effect()
+    monkeypatch.setattr(gen.client.messages, "stream", side_effect)
+    await _run(gen)
+    # Le bloc profil + références est le premier contenu du message utilisateur (caché, identique pour chaque partie).
+    bloc = next(b["text"] for b in calls["kwargs"][0]["messages"][0]["content"] if b["text"].startswith("━━━ PROFIL ENTREPRISE"))
+    profil = json.loads(bloc.split("━━━ PROFIL ENTREPRISE (memoire_config) ━━━\n")[1].split("\n\n━━━")[0])
+    assert profil == {"nom": "ENTREPRISE TEST", "siret": "12345678901234"}, profil
+    assert ": null" not in bloc and '""' not in bloc

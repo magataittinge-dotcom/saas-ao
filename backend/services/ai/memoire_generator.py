@@ -451,6 +451,11 @@ class MemoireGenerator:
                 k: v for k, v in profile_overrides.items() if v is not None
             })
 
+        # Les clés vides (None, "", [], {}) ne partent pas : elles n'apportent rien au modèle et gonflent le
+        # préfixe mis en cache (constat § 6.5 de l'étude du 1er/11). Le reste du branchement (team_members,
+        # adresse et maître d'œuvre des références, champs 0029) est une tranche d'après Ozcan.
+        company_block = {k: v for k, v in company_block.items() if v not in (None, "", [], {})}
+
         # ── 2. References — sorted by relevance to the lot, then by year ──────
         # The acheteur public scores higher when a candidate proves it has done
         # similar projects. Façade reference for a façade lot beats a generic
