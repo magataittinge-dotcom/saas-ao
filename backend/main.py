@@ -43,6 +43,7 @@ from routers import (
     rag,
     veille,
     fiches_entreprise,
+    depot_entreprise,
 )
 from routers.file_serve import router as file_serve_router
 from routers.sources import router as sources_router
@@ -395,6 +396,7 @@ app.include_router(billing.router, prefix="/api/billing", tags=["billing"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
 app.include_router(veille.router, prefix="/api/veille", tags=["veille"])
 app.include_router(fiches_entreprise.router, prefix="/api/entreprise/fiches", tags=["fiches-entreprise"])
+app.include_router(depot_entreprise.router, prefix="/api/entreprise/depots", tags=["depot-entreprise"])
 app.include_router(progress.router, prefix="/api/projects", tags=["progress"])
 app.include_router(calculators.router, prefix="/api/calculators", tags=["calculators"])
 app.include_router(file_serve_router, prefix="/api/files", tags=["files"])
