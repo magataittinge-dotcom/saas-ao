@@ -53,9 +53,29 @@ def test_aucun_autre_location_ne_compresse_les_binaires():
     assert conf.count("application/octet-stream") == 1
 
 
-def test_images_du_cerveau_entreprise_un_jour_de_cache():
-    """Décision 7 du 1er/11 : /entreprise/*.webp (cerveau de « Mon entreprise ») sort du no-cache de location /."""
-    bloc = _bloc(_sans_commentaires(CONF), "location /entreprise/")
-    assert 'add_header Cache-Control "public, max-age=86400";' in bloc
+def test_clips_et_posters_du_visage_un_an_de_cache():
+    """Les clips (mp4, webm) et posters (webp) du visage de « Mon entreprise » : un an, immuables, comme assets/."""
+    conf = _sans_commentaires(CONF)
+    bloc = _bloc(conf, 'location ~ "^/visage/(?:visage-[1-4]\\.(?:mp4|webm)|poster(?:-ferme)?\\.webp)$"')
+    assert 'add_header Cache-Control "public, max-age=31536000, immutable";' in bloc
     assert "synorix-entetes-statiques.conf" in bloc and "try_files $uri =404;" in bloc
-    assert "gzip" not in bloc
+    assert "always" not in re.search(r'Cache-Control[^;]*;', bloc).group(0), "une 404 ne doit pas être mise en cache un an"
+    assert "gzip" not in bloc, "les vidéos et les webp sont déjà compressés"
+
+
+def test_points_bin_n_est_pas_capte_par_le_location_des_clips():
+    """`location =` (exact) l'emporte sur l'expression régulière, et l'expression ne couvre pas .bin."""
+    conf = _sans_commentaires(CONF)
+    assert conf.index("location = /visage/points.bin") >= 0
+    motif = re.search(r'location ~ "(\^/visage/[^"]+)"', conf).group(1)
+    assert re.match(motif, "/visage/visage-1.mp4") and re.match(motif, "/visage/visage-4.webm")
+    assert re.match(motif, "/visage/poster.webp") and re.match(motif, "/visage/poster-ferme.webp")
+    assert not re.match(motif, "/visage/points.bin")
+    assert not re.match(motif, "/visage/sous/dossier.mp4")
+    assert not re.match(motif, "/visage/tete-ouverte-poster.webp"), "les posters du Compagnon gardent leur cache d'avant"
+
+
+def test_le_cerveau_n_est_plus_servi_location_entreprise_retire():
+    """frontend/public/entreprise/ n'existe plus (le visage remplace le cerveau) : plus de location dédié."""
+    assert "location /entreprise/" not in _sans_commentaires(CONF)
+    assert not (Path(__file__).resolve().parents[2] / "frontend/public/entreprise").exists()
