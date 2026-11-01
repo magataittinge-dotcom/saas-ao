@@ -8,17 +8,21 @@ S'ajoute à `upload_validation.recevoir_fichier` (extension en liste blanche, pl
 - Word/Excel modernes (.docx, .xlsx) : garde anti-bombe de décompression avant toute ouverture, puis la structure
   OOXML attendue ; refusés : une archive quelconque renommée, un paquet qui porte du code (exécutable), une macro
   (vbaProject.bin, type de contenu « macroEnabled »), un contrôle ActiveX, un objet OLE embarqué (embeddings/*.bin), une
-  relation vers un modèle (attachedTemplate) ou une ressource externe autre qu'un lien hypertexte ;
+  relation vers un modèle (attachedTemplate) ou une ressource externe autre qu'un lien hypertexte. Le contenu actif se
+  détecte par son TYPE (types de contenu et relations, lus comme du XML avec defusedxml : entité, DOCTYPE, XML invalide ou
+  encodage illisible = refus), les noms en double (casse comprise) sont refusés, chaque partie est lue par son propre ZipInfo ;
+  les noms de parties ne servent que de filet ;
 - anciens Word/Excel (.doc, .xls, OLE2) : refusés avant d'arriver ici (routers/depot_entreprise.py), quel que soit leur
   contenu : ni macros VBA ni paquets Ole10Native à analyser.
 Aucun fichier n'est exécuté ni converti ici. Les refus sont des 415 écrits pour l'utilisateur.
 """
 from __future__ import annotations
 
-import re
 import zipfile
 from typing import BinaryIO
 
+from defusedxml import ElementTree as DET
+from defusedxml.common import DefusedXmlException
 from fastapi import HTTPException
 
 from services import garde_archives
@@ -68,10 +72,13 @@ def _controler_image(flux: BinaryIO) -> None:
 
 _MAX_PARTIE_XML = 1024 * 1024      # [Content_Types].xml et fichiers .rels : de quelques Ko ; au-delà, refusé
 _MAX_RELATIONS = 300                # fichiers .rels lus au plus
-_RELATION = re.compile(r"<(?:\w+:)?Relationship\b[^>]*>", re.IGNORECASE)
-_TYPE = re.compile(r'\bType\s*=\s*"([^"]*)"', re.IGNORECASE)
-_EXTERNE = re.compile(r'\bTargetMode\s*=\s*"External"', re.IGNORECASE)
 _MESSAGE_CODE = "Ce fichier contient du code, une macro ou un objet embarqué : il est refusé."
+# Types de contenu actifs (sous-chaînes, sans tenir compte de la casse) : macros VBA, ActiveX, objets OLE, formats « macro ».
+_TYPES_CONTENU_ACTIFS = ("vbaproject", "activex", "oleobject", "macroenabled")
+# Dernier segment du type d'une relation (quel que soit l'espace de noms) qui désigne un contenu actif ou lié.
+_RELATIONS_ACTIVES = frozenset(x.lower() for x in (
+    "vbaProject", "vbaProjectSignature", "control", "activeXControl", "activeXControlBinary", "oleObject", "package",
+    "aFChunk", "attachedTemplate", "subDocument", "frame", "externalLink"))
 
 
 def _controler_ooxml(flux: BinaryIO, extension: str) -> None:
@@ -80,21 +87,22 @@ def _controler_ooxml(flux: BinaryIO, extension: str) -> None:
         garde_archives.controler_archive_office(flux)
         flux.seek(0)
         with zipfile.ZipFile(flux) as archive:
-            noms = [n.lower() for n in archive.namelist()]
+            infos = archive.infolist()
+            noms = [i.filename.replace("\\", "/").lower() for i in infos]
+            if len(set(noms)) != len(noms):         # deux parties de même nom (casse comprise) : l'une cache l'autre
+                raise _refus(_MESSAGE_CODE)
             if "[content_types].xml" not in noms or _PARTIE_PRINCIPALE[extension] not in noms:
                 raise _pas_le_bon_format()
-            _refuser_parties_dangereuses(noms)
-            types = _lire_partie(archive, "[Content_Types].xml")
-            if "macroenabled" in types.lower():
-                raise _refus(_MESSAGE_CODE)
+            _refuser_parties_dangereuses(noms)       # filet : par le nom
             lues = 0
-            for info in archive.infolist():
-                if not info.filename.lower().endswith(".rels"):
-                    continue
-                lues += 1
-                if lues > _MAX_RELATIONS:
-                    raise _refus(_MESSAGE_CODE)
-                _refuser_relations_dangereuses(_lire_partie(archive, info.filename))
+            for info, nom in zip(infos, noms):       # chaque partie est lue par SON ZipInfo, jamais re-cherchée par son nom
+                if nom == "[content_types].xml":
+                    _refuser_types_de_contenu_actifs(_xml(archive, info))
+                elif nom.endswith(".rels"):
+                    lues += 1
+                    if lues > _MAX_RELATIONS:
+                        raise _refus(_MESSAGE_CODE)
+                    _refuser_relations_dangereuses(_xml(archive, info))
     except garde_archives.ArchiveDemesuree:
         raise _refus("Ce fichier est démesuré une fois ouvert : il est refusé.")
     except (zipfile.BadZipFile, OSError, ValueError, KeyError):
@@ -110,20 +118,36 @@ def _refuser_parties_dangereuses(noms: list[str]) -> None:
             raise _refus(_MESSAGE_CODE)
 
 
-def _lire_partie(archive: zipfile.ZipFile, nom: str) -> str:
-    info = archive.getinfo(nom)
+def _xml(archive: zipfile.ZipFile, info: zipfile.ZipInfo):
+    """La partie, analysée avec defusedxml (aucune entité, aucun DOCTYPE) ; XML invalide ou encodage illisible : refus."""
     if info.file_size > _MAX_PARTIE_XML:
         raise _refus(_MESSAGE_CODE)
-    return archive.read(info).decode("utf-8", errors="replace")
+    try:
+        return DET.fromstring(archive.read(info), forbid_dtd=True)
+    except (DET.ParseError, DefusedXmlException, ValueError, UnicodeError):
+        raise _refus(_MESSAGE_CODE)
 
 
-def _refuser_relations_dangereuses(rels: str) -> None:
-    """Un modèle attaché (attachedTemplate), un objet OLE ou toute ressource EXTERNE autre qu'un lien hypertexte
-    (image distante, cadre, document lié) est refusé ; un lien hypertexte externe est un contenu normal."""
-    for relation in _RELATION.findall(rels):
-        m = _TYPE.search(relation)
-        type_ = (m.group(1) if m else "").rsplit("/", 1)[-1].lower()
-        if type_ in ("attachedtemplate", "oleobject", "package", "externallink", "subdocument", "frame"):
+def _local(balise: str) -> str:
+    return balise.rsplit("}", 1)[-1]
+
+
+def _refuser_types_de_contenu_actifs(racine) -> None:
+    for e in racine.iter():
+        if _local(e.tag) in ("Default", "Override"):
+            type_ = (e.get("ContentType") or "").lower()
+            if any(x in type_ for x in _TYPES_CONTENU_ACTIFS):
+                raise _refus(_MESSAGE_CODE)
+
+
+def _refuser_relations_dangereuses(racine) -> None:
+    """Un contenu actif ou lié (macro, ActiveX, objet OLE, modèle attaché, document lié, bloc HTML…) est refusé d'après le TYPE de
+    la relation ; toute ressource EXTERNE autre qu'un lien hypertexte l'est aussi."""
+    for e in racine.iter():
+        if _local(e.tag) != "Relationship":
+            continue
+        dernier = (e.get("Type") or "").rsplit("/", 1)[-1].lower()
+        if dernier in _RELATIONS_ACTIVES:
             raise _refus(_MESSAGE_CODE)
-        if _EXTERNE.search(relation) and type_ != "hyperlink":
+        if (e.get("TargetMode") or "").lower() == "external" and dernier != "hyperlink":
             raise _refus(_MESSAGE_CODE)
