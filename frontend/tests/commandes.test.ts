@@ -30,14 +30,13 @@ test('chaque bouton a une action (onClick, envoi de formulaire ou props transmis
   assert.deepEqual(sansAction, [])
 })
 
-test('les 6 commandes sans action ont disparu', () => {
+test('les commandes sans action ont disparu (la 6e, « Ajouter un membre » de routes/Team.tsx, est partie avec le fichier)', () => {
   const retirees: [string, string][] = [
     ['src/routes/project/StepAnalysis.tsx', 'Générer Rapport PDF'],
     ['src/routes/project/StepVerification.tsx', 'Sauvegarder le brouillon'],
     ['src/routes/project/StepExport.tsx', 'Envoyer par email'],
     ['src/routes/project/StepExport.tsx', 'À corriger'],
     ['src/components/layout/Header.tsx', 'Recherche intelligente'],
-    ['src/routes/Team.tsx', 'Ajouter un membre'],
   ]
   for (const [f, libelle] of retirees) {
     assert.ok(!sansCommentaires(lire(f)).includes(libelle), `${f} contient encore « ${libelle} »`)

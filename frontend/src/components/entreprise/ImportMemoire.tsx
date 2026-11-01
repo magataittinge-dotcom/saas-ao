@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import type { MemoireConfig } from '@/types'
 
 // Import d'un mémoire existant (.docx ou .pdf) : l'IA pré-remplit le profil, l'utilisateur vérifie avant d'enregistrer.
-// Déplacé depuis routes/MemoireConfig.tsx sans changement de comportement.
+// Déplacé depuis l'ancienne page « Configuration du mémoire » (supprimée le 1er/11) sans changement de comportement.
 
 // ─── Import progress overlay ───────────────────────────────────────────────────
 

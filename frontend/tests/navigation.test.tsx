@@ -9,7 +9,9 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { EntreesBarre } from '@/components/layout/Sidebar'
 import { ACCES_PALETTE, BARRE, ENTREES_TIROIR, ONGLETS_TEL, REDIRECTIONS_ENTREPRISE } from '@/components/layout/navigation'
 import { rubriqueDepuisRecherche } from '@/lib/entreprise/avancement'
-import { fichiersSource, lire, sansCommentaires } from './outils/sources'
+import { existsSync } from 'node:fs'
+import path from 'node:path'
+import { RACINE, fichiersSource, lire, sansCommentaires } from './outils/sources'
 import { contrasteJetons, type Theme } from './outils/jetons'
 
 const rendu = (chemin = '/dashboard') => renderToStaticMarkup(
@@ -86,8 +88,8 @@ test('/team et /references redirigent vers la bonne rubrique de Mon entreprise (
   assert.match(app, /Object\.entries\(REDIRECTIONS_ENTREPRISE\)/)
   assert.match(app, /<Navigate to=\{vers\} replace \/>/)
   assert.doesNotMatch(app, /<Route path="\/(team|references)" element=\{<(Team|References) \/>\}/)
-  // les pages d'origine ne sont pas supprimées
-  assert.ok(lire('src/routes/Team.tsx').length > 0 && lire('src/routes/References.tsx').length > 0)
+  // les pages d'origine sont supprimées (décision 6 du 1er/11) : Équipe et Références vivent dans Mon entreprise
+  for (const f of ['src/routes/Team.tsx', 'src/routes/References.tsx', 'src/routes/MemoireConfig.tsx']) assert.ok(!existsSync(path.join(RACINE, f)), `${f} supprimé`)
 })
 
 test('Mon entreprise ouvre la rubrique demandée par ?rubrique=', () => {
