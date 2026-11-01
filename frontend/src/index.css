@@ -573,8 +573,16 @@
 }
 .animate-tip-in { animation: tip-in 0.3s cubic-bezier(0.4, 0, 0.2, 1) both; }
 
+/* Mention « Enregistré » de la fiche à télécharger : fondu court, opacité seule (pas de déplacement). */
+@keyframes mention-fondu {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.mention-enregistre { animation: mention-fondu 0.2s ease-out both; }
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
+  .mention-enregistre { animation: none; }
   .animate-fade-in,
   .animate-fade-in-delay-1,
   .animate-fade-in-delay-2,

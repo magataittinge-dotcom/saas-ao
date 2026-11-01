@@ -23,6 +23,7 @@ import PhraseARenseigner from '@/components/fiche/PhraseARenseigner'
 import ZoneBordereau from '@/components/fiche/ZoneBordereau'
 import ZoneContenu from '@/components/fiche/ZoneContenu'
 import { useApercuFiche } from '@/components/fiche/useApercuFiche'
+import MentionEnregistre, { useMention } from '@/components/fiche/MentionEnregistre'
 import { useDonneesEntreprise } from '@/components/entreprise/useDonneesEntreprise'
 import { aRenseigner } from '@/lib/entreprise/avancement'
 import EcranEnChargement from '@/components/common/EcranEnChargement'
@@ -66,7 +67,7 @@ function Fiche({ rubrique }: { rubrique: RubriqueFiche }) {
   const [format, setFormat] = useState<FormatFiche>('pdf')
   const [pdfIndisponible, setPdfIndisponible] = useState<string | null>(null)
   const [versionLogo, setVersionLogo] = useState(0)
-  const [enregistre, setEnregistre] = useState(false)
+  const mention = useMention()                          // « Enregistré », une seconde après chaque enregistrement réussi
   // Le compte est celui des cartes de Mon entreprise (informations indispensables de la rubrique encore à saisir).
   const donneesEntreprise = useDonneesEntreprise()
   const aSaisir = donneesEntreprise.profilCharge ? aRenseigner(donneesEntreprise, rubrique).length : 0
@@ -80,8 +81,8 @@ function Fiche({ rubrique }: { rubrique: RubriqueFiche }) {
   const dernierEnvoye = useRef<string>('')
   const enregistrement = useMutation({
     mutationFn: async (b: FicheBordereau) => (await api.put<FicheReponse>(`/entreprise/fiches/${rubrique}`, corpsEnregistre(b))).data,
-    onSuccess: (reponse) => { client.setQueryData(cleFiche(rubrique), reponse); setEnregistre(true) },
-    onError: () => { dernierEnvoye.current = '' },
+    onSuccess: (reponse) => { client.setQueryData(cleFiche(rubrique), reponse); mention.montrer() },
+    onError: () => { dernierEnvoye.current = ''; mention.masquer() },
   })
 
   const logo = useMutation({
@@ -162,11 +163,11 @@ function Fiche({ rubrique }: { rubrique: RubriqueFiche }) {
   }
 
   const bordereau = brouillon ?? data.bordereau
-  const modifier = (patch: Partial<FicheBordereau>) => { setEnregistre(false); setBrouillon({ ...bordereau, ...patch }) }
+  const modifier = (patch: Partial<FicheBordereau>) => setBrouillon({ ...bordereau, ...patch })
   const enRetard = aEnregistrer || enregistrement.isPending
   const statut = enRetard || enMiseAJour(etat)
     ? (enregistrement.isPending || aEnregistrer ? 'Enregistrement…' : TEXTE_MISE_A_JOUR)
-    : enregistre ? 'Enregistré' : ''
+    : ''
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-5">
@@ -214,6 +215,7 @@ function Fiche({ rubrique }: { rubrique: RubriqueFiche }) {
             format={format} onFormat={setFormat} pdfIndisponible={pdfIndisponible}
             onTelecharger={() => telechargement.mutate()} enTelechargement={telechargement.isPending}
           />
+          <MentionEnregistre visible={mention.visible} />
           {enregistrement.isError && (
             <p role="alert" className="mt-3 text-sm text-fg-2">Le bordereau n'a pas pu être enregistré. Vérifiez la couleur et la longueur des textes.</p>
           )}
