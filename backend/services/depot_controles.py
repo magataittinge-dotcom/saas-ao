@@ -74,11 +74,12 @@ _MAX_PARTIE_XML = 1024 * 1024      # [Content_Types].xml et fichiers .rels : de 
 _MAX_RELATIONS = 300                # fichiers .rels lus au plus
 _MESSAGE_CODE = "Ce fichier contient du code, une macro ou un objet embarqué : il est refusé."
 # Types de contenu actifs (sous-chaînes, sans tenir compte de la casse) : macros VBA, ActiveX, objets OLE, formats « macro ».
-_TYPES_CONTENU_ACTIFS = ("vbaproject", "activex", "oleobject", "macroenabled")
+_TYPES_CONTENU_ACTIFS = ("vbaproject", "activex", "oleobject", "macroenabled", "macrosheet", "dialogsheet")   # « macrosheet » couvre intlmacrosheet
 # Dernier segment du type d'une relation (quel que soit l'espace de noms) qui désigne un contenu actif ou lié.
 _RELATIONS_ACTIVES = frozenset(x.lower() for x in (
     "vbaProject", "vbaProjectSignature", "control", "activeXControl", "activeXControlBinary", "oleObject", "package",
-    "aFChunk", "attachedTemplate", "subDocument", "frame", "externalLink"))
+    "aFChunk", "attachedTemplate", "subDocument", "frame", "externalLink",
+    "xlMacrosheet", "xlIntlMacrosheet", "dialogsheet"))     # feuilles de macros Excel 4.0 (XLM) et feuilles de dialogue
 
 
 def _controler_ooxml(flux: BinaryIO, extension: str) -> None:
@@ -114,7 +115,8 @@ def _controler_ooxml(flux: BinaryIO, extension: str) -> None:
 def _refuser_parties_dangereuses(noms: list[str]) -> None:
     for n in noms:
         if (n.endswith(_CODE) or n.endswith("vbaproject.bin") or "/activex/" in n or n.startswith("activex/")
-                or ("/embeddings/" in n and n.endswith(".bin")) or n.endswith("oleobject1.bin")):
+                or ("/embeddings/" in n and n.endswith(".bin")) or n.endswith("oleobject1.bin")
+                or "/macrosheets/" in n or "/dialogsheets/" in n):
             raise _refus(_MESSAGE_CODE)
 
 

@@ -111,3 +111,44 @@ def test_les_verifications_par_nom_restent_un_filet(client, coffre, db_session):
     _refuse(client, db_session, _docx(parties={"word/vbaProject.bin": b"x"}))
     _refuse(client, db_session, _docx(parties={"word/activeX/a1.xml": "<a/>"}))
     _refuse(client, db_session, _docx(parties={"word/embeddings/oleObject1.bin": b"x"}))
+
+
+# ── 5e point : feuilles de macros Excel 4.0 (XLM) et feuilles de dialogue ────
+
+def _xlsx(types=TYPES_OK, rels=None, parties=None) -> bytes:
+    flux = io.BytesIO()
+    with zipfile.ZipFile(flux, "w") as z:
+        z.writestr("[Content_Types].xml", types)
+        z.writestr("xl/workbook.xml", "<workbook/>")
+        if rels is not None:
+            z.writestr("xl/_rels/workbook.xml.rels", rels)
+        for nom, contenu in (parties or {}).items():
+            z.writestr(nom, contenu)
+    return flux.getvalue()
+
+
+@pytest.mark.parametrize("type_contenu", [
+    "application/vnd.ms-excel.macrosheet+xml", "application/vnd.ms-excel.intlmacrosheet+xml",
+    "application/vnd.ms-excel.dialogsheet+xml", "application/vnd.ms-excel.MacroSheet+xml"])
+def test_xlsx_avec_feuille_de_macros_xlm_ou_de_dialogue_refuse_par_son_type_de_contenu(client, coffre, db_session, type_contenu):
+    types = ('<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+             f'<Override PartName="/xl/feuilles/s1.xml" ContentType="{type_contenu}"/></Types>')
+    res = deposer(client, "materiel", ("liste.xlsx", _xlsx(types=types, parties={"xl/feuilles/s1.xml": "<a/>"}))).json()["resultats"][0]
+    assert res["accepte"] is False and res["statut"] == 415 and db_session.query(Document).count() == 0
+
+
+@pytest.mark.parametrize("type_", ["xlMacrosheet", "xlIntlMacrosheet", "dialogsheet"])
+def test_xlsx_avec_relation_vers_une_feuille_de_macros_refuse(client, coffre, db_session, type_):
+    res = deposer(client, "materiel", ("liste.xlsx", _xlsx(rels=_rel(f"{NS_REL}/{type_}", "feuilles/s1.xml")))).json()["resultats"][0]
+    assert res["accepte"] is False and res["statut"] == 415 and db_session.query(Document).count() == 0
+
+
+@pytest.mark.parametrize("dossier", ["xl/macrosheets/s1.xml", "xl/dialogsheets/s1.xml"])
+def test_filet_par_nom_pour_les_feuilles_de_macros(client, coffre, db_session, dossier):
+    res = deposer(client, "materiel", ("liste.xlsx", _xlsx(parties={dossier: "<a/>"}))).json()["resultats"][0]
+    assert res["accepte"] is False and res["statut"] == 415
+
+
+def test_xlsx_sain_accepte_apres_ce_durcissement(client, coffre, db_session):
+    res = deposer(client, "materiel", ("sain.xlsx", fab.xlsx({"Matériel": [["Quantité", "Désignation"], [2, "Nacelle"]]}))).json()["resultats"][0]
+    assert res["accepte"] is True
