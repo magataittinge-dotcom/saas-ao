@@ -44,6 +44,15 @@ export function courbe(p0: Point, p3: Point): Courbe {
   return { p0, c1: { x: p0.x + dx * 0.45, y: p0.y }, c2: { x: p3.x - dx * 0.35, y: p3.y }, p3 }
 }
 
+/**
+ * Le fil quand le visage bouge (parallaxe) : le départ côté visage (`p0` et sa poignée `c1`) suit le décalage,
+ * l'arrivée sur la bulle (`c2`, `p3`) ne bouge pas — le fil reste accroché à la bulle. Sans décalage : la même courbe.
+ */
+export function decalerDepart(c: Courbe, dx: number, dy: number): Courbe {
+  if (dx === 0 && dy === 0) return c
+  return { p0: { x: c.p0.x + dx, y: c.p0.y + dy }, c1: { x: c.c1.x + dx, y: c.c1.y + dy }, c2: c.c2, p3: c.p3 }
+}
+
 /** Point de la courbe à l'instant t ∈ [0, 1]. */
 export function pointSurCourbe(c: Courbe, t: number): Point {
   const u = 1 - t

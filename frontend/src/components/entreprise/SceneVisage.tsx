@@ -1,10 +1,11 @@
-import { forwardRef, useMemo, useRef, useState } from 'react'
+import { forwardRef, useEffect, useMemo, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { useMedia } from '@/hooks/useMedia'
 import { useMouvementReduit } from '@/components/intelligence/useMouvementReduit'
 import type { DonneesEntreprise, RubriqueId } from '@/lib/entreprise/avancement'
 import { boucleDoitTourner } from '@/lib/entreprise/fils'
 import { doitJouer } from '@/lib/entreprise/visage'
+import { REPOS, auRepos, lisser, normaliser, parallaxePermise, pose, transformation, type Normale } from '@/lib/entreprise/parallaxe'
 import { A_RENSEIGNER, construireBulles, type Bulle } from '@/lib/entreprise/synthese'
 import FilsVisage from './FilsVisage'
 import VisageAnime, { type VisageAnimeRef } from './VisageAnime'
@@ -57,22 +58,77 @@ const SceneVisage = forwardRef<VisageAnimeRef, {
   const droite = bulles.filter((b) => b.cote === 'droite')
   const joue = doitJouer({ mouvementReduit, aLEcran, ongletVisible })
   const choisir = (b: Bulle) => onChoisir(b.rubrique)
+
+  // Parallaxe à la souris : le visage (calque `plan`) et le départ des fils suivent le pointeur, ±6 px et ≤ 2°,
+  // lissés par une petite boucle qui s'arrête dès le retour au repos. Rien au toucher, au téléphone, hors écran
+  // ni en mouvement réduit (parallaxePermise) ; la boucle des fils lit `decalage` à chaque image.
+  const plan = useRef<HTMLDivElement>(null)
+  const decalage = useRef({ dx: 0, dy: 0 })
+  const cible = useRef<Normale>(REPOS)
+  const courant = useRef<Normale>(REPOS)
+  const raf = useRef(0)
+  const permise = (pointerType: string) => parallaxePermise({ pointerType, mouvementReduit, tactile, large, actif: joue })
+  const appliquer = (n: Normale) => {
+    const p = pose(n)
+    decalage.current = { dx: p.dx, dy: p.dy }
+    if (plan.current) plan.current.style.transform = transformation(p)
+  }
+  const animer = () => {
+    if (raf.current) return
+    let avant = performance.now()
+    const pas = (ms: number) => {
+      courant.current = lisser(courant.current, cible.current, ms - avant)
+      avant = ms
+      if (auRepos(courant.current, cible.current)) {
+        courant.current = cible.current
+        appliquer(courant.current)
+        raf.current = 0
+        return
+      }
+      appliquer(courant.current)
+      raf.current = requestAnimationFrame(pas)
+    }
+    raf.current = requestAnimationFrame(pas)
+  }
+  const surMouvement = (e: React.PointerEvent<HTMLElement>) => {
+    if (!permise(e.pointerType) || !scene.current) return
+    cible.current = normaliser(e.clientX, e.clientY, scene.current.getBoundingClientRect())
+    animer()
+  }
+  const surSortie = () => {
+    cible.current = REPOS
+    animer()
+  }
+  // Mouvement réduit, passage au tactile, scène cachée : retour immédiat au repos, boucle arrêtée.
+  useEffect(() => {
+    if (permise('mouse')) return
+    cancelAnimationFrame(raf.current)
+    raf.current = 0
+    cible.current = REPOS
+    courant.current = REPOS
+    appliquer(REPOS)
+  }, [mouvementReduit, tactile, large, joue]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => cancelAnimationFrame(raf.current), [])
   const colonne = 'max-lg:contents lg:z-[2] lg:flex lg:flex-col lg:justify-between lg:gap-3.5 lg:py-4'
 
   return (
     <section
       ref={scene}
       aria-label="Le visage de Synorix et les informations de l'entreprise"
+      onPointerMove={surMouvement}
+      onPointerLeave={surSortie}
       className="relative grid grid-cols-2 gap-2.5 overflow-hidden lg:min-h-[420px] lg:grid-cols-[minmax(13.75rem,1fr)_300px_minmax(13.75rem,1fr)] lg:items-center lg:gap-x-3.5"
     >
       {large && (
-        <FilsVisage scene={scene} visage={boite} bulles={bulles} chaud={chaud} tourne={boucleDoitTourner({ mouvementReduit, aLEcran, ongletVisible })} tactile={tactile} mouvementReduit={mouvementReduit} />
+        <FilsVisage scene={scene} visage={boite} bulles={bulles} chaud={chaud} tourne={boucleDoitTourner({ mouvementReduit, aLEcran, ongletVisible })} tactile={tactile} mouvementReduit={mouvementReduit} decalage={decalage} />
       )}
       <div className={cn(colonne, 'lg:items-end')}>
         {gauche.map((b) => <BulleDonnee key={b.id} bulle={b} onChoisir={choisir} onChaud={setChaud} />)}
       </div>
-      <div ref={boite} className="relative z-[1] order-first col-span-2 lg:order-none lg:col-span-1">
-        <VisageAnime ref={visageRef} actif={joue} />
+      <div ref={boite} className="relative z-[1] order-first col-span-2 lg:order-none lg:col-span-1 lg:[perspective:900px]">
+        <div ref={plan} data-plan-visage="">
+          <VisageAnime ref={visageRef} actif={joue} />
+        </div>
       </div>
       <div className={cn(colonne, 'lg:items-start')}>
         {droite.map((b) => <BulleDonnee key={b.id} bulle={b} onChoisir={choisir} onChaud={setChaud} />)}

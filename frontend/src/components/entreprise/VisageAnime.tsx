@@ -13,8 +13,18 @@ export interface VisageAnimeRef {
 }
 
 // Le fond noir des clips : mélange « écran » en nuit (le noir disparaît), médaillon sombre derrière en clair.
-// Le masque fond les bords du recadrage dans la page.
-const MASQUE = '[mask-image:radial-gradient(ellipse_54%_50%_at_50%_50%,#000_58%,transparent_80%)] [-webkit-mask-image:radial-gradient(ellipse_54%_50%_at_50%_50%,#000_58%,transparent_80%)]'
+// Le masque fond les bords du recadrage dans la page. En clair, le fondu est plus long (52 % → 82 %) et finit avec le
+// médaillon : aucun anneau gris entre le bord du clip et celui du médaillon. En nuit, le masque d'origine (58 % → 80 %).
+const MASQUE = cn(
+  '[mask-image:radial-gradient(ellipse_54%_50%_at_50%_50%,#000_52%,transparent_82%)] [-webkit-mask-image:radial-gradient(ellipse_54%_50%_at_50%_50%,#000_52%,transparent_82%)]',
+  'dark:[mask-image:radial-gradient(ellipse_54%_50%_at_50%_50%,#000_58%,transparent_80%)] dark:[-webkit-mask-image:radial-gradient(ellipse_54%_50%_at_50%_50%,#000_58%,transparent_80%)]',
+)
+
+// Médaillon du thème clair : dégradé long et adouci (paliers rapprochés, pas de bande visible), légèrement flouté.
+// Il s'éteint à 82 %, comme le masque du clip en clair. Les paliers suivent une courbe douce plutôt qu'une rampe
+// linéaire, qui laisse voir un anneau gris sur fond clair.
+export const MEDAILLON_CLAIR = 'radial-gradient(ellipse 54% 50% at 50% 49%, var(--surface-dark) 0 46%, color-mix(in oklab, var(--surface-dark) 84%, transparent) 54%, color-mix(in oklab, var(--surface-dark) 58%, transparent) 62%, color-mix(in oklab, var(--surface-dark) 32%, transparent) 69%, color-mix(in oklab, var(--surface-dark) 13%, transparent) 75%, color-mix(in oklab, var(--surface-dark) 3%, transparent) 80%, transparent 82%)'
+export const FLOU_MEDAILLON_PX = 6
 const MEDIA = cn(
   'absolute inset-0 size-full object-cover opacity-0 transition-opacity [transition-duration:280ms] ease-out motion-reduce:transition-none data-[actif=true]:opacity-100 dark:mix-blend-screen',
   MASQUE,
@@ -141,7 +151,7 @@ const VisageAnime = forwardRef<VisageAnimeRef, { actif: boolean; className?: str
   return (
     <div data-visage="" className={cn('relative mx-auto h-[336px] w-[240px] lg:h-[420px] lg:w-[300px]', className)}>
       {/* médaillon sombre derrière le visage en thème clair ; en nuit, le mélange « écran » suffit */}
-      <div aria-hidden="true" className="absolute inset-0 rounded-[50%/42%] opacity-100 [background:radial-gradient(ellipse_at_50%_48%,var(--surface-dark)_0_58%,transparent_76%)] dark:opacity-0" />
+      <div aria-hidden="true" data-medaillon="" className="absolute inset-0 opacity-100 dark:opacity-0" style={{ background: MEDAILLON_CLAIR, filter: `blur(${FLOU_MEDAILLON_PX}px)` }} />
       {reduit ? (
         <img src={POSTER_OUVERT} alt="Le visage de Synorix" width={300} height={420} data-actif="true" className={MEDIA} />
       ) : (

@@ -350,7 +350,7 @@ test('scène (rendu serveur) : six bulles reliées à des boutons, canvas seulem
   assert.ok(bureau.includes('<canvas') && bureau.includes('data-fils'))
   assert.ok(!tel.includes('<canvas'), 'téléphone : ni fils ni canvas')
   assert.match(tel, /grid-cols-2/, 'téléphone : grille à deux colonnes')
-  assert.match(tel, /order-first[^"]*"><div data-visage/, 'le visage d\'abord')
+  assert.match(tel, /order-first[^"]*"><div data-plan-visage=""><div data-visage/, 'le visage d\'abord (dans son calque de parallaxe)')
 })
 
 /* ── les fils ────────────────────────────────────────────────────── */

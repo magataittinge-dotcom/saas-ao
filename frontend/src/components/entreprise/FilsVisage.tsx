@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import {
-  courbe, creerParticules, faireRegulateur, hexAlpha, hexVersRvb, imagesParSeconde, opaciteParticule, pointSurCourbe, positionParticule,
+  courbe, creerParticules, decalerDepart, faireRegulateur, hexAlpha, hexVersRvb, imagesParSeconde, opaciteParticule, pointSurCourbe, positionParticule,
   type Courbe, type Particule,
 } from '@/lib/entreprise/fils'
 import type { Bulle } from '@/lib/entreprise/synthese'
@@ -24,7 +24,7 @@ function lireCouleurs(): { fil: [number, number, number]; particule: string; nui
  * visible, mouvement permis) : 60 images/s sur ordinateur, 30 sur écran tactile, 0 sinon. Sans mouvement, une seule
  * image immobile. Le fil de la bulle `chaud` (survol, focus) est plus lumineux.
  */
-export default function FilsVisage({ scene, visage, bulles, chaud, tourne, tactile, mouvementReduit }: {
+export default function FilsVisage({ scene, visage, bulles, chaud, tourne, tactile, mouvementReduit, decalage }: {
   scene: React.RefObject<HTMLElement>
   visage: React.RefObject<HTMLElement>
   bulles: Bulle[]
@@ -32,6 +32,8 @@ export default function FilsVisage({ scene, visage, bulles, chaud, tourne, tacti
   tourne: boolean
   tactile: boolean
   mouvementReduit: boolean
+  /** Décalage courant du visage en px CSS (parallaxe) : le départ des fils le suit. Lu à chaque image. */
+  decalage?: React.RefObject<{ dx: number; dy: number }>
 }) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const chaudRef = useRef(chaud)
@@ -72,9 +74,12 @@ export default function FilsVisage({ scene, visage, bulles, chaud, tourne, tacti
       ctx.setTransform(1, 0, 0, 1, 0, 0)
       ctx.clearRect(0, 0, cv.width, cv.height)
       ctx.lineCap = 'round'
+      const ox = (decalage?.current?.dx ?? 0) * dpr
+      const oy = (decalage?.current?.dy ?? 0) * dpr
       for (const f of fils) {
         const chauffe = chaudRef.current === f.id
-        const { p0, c1, c2, p3 } = f.courbe
+        const c = decalerDepart(f.courbe, ox, oy)
+        const { p0, c1, c2, p3 } = c
         ctx.beginPath()
         ctx.moveTo(p0.x, p0.y)
         ctx.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, p3.x, p3.y)
@@ -86,7 +91,7 @@ export default function FilsVisage({ scene, visage, bulles, chaud, tourne, tacti
         ctx.stroke()
         for (const p of f.particules) {
           const t = positionParticule(p, ms, fixe)
-          const q = pointSurCourbe(f.courbe, t)
+          const q = pointSurCourbe(c, t)
           ctx.globalAlpha = opaciteParticule(t) * (chauffe ? 1 : 0.85)
           ctx.fillStyle = couleurs.particule
           ctx.shadowBlur = (couleurs.nuit ? 10 : 6) * dpr
@@ -109,7 +114,7 @@ export default function FilsVisage({ scene, visage, bulles, chaud, tourne, tacti
     const theme = new MutationObserver(() => { couleurs = lireCouleurs(); dessiner.current(performance.now(), true) })
     theme.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'class'] })
     return () => { window.clearTimeout(delai); observateur?.disconnect(); theme.disconnect(); dessiner.current = () => {} }
-  }, [scene, visage, signature])
+  }, [scene, visage, signature, decalage])
 
   // La boucle : seulement quand la scène est à l'écran, l'onglet visible et le mouvement permis.
   useEffect(() => {
