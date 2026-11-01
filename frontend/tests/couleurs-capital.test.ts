@@ -31,6 +31,8 @@ export const ECRANS: Record<string, string[]> = {
     'src/routes/Company.tsx',
     'src/routes/MemoireConfig.tsx',          // ProfilMemoireEditor : l'éditeur des onglets de Mon entreprise
     'src/components/company/ProfileFreeTextCard.tsx',
+    'src/components/entreprise/CerveauEntreprise.tsx',
+    'src/components/entreprise/CerveauEffets.tsx',
   ],
 }
 

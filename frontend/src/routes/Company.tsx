@@ -2,11 +2,12 @@ import { useForm, useWatch } from 'react-hook-form'
 import { useMutation } from '@tanstack/react-query'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Archive, Award, Building, Save, MapPin } from 'lucide-react'
+import { Archive, Award, Save, MapPin } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { api } from '@/services/api'
 import { ProfilMemoireEditor } from './MemoireConfig'
 import ProfileFreeTextCard from '@/components/company/ProfileFreeTextCard'
+import CerveauEntreprise from '@/components/entreprise/CerveauEntreprise'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input, Textarea } from '@/components/ui/input'
@@ -40,19 +41,14 @@ export default function Company() {
   const [tab, setTab] = useState<TabId>('identite')
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div className="flex items-center gap-3">
-        <Building size={24} className="text-accent-text" aria-hidden />
-        <div>
-          <h1 className="font-display text-h6 text-fg">Mon entreprise</h1>
-          <p className="text-sm text-fg-2">
-            Votre profil vivant — renseigné une fois, réutilisé par chaque mémoire technique
-          </p>
-        </div>
-      </div>
+    <div className="mx-auto max-w-6xl space-y-6">
+      <CerveauEntreprise
+        titre="Mon entreprise"
+        sousTitre="Votre profil vivant, renseigné une fois, réutilisé par chaque mémoire technique"
+      />
 
       {/* Onglets : Identité / Moyens / Certifications (le libellé long passe à la ligne au téléphone) */}
-      <Tabs value={tab} onValueChange={(v) => setTab(v as TabId)}>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as TabId)} className="mx-auto max-w-3xl">
         <TabsList className="flex w-full overflow-visible rounded-xl">
           {TABS.map((t) => (
             <TabsTrigger key={t.id} value={t.id} className="h-auto min-h-9 flex-1 whitespace-normal rounded-lg px-2 py-1.5 text-center leading-tight [@media(pointer:coarse)]:min-h-11">
