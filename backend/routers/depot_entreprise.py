@@ -2,7 +2,10 @@
 
 - GET  /api/entreprise/depots/cases   : les huit cases (nom, ce qu'on y met, ce que Synorix en fait) — source unique ;
 - GET  /api/entreprise/depots/etat    : l'état de chaque case (`?rubrique=`) ;
-- POST /api/entreprise/depots/{case}  : dépôt de un à dix fichiers dans UNE case.
+- POST /api/entreprise/depots/{case}  : dépôt de un à dix fichiers dans UNE case ;
+- GET  /api/entreprise/depots/propositions            : ce que Synorix propose et que le patron n'a pas tranché ;
+- POST /api/entreprise/depots/propositions/valider    : écrit les propositions cochées dans le profil ;
+- POST /api/entreprise/depots/propositions/ecarter    : écarte des propositions.
 
 Un fichier entre au coffre-fort avec sa rubrique et son type de pièce, puis Synorix le lit (tâche détachée) et PROPOSE des
 informations : rien n'entre dans le profil avant validation. Chaque requête est filtrée par l'organisation de
@@ -16,6 +19,7 @@ import logging
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -23,7 +27,7 @@ from models.depot_entreprise import LectureDepot
 from models.document import Document
 from models.user import User
 from routers.auth import get_auth_user
-from services import depot_cases, depot_controles, depot_extraction, upload_validation
+from services import depot_cases, depot_controles, depot_extraction, depot_validation, upload_validation
 from services.audit_logger import log_action
 from services.depot_etat import etats
 from services.file_storage import FileStorage
@@ -167,3 +171,50 @@ async def deposer(
                 db.commit()
 
     return {"case": case.id, "resultats": resultats}
+
+
+# ── Propositions : lister, valider, écarter ─────────────────────────────────
+
+class _Choix(BaseModel):
+    ids: List[str] = Field(default_factory=list, max_length=300)
+    # Les lectures affichées : ce qui n'y est pas coché est écarté (rien de coché = tout écarter).
+    lecture_ids: List[str] = Field(default_factory=list, max_length=50)
+
+
+@router.get("/propositions")
+def lister_les_propositions(
+    rubrique: Optional[str] = Query(None),
+    user: User = Depends(get_auth_user), db: Session = Depends(get_db),
+):
+    """Ce que Synorix PROPOSE et que le patron n'a pas encore tranché (« Voici ce que j'ai compris »)."""
+    if rubrique is not None and rubrique not in depot_cases.RUBRIQUES:
+        raise HTTPException(status_code=422, detail="Rubrique inconnue.")
+    return {"propositions": depot_validation.a_valider(db, user.organization_id, rubrique)}
+
+
+@router.post("/propositions/valider")
+def valider_les_propositions(
+    choix: _Choix, user: User = Depends(get_auth_user), db: Session = Depends(get_db),
+):
+    """Écrit dans le profil les propositions cochées (mêmes règles que les formulaires) ; écarte les autres de la même
+    lecture. Une proposition d'une autre entreprise est introuvable (404), et rien n'est écrit."""
+    try:
+        bilan = depot_validation.valider(db, user.organization_id, choix.ids, choix.lecture_ids)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Proposition introuvable.")
+    log_action(db, user, "depot.validate", target_type="organization", target_id=user.organization_id,
+               extra={"validees": bilan["validees"], "ecartees": bilan["ecartees"], "rubriques": bilan["rubriques"]})
+    return bilan
+
+
+@router.post("/propositions/ecarter")
+def ecarter_les_propositions(
+    choix: _Choix, user: User = Depends(get_auth_user), db: Session = Depends(get_db),
+):
+    try:
+        bilan = depot_validation.ecarter(db, user.organization_id, choix.ids)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Proposition introuvable.")
+    log_action(db, user, "depot.reject", target_type="organization", target_id=user.organization_id,
+               extra={"ecartees": bilan["ecartees"]})
+    return bilan
