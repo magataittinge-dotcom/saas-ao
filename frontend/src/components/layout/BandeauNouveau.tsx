@@ -2,9 +2,12 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { X } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { useAuthStore } from '@/stores/authStore'
+import { organisationAssezAncienne } from '@/lib/bandeauNouveau'
 
 // Bandeau « Nouveau » : une nouveauté à la fois, fermable ; la fermeture est mémorisée par identifiant
 // dans ce navigateur (une nouvelle nouveauté a un nouvel identifiant et revient). Texte sobre, sans point d'exclamation.
+// Caché la première semaine de l'organisation (lib/bandeauNouveau.ts), et tant que l'organisation n'est pas chargée.
 const NOUVEAUTE = {
   id: 'source-surlignee-2026-10',
   texte: 'Chaque exigence s’ouvre sur sa source : le passage du dossier de l’acheteur est surligné dans la pièce.',
@@ -17,8 +20,14 @@ function dejaFerme(): boolean {
 }
 
 export default function BandeauNouveau() {
+  const organisation = useAuthStore((s) => s.organization)
+  return <BandeauSelonAge organisation={organisation} />
+}
+
+/** Le bandeau lui-même ; `organisation` à null tant qu'elle n'est pas chargée (rien n'est montré). */
+export function BandeauSelonAge({ organisation }: { organisation: { created_at?: string } | null }) {
   const [ferme, setFerme] = useState(dejaFerme)
-  if (ferme) return null
+  if (ferme || organisation === null || organisationAssezAncienne(organisation.created_at) === false) return null
   const fermer = () => {
     setFerme(true)
     try { localStorage.setItem(CLE, 'ferme') } catch { /* stockage indisponible : le bandeau reviendra */ }
