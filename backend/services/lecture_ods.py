@@ -17,6 +17,8 @@ from typing import Iterator, Tuple
 
 _MAX_COLONNES = 64        # colonnes lues par ligne
 _MAX_LIGNES_ODS = 20_000  # lignes lues par onglet
+_MAX_CARACTERES_ODS = 50_000_000   # texte développé par fichier (lignes et colonnes répétées comprises)
+_MAX_CARACTERES_CELLULE = 10_000   # texte gardé par cellule (revue de sécurité D1 : une cellule de plusieurs Mo)
 
 _ODS_T = "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}"
 _ODS_O = "{urn:oasis:names:tc:opendocument:xmlns:office:1.0}"
@@ -39,7 +41,8 @@ def texte_cellule(valeur) -> str:
 
 
 def onglets_ods(chemin, lignes_vides_exactes: bool = False,
-                formules_sans_valeur: "list | None" = None) -> Iterator[Tuple[str, Iterator[list]]]:
+                formules_sans_valeur: "list | None" = None,
+                lignes_repetees: bool = True) -> Iterator[Tuple[str, Iterator[list]]]:
     """(nom de l'onglet, lignes de valeurs) d'un .ods, lus dans content.xml.
 
     Valeur d'une cellule : nombre (office:value) ou texte de ses paragraphes.
@@ -51,9 +54,13 @@ def onglets_ods(chemin, lignes_vides_exactes: bool = False,
 
     ``formules_sans_valeur`` : liste à laquelle on ajoute un élément par cellule à formule dont le
     fichier n'a pas enregistré la valeur calculée (tableur jamais recalculé, D2). La cellule est
-    lue vide : jamais la formule."""
+    lue vide : jamais la formule.
+
+    ``lignes_repetees`` : faux, une ligne répétée n fois n'est donnée qu'une fois (le texte envoyé à
+    l'analyse : quelques octets de XML ne deviennent pas des millions de lignes)."""
     from lxml import etree
 
+    developpe = 0     # caractères produits, répétitions comprises
     with zipfile.ZipFile(chemin) as archive, archive.open("content.xml") as flux:
         nom, lignes = None, []
         for evenement, el in etree.iterparse(
@@ -71,10 +78,16 @@ def onglets_ods(chemin, lignes_vides_exactes: bool = False,
                 continue
             valeurs = _ligne_ods(el, formules_sans_valeur)
             place = _MAX_LIGNES_ODS - len(lignes)
+            if developpe > _MAX_CARACTERES_ODS:
+                place = 0       # budget de texte épuisé : le reste du fichier n'est plus lu
             if place > 0:
                 if any(v not in (None, "") for v in valeurs):
                     repetitions = _entier(el.get(_ODS_T + "number-rows-repeated"))
-                    lignes.extend([valeurs] * min(repetitions, place))
+                    copies = min(repetitions if lignes_repetees else 1, place)
+                    poids = max(sum(len(v) for v in valeurs if isinstance(v, str)), 1)
+                    copies = max(min(copies, (_MAX_CARACTERES_ODS - developpe) // poids), 1)
+                    developpe += copies * poids
+                    lignes.extend([valeurs] * copies)
                 elif lignes_vides_exactes:
                     lignes.extend([[]] * min(_entier(el.get(_ODS_T + "number-rows-repeated")), place))
                 else:
@@ -98,6 +111,8 @@ def _ligne_ods(ligne, formules_sans_valeur: "list | None" = None) -> list:
                 valeur = None
         if valeur is None:
             valeur = "\n".join("".join(p.itertext()) for p in cellule.iter(_ODS_P)) or None
+            if valeur is not None and len(valeur) > _MAX_CARACTERES_CELLULE:
+                valeur = valeur[:_MAX_CARACTERES_CELLULE]
         if (valeur is None and formules_sans_valeur is not None
                 and cellule.get(_ODS_T + "formula") and cellule.get(_ODS_O + "value-type") is None):
             formules_sans_valeur.append(1)

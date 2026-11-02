@@ -36,6 +36,9 @@ _WARN_TABLEUR_ILLISIBLE = (
     "ouvrez-le dans votre tableur, enregistrez-le au format .xlsx puis redéposez-le"
 )
 _EXTENSIONS_TABLEUR = (".xlsx", ".xlsm", ".xls", ".ods")
+# Texte d'un .ods envoyé à l'analyse, tous onglets confondus (revue de sécurité D1) : une DPGF de
+# 20 000 lignes pèse ≈ 2 Mo de texte ; au-delà, la lecture s'arrête et le dépôt le dit.
+_MAX_CARACTERES_TABLEUR = 5_000_000
 _WARN_DOC = (
     "Format .doc (ancien Word) non pris en charge — texte non extrait : "
     "convertissez ce fichier en PDF ou DOCX"
@@ -207,15 +210,23 @@ class DocumentProcessor:
         fichier = io.BytesIO(content) if isinstance(content, (bytes, bytearray)) else str(content)
         lines: List[str] = []
         coupe = False
+        trop_long = False
+        total = 0
         sans_valeur: list = []
-        for _nom, rangees in onglets_ods(fichier, formules_sans_valeur=sans_valeur):
+        for _nom, rangees in onglets_ods(fichier, formules_sans_valeur=sans_valeur, lignes_repetees=False):
             lues = 0
             for row in rangees:
                 lues += 1
                 row_text = "\t".join(texte_cellule(c) for c in row if c not in (None, ""))
                 if row_text.strip():
                     lines.append(row_text)
+                    total += len(row_text) + 1
+                    if total >= _MAX_CARACTERES_TABLEUR:
+                        trop_long = True
+                        break
             coupe = coupe or lues >= _MAX_LIGNES_ODS
+            if trop_long:
+                break
         avertissements = []
         if sans_valeur:
             avertissements.append(avertissement_formules(len(sans_valeur)))
@@ -223,6 +234,10 @@ class DocumentProcessor:
             avertissements.append(
                 f"Tableur très long : les {_MAX_LIGNES_ODS:,} premières lignes de chaque feuille sont lues"
                 .replace(",", " "))
+        if trop_long:
+            avertissements.append(
+                f"Tableur très volumineux : les {_MAX_CARACTERES_TABLEUR // 1_000_000} premiers millions "
+                "de caractères sont lus")
         return "\n".join(lines), (" — ".join(avertissements) or None)
 
     def _extract_xlsx(self, content: Source) -> Tuple[str, Optional[str]]:
