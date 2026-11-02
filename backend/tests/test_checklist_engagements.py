@@ -24,7 +24,7 @@ PIECES = [
     "Joindre les CV des chefs d'équipe affectés au chantier",
     "Produire un certificat de bonne exécution signé par le maître d'ouvrage",
     "Remettre la liste des sous-traitants envisagés avec leurs coordonnées",
-    "Adresser la déclaration de détachement à l'inspection du travail",
+    "Joindre le plan d'installation de chantier proposé par l'entreprise",
 ]
 
 
@@ -48,3 +48,22 @@ def test_le_decompte_ne_garde_que_les_pieces_et_rien_n_est_perdu():
     assert len(plan.lines) == len(PIECES)
     assert len(plan.excluded) == len(ENGAGEMENTS)          # loggés, jamais perdus
     assert len(plan.lines) + len(plan.excluded) == len(rows)
+
+
+# ── V2 : obligations d'exécution (phrases inventées) ──
+EXECUTION = [
+    "Produire tous les six mois les justificatifs relatifs aux obligations sociales du titulaire",
+    "Adresser préalablement une déclaration de détachement à l'inspection du travail",
+    "Fournir la caution demandée pour tout sous-traitant de second rang dans les huit jours",
+]
+
+
+@pytest.mark.parametrize("texte", EXECUTION)
+def test_une_obligation_d_execution_n_est_pas_une_piece_de_l_offre(texte):
+    c = classify_requirement(texte)
+    assert c.excluded and "exécution" in c.exclude_reason, texte
+
+
+def test_une_piece_du_coffre_demandee_tous_les_six_mois_reste_une_piece():
+    c = classify_requirement("Fournir tous les six mois l'attestation de vigilance URSSAF")
+    assert not c.excluded and c.canonical_type == "urssaf"

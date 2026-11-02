@@ -167,6 +167,13 @@ _RULES: list[tuple[str, str, str, list[str]]] = [
         "equipement technique", "équipement technique", "moyens materiels", "moyens matériels",
         "mode operatoire", "mode opératoire", "methodologie d'execution", "méthodologie d'exécution",
     ]),
+    # V2 — obligations qui naissent pendant l'exécution du marché ou à l'agrément d'un sous-traitant : pas des
+    # pièces de l'offre. Après les pièces du coffre : « tous les six mois, l'attestation URSSAF » reste une pièce.
+    ("exclude", "obligation_execution", "Obligation d'exécution du marché (pas une pièce à joindre à l'offre)", [
+        "tous les 6 mois", "tous les six mois", "jusqu'a la fin du marche", "jusqu'a la fin de l'execution",
+        "sous-traitant de second rang", "sous-traitants de second rang", "sous-traitant de rang 2",
+        "sous-traitants de rang 2", "detachant des salaries", "declaration de detachement",
+    ]),
     ("exclude", "execution_doc", "Document d'exécution (PAQ / PPSPS / SOGED)", [
         "plan d'assurance qualite", "plan d'assurance qualité", "(paq)", " paq ",
         "ppsps", "soged", "plan de retrait",
