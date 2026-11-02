@@ -161,3 +161,39 @@ def test_a_couvrir_propose_la_partie_la_plus_proche_par_theme_sinon_c():
     assert par_nom["Gestion et valorisation des déchets"] == "partie_b"
     assert par_nom["Moyens humains"] in ("partie_a", "partie_c")
     assert par_nom["Zorglub quantique"] == "partie_c"
+
+
+# Défaut vu sur le dossier réel (mesure du 2/11) : puces « ◼ » (pas dans la liste des puces), éléments sur plusieurs lignes, et
+# phrase d'annonce coupée par des retours à la ligne. Texte inventé, même forme.
+TEXTE_PUCES_CARRES = (
+    "Pièce n° 3 — Mémoire technique\nCe document est remis par le candidat.\nLe mémoire\ncomprend :\n"
+    "◼ la présentation de l'entreprise et de son\nencadrement,\n◼ les moyens humains et\nmatériels affectés au chantier,\n"
+    "◼ la méthodologie d'exécution des travaux.\nArticle 7. Jugement des offres."
+)
+
+
+def test_parties_annoncees_avec_puces_carrees_et_phrase_sur_plusieurs_lignes():
+    att = pm.extraire_parties_attendues([{"texte": TEXTE_PUCES_CARRES, "source": {"document": "RC.pdf", "page": None}}])
+    assert [a["libelle"] for a in att] == [
+        "La présentation de l'entreprise et de son encadrement", "Les moyens humains et matériels affectés au chantier",
+        "La méthodologie d'exécution des travaux"]
+
+
+@pytest.mark.parametrize("puce", ["◼", "■", "▪", "●", "➢", "", "", "–", "•"])
+def test_toutes_les_puces_usuelles_des_pdf(puce):
+    t = f"Le mémoire technique comprend :\n{puce} un planning détaillé ;\n{puce} la liste du matériel.\nSuite."
+    assert [a["libelle"] for a in pm.extraire_parties_attendues([{"texte": t, "source": {}}])] == ["Un planning détaillé", "La liste du matériel"]
+
+
+def test_le_dernier_element_ne_avale_pas_le_paragraphe_suivant():
+    t = ("Le mémoire technique comprend :\n- le planning détaillé,\n- la liste du matériel affecté au chantier. "
+         "Les candidats veillent à respecter les prescriptions ci-dessus, qui sont rappelées dans tout le document remis.")
+    assert [a["libelle"] for a in pm.extraire_parties_attendues([{"texte": t, "source": {}}])] == ["Le planning détaillé", "La liste du matériel affecté au chantier"]
+
+
+def test_un_element_tres_long_est_coupe_a_la_fin_d_un_mot():
+    long = "un descriptif détaillé des " + "moyens humains et matériels spécifiques " * 6
+    att = pm.extraire_parties_attendues([{"texte": f"Le mémoire technique comprend :\n- {long.strip()},\n- le planning.\nSuite.", "source": {}}])
+    titre = att[0]["libelle"]
+    assert len(titre) <= pm.MAX_TITRE and titre.endswith("…") and not titre[:-1].endswith(" ")
+    assert titre[:-1].split(" ")[-1] in ("humains", "et", "matériels", "spécifiques", "des", "moyens")     # mot entier

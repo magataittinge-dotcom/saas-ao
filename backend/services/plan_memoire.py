@@ -70,28 +70,36 @@ def _fond(texte: str) -> str:
     return (texte or "").translate(table)
 
 
-_OBJET = r"(?:memoire\s+technique|note\s+methodologique|offre\s+technique|note\s+technique)"
+_OBJET = r"(?:memoire(?:\s+(?:technique|justificatif))?|note\s+methodologique|offre\s+technique|note\s+technique)"
 _VERBE = (r"(?:comprendra|comportera|contiendra|comprend|comporte|contient|devra\s+(?:comprendre|comporter|contenir|"
           r"presenter|traiter)|doit\s+(?:comprendre|comporter|contenir|presenter|traiter)|sera\s+compose|"
           r"presentera|traitera|developpera)")
-_DECLENCHEUR = re.compile(_OBJET + r"[^.:;\n]{0,80}?\b" + _VERBE + r"[^:\n]{0,60}:")
-_PUCE = re.compile(r"(?:^|\n)\s*(?:[-–—•·*▪►]|\(?[a-z]\)|\(?\d{1,2}[.)]|\d{1,2}°)\s+")
+# Puces des listes d'un règlement (lues dans les PDF : tirets, ronds, carrés, flèches, symboles Wingdings en zone privée).
+_PUCES = "-–—•·*▪►◼■□●○◦➢➤✓✔\uf0b7\uf0a7\uf0d8\uf0fc\uf076"
+# L'annonce peut tenir sur plusieurs lignes (« Le mémoire\ncomprend : ») : seuls . : ; coupent la phrase.
+_DECLENCHEUR = re.compile(_OBJET + r"[^.:;]{0,120}?\b" + _VERBE + r"[^:]{0,60}:")
+_COUPE_DE_PHRASE = re.compile(r"\.\s+(?=[A-ZÀ-Ý0-9])")
 _MAX_ZONE = 900
 
 
 def _libelle(brut: str) -> str:
-    t = re.sub(r"\s+", " ", brut).strip(" \t\n-–—•·*;,.:")
+    t = _COUPE_DE_PHRASE.split(brut, maxsplit=1)[0]       # le dernier élément s'arrête à la fin de sa phrase
+    t = re.sub(r"\s+", " ", t).strip(f" \t\n{_PUCES};,.:")
     t = re.sub(r"^\(?[A-Za-z]\)\s+", "", t)          # « b) la liste » : la lettre de l'énumération n'est pas le titre
     t = re.sub(r"^(?:et|ou)\s+", "", t)
     if not t:
         return ""
-    return (t[0].upper() + t[1:])[:MAX_TITRE]
+    t = t[0].upper() + t[1:]
+    if len(t) > MAX_TITRE:                                  # jamais coupé au milieu d'un mot
+        t = t[: MAX_TITRE - 1].rsplit(" ", 1)[0].rstrip(" ,;:-–") + "…"
+    return t
 
 
 def _elements_de_la_liste(zone: str) -> list[str]:
-    """Éléments d'une énumération : puces / lettres / numéros en début de ligne ou dans la phrase, sinon `;`."""
+    """Éléments d'une énumération : puces / numéros en début de ligne (un élément peut tenir sur plusieurs lignes), lettres
+    ou « ; » dans la phrase."""
     zone = zone.split("\n\n")[0]
-    lignes = re.split(r"(?:^|\n)\s*(?:[-–—•·*▪►]|\(?\d{1,2}[.)]|\d{1,2}°)\s+", zone)
+    lignes = re.split(rf"(?:^|\n)[ \t]*(?:[{re.escape(_PUCES)}]|\(?\d{{1,2}}[.)]|\d{{1,2}}°)[ \t]*", zone)
     morceaux: list[str] = []
     for ligne in lignes:
         morceaux.extend(re.split(r"\s*;\s*|\s+\(?[a-z]\)\s+|^\(?[a-z]\)\s+", ligne))
