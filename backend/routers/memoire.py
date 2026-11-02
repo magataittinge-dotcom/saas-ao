@@ -538,6 +538,22 @@ def definir_etat_section(
 
 
 REFAIRE_DETAIL = "refaire:"   # processing_detail pendant un « Refaire » : l'écran sait de quoi parle l'attente
+# Plafond de dépense : « Refaire » est un appel payant (~0,30 €) qui ne décompte pas d'unité. Compté par
+# organisation sur 24 heures glissantes, au DÉPART de chaque demande (ligne d'audit « memoire.refaire_section »).
+REFAIRE_MAX_PAR_JOUR = 10
+ACTION_REFAIRE = "memoire.refaire_section"
+MSG_REFAIRE_PLAFOND = (f"Vous avez refait {REFAIRE_MAX_PAR_JOUR} parties dans les dernières 24 heures : "
+                       "c'est le plafond du jour. Vous pourrez en refaire d'autres demain.")
+
+
+def _refaire_des_dernieres_24h(db: Session, org_id: str) -> int:
+    from datetime import timedelta
+    from models.audit_log import AuditLog
+    depuis = datetime.utcnow() - timedelta(hours=24)
+    return (db.query(AuditLog)
+            .filter(AuditLog.organization_id == org_id, AuditLog.action == ACTION_REFAIRE,
+                    AuditLog.created_at >= depuis)
+            .count())
 
 
 @router.get("/{project_id}/memoire/sections/{part}/{cle}/refaire/estimation")
@@ -581,6 +597,8 @@ async def refaire_section_memoire(
     memoire = db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project_id).first()
     if not memoire:
         raise HTTPException(status_code=409, detail="Aucun mémoire à retoucher : générez d'abord le mémoire.")
+    if _refaire_des_dernieres_24h(db, user.organization_id) >= REFAIRE_MAX_PAR_JOUR:
+        raise HTTPException(status_code=429, detail=MSG_REFAIRE_PLAFOND)
 
     # Même réservation atomique que la génération : deux Refaire (ou un Refaire pendant une génération) ne
     # peuvent pas courir ensemble sur le même mémoire.
@@ -606,6 +624,9 @@ async def refaire_section_memoire(
             detail="Service IA momentanément indisponible — réessayez dans quelques minutes.",
         )
     db.commit()
+    # Comptée dès le départ (plafond ci-dessus), même si l'appel échoue ensuite.
+    log_action(db, user, ACTION_REFAIRE, target_type="project", target_id=project_id,
+               extra={"part": part, "cle": cle})
 
     pipeline_tracker.start_pipeline(project_id, "memoire")
     pipeline_tracker.start_step(project_id, "preparing")
@@ -667,13 +688,6 @@ def _run_refaire_job(project_id: str, org_id: str, user_id: str, part: str, cle:
         project.processing_detail = ""
         db.commit()
         pipeline_tracker.complete_pipeline(project_id)
-
-        job_user = db.query(User).filter(User.id == user_id).first()
-        if job_user is not None:
-            log_action(
-                db, job_user, "memoire.refaire_section",
-                target_type="project", target_id=project_id, extra={"part": part, "cle": cle},
-            )
     except Exception as e:
         logger.error("Erreur « Refaire cette partie » projet %s (%s.%s): %s", project_id, part, cle, e, exc_info=True)
         db.rollback()

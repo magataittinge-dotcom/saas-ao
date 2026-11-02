@@ -322,3 +322,47 @@ def test_les_tarifs_sont_ranges_a_un_seul_endroit():
     for modele, (entree, sortie) in mod.TARIFS.items():
         if modele in couts_ia.TARIFS:
             assert couts_ia.TARIFS[modele][:2] == (entree, sortie), modele
+
+
+# ── Plafond de dépense : « Refaire » est un appel payant sans décompte d'unité ──
+
+def test_refaire_plafonne_par_organisation_sur_24_heures(client, db_session, test_org, monkeypatch):
+    """Revue de sécurité du 2/11 : sans plafond, 3 par minute suffisaient à enchaîner des appels payants."""
+    from datetime import datetime, timedelta
+    from models.audit_log import AuditLog
+    import routers.memoire as memoire_mod
+    _projet(db_session, test_org.id)
+    appels = _faux_refaire(monkeypatch)
+    for i in range(memoire_mod.REFAIRE_MAX_PAR_JOUR):
+        db_session.add(AuditLog(organization_id=test_org.id, action="memoire.refaire_section",
+                                target_type="project", target_id=f"autre-{i}",
+                                created_at=datetime.utcnow() - timedelta(hours=1)))
+    # une demande de plus de 24 heures ne compte plus
+    db_session.add(AuditLog(organization_id=test_org.id, action="memoire.refaire_section",
+                            target_type="project", target_id="vieux", created_at=datetime.utcnow() - timedelta(hours=25)))
+    db_session.commit()
+    r = client.post(CHEMIN + "/refaire")
+    assert r.status_code == 429
+    assert "demain" in r.json()["detail"] and "!" not in r.json()["detail"]
+    assert appels == []
+    db_session.expire_all()
+    assert db_session.get(Project, PID).processing_status == "ready"
+
+
+def test_la_demande_compte_des_le_depart(client, db_session, test_org, monkeypatch):
+    """La ligne est écrite au départ, pas à la fin : des Refaire lancés en parallèle sur plusieurs projets
+    sont tous comptés."""
+    from models.audit_log import AuditLog
+    _projet(db_session, test_org.id)
+    libre = threading.Event()
+    _faux_refaire(monkeypatch, attente=libre)
+    assert client.post(CHEMIN + "/refaire").status_code == 200
+    db_session.expire_all()
+    n = db_session.query(AuditLog).filter(AuditLog.organization_id == test_org.id,
+                                          AuditLog.action == "memoire.refaire_section").count()
+    libre.set()
+    _joindre()
+    assert n == 1
+    db_session.expire_all()
+    assert db_session.query(AuditLog).filter(AuditLog.organization_id == test_org.id,
+                                             AuditLog.action == "memoire.refaire_section").count() == 1
