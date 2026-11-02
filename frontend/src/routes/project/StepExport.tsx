@@ -730,7 +730,7 @@ export default function StepExport({ project }: Props) {
                           parcourir
                           <input
                             type="file"
-                            accept=".xlsx,.xls,.ods,.pdf"
+                            accept=".xlsx,.xls,.xlsm,.ods,.pdf"
                             className="hidden"
                             onChange={(e) => {
                               const f = e.target.files?.[0]

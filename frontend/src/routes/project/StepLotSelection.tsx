@@ -170,9 +170,16 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) 
 
   return (
     <div className="group relative">
-      <button
-        type="button"
+      {/* Une div à rôle « button » et non un vrai bouton : la carte contient « Renommer ». Un bouton dans un bouton
+          est du HTML invalide (clavier et lecteurs d'écran peu fiables, R7). */}
+      <div
+        role="button"
+        tabIndex={0}
+        aria-pressed={selected}
         onClick={onSelect}
+        onKeyDown={(e) => {
+          if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onSelect() }
+        }}
         className={cn(
           'w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-left transition-all duration-200 cursor-pointer',
           selected ? '' : 'bg-ds-bg-3 hover:bg-ds-bg-elevated',
@@ -315,7 +322,7 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) 
           <ConfidenceWarning confidence={lot.confidence} />
           <SourcesIndicator sources={lot.sources} />
         </div>
-      </button>
+      </div>
 
       {/* Delete */}
       {onDelete && (

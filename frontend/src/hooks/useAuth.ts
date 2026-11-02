@@ -41,7 +41,8 @@ export function useLogout() {
 
   return async () => {
     logout()
-    await signOut()
+    // Clerk recharge la page vers son adresse de sortie (par défaut « / ») : on lui donne /login (C12).
+    await signOut({ redirectUrl: '/login' })
     navigate('/login')
   }
 }

@@ -10,7 +10,7 @@ import pytest
 from models.organization import Organization
 from models.user import User
 from services.raison_sociale import (
-    noms_du_compte, organisation_publique, raison_sociale_de, raison_sociale_effective,
+    noms_du_compte, nom_entreprise_effectif, organisation_publique, raison_sociale_de, raison_sociale_effective,
 )
 
 
@@ -193,3 +193,16 @@ def test_company_block_sans_nom_et_consigne_notre_entreprise(monkeypatch):
     texte = json.dumps(appels["kwargs"], ensure_ascii=False)
     assert "Bâti Façade SARL" in texte
     assert "jamais de crochets" not in texte
+
+
+# ── Le nom saisi dans le profil du mémoire prime, comme à la génération ───────
+
+def test_nom_entreprise_effectif_profil_du_memoire_prime(db_session):
+    from models.memoire_config import MemoireConfig
+
+    org = _org_et_compte(db_session, nom="maga.taittinge", org_id="org-cfg")
+    assert nom_entreprise_effectif(org, db_session) == ""
+    db_session.add(MemoireConfig(organization_id="org-cfg", nom_entreprise="  Bâti Façade SARL "))
+    db_session.commit()
+    assert nom_entreprise_effectif(org, db_session) == "Bâti Façade SARL"
+    assert raison_sociale_de(org, db_session) == ""      # la règle sur l'organisation seule n'a pas changé

@@ -32,7 +32,9 @@ logger = logging.getLogger(__name__)
 
 UPLOADS_ROOT = Path(__file__).parent.parent / "uploads"
 
-_COMPLETED_ALLOWED_EXTENSIONS = frozenset({".pdf", ".docx", ".xlsx", ".xls"})
+# .xlsm et .ods : lus par le serveur depuis 4152bc1 (tableur OpenDocument et classeur à macros) ; le contenu réel est
+# contrôlé comme pour .xlsx (archive ZIP, upload_validation).
+_COMPLETED_ALLOWED_EXTENSIONS = frozenset({".pdf", ".docx", ".xlsx", ".xlsm", ".xls", ".ods"})
 # B8 — ordre de grandeur : une trame remplie et signée (DC1, DC2, AE, DPGF) est
 # souvent un scan PDF de 10 à 20 pages, jusqu'à 20-30 Mo en couleur à 300 dpi :
 # 50 Mo (plafond inchangé, désormais appliqué avant toute lecture).
@@ -170,7 +172,7 @@ async def upload_completed_template(
     if not safe_name or ".." in safe_name:
         raise HTTPException(status_code=400, detail="Nom de fichier invalide.")
 
-    regle = RegleDepot(_COMPLETED_ALLOWED_EXTENSIONS, _COMPLETED_MAX_SIZE, "PDF, DOCX, XLSX ou XLS")
+    regle = RegleDepot(_COMPLETED_ALLOWED_EXTENSIONS, _COMPLETED_MAX_SIZE, "PDF, DOCX, XLSX, XLSM, XLS ou ODS")
     with await recevoir_fichier(request, file, regle) as recu:
         ext = recu.extension
         file_size = recu.taille

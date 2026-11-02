@@ -251,7 +251,7 @@ function TemplateRow({
         <input
           ref={fileRef}
           type="file"
-          accept=".pdf,.docx,.xlsx,.xls"
+          accept=".pdf,.docx,.xlsx,.xlsm,.xls,.ods"
           onChange={handleFile}
           className="hidden"
         />

@@ -84,3 +84,12 @@ test('l’écran Export cite la même phrase de source et le même « Déposé l
   const code = lire('src/routes/project/StepExport.tsx')
   assert.ok(code.includes('noteDepot(item)') && code.includes('phraseSourceSignature(item)'))
 })
+
+// R19 — la phrase cite le document réellement lu : « le règlement de la consultation » seulement si la source est le RC.
+test('phraseSourceSignature : le document cité n’est pas toujours le RC', () => {
+  const item = ligne({ document_type_required: 'dume', signature_required: true, source_document: '2829 – Acte d’engagement.pdf', source_page: 18, source_article: 'Article 3 — Mode de règlement' })
+  assert.equal(phraseSourceSignature(item),
+    'Le dossier de consultation demande une signature. Source : 2829 – Acte d’engagement.pdf — Article 3 — Mode de règlement, page 18')
+  const rc = ligne({ document_type_required: 'dume', signature_required: true, source_document: 'Règlement de consultation.pdf', source_page: 4 })
+  assert.match(phraseSourceSignature(rc) ?? '', /^Le règlement de la consultation demande une signature\./)
+})

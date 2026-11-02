@@ -26,7 +26,7 @@ from models.checklist_item import ChecklistItem
 from models.memoire import MemoireTechnique
 from services.chrono import chronometre, lot_du_projet
 from services.docx_exporter import compter_passages_a_completer
-from services.raison_sociale import raison_sociale_de
+from services.raison_sociale import nom_entreprise_effectif
 from schemas.export import ExportSummary, ExportDetail, ComplianceExportItem, ChecklistExportItem, MemoireExportInfo, DpgfExportInfo, PieceZipExport, ProjectDocumentExportItem
 from routers.auth import get_auth_user
 from services.file_storage import FileStorage
@@ -162,7 +162,7 @@ def get_export_detail(
             sections_count=sections,
             estimated_pages=estimated_pages,
             passages_a_completer=compter_passages_a_completer(
-                cj, raison_sociale_vide=not raison_sociale_de(org_obj, db)),
+                cj, raison_sociale_vide=not nom_entreprise_effectif(org_obj, db)),
         )
 
     # DPGF info
@@ -472,7 +472,7 @@ def _plan_du_zip(db: Session, project, org_id: str, *, checklist_items, project_
     from services.vault_classifier import effective_expiry_date, is_document_expired
 
     org = db.query(Organization).filter(Organization.id == org_id).first()
-    org_name = (raison_sociale_de(org, db) if org else "") or "Entreprise"
+    org_name = (nom_entreprise_effectif(org, db) if org else "") or "Entreprise"
     # C13b — convention de nommage du RC ; inutile quand seul le CONTENU du
     # plan compte (écran Vérification : nommer=False, le texte du RC n'est pas lu).
     rc_doc = next(

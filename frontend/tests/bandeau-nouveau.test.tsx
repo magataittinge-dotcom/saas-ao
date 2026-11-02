@@ -45,3 +45,11 @@ test('le bandeau de la mise en page lit l\'organisation du compte connecté', ()
   const code = sansCommentaires(lire('src/components/layout/BandeauNouveau.tsx'))
   assert.match(code, /useAuthStore\(\(s\) => s\.organization\)/)
 })
+
+// C13 — à 390 px le texte du bandeau est lu en entier (il revient à la ligne) ; seul l'écran large le tronque sur une ligne.
+test('bandeau : pas de troncature sous 768 px', async () => {
+  const src = sansCommentaires(lire('src/components/layout/BandeauNouveau.tsx'))
+  assert.doesNotMatch(src, /line-clamp/)
+  assert.match(src, /min-\[769px\]:truncate/)
+  assert.doesNotMatch(src, /\btruncate\b(?<!min-\[769px\]:truncate)/)
+})

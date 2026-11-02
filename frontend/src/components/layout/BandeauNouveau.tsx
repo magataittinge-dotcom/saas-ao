@@ -35,7 +35,7 @@ export function BandeauSelonAge({ organisation }: { organisation: { created_at?:
   return (
     <div role="region" aria-label="Nouveauté" className="flex shrink-0 items-center gap-3 border-b border-bord bg-accent-tint px-3 py-1.5 text-sm text-fg sm:px-6">
       <Badge variant="accent" className="shrink-0">Nouveau</Badge>
-      <p className="min-w-0 flex-1 truncate max-[768px]:line-clamp-2 max-[768px]:whitespace-normal max-[768px]:text-[13px] max-[768px]:leading-snug">
+      <p className="min-w-0 flex-1 min-[769px]:truncate max-[768px]:text-[13px] max-[768px]:leading-snug">
         {NOUVEAUTE.texte}{' '}
         <Link to={NOUVEAUTE.lien.to} className="font-medium text-accent-text underline-offset-2 hover:underline max-[768px]:hidden">{NOUVEAUTE.lien.libelle}</Link>
       </p>
