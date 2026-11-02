@@ -345,7 +345,7 @@ class DCEAnalyzer:
         # ── Pass 1: RC + CCAP (administrative) — chunké si volumineux ────────
         result1 = await asyncio.to_thread(
             self._run_pass_chunked, pass1_text, DCE_PASS1_SYSTEM, "passe1-admin",
-            skills_ref, project_id, lot_header, "Analyse administrative",
+            skills_ref, project_id, lot_header, "Lecture des pièces administratives",
         )
 
         # Notify caller that pass 1 is done (for progress tracking +
@@ -363,7 +363,7 @@ class DCEAnalyzer:
         if pass2_text:
             result2 = await asyncio.to_thread(
                 self._run_pass_chunked, pass2_text, DCE_PASS2_SYSTEM, "passe2-technique",
-                skills_ref, project_id, lot_header, "Analyse technique",
+                skills_ref, project_id, lot_header, "Lecture des pièces techniques",
             )
 
         # ── Merge results ────────────────────────────────────────────────────
@@ -427,9 +427,10 @@ class DCEAnalyzer:
 
         # ── Barre HONNÊTE par tranche : chaque tranche streame son ratio ;
         # le % du step = moyenne des ratios (monotone, proportionnel au
-        # volume réel). Le libellé suit : « Analyse administrative — partie
-        # 2/5 ». Sans ça, la barre restait figée pendant chaque tranche
-        # longue puis sautait d'un bloc.
+        # volume réel). Le libellé reste une phrase de patron (« Lecture des
+        # pièces administratives »), sans compteur de tranches (R10). Sans ça,
+        # la barre restait figée pendant chaque tranche longue puis sautait
+        # d'un bloc.
         import threading as _threading
         ratios: dict[int, float] = {}
         ratios_lock = _threading.Lock()
@@ -441,11 +442,9 @@ class DCEAnalyzer:
                 with ratios_lock:
                     ratios[idx] = ratio
                     total = sum(ratios.values()) / n
-                    done = sum(1 for r in ratios.values() if r >= 0.99)
                 _safe_update_progress(
                     project_id, min(total, 0.99),
-                    detail=(f"{detail_label} — partie {min(done + 1, n)}/{n}"
-                            if n > 1 else detail_label),
+                    detail=detail_label,
                 )
             return cb
 

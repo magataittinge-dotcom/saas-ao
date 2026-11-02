@@ -134,18 +134,22 @@ export function VueDocumentPdf({
   )
 }
 
-/** Quand il n'y a rien à montrer à l'écran : un texte positif et le lien vers la pièce. */
-export function VueSansPage({ reponse, lien, children }: { reponse: ReponseSource; lien: ReactNode; children?: ReactNode }) {
+/** Quand il n'y a rien à montrer à l'écran : un texte positif et le lien vers la pièce.
+ *  Pour un champ du résumé (`champ`), l'extrait lu est reproduit tel quel et la phrase ne promet
+ *  ni page ni surlignage (R14). */
+export function VueSansPage({ reponse, lien, children, champ = false }: {
+  reponse: ReponseSource; lien: ReactNode; children?: ReactNode; champ?: boolean
+}) {
   const sansApercu = !reponse.document?.url
+  const phrase = sansApercu
+    ? 'Cette pièce n’a pas d’aperçu à l’écran pour le moment. Vous pouvez l’ouvrir en entier.'
+    : champ
+      ? 'Ce fait est lu dans la pièce ; la page exacte n’est pas repérée. Vous pouvez ouvrir la pièce en entier.'
+      : 'Cette exigence s’appuie sur la pièce dans son ensemble.'
   return (
     <div className="source-vide" role="status">
-      {children ?? (
-        <p>
-          {sansApercu
-            ? 'Cette pièce n’a pas d’aperçu à l’écran pour le moment. Vous pouvez l’ouvrir en entier.'
-            : 'Cette exigence s’appuie sur la pièce dans son ensemble.'}
-        </p>
-      )}
+      {champ && <Citation reponse={reponse} surligner={false} />}
+      {children ?? <p>{phrase}</p>}
       {lien}
     </div>
   )

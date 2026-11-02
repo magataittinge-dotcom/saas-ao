@@ -149,7 +149,7 @@ export function libelleNiveau(ancre: Pick<Ancre, 'niveau' | 'suite' | 'format'>)
   const tableur = formatDe(ancre) === 'tableur'
   if (ancre.niveau === 'passage') {
     if (tableur) return 'Ligne retrouvée dans la feuille'
-    return ancre.suite ? 'Passage retrouvé, sur deux pages' : 'Passage retrouvé dans la page'
+    return ancre.suite ? 'Passage retrouvé, sur deux pages' : 'Passage retrouvé'
   }
   if (ancre.niveau === 'page') return tableur ? 'Feuille citée par l’analyse' : 'Page citée par l’analyse'
   return 'Pièce citée par l’analyse'

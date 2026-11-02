@@ -23,6 +23,7 @@ import functools
 import inspect
 import logging
 import re
+import sys
 import time
 from contextlib import contextmanager
 from typing import Any, Callable, Iterator
@@ -47,8 +48,26 @@ def ligne(etape: str, projet: Any, lot: Any, duree_ms: int, statut: str) -> str:
     return f"chrono etape={identifiant(etape)} projet={identifiant(projet)} lot={identifiant(lot)} duree_ms={int(duree_ms)} statut={statut}"
 
 
+def _sortie_standard() -> None:
+    """R33 — `uvicorn main:app` sans configuration de journal : aucun logger de la chaîne n'a de sortie,
+    et les lignes `chrono` disparaissaient (les lignes `jetons` sortent, elles, par `print`). Dans ce cas
+    seulement, ce logger écrit sur la sortie standard, une fois, au niveau INFO ; si une configuration de
+    journal existe (production, tests), rien n'est ajouté : pas de doublon."""
+    if logger.hasHandlers():
+        return
+    if any(getattr(h, "_chrono_sortie", False) for h in logger.handlers):
+        return
+    sortie = logging.StreamHandler(sys.stdout)
+    sortie.setFormatter(logging.Formatter("%(message)s"))
+    sortie._chrono_sortie = True  # type: ignore[attr-defined]
+    logger.addHandler(sortie)
+    logger.setLevel(logging.INFO)
+    logger.propagate = False      # une configuration de journal posée plus tard ne double pas la ligne
+
+
 def _emettre(etape: str, projet: Any, lot: Any, debut: float, statut: str) -> None:
     try:
+        _sortie_standard()
         logger.info(ligne(etape, projet, lot, round((time.perf_counter() - debut) * 1000), statut))
     except Exception:  # un journal en panne ne casse jamais une étape
         pass

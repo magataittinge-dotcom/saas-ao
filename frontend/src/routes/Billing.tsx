@@ -155,7 +155,7 @@ export default function Billing() {
           <CheckCircle2 size={20} className="text-ds-cyan" />
           <div>
             <p className="text-sm font-semibold text-ds-cyan-dark">
-              Paiement réussi !
+              Paiement réussi
             </p>
             <p className="text-xs text-ds-text-3 mt-0.5">
               {successPlan

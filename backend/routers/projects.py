@@ -1469,7 +1469,7 @@ def _extract_zip_members(
                 _tracker.update_step_progress(
                     project_id,
                     min(budget.written_bytes / _declared_total, 0.99),
-                    detail=f"{budget.written_bytes / 1e6:.0f} / {_declared_total / 1e6:.0f} Mo enregistrés",
+                    detail=f"{budget.written_bytes / 1048576:.0f} / {_declared_total / 1048576:.0f} Mo enregistrés",
                 )
             except Exception:
                 pass

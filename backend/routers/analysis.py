@@ -501,7 +501,7 @@ def _run_analysis_job(
                 skills1, _ = _build_dce_skills(None)
                 r1 = analyzer._run_pass_chunked(
                     pass1_text, DCE_PASS1_SYSTEM, "passe1-admin",
-                    skills1, project_id, "", "Analyse administrative (tronc commun)",
+                    skills1, project_id, "", "Lecture des pièces administratives",
                 )
                 commun_reqs = r1.get("requirements", [])
                 criteres = r1.get("criteres_jugement", [])
@@ -544,7 +544,7 @@ def _run_analysis_job(
                 return analyzer._run_pass_chunked(
                     spec["pass2_commun"], DCE_PASS2_SYSTEM, f"passe2-{spec['lot_id']}-commun",
                     skills_communs, project_id, spec["lot_header"],
-                    f"Analyse technique — {spec['lot_label'] or spec['lot_id']} (pièces communes)",
+                    f"Lecture des pièces techniques — {spec['lot_label'] or spec['lot_id']}",
                     entete_apres=True,
                 )
             if not cache_ecrit.is_set():
@@ -569,7 +569,7 @@ def _run_analysis_job(
                 r2 = analyzer._run_pass_chunked(
                     spec["pass2_text"], DCE_PASS2_SYSTEM, f"passe2-{spec['lot_id']}",
                     skills_lot, project_id, spec["lot_header"],
-                    f"Analyse technique — {spec['lot_label'] or spec['lot_id']}",
+                    f"Lecture des pièces techniques — {spec['lot_label'] or spec['lot_id']}",
                 )
                 exigences.extend(r2.get("requirements", []))
             return spec, {"requirements": exigences}
@@ -881,6 +881,14 @@ def get_critical_fields(
         cache[lot_key] = build_critical_fields(
             project.infos_marche, project.criteres_jugement, docs,
         )
+        project.critical_fields = cache
+        db.commit()
+    # R14 : la page de chaque source est cherchée dans le PDF (une fois, puis rangée avec le champ),
+    # pour que « Voir dans le dossier » ouvre la bonne page au lieu de la pièce entière.
+    from services.critical_fields_pages import resoudre_pages
+    avec_pages = resoudre_pages(db, project_id, cache[lot_key])
+    if avec_pages is not None:
+        cache[lot_key] = avec_pages
         project.critical_fields = cache
         db.commit()
     return {"lot": project.selected_lot, "fields": cache[lot_key]}

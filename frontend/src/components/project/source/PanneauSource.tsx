@@ -223,7 +223,7 @@ export function PanneauSourceVue({
                 </VueSansPage>
               )
             }
-            if (route !== 'pdf' || !vue) return <VueSansPage reponse={reponse} lien={lienOuvrir} />
+            if (route !== 'pdf' || !vue) return <VueSansPage reponse={reponse} lien={lienOuvrir} champ={exigenceId === null} />
             if (vue === 'passage') return <VuePassage reponse={reponse} exigenceId={exigenceId} onVue={choisirVue} />
             if (vue === 'page') {
               return (

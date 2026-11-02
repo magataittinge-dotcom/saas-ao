@@ -31,6 +31,16 @@ _A_COMPLETER_RE = re.compile(
     r"\[\s*[ÀA]\s*COMPL[ÉE]TER(?:\s+PAR\s+L['’]ENTREPRISE)?\s*(?::\s*([^\]]{0,300}))?\]", re.IGNORECASE,
 )
 _PIN_RE = re.compile(r"\[📍[^\]]{0,600}\]")
+# R26 — consignes et notes de l'outil restées entre crochets dans d'anciens mémoires
+# (« [Ici : … la carte est dessinée par Synorix … ] », « [L'organigramme visuel … ] »,
+# « [Insérer une photo … ] ») : jamais imprimées. Ni un lien Markdown « [texte](url) », ni un
+# « [À COMPLÉTER : … ] » (traité plus haut : passage surligné et compté).
+_CONSIGNE_RE = re.compile(
+    r"\[\s*(?:ici\s*:|l['’]organigramme\b|(?:ins[ée]rer|ins[ée]rez|ajouter|ajoutez)\b"
+    r"|(?:image|photo|sch[ée]ma|visuel|carte|plan|logo)\b)[^\]\n]{0,600}\](?!\()"
+    r"|\[[^\]\n]{0,600}\bsynorix\b[^\]\n]{0,600}\](?!\()",
+    re.IGNORECASE,
+)
 _DEBUT_PASSAGE, _FIN_PASSAGE = "\ue000", "\ue001"   # balises privées, jamais imprimées
 _PASSAGE_RE = re.compile(f"{_DEBUT_PASSAGE}([^{_FIN_PASSAGE}]*){_FIN_PASSAGE}")
 
@@ -82,7 +92,21 @@ def _marquer_passages(texte: str, *, retirer_marqueur_carte: bool = False) -> st
             return enregistrer(_libelle_pin(m.group(0)))
         return enregistrer(m.group(1) or "")
 
-    return re.sub(f"{_PIN_RE.pattern}|{_A_COMPLETER_RE.pattern}", remplacer, texte, flags=re.IGNORECASE)
+    marque = re.sub(f"{_PIN_RE.pattern}|{_A_COMPLETER_RE.pattern}", remplacer, texte, flags=re.IGNORECASE)
+    return _retirer_consignes(marque)
+
+
+def _retirer_consignes(texte: str) -> str:
+    """Retire les consignes et notes de l'outil entre crochets ; une ligne qui n'était que cela disparaît."""
+    lignes: list[str] = []
+    for ligne in texte.split("\n"):
+        if not _CONSIGNE_RE.search(ligne):
+            lignes.append(ligne)
+            continue
+        reste = _CONSIGNE_RE.sub("", ligne)
+        if reste.strip():
+            lignes.append(re.sub(r" {2,}", " ", reste).rstrip())
+    return "\n".join(lignes)
 
 logger = logging.getLogger(__name__)
 

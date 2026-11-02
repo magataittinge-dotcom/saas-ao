@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
+import { choixParDefaut, basculerLot, peutLancer } from '@/lib/choixLots'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -494,7 +495,7 @@ export default function StepLotSelection({ project }: Props) {
         const { data: lotsResult } = await api.get<{ lots: LotOption[]; count: number }>(`/projects/${project.id}/lots`)
         const count = lotsResult?.lots?.filter((l: LotOption) => l.id !== '!!')?.length ?? 0
         setDetectLabel(count > 0
-          ? `${count} lot${count > 1 ? 's' : ''} détecté${count > 1 ? 's' : ''} !`
+          ? `${count} lot${count > 1 ? 's' : ''} détecté${count > 1 ? 's' : ''}`
           : 'Marché unique détecté')
       } catch { /* ignore */ }
       setDetectPhase('done')
@@ -526,20 +527,15 @@ export default function StepLotSelection({ project }: Props) {
 
   // Multi-sélection : cliquer une carte AJOUTE/RETIRE le lot ; « tous les
   // lots » est exclusif. 1 POST /analyze = N lots (tronc commun mutualisé).
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(
-    new Set([project.selected_lot ?? 'all']))
+  // R6 : plusieurs lots → aucun choix tant que le patron n'a pas cliqué.
+  const [choix, setChoix] = useState<Set<string> | null>(null)
+  const selectedIds = choix ?? choixParDefaut(project.selected_lot, lots.length)
   const toggleLot = (lotId: string) => {
-    setSelectedIds(prev => {
-      if (lotId === 'all') return new Set(['all'])
-      const next = new Set(prev)
-      next.delete('all')
-      if (next.has(lotId)) next.delete(lotId)
-      else next.add(lotId)
-      return next.size === 0 ? new Set(['all']) : next
-    })
+    setChoix(basculerLot(selectedIds, lotId, lots.length))
   }
   const selectedLotIds = [...selectedIds].filter(id => id !== 'all')
   const selectedId = selectedLotIds[0] ?? 'all'
+  const aucunChoix = !peutLancer(selectedIds)
   const [showAddForm, setShowAddForm] = useState(false)
   const [analysisError, setAnalysisError] = useState<string | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -629,6 +625,7 @@ export default function StepLotSelection({ project }: Props) {
   }
 
   const handleLaunch = async () => {
+    if (!peutLancer(selectedIds)) return
     setAnalysisError(null)
     const abort = new AbortController()
     abortRef.current = abort
@@ -874,14 +871,14 @@ export default function StepLotSelection({ project }: Props) {
               <span className="text-sm" style={{ color: 'var(--text-3)' }}>
                 {selectedId !== 'all' && selectedName
                   ? <>Lot sélectionné : <strong style={{ color: 'var(--text-1)' }}>{selectedName}</strong></>
-                  : 'Tous les lots sélectionnés'
+                  : aucunChoix ? 'Aucun lot choisi' : 'Tous les lots sélectionnés'
                 }
               </span>
             </>}
             tel={<>
               <CheckCircle2 size={16} className="shrink-0" style={{ color: selectedId !== 'all' && selectedName ? 'var(--text-1)' : 'var(--text-3)' }} />
               <span className="truncate text-xs" style={{ color: 'var(--text-3)' }}>
-                {selectedLotIds.length > 1 ? `${selectedLotIds.length} lots` : selectedId !== 'all' && selectedName ? selectedName : 'Tous les lots'}
+                {selectedLotIds.length > 1 ? `${selectedLotIds.length} lots` : selectedId !== 'all' && selectedName ? selectedName : aucunChoix ? 'Aucun lot choisi' : 'Tous les lots'}
               </span>
             </>}
           />
@@ -889,7 +886,7 @@ export default function StepLotSelection({ project }: Props) {
             <BoutonSecondaire libelle="Annuler" icone={X} onClick={() => navigate(`/projects/${project.id}/upload`)} />
             <button
               onClick={handleLaunch}
-              disabled={isAnalyzing || isSuccess}
+              disabled={isAnalyzing || isSuccess || !peutLancer(selectedIds)}
               className="edge-cta flex items-center gap-2 whitespace-nowrap px-6 py-2.5 rounded-lg text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed max-[768px]:px-4 [@media(pointer:coarse)]:min-h-11"
             >
               <Sparkles size={16} aria-hidden />

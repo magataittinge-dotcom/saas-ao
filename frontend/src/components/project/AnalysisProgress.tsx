@@ -125,7 +125,7 @@ export function AnalysisProgress({
     if (!isSuccess) return
     if (timerRef.current) clearTimeout(timerRef.current)
     setProgress(100)
-    setMessage('Terminé !')
+    setMessage('Terminé')
     const t1 = setTimeout(() => setShowCheck(true), 200)
     const t2 = setTimeout(() => onComplete(), 2400)
     return () => { clearTimeout(t1); clearTimeout(t2) }

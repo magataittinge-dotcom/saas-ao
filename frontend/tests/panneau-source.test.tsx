@@ -35,7 +35,8 @@ test('passage : citation (avant, passage surligné, après), loupe, trois onglet
   const html = rendre(base())
   assert.ok(html.includes('<mark>Le titulaire fournit les fiches techniques de tous les produits.</mark>'), html)
   assert.ok(html.includes('Les menuiseries seront livrées') && html.includes('Elles sont remises'))
-  assert.ok(html.includes('Passage retrouvé dans la page'))
+  assert.ok(html.includes('Passage retrouvé') && !html.includes('dans la page'), 'R15 : le mot « page » n\'est dit qu\'une fois')
+  assert.ok(!/page\s+page/i.test(texte(html)), 'R15 : pas de « page page »')
   assert.ok(html.includes('page 7 sur 48'))
   assert.ok(html.includes('Sur la page') && html.includes('source-squelette'), 'la loupe est demandée au serveur')
   const onglets = [...html.matchAll(/role="tab"[^>]*aria-selected="(true|false)"[^>]*>([^<]+)</g)].map((m) => [m[2], m[1]])
@@ -145,4 +146,18 @@ test('vue Document : pdf.js lit par plages, sans pré-chargement ni flux complet
   assert.match(code, /disableStream:\s*true/)
   assert.match(code, /rangeChunkSize:\s*65536/)
   assert.match(code, /renderTextLayer=\{false\}/, 'sans recherche : pas de couche de texte')
+})
+
+test('R14 : source d\'un champ sans page — l\'extrait est montré, aucune promesse de page ni de surlignage', () => {
+  const sansPage = reponseDeChamp({ id: 'd2', file_name: 'rc.pdf' }, { page: null, excerpt: 'Remise des offres avant le 12 mars.' },
+    { pdf: '/api/files/view/rc', origine: '/api/files/view/rc' })
+  assert.equal(sansPage.niveau, 'aucun')
+  const html = rendre(sansPage, { exigenceId: null })
+  const t = texte(html)
+  assert.ok(t.includes('Remise des offres avant le 12 mars.'))
+  assert.ok(t.includes('Ce fait est lu dans la pièce'))
+  assert.ok(!/Cette exigence|surlign|passage retrouvé/i.test(t), t)
+  assert.ok(!html.includes('<mark>'))
+  // une exigence sans page garde sa phrase
+  assert.ok(texte(rendre(base({ niveau: 'aucun', page: null, rects: [], citation: null }))).includes('Cette exigence s’appuie sur la pièce dans son ensemble.'))
 })

@@ -14,6 +14,8 @@ import { uploadService } from '@/services/upload'
 import ProgressDisplay, { type StepDescriptor } from '@/components/common/ProgressDisplay'
 import { useProgressStream } from '@/hooks/useProgressStream'
 import type { Project, ProjectDocument, ProjectDocumentType } from '@/types'
+import { libelleType, optionsType, valeurListe } from '@/lib/typesPieces'
+import { tailleFichier, progressionEnvoi } from '@/lib/tailleFichier'
 import { cn } from '@/lib/utils'
 import BarreEtape, { ActionsBarre, BilanBarre, BoutonSecondaire, BoutonSuite } from '@/components/project/BarreEtape'
 import { AiTipsBlock, type TipData } from '@/components/common/AiTip'
@@ -59,23 +61,6 @@ function FileIcon({ filename }: { filename: string }) {
   if (ext === 'zip') return <FileArchive size={18} className="shrink-0" style={{ color: 'var(--text-3)' }} />
   return <File size={18} className="shrink-0" style={{ color: 'var(--text-3)' }} />
 }
-
-function formatSize(bytes?: number): string {
-  if (!bytes) return ''
-  if (bytes < 1024) return `${bytes} o`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} Ko`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`
-}
-
-const DOC_TYPES: { value: ProjectDocumentType; label: string }[] = [
-  { value: 'rc',              label: 'Règlement de la consultation (RC)' },
-  { value: 'cctp',            label: 'Clauses techniques (CCTP)' },
-  { value: 'ccap',            label: 'Clauses administratives (CCAP)' },
-  { value: 'dpgf',            label: 'Tableau des prix (DPGF)' },
-  { value: 'acte_engagement', label: "Acte d'Engagement" },
-  { value: 'plan',            label: 'Plans' },
-  { value: 'autre',           label: 'Autre' },
-]
 
 interface Props { project: Project }
 
@@ -152,7 +137,7 @@ export default function StepUpload({ project }: Props) {
     onComplete: () => {
       doneRef.current = true
       setDisplayPct(100)
-      setLabel('Traitement terminé !')
+      setLabel('Traitement terminé')
       setSublabel('')
       setPhase('done')
       queryClient.invalidateQueries({ queryKey: ['project-documents', project.id] })
@@ -200,7 +185,7 @@ export default function StepUpload({ project }: Props) {
       if (doneRef.current) return
       doneRef.current = true
       setDisplayPct(100)
-      setLabel('Traitement terminé !')
+      setLabel('Traitement terminé')
       setPhase('done')
       queryClient.invalidateQueries({ queryKey: ['project-documents', project.id] })
       setTimeout(() => { setPhase('idle'); setDisplayPct(0) }, 1000)
@@ -268,11 +253,7 @@ export default function StepUpload({ project }: Props) {
               // axios throttlé — jamais de retour en arrière.
               setDisplayPct(prev => Math.max(prev, mapped))
 
-              const MB = 1024 * 1024
-              const loadedMb = (loaded / MB).toFixed(1)
-              const totalMb = total > 0 ? (total / MB).toFixed(1) : '?'
-              const pct = Math.round(overallPct)
-              setSublabel(`${loadedMb} / ${totalMb} Mo (${pct}%)`)
+              setSublabel(progressionEnvoi(loaded, total, Math.round(overallPct)))
 
               if (hasZip && isComplete) {
                 startProcessing()
@@ -570,7 +551,7 @@ export default function StepUpload({ project }: Props) {
               <div>
                 <h3 className="text-[15px] font-semibold" style={{ color: 'var(--text-1)' }}>Documents du <Sigle code="DCE" /></h3>
                 <p className="num-mono mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
-                  {documents.length} fichier{documents.length > 1 ? 's' : ''} · {formatSize(totalBytes)}
+                  {documents.length} fichier{documents.length > 1 ? 's' : ''} · {tailleFichier(totalBytes)}
                 </p>
               </div>
               {documents.length > 1 && (
@@ -592,7 +573,7 @@ export default function StepUpload({ project }: Props) {
                 className="hidden sm:grid items-center gap-3 px-5 py-2.5"
                 style={{
                   borderBottom: '1px solid var(--line)',
-                  gridTemplateColumns: '2fr 80px 130px 40px',
+                  gridTemplateColumns: 'minmax(0,2fr) 80px minmax(120px,190px) 40px',
                 }}
               >
                 <span className="microlabel">Nom du fichier</span>
@@ -611,7 +592,7 @@ export default function StepUpload({ project }: Props) {
                     className="grid items-center gap-3 px-5 py-2.5 transition-colors hover:bg-ds-bg-2"
                     style={{
                       borderBottom: i < documents.length - 1 ? '1px solid var(--line)' : 'none',
-                      gridTemplateColumns: '2fr 80px 130px 40px',
+                      gridTemplateColumns: 'minmax(0,2fr) 80px minmax(120px,190px) 40px',
                     }}
                   >
                     {/* Filename */}
@@ -622,23 +603,25 @@ export default function StepUpload({ project }: Props) {
 
                     {/* Size */}
                     <span className="num-mono text-xs" style={{ color: 'var(--text-3)' }}>
-                      {formatSize(doc.file_size)}
+                      {tailleFichier(doc.file_size)}
                     </span>
 
                     {/* Type badge — clickable select */}
                     <div className="relative">
                       <select
-                        value={doc.type}
+                        value={valeurListe(doc.type)}
+                        title={libelleType(doc.type)}
                         onChange={(e) => updateDocType(doc.id, e.target.value as ProjectDocumentType)}
-                        className="appearance-none text-xs font-semibold rounded-full pl-2.5 pr-6 py-1 cursor-pointer outline-none"
+                        className="appearance-none text-xs font-semibold rounded-full pl-2.5 pr-6 py-1 cursor-pointer outline-none w-full"
                         style={{
+                          textOverflow: 'ellipsis',
                           color: isFilled ? 'var(--text-1)' : badge.color,
                           background: isFilled ? badge.bg : badge.bg,
                           border: `1px solid ${isFilled ? 'transparent' : badge.border}`,
                         }}
                       >
-                        {DOC_TYPES.map(({ value, label: l }) => (
-                          <option key={value} value={value}>{l.split(' — ')[0]}</option>
+                        {optionsType(doc.type).map(({ value, label: l }) => (
+                          <option key={value} value={value}>{l}</option>
                         ))}
                       </select>
                       <ChevronRight size={10} className="absolute right-2 top-1/2 -translate-y-1/2 rotate-90 pointer-events-none" style={{ color: isFilled ? 'var(--text-1)' : badge.color }} />
