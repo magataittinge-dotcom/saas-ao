@@ -105,8 +105,8 @@ export default function Projects() {
       </div>
 
       {/* Synorix Intelligence : le visage, six bulles, la prochaine action — le haut de Mes AO */}
-      {/* Sans aucun AO, le visage et ses compteurs à zéro n'apprennent rien : l'écran vide ci-dessous suffit (phase C). */}
-      {(isLoading || projects.length > 0) && <SynorixIntelligence projects={projects} stats={stats} prenom={prenom} />}
+      {/* Sans aucun AO, le visage et ses compteurs à zéro n'apprennent rien : l'écran vide ci-dessous suffit (phase C) ; pendant le chargement, rien non plus : « Rien d'urgent » serait faux avant d'avoir les AO (R29). */}
+      {projects.length > 0 && <SynorixIntelligence projects={projects} stats={stats} prenom={prenom} />}
 
       {/* Search + Filters bar */}
       {projects.length > 0 && (

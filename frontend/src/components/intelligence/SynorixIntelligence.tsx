@@ -35,7 +35,8 @@ export default function SynorixIntelligence({ projects, stats, prenom, maintenan
   const fiche = useMemo(() => ficheAffichee(choix, bulles, projects, maintenant ?? new Date()), [choix, bulles, projects, maintenant])
   const indexChoix = choix ? ORDRE_BULLES.indexOf(choix as (typeof ORDRE_BULLES)[number]) : -1
   const Titre = niveauTitre === 1 ? 'h1' : 'h2'
-  // Décision du 1/11 : quand tout est à 0, le visage reste ; seules les bulles se cachent, remplacées par une ligne.
+  // Décision du 2/11 (R29) : quand tout est à 0, la scène se réduit à une ligne (ni visage, ni bulles, ni fiche) et la liste des
+  // AO remonte dans le premier écran. Le visage et les bulles reviennent dès qu'une puce compte quelque chose.
   const rienDUrgent = bulles.every((b) => b.vide)
 
   return (
@@ -47,17 +48,19 @@ export default function SynorixIntelligence({ projects, stats, prenom, maintenan
           {' '}Ce qui bouge dans vos appels d’offres, et ce qu’il faut faire maintenant.
         </p>
       </header>
-      <div className="syx-zone" ref={zoneRef}>
-        <Visage zoneRef={zoneRef} tons={tons} choix={indexChoix} accepterLogiciel={accepterLogiciel} surMode={surMode} />
-        {rienDUrgent ? (
-          <p className="syx-calme" data-rien-d-urgent>
-            Rien d’urgent. Prochaine étape : {fiche.cta ? <Link to={fiche.cta.vers}>{fiche.cta.libelle}</Link> : fiche.titre}.
-          </p>
-        ) : (
-          <BullesAttention bulles={bulles} choix={choix} onChoisir={setChoix} />
-        )}
-      </div>
-      <ProchaineAction fiche={fiche} />
+      {rienDUrgent ? (
+        <p className="syx-calme" data-rien-d-urgent>
+          Rien d’urgent. Prochaine étape : {fiche.cta ? <Link to={fiche.cta.vers}>{fiche.cta.libelle}</Link> : fiche.titre}.
+        </p>
+      ) : (
+        <>
+          <div className="syx-zone" ref={zoneRef}>
+            <Visage zoneRef={zoneRef} tons={tons} choix={indexChoix} accepterLogiciel={accepterLogiciel} surMode={surMode} />
+            <BullesAttention bulles={bulles} choix={choix} onChoisir={setChoix} />
+          </div>
+          <ProchaineAction fiche={fiche} />
+        </>
+      )}
     </section>
   )
 }

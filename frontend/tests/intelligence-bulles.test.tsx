@@ -127,3 +127,36 @@ test('téléphone : marge basse sous la grille, bulles 2 × 3 d’au moins 48 px
   assert.match(css, /\.syx-bulle\s*\{[^}]*min-height:\s*44px/, 'cible tactile ≥ 44 px')
   assert.match(mobile, /\.syx-noeud\s*\{\s*display:\s*none/, 'les nœuds des fils disparaissent au téléphone')
 })
+
+// R29 — les compteurs « Lot à choisir » et « Mémoire à rédiger » comptent l'état réel des AO en cours.
+import { lotAChoisir, memoireARediger } from '@/lib/intelligence/bulles'
+
+const base = (surcharge: Record<string, unknown>) => ({
+  id: 'p', organization_id: 'o', name: 'AO inventé', status: 'en_cours', current_step: 4, completed_steps: {}, created_at: '', updated_at: '', ...surcharge,
+}) as never
+
+test('R29 : un AO dont le dossier est déposé mais dont aucun lot n’est choisi compte dans « Lot à choisir »', () => {
+  assert.equal(lotAChoisir(base({ current_step: 3, completed_steps: { 1: true } })), true, 'dossier déposé, aucun lot retenu')
+  assert.equal(lotAChoisir(base({ current_step: 2 })), true, 'l’étape Lots reste comptée')
+  assert.equal(lotAChoisir(base({ current_step: 3, completed_steps: { 1: true, 2: true }, selected_lot: 'lot1' })), false)
+  assert.equal(lotAChoisir(base({ current_step: 3, completed_steps: { 1: true }, selected_lot: 'lot1' })), false, 'un lot est enregistré')
+  assert.equal(lotAChoisir(base({ current_step: 1, completed_steps: {} })), false, 'rien de déposé : pas encore de lot')
+})
+
+test('R29 : un AO analysé sans mémoire compte dans « Mémoire à rédiger » ; avec mémoire, non', () => {
+  assert.equal(memoireARediger(base({ current_step: 4, completed_steps: { 1: true, 2: true, 3: true } })), true, 'analysé, pas de mémoire')
+  assert.equal(memoireARediger(base({ current_step: 5 })), true, 'l’étape Mémoire reste comptée')
+  assert.equal(memoireARediger(base({ current_step: 6, completed_steps: { 1: true, 2: true, 3: true, 4: true, 5: true } })), false, 'mémoire générée')
+  assert.equal(memoireARediger(base({ current_step: 2, completed_steps: { 1: true } })), false, 'pas encore analysé')
+})
+
+test('R29 : les six bulles reprennent ces deux comptes sur de vrais AO en cours (et pas sur les AO clos)', () => {
+  const projets = [
+    base({ id: 'a', current_step: 3, completed_steps: { 1: true } }),
+    base({ id: 'b', status: 'analyzed', current_step: 4, completed_steps: { 1: true, 2: true, 3: true }, selected_lot: 'lot1' }),
+    base({ id: 'c', status: 'soumis', current_step: 3, completed_steps: { 1: true, 3: true } }),
+  ]
+  const bulles = calculerBulles(projets, null, new Date(2026, 10, 2, 10))
+  assert.equal(bulles.find((b) => b.id === 'lot')!.nombre, 1)
+  assert.equal(bulles.find((b) => b.id === 'memoire')!.nombre, 1)
+})

@@ -27,6 +27,23 @@ export interface Bulle {
 
 const pluriel = (n: number, un: string, plusieurs: string) => (n > 1 ? plusieurs : un)
 
+type EtatAO = Pick<Project, 'current_step' | 'completed_steps' | 'selected_lot'>
+
+/**
+ * « Lot à choisir » (R29) : l'état réel de l'AO, pas la seule étape affichée. Le dossier est déposé (étape 1 faite),
+ * aucun lot n'est retenu (étape 2 non faite, pas de lot enregistré). L'étape « Lots » reste comptée telle quelle.
+ */
+export function lotAChoisir(p: EtatAO): boolean {
+  const faites = p.completed_steps ?? {}
+  return avancementAO(p.current_step).etape === 2 || (faites['1'] === true && faites['2'] !== true && !p.selected_lot)
+}
+
+/** « Mémoire à rédiger » (R29) : l'analyse est faite et aucun mémoire n'est encore généré (l'étape 5 se coche à la génération). */
+export function memoireARediger(p: EtatAO): boolean {
+  const faites = p.completed_steps ?? {}
+  return avancementAO(p.current_step).etape === 5 || (faites['3'] === true && faites['5'] !== true)
+}
+
 const STATS_VIDES: DashboardStats = {
   projects_en_cours: 0, projects_soumis_ce_mois: 0, projects_gagnes: 0, taux_succes: 0, documents_expires: 0, documents_expirant_bientot: 0,
 }
@@ -89,7 +106,7 @@ export function calculerBulles(
   }
 
   // — Lot à choisir
-  const aLots = enCours.filter((p) => avancementAO(p.current_step).etape === 2)
+  const aLots = enCours.filter(lotAChoisir)
   const lot: Bulle = {
     id: 'lot', libelle: pluriel(aLots.length, 'Lot à choisir', 'Lots à choisir'),
     compte: String(aLots.length), nombre: aLots.length, ton: 'calme', vide: aLots.length === 0,
@@ -100,7 +117,7 @@ export function calculerBulles(
   }
 
   // — Mémoire à rédiger
-  const aMemoire = enCours.filter((p) => avancementAO(p.current_step).etape === 5)
+  const aMemoire = enCours.filter(memoireARediger)
   const memoire: Bulle = {
     id: 'memoire', libelle: pluriel(aMemoire.length, 'Mémoire à rédiger', 'Mémoires à rédiger'),
     compte: String(aMemoire.length), nombre: aMemoire.length, ton: 'calme', vide: aMemoire.length === 0,

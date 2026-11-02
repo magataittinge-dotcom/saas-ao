@@ -33,12 +33,12 @@ test('l’assemblage : titre, visage (poster + deux canvas), six bulles, fiche �
   assert.match(html, /class="syx-scene"[^>]*aria-hidden="true"/)
 })
 
-test('sans AO ni pièce : le visage reste, les bulles se cachent, une ligne « Rien d’urgent » (décision du 1/11)', () => {
+test('sans AO ni pièce : la scène se réduit à une ligne « Rien d’urgent » — ni visage, ni bulles, ni fiche (décision du 2/11, R29)', () => {
   const html = rendre({ projects: [], stats: null })
-  assert.match(html, /Aucun appel d’offres en cours/)
   assert.match(html, /href="\/projects\/new"[^>]*>Nouvel AO/)
   assert.equal((html.match(/data-bulle="/g) ?? []).length, 0, 'aucune bulle quand tout est à 0')
-  assert.match(html, /class="syx-scene"/, 'le visage reste affiché')
+  assert.doesNotMatch(html, /class="syx-scene"/, 'plus de visage quand tout est à 0')
+  assert.doesNotMatch(html, /syx-zone|syx-fiche|data-fiche/, 'ni scène ni fiche : une ligne')
   assert.match(html, /data-rien-d-urgent[^>]*>Rien d’urgent\. Prochaine étape : <a[^>]*href="\/projects\/new"[^>]*>Nouvel AO<\/a>\./)
 })
 
