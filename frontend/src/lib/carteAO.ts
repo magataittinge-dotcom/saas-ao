@@ -34,6 +34,7 @@ export interface ProjetCarte {
   infos_marche?: {
     objet?: string | null
     maitre_ouvrage?: string | null
+    maitre_oeuvre?: string | null
     lots?: string[] | null
     date_limite_reponse?: string | null
     duree_marche?: string | null
@@ -48,7 +49,7 @@ export interface ConditionsCarte {
 }
 
 export type IdFaitCarte =
-  | 'acheteur' | 'objet' | 'lots' | 'remise' | 'visite' | 'pieces' | 'criteres' | 'delai' | 'decision'
+  | 'acheteur' | 'oeuvre' | 'objet' | 'lots' | 'remise' | 'visite' | 'pieces' | 'criteres' | 'delai' | 'decision'
 
 export interface FaitCarte {
   id: IdFaitCarte
@@ -62,6 +63,8 @@ export interface FaitCarte {
   action?: boolean
   /** Fait sur toute la largeur de la carte (texte long). */
   large?: boolean
+  /** Pièces : les nombres derrière le libellé (bande de résumé de l'étape Décider). */
+  comptes?: { pretes: number; aJoindre: number }
 }
 
 export interface EntreeCarte {
@@ -106,6 +109,9 @@ export function construireCarteAO(e: EntreeCarte): FaitCarte[] {
   const acheteur = texteNet(infos.maitre_ouvrage ?? projet.maitre_ouvrage)
   if (acheteur) faits.push({ id: 'acheteur', libelle: 'Acheteur', valeur: acheteur })
 
+  const oeuvre = texteNet(infos.maitre_oeuvre)
+  if (oeuvre) faits.push({ id: 'oeuvre', libelle: 'Maîtrise d’œuvre', valeur: oeuvre })
+
   const objet = texteNet(infos.objet)
   if (objet) faits.push({ id: 'objet', libelle: 'Objet', valeur: objet, large: true })
 
@@ -147,7 +153,7 @@ export function construireCarteAO(e: EntreeCarte): FaitCarte[] {
 
   if (e.pieces && e.pieces.length > 0) {
     const { aJoindre, pretes } = comptesPieces(e.pieces, echeance?.date)
-    faits.push({ id: 'pieces', libelle: 'Pièces', valeur: libelleComptes(aJoindre, pretes), action: aJoindre > 0 })
+    faits.push({ id: 'pieces', libelle: 'Pièces', valeur: libelleComptes(aJoindre, pretes), action: aJoindre > 0, comptes: { pretes, aJoindre } })
   }
 
   const criteres = (champs?.criteres?.value ?? projet.criteres_jugement ?? []).filter((c) => c && c.nom)
