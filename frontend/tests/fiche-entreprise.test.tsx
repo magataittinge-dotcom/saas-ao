@@ -350,6 +350,17 @@ test('zone 3 : le PDF est grisé avec sa raison quand le rendu exact est indispo
   assert.ok(html.includes('· Word'))
 })
 
+test('R21 : pendant la génération, le bouton est désactivé et dit « Préparation de la fiche… » (annoncé aux lecteurs d’écran)', () => {
+  const html = renderToStaticMarkup(
+    <ZoneBordereau
+      bordereau={bordereau()} onChange={() => {}} logoSrc={null} logoEnCours={false} onLogo={() => {}} onRetirerLogo={() => {}}
+      sections={[{ id: '01', titre: 'Moyens humains' }]} format="pdf" onFormat={() => {}}
+      pdfIndisponible={null} onTelecharger={() => {}} enTelechargement
+    />)
+  assert.match(html, /<button(?=[^>]*data-telecharger)(?=[^>]*disabled)(?=[^>]*aria-busy="true")[^>]*>[\s\S]*?Préparation de la fiche…/)
+  assert.ok(!html.includes('Télécharger la fiche'))
+})
+
 test('aperçu : pages en images (alt « Page n sur N de la fiche », lazy à partir de la page 2), anciennes pages voilées pendant la mise à jour', () => {
   const pret: EtatApercu = { phase: 'pret', empreinte: 'a'.repeat(64), pages: 2, message: '', empreinteAffichee: 'a'.repeat(64) }
   const pages = [{ numero: 1, src: 'blob:p1' }, { numero: 2, src: 'blob:p2' }]

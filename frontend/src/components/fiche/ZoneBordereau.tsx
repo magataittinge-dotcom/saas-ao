@@ -158,10 +158,10 @@ export default function ZoneBordereau(p: Props) {
       </div>
 
       <Button
-        variant="signature" size="lg" className="h-12 w-full" disabled={p.enTelechargement} onClick={p.onTelecharger} data-telecharger
+        variant="signature" size="lg" className="h-12 w-full" disabled={p.enTelechargement} aria-busy={p.enTelechargement} onClick={p.onTelecharger} data-telecharger
       >
         {p.enTelechargement ? <Loader2 className="animate-spin motion-reduce:animate-none" aria-hidden /> : <Download aria-hidden />}
-        {p.enTelechargement ? 'Préparation…' : <>Télécharger la fiche<span className="font-normal opacity-90">· {nomFormat}</span></>}
+        {p.enTelechargement ? 'Préparation de la fiche…' : <>Télécharger la fiche<span className="font-normal opacity-90">· {nomFormat}</span></>}
       </Button>
     </section>
   )
