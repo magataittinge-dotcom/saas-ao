@@ -37,7 +37,7 @@ test("une seule formule pour passer à l'étape suivante, qui nomme la bonne ét
   const suites: [string, string][] = [
     ['src/routes/project/StepUpload.tsx', 'Lots'],
     ['src/routes/project/StepAnalysis.tsx', 'Pièces'],
-    ['src/routes/project/StepVerification.tsx', 'Mémoire'],
+    ['src/routes/project/StepVerification.tsx', 'Plan'],
     ['src/routes/project/StepMemoire.tsx', 'Export'],
   ]
   const anciennes = ['Suivant &gt;', 'Passer à la vérification', 'Étape Suivante', 'Aller au mémoire', 'Vérification finale']

@@ -18,11 +18,13 @@ test('analyse : les onglets de catégories se replient au lieu de défiler hors 
 
 test('pièces : la rangée d’actions passe sous le texte au téléphone, et le nom de la pièce jointe se replie', () => {
   const t = code('src/components/project/CandidatureSectionTemplates.tsx')
-  assert.match(t, /<li className="flex flex-col gap-3 px-5 py-3 sm:flex-row sm:items-start sm:gap-4">/)
-  assert.match(t, /flex flex-wrap items-center gap-2 sm:shrink-0 sm:justify-end/)
-  assert.match(t, /min-w-0 break-words text-xs[^>]*>\{item\.piece_nom\}/)
+  // cartes sur une colonne au téléphone (deux dès 768 px, SectionEtape), actions qui passent à la ligne, noms qui se replient
+  assert.match(t, /<div data-piece=\{item\.id\} className="grid min-w-0 content-start gap-2 rounded-carte/)
+  assert.match(t, /flex flex-wrap items-center gap-2/)
+  assert.match(t, /break-words pl-\[1\.875rem\] text-sm text-fg-2">\s*\{item\.jointe && item\.piece_nom/)
   const v = code('src/components/project/CandidatureSectionVault.tsx')
-  assert.match(v, /flex flex-wrap items-center gap-x-3 gap-y-2/)
+  assert.match(v, /flex flex-wrap items-center justify-between gap-x-4 gap-y-2/)
+  assert.match(v, /break-words">\{item\.piece_nom\}/)
 })
 
 test('bandeau de l’AO : le titre et la ligne de l’acheteur ne sont plus coupés par « … »', () => {

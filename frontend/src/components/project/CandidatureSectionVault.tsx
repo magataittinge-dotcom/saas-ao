@@ -1,12 +1,15 @@
 import { useMemo } from 'react'
 import { Sigle } from '@/components/common/Sigle'
-import { FolderOpen, FileText, Lock } from 'lucide-react'
+import { FileText } from 'lucide-react'
 import type { ChecklistItem } from '@/types'
 import SignatureLigne from '@/components/project/SignatureLigne'
-import NonConcerneBouton, { estNonConcernee, piecesComptees } from '@/components/project/NonConcerne'
-import { comptesPieces, libelleComptes, noteDepot, noteValidite, statutPiece } from '@/lib/statutPiece'
-
-const F = "'Inter Variable', 'Geist Sans', sans-serif"
+import NonConcerneBouton, { estNonConcernee } from '@/components/project/NonConcerne'
+import { noteDepot, noteValidite, statutPiece } from '@/lib/statutPiece'
+import { EtatElement, SectionEtape } from '@/components/etape'
+import { Button } from '@/components/ui/button'
+import { nomPiece } from '@/lib/nomsPieces'
+import { etatDeStatut } from '@/lib/resumePieces'
+import { libelleSource } from '@/lib/resumeAO'
 
 type VaultCategory = 'administratif' | 'assurances' | 'financier' | 'technique'
 
@@ -33,7 +36,8 @@ function categorize(item: ChecklistItem): VaultCategory {
 interface Props {
   items: ChecklistItem[]
   onPickFromVault: (item: ChecklistItem) => void
-  onOpenVault: () => void
+  /** Conservé pour l'appelant : le coffre-fort s'ouvre depuis l'en-tête de l'étape. */
+  onOpenVault?: () => void
   /** Confirmation de signature, quand le RC la demande (ex. DUME signé). */
   onToggleSignature?: (item: ChecklistItem, confirmed: boolean) => Promise<void>
   onOpenSource?: (item: ChecklistItem) => void
@@ -44,7 +48,7 @@ interface Props {
 }
 
 export default function CandidatureSectionVault({
-  items, onPickFromVault, onOpenVault, onToggleSignature, onOpenSource, onNonConcerne, echeance,
+  items, onPickFromVault, onToggleSignature, onOpenSource, onNonConcerne, echeance,
 }: Props) {
   const grouped = useMemo(() => {
     const map: Record<VaultCategory, ChecklistItem[]> = {
@@ -56,71 +60,25 @@ export default function CandidatureSectionVault({
 
   if (items.length === 0) return null
 
-  // « Non concerné » sort des comptes, comme dans le score du serveur
-  const comptees = piecesComptees(items)
-  const { aJoindre, pretes } = comptesPieces(comptees, echeance)
-
+  // Un sous-titre en capitales par famille de pièces, des cartes sur deux colonnes ; les comptes sont ceux du résumé (un seul calcul)
   return (
-    <section
-      className="glass-card rounded-lg overflow-hidden"
-      style={{ border: '1px solid var(--border-1)', boxShadow: 'var(--shadow-card)', fontFamily: F }}
-    >
-      {/* Header */}
-      <header className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '1px solid var(--border-1)' }}>
-        <div className="flex items-center gap-3 min-w-0">
-          <div
-            className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: 'color-mix(in srgb, var(--text-1) 8%, transparent)' }}
-          >
-            <FolderOpen size={18} style={{ color: 'var(--text-1)' }} />
-          </div>
-          <div className="min-w-0">
-            <h2 className="text-base font-bold" style={{ color: 'var(--text-1)' }}>
-              Pièces du coffre-fort
-            </h2>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
-              {libelleComptes(aJoindre, pretes)} — sélectionnez une pièce existante de votre coffre-fort
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={onOpenVault}
-          className="glass-btn flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium shrink-0"
-          style={{ color: 'var(--text-2)' }}
-        >
-          <Lock size={13} />
-          Ouvrir le coffre-fort
-        </button>
-      </header>
-
-      {/* Categories */}
-      <div className="px-5 py-1.5">
-        {CATEGORY_ORDER.filter((cat) => grouped[cat].length > 0).map((cat) => (
-          <div key={cat} className="py-3" style={{ borderBottom: '1px solid var(--border-1)' }}>
-            <div
-              className="text-xs font-semibold uppercase tracking-wider mb-2"
-              style={{ color: 'var(--text-3)' }}
-            >
-              {CATEGORY_LABELS[cat]}
-            </div>
-            <ul className="space-y-1.5">
-              {grouped[cat].map((item) => (
-                <VaultRow
-                  key={item.id}
-                  item={item}
-                  onPick={() => onPickFromVault(item)}
-                  onToggleSignature={onToggleSignature}
-                  onOpenSource={onOpenSource}
-                  onNonConcerne={onNonConcerne}
-                  echeance={echeance}
-                />
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
-    </section>
+    <>
+      {CATEGORY_ORDER.filter((cat) => grouped[cat].length > 0).map((cat) => (
+        <SectionEtape key={cat} titre={CATEGORY_LABELS[cat]} colonnes={2}>
+          {grouped[cat].map((item) => (
+            <VaultRow
+              key={item.id}
+              item={item}
+              onPick={() => onPickFromVault(item)}
+              onToggleSignature={onToggleSignature}
+              onOpenSource={onOpenSource}
+              onNonConcerne={onNonConcerne}
+              echeance={echeance}
+            />
+          ))}
+        </SectionEtape>
+      ))}
+    </>
   )
 }
 
@@ -135,71 +93,48 @@ function VaultRow({
   onNonConcerne?: (item: ChecklistItem, nonConcerne: boolean) => Promise<void>
 }) {
   const statut = statutPiece(item, echeance)
+  const { etat, texte } = etatDeStatut(statut)
   const note = noteValidite(item.document_type_required)
   const depot = noteDepot(item)
   const isLinked = !!item.linked_document_id
   // Rien de prêt dans le dossier : « Choisir » ; une pièce prête ou à confirmer : « Remplacer »
   const isMissing = statut.code !== 'pret' && statut.code !== 'a-confirmer'
+  const source = item.source_document ? libelleSource({ document: item.source_document, page: item.source_page ?? null }) : null
 
   return (
-    <li
-      className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5 rounded-lg transition-colors hover:bg-ds-bg-2"
-      style={{ background: 'var(--surface-0)' }}
-    >
-      <div className="min-w-0 flex-1 basis-[12rem]">
-        <p className="text-sm font-medium break-words sm:truncate" style={{ color: 'var(--text-1)' }}>
-          {item.details || item.document_type_required}
-        </p>
-        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-          <span className={statut.classe}>{statut.texte}</span>
-          {item.lot && (
-            <span className="text-xs px-1.5 rounded-full"
-              style={{ background: 'color-mix(in srgb, var(--text-1) 8%, transparent)', color: 'var(--text-2)' }}>
-              {item.lot.replace(/^lot/i, 'Lot ')}
-            </span>
-          )}
-          {item.jointe && item.piece_nom && (
-            <span className="text-xs flex items-center gap-1" style={{ color: 'var(--text-3)' }}>
-              <FileText size={11} />
-              {item.piece_nom}
-            </span>
-          )}
-          {isLinked && !item.jointe && (
-            <span className="text-xs flex items-center gap-1" style={{ color: 'var(--text-3)' }}>
-              <FileText size={11} />
-              Lié au coffre-fort
-            </span>
-          )}
+    <div data-piece={item.id} className="grid min-w-0 content-start gap-2 rounded-carte border border-bord-2 bg-surface-1 p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <FileText size={18} className="mt-0.5 shrink-0 text-fg-3" aria-hidden />
+          <p className="min-w-0 break-words font-semibold text-fg">{nomPiece(item.document_type_required, item.details)}</p>
         </div>
-        {note && statut.action && <p className="piece-note">{note}</p>}
-        {depot && <p className="piece-note">{depot}</p>}
-        {item.source_in_rc && ['si-concerne', 'facultatif', 'attribution'].includes(statut.code) && (
-          <p className="piece-note">Lu dans le <Sigle code="RC" /> : « {item.source_in_rc} »</p>
-        )}
-        <SignatureLigne item={item} onToggleSignature={onToggleSignature}
-                  onOpenSource={onOpenSource} />
+        <NonConcerneBouton item={item} onNonConcerne={onNonConcerne} />
       </div>
-
-      <NonConcerneBouton item={item} onNonConcerne={onNonConcerne} />
-      {estNonConcernee(item) ? null : isMissing ? (
-        <button
-          type="button"
-          onClick={onPick}
-          className="glass-btn px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0"
-          style={{ color: 'var(--text-2)' }}
-        >
-          Choisir
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={onPick}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-ds-bg-2 shrink-0"
-          style={{ border: '1px solid var(--border-1)', color: 'var(--text-3)' }}
-        >
-          Remplacer
-        </button>
+      {(item.lot || (item.jointe && item.piece_nom) || (isLinked && !item.jointe)) && (
+        <p className="flex flex-wrap items-center gap-x-3 gap-y-1 pl-[1.875rem] text-sm text-fg-2">
+          {item.lot && <span className="pill pill-muted">{item.lot.replace(/^lot/i, 'Lot ')}</span>}
+          {item.jointe && item.piece_nom && <span className="break-words">{item.piece_nom}</span>}
+          {isLinked && !item.jointe && <span>Lié au coffre-fort</span>}
+        </p>
       )}
-    </li>
+      {note && statut.action && <p className="piece-note">{note}</p>}
+      {depot && <p className="piece-note">{depot}</p>}
+      {item.source_in_rc && ['si-concerne', 'facultatif', 'attribution'].includes(statut.code) && (
+        <p className="piece-note">Lu dans le <Sigle code="RC" /> : « {item.source_in_rc} »</p>
+      )}
+      <SignatureLigne item={item} onToggleSignature={onToggleSignature} onOpenSource={onOpenSource} />
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-bord-2 pt-2.5">
+        <EtatElement
+          etat={etat}
+          texte={texte}
+          source={source ? { libelle: source, onVoir: item.source_exigence_id && onOpenSource ? () => onOpenSource(item) : undefined } : undefined}
+        />
+        {estNonConcernee(item) ? null : (
+          <Button type="button" variant="outline" size="sm" onClick={onPick} className="[@media(pointer:coarse)]:min-h-11">
+            {isMissing ? 'Choisir' : 'Remplacer'}
+          </Button>
+        )}
+      </div>
+    </div>
   )
 }
