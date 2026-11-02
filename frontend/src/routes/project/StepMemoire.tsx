@@ -20,6 +20,7 @@ import ProgressDisplay, { type StepDescriptor } from '@/components/common/Progre
 import { useProgressStream } from '@/hooks/useProgressStream'
 import SubscriptionWall from '@/components/common/SubscriptionWall'
 import PoidsMemoire from '@/components/project/PoidsMemoire'
+import RelectureMemoire from '@/components/memoire/RelectureMemoire'
 import { MemoireSkeleton } from '@/components/skeletons'
 import type { Project, MemoireTechnique, MemoireContent, Reference } from '@/types'
 import {
@@ -801,6 +802,7 @@ export default function StepMemoire({ project }: Props) {
           </div>
 
           <div className="flex items-center gap-2">
+            <RelectureMemoire projectId={project.id} />
             <button
               onClick={() => setShowEditor(true)}
               className="flex items-center gap-1.5 text-sm font-medium py-1.5 px-3.5 rounded-lg transition-colors hover:bg-ds-bg-2"
