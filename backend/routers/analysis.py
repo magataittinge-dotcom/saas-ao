@@ -506,6 +506,7 @@ def _run_analysis_job(
                 commun_reqs = r1.get("requirements", [])
                 criteres = r1.get("criteres_jugement", [])
                 infos = r1.get("infos_marche", {})
+                _ancrer_points_safe(db, project_id, infos)
                 # Ancrage + persistance du tronc commun (scope '_commun' ;
                 # les lignes legacy lot IS NULL sont remplacées ici).
                 _anchor_requirements_safe(db, project_id, commun_reqs, "_commun")
@@ -679,6 +680,24 @@ def _anchor_requirements_safe(db: Session, project_id: str, requirements: list,
         resolve_pages(requirements, paths)
     except Exception:
         logger.warning("Ancrage des sources échoué (non bloquant)", exc_info=True)
+
+
+def _ancrer_points_safe(db: Session, project_id: str, infos: dict) -> None:
+    """« Points à éclaircir » de la passe 1 : bornés, sans question de prix, extraits ancrés sur le dossier (verbatim) ;
+    un point sans source retrouvée est écarté. Non bloquant : une panne ici ne coûte jamais l'analyse."""
+    from services import points_eclaircir as pe
+    if not isinstance(infos, dict) or pe.CLE_INFOS not in infos:
+        return
+    try:
+        points = pe.normaliser(infos.get(pe.CLE_INFOS))
+        if points:
+            texts, paths, rangs = _build_anchor_docs(db, project_id, "_commun")
+            db.rollback()
+            points = pe.ancrer(points, texts, paths, rangs)
+        infos[pe.CLE_INFOS] = points
+    except Exception:
+        logger.warning("Points à éclaircir non ancrés (non bloquant)", exc_info=True)
+        infos.pop(pe.CLE_INFOS, None)
 
 
 def _persist_scope(db: Session, project_id: str, requirements: list,

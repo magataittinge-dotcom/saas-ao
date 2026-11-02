@@ -490,9 +490,18 @@ Sois concis. Ta réponse doit commencer par { et finir par }.
     "visite_site": {"obligatoire": true ou false, "details": "..." ou null, "date": "2025-04-02" ou null},
     "variantes_autorisees": true ou false ou null,
     "conditions_sous_traitance": "..." ou null,
-    "assurances_specifiques": ["Décennale", "RC > 5M€"] ou []
+    "assurances_specifiques": ["Décennale", "RC > 5M€"] ou [],
+    "points_a_eclaircir": [
+      {"question": "Pourriez-vous préciser ... ?", "pourquoi": "ce qui est flou ou contradictoire", "source_document": "RC" | "CCAP", "source_page": entier ou null, "extrait": "citation exacte (max 150 chars)"}
+    ]
   }
 }
+
+━━━ POINTS À ÉCLAIRCIR (infos_marche.points_a_eclaircir) ━━━
+8 au plus, les plus utiles d'abord : les questions à poser à l'acheteur pour lever une ambiguïté RÉELLE du RC ou du CCAP — contradiction entre deux articles ou deux pièces, information que le dossier ne donne pas, quantité ou délai flou.
+• "question" : une phrase polie et autonome, qui se pose telle quelle sur le profil d'acheteur (« Pourriez-vous préciser… »). "pourquoi" : une phrase, ce qui est flou ou contradictoire.
+• JAMAIS de question sur le prix, un montant, un budget, une rémunération ou le chiffrage.
+• "extrait" : copié mot pour mot dans le document. Aucune ambiguïté sûre → liste vide []. N'invente rien.
 
 ━━━ LIEU D'EXÉCUTION (infos_marche.lieu_execution) ━━━
 Renseigne lieu_execution UNIQUEMENT si le RC ou le CCAP donne explicitement l'adresse ou la commune du chantier (« lieu d'exécution », « lieu des travaux », « site de l'opération »).

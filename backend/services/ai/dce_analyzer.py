@@ -294,14 +294,21 @@ def fusionner_infos_marche(infos_par_tranche: list) -> dict:
     cache plus une valeur valide en tranche 3."""
     infos: dict = {}
     candidats: list = []
+    points: list = []
     for tranche in infos_par_tranche:
+        # Les questions à l'acheteur de chaque tranche s'ajoutent (8 au plus, sans doublon) : elles ne s'écrasent pas.
+        if isinstance((tranche or {}).get("points_a_eclaircir"), list):
+            points.append(tranche["points_a_eclaircir"])
         for k, v in (tranche or {}).items():
             if v in (None, "", []):
                 continue
             if k == "lieu_execution":
                 candidats.append(v)
-            if not infos.get(k):
+            if k != "points_a_eclaircir" and not infos.get(k):
                 infos[k] = v
+    if points:
+        from services.points_eclaircir import fusionner
+        infos["points_a_eclaircir"] = fusionner(*points)
     if len(candidats) > 1:
         infos["lieu_execution_candidats"] = candidats
     return infos
