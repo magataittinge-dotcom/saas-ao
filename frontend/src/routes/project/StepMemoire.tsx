@@ -701,7 +701,7 @@ export default function StepMemoire({ project }: Props) {
 
               {criteres.length > 0 && (
                 <div className="min-w-0">
-                  <p className="microlabel mb-2">Le mémoire sera optimisé pour</p>
+                  <p className="microlabel mb-2">Pondération relevée dans le règlement</p>
                   <div className="flex flex-wrap gap-1.5">
                     {criteres.map((c) => (
                       <span

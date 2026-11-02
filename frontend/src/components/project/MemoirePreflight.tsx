@@ -93,7 +93,7 @@ export function QuotaMemoire({ projectId }: { projectId: string }) {
   const { data } = usePreflight(projectId)
   if (!data) return null
   const quotaLabel = data.quota.limit === null
-    ? 'Consommera 1 mémoire — offre illimitée'
+    ? 'Offre illimitée : ce mémoire n’est pas décompté'
     : plan === 'free'
       ? `Consommera 1 mémoire — ${data.quota.used}/${data.quota.limit} sur votre essai`
       : `Consommera 1 mémoire — ${data.quota.used}/${data.quota.limit} ce mois`
