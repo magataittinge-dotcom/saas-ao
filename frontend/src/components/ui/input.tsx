@@ -14,7 +14,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
   ({ className, type, ...props }, ref) => {
     return (
       <input
-        type={type}
+        type={type ?? "text"}
         className={cn(
           champ,
           "flex h-10 py-1 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-fg [@media(pointer:coarse)]:h-11",
