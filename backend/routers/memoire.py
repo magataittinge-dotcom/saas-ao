@@ -27,7 +27,7 @@ from routers.auth import get_auth_user
 from services.ai.memoire_generator import MemoireGenerator
 from services.chrono import chronometre, lot_du_projet
 from services.docx_exporter import build_memoire_docx
-from services.raison_sociale import raison_sociale_de
+from services.raison_sociale import nom_entreprise_effectif, raison_sociale_de
 from services.maps_service import generate_location_map, lieu_execution, lieu_source
 from services.document_tagger import get_documents_for_lot
 
@@ -555,7 +555,7 @@ def _visuels_du_memoire(project, memoire, db, logo_image) -> list:
 def build_project_memoire_docx(project, memoire, org, db) -> bytes:
     """Construit le DOCX complet du mémoire (page de garde, carte,
     organigramme, logo) — source unique pour export-docx, export-pdf et ZIP."""
-    org_name = raison_sociale_de(org, db) if org else ""   # vide : la page de garde dit « À compléter »
+    org_name = nom_entreprise_effectif(org, db) if org else ""   # vide : la page de garde dit « À compléter »
 
     # Generate location map (graceful fallback to None)
     # Carte IGN : le siège, et le CHANTIER seulement si l'analyse en a extrait le

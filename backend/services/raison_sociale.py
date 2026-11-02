@@ -78,3 +78,16 @@ def organisation_publique(org, db: Optional[Session] = None) -> dict:
     donnees = {c.name: getattr(org, c.name) for c in org.__table__.columns}
     donnees["name"] = raison_sociale_de(org, db)
     return donnees
+
+
+def nom_entreprise_effectif(org, db: Optional[Session]) -> str:
+    """Le nom que les documents (page de garde, décompte « à compléter », nom du ZIP) impriment : le nom saisi dans le
+    profil du mémoire (`MemoireConfig.nom_entreprise`, qui prime sur l'organisation comme à la génération et sur les
+    fiches), sinon la raison sociale selon la règle. Vide si aucun des deux n'est connu."""
+    if org is None:
+        return ""
+    if db is None:   # aperçu ou test sans session : la règle seule
+        return raison_sociale_de(org)
+    from models.memoire_config import MemoireConfig
+    cfg = db.query(MemoireConfig).filter(MemoireConfig.organization_id == org.id).first()
+    return ((cfg.nom_entreprise or "").strip() if cfg else "") or raison_sociale_de(org, db)
