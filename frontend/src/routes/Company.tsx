@@ -8,6 +8,7 @@ import RubriquesEntreprise from '@/components/entreprise/RubriquesEntreprise'
 import FormIdentite from '@/components/entreprise/FormIdentite'
 import FormMoyens from '@/components/entreprise/FormMoyens'
 import FormCertifications from '@/components/entreprise/FormCertifications'
+import CommencerParSiret from '@/components/entreprise/CommencerParSiret'
 import ProfileFreeTextCard from '@/components/company/ProfileFreeTextCard'
 import CasesDepot from '@/components/entreprise/CasesDepot'
 import { AfficherPlus } from '@/components/entreprise/champs'
@@ -15,6 +16,7 @@ import { MemoireSkeleton } from '@/components/skeletons'
 import { useMouvementReduit } from '@/components/intelligence/useMouvementReduit'
 import { rubriqueDepuisRecherche, type RubriqueId } from '@/lib/entreprise/avancement'
 import { champDepuisRecherche } from '@/lib/entreprise/champsFiche'
+import { entrepriseVide } from '@/lib/entreprise/vide'
 import { useFocusChamp } from '@/components/entreprise/useFocusChamp'
 
 // Texte libre → l'IA structure → l'utilisateur valide avant toute écriture (C7). Repliée : la saisie guidée vient d'abord.
@@ -47,6 +49,9 @@ export default function Company() {
   const visage = useRef<VisageAnimeRef>(null)
   const actions = useRef({ eclair: () => visage.current?.eclair() }).current
   const [aDefiler, setADefiler] = useState(0)
+  // Profil vide : une seule première action, le SIRET. « À la main » (ou une demande explicite d'une rubrique) ouvre la page complète.
+  const [saisieManuelle, setSaisieManuelle] = useState(false)
+  const premiereAction = donnees.profilCharge && !saisieManuelle && !demandee && entrepriseVide(donnees)
 
   // Choisir une rubrique (carte ou bulle) : elle s'ouvre et le visage joue l'éclair.
   const choisir = (r: RubriqueId) => { setRubrique(r); visage.current?.eclair() }
@@ -66,6 +71,8 @@ export default function Company() {
         </header>
         {!donnees.profilCharge ? (
           <MemoireSkeleton />
+        ) : premiereAction ? (
+          <CommencerParSiret onPasser={() => setSaisieManuelle(true)} />
         ) : (
           <>
             <SceneVisage ref={visage} donnees={donnees} onChoisir={choisirDepuisBulle} />
