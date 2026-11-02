@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { choixParDefaut, basculerLot, peutLancer } from '@/lib/choixLots'
+import { ETIQUETTES_SOURCE_LOT, etiquettesSourceLot } from '@/lib/lotsSource'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -58,27 +59,17 @@ function ConfidenceWarning({ confidence }: { confidence?: number }) {
 
 // ─── Sources indicator ────────────────────────────────────────────────────────
 
-const SOURCE_LABELS: Record<string, string> = {
-  excel:       'Tableau des prix',
-  rc_table:    'Règlement',
-  rc_text:     'Règlement',
-  filename:    'Fichier',
-  ia_fallback: 'Complété par IA',
-}
-
 function SourcesIndicator({ sources }: { sources?: string[] }) {
   if (!sources || sources.length === 0) return null
   // Chips dédupliqués, jamais d'identifiant technique brut à l'écran.
-  const regular = [...new Set(
-    sources.filter(s => s !== 'ia_fallback').map(s => SOURCE_LABELS[s]).filter(Boolean),
-  )]
+  const regular = etiquettesSourceLot(sources)
   const fromIA = sources.includes('ia_fallback')
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-3)' }}>
+    <span className="inline-flex flex-wrap items-center justify-end gap-1.5 text-xs max-sm:justify-start" style={{ color: 'var(--text-3)' }}>
       {regular.map(l => (
         <span
           key={l}
-          className="num-mono rounded px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wide"
+          className="whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-medium"
           style={{ background: 'var(--surface-2)', color: 'var(--text-3)', boxShadow: 'inset 0 0 0 1px var(--line)' }}
           title="Pièce du dossier où ce lot a été détecté"
         >
@@ -93,7 +84,7 @@ function SourcesIndicator({ sources }: { sources?: string[] }) {
           style={{ background: 'color-mix(in srgb, var(--warning-fg) 10%, transparent)', color: 'var(--warning-fg)', border: '1px solid color-mix(in srgb, var(--warning-fg) 25%, transparent)' }}
           title="Ce lot a été complété par l'IA à partir du règlement de consultation — vérifiez son intitulé"
         >
-          {SOURCE_LABELS.ia_fallback}
+          {ETIQUETTES_SOURCE_LOT.ia_fallback}
         </span>
       )}
     </span>
@@ -124,14 +115,6 @@ function splitLotLabel(label: string): { num: string | null; title: string } {
   if (!m) return { num: null, title: label.trim() }
   const title = m[2]?.trim()
   return { num: m[1].padStart(2, '0'), title: title || label.trim() }
-}
-
-/** Les descriptions issues du RC concatènent parfois les lots suivants
- *  (« … Ossature bois 02 Etanchéité 03 Menuiseries… ») : on coupe au
- *  premier numéro de lot suivant pour n'afficher que CE lot. */
-function cleanLotDescription(desc: string): string {
-  const cut = desc.search(/\s0?\d{1,2}\s+[A-ZÉÈÀÂÎÔÛ]/)
-  return cut > 8 ? desc.slice(0, cut).trim() : desc
 }
 
 function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) {
@@ -181,7 +164,7 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) 
           if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onSelect() }
         }}
         className={cn(
-          'w-full flex items-center gap-3.5 px-4 py-3 rounded-xl text-left transition-all duration-200 cursor-pointer',
+          'w-full flex flex-wrap items-center gap-x-3.5 gap-y-2 px-4 py-3 rounded-xl text-left transition-all duration-200 cursor-pointer',
           selected ? '' : 'bg-ds-bg-3 hover:bg-ds-bg-elevated',
         )}
         style={{
@@ -219,7 +202,7 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) 
         )}
 
         {/* Content */}
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1 basis-40">
           {isEditing ? (
             <div
               className="flex items-center gap-2"
@@ -295,15 +278,6 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) 
                   </button>
                 )}
               </div>
-              {lot.description_long && cleanLotDescription(lot.description_long) !== (lotNum ? lotTitle : displayedLabel) && (
-                <p
-                  className="text-xs mt-1 line-clamp-1"
-                  style={{ color: 'var(--text-3)' }}
-                  title={lot.description_long}
-                >
-                  {cleanLotDescription(lot.description_long)}
-                </p>
-              )}
               {lot.tranches && lot.tranches.length > 0 && (
                 <span
                   className="inline-flex items-center gap-1 text-xs font-medium mt-1 px-2 py-0.5 rounded-full"
@@ -318,7 +292,7 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) 
         </div>
 
         {/* Right side: discrete warning (only for < 80% confidence) + sources */}
-        <div className="shrink-0 flex flex-col items-end gap-1">
+        <div className="flex shrink-0 flex-col items-end gap-1 max-sm:basis-full max-sm:items-start">
           <ConfidenceWarning confidence={lot.confidence} />
           <SourcesIndicator sources={lot.sources} />
         </div>
@@ -777,7 +751,6 @@ export default function StepLotSelection({ project }: Props) {
             Source : {project.name}
           </div>
         </div>
-
         {/* ── Consigne — une ligne, pas un pavé ───────────── */}
         <p className="mb-4 flex items-center gap-2 text-sm" style={{ color: 'var(--text-3)' }}>
           <Zap size={14} className="shrink-0" style={{ color: 'var(--text-1)' }} />
