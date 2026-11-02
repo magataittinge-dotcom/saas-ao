@@ -71,8 +71,8 @@ def test_valid_pdf_still_accepted(client, patched_vault_storage):
 
 
 def test_valid_png_accepted(client, patched_vault_storage):
-    png = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
-    resp = _upload(client, "scan.png", png, "image/png")
+    from tests.depot_fabrique import png_valide   # même contrôle de contenu que « Mon entreprise » : une vraie image
+    resp = _upload(client, "scan.png", png_valide(), "image/png")
     assert resp.status_code == 200, resp.text
 
 

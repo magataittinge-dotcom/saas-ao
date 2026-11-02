@@ -1,3 +1,4 @@
+import asyncio
 from datetime import date, datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File, Form
@@ -13,7 +14,7 @@ from schemas.document import DocumentResponse, DocumentUpdateRequest
 from routers.auth import get_auth_user
 from services.audit_logger import log_action
 from services.file_storage import FileStorage
-from services import upload_validation
+from services import depot_cases, depot_controles, upload_validation
 from services.vault_classifier import (
     category_for_type,
     compute_document_status,
@@ -104,10 +105,17 @@ async def upload_document(
     regle = upload_validation.RegleDepot(
         frozenset(upload_validation.VAULT_ALLOWED_EXTENSIONS),
         upload_validation.VAULT_MAX_UPLOAD_SIZE,
-        "PDF, DOCX, DOC, XLSX, XLS, PNG ou JPG",
+        depot_cases.FORMATS_LISIBLES,
     )
+    if upload_validation.extension_of(file.filename or "") in depot_cases.ANCIENS_FORMATS:
+        # .doc / .xls : refusés quel que soit leur contenu, comme dans « Mon entreprise » (pas de requalification d'un zip renommé)
+        raise HTTPException(status_code=415, detail=depot_cases.MESSAGE_ANCIEN_FORMAT)
     with await upload_validation.recevoir_fichier(request, file, regle) as recu:
         total = recu.taille
+        # Mêmes contrôles de contenu que les dépôts de « Mon entreprise » (type réel, macros, ActiveX, modèles externes,
+        # anti-bombe) : fonction commune, pas une copie.
+        tete = await asyncio.to_thread(lambda: (recu.flux.seek(0), recu.flux.read(1024))[1])
+        await asyncio.to_thread(depot_controles.controler_contenu, recu.flux, recu.extension, tete)
         file_url = await storage.upload_stream(
             recu.flux,
             file.filename,

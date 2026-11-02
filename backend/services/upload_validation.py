@@ -24,9 +24,11 @@ from typing import BinaryIO, FrozenSet, Optional, Tuple
 
 from fastapi import HTTPException, Request, UploadFile
 
-# Un document unique, jamais une archive : .zip / .exe exclus volontairement.
+# Un document unique, jamais une archive : .zip / .exe exclus volontairement. Les anciens formats OLE2 (.doc, .xls) sont
+# refusés par la route avec un message d'aide (cf. depot_cases.ANCIENS_FORMATS) : mêmes formats que les dépôts de
+# « Mon entreprise ».
 VAULT_ALLOWED_EXTENSIONS = {
-    ".pdf", ".docx", ".doc", ".xlsx", ".xls", ".png", ".jpg", ".jpeg",
+    ".pdf", ".docx", ".xlsx", ".png", ".jpg", ".jpeg",
 }
 
 # Une attestation / un scan reste petit ; borne haute contre l'abus mémoire/disque.
