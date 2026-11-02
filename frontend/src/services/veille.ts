@@ -56,6 +56,11 @@ export const PREFERENCES_PAR_DEFAUT: PreferencesVeille = {
 
 export const SOURCE_VEILLE = 'BOAMP – DILA, licence ouverte'
 
+/** C10 — la source se lit sans connaître les sigles : « BOAMP – DILA » devient « Avis officiels du BOAMP (DILA) ». */
+export function libelleSourceVeille(source?: string | null): string {
+  return (source ?? SOURCE_VEILLE).replace(/BOAMP\s*[–-]\s*DILA/i, 'Avis officiels du BOAMP (DILA)')
+}
+
 export async function lirePreferences(): Promise<PreferencesVeille> {
   const { data } = await api.get<PreferencesVeille>('/veille/preferences')
   return data

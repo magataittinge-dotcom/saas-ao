@@ -133,7 +133,7 @@ test('« Afficher plus » seulement quand le serveur a donné un curseur ; charg
 
 test('la source est nommée sous la liste', () => {
   const html = renderToStaticMarkup(<ListeAvis {...base({ avis: [avis('1')], total: 1 })} />)
-  assert.ok(html.includes('Source : BOAMP – DILA, licence ouverte'))
+  assert.ok(html.includes('Source : Avis officiels du BOAMP (DILA), licence ouverte'))
 })
 
 test('les filtres : délai en groupe radio (« Toutes » par défaut), procédures en bascule, métier en panneau, mots-clés, tri', () => {
@@ -209,4 +209,21 @@ test('les filtres collés sont relâchés avant la dernière carte : parent flow
   assert.ok(avec.indexOf('lg:-mb-64') < avec.indexOf('<article') && avec.indexOf('lg:pt-64') > avec.lastIndexOf('</article>'))
   const sans = renderToStaticMarkup(<ListeAvis {...base()} />)
   assert.ok(!sans.includes('lg:-mb-64') && !sans.includes('lg:pt-64'), 'sans avis, rien n’est raccourci (états vides)')
+})
+
+// C10 — accueil sans zone choisie : pas de filtres devant une liste qui n'existe pas ; la source est expliquée.
+test('C10 : sans zone, aucun filtre (délai, procédure, métier, mots-clés) ; ils paraissent dès qu’une zone est choisie', () => {
+  const sans = renderToStaticMarkup(<ListeAvis {...base({ zoneVide: true })} />)
+  assert.ok(!sans.includes('data-filtres-colles'), 'bloc des filtres absent')
+  assert.ok(!/Mots-clés|Procédure|Métier|Délai/i.test(sans), 'aucun libellé de filtre')
+  assert.ok(sans.includes('Choisissez une zone sur la carte'))
+  const avec = renderToStaticMarkup(<ListeAvis {...base({ avis: [avis('1')], total: 1 })} />)
+  assert.ok(avec.includes('data-filtres-colles'))
+})
+
+test('C10 : « BOAMP – DILA » s’explique en une courte phrase', async () => {
+  const { libelleSourceVeille } = await import('@/services/veille')
+  assert.equal(libelleSourceVeille('BOAMP – DILA, licence ouverte'), 'Avis officiels du BOAMP (DILA), licence ouverte')
+  assert.equal(libelleSourceVeille(null), 'Avis officiels du BOAMP (DILA), licence ouverte')
+  assert.equal(libelleSourceVeille('Autre source'), 'Autre source')
 })

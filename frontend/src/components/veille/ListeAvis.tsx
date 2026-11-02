@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import CarteAvis from './CarteAvis'
 import FiltresVeille from './FiltresVeille'
-import { SOURCE_VEILLE, type AvisVeille } from '@/services/veille'
+import { libelleSourceVeille, type AvisVeille } from '@/services/veille'
 import { aDesFiltres, type FiltresAvis, type TriAvis } from '@/lib/veille'
 
 export interface PropsListeAvis {
@@ -119,9 +119,12 @@ export default function ListeAvis(p: PropsListeAvis) {
           16 rem, les filtres sont donc relâchés avant la fin de la liste et la dernière carte reste entièrement visible en bas de
           page ; le pt-64 du bloc suivant rend exactement l'espace retiré. */}
       <div className="lg:flow-root">
-        <div data-filtres-colles className="mt-4 bg-surface-0 pb-3 lg:sticky lg:-top-5 lg:z-10 lg:pt-3">
-          <FiltresVeille filtres={p.filtres} onFiltres={p.onFiltres} tri={p.tri} onTri={p.onTri} metiers={p.metiers} />
-        </div>
+        {/* C10 — sans zone choisie, il n'y a aucun avis à filtrer : les filtres apparaissent une fois la zone choisie. */}
+        {!p.zoneVide && (
+          <div data-filtres-colles className="mt-4 bg-surface-0 pb-3 lg:sticky lg:-top-5 lg:z-10 lg:pt-3">
+            <FiltresVeille filtres={p.filtres} onFiltres={p.onFiltres} tri={p.tri} onTri={p.onTri} metiers={p.metiers} />
+          </div>
+        )}
 
         <div className={cn('mt-2', aDesAvis && 'lg:-mb-64')}>
           {p.zoneVide ? (
@@ -177,7 +180,7 @@ export default function ListeAvis(p: PropsListeAvis) {
             <BoutonSuite chargePlus={!!p.chargePlus} nbAvis={p.avis.length} onSuite={p.onVoirPlus} />
           </div>
         )}
-        <p className="mt-6 text-[13px] text-fg-3">Source : {p.source ?? SOURCE_VEILLE}</p>
+        <p className="mt-6 text-[13px] text-fg-3">Source : {libelleSourceVeille(p.source)}</p>
       </div>
     </section>
   )

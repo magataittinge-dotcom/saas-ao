@@ -101,7 +101,7 @@ test('la veille de l\'accueil : recherche de zone, carte, filtres et liste des a
   assert.ok(html.includes('Réhabilitation d&#x27;un groupe scolaire (exemple)') && html.includes('>Nouveau<'), 'liste des avis')
   assert.ok(html.includes('Afficher plus'), 'curseur suivant')
   assert.ok(html.includes('15 avis ouverts en France') && html.includes('Données BOAMP du 31/10 à '), 'horodatage des données, à côté de la source')
-  assert.equal((html.match(/Source : BOAMP – DILA, licence ouverte/g) ?? []).length, 2, 'la source sous la carte et sous la liste')
+  assert.equal((html.match(/Source : Avis officiels du BOAMP \(DILA\), licence ouverte/g) ?? []).length, 2, 'la source sous la carte et sous la liste')
   assert.ok(/<h2[^>]*>Appels d&#x27;offres ouverts<\/h2>/.test(html) && /<h3[^>]*>Avis ouverts<\/h3>/.test(html), 'niveaux de titre')
 })
 

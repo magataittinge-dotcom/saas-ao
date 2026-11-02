@@ -9,7 +9,7 @@ import RechercheZone from './RechercheZone'
 import { DEPARTEMENTS } from './donnees/departements'
 import { useVeille } from '@/hooks/useVeille'
 import { etapeElargir } from '@/lib/veille'
-import { SOURCE_VEILLE } from '@/services/veille'
+import { libelleSourceVeille } from '@/services/veille'
 
 const NOMS: Readonly<Record<string, string>> = Object.fromEntries(DEPARTEMENTS.map((d) => [d.code, d.nom]))
 
@@ -48,7 +48,7 @@ export default function VeilleAccueil() {
           <p className="text-[13px] text-fg-3">
             {v.totalComptes > 0 ? `${v.totalComptes} avis ouverts en France` : v.chargeEnCours ? 'Chargement de la carte…' : 'Aucun avis ouvert pour ces filtres'}
             {actualisation ? ` · ${actualisation}` : ''}
-            {' · '}Source : {v.source ?? SOURCE_VEILLE}
+            {' · '}Source : {libelleSourceVeille(v.source)}
           </p>
         </div>
         <ListeAvis
