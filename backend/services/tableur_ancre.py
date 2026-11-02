@@ -10,8 +10,9 @@ L'ancre, un petit JSON rangé avec l'exigence (``compliance_items.ancre``) ::
 qui portent le passage. Niveau « passage » : la ligne est surlignée. « page » : la feuille
 est citée, sans surlignage (``ligne`` et ``cellules`` vides). « aucun » : rien à montrer.
 
-Le texte que l'analyse a lu est celui de ``DocumentProcessor._extract_xlsx`` (cellules
-non vides d'une ligne, séparées par une tabulation, feuilles à la suite). Ici, la même
+Le texte que l'analyse a lu est celui de ``DocumentProcessor._extract_xlsx`` (valeurs
+calculées, jamais les formules ; cellules non vides d'une ligne, séparées par une tabulation,
+feuilles à la suite). Ici, la même
 lecture donne à chaque cellule sa position, et la comparaison se fait sur le flux
 alphanumérique (lettres et chiffres sans accents ni casse, comme ``pdf_ancre``).
 
@@ -38,6 +39,7 @@ from pathlib import Path
 from typing import Any, Iterator, NamedTuple, Optional, Sequence
 
 from services.garde_archives import controler_tableur
+from services.lecture_ods import texte_cellule
 from services.pdf_ancre import MIN_FLUX_MOT, MIN_FLUX_PASSAGE
 from services.pdf_positions import forme_flux
 
@@ -205,15 +207,15 @@ class _Index(NamedTuple):
 
 
 def _texte(valeur: Any) -> str:
-    """Le texte d'une cellule tel que l'extraction du DCE l'a donné à l'analyse (``str``)."""
-    return str(valeur)
+    """Le texte d'une cellule tel que l'extraction du DCE l'a donné à l'analyse."""
+    return texte_cellule(valeur)
 
 
 def _indexer(chemin) -> _Index:
     bilan = _Bilan()
     noms: list[str] = []
     lignes: list[_Ligne] = []
-    for nom, rangees in _feuilles(chemin, True, None, bilan):
+    for nom, rangees in _feuilles(chemin, False, None, bilan):   # les valeurs, comme l'extraction (D2)
         noms.append(nom)
         for numero, valeurs in rangees:
             morceaux: list[str] = []

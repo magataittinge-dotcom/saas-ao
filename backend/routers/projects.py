@@ -29,8 +29,8 @@ from pathlib import Path as FilePath
 UPLOADS_ROOT = FilePath(__file__).parent.parent / "uploads"
 
 # Upload limits — DCE archives can legitimately reach ~1.5 GB on big projects.
-_ALLOWED_EXTENSIONS = {".pdf", ".docx", ".doc", ".xlsx", ".xls", ".zip", ".png", ".jpg", ".jpeg"}
-_FORMATS_DCE = "PDF, DOCX, DOC, XLSX, XLS, ZIP, PNG ou JPG"
+_ALLOWED_EXTENSIONS = {".pdf", ".docx", ".doc", ".xlsx", ".xlsm", ".xls", ".ods", ".zip", ".png", ".jpg", ".jpeg"}
+_FORMATS_DCE = "PDF, DOCX, DOC, XLSX, XLSM, XLS, ODS, ZIP, PNG ou JPG"
 _MAX_UPLOAD_SIZE = 2 * 1024 * 1024 * 1024     # 2 GB
 _UPLOAD_CHUNK_SIZE = 4 * 1024 * 1024          # 4 MB per chunk
 _UPLOAD_SPOOL_THRESHOLD = 10 * 1024 * 1024    # spill to disk past 10 MB
@@ -1387,7 +1387,7 @@ def _extract_text_from_url_background(doc_id: str, file_url: str, filename: str)
 
 
 # Files to extract from a ZIP (AMÉLIORATION 1: added .ods)
-_ZIP_ALLOWED = {".pdf", ".docx", ".xlsx", ".xls", ".doc", ".ods"}
+_ZIP_ALLOWED = {".pdf", ".docx", ".xlsx", ".xlsm", ".xls", ".doc", ".ods"}
 # Ignore macOS artefacts and hidden files
 _ZIP_IGNORE = re.compile(r'^(__MACOSX[/\\]|\.)', re.IGNORECASE)
 

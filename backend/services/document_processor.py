@@ -9,6 +9,8 @@ from typing import Iterator, List, Optional, Tuple, Union
 from services.pdf_lecture import ERREUR_MOT_DE_PASSE, PdfIllisible, lire_document
 
 from services.garde_archives import controler_archive_office, controler_tableur
+from services.lecture_ods import texte_cellule
+from services.tableur_formules import avertissement_formules, compter_formules_sans_valeur
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +31,14 @@ _WARN_UNREADABLE = (
     "Document non lisible (fichier corrompu ou format non reconnu) — "
     "texte non extrait de ce fichier"
 )
+_WARN_TABLEUR_ILLISIBLE = (
+    "Tableur non lisible en l'état (classeur abîmé, protégé ou démesuré) — "
+    "ouvrez-le dans votre tableur, enregistrez-le au format .xlsx puis redéposez-le"
+)
+_EXTENSIONS_TABLEUR = (".xlsx", ".xlsm", ".xls", ".ods")
+# Texte d'un .ods envoyé à l'analyse, tous onglets confondus (revue de sécurité D1) : une DPGF de
+# 20 000 lignes pèse ≈ 2 Mo de texte ; au-delà, la lecture s'arrête et le dépôt le dit.
+_MAX_CARACTERES_TABLEUR = 5_000_000
 _WARN_DOC = (
     "Format .doc (ancien Word) non pris en charge — texte non extrait : "
     "convertissez ce fichier en PDF ou DOCX"
@@ -99,17 +109,19 @@ class DocumentProcessor:
             return "", None, _WARN_DOC
 
         # Types jamais porteurs de texte (images, plans…) → pas de warning.
-        if not any(lower.endswith(ext) for ext in (".pdf", ".docx", ".xlsx", ".xls", ".txt", ".ods")):
+        if not any(lower.endswith(ext) for ext in (".pdf", ".docx", ".txt") + _EXTENSIONS_TABLEUR):
             return "", None, None
 
         try:
-            text, pages, illisibles = self._do_extract(content, lower, max_pages, on_page, on_pages)
+            text, pages, illisibles, avertissement = self._do_extract(
+                content, lower, max_pages, on_page, on_pages)
         except PdfIllisible as e:
             logger.warning(f"Extraction failed for {filename}: {e}")
             return "", None, _WARN_PASSWORD if e.code == ERREUR_MOT_DE_PASSE else _WARN_UNREADABLE
         except Exception as e:
             logger.warning(f"Extraction failed for {filename}: {e}")
-            return "", None, _WARN_UNREADABLE
+            return "", None, (_WARN_TABLEUR_ILLISIBLE if lower.endswith(_EXTENSIONS_TABLEUR)
+                              else _WARN_UNREADABLE)
 
         if lower.endswith(".pdf"):
             # Un PDF sans aucune page n'a rien livré : non lisible (plan H §6, n° 1 —
@@ -123,23 +135,29 @@ class DocumentProcessor:
             if illisibles:
                 return text, pages, _warn_pages_illisibles(illisibles)
 
-        return text, pages, None
+        return text, pages, avertissement
 
     def _do_extract(
         self, content: Source, lower: str, max_pages: Optional[int], on_page=None, on_pages=None
-    ) -> Tuple[str, Optional[int], Tuple[int, ...]]:
-        """(texte, pages, numéros des pages illisibles)."""
+    ) -> Tuple[str, Optional[int], Tuple[int, ...], Optional[str]]:
+        """(texte, pages, numéros des pages illisibles, avertissement d'un tableur)."""
         if lower.endswith(".pdf"):
-            return self._extract_pdf(content, max_pages, on_page, on_pages)
+            texte, pages, illisibles = self._extract_pdf(content, max_pages, on_page, on_pages)
+            return texte, pages, illisibles, None
         elif lower.endswith(".docx"):
-            return texte_docx(content), None, ()
+            return texte_docx(content), None, (), None
         elif lower.endswith(".xls"):
-            return self._extract_xls_biff(content), None, ()
-        elif lower.endswith((".xlsx", ".ods")):
-            return self._extract_xlsx(content), None, ()
+            texte, avertissement = self._extract_xls_biff(content)
+            return texte, None, (), avertissement
+        elif lower.endswith((".xlsx", ".xlsm")):
+            texte, avertissement = self._extract_xlsx(content)
+            return texte, None, (), avertissement
+        elif lower.endswith(".ods"):
+            texte, avertissement = self._extract_ods(content)
+            return texte, None, (), avertissement
         elif lower.endswith(".txt"):
-            return _octets(content).decode("utf-8", errors="replace"), None, ()
-        return "", None, ()
+            return _octets(content).decode("utf-8", errors="replace"), None, (), None
+        return "", None, (), None
 
     def _extract_pdf(
         self, content: Source, max_pages: Optional[int] = None, on_page=None, on_pages=None
@@ -160,7 +178,7 @@ class DocumentProcessor:
                 pass  # le cache de l'ancrage ne casse jamais l'extraction
         return "\n\n".join(t for t in lu.pages if t), lu.total, lu.illisibles
 
-    def _extract_xls_biff(self, content: Source) -> str:
+    def _extract_xls_biff(self, content: Source) -> Tuple[str, Optional[str]]:
         """Vieux format Excel (BIFF, avant 2007) — xlrd (audit risque #1 :
         openpyxl le rejetait en silence). Fallback openpyxl pour les .xls
         qui sont en réalité des xlsx renommés."""
@@ -173,16 +191,59 @@ class DocumentProcessor:
             for sheet in wb.sheets():
                 for rx in range(sheet.nrows):
                     row_text = "\t".join(
-                        str(c.value) for c in sheet.row(rx)
+                        _texte_cellule_xls(c) for c in sheet.row(rx)
                         if c.value not in (None, "")
                     )
                     if row_text.strip():
                         lines.append(row_text)
-            return "\n".join(lines)
+            # BIFF enregistre toujours le résultat d'une formule : xlrd rend la valeur calculée.
+            return "\n".join(lines), None
         except Exception:
             return self._extract_xlsx(content)
 
-    def _extract_xlsx(self, content: Source) -> str:
+    def _extract_ods(self, content: Source) -> Tuple[str, Optional[str]]:
+        """Tableur OpenDocument (.ods) lu comme un .xlsx : une ligne = les cellules non vides,
+        séparées par une tabulation, feuilles à la suite. Sans odfpy (services/lecture_ods)."""
+        from services.lecture_ods import _MAX_LIGNES_ODS, onglets_ods
+
+        controler_tableur(content)   # bombe de décompression : jamais ouverte
+        fichier = io.BytesIO(content) if isinstance(content, (bytes, bytearray)) else str(content)
+        lines: List[str] = []
+        coupe = False
+        trop_long = False
+        total = 0
+        sans_valeur: list = []
+        for _nom, rangees in onglets_ods(fichier, formules_sans_valeur=sans_valeur, lignes_repetees=False):
+            lues = 0
+            for row in rangees:
+                lues += 1
+                row_text = "\t".join(texte_cellule(c) for c in row if c not in (None, ""))
+                if row_text.strip():
+                    lines.append(row_text)
+                    total += len(row_text) + 1
+                    if total >= _MAX_CARACTERES_TABLEUR:
+                        trop_long = True
+                        break
+            coupe = coupe or lues >= _MAX_LIGNES_ODS
+            if trop_long:
+                break
+        avertissements = []
+        if sans_valeur:
+            avertissements.append(avertissement_formules(len(sans_valeur)))
+        if coupe:
+            avertissements.append(
+                f"Tableur très long : les {_MAX_LIGNES_ODS:,} premières lignes de chaque feuille sont lues"
+                .replace(",", " "))
+        if trop_long:
+            avertissements.append(
+                f"Tableur très volumineux : les {_MAX_CARACTERES_TABLEUR // 1_000_000} premiers millions "
+                "de caractères sont lus")
+        return "\n".join(lines), (" — ".join(avertissements) or None)
+
+    def _extract_xlsx(self, content: Source) -> Tuple[str, Optional[str]]:
+        """(texte, avertissement). Les VALEURS calculées partent à l'analyse, jamais une formule
+        (« =SOMME(B2:B9) ») : une cellule à formule sans valeur enregistrée est laissée de côté et
+        comptée dans l'avertissement (D2)."""
         import openpyxl
 
         controler_tableur(content)   # bombe de décompression : jamais ouverte (garde W, bloc 1)
@@ -193,19 +254,31 @@ class DocumentProcessor:
         else:
             fichier = open(content, "rb")
         try:
-            wb = openpyxl.load_workbook(fichier, read_only=True)
+            wb = openpyxl.load_workbook(fichier, read_only=True, data_only=True)
             try:
                 lines = []
                 for sheet in wb.worksheets:
                     for row in sheet.iter_rows(values_only=True):
-                        row_text = "\t".join(str(c) for c in row if c is not None)
+                        row_text = "\t".join(texte_cellule(c) for c in row if c is not None)
                         if row_text.strip():
                             lines.append(row_text)
-                return "\n".join(lines)
             finally:
                 wb.close()
+            fichier.seek(0)
+            sans_valeur = compter_formules_sans_valeur(fichier)
         finally:
             fichier.close()
+        return "\n".join(lines), (avertissement_formules(sans_valeur) if sans_valeur else None)
+
+
+def _texte_cellule_xls(cellule) -> str:
+    """Une cellule .xls en texte : une erreur de calcul (#DIV/0!…) est un code chez xlrd, on rend
+    son libellé ; le reste est la valeur calculée."""
+    import xlrd
+
+    if cellule.ctype == xlrd.XL_CELL_ERROR:
+        return xlrd.error_text_from_code.get(cellule.value, str(cellule.value))
+    return texte_cellule(cellule.value)
 
 
 def _octets(content: Source) -> bytes:

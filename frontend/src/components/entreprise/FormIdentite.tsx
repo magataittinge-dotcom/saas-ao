@@ -1,19 +1,13 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { MapPin } from 'lucide-react'
 import { Sigle } from '@/components/common/Sigle'
 import { Input, Textarea } from '@/components/ui/input'
 import type { DonneesEntreprise } from '@/lib/entreprise/avancement'
 import { FORMES_JURIDIQUES, METIERS, lireDepartements } from '@/lib/entreprise/metiers'
 import { AfficherPlus, ChampNombre, Field, Groupe, Pleine, SOURCE_SIRENE, Select } from './champs'
 import CadreFormulaire from './CadreFormulaire'
+import CarteSiege from './CarteSiege'
 import { useFormulaireRubrique } from './useFormulaireRubrique'
-
-const GMAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
-
-function staticMapUrl(address: string): string {
-  return `https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(address)}&zoom=12&size=600x300&scale=2&maptype=roadmap&markers=color:red|${encodeURIComponent(address)}&key=${GMAPS_KEY}`
-}
 
 const texte = (v: unknown): boolean => typeof v === 'string' && v.trim() !== ''
 
@@ -27,7 +21,6 @@ const texte = (v: unknown): boolean => typeof v === 'string' && v.trim() !== ''
 export default function FormIdentite({ donnees, avant, idPanneau, idOnglet }: { donnees: DonneesEntreprise; avant?: ReactNode; idPanneau?: string; idOnglet?: string }) {
   const f = useFormulaireRubrique('identite', donnees)
   const { organisation: org, profil } = f.brouillon
-  const [erreurCarte, setErreurCarte] = useState(false)
   const [departements, setDepartements] = useState<string | null>(null)
   const adresse = typeof org.address === 'string' ? org.address : ''
   const metiers = profil.metiers ?? []
@@ -57,17 +50,7 @@ export default function FormIdentite({ donnees, avant, idPanneau, idOnglet }: { 
         <Field label="Adresse du siège" rempli={texte(adresse)} source={sirene}>
           <Input value={adresse} onChange={(e) => f.poserOrganisation('address', e.target.value)} autoComplete="street-address" />
         </Field>
-        {GMAPS_KEY && adresse.trim().length > 5 && !erreurCarte && (
-          <Pleine>
-            <div className="overflow-hidden rounded-lg border border-bord-2">
-              <img src={staticMapUrl(adresse)} alt="Aperçu carte" className="h-auto w-full" loading="lazy" onError={() => setErreurCarte(true)} />
-              <div className="flex items-center gap-1.5 bg-surface-0 px-3 py-2 text-xs text-fg-3">
-                <MapPin size={12} aria-hidden />
-                Aperçu de la carte insérée dans vos mémoires techniques
-              </div>
-            </div>
-          </Pleine>
-        )}
+        <CarteSiege adresse={donnees.organisation?.address} />
       </Groupe>
 
       <Groupe titre="Dirigeant et contacts">

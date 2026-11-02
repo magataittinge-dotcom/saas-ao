@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+import base64
+
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile
 from sqlalchemy.orm import Session
 
 from database import get_db
@@ -6,6 +8,8 @@ from models.user import User
 from models.organization import Organization
 from schemas.organization import OrganizationResponse, OrganizationUpdate
 from routers.auth import get_auth_user
+from services.maps_service import generate_location_map
+from services.rate_limit import limiter
 from services.upload_validation import RegleDepot, recevoir_fichier
 
 router = APIRouter()
@@ -63,6 +67,27 @@ def get_my_organization(user: User = Depends(get_auth_user), db: Session = Depen
     if not org:
         raise HTTPException(status_code=404, detail="Organisation introuvable")
     return org
+
+
+@router.get("/me/carte")
+@limiter.limit("20/minute")
+def carte_du_siege(request: Request, user: User = Depends(get_auth_user), db: Session = Depends(get_db)):
+    """Carte IGN du siège (Plan IGN v2, sans clé ni coût) : la même que celle du mémoire, pour l'aperçu de « Mon entreprise ».
+
+    La route ne prend aucune adresse : elle lit l'adresse ENREGISTRÉE de l'entreprise de l'utilisateur connecté.
+    200 ``{image_base64, legende}`` ; 204 si l'entreprise n'a pas d'adresse ou si la carte n'a pas pu être composée
+    (adresse introuvable, service IGN indisponible) : le front n'affiche alors rien. Le service cache la carte
+    30 jours par adresse ; le délai total d'un appel est borné (maps_service)."""
+    org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Organisation introuvable")
+    adresse = (org.address or "").strip()
+    if not adresse:
+        return Response(status_code=204)
+    png, legende = generate_location_map(adresse)
+    if not png:
+        return Response(status_code=204)
+    return {"image_base64": base64.b64encode(png).decode("ascii"), "legende": legende}
 
 
 @router.patch("/me", response_model=OrganizationResponse)
