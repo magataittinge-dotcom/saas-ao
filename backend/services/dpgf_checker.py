@@ -1,6 +1,6 @@
 """
 DPGF verification: check that a filled DPGF spreadsheet is complete and consistent.
-Supports xlsx (openpyxl), xls (xlrd), ods (odfpy).
+Supports xlsx (openpyxl), xls (xlrd), ods (services/lecture_ods, sans odfpy).
 """
 
 import logging
@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Optional
 
 from services.garde_archives import controler_tableur
+from services.tableur_formules import avertissement_formules, compter_formules_sans_valeur
 
 logger = logging.getLogger(__name__)
 
@@ -274,7 +275,7 @@ def _check_xlsx(file_path: Path) -> dict:
             if rows:
                 results.append(_analyze_rows(rows, sheet_name))
 
-        return _merge_results(results)
+        return _avec_formules_sans_valeur(_merge_results(results), compter_formules_sans_valeur(file_path))
     finally:
         wb.close()
 
@@ -298,11 +299,20 @@ def _check_ods(file_path: Path) -> dict:
     from services.lecture_ods import onglets_ods
 
     results = []
-    for sheet_name, lignes in onglets_ods(file_path):
+    sans_valeur: list = []
+    for sheet_name, lignes in onglets_ods(file_path, formules_sans_valeur=sans_valeur):
         rows = [[_cellule_ods(v) for v in ligne] for ligne in lignes]
         if rows:
             results.append(_analyze_rows(rows, sheet_name))
-    return _merge_results(results)
+    return _avec_formules_sans_valeur(_merge_results(results), len(sans_valeur))
+
+
+def _avec_formules_sans_valeur(rapport: dict, nombre: int) -> dict:
+    """Un classeur jamais recalculé (D2) : ses montants de formule se lisent vides. Le rapport le
+    dit en premier, avec la marche à suivre, pour que « montant vide » ne soit pas pris pour un oubli."""
+    if nombre:
+        rapport["warnings"] = [avertissement_formules(nombre)] + list(rapport["warnings"])
+    return rapport
 
 
 def _cellule_ods(valeur):

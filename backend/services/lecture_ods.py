@@ -38,7 +38,8 @@ def texte_cellule(valeur) -> str:
     return str(valeur)
 
 
-def onglets_ods(chemin, lignes_vides_exactes: bool = False) -> Iterator[Tuple[str, Iterator[list]]]:
+def onglets_ods(chemin, lignes_vides_exactes: bool = False,
+                formules_sans_valeur: "list | None" = None) -> Iterator[Tuple[str, Iterator[list]]]:
     """(nom de l'onglet, lignes de valeurs) d'un .ods, lus dans content.xml.
 
     Valeur d'une cellule : nombre (office:value) ou texte de ses paragraphes.
@@ -46,7 +47,11 @@ def onglets_ods(chemin, lignes_vides_exactes: bool = False) -> Iterator[Tuple[st
     contre les bombes (garde_archives) est appelée par l'appelant.
 
     ``lignes_vides_exactes`` : une ligne vide répétée n fois donne n lignes vides (numéros de
-    ligne exacts, pour « Voir dans le DCE ») au lieu d'une seule (défaut : économie)."""
+    ligne exacts, pour « Voir dans le DCE ») au lieu d'une seule (défaut : économie).
+
+    ``formules_sans_valeur`` : liste à laquelle on ajoute un élément par cellule à formule dont le
+    fichier n'a pas enregistré la valeur calculée (tableur jamais recalculé, D2). La cellule est
+    lue vide : jamais la formule."""
     from lxml import etree
 
     with zipfile.ZipFile(chemin) as archive, archive.open("content.xml") as flux:
@@ -64,7 +69,7 @@ def onglets_ods(chemin, lignes_vides_exactes: bool = False) -> Iterator[Tuple[st
                 continue
             if evenement != "end" or nom is None:
                 continue
-            valeurs = _ligne_ods(el)
+            valeurs = _ligne_ods(el, formules_sans_valeur)
             place = _MAX_LIGNES_ODS - len(lignes)
             if place > 0:
                 if any(v not in (None, "") for v in valeurs):
@@ -80,7 +85,7 @@ def onglets_ods(chemin, lignes_vides_exactes: bool = False) -> Iterator[Tuple[st
                 del parent[0]
 
 
-def _ligne_ods(ligne) -> list:
+def _ligne_ods(ligne, formules_sans_valeur: "list | None" = None) -> list:
     valeurs: list = []
     for cellule in ligne:
         if cellule.tag not in (_ODS_T + "table-cell", _ODS_T + "covered-table-cell"):
@@ -93,6 +98,9 @@ def _ligne_ods(ligne) -> list:
                 valeur = None
         if valeur is None:
             valeur = "\n".join("".join(p.itertext()) for p in cellule.iter(_ODS_P)) or None
+        if (valeur is None and formules_sans_valeur is not None
+                and cellule.get(_ODS_T + "formula") and cellule.get(_ODS_O + "value-type") is None):
+            formules_sans_valeur.append(1)
         repetitions = _entier(cellule.get(_ODS_T + "number-columns-repeated"))
         valeurs.extend([valeur] * min(repetitions, _MAX_COLONNES - len(valeurs)))
         if len(valeurs) >= _MAX_COLONNES:

@@ -96,10 +96,13 @@ def test_feuilles_multiples_le_passage_d_une_seule_feuille(fichier):
     assert (a["feuille"], a["ligne"], a["niveau"]) == ("Tranche optionnelle", 2, "passage")
 
 
-def test_formule_lue_comme_l_extraction_du_dce(fichier):
+def test_formule_sans_valeur_jamais_lue_comme_l_extraction_du_dce(fichier):
+    # D2 : l'analyse reçoit les valeurs, jamais « =B1*45 » ; une formule sans valeur en cache n'est
+    # pas lue, l'ancre ne la porte pas non plus (le cas avec valeur est dans test_tableurs_formules).
     chemin = fichier(_classeur({"F": _lignes(["Mur en parpaing", 12, "=B1*45"])}))
-    a = _ancre(chemin, "Mur en parpaing\t12\t=B1*45")
-    assert a["niveau"] == "passage" and a["ligne"] == 1 and a["cellules"] == ["A", "B", "C"]
+    a = _ancre(chemin, "Mur en parpaing\t12")
+    assert a["niveau"] == "passage" and a["ligne"] == 1 and a["cellules"] == ["A", "B"]
+    assert _ancre(chemin, "Mur en parpaing\t12\t=B1*45")["niveau"] == "aucun"
 
 
 def test_mot_court_seulement_s_il_est_le_contenu_entier_d_une_cellule(fichier):
