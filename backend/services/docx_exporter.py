@@ -477,6 +477,10 @@ def _rendre_liste(doc: Document, liste: md.Liste):
         _ajouter_segments(p, el.segments)
 
 
+def _texte_imprime(texte: str) -> str:
+    return _PASSAGE_RE.sub(lambda m: f"À compléter : {m.group(1)}" if m.group(1) else "À compléter", texte)
+
+
 def _largeurs_colonnes(tableau: md.Tableau) -> list[float]:
     """Largeurs (cm) proportionnelles au contenu, bornées : ni colonne
     écrasée, ni colonne qui mange la page."""
@@ -484,7 +488,8 @@ def _largeurs_colonnes(tableau: md.Tableau) -> list[float]:
     poids = []
     for j in range(n):
         textes = [tableau.entetes[j]] + [ligne[j] for ligne in tableau.lignes]
-        longueur = max((sum(len(s.texte) for s in segs) for segs in textes), default=1)
+        # M2 (2/11) : la longueur est celle du texte IMPRIMÉ (un passage s'imprime « À compléter : X », pas « X »)
+        longueur = max((sum(len(_texte_imprime(s.texte)) for s in segs) for segs in textes), default=1)
         poids.append(min(max(longueur, 6), 38))
     total = sum(poids)
     return [_LARGEUR_UTILE_CM * w / total for w in poids]
