@@ -5,21 +5,12 @@ import { Sigle } from '@/components/common/Sigle'
 import { ArrowRight, FolderX } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DeadlinePill } from '@/components/dashboard/DeadlinePill'
-import { avancementAO, echeanceAO, estEnCours, etatEcheance } from '@/lib/echeance'
+import { echeanceAO, estEnCours, etatEcheance } from '@/lib/echeance'
+import { lienEtape, verbeEtape } from '@/lib/intelligence/action'
 import type { Project } from '@/types'
 
-/** Ce qu'il reste à faire sur un AO : un verbe, l'étape qui suit. */
-export function prochaineEtape(p: Project): string {
-  if (p.status === 'analyzed' && p.current_step < 4) return 'Décider : on y va ?'
-  switch (avancementAO(p.current_step).etape) {
-    case 1: return "Déposer le dossier de l'acheteur"
-    case 2: return 'Choisir le lot'
-    case 3: return p.processing_status === 'processing' ? 'Analyse en cours' : "Lancer l'analyse"
-    case 4: return 'Vérifier le dossier'
-    case 5: return 'Rédiger le mémoire'
-    default: return 'Exporter le dossier'
-  }
-}
+/** Ce qu'il reste à faire sur un AO : un verbe, l'étape qui suit (le calcul commun, lib/intelligence/action.ts). */
+export const prochaineEtape = (p: Project): string => verbeEtape(p)
 
 /** Les AO en cours, la remise la plus proche d'abord (sans date à la fin), trois au plus. */
 export function aoDeLaBande(projets: readonly Project[], max = 3): Project[] {
@@ -85,10 +76,10 @@ export default function BandeAO({ projets, total, chargement, onSansSuite, onNou
                 <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 pt-1">
                   {i === 0 ? (
                     <Button asChild size="sm" className="[@media(pointer:coarse)]:min-h-11">
-                      <Link to={`/projects/${p.id}`}>{prochaineEtape(p)} <ArrowRight aria-hidden /></Link>
+                      <Link to={lienEtape(p)}>{prochaineEtape(p)} <ArrowRight aria-hidden /></Link>
                     </Button>
                   ) : (
-                    <Link to={`/projects/${p.id}`} className="inline-flex items-center text-sm font-medium text-accent-text underline-offset-[3px] hover:underline [@media(pointer:coarse)]:min-h-11">
+                    <Link to={lienEtape(p)} className="inline-flex items-center text-sm font-medium text-accent-text underline-offset-[3px] hover:underline [@media(pointer:coarse)]:min-h-11">
                       {prochaineEtape(p)}
                     </Link>
                   )}

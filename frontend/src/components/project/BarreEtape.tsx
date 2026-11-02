@@ -3,7 +3,7 @@ import { ArrowLeft, Loader2, MoreHorizontal, type LucideIcon } from 'lucide-reac
 import { cn } from '@/lib/utils'
 
 /**
- * La barre d'action collée au bas d'une étape d'un AO (« Étape suivante : Pièces », « Lancer l'analyse »…).
+ * La barre d'action collée au bas d'une étape d'un AO (« Étape suivante : Pièces », « Lire ce dossier »…).
  *
  * Ordinateur : la barre d'origine — `sticky -bottom-5 z-30`, qui compense le `py-5` de <main>, avec son bilan
  * à gauche et ses boutons à droite.

@@ -66,10 +66,12 @@ test('chaque étape mène à son écran, avec le bon verbe', () => {
   const cas: [Parameters<typeof projet>[1], string, string][] = [
     [{ current_step: 1 }, "Déposer le dossier de l'acheteur", '/projects/x/upload'],
     [{ current_step: 2 }, 'Choisir le lot', '/projects/x/lots'],
-    [{ current_step: 3 }, "Lancer l'analyse", '/projects/x/analysis'],
+    [{ current_step: 3 }, 'Lire ce dossier', '/projects/x/analysis'],
     [{ current_step: 3, status: 'analyzed' }, 'Décider : on y va ?', '/projects/x/analysis'],
     [{ current_step: 4 }, 'Vérifier le dossier', '/projects/x/verification'],
-    [{ current_step: 5 }, 'Rédiger le mémoire', '/projects/x/memoire'],
+    [{ current_step: 5 }, 'Préparer le plan du mémoire', '/projects/x/plan'],
+    [{ current_step: 5, processing_status: 'generating' }, 'Rédaction du mémoire en cours', '/projects/x/memoire'],
+    [{ current_step: 5, completed_steps: { 5: true } }, 'Relire le mémoire', '/projects/x/memoire'],
     [{ current_step: 6 }, 'Exporter le dossier', '/projects/x/export'],
   ]
   for (const [over, verbe, vers] of cas) {
