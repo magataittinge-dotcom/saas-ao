@@ -17,7 +17,10 @@ from typing import Iterator, Tuple
 
 _MAX_COLONNES = 64        # colonnes lues par ligne
 _MAX_LIGNES_ODS = 20_000  # lignes lues par onglet
-_MAX_CARACTERES_ODS = 50_000_000   # texte développé par fichier (lignes et colonnes répétées comprises)
+_MAX_LIGNES_FICHIER = 100_000      # lignes lues par fichier, tous onglets confondus (2e revue de sécurité D1)
+_MAX_ONGLETS = 500                 # onglets lus par fichier
+_MAX_CARACTERES_ODS = 50_000_000   # budget par fichier : un point par cellule produite (un caractère de plus
+                                   # par caractère de texte), lignes et colonnes répétées comprises
 _MAX_CARACTERES_CELLULE = 10_000   # texte gardé par cellule (revue de sécurité D1 : une cellule de plusieurs Mo)
 
 _ODS_T = "{urn:oasis:names:tc:opendocument:xmlns:table:1.0}"
@@ -60,7 +63,9 @@ def onglets_ods(chemin, lignes_vides_exactes: bool = False,
     l'analyse : quelques octets de XML ne deviennent pas des millions de lignes)."""
     from lxml import etree
 
-    developpe = 0     # caractères produits, répétitions comprises
+    developpe = 0     # budget consommé : cellules et caractères produits, répétitions comprises
+    total_lignes = 0  # lignes produites, tous onglets confondus
+    onglets = 0
     with zipfile.ZipFile(chemin) as archive, archive.open("content.xml") as flux:
         nom, lignes = None, []
         for evenement, el in etree.iterparse(
@@ -68,6 +73,9 @@ def onglets_ods(chemin, lignes_vides_exactes: bool = False,
                 resolve_entities=False, no_network=True, load_dtd=False):
             if el.tag == _ODS_T + "table":
                 if evenement == "start":
+                    if onglets >= _MAX_ONGLETS:
+                        return      # au-delà, le reste du classeur n'est plus lu
+                    onglets += 1
                     nom, lignes = el.get(_ODS_T + "name") or "", []
                 else:
                     yield nom, iter(lignes)
@@ -77,21 +85,22 @@ def onglets_ods(chemin, lignes_vides_exactes: bool = False,
             if evenement != "end" or nom is None:
                 continue
             valeurs = _ligne_ods(el, formules_sans_valeur)
-            place = _MAX_LIGNES_ODS - len(lignes)
-            if developpe > _MAX_CARACTERES_ODS:
-                place = 0       # budget de texte épuisé : le reste du fichier n'est plus lu
+            reste = _MAX_CARACTERES_ODS - developpe
+            place = min(_MAX_LIGNES_ODS - len(lignes), _MAX_LIGNES_FICHIER - total_lignes) if reste > 0 else 0
             if place > 0:
+                repetitions = _entier(el.get(_ODS_T + "number-rows-repeated"))
                 if any(v not in (None, "") for v in valeurs):
-                    repetitions = _entier(el.get(_ODS_T + "number-rows-repeated"))
                     copies = min(repetitions if lignes_repetees else 1, place)
-                    poids = max(sum(len(v) for v in valeurs if isinstance(v, str)), 1)
-                    copies = max(min(copies, (_MAX_CARACTERES_ODS - developpe) // poids), 1)
+                    poids = sum(len(v) if isinstance(v, str) else 1 for v in valeurs) + 1
+                    copies = max(min(copies, reste // poids), 1)
                     developpe += copies * poids
                     lignes.extend([valeurs] * copies)
-                elif lignes_vides_exactes:
-                    lignes.extend([[]] * min(_entier(el.get(_ODS_T + "number-rows-repeated")), place))
                 else:
-                    lignes.append([])   # une ligne vide suffit, même répétée
+                    # une ligne vide suffit, même répétée ; exactes : n lignes vides (numéros de ligne justes)
+                    copies = min(repetitions, place, reste) if lignes_vides_exactes else 1
+                    developpe += copies
+                    lignes.extend([[]] * copies)
+                total_lignes += copies
             el.clear()
             parent = el.getparent()
             while parent is not None and el.getprevious() is not None:

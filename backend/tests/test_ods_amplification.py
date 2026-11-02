@@ -93,3 +93,68 @@ def test_la_lecture_commune_borne_le_texte_developpe(tmp_path):
     (_nom, lignes), = list(lecture_ods.onglets_ods(chemin))
     produit = sum(len(v) for ligne in lignes for v in ligne if isinstance(v, str))
     assert produit <= lecture_ods._MAX_CARACTERES_ODS + 64 * lecture_ods._MAX_CARACTERES_CELLULE
+
+
+# ─── 2e revue de sécurité D1 : le budget compte chaque cellule produite, tous onglets confondus ───
+
+def _ods_onglets(onglets: list[str]) -> bytes:
+    """Un classeur de plusieurs onglets ; chaque élément est le XML des lignes d'un onglet."""
+    tables = "".join(f'<table:table table:name="Feuille {i}">{lignes}</table:table>' for i, lignes in enumerate(onglets))
+    contenu = (
+        '<?xml version="1.0" encoding="UTF-8"?><office:document-content '
+        'xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" '
+        f'xmlns:table="{_T}" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0">'
+        f"<office:body><office:spreadsheet>{tables}</office:spreadsheet></office:body></office:document-content>")
+    flux = io.BytesIO()
+    with zipfile.ZipFile(flux, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("content.xml", contenu)
+    return flux.getvalue()
+
+
+_NOMBRES = ('<table:table-cell office:value-type="float" office:value="7" '
+            'table:number-columns-repeated="64"><text:p>7</text:p></table:table-cell>')
+
+
+def _lire(tmp_path, onglets, **options):
+    from services import lecture_ods
+    chemin = tmp_path / "Piege.ods"
+    chemin.write_bytes(_ods_onglets(onglets))
+    return [(nom, list(lignes)) for nom, lignes in lecture_ods.onglets_ods(chemin, **options)]
+
+
+def test_une_rangee_de_nombres_repetee_coute_ses_cellules(tmp_path, monkeypatch):
+    from services import lecture_ods
+    monkeypatch.setattr(lecture_ods, "_MAX_CARACTERES_ODS", 10_000)
+    feuilles = _lire(tmp_path, [f'<table:table-row table:number-rows-repeated="1000000">{_NOMBRES}</table:table-row>'])
+    lignes = feuilles[0][1]
+    assert len(lignes) * 65 <= 10_000 + 65              # 64 nombres + la ligne : le budget est en cellules
+
+
+def test_des_rangees_vides_repetees_sont_comptees(tmp_path, monkeypatch):
+    from services import lecture_ods
+    monkeypatch.setattr(lecture_ods, "_MAX_CARACTERES_ODS", 1_000)
+    vide = '<table:table-row table:number-rows-repeated="1000000"><table:table-cell/></table:table-row>'
+    feuilles = _lire(tmp_path, [vide], lignes_vides_exactes=True)
+    assert len(feuilles[0][1]) <= 1_000 + 1
+
+
+def test_les_lignes_sont_plafonnees_tous_onglets_confondus(tmp_path):
+    from services import lecture_ods
+    onglet = f'<table:table-row table:number-rows-repeated="20000">{_NOMBRES}</table:table-row>'
+    feuilles = _lire(tmp_path, [onglet] * 300)
+    assert sum(len(lignes) for _nom, lignes in feuilles) <= lecture_ods._MAX_LIGNES_FICHIER
+    vides = '<table:table-row table:number-rows-repeated="20000"><table:table-cell/></table:table-row>'
+    feuilles = _lire(tmp_path, [vides] * 300, lignes_vides_exactes=True)
+    assert sum(len(lignes) for _nom, lignes in feuilles) <= lecture_ods._MAX_LIGNES_FICHIER
+
+
+def test_le_nombre_d_onglets_est_plafonne(tmp_path):
+    from services import lecture_ods
+    feuilles = _lire(tmp_path, ["<table:table-row><table:table-cell/></table:table-row>"] * (lecture_ods._MAX_ONGLETS + 200))
+    assert len(feuilles) == lecture_ods._MAX_ONGLETS
+
+
+def test_un_classeur_normal_garde_tous_ses_onglets_et_lignes(tmp_path):
+    ligne = f"<table:table-row>{_texte('Poste')}</table:table-row>"
+    feuilles = _lire(tmp_path, [ligne * 50] * 12)
+    assert len(feuilles) == 12 and all(len(lignes) == 50 for _nom, lignes in feuilles)
