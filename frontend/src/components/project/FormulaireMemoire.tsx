@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom'
 import { Sparkles } from 'lucide-react'
 import MemoirePreflight, { QuotaMemoire, type PreflightSelection } from '@/components/project/MemoirePreflight'
 import type { VariablesMemoire } from '@/lib/memoireGeneration'
+import { useDonneesEntreprise } from '@/components/entreprise/useDonneesEntreprise'
+import { avancementTotal, libelleAvancement, type DonneesEntreprise } from '@/lib/entreprise/avancement'
 
 const F = "'Inter Variable', 'Geist Sans', sans-serif"
 
@@ -14,12 +16,25 @@ interface Props {
   variables: VariablesMemoire
   onVariables: (v: VariablesMemoire) => void
   onPreflight: (sel: PreflightSelection) => void
-  stats: { filled: number; total: number; nom_entreprise: string | null } | null
+  /** Ancien compte du serveur (18 champs) : plus lu, le profil se compte comme dans Mon entreprise (R23). */
+  stats?: { filled: number; total: number; nom_entreprise: string | null } | null
   hasMemoire: boolean
   /** Une génération est en cours (ou en reprise après rechargement). */
   enCours: boolean
   erreur: string | null
   onGenerer: () => void
+}
+
+/** Le profil en une ligne : le compte de Mon entreprise (informations indispensables), ou rien tant que les données ne sont pas là. */
+export function LigneProfil({ donnees }: { donnees: DonneesEntreprise | null }) {
+  if (!donnees) return null
+  return (
+    <p className="text-sm" style={{ color: 'var(--text-2)' }}>
+      Profil de l’entreprise : <span className="num-mono">{libelleAvancement(avancementTotal(donnees))}</span>
+      {' · '}
+      <Link to="/company" className="font-medium underline underline-offset-2" style={{ color: 'var(--text-1)' }}>Compléter</Link>
+    </p>
+  )
 }
 
 /**
@@ -28,8 +43,10 @@ interface Props {
  * son contenu reste monté, donc la sélection du pré-contrôle part au serveur même repliée.
  */
 export default function FormulaireMemoire({
-  projectId, variables, onVariables, onPreflight, stats, hasMemoire, enCours, erreur, onGenerer,
+  projectId, variables, onVariables, onPreflight, hasMemoire, enCours, erreur, onGenerer,
 }: Props) {
+  // R23 — un seul compte : les informations indispensables de Mon entreprise (identité, moyens, certifications).
+  const donnees = useDonneesEntreprise()
   const maj = (cle: keyof VariablesMemoire) => (e: { target: { value: string } }) =>
     onVariables({ ...variables, [cle]: e.target.value })
 
@@ -93,13 +110,7 @@ export default function FormulaireMemoire({
       </div>
 
       {/* ── Le profil, en une ligne ── */}
-      {stats && (
-        <p className="text-sm" style={{ color: 'var(--text-2)' }}>
-          Profil : <span className="num-mono">{stats.filled}/{stats.total}</span> renseignés
-          {' · '}
-          <Link to="/company" className="font-medium underline underline-offset-2" style={{ color: 'var(--text-1)' }}>Compléter</Link>
-        </p>
-      )}
+      <LigneProfil donnees={donnees.profil ? donnees : null} />
 
       {/* ── Options, repliées ── */}
       <details className="group rounded-lg" style={{ border: '1px solid var(--border-1)' }}>

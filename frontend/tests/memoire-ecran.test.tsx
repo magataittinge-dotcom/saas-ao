@@ -60,7 +60,7 @@ test("l'éditeur du mémoire corrige l'orthographe en français", () => {
 // ── S5 — l'écran de préparation : l'essentiel et le bouton en haut, le reste sous « Options (facultatif) » ──
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
-import FormulaireMemoire from '@/components/project/FormulaireMemoire'
+import FormulaireMemoire, { LigneProfil } from '@/components/project/FormulaireMemoire'
 import { corpsGeneration, VARIABLES_VIDES } from '@/lib/memoireGeneration'
 import type { PreflightSelection } from '@/components/project/MemoirePreflight'
 
@@ -116,13 +116,15 @@ test('le bouton dit « Rédiger le mémoire », ou « Régénérer le mémoire �
   assert.match(bouton(formulaire({ variables: { ...VARIABLES_VIDES, nb_ouvriers: '4', delai: '3 mois' }, enCours: true })), /disabled=""/)
 })
 
-test('le profil tient en une ligne : « Profil : X/18 renseignés · Compléter »', () => {
-  const html = formulaire()
+test('le profil tient en une ligne : le compte de Mon entreprise, puis « Compléter » (R23)', () => {
+  const donnees = { organisation: { name: 'Entreprise Test' }, profil: {}, equipe: [], references: [], documents: [], qualifications: [] }
+  const html = renderToStaticMarkup(<MemoryRouter><LigneProfil donnees={donnees} /></MemoryRouter>)
   const texte = html.replace(/<!-- -->/g, '').replace(/<[^>]+>/g, '')
-  assert.match(texte, /Profil : 3\/18 renseignés · Compléter/)
+  assert.match(texte, /Profil de l’entreprise : 1 information sur 34 · Compléter/)
   assert.match(html, /<a[^>]*href="\/company"[^>]*>Compléter<\/a>/)
   assert.ok(!html.includes('Profil de votre entreprise'), 'plus de carte de profil')
-  assert.ok(!formulaire({ stats: null }).includes('Profil :'))
+  assert.equal(renderToStaticMarkup(<MemoryRouter><LigneProfil donnees={null} /></MemoryRouter>), '')
+  assert.ok(!formulaire({ stats: null }).includes('Profil de l’entreprise'), 'rien avant le chargement des données')
 })
 
 // La charge utile du POST /memoire/generate reste exactement celle d'avant. Copie verbatim de l'ancien code :

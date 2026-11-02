@@ -150,3 +150,11 @@ export const LIBELLE_ETAT_PIECE: Record<EtatPiece, string> = {
   a_renouveler: 'À renouveler',
   a_joindre: 'À joindre',
 }
+
+/** Le compte d'ensemble : les informations indispensables des trois rubriques (le même que Mon entreprise). */
+export function avancementTotal(d: DonneesEntreprise): Avancement {
+  return RUBRIQUES.reduce<Avancement>((t, r) => {
+    const a = avancement(d, r.id)
+    return { rempli: t.rempli + a.rempli, total: t.total + a.total }
+  }, { rempli: 0, total: 0 })
+}
