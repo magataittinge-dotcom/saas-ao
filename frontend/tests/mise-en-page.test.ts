@@ -60,7 +60,9 @@ test('S10 : sur l\'export, une ligne au téléphone — « Télécharger », men
   assert.match(code, /<details className="text-center max-\[768px\]:hidden">/, 'le repli « Autres formats » reste sur ordinateur')
   assert.match(code, /<div className="contents max-\[768px\]:hidden"><PiecesAJoindre/, 'dans la barre sur ordinateur')
   assert.match(code, /className="mt-6 hidden max-\[768px\]:block"/, 'et au-dessus de la barre au téléphone')
-  assert.ok(code.indexOf('{avertissementTel}') < code.indexOf('{bottomBar}'))
+  // le gabarit rend le contenu (donc l'avertissement) AVANT la barre passée en prop
+  assert.match(code, /barre=\{bottomBar\}/)
+  assert.ok(code.indexOf('{avertissementTel}') > code.indexOf('<GabaritEtape'))
   // le grand bouton de l'ordinateur est une classe réservée aux écrans larges, plus un style en ligne
   assert.match(lire('src/index.css'), /@media \(min-width: 769px\) \{\s*\.signature-btn\.cta-grand/)
   assert.doesNotMatch(code, /padding: '12px 32px'/)

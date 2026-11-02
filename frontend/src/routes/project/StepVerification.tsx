@@ -2,16 +2,19 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { Sigle } from '@/components/common/Sigle'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Loader2, Lock, AlertTriangle, FileSpreadsheet, Download, Upload, Sparkles, RefreshCw } from 'lucide-react'
+import { Loader2, Lock, FileSpreadsheet, Download, Upload, Sparkles, RefreshCw } from 'lucide-react'
 import { api } from '@/services/api'
 import { useCompleteStep } from '@/hooks/useProject'
 import CandidatureSectionVault from '@/components/project/CandidatureSectionVault'
 import CandidatureSectionTemplates from '@/components/project/CandidatureSectionTemplates'
-import BarreEtape, { ActionsBarre, BilanBarre, BoutonSuite } from '@/components/project/BarreEtape'
+import { ActionsBarre, BilanBarre, BoutonSuite } from '@/components/project/BarreEtape'
+import { GabaritEtape, BandeResume, BarreEtape } from '@/components/etape'
+import { Button } from '@/components/ui/button'
+import { cartesPieces } from '@/lib/resumePieces'
 import VaultPickerModal from '@/components/project/VaultPickerModal'
 import PanneauSource, { type SelectionSource } from '@/components/project/source/PanneauSource'
 import { piecesComptees } from '@/components/project/NonConcerne'
-import { comptesPieces, libelleComptes, suiteComptes } from '@/lib/statutPiece'
+import { comptesPieces } from '@/lib/statutPiece'
 import { echeanceAO } from '@/lib/echeance'
 import { RequirementListSkeleton } from '@/components/skeletons'
 import type { Project, ChecklistItem, Document } from '@/types'
@@ -262,93 +265,25 @@ export default function StepVerification({ project }: Props) {
       className={selection ? 'grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]' : undefined}
       style={{ fontFamily: F }}
     >
-    <div className="min-w-0 space-y-3">
-
-      {/* Title bar */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h1 className="font-display tracking-tight text-xl font-bold" style={{ color: 'var(--text-1)' }}>
-          Pièces de la candidature
-        </h1>
-        <div className="flex items-center gap-3">
-          {/* Régénération DISCRÈTE à la demande (ex. après ajout de pièces au
-              coffre). L'état par défaut n'est jamais « vide + bouton ». */}
-          <button
-            type="button"
-            onClick={actualiser}
-            disabled={actualisation?.etat === 'en_cours'}
-            className="flex items-center gap-1.5 text-xs font-medium transition-colors hover:underline disabled:opacity-60"
-            style={{ color: 'var(--text-3)' }}
-            title="Recalculer la checklist depuis les exigences analysées"
-          >
-            <RefreshCw size={13} className={actualisation?.etat === 'en_cours' ? 'animate-spin' : undefined} />
-            Actualiser
-          </button>
-          <span role="status" className="text-xs empty:hidden" style={{ color: 'var(--text-3)' }}>{messageActualisation(actualisation)}</span>
-          <button
-            type="button"
-            onClick={openVaultPage}
-            className="glass-btn flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium"
-            style={{ color: 'var(--text-2)' }}
-          >
-            <Lock size={14} />
-            Accéder au coffre-fort
-          </button>
-        </div>
-      </div>
-
-      {/* ── HÉROS DE PROGRESSION — où en est le dossier, en un regard ── */}
-      <div className="glass-card top-lit blueprint-grid sheen relative overflow-hidden px-6 py-5">
-        <div className="relative flex flex-wrap items-center gap-x-8 gap-y-5">
-          {/* Anneau de complétion */}
-          <div className="relative h-20 w-20 shrink-0">
-            <svg viewBox="0 0 80 80" className="h-20 w-20 -rotate-90">
-              <circle cx="40" cy="40" r="34" fill="none" stroke="var(--surface-2)" strokeWidth="6" />
-              <circle
-                cx="40" cy="40" r="34" fill="none"
-                stroke="var(--text-1)" strokeWidth="6" strokeLinecap="round"
-                strokeDasharray={2 * Math.PI * 34}
-                strokeDashoffset={(2 * Math.PI * 34) * (1 - pct / 100)}
-                style={{
-                  transition: 'stroke-dashoffset .6s cubic-bezier(.4,0,.2,1)',
-                  filter: 'drop-shadow(0 0 5px color-mix(in srgb, var(--text-1) 40%, transparent))',
-                }}
-              />
-            </svg>
-            <span className="num-mono absolute inset-0 flex items-center justify-center text-sm font-bold" style={{ color: 'var(--text-1)' }}>
-              {pct}%
-            </span>
-          </div>
-
-          {/* Le compte, en grand */}
-          <div className="min-w-0 flex-1">
-            <p className="microlabel mb-1.5">Dossier de candidature</p>
-            <div className="flex flex-wrap items-end gap-2.5">
-              <span className="num-mono bg-gradient-silver-text bg-clip-text text-4xl font-bold leading-none text-transparent">
-                {aJoindre}
-              </span>
-              <p className="pb-0.5 text-sm font-semibold" style={{ color: 'var(--text-1)' }}>{suiteComptes(aJoindre, pretes)}</p>
-            </div>
-            <p className="num-mono mt-2 text-xs" style={{ color: 'var(--text-3)' }}>
-              Coffre-fort : {libelleComptes(comptesCoffre.aJoindre, comptesCoffre.pretes)}
-              {'  ·  '}
-              Formulaires de l’acheteur : {libelleComptes(comptesFormulaires.aJoindre, comptesFormulaires.pretes, 'formulaire')}
-            </p>
-          </div>
-        </div>
-
-        {aJoindre > 0 && (
-          <div className="relative mt-4 flex items-start gap-2.5 pt-3.5" style={{ borderTop: '1px solid var(--line)' }}>
-            <AlertTriangle size={15} className="mt-0.5 shrink-0" style={{ color: 'var(--piece-action)' }} />
-            <p className="text-xs leading-relaxed" style={{ color: 'var(--text-3)' }}>
-              <span className="font-semibold" style={{ color: 'var(--text-1)' }}>
-                {aJoindre} pièce{aJoindre > 1 ? 's' : ''} à joindre.
-              </span>{' '}
-              Le règlement de consultation demande ces pièces.
-            </p>
-          </div>
-        )}
-      </div>
-
+    <div className="min-w-0">
+    <GabaritEtape
+      titre="Pièces de la candidature"
+      utilite="Ce que le règlement demande : les pièces de votre coffre-fort et les formulaires de l’acheteur à compléter. Synorix les range dans le dossier de candidature."
+      actionsSecondaires={<>
+        {/* Régénération DISCRÈTE à la demande (ex. après ajout de pièces au coffre). */}
+        <Button type="button" variant="outline" onClick={actualiser} disabled={actualisation?.etat === 'en_cours'} title="Recalculer la checklist depuis les exigences analysées">
+          <RefreshCw size={14} className={actualisation?.etat === 'en_cours' ? 'animate-spin' : undefined} aria-hidden />
+          Actualiser
+        </Button>
+        <span role="status" className="text-xs empty:hidden" style={{ color: 'var(--text-3)' }}>{messageActualisation(actualisation)}</span>
+        <Button type="button" variant="outline" onClick={openVaultPage}>
+          <Lock size={14} aria-hidden />
+          Accéder au coffre-fort
+        </Button>
+      </>}
+      resume={<BandeResume libelle="Les pièces du dossier" cartes={cartesPieces(scored, echeance, { coffre: comptesCoffre, formulaires: comptesFormulaires })} />}
+      barre={bottomBar}
+    >
       <CandidatureSectionVault
         items={vaultItems}
         onPickFromVault={(item) => setPickerItem(item)}
@@ -386,7 +321,7 @@ export default function StepVerification({ project }: Props) {
         />
       )}
 
-      {bottomBar}
+    </GabaritEtape>
     </div>
     {selection && (
       <PanneauSource

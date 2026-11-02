@@ -14,7 +14,8 @@ import { DocumentRowSkeleton } from '@/components/skeletons'
 import EchecAction from '@/components/common/EchecAction'
 import { phraseSourceSignature, signatureAConfirmer } from '@/components/project/SignatureLigne'
 import PiecesAJoindre from '@/components/project/PiecesAJoindre'
-import BarreEtape, { MenuPlus } from '@/components/project/BarreEtape'
+import { MenuPlus } from '@/components/project/BarreEtape'
+import { GabaritEtape, BandeResume, BarreEtape, ActionsBarreTel } from '@/components/etape'
 import ExigencesDuDossier, { type ExigenceExport } from '@/components/project/ExigencesDuDossier'
 import {
   etatPiece, ligneEtatDossier, lignesDuScore, lireAvertissementsExport, resumeExigences, type GroupeExigences,
@@ -22,7 +23,7 @@ import {
 import { messageErreur } from '@/lib/erreurs'
 import { Sigle } from '@/components/common/Sigle'
 import { developper } from '@/lib/lexique'
-import { noteDepot, suiteComptes } from '@/lib/statutPiece'
+import { noteDepot } from '@/lib/statutPiece'
 import { libellePassagesACompleter } from '@/lib/passagesACompleter'
 import { echeanceAO } from '@/lib/echeance'
 
@@ -135,18 +136,6 @@ const DOSSIERS_ZIP: Record<string, string> = {
 }
 
 // ─── Hero check (ligne de contrôle compacte du héros) ──────────────────────
-
-function HeroCheck({ ok, label, value }: { ok: boolean; label: React.ReactNode; value: React.ReactNode }) {
-  return (
-    <span className="flex items-center gap-1.5 text-xs">
-      {ok
-        ? <CheckCircle2 size={13} className="shrink-0" style={{ color: 'var(--success-fg)' }} />
-        : <AlertTriangle size={13} className="shrink-0" style={{ color: 'var(--warning-fg)' }} />}
-      <span style={{ color: 'var(--text-3)' }}>{label}</span>
-      <span className="num-mono font-semibold" style={{ color: 'var(--text-1)' }}>{value}</span>
-    </span>
-  )
-}
 
 // ─── Accordion Section ─────────────────────────────────────────────────────
 
@@ -408,13 +397,9 @@ export default function StepExport({ project }: Props) {
   const totalPieces = score?.total ?? detail.checklist_total
   const readyForDeposit = !gateBlocked && alertCount === 0
 
-  // ── Barre du bas ── un seul bouton principal ; l'avertissement des pièces est une ligne au-dessus.
-  // Téléphone : une ligne [Télécharger][…] ; l'avertissement passe au-dessus de la barre (avertissementTel), les
-  // autres formats dans le menu « … ».
-  const bottomBar = (
-    <BarreEtape className="flex-col justify-start gap-2">
-      {gateBlocked && <div className="contents max-[768px]:hidden"><PiecesAJoindre pieces={nonConformes} /></div>}
-      <button
+  // L'action principale, écrite une fois : en haut à droite sur ordinateur, dans la barre au téléphone (une seule en dégradé par écran).
+  const boutonTelecharger = (
+    <button
         onClick={() => exportZip()}
         disabled={isExportingZip}
         className="signature-btn cta-grand disabled:opacity-40 max-[768px]:flex-1 max-[768px]:justify-center max-[768px]:whitespace-nowrap [@media(pointer:coarse)]:min-h-11"
@@ -424,6 +409,15 @@ export default function StepExport({ project }: Props) {
         <span className="max-[768px]:hidden">Télécharger le dossier</span>
         <span className="hidden max-[768px]:inline">Télécharger</span>
       </button>
+  )
+
+  // ── Barre du bas ── un seul bouton principal ; l'avertissement des pièces est une ligne au-dessus.
+  // Téléphone : une ligne [Télécharger][…] ; l'avertissement passe au-dessus de la barre (avertissementTel), les
+  // autres formats dans le menu « … ».
+  const bottomBar = (
+    <BarreEtape className="flex-col justify-start gap-2">
+      {gateBlocked && <div className="contents max-[768px]:hidden"><PiecesAJoindre pieces={nonConformes} /></div>}
+      <ActionsBarreTel className="max-[768px]:flex-1">{boutonTelecharger}</ActionsBarreTel>
       <MenuPlus libelle="Autres formats">
         {(fermer) => (
           <>
@@ -487,66 +481,30 @@ export default function StepExport({ project }: Props) {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-4" style={{ fontFamily: F }}>
-
-      {/* ── HÉROS — le verdict : combien de pièces sont prêtes, que reste-t-il ── */}
-      <div className="glass-card top-lit blueprint-grid sheen relative overflow-hidden px-5 py-4">
-        <div className="relative grid items-start gap-x-10 gap-y-4 lg:grid-cols-[minmax(0,1fr)_240px]">
-          {/* L'état du dossier, en un chiffre */}
-          <div className="min-w-0">
-            <p className="microlabel mb-2.5">
-              Export du dossier{lotName ? ` — ${lotName}` : ''}
-            </p>
-            <div className="flex flex-wrap items-end gap-3">
-              <span className="num-mono bg-gradient-silver-text bg-clip-text text-5xl font-bold leading-none text-transparent">
-                {totalPieces - conformes}
-              </span>
-              <div className="pb-0.5">
-                <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>
-                  {suiteComptes(totalPieces - conformes, conformes)}
-                </p>
-                <p className="mt-0.5 text-xs font-medium" style={{ color: readyForDeposit ? 'var(--success-fg)' : 'var(--text-2)' }}>
-                  {ligneEtatDossier(gateBlocked ? totalPieces - conformes : 0, alertCount, readyForDeposit)}
-                </p>
-              </div>
-            </div>
-            <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
-              <span className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--text-3)' }}>
-                <FileText size={13} className="shrink-0" style={{ color: 'var(--text-3)' }} />
-                {resumeDesExigences}
-              </span>
-              <HeroCheck
-                ok={memoireOk}
-                label="Mémoire"
-                value={detail.memoire_info ? `${detail.memoire_info.estimated_pages} pages` : 'non généré'}
-              />
-              {detail.memoire_info && libellePassagesACompleter(detail.memoire_info.passages_a_completer) && (
-                <span className="flex min-w-0 items-center gap-1.5 text-xs font-medium" style={{ color: 'var(--warning-fg)' }}>
-                  <AlertTriangle size={13} className="shrink-0" />
-                  {libellePassagesACompleter(detail.memoire_info.passages_a_completer)}
-                </span>
-              )}
-              <HeroCheck
-                ok={dpgfOk}
-                label={<Sigle code="DPGF" majuscule />}
-                value={dpgfLignes > 0 ? `${dpgfLignes} lignes` : detail.has_dpgf ? 'à compléter' : <>aucun dans le <Sigle code="DCE" /></>}
-              />
-            </div>
-          </div>
-
-          {/* Convention de nommage du RC : le ZIP s'y conforme */}
-          <div className="min-w-0">
-            {detail.naming_convention && (
-              <p className="mt-3 text-xs leading-relaxed" style={{ color: 'var(--text-3)' }}>
-                Pièces du ZIP nommées selon le <Sigle code="RC" />&nbsp;:{' '}
-                <span className="num-mono" style={{ color: 'var(--text-3)' }}>
-                  {detail.naming_convention.replace('{lot}', 'Lot').replace('{entreprise}', 'Entreprise').replace('{piece}', 'Pièce')}
-                </span>
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
+    <div style={{ fontFamily: F }}>
+    <GabaritEtape
+      titre="Export du dossier"
+      utilite={`Vérifiez l’état du dossier, puis téléchargez-le : pièces, mémoire et tableau des prix rangés dans l’ordre du règlement.${lotName ? ` — ${lotName}` : ''}`}
+      actionPrincipale={boutonTelecharger}
+      resume={<BandeResume libelle="L’état du dossier" cartes={[
+        { libelle: 'Pièces prêtes', valeur: String(conformes), etat: readyForDeposit ? 'pret' : 'a-verifier', jauge: { rempli: conformes, total: totalPieces },
+          detail: ligneEtatDossier(gateBlocked ? totalPieces - conformes : 0, alertCount, readyForDeposit) },
+        { libelle: 'À joindre', valeur: String(Math.max(totalPieces - conformes, 0)), etat: totalPieces - conformes > 0 ? 'a-verifier' : 'pret', detail: resumeDesExigences },
+        { libelle: 'Mémoire technique', valeur: detail.memoire_info ? `${detail.memoire_info.estimated_pages} pages` : 'À générer', etat: memoireOk ? 'pret' : 'a-verifier',
+          detail: (detail.memoire_info && libellePassagesACompleter(detail.memoire_info.passages_a_completer)) || undefined },
+        { libelle: 'Tableau des prix', valeur: dpgfLignes > 0 ? `${dpgfLignes} lignes` : detail.has_dpgf ? 'À compléter' : 'Aucun dans le dossier', etat: dpgfOk || !detail.has_dpgf ? 'pret' : 'a-verifier' },
+      ]} />}
+      barre={bottomBar}
+    >
+    <div className="space-y-4">
+      {detail.naming_convention && (
+        <p className="text-xs leading-relaxed" style={{ color: 'var(--text-3)' }}>
+          Pièces du ZIP nommées selon le <Sigle code="RC" />&nbsp;:{' '}
+          <span className="num-mono" style={{ color: 'var(--text-3)' }}>
+            {detail.naming_convention.replace('{lot}', 'Lot').replace('{entreprise}', 'Entreprise').replace('{piece}', 'Pièce')}
+          </span>
+        </p>
+      )}
 
       {echec && (
         <EchecAction
@@ -890,7 +848,8 @@ export default function StepExport({ project }: Props) {
 
       {/* ── Sticky bottom bar ───────────────────────────────────── */}
       {avertissementTel}
-      {bottomBar}
+    </div>
+    </GabaritEtape>
 
       {/* Document viewer modal */}
       {viewerIndex !== null && viewableDocs.length > 0 && (
