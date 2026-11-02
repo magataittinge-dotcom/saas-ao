@@ -36,12 +36,12 @@ def test_proposition_sans_enregistrement(client, db_session, test_org):
     assert r.status_code == 200, r.text
     c = r.json()
     assert c["enregistre"] is False and c["valide"] is False and c["version"] == 0
-    assert c["resume"]["parties"] == 26                      # 25 + « zorglub quantique »
+    assert c["resume"]["parties"] == 27                      # 25 + « organisation du chantier » + « zorglub quantique »
     assert c["resume"]["sous_criteres_total"] == 2 and c["resume"]["sous_criteres_servis"] == 2
     assert c["a_couvrir"] == []
     ajout = [p for p in c["parties"] if ".ajout_" in p["cle"]]
-    assert [p["titre"] for p in ajout] == ["Un zorglub quantique inventé"]
-    assert ajout[0]["source"]["document"] == "rc.pdf"
+    assert [p["titre"] for p in ajout] == ["La présentation de l'organisation du chantier", "Un zorglub quantique inventé"]
+    assert all(p["source"]["document"] == "rc.pdf" for p in ajout)
     # rien n'est écrit par une simple lecture
     assert db_session.query(PlanMemoire).count() == 0
     # le critère prix n'apparaît dans aucune partie
@@ -74,7 +74,7 @@ def test_enregistrer_puis_valider(client, db_session, test_org):
 def test_valider_sans_rien_enregistrer_valide_la_proposition(client, db_session, test_org):
     _projet(db_session, test_org.id)
     v = client.post(URL + "/valider")
-    assert v.status_code == 200 and v.json()["valide"] and v.json()["resume"]["parties"] == 26
+    assert v.status_code == 200 and v.json()["valide"] and v.json()["resume"]["parties"] == 27
     assert db_session.query(PlanMemoire).count() == 1
 
 

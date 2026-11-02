@@ -228,3 +228,40 @@ def test_l_enregistrement_de_l_editeur_ne_remplace_jamais_le_plan_suivi(client, 
     client.patch(f"/api/projects/{PID}/memoire", json={"content_json": {**corps}})
     db_session.expire_all()
     assert "_plan" not in db_session.query(MemoireTechnique).first().content_json
+
+
+# ── Le job de rédaction : le plan validé part au générateur, sinon rien ──────
+
+def _lancer_la_generation(client, monkeypatch):
+    import routers.memoire as memoire_mod
+    monkeypatch.setattr(memoire_mod.limiter, "enabled", False, raising=False)
+    recus = {}
+
+    async def _capture(self, **kwargs):
+        recus.update(kwargs)
+        return {"preambule": "ok", "partie_a": {"historique": "ok"}, "partie_b": {}, "partie_c": {}}
+
+    monkeypatch.setattr(memoire_mod.MemoireGenerator, "generate", _capture)
+    r = client.post(f"/api/projects/{PID}/memoire/generate", json={})
+    assert r.status_code == 200, r.text
+    for t in threading.enumerate():
+        if t.name.startswith("synorix-memoire-"):
+            t.join(timeout=30)
+    return recus
+
+
+def test_le_job_passe_le_plan_valide_au_generateur(client, db_session, test_org, monkeypatch):
+    _projet(db_session, test_org.id, plan=_plan_stocke())
+    db_session.query(MemoireTechnique).delete()
+    db_session.commit()
+    recus = _lancer_la_generation(client, monkeypatch)
+    assert recus["plan"] is not None
+    assert [p["sous_cle"] for p in recus["plan"] if p["partie"] == "partie_c"][-1] == "ajout_1"
+    assert any(p["titre"] == "Gestion des déchets de chantier" for p in recus["plan"])
+
+
+def test_le_job_sans_plan_valide_n_envoie_aucun_plan(client, db_session, test_org, monkeypatch):
+    _projet(db_session, test_org.id, plan=_plan_stocke(), valide=False)
+    db_session.query(MemoireTechnique).delete()
+    db_session.commit()
+    assert _lancer_la_generation(client, monkeypatch)["plan"] is None

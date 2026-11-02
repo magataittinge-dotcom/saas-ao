@@ -120,3 +120,44 @@ def test_validation_regroupe_a_b_c_sans_melanger_les_parties():
     sortie = pm.valider(melange)
     assert [p["partie"] for p in sortie] == ["partie_a", "partie_a", "partie_b", "partie_c"]
     assert [p["cle"] for p in sortie][:2] == ["partie_a.implantation", "partie_a.historique"]
+
+
+def test_un_seul_mot_en_commun_ne_rattache_pas_une_partie_annoncee():
+    """« Suivi connecté du chantier » ne devient pas « Interlocuteur dédié » parce qu'ils partagent « suivi » : il faut un mot
+    du titre de la partie ET du thème (ou deux mots du thème). Sinon, une partie nouvelle est proposée."""
+    assert pm.attendue_la_plus_proche("Un dispositif de suivi connecté du chantier") is None
+    assert pm.attendue_la_plus_proche("La gestion des déchets") == "partie_b.dechets"
+    att = [{"id": "att_aaaaaaaaaa", "libelle": "Un dispositif de suivi connecté du chantier", "source": {"document": "RC.pdf", "page": 7}},
+           {"id": "att_bbbbbbbbbb", "libelle": "La gestion des déchets", "source": {"document": "RC.pdf", "page": 7}}]
+    plan = pm.proposer([], att)
+    assert len(plan) == 26 and plan[-1]["attendue"] == "att_aaaaaaaaaa"
+    v = pm.vue(plan, [], att, None)
+    dechets = next(p for p in v["parties"] if p["cle"] == "partie_b.dechets")
+    assert [a["id"] for a in dechets["attendues"]] == ["att_bbbbbbbbbb"] and dechets["source"]["page"] == 7
+
+
+def test_numeros_d_ajout_uniques_dans_tout_le_plan():
+    """Les ancres du mémoire sont « sec-ajout_<n> » : deux parties ajoutées ne portent jamais le même numéro."""
+    att = [{"id": "att_aaaaaaaaaa", "libelle": "Zorglub quantique", "source": {}},
+           {"id": "att_bbbbbbbbbb", "libelle": "Présentation de l'entreprise zorglub", "source": {}}]
+    cles = [p["cle"] for p in pm.proposer([], att) if ".ajout_" in p["cle"]]
+    assert len({c.split(".")[1] for c in cles}) == len(cles) == 2
+    plan = pm.proposer([], [])
+    with pytest.raises(ValueError):
+        pm.valider(plan + [pm._partie("partie_a.ajout_1", "A"), pm._partie("partie_c.ajout_1", "C")])
+
+
+def test_a_couvrir_propose_la_partie_la_plus_proche_par_theme_sinon_c():
+    """Chaque sous-critère « À couvrir » dit dans quelle partie ajouter une partie : la plus proche par thème, sinon C."""
+    criteres = [{"nom": "Valeur", "poids": 100, "sous_criteres": [
+        {"nom": "Gestion et valorisation des déchets", "poids": 50}, {"nom": "Moyens humains", "poids": 30},
+        {"nom": "Zorglub quantique", "poids": 20}]}]
+    plan = pm.proposer([], [])
+    for p in plan:
+        p["retiree"] = p["cle"] not in ("partie_a.historique",)
+    plan = pm.valider(plan)
+    r = pm.rattacher_criteres(plan, criteres)
+    par_nom = {c["nom"]: c["partie"] for c in r["a_couvrir"]}
+    assert par_nom["Gestion et valorisation des déchets"] == "partie_b"
+    assert par_nom["Moyens humains"] in ("partie_a", "partie_c")
+    assert par_nom["Zorglub quantique"] == "partie_c"

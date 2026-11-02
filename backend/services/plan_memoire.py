@@ -57,12 +57,17 @@ def _partie(cle: str, titre: str, attendue: str | None = None) -> dict:
 # ── Parties attendues par le dossier ──────────────────────────────────────────
 
 def _fond(texte: str) -> str:
-    """Minuscules sans accents, MÊME LONGUEUR que le texte (les positions restent celles de l'original)."""
-    sortie = []
-    for c in (texte or "").lower().replace("’", "'"):
-        d = unicodedata.normalize("NFKD", c)
-        sortie.append(d[0] if d and ord(d[0]) < 128 else c)
-    return "".join(sortie)
+    """Minuscules sans accents, MÊME LONGUEUR que le texte (les positions restent celles de l'original). La table de
+    correspondance est faite sur les caractères DISTINCTS du texte : rapide même sur un règlement de plusieurs centaines de
+    milliers de caractères."""
+    def un(c: str) -> str:
+        bas = c.lower().replace("’", "'")
+        if len(bas) != 1:
+            return c
+        d = unicodedata.normalize("NFKD", bas)
+        return d[0] if d and ord(d[0]) < 128 else bas
+    table = {ord(c): un(c) for c in set(texte or "")}
+    return (texte or "").translate(table)
 
 
 _OBJET = r"(?:memoire\s+technique|note\s+methodologique|offre\s+technique|note\s+technique)"
@@ -144,11 +149,12 @@ def _theme_de(cle: str, titre: str) -> frozenset[str]:
 
 def attendue_la_plus_proche(libelle: str) -> str | None:
     """La partie du modèle qui traite déjà de ce que le dossier annonce (plus de mots de thème en commun ; à égalité,
-    la première du document), ou None."""
+    la première du document), ou None. Un seul mot de thème en commun ne suffit pas (« suivi connecté » n'est pas
+    « interlocuteur dédié ») : il faut un mot du titre de la partie, ou deux mots de son thème."""
     racines = _racines_precises(libelle)
-    meilleur, score_max = None, 0
+    meilleur, score_max = None, 1
     for p in parties_de_base():
-        score = len(racines & _THEMES[p["cle"]]) + 2 * len(racines & _racines_precises(p["titre"]))
+        score = len(racines & _THEMES[p["cle"]]) + len(racines & _racines_precises(p["titre"]))
         if score > score_max:
             meilleur, score_max = p["cle"], score
     return meilleur
@@ -158,17 +164,27 @@ def proposer(criteres: Any, attendues: list[dict]) -> list[dict]:
     """Le plan proposé : les 25 parties du modèle, plus une partie nouvelle pour chaque partie annoncée par le dossier
     qu'aucune partie du modèle ne traite. Aucune partie n'est retirée d'office."""
     plan = [_partie(p["cle"], p["titre"]) for p in parties_de_base()]
-    suivant = {a: 1 for a in PARTIES}
+    suivant = 1      # numéro d'ajout UNIQUE dans tout le plan : les ancres « sec-ajout_<n> » du mémoire ne se doublent jamais
     for att in attendues or []:
         if attendue_la_plus_proche(att["libelle"]):
             continue                      # déjà traitée : le plan l'indique par la source, sans partie en double
         partie = _partie_d_une_attendue(_racines_precises(att["libelle"]))
-        plan.append(_partie(f"{partie}.ajout_{suivant[partie]}", att["libelle"][:MAX_TITRE], att["id"]))
-        suivant[partie] += 1
+        plan.append(_partie(f"{partie}.ajout_{suivant}", att["libelle"][:MAX_TITRE], att["id"]))
+        suivant += 1
     return valider(plan)
 
 
 # ── Rattachement des sous-critères ────────────────────────────────────────────
+
+def partie_proche(racines: frozenset[str]) -> str:
+    """La partie A, B ou C dont les thèmes (sur les 25 parties du modèle, retirées comprises) recoupent le plus les mots
+    d'un sous-critère ; sans recoupement, C (méthodologie)."""
+    totaux = {p: 0 for p in PARTIES}
+    for cle, theme in _THEMES.items():
+        totaux[cle.split(".")[0]] += len(racines & theme)
+    meilleur = max(PARTIES, key=lambda p: (totaux[p], p == "partie_c"))
+    return meilleur if totaux[meilleur] > 0 else "partie_c"
+
 
 def rattacher_criteres(plan: list[dict], criteres: Any) -> dict:
     """Pour chaque partie GARDÉE, les sous-critères hors prix qu'elle sert (thème de la partie), et ceux qu'aucune
@@ -188,7 +204,7 @@ def rattacher_criteres(plan: list[dict], criteres: Any) -> dict:
         if parties:
             servis += 1
         else:
-            a_couvrir.append(fiche)
+            a_couvrir.append({**fiche, "partie": partie_proche(racines)})   # où proposer d'ajouter une partie pour lui
     return {"par_partie": par_partie, "a_couvrir": a_couvrir, "total": total, "servis": servis}
 
 
@@ -209,6 +225,7 @@ def valider(parties: list[dict]) -> list[dict]:
     if len(parties) > MAX_PARTIES:
         raise ValueError(f"Un plan compte {MAX_PARTIES} parties au plus.")
     vues: set[str] = set()
+    ajouts: set[str] = set()
     sortie = []
     for p in parties:
         cle = p.get("cle") or ""
@@ -217,6 +234,11 @@ def valider(parties: list[dict]) -> list[dict]:
         if cle in vues:
             raise ValueError(f"La partie « {cle} » figure deux fois.")
         vues.add(cle)
+        if ".ajout_" in cle:
+            numero = cle.split(".", 1)[1]
+            if numero in ajouts:
+                raise ValueError("Deux parties ajoutées ne peuvent pas porter le même numéro.")
+            ajouts.add(numero)
         titre = _titre_propre(p.get("titre")) or _TITRES_BASE.get(cle, "")
         if not titre:
             raise ValueError("Chaque partie ajoutée a besoin d'un titre.")
