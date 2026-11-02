@@ -229,3 +229,37 @@ def test_aucune_ligne_ne_contient_de_nom_de_projet_ni_de_fichier(client, db_sess
     client.get("/api/projects/proj-chr7/memoire/export-docx")
     messages = " ".join(r.getMessage() for r in journal.records if r.name == "synorix.chrono")
     assert "Secret" not in messages and "Groupe" not in messages and ".docx" not in messages
+
+
+# ── R33 : la ligne sort sur la sortie standard même sans configuration de journal ──
+
+def test_ligne_sur_la_sortie_standard_sans_configuration_de_journal(monkeypatch, capsys):
+    """`uvicorn main:app` seul : ni sortie ni niveau INFO au logger racine, comme pour les lignes `jetons`."""
+    racine = logging.getLogger()
+    monkeypatch.setattr(racine, "handlers", [])
+    monkeypatch.setattr(racine, "level", logging.WARNING)
+    anciens = (list(chrono_mod.logger.handlers), chrono_mod.logger.level, chrono_mod.logger.propagate)
+    try:
+        # le flux courant est celui de capsys : le gestionnaire doit écrire sur sys.stdout au moment de l'ajout
+        with chrono_mod.chrono("analyse", "proj-r33", "lot5"):
+            pass
+        with chrono_mod.chrono("export", "proj-r33"):
+            pass
+        sortie = capsys.readouterr().out
+        lignes = [l for l in sortie.splitlines() if l.startswith("chrono ")]
+        assert len(lignes) == 2, sortie                                   # une fois chacune, pas de doublon
+        assert LIGNE.match(lignes[0]) and lignes[0].startswith("chrono etape=analyse projet=proj-r33 lot=lot5 ")
+        assert lignes[1].startswith("chrono etape=export projet=proj-r33 lot=- duree_ms=")
+    finally:
+        chrono_mod.logger.handlers[:] = anciens[0]
+        chrono_mod.logger.setLevel(anciens[1])
+        chrono_mod.logger.propagate = anciens[2]
+
+
+def test_avec_un_journal_configure_rien_n_est_ajoute(journal):
+    """Sous une configuration de journal (production, caplog) : pas de second gestionnaire, pas de doublon."""
+    avant = list(chrono_mod.logger.handlers)
+    with chrono_mod.chrono("lots", "proj-r33b"):
+        pass
+    assert chrono_mod.logger.handlers == avant
+    assert len(_lignes(journal, "lots", "proj-r33b")) == 1
