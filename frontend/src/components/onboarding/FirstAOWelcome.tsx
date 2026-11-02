@@ -56,6 +56,10 @@ export default function FirstAOWelcome() {
         Bienvenue{firstName ? `, ${firstName}` : ''}
       </h1>
 
+      <p className="mb-5 max-w-md text-[15px] text-fg">
+        Synorix lit le dossier de l'acheteur, relève chaque exigence avec sa source et rédige votre mémoire technique.
+      </p>
+
       {!siretDone ? (
         <>
           <p className="mb-7 text-[15px] text-fg-2">

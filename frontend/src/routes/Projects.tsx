@@ -96,16 +96,17 @@ export default function Projects() {
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
           <h1 className="text-ds-text">Mes appels d&apos;offres</h1>
-          <p className="text-sm mt-1 text-ds-text-2">
-            {projects.length === 0
-              ? 'Aucun projet pour le moment'
-              : `${projects.length} projet${projects.length > 1 ? 's' : ''} · ${activeCount} en cours`}
-          </p>
+          {projects.length > 0 && (
+            <p className="text-sm mt-1 text-ds-text-2">
+              {`${projects.length} projet${projects.length > 1 ? 's' : ''} · ${activeCount} en cours`}
+            </p>
+          )}
         </div>
       </div>
 
       {/* Synorix Intelligence : le visage, six bulles, la prochaine action — le haut de Mes AO */}
-      <SynorixIntelligence projects={projects} stats={stats} prenom={prenom} />
+      {/* Sans aucun AO, le visage et ses compteurs à zéro n'apprennent rien : l'écran vide ci-dessous suffit (phase C). */}
+      {(isLoading || projects.length > 0) && <SynorixIntelligence projects={projects} stats={stats} prenom={prenom} />}
 
       {/* Search + Filters bar */}
       {projects.length > 0 && (
@@ -190,8 +191,8 @@ export default function Projects() {
             <Plus size={28} className="text-ds-cyan" />
           </div>
           <div>
-            <p className="text-ds-text font-semibold mb-1">Aucun appel d&apos;offres pour l&apos;instant</p>
-            <p className="text-ds-text-2 text-xs">Créez votre premier projet pour démarrer</p>
+            <p className="text-ds-text font-semibold mb-1">Vos appels d&apos;offres seront suivis ici</p>
+            <p className="text-ds-text-2 text-sm max-w-md">Déposez le dossier de l&apos;acheteur (ZIP ou PDF) : Synorix lit les pièces, repère les lots et prépare l&apos;analyse.</p>
           </div>
           <button
             onClick={() => navigate('/projects/new')}

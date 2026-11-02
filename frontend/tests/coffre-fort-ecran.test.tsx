@@ -27,17 +27,17 @@ test('le coffre-fort rend son titre, la zone de dépôt du socle et le bloc « �
   assert.ok(/<h1[^>]*>Coffre-fort documentaire<\/h1>/.test(html), 'un seul h1')
   assert.ok(html.includes('2 documents stockés'))
   assert.ok(html.includes('Glissez vos documents ici ou cliquez pour parcourir'))
-  assert.ok(html.includes('PDF — 20 MB max'))
+  assert.ok(html.includes('PDF · 20 Mo au plus'))
   const zone = html.match(/<div[^>]*border-dashed[^>]*>/)?.[0] ?? ''
   assert.ok(zone.includes('border-input'), 'bord de zone à 3:1 (jeton de champ)')
   assert.ok(html.includes('À ranger (1) — rangez-les pour les utiliser dans vos candidatures'))
   assert.ok(/<div[^>]*border-warning-border[^>]*bg-warning-bg[^>]*>/.test(html), 'bloc « À ranger » en jetons warning')
 })
 
-test('coffre-fort vide : le message positif est conservé', () => {
+test('coffre-fort vide : le message positif (ce que fait le coffre-fort) est conservé', () => {
   const html = rendre([])
-  assert.ok(html.includes('Votre coffre-fort est vide'))
-  assert.ok(html.includes('0 documents stockés'))
+  assert.ok(html.includes('Vos pièces administratives, rangées une fois pour toutes'))
+  assert.ok(html.includes('Aucune pièce stockée pour le moment'))
 })
 
 test('le retour à la vérification suit le contexte AO (returnTo)', () => {

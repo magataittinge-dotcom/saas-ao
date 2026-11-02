@@ -84,7 +84,7 @@ export function QuotaRond() {
             className={cn('transition-[stroke-dashoffset] duration-morph ease-expo', bloque ? 'stroke-danger' : proche ? 'stroke-warning' : 'stroke-accent-ui')} />
         )}
       </svg>
-      <span className="absolute text-xs font-semibold tabular-nums text-fg-2">{part === null ? '∞' : `${Math.round(part * 100)}`}</span>
+      <span className="absolute text-xs font-semibold tabular-nums text-fg-2">{part === null ? '∞' : `${Math.round(part * 100)}%`}</span>
     </Link>
   )
 }

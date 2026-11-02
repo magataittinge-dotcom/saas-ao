@@ -81,7 +81,7 @@ export default function Settings() {
                 style={{ background: 'rgba(228,233,242,0.10)', border: '1px solid rgba(228,233,242,0.20)' }}
               >
                 <Shield size={10} />
-                {user?.role ?? 'admin'}
+                {user?.role === 'member' ? 'Membre' : 'Administrateur'}
               </span>
             }
           />

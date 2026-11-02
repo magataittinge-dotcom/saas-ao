@@ -94,7 +94,7 @@ export default function Vault() {
         <Archive size={24} className="text-accent-text" aria-hidden />
         <div>
           <h1 className="font-display text-h6 text-fg">Coffre-fort documentaire</h1>
-          <p className="text-sm text-fg-2">{documents.length} documents stockés</p>
+          <p className="text-sm text-fg-2">{documents.length === 0 ? 'Aucune pièce stockée pour le moment' : `${documents.length} document${documents.length > 1 ? 's' : ''} stocké${documents.length > 1 ? 's' : ''}`}</p>
         </div>
       </div>
 
@@ -120,7 +120,7 @@ export default function Vault() {
         <p className="text-sm font-medium text-fg">
           {isUploading ? 'Envoi en cours…' : 'Glissez vos documents ici ou cliquez pour parcourir'}
         </p>
-        <p className="mt-1 text-xs text-fg-3">PDF — 20 MB max</p>
+        <p className="mt-1 text-xs text-fg-3">PDF · 20 Mo au plus</p>
       </div>
 
       {pieceASupprimer && (
@@ -164,7 +164,7 @@ export default function Vault() {
             )
           })()}
 
-          {VAULT_CATEGORY_ORDER.map((category) => {
+          {documents.length > 0 && VAULT_CATEGORY_ORDER.map((category) => {
             const catDocs = documents.filter((d) => d.category === category)
             return (
               <div key={category}>
@@ -186,10 +186,10 @@ export default function Vault() {
           })}
 
           {documents.length === 0 && (
-            <div className="py-16 text-center text-fg-3">
+            <div className="py-10 text-center text-fg-3">
               <Archive size={40} className="mx-auto mb-3 text-fg-disabled" aria-hidden />
-              <p>Votre coffre-fort est vide</p>
-              <p className="mt-1 text-sm">Déposez vos documents administratifs pour les retrouver facilement</p>
+              <p className="text-fg-2">Vos pièces administratives, rangées une fois pour toutes</p>
+              <p className="mx-auto mt-1 max-w-lg text-sm">Attestations sociales et fiscales, Kbis, assurances, qualifications : Synorix les range, les propose dans chaque candidature et vous prévient avant la fin de validité d'une pièce.</p>
             </div>
           )}
         </>
