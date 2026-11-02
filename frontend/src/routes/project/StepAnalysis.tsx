@@ -212,18 +212,6 @@ export default function StepAnalysis({ project }: Props) {
   }, [projectDocs, project.selected_lot, project.selected_lot_name])
 
   // ── Derived data for redesigned layout ────────────────────────
-  const prixPct = useMemo(() => {
-    const c = project.criteres_jugement?.find(cr => cr.nom.toLowerCase().includes('prix'))
-    return c?.poids ?? 0
-  }, [project.criteres_jugement])
-
-  const techPct = useMemo(() => {
-    if (!project.criteres_jugement) return 0
-    return project.criteres_jugement
-      .filter(c => !c.nom.toLowerCase().includes('prix'))
-      .reduce((sum, c) => sum + c.poids, 0)
-  }, [project.criteres_jugement])
-
   const obligatoireCount = useMemo(
     () => items.filter(i => i.priority === 'obligatoire').length,
     [items],
@@ -344,7 +332,7 @@ export default function StepAnalysis({ project }: Props) {
 
       {/* ── HÉROS DE SYNTHÈSE — grille rigide : le fait à gauche, la boussole à droite ── */}
       <div className="glass-card top-lit blueprint-grid sheen relative overflow-hidden px-5 py-4">
-        <div className="relative grid items-start gap-x-10 gap-y-4 lg:grid-cols-[minmax(0,1fr)_260px]">
+        <div className="relative">
           {/* Le résultat de l'analyse, en chiffres */}
           <div className="min-w-0">
             <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
@@ -356,7 +344,7 @@ export default function StepAnalysis({ project }: Props) {
                   <>
                     <span>
                       <span className="font-semibold" style={{ color: 'var(--text-1)' }}>{lotFilterInfo.included.length}</span>
-                      /{lotTotal} docs analysés
+                      /{lotTotal} documents analysés
                     </span>
                     <button
                       onClick={() => setShowLotDetails(v => !v)}
@@ -381,38 +369,12 @@ export default function StepAnalysis({ project }: Props) {
                 </p>
               </div>
             </div>
-            {infos?.objet && (
-              <p className="mt-3.5 max-w-2xl text-sm font-medium leading-snug" style={{ color: 'var(--text-2)' }}>
-                {infos.objet}
-              </p>
-            )}
-            {(infos?.maitre_ouvrage || infos?.maitre_oeuvre) && (
+            {infos?.maitre_oeuvre && (
               <p className="mt-1.5 max-w-2xl text-xs leading-relaxed" style={{ color: 'var(--text-3)' }}>
-                {infos?.maitre_ouvrage && <>Client&nbsp;: <span style={{ color: 'var(--text-3)' }}>{infos.maitre_ouvrage}</span></>}
-                {infos?.maitre_ouvrage && infos?.maitre_oeuvre && ' · '}
-                {infos?.maitre_oeuvre && <>Maîtrise d&apos;œuvre&nbsp;: <span style={{ color: 'var(--text-3)' }}>{infos.maitre_oeuvre}</span></>}
+                Maîtrise d&apos;œuvre&nbsp;: <span style={{ color: 'var(--text-3)' }}>{infos.maitre_oeuvre}</span>
               </p>
             )}
           </div>
-
-          {/* Les critères de jugement — la boussole de la réponse */}
-          {(prixPct > 0 || techPct > 0) && (
-            <div className="min-w-0">
-              <p className="microlabel mb-2">Critères de jugement</p>
-              <div className="flex h-2 overflow-hidden rounded-full" style={{ background: 'var(--surface-2)' }}>
-                {prixPct > 0 && <div title={`Prix ${prixPct} %`} style={{ width: `${prixPct}%`, background: 'var(--text-1)' }} />}
-                {techPct > 0 && <div title={`Technique ${techPct} %`} style={{ width: `${techPct}%`, background: 'var(--text-3)' }} />}
-              </div>
-              <div className="mt-2 flex items-center justify-between text-xs">
-                <span style={{ color: 'var(--text-3)' }}>
-                  Prix <span className="num-mono font-bold" style={{ color: 'var(--text-1)' }}>{prixPct}&nbsp;%</span>
-                </span>
-                <span style={{ color: 'var(--text-3)' }}>
-                  Technique <span className="num-mono font-bold" style={{ color: 'var(--text-1)' }}>{techPct}&nbsp;%</span>
-                </span>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
