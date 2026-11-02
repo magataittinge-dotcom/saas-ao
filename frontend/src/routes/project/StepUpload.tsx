@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { Sigle } from '@/components/common/Sigle'
-import { createPortal } from 'react-dom'
 import { useDropzone } from 'react-dropzone'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -22,6 +21,9 @@ import { AiTipsBlock, type TipData } from '@/components/common/AiTip'
 import VaultSavePrompt, { type VaultSuggestion } from '@/components/vault/VaultSavePrompt'
 import { takePendingUpload } from '@/lib/pendingUpload'
 import DeleteConfirmModal from '@/components/common/DeleteConfirmModal'
+import { GabaritEtape, BandeResume, SectionEtape, ActionsBarreTel } from '@/components/etape'
+import { Button } from '@/components/ui/button'
+import { cartesDepot, ETATS_LECTURE_SERVEUR } from '@/lib/depotDossier'
 
 const UPLOAD_STEPS: StepDescriptor[] = [
   { key: 'uploading',       label: 'Transfert du dossier',   estimated_s: 30 },
@@ -92,12 +94,16 @@ export default function StepUpload({ project }: Props) {
 
   const [dismissedTips, setDismissedTips] = useState<Set<string>>(new Set())
 
+  // Le serveur lit le dossier même quand l'utilisateur est parti : à son retour la lecture est encore affichée (statut du projet).
+  const lectureServeur = ETATS_LECTURE_SERVEUR.includes(project.processing_status ?? '')
   const { data: documents = [] } = useQuery({
     queryKey: ['project-documents', project.id],
     queryFn: async () => {
       const { data } = await api.get<ProjectDocument[]>(`/projects/${project.id}/documents`)
       return data
     },
+    // Pendant la lecture, les pièces reconnues apparaissent au fur et à mesure
+    refetchInterval: phase === 'processing' || lectureServeur ? 3000 : false,
   })
 
   const uploadTips = useMemo<TipData[]>(() => {
@@ -126,6 +132,13 @@ export default function StepUpload({ project }: Props) {
 
   const processingStartedRef = useRef(false)
 
+  // De retour sur la page pendant que le serveur lit encore : l'avancement du projet est relu toutes les 3 s
+  useEffect(() => {
+    if (!lectureServeur || phase !== 'idle') return
+    const t = window.setInterval(() => { void queryClient.invalidateQueries({ queryKey: ['projects', project.id] }) }, 3000)
+    return () => window.clearInterval(t)
+  }, [lectureServeur, phase, project.id, queryClient])
+
   // ─── Backend extraction tracked via SSE on /progress-stream ──────────────
   // (replaces the legacy 2s polling on /processing-status). The SSE hook
   // handles reconnect + fallback automatically.
@@ -141,6 +154,7 @@ export default function StepUpload({ project }: Props) {
       setSublabel('')
       setPhase('done')
       queryClient.invalidateQueries({ queryKey: ['project-documents', project.id] })
+      queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
       setLargeFileNotice(null)
       if (safetyRef.current) { clearTimeout(safetyRef.current); safetyRef.current = null }
       setTimeout(() => { setPhase('idle'); setDisplayPct(0) }, 1000)
@@ -350,8 +364,8 @@ export default function StepUpload({ project }: Props) {
   const hasDocuments = documents.length > 0
   const totalBytes = documents.reduce((s, d) => s + (d.file_size || 0), 0)
   const anyUploading = Object.values(uploading).some(Boolean)
-  const isProcessing = phase !== 'idle'
-  const showOverlay = phase === 'uploading' || phase === 'processing' || phase === 'done'
+  const isProcessing = phase !== 'idle' || lectureServeur
+  const enLecture = phase === 'uploading' || phase === 'processing' || phase === 'done' || lectureServeur
 
   const handleNext = () => {
     setNextError(null)
@@ -381,29 +395,50 @@ export default function StepUpload({ project }: Props) {
         />
       )}
 
-      {/* Upload overlay */}
-      {showOverlay && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'var(--scrim)', backdropFilter: 'blur(4px)' }}>
-          <div className="rounded-2xl p-8 max-w-sm w-full mx-4" style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)', boxShadow: '0 20px 60px color-mix(in srgb, var(--surface-dark) 15%, transparent)' }}>
-            <ProgressDisplay
-              variant="inline"
-              steps={UPLOAD_STEPS}
-              currentStep={
-                phase === 'uploading' ? 'uploading'
-                  : phase === 'processing' ? 'extracting_text'
-                  : 'extracting_text'
-              }
-              progress={Math.round(displayPct)}
-              detail={sublabel || label}
-              phase={phase === 'done' ? 'complete' : 'in_progress'}
-            />
-          </div>
-        </div>,
-        document.body,
-      )}
-
       <div style={{ fontFamily: F }}>
-
+        <GabaritEtape
+          titre="Dépôt du dossier"
+          utilite="Déposez le dossier reçu de l’acheteur : Synorix reconnaît chaque pièce et chaque lot, puis vous choisissez ce que vous analysez."
+          actionPrincipale={
+            <Button type="button" variant="signature" onClick={handleNext} disabled={!hasDocuments || anyUploading || isProcessing || isNavigating}>
+              Étape suivante : Lots
+            </Button>
+          }
+          resume={<BandeResume cartes={cartesDepot(documents, project)} libelle="Le dossier déposé" />}
+          barre={
+        <BarreEtape>
+          <BilanBarre
+            className="gap-2"
+            bureau={<>
+              <CheckCircle2 size={16} style={{ color: hasDocuments ? 'var(--text-1)' : 'var(--text-3)' }} />
+              <span className="text-sm" style={{ color: 'var(--text-3)' }}>
+                {hasDocuments
+                  ? `${documents.length} fichier${documents.length > 1 ? 's déposés' : ' déposé'} dans le dossier.`
+                  : 'Importez des fichiers pour continuer.'
+                }
+              </span>
+            </>}
+            tel={<>
+              <CheckCircle2 size={16} className="shrink-0" style={{ color: hasDocuments ? 'var(--text-1)' : 'var(--text-3)' }} />
+              <span className="truncate text-xs" style={{ color: 'var(--text-3)' }}>
+                {hasDocuments ? `${documents.length} fichier${documents.length > 1 ? 's' : ''}` : 'Aucun fichier'}
+              </span>
+            </>}
+          />
+          <ActionsBarre>
+            <BoutonSecondaire libelle="Retour" onClick={() => navigate(-1)} />
+            <ActionsBarreTel>
+              <BoutonSuite
+                etape="Lots"
+                onClick={handleNext}
+                disabled={!hasDocuments || anyUploading || isProcessing || isNavigating}
+              />
+            </ActionsBarreTel>
+          </ActionsBarre>
+        </BarreEtape>
+          }
+        >
+          <SectionEtape titre="Le dossier de l’acheteur">
         {/* ── AiTips ──────────────────────────────────────── */}
         <AiTipsBlock tips={uploadTips} dismissed={dismissedTips} onDismiss={(id) => setDismissedTips((s) => new Set(s).add(id))} />
 
@@ -414,7 +449,7 @@ export default function StepUpload({ project }: Props) {
           <div
             {...getRootProps()}
             className={cn(
-              'blueprint-grid overflow-hidden rounded-2xl text-center cursor-pointer transition-all duration-200 mt-4',
+              'blueprint-grid overflow-hidden rounded-2xl text-center cursor-pointer transition-all duration-200',
               isDragActive ? 'ring-2 ring-fg' : '',
             )}
             style={{
@@ -461,7 +496,7 @@ export default function StepUpload({ project }: Props) {
           <div
             {...getRootProps()}
             className={cn(
-              'rounded-xl cursor-pointer transition-all duration-200 mt-4',
+              'rounded-xl cursor-pointer transition-all duration-200',
               isDragActive ? 'ring-2 ring-fg' : '',
             )}
             style={{
@@ -500,7 +535,7 @@ export default function StepUpload({ project }: Props) {
         {/* ── Large-file reassurance (cyan for normal, orange for very large) ─ */}
         {largeFileNotice && (phase === 'uploading' || phase === 'processing') && (
           <div
-            className="rounded-xl p-4 mt-4 flex items-start gap-3"
+            className="rounded-xl p-4 flex items-start gap-3"
             style={
               largeFileNotice.tone === 'orange'
                 ? { background: 'color-mix(in srgb, var(--text-3) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--text-3) 25%, transparent)' }
@@ -518,7 +553,7 @@ export default function StepUpload({ project }: Props) {
 
         {/* ── Upload errors ───────────────────────────────── */}
         {uploadErrors.length > 0 && (
-          <div className="rounded-xl p-4 mt-4" style={{ background: 'color-mix(in srgb, var(--danger-fg) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--danger-fg) 15%, transparent)' }}>
+          <div className="rounded-xl p-4" style={{ background: 'color-mix(in srgb, var(--danger-fg) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--danger-fg) 15%, transparent)' }}>
             <p className="text-sm font-semibold mb-1" style={{ color: 'var(--danger-fg)' }}>Erreurs lors de l&apos;envoi :</p>
             {uploadErrors.map((err, i) => (
               <p key={i} className="text-xs" style={{ color: 'var(--danger-fg)' }}>• {err}</p>
@@ -528,7 +563,7 @@ export default function StepUpload({ project }: Props) {
 
         {/* ── ZIP warnings ────────────────────────────────── */}
         {uploadWarnings.length > 0 && (
-          <div className="rounded-xl p-4 mt-4" style={{ background: 'color-mix(in srgb, var(--text-3) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--text-3) 15%, transparent)' }}>
+          <div className="rounded-xl p-4" style={{ background: 'color-mix(in srgb, var(--text-3) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--text-3) 15%, transparent)' }}>
             <p className="text-sm font-semibold mb-1" style={{ color: 'var(--text-3)' }}>Certains fichiers n&apos;ont pas pu être extraits :</p>
             {uploadWarnings.map((w, i) => (
               <p key={i} className="text-xs" style={{ color: 'var(--text-3)' }}>• {w}</p>
@@ -545,12 +580,43 @@ export default function StepUpload({ project }: Props) {
           />
         ))}
 
+        {/* ── Error ───────────────────────────────────────── */}
+        {nextError && (
+          <div
+            className="flex items-start gap-2 p-4 rounded-xl text-sm"
+            style={{ color: 'var(--danger-fg)', background: 'color-mix(in srgb, var(--danger-fg) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--danger-fg) 15%, transparent)' }}
+          >
+            <AlertCircle size={16} className="shrink-0 mt-0.5" />
+            <span>{nextError}</span>
+          </div>
+        )}
+
+          </SectionEtape>
+          {enLecture && (
+            <SectionEtape titre="Lecture du dossier">
+            <div className="rounded-carte border border-bord-2 bg-surface-1 p-5">
+              <ProgressDisplay
+                variant="inline"
+                steps={UPLOAD_STEPS}
+                currentStep={phase === 'uploading' ? 'uploading' : 'extracting_text'}
+                progress={Math.round(phase === 'idle' ? (project.processing_progress ?? 0) : displayPct)}
+                detail={phase === 'idle' ? (project.processing_detail || 'Lecture du dossier…') : (sublabel || label)}
+                phase={phase === 'done' ? 'complete' : 'in_progress'}
+              />
+              <p role="status" className="mt-4 border-t border-bord-2 pt-3 text-sm text-fg-2">
+                {phase === 'uploading'
+                  ? 'Gardez cette page ouverte pendant l’envoi. Ensuite, vous pourrez la quitter : la lecture continue.'
+                  : 'Vous pouvez quitter cette page : la lecture continue et l’AO reste dans « Mes AO ». Les pièces reconnues apparaissent ci-dessous au fur et à mesure.'}
+              </p>
+            </div>
+            </SectionEtape>
+          )}
         {/* ── FILES TABLE ─────────────────────────────────── */}
-        {hasDocuments && (
-          <div className="mt-5">
+          {hasDocuments && (
+          <SectionEtape titre="Pièces reconnues">
+          <div>
             <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
               <div>
-                <h3 className="text-[15px] font-semibold" style={{ color: 'var(--text-1)' }}>Documents du <Sigle code="DCE" /></h3>
                 <p className="num-mono mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
                   {documents.length} fichier{documents.length > 1 ? 's' : ''} · {tailleFichier(totalBytes)}
                 </p>
@@ -644,48 +710,10 @@ export default function StepUpload({ project }: Props) {
               })}
             </div>
           </div>
+          </SectionEtape>
         )}
 
-        {/* ── Error ───────────────────────────────────────── */}
-        {nextError && (
-          <div
-            className="flex items-start gap-2 p-4 rounded-xl text-sm mt-4"
-            style={{ color: 'var(--danger-fg)', background: 'color-mix(in srgb, var(--danger-fg) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--danger-fg) 15%, transparent)' }}
-          >
-            <AlertCircle size={16} className="shrink-0 mt-0.5" />
-            <span>{nextError}</span>
-          </div>
-        )}
-
-        {/* ── Barre du bas (composant commun : une ligne au téléphone) ── */}
-        <BarreEtape>
-          <BilanBarre
-            className="gap-2"
-            bureau={<>
-              <CheckCircle2 size={16} style={{ color: hasDocuments ? 'var(--text-1)' : 'var(--text-3)' }} />
-              <span className="text-sm" style={{ color: 'var(--text-3)' }}>
-                {hasDocuments
-                  ? `${documents.length} fichier${documents.length > 1 ? 's déposés' : ' déposé'} dans le dossier.`
-                  : 'Importez des fichiers pour continuer.'
-                }
-              </span>
-            </>}
-            tel={<>
-              <CheckCircle2 size={16} className="shrink-0" style={{ color: hasDocuments ? 'var(--text-1)' : 'var(--text-3)' }} />
-              <span className="truncate text-xs" style={{ color: 'var(--text-3)' }}>
-                {hasDocuments ? `${documents.length} fichier${documents.length > 1 ? 's' : ''}` : 'Aucun fichier'}
-              </span>
-            </>}
-          />
-          <ActionsBarre>
-            <BoutonSecondaire libelle="Retour" onClick={() => navigate(-1)} />
-            <BoutonSuite
-              etape="Lots"
-              onClick={handleNext}
-              disabled={!hasDocuments || anyUploading || isProcessing || isNavigating}
-            />
-          </ActionsBarre>
-        </BarreEtape>
+        </GabaritEtape>
       </div>
     </>
   )
