@@ -140,10 +140,10 @@ def _couvre_par_le_texte(racines: frozenset[str], comptes: Counter) -> bool:
     return presentes >= (len(racines) if len(racines) <= 3 else -(-3 * len(racines) // 4))
 
 
-def _parle_de_son_theme(cle: str, comptes: Counter) -> bool:
+def _parle_de_son_theme(cle: str, comptes: Counter, themes: dict = _THEMES) -> bool:
     """La partie emploie le vocabulaire de son thème (au moins deux mots de la table) : elle traite bien de ce
     que dit la table, même si elle n'emploie pas les mots exacts du sous-critère."""
-    return sum(1 for r in _THEMES[cle] if comptes.get(r, 0) > 0) >= 2
+    return sum(1 for r in themes[cle] if comptes.get(r, 0) > 0) >= 2
 
 
 def _racines_precises(nom: str) -> frozenset[str]:
@@ -152,14 +152,28 @@ def _racines_precises(nom: str) -> frozenset[str]:
     return frozenset(r for r in _racines(nom) if r not in _COURANTES)
 
 
-def _sections_du_sous_critere(racines: frozenset[str], comptes: dict[str, Counter]) -> list[str]:
+def _themes_du_memoire(contenu: Any) -> dict[str, frozenset[str]]:
+    """La table de thèmes du modèle, plus les parties ajoutées par le patron (plan suivi, ``_plan``) : leur thème est
+    fait des mots de leur titre. Sans plan : la table du modèle, telle quelle."""
+    plan = contenu.get("_plan") if isinstance(contenu, dict) else None
+    liste = plan.get("parties") if isinstance(plan, dict) else None
+    themes = dict(_THEMES)
+    if isinstance(liste, list):
+        for p in liste:
+            if isinstance(p, dict) and isinstance(p.get("sous_cle"), str) and str(p["sous_cle"]).startswith("ajout_"):
+                themes[f"{p.get('partie')}.{p['sous_cle']}"] = _racines_precises(str(p.get("titre") or ""))
+    return themes
+
+
+def _sections_du_sous_critere(racines: frozenset[str], comptes: dict[str, Counter],
+                              themes: dict = _THEMES) -> list[str]:
     trouvees = []
-    for cle in _THEMES:   # ordre du document
+    for cle in themes:   # ordre du document
         c = comptes.get(cle)
         if c is None:
             continue
-        communs = racines & _THEMES[cle]
-        if communs and (any(c.get(r, 0) > 0 for r in communs) or _parle_de_son_theme(cle, c)):
+        communs = racines & themes[cle]
+        if communs and (any(c.get(r, 0) > 0 for r in communs) or _parle_de_son_theme(cle, c, themes)):
             trouvees.append(cle)
         elif not communs and _couvre_par_le_texte(racines, c):
             trouvees.append(cle)
@@ -192,12 +206,13 @@ def rattacher(contenu: Any, criteres_jugement: Any) -> dict:
     Retourne ``{"sous_criteres": [{critere, nom, poids, sections: ["partie_b.dechets", …], traite}],
     "a_couvrir": [{critere, nom, poids}]}``. Un sous-critère général (aucun mot précis) n'est pas listé."""
     comptes = _comptes_par_section(contenu)
+    themes = _themes_du_memoire(contenu)
     resultat, a_couvrir = [], []
     for critere, nom, poids in _unites(criteres_jugement):
         racines = _racines_precises(nom)
         if not racines:
             continue
-        sections = _sections_du_sous_critere(racines, comptes)
+        sections = _sections_du_sous_critere(racines, comptes, themes)
         resultat.append({"critere": critere, "nom": nom, "poids": poids, "sections": sections,
                          "traite": bool(sections)})
         if not sections:
