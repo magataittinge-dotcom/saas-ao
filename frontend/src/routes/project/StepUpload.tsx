@@ -15,6 +15,7 @@ import ProgressDisplay, { type StepDescriptor } from '@/components/common/Progre
 import { useProgressStream } from '@/hooks/useProgressStream'
 import type { Project, ProjectDocument, ProjectDocumentType } from '@/types'
 import { libelleType, optionsType, valeurListe } from '@/lib/typesPieces'
+import { tailleFichier, progressionEnvoi } from '@/lib/tailleFichier'
 import { cn } from '@/lib/utils'
 import BarreEtape, { ActionsBarre, BilanBarre, BoutonSecondaire, BoutonSuite } from '@/components/project/BarreEtape'
 import { AiTipsBlock, type TipData } from '@/components/common/AiTip'
@@ -59,13 +60,6 @@ function FileIcon({ filename }: { filename: string }) {
   if (ext === 'xlsx' || ext === 'xls' || ext === 'ods') return <FileSpreadsheet size={18} className="shrink-0" style={{ color: 'var(--text-1)' }} />
   if (ext === 'zip') return <FileArchive size={18} className="shrink-0" style={{ color: 'var(--text-3)' }} />
   return <File size={18} className="shrink-0" style={{ color: 'var(--text-3)' }} />
-}
-
-function formatSize(bytes?: number): string {
-  if (!bytes) return ''
-  if (bytes < 1024) return `${bytes} o`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} Ko`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`
 }
 
 interface Props { project: Project }
@@ -259,11 +253,7 @@ export default function StepUpload({ project }: Props) {
               // axios throttlé — jamais de retour en arrière.
               setDisplayPct(prev => Math.max(prev, mapped))
 
-              const MB = 1024 * 1024
-              const loadedMb = (loaded / MB).toFixed(1)
-              const totalMb = total > 0 ? (total / MB).toFixed(1) : '?'
-              const pct = Math.round(overallPct)
-              setSublabel(`${loadedMb} / ${totalMb} Mo (${pct}%)`)
+              setSublabel(progressionEnvoi(loaded, total, Math.round(overallPct)))
 
               if (hasZip && isComplete) {
                 startProcessing()
@@ -561,7 +551,7 @@ export default function StepUpload({ project }: Props) {
               <div>
                 <h3 className="text-[15px] font-semibold" style={{ color: 'var(--text-1)' }}>Documents du <Sigle code="DCE" /></h3>
                 <p className="num-mono mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
-                  {documents.length} fichier{documents.length > 1 ? 's' : ''} · {formatSize(totalBytes)}
+                  {documents.length} fichier{documents.length > 1 ? 's' : ''} · {tailleFichier(totalBytes)}
                 </p>
               </div>
               {documents.length > 1 && (
@@ -613,7 +603,7 @@ export default function StepUpload({ project }: Props) {
 
                     {/* Size */}
                     <span className="num-mono text-xs" style={{ color: 'var(--text-3)' }}>
-                      {formatSize(doc.file_size)}
+                      {tailleFichier(doc.file_size)}
                     </span>
 
                     {/* Type badge — clickable select */}
