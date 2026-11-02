@@ -50,7 +50,7 @@ test('S10 : dans la barre, les boutons secondaires sont des BoutonSecondaire (ic
     assert.ok(nus.every((b) => /edge-cta|signature-btn/.test(b)), `${f} : un bouton nu dans la barre : ${nus.join(' ')}`)
   }
   assert.match(barre('src/routes/project/StepUpload.tsx'), /<BoutonSecondaire libelle="Retour"/)
-  assert.match(barre('src/routes/project/StepLotSelection.tsx'), /<BoutonSecondaire libelle="Annuler"/)
+  assert.match(barre('src/routes/project/StepLotSelection.tsx'), /<BoutonSecondaire libelle="Retour"/)
 })
 
 test('S10 : sur l\'export, une ligne au téléphone — « Télécharger », menu « … » pour les autres formats, avertissement au-dessus de la barre', () => {

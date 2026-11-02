@@ -1,17 +1,20 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { choixParDefaut, basculerLot, peutLancer } from '@/lib/choixLots'
-import { ETIQUETTES_SOURCE_LOT, etiquettesSourceLot, phraseLotsEcartes, type LotsEcartes } from '@/lib/lotsSource'
+import { etiquettesSourceLot, phraseLotsEcartes, type LotsEcartes } from '@/lib/lotsSource'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Layers, CheckCircle2, AlertCircle, Plus, X,
+  Layers, CheckCircle2, AlertCircle, Plus, X, ArrowLeft,
   AlertTriangle, Loader2,
   Sparkles, Pencil, Check as CheckIcon,
 } from 'lucide-react'
 import axios from 'axios'
 import { BoutonSecondaire } from '@/components/project/BarreEtape'
-import { GabaritEtape, BandeResume, SectionEtape, BarreEtape, ActionsBarre, ActionsBarreTel, BilanBarre } from '@/components/etape'
+import { GabaritEtape, BandeResume, SectionEtape, EtatElement, BarreEtape, ActionsBarre, ActionsBarreTel, BilanBarre } from '@/components/etape'
+import { METIERS } from '@/lib/entreprise/metiers'
+import { metiersDuLot } from '@/lib/lotsMetiers'
+import { repartirDocuments } from '@/lib/analyseLibelles'
 import { Button } from '@/components/ui/button'
 import { repartirLotsParMetiers, libelleUnites } from '@/lib/lotsMetiers'
 import type { MemoireConfig } from '@/types'
@@ -34,68 +37,10 @@ const ANALYSIS_STEPS_FOR_DISPLAY: StepDescriptor[] = [
   { key: 'finalizing',      label: 'Finalisation',                          estimated_s: 5 },
 ]
 import { cn } from '@/lib/utils'
-import { AiTipsBlock, type TipData } from '@/components/common/AiTip'
 
 const F = "'Inter Variable', 'Geist Sans', sans-serif"
 
 interface Props { project: Project }
-
-// ─── Low-confidence indicator ───────────────────────────────────────────────
-// We deliberately do NOT display the % score or any 'FIABLE/PROBABLE'
-// label. On a paid B2B product, surfacing the AI's self-doubt erodes
-// trust; we either trust the detection or we ask the user to verify it
-// silently. For confidence >= 80 we show nothing. For < 80 we show a
-// tiny grey AlertTriangle with a tooltip suggesting a quick check.
-
-function ConfidenceWarning({ confidence }: { confidence?: number }) {
-  if (confidence === undefined || confidence >= 80) return null
-  return (
-    <span
-      className="inline-flex items-center justify-center w-5 h-5 rounded-full"
-      style={{ color: 'var(--text-3)' }}
-      title="Cette détection mérite une vérification"
-      aria-label="Cette détection mérite une vérification"
-    >
-      <AlertTriangle size={13} />
-    </span>
-  )
-}
-
-// ─── Sources indicator ────────────────────────────────────────────────────────
-
-function SourcesIndicator({ sources }: { sources?: string[] }) {
-  if (!sources || sources.length === 0) return null
-  // Chips dédupliqués, jamais d'identifiant technique brut à l'écran.
-  const regular = etiquettesSourceLot(sources)
-  const fromIA = sources.includes('ia_fallback')
-  return (
-    <span className="inline-flex flex-wrap items-center justify-end gap-1.5 text-xs max-sm:justify-start" style={{ color: 'var(--text-3)' }}>
-      {regular.map(l => (
-        <span
-          key={l}
-          className="whitespace-nowrap rounded px-1.5 py-0.5 text-xs font-medium"
-          style={{ background: 'var(--surface-2)', color: 'var(--text-3)', boxShadow: 'inset 0 0 0 1px var(--line)' }}
-          title="Pièce du dossier où ce lot a été détecté"
-        >
-          {l}
-        </span>
-      ))}
-      {fromIA && (
-        // Badge distinct : lot ajouté/complété par le filet IA (à vérifier
-        // d'un coup d'œil, contrairement aux détections déterministes).
-        <span
-          className="px-1.5 py-0.5 rounded-full font-medium"
-          style={{ background: 'color-mix(in srgb, var(--warning-fg) 10%, transparent)', color: 'var(--warning-fg)', border: '1px solid color-mix(in srgb, var(--warning-fg) 25%, transparent)' }}
-          title="Ce lot a été complété par l'IA à partir du règlement de consultation — vérifiez son intitulé"
-        >
-          {ETIQUETTES_SOURCE_LOT.ia_fallback}
-        </span>
-      )}
-    </span>
-  )
-}
-
-// ─── Lot card ─────────────────────────────────────────────────────────────────
 
 interface LotCardProps {
   lot: LotOption & { _manual?: boolean }
@@ -105,6 +50,8 @@ interface LotCardProps {
   onRename?: (newLabel: string) => void
   /** Coût de la lecture de ce lot, en unités d'abonnement (« 1 unité »). */
   cout?: string
+  /** Les pièces lues pour ce lot (communes + propres au lot) : nombre et « Voir ». */
+  pieces?: { file_name: string }[]
 }
 
 /* A lot label is "generic" when the detector found a number but no
@@ -123,7 +70,7 @@ function splitLotLabel(label: string): { num: string | null; title: string } {
   return { num: m[1].padStart(2, '0'), title: title || label.trim() }
 }
 
-function LotCard({ lot, selected, onSelect, onDelete, onRename, cout }: LotCardProps) {
+function LotCard({ lot, selected, onSelect, onDelete, onRename, cout, pieces }: LotCardProps) {
   // We deliberately do NOT show a Synorix-internal sequential number
   // (e.g. "LOT 06") next to the real DCE label — it confused users by
   // implying two competing numbering systems. lot.nom already starts
@@ -132,6 +79,11 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename, cout }: LotCardP
   const isGeneric = !lot.user_label && isGenericLotLabel(displayedLabel)
   const { num: lotNum, title: lotTitle } = splitLotLabel(displayedLabel)
 
+  const [voirPieces, setVoirPieces] = useState(false)
+  const metiers = lot.id === 'all' ? [] : metiersDuLot(displayedLabel).map((c) => METIERS.find((m) => m.code === c)?.libelle ?? c)
+  const sources = etiquettesSourceLot(lot.sources).map((l) => l.replace(/^Vu dans /, ''))
+  const parIA = (lot.sources ?? []).includes('ia_fallback')
+  const aVerifier = (lot.confidence !== undefined && lot.confidence < 80) || parIA
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState(lot.user_label ?? '')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -182,29 +134,22 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename, cout }: LotCardP
             : 'var(--edge-light)',
         }}
       >
-        {/* Numéro de lot — la poignée visuelle ; radio pour les entrées sans numéro */}
-        {lotNum ? (
+        {/* Case à cocher visible : cible de 44 px, l'état est aussi dit par aria-pressed de la carte */}
+        <span aria-hidden="true" className="-my-1 -ml-2 flex h-11 w-11 shrink-0 items-center justify-center">
           <span
-            className="num-mono shrink-0 rounded-lg px-2.5 py-1.5 text-[13px] font-bold tracking-wide transition-all"
-            style={
-              selected
-                ? { background: 'var(--accent-fill-solid)', color: 'var(--on-accent)' }
-                : { background: 'var(--surface-2)', color: 'var(--text-3)', boxShadow: 'inset 0 0 0 1px var(--line)' }
-            }
+            className="flex h-[22px] w-[22px] items-center justify-center rounded-[6px] border-2 transition-colors"
+            style={selected ? { borderColor: 'var(--accent-ring)', background: 'var(--accent-fill-solid)', color: 'var(--on-accent)' } : { borderColor: 'var(--text-3)', background: 'var(--surface-0)' }}
+          >
+            {selected && <CheckIcon size={14} strokeWidth={3} />}
+          </span>
+        </span>
+        {lotNum && (
+          <span
+            className="num-mono shrink-0 rounded-lg px-2.5 py-1.5 text-[13px] font-bold tracking-wide"
+            style={{ background: 'var(--surface-2)', color: 'var(--text-2)', boxShadow: 'inset 0 0 0 1px var(--line)' }}
           >
             LOT {lotNum}
           </span>
-        ) : (
-          <div
-            className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all"
-            style={
-              selected
-                ? { borderColor: 'var(--accent-ring)', background: 'var(--accent-fill-solid)' }
-                : { borderColor: 'var(--text-3)' }
-            }
-          >
-            {selected && <div className="w-2 h-2 rounded-full bg-accent-on" />}
-          </div>
         )}
 
         {/* Content */}
@@ -297,11 +242,36 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename, cout }: LotCardP
           )}
         </div>
 
-        {/* Right side: discrete warning (only for < 80% confidence) + sources */}
-        <div className="flex shrink-0 flex-col items-end gap-1 max-sm:basis-full max-sm:items-start">
-          {cout && <span className="text-xs font-medium text-fg-2">{cout}</span>}
-          <ConfidenceWarning confidence={lot.confidence} />
-          <SourcesIndicator sources={lot.sources} />
+        {cout && <span className="shrink-0 whitespace-nowrap text-sm font-medium text-fg-2 max-sm:basis-full">{cout}</span>}
+
+        {/* Sous le titre : métiers reconnus, pièces du lot, état en petit */}
+        <div className="basis-full space-y-2 pl-1 sm:pl-[3.25rem]" onClick={(e) => e.stopPropagation()}>
+          {metiers.length > 0 && (
+            <p className="flex flex-wrap items-center gap-1.5 text-sm text-fg-2">
+              <span>{metiers.length > 1 ? 'Métiers reconnus' : 'Métier reconnu'} :</span>
+              {metiers.map((m) => <span key={m} className="pill pill-muted">{m}</span>)}
+            </p>
+          )}
+          {pieces && (
+            <div className="text-sm text-fg-2">
+              <p className="flex flex-wrap items-center gap-x-2">
+                <span>{pieces.length} {pieces.length > 1 ? 'pièces lues' : 'pièce lue'} pour ce lot</span>
+                {pieces.length > 0 && (
+                  <button type="button" aria-expanded={voirPieces} onClick={() => setVoirPieces((v) => !v)}
+                    className="inline-flex min-h-9 items-center rounded-xs font-medium text-accent-text hover:underline [@media(pointer:coarse)]:min-h-11">
+                    {voirPieces ? 'Masquer' : 'Voir'}
+                  </button>
+                )}
+              </p>
+              {voirPieces && <ul className="mt-1 space-y-0.5 text-xs text-fg-3">{pieces.map((d) => <li key={d.file_name} className="break-words">{d.file_name}</li>)}</ul>}
+            </div>
+          )}
+          {lot.id !== 'all' && (
+            <EtatElement
+              etat={aVerifier ? 'a-verifier' : 'pret'}
+              source={parIA ? { libelle: 'complété par l’IA : vérifiez l’intitulé' } : sources.length > 0 ? { libelle: sources.join(' · ') } : undefined}
+            />
+          )}
         </div>
       </div>
 
@@ -558,18 +528,6 @@ export default function StepLotSelection({ project }: Props) {
   const [, setPreparation] = useState<{ extracted: number; total: number } | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
-  const [dismissedTips, setDismissedTips] = useState<Set<string>>(new Set())
-
-
-  const lotTips = useMemo<TipData[]>(() => {
-    const tips: TipData[] = []
-    const lowConfidence = lots.filter(l => (l.confidence ?? 100) < 50)
-    if (lowConfidence.length > 0) {
-      tips.push({ id: 'lots-low-conf', variant: 'warning', text: `Certains lots ont une confiance faible — vérifiez les noms et numéros.` })
-    }
-    tips.push({ id: 'lots-info', variant: 'info', text: `Vérifiez que tous les lots qui vous intéressent sont bien détectés. Vous pouvez en ajouter manuellement.` })
-    return tips
-  }, [lots])
   const selectedName = lots.find(l => l.id === selectedId)?.nom ?? null
 
   const handleDelete = (lotId: string) => {
@@ -668,6 +626,13 @@ export default function StepLotSelection({ project }: Props) {
     queryFn: async () => (await api.get<MemoireConfig>('/memoire-config')).data,
     staleTime: 60_000,
   })
+  // Les pièces du dossier : le nombre de pièces lues pour chaque lot (communes + propres au lot) et leur liste
+  const { data: documents = [] } = useQuery<{ file_name: string; related_lots?: string[] | null }[]>({
+    queryKey: ['project-documents', project.id],
+    queryFn: async () => (await api.get(`/projects/${project.id}/documents`)).data,
+    staleTime: 30_000,
+  })
+  const piecesDuLot = (lotId: string) => repartirDocuments(documents, lotId, lots.map((l) => l.id)).analyses
   const { dansVosMetiers, autres, separes } = repartirLotsParMetiers(lots, profil?.metiers)
   const [autresOuverts, setAutresOuverts] = useState(false)
   // Un lot déjà choisi parmi les autres ne reste jamais caché
@@ -682,6 +647,7 @@ export default function StepLotSelection({ project }: Props) {
       onDelete={() => setLotARetirer(lot)}
       onRename={(label) => renameLot({ lotId: lot.id, label })}
       cout={libelleUnites(1)}
+      pieces={piecesDuLot(lot.id)}
     />
   )
 
@@ -772,7 +738,7 @@ export default function StepLotSelection({ project }: Props) {
             </>}
           />
           <ActionsBarre>
-            <BoutonSecondaire libelle="Annuler" icone={X} onClick={() => navigate(`/projects/${project.id}/upload`)} />
+            <BoutonSecondaire libelle="Retour" icone={ArrowLeft} onClick={() => navigate(`/projects/${project.id}/upload`)} />
             <ActionsBarreTel>
               <button
                 onClick={handleLaunch}
@@ -822,9 +788,6 @@ export default function StepLotSelection({ project }: Props) {
           <p data-lots-ecartes className="text-sm" style={{ color: 'var(--text-3)' }}>{phraseLotsEcartes(lotsData?.ecartes)}</p>
         )}
 
-        {/* AiTips */}
-        <AiTipsBlock tips={lotTips} dismissed={dismissedTips} onDismiss={(id) => setDismissedTips((s) => new Set(s).add(id))} />
-
         {/* Excel error */}
         {errorLots.length > 0 && (
           <div className="flex items-start gap-3 p-4 rounded-xl" style={{ background: 'color-mix(in srgb, var(--text-3) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--text-3) 15%, transparent)' }}>
@@ -864,6 +827,7 @@ export default function StepLotSelection({ project }: Props) {
                 selected={selectedIds.has('all')}
                 onSelect={() => toggleLot('all')}
                 cout={libelleUnites(lots.length)}
+                pieces={documents}
               />
             </SectionEtape>
           </>
@@ -898,7 +862,7 @@ export default function StepLotSelection({ project }: Props) {
             onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--surface-1)'; e.currentTarget.style.color = 'var(--text-3)'; e.currentTarget.style.background = 'transparent' }}
           >
             <Plus size={16} />
-            Ajouter un lot manuellement
+            Un lot du dossier manque à la liste ? Ajoutez-le à la main
           </button>
         )}
 
