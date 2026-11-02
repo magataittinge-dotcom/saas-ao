@@ -65,11 +65,11 @@ export default function Project() {
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="microlabel mb-1">Appel d&apos;offres</p>
-          <h1 className="font-display tracking-tight text-fg text-[22px] font-bold leading-tight truncate">{project.name}</h1>
+          <h1 className="font-display tracking-tight text-fg text-[22px] font-bold leading-tight line-clamp-2 break-words">{project.name}</h1>
           {project.maitre_ouvrage && (
-            <p className="mt-1 flex items-center gap-1.5 text-sm text-fg-2 truncate">
-              <MapPin size={13} className="shrink-0 text-fg-3" />
-              {project.maitre_ouvrage}
+            <p className="mt-1 flex items-start gap-1.5 text-sm text-fg-2">
+              <MapPin size={13} className="mt-[3px] shrink-0 text-fg-3" />
+              <span className="min-w-0 break-words">{project.maitre_ouvrage}</span>
             </p>
           )}
         </div>

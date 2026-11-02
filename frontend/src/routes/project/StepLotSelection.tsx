@@ -752,7 +752,7 @@ export default function StepLotSelection({ project }: Props) {
             </div>
             <ul className="space-y-0.5 pl-6">
               {extractionWarnings.map((w) => (
-                <li key={w.file_name} className="text-xs" style={{ color: 'var(--warning-fg)' }}>
+                <li key={w.file_name} className="break-words text-xs" style={{ color: 'var(--warning-fg)' }}>
                   <span className="font-medium">{w.file_name}</span> — {w.warning}
                 </li>
               ))}

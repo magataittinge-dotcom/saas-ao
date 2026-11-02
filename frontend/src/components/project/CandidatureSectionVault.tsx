@@ -143,11 +143,11 @@ function VaultRow({
 
   return (
     <li
-      className="flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors hover:bg-ds-bg-2"
+      className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5 rounded-lg transition-colors hover:bg-ds-bg-2"
       style={{ background: 'var(--surface-0)' }}
     >
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium truncate" style={{ color: 'var(--text-1)' }}>
+      <div className="min-w-0 flex-1 basis-[12rem]">
+        <p className="text-sm font-medium break-words sm:truncate" style={{ color: 'var(--text-1)' }}>
           {item.details || item.document_type_required}
         </p>
         <div className="flex items-center gap-2 mt-0.5 flex-wrap">

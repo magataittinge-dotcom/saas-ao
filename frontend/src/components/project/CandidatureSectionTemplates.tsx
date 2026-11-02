@@ -160,14 +160,14 @@ function TemplateRow({
   }
 
   return (
-    <li className="px-5 py-3 flex items-start gap-4">
+    <li className="flex flex-col gap-3 px-5 py-3 sm:flex-row sm:items-start sm:gap-4">
       {/* Body */}
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline gap-2 flex-wrap">
           <span className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>{label}</span>
           <span className={statut.classe}>{statut.texte}</span>
           {item.jointe && item.piece_nom ? (
-            <span className="text-xs" style={{ color: 'var(--text-3)' }}>{item.piece_nom}</span>
+            <span className="min-w-0 break-words text-xs" style={{ color: 'var(--text-3)' }}>{item.piece_nom}</span>
           ) : nonConcernee || isWarning ? null : hasTemplate ? (
             <span className="text-xs" style={{ color: 'var(--text-3)' }}>Modèle de l’acheteur à compléter</span>
           ) : officialUrl ? (
@@ -200,7 +200,7 @@ function TemplateRow({
 
       {/* Actions — affordance UNIFORME : Télécharger (trame DCE ou officiel) /
           Importer rempli / (signature via la case ci-dessus, si demandée) */}
-      <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+      <div className="flex flex-wrap items-center gap-2 sm:shrink-0 sm:justify-end">
         <NonConcerneBouton item={item} onNonConcerne={onNonConcerne} />
         {nonConcernee ? null : hasTemplate && downloadHref ? (
           <a
