@@ -17,6 +17,7 @@ import { RequirementListSkeleton } from '@/components/skeletons'
 import type { Project, ChecklistItem, Document } from '@/types'
 import EchecAction from '@/components/common/EchecAction'
 import { messageErreur } from '@/lib/erreurs'
+import { messageActualisation, type EtatActualisation } from '@/lib/actualisation'
 
 const F = "'Inter Variable', 'Geist Sans', sans-serif"
 
@@ -83,6 +84,26 @@ export default function StepVerification({ project }: Props) {
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['checklist', project.id] })
     queryClient.invalidateQueries({ queryKey: ['checklist-score', project.id] })
+  }
+
+  // R18 — « Actualiser » dit ce qu'il a fait : en cours, à jour, ou combien de pièces au lieu de combien.
+  const [actualisation, setActualisation] = useState<EtatActualisation | null>(null)
+  const nombreDePieces = (liste: ChecklistItem[]): number => {
+    const suivies = liste.filter((i) => ['fournir', 'completer'].includes(i.document_group ?? 'fournir'))
+    const c = comptesPieces(piecesComptees(suivies), echeance)
+    return c.aJoindre + c.pretes
+  }
+  const actualiser = async () => {
+    const avant = aJoindre + pretes
+    setActualisation({ etat: 'en_cours' })
+    try {
+      await api.post(`/projects/${project.id}/checklist/regenerate`)
+      await refresh()
+      const apres = nombreDePieces(queryClient.getQueryData<ChecklistItem[]>(['checklist', project.id]) ?? [])
+      setActualisation({ etat: 'fait', avant, apres })
+    } catch {
+      setActualisation({ etat: 'echec' })
+    }
   }
 
   const handleUploadCompleted = async (item: ChecklistItem, file: File) => {
@@ -253,17 +274,16 @@ export default function StepVerification({ project }: Props) {
               coffre). L'état par défaut n'est jamais « vide + bouton ». */}
           <button
             type="button"
-            onClick={async () => {
-              await api.post(`/projects/${project.id}/checklist/regenerate`)
-              await refresh()
-            }}
-            className="flex items-center gap-1.5 text-xs font-medium transition-colors hover:underline"
+            onClick={actualiser}
+            disabled={actualisation?.etat === 'en_cours'}
+            className="flex items-center gap-1.5 text-xs font-medium transition-colors hover:underline disabled:opacity-60"
             style={{ color: 'var(--text-3)' }}
             title="Recalculer la checklist depuis les exigences analysées"
           >
-            <RefreshCw size={13} />
+            <RefreshCw size={13} className={actualisation?.etat === 'en_cours' ? 'animate-spin' : undefined} />
             Actualiser
           </button>
+          <span role="status" className="text-xs empty:hidden" style={{ color: 'var(--text-3)' }}>{messageActualisation(actualisation)}</span>
           <button
             type="button"
             onClick={openVaultPage}
