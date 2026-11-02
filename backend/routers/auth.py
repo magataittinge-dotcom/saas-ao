@@ -15,6 +15,7 @@ from models.user import User
 from models.organization import Organization
 from schemas.auth import SyncRequest
 from services import insee_service
+from services.raison_sociale import organisation_publique
 
 logger = logging.getLogger(__name__)
 
@@ -103,8 +104,10 @@ def _sync_clerk_user(clerk_user_id: str, db: Session) -> User:
     # future provider/country migration can target a specific cohort.
     from config import get_locale_config
     locale_cfg = get_locale_config()
+    # Raison sociale vide tant que le SIRET n'est pas validé : jamais le nom du compte (décision du 2/11,
+    # C8/R20). `organizations.name` est non nul : chaîne vide, sans migration.
     org = Organization(
-        name=name,
+        name="",
         siret=None,
         plan="free",
         billing_provider="stripe",
@@ -175,7 +178,7 @@ def get_auth_user_short(
 @router.get("/me")
 def get_me(user: User = Depends(get_auth_user), db: Session = Depends(get_db)):
     org = db.query(Organization).filter(Organization.id == user.organization_id).first()
-    return {"user": _user_response(user), "organization": org}
+    return {"user": _user_response(user), "organization": organisation_publique(org, db) if org else None}
 
 
 @router.post("/sync")
@@ -211,7 +214,7 @@ def sync_onboarding(
     db.refresh(org)
     if user in db:  # même session que get_db (prod) ; sinon l'objet est déjà à jour
         db.refresh(user)
-    response = {"user": _user_response(user), "organization": org}
+    response = {"user": _user_response(user), "organization": organisation_publique(org, db)}
     if siret_warning:
         response["siret_warning"] = siret_warning
     return response

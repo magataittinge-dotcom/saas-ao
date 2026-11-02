@@ -19,6 +19,7 @@ from models.user import User
 from models.organization import Organization
 from routers.auth import get_auth_user
 from services.billing import BillingError, get_billing_provider
+from services.raison_sociale import raison_sociale_de
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -52,7 +53,9 @@ def _get_or_create_customer(org: Organization, user: User) -> str:
 
     return billing.create_customer(
         email=user.email,
-        name=org.name,
+        # Client de facturation : la raison sociale si elle est connue, sinon le titulaire du compte (le payeur,
+        # pas une raison sociale affichée ailleurs).
+        name=raison_sociale_de(org) or user.name,
         metadata={"organization_id": org.id, "user_id": user.id},
     )
 

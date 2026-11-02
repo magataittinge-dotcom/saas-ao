@@ -26,6 +26,7 @@ from models.reference import Reference
 from models.team_member import TeamMember
 from schemas.fiches_entreprise import COULEUR_PAR_DEFAUT, nettoyer
 from services.nom_client import nom_client_affiche
+from services.raison_sociale import raison_sociale_de
 
 MOIS_FR = (
     "janvier", "février", "mars", "avril", "mai", "juin",
@@ -258,8 +259,9 @@ def _references(db: Session, org_id: str) -> list[Reference]:
 
 # ─── Éléments communs ──────────────────────────────────────────────────────────
 
-def _societe(org: Organization, cfg: Optional[MemoireConfig]) -> dict:
-    nom = _t(_g(cfg, "nom_entreprise")) or _t(org.name)
+def _societe(org: Organization, cfg: Optional[MemoireConfig], db: Optional[Session] = None) -> dict:
+    # Jamais le nom du compte : la règle de lecture unique (vide tant que le SIRET n'est pas validé).
+    nom = _t(_g(cfg, "nom_entreprise")) or _t(raison_sociale_de(org, db))
     email, tel = _t(_g(org, "email_contact")), _t(_g(org, "telephone"))
     return {
         "nom": nom,
@@ -467,7 +469,7 @@ def _exercices(cfg: Optional[MemoireConfig]) -> list[dict]:
 
 
 def _identite(db: Session, org: Organization, cfg: Optional[MemoireConfig], jour: date) -> dict:
-    societe = _societe(org, cfg)
+    societe = _societe(org, cfg, db)
     capital = _g(org, "capital_social")
     exercices = _exercices(cfg)
     creation = _t(_g(cfg, "date_creation"))
@@ -627,7 +629,7 @@ def assembler(db: Session, org_id: str, rubrique: str, *, jour: Optional[date] =
     if org is None:
         raise LookupError("organisation introuvable")
     cfg = db.query(MemoireConfig).filter(MemoireConfig.organization_id == org_id).first()
-    societe = _societe(org, cfg)
+    societe = _societe(org, cfg, db)
     corps = {"moyens": _moyens, "identite": _identite, "certifications": _certifications}[rubrique](
         db, org, cfg, jour)
     donnees = {

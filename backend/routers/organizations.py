@@ -10,6 +10,7 @@ from schemas.organization import OrganizationResponse, OrganizationUpdate
 from routers.auth import get_auth_user
 from services.maps_service import generate_location_map
 from services.rate_limit import limiter
+from services.raison_sociale import organisation_publique
 from services.upload_validation import RegleDepot, recevoir_fichier
 
 router = APIRouter()
@@ -66,7 +67,7 @@ def get_my_organization(user: User = Depends(get_auth_user), db: Session = Depen
     org = db.query(Organization).filter(Organization.id == user.organization_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Organisation introuvable")
-    return org
+    return organisation_publique(org, db)
 
 
 @router.get("/me/carte")
@@ -106,4 +107,4 @@ def update_my_organization(
 
     db.commit()
     db.refresh(org)
-    return org
+    return organisation_publique(org, db)

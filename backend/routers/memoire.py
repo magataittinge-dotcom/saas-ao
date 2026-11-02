@@ -27,6 +27,7 @@ from routers.auth import get_auth_user
 from services.ai.memoire_generator import MemoireGenerator
 from services.chrono import chronometre, lot_du_projet
 from services.docx_exporter import build_memoire_docx
+from services.raison_sociale import raison_sociale_de
 from services.maps_service import generate_location_map, lieu_execution, lieu_source
 from services.document_tagger import get_documents_for_lot
 
@@ -76,7 +77,7 @@ def get_memoire_preflight(
     ).first()
 
     profil = {
-        "nom": (cfg.nom_entreprise if cfg and cfg.nom_entreprise else org.name),
+        "nom": (cfg.nom_entreprise if cfg and cfg.nom_entreprise else raison_sociale_de(org, db)),
         "gerant_nom": cfg.gerant_nom if cfg else None,
         "gerant_titre": cfg.gerant_titre if cfg else None,
         "zone_intervention": cfg.zone_intervention if cfg else None,
@@ -327,6 +328,8 @@ def _run_memoire_job(
             "criteres_jugement": project.criteres_jugement or [],
             "lots_detectes": project.lots_detectes or [],
             "ids_des_lots": _ids_des_lots(project),
+            # lue avant la fermeture de la session : le générateur ne reçoit jamais le nom du compte
+            "raison_sociale": raison_sociale_de(org, db),
         }
         db.close()
 
@@ -342,6 +345,7 @@ def _run_memoire_job(
         generator = MemoireGenerator()
         content = asyncio.run(generator.generate(
             organization=org,
+            raison_sociale=snap["raison_sociale"],
             memoire_config=memoire_cfg,
             project_name=snap["name"],
             maitre_ouvrage=snap["maitre_ouvrage"],
@@ -551,7 +555,7 @@ def _visuels_du_memoire(project, memoire, db, logo_image) -> list:
 def build_project_memoire_docx(project, memoire, org, db) -> bytes:
     """Construit le DOCX complet du mémoire (page de garde, carte,
     organigramme, logo) — source unique pour export-docx, export-pdf et ZIP."""
-    org_name = org.name if org else "Entreprise"
+    org_name = raison_sociale_de(org, db) if org else ""   # vide : la page de garde dit « À compléter »
 
     # Generate location map (graceful fallback to None)
     # Carte IGN : le siège, et le CHANTIER seulement si l'analyse en a extrait le

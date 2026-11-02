@@ -63,6 +63,14 @@ def _poids_segment(segment_subkeys: list[str] | None) -> int:
     return 4000 if segment_subkeys is None else max(len(segment_subkeys), 1) * 6000
 
 
+# Raison sociale inconnue (SIRET non validé, rien de saisi) : la consigne vit dans le bloc « profil », donc dans
+# le préfixe mis en cache de CETTE entreprise (stable : ni date ni aléa). Elle prime sur la règle générale
+# « donnée manquante → [À COMPLÉTER] » : le nom de l'entreprise n'est jamais un trou à signaler dans le texte.
+_CONSIGNE_SANS_RAISON_SOCIALE = (
+    "NOM DE L'ENTREPRISE : non renseigné. Désigne l'entreprise par « notre entreprise » ou « l'entreprise », "
+    "jamais de crochets, jamais de [À COMPLÉTER] pour son nom, et n'invente aucun nom ni aucune forme juridique.\n\n"
+)
+
 _DETAIL_INSTRUCTION = "Génère un mémoire technique COMPLET et DÉTAILLÉ de 20 à 25 pages. Chaque section doit être exhaustive."
 
 # Skills always loaded for mémoire generation
@@ -389,6 +397,7 @@ class MemoireGenerator:
         reglementaire_block: str | None = None,  # Lot 7 T3 — RAG_ENRICHMENT
         ouvrages_dpgf: str | None = None,  # B2 — ouvrages du lot, lus sans IA dans la DPGF
         selected_lot: str | None = None,   # « lot5 » : sert au rattachement des articles du lot 00
+        raison_sociale: str | None = None,  # règle de lecture unique (services/raison_sociale) ; jamais organization.name
         lots_detectes: list | None = None,  # lots du projet [{id, nom}] (désignations des autres lots)
     ) -> dict:
         """Generate a complete mémoire technique using Claude Opus.
@@ -408,7 +417,9 @@ class MemoireGenerator:
         # ── 1. Company profile ────────────────────────────────────────────────
         cfg = memoire_config
         company_block = {
-            "nom": (cfg.nom_entreprise if cfg and cfg.nom_entreprise else organization.name),
+            # Jamais `organization.name` : à la création d'un compte il a longtemps reçu le nom de l'utilisateur
+            # (décision du 2/11). Sans raison sociale connue, la clé est omise (filtre des clés vides plus bas).
+            "nom": (cfg.nom_entreprise if cfg and cfg.nom_entreprise else raison_sociale),
             "siret": organization.siret,
             "adresse": organization.address,
         }
@@ -527,8 +538,9 @@ class MemoireGenerator:
         org_block_text = (
             "━━━ PROFIL ENTREPRISE (memoire_config) ━━━\n"
             f"{json.dumps(company_block, ensure_ascii=False, indent=2)}\n\n"
-            "━━━ RÉFÉRENCES CHANTIERS ━━━\n"
-            f"{json.dumps(ref_list, ensure_ascii=False, indent=2)}\n"
+            + ("" if company_block.get("nom") else _CONSIGNE_SANS_RAISON_SOCIALE)
+            + "━━━ RÉFÉRENCES CHANTIERS ━━━\n"
+            + f"{json.dumps(ref_list, ensure_ascii=False, indent=2)}\n"
         )
 
         # ── 7. Build DYNAMIC block (uncached — varies per AO) ────────────────

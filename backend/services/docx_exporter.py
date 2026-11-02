@@ -18,6 +18,7 @@ from docx.shared import Cm, Pt, RGBColor, Twips
 
 from services import memoire_markdown as md
 from services.docx_sommaire import inserer_sommaire
+from services.raison_sociale import raison_sociale_de
 
 # ─── Passages « À compléter » ──────────────────────────────────────────────────
 #
@@ -245,10 +246,11 @@ def _setup_doc(org_name: str) -> Document:
     hp = header.paragraphs[0]
     hp.alignment = WD_ALIGN_PARAGRAPH.RIGHT
     _effacer_tabulations_du_style(hp)
-    hr = hp.add_run(org_name)
-    hr.font.name = "Calibri"
-    hr.font.size = Pt(9)
-    hr.font.color.rgb = _GREY_META
+    if org_name:     # raison sociale inconnue : pas d'en-tête (la page de garde porte le passage « À compléter »)
+        hr = hp.add_run(org_name)
+        hr.font.name = "Calibri"
+        hr.font.size = Pt(9)
+        hr.font.color.rgb = _GREY_META
 
     _add_footer_page_numbers(section)
 
@@ -361,7 +363,17 @@ def _cover_page(
             color=RGBColor(0x47, 0x55, 0x69), space_after=16,
         )
 
-    _centered_line(doc, org_name, size=13, color=RGBColor(0x37, 0x41, 0x51))
+    if org_name:
+        _centered_line(doc, org_name, size=13, color=RGBColor(0x37, 0x41, 0x51))
+    else:
+        # Raison sociale inconnue (SIRET non validé) : un passage « À compléter » surligné et compté, comme
+        # ceux du corps (jamais le nom du compte, jamais un blanc silencieux).
+        _SECTION.set("Page de garde")
+        marque = _marquer_passages("[À COMPLÉTER : raison sociale]")
+        p_nom = doc.add_paragraph()
+        p_nom.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_nom.paragraph_format.space_after = Pt(6)
+        _ajouter_segments(p_nom, [md.Segment(marque)], taille=13)
     if org_address:
         _centered_line(doc, org_address, size=10, color=_GREY_PG, space_after=2)
     if org_siret:
@@ -709,11 +721,12 @@ def build_memoire_docx(
     return buf.getvalue()
 
 
-def compter_passages_a_completer(content_json: dict[str, Any] | None) -> int:
+def compter_passages_a_completer(content_json: dict[str, Any] | None, *, raison_sociale_vide: bool = False) -> int:
     """Nombre de passages « À compléter » du mémoire, SANS construire le Word (pas de carte ni de visuels :
     l'écran d'export l'appelle à chaque ouverture). Mêmes sections et même règle que l'export : le préambule
     et les sections des parties A, B, C. Seuls les « [À COMPLÉTER : … ] » sont comptés ; l'ancienne consigne
-    « [📍 … ] » d'un vieux mémoire ne l'est pas (l'export la retire quand la carte est dessinée)."""
+    « [📍 … ] » d'un vieux mémoire ne l'est pas (l'export la retire quand la carte est dessinée).
+    `raison_sociale_vide` : la page de garde porte alors un passage « À compléter » de plus, compté ici aussi."""
     cj = content_json or {}
     textes: list[str] = []
     if isinstance(cj.get("preambule"), str):
@@ -725,7 +738,7 @@ def compter_passages_a_completer(content_json: dict[str, Any] | None) -> int:
         for sous_cle, _ in sections:
             if isinstance(partie.get(sous_cle), str):
                 textes.append(partie[sous_cle])
-    return sum(len(_A_COMPLETER_RE.findall(t)) for t in textes)
+    return sum(len(_A_COMPLETER_RE.findall(t)) for t in textes) + (1 if raison_sociale_vide else 0)
 
 
 def build_memoire_docx_ex(*args: Any, **kwargs: Any) -> ExportDocx:
@@ -749,6 +762,6 @@ class DocxExporter:
     """Façade conservée pour la rétrocompatibilité avec routers/export.py."""
 
     def export(self, content_json: dict, organization) -> bytes:
-        org_name = organization.name if organization else "Entreprise"
+        org_name = raison_sociale_de(organization) if organization else ""
         project_name = content_json.get("_project_name", "Projet")
         return build_memoire_docx(content_json, project_name, org_name)

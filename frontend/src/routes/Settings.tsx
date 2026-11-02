@@ -91,7 +91,7 @@ export default function Settings() {
       {/* ── Entreprise ──────────────────────────────────────────────────── */}
       <SectionCard icon={<Building2 size={15} className="text-ds-cyan" />} title="Mon entreprise">
         <div className="divide-y" style={{ borderColor: 'transparent' }}>
-          <InfoRow label="Raison sociale"   value={organization?.name} />
+          <InfoRow label="Raison sociale"   value={organization?.name || undefined} />
           <InfoRow label="SIRET"            value={(organization as any)?.siret} />
           <InfoRow label="Secteur d'activité" value={(organization as any)?.sector} />
           <InfoRow label="Effectif"         value={(organization as any)?.headcount} />

@@ -110,6 +110,7 @@ async def _run(gen):
         criteres_jugement=[],
         reference_template_text=None,
         project_id=None,
+        raison_sociale="ENTREPRISE TEST",   # la raison sociale arrive du routeur (règle de lecture unique)
     )
 
 
