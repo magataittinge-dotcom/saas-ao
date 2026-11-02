@@ -50,7 +50,7 @@ def test_la_page_de_chaque_source_est_trouvee_dans_le_pdf(projet):
     assert res["visite_site"]["source"]["page"] == 4
     # extrait introuvable : pas de page inventée, mais la recherche est marquée (pas de nouvel essai)
     assert res["delai_execution"]["source"]["page"] is None
-    assert res["delai_execution"]["source"]["page_cherchee"] is True
+    assert res["delai_execution"]["source"]["page_cherchee"] == 2
     assert res["penalites"] == {"value": None, "source": None}
     assert champs["date_limite_remise"]["source"]["page"] is None      # l'entrée n'est pas modifiée
 
@@ -94,3 +94,97 @@ def test_la_route_d_une_autre_organisation_reste_fermee(client, db_session):
     db_session.add(Project(id="p-autre", organization_id="org-autre", name="AO"))
     db_session.commit()
     assert client.get("/api/projects/p-autre/critical-fields").status_code == 404
+
+
+# ── V1 : une page de sommaire n'est jamais la page du fait ────────────────────
+
+SOMMAIRE = (
+    "SOMMAIRE\n"
+    "1. OBJET DE LA CONSULTATION ................................ 3\n"
+    "2. CONDITIONS DE LA CONSULTATION ........................... 3\n"
+    "3. PRESENTATION DES OFFRES ................................. 4\n"
+    "4. JUGEMENT DES OFFRES INVENTES ET CHOIX DU TITULAIRE ...... 5\n"
+    "5. RENSEIGNEMENTS COMPLEMENTAIRES .......................... 6"
+)
+JUGEMENT = ("4. JUGEMENT DES OFFRES INVENTES ET CHOIX DU TITULAIRE\n"
+            "Les offres sont classees selon deux criteres ponderes :\n"
+            "Valeur technique de l'offre : 60 pour cent\n"
+            "Prix des prestations : 40 pour cent")
+
+
+@pytest.fixture
+def projet_sommaire(db_session, test_org, tmp_path, monkeypatch):
+    monkeypatch.setattr(file_storage, "UPLOADS_ROOT", tmp_path)
+    dossier = tmp_path / "projects" / "p-som"
+    dossier.mkdir(parents=True)
+    pages = ["Reglement inventé de la consultation", SOMMAIRE, "1. OBJET\nTravaux inventés de peinture.",
+             "3. PRESENTATION\nLes plis sont remis le douze mars à midi.", JUGEMENT,
+             "5. RENSEIGNEMENTS\nVisite des lieux facultative sur rendez-vous."]
+    (dossier / "rc.pdf").write_bytes(pdf_texte(pages))
+    db_session.add(Project(id="p-som", organization_id=test_org.id, name="AO"))
+    db_session.add(ProjectDocument(id="d-som", project_id="p-som", type="rc", file_name="rc.pdf",
+                                   file_url="/uploads/projects/p-som/rc.pdf"))
+    db_session.commit()
+    return db_session
+
+
+def _criteres(extrait):
+    return {"criteres": {"value": [{"nom": "Valeur technique", "poids": 60}, {"nom": "Prix", "poids": 40}],
+                         "source": {"document": "rc.pdf", "page": None, "excerpt": extrait}}}
+
+
+def test_l_extrait_pris_dans_le_sommaire_ne_donne_pas_la_page_du_sommaire(projet_sommaire):
+    extrait = "4. JUGEMENT DES OFFRES INVENTES ET CHOIX DU TITULAIRE ...... 5 5. RENSEIGNEMENTS COMPLEMENTAIRES"
+    res = critical_fields_pages.resoudre_pages(projet_sommaire, "p-som", _criteres(extrait))
+    assert res["criteres"]["source"]["page"] == 5, res            # la page du jugement, pas la page 2
+
+
+def test_une_page_normale_est_gardee(projet_sommaire):
+    extrait = "Les offres sont classees selon deux criteres ponderes"
+    res = critical_fields_pages.resoudre_pages(projet_sommaire, "p-som", _criteres(extrait))
+    assert res["criteres"]["source"]["page"] == 5
+
+
+def test_une_recherche_ancienne_qui_a_garde_le_sommaire_est_refaite(projet_sommaire):
+    champs = _criteres("4. JUGEMENT DES OFFRES INVENTES ET CHOIX DU TITULAIRE ...... 5 5. RENSEIGNEMENTS COMPLEMENTAIRES")
+    champs["criteres"]["source"].update({"page": 2, "page_cherchee": True})     # état rangé par la première version
+    res = critical_fields_pages.resoudre_pages(projet_sommaire, "p-som", champs)
+    assert res["criteres"]["source"]["page"] == 5 and res["criteres"]["source"]["page_cherchee"] == 2
+
+
+def test_la_visite_et_la_remise_gardent_leur_page(projet_sommaire):
+    champs = {
+        "visite_site": {"value": {"statut": "facultative", "date": None},
+                        "source": {"document": "rc.pdf", "page": None, "excerpt": "Visite des lieux facultative sur rendez-vous."}},
+        "date_limite_remise": {"value": {"date": "2027-03-12", "heure": "12:00"},
+                               "source": {"document": "rc.pdf", "page": None, "excerpt": "Les plis sont remis le douze mars à midi."}},
+    }
+    res = critical_fields_pages.resoudre_pages(projet_sommaire, "p-som", champs)
+    assert res["visite_site"]["source"]["page"] == 6
+    assert res["date_limite_remise"]["source"]["page"] == 4
+
+
+def test_detection_des_pages_de_sommaire():
+    from services.pdf_pages_faits import est_sommaire
+    assert est_sommaire(SOMMAIRE) and not est_sommaire(JUGEMENT)
+    assert est_sommaire("Titre un ........ 3\nTitre deux ........ 4\nTitre trois ........ 9")
+    assert not est_sommaire("Le délai d'exécution est de 3 mois. Les pénalités sont de 1/1000 par jour.")
+
+
+def test_un_extrait_sans_rapport_avec_le_fait_ne_donne_pas_sa_page(db_session, test_org, tmp_path, monkeypatch):
+    """Extrait pris dans un tableau de lots alors que le fait est une pénalité : la page est celle qui parle de pénalités."""
+    monkeypatch.setattr(file_storage, "UPLOADS_ROOT", tmp_path)
+    dossier = tmp_path / "projects" / "p-req"
+    dossier.mkdir(parents=True)
+    (dossier / "ccap.pdf").write_bytes(pdf_texte([
+        "Cahier inventé", "Tableau des lots : peinture inventée, plomberie inventée, couverture inventée",
+        "Article inventé", "Les penalites de retard sont de 1/1000 par jour calendaire."]))
+    db_session.add(Project(id="p-req", organization_id=test_org.id, name="AO"))
+    db_session.add(ProjectDocument(id="d-req", project_id="p-req", type="ccap", file_name="ccap.pdf",
+                                   file_url="/uploads/projects/p-req/ccap.pdf"))
+    db_session.commit()
+    champs = {"penalites": {"value": {"retard": "1/1000 par jour", "plafond": None},
+                            "source": {"document": "ccap.pdf", "page": None,
+                                       "excerpt": "Tableau des lots : peinture inventée, plomberie inventée, couverture inventée"}}}
+    res = critical_fields_pages.resoudre_pages(db_session, "p-req", champs)
+    assert res["penalites"]["source"]["page"] == 4
