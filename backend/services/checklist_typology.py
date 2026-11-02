@@ -189,6 +189,14 @@ _NORM_RULES = [
 ]
 
 
+_RAISON_ENGAGEMENT = "Engagement du candidat (pas une pièce à joindre)"
+# Verbes par lesquels un dossier demande de remettre quelque chose (forme normalisée, sans accents).
+_VERBE_REMISE = re.compile(
+    r"\b(?:joindre|joignez|fournir|fournissez|produire|produisez|remettre|remettez"
+    r"|adresser|adressez|transmettre|transmettez)\b"
+)
+
+
 def classify_requirement(text: str) -> Classification:
     """Classe une exigence documentaire. Jamais d'exception, jamais None inattendu."""
     norm = _norm(text)
@@ -198,7 +206,14 @@ def classify_requirement(text: str) -> Classification:
                 return Classification(group=None, canonical_type=ctype, label=label,
                                       excluded=True, exclude_reason=label)
             return Classification(group=action, canonical_type=ctype, label=label)
-    # Défaut : pièce à fournir, libellé brut — jamais perdu.
+    # Aucune règle ne reconnaît la pièce. Le dossier ne la demande comme pièce que s'il dit de la
+    # remettre (R17) : sinon c'est un engagement du candidat (validité de l'offre, solidarité,
+    # exactitude des renseignements, langue…), exclu de la liste des pièces mais jamais perdu
+    # (il reste dans les exigences de l'analyse).
+    if not _VERBE_REMISE.search(norm):
+        return Classification(group=None, canonical_type="engagement", label=_RAISON_ENGAGEMENT,
+                              excluded=True, exclude_reason=_RAISON_ENGAGEMENT)
+    # Pièce demandée, mais inconnue de la typologie : à fournir, libellé brut — jamais perdu.
     return Classification(group="fournir", canonical_type="autre", label=text.strip()[:120])
 
 
