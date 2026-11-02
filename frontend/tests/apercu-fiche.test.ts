@@ -174,3 +174,27 @@ test('au démontage : plus de minuterie, plus de sondage, plus de notification',
 test('adresse d\'une page', () => {
   assert.equal(urlPage('moyens', EMP, 2), `/entreprise/fiches/moyens/apercu/${EMP}/pages/2`)
 })
+
+test('React rejoue les effets au démarrage (mode développement) : après un arrêt puis une reprise, l\'aperçu part', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const { acces, appels } = faux([{ etat: 'pret', empreinte: EMP, pages: 1 }])
+  const c = new ControleurApercu(acces, 'moyens')
+  c.arreter()
+  c.reprendre()
+  c.planifier('pdf', 0)
+  t.mock.timers.tick(0)
+  await vider()
+  assert.deepEqual(appels, [{ genre: 'demander', format: 'pdf' }])
+  assert.equal(c.lire().phase, 'pret')
+})
+
+test('un contrôleur arrêté et non repris ne demande rien', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] })
+  const { acces, appels } = faux([])
+  const c = new ControleurApercu(acces, 'moyens')
+  c.arreter()
+  c.planifier('pdf', 0)
+  t.mock.timers.tick(0)
+  await vider()
+  assert.equal(appels.length, 0)
+})

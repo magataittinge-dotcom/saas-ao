@@ -77,6 +77,11 @@ export class ControleurApercu {
     this.abonnes.clear()
   }
 
+  /** Remontage de l'écran (React rejoue les effets au démarrage en développement : arrêt puis reprise aussitôt). */
+  reprendre(): void {
+    this.arrete = false
+  }
+
   private annulerMinuteurs(): void {
     if (this.minuteur) clearTimeout(this.minuteur)
     if (this.sondage) clearTimeout(this.sondage)

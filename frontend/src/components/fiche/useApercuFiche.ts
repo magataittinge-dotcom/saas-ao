@@ -22,6 +22,7 @@ export function useApercuFiche(rubrique: RubriqueFiche) {
   const controleur = useMemo(() => new ControleurApercu(accesApi, rubrique), [rubrique])
   const [etat, setEtat] = useState<EtatApercu>(ETAT_INITIAL)
   useEffect(() => {
+    controleur.reprendre()
     setEtat(controleur.lire())
     const fin = controleur.abonner(setEtat)
     return () => { fin(); controleur.arreter() }

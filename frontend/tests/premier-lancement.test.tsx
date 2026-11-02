@@ -63,3 +63,8 @@ test('la jauge de la barre dit « % » : un « 0 » seul dans un rond ne veut ri
   const html = renderToStaticMarkup(<QueryClientProvider client={c}><MemoryRouter><QuotaRond /></MemoryRouter></QueryClientProvider>)
   assert.ok(/>0 ?%<|>0&nbsp;%<|>0%</.test(html), 'le pourcentage est écrit avec son signe')
 })
+
+test('fiche à télécharger : le hook reprend le contrôleur au montage (sinon, en développement, l\'aperçu reste « Mise à jour »)', () => {
+  const src = sansCommentaires(lire('src/components/fiche/useApercuFiche.ts'))
+  assert.ok(src.indexOf('controleur.reprendre()') > -1 && src.indexOf('controleur.reprendre()') < src.indexOf('controleur.abonner'))
+})
