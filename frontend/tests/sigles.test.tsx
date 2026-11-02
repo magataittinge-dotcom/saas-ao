@@ -59,7 +59,8 @@ test('aucun fichier n’est exempté de la règle des sigles', () => {
 test('le dépôt du dossier et l’export passent par <Sigle> et par la forme développée des messages', () => {
   assert.match(lire('src/routes/NewProject.tsx'), /<Sigle code="DCE" \/>/)
   const export_ = lire('src/routes/project/StepExport.tsx')
-  assert.match(export_, /label=\{<Sigle code="DPGF" majuscule \/>\}/, 'première apparition de la DPGF : développée')
+  assert.match(export_, /<Sigle code="DPGF"/, 'la DPGF passe par <Sigle> (développée à sa première apparition) ; la carte du résumé écrit « Tableau des prix »')
+  assert.match(export_, /titre="TABLEAU DES PRIX"/, 'la section dit « Tableau des prix » sans sigle nu')
   assert.match(export_, /developper\('DPGF'\)/, 'messages d’erreur : forme développée')
 })
 

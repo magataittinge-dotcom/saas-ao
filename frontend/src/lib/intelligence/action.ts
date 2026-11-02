@@ -32,36 +32,58 @@ export const enAttente = (p: Pick<Project, 'processing_status'>): boolean => p.p
 /** La décision « on y va ? » : l'analyse est faite, la vérification n'est pas commencée. */
 export const aDecider = (p: Pick<Project, 'status' | 'current_step'>): boolean => p.status === 'analyzed' && p.current_step < 4
 
-/** Libellé court de ce qui reste à faire sur un AO (même vocabulaire que le tableau de bord). */
-export function verbeEtape(p: Pick<Project, 'status' | 'current_step' | 'processing_status'>): string {
-  if (aDecider(p)) return 'Décider : on y va ?'
-  switch (avancementAO(p.current_step).etape) {
-    case 1: return "Déposer le dossier de l'acheteur"
-    case 2: return 'Choisir le lot'
-    case 3: return enAttente(p) ? 'Analyse en cours' : "Lancer l'analyse"
-    case 4: return 'Vérifier le dossier'
-    case 5: return 'Rédiger le mémoire'
-    default: return 'Exporter le dossier'
+/**
+ * Le mémoire existe : le serveur marque l'étape 5 faite à la fin de la rédaction (routers/memoire.py).
+ * Les étapes d'affichage « Plan » et « Rédiger » se rangent toutes deux derrière l'étape 5 du serveur.
+ */
+export const aMemoire = (p: Pick<Project, 'completed_steps'>): boolean => p.completed_steps?.['5'] === true
+const enRedaction = (p: Pick<Project, 'processing_status'>): boolean => p.processing_status === 'generating'
+
+type EtatEtape = Pick<Project, 'status' | 'current_step' | 'processing_status' | 'completed_steps'>
+
+/**
+ * Prochaine action d'un AO : le verbe, l'écran. UN seul calcul (sans IA) pour l'accueil, Mes AO, la bande « Vos AO en cours »,
+ * la palette Ctrl K et la fiche du Compagnon. À l'étape 5 du serveur : pas de mémoire → « Préparer le plan du mémoire » (écran
+ * Plan) ; rédaction en cours ou mémoire écrit → l'écran Rédiger.
+ */
+export function actionEtape(p: EtatEtape): { verbe: string; segment: string } {
+  if (aDecider(p)) return { verbe: 'Décider : on y va ?', segment: ROUTES_ETAPES[2] }
+  const etape = avancementAO(p.current_step).etape
+  switch (etape) {
+    case 1: return { verbe: "Déposer le dossier de l'acheteur", segment: ROUTES_ETAPES[0] }
+    case 2: return { verbe: 'Choisir le lot', segment: ROUTES_ETAPES[1] }
+    case 3: return { verbe: enAttente(p) ? 'Analyse en cours' : 'Lire ce dossier', segment: ROUTES_ETAPES[2] }
+    case 4: return { verbe: 'Vérifier le dossier', segment: ROUTES_ETAPES[3] }
+    case 5:
+      if (enRedaction(p)) return { verbe: 'Rédaction du mémoire en cours', segment: 'memoire' }
+      if (aMemoire(p)) return { verbe: 'Relire le mémoire', segment: 'memoire' }
+      return { verbe: 'Préparer le plan du mémoire', segment: 'plan' }
+    default: return { verbe: 'Exporter le dossier', segment: ROUTES_ETAPES[5] }
   }
 }
 
+/** Libellé court de ce qui reste à faire sur un AO (même vocabulaire partout). */
+export const verbeEtape = (p: EtatEtape): string => actionEtape(p).verbe
+
 /** L'écran où se fait cette étape. */
-export function lienEtape(p: Pick<Project, 'id' | 'status' | 'current_step'>): string {
-  return aDecider(p) ? versEtape(p.id, 3) : versEtape(p.id, p.current_step)
-}
+export const lienEtape = (p: EtatEtape & Pick<Project, 'id'>): string => `/projects/${p.id}/${actionEtape(p).segment}`
 
 const TEXTES: Record<number, string> = {
   1: 'Déposez le dossier de consultation (ZIP ou PDF) : Synorix lit les pièces et repère les lots.',
-  2: 'Synorix a repéré les lots du dossier de consultation. Choisissez le vôtre pour passer à l’analyse.',
-  3: 'Le dossier est lu. Lancez l’analyse : chaque exigence sera relevée avec sa source.',
+  2: 'Synorix a repéré les lots du dossier de consultation. Choisissez le vôtre pour passer à la lecture.',
+  3: 'Les lots sont choisis. Lancez la lecture du dossier : chaque exigence sera relevée avec sa source.',
   4: 'Passez en revue les exigences et les pièces de candidature, chacune avec sa source dans le dossier.',
-  5: 'Tout est prêt pour la rédaction. Synorix écrit le mémoire technique à partir de votre entreprise et du dossier de consultation.',
+  5: 'Tout est prêt pour le mémoire. Choisissez ses parties, puis Synorix le rédige à partir de votre entreprise et du dossier de consultation.',
   6: 'Toutes les étapes sont faites. Il reste à exporter le dossier, puis à le déposer sur la plateforme de l’acheteur.',
 }
 
-function texteEtape(p: Pick<Project, 'status' | 'current_step' | 'processing_status'>): string {
+function texteEtape(p: EtatEtape): string {
   if (aDecider(p)) return 'L’analyse est terminée. La fiche « On y va ? » rassemble les conditions du marché, chacune avec sa source. La décision vous revient.'
   if (enAttente(p)) return 'L’analyse est en cours. Cet écran se met à jour dès qu’elle est terminée.'
+  if (avancementAO(p.current_step).etape === 5) {
+    if (enRedaction(p)) return 'Le mémoire est en cours de rédaction. Cet écran se met à jour dès qu’il est prêt.'
+    if (aMemoire(p)) return 'Le mémoire est rédigé. Relisez-le, retouchez ce qui doit l’être, puis passez à l’export.'
+  }
   return TEXTES[avancementAO(p.current_step).etape]
 }
 

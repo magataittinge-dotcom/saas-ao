@@ -19,15 +19,16 @@ export interface SourceEtat {
 /**
  * L'état d'un élément, en petit sous lui (comme « Source : … · Voir l'extrait d'origine » sur Mon entreprise) :
  * une icône et un mot (jamais la couleur seule), puis sa source et « Voir dans le dossier ».
+ * `texte` remplace le mot par défaut quand l'écran a un statut plus précis (« À renouveler avant le dépôt — valable jusqu'au… »).
  */
-export function EtatElement({ etat, source, className }: { etat: EtatPiece; source?: SourceEtat; className?: string }) {
+export function EtatElement({ etat, source, className, texte }: { etat: EtatPiece; source?: SourceEtat; className?: string; texte?: string }) {
   const e = ETATS[etat]
   const Icone = e.icone
   return (
     <p data-etat={etat} className={cn('flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-fg-2', className)}>
       <span className={cn('inline-flex items-center gap-1.5 font-medium', e.classe)}>
         <Icone size={14} aria-hidden />
-        {e.texte}
+        {texte ?? e.texte}
       </span>
       {source && (
         <span className="inline-flex flex-wrap items-center gap-x-2">

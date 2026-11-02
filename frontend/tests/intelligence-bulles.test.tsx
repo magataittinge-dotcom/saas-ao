@@ -84,7 +84,7 @@ test('les bulles du coffre-fort mènent au coffre-fort, celles des AO à l’éc
   assert.equal(b.expirent.fiche.cta?.vers, '/vault')
   assert.equal(b.decision.fiche.cta?.vers, '/projects/decision/analysis')
   assert.equal(b.lot.fiche.cta?.vers, '/projects/lot/lots')
-  assert.equal(b.memoire.fiche.cta?.vers, '/projects/memoire/memoire')
+  assert.equal(b.memoire.fiche.cta?.vers, '/projects/memoire/plan', 'sans mémoire : l’écran du plan')
   assert.equal(b.remise.fiche.cta?.vers, '/projects/export/export')
   assert.equal(b.lot.fiche.meta, '4 lots repérés')
 })

@@ -155,7 +155,7 @@ export default function SynorixScoreCard({ project, onOpenSource, onYAller, enCo
           <p className="text-sm" style={{ color: 'var(--text-2)' }}>Vous avez décidé d'y aller.</p>
         ) : (
           <>
-            <button onClick={onYAller} disabled={enCours || changement} className="signature-btn disabled:opacity-60">
+            <button onClick={onYAller} disabled={enCours || changement} className="glass-btn px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-60" style={{ color: 'var(--text-1)' }}>
               On y va
             </button>
             <button

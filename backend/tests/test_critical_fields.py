@@ -223,3 +223,10 @@ def test_questions_deadline_unreadable_analysis_value_is_not_replaced_by_a_guess
     rc = _Doc("RC-demo.pdf", "rc", "Les offres sont remises sur la plateforme.")
     f = build_critical_fields({"date_limite_reponse": "2027-03-22", "date_limite_questions": "dix jours avant"}, [], [rc])["date_limite_questions"]
     assert f["value"] == "dix jours avant"   # comportement d'avant conservé : la valeur brute de l'analyse, jamais une date inventée
+
+
+def test_la_reponse_de_l_acheteur_n_est_pas_la_date_limite_des_questions():
+    from services.critical_fields import build_critical_fields
+    rc = _Doc("RC-demo.pdf", "rc", "Une réponse sera adressée aux candidats six jours au plus tard avant la date limite de dépôt des plis.")
+    f = build_critical_fields({"date_limite_reponse": "2027-03-22"}, [], [rc])["date_limite_questions"]
+    assert f["value"] is None and f["source"] is None

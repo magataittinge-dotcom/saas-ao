@@ -6,9 +6,10 @@ import { Check, Plus } from 'lucide-react'
 import { api } from '@/services/api'
 import { useSourceChamp } from '@/hooks/useSourceChamp'
 import {
-  ActionsBarre, ActionsBarreTel, BandeResume, BarreEtape, BilanBarre, BoutonSuite, EtatElement, GabaritEtape, SectionEtape,
+  BandeResume, EtatElement, GabaritEtape, SectionEtape,
 } from '@/components/etape'
 import PartiePlanCarte from '@/components/plan/PartiePlanCarte'
+import { BarrePlan, BoutonPrincipalPlan, type EtatPlan } from '@/components/plan/ActionsPlan'
 import { Input } from '@/components/ui/input'
 import EcranEnChargement from '@/components/common/EcranEnChargement'
 import type { CriticalFieldsPayload } from '@/components/project/CriticalBanner'
@@ -151,19 +152,11 @@ export default function StepPlan({ project }: { project: Project }) {
     },
   ]
 
-  const boutonPrincipal = (classe: string) => valideEtAJour ? (
-    <button type="button" className={`signature-btn [@media(pointer:coarse)]:min-h-11 ${classe}`} onClick={() => navigate(`/projects/${project.id}/memoire`)}>
-      Rédiger le mémoire
-    </button>
-  ) : (
-    <button
-      type="button" className={`signature-btn disabled:opacity-40 [@media(pointer:coarse)]:min-h-11 ${classe}`} disabled={enCours}
-      onClick={() => valider.mutate(parties)}
-    >
-      {valider.isPending ? 'Validation…' : 'Valider le plan'}
-    </button>
-  )
-  const actionPrincipale = boutonPrincipal('w-full')
+  const etat: EtatPlan = {
+    valideEtAJour, valideLe: vue.valide_le, enregistre: vue.enregistre, modifie, enCours, enValidation: valider.isPending,
+  }
+  const versRedaction = () => navigate(`/projects/${project.id}/memoire`)
+  const actionPrincipale = <BoutonPrincipalPlan etat={etat} onValider={() => valider.mutate(parties)} onRediger={versRedaction} />
 
   return (
     <>
@@ -172,21 +165,7 @@ export default function StepPlan({ project }: { project: Project }) {
         utilite="Les parties de votre mémoire, avant sa rédaction : retirez, ajoutez, renommez, ordonnez, puis validez."
         actionPrincipale={actionPrincipale}
         resume={<BandeResume cartes={cartes} libelle="Résumé du plan" />}
-        barre={
-          <BarreEtape className="justify-between gap-3">
-            <BilanBarre
-              bureau={
-                <p role="status" aria-live="polite" className="text-sm text-fg-2">
-                  {enCours ? 'Enregistrement…' : modifie ? 'Modifications en cours' : valideEtAJour ? 'Plan validé' : vue.enregistre ? 'Plan enregistré, à valider' : 'Plan proposé, à valider'}
-                </p>
-              }
-            />
-            <ActionsBarre className="max-[768px]:hidden">
-              <BoutonSuite etape="Rédiger" onClick={() => navigate(`/projects/${project.id}/memoire`)} />
-            </ActionsBarre>
-            <ActionsBarreTel>{boutonPrincipal('')}</ActionsBarreTel>
-          </BarreEtape>
-        }
+        barre={<BarrePlan etat={etat} onValider={() => valider.mutate(parties)} onRediger={versRedaction} />}
       >
         {erreur && (
           <p role="alert" className="rounded-carte border border-bord-2 bg-surface-1 p-4 text-sm text-fg">{erreur}</p>
@@ -198,12 +177,28 @@ export default function StepPlan({ project }: { project: Project }) {
               <EtatElement etat="pret" />
             ) : (
               vue.a_couvrir.map((c) => (
-                <div key={c.nom} className="rounded-carte border border-bord-2 bg-surface-1 p-4">
-                  <p className="text-sm font-medium text-fg">{libellePoids(c.nom, c.poids)}</p>
-                  <EtatElement
-                    etat="a-couvrir" className="mt-1"
-                    source={sourceCriteres ? { libelle: `${sourceCriteres.document}${sourceCriteres.page ? ` · page ${sourceCriteres.page}` : ''}`, onVoir: () => source.ouvrir(sourceCriteres) } : undefined}
-                  />
+                <div key={c.nom} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 rounded-carte border border-bord-2 bg-surface-1 p-4">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-fg">{libellePoids(c.nom, c.poids)}</p>
+                    <EtatElement
+                      etat="a-couvrir" className="mt-1"
+                      source={sourceCriteres ? { libelle: `${sourceCriteres.document}${sourceCriteres.page ? ` · page ${sourceCriteres.page}` : ''}`, onVoir: () => source.ouvrir(sourceCriteres) } : undefined}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    disabled={parties.length >= MAX_PARTIES}
+                    onClick={() => {
+                      const suivant = ajouter(parties, c.partie ?? 'partie_c', c.nom)
+                      changer(suivant)
+                      const nouvelle = suivant.find((p) => !parties.some((q) => q.cle === p.cle))
+                      if (nouvelle) setOuvertes((o) => new Set(o).add(nouvelle.cle))
+                    }}
+                    aria-label={`Ajouter une partie pour ce critère : ${c.nom}`}
+                    className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-bord-2 px-3.5 text-sm font-medium text-fg hover:bg-surface-0 disabled:opacity-40 [@media(pointer:coarse)]:min-h-11"
+                  >
+                    <Plus size={15} aria-hidden /> Ajouter une partie pour ce critère
+                  </button>
                 </div>
               ))
             )}

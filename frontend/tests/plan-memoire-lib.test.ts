@@ -71,3 +71,8 @@ test('résumé : chaque morceau seulement s’il existe', () => {
   assert.equal(resume({ parties: 1, sous_criteres_total: 0, limite_pages: null, fiches_remplies: 1 }), '1 partie · 1 fiche remplie')
   assert.equal(parGroupe(PLAN).map((g) => g.parties.length).join(), '3,1,1')
 })
+
+test('le numéro d’une partie ajoutée est unique dans tout le plan (ancres du mémoire)', () => {
+  const a = ajouter(ajouter(PLAN, 'partie_a', 'Une'), 'partie_c', 'Deux')
+  assert.deepEqual(a.filter((q) => q.cle.includes('ajout')).map((q) => q.cle), ['partie_a.ajout_1', 'partie_c.ajout_2'])
+})

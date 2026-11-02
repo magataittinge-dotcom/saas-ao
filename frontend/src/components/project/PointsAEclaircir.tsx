@@ -15,11 +15,11 @@ const MESSAGE_PREPARATION = "Les questions n'ont pas pu être préparées. Rées
 
 /** La date limite des questions : lue dans le règlement, sans IA ; « À vérifier dans le RC » quand elle n'y est pas lisible. */
 export function DateLimiteQuestions({ date, onVoir }: { date: DateQuestions | null | undefined; onVoir?: (s: SourceFait) => void }) {
-  const { valeur, precision } = libelleDateQuestions(date)
+  const { libelle, valeur, precision } = libelleDateQuestions(date)
   const source: SourceFait | null = date?.document ? { document: date.document, page: null, excerpt: date.extrait } : null
   return (
     <div className="grid gap-1.5 rounded-carte border border-bord-2 bg-surface-1 p-5">
-      <p className="text-sm font-medium text-fg-2">Date limite des questions</p>
+      <p className="text-sm font-medium text-fg-2">{libelle}</p>
       <p className="font-display text-h6 text-fg">{valeur}</p>
       {precision && <p className="text-sm text-fg-2">{precision}</p>}
       {date?.motif && date.statut !== 'trouvee' && date.extrait && <p className="text-sm text-fg-2">{date.motif}</p>}

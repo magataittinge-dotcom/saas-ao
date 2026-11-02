@@ -360,11 +360,9 @@ export default function StepAnalysis({ project }: Props) {
         </SectionEtape>
 
         {/* ── TRÉSORERIE (C19) + RÉTRO-PLANNING (C20) ── */}
-        <SectionEtape titre="Trésorerie et calendrier">
-          <div className="grid items-start gap-4 lg:grid-cols-[1fr,320px]">
-            <TresorerieCard projectId={project.id} onOpenSource={openFieldSource} />
-            <RetroPlanning projectId={project.id} />
-          </div>
+        <SectionEtape titre="Trésorerie et calendrier" colonnes={2} classeContenu="md:[&>*:only-child]:col-span-2">
+          <TresorerieCard projectId={project.id} onOpenSource={openFieldSource} />
+          <RetroPlanning projectId={project.id} />
         </SectionEtape>
 
         {/* ── LISTE | PANNEAU « Voir dans le DCE » (ordinateur : côte à côte ; téléphone : feuille) ── */}

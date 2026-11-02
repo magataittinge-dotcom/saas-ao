@@ -208,7 +208,7 @@ def build_critical_fields(infos_marche: Optional[dict], criteres_jugement: Optio
                   if (getattr(d, "type", "") or "") in ("rc", "ccap")]
         remise_date = parse_french_date((remise_value or {}).get("date") or "")
         lu = trouver_date_questions(pieces, remise_date)
-        if lu["statut"] == "trouvee":
+        if lu["statut"] == "trouvee" and lu["regle"] != "reponse_acheteur":   # la date de réponse de l'acheteur n'est pas la date limite des questions
             questions_value = lu["date"]
             questions_source = {"document": lu["document"], "page": None, "excerpt": lu["extrait"]}
         elif raw_questions:

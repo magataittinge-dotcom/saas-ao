@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { avancementAO, echeanceAO, etatEcheance } from '@/lib/echeance'
+import { lienEtape } from '@/lib/intelligence/action'
 import type { Project } from '@/types'
 
 import { PIPELINE_STEPS } from './PipelineRail'
@@ -57,7 +58,7 @@ export function AOCard({ project, onDelete }: Props) {
     <Card
       interactive
       className={cn('relative flex flex-col gap-4 overflow-hidden p-5', isUrgent && 'ring-1 ring-warning-border')}
-      onClick={() => navigate(`/projects/${project.id}`)}
+      onClick={() => navigate(lienEtape(project))}
     >
       {/* Filet du haut : la couleur du statut (ou l'échéance proche) */}
       <div aria-hidden className={cn('absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r to-transparent opacity-80', filet)} />
@@ -168,7 +169,7 @@ export function AOCard({ project, onDelete }: Props) {
             variant="link"
             size="sm"
             className="h-8 gap-1 text-xs [@media(pointer:coarse)]:min-h-11"
-            onClick={(e) => { e.stopPropagation(); navigate(`/projects/${project.id}`) }}
+            onClick={(e) => { e.stopPropagation(); navigate(lienEtape(project)) }}
           >
             Continuer
             <ArrowRight size={12} aria-hidden />

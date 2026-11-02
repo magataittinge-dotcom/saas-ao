@@ -48,7 +48,7 @@ test("une seule formule pour passer à l'étape suivante, qui nomme la bonne ét
     for (const a of anciennes) assert.ok(!textes.some((t) => t.includes(a)), `${f} contient encore « ${a} »`)
   }
   const lancement = textesAffiches('src/routes/project/StepLotSelection.tsx').map((t) => t.texte)
-  assert.ok(lancement.includes("Lancer l'analyse"))
+  assert.ok(lancement.some((t) => t.includes('Lire ce dossier')))
 })
 
 // S4 — Renommages (simplification) : les mots du patron, ni plus ni moins.
@@ -83,7 +83,7 @@ test('S4 : les nouveaux libellés sont à l\'écran', () => {
     ['src/components/common/FileCard.tsx', 'Ranger'],
     ['src/components/vault/ClassifyDocumentModal.tsx', 'Ranger le document'],
     ['src/components/company/ProfileFreeTextCard.tsx', 'Décrire avec vos mots'],
-    ['src/routes/project/StepExport.tsx', 'Avant d&apos;envoyer'],
+    ['src/routes/project/StepExport.tsx', 'Voir le mémoire'],
   ]
   for (const [f, mot] of attendus) {
     assert.ok(textesAffiches(f).some((t) => t.texte.includes(mot)), `${f} : « ${mot} »`)

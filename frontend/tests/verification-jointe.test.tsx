@@ -29,7 +29,7 @@ test('pièce du coffre : « Prêt — valable jusqu’au … » et le nom du fic
   assert.ok(html.includes('Prêt — valable jusqu’au 01/03/2027'), html)
   assert.ok(html.includes('kbis.pdf'), html)
   assert.ok(!html.includes('Conforme'))
-  assert.ok(sansBalises(html).includes('1 pièce à joindre · 1 prête'), sansBalises(html))
+  // les comptes vivent dans le résumé de l'étape (un seul calcul, tests/etapes-gabarit-pieces-export.test.tsx), plus en tête de section
   assert.ok(!/\d+\s*\/\s*\d+/.test(sansBalises(html).replace('01/03/2027', '')), 'aucune fraction')
 })
 
@@ -45,7 +45,6 @@ test('formulaire : « Prêt » et le nom du fichier, jamais « Complété »', (
   assert.ok(html.includes('DC1_rempli.pdf'), html)
   assert.ok(sansBalises(html).includes('Prêt'), html)
   assert.ok(!html.includes('Complété'), html)
-  assert.ok(sansBalises(html).includes('0 formulaire à joindre · 1 prêt'), sansBalises(html))
 })
 
 test('comptes sans fraction', () => {

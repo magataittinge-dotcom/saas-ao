@@ -41,7 +41,8 @@ export interface PartiePlan {
 
 export interface VuePlan {
   parties: PartiePlan[]
-  a_couvrir: { critere: string; nom: string; poids: number | null }[]
+  /** `partie` : la partie A, B ou C où ajouter une partie pour ce sous-critère (la plus proche par thème, sinon C). */
+  a_couvrir: { critere: string; nom: string; poids: number | null; partie?: PartieId }[]
   resume: {
     parties: number; retirees: number
     sous_criteres_total: number; sous_criteres_servis: number
@@ -120,8 +121,9 @@ export function peutDeplacer(parties: readonly PartiePlan[], cle: string, sens: 
 /** Ajoute une partie nouvelle à la fin de la partie A, B ou C. */
 export function ajouter(parties: readonly PartiePlan[], partie: PartieId, titre: string): PartiePlan[] {
   if (parties.length >= MAX_PARTIES) return sansChange(parties)
+  // numéro unique dans tout le plan : les ancres « sec-ajout_<n> » du mémoire ne se doublent jamais
   const utilises = parties
-    .filter((p) => p.partie === partie && /\.ajout_\d+$/.test(p.cle))
+    .filter((p) => /\.ajout_\d+$/.test(p.cle))
     .map((p) => Number(p.cle.split('ajout_')[1]))
   const numero = Math.max(0, ...utilises) + 1
   const nouvelle: PartiePlan = {

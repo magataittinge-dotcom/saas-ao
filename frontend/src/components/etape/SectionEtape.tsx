@@ -6,13 +6,15 @@ import { cn } from '@/lib/utils'
  * la largeur, sur une ou deux colonnes. Au téléphone : toujours une colonne.
  * `action` : un lien ou un bouton secondaire à droite du sous-titre (« Tout afficher », « Copier »…).
  */
-export function SectionEtape({ titre, colonnes = 1, description, action, children, className }: {
+export function SectionEtape({ titre, colonnes = 1, description, action, children, className, classeContenu }: {
   titre: string
   colonnes?: 1 | 2
   description?: ReactNode
   action?: ReactNode
   children: ReactNode
   className?: string
+  /** Classes ajoutées à la grille du contenu (ex. un enfant seul qui prend les deux colonnes). */
+  classeContenu?: string
 }) {
   const id = useId()
   return (
@@ -22,7 +24,7 @@ export function SectionEtape({ titre, colonnes = 1, description, action, childre
         {action}
       </div>
       {description && <p className="text-sm text-fg-2">{description}</p>}
-      <div className={cn('grid min-w-0 gap-3.5', colonnes === 2 && 'md:grid-cols-2')}>{children}</div>
+      <div className={cn('grid min-w-0 gap-3.5', colonnes === 2 && 'md:grid-cols-2', classeContenu)}>{children}</div>
     </section>
   )
 }

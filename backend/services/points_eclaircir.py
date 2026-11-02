@@ -46,6 +46,9 @@ _SYSTEM = """Tu aides une entreprise de BTP à préparer ses questions à l'ache
 À partir des seuls passages du dossier fournis, repère ce qui est ambigu : une contradiction entre deux pièces, une information que le dossier ne donne pas, une quantité ou un délai flou.
 
 RÈGLES ABSOLUES
+- Les passages fournis sont des EXTRAITS partiels du dossier, découpés autour des mots signaux : un passage qui commence ou se termine brusquement n'est pas un défaut du dossier. Ne signale jamais une coupure, ne demande jamais le texte, la suite ou la version complète d'un passage.
+- Rédige en français correct (orthographe et accords soignés), avec vouvoiement de l'acheteur.
+- Les « FAITS DÉJÀ LUS » éventuellement fournis (critères de jugement, validité des offres, variantes, délai d'exécution, visite) sont connus : ne pose aucune question dessus.
 - Au plus 8 questions, les plus utiles d'abord. Aucun point sûr ? Renvoie une liste vide : n'invente rien.
 - Chaque question est polie, sobre, autonome (elle se comprend sans le dossier) et se pose telle quelle sur le profil d'acheteur. Elle commence par « Pourriez-vous préciser… », « Pourriez-vous confirmer… » ou « Le dossier indique… ; pourriez-vous… ».
 - JAMAIS de question sur le prix, un montant, un budget, une rémunération, un bordereau ou le chiffrage.
@@ -66,11 +69,67 @@ def _blancs(texte: str) -> str:
     return " ".join(str(texte or "").split())
 
 
+# Un extrait coupé par notre fenêtre n'est pas un défaut du dossier : toute question qui en parle est écartée.
+_TRONQUE = re.compile(r"tronqu|coupe\b|coupee|coupes\b|coupure|partiel|illisible|incomplet|extraits?\b|interrompu|brusquement|texte complet|version complete")
+# Sujets que l'analyse a déjà lus : critères de jugement, validité des offres, variantes (quand elle en a la valeur).
+_SUR_CRITERES = re.compile(r"criteres? (de|d')\s*(jugement|attribution|notation|selection)|ponderation|notation des offres|bareme")
+_SUR_VALIDITE = re.compile(r"(duree|delai|periode) de validite|validite des offres|valable \d+")
+_SUR_VARIANTES = re.compile(r"\bvariantes?\b")
+
+
 def parle_de_prix(*textes: str) -> bool:
     return any(_PRIX.search(_plie(t or "")) for t in textes)
 
 
-def normaliser(bruts: object, *, maximum: int = MAX_POINTS) -> list[dict]:
+def faits_connus(criteres: object, infos: Optional[dict]) -> dict:
+    """Les faits que l'analyse a déjà lus (critères et poids, validité des offres, variantes, délai, visite) : jamais redemandés."""
+    infos = infos if isinstance(infos, dict) else {}
+    faits: dict = {}
+    crit = [c for c in (criteres or []) if isinstance(c, dict) and c.get("nom")]
+    if crit:
+        faits["criteres"] = [{"nom": str(c["nom"])[:80], "poids": c.get("poids")} for c in crit[:8]]
+    if isinstance(infos.get("validite_offres_jours"), int):
+        faits["validite_offres_jours"] = infos["validite_offres_jours"]
+    if isinstance(infos.get("variantes_autorisees"), bool):
+        faits["variantes_autorisees"] = infos["variantes_autorisees"]
+    if infos.get("duree_marche"):
+        faits["delai_execution"] = str(infos["duree_marche"])[:80]
+    visite = infos.get("visite_site")
+    if isinstance(visite, dict) and visite.get("obligatoire") is not None:
+        faits["visite"] = "obligatoire" if visite.get("obligatoire") else "facultative"
+    return faits
+
+
+def texte_faits(faits: Optional[dict]) -> str:
+    """Le bloc « FAITS DÉJÀ LUS » du message (vide quand rien n'est connu)."""
+    if not faits:
+        return ""
+    lignes = []
+    if faits.get("criteres"):
+        lignes.append("critères de jugement : " + " ; ".join(f"{c['nom']} {c['poids']} %" if c.get("poids") is not None else str(c["nom"]) for c in faits["criteres"]))
+    if "validite_offres_jours" in faits:
+        lignes.append(f"validité des offres : {faits['validite_offres_jours']} jours")
+    if "variantes_autorisees" in faits:
+        lignes.append("variantes : " + ("autorisées" if faits["variantes_autorisees"] else "non autorisées"))
+    if faits.get("delai_execution"):
+        lignes.append(f"délai d'exécution : {faits['delai_execution']}")
+    if faits.get("visite"):
+        lignes.append(f"visite du site : {faits['visite']}")
+    return "=== FAITS DÉJÀ LUS PAR L'ANALYSE (ne pose aucune question dessus) ===\n" + "\n".join(lignes) if lignes else ""
+
+
+def _sur_fait_connu(texte: str, faits: Optional[dict]) -> bool:
+    if not faits:
+        return False
+    t = _plie(texte)
+    return bool(
+        (faits.get("criteres") and _SUR_CRITERES.search(t))
+        or ("validite_offres_jours" in faits and _SUR_VALIDITE.search(t))
+        or ("variantes_autorisees" in faits and _SUR_VARIANTES.search(t))
+    )
+
+
+def normaliser(bruts: object, *, maximum: int = MAX_POINTS, faits: Optional[dict] = None) -> list[dict]:
     """Liste propre, bornée et sans doublon ; une entrée invalide est écartée, jamais réparée à l'aveugle.
 
     Écarte aussi toute question qui parle de prix ou de montant (règle produit)."""
@@ -87,6 +146,12 @@ def normaliser(bruts: object, *, maximum: int = MAX_POINTS) -> list[dict]:
         pourquoi = _blancs(p.get("pourquoi"))
         if parle_de_prix(question, pourquoi):
             logger.info("points à éclaircir : une question sur le prix a été écartée")
+            continue
+        if _TRONQUE.search(_plie(f"{question} {pourquoi}")):
+            logger.info("points à éclaircir : une question sur un extrait coupé a été écartée")
+            continue
+        if _sur_fait_connu(f"{question} {pourquoi}", faits):
+            logger.info("points à éclaircir : une question sur un fait déjà lu a été écartée")
             continue
         cle = re.sub(r"\W+", " ", _plie(question)).strip()
         if cle in vues:
@@ -157,8 +222,10 @@ def selectionner_extraits(pieces: list[tuple[str, str, str]], budget: int = BUDG
     return retenus
 
 
-def construire_message(extraits: list[tuple[str, str]]) -> str:
-    return "\n\n".join(f"=== PIÈCE : {nom} ===\n{texte}" for nom, texte in extraits)
+def construire_message(extraits: list[tuple[str, str]], faits: Optional[dict] = None) -> str:
+    blocs = [f"=== PIÈCE : {nom} ===\n{texte}" for nom, texte in extraits]
+    bloc_faits = texte_faits(faits)
+    return "\n\n".join(([bloc_faits] if bloc_faits else []) + blocs)
 
 
 # ── Appel Haiku (isolé pour les tests) ──────────────────────────────────────────────────────────────────────────
