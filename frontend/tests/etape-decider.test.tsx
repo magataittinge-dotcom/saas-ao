@@ -91,7 +91,7 @@ test('le texte à copier : poli, sans le « pourquoi », avec la référence du 
 })
 
 test('la date limite des questions : calculée avec sa règle, ou « À vérifier dans le règlement »', () => {
-  assert.deepEqual(libelleDateQuestions(DATE_RELATIVE), { valeur: 'vendredi 12 mars 2027', precision: '10 jours avant la remise des offres' })
+  assert.deepEqual(libelleDateQuestions(DATE_RELATIVE), { libelle: 'Date limite des questions', valeur: 'vendredi 12 mars 2027', precision: '10 jours avant la remise des offres' })
   const absente: DateQuestions = { statut: 'a_verifier', regle: null, date: null, heure: null, jours: null, document: null, extrait: null, motif: 'Aucune date…' }
   assert.equal(libelleDateQuestions(absente).valeur, 'À vérifier dans le règlement')
   assert.equal(libelleDateQuestions(undefined).valeur, 'À vérifier dans le règlement')
@@ -133,4 +133,18 @@ test('l’écran Décider passe par le gabarit : une seule action principale en 
   for (const f of ['src/components/project/PointsAEclaircir.tsx', 'src/components/project/AVerifierAvantEngagement.tsx', 'src/lib/resumeAO.ts']) {
     assert.doesNotMatch(sansCommentaires(lire(f)), /#[0-9a-fA-F]{3,8}\b|rgba?\(/, `${f} : aucune couleur écrite`)
   }
+})
+
+test('réponse de l’acheteur N jours avant la remise : « Réponses de l’acheteur jusqu’au », « Posez vos questions avant cette date », source du règlement', () => {
+  const reponse: DateQuestions = { ...DATE_RELATIVE, regle: 'reponse_acheteur', date: '2027-03-16', jours: 6 }
+  const l = libelleDateQuestions(reponse)
+  assert.equal(l.libelle, 'Réponses de l’acheteur jusqu’au')
+  assert.equal(l.valeur, 'mardi 16 mars 2027')
+  assert.match(l.precision ?? '', /^Posez vos questions avant cette date : l’acheteur répond 6 jours avant la remise des offres\.$/)
+  const html = renderToStaticMarkup(<PointsAEclaircirVue points={[]} date={reponse} onVoir={() => undefined} preparation={PREP} />)
+  assert.match(html, /Réponses de l’acheteur jusqu’au/)
+  assert.match(html, /Posez vos questions avant cette date/)
+  assert.match(html, /Source : RC-demo\.pdf/)
+  const carte = cartesResumeAO([], null, undefined, reponse).find((c) => c.libelle.startsWith('Réponses'))
+  assert.equal(carte?.valeur, '16 mars 2027')
 })

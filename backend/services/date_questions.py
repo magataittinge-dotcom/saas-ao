@@ -89,6 +89,45 @@ def _extrait(texte: str, debut: int, fin: int, rayon: int = 90) -> str:
     return " ".join(texte[max(0, debut - rayon): min(len(texte), fin + rayon)].split())
 
 
+def _depuis_relative(trouve: re.Match, base: dict, remise: Optional[date], regle: str) -> Optional[dict]:
+    """Une formule « N jours avant la remise » lue : la date calculée si elle l'est sans deviner, sinon « à vérifier »."""
+    n = _entier(trouve)
+    unite = trouve.group("unite")
+    qualif = (trouve.group("qualif") or "").rstrip("s")
+    if n is None:
+        return None
+    if unite.startswith("semaine"):
+        jours: Optional[int] = n * 7
+    elif unite.startswith("heure"):
+        jours = n // 24 if n % 24 == 0 else None
+    else:
+        jours = n
+    res = {**base, "regle": regle, "heure": None, "jours": jours, "date": None}
+    if jours is None or qualif in ("ouvre", "ouvrable", "franc"):
+        return {**res, "statut": "a_verifier", "motif": "Délai en jours ouvrés, francs ou en heures : à compter selon le calendrier du marché."}
+    if remise is None:
+        return {**res, "statut": "a_verifier", "motif": "La date de remise des offres n'est pas connue : le calcul n'est pas possible."}
+    return {**res, "statut": "trouvee", "date": (remise - timedelta(days=jours)).isoformat(), "motif": None}
+
+
+_REPONSE_MOT = re.compile(r"\breponses?\b")
+
+
+def _chercher_reponse(nom: str, texte: str, remise: Optional[date]) -> Optional[dict]:
+    """« Une réponse sera adressée six jours au plus tard avant la date limite » : le règlement ne donne pas de date propre aux
+    questions, mais la date jusqu'à laquelle l'acheteur répond ; poser ses questions avant cette date en découle."""
+    norm = _plie(texte)
+    for mot in _REPONSE_MOT.finditer(norm):
+        fin = min(len(norm), mot.end() + _PORTEE)
+        coupure = _FIN_DE_PHRASE.search(texte, mot.end(), fin)
+        if coupure:
+            fin = coupure.start() + 1
+        trouve = _RELATIVE.search(norm, mot.end(), fin)
+        if trouve:
+            return _depuis_relative(trouve, {"document": nom, "extrait": _extrait(texte, mot.start(), trouve.end())}, remise, "reponse_acheteur")
+    return None
+
+
 def _chercher(nom: str, texte: str, remise: Optional[date]) -> Optional[dict]:
     norm = _plie(texte)
     for decl in _DECLENCHEUR.finditer(norm):
@@ -101,7 +140,7 @@ def _chercher(nom: str, texte: str, remise: Optional[date]) -> Optional[dict]:
         if not candidats:
             continue
         trouve = min(candidats, key=lambda m: m.start())
-        # « Les réponses seront communiquées six jours avant… » : c'est le délai de l'acheteur, pas celui des questions
+        # « Les réponses seront communiquées six jours avant… » : c'est le délai de l'acheteur, lu à part (_chercher_reponse)
         if _REPONSE_ACHETEUR.search(norm[decl.end():trouve.start()]):
             continue
         extrait = _extrait(texte, debut, trouve.end())
@@ -112,23 +151,7 @@ def _chercher(nom: str, texte: str, remise: Optional[date]) -> Optional[dict]:
                 continue
             heure = f"{int(trouve.group('h'))}h{trouve.group('m') or '00'}" if trouve.group("h") else None
             return {**base, "statut": "trouvee", "regle": "absolue", "date": jour.isoformat(), "heure": heure, "jours": None, "motif": None}
-        n = _entier(trouve)
-        unite = trouve.group("unite")
-        qualif = (trouve.group("qualif") or "").rstrip("s")
-        if n is None:
-            continue
-        if unite.startswith("semaine"):
-            jours: Optional[int] = n * 7
-        elif unite.startswith("heure"):
-            jours = n // 24 if n % 24 == 0 else None
-        else:
-            jours = n
-        res = {**base, "regle": "relative", "heure": None, "jours": jours, "date": None}
-        if jours is None or qualif in ("ouvre", "ouvrable", "franc"):
-            return {**res, "statut": "a_verifier", "motif": "Délai en jours ouvrés, francs ou en heures : à compter selon le calendrier du marché."}
-        if remise is None:
-            return {**res, "statut": "a_verifier", "motif": "La date de remise des offres n'est pas connue : le calcul n'est pas possible."}
-        return {**res, "statut": "trouvee", "date": (remise - timedelta(days=jours)).isoformat(), "motif": None}
+        return _depuis_relative(trouve, base, remise, "relative")
     return None
 
 
@@ -138,10 +161,14 @@ def trouver_date_questions(pieces: Iterable[tuple[str, str]], date_remise: Optio
     ``pieces`` : (nom du fichier, texte). ``date_remise`` : la date de remise, si elle est connue.
     Retourne toujours un dict : ``statut`` « trouvee » (``date`` ISO, ``regle`` « absolue » ou « relative », ``document``,
     ``extrait``) ou « a_verifier » (``motif`` ; ``extrait`` quand une formule a été lue sans pouvoir la calculer)."""
+    pieces = [(n, t) for n, t in pieces if t and not t.startswith("[document volumineux")]
     for nom, texte in pieces:
-        if not texte or texte.startswith("[document volumineux"):
-            continue
         res = _chercher(nom, texte, date_remise)
+        if res:
+            return res
+    # Aucune date propre aux questions : la formule « réponse de l'acheteur N jours avant la remise », si le règlement la donne
+    for nom, texte in pieces:
+        res = _chercher_reponse(nom, texte, date_remise)
         if res:
             return res
     return {"statut": "a_verifier", "regle": None, "date": None, "heure": None, "jours": None, "document": None, "extrait": None,
