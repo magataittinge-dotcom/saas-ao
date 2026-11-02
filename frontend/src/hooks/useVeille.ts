@@ -7,6 +7,8 @@ import {
   creerAODepuisAvis, enregistrerPreferences, lireAvis, lireComptes, lireMetiers, lirePreferences, poserVisite,
   PREFERENCES_PAR_DEFAUT, type AvisVeille, type PreferencesAEnvoyer, type PreferencesVeille,
 } from '@/services/veille'
+import { useAuthStore } from '@/stores/authStore'
+import { enregistrerVisite } from '@/lib/visiteVeille'
 import {
   FILTRES_PAR_DEFAUT, doitPoserVisite, etapeElargir, sauvegardeDifferee,
   type FiltresAvis, type TriAvis, type VilleZone,
@@ -67,13 +69,26 @@ export function useVeille() {
   const setTri = useCallback((t: TriAvis) => setTriEtat(t), [])
 
   // ── Visite : à la sortie de l'accueil, si la dernière date de plus de 24 h ──
+  // À la déconnexion, la session est fermée avant le démontage : la déconnexion pose donc la visite elle-même
+  // (enregistrerVisite), et le démontage ne la pose que si elle n'est pas déjà partie et si la session est ouverte (R1).
+  // Session ouverte = utilisateur connu du store (la déconnexion le vide avant de fermer la session).
+  const sessionOuverte = useAuthStore((e) => !!e.user)
+  const connecte = useRef(false)
+  connecte.current = sessionOuverte
   const derniereVisite = useRef<string | null>(null)
   derniereVisite.current = prefs.data?.derniere_visite ?? null
   const chargee = useRef(false)
   chargee.current = !!prefs.data
-  useEffect(() => () => {
-    if (!chargee.current || !doitPoserVisite(derniereVisite.current)) return
-    poserVisite().then((r) => qc.setQueryData<PreferencesVeille>(CLES_VEILLE.preferences, (anc) => ({ ...(anc ?? PREFERENCES_PAR_DEFAUT), derniere_visite: r.derniere_visite }))).catch(() => {})
+  useEffect(() => {
+    let posee = false
+    const poser = async () => {
+      if (posee || !chargee.current || !connecte.current || !doitPoserVisite(derniereVisite.current)) return
+      posee = true
+      const r = await poserVisite()
+      qc.setQueryData<PreferencesVeille>(CLES_VEILLE.preferences, (anc) => ({ ...(anc ?? PREFERENCES_PAR_DEFAUT), derniere_visite: r.derniere_visite }))
+    }
+    const retirer = enregistrerVisite(poser)
+    return () => { retirer(); poser().catch(() => {}) }
   }, [qc])
 
   // ── Données ──

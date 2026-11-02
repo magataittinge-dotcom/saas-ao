@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { authService } from '@/services/auth'
 import { setClerkTokenProvider } from '@/services/api'
+import { poserVisiteAvantSortie } from '@/lib/visiteVeille'
 
 export function useSyncUser(): boolean {
   const { isSignedIn, isLoaded, getToken, userId } = useAuth()
@@ -40,6 +41,8 @@ export function useLogout() {
   const navigate = useNavigate()
 
   return async () => {
+    // R1 — la visite de la veille part tant que la session est ouverte (jamais sans jeton, 2 s au plus).
+    await poserVisiteAvantSortie()
     logout()
     // Clerk recharge la page vers son adresse de sortie (par défaut « / ») : on lui donne /login (C12).
     await signOut({ redirectUrl: '/login' })
