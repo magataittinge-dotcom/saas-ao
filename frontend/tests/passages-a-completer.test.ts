@@ -21,6 +21,6 @@ test('jamais de mot négatif', () => {
 
 test('l\'écran d\'export affiche le libellé, sans couleur en dur', () => {
   const code = lire('src/routes/project/StepExport.tsx')
-  assert.match(code, /libellePassagesACompleter\(detail\.memoire_info\.passages_a_completer\)/)
+  assert.match(code, /libellePassagesACompleter\((detail\.memoire_info|mem)\.passages_a_completer\)/)
   assert.match(code, /passages_a_completer: number/)
 })

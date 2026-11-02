@@ -9,7 +9,7 @@ import axios from 'axios'
 import { memoireDepuisReponse } from '@/lib/memoireLecture'
 import { api } from '@/services/api'
 import FormulaireMemoire from '@/components/project/FormulaireMemoire'
-import BarreEtape, { ActionsBarre, BoutonSuite } from '@/components/project/BarreEtape'
+import BarreEtape, { BoutonSuite } from '@/components/project/BarreEtape'
 import { type PreflightSelection } from '@/components/project/MemoirePreflight'
 import { VARIABLES_VIDES, corpsGeneration } from '@/lib/memoireGeneration'
 import RewritePassageBar, { type PassageSelection } from '@/components/project/RewritePassageBar'
@@ -18,6 +18,10 @@ import { useProgressStream } from '@/hooks/useProgressStream'
 import SubscriptionWall from '@/components/common/SubscriptionWall'
 import PoidsMemoire from '@/components/project/PoidsMemoire'
 import RelectureMemoire from '@/components/memoire/RelectureMemoire'
+import {
+  ActionsBarreTel, BandeResume, BilanBarre, GabaritEtape, SectionEtape, type CarteResume,
+} from '@/components/etape'
+import { ETAT_A_VERIFIER, ETAT_PRET, type VuePlan } from '@/lib/planMemoire'
 import { MemoireSkeleton } from '@/components/skeletons'
 import type { Project, MemoireTechnique, MemoireContent, Reference } from '@/types'
 import {
@@ -25,7 +29,7 @@ import {
 } from '@/lib/memoireControles'
 import { depuisMarkdown, versMarkdown } from '@/lib/memoireMarkdown'
 import {
-  ANNEXES_MEMOIRE, SECTIONS_MEMOIRE, sommaireMemoire, type SectionMemoire,
+  ANNEXES_MEMOIRE, sectionsDuContenu, sommaireMemoire, type SectionMemoire,
 } from '@/lib/memoireSections'
 import SommaireMemoire from '@/components/memoire/SommaireMemoire'
 import ConfirmationRefaire, { BoutonRefaire, type CibleRefaire } from '@/components/memoire/RefaireSection'
@@ -266,7 +270,7 @@ export function DocumentView({
   const c = content.partie_c as Record<string, string>
 
   const items = (part: SectionMemoire['part']): [string, string][] =>
-    SECTIONS_MEMOIRE.filter((s) => s.part === part).map((s) => [s.cle, s.titre])
+    sectionsDuContenu(content).filter((s) => s.part === part).map((s) => [s.cle, s.titre])
   const partAItems = items('partie_a')
   const partBItems = items('partie_b')
   const partCItems = items('partie_c')
@@ -393,6 +397,60 @@ function MdContent({ text }: { text: string }) {
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
+const BOUTON_SECONDAIRE = 'inline-flex items-center justify-center gap-1.5 rounded-lg border border-bord-2 px-3.5 py-1.5 text-sm font-medium text-fg-2 transition-colors hover:bg-surface-0 max-[768px]:flex-1 [@media(pointer:coarse)]:min-h-11'
+
+/** Les cartes de l'écran de préparation : le plan suivi, le poids dans la note, ce que la rédaction décompte. */
+export function cartesPreparation(plan: VuePlan | null, techPct: number): CarteResume[] {
+  return [
+    plan
+      ? {
+        libelle: 'Plan', valeur: `${plan.resume.parties} parties`, etat: plan.valide ? ETAT_PRET : ETAT_A_VERIFIER,
+        detail: plan.valide ? 'Plan validé : la rédaction le suit.' : 'Plan non validé : le plan du modèle sera suivi.',
+      }
+      : { libelle: 'Plan', valeur: 'Plan du modèle', detail: 'Le plan du modèle sera suivi.' },
+    techPct > 0
+      ? { libelle: 'Poids dans la note', valeur: `${techPct} %`, detail: 'Pondération hors prix relevée dans le règlement.' }
+      : { libelle: 'Poids dans la note', valeur: 'Non précisé', detail: 'Le règlement ne donne pas de pondération.' },
+    { libelle: 'Abonnement', valeur: '1 unité', detail: 'Un mémoire décompte 1 unité, au succès de la rédaction.' },
+  ]
+}
+
+/** ~500 mots par page (même ordre de grandeur que la relecture et l'export). */
+export function pagesEstimees(contenu: MemoireContent | null): number {
+  if (!contenu) return 0
+  const textes = [contenu.preambule, ...Object.values(contenu.partie_a ?? {}), ...Object.values(contenu.partie_b ?? {}), ...Object.values(contenu.partie_c ?? {})]
+  const mots = textes.reduce((n, t) => n + (typeof t === 'string' ? t.split(/\s+/).filter(Boolean).length : 0), 0)
+  return Math.max(1, Math.round(mots / 500))
+}
+
+/** Les cartes du mémoire rédigé : avancement, critères traités, parties à refaire, longueur. */
+export function cartesRedaction({ version, completionPct, rattachement, nbARefaire, pages, limite }: {
+  version: number
+  completionPct: number
+  rattachement: RattachementCriteres | undefined
+  nbARefaire: number
+  pages: number
+  limite: number | null
+}): CarteResume[] {
+  const total = rattachement?.sous_criteres.length ?? 0
+  const traites = rattachement?.sous_criteres.filter((s) => s.traite).length ?? 0
+  return [
+    { libelle: 'Rédaction', valeur: `${completionPct} %`, jauge: { rempli: completionPct, total: 100 }, detail: `Version ${version}` },
+    total > 0
+      ? {
+        libelle: 'Critères du règlement', valeur: `${traites} sur ${total}`, etat: traites === total ? ETAT_PRET : ETAT_A_VERIFIER,
+        jauge: { rempli: traites, total }, detail: traites === total ? 'Chaque sous-critère est traité.' : `${total - traites} à couvrir`,
+      }
+      : { libelle: 'Critères du règlement', valeur: 'Non détaillés', detail: 'Le règlement ne détaille pas de sous-critères.' },
+    nbARefaire > 0
+      ? { libelle: 'Parties à refaire', valeur: String(nbARefaire), etat: ETAT_A_VERIFIER, detail: 'Marquées « À refaire » dans le sommaire.' }
+      : { libelle: 'Parties à refaire', valeur: 'Aucune', etat: ETAT_PRET, detail: 'Toutes les parties sont rédigées.' },
+    limite
+      ? { libelle: 'Longueur', valeur: `environ ${pages} pages`, etat: pages <= limite ? ETAT_PRET : ETAT_A_VERIFIER, detail: `Limite du dossier : ${limite} pages.` }
+      : { libelle: 'Longueur', valeur: `environ ${pages} pages`, detail: 'Le dossier ne fixe pas de limite.' },
+  ]
+}
+
 interface Props { project: Project }
 
 export default function StepMemoire({ project }: Props) {
@@ -457,6 +515,13 @@ export default function StepMemoire({ project }: Props) {
   const sommaire = useMemo(() => (displayContent ? sommaireMemoire(displayContent) : []), [displayContent])
   const criteres = project.criteres_jugement ?? []
 
+  // B4 — l'état du plan (validé ou non) : lu seulement, pour le dire en tête de l'écran. Sans plan, le modèle standard est suivi.
+  const { data: plan } = useQuery({
+    queryKey: ['plan-memoire', project.id],
+    queryFn: async () => (await api.get<VuePlan>(`/projects/${project.id}/plan-memoire`)).data,
+    retry: false,
+  })
+
   // Poids total hors prix : la part de la note que le mémoire peut capter
   const techPct = useMemo(
     () => Math.round(criteres.filter((c) => !c.nom.toLowerCase().includes('prix')).reduce((s, c) => s + c.poids, 0)),
@@ -486,7 +551,7 @@ export default function StepMemoire({ project }: Props) {
     queryFn: async () => (await api.get<Reference[]>('/references')).data,
   })
   const breves = useMemo(
-    () => (displayContent ? sectionsBreves(displayContent, SECTIONS_MEMOIRE) : []),
+    () => (displayContent ? sectionsBreves(displayContent, sectionsDuContenu(displayContent)) : []),
     [displayContent],
   )
   const controleRefs = useMemo(
@@ -624,21 +689,6 @@ export default function StepMemoire({ project }: Props) {
   const hasMemoire = !!memoire
   const lotName = project.selected_lot_name || 'Lot unique'
 
-  // ── Barre du bas (vue document seulement) ── l'étape suivante est active : le mémoire existe.
-  // Sur l'écran de préparation il n'y a plus d'« Étape suivante » grisé : le seul bouton est « Rédiger le mémoire ».
-
-  const bottomBar = (
-    <BarreEtape className="justify-end gap-3">
-      <ActionsBarre className="max-[768px]:w-full">
-        <BoutonSuite
-          etape="Export"
-          onClick={() => navigate(`/projects/${project.id}/export`)}
-          className="max-[768px]:flex-1 max-[768px]:justify-center"
-        />
-      </ActionsBarre>
-    </BarreEtape>
-  )
-
   // ── Generation form (no mémoire yet or regenerate) ─────────────
 
   if (!hasMemoire || showForm) {
@@ -659,72 +709,48 @@ export default function StepMemoire({ project }: Props) {
           />
         )}
 
-        <div className="space-y-4" style={{ fontFamily: F }}>
-          {/* ── HÉROS — le fait qui motive l'effort : le poids du mémoire dans la note ── */}
-          <div className="glass-card top-lit blueprint-grid sheen relative overflow-hidden px-5 py-4">
-            <div className="relative grid items-start gap-x-10 gap-y-4 lg:grid-cols-[minmax(0,1fr)_260px]">
-              <div className="min-w-0">
-                <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
-                  <p className="microlabel">Mémoire technique — {lotName}</p>
-                  {hasMemoire && (
-                    <span className="flex items-center gap-3">
-                      <span className="edge-data text-xs" style={{ color: 'var(--text-3)' }}>
-                        v{memoire.version} — {new Date(memoire.generated_at).toLocaleDateString('fr-FR')}
-                      </span>
-                      <button
-                        onClick={() => setShowForm(false)}
-                        className="text-xs font-medium px-3 py-1 rounded-lg transition-colors hover:bg-ds-bg-2"
-                        style={{ color: 'var(--text-3)', border: '1px solid var(--border-1)' }}
-                      >
-                        Retour
-                      </button>
-                    </span>
-                  )}
-                </div>
-                <PoidsMemoire techPct={techPct} />
-                {hasMemoire && (
-                  <p className="mt-3 text-xs font-medium leading-relaxed" style={{ color: 'var(--warn)' }}>
-                    La régénération remplacera la version actuelle du mémoire.
-                  </p>
-                )}
-              </div>
-
-              {criteres.length > 0 && (
-                <div className="min-w-0">
-                  <p className="microlabel mb-2">Pondération relevée dans le règlement</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {criteres.map((c) => (
-                      <span
-                        key={c.nom}
-                        className="num-mono text-xs px-2 py-1 rounded-md"
-                        style={{ background: 'color-mix(in srgb, var(--text-1) 6%, transparent)', border: '1px solid var(--border-1)', color: 'var(--text-2)' }}
-                      >
-                        {c.nom} {c.poids}&nbsp;%
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <FormulaireMemoire
-            projectId={project.id}
-            variables={variables}
-            onVariables={setVariables}
-            onPreflight={handlePreflightChange}
-            stats={profileStats ?? null}
-            hasMemoire={hasMemoire}
-            enCours={isRunning}
-            erreur={genError || (!isRunning && project.processing_status === 'error')
-              ? (genError ?? project.processing_detail ?? 'La génération du mémoire a échoué. Relancez la génération.')
-              : null}
-            onGenerer={() => {
-              setGenError(null)
-              generate()
-            }}
-          />
-        </div>
+        <GabaritEtape
+          titre="Rédiger le mémoire"
+          utilite="Synorix rédige chaque partie du plan, à partir de votre dossier et de Mon entreprise."
+          actionsSecondaires={hasMemoire ? (
+            <button type="button" onClick={() => setShowForm(false)} className={BOUTON_SECONDAIRE}>Retour</button>
+          ) : (
+            <button type="button" onClick={() => navigate(`/projects/${project.id}/plan`)} className={BOUTON_SECONDAIRE}>Voir le plan</button>
+          )}
+          resume={<BandeResume libelle="Résumé de la rédaction" cartes={cartesPreparation(plan ?? null, techPct)} />}
+        >
+          {hasMemoire && (
+            <p className="text-sm font-medium text-warning">La régénération remplacera la version actuelle du mémoire.</p>
+          )}
+          <SectionEtape titre="CE QUE LE RÈGLEMENT NOTE" description="La pondération relevée dans le règlement de consultation, hors prix.">
+            <PoidsMemoire techPct={techPct} />
+            {criteres.length > 0 && (
+              <ul className="flex flex-wrap gap-1.5" aria-label="Pondération relevée dans le règlement">
+                {criteres.map((c) => (
+                  <li key={c.nom} className="pill pill-muted num-mono">{c.nom} {c.poids}&nbsp;%</li>
+                ))}
+              </ul>
+            )}
+          </SectionEtape>
+          <SectionEtape titre="VOS INFORMATIONS POUR CE MÉMOIRE">
+            <FormulaireMemoire
+              projectId={project.id}
+              variables={variables}
+              onVariables={setVariables}
+              onPreflight={handlePreflightChange}
+              stats={profileStats ?? null}
+              hasMemoire={hasMemoire}
+              enCours={isRunning}
+              erreur={genError || (!isRunning && project.processing_status === 'error')
+                ? (genError ?? project.processing_detail ?? 'La génération du mémoire a échoué. Relancez la génération.')
+                : null}
+              onGenerer={() => {
+                setGenError(null)
+                generate()
+              }}
+            />
+          </SectionEtape>
+        </GabaritEtape>
 
       </>
     )
@@ -751,7 +777,7 @@ export default function StepMemoire({ project }: Props) {
 
       {aRefaire && (
         <ConfirmationRefaire
-          projectId={project.id} cible={aRefaire} enCours={envoiRefaire}
+          cible={aRefaire} enCours={envoiRefaire}
           onConfirmer={() => refaire(aRefaire)} onAnnuler={() => setARefaire(null)}
         />
       )}
@@ -767,47 +793,53 @@ export default function StepMemoire({ project }: Props) {
         document.body,
       )}
 
+      <GabaritEtape
+        titre="Rédiger le mémoire"
+        utilite={`${lotName} : relisez, retouchez, refaites une partie, puis passez à l’export.`}
+        actionPrincipale={
+          <button type="button" className="signature-btn w-full [@media(pointer:coarse)]:min-h-11" onClick={() => navigate(`/projects/${project.id}/export`)}>
+            Passer à l’export
+          </button>
+        }
+        actionsSecondaires={
+          <>
+            <RelectureMemoire projectId={project.id} />
+            <button type="button" onClick={() => setShowEditor(true)} className={BOUTON_SECONDAIRE}>
+              <Pencil size={13} aria-hidden /> Modifier
+            </button>
+            <button type="button" onClick={() => navigate(`/projects/${project.id}/plan`)} className={BOUTON_SECONDAIRE}>Voir le plan</button>
+          </>
+        }
+        resume={
+          <BandeResume
+            libelle="Résumé du mémoire"
+            cartes={cartesRedaction({
+              version: memoire!.version, completionPct, rattachement, nbARefaire: Object.keys(etats ?? {}).length,
+              pages: pagesEstimees(displayContent), limite: plan?.limite_pages?.pages ?? null,
+            })}
+          />
+        }
+        barre={
+          <BarreEtape className="justify-between gap-3">
+            <BilanBarre bureau={<span className="text-sm text-fg-2">Version {memoire!.version} · {completionPct}&nbsp;% rédigé</span>} />
+            <ActionsBarreTel>
+              <BoutonSuite etape="Export" onClick={() => navigate(`/projects/${project.id}/export`)} />
+            </ActionsBarreTel>
+          </BarreEtape>
+        }
+      >
       <div className="space-y-4" style={{ fontFamily: F }}>
 
         {/* Échec d'une régénération détachée : signalé sans quitter le doc */}
         {genError && (
           <p
+            role="alert"
             className="text-sm rounded-lg px-3 py-2"
             style={{ background: 'color-mix(in srgb, var(--danger-fg) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--danger-fg) 20%, transparent)', color: 'var(--danger-fg)' }}
           >
             {genError}
           </p>
         )}
-
-        {/* ── Barre de titre : un seul rang, tout l'état du document ── */}
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <h1 className="text-xl font-bold truncate" style={{ color: 'var(--text-1)' }}>
-              Mémoire technique — {lotName}
-            </h1>
-            <span
-              className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full shrink-0"
-              style={{ background: 'color-mix(in srgb, var(--text-1) 6%, transparent)', border: '1px solid var(--border-1)', color: 'var(--text-2)' }}
-              title={`Générée le ${new Date(memoire!.generated_at).toLocaleDateString('fr-FR')} par Synorix IA`}
-            >
-              <span className="h-1.5 w-1.5 rounded-full" style={{ background: 'var(--success-fg)' }} />
-              v{memoire!.version}
-              <span style={{ color: 'var(--text-3)' }}>·</span>
-              <span className="num-mono">{completionPct}&nbsp;% rédigé</span>
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <RelectureMemoire projectId={project.id} />
-            <button
-              onClick={() => setShowEditor(true)}
-              className="flex items-center gap-1.5 text-sm font-medium py-1.5 px-3.5 rounded-lg transition-colors hover:bg-ds-bg-2"
-              style={{ border: '1px solid var(--border-1)', color: 'var(--text-2)' }}
-            >
-              <Pencil size={13} /> Modifier
-            </button>
-          </div>
-        </div>
 
         {/* ── 3-column layout ────────────────────────────────────── */}
         {displayContent && (
@@ -915,8 +947,7 @@ export default function StepMemoire({ project }: Props) {
           </div>
         )}
       </div>
-
-      {bottomBar}
+      </GabaritEtape>
     </>
   )
 }

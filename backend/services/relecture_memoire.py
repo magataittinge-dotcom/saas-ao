@@ -27,7 +27,7 @@ from dataclasses import dataclass, field
 from typing import Any, Iterable, Optional
 
 from services.ai.dtu_autorises import trouver_dtu
-from services.docx_exporter import _A_COMPLETER_RE, _PART_A, _PART_B, _PART_C
+from services.docx_exporter import _A_COMPLETER_RE, _PART_A, _PART_B, _PART_C, sections_de_la_partie
 
 A_COUVRIR = "À couvrir"
 A_CITER = "À citer"
@@ -98,15 +98,18 @@ def sections_du_memoire(contenu: dict[str, Any]) -> list[Section]:
     pre = contenu.get("preambule")
     if isinstance(pre, str) and pre.strip():
         sections.append(Section("preambule", _TITRES["preambule"], pre))
-    for cle, liste in (("partie_a", _PART_A), ("partie_b", _PART_B), ("partie_c", _PART_C)):
+    for cle, lettre, defaut in (("partie_a", "A", _PART_A), ("partie_b", "B", _PART_B), ("partie_c", "C", _PART_C)):
         partie = contenu.get(cle)
         if not isinstance(partie, dict):
             continue
-        for sous_cle, _ in liste:
+        liste = sections_de_la_partie(contenu, cle, defaut)
+        for sous_cle, titre in liste:
             texte = partie.get(sous_cle)
             if isinstance(texte, str) and texte.strip():
                 ancre = f"sec-{sous_cle}"
-                sections.append(Section(ancre, _TITRES[ancre], texte))
+                # plan suivi : titre du patron sans son numéro ; sinon le titre du modèle
+                propre = _TITRES[ancre] if liste is defaut else f"Partie {lettre} · {titre.split('. ', 1)[-1]}"
+                sections.append(Section(ancre, propre, texte))
     return sections
 
 
@@ -301,4 +304,8 @@ def relire_memoire(
         + _controle_dtu(sections, set(dtu_autorises))
         + _controle_longueur(sections, limite)
     )
+    titres = {sec.ancre: sec.titre for sec in sections}      # plan suivi : le titre du patron, pas celui du modèle
+    for ligne in lignes:
+        if ligne.get("ancre") in titres:
+            ligne["section"] = titres[ligne["ancre"]]
     return Relecture(lignes, estimation_pages(sections), limite["pages"] if limite else None)

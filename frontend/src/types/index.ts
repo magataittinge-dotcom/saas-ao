@@ -355,6 +355,9 @@ export interface MemoireContent {
   /** E3 — parties que le patron a marquées « À refaire » (« partie_b.dechets » → 'a_refaire') ; absent = « Rédigée ».
    *  Clé technique tenue par le serveur : l'export ne la lit pas. */
   _etat_sections?: Record<string, 'a_refaire'>
+  /** Plan suivi à la rédaction (titres du patron, ordre, parties ajoutées « ajout_<n> »). Posé par le serveur ; absent
+   *  quand le mémoire a été rédigé sans plan validé. */
+  _plan?: { parties: { partie: 'partie_a' | 'partie_b' | 'partie_c'; sous_cle: string; titre: string }[] }
 }
 
 export interface MemoireTechnique {

@@ -83,7 +83,7 @@ test('S4 : les nouveaux libellés sont à l\'écran', () => {
     ['src/components/common/FileCard.tsx', 'Ranger'],
     ['src/components/vault/ClassifyDocumentModal.tsx', 'Ranger le document'],
     ['src/components/company/ProfileFreeTextCard.tsx', 'Décrire avec vos mots'],
-    ['src/routes/project/StepExport.tsx', 'Avant d&apos;envoyer'],
+    ['src/routes/project/StepExport.tsx', 'Voir le mémoire'],
   ]
   for (const [f, mot] of attendus) {
     assert.ok(textesAffiches(f).some((t) => t.texte.includes(mot)), `${f} : « ${mot} »`)
