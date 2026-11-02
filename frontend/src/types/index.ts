@@ -342,6 +342,9 @@ export interface MemoireContent {
     gpa: string
     delai: string
   }
+  /** E3 — parties que le patron a marquées « À refaire » (« partie_b.dechets » → 'a_refaire') ; absent = « Rédigée ».
+   *  Clé technique tenue par le serveur : l'export ne la lit pas. */
+  _etat_sections?: Record<string, 'a_refaire'>
 }
 
 export interface MemoireTechnique {

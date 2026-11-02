@@ -761,6 +761,12 @@
   .source-panneau { animation: source-monte .28s cubic-bezier(.2, .8, .2, 1) both; }
   .source-voile { animation: source-voile .2s ease both; }
 }
+/* « Voir dans le dossier » depuis le mémoire : le panneau prend une colonne à droite (ordinateur) ; sous 1024 px
+   il est une feuille fixe et la colonne n'existe pas. */
+.memoire-source-colonne { display: contents; }
+@media (min-width: 1024px) {
+  .memoire-source-colonne { display: block; flex: 0 0 min(440px, 38vw); min-width: 0; }
+}
 @keyframes source-monte { from { transform: translateY(100%); } to { transform: none; } }
 @keyframes source-voile { from { opacity: 0; } to { opacity: 1; } }
 

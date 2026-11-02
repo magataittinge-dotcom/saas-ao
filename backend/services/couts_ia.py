@@ -18,8 +18,15 @@ from models.depot_entreprise import CoutIA
 logger = logging.getLogger(__name__)
 
 HAIKU_4_5 = "claude-haiku-4-5-20251001"
-# $ / million de jetons : entrée, sortie, lecture du cache, écriture du cache
-TARIFS = {HAIKU_4_5: (1.00, 5.00, 0.10, 1.25)}
+SONNET_4_6 = "claude-sonnet-4-6"
+SONNET_5_5 = "claude-sonnet-5-5"
+# $ / million de jetons : entrée, sortie, lecture du cache, écriture du cache. Sonnet 4.6 : 3 / 15 ; Sonnet 5.5 : 2 / 10
+# (le tarif de la mesure du 26/10). Mêmes valeurs que scripts/couts_journal.py (un test les compare).
+TARIFS = {
+    HAIKU_4_5: (1.00, 5.00, 0.10, 1.25),
+    SONNET_4_6: (3.00, 15.00, 0.10, 1.25),
+    SONNET_5_5: (2.00, 10.00, 0.10, 1.25),
+}
 
 
 def taux_usd_eur() -> float:
@@ -46,6 +53,12 @@ def calculer(modele: str, usage: dict) -> tuple[float, float]:
 
 def estimer(modele: str, jetons_entree: int, jetons_sortie: int) -> tuple[float, float]:
     return calculer(modele, {"input_tokens": jetons_entree, "output_tokens": jetons_sortie})
+
+
+def estimer_ecriture_cache(modele: str, jetons_prefixe: int, jetons_sortie: int) -> tuple[float, float]:
+    """(dollars, euros) d'un appel dont le préfixe est ÉCRIT dans le cache (cache de 5 minutes expiré : le cas
+    courant pour « Refaire cette partie »), plus la sortie. Déterministe ; (0, 0) si le modèle n'a pas de tarif."""
+    return calculer(modele, {"cache_creation_input_tokens": jetons_prefixe, "output_tokens": jetons_sortie})
 
 
 def enregistrer(db: Session, organization_id: str, usage_nom: str, modele: str, usage: dict,

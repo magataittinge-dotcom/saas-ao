@@ -8,6 +8,7 @@ La densité normative vient du PROMPT + corpus skills, mais un DTU n'est cité q
 """
 import json
 import asyncio
+from dataclasses import dataclass
 import threading
 import time
 import anthropic
@@ -371,6 +372,25 @@ def texte_dce_pour_memoire(all_docs: list, ouvrages_dpgf: str | None = None) -> 
     return "\n\n".join(parts)
 
 
+class RefaireVide(Exception):
+    """Le modèle n'a rendu aucun texte pour la sous-section demandée : le mémoire reste tel quel."""
+
+
+def modele_du_segment(segment_key: str) -> str:
+    """Le modèle d'une partie : celui de la génération (`MEMOIRE_MODELE` le force, sinon la table), jamais Opus
+    par défaut. Source commune à « Refaire cette partie » et à son estimation de coût."""
+    forcé = get_settings().MEMOIRE_MODELE.strip()
+    return forcé or _MEMOIRE_SEGMENT_MODELS.get(segment_key, MemoireGenerator.MODEL)
+
+
+@dataclass(frozen=True)
+class _PromptMemoire:
+    stable_skills_block: str
+    org_block_text: str
+    dynamic_block: str
+    regle: object   # RegleDtu
+
+
 class MemoireGenerator:
     def __init__(self):
         self.client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
@@ -379,40 +399,30 @@ class MemoireGenerator:
     # high-stakes, structured). Sonnet is reserved for extraction/matching.
     MODEL = "claude-opus-4-7"
 
-    async def generate(
+    def _construire_prompt(
         self,
-        organization,           # Organization ORM object
-        memoire_config,         # MemoireConfig ORM object or None
+        organization,
+        memoire_config,
         project_name: str,
         maitre_ouvrage: str,
-        selected_lot_name: str,  # e.g. "Lot 05 — Revêtement de Façade + ITE"
-        all_docs: list,         # list of ProjectDocument objects
-        compliance_items: list, # list of ComplianceItem objects
-        references: list,       # list of Reference objects
+        selected_lot_name: str,
+        all_docs: list,
+        compliance_items: list,
+        references: list,
         variables: dict,
         criteres_jugement: list | None = None,
-        reference_template_text: str | None = None,  # text from imported mémoire
-        project_id: str | None = None,
-        profile_overrides: dict | None = None,  # C9a — overrides locaux du pre-flight
-        reglementaire_block: str | None = None,  # Lot 7 T3 — RAG_ENRICHMENT
-        ouvrages_dpgf: str | None = None,  # B2 — ouvrages du lot, lus sans IA dans la DPGF
-        selected_lot: str | None = None,   # « lot5 » : sert au rattachement des articles du lot 00
+        reference_template_text: str | None = None,
+        profile_overrides: dict | None = None,
+        reglementaire_block: str | None = None,
+        ouvrages_dpgf: str | None = None,
+        selected_lot: str | None = None,
+        lots_detectes: list | None = None,
         raison_sociale: str | None = None,  # règle de lecture unique (services/raison_sociale) ; jamais organization.name
-        lots_detectes: list | None = None,  # lots du projet [{id, nom}] (désignations des autres lots)
-    ) -> dict:
-        """Generate a complete mémoire technique using Claude Opus.
+    ) -> "_PromptMemoire":
+        """Le préfixe de tous les appels du mémoire (système + référentiels, profil, bloc du marché).
 
-        Cost optimisation — prompt caching: the *stable* parts of every call
-        (system prompt, BTP skills, methodology references, company profile,
-        chantiers references) are tagged with `cache_control=ephemeral` so
-        Anthropic only bills the cached-read price (~10 % of the input price)
-        on subsequent calls within the 5 min TTL.
-
-        Result on a typical mémoire:
-          • 1st generation of an org : full price (~80k input tokens)
-          • subsequent generations : ~70k tokens cached (90 % discount) +
-            ~10k uncached → ~5x cost reduction.
-        """
+        Source UNIQUE : la génération complète et « Refaire cette partie » passent par ici, donc le préfixe mis
+        en cache est identique à l'octet ; seule la consigne de segment (non cachée) change."""
 
         # ── 1. Company profile ────────────────────────────────────────────────
         cfg = memoire_config
@@ -577,6 +587,51 @@ class MemoireGenerator:
         # None (flag off / retrieve indisponible) → prompt inchangé À L'OCTET.
         dynamic_block = _append_reglementaire(dynamic_block, reglementaire_block)
 
+        return _PromptMemoire(stable_skills_block, org_block_text, dynamic_block, regle)
+
+    async def generate(
+        self,
+        organization,           # Organization ORM object
+        memoire_config,         # MemoireConfig ORM object or None
+        project_name: str,
+        maitre_ouvrage: str,
+        selected_lot_name: str,  # e.g. "Lot 05 — Revêtement de Façade + ITE"
+        all_docs: list,         # list of ProjectDocument objects
+        compliance_items: list, # list of ComplianceItem objects
+        references: list,       # list of Reference objects
+        variables: dict,
+        criteres_jugement: list | None = None,
+        reference_template_text: str | None = None,  # text from imported mémoire
+        project_id: str | None = None,
+        profile_overrides: dict | None = None,  # C9a — overrides locaux du pre-flight
+        reglementaire_block: str | None = None,  # Lot 7 T3 — RAG_ENRICHMENT
+        ouvrages_dpgf: str | None = None,  # B2 — ouvrages du lot, lus sans IA dans la DPGF
+        selected_lot: str | None = None,   # « lot5 » : sert au rattachement des articles du lot 00
+        lots_detectes: list | None = None,  # lots du projet [{id, nom}] (désignations des autres lots)
+        raison_sociale: str | None = None,  # règle de lecture unique (services/raison_sociale) ; jamais organization.name
+    ) -> dict:
+        """Generate a complete mémoire technique using Claude Opus.
+
+        Cost optimisation — prompt caching: the *stable* parts of every call
+        (system prompt, BTP skills, methodology references, company profile,
+        chantiers references) are tagged with `cache_control=ephemeral` so
+        Anthropic only bills the cached-read price (~10 % of the input price)
+        on subsequent calls within the 5 min TTL.
+
+        Result on a typical mémoire:
+          • 1st generation of an org : full price (~80k input tokens)
+          • subsequent generations : ~70k tokens cached (90 % discount) +
+            ~10k uncached → ~5x cost reduction.
+        """
+
+        prompt = self._construire_prompt(
+            organization, memoire_config, project_name, maitre_ouvrage, selected_lot_name, all_docs,
+            compliance_items, references, variables, criteres_jugement, reference_template_text,
+            profile_overrides, reglementaire_block, ouvrages_dpgf, selected_lot, lots_detectes,
+            raison_sociale)
+        stable_skills_block, org_block_text, dynamic_block, regle = (
+            prompt.stable_skills_block, prompt.org_block_text, prompt.dynamic_block, prompt.regle)
+
         # ── 8. Génération : le 1er segment SEUL, puis les autres EN PARALLÈLE ──
         # Évite la troncature du monobloc (26 sous-sections > max tokens de
         # sortie). Le préambule part seul : il écrit le prompt cache du préfixe
@@ -693,6 +748,45 @@ class MemoireGenerator:
         assembled["_generation_meta"] = meta
         return assembled
 
+    async def refaire_section(
+        self,
+        part: str,
+        cle: str,
+        project_id: str | None = None,
+        **contexte,
+    ) -> tuple[str, dict]:
+        """« Refaire cette partie » : régénère UNE sous-section, rien d'autre.
+
+        Même construction que `generate` (`_construire_prompt`, même préfixe mis en cache, même modèle) ; seule la
+        consigne de segment, non cachée, est limitée à cette sous-section. Retourne (texte, méta de l'appel).
+        Lève `RefaireVide` si le modèle ne rend rien pour elle ; ne touche jamais au reste du mémoire."""
+        sous_sections = dict(_MEMOIRE_SEGMENTS).get(part)
+        if not sous_sections or cle not in sous_sections:
+            raise ValueError(f"Sous-section inconnue : {part}.{cle}")
+        prompt = self._construire_prompt(**contexte)
+        modele = modele_du_segment(part)
+
+        def maj(local: float) -> None:
+            if project_id:
+                _safe_update_progress(project_id, min(0.02 + local * 0.96, 0.99))
+
+        parsed, meta = await asyncio.to_thread(
+            self._sync_call_segment,
+            prompt.stable_skills_block, prompt.org_block_text, prompt.dynamic_block,
+            part, [cle], modele, project_id,
+            progress_cb=maj, etiquette_journal=f"memoire_refaire_{part}_{cle}",
+        )
+        bloc = parsed.get(part) if isinstance(parsed, dict) else None
+        if not isinstance(bloc, dict) and isinstance(parsed, dict) and cle in parsed:
+            bloc = parsed      # le modèle a renvoyé l'objet interne directement
+        texte = bloc.get(cle) if isinstance(bloc, dict) else None
+        if not isinstance(texte, str) or not texte.strip():
+            raise RefaireVide(f"{part}.{cle}")
+        # Même garde-fou DTU que la génération : une citation hors de la liste autorisée est retirée.
+        contenu = {part: {cle: texte}}
+        meta["dtu"] = prompt.regle.garde_contenu(contenu)
+        return contenu[part][cle], meta
+
     def _sync_call_segment(
         self,
         stable_skills_block: str,
@@ -705,6 +799,7 @@ class MemoireGenerator:
         progress_base: float = 0.0,
         progress_span: float = 1.0,
         progress_cb=None,
+        etiquette_journal: str | None = None,
     ) -> tuple[dict, dict]:
         """Un appel streaming pour UNE SEULE partie du mémoire, avec `model` dédié.
 
@@ -813,7 +908,7 @@ class MemoireGenerator:
                     f"cache_read={cache_read}, cache_write={cache_write}, out={output_tokens}",
                     flush=True,
                 )
-                print(ligne_jetons(f"memoire_{segment_key}", model, usage), flush=True)
+                print(ligne_jetons(etiquette_journal or f"memoire_{segment_key}", model, usage), flush=True)
                 seg_meta.update({
                     "stop_reason": stop_reason,
                     "elapsed_s": round(elapsed, 1),

@@ -21,7 +21,7 @@ from models.memoire_config import MemoireConfig
 from models.memoire_template import MemoireTemplate
 from schemas.memoire import (
     MemoireGenerateRequest, MemoireUpdateRequest, MemoireResponse,
-    PassageRewriteRequest,
+    PassageRewriteRequest, EtatSectionRequest,
 )
 from routers.auth import get_auth_user
 from services.ai.memoire_generator import MemoireGenerator
@@ -56,6 +56,23 @@ def get_memoire(
     if not memoire:
         raise HTTPException(status_code=404, detail="Mémoire non généré")
     return memoire
+
+
+@router.get("/{project_id}/memoire/criteres")
+def get_memoire_criteres(
+    project_id: str,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """E1 — sous-critères du RC (hors prix) rattachés aux parties du mémoire, et ceux « À couvrir ».
+    Calcul déterministe sur le texte enregistré (services/memoire_criteres.py) : aucun appel IA."""
+    from services.memoire_criteres import rattacher
+
+    project = _get_project_or_404(project_id, user.organization_id, db)
+    memoire = db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project_id).first()
+    if not memoire:
+        raise HTTPException(status_code=404, detail="Mémoire non généré")
+    return rattacher(memoire.content_json, project.criteres_jugement)
 
 
 @router.get("/{project_id}/memoire/preflight")
@@ -252,7 +269,7 @@ def _memoire_content_all_placeholders(content: dict) -> bool:
     mémoire fantôme en base, pas d'unité consommée."""
     leaves: list[str] = []
     for key, val in (content or {}).items():
-        if key == "_generation_meta":
+        if key.startswith("_"):      # _generation_meta, _etat_sections : techniques, pas des sections
             continue
         if isinstance(val, dict):
             leaves.extend(str(v) for v in val.values())
@@ -261,6 +278,105 @@ def _memoire_content_all_placeholders(content: dict) -> bool:
     return not any(
         v.strip() and not v.strip().startswith("[SECTION À RÉGÉNÉRER")
         for v in leaves
+    )
+
+
+def _lire_contexte_generation(db, project_id: str, org_id: str, reference_ids: list | None) -> dict:
+    """Tout ce que le générateur lit en base pour construire le préfixe du mémoire.
+
+    Source UNIQUE de la génération complète et de « Refaire cette partie » : même contexte, donc même préfixe
+    (et même cache). Les objets rendus sont chargés en entier, utilisables après `db.close()`."""
+    project = db.query(Project).filter(Project.id == project_id).first()
+    org = db.query(Organization).filter(Organization.id == org_id).first()
+    memoire_cfg = db.query(MemoireConfig).filter(
+        MemoireConfig.organization_id == org_id).first()
+    all_docs = db.query(ProjectDocument).filter(
+        ProjectDocument.project_id == project_id).all()
+    docs = get_documents_for_lot(all_docs, project.selected_lot, _ids_des_lots(project))
+    refs = db.query(Reference).filter(
+        Reference.organization_id == org_id,
+        Reference.is_reference == True,
+        Reference.deleted_at.is_(None),
+    ).all()
+    # C9a — sélection du pre-flight : si fournie, seules ces références
+    # partent au générateur (ids étrangers ignorés par le scope org).
+    if reference_ids is not None:
+        wanted = set(reference_ids)
+        refs = [r for r in refs if r.id in wanted]
+    # Tranche A (bloc 3) : toutes les exigences du lot choisi (communes +
+    # propres au lot), pas celles des autres lots ; le générateur les range.
+    from services.exigences import exigences_pour_memoire
+    compliance_items = exigences_pour_memoire(db, project)
+
+    # Check for reference template (imported mémoire)
+    ref_template = db.query(MemoireTemplate).filter(
+        MemoireTemplate.organization_id == org_id,
+    ).first()
+    ref_template_text = None
+    if ref_template and ref_template.content_json:
+        cj = ref_template.content_json
+        parts = [cj.get("preambule", "")]
+        for section in ("partie_a", "partie_b", "partie_c"):
+            sec = cj.get(section, {})
+            if isinstance(sec, dict):
+                parts.extend(sec.values())
+        ref_template_text = "\n\n".join(str(p) for p in parts if p)
+
+    # Lot 7 T3 — enrichissement réglementaire, UNIQUEMENT si RAG_ENRICHMENT
+    # (env, défaut false). Flag off → chemin strictement inchangé (testé).
+    reglementaire_block = None
+    from config import get_settings as _gs
+    if _gs().RAG_ENRICHMENT:
+        from services.rag.enrichment import build_reglementaire_block
+        reglementaire_block = build_reglementaire_block(db, compliance_items)
+
+    return {
+        "organization": org, "memoire_config": memoire_cfg, "tous_les_docs": all_docs, "docs": docs,
+        "references": refs, "compliance_items": compliance_items,
+        "reference_template_text": ref_template_text, "reglementaire_block": reglementaire_block,
+        "snap": {
+            "name": project.name,
+            "maitre_ouvrage": project.maitre_ouvrage or "",
+            "selected_lot": project.selected_lot,
+            "selected_lot_name": project.selected_lot_name or "",
+            "criteres_jugement": project.criteres_jugement or [],
+            "lots_detectes": project.lots_detectes or [],
+            "ids_des_lots": _ids_des_lots(project),
+            # lue avant la fermeture de la session : le générateur ne reçoit jamais le nom du compte
+            "raison_sociale": raison_sociale_de(org, db),
+        },
+    }
+
+
+def _ouvrages_du_contexte(ctx: dict) -> str | None:
+    """Les ouvrages du lot, lus sans IA dans la DPGF (à appeler hors session, dans le thread du job)."""
+    from services.dpgf_ouvrages import texte_ouvrages_du_lot
+    from services.file_storage import UPLOADS_ROOT as _uploads_root
+    snap = ctx["snap"]
+    return texte_ouvrages_du_lot(
+        ctx["tous_les_docs"], snap["selected_lot"], _uploads_root, snap["selected_lot_name"],
+        snap["ids_des_lots"])
+
+
+def _arguments_generateur(ctx: dict, ouvrages_dpgf: str | None) -> dict:
+    """Les arguments du préfixe du mémoire, communs à `generate` et `refaire_section`."""
+    snap = ctx["snap"]
+    return dict(
+        organization=ctx["organization"],
+        raison_sociale=snap["raison_sociale"],
+        memoire_config=ctx["memoire_config"],
+        project_name=snap["name"],
+        maitre_ouvrage=snap["maitre_ouvrage"],
+        selected_lot_name=snap["selected_lot_name"],
+        all_docs=ctx["docs"],
+        compliance_items=ctx["compliance_items"],
+        references=ctx["references"],
+        criteres_jugement=snap["criteres_jugement"],
+        reference_template_text=ctx["reference_template_text"],
+        reglementaire_block=ctx["reglementaire_block"],
+        ouvrages_dpgf=ouvrages_dpgf,
+        selected_lot=snap["selected_lot"],
+        lots_detectes=snap["lots_detectes"],
     )
 
 
@@ -273,95 +389,23 @@ def _run_memoire_job(
     rechargé par id (jamais d'objets ORM partagés entre threads)."""
     db = SessionLocal()
     try:
-        project = db.query(Project).filter(Project.id == project_id).first()
-        org = db.query(Organization).filter(Organization.id == org_id).first()
-        memoire_cfg = db.query(MemoireConfig).filter(
-            MemoireConfig.organization_id == org_id).first()
-        all_docs = db.query(ProjectDocument).filter(
-            ProjectDocument.project_id == project_id).all()
-        docs = get_documents_for_lot(all_docs, project.selected_lot, _ids_des_lots(project))
-        refs = db.query(Reference).filter(
-            Reference.organization_id == org_id,
-            Reference.is_reference == True,
-            Reference.deleted_at.is_(None),
-        ).all()
-        # C9a — sélection du pre-flight : si fournie, seules ces références
-        # partent au générateur (ids étrangers ignorés par le scope org).
-        if reference_ids is not None:
-            wanted = set(reference_ids)
-            refs = [r for r in refs if r.id in wanted]
-        # Tranche A (bloc 3) : toutes les exigences du lot choisi (communes +
-        # propres au lot), pas celles des autres lots ; le générateur les range.
-        from services.exigences import exigences_pour_memoire
-        compliance_items = exigences_pour_memoire(db, project)
-
-        # Check for reference template (imported mémoire)
-        ref_template = db.query(MemoireTemplate).filter(
-            MemoireTemplate.organization_id == org_id,
-        ).first()
-        ref_template_text = None
-        if ref_template and ref_template.content_json:
-            cj = ref_template.content_json
-            parts = [cj.get("preambule", "")]
-            for section in ("partie_a", "partie_b", "partie_c"):
-                sec = cj.get(section, {})
-                if isinstance(sec, dict):
-                    parts.extend(sec.values())
-            ref_template_text = "\n\n".join(str(p) for p in parts if p)
-
-        # Lot 7 T3 — enrichissement réglementaire, UNIQUEMENT si RAG_ENRICHMENT
-        # (env, défaut false). Flag off → chemin strictement inchangé (testé).
-        reglementaire_block = None
-        from config import get_settings as _gs
-        if _gs().RAG_ENRICHMENT:
-            from services.rag.enrichment import build_reglementaire_block
-            reglementaire_block = build_reglementaire_block(db, compliance_items)
-
+        ctx = _lire_contexte_generation(db, project_id, org_id, reference_ids)
         # B5 — tout est lu : on RENDS la connexion au pool avant le travail long (lecture du
         # tableur DPGF, puis génération, plusieurs minutes). Les objets chargés restent
         # lisibles (détachés, aucun accès paresseux) ; on rouvre une session courte pour écrire.
-        snap = {
-            "name": project.name,
-            "maitre_ouvrage": project.maitre_ouvrage or "",
-            "selected_lot": project.selected_lot,
-            "selected_lot_name": project.selected_lot_name or "",
-            "criteres_jugement": project.criteres_jugement or [],
-            "lots_detectes": project.lots_detectes or [],
-            "ids_des_lots": _ids_des_lots(project),
-            # lue avant la fermeture de la session : le générateur ne reçoit jamais le nom du compte
-            "raison_sociale": raison_sociale_de(org, db),
-        }
         db.close()
 
         # B2 — la DPGF n'entre au mémoire que par la liste de ses ouvrages (lue sans
         # IA, ici dans le thread du job) : jamais son tableur brut ni ses prix.
-        from services.dpgf_ouvrages import texte_ouvrages_du_lot
-        from services.file_storage import UPLOADS_ROOT as _uploads_root
-        ouvrages_dpgf = texte_ouvrages_du_lot(
-            all_docs, snap["selected_lot"], _uploads_root, snap["selected_lot_name"],
-            snap["ids_des_lots"])
+        ouvrages_dpgf = _ouvrages_du_contexte(ctx)
 
         pipeline_tracker.start_step(project_id, "generating")
         generator = MemoireGenerator()
         content = asyncio.run(generator.generate(
-            organization=org,
-            raison_sociale=snap["raison_sociale"],
-            memoire_config=memoire_cfg,
-            project_name=snap["name"],
-            maitre_ouvrage=snap["maitre_ouvrage"],
-            selected_lot_name=snap["selected_lot_name"],
-            all_docs=docs,
-            compliance_items=compliance_items,
-            references=refs,
+            **_arguments_generateur(ctx, ouvrages_dpgf),
             variables=variables,
-            criteres_jugement=snap["criteres_jugement"],
-            reference_template_text=ref_template_text,
             project_id=project_id,
             profile_overrides=profile_overrides,
-            reglementaire_block=reglementaire_block,
-            ouvrages_dpgf=ouvrages_dpgf,
-            selected_lot=snap["selected_lot"],
-            lots_detectes=snap["lots_detectes"],
         ))
         # Contenu 100 % placeholders = panne du service IA en plein run
         # (constat audit : crédit épuisé → 26/26 sections vides quand même
@@ -444,6 +488,205 @@ def _run_memoire_job(
                 db.commit()
         except Exception:
             logger.exception("Impossible d'enregistrer l'échec mémoire %s", project_id)
+    finally:
+        db.close()
+
+
+def _section_connue(part: str, cle: str) -> None:
+    """404 si ``part.cle`` n'est pas une des 25 sous-sections rédigées du mémoire (jamais le préambule)."""
+    from services.ai.memoire_generator import _MEMOIRE_SEGMENTS
+    sous = dict(_MEMOIRE_SEGMENTS).get(part)
+    if not sous or cle not in sous:
+        raise HTTPException(status_code=404, detail="Partie du mémoire inconnue")
+
+
+CLE_ETATS = "_etat_sections"   # {"partie_b.dechets": "a_refaire"} : seules les parties « À refaire » y figurent
+
+
+@router.put("/{project_id}/memoire/sections/{part}/{cle}/etat")
+def definir_etat_section(
+    project_id: str,
+    part: str,
+    cle: str,
+    payload: EtatSectionRequest,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """E3 — « Rédigée » (par défaut) ou « À refaire » pour une partie du mémoire. Un seul état, aucun autre champ.
+
+    Rangé dans le JSON du mémoire, sous une clé à part que l'export ignore : pas de migration."""
+    import copy
+    _section_connue(part, cle)
+    _get_project_or_404(project_id, user.organization_id, db)
+    memoire = (db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project_id)
+               .with_for_update().first())
+    if not memoire:
+        raise HTTPException(status_code=409, detail="Aucun mémoire : générez d'abord le mémoire.")
+    contenu = copy.deepcopy(memoire.content_json)
+    etats = dict(contenu.get(CLE_ETATS) or {})
+    if payload.etat == "a_refaire":
+        etats[f"{part}.{cle}"] = "a_refaire"
+    else:
+        etats.pop(f"{part}.{cle}", None)
+    if etats:
+        contenu[CLE_ETATS] = etats
+    else:
+        contenu.pop(CLE_ETATS, None)
+    memoire.content_json = contenu
+    db.commit()
+    return {"etats": etats}
+
+
+REFAIRE_DETAIL = "refaire:"   # processing_detail pendant un « Refaire » : l'écran sait de quoi parle l'attente
+
+
+@router.get("/{project_id}/memoire/sections/{part}/{cle}/refaire/estimation")
+def estimation_refaire_section(
+    project_id: str,
+    part: str,
+    cle: str,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """E2 — coût estimé de « Refaire cette partie », affiché avant de cliquer (déterministe, aucun appel IA)."""
+    from services.ai.memoire_generator import modele_du_segment
+    from services.memoire_refaire import estimer
+
+    _section_connue(part, cle)
+    _get_project_or_404(project_id, user.organization_id, db)
+    memoire = db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project_id).first()
+    if not memoire:
+        raise HTTPException(status_code=404, detail="Mémoire non généré")
+    return estimer(memoire.content_json, part, cle, modele_du_segment(part))
+
+
+@router.post("/{project_id}/memoire/sections/{part}/{cle}/refaire")
+@limiter.limit("3/minute")
+async def refaire_section_memoire(
+    request: Request,
+    project_id: str,
+    part: str,
+    cle: str,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """E2 — « Refaire cette partie » : régénère UNE sous-section en TÂCHE DE FOND, le reste du mémoire intact.
+
+    Même mécanisme détaché que la génération (POST -> « started », suivi par /processing-status et le flux SSE).
+    Ne décompte AUCUNE unité de quota : le mémoire de ce lot est déjà décompté. Un seul « Refaire » (ou une seule
+    génération) à la fois par projet."""
+    _section_connue(part, cle)
+    project = _get_project_or_404(project_id, user.organization_id, db)
+    ensure_relaunchable(project)
+    memoire = db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project_id).first()
+    if not memoire:
+        raise HTTPException(status_code=409, detail="Aucun mémoire à retoucher : générez d'abord le mémoire.")
+
+    # Même réservation atomique que la génération : deux Refaire (ou un Refaire pendant une génération) ne
+    # peuvent pas courir ensemble sur le même mémoire.
+    claimed = db.execute(
+        _sql_update(Project)
+        .where(
+            Project.id == project_id,
+            or_(Project.processing_status.is_(None),
+                Project.processing_status != "generating"),
+        )
+        .values(processing_status="generating", processing_detail=f"{REFAIRE_DETAIL}{part}.{cle}")
+    ).rowcount
+    if not claimed:
+        raise HTTPException(status_code=409, detail="Une rédaction est déjà en cours pour ce projet.")
+
+    from services.ai.api_preflight import AIServiceUnavailable, ensure_ai_service_available
+    try:
+        await asyncio.to_thread(ensure_ai_service_available)
+    except AIServiceUnavailable:
+        db.rollback()
+        raise HTTPException(
+            status_code=503,
+            detail="Service IA momentanément indisponible — réessayez dans quelques minutes.",
+        )
+    db.commit()
+
+    pipeline_tracker.start_pipeline(project_id, "memoire")
+    pipeline_tracker.start_step(project_id, "preparing")
+    pipeline_tracker.complete_step(project_id, "preparing")
+
+    threading.Thread(
+        target=_run_refaire_job,
+        args=(project_id, user.organization_id, user.id, part, cle),
+        daemon=True,
+        name=f"synorix-refaire-{project_id[:12]}",
+    ).start()
+    return {"status": "started", "project_id": project_id, "part": part, "cle": cle}
+
+
+MSG_REFAIRE_ECHEC = "Cette partie n'a pas pu être refaite. Le mémoire est resté tel quel : réessayez dans un instant."
+
+
+def _run_refaire_job(project_id: str, org_id: str, user_id: str, part: str, cle: str) -> None:
+    """Job « Refaire cette partie » — session propre, contexte rechargé par id comme la génération.
+
+    Seule la sous-section visée est réécrite, à partir du contenu LU AU MOMENT D'ÉCRIRE (une retouche faite dans
+    l'éditeur pendant l'attente sur une autre partie n'est pas écrasée). Échec : le mémoire n'est pas touché."""
+    import copy
+    db = SessionLocal()
+    try:
+        memoire = db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project_id).first()
+        stockees = dict(memoire.variables or {})
+        reference_ids = stockees.pop("reference_ids", None)
+        profile_overrides = memoire.profile_overrides or None
+        ctx = _lire_contexte_generation(db, project_id, org_id, reference_ids)
+        db.close()
+
+        ouvrages_dpgf = _ouvrages_du_contexte(ctx)
+        pipeline_tracker.start_step(project_id, "generating")
+        texte, _meta = asyncio.run(MemoireGenerator().refaire_section(
+            part, cle,
+            **_arguments_generateur(ctx, ouvrages_dpgf),
+            variables=stockees,
+            project_id=project_id,
+            profile_overrides=profile_overrides,
+        ))
+        pipeline_tracker.complete_step(project_id, "generating")
+        pipeline_tracker.start_step(project_id, "finalizing")
+
+        memoire = (db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project_id)
+                   .with_for_update().first())
+        contenu = copy.deepcopy(memoire.content_json)
+        contenu.setdefault(part, {})[cle] = texte
+        # E3 — une partie refaite redevient « Rédigée » ; les autres gardent l'état choisi par le patron.
+        etats = dict(contenu.get(CLE_ETATS) or {})
+        etats.pop(f"{part}.{cle}", None)
+        if etats:
+            contenu[CLE_ETATS] = etats
+        else:
+            contenu.pop(CLE_ETATS, None)
+        memoire.content_json = contenu
+        project = db.query(Project).filter(Project.id == project_id).first()
+        project.processing_status = "ready"
+        project.processing_detail = ""
+        db.commit()
+        pipeline_tracker.complete_pipeline(project_id)
+
+        job_user = db.query(User).filter(User.id == user_id).first()
+        if job_user is not None:
+            log_action(
+                db, job_user, "memoire.refaire_section",
+                target_type="project", target_id=project_id, extra={"part": part, "cle": cle},
+            )
+    except Exception as e:
+        logger.error("Erreur « Refaire cette partie » projet %s (%s.%s): %s", project_id, part, cle, e, exc_info=True)
+        db.rollback()
+        pipeline_tracker.fail_pipeline(project_id, MSG_REFAIRE_ECHEC)
+        try:
+            p = db.query(Project).filter(Project.id == project_id).first()
+            if p is not None:
+                # Le mémoire n'a pas bougé : le projet reste utilisable, aucun statut d'erreur à relancer.
+                p.processing_status = "ready"
+                p.processing_detail = ""
+                db.commit()
+        except Exception:
+            logger.exception("Impossible de rendre le projet %s après l'échec d'un « Refaire »", project_id)
     finally:
         db.close()
 
@@ -679,7 +922,15 @@ def update_memoire(
     memoire = db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project_id).first()
     if not memoire:
         raise HTTPException(status_code=404, detail="Mémoire introuvable")
-    memoire.content_json = payload.content_json
+    # E3 — l'état des parties (« À refaire ») est choisi par le patron via sa propre route : l'enregistrement du
+    # texte depuis l'éditeur ne le modifie jamais.
+    nouveau = dict(payload.content_json)
+    etats = (memoire.content_json or {}).get(CLE_ETATS)
+    if etats:
+        nouveau[CLE_ETATS] = etats
+    else:
+        nouveau.pop(CLE_ETATS, None)
+    memoire.content_json = nouveau
     db.commit()
     db.refresh(memoire)
     return memoire

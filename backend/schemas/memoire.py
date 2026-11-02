@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, field_validator, model_validator
 from services.visuels.limites import GANTT_DUREE_MAX, GANTT_MAX_PHASES, GANTT_TOTAL_MAX
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Literal
 from datetime import datetime
 
 # Champs de profil éditables au pre-flight (C9a) — alignés sur les clés du
@@ -82,6 +82,12 @@ class MemoireUpdateRequest(BaseModel):
             if not isinstance(bloc, dict) or not all(isinstance(t, str) for t in bloc.values()):
                 raise ValueError(f"« {partie} » doit contenir des textes.")
         return v
+
+
+class EtatSectionRequest(BaseModel):
+    """E3 — l'état d'une partie, choisi par le patron : « Rédigée » ou « À refaire ». Rien d'autre."""
+    model_config = {"extra": "forbid"}
+    etat: Literal["redigee", "a_refaire"]
 
 
 class PassageRewriteRequest(BaseModel):

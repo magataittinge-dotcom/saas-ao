@@ -3,11 +3,7 @@ import { useState, useRef, useMemo, useCallback, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, Link } from 'react-router-dom'
-import {
-  Save, CheckCircle2, ChevronDown,
-  Pencil, X,
-  ChevronRight,
-} from 'lucide-react'
+import { Save, CheckCircle2, Pencil, X } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import axios from 'axios'
 import { api } from '@/services/api'
@@ -28,8 +24,15 @@ import {
 } from '@/lib/memoireControles'
 import { depuisMarkdown, versMarkdown } from '@/lib/memoireMarkdown'
 import {
-  ANNEXES_MEMOIRE, SECTIONS_MEMOIRE, sommaireMemoire, type EntreeSommaire, type SectionMemoire,
+  ANNEXES_MEMOIRE, SECTIONS_MEMOIRE, sommaireMemoire, type SectionMemoire,
 } from '@/lib/memoireSections'
+import SommaireMemoire from '@/components/memoire/SommaireMemoire'
+import ConfirmationRefaire, { BoutonRefaire, type CibleRefaire } from '@/components/memoire/RefaireSection'
+import EtatPartieChoix from '@/components/memoire/EtatPartie'
+import { etatDe, etatsDuMemoire, type EtatPartie, type EtatsSections } from '@/lib/memoireEtats'
+import { useSourceChamp } from '@/hooks/useSourceChamp'
+import type { RattachementCriteres } from '@/lib/memoireCriteres'
+import type { CriticalFieldsPayload } from '@/components/project/CriticalBanner'
 
 const MEMOIRE_GEN_STEPS: StepDescriptor[] = [
   { key: 'preparing',  label: 'Préparation du contexte',         estimated_s: 3 },
@@ -227,96 +230,36 @@ function FullscreenEditor({
   )
 }
 
-// ─── TOC Sidebar ─────────────────────────────────────────────────────────────
-
-function TocSidebar({
-  entrees, activeSection, onNavigate,
-}: {
-  entrees: EntreeSommaire[]
-  activeSection: string
-  onNavigate: (id: string) => void
-}) {
-  const [fermees, setFermees] = useState<Set<string>>(new Set())
-
-  const basculer = (id: string) => {
-    setFermees((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id); else next.add(id)
-      return next
-    })
-  }
-
-  return (
-    <div
-      className="glass-card rounded-lg p-4 sticky top-4"
-      style={{ border: '1px solid var(--border-1)', boxShadow: 'var(--shadow-card)', width: 220 }}
-    >
-      <p className="microlabel mb-3">Sommaire</p>
-
-      <nav aria-label="Sommaire du mémoire" className="space-y-1">
-        {entrees.map((section) => {
-          const ouverte = !fermees.has(section.id)
-          const active = activeSection === section.id
-          return (
-            <div key={section.id}>
-              <button
-                onClick={() => {
-                  if (section.enfants.length > 0) basculer(section.id)
-                  onNavigate(section.id)
-                }}
-                aria-expanded={section.enfants.length > 0 ? ouverte : undefined}
-                className="w-full flex items-center gap-1.5 py-1.5 px-2 rounded text-left transition-colors hover:bg-ds-bg-2"
-                style={{ borderLeft: active ? '2px solid var(--text-1)' : '2px solid transparent' }}
-              >
-                {section.enfants.length > 0 ? (
-                  ouverte
-                    ? <ChevronDown size={12} style={{ color: 'var(--text-3)' }} />
-                    : <ChevronRight size={12} style={{ color: 'var(--text-3)' }} />
-                ) : <span style={{ width: 12 }} />}
-                <span className="text-sm font-semibold" style={{ color: active ? 'var(--text-1)' : 'var(--text-1)', fontFamily: F }}>
-                  {section.titre}
-                </span>
-              </button>
-              {section.enfants.length > 0 && ouverte && (
-                <div className="ml-2 space-y-0.5">
-                  {section.enfants.map((enfant) => {
-                    const enfantActif = activeSection === enfant.id
-                    return (
-                      <button
-                        key={enfant.id}
-                        onClick={() => onNavigate(enfant.id)}
-                        className="w-full text-left py-1 px-4 text-xs transition-colors hover:text-fg"
-                        style={{
-                          color: enfantActif ? 'var(--text-1)' : 'var(--text-3)',
-                          fontWeight: enfantActif ? 600 : 400,
-                          borderLeft: enfantActif ? '2px solid var(--text-1)' : '2px solid transparent',
-                          fontFamily: F,
-                        }}
-                      >
-                        {enfant.titre}
-                      </button>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </nav>
-    </div>
-  )
-}
-
 // ─── Document View (center column — "Word page" style) ───────────────────────
 
 
 export function DocumentView({
-  content, project, docRef,
+  content, project, docRef, onRefaire, refaireDesactive = false, etats, onEtat,
 }: {
   content: MemoireContent
   project: Project
   docRef: React.MutableRefObject<HTMLDivElement | null>
+  /** E2 — « Refaire cette partie » : absent, aucun bouton (aperçus, tests). */
+  onRefaire?: (cible: CibleRefaire) => void
+  refaireDesactive?: boolean
+  /** E3 — états « À refaire » choisis par le patron (absent = tout « Rédigée ») et le moyen de les changer. */
+  etats?: EtatsSections
+  onEtat?: (cible: { part: string; cle: string }, etat: EtatPartie) => void
 }) {
+  const entete = (part: string, cle: string, label: string) => (
+    <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+      <SectionHeading>{label}</SectionHeading>
+      <div className="flex flex-wrap items-center gap-2">
+        {onEtat && (
+          <EtatPartieChoix titre={label} etat={etatDe(etats, part, cle)} desactive={refaireDesactive}
+            onChange={(e) => onEtat({ part, cle }, e)} />
+        )}
+        {onRefaire && (
+          <BoutonRefaire titre={label} desactive={refaireDesactive} onClick={() => onRefaire({ part, cle, titre: label })} />
+        )}
+      </div>
+    </div>
+  )
   const a = content.partie_a as Record<string, string>
   const b = content.partie_b as Record<string, string>
   const c = content.partie_c as Record<string, string>
@@ -364,7 +307,7 @@ export function DocumentView({
           {partAItems.map(([key, label]) =>
             a?.[key] ? (
               <div key={key} id={`sec-${key}`} className="mt-6">
-                <SectionHeading>{label}</SectionHeading>
+                {entete('partie_a', key, label)}
                 <MdContent text={a[key]} />
               </div>
             ) : null,
@@ -377,7 +320,7 @@ export function DocumentView({
           {partBItems.map(([key, label]) =>
             b?.[key] ? (
               <div key={key} id={`sec-${key}`} className="mt-6">
-                <SectionHeading>{label}</SectionHeading>
+                {entete('partie_b', key, label)}
                 <MdContent text={b[key]} />
               </div>
             ) : null,
@@ -390,7 +333,7 @@ export function DocumentView({
           {partCItems.map(([key, label]) =>
             c?.[key] ? (
               <div key={key} id={`sec-${key}`} className="mt-6">
-                <SectionHeading>{label}</SectionHeading>
+                {entete('partie_c', key, label)}
                 <MdContent text={c[key]} />
               </div>
             ) : null,
@@ -402,7 +345,7 @@ export function DocumentView({
           <PartHeading>ANNEXES</PartHeading>
           {ANNEXES_MEMOIRE.map(({ cle, titre }) => a?.[cle] ? (
             <div key={cle} id={`annexe-${cle}`} className="mt-6">
-              <SectionHeading>{titre}</SectionHeading>
+              <div className="mb-2"><SectionHeading>{titre}</SectionHeading></div>
               <MdContent text={a[cle]} />
             </div>
           ) : null)}
@@ -431,7 +374,7 @@ function PartHeading({ children }: { children: React.ReactNode }) {
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-1)', fontFamily: F }}>
+    <h3 className="text-lg font-semibold" style={{ color: 'var(--text-1)', fontFamily: F }}>
       {children}
     </h3>
   )
@@ -493,6 +436,24 @@ export default function StepMemoire({ project }: Props) {
       return data
     },
   })
+
+  // E1 — sous-critères du RC rattachés aux parties (calcul serveur, sans IA) ; la clé commence par celle du
+  // mémoire : toute modification enregistrée la relit.
+  const { data: rattachement } = useQuery({
+    queryKey: ['memoire', project.id, 'criteres'],
+    queryFn: async () => (await api.get<RattachementCriteres>(`/projects/${project.id}/memoire/criteres`)).data,
+    enabled: !!memoire,
+    retry: false,
+  })
+  // Source des critères dans le règlement (même requête que le bandeau de l'analyse) : « Voir dans le dossier ».
+  const { data: champsCritiques } = useQuery({
+    queryKey: ['critical-fields', project.id],
+    queryFn: async () => (await api.get<CriticalFieldsPayload>(`/projects/${project.id}/critical-fields`)).data,
+    enabled: !!memoire,
+    retry: false,
+  })
+  const sourceCriteres = champsCritiques?.fields.criteres?.source ?? null
+  const source = useSourceChamp(project.id)
 
   const displayContent: MemoireContent | null = editedContent ?? memoire?.content_json ?? null
   // 1.9 — sommaire tiré des vrais titres (chaque entrée mène à la section de même nom)
@@ -574,9 +535,40 @@ export default function StepMemoire({ project }: Props) {
     },
   })
 
+  // E3 — « Rédigée » / « À refaire » : le choix du patron, tenu par le serveur (clé à part du JSON du mémoire).
+  const etats = etatsDuMemoire(memoire?.content_json)
+  const { mutate: definirEtat } = useMutation({
+    mutationFn: async (c: { part: string; cle: string; etat: EtatPartie }) =>
+      (await api.put<{ etats: EtatsSections }>(`/projects/${project.id}/memoire/sections/${c.part}/${c.cle}/etat`, { etat: c.etat })).data,
+    onSuccess: (data) => {
+      queryClient.setQueryData<MemoireTechnique | null | undefined>(['memoire', project.id], (ancien) =>
+        ancien ? { ...ancien, content_json: { ...ancien.content_json, _etat_sections: data.etats } } : ancien)
+    },
+    onError: () => setGenError('Ce choix n’a pas pu être enregistré. Réessayez dans un instant.'),
+  })
+
+  // E2 — « Refaire cette partie » : confirmation (avec le coût estimé), puis même suivi que la génération.
+  const [aRefaire, setARefaire] = useState<CibleRefaire | null>(null)
+  const { mutate: refaire, isPending: envoiRefaire } = useMutation({
+    mutationFn: (c: CibleRefaire) =>
+      api.post<{ status: string }>(`/projects/${project.id}/memoire/sections/${c.part}/${c.cle}/refaire`, {}, { timeout: 60_000 }),
+    onSuccess: () => {
+      setGenError(null)
+      setARefaire(null)
+      setRunning(true)
+      queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
+    },
+    onError: (err) => {
+      setARefaire(null)
+      const msg = axios.isAxiosError(err) ? err.response?.data?.detail : null
+      setGenError(typeof msg === 'string' ? msg : 'Cette partie n’a pas pu être lancée. Réessayez dans un instant.')
+    },
+  })
+
   // Le run est détaché : l'état vivant est porté par processing_status
   // (reprise après reload) + le flux SSE (progression temps réel).
   const isRunning = isGenerating || running || project.processing_status === 'generating'
+  const refaitUnePartie = envoiRefaire || (project.processing_detail ?? '').startsWith('refaire:')
 
   const memoireSse = useProgressStream(project.id, {
     enabled: isRunning,
@@ -749,7 +741,7 @@ export default function StepMemoire({ project }: Props) {
       {isRunning && (
         <ProgressDisplay
           variant="modal"
-          title="Synorix IA rédige votre mémoire"
+          title={refaitUnePartie ? 'Synorix IA refait cette partie' : 'Synorix IA rédige votre mémoire'}
           steps={MEMOIRE_GEN_STEPS}
           currentStep={memoireSse.step}
           progress={memoireSse.progress}
@@ -757,6 +749,13 @@ export default function StepMemoire({ project }: Props) {
           phase={memoireSse.phase}
           avis={avisAttente}
           onArrierePlan={() => navigate('/dashboard')}
+        />
+      )}
+
+      {aRefaire && (
+        <ConfirmationRefaire
+          projectId={project.id} cible={aRefaire} enCours={envoiRefaire}
+          onConfirmer={() => refaire(aRefaire)} onAnnuler={() => setARefaire(null)}
         />
       )}
 
@@ -819,16 +818,25 @@ export default function StepMemoire({ project }: Props) {
 
             {/* LEFT — Table of Contents */}
             <div className="shrink-0 hidden xl:block">
-              <TocSidebar entrees={sommaire} activeSection={activeSection} onNavigate={handleTocNavigate} />
+              <SommaireMemoire
+                entrees={sommaire} activeSection={activeSection} onNavigate={handleTocNavigate}
+                criteres={rattachement} sourceCriteres={sourceCriteres} onOpenSource={source.ouvrir} etats={etats}
+              />
             </div>
 
-            {/* CENTER — Document */}
+            {/* CENTER — Document (sous 1280 px le sommaire se replie au-dessus) */}
             <div className="flex-1 min-w-0">
-              <DocumentView content={displayContent} project={project} docRef={docRef} />
+              <div className="xl:hidden mb-3">
+                <SommaireMemoire
+                  repliable entrees={sommaire} activeSection={activeSection} onNavigate={handleTocNavigate}
+                  criteres={rattachement} sourceCriteres={sourceCriteres} onOpenSource={source.ouvrir} etats={etats}
+                />
+              </div>
+              <DocumentView content={displayContent} project={project} docRef={docRef} onRefaire={setARefaire} refaireDesactive={isRunning} etats={etats} onEtat={(c, e) => definirEtat({ ...c, etat: e })} />
             </div>
 
-            {/* RIGHT — Assistant Synorix */}
-            <div className="shrink-0 hidden lg:block" style={{ width: 280 }}>
+            {/* RIGHT — Assistant Synorix (cède la place au dossier quand « Voir dans le dossier » est ouvert) */}
+            <div className={`shrink-0 hidden${source.ouvert ? '' : ' lg:block'}`} style={{ width: 280 }}>
               <div className="sticky top-4 space-y-3">
 
                 {/* Header */}
@@ -906,6 +914,7 @@ export default function StepMemoire({ project }: Props) {
                 </div>
               </div>
             </div>
+            {source.panneau}
           </div>
         )}
       </div>
