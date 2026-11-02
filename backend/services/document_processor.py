@@ -29,6 +29,11 @@ _WARN_UNREADABLE = (
     "Document non lisible (fichier corrompu ou format non reconnu) — "
     "texte non extrait de ce fichier"
 )
+_WARN_TABLEUR_ILLISIBLE = (
+    "Tableur non lisible en l'état (classeur abîmé, protégé ou démesuré) — "
+    "ouvrez-le dans votre tableur, enregistrez-le au format .xlsx puis redéposez-le"
+)
+_EXTENSIONS_TABLEUR = (".xlsx", ".xlsm", ".xls", ".ods")
 _WARN_DOC = (
     "Format .doc (ancien Word) non pris en charge — texte non extrait : "
     "convertissez ce fichier en PDF ou DOCX"
@@ -99,17 +104,19 @@ class DocumentProcessor:
             return "", None, _WARN_DOC
 
         # Types jamais porteurs de texte (images, plans…) → pas de warning.
-        if not any(lower.endswith(ext) for ext in (".pdf", ".docx", ".xlsx", ".xls", ".txt", ".ods")):
+        if not any(lower.endswith(ext) for ext in (".pdf", ".docx", ".txt") + _EXTENSIONS_TABLEUR):
             return "", None, None
 
         try:
-            text, pages, illisibles = self._do_extract(content, lower, max_pages, on_page, on_pages)
+            text, pages, illisibles, avertissement = self._do_extract(
+                content, lower, max_pages, on_page, on_pages)
         except PdfIllisible as e:
             logger.warning(f"Extraction failed for {filename}: {e}")
             return "", None, _WARN_PASSWORD if e.code == ERREUR_MOT_DE_PASSE else _WARN_UNREADABLE
         except Exception as e:
             logger.warning(f"Extraction failed for {filename}: {e}")
-            return "", None, _WARN_UNREADABLE
+            return "", None, (_WARN_TABLEUR_ILLISIBLE if lower.endswith(_EXTENSIONS_TABLEUR)
+                              else _WARN_UNREADABLE)
 
         if lower.endswith(".pdf"):
             # Un PDF sans aucune page n'a rien livré : non lisible (plan H §6, n° 1 —
@@ -123,23 +130,27 @@ class DocumentProcessor:
             if illisibles:
                 return text, pages, _warn_pages_illisibles(illisibles)
 
-        return text, pages, None
+        return text, pages, avertissement
 
     def _do_extract(
         self, content: Source, lower: str, max_pages: Optional[int], on_page=None, on_pages=None
-    ) -> Tuple[str, Optional[int], Tuple[int, ...]]:
-        """(texte, pages, numéros des pages illisibles)."""
+    ) -> Tuple[str, Optional[int], Tuple[int, ...], Optional[str]]:
+        """(texte, pages, numéros des pages illisibles, avertissement d'un tableur)."""
         if lower.endswith(".pdf"):
-            return self._extract_pdf(content, max_pages, on_page, on_pages)
+            texte, pages, illisibles = self._extract_pdf(content, max_pages, on_page, on_pages)
+            return texte, pages, illisibles, None
         elif lower.endswith(".docx"):
-            return texte_docx(content), None, ()
+            return texte_docx(content), None, (), None
         elif lower.endswith(".xls"):
-            return self._extract_xls_biff(content), None, ()
-        elif lower.endswith((".xlsx", ".ods")):
-            return self._extract_xlsx(content), None, ()
+            return self._extract_xls_biff(content), None, (), None
+        elif lower.endswith((".xlsx", ".xlsm")):
+            return self._extract_xlsx(content), None, (), None
+        elif lower.endswith(".ods"):
+            texte, avertissement = self._extract_ods(content)
+            return texte, None, (), avertissement
         elif lower.endswith(".txt"):
-            return _octets(content).decode("utf-8", errors="replace"), None, ()
-        return "", None, ()
+            return _octets(content).decode("utf-8", errors="replace"), None, (), None
+        return "", None, (), None
 
     def _extract_pdf(
         self, content: Source, max_pages: Optional[int] = None, on_page=None, on_pages=None
@@ -181,6 +192,28 @@ class DocumentProcessor:
             return "\n".join(lines)
         except Exception:
             return self._extract_xlsx(content)
+
+    def _extract_ods(self, content: Source) -> Tuple[str, Optional[str]]:
+        """Tableur OpenDocument (.ods) lu comme un .xlsx : une ligne = les cellules non vides,
+        séparées par une tabulation, feuilles à la suite. Sans odfpy (services/lecture_ods)."""
+        from services.lecture_ods import _MAX_LIGNES_ODS, onglets_ods, texte_cellule
+
+        controler_tableur(content)   # bombe de décompression : jamais ouverte
+        fichier = io.BytesIO(content) if isinstance(content, (bytes, bytearray)) else str(content)
+        lines: List[str] = []
+        coupe = False
+        for _nom, rangees in onglets_ods(fichier):
+            lues = 0
+            for row in rangees:
+                lues += 1
+                row_text = "\t".join(texte_cellule(c) for c in row if c not in (None, ""))
+                if row_text.strip():
+                    lines.append(row_text)
+            coupe = coupe or lues >= _MAX_LIGNES_ODS
+        avertissement = (
+            f"Tableur très long : les {_MAX_LIGNES_ODS:,} premières lignes de chaque feuille sont lues"
+            .replace(",", " ") if coupe else None)
+        return "\n".join(lines), avertissement
 
     def _extract_xlsx(self, content: Source) -> str:
         import openpyxl

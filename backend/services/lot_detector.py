@@ -313,6 +313,8 @@ def _detect_tranches_in_excel(file_path: str, wb=None) -> List[str]:
     """
     path = Path(file_path)
     suffix = path.suffix.lower()
+    if suffix == ".xlsm":     # classeur avec macros : même format qu'un .xlsx
+        suffix = ".xlsx"
     tranches: List[str] = []
 
     try:
@@ -383,6 +385,8 @@ def _scan_excel_cell_content_for_lots(file_path: str, sheet_names: List[str], wb
     `wb` : classeur déjà ouvert par l'appelant (.xlsx/.xls) — évite de le rouvrir."""
     path = Path(file_path)
     suffix = path.suffix.lower()
+    if suffix == ".xlsm":     # classeur avec macros : même format qu'un .xlsx
+        suffix = ".xlsx"
     lots: Dict[str, LotDetection] = {}
 
     try:
@@ -534,6 +538,8 @@ def detect_lots_from_excel(file_path: str) -> List[Dict]:
         return []
 
     suffix = path.suffix.lower()
+    if suffix == ".xlsm":     # classeur avec macros : même format qu'un .xlsx
+        suffix = ".xlsx"
     sheet_names: List[str] = []
     # Classeur ouvert UNE fois et transmis aux scans (avant : 3 ouvertures, soit
     # 3 lectures complètes des chaînes partagées — 44 s sur les 6 DPGF de Gueux).
@@ -1168,7 +1174,7 @@ def detect_all_lots(
     onglets: List[tuple] = []   # (id, nom) des lots lus dans les onglets / cellules
     spreadsheet_docs = [
         d for d in documents
-        if d.file_name.lower().endswith((".xls", ".xlsx", ".ods"))
+        if d.file_name.lower().endswith((".xls", ".xlsx", ".xlsm", ".ods"))
     ]
     excel_total = max(len(spreadsheet_docs), 1)
     if spreadsheet_docs:

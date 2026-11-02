@@ -6,8 +6,9 @@ l'archive (zipfile + lxml.iterparse), ligne par ligne : la mémoire reste borné
 (au plus 64 colonnes et 20 000 lignes par onglet, lignes vides répétées non
 développées).
 
-Utilisé par la liste des ouvrages (dpgf_ouvrages), le contrôle de forme d'une
-DPGF (dpgf_checker) et la détection des lots (lot_detector).
+Utilisé par le texte d'une pièce (document_processor), la liste des ouvrages
+(dpgf_ouvrages), le contrôle de forme d'une DPGF (dpgf_checker), la détection des
+lots (lot_detector) et l'ancre « Voir dans le DCE » (tableur_ancre).
 """
 from __future__ import annotations
 
@@ -27,6 +28,14 @@ def _entier(texte, defaut: int = 1) -> int:
         return max(int(texte), 0)
     except (TypeError, ValueError):
         return defaut
+
+
+def texte_cellule(valeur) -> str:
+    """Le texte d'une cellule de tableur tel qu'il part vers l'analyse : un nombre entier
+    sans « .0 » (un .ods donne 240.0 là où un .xlsx donne 240)."""
+    if isinstance(valeur, float) and valeur.is_integer() and abs(valeur) < 1e15:
+        return str(int(valeur))
+    return str(valeur)
 
 
 def onglets_ods(chemin, lignes_vides_exactes: bool = False) -> Iterator[Tuple[str, Iterator[list]]]:
