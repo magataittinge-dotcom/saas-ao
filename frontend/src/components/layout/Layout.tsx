@@ -17,7 +17,7 @@ import { PorteeSigles } from '@/components/common/Sigle'
 // en-tête, onglets du bas, palette Ctrl K) le suit partout ; les autres écrans restent en nuit
 // (data-theme="dark" sur <main>) jusqu'à leur passage — phase C, un écran à la fois :
 // ajouter ici la route de l'écran dès qu'il ne contient plus de couleur écrite en dur.
-export const PAGES_THEMEES = ['/dashboard', '/projects', '/design', '/projects/new', '/vault', '/company']
+export const PAGES_THEMEES = ['/dashboard', '/projects', '/design', '/projects/new', '/vault', '/company', '/settings', '/settings/billing', '/outils']
 const FICHE_ENTREPRISE = /^\/entreprise\/fiche\/[a-z]+$/ // fiches « Mon entreprise » à télécharger
 export const estThemee = (pathname: string) => PAGES_THEMEES.some((p) => pathname === p) || pathname === '/design' || FICHE_ENTREPRISE.test(pathname) ||
   /^\/projects\/(?!new(\/|$))[^/]+/.test(pathname) // la page d'un AO : /projects/:id/…

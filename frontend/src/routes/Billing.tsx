@@ -9,12 +9,18 @@ import type { Organization } from '@/types'
 import GrilleOffres from '@/components/offres/GrilleOffres'
 import { nomPlan, prixLibelle, trouverOffre } from '@/lib/offres'
 
+// Jetons du système (clair et nuit) : aucune couleur écrite en dur, l'écran suit le thème (C11).
+const BADGE_ACCENT = { color: 'var(--accent-text)', bg: 'var(--accent-tint)', border: 'var(--accent-ring)' }
 const PLAN_BADGES: Record<string, { color: string; bg: string; border: string }> = {
-  essentiel: { color: '#E4E9F2', bg: 'rgba(228,233,242,0.10)',  border: 'rgba(228,233,242,0.25)' },
-  pro:       { color: '#E4E9F2', bg: 'rgba(228,233,242,0.10)',  border: 'rgba(228,233,242,0.25)' },
-  business:  { color: '#F4F6FA', bg: 'rgba(0,0,0,0.45)', border: 'rgba(186,205,234,0.23)' },
-  free:      { color: '#9BA4B5', bg: '#1C222D', border: '#1C222D' },
+  essentiel: BADGE_ACCENT,
+  pro:       BADGE_ACCENT,
+  business:  BADGE_ACCENT,
+  free:      { color: 'var(--text-2)', bg: 'var(--surface-2)', border: 'var(--border-1)' },
 }
+
+const PASTILLE_ICONE = { background: 'var(--surface-2)', border: '1px solid var(--border-1)' } as const
+const ENTETE_CARTE = { borderBottom: '1px solid var(--border-1)', background: 'var(--surface-1)' } as const
+const BANDEAU_ACCENT = { background: 'var(--accent-tint)', border: '1px solid var(--accent-ring)' } as const
 
 export default function Billing() {
   const { organization, setOrganization } = useAuthStore()
@@ -116,7 +122,7 @@ export default function Billing() {
       <div className="flex items-center gap-3">
         <div
           className="w-10 h-10 rounded-xl flex items-center justify-center"
-          style={{ background: 'rgba(228,233,242,0.10)', border: '1px solid rgba(228,233,242,0.18)' }}
+          style={PASTILLE_ICONE}
         >
           <CreditCard size={18} className="text-ds-cyan" />
         </div>
@@ -130,10 +136,7 @@ export default function Billing() {
       {verifying && (
         <div
           className="flex items-center gap-3 px-5 py-4 rounded-2xl animate-fade-in"
-          style={{
-            background: 'rgba(228,233,242,0.08)',
-            border: '1px solid rgba(228,233,242,0.25)',
-          }}
+          style={BANDEAU_ACCENT}
         >
           <Loader2 size={20} className="animate-spin text-ds-cyan" />
           <div>
@@ -147,10 +150,7 @@ export default function Billing() {
       {showSuccess && !verifying && (
         <div
           className="flex items-center gap-3 px-5 py-4 rounded-2xl animate-fade-in"
-          style={{
-            background: 'rgba(228,233,242,0.08)',
-            border: '1px solid rgba(228,233,242,0.25)',
-          }}
+          style={BANDEAU_ACCENT}
         >
           <CheckCircle2 size={20} className="text-ds-cyan" />
           <div>
@@ -170,13 +170,13 @@ export default function Billing() {
       <div className="glass-card overflow-hidden">
         <div
           className="flex items-center gap-3 px-6 py-4"
-          style={{ borderBottom: '1px solid rgba(228,233,242,0.08)', background: 'rgba(228,233,242,0.02)' }}
+          style={ENTETE_CARTE}
         >
           <Sparkles size={15} className="text-ds-cyan" />
           <h2 className="text-sm font-semibold text-ds-text">Mon abonnement</h2>
         </div>
         <div className="px-6 py-5">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-3 mb-2">
                 <span
@@ -186,7 +186,7 @@ export default function Billing() {
                   {nomPlan(plan)}
                 </span>
                 {offreActive && (
-                  <span className="text-2xl font-bold text-ds-text">
+                  <span className="whitespace-nowrap text-2xl font-bold text-ds-text">
                     {prixLibelle(offreActive)}
                     <span className="text-sm font-normal text-ds-text-3">/mois HT</span>
                   </span>
@@ -202,26 +202,11 @@ export default function Billing() {
               <button
                 onClick={handlePortal}
                 disabled={portalLoading}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
-                style={{
-                  background: '#1C222D',
-                  border: '1px solid rgba(186,205,234,.13)',
-                  color: '#9BA4B5',
-                  cursor: 'pointer',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#1C222D'
-                  e.currentTarget.style.color = '#F4F6FA'
-                  e.currentTarget.style.borderColor = '#5C6678'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#1C222D'
-                  e.currentTarget.style.color = '#9BA4B5'
-                  e.currentTarget.style.borderColor = '#1C222D'
-                }}
+                className="flex cursor-pointer items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-fg-2 transition-all duration-200 hover:border-bord-2 hover:text-fg"
+                style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)' }}
               >
                 {portalLoading ? (
-                  <span className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white/70 animate-spin" />
+                  <span className="w-4 h-4 rounded-full border-2 border-fg-3 border-t-fg animate-spin" />
                 ) : (
                   <ExternalLink size={14} />
                 )}
@@ -237,7 +222,7 @@ export default function Billing() {
         <div className="glass-card overflow-hidden">
           <div
             className="flex items-center gap-3 px-6 py-4"
-            style={{ borderBottom: '1px solid rgba(228,233,242,0.08)', background: 'rgba(228,233,242,0.02)' }}
+            style={ENTETE_CARTE}
           >
             <Sparkles size={15} className="text-ds-cyan" />
             <h2 className="text-sm font-semibold text-ds-text">Choisir une offre</h2>
@@ -260,7 +245,7 @@ export default function Billing() {
               )}
             />
             {erreur && (
-              <p role="alert" className="mt-3 text-sm text-center" style={{ color: '#F5C26B' }}>{erreur}</p>
+              <p role="alert" className="mt-3 text-sm text-center" style={{ color: 'var(--warning-fg)' }}>{erreur}</p>
             )}
           </div>
           <div className="text-center px-6 pb-5">
@@ -275,7 +260,7 @@ export default function Billing() {
       <div className="glass-card overflow-hidden">
         <div
           className="flex items-center gap-3 px-6 py-4"
-          style={{ borderBottom: '1px solid rgba(228,233,242,0.08)', background: 'rgba(228,233,242,0.02)' }}
+          style={ENTETE_CARTE}
         >
           <Download size={15} className="text-ds-cyan" />
           <h2 className="text-sm font-semibold text-ds-text">Historique de facturation</h2>

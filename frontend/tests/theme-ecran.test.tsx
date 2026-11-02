@@ -23,8 +23,8 @@ test('sur un écran en nuit forcée, le portail lit « dark »', () => {
 })
 
 test('les écrans pas encore refaits sont en nuit forcée, les écrans refaits suivent le thème global', () => {
-  for (const p of ['/team', '/outils', '/references', '/settings']) assert.equal(estThemee(p), false, p)
-  for (const p of ['/dashboard', '/vault', '/company', '/projects/abc']) assert.equal(estThemee(p), true, p)
+  for (const p of ['/team', '/references']) assert.equal(estThemee(p), false, p)
+  for (const p of ['/dashboard', '/vault', '/company', '/projects/abc', '/settings', '/settings/billing', '/outils']) assert.equal(estThemee(p), true, p)
 })
 
 const PORTAILS: [string, number][] = [
@@ -47,4 +47,15 @@ test('Layout publie le thème de l\'écran dans <main>, autour de l\'écran, et 
   assert.match(code, /<ToastContainer theme=\{themeEcran\} \/>/)
   const toast = sansCommentaires(lire('src/components/common/Toast.tsx'))
   assert.match(toast, /z-\[9999\][^"]*"\s+data-theme=\{theme\}/)
+})
+
+// C11 — Paramètres, Abonnement et Outils suivent le thème : plus aucune couleur écrite en dur (sinon un aplat sombre
+// resterait posé sur un écran clair : texte illisible).
+test('C11 : Paramètres, Abonnement (et sa grille d’offres) et Outils lisent les jetons, sans couleur en dur', async () => {
+  const { lire, sansCommentaires } = await import('./outils/sources')
+  const enDur = ['src/routes/Settings.tsx', 'src/routes/Billing.tsx', 'src/routes/Tools.tsx', 'src/components/offres/GrilleOffres.tsx'].flatMap((f) => {
+    const code = sansCommentaires(lire(f))
+    return [...code.matchAll(/#[0-9A-Fa-f]{6}\b|#[0-9A-Fa-f]{3}\b(?![\w-])|rgba?\(|hsla?\(/g)].map((m) => `${f} : ${m[0]}`)
+  })
+  assert.deepEqual(enDur, [])
 })

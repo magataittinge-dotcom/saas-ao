@@ -141,7 +141,7 @@ function RetenueCalculator() {
         </button>
 
         {showAdvanced && (
-          <div className="grid grid-cols-2 gap-3 rounded-xl p-3" style={{ background: '#1C222D' }}>
+          <div className="grid grid-cols-2 gap-3 rounded-xl p-3" style={{ background: 'var(--surface-1)' }}>
             <Field id="rg-jours" label="Jours de retard">
               <input id="rg-jours" type="number" min={0} className="input-dark"
                 value={joursRetard} onChange={(e) => setJoursRetard(e.target.value)} />
@@ -170,33 +170,33 @@ function RetenueCalculator() {
         </button>
 
         {error && (
-          <p className="text-xs font-medium" style={{ color: '#F58E86' }} role="alert">{error}</p>
+          <p className="text-xs font-medium" style={{ color: 'var(--danger-fg)' }} role="alert">{error}</p>
         )}
       </div>
 
       {result && (
-        <div className="mt-5 pt-5 space-y-4" style={{ borderTop: '1px solid rgba(186,205,234,.13)' }}>
-          <div className="text-center rounded-xl p-4" style={{ background: '#151A23', border: '1px solid rgba(186,205,234,.13)' }}>
+        <div className="mt-5 pt-5 space-y-4" style={{ borderTop: '1px solid var(--border-1)' }}>
+          <div className="text-center rounded-xl p-4" style={{ background: 'var(--surface-0)', border: '1px solid var(--border-1)' }}>
             <p className="text-xs uppercase tracking-wide font-semibold text-ds-text-3">Montant TTC du marché</p>
-            <p className="text-2xl font-bold mt-1" style={{ color: '#F4F6FA', fontFamily: F }}>
+            <p className="text-2xl font-bold mt-1" style={{ color: 'var(--text-1)', fontFamily: F }}>
               {formatMontant(result.montant_ttc)}
             </p>
           </div>
 
-          <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid rgba(186,205,234,.13)' }}>
+          <div className="overflow-x-auto rounded-xl" style={{ border: '1px solid var(--border-1)' }}>
             <table className="w-full text-sm">
-              <thead style={{ background: '#1C222D' }}>
+              <thead style={{ background: 'var(--surface-1)' }}>
                 <tr>
                   {['Poste', 'Montant', 'Base', 'Détail'].map((h) => (
                     <th key={h} className="text-left text-xs font-semibold uppercase tracking-wide px-3 py-2 text-ds-text-2">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y" style={{ borderColor: '#1C222D' }}>
+              <tbody className="divide-y" style={{ borderColor: 'var(--surface-1)' }}>
                 {result.postes.map((p, i) => (
                   <tr key={i}>
                     <td className="px-3 py-2.5 font-medium text-ds-text">{p.poste}</td>
-                    <td className="px-3 py-2.5 font-semibold whitespace-nowrap" style={{ color: '#F4F6FA' }}>{formatMontant(p.montant)}</td>
+                    <td className="px-3 py-2.5 font-semibold whitespace-nowrap" style={{ color: 'var(--text-1)' }}>{formatMontant(p.montant)}</td>
                     <td className="px-3 py-2.5 text-ds-text-3">{p.base}</td>
                     <td className="px-3 py-2.5 text-ds-text-2 text-xs">{p.detail}</td>
                   </tr>
@@ -218,7 +218,7 @@ function RetenueCalculator() {
           ))}
 
           <div className="flex items-center gap-1.5 text-xs text-ds-text-3">
-            <ShieldCheck size={12} style={{ color: '#788295' }} />
+            <ShieldCheck size={12} style={{ color: 'var(--text-3)' }} />
             Calcul indicatif — l'assiette et les plafonds définitifs dépendent des <Sigle code="CCAP" />.
           </div>
         </div>
@@ -232,7 +232,7 @@ export default function Tools() {
   return (
     <div className="max-w-5xl mx-auto space-y-6 animate-fade-in">
       <div className="flex items-center gap-3">
-        <Calculator size={24} style={{ color: 'var(--text-1)' }} />
+        <Calculator size={24} className="shrink-0" style={{ color: 'var(--text-1)' }} />
         <div>
           <h1 className="text-2xl font-bold text-ds-text">Retenue de garantie</h1>
           <p className="text-sm text-ds-text-2">Retenue, pénalités et intérêts moratoires, selon l'article 19 des <Sigle code="CCAG" /> Travaux. Calcul instantané, aucune donnée enregistrée.</p>

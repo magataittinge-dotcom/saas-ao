@@ -4,12 +4,16 @@ import { Settings as SettingsIcon, User, Building2, CreditCard, ChevronRight, Sh
 import { useAuthStore } from '@/stores/authStore'
 import { ESSAI_LIBELLE, nomPlan, prixLibelle, quotaLibelle, trouverOffre } from '@/lib/offres'
 
+// Jetons du système (clair et nuit) : aucune couleur écrite en dur, l'écran suit le thème (C11).
+const PLAN_ACCENT = { color: 'var(--accent-text)', bg: 'var(--accent-tint)', border: 'var(--accent-ring)' }
 const PLAN_LABELS: Record<string, { color: string; bg: string; border: string }> = {
-  essentiel: { color: '#E4E9F2', bg: 'rgba(228,233,242,0.10)',  border: 'rgba(228,233,242,0.25)' },
-  pro:       { color: '#E4E9F2', bg: 'rgba(228,233,242,0.10)',  border: 'rgba(228,233,242,0.25)' },
-  business:  { color: '#F4F6FA', bg: 'rgba(0,0,0,0.45)',   border: 'rgba(186,205,234,0.23)' },
-  free:      { color: '#9BA4B5', bg: '#1C222D', border: '#1C222D' },
+  essentiel: PLAN_ACCENT,
+  pro:       PLAN_ACCENT,
+  business:  PLAN_ACCENT,
+  free:      { color: 'var(--text-2)', bg: 'var(--surface-2)', border: 'var(--border-1)' },
 }
+
+const PASTILLE_ICONE = { background: 'var(--surface-2)', border: '1px solid var(--border-1)' } as const
 
 function SectionCard({ icon, title, children }: {
   icon: ReactNode
@@ -20,11 +24,11 @@ function SectionCard({ icon, title, children }: {
     <div className="glass-card overflow-hidden">
       <div
         className="flex items-center gap-3 px-6 py-4"
-        style={{ borderBottom: '1px solid rgba(228,233,242,0.08)', background: 'rgba(228,233,242,0.02)' }}
+        style={{ borderBottom: '1px solid var(--border-1)', background: 'var(--surface-1)' }}
       >
         <div
           className="w-8 h-8 rounded-lg flex items-center justify-center"
-          style={{ background: 'rgba(228,233,242,0.10)', border: '1px solid rgba(228,233,242,0.18)' }}
+          style={PASTILLE_ICONE}
         >
           {icon}
         </div>
@@ -37,7 +41,7 @@ function SectionCard({ icon, title, children }: {
 
 function InfoRow({ label, value }: { label: string; value?: ReactNode }) {
   return (
-    <div className="flex items-center justify-between py-2.5" style={{ borderBottom: '1px solid rgba(186,205,234,.13)' }}>
+    <div className="flex items-center justify-between py-2.5" style={{ borderBottom: '1px solid var(--border-1)' }}>
       <span className="text-sm text-ds-text-2">{label}</span>
       <span className="text-sm font-medium text-ds-text">{value ?? <span className="text-ds-text-3 italic">—</span>}</span>
     </div>
@@ -58,7 +62,7 @@ export default function Settings() {
       <div className="flex items-center gap-3">
         <div
           className="w-10 h-10 rounded-xl flex items-center justify-center"
-          style={{ background: 'rgba(228,233,242,0.10)', border: '1px solid rgba(228,233,242,0.18)' }}
+          style={PASTILLE_ICONE}
         >
           <SettingsIcon size={18} className="text-ds-cyan" />
         </div>
@@ -78,7 +82,7 @@ export default function Settings() {
             value={
               <span
                 className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium text-ds-cyan-dark"
-                style={{ background: 'rgba(228,233,242,0.10)', border: '1px solid rgba(228,233,242,0.20)' }}
+                style={{ background: 'var(--accent-tint)', border: '1px solid var(--accent-ring)' }}
               >
                 <Shield size={10} />
                 {user?.role === 'member' ? 'Membre' : 'Administrateur'}
@@ -139,14 +143,8 @@ export default function Settings() {
 
           <a
             href="/settings/billing"
-            className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm text-ds-text-2 transition-all duration-200 hover:text-ds-text no-underline"
-            style={{
-              background: 'var(--edge-graphite)',
-              boxShadow: 'inset 0 0 0 1px rgba(186,205,234,.13)',
-              cursor: 'pointer',
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = '#1C222D')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--edge-graphite)')}
+            className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm text-ds-text-2 transition-all duration-200 hover:bg-surface-1 hover:text-ds-text no-underline cursor-pointer"
+            style={{ background: 'var(--edge-graphite)', boxShadow: 'inset 0 0 0 1px var(--border-1)' }}
           >
             <span>Historique de facturation</span>
             <ChevronRight size={16} />
@@ -159,7 +157,7 @@ export default function Settings() {
         <Link
           to="/outils"
           className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm text-ds-text-2 transition-colors duration-200 hover:text-ds-text no-underline"
-          style={{ background: 'var(--edge-graphite)', boxShadow: 'inset 0 0 0 1px rgba(186,205,234,.13)' }}
+          style={{ background: 'var(--edge-graphite)', boxShadow: 'inset 0 0 0 1px var(--border-1)' }}
         >
           <span>Retenue de garantie</span>
           <ChevronRight size={16} />
