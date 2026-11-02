@@ -8,6 +8,7 @@ from .compliance_item import ComplianceItem
 from .checklist_item import ChecklistItem
 from .memoire import MemoireTechnique
 from .memoire_template import MemoireTemplate
+from .plan_memoire import PlanMemoire
 from .memoire_config import MemoireConfig
 from .audit_log import AuditLog
 from .quota_consumption import QuotaConsumption
@@ -35,6 +36,7 @@ __all__ = [
     "ChecklistItem",
     "MemoireTechnique",
     "MemoireTemplate",
+    "PlanMemoire",
     "MemoireConfig",
     "AuditLog",
     "QuotaConsumption",
