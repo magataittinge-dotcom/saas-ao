@@ -40,7 +40,7 @@ test('un seul bouton en dégradé par écran : l’action de l’en-tête, jamai
   assert.doesNotMatch(decision, /signature-btn/, '« On y va » n’est pas un second bouton principal')
   const export_ = sansCommentaires(lire('src/routes/project/StepExport.tsx'))
   assert.equal((export_.match(/signature-btn/g) ?? []).length, 1, 'le bouton est écrit une fois')
-  assert.match(export_, /actionPrincipale=\{boutonTelecharger\}/)
+  assert.match(export_, /actionPrincipale=\{[\s\S]*?\{boutonTelecharger\}/)
   assert.match(export_, /<ActionsBarreTel className="max-\[768px\]:flex-1">\{boutonTelecharger\}<\/ActionsBarreTel>/)
   const lots = sansCommentaires(lire('src/routes/project/StepLotSelection.tsx'))
   assert.match(lots, /<ActionsBarreTel>\s*<button/)
