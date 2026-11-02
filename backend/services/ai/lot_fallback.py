@@ -236,3 +236,30 @@ def run_fallback_if_needed(
             by_id[lot_id] = new_lot
 
     return merged, True
+
+
+def _ids(lots: List[dict]) -> set:
+    return {l.get("id") for l in lots if l.get("id")}
+
+
+def finaliser_lots(
+    doc_texts: Dict[str, str],
+    lots: List[dict],
+    announced: Optional[int],
+) -> Tuple[List[dict], bool, Dict[str, int]]:
+    """La suite de nettoyage de la détection, dans l'ordre : fantômes écartés, filet IA si besoin, lots sans libellé écartés.
+
+    Retourne (lots proposés, filet IA utilisé, écartés). `écartés` ne contient que des COMPTES (R9), jamais de nom :
+      • hors_liste    : lots cités dans le dossier mais qui ne figurent pas dans la liste des lots du règlement ;
+      • sans_intitule : lots cités sans intitulé exploitable (« Lot 6 » nu), même après le filet IA.
+    Un lot écarté puis retrouvé par le filet IA (même id) n'est pas compté : il est proposé."""
+    bruts = list(lots or [])
+    sans_fantomes = drop_ghosts(bruts, announced)
+    apres_filet, ia_used = run_fallback_if_needed(doc_texts, sans_fantomes, announced)
+    finaux = drop_unlabeled(apres_filet)
+    proposes = _ids(finaux)
+    ecartes = {
+        "hors_liste": len(_ids(bruts) - _ids(sans_fantomes) - proposes),
+        "sans_intitule": len(_ids(apres_filet) - proposes),
+    }
+    return finaux, ia_used, ecartes

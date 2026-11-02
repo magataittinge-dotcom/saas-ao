@@ -64,3 +64,20 @@ test('R8 : sous le titre d’un lot, plus de ligne « nom de pièce » (descript
   const code = sansCommentaires(lire('src/routes/project/StepLotSelection.tsx'))
   assert.doesNotMatch(code, /description_long/)
 })
+
+// R9 — « 13 lots détectés » : une ligne sobre dit combien d'autres lots cités ne sont pas proposés, et pourquoi.
+import { phraseLotsEcartes } from '@/lib/lotsSource'
+
+test('R9 : la ligne donne le nombre et la raison, jamais un nom de lot', () => {
+  assert.equal(phraseLotsEcartes({ hors_liste: 3, sans_intitule: 0 }), '3 autres lots cités dans le dossier ne figurent pas dans la liste du règlement : ils ne sont pas proposés.')
+  assert.equal(phraseLotsEcartes({ hors_liste: 1, sans_intitule: 0 }), '1 autre lot cité dans le dossier ne figure pas dans la liste du règlement : il n’est pas proposé.')
+  assert.equal(phraseLotsEcartes({ hors_liste: 0, sans_intitule: 2 }), '2 autres lots cités sans intitulé ne sont pas proposés.')
+  assert.match(phraseLotsEcartes({ hors_liste: 2, sans_intitule: 1 })!, /^2 autres lots .* 1 autre lot cité sans intitulé/)
+  for (const rien of [null, undefined, {}, { hors_liste: 0, sans_intitule: 0 }]) assert.equal(phraseLotsEcartes(rien), null)
+})
+
+test('R9 : l’écran affiche la ligne sous le compte des lots', () => {
+  const code = sansCommentaires(lire('src/routes/project/StepLotSelection.tsx'))
+  assert.match(code, /phraseLotsEcartes\(lotsData\?\.ecartes\)/)
+  assert.match(code, /data-lots-ecartes/)
+})

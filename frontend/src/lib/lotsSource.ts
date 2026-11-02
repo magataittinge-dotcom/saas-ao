@@ -13,3 +13,29 @@ export function etiquettesSourceLot(sources: readonly string[] | null | undefine
   const phrases = (sources ?? []).filter((s) => s !== 'ia_fallback').map((s) => ETIQUETTES_SOURCE_LOT[s]).filter(Boolean)
   return [...new Set(phrases)]
 }
+
+/** R9 — lots cités dans le dossier mais non proposés : le serveur donne les comptes, jamais les noms. */
+export interface LotsEcartes {
+  /** Cités dans le dossier, mais qui ne figurent pas dans la liste des lots du règlement. */
+  hors_liste: number
+  /** Cités sans intitulé exploitable. */
+  sans_intitule: number
+}
+
+/** Une ligne sobre sous le compte des lots (null quand rien n'est écarté). Aucun nom de lot : le serveur n'en donne pas. */
+export function phraseLotsEcartes(e: Partial<LotsEcartes> | null | undefined): string | null {
+  const horsListe = Math.max(0, Math.trunc(e?.hors_liste ?? 0))
+  const sansIntitule = Math.max(0, Math.trunc(e?.sans_intitule ?? 0))
+  const phrases: string[] = []
+  if (horsListe > 0) {
+    phrases.push(horsListe === 1
+      ? '1 autre lot cité dans le dossier ne figure pas dans la liste du règlement : il n’est pas proposé.'
+      : `${horsListe} autres lots cités dans le dossier ne figurent pas dans la liste du règlement : ils ne sont pas proposés.`)
+  }
+  if (sansIntitule > 0) {
+    phrases.push(sansIntitule === 1
+      ? '1 autre lot cité sans intitulé n’est pas proposé.'
+      : `${sansIntitule} autres lots cités sans intitulé ne sont pas proposés.`)
+  }
+  return phrases.length ? phrases.join(' ') : null
+}

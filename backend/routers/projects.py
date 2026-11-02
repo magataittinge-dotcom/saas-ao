@@ -443,7 +443,7 @@ def _decode_zip_entry_name(member: zipfile.ZipInfo) -> str:
 def _invalidate_lots_cache(project_id: str, db: Session) -> None:
     """Set lots_detectes = NULL to force re-detection on next GET /lots."""
     db.query(Project).filter(Project.id == project_id).update(
-        {"lots_detectes": None},
+        {"lots_detectes": None, "lots_ecartes": None},
         synchronize_session=False,
     )
     db.commit()
@@ -1792,7 +1792,7 @@ def detect_lots(
     # ── Cache hit (AMÉLIORATION 7) ─────────────────────────────────────────────
     if project.lots_detectes is not None:
         cached = project.lots_detectes
-        return {"lots": cached, "count": len(cached), "cached": True}
+        return {"lots": cached, "count": len(cached), "cached": True, "ecartes": project.lots_ecartes}
 
     # ── Already detecting? Return current status ──────────────────────────────
     if project.processing_status == "detecting_lots":
@@ -1905,12 +1905,11 @@ def _run_lot_detection_background(project_id: str, docs_data: list, uploads_root
         # Fantômes écartés AVANT le déclencheur IA : sinon l'écart brut
         # (fantômes inclus) déclenche ~11 s d'appel Sonnet pour rien alors
         # que le tableau RC est complet.
-        lots = lot_fallback.drop_ghosts(lots or [], announced)
-        lots, ia_used = lot_fallback.run_fallback_if_needed(doc_texts, lots, announced)
+        lots, ia_used, ecartes = lot_fallback.finaliser_lots(doc_texts, lots or [], announced)
         if ia_used:
             print(f"[LOTS] filet IA utilisé → {len(lots)} lots après fusion", flush=True)
-        # Invariant : jamais de lot sans libellé exploitable affiché.
-        lots = lot_fallback.drop_unlabeled(lots)
+        if ecartes["hors_liste"] or ecartes["sans_intitule"]:
+            print(f"[LOTS] lots cités mais non proposés : {ecartes}", flush=True)   # comptes seuls, jamais de nom
 
         # Save results
         db = SessionLocal()
@@ -1919,6 +1918,7 @@ def _run_lot_detection_background(project_id: str, docs_data: list, uploads_root
             if project:
                 project.lots_detectes = lots or []
                 project.lots_announced = announced
+                project.lots_ecartes = ecartes
                 project.processing_status = "ready"
                 project.processing_progress = 100
                 project.processing_detail = ""

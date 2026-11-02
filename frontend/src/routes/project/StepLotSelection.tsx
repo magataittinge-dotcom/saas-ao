@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { choixParDefaut, basculerLot, peutLancer } from '@/lib/choixLots'
-import { ETIQUETTES_SOURCE_LOT, etiquettesSourceLot } from '@/lib/lotsSource'
+import { ETIQUETTES_SOURCE_LOT, etiquettesSourceLot, phraseLotsEcartes, type LotsEcartes } from '@/lib/lotsSource'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -453,7 +453,7 @@ export default function StepLotSelection({ project }: Props) {
   const { data: lotsData, isLoading: lotsLoading } = useQuery({
     queryKey: ['projects', project.id, 'lots'],
     queryFn: async () => {
-      const { data } = await api.get<{ lots?: LotOption[]; count?: number; cached?: boolean; status?: string; progress?: number; detail?: string }>(`/projects/${project.id}/lots`)
+      const { data } = await api.get<{ lots?: LotOption[]; count?: number; cached?: boolean; status?: string; progress?: number; detail?: string; ecartes?: LotsEcartes | null }>(`/projects/${project.id}/lots`)
       if (data.status === 'detecting_lots') {
         if (!detectDoneRef.current) {
           setDetectPhase('detecting')
@@ -462,7 +462,7 @@ export default function StepLotSelection({ project }: Props) {
         return null
       }
       queryClient.invalidateQueries({ queryKey: ['projects', project.id], exact: true })
-      return data as { lots: LotOption[]; count: number }
+      return data as { lots: LotOption[]; count: number; ecartes?: LotsEcartes | null }
     },
   })
 
@@ -751,6 +751,11 @@ export default function StepLotSelection({ project }: Props) {
             Source : {project.name}
           </div>
         </div>
+        {/* R9 — les lots cités dans le dossier mais non proposés : le nombre et la raison, sans nom de lot. */}
+        {phraseLotsEcartes(lotsData?.ecartes) && (
+          <p data-lots-ecartes className="-mt-2 mb-4 text-sm" style={{ color: 'var(--text-3)' }}>{phraseLotsEcartes(lotsData?.ecartes)}</p>
+        )}
+
         {/* ── Consigne — une ligne, pas un pavé ───────────── */}
         <p className="mb-4 flex items-center gap-2 text-sm" style={{ color: 'var(--text-3)' }}>
           <Zap size={14} className="shrink-0" style={{ color: 'var(--text-1)' }} />

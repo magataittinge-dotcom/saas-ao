@@ -74,6 +74,8 @@ class Project(Base):
     infos_marche = Column(JSON, nullable=True)         # {objet, maitre_ouvrage, ...}
     lots_detectes = Column(JSON, nullable=True)        # [{id, nom, confidence, sources, ...}] cached lot list
     lots_announced = Column(Integer, nullable=True)    # nb de lots annoncé dans le RC (C3)
+    # R9 — lots cités dans le dossier mais non proposés : {"hors_liste": n, "sans_intitule": m} (comptes seuls, jamais de nom)
+    lots_ecartes = Column(JSON, nullable=True)
     # C5 — bandeau critique : champs structurés PAR LOT analysé
     # {"lot1": {date_limite_remise: {value, source}, ...}, "_all": {...}}
     critical_fields = Column(JSON, nullable=True)
