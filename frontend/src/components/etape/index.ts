@@ -1,0 +1,7 @@
+// Le gabarit d'une étape de l'AO (contrat : .claude/echange/sprint-ozcan/CONCEPTION-gabarit-etape.md).
+export { GabaritEtape, ActionsBarreTel } from './GabaritEtape'
+export { BandeResume, type CarteResume, type EtatCarte } from './BandeResume'
+export { SectionEtape } from './SectionEtape'
+export { EtatElement, type EtatPiece, type SourceEtat } from './EtatElement'
+export { default as BarreEtape } from '@/components/project/BarreEtape'
+export { BilanBarre, ActionsBarre, BoutonSuite, BoutonSecondaire, MenuPlus } from '@/components/project/BarreEtape'
