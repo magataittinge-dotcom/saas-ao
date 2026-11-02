@@ -10,11 +10,15 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from sqlalchemy.orm import Session, defer
 
 from database import get_db
+from models.memoire_config import MemoireConfig
 from models.plan_memoire import PlanMemoire
 from models.project import ProjectDocument
+from models.reference import Reference
+from models.team_member import TeamMember
 from models.user import User
 from routers.auth import get_auth_user
 from schemas.plan_memoire import PlanMemoireIn
+from services import plan_fiches
 from services import plan_memoire as service
 from services.audit_logger import log_action
 from services.document_tagger import get_documents_for_lot
@@ -60,11 +64,28 @@ def _textes_du_dossier(db: Session, project) -> tuple[list[dict], list[dict]]:
 
 
 def _reponse(db: Session, project, enregistre: Optional[PlanMemoire]) -> dict:
+    org_id = project.organization_id
     textes, pour_limite = _textes_du_dossier(db, project)
     attendues = service.extraire_parties_attendues(textes)
     limite = limite_de_pages(pour_limite)
     plan = enregistre.parties if enregistre else service.proposer(project.criteres_jugement, attendues)
     corps = service.vue(plan, project.criteres_jugement, attendues, limite)
+
+    # B2 — la fiche de chaque partie : exigences du dossier rattachées (sans IA) et cases proposées de « Mon entreprise »
+    exigences = [{"id": e.id, "texte": e.exigence_text, "categorie": e.category,
+                  "source": {"type": "exigence", "id": e.id, "document": e.source_document, "page": e.source_page}}
+                 for e in exigences_pour_memoire(db, project)]
+    references = (db.query(Reference)
+                  .filter(Reference.organization_id == org_id, Reference.is_reference == True,  # noqa: E712
+                          Reference.deleted_at.is_(None)).all())
+    equipe = db.query(TeamMember).filter(TeamMember.organization_id == org_id).order_by(TeamMember.name).all()
+    cfg = db.query(MemoireConfig).filter(MemoireConfig.organization_id == org_id).first()
+    materiel = [l for l in (getattr(cfg, "materiel_liste", None) or []) if isinstance(l, dict)]
+    par_exigences = plan_fiches.exigences_par_partie(plan, exigences)
+    par_cases = plan_fiches.propositions(plan, references, equipe, materiel, project.selected_lot_name)
+    for partie in corps["parties"]:
+        partie["exigences"] = par_exigences.get(partie["cle"], [])
+        partie["propose"] = par_cases.get(partie["cle"], {"references": [], "personnes": [], "materiel": []})
     return {
         **corps,
         "enregistre": enregistre is not None,

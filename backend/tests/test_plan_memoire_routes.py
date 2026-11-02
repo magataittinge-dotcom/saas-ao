@@ -129,3 +129,41 @@ def test_un_plan_d_une_autre_organisation_n_est_jamais_lu(client, db_session, te
     db_session.commit()
     c = client.get(URL).json()
     assert c["enregistre"] is False and "Espion" not in str(c)
+
+
+# ── B2 : la fiche de chaque partie ────────────────────────────────────────────
+
+def test_la_fiche_porte_exigences_sources_et_cases_proposees(client, db_session, test_org):
+    from models.reference import Reference
+    from models.team_member import TeamMember
+    _projet(db_session, test_org.id)
+    db_session.add(ComplianceItem(project_id=PID, exigence_text="Les déchets sont triés puis évacués en benne agréée.",
+                                  source_document="CCTP.pdf", source_page=14, category="technique", lot="_commun"))
+    db_session.add(ComplianceItem(project_id=PID, exigence_text="Fournir les attestations de déchets triés.",
+                                  category="candidature", lot="_commun"))
+    db_session.add(Reference(id="ref-1", organization_id=test_org.id, intitule="ITE d'une école inventée", annee=2024,
+                             is_reference=True))
+    db_session.add(Organization(id="org-autre", name="Autre BTP"))
+    db_session.add(Reference(id="ref-2", organization_id="org-autre", intitule="Chantier d'ailleurs", is_reference=True))
+    db_session.add(TeamMember(id="tm-1", organization_id=test_org.id, name="Camille Martin", role="Conducteur de travaux"))
+    db_session.add(TeamMember(id="tm-2", organization_id="org-autre", name="Espion Autre", role="Conducteur"))
+    db_session.commit()
+    c = client.get(URL).json()
+    d = next(p for p in c["parties"] if p["cle"] == "partie_b.dechets")
+    assert [e["source"]["document"] for e in d["exigences"]] == ["CCTP.pdf"] and d["exigences"][0]["source"]["page"] == 14
+    assert len(d["exigences"]) == 1                              # la pièce de candidature n'est pas rattachée
+    assert [r["id"] for r in next(p for p in c["parties"] if p["cle"] == "partie_a.references")["propose"]["references"]] == ["ref-1"]
+    assert [x["id"] for x in next(p for p in c["parties"] if p["cle"] == "partie_a.organigramme")["propose"]["personnes"]] == ["tm-1"]
+    assert "Espion" not in str(c) and "ailleurs" not in str(c)    # rien d'une autre organisation
+
+
+def test_la_fiche_enregistree_revient_telle_quelle(client, db_session, test_org):
+    _projet(db_session, test_org.id)
+    corps = {"parties": [{"cle": "partie_b.dechets", "fiche": {"references": ["r-1"], "personnes": [], "voulu": "Tri sur site."}},
+                         {"cle": "partie_a.historique"}]}
+    r = client.put(URL, json=corps).json()
+    d = next(p for p in r["parties"] if p["cle"] == "partie_b.dechets")
+    assert d["fiche"] == {"references": ["r-1"], "personnes": [], "materiel": None, "voulu": "Tri sur site."}
+    assert r["resume"]["fiches_remplies"] == 1
+    # une fiche non touchée reste « non touchée » (rien ne part au modèle)
+    assert next(p for p in r["parties"] if p["cle"] == "partie_a.historique")["fiche"]["references"] is None
