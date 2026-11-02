@@ -494,7 +494,7 @@ export default function StepLotSelection({ project }: Props) {
         const { data: lotsResult } = await api.get<{ lots: LotOption[]; count: number }>(`/projects/${project.id}/lots`)
         const count = lotsResult?.lots?.filter((l: LotOption) => l.id !== '!!')?.length ?? 0
         setDetectLabel(count > 0
-          ? `${count} lot${count > 1 ? 's' : ''} détecté${count > 1 ? 's' : ''} !`
+          ? `${count} lot${count > 1 ? 's' : ''} détecté${count > 1 ? 's' : ''}`
           : 'Marché unique détecté')
       } catch { /* ignore */ }
       setDetectPhase('done')

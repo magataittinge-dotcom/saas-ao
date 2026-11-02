@@ -143,7 +143,7 @@ export default function StepUpload({ project }: Props) {
     onComplete: () => {
       doneRef.current = true
       setDisplayPct(100)
-      setLabel('Traitement terminé !')
+      setLabel('Traitement terminé')
       setSublabel('')
       setPhase('done')
       queryClient.invalidateQueries({ queryKey: ['project-documents', project.id] })
@@ -191,7 +191,7 @@ export default function StepUpload({ project }: Props) {
       if (doneRef.current) return
       doneRef.current = true
       setDisplayPct(100)
-      setLabel('Traitement terminé !')
+      setLabel('Traitement terminé')
       setPhase('done')
       queryClient.invalidateQueries({ queryKey: ['project-documents', project.id] })
       setTimeout(() => { setPhase('idle'); setDisplayPct(0) }, 1000)
