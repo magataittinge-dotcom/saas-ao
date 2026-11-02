@@ -191,3 +191,23 @@ def test_etat_civil_separateurs_et_espaces_speciaux(texte):
 def test_domicile_separateurs_et_espaces_speciaux(texte):
     r = _m(texte)
     assert "Volcans" not in r.texte and "63200" not in r.texte
+
+
+# ── 3e revue de sécurité du 2/11 : séparateurs mêlés d'espaces, toute espace Unicode, caractères invisibles,
+#    lieu à la ligne. Valeurs inventées.
+
+@pytest.mark.parametrize("texte", [
+    "Lieu de naissance : - Riom", "Lieu de naissance : – Riom", "Lieu de naissance - : Riom",
+    "Date de naissance : 12/09/1978\nà Riom", "né le 12/09/1978\nà Riom",
+    "Date de naissance : 12/09/1978 à Riom",                 # espace cadratin
+    "Lieu de nais\u00adsance : Riom",                             # trait d'union conditionnel, dans le mot
+    "Date de naissance​: 12/09/1978 à Riom",                 # espace sans chasse
+    "Lieu de naissance Riom",                                # séparateur de ligne Unicode
+])
+def test_etat_civil_unicode_et_separateurs_meles(texte):
+    r = _m(texte)
+    assert "1978" not in r.texte and "Riom" not in r.texte
+
+
+def test_les_unites_et_exposants_ne_sont_pas_touches():
+    assert "700 m² d'échafaudage" in _m("700 m² d'échafaudage").texte
