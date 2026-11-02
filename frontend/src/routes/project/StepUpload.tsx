@@ -333,10 +333,11 @@ export default function StepUpload({ project }: Props) {
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
       'application/vnd.ms-excel':                                                ['.xls'],
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':       ['.xlsx'],
+      'application/vnd.ms-excel.sheet.macroEnabled.12':                          ['.xlsm'],
       'application/vnd.oasis.opendocument.spreadsheet': ['.ods'],
       'application/zip':              ['.zip'],
       'application/x-zip-compressed': ['.zip'],
-      'application/octet-stream':     ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.zip', '.ods'],
+      'application/octet-stream':     ['.pdf', '.doc', '.docx', '.xls', '.xlsx', '.xlsm', '.zip', '.ods'],
     },
     maxSize: 2 * 1024 * 1024 * 1024,
   })
@@ -453,7 +454,7 @@ export default function StepUpload({ project }: Props) {
             </button>
 
             <p className="relative num-mono mt-5 text-xs" style={{ color: 'var(--text-3)' }}>
-              .pdf · .docx · .xlsx · .ods · .zip — jusqu&apos;à 2 Go
+              .pdf · .docx · .xlsx · .xlsm · .ods · .zip — jusqu&apos;à 2 Go
             </p>
           </div>
         ) : (
@@ -482,7 +483,7 @@ export default function StepUpload({ project }: Props) {
                   {isDragActive ? 'Déposez ici…' : 'Ajouter des fichiers au dossier'}
                 </p>
                 <p className="num-mono mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
-                  glisser-déposer · .pdf .docx .xlsx .ods .zip · 2 Go max
+                  glisser-déposer · .pdf .docx .xlsx .xlsm .ods .zip · 2 Go max
                 </p>
               </div>
               <button
