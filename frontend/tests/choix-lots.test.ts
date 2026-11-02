@@ -1,0 +1,47 @@
+// R6 — écran des lots : aucun choix par défaut quand l'AO a plusieurs lots,
+// « Lancer l'analyse » désactivé tant qu'aucun choix n'est fait.
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { choixParDefaut, basculerLot, peutLancer } from '@/lib/choixLots'
+import { lire, sansCommentaires } from './outils/sources'
+
+test('plusieurs lots : aucun lot choisi par défaut, lancement impossible', () => {
+  const choix = choixParDefaut(null, 13)
+  assert.equal(choix.size, 0)
+  assert.equal(peutLancer(choix), false)
+})
+
+test('lot unique ou marché sans lot : comportement inchangé (l\'ensemble est pris)', () => {
+  assert.deepEqual([...choixParDefaut(null, 1)], ['all'])
+  assert.deepEqual([...choixParDefaut(null, 0)], ['all'])
+  assert.equal(peutLancer(choixParDefaut(null, 1)), true)
+})
+
+test('un lot déjà retenu pour ce projet reste retenu', () => {
+  assert.deepEqual([...choixParDefaut('5', 13)], ['5'])
+})
+
+test('« tout analyser » est un choix explicite ; en retirant le dernier lot on revient à aucun choix', () => {
+  let choix = basculerLot(choixParDefaut(null, 13), 'all', 13)
+  assert.deepEqual([...choix], ['all'])
+  assert.equal(peutLancer(choix), true)
+  choix = basculerLot(choix, '5', 13)               // choisir un lot retire « tout »
+  assert.deepEqual([...choix], ['5'])
+  choix = basculerLot(choix, '7', 13)
+  assert.deepEqual([...choix].sort(), ['5', '7'])
+  choix = basculerLot(basculerLot(choix, '5', 13), '7', 13)
+  assert.equal(choix.size, 0)
+  assert.equal(peutLancer(choix), false)
+})
+
+test('lot unique : retirer le lot revient à l\'ensemble, comme avant', () => {
+  const choix = basculerLot(new Set(['1']), '1', 1)
+  assert.deepEqual([...choix], ['all'])
+})
+
+test('l\'écran branche le choix : bouton désactivé sans choix, pied de page honnête', () => {
+  const code = sansCommentaires(lire('src/routes/project/StepLotSelection.tsx'))
+  assert.match(code, /disabled=\{isAnalyzing \|\| isSuccess \|\| !peutLancer\(selectedIds\)\}/)
+  assert.ok(!code.includes("new Set([project.selected_lot ?? 'all'])"))
+  assert.ok(code.includes('Aucun lot choisi'))
+})
