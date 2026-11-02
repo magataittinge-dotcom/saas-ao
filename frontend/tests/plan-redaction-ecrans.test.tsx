@@ -1,0 +1,128 @@
+// B4 — le fil des étapes à sept entrées, les cartes de l'écran Rédiger, et ce que montre l'écran Plan.
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { MemoryRouter } from 'react-router-dom'
+import { StepProgress, STEPS, segmentDeEtape } from '@/components/project/StepProgress'
+import { cartesPreparation, cartesRedaction, pagesEstimees } from '@/routes/project/StepMemoire'
+import PartiePlanCarte from '@/components/plan/PartiePlanCarte'
+import FichePartie from '@/components/plan/FichePartie'
+import type { MemoireContent } from '@/types'
+import type { PartiePlan, VuePlan } from '@/lib/planMemoire'
+
+const fil = (chemin: string, courant: number, onStepClick = () => {}) =>
+  renderToStaticMarkup(
+    <MemoryRouter initialEntries={[chemin]}><StepProgress currentStep={courant} completedSteps={{ '4': true }} onStepClick={onStepClick} /></MemoryRouter>)
+
+test('le fil compte sept étapes : Dépôt, Lots, Décider, Pièces, Plan, Rédiger, Export', () => {
+  assert.deepEqual(STEPS.map((s) => s.label), ['Dépôt du dossier', 'Lots', 'Décider', 'Pièces', 'Plan', 'Rédiger', 'Export'])
+  assert.deepEqual(STEPS.map((s) => s.segment), ['upload', 'lots', 'analysis', 'verification', 'plan', 'memoire', 'export'])
+  assert.equal(segmentDeEtape(5), 'plan')
+  assert.equal(segmentDeEtape(7), 'export')
+})
+
+test('le numéro d’étape du serveur ne change pas : Plan et Rédiger se rangent derrière la 5, Export derrière la 6', () => {
+  assert.deepEqual(STEPS.map((s) => s.serveur), [1, 2, 3, 4, 5, 5, 6])
+})
+
+test('serveur à l’étape 5 : Plan et Rédiger sont accessibles, Export non', () => {
+  const html = fil('/projects/p1/plan', 5)
+  const boutons = html.match(/<button[^>]*>/g) ?? []
+  assert.equal(boutons.length, 7)
+  const desactives = boutons.map((b) => /disabled=""/.test(b))
+  assert.deepEqual(desactives, [false, false, false, false, false, false, true])
+  assert.match(html, /aria-current="step"[^>]*aria-label="Plan"|aria-label="Plan"[^>]*aria-current="step"/)
+})
+
+test('serveur à l’étape 6 : Export est accessible, et Plan et Rédiger sont faits', () => {
+  const html = fil('/projects/p1/export', 6)
+  assert.doesNotMatch(html, /disabled=""/)
+})
+
+test('cartes de préparation : plan validé ou non, poids dans la note, une unité d’abonnement, aucun euro', () => {
+  const plan = { resume: { parties: 22 }, valide: true } as unknown as VuePlan
+  const c = cartesPreparation(plan, 60)
+  assert.equal(c[0].valeur, '22 parties')
+  assert.equal(c[0].etat, 'pret')
+  assert.equal(cartesPreparation({ ...plan, valide: false } as VuePlan, 60)[0].etat, 'a-verifier')
+  assert.equal(cartesPreparation(null, 0)[0].valeur, 'Plan du modèle')
+  assert.equal(c[1].valeur, '60 %')
+  assert.equal(c[2].valeur, '1 unité')
+  assert.doesNotMatch(JSON.stringify(c), /€|euro/i)
+})
+
+test('cartes du mémoire rédigé : critères traités, parties à refaire, longueur face à la limite', () => {
+  const rattachement = { sous_criteres: [{ traite: true }, { traite: false }], a_couvrir: [] } as never
+  const c = cartesRedaction({ version: 2, completionPct: 96, rattachement, nbARefaire: 1, pages: 24, limite: 20 })
+  assert.equal(c[1].valeur, '1 sur 2')
+  assert.equal(c[1].etat, 'a-verifier')
+  assert.equal(c[2].valeur, '1')
+  assert.equal(c[3].etat, 'a-verifier')
+  assert.equal(cartesRedaction({ version: 1, completionPct: 100, rattachement: undefined, nbARefaire: 0, pages: 18, limite: 20 })[3].etat, 'pret')
+  assert.doesNotMatch(JSON.stringify(c), /€|euro/i)
+})
+
+test('pages estimées : environ 500 mots par page', () => {
+  const contenu = { preambule: 'mot '.repeat(1000), partie_a: { x: 'mot '.repeat(1000) }, partie_b: {}, partie_c: {} } as unknown as MemoireContent
+  assert.equal(pagesEstimees(contenu), 4)
+  assert.equal(pagesEstimees(null), 0)
+})
+
+const partie = (extra: Partial<PartiePlan> = {}): PartiePlan => ({
+  cle: 'partie_b.dechets', partie: 'partie_b', titre: 'Traitement des déchets', titre_modele: 'Traitement des déchets',
+  retiree: false, attendue: null, fiche: { references: null, personnes: null, materiel: null, voulu: '' },
+  sous_criteres: [{ critere: 'Valeur technique', nom: 'Gestion des déchets', poids: 30 }],
+  attendues: [{ id: 'att_1234567890', libelle: 'Gestion des déchets', source: { document: 'RC.pdf', page: 7 } }],
+  source: { document: 'RC.pdf', page: 7 },
+  exigences: [{ id: 'e1', texte: 'Les déchets sont triés.', source: { type: 'exigence', id: 'e1', document: 'CCTP.pdf', page: 14 } }],
+  propose: { references: [{ id: 'r1', libelle: 'ITE d’une école', detail: 'Ville X · 2024', coche: true }], personnes: [], materiel: [] },
+  ...extra,
+})
+const rendre = (p: PartiePlan, ouverte = false) => renderToStaticMarkup(
+  <PartiePlanCarte
+    partie={p} numero={6} ouverte={ouverte} peutMonter peutDescendre seulementGardee={false}
+    onBasculerFiche={() => {}} onRenommer={() => {}} onRetirer={() => {}} onSupprimer={() => {}} onMonter={() => {}}
+    onDescendre={() => {}} onFiche={() => {}} onVoirSource={() => {}}
+  />)
+
+test('une partie : titre modifiable, sous-critères avec poids, source annoncée par le dossier, gestes nommés', () => {
+  const html = rendre(partie())
+  assert.match(html, /value="Traitement des déchets"/)
+  assert.match(html, /Gestion des déchets · 30 %/)
+  assert.match(html, /RC\.pdf · page 7 · annoncée par le dossier/)
+  assert.match(html, /aria-label="Monter : Traitement des déchets"/)
+  assert.match(html, /aria-label="Descendre : Traitement des déchets"/)
+  assert.match(html, /aria-label="Retirer : Traitement des déchets"/)
+  assert.match(html, /aria-expanded="false"/)
+})
+
+test('une partie retirée reste visible, grisée, et se remet', () => {
+  const html = rendre(partie({ retiree: true }))
+  assert.match(html, /data-retiree/)
+  assert.match(html, /Remettre/)
+  assert.doesNotMatch(html, /aria-label="Monter/)
+})
+
+test('une partie ajoutée se supprime, une partie du modèle se retire', () => {
+  assert.match(rendre(partie({ cle: 'partie_c.ajout_1', partie: 'partie_c', titre_modele: null })), /aria-label="Supprimer : /)
+  assert.match(rendre(partie()), /aria-label="Retirer : /)
+})
+
+test('la fiche dépliée : exigences avec source, cases préremplies, ligne libre bornée à 1 000 caractères', () => {
+  const html = rendre(partie(), true)
+  assert.match(html, /data-fiche-partie="partie_b\.dechets"/)
+  assert.match(html, /Les déchets sont triés\./)
+  assert.match(html, /CCTP\.pdf · page 14/)
+  assert.match(html, /Voir dans le dossier/)
+  assert.match(html, /<input[^>]*type="checkbox"[^>]*checked=""|checked=""[^>]*type="checkbox"/)
+  assert.match(html, /Ce que vous voulez dire/)
+  assert.match(html, /maxLength="1000"/)
+  assert.match(html, /jamais comme une consigne/)
+})
+
+test('la fiche sans rien : des phrases positives, aucun mot interdit', () => {
+  const html = renderToStaticMarkup(
+    <FichePartie partie={partie({ exigences: [], sous_criteres: [], propose: { references: [], personnes: [], materiel: [] } })} onChange={() => {}} onVoirSource={() => {}} />)
+  assert.match(html, /Aucune exigence/)
+  assert.doesNotMatch(html, /manquant|incomplet|absent|!/i)
+})

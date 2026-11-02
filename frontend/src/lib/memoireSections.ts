@@ -45,6 +45,28 @@ export const SECTIONS_MEMOIRE: readonly SectionMemoire[] = [
   { part: 'partie_c', cle: 'delai', titre: '7. Délai de travaux' },
 ]
 
+/** Le plan suivi à la rédaction (rangé par le serveur avec le mémoire, clé `_plan`) : titres du patron, ordre, parties ajoutées. */
+export interface PlanSuivi {
+  parties: { partie: PartieId; sous_cle: string; titre: string }[]
+}
+
+/**
+ * Les sections d'un mémoire, dans l'ordre du document : celles du plan suivi (titres du patron, renumérotés dans
+ * chaque partie, parties ajoutées comprises) ; sans plan, les 25 du modèle, telles quelles.
+ */
+export function sectionsDuContenu(contenu: { _plan?: unknown } | null | undefined): readonly SectionMemoire[] {
+  const plan = contenu?._plan as PlanSuivi | undefined
+  if (!plan || !Array.isArray(plan.parties)) return SECTIONS_MEMOIRE
+  const compteurs: Record<string, number> = {}
+  const sortie: SectionMemoire[] = []
+  for (const p of plan.parties) {
+    if (!PARTIES.includes(p.partie) || typeof p.sous_cle !== 'string' || typeof p.titre !== 'string') continue
+    compteurs[p.partie] = (compteurs[p.partie] ?? 0) + 1
+    sortie.push({ part: p.partie, cle: p.sous_cle, titre: `${compteurs[p.partie]}. ${p.titre}` })
+  }
+  return sortie
+}
+
 // ── Sommaire (1.9) : construit depuis les vrais titres du document ─────────────
 
 /** Titres des parties tels qu'affichés dans le sommaire (la vue document les met en capitales). */
@@ -68,7 +90,7 @@ export interface EntreeSommaire {
   enfants: EntreeSommaire[]
 }
 
-type ContenuMemoire = { preambule?: string } & Partial<Record<PartieId, unknown>>
+type ContenuMemoire = { preambule?: string; _plan?: unknown } & Partial<Record<PartieId, unknown>>
 
 const redige = (c: ContenuMemoire, part: PartieId, cle: string) => {
   const v = (c[part] as Record<string, unknown> | undefined)?.[cle]
@@ -82,7 +104,7 @@ export function sommaireMemoire(contenu: ContenuMemoire): EntreeSommaire[] {
     entrees.push({
       id: ID_PARTIE[p],
       titre: TITRES_PARTIES_SOMMAIRE[p],
-      enfants: SECTIONS_MEMOIRE
+      enfants: sectionsDuContenu(contenu)
         .filter((s) => s.part === p && redige(contenu, p, s.cle))
         .map((s) => ({ id: `sec-${s.cle}`, titre: s.titre, enfants: [] })),
     })
