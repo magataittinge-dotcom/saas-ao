@@ -63,6 +63,10 @@ def test_zip_export_streams_from_disk_and_cleans_up(client, db_session, test_org
 
     db_session.add(Project(id="proj-zip", organization_id=test_org.id,
                            name="ZIP", deadline=date.today()))
+    # R28 (2/11) : le ZIP ne crée plus de dossier vide ; un mémoire lui donne un fichier à porter.
+    from models.memoire import MemoireTechnique
+    db_session.add(MemoireTechnique(id="mem-zip", project_id="proj-zip", version=1, content_json={
+        "preambule": "Préambule fictif.", "partie_a": {}, "partie_b": {}, "partie_c": {}}))
     db_session.commit()
 
     created = []

@@ -36,6 +36,30 @@ from services.pdf_export import PdfConversionError, docx_to_pdf, soffice_availab
 
 logger = logging.getLogger(__name__)
 
+# R27 (recette du 2/11) — pages annoncées à l'export. Mesuré sur les deux mémoires réels de Gueux (43 et 46 pages
+# de PDF) : ~450 mots de texte par page de corps, plus la page de garde et le sommaire. On compte les mots des
+# seuls textes (ni les noms de clés, ni les clés internes « _… »).
+_MOTS_PAR_PAGE = 450
+_PAGES_GARDE_ET_SOMMAIRE = 2
+
+
+def _textes_memoire(valeur):
+    if isinstance(valeur, str):
+        yield valeur
+    elif isinstance(valeur, dict):
+        for cle, v in valeur.items():
+            if not str(cle).startswith("_"):
+                yield from _textes_memoire(v)
+    elif isinstance(valeur, list):
+        for v in valeur:
+            yield from _textes_memoire(v)
+
+
+def pages_estimees(content_json: dict) -> int:
+    mots = sum(len(t.split()) for t in _textes_memoire(content_json or {}))
+    return _PAGES_GARDE_ET_SOMMAIRE + round(mots / _MOTS_PAR_PAGE)
+
+
 UPLOADS_ROOT = FilePath(__file__).parent.parent / "uploads"
 
 router = APIRouter()
@@ -131,10 +155,7 @@ def get_export_detail(
             part = cj.get(part_key, {})
             if isinstance(part, dict):
                 sections += sum(1 for v in part.values() if v)
-        # Estimate ~1 page per 500 words
-        total_text = str(cj)
-        word_count = len(total_text.split())
-        estimated_pages = max(1, word_count // 500)
+        estimated_pages = pages_estimees(cj)
         memoire_info = MemoireExportInfo(
             version=memoire.version,
             generated_at=memoire.generated_at,
@@ -354,11 +375,8 @@ def export_zip(
                 )
                 zf.writestr(f"{root}/{entree.dossier}/Memoire_technique.docx", docx_bytes)
 
-            # ── Ensure 3 folders exist (even if empty) ────────────────────────
-            for sub in ("01_Candidature", "02_Offre", "03_Technique"):
-                folder_path = f"{root}/{sub}/"
-                if folder_path not in {info.filename for info in zf.filelist}:
-                    zf.writestr(folder_path, "")
+            # R28 (recette du 2/11) : plus de dossier vide créé d'office ; un dossier n'existe que s'il contient
+            # un fichier (l'écran dit déjà quelles pièces ne sont pas dans le dossier).
 
         tmp.flush()
         tmp.close()
