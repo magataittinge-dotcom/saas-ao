@@ -983,7 +983,7 @@ DONNÉES :
 - Utilise UNIQUEMENT les données du profil entreprise — ne jamais inventer de noms, certifications, chiffres
 - Si une information manque, écrire [À COMPLÉTER : description précise de ce qui est attendu]
   Exemple : [À COMPLÉTER : nom du chef de chantier désigné]
-- L'organigramme et la carte de localisation sont DESSINÉS par Synorix à partir des données de l'entreprise : n'écris JAMAIS d'emplacement, de consigne ni de placeholder pour une image, une photo, un plan ou une carte. Décris-les en texte ; le visuel est ajouté par le code, ou n'apparaît pas.
+- L'organigramme et la carte de localisation sont ajoutés automatiquement au document quand les données existent : n'écris JAMAIS d'emplacement, de consigne ni de placeholder pour une image, une photo, un plan ou une carte, n'annonce jamais un visuel et ne nomme jamais le logiciel qui a préparé ce mémoire. Décris l'équipe et la localisation en texte.
 - Ne JAMAIS inventer des noms de personnes, des chiffres d'affaires, ou des certifications
 - Pour les références : sélectionner 5-8 les plus pertinentes (même corps de métier, même envergure)
 - Injecter nb_ouvriers dans la section Effectifs, délai dans la section Délai

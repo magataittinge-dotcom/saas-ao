@@ -42,6 +42,8 @@ _CONSIGNE_RE = re.compile(
     r"|\[[^\]\n]{0,600}\bsynorix\b[^\]\n]{0,600}\](?!\()",
     re.IGNORECASE,
 )
+from services.mentions_outil import retirer_mentions_outil  # phrases qui nomment l'outil (recette du 2/11)
+
 _DEBUT_PASSAGE, _FIN_PASSAGE = "\ue000", "\ue001"   # balises privées, jamais imprimées
 _PASSAGE_RE = re.compile(f"{_DEBUT_PASSAGE}([^{_FIN_PASSAGE}]*){_FIN_PASSAGE}")
 
@@ -94,7 +96,7 @@ def _marquer_passages(texte: str, *, retirer_marqueur_carte: bool = False) -> st
         return enregistrer(m.group(1) or "")
 
     marque = re.sub(f"{_PIN_RE.pattern}|{_A_COMPLETER_RE.pattern}", remplacer, texte, flags=re.IGNORECASE)
-    return _retirer_consignes(marque)
+    return retirer_mentions_outil(_retirer_consignes(marque))
 
 
 def _retirer_consignes(texte: str) -> str:
