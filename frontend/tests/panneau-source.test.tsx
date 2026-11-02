@@ -147,3 +147,17 @@ test('vue Document : pdf.js lit par plages, sans pré-chargement ni flux complet
   assert.match(code, /rangeChunkSize:\s*65536/)
   assert.match(code, /renderTextLayer=\{false\}/, 'sans recherche : pas de couche de texte')
 })
+
+test('R14 : source d\'un champ sans page — l\'extrait est montré, aucune promesse de page ni de surlignage', () => {
+  const sansPage = reponseDeChamp({ id: 'd2', file_name: 'rc.pdf' }, { page: null, excerpt: 'Remise des offres avant le 12 mars.' },
+    { pdf: '/api/files/view/rc', origine: '/api/files/view/rc' })
+  assert.equal(sansPage.niveau, 'aucun')
+  const html = rendre(sansPage, { exigenceId: null })
+  const t = texte(html)
+  assert.ok(t.includes('Remise des offres avant le 12 mars.'))
+  assert.ok(t.includes('Ce fait est lu dans la pièce'))
+  assert.ok(!/Cette exigence|surlign|passage retrouvé/i.test(t), t)
+  assert.ok(!html.includes('<mark>'))
+  // une exigence sans page garde sa phrase
+  assert.ok(texte(rendre(base({ niveau: 'aucun', page: null, rects: [], citation: null }))).includes('Cette exigence s’appuie sur la pièce dans son ensemble.'))
+})

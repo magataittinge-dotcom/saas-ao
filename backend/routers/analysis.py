@@ -883,6 +883,14 @@ def get_critical_fields(
         )
         project.critical_fields = cache
         db.commit()
+    # R14 : la page de chaque source est cherchée dans le PDF (une fois, puis rangée avec le champ),
+    # pour que « Voir dans le dossier » ouvre la bonne page au lieu de la pièce entière.
+    from services.critical_fields_pages import resoudre_pages
+    avec_pages = resoudre_pages(db, project_id, cache[lot_key])
+    if avec_pages is not None:
+        cache[lot_key] = avec_pages
+        project.critical_fields = cache
+        db.commit()
     return {"lot": project.selected_lot, "fields": cache[lot_key]}
 
 
