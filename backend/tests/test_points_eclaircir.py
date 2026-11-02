@@ -202,3 +202,80 @@ def test_date_limite_des_questions_absente_a_verifier(client, db_session, test_o
     _projet(db_session, test_org.id)
     corps = client.get(f"/api/projects/{PID}/date-limite-questions").json()
     assert corps["statut"] == "a_verifier" and corps["date"] is None and corps["motif"]
+
+
+# ── Retour de l'essai réel (2/11) : extraits partiels, faits déjà lus, page absente, réponse de l'acheteur ─────
+
+@pytest.mark.parametrize("question", [
+    "Le contenu de l'article 4 est tronqué : pourriez-vous nous transmettre le texte complet ?",
+    "Le passage relatif au phasage semble coupé : pourriez-vous le compléter ?",
+    "Pourriez-vous fournir la suite de l'extrait concernant les installations de chantier ?",
+    "Le texte du paragraphe est partiel : pourriez-vous préciser la fin de la phrase ?",
+    "Le passage est illisible : pourriez-vous le renvoyer sous une autre forme ?",
+])
+def test_une_question_sur_un_texte_tronque_ou_un_extrait_est_ecartee(question):
+    assert pe.normaliser([{"question": question, "pourquoi": "Flou."}]) == []
+    assert pe.normaliser([{"question": "Pourriez-vous préciser le phasage des travaux ?", "pourquoi": "Le passage est tronqué."}]) == []
+
+
+def test_la_consigne_dit_que_les_passages_sont_des_extraits_et_demande_un_francais_correct():
+    consigne = pe._SYSTEM.replace("Ne signale", "ne signale")
+    assert "EXTRAITS" in consigne and "ne signale jamais une coupure" in consigne
+    assert "vouvoiement" in consigne and "français correct" in consigne
+
+
+def test_une_question_sur_un_fait_deja_lu_est_ecartee_seulement_si_l_analyse_a_la_valeur():
+    q_crit = {"question": "Pourriez-vous préciser les critères de jugement des offres et leur pondération ?", "pourquoi": "Non détaillés."}
+    q_valid = {"question": "Pourriez-vous confirmer la durée de validité des offres ?", "pourquoi": "Non lue."}
+    q_autre = {"question": "Pourriez-vous préciser le phasage retenu pour la salle voisine ?", "pourquoi": "Flou."}
+    sans = pe.normaliser([q_crit, q_valid, q_autre])
+    assert len(sans) == 3                                                    # rien de connu : toutes gardées
+    faits = {"criteres": [{"nom": "Valeur technique", "poids": 60}], "validite_offres_jours": 120}
+    assert [p["question"] for p in pe.normaliser([q_crit, q_valid, q_autre], faits=faits)] == [q_autre["question"]]
+    assert len(pe.normaliser([q_crit, q_valid, q_autre], faits={"criteres": [{"nom": "Prix", "poids": 100}]})) == 2   # la validité n'est pas connue
+
+
+def test_les_faits_deja_lus_partent_au_modele_avec_la_consigne_de_ne_pas_les_demander(client, db_session, test_org, modele):
+    _projet(db_session, test_org.id)
+    p = db_session.get(Project, PID)
+    p.criteres_jugement = [{"nom": "Valeur technique", "poids": 60}, {"nom": "Autre critère inventé", "poids": 40}]
+    p.infos_marche = {"validite_offres_jours": 120, "variantes_autorisees": False, "duree_marche": "8 mois (inventé)"}
+    db_session.commit()
+    modele["sortie"] = [{"question": "Pourriez-vous confirmer les critères de jugement retenus ?", "pourquoi": "x", "source_document": "RC-demo.pdf", "extrait": Q1["extrait"]}, Q1]
+    r = client.post(f"/api/projects/{PID}/points-a-eclaircir")
+    assert r.status_code == 200
+    message = modele["appels"][0]
+    assert "FAITS DÉJÀ LUS" in message and "Valeur technique 60 %" in message and "120 jours" in message and "8 mois (inventé)" in message
+    assert [x["question"] for x in r.json()["points"]] == [Q1["question"]]
+
+
+def test_une_question_sans_page_garde_sa_piece_comme_source_sans_page_inventee(client, db_session, test_org, modele):
+    _projet(db_session, test_org.id)
+    points = client.post(f"/api/projects/{PID}/points-a-eclaircir").json()["points"]
+    assert points[0]["source_document"] == "RC-demo.pdf" and points[0]["source_page"] is None     # pièce sans PDF : pas de page, jamais « None » à l'écran
+
+
+def test_la_lecture_filtre_les_points_deja_enregistres_sans_reecrire_la_base(client, db_session, test_org):
+    """Les questions enregistrées avant les correctifs (tronqué, fait déjà lu, prix) s'affichent filtrées ; la base n'est pas touchée."""
+    enregistres = [
+        {"question": "Le contenu de l'article 4 est tronqué : pourriez-vous nous transmettre le texte complet ?", "pourquoi": "Coupé.", "source_document": "RC-demo.pdf", "source_page": 4, "extrait": "extrait"},
+        {"question": "Pourriez-vous préciser les critères de jugement des offres ?", "pourquoi": "Non détaillés.", "source_document": "RC-demo.pdf", "source_page": 5, "extrait": "extrait"},
+        {"question": "Pourriez-vous confirmer le montant estimé de l'opération ?", "pourquoi": "Budget.", "source_document": "RC-demo.pdf", "source_page": 6, "extrait": "extrait"},
+        Q1,
+    ]
+    _projet(db_session, test_org.id, infos={"objet": "AO inventé", "points_a_eclaircir": enregistres})
+    p = db_session.get(Project, PID)
+    p.criteres_jugement = [{"nom": "Valeur technique", "poids": 100}]
+    db_session.commit()
+
+    corps = client.get(f"/api/projects/{PID}").json()
+    assert [x["question"] for x in corps["infos_marche"]["points_a_eclaircir"]] == [Q1["question"]]
+    assert corps["infos_marche"]["objet"] == "AO inventé"
+    assert len(_infos(db_session)["points_a_eclaircir"]) == 4                     # la base garde tout : filtrage à la lecture seulement
+    liste = client.get("/api/projects").json()
+    assert len(next(x for x in liste if x["id"] == PID)["infos_marche"]["points_a_eclaircir"]) == 1
+
+
+def test_la_lecture_d_une_analyse_ancienne_sans_points_ne_change_rien(client, db_session, test_org):
+    _projet(db_session, test_org.id, infos={"objet": "AO inventé"})
+    assert client.get(f"/api/projects/{PID}").json()["infos_marche"] == {"objet": "AO inventé"}

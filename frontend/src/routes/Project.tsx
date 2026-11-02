@@ -3,6 +3,7 @@ import { useParams, Routes, Route, Navigate, useNavigate } from 'react-router-do
 import { MapPin } from 'lucide-react'
 import { useProject } from '@/hooks/useProject'
 import { StepProgress, segmentDeEtape } from '@/components/project/StepProgress'
+import { actionEtape } from '@/lib/intelligence/action'
 import { DeadlinePill } from '@/components/dashboard/DeadlinePill'
 import { echeanceAO } from '@/lib/echeance'
 import { StepperSkeleton } from '@/components/skeletons'
@@ -100,7 +101,7 @@ export default function Project() {
       {/* Step content */}
       <Suspense fallback={<EcranEnChargement />}>
       <Routes>
-        <Route path="/"            element={<Navigate to="upload" replace />} />
+        <Route path="/"            element={<Navigate to={actionEtape(project).segment} replace />} />
         <Route path="upload"       element={<StepUpload       project={project} />} />
         <Route path="lots"         element={<StepLotSelection project={project} />} />
         <Route path="analysis"     element={<StepAnalysis     project={project} />} />

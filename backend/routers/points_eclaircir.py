@@ -106,6 +106,7 @@ async def preparer_points(request: Request, project_id: str, user: User = Depend
         log_action(db, user, ACTION, target_type="project", target_id=project_id)
         extraits = pe.selectionner_extraits(pieces)
         org_id = user.organization_id
+        faits = pe.faits_connus(project.criteres_jugement, project.infos_marche)
         texts: dict[str, str] = {}
         paths: dict[str, str] = {}
         rangs: dict[str, int] = {}
@@ -116,13 +117,13 @@ async def preparer_points(request: Request, project_id: str, user: User = Depend
         points: list[dict] = []
         if extraits:
             try:
-                bruts, usage = await asyncio.to_thread(pe.appeler_haiku, pe.construire_message(extraits))
+                bruts, usage = await asyncio.to_thread(pe.appeler_haiku, pe.construire_message(extraits, faits))
             except Exception as e:
                 logger.error("points à éclaircir projet %s : appel Haiku en échec : %s", project_id, e)
                 raise HTTPException(status_code=503, detail=MSG_IA)
             print(ligne_jetons("points_a_eclaircir", pe.MODELE, usage), flush=True)
             couts_ia.enregistrer(db, org_id, "points_a_eclaircir", pe.MODELE, usage, reference=project_id)
-            points = await asyncio.to_thread(pe.ancrer, pe.normaliser(bruts), texts, paths, rangs)
+            points = await asyncio.to_thread(pe.ancrer, pe.normaliser(bruts, faits=faits), texts, paths, rangs)
         project = _get_project_or_404(project_id, org_id, db)
         project.infos_marche = {**(project.infos_marche or {}), pe.CLE_INFOS: points}
         db.commit()

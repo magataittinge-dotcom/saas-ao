@@ -50,3 +50,16 @@ test('l’écran Lots passe par le gabarit : « Lire ce dossier » grisé sans c
   assert.doesNotMatch(code, /€|euros?\b/)
   assert.match(code, /<ActionsBarreTel>/)
 })
+
+test('la carte d’un lot : case visible de 44 px, numéro, désignation, métiers reconnus, pièces du lot avec « Voir », 1 unité, état en petit', () => {
+  const code = sansCommentaires(lire('src/routes/project/StepLotSelection.tsx'))
+  assert.match(code, /h-11 w-11 shrink-0 items-center justify-center/, 'case à cocher visible dans une cible de 44 px')
+  assert.match(code, /LOT \{lotNum\}/)
+  assert.match(code, /Métiers? reconnus?/)
+  assert.match(code, /pièces lues' : 'pièce lue'/)
+  assert.match(code, /\{voirPieces \? 'Masquer' : 'Voir'\}/)
+  assert.match(code, /<EtatElement\s+etat=\{aVerifier \? 'a-verifier' : 'pret'\}/)
+  assert.match(code, /<BoutonSecondaire libelle="Retour"/)
+  assert.doesNotMatch(code, /AiTipsBlock|Vérifiez que tous les lots/, 'plus de bandeau qui double « Ajouter un lot »')
+  assert.match(code, /Un lot du dossier manque à la liste \? Ajoutez-le à la main/)
+})

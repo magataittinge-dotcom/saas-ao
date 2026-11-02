@@ -61,7 +61,7 @@ def test_absente_du_reglement():
 
 def test_le_delai_de_reponse_de_lacheteur_nest_pas_celui_des_questions():
     r = _lire("Les réponses aux questions seront communiquées à tous les candidats six jours au plus tard avant la date limite de dépôt des plis.")
-    assert r["statut"] == "a_verifier" and r["date"] is None
+    assert r["regle"] == "reponse_acheteur" and r["date"] == "2027-03-16"   # jamais présentée comme la date limite des questions
 
 
 def test_une_autre_phrase_ne_compte_pas():
@@ -82,3 +82,21 @@ def test_texte_vide_ou_volumineux_ne_plante_pas():
 @pytest.mark.parametrize("texte", ["Les questions au plus tard le 31/02/2027.", "Questions avant le 12/13/2027."])
 def test_date_impossible_nest_pas_inventee(texte):
     assert _lire(texte, remise=None)["statut"] == "a_verifier"
+
+
+# ── Formulation « réponse de l'acheteur N jours avant la remise », sans date propre aux questions (essai réel du 2/11) ──
+
+def test_la_reponse_de_l_acheteur_donne_la_date_jusqu_a_laquelle_poser_ses_questions():
+    r = _lire("Les candidats font parvenir en temps utile une demande par le profil d'acheteur ; une réponse leur sera adressée six jours au plus tard avant la date limite de dépôt des plis.")
+    assert (r["statut"], r["regle"], r["jours"], r["date"]) == ("trouvee", "reponse_acheteur", 6, "2027-03-16")
+    assert "six jours" in r["extrait"] and r["document"] == "RC-demo.pdf"
+
+
+def test_la_reponse_de_l_acheteur_sans_remise_connue_reste_a_verifier():
+    r = _lire("Une réponse sera adressée aux candidats 6 jours avant la date limite de dépôt des plis.", remise=None)
+    assert r["statut"] == "a_verifier" and r["regle"] == "reponse_acheteur" and r["jours"] == 6 and r["date"] is None
+
+
+def test_une_date_propre_aux_questions_l_emporte_sur_le_delai_de_reponse():
+    r = _lire("Les questions parviennent au plus tard le 5 mars 2027. Une réponse est adressée six jours avant la date limite de dépôt des plis.", remise=None)
+    assert (r["regle"], r["date"]) == ("absolue", "2027-03-05")

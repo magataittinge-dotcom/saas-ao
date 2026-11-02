@@ -49,11 +49,11 @@ export function cartesResumeAO(
 
   // La visite du site est dans « À vérifier avant de vous engager » : ici, la date limite des questions à l'acheteur.
   if (questions !== undefined) {
-    const { valeur, precision } = libelleDateQuestions(questions)
+    const { libelle, valeur, precision } = libelleDateQuestions(questions)
     const trouvee = questions?.statut === 'trouvee' && Boolean(questions.date)
     const source = questions?.document ? { document: questions.document, page: null, excerpt: questions.extrait } : null
     cartes.push({
-      libelle: 'Questions à l’acheteur jusqu’au', valeur: valeur.replace(JOUR_SEMAINE, ''), etat: trouvee ? 'neutre' : 'a-verifier',
+      libelle: questions?.regle === 'reponse_acheteur' ? libelle : 'Questions à l’acheteur jusqu’au', valeur: valeur.replace(JOUR_SEMAINE, ''), etat: trouvee ? 'neutre' : 'a-verifier',
       detail: precision ?? undefined, source: vers(source, voir),
     })
   }
@@ -143,7 +143,7 @@ export function texteACopier(p: Pick<PointAEclaircir, 'question' | 'source_docum
 
 export interface DateQuestions {
   statut: 'trouvee' | 'a_verifier'
-  regle: 'absolue' | 'relative' | null
+  regle: 'absolue' | 'relative' | 'reponse_acheteur' | null
   date: string | null
   heure: string | null
   jours: number | null
@@ -153,12 +153,18 @@ export interface DateQuestions {
   rappel?: string
 }
 
-/** « 12 mars 2027 » ou « À vérifier dans le RC », avec la manière dont la date est obtenue. */
-export function libelleDateQuestions(d: DateQuestions | null | undefined): { valeur: string; precision: string | null } {
-  if (!d || d.statut !== 'trouvee' || !d.date) return { valeur: AVERIFIER_RC, precision: d?.extrait ? 'Le règlement donne une formule que Synorix ne peut pas calculer seul.' : null }
+/** « 12 mars 2027 » ou « À vérifier dans le règlement », avec la manière dont la date est obtenue. */
+export function libelleDateQuestions(d: DateQuestions | null | undefined): { libelle: string; valeur: string; precision: string | null } {
+  const reponse = d?.regle === 'reponse_acheteur'
+  const libelle = reponse ? 'Réponses de l’acheteur jusqu’au' : 'Date limite des questions'
+  if (!d || d.statut !== 'trouvee' || !d.date) return { libelle, valeur: AVERIFIER_RC, precision: d?.extrait ? 'Le règlement donne une formule que Synorix ne peut pas calculer seul.' : null }
   const jour = dateLongue(d.date)
+  const nb = d.jours ? `${d.jours} ${d.jours > 1 ? 'jours' : 'jour'}` : ''
   return {
+    libelle,
     valeur: d.heure ? `${jour} · ${d.heure}` : jour,
-    precision: d.regle === 'relative' && d.jours ? `${d.jours} ${d.jours > 1 ? 'jours' : 'jour'} avant la remise des offres` : null,
+    precision: reponse
+      ? `Posez vos questions avant cette date : l’acheteur répond ${nb} avant la remise des offres.`
+      : d.regle === 'relative' && d.jours ? `${nb} avant la remise des offres` : null,
   }
 }

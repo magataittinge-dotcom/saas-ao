@@ -100,10 +100,11 @@ test('le rendu pose les classes sémantiques, sans mot négatif', () => {
       onPickFromVault={() => {}} onOpenVault={() => {}}
     />,
   )
-  for (const c of ['statut-piece--a-joindre', 'statut-piece--pret', 'statut-piece--si-concerne']) assert.ok(html.includes(c), c)
+  // l'état de chaque pièce est dit en petit sous elle (EtatElement) : un mot, une icône, jamais la couleur seule
+  for (const c of ['data-etat="a-couvrir"', 'data-etat="pret"', 'data-etat="a-verifier"']) assert.ok(html.includes(c), c)
+  for (const mot of ['À joindre', 'Prêt — valable jusqu’au 01/03/2027', 'Si concerné']) assert.ok(html.includes(mot), mot)
   assert.ok(html.includes('Attestation URSSAF : valable 6 mois (Code du travail, art. D8222-5)'))
   assert.match(html.replace(/<[^>]+>/g, ''), /Lu dans le règlement de la consultation \(RC\) : « Le cas échéant/)
-  assert.ok(html.includes('1 pièce à joindre · 1 prête'))
   assert.ok(!/À fournir|Expiré|manquant|incomplet|absent/i.test(html.replace(/class="[^"]*"/g, '')))
 })
 

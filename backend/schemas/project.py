@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, Field, computed_field, field_validator, ValidationInfo
 from typing import Literal, Optional, List, Any
 from datetime import date, datetime
 
@@ -42,6 +42,17 @@ class ProjectResponse(BaseModel):
     critical_fields: Optional[Any] = Field(default=None, exclude=True)
 
     model_config = {"from_attributes": True}
+
+    @field_validator("infos_marche", mode="after")
+    @classmethod
+    def _points_filtres_a_la_lecture(cls, infos, info: ValidationInfo):
+        """« Points à éclaircir » enregistrés : les filtres déterministes (extrait tronqué, fait déjà lu, prix) s'appliquent aussi à la
+        LECTURE, pour les questions enregistrées avant eux. La base n'est jamais réécrite."""
+        from services import points_eclaircir as pe
+        if not isinstance(infos, dict) or not isinstance(infos.get(pe.CLE_INFOS), list):
+            return infos
+        faits = pe.faits_connus(info.data.get("criteres_jugement"), infos)
+        return {**infos, pe.CLE_INFOS: pe.normaliser(infos[pe.CLE_INFOS], faits=faits)}
 
     @computed_field
     @property

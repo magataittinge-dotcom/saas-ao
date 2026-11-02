@@ -10,7 +10,7 @@ import CandidatureSectionTemplates from '@/components/project/CandidatureSection
 import { ActionsBarre, BilanBarre, BoutonSuite } from '@/components/project/BarreEtape'
 import { GabaritEtape, BandeResume, BarreEtape } from '@/components/etape'
 import { Button } from '@/components/ui/button'
-import { cartesPieces } from '@/lib/resumePieces'
+import { cartesPieces, comptesDetailles, phraseComptes } from '@/lib/resumePieces'
 import VaultPickerModal from '@/components/project/VaultPickerModal'
 import PanneauSource, { type SelectionSource } from '@/components/project/source/PanneauSource'
 import { piecesComptees } from '@/components/project/NonConcerne'
@@ -77,10 +77,10 @@ export default function StepVerification({ project }: Props) {
   // « Prêt » : fait vérifié par le serveur (plan du ZIP), comme à l'Export. Les pièces
   // « Si concerné », « Facultatif » et « Pour l'attribution » ne sont pas à joindre maintenant.
   const echeance = echeanceAO(project)?.date?.slice(0, 10) ?? null
+  // UN SEUL calcul des comptes (résumé, barre du bas, liste) : prêtes + à joindre + à renouveler = pièces demandées au dépôt
+  const comptes = comptesDetailles(scored, echeance)
   const { aJoindre, pretes } = comptesPieces(scored, echeance)
-  const comptesCoffre = comptesPieces(piecesComptees(vaultItems), echeance)
-  const comptesFormulaires = comptesPieces(piecesComptees(templateItems), echeance)
-  const pct = aJoindre + pretes > 0 ? Math.round((pretes / (aJoindre + pretes)) * 100) : 0
+  const pct = comptes.total > 0 ? Math.round((comptes.pretes / comptes.total) * 100) : 0
 
   // ── Mutations ───────────────────────────────────────────────────
   // Rafraîchit la liste ET recalcule le score, sans quitter l'étape.
@@ -219,26 +219,16 @@ export default function StepVerification({ project }: Props) {
       <BilanBarre
         className="gap-3"
         bureau={<>
-          <span className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
-            Complétion dossier
-          </span>
-          <div className="h-1.5 w-[120px] overflow-hidden rounded-full" style={{ background: 'var(--surface-1)' }}>
-            <div
-              className="h-full transition-all duration-500"
-              style={{ width: `${pct}%`, background: 'var(--text-1)' }}
-            />
+          <div role="progressbar" aria-label="Pièces prêtes" aria-valuemin={0} aria-valuemax={comptes.total} aria-valuenow={comptes.pretes} className="h-1 w-[120px] shrink-0 overflow-hidden rounded-pilule bg-surface-2">
+            <div className="h-full rounded-pilule bg-accent-ui transition-[width] duration-morph ease-lien motion-reduce:transition-none" style={{ width: `${pct}%` }} />
           </div>
-          <span className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>{pct}%</span>
+          <span className="text-sm text-fg-2">{phraseComptes(comptes)}</span>
         </>}
         tel={<>
-          <span className="sr-only">Complétion dossier</span>
-          <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full" style={{ background: 'var(--surface-1)' }}>
-            <div
-              className="h-full transition-all duration-500"
-              style={{ width: `${pct}%`, background: 'var(--text-1)' }}
-            />
+          <div role="progressbar" aria-label="Pièces prêtes" aria-valuemin={0} aria-valuemax={comptes.total} aria-valuenow={comptes.pretes} className="h-1 min-w-0 flex-1 overflow-hidden rounded-pilule bg-surface-2">
+            <div className="h-full rounded-pilule bg-accent-ui" style={{ width: `${pct}%` }} />
           </div>
-          <span className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>{pct}%</span>
+          <span className="shrink-0 text-xs text-fg-2">{comptes.pretes} sur {comptes.total}</span>
         </>}
       />
       <ActionsBarre>
@@ -281,7 +271,7 @@ export default function StepVerification({ project }: Props) {
           Accéder au coffre-fort
         </Button>
       </>}
-      resume={<BandeResume libelle="Les pièces du dossier" cartes={cartesPieces(scored, echeance, { coffre: comptesCoffre, formulaires: comptesFormulaires })} />}
+      resume={<BandeResume libelle="Les pièces du dossier" cartes={cartesPieces(scored, echeance, { coffre: piecesComptees(vaultItems), formulaires: piecesComptees(templateItems) })} />}
       barre={bottomBar}
     >
       <CandidatureSectionVault
