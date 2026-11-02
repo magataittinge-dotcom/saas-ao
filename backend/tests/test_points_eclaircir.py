@@ -253,3 +253,29 @@ def test_une_question_sans_page_garde_sa_piece_comme_source_sans_page_inventee(c
     _projet(db_session, test_org.id)
     points = client.post(f"/api/projects/{PID}/points-a-eclaircir").json()["points"]
     assert points[0]["source_document"] == "RC-demo.pdf" and points[0]["source_page"] is None     # pièce sans PDF : pas de page, jamais « None » à l'écran
+
+
+def test_la_lecture_filtre_les_points_deja_enregistres_sans_reecrire_la_base(client, db_session, test_org):
+    """Les questions enregistrées avant les correctifs (tronqué, fait déjà lu, prix) s'affichent filtrées ; la base n'est pas touchée."""
+    enregistres = [
+        {"question": "Le contenu de l'article 4 est tronqué : pourriez-vous nous transmettre le texte complet ?", "pourquoi": "Coupé.", "source_document": "RC-demo.pdf", "source_page": 4, "extrait": "extrait"},
+        {"question": "Pourriez-vous préciser les critères de jugement des offres ?", "pourquoi": "Non détaillés.", "source_document": "RC-demo.pdf", "source_page": 5, "extrait": "extrait"},
+        {"question": "Pourriez-vous confirmer le montant estimé de l'opération ?", "pourquoi": "Budget.", "source_document": "RC-demo.pdf", "source_page": 6, "extrait": "extrait"},
+        Q1,
+    ]
+    _projet(db_session, test_org.id, infos={"objet": "AO inventé", "points_a_eclaircir": enregistres})
+    p = db_session.get(Project, PID)
+    p.criteres_jugement = [{"nom": "Valeur technique", "poids": 100}]
+    db_session.commit()
+
+    corps = client.get(f"/api/projects/{PID}").json()
+    assert [x["question"] for x in corps["infos_marche"]["points_a_eclaircir"]] == [Q1["question"]]
+    assert corps["infos_marche"]["objet"] == "AO inventé"
+    assert len(_infos(db_session)["points_a_eclaircir"]) == 4                     # la base garde tout : filtrage à la lecture seulement
+    liste = client.get("/api/projects").json()
+    assert len(next(x for x in liste if x["id"] == PID)["infos_marche"]["points_a_eclaircir"]) == 1
+
+
+def test_la_lecture_d_une_analyse_ancienne_sans_points_ne_change_rien(client, db_session, test_org):
+    _projet(db_session, test_org.id, infos={"objet": "AO inventé"})
+    assert client.get(f"/api/projects/{PID}").json()["infos_marche"] == {"objet": "AO inventé"}
