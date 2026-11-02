@@ -283,6 +283,33 @@ def _memoire_content_all_placeholders(content: dict) -> bool:
     )
 
 
+def _plan_valide(db, project, org_id: str, memoire_cfg) -> list[dict] | None:
+    """B3 — le plan VALIDÉ du dossier pour le lot choisi, tel que le générateur le lit, ou None (aucun plan, plan non
+    validé, plan illisible : le mémoire est alors rédigé comme avant le plan). Références et équipe : seulement celles
+    de l'organisation (un identifiant étranger n'est jamais lu)."""
+    from models.plan_memoire import PlanMemoire
+    from services import plan_fiches, plan_memoire as service
+    ligne = (db.query(PlanMemoire)
+             .filter(PlanMemoire.project_id == project.id, PlanMemoire.organization_id == org_id,
+                     PlanMemoire.lot == (project.selected_lot or "")[:64])
+             .first())
+    if ligne is None or ligne.valide_le is None:
+        return None
+    try:
+        plan = service.valider(list(ligne.parties or []))
+    except (ValueError, TypeError, AttributeError):
+        logger.warning("Plan du mémoire illisible pour %s : ignoré", project.id)
+        return None
+    refs = {r.id: r for r in db.query(Reference).filter(
+        Reference.organization_id == org_id, Reference.is_reference == True,  # noqa: E712
+        Reference.deleted_at.is_(None)).all()}
+    equipe = {m.id: m for m in db.query(TeamMember).filter(TeamMember.organization_id == org_id).all()}
+    liste = (getattr(memoire_cfg, "materiel_liste", None) or []) if memoire_cfg else []
+    materiel = {str(l.get("designation") or "").strip()[:160] for l in liste if isinstance(l, dict)}
+    rattachement = service.rattacher_criteres(plan, project.criteres_jugement)
+    return plan_fiches.pour_generation(plan, rattachement, refs, equipe, materiel) or None
+
+
 def _lire_contexte_generation(db, project_id: str, org_id: str, reference_ids: list | None) -> dict:
     """Tout ce que le générateur lit en base pour construire le préfixe du mémoire.
 
@@ -333,6 +360,7 @@ def _lire_contexte_generation(db, project_id: str, org_id: str, reference_ids: l
         reglementaire_block = build_reglementaire_block(db, compliance_items)
 
     return {
+        "plan": _plan_valide(db, project, org_id, memoire_cfg),
         "organization": org, "memoire_config": memoire_cfg, "tous_les_docs": all_docs, "docs": docs,
         "references": refs, "compliance_items": compliance_items,
         "reference_template_text": ref_template_text, "reglementaire_block": reglementaire_block,
@@ -408,6 +436,7 @@ def _run_memoire_job(
             variables=variables,
             project_id=project_id,
             profile_overrides=profile_overrides,
+            plan=ctx["plan"],
         ))
         # Contenu 100 % placeholders = panne du service IA en plein run
         # (constat audit : crédit épuisé → 26/26 sections vides quand même
@@ -494,12 +523,26 @@ def _run_memoire_job(
         db.close()
 
 
-def _section_connue(part: str, cle: str) -> None:
-    """404 si ``part.cle`` n'est pas une des 25 sous-sections rédigées du mémoire (jamais le préambule)."""
+def _section_connue(part: str, cle: str, contenu: dict | None = None) -> None:
+    """404 si ``part.cle`` n'est pas une des 25 sous-sections rédigées du mémoire (jamais le préambule) ni une partie
+    ajoutée par le patron dans le plan suivi de ce mémoire (``ajout_<n>``, présente dans ``_plan``)."""
     from services.ai.memoire_generator import _MEMOIRE_SEGMENTS
     sous = dict(_MEMOIRE_SEGMENTS).get(part)
-    if not sous or cle not in sous:
-        raise HTTPException(status_code=404, detail="Partie du mémoire inconnue")
+    if sous and cle in sous:
+        return
+    plan = (contenu or {}).get("_plan") if isinstance(contenu, dict) else None
+    suivies = plan.get("parties") if isinstance(plan, dict) else None
+    if isinstance(suivies, list) and any(isinstance(p, dict) and p.get("partie") == part and p.get("sous_cle") == cle
+                                         and cle.startswith("ajout_") for p in suivies):
+        return
+    raise HTTPException(status_code=404, detail="Partie du mémoire inconnue")
+
+
+def _contenu_du_projet(db, project_id: str) -> dict | None:
+    """Le JSON du mémoire du projet (pour reconnaître les parties ajoutées au plan) ; la propriété du projet est
+    vérifiée juste après par chaque route."""
+    ligne = db.query(MemoireTechnique.content_json).filter(MemoireTechnique.project_id == project_id).first()
+    return ligne[0] if ligne else None
 
 
 CLE_ETATS = "_etat_sections"   # {"partie_b.dechets": "a_refaire"} : seules les parties « À refaire » y figurent
@@ -518,7 +561,7 @@ def definir_etat_section(
 
     Rangé dans le JSON du mémoire, sous une clé à part que l'export ignore : pas de migration."""
     import copy
-    _section_connue(part, cle)
+    _section_connue(part, cle, _contenu_du_projet(db, project_id))
     _get_project_or_404(project_id, user.organization_id, db)
     memoire = (db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project_id)
                .with_for_update().first())
@@ -570,7 +613,7 @@ def estimation_refaire_section(
     from services.ai.memoire_generator import modele_du_segment
     from services.memoire_refaire import estimer
 
-    _section_connue(part, cle)
+    _section_connue(part, cle, _contenu_du_projet(db, project_id))
     _get_project_or_404(project_id, user.organization_id, db)
     memoire = db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project_id).first()
     if not memoire:
@@ -593,7 +636,7 @@ async def refaire_section_memoire(
     Même mécanisme détaché que la génération (POST -> « started », suivi par /processing-status et le flux SSE).
     Ne décompte AUCUNE unité de quota : le mémoire de ce lot est déjà décompté. Un seul « Refaire » (ou une seule
     génération) à la fois par projet."""
-    _section_connue(part, cle)
+    _section_connue(part, cle, _contenu_du_projet(db, project_id))
     project = _get_project_or_404(project_id, user.organization_id, db)
     ensure_relaunchable(project)
     memoire = db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project_id).first()
@@ -659,12 +702,24 @@ def _run_refaire_job(project_id: str, org_id: str, user_id: str, part: str, cle:
         reference_ids = stockees.pop("reference_ids", None)
         profile_overrides = memoire.profile_overrides or None
         ctx = _lire_contexte_generation(db, project_id, org_id, reference_ids)
+        contenu_actuel = memoire.content_json
         db.close()
+
+        # B3 — la fiche de la partie (plan validé), ou à défaut son titre dans le plan suivi (partie ajoutée) ;
+        # sans plan, « Refaire » est celui d'avant.
+        plan_partie = next((p for p in (ctx["plan"] or []) if p["partie"] == part and p["sous_cle"] == cle), None)
+        if plan_partie is None and cle.startswith("ajout_"):
+            suivi = next((p for p in ((contenu_actuel or {}).get("_plan") or {}).get("parties", [])
+                          if isinstance(p, dict) and p.get("partie") == part and p.get("sous_cle") == cle), None)
+            if suivi:
+                plan_partie = {"partie": part, "sous_cle": cle, "titre": suivi.get("titre") or cle, "ajout": True,
+                               "criteres": [], "lignes": [], "voulu": ""}
 
         ouvrages_dpgf = _ouvrages_du_contexte(ctx)
         pipeline_tracker.start_step(project_id, "generating")
         texte, _meta = asyncio.run(MemoireGenerator().refaire_section(
             part, cle,
+            plan_partie=plan_partie,
             **_arguments_generateur(ctx, ouvrages_dpgf),
             variables=stockees,
             project_id=project_id,
@@ -946,6 +1001,13 @@ def update_memoire(
         nouveau[CLE_ETATS] = etats
     else:
         nouveau.pop(CLE_ETATS, None)
+    # B3 — le plan suivi à la rédaction (titres, ordre, parties ajoutées) est posé par le serveur : un envoi du client ne
+    # le remplace jamais.
+    suivi = (memoire.content_json or {}).get("_plan")
+    if suivi:
+        nouveau["_plan"] = suivi
+    else:
+        nouveau.pop("_plan", None)
     memoire.content_json = nouveau
     db.commit()
     db.refresh(memoire)

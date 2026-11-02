@@ -240,12 +240,12 @@ export default function StepVerification({ project }: Props) {
       />
       <ActionsBarre>
         <BoutonSuite
-          etape="Mémoire"
+          etape="Plan"
           onClick={() =>
             isAlreadyDone
-              ? navigate(`/projects/${project.id}/memoire`)
+              ? navigate(`/projects/${project.id}/plan`)
               : completeStep.mutate(4, {
-                  onSuccess: () => navigate(`/projects/${project.id}/memoire`),
+                  onSuccess: () => navigate(`/projects/${project.id}/plan`),
                 })
           }
           enCours={completeStep.isPending}

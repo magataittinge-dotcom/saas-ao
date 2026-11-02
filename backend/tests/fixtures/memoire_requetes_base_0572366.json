@@ -1,0 +1,194 @@
+{
+ "partie_a": {
+  "autres_arguments": [
+   "extra_body"
+  ],
+  "consigne": "\n\n━━━ CONSIGNE DE CET APPEL (IMPÉRATIVE) ━━━\nLe mémoire est généré EN PLUSIEURS APPELS. Pour CET appel, génère UNIQUEMENT la partie « partie_a ».\nRéponds avec un objet JSON STRICT contenant EXACTEMENT l'unique clé de premier niveau \"partie_a\", dont la valeur est un objet avec ces sous-sections (TOUTES obligatoires, valeurs en markdown détaillé et spécifique au marché) :\n  - implantation\n  - historique\n  - engagement_qualitatif\n  - activites\n  - organigramme\n  - roles_missions\n  - moyens_informatiques\n  - vehicules\n  - materiel\n  - references\n  - fournisseurs\nNe génère AUCUNE autre partie (ni preambule, ni les autres partie_*). Format attendu : {\"partie_a\": {\"<sous_section>\": \"markdown...\", ...}}. Ta réponse commence par { et finit par }.",
+  "extra_body": {
+   "thinking": {
+    "type": "between_tools"
+   }
+  },
+  "max_tokens": 32000,
+  "modele": "claude-sonnet-5-5",
+  "system": [
+   {
+    "cache": null,
+    "longueur": 30,
+    "sha256": "0f8c543c30ab53ca253788d98d5bbbe57b797e57b57a03b3af48cc20575cb68a"
+   },
+   {
+    "cache": {
+     "type": "ephemeral"
+    },
+    "longueur": 758,
+    "sha256": "f3621443cea9b5680945da2df5c1861570fd5fc8bec483be8e15309b50866ec5"
+   }
+  ],
+  "user": [
+   {
+    "cache": {
+     "type": "ephemeral"
+    },
+    "longueur": 649,
+    "sha256": "3ea9c29edbefb1d3e216a1c32856728101efbe3fcbdd300998f203b0282fc2cd"
+   },
+   {
+    "cache": {
+     "type": "ephemeral"
+    },
+    "longueur": 1126,
+    "sha256": "342347b5299129afcde24bfaba216de2d78b4f2625c8a1a34e16643ae853fb5c"
+   },
+   {
+    "cache": null,
+    "longueur": 747,
+    "sha256": "39ff6c75ba41915318dec81794f2122d0f3e096cfe3f29513ba3b66fc89a4d12"
+   }
+  ]
+ },
+ "partie_b": {
+  "autres_arguments": [
+   "extra_body"
+  ],
+  "consigne": "\n\n━━━ CONSIGNE DE CET APPEL (IMPÉRATIVE) ━━━\nLe mémoire est généré EN PLUSIEURS APPELS. Pour CET appel, génère UNIQUEMENT la partie « partie_b ».\nRéponds avec un objet JSON STRICT contenant EXACTEMENT l'unique clé de premier niveau \"partie_b\", dont la valeur est un objet avec ces sous-sections (TOUTES obligatoires, valeurs en markdown détaillé et spécifique au marché) :\n  - demarrage\n  - interlocuteur\n  - qualite_ouvrages\n  - respect_planning\n  - securite\n  - dechets\n  - environnement\nNe génère AUCUNE autre partie (ni preambule, ni les autres partie_*). Format attendu : {\"partie_b\": {\"<sous_section>\": \"markdown...\", ...}}. Ta réponse commence par { et finit par }.",
+  "extra_body": {
+   "thinking": {
+    "type": "between_tools"
+   }
+  },
+  "max_tokens": 32000,
+  "modele": "claude-sonnet-5-5",
+  "system": [
+   {
+    "cache": null,
+    "longueur": 30,
+    "sha256": "0f8c543c30ab53ca253788d98d5bbbe57b797e57b57a03b3af48cc20575cb68a"
+   },
+   {
+    "cache": {
+     "type": "ephemeral"
+    },
+    "longueur": 758,
+    "sha256": "f3621443cea9b5680945da2df5c1861570fd5fc8bec483be8e15309b50866ec5"
+   }
+  ],
+  "user": [
+   {
+    "cache": {
+     "type": "ephemeral"
+    },
+    "longueur": 649,
+    "sha256": "3ea9c29edbefb1d3e216a1c32856728101efbe3fcbdd300998f203b0282fc2cd"
+   },
+   {
+    "cache": {
+     "type": "ephemeral"
+    },
+    "longueur": 1126,
+    "sha256": "342347b5299129afcde24bfaba216de2d78b4f2625c8a1a34e16643ae853fb5c"
+   },
+   {
+    "cache": null,
+    "longueur": 672,
+    "sha256": "a27c5790e13a4965d3c777dc188b97c1d29035c34a1dce6afaa906e23e655d35"
+   }
+  ]
+ },
+ "partie_c": {
+  "autres_arguments": [
+   "extra_body"
+  ],
+  "consigne": "\n\n━━━ CONSIGNE DE CET APPEL (IMPÉRATIVE) ━━━\nLe mémoire est généré EN PLUSIEURS APPELS. Pour CET appel, génère UNIQUEMENT la partie « partie_c ».\nRéponds avec un objet JSON STRICT contenant EXACTEMENT l'unique clé de premier niveau \"partie_c\", dont la valeur est un objet avec ces sous-sections (TOUTES obligatoires, valeurs en markdown détaillé et spécifique au marché) :\n  - methodologie\n  - effectifs\n  - materiels\n  - hygiene_securite\n  - mesures_environnementales\n  - gpa\n  - delai\nNe génère AUCUNE autre partie (ni preambule, ni les autres partie_*). Format attendu : {\"partie_c\": {\"<sous_section>\": \"markdown...\", ...}}. Ta réponse commence par { et finit par }.",
+  "extra_body": {
+   "thinking": {
+    "type": "between_tools"
+   }
+  },
+  "max_tokens": 32000,
+  "modele": "claude-sonnet-5-5",
+  "system": [
+   {
+    "cache": null,
+    "longueur": 30,
+    "sha256": "0f8c543c30ab53ca253788d98d5bbbe57b797e57b57a03b3af48cc20575cb68a"
+   },
+   {
+    "cache": {
+     "type": "ephemeral"
+    },
+    "longueur": 758,
+    "sha256": "f3621443cea9b5680945da2df5c1861570fd5fc8bec483be8e15309b50866ec5"
+   }
+  ],
+  "user": [
+   {
+    "cache": {
+     "type": "ephemeral"
+    },
+    "longueur": 649,
+    "sha256": "3ea9c29edbefb1d3e216a1c32856728101efbe3fcbdd300998f203b0282fc2cd"
+   },
+   {
+    "cache": {
+     "type": "ephemeral"
+    },
+    "longueur": 1126,
+    "sha256": "342347b5299129afcde24bfaba216de2d78b4f2625c8a1a34e16643ae853fb5c"
+   },
+   {
+    "cache": null,
+    "longueur": 669,
+    "sha256": "f8bb7a120815b4ee3fb8391dd5a4a76cf3224e11027e014c957ca991b0f26b7d"
+   }
+  ]
+ },
+ "preambule": {
+  "autres_arguments": [
+   "extra_body"
+  ],
+  "consigne": "\n\n━━━ CONSIGNE DE CET APPEL (IMPÉRATIVE) ━━━\nLe mémoire est généré EN PLUSIEURS APPELS. Pour CET appel, génère UNIQUEMENT le préambule.\nRéponds avec un objet JSON STRICT contenant EXACTEMENT cette unique clé : {\"preambule\": \"markdown...\"} — et RIEN d'autre. Ne génère aucune autre partie. Ta réponse commence par { et finit par }.",
+  "extra_body": {
+   "thinking": {
+    "type": "between_tools"
+   }
+  },
+  "max_tokens": 32000,
+  "modele": "claude-sonnet-5-5",
+  "system": [
+   {
+    "cache": null,
+    "longueur": 30,
+    "sha256": "0f8c543c30ab53ca253788d98d5bbbe57b797e57b57a03b3af48cc20575cb68a"
+   },
+   {
+    "cache": {
+     "type": "ephemeral"
+    },
+    "longueur": 758,
+    "sha256": "f3621443cea9b5680945da2df5c1861570fd5fc8bec483be8e15309b50866ec5"
+   }
+  ],
+  "user": [
+   {
+    "cache": {
+     "type": "ephemeral"
+    },
+    "longueur": 649,
+    "sha256": "3ea9c29edbefb1d3e216a1c32856728101efbe3fcbdd300998f203b0282fc2cd"
+   },
+   {
+    "cache": {
+     "type": "ephemeral"
+    },
+    "longueur": 1126,
+    "sha256": "342347b5299129afcde24bfaba216de2d78b4f2625c8a1a34e16643ae853fb5c"
+   },
+   {
+    "cache": null,
+    "longueur": 330,
+    "sha256": "77a91e27f8258e40f5ddfbbac4a430f2708eba1e824819de18b29774700f1815"
+   }
+  ]
+ }
+}

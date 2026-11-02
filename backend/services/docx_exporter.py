@@ -154,6 +154,22 @@ _PART_C: list[tuple[str, str]] = [
 ]
 
 
+def sections_de_la_partie(content_json: dict[str, Any] | None, part_key: str,
+                          defaut: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    """Les sections d'une partie (clé, titre numéroté) : celles du plan suivi à la rédaction (``_plan``, rangé avec
+    le mémoire : titres du patron, ordre, parties ajoutées), sinon les 25 du modèle. Sans plan : ``defaut`` tel quel."""
+    plan = (content_json or {}).get("_plan") if isinstance(content_json, dict) else None
+    liste = plan.get("parties") if isinstance(plan, dict) else None
+    if not isinstance(liste, list):
+        return defaut
+    sortie: list[tuple[str, str]] = []
+    for p in liste:
+        if isinstance(p, dict) and p.get("partie") == part_key and isinstance(p.get("sous_cle"), str) \
+                and isinstance(p.get("titre"), str):
+            sortie.append((p["sous_cle"], f"{len(sortie) + 1}. {p['titre']}"))
+    return sortie
+
+
 # ─── Date en français, sans dépendre de la locale du système ───────────────────
 
 _MOIS_FR = ("janvier", "février", "mars", "avril", "mai", "juin", "juillet",
@@ -717,9 +733,9 @@ def build_memoire_docx(
         _h1(doc, "PRÉAMBULE")
         _body(doc, preambule, niveau_base=1)
 
-    _add_part(doc, "PARTIE A — PRÉSENTATION GÉNÉRALE",       content_json.get("partie_a", {}), _PART_A, part_key="partie_a", map_image=map_image, map_caption=map_caption, visuels=visuels)
-    _add_part(doc, "PARTIE B — PRÉSENTATION DE LA PRESTATION", content_json.get("partie_b", {}), _PART_B, part_key="partie_b", visuels=visuels)
-    _add_part(doc, "PARTIE C — MÉTHODOLOGIE MISE EN ŒUVRE",   content_json.get("partie_c", {}), _PART_C, part_key="partie_c", visuels=visuels)
+    _add_part(doc, "PARTIE A — PRÉSENTATION GÉNÉRALE",       content_json.get("partie_a", {}), sections_de_la_partie(content_json, "partie_a", _PART_A), part_key="partie_a", map_image=map_image, map_caption=map_caption, visuels=visuels)
+    _add_part(doc, "PARTIE B — PRÉSENTATION DE LA PRESTATION", content_json.get("partie_b", {}), sections_de_la_partie(content_json, "partie_b", _PART_B), part_key="partie_b", visuels=visuels)
+    _add_part(doc, "PARTIE C — MÉTHODOLOGIE MISE EN ŒUVRE",   content_json.get("partie_c", {}), sections_de_la_partie(content_json, "partie_c", _PART_C), part_key="partie_c", visuels=visuels)
 
     inserer_sommaire(doc, ancre_sommaire._p)
 
@@ -738,11 +754,11 @@ def compter_passages_a_completer(content_json: dict[str, Any] | None, *, raison_
     textes: list[str] = []
     if isinstance(cj.get("preambule"), str):
         textes.append(cj["preambule"])
-    for cle, sections in (("partie_a", _PART_A), ("partie_b", _PART_B), ("partie_c", _PART_C)):
+    for cle, defaut in (("partie_a", _PART_A), ("partie_b", _PART_B), ("partie_c", _PART_C)):
         partie = cj.get(cle)
         if not isinstance(partie, dict):
             continue
-        for sous_cle, _ in sections:
+        for sous_cle, _ in sections_de_la_partie(cj, cle, defaut):
             if isinstance(partie.get(sous_cle), str):
                 textes.append(partie[sous_cle])
     return sum(len(_A_COMPLETER_RE.findall(t)) for t in textes) + (1 if raison_sociale_vide else 0)

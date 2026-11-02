@@ -2,7 +2,7 @@ import { lazy, Suspense, useRef, useState, useEffect } from 'react'
 import { useParams, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { MapPin } from 'lucide-react'
 import { useProject } from '@/hooks/useProject'
-import { StepProgress } from '@/components/project/StepProgress'
+import { StepProgress, segmentDeEtape } from '@/components/project/StepProgress'
 import { DeadlinePill } from '@/components/dashboard/DeadlinePill'
 import { echeanceAO } from '@/lib/echeance'
 import { StepperSkeleton } from '@/components/skeletons'
@@ -15,10 +15,10 @@ const StepUpload = lazy(() => import('./project/StepUpload'))
 const StepLotSelection = lazy(() => import('./project/StepLotSelection'))
 const StepAnalysis = lazy(() => import('./project/StepAnalysis'))
 const StepVerification = lazy(() => import('./project/StepVerification'))
+const StepPlan = lazy(() => import('./project/StepPlan'))
 const StepMemoire = lazy(() => import('./project/StepMemoire'))
 const StepExport = lazy(() => import('./project/StepExport'))
 
-const STEP_ROUTES = ['upload', 'lots', 'analysis', 'verification', 'memoire', 'export']
 
 export default function Project() {
   const { id } = useParams<{ id: string }>()
@@ -56,7 +56,7 @@ export default function Project() {
   if (!project) return <Navigate to="/dashboard" replace />
 
   const handleStepClick = (step: number) => {
-    navigate(`/projects/${id}/${STEP_ROUTES[step - 1]}`)
+    navigate(`/projects/${id}/${segmentDeEtape(step)}`)
   }
 
   return (
@@ -107,6 +107,7 @@ export default function Project() {
         <Route path="verification" element={<StepVerification project={project} />} />
         {/* B9 — ancien nom d'étape conservé en redirect */}
         <Route path="candidature"  element={<Navigate to={`/projects/${project.id}/verification`} replace />} />
+        <Route path="plan"         element={<StepPlan         project={project} />} />
         <Route path="memoire"      element={<StepMemoire      project={project} />} />
         <Route path="export"       element={<StepExport       project={project} />} />
       </Routes>

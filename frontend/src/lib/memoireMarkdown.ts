@@ -7,30 +7,26 @@
 //   (une barre de plus à chaque niveau), et désescapée à la relecture ;
 // - le séparateur « --- » posé avant chaque partie est retiré exactement.
 import type { MemoireContent } from '@/types'
-import { PARTIES, SECTIONS_MEMOIRE, TITRES_PARTIES, type PartieId, type SectionMemoire } from '@/lib/memoireSections'
+import { PARTIES, TITRES_PARTIES, sectionsDuContenu, type PartieId, type SectionMemoire } from '@/lib/memoireSections'
 
 const TITRE_PREAMBULE = '# PRÉAMBULE'
 const SEPARATEUR = '---'
 const titrePartie = (p: PartieId) => `# ${TITRES_PARTIES[p]}`
 const titreSection = (s: SectionMemoire) => `## ${s.titre}`
 
-const TITRES: ReadonlySet<string> = new Set([
-  TITRE_PREAMBULE,
-  ...PARTIES.map(titrePartie),
-  ...SECTIONS_MEMOIRE.map(titreSection),
-])
-
-/** Ligne de contenu qui ressemble à un titre d'éditeur, échappée ou non. */
-function estTitreOuEchappe(ligne: string): boolean {
-  return TITRES.has(ligne.replace(/^\\+/, ''))
+/** Les titres d'éditeur d'un mémoire (ceux de son plan suivi, ou du modèle) : seuls à séparer des sections. */
+function titresDe(sections: readonly SectionMemoire[]): ReadonlySet<string> {
+  return new Set([TITRE_PREAMBULE, ...PARTIES.map(titrePartie), ...sections.map(titreSection)])
 }
 
-const echapper = (ligne: string) => (estTitreOuEchappe(ligne) ? `\\${ligne}` : ligne)
-const desechapper = (ligne: string) =>
-  ligne.startsWith('\\') && estTitreOuEchappe(ligne) ? ligne.slice(1) : ligne
-
-function lignesDe(texte: string): string[] {
-  return texte.split('\n').map(echapper)
+/** Les trois gestes d'échappement, pour un jeu de titres donné. */
+function echappement(titres: ReadonlySet<string>) {
+  /** Ligne de contenu qui ressemble à un titre d'éditeur, échappée ou non. */
+  const estTitreOuEchappe = (ligne: string): boolean => titres.has(ligne.replace(/^\\+/, ''))
+  return {
+    echapper: (ligne: string) => (estTitreOuEchappe(ligne) ? `\\${ligne}` : ligne),
+    desechapper: (ligne: string) => (ligne.startsWith('\\') && estTitreOuEchappe(ligne) ? ligne.slice(1) : ligne),
+  }
 }
 
 function texteDe(partie: unknown, cle: string): string {
@@ -40,10 +36,13 @@ function texteDe(partie: unknown, cle: string): string {
 
 /** Le mémoire en un seul texte Markdown, pour l'éditeur. */
 export function versMarkdown(content: MemoireContent): string {
+  const sections = sectionsDuContenu(content)
+  const { echapper } = echappement(titresDe(sections))
+  const lignesDe = (texte: string): string[] => texte.split('\n').map(echapper)
   const lignes: string[] = [TITRE_PREAMBULE, '', ...lignesDe(content.preambule ?? ''), '']
   for (const p of PARTIES) {
     lignes.push(SEPARATEUR, '', titrePartie(p), '')
-    for (const s of SECTIONS_MEMOIRE.filter((x) => x.part === p)) {
+    for (const s of sections.filter((x) => x.part === p)) {
       const texte = texteDe(content[p], s.cle)
       if (texte) lignes.push(titreSection(s), '', ...lignesDe(texte), '')
     }
@@ -55,6 +54,8 @@ type Cible = { type: 'preambule' } | { type: 'partie'; part: PartieId } | { type
 
 /** Relit le texte de l'éditeur. Les sections absentes du texte gardent leur contenu d'origine. */
 export function depuisMarkdown(raw: string, original: MemoireContent): MemoireContent {
+  const sections = sectionsDuContenu(original)
+  const { desechapper } = echappement(titresDe(sections))
   const resultat = {
     ...original,
     partie_a: { ...original.partie_a },
@@ -70,7 +71,7 @@ export function depuisMarkdown(raw: string, original: MemoireContent): MemoireCo
     const p = PARTIES.find((x) => ligne === titrePartie(x))
     if (p) cible = { type: 'partie', part: p }
     if (!cible && partieCourante) {
-      const s = SECTIONS_MEMOIRE.find((x) => x.part === partieCourante && ligne === titreSection(x))
+      const s = sections.find((x) => x.part === partieCourante && ligne === titreSection(x))
       if (s) cible = { type: 'section', section: s }
     }
     if (cible) {

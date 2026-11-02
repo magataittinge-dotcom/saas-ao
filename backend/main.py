@@ -35,6 +35,7 @@ from routers import (
     memoire,
     memoire_config,
     relecture_memoire,
+    plan_memoire,
     export,
     dashboard,
     billing,
@@ -391,6 +392,7 @@ app.include_router(compliance.router, prefix="/api/projects", tags=["compliance"
 app.include_router(candidature.router, prefix="/api/projects", tags=["candidature"])
 app.include_router(memoire.router, prefix="/api/projects", tags=["memoire"])
 app.include_router(relecture_memoire.router, prefix="/api/projects", tags=["relecture-memoire"])
+app.include_router(plan_memoire.router, prefix="/api/projects", tags=["plan-memoire"])
 app.include_router(memoire_config.router, prefix="/api/memoire-config", tags=["memoire-config"])
 app.include_router(rag.router, prefix="/api/rag", tags=["rag"])
 app.include_router(export.router, prefix="/api/projects", tags=["export"])

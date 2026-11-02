@@ -4,14 +4,20 @@ import { cn } from '@/lib/utils'
 import { useCompanionStore } from '@/stores/companionStore'
 import CompanionOrb from '@/components/ui/CompanionOrb'
 
-const STEPS = [
-  { number: 1, label: 'Dépôt du dossier', segment: 'upload' },
-  { number: 2, label: 'Lots',        segment: 'lots' },
-  { number: 3, label: 'Décider',  segment: 'analysis' },
-  { number: 4, label: 'Pièces', segment: 'verification' },
-  { number: 5, label: 'Mémoire',     segment: 'memoire' },
-  { number: 6, label: 'Export',      segment: 'export' },
-]
+// Numérotation d'AFFICHAGE (1-7). `serveur` : le numéro d'étape tenu par le serveur (current_step, completed_steps), qui ne
+// change pas : « Plan » et « Rédiger » se rangent derrière l'étape 5 du serveur, « Export » derrière la 6.
+export const STEPS = [
+  { number: 1, label: 'Dépôt du dossier', segment: 'upload', serveur: 1 },
+  { number: 2, label: 'Lots',        segment: 'lots', serveur: 2 },
+  { number: 3, label: 'Décider',  segment: 'analysis', serveur: 3 },
+  { number: 4, label: 'Pièces', segment: 'verification', serveur: 4 },
+  { number: 5, label: 'Plan',        segment: 'plan', serveur: 5 },
+  { number: 6, label: 'Rédiger',     segment: 'memoire', serveur: 5 },
+  { number: 7, label: 'Export',      segment: 'export', serveur: 6 },
+] as const
+
+/** Le segment d'URL d'une étape d'affichage. */
+export const segmentDeEtape = (numero: number): string => STEPS.find((s) => s.number === numero)?.segment ?? 'upload'
 
 interface Props {
   currentStep: number
@@ -28,16 +34,18 @@ interface Props {
 export function StepProgress({ currentStep, completedSteps = {}, onStepClick }: Props) {
   const { pathname } = useLocation()
   const companionState = useCompanionStore((s) => s.state)
-  const activeStep = STEPS.find(s => pathname.endsWith(`/${s.segment}`))?.number ?? currentStep
+  // Sans segment reconnu dans l'URL : l'étape la plus avancée du serveur (« Plan » quand le serveur est à l'étape 5).
+  const activeStep = STEPS.find(s => pathname.endsWith(`/${s.segment}`))?.number
+    ?? STEPS.find((s) => s.serveur === currentStep)?.number ?? currentStep
 
   return (
     <div className="flex items-center w-full gap-4">
       <div className="flex items-start flex-1 min-w-0">
         {STEPS.map((step, index) => {
           const isCompleted =
-            completedSteps[String(step.number)] === true || step.number < currentStep
+            completedSteps[String(step.serveur)] === true || step.serveur < currentStep
           const isActive    = step.number === activeStep
-          const isClickable = step.number <= currentStep && !!onStepClick
+          const isClickable = step.serveur <= currentStep && !!onStepClick
 
           return (
             <div key={step.number} className="flex items-start flex-1 min-w-0 last:flex-none">
@@ -48,7 +56,7 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick }: 
                 aria-label={step.label}
                 aria-current={isActive ? 'step' : undefined}
                 className={cn(
-                  'flex flex-col items-center gap-1.5 bg-transparent border-none p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring rounded-lg',
+                  'flex flex-col items-center gap-1.5 bg-transparent border-none p-0 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring rounded-lg',
                   isClickable ? 'cursor-pointer' : 'cursor-default',
                 )}
               >
@@ -82,7 +90,7 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick }: 
               {/* Connecteur — fin, aligné sur le centre des ronds */}
               {index < STEPS.length - 1 && (
                 <div
-                  className="flex-1 min-w-1 h-px mx-2 mt-4 max-sm:mt-[22px] rounded-full transition-all duration-500"
+                  className="flex-1 min-w-1 h-px mx-2 mt-4 max-sm:mt-[22px] max-sm:mx-0 max-sm:min-w-0 rounded-full transition-all duration-500"
                   style={
                     isCompleted
                       ? { background: 'var(--accent-ui)' }
