@@ -45,16 +45,18 @@ router = APIRouter()
 from services.rate_limit import limiter  # S1.2 — limiter partagé (org-keyed)
 
 
-@router.get("/{project_id}/memoire", response_model=MemoireResponse)
+@router.get("/{project_id}/memoire", response_model=MemoireResponse,
+            responses={204: {"description": "Pas encore de mémoire pour ce projet"}})
 def get_memoire(
     project_id: str,
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ):
-    _get_project_or_404(project_id, user.organization_id, db)
+    _get_project_or_404(project_id, user.organization_id, db)   # 404 : projet inconnu ou d'une autre organisation
     memoire = db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project_id).first()
     if not memoire:
-        raise HTTPException(status_code=404, detail="Mémoire non généré")
+        # R31 : « pas encore de mémoire » est un état normal, pas une erreur : 204, la console du navigateur reste muette.
+        return Response(status_code=204)
     return memoire
 
 

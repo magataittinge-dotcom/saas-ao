@@ -6,6 +6,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { Save, CheckCircle2, Pencil, X } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import axios from 'axios'
+import { memoireDepuisReponse } from '@/lib/memoireLecture'
 import { api } from '@/services/api'
 import FormulaireMemoire from '@/components/project/FormulaireMemoire'
 import BarreEtape, { ActionsBarre, BoutonSuite } from '@/components/project/BarreEtape'
@@ -416,14 +417,10 @@ export default function StepMemoire({ project }: Props) {
   // Fetch existing mémoire
   const { data: memoire, isLoading } = useQuery({
     queryKey: ['memoire', project.id],
+    // 204 = pas encore de mémoire (R31) : un état normal, sans erreur ni ligne rouge dans la console.
     queryFn: async () => {
-      try {
-        const { data } = await api.get<MemoireTechnique>(`/projects/${project.id}/memoire`)
-        return data
-      } catch (err) {
-        if (axios.isAxiosError(err) && err.response?.status === 404) return null
-        throw err
-      }
+      const res = await api.get<MemoireTechnique | ''>(`/projects/${project.id}/memoire`)
+      return memoireDepuisReponse<MemoireTechnique>(res.status, res.data)
     },
     retry: false,
   })
