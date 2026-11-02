@@ -26,6 +26,7 @@ import type { Project, ComplianceItem, ComplianceCategory, ProjectDocument } fro
 import { useCompleteStep } from '@/hooks/useProject'
 import EchecAction from '@/components/common/EchecAction'
 import { messageErreur } from '@/lib/erreurs'
+import { phraseDocumentsAnalyses, phraseExigences, repartirDocuments } from '@/lib/analyseLibelles'
 import { PASSAGE_INTROUVABLE, trouverPieceCitee } from '@/lib/pieceCitee'
 
 const ANALYSIS_STEPS: StepDescriptor[] = [
@@ -197,19 +198,16 @@ export default function StepAnalysis({ project }: Props) {
   const lotFilterInfo = useMemo(() => {
     if (!project.selected_lot || project.selected_lot === 'all') return null
     const lotNum = project.selected_lot.replace(/^lot/i, '').replace(/^0+/, '') || '0'
-    const isIncluded = (doc: typeof projectDocs[0]) => {
-      const tags = doc.related_lots
-      if (!tags) return true
-      if (tags.includes('all')) return true
-      if (tags.every(t => t === 'info')) return false
-      return tags.some(t => t !== 'info' && (t.replace(/^0+/, '') || '0') === lotNum)
-    }
+    // R16 — même règle que le serveur : pièces communes et du lot analysées ; plans/informations et autres lots écartés.
+    const r = repartirDocuments(projectDocs, project.selected_lot, (project.lots_detectes || []).map((l) => l.id))
     return {
-      included: projectDocs.filter(isIncluded),
-      excluded: projectDocs.filter(d => !isIncluded(d)),
+      included: r.analyses,
+      excluded: [...r.informations, ...r.autresLots],
+      informations: r.informations.length,
+      autresLots: r.autresLots.length,
       lotLabel: project.selected_lot_name || `Lot ${lotNum}`,
     }
-  }, [projectDocs, project.selected_lot, project.selected_lot_name])
+  }, [projectDocs, project.selected_lot, project.selected_lot_name, project.lots_detectes])
 
   // ── Derived data for redesigned layout ────────────────────────
   const obligatoireCount = useMemo(
@@ -218,7 +216,9 @@ export default function StepAnalysis({ project }: Props) {
   )
 
   const [showLotDetails, setShowLotDetails] = useState(false)
-  const lotTotal = lotFilterInfo ? lotFilterInfo.included.length + lotFilterInfo.excluded.length : 0
+  const phraseDocuments = lotFilterInfo
+    ? phraseDocumentsAnalyses({ analyses: lotFilterInfo.included.length, informations: lotFilterInfo.informations, autresLots: lotFilterInfo.autresLots })
+    : null
 
   // ── Loading states ────────────────────────────────────────────
 
@@ -279,7 +279,7 @@ export default function StepAnalysis({ project }: Props) {
         bureau={<>
           <CheckCircle2 size={16} className="shrink-0" style={{ color: 'var(--text-1)' }} />
           <p className="num-mono truncate text-xs" style={{ color: 'var(--text-3)', fontFamily: F }}>
-            {items.length} exigences · {obligatoireCount} obligatoires
+            {items.length} exigences dont {obligatoireCount} à respecter impérativement
           </p>
         </>}
         tel={<>
@@ -342,10 +342,7 @@ export default function StepAnalysis({ project }: Props) {
               <span className="edge-data flex items-center gap-2 text-xs" style={{ color: 'var(--text-3)' }}>
                 {lotFilterInfo ? (
                   <>
-                    <span>
-                      <span className="font-semibold" style={{ color: 'var(--text-1)' }}>{lotFilterInfo.included.length}</span>
-                      /{lotTotal} documents analysés
-                    </span>
+                    <span>{phraseDocuments?.principale}</span>
                     <button
                       onClick={() => setShowLotDetails(v => !v)}
                       className="cible-libre cible-etendue font-medium hover:underline"
@@ -357,6 +354,9 @@ export default function StepAnalysis({ project }: Props) {
                 ) : null}
               </span>
             </div>
+            {phraseDocuments?.detail && (
+              <p className="-mt-1.5 mb-2.5 max-w-2xl text-xs leading-relaxed" style={{ color: 'var(--text-3)' }}>{phraseDocuments.detail}</p>
+            )}
             <div className="flex flex-wrap items-end gap-3">
               <span className="num-mono bg-gradient-silver-text bg-clip-text text-5xl font-bold leading-none text-transparent">
                 {items.length}
@@ -364,8 +364,7 @@ export default function StepAnalysis({ project }: Props) {
               <div className="pb-0.5">
                 <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>exigences identifiées</p>
                 <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
-                  <span className="font-semibold" style={{ color: 'var(--warn)' }}>{obligatoireCount} obligatoires</span>
-                  {' · '}{items.length - obligatoireCount} souhaitées
+                  <span className="font-semibold" style={{ color: 'var(--text-2)' }}>{phraseExigences(items.length, obligatoireCount)}</span>
                 </p>
               </div>
             </div>
