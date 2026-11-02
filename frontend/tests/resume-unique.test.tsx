@@ -29,13 +29,13 @@ test('le bandeau ne répète ni la remise, ni la visite, ni le délai, ni les cr
   assert.ok(!/Délai d.exécution/.test(t), t)
   assert.ok(!/Critères|Valeur technique/.test(t), t)
   assert.ok(!/Possible/.test(t), t)
-  // ce que la carte ne dit pas reste affiché
-  assert.ok(/Pénalités de retard/.test(t) && /1\/1000 par jour/.test(t))
+  // ce que la carte ne dit pas reste affiché : la date des questions (V3 : les pénalités ne sont détaillées que dans la trésorerie)
+  assert.ok(!/énalit|1\/1000/.test(t), t)
   assert.ok(/Questions jusqu/.test(t))
 })
 
 test('rien à ajouter : le bandeau disparaît', () => {
-  const data = faits({ penalites: vide, date_limite_questions: vide } as never)
+  const data = faits({ date_limite_questions: vide } as never)
   assert.equal(renderToStaticMarkup(<CriticalBannerVue data={data} onOpenSource={() => {}} />), '')
 })
 
@@ -50,4 +50,24 @@ test('la page d\'analyse n\'a plus de second résumé (objet, client, jauge des 
 test('plus de « Possible » pour la visite nulle part', () => {
   const code = sansCommentaires(lire('src/components/project/CriticalBanner.tsx'))
   assert.ok(!code.includes('Possible'))
+})
+
+// V3 — les pénalités de retard ne sont détaillées qu'à un seul endroit : le bloc « Trésorerie du marché » (traduction du CCAP).
+test('V3 : plus de tuile « Pénalités de retard » ; la décision ne garde qu’un lien « Voir les pénalités » vers la trésorerie', () => {
+  const bandeau = sansCommentaires(lire('src/components/project/CriticalBanner.tsx'))
+  assert.doesNotMatch(bandeau.replace(/penalites: Field<[^;]*>/, ''), /Pénalités de retard|f\.penalites/)
+  const decision = sansCommentaires(lire('src/components/project/SynorixScoreCard.tsx'))
+  assert.match(decision, /Voir les pénalités/)
+  assert.match(decision, /voirTresorerie/)
+  assert.match(decision, /comp\.id === PENALITES \? \(/, 'la ligne des pénalités n’affiche pas son explication chiffrée')
+  const tresorerie = sansCommentaires(lire('src/components/project/TresorerieCard.tsx'))
+  assert.match(tresorerie, /id=\{ID_TRESORERIE\}/, 'le bloc porte l’ancre vers laquelle le lien mène')
+  assert.match(tresorerie, /scrollIntoView/)
+})
+
+test('V3 : la carte « L’AO en 30 secondes » ne dit jamais les pénalités', async () => {
+  const { construireCarteAO } = await import('@/lib/carteAO')
+  const faitsCarte = construireCarteAO({ projet: { name: 'AO inventé', infos_marche: { objet: 'Objet inventé' } }, champs: { delai_execution: { value: '8 mois', source: null } } })
+  assert.ok(faitsCarte.length > 0)
+  assert.ok(faitsCarte.every((f) => !/énalit/i.test(`${f.libelle} ${f.valeur} ${f.reste ?? ''}`)))
 })

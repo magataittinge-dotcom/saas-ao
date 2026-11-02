@@ -5,6 +5,7 @@ import { Check, CircleDot, ExternalLink } from 'lucide-react'
 import { api } from '@/services/api'
 import type { Project } from '@/types'
 import type { FieldSource } from './CriticalBanner'
+import { voirTresorerie } from './TresorerieCard'
 
 interface Composante {
   id: string
@@ -18,6 +19,8 @@ interface Composante {
 interface ScorePayload {
   composantes: Composante[]
 }
+
+const PENALITES = 'penalites'
 
 /** Conditions lues dans le profil de l'entreprise (les autres viennent du DCE). */
 const CONDITIONS_DE_PROFIL = new Set(['ca', 'qualifications'])
@@ -97,19 +100,30 @@ export default function SynorixScoreCard({ project, onOpenSource, onYAller, enCo
                 <span className="font-semibold" style={{ color: 'var(--text-2)' }}>{comp.label}</span>
                 <span style={{ color: comp.statut === 'ok' ? 'var(--success-fg)' : 'var(--warning-fg)' }}> · {libelleStatut(comp)}</span>
               </p>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
-                {comp.explication}
-                {comp.action === 'completer_profil' && (
-                  <>
-                    {' '}
-                    <Link to="/company" className="font-medium underline" style={{ color: 'var(--text-1)' }}>
-                      Compléter mon profil
-                    </Link>
-                  </>
-                )}
-              </p>
+              {comp.id === PENALITES ? (
+                // V3 — le détail des pénalités n'est dit qu'une fois, dans « Trésorerie du marché » : ici, un lien seulement.
+                (comp.source || comp.statut !== 'ok') && (
+                  <p className="text-xs mt-0.5">
+                    <button type="button" onClick={voirTresorerie} className="cible-libre cible-etendue font-medium underline" style={{ color: 'var(--text-1)' }}>
+                      Voir les pénalités
+                    </button>
+                  </p>
+                )
+              ) : (
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
+                  {comp.explication}
+                  {comp.action === 'completer_profil' && (
+                    <>
+                      {' '}
+                      <Link to="/company" className="font-medium underline" style={{ color: 'var(--text-1)' }}>
+                        Compléter mon profil
+                      </Link>
+                    </>
+                  )}
+                </p>
+              )}
             </div>
-            {comp.source && (
+            {comp.source && comp.id !== PENALITES && (
               <button
                 onClick={() => onOpenSource(comp.source!)}
                 title={`Source — ${comp.source.document}`}

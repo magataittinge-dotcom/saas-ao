@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { ExternalLink, HelpCircle, Shield } from 'lucide-react'
+import { ExternalLink, HelpCircle } from 'lucide-react'
 import { api } from '@/services/api'
 
 // ── Types (miroir de services/critical_fields.py) ────────────────────────────
@@ -78,26 +78,15 @@ function Tile({ icon, label, accent, wide, children }: {
 
 /**
  * C5 — les faits du marché que la carte « L'AO en 30 secondes » ne dit pas :
- * pénalités de retard et date limite des questions. La remise, la visite, le délai
- * et les critères ne sont dits qu'une fois, dans la carte (R12). Chaque champ garde
+ * la date limite des questions. La remise, la visite, le délai et les critères ne sont dits
+ * qu'une fois, dans la carte (R12) ; les pénalités de retard qu'une fois, dans le bloc
+ * « Trésorerie du marché » (V3). Chaque champ garde
  * sa source cliquable ; un champ absent du DCE est absent de la grille.
  */
 export function CriticalBannerVue({ data, onOpenSource }: { data: CriticalFieldsPayload; onOpenSource: (s: FieldSource) => void }) {
   const f = data.fields
 
   const tiles: React.ReactNode[] = []
-
-  if (f.penalites.value) {
-    const { retard, plafond } = f.penalites.value
-    tiles.push(
-      <Tile key="penalites" icon={<Shield size={13} />} label="Pénalités de retard" wide>
-        {retard && <span>{retard}</span>}
-        {retard && plafond && <span style={{ color: 'var(--text-3)' }}> · </span>}
-        {plafond && <span style={{ color: 'var(--text-2)' }}>plafond {plafond}</span>}
-        {' '}<SourceLink source={f.penalites.source} onOpen={onOpenSource} />
-      </Tile>,
-    )
-  }
 
   if (f.date_limite_questions.value) {
     tiles.push(

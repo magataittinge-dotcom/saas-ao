@@ -4,6 +4,17 @@ import { ArrowRight, Banknote, ExternalLink } from 'lucide-react'
 import { api } from '@/services/api'
 import type { FieldSource } from './CriticalBanner'
 
+/** Ancre du bloc : les pénalités de retard ne sont détaillées qu'ici, les autres blocs y renvoient (V3). */
+export const ID_TRESORERIE = 'tresorerie-du-marche'
+
+/** Amène le bloc « Trésorerie du marché » à l'écran (sans animation si le mouvement est réduit). */
+export function voirTresorerie(): void {
+  const bloc = document.getElementById(ID_TRESORERIE)
+  if (!bloc) return
+  const reduit = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  bloc.scrollIntoView({ behavior: reduit ? 'auto' : 'smooth', block: 'start' })
+}
+
 interface TresorerieLigne {
   id: string
   label: string
@@ -37,7 +48,7 @@ export default function TresorerieCard({ projectId, onOpenSource }: Props) {
   if (!data || data.lignes.length === 0) return null
 
   return (
-    <div className="rounded-lg" style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)' }}>
+    <div id={ID_TRESORERIE} className="scroll-mt-20 rounded-lg" style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)' }}>
       <div className="flex items-center gap-2 px-5 py-3" style={{ borderBottom: '1px solid var(--border-1)' }}>
         <Banknote size={16} style={{ color: 'var(--text-1)' }} />
         <h3 className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>Trésorerie du marché</h3>
