@@ -87,3 +87,8 @@ export function avancementAO(etapeCourante: number) {
     libelle: `Étape ${etape} sur ${ETAPES_AO.length} · ${ETAPES_AO[etape - 1]}`,
   }
 }
+
+/** Libellé de la pastille de « Mes AO » : elle compte les AO en cours dont la remise tombe aujourd'hui ou sous 7 jours (R2). */
+export function libelleUrgents(n: number): string {
+  return `${n} AO en cours à remettre sous 7 jours`
+}

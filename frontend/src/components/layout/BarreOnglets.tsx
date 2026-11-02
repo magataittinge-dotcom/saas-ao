@@ -6,6 +6,7 @@ import { Pastille } from '@/components/ui/badge'
 import { useLogout } from '@/hooks/useAuth'
 import { useAuthStore } from '@/stores/authStore'
 import { cn } from '@/lib/utils'
+import { libelleUrgents } from '@/lib/echeance'
 import { ENTREES_TIROIR, ONGLETS_TEL, ONGLET_CERVEAU, estActif } from './navigation'
 import { QuotaRond } from './QuotaGauge'
 import { useUrgents } from './useUrgents'
@@ -40,7 +41,7 @@ export default function BarreOnglets() {
               {actif && <span aria-hidden className="absolute inset-x-6 top-0 h-0.5 rounded-b-pilule bg-accent-ui" />}
               <span className="relative">
                 <Icone size={22} strokeWidth={1.5} absoluteStrokeWidth aria-hidden />
-                {e.to === '/projects' && urgents > 0 && <Pastille valeur={urgents} className="absolute -right-3 -top-1.5" title={`${urgents} AO avec une échéance sous 7 jours`} />}
+                {e.to === '/projects' && urgents > 0 && <Pastille valeur={urgents} className="absolute -right-3 -top-1.5" role="img" aria-label={libelleUrgents(urgents)} title={libelleUrgents(urgents)} />}
               </span>
               {e.label}
             </NavLink>

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Pastille } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { libelleUrgents } from '@/lib/echeance'
 import { BARRE, BARRE_HAUT, ENTREE_PARAMETRES, estActif, type Entree } from './navigation'
 import { QuotaRond } from './QuotaGauge'
 import { useUrgents } from './useUrgents'
@@ -41,7 +42,7 @@ export function EntreesBarre({ entrees = BARRE }: { entrees?: Entree[] }) {
       {entrees.map((e) => (
         <Rail key={e.to} entree={e}
           pastille={e.to === '/projects' && urgents > 0
-            ? <Pastille valeur={urgents} ton="warning" title={`${urgents} AO avec une échéance sous 7 jours`} />
+            ? <Pastille valeur={urgents} ton="warning" role="img" aria-label={libelleUrgents(urgents)} title={libelleUrgents(urgents)} />
             : undefined} />
       ))}
     </>
