@@ -36,7 +36,7 @@ test('coffre-fort vide : une seule action (la zone de dépôt), pas six rubrique
   const html = coffreVide()
   assert.ok(!html.includes('0 documents'), 'pas de « 0 documents stockés »')
   assert.equal((html.match(/Aucun document/g) ?? []).length, 0, 'les rubriques vides ne sont pas listées')
-  assert.ok(!/\bMB\b/.test(html) && html.includes('20 Mo'), 'unité française')
+  assert.ok(!/\bMB\b/.test(html) && html.includes('50 Mo'), 'unité française')
   assert.ok(/attestations/i.test(html) && /validité/i.test(html), 'dit à quoi sert le coffre-fort et qu\'il surveille les dates')
   assert.ok(html.includes('Glissez vos documents ici ou cliquez pour parcourir'))
 })

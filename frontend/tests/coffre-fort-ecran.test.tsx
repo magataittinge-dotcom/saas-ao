@@ -27,7 +27,7 @@ test('le coffre-fort rend son titre, la zone de dépôt du socle et le bloc « �
   assert.ok(/<h1[^>]*>Coffre-fort documentaire<\/h1>/.test(html), 'un seul h1')
   assert.ok(html.includes('2 documents stockés'))
   assert.ok(html.includes('Glissez vos documents ici ou cliquez pour parcourir'))
-  assert.ok(html.includes('PDF · 20 Mo au plus'))
+  assert.ok(html.includes('PDF · 50 Mo au plus'))
   const zone = html.match(/<div[^>]*border-dashed[^>]*>/)?.[0] ?? ''
   assert.ok(zone.includes('border-input'), 'bord de zone à 3:1 (jeton de champ)')
   assert.ok(html.includes('À ranger (1) — rangez-les pour les utiliser dans vos candidatures'))
@@ -63,4 +63,14 @@ test('les lignes de pièce passent à la ligne et leurs boutons font 44 px sur �
 
 test('/vault suit le thème clair / nuit', () => {
   assert.match(sansCommentaires(lire('src/components/layout/Layout.tsx')), /PAGES_THEMEES = \[[^\]]*'\/vault'/)
+})
+
+test('R30 : la limite affichée est celle du serveur, et le coffre-fort n’annonce que ce qu’il accepte (PDF)', async () => {
+  const { lire, sansCommentaires } = await import('./outils/sources')
+  const serveur = lire('../backend/services/upload_validation.py').match(/VAULT_MAX_UPLOAD_SIZE\s*=\s*(\d+)\s*\*\s*1024\s*\*\s*1024/)
+  assert.ok(serveur, 'limite du serveur lisible')
+  const code = sansCommentaires(lire('src/routes/Vault.tsx'))
+  assert.match(code, new RegExp(`TAILLE_MAX_COFFRE_MO = ${serveur[1]}\\b`))
+  assert.doesNotMatch(code, /\b20 Mo|20 \* 1024/)
+  assert.match(code, /accept: \{ 'application\/pdf': \['\.pdf'\] \}/)
 })

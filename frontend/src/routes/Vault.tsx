@@ -16,6 +16,9 @@ import DeleteConfirmModal from '@/components/common/DeleteConfirmModal'
 import { messageErreur } from '@/lib/erreurs'
 import { cn } from '@/lib/utils'
 
+/** Limite d'un dépôt au coffre-fort : celle du serveur (backend/services/upload_validation.py, VAULT_MAX_UPLOAD_SIZE). */
+const TAILLE_MAX_COFFRE_MO = 50
+
 // Une ligne de pièce (nom, puis statut et actions) passe à la ligne sous 640 px : pas de défilement horizontal à 390 px ;
 // ses boutons d'action font 44 px sur écran tactile.
 const LISTE_PIECES = 'space-y-2 [@media(pointer:coarse)]:[&_button]:min-h-11 [@media(pointer:coarse)]:[&_button]:min-w-11 [&>div]:flex-wrap [&>div>div:last-child]:max-w-full [&>div>div:last-child]:flex-wrap sm:[&>div]:flex-nowrap sm:[&>div>div:last-child]:flex-nowrap'
@@ -68,14 +71,14 @@ export default function Vault() {
 
   const onDropRejected = useCallback((refus: FileRejection[]) => {
     const noms = refus.map((r) => `« ${r.file.name} »`).join(', ')
-    setEchec({ message: `${noms} : seuls les PDF de 20 Mo au plus sont acceptés.`, fichiers: [] })
+    setEchec({ message: `${noms} : seuls les PDF de ${TAILLE_MAX_COFFRE_MO} Mo au plus sont acceptés.`, fichiers: [] })
   }, [])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: (acceptes) => { void deposer(acceptes) },
     onDropRejected,
     accept: { 'application/pdf': ['.pdf'] },
-    maxSize: 20 * 1024 * 1024,
+    maxSize: TAILLE_MAX_COFFRE_MO * 1024 * 1024,
   })
 
   return (
@@ -120,7 +123,7 @@ export default function Vault() {
         <p className="text-sm font-medium text-fg">
           {isUploading ? 'Envoi en cours…' : 'Glissez vos documents ici ou cliquez pour parcourir'}
         </p>
-        <p className="mt-1 text-xs text-fg-3">PDF · 20 Mo au plus</p>
+        <p className="mt-1 text-xs text-fg-3">PDF · {TAILLE_MAX_COFFRE_MO} Mo au plus</p>
       </div>
 
       {pieceASupprimer && (
