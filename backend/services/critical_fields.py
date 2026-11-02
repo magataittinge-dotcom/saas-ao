@@ -192,21 +192,28 @@ def build_critical_fields(infos_marche: Optional[dict], criteres_jugement: Optio
             }
             remise_source = source
 
-    # ── Date limite des questions (regex ciblée) ─────────────────────────────
+    # ── Date limite des questions : l'analyse d'abord si elle donne une vraie date ; sinon lecture du RC sans IA,
+    # y compris « N jours avant la date limite de remise » (calculée depuis la remise) ──────────────────────────────
     questions_value = None
     questions_source = None
     raw_questions = infos.get("date_limite_questions")
-    if raw_questions:
-        parsed = parse_french_date(raw_questions)
-        questions_value = parsed.isoformat() if parsed else raw_questions
+    parsed_raw = parse_french_date(raw_questions) if raw_questions else None
+    if parsed_raw:
+        questions_value = parsed_raw.isoformat()
         questions_source = _locate_value(docs, raw_questions)
     else:
-        m, source = _find_in_docs(docs, _QUESTIONS_CTX)
-        if m:
-            parsed = parse_french_date(m.group(1))
-            if parsed:
-                questions_value = parsed.isoformat()
-                questions_source = source
+        from services.date_questions import trouver_date_questions
+        pieces = [(d.file_name, getattr(d, "extracted_text", None) or "")
+                  for d in sorted(docs, key=lambda d: 0 if (getattr(d, "type", "") or "") == "rc" else 1)
+                  if (getattr(d, "type", "") or "") in ("rc", "ccap")]
+        remise_date = parse_french_date((remise_value or {}).get("date") or "")
+        lu = trouver_date_questions(pieces, remise_date)
+        if lu["statut"] == "trouvee":
+            questions_value = lu["date"]
+            questions_source = {"document": lu["document"], "page": None, "excerpt": lu["extrait"]}
+        elif raw_questions:
+            questions_value = raw_questions
+            questions_source = _locate_value(docs, raw_questions)
 
     # ── Visite de site ────────────────────────────────────────────────────────
     visite = infos.get("visite_site") or {}
