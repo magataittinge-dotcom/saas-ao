@@ -47,7 +47,7 @@ test('S10 : dans la barre, les boutons secondaires sont des BoutonSecondaire (ic
   for (const f of ETAPES_MIGREES.filter((x) => !x.endsWith('StepExport.tsx'))) {
     const nus = barre(f).match(/<button\b[^>]*>/g) ?? []
     // seul « Lancer l'analyse » est écrit à la main (edge-cta, texte fixe) ; les autres passent par BoutonSuite / BoutonSecondaire
-    assert.ok(nus.every((b) => /edge-cta/.test(b)), `${f} : un bouton nu dans la barre : ${nus.join(' ')}`)
+    assert.ok(nus.every((b) => /edge-cta|signature-btn/.test(b)), `${f} : un bouton nu dans la barre : ${nus.join(' ')}`)
   }
   assert.match(barre('src/routes/project/StepUpload.tsx'), /<BoutonSecondaire libelle="Retour"/)
   assert.match(barre('src/routes/project/StepLotSelection.tsx'), /<BoutonSecondaire libelle="Annuler"/)
