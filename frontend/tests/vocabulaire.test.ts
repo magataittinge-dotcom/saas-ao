@@ -48,7 +48,7 @@ test("une seule formule pour passer à l'étape suivante, qui nomme la bonne ét
     for (const a of anciennes) assert.ok(!textes.some((t) => t.includes(a)), `${f} contient encore « ${a} »`)
   }
   const lancement = textesAffiches('src/routes/project/StepLotSelection.tsx').map((t) => t.texte)
-  assert.ok(lancement.includes("Lancer l'analyse"))
+  assert.ok(lancement.some((t) => t.includes('Lire ce dossier')))
 })
 
 // S4 — Renommages (simplification) : les mots du patron, ni plus ni moins.

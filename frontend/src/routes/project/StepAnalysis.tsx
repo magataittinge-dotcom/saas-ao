@@ -8,9 +8,14 @@ import {
   CheckCircle2, Sparkles,
 } from 'lucide-react'
 import { api, getSignedFileUrl } from '@/services/api'
-import CriticalBanner, { type FieldSource } from '@/components/project/CriticalBanner'
-import CarteAO30s from '@/components/project/CarteAO30s'
-import BarreEtape, { ActionsBarre, BilanBarre, BoutonSuite } from '@/components/project/BarreEtape'
+import { type FieldSource, type CriticalFieldsPayload } from '@/components/project/CriticalBanner'
+import { CarteAO30sVue, useFaitsAO } from '@/components/project/CarteAO30s'
+import PointsAEclaircir from '@/components/project/PointsAEclaircir'
+import AVerifierAvantEngagement from '@/components/project/AVerifierAvantEngagement'
+import { voirTresorerie } from '@/components/project/TresorerieCard'
+import { GabaritEtape, BandeResume, SectionEtape, BarreEtape, ActionsBarre, ActionsBarreTel, BilanBarre, BoutonSuite } from '@/components/etape'
+import { Button } from '@/components/ui/button'
+import { cartesResumeAO, pointsAVerifier, type DateQuestions } from '@/lib/resumeAO'
 import TresorerieCard from '@/components/project/TresorerieCard'
 import SynorixScoreCard from '@/components/project/SynorixScoreCard'
 import RetroPlanning from '@/components/project/RetroPlanning'
@@ -216,6 +221,24 @@ export default function StepAnalysis({ project }: Props) {
   )
 
   const [showLotDetails, setShowLotDetails] = useState(false)
+  // Le résumé de l'étape et « À vérifier » : faits déjà en base (champs critiques, pièces, analyse), aucun appel IA
+  const faits = useFaitsAO(project)
+  const { data: critiques } = useQuery<CriticalFieldsPayload>({
+    queryKey: ['critical-fields', project.id],
+    queryFn: async () => (await api.get<CriticalFieldsPayload>(`/projects/${project.id}/critical-fields`)).data,
+    staleTime: 60_000,
+    enabled: project.processing_status !== 'analyzing',
+  })
+  // Déjà demandée par « Points à éclaircir » (même clé) : une seule requête
+  const { data: dateQuestions } = useQuery<DateQuestions>({
+    queryKey: ['date-questions', project.id],
+    queryFn: async () => (await api.get<DateQuestions>(`/projects/${project.id}/date-limite-questions`)).data,
+    staleTime: 60_000,
+  })
+  const aVerifier = useMemo(
+    () => pointsAVerifier(critiques?.fields, project.infos_marche, items),
+    [critiques, project.infos_marche, items],
+  )
   const phraseDocuments = lotFilterInfo
     ? phraseDocumentsAnalyses({ analyses: lotFilterInfo.included.length, informations: lotFilterInfo.informations, autresLots: lotFilterInfo.autresLots })
     : null
@@ -272,6 +295,7 @@ export default function StepAnalysis({ project }: Props) {
   )
 
   // ── Barre du bas (composant commun : une ligne au téléphone) ───────
+  // Ordinateur : le bilan ; l'action principale est celle de l'en-tête. Téléphone : la barre porte « Suivant : Pièces ».
 
   const bottomBar = (
     <BarreEtape>
@@ -288,198 +312,187 @@ export default function StepAnalysis({ project }: Props) {
         </>}
       />
       <ActionsBarre>
-        <BoutonSuite
-          etape="Pièces"
-          onClick={handleValidate}
-          enCours={isValidating}
-          enCoursLibelle="Validation..."
-          icone={isStepAlreadyDone ? CheckCircle2 : Sparkles}
-        />
+        <ActionsBarreTel>
+          <BoutonSuite
+            etape="Pièces"
+            onClick={handleValidate}
+            enCours={isValidating}
+            enCoursLibelle="Validation..."
+            icone={isStepAlreadyDone ? CheckCircle2 : Sparkles}
+          />
+        </ActionsBarreTel>
       </ActionsBarre>
     </BarreEtape>
   )
 
-  const infos = project.infos_marche
+  const voirSource = (src: FieldSource) => { void openFieldSource(src) }
+  const marche = faits.filter((f) => ['acheteur', 'oeuvre', 'objet', 'lots', 'criteres', 'delai'].includes(f.id))
 
   // ── Main render ───────────────────────────────────────────────
 
   return (
-    <div className="space-y-3" style={{ fontFamily: F }}>
-
-      {/* ── L'AO EN 30 SECONDES — le résumé calculé depuis l'analyse (aucun appel IA) ── */}
-      <CarteAO30s project={project} onOpenSource={openFieldSource} />
-
-      {/* ── Lot details (expanded inline) ───────────────────────── */}
-      {showLotDetails && lotFilterInfo && (
-        <div
-          className="rounded-lg px-4 py-2.5 flex flex-wrap gap-x-4 gap-y-1 text-xs -mt-2"
-          style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)' }}
-        >
-          {lotFilterInfo.included.map(doc => (
-            <span key={doc.id} className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--text-1)' }} />
-              <span style={{ color: 'var(--text-2)' }}>{doc.file_name}</span>
-            </span>
-          ))}
-          {lotFilterInfo.excluded.map(doc => (
-            <span key={doc.id} className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--text-3)' }} />
-              <span style={{ color: 'var(--text-3)' }}>{doc.file_name}</span>
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* ── HÉROS DE SYNTHÈSE — grille rigide : le fait à gauche, la boussole à droite ── */}
-      <div className="glass-card top-lit blueprint-grid sheen relative overflow-hidden px-5 py-4">
-        <div className="relative">
-          {/* Le résultat de l'analyse, en chiffres */}
-          <div className="min-w-0">
-            <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
-              <p className="microlabel">
-                Analyse terminée{project.selected_lot_name ? ` — ${project.selected_lot_name}` : ''}
-              </p>
-              <span className="edge-data flex items-center gap-2 text-xs" style={{ color: 'var(--text-3)' }}>
-                {lotFilterInfo ? (
-                  <>
-                    <span>{phraseDocuments?.principale}</span>
-                    <button
-                      onClick={() => setShowLotDetails(v => !v)}
-                      className="cible-libre cible-etendue font-medium hover:underline"
-                      style={{ color: 'var(--text-1)' }}
-                    >
-                      {showLotDetails ? 'Masquer' : 'Détails'}
-                    </button>
-                  </>
-                ) : null}
-              </span>
-            </div>
-            {phraseDocuments?.detail && (
-              <p className="-mt-1.5 mb-2.5 max-w-2xl text-xs leading-relaxed" style={{ color: 'var(--text-3)' }}>{phraseDocuments.detail}</p>
-            )}
-            <div className="flex flex-wrap items-end gap-3">
-              <span className="num-mono bg-gradient-silver-text bg-clip-text text-5xl font-bold leading-none text-transparent">
-                {items.length}
-              </span>
-              <div className="pb-0.5">
-                <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>exigences identifiées</p>
-                <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
-                  <span className="font-semibold" style={{ color: 'var(--text-2)' }}>{phraseExigences(items.length, obligatoireCount)}</span>
-                </p>
-              </div>
-            </div>
-            {infos?.maitre_oeuvre && (
-              <p className="mt-1.5 max-w-2xl text-xs leading-relaxed" style={{ color: 'var(--text-3)' }}>
-                Maîtrise d&apos;œuvre&nbsp;: <span style={{ color: 'var(--text-3)' }}>{infos.maitre_oeuvre}</span>
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Synorix Score retiré de cette page (décision produit) — composant
-          et endpoint conservés, réactivables. */}
-
-      {/* Sélecteur de lot (multi-lots mutualisé) */}
-      {analyzedLots.length > 1 && (
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-ds-text-2">Lot affiché :</span>
-          <select
-            value={activeLot ?? ''}
-            onChange={(e) => setViewLot(e.target.value)}
-            className="glass-input py-1.5 px-2 text-sm"
-          >
-            {analyzedLots.map((l) => (
-              <option key={l} value={l}>
-                {(project.lots_detectes || []).find(d => d.id === l)?.nom ?? l}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      {/* ── BANDEAU CRITIQUE (C5) — deadline, visite, critères, pénalités ── */}
-      <CriticalBanner projectId={project.id} onOpenSource={openFieldSource} />
-
-      {/* ── FICHE DE DÉCISION (1.7) — conditions vérifiées, puis « On y va » / « On passe » ── */}
-      <SynorixScoreCard project={project} onOpenSource={openFieldSource} onYAller={handleValidate} enCours={isValidating} />
-
-      {/* ── TRÉSORERIE (C19) + RÉTRO-PLANNING (C20) ── */}
-      <div className="grid gap-4 lg:grid-cols-[1fr,320px] items-start">
-        <TresorerieCard projectId={project.id} onOpenSource={openFieldSource} />
-        <RetroPlanning projectId={project.id} />
-      </div>
-
-      {/* ── LISTE | PANNEAU « Voir dans le DCE » (ordinateur : côte à côte ; téléphone : feuille) ── */}
-      <div
-        className={selection ? 'grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]' : undefined}
+    <div style={{ fontFamily: F }}>
+      <GabaritEtape
+        titre="Décider"
+        utilite="Ce que le dossier demande, ce qui vous engage et les questions à poser à l’acheteur, avant de décider d’y répondre."
+        actionPrincipale={
+          <Button type="button" variant="signature" onClick={handleValidate} disabled={isValidating} aria-busy={isValidating}>
+            {isStepAlreadyDone ? <CheckCircle2 size={16} aria-hidden /> : <Sparkles size={16} aria-hidden />}
+            {isValidating ? 'Validation...' : 'Étape suivante : Pièces'}
+          </Button>
+        }
+        resume={<BandeResume cartes={cartesResumeAO(faits, { total: items.length, obligatoires: obligatoireCount }, voirSource, dateQuestions)} libelle="L’AO en 30 secondes" />}
+        barre={bottomBar}
       >
-      <div className={selection ? 'min-w-0 space-y-3 lg:pb-24' : 'min-w-0 space-y-3'}>
-      {/* ── SEARCH BAR ──────────────────────────────────────────── */}
-      <div className="relative">
-        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }} />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Rechercher une clause ou une exigence..."
-          className="glass-input w-full pl-10 pr-10 py-2.5 text-sm"
-          style={{ fontFamily: F }}
-        />
-        <Sparkles size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-1)' }} />
-      </div>
+        {marche.length > 0 && (
+          <SectionEtape titre="Le marché en bref">
+            <CarteAO30sVue faits={marche} titre={null} onOpenSource={voirSource} />
+          </SectionEtape>
+        )}
 
-      {/* ── ONGLETS ─────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 pb-px" style={{ borderBottom: '1px solid var(--border-1)' }}>
-        <TabButton
-          label={`Tout (${items.length})`}
-          active={activeFilter === 'all'}
-          onClick={() => setActiveFilter('all')}
-        />
-        {CATEGORY_ORDER.filter(cat => counts[cat]).map(cat => (
-          <TabButton
-            key={cat}
-            label={`${CATEGORY_LABELS[cat]} (${counts[cat]})`}
-            active={activeFilter === cat}
-            onClick={() => setActiveFilter(cat)}
-          />
-        ))}
-      </div>
+        <AVerifierAvantEngagement points={aVerifier} onVoir={voirSource} onVoirPenalites={voirTresorerie} />
 
-      {/* ── Exigences ───────────────────────────────────────────── */}
-      {filtered.length === 0 ? (
-        <p className="text-center text-sm py-12" style={{ color: 'var(--text-3)', fontFamily: F }}>
-          Aucune exigence trouvée
-        </p>
-      ) : (
-        <div className="space-y-3">
-          {Object.entries(grouped).map(([cat, catItems], sectionIdx) => (
-            <ExigenceSection
-              key={cat}
-              category={cat as ComplianceCategory}
-              items={catItems}
-              onOpenSource={openSourceDocument}
-              selectionId={selection?.type === 'exigence' ? selection.id : null}
-              defaultOpen={sectionIdx === 0 || activeFilter !== 'all' || search.trim().length > 0}
+        <PointsAEclaircir project={project} onOpenSource={voirSource} />
+
+        {/* ── FICHE DE DÉCISION (1.7) — conditions vérifiées, puis « On y va » / « On passe » ── */}
+        <SectionEtape titre="Décision">
+          <SynorixScoreCard project={project} onOpenSource={openFieldSource} onYAller={handleValidate} enCours={isValidating} />
+        </SectionEtape>
+
+        {/* ── TRÉSORERIE (C19) + RÉTRO-PLANNING (C20) ── */}
+        <SectionEtape titre="Trésorerie et calendrier" colonnes={2} classeContenu="md:[&>*:only-child]:col-span-2">
+          <TresorerieCard projectId={project.id} onOpenSource={openFieldSource} />
+          <RetroPlanning projectId={project.id} />
+        </SectionEtape>
+
+        {/* ── LISTE | PANNEAU « Voir dans le DCE » (ordinateur : côte à côte ; téléphone : feuille) ── */}
+        <SectionEtape
+          titre="Les exigences du dossier"
+          description={
+            <>
+              <span className="font-semibold text-fg">{items.length} exigences identifiées</span>
+              {project.selected_lot_name ? ` pour ${project.selected_lot_name}` : ''}. {phraseExigences(items.length, obligatoireCount)}
+              {lotFilterInfo && phraseDocuments && (
+                <>
+                  {' '}{phraseDocuments.principale}.{' '}
+                  <button onClick={() => setShowLotDetails(v => !v)} className="font-medium text-accent-text hover:underline [@media(pointer:coarse)]:min-h-11">
+                    {showLotDetails ? 'Masquer le détail' : 'Voir le détail'}
+                  </button>
+                </>
+              )}
+            </>
+          }
+        >
+          {showLotDetails && lotFilterInfo && (
+            <div
+              className="rounded-lg px-4 py-2.5 flex flex-wrap gap-x-4 gap-y-1 text-xs"
+              style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)' }}
+            >
+              {lotFilterInfo.included.map(doc => (
+                <span key={doc.id} className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--text-1)' }} />
+                  <span style={{ color: 'var(--text-2)' }}>{doc.file_name}</span>
+                </span>
+              ))}
+              {lotFilterInfo.excluded.map(doc => (
+                <span key={doc.id} className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--text-3)' }} />
+                  <span style={{ color: 'var(--text-3)' }}>{doc.file_name}</span>
+                </span>
+              ))}
+            </div>
+          )}
+          {phraseDocuments?.detail && (
+            <p className="max-w-2xl text-xs leading-relaxed" style={{ color: 'var(--text-3)' }}>{phraseDocuments.detail}</p>
+          )}
+
+          {/* Sélecteur de lot (multi-lots mutualisé) */}
+          {analyzedLots.length > 1 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-medium text-ds-text-2">Lot affiché :</span>
+              <select
+                value={activeLot ?? ''}
+                onChange={(e) => setViewLot(e.target.value)}
+                className="glass-input py-1.5 px-2 text-sm"
+              >
+                {analyzedLots.map((l) => (
+                  <option key={l} value={l}>
+                    {(project.lots_detectes || []).find(d => d.id === l)?.nom ?? l}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <div
+            className={selection ? 'grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]' : undefined}
+          >
+          <div className={selection ? 'min-w-0 space-y-3 lg:pb-24' : 'min-w-0 space-y-3'}>
+          {/* ── SEARCH BAR ──────────────────────────────────────────── */}
+          <div className="relative">
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }} />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Rechercher une clause ou une exigence..."
+              aria-label="Rechercher une clause ou une exigence"
+              className="glass-input w-full pl-10 pr-10 py-2.5 text-sm"
+              style={{ fontFamily: F }}
             />
-          ))}
-        </div>
-      )}
+            <Sparkles size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-1)' }} />
+          </div>
 
-      </div>
-      {selection && (
-        <PanneauSource
-          key={selection.type === 'exigence' ? selection.id : `champ-${selection.reponse.doc_id}-${selection.reponse.page}`}
-          selection={selection}
-          onFermer={fermerSelection}
-          rendreTableur={(reponse) => selection.type === 'exigence'
-            ? <div className="source-vue"><VueTableau exigenceId={selection.id} ancre={enAncreTableur(reponse)} /></div>
-            : null}
-        />
-      )}
-      </div>
+          {/* ── ONGLETS ─────────────────────────────────────────────── */}
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 pb-px" style={{ borderBottom: '1px solid var(--border-1)' }}>
+            <TabButton
+              label={`Tout (${items.length})`}
+              active={activeFilter === 'all'}
+              onClick={() => setActiveFilter('all')}
+            />
+            {CATEGORY_ORDER.filter(cat => counts[cat]).map(cat => (
+              <TabButton
+                key={cat}
+                label={`${CATEGORY_LABELS[cat]} (${counts[cat]})`}
+                active={activeFilter === cat}
+                onClick={() => setActiveFilter(cat)}
+              />
+            ))}
+          </div>
 
-      {/* ── Sticky bottom bar ───────────────────────────────────── */}
-      {bottomBar}
+          {/* ── Exigences ───────────────────────────────────────────── */}
+          {filtered.length === 0 ? (
+            <p className="text-center text-sm py-12" style={{ color: 'var(--text-3)', fontFamily: F }}>
+              Aucune exigence trouvée
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {Object.entries(grouped).map(([cat, catItems], sectionIdx) => (
+                <ExigenceSection
+                  key={cat}
+                  category={cat as ComplianceCategory}
+                  items={catItems}
+                  onOpenSource={openSourceDocument}
+                  selectionId={selection?.type === 'exigence' ? selection.id : null}
+                  defaultOpen={sectionIdx === 0 || activeFilter !== 'all' || search.trim().length > 0}
+                />
+              ))}
+            </div>
+          )}
+
+          </div>
+          {selection && (
+            <PanneauSource
+              key={selection.type === 'exigence' ? selection.id : `champ-${selection.reponse.doc_id}-${selection.reponse.page}`}
+              selection={selection}
+              onFermer={fermerSelection}
+              rendreTableur={(reponse) => selection.type === 'exigence'
+                ? <div className="source-vue"><VueTableau exigenceId={selection.id} ancre={enAncreTableur(reponse)} /></div>
+                : null}
+            />
+          )}
+          </div>
+        </SectionEtape>
+      </GabaritEtape>
       {avis && createPortal(
         <div className="fixed bottom-20 left-1/2 z-50 w-full max-w-lg -translate-x-1/2 px-4">
           <EchecAction

@@ -193,6 +193,16 @@ export interface InfosMarche {
   variantes_autorisees?: boolean | null
   conditions_sous_traitance?: string | null
   assurances_specifiques?: string[]
+  /** Questions à poser à l'acheteur (absent : pas encore préparées ; liste vide : rien à poser). */
+  points_a_eclaircir?: PointAEclaircir[]
+}
+
+export interface PointAEclaircir {
+  question: string
+  pourquoi: string | null
+  source_document: string | null
+  source_page: number | null
+  extrait: string | null
 }
 
 export interface LotOption {

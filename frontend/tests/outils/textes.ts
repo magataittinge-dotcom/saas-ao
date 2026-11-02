@@ -13,12 +13,13 @@ const ATTRIBUTS_TECHNIQUES = new Set([
   'className', 'style', 'key', 'id', 'to', 'href', 'type', 'name', 'role', 'target', 'rel', 'htmlFor', 'path',
   'src', 'accept', 'method', 'action', 'autoComplete', 'inputMode', 'pattern', 'form', 'variant', 'feature',
   'size', 'fill', 'stroke', 'd', 'viewBox', 'xmlns', 'strokeWidth', 'strokeLinecap', 'strokeLinejoin',
-  'currentStep', 'phase', 'state', 'code',
+  'currentStep', 'phase', 'state', 'code', 'etat',
 ])
 const PROPRIETES_TECHNIQUES = new Set([
   'id', 'key', 'segment', 'variant', 'type', 'status', 'kind', 'color', 'className', 'to', 'href', 'path',
   'queryKey', 'mode', 'part', 'cle', 'icon', 'pillClass', 'bg', 'border', 'background', 'fontFamily',
   'boxShadow', 'responseType', 'contentType', 'method', 'anim', 'dur', 'delay', 'top', 'left', 'right', 'bottom',
+  'etat',
 ])
 const APPELS_TECHNIQUES = /^(developper|nomSigle|api\.(get|post|patch|put|delete)|navigate|fetch|setSearchParams|useQuery|invalidateQueries|getElementById|querySelector(All)?|addEventListener|removeEventListener|createElement|setAttribute|getItem|setItem|removeItem|startsWith|endsWith|includes|split|replace|match|test|format|toLocaleDateString|toLocaleTimeString|Intl\.\w+|new Date|require|import)$/
 

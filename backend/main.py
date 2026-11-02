@@ -29,6 +29,7 @@ from routers import (
     references,
     projects,
     analysis,
+    points_eclaircir,
     compliance,
     candidature,
     memoire,
@@ -386,6 +387,7 @@ app.include_router(references.router, prefix="/api/references", tags=["reference
 app.include_router(qualifications.router, prefix="/api/qualifications", tags=["qualifications"])
 app.include_router(projects.router, prefix="/api/projects", tags=["projects"])
 app.include_router(analysis.router, prefix="/api/projects", tags=["analysis"])
+app.include_router(points_eclaircir.router, prefix="/api/projects", tags=["points-a-eclaircir"])
 app.include_router(compliance.router, prefix="/api/projects", tags=["compliance"])
 app.include_router(candidature.router, prefix="/api/projects", tags=["candidature"])
 app.include_router(memoire.router, prefix="/api/projects", tags=["memoire"])

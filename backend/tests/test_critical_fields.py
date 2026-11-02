@@ -206,3 +206,20 @@ def test_endpoint_cross_org_404(client, db_session, test_org):
 
     resp = client.get("/api/projects/proj-c5-other/critical-fields")
     assert resp.status_code == 404
+
+
+# ─── Date limite des questions relative à la remise (lecture sans IA) ────────
+
+def test_questions_deadline_relative_calculated_from_remise():
+    from services.critical_fields import build_critical_fields
+    rc = _Doc("RC-demo.pdf", "rc", "Les questions parviennent à l'acheteur au plus tard 10 jours avant la date limite de dépôt des plis.")
+    f = build_critical_fields({"date_limite_reponse": "2027-03-22"}, [], [rc])["date_limite_questions"]
+    assert f["value"] == "2027-03-12"
+    assert f["source"]["document"] == "RC-demo.pdf" and "10 jours avant" in f["source"]["excerpt"]
+
+
+def test_questions_deadline_unreadable_analysis_value_is_not_replaced_by_a_guess():
+    from services.critical_fields import build_critical_fields
+    rc = _Doc("RC-demo.pdf", "rc", "Les offres sont remises sur la plateforme.")
+    f = build_critical_fields({"date_limite_reponse": "2027-03-22", "date_limite_questions": "dix jours avant"}, [], [rc])["date_limite_questions"]
+    assert f["value"] == "dix jours avant"   # comportement d'avant conservé : la valeur brute de l'analyse, jamais une date inventée

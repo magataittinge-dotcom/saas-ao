@@ -121,9 +121,10 @@ test('lisible à 390 px : une colonne, pas de défilement horizontal, cibles de 
   assert.ok(!/min-width:\s*\d{3,}px(?![^{]*@media)/.test(faits), 'aucune largeur minimale fixe')
 })
 
-test('la carte est en tête de l’analyse', () => {
+test('le résumé est en tête de l’étape Décider, avant tout autre bloc, et le bandeau critique ne double plus les mêmes faits', () => {
   const code = lire('src/routes/project/StepAnalysis.tsx')
-  const i = code.indexOf('<CarteAO30s')
-  assert.ok(i > 0 && i < code.indexOf('<CriticalBanner'), 'avant le bandeau critique')
-  assert.ok(i < code.indexOf('HÉROS DE SYNTHÈSE'), 'avant le héros de synthèse')
+  const i = code.indexOf('resume={<BandeResume')
+  assert.ok(i > 0 && i < code.indexOf('<SectionEtape titre="Le marché en bref"'), 'la bande de résumé précède les sections')
+  assert.ok(!code.includes('<CriticalBanner'), 'plus de second résumé de la remise, de la visite et du délai')
+  assert.ok(!code.includes('HÉROS DE SYNTHÈSE'))
 })

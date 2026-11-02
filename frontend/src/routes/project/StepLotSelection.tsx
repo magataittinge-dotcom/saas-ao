@@ -5,12 +5,16 @@ import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Layers, CheckCircle2, AlertCircle, Zap, Plus, X,
+  Layers, CheckCircle2, AlertCircle, Plus, X,
   AlertTriangle, Loader2,
-  Sparkles, FileArchive, Pencil, Check as CheckIcon,
+  Sparkles, Pencil, Check as CheckIcon,
 } from 'lucide-react'
 import axios from 'axios'
-import BarreEtape, { ActionsBarre, BilanBarre, BoutonSecondaire } from '@/components/project/BarreEtape'
+import { BoutonSecondaire } from '@/components/project/BarreEtape'
+import { GabaritEtape, BandeResume, SectionEtape, BarreEtape, ActionsBarre, ActionsBarreTel, BilanBarre } from '@/components/etape'
+import { Button } from '@/components/ui/button'
+import { repartirLotsParMetiers, libelleUnites } from '@/lib/lotsMetiers'
+import type { MemoireConfig } from '@/types'
 import { api } from '@/services/api'
 import SubscriptionWall from '@/components/common/SubscriptionWall'
 import DeleteConfirmModal from '@/components/common/DeleteConfirmModal'
@@ -99,6 +103,8 @@ interface LotCardProps {
   onSelect: () => void
   onDelete?: () => void
   onRename?: (newLabel: string) => void
+  /** Coût de la lecture de ce lot, en unités d'abonnement (« 1 unité »). */
+  cout?: string
 }
 
 /* A lot label is "generic" when the detector found a number but no
@@ -117,7 +123,7 @@ function splitLotLabel(label: string): { num: string | null; title: string } {
   return { num: m[1].padStart(2, '0'), title: title || label.trim() }
 }
 
-function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) {
+function LotCard({ lot, selected, onSelect, onDelete, onRename, cout }: LotCardProps) {
   // We deliberately do NOT show a Synorix-internal sequential number
   // (e.g. "LOT 06") next to the real DCE label — it confused users by
   // implying two competing numbering systems. lot.nom already starts
@@ -293,6 +299,7 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename }: LotCardProps) 
 
         {/* Right side: discrete warning (only for < 80% confidence) + sources */}
         <div className="flex shrink-0 flex-col items-end gap-1 max-sm:basis-full max-sm:items-start">
+          {cout && <span className="text-xs font-medium text-fg-2">{cout}</span>}
           <ConfidenceWarning confidence={lot.confidence} />
           <SourcesIndicator sources={lot.sources} />
         </div>
@@ -553,7 +560,6 @@ export default function StepLotSelection({ project }: Props) {
 
   const [dismissedTips, setDismissedTips] = useState<Set<string>>(new Set())
 
-  const hasMultiLots = lots.length >= 2
 
   const lotTips = useMemo<TipData[]>(() => {
     const tips: TipData[] = []
@@ -656,6 +662,29 @@ export default function StepLotSelection({ project }: Props) {
     }
   }
 
+  // « Dans vos métiers » : les lots rattachés aux métiers déclarés dans Mon entreprise d'abord, les autres repliés
+  const { data: profil } = useQuery<MemoireConfig>({
+    queryKey: ['memoire-config'],
+    queryFn: async () => (await api.get<MemoireConfig>('/memoire-config')).data,
+    staleTime: 60_000,
+  })
+  const { dansVosMetiers, autres, separes } = repartirLotsParMetiers(lots, profil?.metiers)
+  const [autresOuverts, setAutresOuverts] = useState(false)
+  // Un lot déjà choisi parmi les autres ne reste jamais caché
+  const autresVisibles = autresOuverts || autres.some((l) => selectedIds.has(l.id))
+  const nbChoisis = selectedIds.has('all') ? lots.length : selectedLotIds.length
+  const carteLot = (lot: LotOption & { _manual?: boolean }) => (
+    <LotCard
+      key={lot.id}
+      lot={lot}
+      selected={selectedIds.has(lot.id)}
+      onSelect={() => toggleLot(lot.id)}
+      onDelete={() => setLotARetirer(lot)}
+      onRename={(label) => renameLot({ lotId: lot.id, label })}
+      cout={libelleUnites(1)}
+    />
+  )
+
   /* ════════════════════════════════════════════════════════════════
      JSX
      ════════════════════════════════════════════════════════════════ */
@@ -703,151 +732,26 @@ export default function StepLotSelection({ project }: Props) {
       )}
 
       <div style={{ fontFamily: F }}>
-
-        {/* Backend busy */}
-        {isBackendBusy && (
-          <div className="flex items-center gap-3 p-4 rounded-xl mb-4" style={{ background: 'color-mix(in srgb, var(--text-1) 5%, transparent)', border: '1px solid var(--border-2)' }}>
-            <Loader2 size={18} className="animate-spin" style={{ color: 'var(--text-1)' }} />
-            <div>
-              <span className="text-sm font-medium block" style={{ color: 'var(--text-1)' }}>Extraction des documents en cours...</span>
-              {processingDetail && <span className="text-xs block mt-0.5" style={{ color: 'var(--text-3)' }}>{processingDetail}</span>}
-            </div>
-          </div>
-        )}
-
-        {/* Documents illisibles — signalés par fichier, jamais silencieux */}
-        {extractionWarnings.length > 0 && (
-          <div className="p-4 rounded-xl mb-4" style={{ background: 'color-mix(in srgb, var(--warning-fg) 9%, transparent)', border: '1px solid color-mix(in srgb, var(--warning-fg) 22%, transparent)' }}>
-            <div className="flex items-center gap-2 mb-1.5">
-              <AlertTriangle size={16} style={{ color: 'var(--warning-fg)' }} />
-              <span className="text-sm font-semibold" style={{ color: 'var(--warning-fg)' }}>
-                {extractionWarnings.length} document{extractionWarnings.length > 1 ? 's' : ''} illisible{extractionWarnings.length > 1 ? 's' : ''} — exigences non extraites de ce{extractionWarnings.length > 1 ? 's' : ''} fichier{extractionWarnings.length > 1 ? 's' : ''}
-              </span>
-            </div>
-            <ul className="space-y-0.5 pl-6">
-              {extractionWarnings.map((w) => (
-                <li key={w.file_name} className="break-words text-xs" style={{ color: 'var(--warning-fg)' }}>
-                  <span className="font-medium">{w.file_name}</span> — {w.warning}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* ── TITLE + BADGE ───────────────────────────────── */}
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
-          <div className="flex items-center gap-3 flex-wrap">
-            <h2 className="font-display tracking-tight text-xl font-bold" style={{ color: 'var(--text-1)' }}>
-              Sélection du lot à analyser
-            </h2>
-            {lots.length > 0 && (
-              <span className="pill-cyan text-xs font-bold px-3 py-1 rounded-full">
-                {lots.length} lot{lots.length > 1 ? 's' : ''} détecté{lots.length > 1 ? 's' : ''}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-1.5 text-sm" style={{ color: 'var(--text-3)' }}>
-            <FileArchive size={14} />
-            Source : {project.name}
-          </div>
-        </div>
-        {/* R9 — les lots cités dans le dossier mais non proposés : le nombre et la raison, sans nom de lot. */}
-        {phraseLotsEcartes(lotsData?.ecartes) && (
-          <p data-lots-ecartes className="-mt-2 mb-4 text-sm" style={{ color: 'var(--text-3)' }}>{phraseLotsEcartes(lotsData?.ecartes)}</p>
-        )}
-
-        {/* ── Consigne — une ligne, pas un pavé ───────────── */}
-        <p className="mb-4 flex items-center gap-2 text-sm" style={{ color: 'var(--text-3)' }}>
-          <Zap size={14} className="shrink-0" style={{ color: 'var(--text-1)' }} />
-          {hasMultiLots
-            ? 'Sélectionnez le lot sur lequel votre entreprise répond — l’analyse de conformité se lance ensuite.'
+        <GabaritEtape
+          titre="Lots"
+          utilite={lots.length > 1
+            ? 'Choisissez le ou les lots sur lesquels votre entreprise répond : Synorix ne lit que ceux-là. Chaque lot lu décompte 1 unité de votre abonnement.'
             : lots.length === 1
-              ? 'Un seul lot a été détecté. Confirmez ou ajoutez des lots manuellement.'
-              : "Cet appel d'offres semble être mono-lot. Vous pouvez lancer l'analyse ou ajouter les lots manuellement."}
-        </p>
-
-        {/* AiTips */}
-        <div className="mb-5">
-          <AiTipsBlock tips={lotTips} dismissed={dismissedTips} onDismiss={(id) => setDismissedTips((s) => new Set(s).add(id))} />
-        </div>
-
-        {/* Excel error */}
-        {errorLots.length > 0 && (
-          <div className="flex items-start gap-3 p-4 rounded-xl mb-5" style={{ background: 'color-mix(in srgb, var(--text-3) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--text-3) 15%, transparent)' }}>
-            <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: 'var(--text-3)' }} />
-            <div>
-              <p className="text-sm font-semibold" style={{ color: 'var(--text-3)' }}>Fichier(s) Excel protégé(s) par mot de passe</p>
-              {errorLots.map(l => <p key={l.id} className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>{l.nom}</p>)}
-            </div>
-          </div>
-        )}
-
-        {/* ── LOT LIST ────────────────────────────────────── */}
-        {lots.length > 0 ? (
-          <div className="space-y-2">
-            {/* All lots option */}
-            <LotCard
-              lot={{ id: 'all', nom: "Analyser l'ensemble du dossier (tous les lots)" }}
-              selected={selectedIds.has('all')}
-              onSelect={() => toggleLot('all')}
-            />
-            {lots.map((lot) => (
-              <LotCard
-                key={lot.id}
-                lot={lot}
-                selected={selectedIds.has(lot.id)}
-                onSelect={() => toggleLot(lot.id)}
-                onDelete={() => setLotARetirer(lot)}
-                onRename={(label) => renameLot({ lotId: lot.id, label })}
-              />
-            ))}
-          </div>
-        ) : !lotsInitialized && (lotsLoading || detectPhase === 'detecting' || isBackendBusy) ? (
-          <div className="flex items-center gap-3 p-5 rounded-xl" style={{ background: 'color-mix(in srgb, var(--text-1) 4%, transparent)', border: '1px solid var(--border-2)' }}>
-            <Loader2 size={20} className="animate-spin" style={{ color: 'var(--text-1)' }} />
-            <div>
-              <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>Détection des lots en cours...</p>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>Analyse des documents du dossier.</p>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center gap-3 p-5 rounded-xl" style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)' }}>
-            <Layers size={20} style={{ color: 'var(--text-1)' }} />
-            <div>
-              <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>Marché unique (pas de lots)</p>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>L&apos;IA analysera l&apos;intégralité du dossier sans filtre par lot.</p>
-            </div>
-          </div>
-        )}
-
-        {/* Add lot */}
-        {showAddForm ? (
-          <div className="mt-4">
-            <AddLotForm onAdd={handleAddLot} onCancel={() => setShowAddForm(false)} />
-          </div>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setShowAddForm(true)}
-            className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed text-sm font-medium mt-4 transition-colors"
-            style={{ borderColor: 'var(--surface-1)', color: 'var(--text-3)' }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--text-3)'; e.currentTarget.style.color = 'var(--text-3)'; e.currentTarget.style.background = 'var(--surface-1)' }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--surface-1)'; e.currentTarget.style.color = 'var(--text-3)'; e.currentTarget.style.background = 'transparent' }}
-          >
-            <Plus size={16} />
-            Ajouter un lot manuellement
-          </button>
-        )}
-
-        {/* Error */}
-        {analysisError && (
-          <div className="flex items-start gap-2 p-4 rounded-xl text-sm mt-4" style={{ color: 'var(--danger-fg)', background: 'color-mix(in srgb, var(--danger-fg) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--danger-fg) 15%, transparent)' }}>
-            <AlertCircle size={16} className="shrink-0 mt-0.5" />
-            <span>{analysisError}</span>
-          </div>
-        )}
-
-        {/* ── Barre du bas (composant commun : une ligne au téléphone) ── */}
+              ? 'Un seul lot a été détecté. Confirmez-le ou ajoutez des lots à la main ; la lecture décompte 1 unité de votre abonnement.'
+              : 'Cet appel d’offres semble être mono-lot : lancez la lecture du dossier, ou ajoutez les lots à la main. Chaque lot lu décompte 1 unité.'}
+          actionPrincipale={
+            <Button type="button" variant="signature" onClick={handleLaunch} disabled={isAnalyzing || isSuccess || !peutLancer(selectedIds)}>
+              <Sparkles size={16} aria-hidden />
+              Lire ce dossier{selectedLotIds.length > 1 ? ` (${selectedLotIds.length} lots)` : ''}
+            </Button>
+          }
+          resume={lots.length > 0 ? <BandeResume libelle="Les lots du dossier" cartes={[
+            { libelle: 'Lots détectés', valeur: String(lots.length), etat: 'neutre', detail: 'Dans le dossier de l’acheteur.' },
+            { libelle: 'Lots choisis', valeur: String(nbChoisis), etat: nbChoisis > 0 ? 'pret' : 'a-verifier', jauge: { rempli: nbChoisis, total: lots.length }, detail: nbChoisis > 0 ? undefined : 'Cochez au moins un lot pour lancer la lecture.' },
+            { libelle: 'Coût de la lecture', valeur: libelleUnites(nbChoisis), etat: 'neutre', detail: '1 lot lu = 1 unité de votre abonnement.' },
+            ...(separes ? [{ libelle: 'Dans vos métiers', valeur: String(dansVosMetiers.length), etat: 'neutre' as const, detail: 'Selon les métiers de Mon entreprise.' }] : []),
+          ]} /> : undefined}
+          barre={
         <BarreEtape>
           <BilanBarre
             className="gap-2"
@@ -869,19 +773,143 @@ export default function StepLotSelection({ project }: Props) {
           />
           <ActionsBarre>
             <BoutonSecondaire libelle="Annuler" icone={X} onClick={() => navigate(`/projects/${project.id}/upload`)} />
-            <button
-              onClick={handleLaunch}
-              disabled={isAnalyzing || isSuccess || !peutLancer(selectedIds)}
-              className="edge-cta flex items-center gap-2 whitespace-nowrap px-6 py-2.5 rounded-lg text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed max-[768px]:px-4 [@media(pointer:coarse)]:min-h-11"
-            >
-              <Sparkles size={16} aria-hidden />
-              <span>
-                {"Lancer l'analyse"}
-                {selectedLotIds.length > 1 && <span className="max-[768px]:hidden">{` (${selectedLotIds.length} lots)`}</span>}
-              </span>
-            </button>
+            <ActionsBarreTel>
+              <button
+                onClick={handleLaunch}
+                disabled={isAnalyzing || isSuccess || !peutLancer(selectedIds)}
+                className="signature-btn whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed [@media(pointer:coarse)]:min-h-11"
+              >
+                <Sparkles size={16} aria-hidden />
+                <span>Lire ce dossier</span>
+              </button>
+            </ActionsBarreTel>
           </ActionsBarre>
         </BarreEtape>
+          }
+        >
+        {/* Backend busy */}
+        {isBackendBusy && (
+          <div className="flex items-center gap-3 p-4 rounded-xl" style={{ background: 'color-mix(in srgb, var(--text-1) 5%, transparent)', border: '1px solid var(--border-2)' }}>
+            <Loader2 size={18} className="animate-spin" style={{ color: 'var(--text-1)' }} />
+            <div>
+              <span className="text-sm font-medium block" style={{ color: 'var(--text-1)' }}>Extraction des documents en cours...</span>
+              {processingDetail && <span className="text-xs block mt-0.5" style={{ color: 'var(--text-3)' }}>{processingDetail}</span>}
+            </div>
+          </div>
+        )}
+
+        {/* Documents illisibles — signalés par fichier, jamais silencieux */}
+        {extractionWarnings.length > 0 && (
+          <div className="p-4 rounded-xl" style={{ background: 'color-mix(in srgb, var(--warning-fg) 9%, transparent)', border: '1px solid color-mix(in srgb, var(--warning-fg) 22%, transparent)' }}>
+            <div className="flex items-center gap-2 mb-1.5">
+              <AlertTriangle size={16} style={{ color: 'var(--warning-fg)' }} />
+              <span className="text-sm font-semibold" style={{ color: 'var(--warning-fg)' }}>
+                {extractionWarnings.length} document{extractionWarnings.length > 1 ? 's' : ''} illisible{extractionWarnings.length > 1 ? 's' : ''} — exigences non extraites de ce{extractionWarnings.length > 1 ? 's' : ''} fichier{extractionWarnings.length > 1 ? 's' : ''}
+              </span>
+            </div>
+            <ul className="space-y-0.5 pl-6">
+              {extractionWarnings.map((w) => (
+                <li key={w.file_name} className="break-words text-xs" style={{ color: 'var(--warning-fg)' }}>
+                  <span className="font-medium">{w.file_name}</span> — {w.warning}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* R9 — les lots cités dans le dossier mais non proposés : le nombre et la raison, sans nom de lot. */}
+        {phraseLotsEcartes(lotsData?.ecartes) && (
+          <p data-lots-ecartes className="text-sm" style={{ color: 'var(--text-3)' }}>{phraseLotsEcartes(lotsData?.ecartes)}</p>
+        )}
+
+        {/* AiTips */}
+        <AiTipsBlock tips={lotTips} dismissed={dismissedTips} onDismiss={(id) => setDismissedTips((s) => new Set(s).add(id))} />
+
+        {/* Excel error */}
+        {errorLots.length > 0 && (
+          <div className="flex items-start gap-3 p-4 rounded-xl" style={{ background: 'color-mix(in srgb, var(--text-3) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--text-3) 15%, transparent)' }}>
+            <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: 'var(--text-3)' }} />
+            <div>
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-3)' }}>Fichier(s) Excel protégé(s) par mot de passe</p>
+              {errorLots.map(l => <p key={l.id} className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>{l.nom}</p>)}
+            </div>
+          </div>
+        )}
+
+        {/* ── LOT LIST ────────────────────────────────────── */}
+        {lots.length > 0 ? (
+          <>
+            {separes ? (
+              <>
+                <SectionEtape titre="Dans vos métiers" colonnes={2}>{dansVosMetiers.map(carteLot)}</SectionEtape>
+                <SectionEtape
+                  titre="Autres lots"
+                  colonnes={2}
+                  action={
+                    <button type="button" aria-expanded={autresVisibles} onClick={() => setAutresOuverts((o) => !o)}
+                      className="inline-flex min-h-9 items-center gap-1 rounded-xs text-sm font-medium text-accent-text hover:underline [@media(pointer:coarse)]:min-h-11">
+                      {autresVisibles ? 'Replier' : `Afficher les ${autres.length} autres lots`}
+                    </button>
+                  }
+                >
+                  {autresVisibles && autres.map(carteLot)}
+                </SectionEtape>
+              </>
+            ) : (
+              <SectionEtape titre="Lots du dossier" colonnes={2}>{lots.map(carteLot)}</SectionEtape>
+            )}
+            <SectionEtape titre="Ou tout le dossier">
+              <LotCard
+                lot={{ id: 'all', nom: "Analyser l'ensemble du dossier (tous les lots)" }}
+                selected={selectedIds.has('all')}
+                onSelect={() => toggleLot('all')}
+                cout={libelleUnites(lots.length)}
+              />
+            </SectionEtape>
+          </>
+        ) : !lotsInitialized && (lotsLoading || detectPhase === 'detecting' || isBackendBusy) ? (
+          <div className="flex items-center gap-3 p-5 rounded-xl" style={{ background: 'color-mix(in srgb, var(--text-1) 4%, transparent)', border: '1px solid var(--border-2)' }}>
+            <Loader2 size={20} className="animate-spin" style={{ color: 'var(--text-1)' }} />
+            <div>
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>Détection des lots en cours...</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>Analyse des documents du dossier.</p>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 p-5 rounded-xl" style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)' }}>
+            <Layers size={20} style={{ color: 'var(--text-1)' }} />
+            <div>
+              <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>Marché unique (pas de lots)</p>
+              <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>L&apos;IA analysera l&apos;intégralité du dossier sans filtre par lot.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Add lot */}
+        {showAddForm ? (
+          <AddLotForm onAdd={handleAddLot} onCancel={() => setShowAddForm(false)} />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowAddForm(true)}
+            className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed text-sm font-medium transition-colors"
+            style={{ borderColor: 'var(--surface-1)', color: 'var(--text-3)' }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--text-3)'; e.currentTarget.style.color = 'var(--text-3)'; e.currentTarget.style.background = 'var(--surface-1)' }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--surface-1)'; e.currentTarget.style.color = 'var(--text-3)'; e.currentTarget.style.background = 'transparent' }}
+          >
+            <Plus size={16} />
+            Ajouter un lot manuellement
+          </button>
+        )}
+
+        {/* Error */}
+        {analysisError && (
+          <div className="flex items-start gap-2 p-4 rounded-xl text-sm" style={{ color: 'var(--danger-fg)', background: 'color-mix(in srgb, var(--danger-fg) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--danger-fg) 15%, transparent)' }}>
+            <AlertCircle size={16} className="shrink-0 mt-0.5" />
+            <span>{analysisError}</span>
+          </div>
+        )}
+        </GabaritEtape>
       </div>
     </>
   )

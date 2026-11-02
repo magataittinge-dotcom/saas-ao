@@ -1,4 +1,5 @@
 import { cn } from '@/lib/utils'
+import type { SourceEtat } from './EtatElement'
 
 export type EtatCarte = 'pret' | 'a-verifier' | 'neutre'
 
@@ -11,6 +12,8 @@ export interface CarteResume {
   jauge?: { rempli: number; total: number }
   /** Une ligne d'explication, en petit sous la valeur. */
   detail?: string
+  /** La source de la valeur dans le dossier : « Source : RC · page 4 » et « Voir dans le dossier ». */
+  source?: SourceEtat
 }
 
 const PASTILLE: Record<Exclude<EtatCarte, 'neutre'>, { classe: string; texte: string }> = {
@@ -34,6 +37,19 @@ function Jauge({ libelle, rempli, total }: { libelle: string } & NonNullable<Car
   )
 }
 
+function SourceCarte({ source }: { source: SourceEtat }) {
+  return (
+    <p className="flex flex-wrap items-center gap-x-2 border-t border-bord-2 pt-2 text-sm text-fg-2">
+      <span>Source : {source.libelle}</span>
+      {source.onVoir && (
+        <button type="button" onClick={source.onVoir} className="inline-flex min-h-9 items-center rounded-xs font-medium text-accent-text hover:underline [@media(pointer:coarse)]:min-h-11">
+          Voir dans le dossier
+        </button>
+      )}
+    </p>
+  )
+}
+
 /**
  * Le résumé d'une étape : trois ou quatre cartes égales sur toute la largeur (une colonne au téléphone), comme les trois
  * rubriques de « Mon entreprise ». Chaque carte : un libellé, une valeur en grand, une pastille d'état, une jauge et une ligne
@@ -52,9 +68,10 @@ export function BandeResume({ cartes, libelle = 'Résumé de l’étape', classN
               <p className="text-sm font-medium text-fg-2">{c.libelle}</p>
               {pastille && <span className={cn(pastille.classe, 'shrink-0')}>{pastille.texte}</span>}
             </div>
-            <p className="min-w-0 break-words font-display text-h5 tabular-nums text-fg">{c.valeur}</p>
+            <p className="min-w-0 break-words font-display text-h6 tabular-nums text-fg">{c.valeur}</p>
             {c.jauge && <Jauge libelle={c.libelle} {...c.jauge} />}
             {c.detail && <p className="text-sm text-fg-2">{c.detail}</p>}
+            {c.source && <SourceCarte source={c.source} />}
           </li>
         )
       })}

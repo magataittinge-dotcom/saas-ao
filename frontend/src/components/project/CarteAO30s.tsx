@@ -6,15 +6,17 @@ import type { ChecklistItem, Project } from '@/types'
 
 /** Présentation seule : les faits déjà calculés, aucune couleur écrite ici (styles/pieces.css). */
 export function CarteAO30sVue({
-  faits, onOpenSource,
+  faits, onOpenSource, titre = 'L’AO en 30 secondes',
 }: {
   faits: FaitCarte[]
   onOpenSource?: (source: SourceFait) => void
+  /** `null` : pas de titre visible (l'écran donne déjà un sous-titre de section) ; le bloc garde un nom accessible. */
+  titre?: string | null
 }) {
   if (faits.length === 0) return null
   return (
-    <section className="carte-ao-30s" aria-labelledby="carte-ao-30s-titre">
-      <h2 id="carte-ao-30s-titre" className="carte-ao-30s__titre">L’AO en 30 secondes</h2>
+    <section className="carte-ao-30s" {...(titre === null ? { 'aria-label': 'Le marché en bref' } : { 'aria-labelledby': 'carte-ao-30s-titre' })}>
+      {titre !== null && <h2 id="carte-ao-30s-titre" className="carte-ao-30s__titre">{titre}</h2>}
       <dl className="carte-ao-30s__faits">
         {faits.map((f) => (
           <div key={f.id} className={`carte-ao-30s__fait${f.large ? ' carte-ao-30s__fait--large' : ''}`}>
@@ -44,16 +46,11 @@ interface ScorePayload { composantes: { statut: 'ok' | 'warning' | 'ko' | 'non_e
 interface CriticalPayload { fields: ChampsCritiquesCarte }
 
 /**
- * « L'AO en 30 secondes » : en tête de l'analyse, le résumé calculé depuis ce qui est déjà en
- * base (champs critiques, checklist, fiche de décision) — aucun appel IA, aucun avis de prix.
- * Les requêtes partagent les clés des cartes voisines : pas de second appel serveur.
+ * Les faits de l'AO (acheteur, objet, lot, remise, visite, pièces, critères, délai, décision), calculés depuis ce qui est déjà
+ * en base — champs critiques, checklist, fiche de décision. Aucun appel IA, aucun avis de prix. Les requêtes partagent les clés
+ * des cartes voisines : pas de second appel serveur.
  */
-export default function CarteAO30s({
-  project, onOpenSource,
-}: {
-  project: Project
-  onOpenSource: (source: SourceFait) => void
-}) {
+export function useFaitsAO(project: Project): FaitCarte[] {
   const prete = project.processing_status !== 'analyzing'
   const { data: critiques } = useQuery<CriticalPayload>({
     queryKey: ['critical-fields', project.id],
@@ -73,7 +70,7 @@ export default function CarteAO30s({
     enabled: prete,
   })
 
-  const faits = useMemo(() => {
+  return useMemo(() => {
     const evaluables = (score?.composantes ?? []).filter((c) => c.statut !== 'non_evaluable')
     const conditions: ConditionsCarte | null = evaluables.length
       ? {
@@ -86,6 +83,14 @@ export default function CarteAO30s({
       ['fournir', 'completer'].includes(p.document_group ?? 'fournir') && p.status !== 'non_applicable')
     return construireCarteAO({ projet: project, champs: critiques?.fields ?? null, pieces: aFournir, conditions })
   }, [project, critiques, pieces, score])
+}
 
-  return <CarteAO30sVue faits={faits} onOpenSource={onOpenSource} />
+/** « L'AO en 30 secondes » : en tête de l'analyse, le résumé calculé depuis ce qui est déjà en base. */
+export default function CarteAO30s({
+  project, onOpenSource,
+}: {
+  project: Project
+  onOpenSource: (source: SourceFait) => void
+}) {
+  return <CarteAO30sVue faits={useFaitsAO(project)} onOpenSource={onOpenSource} />
 }

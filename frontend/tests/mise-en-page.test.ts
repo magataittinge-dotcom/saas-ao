@@ -47,7 +47,7 @@ test('S10 : dans la barre, les boutons secondaires sont des BoutonSecondaire (ic
   for (const f of ETAPES_MIGREES.filter((x) => !x.endsWith('StepExport.tsx'))) {
     const nus = barre(f).match(/<button\b[^>]*>/g) ?? []
     // seul « Lancer l'analyse » est écrit à la main (edge-cta, texte fixe) ; les autres passent par BoutonSuite / BoutonSecondaire
-    assert.ok(nus.every((b) => /edge-cta/.test(b)), `${f} : un bouton nu dans la barre : ${nus.join(' ')}`)
+    assert.ok(nus.every((b) => /edge-cta|signature-btn/.test(b)), `${f} : un bouton nu dans la barre : ${nus.join(' ')}`)
   }
   assert.match(barre('src/routes/project/StepUpload.tsx'), /<BoutonSecondaire libelle="Retour"/)
   assert.match(barre('src/routes/project/StepLotSelection.tsx'), /<BoutonSecondaire libelle="Annuler"/)
@@ -60,7 +60,9 @@ test('S10 : sur l\'export, une ligne au téléphone — « Télécharger », men
   assert.match(code, /<details className="text-center max-\[768px\]:hidden">/, 'le repli « Autres formats » reste sur ordinateur')
   assert.match(code, /<div className="contents max-\[768px\]:hidden"><PiecesAJoindre/, 'dans la barre sur ordinateur')
   assert.match(code, /className="mt-6 hidden max-\[768px\]:block"/, 'et au-dessus de la barre au téléphone')
-  assert.ok(code.indexOf('{avertissementTel}') < code.indexOf('{bottomBar}'))
+  // le gabarit rend le contenu (donc l'avertissement) AVANT la barre passée en prop
+  assert.match(code, /barre=\{bottomBar\}/)
+  assert.ok(code.indexOf('{avertissementTel}') > code.indexOf('<GabaritEtape'))
   // le grand bouton de l'ordinateur est une classe réservée aux écrans larges, plus un style en ligne
   assert.match(lire('src/index.css'), /@media \(min-width: 769px\) \{\s*\.signature-btn\.cta-grand/)
   assert.doesNotMatch(code, /padding: '12px 32px'/)
