@@ -6,6 +6,7 @@ from database import get_db
 from models.notification import Notification
 from models.user import User
 from routers.auth import get_auth_user
+from services import notifications as notifications_service
 
 router = APIRouter()
 
@@ -24,6 +25,9 @@ def list_notifications(
     items = base.order_by(Notification.created_at.desc()).limit(_MAX_ITEMS).all()
     return {
         "unread": unread,
+        # R11 : vrai seulement si l'envoi d'e-mails est configuré côté serveur ;
+        # l'écran d'attente ne promet « Synorix vous prévient par e-mail » qu'à cette condition.
+        "email_actif": notifications_service._smtp_configured(),
         "items": [
             {
                 "id": n.id, "type": n.type, "titre": n.titre, "corps": n.corps,

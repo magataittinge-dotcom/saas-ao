@@ -1,3 +1,4 @@
+import { useAvisAttente } from '@/hooks/useAvisAttente'
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -451,6 +452,7 @@ interface Props { project: Project }
 
 export default function StepMemoire({ project }: Props) {
   const navigate = useNavigate()
+  const avisAttente = useAvisAttente('mémoire')
   const queryClient = useQueryClient()
   const [showPaywall, setShowPaywall] = useState(false)
   const [paywallMessage, setPaywallMessage] = useState<string | null>(null)
@@ -662,7 +664,7 @@ export default function StepMemoire({ project }: Props) {
             progress={memoireSse.progress}
             detail={memoireSse.detail || 'Préparation du contexte…'}
             phase={memoireSse.phase}
-            avis="Vous pouvez fermer cette page : Synorix vous prévient par e-mail."
+            avis={avisAttente}
             onArrierePlan={() => navigate('/dashboard')}
           />
         )}
@@ -752,7 +754,7 @@ export default function StepMemoire({ project }: Props) {
           progress={memoireSse.progress}
           detail={memoireSse.detail || 'Préparation du contexte…'}
           phase={memoireSse.phase}
-          avis="Vous pouvez fermer cette page : Synorix vous prévient par e-mail."
+          avis={avisAttente}
           onArrierePlan={() => navigate('/dashboard')}
         />
       )}

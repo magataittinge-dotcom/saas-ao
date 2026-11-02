@@ -1,3 +1,4 @@
+import { useAvisAttente } from '@/hooks/useAvisAttente'
 import { useState, useMemo, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -53,6 +54,7 @@ type FilterCategory = 'all' | ComplianceCategory
 
 export default function StepAnalysis({ project }: Props) {
   const navigate = useNavigate()
+  const avisAttente = useAvisAttente('analyse')
   const queryClient = useQueryClient()
   const [activeFilter, setActiveFilter] = useState<FilterCategory>('all')
   const [search, setSearch] = useState('')
@@ -276,7 +278,7 @@ export default function StepAnalysis({ project }: Props) {
       progress={analysisSse.progress}
       detail={analysisSse.detail || "L'IA lit vos documents et extrait les exigences"}
       phase={analysisSse.phase}
-      avis="Vous pouvez fermer cette page : Synorix vous prévient par e-mail."
+      avis={avisAttente}
       onArrierePlan={() => navigate('/dashboard')}
     />
   )
