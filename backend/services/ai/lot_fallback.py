@@ -17,6 +17,8 @@ import logging
 import re
 from typing import Dict, List, Optional, Tuple
 
+from services.jetons import ligne_jetons
+
 logger = logging.getLogger(__name__)
 
 _MODEL = "claude-sonnet-4-6"
@@ -117,6 +119,7 @@ def _call_claude(excerpts: str, detected: List[dict], announced: Optional[int]) 
         system=_SYSTEM_PROMPT,
         messages=[{"role": "user", "content": user_msg}],
     )
+    print(ligne_jetons("repli_lots", _MODEL, getattr(response, "usage", None)), flush=True)
     raw = "".join(block.text for block in response.content if hasattr(block, "text"))
     m = re.search(r'\[.*\]', raw, re.DOTALL)
     if not m:

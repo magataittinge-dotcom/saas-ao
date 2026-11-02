@@ -13,6 +13,7 @@ import anthropic
 from json_repair import repair_json
 from pydantic import ValidationError
 from config import get_settings
+from services.jetons import ligne_jetons
 from schemas.compliance import RequirementFromAI
 from .prompts import DCE_ANALYSIS_SYSTEM, DCE_PASS1_SYSTEM, DCE_PASS2_SYSTEM
 from services.skill_loader import load_skill, load_skill_section
@@ -637,6 +638,7 @@ class DCEAnalyzer:
                 elapsed = time.monotonic() - t0
                 stop_reason = final_message.stop_reason
                 print(f"[TIMING] [{label}] Streaming: {elapsed:.1f}s (attempt {attempt})", flush=True)
+                print(ligne_jetons(label, "claude-sonnet-4-6", getattr(final_message, "usage", None)), flush=True)
                 break
 
             except anthropic.AuthenticationError as e:

@@ -13,6 +13,7 @@ import time
 import anthropic
 from json_repair import repair_json
 from config import get_settings
+from services.jetons import ligne_jetons
 from .prompts import MEMOIRE_GENERATION_SYSTEM
 from services.skill_loader import load_skill, load_skills_bundle, load_skill_reference
 from models.project import TYPE_AE, TYPES_GRILLES_DE_PRIX
@@ -800,6 +801,7 @@ class MemoireGenerator:
                     f"cache_read={cache_read}, cache_write={cache_write}, out={output_tokens}",
                     flush=True,
                 )
+                print(ligne_jetons(f"memoire_{segment_key}", model, usage), flush=True)
                 seg_meta.update({
                     "stop_reason": stop_reason,
                     "elapsed_s": round(elapsed, 1),
