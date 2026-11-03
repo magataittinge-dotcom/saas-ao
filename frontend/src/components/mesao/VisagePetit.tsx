@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
  * Le visage de Synorix en petit : l'image fixe (yeux ouverts), sans vidéo ni mouvement. Un médaillon sombre derrière, les bords
  * fondus par un masque (comme le visage de « Mon entreprise »). Décoratif : masqué aux lecteurs d'écran.
  */
-const MASQUE = 'radial-gradient(ellipse 52% 46% at 50% 47%, #000 62%, transparent 82%)'
+const MASQUE = 'radial-gradient(ellipse 52% 46% at 50% 47%, black 62%, transparent 82%)'
 
 export function VisagePetit({ className }: { className?: string }) {
   return (

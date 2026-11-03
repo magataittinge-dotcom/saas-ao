@@ -46,8 +46,10 @@ test('« Lancer l’analyse » n’existe plus : c’est « Lire ce dossier » p
 test('l’accueil, Mes AO et la palette ouvrent l’écran de la prochaine action, pas toujours le dépôt', () => {
   const bande = sansCommentaires(lire('src/components/dashboard/BandeAO.tsx'))
   assert.equal((bande.match(/lienEtape\(p\)/g) ?? []).length, 2, 'bouton principal et lien des autres AO')
-  const carte = sansCommentaires(lire('src/components/dashboard/AOCard.tsx'))
-  assert.equal((carte.match(/navigate\(lienEtape\(project\)\)/g) ?? []).length, 2, 'la carte et « Continuer »')
+  for (const f of ['src/components/mesao/LigneAO.tsx', 'src/components/mesao/ALaUne.tsx']) {
+    const code = sansCommentaires(lire(f))
+    assert.equal((code.match(/to=\{lienEtape\(projet\)\}/g) ?? []).length, 1, `${f} : le bouton de la prochaine action`)
+  }
   const projetEcran = sansCommentaires(lire('src/routes/Project.tsx'))
   assert.match(projetEcran, /<Navigate to=\{actionEtape\(project\)\.segment\} replace \/>/, '/projects/<id> (palette, veille) ouvre la prochaine action')
 })

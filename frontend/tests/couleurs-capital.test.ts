@@ -12,10 +12,8 @@ import { lire, sansCommentaires } from './outils/sources'
 export const ECRANS: Record<string, string[]> = {
   'Tableau de bord': [
     'src/routes/Dashboard.tsx',
-    'src/components/dashboard/AOCard.tsx',
     'src/components/dashboard/AlertCard.tsx',
     'src/components/dashboard/DeadlinePill.tsx',
-    'src/components/dashboard/PipelineRail.tsx',
     'src/components/dashboard/StatCard.tsx',
     'src/components/onboarding/FirstAOWelcome.tsx',   // l'écran « premier DCE offert » s'affiche sur le tableau de bord
   ],

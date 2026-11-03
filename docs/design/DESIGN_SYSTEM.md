@@ -80,7 +80,10 @@ Identité = **cyan + slate + rouge + émeraude (réservée)**. NE PAS introduire
 `StepProgress` (stepper 6 étapes), `AnalysisProgress`, `DocumentViewer`, `PdfViewerModal`, `VaultPickerModal`, `CandidatureSectionTemplates`, `CandidatureSectionVault`.
 
 ### `components/dashboard/`
-`AOCard`, `AlertCard`, `StatsBar`.
+`AlertCard`, `StatsBar`.
+
+### `components/mesao/` (écran Mes AO)
+`ALaUne`, `LigneAO`, `ResumeMesAO`, `Termines`, `VideMesAO`, `Etat`, `VisagePetit`.
 
 ### `components/ui/` — **VIDE** (pas de shadcn installé malgré les vars CSS) → formulaires en Tailwind inline.
 
