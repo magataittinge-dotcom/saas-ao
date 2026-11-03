@@ -25,8 +25,9 @@ export function cartesDepot(documents: readonly Pick<ProjectDocument, 'type' | '
     },
     { libelle: 'À classer', valeur: String(aClasser), etat: aClasser > 0 ? 'a-verifier' : 'pret', detail: aClasser > 0 ? 'Indiquez ce que sont ces fichiers dans la liste ci-dessous.' : 'Tous les fichiers sont reconnus.' },
   ]
-  // Un lot (ou un marché unique) : la carte le dit, il n'y a rien à choisir à l'étape suivante.
-  if (lotUnique) cartes.push({ libelle: 'Lots détectés', valeur: `Lot unique : ${lotUnique.designation}`, etat: 'neutre', detail: 'La lecture se lance depuis cette page.' })
+  // Un lot (ou un marché unique) : la carte le dit, il n'y a rien à choisir à l'étape suivante. « Lot unique » en grand ; la
+  // désignation (longue, au choix du maître d'ouvrage) en texte normal sous la valeur, deux lignes au plus.
+  if (lotUnique) cartes.push({ libelle: 'Lots détectés', valeur: 'Lot unique', designation: lotUnique.designation, etat: 'neutre', detail: 'La lecture se lance depuis cette page.' })
   else {
     const lots = project?.lots_detectes?.length ?? 0
     if (lots > 0) cartes.push({ libelle: 'Lots détectés', valeur: String(lots), etat: 'neutre', detail: 'À choisir à l’étape suivante.' })

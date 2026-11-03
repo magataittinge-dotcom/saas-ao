@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { SourceEtat } from './EtatElement'
 
@@ -10,6 +12,9 @@ export interface CarteResume {
   etat?: EtatCarte
   /** Jauge : `rempli` sur `total`. */
   jauge?: { rempli: number; total: number }
+  /** Une désignation (nom de lot, objet du marché) : texte normal sous la valeur, deux lignes au plus ; le texte entier au survol et
+   *  au toucher (la ligne se déplie). Pour un libellé long qui ne peut pas être la valeur en grand. */
+  designation?: string
   /** Une ligne d'explication, en petit sous la valeur. */
   detail?: string
   /** La source de la valeur dans le dossier : « Source : RC · page 4 » et « Voir dans le dossier ». */
@@ -34,6 +39,45 @@ function Jauge({ libelle, rempli, total }: { libelle: string } & NonNullable<Car
     >
       <div className="h-full rounded-pilule bg-accent-ui transition-[width] duration-morph ease-lien motion-reduce:transition-none" style={{ width: `${pct}%` }} />
     </div>
+  )
+}
+
+/**
+ * Une désignation longue dans une carte : texte normal, coupé à deux lignes par le style seulement (le texte entier reste dans la
+ * page pour le lecteur d'écran), le texte entier au survol (`title`). Quand la coupure a vraiment lieu (mesurée), la ligne devient
+ * un bouton : un appui l'ouvre et la referme (`aria-expanded`), cible de 44 px sur écran tactile.
+ */
+function DesignationCarte({ texte }: { texte: string }) {
+  const [ouvert, setOuvert] = useState(false)
+  const [coupe, setCoupe] = useState(false)
+  const ligne = useRef<HTMLSpanElement>(null)
+  const cliquable = coupe || ouvert
+  useEffect(() => {
+    const el = ligne.current
+    if (!el) return undefined
+    const mesurer = () => { if (!ouvert) setCoupe(el.scrollHeight > el.clientHeight + 1) }
+    mesurer()
+    if (typeof ResizeObserver === 'undefined') return undefined
+    const obs = new ResizeObserver(mesurer)
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [texte, ouvert, cliquable])
+  const contenu = <span ref={ligne} className={cn('block break-words', !ouvert && 'line-clamp-2')}>{texte}</span>
+  if (!cliquable) return <p className="text-sm text-fg" title={texte}>{contenu}</p>
+  return (
+    <button
+      type="button"
+      aria-expanded={ouvert}
+      title={ouvert ? undefined : texte}
+      onClick={() => setOuvert((v) => !v)}
+      className="block w-full min-w-0 rounded-xs text-left text-sm text-fg [@media(pointer:coarse)]:min-h-11"
+    >
+      {contenu}
+      <span aria-hidden="true" className="mt-0.5 inline-flex items-center gap-1 font-medium text-accent-text">
+        {ouvert ? 'Réduire' : 'Voir tout'}
+        <ChevronDown size={14} className={cn('transition-transform duration-base ease-lien motion-reduce:transition-none', ouvert && 'rotate-180')} />
+      </span>
+    </button>
   )
 }
 
@@ -69,6 +113,7 @@ export function BandeResume({ cartes, libelle = 'Résumé de l’étape', classN
               {pastille && <span className={cn(pastille.classe, 'shrink-0')}>{pastille.texte}</span>}
             </div>
             <p className="min-w-0 break-words font-display text-h6 tabular-nums text-fg">{c.valeur}</p>
+            {c.designation && <DesignationCarte texte={c.designation} />}
             {c.jauge && <Jauge libelle={c.libelle} {...c.jauge} />}
             {c.detail && <p className="text-sm text-fg-2">{c.detail}</p>}
             {c.source && <SourceCarte source={c.source} />}

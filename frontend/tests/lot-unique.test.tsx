@@ -86,18 +86,21 @@ test('le résumé du dépôt : « Lot unique : … » sans « À choisir » ; pl
   const seul = lotUniqueDuDossier({ name: 'AO démo', lots_detectes: [LOT] })
   const carteSeul = cartesDepot(docs, { lots_detectes: [LOT] }, seul).at(-1)
   assert.equal(carteSeul?.libelle, 'Lots détectés')
-  assert.equal(carteSeul?.valeur, 'Lot unique : Lot 3 — Menuiseries (démo)')
+  assert.equal(carteSeul?.valeur, 'Lot unique')                                     // en grand : deux mots ; la désignation passe en texte normal
+  assert.equal(carteSeul?.designation, 'Lot 3 — Menuiseries (démo)')
+  assert.equal(carteSeul?.detail, 'La lecture se lance depuis cette page.')
   assert.doesNotMatch(JSON.stringify(carteSeul), /À choisir/)
   const deux = [LOT, { id: 'lot4', nom: 'Lot 4' }]
   const carteDeux = cartesDepot(docs, { lots_detectes: deux }, lotUniqueDuDossier({ name: 'x', lots_detectes: deux })).at(-1)
   assert.deepEqual([carteDeux?.valeur, carteDeux?.detail], ['2', 'À choisir à l’étape suivante.'])
 })
 
-test('marché unique : la carte « Lots détectés » existe aussi (aucun lot repéré) et dit « Lot unique : <objet> »', async () => {
+test('marché unique : la carte « Lots détectés » existe aussi (aucun lot repéré) : « Lot unique » en grand, l’objet du marché en texte normal', async () => {
   const { cartesDepot } = await import('@/lib/depotDossier')
   const docs = [{ type: 'rc' as const, file_size: 1 }]
   const unique = lotUniqueDuDossier({ name: 'Réhabilitation d’une salle (démo)', lots_detectes: [] })
-  assert.equal(cartesDepot(docs, { lots_detectes: [] }, unique).at(-1)?.valeur, 'Lot unique : Réhabilitation d’une salle (démo)')
+  const carte = cartesDepot(docs, { lots_detectes: [] }, unique).at(-1)
+  assert.deepEqual([carte?.valeur, carte?.designation], ['Lot unique', 'Réhabilitation d’une salle (démo)'])
   assert.equal(cartesDepot(docs, { lots_detectes: [] }, null).at(-1)?.libelle, 'À classer')      // pas de lot unique, pas de lot : pas de carte
 })
 
@@ -161,4 +164,38 @@ test('plafond de lectures assistées atteint : l’écran des lots le dit d’un
   assert.doesNotMatch(jour ?? '', /manquant|incomplet|absent|!/i)
   assert.equal(phraseLotsEcartes({ hors_liste: 0, sans_intitule: 0 }), null)
   assert.match(phraseLotsEcartes({ hors_liste: 2, sans_intitule: 0, ia_plafond: 'jour' }) ?? '', /2 autres lots cités[^]*plafond/)   // les deux phrases se suivent
+})
+
+// ── A2 (3/11) : la désignation d'un lot unique n'est plus la valeur en grand de la carte ──
+import { BandeResume } from '@/components/etape'
+import { cartesDepot } from '@/lib/depotDossier'
+
+const LONGUE = 'Lot 3 — Menuiseries extérieures bois et aluminium, fourniture et pose de fenêtres, portes-fenêtres, volets roulants et occultations (désignation inventée)'
+const bande = (designation: string) => renderToStaticMarkup(
+  <BandeResume cartes={cartesDepot([{ type: 'rc' as const, file_size: 1 }], { lots_detectes: [{ id: 'lot3', nom: designation }] }, { id: 'lot3', designation, marcheUnique: false })} />)
+
+test('la carte : « Lot unique » en grand, la désignation entière dans le texte, coupée à deux lignes par le style (jamais tronquée dans le texte)', () => {
+  const html = bande(LONGUE)
+  assert.match(html, /<p class="[^"]*font-display[^"]*">Lot unique<\/p>/)
+  assert.ok(html.includes(LONGUE), 'le texte complet reste dans la page (lecteur d’écran, copie, impression)')
+  assert.match(html, /line-clamp-2/)
+  assert.doesNotMatch(html, /…|\.\.\./)
+  assert.match(html, /La lecture se lance depuis cette page\./)
+  assert.doesNotMatch(html, /manquant|incomplet|absent|!/i)
+})
+
+test('la désignation est en texte normal de carte (text-sm), pas en grand ; le survol donne le texte complet', () => {
+  const html = bande(LONGUE)
+  const ligne = html.match(/<[a-z]+ [^>]*line-clamp-2[^>]*>/)?.[0] ?? ''
+  assert.match(html, /text-sm/)
+  assert.doesNotMatch(ligne, /font-display|text-h6/)
+  assert.match(html, /title="Lot 3 — Menuiseries extérieures[^"]*\(désignation inventée\)"/)
+})
+
+test('au toucher : la ligne se déplie (aria-expanded), cible de 44 px sous pointer:coarse, cue décoratif masqué au lecteur d’écran', () => {
+  const code = sansCommentaires(lire('src/components/etape/BandeResume.tsx'))
+  assert.match(code, /aria-expanded=\{ouvert\}/)
+  assert.match(code, /\[@media\(pointer:coarse\)\]:min-h-11/)
+  assert.match(code, /aria-hidden="true"/)
+  assert.match(code, /ResizeObserver/)              // la coupure est mesurée : pas de bouton sur une désignation courte
 })
