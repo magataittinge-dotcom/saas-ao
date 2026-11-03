@@ -15,7 +15,7 @@ Invariant de sortie : jamais de lot sans libellé (anomalie loggée, pas affich�
 import json
 import logging
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 from services.jetons import ligne_jetons
 
@@ -95,9 +95,11 @@ def collect_lot_excerpts(doc_texts: Dict[str, str], max_chars: int = _MAX_EXCERP
     return "\n\n".join(chunks)
 
 
-def _call_claude(excerpts: str, detected: List[dict], announced: Optional[int]) -> List[dict]:
+def _call_claude(excerpts: str, detected: List[dict], announced: Optional[int],
+                 on_usage: Optional[Callable[[dict], None]] = None) -> List[dict]:
     """UN appel Sonnet. Appelé depuis le thread de détection (pas d'event loop
-    FastAPI ici — l'appel synchrone au SDK est sans risque de famine asyncio)."""
+    FastAPI ici — l'appel synchrone au SDK est sans risque de famine asyncio).
+    `on_usage` reçoit les jetons de l'appel (comptage dans le plafond de l'entreprise)."""
     import anthropic
     from json_repair import repair_json
     from config import get_settings
@@ -120,6 +122,10 @@ def _call_claude(excerpts: str, detected: List[dict], announced: Optional[int]) 
         messages=[{"role": "user", "content": user_msg}],
     )
     print(ligne_jetons("repli_lots", _MODEL, getattr(response, "usage", None)), flush=True)
+    if on_usage is not None:
+        usage = getattr(response, "usage", None)
+        on_usage({cle: int(getattr(usage, cle, 0) or 0) for cle in
+                  ("input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens")})
     raw = "".join(block.text for block in response.content if hasattr(block, "text"))
     m = re.search(r'\[.*\]', raw, re.DOTALL)
     if not m:
@@ -177,10 +183,21 @@ def drop_unlabeled(lots: List[dict]) -> List[dict]:
     return out
 
 
+def filet_necessaire(doc_texts: Dict[str, str], lots: List[dict], announced: Optional[int]) -> bool:
+    """Le filet IA se déclencherait-il sur ces lots ? Même décision que `finaliser_lots` (fantômes écartés d'abord, déclencheur
+    strict, extraits disponibles), sans aucun appel : sert à l'écran de dépôt, qui n'appelle jamais l'IA."""
+    from services.lot_detector import mentions_allotissement as _mentions
+    sans_fantomes = drop_ghosts(list(lots or []), announced)
+    mentions = any(_mentions(t) for t in doc_texts.values())
+    declenche, _ = should_trigger(sans_fantomes, announced, mentions)
+    return bool(declenche and collect_lot_excerpts(doc_texts))
+
+
 def run_fallback_if_needed(
     doc_texts: Dict[str, str],
     detected: List[dict],
     announced: Optional[int],
+    on_usage: Optional[Callable[[dict], None]] = None,
 ) -> Tuple[List[dict], bool]:
     """Orchestration : décide, appelle (au plus une fois), fusionne.
 
@@ -200,7 +217,8 @@ def run_fallback_if_needed(
 
     logger.info("Filet IA lots déclenché : %s", reason)
     try:
-        ia_lots = _call_claude(excerpts, detected, announced)
+        ia_lots = (_call_claude(excerpts, detected, announced, on_usage=on_usage) if on_usage is not None
+                   else _call_claude(excerpts, detected, announced))
     except Exception as exc:
         logger.warning("Filet IA lots : appel Claude échoué (%s) — lots regex conservés", exc)
         return detected, False
@@ -246,16 +264,23 @@ def finaliser_lots(
     doc_texts: Dict[str, str],
     lots: List[dict],
     announced: Optional[int],
+    *,
+    ia_permise: bool = True,
+    on_usage: Optional[Callable[[dict], None]] = None,
 ) -> Tuple[List[dict], bool, Dict[str, int]]:
     """La suite de nettoyage de la détection, dans l'ordre : fantômes écartés, filet IA si besoin, lots sans libellé écartés.
 
     Retourne (lots proposés, filet IA utilisé, écartés). `écartés` ne contient que des COMPTES (R9), jamais de nom :
       • hors_liste    : lots cités dans le dossier mais qui ne figurent pas dans la liste des lots du règlement ;
       • sans_intitule : lots cités sans intitulé exploitable (« Lot 6 » nu), même après le filet IA.
-    Un lot écarté puis retrouvé par le filet IA (même id) n'est pas compté : il est proposé."""
+    Un lot écarté puis retrouvé par le filet IA (même id) n'est pas compté : il est proposé.
+    `ia_permise=False` : le filet n'est jamais appelé (écran de dépôt, plafond du jour atteint)."""
     bruts = list(lots or [])
     sans_fantomes = drop_ghosts(bruts, announced)
-    apres_filet, ia_used = run_fallback_if_needed(doc_texts, sans_fantomes, announced)
+    if ia_permise:
+        apres_filet, ia_used = run_fallback_if_needed(doc_texts, sans_fantomes, announced, on_usage)
+    else:                                                  # dépôt, ou plafond atteint : lecture sans IA seulement
+        apres_filet, ia_used = sans_fantomes, False
     finaux = drop_unlabeled(apres_filet)
     proposes = _ids(finaux)
     ecartes = {

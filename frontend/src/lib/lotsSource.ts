@@ -20,6 +20,8 @@ export interface LotsEcartes {
   hors_liste: number
   /** Cités sans intitulé exploitable. */
   sans_intitule: number
+  /** Le plafond de lectures assistées de l'entreprise était atteint : la liste vient de la lecture directe des pièces. */
+  ia_plafond?: 'jour' | 'mois'
 }
 
 /** Une ligne sobre sous le compte des lots (null quand rien n'est écarté). Aucun nom de lot : le serveur n'en donne pas. */
@@ -36,6 +38,9 @@ export function phraseLotsEcartes(e: Partial<LotsEcartes> | null | undefined): s
     phrases.push(sansIntitule === 1
       ? '1 autre lot cité sans intitulé n’est pas proposé.'
       : `${sansIntitule} autres lots cités sans intitulé ne sont pas proposés.`)
+  }
+  if (e?.ia_plafond === 'jour' || e?.ia_plafond === 'mois') {
+    phrases.push(`Le plafond de lectures assistées du ${e.ia_plafond === 'mois' ? 'mois' : 'jour'} est atteint : la liste vient de la lecture directe des pièces. Vous pouvez ajouter un lot à la main.`)
   }
   return phrases.length ? phrases.join(' ') : null
 }

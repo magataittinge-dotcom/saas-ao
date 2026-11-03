@@ -128,3 +128,37 @@ test('Project.tsx passe le lot unique du projet à la barre des étapes', () => 
   const projet = sansCommentaires(lire('src/routes/Project.tsx'))
   assert.match(projet, /lotUnique=\{lotUniqueDuDossier\(project\)\}/)
 })
+
+// ── 3/11 : aucun appel IA à la fin du dépôt ─────────────────────────────────────────────────────────────────────
+
+test('l’écran de dépôt demande la lecture des lots SANS IA ; l’écran des lots, lui, ne passe pas le paramètre', () => {
+  const lecteur = sansCommentaires(lire('src/hooks/useLotsDuDepot.ts'))
+  assert.match(lecteur, /api\.get<[^`]*>\(`\/projects\/\$\{project\.id\}\/lots`, \{ params: \{ sans_ia: 1 \} \}\)/)
+  const lots = sansCommentaires(lire('src/routes/project/StepLotSelection.tsx'))
+  assert.doesNotMatch(lots, /sans_ia/)
+  assert.equal((lots.match(/`\/projects\/\$\{project\.id\}\/lots`\)/g) ?? []).length, 2)      // les deux lectures de l’écran des lots : sans paramètre
+})
+
+test('le dépôt a sa propre clé de lecture : un résultat « sans IA » n’est jamais servi à l’écran des lots', () => {
+  const lecteur = sansCommentaires(lire('src/hooks/useLotsDuDepot.ts'))
+  assert.match(lecteur, /queryKey: \['projects', project\.id, 'lots-depot'\]/)
+  const lots = sansCommentaires(lire('src/routes/project/StepLotSelection.tsx'))
+  assert.match(lots, /queryKey: \['projects', project\.id, 'lots'\]/)
+})
+
+test('le filet IA reste à passer (ia_necessaire) : pas de carte « un seul lot », le parcours mène à l’écran des lots', () => {
+  const lecteur = sansCommentaires(lire('src/hooks/useLotsDuDepot.ts'))
+  assert.match(lecteur, /ia_necessaire/)
+  assert.match(lecteur, /data\.iaNecessaire/)
+})
+
+test('plafond de lectures assistées atteint : l’écran des lots le dit d’une ligne sobre, sans conseil ni « manquant »', async () => {
+  const { phraseLotsEcartes } = await import('@/lib/lotsSource')
+  const jour = phraseLotsEcartes({ hors_liste: 0, sans_intitule: 0, ia_plafond: 'jour' })
+  assert.match(jour ?? '', /plafond de lectures assistées du jour est atteint/)
+  assert.match(jour ?? '', /ajouter un lot à la main/)
+  assert.match(phraseLotsEcartes({ ia_plafond: 'mois' }) ?? '', /du mois est atteint/)
+  assert.doesNotMatch(jour ?? '', /manquant|incomplet|absent|!/i)
+  assert.equal(phraseLotsEcartes({ hors_liste: 0, sans_intitule: 0 }), null)
+  assert.match(phraseLotsEcartes({ hors_liste: 2, sans_intitule: 0, ia_plafond: 'jour' }) ?? '', /2 autres lots cités[^]*plafond/)   // les deux phrases se suivent
+})

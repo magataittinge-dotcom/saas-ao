@@ -6,7 +6,7 @@ import unicodedata
 import io as _io
 import threading
 from typing import IO, List, Optional, Any
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, UploadFile, File, Form
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, UploadFile, File, Form
 from sqlalchemy.orm import Session, defer
 from pydantic import BaseModel
 
@@ -1769,11 +1769,14 @@ def get_extraction_status(
 @router.get("/{project_id}/lots")
 def detect_lots(
     project_id: str,
+    sans_ia: bool = Query(False, description="Lecture sans IA seulement (écran de dépôt) : le filet IA n'est jamais appelé."),
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ):
     """
     Detect lots from uploaded documents. Fast (no AI), uses extracted text only.
+    Le filet IA (au plus un appel Sonnet, sur échec objectif) ne tourne qu'à l'écran des lots, jamais avec `sans_ia=1` (écran de
+    dépôt) : si le filet se serait déclenché, la réponse est `ia_necessaire` et rien n'est mis en cache comme « fait ».
     AMÉLIORATION 7: returns cached result if lots_detectes is not NULL.
     Cache is invalidated on document upload or delete.
     On cache miss: launches detection in background thread, returns status immediately.
@@ -1798,6 +1801,10 @@ def detect_lots(
     if project.processing_status == "detecting_lots":
         return {"status": "detecting_lots", "progress": project.processing_progress or 0, "detail": project.processing_detail or ""}
 
+    # ── Dépôt (sans IA) : la lecture sans IA a déjà tourné et le filet reste à passer à l'écran des lots ──
+    if sans_ia and (project.lots_ecartes or {}).get("ia_en_attente"):
+        return {"lots": [], "count": 0, "cached": False, "ia_necessaire": True, "ecartes": None}
+
     # ── Cache miss: launch detection in background ────────────────────────────
     docs = db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).all()
     project.processing_status = "detecting_lots"
@@ -1820,6 +1827,7 @@ def detect_lots(
     threading.Thread(
         target=_run_lot_detection_background,
         args=(project_id, docs_data, str(UPLOADS_ROOT)),
+        kwargs={"sans_ia": sans_ia},
         daemon=True,
         name=f"synorix-lots-{project_id}",
     ).start()
@@ -1828,9 +1836,12 @@ def detect_lots(
 
 
 @chronometre("lots")
-def _run_lot_detection_background(project_id: str, docs_data: list, uploads_root_str: str) -> None:
+def _run_lot_detection_background(project_id: str, docs_data: list, uploads_root_str: str, sans_ia: bool = False) -> None:
     """Background thread: run lot detection with real progress updates to DB
-    AND to the SSE bus via pipeline_tracker."""
+    AND to the SSE bus via pipeline_tracker.
+
+    Le filet IA (au plus un appel Sonnet) : jamais avec `sans_ia` (écran de dépôt) ; sinon seulement si le plafond du jour et du
+    mois de l'entreprise le permet (`depot_budget`), et son appel est compté dans ce plafond (table `couts_ia`)."""
     import logging
     _log = logging.getLogger(__name__)
     _log.info(f"Lot detection background thread started for project {project_id}")
@@ -1902,14 +1913,60 @@ def _run_lot_detection_background(project_id: str, docs_data: list, uploads_root
             for p in doc_proxies
             if (p.type or "autre") in ("rc", "ccap", "autre")
         }
+        besoin_filet = lot_fallback.filet_necessaire(doc_texts, lots or [], announced)
+        if sans_ia and besoin_filet:
+            # Dépôt : aucun appel IA. Le résultat sans IA n'est PAS gardé comme « fait » (il empêcherait le filet de passer à
+            # l'écran des lots) ; seul un marqueur dit que le filet reste à passer. Un dépôt ou une suppression l'efface.
+            db = SessionLocal()
+            try:
+                project = db.query(Project).filter(Project.id == project_id).first()
+                if project:
+                    project.lots_announced = announced
+                    project.lots_ecartes = {"ia_en_attente": True}
+                    project.processing_status = "ready"
+                    project.processing_progress = 100
+                    project.processing_detail = ""
+                    db.commit()
+            finally:
+                db.close()
+            pipeline_tracker.complete_step(project_id, "detecting_lots")
+            pipeline_tracker.complete_pipeline(project_id)
+            return
+
+        plafond = None
+        enregistrer_appel = None
+        if besoin_filet and not sans_ia:
+            from services import couts_ia, depot_budget
+            db = SessionLocal()
+            try:
+                org_id = db.query(Project.organization_id).filter(Project.id == project_id).scalar()
+                plafond = depot_budget.raison_de_report(db, org_id, avec_file=False) if org_id else "jour"
+            finally:
+                db.close()
+            if plafond is None:
+                def enregistrer_appel(usage: dict) -> None:
+                    """Un appel du filet : une ligne dans `couts_ia` (usage « depot_entreprise »), donc dans le plafond du jour."""
+                    db_c = SessionLocal()
+                    try:
+                        couts_ia.enregistrer(db_c, org_id, depot_budget.USAGE, lot_fallback._MODEL, usage, f"lots:{project_id}")
+                    except Exception as exc:            # le comptage ne casse jamais la détection
+                        _log.warning(f"Filet IA lots : comptage impossible ({type(exc).__name__})")
+                    finally:
+                        db_c.close()
+            else:
+                print(f"[LOTS] filet IA non lancé : plafond atteint ({plafond})", flush=True)
+
         # Fantômes écartés AVANT le déclencheur IA : sinon l'écart brut
         # (fantômes inclus) déclenche ~11 s d'appel Sonnet pour rien alors
         # que le tableau RC est complet.
-        lots, ia_used, ecartes = lot_fallback.finaliser_lots(doc_texts, lots or [], announced)
+        lots, ia_used, ecartes = lot_fallback.finaliser_lots(
+            doc_texts, lots or [], announced, ia_permise=not sans_ia and plafond is None, on_usage=enregistrer_appel)
         if ia_used:
             print(f"[LOTS] filet IA utilisé → {len(lots)} lots après fusion", flush=True)
         if ecartes["hors_liste"] or ecartes["sans_intitule"]:
             print(f"[LOTS] lots cités mais non proposés : {ecartes}", flush=True)   # comptes seuls, jamais de nom
+        if plafond:
+            ecartes = {**ecartes, "ia_plafond": plafond}     # l'écran des lots le dit d'une ligne sobre
 
         # Save results
         db = SessionLocal()
