@@ -134,6 +134,15 @@
   --danger-bg: #fef0ef;   --danger-border: #feacad;   --danger-fg: #cd2165;
   --danger-solid: #cd2165;
 
+  /* États (COULEURS.md, 3/11) : une couleur = un sens, toujours avec un mot et une icône. ink = texte, soft = fond de pastille ou
+     de carte, mark = barre, point, bordure. Ajoutés À CÔTÉ du bleu de la marque (--accent-*), qu'ils ne remplacent pas. */
+  --bleu-ink: #0858b0;      --bleu-soft: #e7f1fd;      --bleu-mark: #0a6fd6;       /* en cours, action, information */
+  --vert-ink: #17693d;      --vert-soft: #e5f5ec;      --vert-mark: #1f9d55;       /* fait, prêt, validé, gagné */
+  --ambre-ink: #8a4b00;     --ambre-soft: #fff1dc;     --ambre-mark: #c27c00;      /* à surveiller */
+  --rouge-ink: #b42318;     --rouge-soft: #fdecea;     --rouge-mark: #e5484d;      /* urgent ou négatif */
+  --turquoise-ink: #0b6b6b; --turquoise-soft: #e2f4f3; --turquoise-mark: #14a3a0;  /* veille */
+  --gris-ink: #566373;      --gris-soft: #eef1f5;      --gris-mark: #c4ccd6;       /* à venir, sans suite, archivé */
+
   --glass-fill: rgba(255, 255, 255, .88);
   --glass-border: rgba(0, 0, 0, .08);
   --scrim: rgba(17, 17, 17, .32);
@@ -196,6 +205,14 @@
   --warning-bg: #5c3721;  --warning-border: #934c1a;  --warning-fg: #ffbe62;
   --danger-bg: #612241;   --danger-border: #901d56;   --danger-fg: #fc7d97;
   --danger-solid: #b31a57;
+
+  /* États, nuit (voir le bloc clair) */
+  --bleu-ink: #8cc8ff;      --bleu-soft: rgba(43, 155, 255, .14);   --bleu-mark: #4aa8ff;
+  --vert-ink: #74d9a0;      --vert-soft: rgba(80, 200, 130, .13);   --vert-mark: #3fbf78;
+  --ambre-ink: #ffc46b;     --ambre-soft: rgba(255, 170, 60, .13);  --ambre-mark: #ffb020;
+  --rouge-ink: #ff8f87;     --rouge-soft: rgba(255, 90, 80, .15);   --rouge-mark: #ff6b63;
+  --turquoise-ink: #5fd4cf; --turquoise-soft: rgba(40, 190, 180, .14); --turquoise-mark: #2cc2bc;
+  --gris-ink: #93a1b1;      --gris-soft: #141c27;                   --gris-mark: #33414f;
 
   --glass-fill: rgba(29, 29, 29, .82);
   --glass-border: rgba(255, 255, 255, .14);

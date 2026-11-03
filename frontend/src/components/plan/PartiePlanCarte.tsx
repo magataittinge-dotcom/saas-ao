@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import { ArrowDown, ArrowUp, ChevronDown, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, Check, ChevronDown, X } from 'lucide-react'
 import { EtatElement } from '@/components/etape'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
@@ -77,7 +77,7 @@ export default function PartiePlanCarte({
             className="inline-flex min-h-9 items-center gap-1 rounded-md px-2 text-sm font-medium text-accent-text hover:bg-surface-0 [@media(pointer:coarse)]:min-h-11"
           >
             Fiche
-            {ficheRemplie(partie.fiche) && <span className="pill pill-conforme ml-1" aria-label="fiche remplie">remplie</span>}
+            {ficheRemplie(partie.fiche) && <span className="pill pill-vert ml-1" aria-label="fiche remplie">remplie</span>}
             <ChevronDown size={15} aria-hidden className={cn('transition-transform duration-base ease-lien motion-reduce:transition-none', ouverte && 'rotate-180')} />
           </button>
         </div>
@@ -87,7 +87,7 @@ export default function PartiePlanCarte({
         {partie.sous_criteres.length > 0 && (
           <ul className="flex flex-wrap gap-1.5" aria-label="Sous-critères servis">
             {partie.sous_criteres.map((s) => (
-              <li key={s.nom} className="pill pill-cyan">{libellePoids(s.nom, s.poids)}</li>
+              <li key={s.nom} className="pill pill-vert"><Check size={12} strokeWidth={2.4} aria-hidden />{libellePoids(s.nom, s.poids)}</li>
             ))}
           </ul>
         )}

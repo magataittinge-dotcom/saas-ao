@@ -1,7 +1,7 @@
 import { useId, useRef } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Check, CircleDashed } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { LIBELLE_FICHE, lienFiche } from '@/lib/fiche'
 import { RUBRIQUES, avancement, libelleAvancement, type DonneesEntreprise, type RubriqueId } from '@/lib/entreprise/avancement'
@@ -12,7 +12,7 @@ const LIEN_FICHE = 'relative z-10 inline-flex min-h-9 items-center gap-1.5 white
 function Barre({ rempli, total }: { rempli: number; total: number }) {
   return (
     <div aria-hidden="true" className="h-1 overflow-hidden rounded-pilule bg-surface-2">
-      <div className="h-full rounded-pilule bg-accent-ui transition-[width] duration-morph ease-lien motion-reduce:transition-none" style={{ width: `${total ? Math.round((rempli / total) * 100) : 0}%` }} />
+      <div className={cn('h-full rounded-pilule transition-[width] duration-morph ease-lien motion-reduce:transition-none', total > 0 && rempli >= total ? 'bg-vert-mark' : 'bg-accent-ui')} style={{ width: `${total ? Math.round((rempli / total) * 100) : 0}%` }} />
     </div>
   )
 }
@@ -86,12 +86,15 @@ export default function RubriquesEntreprise({ donnees, rubrique, onChoisir, pann
                 {faits.map((f) => (
                   <li key={f.libelle} className="flex min-w-0 items-baseline justify-between gap-3 border-t border-bord-2 pt-1.5 text-sm">
                     <span className="shrink-0 text-fg-2">{f.libelle}</span>
-                    <span className={cn('min-w-0 break-words text-right', f.valeur === null ? 'font-medium text-accent-text' : 'font-semibold tabular-nums text-fg')}>{f.valeur ?? A_RENSEIGNER}</span>
+                    <span className={cn('min-w-0 break-words text-right', f.valeur === null ? 'inline-flex items-baseline justify-end gap-1 font-medium text-ambre-ink' : 'font-semibold tabular-nums text-fg')}>{f.valeur ?? <><CircleDashed size={13} aria-hidden className="shrink-0 self-center" />{A_RENSEIGNER}</>}</span>
                   </li>
                 ))}
               </ul>
               <div className="mt-auto flex items-center justify-between gap-3 pt-1 text-sm">
-                <span className="text-fg-2">{libelleAvancement(av)}</span>
+                <span className={cn('inline-flex items-center gap-1.5', av.total > 0 && av.rempli >= av.total ? 'font-medium text-vert-ink' : 'text-fg-2')}>
+                  {av.total > 0 && av.rempli >= av.total && <Check size={14} strokeWidth={2.4} aria-hidden />}
+                  {libelleAvancement(av)}{av.total > 0 && av.rempli >= av.total ? ' · complète' : ''}
+                </span>
                 <Link to={lienFiche(r.id)} className={LIEN_FICHE}>{LIBELLE_FICHE} <ArrowRight size={14} aria-hidden /></Link>
               </div>
             </div>

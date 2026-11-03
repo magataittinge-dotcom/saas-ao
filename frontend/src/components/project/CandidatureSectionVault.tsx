@@ -93,7 +93,7 @@ function VaultRow({
   onNonConcerne?: (item: ChecklistItem, nonConcerne: boolean) => Promise<void>
 }) {
   const statut = statutPiece(item, echeance)
-  const { etat, texte } = etatDeStatut(statut)
+  const { etat, texte, perimee } = etatDeStatut(statut)
   const note = noteValidite(item.document_type_required)
   const depot = noteDepot(item)
   const isLinked = !!item.linked_document_id
@@ -127,6 +127,7 @@ function VaultRow({
         <EtatElement
           etat={etat}
           texte={texte}
+          perimee={perimee}
           source={source ? { libelle: source, onVoir: item.source_exigence_id && onOpenSource ? () => onOpenSource(item) : undefined } : undefined}
         />
         {estNonConcernee(item) ? null : (

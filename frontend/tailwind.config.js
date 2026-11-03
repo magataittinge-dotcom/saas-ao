@@ -73,6 +73,13 @@ export default {
           on:         jeton('--on-accent'),
         },
         info:    { DEFAULT: jeton('--info-fg'),    bg: jeton('--info-bg'),    border: jeton('--info-border') },
+        // États (COULEURS.md) : bleu en cours · vert fait · ambre à surveiller · rouge urgent · turquoise veille · gris à venir.
+        bleu: { ink: jeton('--bleu-ink'), soft: jeton('--bleu-soft'), mark: jeton('--bleu-mark') },
+        vert: { ink: jeton('--vert-ink'), soft: jeton('--vert-soft'), mark: jeton('--vert-mark') },
+        ambre: { ink: jeton('--ambre-ink'), soft: jeton('--ambre-soft'), mark: jeton('--ambre-mark') },
+        rouge: { ink: jeton('--rouge-ink'), soft: jeton('--rouge-soft'), mark: jeton('--rouge-mark') },
+        turquoise: { ink: jeton('--turquoise-ink'), soft: jeton('--turquoise-soft'), mark: jeton('--turquoise-mark') },
+        gris: { ink: jeton('--gris-ink'), soft: jeton('--gris-soft'), mark: jeton('--gris-mark') },
         success: { DEFAULT: jeton('--success-fg'), bg: jeton('--success-bg'), border: jeton('--success-border') },
         warning: { DEFAULT: jeton('--warning-fg'), bg: jeton('--warning-bg'), border: jeton('--warning-border') },
         danger:  { DEFAULT: jeton('--danger-fg'),  bg: jeton('--danger-bg'),  border: jeton('--danger-border'), solid: jeton('--danger-solid') },

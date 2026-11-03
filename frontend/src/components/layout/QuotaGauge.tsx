@@ -17,11 +17,18 @@ interface QuotaStatus {
   memoires: QuotaCounter
 }
 
-/** Jauge : bleu de Prusse, ambre à 80 %, brique quand le quota bloque. */
+/** Seuils de COULEURS.md : vert sous 70 % de consommation, ambre de 70 à 90 %, rouge au-delà de 90 %. Le chiffre reste écrit. */
+export const SEUIL_AMBRE = 0.7
+export const SEUIL_ROUGE = 0.9
+export function tonConsommation(part: number): 'vert' | 'ambre' | 'rouge' {
+  return part > SEUIL_ROUGE ? 'rouge' : part >= SEUIL_AMBRE ? 'ambre' : 'vert'
+}
+
 function teinte(used: number, limit: number): { texte: string; barre: string } {
-  if (used >= limit) return { texte: 'text-bloquant', barre: 'bg-bloquant' }
-  if (used / limit >= 0.8) return { texte: 'text-attention', barre: 'bg-attention' }
-  return { texte: 'text-encre-2', barre: 'bg-prusse-500' }
+  const ton = tonConsommation(used / limit)
+  return ton === 'rouge' ? { texte: 'text-rouge-ink', barre: 'bg-rouge-mark' }
+    : ton === 'ambre' ? { texte: 'text-ambre-ink', barre: 'bg-ambre-mark' }
+    : { texte: 'text-vert-ink', barre: 'bg-vert-mark' }
 }
 
 function CounterRow({ label, counter }: { label: string; counter: QuotaCounter }) {
@@ -68,8 +75,7 @@ export function QuotaRond() {
   if (!data?.analyses || !data.memoires) return null
   const R = 15
   const C = 2 * Math.PI * R
-  const bloque = part !== null && part >= 1
-  const proche = part !== null && part >= 0.8
+  const ton = part === null ? null : tonConsommation(part)
   const detail = part === null
     ? `Offre ${nomPlan(data.plan)} · illimitée`
     : `Analyses ${data.analyses.used} / ${data.analyses.limit} · Mémoires ${data.memoires.used} / ${data.memoires.limit}`
@@ -81,7 +87,7 @@ export function QuotaRond() {
         {part !== null && (
           <circle cx="18" cy="18" r={R} fill="none" strokeWidth="3" strokeLinecap="round"
             strokeDasharray={C} strokeDashoffset={C * (1 - part)}
-            className={cn('transition-[stroke-dashoffset] duration-morph ease-expo', bloque ? 'stroke-danger' : proche ? 'stroke-warning' : 'stroke-accent-ui')} />
+            className={cn('transition-[stroke-dashoffset] duration-morph ease-expo', ton === 'rouge' ? 'stroke-rouge-mark' : ton === 'ambre' ? 'stroke-ambre-mark' : 'stroke-vert-mark')} />
         )}
       </svg>
       <span className="absolute text-xs font-semibold tabular-nums text-fg-2">{part === null ? '∞' : `${Math.round(part * 100)}%`}</span>

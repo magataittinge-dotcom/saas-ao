@@ -19,6 +19,26 @@ class ProjectUpdate(BaseModel):
     current_step: Optional[int] = None
 
 
+class UnitesAO(BaseModel):
+    """Unités du forfait consommées par cet AO (1 analyse = 1 unité ; 1 mémoire par lot = 1 unité)."""
+    analyses: int = 0
+    memoires: int = 0
+
+
+class PiecesAO(BaseModel):
+    """Pièces du coffre-fort demandées par l'AO (hors « non applicable ») et celles qui sont prêtes."""
+    total: int
+    pretes: int
+
+
+class AvancementAO(BaseModel):
+    """Ce que Mes AO affiche en plus de l'étape : calculé en lot par services/avancement_ao.py, null quand la donnée n'existe pas."""
+    unites: UnitesAO
+    pieces: Optional[PiecesAO] = None
+    plan_valide_le: Optional[datetime] = None
+    memoire_ecrit_le: Optional[datetime] = None
+
+
 class ProjectResponse(BaseModel):
     id: str
     organization_id: str
@@ -38,6 +58,9 @@ class ProjectResponse(BaseModel):
     processing_detail: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+    depose_at: Optional[datetime] = None
+    # Rempli par la seule liste (GET /projects) ; null ailleurs.
+    avancement: Optional[AvancementAO] = None
     # Lu sur le modèle pour calculer l'échéance, jamais renvoyé tel quel.
     critical_fields: Optional[Any] = Field(default=None, exclude=True)
 

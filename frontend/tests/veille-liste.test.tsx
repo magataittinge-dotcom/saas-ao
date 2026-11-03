@@ -66,7 +66,7 @@ test('le délai s’affiche en J−x, avec la date limite en jour et mois', () =
 test('la pastille « Nouveau » n’apparaît que sur les avis nouveaux', () => {
   const html = renderToStaticMarkup(<ListeAvis {...base({ avis: [avis('1', { nouveau: true }), avis('2'), avis('3', { nouveau: true })], total: 3 })} />)
   assert.equal((html.match(/>Nouveau</g) ?? []).length, 2)
-  assert.ok(/border-accent-tint-2 bg-accent-tint text-accent-text[^>]*>Nouveau</.test(html), 'pastille en accent, par les jetons')
+  assert.ok(/bg-turquoise-soft[^>]*text-turquoise-ink[^>]*>.*Nouveau/.test(html), 'pastille turquoise (la veille), par les jetons, mot et icône')
 })
 
 test('« Voir l’avis » : lien externe sûr ; « Créer l’AO » : un bouton par avis', () => {

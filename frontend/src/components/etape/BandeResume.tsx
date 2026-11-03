@@ -22,8 +22,8 @@ export interface CarteResume {
 }
 
 const PASTILLE: Record<Exclude<EtatCarte, 'neutre'>, { classe: string; texte: string }> = {
-  pret: { classe: 'pill pill-conforme', texte: 'Prêt' },
-  'a-verifier': { classe: 'pill pill-warning', texte: 'À vérifier' },
+  pret: { classe: 'pill pill-vert', texte: 'Prêt' },
+  'a-verifier': { classe: 'pill pill-ambre', texte: 'À vérifier' },
 }
 
 function Jauge({ libelle, rempli, total }: { libelle: string } & NonNullable<CarteResume['jauge']>) {

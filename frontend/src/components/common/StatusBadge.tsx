@@ -1,16 +1,21 @@
+import { AlertCircle, Check, Clock, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ComplianceStatus, DocumentStatus, ProjectStatus } from '@/types'
 
 type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'amber'
 
+// Couleurs d'état (COULEURS.md) : vert fait / prêt / gagné, ambre à surveiller, rouge urgent ou négatif, bleu en cours, gris à venir.
+// Le mot est toujours écrit ; une icône l'accompagne pour les états vert, ambre et rouge (jamais la couleur seule).
+const ton = (n: 'vert' | 'ambre' | 'rouge' | 'bleu' | 'gris'): React.CSSProperties => ({ background: `var(--${n}-soft)`, color: `var(--${n}-ink)` })
 const variantStyles: Record<BadgeVariant, React.CSSProperties> = {
-  success: { background: 'color-mix(in srgb, var(--success-fg) 10%, transparent)', color: 'var(--success-fg)',  border: '1px solid color-mix(in srgb, var(--success-fg) 22%, transparent)' },
-  warning: { background: 'color-mix(in srgb, var(--warning-fg) 9%, transparent)', color: 'var(--warning-fg)',  border: '1px solid color-mix(in srgb, var(--warning-fg) 22%, transparent)' },
-  danger:  { background: 'color-mix(in srgb, var(--danger-fg) 10%, transparent)',  color: 'var(--danger-fg)',  border: '1px solid color-mix(in srgb, var(--danger-fg) 20%, transparent)'  },
-  info:    { background: 'color-mix(in srgb, var(--text-1) 10%, transparent)', color: 'var(--text-2)',  border: '1px solid var(--border-2)' },
-  neutral: { background: 'var(--surface-1)', color: 'var(--text-3)',  border: '1px solid var(--border-2)'},
-  amber:   { background: 'color-mix(in srgb, var(--warning-fg) 10%, transparent)', color: 'var(--warning-fg)',  border: '1px solid color-mix(in srgb, var(--warning-fg) 25%, transparent)' },
+  success: ton('vert'),
+  warning: ton('ambre'),
+  danger:  ton('rouge'),
+  info:    ton('bleu'),
+  neutral: ton('gris'),
+  amber:   ton('ambre'),
 }
+const ICONES: Partial<Record<BadgeVariant, LucideIcon>> = { success: Check, warning: Clock, amber: Clock, danger: AlertCircle }
 
 interface Props {
   label: string
@@ -19,11 +24,13 @@ interface Props {
 }
 
 export function StatusBadge({ label, variant, className }: Props) {
+  const Icone = ICONES[variant]
   return (
     <span
-      className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium', className)}
+      className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium', className)}
       style={variantStyles[variant]}
     >
+      {Icone && <Icone size={11} strokeWidth={2.4} aria-hidden />}
       {label}
     </span>
   )
@@ -45,7 +52,7 @@ export function documentStatusBadge(status: DocumentStatus) {
   const map: Record<DocumentStatus, { label: string; variant: BadgeVariant }> = {
     valid:          { label: 'Prêt',             variant: 'success' },
     expiring_soon:  { label: 'Prêt',             variant: 'success' },
-    expired:        { label: 'À renouveler',     variant: 'amber'   },
+    expired:        { label: 'À renouveler',     variant: 'danger'  },
     unverified:     { label: 'Date de validité à confirmer', variant: 'amber' },
     unclassified:   { label: 'À ranger',         variant: 'neutral' },
   }
@@ -59,7 +66,7 @@ export function projectStatusBadge(status: ProjectStatus) {
     analyzed:   { label: 'Analysé',              variant: 'info'     },
     // Ton neutre : décision éclairée de ne pas répondre — pas une alerte.
     sans_suite: { label: 'Analysé — sans suite', variant: 'neutral'  },
-    soumis:     { label: 'Soumis',               variant: 'warning'  },
+    soumis:     { label: 'Soumis',               variant: 'info'     },
     gagné:      { label: 'Gagné',                variant: 'success'  },
     perdu:      { label: 'Perdu',                variant: 'danger'   },
   }

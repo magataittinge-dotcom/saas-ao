@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Check, ListChecks, Loader2, X } from 'lucide-react'
+import { AlertCircle, ArrowLeft, Check, ListChecks, Loader2, X } from 'lucide-react'
 import { api, getSignedFileUrl } from '@/services/api'
 import PanneauSource, { type SelectionSource } from '@/components/project/source/PanneauSource'
 import { reponseDeChamp } from '@/lib/ancre'
@@ -21,7 +21,7 @@ export function ListeRelecture({ donnees, onAller, onSource }: {
   if (donnees.lignes.length === 0) {
     return (
       <p className="flex items-start gap-2 text-sm text-fg-2">
-        <Check size={16} className="mt-0.5 shrink-0 text-success" aria-hidden="true" />
+        <Check size={16} className="mt-0.5 shrink-0 text-vert-ink" aria-hidden="true" />
         <span>{donnees.message}</span>
       </p>
     )
@@ -31,7 +31,7 @@ export function ListeRelecture({ donnees, onAller, onSource }: {
       {donnees.lignes.map((l, i) => (
         <li key={`${l.type}-${i}`} className="rounded-lg border border-bord-2 bg-surface-1 p-3" data-ligne={l.type}>
           <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-            <span className="text-xs font-semibold uppercase tracking-[0.06em] text-accent-text">{l.libelle}</span>
+            <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-[0.06em] text-ambre-ink"><AlertCircle size={12} aria-hidden="true" />{l.libelle}</span>
             <span className="min-w-0 break-words text-sm font-medium text-fg">{l.texte}</span>
           </p>
           {l.detail && <p className="mt-0.5 text-xs text-fg-3">{l.detail}</p>}
@@ -157,7 +157,7 @@ export default function RelectureMemoire({ projectId }: { projectId: string }) {
                   {data.limite_pages !== null && (
                     <p className="text-xs text-fg-3">Longueur estimée : environ {data.pages_estimees} pages, pour {data.limite_pages} au plus dans le règlement.</p>
                   )}
-                  {avis && <p role="status" className="text-[13px] text-warning">{avis}</p>}
+                  {avis && <p role="status" className="text-[13px] text-ambre-ink">{avis}</p>}
                 </div>
               )}
             </div>

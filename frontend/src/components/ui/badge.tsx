@@ -39,6 +39,9 @@ const tonsPastille = {
   accent: "bg-accent-tint text-accent-text border-accent-tint-2",
   success: "bg-success-bg text-success border-success-border",
   danger: "bg-danger-bg text-danger border-danger-border",
+  // États de COULEURS.md : rouge à 3 jours ou moins, ambre de 4 à 7 jours ; le nombre reste écrit dans la pastille.
+  rouge: "bg-rouge-soft text-rouge-ink border-rouge-mark",
+  ambre: "bg-ambre-soft text-ambre-ink border-ambre-mark",
 } as const
 
 function Pastille({ valeur, ton = "warning", className, ...props }: { valeur?: number | string; ton?: keyof typeof tonsPastille } & React.HTMLAttributes<HTMLSpanElement>) {

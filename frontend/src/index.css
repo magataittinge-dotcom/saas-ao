@@ -217,6 +217,13 @@
 .pill-cyan    { background: var(--accent-tint);   color: var(--accent-text); border-color: var(--accent-tint-2); }
 .pill-info    { background: var(--info-bg);   color: var(--info-fg); border-color: var(--info-border); }
 .pill-muted   { background: var(--surface-1);  color: var(--text-3); border-color: var(--border-1); }
+/* États de COULEURS.md : toujours un mot (et une icône) dans la pastille, jamais la couleur seule. */
+.pill-bleu      { background: var(--bleu-soft);      color: var(--bleu-ink); }
+.pill-vert      { background: var(--vert-soft);      color: var(--vert-ink); }
+.pill-ambre     { background: var(--ambre-soft);     color: var(--ambre-ink); }
+.pill-rouge     { background: var(--rouge-soft);     color: var(--rouge-ink); }
+.pill-turquoise { background: var(--turquoise-soft); color: var(--turquoise-ink); }
+.pill-gris      { background: var(--gris-soft);      color: var(--gris-ink); }
 
 /* ── Tables ───────────────────────────────────────────────────── */
 .table-dark { width: 100%; font-size: 0.875rem; border-collapse: collapse; }
