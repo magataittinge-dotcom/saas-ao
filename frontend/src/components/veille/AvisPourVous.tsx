@@ -2,7 +2,7 @@
 // vide de Mes AO (React.lazy) : les données de la veille ne pèsent que là où on les montre.
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowRight, ExternalLink, MapPin } from 'lucide-react'
+import { ArrowRight, ExternalLink, Sparkles } from 'lucide-react'
 import { lireAvis, lireMetiers, lirePreferences, creerAODepuisAvis, type AvisVeille } from '@/services/veille'
 import { CLES_VEILLE } from '@/hooks/useVeille'
 import { jourCourt } from '@/lib/mesAO'
@@ -39,7 +39,7 @@ function CarteAvisVeille({ avis, libelles }: { avis: AvisVeille; libelles: Recor
   return (
     <article className="flex min-w-0 flex-col gap-2 rounded-carte border border-bord-2 bg-surface-0 p-4 sm:p-5">
       <div className="flex flex-wrap gap-2">
-        {avis.nouveau && <Pastille ton="turquoise" icone={MapPin}>Nouveau</Pastille>}
+        {avis.nouveau && <Pastille ton="turquoise" icone={Sparkles}>Nouveau</Pastille>}
         {avis.metiers[0] && libelles[avis.metiers[0]] && <Pastille ton="gris">{libelles[avis.metiers[0]]}</Pastille>}
       </div>
       <h3 className="line-clamp-3 text-[15px] font-semibold leading-snug text-fg">{avis.objet}</h3>

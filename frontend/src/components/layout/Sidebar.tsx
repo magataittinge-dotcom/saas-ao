@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 import { libelleUrgents } from '@/lib/echeance'
 import { BARRE, BARRE_HAUT, ENTREE_PARAMETRES, estActif, type Entree } from './navigation'
 import { QuotaRond } from './QuotaGauge'
-import { useUrgents } from './useUrgents'
+import { useTonUrgence, useUrgents } from './useUrgents'
 import MenuCompte from './MenuCompte'
 
 // Barre d'icônes flottante (bureau, ≥ 769 px) : une colonne en pilule de 76 px, posée à 16 px du bord, avec son anneau
@@ -37,12 +37,13 @@ function Rail({ entree, pastille }: { entree: Entree; pastille?: ReactNode }) {
 /** Les entrées de la barre (sans Clerk ni quota : se rend telle quelle dans les tests). */
 export function EntreesBarre({ entrees = BARRE }: { entrees?: Entree[] }) {
   const urgents = useUrgents()
+  const ton = useTonUrgence()
   return (
     <>
       {entrees.map((e) => (
         <Rail key={e.to} entree={e}
           pastille={e.to === '/projects' && urgents > 0
-            ? <Pastille valeur={urgents} ton="warning" role="img" aria-label={libelleUrgents(urgents)} title={libelleUrgents(urgents)} />
+            ? <Pastille valeur={urgents} ton={ton} role="img" aria-label={libelleUrgents(urgents)} title={libelleUrgents(urgents)} />
             : undefined} />
       ))}
     </>

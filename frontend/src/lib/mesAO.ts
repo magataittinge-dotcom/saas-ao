@@ -174,3 +174,8 @@ export function versAvisOrigine(p: Project): { id: string | null; url: string } 
   const url = urlSure(s?.url_avis)
   return url ? { id: s?.id_boamp ?? null, url } : null
 }
+
+/** La couleur la plus urgente parmi les AO en cours dont la remise tombe aujourd'hui ou sous 7 jours (pastille de Mes AO dans la barre). */
+export function niveauUrgence(projets: readonly Project[], maintenant: Date = new Date()): Niveau {
+  return resumeMesAO(projets, maintenant).remise7.niveau
+}

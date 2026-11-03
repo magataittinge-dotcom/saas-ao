@@ -142,3 +142,13 @@ test('« vendredi 6 nov., 12 h » : le jour et l’heure de la remise', () => {
   assert.equal(quandCourt(projet({ deadline: '2026-11-06' })), 'ven. 6 nov.')
   assert.equal(quandCourt(projet()), null)
 })
+
+import { niveauUrgence } from '@/lib/mesAO'
+
+test('la pastille de Mes AO dans la barre latérale prend la couleur la plus urgente', () => {
+  const m = le(3, 11)
+  assert.equal(niveauUrgence([projet({ deadline: '2026-11-09' })], m), 'ambre')
+  assert.equal(niveauUrgence([projet({ deadline: '2026-11-09' }), projet({ id: 'q', deadline: '2026-11-05' })], m), 'rouge')
+  assert.equal(niveauUrgence([projet({ deadline: '2026-12-09' })], m), 'neutre')
+  assert.equal(niveauUrgence([projet({ status: 'soumis', deadline: '2026-11-04' })], m), 'neutre', 'un AO terminé ne compte pas')
+})

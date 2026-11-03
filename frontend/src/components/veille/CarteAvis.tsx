@@ -1,6 +1,6 @@
 // Un avis ouvert : l'objet, l'acheteur, le département, le délai (J−12), la procédure, les métiers,
 // et deux gestes : lire l'avis (lien externe) ou en faire un AO.
-import { ExternalLink, Plus } from 'lucide-react'
+import { ExternalLink, Plus, Sparkles } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DeadlinePill } from '@/components/dashboard/DeadlinePill'
@@ -31,7 +31,11 @@ export default function CarteAvis({ avis, libellesMetiers, nomsDepartements, onC
     <article aria-labelledby={idTitre} data-avis={avis.id} className="rounded-lg bg-surface-1 p-4 sm:p-5">
       <div className="flex items-start justify-between gap-3">
         <h4 id={idTitre} className="line-clamp-3 min-w-0 text-[15px] font-semibold leading-snug text-fg">{avis.objet}</h4>
-        {avis.nouveau && <Badge variant="accent" className="shrink-0">Nouveau</Badge>}
+        {avis.nouveau && (
+          <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-pilule bg-turquoise-soft px-2.5 py-0.5 text-xs font-semibold text-turquoise-ink">
+            <Sparkles size={12} aria-hidden />Nouveau
+          </span>
+        )}
       </div>
       <p className="mt-1 text-sm text-fg-2">{avis.acheteur}</p>
 

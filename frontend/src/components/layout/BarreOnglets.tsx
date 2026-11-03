@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils'
 import { libelleUrgents } from '@/lib/echeance'
 import { ENTREES_TIROIR, ONGLETS_TEL, ONGLET_CERVEAU, estActif } from './navigation'
 import { QuotaRond } from './QuotaGauge'
-import { useUrgents } from './useUrgents'
+import { useTonUrgence, useUrgents } from './useUrgents'
 import BasculeTheme from './BasculeTheme'
 
 // Onglets du bas (téléphone, ≤ 768 px) : Accueil, Mes AO, Mon entreprise, Coffre-fort, Compte (la photo). Dernier élément de la colonne
@@ -21,6 +21,7 @@ const ONGLET = 'relative flex min-h-14 min-w-0 flex-1 flex-col items-center just
 export default function BarreOnglets() {
   const { pathname } = useLocation()
   const urgents = useUrgents()
+  const ton = useTonUrgence()
   const [tiroir, setTiroir] = useState(false)
   const { user } = useAuthStore()
   const handleLogout = useLogout()
@@ -41,7 +42,7 @@ export default function BarreOnglets() {
               {actif && <span aria-hidden className="absolute inset-x-6 top-0 h-0.5 rounded-b-pilule bg-accent-ui" />}
               <span className="relative">
                 <Icone size={22} strokeWidth={1.5} absoluteStrokeWidth aria-hidden />
-                {e.to === '/projects' && urgents > 0 && <Pastille valeur={urgents} className="absolute -right-3 -top-1.5" role="img" aria-label={libelleUrgents(urgents)} title={libelleUrgents(urgents)} />}
+                {e.to === '/projects' && urgents > 0 && <Pastille valeur={urgents} ton={ton} className="absolute -right-3 -top-1.5" role="img" aria-label={libelleUrgents(urgents)} title={libelleUrgents(urgents)} />}
               </span>
               {e.label}
             </NavLink>

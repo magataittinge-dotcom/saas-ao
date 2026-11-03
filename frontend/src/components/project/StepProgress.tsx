@@ -72,8 +72,8 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick, lo
                     isActive
                       ? { background: 'var(--accent-fill-solid)', color: 'var(--on-accent)', boxShadow: 'var(--shadow-btn)' }
                       : isCompleted
-                      ? { background: 'var(--accent-tint)', border: '1px solid var(--accent-ring)', color: 'var(--accent-text)' }
-                      : { background: 'transparent', border: '1px solid var(--border-2)', color: 'var(--text-3)' }
+                      ? { background: 'var(--vert-soft)', border: '1px solid var(--vert-mark)', color: 'var(--vert-ink)' }
+                      : { background: 'transparent', border: '1px solid var(--gris-mark)', color: 'var(--gris-ink)' }
                   }
                 >
                   {isCompleted && !isActive ? <Check size={14} strokeWidth={2.5} /> : step.number}
@@ -84,8 +84,8 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick, lo
                   className={cn('text-xs whitespace-nowrap transition-colors', isActive ? 'block' : 'hidden sm:block')}
                   style={
                     isActive    ? { color: 'var(--text-1)', fontWeight: 600 }
-                    : isCompleted ? { color: 'var(--text-2)', fontWeight: 500 }
-                    : { color: 'var(--text-3)', fontWeight: 500 }
+                    : isCompleted ? { color: 'var(--vert-ink)', fontWeight: 500 }
+                    : { color: 'var(--gris-ink)', fontWeight: 500 }
                   }
                 >
                   {step.label}
@@ -103,10 +103,10 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick, lo
                   className="flex-1 min-w-1 h-px mx-2 mt-4 max-sm:mt-[22px] max-sm:mx-0 max-sm:min-w-0 rounded-full transition-all duration-500"
                   style={
                     isCompleted
-                      ? { background: 'var(--accent-ui)' }
+                      ? { background: 'var(--vert-mark)' }
                       : isActive
-                      ? { background: 'linear-gradient(90deg, var(--accent-ui), var(--border-1))' }
-                      : { background: 'var(--border-2)' }
+                      ? { background: 'linear-gradient(90deg, var(--bleu-mark), var(--gris-mark))' }
+                      : { background: 'var(--gris-mark)' }
                   }
                 />
               )}
