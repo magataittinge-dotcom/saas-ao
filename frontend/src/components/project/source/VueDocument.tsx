@@ -17,9 +17,13 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 // plages demandées. Mesuré (serveur de plages local, pièce de 1,66 Mo) : 1,68 Mo envoyés avec
 // `true` (la requête initiale est coupée après 16 Ko), 3,06 Mo avec `false`. C'est la configuration
 // du prototype du sujet A (17 Mo : 2,9 Mo reçus).
+// `isEvalSupported: false` : pdf.js teste `new Function("")` dans un `try`, dans la page et dans son
+// travailleur. Sous une CSP sans `unsafe-eval`, chaque ouverture d'un document enverrait un rapport
+// `eval` à /api/csp-rapport ; pdf.js prend alors son chemin sans `eval` (répétition du 3/11).
 const OPTIONS_PDFJS = {
   disableAutoFetch: true,
   disableStream: true,
+  isEvalSupported: false,
   rangeChunkSize: 65536,
 } as const
 

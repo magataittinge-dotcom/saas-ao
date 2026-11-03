@@ -112,7 +112,7 @@ sudo -u postgres psql -d synorix -c "CREATE EXTENSION IF NOT EXISTS vector"
 ```
 Prouvé sur une base jetable (27/10/2026, Postgres 16, pgvector 0.6.0, rôle sans superutilisateur) :
 sans cette ligne, `alembic upgrade head` échoue à la migration 0003 (« permission denied to create
-extension vector ») ; avec elle, les 25 migrations passent (0025 head, 16 tables + `alembic_version`,
+extension vector ») ; avec elle, les 34 migrations passent (0034 head, 25 tables dont `alembic_version`,
 schéma identique aux modèles hors `rag_chunks`, créée en SQL), puis l'API démarre (`/api/health` :
 `db: up`).
 

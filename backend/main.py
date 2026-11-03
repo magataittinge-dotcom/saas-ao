@@ -226,12 +226,23 @@ _reconcile_orphans_at_boot()
 # globales ne s'appliquent JAMAIS (l'ancien default_limits était mort).
 from services.rate_limit import LimiteGlobaleMiddleware, limiter
 
+def urls_documentation(debug: bool) -> dict:
+    """Pages de documentation de l'API : ouvertes en DEBUG seulement.
+
+    `/openapi.json` rend le schéma complet de l'API : il se ferme avec `/docs`
+    et `/redoc` (répétition du 3/11 : il restait ouvert hors DEBUG)."""
+    return {
+        "docs_url": "/docs" if debug else None,
+        "redoc_url": "/redoc" if debug else None,
+        "openapi_url": "/openapi.json" if debug else None,
+    }
+
+
 app = FastAPI(
     title="SaaS AO BTP API",
     description="API for automating BTP tender responses",
     version="1.0.0",
-    docs_url="/docs" if settings.DEBUG else None,
-    redoc_url="/redoc" if settings.DEBUG else None,
+    **urls_documentation(settings.DEBUG),
 )
 
 app.state.limiter = limiter
@@ -413,14 +424,34 @@ app.include_router(csp_rapport_router, prefix="/api", tags=["csp"])  # publique,
 _APP_BOOTED_AT = datetime.utcnow()
 
 
+def _jeton_ops_valide(request: Request) -> bool:
+    """Vrai si la requête porte le bearer `METRICS_TOKEN` (comparaison constante).
+
+    Sans `METRICS_TOKEN` configuré, jamais vrai : deux chaînes vides seraient
+    égales, un `Authorization: Bearer ` vide ne doit pas ouvrir le détail."""
+    import hmac as _hmac
+
+    token = get_settings().METRICS_TOKEN
+    if not token:
+        return False
+    auth = request.headers.get("authorization", "")
+    provided = auth[7:] if auth[:7].lower() == "bearer " else ""
+    return _hmac.compare_digest(provided, token)
+
+
 @app.get("/api/health")
 @limiter.exempt  # sonde LB : jamais throttlée (S1.2)
-def health_check():
+def health_check(request: Request):
     """Liveness + readiness probe.
 
     Returns degraded markers without ever 5xx-ing — load balancers should
     keep traffic flowing while the service self-heals (e.g. transient PG
     blip). External monitor reads `status=ok` and `db=up`.
+
+    Public : `status` et `db` seulement. Le reste (version, durée de
+    fonctionnement, disque libre, clés configurées) exige le jeton ops
+    `METRICS_TOKEN` (comme `/api/metrics`) ; un mauvais jeton ne change rien
+    (pas de 403 : la sonde doit toujours lire `status`).
     """
     from datetime import datetime as _dt
     import shutil as _shutil
@@ -434,6 +465,10 @@ def health_check():
         logger.warning("health: DB check failed: %s", exc)
         db_status = "down"
 
+    reponse = {"status": "ok" if db_status == "up" else "degraded", "db": db_status}
+    if not _jeton_ops_valide(request):
+        return reponse
+
     disk_free_gb: float | None = None
     try:
         usage = _shutil.disk_usage(str(_uploads_dir))
@@ -444,8 +479,7 @@ def health_check():
     uptime_s = int((_dt.utcnow() - _APP_BOOTED_AT).total_seconds())
 
     return {
-        "status": "ok" if db_status == "up" else "degraded",
-        "db": db_status,
+        **reponse,
         "version": "1.0.0",
         "uptime_seconds": uptime_s,
         "disk_free_gb": disk_free_gb,

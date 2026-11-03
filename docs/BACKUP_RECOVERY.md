@@ -172,7 +172,7 @@ Sur le bucket `synorix-backups` (AWS console) :
 |---|---|---|---|
 | `synorix-api` crashed | Cron uptime + Telegram alert | Auto-restart par systemd | < 10 s |
 | OOM Postgres | Cron logs check | Provisionner KVM supérieur | < 1 h |
-| Disque saturé (uploads) | `/api/health` `disk_free_gb` < 5 | Migration vers S3 + suppression locale | < 4 h |
+| Disque saturé (uploads) | alerte disque du serveur (cron `deploy/cron/synorix-disque`) (ou `/api/health` avec le jeton ops : `disk_free_gb` < 5) | Migration vers S3 + suppression locale | < 4 h |
 | VPS Hostinger down | Uptime check, monitoring externe | Restaurer sur OVH/Hetzner via §3 | < 4 h |
 | Compromission complète | Logs anormaux, alert Cloudflare | Wipe + restore sur nouveau VPS, rotation tous secrets | < 8 h |
 | Erreur humaine massive (DROP TABLE) | Métrique `projects_total` inattendue | Restaurer DB depuis dump du jour | < 1 h |
