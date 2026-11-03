@@ -501,7 +501,14 @@ def list_projects(
     q = db.query(Project).filter(Project.organization_id == user.organization_id)
     if not include_deleted:
         q = q.filter(Project.deleted_at.is_(None))
-    return q.order_by(Project.updated_at.desc()).all()
+    projets = q.order_by(Project.updated_at.desc()).all()
+    # Mes AO : unités, pièces, plan, mémoire de chaque AO, en quatre requêtes groupées (pas de N+1), filtrées par organisation.
+    from services.avancement_ao import avancements_par_projet
+    avancements = avancements_par_projet(db, user.organization_id, [p.id for p in projets])
+    lignes = [ProjectResponse.model_validate(p) for p in projets]
+    for ligne in lignes:
+        ligne.avancement = avancements.get(ligne.id)
+    return lignes
 
 
 @router.post("", response_model=ProjectResponse)
