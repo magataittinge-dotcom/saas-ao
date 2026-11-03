@@ -46,11 +46,17 @@ export function BoutonPrincipalPlan({ etat, onValider, onRediger, tel = false }:
 }
 
 /**
- * La barre du bas du plan. Ordinateur : l'état du plan, et « Étape suivante : Rédiger » EN CONTOUR tant que le plan n'est
+ * La barre du bas du plan. Ordinateur : l'état du plan, et « Valider le plan et rédiger » EN CONTOUR tant que le plan n'est
  * pas validé (l'action principale est celle de l'en-tête). Téléphone : l'en-tête ne porte pas son action, c'est la barre
  * qui porte l'action principale. Jamais deux boutons en dégradé visibles ensemble.
  */
-export function BarrePlan({ etat, onValider, onRediger }: { etat: EtatPlan; onValider: () => void; onRediger: () => void }) {
+export function BarrePlan({ etat, onValider, onRediger, onValiderEtRediger }: {
+  etat: EtatPlan
+  onValider: () => void
+  onRediger: () => void
+  /** Valide le plan (même appel que « Valider le plan »), puis mène à Rédiger. */
+  onValiderEtRediger: () => void
+}) {
   return (
     <BarreEtape className="justify-between gap-3">
       <BilanBarre
@@ -59,10 +65,10 @@ export function BarrePlan({ etat, onValider, onRediger }: { etat: EtatPlan; onVa
       {!etat.valideEtAJour && (
         <ActionsBarre className="max-[768px]:hidden">
           <button
-            type="button" onClick={onRediger}
-            className="inline-flex items-center justify-center rounded-lg border border-bord-2 px-4 py-2 text-sm font-medium text-fg-2 transition-colors hover:bg-surface-0 [@media(pointer:coarse)]:min-h-11"
+            type="button" onClick={onValiderEtRediger} disabled={etat.enCours}
+            className="inline-flex items-center justify-center rounded-lg border border-bord-2 px-4 py-2 text-sm font-medium text-fg-2 transition-colors hover:bg-surface-0 disabled:opacity-40 [@media(pointer:coarse)]:min-h-11"
           >
-            Étape suivante&nbsp;: Rédiger
+            Valider le plan et rédiger
           </button>
         </ActionsBarre>
       )}

@@ -8,6 +8,7 @@ import { useSourceChamp } from '@/hooks/useSourceChamp'
 import {
   BandeResume, EtatElement, GabaritEtape, SectionEtape,
 } from '@/components/etape'
+import { recoupements } from '@/lib/planRecoupe'
 import PartiePlanCarte from '@/components/plan/PartiePlanCarte'
 import PartiesHabituelles from '@/components/plan/PartiesHabituelles'
 import { BarrePlan, BoutonPrincipalPlan, type EtatPlan } from '@/components/plan/ActionsPlan'
@@ -17,7 +18,7 @@ import type { CriticalFieldsPayload } from '@/components/project/CriticalBanner'
 import type { Project } from '@/types'
 import type { PartieId } from '@/lib/memoireSections'
 import {
-  ETAT_A_VERIFIER, ETAT_PRET, MAX_PARTIES, MAX_TITRE, TITRES_PARTIES_PLAN, ajouter, basculerRetrait, changerFiche, corpsPlan, deplacer, libellePoids,
+  ETAT_A_VERIFIER, ETAT_PRET, MAX_PARTIES, MAX_TITRE, TITRES_PARTIES_PLAN, ajouter, basculerRetrait, changerFiche, corpsPlan, deplacer, libelleFichesRemplies, libelleLongueur, libellePoids,
   numeroDansLaPartie, parGroupe, peutDeplacer, renommer, supprimerAjout, type PartiePlan, type SourcePlan, type VuePlan,
 } from '@/lib/planMemoire'
 
@@ -108,6 +109,8 @@ export default function StepPlan({ project }: { project: Project }) {
     setOuvertes((o) => { const n = new Set(o); if (n.has(c)) n.delete(c); else n.add(c); return n })
   const voir = (s: SourcePlan) => { if (s.document) source.ouvrir({ document: s.document, page: s.page ?? null, excerpt: null }) }
 
+  const recoupes = useMemo(() => (parties ? recoupements(parties) : new Map<string, { cle: string; titre: string }>()), [parties])
+
   const groupes = useMemo(
     () => (parties ? parGroupe(parties.filter((p) => !p.retiree)).filter((g) => g.parties.length > 0) : []),
     [parties])
@@ -148,10 +151,10 @@ export default function StepPlan({ project }: { project: Project }) {
       }
       : { libelle: 'Critères du règlement', valeur: 'Non détaillés', detail: 'Le règlement ne détaille pas de sous-critères.' },
     vue.limite_pages
-      ? { libelle: 'Longueur', valeur: `${vue.limite_pages.pages} pages au plus`, detail: 'Limite relevée dans le dossier.' }
+      ? { libelle: 'Longueur', valeur: libelleLongueur(vue.limite_pages.pages), detail: 'Limite relevée dans le dossier.' }
       : { libelle: 'Longueur', valeur: 'Non précisée', detail: 'Le dossier ne fixe pas de limite de pages.' },
     {
-      libelle: 'Fiches', valeur: `${fiches} remplie${fiches > 1 ? 's' : ''}`,
+      libelle: 'Fiches', valeur: libelleFichesRemplies(fiches),
       detail: 'Facultatif : vous pouvez valider le plan sans ouvrir une fiche.',
     },
   ]
@@ -169,7 +172,7 @@ export default function StepPlan({ project }: { project: Project }) {
         utilite="Les parties de votre mémoire, avant sa rédaction : retirez, ajoutez, renommez, ordonnez, puis validez."
         actionPrincipale={actionPrincipale}
         resume={<BandeResume cartes={cartes} libelle="Résumé du plan" />}
-        barre={<BarrePlan etat={etat} onValider={() => valider.mutate(parties)} onRediger={versRedaction} />}
+        barre={<BarrePlan etat={etat} onValider={() => valider.mutate(parties)} onRediger={versRedaction} onValiderEtRediger={() => valider.mutate(parties, { onSuccess: versRedaction })} />}
       >
         {erreur && (
           <p role="alert" className="rounded-carte border border-bord-2 bg-surface-1 p-4 text-sm text-fg">{erreur}</p>
@@ -226,6 +229,7 @@ export default function StepPlan({ project }: { project: Project }) {
                   peutMonter={peutDeplacer(parties, p.cle, -1)}
                   peutDescendre={peutDeplacer(parties, p.cle, 1)}
                   seulementGardee={gardees.length <= 1}
+                  recoupe={recoupes.get(p.cle) ?? null}
                   onBasculerFiche={() => basculerFiche(p.cle)}
                   onRenommer={(t) => changer(renommer(parties, p.cle, t))}
                   onRetirer={() => changer(basculerRetrait(parties, p.cle))}

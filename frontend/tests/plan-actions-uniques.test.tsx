@@ -20,22 +20,23 @@ const nb = (html: string, motif: string) => (html.match(new RegExp(motif, 'g')) 
 for (const [nom, etat] of ETATS) {
   test(`plan ${nom} : un seul bouton en dégradé sur ordinateur (l'en-tête), un seul au téléphone (la barre)`, () => {
     const entete = renderToStaticMarkup(<BoutonPrincipalPlan etat={etat} onValider={noop} onRediger={noop} />)
-    const barre = renderToStaticMarkup(<BarrePlan etat={etat} onValider={noop} onRediger={noop} />)
+    const barre = renderToStaticMarkup(<BarrePlan etat={etat} onValider={noop} onRediger={noop} onValiderEtRediger={noop} />)
     assert.equal(nb(entete, 'signature-btn'), 1)
     // dans la barre : seul le bouton porté par ActionsBarreTel (visible au téléphone seulement) est en dégradé
     assert.equal(nb(barre, 'signature-btn'), 1)
     assert.equal(nb(barre, 'data-principal-tel'), 1)
     assert.doesNotMatch(entete, /data-principal-tel/)
-    // la barre ordinateur n'a aucun autre bouton en dégradé : « Étape suivante » est en contour
+    // la barre ordinateur n'a aucun autre bouton en dégradé : « Valider le plan et rédiger » est en contour
     assert.doesNotMatch(barre.replace(/<button[^>]*data-principal-tel[^>]*>.*?<\/button>/s, ''), /signature-btn/)
   })
 }
 
-test('avant validation : « Valider le plan » est l’action, « Étape suivante : Rédiger » est en contour ; validé : « Rédiger le mémoire »', () => {
-  const avant = renderToStaticMarkup(<BarrePlan etat={base} onValider={noop} onRediger={noop} />)
+test('avant validation : « Valider le plan » est l’action, « Valider le plan et rédiger » est en contour ; validé : « Rédiger le mémoire »', () => {
+  const avant = renderToStaticMarkup(<BarrePlan etat={base} onValider={noop} onRediger={noop} onValiderEtRediger={noop} />)
   assert.match(avant, /Valider le plan/)
-  assert.match(avant, /Étape suivante&nbsp;: Rédiger|Étape suivante : Rédiger/)
-  const apres = renderToStaticMarkup(<BarrePlan etat={ETATS[3][1]} onValider={noop} onRediger={noop} />)
+  assert.match(avant, /Valider le plan et rédiger/)
+  assert.doesNotMatch(avant, /Étape suivante/)
+  const apres = renderToStaticMarkup(<BarrePlan etat={ETATS[3][1]} onValider={noop} onRediger={noop} onValiderEtRediger={noop} />)
   assert.match(apres, /Rédiger le mémoire/)
   assert.doesNotMatch(apres, /Étape suivante/)
   assert.match(apres, /Plan validé le 2 novembre/)

@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils'
 import { MAX_TITRE, ficheRemplie, libellePoids, type FichePlan, type PartiePlan, type SourcePlan } from '@/lib/planMemoire'
 import FichePartie, { libelleSource } from './FichePartie'
 import { demandePar } from './demandePar'
+import MentionRecoupe from './MentionRecoupe'
 
 const BOUTON_ICONE = 'grid size-9 shrink-0 place-items-center rounded-md text-fg-3 transition-colors duration-base ease-lien hover:bg-surface-0 hover:text-fg disabled:pointer-events-none disabled:opacity-40 [@media(pointer:coarse)]:size-11'
 
@@ -16,7 +17,7 @@ const BOUTON_ICONE = 'grid size-9 shrink-0 place-items-center rounded-md text-fg
  */
 export default function PartiePlanCarte({
   partie, numero, ouverte, peutMonter, peutDescendre, seulementGardee,
-  onBasculerFiche, onRenommer, onRetirer, onSupprimer, onMonter, onDescendre, onFiche, onVoirSource,
+  recoupe, onBasculerFiche, onRenommer, onRetirer, onSupprimer, onMonter, onDescendre, onFiche, onVoirSource,
 }: {
   partie: PartiePlan
   numero: number | null
@@ -25,6 +26,8 @@ export default function PartiePlanCarte({
   peutDescendre: boolean
   /** C'est la dernière partie gardée : elle ne se retire pas. */
   seulementGardee: boolean
+  /** Une partie plus haut sert le même sous-critère avec un titre proche. */
+  recoupe?: { cle: string; titre: string } | null
   onBasculerFiche: () => void
   onRenommer: (titre: string) => void
   onRetirer: () => void
@@ -100,6 +103,7 @@ export default function PartiePlanCarte({
         ) : (
           partie.sous_criteres.length === 0 && !ajout && <p className="text-sm text-fg-2">Partie habituelle du mémoire.</p>
         )}
+        {recoupe && <MentionRecoupe titre={recoupe.titre} onRetirer={ajout ? onSupprimer : onRetirer} />}
       </div>
 
       {ouverte && (

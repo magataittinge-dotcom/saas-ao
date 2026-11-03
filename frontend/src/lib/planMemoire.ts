@@ -188,3 +188,9 @@ export function numeroDansLaPartie(parties: readonly PartiePlan[], cle: string):
 /** Les états de la bande de résumé (voir components/etape/BandeResume) : constantes, pour ne pas répéter l'identifiant technique. */
 export const ETAT_PRET = 'pret' as const
 export const ETAT_A_VERIFIER = 'a-verifier' as const
+
+/** La carte « Fiches » : « Aucune remplie », « 1 remplie », « 3 remplies ». */
+export const libelleFichesRemplies = (n: number): string => (n <= 0 ? 'Aucune remplie' : n === 1 ? '1 remplie' : `${n} remplies`)
+
+/** La carte « Longueur » : « 1 page au plus », « 20 pages au plus ». */
+export const libelleLongueur = (pages: number): string => `${pages} page${pages > 1 ? 's' : ''} au plus`
