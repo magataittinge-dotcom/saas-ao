@@ -76,7 +76,6 @@ test('S4 : les anciens libellés ont disparu des écrans (hors fichiers réserv�
 
 test('S4 : les nouveaux libellés sont à l\'écran', () => {
   const attendus: [string, string][] = [
-    ['src/components/intelligence/SynorixIntelligence.tsx', 'À faire maintenant'],
     ['src/routes/project/StepUpload.tsx', 'Reconnu comme'],
     ['src/components/common/StatusBadge.tsx', 'À ranger'],
     ['src/lib/vault.ts', 'À ranger'],

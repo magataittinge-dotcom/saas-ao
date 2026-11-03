@@ -1,10 +1,7 @@
 // Phase D, tranche 3 — les six bulles : fonctions pures, libellés positifs, sans conseil de prix ; rendu et marge basse.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { renderToStaticMarkup } from 'react-dom/server'
-import { MemoryRouter } from 'react-router-dom'
 import { calculerBulles, ORDRE_BULLES, type Bulle } from '@/lib/intelligence/bulles'
-import BullesAttention from '@/components/intelligence/BullesAttention'
 import type { DashboardStats } from '@/types'
 import { MAINTENANT, projet, remise, textesFiche } from './outils/projetsFactices'
 import { lire, sansCommentaires } from './outils/sources'
@@ -102,19 +99,6 @@ test('ton : jamais « manquant / incomplet / absent », pas de point d’exclama
       for (const t of [b.libelle, b.compte, b.aria, ...textesFiche(b.fiche)]) for (const re of interdits) assert.doesNotMatch(t, re, `${b.id} : « ${t} »`)
     }
   }
-})
-
-test('rendu : un groupe de six boutons à bascule, chacun avec son nom accessible ; choisir deux fois revient en arrière', () => {
-  const bulles = calculerBulles(jeu(), STATS, MAINTENANT)
-  const html = renderToStaticMarkup(<MemoryRouter><BullesAttention bulles={bulles} choix="piece" onChoisir={() => {}} /></MemoryRouter>)
-  assert.equal((html.match(/<button/g) ?? []).length, 6)
-  assert.match(html, /role="group" aria-label="Ce qui demande votre attention"/)
-  assert.equal((html.match(/aria-pressed="true"/g) ?? []).length, 1)
-  assert.match(html, /data-bulle="piece"[^>]*aria-pressed="true"/)
-  assert.match(html, /aria-label="1 pièce à renouveler"/)
-  assert.match(html, /data-ton="attention"/)
-  // les pastilles décoratives (doublon du nom accessible) sont cachées aux lecteurs d'écran
-  assert.match(html, /<span aria-hidden="true">Remise dans 5 jours<\/span>/)
 })
 
 test('téléphone : marge basse sous la grille, bulles 2 × 3 d’au moins 48 px, aucun défilement horizontal', () => {

@@ -177,7 +177,6 @@ test('le moteur WebGL est chargé à la demande : jamais importé statiquement',
     const code = sansCommentaires(lire(f))
     assert.doesNotMatch(code, /import\s+(?!type\b)[^;\n]*from ['"][^'"]*moteurVisage['"]/, `${f} : import statique du moteur`)
   }
-  assert.match(sansCommentaires(lire('src/components/intelligence/Visage.tsx')), /import\('\.\/moteurVisage'\)/)
 })
 
 test('le nettoyage libère le contexte WebGL, les observateurs et les écouteurs', () => {

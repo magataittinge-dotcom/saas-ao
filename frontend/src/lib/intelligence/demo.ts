@@ -1,4 +1,4 @@
-// Données INVENTÉES pour la page de démonstration interne /intelligence-demo et les tests.
+// Données INVENTÉES pour les tests (la page de démonstration interne a été retirée le 4/11).
 // Aucun texte de DCE client : noms, acheteurs et lots sont fictifs.
 import type { DashboardStats, Project } from '@/types'
 

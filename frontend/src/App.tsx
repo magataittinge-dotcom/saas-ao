@@ -23,7 +23,6 @@ const FicheEntreprise = lazy(() => import('@/routes/FicheEntreprise'))
 const Settings = lazy(() => import('@/routes/Settings'))
 const Billing = lazy(() => import('@/routes/Billing'))
 const Tools = lazy(() => import('@/routes/Tools'))
-const IntelligenceDemo = lazy(() => import('@/routes/IntelligenceDemo')) // démonstration interne, non liée au menu
 const Design = lazy(() => import('@/routes/Design'))
 
 // Écrans publics (accueil, tarifs, mentions, connexion) : pas encore refaits sur les jetons clair / nuit,
@@ -75,7 +74,6 @@ function AppRoutes() {
         }
       />
 
-      <Route path="/intelligence-demo" element={<PrivateRoute><IntelligenceDemo /></PrivateRoute>} />
 
       {/* Private routes — with layout */}
       <Route
