@@ -32,13 +32,22 @@ meme_version() {
   echo "→ même version des deux côtés : ${ici:0:12}"
 }
 
-meme_version
 cd "$RACINE/frontend"
 [ -f .env.production ] || { echo "ERREUR : frontend/.env.production absent (voir docs/DEPLOYMENT.md §5)"; exit 1; }
 grep -q '^VITE_CLERK_PUBLISHABLE_KEY=pk_' .env.production || { echo "ERREUR : VITE_CLERK_PUBLISHABLE_KEY absente de .env.production"; exit 1; }
+# Vite lit frontend/.env PUIS .env.production : sans cette ligne vide, l'adresse locale du .env du PC passerait dans le paquet.
+grep -qx 'VITE_API_URL=' .env.production || { echo "ERREUR : .env.production doit contenir la ligne exacte VITE_API_URL= (vide) ; sinon le front de production appelle localhost."; exit 1; }
+meme_version
 echo "→ build (sur ce PC)"
 npm run build > /tmp/synorix-build-front.log 2>&1 || { tail -20 /tmp/synorix-build-front.log; exit 1; }
 echo "→ $(ls dist/assets | wc -l) fichiers dans dist/assets, dont $(ls dist/assets | grep -c '\.gz$') .gz"
+# Garde après le build : aucune adresse locale dans le paquet.
+LOCAL=$(grep -rlE 'localhost:8000|127\.0\.0\.1:8000' dist/ || true)
+if [ -n "$LOCAL" ]; then
+  echo "ERREUR : le paquet contient l'adresse locale (localhost:8000) dans :"; echo "$LOCAL" | head -5
+  echo "        Rien n'est envoyé. Vérifie VITE_API_URL= dans frontend/.env.production, puis relance."
+  exit 1
+fi
 meme_version
 R="rsync -az --delete"; [ "$SIMULATION" = --simulation ] && R="$R --dry-run --itemize-changes"
 echo "→ envoi vers $CIBLE:/srv/synorix/frontend/dist"
