@@ -34,6 +34,40 @@ def _get_jwks_client() -> PyJWKClient:
     return _jwks_client
 
 
+# Origines locales du front, acceptées pour `azp` en développement (DEBUG) seulement : ce sont celles
+# que le CORS local ajoute aussi (main.py).
+_ORIGINES_LOCALES_DEV = (
+    "http://localhost:3000", "http://localhost:5173",
+    "http://127.0.0.1:3000", "http://127.0.0.1:5173",
+)
+
+
+def _origines_autorisees() -> set[str]:
+    """Origines qui ont le droit d'obtenir un jeton pour cette API : `FRONTEND_URL`, et, en DEBUG,
+    les origines locales du front. Lues à chaque appel (réglages, tests)."""
+    origines = {(settings.FRONTEND_URL or "").rstrip("/")} - {""}
+    if settings.DEBUG:
+        origines |= set(_ORIGINES_LOCALES_DEV)
+    return origines
+
+
+def _verifier_azp(payload: dict) -> None:
+    """Revendication `azp` (« authorized party ») : l'origine où le navigateur a obtenu le jeton.
+
+    Avec une seule instance Clerk partagée entre le PC de développement et synorix.tech, un jeton
+    obtenu sur `http://localhost:3000` serait sinon accepté par la production.
+    - `azp` présent : doit être une origine autorisée, sinon 401 ;
+    - `azp` absent : accepté. Clerk le pose sur les jetons de session émis à un navigateur ; un jeton
+      sans `azp` vient de l'API Backend de Clerk (clé secrète), et le SDK officiel de Clerk ne contrôle
+      `azp` que s'il est présent. La signature reste vérifiée dans tous les cas."""
+    if "azp" not in payload:
+        return
+    azp = payload["azp"]
+    if not isinstance(azp, str) or azp.rstrip("/") not in _origines_autorisees():
+        logger.warning("Auth failed: origine du jeton (azp) non autorisée")
+        raise HTTPException(status_code=401, detail="Token invalide")
+
+
 def _decode_clerk_token(token: str) -> dict:
     """Decode and validate a Clerk JWT using the JWKS endpoint."""
     try:
@@ -44,7 +78,6 @@ def _decode_clerk_token(token: str) -> dict:
             algorithms=["RS256"],
             options={"verify_aud": False},
         )
-        return payload
     except jwt.ExpiredSignatureError:
         logger.warning("Auth failed: token expiré")
         raise HTTPException(status_code=401, detail="Token expiré")
@@ -64,6 +97,9 @@ def _decode_clerk_token(token: str) -> dict:
         # pile d'appels dans les journaux, avec le `kid` choisi par l'appelant.
         logger.warning(f"Auth failed: token invalide — {type(e).__name__}")
         raise HTTPException(status_code=401, detail="Token invalide")
+
+    _verifier_azp(payload)
+    return payload
 
 
 def _fetch_clerk_user(clerk_user_id: str) -> dict:
