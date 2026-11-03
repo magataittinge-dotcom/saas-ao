@@ -9,7 +9,6 @@ import {
   AlertTriangle, Loader2,
   Sparkles, Pencil, Check as CheckIcon,
 } from 'lucide-react'
-import axios from 'axios'
 import { BoutonSecondaire } from '@/components/project/BarreEtape'
 import { GabaritEtape, BandeResume, SectionEtape, EtatElement, BarreEtape, ActionsBarre, ActionsBarreTel, BilanBarre } from '@/components/etape'
 import { METIERS } from '@/lib/entreprise/metiers'
@@ -19,7 +18,8 @@ import { Button } from '@/components/ui/button'
 import { repartirLotsParMetiers, libelleUnites } from '@/lib/lotsMetiers'
 import type { MemoireConfig } from '@/types'
 import { api } from '@/services/api'
-import SubscriptionWall from '@/components/common/SubscriptionWall'
+import EcransLecture from '@/components/project/EcransLecture'
+import { useLancerLecture } from '@/hooks/useLancerLecture'
 import DeleteConfirmModal from '@/components/common/DeleteConfirmModal'
 import ProgressDisplay, { type StepDescriptor } from '@/components/common/ProgressDisplay'
 import { useProgressStream } from '@/hooks/useProgressStream'
@@ -29,13 +29,6 @@ const LOT_DETECTION_STEPS: StepDescriptor[] = [
   { key: 'detecting_lots', label: 'Détection des lots', estimated_s: 30 },
 ]
 
-// Used by the modal shown right after the user clicks "Analyser le DCE".
-const ANALYSIS_STEPS_FOR_DISPLAY: StepDescriptor[] = [
-  { key: 'preparation',     label: 'Lecture des documents',                 estimated_s: 2 },
-  { key: 'analyzing_pass1', label: 'Analyse des exigences administratives', estimated_s: 50 },
-  { key: 'analyzing_pass2', label: 'Analyse des exigences techniques',      estimated_s: 50 },
-  { key: 'finalizing',      label: 'Finalisation',                          estimated_s: 5 },
-]
 import { cn } from '@/lib/utils'
 
 const F = "'Inter Variable', 'Geist Sans', sans-serif"
@@ -356,10 +349,8 @@ function AddLotForm({ onAdd, onCancel }: AddLotFormProps) {
 export default function StepLotSelection({ project }: Props) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const [showPaywall, setShowPaywall] = useState(false)
   // 1.13 — un lot ne disparaît pas de la liste en un clic
   const [lotARetirer, setLotARetirer] = useState<LotOption | null>(null)
-  const [paywallMessage, setPaywallMessage] = useState<string | null>(null)
   const [processingDetail, setProcessingDetail] = useState('')
   const [waitingForExtraction, setWaitingForExtraction] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -495,38 +486,8 @@ export default function StepLotSelection({ project }: Props) {
   const selectedId = selectedLotIds[0] ?? 'all'
   const aucunChoix = !peutLancer(selectedIds)
   const [showAddForm, setShowAddForm] = useState(false)
-  const [analysisError, setAnalysisError] = useState<string | null>(null)
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [isSuccess, setIsSuccess] = useState(false)
-
-  // SSE driving the modal during analysis. Disabled when not analyzing
-  // so we don't keep an idle stream open.
-  const analysisSse = useProgressStream(project.id, {
-    enabled: isAnalyzing,
-    onComplete: () => {
-      setIsAnalyzing(false)
-      setIsSuccess(true)
-      navigate(`/projects/${project.id}/analysis`)
-    },
-    onError: () => {
-      setIsAnalyzing(false)
-      setIsSuccess(false)
-    },
-  })
-
-  // Fallback: if the SSE missed the 'complete' event (network blip during
-  // the last 100 ms of the pipeline) the project still ends up with
-  // status='analyzed' on the next refetch. Navigate to /analysis in that
-  // case so the user never gets stuck on this page.
-  useEffect(() => {
-    if (project.status === 'analyzed' && isAnalyzing) {
-      setIsAnalyzing(false)
-      setIsSuccess(true)
-      navigate(`/projects/${project.id}/analysis`)
-    }
-  }, [project.status, isAnalyzing, project.id, navigate])
-  const [, setPreparation] = useState<{ extracted: number; total: number } | null>(null)
-  const abortRef = useRef<AbortController | null>(null)
+  const lecture = useLancerLecture(project)
+  const { isAnalyzing, isSuccess, analysisError } = lecture
 
   const selectedName = lots.find(l => l.id === selectedId)?.nom ?? null
 
@@ -544,11 +505,6 @@ export default function StepLotSelection({ project }: Props) {
     setShowAddForm(false)
   }
 
-  const { mutateAsync: selectLot } = useMutation({
-    mutationFn: (payload: { lot_id: string | null; lot_name: string | null }) =>
-      api.post(`/projects/${project.id}/lots/select`, payload),
-  })
-
   const { mutate: renameLot } = useMutation({
     mutationFn: ({ lotId, label }: { lotId: string; label: string }) =>
       api.patch<Project>(
@@ -561,63 +517,9 @@ export default function StepLotSelection({ project }: Props) {
     },
   })
 
-  const handleCancel = () => {
-    abortRef.current?.abort()
-    setIsAnalyzing(false)
-    setIsSuccess(false)
-    setPreparation(null)
-    setAnalysisError("Analyse annulée.")
-  }
-
-  const handleLaunch = async () => {
+  const handleLaunch = () => {
     if (!peutLancer(selectedIds)) return
-    setAnalysisError(null)
-    const abort = new AbortController()
-    abortRef.current = abort
-    try {
-      await selectLot({
-        lot_id: selectedId === 'all' ? null : selectedId,
-        lot_name: selectedId === 'all' ? null : selectedName,
-      })
-      const lotsPayload = selectedLotIds.length > 1 ? { lots: selectedLotIds } : {}
-      queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
-      setIsAnalyzing(true)
-      let ready = false
-      while (!ready) {
-        if (abort.signal.aborted) return
-        const { data } = await api.get<{ total: number; extracted: number; ready: boolean }>(
-          `/projects/${project.id}/extraction-status`,
-        )
-        setPreparation({ extracted: data.extracted, total: data.total })
-        if (data.ready) { ready = true } else { await new Promise((r) => setTimeout(r, 2000)) }
-      }
-      if (abort.signal.aborted) return
-      setPreparation(null)
-      // L'analyse est DÉTACHÉE côté serveur (thread) : le POST répond
-      // « started » immédiatement et le run survit à tout — navigation,
-      // reload, connexion coupée. On rejoint l'écran d'analyse qui suit
-      // la progression via SSE (et la retrouve après un reload).
-      await api.post(`/projects/${project.id}/analyze`, lotsPayload, { timeout: 60_000 })
-      queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
-      navigate(`/projects/${project.id}/analysis`)
-      return
-    } catch (err) {
-      if (abort.signal.aborted) return
-      setIsAnalyzing(false)
-      setIsSuccess(false)
-      setPreparation(null)
-      const msg = axios.isAxiosError(err)
-        ? (err.response?.data?.detail ?? "Erreur lors de l'analyse")
-        : "Erreur lors de l'analyse"
-      const texte = typeof msg === 'string' ? msg : JSON.stringify(msg)
-      // 1.2 — quota appliqué par le serveur : son refus ouvre le choix d'une offre
-      if (axios.isAxiosError(err) && err.response?.status === 402) {
-        setPaywallMessage(texte)
-        setShowPaywall(true)
-        return
-      }
-      setAnalysisError(texte)
-    }
+    void lecture.lancer(selectedLotIds, selectedName)
   }
 
   // « Dans vos métiers » : les lots rattachés aux métiers déclarés dans Mon entreprise d'abord, les autres repliés
@@ -656,7 +558,7 @@ export default function StepLotSelection({ project }: Props) {
      ════════════════════════════════════════════════════════════════ */
   return (
     <>
-      <SubscriptionWall open={showPaywall} onClose={() => setShowPaywall(false)} feature="analysis" message={paywallMessage} />
+      <EcransLecture lecture={lecture} />
       {lotARetirer && (
         <DeleteConfirmModal
           title={`Retirer « ${lotARetirer.user_label || lotARetirer.nom} » de la liste ?`}
@@ -664,19 +566,6 @@ export default function StepLotSelection({ project }: Props) {
           libelleConfirmer="Retirer"
           onConfirm={() => { handleDelete(lotARetirer.id); setLotARetirer(null) }}
           onCancel={() => setLotARetirer(null)}
-        />
-      )}
-
-      {isAnalyzing && (
-        <ProgressDisplay
-          variant="modal"
-          title="Analyse IA en cours"
-          steps={ANALYSIS_STEPS_FOR_DISPLAY}
-          currentStep={analysisSse.step}
-          progress={analysisSse.progress}
-          detail={analysisSse.detail}
-          phase={analysisSse.phase}
-          onCancel={handleCancel}
         />
       )}
 

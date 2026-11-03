@@ -25,6 +25,6 @@ export function cartesDepot(documents: readonly Pick<ProjectDocument, 'type' | '
     { libelle: 'À classer', valeur: String(aClasser), etat: aClasser > 0 ? 'a-verifier' : 'pret', detail: aClasser > 0 ? 'Indiquez ce que sont ces fichiers dans la liste ci-dessous.' : 'Tous les fichiers sont reconnus.' },
   ]
   const lots = project?.lots_detectes?.length ?? 0
-  if (lots > 0) cartes.push({ libelle: 'Lots détectés', valeur: String(lots), etat: 'neutre', detail: 'À choisir à l’étape suivante.' })
+  if (lots > 0) cartes.push({ libelle: 'Lots détectés', valeur: String(lots), etat: 'neutre', detail: lots === 1 ? 'Un seul lot : la lecture se lance depuis cette page.' : 'À choisir à l’étape suivante.' })
   return cartes
 }

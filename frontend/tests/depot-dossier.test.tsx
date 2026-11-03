@@ -32,6 +32,6 @@ test('l’écran : dans le gabarit, la lecture est une section de la page, les p
   assert.match(code, /Vous pouvez quitter cette page : la lecture continue/)
   assert.match(code, /Gardez cette page ouverte pendant l’envoi/)
   assert.equal((code.match(/actionPrincipale=/g) ?? []).length, 1)
-  assert.match(code, /<ActionsBarreTel>\s*<BoutonSuite\s+etape="Lots"/)
+  assert.match(code, /<ActionsBarreTel>[\s\S]*<BoutonSuite\s+etape="Lots"/)      // plusieurs lots : l'écran Lots reste l'étape suivante
   assert.ok(ETATS_LECTURE_SERVEUR.includes('extracting_text') && ETATS_LECTURE_SERVEUR.includes('detecting_lots'))
 })

@@ -2,6 +2,7 @@
 // Règle : parmi les AO en cours, celui dont la date de remise est la plus proche (et pas encore passée)
 // et dont une étape reste à faire ; sans date, après les AO datés ; date passée, en dernier.
 import { avancementAO, echeanceAO, estEnCours, etatEcheance, type Echeance } from '@/lib/echeance'
+import { lotUniqueDuDossier } from '@/lib/lotUnique'
 import type { Project } from '@/types'
 
 /** Les écrans d'un AO, dans l'ordre des six étapes (comme Project.tsx). */
@@ -39,7 +40,7 @@ export const aDecider = (p: Pick<Project, 'status' | 'current_step'>): boolean =
 export const aMemoire = (p: Pick<Project, 'completed_steps'>): boolean => p.completed_steps?.['5'] === true
 const enRedaction = (p: Pick<Project, 'processing_status'>): boolean => p.processing_status === 'generating'
 
-type EtatEtape = Pick<Project, 'status' | 'current_step' | 'processing_status' | 'completed_steps'>
+type EtatEtape = Pick<Project, 'status' | 'current_step' | 'processing_status' | 'completed_steps'> & Partial<Pick<Project, 'name' | 'lots_detectes'>>
 
 /**
  * Prochaine action d'un AO : le verbe, l'écran. UN seul calcul (sans IA) pour l'accueil, Mes AO, la bande « Vos AO en cours »,
@@ -51,7 +52,10 @@ export function actionEtape(p: EtatEtape): { verbe: string; segment: string } {
   const etape = avancementAO(p.current_step).etape
   switch (etape) {
     case 1: return { verbe: "Déposer le dossier de l'acheteur", segment: ROUTES_ETAPES[0] }
-    case 2: return { verbe: 'Choisir le lot', segment: ROUTES_ETAPES[1] }
+    case 2:
+      // Un seul lot (ou un marché unique) : rien à choisir, la lecture se lance depuis l'écran de dépôt, au clic.
+      if (lotUniqueDuDossier(p)) return { verbe: 'Lire ce dossier', segment: ROUTES_ETAPES[0] }
+      return { verbe: 'Choisir le lot', segment: ROUTES_ETAPES[1] }
     case 3: return { verbe: enAttente(p) ? 'Analyse en cours' : 'Lire ce dossier', segment: ROUTES_ETAPES[2] }
     case 4: return { verbe: 'Vérifier le dossier', segment: ROUTES_ETAPES[3] }
     case 5:
@@ -84,6 +88,7 @@ function texteEtape(p: EtatEtape): string {
     if (enRedaction(p)) return 'Le mémoire est en cours de rédaction. Cet écran se met à jour dès qu’il est prêt.'
     if (aMemoire(p)) return 'Le mémoire est rédigé. Relisez-le, retouchez ce qui doit l’être, puis passez à l’export.'
   }
+  if (avancementAO(p.current_step).etape === 2 && lotUniqueDuDossier(p)) return 'Le dossier n’a qu’un lot. Lancez la lecture depuis l’écran de dépôt : chaque exigence sera relevée avec sa source.'
   return TEXTES[avancementAO(p.current_step).etape]
 }
 

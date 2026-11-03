@@ -24,6 +24,10 @@ import DeleteConfirmModal from '@/components/common/DeleteConfirmModal'
 import { GabaritEtape, BandeResume, SectionEtape, ActionsBarreTel } from '@/components/etape'
 import { Button } from '@/components/ui/button'
 import { cartesDepot, ETATS_LECTURE_SERVEUR } from '@/lib/depotDossier'
+import CarteLotUnique from '@/components/depot/CarteLotUnique'
+import EcransLecture from '@/components/project/EcransLecture'
+import { useLancerLecture } from '@/hooks/useLancerLecture'
+import { useLotsDuDepot } from '@/hooks/useLotsDuDepot'
 
 const UPLOAD_STEPS: StepDescriptor[] = [
   { key: 'uploading',       label: 'Transfert du dossier',   estimated_s: 30 },
@@ -373,6 +377,16 @@ export default function StepUpload({ project }: Props) {
     navigate(`/projects/${project.id}/lots`)
   }
 
+  // Un seul lot (ou un marché unique) : l'écran Lots est sauté, mais la lecture ne part qu'au clic (elle décompte 1 unité).
+  const lecture = useLancerLecture(project)
+  const depotFini = hasDocuments && !anyUploading && !isProcessing && project.status !== 'analyzed' && (project.current_step ?? 1) <= 2
+  const { lotUnique, ecartes } = useLotsDuDepot(project, { actif: depotFini, signature: documents.map((d) => d.id).join(',') })
+  const lireLeLotUnique = () => {
+    if (!lotUnique || lecture.isAnalyzing || lecture.isSuccess) return
+    void lecture.lancer(lotUnique.id ? [lotUnique.id] : [], lotUnique.designation)
+  }
+  const erreurAffichee = nextError ?? lecture.analysisError
+
   /* ════════════════════════════════════════════════════════════════
      JSX
      ════════════════════════════════════════════════════════════════ */
@@ -395,15 +409,17 @@ export default function StepUpload({ project }: Props) {
         />
       )}
 
+      <EcransLecture lecture={lecture} />
+
       <div style={{ fontFamily: F }}>
         <GabaritEtape
           titre="Dépôt du dossier"
           utilite="Déposez le dossier reçu de l’acheteur : Synorix reconnaît chaque pièce et chaque lot, puis vous choisissez ce que vous analysez."
-          actionPrincipale={
+          actionPrincipale={lotUnique ? undefined : (
             <Button type="button" variant="signature" onClick={handleNext} disabled={!hasDocuments || anyUploading || isProcessing || isNavigating}>
               Étape suivante : Lots
             </Button>
-          }
+          )}
           resume={<BandeResume cartes={cartesDepot(documents, project)} libelle="Le dossier déposé" />}
           barre={
         <BarreEtape>
@@ -428,11 +444,17 @@ export default function StepUpload({ project }: Props) {
           <ActionsBarre>
             <BoutonSecondaire libelle="Retour" onClick={() => navigate(-1)} />
             <ActionsBarreTel>
-              <BoutonSuite
-                etape="Lots"
-                onClick={handleNext}
-                disabled={!hasDocuments || anyUploading || isProcessing || isNavigating}
-              />
+              {lotUnique ? (
+                <Button type="button" variant="signature" onClick={lireLeLotUnique} disabled={lecture.isAnalyzing || lecture.isSuccess}>
+                  Lire ce dossier (1 unité)
+                </Button>
+              ) : (
+                <BoutonSuite
+                  etape="Lots"
+                  onClick={handleNext}
+                  disabled={!hasDocuments || anyUploading || isProcessing || isNavigating}
+                />
+              )}
             </ActionsBarreTel>
           </ActionsBarre>
         </BarreEtape>
@@ -581,17 +603,26 @@ export default function StepUpload({ project }: Props) {
         ))}
 
         {/* ── Error ───────────────────────────────────────── */}
-        {nextError && (
+        {erreurAffichee && (
           <div
             className="flex items-start gap-2 p-4 rounded-xl text-sm"
             style={{ color: 'var(--danger-fg)', background: 'color-mix(in srgb, var(--danger-fg) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--danger-fg) 15%, transparent)' }}
           >
             <AlertCircle size={16} className="shrink-0 mt-0.5" />
-            <span>{nextError}</span>
+            <span>{erreurAffichee}</span>
           </div>
         )}
 
           </SectionEtape>
+          {lotUnique && (
+            <CarteLotUnique
+              lot={lotUnique}
+              ecartes={ecartes}
+              enCours={lecture.isAnalyzing || lecture.isSuccess}
+              onLire={lireLeLotUnique}
+              onOuvrirLots={() => navigate(`/projects/${project.id}/lots`)}
+            />
+          )}
           {enLecture && (
             <SectionEtape titre="Lecture du dossier">
             <div className="rounded-carte border border-bord-2 bg-surface-1 p-5">
