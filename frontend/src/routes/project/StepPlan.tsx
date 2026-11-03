@@ -9,6 +9,7 @@ import {
   BandeResume, EtatElement, GabaritEtape, SectionEtape,
 } from '@/components/etape'
 import PartiePlanCarte from '@/components/plan/PartiePlanCarte'
+import PartiesHabituelles from '@/components/plan/PartiesHabituelles'
 import { BarrePlan, BoutonPrincipalPlan, type EtatPlan } from '@/components/plan/ActionsPlan'
 import { Input } from '@/components/ui/input'
 import EcranEnChargement from '@/components/common/EcranEnChargement'
@@ -107,7 +108,9 @@ export default function StepPlan({ project }: { project: Project }) {
     setOuvertes((o) => { const n = new Set(o); if (n.has(c)) n.delete(c); else n.add(c); return n })
   const voir = (s: SourcePlan) => { if (s.document) source.ouvrir({ document: s.document, page: s.page ?? null, excerpt: null }) }
 
-  const groupes = useMemo(() => (parties ? parGroupe(parties) : []), [parties])
+  const groupes = useMemo(
+    () => (parties ? parGroupe(parties.filter((p) => !p.retiree)).filter((g) => g.parties.length > 0) : []),
+    [parties])
 
   if (isLoading || (!parties && !isError)) return <EcranEnChargement />
   if (isError || !parties || !vue) {
@@ -122,6 +125,7 @@ export default function StepPlan({ project }: { project: Project }) {
   }
 
   const gardees = parties.filter((p) => !p.retiree)
+  const habituelles = parties.filter((p) => p.retiree)
   const ajoutees = parties.filter((p) => p.cle.includes('.ajout_') && !p.retiree).length
   const resume = vue.resume
   const fiches = gardees.filter((p) => p.fiche.voulu.trim() || p.fiche.references !== null || p.fiche.personnes !== null || p.fiche.materiel !== null).length
@@ -132,7 +136,7 @@ export default function StepPlan({ project }: { project: Project }) {
     {
       libelle: 'Parties', valeur: String(gardees.length),
       detail: [ajoutees > 0 ? `${ajoutees} ajoutée${ajoutees > 1 ? 's' : ''}` : null,
-        parties.length - gardees.length > 0 ? `${parties.length - gardees.length} retirée${parties.length - gardees.length > 1 ? 's' : ''}` : null]
+        parties.length - gardees.length > 0 ? `${parties.length - gardees.length} habituelle${parties.length - gardees.length > 1 ? 's' : ''} à ajouter si utile` : null]
         .filter(Boolean).join(' · ') || 'Le plan du modèle, sans changement',
     },
     resume.sous_criteres_total > 0
@@ -205,6 +209,11 @@ export default function StepPlan({ project }: { project: Project }) {
           </SectionEtape>
         )}
 
+        <p className="text-sm text-fg-2">
+          Le plan retient les parties qui servent un sous-critère du règlement et celles que le dossier demande. Les autres
+          parties habituelles sont proposées plus bas, à ajouter si elles vous servent.
+        </p>
+
         {groupes.map((g) => (
           <SectionEtape key={g.partie} titre={g.titre}>
             <ul className="space-y-3" aria-label={TITRES_PARTIES_PLAN[g.partie]}>
@@ -216,7 +225,7 @@ export default function StepPlan({ project }: { project: Project }) {
                   ouverte={ouvertes.has(p.cle)}
                   peutMonter={peutDeplacer(parties, p.cle, -1)}
                   peutDescendre={peutDeplacer(parties, p.cle, 1)}
-                  seulementGardee={!p.retiree && gardees.length <= 1}
+                  seulementGardee={gardees.length <= 1}
                   onBasculerFiche={() => basculerFiche(p.cle)}
                   onRenommer={(t) => changer(renommer(parties, p.cle, t))}
                   onRetirer={() => changer(basculerRetrait(parties, p.cle))}
@@ -230,6 +239,8 @@ export default function StepPlan({ project }: { project: Project }) {
             </ul>
           </SectionEtape>
         ))}
+
+        <PartiesHabituelles parties={habituelles} onAjouter={(cle) => changer(basculerRetrait(parties, cle))} />
 
         <SectionEtape titre="AJOUTER UNE PARTIE" description="Une partie de plus, rattachée à la partie A, B ou C. Vous la renseignez ensuite dans sa fiche.">
           <form

@@ -197,3 +197,55 @@ def test_un_element_tres_long_est_coupe_a_la_fin_d_un_mot():
     titre = att[0]["libelle"]
     assert len(titre) <= pm.MAX_TITRE and titre.endswith("…") and not titre[:-1].endswith(" ")
     assert titre[:-1].split(" ")[-1] in ("humains", "et", "matériels", "spécifiques", "des", "moyens")     # mot entier
+
+
+# ── Plan par défaut plus court (décision 5 du 3/11) ───────────────────────────
+
+def test_par_defaut_seules_les_parties_qui_servent_un_critere_sont_gardees():
+    plan = pm.proposer(CRITERES, [])
+    gardees = {p["cle"] for p in plan if not p["retiree"]}
+    rattachement = pm.rattacher_criteres([{**p, "retiree": False} for p in plan], CRITERES)
+    assert gardees == set(rattachement["par_partie"])           # exactement celles qui servent au moins un sous-critère
+    assert {"partie_b.dechets", "partie_c.effectifs"} <= gardees
+    retirees = [p for p in plan if p["retiree"]]
+    assert retirees and len(retirees) + len(gardees) == 25
+    assert all(p["attendue"] is None for p in retirees)
+
+
+def test_par_defaut_une_partie_annoncee_par_le_rc_est_gardee_avec_sa_source():
+    att = [{"id": "att_ref", "libelle": "Les références de l'entreprise", "source": {"document": "RC.pdf", "page": 7}}]
+    sans = {p["cle"]: p for p in pm.proposer([], [])}
+    cible = pm.attendue_la_plus_proche(att[0]["libelle"])
+    assert cible is not None
+    plan = pm.proposer(CRITERES, att)
+    par_cle = {p["cle"]: p for p in plan}
+    assert par_cle[cible]["retiree"] is False
+    v = pm.vue(plan, CRITERES, att, None)
+    partie = next(p for p in v["parties"] if p["cle"] == cible)
+    assert partie["source"] == {"document": "RC.pdf", "page": 7}
+    # sans l'annonce, cette partie serait restée décochée (elle ne sert aucun sous-critère de CRITERES)
+    seul = {p["cle"]: p for p in pm.proposer(CRITERES, [])}
+    assert seul[cible]["retiree"] is True and sans[cible]["retiree"] is False
+
+
+def test_par_defaut_une_partie_nouvelle_annoncee_est_gardee():
+    att = [{"id": "att_x", "libelle": "Zorglub quantique", "source": {"document": "RC.pdf", "page": 3}}]
+    nouvelle = [p for p in pm.proposer(CRITERES, att) if ".ajout_" in p["cle"]]
+    assert len(nouvelle) == 1 and nouvelle[0]["retiree"] is False and nouvelle[0]["attendue"] == "att_x"
+
+
+def test_par_defaut_sans_aucune_information_le_plan_garde_le_modele_entier():
+    # aucun critère, aucune annonce : rien ne permet de trier, on ne propose pas un plan vide
+    assert all(not p["retiree"] for p in pm.proposer([], []))
+
+
+def test_par_defaut_le_critere_prix_ne_garde_aucune_partie():
+    prix = [{"nom": "Prix des prestations", "poids": 100, "sous_criteres": [{"nom": "Montant de l'offre", "poids": 100}]}]
+    assert all(not p["retiree"] for p in pm.proposer(prix, []))     # rien à trier (prix écarté) : modèle entier
+
+
+def test_remettre_une_partie_decochee_garde_un_plan_valide():
+    plan = pm.proposer(CRITERES, [])
+    retiree = next(p for p in plan if p["retiree"])
+    retiree["retiree"] = False
+    assert pm.valider(plan)          # le plan reste valide, la partie remise est gardée

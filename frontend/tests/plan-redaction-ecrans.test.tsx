@@ -7,6 +7,8 @@ import { StepProgress, STEPS, segmentDeEtape } from '@/components/project/StepPr
 import { cartesPreparation, cartesRedaction, pagesEstimees } from '@/routes/project/StepMemoire'
 import PartiePlanCarte from '@/components/plan/PartiePlanCarte'
 import FichePartie from '@/components/plan/FichePartie'
+import PartiesHabituelles from '@/components/plan/PartiesHabituelles'
+import { demandePar } from '@/components/plan/demandePar'
 import type { MemoireContent } from '@/types'
 import type { PartiePlan, VuePlan } from '@/lib/planMemoire'
 
@@ -89,18 +91,39 @@ test('une partie : titre modifiable, sous-critères avec poids, source annoncée
   const html = rendre(partie())
   assert.match(html, /value="Traitement des déchets"/)
   assert.match(html, /Gestion des déchets · 30 %/)
-  assert.match(html, /RC\.pdf · page 7 · annoncée par le dossier/)
+  assert.match(html, /Demandé par le règlement de la consultation/)
+  assert.match(html, /Source : RC\.pdf · page 7/)
+  assert.match(html, /Voir dans le dossier/)
   assert.match(html, /aria-label="Monter : Traitement des déchets"/)
   assert.match(html, /aria-label="Descendre : Traitement des déchets"/)
   assert.match(html, /aria-label="Retirer : Traitement des déchets"/)
   assert.match(html, /aria-expanded="false"/)
 })
 
-test('une partie retirée reste visible, grisée, et se remet', () => {
-  const html = rendre(partie({ retiree: true }))
-  assert.match(html, /data-retiree/)
-  assert.match(html, /Remettre/)
-  assert.doesNotMatch(html, /aria-label="Monter/)
+test('une partie gardée dit pourquoi : sous-critère et poids, ou demandée par le dossier avec sa source, sinon partie habituelle', () => {
+  assert.match(rendre(partie({ attendues: [], source: null })), /Gestion des déchets · 30 %/)
+  const cctp = rendre(partie({ sous_criteres: [], attendues: [{ id: 'a', libelle: 'x', source: { document: '2-CCTP lot 5.pdf', page: 12 } }] }))
+  assert.match(cctp, /Demandé par le cahier des clauses techniques \(CCTP\)/)
+  assert.match(cctp, /Voir dans le dossier/)
+  assert.match(rendre(partie({ sous_criteres: [], attendues: [] })), /Partie habituelle du mémoire/)
+  assert.equal(demandePar({ document: 'document.pdf' }), 'Demandé par le dossier')
+})
+
+test('la section des parties habituelles : décochées, regroupées, un geste nommé pour chacune, rien quand il n’y en a pas', () => {
+  const vide = renderToStaticMarkup(<PartiesHabituelles parties={[]} onAjouter={() => {}} />)
+  assert.equal(vide, '')
+  const html = renderToStaticMarkup(
+    <PartiesHabituelles
+      parties={[partie({ cle: 'partie_a.historique', partie: 'partie_a', titre: 'Historique', retiree: true, sous_criteres: [], attendues: [] }),
+        partie({ cle: 'partie_c.delai', partie: 'partie_c', titre: 'Délai de travaux', retiree: true, sous_criteres: [], attendues: [] })]}
+      onAjouter={() => {}}
+    />)
+  assert.match(html, /PARTIES HABITUELLES, À AJOUTER SI UTILE/)
+  assert.match(html, /aria-label="Ajouter au plan : Historique"/)
+  assert.match(html, /aria-label="Ajouter au plan : Délai de travaux"/)
+  assert.match(html, /Partie A/)
+  assert.match(html, /Partie C/)
+  assert.doesNotMatch(html, /manquant|incomplet|absent|!/i)
 })
 
 test('une partie ajoutée se supprime, une partie du modèle se retire', () => {

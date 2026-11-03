@@ -170,8 +170,15 @@ def attendue_la_plus_proche(libelle: str) -> str | None:
 
 def proposer(criteres: Any, attendues: list[dict]) -> list[dict]:
     """Le plan proposé : les 25 parties du modèle, plus une partie nouvelle pour chaque partie annoncée par le dossier
-    qu'aucune partie du modèle ne traite. Aucune partie n'est retirée d'office."""
+    qu'aucune partie du modèle ne traite.
+
+    Plan court par défaut (décision du 3/11) : une partie du modèle est GARDÉE si elle sert au moins un sous-critère du
+    règlement (hors prix) ou si le dossier l'annonce pour le mémoire ; une partie nouvelle annoncée est toujours gardée.
+    Les autres restent dans le plan, décochées (``retiree``) : le patron les ajoute d'un geste. Quand rien ne permet de
+    trier (ni sous-critère détaillé, ni annonce), le modèle entier est gardé : on ne propose pas un plan vide. Ne sert
+    que pour un plan NON enregistré : un plan enregistré par le patron n'est jamais recalculé."""
     plan = [_partie(p["cle"], p["titre"]) for p in parties_de_base()]
+    annoncees = {attendue_la_plus_proche(a["libelle"]) for a in attendues or []} - {None}
     suivant = 1      # numéro d'ajout UNIQUE dans tout le plan : les ancres « sec-ajout_<n> » du mémoire ne se doublent jamais
     for att in attendues or []:
         if attendue_la_plus_proche(att["libelle"]):
@@ -179,6 +186,12 @@ def proposer(criteres: Any, attendues: list[dict]) -> list[dict]:
         partie = _partie_d_une_attendue(_racines_precises(att["libelle"]))
         plan.append(_partie(f"{partie}.ajout_{suivant}", att["libelle"][:MAX_TITRE], att["id"]))
         suivant += 1
+    servies = set(rattacher_criteres(plan, criteres)["par_partie"])
+    a_garder = servies | annoncees
+    if a_garder or len(plan) > 25:
+        for p in plan:
+            if ".ajout_" not in p["cle"] and p["cle"] not in a_garder:
+                p["retiree"] = True
     return valider(plan)
 
 

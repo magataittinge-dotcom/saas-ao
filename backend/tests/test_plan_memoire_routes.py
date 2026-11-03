@@ -36,7 +36,12 @@ def test_proposition_sans_enregistrement(client, db_session, test_org):
     assert r.status_code == 200, r.text
     c = r.json()
     assert c["enregistre"] is False and c["valide"] is False and c["version"] == 0
-    assert c["resume"]["parties"] == 27                      # 25 + « organisation du chantier » + « zorglub quantique »
+    # plan court par défaut : les parties qui servent un sous-critère, celles que le RC annonce, et ses 2 parties nouvelles
+    assert c["resume"]["parties"] + c["resume"]["retirees"] == 27     # 25 + « organisation du chantier » + « zorglub quantique »
+    assert 0 < c["resume"]["parties"] < 27 and c["resume"]["retirees"] > 0
+    gardees = {p["cle"] for p in c["parties"] if not p["retiree"]}
+    assert {"partie_b.dechets", "partie_c.effectifs"} <= gardees
+    assert all(p["retiree"] for p in c["parties"] if p["cle"] == "partie_a.historique")
     assert c["resume"]["sous_criteres_total"] == 2 and c["resume"]["sous_criteres_servis"] == 2
     assert c["a_couvrir"] == []
     ajout = [p for p in c["parties"] if ".ajout_" in p["cle"]]
@@ -74,7 +79,9 @@ def test_enregistrer_puis_valider(client, db_session, test_org):
 def test_valider_sans_rien_enregistrer_valide_la_proposition(client, db_session, test_org):
     _projet(db_session, test_org.id)
     v = client.post(URL + "/valider")
-    assert v.status_code == 200 and v.json()["valide"] and v.json()["resume"]["parties"] == 27
+    assert v.status_code == 200 and v.json()["valide"]
+    proposition = client.get(URL).json()
+    assert v.json()["resume"]["parties"] == proposition["resume"]["parties"] < 27      # le plan court est celui qui est validé
     assert db_session.query(PlanMemoire).count() == 1
 
 
@@ -148,6 +155,10 @@ def test_la_fiche_porte_exigences_sources_et_cases_proposees(client, db_session,
     db_session.add(TeamMember(id="tm-1", organization_id=test_org.id, name="Camille Martin", role="Conducteur de travaux"))
     db_session.add(TeamMember(id="tm-2", organization_id="org-autre", name="Espion Autre", role="Conducteur"))
     db_session.commit()
+    # le patron a gardé toutes les parties du modèle (le plan proposé est plus court : les cases ne vivent que sur les gardées)
+    tout = client.get(URL).json()["parties"]
+    assert client.put(URL, json={"parties": [{"cle": p["cle"], "titre": p["titre"], "retiree": False, "attendue": p["attendue"]}
+                                             for p in tout]}).status_code == 200
     c = client.get(URL).json()
     d = next(p for p in c["parties"] if p["cle"] == "partie_b.dechets")
     assert [e["source"]["document"] for e in d["exigences"]] == ["CCTP.pdf"] and d["exigences"][0]["source"]["page"] == 14
@@ -167,3 +178,19 @@ def test_la_fiche_enregistree_revient_telle_quelle(client, db_session, test_org)
     assert r["resume"]["fiches_remplies"] == 1
     # une fiche non touchée reste « non touchée » (rien ne part au modèle)
     assert next(p for p in r["parties"] if p["cle"] == "partie_a.historique")["fiche"]["references"] is None
+
+
+def test_un_plan_enregistre_par_le_patron_n_est_jamais_recalcule(client, db_session, test_org):
+    """Le plan court ne vaut que pour la PROPOSITION : un plan enregistré revient tel que le patron l'a laissé."""
+    _projet(db_session, test_org.id)
+    propose = client.get(URL).json()["parties"]
+    tout_garde = [{"cle": p["cle"], "titre": p["titre"], "retiree": False, "attendue": p["attendue"]} for p in propose]
+    assert any(p["retiree"] for p in propose)                        # la proposition a des parties décochées
+    assert client.put(URL, json={"parties": tout_garde}).status_code == 200
+    relu = client.get(URL).json()
+    assert relu["enregistre"] is True and not any(p["retiree"] for p in relu["parties"])
+    # un autre choix du patron (une partie sans critère retirée) est lui aussi respecté
+    un_choix = [{**p, "retiree": p["cle"] == "partie_a.historique"} for p in tout_garde]
+    assert client.put(URL, json={"parties": un_choix}).status_code == 200
+    relu = client.get(URL).json()
+    assert [p["cle"] for p in relu["parties"] if p["retiree"]] == ["partie_a.historique"]
