@@ -125,7 +125,7 @@ function TemplateRow({
     }
   }
 
-  const { etat, texte } = etatDeStatut(statut)
+  const { etat, texte, perimee } = etatDeStatut(statut)
   const source = item.source_document ? libelleSource({ document: item.source_document, page: item.source_page ?? null }) : null
   const lien = 'inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-bord-2 px-3 text-sm font-medium text-fg-2 transition-colors hover:bg-surface-2 [@media(pointer:coarse)]:min-h-11'
 
@@ -157,6 +157,7 @@ function TemplateRow({
         <EtatElement
           etat={etat}
           texte={texte}
+          perimee={perimee}
           source={source ? { libelle: source, onVoir: item.source_exigence_id && onOpenSource ? () => onOpenSource(item) : undefined } : undefined}
         />
         {/* Actions — affordance UNIFORME : Télécharger (trame du dossier ou officiel) / Importer rempli */}

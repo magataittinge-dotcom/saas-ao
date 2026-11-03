@@ -37,10 +37,11 @@ export function phraseComptes(c: ComptesPieces): string {
 }
 
 /** Le mot et l'état d'une pièce, pour EtatElement : « Prêt », « À renouveler… », « À joindre »… */
-export function etatDeStatut(s: StatutPiece): { etat: 'pret' | 'a-verifier' | 'a-couvrir'; texte: string } {
-  if (s.code === 'pret') return { etat: 'pret', texte: s.texte }
-  if (s.code === 'a-joindre') return { etat: 'a-couvrir', texte: s.texte }
-  return { etat: 'a-verifier', texte: s.texte }
+export function etatDeStatut(s: StatutPiece): { etat: 'pret' | 'a-verifier' | 'a-couvrir'; texte: string; perimee: boolean } {
+  const perimee = s.classe.includes('--perimee')
+  if (s.code === 'pret') return { etat: 'pret', texte: s.texte, perimee }
+  if (s.code === 'a-joindre') return { etat: 'a-couvrir', texte: s.texte, perimee }
+  return { etat: 'a-verifier', texte: s.texte, perimee }
 }
 
 export function cartesPieces(
