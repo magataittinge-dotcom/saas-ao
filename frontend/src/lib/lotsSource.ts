@@ -44,3 +44,14 @@ export function phraseLotsEcartes(e: Partial<LotsEcartes> | null | undefined): s
   }
   return phrases.length ? phrases.join(' ') : null
 }
+
+/**
+ * Les lots que l'écran des lots affiche, et d'où il les prend. `reponse` est le résultat de la route des lots : `undefined` tant
+ * qu'elle charge (ou en erreur), `null` quand le serveur répond « détection en cours », la réponse sinon. Pendant une détection
+ * en cours on n'utilise JAMAIS la liste gardée dans le projet : elle est l'ancienne (cas d'une détection reprise après la remise à
+ * zéro du plafond de lectures assistées) et, une fois reprise comme liste de départ de l'écran, elle ne serait plus remplacée.
+ */
+export function lotsAAfficher<T>(reponse: { lots: T[] } | null | undefined, lotsDuProjet: T[] | null | undefined): T[] {
+  if (reponse === null) return []
+  return reponse?.lots ?? lotsDuProjet ?? []
+}

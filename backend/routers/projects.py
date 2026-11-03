@@ -449,6 +449,47 @@ def _invalidate_lots_cache(project_id: str, db: Session) -> None:
     db.commit()
 
 
+def _reprise_lots_a_faire(db: Session, project: Project) -> bool:
+    """3/11 (A1) — Le filet IA des lots n'a pas été lancé parce que le plafond de lectures assistées était atteint
+    (`lots_ecartes.ia_plafond`) : faut-il le retenter à CETTE ouverture de l'écran des lots ?
+
+    Oui seulement si le plafond est maintenant remis à zéro (`raison_de_report` vaut None) ET si l'utilisateur n'a encore rien fait
+    sur la liste : lot renommé (`user_label`), lot choisi (`selected_lot`), parcours passé l'étape des lots. Relancer remplacerait
+    la liste (et l'identité des lots) sous ses pieds : dans ce cas le cache est servi tel quel. Un lot ajouté à la main n'existe que
+    dans l'écran (rien n'est enregistré avant « Lancer la lecture », qui enregistre le choix) : il n'y a rien à protéger côté serveur.
+    Jamais en tâche de fond : cette fonction n'est appelée que par la route de l'écran des lots (sans `sans_ia`)."""
+    if (project.lots_ecartes or {}).get("ia_plafond") not in ("jour", "mois"):
+        return False
+    if project.processing_status == "detecting_lots":
+        return False
+    if project.selected_lot or project.selected_lot_name:
+        return False
+    if (project.current_step or 0) > 2 or (project.completed_steps or {}).get("2"):
+        return False
+    if any(isinstance(l, dict) and l.get("user_label") for l in (project.lots_detectes or [])):
+        return False
+    from services import depot_budget
+    return depot_budget.raison_de_report(db, project.organization_id, avec_file=False) is None
+
+
+def _prendre_reprise_lots(db: Session, project_id: str) -> bool:
+    """Prise ATOMIQUE de la reprise : un seul UPDATE conditionnel passe le projet à « detecting_lots » et vide le cache (état d'un
+    cache manquant). Deux ouvertures simultanées : une seule voit « 1 ligne touchée » et lance le fil ; l'autre répond
+    « detecting_lots » comme pour une détection en cours. Les deux conditions (statut et marqueur) évitent aussi qu'une reprise
+    écrase une détection déjà repartie."""
+    from sqlalchemy import or_
+    touchees = db.query(Project).filter(
+        Project.id == project_id,
+        or_(Project.processing_status.is_(None), Project.processing_status != "detecting_lots"),
+    ).update(
+        {"lots_detectes": None, "lots_ecartes": None, "processing_status": "detecting_lots",
+         "processing_progress": 0, "processing_detail": "Démarrage de la détection..."},
+        synchronize_session=False,
+    )
+    db.commit()
+    return touchees == 1
+
+
 # ─── Project CRUD ─────────────────────────────────────────────────────────────
 
 @router.get("", response_model=List[ProjectResponse])
@@ -1793,12 +1834,20 @@ def detect_lots(
         _mark_step_1_complete(project, db)
 
     # ── Cache hit (AMÉLIORATION 7) ─────────────────────────────────────────────
+    reprise = False
     if project.lots_detectes is not None:
         cached = project.lots_detectes
-        return {"lots": cached, "count": len(cached), "cached": True, "ecartes": project.lots_ecartes}
+        # ── Reprise du filet IA (3/11, A1) : plafond remis à zéro depuis, jamais depuis le dépôt (`sans_ia`) ──
+        if sans_ia or not _reprise_lots_a_faire(db, project):
+            return {"lots": cached, "count": len(cached), "cached": True, "ecartes": project.lots_ecartes}
+        if not _prendre_reprise_lots(db, project_id):
+            db.refresh(project)       # une autre ouverture vient de la prendre : même réponse qu'une détection en cours
+            return {"status": "detecting_lots", "progress": project.processing_progress or 0, "detail": project.processing_detail or ""}
+        db.refresh(project)
+        reprise = True
 
     # ── Already detecting? Return current status ──────────────────────────────
-    if project.processing_status == "detecting_lots":
+    if project.processing_status == "detecting_lots" and not reprise:
         return {"status": "detecting_lots", "progress": project.processing_progress or 0, "detail": project.processing_detail or ""}
 
     # ── Dépôt (sans IA) : la lecture sans IA a déjà tourné et le filet reste à passer à l'écran des lots ──

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { choixParDefaut, basculerLot, peutLancer } from '@/lib/choixLots'
-import { etiquettesSourceLot, phraseLotsEcartes, type LotsEcartes } from '@/lib/lotsSource'
+import { etiquettesSourceLot, lotsAAfficher, phraseLotsEcartes, type LotsEcartes } from '@/lib/lotsSource'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -464,7 +464,7 @@ export default function StepLotSelection({ project }: Props) {
     }
   }, [detectSse.detail, detectPhase])
 
-  const allDetected = lotsData?.lots ?? project.lots_detectes ?? []
+  const allDetected = lotsAAfficher(lotsData, project.lots_detectes)
   const errorLots = allDetected.filter(l => l.sources?.includes('error'))
   const [lots, setLots] = useState<(LotOption & { _manual?: boolean })[]>([])
   const [lotsInitialized, setLotsInitialized] = useState(false)
