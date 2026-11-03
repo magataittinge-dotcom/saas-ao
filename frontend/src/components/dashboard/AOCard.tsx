@@ -6,11 +6,11 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
-import { avancementAO, echeanceAO, etatEcheance } from '@/lib/echeance'
+import { echeanceAO, etatEcheance } from '@/lib/echeance'
 import { lienEtape } from '@/lib/intelligence/action'
+import { FIL_ETAPES, avancementAffiche } from '@/lib/mesAO'
 import type { Project } from '@/types'
 
-import { PIPELINE_STEPS } from './PipelineRail'
 
 type Ton = 'neutral' | 'accent' | 'success' | 'danger'
 // Étiquette de statut (Badge du socle) et couleur du filet du haut, par jeton.
@@ -50,7 +50,7 @@ export function AOCard({ project, onDelete }: Props) {
   // 1.14 — échéance et avancement : les fonctions communes (lib/echeance.ts)
   const echeance = etatEcheance(echeanceAO(project))
   const isUrgent = echeance.etat === 'proche' || echeance.etat === 'aujourdhui'
-  const { etape: stepIndex, total: nbEtapes } = avancementAO(project.current_step)
+  const { etape: stepIndex, total: nbEtapes, nom: nomEtape } = avancementAffiche(project)
   const status = STATUS_CONFIG[project.status] ?? STATUS_CONFIG.brouillon
   const filet = isUrgent ? 'from-warning' : status.filet
 
@@ -65,7 +65,7 @@ export function AOCard({ project, onDelete }: Props) {
 
       {/* En-tête */}
       <div className="relative flex items-start justify-between gap-2">
-        <h3 className="line-clamp-2 flex-1 text-sm font-semibold leading-snug text-fg">
+        <h3 className="line-clamp-2 min-w-0 flex-1 break-words text-sm font-semibold leading-snug text-fg">
           {project.name}
         </h3>
         <div className="flex shrink-0 items-center gap-1.5">
@@ -91,8 +91,8 @@ export function AOCard({ project, onDelete }: Props) {
       )}
 
       {/* Date et lot */}
-      <div className="relative -mt-2 flex items-center gap-3 text-xs text-fg-2">
-        <span>
+      <div className="relative -mt-2 flex min-w-0 items-center gap-3 text-xs text-fg-2">
+        <span className="shrink-0">
           {new Date(project.created_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}
         </span>
         {project.selected_lot_name && (
@@ -103,13 +103,13 @@ export function AOCard({ project, onDelete }: Props) {
       {/* Avancement */}
       <div className="relative">
         <div className="mb-1.5 flex justify-between text-xs">
-          <span className="text-fg-3">{PIPELINE_STEPS[stepIndex - 1]}</span>
+          <span className="text-fg-3">{nomEtape}</span>
           <span className="font-mono font-medium tabular-nums text-fg-2">
             Étape {stepIndex} sur {nbEtapes}
           </span>
         </div>
         <div className="flex w-full gap-[3px]">
-          {PIPELINE_STEPS.map((_, i) => (
+          {FIL_ETAPES.map((_, i) => (
             <i
               key={i}
               className={cn('h-[3px] flex-1 rounded-full', i < stepIndex - 1 ? 'bg-fg' : i === stepIndex - 1 ? 'bg-accent-ui' : 'bg-fg-disabled')}
@@ -119,9 +119,9 @@ export function AOCard({ project, onDelete }: Props) {
       </div>
 
       {/* Pied */}
-      <div className="relative flex items-center justify-between">
+      <div className="relative flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         {echeance.etat !== 'sans_date' ? (
-          <div className={cn('flex items-center gap-1.5 text-xs', isUrgent ? 'font-semibold text-warning' : 'text-fg-3')}>
+          <div className={cn('flex min-w-0 items-center gap-1.5 text-xs', isUrgent ? 'font-semibold text-warning' : 'text-fg-3')}>
             {isUrgent ? <AlertTriangle size={11} aria-hidden /> : <Clock size={11} aria-hidden />}
             {echeance.libelle}
           </div>
@@ -129,7 +129,7 @@ export function AOCard({ project, onDelete }: Props) {
           <span />
         )}
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {/* C14 — actions de cycle de vie (1 clic) */}
           {isReady && (
             <Button

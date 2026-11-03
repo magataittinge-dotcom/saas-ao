@@ -5,7 +5,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useProjects } from '@/hooks/useProject'
 import { useAuthStore } from '@/stores/authStore'
 import SynorixIntelligence from '@/components/intelligence/SynorixIntelligence'
-import { echeanceAO, estEnCours, momentLimite } from '@/lib/echeance'
+import { estEnCours } from '@/lib/echeance'
+import { comparerParRemise } from '@/lib/mesAO'
 import { api } from '@/services/api'
 import { AOCard } from '@/components/dashboard/AOCard'
 import DeleteConfirmModal from '@/components/common/DeleteConfirmModal'
@@ -67,9 +68,7 @@ export default function Projects() {
     // Sort
     list.sort((a, b) => {
       if (sort === 'deadline') {
-        const da = momentLimite(echeanceAO(a))?.getTime() ?? Number.MAX_SAFE_INTEGER
-        const db = momentLimite(echeanceAO(b))?.getTime() ?? Number.MAX_SAFE_INTEGER
-        return da - db
+        return comparerParRemise(a, b)
       }
       if (sort === 'created_at') {
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
