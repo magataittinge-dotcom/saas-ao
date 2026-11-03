@@ -13,12 +13,13 @@
 [data-theme='light'],
 [data-theme='dark'] {
   /* ── Teintes : branchées sur les jetons du système (styles/theme.css), clair et nuit ── */
-  --piece-action: var(--warning-fg);
-  --piece-action-fond: var(--warning-bg);
-  --piece-action-filet: var(--warning-border);
-  --piece-pret: var(--success-fg);
-  --piece-pret-fond: var(--success-bg);
-  --piece-pret-filet: var(--success-border);
+  --piece-action: var(--ambre-ink);
+  --piece-action-fond: var(--ambre-soft);
+  --piece-action-filet: var(--ambre-mark);
+  --piece-pret: var(--vert-ink);
+  --piece-pret-fond: var(--vert-soft);
+  --piece-pret-filet: var(--vert-mark);
+  --piece-perimee: var(--rouge-ink);
   --piece-neutre: var(--text-3);
   --piece-neutre-fond: var(--surface-2);
   --piece-neutre-filet: var(--border-1);
@@ -51,6 +52,8 @@
 .statut-piece--a-renouveler,
 .statut-piece--a-confirmer { color: var(--piece-action); }
 .statut-piece--pret { color: var(--piece-pret); }
+/* Une pièce dont la validité est déjà dépassée (statut « expire ») : rouge, avec le mot « À renouveler » et la date de fin. */
+.statut-piece--perimee { color: var(--piece-perimee); }
 .statut-piece--si-concerne,
 .statut-piece--facultatif,
 .statut-piece--attribution,

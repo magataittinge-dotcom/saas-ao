@@ -152,3 +152,18 @@ test('la pastille de Mes AO dans la barre latérale prend la couleur la plus urg
   assert.equal(niveauUrgence([projet({ deadline: '2026-12-09' })], m), 'neutre')
   assert.equal(niveauUrgence([projet({ status: 'soumis', deadline: '2026-11-04' })], m), 'neutre', 'un AO terminé ne compte pas')
 })
+
+import { urgenceQuestions } from '@/components/project/PointsAEclaircir'
+
+test('date limite des questions : ambre à 7 jours, rouge à 3 jours ou moins ou dépassée, rien au-delà ; le texte dit le délai', () => {
+  const m = le(3, 11)
+  const date = (d: string, regle: 'absolue' | 'reponse_acheteur' = 'absolue') => ({ statut: 'trouvee' as const, regle, date: d, heure: null, jours: null, document: null, extrait: null, motif: null })
+  assert.deepEqual(urgenceQuestions(date('2026-11-10'), m), { ton: 'ambre', texte: 'Dans 7 jours' })
+  assert.deepEqual(urgenceQuestions(date('2026-11-06'), m), { ton: 'rouge', texte: 'Dans 3 jours' })
+  assert.deepEqual(urgenceQuestions(date('2026-11-03'), m), { ton: 'rouge', texte: 'Aujourd’hui' })
+  assert.deepEqual(urgenceQuestions(date('2026-11-01'), m), { ton: 'rouge', texte: 'Date dépassée' })
+  assert.equal(urgenceQuestions(date('2026-11-11'), m), null)
+  assert.equal(urgenceQuestions(date('2026-11-04', 'reponse_acheteur'), m), null, 'ce n’est pas la date limite de poser une question')
+  assert.equal(urgenceQuestions({ ...date('2026-11-04'), statut: 'a_verifier' }, m), null)
+  assert.equal(urgenceQuestions(null, m), null)
+})

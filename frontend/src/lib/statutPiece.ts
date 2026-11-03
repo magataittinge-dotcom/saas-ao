@@ -65,7 +65,7 @@ export function statutPiece(p: EntreeStatutPiece, echeance?: string | null): Sta
     return fait('pret', `Prêt${validite}`, false)
   }
   if (p.status === 'expire') {
-    return fait('a-renouveler', fin ? `À renouveler — fin de validité le ${dateFr(fin)}` : 'À renouveler', true)
+    return { ...fait('a-renouveler', fin ? `À renouveler — fin de validité le ${dateFr(fin)}` : 'À renouveler', true), classe: 'statut-piece statut-piece--a-renouveler statut-piece--perimee' }
   }
   if (p.status === 'warning') return fait('a-confirmer', 'Date de validité à confirmer', true)
   if (p.phase === 'attribution') return fait('attribution', 'Pour l’attribution — à préparer', false)

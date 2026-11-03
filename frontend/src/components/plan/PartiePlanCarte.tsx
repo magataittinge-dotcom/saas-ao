@@ -77,7 +77,7 @@ export default function PartiePlanCarte({
             className="inline-flex min-h-9 items-center gap-1 rounded-md px-2 text-sm font-medium text-accent-text hover:bg-surface-0 [@media(pointer:coarse)]:min-h-11"
           >
             Fiche
-            {ficheRemplie(partie.fiche) && <span className="pill pill-conforme ml-1" aria-label="fiche remplie">remplie</span>}
+            {ficheRemplie(partie.fiche) && <span className="pill pill-vert ml-1" aria-label="fiche remplie">remplie</span>}
             <ChevronDown size={15} aria-hidden className={cn('transition-transform duration-base ease-lien motion-reduce:transition-none', ouverte && 'rotate-180')} />
           </button>
         </div>

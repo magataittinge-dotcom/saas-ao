@@ -4,9 +4,9 @@ import { cn } from '@/lib/utils'
 export type EtatPiece = 'pret' | 'a-verifier' | 'a-couvrir'
 
 const ETATS: Record<EtatPiece, { texte: string; icone: LucideIcon; classe: string }> = {
-  pret: { texte: 'Prêt', icone: CheckCircle2, classe: 'text-success' },
-  'a-verifier': { texte: 'À vérifier', icone: CircleHelp, classe: 'text-warning' },
-  'a-couvrir': { texte: 'À couvrir', icone: CircleDashed, classe: 'text-accent-text' },
+  pret: { texte: 'Prêt', icone: CheckCircle2, classe: 'text-vert-ink' },
+  'a-verifier': { texte: 'À vérifier', icone: CircleHelp, classe: 'text-ambre-ink' },
+  'a-couvrir': { texte: 'À couvrir', icone: CircleDashed, classe: 'text-bleu-ink' },
 }
 
 export interface SourceEtat {

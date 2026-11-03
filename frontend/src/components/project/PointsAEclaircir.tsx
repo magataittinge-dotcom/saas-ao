@@ -1,26 +1,43 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, Copy, Loader2, MessageSquareText } from 'lucide-react'
+import { AlertCircle, Check, Clock, Copy, Loader2, MessageSquareText } from 'lucide-react'
 import { api } from '@/services/api'
 import { EtatElement, SectionEtape } from '@/components/etape'
 import EchecAction from '@/components/common/EchecAction'
 import { Button } from '@/components/ui/button'
 import { messageErreur } from '@/lib/erreurs'
 import { copierTexte } from '@/lib/copier'
+import { etatEcheance } from '@/lib/echeance'
 import { libelleSource, libelleDateQuestions, texteACopier, type DateQuestions } from '@/lib/resumeAO'
 import type { SourceFait } from '@/lib/carteAO'
 import type { PointAEclaircir, Project } from '@/types'
 
 const MESSAGE_PREPARATION = "Les questions n'ont pas pu être préparées. Réessayez dans un instant."
 
+/** Ce que dit la proximité de la date limite des questions (COULEURS.md) : rouge à 3 jours ou moins, ambre de 4 à 7 jours ; rien au-delà. */
+export function urgenceQuestions(date: DateQuestions | null | undefined, maintenant: Date = new Date()): { ton: 'rouge' | 'ambre'; texte: string } | null {
+  if (!date || date.statut !== 'trouvee' || !date.date || date.regle === 'reponse_acheteur') return null
+  const e = etatEcheance({ date: date.date, heure: date.heure }, maintenant)
+  if (e.etat === 'passee') return { ton: 'rouge', texte: 'Date dépassée' }
+  if (e.etat === 'aujourdhui') return { ton: 'rouge', texte: 'Aujourd’hui' }
+  if (e.etat === 'proche') return { ton: (e.jours ?? 99) <= 3 ? 'rouge' : 'ambre', texte: `Dans ${e.jours} jour${(e.jours ?? 0) > 1 ? 's' : ''}` }
+  return null
+}
+
 /** La date limite des questions : lue dans le règlement, sans IA ; « À vérifier dans le RC » quand elle n'y est pas lisible. */
 export function DateLimiteQuestions({ date, onVoir }: { date: DateQuestions | null | undefined; onVoir?: (s: SourceFait) => void }) {
   const { libelle, valeur, precision } = libelleDateQuestions(date)
   const source: SourceFait | null = date?.document ? { document: date.document, page: null, excerpt: date.extrait } : null
+  const urgence = urgenceQuestions(date)
   return (
     <div className="grid gap-1.5 rounded-carte border border-bord-2 bg-surface-1 p-5">
       <p className="text-sm font-medium text-fg-2">{libelle}</p>
-      <p className="font-display text-h6 text-fg">{valeur}</p>
+      <p className={urgence ? `font-display text-h6 ${urgence.ton === 'rouge' ? 'text-rouge-ink' : 'text-ambre-ink'}` : 'font-display text-h6 text-fg'}>{valeur}</p>
+      {urgence && (
+        <p className={`inline-flex items-center gap-1.5 text-sm font-semibold ${urgence.ton === 'rouge' ? 'text-rouge-ink' : 'text-ambre-ink'}`}>
+          {urgence.ton === 'rouge' ? <AlertCircle size={14} aria-hidden /> : <Clock size={14} aria-hidden />}{urgence.texte}
+        </p>
+      )}
       {precision && <p className="text-sm text-fg-2">{precision}</p>}
       {date?.motif && date.statut !== 'trouvee' && date.extrait && <p className="text-sm text-fg-2">{date.motif}</p>}
       {source && (
