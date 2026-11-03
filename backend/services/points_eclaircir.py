@@ -49,6 +49,7 @@ RÈGLES ABSOLUES
 - Les passages fournis sont des EXTRAITS partiels du dossier, découpés autour des mots signaux : un passage qui commence ou se termine brusquement n'est pas un défaut du dossier. Ne signale jamais une coupure, ne demande jamais le texte, la suite ou la version complète d'un passage.
 - Rédige en français correct (orthographe et accords soignés), avec vouvoiement de l'acheteur.
 - Les « FAITS DÉJÀ LUS » éventuellement fournis (critères de jugement, validité des offres, variantes, délai d'exécution, visite) sont connus : ne pose aucune question dessus.
+- Ne pose une question que sur une ambiguïté ou une contradiction du dossier, jamais sur ce que les extraits ne contiennent pas.
 - Au plus 8 questions, les plus utiles d'abord. Aucun point sûr ? Renvoie une liste vide : n'invente rien.
 - Chaque question est polie, sobre, autonome (elle se comprend sans le dossier) et se pose telle quelle sur le profil d'acheteur. Elle commence par « Pourriez-vous préciser… », « Pourriez-vous confirmer… » ou « Le dossier indique… ; pourriez-vous… ».
 - JAMAIS de question sur le prix, un montant, un budget, une rémunération, un bordereau ou le chiffrage.
@@ -71,6 +72,13 @@ def _blancs(texte: str) -> str:
 
 # Un extrait coupé par notre fenêtre n'est pas un défaut du dossier : toute question qui en parle est écartée.
 _TRONQUE = re.compile(r"tronqu|coupe\b|coupee|coupes\b|coupure|partiel|illisible|incomplet|extraits?\b|interrompu|brusquement|texte complet|version complete")
+# Une question justifiée par ce que NOS passages (extraits) ne contiennent pas n'est pas une ambiguïté du dossier : écartée.
+# Texte plié (minuscules, sans accents) ; singulier, pluriel et accords (« passage fourni », « passages fournies »…).
+_SUR_NOS_PASSAGES = re.compile(
+    r"\bpassages?\s+(?:\w+\s+){0,2}?(?:fourni|transmis|communiqu|disponible|presente|soumis|analys|selectionn)\w*"
+    r"|\b(?:dans|par|selon)\s+(?:les|ces|le|ce|l'un des)\s+passages?\b"
+    r"|\bpassages?\s+(?:ne\s+|n')\s*(?:\w+\s+){0,2}?(?:pas|aucun\w*|rien)\b"
+    r"|\b(?:ne\s+|n')\s*(?:\w+\s+){0,3}?(?:pas|aucun\w*)\s+(?:\w+\s+){0,2}?(?:dans|par)\s+(?:les|ces)\s+(?:passages?|extraits?)\b")
 # Sujets que l'analyse a déjà lus : critères de jugement, validité des offres, variantes (quand elle en a la valeur).
 _SUR_CRITERES = re.compile(r"criteres? (de|d')\s*(jugement|attribution|notation|selection)|ponderation|notation des offres|bareme")
 _SUR_VALIDITE = re.compile(r"(duree|delai|periode) de validite|validite des offres|valable \d+")
@@ -149,6 +157,9 @@ def normaliser(bruts: object, *, maximum: int = MAX_POINTS, faits: Optional[dict
             continue
         if _TRONQUE.search(_plie(f"{question} {pourquoi}")):
             logger.info("points à éclaircir : une question sur un extrait coupé a été écartée")
+            continue
+        if _SUR_NOS_PASSAGES.search(_plie(f"{question} {pourquoi}")):
+            logger.info("points à éclaircir : une question sur ce que nos passages ne contiennent pas a été écartée")
             continue
         if _sur_fait_connu(f"{question} {pourquoi}", faits):
             logger.info("points à éclaircir : une question sur un fait déjà lu a été écartée")

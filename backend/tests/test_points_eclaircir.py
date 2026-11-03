@@ -279,3 +279,30 @@ def test_la_lecture_filtre_les_points_deja_enregistres_sans_reecrire_la_base(cli
 def test_la_lecture_d_une_analyse_ancienne_sans_points_ne_change_rien(client, db_session, test_org):
     _projet(db_session, test_org.id, infos={"objet": "AO inventé"})
     assert client.get(f"/api/projects/{PID}").json()["infos_marche"] == {"objet": "AO inventé"}
+
+
+# ── 3/11 : plus de question sur ce que NOS extraits ne contiennent pas ──────────────────────────────────────────
+
+@pytest.mark.parametrize("question,pourquoi", [
+    ("Pourriez-vous préciser le nombre de pièces de la fourniture ?", "Les passages fournis ne donnent pas ce nombre."),
+    ("Pourriez-vous confirmer la durée des prolongations ?", "Cette durée n'est pas fournie dans les passages."),
+    ("Pourriez-vous préciser le calendrier des visites ?", "Le passage fourni ne mentionne aucune date."),
+    ("Pourriez-vous indiquer la liste des locaux concernés ?", "Les extraits ne contiennent pas cette liste."),
+    ("Les passages transmis ne précisent pas l'ordre des tâches : pourriez-vous le préciser ?", "Flou."),
+    ("Pourriez-vous préciser l'accès au site ?", "L'information n'est pas donnée dans les passages disponibles."),
+    ("Pourriez-vous préciser l'accès au site ?", "Ces passages ne présentent pas de plan d'accès."),
+])
+def test_une_question_sur_ce_que_les_passages_ou_extraits_ne_contiennent_pas_est_ecartee(question, pourquoi):
+    assert pe.normaliser([{"question": question, "pourquoi": pourquoi}]) == []
+
+
+def test_une_vraie_contradiction_du_dossier_reste_posee():
+    vraie = {"question": "Le règlement indique 3 lots et le cahier des charges 2 lots ; pourriez-vous confirmer le nombre de lots ?",
+             "pourquoi": "Le règlement et le cahier des charges se contredisent sur le nombre de lots."}
+    assert len(pe.normaliser([vraie])) == 1
+    assert len(pe.normaliser([{"question": "Pourriez-vous préciser le phasage du passage piéton provisoire ?", "pourquoi": "Deux pièces donnent des phases différentes."}])) == 1
+
+
+def test_la_consigne_interdit_de_questionner_ce_que_les_extraits_ne_contiennent_pas():
+    assert ("Ne pose une question que sur une ambiguïté ou une contradiction du dossier, "
+            "jamais sur ce que les extraits ne contiennent pas.") in pe._SYSTEM
