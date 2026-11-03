@@ -3,6 +3,7 @@ import { useParams, Routes, Route, Navigate, useNavigate } from 'react-router-do
 import { MapPin } from 'lucide-react'
 import { useProject } from '@/hooks/useProject'
 import { StepProgress, segmentDeEtape } from '@/components/project/StepProgress'
+import { lotUniqueDuDossier } from '@/lib/lotUnique'
 import { actionEtape } from '@/lib/intelligence/action'
 import { DeadlinePill } from '@/components/dashboard/DeadlinePill'
 import { echeanceAO } from '@/lib/echeance'
@@ -94,6 +95,7 @@ export default function Project() {
         <StepProgress
           currentStep={project.current_step}
           completedSteps={project.completed_steps}
+          lotUnique={lotUniqueDuDossier(project)}
           onStepClick={handleStepClick}
         />
       </div>

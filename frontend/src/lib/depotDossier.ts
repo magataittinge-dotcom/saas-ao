@@ -2,6 +2,7 @@
 import type { CarteResume } from '@/components/etape'
 import { libelleType } from '@/lib/typesPieces'
 import { tailleFichier } from '@/lib/tailleFichier'
+import type { LotUnique } from '@/lib/lotUnique'
 import type { Project, ProjectDocument } from '@/types'
 
 /** Statuts du projet pendant que le serveur lit le dossier (l'utilisateur peut avoir quitté la page). */
@@ -10,7 +11,7 @@ export const ETATS_LECTURE_SERVEUR: readonly string[] = ['uploading', 'extractin
 const TYPES_CLES = ['rc', 'ccap', 'cctp', 'dpgf', 'acte_engagement'] as const
 
 /** Fichiers déposés, pièces clés reconnues (règlement, clauses, prix, engagement), et ce qui reste à classer. Rien sans pièce. */
-export function cartesDepot(documents: readonly Pick<ProjectDocument, 'type' | 'file_size'>[], project?: Pick<Project, 'lots_detectes'> | null): CarteResume[] {
+export function cartesDepot(documents: readonly Pick<ProjectDocument, 'type' | 'file_size'>[], project?: Pick<Project, 'lots_detectes'> | null, lotUnique?: LotUnique | null): CarteResume[] {
   if (documents.length === 0) return []
   const reconnues = TYPES_CLES.filter((t) => documents.some((d) => d.type === t))
   const aClasser = documents.filter((d) => !d.type || d.type === 'autre').length
@@ -24,7 +25,11 @@ export function cartesDepot(documents: readonly Pick<ProjectDocument, 'type' | '
     },
     { libelle: 'À classer', valeur: String(aClasser), etat: aClasser > 0 ? 'a-verifier' : 'pret', detail: aClasser > 0 ? 'Indiquez ce que sont ces fichiers dans la liste ci-dessous.' : 'Tous les fichiers sont reconnus.' },
   ]
-  const lots = project?.lots_detectes?.length ?? 0
-  if (lots > 0) cartes.push({ libelle: 'Lots détectés', valeur: String(lots), etat: 'neutre', detail: lots === 1 ? 'Un seul lot : la lecture se lance depuis cette page.' : 'À choisir à l’étape suivante.' })
+  // Un lot (ou un marché unique) : la carte le dit, il n'y a rien à choisir à l'étape suivante.
+  if (lotUnique) cartes.push({ libelle: 'Lots détectés', valeur: `Lot unique : ${lotUnique.designation}`, etat: 'neutre', detail: 'La lecture se lance depuis cette page.' })
+  else {
+    const lots = project?.lots_detectes?.length ?? 0
+    if (lots > 0) cartes.push({ libelle: 'Lots détectés', valeur: String(lots), etat: 'neutre', detail: 'À choisir à l’étape suivante.' })
+  }
   return cartes
 }

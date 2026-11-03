@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { useCompanionStore } from '@/stores/companionStore'
 import CompanionOrb from '@/components/ui/CompanionOrb'
+import type { LotUnique } from '@/lib/lotUnique'
 
 // Numérotation d'AFFICHAGE (1-7). `serveur` : le numéro d'étape tenu par le serveur (current_step, completed_steps), qui ne
 // change pas : « Plan » et « Rédiger » se rangent derrière l'étape 5 du serveur, « Export » derrière la 6.
@@ -23,6 +24,8 @@ interface Props {
   currentStep: number
   completedSteps?: Record<string, boolean>
   onStepClick?: (step: number) => void
+  /** Le dossier n'a qu'un lot (ou un marché unique) : l'étape « Lots » est faite d'office et dit « 1 lot ». */
+  lotUnique?: LotUnique | null
 }
 
 /**
@@ -31,7 +34,7 @@ interface Props {
  * seuls les ronds (44 px) et le nom de l'étape active sont montrés : la ligne ne déborde jamais.
  * Le Compagnon veille à droite de la pipeline.
  */
-export function StepProgress({ currentStep, completedSteps = {}, onStepClick }: Props) {
+export function StepProgress({ currentStep, completedSteps = {}, onStepClick, lotUnique = null }: Props) {
   const { pathname } = useLocation()
   const companionState = useCompanionStore((s) => s.state)
   // Sans segment reconnu dans l'URL : l'étape la plus avancée du serveur (« Plan » quand le serveur est à l'étape 5).
@@ -42,8 +45,10 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick }: 
     <div className="flex items-center w-full gap-4">
       <div className="flex items-start flex-1 min-w-0">
         {STEPS.map((step, index) => {
+          const lotFait = !!lotUnique && step.segment === 'lots'
           const isCompleted =
-            completedSteps[String(step.serveur)] === true || step.serveur < currentStep
+            completedSteps[String(step.serveur)] === true || step.serveur < currentStep || lotFait
+          const precision = lotFait ? '1 lot' : null
           const isActive    = step.number === activeStep
           const isClickable = step.serveur <= currentStep && !!onStepClick
 
@@ -53,7 +58,7 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick }: 
                 type="button"
                 disabled={!isClickable}
                 onClick={() => onStepClick && onStepClick(step.number)}
-                aria-label={step.label}
+                aria-label={precision ? `${step.label}, ${precision}` : step.label}
                 aria-current={isActive ? 'step' : undefined}
                 className={cn(
                   'flex flex-col items-center gap-1.5 bg-transparent border-none p-0 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-ring rounded-lg',
@@ -85,6 +90,11 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick }: 
                 >
                   {step.label}
                 </span>
+                {precision && (
+                  <span className={cn('-mt-1 text-xs whitespace-nowrap', isActive ? 'block' : 'hidden sm:block')} style={{ color: 'var(--text-2)' }}>
+                    {precision}
+                  </span>
+                )}
               </button>
 
               {/* Connecteur — fin, aligné sur le centre des ronds */}

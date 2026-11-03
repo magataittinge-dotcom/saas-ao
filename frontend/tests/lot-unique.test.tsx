@@ -5,6 +5,8 @@ import assert from 'node:assert/strict'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { lotUniqueDuDossier } from '@/lib/lotUnique'
 import { actionEtape } from '@/lib/intelligence/action'
+import { StepProgress, STEPS } from '@/components/project/StepProgress'
+import { MemoryRouter } from 'react-router-dom'
 import CarteLotUnique from '@/components/depot/CarteLotUnique'
 import { lire, sansCommentaires } from './outils/sources'
 
@@ -78,9 +80,51 @@ test('l’écran de dépôt : aucune lecture ne part sans le clic ; le clic pass
   assert.match(hook, /err\.response\?\.status === 402/)          // la garde de quota du serveur ouvre la grille des offres
 })
 
-test('le résumé du dépôt : un seul lot se lit depuis la page, plusieurs lots se choisissent à l’étape suivante', async () => {
+test('le résumé du dépôt : « Lot unique : … » sans « À choisir » ; plusieurs lots : inchangé', async () => {
   const { cartesDepot } = await import('@/lib/depotDossier')
   const docs = [{ type: 'rc' as const, file_size: 1 }]
-  assert.equal(cartesDepot(docs, { lots_detectes: [LOT] }).at(-1)?.detail, 'Un seul lot : la lecture se lance depuis cette page.')
-  assert.equal(cartesDepot(docs, { lots_detectes: [LOT, { id: 'lot4', nom: 'Lot 4' }] }).at(-1)?.detail, 'À choisir à l’étape suivante.')
+  const seul = lotUniqueDuDossier({ name: 'AO démo', lots_detectes: [LOT] })
+  const carteSeul = cartesDepot(docs, { lots_detectes: [LOT] }, seul).at(-1)
+  assert.equal(carteSeul?.libelle, 'Lots détectés')
+  assert.equal(carteSeul?.valeur, 'Lot unique : Lot 3 — Menuiseries (démo)')
+  assert.doesNotMatch(JSON.stringify(carteSeul), /À choisir/)
+  const deux = [LOT, { id: 'lot4', nom: 'Lot 4' }]
+  const carteDeux = cartesDepot(docs, { lots_detectes: deux }, lotUniqueDuDossier({ name: 'x', lots_detectes: deux })).at(-1)
+  assert.deepEqual([carteDeux?.valeur, carteDeux?.detail], ['2', 'À choisir à l’étape suivante.'])
+})
+
+test('marché unique : la carte « Lots détectés » existe aussi (aucun lot repéré) et dit « Lot unique : <objet> »', async () => {
+  const { cartesDepot } = await import('@/lib/depotDossier')
+  const docs = [{ type: 'rc' as const, file_size: 1 }]
+  const unique = lotUniqueDuDossier({ name: 'Réhabilitation d’une salle (démo)', lots_detectes: [] })
+  assert.equal(cartesDepot(docs, { lots_detectes: [] }, unique).at(-1)?.valeur, 'Lot unique : Réhabilitation d’une salle (démo)')
+  assert.equal(cartesDepot(docs, { lots_detectes: [] }, null).at(-1)?.libelle, 'À classer')      // pas de lot unique, pas de lot : pas de carte
+})
+
+const filLots = (lotUnique: Parameters<typeof StepProgress>[0]['lotUnique'], courant = 2, completes: Record<string, boolean> = { '1': true }) =>
+  renderToStaticMarkup(
+    <MemoryRouter initialEntries={['/projects/p1/upload']}><StepProgress currentStep={courant} completedSteps={completes} lotUnique={lotUnique} /></MemoryRouter>)
+
+test('la barre des étapes : un lot unique rend « Lots » fait, avec la coche et « 1 lot » sous le libellé ; le fil garde 7 étapes', () => {
+  const html = filLots({ id: 'lot3', designation: 'Lot 3', marcheUnique: false }, 1, { '1': true })
+  assert.equal(STEPS.length, 7)
+  const boutonLots = html.match(/<button[^>]*aria-label="Lots[^"]*"[^>]*>[\s\S]*?<\/button>/)?.[0] ?? ''
+  assert.match(boutonLots, /<svg/)                       // la coche (Lucide Check)
+  assert.match(boutonLots, />1 lot</)
+  assert.equal((html.match(/>1 lot</g) ?? []).length, 1)
+  assert.equal((html.match(/<button/g) ?? []).length, 7)
+})
+
+test('le marché unique se compte aussi « 1 lot » ; plusieurs lots ou détection pas faite : « Lots » reste à faire', () => {
+  assert.match(filLots({ id: null, designation: 'Objet', marcheUnique: true }, 1), />1 lot</)
+  const sans = filLots(null, 1)
+  assert.doesNotMatch(sans, />1 lot</)
+  const boutonLots = sans.match(/<button[^>]*aria-label="Lots"[^>]*>[\s\S]*?<\/button>/)?.[0] ?? ''
+  assert.doesNotMatch(boutonLots, /<svg/)
+  assert.match(boutonLots, />2</)
+})
+
+test('Project.tsx passe le lot unique du projet à la barre des étapes', () => {
+  const projet = sansCommentaires(lire('src/routes/Project.tsx'))
+  assert.match(projet, /lotUnique=\{lotUniqueDuDossier\(project\)\}/)
 })

@@ -420,7 +420,7 @@ export default function StepUpload({ project }: Props) {
               Étape suivante : Lots
             </Button>
           )}
-          resume={<BandeResume cartes={cartesDepot(documents, project)} libelle="Le dossier déposé" />}
+          resume={<BandeResume cartes={cartesDepot(documents, project, lotUnique)} libelle="Le dossier déposé" />}
           barre={
         <BarreEtape>
           <BilanBarre
