@@ -49,7 +49,23 @@ def _resolve_storage_uri() -> str | None:
     return settings.REDIS_URL or None
 
 
-limiter = Limiter(
+class LimiteurResilient(Limiter):
+    """`Limiter` de slowapi qui survit à une panne de son stockage.
+
+    `swallow_errors=True` laisse passer la requête quand Redis est injoignable
+    ou refuse le mot de passe, mais slowapi ne pose `request.state.
+    view_rate_limit` qu'à la fin d'une vérification réussie ; son middleware
+    et son décorateur le lisent ensuite sans condition : `'State' object has no
+    attribute 'view_rate_limit'`, soit une 500 sur presque toute l'API (constat
+    de la répétition du 3/11). On le pose donc à `None` avant chaque
+    vérification : `_inject_headers(…, None)` ne fait rien."""
+
+    def _check_request_limit(self, request, endpoint_func, in_middleware=True):
+        request.state.view_rate_limit = None
+        super()._check_request_limit(request, endpoint_func, in_middleware)
+
+
+limiter = LimiteurResilient(
     key_func=org_or_ip_key,
     default_limits=["600/minute"],
     storage_uri=_resolve_storage_uri(),

@@ -14,6 +14,10 @@ a() { grep -iE "^$1:" <<<"$2" | head -1 | cut -d' ' -f2- ; }
 # 1. santé de l'API
 s=$(curl -sS -m 10 "$URL/api/health" 2>&1); grep -q '"status"' <<<"$s" && ok "api/health : ${s:0:120}" || ko "api/health : ${s:0:120}"
 
+# 1b. limiteur de débit : /api/projects sans jeton → 401 (500 = Redis injoignable ou mauvais mot de passe dans REDIS_URL)
+c=$(curl -sS -o /dev/null -w '%{http_code}' -m 10 "$URL/api/projects")
+[ "$c" = "401" ] && ok "api/projects sans jeton : 401" || ko "api/projects sans jeton : $c (attendu 401 ; 500 = Redis injoignable ou mauvais mot de passe dans REDIS_URL)"
+
 # 2. redirections
 h=$(entete -m 10 "http://${URL#https://}/"); grep -qE "^HTTP/[0-9.]+ 301" <<<"$h" && ok "http → https (301)" || ko "http → https : $(head -1 <<<"$h")"
 

@@ -164,3 +164,116 @@ def test_chaque_route_de_l_appli_est_vue_par_la_limite_globale():
         if endpoint_de_la_requete(app, scope) is None:
             non_vues.append(f"{methode} {route.path_format}")
     assert not non_vues, f"{len(non_vues)} routes exemptées de la limite globale : {non_vues[:5]}"
+
+
+# ── 6. panne du stockage du limiteur : la requête passe (nuit du 3/11) ────────
+
+def _mini_app_avec_limite(limite):
+    """Petite appli avec le vrai middleware de limitage de Synorix et une route
+    protégée (401 sans jeton) à côté d'une route publique (200)."""
+    from fastapi import HTTPException
+
+    mini = FastAPI()
+    mini.state.limiter = limite
+    mini.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    mini.add_middleware(_middleware_de_limite())
+
+    @mini.get("/api/projects")
+    def projets():
+        raise HTTPException(status_code=401, detail="Non authentifié")
+
+    @mini.get("/api/public")
+    def public():
+        return {"ok": True}
+
+    return TestClient(mini, raise_server_exceptions=False)
+
+
+def test_redis_injoignable_ne_donne_pas_de_500():
+    """Avec `REDIS_URL` vers un Redis qui ne répond pas, la requête donnait
+    500 (`'State' object has no attribute 'view_rate_limit'`) au lieu de
+    passer : `swallow_errors` laissait passer la vérification, mais le
+    middleware lisait quand même `request.state.view_rate_limit`, jamais posé
+    puisque la vérification avait échoué."""
+    from services.rate_limit import LimiteurResilient
+
+    limite = LimiteurResilient(key_func=org_or_ip_key, default_limits=["600/minute"],
+                     storage_uri="redis://127.0.0.1:1/0", swallow_errors=True,
+                     headers_enabled=False)
+    c = _mini_app_avec_limite(limite)
+    assert c.get("/api/projects").status_code == 401
+    assert c.get("/api/public").status_code == 200
+
+
+@pytest.mark.parametrize("erreur", ["connexion", "authentification"])
+def test_erreur_du_stockage_ne_donne_pas_de_500(erreur):
+    """Même chose si le stockage lève une erreur de connexion ou de mot de
+    passe au moment du comptage (ici simulée sur le stockage réel)."""
+    import redis
+    from services.rate_limit import LimiteurResilient
+
+    exc = (redis.exceptions.ConnectionError("Connection refused") if erreur == "connexion"
+           else redis.exceptions.AuthenticationError("invalid password"))
+    limite = LimiteurResilient(key_func=org_or_ip_key, default_limits=["600/minute"],
+                     swallow_errors=True, headers_enabled=False)
+
+    def _hit(*a, **k):
+        raise exc
+
+    limite.limiter.hit = _hit
+    c = _mini_app_avec_limite(limite)
+    assert c.get("/api/projects").status_code == 401
+    assert c.get("/api/public").status_code == 200
+
+
+def test_le_limiteur_limite_toujours_quand_le_stockage_marche():
+    """Contre-épreuve : le correctif ne désactive pas la limite."""
+    from services.rate_limit import LimiteurResilient
+
+    limite = LimiteurResilient(key_func=org_or_ip_key, default_limits=["2/minute"],
+                     swallow_errors=True, headers_enabled=False)
+    c = _mini_app_avec_limite(limite)
+    codes = [c.get("/api/public").status_code for _ in range(3)]
+    assert codes == [200, 200, 429], codes
+
+
+def test_route_decoree_avec_stockage_en_panne_passe_aussi():
+    """Les routes à limite propre (`@limiter.limit`, auth/sync, IA…) passent
+    aussi quand le stockage lève une erreur."""
+    import redis
+    from services.rate_limit import LimiteurResilient
+
+    limite = LimiteurResilient(key_func=org_or_ip_key, default_limits=["600/minute"],
+                     swallow_errors=True, headers_enabled=False)
+
+    def _hit(*a, **k):
+        raise redis.exceptions.ConnectionError("Connection refused")
+
+    limite.limiter.hit = _hit
+    mini = FastAPI()
+    mini.state.limiter = limite
+    mini.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    mini.add_middleware(_middleware_de_limite())
+
+    @mini.get("/chere")
+    @limite.limit("3/minute")
+    def chere(request: Request):
+        return {"ok": True}
+
+    assert TestClient(mini, raise_server_exceptions=False).get("/chere").status_code == 200
+
+
+def test_appli_reelle_avec_stockage_en_panne(rl_enabled, monkeypatch):
+    """Sur l'appli réelle : /api/projects sans jeton -> 401 et /api/health -> 200
+    même si le stockage du limiteur lève une erreur."""
+    import redis
+
+    from main import app
+
+    def _hit(*a, **k):
+        raise redis.exceptions.ConnectionError("Connection refused")
+
+    monkeypatch.setattr(limiter.limiter, "hit", _hit)
+    client = TestClient(app, raise_server_exceptions=False)
+    assert client.get("/api/projects").status_code == 401
+    assert client.get("/api/health").status_code == 200
