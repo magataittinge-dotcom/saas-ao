@@ -14,13 +14,14 @@ function mesAoVide() {
   return renderToStaticMarkup(<QueryClientProvider client={c}><MemoryRouter><Projects /></MemoryRouter></QueryClientProvider>)
 }
 
-test('Mes AO sans aucun AO : un seul bloc, une seule action, ce que fait l\'écran est dit', () => {
+test('Mes AO sans aucun AO : la zone de dépôt, l\'accès à Mon entreprise, ce que fait l\'écran est dit', () => {
   const html = mesAoVide()
-  const boutons = (html.match(/<button[^>]*>[^<]*(?:<[^>]+>[^<]*)*?<\/button>/g) ?? []).filter((b) => /AO|appel/i.test(b))
-  assert.equal(boutons.length, 1, `une seule action pour créer un AO (${boutons.length} trouvées)`)
   assert.ok(!html.includes('data-synorix-intelligence'), 'pas de scène « À faire maintenant » sans AO')
   assert.ok(!/Aucun (projet|appel)/.test(html), 'le vide n\'est pas annoncé en plus du bloc')
-  assert.ok(/dossier/i.test(html) && /ZIP/.test(html), 'dit quoi déposer')
+  assert.ok(/Déposez le dossier de l.acheteur/.test(html) && /ZIP/.test(html), 'dit quoi déposer')
+  assert.ok(html.includes('href="/company"') && html.includes('Compléter Mon entreprise'), 'un lien vers Mon entreprise')
+  assert.ok(html.includes('Trouvés par la veille pour vous'), 'la veille est proposée')
+  assert.ok(!html.includes('Votre premier dossier est offert'), 'l\'offre n\'est annoncée que pour un compte à l\'essai intact')
 })
 
 import Vault from '@/routes/Vault'

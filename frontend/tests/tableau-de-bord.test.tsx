@@ -1,5 +1,5 @@
 // Accueil (31/10) : la bande « Vos AO en cours », puis la veille (carte et liste, chargées à la demande) ;
-// « Synorix Intelligence » est en haut de Mes AO. Le « Bonjour, … » reste le seul h1 de l'accueil.
+// Mes AO a son propre écran (résumé, « À la une », une ligne par AO). Le « Bonjour, … » reste le seul h1 de l'accueil.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -78,7 +78,8 @@ test('la carte et ses données ne sont importées que par l\'accueil, en lazy (j
     if (f.startsWith('src/components/veille/') || f === 'src/lib/veille.ts' || f === 'src/lib/carteFrance.ts' || f === 'src/hooks/useVeille.ts' || f === 'src/services/veille.ts' || f === 'src/services/adresse.ts') continue
     const code = sansCommentaires(lire(f))
     if (/from '@\/(components\/veille|lib\/veille|lib\/carteFrance|hooks\/useVeille|services\/veille|services\/adresse)/.test(code)) intrus.push(f)
-    if (/import\('@\/components\/veille\//.test(code) && f !== 'src/routes/Dashboard.tsx') intrus.push(f)
+    // l'accueil, et l'écran vide de Mes AO (trois avis pour la zone enregistrée), les chargent à la demande
+    if (/import\('@\/components\/veille\//.test(code) && f !== 'src/routes/Dashboard.tsx' && f !== 'src/components/mesao/VideMesAO.tsx') intrus.push(f)
   }
   assert.deepEqual(intrus, [], 'importé en dur ou hors de l\'accueil')
 })
@@ -113,17 +114,16 @@ test('la veille sans zone : « Choisissez une zone sur la carte », la carte et 
   assert.ok(html.includes('cf-svg') && html.includes('Carte de France'), 'la carte')
 })
 
-test('Mes AO : Synorix Intelligence en haut, la liste des AO dessous', () => {
+test('Mes AO : on arrive sur du travail en cours — en-tête, résumé, « À la une », une ligne par AO avec le verbe de sa prochaine action', () => {
   const html = renderToStaticMarkup(<QueryClientProvider client={client(PROJETS_DEMO)}><MemoryRouter><Projects /></MemoryRouter></QueryClientProvider>)
-  assert.ok(html.includes('data-synorix-intelligence'), 'l\'intelligence est sur Mes AO')
-  assert.ok(/<h2[^>]*id="syx-titre"[^>]*>À faire maintenant<\/h2>/.test(html))
-  assert.ok((html.match(/Bonjour/g) ?? []).length <= 1, 'un seul « Bonjour » sur Mes AO (celui de l\'intelligence)')
-  assert.ok(!/Bonjour/.test(sansCommentaires(lire('src/routes/Projects.tsx'))), 'l\'en-tête de Mes AO ne salue pas une seconde fois')
-  assert.equal((html.match(/data-bulle="/g) ?? []).length, 6, 'six bulles')
-  assert.ok(html.includes('src="/visage/tete-ouverte-poster.webp"'))
   assert.equal((html.match(/<h1[\s>]/g) ?? []).length, 1)
-  assert.ok(html.indexOf('data-synorix-intelligence') < html.indexOf('data-project-id') || !html.includes('data-project-id'), 'l\'intelligence précède la liste')
-  assert.ok(html.indexOf('Mes appels d&#x27;offres') < html.indexOf('data-synorix-intelligence'))
+  assert.ok(/<section[^>]*aria-label="Résumé"/.test(html), 'les cartes de résumé')
+  assert.equal((html.match(/data-carte-resume=""/g) ?? []).length, 4, 'quatre cartes de résumé')
+  assert.ok(html.includes('À la une'), '« À la une »')
+  assert.ok(!html.includes('data-synorix-intelligence') && !html.includes('data-bulle='), 'plus de visage animé ni de bulles : un seul calcul, les cartes')
+  assert.ok(!/>Continuer</.test(html), 'jamais « Continuer » : le bouton porte le verbe de la prochaine action')
+  assert.ok(html.indexOf('À la une') < html.indexOf('data-ligne-ao'), '« À la une » précède la liste')
+  assert.ok(!/Bonjour/.test(sansCommentaires(lire('src/routes/Projects.tsx'))), 'l\'en-tête de Mes AO ne salue pas')
 })
 
 test("l'écran « premier DCE offert » (affiché sur le tableau de bord) : champ et bouton du socle, visage de public/visage", () => {
@@ -141,7 +141,7 @@ test("l'écran « premier DCE offert » (affiché sur le tableau de bord) : cham
 
 test('Mes AO : le champ de recherche fait 44 px de haut et garde un contour à 3:1 (bord des champs)', () => {
   const src = sansCommentaires(lire('src/routes/Projects.tsx'))
-  const champ = src.match(/<input[^>]*placeholder="Rechercher un projet\.\.\."[\s\S]*?\/>/)?.[0]
+  const champ = src.match(/<input[^>]*placeholder="Nom, acheteur, lot…"[\s\S]*?\/>/)?.[0]
   assert.ok(champ, 'le champ de recherche existe')
   assert.match(champ!, /min-h-11/, 'hauteur minimale 44 px')
   assert.match(champ!, /var\(--border-field\)/, 'contour « bord des champs » (3:1 minimum)')

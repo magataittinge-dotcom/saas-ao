@@ -195,6 +195,8 @@ export interface InfosMarche {
   assurances_specifiques?: string[]
   /** Questions à poser à l'acheteur (absent : pas encore préparées ; liste vide : rien à poser). */
   points_a_eclaircir?: PointAEclaircir[]
+  /** L'avis de la veille d'où vient l'AO (conservé après l'analyse). */
+  source_avis?: { id_boamp?: string | null; url_avis?: string | null; url_dossier?: string | null } | null
 }
 
 export interface PointAEclaircir {
@@ -213,6 +215,14 @@ export interface LotOption {
   confidence?: number    // 0–100 detection confidence (kept server-side; not displayed)
   sources?: string[]     // ["excel", "rc_text", "filename", "error"]
   tranches?: string[]    // ["Tranche ferme: Existant école", ...] (AMÉLIORATION 7)
+}
+
+/** Ce que la liste « Mes AO » affiche en plus de l'étape (GET /projects ; null ailleurs ; chaque champ null = la donnée n'existe pas). */
+export interface AvancementAO {
+  unites: { analyses: number; memoires: number }
+  pieces: { total: number; pretes: number } | null
+  plan_valide_le: string | null
+  memoire_ecrit_le: string | null
 }
 
 export interface Project {
@@ -236,6 +246,8 @@ export interface Project {
   processing_detail?: string
   created_at: string
   updated_at: string
+  depose_at?: string | null
+  avancement?: AvancementAO | null
 }
 
 // ─── Project Documents (DCE) ──────────────────────────────────────────────────

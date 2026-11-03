@@ -47,3 +47,98 @@ test('tri par remise : les AO en cours d’abord (remise la plus proche), les te
   const tri = [termine, lointain, sansDate, passee, proche].sort((a, b) => comparerParRemise(a, b, maintenant)).map((p) => p.id)
   assert.deepEqual(tri, ['c', 'l', 's', 'x', 't'])
 })
+
+import {
+  enTraitement, faitsALaUne, niveauRemise, quandCourt, repartitionTermines, resumeMesAO, texteUnites, uniteMois, versAvisOrigine,
+} from '@/lib/mesAO'
+
+test('niveau de la remise : rouge à 3 jours ou moins ou date dépassée, ambre de 4 à 7 jours, sinon neutre', () => {
+  const m = le(3, 11)
+  const niveau = (deadline?: string) => niveauRemise(projet({ deadline }), m)
+  assert.equal(niveau('2026-11-03'), 'rouge') // aujourd'hui
+  assert.equal(niveau('2026-11-06'), 'rouge') // J-3
+  assert.equal(niveau('2026-11-07'), 'ambre') // J-4
+  assert.equal(niveau('2026-11-10'), 'ambre') // J-7
+  assert.equal(niveau('2026-11-11'), 'neutre') // J-8
+  assert.equal(niveau('2026-10-20'), 'rouge') // dépassée
+  assert.equal(niveau(undefined), 'neutre')
+})
+
+test('le résumé : en cours, remise sous 7 jours (la couleur la plus urgente gagne), à décider', () => {
+  const m = le(3, 11)
+  const liste = [
+    projet({ id: 'a', deadline: '2026-11-06', current_step: 6 }),
+    projet({ id: 'b', deadline: '2026-11-09', current_step: 5 }),
+    projet({ id: 'c', deadline: '2026-11-17', status: 'analyzed', current_step: 3 }),
+    projet({ id: 'd', deadline: '2026-12-08', processing_status: 'analyzing' }),
+    projet({ id: 'e', status: 'soumis', deadline: '2026-10-28' }),
+  ]
+  const r = resumeMesAO(liste, m)
+  assert.equal(r.enCours, 4)
+  assert.equal(r.enLecture, 1)
+  assert.deepEqual([r.remise7.n, r.remise7.niveau], [2, 'rouge'])
+  assert.deepEqual(r.remise7.ids, ['a', 'b'])
+  assert.deepEqual([r.aDecider.n, r.aDecider.premier?.id], [1, 'c'])
+  assert.equal(resumeMesAO([projet({ deadline: '2026-11-09' })], m).remise7.niveau, 'ambre')
+  assert.equal(resumeMesAO([projet({ deadline: '2026-12-09' })], m).remise7.niveau, 'neutre')
+})
+
+test('terminés : le décompte par statut, dans l’ordre Déposé, Gagné, Perdu, Sans suite', () => {
+  const liste = [projet({ status: 'perdu' }), projet({ status: 'soumis' }), projet({ status: 'gagné' }), projet({ status: 'sans_suite' }), projet({ status: 'soumis' }), projet({ status: 'en_cours' })]
+  assert.deepEqual(repartitionTermines(liste), [['soumis', 2], ['gagné', 1], ['perdu', 1], ['sans_suite', 1]])
+  assert.deepEqual(repartitionTermines([projet()]), [])
+})
+
+test('unités : « 1 analyse · 0 mémoire » ; rien quand le serveur n’a pas de donnée', () => {
+  assert.equal(texteUnites({ unites: { analyses: 1, memoires: 0 }, pieces: null, plan_valide_le: null, memoire_ecrit_le: null }), '1 analyse · 0 mémoire')
+  assert.equal(texteUnites({ unites: { analyses: 2, memoires: 3 }, pieces: null, plan_valide_le: null, memoire_ecrit_le: null }), '2 analyses · 3 mémoires')
+  assert.equal(texteUnites({ unites: { analyses: 0, memoires: 0 }, pieces: null, plan_valide_le: null, memoire_ecrit_le: null }), null)
+  assert.equal(texteUnites(null), null)
+  assert.equal(texteUnites(undefined), null)
+})
+
+test('l’unité du mois : le cumul des deux compteurs de l’offre, ou « illimité » sans plafond', () => {
+  assert.deepEqual(uniteMois({ plan: 'pro', analyses: { used: 9, limit: 40 }, memoires: { used: 5, limit: 40 } }),
+    { utilisees: 14, total: 80, restantes: 66, part: 14 / 80, illimite: false })
+  assert.equal(uniteMois({ plan: 'business', analyses: { used: 9, limit: null }, memoires: { used: 5, limit: null } })?.illimite, true)
+  assert.equal(uniteMois(undefined), null)
+})
+
+test('les faits de « À la une » : seulement ceux que le serveur connaît, rien d’inventé', () => {
+  const sans = faitsALaUne(projet({ id: 'x' }), le(3, 11))
+  assert.deepEqual(sans, [])
+  const p = projet({
+    infos_marche: { points_a_eclaircir: [] },
+    avancement: { unites: { analyses: 1, memoires: 1 }, pieces: { total: 9, pretes: 9 }, plan_valide_le: '2026-11-02T09:00:00', memoire_ecrit_le: '2026-11-02T15:00:00' },
+  })
+  const f = faitsALaUne(p, le(3, 11))
+  assert.deepEqual(f.map((x) => [x.libelle, x.valeur, x.ton]), [
+    ['Pièces du coffre-fort', '9 sur 9 prêtes', 'vert'],
+    ['Mémoire technique', 'écrit le 2 nov.', 'vert'],
+    ['Questions à l’acheteur', 'Aucune à poser', 'vert'],
+    ['Unités utilisées', '1 analyse · 1 mémoire', 'neutre'],
+  ])
+  const partiel = faitsALaUne(projet({ infos_marche: { points_a_eclaircir: [{ question: 'q', pourquoi: null, source_document: null }, { question: 'r', pourquoi: null, source_document: null }] }, avancement: { unites: { analyses: 1, memoires: 0 }, pieces: { total: 9, pretes: 7 }, plan_valide_le: '2026-11-02T09:00:00', memoire_ecrit_le: null } }), le(3, 11))
+  assert.deepEqual(partiel.map((x) => [x.valeur, x.ton]), [['7 sur 9 prêtes', 'ambre'], ['plan validé le 2 nov.', 'vert'], ['2 à poser', 'ambre'], ['1 analyse · 0 mémoire', 'neutre']])
+})
+
+test('le traitement en cours : lecture ou rédaction, sans bouton', () => {
+  assert.equal(enTraitement(projet({ processing_status: 'analyzing' })), true)
+  assert.equal(enTraitement(projet({ processing_status: 'generating' })), true)
+  assert.equal(enTraitement(projet({ processing_status: 'ready' })), false)
+  assert.equal(enTraitement(projet()), false)
+})
+
+test('l’avis d’origine : le lien de la veille, seulement s’il est sûr', () => {
+  assert.deepEqual(versAvisOrigine(projet({ infos_marche: { source_avis: { id_boamp: '26-118204', url_avis: 'https://www.boamp.fr/avis/detail/26-118204' } } })),
+    { id: '26-118204', url: 'https://www.boamp.fr/avis/detail/26-118204' })
+  assert.equal(versAvisOrigine(projet({ infos_marche: { source_avis: { id_boamp: '1', url_avis: 'javascript:alert(1)' } } })), null)
+  assert.equal(versAvisOrigine(projet()), null)
+})
+
+test('« vendredi 6 nov., 12 h » : le jour et l’heure de la remise', () => {
+  assert.equal(quandCourt(projet({ echeance: { date: '2026-11-06', heure: '12h00' } })), 'ven. 6 nov., 12 h')
+  assert.equal(quandCourt(projet({ echeance: { date: '2026-11-06', heure: '17h30' } })), 'ven. 6 nov., 17 h 30')
+  assert.equal(quandCourt(projet({ deadline: '2026-11-06' })), 'ven. 6 nov.')
+  assert.equal(quandCourt(projet()), null)
+})
