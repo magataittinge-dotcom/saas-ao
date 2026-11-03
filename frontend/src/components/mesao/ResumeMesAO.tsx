@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { CircleHelp, Clock, FolderOpen } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
+import { tonConsommation } from '@/components/layout/QuotaGauge'
 import { uniteMois, type Niveau, type ResumeMesAO as Resume } from '@/lib/mesAO'
 import type { TonEtat } from './Etat'
 import { TON_TEXTE } from './Etat'
@@ -47,7 +48,7 @@ export function ResumeMesAOCartes({ resume, filtre, onFiltre, quota }: {
 }) {
   const unites = uniteMois(quota)
   const bascule = (f: FiltreMesAO) => onFiltre(filtre === f ? 'tous' : f)
-  const tonUnites: TonEtat = !unites || unites.illimite ? 'gris' : unites.part > 0.9 ? 'rouge' : unites.part >= 0.7 ? 'ambre' : 'vert'
+  const tonUnites: TonEtat = !unites || unites.illimite ? 'gris' : tonConsommation(unites.part)
   const ton7 = TON_DU_NIVEAU[resume.remise7.niveau]
   return (
     <section aria-label="Résumé" className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">

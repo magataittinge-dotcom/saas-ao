@@ -28,7 +28,7 @@ export default function ZoneContenu({ rubrique, donnees, libres, apresValidation
                 <span className="block text-sm font-medium text-fg">
                   {l.numero && <span className="mr-2 text-fg-2" aria-hidden>{l.numero}</span>}{l.titre}
                 </span>
-                <span className={`mt-0.5 inline-flex items-center gap-1 text-xs font-medium ${prete ? 'text-success' : 'text-fg-2'}`}>
+                <span className={`mt-0.5 inline-flex items-center gap-1 text-xs font-medium ${prete ? 'text-vert-ink' : 'text-ambre-ink'}`}>
                   {prete ? <CheckCircle2 size={13} aria-hidden /> : <CircleDashed size={13} aria-hidden />}
                   {LIBELLE_ETAT[l.etat]}
                 </span>

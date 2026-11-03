@@ -105,7 +105,7 @@ test('trois cartes égales : titre, numéro, jauge, quatre faits clés, nombre d
   assert.ok(html.includes('informations sur 9') && html.includes('informations sur 10') && html.includes('informations sur 15'), 'avancement affiché')
   assert.equal(compte(html, /<li /g), 12, 'quatre faits clés par carte')
   assert.ok(html.includes('Raison sociale') && html.includes('Entreprise de démonstration') && html.includes('Renseigné'))
-  assert.match(html, /<span class="[^"]*text-accent-text[^"]*">À renseigner<\/span>/, '« À renseigner » en accent')
+  assert.match(html, /<span class="[^"]*text-ambre-ink[^"]*">(<svg[\s\S]*?<\/svg>)?À renseigner<\/span>/, '« À renseigner » en ambre, avec son icône')
   assert.equal(compte(html, /border-accent-ui/g) >= 1, true, 'bord accent sur la carte choisie')
   assert.ok(!/text-danger|border-danger/.test(html), 'jamais de rouge sur une carte')
   assert.equal(compte(html, /<i>moyens<\/i>/g), 1, 'seul le formulaire de la rubrique choisie est monté')

@@ -167,3 +167,9 @@ test('date limite des questions : ambre à 7 jours, rouge à 3 jours ou moins ou
   assert.equal(urgenceQuestions({ ...date('2026-11-04'), statut: 'a_verifier' }, m), null)
   assert.equal(urgenceQuestions(null, m), null)
 })
+
+import { tonConsommation } from '@/components/layout/QuotaGauge'
+
+test('jauge des unités : vert sous 70 %, ambre de 70 à 90 %, rouge au-delà de 90 %', () => {
+  assert.deepEqual([0, 0.69, 0.7, 0.9, 0.91, 1].map(tonConsommation), ['vert', 'vert', 'ambre', 'ambre', 'rouge', 'rouge'])
+})

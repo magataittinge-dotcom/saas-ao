@@ -244,9 +244,10 @@ function Group({
 }
 
 const PILL_TONES: Record<VaultPillTone, { color: string; bg: string }> = {
-  alert: { color: 'var(--danger-fg)', bg: 'color-mix(in srgb, var(--danger-fg) 10%, transparent)' },
-  neutral: { color: 'var(--text-3)', bg: 'var(--surface-1)' },
-  ok: { color: 'var(--success-fg)', bg: 'color-mix(in srgb, var(--success-fg) 10%, transparent)' },
+  alert: { color: 'var(--rouge-ink)', bg: 'var(--rouge-soft)' },
+  attention: { color: 'var(--ambre-ink)', bg: 'var(--ambre-soft)' },
+  neutral: { color: 'var(--gris-ink)', bg: 'var(--gris-soft)' },
+  ok: { color: 'var(--vert-ink)', bg: 'var(--vert-soft)' },
 }
 
 // B1 — « Valide » seulement pour une pièce datée (règle commune lib/vault).
