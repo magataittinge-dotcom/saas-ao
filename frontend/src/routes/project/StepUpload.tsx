@@ -555,7 +555,7 @@ export default function StepUpload({ project }: Props) {
         )}
 
         {/* ── Large-file reassurance (cyan for normal, orange for very large) ─ */}
-        {largeFileNotice && (phase === 'uploading' || phase === 'processing') && (
+        {largeFileNotice && phase === 'uploading' && (
           <div
             className="rounded-xl p-4 flex items-start gap-3"
             style={

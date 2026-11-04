@@ -91,7 +91,9 @@ test('S4 : les nouveaux libellés sont à l\'écran', () => {
 
 test('S4 : les étapes s\'appellent Dépôt du dossier, Lots, Décider, Pièces, Mémoire, Export — partout pareil', () => {
   assert.deepEqual([...ETAPES_AO], ['Dépôt du dossier', 'Lots', 'Décider', 'Pièces', 'Mémoire', 'Export'])
-  for (const f of ['src/components/project/StepProgress.tsx', 'src/components/layout/Header.tsx']) {
+  // le Header reprend les noms de STEPS (titres-etapes-depot.test.ts) : plus de liste écrite en double
+  assert.match(lire('src/components/layout/Header.tsx'), /STEPS\.map\(/)
+  for (const f of ['src/components/project/StepProgress.tsx']) {
     const textes = textesAffiches(f).map((t) => t.texte)
     assert.ok(textes.includes('Décider') && textes.includes('Pièces'), `${f} : Décider et Pièces`)
     assert.ok(!textes.includes('Analyse IA') && !textes.includes('Vérification'), `${f} : plus d'ancien nom d'étape`)

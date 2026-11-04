@@ -1,4 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { STEPS } from '@/components/project/StepProgress'
 import { ChevronRight, Plus, Search } from 'lucide-react'
 import { useCompanionStore } from '@/stores/companionStore'
 import { useTheme } from '@/lib/theme'
@@ -25,7 +26,8 @@ const ROUTE_LABELS: Record<string, { parent?: string; parentTo?: string; label: 
   '/settings/billing': { label: 'Abonnement' },
   '/design':         { label: 'Système de design' },
 }
-const STEP_LABELS: Record<string, string> = { upload: 'Dépôt du dossier', lots: 'Sélection lots', analysis: 'Décider', verification: 'Pièces', candidature: 'Pièces', memoire: 'Mémoire', export: 'Export' }
+// Le titre de page d'un écran de l'AO est le nom de l'étape au fil (source unique : STEPS ; « candidature » est l'ancien nom de Pièces).
+export const STEP_LABELS: Record<string, string> = { ...Object.fromEntries(STEPS.map((e) => [e.segment, e.label])), candidature: 'Pièces' }
 
 const COMPANION_LABELS: Record<CompanionState, string> = {
   veille:  'Compagnon Synorix — en veille',
