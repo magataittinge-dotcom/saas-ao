@@ -5,7 +5,7 @@ import { Sigle } from '@/components/common/Sigle'
 import { ArrowRight, FolderX } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DeadlinePill } from '@/components/dashboard/DeadlinePill'
-import { echeanceAO, estEnCours, etatEcheance } from '@/lib/echeance'
+import { echeanceAO, estEnCoursOuvert, etatEcheance } from '@/lib/echeance'
 import { lienEtape, verbeEtape } from '@/lib/intelligence/action'
 import type { Project } from '@/types'
 
@@ -15,7 +15,7 @@ export const prochaineEtape = (p: Project): string => verbeEtape(p)
 /** Les AO en cours, la remise la plus proche d'abord (sans date à la fin), trois au plus. */
 export function aoDeLaBande(projets: readonly Project[], max = 3): Project[] {
   return projets
-    .filter((p) => estEnCours(p.status))
+    .filter((p) => estEnCoursOuvert(p))
     .map((p) => ({ p, t: etatEcheance(echeanceAO(p)).limite?.getTime() ?? Infinity }))
     .sort((a, b) => a.t - b.t)
     .slice(0, max)

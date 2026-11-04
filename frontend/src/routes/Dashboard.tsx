@@ -6,7 +6,8 @@ import { useAuthStore } from '@/stores/authStore'
 import BandeAO from '@/components/dashboard/BandeAO'
 import FirstAOWelcome from '@/components/onboarding/FirstAOWelcome'
 import { api } from '@/services/api'
-import { echeanceAO, estEnCours, etatEcheance } from '@/lib/echeance'
+import { echeanceAO, estEnCours, estEnCoursOuvert, etatEcheance } from '@/lib/echeance'
+import { prenomAffichable } from '@/lib/prenom'
 import { cn } from '@/lib/utils'
 import type { Project, DashboardStats } from '@/types'
 
@@ -89,11 +90,11 @@ export default function Dashboard() {
   })
 
   const s = stats ?? EMPTY_STATS
-  const firstName = user?.name?.split(' ')[0] ?? 'vous'
+  const prenom = prenomAffichable(user?.name, user?.email)
 
   // 1.14 — « en cours » : la définition commune (lib/echeance.ts, comme le serveur).
   // Les AO clos (soumis/gagné/perdu/sans_suite) sortent du tableau de bord.
-  const activeProjects = projects.filter((p) => estEnCours(p.status))
+  const activeProjects = projects.filter((p) => estEnCoursOuvert(p))
   const avecEcheance = activeProjects.map((p) => ({ ...p, _echeance: etatEcheance(echeanceAO(p)) }))
   // La liste : la remise la plus proche d'abord, les AO sans date à la fin.
   const liste = [...avecEcheance].sort((a, b) =>
@@ -104,11 +105,13 @@ export default function Dashboard() {
 
   // Note du Compagnon — positive, basée sur les vrais compteurs
   const next = upcoming[0]
-  // Pas de « marge » annoncée quand une date de remise est déjà passée (1.14).
-  const datePassee = activeProjects.find((p) => etatEcheance(echeanceAO(p)).etat === 'passee')
+  // Un AO dont la remise est passée a quitté la bande et le compteur (il reste dans Mes AO) : on le dit, sans « marge » annoncée.
+  const datePassee = projects.find((p) => estEnCours(p.status) && etatEcheance(echeanceAO(p)).etat === 'passee')
   // « Dossier prêt » seulement si l'étape Export est atteinte — 1.14.
   const synorixNote = activeProjects.length === 0
-    ? "Créez votre premier appel d'offres : l'IA analyse le dossier de l'acheteur, prépare la candidature et rédige le mémoire technique."
+    ? datePassee
+      ? "Aucun appel d'offres en cours : ceux dont la remise est passée restent dans Mes AO."
+      : "Créez votre premier appel d'offres : l'IA analyse le dossier de l'acheteur, prépare la candidature et rédige le mémoire technique."
     : `${activeProjects.length} appel${activeProjects.length > 1 ? 's' : ''} d'offres en cours.` +
       (next
         ? next._echeance.etat === 'aujourdhui'
@@ -116,9 +119,7 @@ export default function Dashboard() {
             ? ` Échéance aujourd'hui : « ${next.name} » — votre dossier est prêt.`
             : ` Échéance aujourd'hui : « ${next.name} ».`
           : ` Prochaine échéance dans ${next._echeance.jours} jour${next._echeance.jours! > 1 ? 's' : ''} : « ${next.name} ».`
-        : datePassee
-          ? ` La date de remise de « ${datePassee.name} » est passée.`
-          : ' Aucune échéance imminente, vous avez de la marge.')
+        : ' Aucune échéance imminente, vous avez de la marge.')
 
   const prochaine = aVenir[0]?._echeance
   const resume = [
@@ -169,7 +170,7 @@ export default function Dashboard() {
 
       {/* ── En-tête : bonjour, la journée en une ligne, la note du jour ── */}
       <header>
-        <h1 className="font-display text-h5 text-fg">Bonjour, {firstName}</h1>
+        <h1 className="font-display text-h5 text-fg">{prenom ? `Bonjour, ${prenom}` : 'Bonjour'}</h1>
         <p className="mt-1 text-[15px] text-fg-3">{resume}</p>
         <p className="mt-4 max-w-[72ch] text-[15px] leading-6 text-fg-2">{synorixNote}</p>
       </header>
