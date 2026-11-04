@@ -146,9 +146,14 @@ function FullscreenEditor({
         className="flex items-center justify-between gap-4 px-6 py-3 shrink-0"
         style={{ borderBottom: '1px solid var(--border-1)', background: 'var(--surface-1)' }}
       >
-        <p className="text-sm font-medium" style={{ color: 'var(--text-1)' }}>
-          Édition du mémoire — format Markdown
-        </p>
+        <div>
+          <p className="text-sm font-medium" style={{ color: 'var(--text-1)' }}>
+            Modification du texte du mémoire
+          </p>
+          <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
+            {'# = titre, **texte** = gras'}
+          </p>
+        </div>
         <div className="flex items-center gap-3">
           <p
             role="status"
@@ -799,7 +804,7 @@ export default function StepMemoire({ project }: Props) {
           <>
             <RelectureMemoire projectId={project.id} />
             <button type="button" onClick={() => setShowEditor(true)} className={BOUTON_SECONDAIRE}>
-              <Pencil size={13} aria-hidden /> Modifier
+              <Pencil size={13} aria-hidden /> Modifier le texte
             </button>
             <button type="button" onClick={() => navigate(`/projects/${project.id}/plan`)} className={BOUTON_SECONDAIRE}>Voir le plan</button>
           </>
