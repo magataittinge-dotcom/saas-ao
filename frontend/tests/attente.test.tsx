@@ -31,7 +31,8 @@ test('les attentes longues (analyse, mémoire) branchent l\'arrière-plan et l\'
 
 test('avant la génération : quota selon l\'offre et durée mesurée, aucun chiffre inventé', () => {
   const code = sansCommentaires(lire('src/components/project/MemoirePreflight.tsx'))
-  assert.ok(code.includes('Rédaction : environ 15 minutes'))     // 930 s mesurées (RESULTAT.md)
+  assert.ok(code.includes('Rédaction : environ 3 minutes'))      // 169 s mesurées sur le mémoire réel (recette du 4/11, G8)
+  assert.ok(!code.includes('15 minutes'))
   assert.ok(code.includes('sur votre essai'))                    // l'essai est à vie, pas « ce mois »
   assert.ok(!/20 pages|2 minutes/.test(code))
 })

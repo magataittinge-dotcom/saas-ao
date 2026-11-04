@@ -10,10 +10,9 @@ test('R24 : la pondération est « relevée dans le règlement », le mémoire n
   assert.ok(!/optimisé pour/i.test(code))
 })
 
-test('R25 : offre illimitée → plus de « Consommera 1 mémoire — offre illimitée »', () => {
+test('R25 / G8 : offre illimitée → une seule phrase de coût (la carte), plus de « non décompté » ni de « Consommera 1 mémoire »', () => {
   const code = sansCommentaires(lire('src/components/project/MemoirePreflight.tsx'))
-  assert.ok(!code.includes('Consommera 1 mémoire — offre illimitée'))
-  assert.ok(code.includes('Offre illimitée : ce mémoire n’est pas décompté'))
-  // les offres à quota gardent leur phrase
-  assert.ok(code.includes('Consommera 1 mémoire'))
+  assert.ok(!code.includes('Consommera 1 mémoire'))
+  assert.ok(!/non décompté|n’est pas décompté/.test(code))
+  assert.ok(sansCommentaires(lire('src/routes/project/StepMemoire.tsx')).includes('Votre offre est illimitée.'))
 })
