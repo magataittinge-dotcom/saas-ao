@@ -4,7 +4,7 @@ import { ExternalLink, Plus, Sparkles } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { DeadlinePill } from '@/components/dashboard/DeadlinePill'
-import { jourMois, urlSure } from '@/lib/veille'
+import { departementsAAfficher, jourMois, urlSure } from '@/lib/veille'
 import type { AvisVeille } from '@/services/veille'
 
 export interface PropsCarteAvis {
@@ -13,6 +13,8 @@ export interface PropsCarteAvis {
   libellesMetiers: Readonly<Record<string, string>>
   /** Noms des départements (code → nom). */
   nomsDepartements: Readonly<Record<string, string>>
+  /** La zone choisie : un avis sur plusieurs départements montre ceux de la zone. */
+  zone?: readonly string[]
   onCreerAO: (idAvis: string) => void
   /** Création en cours pour cet avis. */
   enCreation?: boolean
@@ -22,10 +24,10 @@ export interface PropsCarteAvis {
 
 const METIERS_VISIBLES = 3
 
-export default function CarteAvis({ avis, libellesMetiers, nomsDepartements, onCreerAO, enCreation, creationEnErreur }: PropsCarteAvis) {
+export default function CarteAvis({ avis, libellesMetiers, nomsDepartements, zone, onCreerAO, enCreation, creationEnErreur }: PropsCarteAvis) {
   const idTitre = `avis-${avis.id}`
   const lien = urlSure(avis.url_avis)
-  const departements = avis.departements.map((c) => `${nomsDepartements[c] ?? c} (${c})`).join(', ')
+  const departements = departementsAAfficher(avis.departements, zone).map((c) => `${nomsDepartements[c] ?? c} (${c})`).join(', ')
   const metiers = avis.metiers.map((m) => libellesMetiers[m] ?? m)
   return (
     <article aria-labelledby={idTitre} data-avis={avis.id} className="rounded-lg bg-surface-1 p-4 sm:p-5">

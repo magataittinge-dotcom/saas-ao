@@ -61,6 +61,7 @@ export default function VeilleAccueil() {
           onTri={v.setTri}
           metiers={v.metiers}
           nomsDepartements={NOMS}
+          zone={v.zone.selection}
           aPlus={v.aPlus}
           chargePlus={v.chargePlus}
           onVoirPlus={v.voirPlus}

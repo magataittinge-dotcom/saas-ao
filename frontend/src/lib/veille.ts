@@ -302,3 +302,14 @@ export const jourMois = (iso: string | null) => {
 
 /** Ajoute la valeur à la liste, ou la retire si elle y est (puces de filtre à bascule). */
 export const basculerValeur = (liste: readonly string[], v: string): string[] => (liste.includes(v) ? liste.filter((x) => x !== v) : [...liste, v])
+
+/**
+ * Les départements à afficher sur la carte d'un avis. Un avis (accord-cadre, marché multi-départements) en liste plusieurs :
+ * quand la zone choisie en contient, on n'affiche que ceux-là (recette du 4/11 : un avis « à LILLE (59) » dans la zone Marne et
+ * Aisne). Sans zone, ou si aucun ne correspond, la liste complète.
+ */
+export function departementsAAfficher(departementsAvis: readonly string[], zone?: readonly string[] | null): string[] {
+  if (!zone || zone.length === 0) return [...departementsAvis]
+  const dansLaZone = departementsAvis.filter((c) => zone.includes(c))
+  return dansLaZone.length > 0 ? dansLaZone : [...departementsAvis]
+}

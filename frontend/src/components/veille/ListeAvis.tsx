@@ -21,6 +21,8 @@ export interface PropsListeAvis {
   onTri: (t: TriAvis) => void
   metiers: readonly { code: string; libelle: string }[]
   nomsDepartements: Readonly<Record<string, string>>
+  /** La zone choisie (codes de départements). */
+  zone?: readonly string[]
   aPlus: boolean
   chargePlus?: boolean
   onVoirPlus: () => void
@@ -163,6 +165,7 @@ export default function ListeAvis(p: PropsListeAvis) {
                     avis={a}
                     libellesMetiers={libellesMetiers}
                     nomsDepartements={p.nomsDepartements}
+                    zone={p.zone}
                     onCreerAO={p.onCreerAO}
                     enCreation={p.creationEnCours === a.id}
                     creationEnErreur={p.creationEnErreurPour === a.id}
