@@ -651,6 +651,27 @@
   }
 }
 
+/* Lecteur du mémoire (Rédiger) — le plugin typographie reprend les jetons du thème, clair comme nuit.
+   `prose-invert` mettait titres et gras en blanc sur le papier clair (B2, recette du 4/11). */
+.lecteur-memoire {
+  --tw-prose-body: var(--text-2);
+  --tw-prose-headings: var(--text-1);
+  --tw-prose-lead: var(--text-2);
+  --tw-prose-links: var(--accent-text);
+  --tw-prose-bold: var(--text-1);
+  --tw-prose-counters: var(--text-3);
+  --tw-prose-bullets: var(--text-3);
+  --tw-prose-hr: var(--border-2);
+  --tw-prose-quotes: var(--text-1);
+  --tw-prose-quote-borders: var(--border-2);
+  --tw-prose-captions: var(--text-3);
+  --tw-prose-code: var(--text-1);
+  --tw-prose-pre-code: var(--text-1);
+  --tw-prose-pre-bg: var(--surface-2);
+  --tw-prose-th-borders: var(--border-2);
+  --tw-prose-td-borders: var(--border-1);
+}
+
 /* Legal documents — typography for /legal markdown content */
 .legal-prose {
   color: var(--ink);

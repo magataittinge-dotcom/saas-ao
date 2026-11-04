@@ -68,5 +68,7 @@ test('tableau de bord : jamais « dans les temps » ni « de la marge » quand c
   const code = sansCommentaires(lire('src/routes/Dashboard.tsx'))
   assert.doesNotMatch(code, /vous êtes dans les temps/)
   assert.match(code, /next\.current_step >= 6/)              // « dossier prêt » seulement à l'étape Export
-  assert.match(code, /La date de remise de « \$\{datePassee\.name\} » est passée\./)
+  // une remise passée sort de la bande et du compteur (estEnCoursOuvert) ; la note le dit sans annoncer de « marge »
+  assert.match(code, /estEnCoursOuvert\(p\)/)
+  assert.match(code, /dont la remise est passée restent dans Mes AO/)
 })

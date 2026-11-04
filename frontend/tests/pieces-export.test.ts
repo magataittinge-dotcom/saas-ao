@@ -41,23 +41,22 @@ test('la ligne dit combien de pièces sont à joindre et qu\'elles ne seront pas
   for (const n of [1, 2, 12]) assert.doesNotMatch(phrasePiecesAJoindre(n)!, /manquant|incomplet|absent|erreur|attention/i)
 })
 
-test('l\'export a un seul bouton principal ; PDF seul et Word seul sont sous « Autres formats » ; le contenu est en sections', () => {
+test('l\'export a un seul bouton principal ; « Mémoire en Word » et « Mémoire en PDF » sont deux boutons visibles ; le contenu est en sections', () => {
   const code = sansCommentaires(lire('src/routes/project/StepExport.tsx'))
   assert.equal((code.match(/signature-btn/g) ?? []).length, 1, 'un seul bouton principal')
   assert.ok(code.includes('Télécharger le dossier'))
   assert.doesNotMatch(code, /Exporter quand même|showGateWarning|Télécharger le dossier ZIP|Livrables|Points de contrôle/)
   assert.doesNotMatch(code, /var\(--warning-bg\)/, 'plus de bouton orange')
   assert.match(code, /<PiecesAJoindre pieces=\{nonConformes\} \/>/)
-  // « Autres formats » : un repli fermé qui contient les deux sorties, et seulement elles
-  assert.ok(code.includes('Autres formats'))
-  assert.equal((code.match(/Mémoire PDF/g) ?? []).length, 1, 'PDF : écrit une fois, servi par le repli et par le menu')
-  assert.ok(code.indexOf('Mémoire Word') > code.indexOf('Mémoire PDF'))
-  assert.ok(code.indexOf('Télécharger le dossier') < code.indexOf('autresFormats()'))
+  // G10 : les deux sorties du mémoire sont deux boutons visibles sur ordinateur (plus de repli « Autres formats » caché)
+  assert.equal((code.match(/Mémoire en Word/g) ?? []).length, 1, 'Word : écrit une fois, servi par la barre et par le menu du téléphone')
+  assert.equal((code.match(/Mémoire en PDF/g) ?? []).length, 1)
+  assert.ok(code.indexOf('Mémoire en PDF') > code.indexOf('Mémoire en Word'))
+  assert.ok(code.indexOf('Télécharger le dossier') < code.indexOf('formatsMemoire()'))
+  assert.doesNotMatch(code, /<details/)
   // Le contenu est en sections du gabarit (sous-titres en capitales), plus d'accordéon « Avant d'envoyer »
   for (const t of ['PIÈCES DEMANDÉES', 'MÉMOIRE TECHNIQUE', 'TABLEAU DES PRIX', 'EXIGENCES RELEVÉES']) assert.ok(code.includes(`titre="${t}"`), t)
   assert.doesNotMatch(code, /Avant d&apos;envoyer|AccordionSection/)
-  // « Autres formats » est replié : un <details> sans « open »
-  assert.ok(/<details(?![^>]*\bopen\b)[^>]*>\s*<summary[^>]*>\s*Autres formats/.test(code), '« Autres formats » dans un <details> fermé')
 })
 
 test('le héros de l’export dit ce qu’il reste à faire, sans couleur d’alarme (décision du 1/11)', () => {

@@ -41,14 +41,14 @@ test('l’écran Lots passe par le gabarit : « Lire ce dossier » grisé sans c
   const code = sansCommentaires(lire('src/routes/project/StepLotSelection.tsx'))
   assert.match(code, /<GabaritEtape\s+titre="Lots"/)
   assert.equal((code.match(/actionPrincipale=/g) ?? []).length, 1)
-  assert.match(code, /Lire ce dossier\{selectedLotIds\.length > 1/)
+  assert.match(code, /<BoutonLireDossier nbLots=\{nbChoisis\}/)
   assert.match(code, /disabled=\{isAnalyzing \|\| isSuccess \|\| !peutLancer\(selectedIds\)\}/)
-  assert.match(code, /cout=\{libelleUnites\(1\)\}/)
-  assert.match(code, /cout=\{libelleUnites\(lots\.length\)\}/)
+  assert.match(code, /cout=\{illimite \? undefined : libelleUnites\(1\)\}/)
+  assert.match(code, /cout=\{illimite \? undefined : libelleUnites\(lots\.length\)\}/)
   assert.match(code, /<SectionEtape titre="Dans vos métiers"/)
   assert.match(code, /autres\.some\(\(l\) => selectedIds\.has\(l\.id\)\)/, 'un lot choisi parmi les autres n’est jamais caché')
   assert.doesNotMatch(code, /€|euros?\b/)
-  assert.match(code, /<ActionsBarreTel>/)
+  assert.match(code, /<ActionsBarre>[\s\S]*<BoutonLireDossier variante="default"/, 'le bouton est aussi dans la barre du bas')
 })
 
 test('la carte d’un lot : case visible de 44 px, numéro, désignation, métiers reconnus, pièces du lot avec « Voir », 1 unité, état en petit', () => {

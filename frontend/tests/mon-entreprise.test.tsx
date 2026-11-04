@@ -219,13 +219,13 @@ test('« Fiche à télécharger » partout, jamais « Fiche » seul ; jamais « 
   for (const f of sources) assert.doesNotMatch(sansCommentaires(lire(f)), />\s*Fiche\s*(<|\{)|'Fiche'|"Fiche"/, f)
 })
 
-test('états sous les champs : « Renseigné », la source (Sirene) ou « À renseigner » en accent, jamais de rouge', () => {
+test('états sous les champs : « Renseigné », la source (Sirene) ou « À renseigner » en ambre (COULEURS.md), jamais de rouge', () => {
   const html = rendre(<QueryClientProvider client={new QueryClient()}><MemoryRouter><FormIdentite donnees={DONNEES} /></MemoryRouter></QueryClientProvider>, true)
   assert.ok(html.includes('Prérempli depuis le répertoire Sirene'), 'nom, forme juridique et siège : la source Sirene')
   assert.ok(html.includes('Vérifié au répertoire Sirene'), 'SIRET vérifié')
   assert.equal(compte(html, /data-etat="rempli"/g) >= 5, true)
   assert.equal(compte(html, /data-etat="a-renseigner"/g) >= 3, true, 'forme juridique, e-mail, téléphone… à renseigner')
-  assert.match(html, /data-etat="a-renseigner"[^>]*><span class="[^"]*text-accent-text[^"]*">À renseigner<\/span>/)
+  assert.match(html, /data-etat="a-renseigner"[^>]*><span class="[^"]*text-ambre-ink[^"]*">À renseigner<\/span>/)
   assert.ok(!/data-etat="a-renseigner"[^>]*(danger|red)/.test(html) && !/À renseigner<\/span>[^<]*<[^>]*danger/.test(html) && !/class="[^"]*(text-danger|text-red)[^"]*"[^>]*>(<span[^>]*>)?À renseigner/.test(html), 'un champ vide n\'est pas une erreur')
   // un profil vide : tout est « À renseigner »
   const vide = rendre(<QueryClientProvider client={new QueryClient()}><MemoryRouter><FormMoyens donnees={{}} /></MemoryRouter></QueryClientProvider>, true)

@@ -5,16 +5,18 @@ import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
-  Layers, CheckCircle2, AlertCircle, Plus, X, ArrowLeft,
+  Layers, CheckCircle2, Plus, X, ArrowLeft,
   AlertTriangle, Loader2,
-  Sparkles, Pencil, Check as CheckIcon,
+  Pencil, Check as CheckIcon,
 } from 'lucide-react'
 import { BoutonSecondaire } from '@/components/project/BarreEtape'
-import { GabaritEtape, BandeResume, SectionEtape, EtatElement, BarreEtape, ActionsBarre, ActionsBarreTel, BilanBarre } from '@/components/etape'
+import { GabaritEtape, BandeResume, SectionEtape, EtatElement, BarreEtape, ActionsBarre, BilanBarre } from '@/components/etape'
 import { METIERS } from '@/lib/entreprise/metiers'
 import { metiersDuLot } from '@/lib/lotsMetiers'
 import { repartirDocuments } from '@/lib/analyseLibelles'
-import { Button } from '@/components/ui/button'
+import { doitConfirmerLecture, phraseCoutLots } from '@/lib/coutLecture'
+import { useQuota } from '@/components/layout/QuotaGauge'
+import ConfirmationLecture, { BoutonLireDossier, ErreurLecture } from '@/components/project/LectureLots'
 import { repartirLotsParMetiers, libelleUnites } from '@/lib/lotsMetiers'
 import type { MemoireConfig } from '@/types'
 import { api } from '@/services/api'
@@ -517,10 +519,20 @@ export default function StepLotSelection({ project }: Props) {
     },
   })
 
-  const handleLaunch = () => {
-    if (!peutLancer(selectedIds)) return
+  // G1 — au-delà d'un lot, la lecture se confirme avant l'appel (« Lire N lots = N unités »)
+  const [confirmerLecture, setConfirmerLecture] = useState(false)
+  const lancerLecture = () => {
+    setConfirmerLecture(false)
     void lecture.lancer(selectedLotIds, selectedName)
   }
+  const handleLaunch = () => {
+    if (!peutLancer(selectedIds)) return
+    if (doitConfirmerLecture(nbChoisis)) setConfirmerLecture(true)
+    else lancerLecture()
+  }
+  const { data: quota } = useQuota()
+  // offre illimitée : aucune unité n'est annoncée ni décomptée
+  const illimite = quota?.analyses?.limit === null && quota?.memoires?.limit === null
 
   // « Dans vos métiers » : les lots rattachés aux métiers déclarés dans Mon entreprise d'abord, les autres repliés
   const { data: profil } = useQuery<MemoireConfig>({
@@ -548,7 +560,7 @@ export default function StepLotSelection({ project }: Props) {
       onSelect={() => toggleLot(lot.id)}
       onDelete={() => setLotARetirer(lot)}
       onRename={(label) => renameLot({ lotId: lot.id, label })}
-      cout={libelleUnites(1)}
+      cout={illimite ? undefined : libelleUnites(1)}
       pieces={piecesDuLot(lot.id)}
     />
   )
@@ -559,6 +571,9 @@ export default function StepLotSelection({ project }: Props) {
   return (
     <>
       <EcransLecture lecture={lecture} />
+      {confirmerLecture && (
+        <ConfirmationLecture nbLots={nbChoisis} illimite={illimite} onConfirmer={lancerLecture} onAnnuler={() => setConfirmerLecture(false)} />
+      )}
       {lotARetirer && (
         <DeleteConfirmModal
           title={`Retirer « ${lotARetirer.user_label || lotARetirer.nom} » de la liste ?`}
@@ -589,28 +604,25 @@ export default function StepLotSelection({ project }: Props) {
       <div style={{ fontFamily: F }}>
         <GabaritEtape
           titre="Lots"
-          utilite={lots.length > 1
-            ? 'Choisissez le ou les lots sur lesquels votre entreprise répond : Synorix ne lit que ceux-là. Chaque lot lu décompte 1 unité de votre abonnement.'
-            : lots.length === 1
-              ? 'Un seul lot a été détecté. Confirmez-le ou ajoutez des lots à la main ; la lecture décompte 1 unité de votre abonnement.'
-              : 'Cet appel d’offres semble être mono-lot : lancez la lecture du dossier, ou ajoutez les lots à la main. Chaque lot lu décompte 1 unité.'}
+          utilite={phraseCoutLots(lots.length, illimite)}
           actionPrincipale={
-            <Button type="button" variant="signature" onClick={handleLaunch} disabled={isAnalyzing || isSuccess || !peutLancer(selectedIds)}>
-              <Sparkles size={16} aria-hidden />
-              Lire ce dossier{selectedLotIds.length > 1 ? ` (${selectedLotIds.length} lots)` : ''}
-            </Button>
+            <div className="flex flex-col items-end gap-2">
+              <BoutonLireDossier nbLots={nbChoisis} illimite={illimite} onClick={handleLaunch}
+                disabled={isAnalyzing || isSuccess || !peutLancer(selectedIds)} />
+              {analysisError && <ErreurLecture message={analysisError} className="max-w-sm" />}
+            </div>
           }
           resume={lots.length > 0 ? <BandeResume libelle="Les lots du dossier" cartes={[
             { libelle: 'Lots détectés', valeur: String(lots.length), etat: 'neutre', detail: 'Dans le dossier de l’acheteur.' },
             { libelle: 'Lots choisis', valeur: String(nbChoisis), etat: nbChoisis > 0 ? 'pret' : 'a-verifier', jauge: { rempli: nbChoisis, total: lots.length }, detail: nbChoisis > 0 ? undefined : 'Cochez au moins un lot pour lancer la lecture.' },
-            { libelle: 'Coût de la lecture', valeur: libelleUnites(nbChoisis), etat: 'neutre', detail: '1 lot lu = 1 unité de votre abonnement.' },
+            { libelle: 'Coût de la lecture', valeur: illimite ? 'Illimité' : libelleUnites(nbChoisis), etat: 'neutre', detail: illimite ? 'Votre offre est illimitée.' : '1 lot lu = 1 unité de votre abonnement.' },
             ...(separes ? [{ libelle: 'Dans vos métiers', valeur: String(dansVosMetiers.length), etat: 'neutre' as const, detail: 'Selon les métiers de Mon entreprise.' }] : []),
           ]} /> : undefined}
           barre={
         <BarreEtape>
           <BilanBarre
             className="gap-2"
-            bureau={<>
+            bureau={analysisError ? <ErreurLecture message={analysisError} alerte={false} className="max-w-xl" /> : <>
               <CheckCircle2 size={16} style={{ color: selectedId !== 'all' && selectedName ? 'var(--text-1)' : 'var(--text-3)' }} />
               <span className="text-sm" style={{ color: 'var(--text-3)' }}>
                 {selectedId !== 'all' && selectedName
@@ -619,7 +631,7 @@ export default function StepLotSelection({ project }: Props) {
                 }
               </span>
             </>}
-            tel={<>
+            tel={analysisError ? <ErreurLecture message={analysisError} alerte={false} className="line-clamp-2 text-xs" /> : <>
               <CheckCircle2 size={16} className="shrink-0" style={{ color: selectedId !== 'all' && selectedName ? 'var(--text-1)' : 'var(--text-3)' }} />
               <span className="truncate text-xs" style={{ color: 'var(--text-3)' }}>
                 {selectedLotIds.length > 1 ? `${selectedLotIds.length} lots` : selectedId !== 'all' && selectedName ? selectedName : aucunChoix ? 'Aucun lot choisi' : 'Tous les lots'}
@@ -628,16 +640,8 @@ export default function StepLotSelection({ project }: Props) {
           />
           <ActionsBarre>
             <BoutonSecondaire libelle="Retour" icone={ArrowLeft} onClick={() => navigate(`/projects/${project.id}/upload`)} />
-            <ActionsBarreTel>
-              <button
-                onClick={handleLaunch}
-                disabled={isAnalyzing || isSuccess || !peutLancer(selectedIds)}
-                className="signature-btn whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed [@media(pointer:coarse)]:min-h-11"
-              >
-                <Sparkles size={16} aria-hidden />
-                <span>Lire ce dossier</span>
-              </button>
-            </ActionsBarreTel>
+            <BoutonLireDossier variante="default" nbLots={nbChoisis} illimite={illimite} onClick={handleLaunch}
+              disabled={isAnalyzing || isSuccess || !peutLancer(selectedIds)} />
           </ActionsBarre>
         </BarreEtape>
           }
@@ -715,7 +719,7 @@ export default function StepLotSelection({ project }: Props) {
                 lot={{ id: 'all', nom: "Analyser l'ensemble du dossier (tous les lots)" }}
                 selected={selectedIds.has('all')}
                 onSelect={() => toggleLot('all')}
-                cout={libelleUnites(lots.length)}
+                cout={illimite ? undefined : libelleUnites(lots.length)}
                 pieces={documents}
               />
             </SectionEtape>
@@ -755,13 +759,6 @@ export default function StepLotSelection({ project }: Props) {
           </button>
         )}
 
-        {/* Error */}
-        {analysisError && (
-          <div className="flex items-start gap-2 p-4 rounded-xl text-sm" style={{ color: 'var(--danger-fg)', background: 'color-mix(in srgb, var(--danger-fg) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--danger-fg) 15%, transparent)' }}>
-            <AlertCircle size={16} className="shrink-0 mt-0.5" />
-            <span>{analysisError}</span>
-          </div>
-        )}
         </GabaritEtape>
       </div>
     </>

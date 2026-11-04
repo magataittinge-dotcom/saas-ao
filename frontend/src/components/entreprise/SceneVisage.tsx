@@ -1,4 +1,5 @@
 import { forwardRef, useEffect, useMemo, useRef, useState } from 'react'
+import { CircleDashed } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useMedia } from '@/hooks/useMedia'
 import { useMouvementReduit } from '@/components/intelligence/useMouvementReduit'
@@ -30,7 +31,9 @@ function BulleDonnee({ bulle, onChoisir, onChaud }: { bulle: Bulle; onChoisir: (
     >
       <span aria-hidden="true" className={cn('absolute top-1/2 hidden size-2 -translate-y-1/2 rounded-full bg-accent-ui shadow-[0_0_8px_var(--accent-ui)] lg:block', bulle.cote === 'gauche' ? '-right-[5px]' : '-left-[5px]')} />
       <span className="text-xs font-semibold uppercase tracking-[0.06em] text-fg-3">{bulle.libelle}</span>
-      <span className={cn('text-sm font-semibold leading-tight', bulle.valeur === A_RENSEIGNER ? 'text-accent-text' : 'text-fg')}>{bulle.valeur}</span>
+      <span className={cn('text-sm font-semibold leading-tight', bulle.valeur === A_RENSEIGNER ? 'inline-flex items-center gap-1 text-ambre-ink' : 'text-fg')}>
+        {bulle.valeur === A_RENSEIGNER && <CircleDashed size={13} aria-hidden className="shrink-0" />}{bulle.valeur}
+      </span>
       <span className="text-xs text-fg-2">{bulle.detail}</span>
     </button>
   )

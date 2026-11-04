@@ -68,11 +68,13 @@ export function partQuota(q: QuotaStatus | undefined): number | null {
   return parts.length ? Math.min(1, Math.max(...parts)) : null
 }
 
-/** Anneau de quota pour la barre d'icônes : un clic mène à Paramètres › Abonnement. */
-export function QuotaRond() {
+/** Anneau de quota pour la barre d'icônes : un clic mène à Paramètres › Abonnement. `masquerIllimite` : rien en offre illimitée. */
+export function QuotaRond({ masquerIllimite = false }: { masquerIllimite?: boolean }) {
   const { data } = useQuota()
   const part = partQuota(data)
   if (!data?.analyses || !data.memoires) return null
+  // Offre illimitée : pas de jauge à lire. Le rond « ∞ » sans nom sous l'icône déroutait (recette du 4/11) ; la barre latérale le retire.
+  if (masquerIllimite && part === null) return null
   const R = 15
   const C = 2 * Math.PI * R
   const ton = part === null ? null : tonConsommation(part)

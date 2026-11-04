@@ -149,3 +149,19 @@ test('la fiche sans rien : des phrases positives, aucun mot interdit', () => {
   assert.match(html, /Aucune exigence/)
   assert.doesNotMatch(html, /manquant|incomplet|absent|!/i)
 })
+
+// G8 (recette du 4/11) — « 1 unité » et « offre illimitée : non décompté » s'affichaient ensemble ; « environ 15 minutes »
+// pour un mémoire mesuré à 169 s. Une seule phrase de coût selon l'offre ; durée mesurée.
+import { ligneQuotaMemoire, DUREE_REDACTION } from '@/components/project/MemoirePreflight'
+
+test('G8 : la carte Abonnement dit l\'unité ou l\'offre illimitée, jamais les deux ; la ligne du bouton ne parle plus de coût', () => {
+  assert.equal(cartesPreparation(null, 0)[2].valeur, '1 unité')
+  const illimite = cartesPreparation(null, 0, true)[2]
+  assert.equal(illimite.valeur, 'Illimité')
+  assert.doesNotMatch(JSON.stringify(illimite), /unité|décompt/)
+  assert.doesNotMatch(ligneQuotaMemoire('business', { used: 5, limit: null }), /décompt|unité|illimit/)
+  assert.equal(ligneQuotaMemoire('business', { used: 5, limit: null }), DUREE_REDACTION)
+  assert.match(ligneQuotaMemoire('pro', { used: 3, limit: 40 }), /^3 sur 40 mémoires utilisés ce mois · Rédaction : environ 3 minutes$/)
+  assert.match(ligneQuotaMemoire('free', { used: 0, limit: 1 }), /sur votre essai/)
+  assert.match(DUREE_REDACTION, /3 minutes/)
+})

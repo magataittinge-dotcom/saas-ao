@@ -47,7 +47,7 @@ test("une seule formule pour passer à l'étape suivante, qui nomme la bonne ét
     assert.match(lire(f), new RegExp(`<BoutonSuite\\s+etape="${etape}"`), `${f} : « Étape suivante : ${etape} »`)
     for (const a of anciennes) assert.ok(!textes.some((t) => t.includes(a)), `${f} contient encore « ${a} »`)
   }
-  const lancement = textesAffiches('src/routes/project/StepLotSelection.tsx').map((t) => t.texte)
+  const lancement = textesAffiches('src/lib/coutLecture.ts').map((t) => t.texte)
   assert.ok(lancement.some((t) => t.includes('Lire ce dossier')))
 })
 
@@ -91,7 +91,9 @@ test('S4 : les nouveaux libellés sont à l\'écran', () => {
 
 test('S4 : les étapes s\'appellent Dépôt du dossier, Lots, Décider, Pièces, Mémoire, Export — partout pareil', () => {
   assert.deepEqual([...ETAPES_AO], ['Dépôt du dossier', 'Lots', 'Décider', 'Pièces', 'Mémoire', 'Export'])
-  for (const f of ['src/components/project/StepProgress.tsx', 'src/components/layout/Header.tsx']) {
+  // le Header reprend les noms de STEPS (titres-etapes-depot.test.ts) : plus de liste écrite en double
+  assert.match(lire('src/components/layout/Header.tsx'), /STEPS\.map\(/)
+  for (const f of ['src/components/project/StepProgress.tsx']) {
     const textes = textesAffiches(f).map((t) => t.texte)
     assert.ok(textes.includes('Décider') && textes.includes('Pièces'), `${f} : Décider et Pièces`)
     assert.ok(!textes.includes('Analyse IA') && !textes.includes('Vérification'), `${f} : plus d'ancien nom d'étape`)

@@ -31,7 +31,7 @@ function rendre(projets: Project[]) {
 test('l\'accueil : un seul h1, la bande « Vos AO en cours » (trois au plus), plus de Synorix Intelligence', () => {
   const html = rendre(PROJETS_DEMO)
   assert.equal((html.match(/<h1[\s>]/g) ?? []).length, 1, 'un seul h1')
-  assert.ok(/<h1[^>]*>Bonjour, vous<\/h1>/.test(html), 'le « Bonjour » existant est le h1')
+  assert.ok(/<h1[^>]*>Bonjour<\/h1>/.test(html), 'le « Bonjour » (sans prénom connu) est le h1')
   assert.ok(html.includes('data-bande-ao'), 'la bande est rendue')
   assert.ok(/<h2[^>]*id="t-bande"[^>]*>Vos AO en cours/.test(html))
   const cartes = html.match(/data-ao="/g) ?? []

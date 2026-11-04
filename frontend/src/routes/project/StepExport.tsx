@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'react'
+import { jourCourtParis } from '@/lib/dateParis'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -19,7 +20,7 @@ import { GabaritEtape, BandeResume, BarreEtape, BilanBarre, ActionsBarreTel, Sec
 import { cartesPieces } from '@/lib/resumePieces'
 import ExigencesDuDossier, { type ExigenceExport } from '@/components/project/ExigencesDuDossier'
 import {
-  etatPiece, ligneEtatDossier, lignesDuScore, lireAvertissementsExport, resumeExigences, type GroupeExigences,
+  etatPiece, ligneEtatDossier, lignesDuScore, lireAvertissementsExport, pieceDemandee, resumeExigences, type GroupeExigences,
 } from '@/lib/exportDossier'
 import { messageErreur } from '@/lib/erreurs'
 import { Sigle } from '@/components/common/Sigle'
@@ -341,14 +342,13 @@ export default function StepExport({ project }: Props) {
   // Signature : règle serveur (signature_required) — DC1, DC2, DUME et AE
   // seulement si le RC l'exige ; plus de liste de types « à signer » ici.
   // Mêmes lignes que le score du serveur : pièces à fournir et à compléter.
+  // Une pièce facultative n'est pas comptée : même nombre que les cartes de l'écran Pièces (14, pas 15 avec la facultative).
   const nonConformes = lignesDuScore(detail?.checklist_items ?? []).filter((i) =>
-    i.status !== 'non_applicable' && (!CONFORME_STATUSES.has(i.status) || signatureAConfirmer(i)),
+    i.status !== 'non_applicable' && (!CONFORME_STATUSES.has(i.status) || signatureAConfirmer(i)) && pieceDemandee(i, echeance),
   )
 
   // ── Faits du héros : l'état du dossier en un chiffre ─────────────────────
   const lotName = project.selected_lot_name || ''
-  const conformes = score?.conformes ?? detail.checklist_present
-  const totalPieces = score?.total ?? detail.checklist_total
   const readyForDeposit = !gateBlocked && alertCount === 0
 
   // L'action principale, écrite une fois : en haut à droite sur ordinateur, dans la barre au téléphone (une seule en dégradé par écran).
@@ -365,47 +365,39 @@ export default function StepExport({ project }: Props) {
       </button>
   )
 
-  // ── Autres formats : repliés. Ordinateur : sous « Autres formats » dans la barre ; téléphone : menu « … ».
-  const autresFormats = (fermer?: () => void) => (
+  // ── Formats du mémoire : deux boutons visibles sur ordinateur (G10) ; au téléphone, le menu « … » de la barre.
+  const sortieMemoire = (libelle: string, enCours: boolean, lancer: () => void, fermer?: () => void) => (
+    <button
+      key={libelle}
+      type="button"
+      role={fermer ? 'menuitem' : undefined}
+      onClick={() => { fermer?.(); lancer() }}
+      disabled={enCours || !detail.has_memoire}
+      className={fermer
+        ? 'flex min-h-9 items-center gap-2 rounded-lg px-3 text-left text-sm font-medium text-fg hover:bg-surface-0 disabled:opacity-40 [@media(pointer:coarse)]:min-h-11'
+        : 'inline-flex items-center gap-2 rounded-lg border border-bord-2 px-3.5 py-2 text-sm font-medium text-fg-2 hover:bg-surface-0 disabled:opacity-40'}
+    >
+      {enCours ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <FileDown size={14} aria-hidden />}
+      {libelle}
+    </button>
+  )
+  const formatsMemoire = (fermer?: () => void) => (
     <>
-      <button
-        role={fermer ? 'menuitem' : undefined}
-        onClick={() => { fermer?.(); exportPdf() }}
-        disabled={isExportingPdf || !detail.has_memoire}
-        className="flex min-h-9 items-center gap-2 rounded-lg px-3 text-left text-sm font-medium text-fg hover:bg-surface-0 disabled:opacity-40 [@media(pointer:coarse)]:min-h-11"
-      >
-        {isExportingPdf ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <FileDown size={14} aria-hidden />}
-        Mémoire PDF (dépôt)
-      </button>
-      <button
-        role={fermer ? 'menuitem' : undefined}
-        onClick={() => { fermer?.(); exportDocx() }}
-        disabled={isExportingDocx || !detail.has_memoire}
-        className="flex min-h-9 items-center gap-2 rounded-lg px-3 text-left text-sm font-medium text-fg-2 hover:bg-surface-0 disabled:opacity-40 [@media(pointer:coarse)]:min-h-11"
-      >
-        {isExportingDocx ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <FileDown size={14} aria-hidden />}
-        Mémoire Word (retouche)
-      </button>
+      {sortieMemoire('Mémoire en Word', isExportingDocx, exportDocx, fermer)}
+      {sortieMemoire('Mémoire en PDF', isExportingPdf, exportPdf, fermer)}
     </>
   )
 
-  // ── Barre du bas : l'état du dossier, « Autres formats » (repliés) ; le bouton principal n'y figure qu'au téléphone
+  // ── Barre du bas : l'état du dossier, les deux formats du mémoire (Word, PDF) ; le bouton principal n'y figure qu'au téléphone
   // (l'en-tête porte le sien sur ordinateur) : jamais deux boutons en dégradé visibles ensemble.
   const bottomBar = (
     <BarreEtape className="justify-between gap-3">
       <BilanBarre
-        bureau={<p role="status" className="text-sm text-fg-2">{ligneEtatDossier(gateBlocked ? totalPieces - conformes : 0, alertCount, readyForDeposit)}</p>}
+        bureau={<p role="status" className="text-sm text-fg-2">{ligneEtatDossier(gateBlocked ? nonConformes.length : 0, alertCount, readyForDeposit)}</p>}
       />
       <div className="flex shrink-0 items-center gap-3 max-[768px]:ml-auto">
-        <details className="relative max-[768px]:hidden">
-          <summary className="cursor-pointer list-none rounded-lg border border-bord-2 px-3.5 py-2 text-sm font-medium text-fg-2 hover:bg-surface-0 [&::-webkit-details-marker]:hidden [@media(pointer:coarse)]:min-h-11">
-            Autres formats
-          </summary>
-          <div className="absolute bottom-full right-0 mb-2 flex w-60 flex-col gap-1 rounded-lg border border-bord-2 bg-surface-0 p-1.5 shadow-lg">
-            {autresFormats()}
-          </div>
-        </details>
-        <MenuPlus libelle="Autres formats">{(fermer) => autresFormats(fermer)}</MenuPlus>
+        <div className="flex items-center gap-3 max-[768px]:hidden">{formatsMemoire()}</div>
+        <MenuPlus libelle="Autres formats">{(fermer) => formatsMemoire(fermer)}</MenuPlus>
         <ActionsBarreTel className="max-[768px]:flex-1">{boutonTelecharger}</ActionsBarreTel>
       </div>
     </BarreEtape>
@@ -508,7 +500,7 @@ export default function StepExport({ project }: Props) {
               <div className="min-w-0">
                 <p className="text-sm font-medium text-fg">Mémoire technique v{mem.version}</p>
                 <p className="mt-0.5 text-sm text-fg-2">
-                  {mem.estimated_pages} pages, {mem.sections_count} sections — généré le {new Date(mem.generated_at).toLocaleDateString('fr-FR')}
+                  {mem.estimated_pages} pages, {mem.sections_count} sections — généré le {jourCourtParis(mem.generated_at)}
                 </p>
                 <EtatElement
                   etat={libellePassagesACompleter(mem.passages_a_completer) ? 'a-verifier' : 'pret'} className="mt-1.5"

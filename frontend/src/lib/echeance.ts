@@ -72,6 +72,12 @@ export function echeanceAO(p: ProjetEcheance): EcheanceSource | null {
 // ── « En cours » : la même définition partout (tableau de bord, Mes AO, barre latérale, serveur) ──
 export const STATUTS_EN_COURS: readonly string[] = ['brouillon', 'en_cours', 'analyzed']
 export const estEnCours = (statut: string) => STATUTS_EN_COURS.includes(statut)
+/**
+ * « Vos AO en cours » de l'accueil : en cours ET dont la remise n'est pas passée. Un AO dont la date est dépassée sort de
+ * l'accueil (bande et compteur) ; il reste dans Mes AO.
+ */
+export const estEnCoursOuvert = (p: ProjetEcheance & { status: string }): boolean =>
+  estEnCours(p.status) && etatEcheance(echeanceAO(p)).etat !== 'passee'
 
 // ── Avancement : en étapes, la même mesure partout ──
 export const ETAPES_AO = ['Dépôt du dossier', 'Lots', 'Décider', 'Pièces', 'Mémoire', 'Export'] as const

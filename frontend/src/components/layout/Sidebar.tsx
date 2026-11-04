@@ -64,7 +64,7 @@ export default function Sidebar() {
 
       <div className="mt-auto flex w-full flex-col items-center gap-1">
         <EntreesBarre entrees={[ENTREE_PARAMETRES]} />
-        <QuotaRond />
+        <QuotaRond masquerIllimite />
         <span role="separator" className="my-1.5 h-px w-7 bg-bord-2" />
         <MenuCompte />
       </div>

@@ -82,23 +82,27 @@ function usePreflight(projectId: string) {
   })
 }
 
+/** Durée annoncée de la rédaction : mesurée, environ 3 minutes (169 s sur le dossier de démonstration, recette du 4/11). */
+export const DUREE_REDACTION = 'Rédaction : environ 3 minutes'
+
+/** La ligne sous le bouton : où en est le quota, puis la durée. Le coût (1 unité, ou offre illimitée) est dit une fois, dans la carte « Abonnement » (G8). */
+export function ligneQuotaMemoire(plan: string, quota: { used: number; limit: number | null }): string {
+  if (quota.limit === null) return DUREE_REDACTION
+  const periode = plan === 'free' ? 'sur votre essai' : 'ce mois'
+  return `${quota.used} sur ${quota.limit} mémoires utilisés ${periode} · ${DUREE_REDACTION}`
+}
+
 /**
- * Rappel du quota, avant de consommer l'unité — affiché près du bouton « Rédiger le mémoire », même quand
- * le pré-contrôle est replié (même requête, même cache que le pré-contrôle).
- * 1.10 — quota annoncé selon l'offre (l'essai gratuit est à vie, pas « ce mois ») et durée mesurée :
- * 930 s (~15,5 min) sur le DCE Gueux, Sonnet 4.6 (docs/comparaison-memoire-AB/RESULTAT.md) — pas de chiffre inventé.
+ * Rappel du quota et de la durée, affiché près du bouton « Rédiger le mémoire », même quand le pré-contrôle est
+ * replié (même requête, même cache que le pré-contrôle).
+ * 1.10 — quota selon l'offre (l'essai gratuit est à vie, pas « ce mois »). G8 (4/11) — plus de phrase de coût ici
+ * (elle contredisait la carte « 1 unité » en offre illimitée) et durée mesurée : environ 3 minutes, pas 15.
  */
 export function QuotaMemoire({ projectId }: { projectId: string }) {
   const plan = useAuthStore((st) => st.organization?.plan ?? 'free')
   const { data } = usePreflight(projectId)
   if (!data) return null
-  const quotaLabel = data.quota.limit === null
-    ? 'Offre illimitée : ce mémoire n’est pas décompté'
-    : plan === 'free'
-      ? `Consommera 1 mémoire — ${data.quota.used}/${data.quota.limit} sur votre essai`
-      : `Consommera 1 mémoire — ${data.quota.used}/${data.quota.limit} ce mois`
-  const dureeLabel = 'Rédaction : environ 15 minutes'
-  return <p className="text-xs" style={{ color: 'var(--text-3)' }}>{quotaLabel} · {dureeLabel}</p>
+  return <p className="text-xs" style={{ color: 'var(--text-3)' }}>{ligneQuotaMemoire(plan, data.quota)}</p>
 }
 
 /**

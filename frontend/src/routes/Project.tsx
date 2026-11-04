@@ -1,4 +1,4 @@
-import { lazy, Suspense, useRef, useState, useEffect } from 'react'
+import { lazy, Suspense } from 'react'
 import { useParams, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import { MapPin } from 'lucide-react'
 import { useProject } from '@/hooks/useProject'
@@ -7,10 +7,11 @@ import { lotUniqueDuDossier } from '@/lib/lotUnique'
 import { actionEtape } from '@/lib/intelligence/action'
 import { DeadlinePill } from '@/components/dashboard/DeadlinePill'
 import { echeanceAO } from '@/lib/echeance'
+import { dossierLu } from '@/lib/dossierLu'
+import { LectureNonFaite } from '@/components/etape'
 import { StepperSkeleton } from '@/components/skeletons'
 import Skeleton from '@/components/common/Skeleton'
 import EcranEnChargement from '@/components/common/EcranEnChargement'
-import { cn } from '@/lib/utils'
 
 // Chaque étape est un morceau chargé à la demande (bloc 6).
 const StepUpload = lazy(() => import('./project/StepUpload'))
@@ -26,20 +27,6 @@ export default function Project() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { data: project, isLoading } = useProject(id!)
-
-  const sentinelRef = useRef<HTMLDivElement>(null)
-  const [stepperStuck, setStepperStuck] = useState(false)
-
-  useEffect(() => {
-    const sentinel = sentinelRef.current
-    if (!sentinel) return
-    const observer = new IntersectionObserver(
-      ([entry]) => setStepperStuck(!entry.isIntersecting),
-      { threshold: 0 },
-    )
-    observer.observe(sentinel)
-    return () => observer.disconnect()
-  }, [])
 
   if (isLoading) {
     // Show the page skeleton (header + stepper) instead of a full-screen
@@ -82,16 +69,8 @@ export default function Project() {
         )}
       </div>
 
-      <div ref={sentinelRef} className="h-px" />
-
-      {/* Sticky stepper — fin, une seule lumière */}
-      <div
-        className={cn(
-          'sticky top-0 z-20 glass-card px-4 py-2.5 mb-5 transition-all duration-200',
-          stepperStuck && 'rounded-none -mx-3 px-6 sm:-mx-4 sm:px-8',
-        )}
-        style={stepperStuck ? { background: 'var(--glass-fill)', backdropFilter: 'blur(var(--blur-sm))', WebkitBackdropFilter: 'blur(var(--blur-sm))', borderBottom: '1px solid var(--border-1)', boxShadow: 'var(--shadow-card)' } : undefined}
-      >
+      {/* Le fil des étapes défile avec la page : collé, il recouvrait le contenu et les messages d'erreur (G3). */}
+      <div className="glass-card px-4 py-2.5 mb-5">
         <StepProgress
           currentStep={project.current_step}
           completedSteps={project.completed_steps}
@@ -110,8 +89,14 @@ export default function Project() {
         <Route path="verification" element={<StepVerification project={project} />} />
         {/* B9 — ancien nom d'étape conservé en redirect */}
         <Route path="candidature"  element={<Navigate to={`/projects/${project.id}/verification`} replace />} />
-        <Route path="plan"         element={<StepPlan         project={project} />} />
-        <Route path="memoire"      element={<StepMemoire      project={project} />} />
+        <Route path="plan"         element={dossierLu(project)
+          ? <StepPlan project={project} />
+          : <LectureNonFaite project={project} titre="Plan du mémoire" utilite="Les parties de votre mémoire, avant sa rédaction." action="Valider le plan"
+              libelles={['Parties', 'Critères du règlement', 'Longueur', 'Fiches']} />} />
+        <Route path="memoire"      element={dossierLu(project)
+          ? <StepMemoire project={project} />
+          : <LectureNonFaite project={project} titre="Rédiger le mémoire" utilite="Synorix rédige chaque partie du plan, à partir de votre dossier et de Mon entreprise." action="Rédiger le mémoire"
+              libelles={['Plan', 'Poids dans la note', 'Abonnement']} />} />
         <Route path="export"       element={<StepExport       project={project} />} />
       </Routes>
       </Suspense>

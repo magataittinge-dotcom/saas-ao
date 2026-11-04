@@ -1,10 +1,10 @@
 import { useAvisAttente } from '@/hooks/useAvisAttente'
+import { heureParis } from '@/lib/dateParis'
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, Link } from 'react-router-dom'
 import { Save, CheckCircle2, Pencil, X } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
 import axios from 'axios'
 import { memoireDepuisReponse } from '@/lib/memoireLecture'
 import { api } from '@/services/api'
@@ -31,6 +31,8 @@ import { depuisMarkdown, versMarkdown } from '@/lib/memoireMarkdown'
 import {
   ANNEXES_MEMOIRE, sectionsDuContenu, sommaireMemoire, type SectionMemoire,
 } from '@/lib/memoireSections'
+import LecteurMarkdown from '@/components/memoire/LecteurMarkdown'
+import { useQuota } from '@/components/layout/QuotaGauge'
 import SommaireMemoire from '@/components/memoire/SommaireMemoire'
 import ConfirmationRefaire, { BoutonRefaire, type CibleRefaire } from '@/components/memoire/RefaireSection'
 import EtatPartieChoix from '@/components/memoire/EtatPartie'
@@ -137,7 +139,7 @@ function FullscreenEditor({
       : modifie
         ? 'Modifications en cours'
         : heure
-          ? `Enregistré à ${heure.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
+          ? `Enregistré à ${heureParis(heure)}`
           : ''
 
   return (
@@ -146,9 +148,14 @@ function FullscreenEditor({
         className="flex items-center justify-between gap-4 px-6 py-3 shrink-0"
         style={{ borderBottom: '1px solid var(--border-1)', background: 'var(--surface-1)' }}
       >
-        <p className="text-sm font-medium" style={{ color: 'var(--text-1)' }}>
-          Édition du mémoire — format Markdown
-        </p>
+        <div>
+          <p className="text-sm font-medium" style={{ color: 'var(--text-1)' }}>
+            Modification du texte du mémoire
+          </p>
+          <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
+            {'# = titre, **texte** = gras'}
+          </p>
+        </div>
         <div className="flex items-center gap-3">
           <p
             role="status"
@@ -386,13 +393,7 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
 }
 
 function MdContent({ text }: { text: string }) {
-  return (
-    <div className="prose prose-sm prose-invert max-w-none prose-headings:font-semibold prose-p:leading-relaxed prose-code:text-xs"
-      style={{ color: 'var(--text-2)', fontFamily: F }}
-    >
-      <ReactMarkdown>{text}</ReactMarkdown>
-    </div>
-  )
+  return <LecteurMarkdown text={text} />
 }
 
 // ─── Main component ──────────────────────────────────────────────────────────
@@ -400,7 +401,7 @@ function MdContent({ text }: { text: string }) {
 const BOUTON_SECONDAIRE = 'inline-flex items-center justify-center gap-1.5 rounded-lg border border-bord-2 px-3.5 py-1.5 text-sm font-medium text-fg-2 transition-colors hover:bg-surface-0 max-[768px]:flex-1 [@media(pointer:coarse)]:min-h-11'
 
 /** Les cartes de l'écran de préparation : le plan suivi, le poids dans la note, ce que la rédaction décompte. */
-export function cartesPreparation(plan: VuePlan | null, techPct: number): CarteResume[] {
+export function cartesPreparation(plan: VuePlan | null, techPct: number, illimite = false): CarteResume[] {
   return [
     plan
       ? {
@@ -411,7 +412,9 @@ export function cartesPreparation(plan: VuePlan | null, techPct: number): CarteR
     techPct > 0
       ? { libelle: 'Poids dans la note', valeur: `${techPct} %`, detail: 'Pondération hors prix relevée dans le règlement.' }
       : { libelle: 'Poids dans la note', valeur: 'Non précisé', detail: 'Le règlement ne donne pas de pondération.' },
-    { libelle: 'Abonnement', valeur: '1 unité', detail: 'Un mémoire décompte 1 unité, au succès de la rédaction.' },
+    illimite
+      ? { libelle: 'Abonnement', valeur: 'Illimité', detail: 'Votre offre est illimitée.' }
+      : { libelle: 'Abonnement', valeur: '1 unité', detail: 'Un mémoire décompte 1 unité, au succès de la rédaction.' },
   ]
 }
 
@@ -456,6 +459,9 @@ interface Props { project: Project }
 export default function StepMemoire({ project }: Props) {
   const navigate = useNavigate()
   const avisAttente = useAvisAttente('mémoire')
+  const { data: quota } = useQuota()
+  // offre illimitée : la carte « Abonnement » ne parle d'aucune unité (G8)
+  const illimite = quota?.analyses?.limit === null && quota?.memoires?.limit === null
   const queryClient = useQueryClient()
   const [showPaywall, setShowPaywall] = useState(false)
   const [paywallMessage, setPaywallMessage] = useState<string | null>(null)
@@ -717,7 +723,7 @@ export default function StepMemoire({ project }: Props) {
           ) : (
             <button type="button" onClick={() => navigate(`/projects/${project.id}/plan`)} className={BOUTON_SECONDAIRE}>Voir le plan</button>
           )}
-          resume={<BandeResume libelle="Résumé de la rédaction" cartes={cartesPreparation(plan ?? null, techPct)} />}
+          resume={<BandeResume libelle="Résumé de la rédaction" cartes={cartesPreparation(plan ?? null, techPct, illimite)} />}
         >
           {hasMemoire && (
             <p className="text-sm font-medium text-warning">La régénération remplacera la version actuelle du mémoire.</p>
@@ -805,7 +811,7 @@ export default function StepMemoire({ project }: Props) {
           <>
             <RelectureMemoire projectId={project.id} />
             <button type="button" onClick={() => setShowEditor(true)} className={BOUTON_SECONDAIRE}>
-              <Pencil size={13} aria-hidden /> Modifier
+              <Pencil size={13} aria-hidden /> Modifier le texte
             </button>
             <button type="button" onClick={() => navigate(`/projects/${project.id}/plan`)} className={BOUTON_SECONDAIRE}>Voir le plan</button>
           </>

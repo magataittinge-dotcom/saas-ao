@@ -97,6 +97,9 @@ const nomsMaitresOuvrage = (refs: Partial<Reference>[]): string[] => {
 const montantCumule = (refs: Partial<Reference>[]): number => refs.reduce((t, r) => t + (nombre(r.montant_ht) ? r.montant_ht : 0), 0)
 
 /** Les six bulles, de gauche à droite puis de haut en bas : trois à gauche du visage, trois à droite. */
+/** « échafaudage » → « Échafaudage » : la valeur d'une bulle se lit sous son titre, comme une phrase. */
+const majuscule = (t: string): string => t.charAt(0).toUpperCase() + t.slice(1)
+
 export function construireBulles(d: DonneesEntreprise, aujourdhui: Date = new Date()): Bulle[] {
   const jour = aujourdhui instanceof Date ? aujourdhui : new Date()
   const iso = aujourdhuiIso(jour)
@@ -140,7 +143,7 @@ export function construireBulles(d: DonneesEntreprise, aujourdhui: Date = new Da
   const enTexteLibre = texte(profil?.vehicules) || texte(profil?.materiel)
   const moyens: Bulle = {
     id: 'moyens', rubrique: 'moyens', libelle: 'Moyens', cote: 'gauche', ancre: { x: 0.24, y: 0.72 },
-    valeur: partiesValeur.join(' · ') || (autres.length > 0 ? accorder(autres.reduce((t, l) => t + quantite(l), 0), 'matériel', 'matériels') : enTexteLibre ? 'Décrits en texte libre' : A_RENSEIGNER),
+    valeur: majuscule(partiesValeur.join(' · ')) || (autres.length > 0 ? accorder(autres.reduce((t, l) => t + quantite(l), 0), 'matériel', 'matériels') : enTexteLibre ? 'Décrits en texte libre' : A_RENSEIGNER),
     renseignee: partiesValeur.length > 0 || autres.length > 0 || Boolean(enTexteLibre),
     detail: autres.length > 0 ? autres.slice(0, 2).map((l) => `${quantite(l)} ${texte(l.designation).toLowerCase()}`).join(' · ') : 'Machines et gros matériel à renseigner',
   }
