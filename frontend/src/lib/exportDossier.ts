@@ -80,3 +80,10 @@ export function ligneEtatDossier(aFaire: number, alertes: number, pret: boolean)
   if (aFaire > 0) return `${aFaire} pièce${aFaire > 1 ? 's' : ''} à joindre ou à confirmer avant le dépôt`
   return `${alertes} point${alertes > 1 ? 's' : ''} de contrôle à vérifier`
 }
+
+/** Les pièces de la ligne « N pièces à joindre ou à confirmer » : celles que le dépôt demande (prêtes, à joindre, à confirmer,
+ *  à renouveler), comme les cartes de l'écran Pièces. Une pièce facultative ou « pour l'attribution » n'est pas comptée. */
+export function pieceDemandee(p: EtatPieceEntree, echeance?: string | null): boolean {
+  const code = statutPiece(p, echeance).code
+  return code === 'pret' || code === 'a-joindre' || code === 'a-confirmer' || code === 'a-renouveler'
+}

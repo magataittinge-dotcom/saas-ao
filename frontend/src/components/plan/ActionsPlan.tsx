@@ -1,4 +1,5 @@
 import { ActionsBarre, ActionsBarreTel, BarreEtape, BilanBarre } from '@/components/etape'
+import { jourLongParis } from '@/lib/dateParis'
 
 export interface EtatPlan {
   /** Le plan enregistré est validé et rien n'a changé depuis. */
@@ -10,11 +11,10 @@ export interface EtatPlan {
   enValidation: boolean
 }
 
-/** « Plan validé le 2 novembre » ; sans date lisible, « Plan validé ». */
+/** « Plan validé le 2 novembre » (à l'heure de Paris) ; sans date lisible, « Plan validé ». */
 export function libelleValidation(valideLe: string | null): string {
-  const d = valideLe ? new Date(valideLe) : null
-  if (!d || Number.isNaN(d.getTime())) return 'Plan validé'
-  return `Plan validé le ${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
+  const jour = jourLongParis(valideLe)
+  return jour ? `Plan validé le ${jour}` : 'Plan validé'
 }
 
 export function libelleEtat(e: EtatPlan): string {

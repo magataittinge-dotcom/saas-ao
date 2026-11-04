@@ -1,6 +1,7 @@
 // Mes AO — la logique de l'écran, sans JSX : le fil réel à 7 étapes, le tri par remise, les comptes du résumé.
 // Tout est déterministe (aucune IA) et lit les données de GET /projects. Les verbes viennent de `actionEtape()` (un seul calcul).
 import { echeanceAO, estEnCours, etatEcheance, momentLimite, type Echeance } from '@/lib/echeance'
+import { jourCourtParis } from '@/lib/dateParis'
 import { aDecider, aMemoire } from '@/lib/intelligence/action'
 import type { AvancementAO, Project } from '@/types'
 
@@ -73,7 +74,7 @@ const MOIS_COURTS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 
 const heure = (d: Date) => (d.getMinutes() ? `${d.getHours()} h ${String(d.getMinutes()).padStart(2, '0')}` : `${d.getHours()} h`)
 /** « 28 oct. » */
 export const jourCourt = (d: Date): string => `${d.getDate()} ${MOIS_COURTS[d.getMonth()]}`
-const jourMois = (iso: string) => jourCourt(new Date(iso))
+const jourMois = (iso: string) => jourCourtParis(iso)
 
 /** « ven. 6 nov., 12 h » ; sans heure connue, le jour seul ; null sans date. */
 export function quandCourt(p: Project): string | null {

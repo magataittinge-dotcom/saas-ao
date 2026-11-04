@@ -1,4 +1,5 @@
 import { useAvisAttente } from '@/hooks/useAvisAttente'
+import { heureParis } from '@/lib/dateParis'
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -138,7 +139,7 @@ function FullscreenEditor({
       : modifie
         ? 'Modifications en cours'
         : heure
-          ? `Enregistré à ${heure.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`
+          ? `Enregistré à ${heureParis(heure)}`
           : ''
 
   return (
