@@ -135,7 +135,7 @@ export default function FormCertifications({ donnees, avant, idPanneau, idOnglet
               </button>
             )}
             <p data-etat={ca.some((e) => e.annee.trim() && e.montant.trim()) ? 'rempli' : 'a-renseigner'} className="text-xs text-fg-3">
-              {ca.some((e) => e.annee.trim() && e.montant.trim()) ? 'Renseigné' : <span className="font-medium text-accent-text">À renseigner</span>}
+              {ca.some((e) => e.annee.trim() && e.montant.trim()) ? 'Renseigné' : <span className="font-medium text-ambre-ink">À renseigner</span>}
             </p>
           </div>
         </Pleine>

@@ -32,7 +32,7 @@ export function Field({ label, aide, groupe, rempli, source, children }: { label
         aide && <p className="mt-1 text-xs text-fg-3">{aide}</p>
       ) : (
         <p data-etat={rempli ? 'rempli' : 'a-renseigner'} className="mt-1 text-xs text-fg-3">
-          {rempli ? (source ?? 'Renseigné') : <span className="font-medium text-accent-text">{A_RENSEIGNER}</span>}
+          {rempli ? (source ?? 'Renseigné') : <span className="font-medium text-ambre-ink">{A_RENSEIGNER}</span>}
           {aide ? ` · ${aide}` : ''}
         </p>
       )}
