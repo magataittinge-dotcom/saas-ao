@@ -7,6 +7,8 @@ import { lotUniqueDuDossier } from '@/lib/lotUnique'
 import { actionEtape } from '@/lib/intelligence/action'
 import { DeadlinePill } from '@/components/dashboard/DeadlinePill'
 import { echeanceAO } from '@/lib/echeance'
+import { dossierLu } from '@/lib/dossierLu'
+import { LectureNonFaite } from '@/components/etape'
 import { StepperSkeleton } from '@/components/skeletons'
 import Skeleton from '@/components/common/Skeleton'
 import EcranEnChargement from '@/components/common/EcranEnChargement'
@@ -87,8 +89,14 @@ export default function Project() {
         <Route path="verification" element={<StepVerification project={project} />} />
         {/* B9 — ancien nom d'étape conservé en redirect */}
         <Route path="candidature"  element={<Navigate to={`/projects/${project.id}/verification`} replace />} />
-        <Route path="plan"         element={<StepPlan         project={project} />} />
-        <Route path="memoire"      element={<StepMemoire      project={project} />} />
+        <Route path="plan"         element={dossierLu(project)
+          ? <StepPlan project={project} />
+          : <LectureNonFaite project={project} titre="Plan du mémoire" utilite="Les parties de votre mémoire, avant sa rédaction." action="Valider le plan"
+              libelles={['Parties', 'Critères du règlement', 'Longueur', 'Fiches']} />} />
+        <Route path="memoire"      element={dossierLu(project)
+          ? <StepMemoire project={project} />
+          : <LectureNonFaite project={project} titre="Rédiger le mémoire" utilite="Synorix rédige chaque partie du plan, à partir de votre dossier et de Mon entreprise." action="Rédiger le mémoire"
+              libelles={['Plan', 'Poids dans la note', 'Abonnement']} />} />
         <Route path="export"       element={<StepExport       project={project} />} />
       </Routes>
       </Suspense>
