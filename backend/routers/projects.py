@@ -2112,18 +2112,13 @@ def select_lot(
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ):
-    """Save the selected lot and advance to step 3 (AI analysis)."""
+    """Enregistre le lot choisi. N'avance PAS l'étape (B1) : l'étape Lots est cochée et l'AO passe à l'étape 3
+    quand la lecture est effectivement lancée (POST /analyze) — un lancement en échec (pré-vol IA, quota) laisse
+    l'AO sur Lots."""
     project = _get_project_or_404(project_id, user.organization_id, db)
 
     project.selected_lot = payload.lot_id or None
     project.selected_lot_name = payload.lot_name or None
-
-    # Mark step 2 complete, advance to step 3
-    steps = dict(project.completed_steps or {})
-    steps["2"] = True
-    project.completed_steps = steps
-    if project.current_step <= 2:
-        project.current_step = 3
 
     db.commit()
     db.refresh(project)

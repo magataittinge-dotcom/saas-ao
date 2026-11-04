@@ -263,14 +263,14 @@ test('le chiffre d\'affaires et l\'effectif des exercices sont dans Certificatio
   assert.ok(INFORMATIONS.filter((i) => ['I20', 'I23'].includes(i.id)).every((i) => i.rubrique === 'certifications'))
 })
 
-test('Identité : étiquettes associées aux champs, SIRET en lecture seule, le reste à la demande', () => {
+test('Identité : étiquettes associées aux champs, SIRET saisissable (G7), le reste à la demande', () => {
   const html = rendre(<QueryClientProvider client={new QueryClient()}><MemoryRouter><FormIdentite donnees={DONNEES} /></MemoryRouter></QueryClientProvider>, true)
   assert.ok(html.includes('value="Entreprise de démonstration"'), 'le nom vient de l\'organisation')
   assert.ok(!html.includes('Ancien nom'), 'le nom du profil n\'est pas montré')
   for (const label of ['Nom de l&#x27;entreprise', 'SIRET', 'Adresse du siège', 'Nom du dirigeant', 'Fonction du dirigeant', 'Activités principales']) {
     assert.ok(html.includes(label), label)
   }
-  assert.match(html, /readOnly=""|readonly=""/)
+  assert.ok(!/readOnly=""|readonly=""/.test(html), 'G7 : le SIRET se saisit, même sur un profil rempli')
   assert.match(html, /aria-expanded="false"[^>]*>Afficher les informations utiles et en option/)
   assert.ok(!html.includes('Historique et parcours'), 'replié tant qu\'on ne le demande pas')
   assert.equal(compte(html, /for="[^"]+"/g) >= 6, true)

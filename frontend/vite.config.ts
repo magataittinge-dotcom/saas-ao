@@ -1,8 +1,16 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
-export default defineConfig({
+// Cible du proxy /api du serveur de développement : VITE_PROXY_API (variable d'environnement ou frontend/.env), sinon
+// l'API locale habituelle, http://localhost:8000. N'a aucun effet sur le build de production (le proxy ne sert qu'au serveur
+// de développement ; la production passe par nginx).
+export const CIBLE_PROXY_PAR_DEFAUT = 'http://localhost:8000'
+
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+  const cibleProxy = (process.env.VITE_PROXY_API || env.VITE_PROXY_API || '').trim() || CIBLE_PROXY_PAR_DEFAUT
+  return {
   plugins: [react()],
   resolve: {
     alias: {
@@ -28,9 +36,10 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: cibleProxy,
         changeOrigin: true,
       },
     },
   },
+  }
 })

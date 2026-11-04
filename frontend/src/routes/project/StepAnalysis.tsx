@@ -1,7 +1,7 @@
 import { useAvisAttente } from '@/hooks/useAvisAttente'
-import { useState, useMemo, useRef, useCallback } from 'react'
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient, useIsFetching } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
   Search, Eye,
@@ -33,6 +33,7 @@ import EchecAction from '@/components/common/EchecAction'
 import { messageErreur } from '@/lib/erreurs'
 import { phraseDocumentsAnalyses, phraseExigences, repartirDocuments } from '@/lib/analyseLibelles'
 import { PASSAGE_INTROUVABLE, trouverPieceCitee } from '@/lib/pieceCitee'
+import { lectureNonDemarree } from '@/lib/lectureNonDemarree'
 
 const ANALYSIS_STEPS: StepDescriptor[] = [
   { key: 'preparation',     label: 'Lecture des documents',                 estimated_s: 2 },
@@ -199,6 +200,15 @@ export default function StepAnalysis({ project }: Props) {
     },
   })
 
+  // B1 — la lecture a-t-elle réellement démarré ? Le projet est relu après le lancement ; on laisse ce temps (2,5 s) avant
+  // de conclure qu'aucune lecture ne tourne, pour ne pas alerter pendant que le lancement se confirme.
+  const projetEnRelecture = useIsFetching({ queryKey: ['projects', project.id] }) > 0
+  const [delaiDeGracePasse, setDelaiDeGracePasse] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setDelaiDeGracePasse(true), 2500)
+    return () => clearTimeout(t)
+  }, [])
+
   // ── Lot filter computation ────────────────────────────────────
   const lotFilterInfo = useMemo(() => {
     if (!project.selected_lot || project.selected_lot === 'all') return null
@@ -276,6 +286,24 @@ export default function StepAnalysis({ project }: Props) {
         className="btn-primary py-2 px-5 disabled:opacity-60"
       >
         {avis ? 'Réessayer' : "Relancer l'analyse"}
+      </button>
+    </div>
+  )
+
+  // B1 — aucun traitement en cours, aucune analyse : la lecture n'a pas démarré (lancement en échec).
+  if (lectureNonDemarree({
+    nbExigences: items.length,
+    statutTraitement: project.processing_status,
+    phaseFlux: analysisSse.phase,
+    donneesAJour: delaiDeGracePasse && !projetEnRelecture,
+  })) return (
+    <div className="max-w-lg mx-auto glass-card p-8 text-center space-y-4 animate-fade-in">
+      <p className="text-base font-semibold text-ds-text">La lecture n’a pas démarré</p>
+      <p className="text-sm text-ds-text-2">
+        Le dossier est bien enregistré, mais aucune lecture n’est en cours. Relancez-la depuis le choix des lots.
+      </p>
+      <button onClick={() => navigate(`/projects/${project.id}/lots`)} className="btn-primary py-2 px-5">
+        Relancer
       </button>
     </div>
   )

@@ -6,6 +6,7 @@ import type { DonneesEntreprise } from '@/lib/entreprise/avancement'
 import { FORMES_JURIDIQUES, METIERS, lireDepartements } from '@/lib/entreprise/metiers'
 import { AfficherPlus, ChampNombre, Field, Groupe, Pleine, SOURCE_SIRENE, Select } from './champs'
 import CadreFormulaire from './CadreFormulaire'
+import ChampSiret from './ChampSiret'
 import CarteSiege from './CarteSiege'
 import { useFormulaireRubrique } from './useFormulaireRubrique'
 
@@ -37,9 +38,7 @@ export default function FormIdentite({ donnees, avant, idPanneau, idOnglet }: { 
         <Field label="Nom de l'entreprise" rempli={texte(org.name)} source={sirene}>
           <Input value={org.name ?? ''} onChange={(e) => f.poserOrganisation('name', e.target.value)} required autoComplete="organization" />
         </Field>
-        <Field label="SIRET" rempli={texte(donnees.organisation?.siret)} source={donnees.organisation?.siret_verified ? 'Vérifié au répertoire Sirene' : undefined}>
-          <Input value={donnees.organisation?.siret ?? ''} readOnly inputMode="numeric" />
-        </Field>
+        <ChampSiret siret={donnees.organisation?.siret} verifie={donnees.organisation?.siret_verified} />
         <Field label="Forme juridique" rempli={texte(forme)} source={sirene}>
           <Select value={forme} onChange={(e) => f.poserOrganisation('forme_juridique', e.target.value)}>
             <option value="">À renseigner</option>

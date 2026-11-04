@@ -46,7 +46,9 @@ function Etat({ vue, onVerifier }: { vue: VueCase; onVerifier: () => void }) {
           )}
         </p>
       )}
-      {!vue.envoi && (e?.plafond || e?.note) && <p className="text-xs text-fg-3">{[e?.plafond, e?.note].filter(Boolean).join(' · ')}</p>}
+      {/* G6 — « Lecture indisponible » : la phrase qui dit quoi faire se lit, elle n'est pas en petit gris */}
+      {!vue.envoi && e?.etat === 'echec' && e.note && <p className="text-sm leading-relaxed text-fg-2">{e.note}</p>}
+      {!vue.envoi && (e?.plafond || (e?.note && e.etat !== 'echec')) && <p className="text-xs text-fg-3">{[e?.plafond, e?.etat === 'echec' ? null : e?.note].filter(Boolean).join(' · ')}</p>}
       {vue.erreur && <p role="alert" className="text-xs text-warning">{vue.erreur}</p>}
     </div>
   )

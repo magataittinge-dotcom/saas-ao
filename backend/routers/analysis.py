@@ -202,6 +202,10 @@ async def trigger_analysis(
     # un échec d'analyse laisse le projet à l'étape analyse avec un statut
     # d'erreur explicite et un bouton relancer (vision : état persistant).
     project.current_step = 3
+    # B1 — l'étape Lots n'est cochée qu'ici, au lancement effectif de la lecture (plus à `lots/select`).
+    etapes_faites = dict(project.completed_steps or {})
+    etapes_faites["2"] = True
+    project.completed_steps = etapes_faites
     project.status = "en_cours"
     project.processing_status = "analyzing"
     project.processing_detail = ""

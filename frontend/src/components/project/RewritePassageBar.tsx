@@ -15,6 +15,9 @@ interface Props {
   onApply: (start: number, end: number, rewritten: string) => void
 }
 
+/** Plafond du jour par entreprise : le même que le serveur (routers/memoire.py, REECRIRE_MAX_PAR_JOUR ; un test les compare). */
+const PLAFOND_PAR_JOUR = 60
+
 const ACTIONS: { id: string; label: string }[] = [
   { id: 'reformuler', label: 'Reformuler' },
   { id: 'plus_technique', label: 'Plus technique' },
@@ -97,6 +100,10 @@ export default function RewritePassageBar({ projectId, selection, onApply }: Pro
           </button>
         </span>
         {busy && <Loader2 size={13} className="animate-spin" style={{ color: 'var(--text-1)' }} />}
+        {/* Annoncé avant le clic : l'IA réécrit, aucune unité n'est décomptée, le jour a un plafond. */}
+        <span className="text-xs sm:ml-auto" style={{ color: 'var(--text-3)' }}>
+          Réécriture par l’IA, ne décompte aucune unité · {PLAFOND_PAR_JOUR} par jour
+        </span>
         {error && <span className="text-xs" style={{ color: 'var(--danger-fg)' }}>{error}</span>}
       </div>
 

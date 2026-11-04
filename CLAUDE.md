@@ -33,7 +33,7 @@ Lis le fichier `docs/PRD_SYNORIX_V2.md` pour comprendre le projet complet (PRD c
 
 - **Frontend :** React 18 + TypeScript + Tailwind CSS + shadcn/ui + Zustand + React Router v6
 - **Backend :** FastAPI (Python) + SQLAlchemy + PostgreSQL + Redis + Celery
-- **IA :** Claude API — Haiku 4.5 (routing + reformulation de texte libre du profil), Sonnet 4.6 (extraction, analyse) et Sonnet 5.5 (génération mémoire), Opus 4.7 (réécriture ciblée de paragraphe + fallback)
+- **IA :** Claude API — Haiku 4.5 (routing + reformulation de texte libre du profil), Sonnet 4.6 (extraction, analyse) et Sonnet 5.5 (génération mémoire **et réécriture ciblée de paragraphe**), Opus 4.7 (repli par défaut du générateur seulement, jamais appelé aujourd'hui)
 - **Stockage :** uploads sur disque du VPS (`backend/uploads/`, servis via `/api/files/view/...` avec contrôle d'ownership) ; object storage Hostinger (S3-compatible) prévu à l'échelle. Stripe (paiement)
 - **Déploiement :** Hostinger VPS (Nginx + FastAPI + Postgres + Redis + Celery)
 
@@ -46,7 +46,7 @@ Architecture cible et réelle (moteur `services/ai`, pipeline 6 étapes, chunkin
 - Toujours écrire du code propre, typé (TypeScript strict, Pydantic pour Python)
 - **Ne jamais hardcoder de clés API ou secrets** — utiliser les variables d'environnement
 - Suivre les conventions de nommage : camelCase (JS/TS), snake_case (Python)
-- Les modèles IA : **Haiku 4.5** pour le routing + la reformulation de texte libre du profil ; **Sonnet 4.6** pour extraction/matching, **Sonnet 5.5** (`claude-sonnet-5-5`, réflexion coupée `between_tools`, réglage `MEMOIRE_MODELE` pour en forcer un autre) pour la **génération mémoire** ; **Opus 4.7** pour la réécriture ciblée de paragraphe + fallback. Les **scores (Synorix Score, conformité) sont déterministes** — pas de LLM.
+- Les modèles IA : **Haiku 4.5** pour le routing + la reformulation de texte libre du profil ; **Sonnet 4.6** pour extraction/matching, **Sonnet 5.5** (`claude-sonnet-5-5`, réflexion coupée `between_tools`, réglage `MEMOIRE_MODELE` pour en forcer un autre) pour la **génération mémoire** et la **réécriture ciblée de paragraphe** (éditeur : Reformuler, Plus technique, Plus concis, Insister sur… ; même modèle que la génération, `MEMOIRE_MODELE` s'applique, jamais de `temperature`, plafond de 60 par jour et par organisation, `REECRIRE_MAX_PAR_JOUR`) ; **Opus 4.7** n'est plus que le repli par défaut de `MemoireGenerator.MODEL` (aucun appel en pratique). Les **scores (Synorix Score, conformité) sont déterministes** — pas de LLM.
 - Écrire des tests pour les fonctions critiques (auth, IA, export)
 - Utiliser les schémas Pydantic pour toute validation de données côté backend
 - Les tâches longues (analyse DCE, génération mémoire) sont des tâches Celery asynchrones

@@ -137,4 +137,5 @@ def test_status_set_to_analyzed_after_compliance_commit(client, db_session, test
         f"project.status must be 'analyzed' after pass2, got {fresh.status!r}"
     )
     assert fresh.current_step == 4
-    assert fresh.completed_steps == {"3": True}
+    # B1 : le lancement de la lecture coche l'étape Lots (plus `lots/select`), l'analyse finie coche l'étape 3.
+    assert fresh.completed_steps == {"2": True, "3": True}

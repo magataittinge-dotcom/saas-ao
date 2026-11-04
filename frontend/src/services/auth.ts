@@ -10,6 +10,8 @@ export const authService = {
   sync: async (payload: {
     organization_name?: string
     siret?: string
+    /** Saisi depuis « Mon entreprise » : mêmes contrôles Sirene, phrases adaptées (G7). */
+    depuis_profil?: boolean
     plan?: string
   }): Promise<{ user: User; organization: Organization }> => {
     const { data } = await api.post('/auth/sync', payload)

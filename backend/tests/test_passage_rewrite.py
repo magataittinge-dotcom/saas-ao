@@ -40,7 +40,7 @@ def _mock_opus(monkeypatch, result="Passage réécrit plus techniquement."):
         calls["n"] += 1
         calls["kwargs"] = {"passage": passage, "action": action, "instruction": instruction}
         return result
-    monkeypatch.setattr(pr, "_call_opus", fake)
+    monkeypatch.setattr(pr, "_call_modele", fake)
     return calls
 
 
