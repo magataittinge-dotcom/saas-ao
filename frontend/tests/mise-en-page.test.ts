@@ -57,7 +57,7 @@ test('S10 : sur l\'export, une ligne au téléphone — « Télécharger », men
   const code = sansCommentaires(lire('src/routes/project/StepExport.tsx'))
   assert.match(code, /<span className="hidden max-\[768px\]:inline">Télécharger<\/span>/)
   assert.match(code, /<MenuPlus libelle="Autres formats">/)
-  assert.match(code, /<details className="relative max-\[768px\]:hidden">/, 'le repli « Autres formats » reste sur ordinateur')
+  assert.match(code, /<div className="flex items-center gap-3 max-\[768px\]:hidden">\{formatsMemoire\(\)\}<\/div>/, 'sur ordinateur, les deux formats sont deux boutons visibles (G10)')
   assert.match(code, /\{gateBlocked && <PiecesAJoindre pieces=\{nonConformes\} \/>\}/, 'une ligne au-dessus du bouton, dans l\'en-tête sur ordinateur')
   assert.match(code, /className="mt-6 hidden max-\[768px\]:block"/, 'et au-dessus de la barre au téléphone')
   // le gabarit rend le contenu (donc l'avertissement) AVANT la barre passée en prop

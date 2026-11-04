@@ -365,31 +365,30 @@ export default function StepExport({ project }: Props) {
       </button>
   )
 
-  // ── Autres formats : repliés. Ordinateur : sous « Autres formats » dans la barre ; téléphone : menu « … ».
-  const autresFormats = (fermer?: () => void) => (
+  // ── Formats du mémoire : deux boutons visibles sur ordinateur (G10) ; au téléphone, le menu « … » de la barre.
+  const sortieMemoire = (libelle: string, enCours: boolean, lancer: () => void, fermer?: () => void) => (
+    <button
+      key={libelle}
+      type="button"
+      role={fermer ? 'menuitem' : undefined}
+      onClick={() => { fermer?.(); lancer() }}
+      disabled={enCours || !detail.has_memoire}
+      className={fermer
+        ? 'flex min-h-9 items-center gap-2 rounded-lg px-3 text-left text-sm font-medium text-fg hover:bg-surface-0 disabled:opacity-40 [@media(pointer:coarse)]:min-h-11'
+        : 'inline-flex items-center gap-2 rounded-lg border border-bord-2 px-3.5 py-2 text-sm font-medium text-fg-2 hover:bg-surface-0 disabled:opacity-40'}
+    >
+      {enCours ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <FileDown size={14} aria-hidden />}
+      {libelle}
+    </button>
+  )
+  const formatsMemoire = (fermer?: () => void) => (
     <>
-      <button
-        role={fermer ? 'menuitem' : undefined}
-        onClick={() => { fermer?.(); exportPdf() }}
-        disabled={isExportingPdf || !detail.has_memoire}
-        className="flex min-h-9 items-center gap-2 rounded-lg px-3 text-left text-sm font-medium text-fg hover:bg-surface-0 disabled:opacity-40 [@media(pointer:coarse)]:min-h-11"
-      >
-        {isExportingPdf ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <FileDown size={14} aria-hidden />}
-        Mémoire PDF (dépôt)
-      </button>
-      <button
-        role={fermer ? 'menuitem' : undefined}
-        onClick={() => { fermer?.(); exportDocx() }}
-        disabled={isExportingDocx || !detail.has_memoire}
-        className="flex min-h-9 items-center gap-2 rounded-lg px-3 text-left text-sm font-medium text-fg-2 hover:bg-surface-0 disabled:opacity-40 [@media(pointer:coarse)]:min-h-11"
-      >
-        {isExportingDocx ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <FileDown size={14} aria-hidden />}
-        Mémoire Word (retouche)
-      </button>
+      {sortieMemoire('Mémoire en Word', isExportingDocx, exportDocx, fermer)}
+      {sortieMemoire('Mémoire en PDF', isExportingPdf, exportPdf, fermer)}
     </>
   )
 
-  // ── Barre du bas : l'état du dossier, « Autres formats » (repliés) ; le bouton principal n'y figure qu'au téléphone
+  // ── Barre du bas : l'état du dossier, les deux formats du mémoire (Word, PDF) ; le bouton principal n'y figure qu'au téléphone
   // (l'en-tête porte le sien sur ordinateur) : jamais deux boutons en dégradé visibles ensemble.
   const bottomBar = (
     <BarreEtape className="justify-between gap-3">
@@ -397,15 +396,8 @@ export default function StepExport({ project }: Props) {
         bureau={<p role="status" className="text-sm text-fg-2">{ligneEtatDossier(gateBlocked ? totalPieces - conformes : 0, alertCount, readyForDeposit)}</p>}
       />
       <div className="flex shrink-0 items-center gap-3 max-[768px]:ml-auto">
-        <details className="relative max-[768px]:hidden">
-          <summary className="cursor-pointer list-none rounded-lg border border-bord-2 px-3.5 py-2 text-sm font-medium text-fg-2 hover:bg-surface-0 [&::-webkit-details-marker]:hidden [@media(pointer:coarse)]:min-h-11">
-            Autres formats
-          </summary>
-          <div className="absolute bottom-full right-0 mb-2 flex w-60 flex-col gap-1 rounded-lg border border-bord-2 bg-surface-0 p-1.5 shadow-lg">
-            {autresFormats()}
-          </div>
-        </details>
-        <MenuPlus libelle="Autres formats">{(fermer) => autresFormats(fermer)}</MenuPlus>
+        <div className="flex items-center gap-3 max-[768px]:hidden">{formatsMemoire()}</div>
+        <MenuPlus libelle="Autres formats">{(fermer) => formatsMemoire(fermer)}</MenuPlus>
         <ActionsBarreTel className="max-[768px]:flex-1">{boutonTelecharger}</ActionsBarreTel>
       </div>
     </BarreEtape>
