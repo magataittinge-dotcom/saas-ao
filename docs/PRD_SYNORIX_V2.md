@@ -75,7 +75,7 @@ Synorix's wedge is the **automated generation of personalised, deposit-grade tec
 - **Barre de navigation permanente (5 entrées, chacune avec son nom sous l'icône)** — Accueil, Mes AO, Mon entreprise, Coffre-fort, Paramètres ; bouton `[+ Nouvel AO]` hors nav ; jauge quota → Paramètres > Abonnement. Équipe et Mes références sont des accès de Mon entreprise ; Retenue de garantie n'est plus dans la barre. **Le pipeline n'apparaît jamais dans la barre.**
 - **Synorix Coach** — level-3 strategic chatbot (bulle flottante)
 - **86 modular skills V1** — each grounded in real BTP expertise from 8 validated NotebookLM notebooks (193 curated sources) <!-- v2.1 - notebooks 17/5/26 -->
-- **Multi-model AI stack** — Haiku 4.5 (routing + **reformulation de texte libre du profil**) / Sonnet 4.6 (extraction, analyse **et génération mémoire**) / Opus 4.7 (réécriture ciblée + fallback) — measured cost **~€1 per complete tender response** (1er mémoire ≤ €1, suivants < €0,50 via profil mémoire vivant + prompt caching)
+- **Multi-model AI stack** — Haiku 4.5 (routing + **reformulation de texte libre du profil**) / Sonnet 4.6 (extraction, analyse **et génération mémoire**) / Opus 4.7 (repli seulement ; la réécriture ciblée tourne sur le modèle de la génération, Sonnet 5.5) — measured cost **~€1 per complete tender response** (1er mémoire ≤ €1, suivants < €0,50 via profil mémoire vivant + prompt caching)
 - **Two plans** — Pro (€349/mo, 1 seat, **40 analyses + 40 mémoires/mois**) and Business (€599/mo, 5 seats, **illimité fair-use**). Paiement Stripe **carte uniquement en V1**. **1 AO offert** à la création (SIRET vérifié via API Sirene INSEE).
 
 ### 1.7 Différenciateurs V1 — déterministes, 0 € API <!-- v3.0 - vision V1 FINALE -->
@@ -607,7 +607,7 @@ After generation, the memo opens in a section-by-section editor:
 └─────────────────────────────────────────────────────┘
 ```
 
-The **"Réécrire avec instructions"** action takes a selected paragraph plus a free-text instruction (e.g., *"insiste davantage sur le respect de l'environnement urbain"*) and rewrites just that paragraph via Opus 4.7.
+The **"Réécrire avec instructions"** action takes a selected paragraph plus a free-text instruction (e.g., *"insiste davantage sur le respect de l'environnement urbain"*) and rewrites just that paragraph with the same model as the memo generation (Sonnet 5.5; capped at 60 rewrites per day and per organization, no unit consumed).
 
 #### 3.4.7 Output Formats
 

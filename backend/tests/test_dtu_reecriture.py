@@ -83,8 +83,8 @@ async def test_reecriture_recoit_la_liste_fermee_sans_temperature(faux_anthropic
     faux_anthropic.texte = "Passage réécrit."
     await rewrite_passage("Passage d'origine.", "reformuler", None, _regle())
     req = faux_anthropic.dernier
-    assert req["model"] == "claude-opus-4-7"
-    assert "temperature" not in req          # dépréciée pour Opus 4.7 : 400
+    assert req["model"] == "claude-sonnet-5-5"   # le modèle de la génération du mémoire (plus Opus)
+    assert "temperature" not in req          # jamais transmise (400 sur Opus 4.7)
     contenu = req["messages"][0]["content"]
     assert "LISTE DES DTU AUTORISÉS" in contenu
     assert "NF DTU 41.2" in contenu and "NF DTU 59.1" not in contenu

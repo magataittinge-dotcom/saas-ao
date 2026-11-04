@@ -762,6 +762,26 @@ def _run_refaire_job(project_id: str, org_id: str, user_id: str, part: str, cle:
         db.close()
 
 
+# Plafond de dépense de la réécriture de passage (éditeur) : un appel Sonnet 5.5 sur un passage (≤ 6 000 caractères),
+# ~0,01 à 0,02 €, sans unité décomptée. Compté par organisation sur 24 heures glissantes, au DÉPART de chaque demande
+# (ligne d'audit « memoire.rewrite_passage »), comme « Refaire » (10 par jour) mais plus haut : la reformulation est
+# bien plus légère (60 appels ≈ 1 € au plus). Le front annonce la même valeur (RewritePassageBar.tsx : un test les compare).
+REECRIRE_MAX_PAR_JOUR = 60
+ACTION_REECRIRE = "memoire.rewrite_passage"
+MSG_REECRIRE_PLAFOND = (f"Vous avez réécrit {REECRIRE_MAX_PAR_JOUR} passages dans les dernières 24 heures : "
+                        "c'est le plafond du jour. Vous pourrez en réécrire d'autres demain.")
+
+
+def _reecritures_des_dernieres_24h(db: Session, org_id: str) -> int:
+    from datetime import timedelta
+    from models.audit_log import AuditLog
+    depuis = datetime.utcnow() - timedelta(hours=24)
+    return (db.query(AuditLog)
+            .filter(AuditLog.organization_id == org_id, AuditLog.action == ACTION_REECRIRE,
+                    AuditLog.created_at >= depuis)
+            .count())
+
+
 @router.post("/{project_id}/memoire/rewrite-passage")
 @limiter.limit("10/minute")
 async def rewrite_passage_endpoint(
@@ -771,14 +791,16 @@ async def rewrite_passage_endpoint(
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ):
-    """C9b — réécrit le passage sélectionné SEUL (Opus 4.7).
+    """C9b — réécrit le passage sélectionné SEUL (Sonnet 5.5, le modèle de la génération du mémoire).
 
     Ne modifie JAMAIS le mémoire en base : le front affiche le diff
     avant/après et applique (ou non) via le PATCH mémoire existant.
-    Usage loggé par org (compteur simple, pas de quota V1)."""
+    Ne décompte aucune unité ; plafonné par jour et par organisation (REECRIRE_MAX_PAR_JOUR, 429)."""
     from services.ai.passage_rewriter import rewrite_passage
 
     project = _get_project_or_404(project_id, user.organization_id, db)
+    if _reecritures_des_dernieres_24h(db, user.organization_id) >= REECRIRE_MAX_PAR_JOUR:
+        raise HTTPException(status_code=429, detail=MSG_REECRIRE_PLAFOND)
 
     # Même règle DTU que la génération (décision du 27/10) : liste fermée du lot dans
     # la consigne, garde-fou déterministe sur la sortie. Lue ici, hors du thread SDK.
@@ -787,6 +809,12 @@ async def rewrite_passage_endpoint(
         regle_dtu, docs, project.selected_lot, project.selected_lot_name,
         project.lots_detectes or [], _ids_des_lots(project))
 
+    # Comptée dès le départ (plafond ci-dessus), même si l'appel échoue ensuite — comme « Refaire ».
+    log_action(
+        db, user, ACTION_REECRIRE,
+        target_type="project", target_id=project_id,
+        extra={"action": payload.action, "chars": len(payload.passage)},
+    )
     try:
         rewritten = await rewrite_passage(
             payload.passage, payload.action, payload.instruction, regle,
@@ -801,11 +829,6 @@ async def rewrite_passage_endpoint(
             detail="La réécriture a échoué — réessayez dans un instant.",
         )
 
-    log_action(
-        db, user, "memoire.rewrite_passage",
-        target_type="project", target_id=project_id,
-        extra={"action": payload.action, "chars": len(payload.passage)},
-    )
     return {
         "original": payload.passage,
         "rewritten": rewritten,

@@ -65,7 +65,7 @@ These rules apply to every skill in this registry, regardless of category.
 
 3. **Source citation is mandatory for every extracted fact.** Every skill that extracts a textual fact (date, amount, requirement, clause) must output the source document and page number. No source = output is invalid.
 
-4. **Cost-effective model selection.** Use Haiku 4.5 by default. Step up to Sonnet 4.6 when the task requires multi-document reasoning, nuanced judgement, or complex extraction — **including the memo generator skills (Step 4), which run on Sonnet 4.6** (full-Sonnet, ~7× cheaper than Opus). Use Opus 4.7 only for targeted paragraph rewrite (editeur) and the Synorix Score evaluation.
+4. **Cost-effective model selection.** Use Haiku 4.5 by default. Step up to Sonnet 4.6 when the task requires multi-document reasoning, nuanced judgement, or complex extraction — **including the memo generator skills (Step 4), which run on Sonnet 4.6** (full-Sonnet, ~7× cheaper than Opus). Targeted paragraph rewrite (editeur) uses the memo model (Sonnet 5.5). Opus 4.7 is only the default fallback of the generator.
 
 ---
 
@@ -118,7 +118,7 @@ The measured multi-model cost of **~€1 per complete AO** (mémoire en full-Son
 |---|---|---|
 | **Haiku 4.5** | Lightweight classification, deterministic extraction, fast routing | €0.005–0.02 |
 | **Sonnet 4.6** | Bulk analysis, structured extraction with reasoning, **long-form memo composition** (Step 4) | €0.02–0.90 |
-| **Opus 4.7** | Targeted paragraph rewrite (editeur), high-stakes synthesis (Synorix Score) | €0.10–0.30 |
+| **Opus 4.7** | Fallback only (generator default, never called today); the editor's paragraph rewrite runs on Sonnet 5.5 | €0.10–0.30 |
 
 The recommended model per skill is **a default, not a contract** — A/B testing post-launch may downgrade or upgrade individual skills.
 
