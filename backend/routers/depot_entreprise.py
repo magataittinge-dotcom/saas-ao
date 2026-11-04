@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import logging
+from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
@@ -28,6 +29,7 @@ from models.document import Document
 from models.user import User
 from routers.auth import get_auth_user
 from services import depot_budget, depot_cases, depot_controles, depot_extraction, depot_validation, upload_validation
+from services.ai.api_preflight import AIServiceUnavailable, ensure_ai_service_available
 from services.audit_logger import log_action
 from services.depot_etat import etats
 from services.file_storage import FileStorage
@@ -40,6 +42,9 @@ storage = FileStorage()
 
 _REGLE = upload_validation.RegleDepot(
     frozenset(depot_cases.EXTENSIONS), depot_cases.PLAFOND_OCTETS, depot_cases.FORMATS_LISIBLES)
+# G6 — pré-vol IA en échec : la phrase lue par le patron (le fichier est rangé, la saisie à la main reste possible).
+MESSAGE_LECTURE_INDISPONIBLE = (
+    "Lecture indisponible : le fichier est dans votre coffre-fort, vous pouvez saisir à la main.")
 _ETATS_QUI_BLOQUENT_LE_REDEPOT = ("en_lecture", "differee", "lu", "coffre_seul", "ocr_requis")
 
 
@@ -107,6 +112,7 @@ async def deposer(
     resultats: list[dict] = []
     total_octets = 0
     a_lire: list[str] = []
+    ia_disponible: Optional[bool] = None     # pré-vol IA : une seule fois par envoi, et seulement si une lecture va partir
     for fichier in fichiers:
         nom = (fichier.filename or "").strip() or "fichier"
         if upload_validation.extension_of(nom) in depot_cases.ANCIENS_FORMATS:
@@ -153,10 +159,26 @@ async def deposer(
         # Plafonds de la lecture (appels du jour, dépense du mois, file) : au-delà, le fichier reste au coffre-fort,
         # sans lecture, et sera lu quand la place reviendra.
         raison = depot_budget.raison_de_report(db, org_id)
+        # G6 — même pré-vol que l'analyse et le mémoire (jamais de SDK dans la boucle d'événements : to_thread). S'il
+        # échoue, le fichier reste au coffre-fort, aucun appel ne part, et l'état « echec » (qui ne bloque pas le
+        # redépôt) porte la phrase « Lecture indisponible ».
+        indisponible = False
+        if not raison:
+            if ia_disponible is None:
+                try:
+                    await asyncio.to_thread(ensure_ai_service_available)
+                    ia_disponible = True
+                except AIServiceUnavailable:
+                    ia_disponible = False
+            indisponible = not ia_disponible
+        if indisponible:
+            etat, message = "echec", MESSAGE_LECTURE_INDISPONIBLE
+        else:
+            etat, message = ("differee", depot_budget.MESSAGES[raison]) if raison else ("en_lecture", None)
         lecture = LectureDepot(
             organization_id=org_id, document_id=doc.id, case_depot=case.id, rubrique=case.rubrique,
-            sha256=empreinte, etat="differee" if raison else "en_lecture",
-            message=depot_budget.MESSAGES[raison] if raison else None)
+            sha256=empreinte, etat=etat, message=message,
+            terminee_le=datetime.utcnow() if indisponible else None)
         db.add(lecture)
         db.commit()
         # Jamais le nom du fichier dans le journal : un CV ou une liste du personnel peut porter un nom de personne.
@@ -165,7 +187,7 @@ async def deposer(
         resultats.append({
             "nom": nom, "accepte": True, "deja_depose": False, "document_id": doc.id,
             "lecture_id": lecture.id, "etat": lecture.etat})
-        if not raison:
+        if not raison and not indisponible:
             a_lire.append(lecture.id)
 
     # La lecture est détachée (fil « synorix-depot-* ») : la réponse part tout de suite avec l'état « En lecture… » ;
