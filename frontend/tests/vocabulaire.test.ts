@@ -47,7 +47,7 @@ test("une seule formule pour passer à l'étape suivante, qui nomme la bonne ét
     assert.match(lire(f), new RegExp(`<BoutonSuite\\s+etape="${etape}"`), `${f} : « Étape suivante : ${etape} »`)
     for (const a of anciennes) assert.ok(!textes.some((t) => t.includes(a)), `${f} contient encore « ${a} »`)
   }
-  const lancement = textesAffiches('src/routes/project/StepLotSelection.tsx').map((t) => t.texte)
+  const lancement = textesAffiches('src/lib/coutLecture.ts').map((t) => t.texte)
   assert.ok(lancement.some((t) => t.includes('Lire ce dossier')))
 })
 
