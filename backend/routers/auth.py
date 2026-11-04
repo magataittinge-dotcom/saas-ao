@@ -244,6 +244,7 @@ def sync_onboarding(
         siret_warning = _apply_siret(
             org, payload.siret, db,
             name_provided=bool(payload.organization_name),
+            depuis_profil=payload.depuis_profil,
         )
 
     db.commit()
@@ -256,19 +257,27 @@ def sync_onboarding(
     return response
 
 
-def _apply_siret(org: Organization, raw_siret: str, db: Session, name_provided: bool = False):
+def _apply_siret(org: Organization, raw_siret: str, db: Session, name_provided: bool = False,
+                 depuis_profil: bool = False):
     """Valide, dédoublonne et enrichit le profil org depuis Sirene.
 
-    Retourne un message d'avertissement à afficher, ou None si tout est ok."""
+    Retourne un message d'avertissement à afficher, ou None si tout est ok.
+
+    `depuis_profil` (G7) : saisi dans « Mon entreprise » — mêmes contrôles ; les phrases ne renvoient pas vers l'écran où
+    se trouve déjà l'utilisateur, et un SIRET déjà pris n'enlève pas l'essai du compte (ce n'est pas une inscription)."""
     try:
         siret = insee_service.normalize_siret(raw_siret)
     except insee_service.SiretFormatError as exc:
+        if depuis_profil:
+            return str(exc)   # « Numéro SIRET invalide (clé de contrôle incorrecte). » se suffit à lui-même
         return f"SIRET invalide : {exc} Vous pourrez le corriger dans Mon entreprise."
 
     duplicate = db.query(Organization).filter(
         Organization.siret == siret,
         Organization.id != org.id,
     ).first()
+    if duplicate and depuis_profil:
+        return "Ce SIRET est déjà associé à un autre compte Synorix : il n'a pas été enregistré."
     if duplicate:
         org.trial_granted = False
         return (
@@ -282,12 +291,16 @@ def _apply_siret(org: Organization, raw_siret: str, db: Session, name_provided: 
         info = insee_service.lookup_siret(siret)
     except insee_service.SiretNotFoundError:
         org.siret_verified = False
+        if depuis_profil:
+            return "SIRET introuvable au répertoire Sirene : vérifiez le numéro. Il est enregistré, à vérifier."
         return (
             "SIRET introuvable au répertoire Sirene — vérifiez le numéro ou "
             "complétez votre profil manuellement dans Mon entreprise."
         )
     except insee_service.SireneUnavailableError:
         org.siret_verified = False
+        if depuis_profil:
+            return "Le répertoire Sirene est momentanément indisponible : le numéro est enregistré, à vérifier plus tard."
         return (
             "La vérification Sirene est momentanément indisponible — votre "
             "profil pourra être complété manuellement dans Mon entreprise."
