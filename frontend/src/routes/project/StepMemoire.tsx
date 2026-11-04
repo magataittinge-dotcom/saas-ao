@@ -4,7 +4,6 @@ import { createPortal } from 'react-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, Link } from 'react-router-dom'
 import { Save, CheckCircle2, Pencil, X } from 'lucide-react'
-import ReactMarkdown from 'react-markdown'
 import axios from 'axios'
 import { memoireDepuisReponse } from '@/lib/memoireLecture'
 import { api } from '@/services/api'
@@ -31,6 +30,7 @@ import { depuisMarkdown, versMarkdown } from '@/lib/memoireMarkdown'
 import {
   ANNEXES_MEMOIRE, sectionsDuContenu, sommaireMemoire, type SectionMemoire,
 } from '@/lib/memoireSections'
+import LecteurMarkdown from '@/components/memoire/LecteurMarkdown'
 import SommaireMemoire from '@/components/memoire/SommaireMemoire'
 import ConfirmationRefaire, { BoutonRefaire, type CibleRefaire } from '@/components/memoire/RefaireSection'
 import EtatPartieChoix from '@/components/memoire/EtatPartie'
@@ -386,13 +386,7 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
 }
 
 function MdContent({ text }: { text: string }) {
-  return (
-    <div className="prose prose-sm prose-invert max-w-none prose-headings:font-semibold prose-p:leading-relaxed prose-code:text-xs"
-      style={{ color: 'var(--text-2)', fontFamily: F }}
-    >
-      <ReactMarkdown>{text}</ReactMarkdown>
-    </div>
-  )
+  return <LecteurMarkdown text={text} />
 }
 
 // ─── Main component ──────────────────────────────────────────────────────────

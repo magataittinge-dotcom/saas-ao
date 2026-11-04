@@ -63,7 +63,7 @@ test('aucun texte sous 12 px', () => {
 })
 
 test('le code cité dans le mémoire s\'affiche à 12 px (prose-sm le réduit à 10,3 px)', () => {
-  const memoire = sansCommentaires(lire('src/routes/project/StepMemoire.tsx'))
+  const memoire = sansCommentaires(lire('src/components/memoire/LecteurMarkdown.tsx'))
   assert.match(memoire, /prose prose-sm [^"]*prose-code:text-xs/)
 })
 
