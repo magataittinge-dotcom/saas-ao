@@ -54,7 +54,7 @@ export function ALaUne({ projet, maintenant = new Date(), avecRemise }: { projet
             </div>
           ) : (
             <div className="mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-2">
-              <Link to={lienEtape(projet)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-pilule bg-accent-600 px-5 text-sm font-semibold text-accent-on transition-colors duration-base ease-survol hover:bg-accent-700 max-sm:w-full">
+              <Link to={lienEtape(projet)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-pilule bg-accent-700 px-5 text-sm font-semibold text-accent-on transition-colors duration-base ease-survol hover:bg-accent-800 max-sm:w-full">
                 {action.verbe}<ArrowRight size={16} aria-hidden />
               </Link>
               <Link to={`/projects/${projet.id}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-accent-text underline-offset-4 hover:underline">Ouvrir l’AO</Link>
