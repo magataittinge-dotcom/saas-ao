@@ -67,8 +67,9 @@ test('la déconnexion est dans le menu du compte (la photo), plus dans la barre'
 test('le nom sous l\'icône dépasse 4,5:1, au repos et sur l\'entrée active, en clair comme en nuit', () => {
   const faibles: string[] = []
   for (const theme of ['light', 'dark'] as Theme[]) {
-    for (const [texte, fond] of [['--text-2', '--surface-1'], ['--accent-text', '--accent-tint'], ['--text-1', '--surface-2']]) {
-      const { minimum } = contrasteJetons(theme, texte, fond)
+    // repos sur la barre (--surface-0) et au survol (--surface-1) ; entrée active : bleu d'état (DESIGN.md § Navigation)
+    for (const [texte, fond] of [['--text-2', '--surface-0'], ['--text-2', '--surface-1'], ['--bleu-ink', '--bleu-soft'], ['--accent-text', '--accent-tint'], ['--text-1', '--surface-2']]) {
+      const { minimum } = contrasteJetons(theme, texte, fond, '--surface-0') // fonds translucides (nuit) posés sur la barre
       if (minimum < 4.5) faibles.push(`${theme} ${texte} sur ${fond} : ${minimum.toFixed(2)}`)
     }
   }

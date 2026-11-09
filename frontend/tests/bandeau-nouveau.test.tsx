@@ -46,10 +46,14 @@ test('le bandeau de la mise en page lit l\'organisation du compte connecté', ()
   assert.match(code, /useAuthStore\(\(s\) => s\.organization\)/)
 })
 
-// C13 — à 390 px le texte du bandeau est lu en entier (il revient à la ligne) ; seul l'écran large le tronque sur une ligne.
-test('bandeau : pas de troncature sous 768 px', async () => {
+// C13 — à 390 px le texte du bandeau est lu en entier ; refonte groupe A : sur une seule ligne, donc une phrase courte
+// (qui est le lien), jamais tronquée. Seul l'écran large tronque la phrase longue.
+test('bandeau : une ligne au téléphone, phrase courte lue en entier, pas de troncature sous 768 px', async () => {
   const src = sansCommentaires(lire('src/components/layout/BandeauNouveau.tsx'))
   assert.doesNotMatch(src, /line-clamp/)
   assert.match(src, /min-\[769px\]:truncate/)
   assert.doesNotMatch(src, /\btruncate\b(?<!min-\[769px\]:truncate)/)
+  const court = src.match(/court: '([^']+)'/)?.[1] ?? ''
+  assert.ok(court.length > 0 && court.length <= 36, 'phrase courte : tient sur une ligne à 390 px')
+  assert.match(src, /whitespace-nowrap[^"]*min-\[769px\]:hidden">\{NOUVEAUTE\.court\}/)
 })
