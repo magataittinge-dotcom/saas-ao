@@ -30,3 +30,10 @@ test('le menu du compte et le tiroir du téléphone lisent prénom et raison soc
     assert.doesNotMatch(code, /user\?\.name \?\?|user\?\.name \|\||'Utilisateur'/, f)
   }
 })
+
+test('acheteur court : le nom de l\'acheteur sans son adresse', async () => {
+  const { acheteurCourt } = await import('@/lib/mesAO')
+  assert.equal(acheteurCourt('Commune de VILLEBOIS – 12 rue des Tilleuls, 10000 VILLEBOIS (mandataire : ATELIER NORD)'), 'Commune de VILLEBOIS')
+  assert.equal(acheteurCourt('Horizon Habitat, 8 avenue des Peupliers'), 'Horizon Habitat')
+  assert.equal(acheteurCourt(null), '')
+})

@@ -180,3 +180,10 @@ export function versAvisOrigine(p: Project): { id: string | null; url: string } 
 export function niveauUrgence(projets: readonly Project[], maintenant: Date = new Date()): Niveau {
   return resumeMesAO(projets, maintenant).remise7.niveau
 }
+
+/** L'acheteur en court : « Commune de GUEUX » plutôt que l'adresse complète du maître d'ouvrage (DIAGNOSTIC, défaut 10). */
+export function acheteurCourt(maitreOuvrage: string | null | undefined): string {
+  const brut = (maitreOuvrage ?? '').trim()
+  if (!brut) return ''
+  return brut.split(/\s[–—-]\s|\s\(|,/)[0].trim()
+}

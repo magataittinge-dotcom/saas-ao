@@ -12,7 +12,7 @@ export const COLONNES = 'xl:grid-cols-[minmax(0,2.3fr)_minmax(0,1.5fr)_minmax(0,
 
 export function EnTeteListe() {
   return (
-    <div aria-hidden className={cn('hidden gap-5 bg-surface-1 px-5 py-3 text-xs font-semibold uppercase tracking-[.06em] text-fg-3 xl:grid', COLONNES)}>
+    <div aria-hidden className={cn('hidden gap-5 border-b border-bord px-5 py-3 text-[12.5px] font-semibold text-fg-3 xl:grid', COLONNES)}>
       <span>Appel d’offres</span><span>Où vous en êtes</span><span>Remise</span><span>Unités</span><span className="text-right">Prochaine action</span>
     </div>
   )
@@ -38,7 +38,7 @@ export function LigneAO({ projet, maintenant = new Date(), onSupprimer }: { proj
   const complement = [projet.maitre_ouvrage, projet.selected_lot_name].filter(Boolean).join(' · ')
   const [u1, u2] = unites ? unites.split(' · ') : [null, null]
   return (
-    <article data-ligne-ao={projet.id} className={cn('grid gap-3 border-t border-bord-2 px-4 py-4 first:border-t-0 hover:bg-surface-1 sm:px-5 xl:items-center xl:gap-5', COLONNES)}>
+    <article data-ligne-ao={projet.id} className={cn('grid gap-3 border-t border-bord px-4 py-4 transition-colors duration-base first:border-t-0 hover:bg-surface-1 sm:px-5 xl:items-center xl:gap-5', COLONNES)}>
       {/* L'AO */}
       <div className="flex min-w-0 flex-col gap-1">
         <Link to={`/projects/${projet.id}`} className="break-words text-[15px] font-semibold leading-snug text-fg hover:text-accent-text">{projet.name}</Link>
@@ -95,7 +95,7 @@ export function LigneAO({ projet, maintenant = new Date(), onSupprimer }: { proj
         ) : (
           <Link
             to={lienEtape(projet)}
-            className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-bleu-soft px-3.5 py-2 text-center text-[13.5px] font-semibold leading-snug text-bleu-ink transition-colors duration-base ease-lien hover:ring-1 hover:ring-bleu-mark xl:flex-none xl:justify-between"
+            className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg border border-bord-champ bg-surface-0 px-3.5 py-2 text-center text-[13.5px] font-semibold leading-snug text-fg transition-[border-color,color] duration-base ease-survol hover:border-accent-ui hover:text-accent-text xl:flex-none xl:justify-between"
           >
             <span className="min-w-0">{action.verbe}</span><ArrowRight size={15} aria-hidden className="shrink-0" />
           </Link>

@@ -16,6 +16,8 @@ import { Pastille } from '@/components/mesao/Etat'
 import { ResumeMesAOCartes, type FiltreMesAO } from '@/components/mesao/ResumeMesAO'
 import { Termines } from '@/components/mesao/Termines'
 import { VideMesAO } from '@/components/mesao/VideMesAO'
+import { BOUTON_SECONDAIRE } from '@/components/dashboard/BandeAO'
+import { cn } from '@/lib/utils'
 import type { Project } from '@/types'
 
 type Tri = 'remise' | 'activite' | 'nom'
@@ -82,14 +84,14 @@ export default function Projects() {
 
       <header className="flex flex-wrap items-end justify-between gap-x-5 gap-y-3">
         <div className="min-w-0 flex-1 basis-[18rem]">
-          <h1 className="font-display text-h5 text-fg">Mes appels d’offres</h1>
-          <p className="mt-1.5 text-sm text-fg-2">
-            <strong className="font-semibold text-fg">{resume.enCours} en cours</strong>
+          <h1 className="titre-page text-fg">Mes appels d’offres</h1>
+          <p className="mt-2 text-[15px] text-fg-2">
+            <strong className="chiffres font-semibold text-fg">{resume.enCours} en cours</strong>
             {prochaine && quandProchaine ? <> · prochaine remise <strong className="font-semibold text-fg">{quandProchaine}</strong>, pour {prochaine.name}.</> : '.'}
           </p>
         </div>
-        <Link to="/dashboard" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-bord-2 bg-surface-0 px-4 text-sm font-semibold text-fg hover:bg-surface-1 max-sm:w-full max-sm:justify-center">
-          <MapPin size={16} aria-hidden className="text-turquoise-ink" />Avis de la veille
+        <Link to="/dashboard" className={cn(BOUTON_SECONDAIRE, 'max-sm:w-full')}>
+          <MapPin size={16} strokeWidth={1.8} aria-hidden className="text-turquoise-ink" />Avis de la veille
         </Link>
       </header>
 
@@ -100,10 +102,10 @@ export default function Projects() {
       <section aria-labelledby="titre-en-cours" className="space-y-3.5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
-            <h2 id="titre-en-cours" className="font-display text-h6 text-fg">En cours</h2>
+            <h2 id="titre-en-cours" className="text-lg font-semibold text-fg">En cours</h2>
             <Pastille ton="gris">{enCours.length}</Pastille>
             {filtre !== 'tous' && (
-              <button type="button" onClick={() => setFiltre('tous')} className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-bord-2 px-3 text-[13px] font-semibold text-fg hover:bg-surface-1 [@media(pointer:coarse)]:min-h-11">
+              <button type="button" onClick={() => setFiltre('tous')} className="inline-flex min-h-9 items-center gap-1.5 rounded-pilule border border-bord-champ px-3 text-[13px] font-semibold text-fg transition-colors duration-base hover:border-accent-ui [@media(pointer:coarse)]:min-h-11">
                 Filtre : {NOMS_FILTRE[filtre]}<span aria-hidden>×</span><span className="sr-only">retirer le filtre</span>
               </button>
             )}
@@ -111,11 +113,11 @@ export default function Projects() {
           <div className="flex flex-wrap items-center gap-2.5 max-sm:w-full max-sm:flex-col max-sm:items-stretch">
             <label className="relative block min-w-0 sm:w-[280px] sm:flex-none">
               <span className="sr-only">Rechercher un appel d’offres</span>
-              <Search size={15} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-fg-3" />
+              <Search size={16} strokeWidth={1.8} aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-fg-3" />
               <input type="search" placeholder="Nom, acheteur, lot…" value={recherche} onChange={(e) => setRecherche(e.target.value)}
-                className="glass-input min-h-11 w-full py-2 pl-9 pr-3 text-sm" style={{ borderColor: 'var(--border-field)' }} />
+                className="h-11 w-full rounded-pilule border border-bord-champ bg-surface-0 pl-10 pr-4 text-sm text-fg outline-none transition-[border-color] duration-base placeholder:text-fg-3 hover:border-fg-3 focus-visible:ring-2 focus-visible:ring-accent-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface-page" />
             </label>
-            <label className="flex min-h-11 items-center gap-2 rounded-xl border border-bord-2 bg-surface-0 px-3 text-[13px] text-fg-2">
+            <label className="flex h-11 items-center gap-2 rounded-lg border border-bord-champ bg-surface-0 pl-3.5 pr-2 text-[13px] text-fg-2">
               <span>Trier par</span>
               <select value={tri} onChange={(e) => setTri(e.target.value as Tri)} className="bg-transparent py-2 text-sm font-medium text-fg outline-none">
                 <option value="remise">Remise la plus proche</option>
@@ -127,12 +129,12 @@ export default function Projects() {
         </div>
 
         {enCours.length > 0 ? (
-          <div className="overflow-hidden rounded-[18px] border border-bord-2 bg-surface-0">
+          <div className="overflow-hidden rounded-carte border border-bord bg-surface-0 shadow-card">
             <EnTeteListe />
             {enCours.map((p) => <LigneAO key={p.id} projet={p} maintenant={maintenant} onSupprimer={(id, nom) => setDeleteTarget({ id, name: nom })} />)}
           </div>
         ) : (
-          <p className="rounded-carte border border-bord-2 bg-surface-1 px-5 py-4 text-sm text-fg-2">
+          <p className="rounded-carte border border-bord bg-surface-0 px-5 py-4 text-[15px] text-fg-2">
             {recherche.trim() || filtre !== 'tous' ? 'Aucun appel d’offres ne correspond à votre recherche.' : 'Aucun appel d’offres en cours. Déposez un dossier avec « Nouvel appel d’offres ».'}
           </p>
         )}

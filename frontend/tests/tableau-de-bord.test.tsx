@@ -144,6 +144,8 @@ test('Mes AO : le champ de recherche fait 44 px de haut et garde un contour à 3
   const src = sansCommentaires(lire('src/routes/Projects.tsx'))
   const champ = src.match(/<input[^>]*placeholder="Nom, acheteur, lot…"[\s\S]*?\/>/)?.[0]
   assert.ok(champ, 'le champ de recherche existe')
-  assert.match(champ!, /min-h-11/, 'hauteur minimale 44 px')
-  assert.match(champ!, /var\(--border-field\)/, 'contour « bord des champs » (3:1 minimum)')
+  assert.match(champ!, /\b(min-)?h-11\b/, 'hauteur 44 px')
+  assert.match(champ!, /var\(--border-field\)|border-bord-champ/, 'contour « bord des champs » (3:1 minimum)')
+  assert.match(champ!, /placeholder:text-fg-3/, 'texte d\'aide à --text-3 (≥ 4,5:1), plus le #9ca3af du champ en verre')
+  assert.doesNotMatch(champ!, /glass-input/)
 })

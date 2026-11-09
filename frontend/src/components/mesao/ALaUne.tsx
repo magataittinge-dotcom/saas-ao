@@ -2,11 +2,11 @@ import { Link } from 'react-router-dom'
 import { AlertCircle, ArrowRight, Check, Loader2 } from 'lucide-react'
 import { echeanceAO, etatEcheance } from '@/lib/echeance'
 import { actionEtape, ficheDepuisProjet, libelleRemise, lienEtape } from '@/lib/intelligence/action'
-import { avancementAffiche, enTraitement, faitsALaUne, filDeLAO, niveauRemise, quandCourt } from '@/lib/mesAO'
+import { acheteurCourt, avancementAffiche, enTraitement, faitsALaUne, filDeLAO, niveauRemise, quandCourt } from '@/lib/mesAO'
 import { cn } from '@/lib/utils'
 import type { Project } from '@/types'
 import { FilPoints, JaugeLecture, PastilleRemise, TON_TEXTE } from './Etat'
-import { VisagePetit } from './VisagePetit'
+import { VisageRond } from './VisagePetit'
 
 /**
  * « À la une » : l'AO dont la remise est la plus proche, son action et ses faits. Le texte de l'action est celui de la fiche
@@ -24,11 +24,11 @@ export function ALaUne({ projet, maintenant = new Date(), avecRemise }: { projet
   const action = actionEtape(projet)
   return (
     <section aria-labelledby="une-titre" className="space-y-3">
-      <p className="text-xs font-semibold uppercase tracking-[.08em] text-fg-3">
-        {avecRemise ? 'À la une · la remise la plus proche' : 'À la une · à reprendre'}
-      </p>
-      <div className="grid gap-6 rounded-[22px] border border-bord-2 bg-surface-0 p-5 shadow-sm sm:p-6 lg:grid-cols-[136px_minmax(0,1fr)_minmax(0,320px)] lg:items-center lg:gap-7">
-        <VisagePetit className="hidden h-[168px] w-[136px] lg:flex" />
+      <h2 className="flex flex-wrap items-baseline gap-x-2 text-lg font-semibold text-fg">
+        À la une<span className="text-[15px] font-normal text-fg-3">{avecRemise ? '· la remise la plus proche' : '· à reprendre'}</span>
+      </h2>
+      <div className="grid gap-6 rounded-carte border border-bord bg-surface-0 p-5 shadow-card sm:p-6 lg:grid-cols-[96px_minmax(0,1fr)_minmax(0,320px)] lg:items-center lg:gap-8">
+        <VisageRond taille={96} className="hidden self-start lg:grid" />
         <div className="flex min-w-0 flex-col gap-2.5">
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
             {e.etat !== 'sans_date' ? (
@@ -38,8 +38,10 @@ export function ALaUne({ projet, maintenant = new Date(), avecRemise }: { projet
             )}
             {quand && <span className="text-sm font-semibold text-fg">{quand}</span>}
           </div>
-          <h2 id="une-titre" className="font-display text-h6 leading-tight text-fg sm:text-h5">{projet.name}</h2>
-          {fiche.meta && <p className="text-sm text-fg-2">{fiche.meta}</p>}
+          <h3 id="une-titre" className="text-[22px] font-semibold leading-tight tracking-[-0.01em] text-fg">{projet.name}</h3>
+          {(projet.maitre_ouvrage || projet.selected_lot_name)
+            ? <p className="text-sm text-fg-2" title={projet.maitre_ouvrage ?? undefined}>{[acheteurCourt(projet.maitre_ouvrage), projet.selected_lot_name].filter(Boolean).join(' · ')}</p>
+            : fiche.meta && <p className="text-sm text-fg-2">{fiche.meta}</p>}
           <p className="max-w-[62ch] text-[15px] leading-6 text-fg-2">{fiche.texte}</p>
           <div className="mt-1 max-w-[560px]">
             <FilPoints fil={filDeLAO(projet)} etiquettes />
@@ -52,7 +54,7 @@ export function ALaUne({ projet, maintenant = new Date(), avecRemise }: { projet
             </div>
           ) : (
             <div className="mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-2">
-              <Link to={lienEtape(projet)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-accent-fill px-5 text-sm font-semibold text-accent-on shadow-btn hover:[background-image:var(--accent-fill-hover)] max-sm:w-full">
+              <Link to={lienEtape(projet)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-pilule bg-accent-600 px-5 text-sm font-semibold text-accent-on transition-colors duration-base ease-survol hover:bg-accent-700 max-sm:w-full">
                 {action.verbe}<ArrowRight size={16} aria-hidden />
               </Link>
               <Link to={`/projects/${projet.id}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-accent-text underline-offset-4 hover:underline">Ouvrir l’AO</Link>
@@ -60,9 +62,9 @@ export function ALaUne({ projet, maintenant = new Date(), avecRemise }: { projet
           )}
         </div>
         {faits.length > 0 && (
-          <dl className="m-0 flex flex-col rounded-2xl bg-surface-1 px-4 py-2 text-[13.5px]">
+          <dl className="m-0 flex flex-col border-t border-bord pt-2 text-[13.5px] lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
             {faits.map((f, i) => (
-              <div key={f.libelle} className={cn('flex justify-between gap-3 py-2', i > 0 && 'border-t border-bord-2')}>
+              <div key={f.libelle} className={cn('flex justify-between gap-3 py-2.5', i > 0 && 'border-t border-bord')}>
                 <dt className="text-fg-2">{f.libelle}</dt>
                 <dd className={cn('m-0 flex items-start justify-end gap-1.5 text-right font-semibold', f.ton === 'neutre' ? 'text-fg' : f.ton === 'vert' ? TON_TEXTE.vert : TON_TEXTE.ambre)}>
                   {f.ton === 'vert' && <Check size={14} strokeWidth={2.4} aria-hidden className="mt-0.5 shrink-0" />}

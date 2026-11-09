@@ -10,7 +10,7 @@ import { FilPoints, Pastille, PastilleRemise } from '@/components/mesao/Etat'
 import { echeanceAO, estEnCours, estEnCoursOuvert, etatEcheance } from '@/lib/echeance'
 import { jourLongParis } from '@/lib/dateParis'
 import { lienEtape, verbeEtape } from '@/lib/intelligence/action'
-import { avancementAffiche, filDeLAO, niveauRemise, quandCourt } from '@/lib/mesAO'
+import { acheteurCourt, avancementAffiche, filDeLAO, niveauRemise, quandCourt } from '@/lib/mesAO'
 import type { Project } from '@/types'
 
 /** Ce qu'il reste à faire sur un AO : un verbe, l'étape qui suit (le calcul commun, lib/intelligence/action.ts). */
@@ -36,12 +36,6 @@ export function aoRemisePassee(projets: readonly Project[]): Project[] {
     .sort((a, b) => (etatEcheance(echeanceAO(b)).limite?.getTime() ?? 0) - (etatEcheance(echeanceAO(a)).limite?.getTime() ?? 0))
 }
 
-/** L'acheteur en court : « Commune de Gueux » plutôt que l'adresse complète du maître d'ouvrage. */
-export function acheteurCourt(maitreOuvrage: string | null | undefined): string {
-  const brut = (maitreOuvrage ?? '').trim()
-  if (!brut) return ''
-  return brut.split(/\s[–—-]\s|\s\(|,/)[0].trim()
-}
 
 const STATUT: Record<string, string> = { brouillon: 'brouillon', en_cours: 'en cours', analyzed: 'analysé' }
 
