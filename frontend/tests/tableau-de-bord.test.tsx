@@ -36,21 +36,22 @@ test('l\'accueil : un seul h1, la bande « Vos AO en cours » (trois au plus), p
   assert.ok(/<h2[^>]*id="t-bande"[^>]*>Vos AO en cours/.test(html))
   const cartes = html.match(/data-ao="/g) ?? []
   assert.ok(cartes.length >= 1 && cartes.length <= 3, `${cartes.length} AO dans la bande`)
-  assert.ok(html.includes('href="/projects"') && html.includes('Mes AO'), 'lien « Mes AO »')
+  assert.ok(html.includes('href="/projects"') && html.includes('Tous mes AO'), 'lien « Tous mes AO »')
   assert.ok(!html.includes('data-synorix-intelligence'), 'le visage a quitté l\'accueil')
   assert.ok(!html.includes('data-bulle="'), 'les six bulles aussi')
   // la bande précède la veille ; la veille précède le coffre-fort
   assert.ok(html.indexOf('data-bande-ao') < html.indexOf('id="t-coffre"'))
 })
 
-test('la bande garde trois AO au plus, la remise la plus proche d\'abord, et porte le bouton principal sur le plus urgent', () => {
+test('la bande garde trois AO au plus, la remise la plus proche d\'abord ; chaque AO a un bouton secondaire au verbe de sa prochaine action (le seul dégradé est « Nouvel appel d\'offres »)', () => {
   const sept = Array.from({ length: 7 }, (_, i) => projet(`b${i}`, { name: `AO ${i}`, ...remise(`2026-12-${String(20 - i).padStart(2, '0')}`), current_step: 2 }))
   const ordre = aoDeLaBande(sept).map((p) => p.id)
   assert.deepEqual(ordre, ['b6', 'b5', 'b4'], 'les trois remises les plus proches')
   const html = renderToStaticMarkup(<MemoryRouter><BandeAO projets={sept} total={7} onNouveau={() => {}} /></MemoryRouter>)
   assert.equal((html.match(/data-ao="/g) ?? []).length, 3)
-  assert.ok(/<a[^>]*bg-accent-fill[^>]*>Choisir le lot/.test(html), 'bouton principal = prochaine action du plus urgent')
-  assert.equal((html.match(/bg-accent-fill/g) ?? []).length, 1, 'un seul bouton principal')
+  assert.equal((html.match(/<a[^>]*border-bord-champ[^>]*>Choisir le lot/g) ?? []).length, 3, 'bouton secondaire au verbe de la prochaine action')
+  assert.equal((html.match(/bg-accent-fill/g) ?? []).length, 0, 'aucun dégradé dans la bande')
+  assert.ok(!/>Reprendre</.test(html), 'jamais « Reprendre »')
   assert.ok(html.indexOf('data-ao="b6"') < html.indexOf('data-ao="b5"'))
   assert.ok(html.includes('>7<'), 'le total des AO en cours reste affiché')
   // les AO clos n'y figurent pas
@@ -103,7 +104,7 @@ test('la veille de l\'accueil : recherche de zone, carte, filtres et liste des a
   assert.ok(html.includes('Afficher plus'), 'curseur suivant')
   assert.ok(html.includes('15 avis ouverts en France') && html.includes('Données BOAMP du 31/10 à '), 'horodatage des données, à côté de la source')
   assert.equal((html.match(/Source : Avis officiels du BOAMP \(DILA\), licence ouverte/g) ?? []).length, 2, 'la source sous la carte et sous la liste')
-  assert.ok(/<h2[^>]*>Appels d&#x27;offres ouverts<\/h2>/.test(html) && /<h3[^>]*>Avis ouverts<\/h3>/.test(html), 'niveaux de titre')
+  assert.ok(/<h2[^>]*id="titre-veille"[^>]*>.*Veille<\/h2>/.test(html) && /<h3[^>]*>Avis ouverts<\/h3>/.test(html), 'niveaux de titre')
 })
 
 test('la veille sans zone : « Choisissez une zone sur la carte », la carte et la recherche sont là', () => {

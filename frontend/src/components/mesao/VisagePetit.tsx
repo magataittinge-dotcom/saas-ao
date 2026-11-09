@@ -14,3 +14,18 @@ export function VisagePetit({ className }: { className?: string }) {
     </div>
   )
 }
+
+/**
+ * Le visage en rond (direction A) : l'image fixe dans un médaillon sombre, cerclé d'un trait d'aurore (la marque, pas un état).
+ * Taille de 40 à 96 px. Décoratif : masqué aux lecteurs d'écran.
+ */
+export function VisageRond({ taille = 52, className }: { taille?: number; className?: string }) {
+  return (
+    <span aria-hidden="true" data-visage-petit="" style={{ width: taille, height: taille }}
+      className={cn('relative grid shrink-0 place-items-center overflow-hidden rounded-full bg-surface-dark ring-[1.5px] ring-aurore-mark ring-offset-2 ring-offset-surface-0', className)}>
+      <img src={POSTER_OUVERT} alt="" width={150} height={225} loading="lazy" decoding="async"
+        style={{ width: taille * 1.15, height: taille * 1.72, WebkitMaskImage: MASQUE, maskImage: MASQUE }}
+        className="max-w-none object-cover" />
+    </span>
+  )
+}

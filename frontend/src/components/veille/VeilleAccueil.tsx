@@ -38,7 +38,13 @@ export default function VeilleAccueil() {
 
   return (
     <section aria-labelledby="titre-veille" data-veille>
-      <h2 id="titre-veille" className="border-b border-bord pb-3 text-lg font-semibold text-fg">Appels d'offres ouverts</h2>
+      {/* L'enveloppe (refonte groupe A) : un en-tête calme, le point turquoise de la veille (COULEURS.md), une phrase. */}
+      <div className="border-b border-bord pb-4">
+        <h2 id="titre-veille" className="flex items-center gap-2.5 text-lg font-semibold text-fg">
+          <span aria-hidden className="size-2.5 shrink-0 rounded-full bg-turquoise-mark" />Veille
+        </h2>
+        <p className="mt-1 max-w-2xl text-[15px] text-fg-2">Synorix surveille les avis ouverts de votre zone et signale chaque matin les nouveaux.</p>
+      </div>
       <div className="mt-6 grid grid-cols-1 gap-x-10 gap-y-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
         <div className="min-w-0 space-y-4 lg:sticky lg:top-4 lg:self-start">
           <RechercheZone selection={v.zone.selection} ville={v.zone.ville} onZone={v.setZone} />

@@ -45,3 +45,11 @@ export function heureParis(valeur: string | Date | null | undefined): string {
   if (!d) return ''
   return new Intl.DateTimeFormat('fr-FR', { timeZone: FUSEAU, hour: '2-digit', minute: '2-digit' }).format(d)
 }
+
+/** « Lundi 9 novembre 2026 » (à l'heure de Paris, majuscule initiale) : la ligne du jour de l'accueil. */
+export function dateDuJourParis(valeur: string | Date = new Date()): string {
+  const d = lireDate(valeur)
+  if (!d) return ''
+  const t = new Intl.DateTimeFormat('fr-FR', { timeZone: FUSEAU, weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(d)
+  return t.charAt(0).toLocaleUpperCase('fr-FR') + t.slice(1)
+}

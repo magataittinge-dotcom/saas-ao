@@ -1,13 +1,19 @@
 import { lazy, Suspense, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
+import { ArrowRight, Check, CircleAlert } from 'lucide-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/authStore'
 import BandeAO from '@/components/dashboard/BandeAO'
 import FirstAOWelcome from '@/components/onboarding/FirstAOWelcome'
 import { api } from '@/services/api'
-import { echeanceAO, estEnCours, estEnCoursOuvert, etatEcheance } from '@/lib/echeance'
+import { echeanceAO, estEnCoursOuvert, etatEcheance } from '@/lib/echeance'
 import { prenomAffichable } from '@/lib/prenom'
+import { raisonSociale } from '@/lib/raisonSociale'
+import { dateDuJourParis } from '@/lib/dateParis'
+import { avancement } from '@/lib/entreprise/avancement'
+import { useDocuments } from '@/hooks/useDocuments'
+import { VisageRond } from '@/components/mesao/VisagePetit'
 import { cn } from '@/lib/utils'
 import type { Project, DashboardStats } from '@/types'
 
@@ -29,10 +35,6 @@ const VeilleAccueil = lazy(() => import('@/components/veille/VeilleAccueil'))
 
 const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''}`
 
-/* ── Dates : « jeudi 23 octobre », « 27/10 · 12 h », « mardi à 9 h 30 » ── */
-function dateDuJour(d: Date) {
-  return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }).replace(/^\w/, (c) => c.toUpperCase())
-}
 
 /* ═══════════════════════════════════════════════════════════════════
    TABLEAU DE BORD — jetons du système (clair et nuit)
@@ -103,30 +105,20 @@ export default function Dashboard() {
   const aVenir = liste.filter((p) => p._echeance.etat === 'aujourdhui' || p._echeance.etat === 'proche' || p._echeance.etat === 'a_venir')
   const upcoming = aVenir.filter((p) => p._echeance.etat !== 'a_venir')
 
-  // Note du Compagnon — positive, basée sur les vrais compteurs
-  const next = upcoming[0]
-  // Un AO dont la remise est passée a quitté la bande et le compteur (il reste dans Mes AO) : on le dit, sans « marge » annoncée.
-  const datePassee = projects.find((p) => estEnCours(p.status) && etatEcheance(echeanceAO(p)).etat === 'passee')
+  // La ligne du jour (heure de Paris) : la date, le nombre d'AO en cours et la prochaine remise. Une seule fois chaque
+  // information : sans AO en cours, la bande le dit (et liste les remises passées) ; la ligne s'en tient à la date.
   // « Dossier prêt » seulement si l'étape Export est atteinte — 1.14.
-  const synorixNote = activeProjects.length === 0
-    ? datePassee
-      ? "Aucun appel d'offres en cours : ceux dont la remise est passée restent dans Mes AO."
-      : "Créez votre premier appel d'offres : l'IA analyse le dossier de l'acheteur, prépare la candidature et rédige le mémoire technique."
-    : `${activeProjects.length} appel${activeProjects.length > 1 ? 's' : ''} d'offres en cours.` +
-      (next
-        ? next._echeance.etat === 'aujourdhui'
-          ? next.current_step >= 6
-            ? ` Échéance aujourd'hui : « ${next.name} » — votre dossier est prêt.`
-            : ` Échéance aujourd'hui : « ${next.name} ».`
-          : ` Prochaine échéance dans ${next._echeance.jours} jour${next._echeance.jours! > 1 ? 's' : ''} : « ${next.name} ».`
-        : ' Aucune échéance imminente, vous avez de la marge.')
-
+  const next = upcoming[0]
   const prochaine = aVenir[0]?._echeance
-  const resume = [
-    dateDuJour(new Date()),
-    `${activeProjects.length} AO en cours`,
-    prochaine && (prochaine.etat === 'aujourdhui' ? "remise aujourd'hui" : `prochaine remise dans ${pluriel(prochaine.jours!, 'jour')}`),
-  ].filter(Boolean).join(' · ')
+  const suite = next && next._echeance.etat === 'aujourdhui'
+    ? (next.current_step >= 6 ? "remise aujourd'hui, dossier prêt" : "remise aujourd'hui")
+    : prochaine && prochaine.etat !== 'a_venir' ? `prochaine remise dans ${pluriel(prochaine.jours!, 'jour')}` : null
+  const enCours = activeProjects.length > 0 ? `${activeProjects.length} AO en cours` : null
+  const raison = raisonSociale(organization)
+  const identite = avancement({ organisation: organization }, 'identite')
+  const profilRenseigne = identite.total > 0 && identite.rempli >= identite.total
+  const { data: documents } = useDocuments()
+  const nbDocuments = documents?.length ?? 0
 
   // C15 — essai intact (free, trial accordé, 0 unité, 0 projet) → écran
   // central « premier DCE offert » ; essai consommé → tableau de bord normal.
@@ -155,7 +147,7 @@ export default function Dashboard() {
 
       {/* C15 — essai utilisé : rappel sobre de l'offre, jamais bloquant */}
       {consumedFreeTrial && (
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-y border-bord py-3">
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-carte border border-bord bg-surface-0 px-5 py-3">
           <p className="text-[15px] text-fg-2">
             Votre AO d'essai est utilisé. Le plan Pro couvre 40 analyses et 40 mémoires par mois.
           </p>
@@ -168,15 +160,32 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ── En-tête : bonjour, la journée en une ligne, la note du jour ── */}
-      <header>
-        <h1 className="font-display text-h5 text-fg">{prenom ? `Bonjour, ${prenom}` : 'Bonjour'}</h1>
-        <p className="mt-1 text-[15px] text-fg-3">{resume}</p>
-        <p className="mt-4 max-w-[72ch] text-[15px] leading-6 text-fg-2">{synorixNote}</p>
+      {/* ── En-tête : bonjour (le h1 serif), la journée en une ligne, le fil d'aurore ; à droite, l'entreprise et son visage ── */}
+      <header className="flex flex-wrap items-start justify-between gap-x-8 gap-y-5">
+        <div className="min-w-0">
+          <h1 className="titre-page text-fg">{prenom ? `Bonjour, ${prenom}` : 'Bonjour'}</h1>
+          <p className="mt-2 text-[15px] text-fg-2">
+            {dateDuJourParis()}
+            {enCours && <> · <strong className="chiffres font-semibold text-fg">{enCours}</strong></>}
+            {suite && <>, {suite}</>}
+          </p>
+          <span aria-hidden className="fil-aurore mt-4 block" />
+        </div>
+        <Link to="/company" data-pastille-entreprise
+          className="flex min-w-0 max-w-full items-center gap-3 rounded-pilule border border-bord bg-surface-0 py-2 pl-2.5 pr-5 shadow-card transition-[border-color] duration-base ease-survol hover:border-bord-2">
+          <VisageRond taille={48} />
+          <span className="min-w-0">
+            <span className="block truncate text-[15px] font-semibold text-fg">{raison}</span>
+            <span className={cn('mt-0.5 flex items-center gap-1.5 text-[13px] font-semibold', profilRenseigne ? 'text-vert-ink' : 'text-ambre-ink')}>
+              {profilRenseigne ? <Check size={13} strokeWidth={2.4} aria-hidden /> : <CircleAlert size={13} strokeWidth={2.2} aria-hidden />}
+              {profilRenseigne ? 'Profil renseigné' : 'Profil à compléter'}
+            </span>
+          </span>
+        </Link>
       </header>
 
-      {/* ── Vos AO en cours : trois au plus, la remise et la prochaine action ── */}
-      <div className="mt-8">
+      {/* ── Vos AO en cours : trois au plus, la remise et la prochaine action ; les remises passées en dessous ── */}
+      <div className="mt-10">
         <BandeAO
           projets={projects}
           total={activeProjects.length}
@@ -193,26 +202,31 @@ export default function Dashboard() {
         </Suspense>
       </div>
 
-      {/* ── Coffre-fort et bilan, en une ligne chacun ── */}
-      <div className="mt-12 grid gap-x-14 gap-y-8 border-t border-bord pt-6 md:grid-cols-2">
-        <section aria-labelledby="t-coffre">
-          <h2 id="t-coffre" className="text-base font-semibold text-fg">Coffre-fort</h2>
-          {s.documents_expires === 0 && s.documents_expirant_bientot === 0 ? (
-            <p className="pt-2 text-[15px] text-fg-3">Aucune pièce à renouveler.</p>
+      {/* ── Coffre-fort et bilan : une seule surface découpée par un filet (direction A) ; jamais de gros « 0 » ── */}
+      <div className="mt-12 grid overflow-hidden rounded-carte border border-bord bg-surface-0 shadow-card md:grid-cols-2">
+        <section aria-labelledby="t-coffre" className="flex flex-col gap-3 p-5 sm:p-6">
+          <h2 id="t-coffre" className="text-lg font-semibold text-fg">Coffre-fort</h2>
+          {nbDocuments > 0 ? (
+            <p className="flex items-baseline gap-2"><span className="chiffre-grand">{nbDocuments}</span><span className="text-[15px] font-semibold text-fg-2">{nbDocuments > 1 ? 'documents' : 'document'}</span></p>
           ) : (
-            <ul className="pt-1">
+            <p className="text-[15px] text-fg-2">Vos pièces administratives apparaîtront ici, avec leur date de validité.</p>
+          )}
+          {s.documents_expires === 0 && s.documents_expirant_bientot === 0 ? (
+            nbDocuments > 0 && <p className="flex items-center gap-2 text-[15px] font-semibold text-vert-ink"><Check size={16} strokeWidth={2.2} aria-hidden />Aucune pièce à renouveler.</p>
+          ) : (
+            <ul>
               {s.documents_expires > 0 && (
                 <li>
-                  <Link to="/vault" className={cn(cible, 'gap-2.5 py-2 text-[15px] text-fg transition-colors duration-base ease-lien hover:text-accent-text')}>
-                    <span className="size-2 shrink-0 rounded-full bg-warning" aria-hidden />
+                  <Link to="/vault" className={cn(cible, 'gap-2 py-1 text-[15px] font-semibold text-rouge-ink transition-colors duration-base ease-lien hover:underline')}>
+                    <CircleAlert size={16} strokeWidth={2.2} aria-hidden />
                     {pluriel(s.documents_expires, 'pièce')} à renouveler
                   </Link>
                 </li>
               )}
               {s.documents_expirant_bientot > 0 && (
                 <li>
-                  <Link to="/vault" className={cn(cible, 'gap-2.5 py-2 text-[15px] text-fg transition-colors duration-base ease-lien hover:text-accent-text')}>
-                    <span className="size-2 shrink-0 rounded-full border border-warning" aria-hidden />
+                  <Link to="/vault" className={cn(cible, 'gap-2 py-1 text-[15px] font-semibold text-ambre-ink transition-colors duration-base ease-lien hover:underline')}>
+                    <CircleAlert size={16} strokeWidth={2.2} aria-hidden />
                     {s.documents_expirant_bientot > 1
                       ? `${s.documents_expirant_bientot} pièces expirent bientôt`
                       : '1 pièce expire bientôt'}
@@ -221,23 +235,34 @@ export default function Dashboard() {
               )}
             </ul>
           )}
+          <Link to="/vault" className={cn(cible, 'mt-auto w-fit gap-1.5 pt-2 text-sm font-semibold text-accent-text underline-offset-[3px] hover:underline')}>
+            Ouvrir le coffre-fort <ArrowRight size={15} aria-hidden />
+          </Link>
         </section>
 
-        <section aria-labelledby="t-bilan">
-          <h2 id="t-bilan" className="text-base font-semibold text-fg">Bilan</h2>
-          <dl className="pt-1 text-[15px]">
-            <div className="flex items-baseline justify-between py-1.5">
-              <dt className="text-fg-3">Soumis ce mois-ci</dt>
-              <dd className="font-medium tabular-nums text-fg">{s.projects_soumis_ce_mois}</dd>
+        <section aria-labelledby="t-bilan" className="flex flex-col gap-3 border-t border-bord p-5 sm:p-6 md:border-l md:border-t-0">
+          <h2 id="t-bilan" className="text-lg font-semibold text-fg">Bilan</h2>
+          <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
+            <div>
+              <dt className="text-[13.5px] text-fg-3">Soumis ce mois-ci</dt>
+              <dd className="mt-1">
+                {s.projects_soumis_ce_mois > 0
+                  ? <span className="chiffre-grand">{s.projects_soumis_ce_mois}</span>
+                  : <span className="text-[15px] text-fg-2">Votre premier dossier déposé apparaîtra ici.</span>}
+              </dd>
             </div>
-            <div className="flex items-baseline justify-between py-1.5">
-              <dt className="text-fg-3">AO gagnés</dt>
-              <dd className="font-medium tabular-nums text-fg">{s.projects_gagnes}</dd>
+            <div>
+              <dt className="text-[13.5px] text-fg-3">Taux de réussite</dt>
+              <dd className="mt-1">
+                {decides
+                  ? <span className="chiffre-grand">{s.taux_succes}<span className="ml-1 text-2xl">%</span></span>
+                  : <span className="text-[15px] text-fg-2">Dès votre premier résultat</span>}
+              </dd>
             </div>
-            {decides && (
-              <div className="flex items-baseline justify-between py-1.5">
-                <dt className="text-fg-3">Taux de réussite</dt>
-                <dd className="font-medium tabular-nums text-fg">{s.taux_succes} %</dd>
+            {s.projects_gagnes > 0 && (
+              <div>
+                <dt className="text-[13.5px] text-fg-3">AO gagnés</dt>
+                <dd className="chiffres mt-1 text-[15px] font-semibold text-fg">{s.projects_gagnes}</dd>
               </div>
             )}
           </dl>
@@ -247,7 +272,7 @@ export default function Dashboard() {
       {classe && createPortal(
         <div
           role="status"
-          className="fixed bottom-6 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-center gap-3 rounded-lg border border-bord bg-surface-pop px-4 py-3 text-sm shadow-toast"
+          className="fixed bottom-6 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-center gap-3 rounded-lg border border-bord bg-surface-pop px-4 py-3 text-sm shadow-flottant"
         >
           <p className="flex-1 text-fg">« {classe.name} » est classé sans suite.</p>
           <button

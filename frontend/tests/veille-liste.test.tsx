@@ -181,7 +181,7 @@ test('les filtres sont collés en haut seulement à partir de lg, sur fond opaqu
   assert.ok(!classes.includes('sticky'), 'jamais collé sans préfixe : au téléphone, les filtres défilent avec la liste')
   assert.ok(classes.filter((c) => /sticky$/.test(c)).every((c) => c.startsWith('lg:')), 'sticky seulement à partir de lg')
   assert.ok(classes.includes('lg:-top-5'), 'collé sous l’en-tête : -top-5 annule le py-5 de <main>, sans interstice où une carte apparaîtrait')
-  assert.ok(classes.includes('bg-surface-0'), 'fond opaque : les cartes qui passent dessous ne transparaissent pas')
+  assert.ok(classes.includes('bg-surface-0') || classes.includes('lg:bg-surface-0'), 'fond opaque là où il est collé : les cartes qui passent dessous ne transparaissent pas')
   assert.ok(classes.some((c) => /^(lg:)?z-\d+$/.test(c)), 'au-dessus des cartes')
   // les cartes viennent après le bloc, dans le même flux : rien n'est retiré du flux
   assert.ok(html.indexOf('data-filtres-colles') < html.indexOf('<article'))

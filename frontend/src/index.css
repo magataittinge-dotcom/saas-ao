@@ -29,6 +29,24 @@
   color: var(--text-1);
 }
 
+/* ── Titre de page (DESIGN.md § Typography) : la serif au sommet, une fois par page ; jamais sous 28 px. ── */
+.titre-page {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-weight: 500;
+  font-size: clamp(2rem, 1.4rem + 1.6vw, 2.75rem);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+/* ── Fil d'aurore : le trait de lumière de la marque sous le titre de l'Accueil (120 × 3 px, jamais un état). ── */
+.fil-aurore {
+  width: 120px;
+  height: 3px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, var(--aurore-mark), var(--turquoise-mark) 55%, transparent);
+}
+
 /* ── Boutons ─────────────────────────────────────────────────────
    Primaire = dégradé de l'accent (accent-700 → accent-600 en clair, accent-600 en nuit),
    texte blanc. États : survol, actif, focus (anneau global), désactivé. */

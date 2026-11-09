@@ -123,7 +123,7 @@ export default function ListeAvis(p: PropsListeAvis) {
       <div className="lg:flow-root">
         {/* C10 — sans zone choisie, il n'y a aucun avis à filtrer : les filtres apparaissent une fois la zone choisie. */}
         {!p.zoneVide && (
-          <div data-filtres-colles className="mt-4 bg-surface-0 pb-3 lg:sticky lg:-top-5 lg:z-10 lg:pt-3">
+          <div data-filtres-colles className="mt-4 pb-3 lg:sticky lg:-top-5 lg:z-10 lg:rounded-carte lg:border lg:border-bord lg:bg-surface-0 lg:px-4 lg:pt-3">
             <FiltresVeille filtres={p.filtres} onFiltres={p.onFiltres} tri={p.tri} onTri={p.onTri} metiers={p.metiers} />
           </div>
         )}
