@@ -5,7 +5,7 @@ import { useDocuments } from '@/hooks/useDocuments'
 import { vaultValidityPill, type VaultPillTone } from '@/lib/vault'
 import type { ChecklistItem, Document } from '@/types'
 
-const F = "'Inter Variable', 'Geist Sans', sans-serif"
+const F = 'var(--font-ui)'
 
 interface Props {
   item: ChecklistItem

@@ -42,7 +42,7 @@ const ANALYSIS_STEPS: StepDescriptor[] = [
   { key: 'finalizing',      label: 'Finalisation',                          estimated_s: 5 },
 ]
 
-const F = "'Inter Variable', 'Geist Sans', sans-serif"
+const F = 'var(--font-ui)'
 
 const CATEGORY_LABELS: Record<ComplianceCategory, string> = {
   candidature:       'Candidature',

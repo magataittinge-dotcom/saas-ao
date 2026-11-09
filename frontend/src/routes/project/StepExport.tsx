@@ -29,7 +29,7 @@ import { noteDepot } from '@/lib/statutPiece'
 import { libellePassagesACompleter } from '@/lib/passagesACompleter'
 import { echeanceAO } from '@/lib/echeance'
 
-const F = "'Inter Variable', 'Geist Sans', sans-serif"
+const F = 'var(--font-ui)'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 

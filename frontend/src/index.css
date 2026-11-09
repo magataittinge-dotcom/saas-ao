@@ -215,7 +215,7 @@
   font-size: 0.75rem;
   font-weight: 500;
   border: 1px solid transparent;
-  font-family: 'Inter Variable', 'Geist Sans', system-ui, sans-serif;
+  font-family: var(--font-ui);
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
@@ -246,7 +246,7 @@
   color: var(--ink-3);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  font-family: 'Inter Variable', 'Geist Sans', system-ui, sans-serif;
+  font-family: var(--font-ui);
 }
 .table-dark tbody tr {
   border-bottom: 1px solid var(--surface-2);
@@ -310,7 +310,7 @@
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-family: 'Inter Variable', 'Geist Sans', system-ui, sans-serif;
+  font-family: var(--font-ui);
 }
 
 /* ── Divider ──────────────────────────────────────────────────── */
@@ -701,7 +701,7 @@
 /* Legal documents — typography for /legal markdown content */
 .legal-prose {
   color: var(--ink);
-  font-family: 'Inter Variable', 'Geist Sans', system-ui, sans-serif;
+  font-family: 'Geist Sans', system-ui, sans-serif;   /* page publique : Geist Sans */
   line-height: 1.7;
   font-size: 15px;
 }

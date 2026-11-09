@@ -33,7 +33,7 @@ const LOT_DETECTION_STEPS: StepDescriptor[] = [
 
 import { cn } from '@/lib/utils'
 
-const F = "'Inter Variable', 'Geist Sans', sans-serif"
+const F = 'var(--font-ui)'
 
 interface Props { project: Project }
 

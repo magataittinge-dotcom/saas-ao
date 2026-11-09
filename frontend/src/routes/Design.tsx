@@ -63,7 +63,7 @@ function Echantillon({ jeton, fond }: { jeton: string; fond?: string }) {
 }
 
 const PALETTES: [string, string[]][] = [
-  ['Surfaces', ['--surface-0', '--surface-1', '--surface-2', '--surface-dark', '--surface-pop']],
+  ['Surfaces', ['--surface-page', '--surface-0', '--surface-1', '--surface-2', '--surface-dark', '--surface-pop']],
   ['Textes', ['--text-1', '--text-2', '--text-3', '--text-disabled']],
   ['Bordures', ['--border-1', '--border-2', '--border-field']],
   ['Accent (échelle)', ['--accent-50', '--accent-100', '--accent-200', '--accent-300', '--accent-400', '--accent-500', '--accent-600', '--accent-700', '--accent-800', '--accent-900']],
@@ -73,6 +73,7 @@ const PALETTES: [string, string[]][] = [
   ['Avertissement', ['--warning-bg', '--warning-border', '--warning-fg']],
   ['Erreur bloquante', ['--danger-bg', '--danger-border', '--danger-fg', '--danger-solid']],
   ['Surlignage de la preuve', ['--highlight', '--highlight-soft']],
+  ['Aurore (marque, jamais un état)', ['--aurore-ink', '--aurore-mark', '--aurore-glow', '--aurore-a', '--aurore-b', '--aurore-c']],
 ]
 
 const PAIRES: [string, string, string][] = [
@@ -125,7 +126,8 @@ function Mouvement() {
   const [lecture, setLecture] = useState(0)
   const courbes: [string, string, string][] = [
     ['reveal', 'ease-reveal', 'Apparition : ressort sans dépassement, 600 à 1000 ms'],
-    ['pop', 'ease-pop', 'Infobulles et menus : léger dépassement, 280 ms'],
+    ['survol', 'ease-survol', 'Survols et changements d’état : 180 ms, sans dépassement'],
+    ['pop', 'ease-pop', 'Infobulles et menus : 280 ms, sans dépassement (plus de rebond)'],
     ['expo', 'ease-expo', 'Pression et rayon : 100 à 450 ms'],
     ['lien', 'ease-link', 'Liens : 400 ms'],
   ]
@@ -161,7 +163,7 @@ export default function Design() {
         </nav>
       </header>
 
-      <Section id="couleurs" titre="Couleurs" note="Accent bleu (teinte 251,7°), nuit neutre (surface-0 gris très foncé, sans teinte). Le texte d’accent est accent-700 en clair et accent-300 en nuit ; jamais de texte foncé sur un accent vif.">
+      <Section id="couleurs" titre="Couleurs" note="Aurore polaire : blanc glacé le jour, bleu-noir la nuit ; une seule couleur d’action (accent bleu, inchangé) ; l’accent d’aurore signe la marque et n’est jamais un état. Le texte d’accent est accent-700 en clair et accent-300 en nuit.">
         <Cote>
           <div className="space-y-5">
             {PALETTES.map(([nom, jetons]) => (
@@ -180,24 +182,31 @@ export default function Design() {
         <Cote><TableContrastes /></Cote>
       </Section>
 
-      <Section id="typographie" titre="Typographie" note="Titres en Bricolage Grotesque (600), interface et texte en Inter, données en Geist Mono. Échelle de bureau ; elle se réduit sous 810 px.">
+      <Section id="typographie" titre="Typographie" note="Newsreader (taille optique) pour le titre de la page et le texte du mémoire, et rien d’autre ; Manrope pour l’interface, les titres de cartes et les chiffres (tabulaires) ; Geist Mono pour les données.">
         <Cote>
           <div className="space-y-4">
             {ECHELLE.map(([nom, classe, texte]) => (
               <div key={nom} className="flex items-baseline gap-3 overflow-hidden">
                 <span className="w-7 shrink-0 text-xs text-fg-3">{nom}</span>
-                <p className={cn('truncate font-display text-fg', classe)}>{texte}</p>
+                <p className={cn('truncate text-fg', nom === 'h1' ? 'font-display font-medium' : 'font-sans', classe)}>{texte}</p>
               </div>
             ))}
-            <p className="text-lead text-fg">Texte d’introduction, Inter 20 / 26, graisse 500.</p>
-            <p className="text-long text-fg-2">Texte long, Inter 18 / 30,6. Le dossier est lu pièce par pièce ; chaque exigence garde sa source.</p>
+            <p className="lecteur-memoire max-w-[72ch] text-[17px] leading-[1.65] text-fg">
+              Texte du mémoire, Newsreader 17 / 1,65. Le groupe scolaire reste en activité : élèves, enseignants, circulation de la rue du Moutier fermée sauf livraisons et urgences. Notre organisation protège les usagers avant de chercher la cadence : laine de roche de 180 mm, R ≥ 5,10 m².K/W.
+            </p>
+            <div className="flex flex-wrap items-end gap-8">
+              <div><p className="chiffre-grand">12</p><p className="mt-1 text-sm font-semibold text-fg-2">exigences relevées</p></div>
+              <div><p className="chiffre-grand">50 %</p><p className="mt-1 text-sm font-semibold text-fg-2">valeur technique</p></div>
+            </div>
+            <p className="text-lead text-fg">Texte d’introduction, Manrope 20 / 26, graisse 500.</p>
+            <p className="text-long text-fg-2">Texte long, Manrope 18 / 30,6. Le dossier est lu pièce par pièce ; chaque exigence garde sa source.</p>
             <p className="text-sm text-fg-2">Petit texte, 14 px. Les montants et références utilisent la classe <span className="edge-data text-fg">edge-data</span> : 1 234,50 € · lot 03.</p>
             <p className="text-micro text-fg-3">Légende, 12 px.</p>
           </div>
         </Cote>
       </Section>
 
-      <Section id="formes" titre="Rayons, ombres, verre" note="Rayons 4 / 8 / 12 / 16 / 20 / 30 / pilule. Ombres relevées sur le site de référence ; le verre reste limité à l’en-tête, aux infobulles et aux voiles.">
+      <Section id="formes" titre="Rayons, ombres, verre" note="Rayons 8 / 14 / 22 / pilule (4 pour le focus). Traits d’un pixel plutôt qu’ombres : seuls les éléments flottants portent une ombre froide ; le verre reste limité à l’en-tête, aux infobulles et aux voiles.">
         <Cote>
           <div className="space-y-5">
             <div className="flex flex-wrap gap-3">

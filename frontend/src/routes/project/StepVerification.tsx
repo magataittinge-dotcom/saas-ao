@@ -22,7 +22,7 @@ import EchecAction from '@/components/common/EchecAction'
 import { messageErreur } from '@/lib/erreurs'
 import { messageActualisation, type EtatActualisation } from '@/lib/actualisation'
 
-const F = "'Inter Variable', 'Geist Sans', sans-serif"
+const F = 'var(--font-ui)'
 
 interface Props { project: Project }
 

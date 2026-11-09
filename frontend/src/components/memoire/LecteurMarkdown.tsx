@@ -46,7 +46,7 @@ export default function LecteurMarkdown({ text }: { text: string }) {
   return (
     <div
       className="lecteur-memoire prose prose-sm max-w-none prose-headings:font-semibold prose-p:leading-relaxed prose-code:text-xs"
-      style={{ fontFamily: "'Inter Variable', 'Geist Sans', sans-serif" }}
+      style={{ fontFamily: 'var(--font-memoire)', fontFeatureSettings: '"tnum" 0' }}
     >
       {decouperTables(text).map((s, i) =>
         s.type === 'table' ? <Tableau key={i} table={s} /> : <ReactMarkdown key={i}>{s.texte}</ReactMarkdown>,

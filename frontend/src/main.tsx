@@ -5,7 +5,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import App from './App'
 import { apparenceDepuisPage, localisationFr } from './lib/clerkApparence'
 import { useTheme } from './lib/theme'
-// Polices : latin et latin-ext seulement (français), rien d'inutilisé (bloc 6).
+// Polices : latin et latin-ext seulement (français), rien d'inutilisé (bloc 6, DESIGN.md).
+// Manrope (interface) et Newsreader (h1 + mémoire) : styles/polices.css.
 // Geist Sans : landing, connexion, inscription, tarifs, mentions légales (pas de latin-ext publié).
 import '@fontsource/geist-sans/latin-400.css'
 import '@fontsource/geist-sans/latin-500.css'

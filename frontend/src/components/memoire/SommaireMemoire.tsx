@@ -7,7 +7,7 @@ import {
 import type { SourceChamp } from '@/hooks/useSourceChamp'
 import { bilanARefaire, etatDe, type EtatsSections } from '@/lib/memoireEtats'
 
-const F = "'Inter Variable', 'Geist Sans', sans-serif"
+const F = 'var(--font-ui)'
 
 interface Props {
   entrees: EntreeSommaire[]

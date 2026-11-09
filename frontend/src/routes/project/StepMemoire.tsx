@@ -47,7 +47,7 @@ const MEMOIRE_GEN_STEPS: StepDescriptor[] = [
   { key: 'finalizing', label: 'Finalisation',                    estimated_s: 5 },
 ]
 
-const F = "'Inter Variable', 'Geist Sans', sans-serif"
+const F = 'var(--font-ui)'
 
 // ─── Fullscreen editor ─────────────────────────────────────────────────────────
 

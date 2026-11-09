@@ -35,7 +35,7 @@ const UPLOAD_STEPS: StepDescriptor[] = [
   { key: 'extracting_text', label: 'Indexation des documents', estimated_s: 60 },
 ]
 
-const F = "'Inter Variable', 'Geist Sans', sans-serif"
+const F = 'var(--font-ui)'
 
 type Phase = 'idle' | 'uploading' | 'processing' | 'done'
 

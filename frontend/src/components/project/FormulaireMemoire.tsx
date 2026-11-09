@@ -5,7 +5,7 @@ import type { VariablesMemoire } from '@/lib/memoireGeneration'
 import { useDonneesEntreprise } from '@/components/entreprise/useDonneesEntreprise'
 import { avancementTotal, libelleAvancement, type DonneesEntreprise } from '@/lib/entreprise/avancement'
 
-const F = "'Inter Variable', 'Geist Sans', sans-serif"
+const F = 'var(--font-ui)'
 
 const champStyle = { background: 'var(--surface-0)', border: '1px solid var(--border-field)', color: 'var(--text-1)', fontFamily: F }
 const champClasse = 'w-full py-2 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-ring'
