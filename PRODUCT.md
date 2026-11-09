@@ -92,7 +92,7 @@ Engagements confirmés par le fondateur le 2026-11-09, dans la perspective d'une
 - **Les règles d'accessibilité existantes** (voir section dédiée).
 - **Les règles de ton** du PRD §7, résumées ci-dessus : elles font partie de la marque.
 
-Tout le reste peut évoluer dans la refonte : logo actuel (`frontend/public/assets/logo-synorix.png`), couleurs, polices, composants. Le référentiel `docs/design/DESIGN_SYSTEM.md` (cyan, DM Sans) décrit un état antérieur au code actuel (Inter + Bricolage Grotesque, thème clair/nuit du 30/10) ; aucun des deux n'est contraignant.
+Tout le reste peut évoluer dans la refonte : logo actuel (`frontend/public/assets/logo-synorix.png`), couleurs, polices, composants. Le référentiel `docs/design/archive/DESIGN_SYSTEM.md` (cyan, DM Sans, archivé le 9/11/2026, remplacé par `DESIGN.md`) décrit un état antérieur au code actuel (Inter + Bricolage Grotesque, thème clair/nuit du 30/10) ; aucun des deux n'est contraignant.
 
 ## Evidence on Hand
 

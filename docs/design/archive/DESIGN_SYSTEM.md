@@ -1,3 +1,5 @@
+> Remplacé par /DESIGN.md le 9/11/2026 (archive, ne plus s'en servir).
+
 # Synorix — Design System (référentiel)
 
 > Référentiel extrait du frontend réel (`frontend/src`, `tailwind.config.js`, `index.css`). À fournir à Claude Design / Figma MCP pour générer **dans l'identité Synorix** (cohérence totale, pas de générique). Stack : React 18 + TypeScript + Tailwind + React Router v6 + lucide-react. Mode **light SaaS**.

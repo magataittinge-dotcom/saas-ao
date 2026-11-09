@@ -3,7 +3,7 @@
 Carte de tous les rapports et référentiels du repo. Branche de travail : `refactor-v2`.
 
 ## 📐 Design (`docs/design/`) — préparé pour la passe design
-- **[DESIGN_SYSTEM.md](design/DESIGN_SYSTEM.md)** — référentiel d'identité (palette 4-rôles, DM Sans, tokens `ds-*`, classes, composants, conventions). À donner à Claude Design / Figma MCP.
+- **[DESIGN.md](../DESIGN.md)** (racine du dépôt) — système de design courant « Aurore polaire » (jetons clair et nuit, polices, aurore, règles). L'ancien référentiel est archivé : [archive/DESIGN_SYSTEM.md](design/archive/DESIGN_SYSTEM.md) (remplacé le 9/11/2026).
 - **[AUDIT_UI.md](design/AUDIT_UI.md)** — état visuel écran par écran + priorités de refonte.
 - **[QUICK_WINS_appliques.md](design/QUICK_WINS_appliques.md)** — corrections cohérence appliquées + décisions laissées au design.
 - **[PLAN_DESIGN.md](design/PLAN_DESIGN.md)** — plan d'action du chantier design (ordre, outils, captures).

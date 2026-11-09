@@ -1,0 +1,92 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-09T17:10:00+01:00",
+  "title": "Design System: Synorix",
+  "extensions": {
+    "colorMeta": {
+      "accent-ui": { "role": "primary", "displayName": "Bleu Synorix", "canonical": "#0078d6", "tonalRamp": ["#eff7ff", "#e2effe", "#aed3fd", "#69b1ff", "#4ba3ff", "#008cf8", "#0078d6", "#0067ba", "#004e8e", "#003361"] },
+      "aurore-mark": { "role": "secondary", "displayName": "Lumière d'aurore", "canonical": "#0f9a78" },
+      "page": { "role": "neutral", "displayName": "Givre", "canonical": "#f3f7fb" },
+      "surface-0": { "role": "neutral", "displayName": "Papier", "canonical": "#ffffff" },
+      "nuit-page": { "role": "neutral", "displayName": "Ciel polaire", "canonical": "#060d1a" }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Titre de page", "purpose": "Le h1 de chaque écran, une fois par page." },
+      "memoire": { "displayName": "Texte du mémoire", "purpose": "Rédiger et aperçus du mémoire, 72 caractères au plus." },
+      "chiffre-grand": { "displayName": "Gros chiffre", "purpose": "Cartes de résumé ; jamais un 0 seul." }
+    },
+    "shadows": [
+      { "name": "shadow-card", "value": "0 1px 0 rgba(11,23,40,.03)", "purpose": "Cartes au repos : le trait de 1 px fait le travail." },
+      { "name": "shadow-pop", "value": "0 2px 6px rgba(11,23,40,.06), 0 18px 40px -18px rgba(11,23,40,.22)", "purpose": "Éléments flottants : menus, fenêtres, barre latérale." },
+      { "name": "shadow-cta", "value": "inset 0 1px 0 rgba(255,255,255,.28), 0 8px 18px -8px rgba(0,120,214,.55)", "purpose": "Le bouton principal, un par écran." }
+    ],
+    "motion": [
+      { "name": "ease-survol", "value": "cubic-bezier(.2,.8,.2,1)", "purpose": "Survols et changements d'état, 180 ms, sans dépassement." },
+      { "name": "ease-pop", "value": "cubic-bezier(.2,.8,.2,1)", "purpose": "Ancien nom du rebond, désormais sans dépassement." },
+      { "name": "aurore", "value": "28s / 36s / 44s ease-in-out infinite alternate, transform seul", "purpose": "Le seul mouvement continu ; coupé sous reduced-motion, onglet caché, saveData ou 2G." }
+    ],
+    "breakpoints": [
+      { "name": "telephone", "value": "390px" },
+      { "name": "onglets-bas", "value": "768px" },
+      { "name": "tab", "value": "810px" },
+      { "name": "desk", "value": "1200px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Bouton principal",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "L'action qui fait avancer l'AO ; un seul par écran.",
+      "html": "<button class=\"syx-cta\">Nouvel appel d'offres</button>",
+      "css": ".syx-cta{display:inline-flex;align-items:center;min-height:44px;padding:0 20px;border:0;border-radius:9999px;color:#fff;font:600 14.5px/1 Manrope,system-ui,sans-serif;background:linear-gradient(110deg,#0067ba,#0078d6);box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 8px 18px -8px rgba(0,120,214,.55);transition:transform .18s cubic-bezier(.2,.8,.2,1)}.syx-cta:hover{transform:translateY(-1px);background:linear-gradient(110deg,#004e8e,#0067ba)}"
+    },
+    {
+      "name": "Pastille d'état",
+      "kind": "chip",
+      "refersTo": "pastille-etat",
+      "description": "Un sens de COULEURS.md : fond soft, texte ink, une icône et un mot.",
+      "html": "<span class=\"syx-pastille\"><svg width=\"12\" height=\"12\" viewBox=\"0 0 12 12\" aria-hidden=\"true\"><path d=\"M2.5 6.2 5 8.5l4.5-5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\"/></svg>Rédigée</span>",
+      "css": ".syx-pastille{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:9999px;background:#e5f5ec;color:#17693d;font:600 12.5px/1.6 Manrope,system-ui,sans-serif}"
+    },
+    {
+      "name": "Carte de résumé",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Surface papier, trait de 1 px, gros chiffre tabulaire.",
+      "html": "<div class=\"syx-carte\"><p class=\"syx-carte-t\">AO en cours</p><p class=\"syx-chiffre\">2</p><p class=\"syx-carte-l\">dont 1 remise à préciser</p></div>",
+      "css": ".syx-carte{background:#fff;border:1px solid #d6e0ea;border-radius:22px;padding:24px;font-family:Manrope,system-ui,sans-serif;color:#3b4c62}.syx-carte-t{margin:0 0 12px;font-weight:600;font-size:16px;color:#0b1728}.syx-chiffre{margin:0;font-weight:600;font-size:44px;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums lining-nums;color:#0b1728}.syx-carte-l{margin:8px 0 0;font-size:14px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Aurore polaire",
+    "overview": "Un logiciel qui écrit des documents, pas un tableau de bord de plus. Blanc glacé le jour, bleu-noir la nuit ; un ciel d'aurores respire derrière le travail sans jamais le toucher. Discipline de traits d'un pixel, une seule couleur d'action, couleur réservée aux états, gros chiffres tabulaires sur les cartes de résumé.",
+    "keyCharacteristics": [
+      "Newsreader pour le h1 et le mémoire, Manrope pour le reste",
+      "Une seule couleur d'action : le bleu --accent-*",
+      "Six couleurs d'état, jamais seules, la plus urgente gagne",
+      "Aurore en transform seul, coupée sous reduced-motion, onglet caché, saveData/2G"
+    ],
+    "rules": [
+      { "name": "Jamais la couleur seule", "body": "Un état porte toujours un mot et une icône.", "section": "colors" },
+      { "name": "La plus urgente gagne", "body": "Plusieurs états dans un bloc : rouge > ambre > bleu > vert > turquoise > gris.", "section": "colors" },
+      { "name": "L'aurore n'est pas un état", "body": "--aurore-* ne colore jamais une pastille, un texte d'état ni une barre.", "section": "colors" },
+      { "name": "Serif au sommet", "body": "La serif sert au h1 de la page et au texte du mémoire, et à rien d'autre.", "section": "typography" },
+      { "name": "Plat au repos", "body": "Les cartes n'ont qu'un trait ; seuls les éléments flottants portent une ombre froide.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do écrire en mots positifs (À ajouter, À compléter)",
+      "Do remplacer un compteur vide par une phrase qui dit ce qui apparaîtra ici",
+      "Do donner 44 px à toute cible tactile et tenir 390 px sans débordement",
+      "Do respecter « réduire les animations »"
+    ],
+    "donts": [
+      "Don't afficher un gros 0",
+      "Don't introduire une deuxième couleur d'action",
+      "Don't aligner des cartes identiques en grille ni poser une icône dans un rond",
+      "Don't écrire de surtitre en capitales monospace",
+      "Don't faire rebondir quoi que ce soit",
+      "Don't mettre l'aurore devant le contenu"
+    ]
+  }
+}
