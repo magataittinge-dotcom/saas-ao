@@ -147,14 +147,14 @@
 }
 
 /* ── Utilitaires Lumen ───────────────────────────────────────── */
-/* étiquette mono technique (labels de cartes, en-têtes de table) */
+/* libellé court (labels de cartes, en-têtes de table) : Manrope 600, casse normale.
+   Plus de surtitre en capitales monospace (DESIGN.md, Don'ts) : le titre porte son propre poids. */
 .microlabel {
-  font-family: 'Geist Mono', ui-monospace, monospace;
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  color: var(--ink-4);
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--text-3);
 }
 
 /* la ligne d'horizon — utilisable seule */

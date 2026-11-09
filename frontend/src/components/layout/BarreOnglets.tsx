@@ -59,7 +59,7 @@ export default function BarreOnglets() {
       <Sheet open={tiroir} onOpenChange={setTiroir}>
         <SheetContent side="bottom" className="rounded-t-section pb-[max(1.5rem,env(safe-area-inset-bottom))]">
           <SheetHeader className="text-left">
-            <SheetTitle className="font-display">Mon compte</SheetTitle>
+            <SheetTitle className="font-sans">Mon compte</SheetTitle>
             <SheetDescription>{user?.name || 'Utilisateur'}{user?.email ? ` · ${user.email}` : ''}</SheetDescription>
           </SheetHeader>
           <ul className="mt-3 grid gap-1">

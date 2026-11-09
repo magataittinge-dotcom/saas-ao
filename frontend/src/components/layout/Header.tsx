@@ -69,7 +69,7 @@ export default function Header({ onSearch }: Props) {
             <ChevronRight size={14} className="hidden shrink-0 text-fg-3 sm:block" aria-hidden />
           </>
         )}
-        <span className="truncate font-display text-lg font-semibold text-fg max-[768px]:text-base" aria-current="page">{label || 'Accueil'}</span>
+        <span className="truncate font-sans text-lg font-semibold text-fg max-[768px]:text-base" aria-current="page">{label || 'Accueil'}</span>
       </nav>
 
       <div className="flex shrink-0 items-center gap-0.5 sm:gap-1.5">

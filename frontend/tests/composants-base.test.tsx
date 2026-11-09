@@ -40,7 +40,7 @@ test('Input / Textarea : bord 3:1, survol, focus, erreur et désactivé', () => 
 test('Card, Badge, Tabs : rendu et variantes', () => {
   const carte = renderToStaticMarkup(<Card interactive><CardHeader><CardTitle>Titre</CardTitle></CardHeader><CardContent>Corps</CardContent></Card>)
   assert.match(carte, /rounded-carte bg-surface-1/)
-  assert.match(carte, /<h3[^>]*font-display/)
+  assert.match(carte, /<h3[^>]*font-sans/, "titre de carte en Manrope (DESIGN.md : serif au sommet seulement)")
   const variantes = { neutral: 'text-fg-2', accent: 'text-accent-text', info: 'text-info', success: 'text-success', warning: 'text-warning', danger: 'text-danger' } as const
   for (const [v, classe] of Object.entries(variantes)) assert.match(renderToStaticMarkup(<Badge variant={v as keyof typeof variantes}>À joindre</Badge>), new RegExp(classe))
   const onglets = renderToStaticMarkup(

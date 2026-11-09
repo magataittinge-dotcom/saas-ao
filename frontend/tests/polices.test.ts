@@ -87,3 +87,12 @@ test('aucune requête vers Google Fonts : ni dans index.html, ni dans src/', () 
   const fautifs = sources(path.join(RACINE, 'src')).filter((f) => /fonts\.(googleapis|gstatic)/.test(lire(path.relative(RACINE, f))))
   assert.deepEqual(fautifs, [])
 })
+
+test('serif au sommet : les composants partagés (ui, coquille) ne posent jamais la serif ; titres de cartes et de sections en Manrope', () => {
+  const fautifs = ['ui', 'layout'].flatMap((d) => sources(path.join(RACINE, 'src/components', d)))
+    .filter((f) => /\bfont-display\b/.test(sansCommentaires(lire(path.relative(RACINE, f)))))
+  assert.deepEqual(fautifs, [])
+  const base = lire('src/index.css')
+  assert.match(base, /h1, h2, h3, h4, h5, h6 \{\s*font-family: var\(--font-ui\);/)
+  assert.match(base, /h1 \{\s*font-family: var\(--font-display\);/)
+})
