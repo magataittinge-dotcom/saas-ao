@@ -1,8 +1,8 @@
 /* ═══════════════════════════════════════════════════════════════
-   SYNORIX — JETONS DU SYSTÈME DE DESIGN (clair + nuit)
-   Source des valeurs : .claude/echange/sprint-ozcan/design-insyder/
-   SYSTEME-DESIGN.md §3 à §9 (mesuré / dérivé, avec la preuve).
-   Seule différence avec la référence : l'accent est bleu (teinte 251,7°).
+   SYNORIX — JETONS DU SYSTÈME DE DESIGN « AURORE POLAIRE » (clair + nuit)
+   Référence : /DESIGN.md (9/11/2026) — palette de la direction A, discipline
+   de B (traits d'un pixel, une couleur d'action, chiffres tabulaires), gros
+   chiffres de C. L'échelle d'accent bleue (--accent-*) est inchangée.
 
    Le thème se lit sur l'attribut data-theme de <html> (posé avant l'affichage
    par public/theme-init.js). Un sous-arbre peut forcer l'autre thème avec son
@@ -43,10 +43,12 @@
   --blur-lg: 20px;      /* saturation 1,5 */
   --blur-xl: 28px;      /* saturation 1,8 */
 
-  /* Polices : Bricolage Grotesque (titres), Inter (interface et texte), Geist Mono (données) */
-  --font-display: 'Bricolage Grotesque', 'Inter Variable', system-ui, sans-serif;
-  --font-ui: 'Inter Variable', Inter, system-ui, sans-serif;
-  --font-text: 'Inter Variable', Inter, system-ui, sans-serif;
+  /* Polices : Newsreader (titre de page h1 et texte du mémoire, rien d'autre), Manrope (interface, titres
+     de cartes et de sections, chiffres), Geist Mono (données). Auto-hébergées : styles/polices.css. */
+  --font-display: 'Newsreader Variable', ui-serif, Georgia, 'Times New Roman', serif;
+  --font-memoire: 'Newsreader Variable', ui-serif, Georgia, 'Times New Roman', serif;
+  --font-ui: 'Manrope Variable', ui-sans-serif, system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
+  --font-text: 'Manrope Variable', ui-sans-serif, system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, Menlo, monospace;
 
   /* Échelle typographique (bureau) : taille, interligne, approche */
@@ -68,22 +70,27 @@
   --gutter: 16px;       /* 120 px sur bureau, voir le media query ci-dessous */
   --bp-tab: 810px;      --bp-desk: 1200px;
 
-  /* Rayons */
-  --radius-xs: 4px;  --radius-sm: 8px;  --radius-md: 12px;  --radius-lg: 16px;
-  --radius-xl: 20px; --radius-2xl: 30px; --radius-pill: 9999px;  --radius-nav: 10px;
-  --radius: 12px;    /* shadcn : lg = 12, md = 10, sm = 8 */
+  /* Rayons (DESIGN.md § Shapes) : 8 petits éléments, 14 boutons et champs, 22 cartes et blocs */
+  --radius-xs: 4px;  --radius-sm: 8px;  --radius-md: 14px;  --radius-lg: 22px;
+  --radius-xl: 22px; --radius-2xl: 28px; --radius-pill: 9999px;  --radius-nav: 14px;
+  --radius: 14px;    /* shadcn : lg = 14, md = 12, sm = 10 */
 
-  /* Mouvement (SYSTEME-DESIGN §8) */
+  /* Mouvement : survols 180 ms sans dépassement ; aucun rebond, rien n'entre en scène au défilement */
+  --dur-survol: 180ms;
+  --ease-survol: cubic-bezier(.2, .8, .2, 1);
   --dur-instant: 80ms;   --dur-fast: 100ms;   --dur-base: 150ms;     --dur-pop: 280ms;
   --dur-link: 400ms;     --dur-morph: 450ms;  --dur-reveal-sm: 600ms; --dur-reveal-lg: 1000ms;
   --ease-reveal: cubic-bezier(.35, .8, .15, 1);
-  --ease-pop: cubic-bezier(.34, 1.56, .64, 1);
+  --ease-pop: cubic-bezier(.2, .8, .2, 1);      /* ancien rebond : désormais sans dépassement */
   --ease-expo: cubic-bezier(.16, 1, .3, 1);
   --ease-link: cubic-bezier(.44, 0, .56, 1);
 
-  /* Ombres teintées par l'accent (identiques dans les deux thèmes) */
-  --shadow-cta: inset 4px 4px 8px rgba(255, 255, 255, .3), inset -4px -4px 8px rgba(255, 255, 255, .3), 0 8px 16px rgba(0, 140, 248, .5);
-  --shadow-halo: 0 8px 32px 4px rgba(0, 140, 248, .5);
+  /* Ombres teintées par l'accent (identiques dans les deux thèmes) : décalées et douces, le bouton principal seulement */
+  --shadow-cta: inset 0 1px 0 rgba(255, 255, 255, .28), 0 8px 18px -8px rgba(0, 120, 214, .55);
+  --shadow-halo: 0 10px 24px -10px rgba(0, 120, 214, .45);
+
+  /* Aurore : 3 ellipses, transform seul (components/layout/Aurore.tsx) */
+  --aurore-duree-a: 28s;  --aurore-duree-b: 36s;  --aurore-duree-c: 44s;
   --shadow-btn: inset 0 1px 0 rgba(255, 255, 255, .22);   /* reflet interne des boutons pleins */
 }
 @media (min-width: 1200px) { :root { --gutter: 120px; } }
@@ -102,22 +109,30 @@
 [data-theme="light"] {
   color-scheme: light;
 
-  --surface-0: #ffffff;
-  --surface-1: #edf1f4;
-  --surface-2: #dde5ed;
-  --surface-dark: #111111;
+  --surface-page: #f3f7fb;          /* fond de page, sous l'aurore (blanc glacé) */
+  --surface-0: #ffffff;             /* papier : cartes, panneaux, barre latérale */
+  --surface-1: #e8eff7;             /* glace : survols, en-têtes de bloc */
+  --surface-2: #dde6f0;             /* glace profonde */
+  --surface-dark: #0b1728;
   --surface-pop: #ffffff;           /* menus, infobulles, fenêtres */
 
-  --text-1: #1d1d1d;
-  --text-2: #4d585f;
-  --text-3: #5c676f;
-  --text-disabled: #bababa;         /* exempt de contraste (élément désactivé) */
+  --text-1: #0b1728;
+  --text-2: #3b4c62;
+  --text-3: #56677d;
+  --text-disabled: #a9b4c1;         /* exempt de contraste (élément désactivé) */
   --text-inverse: #ffffff;
 
-  --border-1: rgba(0, 0, 0, .08);
-  --border-2: rgba(0, 0, 0, .10);
-  --border-field: #7a828a;          /* bord des champs et contrôles : 3:1 minimum sur toute surface */
-  --ring-nav: 0 0 0 4px rgba(221, 229, 237, .7);
+  --border-1: #d6e0ea;              /* filet : séparateurs, bords de carte (décoratif) */
+  --border-2: #c3d0de;              /* filet au survol */
+  --border-field: #748296;          /* bord des champs et contrôles : 3:1 minimum sur toute surface, glace profonde comprise */
+  --ring-nav: 0 0 0 4px rgba(221, 230, 240, .7);
+
+  /* Accent d'aurore : la lumière de la marque (traits, halos, sélection, logo). Jamais un état. */
+  --aurore-ink: #0f7a62;  --aurore-mark: #0f9a78;  --aurore-glow: rgba(23, 176, 138, .22);
+  --aurore-a: rgba(46, 204, 160, .55);   /* émeraude */
+  --aurore-b: rgba(60, 190, 210, .45);   /* turquoise */
+  --aurore-c: rgba(70, 140, 255, .40);   /* bleu */
+  --aurore-opacite: .26;                 /* le jour, elle se devine */
 
   --accent-text: var(--accent-700);
   --accent-ui: var(--accent-600);
@@ -141,15 +156,16 @@
   --ambre-ink: #8a4b00;     --ambre-soft: #fff1dc;     --ambre-mark: #c27c00;      /* à surveiller */
   --rouge-ink: #b42318;     --rouge-soft: #fdecea;     --rouge-mark: #e5484d;      /* urgent ou négatif */
   --turquoise-ink: #0b6b6b; --turquoise-soft: #e2f4f3; --turquoise-mark: #14a3a0;  /* veille */
-  --gris-ink: #566373;      --gris-soft: #eef1f5;      --gris-mark: #c4ccd6;       /* à venir, sans suite, archivé */
+  --gris-ink: #566373;      --gris-soft: #eef1f5;      --gris-mark: #7f8da0;       /* à venir, sans suite, archivé (mark remonté à 3:1) */
 
   --glass-fill: rgba(255, 255, 255, .88);
-  --glass-border: rgba(0, 0, 0, .08);
-  --scrim: rgba(17, 17, 17, .32);
+  --glass-border: #d6e0ea;
+  --scrim: rgba(11, 23, 40, .32);
 
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, .06), 0 1px 1px rgba(0, 0, 0, .04);
-  --shadow-pop: 0 10px 36px rgba(0, 0, 0, .18), inset 0 1px 0 rgba(255, 255, 255, .8);
-  --shadow-toast: 0 4px 16px rgba(0, 0, 0, .10);
+  /* Traits plutôt qu'ombres : la carte n'a qu'un appui à peine visible ; l'ombre froide est réservée aux flottants */
+  --shadow-card: 0 1px 0 rgba(11, 23, 40, .03);
+  --shadow-pop: 0 2px 6px rgba(11, 23, 40, .06), 0 18px 40px -18px rgba(11, 23, 40, .22);
+  --shadow-toast: 0 2px 6px rgba(11, 23, 40, .06), 0 12px 28px -14px rgba(11, 23, 40, .22);
   --edge-light: inset 0 1px 0 rgba(255, 255, 255, .8);
   --bottom-lit: none;
 
@@ -174,22 +190,29 @@
 [data-theme="dark"] {
   color-scheme: dark;
 
-  --surface-0: #111111;
-  --surface-1: #1d1d1d;
-  --surface-2: #292929;
-  --surface-dark: #000000;
-  --surface-pop: #1d1d1d;
+  --surface-page: #060d1a;          /* ciel polaire, jamais un gris neutre */
+  --surface-0: #0d1828;
+  --surface-1: #13223a;
+  --surface-2: #1a2c47;
+  --surface-dark: #03070f;
+  --surface-pop: #13223a;
 
-  --text-1: #ffffff;
-  --text-2: #bababa;
-  --text-3: #859198;
-  --text-disabled: #555761;
-  --text-inverse: #111111;
+  --text-1: #eaf1fa;
+  --text-2: #b4c3d6;
+  --text-3: #8ea0b6;
+  --text-disabled: #4a5a70;
+  --text-inverse: #0b1728;
 
-  --border-1: rgba(255, 255, 255, .14);
-  --border-2: rgba(255, 255, 255, .20);
-  --border-field: #7b858c;
-  --ring-nav: 0 0 0 4px rgba(255, 255, 255, .14);
+  --border-1: #1c2a40;
+  --border-2: #2a3d5a;
+  --border-field: #667a95;          /* 3:1 sur toutes les surfaces de nuit */
+  --ring-nav: 0 0 0 4px rgba(234, 241, 250, .12);
+
+  --aurore-ink: #5fe6bb;  --aurore-mark: #3fd9ad;  --aurore-glow: rgba(63, 217, 173, .22);
+  --aurore-a: rgba(46, 230, 170, .55);
+  --aurore-b: rgba(50, 200, 230, .45);
+  --aurore-c: rgba(70, 150, 255, .45);
+  --aurore-opacite: .9;
 
   --accent-text: var(--accent-300);
   --accent-ui: var(--accent-500);
@@ -212,17 +235,17 @@
   --ambre-ink: #ffc46b;     --ambre-soft: rgba(255, 170, 60, .13);  --ambre-mark: #ffb020;
   --rouge-ink: #ff8f87;     --rouge-soft: rgba(255, 90, 80, .15);   --rouge-mark: #ff6b63;
   --turquoise-ink: #5fd4cf; --turquoise-soft: rgba(40, 190, 180, .14); --turquoise-mark: #2cc2bc;
-  --gris-ink: #93a1b1;      --gris-soft: #141c27;                   --gris-mark: #33414f;
+  --gris-ink: #93a1b1;      --gris-soft: #141c27;                   --gris-mark: #627590;
 
-  --glass-fill: rgba(29, 29, 29, .82);
-  --glass-border: rgba(255, 255, 255, .14);
-  --scrim: rgba(0, 0, 0, .6);
+  --glass-fill: rgba(13, 24, 40, .86);
+  --glass-border: #1c2a40;
+  --scrim: rgba(3, 7, 15, .64);
 
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, .5), 0 16px 40px -20px rgba(0, 0, 0, .7);
-  --shadow-pop: 0 10px 36px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .12);
-  --shadow-toast: 0 4px 16px rgba(0, 0, 0, .4);
-  --edge-light: inset 0 1px 0 rgba(255, 255, 255, .07);
-  --bottom-lit: radial-gradient(130% 115% at 50% 128%, rgba(255, 255, 255, .06), transparent 56%);
+  --shadow-card: 0 1px 0 rgba(0, 0, 0, .28);
+  --shadow-pop: 0 2px 6px rgba(0, 0, 0, .45), 0 22px 48px -18px rgba(0, 0, 0, .7), inset 0 1px 0 rgba(234, 241, 250, .06);
+  --shadow-toast: 0 2px 6px rgba(0, 0, 0, .4), 0 14px 32px -14px rgba(0, 0, 0, .6);
+  --edge-light: inset 0 1px 0 rgba(234, 241, 250, .05);
+  --bottom-lit: none;
 
   --highlight: #5e4b00;
   --highlight-soft: #3d3200;
@@ -250,7 +273,7 @@
   --lum: var(--accent-text);
   --lum-bright: var(--text-1);
   --lum-dim: var(--text-3);
-  --glow-white: rgba(0, 140, 248, .30);
+  --glow-white: rgba(0, 120, 214, .30);
   --ok: var(--success-fg);   --ok-bg: var(--success-bg);   --ok-line: var(--success-border);
   --warn: var(--warning-fg); --warn-bg: var(--warning-bg); --warn-line: var(--warning-border);
   --bad: var(--danger-fg);   --bad-bg: var(--danger-bg);   --bad-line: var(--danger-border);
@@ -329,7 +352,7 @@
   --calque-focus: 0 0 0 2px var(--surface-0), 0 0 0 4px var(--accent-ring);
   --calque-voile: var(--scrim);
   --calque-selection: var(--accent-tint-2);
-  --calque-compagnon-fond: #111111;
+  --calque-compagnon-fond: var(--surface-dark);
 
   /* « Voir dans le DCE » : le surlignage de la preuve */
   --source-surligne: color-mix(in srgb, var(--highlight) 60%, transparent);
@@ -350,7 +373,7 @@
   --secondary-foreground: var(--text-1);
   --muted: var(--surface-1);
   --muted-foreground: var(--text-3);
-  --accent: var(--surface-1);
+  --accent: var(--surface-1);         /* survol d'un élément de menu : glace sur papier */
   --accent-foreground: var(--text-1);
   --destructive: var(--danger-solid);
   --destructive-foreground: #ffffff;

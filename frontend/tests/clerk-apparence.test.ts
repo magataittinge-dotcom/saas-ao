@@ -14,12 +14,12 @@ test('Clerk : les variables sont les jetons résolus, dans chaque thème', () =>
   assert.equal(clair.colorPrimary, '#0078d6')
   assert.equal(nuit.colorPrimary, '#0078d6')
   assert.equal(clair.colorBackground, '#ffffff')
-  assert.equal(nuit.colorBackground, '#1d1d1d')
-  assert.equal(clair.colorText, '#1d1d1d')
-  assert.equal(nuit.colorText, '#ffffff')
+  assert.equal(nuit.colorBackground, '#13223a')
+  assert.equal(clair.colorText, '#0b1728')
+  assert.equal(nuit.colorText, '#eaf1fa')
   assert.equal(clair.colorInputBackground, '#ffffff')
-  assert.equal(nuit.colorInputBackground, '#111111')
-  assert.match(String(clair.fontFamily), /Inter/)
+  assert.equal(nuit.colorInputBackground, '#0d1828')
+  assert.match(String(clair.fontFamily), /Manrope/)
 })
 
 test('Clerk : textes lisibles (4,5:1) sur la carte, le champ et le bouton, dans les deux thèmes', () => {

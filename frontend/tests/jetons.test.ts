@@ -1,5 +1,6 @@
 // Socle (bloc 10, phase B) — jetons clair et nuit : chaque jeton du système existe dans les deux thèmes,
-// l'accent est l'échelle bleue de SYSTEME-DESIGN §3.3, les contrastes tiennent (texte 4,5:1, interface 3:1),
+// l'accent est l'échelle bleue de SYSTEME-DESIGN §3.3 (inchangée), la palette est celle de DESIGN.md « Aurore polaire »
+// (9/11/2026), les contrastes tiennent (texte 4,5:1, interface 3:1),
 // Tailwind ne recopie aucune couleur et ne renvoie qu'à des jetons définis.
 // JETONS_TABLEAU=1 npm test -- jetons  → affiche le tableau des contrastes.
 import { test } from 'node:test'
@@ -11,7 +12,7 @@ const THEMES: Theme[] = ['light', 'dark']
 
 // SYSTEME-DESIGN §9 : jetons que chaque thème doit définir.
 const REQUIS = [
-  'surface-0', 'surface-1', 'surface-2', 'surface-dark', 'surface-pop',
+  'surface-page', 'surface-0', 'surface-1', 'surface-2', 'surface-dark', 'surface-pop',
   'surface-glass-1', 'surface-glass-2', 'surface-glass-3',
   'text-1', 'text-2', 'text-3', 'text-disabled', 'text-inverse',
   'border-1', 'border-2', 'border-field', 'ring-nav',
@@ -19,7 +20,9 @@ const REQUIS = [
   'accent-text', 'accent-ui', 'accent-ring', 'accent-fill', 'accent-fill-solid', 'accent-fill-hover', 'accent-tint', 'accent-tint-2', 'on-accent',
   ...['info', 'success', 'warning', 'danger'].flatMap((k) => [`${k}-bg`, `${k}-border`, `${k}-fg`]),
   'danger-solid', 'glass-fill', 'glass-border', 'scrim',
-  'font-display', 'font-ui', 'font-text', 'font-mono',
+  'font-display', 'font-memoire', 'font-ui', 'font-text', 'font-mono',
+  'aurore-ink', 'aurore-mark', 'aurore-glow', 'aurore-a', 'aurore-b', 'aurore-c', 'aurore-opacite',
+  'dur-survol', 'ease-survol',
   ...['h1', 'h2', 'h3', 'h5', 'h6'].flatMap((k) => [`text-${k}`, `text-${k}-line`]),
   'space-4', 'space-8', 'space-10', 'space-12', 'space-16', 'space-20', 'space-30', 'space-40', 'space-50', 'space-100', 'space-200',
   'container', 'gutter', 'bp-tab', 'bp-desk',
@@ -53,10 +56,18 @@ test('les anciens noms (Lumen, Edge, Calque, shadcn) renvoient tous à un jeton 
   }
 })
 
-test('les surfaces, textes et l\'échelle d\'accent sont ceux de SYSTEME-DESIGN (clair mesuré, nuit neutre #111111)', () => {
+test('les surfaces et textes sont ceux de DESIGN.md (palette A), l\'échelle d\'accent reste celle de SYSTEME-DESIGN', () => {
   const attendu: Record<Theme, Record<string, string>> = {
-    light: { 'surface-0': '#ffffff', 'surface-1': '#edf1f4', 'surface-2': '#dde5ed', 'text-1': '#1d1d1d', 'text-2': '#4d585f', 'text-disabled': '#bababa' },
-    dark: { 'surface-0': '#111111', 'surface-1': '#1d1d1d', 'surface-2': '#292929', 'surface-dark': '#000000', 'text-1': '#ffffff', 'text-2': '#bababa', 'text-disabled': '#555761' },
+    light: {
+      'surface-page': '#f3f7fb', 'surface-0': '#ffffff', 'surface-1': '#e8eff7', 'surface-2': '#dde6f0',
+      'text-1': '#0b1728', 'text-2': '#3b4c62', 'text-3': '#56677d', 'border-1': '#d6e0ea', 'border-field': '#748296', 'gris-mark': '#7f8da0',
+      'aurore-ink': '#0f7a62', 'aurore-mark': '#0f9a78',
+    },
+    dark: {
+      'surface-page': '#060d1a', 'surface-0': '#0d1828', 'surface-1': '#13223a', 'surface-2': '#1a2c47',
+      'text-1': '#eaf1fa', 'text-2': '#b4c3d6', 'text-3': '#8ea0b6', 'border-1': '#1c2a40', 'border-field': '#667a95', 'gris-mark': '#627590',
+      'aurore-ink': '#5fe6bb', 'aurore-mark': '#3fd9ad',
+    },
   }
   for (const theme of THEMES) for (const [nom, v] of Object.entries(attendu[theme])) assert.equal(valeur(theme, `--${nom}`), v, `${nom} (${theme})`)
   const echelle = ['#eff7ff', '#e2effe', '#aed3fd', '#69b1ff', '#4ba3ff', '#008cf8', '#0078d6', '#0067ba', '#004e8e', '#003361']
@@ -73,11 +84,15 @@ test('les surfaces, textes et l\'échelle d\'accent sont ceux de SYSTEME-DESIGN 
 })
 
 // ── Contrastes ───────────────────────────────────────────────────
-const SURFACES = ['--surface-0', '--surface-1', '--surface-2']
+const SURFACES = ['--surface-page', '--surface-0', '--surface-1', '--surface-2']
+const ETATS = ['bleu', 'vert', 'ambre', 'rouge', 'turquoise', 'gris']
 const TEXTE: [string, string[]][] = [
   ['--text-1', SURFACES], ['--text-2', SURFACES], ['--text-3', SURFACES],
   ['--accent-text', SURFACES],
   // pastilles et messages : sur leur propre fond, sur la page et sur une carte (pas sur surface-2, réservée aux survols)
+  // états (COULEURS.md) : ink sur la page et sur une carte (sur son soft : test dédié plus bas, le soft de nuit est translucide)
+  ...ETATS.map((k): [string, string[]] => [`--${k}-ink`, ['--surface-page', '--surface-0']]),
+  ['--aurore-ink', ['--surface-page', '--surface-0']],
   ['--info-fg', ['--surface-0', '--surface-1', '--info-bg']], ['--success-fg', ['--surface-0', '--surface-1', '--success-bg']],
   ['--warning-fg', ['--surface-0', '--surface-1', '--warning-bg']], ['--danger-fg', ['--surface-0', '--surface-1', '--danger-bg']],
   ['--on-accent', ['--accent-fill', '--accent-fill-hover', '--primary']],
@@ -93,6 +108,8 @@ const INTERFACE: [string, string[]][] = [
   ['--accent-ui', SURFACES],
   ['--accent-ring', SURFACES],
   ['--accent-fill', ['--surface-0']],
+  // marques d'état (barres, points, bordures) : 3:1 sur le papier des cartes, où elles se posent (COULEURS.md : « marks sur blanc ≥ 3 »)
+  ...ETATS.map((k): [string, string[]] => [`--${k}-mark`, ['--surface-0']]),
 ]
 
 test('contraste : texte 4,5:1 et interface 3:1 sur chaque surface, dans les deux thèmes', () => {
@@ -122,6 +139,21 @@ test('contraste : le texte posé sur du verre (infobulle, en-tête, toast) se li
   assert.deepEqual(echecs, [])
 })
 
+test('contraste : chaque pastille d\'état (ink sur son soft, posé sur la page ou une carte) se lit, dans les deux thèmes', () => {
+  const echecs: string[] = []
+  for (const theme of THEMES) for (const k of ETATS) for (const sur of ['--surface-page', '--surface-0']) {
+    const { minimum } = contrasteJetons(theme, `--${k}-ink`, `--${k}-soft`, sur)
+    if (minimum < 4.5) echecs.push(`${theme} ${k} ink sur soft/${sur} : ${minimum.toFixed(2)}:1`)
+  }
+  assert.deepEqual(echecs, [])
+})
+
+test('l\'accent d\'aurore n\'est pas un état : aucune pastille ni aucun jeton d\'état ne renvoie à --aurore-*', () => {
+  for (const theme of THEMES) for (const k of ETATS) for (const r of ['ink', 'soft', 'mark']) {
+    assert.doesNotMatch(jetons(theme)[`--${k}-${r}`] ?? '', /aurore/, `--${k}-${r}`)
+  }
+})
+
 test('contraste : en nuit, le bouton plein (accent-600) se détache de la surface où il pose (3:1 au moins sur surface-0)', () => {
   assert.ok(contrasteJetons('dark', '--accent-fill', '--surface-0').minimum >= 3)
   assert.ok(contrasteJetons('light', '--accent-fill', '--surface-0').minimum >= 3)
@@ -139,7 +171,9 @@ test('tailwind.config.js : aucune couleur recopiée, seulement des jetons défin
   }
   assert.deepEqual(absents, [])
   assert.match(config, /darkMode: \['selector', '\[data-theme="dark"\]'\]/)
-  assert.match(config, /"Bricolage Grotesque"/)
+  assert.match(config, /sans:\s*\['"Manrope Variable"'/)
+  assert.match(config, /display:\s*\['"Newsreader Variable"'/)
+  assert.doesNotMatch(config, /Bricolage|Inter Variable/)
 })
 
 test('theme.css : les valeurs de couleur n\'existent qu\'ici (le reste du CSS passe par des jetons)', () => {

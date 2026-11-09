@@ -24,9 +24,11 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans:    ['"Inter Variable"', 'Inter', 'system-ui', 'sans-serif'],
-        display: ['"Bricolage Grotesque"', '"Inter Variable"', 'system-ui', 'sans-serif'],
-        brand:   ['"Bricolage Grotesque"', '"Inter Variable"', 'system-ui', 'sans-serif'],
+        // DESIGN.md : Manrope partout, Newsreader pour le h1 de la page et le texte du mémoire, Geist Mono pour les données
+        sans:    ['"Manrope Variable"', 'ui-sans-serif', 'system-ui', '"Segoe UI"', 'Roboto', 'Arial', 'sans-serif'],
+        display: ['"Newsreader Variable"', 'ui-serif', 'Georgia', 'serif'],
+        memoire: ['"Newsreader Variable"', 'ui-serif', 'Georgia', 'serif'],
+        brand:   ['"Newsreader Variable"', 'ui-serif', 'Georgia', 'serif'],
         mono:    ['"Geist Mono"', 'Menlo', 'monospace'],
       },
       fontSize: {
@@ -43,6 +45,7 @@ export default {
         // ── Jetons du système (styles/theme.css) ───────────────────
         surface: {
           DEFAULT: jeton('--surface-1'),
+          page:    jeton('--surface-page'),
           0:       jeton('--surface-0'),
           1:       jeton('--surface-1'),
           2:       jeton('--surface-2'),
@@ -72,6 +75,8 @@ export default {
           'tint-2':   jeton('--accent-tint-2'),
           on:         jeton('--on-accent'),
         },
+        // Accent d'aurore : traits, halos, logo ; jamais une pastille ni un texte d'état
+        aurore: { ink: jeton('--aurore-ink'), mark: jeton('--aurore-mark'), glow: jeton('--aurore-glow') },
         info:    { DEFAULT: jeton('--info-fg'),    bg: jeton('--info-bg'),    border: jeton('--info-border') },
         // États (COULEURS.md) : bleu en cours · vert fait · ambre à surveiller · rouge urgent · turquoise veille · gris à venir.
         bleu: { ink: jeton('--bleu-ink'), soft: jeton('--bleu-soft'), mark: jeton('--bleu-mark') },
@@ -266,6 +271,7 @@ export default {
       },
       transitionTimingFunction: {
         smooth: 'cubic-bezier(0.4, 0, 0.2, 1)',
+        survol: 'var(--ease-survol)',
         reveal: 'var(--ease-reveal)',
         pop:    'var(--ease-pop)',
         expo:   'var(--ease-expo)',
@@ -273,6 +279,7 @@ export default {
       },
       transitionDuration: {
         instant: 'var(--dur-instant)',
+        survol:  'var(--dur-survol)',
         fast:    'var(--dur-fast)',
         base:    'var(--dur-base)',
         pop:     'var(--dur-pop)',

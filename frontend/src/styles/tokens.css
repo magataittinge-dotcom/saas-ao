@@ -229,21 +229,9 @@
   .sheen:hover::after { animation: none; }
 }
 
-/* grille technique en fondu (héros, zones d'accueil) */
+/* ancienne grille technique en fondu : le fond quadrillé est retiré (DESIGN.md, Don'ts) ; la classe reste un simple repère */
 .blueprint-grid {
   position: relative;
-}
-.blueprint-grid::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    linear-gradient(color-mix(in srgb, var(--text-1) 7%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--text-1) 7%, transparent) 1px, transparent 1px);
-  background-size: 48px 48px;
-  -webkit-mask-image: radial-gradient(110% 55% at 50% 0%, black 20%, transparent 72%);
-  mask-image: radial-gradient(110% 55% at 50% 0%, black 20%, transparent 72%);
 }
 
 /* avancement 6 étapes — remplace les % mensongers */

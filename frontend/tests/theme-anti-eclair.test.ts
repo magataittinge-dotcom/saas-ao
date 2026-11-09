@@ -58,11 +58,11 @@ test('index.html : script synchrone dans le <head>, avant la feuille de style et
   assert.ok(tete.indexOf(balise![0]) < tete.indexOf('<style>'), 'le script passe avant le style')
   // le module de l'appli est hors du head (après le body) : il ne peut pas précéder le script
   assert.ok(html.indexOf('/src/main.tsx') > html.indexOf('</head>'))
-  // fond avant l'arrivée de la feuille de style = surface-0 de chaque thème
+  // fond avant l'arrivée de la feuille de style = fond de page (surface-page) de chaque thème
   const clair = html.match(/html \{ background: (#[0-9a-f]{6});/i)![1]
   const nuit = html.match(/html\[data-theme="dark"\] \{ background: (#[0-9a-f]{6});/i)![1]
-  assert.equal(clair.toLowerCase(), valeur('light', '--surface-0'))
-  assert.equal(nuit.toLowerCase(), valeur('dark', '--surface-0'))
+  assert.equal(clair.toLowerCase(), valeur('light', '--surface-page'))
+  assert.equal(nuit.toLowerCase(), valeur('dark', '--surface-page'))
 })
 
 test('la clé et les valeurs sont les mêmes dans le script et dans src/lib/theme.ts ; la CSP (script-src \'self\') n\'a pas besoin d\'un script en ligne', () => {

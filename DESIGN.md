@@ -12,7 +12,7 @@ colors:
   text-3: "#56677d"
   border-1: "#d6e0ea"
   border-2: "#c3d0de"
-  border-field: "#7f8da0"
+  border-field: "#748296"
   accent-text: "#0067ba"
   accent-ui: "#0078d6"
   accent-fill: "#0078d6"
@@ -53,7 +53,7 @@ colors:
   nuit-text-3: "#8ea0b6"
   nuit-border-1: "#1c2a40"
   nuit-border-2: "#2a3d5a"
-  nuit-border-field: "#627590"
+  nuit-border-field: "#667a95"
   nuit-accent-text: "#69b1ff"
   nuit-accent-ui: "#008cf8"
   nuit-accent-fill: "#0078d6"
@@ -209,7 +209,7 @@ Un ciel froid et lumineux : neutres bleutés, un bleu d'action franc, un vert-tu
 - **Glace** (`--surface-1` `#e8eff7` / `#13223a`) : survols, en-têtes de bloc, fonds de barre.
 - **Glace profonde** (`--surface-2` `#dde6f0` / `#1a2c47`) : survol sur une surface déjà teintée, sélection de rangée.
 - **Encre** (`--text-1` `#0b1728` / `#eaf1fa`), **encre 2** (`--text-2` `#3b4c62` / `#b4c3d6`), **encre 3** (`--text-3` `#56677d` / `#8ea0b6`) : texte, texte secondaire, méta. Tous ≥ 4,5:1 sur les trois surfaces et la page.
-- **Filet** (`--border-1` `#d6e0ea` / `#1c2a40`) : séparateurs et bords de carte (décoratifs). **Bord de champ** (`--border-field` `#7f8da0` / `#627590`) : contrôles, ≥ 3:1 sur toute surface.
+- **Filet** (`--border-1` `#d6e0ea` / `#1c2a40`) : séparateurs et bords de carte (décoratifs). **Bord de champ** (`--border-field` `#748296` / `#667a95`) : contrôles, ≥ 3:1 sur toute surface, glace profonde comprise (les `#7f8da0` / `#627590` de la direction A tombaient à 2,7 et 2,99:1 sur `--surface-2` ; ils restent le gris `mark`).
 
 ### Les six sens (COULEURS.md, 3/11/2026)
 

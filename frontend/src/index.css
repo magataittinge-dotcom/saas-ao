@@ -11,12 +11,22 @@
    Tokens canoniques : styles/tokens.css.
    ═══════════════════════════════════════════════════════════════ */
 
-/* ── Gradient Text ────────────────────────────────────────────── */
-.text-gradient {
-  background: linear-gradient(180deg, var(--text-1) 30%, var(--accent-text) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+/* ── Ancien texte en dégradé : retiré (DESIGN.md, Don'ts) ; l'emphase vient de la graisse et de la taille. ── */
+.text-gradient { color: var(--text-1); }
+
+/* ── Chiffres (DESIGN.md § Typography) ───────────────────────────
+   .chiffres : tabulaires et alignés, pour tout nombre isolé.
+   .chiffre-grand : le gros chiffre des cartes de résumé (jamais un « 0 » seul :
+   quand il n'y a rien, une phrase dit ce qui apparaîtra ici). */
+.chiffres { font-variant-numeric: tabular-nums lining-nums; }
+.chiffre-grand {
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: clamp(40px, 24px + 2vw, 48px);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums lining-nums;
+  color: var(--text-1);
 }
 
 /* ── Boutons ─────────────────────────────────────────────────────
@@ -608,24 +618,33 @@
 @layer base {
   * { @apply border-border; box-sizing: border-box; }
 
+  html { background-color: var(--surface-page); }
   body {
-    background-color: var(--surface-0);
+    background-color: var(--surface-page);
     color: var(--text-2);
     font-family: var(--font-text);
-    font-feature-settings: "rlig" 1, "calt" 1;
+    /* chiffres tabulaires par défaut (DESIGN.md, discipline de B) ; le texte du mémoire revient aux proportionnels */
+    font-feature-settings: "rlig" 1, "calt" 1, "tnum" 1;
     font-size: 0.875rem;
     line-height: 1.65;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
+  /* Serif au sommet : le h1 de la page seulement (et le texte du mémoire) ; tous les autres titres en Manrope. */
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-display);
+    font-family: var(--font-ui);
     letter-spacing: -0.01em;
     font-weight: 600;
+    text-wrap: balance;
   }
 
-  h1 { font-size: 1.75rem; letter-spacing: -0.025em; line-height: 1.2; }
+  h1 {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    font-weight: 500;
+    font-size: 1.75rem; letter-spacing: -0.01em; line-height: 1.15;
+  }
   h2 { font-size: 1.375rem; letter-spacing: -0.015em; line-height: 1.3; }
   h3 { font-size: 1.125rem; line-height: 1.4; }
 
@@ -637,11 +656,14 @@
     cursor: pointer;
   }
 
-  /* Smooth transitions sur les éléments interactifs */
+  /* Survols : 180 ms, sortie douce sans dépassement */
   button, a, input, select, textarea {
-    transition-duration: 200ms;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: var(--dur-survol);
+    transition-timing-function: var(--ease-survol);
   }
+
+  /* Surfaces du navigateur : sélection à la lumière d'aurore */
+  ::selection { background: var(--aurore-glow); color: var(--text-1); }
 
   /* Données chiffrées : montants, refs, compteurs, dates, lots. */
   .edge-data {
@@ -654,6 +676,10 @@
 /* Lecteur du mémoire (Rédiger) — le plugin typographie reprend les jetons du thème, clair comme nuit.
    `prose-invert` mettait titres et gras en blanc sur le papier clair (B2, recette du 4/11). */
 .lecteur-memoire {
+  /* le mémoire se lit comme un document : Newsreader, taille optique suivie, chiffres proportionnels */
+  font-family: var(--font-memoire);
+  font-optical-sizing: auto;
+  font-feature-settings: "rlig" 1, "calt" 1, "tnum" 0;
   --tw-prose-body: var(--text-2);
   --tw-prose-headings: var(--text-1);
   --tw-prose-lead: var(--text-2);
@@ -748,7 +774,7 @@
 .legal-prose th { font-weight: 600; color: var(--ink); }
 .legal-prose td { color: var(--ink-2); }
 .legal-prose blockquote {
-  border-left: 3px solid var(--lum);
+  border-left: 1px solid var(--border-field);
   padding-left: 16px;
   color: var(--ink-2);
   margin: 16px 0;
