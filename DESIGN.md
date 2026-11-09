@@ -326,7 +326,7 @@ La profondeur vient de la lumière et des traits, pas des ombres. Au repos, une 
 
 ### Aurore (signature)
 - Trois ellipses en `radial-gradient` (émeraude, turquoise, bleu), 140 vw × 34 à 46 vh, animées en `transform` seul sur 28 / 36 / 44 s (aller-retour, `ease-in-out`), sous un masque qui les éteint à 78 % de la hauteur. Aucun `filter: blur`.
-- Opacité `--aurore-opacite` : 0,26 le jour (elle se devine), 0,9 la nuit.
+- Opacité `--aurore-opacite` : 0,30 le jour (elle se devine), 0,9 la nuit.
 - Image fixe sous `prefers-reduced-motion`, en pause quand l'onglet est caché (`visibilitychange`), figée si `navigator.connection.saveData` ou une connexion 2G.
 
 ## Do's and Don'ts

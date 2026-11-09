@@ -33,7 +33,7 @@ export function BandeauSelonAge({ organisation }: { organisation: { created_at?:
     try { localStorage.setItem(CLE, 'ferme') } catch { /* stockage indisponible : le bandeau reviendra */ }
   }
   return (
-    <div role="region" aria-label="Nouveauté" className="flex shrink-0 items-center gap-3 border-b border-bord bg-accent-tint px-3 py-1.5 text-sm text-fg sm:px-6">
+    <div role="region" aria-label="Nouveauté" className="relative flex shrink-0 items-center gap-3 border-b border-bord bg-accent-tint px-3 py-1.5 text-sm text-fg sm:px-6">
       <Badge variant="accent" className="shrink-0">Nouveau</Badge>
       <p className="min-w-0 flex-1 min-[769px]:truncate max-[768px]:text-[13px] max-[768px]:leading-snug">
         {NOUVEAUTE.texte}{' '}

@@ -132,7 +132,7 @@
   --aurore-a: rgba(46, 204, 160, .55);   /* émeraude */
   --aurore-b: rgba(60, 190, 210, .45);   /* turquoise */
   --aurore-c: rgba(70, 140, 255, .40);   /* bleu */
-  --aurore-opacite: .26;                 /* le jour, elle se devine */
+  --aurore-opacite: .3;                  /* le jour, elle se devine (réglée à l’œil sur capture : 0,26 trop effacée) */
 
   --accent-text: var(--accent-700);
   --accent-ui: var(--accent-600);

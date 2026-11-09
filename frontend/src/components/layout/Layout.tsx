@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils'
 import { ThemeEcranProvider, type ThemeForce } from '@/lib/themeEcran'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import Sidebar from './Sidebar'
+import Aurore from './Aurore'
 import Header from './Header'
 import BarreOnglets from './BarreOnglets'
 import BandeauNouveau from './BandeauNouveau'
@@ -31,15 +32,17 @@ export default function Layout() {
 
   return (
     <TooltipProvider delayDuration={150}>
-      {/* barre d'icônes flottante (bureau) : 16 px de marge + 76 px + 16 px d'air = 108 px à gauche */}
-      <div className="flex h-svh min-h-0 flex-col overflow-hidden bg-surface-0 min-[769px]:pl-[108px]">
+      {/* barre d'icônes flottante (bureau) : 16 px de marge + 76 px + 16 px d'air = 108 px à gauche.
+          Le fond de page (givre / ciel polaire) porte l'aurore, posée une fois, derrière tout le contenu. */}
+      <div className="isolate flex h-svh min-h-0 flex-col overflow-hidden bg-surface-page min-[769px]:pl-[108px]">
+        <Aurore />
         <Sidebar />
         <BandeauNouveau />
         <Header onSearch={() => setPalette(true)} />
         <main
           className={cn(
             'relative flex flex-1 flex-col overflow-y-auto px-3 py-5 sm:px-4',
-            themee ? 'bg-surface-0' : 'bg-surface-0 text-fg-2',
+            themee ? 'bg-transparent' : 'bg-surface-0 text-fg-2', // écran refait : l'aurore se devine derrière
           )}
           data-theme={themee ? undefined : 'dark'}
         >
