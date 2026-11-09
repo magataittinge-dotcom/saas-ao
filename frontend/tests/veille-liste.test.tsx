@@ -227,3 +227,12 @@ test('C10 : « BOAMP – DILA » s’explique en une courte phrase', async () =>
   assert.equal(libelleSourceVeille(null), 'Avis officiels du BOAMP (DILA), licence ouverte')
   assert.equal(libelleSourceVeille('Autre source'), 'Autre source')
 })
+
+// Refonte groupe A — au téléphone, pas de mur de puces avant les avis : les filtres sont repliés sous « Affiner » (bouton
+// qui dit son état, aria-expanded) ; à partir de lg ils restent ouverts.
+test('sous lg, les filtres sont repliés sous « Affiner » ; ouverts à partir de lg', () => {
+  const html = renderToStaticMarkup(<ListeAvis {...base({ avis: [avis('1')], total: 1 })} />)
+  assert.match(html, /<button[^>]*aria-expanded="false"[^>]*>.*Affiner/)
+  assert.match(html, /<div id="[^"]+" class="max-lg:hidden max-lg:mt-3">/)
+  assert.ok(html.indexOf('Affiner') < html.indexOf('Mots-clés'), 'le bouton précède les filtres')
+})

@@ -2,7 +2,8 @@
 // (curseur ; la suite se charge aussi toute seule quand le bouton entre dans la zone visible), états vides positifs, source.
 //
 //   <ListeAvis avis={…} total={…} zoneVide={…} … />
-import { Fragment, useEffect, useRef } from 'react'
+import { Fragment, useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { ChevronDown, SlidersHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import CarteAvis from './CarteAvis'
@@ -100,6 +101,25 @@ function BoutonSuite({ chargePlus, nbAvis, onSuite }: { chargePlus: boolean; nbA
   )
 }
 
+/**
+ * Sous lg (téléphone, tablette), les filtres sont repliés sous « Affiner » : la liste des avis vient d'abord, pas un mur de
+ * puces (refonte groupe A). À partir de lg ils restent ouverts (et collés en haut de la zone qui défile).
+ */
+function FiltresRepliables({ filtre, children }: { filtre: boolean; children: ReactNode }) {
+  const [affiner, setAffiner] = useState(false)
+  const id = useId()
+  return (
+    <>
+      <button type="button" onClick={() => setAffiner((v) => !v)} aria-expanded={affiner} aria-controls={id}
+        className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-bord-champ bg-surface-0 px-4 text-sm font-semibold text-fg transition-[border-color,color] duration-base hover:border-accent-ui hover:text-accent-text lg:hidden">
+        <SlidersHorizontal size={16} strokeWidth={1.8} aria-hidden />Affiner{filtre ? ' · filtres appliqués' : ''}
+        <ChevronDown size={16} strokeWidth={1.8} aria-hidden className={cn('transition-transform duration-base', affiner && 'rotate-180')} />
+      </button>
+      <div id={id} className={cn(!affiner && 'max-lg:hidden', 'max-lg:mt-3')}>{children}</div>
+    </>
+  )
+}
+
 export default function ListeAvis(p: PropsListeAvis) {
   const libellesMetiers = Object.fromEntries(p.metiers.map((m) => [m.code, m.libelle]))
   const filtre = aDesFiltres(p.filtres)
@@ -124,7 +144,9 @@ export default function ListeAvis(p: PropsListeAvis) {
         {/* C10 — sans zone choisie, il n'y a aucun avis à filtrer : les filtres apparaissent une fois la zone choisie. */}
         {!p.zoneVide && (
           <div data-filtres-colles className="mt-4 pb-3 lg:sticky lg:-top-5 lg:z-10 lg:rounded-carte lg:border lg:border-bord lg:bg-surface-0 lg:px-4 lg:pt-3">
-            <FiltresVeille filtres={p.filtres} onFiltres={p.onFiltres} tri={p.tri} onTri={p.onTri} metiers={p.metiers} />
+            <FiltresRepliables filtre={filtre}>
+              <FiltresVeille filtres={p.filtres} onFiltres={p.onFiltres} tri={p.tri} onTri={p.onTri} metiers={p.metiers} />
+            </FiltresRepliables>
           </div>
         )}
 
