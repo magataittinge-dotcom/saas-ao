@@ -183,3 +183,31 @@ def test_word_numerote_sans_libreoffice_rend_le_fichier_tel_quel(monkeypatch):
     monkeypatch.setattr(pdf_export, "soffice_available", lambda: False)
     octets = _octets()
     assert pdf_export.docx_numerote(octets) == octets
+
+
+def test_pdf_page_de_garde_tient_sur_une_page_avec_logo_et_long_objet():
+    """Pire cas de la page de garde composée : logo haut, objet sur trois lignes, adresse et SIRET.
+    Tout tient en page 1 ; le sommaire ouvre la page 2."""
+    import shutil
+
+    import pytest
+    if not (shutil.which("soffice") or shutil.which("libreoffice")):
+        pytest.skip("LibreOffice absent")
+    from PIL import Image
+    from pypdf import PdfReader
+
+    from services.pdf_export import docx_to_pdf
+    tampon = io.BytesIO()
+    Image.new("RGB", (400, 400), (122, 31, 43)).save(tampon, "PNG")   # logo carré : le plus haut à 4,5 cm
+    objet = ("Lot 03 — Couverture zinc — Réhabilitation lourde et extension de la salle des fêtes communale, "
+             "du préau et des locaux associatifs de Villefictive-sur-Rivière (99000)")
+    pdf = docx_to_pdf(build_memoire_docx(
+        CONTENU, "x", "ENTREPRISE TEST", objet_marche=objet, lot_name="Lot 03 — Couverture zinc",
+        maitre_ouvrage="Commune de Villefictive", org_address="1 rue Imaginaire, 99000 Villefictive",
+        org_siret="00000000000000", logo_image=tampon.getvalue()))
+    pages = PdfReader(io.BytesIO(pdf)).pages
+    p1 = pages[0].extract_text()
+    for attendu in ("Mémoire technique", "Présenté par", "ENTREPRISE TEST", "SIRET 00000000000000"):
+        assert attendu in p1, (attendu, p1)
+    assert pages[1].extract_text().lstrip().splitlines()[1].startswith("Sommaire") or \
+        "Sommaire" in pages[1].extract_text()[:200]
