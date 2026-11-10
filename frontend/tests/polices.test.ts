@@ -21,9 +21,10 @@ test('main.tsx : uniquement des sous-ensembles latin / latin-ext, aucune police 
   assert.ok(importsPolices.includes('./styles/polices.css'), 'Manrope et Newsreader passent par styles/polices.css (latin + latin-ext)')
 })
 
-test('Geist Sans reste chargée : la landing, la connexion, l\'inscription, les tarifs et les mentions la nomment', () => {
-  assert.ok(importsPolices.some((i) => /geist-sans\/latin-400\.css/.test(i)))
-  for (const f of ['Landing', 'Login', 'Register', 'Pricing', 'Legal']) assert.ok(/Geist Sans/.test(lire(`src/routes/${f}.tsx`)), f)
+test('le site public parle la langue de l\'appli : la landing, la connexion, l\'inscription, les tarifs et les mentions ne nomment plus Geist', () => {
+  // Lot d : ces cinq écrans sont passés à Manrope et Newsreader (jetons). Geist Sans reste chargée tant que la grille des
+  // offres et les outils la nomment (components/offres/GrilleOffres.tsx, routes/Tools.tsx : lot c).
+  for (const f of ['Landing', 'Login', 'Register', 'Pricing', 'Legal']) assert.ok(!/Geist/.test(lire(`src/routes/${f}.tsx`)), f)
 })
 
 /** Plages « U+0000-00FF,U+0131 » → fonction d'appartenance. */

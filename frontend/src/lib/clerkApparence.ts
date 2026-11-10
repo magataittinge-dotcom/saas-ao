@@ -27,16 +27,23 @@ export function construireApparence(lire: (jeton: string) => string): ApparenceC
       fontFamilyButtons: lire('--font-ui'),
       borderRadius: lire('--radius-md'),
     },
+    // Les éléments suivent le système, par les classes aux jetons (jamais une valeur écrite ici) : carte (rayon 22, trait,
+    // ombre), titre en serif (c'est le h1 de l'écran), champs et boutons à 44 px, bouton principal = celui du système
+    // (pilule, dégradé d'accent), casse de phrase. « ! » : les styles que Clerk injecte passent après la feuille de l'appli.
     elements: {
-      card: { border: '1px solid var(--border-2)', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-pop)' },
-      headerTitle: { fontFamily: 'var(--font-display)', fontWeight: 600, letterSpacing: '-0.01em' },
-      formButtonPrimary: { backgroundImage: 'var(--accent-fill)', boxShadow: 'var(--shadow-btn)', fontWeight: 600, textTransform: 'none' },
-      formFieldInput: { border: '1px solid var(--border-field)', '&:focus': { borderColor: 'var(--accent-ring)', boxShadow: '0 0 0 2px var(--accent-ring)' } },
-      socialButtonsBlockButton: { border: '1px solid var(--border-field)' },
-      footerActionLink: { color: 'var(--accent-text)', fontWeight: 500 },
-      formFieldAction: { color: 'var(--accent-text)' },
-      identityPreviewEditButton: { color: 'var(--accent-text)' },
-      userButtonPopoverCard: { border: '1px solid var(--border-2)', boxShadow: 'var(--shadow-pop)' },
+      rootBox: '!w-full !max-w-[400px]',
+      cardBox: '!w-full !max-w-[400px] !rounded-carte !shadow-pop',
+      card: '!rounded-carte !border !border-solid !border-bord-2 !shadow-none',
+      headerTitle: '!font-display !text-xl !font-medium !tracking-[-0.01em]',
+      headerSubtitle: '!text-sm',
+      formButtonPrimary: `!min-h-11 !rounded-pilule ![background-image:var(--accent-fill)] !text-sm !font-semibold !normal-case !shadow-cta`,
+      formFieldInput: '!min-h-11 !rounded-lg !border !border-solid !border-bord-champ !text-sm focus:!border-accent-ring',
+      formFieldLabel: '!text-xs !font-medium',
+      socialButtonsBlockButton: '!min-h-11 !rounded-lg !border !border-solid !border-bord-champ',
+      footerActionLink: '!font-medium !text-accent-text',
+      formFieldAction: '!text-accent-text',
+      identityPreviewEditButton: '!text-accent-text',
+      userButtonPopoverCard: '!border !border-solid !border-bord-2 !shadow-pop',
     },
   }
 }

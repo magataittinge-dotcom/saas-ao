@@ -1,207 +1,85 @@
-/* Legal pages — public, no auth required.
- *
- * Layout: 2-column (sidebar nav + markdown content).
- * Each document is a static .md served from /public/legal/.
+import { Fragment } from 'react'
+import { Link, Navigate, useParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import ReactMarkdown, { type Components } from 'react-markdown'
+import CoquillePublique, { NavSite } from '@/components/public/CoquillePublique'
+import { Page } from '@/components/ui/page'
+import { EtatErreur, EtatRequete } from '@/components/ui/etats'
+import { SqueletteLignes } from '@/components/ui/squelette'
+import { Tableau } from '@/components/ui/tableau'
+import { classesBouton } from '@/components/ui/bouton'
+import { DOCUMENTS_JURIDIQUES, estSlugJuridique, preparerDocument, type SlugJuridique } from '@/lib/pagesJuridiques'
+import { decouperTables, type SegmentTable } from '@/lib/tablesMarkdown'
+import { cn } from '@/lib/utils'
+
+// Une colonne de lecture : 68 signes par ligne au plus, titres en Manrope (le seul serif est le h1 de la page).
+const LIGNE = 'max-w-[68ch]'
+const RENDU: Components = {
+  h1: ({ children }) => <h2 className="mb-3 mt-10 text-lg font-semibold text-fg">{children}</h2>,
+  h2: ({ children }) => <h2 className="mb-3 mt-10 text-lg font-semibold text-fg">{children}</h2>,
+  h3: ({ children }) => <h3 className="mb-2 mt-6 text-base font-semibold text-fg">{children}</h3>,
+  p: ({ children }) => <p className={cn(LIGNE, 'mb-4 text-base text-fg-2')}>{children}</p>,
+  ul: ({ children }) => <ul className={cn(LIGNE, 'mb-4 list-disc space-y-1.5 pl-5 text-base text-fg-2 marker:text-fg-3')}>{children}</ul>,
+  ol: ({ children }) => <ol className={cn(LIGNE, 'mb-4 list-decimal space-y-1.5 pl-5 text-base text-fg-2 marker:text-fg-3')}>{children}</ol>,
+  a: ({ children, href }) => <a href={href} className="font-medium text-accent-text underline underline-offset-4">{children}</a>,
+  strong: ({ children }) => <strong className="font-semibold text-fg">{children}</strong>,
+  code: ({ children }) => <code className="rounded bg-surface-1 px-1 font-sans text-sm text-fg">{children}</code>,
+  hr: () => <hr className="my-8 border-bord" />,
+}
+
+/** Une cellule : du texte courant (gras, code), sans paragraphe autour. */
+function Cellule({ texte }: { texte: string }) {
+  return <ReactMarkdown components={{ ...RENDU, p: ({ children }) => <Fragment>{children}</Fragment> }}>{texte}</ReactMarkdown>
+}
+
+/** Un tableau du document, rendu par le tableau du système (au téléphone, chaque rangée s'empile). */
+function TableauJuridique({ table }: { table: SegmentTable }) {
+  const colonnes = table.entetes.map((titre, k) => ({ cle: String(k), titre, tel: true, rendu: (ligne: string[]) => <Cellule texte={ligne[k] ?? ''} /> }))
+  return <Tableau className="my-6" libelle={table.entetes.join(', ')} colonnes={colonnes} lignes={table.lignes} cle={(ligne) => ligne.join('|')} vide={null} />
+}
+
+async function lireDocument(slug: SlugJuridique): Promise<string> {
+  const reponse = await fetch(`/legal/${slug}.md`, { cache: 'no-cache' })
+  if (!reponse.ok) throw new Error(`document ${slug} : ${reponse.status}`)
+  return reponse.text()
+}
+
+/**
+ * Pages juridiques : la coquille du site, une colonne de lecture, les cinq documents à portée de clic. Le texte vient de
+ * public/legal/*.md et n'est pas récrit ; ses tableaux sont de vrais tableaux, et un champ que l'éditeur n'a pas encore
+ * renseigné s'affiche « Information en cours d'enregistrement » (lib/pagesJuridiques.ts). Chargement → erreur → contenu.
  */
-import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import ReactMarkdown from 'react-markdown'
-import { ArrowLeft, FileText } from 'lucide-react'
-
-const F = "'Geist Sans', sans-serif"
-
-type DocSlug =
-  | 'mentions-legales'
-  | 'cgu'
-  | 'cgv'
-  | 'politique-confidentialite'
-  | 'cookies'
-
-const DOCS: { slug: DocSlug; label: string; description: string }[] = [
-  {
-    slug: 'mentions-legales',
-    label: 'Mentions légales',
-    description: 'Éditeur, hébergeur, contact',
-  },
-  {
-    slug: 'cgu',
-    label: 'CGU',
-    description: "Conditions Générales d'Utilisation",
-  },
-  {
-    slug: 'cgv',
-    label: 'CGV',
-    description: 'Conditions Générales de Vente B2B',
-  },
-  {
-    slug: 'politique-confidentialite',
-    label: 'Confidentialité',
-    description: 'Politique de protection des données (RGPD)',
-  },
-  {
-    slug: 'cookies',
-    label: 'Cookies',
-    description: 'Politique de gestion des cookies',
-  },
-]
-
 export default function Legal() {
   const { slug } = useParams<{ slug?: string }>()
-  const navigate = useNavigate()
-
-  // Default to mentions-legales when navigating to /legal directly.
-  const activeSlug = useMemo<DocSlug>(() => {
-    const valid = DOCS.find((d) => d.slug === slug)?.slug
-    return valid ?? 'mentions-legales'
-  }, [slug])
-
-  useEffect(() => {
-    if (!slug) navigate('/legal/mentions-legales', { replace: true })
-  }, [slug, navigate])
-
-  const [markdown, setMarkdown] = useState<string>('')
-  const [error, setError] = useState<string | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    let cancelled = false
-    setIsLoading(true)
-    setError(null)
-    fetch(`/legal/${activeSlug}.md`, { cache: 'no-cache' })
-      .then((r) => {
-        if (!r.ok) throw new Error(`Document indisponible (${r.status})`)
-        return r.text()
-      })
-      .then((txt) => {
-        if (!cancelled) setMarkdown(txt)
-      })
-      .catch((e) => {
-        if (!cancelled) setError(e.message ?? 'Erreur de chargement')
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [activeSlug])
-
-  // Scroll to top on slug change so users always start at the title.
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior })
-  }, [activeSlug])
+  const actif = estSlugJuridique(slug) ? slug : null
+  const requete = useQuery({ queryKey: ['page-juridique', actif], queryFn: () => lireDocument(actif!), enabled: actif !== null, staleTime: Infinity, select: preparerDocument })
+  if (!actif) return <Navigate to="/legal/mentions-legales" replace />
+  const document = DOCUMENTS_JURIDIQUES.find((d) => d.slug === actif)!
 
   return (
-    <div style={{ background: '#151A23', minHeight: '100vh', fontFamily: F }}>
-      {/* Top bar with back link */}
-      <div className="border-b" style={{ borderColor: '#1C222D', background: '#151A23' }}>
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 text-sm font-medium transition-colors"
-            style={{ color: '#9BA4B5' }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = '#E4E9F2' }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = '#9BA4B5' }}
-          >
-            <ArrowLeft size={16} /> Retour à l&apos;accueil
-          </Link>
-          <div className="flex items-center gap-2">
-            <div
-              className="w-7 h-7 rounded flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #E4E9F2, #FFFFFF)' }}
-            >
-              <span className="font-black text-xs" style={{ color: '#0A0C11' }}>S</span>
-            </div>
-            <span className="text-sm font-semibold" style={{ color: '#F4F6FA' }}>
-              Synorix
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Main content */}
-      <div className="max-w-6xl mx-auto px-6 py-10 grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-10">
-        {/* Sidebar */}
-        <aside className="lg:sticky lg:top-6 self-start">
-          <div className="flex items-center gap-2 mb-4">
-            <FileText size={16} style={{ color: '#E4E9F2' }} />
-            <h2 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#788295' }}>
-              Documents légaux
-            </h2>
-          </div>
-          <nav className="space-y-1">
-            {DOCS.map((doc) => {
-              const active = doc.slug === activeSlug
-              return (
-                <Link
-                  key={doc.slug}
-                  to={`/legal/${doc.slug}`}
-                  className="block rounded-lg px-3 py-2.5 transition-colors"
-                  style={{
-                    background: active ? 'rgba(228,233,242,0.08)' : 'transparent',
-                    border: '1px solid',
-                    borderColor: active ? 'rgba(228,233,242,0.18)' : 'transparent',
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!active) e.currentTarget.style.background = '#1C222D'
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!active) e.currentTarget.style.background = 'transparent'
-                  }}
-                >
-                  <p
-                    className="text-sm font-semibold"
-                    style={{ color: active ? '#E4E9F2' : '#F4F6FA' }}
-                  >
-                    {doc.label}
-                  </p>
-                  <p className="text-xs mt-0.5" style={{ color: '#788295' }}>
-                    {doc.description}
-                  </p>
-                </Link>
-              )
-            })}
+    <CoquillePublique nav={<NavSite />}>
+      <Page etroite titre={requete.data?.titre ?? document.libelle}
+        avant={(
+          <nav aria-label="Documents juridiques" className="-ml-3 mb-6 flex flex-wrap gap-x-1 gap-y-1">
+            {DOCUMENTS_JURIDIQUES.map((d) => (
+              <Link key={d.slug} to={`/legal/${d.slug}`} aria-current={d.slug === actif ? 'page' : undefined}
+                className={classesBouton('discret', d.slug === actif ? 'bg-surface-1 text-fg' : undefined)}>
+                {d.libelle}
+              </Link>
+            ))}
           </nav>
-          <p className="text-xs mt-6 leading-relaxed" style={{ color: '#788295' }}>
-            Pour toute question juridique, contactez-nous à{' '}
-            <a
-              href="mailto:contact@synorix.tech"
-              className="font-medium"
-              style={{ color: '#E4E9F2' }}
-            >
-              contact@synorix.tech
-            </a>
-            .
-          </p>
-        </aside>
-
-        {/* Document */}
-        <article className="legal-prose">
-          {isLoading && (
-            <div className="space-y-3 animate-pulse">
-              <div className="h-8 rounded" style={{ background: '#1C222D', width: '60%' }} />
-              <div className="h-4 rounded" style={{ background: '#1C222D', width: '40%' }} />
-              <div className="h-3 rounded mt-6" style={{ background: '#1C222D' }} />
-              <div className="h-3 rounded" style={{ background: '#1C222D' }} />
-              <div className="h-3 rounded" style={{ background: '#1C222D', width: '80%' }} />
-            </div>
+        )}>
+        <EtatRequete requete={requete} squelette={<SqueletteLignes lignes={8} />} vide={null} estVide={() => false}
+          erreur={<EtatErreur titre="Ce document n’a pas pu se charger" detail="La connexion au serveur a échoué. Réessayez dans un instant." onReessayer={() => { void requete.refetch() }} enCours={requete.isFetching} />}>
+          {(doc) => (
+            <article>
+              {decouperTables(doc.corps).map((s, i) => (s.type === 'table'
+                ? <TableauJuridique key={i} table={s} />
+                : <ReactMarkdown key={i} components={RENDU}>{s.texte}</ReactMarkdown>))}
+            </article>
           )}
-          {error && (
-            <div
-              className="rounded-lg p-4"
-              style={{ background: 'rgba(245,142,134,0.09)', border: '1px solid rgba(245,142,134,0.30)', color: '#F58E86' }}
-            >
-              <p className="text-sm font-semibold">Impossible de charger le document</p>
-              <p className="text-xs mt-1">{error}</p>
-            </div>
-          )}
-          {!isLoading && !error && (
-            <div className="animate-fade-in">
-              <ReactMarkdown>{markdown}</ReactMarkdown>
-            </div>
-          )}
-        </article>
-      </div>
-    </div>
+        </EtatRequete>
+      </Page>
+    </CoquillePublique>
   )
 }

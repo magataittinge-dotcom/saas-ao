@@ -1,0 +1,188 @@
+// Lot d — site public, tarifs, pages juridiques, adresse inconnue, erreur, hors ligne, premiers jours.
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import path from 'node:path'
+import { renderToStaticMarkup } from 'react-dom/server'
+import { MemoryRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { TableRoutes, ecranPourErreur, estMorceauIntrouvable } from '@/App'
+import Landing from '@/routes/Landing'
+import Pricing from '@/routes/Pricing'
+import Legal from '@/routes/Legal'
+import { Route, Routes } from 'react-router-dom'
+import { AdresseInconnue, AOIntrouvable } from '@/components/public/EcransEtat'
+import { ConnexionInterrompue, ErreurAppli, MorceauIntrouvable, accueilPour } from '@/components/public/EcransHorsRouteur'
+import { VideMesAO } from '@/components/mesao/VideMesAO'
+import { DOCUMENTS_JURIDIQUES, MENTION_EN_ATTENTE, champsACompleter, preparerDocument, sansChampsACompleter } from '@/lib/pagesJuridiques'
+import { decouperTables } from '@/lib/tablesMarkdown'
+import { OFFRES, prixLibelle } from '@/lib/offres'
+import { RACINE, lire, sansCommentaires } from './outils/sources'
+
+const NB = ' '
+const rendre = (noeud: React.ReactNode, adresse = '/') =>
+  renderToStaticMarkup(<QueryClientProvider client={new QueryClient()}><MemoryRouter initialEntries={[adresse]}>{noeud}</MemoryRouter></QueryClientProvider>)
+const nb = (html: string, motif: RegExp) => (html.match(motif) ?? []).length
+
+// ─── F-04 : les pages publiques n'attendent plus Clerk ───
+test('F-04 : le site, les tarifs et les pages juridiques s’affichent sans Clerk (aucun ClerkProvider autour, rien de vide)', () => {
+  for (const adresse of ['/', '/pricing', '/legal/cgu']) {
+    const html = rendre(<TableRoutes />, adresse)
+    assert.ok(html.length > 0, `${adresse} : la route rend quelque chose avant que Clerk soit prêt`)
+  }
+  const app = sansCommentaires(lire('src/App.tsx'))
+  assert.doesNotMatch(app, /if \(!clerkReady\) return null/)
+  assert.doesNotMatch(app, /data-theme="dark"/, 'le site n’est plus enfermé en nuit')
+  for (const f of ['src/routes/Landing.tsx', 'src/routes/Pricing.tsx', 'src/routes/Legal.tsx', 'src/components/public/CoquillePublique.tsx']) {
+    assert.doesNotMatch(sansCommentaires(lire(f)), /@clerk\//, `${f} ne lit pas Clerk`)
+  }
+})
+
+// ─── Site public ───
+test('site public : un h1, un seul aplat (l’offre telle que le code la donne), « Voir comment ça marche », les sept étapes', () => {
+  const html = rendre(<Landing />)
+  assert.equal(nb(html, /<h1/g), 1)
+  assert.equal(nb(html, /bg-accent-fill/g), 1, 'un seul geste')
+  assert.ok(html.includes(`Créer mon compte${NB}: 1 appel d’offres offert`))
+  assert.ok(html.includes('Voir comment ça marche') && !html.includes('Voir la démo'), 'A8')
+  const ordre = ['Dépôt', 'Lots', 'Décider', 'Pièces', 'Plan', 'Rédiger', 'Export'].map((e) => html.indexOf(`</span>${e}</p>`))
+  assert.ok(ordre.every((p, i) => p > 0 && (i === 0 || p > ordre[i - 1])), 'les sept étapes, dans l’ordre')
+  assert.ok(html.includes(`Synorix lit et rédige${NB}; vous décidez et vous déposez.`))
+  assert.equal(nb(html, /data-synorix-parle/g), 1, 'le visage une fois, à côté de la phrase')
+  assert.ok(html.includes('href="/login"') && html.includes('href="/pricing"') && html.includes('href="/legal/mentions-legales"'))
+})
+
+test('site public : aucun chiffre ni promesse non sourcés, aucun point d’exclamation, aucune couleur en dur, plus de fausse fenêtre', () => {
+  const html = rendre(<Landing />)
+  const sansPrix = OFFRES.reduce((t, o) => t.split(prixLibelle(o)).join(''), html.replace(/<svg.*?<\/svg>/gs, ''))
+  const texte = sansPrix.replace(/<[^>]+>/g, ' ')
+  assert.doesNotMatch(texte, /\d+ ?%|\d+ ?×|\d+x plus|gagnés|soumis|témoign|Propulsé/i)
+  assert.doesNotMatch(texte, /!/)
+  const src = sansCommentaires(lire('src/routes/Landing.tsx'))
+  assert.doesNotMatch(src, /#[0-9A-Fa-f]{6}\b|style=\{\{|synorix\.tech\/dashboard|float-particle|Geist/)
+  assert.ok(src.split('\n').length < 200, 'la page tient en moins de 200 lignes')
+})
+
+test('tarifs : la coquille du site (logo, retour, pied de page) et la grille du code, un seul aplat', () => {
+  const html = rendre(<Pricing />)
+  assert.equal(nb(html, /<h1/g), 1)
+  assert.ok(/<h1[^>]*>Tarifs<\/h1>/.test(html))
+  assert.equal(nb(html, /bg-accent-fill/g), 1)
+  assert.ok(html.includes('Retour au site') && html.includes('data-coquille-publique') && html.includes('href="/legal/cgv"'))
+  for (const o of OFFRES) assert.ok(html.includes(prixLibelle(o)) && html.includes(`href="/register?plan=${o.id}"`), o.nom)
+  assert.doesNotMatch(sansCommentaires(lire('src/routes/Pricing.tsx')), /\d+ ?€/, 'aucun prix écrit dans la page')
+})
+
+// ─── Pages juridiques ───
+const juridique = (slug: string) => readFileSync(path.join(RACINE, 'public/legal', `${slug}.md`), 'utf8')
+
+test('pages juridiques : « [À COMPLÉTER] » ne s’affiche plus tel quel, et rien n’est inventé à sa place', () => {
+  assert.equal(sansChampsACompleter('- **SIRET :** [À COMPLÉTER]'), `- **SIRET :** ${MENTION_EN_ATTENTE}`)
+  assert.equal(sansChampsACompleter('édité par [À COMPLÉTER] (cf. Mentions légales)'), `édité par ${MENTION_EN_ATTENTE.toLowerCase()} (cf. Mentions légales)`)
+  assert.equal(sansChampsACompleter('ressort de [À COMPLÉTER : ville\ndu siège]'), `ressort de ${MENTION_EN_ATTENTE.toLowerCase()}`)
+  let champs = 0
+  for (const d of DOCUMENTS_JURIDIQUES) {
+    const brut = juridique(d.slug)
+    champs += champsACompleter(brut).length
+    const { titre, corps } = preparerDocument(brut)
+    assert.ok(titre && titre.length > 3, `${d.slug} : le titre du document devient le h1`)
+    assert.doesNotMatch(corps, /À COMPLÉTER/, d.slug)
+    assert.doesNotMatch(corps, /^# /m, `${d.slug} : un seul titre de premier niveau`)
+  }
+  assert.ok(champs > 0, 'la liste des champs à renseigner reste lisible dans les fichiers (rapport, D11)')
+})
+
+test('pages juridiques : les tableaux Markdown sont de vrais tableaux, dans une colonne de lecture', () => {
+  for (const slug of ['cookies', 'politique-confidentialite']) {
+    const client = new QueryClient()
+    client.setQueryData(['page-juridique', slug], juridique(slug))
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={client}><MemoryRouter initialEntries={[`/legal/${slug}`]}><Routes><Route path="/legal/:slug" element={<Legal />} /></Routes></MemoryRouter></QueryClientProvider>)
+    assert.ok(decouperTables(preparerDocument(juridique(slug)).corps).some((s) => s.type === 'table'))
+    assert.ok(html.includes('<table'), `${slug} : tableau rendu`)
+    assert.doesNotMatch(html, /\|---|\| ?Nom ?\|/, `${slug} : plus de barres verticales à l’écran`)
+    assert.equal(nb(html, /<h1/g), 1)
+    assert.ok(html.includes('data-page="etroite"') && html.includes('aria-current="page"'))
+    assert.doesNotMatch(html, /À COMPLÉTER/)
+  }
+})
+
+test('pages juridiques : une panne de lecture dit l’erreur et propose « Réessayer », jamais une page blanche', async () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, retryOnMount: false } } })
+  await client.prefetchQuery({ queryKey: ['page-juridique', 'cgu'], queryFn: () => Promise.reject(new Error('500')) })
+  const html = renderToStaticMarkup(
+    <QueryClientProvider client={client}><MemoryRouter initialEntries={['/legal/cgu']}><Routes><Route path="/legal/:slug" element={<Legal />} /></Routes></MemoryRouter></QueryClientProvider>)
+  assert.ok(html.includes('Ce document n’a pas pu se charger') && html.includes('Réessayer'))
+  assert.doesNotMatch(html, /500|Error/)
+})
+
+test('connexion : la carte Clerk dans la coquille du site, sans slogan ; session expirée (F-01) : la phrase, puis le retour à la page d’origine', () => {
+  for (const f of ['src/routes/Login.tsx', 'src/routes/Register.tsx']) {
+    const src = sansCommentaires(lire(f))
+    assert.match(src, /<CoquillePublique>/, f)
+    assert.doesNotMatch(src, /10×|plus vite|#[0-9A-Fa-f]{6}\b|style=\{\{|appearance=/, `${f} : ni slogan chiffré, ni couleur en dur, ni second habillage de Clerk`)
+  }
+  const connexion = sansCommentaires(lire('src/routes/Login.tsx'))
+  assert.match(connexion, /PHRASE_SESSION_EXPIREE/)
+  assert.match(connexion, /forceRedirectUrl=\{retour/)
+})
+
+// ─── Adresse inconnue, erreur, hors ligne ───
+test('adresse inconnue : un écran, plus un renvoi muet ; connecté, on reste dans l’appli', () => {
+  const visiteur = rendre(<AdresseInconnue connecte={false} />)
+  const connecte = rendre(<AdresseInconnue connecte />)
+  for (const html of [visiteur, connecte]) {
+    assert.ok(/<h1[^>]*>Cette adresse n’existe pas<\/h1>/.test(html))
+    assert.equal(nb(html, /bg-accent-fill/g), 1)
+  }
+  assert.ok(visiteur.includes('href="/"') && visiteur.includes('href="/login"'))
+  assert.ok(connecte.includes('href="/dashboard"') && connecte.includes('href="/projects"') && !connecte.includes('href="/"'))
+  const ao = rendre(<AOIntrouvable />)
+  assert.ok(ao.includes('Cet appel d’offres est introuvable') && ao.includes('href="/projects"'))
+  const app = sansCommentaires(lire('src/App.tsx'))
+  assert.doesNotMatch(app, /<Navigate to="\/" replace \/>/)
+  assert.match(lire('src/App.tsx'), /<Route path="\*" element=\{<AdresseInconnue connecte \/>\} \/>/)
+})
+
+test('écran d’erreur : calme, en français, deux gestes ; rien de technique à l’écran, le détail part à la console et à Sentry (F-02)', () => {
+  const html = renderToStaticMarkup(<ErreurAppli />)
+  assert.ok(html.includes('Recharger la page') && html.includes('Revenir à l’accueil'))
+  assert.equal(nb(html, /<h1/g), 1)
+  assert.doesNotMatch(html, /Erreur React|stack|Error|undefined|monospace/)
+  const app = sansCommentaires(lire('src/App.tsx'))
+  assert.doesNotMatch(app, /error\.stack\}|error\.message\}|Erreur React|style=\{\{/)
+  assert.match(app, /componentDidCatch\(/)
+  assert.match(app, /Sentry\?\.captureException\?\.\(error/)
+  assert.equal(accueilPour('/projects/abc/plan'), '/dashboard')
+  assert.equal(accueilPour('/legal/cgu'), '/')
+  assert.equal(accueilPour('/'), '/')
+})
+
+test('hors ligne : « Connexion interrompue » ; un morceau qui ne se charge pas propose de recharger', () => {
+  const morceau = new TypeError('Failed to fetch dynamically imported module: http://localhost/src/routes/Vault.tsx')
+  assert.equal(estMorceauIntrouvable(morceau), true)
+  assert.equal(estMorceauIntrouvable(new Error('x is not a function')), false)
+  assert.equal(ecranPourErreur(morceau, false), 'hors-ligne')
+  assert.equal(ecranPourErreur(new Error('x is not a function'), false), 'hors-ligne')
+  assert.equal(ecranPourErreur(morceau, true), 'morceau')
+  assert.equal(ecranPourErreur(new Error('x is not a function'), true), 'erreur')
+  const horsLigne = renderToStaticMarkup(<ConnexionInterrompue />)
+  assert.ok(/<h1[^>]*>Connexion interrompue<\/h1>/.test(horsLigne) && horsLigne.includes('se rechargera seul'))
+  assert.match(sansCommentaires(lire('src/components/public/EcransHorsRouteur.tsx')), /addEventListener\('online', recharger\)/)
+  const version = renderToStaticMarkup(<MorceauIntrouvable />)
+  assert.ok(version.includes('Recharger la page'))
+  for (const html of [horsLigne, version]) assert.doesNotMatch(html, /Failed|fetch|module/)
+})
+
+// ─── Premiers jours ───
+test('Mes AO sans AO : la page du système, un seul geste (déposer), Synorix dit le partage des rôles, plus de vignette ni de capitales', () => {
+  const html = rendre(<VideMesAO />)
+  assert.ok(/<h1[^>]*>Mes appels d’offres<\/h1>/.test(html))
+  assert.equal(nb(html, /<h1/g), 1)
+  assert.equal(nb(html, /bg-accent-fill/g), 1)
+  assert.ok(html.includes('Choisir un fichier'))
+  assert.equal(nb(html, /data-synorix-parle/g), 1)
+  assert.ok(html.includes(`Synorix lit et rédige${NB}; vous décidez et vous déposez.`))
+  const src = sansCommentaires(lire('src/components/mesao/VideMesAO.tsx'))
+  assert.doesNotMatch(src, /uppercase|VisagePetit|rounded-\[|text-\[/)
+})

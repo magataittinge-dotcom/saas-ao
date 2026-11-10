@@ -37,9 +37,13 @@ test('Clerk : textes lisibles (4,5:1) sur la carte, le champ et le bouton, dans 
 })
 
 test('Clerk : les éléments passent par var(--jeton), le ClerkProvider reçoit l\'apparence et la recalcule à chaque bascule', () => {
-  const e = pour('light').elements as Record<string, Record<string, unknown>>
-  assert.equal(e.formButtonPrimary.backgroundImage, 'var(--accent-fill)')
-  assert.equal(e.card.borderRadius, 'var(--radius-xl)')
+  const e = pour('light').elements as Record<string, string>
+  assert.match(e.formButtonPrimary, /!\[background-image:var\(--accent-fill\)\]/)
+  assert.match(e.formButtonPrimary, /!min-h-11/, 'bouton à 44 px')
+  assert.match(e.formFieldInput, /!min-h-11/, 'champ à 44 px')
+  assert.match(e.card, /!rounded-carte/)
+  assert.match(e.headerTitle, /!font-display/, 'le titre de la carte est en serif')
+  for (const [nom, classes] of Object.entries(e)) assert.equal(typeof classes, 'string', `${nom} : des classes aux jetons, pas de style écrit`)
   const src = sansCommentaires(lire('src/lib/clerkApparence.ts'))
   assert.doesNotMatch(src, /#[0-9A-Fa-f]{3,8}\b/, 'aucune couleur en dur')
   const main = sansCommentaires(lire('src/main.tsx'))

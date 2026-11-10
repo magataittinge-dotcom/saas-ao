@@ -3,7 +3,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { authService } from '@/services/auth'
 import { prenomAffichable } from '@/lib/prenom'
 import { Page } from '@/components/ui/page'
-import { Carte, TitreCarte } from '@/components/ui/carte'
+import { Carte } from '@/components/ui/carte'
 import { Bouton } from '@/components/ui/bouton'
 import { Champ, GroupeChamp } from '@/components/ui/champ'
 import { Message } from '@/components/ui/message'
@@ -53,7 +53,7 @@ export default function FirstAOWelcome() {
 
       {!siretDone ? (
         <Carte className="mt-8">
-          <TitreCarte>Pour commencer, votre numéro SIRET</TitreCarte>
+          <h2 className="text-lg font-semibold text-fg">Pour commencer, votre numéro SIRET</h2>
           <p className="mt-1.5 text-sm text-fg-2">Rien d’autre à saisir : le répertoire Sirene remplit le reste de votre profil.</p>
           <form className="mt-5 flex flex-wrap items-end gap-3" onSubmit={(e) => { e.preventDefault(); void submitSiret() }}>
             <GroupeChamp libelle="Numéro SIRET" aide="14 chiffres, sans espace." className="min-w-0 flex-1 basis-64">

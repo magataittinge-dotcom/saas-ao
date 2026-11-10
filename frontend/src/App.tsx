@@ -4,6 +4,8 @@ import { useAuth } from '@clerk/clerk-react'
 import { useSyncUser } from '@/hooks/useAuth'
 import EcranEnChargement from '@/components/common/EcranEnChargement'
 import { REDIRECTIONS_ENTREPRISE } from '@/lib/entreprise/redirections'
+import { AdresseInconnue } from '@/components/public/EcransEtat'
+import { ConnexionInterrompue, ErreurAppli, MorceauIntrouvable } from '@/components/public/EcransHorsRouteur'
 
 // Un écran = un morceau chargé à la demande (bloc 6) : l'accueil public ne télécharge ni la
 // coquille connectée, ni le Markdown, ni les étapes de l'AO.
@@ -24,12 +26,7 @@ const Settings = lazy(() => import('@/routes/Settings'))
 const Billing = lazy(() => import('@/routes/Billing'))
 const Tools = lazy(() => import('@/routes/Tools'))
 const Design = lazy(() => import('@/routes/Design'))
-
-// Écrans publics (accueil, tarifs, mentions, connexion) : pas encore refaits sur les jetons clair / nuit,
-// ils restent en nuit quel que soit le thème choisi (retirer ce cadre écran par écran, phase C).
-function Nuit({ children }: { children: React.ReactNode }) {
-  return <div data-theme="dark" className="min-h-svh bg-surface-0 text-fg-2">{children}</div>
-}
+const CoquillePublique = lazy(() => import('@/components/public/CoquillePublique'))
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isSignedIn, isLoaded } = useAuth()
@@ -43,25 +40,35 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return isSignedIn ? <Navigate to="/dashboard" replace /> : <>{children}</>
 }
 
-function AppRoutes() {
-  const clerkReady = useSyncUser()
+/**
+ * Adresse inconnue : un vrai écran (404), dans la coquille de l'appli si l'on est connecté, sur le site sinon. Seule cette
+ * route attend Clerk pour choisir sa coquille.
+ */
+function CoquilleSelonSession() {
+  const { isSignedIn, isLoaded } = useAuth()
+  if (!isLoaded) return null
+  return isSignedIn ? <Layout /> : <CoquillePublique><AdresseInconnue connecte={false} /></CoquillePublique>
+}
 
-  // Don't render any routes until Clerk is loaded and token provider is set
-  if (!clerkReady) return null
-
+/**
+ * La table des routes. Les pages publiques (site, tarifs, pages juridiques) ne lisent pas Clerk : elles s'affichent tout de
+ * suite, même si le script tiers est lent ou bloqué (F-04). Seules les routes connectées, la connexion et l'inscription
+ * l'attendent (PrivateRoute, PublicRoute).
+ */
+export function TableRoutes() {
   return (
     <Suspense fallback={<EcranEnChargement />}>
     <Routes>
       {/* Public routes */}
-      <Route path="/" element={<Nuit><Landing /></Nuit>} />
-      <Route path="/pricing" element={<Nuit><Pricing /></Nuit>} />
-      <Route path="/legal" element={<Nuit><Legal /></Nuit>} />
-      <Route path="/legal/:slug" element={<Nuit><Legal /></Nuit>} />
+      <Route path="/" element={<Landing />} />
+      <Route path="/pricing" element={<Pricing />} />
+      <Route path="/legal" element={<Legal />} />
+      <Route path="/legal/:slug" element={<Legal />} />
       <Route
         path="/login/*"
         element={
           <PublicRoute>
-            <Nuit><Login /></Nuit>
+            <Login />
           </PublicRoute>
         }
       />
@@ -69,11 +76,10 @@ function AppRoutes() {
         path="/register/*"
         element={
           <PublicRoute>
-            <Nuit><Register /></Nuit>
+            <Register />
           </PublicRoute>
         }
       />
-
 
       {/* Private routes — with layout */}
       <Route
@@ -103,14 +109,40 @@ function AppRoutes() {
         <Route path="/billing" element={<Navigate to="/settings/billing" replace />} />
       </Route>
 
-      {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      {/* Adresse inconnue : un écran, jamais un renvoi muet vers le site */}
+      <Route element={<CoquilleSelonSession />}>
+        <Route path="*" element={<AdresseInconnue connecte />} />
+      </Route>
     </Routes>
     </Suspense>
   )
 }
 
-class ErrorBoundary extends React.Component<
+function AppRoutes() {
+  // Pose le fournisseur de jeton et la réaction « session expirée » ; ne retient plus l'affichage des pages publiques.
+  useSyncUser()
+  return <TableRoutes />
+}
+
+type Sentry = { captureException?: (erreur: unknown, contexte?: unknown) => void }
+
+// Un morceau de code (écran chargé à la demande) qui n'arrive pas : hors ligne, ou retiré par un déploiement.
+export function estMorceauIntrouvable(erreur: unknown): boolean {
+  const message = erreur instanceof Error ? erreur.message : String(erreur ?? '')
+  return /dynamically imported module|Importing a module script failed|Unable to preload|Loading chunk|Failed to fetch/i.test(message)
+}
+
+export type EcranErreur = 'hors-ligne' | 'morceau' | 'erreur'
+
+// L'écran à montrer pour une erreur de rendu : connexion interrompue, morceau à recharger, ou erreur de l'appli.
+export function ecranPourErreur(erreur: unknown, enLigne: boolean): EcranErreur {
+  if (!enLigne) return 'hors-ligne'
+  return estMorceauIntrouvable(erreur) ? 'morceau' : 'erreur'
+}
+
+// Le dernier filet : une erreur de rendu n'affiche plus rien de technique (F-02). Le détail va à la console et à Sentry
+// quand il est chargé sur la page (`window.Sentry`) ; l'écran reste calme, en français, avec le geste pour repartir.
+export class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
   { error: Error | null }
 > {
@@ -118,25 +150,18 @@ class ErrorBoundary extends React.Component<
   static getDerivedStateFromError(error: Error) {
     return { error }
   }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('[Synorix] erreur de rendu', error, info.componentStack)
+    try {
+      (window as Window & { Sentry?: Sentry }).Sentry?.captureException?.(error, { extra: { componentStack: info.componentStack } })
+    } catch {
+      // l'envoi du rapport ne doit jamais empêcher l'écran d'erreur de s'afficher
+    }
+  }
   render() {
     if (this.state.error) {
-      return (
-        <div style={{ padding: 40, color: '#F58E86', background: '#0F1218', minHeight: '100vh', fontFamily: 'monospace' }}>
-          <h1 style={{ fontSize: 20, marginBottom: 16 }}>Erreur React</h1>
-          <pre style={{ whiteSpace: 'pre-wrap', fontSize: 14, color: '#FCA5A5' }}>
-            {this.state.error.message}
-          </pre>
-          <pre style={{ whiteSpace: 'pre-wrap', fontSize: 12, color: '#788295', marginTop: 12 }}>
-            {this.state.error.stack}
-          </pre>
-          <button
-            onClick={() => { this.setState({ error: null }); window.location.reload() }}
-            style={{ marginTop: 20, padding: '8px 16px', background: '#E4E9F2', color: '#0A0C11', border: 'none', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}
-          >
-            Recharger
-          </button>
-        </div>
-      )
+      const ecran = ecranPourErreur(this.state.error, typeof navigator === 'undefined' ? true : navigator.onLine)
+      return ecran === 'hors-ligne' ? <ConnexionInterrompue /> : ecran === 'morceau' ? <MorceauIntrouvable /> : <ErreurAppli />
     }
     return this.props.children
   }

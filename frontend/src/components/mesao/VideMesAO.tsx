@@ -6,7 +6,7 @@ import { useQuota } from '@/components/layout/QuotaGauge'
 import ZoneDepotAO from '@/components/onboarding/ZoneDepotAO'
 import { FilSeptEtapes, PARTAGE_DES_ROLES } from '@/components/onboarding/FilSeptEtapes'
 import { Page, TitreSection } from '@/components/ui/page'
-import { Carte, TitreCarte } from '@/components/ui/carte'
+import { Carte } from '@/components/ui/carte'
 import { classesBouton } from '@/components/ui/bouton'
 import { PastilleEtat } from '@/components/ui/pastille'
 import { SynorixParle } from '@/components/ui/synorix-parle'
@@ -44,7 +44,7 @@ export function VideMesAO() {
           <SynorixParle>{PARTAGE_DES_ROLES}</SynorixParle>
           <FilSeptEtapes className="mt-4 text-fg-2" />
           <div className="mt-6 border-t border-bord pt-5">
-            <TitreCarte>Mon entreprise</TitreCarte>
+            <h2 className="text-lg font-semibold text-fg">Mon entreprise</h2>
             <p className="mt-1.5 text-sm text-fg-2">Identité, moyens et certifications : renseignés une fois, repris dans chaque mémoire.</p>
           </div>
           <Link to="/company" className={classesBouton('secondaire', 'mt-5 self-start max-sm:w-full')}>
