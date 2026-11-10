@@ -1,39 +1,41 @@
 import { useState, useEffect, useRef } from 'react'
 import { choixParDefaut, basculerLot, peutLancer } from '@/lib/choixLots'
 import { etiquettesSourceLot, lotsAAfficher, phraseLotsEcartes, type LotsEcartes } from '@/lib/lotsSource'
-import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  Layers, CheckCircle2, Plus, X, ArrowLeft,
-  AlertTriangle, Loader2,
-  Pencil, Check as CheckIcon,
-} from 'lucide-react'
+import { ArrowLeft, Check as CheckIcon, Pencil, Plus, X } from 'lucide-react'
 import { BoutonSecondaire } from '@/components/project/BarreEtape'
-import { GabaritEtape, BandeResume, SectionEtape, EtatElement, BarreEtape, ActionsBarre, BilanBarre } from '@/components/etape'
+import { GabaritEtape, BandeResume, SectionEtape, EtatElement, BarreEtape, ActionsBarre, ActionsBarreTel, BilanBarre, type CarteResume } from '@/components/etape'
 import { METIERS } from '@/lib/entreprise/metiers'
 import { metiersDuLot } from '@/lib/lotsMetiers'
 import { repartirDocuments } from '@/lib/analyseLibelles'
-import { doitConfirmerLecture, phraseCoutLots } from '@/lib/coutLecture'
+import { doitConfirmerLecture, libelleBoutonLire, phraseCoutLots } from '@/lib/coutLecture'
+import ConfirmationLecture from '@/components/project/LectureLots'
 import { useQuota } from '@/components/layout/QuotaGauge'
-import ConfirmationLecture, { BoutonLireDossier, ErreurLecture } from '@/components/project/LectureLots'
 import { repartirLotsParMetiers, libelleUnites } from '@/lib/lotsMetiers'
 import type { MemoireConfig } from '@/types'
 import { api } from '@/services/api'
 import EcransLecture from '@/components/project/EcransLecture'
 import { useLancerLecture } from '@/hooks/useLancerLecture'
-import DeleteConfirmModal from '@/components/common/DeleteConfirmModal'
 import ProgressDisplay, { type StepDescriptor } from '@/components/common/ProgressDisplay'
+import { Sigle } from '@/components/common/Sigle'
 import { useProgressStream } from '@/hooks/useProgressStream'
+import { Bouton } from '@/components/ui/bouton'
+import { Carte } from '@/components/ui/carte'
+import { Champ, ChampNombre, GroupeChamp } from '@/components/ui/champ'
+import { DialogueConfirmation } from '@/components/ui/dialogue'
+import { EtatErreur, EtatVide } from '@/components/ui/etats'
+import { Infobulle } from '@/components/ui/infobulle'
+import { MenuElement, MenuPoints } from '@/components/ui/menu'
+import { Message } from '@/components/ui/message'
+import { PastilleEtat } from '@/components/ui/pastille'
+import { Squelette } from '@/components/ui/squelette'
 import type { Project, LotOption } from '@/types'
+import { cn } from '@/lib/utils'
 
 const LOT_DETECTION_STEPS: StepDescriptor[] = [
   { key: 'detecting_lots', label: 'Détection des lots', estimated_s: 30 },
 ]
-
-import { cn } from '@/lib/utils'
-
-const F = 'var(--font-ui)'
 
 interface Props { project: Project }
 
@@ -83,31 +85,25 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename, cout, pieces }: 
   const [draft, setDraft] = useState(lot.user_label ?? '')
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const startEdit = (e?: React.MouseEvent) => {
-    e?.stopPropagation()
+  const startEdit = () => {
     setDraft(lot.user_label ?? '')
     setIsEditing(true)
     setTimeout(() => inputRef.current?.focus(), 0)
   }
-  const cancelEdit = (e?: React.MouseEvent | React.KeyboardEvent) => {
-    e?.stopPropagation?.()
-    setIsEditing(false)
-  }
-  const saveEdit = (e?: React.MouseEvent | React.KeyboardEvent) => {
-    e?.stopPropagation?.()
+  const saveEdit = () => {
     const value = draft.trim()
-    if (!value || !onRename) {
-      setIsEditing(false)
-      return
-    }
-    onRename(value)
+    if (value && onRename) onRename(value)
     setIsEditing(false)
   }
+  const aUnMenu = !isEditing && (onRename || onDelete)
 
   return (
-    <div className="group relative">
-      {/* Une div à rôle « button » et non un vrai bouton : la carte contient « Renommer ». Un bouton dans un bouton
-          est du HTML invalide (clavier et lecteurs d'écran peu fiables, R7). */}
+    <div data-lot={lot.id} className={cn(
+      'relative rounded-carte border transition-colors duration-survol ease-survol',
+      selected ? 'border-accent-ring bg-accent-tint' : 'border-bord bg-surface-0 hover:border-bord-champ',
+    )}>
+      {/* Une div à rôle « button » et non un vrai bouton : la carte contient d'autres boutons (« Voir », le menu). Un bouton
+          dans un bouton est du HTML invalide (clavier et lecteurs d'écran peu fiables, R7). */}
       <div
         role="button"
         tabIndex={0}
@@ -116,135 +112,64 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename, cout, pieces }: 
         onKeyDown={(e) => {
           if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onSelect() }
         }}
-        className={cn(
-          'w-full flex flex-wrap items-center gap-x-3.5 gap-y-2 px-4 py-3 rounded-xl text-left transition-all duration-200 cursor-pointer',
-          selected ? '' : 'bg-ds-bg-3 hover:bg-ds-bg-elevated',
-        )}
-        style={{
-          background: selected ? 'var(--accent-tint)' : undefined,
-          border: '1px solid',
-          borderColor: selected ? 'var(--accent-ring)' : 'var(--line)',
-          boxShadow: selected
-            ? '0 0 0 1px var(--accent-ring)'
-            : 'var(--edge-light)',
-        }}
+        className={cn('flex w-full cursor-pointer flex-wrap items-start gap-x-2 gap-y-1 rounded-carte px-4 py-3 text-left', aUnMenu && 'pr-14')}
       >
-        {/* Case à cocher visible : cible de 44 px, l'état est aussi dit par aria-pressed de la carte */}
-        <span aria-hidden="true" className="-my-1 -ml-2 flex h-11 w-11 shrink-0 items-center justify-center">
-          <span
-            className="flex h-[22px] w-[22px] items-center justify-center rounded-[6px] border-2 transition-colors"
-            style={selected ? { borderColor: 'var(--accent-ring)', background: 'var(--accent-fill-solid)', color: 'var(--on-accent)' } : { borderColor: 'var(--text-3)', background: 'var(--surface-0)' }}
-          >
+        {/* Case à cocher dessinée : cible de 44 px, l'état est aussi dit par aria-pressed de la carte */}
+        <span aria-hidden="true" className="-ml-2 grid size-11 shrink-0 place-items-center">
+          <span className={cn(
+            'grid size-5 place-items-center rounded border transition-colors duration-fast ease-survol',
+            selected ? 'border-accent-ui bg-accent-ui text-accent-on' : 'border-bord-champ bg-surface-0',
+          )}>
             {selected && <CheckIcon size={14} strokeWidth={3} />}
           </span>
         </span>
-        {lotNum && (
-          <span
-            className="num-mono shrink-0 rounded-lg px-2.5 py-1.5 text-[13px] font-bold tracking-wide"
-            style={{ background: 'var(--surface-2)', color: 'var(--text-2)', boxShadow: 'inset 0 0 0 1px var(--line)' }}
-          >
-            LOT {lotNum}
-          </span>
-        )}
 
-        {/* Content */}
-        <div className="min-w-0 flex-1 basis-40">
+        <div className="min-w-0 flex-1 basis-40 py-2.5">
           {isEditing ? (
-            <div
-              className="flex items-center gap-2"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <input
+            <div className="flex flex-wrap items-center gap-2" onClick={(e) => e.stopPropagation()}>
+              <Champ
                 ref={inputRef}
+                aria-label={`Intitulé de ${displayedLabel}`}
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') saveEdit(e)
-                  if (e.key === 'Escape') cancelEdit(e)
+                  e.stopPropagation()
+                  if (e.key === 'Enter') saveEdit()
+                  if (e.key === 'Escape') setIsEditing(false)
                 }}
-                placeholder={`${displayedLabel} — décrivez le lot`}
+                placeholder={`${displayedLabel} : l’intitulé du lot`}
                 maxLength={200}
-                className="input-dark flex-1"
-                style={{ padding: '0.4rem 0.6rem' }}
+                className="h-11 min-w-0 flex-1 basis-48"
               />
-              <button
-                type="button"
-                onClick={saveEdit}
-                className="glass-btn text-ds-text w-8 h-8 rounded-lg flex items-center justify-center"
-                title="Enregistrer"
-              >
-                <CheckIcon size={14} />
-              </button>
-              <button
-                type="button"
-                onClick={cancelEdit}
-                className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ background: 'var(--surface-1)', color: 'var(--text-3)' }}
-                title="Annuler"
-              >
-                <X size={14} />
-              </button>
+              <Bouton variante="secondaire" onClick={saveEdit}>Enregistrer</Bouton>
+              <Bouton variante="discret" onClick={() => setIsEditing(false)}>Annuler</Bouton>
             </div>
           ) : (
-            <>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span
-                  className="text-[15px] font-semibold"
-                  style={{
-                    color: isGeneric ? 'var(--text-3)' : 'var(--text-1)',
-                    fontStyle: isGeneric ? 'italic' : 'normal',
-                  }}
-                >
-                  {isGeneric ? (
-                    <>
-                      {displayedLabel}
-                      <span style={{ color: 'var(--text-3)' }}> — Description à compléter</span>
-                    </>
-                  ) : lotNum ? lotTitle : displayedLabel}
-                </span>
-                {lot._manual && (
-                  <span
-                    className="text-xs font-semibold px-1.5 py-0.5 rounded"
-                    style={{ color: 'var(--text-1)', background: 'color-mix(in srgb, var(--text-1) 8%, transparent)' }}
-                  >
-                    Manuel
-                  </span>
-                )}
-                {onRename && (
-                  <button
-                    type="button"
-                    onClick={startEdit}
-                    className="inline-flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded transition-colors"
-                    style={{ color: 'var(--text-3)', background: 'transparent' }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-1)' }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
-                    title="Renommer ce lot"
-                  >
-                    <Pencil size={11} /> Renommer
-                  </button>
-                )}
-              </div>
+            <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-base text-fg">
+              {lotNum && <span className="chiffres shrink-0 font-medium text-fg-2">Lot {lotNum}</span>}
+              <span className="min-w-0 break-words font-semibold">
+                {isGeneric ? <span className="font-medium text-fg-2">Intitulé à préciser</span> : lotNum ? lotTitle : displayedLabel}
+              </span>
+              {lot._manual && <PastilleEtat sens="gris" icone={null}>Ajouté à la main</PastilleEtat>}
               {lot.tranches && lot.tranches.length > 0 && (
-                <span
-                  className="inline-flex items-center gap-1 text-xs font-medium mt-1 px-2 py-0.5 rounded-full"
-                  style={{ color: 'var(--text-1)', background: 'color-mix(in srgb, var(--text-1) 8%, transparent)' }}
-                  title={lot.tranches.join('\n')}
-                >
-                  {lot.tranches.length} tranche{lot.tranches.length > 1 ? 's' : ''}
-                </span>
+                <Infobulle texte={lot.tranches.join(' · ')}>
+                  <span tabIndex={0} className="inline-flex rounded-pilule" onClick={(e) => e.stopPropagation()}>
+                    <PastilleEtat sens="gris" icone={null}>{lot.tranches.length} tranche{lot.tranches.length > 1 ? 's' : ''}</PastilleEtat>
+                  </span>
+                </Infobulle>
               )}
-            </>
+            </p>
           )}
         </div>
 
-        {cout && <span className="shrink-0 whitespace-nowrap text-sm font-medium text-fg-2 max-sm:basis-full">{cout}</span>}
+        {cout && <span className="shrink-0 whitespace-nowrap py-3 text-sm font-medium text-fg-2 max-sm:basis-full max-sm:py-0 max-sm:pl-11">{cout}</span>}
 
         {/* Sous le titre : métiers reconnus, pièces du lot, état en petit */}
-        <div className="basis-full space-y-2 pl-1 sm:pl-[3.25rem]" onClick={(e) => e.stopPropagation()}>
+        <div className="basis-full space-y-1.5 pb-1 pl-11" onClick={(e) => e.stopPropagation()}>
           {metiers.length > 0 && (
             <p className="flex flex-wrap items-center gap-1.5 text-sm text-fg-2">
               <span>{metiers.length > 1 ? 'Métiers reconnus' : 'Métier reconnu'} :</span>
-              {metiers.map((m) => <span key={m} className="pill pill-muted">{m}</span>)}
+              {metiers.map((m) => <PastilleEtat key={m} sens="gris" icone={null}>{m}</PastilleEtat>)}
             </p>
           )}
           {pieces && (
@@ -252,10 +177,9 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename, cout, pieces }: 
               <p className="flex flex-wrap items-center gap-x-2">
                 <span>{pieces.length} {pieces.length > 1 ? 'pièces lues' : 'pièce lue'} pour ce lot</span>
                 {pieces.length > 0 && (
-                  <button type="button" aria-expanded={voirPieces} onClick={() => setVoirPieces((v) => !v)}
-                    className="inline-flex min-h-9 items-center rounded-xs font-medium text-accent-text hover:underline [@media(pointer:coarse)]:min-h-11">
+                  <Bouton variante="lien" aria-expanded={voirPieces} onClick={() => setVoirPieces((v) => !v)}>
                     {voirPieces ? 'Masquer' : 'Voir'}
-                  </button>
+                  </Bouton>
                 )}
               </p>
               {voirPieces && <ul className="mt-1 space-y-0.5 text-xs text-fg-3">{pieces.map((d) => <li key={d.file_name} className="break-words">{d.file_name}</li>)}</ul>}
@@ -270,17 +194,12 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename, cout, pieces }: 
         </div>
       </div>
 
-      {/* Delete */}
-      {onDelete && (
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onDelete() }}
-          className="absolute top-3 right-3 w-7 h-7 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all"
-          style={{ color: 'var(--danger-fg)', background: 'color-mix(in srgb, var(--danger-fg) 6%, transparent)' }}
-          title="Supprimer ce lot"
-        >
-          <X size={13} />
-        </button>
+      {/* Les gestes rares (renommer, retirer) : dans le menu de la carte, pas sur chaque ligne */}
+      {aUnMenu && (
+        <MenuPoints libelle={`Autres actions pour ${displayedLabel}`} className="absolute right-1.5 top-2">
+          {onRename && <MenuElement onSelect={startEdit}><Pencil aria-hidden size={16} strokeWidth={1.5} />Renommer</MenuElement>}
+          {onDelete && <MenuElement danger onSelect={onDelete}><X aria-hidden size={16} strokeWidth={1.5} />Retirer de la liste</MenuElement>}
+        </MenuPoints>
       )}
     </div>
   )
@@ -294,55 +213,35 @@ interface AddLotFormProps {
 }
 
 function AddLotForm({ onAdd, onCancel }: AddLotFormProps) {
-  const [num, setNum] = useState('')
+  const [num, setNum] = useState<number | null>(null)
   const [label, setLabel] = useState('')
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    const n = parseInt(num, 10)
+    const n = num === null ? 0 : Math.round(num)
     if (!n || n < 1 || n > 30) return
     const id = `lot${n}`
     const nom = label.trim() ? `Lot ${n} — ${label.trim()}` : `Lot ${n}`
     onAdd({ id, nom, confidence: undefined, sources: [], _manual: true })
-    setNum('')
+    setNum(null)
     setLabel('')
   }
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="flex items-end gap-3 p-4 rounded-xl"
-      style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)' }}
-    >
-      <div className="flex flex-col gap-1">
-        <label className="text-xs font-medium" style={{ color: 'var(--text-3)' }}>N° lot</label>
-        <input
-          type="number" min={1} max={30} placeholder="1"
-          value={num} onChange={(e) => setNum(e.target.value)}
-          className="w-16 text-sm rounded-lg px-2.5 py-2 outline-none"
-          style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)', color: 'var(--text-1)' }}
-          required
-        />
-      </div>
-      <div className="flex flex-col gap-1 flex-1">
-        <label className="text-xs font-medium" style={{ color: 'var(--text-3)' }}>Intitulé (optionnel)</label>
-        <input
-          type="text" placeholder="ex : Gros œuvre"
-          value={label} onChange={(e) => setLabel(e.target.value)} maxLength={60}
-          className="text-sm rounded-lg px-2.5 py-2 outline-none"
-          style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)', color: 'var(--text-1)' }}
-        />
-      </div>
-      <button type="submit" disabled={!num}
-        className="glass-btn text-ds-text px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-40 shrink-0">
-        Ajouter
-      </button>
-      <button type="button" onClick={onCancel}
-        className="px-3 py-2 text-sm shrink-0 transition-colors"
-        style={{ color: 'var(--text-3)' }}>
-        Annuler
-      </button>
-    </form>
+    <Carte>
+      <form onSubmit={handleSubmit} className="flex flex-wrap items-start gap-3">
+        <GroupeChamp libelle="Numéro du lot" aide="De 1 à 30" className="w-32">
+          <ChampNombre valeur={num} onChange={setNum} min={1} max={30} placeholder="1" required />
+        </GroupeChamp>
+        <GroupeChamp libelle="Intitulé" facultatif aide="Par exemple : Gros œuvre" className="min-w-0 flex-1 basis-56">
+          <Champ value={label} onChange={(e) => setLabel(e.target.value)} maxLength={60} className="h-11" />
+        </GroupeChamp>
+        <div className="flex gap-2 pt-[1.6rem] max-sm:basis-full max-sm:pt-0">
+          <Bouton variante="secondaire" type="submit" disabled={num === null}>Ajouter le lot</Bouton>
+          <Bouton variante="discret" onClick={onCancel}>Annuler</Bouton>
+        </div>
+      </form>
+    </Carte>
   )
 }
 
@@ -417,17 +316,29 @@ export default function StepLotSelection({ project }: Props) {
   // background detection thread and returns {status: 'detecting_lots'}.
   // We then drive the UI from the SSE bus instead of polling.
   const [detectPhase, setDetectPhase] = useState<'idle' | 'detecting' | 'done'>('idle')
-  const [detectLabel, setDetectLabel] = useState('Détection des lots en cours...')
+  const [detectLabel, setDetectLabel] = useState('Recherche des lots dans le règlement et les pièces du dossier…')
   const detectDoneRef = useRef(false)
 
-  const { data: lotsData, isLoading: lotsLoading } = useQuery({
+  // Les pièces du dossier : le nombre de pièces lues pour chaque lot (communes + propres au lot) et leur liste. Elles disent
+  // aussi si un dossier est déposé : sans dépôt, le serveur refuse la lecture des lots (400 « Aucun document déposé »,
+  // backend/routers/projects.py), donc on ne la demande pas et l'écran invite à déposer.
+  const requeteDocuments = useQuery<{ file_name: string; related_lots?: string[] | null }[]>({
+    queryKey: ['project-documents', project.id],
+    queryFn: async () => (await api.get(`/projects/${project.id}/documents`)).data,
+    staleTime: 30_000,
+  })
+  const documents = requeteDocuments.data ?? []
+  const sansDepot = requeteDocuments.isSuccess && documents.length === 0
+
+  const requeteLots = useQuery({
+    enabled: requeteDocuments.isSuccess && documents.length > 0,
     queryKey: ['projects', project.id, 'lots'],
     queryFn: async () => {
       const { data } = await api.get<{ lots?: LotOption[]; count?: number; cached?: boolean; status?: string; progress?: number; detail?: string; ecartes?: LotsEcartes | null }>(`/projects/${project.id}/lots`)
       if (data.status === 'detecting_lots') {
         if (!detectDoneRef.current) {
           setDetectPhase('detecting')
-          setDetectLabel(data.detail || 'Détection des lots en cours...')
+          setDetectLabel(data.detail || 'Recherche des lots dans le règlement et les pièces du dossier…')
         }
         return null
       }
@@ -435,6 +346,7 @@ export default function StepLotSelection({ project }: Props) {
       return data as { lots: LotOption[]; count: number; ecartes?: LotsEcartes | null }
     },
   })
+  const { data: lotsData, isLoading: lotsLoading } = requeteLots
 
   // SSE stream during detection. Disabled when not detecting so we don't
   // hold an open HTTP connection on every page visit.
@@ -447,7 +359,7 @@ export default function StepLotSelection({ project }: Props) {
         const count = lotsResult?.lots?.filter((l: LotOption) => l.id !== '!!')?.length ?? 0
         setDetectLabel(count > 0
           ? `${count} lot${count > 1 ? 's' : ''} détecté${count > 1 ? 's' : ''}`
-          : 'Marché unique détecté')
+          : 'Ce dossier n’a pas de lots')
       } catch { /* ignore */ }
       setDetectPhase('done')
       queryClient.invalidateQueries({ queryKey: ['projects', project.id, 'lots'] })
@@ -540,12 +452,6 @@ export default function StepLotSelection({ project }: Props) {
     queryFn: async () => (await api.get<MemoireConfig>('/memoire-config')).data,
     staleTime: 60_000,
   })
-  // Les pièces du dossier : le nombre de pièces lues pour chaque lot (communes + propres au lot) et leur liste
-  const { data: documents = [] } = useQuery<{ file_name: string; related_lots?: string[] | null }[]>({
-    queryKey: ['project-documents', project.id],
-    queryFn: async () => (await api.get(`/projects/${project.id}/documents`)).data,
-    staleTime: 30_000,
-  })
   const piecesDuLot = (lotId: string) => repartirDocuments(documents, lotId, lots.map((l) => l.id)).analyses
   const { dansVosMetiers, autres, separes } = repartirLotsParMetiers(lots, profil?.metiers)
   const [autresOuverts, setAutresOuverts] = useState(false)
@@ -565,135 +471,120 @@ export default function StepLotSelection({ project }: Props) {
     />
   )
 
-  /* ════════════════════════════════════════════════════════════════
-     JSX
-     ════════════════════════════════════════════════════════════════ */
+  // ── Ce que l'écran montre, dans l'ordre du motif de requête : erreur → rien de déposé → chargement → lots ──
+  const chargementEchoue = (requeteLots.isError && lots.length === 0) || (requeteDocuments.isError && requeteDocuments.data === undefined)
+  const enDetection = !lotsInitialized && (lotsLoading || requeteDocuments.isLoading || detectPhase === 'detecting' || isBackendBusy)
+  const lectureBloquee = isAnalyzing || isSuccess || !peutLancer(selectedIds)
+  // Le seul bouton « Lire … » de l'écran : dans l'en-tête à l'ordinateur, dans la barre du bas au téléphone.
+  const actionLire = (
+    <Bouton variante="principal" onClick={handleLaunch} disabled={lectureBloquee}>
+      {libelleBoutonLire(nbChoisis, illimite)}
+    </Bouton>
+  )
+  const peutLire = !sansDepot && !chargementEchoue && !enDetection
+  const cartes: CarteResume[] = [
+    { libelle: 'Lots détectés', valeur: String(lots.length), etat: 'neutre', detail: 'Dans le dossier de l’acheteur.' },
+    { libelle: 'Lots choisis', valeur: String(nbChoisis), etat: nbChoisis > 0 ? 'pret' : 'a-verifier', jauge: { rempli: nbChoisis, total: lots.length }, detail: nbChoisis > 0 ? undefined : 'Cochez au moins un lot pour lancer la lecture.' },
+    // Offre illimitée : la phrase de l'en-tête le dit déjà, pas de case « Illimité » qui le répète.
+    ...(illimite ? [] : [{ libelle: 'Coût de la lecture', valeur: libelleUnites(nbChoisis), etat: 'neutre' as const, detail: '1 lot lu = 1 unité de votre abonnement.' }]),
+    ...(separes ? [{ libelle: 'Dans vos métiers', valeur: String(dansVosMetiers.length), etat: 'neutre' as const, detail: 'Selon les métiers de Mon entreprise.' }] : []),
+  ]
+  const bilan = chargementEchoue ? 'Les lots n’ont pas pu être lus.'
+    : sansDepot ? 'Aucun dossier déposé.'
+    : selectedLotIds.length > 1 ? `${selectedLotIds.length} lots choisis`
+    : selectedId !== 'all' && selectedName ? `Lot choisi : ${selectedName}`
+    : aucunChoix ? 'Aucun lot choisi' : 'Tout le dossier'
+  const ecartes = phraseLotsEcartes(lotsData?.ecartes)
+
   return (
     <>
       <EcransLecture lecture={lecture} />
-      {confirmerLecture && (
-        <ConfirmationLecture nbLots={nbChoisis} illimite={illimite} onConfirmer={lancerLecture} onAnnuler={() => setConfirmerLecture(false)} />
-      )}
-      {lotARetirer && (
-        <DeleteConfirmModal
-          title={`Retirer « ${lotARetirer.user_label || lotARetirer.nom} » de la liste ?`}
-          detail="Vous pourrez l'ajouter de nouveau à la main."
-          libelleConfirmer="Retirer"
-          onConfirm={() => { handleDelete(lotARetirer.id); setLotARetirer(null) }}
-          onCancel={() => setLotARetirer(null)}
+      {/* G1 — « Lire N lots = N unités » : confirmée avant l'appel dès que plus d'un lot est choisi */}
+      <ConfirmationLecture ouvert={confirmerLecture} onOuvert={setConfirmerLecture} nbLots={nbChoisis} illimite={illimite} onConfirmer={lancerLecture} />
+      <DialogueConfirmation
+        ouvert={lotARetirer !== null}
+        onOuvert={(o) => { if (!o) setLotARetirer(null) }}
+        danger
+        titre={lotARetirer ? `Retirer « ${lotARetirer.user_label || lotARetirer.nom} » de la liste ?` : ''}
+        description="Vous pourrez l’ajouter de nouveau à la main."
+        libelleConfirmer="Retirer"
+        onConfirmer={() => { if (lotARetirer) handleDelete(lotARetirer.id); setLotARetirer(null) }}
+      />
+
+      {detectPhase !== 'idle' && (
+        <ProgressDisplay
+          variant="modal"
+          title="Synorix repère les lots du dossier"
+          steps={LOT_DETECTION_STEPS}
+          currentStep="detecting_lots"
+          progress={detectPhase === 'done' ? 100 : detectSse.progress}
+          detail={detectLabel}
+          phase={detectPhase === 'done' ? 'complete' : 'in_progress'}
         />
       )}
 
-      {/* Lot detection overlay (inline circle wrapped in our own portal) */}
-      {detectPhase !== 'idle' && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'var(--scrim)', backdropFilter: 'blur(4px)' }}>
-          <div className="rounded-2xl p-8 max-w-sm w-full mx-4" style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)', boxShadow: '0 20px 60px color-mix(in srgb, var(--surface-dark) 15%, transparent)' }}>
-            <ProgressDisplay
-              variant="inline"
-              steps={LOT_DETECTION_STEPS}
-              currentStep="detecting_lots"
-              progress={detectPhase === 'done' ? 100 : detectSse.progress}
-              detail={detectLabel}
-              phase={detectPhase === 'done' ? 'complete' : 'in_progress'}
-            />
-          </div>
-        </div>,
-        document.body,
-      )}
-
-      <div style={{ fontFamily: F }}>
-        <GabaritEtape
-          titre="Lots"
-          utilite={phraseCoutLots(lots.length, illimite)}
-          actionPrincipale={
-            <div className="flex flex-col items-end gap-2">
-              <BoutonLireDossier nbLots={nbChoisis} illimite={illimite} onClick={handleLaunch}
-                disabled={isAnalyzing || isSuccess || !peutLancer(selectedIds)} />
-              {analysisError && <ErreurLecture message={analysisError} className="max-w-sm" />}
-            </div>
-          }
-          resume={lots.length > 0 ? <BandeResume libelle="Les lots du dossier" cartes={[
-            { libelle: 'Lots détectés', valeur: String(lots.length), etat: 'neutre', detail: 'Dans le dossier de l’acheteur.' },
-            { libelle: 'Lots choisis', valeur: String(nbChoisis), etat: nbChoisis > 0 ? 'pret' : 'a-verifier', jauge: { rempli: nbChoisis, total: lots.length }, detail: nbChoisis > 0 ? undefined : 'Cochez au moins un lot pour lancer la lecture.' },
-            { libelle: 'Coût de la lecture', valeur: illimite ? 'Illimité' : libelleUnites(nbChoisis), etat: 'neutre', detail: illimite ? 'Votre offre est illimitée.' : '1 lot lu = 1 unité de votre abonnement.' },
-            ...(separes ? [{ libelle: 'Dans vos métiers', valeur: String(dansVosMetiers.length), etat: 'neutre' as const, detail: 'Selon les métiers de Mon entreprise.' }] : []),
-          ]} /> : undefined}
-          barre={
-        <BarreEtape>
-          <BilanBarre
-            className="gap-2"
-            bureau={analysisError ? <ErreurLecture message={analysisError} alerte={false} className="max-w-xl" /> : <>
-              <CheckCircle2 size={16} style={{ color: selectedId !== 'all' && selectedName ? 'var(--text-1)' : 'var(--text-3)' }} />
-              <span className="text-sm" style={{ color: 'var(--text-3)' }}>
-                {selectedId !== 'all' && selectedName
-                  ? <>Lot sélectionné : <strong style={{ color: 'var(--text-1)' }}>{selectedName}</strong></>
-                  : aucunChoix ? 'Aucun lot choisi' : 'Tous les lots sélectionnés'
-                }
-              </span>
-            </>}
-            tel={analysisError ? <ErreurLecture message={analysisError} alerte={false} className="line-clamp-2 text-xs" /> : <>
-              <CheckCircle2 size={16} className="shrink-0" style={{ color: selectedId !== 'all' && selectedName ? 'var(--text-1)' : 'var(--text-3)' }} />
-              <span className="truncate text-xs" style={{ color: 'var(--text-3)' }}>
-                {selectedLotIds.length > 1 ? `${selectedLotIds.length} lots` : selectedId !== 'all' && selectedName ? selectedName : aucunChoix ? 'Aucun lot choisi' : 'Tous les lots'}
-              </span>
-            </>}
-          />
-          <ActionsBarre>
-            <BoutonSecondaire libelle="Retour" icone={ArrowLeft} onClick={() => navigate(`/projects/${project.id}/upload`)} />
-            <BoutonLireDossier variante="default" nbLots={nbChoisis} illimite={illimite} onClick={handleLaunch}
-              disabled={isAnalyzing || isSuccess || !peutLancer(selectedIds)} />
-          </ActionsBarre>
-        </BarreEtape>
-          }
-        >
-        {/* Backend busy */}
+      <GabaritEtape
+        titre="Lots"
+        utilite={sansDepot || chargementEchoue
+          ? 'Les lots sur lesquels votre entreprise répond : Synorix ne lit que ceux que vous choisissez.'
+          : phraseCoutLots(lots.length, illimite)}
+        actionPrincipale={peutLire ? actionLire : undefined}
+        message={analysisError && <Message ton="erreur" titre="La lecture n’a pas démarré">{analysisError}</Message>}
+        resume={lots.length > 0 ? <BandeResume libelle="Les lots du dossier" cartes={cartes} /> : undefined}
+        barre={
+          <BarreEtape>
+            <BilanBarre bureau={bilan} tel={<span className="truncate">{bilan}</span>} />
+            <ActionsBarre>
+              <BoutonSecondaire libelle="Retour" icone={ArrowLeft} onClick={() => navigate(`/projects/${project.id}/upload`)} />
+              {peutLire && <ActionsBarreTel>{actionLire}</ActionsBarreTel>}
+            </ActionsBarre>
+          </BarreEtape>
+        }
+      >
         {isBackendBusy && (
-          <div className="flex items-center gap-3 p-4 rounded-xl" style={{ background: 'color-mix(in srgb, var(--text-1) 5%, transparent)', border: '1px solid var(--border-2)' }}>
-            <Loader2 size={18} className="animate-spin" style={{ color: 'var(--text-1)' }} />
-            <div>
-              <span className="text-sm font-medium block" style={{ color: 'var(--text-1)' }}>Extraction des documents en cours...</span>
-              {processingDetail && <span className="text-xs block mt-0.5" style={{ color: 'var(--text-3)' }}>{processingDetail}</span>}
-            </div>
-          </div>
+          <Message ton="info" titre="Synorix finit de lire les pièces du dossier">
+            {processingDetail || 'Les lots apparaissent dès que la lecture des pièces est terminée.'}
+          </Message>
         )}
 
-        {/* Documents illisibles — signalés par fichier, jamais silencieux */}
+        {/* Documents illisibles : signalés par fichier, jamais silencieux */}
         {extractionWarnings.length > 0 && (
-          <div className="p-4 rounded-xl" style={{ background: 'color-mix(in srgb, var(--warning-fg) 9%, transparent)', border: '1px solid color-mix(in srgb, var(--warning-fg) 22%, transparent)' }}>
-            <div className="flex items-center gap-2 mb-1.5">
-              <AlertTriangle size={16} style={{ color: 'var(--warning-fg)' }} />
-              <span className="text-sm font-semibold" style={{ color: 'var(--warning-fg)' }}>
-                {extractionWarnings.length} document{extractionWarnings.length > 1 ? 's' : ''} illisible{extractionWarnings.length > 1 ? 's' : ''} — exigences non extraites de ce{extractionWarnings.length > 1 ? 's' : ''} fichier{extractionWarnings.length > 1 ? 's' : ''}
-              </span>
-            </div>
-            <ul className="space-y-0.5 pl-6">
+          <Message ton="attention" titre={extractionWarnings.length > 1
+            ? `${extractionWarnings.length} documents n’ont pas pu être lus : leurs exigences ne sont pas relevées`
+            : 'Un document n’a pas pu être lu : ses exigences ne sont pas relevées'}>
+            <ul className="space-y-0.5">
               {extractionWarnings.map((w) => (
-                <li key={w.file_name} className="break-words text-xs" style={{ color: 'var(--warning-fg)' }}>
-                  <span className="font-medium">{w.file_name}</span> — {w.warning}
+                <li key={w.file_name} className="break-words text-xs">
+                  <span className="font-medium text-fg">{w.file_name}</span> : {w.warning}
                 </li>
               ))}
             </ul>
-          </div>
+          </Message>
         )}
 
         {/* R9 — les lots cités dans le dossier mais non proposés : le nombre et la raison, sans nom de lot. */}
-        {phraseLotsEcartes(lotsData?.ecartes) && (
-          <p data-lots-ecartes className="text-sm" style={{ color: 'var(--text-3)' }}>{phraseLotsEcartes(lotsData?.ecartes)}</p>
-        )}
+        {ecartes && <p data-lots-ecartes className="text-sm text-fg-2">{ecartes}</p>}
 
-        {/* Excel error */}
         {errorLots.length > 0 && (
-          <div className="flex items-start gap-3 p-4 rounded-xl" style={{ background: 'color-mix(in srgb, var(--text-3) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--text-3) 15%, transparent)' }}>
-            <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: 'var(--text-3)' }} />
-            <div>
-              <p className="text-sm font-semibold" style={{ color: 'var(--text-3)' }}>Fichier(s) Excel protégé(s) par mot de passe</p>
-              {errorLots.map(l => <p key={l.id} className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>{l.nom}</p>)}
-            </div>
-          </div>
+          <Message ton="attention" titre={errorLots.length > 1 ? 'Des tableurs sont protégés par un mot de passe' : 'Un tableur est protégé par un mot de passe'}>
+            <ul className="space-y-0.5">{errorLots.map((l) => <li key={l.id} className="break-words text-xs">{l.nom}</li>)}</ul>
+          </Message>
         )}
 
-        {/* ── LOT LIST ────────────────────────────────────── */}
-        {lots.length > 0 ? (
+        {chargementEchoue ? (
+          <EtatErreur
+            titre="Les lots n’ont pas pu se charger"
+            detail="La liste des lots du dossier n’a pas pu être lue. Votre dossier n’est pas touché."
+            onReessayer={() => { void requeteDocuments.refetch(); void requeteLots.refetch() }}
+            enCours={requeteLots.isFetching || requeteDocuments.isFetching}
+          />
+        ) : sansDepot ? (
+          <EtatVide
+            titre="Les lots du dossier apparaîtront ici"
+            phrase={<>Déposez d’abord le <Sigle code="DCE" /> : Synorix y repère les lots et vous choisissez ceux que vous lisez.</>}
+            action={<Bouton variante={sansDepot ? 'principal' : 'secondaire'} onClick={() => navigate(`/projects/${project.id}/upload`)}>Déposer le dossier</Bouton>}
+          />
+        ) : lots.length > 0 ? (
           <>
             {separes ? (
               <>
@@ -702,10 +593,9 @@ export default function StepLotSelection({ project }: Props) {
                   titre="Autres lots"
                   colonnes={2}
                   action={
-                    <button type="button" aria-expanded={autresVisibles} onClick={() => setAutresOuverts((o) => !o)}
-                      className="inline-flex min-h-9 items-center gap-1 rounded-xs text-sm font-medium text-accent-text hover:underline [@media(pointer:coarse)]:min-h-11">
+                    <Bouton variante="lien" aria-expanded={autresVisibles} onClick={() => setAutresOuverts((o) => !o)}>
                       {autresVisibles ? 'Replier' : `Afficher les ${autres.length} autres lots`}
-                    </button>
+                    </Bouton>
                   }
                 >
                   {autresVisibles && autres.map(carteLot)}
@@ -716,7 +606,7 @@ export default function StepLotSelection({ project }: Props) {
             )}
             <SectionEtape titre="Ou tout le dossier">
               <LotCard
-                lot={{ id: 'all', nom: "Analyser l'ensemble du dossier (tous les lots)" }}
+                lot={{ id: 'all', nom: 'Lire l’ensemble du dossier (tous les lots)' }}
                 selected={selectedIds.has('all')}
                 onSelect={() => toggleLot('all')}
                 cout={illimite ? undefined : libelleUnites(lots.length)}
@@ -724,43 +614,28 @@ export default function StepLotSelection({ project }: Props) {
               />
             </SectionEtape>
           </>
-        ) : !lotsInitialized && (lotsLoading || detectPhase === 'detecting' || isBackendBusy) ? (
-          <div className="flex items-center gap-3 p-5 rounded-xl" style={{ background: 'color-mix(in srgb, var(--text-1) 4%, transparent)', border: '1px solid var(--border-2)' }}>
-            <Loader2 size={20} className="animate-spin" style={{ color: 'var(--text-1)' }} />
-            <div>
-              <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>Détection des lots en cours...</p>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>Analyse des documents du dossier.</p>
-            </div>
+        ) : enDetection ? (
+          <div role="status" aria-label="Synorix repère les lots du dossier" className="grid gap-3.5 md:grid-cols-2">
+            {[0, 1, 2, 3].map((i) => <Squelette key={i} className="h-28 rounded-carte" />)}
           </div>
         ) : (
-          <div className="flex items-center gap-3 p-5 rounded-xl" style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)' }}>
-            <Layers size={20} style={{ color: 'var(--text-1)' }} />
-            <div>
-              <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>Marché unique (pas de lots)</p>
-              <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>L&apos;IA analysera l&apos;intégralité du dossier sans filtre par lot.</p>
-            </div>
-          </div>
+          <Carte>
+            <p className="text-base font-semibold text-fg">Ce dossier n’a pas de lots</p>
+            <p className="mt-1 text-sm text-fg-2">Synorix lira l’ensemble du dossier, sans tri par lot. Si l’acheteur a prévu des lots, ajoutez-les à la main.</p>
+          </Carte>
         )}
 
-        {/* Add lot */}
-        {showAddForm ? (
+        {!sansDepot && !chargementEchoue && (showAddForm ? (
           <AddLotForm onAdd={handleAddLot} onCancel={() => setShowAddForm(false)} />
         ) : (
-          <button
-            type="button"
-            onClick={() => setShowAddForm(true)}
-            className="w-full flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed text-sm font-medium transition-colors"
-            style={{ borderColor: 'var(--surface-1)', color: 'var(--text-3)' }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--text-3)'; e.currentTarget.style.color = 'var(--text-3)'; e.currentTarget.style.background = 'var(--surface-1)' }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--surface-1)'; e.currentTarget.style.color = 'var(--text-3)'; e.currentTarget.style.background = 'transparent' }}
-          >
-            <Plus size={16} />
-            Un lot du dossier manque à la liste ? Ajoutez-le à la main
-          </button>
-        )}
-
-        </GabaritEtape>
-      </div>
+          <div>
+            <Bouton variante="secondaire" onClick={() => setShowAddForm(true)}>
+              <Plus aria-hidden size={16} strokeWidth={1.5} />
+              Ajouter un lot à la main
+            </Bouton>
+          </div>
+        ))}
+      </GabaritEtape>
     </>
   )
 }
