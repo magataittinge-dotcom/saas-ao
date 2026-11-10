@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Lightbulb, AlertTriangle, CheckCircle2, X } from 'lucide-react'
+import { Message, type TonMessage } from '@/components/ui/message'
 
 export type TipVariant = 'info' | 'warning' | 'success'
 
@@ -14,101 +14,28 @@ interface Props {
   onDismiss: (id: string) => void
 }
 
-const VARIANT_CONFIG: Record<TipVariant, {
-  icon: typeof Lightbulb
-  bg: string
-  border: string
-  iconColor: string
-  textColor: string
-}> = {
-  info: {
-    icon: Lightbulb,
-    bg: 'color-mix(in srgb, var(--text-1) 6%, transparent)',
-    border: 'var(--border-2)',
-    iconColor: 'var(--text-1)',
-    textColor: 'var(--text-1)',
-  },
-  warning: {
-    icon: AlertTriangle,
-    bg: 'color-mix(in srgb, var(--danger-fg) 6%, transparent)',
-    border: 'color-mix(in srgb, var(--danger-fg) 20%, transparent)',
-    iconColor: 'var(--danger-fg)',
-    textColor: 'var(--danger-fg)',
-  },
-  success: {
-    icon: CheckCircle2,
-    bg: 'color-mix(in srgb, var(--text-1) 6%, transparent)',
-    border: 'var(--border-2)',
-    iconColor: 'var(--text-1)',
-    textColor: 'var(--text-1)',
-  },
-}
+const TONS: Record<TipVariant, TonMessage> = { info: 'info', warning: 'attention', success: 'succes' }
 
+/** ALIAS MINCE. Un conseil qui se referme : c'est le `Message` du système (components/ui/message.tsx). */
 export default function AiTip({ tip, onDismiss }: Props) {
   const [visible, setVisible] = useState(true)
-
   if (!visible) return null
-
-  const cfg = VARIANT_CONFIG[tip.variant]
-  const Icon = cfg.icon
-
-  const handleDismiss = () => {
-    setVisible(false)
-    onDismiss(tip.id)
-  }
-
   return (
-    <div
-      className="flex items-start gap-2.5 px-4 py-3 rounded-lg animate-tip-in"
-      style={{
-        background: cfg.bg,
-        border: `1px solid ${cfg.border}`,
-      }}
-    >
-      <Icon size={15} className="shrink-0 mt-0.5" style={{ color: cfg.iconColor }} />
-      <p className="text-sm font-medium leading-relaxed flex-1" style={{ color: cfg.textColor }}>
-        {tip.text}
-      </p>
-      <button
-        onClick={handleDismiss}
-        className="shrink-0 p-0.5 rounded hover:bg-surface-1 transition-colors"
-        style={{ color: cfg.iconColor, opacity: 0.5 }}
-      >
-        <X size={12} />
-      </button>
-    </div>
+    <Message ton={TONS[tip.variant]} onFermer={() => { setVisible(false); onDismiss(tip.id) }}>
+      <span className="text-fg">{tip.text}</span>
+    </Message>
   )
 }
 
-/**
- * Renders up to `max` tips, prioritized by variant: warning > info > success.
- * Filters out dismissed tips.
- */
-export function AiTipsBlock({
-  tips,
-  dismissed,
-  onDismiss,
-  max = 2,
-}: {
+/** Au plus `max` conseils, dans l'ordre : à surveiller, information, fait. Les conseils refermés sont écartés. */
+export function AiTipsBlock({ tips, dismissed, onDismiss, max = 2 }: {
   tips: TipData[]
   dismissed: Set<string>
   onDismiss: (id: string) => void
   max?: number
 }) {
   const PRIORITY: Record<TipVariant, number> = { warning: 0, info: 1, success: 2 }
-
-  const visible = tips
-    .filter((t) => !dismissed.has(t.id))
-    .sort((a, b) => PRIORITY[a.variant] - PRIORITY[b.variant])
-    .slice(0, max)
-
+  const visible = tips.filter((t) => !dismissed.has(t.id)).sort((a, b) => PRIORITY[a.variant] - PRIORITY[b.variant]).slice(0, max)
   if (visible.length === 0) return null
-
-  return (
-    <div className="space-y-2">
-      {visible.map((tip) => (
-        <AiTip key={tip.id} tip={tip} onDismiss={onDismiss} />
-      ))}
-    </div>
-  )
+  return <div className="space-y-2">{visible.map((tip) => <AiTip key={tip.id} tip={tip} onDismiss={onDismiss} />)}</div>
 }

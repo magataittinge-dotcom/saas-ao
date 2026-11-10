@@ -121,7 +121,7 @@ export function GroupeChamp({ libelle, aide, erreur, facultatif, children, class
   const id = React.useId()
   const decrit = [aide ? `${id}-aide` : null, erreur ? `${id}-erreur` : null].filter(Boolean).join(' ') || undefined
   return (
-    <div className={cn('grid gap-1.5', className)}>
+    <div className={cn('grid content-start gap-1.5', className)}>
       <label htmlFor={id} className="text-xs font-medium text-fg-2">
         {libelle}{facultatif && <span className="font-normal text-fg-3"> (facultatif)</span>}
       </label>

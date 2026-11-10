@@ -2,6 +2,8 @@ import { FileText, Trash2, ExternalLink, Tag, Pencil } from 'lucide-react'
 import { DOC_TYPE_LABELS } from '@/lib/vault'
 import { noteValidite, statutDocument } from '@/lib/statutPiece'
 import { getSignedFileUrl } from '@/services/api'
+import { Bouton, BoutonIcone } from '@/components/ui/bouton'
+import { Infobulle } from '@/components/ui/infobulle'
 import { StatusBadge, documentStatusBadge } from './StatusBadge'
 import type { Document } from '@/types'
 
@@ -11,6 +13,10 @@ interface Props {
   onEdit?: (document: Document) => void
 }
 
+/**
+ * Une pièce du coffre-fort, en rangée : son type, son nom de fichier, son état (un mot), puis ses gestes (ranger ou modifier,
+ * ouvrir, supprimer). Boutons du système, cibles de 44 px, infobulles du système (plus de `title=` natif).
+ */
 export function FileCard({ document, onDelete, onEdit }: Props) {
   const badge = documentStatusBadge(document.status)
   const statut = statutDocument(document)
@@ -27,67 +33,26 @@ export function FileCard({ document, onDelete, onEdit }: Props) {
   }
 
   return (
-    <div
-      className="flex items-center justify-between p-3 rounded-lg border transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-survol bg-surface-1 hover:bg-surface-1 hover:border-bord-2"
-      style={{ borderColor: 'var(--border-2)' }}
-    >
-      <div className="flex items-center gap-3 min-w-0">
-        <div
-          className="p-2 rounded-md shrink-0"
-          style={{ background: 'color-mix(in srgb, var(--text-1) 10%, transparent)' }}
-        >
-          <FileText size={18} style={{ color: 'var(--text-1)' }} />
-        </div>
+    <div className="flex min-h-[52px] items-center justify-between gap-2 rounded-lg border border-bord bg-surface-0 py-1.5 pl-3 pr-1.5 transition-colors duration-fast ease-survol hover:border-bord-2">
+      <div className="flex min-w-0 items-center gap-3">
+        <FileText aria-hidden size={18} strokeWidth={1.5} className="shrink-0 text-fg-2" />
         <div className="min-w-0">
-          <p className="text-sm font-medium text-ds-text truncate">
+          <p className="truncate text-sm font-medium text-fg">
             {isUnclassified ? document.file_name : (DOC_TYPE_LABELS[document.type] ?? document.type)}
           </p>
-          {!isUnclassified && (
-            <p className="text-xs text-ds-text-2 truncate">{document.file_name}</p>
-          )}
+          {!isUnclassified && <p className="truncate text-xs text-fg-2">{document.file_name}</p>}
           {!isUnclassified && note && <p className="piece-note">{note}</p>}
         </div>
       </div>
-      <div className="flex items-center gap-2 ml-2 shrink-0">
+      <div className="flex shrink-0 items-center gap-1">
         {isUnclassified
           ? <StatusBadge label={badge.label} variant={badge.variant} />
           : <span className={statut.classe}>{statut.texte}</span>}
-        {onEdit && (
-          isUnclassified ? (
-            <button
-              onClick={() => onEdit(document)}
-              className="flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold transition-colors"
-              style={{ color: 'var(--text-1)', background: 'color-mix(in srgb, var(--text-1) 10%, transparent)' }}
-            >
-              <Tag size={12} /> Ranger
-            </button>
-          ) : (
-            <button
-              onClick={() => onEdit(document)}
-              title="Modifier (catégorie, type, dates)"
-              className="p-1.5 text-ds-text-3 hover:text-ds-text rounded transition-colors"
-            >
-              <Pencil size={14} />
-            </button>
-          )
-        )}
-        <button
-          onClick={openFile}
-          title="Ouvrir le document"
-          className="p-1.5 text-ds-text-3 hover:text-ds-text rounded transition-colors"
-        >
-          <ExternalLink size={14} />
-        </button>
-        {onDelete && (
-          <button
-            onClick={() => onDelete(document.id)}
-            aria-label={`Supprimer ${document.file_name}`}
-            title="Supprimer"
-            className="p-1.5 text-ds-text-3 hover:text-ds-danger rounded transition-colors"
-          >
-            <Trash2 size={14} />
-          </button>
-        )}
+        {onEdit && (isUnclassified
+          ? <Bouton variante="secondaire" onClick={() => onEdit(document)}><Tag aria-hidden />Ranger</Bouton>
+          : <Infobulle texte="Modifier la catégorie, le type ou les dates"><BoutonIcone libelle={`Modifier ${document.file_name}`} onClick={() => onEdit(document)}><Pencil aria-hidden strokeWidth={1.5} /></BoutonIcone></Infobulle>)}
+        <Infobulle texte="Ouvrir le document"><BoutonIcone libelle={`Ouvrir ${document.file_name}`} onClick={() => { void openFile() }}><ExternalLink aria-hidden strokeWidth={1.5} /></BoutonIcone></Infobulle>
+        {onDelete && <BoutonIcone libelle={`Supprimer ${document.file_name}`} onClick={() => onDelete(document.id)}><Trash2 aria-hidden strokeWidth={1.5} /></BoutonIcone>}
       </div>
     </div>
   )

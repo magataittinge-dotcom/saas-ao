@@ -11,9 +11,12 @@ test('ExpiryAlert : texte >= 4,5:1 sur son fond opaque, quel que soit l\'écran 
   assert.doesNotMatch(code, /color-mix|#[0-9a-f]{3,8}\b|rgba?\(/i)       // jetons seulement
   // COULEURS.md : rouge si la validité est dépassée, ambre à renouveler bientôt. Le fond « soft » est translucide en nuit : il est posé
   // sur la surface de la page et sur celle d'une carte.
+  const message = sansCommentaires(lire('src/components/ui/message.tsx'))
   const paires: [string, string][] = [['--rouge-ink', '--rouge-soft'], ['--ambre-ink', '--ambre-soft']]
   for (const [texte, fond] of paires) {
-    assert.ok(code.includes(`color: 'var(${texte})'`) && code.includes(`background: 'var(${fond})'`), `${texte} sur ${fond}`)
+    // l'alerte est le Message du système : icône à l'encre de l'état, fond « soft » du même état (components/ui/message.tsx)
+    assert.ok(code.includes('<Message ton={isExpired ? \'erreur\' : \'attention\'}>'), 'ExpiryAlert passe par Message')
+    assert.ok(message.includes(`bg-${fond.slice(2)}`) && message.includes(`text-${texte.slice(2)}`), `${texte} sur ${fond}`)
     for (const theme of THEMES) for (const sur of ['--surface-0', '--surface-1']) {
       const { minimum } = contrasteJetons(theme, texte, fond, sur)
       assert.ok(minimum >= 4.5, `${theme} ${texte} sur ${fond} (posé sur ${sur}) : ${minimum.toFixed(2)}:1`)
