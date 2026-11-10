@@ -26,12 +26,15 @@ export function Cellule({ texte }: { texte: string }) {
   return <ReactMarkdown components={{ p: ({ children }) => <Fragment>{children}</Fragment> }}>{texte.replace(/^(\s*)(#+)(\s|$)/, '$1\\$2$3')}</ReactMarkdown>
 }
 
+/** Le titre d'une colonne, sans les marques du Markdown : il est redit au-dessus de chaque cellule au téléphone. */
+const titreColonne = (e: string | undefined) => (e ?? '').replace(/[*_`#]/g, '').trim()
+
 function Tableau({ table }: { table: SegmentTable }) {
   const style = (k: number) => (table.alignements[k] ? { textAlign: table.alignements[k]! } : undefined)
   return (
-    <div className="my-4 overflow-x-auto">
-      <table className="w-full border-collapse text-left text-sm">
-        <thead>
+    <div className="my-4 overflow-x-auto max-md:overflow-visible">
+      <table className="w-full border-collapse text-left text-sm max-md:block">
+        <thead className="max-md:sr-only">
           <tr>
             {table.entetes.map((e, k) => (
               <th key={k} style={style(k)} className="border border-bord-2 bg-surface-2 px-3 py-2 align-top font-semibold text-fg">
@@ -40,11 +43,11 @@ function Tableau({ table }: { table: SegmentTable }) {
             ))}
           </tr>
         </thead>
-        <tbody>
+        <tbody className="max-md:grid max-md:gap-3">
           {table.lignes.map((ligne, r) => (
-            <tr key={r}>
+            <tr key={r} className="max-md:grid max-md:rounded-lg max-md:border max-md:border-bord-2">
               {ligne.map((c, k) => (
-                <td key={k} style={style(k)} className="border border-bord-2 px-3 py-2 align-top text-fg-2">
+                <td key={k} style={style(k)} data-colonne={titreColonne(table.entetes[k])} className="border border-bord-2 px-3 py-2 align-top text-fg-2 max-md:block max-md:border-0 max-md:border-b max-md:!text-left max-md:last:border-b-0 max-md:before:mb-0.5 max-md:before:block max-md:before:text-xs max-md:before:font-semibold max-md:before:text-fg-3 max-md:before:content-[attr(data-colonne)]">
                   <Cellule texte={c} />
                 </td>
               ))}
