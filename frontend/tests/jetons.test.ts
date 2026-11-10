@@ -83,8 +83,9 @@ const TEXTE: [string, string[]][] = [
   // états (COULEURS.md) : ink sur la page et sur une carte (sur son soft : test dédié plus bas, le soft de nuit est translucide)
   ...ETATS.map((k): [string, string[]] => [`--${k}-ink`, ['--surface-page', '--surface-0']]),
   ['--aurore-ink', ['--surface-page', '--surface-0']],
-  ['--info-fg', ['--surface-0', '--surface-1', '--info-bg']], ['--success-fg', ['--surface-0', '--surface-1', '--success-bg']],
-  ['--warning-fg', ['--surface-0', '--surface-1', '--warning-bg']], ['--danger-fg', ['--surface-0', '--surface-1', '--danger-bg']],
+  // anciens noms : alias des six sens (sur leur fond : test dédié plus bas, le fond de nuit est translucide comme le soft)
+  ['--info-fg', ['--surface-0', '--surface-1']], ['--success-fg', ['--surface-0', '--surface-1']],
+  ['--warning-fg', ['--surface-0', '--surface-1']], ['--danger-fg', ['--surface-0', '--surface-1']],
   ['--on-accent', ['--accent-fill', '--accent-fill-hover', '--primary']],
   ['--destructive-foreground', ['--destructive']],
   ['--text-inverse', ['--text-1']],
@@ -134,6 +135,11 @@ test('contraste : chaque pastille d\'état (ink sur son soft, posé sur la page 
   for (const theme of THEMES) for (const k of ETATS) for (const sur of ['--surface-page', '--surface-0']) {
     const { minimum } = contrasteJetons(theme, `--${k}-ink`, `--${k}-soft`, sur)
     if (minimum < 4.5) echecs.push(`${theme} ${k} ink sur soft/${sur} : ${minimum.toFixed(2)}:1`)
+  }
+  // les anciens noms sont des alias des six sens : même lecture, fg sur bg posé sur la page, une carte ou la glace
+  for (const theme of THEMES) for (const m of ['info', 'success', 'warning', 'danger']) for (const sur of ['--surface-page', '--surface-0', '--surface-1']) {
+    const { minimum } = contrasteJetons(theme, `--${m}-fg`, `--${m}-bg`, sur)
+    if (minimum < 4.5) echecs.push(`${theme} ${m} fg sur bg/${sur} : ${minimum.toFixed(2)}:1`)
   }
   assert.deepEqual(echecs, [])
 })

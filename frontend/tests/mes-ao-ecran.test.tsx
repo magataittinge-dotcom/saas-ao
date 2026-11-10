@@ -39,7 +39,7 @@ test('chaque ligne porte le verbe de sa prochaine action ; jamais « Continuer �
 
 test('un dossier en lecture : la jauge et le détail, aucun bouton d\'action', () => {
   const html = rendre(LISTE)
-  const ligne = html.split('data-ligne-ao="d"')[1].split('</article>')[0]
+  const ligne = html.split('data-ligne-ao="d"')[1].split('</tr>')[0]
   assert.ok(ligne.includes('14 documents sur 26 lus'))
   assert.ok(!ligne.includes('/projects/d/upload'), 'pas de lien d\'action')
   assert.ok(ligne.includes('Synorix s’en occupe'))
@@ -53,7 +53,7 @@ test('l\'avis de la veille d\'origine : un lien externe sûr, sinon rien', () =>
 
 test('les unités : affichées quand le serveur les donne, rien d\'inventé sinon ; terminés repliés', () => {
   const html = rendre(LISTE)
-  const sans = html.split('data-ligne-ao="c"')[1].split('</article>')[0]
+  const sans = html.split('data-ligne-ao="c"')[1].split('</tr>')[0]
   assert.ok(!sans.includes('analyse'), 'sans avancement, pas de ligne d\'unités')
   assert.ok(html.includes('1 analyse') && html.includes('0 mémoire'))
   assert.ok(!html.includes('data-terminee='), 'les terminés sont repliés par défaut')

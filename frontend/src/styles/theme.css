@@ -101,7 +101,7 @@
   --dur-morph: var(--dur-pop);     --dur-reveal-sm: var(--dur-pop); --dur-reveal-lg: var(--dur-pop);
   --ease-reveal: var(--ease-survol);  --ease-pop: var(--ease-survol);  --ease-expo: var(--ease-survol);  --ease-link: var(--ease-survol);
 
-  /* Ombres teintées par l'accent : décalées et douces, le bouton principal seulement (en nuit, une lueur : voir le bloc nuit) */
+  /* Ombres teintées par l'accent : décalées et douces, le bouton principal seulement, en clair seulement (en nuit, aucune : voir le bloc nuit) */
   --shadow-cta: inset 0 1px 0 rgba(255, 255, 255, .28), 0 8px 18px -8px rgba(var(--accent-rvb), .55);
   --shadow-halo: 0 10px 24px -10px rgba(var(--accent-rvb), .45);
 
@@ -164,13 +164,13 @@
   --accent-tint: var(--accent-50);
   --accent-tint-2: var(--accent-100);
 
-  --info-bg: #e6f1fe;     --info-border: #b1d5fd;     --info-fg: #0a518f;
-  --success-bg: #e2f6e6;  --success-border: #afdfbb;  --success-fg: #0e6835;
-  --warning-bg: #feedde;  --warning-border: #f3c7a2;  --warning-fg: #834b0c;
-  --danger-bg: #feebe8;   --danger-border: #fcc0b8;   --danger-fg: #830d10;
+  --info-bg: var(--bleu-soft);     --info-border: var(--bleu-mark);     --info-fg: var(--bleu-ink);
+  --success-bg: var(--vert-soft);  --success-border: var(--vert-mark);  --success-fg: var(--vert-ink);
+  --warning-bg: var(--ambre-soft);  --warning-border: var(--ambre-mark);  --warning-fg: var(--ambre-ink);
+  --danger-bg: var(--rouge-soft);   --danger-border: var(--rouge-mark);   --danger-fg: var(--rouge-ink);
   --danger-solid: #cc3430;
-  /* ↑ Seconde palette (--info / --success / --warning / --danger) : calculée par le script comme descendante des six sens
-     (bg = soft, fg = ink). Elle ne s'emploie plus : les six sens ci-dessous (garde-fou « seconde-palette »). */
+  /* ↑ Anciens noms (--info / --success / --warning / --danger) : de simples alias des six sens ci-dessous, en clair comme en nuit
+     (bg = soft, fg = ink, border = mark ; écrits par le script). Ils ne s'emploient plus : garde-fou « seconde-palette ». */
 
   /* États (COULEURS.md, 3/11) : une couleur = un sens, toujours avec un mot et une icône. ink = texte, soft = fond de pastille ou
      de carte, mark = barre, point, bordure. Ajoutés À CÔTÉ du bleu de la marque (--accent-*), qu'ils ne remplacent pas. */
@@ -214,7 +214,8 @@
 }
 
 /* ── Nuit : elle part des ombres du visage (237,2°), pas du noir. La page est le vide mesuré derrière le visage ;
-   les accents sont plus clairs qu'en clair, la profondeur vient de lumière colorée (lueur, filet) plutôt que d'ombre grise. ── */
+   les accents sont plus clairs qu'en clair, la profondeur vient de surfaces qui s'éclaircissent et d'un filet de lumière,
+   jamais d'une lueur colorée : la seule lumière colorée est l'aurore (et le halo du visage). ── */
 [data-theme="dark"] {
   color-scheme: dark;
 
@@ -231,9 +232,11 @@
   --text-disabled: #485b67;
   --text-inverse: #061620;
 
-  --border-1: #192d39;
-  --border-2: #2b4352;
-  --border-field: #6d8493;          /* 3:1 sur toutes les surfaces de nuit */
+  /* Filets de nuit (P24) : la lumière du visage en transparence, plus un gris opaque : le trait prend la couleur de la surface
+     qu'il borde et s'en distingue sur chacune (alpha résolu par le script : 1,15:1 au repos, 1,3:1 au survol, au moins). */
+  --border-1: rgba(211, 221, 230, .09);
+  --border-2: rgba(211, 221, 230, .16);
+  --border-field: #6d8493;          /* 3:1 sur toutes les surfaces de nuit : le bord qui fait reconnaître un champ reste opaque */
   --ring-nav: 0 0 0 4px rgba(236, 243, 248, .12);
 
   --aurore-ink: #a7dcff;  --aurore-mark: #78ccff;  --aurore-glow: rgba(120, 204, 255, .22);
@@ -252,10 +255,10 @@
   --accent-tint: #15283c;
   --accent-tint-2: #173758;
 
-  --info-bg: #182f48;     --info-border: #244f7c;     --info-fg: #a3cdfc;
-  --success-bg: #163620;  --success-border: #1e5b34;  --success-fg: #92e8aa;
-  --warning-bg: #41270d;  --warning-border: #6f400c;  --warning-fg: #fdcb9f;
-  --danger-bg: #46221e;   --danger-border: #773731;   --danger-fg: #fca095;
+  --info-bg: var(--bleu-soft);     --info-border: var(--bleu-mark);     --info-fg: var(--bleu-ink);
+  --success-bg: var(--vert-soft);  --success-border: var(--vert-mark);  --success-fg: var(--vert-ink);
+  --warning-bg: var(--ambre-soft);  --warning-border: var(--ambre-mark);  --warning-fg: var(--ambre-ink);
+  --danger-bg: var(--rouge-soft);   --danger-border: var(--rouge-mark);   --danger-fg: var(--rouge-ink);
   --danger-solid: #cc3430;
 
   /* États, nuit (voir le bloc clair) */
@@ -267,7 +270,7 @@
   --gris-ink: #aab8c1;      --gris-soft: rgba(135, 148, 157, .14);                   --gris-mark: #87949d;
 
   --glass-fill: rgba(10, 25, 34, .86);
-  --glass-border: #192d39;
+  --glass-border: rgba(211, 221, 230, .09);
   --scrim: rgba(2, 6, 10, .64);
 
   --ombre-rvb: 0, 3, 6;
@@ -277,9 +280,10 @@
   --shadow-toast: 0 2px 6px rgba(var(--ombre-rvb), .45), 0 14px 32px -14px rgba(var(--ombre-rvb), .65), inset 0 1px 0 var(--filet-lumiere);
   --edge-light: inset 0 1px 0 var(--filet-lumiere);
   --bottom-lit: none;
-  /* En nuit, le bouton principal éclaire au lieu de projeter une ombre : lueur de la couleur d'action */
-  --shadow-cta: inset 0 1px 0 rgba(255, 255, 255, .24), 0 0 0 1px rgba(var(--accent-vif-rvb), .35), 0 10px 28px -8px rgba(var(--accent-vif-rvb), .6);
-  --shadow-halo: 0 0 32px -6px rgba(var(--accent-vif-rvb), .5);
+  /* En nuit, le bouton principal n'a ni ombre ni lueur (P25) : il se détache par son aplat et par le reflet d'un pixel.
+     L'aurore et le halo du visage sont les seules lumières colorées de l'écran. */
+  --shadow-cta: inset 0 1px 0 rgba(255, 255, 255, .22);
+  --shadow-halo: none;
 
   --highlight: #5e4b00;
   --highlight-soft: #3d3200;
@@ -444,4 +448,15 @@
   --sidebar-accent-foreground: var(--text-1);
   --sidebar-border: var(--border-1);
   --sidebar-ring: var(--accent-ring);
+}
+
+/* En nuit, les anciennes lueurs s'éteignent aussi (P25) : posé après les alias, qui sont redéclarés dans chaque portée de thème. */
+[data-theme="dark"] {
+  --glow-white: transparent;
+  --edge-glow: none;
+  /* Calque (ancien thème, plus aucune classe ne les emploie) : ses trois fonds d'état se lisaient opaques. En nuit, le soft
+     d'un sens est translucide : ils valent ce soft posé sur le papier (--surface-0), vérifié par tests/palette-visage.test.ts. */
+  --calque-ok-fond: #12322d;
+  --calque-attention-fond: #2c2a22;
+  --calque-bloquant-fond: #2a242a;
 }

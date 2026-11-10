@@ -1,146 +1,201 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
-import { MapPin, Search } from 'lucide-react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { MapPin } from 'lucide-react'
 import { useProjects } from '@/hooks/useProject'
 import { useQuota } from '@/components/layout/QuotaGauge'
-import { echeanceAO, estEnCours, etatEcheance } from '@/lib/echeance'
-import { aDecider, prochaineAction } from '@/lib/intelligence/action'
-import { comparerParRemise, quandCourt, resumeMesAO, STATUTS_TERMINES } from '@/lib/mesAO'
-import { api } from '@/services/api'
-import DeleteConfirmModal from '@/components/common/DeleteConfirmModal'
-import { ProjectCardGridSkeleton } from '@/components/skeletons'
+import { MettreAJourStatut } from '@/components/common/MettreAJourStatut'
+import { classesBouton } from '@/components/ui/bouton'
+import { Carte } from '@/components/ui/carte'
+import { ChampRecherche } from '@/components/ui/champ'
+import { DialogueConfirmation } from '@/components/ui/dialogue'
+import { EtatErreur, EtatRequete, EtatVide } from '@/components/ui/etats'
+import { EffacerFiltres, PuceFiltre } from '@/components/ui/filtre'
+import { ListeDeroulante } from '@/components/ui/liste-deroulante'
+import { Page, TitreSection } from '@/components/ui/page'
+import { Squelette } from '@/components/ui/squelette'
+import { Tableau } from '@/components/ui/tableau'
+import { annoncer } from '@/components/ui/toast'
 import { ALaUne } from '@/components/mesao/ALaUne'
-import { EnTeteListe, LigneAO } from '@/components/mesao/LigneAO'
-import { Pastille } from '@/components/mesao/Etat'
+import { colonnesAMettreAJour, colonnesEnCours } from '@/components/mesao/LigneAO'
 import { ResumeMesAOCartes, type FiltreMesAO } from '@/components/mesao/ResumeMesAO'
 import { Termines } from '@/components/mesao/Termines'
 import { VideMesAO } from '@/components/mesao/VideMesAO'
-import { BOUTON_SECONDAIRE } from '@/components/dashboard/BandeAO'
-import { cn } from '@/lib/utils'
+import { aLaUne, aoDansEtat, comptesAO } from '@/lib/etatAO'
+import { messageErreur } from '@/lib/erreurs'
+import { aDecider } from '@/lib/intelligence/action'
+import { comparerParRemise, quandCourt, resumeMesAO, STATUTS_TERMINES } from '@/lib/mesAO'
+import { phaseRequete } from '@/lib/requete'
+import { api } from '@/services/api'
 import type { Project } from '@/types'
 
 type Tri = 'remise' | 'activite' | 'nom'
 
-const NOMS_FILTRE: Record<Exclude<FiltreMesAO, 'tous'>, string> = { urgent: 'remise sous 7 jours', decider: 'à décider' }
+const TRIS = [
+  { valeur: 'remise', libelle: 'Remise la plus proche' },
+  { valeur: 'activite', libelle: 'Dernière activité' },
+  { valeur: 'nom', libelle: 'Nom' },
+] as const
+
+const nombreAO = (n: number) => `${n} appel${n > 1 ? 's' : ''} d’offres`
 
 const sansAccent = (t: string) => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 
 /**
- * Mes AO : on arrive sur du travail en cours. L'en-tête dit la prochaine remise ; quatre cartes de résumé filtrent la liste ;
- * « À la une » montre l'AO dont la remise est la plus proche ; une ligne par AO en cours avec le verbe de sa prochaine action ;
- * les AO terminés restent repliés. Sans AO : la zone de dépôt, Mon entreprise et les avis de la veille. Tout est déterministe.
+ * Mes AO : où en sont mes appels d'offres. Trois états, lus dans `lib/etatAO.ts` et nulle part ailleurs : « En cours »,
+ * « À mettre à jour » (remise passée : la seule action est de dire ce que le dossier est devenu), « Terminés » (repliés).
+ * « À la une » est la prochaine remise à venir ; sans remise à venir, pas de bloc. Lecture des données par le motif du
+ * système : chargement (squelette de la liste) → erreur (jamais l'écran vide) → vide (premier dossier) → contenu.
  */
 export default function Projects() {
+  const requete = useProjects()
+  // Aucun AO (et le serveur a répondu) : l'écran du premier dossier, qui porte son propre titre.
+  if (phaseRequete(requete) === 'vide') return <VideMesAO />
+  return (
+    <Page titre="Mes appels d’offres" sousTitre={<SousTitre projets={requete.data} />}
+      action={<Link to="/dashboard" className={classesBouton('secondaire', 'max-md:w-full')}><MapPin aria-hidden strokeWidth={1.75} />Avis de la veille</Link>}>
+      <EtatRequete requete={requete} squelette={<SqueletteMesAO />} vide={null}
+        erreur={<EtatErreur titre="Vos appels d’offres n’ont pas pu se charger" detail="La connexion au serveur a échoué. Vos dossiers ne sont pas touchés." onReessayer={() => { void requete.refetch() }} enCours={requete.isFetching} />}>
+        {(projets) => <ListeMesAO projets={projets} />}
+      </EtatRequete>
+    </Page>
+  )
+}
+
+/** La sous-ligne dit autre chose que la première case : la prochaine remise, quand il y en a une. */
+function SousTitre({ projets }: { projets: Project[] | undefined }) {
+  const une = projets ? aLaUne(projets) : null
+  const quand = une ? quandCourt(une) : null
+  if (!une || !quand) return 'Vos dossiers, de la lecture du dossier de l’acheteur au dépôt.'
+  return <>Prochaine remise <strong className="chiffres font-semibold text-fg">{quand}</strong>.</>
+}
+
+/** Le squelette de Mes AO : la bande de résumé puis des rangées, aux dimensions de la liste (fixe, sans pulsation). */
+export function SqueletteMesAO() {
+  return (
+    <div data-squelette-mes-ao="">
+      <Carte sansMarge className="grid md:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => <div key={i} className="grid gap-3 p-5"><Squelette className="h-3.5 w-24" /><Squelette className="h-8 w-12" /></div>)}
+      </Carte>
+      <Squelette className="mb-4 mt-10 h-5 w-32 max-md:mt-7.5" />
+      <Carte sansMarge>
+        {[0, 1, 2, 3, 4].map((i) => (
+          <div key={i} className="flex min-h-[76px] items-center gap-6 border-t border-bord px-4 first:border-t-0">
+            <div className="grid flex-[2] gap-2"><Squelette className="h-4 w-4/5" /><Squelette className="h-3.5 w-2/5" /></div>
+            <Squelette className="h-3.5 flex-1 max-md:hidden" />
+            <Squelette className="h-6 w-20 rounded-pilule max-md:hidden" />
+            <Squelette className="h-11 w-40 rounded-lg" />
+          </div>
+        ))}
+      </Carte>
+    </div>
+  )
+}
+
+function ListeMesAO({ projets }: { projets: Project[] }) {
   const queryClient = useQueryClient()
-  const { data: projects = [], isLoading } = useProjects()
   const { data: quota } = useQuota()
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
+  const [aSupprimer, setASupprimer] = useState<Project | null>(null)
+  const [erreurSuppression, setErreurSuppression] = useState<string | null>(null)
+  const [statutPour, setStatutPour] = useState<Project | null>(null)
   const [recherche, setRecherche] = useState('')
   const [tri, setTri] = useState<Tri>('remise')
   const [filtre, setFiltre] = useState<FiltreMesAO>('tous')
-  const maintenant = useMemo(() => new Date(), [projects]) // eslint-disable-line react-hooks/exhaustive-deps
+  const maintenant = useMemo(() => new Date(), [projets]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const supprimer = async (id: string) => {
-    await api.delete(`/projects/${id}`)
-    queryClient.invalidateQueries({ queryKey: ['projects'] })
-    setDeleteTarget(null)
-  }
+  const { mutate: supprimer, isPending: suppression } = useMutation({
+    mutationFn: async (p: Project) => { await api.delete(`/projects/${p.id}`) },
+    onSuccess: (_, p) => {
+      void queryClient.invalidateQueries({ queryKey: ['projects'] })
+      annoncer(`« ${p.name} » est supprimé.`, 'succes')
+      setASupprimer(null)
+    },
+    onError: async (err) => setErreurSuppression(await messageErreur(err, 'La suppression n’a pas pu se faire. Réessayez dans un instant.')),
+  })
 
-  const resume = useMemo(() => resumeMesAO(projects, maintenant), [projects, maintenant])
-  const uneAO = useMemo(() => prochaineAction(projects, maintenant), [projects, maintenant])
+  const comptes = useMemo(() => comptesAO(projets, maintenant), [projets, maintenant])
+  const resume = useMemo(() => resumeMesAO(projets, maintenant), [projets, maintenant])
+  const une = useMemo(() => aLaUne(projets, maintenant), [projets, maintenant])
+  const nbADecider = resume.aDecider.n
 
-  const { enCours, termines } = useMemo(() => {
+  const cherche = recherche.trim() !== ''
+  const filtres = (filtre !== 'tous' ? 1 : 0) + (cherche ? 1 : 0)
+  const { enCours, aMettreAJour, termines } = useMemo(() => {
     const q = sansAccent(recherche.trim())
     const garde = (p: Project) => !q || [p.name, p.maitre_ouvrage, p.selected_lot_name].some((t) => t && sansAccent(t).includes(q))
     const trier = (a: Project, b: Project) => tri === 'nom'
       ? a.name.localeCompare(b.name, 'fr')
       : tri === 'activite' ? new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime() : comparerParRemise(a, b, maintenant)
-    let courants = projects.filter((p) => estEnCours(p.status) && garde(p))
+    let courants = aoDansEtat(projets, 'en_cours', maintenant).filter(garde)
     if (filtre === 'urgent') courants = courants.filter((p) => resume.remise7.ids.includes(p.id))
     if (filtre === 'decider') courants = courants.filter(aDecider)
+    // un filtre de puce ne porte que sur les AO en cours : les deux autres groupes se retirent
+    const autres = filtre === 'tous'
     return {
       enCours: courants.sort(trier),
-      termines: projects.filter((p) => !estEnCours(p.status) && garde(p)).sort((a, b) => STATUTS_TERMINES.indexOf(a.status as never) - STATUTS_TERMINES.indexOf(b.status as never) || comparerParRemise(a, b, maintenant)),
+      aMettreAJour: autres ? aoDansEtat(projets, 'a_mettre_a_jour', maintenant).filter(garde).sort(trier) : [],
+      termines: autres ? aoDansEtat(projets, 'termine', maintenant).filter(garde).sort((a, b) => STATUTS_TERMINES.indexOf(a.status as never) - STATUTS_TERMINES.indexOf(b.status as never) || comparerParRemise(a, b, maintenant)) : [],
     }
-  }, [projects, recherche, tri, filtre, resume, maintenant])
+  }, [projets, recherche, tri, filtre, resume, maintenant])
 
-  if (isLoading) return <div className="mx-auto w-full max-w-[1360px]"><ProjectCardGridSkeleton count={6} /></div>
-  if (projects.length === 0) return <div className="mx-auto w-full max-w-[1360px]"><VideMesAO /></div>
-
-  // « Prochaine remise » : celle de l'AO à la une, seulement si sa date n'est pas passée.
-  const prochaine = uneAO && etatEcheance(echeanceAO(uneAO), maintenant).etat !== 'passee' ? uneAO : null
-  const quandProchaine = prochaine ? quandCourt(prochaine) : null
+  const effacer = () => { setFiltre('tous'); setRecherche('') }
+  const gestes = { maintenant, onStatut: setStatutPour, onSupprimer: (p: Project) => { setErreurSuppression(null); setASupprimer(p) } }
+  const rienTrouve = enCours.length + aMettreAJour.length + termines.length === 0
 
   return (
-    <div className="mx-auto flex w-full max-w-[1360px] flex-col gap-7 animate-fade-in">
-      {deleteTarget && (
-        <DeleteConfirmModal
-          title={`Supprimer « ${deleteTarget.name} » ?`}
-          onConfirm={() => supprimer(deleteTarget.id)}
-          onCancel={() => setDeleteTarget(null)}
-        />
+    <>
+      {/* Au téléphone, « À la une » passe avant le résumé : l'action de l'écran reste sous le pouce, au premier écran. */}
+      <div className="flex flex-col gap-10 max-md:flex-col-reverse max-md:gap-7.5">
+        <ResumeMesAOCartes comptes={comptes} resume={resume} quota={quota} />
+        {/* « À la une » suit la recherche et les filtres : elle se retire dès qu'on cherche */}
+        {une && filtres === 0 && <ALaUne projet={une} maintenant={maintenant} />}
+      </div>
+
+      <div role="search" aria-label="Chercher et filtrer mes appels d’offres" className="mt-10 flex flex-wrap items-center gap-2 max-md:mt-7.5">
+        <label className="min-w-0 max-md:basis-full md:w-80">
+          <span className="sr-only">Rechercher un appel d’offres</span>
+          <ChampRecherche placeholder="Nom, acheteur, lot…" value={recherche} onChange={(e) => setRecherche(e.target.value)} />
+        </label>
+        {(resume.remise7.n > 0 || filtre === 'urgent') && (
+          <PuceFiltre libelle="Remise sous 7 jours" valeur={filtre === 'urgent' ? nombreAO(resume.remise7.n) : null} onOuvrir={() => setFiltre(filtre === 'urgent' ? 'tous' : 'urgent')} onRetirer={() => setFiltre('tous')} />
+        )}
+        {(nbADecider > 0 || filtre === 'decider') && (
+          <PuceFiltre libelle="À décider" valeur={filtre === 'decider' ? nombreAO(nbADecider) : null} onOuvrir={() => setFiltre(filtre === 'decider' ? 'tous' : 'decider')} onRetirer={() => setFiltre('tous')} />
+        )}
+        {/* « Effacer les filtres » : seulement si une puce est active (la recherche a sa croix ; l'état vide a son bouton) */}
+        <EffacerFiltres actifs={rienTrouve || filtre === 'tous' ? 0 : 1} onEffacer={effacer} />
+        <ListeDeroulante libelle="Trier par" valeur={tri} onChange={(v) => setTri(v as Tri)} options={TRIS} className="w-auto min-w-56 max-md:w-full md:ml-auto" />
+      </div>
+
+      {rienTrouve && (
+        <EtatVide className="mt-4" parFiltre={effacer}
+          titre="Aucun appel d’offres ne correspond"
+          phrase={cherche ? `Aucun nom, acheteur ni lot ne contient « ${recherche.trim()} ».` : 'Aucun appel d’offres en cours ne passe ce filtre.'} />
       )}
 
-      <header className="flex flex-wrap items-end justify-between gap-x-5 gap-y-3">
-        <div className="min-w-0 flex-1 basis-[18rem]">
-          <h1 className="titre-page text-fg">Mes appels d’offres</h1>
-          <p className="mt-2 text-[15px] text-fg-2">
-            <strong className="chiffres font-semibold text-fg">{resume.enCours} en cours</strong>
-            {prochaine && quandProchaine ? <> · prochaine remise <strong className="font-semibold text-fg">{quandProchaine}</strong>, pour {prochaine.name}.</> : '.'}
-          </p>
-        </div>
-        <Link to="/dashboard" className={cn(BOUTON_SECONDAIRE, 'max-sm:w-full')}>
-          <MapPin size={16} strokeWidth={1.8} aria-hidden className="text-turquoise-ink" />Avis de la veille
-        </Link>
-      </header>
+      {enCours.length > 0 && (
+        <section aria-labelledby="titre-en-cours" className="mt-10 max-md:mt-7.5">
+          <TitreSection id="titre-en-cours">En cours <span className="chiffres font-normal text-fg-3">{enCours.length}</span></TitreSection>
+          <Tableau libelle="Appels d’offres en cours" colonnes={colonnesEnCours(gestes)} lignes={enCours} cle={(p) => p.id} vide={null} />
+        </section>
+      )}
 
-      <ResumeMesAOCartes resume={resume} filtre={filtre} onFiltre={setFiltre} quota={quota} />
+      {aMettreAJour.length > 0 && (
+        <section aria-labelledby="titre-a-mettre-a-jour" className="mt-10 max-md:mt-7.5">
+          <TitreSection id="titre-a-mettre-a-jour">À mettre à jour <span className="chiffres font-normal text-fg-3">{aMettreAJour.length}</span></TitreSection>
+          <p className="-mt-2 mb-4 max-w-[70ch] text-sm text-fg-2">La date de remise est passée. Dites si le dossier a été déposé : il rejoindra les terminés.</p>
+          <Tableau libelle="Appels d’offres à mettre à jour" colonnes={colonnesAMettreAJour(gestes)} lignes={aMettreAJour} cle={(p) => p.id} vide={null} />
+        </section>
+      )}
 
-      {uneAO && <ALaUne projet={uneAO} maintenant={maintenant} avecRemise={quandCourt(uneAO) !== null} />}
+      <Termines projets={termines} ouvertParDefaut={cherche} {...gestes} />
 
-      <section aria-labelledby="titre-en-cours" className="space-y-3.5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <h2 id="titre-en-cours" className="text-lg font-semibold text-fg">En cours</h2>
-            <Pastille ton="gris">{enCours.length}</Pastille>
-            {filtre !== 'tous' && (
-              <button type="button" onClick={() => setFiltre('tous')} className="inline-flex min-h-9 items-center gap-1.5 rounded-pilule border border-bord-champ px-3 text-[13px] font-semibold text-fg transition-colors duration-base hover:border-accent-ui [@media(pointer:coarse)]:min-h-11">
-                Filtre : {NOMS_FILTRE[filtre]}<span aria-hidden>×</span><span className="sr-only">retirer le filtre</span>
-              </button>
-            )}
-          </div>
-          <div className="flex flex-wrap items-center gap-2.5 max-sm:w-full max-sm:flex-col max-sm:items-stretch">
-            <label className="relative block min-w-0 sm:w-[280px] sm:flex-none">
-              <span className="sr-only">Rechercher un appel d’offres</span>
-              <Search size={16} strokeWidth={1.8} aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-fg-3" />
-              <input type="search" placeholder="Nom, acheteur, lot…" value={recherche} onChange={(e) => setRecherche(e.target.value)}
-                className="h-11 w-full rounded-pilule border border-bord-champ bg-surface-0 pl-10 pr-4 text-sm text-fg outline-none transition-[border-color] duration-base placeholder:text-fg-3 hover:border-fg-3 focus-visible:ring-2 focus-visible:ring-accent-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface-page" />
-            </label>
-            <label className="flex h-11 items-center gap-2 rounded-lg border border-bord-champ bg-surface-0 pl-3.5 pr-2 text-[13px] text-fg-2">
-              <span>Trier par</span>
-              <select value={tri} onChange={(e) => setTri(e.target.value as Tri)} className="bg-transparent py-2 text-sm font-medium text-fg outline-none">
-                <option value="remise">Remise la plus proche</option>
-                <option value="activite">Dernière activité</option>
-                <option value="nom">Nom</option>
-              </select>
-            </label>
-          </div>
-        </div>
-
-        {enCours.length > 0 ? (
-          <div className="overflow-hidden rounded-carte border border-bord bg-surface-0 shadow-card">
-            <EnTeteListe />
-            {enCours.map((p) => <LigneAO key={p.id} projet={p} maintenant={maintenant} onSupprimer={(id, nom) => setDeleteTarget({ id, name: nom })} />)}
-          </div>
-        ) : (
-          <p className="rounded-carte border border-bord bg-surface-0 px-5 py-4 text-[15px] text-fg-2">
-            {recherche.trim() || filtre !== 'tous' ? 'Aucun appel d’offres ne correspond à votre recherche.' : 'Aucun appel d’offres en cours. Déposez un dossier avec « Nouvel appel d’offres ».'}
-          </p>
-        )}
-      </section>
-
-      <Termines projets={termines} onSupprimer={(id, nom) => setDeleteTarget({ id, name: nom })} ouvertParDefaut={recherche.trim() !== ''} />
-    </div>
+      {statutPour && <MettreAJourStatut projet={statutPour} ouvert onOuvert={(o) => { if (!o) setStatutPour(null) }} />}
+      <DialogueConfirmation ouvert={aSupprimer !== null} onOuvert={(o) => { if (!o) setASupprimer(null) }} danger
+        titre={aSupprimer ? `Supprimer « ${aSupprimer.name} » ?` : 'Supprimer cet appel d’offres ?'}
+        description="Le dossier, l’analyse et le mémoire de cet appel d’offres sont supprimés. Cette action ne s’annule pas."
+        libelleConfirmer="Supprimer" libelleEnCours="Suppression…" enCours={suppression} erreur={erreurSuppression}
+        onConfirmer={() => { if (aSupprimer) supprimer(aSupprimer) }} />
+    </>
   )
 }
