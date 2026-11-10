@@ -76,7 +76,7 @@ export default function BandeAO({ projets, maintenant = new Date(), onStatut, on
               return (
                 <li key={p.id} data-ao={p.id} className={`${RANGEE} lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1.1fr)_minmax(0,1fr)_auto] lg:items-center`}>
                   <div className="min-w-0">
-                    <Link to={`/projects/${p.id}`} className="line-clamp-2 break-words text-base font-semibold leading-snug text-fg underline-offset-4 hover:underline">{p.name}</Link>
+                    <Link to={`/projects/${p.id}`} className="block break-words text-base font-semibold leading-snug text-fg underline-offset-4 hover:underline max-md:-my-3 max-md:py-3"><span className="line-clamp-2">{p.name}</span></Link>
                     {sousTitre && <p className="mt-0.5 truncate text-sm text-fg-2">{sousTitre}</p>}
                   </div>
                   <div className="min-w-0">
@@ -126,7 +126,7 @@ export default function BandeAO({ projets, maintenant = new Date(), onStatut, on
                 return (
                   <li key={p.id} data-remise-passee={p.id} className={`${RANGEE} sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center`}>
                     <div className="min-w-0">
-                      <Link to={`/projects/${p.id}`} className="line-clamp-2 break-words text-base font-semibold leading-snug text-fg underline-offset-4 hover:underline">{p.name}</Link>
+                      <Link to={`/projects/${p.id}`} className="block break-words text-base font-semibold leading-snug text-fg underline-offset-4 hover:underline max-md:-my-3 max-md:py-3"><span className="line-clamp-2">{p.name}</span></Link>
                       {acheteurCourt(p.maitre_ouvrage) && <p className="mt-0.5 truncate text-sm text-fg-2">{acheteurCourt(p.maitre_ouvrage)}</p>}
                     </div>
                     <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">

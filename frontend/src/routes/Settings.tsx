@@ -18,7 +18,7 @@ function Ligne({ libelle, children }: { libelle: string; children: ReactNode }) 
   )
 }
 
-const LIEN = 'font-medium text-accent-text underline-offset-4 hover:underline'
+const LIEN = 'font-medium text-accent-text underline-offset-4 hover:underline max-md:inline-flex max-md:min-h-11 max-md:items-center'
 
 /** Une rangée qui mène ailleurs : toute la rangée est la cible (52 px), un chevron dit qu'on change d'écran. */
 function RangeeLien({ to, titre, detail }: { to: string; titre: string; detail?: ReactNode }) {
