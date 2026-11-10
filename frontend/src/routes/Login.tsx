@@ -1,6 +1,7 @@
 import { SignIn } from '@clerk/clerk-react'
 import { useSearchParams } from 'react-router-dom'
 import CoquillePublique from '@/components/public/CoquillePublique'
+import { AttenteClerk } from '@/components/public/AttenteClerk'
 import { Message } from '@/components/ui/message'
 import { PHRASE_SESSION_EXPIREE, retourApresConnexion } from '@/lib/sessionExpiree'
 
@@ -26,6 +27,7 @@ export default function Login() {
     <CoquillePublique>
       <div className="grid justify-items-center gap-5 pt-4 sm:pt-10">
         {expiree && <Message ton="attention" className="w-full max-w-[400px]">{PHRASE_SESSION_EXPIREE}</Message>}
+        <AttenteClerk />
         <SignIn routing="path" path="/login" signUpUrl="/register" forceRedirectUrl={retour} />
       </div>
     </CoquillePublique>

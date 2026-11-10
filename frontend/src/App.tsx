@@ -46,8 +46,8 @@ function apresConnexion(): string {
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { isSignedIn, isLoaded } = useAuth()
-  if (!isLoaded) return null
-  return isSignedIn ? <Navigate to={apresConnexion()} replace /> : <>{children}</>
+  // La connexion et l'inscription affichent leur coquille tout de suite ; la carte Clerk arrive quand Clerk est prêt.
+  return isLoaded && isSignedIn ? <Navigate to={apresConnexion()} replace /> : <>{children}</>
 }
 
 /**

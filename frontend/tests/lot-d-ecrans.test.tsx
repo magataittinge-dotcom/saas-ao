@@ -122,6 +122,12 @@ test('connexion : la carte Clerk dans la coquille du site, sans slogan ; session
     assert.match(src, /<CoquillePublique>/, f)
     assert.doesNotMatch(src, /10×|plus vite|#[0-9A-Fa-f]{6}\b|style=\{\{|appearance=/, `${f} : ni slogan chiffré, ni couleur en dur, ni second habillage de Clerk`)
   }
+  // jamais une page blanche : la coquille tout de suite, un squelette à la place de la carte, l'échec de Clerk dit
+  for (const f of ['src/routes/Login.tsx', 'src/routes/Register.tsx']) assert.match(sansCommentaires(lire(f)), /<AttenteClerk \/>/, f)
+  const attente = sansCommentaires(lire('src/components/public/AttenteClerk.tsx'))
+  assert.match(attente, /<ClerkLoading>[\s\S]*<Squelette/)
+  assert.match(attente, /<ClerkFailed>[\s\S]*<EtatErreur[\s\S]*onReessayer/)
+  assert.match(lire('src/App.tsx'), /return isLoaded && isSignedIn \? <Navigate to=\{apresConnexion\(\)\} replace \/> : <>\{children\}<\/>/)
   const connexion = sansCommentaires(lire('src/routes/Login.tsx'))
   assert.match(connexion, /PHRASE_SESSION_EXPIREE/)
   assert.match(connexion, /forceRedirectUrl=\{retour/)
