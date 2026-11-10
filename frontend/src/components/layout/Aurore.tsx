@@ -45,6 +45,7 @@ export default function Aurore() {
       <span className="aurore-ruban aurore-ruban-a" />
       <span className="aurore-ruban aurore-ruban-b" />
       <span className="aurore-ruban aurore-ruban-c" />
+      <span className="aurore-ruban aurore-aube" />
     </div>
   )
 }

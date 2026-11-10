@@ -102,7 +102,7 @@
   --shadow-halo: 0 10px 24px -10px rgba(var(--accent-rvb), .45);
 
   /* Aurore : 3 ellipses, transform seul (components/layout/Aurore.tsx) */
-  --aurore-duree-a: 28s;  --aurore-duree-b: 36s;  --aurore-duree-c: 44s;
+  --aurore-duree-a: 28s;  --aurore-duree-b: 36s;  --aurore-duree-c: 44s;  --aurore-duree-d: 52s;
   --shadow-btn: inset 0 1px 0 rgba(255, 255, 255, .22);   /* reflet interne des boutons pleins */
 }
 @media (min-width: 1200px) { :root { --gutter: 120px; } }
@@ -146,6 +146,7 @@
   --aurore-b: rgba(171, 214, 253, .45);   /* givre : teinte des lumières (245,5°) */
   --aurore-c: rgba(66, 155, 247, .4);   /* azur : teinte de la famille colorée, celle de l'action (251,7°) */
   --aurore-opacite: .3;                  /* le jour, elle se devine (réglée à l’œil sur capture : 0,26 trop effacée) */
+  --aurore-aube: rgba(245, 193, 107, .2);   /* la lumière de l'aube : l'or de la flamme, basse et étroite à l'horizon du ciel ; le jour elle se devine à peine */
   /* Flamme : la braise au cœur du visage (71,8°, 0,5 % de sa surface). La seule teinte chaude de la marque, réservée à la
      signature (jamais un état, jamais un aplat, jamais plus d'un élément par écran). */
   --flamme: #ecac2f;  --flamme-glow: rgba(236, 172, 47, .3);
@@ -233,6 +234,7 @@
   --aurore-b: rgba(159, 209, 252, .38);
   --aurore-c: rgba(0, 135, 240, .5);
   --aurore-opacite: .9;
+  --aurore-aube: rgba(242, 176, 54, .28);   /* la nuit, l'aube est nette */
   --flamme: #fdbe51;  --flamme-glow: rgba(253, 190, 81, .3);
 
   --accent-text: var(--accent-300);

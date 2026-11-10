@@ -40,12 +40,23 @@
   text-wrap: balance;
 }
 /* ── Fil d'aurore : le trait de lumière de la marque sous le titre de l'Accueil (120 × 3 px, jamais un état).
-   De la glace (teinte des ombres du visage) à l'azur de l'action : deux teintes mesurées, aucune couleur d'état. ── */
+   De la glace à l'azur de l'action, puis une pointe d'or sur le dernier cinquième (la flamme du visage) : trois teintes
+   mesurées, aucune couleur d'état. L'or est de la lumière : jamais un texte, une pastille, un point ni une barre. ── */
 .fil-aurore {
   width: 120px;
   height: 3px;
   border-radius: 9999px;
-  background: linear-gradient(90deg, var(--aurore-mark), var(--accent-ui) 55%, transparent);
+  background: linear-gradient(90deg, var(--aurore-mark), var(--accent-ui) 45%, var(--accent-ui) 76%, transparent 76%, transparent 81%, var(--flamme) 81%);
+}
+/* ── Éclat d'or du halo du visage : un arc court posé sur le liseré bleu, comme la flamme dans le visage. Décoratif. ── */
+.eclat-or {
+  position: absolute;
+  inset: -3.5px;
+  border-radius: 9999px;
+  pointer-events: none;
+  background: conic-gradient(from 14deg, transparent 0deg, var(--flamme) 8deg, var(--flamme) 36deg, transparent 46deg);
+  -webkit-mask: radial-gradient(closest-side, transparent calc(100% - 1.5px), black calc(100% - 1.5px));
+  mask: radial-gradient(closest-side, transparent calc(100% - 1.5px), black calc(100% - 1.5px));
 }
 
 /* ── Boutons ─────────────────────────────────────────────────────

@@ -113,6 +113,7 @@ Object.assign(clair, {
   'aurore-a': couleur(0.78, 0.12, H.ombres, 'ombres', 0.55),
   'aurore-b': couleur(0.86, 0.07, H.lumieres, 'lumieres', 0.45),
   'aurore-c': couleur(0.68, 0.16, H.famille, 'famille', 0.4),
+  'aurore-aube': couleur(0.84, 0.12, H.or, 'or (flamme)', 0.2),
   'accent-tint': null, 'accent-tint-2': null,
 })
 Object.assign(nuit, {
@@ -122,6 +123,7 @@ Object.assign(nuit, {
   'aurore-a': couleur(0.76, 0.13, H.ombres, 'ombres', 0.5),
   'aurore-b': couleur(0.84, 0.08, H.lumieres, 'lumieres', 0.38),
   'aurore-c': couleur(0.62, 0.19, H.famille, 'famille', 0.5),
+  'aurore-aube': couleur(0.8, 0.15, H.or, 'or (flamme)', 0.28),
   'accent-tint': couleur(0.27, 0.045, H.famille, 'famille'),
   'accent-tint-2': couleur(0.33, 0.07, H.famille, 'famille'),
 })

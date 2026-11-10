@@ -47,7 +47,7 @@ test('marque : chaque teinte de l\'accent, de l\'aurore, des neutres et de la fl
     ...[50, 100, 200, 300, 400, 500, 600, 700, 800, 900].map((n): [string, number] => [`accent-${n}`, T.famille]),
     ...NEUTRES.map((n): [string, number] => [n, T.ombres]),
     ['aurore-ink', T.ombres], ['aurore-mark', T.ombres], ['aurore-glow', T.ombres], ['aurore-a', T.ombres],
-    ['aurore-b', T.lumieres], ['aurore-c', T.famille], ['flamme', T.or], ['flamme-glow', T.or],
+    ['aurore-b', T.lumieres], ['aurore-c', T.famille], ['flamme', T.or], ['flamme-glow', T.or], ['aurore-aube', T.or],
   ]
   const hors: string[] = []
   for (const theme of THEMES) for (const [nom, teinte] of attendu) {
@@ -64,7 +64,7 @@ test('marque : l\'aurore, le fil et le logo n\'empruntent aucune couleur d\'éta
   const etat = /--(bleu|vert|ambre|rouge|turquoise|gris)-(ink|soft|mark)/
   const fil = sansCommentaires(lire('src/index.css')).match(/\.fil-aurore \{[^}]*\}/)![0]
   assert.doesNotMatch(fil, etat)
-  assert.match(fil, /var\(--aurore-mark\), var\(--accent-ui\)/)
+  assert.match(fil, /var\(--aurore-mark\), var\(--accent-ui\) 45%, var\(--accent-ui\) 76%, transparent 76%, transparent 81%, var\(--flamme\) 81%\)/, 'pointe d\'or sur le dernier cinquième')
   assert.doesNotMatch(sansCommentaires(lire('src/components/layout/Logo.tsx')), etat)
   assert.doesNotMatch(sansCommentaires(lire('src/components/layout/aurore.css')), etat)
   for (const theme of THEMES) for (const j of ['--aurore-a', '--aurore-b', '--aurore-c', '--aurore-mark', '--aurore-ink']) {
@@ -129,10 +129,18 @@ test('or de marque : jamais confondu avec l\'ambre « à surveiller » (écart m
     assert.ok(ecartTeinte(teinteDe(theme, '--flamme')[2], teinteDe(theme, '--ambre-mark')[2]) >= 12, `${theme} : teintes or / ambre`)
   }
   assert.deepEqual(proches, [])
-  // l'or n'est disponible que comme lumière : le logo et la page /design ; aucune classe Tailwind, aucun autre fichier
+  // l'or n'est que de la lumière : la braise du logo, la pointe du fil d'aurore, l'éclat du halo du visage (index.css),
+  // la lueur d'aube (jeton --aurore-aube, aurore.css) et la page /design ; aucune classe Tailwind, aucun autre fichier
   const usages = [...fichiersSource('src'), 'src/index.css', 'src/styles/tokens.css', 'src/styles/pieces.css', 'src/components/layout/aurore.css', 'tailwind.config.js']
-    .filter((f) => /flamme/.test(sansCommentaires(lire(f))))
-  assert.deepEqual(usages.sort(), ['src/components/layout/Logo.tsx', 'src/routes/Design.tsx'])
+    .filter((f) => /flamme|aurore-aube/.test(sansCommentaires(lire(f))))
+  assert.deepEqual(usages.sort(), ['src/components/layout/Aurore.tsx', 'src/components/layout/Logo.tsx', 'src/components/layout/aurore.css', 'src/index.css', 'src/routes/Design.tsx'])
+  const feuille = sansCommentaires(lire('src/index.css'))
+  const regles = [...feuille.matchAll(/([^{}]+)\{([^{}]*var\(--flamme\)[^{}]*)\}/g)]
+  assert.deepEqual(regles.map((m) => m[1].trim()).sort(), ['.eclat-or', '.fil-aurore'])
+  // jamais un texte, un fond de bouton ni une bordure : l'or ne passe que par un dégradé de fond décoratif
+  for (const m of regles) assert.doesNotMatch(m[2], /(^|[;\s])(color|border(-\w+)?|background-color)\s*:[^;]*flamme/)
+  assert.equal(sansCommentaires(lire('src/components/mesao/VisagePetit.tsx')).match(/className="eclat-or"/g)?.length, 1)
+  assert.doesNotMatch([...fichiersSource('src')].map((f) => lire(f)).join('\n'), /(text|bg|border|ring|fill|stroke)-flamme/)
   for (const theme of THEMES) for (const k of ETATS) for (const r of ['ink', 'soft', 'mark']) assert.doesNotMatch(jetons(theme)[`--${k}-${r}`], /flamme|aurore/)
 })
 

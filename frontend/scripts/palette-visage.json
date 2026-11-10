@@ -428,6 +428,16 @@
    "css": "rgba(66, 155, 247, .4)",
    "source": "famille"
   },
+  "aurore-aube": {
+   "oklch": [
+    0.84,
+    0.12,
+    78.5
+   ],
+   "hex": "#f5c16b",
+   "css": "rgba(245, 193, 107, .2)",
+   "source": "or (flamme)"
+  },
   "bleu-ink": {
    "oklch": [
     0.43,
@@ -997,6 +1007,16 @@
    "hex": "#0087f0",
    "css": "rgba(0, 135, 240, .5)",
    "source": "famille"
+  },
+  "aurore-aube": {
+   "oklch": [
+    0.8,
+    0.15,
+    78.5
+   ],
+   "hex": "#f2b036",
+   "css": "rgba(242, 176, 54, .28)",
+   "source": "or (flamme)"
   },
   "accent-tint": {
    "oklch": [

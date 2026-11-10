@@ -27,17 +27,20 @@ test('aurore : connexion économe = saveData ou 2G ; 3G et 4G laissent le ciel b
   assert.equal(connexionEconome({ saveData: false, effectiveType: '4g' }), false)
 })
 
-test('aurore : transform seul, aucun filter: blur, trois rubans de 28 / 36 / 44 s, pas de violet', () => {
+test('aurore : transform seul, aucun filter: blur, trois rubans de 28 / 36 / 44 s et la lueur d\'aube de 52 s, pas de violet', () => {
   assert.doesNotMatch(feuille, /filter\s*:/)
   assert.doesNotMatch(feuille, /blur\(/)
   const images = [...feuille.matchAll(/@keyframes [\w-]+\s*\{([\s\S]*?)\}\s*\}/g)].map((m) => m[1])
-  assert.equal(images.length, 3)
+  assert.equal(images.length, 4)
   for (const k of images) {
     const proprietes = [...k.matchAll(/([a-z-]+)\s*:/g)].map((m) => m[1])
     assert.deepEqual([...new Set(proprietes)], ['transform'])
   }
   const theme = lire('src/styles/theme.css')
-  assert.match(theme, /--aurore-duree-a: 28s;\s*--aurore-duree-b: 36s;\s*--aurore-duree-c: 44s;/)
+  assert.match(theme, /--aurore-duree-a: 28s;\s*--aurore-duree-b: 36s;\s*--aurore-duree-c: 44s;\s*--aurore-duree-d: 52s;/)
+  // la lueur d'aube est un ruban comme les autres : mêmes garde-fous (pause, mouvement réduit), une seule fois
+  assert.equal(composant.match(/className="aurore-ruban aurore-aube"/g)?.length, 1)
+  assert.match(feuille, /\.aurore-aube \{[^}]*background: radial-gradient\([^;]*var\(--aurore-aube\)/)
   for (const j of ['--aurore-a', '--aurore-b', '--aurore-c']) {
     for (const m of theme.matchAll(new RegExp(`${j}: rgba\\((\\d+), (\\d+), (\\d+)`, 'g'))) {
       const [r, g, b] = [Number(m[1]), Number(m[2]), Number(m[3])]
