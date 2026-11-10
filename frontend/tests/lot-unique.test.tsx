@@ -184,12 +184,14 @@ test('la carte : « Lot unique » en grand, la désignation entière dans le tex
   assert.doesNotMatch(html, /manquant|incomplet|absent|!/i)
 })
 
-test('la désignation est en texte normal de carte (text-sm), pas en grand ; le survol donne le texte complet', () => {
+test('la désignation est en texte normal de carte (text-sm), pas en grand  ; le texte complet reste dans la page', () => {
   const html = bande(LONGUE)
   const ligne = html.match(/<[a-z]+ [^>]*line-clamp-2[^>]*>/)?.[0] ?? ''
   assert.match(html, /text-sm/)
   assert.doesNotMatch(ligne, /font-display|text-h6/)
-  assert.match(html, /title="Lot 3 — Menuiseries extérieures[^"]*\(désignation inventée\)"/)
+  // plus d'infobulle native (title=) : le texte entier est dans la page, et la ligne se déplie au clic quand elle est coupée
+  assert.doesNotMatch(html, /\stitle="/)
+  assert.match(html, /Lot 3 — Menuiseries extérieures[^<]*\(désignation inventée\)/)
 })
 
 test('au toucher : la ligne se déplie (aria-expanded), cible de 44 px sous pointer:coarse, cue décoratif masqué au lecteur d’écran', () => {

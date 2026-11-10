@@ -3,6 +3,7 @@ import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BandeCases, CaseResume } from '@/components/ui/case-resume'
 import { PastilleEtat, type Sens } from '@/components/ui/pastille'
+import { Bouton } from '@/components/ui/bouton'
 import type { SourceEtat } from './EtatElement'
 
 export type EtatCarte = 'pret' | 'a-verifier' | 'neutre'
@@ -48,7 +49,7 @@ function Jauge({ libelle, rempli, total }: { libelle: string } & NonNullable<Car
 
 /**
  * Une désignation longue dans une carte : texte normal, coupé à deux lignes par le style seulement (le texte entier reste dans la
- * page pour le lecteur d'écran), le texte entier au survol (`title`). Quand la coupure a vraiment lieu (mesurée), la ligne devient
+ * page pour le lecteur d'écran). Quand la coupure a vraiment lieu (mesurée), la ligne devient
  * un bouton : un appui l'ouvre et la referme (`aria-expanded`), cible de 44 px sur écran tactile.
  */
 function DesignationCarte({ texte }: { texte: string }) {
@@ -67,12 +68,11 @@ function DesignationCarte({ texte }: { texte: string }) {
     return () => obs.disconnect()
   }, [texte, ouvert, cliquable])
   const contenu = <span ref={ligne} className={cn('block break-words', !ouvert && 'line-clamp-2')}>{texte}</span>
-  if (!cliquable) return <p className="text-sm text-fg" title={texte}>{contenu}</p>
+  if (!cliquable) return <p className="text-sm text-fg">{contenu}</p>
   return (
     <button
       type="button"
       aria-expanded={ouvert}
-      title={ouvert ? undefined : texte}
       onClick={() => setOuvert((v) => !v)}
       className="block w-full min-w-0 rounded-xs text-left text-sm text-fg [@media(pointer:coarse)]:min-h-11"
     >
@@ -90,9 +90,7 @@ function SourceCarte({ source }: { source: SourceEtat }) {
     <p className="flex flex-wrap items-center gap-x-2 border-t border-bord-2 pt-2 text-sm text-fg-2">
       <span>Source : {source.libelle}</span>
       {source.onVoir && (
-        <button type="button" onClick={source.onVoir} className="inline-flex min-h-9 items-center rounded-xs font-medium text-accent-text hover:underline [@media(pointer:coarse)]:min-h-11">
-          Voir dans le dossier
-        </button>
+        <Bouton variante="lien" onClick={source.onVoir}>Voir dans le dossier</Bouton>
       )}
     </p>
   )

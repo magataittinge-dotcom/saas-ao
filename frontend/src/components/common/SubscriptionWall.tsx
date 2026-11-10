@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Bouton } from '@/components/ui/bouton'
-import { createPortal } from 'react-dom'
-import { X, Sparkles } from 'lucide-react'
+import { Dialogue } from '@/components/ui/dialogue'
+import { Message } from '@/components/ui/message'
 import { api } from '@/services/api'
 import GrilleOffres from '@/components/offres/GrilleOffres'
 
@@ -35,101 +35,21 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis', 
     }
   }
 
-  if (!open) return null
-
-  return createPortal(
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        zIndex: 9999,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '16px',
-        overflow: 'hidden',
-      }}
-    >
-      {/* Backdrop */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'color-mix(in srgb, var(--surface-0) 90%, transparent)',
-          backdropFilter: 'none',
-        }}
-        onClick={onClose}
+  // Le mur d'abonnement est un Dialogue du système (grand) : Échap, clic sur le voile, piège et retour du focus par Radix.
+  // Aucun aplat dans la grille : chaque offre a un bouton au trait (le choix revient à l'utilisateur, aucune n'est poussée).
+  return (
+    <Dialogue ouvert={open} onOuvert={(o) => { if (!o) onClose() }} taille="grand" titre="Passez au niveau supérieur"
+      description={message ?? `${FEATURE_LABELS[feature] ?? 'Cette fonctionnalité'} demande une offre active. Choisissez celle qui suit votre rythme.`}>
+    <GrilleOffres
+        compacte
+        action={(offre) => (
+          <Bouton large onClick={() => handleSubscribe(offre.id)} enCours={loading === offre.id} libelleEnCours="Ouverture du paiement…">
+            {`Choisir ${offre.nom}`}
+          </Bouton>
+        )}
       />
-
-      {/* Modal */}
-      <div
-        className="relative w-full max-w-3xl animate-fade-in overflow-y-auto"
-        style={{
-          background: 'var(--edge-panel-light), var(--edge-panel)',
-          backdropFilter: 'blur(32px) saturate(140%)',
-          border: '1px solid var(--border-1)',
-          borderRadius: '24px',
-          boxShadow: '0 0 80px color-mix(in srgb, var(--text-1) 8%, transparent), 0 24px 60px color-mix(in srgb, var(--surface-dark) 45%, transparent)',
-          maxHeight: '95vh',
-        }}
-      >
-        {/* Close */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 rounded-lg transition-colors hover:bg-surface-1 z-10 text-ds-text-2"
-        >
-          <X size={18} />
-        </button>
-
-        {/* Header */}
-        <div className="text-center px-6 pt-6 pb-1">
-          <div
-            className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3"
-            style={{
-              background: 'linear-gradient(135deg, color-mix(in srgb, var(--text-1) 20%, transparent), color-mix(in srgb, var(--text-1) 10%, transparent))',
-              border: '1px solid var(--border-2)',
-              boxShadow: '0 0 30px color-mix(in srgb, var(--text-1) 15%, transparent)',
-            }}
-          >
-            <Sparkles size={22} className="text-ds-cyan" />
-          </div>
-          <h2 className="text-lg font-semibold text-ds-text">
-            Passez au niveau supérieur
-          </h2>
-          <p role="status" className="text-sm text-ds-text-2 mt-1.5 max-w-lg mx-auto">
-            {message ?? `${FEATURE_LABELS[feature] ?? 'Cette fonctionnalité'} demande une offre active. Choisissez celle qui suit votre rythme.`}
-          </p>
-        </div>
-
-        {/* Offres — la grille unique (lib/offres.ts) */}
-        <div className="px-6 py-5">
-          <GrilleOffres
-            compacte
-            action={(offre) => (
-              <Bouton large onClick={() => handleSubscribe(offre.id)} enCours={loading === offre.id} libelleEnCours="Ouverture du paiement…">
-                {`Choisir ${offre.nom}`}
-              </Bouton>
-            )}
-          />
-          {erreur && (
-            <p role="alert" className="mt-3 text-sm text-center" style={{ color: 'var(--warning-fg)' }}>{erreur}</p>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="text-center px-6 pb-5">
-          <p className="text-xs text-ds-text-3">
-            Annulation possible à tout moment. Facturation mensuelle sans engagement.
-          </p>
-        </div>
-      </div>
-    </div>,
-    document.body,
+        {erreur && <Message ton="erreur">{erreur}</Message>}
+      <p className="text-xs text-fg-3">Annulation possible à tout moment. Facturation mensuelle sans engagement.</p>
+    </Dialogue>
   )
 }
