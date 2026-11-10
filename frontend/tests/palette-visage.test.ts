@@ -167,7 +167,7 @@ test('gamut large : bloc display-p3 gardé par @media et @supports, même teinte
   for (const theme of THEMES) for (const n of ['--accent-fill', '--accent-ring', '--accent-vif']) assert.ok(couleursDe(valeur(theme, n)).every((c) => c.startsWith('#')), `${theme} ${n}`)
 })
 
-test('ombres teintées et filet de lumière : aucun noir neutre, un jeton pour le filet d\'un pixel, une lueur colorée en nuit', () => {
+test('ombres teintées et filet de lumière : aucun noir neutre, un jeton pour le filet d\'un pixel, aucune ombre colorée en nuit hors aurore et visage', () => {
   const css = sansCommentaires(lire('src/styles/theme.css'))
   assert.doesNotMatch(css, /rgba\(0, 0, 0/, 'ombre en noir neutre')
   for (const theme of THEMES) {
@@ -178,7 +178,18 @@ test('ombres teintées et filet de lumière : aucun noir neutre, un jeton pour l
     assert.match(valeur(theme, '--filet-lumiere'), /^rgba\(/)
     assert.match(valeur(theme, '--shadow-cta'), /^inset 0 1px 0 rgba\(255, 255, 255/)
   }
-  assert.match(jetons('dark')['--shadow-cta'], /0 0 0 1px rgba\(var\(--accent-vif-rvb\)/, 'en nuit, le bouton principal éclaire')
+  // P25 : en nuit, le bouton principal n'a ni ombre ni lueur ; il se détache par son aplat et par le filet de lumière d'un pixel
+  assert.equal(jetons('dark')['--shadow-cta'], 'inset 0 1px 0 rgba(255, 255, 255, .22)', 'en nuit, le bouton principal ne porte que son reflet')
+  assert.equal(jetons('dark')['--shadow-halo'], 'none')
+  // … et aucune ombre ni lueur de nuit n'est colorée : l'aurore et le halo du visage (--aurore-glow, --flamme-glow) sont les seules lumières
+  const colorees: string[] = []
+  for (const nom of Object.keys(jetons('dark')).filter((n) => /shadow|glow|halo|lueur/.test(n) && !/^--(aurore|flamme)-/.test(n))) {
+    assert.doesNotMatch(jetons('dark')[nom], /accent/, `nuit ${nom} : teinté par l'accent`)
+    for (const c of couleursDe(valeur('dark', nom))) if (versOklch(c)[1] > 0.04) colorees.push(`nuit ${nom} : ${c}`)
+  }
+  assert.deepEqual(colorees, [])
+  // le clair garde son ombre bleue, décalée et douce, sous le seul bouton principal
+  assert.match(jetons('light')['--shadow-cta'], /0 8px 18px -8px rgba\(var\(--accent-rvb\), \.55\)$/)
   assert.match(jetons('dark')['--shadow-pop'], /inset 0 1px 0 var\(--filet-lumiere\)/)
   // en nuit, les accents sont plus clairs qu'en clair
   for (const j of ['--accent-text', '--accent-ring', '--aurore-mark', '--aurore-ink', ...ETATS.flatMap((k) => [`--${k}-ink`, `--${k}-mark`])]) {

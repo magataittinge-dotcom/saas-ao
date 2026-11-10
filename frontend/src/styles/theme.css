@@ -101,7 +101,7 @@
   --dur-morph: var(--dur-pop);     --dur-reveal-sm: var(--dur-pop); --dur-reveal-lg: var(--dur-pop);
   --ease-reveal: var(--ease-survol);  --ease-pop: var(--ease-survol);  --ease-expo: var(--ease-survol);  --ease-link: var(--ease-survol);
 
-  /* Ombres teintées par l'accent : décalées et douces, le bouton principal seulement (en nuit, une lueur : voir le bloc nuit) */
+  /* Ombres teintées par l'accent : décalées et douces, le bouton principal seulement, en clair seulement (en nuit, aucune : voir le bloc nuit) */
   --shadow-cta: inset 0 1px 0 rgba(255, 255, 255, .28), 0 8px 18px -8px rgba(var(--accent-rvb), .55);
   --shadow-halo: 0 10px 24px -10px rgba(var(--accent-rvb), .45);
 
@@ -214,7 +214,8 @@
 }
 
 /* ── Nuit : elle part des ombres du visage (237,2°), pas du noir. La page est le vide mesuré derrière le visage ;
-   les accents sont plus clairs qu'en clair, la profondeur vient de lumière colorée (lueur, filet) plutôt que d'ombre grise. ── */
+   les accents sont plus clairs qu'en clair, la profondeur vient de surfaces qui s'éclaircissent et d'un filet de lumière,
+   jamais d'une lueur colorée : la seule lumière colorée est l'aurore (et le halo du visage). ── */
 [data-theme="dark"] {
   color-scheme: dark;
 
@@ -277,9 +278,10 @@
   --shadow-toast: 0 2px 6px rgba(var(--ombre-rvb), .45), 0 14px 32px -14px rgba(var(--ombre-rvb), .65), inset 0 1px 0 var(--filet-lumiere);
   --edge-light: inset 0 1px 0 var(--filet-lumiere);
   --bottom-lit: none;
-  /* En nuit, le bouton principal éclaire au lieu de projeter une ombre : lueur de la couleur d'action */
-  --shadow-cta: inset 0 1px 0 rgba(255, 255, 255, .24), 0 0 0 1px rgba(var(--accent-vif-rvb), .35), 0 10px 28px -8px rgba(var(--accent-vif-rvb), .6);
-  --shadow-halo: 0 0 32px -6px rgba(var(--accent-vif-rvb), .5);
+  /* En nuit, le bouton principal n'a ni ombre ni lueur (P25) : il se détache par son aplat et par le reflet d'un pixel.
+     L'aurore et le halo du visage sont les seules lumières colorées de l'écran. */
+  --shadow-cta: inset 0 1px 0 rgba(255, 255, 255, .22);
+  --shadow-halo: none;
 
   --highlight: #5e4b00;
   --highlight-soft: #3d3200;
@@ -444,4 +446,10 @@
   --sidebar-accent-foreground: var(--text-1);
   --sidebar-border: var(--border-1);
   --sidebar-ring: var(--accent-ring);
+}
+
+/* En nuit, les anciennes lueurs s'éteignent aussi (P25) : posé après les alias, qui sont redéclarés dans chaque portée de thème. */
+[data-theme="dark"] {
+  --glow-white: transparent;
+  --edge-glow: none;
 }
