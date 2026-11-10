@@ -40,17 +40,17 @@ function rendre(preparer: (client: QueryClient) => void | Promise<void>) {
 }
 const texte = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/&#x27;/g, "'").replace(/\s+/g, ' ')
 
-test('comptes uniques : le mémoire dit la phrase de Rédiger, une fois dans le résumé et une fois dans sa section', async () => {
+test('comptes uniques : le mémoire dit la phrase de Rédiger, une fois dans le résumé et une fois dans sa section', async () => {
   const html = await rendre((c) => { c.setQueryData(['export-detail', 'ao-1'], DETAIL) })
   const phrase = libellePassagesACompleter(136)!
   assert.equal(phrase, '136 passages à compléter avant le dépôt')
-  assert.equal(html.split(phrase).length - 1, 2, 'résumé et section : la même phrase')
+  assert.equal(html.split(phrase).length - 1, 2, 'résumé et section : la même phrase')
   assert.doesNotMatch(texte(html), /100 %|Aucune partie à refaire/, 'plus de second compte qui dit le contraire')
   assert.equal((html.match(/<h1/g) ?? []).length, 1, 'un seul h1')
   assert.equal((html.match(/data-variante="principal"/g) ?? []).length, 1, 'un seul bouton principal')
 })
 
-test('A11 : une ligne restée vide se dit « à remplir », à l’encre ambre ; jamais « vides » en rouge', async () => {
+test('A11 : une ligne restée vide se dit « à remplir », à l’encre ambre ; jamais « vides » en rouge', async () => {
   const html = await rendre((c) => { c.setQueryData(['export-detail', 'ao-1'], DETAIL) })
   assert.match(html, /<span class="[^"]*text-ambre-ink[^"]*">3 à remplir<\/span>/)
   assert.doesNotMatch(texte(html), /\bvides?\b/)
@@ -58,7 +58,7 @@ test('A11 : une ligne restée vide se dit « à remplir », à l’encre ambre ;
   assert.doesNotMatch(code, /nb_lignes_vides\}[^<]*vides/)
 })
 
-test('pièces demandées : des rangées à filet dans une seule carte, plus une carte par pièce', async () => {
+test('pièces demandées : des rangées à filet dans une seule carte, plus une carte par pièce', async () => {
   const html = await rendre((c) => { c.setQueryData(['export-detail', 'ao-1'], DETAIL) })
   assert.match(html, /<ul aria-label="Pièces demandées">/)
   assert.match(html, /<li class="[^"]*border-t border-bord[^"]*first:border-t-0/)
@@ -66,8 +66,8 @@ test('pièces demandées : des rangées à filet dans une seule carte, plus une 
   assert.doesNotMatch(texte(html), /!/)
 })
 
-test('A12 : la phrase du dépôt donne la date de remise à l’heure de Paris, et se tait sur une date passée', async () => {
-  const debut = 'Dernière étape, hors Synorix : déposez ce dossier sur la plateforme de l’acheteur'
+test('A12 : la phrase du dépôt donne la date de remise à l’heure de Paris, et se tait sur une date passée', async () => {
+  const debut = 'Dernière étape, hors Synorix : déposez ce dossier sur la plateforme de l’acheteur'
   assert.equal(phraseDepot(null), `${debut} avant la date de remise.`)
   assert.equal(phraseDepot({ jour: '12 novembre', heure: '14 h 30', passee: false }), `${debut} avant le 12 novembre à 14 h 30.`)
   assert.equal(phraseDepot({ jour: '12 novembre', heure: null, passee: false }), `${debut} avant le 12 novembre.`)
@@ -79,10 +79,10 @@ test('A12 : la phrase du dépôt donne la date de remise à l’heure de Paris, 
   assert.equal(r.heure, '14 h')
   assert.equal(remiseDe({ date: '2026-04-10', heure: '14h00' }, new Date('2026-11-01T08:00:00'))!.passee, true)
   const html = await rendre((c) => { c.setQueryData(['export-detail', 'ao-1'], DETAIL) })
-  assert.match(html, /<p data-phrase-depot=""[^>]*>Dernière étape, hors Synorix : déposez ce dossier sur la plateforme de l’acheteur avant le 12 novembre[^<]* à 14 h 30\.<\/p>/)
+  assert.match(html, /<p data-phrase-depot=""[^>]*>Dernière étape, hors Synorix : déposez ce dossier sur la plateforme de l’acheteur avant le 12 novembre[^<]* à 14 h 30\.<\/p>/)
 })
 
-test('B1 : « Je l’ai déposé » n’apparaît qu’après un téléchargement du dossier ; le dialogue du socle envoie « soumis »', async () => {
+test('B1 : « Je l’ai déposé » n’apparaît qu’après un téléchargement du dossier ; le dialogue du socle envoie « soumis »', async () => {
   const rien = () => {}
   assert.equal(renderToStaticMarkup(<SuiteDepot telecharge={false} phrase="x" avertissements={[]} onDepose={rien} />), '')
   const apres = renderToStaticMarkup(<SuiteDepot telecharge phrase="Déposez ce dossier." avertissements={['Une pièce écartée']} onDepose={rien} />)
@@ -100,12 +100,12 @@ test('B1 : « Je l’ai déposé » n’apparaît qu’après un téléchargemen
   assert.match(code, /<MettreAJourStatut projet=\{project\} ouvert=\{statutOuvert\} onOuvert=\{setStatutOuvert\} \/>/)
   // le dialogue propose « soumis » pour un AO en cours et l'envoie tel quel au serveur
   const choix = choixStatut('en_cours').find((c) => c.statut === 'soumis')
-  assert.ok(choix, '« Je l’ai déposé » est un choix du dialogue')
+  assert.ok(choix, '« Je l’ai déposé » est un choix du dialogue')
   assert.match(choix!.libelle, /déposé/)
   assert.match(sansCommentaires(lire('src/components/common/MettreAJourStatut.tsx')), /api\.patch\(`\/projects\/\$\{projet\.id\}`, \{ status \}\)/)
 })
 
-test('une panne du serveur n’est jamais un dossier vide : « Réessayer », aucun texte d’état vide, aucun bouton de téléchargement', async () => {
+test('une panne du serveur n’est jamais un dossier vide : « Réessayer », aucun texte d’état vide, aucun bouton de téléchargement', async () => {
   const html = await rendre(async (c) => {
     await c.prefetchQuery({ queryKey: ['export-detail', 'ao-1'], queryFn: () => Promise.reject(new Error('Request failed with status code 500')) })
   })
@@ -118,7 +118,7 @@ test('une panne du serveur n’est jamais un dossier vide : « Réessayer », au
   }
 })
 
-test('AO neuf : chaque section dit ce qui apparaîtra ici ; le bouton attend qu’il y ait un dossier', async () => {
+test('AO neuf : chaque section dit ce qui apparaîtra ici ; le bouton attend qu’il y ait un dossier', async () => {
   const html = await rendre((c) => {
     c.setQueryData(['export-detail', 'ao-1'], {
       ...DETAIL, has_memoire: false, has_dpgf: false, checklist_items: [], pieces_zip: [], memoire_info: null, dpgf_info: null, dpgf_remplie: null,

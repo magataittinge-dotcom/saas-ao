@@ -38,9 +38,9 @@ export interface AccesApercu {
   etat: (rubrique: RubriqueFiche, empreinte: string) => Promise<ReponseEtat>
 }
 
-export const MESSAGE_INDISPONIBLE = 'Aperçu simplifié : le rendu exact est indisponible pour le moment.'
-export const MESSAGE_TARDE = "L'aperçu tarde à s'afficher. Le fichier reste téléchargeable."
-export const MESSAGE_ECHEC = "L'aperçu n'a pas pu être produit pour le moment."
+export const MESSAGE_INDISPONIBLE = 'Aperçu simplifié : le rendu exact est indisponible pour le moment.'
+export const MESSAGE_TARDE = "L’aperçu tarde à s’afficher. Le fichier reste téléchargeable."
+export const MESSAGE_ECHEC = "L’aperçu n’a pas pu être produit pour le moment."
 
 export class ControleurApercu {
   private etat: EtatApercu = ETAT_INITIAL

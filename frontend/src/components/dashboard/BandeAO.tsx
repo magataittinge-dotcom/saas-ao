@@ -61,7 +61,7 @@ export default function BandeAO({ projets, maintenant = new Date(), onStatut, on
       {liste.length === 0 ? (
         passees.length === 0 && (
           <EtatVide titre="Aucun appel d’offres en cours"
-            phrase="Choisissez un avis de la veille, ou déposez le dossier de l’acheteur : Synorix le lit et prépare l’analyse."
+            phrase="Choisissez un avis de la veille, ou déposez le dossier de l’acheteur : Synorix le lit et prépare la décision."
             action={<Bouton onClick={onNouveau}>Nouvel appel d’offres</Bouton>} />
         )
       ) : (

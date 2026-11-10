@@ -8,7 +8,7 @@ import { adresseCartographiable, lireCarteSiege, sourceImage, type ReponseCarteS
 export function CarteSiegeVue({ carte }: { carte: ReponseCarteSiege }) {
   return (
     <figure className="m-0 overflow-hidden rounded-lg border border-bord-2">
-      <img src={sourceImage(carte)} alt="Carte de situation du siège de l'entreprise" className="h-auto w-full" />
+      <img src={sourceImage(carte)} alt="Carte de situation du siège de l’entreprise" className="h-auto w-full" />
       <figcaption className="flex items-start gap-1.5 bg-surface-0 px-3 py-2 text-xs text-fg-3">
         <MapPin size={12} className="mt-0.5 shrink-0" aria-hidden />
         <span>Aperçu de la carte insérée dans vos mémoires techniques. {carte.legende}</span>

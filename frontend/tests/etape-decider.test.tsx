@@ -21,7 +21,7 @@ const faits = construireCarteAO({
   maintenant: new Date(2026, 10, 10, 9),
 })
 
-test('le résumé : remise (date, jour, heure, temps restant, source), date limite des questions, pièces avec jauge, exigences', () => {
+test('le résumé : remise (date, jour, heure, temps restant, source), date limite des questions, pièces avec jauge, exigences', () => {
   const voir = () => undefined
   const cartes = cartesResumeAO(faits, { total: 62, obligatoires: 41 }, voir, DATE_RELATIVE)
   assert.deepEqual(cartes.map((c) => c.libelle), ['Remise des offres', 'Questions à l’acheteur jusqu’au', 'Pièces à joindre', 'Exigences relevées'])
@@ -34,19 +34,19 @@ test('le résumé : remise (date, jour, heure, temps restant, source), date limi
   assert.deepEqual([pieces.valeur, pieces.jauge], ['2', { rempli: 1, total: 3 }])
   assert.equal(exigences.valeur, '62')
   const html = renderToStaticMarkup(<BandeResume cartes={cartes} />)
-  assert.match(html, /Source : RC-demo\.pdf · page 4/)
+  assert.match(html, /Source : RC-demo\.pdf · page 4/)
   assert.match(html, /Voir dans le dossier/)
   // date des questions illisible : « À vérifier dans le règlement », jamais une date inventée
   const inconnue = cartesResumeAO(faits, null, voir, { ...DATE_RELATIVE, statut: 'a_verifier', date: null, document: null, extrait: null })
   assert.deepEqual(inconnue.find((c) => c.libelle.startsWith('Questions'))?.valeur, 'À vérifier dans le règlement')
 })
 
-test('sans remise lisible : « À vérifier dans le règlement », jamais une date inventée ; sans pièces ni exigences : pas de carte vide', () => {
+test('sans remise lisible : « À vérifier dans le règlement », jamais une date inventée ; sans pièces ni exigences : pas de carte vide', () => {
   const cartes = cartesResumeAO([], null)
   assert.deepEqual(cartes.map((c) => [c.libelle, c.valeur, c.etat]), [['Remise des offres', 'À vérifier dans le règlement', 'a-verifier']])
 })
 
-test('« À vérifier avant de vous engager » : chaque point avec sa source, les pénalités en une ligne et un lien', () => {
+test('« À vérifier avant de vous engager » : chaque point avec sa source, les pénalités en une ligne et un lien', () => {
   const exigences = [
     { exigence_text: 'Les variantes sont interdites.', source_document: 'RC-demo.pdf', source_page: 7, source_excerpt: 'Les variantes ne sont pas admises.' },
     { exigence_text: 'Une retenue de garantie est opérée.', source_document: 'CCAP-demo.pdf', source_page: 12, source_excerpt: null },
@@ -79,18 +79,18 @@ test('« À vérifier avant de vous engager » : chaque point avec sa source, le
   assert.equal(sourceParMots([], /x/), null)
 })
 
-const POINT = { question: 'Pourriez-vous préciser le phasage retenu pour fixer le délai d’exécution ?', pourquoi: 'Le délai dépend d’un phasage non décrit.', source_document: 'RC-demo.pdf', source_page: 4, extrait: 'le délai est à préciser selon le phasage' }
+const POINT = { question: 'Pourriez-vous préciser le phasage retenu pour fixer le délai d’exécution ?', pourquoi: 'Le délai dépend d’un phasage non décrit.', source_document: 'RC-demo.pdf', source_page: 4, extrait: 'le délai est à préciser selon le phasage' }
 const PREP = { onPreparer: () => undefined, enCours: false, erreur: null }
 
-test('le texte à copier : poli, sans le « pourquoi », avec la référence du dossier', () => {
+test('le texte à copier : poli, sans le « pourquoi », avec la référence du dossier', () => {
   const t = texteACopier(POINT)
   assert.match(t, /^Bonjour,\n\nPourriez-vous préciser/)
-  assert.match(t, /\(Référence : RC-demo\.pdf, page 4\.\)/)
+  assert.match(t, /\(Référence : RC-demo\.pdf, page 4\.\)/)
   assert.match(t, /Merci par avance de votre réponse\.$/)
   assert.ok(!t.includes('Le délai dépend'))
 })
 
-test('la date limite des questions : calculée avec sa règle, ou « À vérifier dans le règlement »', () => {
+test('la date limite des questions : calculée avec sa règle, ou « À vérifier dans le règlement »', () => {
   assert.deepEqual(libelleDateQuestions(DATE_RELATIVE), { libelle: 'Date limite des questions', valeur: 'vendredi 12 mars 2027', precision: '10 jours avant la remise des offres' })
   const absente: DateQuestions = { statut: 'a_verifier', regle: null, date: null, heure: null, jours: null, document: null, extrait: null, motif: 'Aucune date…' }
   assert.equal(libelleDateQuestions(absente).valeur, 'À vérifier dans le règlement')
@@ -99,7 +99,7 @@ test('la date limite des questions : calculée avec sa règle, ou « À vérifie
   assert.match(libelleDateQuestions(formule).precision ?? '', /formule/)
 })
 
-test('points à éclaircir : invitation sans unité décomptée, puis questions sourcées avec « Copier », ou « rien à poser »', () => {
+test('points à éclaircir : invitation sans unité décomptée, puis questions sourcées avec « Copier », ou « rien à poser »', () => {
   const avant = renderToStaticMarkup(<PointsAEclaircirVue points={undefined} date={DATE_RELATIVE} preparation={PREP} />)
   assert.match(avant, /Préparer les questions/)
   assert.match(avant, /Ne décompte aucune unité/)
@@ -110,10 +110,10 @@ test('points à éclaircir : invitation sans unité décomptée, puis questions 
   assert.match(enCours, /aria-busy="true"/)
   assert.match(enCours, /Vous pouvez rester sur cette page/)
 
-  const avec = renderToStaticMarkup(<PointsAEclaircirVue points={[POINT, { ...POINT, question: 'Pourriez-vous confirmer la durée du préavis avant intervention ?', source_page: null }]} date={DATE_RELATIVE} onVoir={() => undefined} preparation={PREP} />)
+  const avec = renderToStaticMarkup(<PointsAEclaircirVue points={[POINT, { ...POINT, question: 'Pourriez-vous confirmer la durée du préavis avant intervention ?', source_page: null }]} date={DATE_RELATIVE} onVoir={() => undefined} preparation={PREP} />)
   assert.equal((avec.match(/data-point-a-eclaircir/g) ?? []).length, 2)
-  assert.match(avec, /Source : RC-demo\.pdf · page 4/)
-  assert.match(avec, /Source : RC-demo\.pdf</)
+  assert.match(avec, /Source : RC-demo\.pdf · page 4/)
+  assert.match(avec, /Source : RC-demo\.pdf</)
   assert.equal((avec.match(/Copier la question/g) ?? []).length, 2)
   assert.doesNotMatch(avec, /Préparer les questions/)
 
@@ -121,20 +121,20 @@ test('points à éclaircir : invitation sans unité décomptée, puis questions 
   assert.match(vide, /rien à poser à l’acheteur/)
 })
 
-test('l’écran Décider passe par le gabarit : une seule action principale en tête, les sections dans l’ordre, aucun doublon des pénalités', () => {
+test('l’écran Décider passe par le gabarit : une seule action principale en tête, les sections dans l’ordre, aucun doublon des pénalités', () => {
   const code = sansCommentaires(lire('src/routes/project/StepAnalysis.tsx'))
   assert.match(code, /<GabaritEtape\s+titre="Décider"/)
   assert.equal((code.match(/actionPrincipale=/g) ?? []).length, 1)
   // A2 — l'ordre de la décision : le marché, à vérifier, la décision, trésorerie et calendrier, points à éclaircir, exigences
   const ordre = ['libelle="L’AO en 30 secondes"', 'Le marché en bref', '<AVerifierAvantEngagement', 'titre="Décision"', 'Trésorerie et calendrier', '<PointsAEclaircir ', 'Les exigences du dossier'].map((m) => code.indexOf(m))
-  assert.ok(ordre.every((n, i) => n > 0 && (i === 0 || n > ordre[i - 1])), `ordre des sections : ${ordre}`)
+  assert.ok(ordre.every((n, i) => n > 0 && (i === 0 || n > ordre[i - 1])), `ordre des sections : ${ordre}`)
   // A1 — l'action de l'en-tête est la décision : « On y va », la vraie ellipse pendant la validation, puis « Passer aux pièces »
   assert.match(code, /<Bouton variante="principal" onClick=\{handleValidate\} enCours=\{isValidating\} libelleEnCours="Validation…">\s*\{isStepAlreadyDone \? 'Passer aux pièces' : 'On y va'\}/)
   assert.doesNotMatch(code, /Sparkles|Validation\.\.\./)
   // A15 — catégories d'exigences repliables, annoncées ; tableau du système (pages de 50) ; filtre par catégorie en puces
   assert.match(code, /aria-expanded=\{open\} aria-controls=\{idContenu\}/)
   assert.match(code, /<div id=\{idContenu\} hidden=\{!open\}>/)
-  assert.match(code, /<Tableau\s+libelle=\{`Exigences : \$\{CATEGORY_LABELS\[category\]\}`\}/)
+  assert.match(code, /<Tableau\s+libelle=\{`Exigences : \$\{CATEGORY_LABELS\[category\]\}`\}/)
   assert.match(code, /<PuceFiltre/)
   // les états : l'erreur dit son erreur (plus de fenêtre « Analyse… 0 % »), l'attente est dans la page
   assert.match(code, /requeteExigences\.isError && requeteExigences\.data === undefined\) return \(\s*<GabaritEtape[^>]*>\s*<EtatErreur/)
@@ -148,28 +148,28 @@ test('l’écran Décider passe par le gabarit : une seule action principale en 
   }
 })
 
-test('réponse de l’acheteur N jours avant la remise : « Réponses de l’acheteur jusqu’au », « Posez vos questions avant cette date », source du règlement', () => {
+test('réponse de l’acheteur N jours avant la remise : « Réponses de l’acheteur jusqu’au », « Posez vos questions avant cette date », source du règlement', () => {
   const reponse: DateQuestions = { ...DATE_RELATIVE, regle: 'reponse_acheteur', date: '2027-03-16', jours: 6 }
   const l = libelleDateQuestions(reponse)
   assert.equal(l.libelle, 'Réponses de l’acheteur jusqu’au')
   assert.equal(l.valeur, 'mardi 16 mars 2027')
-  assert.match(l.precision ?? '', /^Posez vos questions avant cette date : l’acheteur répond 6 jours avant la remise des offres\.$/)
+  assert.match(l.precision ?? '', /^Posez vos questions avant cette date : l’acheteur répond 6 jours avant la remise des offres\.$/)
   const html = renderToStaticMarkup(<PointsAEclaircirVue points={[]} date={reponse} onVoir={() => undefined} preparation={PREP} />)
   assert.match(html, /Réponses de l’acheteur jusqu’au/)
   assert.match(html, /Posez vos questions avant cette date/)
-  assert.match(html, /Source : RC-demo\.pdf/)
+  assert.match(html, /Source : RC-demo\.pdf/)
   const carte = cartesResumeAO([], null, undefined, reponse).find((c) => c.libelle.startsWith('Réponses'))
   assert.equal(carte?.valeur, '16 mars 2027')
 })
 
 // ── Mission finale (10/11) : les cartes de Décider sont celles du système ──
-test('Décider : décision, trésorerie et rétro-planning en Carte du système ; un seul aplat (l’en-tête) ; sigles expliqués (A3)', () => {
+test('Décider : décision, trésorerie et rétro-planning en Carte du système ; un seul aplat (l’en-tête) ; sigles expliqués (A3)', () => {
   const cartes = ['SynorixScoreCard', 'TresorerieCard', 'RetroPlanning', 'AVerifierAvantEngagement', 'CarteAO30s'].map((f) => `src/components/project/${f}.tsx`)
   for (const f of cartes) {
     assert.doesNotMatch(sansCommentaires(lire(f)), /<button\b|style=\{\{|glass-card|glass-btn|microlabel|uppercase|font-mono|title=/, f)
   }
   const decision = sansCommentaires(lire('src/components/project/SynorixScoreCard.tsx'))
-  assert.doesNotMatch(decision, /variante="principal"/, '« On y va » de la carte est au trait : l’aplat est dans l’en-tête')
+  assert.doesNotMatch(decision, /variante="principal"/, '« On y va » de la carte est au trait : l’aplat est dans l’en-tête')
   assert.match(decision, /<Sigle code="DCE" \/>/)
   assert.match(sansCommentaires(lire('src/components/project/TresorerieCard.tsx')), /<Sigle code="CCAP" \/>/)
   assert.match(sansCommentaires(lire('src/components/project/RetroPlanning.tsx')), /<Sigle code="RC" \/>/)

@@ -9,7 +9,7 @@ import { statutPiece, type EntreeStatutPiece, type StatutPiece } from '@/lib/sta
 const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''}`
 
 export function resumeExigences(total: number, avecSource: number, confirmees: number): string {
-  if (total === 0) return "Les exigences apparaissent après l'analyse du dossier"
+  if (total === 0) return "Les exigences apparaissent après la lecture du dossier"
   let texte = `${pluriel(total, 'exigence')} ${total > 1 ? 'relevées' : 'relevée'}`
   if (avecSource >= total) texte += total > 1 ? ', chacune avec sa source' : ', avec sa source'
   if (confirmees > 0) texte += `, dont ${confirmees} ${confirmees > 1 ? 'confirmées' : 'confirmée'} par vous`
@@ -94,7 +94,7 @@ export function pieceDemandee(p: EtatPieceEntree, echeance?: string | null): boo
  * de remise est derrière nous (la coquille de l'AO le dit déjà : la phrase ne redonne pas une date dépassée).
  */
 export function phraseDepot(remise: { jour: string; heure?: string | null; passee: boolean } | null): string {
-  const debut = 'Dernière étape, hors Synorix : déposez ce dossier sur la plateforme de l’acheteur'
+  const debut = 'Dernière étape, hors Synorix : déposez ce dossier sur la plateforme de l’acheteur'
   if (!remise || !remise.jour) return `${debut} avant la date de remise.`
   if (remise.passee) return `${debut}.`
   return `${debut} avant le ${remise.jour}${remise.heure ? ` à ${remise.heure}` : ''}.`

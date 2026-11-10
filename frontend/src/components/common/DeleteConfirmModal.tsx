@@ -42,14 +42,14 @@ export function DeleteConfirmContenu({ title, detail, libelleConfirmer, enCours,
  * ALIAS MINCE. La confirmation de suppression est le `DialogueConfirmation` du système (components/ui/dialogue.tsx), en
  * variante « danger » : Échap, clic sur le voile, piège et retour du focus fournis par Radix. Monté = ouvert.
  */
-export default function DeleteConfirmModal({ title = "Supprimer cet appel d'offres ?", detail, libelleConfirmer = 'Supprimer', onConfirm, onCancel }: Props) {
+export default function DeleteConfirmModal({ title = "Supprimer cet appel d’offres ?", detail, libelleConfirmer = 'Supprimer', onConfirm, onCancel }: Props) {
   const [enCours, setEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
   const confirmer = async () => {
     setEnCours(true)
     setErreur(null)
     try { await onConfirm() }
-    catch (err) { setErreur(await messageErreur(err, "La suppression n'a pas abouti. Réessayez.")) }
+    catch (err) { setErreur(await messageErreur(err, "La suppression n’a pas abouti. Réessayez.")) }
     finally { setEnCours(false) }
   }
   return (

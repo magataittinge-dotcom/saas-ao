@@ -20,21 +20,21 @@ const DONNEES: ReponseRelecture = {
   ],
 }
 
-test('la liste : une ligne par point, mots positifs, jamais de mot négatif', () => {
+test('la liste : une ligne par point, mots positifs, jamais de mot négatif', () => {
   const html = rendre(DONNEES)
   assert.equal((html.match(/data-ligne=/g) ?? []).length, 3)
   for (const mot of ['À couvrir', 'À compléter', 'Hors liste autorisée']) assert.ok(html.includes(mot), mot)
   assert.doesNotMatch(html, /manquant|incomplet|absent|!/i)
 })
 
-test('chaque ligne renvoie à sa partie du mémoire ; « Voir dans le dossier » seulement avec une source', () => {
+test('chaque ligne renvoie à sa partie du mémoire ; « Voir dans le dossier » seulement avec une source', () => {
   const html = rendre(DONNEES)
-  assert.equal((html.match(/Aller à : /g) ?? []).length, 2)               // la ligne de la page de garde n'a pas de partie
+  assert.equal((html.match(/Aller à : /g) ?? []).length, 2)               // la ligne de la page de garde n'a pas de partie
   assert.equal((html.match(/Voir dans le dossier/g) ?? []).length, 1)     // une seule ligne a une source
   assert.match(html, /href="\/company\?rubrique=identite"/)
 })
 
-test('tout va bien : une phrase sobre, aucune liste', () => {
+test('tout va bien : une phrase sobre, aucune liste', () => {
   const html = rendre({ lignes: [], nombre: 0, message: 'Le mémoire nomme chaque sous-critère.', pages_estimees: 10, limite_pages: null })
   assert.match(html, /Le mémoire nomme chaque sous-critère\./)
   assert.doesNotMatch(html, /data-ligne=/)
@@ -42,7 +42,7 @@ test('tout va bien : une phrase sobre, aucune liste', () => {
 
 test('le résumé du bouton', () => {
   assert.equal(resumeRelecture(null), 'Relire mon mémoire')
-  assert.equal(resumeRelecture({ nombre: 0 }), 'Relu : rien à reprendre')
+  assert.equal(resumeRelecture({ nombre: 0 }), 'Relu : rien à reprendre')
   assert.equal(resumeRelecture({ nombre: 1 }), '1 point à reprendre')
   assert.equal(resumeRelecture({ nombre: 4 }), '4 points à reprendre')
 })

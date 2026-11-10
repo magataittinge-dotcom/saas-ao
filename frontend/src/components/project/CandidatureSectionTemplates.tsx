@@ -150,7 +150,7 @@ function TemplateRow({
       {item.details && item.details.trim() !== label && !/^[a-z0-9_-]+$/i.test(item.details.trim()) && (
         <p className="text-sm leading-relaxed text-fg-3">{item.details}</p>
       )}
-      {item.source_in_rc && <p className="text-sm italic text-fg-3">« {item.source_in_rc} »</p>}
+      {item.source_in_rc && <p className="text-sm italic text-fg-3">«&nbsp;{item.source_in_rc}&nbsp;»</p>}
       {error && <Message ton="erreur" onFermer={() => setError(null)}>{error}</Message>}
 
       <div className="mt-auto grid gap-3 border-t border-bord pt-3">

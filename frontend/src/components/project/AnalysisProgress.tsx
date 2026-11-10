@@ -11,18 +11,18 @@ export interface ProgressStage {
 }
 
 const DEFAULT_STAGES: ProgressStage[] = [
-  { upTo: 20, message: 'Extraction du texte...', msPerStep: 120 },
-  { upTo: 60, message: 'Analyse IA en cours...', msPerStep: 380 },
-  { upTo: 90, message: 'Extraction des exigences...', msPerStep: 300 },
-  { upTo: 99, message: 'Finalisation...', msPerStep: 2800 },
+  { upTo: 20, message: 'Extraction du texte…', msPerStep: 120 },
+  { upTo: 60, message: 'Lecture en cours…', msPerStep: 380 },
+  { upTo: 90, message: 'Relevé des exigences…', msPerStep: 300 },
+  { upTo: 99, message: 'Finalisation…', msPerStep: 2800 },
 ]
 
 export const MEMOIRE_STAGES: ProgressStage[] = [
-  { upTo: 5,  message: 'Lecture des documents de l\'acheteur...', msPerStep: 300 },
-  { upTo: 15, message: 'Analyse du contexte projet...', msPerStep: 800 },
-  { upTo: 70, message: 'Rédaction par Synorix IA...', msPerStep: 1800 },
-  { upTo: 90, message: 'Structuration des sections...', msPerStep: 2200 },
-  { upTo: 99, message: 'Finalisation du mémoire...', msPerStep: 6000 },
+  { upTo: 5,  message: 'Lecture des documents de l’acheteur…', msPerStep: 300 },
+  { upTo: 15, message: 'Lecture du contexte du chantier…', msPerStep: 800 },
+  { upTo: 70, message: 'Rédaction par Synorix…', msPerStep: 1800 },
+  { upTo: 90, message: 'Mise en ordre des parties…', msPerStep: 2200 },
+  { upTo: 99, message: 'Finalisation du mémoire…', msPerStep: 6000 },
 ]
 
 /** Seconds before showing "taking longer than expected" hint */
@@ -49,7 +49,7 @@ export function AnalysisProgress({
   onComplete,
   onCancel,
   stages = DEFAULT_STAGES,
-  subtitle = "L'IA analyse les documents de l'acheteur...",
+  subtitle = 'Synorix lit les documents de l’acheteur…',
   preparation = null,
 }: Props) {
   const [progress, setProgress] = useState(0)
@@ -93,7 +93,7 @@ export function AnalysisProgress({
     const pct = Math.round((preparation!.extracted / Math.max(preparation!.total, 1)) * 100)
     const displayPct = Math.min(Math.round(pct * 0.15), 15)
     setProgress(displayPct)
-    setMessage(`Préparation des documents... ${preparation!.extracted}/${preparation!.total} prêts`)
+    setMessage(`Préparation des documents… ${preparation!.extracted}/${preparation!.total} prêts`)
   }, [isAnalyzing, preparation, prepDone])
 
   // ── Analysis phase: animated fake progress ────────────────────────────────
@@ -185,9 +185,9 @@ export function AnalysisProgress({
           {!showCheck && (
             <p className="text-sm text-ds-text-2">
               {!prepDone
-                ? 'Extraction en cours, veuillez patienter...'
+                ? 'Préparation des pièces en cours…'
                 : isSlow
-                  ? "L'analyse prend plus de temps que prévu. Veuillez patienter..."
+                  ? 'La lecture prend plus de temps que prévu. Elle continue, rien n’est perdu.'
                   : subtitle}
             </p>
           )}

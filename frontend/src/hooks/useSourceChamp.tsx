@@ -41,7 +41,7 @@ export function useSourceChamp(projectId: string): { ouvrir: (source: SourceCham
       })
       setAvis(null)
     } catch {
-      setAvis({ message: "Le document source n'a pas pu s'ouvrir.", relancer: () => { void ouvrir(src) } })
+      setAvis({ message: "Le document source n’a pas pu s’ouvrir.", relancer: () => { void ouvrir(src) } })
     }
   }, [pieces])
 

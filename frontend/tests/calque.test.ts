@@ -11,7 +11,7 @@ import { lire, sansCommentaires } from './outils/sources'
 import { contrasteJetons, type Theme } from './outils/jetons'
 import { ACCES_PALETTE, BARRE, ENTREES_TIROIR, ONGLETS_TEL } from '@/components/layout/navigation'
 
-test('Calque : chaque couleur de texte atteint 4,5:1 sur les fonds où elle se pose, en clair comme en nuit', () => {
+test('Calque : chaque couleur de texte atteint 4,5:1 sur les fonds où elle se pose, en clair comme en nuit', () => {
   const paires: [string, string[]][] = [
     ['encre', ['papier', 'surface', 'surface-2', 'prusse-50', 'attention-fond']],
     ['encre-2', ['papier', 'surface', 'surface-2']],
@@ -61,7 +61,7 @@ const FICHIERS_CALQUE = [
   'src/components/onboarding/FirstAOWelcome.tsx',
 ]
 
-test('coquille et tableau de bord : aucune couleur écrite en dur, tout passe par les jetons', () => {
+test('coquille et tableau de bord : aucune couleur écrite en dur, tout passe par les jetons', () => {
   const enDur = FICHIERS_CALQUE.flatMap((f) => {
     const code = sansCommentaires(lire(f))
     return [...code.matchAll(/#[0-9A-Fa-f]{6}\b|#[0-9A-Fa-f]{3}\b(?![\w-])|rgba?\(|hsla?\(/g)].map((m) => `${f} : ${m[0]}`)
@@ -81,14 +81,14 @@ test('les couleurs Calque de Tailwind renvoient toutes à un jeton défini dans 
   }
 })
 
-test("l'avatar de la barre d'icônes montre la photo du compte, et les initiales sans photo", () => {
+test("l’avatar de la barre d’icônes montre la photo du compte, et les initiales sans photo", () => {
   const code = sansCommentaires(lire('src/components/layout/MenuCompte.tsx'))
   assert.match(code, /const \{ user: compte \} = useUser\(\)/)
   assert.match(code, /const photo = compte\?\.hasImage && compte\.imageUrl !== photoEnEchec \? compte\.imageUrl : null/)
   assert.match(code, /<RondCompte photo=\{photo\} initiale=\{initialeDuPrenom\(prenom\)\} onErreurPhoto=\{\(\) => setPhotoEnEchec\(photo\)\} \/>/)
 })
 
-test('la palette Ctrl K s\'ouvre au clavier et mène partout où mène la navigation (barre d\'icônes, onglets, tiroir)', () => {
+test('la palette Ctrl K s’ouvre au clavier et mène partout où mène la navigation (barre d’icônes, onglets, tiroir)', () => {
   const palette = sansCommentaires(lire('src/components/layout/CommandPalette.tsx'))
   assert.match(palette, /e\.key\.toLowerCase\(\) === 'k' && \(e\.metaKey \|\| e\.ctrlKey\)/)
   assert.match(palette, /aller\(`\/projects\/\$\{p\.id\}`\)/)
@@ -102,9 +102,9 @@ test('la palette Ctrl K s\'ouvre au clavier et mène partout où mène la naviga
   assert.match(entete, /onClick=\{onSearch\}/)
 })
 
-test('coquille : barre d\'icônes flottante, onglets du bas au téléphone (cibles 44 px, place du Cerveau), bandeau, bascule, bouton « Nouvel appel d\'offres »', () => {
+test('coquille : barre d’icônes flottante, onglets du bas au téléphone (cibles 44 px, place du Cerveau), bandeau, bascule, bouton « Nouvel appel d’offres »', () => {
   const rail = sansCommentaires(lire('src/components/layout/Sidebar.tsx'))
-  assert.match(rail, /max-\[768px\]:hidden/, 'barre d\'icônes masquée au téléphone')
+  assert.match(rail, /max-\[768px\]:hidden/, 'barre d’icônes masquée au téléphone')
   assert.match(rail, /<Pastille/)
   const onglets = sansCommentaires(lire('src/components/layout/BarreOnglets.tsx'))
   assert.match(onglets, /max-\[768px\]:flex/)
@@ -116,11 +116,11 @@ test('coquille : barre d\'icônes flottante, onglets du bas au téléphone (cibl
   const entete = sansCommentaires(lire('src/components/layout/Header.tsx'))
   assert.doesNotMatch(entete, /BasculeTheme/, 'le thème vit dans le menu du compte')
   assert.match(sansCommentaires(lire('src/components/layout/MenuCompte.tsx')), /OPTIONS_THEME/)
-  assert.match(entete, /Nouvel appel d&apos;offres/)
+  assert.match(entete, /Nouvel appel d’offres/)
   assert.match(entete, /rounded-pilule/)
   const layout = sansCommentaires(lire('src/components/layout/Layout.tsx'))
-  assert.doesNotMatch(layout, /BandeauNouveau/, 'le bandeau « Nouveau » a quitté la coquille')
+  assert.doesNotMatch(layout, /BandeauNouveau/, 'le bandeau « Nouveau » a quitté la coquille')
   assert.match(layout, /export const PAGES_THEMEES = \['\/dashboard', '\/projects', '\/design'(, '[^']+')*\]/)
   assert.match(layout, /data-theme=\{themee \? undefined : 'dark'\}/)
-  assert.doesNotMatch(sansCommentaires(lire('src/components/layout/BandeauNouveau.tsx')), /!/, 'aucun point d\'exclamation')
+  assert.doesNotMatch(sansCommentaires(lire('src/components/layout/BandeauNouveau.tsx')), /!/, 'aucun point d’exclamation')
 })

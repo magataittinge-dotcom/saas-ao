@@ -8,7 +8,7 @@ import { Message } from '@/components/ui/message'
 
 const FIELD_LABELS: Record<string, string> = {
   activites: 'Activités principales',
-  zone_intervention: "Zone d'intervention",
+  zone_intervention: "Zone d’intervention",
   historique: 'Historique',
   organigramme_description: 'Équipe / effectifs',
   moyens_informatiques: 'Moyens informatiques',
@@ -46,7 +46,7 @@ export default function ProfileFreeTextCard() {
       setProposed(p)
       setIncluded(new Set(Object.keys(p)))
     },
-    onError: () => setError('Le rangement en rubriques n’a pas abouti. Votre texte est gardé : réessayez dans un instant.'),
+    onError: () => setError('Le rangement en rubriques n’a pas abouti. Votre texte est gardé : réessayez dans un instant.'),
   })
 
   const { mutate: apply, isPending: applying, isError: echecApplication } = useMutation({
@@ -73,7 +73,7 @@ export default function ProfileFreeTextCard() {
   if (!proposed) {
     return (
       <div className="grid gap-3">
-        <p className="text-sm text-fg-2">Synorix range votre texte en rubriques ; vous vérifiez avant que rien ne soit écrit.</p>
+        <p className="text-sm text-fg-2">Synorix range votre texte en rubriques ; vous vérifiez avant que rien ne soit écrit.</p>
         <ZoneTexte rows={3} aria-label="Décrire avec vos mots" value={text} onChange={(e) => setText(e.target.value)}
           placeholder="Ex. : On est une entreprise de ravalement à Caen, 8 compagnons, 3 camions benne, 2 échafaudages…" />
         {error && <Message ton="attention">{error}</Message>}

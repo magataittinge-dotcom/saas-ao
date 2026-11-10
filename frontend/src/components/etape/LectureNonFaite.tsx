@@ -28,10 +28,10 @@ export default function LectureNonFaite({ project, titre, utilite, action, libel
       titre={titre}
       utilite={utilite}
       actionPrincipale={<Bouton variante="secondaire" disabled>{action}</Bouton>}
-      resume={<BandeResume libelle="Résumé de l'étape" cartes={cartes} />}
+      resume={<BandeResume libelle="Résumé de l’étape" cartes={cartes} />}
     >
       <Carte className="text-sm text-fg-2" data-lecture-non-faite="">
-        <p>Le dossier n’a pas encore été lu. Cet écran se remplit une fois la lecture faite : il reprend alors ce que dit le règlement.</p>
+        <p>Le dossier n’a pas encore été lu. Cet écran se remplit une fois la lecture faite : il reprend alors ce que dit le règlement.</p>
         <Bouton asChild variante="principal" className="mt-4"><Link to={`/projects/${project.id}/${suite.segment}`}>{suite.verbe}</Link></Bouton>
       </Carte>
     </GabaritEtape>

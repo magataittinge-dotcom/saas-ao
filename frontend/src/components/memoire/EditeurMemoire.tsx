@@ -170,7 +170,7 @@ export default function EditeurMemoire({
         <DialogueConfirmation
           ouvert={confirmerFermeture}
           onOuvert={setConfirmerFermeture}
-          titre="Enregistrer avant de fermer ?"
+          titre="Enregistrer avant de fermer ?"
           description="Des modifications ne sont pas encore enregistrées."
           libelleConfirmer="Enregistrer et fermer"
           libelleAnnuler="Continuer la rédaction"

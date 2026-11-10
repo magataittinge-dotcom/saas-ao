@@ -26,7 +26,7 @@ export function CarteAO30sVue({
               {f.valeur}
               {f.reste && <span className="carte-ao-30s__reste">{f.reste}</span>}
               {f.source && onOpenSource && (
-                <Bouton variante="lien" className="carte-ao-30s__source" aria-label={`Voir dans le dossier : ${f.libelle}`} onClick={() => onOpenSource(f.source as SourceFait)}>
+                <Bouton variante="lien" className="carte-ao-30s__source" aria-label={`Voir dans le dossier : ${f.libelle}`} onClick={() => onOpenSource(f.source as SourceFait)}>
                   Voir dans le dossier
                 </Bouton>
               )}

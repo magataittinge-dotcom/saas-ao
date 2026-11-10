@@ -51,9 +51,9 @@ test('la citation se lit aux lecteurs d\'écran : début et fin du passage annon
   assert.ok(html.includes('Texte exact de la page 7 · cctp.pdf'))
 })
 
-test('niveau « page » : pas de surlignage, « Page citée par l’analyse »', () => {
+test('niveau « page » : pas de surlignage, « Page citée par Synorix »', () => {
   const html = rendre(base({ niveau: 'page', rects: [], citation: null, cadrage: null }))
-  assert.ok(html.includes('Page citée par l’analyse'), html)
+  assert.ok(html.includes('Page citée par Synorix'), html)
   assert.ok(!html.includes('<mark>') && !html.includes('source-surligne'))
   assert.ok(html.includes('Sur la page'), 'la page citée reste montrée')
 })
@@ -112,7 +112,7 @@ test('source d’un champ du bandeau : extrait cité non surligné, pas de loupe
   assert.equal(r.niveau, 'page')
   const html = rendre(r, { exigenceId: null })
   assert.ok(html.includes('Remise des offres avant le 12 mars.') && !html.includes('<mark>'))
-  assert.ok(html.includes('Extrait cité par l’analyse') && html.includes('Page citée par l’analyse'))
+  assert.ok(html.includes('Extrait cité par Synorix') && html.includes('Page citée par Synorix'))
   assert.ok(!html.includes('Sur la page'))
   assert.deepEqual([...html.matchAll(/role="tab"[^>]*>([^<]+)</g)].map((m) => m[1]), ['Passage', 'Document'])
   const sansPage = reponseDeChamp({ id: 'd2', file_name: 'rc.pdf' }, { page: null, excerpt: null }, { pdf: null, origine: '/o' })

@@ -79,7 +79,7 @@ const SceneVisage = forwardRef<VisageAnimeRef, {
   return (
     <section
       ref={scene}
-      aria-label="Synorix et ce qu'il sait de votre entreprise"
+      aria-label="Synorix et ce qu’il sait de votre entreprise"
       onPointerMove={surMouvement}
       onPointerLeave={surSortie}
       className="grid items-center gap-x-10 gap-y-6 lg:grid-cols-[300px_minmax(0,1fr)]"

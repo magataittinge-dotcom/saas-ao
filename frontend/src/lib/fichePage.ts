@@ -7,11 +7,11 @@ import { CHAMP_DE_SECTION, CHAMP_DES_REFERENCES, lienChamp } from '@/lib/entrepr
 /** Une phrase par fiche, dite comme un patron du BTP la comprend : à qui elle se remet, pourquoi, et qu'elle se joint telle quelle. */
 export const A_QUOI_SERT: Record<RubriqueFiche, string> = {
   identite:
-    "Avant d'étudier une candidature, un acheteur veut savoir qui vous êtes : raison sociale, SIRET, siège, dirigeant, chiffres et activités. Cette fiche le dit en une page et se joint telle quelle à votre dossier.",
+    "Avant d’étudier une candidature, un acheteur veut savoir qui vous êtes : raison sociale, SIRET, siège, dirigeant, chiffres et activités. Cette fiche le dit en une page et se joint telle quelle à votre dossier.",
   moyens:
     "Les grandes entreprises demandent vos moyens et vos références avant de vous confier un chantier en sous-traitance. Cette fiche se remet telle quelle.",
   certifications:
-    "Un acheteur public regarde d'abord vos qualifications, vos assurances et les chantiers que vous avez déjà réalisés. Cette fiche les réunit et se joint telle quelle à une candidature.",
+    "Un acheteur public regarde d’abord vos qualifications, vos assurances et les chantiers que vous avez déjà réalisés. Cette fiche les réunit et se joint telle quelle à une candidature.",
 }
 
 export const FORMATS_FICHE: { id: FormatFiche; libelle: string; explication: string }[] = [

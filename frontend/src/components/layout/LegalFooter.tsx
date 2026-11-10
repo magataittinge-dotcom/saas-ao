@@ -22,7 +22,7 @@ export default function LegalFooter({ calque = false }: { calque?: boolean }) {
     >
       <div className={cn('mx-auto flex flex-col items-center justify-between gap-3 px-6 py-4 sm:flex-row', calque ? 'max-w-[1680px]' : 'max-w-6xl')}>
         <span className={cn('text-xs', calque ? 'text-encre-3' : 'text-[var(--ink-3)]')}>
-          © {new Date().getFullYear()} Synorix — Tous droits réservés.
+          © {new Date().getFullYear()} Synorix
         </span>
         <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5">
           {LINKS.map((l) => (

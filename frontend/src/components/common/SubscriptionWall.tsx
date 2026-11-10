@@ -14,8 +14,8 @@ interface Props {
 }
 
 const FEATURE_LABELS: Record<string, string> = {
-  analysis: "L'analyse IA de votre dossier de l'acheteur",
-  memoire: 'La génération du mémoire technique',
+  analysis: 'La lecture du dossier de l’acheteur',
+  memoire: 'La rédaction du mémoire technique',
 }
 
 export default function SubscriptionWall({ open, onClose, feature = 'analysis', message }: Props) {
@@ -30,7 +30,7 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis', 
       window.location.href = data.url
     } catch (e) {
       const detail = (e as { response?: { data?: { detail?: unknown } } }).response?.data?.detail
-      setErreur(typeof detail === 'string' ? detail : "Le paiement n'a pas pu démarrer. Réessayez dans un instant.")
+      setErreur(typeof detail === 'string' ? detail : "Le paiement n’a pas pu démarrer. Réessayez dans un instant.")
       setLoading(null)
     }
   }

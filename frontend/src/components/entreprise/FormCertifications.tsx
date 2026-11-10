@@ -77,7 +77,7 @@ export default function FormCertifications({ donnees, avant, idPanneau, idOnglet
     >
       <ImportDialog ouvert={dialogue} onClose={() => setDialogue(false)} onImported={apresImport} />
 
-      <Groupe titre="Qualifications" aide="Qualibat, Qualifelec… avec leur date de fin : Synorix vous prévient avant l'échéance.">
+      <Groupe titre="Qualifications" aide="Qualibat, Qualifelec… avec leur date de fin : Synorix vous prévient avant l’échéance.">
         <Pleine>
           <EditeurQualifications famille="qualification" lignes={qualifications.lignes} documents={coffre} modifier={qualifications.modifier} ajouter={qualifications.ajouter} retirer={qualifications.retirer} />
         </Pleine>
@@ -112,14 +112,14 @@ export default function FormCertifications({ donnees, avant, idPanneau, idOnglet
         </Pleine>
       </Groupe>
 
-      <Groupe titre={<>Chiffres demandés dans la <Sigle code="DC2" /></>} aide="Les derniers exercices clos : chiffre d'affaires hors taxes et effectif moyen annuel.">
+      <Groupe titre={<>Chiffres demandés dans la <Sigle code="DC2" /></>} aide="Les derniers exercices clos : chiffre d’affaires hors taxes et effectif moyen annuel.">
         <Pleine>
           <div className="space-y-2">
             {ca.map((ligne, i) => (
               <div key={i} className="flex items-center gap-2">
                 <Champ aria-label="Année" className="w-20 shrink-0" placeholder="Année" inputMode="numeric" maxLength={4} value={ligne.annee}
                   onChange={(e) => majCA(i, { annee: e.target.value.replace(/\D/g, '') })} />
-                <Champ aria-label="Chiffre d'affaires hors taxes" placeholder="1 200 000 €" maxLength={40} value={ligne.montant}
+                <Champ aria-label="Chiffre d’affaires hors taxes" placeholder="1 200 000 €" maxLength={40} value={ligne.montant}
                   onChange={(e) => majCA(i, { montant: e.target.value })} />
                 <ChampNombre aria-label="Effectif moyen annuel" placeholder="Effectif" max={999} className="w-24 shrink-0" valeur={ligne.effectif_moyen}
                   onChange={(v) => majCA(i, { effectif_moyen: v })} />
@@ -136,7 +136,7 @@ export default function FormCertifications({ donnees, avant, idPanneau, idOnglet
       </Groupe>
 
       <AfficherPlus>
-        <Groupe titre="Labels" aide="RGE (Qualit'EnR, Qualibat RGE…).">
+        <Groupe titre="Labels" aide="RGE (Qualit’EnR, Qualibat RGE…).">
           <Pleine>
             <EditeurQualifications famille="rge" lignes={qualifications.lignes} documents={coffre} modifier={qualifications.modifier} ajouter={qualifications.ajouter} retirer={qualifications.retirer} />
           </Pleine>
@@ -146,24 +146,24 @@ export default function FormCertifications({ donnees, avant, idPanneau, idOnglet
             <EditeurQualifications famille="systeme_management" lignes={qualifications.lignes} documents={coffre} modifier={qualifications.modifier} ajouter={qualifications.ajouter} retirer={qualifications.retirer} />
           </Pleine>
         </Groupe>
-        <Groupe titre="Le détail de chaque exercice" aide="Chiffre d'affaires du domaine du marché et dates de l'exercice.">
+        <Groupe titre="Le détail de chaque exercice" aide="Chiffre d’affaires du domaine du marché et dates de l’exercice.">
           {ca.map((ligne, i) => (
             <Pleine key={i}>
               <div className={cn(BLOC_LISTE, 'grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(11rem,1fr))]')}>
-                <Field label={`Exercice ${ligne.annee || i + 1} : chiffre d'affaires du domaine`}>
+                <Field label={`Exercice ${ligne.annee || i + 1} : chiffre d’affaires du domaine`}>
                   <Champ maxLength={40} value={ligne.montant_domaine ?? ''} onChange={(e) => majCA(i, { montant_domaine: e.target.value })} />
                 </Field>
-                <Field label="Début de l'exercice">
+                <Field label="Début de l’exercice">
                   <ChampDate valeur={ligne.exercice_debut} onChange={(iso) => majCA(i, { exercice_debut: iso })} />
                 </Field>
-                <Field label="Fin de l'exercice">
+                <Field label="Fin de l’exercice">
                   <ChampDate valeur={ligne.exercice_fin} onChange={(iso) => majCA(i, { exercice_fin: iso })} />
                 </Field>
               </div>
             </Pleine>
           ))}
         </Groupe>
-        <Groupe titre="Un mémoire déjà rédigé ?" aide="Importez-le : Synorix pré-remplit vos rubriques, vous vérifiez puis vous enregistrez.">
+        <Groupe titre="Un mémoire déjà rédigé ?" aide="Importez-le : Synorix pré-remplit vos rubriques, vous vérifiez puis vous enregistrez.">
           <Pleine>
             {importe !== null && (
               <Message ton="succes" className="mb-3" onFermer={() => setImporte(null)}>

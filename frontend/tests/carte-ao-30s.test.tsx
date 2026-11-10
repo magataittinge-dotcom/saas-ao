@@ -53,7 +53,7 @@ test('la carte résume l’AO depuis l’analyse déjà en base, fait par fait',
   assert.equal(f.decision.reste, '2 à confirmer par vous')
 })
 
-test('jamais de montant ni d’avis de prix : le montant estimé n’est pas repris', () => {
+test('jamais de montant ni d’avis de prix : le montant estimé n’est pas repris', () => {
   const texte = JSON.stringify(construireCarteAO(entree()))
   assert.ok(!texte.includes('350 000'), 'le montant du marché ne figure pas dans la carte')
   assert.ok(!/€|euro|trop cher|compétitif|marge|tarif/i.test(texte))
@@ -66,7 +66,7 @@ test('un fait sans donnée n’est pas affiché', () => {
   assert.deepEqual(Object.keys(partiel), ['objet'])
 })
 
-test('temps restant : demain, aujourd’hui avec l’heure, date passée', () => {
+test('temps restant : demain, aujourd’hui avec l’heure, date passée', () => {
   const avec = (date: string, heure: string | null, maintenant: Date) =>
     parId(construireCarteAO({ projet: { echeance: { date, heure } }, maintenant })).remise
   assert.equal(avec('2026-11-11', null, new Date(2026, 10, 10, 9)).reste, 'demain')
@@ -98,12 +98,12 @@ test('date longue en français', () => {
   assert.equal(dateLongue('2027-01-01'), 'vendredi 1 janvier 2027')
 })
 
-test('le rendu : titre, source cliquable, classes sémantiques, aucune couleur en dur', () => {
+test('le rendu : titre, source cliquable, classes sémantiques, aucune couleur en dur', () => {
   const html = renderToStaticMarkup(<CarteAO30sVue faits={construireCarteAO(entree())} onOpenSource={() => {}} />)
   assert.ok(html.includes('L’AO en 30 secondes'))
   assert.ok(html.includes('carte-ao-30s__fait--large'))
   assert.ok(html.includes('carte-ao-30s__valeur--action'))
-  assert.ok(html.includes('aria-label="Voir dans le dossier : Remise des offres"'))
+  assert.ok(html.includes('aria-label="Voir dans le dossier : Remise des offres"'))
   assert.ok(!/style=|#[0-9a-f]{3,8}\b/i.test(html), 'aucun style en ligne ni couleur')
   for (const code of ['CarteAO30s.tsx', '../../lib/carteAO.ts']) {
     const src = code.startsWith('..') ? lire('src/lib/carteAO.ts') : lire(`src/components/project/${code}`)
@@ -111,7 +111,7 @@ test('le rendu : titre, source cliquable, classes sémantiques, aucune couleur e
   }
 })
 
-test('lisible à 390 px : une colonne, pas de défilement horizontal, cibles de 44 px', () => {
+test('lisible à 390 px : une colonne, pas de défilement horizontal, cibles de 44 px', () => {
   const css = lire('src/styles/pieces.css')
   const faits = css.match(/\.carte-ao-30s__faits\s*\{[^}]*\}/)?.[0] ?? ''
   assert.ok(/grid-template-columns:\s*minmax\(0,\s*1fr\)/.test(faits), 'une seule colonne par défaut')

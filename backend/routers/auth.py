@@ -65,7 +65,7 @@ def _verifier_azp(payload: dict) -> None:
     azp = payload["azp"]
     if not isinstance(azp, str) or azp.rstrip("/") not in _origines_autorisees():
         logger.warning("Auth failed: origine du jeton (azp) non autorisée")
-        raise HTTPException(status_code=401, detail="Token invalide")
+        raise HTTPException(status_code=401, detail="Votre session n’est plus reconnue. Reconnectez-vous.")
 
 
 def _decode_clerk_token(token: str) -> dict:
@@ -80,10 +80,10 @@ def _decode_clerk_token(token: str) -> dict:
         )
     except jwt.ExpiredSignatureError:
         logger.warning("Auth failed: token expiré")
-        raise HTTPException(status_code=401, detail="Token expiré")
+        raise HTTPException(status_code=401, detail="Votre session a expiré. Reconnectez-vous.")
     except jwt.InvalidTokenError as e:
         logger.warning(f"Auth failed: token invalide — {type(e).__name__}")
-        raise HTTPException(status_code=401, detail="Token invalide")
+        raise HTTPException(status_code=401, detail="Votre session n’est plus reconnue. Reconnectez-vous.")
     except jwt.PyJWKClientConnectionError as e:
         # JWKS de Clerk injoignable : le jeton n'est pas en cause.
         logger.warning(f"Auth indisponible : JWKS de Clerk injoignable — {type(e).__name__}")
@@ -96,7 +96,7 @@ def _decode_clerk_token(token: str) -> dict:
         # exception n'hérite pas de InvalidTokenError ; sans ce bloc, 500 et
         # pile d'appels dans les journaux, avec le `kid` choisi par l'appelant.
         logger.warning(f"Auth failed: token invalide — {type(e).__name__}")
-        raise HTTPException(status_code=401, detail="Token invalide")
+        raise HTTPException(status_code=401, detail="Votre session n’est plus reconnue. Reconnectez-vous.")
 
     _verifier_azp(payload)
     return payload
@@ -176,7 +176,7 @@ def get_auth_user(
     payload = _decode_clerk_token(credentials.credentials)
     clerk_user_id = payload.get("sub")
     if not clerk_user_id:
-        raise HTTPException(status_code=401, detail="Jeton invalide : identifiant non fourni")
+        raise HTTPException(status_code=401, detail="Votre session n’a pas pu être vérifiée. Reconnectez-vous.")
     user = _sync_clerk_user(clerk_user_id, db)
     # Clé de rate-limit par org (S1.2) — non spoofable (liée au JWT validé),
     # contrairement à l'IP derrière un proxy. Lue par services.rate_limit.
@@ -197,7 +197,7 @@ def get_auth_user_short(
     payload = _decode_clerk_token(credentials.credentials)
     clerk_user_id = payload.get("sub")
     if not clerk_user_id:
-        raise HTTPException(status_code=401, detail="Jeton invalide : identifiant non fourni")
+        raise HTTPException(status_code=401, detail="Votre session n’a pas pu être vérifiée. Reconnectez-vous.")
     db = SessionLocal()
     try:
         user = _sync_clerk_user(clerk_user_id, db)

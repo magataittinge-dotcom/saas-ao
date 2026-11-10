@@ -19,7 +19,7 @@ const page = (props: Partial<Parameters<typeof GabaritEtape>[0]> = {}) => render
   <MemoryRouter>
     <GabaritEtape
       titre="Plan du mémoire"
-      utilite="Choisissez l'ordre des parties avant de rédiger."
+      utilite="Choisissez l’ordre des parties avant de rédiger."
       actionPrincipale={<button type="button" className="signature-btn">Valider le plan</button>}
       actionsSecondaires={<button type="button">Imprimer</button>}
       resume={<BandeResume cartes={CARTES} />}
@@ -31,10 +31,10 @@ const page = (props: Partial<Parameters<typeof GabaritEtape>[0]> = {}) => render
   </MemoryRouter>,
 )
 
-test("l'en-tête porte le titre, une ligne d'utilité et une seule action principale", () => {
+test("l’en-tête porte le titre, une ligne d’utilité et une seule action principale", () => {
   const h = page()
   assert.match(h, /<h1[^>]*titre-page[^>]*>Plan du mémoire<\/h1>/)
-  assert.match(h, /Choisissez l(&#x27;|')ordre des parties avant de rédiger\./)
+  assert.match(h, /Choisissez l’ordre des parties avant de rédiger\./)
   assert.equal((h.match(/data-action-principale/g) ?? []).length, 1)
   assert.equal((h.match(/signature-btn/g) ?? []).length, 1)
 })
@@ -51,7 +51,7 @@ test('le résumé rend une carte par fait, avec pastille, jauge et détail', () 
   assert.equal((h.match(/data-sens=/g) ?? []).length, 2)
 })
 
-test('trois cartes : trois colonnes ; quatre cartes : 2 puis 4 colonnes ; une colonne au téléphone', () => {
+test('trois cartes : trois colonnes ; quatre cartes : 2 puis 4 colonnes ; une colonne au téléphone', () => {
   const trois = renderToStaticMarkup(<BandeResume cartes={CARTES} />)
   assert.match(trois, /md:grid-cols-3/)
   const quatre = renderToStaticMarkup(<BandeResume cartes={[...CARTES, { libelle: 'Total', valeur: '19' }]} />)
@@ -71,22 +71,22 @@ test('les sections ont un sous-titre en capitales (h3) et choisissent leurs colo
   assert.doesNotMatch(une, /md:grid-cols-2/)
 })
 
-test("l'état d'un élément dit un mot, pas seulement une couleur, puis sa source", () => {
+test("l’état d’un élément dit un mot, pas seulement une couleur, puis sa source", () => {
   const voir = () => undefined
   const pret = renderToStaticMarkup(<EtatElement etat="pret" source={{ libelle: 'RC · page 4', onVoir: voir }} />)
   assert.match(pret, /data-etat="pret"/)
   assert.match(pret, />Prêt</)
-  assert.match(pret, /Source : RC · page 4/)
+  assert.match(pret, /Source : RC · page 4/)
   assert.match(pret, /Voir dans le dossier/)
   assert.match(renderToStaticMarkup(<EtatElement etat="a-verifier" />), />À vérifier</)
   assert.match(renderToStaticMarkup(<EtatElement etat="a-couvrir" />), />À couvrir</)
   // sans fonction : la source s'écrit, aucun bouton
   const sans = renderToStaticMarkup(<EtatElement etat="pret" source={{ libelle: 'CCAP · page 2' }} />)
-  assert.match(sans, /Source : CCAP · page 2/)
+  assert.match(sans, /Source : CCAP · page 2/)
   assert.doesNotMatch(sans, /<button/)
 })
 
-test("avec une barre, l'action de l'en-tête s'efface au téléphone ; sans barre, elle reste", () => {
+test("avec une barre, l’action de l’en-tête s’efface au téléphone ; sans barre, elle reste", () => {
   const avec = page({ barre: <BarreEtape><ActionsBarreTel><BoutonSuite etape="Plan" onClick={() => undefined} /></ActionsBarreTel></BarreEtape> })
   assert.match(avec, /data-action-principale="" class="[^"]*max-\[768px\]:hidden/)
   assert.match(avec, /data-barre-etape/)
@@ -94,7 +94,7 @@ test("avec une barre, l'action de l'en-tête s'efface au téléphone ; sans barr
   assert.doesNotMatch(page(), /data-action-principale="" class="[^"]*max-\[768px\]:hidden/)
 })
 
-test('au téléphone : une colonne, boutons de l’en-tête pleine largeur, aucune couleur écrite dans le JSX', () => {
+test('au téléphone : une colonne, boutons de l’en-tête pleine largeur, aucune couleur écrite dans le JSX', () => {
   const h = page()
   assert.match(h, /max-\[768px\]:w-full/)
   for (const f of ['GabaritEtape', 'BandeResume', 'SectionEtape', 'EtatElement']) {

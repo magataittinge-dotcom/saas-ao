@@ -39,14 +39,14 @@ function avecCalculs(locales: PartiePlan[], serveur: PartiePlan[]): PartiePlan[]
   })
 }
 
-const UTILITE = 'Les parties de votre mémoire, avant sa rédaction : retirez, ajoutez, renommez, ordonnez, puis validez.'
+const UTILITE = 'Les parties de votre mémoire, avant sa rédaction : retirez, ajoutez, renommez, ordonnez, puis validez.'
 const OPTIONS_PARTIE = [
   { valeur: 'partie_a', libelle: 'Partie A' },
   { valeur: 'partie_b', libelle: 'Partie B' },
   { valeur: 'partie_c', libelle: 'Partie C' },
 ] as const
 
-const MESSAGE_ECHEC = 'Le plan n’a pas pu être enregistré. Vos modifications restent ici ; réessayez dans un instant.'
+const MESSAGE_ECHEC = 'Le plan n’a pas pu être enregistré. Vos modifications restent ici ; réessayez dans un instant.'
 
 export default function StepPlan({ project }: { project: Project }) {
   const navigate = useNavigate()
@@ -144,7 +144,7 @@ export default function StepPlan({ project }: { project: Project }) {
       <GabaritEtape titre="Plan du mémoire" utilite={UTILITE}>
         <EtatErreur
           titre="Le plan n’a pas pu s’ouvrir"
-          detail="La connexion au serveur a échoué. Votre plan n’est pas touché : il reviendra tel que vous l’avez laissé."
+          detail="La connexion au serveur a échoué. Votre plan n’est pas touché : il reviendra tel que vous l’avez laissé."
           onReessayer={() => { void refetch() }} enCours={isFetching}
         />
       </GabaritEtape>
@@ -180,7 +180,7 @@ export default function StepPlan({ project }: { project: Project }) {
       : { libelle: 'Longueur', valeur: 'Libre', detail: 'Le dossier ne fixe pas de limite de pages.' },
     {
       libelle: 'Fiches remplies', valeur: fiches > 0 ? String(fiches) : libelleFichesRemplies(fiches), rien: 'Aucune' as const,
-      detail: 'Facultatif : le plan se valide sans ouvrir une fiche.',
+      detail: 'Facultatif : le plan se valide sans ouvrir une fiche.',
     },
   ]
 
@@ -196,7 +196,7 @@ export default function StepPlan({ project }: { project: Project }) {
         titre="Plan du mémoire"
         utilite={UTILITE}
         actionPrincipale={actionPrincipale}
-        message={erreur ? <Message ton="erreur">{erreur}</Message> : valideEtAJour ? <Message ton="succes">Le plan est validé : la rédaction le suivra, partie par partie.</Message> : undefined}
+        message={erreur ? <Message ton="erreur">{erreur}</Message> : valideEtAJour ? <Message ton="succes">Le plan est validé : la rédaction le suivra, partie par partie.</Message> : undefined}
         resume={<BandeResume cartes={cartes} libelle="Résumé du plan" />}
         barre={<BarrePlan etat={etat} onValider={() => valider.mutate(parties)} onRediger={versRedaction} />}
       >
@@ -225,7 +225,7 @@ export default function StepPlan({ project }: { project: Project }) {
                         const nouvelle = suivant.find((p) => !parties.some((q) => q.cle === p.cle))
                         if (nouvelle) setOuvertes((o) => new Set(o).add(nouvelle.cle))
                       }}
-                      aria-label={`Ajouter une partie pour ce critère : ${c.nom}`}
+                      aria-label={`Ajouter une partie pour ce critère : ${c.nom}`}
                     >
                       <Plus aria-hidden /> Ajouter une partie pour ce critère
                     </Bouton>
@@ -273,7 +273,7 @@ export default function StepPlan({ project }: { project: Project }) {
         <SectionEtape
           titre="Ajouter une partie"
           description={complet
-            ? `Le plan compte ${MAX_PARTIES} parties, le plus qu’il peut porter : retirez-en une pour en ajouter une autre.`
+            ? `Le plan compte ${MAX_PARTIES} parties, le plus qu’il peut porter : retirez-en une pour en ajouter une autre.`
             : 'Une partie de plus, rattachée à la partie A, B ou C. Vous la renseignez ensuite dans sa fiche.'}
         >
           <form
@@ -288,7 +288,7 @@ export default function StepPlan({ project }: { project: Project }) {
             }}
           >
             <GroupeChamp libelle="Titre de la nouvelle partie">
-              <Champ value={nouveauTitre} maxLength={MAX_TITRE} onChange={(e) => setNouveauTitre(e.target.value)} placeholder="Par exemple : Suivi de chantier connecté" className="h-11" />
+              <Champ value={nouveauTitre} maxLength={MAX_TITRE} onChange={(e) => setNouveauTitre(e.target.value)} placeholder="Par exemple : Suivi de chantier connecté" className="h-11" />
             </GroupeChamp>
             <GroupeChamp libelle="Rattachée à la">
               <ListeDeroulante valeur={nouvellePartie} onChange={(v) => setNouvellePartie(v as PartieId)} options={OPTIONS_PARTIE} />

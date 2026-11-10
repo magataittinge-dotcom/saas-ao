@@ -90,7 +90,7 @@ export function CriticalBannerVue({ data, onOpenSource }: { data: CriticalFields
 
   if (f.date_limite_questions.value) {
     tiles.push(
-      <Tile key="questions" icon={<HelpCircle size={13} />} label="Questions jusqu'au">
+      <Tile key="questions" icon={<HelpCircle size={13} />} label="Questions jusqu’au">
         {formatFr(f.date_limite_questions.value)}
         {' '}<SourceLink source={f.date_limite_questions.source} onOpen={onOpenSource} />
       </Tile>,

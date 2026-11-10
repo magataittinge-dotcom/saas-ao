@@ -87,7 +87,7 @@ function usePreflight(projectId: string) {
 }
 
 /** Durée annoncée de la rédaction : mesurée, environ 3 minutes (169 s sur le dossier de démonstration, recette du 4/11). */
-export const DUREE_REDACTION = 'Rédaction : environ 3 minutes'
+export const DUREE_REDACTION = 'Rédaction : environ 3 minutes'
 
 /** La ligne sous le bouton : où en est le quota, puis la durée. Le coût (1 unité, ou offre illimitée) est dit une fois, dans la carte « Abonnement » (G8). */
 export function ligneQuotaMemoire(plan: string, quota: { used: number; limit: number | null }): string {
@@ -236,7 +236,7 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
         <div>
           <h3 className={TITRE}>Planning prévisionnel (facultatif)</h3>
           <p className="mt-1 text-xs text-fg-3">
-            Saisissez vos phases : un planning de Gantt sera inséré dans le mémoire. Sans phase, le mémoire n’en contient pas.
+            Saisissez vos phases : un planning de Gantt sera inséré dans le mémoire. Sans phase, le mémoire n’en contient pas.
           </p>
         </div>
         {ganttPhases.length > 0 && (
@@ -265,7 +265,7 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
         <section className={SECTION}>
           <div>
             <h3 className={TITRE}>Annexes du coffre-fort (facultatif)</h3>
-            <p className="mt-1 text-xs text-fg-3">Jointes au dossier téléchargé, dans le dossier « Annexes ».</p>
+            <p className="mt-1 text-xs text-fg-3">Jointes au dossier téléchargé, dans le dossier «&nbsp;Annexes&nbsp;».</p>
           </div>
           <ul className="max-h-40 overflow-y-auto">
             {data.vault_documents.map((doc) => (

@@ -95,7 +95,7 @@ export function messageErreur(detail: unknown): string {
   if (Array.isArray(detail) && detail.length) {
     const premier = detail[0] as { loc?: unknown[]; msg?: string }
     const champ = Array.isArray(premier.loc) ? String(premier.loc[premier.loc.length - 1] ?? '') : ''
-    return `Une valeur n'est pas acceptée${champ ? ` (${champ})` : ''}${premier.msg ? ` : ${premier.msg}` : ''}.`
+    return `Une valeur n’est pas acceptée${champ ? ` (${champ})` : ''}${premier.msg ? ` : ${premier.msg}` : ''}.`
   }
-  return "L'enregistrement n'a pas abouti. Réessayez dans un instant."
+  return "L’enregistrement n’a pas abouti. Réessayez dans un instant."
 }

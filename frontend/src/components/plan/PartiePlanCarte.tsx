@@ -70,7 +70,7 @@ export default function PartiePlanCarte({
           className="-ml-2 h-11 min-w-0 flex-1 truncate border-transparent bg-transparent px-2 text-base font-semibold hover:border-bord-champ focus-visible:bg-surface-0"
         />
         {boutonFiche('max-sm:hidden')}
-        <MenuPoints libelle={`Actions : ${nom}`}>
+        <MenuPoints libelle={`Actions : ${nom}`}>
           <MenuElement onSelect={() => { setTimeout(() => { champ.current?.focus(); champ.current?.select() }, 0) }}>
             <Pencil aria-hidden size={16} strokeWidth={1.5} /> Renommer
           </MenuElement>

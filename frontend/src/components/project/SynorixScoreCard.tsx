@@ -77,7 +77,7 @@ export default function SynorixScoreCard({ project, onOpenSource, onYAller, enCo
   return (
     <Carte sansMarge aria-labelledby="fiche-decision-titre" role="group">
       <header className="grid gap-1 border-b border-bord px-5 py-4 sm:px-6">
-        <TitreCarte id="fiche-decision-titre">On y va ?</TitreCarte>
+        <TitreCarte id="fiche-decision-titre">On y va ?</TitreCarte>
         <p className="text-sm text-fg-2">
           Les conditions relevées dans le <Sigle code="DCE" />, comparées à votre profil. La décision vous appartient.
         </p>
@@ -128,7 +128,7 @@ export default function SynorixScoreCard({ project, onOpenSource, onYAller, enCo
             {/* « On y va » est l'action principale de l'en-tête (un seul aplat par écran) ; ici, au trait, là où la décision se lit */}
             <Bouton variante="secondaire" onClick={onYAller} disabled={enCours || changement}>On y va</Bouton>
             <Bouton variante="secondaire" onClick={() => changerStatut('sans_suite')} disabled={enCours || changement}>On passe</Bouton>
-            <p className="min-w-0 flex-1 basis-56 text-sm text-fg-3">« On passe » classe l’appel d’offres sans suite ; vous pourrez le rouvrir.</p>
+            <p className="min-w-0 flex-1 basis-56 text-sm text-fg-3">«&nbsp;On passe&nbsp;» classe l’appel d’offres sans suite ; vous pourrez le rouvrir.</p>
           </>
         )}
       </footer>

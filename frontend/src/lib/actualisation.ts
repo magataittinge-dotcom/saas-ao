@@ -13,6 +13,6 @@ export function messageActualisation(e: EtatActualisation | null): string {
   if (e.etat === 'en_cours') return 'Actualisation…'
   if (e.etat === 'echec') return 'L’actualisation n’a pas abouti. Réessayez dans un instant.'
   return e.avant === e.apres
-    ? `Liste à jour : ${pieces(e.apres)}, rien n’a changé`
-    : `Liste actualisée : ${pieces(e.apres)} au lieu de ${e.avant}`
+    ? `Liste à jour : ${pieces(e.apres)}, rien n’a changé`
+    : `Liste actualisée : ${pieces(e.apres)} au lieu de ${e.avant}`
 }

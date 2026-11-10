@@ -101,7 +101,7 @@ function PageAO({ project }: { project: ProjetAO }) {
       {lecture.action.statut && (
         <Message ton={lecture.etat === 'a_mettre_a_jour' ? 'attention' : 'info'} titre={lecture.etat === 'a_mettre_a_jour' ? 'La date de remise est passée' : 'Le dossier est déposé'} className="mb-6"
           action={<Bouton onClick={() => setStatut(true)}>{lecture.action.verbe}</Bouton>}>
-          {lecture.etat === 'a_mettre_a_jour' ? 'Dites si le dossier a été déposé : cet appel d’offres quittera ceux à suivre.' : 'Indiquez le résultat quand l’acheteur l’annonce.'}
+          {lecture.etat === 'a_mettre_a_jour' ? 'Dites si le dossier a été déposé : cet appel d’offres quittera ceux à suivre.' : 'Indiquez le résultat quand l’acheteur l’annonce.'}
         </Message>
       )}
       <MettreAJourStatut projet={project} ouvert={statut} onOuvert={setStatut} />

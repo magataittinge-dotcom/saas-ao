@@ -56,7 +56,7 @@ export function cartesPreparation(plan: VuePlan | null, techPct: number, illimit
     plan
       ? {
         libelle: 'Plan', valeur: `${plan.resume.parties} parties`, etat: plan.valide ? ETAT_PRET : ETAT_A_VERIFIER,
-        detail: plan.valide ? 'Plan validé : la rédaction le suit.' : 'Plan non validé : le plan du modèle sera suivi.',
+        detail: plan.valide ? 'Plan validé : la rédaction le suit.' : 'Plan non validé : le plan du modèle sera suivi.',
       }
       : { libelle: 'Plan', valeur: 'Plan du modèle', detail: 'Le plan du modèle sera suivi.' },
     techPct > 0
@@ -104,10 +104,10 @@ export function cartesRedaction({ version, completionPct, rattachement, nbARefai
       }
       : { libelle: 'Critères du règlement', valeur: 'Non détaillés', detail: 'Le règlement ne détaille pas de sous-critères.' },
     nbARefaire > 0
-      ? { libelle: 'Parties à refaire', valeur: String(nbARefaire), etat: ETAT_A_VERIFIER, detail: 'Marquées « À refaire » dans le sommaire.' }
+      ? { libelle: 'Parties à refaire', valeur: String(nbARefaire), etat: ETAT_A_VERIFIER, detail: 'Marquées « À refaire » dans le sommaire.' }
       : { libelle: 'Parties à refaire', valeur: 'Aucune', rien: 'Aucune', etat: ETAT_PRET, detail: 'Toutes les parties sont rédigées.' },
     limite
-      ? { libelle: 'Longueur', valeur: `environ ${pages} pages`, etat: pages <= limite ? ETAT_PRET : ETAT_A_VERIFIER, detail: `Limite du dossier : ${limite} pages.` }
+      ? { libelle: 'Longueur', valeur: `environ ${pages} pages`, etat: pages <= limite ? ETAT_PRET : ETAT_A_VERIFIER, detail: `Limite du dossier : ${limite} pages.` }
       : { libelle: 'Longueur', valeur: `environ ${pages} pages`, detail: 'Le dossier ne fixe pas de limite.' },
   ]
 }
@@ -259,7 +259,7 @@ export default function StepMemoire({ project }: Props) {
     },
     onError: (err) => {
       const detail = axios.isAxiosError(err) ? err.response?.data?.detail : null
-      const texte = typeof detail === 'string' ? detail : 'La rédaction n’a pas pu démarrer. Rien n’est décompté ; réessayez dans un instant.'
+      const texte = typeof detail === 'string' ? detail : 'La rédaction n’a pas pu démarrer. Rien n’est décompté ; réessayez dans un instant.'
       // 1.2 — quota appliqué par le serveur : son refus ouvre le choix d'une offre
       if (axios.isAxiosError(err) && err.response?.status === 402) {
         setPaywallMessage(texte)
@@ -375,7 +375,7 @@ export default function StepMemoire({ project }: Props) {
       <GabaritEtape titre={TITRE} utilite="Votre mémoire, partie par partie.">
         <EtatErreur
           titre="Le mémoire n’a pas pu s’ouvrir"
-          detail="La connexion au serveur a échoué. Votre mémoire n’est pas touché : il reviendra tel que vous l’avez laissé."
+          detail="La connexion au serveur a échoué. Votre mémoire n’est pas touché : il reviendra tel que vous l’avez laissé."
           onReessayer={() => { void requeteMemoire.refetch() }} enCours={requeteMemoire.isFetching}
         />
       </GabaritEtape>
@@ -395,7 +395,7 @@ export default function StepMemoire({ project }: Props) {
         {isRunning && (
           <ProgressDisplay
             variant="modal"
-            title="Synorix IA rédige votre mémoire"
+            title="Synorix rédige votre mémoire"
             steps={MEMOIRE_GEN_STEPS}
             currentStep={memoireSse.step}
             progress={memoireSse.progress}
@@ -465,7 +465,7 @@ export default function StepMemoire({ project }: Props) {
       {isRunning && (
         <ProgressDisplay
           variant="modal"
-          title={refaitUnePartie ? 'Synorix IA refait cette partie' : 'Synorix IA rédige votre mémoire'}
+          title={refaitUnePartie ? 'Synorix refait cette partie' : 'Synorix rédige votre mémoire'}
           steps={MEMOIRE_GEN_STEPS}
           currentStep={memoireSse.step}
           progress={memoireSse.progress}
@@ -505,7 +505,7 @@ export default function StepMemoire({ project }: Props) {
         message={genError
           ? <Message ton="erreur" onFermer={() => setGenError(null)}>{genError}</Message>
           : echecRedaction
-            ? <Message ton="erreur">La dernière rédaction n’a pas abouti. Le texte ci-dessous est celui d’avant ; refaites la partie voulue quand vous voulez.</Message>
+            ? <Message ton="erreur">La dernière rédaction n’a pas abouti. Le texte ci-dessous est celui d’avant ; refaites la partie voulue quand vous voulez.</Message>
             : undefined}
         resume={
           <BandeResume

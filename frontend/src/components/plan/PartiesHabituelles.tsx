@@ -12,7 +12,7 @@ export default function PartiesHabituelles({ parties, onAjouter }: { parties: re
   return (
     <SectionEtape
       titre="Parties habituelles, à ajouter si utile"
-      description="Ces parties ne servent aucun sous-critère du règlement et le dossier ne les demande pas : elles restent hors du plan. Ajoutez celles qui servent votre dossier."
+      description="Ces parties ne servent aucun sous-critère du règlement et le dossier ne les demande pas : elles restent hors du plan. Ajoutez celles qui servent votre dossier."
     >
       <Carte sansMarge>
         <ul className="grid min-w-0 md:grid-cols-2 md:gap-x-6" aria-label="Parties habituelles, à ajouter si utile">

@@ -38,7 +38,7 @@ export default function ControlesTexte({ references, breves, onAller, repliable 
             {references.nonRetrouvees.length > 0 && (
               <ul className="mt-1.5 space-y-1">
                 {references.nonRetrouvees.map((r) => (
-                  <li key={r.id} className="text-xs text-fg-3">« {r.intitule} » n’y figure pas telle quelle.</li>
+                  <li key={r.id} className="text-xs text-fg-3">«&nbsp;{r.intitule}&nbsp;» n’y figure pas telle quelle.</li>
                 ))}
               </ul>
             )}
@@ -57,7 +57,7 @@ export default function ControlesTexte({ references, breves, onAller, repliable 
         ) : (
           <>
             <p className="mt-1 text-sm text-fg-2">
-              {breves.length} section{breves.length > 1 ? 's font' : ' fait'} moins de {SEUIL_SECTION_BREVE} mots, à étoffer si besoin :
+              {breves.length} section{breves.length > 1 ? 's font' : ' fait'} moins de {SEUIL_SECTION_BREVE} mots, à étoffer si besoin :
             </p>
             <ul className="mt-1">
               {breves.map((sb) => (

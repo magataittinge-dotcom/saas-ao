@@ -8,7 +8,7 @@ import { Page } from '@/components/ui/page'
 export default function NewProject() {
   return (
     <Page
-      titre="Nouvel appel d'offres"
+      titre="Nouvel appel d’offres"
       sousTitre="Déposez le dossier reçu de l’acheteur, tel que vous l’avez téléchargé. Synorix le range, le lit et vous dit ce que le marché demande."
     >
       <ZoneDepotAO

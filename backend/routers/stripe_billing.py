@@ -102,7 +102,7 @@ def create_checkout_session(
         customer_id = _get_or_create_customer(org, user)
     except BillingError as exc:
         logger.error("Billing customer error for org %s: %s", org.id, exc)
-        raise HTTPException(status_code=502, detail="Erreur du provider de facturation") from exc
+        raise HTTPException(status_code=502, detail="Le service de paiement n’a pas répondu. Réessayez dans un instant.") from exc
 
     if customer_id != org.stripe_customer_id:
         org.stripe_customer_id = customer_id

@@ -320,7 +320,7 @@ export default function CarteFrance({ comptes, selection, onSelection, className
           style={{ aspectRatio: `${VIEWBOX.w} / ${VIEWBOX.h}`, touchAction: zoome ? 'none' : 'pan-y pinch-zoom' }}
           data-deplace={deplace ? '' : undefined}
           role="group"
-          aria-label="Carte de France : choisir un ou plusieurs départements"
+          aria-label="Carte de France : choisir un ou plusieurs départements"
           onPointerDown={surAppui}
           onPointerMove={surMouvement}
           onPointerUp={finGeste}

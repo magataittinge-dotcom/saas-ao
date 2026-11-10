@@ -22,7 +22,7 @@ test('un résultat de l’API Adresse donne la ville et son département', () =>
   assert.equal(villeDepuisAdresse(LYON, 50)!.rayon_km, 50)
 })
 
-test('le contexte « code, nom, région » se lit pour la métropole, la Corse et l’outre-mer ; un code inconnu est refusé', () => {
+test('le contexte « code, nom, région » se lit pour la métropole, la Corse et l’outre-mer ; un code inconnu est refusé', () => {
   assert.deepEqual(departementDepuisContexte('69, Rhône, Auvergne-Rhône-Alpes'), { code: '69', nom: 'Rhône' })
   assert.deepEqual(departementDepuisContexte('2A, Corse-du-Sud, Corse'), { code: '2A', nom: 'Corse-du-Sud' })
   assert.deepEqual(departementDepuisContexte('2b, Haute-Corse, Corse'), { code: '2B', nom: 'Haute-Corse' })
@@ -39,7 +39,7 @@ test('un résultat inexploitable est écarté (sans coordonnées, sans contexte,
   assert.equal(villeDepuisAdresse({ properties: LYON.properties, geometry: { coordinates: [NaN, 1] } }), null)
 })
 
-test('haversine : un degré de latitude vaut environ 111,2 km ; distance nulle sur le même point', () => {
+test('haversine : un degré de latitude vaut environ 111,2 km ; distance nulle sur le même point', () => {
   assert.ok(Math.abs(distanceKm({ lat: 45, lon: 3 }, { lat: 46, lon: 3 }) - 111.19) < 0.1)
   assert.equal(distanceKm({ lat: 45, lon: 3 }, { lat: 45, lon: 3 }), 0)
   assert.ok(Math.abs(distanceKm({ lat: 48.8566, lon: 2.3522 }, { lat: 45.764, lon: 4.8357 }) - 392) < 6, 'Paris-Lyon ≈ 392 km')
@@ -56,20 +56,20 @@ const POINTS = [
 const CENTRE = { lat: 45.0, lon: 4 }
 
 test('le rayon ajoute les départements dont le centroïde est à moins de N km, du plus proche au plus éloigné', () => {
-  assert.deepEqual(departementsDansLeRayon(CENTRE, 0, 'A', POINTS), ['A'], '0 km : le département de la ville seulement')
+  assert.deepEqual(departementsDansLeRayon(CENTRE, 0, 'A', POINTS), ['A'], '0 km : le département de la ville seulement')
   assert.deepEqual(departementsDansLeRayon(CENTRE, 25, 'A', POINTS), ['A', 'B'])
-  assert.deepEqual(departementsDansLeRayon(CENTRE, 50, 'A', POINTS), ['A', 'B'], '56 km : hors du rayon de 50')
-  assert.deepEqual(departementsDansLeRayon(CENTRE, 100, 'A', POINTS), ['A', 'B', 'C'], '100,08 km : juste au-delà de 100')
+  assert.deepEqual(departementsDansLeRayon(CENTRE, 50, 'A', POINTS), ['A', 'B'], '56 km : hors du rayon de 50')
+  assert.deepEqual(departementsDansLeRayon(CENTRE, 100, 'A', POINTS), ['A', 'B', 'C'], '100,08 km : juste au-delà de 100')
   assert.deepEqual(departementsDansLeRayon(CENTRE, 200, 'A', POINTS), ['A', 'B', 'C', 'D', 'E'])
 })
 
-test('le département de la ville reste dans la zone même quand son centroïde est loin ; il passe en premier', () => {
+test('le département de la ville reste dans la zone même quand son centroïde est loin ; il passe en premier', () => {
   const loin = departementsDansLeRayon({ lat: 45.9, lon: 4 }, 25, 'A', POINTS)
   assert.deepEqual(loin, ['A', 'D'])
   assert.deepEqual(departementsDansLeRayon(CENTRE, 25, null, POINTS), ['A', 'B'])
 })
 
-test('la zone d’une ville suit son rayon (centroïdes de la carte) : Lyon à 0 km = le Rhône ; à 100 km, plus de départements', () => {
+test('la zone d’une ville suit son rayon (centroïdes de la carte) : Lyon à 0 km = le Rhône ; à 100 km, plus de départements', () => {
   const v = villeDepuisAdresse(LYON, 0)!
   assert.deepEqual(departementsDeLaVille(v), ['69'])
   const large = departementsDeLaVille({ ...v, rayon_km: 100 })
@@ -82,7 +82,7 @@ test('la zone d’une ville suit son rayon (centroïdes de la carte) : Lyon à 0
   assert.deepEqual([...RAYONS_KM], [0, 25, 50, 100])
 })
 
-test('départements : par nom (accents et casse ignorés), par début de nom, par numéro', () => {
+test('départements : par nom (accents et casse ignorés), par début de nom, par numéro', () => {
   const noms = (q: string) => chercherDepartements(q).map((d) => d.nom)
   assert.equal(noms('rhone')[0], 'Rhône')
   assert.ok(noms('rhone').includes('Bouches-du-Rhône'))
@@ -90,13 +90,13 @@ test('départements : par nom (accents et casse ignorés), par début de nom, pa
   assert.equal(noms('2a')[0], 'Corse-du-Sud')
   assert.equal(noms('2B')[0], 'Haute-Corse')
   assert.equal(noms('974')[0], 'La Réunion')
-  assert.deepEqual(noms('côte').sort(), ["Côte-d'Or", "Côtes-d'Armor"].sort())
+  assert.deepEqual(noms('côte').sort(), ["Côte-d’Or", "Côtes-d’Armor"].sort())
   assert.deepEqual(noms('zzzz'), [])
   assert.deepEqual(noms('   '), [])
   assert.ok(chercherDepartements('a').length <= 6, 'six propositions au plus')
 })
 
-test('une saisie de numéro court ne part pas à l’API ; la requête est nettoyée', () => {
+test('une saisie de numéro court ne part pas à l’API ; la requête est nettoyée', () => {
   assert.ok(estSaisieDeCode('69') && estSaisieDeCode('974') && estSaisieDeCode('2a'))
   assert.ok(!estSaisieDeCode('69003') && !estSaisieDeCode('Lyon'))
   assert.equal(nettoyerRequete('  Saint   Étienne '), 'Saint Étienne')
@@ -104,7 +104,7 @@ test('une saisie de numéro court ne part pas à l’API ; la requête est netto
 
 const attendre = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-test('recherche différée : seule la dernière saisie part ; la requête périmée est abandonnée', async () => {
+test('recherche différée : seule la dernière saisie part ; la requête périmée est abandonnée', async () => {
   const appels: string[] = []
   const abandons: string[] = []
   const chercher = (q: string, signal: AbortSignal) => new Promise<string>((resolve, reject) => {
@@ -127,7 +127,7 @@ test('recherche différée : seule la dernière saisie part ; la requête périm
   assert.equal(DELAI_RECHERCHE_MS, 300)
 })
 
-test('annuler arrête la minuterie et la requête ; une erreur est rapportée une seule fois', async () => {
+test('annuler arrête la minuterie et la requête ; une erreur est rapportée une seule fois', async () => {
   let appels = 0
   const r = rechercheDifferee(async () => { appels += 1; throw new Error('réseau') }, 10)
   const erreurs: unknown[] = []
@@ -141,7 +141,7 @@ test('annuler arrête la minuterie et la requête ; une erreur est rapportée un
   assert.equal(erreurs.length, 1)
 })
 
-test('le rendu : champ nommé, rôle combobox, rayon et puces de la zone choisie', () => {
+test('le rendu : champ nommé, rôle combobox, rayon et puces de la zone choisie', () => {
   const v = villeDepuisAdresse(LYON, 25)!
   const html = renderToStaticMarkup(<RechercheZone selection={['69', '01']} ville={v} onZone={() => {}} chercher={async () => []} />)
   assert.ok(html.includes('Département, ville ou code postal'))

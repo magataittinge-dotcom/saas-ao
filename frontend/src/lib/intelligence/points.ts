@@ -44,7 +44,7 @@ export function decoderPoints(buffer: ArrayBuffer, { poussiere = 420 }: { poussi
   const nYeux = dv.getUint32(12, true)
   const W = dv.getUint16(16, true)
   const CASE = dv.getUint8(20)
-  if (!n || !CASE || !W) throw new Error('fichier de points invalide')
+  if (!n || !CASE || !W) throw new Error('fichier de points illisible')
   const i16 = (o: number) => dv.getInt16(o, true)
   const [cx, cy, ax, ay] = [i16(24), i16(26), i16(28), i16(30)]
   const yeux: [number, number][] = [[i16(32), i16(34)], [i16(36), i16(38)]]

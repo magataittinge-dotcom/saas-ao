@@ -195,7 +195,7 @@ export default function ListeAvis(p: PropsListeAvis) {
             <BoutonSuite chargePlus={!!p.chargePlus} nbAvis={p.avis.length} onSuite={p.onVoirPlus} />
           </div>
         )}
-        <p className="mt-6 text-sm text-fg-3">Source : {libelleSourceVeille(p.source)}</p>
+        <p className="mt-6 text-sm text-fg-3">Source : {libelleSourceVeille(p.source)}</p>
       </div>
     </section>
   )

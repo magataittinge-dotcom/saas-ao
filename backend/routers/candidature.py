@@ -164,13 +164,13 @@ async def upload_completed_template(
     if item.source_kind != "dce_template":
         raise HTTPException(
             status_code=400,
-            detail="Cet item n'est pas un template DCE — utilisez l'endpoint /link à la place.",
+            detail="Cette pièce ne se remplit pas à partir d’un modèle du dossier : joignez-la depuis le coffre-fort.",
         )
 
     raw_name = file.filename or ""
     safe_name = Path(raw_name).name  # strip any path components → defeats traversal
     if not safe_name or ".." in safe_name:
-        raise HTTPException(status_code=400, detail="Nom de fichier invalide.")
+        raise HTTPException(status_code=400, detail="Ce nom de fichier n’est pas accepté. Renommez le fichier, puis déposez-le de nouveau.")
 
     regle = RegleDepot(_COMPLETED_ALLOWED_EXTENSIONS, _COMPLETED_MAX_SIZE, "PDF, DOCX, XLSX, XLSM, XLS ou ODS")
     with await recevoir_fichier(request, file, regle) as recu:
@@ -267,7 +267,7 @@ def link_vault_document(
     if item.source_kind != "vault":
         raise HTTPException(
             status_code=400,
-            detail="Cet item attend un template DCE, pas un document du coffre-fort.",
+            detail="Cette pièce se remplit à partir du modèle fourni dans le dossier, pas d’un document du coffre-fort.",
         )
 
     # B1 — un document supprimé du coffre ne se lie plus (il ne partirait pas
@@ -326,7 +326,7 @@ def patch_checklist_item(
         if payload.status not in allowed_statuses:
             raise HTTPException(
                 status_code=400,
-                detail=f"Statut invalide. Valeurs acceptées : {sorted(allowed_statuses)}",
+                detail="Ce statut n’est pas reconnu. Rechargez la page, puis choisissez-en un dans la liste.",
             )
         item.status = payload.status
 
@@ -369,7 +369,7 @@ def marquer_non_concerne(
     item = _get_checklist_item_or_404(item_id, project_id, db)
     if item.document_group == "synorix":
         raise HTTPException(status_code=400,
-                            detail="Pièce produite par Synorix à l'étape Mémoire.")
+                            detail="Pièce rédigée par Synorix à l’étape Rédiger.")
     if body.non_concerne:
         item.status = "non_applicable"
     elif item.status == "non_applicable":
@@ -412,7 +412,7 @@ def _get_checklist_item_or_404(item_id: str, project_id: str, db: Session) -> Ch
         ChecklistItem.project_id == project_id,
     ).first()
     if not item:
-        raise HTTPException(status_code=404, detail="Item de checklist introuvable")
+        raise HTTPException(status_code=404, detail="Cette pièce n’est plus dans la liste. Rechargez la page.")
     return item
 
 

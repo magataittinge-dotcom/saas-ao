@@ -174,7 +174,7 @@ export function PanneauSourceVue({
                 </p>
               )}
             </div>
-            <Bouton variante="secondaire" className="w-11 rounded-pilule px-0" onClick={onFermer} aria-label="Fermer l'extrait du dossier">
+            <Bouton variante="secondaire" className="w-11 rounded-pilule px-0" onClick={onFermer} aria-label="Fermer l’extrait du dossier">
               <X aria-hidden="true" />
             </Bouton>
           </div>
@@ -222,7 +222,7 @@ export function PanneauSourceVue({
             if (route === 'tableur') {
               return rendreTableur ? rendreTableur(reponse) : (
                 <VueSansPage reponse={reponse} lien={lienOuvrir}>
-                  <p>Cette pièce est un tableur : ouvrez-la pour lire la ligne citée.</p>
+                  <p>Cette pièce est un tableur : ouvrez-la pour lire la ligne citée.</p>
                 </VueSansPage>
               )
             }

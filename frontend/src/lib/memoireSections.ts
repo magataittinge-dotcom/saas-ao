@@ -23,7 +23,7 @@ export const SECTIONS_MEMOIRE: readonly SectionMemoire[] = [
   { part: 'partie_a', cle: 'engagement_qualitatif', titre: '3. Engagement qualitatif' },
   { part: 'partie_a', cle: 'activites', titre: '4. Nos activités' },
   { part: 'partie_a', cle: 'organigramme', titre: '5. Organigramme' },
-  { part: 'partie_a', cle: 'roles_missions', titre: "6. Rôles et missions de l'équipe d'encadrement" },
+  { part: 'partie_a', cle: 'roles_missions', titre: "6. Rôles et missions de l’équipe d’encadrement" },
   { part: 'partie_a', cle: 'moyens_informatiques', titre: '7. Moyens informatiques' },
   { part: 'partie_a', cle: 'vehicules', titre: '8. Véhicules' },
   { part: 'partie_a', cle: 'materiel', titre: '9. Matériel' },

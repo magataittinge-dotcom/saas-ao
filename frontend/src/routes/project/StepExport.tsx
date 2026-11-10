@@ -217,7 +217,7 @@ export default function StepExport({ project }: Props) {
     onMutate: () => setEchec(null),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['export-detail', project.id] }),
     onError: async (err, action) => setEchec({
-      message: await messageErreur(err, "La confirmation n'a pas été enregistrée."),
+      message: await messageErreur(err, "La confirmation n’a pas été enregistrée."),
       relancer: () => confirmer(action),
     }),
   })
@@ -234,7 +234,7 @@ export default function StepExport({ project }: Props) {
     },
     onMutate: () => setEchec(null),
     onError: async (err) => setEchec({
-      message: await messageErreur(err, "Le téléchargement du mémoire Word n'a pas abouti."),
+      message: await messageErreur(err, "Le téléchargement du mémoire Word n’a pas abouti."),
       relancer: () => exportDocx(),
     }),
   })
@@ -254,7 +254,7 @@ export default function StepExport({ project }: Props) {
     },
     onMutate: () => setEchec(null),
     onError: async (err) => setEchec({
-      message: await messageErreur(err, "Le téléchargement du mémoire PDF n'a pas abouti."),
+      message: await messageErreur(err, "Le téléchargement du mémoire PDF n’a pas abouti."),
       relancer: () => exportPdf(),
     }),
   })
@@ -274,7 +274,7 @@ export default function StepExport({ project }: Props) {
     },
     onMutate: () => { setEchec(null); setAvertissementsZip(null) },
     onError: async (err) => setEchec({
-      message: await messageErreur(err, "Le téléchargement du dossier ZIP n'a pas abouti."),
+      message: await messageErreur(err, "Le téléchargement du dossier ZIP n’a pas abouti."),
       relancer: () => exportZip(),
     }),
   })
@@ -296,7 +296,7 @@ export default function StepExport({ project }: Props) {
       URL.revokeObjectURL(url)
     } catch (err) {
       setEchec({
-        message: await messageErreur(err, `Le téléchargement du ${developper('DPGF')} n'a pas abouti.`),
+        message: await messageErreur(err, `Le téléchargement du ${developper('DPGF')} n’a pas abouti.`),
         relancer: () => { void handleDownloadDpgf() },
       })
     }
@@ -312,7 +312,7 @@ export default function StepExport({ project }: Props) {
       await api.post(`/projects/${project.id}/dpgf-upload`, fd)
       queryClient.invalidateQueries({ queryKey: ['export-detail', project.id] })
     } catch {
-      setDpgfError(`L'envoi du ${developper('DPGF')} n'a pas abouti.`)
+      setDpgfError(`L’envoi du ${developper('DPGF')} n’a pas abouti.`)
     } finally {
       setDpgfUploading(false)
     }
@@ -450,7 +450,7 @@ export default function StepExport({ project }: Props) {
     <>
       <GabaritEtape
         titre={TITRE}
-        utilite={`Le dossier de réponse, rangé dans l’ordre du règlement : vérifiez-le, puis téléchargez-le.${lotName ? ` ${lotName}.` : ''}`}
+        utilite={`Le dossier de réponse, rangé dans l’ordre du règlement : vérifiez-le, puis téléchargez-le.${lotName ? ` ${lotName}.` : ''}`}
         actionPrincipale={tel ? undefined : (
           <div className="flex max-w-xs flex-col items-end gap-2">
             {boutonTelecharger}
@@ -483,7 +483,7 @@ export default function StepExport({ project }: Props) {
       >
         {/* ── Pièces demandées : mêmes lignes et même règle que le résumé ── */}
         <SectionEtape titre="Pièces demandées"
-          description={piecesVisibles.length === 0 ? undefined : 'Une pièce prête part dans le dossier ; une pièce à joindre, à renouveler ou à confirmer reste à traiter avant le dépôt.'}>
+          description={piecesVisibles.length === 0 ? undefined : 'Une pièce prête part dans le dossier ; une pièce à joindre, à renouveler ou à confirmer reste à traiter avant le dépôt.'}>
           {piecesVisibles.length === 0 ? (
             <p className="text-sm text-fg-2">La liste des pièces apparaît après la lecture du <Sigle code="RC" />.</p>
           ) : (
@@ -578,7 +578,7 @@ export default function StepExport({ project }: Props) {
                   <p className="chiffres text-sm text-fg-2">
                     {v.nb_lignes} lignes · {v.nb_lignes_remplies} remplies
                     {v.nb_lignes_vides > 0 && <> · <span className="font-medium text-ambre-ink">{v.nb_lignes_vides} à remplir</span></>}
-                    {v.total_ht != null && <> · total HT lu : <span className="font-medium text-fg">{v.total_ht.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</span></>}
+                    {v.total_ht != null && <> · total HT lu : <span className="font-medium text-fg">{v.total_ht.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</span></>}
                   </p>
                   {v.warnings.length > 0 && (
                     <ul className="space-y-0.5 text-sm text-fg-2">
@@ -591,7 +591,7 @@ export default function StepExport({ project }: Props) {
 
             {!detail.dpgf_info && !detail.dpgf_remplie && (
               <p className="border-t border-bord px-4 py-3 text-sm text-fg-2 sm:px-5">
-                Le dossier lu ne contient pas de <Sigle code="DPGF" /> : déposez la vôtre si le règlement en demande une.
+                Le dossier lu ne contient pas de <Sigle code="DPGF" />&nbsp;: déposez la vôtre si le règlement en demande une.
               </p>
             )}
           </Carte>
@@ -613,7 +613,7 @@ export default function StepExport({ project }: Props) {
         <SectionEtape
           titre="Contenu du dossier"
           description={detail.naming_convention
-            ? <>Pièces nommées selon le <Sigle code="RC" /> : {detail.naming_convention.replace('{lot}', 'Lot').replace('{entreprise}', 'Entreprise').replace('{piece}', 'Pièce')}</>
+            ? <>Pièces nommées selon le <Sigle code="RC" />&nbsp;: {detail.naming_convention.replace('{lot}', 'Lot').replace('{entreprise}', 'Entreprise').replace('{piece}', 'Pièce')}</>
             : undefined}
         >
           {detail.pieces_zip.length === 0 ? (

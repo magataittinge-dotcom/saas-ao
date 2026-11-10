@@ -17,7 +17,7 @@ const COMPTES = { '69': 12, '75': 1, '13': 30 }
 const dep = (code: string) => DEPARTEMENTS.find((d) => d.code === code)!
 const PLEIN = { ...VIEWBOX }
 
-test('la carte se rend : un bouton par département, avec son nom et son nombre d’avis', () => {
+test('la carte se rend : un bouton par département, avec son nom et son nombre d’avis', () => {
   const html = renderToStaticMarkup(<CarteFrance comptes={COMPTES} selection={['69']} onSelection={() => {}} />)
   assert.equal((html.match(/role="button"/g) ?? []).length, DEPARTEMENTS.length, 'un bouton par département')
   assert.ok(html.includes('aria-label="Rhône, 12 avis"'))
@@ -50,10 +50,10 @@ test('le clic sur un département remonte son code', () => {
   el.props.onKeyDown({ key: 'Enter', preventDefault: () => {} })
   el.props.onKeyDown({ key: ' ', preventDefault: () => {} })
   el.props.onKeyDown({ key: 'a', preventDefault: () => {} })
-  assert.deepEqual(recus, ['69', '69', '69'], 'clic, Entrée et Espace ; une autre touche ne fait rien')
+  assert.deepEqual(recus, ['69', '69', '69'], 'clic, Entrée et Espace ; une autre touche ne fait rien')
 })
 
-test('sélection multiple : ajouter, retirer, limite du serveur', () => {
+test('sélection multiple : ajouter, retirer, limite du serveur', () => {
   assert.deepEqual(basculerSelection([], '69'), ['69'])
   assert.deepEqual(basculerSelection(['69'], '01'), ['69', '01'])
   assert.deepEqual(basculerSelection(['69', '01'], '69'), ['01'])
@@ -72,7 +72,7 @@ test('trois paliers de bulles et libellés', () => {
   assert.equal(libelleDepartement('Rhône', 0), 'Rhône, aucun avis ouvert')
 })
 
-test('zoom et déplacement : le cadre garde ses proportions et reste dans le dessin', () => {
+test('zoom et déplacement : le cadre garde ses proportions et reste dans le dessin', () => {
   const z = zoomer(PLEIN, 2, 0.5, 0.5, PLEIN)
   assert.ok(Math.abs(z.w - PLEIN.w / 2) < 1e-6)
   assert.ok(Math.abs(z.w / z.h - PLEIN.w / PLEIN.h) < 1e-6)
@@ -102,7 +102,7 @@ test('les flèches du clavier mènent au département voisin dans la bonne direc
   assert.equal(voisinDansLaDirection(points, 'xx', 'haut'), null)
 })
 
-test('en nuit, le département qui compte des avis reste assez sombre pour que la bulle y garde 3:1 (mesuré : 3,13)', () => {
+test('en nuit, le département qui compte des avis reste assez sombre pour que la bulle y garde 3:1 (mesuré : 3,13)', () => {
   const css = lire('src/components/veille/carte-france.css')
   assert.match(css, /\[data-theme="dark"\] \.cf \{[^}]*--cf-actif: color-mix\(in srgb, var\(--accent-tint\) 45%, var\(--surface-2\)\)/)
 })
@@ -121,7 +121,7 @@ const bullesDe = (comptes: Record<string, number>): BulleDep[] =>
   DEPARTEMENTS.filter((d) => (comptes[d.code] ?? 0) > 0).map((d) => ({ code: d.code, cx: d.cx, cy: d.cy, compte: comptes[d.code] }))
 const echelle600 = 600 / VIEWBOX.w
 
-test('regrouperBulles : la petite couronne ne fait qu’un groupe, Lyon reste seul', () => {
+test('regrouperBulles : la petite couronne ne fait qu’un groupe, Lyon reste seul', () => {
   const g = regrouperBulles(bullesDe(COMPTES_COURONNE), echelle600)
   assert.equal(g.length, 2)
   const couronne = g.find(estGroupe)!
@@ -133,7 +133,7 @@ test('regrouperBulles : la petite couronne ne fait qu’un groupe, Lyon reste se
   assert.equal(seul.cx, dep('69').cx)
 })
 
-test('regrouperBulles : le centre est le barycentre pondéré par les comptes', () => {
+test('regrouperBulles : le centre est le barycentre pondéré par les comptes', () => {
   const g = regrouperBulles([
     { code: 'A', cx: 0, cy: 0, compte: 30 },
     { code: 'B', cx: 10, cy: 20, compte: 10 },
@@ -144,7 +144,7 @@ test('regrouperBulles : le centre est le barycentre pondéré par les comptes', 
   assert.equal(g[0].compte, 40)
 })
 
-test('regrouperBulles : transitif (A touche B, B touche C, mais A ne touche pas C → un seul groupe)', () => {
+test('regrouperBulles : transitif (A touche B, B touche C, mais A ne touche pas C → un seul groupe)', () => {
   // rayon 11 (1 à 4 avis) → deux bulles se touchent sous 22 + 4 = 26 px
   const abc: BulleDep[] = [
     { code: 'A', cx: 0, cy: 0, compte: 1 },
@@ -158,7 +158,7 @@ test('regrouperBulles : transitif (A touche B, B touche C, mais A ne touche pas 
   assert.equal(regrouperBulles([abc[0], abc[2]], 1).length, 2)
 })
 
-test('regrouperBulles : le groupe, plus gros, peut en toucher un troisième (le rayon suit le total)', () => {
+test('regrouperBulles : le groupe, plus gros, peut en toucher un troisième (le rayon suit le total)', () => {
   // A et B (4 avis chacun) fusionnent en 8 avis (rayon 14,5) ; C (4 avis, rayon 11) est à 30,7 px de A et de B (ils ne se
   // touchent pas : 30,7 > 26) mais à 28 px du barycentre (12,5 ; 0) : 28 < 14,5 + 11 + 4 = 29,5, il touche le groupe.
   const g = regrouperBulles([
@@ -170,7 +170,7 @@ test('regrouperBulles : le groupe, plus gros, peut en toucher un troisième (le 
   assert.equal(g[0].compte, 12)
 })
 
-test('regrouperBulles : au zoom les groupes se défont ; à grande échelle, plus aucun groupe', () => {
+test('regrouperBulles : au zoom les groupes se défont ; à grande échelle, plus aucun groupe', () => {
   const bulles = bullesDe(COMPTES_COURONNE)
   const nb = (e: number) => regrouperBulles(bulles, e).length
   assert.equal(nb(echelle600), 2)
@@ -181,19 +181,19 @@ test('regrouperBulles : au zoom les groupes se défont ; à grande échelle, plu
   for (let e = 0.1; e < 12; e *= 1.15) { const n = nb(e); assert.ok(n >= avant, `échelle ${e}`); avant = n }
 })
 
-test('regrouperBulles : déterministe (ordre d’entrée sans effet), sans avis pas de bulle, un seul département reste ordinaire', () => {
+test('regrouperBulles : déterministe (ordre d’entrée sans effet), sans avis pas de bulle, un seul département reste ordinaire', () => {
   const bulles = bullesDe(COMPTES_COURONNE)
   const a = regrouperBulles(bulles, echelle600)
   const b = regrouperBulles([...bulles].reverse(), echelle600)
   assert.deepEqual(a, b)
-  assert.deepEqual(regrouperBulles([{ code: '75', cx: 0, cy: 0, compte: 0 }, ...bulles], echelle600), a, 'compte 0 : ignoré')
+  assert.deepEqual(regrouperBulles([{ code: '75', cx: 0, cy: 0, compte: 0 }, ...bulles], echelle600), a, 'compte 0 : ignoré')
   assert.deepEqual(regrouperBulles([], 1), [])
   const seul = regrouperBulles([{ code: '75', cx: 3, cy: 4, compte: 9 }], 0.1)
   assert.deepEqual(seul, [{ codes: ['75'], cx: 3, cy: 4, compte: 9, rayon: rayonAffiche(9) }])
   assert.ok(!estGroupe(seul[0]))
 })
 
-test('regrouperBulles : en mode compact, les rayons réduits ne touchent plus de la même façon', () => {
+test('regrouperBulles : en mode compact, les rayons réduits ne touchent plus de la même façon', () => {
   const trois: BulleDep[] = [
     { code: 'A', cx: 0, cy: 0, compte: 1 },
     { code: 'B', cx: 22, cy: 0, compte: 1 },
@@ -206,12 +206,12 @@ test('regrouperBulles : en mode compact, les rayons réduits ne touchent plus de
 test('libelleGroupe et cleGroupe', () => {
   assert.equal(
     libelleGroupe(['Paris', 'Hauts-de-Seine', 'Seine-Saint-Denis', 'Val-de-Marne'], 115),
-    '115 avis ouverts dans 4 départements : Paris, Hauts-de-Seine, Seine-Saint-Denis, Val-de-Marne',
+    '115 avis ouverts dans 4 départements : Paris, Hauts-de-Seine, Seine-Saint-Denis, Val-de-Marne',
   )
   assert.equal(cleGroupe(['75', '92']), '75+92')
 })
 
-test('cadreSurGroupe : le cadre montre tout le groupe et défait ses bulles, sans dépasser le zoom maximal', () => {
+test('cadreSurGroupe : le cadre montre tout le groupe et défait ses bulles, sans dépasser le zoom maximal', () => {
   const bulles = bullesDe(COMPTES_COURONNE)
   const groupe = regrouperBulles(bulles, echelle600).find(estGroupe)!
   for (const largeur of [600, 1000]) {
@@ -234,7 +234,7 @@ test('cadreSurGroupe : le cadre montre tout le groupe et défait ses bulles, san
 })
 
 /* ── Rendu du groupe : une bulle, un nom lu, clic ou Entrée = zoom ───────────────────────── */
-const LIBELLE_COURONNE = '115 avis ouverts dans 4 départements : Paris, Hauts-de-Seine, Seine-Saint-Denis, Val-de-Marne'
+const LIBELLE_COURONNE = '115 avis ouverts dans 4 départements : Paris, Hauts-de-Seine, Seine-Saint-Denis, Val-de-Marne'
 const rendre = (props: Partial<React.ComponentProps<typeof CarteFrance>> = {}) =>
   renderToStaticMarkup(<CarteFrance comptes={COMPTES_COURONNE} selection={[]} onSelection={() => {}} initial={{ largeur: 600 }} {...props} />)
 
@@ -260,7 +260,7 @@ test('sans largeur connue (premier rendu), aucune bulle n’est regroupée', () 
   assert.equal((html.match(/class="cf-bulle"/g) ?? []).length, 5)
 })
 
-test('un département choisi dans un groupe : le groupe porte data-choisi', () => {
+test('un département choisi dans un groupe : le groupe porte data-choisi', () => {
   assert.equal((rendre({ selection: ['92'] }).match(/data-choisi/g) ?? []).length, 1)
   assert.equal((rendre({ selection: ['69'] }).match(/data-choisi/g) ?? []).length, 0, 'Rhône n’est pas dans le groupe')
 })
@@ -275,7 +275,7 @@ test('après le zoom sur le groupe (cadre obtenu par cadreSurGroupe), les cinq b
   assert.ok(html.includes(`viewBox="${cadre.x} ${cadre.y} ${cadre.w} ${cadre.h}"`))
 })
 
-test('le groupe : clic, Entrée et Espace demandent le zoom (pas la sélection) ; une autre touche ne fait rien', () => {
+test('le groupe : clic, Entrée et Espace demandent le zoom (pas la sélection) ; une autre touche ne fait rien', () => {
   const groupe = regrouperBulles(bullesDe(COMPTES_COURONNE), echelle600).find(estGroupe)!
   const recus: string[] = []
   const el = GroupeCarteVue({

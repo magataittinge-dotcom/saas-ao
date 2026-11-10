@@ -54,8 +54,8 @@ export function MettreAJourStatut({ projet, ouvert, onOuvert }: {
       {choix.length > 0
         ? <GroupeRadio libelle="Statut de l’appel d’offres" valeur={status} onChange={setStatus} disabled={isPending}
             options={choix.map((c) => ({ valeur: c.statut, libelle: c.libelle, aide: c.aide }))} />
-        : <p className="text-sm text-fg-2">Le résultat de cet appel d’offres est enregistré : il ne se modifie plus.</p>}
-      {status && choixDefinitif(status) && <Message ton="info">Ce résultat est définitif : il ne se modifie plus ensuite.</Message>}
+        : <p className="text-sm text-fg-2">Le résultat de cet appel d’offres est enregistré : il ne se modifie plus.</p>}
+      {status && choixDefinitif(status) && <Message ton="info">Ce résultat est définitif : il ne se modifie plus ensuite.</Message>}
       {status && !choixDefinitif(status) && <p className="text-xs text-fg-3">Vous pourrez revenir sur ce choix en rouvrant ce dialogue.</p>}
       {erreur && <Message ton="erreur">{erreur}</Message>}
     </Dialogue>

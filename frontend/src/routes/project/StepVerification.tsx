@@ -194,7 +194,7 @@ export default function StepVerification({ project }: Props) {
   }
 
   const TITRE = 'Réunir les pièces'
-  const UTILITE = 'Ce que le règlement demande : les pièces de votre coffre-fort et les formulaires de l’acheteur à compléter. Synorix les range dans le dossier de candidature.'
+  const UTILITE = 'Ce que le règlement demande : les pièces de votre coffre-fort et les formulaires de l’acheteur à compléter. Synorix les range dans le dossier de candidature.'
 
   // ── Chargement → erreur → rien à montrer → contenu (une erreur n'est jamais « le dossier n'est pas lu ») ──
   if (isLoading) return (
@@ -357,7 +357,7 @@ function WorkflowSection({
   return (
     <SectionEtape
       titre="Tableaux de prix à remplir"
-      description={<>Le <Sigle code="DPGF" /> ou le <Sigle code="BPU" /> de l’acheteur : téléchargez la trame, remplissez-la, puis déposez-la ici. Synorix vérifie qu’aucune ligne n’est restée sans prix.</>}
+      description={<>Le <Sigle code="DPGF" /> ou le <Sigle code="BPU" /> de l’acheteur : téléchargez la trame, remplissez-la, puis déposez-la ici. Synorix vérifie qu’aucune ligne n’est restée sans prix.</>}
       colonnes={2}
     >
       {items.map((i) => <WorkflowRow key={i.id} item={i} onDownload={onDownload} onUpload={onUpload} />)}
@@ -399,7 +399,7 @@ function WorkflowRow({
       </div>
       <EtatElement
         etat={done ? 'pret' : warn ? 'a-verifier' : 'a-couvrir'}
-        texte={done ? 'Rempli et vérifié' : warn ? 'À corriger : des lignes sont sans prix' : 'À remplir'}
+        texte={done ? 'Rempli et vérifié' : warn ? 'À corriger : des lignes sont sans prix' : 'À remplir'}
       />
       <EntreeFichier
         ref={inputRef}
@@ -437,7 +437,7 @@ function WorkflowRow({
 function SynorixJalonSection({ items }: { items: ChecklistItem[] }) {
   if (items.length === 0) return null
   return (
-    <SectionEtape titre="Rédigé avec Synorix" description="Ces pièces se préparent à l’étape Rédiger : rien à joindre ici.">
+    <SectionEtape titre="Rédigé avec Synorix" description="Ces pièces se préparent à l’étape Rédiger : rien à joindre ici.">
       <Carte sansMarge>
         <ul>
           {items.map((i) => (

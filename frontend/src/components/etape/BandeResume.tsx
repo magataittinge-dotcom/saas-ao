@@ -88,7 +88,7 @@ function DesignationCarte({ texte }: { texte: string }) {
 function SourceCarte({ source }: { source: SourceEtat }) {
   return (
     <p className="flex flex-wrap items-center gap-x-2 border-t border-bord-2 pt-2 text-sm text-fg-2">
-      <span>Source : {source.libelle}</span>
+      <span>Source : {source.libelle}</span>
       {source.onVoir && (
         <Bouton variante="lien" onClick={source.onVoir}>Voir dans le dossier</Bouton>
       )}

@@ -151,8 +151,8 @@ export function libelleNiveau(ancre: Pick<Ancre, 'niveau' | 'suite' | 'format'>)
     if (tableur) return 'Ligne retrouvée dans la feuille'
     return ancre.suite ? 'Passage retrouvé, sur deux pages' : 'Passage retrouvé'
   }
-  if (ancre.niveau === 'page') return tableur ? 'Feuille citée par l’analyse' : 'Page citée par l’analyse'
-  return 'Pièce citée par l’analyse'
+  if (ancre.niveau === 'page') return tableur ? 'Feuille citée par Synorix' : 'Page citée par Synorix'
+  return 'Pièce citée par Synorix'
 }
 
 /** La page que l'analyse a citée pour une exigence, ou null. Sans extrait, l'analyse n'a cité aucune

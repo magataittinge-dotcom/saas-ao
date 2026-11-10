@@ -33,11 +33,11 @@ export default function FormIdentite({ donnees, avant, idPanneau, idOnglet }: { 
   return (
     <CadreFormulaire
       rubrique="identite" titre="Identité" idPanneau={idPanneau} idOnglet={idOnglet}
-      explication={<>Qui vous êtes : ce que l'acheteur lit en premier, et ce qui remplit la <Sigle code="DC1" /> et la <Sigle code="DC2" />.</>}
+      explication={<>Qui vous êtes : ce que l’acheteur lit en premier, et ce qui remplit la <Sigle code="DC1" /> et la <Sigle code="DC2" />.</>}
       etat={f} onEnregistrer={f.enregistrer} avant={avant}
     >
-      <Groupe titre="Coordonnées légales" aide={sirene ? "Pré-remplies depuis le répertoire Sirene à l'inscription." : undefined}>
-        <Field label="Nom de l'entreprise" rempli={texte(org.name)} source={sirene}>
+      <Groupe titre="Coordonnées légales" aide={sirene ? "Pré-remplies depuis le répertoire Sirene à l’inscription." : undefined}>
+        <Field label="Nom de l’entreprise" rempli={texte(org.name)} source={sirene}>
           <Champ value={org.name ?? ''} onChange={(e) => f.poserOrganisation('name', e.target.value)} autoComplete="organization" />
         </Field>
         <ChampSiret siret={donnees.organisation?.siret} verifie={donnees.organisation?.siret_verified} />
@@ -58,7 +58,7 @@ export default function FormIdentite({ donnees, avant, idPanneau, idOnglet }: { 
         <Field label="Fonction du dirigeant" rempli={texte(profil.gerant_titre)}>
           <Champ value={profil.gerant_titre ?? ''} onChange={(e) => f.poserProfil('gerant_titre', e.target.value)} placeholder="Gérant, PDG, directeur…" />
         </Field>
-        <Field label="E-mail de l'entreprise" rempli={texte(org.email_contact)}>
+        <Field label="E-mail de l’entreprise" rempli={texte(org.email_contact)}>
           <Champ type="email" value={org.email_contact ?? ''} onChange={(e) => f.poserOrganisation('email_contact', e.target.value)} autoComplete="email" />
         </Field>
         <Field label="Téléphone" rempli={texte(org.telephone)}>
@@ -73,8 +73,8 @@ export default function FormIdentite({ donnees, avant, idPanneau, idOnglet }: { 
           </Field>
         </Pleine>
         <Pleine>
-          <Field label="Zone d'intervention géographique" rempli={texte(profil.zone_intervention)}>
-            <Champ value={profil.zone_intervention ?? ''} onChange={(e) => f.poserProfil('zone_intervention', e.target.value)} placeholder="Île-de-France, Provence-Alpes-Côte d'Azur…" />
+          <Field label="Zone d’intervention géographique" rempli={texte(profil.zone_intervention)}>
+            <Champ value={profil.zone_intervention ?? ''} onChange={(e) => f.poserProfil('zone_intervention', e.target.value)} placeholder="Île-de-France, Provence-Alpes-Côte d’Azur…" />
           </Field>
         </Pleine>
       </Groupe>
@@ -102,7 +102,7 @@ export default function FormIdentite({ donnees, avant, idPanneau, idOnglet }: { 
               </div>
             </Field>
           </Pleine>
-          <Field label="Départements d'intervention" rempli={(profil.departements_intervention ?? []).length > 0} aide="codes séparés par une virgule : 14, 50, 61">
+          <Field label="Départements d’intervention" rempli={(profil.departements_intervention ?? []).length > 0} aide="codes séparés par une virgule : 14, 50, 61">
             <Champ
               value={departements ?? (profil.departements_intervention ?? []).join(', ')}
               onChange={(e) => { setDepartements(e.target.value); f.poserProfil('departements_intervention', lireDepartements(e.target.value)) }}

@@ -212,7 +212,7 @@ export default function Billing() {
               {atteint && (
                 <Message ton="erreur" titre="Quota du mois atteint">
                   {retour ? `Vos unités reviennent le ${retour}.` : 'Vos unités reviennent au début de la prochaine période.'}
-                  {' '}Vos dossiers en cours restent ouverts ; une offre plus large lève la limite tout de suite.
+                  {' '}Vos dossiers en cours restent ouverts ; une offre plus large lève la limite tout de suite.
                 </Message>
               )}
               {illimite ? (

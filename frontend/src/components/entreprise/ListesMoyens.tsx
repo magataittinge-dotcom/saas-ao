@@ -22,12 +22,12 @@ export function EditeurPersonnes({ lignes, modifier, ajouter, retirer }: {
           <Field label="Nom"><Champ aria-label={`Personne clé ${i + 1} : nom`} maxLength={255} value={l.valeurs.name ?? ''} onChange={(e) => modifier(l.cle, { name: e.target.value })} /></Field>
           <Field label="Fonction"><Champ aria-label={`Personne clé ${i + 1} : fonction`} maxLength={255} value={l.valeurs.role ?? ''} onChange={(e) => modifier(l.cle, { role: e.target.value })} placeholder="Conducteur de travaux" /></Field>
           <Field label="Spécialité"><Champ aria-label={`Personne clé ${i + 1} : spécialité`} maxLength={255} value={l.valeurs.specialite ?? ''} onChange={(e) => modifier(l.cle, { specialite: e.target.value })} placeholder="Façades" /></Field>
-          <Field label="Années d'expérience"><ChampNombre aria-label={`Personne clé ${i + 1} : années d'expérience`} max={80} valeur={l.valeurs.experience_years} onChange={(v) => modifier(l.cle, { experience_years: v ?? undefined })} /></Field>
+          <Field label="Années d’expérience"><ChampNombre aria-label={`Personne clé ${i + 1} : années d’expérience`} max={80} valeur={l.valeurs.experience_years} onChange={(v) => modifier(l.cle, { experience_years: v ?? undefined })} /></Field>
           <Field label="Qualifications"><Champ aria-label={`Personne clé ${i + 1} : qualifications`} maxLength={500} value={l.valeurs.certifications ?? ''} onChange={(e) => modifier(l.cle, { certifications: e.target.value })} placeholder="SST, CACES R486…" /></Field>
           <div className="flex items-end gap-2 [grid-column:1/-1]">
             <div className="min-w-0 flex-1">
-              <Field label="Résumé d'expérience">
-                <ZoneTexte aria-label={`Personne clé ${i + 1} : résumé d'expérience`} rows={2} maxLength={1000} value={l.valeurs.experience_resume ?? ''} onChange={(e) => modifier(l.cle, { experience_resume: e.target.value })} />
+              <Field label="Résumé d’expérience">
+                <ZoneTexte aria-label={`Personne clé ${i + 1} : résumé d’expérience`} rows={2} maxLength={1000} value={l.valeurs.experience_resume ?? ''} onChange={(e) => modifier(l.cle, { experience_resume: e.target.value })} />
               </Field>
             </div>
             <BoutonRetrait libelle={`Retirer la personne clé ${i + 1}`} onClick={() => retirer(l.cle)} />
@@ -89,7 +89,7 @@ const AUTRES: { type: TypeHabilitation; libelle: string }[] = [
 export function HabilitationSst({ valeur, onChange }: { valeur: Habilitations; onChange: (h: Habilitations) => void }) {
   const ligne = valeur.find((h) => h.type === 'sst')
   return (
-    <Field label="Secouristes du travail (SST) : nombre" rempli={typeof ligne?.nombre === 'number'}>
+    <Field label="Secouristes du travail (SST) : nombre" rempli={typeof ligne?.nombre === 'number'}>
       <ChampNombre max={999} valeur={ligne?.nombre} onChange={(v) => onChange(v === null ? valeur.filter((h) => h.type !== 'sst') : [...valeur.filter((h) => h.type !== 'sst'), { type: 'sst', nombre: v, libelle: null, valide_jusqu: ligne?.valide_jusqu ?? null }])} />
     </Field>
   )
@@ -100,7 +100,7 @@ export function EditeurHabilitations({ valeur, onChange }: { valeur: Habilitatio
   const sst = valeur.filter((h) => h.type === 'sst')
   const remplacer = (n: Habilitations) => onChange([...sst, ...n])
   return (
-    <Field label="Autres habilitations" groupe aide="Nombre de personnes habilitées par type, avec la date de fin si vous la connaissez. Aucun nom n'est demandé.">
+    <Field label="Autres habilitations" groupe aide="Nombre de personnes habilitées par type, avec la date de fin si vous la connaissez. Aucun nom n’est demandé.">
       <div className="space-y-2">
         {autres.map((h, i) => (
           <div key={i} className={CARTE}>
@@ -110,8 +110,8 @@ export function EditeurHabilitations({ valeur, onChange }: { valeur: Habilitatio
             </Field>
             {h.type === 'autre' && <Field label="Libellé"><Champ aria-label={`Habilitation ${i + 1} : libellé`} maxLength={80} value={h.libelle ?? ''} onChange={(e) => remplacer(autres.map((x, j) => (j === i ? { ...x, libelle: e.target.value } : x)))} /></Field>}
             <Field label="Nombre"><ChampNombre aria-label={`Habilitation ${i + 1} : nombre`} max={999} valeur={h.nombre} onChange={(v) => remplacer(autres.map((x, j) => (j === i ? { ...x, nombre: v ?? 0 } : x)))} /></Field>
-            <Field label="Valable jusqu'au"><ChampDate aria-label={`Habilitation ${i + 1} : date de fin`} valeur={h.valide_jusqu} onChange={(iso) => remplacer(autres.map((x, j) => (j === i ? { ...x, valide_jusqu: iso } : x)))} /></Field>
-            <BoutonRetrait libelle={`Retirer l'habilitation ${i + 1}`} onClick={() => remplacer(autres.filter((_, j) => j !== i))} />
+            <Field label="Valable jusqu’au"><ChampDate aria-label={`Habilitation ${i + 1} : date de fin`} valeur={h.valide_jusqu} onChange={(iso) => remplacer(autres.map((x, j) => (j === i ? { ...x, valide_jusqu: iso } : x)))} /></Field>
+            <BoutonRetrait libelle={`Retirer l’habilitation ${i + 1}`} onClick={() => remplacer(autres.filter((_, j) => j !== i))} />
           </div>
         ))}
         <BoutonAjout onClick={() => remplacer([...autres, { type: 'caces', nombre: 1, libelle: null, valide_jusqu: null }])}>Ajouter une habilitation</BoutonAjout>

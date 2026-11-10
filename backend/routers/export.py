@@ -556,7 +556,7 @@ def _plan_du_zip(db: Session, project, org_id: str, *, checklist_items, project_
         nom = "Memoire_technique.pdf" if soffice_available() else "Memoire_technique.docx"
         plan.entrees.append(EntreeZip("02_Offre", nom, "memoire"))
     else:
-        plan.avertissements.append("Mémoire technique : à générer à l'étape Mémoire")
+        plan.avertissements.append("Mémoire technique : à rédiger à l’étape Rédiger")
 
     # ── 3_ANNEXES : pièces du coffre cochées au pré-vol (ownership org) ──────
     annexe_ids = list(((memoire.variables if memoire else None) or {}).get(

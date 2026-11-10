@@ -16,7 +16,7 @@ const plusJours = (n: number) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 const avis = (id: string, p: Partial<AvisVeille> = {}): AvisVeille => ({
-  id, id_boamp: `SIM-${id}`, objet: `Réhabilitation d'un groupe scolaire ${id} (exemple)`, acheteur: 'Commune de Valmont-sur-Exemple',
+  id, id_boamp: `SIM-${id}`, objet: `Réhabilitation d’un groupe scolaire ${id} (exemple)`, acheteur: 'Commune de Valmont-sur-Exemple',
   departements: ['69'], date_parution: plusJours(-2), date_limite: plusJours(12), procedure: 'adaptee', procedure_libelle: 'Procédure adaptée',
   famille: 'Travaux', metiers: ['facade_ite', 'menuiseries'], url_avis: 'https://exemple.invalid/avis/1', url_dossier: null, nouveau: false, ...p,
 })
@@ -42,16 +42,16 @@ function trouver(noeud: ReactNode, test: (el: ReactElement<Record<string, unknow
 }
 const texteDe = (n: ReactNode): string => (Array.isArray(n) ? n.map(texteDe).join('') : typeof n === 'string' || typeof n === 'number' ? String(n) : isValidElement(n) ? texteDe((n.props as { children?: ReactNode }).children) : '')
 
-test('une liste simulée : une carte par avis, objet, acheteur, département, procédure, métiers', () => {
+test('une liste simulée : une carte par avis, objet, acheteur, département, procédure, métiers', () => {
   const liste = [avis('1'), avis('2', { departements: ['01'], metiers: ['cvc', 'plomberie', 'peinture', 'facade_ite'] }), avis('3')]
   const html = renderToStaticMarkup(<ListeAvis {...base({ avis: liste, total: 3 })} />)
   assert.equal((html.match(/<article/g) ?? []).length, 3)
-  assert.ok(html.includes("Réhabilitation d&#x27;un groupe scolaire 1 (exemple)"))
+  assert.ok(html.includes("Réhabilitation d’un groupe scolaire 1 (exemple)"))
   assert.ok(html.includes('Commune de Valmont-sur-Exemple'))
   assert.ok(html.includes('Rhône (69)') && html.includes('Ain (01)'))
   assert.ok(html.includes('Procédure adaptée'))
   assert.ok(html.includes('Façade et ITE') && html.includes('Menuiseries'))
-  assert.ok(html.includes('>+1<'), 'un 4e métier se range derrière « +1 »')
+  assert.ok(html.includes('>+1<'), 'un 4e métier se range derrière « +1 »')
   assert.ok(html.includes('3 avis ouverts dans cette zone'))
 })
 
@@ -64,17 +64,17 @@ test('le délai s’affiche en J−x, avec la date limite en jour et mois', () =
   assert.equal(jourMois(null), '')
 })
 
-test('la pastille « Nouveau » n’apparaît que sur les avis nouveaux', () => {
+test('la pastille « Nouveau » n’apparaît que sur les avis nouveaux', () => {
   const html = renderToStaticMarkup(<ListeAvis {...base({ avis: [avis('1', { nouveau: true }), avis('2'), avis('3', { nouveau: true })], total: 3 })} />)
   assert.equal((html.match(/>Nouveau</g) ?? []).length, 2)
   assert.ok(/bg-turquoise-soft[^>]*text-turquoise-ink[^>]*>.*Nouveau/.test(html), 'pastille turquoise (la veille), par les jetons, mot et icône')
 })
 
-test('« Voir l’avis » : lien externe sûr ; « Créer l’AO » : un bouton par avis', () => {
+test('« Voir l’avis » : lien externe sûr ; « Créer l’AO » : un bouton par avis', () => {
   const html = renderToStaticMarkup(<ListeAvis {...base({ avis: [avis('1'), avis('2')], total: 2 })} />)
   assert.equal((html.match(/target="_blank" rel="noopener noreferrer"/g) ?? []).length, 2)
   assert.equal((html.match(/Créer l’AO/g) ?? []).length, 2)
-  assert.equal((html.match(/data-variante="principal"/g) ?? []).length, 0, 'aucun aplat dans la liste des avis : l’action pleine de l’Accueil est celle du prochain AO')
+  assert.equal((html.match(/data-variante="principal"/g) ?? []).length, 0, 'aucun aplat dans la liste des avis : l’action pleine de l’Accueil est celle du prochain AO')
   assert.ok(html.includes('s’ouvre dans un nouvel onglet'))
   const piege = renderToStaticMarkup(<ListeAvis {...base({ avis: [avis('9', { url_avis: 'javascript:alert(1)' })], total: 1 })} />)
   assert.ok(!piege.includes('javascript:') && !piege.includes('Voir l’avis'), 'un lien non http(s) n’est jamais proposé')
@@ -85,7 +85,7 @@ test('« Voir l’avis » : lien externe sûr ; « Créer l’AO » : un bouton 
   assert.equal(urlSure(null), null)
 })
 
-test('« Créer l’AO » remonte l’identifiant de l’avis', () => {
+test('« Créer l’AO » remonte l’identifiant de l’avis', () => {
   const recus: string[] = []
   const el = CarteAvis({ avis: avis('42'), libellesMetiers: {}, nomsDepartements: NOMS, onCreerAO: (id) => recus.push(id) }) as ReactElement
   const bouton = trouver(el, (e) => typeof e.props.onClick === 'function' && texteDe(e.props.children).includes('Créer'))
@@ -94,20 +94,20 @@ test('« Créer l’AO » remonte l’identifiant de l’avis', () => {
   assert.deepEqual(recus, ['42'])
 })
 
-test('création en cours et création non aboutie : textes positifs, bouton désactivé pendant la création', () => {
+test('création en cours et création non aboutie : textes positifs, bouton désactivé pendant la création', () => {
   const en = renderToStaticMarkup(<CarteAvis avis={avis('1')} libellesMetiers={{}} nomsDepartements={NOMS} onCreerAO={() => {}} enCreation />)
   assert.ok(en.includes('Création…') && /<button[^>]*disabled/.test(en))
   const err = renderToStaticMarkup(<CarteAvis avis={avis('1')} libellesMetiers={{}} nomsDepartements={NOMS} onCreerAO={() => {}} creationEnErreur />)
   assert.ok(err.includes('La création n’a pas abouti. Réessayez dans un instant.'))
 })
 
-test('sans zone : « Choisissez une zone sur la carte »', () => {
+test('sans zone : « Choisissez une zone sur la carte »', () => {
   const html = renderToStaticMarkup(<ListeAvis {...base({ zoneVide: true })} />)
   assert.ok(html.includes('Choisissez une zone sur la carte'))
   assert.ok(!html.includes('Élargir'))
 })
 
-test('zone sans avis : message positif et bouton « Élargir » ; il dit ce qu’il fait', () => {
+test('zone sans avis : message positif et bouton « Élargir » ; il dit ce qu’il fait', () => {
   const sans = renderToStaticMarkup(<ListeAvis {...base()} />)
   assert.ok(sans.includes('Aucun avis ouvert dans cette zone pour ces filtres'))
   assert.ok(sans.includes('>Élargir<') && sans.includes('Élargir ajoute les départements voisins.'))
@@ -123,7 +123,7 @@ test('zone sans avis : message positif et bouton « Élargir » ; il dit ce qu�
   assert.equal(appels, 1)
 })
 
-test('« Afficher plus » seulement quand le serveur a donné un curseur ; chargement et erreur en termes positifs', () => {
+test('« Afficher plus » seulement quand le serveur a donné un curseur ; chargement et erreur en termes positifs', () => {
   assert.ok(renderToStaticMarkup(<ListeAvis {...base({ avis: [avis('1')], total: 40, aPlus: true })} />).includes('Afficher plus'))
   assert.ok(!renderToStaticMarkup(<ListeAvis {...base({ avis: [avis('1')], total: 1, aPlus: false })} />).includes('Afficher plus'))
   assert.ok(renderToStaticMarkup(<ListeAvis {...base({ avis: [avis('1')], total: 40, aPlus: true, chargePlus: true })} />).includes('Chargement…'))
@@ -135,20 +135,20 @@ test('« Afficher plus » seulement quand le serveur a donné un curseur ; charg
 
 test('la source est nommée sous la liste', () => {
   const html = renderToStaticMarkup(<ListeAvis {...base({ avis: [avis('1')], total: 1 })} />)
-  assert.ok(html.includes('Source : Avis officiels du BOAMP (DILA), licence ouverte'))
+  assert.ok(html.includes('Source : Avis officiels du BOAMP (DILA), licence ouverte'))
 })
 
-test('les filtres : trois puces du système (date limite, procédure, métier), mots-clés, tri ; une sélection n’est jamais un aplat', () => {
+test('les filtres : trois puces du système (date limite, procédure, métier), mots-clés, tri ; une sélection n’est jamais un aplat', () => {
   const html = renderToStaticMarkup(<FiltresVeille filtres={{ ...FILTRES_PAR_DEFAUT, delai_jours: 15, procedures: ['adaptee'], metiers: ['cvc', 'peinture'] }} onFiltres={() => {}} tri="date_limite" onTri={() => {}} metiers={METIERS} />)
   assert.equal((html.match(/data-filtre="actif"/g) ?? []).length, 3, 'trois puces actives, chacune avec sa valeur')
   assert.ok(html.includes('sous 15 jours') && html.includes('Adaptée') && html.includes('CVC, Peinture'))
   for (const l of ['Date limite', 'Procédure', 'Métier']) assert.ok(html.includes(`aria-label="Retirer le filtre ${l}"`), l)
-  assert.ok(html.includes('Effacer les filtres'), '« Effacer les filtres » : un filtre est actif')
+  assert.ok(html.includes('Effacer les filtres'), '« Effacer les filtres » : un filtre est actif')
   assert.ok(html.includes('Mots-clés') && html.includes('aria-label="Trier par"'))
-  assert.ok(!/bg-accent-fill|bg-accent-tint|aria-pressed/.test(html), 'un seul style de sélection : la puce du système, jamais un aplat')
+  assert.ok(!/bg-accent-fill|bg-accent-tint|aria-pressed/.test(html), 'un seul style de sélection : la puce du système, jamais un aplat')
   const defaut = renderToStaticMarkup(<FiltresVeille filtres={FILTRES_PAR_DEFAUT} onFiltres={() => {}} tri="date_limite" onTri={() => {}} metiers={METIERS} />)
-  assert.equal((defaut.match(/data-filtre="propose"/g) ?? []).length, 3, 'sans filtre : trois puces proposées')
-  assert.ok(!defaut.includes('Effacer les filtres'), '« Effacer les filtres » seulement si un filtre est actif')
+  assert.equal((defaut.match(/data-filtre="propose"/g) ?? []).length, 3, 'sans filtre : trois puces proposées')
+  assert.ok(!defaut.includes('Effacer les filtres'), '« Effacer les filtres » seulement si un filtre est actif')
   // un seul style de champ, plus aucun contrôle du navigateur écrit à la main
   const code = sansCommentaires(lire('src/components/veille/FiltresVeille.tsx'))
   assert.doesNotMatch(code, /<select\b|<input\b|<button\b/)
@@ -160,7 +160,7 @@ test('les filtres : trois puces du système (date limite, procédure, métier), 
   assert.equal(nombreFiltres({ ...FILTRES_PAR_DEFAUT, mots_cles: ' école ', metiers: ['cvc'] }), 2)
 })
 
-test('les choix de procédure et de métier basculent ; chaque geste remonte son filtre', () => {
+test('les choix de procédure et de métier basculent ; chaque geste remonte son filtre', () => {
   assert.deepEqual(basculerValeur([], 'adaptee'), ['adaptee'])
   assert.deepEqual(basculerValeur(['adaptee', 'ouvert'], 'adaptee'), ['ouvert'])
   const code = sansCommentaires(lire('src/components/veille/FiltresVeille.tsx'))
@@ -168,14 +168,14 @@ test('les choix de procédure et de métier basculent ; chaque geste remonte son
   assert.match(code, /onFiltres\(\{ procedures: basculerValeur\(filtres\.procedures, p\.code\) \}\)/)
   assert.match(code, /onFiltres\(\{ metiers: basculerValeur\(filtres\.metiers, m\.code\) \}\)/)
   assert.match(code, /onFiltres\(\{ mots_cles: v \}\)/)
-  assert.match(code, /setTimeout\(\(\) => onChange\(local\.slice\(0, 120\)\), 400\)/, 'mots-clés : 400 ms et 120 caractères au plus')
+  assert.match(code, /setTimeout\(\(\) => onChange\(local\.slice\(0, 120\)\), 400\)/, 'mots-clés : 400 ms et 120 caractères au plus')
 })
 
 // DEFIL — une seule barre de défilement (celle de <main>), filtres et carte collés à partir de lg.
 // Cause mesurée : les éléments `sr-only` (position: absolute) des cartes n'avaient aucun ancêtre positionné ; leur bloc
 // conteneur était la fenêtre, donc hors du clip de <main> : le document défilait en plus (barre collée à celle de la page).
 
-test('la liste n’a aucun défilement interne : ni overflow ni hauteur maximale dans ListeAvis, FiltresVeille et VeilleAccueil', () => {
+test('la liste n’a aucun défilement interne : ni overflow ni hauteur maximale dans ListeAvis, FiltresVeille et VeilleAccueil', () => {
   for (const f of ['ListeAvis', 'FiltresVeille', 'VeilleAccueil']) {
     const src = sansCommentaires(lire(`src/components/veille/${f}.tsx`))
     assert.ok(!/overflow-(y-)?(auto|scroll)|\bmax-h-|\boverflow-hidden/.test(src), `${f} : pas de défilement interne`)
@@ -188,16 +188,16 @@ test('les filtres sont collés en haut seulement à partir de lg, sur fond opaqu
   assert.ok(m, 'bloc des filtres repéré')
   const classes = /class="([^"]*)"/.exec(m![1])![1].split(/\s+/)
   assert.ok(classes.some((c) => /(^|:)sticky$/.test(c)), 'sticky présent')
-  assert.ok(!classes.includes('sticky'), 'jamais collé sans préfixe : au téléphone, les filtres défilent avec la liste')
+  assert.ok(!classes.includes('sticky'), 'jamais collé sans préfixe : au téléphone, les filtres défilent avec la liste')
   assert.ok(classes.filter((c) => /sticky$/.test(c)).every((c) => c.startsWith('lg:')), 'sticky seulement à partir de lg')
-  assert.ok(classes.includes('lg:-top-5'), 'collé sous l’en-tête : -top-5 annule le py-5 de <main>, sans interstice où une carte apparaîtrait')
-  assert.ok(classes.includes('bg-surface-0') || classes.includes('lg:bg-surface-0'), 'fond opaque là où il est collé : les cartes qui passent dessous ne transparaissent pas')
+  assert.ok(classes.includes('lg:-top-5'), 'collé sous l’en-tête : -top-5 annule le py-5 de <main>, sans interstice où une carte apparaîtrait')
+  assert.ok(classes.includes('bg-surface-0') || classes.includes('lg:bg-surface-0'), 'fond opaque là où il est collé : les cartes qui passent dessous ne transparaissent pas')
   assert.ok(classes.some((c) => /^(lg:)?z-\d+$/.test(c)), 'au-dessus des cartes')
   // les cartes viennent après le bloc, dans le même flux : rien n'est retiré du flux
   assert.ok(html.indexOf('data-filtres-colles') < html.indexOf('<article'))
 })
 
-test('<main> est le bloc conteneur des éléments en position absolue : le document ne défile plus à côté de lui', () => {
+test('<main> est le bloc conteneur des éléments en position absolue : le document ne défile plus à côté de lui', () => {
   const src = sansCommentaires(lire('src/components/layout/Layout.tsx'))
   const main = /<main[\s\S]*?>/.exec(src)![0]
   assert.ok(/'[^']*\brelative\b[^']*overflow-y-auto|overflow-y-auto[^']*\brelative\b/.test(main), 'main porte relative avec overflow-y-auto')
@@ -208,10 +208,10 @@ test('la colonne de la carte reste collée sous l’en-tête à partir de lg (le
   const src = sansCommentaires(lire('src/components/veille/VeilleAccueil.tsx'))
   assert.ok(/lg:sticky lg:top-4 lg:self-start/.test(src))
   assert.ok(!/\bsticky\b/.test(src.replace(/lg:sticky/g, '')), 'jamais collée au téléphone')
-  assert.ok(!/max-w-\[/.test(src), 'la carte est à pleine largeur : plus bornée par la hauteur de l’écran (décision du 1er/11, le sud coupé est accepté)')
+  assert.ok(!/max-w-\[/.test(src), 'la carte est à pleine largeur : plus bornée par la hauteur de l’écran (décision du 1er/11, le sud coupé est accepté)')
 })
 
-test('les filtres collés sont relâchés avant la dernière carte : parent flow-root raccourci de 16 rem, espace rendu par le bloc suivant', () => {
+test('les filtres collés sont relâchés avant la dernière carte : parent flow-root raccourci de 16 rem, espace rendu par le bloc suivant', () => {
   const avec = renderToStaticMarkup(<ListeAvis {...base({ avis: [avis('1'), avis('2')], total: 2, aPlus: true })} />)
   assert.ok(/<div class="lg:flow-root"><div data-filtres-colles/.test(avec), 'le bloc collé est l’enfant direct du parent flow-root')
   assert.equal((avec.match(/lg:-mb-64/g) ?? []).length, 1, 'la liste raccourcit son parent de 16 rem')
@@ -222,7 +222,7 @@ test('les filtres collés sont relâchés avant la dernière carte : parent flow
 })
 
 // C10 — accueil sans zone choisie : pas de filtres devant une liste qui n'existe pas ; la source est expliquée.
-test('C10 : sans zone, aucun filtre (délai, procédure, métier, mots-clés) ; ils paraissent dès qu’une zone est choisie', () => {
+test('C10 : sans zone, aucun filtre (délai, procédure, métier, mots-clés) ; ils paraissent dès qu’une zone est choisie', () => {
   const sans = renderToStaticMarkup(<ListeAvis {...base({ zoneVide: true })} />)
   assert.ok(!sans.includes('data-filtres-colles'), 'bloc des filtres absent')
   assert.ok(!/Mots-clés|Procédure|Métier|Délai/i.test(sans), 'aucun libellé de filtre')
@@ -231,7 +231,7 @@ test('C10 : sans zone, aucun filtre (délai, procédure, métier, mots-clés) ; 
   assert.ok(avec.includes('data-filtres-colles'))
 })
 
-test('C10 : « BOAMP – DILA » s’explique en une courte phrase', async () => {
+test('C10 : « BOAMP – DILA » s’explique en une courte phrase', async () => {
   const { libelleSourceVeille } = await import('@/services/veille')
   assert.equal(libelleSourceVeille('BOAMP – DILA, licence ouverte'), 'Avis officiels du BOAMP (DILA), licence ouverte')
   assert.equal(libelleSourceVeille(null), 'Avis officiels du BOAMP (DILA), licence ouverte')
@@ -240,7 +240,7 @@ test('C10 : « BOAMP – DILA » s’explique en une courte phrase', async () =>
 
 // Refonte groupe A — au téléphone, pas de mur de puces avant les avis : les filtres sont repliés sous « Affiner » (bouton
 // qui dit son état, aria-expanded) ; à partir de lg ils restent ouverts.
-test('sous lg, les filtres sont repliés sous « Affiner » ; ouverts à partir de lg', () => {
+test('sous lg, les filtres sont repliés sous « Affiner » ; ouverts à partir de lg', () => {
   const html = renderToStaticMarkup(<ListeAvis {...base({ avis: [avis('1')], total: 1 })} />)
   assert.match(html, /<button[^>]*aria-expanded="false"[^>]*>.*Affiner/)
   assert.match(html, /<div id="[^"]+" class="max-lg:hidden max-lg:mt-3">/)

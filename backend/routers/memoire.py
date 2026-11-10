@@ -207,7 +207,7 @@ async def generate_memoire(
         .values(processing_status="generating")
     ).rowcount
     if not claimed:
-        raise HTTPException(status_code=409, detail="Une génération est déjà en cours pour ce projet.")
+        raise HTTPException(status_code=409, detail="Une rédaction est déjà en cours pour cet appel d’offres.")
 
     # ── Garde pré-vol IA (audit risque #4) : jamais de run condamné d'avance
     # (API down / crédit épuisé). asyncio.to_thread : règle WSL2.
@@ -657,7 +657,7 @@ async def refaire_section_memoire(
         .values(processing_status="generating", processing_detail=f"{REFAIRE_DETAIL}{part}.{cle}")
     ).rowcount
     if not claimed:
-        raise HTTPException(status_code=409, detail="Une rédaction est déjà en cours pour ce projet.")
+        raise HTTPException(status_code=409, detail="Une rédaction est déjà en cours pour cet appel d’offres.")
 
     from services.ai.api_preflight import AIServiceUnavailable, ensure_ai_service_available
     try:

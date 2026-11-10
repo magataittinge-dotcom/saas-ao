@@ -122,7 +122,7 @@ function VaultRow({
       {note && statut.action && <p className="piece-note">{note}</p>}
       {depot && <p className="piece-note">{depot}</p>}
       {item.source_in_rc && ['si-concerne', 'facultatif', 'attribution'].includes(statut.code) && (
-        <p className="piece-note">Lu dans le <Sigle code="RC" /> : « {item.source_in_rc} »</p>
+        <p className="piece-note">Lu dans le <Sigle code="RC" />&nbsp;: «&nbsp;{item.source_in_rc}&nbsp;»</p>
       )}
       <SignatureLigne item={item} onToggleSignature={onToggleSignature} onOpenSource={onOpenSource} />
       <div className="mt-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-bord pt-3">

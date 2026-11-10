@@ -563,7 +563,7 @@ function ExigenceSection({
       <div id={idContenu} hidden={!open}>
         {open && (
           <Tableau
-            libelle={`Exigences : ${CATEGORY_LABELS[category]}`}
+            libelle={`Exigences : ${CATEGORY_LABELS[category]}`}
             colonnes={colonnes}
             lignes={items}
             cle={(item) => item.id}

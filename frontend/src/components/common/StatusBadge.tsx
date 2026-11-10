@@ -23,7 +23,7 @@ export function complianceStatusBadge(status: ComplianceStatus) {
     couvert:     { label: 'Confirmée par vous', variant: 'success' },
     non_couvert: { label: 'À confirmer',  variant: 'neutral' },
     partiel:     { label: 'Partiel',   variant: 'warning' },
-    a_generer:   { label: 'À générer', variant: 'info'    },
+    a_generer:   { label: 'À rédiger', variant: 'info'    },
     expire:      { label: 'À renouveler', variant: 'amber'  },
   }
   return map[status]

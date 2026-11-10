@@ -87,7 +87,7 @@ function CelluleRemise({ projet, maintenant }: { projet: Project; maintenant: Da
 /** Le menu « … » d'une rangée : ouvrir l'AO, changer son statut, le supprimer. */
 export function MenuAO({ projet, onStatut, onSupprimer }: { projet: Project } & Pick<GestesAO, 'onStatut' | 'onSupprimer'>) {
   return (
-    <MenuPoints libelle={`Autres actions pour « ${projet.name} »`}>
+    <MenuPoints libelle={`Autres actions pour « ${projet.name} »`}>
       <MenuElement asChild><Link to={`/projects/${projet.id}`}>Ouvrir l’appel d’offres</Link></MenuElement>
       <MenuElement onSelect={() => onStatut(projet)}>Mettre à jour le statut</MenuElement>
       {onSupprimer && <MenuElement danger onSelect={() => onSupprimer(projet)}>Supprimer</MenuElement>}

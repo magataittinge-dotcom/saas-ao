@@ -60,7 +60,7 @@ export interface Proposition {
   extrait: string | null
 }
 
-export const MESSAGE_FORMAT = "Ce fichier n'est pas un PDF, un Word, un Excel ou une image JPEG/PNG."
+export const MESSAGE_FORMAT = "Ce fichier n’est pas un PDF, un Word, un Excel ou une image JPEG/PNG."
 export const MESSAGE_ANCIEN_FORMAT = 'Enregistrez le fichier au format .docx (ou .xlsx) puis redéposez-le.'
 export const TYPES_ACCEPTES = '.pdf,.docx,.xlsx,.jpg,.jpeg,.png'
 // Les anciens formats Word et Excel (OLE2) sont refusés : ils peuvent porter des macros.
@@ -100,8 +100,8 @@ export function messageRefus(statut: number | undefined, detail: unknown): strin
   if (statut === 415) return MESSAGE_FORMAT
   if (typeof detail === 'string' && detail.trim()) return detail
   if (statut === 413) return 'Fichier trop volumineux.'
-  if (statut === 429) return 'Trop de dépôts à la suite : réessayez dans une minute.'
-  return 'Ce fichier n\'a pas pu être déposé. Réessayez.'
+  if (statut === 429) return 'Trop de dépôts à la suite : réessayez dans une minute.'
+  return 'Ce fichier n’a pas pu être déposé. Réessayez.'
 }
 
 export const casesDeLaRubrique = <T extends { rubrique: RubriqueId }>(cases: T[], rubrique: RubriqueId): T[] =>
@@ -123,7 +123,7 @@ export function sourceLisible(s: PropositionSource): string {
 
 /** « À confirmer : remplace … » quand la valeur du profil diffère. */
 export const libelleAConfirmer = (p: Pick<Proposition, 'a_confirmer' | 'remplace'>): string | null =>
-  p.a_confirmer ? `À confirmer : remplace ${p.remplace ? `« ${p.remplace} »` : 'la valeur actuelle'}` : null
+  p.a_confirmer ? `À confirmer : remplace ${p.remplace ? `« ${p.remplace} »` : 'la valeur actuelle'}` : null
 
 /** Propositions rangées par lecture (un fichier), dans l'ordre d'arrivée. */
 export function groupesParLecture(propositions: Proposition[]): { lecture_id: string; case_nom: string; source: string; propositions: Proposition[] }[] {
@@ -155,6 +155,6 @@ export const libelleValider = (n: number): string => (n === 0 ? 'Valider' : n ==
 /** Le bilan d'une validation, en une phrase positive. */
 export function phraseBilan(b: { validees: number; ecartees: number; erreurs: { libelle: string; message: string }[] }): string {
   const ecrites = b.validees === 0 ? 'Aucune information ajoutée à votre profil' : b.validees === 1 ? '1 information ajoutée à votre profil' : `${b.validees} informations ajoutées à votre profil`
-  const erreurs = b.erreurs.length > 0 ? ` · ${b.erreurs.map((e) => `${e.libelle} : ${e.message}`).join(' ; ')}` : ''
+  const erreurs = b.erreurs.length > 0 ? ` · ${b.erreurs.map((e) => `${e.libelle} : ${e.message}`).join(' ; ')}` : ''
   return ecrites + erreurs
 }

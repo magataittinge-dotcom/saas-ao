@@ -15,11 +15,11 @@ const projet = (over: Partial<Project> = {}): Project => ({
 
 test('chaque état de l’AO a son verbe et son écran, jusqu’à l’étape 5 du serveur', () => {
   const cas: [Partial<Project>, string, string][] = [
-    [{ current_step: 1 }, 'Déposer le dossier de l’acheteur'.replace('’', "'"), 'upload'],
+    [{ current_step: 1 }, 'Déposer le dossier de l’acheteur', 'upload'],
     [{ current_step: 2 }, 'Choisir le lot', 'lots'],
     [{ current_step: 3 }, 'Lire ce dossier', 'analysis'],
-    [{ current_step: 3, processing_status: 'processing' }, 'Analyse en cours', 'analysis'],
-    [{ current_step: 3, status: 'analyzed' }, 'Décider : on y va ?', 'analysis'],
+    [{ current_step: 3, processing_status: 'processing' }, 'Lecture en cours', 'analysis'],
+    [{ current_step: 3, status: 'analyzed' }, 'Décider : on y va ?', 'analysis'],
     [{ current_step: 4, status: 'analyzed', completed_steps: { 3: true } }, 'Réunir les pièces', 'verification'],
     // étape 5 : le plan d'abord, la rédaction ensuite
     [{ current_step: 5, status: 'analyzed', completed_steps: { 3: true, 4: true } }, 'Préparer le plan du mémoire', 'plan'],
@@ -32,13 +32,13 @@ test('chaque état de l’AO a son verbe et son écran, jusqu’à l’étape 5 
     assert.deepEqual(actionEtape(p), { verbe, segment }, JSON.stringify(over))
     assert.equal(verbeEtape(p), verbe)
     assert.equal(lienEtape(p), `/projects/p/${segment}`)
-    assert.equal(prochaineEtape(p), verbe, 'la bande « Vos AO en cours » utilise le même calcul')
+    assert.equal(prochaineEtape(p), verbe, 'la bande « Vos AO en cours » utilise le même calcul')
   }
   assert.equal(aMemoire(projet({ completed_steps: { 5: true } })), true)
   assert.equal(aMemoire(projet()), false)
 })
 
-test('« Lancer l’analyse » n’existe plus : c’est « Lire ce dossier » partout où c’est la même action', () => {
+test('« Lancer l’analyse » n’existe plus : c’est « Lire ce dossier » partout où c’est la même action', () => {
   const restes = fichiersSource().flatMap((f) => textesAffiches(f).filter((t) => /\blancer l['’]analyse/i.test(t.texte)).map((t) => `${t.fichier}:${t.ligne}`))
   assert.deepEqual(restes, [])
 })
@@ -50,7 +50,7 @@ test('l’accueil, Mes AO et la palette ouvrent l’écran de la prochaine actio
   assert.equal((sansCommentaires(lire('src/components/mesao/ALaUne.tsx')).match(/to=\{lienAO\(projet, maintenant\)\}/g) ?? []).length, 1, 'À la une : le bouton de la prochaine action')
   const ligne = sansCommentaires(lire('src/components/mesao/LigneAO.tsx'))
   assert.match(ligne, /const \{ action \} = lectureAO\(projet, maintenant\)/)
-  assert.match(ligne, /`\/projects\/\$\{projet\.id\}\/\$\{action\.segment\}`/, 'la ligne ouvre l\'écran de l\'action')
+  assert.match(ligne, /`\/projects\/\$\{projet\.id\}\/\$\{action\.segment\}`/, 'la ligne ouvre l’écran de l’action')
   const projetEcran = sansCommentaires(lire('src/routes/Project.tsx'))
   assert.match(projetEcran, /<Navigate to=\{actionEtape\(project\)\.segment\} replace \/>/, '/projects/<id> (palette, veille) ouvre la prochaine action')
 })

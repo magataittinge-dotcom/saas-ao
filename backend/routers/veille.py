@@ -111,7 +111,7 @@ def _decoder_curseur(curseur: str) -> tuple[date, str]:
         valeur, identifiant = json.loads(brut)
         return date.fromisoformat(valeur), str(identifiant)
     except Exception:
-        raise HTTPException(status_code=422, detail="curseur invalide.")
+        raise HTTPException(status_code=422, detail="La suite de la liste n’a pas pu être lue. Rechargez la page.")
 
 
 def _avis_sortie(avis: AvisVeille, nouveau: bool) -> dict:
