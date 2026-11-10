@@ -66,7 +66,7 @@ test('Pièces : l’état de chaque pièce est dit par un mot positif, « Non co
 
 test('un seul bouton en dégradé par écran : l’action de l’en-tête, jamais doublée sur ordinateur par la barre ni par une autre carte', () => {
   const analyse = sansCommentaires(lire('src/routes/project/StepAnalysis.tsx'))
-  assert.equal((analyse.match(/variant="signature"/g) ?? []).length, 1)
+  assert.equal((analyse.match(/variante="principal"/g) ?? []).length, 1)
   assert.match(analyse, /<ActionsBarreTel>\s*<BoutonSuite/)
   const decision = sansCommentaires(lire('src/components/project/SynorixScoreCard.tsx'))
   assert.doesNotMatch(decision, /signature-btn/, '« On y va » n’est pas un second bouton principal')

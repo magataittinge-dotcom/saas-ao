@@ -1,12 +1,20 @@
 import { useAvisAttente } from '@/hooks/useAvisAttente'
-import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
-import { createPortal } from 'react-dom'
+import { useState, useMemo, useRef, useCallback, useEffect, useId } from 'react'
 import { useQuery, useQueryClient, useIsFetching } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import {
-  Search, Eye,
-  CheckCircle2, Sparkles,
-} from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
+import { Bouton } from '@/components/ui/bouton'
+import { Carte } from '@/components/ui/carte'
+import { ChampRecherche } from '@/components/ui/champ'
+import { EtatErreur, EtatVide } from '@/components/ui/etats'
+import { EffacerFiltres, PuceFiltre } from '@/components/ui/filtre'
+import { ListeDeroulante } from '@/components/ui/liste-deroulante'
+import { Message } from '@/components/ui/message'
+import { PastilleEtat } from '@/components/ui/pastille'
+import { Squelette } from '@/components/ui/squelette'
+import { Tableau, type ColonneTableau } from '@/components/ui/tableau'
+import { annoncer } from '@/components/ui/toast'
+import { cn } from '@/lib/utils'
 import { api, getSignedFileUrl } from '@/services/api'
 import { type FieldSource, type CriticalFieldsPayload } from '@/components/project/CriticalBanner'
 import { CarteAO30sVue, useFaitsAO } from '@/components/project/CarteAO30s'
@@ -14,7 +22,6 @@ import PointsAEclaircir from '@/components/project/PointsAEclaircir'
 import AVerifierAvantEngagement from '@/components/project/AVerifierAvantEngagement'
 import { voirTresorerie } from '@/components/project/TresorerieCard'
 import { GabaritEtape, BandeResume, SectionEtape, BarreEtape, ActionsBarre, ActionsBarreTel, BilanBarre, BoutonSuite } from '@/components/etape'
-import { Button } from '@/components/ui/button'
 import { cartesResumeAO, pointsAVerifier, type DateQuestions } from '@/lib/resumeAO'
 import TresorerieCard from '@/components/project/TresorerieCard'
 import SynorixScoreCard from '@/components/project/SynorixScoreCard'
@@ -26,23 +33,19 @@ import { precharger, abandonner } from '@/services/sources'
 import { useVisible } from '@/hooks/useVisible'
 import ProgressDisplay, { type StepDescriptor } from '@/components/common/ProgressDisplay'
 import { useProgressStream } from '@/hooks/useProgressStream'
-import { RequirementListSkeleton } from '@/components/skeletons'
 import type { Project, ComplianceItem, ComplianceCategory, ProjectDocument } from '@/types'
 import { useCompleteStep } from '@/hooks/useProject'
-import EchecAction from '@/components/common/EchecAction'
 import { messageErreur } from '@/lib/erreurs'
 import { phraseDocumentsAnalyses, phraseExigences, repartirDocuments } from '@/lib/analyseLibelles'
 import { PASSAGE_INTROUVABLE, trouverPieceCitee } from '@/lib/pieceCitee'
 import { lectureNonDemarree } from '@/lib/lectureNonDemarree'
 
 const ANALYSIS_STEPS: StepDescriptor[] = [
-  { key: 'preparation',     label: 'Lecture des documents',                 estimated_s: 2 },
-  { key: 'analyzing_pass1', label: 'Analyse des exigences administratives', estimated_s: 50 },
-  { key: 'analyzing_pass2', label: 'Analyse des exigences techniques',      estimated_s: 50 },
-  { key: 'finalizing',      label: 'Finalisation',                          estimated_s: 5 },
+  { key: 'preparation',     label: 'Lecture des documents',      estimated_s: 2 },
+  { key: 'analyzing_pass1', label: 'Exigences administratives',  estimated_s: 50 },
+  { key: 'analyzing_pass2', label: 'Exigences techniques',       estimated_s: 50 },
+  { key: 'finalizing',      label: 'Mise en ordre',              estimated_s: 5 },
 ]
-
-const F = 'var(--font-ui)'
 
 const CATEGORY_LABELS: Record<ComplianceCategory, string> = {
   candidature:       'Candidature',
@@ -81,7 +84,8 @@ export default function StepAnalysis({ project }: Props) {
   const [selection, setSelection] = useState<SelectionSource | null>(null)
   const fermerSelection = useCallback(() => setSelection(null), [])
   // 1.16 — ce qui n'a pas abouti est dit (source introuvable, document qui ne s'ouvre pas, relance)
-  const [avis, setAvis] = useState<{ message: string; relancer?: () => void } | null>(null)
+  const [avis, setAvis] = useState<{ message: string } | null>(null)
+  const idDetailLot = useId()
   const [relanceEnCours, setRelanceEnCours] = useState(false)
 
   const nombrePagesDe = (nomPiece: string | null | undefined): number | null =>
@@ -91,7 +95,7 @@ export default function StepAnalysis({ project }: Props) {
   // la page citée par l'analyse dans le document, et l'extrait tel quel).
   const openFieldSource = async (src: FieldSource) => {
     const doc = projectDocs.find(d => d.file_name === src.document)
-    if (!doc) { setAvis({ message: PASSAGE_INTROUVABLE }); return }
+    if (!doc) { annoncer(PASSAGE_INTROUVABLE, 'erreur'); return }
     if (doc.file_url.startsWith('http')) { window.open(doc.file_url, '_blank'); return }
     try {
       const origine = await getSignedFileUrl(doc.file_url)
@@ -101,12 +105,9 @@ export default function StepAnalysis({ project }: Props) {
         type: 'champ', nombrePages: doc.page_count ?? null,
         reponse: reponseDeChamp(doc, { page: src.page, excerpt: src.excerpt }, { pdf, origine }),
       })
-      setAvis(null)
     } catch {
-      setAvis({
-        message: "Le document source n'a pas pu s'ouvrir.",
-        relancer: () => { void openFieldSource(src) },
-      })
+      // 1.16 — ce qui n'a pas abouti est dit, là où l'on regarde (le clic est au milieu d'un long écran)
+      annoncer('Le document source n’a pas pu s’ouvrir. Réessayez dans un instant.', 'erreur')
     }
   }
 
@@ -114,7 +115,6 @@ export default function StepAnalysis({ project }: Props) {
   // pour un ancien AO) ; jamais de repli sur une autre pièce du dossier (1.16).
   const openSourceDocument = (item: ComplianceItem) => {
     if (!item.source_document && !item.source_page) return
-    setAvis(null)
     setSelection({
       type: 'exigence', id: item.id, titre: item.source_document,
       nombrePages: nombrePagesDe(trouverPieceCitee(item.source_document, projectDocs)?.file_name),
@@ -132,7 +132,7 @@ export default function StepAnalysis({ project }: Props) {
   })
   const activeLot = viewLot ?? project.selected_lot ?? analyzedLots[0] ?? null
 
-  const { data: items = [], isLoading } = useQuery({
+  const requeteExigences = useQuery({
     queryKey: ['compliance', project.id, activeLot],
     queryFn: async () => {
       const { data } = await api.get<ComplianceItem[]>(
@@ -142,6 +142,8 @@ export default function StepAnalysis({ project }: Props) {
     refetchInterval: (query) => (query.state.data?.length === 0 ? 3000 : false),
     refetchIntervalInBackground: false,
   })
+  const { isLoading } = requeteExigences
+  const items = useMemo(() => requeteExigences.data ?? [], [requeteExigences.data])
 
   const counts = useMemo(() => {
     const map: Partial<Record<ComplianceCategory, number>> = {}
@@ -253,41 +255,60 @@ export default function StepAnalysis({ project }: Props) {
     ? phraseDocumentsAnalyses({ analyses: lotFilterInfo.included.length, informations: lotFilterInfo.informations, autresLots: lotFilterInfo.autresLots })
     : null
 
-  // ── Loading states ────────────────────────────────────────────
+  const TITRE = 'Décider'
+  const UTILITE = 'Ce que le dossier demande, ce qui vous engage et les questions à poser à l’acheteur, avant de décider d’y répondre.'
 
-  if (isLoading) return <RequirementListSkeleton count={5} />
+  // ── Chargement, puis erreur (jamais « Analyse… 0 % » quand le serveur ne répond pas), puis les états de la lecture ──
+  if (isLoading) return (
+    <GabaritEtape titre={TITRE} utilite={UTILITE}>
+      <div aria-busy="true" className="grid gap-6">
+        <Squelette className="h-32 w-full rounded-carte" />
+        <Squelette className="h-56 w-full rounded-carte" />
+        <Squelette className="h-56 w-full rounded-carte" />
+      </div>
+    </GabaritEtape>
+  )
 
-  // Échec du run détaché : statut erreur EXPLICITE + relance — jamais de
-  // régression d'étape ni d'attente infinie.
-  const analysisFailed =
-    analysisSse.phase === 'error' || project.processing_status === 'error'
+  if (requeteExigences.isError && requeteExigences.data === undefined) return (
+    <GabaritEtape titre={TITRE} utilite={UTILITE}>
+      <EtatErreur
+        titre="La lecture du dossier n’a pas pu se charger"
+        detail="Les exigences relevées dans le dossier n’ont pas pu être lues. Votre dossier et sa lecture ne sont pas touchés."
+        onReessayer={() => { void requeteExigences.refetch() }}
+        enCours={requeteExigences.isFetching}
+      />
+    </GabaritEtape>
+  )
+
+  // Échec du run détaché : statut erreur EXPLICITE + relance — jamais de régression d'étape ni d'attente infinie.
+  const analysisFailed = analysisSse.phase === 'error' || project.processing_status === 'error'
+  const relancerLecture = async () => {
+    setAvis(null)
+    setRelanceEnCours(true)
+    try {
+      await api.post(`/projects/${project.id}/analyze`, {}, { timeout: 60_000 })
+      window.location.reload()
+    } catch (err) {
+      setAvis({ message: await messageErreur(err, 'La relance de la lecture n’a pas abouti. Réessayez dans un instant.') })
+      setRelanceEnCours(false)
+    }
+  }
 
   if (items.length === 0 && analysisFailed) return (
-    <div className="max-w-lg mx-auto glass-card p-8 text-center space-y-4 animate-fade-in">
-      <p className="text-base font-semibold text-ds-text">L'analyse a échoué</p>
-      <p className="text-sm text-ds-text-2">
-        {project.processing_detail || analysisSse.detail
-          || "Une erreur est survenue pendant l'analyse. Relancez-la."}
-      </p>
-      {avis && <EchecAction message={avis.message} />}
-      <button
-        onClick={async () => {
-          setAvis(null)
-          setRelanceEnCours(true)
-          try {
-            await api.post(`/projects/${project.id}/analyze`, {}, { timeout: 60_000 })
-            window.location.reload()
-          } catch (err) {
-            setAvis({ message: await messageErreur(err, "La relance de l'analyse n'a pas abouti. Réessayez dans un instant.") })
-            setRelanceEnCours(false)
-          }
-        }}
-        disabled={relanceEnCours}
-        className="btn-primary py-2 px-5 disabled:opacity-60"
-      >
-        {avis ? 'Réessayer' : "Relancer l'analyse"}
-      </button>
-    </div>
+    <GabaritEtape titre={TITRE} utilite={UTILITE} message={avis && <Message ton="erreur">{avis.message}</Message>}>
+      <Carte>
+        <ProgressDisplay
+          variant="page"
+          steps={ANALYSIS_STEPS}
+          currentStep={analysisSse.step}
+          progress={analysisSse.progress}
+          phase="error"
+          erreur={project.processing_detail || analysisSse.detail || 'La lecture du dossier s’est arrêtée avant la fin.'}
+          uniteRendue
+          onRelancer={relanceEnCours ? undefined : () => { void relancerLecture() }}
+        />
+      </Carte>
+    </GabaritEtape>
   )
 
   // B1 — aucun traitement en cours, aucune analyse : la lecture n'a pas démarré (lancement en échec).
@@ -297,57 +318,42 @@ export default function StepAnalysis({ project }: Props) {
     phaseFlux: analysisSse.phase,
     donneesAJour: delaiDeGracePasse && !projetEnRelecture,
   })) return (
-    <div className="max-w-lg mx-auto glass-card p-8 text-center space-y-4 animate-fade-in">
-      <p className="text-base font-semibold text-ds-text">La lecture n’a pas démarré</p>
-      <p className="text-sm text-ds-text-2">
-        Le dossier est bien enregistré, mais aucune lecture n’est en cours. Relancez-la depuis le choix des lots.
-      </p>
-      <button onClick={() => navigate(`/projects/${project.id}/lots`)} className="btn-primary py-2 px-5">
-        Relancer
-      </button>
-    </div>
+    <GabaritEtape titre={TITRE} utilite={UTILITE}>
+      <EtatVide
+        titre="La lecture n’a pas démarré"
+        phrase="Le dossier est bien enregistré, mais aucune lecture n’est en cours. Relancez-la depuis le choix des lots."
+        action={<Bouton variante="secondaire" onClick={() => navigate(`/projects/${project.id}/lots`)}>Relancer</Bouton>}
+      />
+    </GabaritEtape>
   )
 
+  // La lecture tourne : l'écran d'attente est DANS la page (plus de fenêtre par-dessus un écran vide).
   if (items.length === 0 || (analysisRunning && analysisSse.phase !== 'complete')) return (
-    <ProgressDisplay
-      variant="modal"
-      title="Analyse du dossier par l'IA"
-      steps={ANALYSIS_STEPS}
-      currentStep={analysisSse.step}
-      progress={analysisSse.progress}
-      detail={analysisSse.detail || "L'IA lit vos documents et extrait les exigences"}
-      phase={analysisSse.phase}
-      avis={avisAttente}
-      onArrierePlan={() => navigate('/dashboard')}
-    />
+    <GabaritEtape titre={TITRE} utilite={UTILITE}>
+      <Carte>
+        <ProgressDisplay
+          variant="page"
+          title="Synorix lit votre dossier"
+          steps={ANALYSIS_STEPS}
+          currentStep={analysisSse.step}
+          progress={analysisSse.progress}
+          detail={analysisSse.detail || 'Je lis vos documents et je relève chaque exigence avec sa source.'}
+          phase={analysisSse.phase}
+          avis={avisAttente}
+          onArrierePlan={() => navigate('/dashboard')}
+        />
+      </Carte>
+    </GabaritEtape>
   )
 
-  // ── Barre du bas (composant commun : une ligne au téléphone) ───────
-  // Ordinateur : le bilan ; l'action principale est celle de l'en-tête. Téléphone : la barre porte « Suivant : Pièces ».
-
+  // ── Barre du bas : le bilan à l'ordinateur ; au téléphone elle porte l'action de l'étape ───────
+  const bilan = `${items.length} exigences dont ${obligatoireCount} à respecter impérativement`
   const bottomBar = (
     <BarreEtape>
-      <BilanBarre
-        bureau={<>
-          <CheckCircle2 size={16} className="shrink-0" style={{ color: 'var(--text-1)' }} />
-          <p className="num-mono truncate text-xs" style={{ color: 'var(--text-3)', fontFamily: F }}>
-            {items.length} exigences dont {obligatoireCount} à respecter impérativement
-          </p>
-        </>}
-        tel={<>
-          <CheckCircle2 size={16} className="shrink-0" style={{ color: 'var(--text-1)' }} />
-          <p className="num-mono truncate text-xs" style={{ color: 'var(--text-3)', fontFamily: F }}>{items.length} exigences</p>
-        </>}
-      />
+      <BilanBarre bureau={bilan} tel={`${items.length} exigences`} />
       <ActionsBarre>
         <ActionsBarreTel>
-          <BoutonSuite
-            etape="Pièces"
-            onClick={handleValidate}
-            enCours={isValidating}
-            enCoursLibelle="Validation..."
-            icone={isStepAlreadyDone ? CheckCircle2 : Sparkles}
-          />
+          <BoutonSuite etape="Pièces" onClick={handleValidate} enCours={isValidating} enCoursLibelle="Validation…" />
         </ActionsBarreTel>
       </ActionsBarre>
     </BarreEtape>
@@ -355,158 +361,143 @@ export default function StepAnalysis({ project }: Props) {
 
   const voirSource = (src: FieldSource) => { void openFieldSource(src) }
   const marche = faits.filter((f) => ['acheteur', 'oeuvre', 'objet', 'lots', 'criteres', 'delai'].includes(f.id))
+  const categoriesPresentes = CATEGORY_ORDER.filter((cat) => counts[cat])
+  const selectionId = selection?.type === 'exigence' ? selection.id : null
 
   // ── Main render ───────────────────────────────────────────────
 
   return (
-    <div style={{ fontFamily: F }}>
-      <GabaritEtape
-        titre="Décider"
-        utilite="Ce que le dossier demande, ce qui vous engage et les questions à poser à l’acheteur, avant de décider d’y répondre."
-        actionPrincipale={
-          <Button type="button" variant="signature" onClick={handleValidate} disabled={isValidating} aria-busy={isValidating}>
-            {isStepAlreadyDone ? <CheckCircle2 size={16} aria-hidden /> : <Sparkles size={16} aria-hidden />}
-            {isValidating ? 'Validation...' : 'Étape suivante : Pièces'}
-          </Button>
+    <GabaritEtape
+      titre="Décider"
+      utilite={UTILITE}
+      // A1 — l'action de l'écran est la décision : « On y va » (même validation), puis « Passer aux pièces » une fois l'étape faite.
+      actionPrincipale={
+        <Bouton variante="principal" onClick={handleValidate} enCours={isValidating} libelleEnCours="Validation…">
+          {isStepAlreadyDone ? 'Passer aux pièces' : 'On y va'}
+        </Bouton>
+      }
+      // Une lecture en échec se dit, même quand une lecture précédente a laissé des exigences à l'écran.
+      message={analysisFailed && (
+        <Message ton="attention" titre="La dernière lecture s’est arrêtée avant la fin"
+          action={<Bouton variante="secondaire" onClick={() => navigate(`/projects/${project.id}/lots`)}>Relancer la lecture</Bouton>}>
+          La liste des exigences ci-dessous peut être partielle.
+        </Message>
+      )}
+      resume={<BandeResume cartes={cartesResumeAO(faits, { total: items.length, obligatoires: obligatoireCount }, voirSource, dateQuestions)} libelle="L’AO en 30 secondes" />}
+      barre={bottomBar}
+    >
+      {/* A2 — l'ordre de la décision : le marché, ce qui est à vérifier, la décision, puis ce qui la prépare et le détail */}
+      {marche.length > 0 && (
+        <SectionEtape titre="Le marché en bref">
+          <CarteAO30sVue faits={marche} titre={null} onOpenSource={voirSource} />
+        </SectionEtape>
+      )}
+
+      <AVerifierAvantEngagement points={aVerifier} onVoir={voirSource} onVoirPenalites={voirTresorerie} />
+
+      {/* ── FICHE DE DÉCISION (1.7) — conditions vérifiées, puis « On y va » / « On passe » ── */}
+      <SectionEtape titre="Décision">
+        <SynorixScoreCard project={project} onOpenSource={openFieldSource} onYAller={handleValidate} enCours={isValidating} />
+      </SectionEtape>
+
+      {/* ── TRÉSORERIE (C19) + RÉTRO-PLANNING (C20) ── */}
+      <SectionEtape titre="Trésorerie et calendrier" colonnes={2} classeContenu="md:[&>*:only-child]:col-span-2">
+        <TresorerieCard projectId={project.id} onOpenSource={openFieldSource} />
+        <RetroPlanning projectId={project.id} />
+      </SectionEtape>
+
+      <PointsAEclaircir project={project} onOpenSource={voirSource} />
+
+      {/* ── LISTE | PANNEAU « Voir dans le dossier » (ordinateur : côte à côte ; téléphone : feuille) ── */}
+      <SectionEtape
+        titre="Les exigences du dossier"
+        description={
+          <>
+            <span className="font-semibold text-fg">{items.length} exigences identifiées</span>
+            {project.selected_lot_name ? ` pour ${project.selected_lot_name}` : ''}. {phraseExigences(items.length, obligatoireCount)}
+            {lotFilterInfo && phraseDocuments && (
+              <>
+                {' '}{phraseDocuments.principale}.{' '}
+                <Bouton variante="lien" aria-expanded={showLotDetails} aria-controls={idDetailLot} onClick={() => setShowLotDetails((v) => !v)}>
+                  {showLotDetails ? 'Masquer le détail' : 'Voir le détail'}
+                </Bouton>
+              </>
+            )}
+          </>
         }
-        resume={<BandeResume cartes={cartesResumeAO(faits, { total: items.length, obligatoires: obligatoireCount }, voirSource, dateQuestions)} libelle="L’AO en 30 secondes" />}
-        barre={bottomBar}
       >
-        {marche.length > 0 && (
-          <SectionEtape titre="Le marché en bref">
-            <CarteAO30sVue faits={marche} titre={null} onOpenSource={voirSource} />
-          </SectionEtape>
+        {showLotDetails && lotFilterInfo && (
+          <div id={idDetailLot} className="grid gap-3 rounded-lg bg-surface-1 px-4 py-3 text-sm sm:grid-cols-2">
+            <div>
+              <p className="font-medium text-fg">{lotFilterInfo.included.length} pièces lues pour ce lot</p>
+              <ul className="mt-1 grid gap-0.5 text-xs text-fg-2">{lotFilterInfo.included.map((doc) => <li key={doc.id} className="break-words">{doc.file_name}</li>)}</ul>
+            </div>
+            {lotFilterInfo.excluded.length > 0 && (
+              <div>
+                <p className="font-medium text-fg">{lotFilterInfo.excluded.length} pièces laissées de côté</p>
+                <ul className="mt-1 grid gap-0.5 text-xs text-fg-3">{lotFilterInfo.excluded.map((doc) => <li key={doc.id} className="break-words">{doc.file_name}</li>)}</ul>
+              </div>
+            )}
+          </div>
         )}
+        {phraseDocuments?.detail && <p className="max-w-2xl text-xs text-fg-3">{phraseDocuments.detail}</p>}
 
-        <AVerifierAvantEngagement points={aVerifier} onVoir={voirSource} onVoirPenalites={voirTresorerie} />
-
-        <PointsAEclaircir project={project} onOpenSource={voirSource} />
-
-        {/* ── FICHE DE DÉCISION (1.7) — conditions vérifiées, puis « On y va » / « On passe » ── */}
-        <SectionEtape titre="Décision">
-          <SynorixScoreCard project={project} onOpenSource={openFieldSource} onYAller={handleValidate} enCours={isValidating} />
-        </SectionEtape>
-
-        {/* ── TRÉSORERIE (C19) + RÉTRO-PLANNING (C20) ── */}
-        <SectionEtape titre="Trésorerie et calendrier" colonnes={2} classeContenu="md:[&>*:only-child]:col-span-2">
-          <TresorerieCard projectId={project.id} onOpenSource={openFieldSource} />
-          <RetroPlanning projectId={project.id} />
-        </SectionEtape>
-
-        {/* ── LISTE | PANNEAU « Voir dans le DCE » (ordinateur : côte à côte ; téléphone : feuille) ── */}
-        <SectionEtape
-          titre="Les exigences du dossier"
-          description={
-            <>
-              <span className="font-semibold text-fg">{items.length} exigences identifiées</span>
-              {project.selected_lot_name ? ` pour ${project.selected_lot_name}` : ''}. {phraseExigences(items.length, obligatoireCount)}
-              {lotFilterInfo && phraseDocuments && (
-                <>
-                  {' '}{phraseDocuments.principale}.{' '}
-                  <button onClick={() => setShowLotDetails(v => !v)} className="font-medium text-accent-text hover:underline [@media(pointer:coarse)]:min-h-11">
-                    {showLotDetails ? 'Masquer le détail' : 'Voir le détail'}
-                  </button>
-                </>
-              )}
-            </>
-          }
-        >
-          {showLotDetails && lotFilterInfo && (
-            <div
-              className="rounded-lg px-4 py-2.5 flex flex-wrap gap-x-4 gap-y-1 text-xs"
-              style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)' }}
-            >
-              {lotFilterInfo.included.map(doc => (
-                <span key={doc.id} className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--text-1)' }} />
-                  <span style={{ color: 'var(--text-2)' }}>{doc.file_name}</span>
-                </span>
-              ))}
-              {lotFilterInfo.excluded.map(doc => (
-                <span key={doc.id} className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--text-3)' }} />
-                  <span style={{ color: 'var(--text-3)' }}>{doc.file_name}</span>
-                </span>
-              ))}
-            </div>
-          )}
-          {phraseDocuments?.detail && (
-            <p className="max-w-2xl text-xs leading-relaxed" style={{ color: 'var(--text-3)' }}>{phraseDocuments.detail}</p>
-          )}
-
-          {/* Sélecteur de lot (multi-lots mutualisé) */}
-          {analyzedLots.length > 1 && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-ds-text-2">Lot affiché :</span>
-              <select
-                value={activeLot ?? ''}
-                onChange={(e) => setViewLot(e.target.value)}
-                className="glass-input py-1.5 px-2 text-sm"
-              >
-                {analyzedLots.map((l) => (
-                  <option key={l} value={l}>
-                    {(project.lots_detectes || []).find(d => d.id === l)?.nom ?? l}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <div
-            className={selection ? 'grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]' : undefined}
-          >
+        <div className={selection ? 'grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]' : undefined}>
           <div className={selection ? 'min-w-0 space-y-3 lg:pb-24' : 'min-w-0 space-y-3'}>
-          {/* ── SEARCH BAR ──────────────────────────────────────────── */}
-          <div className="relative">
-            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-3)' }} />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher une clause ou une exigence..."
-              aria-label="Rechercher une clause ou une exigence"
-              className="glass-input w-full pl-10 pr-10 py-2.5 text-sm"
-              style={{ fontFamily: F }}
-            />
-            <Sparkles size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2" style={{ color: 'var(--text-1)' }} />
-          </div>
-
-          {/* ── ONGLETS ─────────────────────────────────────────────── */}
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 pb-px" style={{ borderBottom: '1px solid var(--border-1)' }}>
-            <TabButton
-              label={`Tout (${items.length})`}
-              active={activeFilter === 'all'}
-              onClick={() => setActiveFilter('all')}
-            />
-            {CATEGORY_ORDER.filter(cat => counts[cat]).map(cat => (
-              <TabButton
-                key={cat}
-                label={`${CATEGORY_LABELS[cat]} (${counts[cat]})`}
-                active={activeFilter === cat}
-                onClick={() => setActiveFilter(cat)}
+            <div className="flex flex-wrap items-center gap-2">
+              <ChampRecherche
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Rechercher une clause ou une exigence"
+                aria-label="Rechercher une clause ou une exigence"
+                className="min-w-0 flex-1 basis-64"
               />
-            ))}
-          </div>
+              {/* Sélecteur de lot (multi-lots mutualisé) */}
+              {analyzedLots.length > 1 && (
+                <ListeDeroulante
+                  libelle="Lot affiché"
+                  className="w-64 max-w-full"
+                  valeur={activeLot ?? undefined}
+                  onChange={setViewLot}
+                  options={analyzedLots.map((l) => ({ valeur: l, libelle: (project.lots_detectes || []).find((d) => d.id === l)?.nom ?? l }))}
+                />
+              )}
+            </div>
 
-          {/* ── Exigences ───────────────────────────────────────────── */}
-          {filtered.length === 0 ? (
-            <p className="text-center text-sm py-12" style={{ color: 'var(--text-3)', fontFamily: F }}>
-              Aucune exigence trouvée
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {Object.entries(grouped).map(([cat, catItems], sectionIdx) => (
-                <ExigenceSection
+            {/* Filtre par catégorie : des puces (une sélection n'est jamais un aplat) */}
+            <div role="group" aria-label="Montrer une catégorie d’exigences" className="flex flex-wrap items-center gap-2">
+              {categoriesPresentes.map((cat) => (
+                <PuceFiltre
                   key={cat}
-                  category={cat as ComplianceCategory}
-                  items={catItems}
-                  onOpenSource={openSourceDocument}
-                  selectionId={selection?.type === 'exigence' ? selection.id : null}
-                  defaultOpen={sectionIdx === 0 || activeFilter !== 'all' || search.trim().length > 0}
+                  libelle={activeFilter === cat ? 'Catégorie' : `${CATEGORY_LABELS[cat]} (${counts[cat]})`}
+                  valeur={activeFilter === cat ? `${CATEGORY_LABELS[cat]} (${counts[cat]})` : null}
+                  onOuvrir={() => setActiveFilter(activeFilter === cat ? 'all' : cat)}
+                  onRetirer={() => setActiveFilter('all')}
                 />
               ))}
+              <EffacerFiltres actifs={(activeFilter !== 'all' ? 1 : 0) + (search.trim() ? 1 : 0)} onEffacer={() => { setActiveFilter('all'); setSearch('') }} />
             </div>
-          )}
 
+            {filtered.length === 0 ? (
+              <EtatVide
+                titre="Aucune exigence ne correspond"
+                phrase="Aucune exigence du dossier ne contient ces mots dans cette catégorie."
+                parFiltre={() => { setActiveFilter('all'); setSearch('') }}
+              />
+            ) : (
+              <div className="space-y-3">
+                {Object.entries(grouped).map(([cat, catItems], sectionIdx) => (
+                  <ExigenceSection
+                    key={cat}
+                    category={cat as ComplianceCategory}
+                    items={catItems}
+                    onOpenSource={openSourceDocument}
+                    selectionId={selectionId}
+                    defaultOpen={sectionIdx === 0 || activeFilter !== 'all' || search.trim().length > 0}
+                  />
+                ))}
+              </div>
+            )}
           </div>
           {selection && (
             <PanneauSource
@@ -518,50 +509,18 @@ export default function StepAnalysis({ project }: Props) {
                 : null}
             />
           )}
-          </div>
-        </SectionEtape>
-      </GabaritEtape>
-      {avis && createPortal(
-        <div className="fixed bottom-20 left-1/2 z-50 w-full max-w-lg -translate-x-1/2 px-4">
-          <EchecAction
-            message={avis.message}
-            onReessayer={avis.relancer ? () => { const relancer = avis.relancer!; setAvis(null); relancer() } : undefined}
-            onFermer={() => setAvis(null)}
-          />
-        </div>,
-        document.body,
-      )}
-    </div>
+        </div>
+      </SectionEtape>
+    </GabaritEtape>
   )
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-//  Helper Components
+//  Les exigences : une section repliable par catégorie (A15), un tableau du système par section (pages de 50)
 // ═════════════════════════════════════════════════════════════════════════════
-
-function TabButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`pb-3 text-sm transition-colors relative whitespace-nowrap ${active ? 'font-semibold' : 'font-medium'}`}
-      style={{ color: active ? 'var(--text-1)' : 'var(--text-3)', fontFamily: F }}
-    >
-      {label}
-      {active && (
-        <span className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full" style={{ background: 'var(--text-1)' }} />
-      )}
-    </button>
-  )
-}
-
-// ─── Exigence Column ─────────────────────────────────────────────────────────
 
 function ExigenceSection({
-  category,
-  items,
-  onOpenSource,
-  selectionId,
-  defaultOpen = false,
+  category, items, onOpenSource, selectionId, defaultOpen = false,
 }: {
   category: ComplianceCategory
   items: ComplianceItem[]
@@ -569,124 +528,67 @@ function ExigenceSection({
   selectionId: string | null
   defaultOpen?: boolean
 }) {
-  // Section REPLIABLE : avec 400+ exigences, tout-ouvert rend la page
-  // interminable. Lignes denses : texte pleine largeur, source + badge
-  // sur la même ligne (wrap en mobile), extrait tronqué retiré (le
-  // passage complet vit dans le panneau « Voir dans le DCE » au clic).
+  // Section REPLIABLE : avec 400 exigences et plus, tout ouvrir rend la page interminable.
   const [open, setOpen] = useState(defaultOpen)
+  const idContenu = useId()
+  const colonnes: ColonneTableau<ComplianceItem>[] = [
+    { cle: 'exigence', titre: 'Exigence', rendu: (item) => <ExigenceTexte item={item} active={item.id === selectionId} /> },
+    {
+      cle: 'source', titre: 'Source', tel: true, classe: 'md:w-64',
+      rendu: (item) => {
+        const page = pageCitee(item)
+        return aUneSource(item)
+          ? <span className="break-words text-accent-text">{item.source_document}{page ? ` · page ${page}` : ''}</span>
+          : null
+      },
+    },
+    {
+      cle: 'priorite', titre: 'Portée', tel: true, classe: 'md:w-36',
+      // Ambre = clause du dossier à respecter (le rouge reste aux vraies alertes)
+      rendu: (item) => item.priority === 'obligatoire'
+        ? <PastilleEtat sens="ambre">Obligatoire</PastilleEtat>
+        : <PastilleEtat sens="gris" icone={null}>Souhaitée</PastilleEtat>,
+    },
+  ]
 
   return (
-    <div className="glass-card overflow-hidden">
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between px-5 py-3.5 text-left transition-colors hover:bg-ds-bg-2"
-      >
-        <h3 className="text-base font-bold" style={{ color: 'var(--text-1)', fontFamily: F }}>
-          {CATEGORY_LABELS[category]}{' '}
-          <span className="font-medium text-sm" style={{ color: 'var(--text-3)' }}>({items.length})</span>
-        </h3>
-        <span
-          className="text-xs font-medium transition-transform"
-          style={{ color: 'var(--text-1)', transform: open ? 'rotate(180deg)' : undefined }}
-        >
-          ▾
-        </span>
-      </button>
-
-      {open && (
-        <div className="px-5 pb-3">
-          {items.map((item, idx) => (
-            <ExigenceLigne
-              key={item.id}
-              item={item}
-              numero={idx + 1}
-              derniere={idx === items.length - 1}
-              active={item.id === selectionId}
-              onOpenSource={onOpenSource}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+    <section data-categorie={category} className="space-y-2">
+      <h3>
+        <Bouton variante="discret" aria-expanded={open} aria-controls={idContenu} onClick={() => setOpen((o) => !o)}
+          className="w-full justify-between px-2 text-base font-semibold text-fg">
+          <span>{CATEGORY_LABELS[category]} <span className="chiffres font-medium text-fg-3">({items.length})</span></span>
+          <ChevronDown aria-hidden strokeWidth={1.5} className={cn('transition-transform duration-survol ease-survol', open && 'rotate-180')} />
+        </Bouton>
+      </h3>
+      <div id={idContenu} hidden={!open}>
+        {open && (
+          <Tableau
+            libelle={`Exigences : ${CATEGORY_LABELS[category]}`}
+            colonnes={colonnes}
+            lignes={items}
+            cle={(item) => item.id}
+            onLigne={onOpenSource}
+            vide={null}
+          />
+        )}
+      </div>
+    </section>
   )
 }
 
-// ─── Une ligne d'exigence ────────────────────────────────────────────────────
+const aUneSource = (item: ComplianceItem): boolean => Boolean(item.source_document && (item.source_excerpt || item.source_page))
 
-function ExigenceLigne({
-  item, numero, derniere, active, onOpenSource,
-}: {
-  item: ComplianceItem
-  numero: number
-  derniere: boolean
-  active: boolean
-  onOpenSource: (item: ComplianceItem) => void
-}) {
+/** Le texte d'une exigence. Visible à l'écran : sa source se prépare avant le clic (file bornée, voir services/sources.ts). */
+function ExigenceTexte({ item, active }: { item: ComplianceItem; active: boolean }) {
   const ref = useRef<HTMLDivElement>(null)
-  const aUneSource = Boolean(item.source_document && (item.source_excerpt || item.source_page))
-  const page = pageCitee(item)
-  // Visible à l'écran : l'ancre et la loupe se chargent avant le clic (file bornée, voir services/sources.ts)
   const entree = useCallback(() => precharger(item.id), [item.id])
   const sortie = useCallback(() => abandonner(item.id), [item.id])
-  useVisible(ref, aUneSource, entree, sortie)
+  useVisible(ref, aUneSource(item), entree, sortie)
 
   return (
-    <div
-      ref={ref}
-      className="exigence-ligne flex items-start gap-x-2.5 gap-y-1 py-2 flex-wrap"
-      aria-current={active ? 'true' : undefined}
-      style={derniere ? undefined : { borderBottom: '1px solid var(--border-1)' }}
-    >
-      <span
-        className="shrink-0 mt-0.5 text-xs tabular-nums w-7 text-right"
-        style={{ color: 'var(--text-3)', fontFamily: '"Geist Mono", monospace' }}
-      >
-        {numero}
-      </span>
-
-      <p className="flex-1 min-w-[240px] text-sm leading-snug" style={{ color: 'var(--text-2)' }}>
-        {item.exigence_text}
-        {item.suggestion_ia && (
-          <span className="block text-xs mt-0.5 italic" style={{ color: 'var(--text-2)' }}>
-            💡 {item.suggestion_ia}
-          </span>
-        )}
-      </p>
-
-      <div className="flex min-w-0 max-w-full items-center gap-2 ml-auto flex-wrap justify-end">
-        {aUneSource && (
-          <>
-            <span className="basis-full text-xs sm:basis-auto" style={{ color: 'var(--text-3)' }}>
-              {item.source_document}{page ? ` · page ${page}` : ''}
-            </span>
-            <button
-              type="button"
-              onClick={() => onOpenSource(item)}
-              className="source-voir"
-              aria-label={`Voir dans le dossier : ${item.source_document}${page ? `, page ${page}` : ''}`}
-            >
-              <Eye size={16} aria-hidden="true" />
-              Voir dans le dossier
-            </button>
-          </>
-        )}
-        {item.priority === 'obligatoire' ? (
-          // Ambre = clause du DCE à respecter (le corail reste aux vraies alertes)
-          <span
-            className="px-2 py-0.5 rounded-md text-xs font-medium whitespace-nowrap"
-            style={{ background: 'var(--warn-bg)', color: 'var(--warn)' }}
-          >
-            Obligatoire
-          </span>
-        ) : (
-          <span
-            className="px-2 py-0.5 rounded-md text-xs font-medium whitespace-nowrap"
-            style={{ background: 'color-mix(in srgb, var(--text-3) 8%, transparent)', color: 'var(--text-3)' }}
-          >
-            Souhaitée
-          </span>
-        )}
-      </div>
+    <div ref={ref} className="exigence-ligne -mx-2 rounded-md px-2 py-1" aria-current={active ? 'true' : undefined}>
+      <p className="break-words text-fg">{item.exigence_text}</p>
+      {item.suggestion_ia && <p className="mt-0.5 text-xs text-fg-2">{item.suggestion_ia}</p>}
     </div>
   )
 }

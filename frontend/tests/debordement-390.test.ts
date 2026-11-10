@@ -10,9 +10,9 @@ test('lots : les noms de fichiers des documents illisibles passent à la ligne',
   assert.match(code('src/routes/project/StepLotSelection.tsx'), /<li key=\{w\.file_name\} className="break-words text-xs"/)
 })
 
-test('analyse : les onglets de catégories se replient au lieu de défiler hors de l’écran', () => {
+test('analyse : les puces de catégories se replient au lieu de défiler hors de l’écran', () => {
   const c = code('src/routes/project/StepAnalysis.tsx')
-  assert.match(c, /flex flex-wrap items-center gap-x-5 gap-y-1 pb-px/)
+  assert.match(c, /aria-label="Montrer une catégorie d’exigences" className="flex flex-wrap items-center gap-2"/)
   assert.doesNotMatch(c, /gap-6 pb-px overflow-x-auto/)
 })
 
