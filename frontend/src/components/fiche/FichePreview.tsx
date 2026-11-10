@@ -6,6 +6,7 @@
 // jetons de thème (le PDF imprimé est le même en clair et en nuit).
 import { Link } from 'react-router-dom'
 import { ImagePlus, Plus, X } from 'lucide-react'
+import { Infobulle } from '@/components/ui/infobulle'
 import {
   INFOBULLE_ABREGE, INTERVENTIONS, MAX_LIGNES_LIBRES, VIDE_SECTION, estAbrege, lignesDeSection, pageEstimee, tuilesAffichees, variablesFiche,
   type FicheBordereau, type FicheDonnees, type FicheReference, type FicheSection, type LigneLibre, type PaletteFiche,
@@ -30,10 +31,13 @@ interface Props {
 
 const CAPITALES = 'uppercase tracking-[0.18em]'
 
-/** Un texte du profil ; abrégé par le serveur (« … »), il porte l'infobulle « Texte abrégé, modifiable dans Mon entreprise ». */
+/**
+ * Un texte du profil ; abrégé par le serveur (« … »), il porte l'infobulle du système « Texte abrégé, modifiable dans
+ * Mon entreprise » : au survol et au focus clavier (il entre alors dans l'ordre de tabulation), jamais un `title` natif.
+ */
 function Texte({ t, className }: { t: string; className?: string }) {
-  const abrege = estAbrege(t)
-  return <span className={className} title={abrege ? INFOBULLE_ABREGE : undefined} data-abrege={abrege ? '' : undefined}>{t}</span>
+  if (!estAbrege(t)) return <span className={className}>{t}</span>
+  return <Infobulle texte={INFOBULLE_ABREGE}><span className={className} tabIndex={0} data-abrege="">{t}</span></Infobulle>
 }
 const CHAMP = 'w-full rounded-xs border-b border-dashed border-current bg-transparent px-1 py-0.5 outline-offset-2 placeholder:text-current placeholder:opacity-60'
 

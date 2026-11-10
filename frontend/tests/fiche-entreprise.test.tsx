@@ -111,11 +111,13 @@ test('aperçu Références : tableau, pastilles, total, note, particulier avec s
   assert.ok(html.includes('Qualibat') && html.includes('data-section="01"'))
 })
 
-test('texte abrégé par le serveur (« … ») : infobulle « Texte abrégé, modifiable dans Mon entreprise », rien sur les autres', () => {
+test('texte abrégé par le serveur (« … ») : infobulle du système « Texte abrégé, modifiable dans Mon entreprise » (jamais un title natif), rien sur les autres', () => {
   const abrege = { ...moyens, lignes_cles: [{ libelle: 'Activités', valeur: 'Gros œuvre, rénovation et façades de bâtiments anciens …' }], sections: moyens.sections.map((s, i) => i === 1 ? { ...s, texte: 'Tablettes et logiciel …' } : s) }
   const html = rendre(abrege)
   assert.equal((html.match(/data-abrege=""/g) ?? []).length, 2, 'les deux textes abrégés, et seulement eux')
-  assert.equal((html.match(/title="Texte abrégé, modifiable dans Mon entreprise"/g) ?? []).length, 2)
+  assert.ok(!html.includes('title="'), 'aucune infobulle native')
+  assert.equal((html.match(/<span[^>]*tabindex="0"[^>]*data-abrege=""/g) ?? []).length, 2, 'atteignable au clavier')
+  assert.match(sansCommentaires(lire('src/components/fiche/FichePreview.tsx')), /<Infobulle texte=\{INFOBULLE_ABREGE\}>/)
   assert.ok(html.includes('anciens …</span>'))
   const refs = rendre({ ...certifications, references: { ...certifications.references!, lignes: [{ ...certifications.references!.lignes[0], travaux: 'Gros œuvre …' }] } })
   assert.equal((refs.match(/data-abrege=""/g) ?? []).length, 2, 'tableau (ordinateur) et carte (téléphone) de la même référence')
@@ -215,31 +217,52 @@ function ecran(donnees: FicheDonnees, cases?: CaseDefinition[]) {
     </QueryClientProvider>)
 }
 
-test('l\'écran : un seul h1, les trois fiches, les trois zones, le choix PDF / Word / Excel et le téléchargement', () => {
+test('l\'écran : un seul h1 (« Fiche à télécharger », une fois), les trois fiches, le choix PDF / Word / Excel et le téléchargement', () => {
   const html = ecran(moyens)
   assert.equal((html.match(/<h1/g) ?? []).length, 1)
-  assert.ok(html.includes('Fiche à télécharger — Moyens humains et matériels'))
+  assert.match(html, /<h1[^>]*>Fiche à télécharger<\/h1>/)
+  assert.equal((html.match(/Fiche à télécharger/g) ?? []).length, 1, 'le titre n\'est pas répété')
+  assert.match(html, /data-page="large"/, 'le conteneur et l\'en-tête de page du système')
   for (const t of ['Identité', 'Moyens', 'Références']) assert.ok(html.includes(`>${t}</a>`), t)
   assert.match(html, /<a(?=[^>]*aria-current="page")(?=[^>]*href="\/entreprise\/fiche\/moyens")[^>]*>/)
   assert.ok(html.includes('href="/entreprise/fiche/certifications"') && html.includes('href="/entreprise/fiche/identite"'))
-  assert.ok(html.includes('name="format-fiche"') && ['pdf', 'docx', 'xlsx'].every((v) => html.includes(`value="${v}"`)))
+  assert.match(html, /role="radiogroup" aria-label="Format du fichier"/)
+  assert.ok(['pdf', 'docx', 'xlsx'].every((v) => new RegExp(`<input[^>]*type="radio"[^>]*value="${v}"`).test(html)))
   assert.match(html, /<input(?=[^>]*value="pdf")(?=[^>]*checked)[^>]*>/)
   assert.ok(html.includes('>PDF<') && html.includes('>Word<') && html.includes('>Excel<'))
   assert.ok(html.includes('Télécharger la fiche') && !html.includes('Modifier le bordereau') && !html.includes('Enregistrer le bordereau'))
-  assert.ok(html.includes('href="/company"') && html.includes('Mon entreprise'))
+  // le retour vers Mon entreprise : le fil de la barre du haut (coquille), pas un second lien au-dessus du titre
+  assert.ok(!html.includes('href="/company"'))
+  assert.match(lire('src/components/layout/Header.tsx'), /'\/entreprise\/fiche': \{ parent: 'Mon entreprise', parentTo: '\/company'/)
 })
 
-test('l\'écran : trois zones, dans l\'ordre du DOM contenu → aperçu → bordereau, chacune avec son titre', () => {
+test('l\'écran : deux colonnes à l\'ordinateur, une au téléphone ; l\'ordre du DOM est l\'ordre de lecture : aperçu → téléchargement → contenu', () => {
   const html = ecran(moyens)
-  const zones = ['data-zone="contenu"', 'data-zone="apercu"', 'data-zone="bordereau"'].map((z) => html.indexOf(z))
-  assert.ok(zones.every((i) => i > 0) && zones[0] < zones[1] && zones[1] < zones[2], 'contenu, aperçu, bordereau')
-  assert.ok(html.indexOf("Ce qu&#x27;il y a dans la fiche") > 0 && html.includes('>Aperçu</h2>') && html.includes('>Bordereau et téléchargement</h2>'))
+  const zones = ['data-zone="apercu"', 'data-zone="bordereau"', 'data-zone="contenu"'].map((z) => html.indexOf(z))
+  assert.ok(zones.every((i) => i > 0) && zones[0] < zones[1] && zones[1] < zones[2], 'aperçu, téléchargement, contenu')
+  assert.ok(html.includes('>Aperçu</h2>') && html.includes('>Téléchargement</h2>') && html.includes('>Ce qu&#x27;il y a dans la fiche</h2>'))
   assert.match(html, /<section[^>]*aria-labelledby="zone-contenu"/)
-  // téléphone : l'aperçu d'abord, puis le bordereau (bouton), puis le contenu ; ordinateur : trois colonnes
-  assert.match(html, /data-trois-zones[^>]*>/)
-  assert.match(html, /class="[^"]*lg:grid-cols-\[[^"]*"[^>]*data-trois-zones/)
-  assert.match(html, /<div class="order-3 lg:order-none">/)
-  assert.match(html, /<section[^>]*data-zone="apercu"[^>]*class="order-1 /)
+  assert.match(html, /class="[^"]*lg:grid-cols-\[minmax\(0,1fr\)_20rem\][^"]*"[^>]*data-zones/, 'l\'aperçu au large, les réglages à côté')
+  assert.ok(!/\border-[123]\b|lg:order-none/.test(html), 'plus de réordonnancement : le DOM suit la lecture aux deux largeurs')
+  assert.match(html, /class="[^"]*lg:sticky[^"]*"[^>]*data-colonne-bordereau/, 'la colonne du téléchargement reste à l\'écran')
+})
+
+test('lecture de la fiche : chargement → erreur → contenu par le motif du système ; une panne dit son erreur et propose « Réessayer »', () => {
+  const code = sansCommentaires(lire('src/routes/FicheEntreprise.tsx'))
+  assert.match(code, /<Page\b/)
+  assert.match(code, /<EtatRequete\b[\s\S]*requete=\{\{ data, isLoading, isError, refetch, isFetching \}\}/)
+  assert.match(code, /<EtatErreur\b[\s\S]*titre="La fiche n’a pas pu se charger"[\s\S]*onReessayer=/)
+  assert.doesNotMatch(code, /EcranEnChargement|err\.message|error\.message/)
+  // sans réponse du serveur : le titre et les trois fiches restent là, aucune zone n'est montée
+  const html = renderToStaticMarkup(
+    <QueryClientProvider client={new QueryClient()}>
+      <MemoryRouter initialEntries={['/entreprise/fiche/moyens']}>
+        <Routes><Route path="/entreprise/fiche/:rubrique" element={<FicheEntreprise />} /></Routes>
+      </MemoryRouter>
+    </QueryClientProvider>)
+  assert.match(html, /<h1[^>]*>Fiche à télécharger<\/h1>/)
+  assert.ok(html.includes('aria-label="Fiches"') && html.includes('data-phase="chargement"') && html.includes('aria-busy="true"'))
+  assert.ok(!html.includes('data-zone='))
 })
 
 test('zone 1 : une phrase par fiche, les sections avec « Prête » ou « À renseigner » et un lien vers le bon champ', () => {
@@ -324,29 +347,43 @@ test('liens « champ » : Mon entreprise donne le focus au champ demandé (étiq
   assert.equal(intituleCorrespond('Équipe', CHAMPS.habilitations, 'groupe'), false)
 })
 
-test('zone 3 : logo (zone de dépôt visible), titre, sous-titre, contact, couleur, formats expliqués, lignes libres, bouton', () => {
+test('colonne « Téléchargement » : d\'abord le format expliqué et le bouton, puis le bordereau (logo, titre, sous-titre, contact, couleur, lignes libres) ; aucun contrôle natif visible', () => {
   const html = ecran(moyens)
-  assert.match(html, /data-depot-logo/)
-  assert.ok(html.includes('Déposer votre logo ici') && html.includes('PNG ou JPEG, 2 Mo au plus'))
-  for (const id of ['fiche-titre', 'fiche-sous-titre', 'fiche-contact', 'fiche-couleur']) assert.ok(html.includes(`id="${id}"`), id)
   assert.ok(html.includes('à envoyer tel quel') && html.includes('pour modifier avant d’envoyer') && html.includes('le tableau, pour trier ou compléter'))
-  assert.match(html, /<h3[^>]*>Lignes libres<\/h3>/)
   assert.match(html, /<button[^>]*data-telecharger[^>]*>[\s\S]*?Télécharger la fiche[\s\S]*?· PDF/)
-  assert.match(html, /accept="image\/png,image\/jpeg"/)
+  assert.equal((html.match(/data-variante="principal"/g) ?? []).length, 1, 'une seule action pleine sur l\'écran')
+  assert.ok(html.indexOf('data-formats') < html.indexOf('data-telecharger') && html.indexOf('data-telecharger') < html.indexOf('Personnaliser le bordereau'), 'le geste de l\'écran d\'abord')
+  // le bordereau : champs du système, chacun avec son étiquette reliée
+  for (const l of ['Titre', 'Sous-titre', 'Contact']) {
+    const id = html.match(new RegExp(`<label for="([^"]+)"[^>]*>${l}</label>`))?.[1]
+    assert.ok(id && html.includes(`id="${id}"`), l)
+  }
+  // logo et couleur : un bouton du système ouvre le sélecteur du navigateur ; le contrôle natif ne se voit pas
+  assert.match(html, /data-depot-logo/)
+  assert.ok(html.includes('>Choisir un logo</button>') && html.includes('PNG ou JPEG, 2 Mo au plus'))
+  assert.match(html, /<input(?=[^>]*type="file")(?=[^>]*accept="image\/png,image\/jpeg")(?=[^>]*aria-hidden="true")(?=[^>]*sr-only)[^>]*>/)
+  assert.ok(html.includes('Couleur d’accent') && html.includes('#008cf8') && html.includes('· Changer'))
+  assert.match(html, /<input(?=[^>]*type="color")(?=[^>]*value="#008cf8")(?=[^>]*aria-hidden="true")(?=[^>]*sr-only)[^>]*>/)
+  assert.ok(!/border-dashed/.test(html), 'aucune zone en pointillés au repos')
+  assert.match(html, /<h3[^>]*>Lignes libres<\/h3>/)
+  const source = sansCommentaires(lire('src/components/fiche/ZoneBordereau.tsx'))
+  assert.doesNotMatch(source, /<select\b|type="radio"|<button\b|<input\b|animate-spin/, 'composants du système seulement')
+  for (const composant of ['<GroupeRadio', '<ListeDeroulante', '<Champ', '<Bouton', '<BoutonIcone']) assert.ok(source.includes(composant), composant)
 })
 
-test('zone 3 : le PDF est grisé avec sa raison quand le rendu exact est indisponible ; Word et Excel restent offerts', () => {
+test('le PDF n\'est plus offert, avec sa raison, quand le rendu exact est indisponible ; Word et Excel restent offerts', () => {
   const html = renderToStaticMarkup(
     <ZoneBordereau
       bordereau={bordereau()} onChange={() => {}} logoSrc={null} logoEnCours={false} onLogo={() => {}} onRetirerLogo={() => {}}
       sections={[{ id: '01', titre: 'Moyens humains' }]} format="docx" onFormat={() => {}}
       pdfIndisponible={RAISON_PDF_INDISPONIBLE} onTelecharger={() => {}} enTelechargement={false}
     />)
-  assert.match(html, /<input(?=[^>]*value="pdf")(?=[^>]*disabled)[^>]*>/)
+  assert.doesNotMatch(html, /<input[^>]*value="pdf"/, 'le PDF ne peut pas être choisi')
+  assert.match(html, /data-pdf-indisponible[^>]*>PDF · /)
   assert.ok(html.includes(RAISON_PDF_INDISPONIBLE))
-  assert.doesNotMatch(html, /<input(?=[^>]*value="docx")(?=[^>]*disabled)[^>]*>/)
-  assert.doesNotMatch(html, /<input(?=[^>]*value="xlsx")(?=[^>]*disabled)[^>]*>/)
   assert.match(html, /<input(?=[^>]*value="docx")(?=[^>]*checked)[^>]*>/)
+  assert.match(html, /<input[^>]*value="xlsx"/)
+  assert.doesNotMatch(html, /<input(?=[^>]*value="(?:docx|xlsx)")(?=[^>]*disabled)[^>]*>/)
   assert.ok(html.includes('· Word'))
 })
 
