@@ -17,9 +17,9 @@ Le site **synorix.tech** (ci-après « Synorix » ou « le Service ») est édit
 
 Le site est hébergé par :
 
-**Hostinger International Ltd**
-61 Lordou Vironos Street
-6023 Larnaca, Chypre
+**Hostinger International Ltd**  
+61 Lordou Vironos Street  
+6023 Larnaca, Chypre  
 Site : [https://www.hostinger.com](https://www.hostinger.com)
 
 L'infrastructure de stockage et de traitement est localisée en France.
