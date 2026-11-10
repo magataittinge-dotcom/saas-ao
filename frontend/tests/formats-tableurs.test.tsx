@@ -8,8 +8,9 @@ test('dépôt du DCE : .xlsm et .ods dans le sélecteur et dans le texte des for
   assert.match(src, /'application\/vnd\.ms-excel\.sheet\.macroEnabled\.12':\s*\['\.xlsm'\]/)
   assert.match(src, /'application\/vnd\.oasis\.opendocument\.spreadsheet':\s*\['\.ods'\]/)
   assert.match(src, /'application\/octet-stream':\s*\[[^\]]*'\.xlsm'[^\]]*'\.ods'|'application\/octet-stream':\s*\[[^\]]*'\.ods'[^\]]*'\.xlsm'/)
-  assert.match(src, /\.pdf · \.docx · \.xlsx · \.xlsm · \.ods · \.zip/)
-  assert.match(src, /\.pdf \.docx \.xlsx \.xlsm \.ods \.zip/)
+  // le texte des formats, en mots du métier (une seule phrase pour la grande zone et la zone compacte) : Excel couvre .xlsm, OpenDocument .ods
+  assert.match(src, /const FORMATS_ACCEPTES = 'PDF, Word, Excel, OpenDocument ou ZIP, jusqu’à 2 Go'/)
+  assert.equal((src.match(/>\{FORMATS_ACCEPTES\}</g) ?? []).length, 2)
 })
 
 test('DPGF remplie et formulaires remplis : .xlsm et .ods acceptés par les sélecteurs de fichier', () => {
