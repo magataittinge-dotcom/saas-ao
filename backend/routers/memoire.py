@@ -929,6 +929,7 @@ def build_project_memoire_docx(project, memoire, org, db) -> bytes:
         maitre_ouvrage=project.maitre_ouvrage,
         org_address=org.address if org else None,
         org_siret=org.siret if org else None,
+        objet_marche=(project.infos_marche or {}).get("objet") if isinstance(project.infos_marche, dict) else None,
     )
 
 

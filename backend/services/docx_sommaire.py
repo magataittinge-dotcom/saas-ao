@@ -111,7 +111,7 @@ def inserer_sommaire(doc: _Document, ancre) -> bool:
     r = titre_toc.add_run("Sommaire")
     r.bold = True
     r.font.size = Pt(18)
-    r.font.color.rgb = RGBColor(0x1E, 0x40, 0xAF)
+    r.font.color.rgb = RGBColor(0x11, 0x18, 0x27)   # encre neutre (mission finale DOCUMENTS)
     titres[0][2].paragraph_format.page_break_before = True
 
     entrees = []
