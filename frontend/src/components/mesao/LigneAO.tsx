@@ -30,7 +30,7 @@ export function CelluleAO({ projet, detail = true, large = false }: { projet: Pr
   const complement = [acheteurCourt(projet.maitre_ouvrage), projet.selected_lot_name].filter(Boolean).join(' · ')
   return (
     <div data-ligne-ao={projet.id} className={cn('flex min-w-0 flex-col gap-1 py-1.5 max-md:py-0', large ? 'md:max-w-[34rem]' : 'md:max-w-[24rem]')}>
-      <Link to={`/projects/${projet.id}`} className="block break-words text-base font-semibold leading-snug text-fg underline-offset-4 hover:underline max-md:-my-3 max-md:py-3"><span className="line-clamp-2">{projet.name}</span></Link>
+      <Link to={`/projects/${projet.id}`} className="block break-words text-base font-semibold leading-snug text-fg underline-offset-4 hover:underline max-md:-my-3 max-md:py-3 [@media(pointer:coarse)]:-my-3 [@media(pointer:coarse)]:py-3"><span className="line-clamp-2">{projet.name}</span></Link>
       {/* au téléphone la rangée s'empile : la ligne passe à la ligne plutôt que d'élargir la carte */}
       {complement && <span className="break-words text-sm text-fg-2 max-md:line-clamp-2 md:truncate">{complement}</span>}
       {questions > 0 && <PastilleEtat sens="ambre" icone={HelpCircle} className="w-fit">{questions} question{questions > 1 ? 's' : ''} à poser à l’acheteur</PastilleEtat>}

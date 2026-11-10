@@ -30,7 +30,7 @@ export default function LegalFooter({ calque = false }: { calque?: boolean }) {
               key={l.to}
               to={l.to}
               className={cn(
-                'text-xs transition-colors max-md:inline-flex max-md:min-h-11 max-md:items-center max-md:px-2.5',
+                'text-xs transition-colors max-md:inline-flex max-md:min-h-11 max-md:items-center max-md:px-2.5 [@media(pointer:coarse)]:px-2.5 [@media(pointer:coarse)]:inline-flex [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:items-center',
                 calque ? 'text-encre-3 hover:text-encre' : 'text-[var(--ink-3)] hover:text-[var(--ink)]',
               )}
             >

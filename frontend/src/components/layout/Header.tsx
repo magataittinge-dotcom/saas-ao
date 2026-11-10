@@ -42,7 +42,7 @@ export function TitreBarre({ titre, montre }: { titre: string; montre: boolean }
   )
 }
 
-const LIEN_PARENT = 'shrink-0 rounded-md text-base text-fg-2 transition-colors duration-fast ease-survol hover:text-fg max-[768px]:inline-flex max-[768px]:min-h-11 max-[768px]:items-center'
+const LIEN_PARENT = 'shrink-0 rounded-md text-base text-fg-2 transition-colors duration-fast ease-survol hover:text-fg max-[768px]:inline-flex max-[768px]:min-h-11 max-[768px]:items-center [@media(pointer:coarse)]:inline-flex [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:items-center'
 
 interface Props {
   /** Ouvre la palette Ctrl K. */

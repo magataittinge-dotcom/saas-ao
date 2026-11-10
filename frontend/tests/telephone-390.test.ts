@@ -36,7 +36,7 @@ test('Export, exigences relevées : rangées empilées, case de 44 px, source so
 test('coquille : liens du pied de page et fil d’Ariane à 44 px ; dans un AO, la barre du haut garde deux actions', () => {
   assert.match(code('src/components/layout/LegalFooter.tsx'), /max-md:inline-flex max-md:min-h-11 max-md:items-center max-md:px-2\.5/)
   assert.match(code('src/components/ui/sheet.tsx'), /size-10 place-items-center max-\[768px\]:size-11/)
-  assert.match(lire('src/styles/pieces.css'), /@media \(max-width: 768px\) \{\s*\.piece-note, \.carte-ao-30s__libelle \{ font-size: var\(--taille-12\); \}/)
+  assert.match(lire('src/styles/pieces.css'), /@media \(max-width: 768px\), \(pointer: coarse\) \{\s*\.piece-note, \.carte-ao-30s__libelle \{ font-size: var\(--taille-12\); \}/)
   const h = code('src/components/layout/Header.tsx')
   assert.match(h, /LIEN_PARENT = '[^']*max-\[768px\]:min-h-11/)
   assert.match(h, /parent && 'max-\[768px\]:hidden'/)
@@ -49,7 +49,7 @@ test('champs à 16 px au téléphone (sinon le téléphone zoome à la saisie) :
 
 test('listes d’AO : le titre est une cible de 44 px au téléphone, la rangée ne bouge pas', () => {
   for (const f of ['src/components/mesao/LigneAO.tsx', 'src/components/dashboard/BandeAO.tsx']) {
-    assert.match(code(f), /max-md:-my-3 max-md:py-3"><span className="line-clamp-2">/)
+    assert.match(code(f), /max-md:-my-3 max-md:py-3[^"]*"><span className="line-clamp-2">/)
   }
 })
 
@@ -86,4 +86,13 @@ test('fil des étapes au téléphone : le nom de l’étape en cours est posé s
   assert.match(c, /'sm:contents max-sm:absolute max-sm:top-full max-sm:flex max-sm:flex-col'/)
   assert.match(c, /index === 0 \? 'max-sm:left-0 max-sm:items-start' : index === STEPS\.length - 1 \? 'max-sm:right-0 max-sm:items-end'/)
   assert.match(c, /data-fil-etapes="" className="pb-6 max-sm:pb-10"/)
+})
+
+test('téléphone couché (mise en page du bureau, écran tactile) : fil d’Ariane, pied de page, titres d’AO et « Tout confirmer » à 44 px', () => {
+  assert.match(code('src/components/layout/Header.tsx'), /\[@media\(pointer:coarse\)\]:min-h-11/)
+  assert.match(code('src/components/layout/LegalFooter.tsx'), /\[@media\(pointer:coarse\)\]:px-2\.5 \[@media\(pointer:coarse\)\]:inline-flex \[@media\(pointer:coarse\)\]:min-h-11/)
+  assert.match(code('src/components/project/ExigencesDuDossier.tsx'), /max-md:text-sm \[@media\(pointer:coarse\)\]:min-h-11/)
+  for (const f of ['src/components/mesao/LigneAO.tsx', 'src/components/dashboard/BandeAO.tsx']) {
+    assert.match(code(f), /max-md:py-3 \[@media\(pointer:coarse\)\]:-my-3 \[@media\(pointer:coarse\)\]:py-3/)
+  }
 })

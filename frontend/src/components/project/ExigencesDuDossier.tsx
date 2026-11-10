@@ -60,7 +60,7 @@ export default function ExigencesDuDossier({
                   type="button"
                   disabled={enCours}
                   onClick={() => onConfirmerGroupe(id)}
-                  className="glass-btn shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium disabled:opacity-50 max-md:min-h-11 max-md:px-3 max-md:text-sm"
+                  className="glass-btn shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium disabled:opacity-50 max-md:min-h-11 max-md:px-3 max-md:text-sm [@media(pointer:coarse)]:min-h-11"
                   style={{ color: 'var(--text-2)' }}
                 >
                   Tout confirmer
