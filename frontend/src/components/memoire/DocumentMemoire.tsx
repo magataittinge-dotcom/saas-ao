@@ -68,7 +68,8 @@ export function DocumentView({
 
   return (
     <article ref={docRef} data-surface="" data-document-memoire="" className="min-w-0 rounded-carte border border-bord bg-surface-0 shadow-card">
-      <div className="mx-auto w-full max-w-[44rem] space-y-12 px-5 py-8 sm:px-10 sm:py-12">
+      {/* 38rem moins les marges : 528 px de texte, soit 72 caractères environ en Newsreader 17 px (mesuré : 87 à 44rem) */}
+      <div className="mx-auto w-full max-w-[38rem] space-y-12 px-5 py-8 sm:px-10 sm:py-12">
         <header className="border-b border-bord-2 pb-6">
           <p className="font-memoire text-xl font-semibold text-fg">Mémoire justificatif</p>
           <p className="mt-1 text-sm text-fg-2">{project.name}</p>

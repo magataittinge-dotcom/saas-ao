@@ -64,7 +64,7 @@ function Tableau({ table }: { table: SegmentTable }) {
  */
 export default function LecteurMarkdown({ text }: { text: string }) {
   return (
-    <div className="lecteur-memoire prose max-w-[72ch] text-lg leading-[1.65] prose-headings:font-semibold prose-code:text-xs">
+    <div className="lecteur-memoire prose max-w-[72ch] text-lg leading-[1.65] prose-headings:font-semibold prose-code:text-xs text-pretty">
       {decouperTables(text).map((s, i) =>
         s.type === 'table' ? <Tableau key={i} table={s} /> : <ReactMarkdown key={i} components={TITRES}>{s.texte}</ReactMarkdown>,
       )}
