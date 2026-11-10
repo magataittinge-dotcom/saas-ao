@@ -72,6 +72,9 @@ body:has([data-page-pleine]) [data-coquille="barre-haut"] > .conteneur { max-wid
   mask-image: radial-gradient(ellipse 52% 46% at 50% 47%, black 62%, transparent 82%);
 }
 
+/* Aucun mot seul en fin de paragraphe : le navigateur rééquilibre les dernières lignes (là où il le sait). */
+p { text-wrap: pretty; }
+
 /* ── Titre de page (DESIGN.md § Typography) : la serif au sommet, une fois par page ; jamais sous 28 px. ── */
 .titre-page {
   font-family: var(--font-display);

@@ -47,7 +47,7 @@ function Section({ id, titre, note, children }: { id: string; titre: string; not
     <section id={id} aria-labelledby={`${id}-t`} className="scroll-mt-6 space-y-4 pt-10">
       <div>
         <h2 id={`${id}-t`} className="text-xl font-semibold text-fg">{titre}</h2>
-        {note && <p className="mt-1 max-w-3xl text-sm text-fg-2">{note}</p>}
+        {note && <p className="mt-1 max-w-md text-sm text-fg-2">{note}</p>}
       </div>
       {children}
     </section>
@@ -153,7 +153,7 @@ function Mouvement() {
           <p className="text-sm text-fg-2"><span className="chiffres font-semibold text-fg">{nom}</span> · {texte}</p>
         </div>
       ))}
-      <p className="text-sm text-fg-2">Une seule courbe (sortie douce, sans dépassement). Au survol le fond change et rien ne bouge ; à l’appui tout ce qui se clique se réduit à 0,98 en 100 ms. Rien ne boucle, sauf l’aurore et le visage. « Réduire les animations » rend tout instantané.</p>
+      <p className="max-w-md text-sm text-fg-2">Une seule courbe (sortie douce, sans dépassement). Au survol le fond change et rien ne bouge ; à l’appui tout ce qui se clique se réduit à 0,98 en 100 ms. Rien ne boucle, sauf l’aurore et le visage. « Réduire les animations » rend tout instantané.</p>
     </div>
   )
 }
@@ -247,7 +247,7 @@ export default function Design() {
     <Page titre="Système de design" sousTitre="Page interne, non liée au menu : les jetons et chaque composant du système, dans chaque état, en clair et en nuit.">
       <nav aria-label="Sections" className="flex flex-wrap gap-x-4 gap-y-1">
         {SECTIONS.map((id) => (
-          <a key={id} href={`#${id}`} className="flex min-h-11 items-center rounded text-sm font-medium text-accent-text underline-offset-4 hover:underline">{id}</a>
+          <a key={id} href={`#${id}`} className="flex min-h-11 items-center rounded text-sm font-medium text-fg underline decoration-bord-2 underline-offset-4 hover:decoration-fg">{id}</a>
         ))}
       </nav>
 
@@ -329,12 +329,7 @@ export default function Design() {
                 <BoutonIcone libelle="Ajouter" disabled={'disabled' in props || 'enCours' in props}><Plus aria-hidden strokeWidth={1.5} /></BoutonIcone>
               </div>
             ))}
-            <p className="text-sm text-fg-2">Survol, appui et focus : passez la souris, appuyez, tabulez. Le principal (désactivé puis en cours) se montre ainsi, sans second aplat à l’écran :</p>
-            <div className="flex flex-wrap items-center gap-3 opacity-100">
-              <span className="w-20 shrink-0 text-xs font-medium text-fg-3">Principal</span>
-              <span className="inline-flex min-h-11 items-center rounded-pilule border border-bord-champ px-5 text-sm font-semibold text-fg-disabled">Désactivé : 45 %</span>
-              <span className="inline-flex min-h-11 items-center rounded-pilule border border-bord-champ px-5 text-sm font-semibold text-fg-disabled">En cours : « Enregistrement… »</span>
-            </div>
+            <p className="max-w-md text-sm text-fg-2">Survol, appui et focus : passez la souris, appuyez, tabulez. Le bouton principal suit les mêmes états : désactivé à 45 %, en cours avec son libellé qui change. Il n’est montré qu’une fois, au-dessus, pour ne pas poser un second aplat à l’écran.</p>
           </div>
         </Cote>
       </Section>
