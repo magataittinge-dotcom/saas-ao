@@ -410,9 +410,15 @@ def generer_docx(donnees: dict, bordereau: dict, pal: dict, logo_png: Optional[b
     _police_style(normal)
     props = doc.core_properties
     props.title = _s(bordereau["titre"])[:200]
-    props.author = _s(donnees["societe"]["nom"])[:200] or "Synorix"
+    # Mission finale DOCUMENTS : la fiche est celle de l'entreprise, jamais signée par l'outil ; en français.
+    props.author = _s(donnees["societe"]["nom"])[:200]
     props.last_modified_by = props.author
     props.comments = ""
+    props.language = "fr-FR"
+    from datetime import datetime, timezone
+    props.created = props.modified = datetime.now(timezone.utc).replace(microsecond=0)
+    from services.docx_exporter import _langue_par_defaut
+    _langue_par_defaut(doc)
 
     pal = dict(pal)
     _banniere(doc, bordereau, donnees["societe"], pal, logo_png)
