@@ -17,6 +17,6 @@ test('le titre de page de chaque écran de l\'AO est le nom de son étape au fil
 
 test('au dépôt, l\'annonce « Envoi en cours » ne s\'affiche que pendant l\'envoi, pas pendant la lecture des fichiers déposés', () => {
   const code = sansCommentaires(lire('src/routes/project/StepUpload.tsx'))
-  assert.match(code, /\{largeFileNotice && phase === 'uploading' && \(/)
+  assert.match(code, /\{largeFileNotice && phase === 'uploading' && </)
   assert.doesNotMatch(code, /largeFileNotice && \(phase === 'uploading' \|\| phase === 'processing'\)/)
 })

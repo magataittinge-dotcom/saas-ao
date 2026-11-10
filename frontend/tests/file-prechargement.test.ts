@@ -177,7 +177,7 @@ test('le budget de préchargement reste sous la moitié des limites du serveur (
 test('chaque ligne d’exigence précharge sa source quand elle devient visible, et l’abandonne en sortant', async () => {
   const { lire, sansCommentaires } = await import('./outils/sources')
   const code = sansCommentaires(lire('src/routes/project/StepAnalysis.tsx'))
-  assert.match(code, /useVisible\(ref,\s*aUneSource,\s*entree,\s*sortie\)/)
+  assert.match(code, /useVisible\(ref,\s*aUneSource\(item\),\s*entree,\s*sortie\)/)
   assert.match(code, /precharger\(item\.id\)/)
   assert.match(code, /abandonner\(item\.id\)/)
   const hook = sansCommentaires(lire('src/hooks/useVisible.ts'))

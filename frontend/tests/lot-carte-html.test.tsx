@@ -9,5 +9,8 @@ test('la carte de lot est un role="button" au clavier, pas un <button> qui en co
   assert.doesNotMatch(src, /<button[^>]*onClick=\{onSelect\}/)
   const carte = /<div\s+role="button"\s+tabIndex=\{0\}\s+aria-pressed=\{selected\}\s+onClick=\{onSelect\}\s+onKeyDown=\{\(e\) => \{[^}]*e\.key === 'Enter'[^}]*e\.key === ' '/.exec(src)
   assert.ok(carte, 'carte de lot : role="button", tabIndex, aria-pressed, onClick et touches Entrée/Espace')
-  assert.match(src, /title="Renommer ce lot"/)
+  // « Renommer » et « Retirer de la liste » : dans le menu « … » de la carte (hors de la zone cliquable), plus d'infobulle native
+  assert.match(src, /<MenuElement onSelect=\{startEdit\}>/)
+  assert.match(src, /<MenuElement danger onSelect=\{onDelete\}>/)
+  assert.doesNotMatch(src, /title="(Renommer|Supprimer|Enregistrer|Annuler)/)
 })

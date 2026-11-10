@@ -1,22 +1,38 @@
 import { useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
-import { X, FileText, Search, Loader2, AlertCircle, Upload } from 'lucide-react'
+import { Upload } from 'lucide-react'
 import { useDocuments } from '@/hooks/useDocuments'
-import { vaultValidityPill, type VaultPillTone } from '@/lib/vault'
+import { DOC_TYPE_LABELS, vaultValidityPill, type VaultPillTone } from '@/lib/vault'
+import { nomPiece } from '@/lib/nomsPieces'
+import { messageErreur } from '@/lib/erreurs'
+import { Bouton } from '@/components/ui/bouton'
+import { ChampRecherche } from '@/components/ui/champ'
+import { Dialogue } from '@/components/ui/dialogue'
+import { EtatErreur } from '@/components/ui/etats'
+import { Message } from '@/components/ui/message'
+import { PastilleEtat, type Sens } from '@/components/ui/pastille'
+import { Squelette } from '@/components/ui/squelette'
+import EntreeFichier from '@/components/depot/EntreeFichier'
 import type { ChecklistItem, Document } from '@/types'
-
-const F = 'var(--font-ui)'
 
 interface Props {
   item: ChecklistItem
   onClose: () => void
   onLink: (doc: Document) => Promise<void>
-  /** Téléverser un NOUVEAU fichier pour cette pièce (upload coffre + rattachement). */
+  /** Déposer un NOUVEAU fichier pour cette pièce (ajout au coffre-fort, puis rattachement). */
   onUploadNew: (file: File) => Promise<void>
 }
 
+// B1 : « Prêt » seulement pour une pièce reconnue et datée (règle commune lib/vault) ; le mot vient de là, la couleur d'ici.
+const SENS: Record<VaultPillTone, Sens> = { ok: 'vert', attention: 'ambre', alert: 'rouge', neutral: 'gris' }
+
+/**
+ * « Choisir une pièce du coffre-fort » : le dialogue du système (piège de focus, Échap, retour du focus). Les pièces du type
+ * demandé d'abord, puis les autres ; un fichier qui n'est pas encore au coffre-fort se dépose d'ici. Aucun aplat : le geste
+ * principal de l'écran reste celui de l'étape.
+ */
 export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }: Props) {
-  const { data: documents = [], isLoading } = useDocuments()
+  const requete = useDocuments()
+  const documents = useMemo(() => requete.data ?? [], [requete.data])
   const [query, setQuery] = useState('')
   const [linking, setLinking] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -24,19 +40,13 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const required = item.document_type_required
+  const nom = nomPiece(required, item.details)
 
-  const candidates = useMemo(() => {
+  const { candidates, others } = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return documents
-      .filter((d) => d.type === required || (required === 'autre' || !required))
-      .filter((d) => !q || d.file_name.toLowerCase().includes(q))
-  }, [documents, required, query])
-
-  const others = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    return documents
-      .filter((d) => d.type !== required)
-      .filter((d) => !q || d.file_name.toLowerCase().includes(q))
+    const trouves = documents.filter((d) => !q || d.file_name.toLowerCase().includes(q))
+    const duType = (d: Document) => d.type === required || required === 'autre' || !required
+    return { candidates: trouves.filter(duType), others: trouves.filter((d) => d.type !== required && !duType(d)) }
   }, [documents, required, query])
 
   const handleLink = async (doc: Document) => {
@@ -46,8 +56,7 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
       await onLink(doc)
       onClose()
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Échec du rattachement'
-      setError(msg)
+      setError(await messageErreur(err, 'La pièce n’a pas pu être rattachée. Réessayez dans un instant.'))
     } finally {
       setLinking(null)
     }
@@ -60,206 +69,116 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
       await onUploadNew(file)
       onClose()
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Échec de l'import"
-      setError(msg)
+      setError(await messageErreur(err, 'Le fichier n’a pas pu être déposé. Réessayez dans un instant.'))
     } finally {
       setUploading(false)
     }
   }
 
-  // Rendu en PORTAIL sur <body> : garantit un overlay plein écran au-dessus de
-  // tout (la barre du bas est elle aussi portée) — sinon un ancêtre au contexte
-  // d'empilement piège le `fixed` et le clic « Choisir » paraît sélectionner la page.
-  return createPortal(
-    <div
-      role="dialog"
-      aria-modal="true"
-      className="fixed inset-0 z-[100] flex items-center justify-center px-4 select-none"
-      style={{ background: 'var(--scrim)', fontFamily: F }}
-      onClick={onClose}
+  const occupe = linking !== null || uploading
+
+  return (
+    <Dialogue
+      ouvert
+      onOuvert={(ouvert) => { if (!ouvert) onClose() }}
+      titre="Choisir une pièce du coffre-fort"
+      description={<>Pour : {nom}</>}
+      actions={<>
+        <Bouton variante="secondaire" onClick={onClose}>Fermer</Bouton>
+        <Bouton variante="secondaire" disabled={occupe} enCours={uploading} libelleEnCours="Dépôt en cours…" onClick={() => fileInputRef.current?.click()}>
+          <Upload aria-hidden size={16} strokeWidth={1.5} />
+          Déposer un nouveau fichier
+        </Bouton>
+      </>}
     >
-      <div
-        className="glass-card rounded-lg w-full max-w-xl max-h-[80vh] flex flex-col overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-        style={{ boxShadow: 'var(--shadow-pop)' }}
-      >
-        {/* Header */}
-        <header className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border-1)' }}>
-          <div className="min-w-0">
-            <h3 className="text-base font-bold" style={{ color: 'var(--text-1)' }}>
-              Choisir une pièce du coffre-fort
-            </h3>
-            <p className="text-xs mt-0.5 truncate" style={{ color: 'var(--text-3)' }}>
-              Pour : {item.details || item.document_type_required}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-lg transition-colors hover:bg-ds-bg-2 shrink-0"
-            aria-label="Fermer"
-          >
-            <X size={18} style={{ color: 'var(--text-3)' }} />
-          </button>
-        </header>
+      <EntreeFichier
+        ref={fileInputRef}
+        accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+        onChange={(e) => {
+          const f = e.target.files?.[0]
+          if (f) void handleUpload(f)
+          e.target.value = ''
+        }}
+      />
+      {error && <Message ton="erreur" onFermer={() => setError(null)}>{error}</Message>}
 
-        {/* Téléverser un nouveau fichier pour CETTE pièce */}
-        <div className="px-6 pt-4">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0]
-              if (f) handleUpload(f)
-              e.target.value = ''
-            }}
+      {requete.isLoading ? (
+        <div aria-busy="true" className="grid gap-2">
+          {[0, 1, 2].map((i) => <Squelette key={i} className="h-14 w-full rounded-lg" />)}
+        </div>
+      ) : requete.isError && requete.data === undefined ? (
+        <EtatErreur
+          titre="Le coffre-fort n’a pas pu se charger"
+          detail="Vos pièces ne sont pas touchées. Vous pouvez aussi déposer un nouveau fichier."
+          onReessayer={() => { void requete.refetch() }}
+          enCours={requete.isFetching}
+        />
+      ) : documents.length === 0 ? (
+        <p className="text-sm text-fg-2">Votre coffre-fort ne contient pas encore de pièce. Déposez le fichier ici : il y sera rangé, puis joint à ce dossier.</p>
+      ) : (
+        <>
+          <ChampRecherche
+            aria-label="Rechercher une pièce par son nom de fichier"
+            placeholder="Rechercher par nom de fichier"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
           />
-          <button
-            type="button"
-            disabled={uploading}
-            onClick={() => fileInputRef.current?.click()}
-            className="edge-cta w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold disabled:opacity-60"
-          >
-            {uploading
-              ? <><Loader2 size={15} className="animate-spin" /> Import…</>
-              : <><Upload size={15} /> Téléverser un fichier depuis mon ordinateur</>}
-          </button>
-          <div className="flex items-center gap-3 my-3">
-            <span className="flex-1 h-px" style={{ background: 'var(--surface-1)' }} />
-            <span className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-3)' }}>ou choisir au coffre-fort</span>
-            <span className="flex-1 h-px" style={{ background: 'var(--surface-1)' }} />
-          </div>
-        </div>
-
-        {/* Search */}
-        <div className="px-6">
-          <div
-            className="flex items-center gap-2 px-3 py-2 rounded-lg"
-            style={{ border: '1px solid var(--border-1)' }}
-          >
-            <Search size={14} style={{ color: 'var(--text-3)' }} />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Rechercher par nom de fichier"
-              className="flex-1 text-sm outline-none bg-transparent"
-              style={{ color: 'var(--text-1)' }}
+          <div className="-mx-2 grid max-h-80 content-start gap-4 overflow-y-auto px-2">
+            <Group
+              title="Du type demandé"
+              docs={candidates}
+              onLink={handleLink}
+              linkingId={linking}
+              occupe={occupe}
+              emptyText={query.trim() ? 'Aucune pièce de ce type ne porte ce nom.' : 'Aucune pièce de ce type dans votre coffre-fort pour le moment.'}
             />
+            {others.length > 0 && (
+              <Group title="Autres pièces du coffre-fort" docs={others} onLink={handleLink} linkingId={linking} occupe={occupe} />
+            )}
           </div>
-          {error && (
-            <p className="text-xs mt-2 flex items-center gap-1" style={{ color: 'var(--danger-fg)' }}>
-              <AlertCircle size={12} />
-              {error}
-            </p>
-          )}
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-10">
-              <Loader2 size={20} className="animate-spin" style={{ color: 'var(--text-1)' }} />
-            </div>
-          ) : (
-            <>
-              <Group
-                title={`Type recommandé (${required || 'autre'})`}
-                docs={candidates}
-                onLink={handleLink}
-                linkingId={linking}
-                emptyText="Aucun document de ce type dans votre coffre-fort."
-              />
-              {others.length > 0 && (
-                <Group
-                  title="Autres pièces"
-                  docs={others}
-                  onLink={handleLink}
-                  linkingId={linking}
-                />
-              )}
-            </>
-          )}
-        </div>
-      </div>
-    </div>,
-    document.body,
+        </>
+      )}
+    </Dialogue>
   )
 }
 
 function Group({
-  title, docs, onLink, linkingId, emptyText,
+  title, docs, onLink, linkingId, occupe, emptyText,
 }: {
   title: string
   docs: Document[]
   onLink: (doc: Document) => void
   linkingId: string | null
+  occupe: boolean
   emptyText?: string
 }) {
   return (
-    <div>
-      <h4 className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: 'var(--text-3)' }}>
-        {title}
-      </h4>
+    <section className="grid gap-1.5">
+      <h3 className="text-xs font-medium text-fg-3">{title}</h3>
       {docs.length === 0 ? (
-        emptyText ? (
-          <p className="text-xs py-2" style={{ color: 'var(--text-3)' }}>{emptyText}</p>
-        ) : null
+        emptyText ? <p className="text-sm text-fg-2">{emptyText}</p> : null
       ) : (
-        <ul className="space-y-1.5">
-          {docs.map((doc) => (
-            <li
-              key={doc.id}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg"
-              style={{ background: 'var(--surface-0)' }}
-            >
-              <FileText size={16} style={{ color: 'var(--text-3)' }} className="shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate" style={{ color: 'var(--text-1)' }}>
-                  {doc.file_name}
-                </p>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs" style={{ color: 'var(--text-3)' }}>{doc.type}</span>
-                  <StatusPill doc={doc} />
+        <ul className="grid">
+          {docs.map((doc) => {
+            const { label, tone } = vaultValidityPill(doc)
+            return (
+              <li key={doc.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-bord py-2.5 last:border-b-0">
+                <div className="grid min-w-0 flex-1 basis-48 gap-1">
+                  <p className="break-words text-sm font-medium text-fg">{doc.file_name}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs text-fg-3">{DOC_TYPE_LABELS[doc.type] ?? 'Autre pièce'}</span>
+                    <PastilleEtat sens={SENS[tone]}>{label}</PastilleEtat>
+                  </div>
                 </div>
-              </div>
-              <button
-                type="button"
-                disabled={linkingId !== null}
-                onClick={() => onLink(doc)}
-                className="edge-cta px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-60 shrink-0"
-              >
-                {linkingId === doc.id
-                  ? <span className="flex items-center gap-1"><Loader2 size={12} className="animate-spin" /> Liaison...</span>
-                  : 'Choisir'}
-              </button>
-            </li>
-          ))}
+                <Bouton variante="secondaire" className="shrink-0" disabled={occupe} enCours={linkingId === doc.id} libelleEnCours="Rattachement…"
+                  aria-label={`Choisir ${doc.file_name}`} onClick={() => onLink(doc)}>
+                  Choisir
+                </Bouton>
+              </li>
+            )
+          })}
         </ul>
       )}
-    </div>
-  )
-}
-
-const PILL_TONES: Record<VaultPillTone, { color: string; bg: string }> = {
-  alert: { color: 'var(--rouge-ink)', bg: 'var(--rouge-soft)' },
-  attention: { color: 'var(--ambre-ink)', bg: 'var(--ambre-soft)' },
-  neutral: { color: 'var(--gris-ink)', bg: 'var(--gris-soft)' },
-  ok: { color: 'var(--vert-ink)', bg: 'var(--vert-soft)' },
-}
-
-// B1 — « Valide » seulement pour une pièce datée (règle commune lib/vault).
-function StatusPill({ doc }: { doc: Document }) {
-  const { label, tone } = vaultValidityPill(doc)
-  const cfg = PILL_TONES[tone]
-  return (
-    <span
-      className="text-xs font-medium px-1.5 py-0.5 rounded"
-      style={{ color: cfg.color, background: cfg.bg }}
-    >
-      {label}
-    </span>
+    </section>
   )
 }

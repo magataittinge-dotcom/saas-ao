@@ -98,7 +98,7 @@ test('S4 : les étapes s\'appellent Dépôt du dossier, Lots, Décider, Pièces,
     assert.ok(textes.includes('Décider') && textes.includes('Pièces'), `${f} : Décider et Pièces`)
     assert.ok(!textes.includes('Analyse IA') && !textes.includes('Vérification'), `${f} : plus d'ancien nom d'étape`)
   }
-  assert.ok(textesAffiches('src/routes/project/StepVerification.tsx').some((t) => t.texte.includes('Pièces de la candidature')))
+  assert.ok(textesAffiches('src/routes/project/StepVerification.tsx').some((t) => t.texte.includes('Réunir les pièces')), 'le titre de l’écran Pièces est le verbe du socle')
 })
 
 test('S4 : « Retour » à la place d\'« Annuler » quand le bouton ne défait rien (dépôt du dossier)', () => {

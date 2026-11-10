@@ -41,7 +41,8 @@ test('lot unique : retirer le lot revient à l\'ensemble, comme avant', () => {
 
 test('l\'écran branche le choix : bouton désactivé sans choix, pied de page honnête', () => {
   const code = sansCommentaires(lire('src/routes/project/StepLotSelection.tsx'))
-  assert.match(code, /disabled=\{isAnalyzing \|\| isSuccess \|\| !peutLancer\(selectedIds\)\}/)
+  assert.match(code, /const lectureBloquee = isAnalyzing \|\| isSuccess \|\| !peutLancer\(selectedIds\)/)
+  assert.match(code, /disabled=\{lectureBloquee\}/)
   assert.ok(!code.includes("new Set([project.selected_lot ?? 'all'])"))
   assert.ok(code.includes('Aucun lot choisi'))
 })

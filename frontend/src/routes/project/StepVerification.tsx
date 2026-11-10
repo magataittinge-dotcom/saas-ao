@@ -2,27 +2,30 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { Sigle } from '@/components/common/Sigle'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Loader2, Lock, FileSpreadsheet, Download, Upload, Sparkles, RefreshCw } from 'lucide-react'
+import { Lock, Download, Upload, RefreshCw } from 'lucide-react'
 import { api } from '@/services/api'
 import { useCompleteStep } from '@/hooks/useProject'
 import CandidatureSectionVault from '@/components/project/CandidatureSectionVault'
 import CandidatureSectionTemplates from '@/components/project/CandidatureSectionTemplates'
 import { ActionsBarre, BilanBarre, BoutonSuite } from '@/components/project/BarreEtape'
-import { GabaritEtape, BandeResume, BarreEtape } from '@/components/etape'
-import { Button } from '@/components/ui/button'
-import { cartesPieces, comptesDetailles, phraseComptes } from '@/lib/resumePieces'
+import { GabaritEtape, BandeResume, BarreEtape, SectionEtape, EtatElement } from '@/components/etape'
+import { Bouton } from '@/components/ui/bouton'
+import { Carte } from '@/components/ui/carte'
+import { EtatErreur, EtatVide } from '@/components/ui/etats'
+import { Message } from '@/components/ui/message'
+import { PastilleEtat } from '@/components/ui/pastille'
+import { Squelette } from '@/components/ui/squelette'
+import EntreeFichier from '@/components/depot/EntreeFichier'
+import { cn } from '@/lib/utils'
+import { cartesPieces, comptesDetailles, phraseComptes, phrasePiecesAutres } from '@/lib/resumePieces'
 import VaultPickerModal from '@/components/project/VaultPickerModal'
 import PanneauSource, { type SelectionSource } from '@/components/project/source/PanneauSource'
 import { piecesComptees } from '@/components/project/NonConcerne'
 import { comptesPieces } from '@/lib/statutPiece'
 import { echeanceAO } from '@/lib/echeance'
-import { RequirementListSkeleton } from '@/components/skeletons'
 import type { Project, ChecklistItem, Document } from '@/types'
-import EchecAction from '@/components/common/EchecAction'
 import { messageErreur } from '@/lib/erreurs'
 import { messageActualisation, type EtatActualisation } from '@/lib/actualisation'
-
-const F = 'var(--font-ui)'
 
 interface Props { project: Project }
 
@@ -36,13 +39,15 @@ export default function StepVerification({ project }: Props) {
   const completeStep = useCompleteStep(project.id)
   const isAlreadyDone = project.completed_steps?.['4'] === true
 
-  const { data: items = [], isLoading } = useQuery({
+  const requetePieces = useQuery({
     queryKey: ['checklist', project.id],
     queryFn: async () => {
       const { data } = await api.get<ChecklistItem[]>(`/projects/${project.id}/checklist`)
       return data
     },
   })
+  const { isLoading } = requetePieces
+  const items = useMemo(() => requetePieces.data ?? [], [requetePieces.data])
 
   const [pickerItem, setPickerItem] = useState<ChecklistItem | null>(null)
 
@@ -81,6 +86,8 @@ export default function StepVerification({ project }: Props) {
   const comptes = comptesDetailles(scored, echeance)
   const { aJoindre, pretes } = comptesPieces(scored, echeance)
   const pct = comptes.total > 0 ? Math.round((comptes.pretes / comptes.total) * 100) : 0
+  // La pièce facultative (ou pour l'attribution) se nomme, elle ne se cache pas : même décompte qu'à l'Export (14 demandées + 1).
+  const phraseAutres = phrasePiecesAutres(comptes)
 
   // ── Mutations ───────────────────────────────────────────────────
   // Rafraîchit la liste ET recalcule le score, sans quitter l'étape.
@@ -186,49 +193,60 @@ export default function StepVerification({ project }: Props) {
     await refresh()
   }
 
-  // ── Loading / empty ─────────────────────────────────────────────
+  const TITRE = 'Réunir les pièces'
+  const UTILITE = 'Ce que le règlement demande : les pièces de votre coffre-fort et les formulaires de l’acheteur à compléter. Synorix les range dans le dossier de candidature.'
 
+  // ── Chargement → erreur → rien à montrer → contenu (une erreur n'est jamais « le dossier n'est pas lu ») ──
   if (isLoading) return (
-    <div style={{ fontFamily: F }}>
-      <p className="flex items-center gap-2 text-sm mb-4" style={{ color: 'var(--text-3)' }}>
-        <Loader2 size={15} className="animate-spin" style={{ color: 'var(--text-1)' }} />
-        Préparation de votre checklist…
-      </p>
-      <RequirementListSkeleton count={5} />
-    </div>
+    <GabaritEtape titre={TITRE} utilite={UTILITE}>
+      <div aria-busy="true" className="grid gap-6">
+        <Squelette className="h-32 w-full rounded-carte" />
+        <div className="grid gap-3.5 md:grid-cols-2">
+          {[0, 1, 2, 3].map((i) => <Squelette key={i} className="h-28 rounded-carte" />)}
+        </div>
+      </div>
+    </GabaritEtape>
   )
 
-  // La checklist est matérialisée AUTOMATIQUEMENT (fin d'analyse + filet
-  // paresseux côté serveur) : plus aucun bouton manuel. Un état vide ici
-  // signifie que le DCE n'est pas encore analysé.
+  if (requetePieces.isError && requetePieces.data === undefined) return (
+    <GabaritEtape titre={TITRE} utilite={UTILITE}>
+      <EtatErreur
+        titre="Les pièces n’ont pas pu se charger"
+        detail="La liste des pièces demandées par le règlement n’a pas pu être lue. Vos pièces et votre coffre-fort ne sont pas touchés."
+        onReessayer={() => { void requetePieces.refetch() }}
+        enCours={requetePieces.isFetching}
+      />
+    </GabaritEtape>
+  )
+
+  // La liste des pièces est établie par Synorix à la fin de la lecture du dossier : vide, c'est que le dossier n'est pas lu.
   if (items.length === 0) return (
-    <div
-      className="glass-card rounded-lg p-12 text-center"
-      style={{ border: '1px solid var(--border-1)', boxShadow: 'var(--shadow-card)', fontFamily: F }}
-    >
-      <p className="text-sm" style={{ color: 'var(--text-3)' }}>
-        La checklist des pièces apparaîtra automatiquement une fois le <Sigle code="DCE" /> analysé.
-      </p>
-    </div>
+    <GabaritEtape titre={TITRE} utilite={UTILITE}>
+      <EtatVide
+        titre="Les pièces à réunir apparaîtront ici"
+        phrase={<>Synorix les relève dans le règlement à la lecture du <Sigle code="DCE" />.</>}
+        action={<Bouton variante="secondaire" onClick={() => navigate(`/projects/${project.id}/lots`)}>Lire le dossier</Bouton>}
+      />
+    </GabaritEtape>
   )
 
   // ── Barre du bas (composant commun : une ligne au téléphone) ──────
-
+  const jauge = (classe: string) => (
+    <div role="progressbar" aria-label="Pièces prêtes" aria-valuemin={0} aria-valuemax={comptes.total} aria-valuenow={comptes.pretes} className={cn('h-1 overflow-hidden rounded-pilule bg-surface-2', classe)}>
+      <div className="h-full rounded-pilule bg-accent-ui transition-[width] duration-pop ease-survol motion-reduce:transition-none" style={{ width: `${pct}%` }} />
+    </div>
+  )
   const bottomBar = (
     <BarreEtape className="flex-wrap gap-x-4 gap-y-2">
       <BilanBarre
         className="gap-3"
         bureau={<>
-          <div role="progressbar" aria-label="Pièces prêtes" aria-valuemin={0} aria-valuemax={comptes.total} aria-valuenow={comptes.pretes} className="h-1 w-[120px] shrink-0 overflow-hidden rounded-pilule bg-surface-2">
-            <div className="h-full rounded-pilule bg-accent-ui transition-[width] duration-morph ease-lien motion-reduce:transition-none" style={{ width: `${pct}%` }} />
-          </div>
-          <span className="text-sm text-fg-2">{phraseComptes(comptes)}</span>
+          {jauge('w-32 shrink-0')}
+          <span>{phraseComptes(comptes)}{phraseAutres ? ` · ${phraseAutres}` : ''}</span>
         </>}
         tel={<>
-          <div role="progressbar" aria-label="Pièces prêtes" aria-valuemin={0} aria-valuemax={comptes.total} aria-valuenow={comptes.pretes} className="h-1 min-w-0 flex-1 overflow-hidden rounded-pilule bg-surface-2">
-            <div className="h-full rounded-pilule bg-accent-ui" style={{ width: `${pct}%` }} />
-          </div>
-          <span className="shrink-0 text-xs text-fg-2">{comptes.pretes} sur {comptes.total}</span>
+          {jauge('min-w-0 flex-1')}
+          <span className="chiffres shrink-0 text-xs">{comptes.pretes} sur {comptes.total}</span>
         </>}
       />
       <ActionsBarre>
@@ -242,7 +260,7 @@ export default function StepVerification({ project }: Props) {
                 })
           }
           enCours={completeStep.isPending}
-          enCoursLibelle="Validation..."
+          enCoursLibelle="Validation…"
         />
       </ActionsBarre>
     </BarreEtape>
@@ -251,82 +269,83 @@ export default function StepVerification({ project }: Props) {
   // ── Render ──────────────────────────────────────────────────────
 
   return (
-    <div
-      className={selection ? 'grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]' : undefined}
-      style={{ fontFamily: F }}
-    >
-    <div className="min-w-0">
-    <GabaritEtape
-      titre="Pièces de la candidature"
-      utilite="Ce que le règlement demande : les pièces de votre coffre-fort et les formulaires de l’acheteur à compléter. Synorix les range dans le dossier de candidature."
-      actionsSecondaires={<>
-        {/* Régénération DISCRÈTE à la demande (ex. après ajout de pièces au coffre). */}
-        <Button type="button" variant="outline" onClick={actualiser} disabled={actualisation?.etat === 'en_cours'} title="Recalculer la checklist depuis les exigences analysées">
-          <RefreshCw size={14} className={actualisation?.etat === 'en_cours' ? 'animate-spin' : undefined} aria-hidden />
-          Actualiser
-        </Button>
-        <span role="status" className="text-xs empty:hidden" style={{ color: 'var(--text-3)' }}>{messageActualisation(actualisation)}</span>
-        <Button type="button" variant="outline" onClick={openVaultPage}>
-          <Lock size={14} aria-hidden />
-          Accéder au coffre-fort
-        </Button>
-      </>}
-      resume={<BandeResume libelle="Les pièces du dossier" cartes={cartesPieces(scored, echeance, { coffre: piecesComptees(vaultItems), formulaires: piecesComptees(templateItems) })} />}
-      barre={bottomBar}
-    >
-      <CandidatureSectionVault
-        items={vaultItems}
-        onPickFromVault={(item) => setPickerItem(item)}
-        onOpenVault={openVaultPage}
-        onToggleSignature={handleToggleSignature}
-        onOpenSource={ouvrirSource}
-        onNonConcerne={handleNonConcerne}
-        echeance={echeance}
-      />
+    <div className={selection ? 'grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]' : undefined}>
+      <div className="min-w-0">
+        <GabaritEtape
+          titre="Réunir les pièces"
+          utilite={UTILITE}
+          actionsSecondaires={<>
+            {/* La liste se recalcule à la demande (par exemple après l'ajout d'une pièce au coffre-fort). */}
+            <Bouton variante="secondaire" onClick={() => { void actualiser() }} enCours={actualisation?.etat === 'en_cours'} libelleEnCours="Actualisation…">
+              <RefreshCw aria-hidden size={16} strokeWidth={1.5} />
+              Actualiser
+            </Bouton>
+            <Bouton variante="secondaire" onClick={openVaultPage}>
+              <Lock aria-hidden size={16} strokeWidth={1.5} />
+              Ouvrir le coffre-fort
+            </Bouton>
+          </>}
+          message={messageActualisation(actualisation) && actualisation?.etat !== 'en_cours' && (
+            <Message ton={actualisation?.etat === 'echec' ? 'erreur' : 'succes'} onFermer={() => setActualisation(null)}>
+              {messageActualisation(actualisation)}
+            </Message>
+          )}
+          resume={<BandeResume libelle="Les pièces du dossier" cartes={cartesPieces(scored, echeance, { coffre: piecesComptees(vaultItems), formulaires: piecesComptees(templateItems) })} />}
+          barre={bottomBar}
+        >
+          <CandidatureSectionVault
+            items={vaultItems}
+            onPickFromVault={(item) => setPickerItem(item)}
+            onOpenVault={openVaultPage}
+            onToggleSignature={handleToggleSignature}
+            onOpenSource={ouvrirSource}
+            onNonConcerne={handleNonConcerne}
+            echeance={echeance}
+          />
 
-      <CandidatureSectionTemplates
-        projectId={project.id}
-        items={templateItems}
-        onUploadCompleted={handleUploadCompleted}
-        onToggleSignature={handleToggleSignature}
-        onOpenSource={ouvrirSource}
-        onNonConcerne={handleNonConcerne}
-        echeance={echeance}
-      />
+          <CandidatureSectionTemplates
+            projectId={project.id}
+            items={templateItems}
+            onUploadCompleted={handleUploadCompleted}
+            onToggleSignature={handleToggleSignature}
+            onOpenSource={ouvrirSource}
+            onNonConcerne={handleNonConcerne}
+            echeance={echeance}
+          />
 
-      <WorkflowSection
-        items={groups.workflow}
-        onDownload={handleDownloadTemplate}
-        onUpload={handleUploadDpgf}
-      />
+          <WorkflowSection
+            items={groups.workflow}
+            onDownload={handleDownloadTemplate}
+            onUpload={handleUploadDpgf}
+          />
 
-      <SynorixJalonSection items={groups.synorix} />
+          <SynorixJalonSection items={groups.synorix} />
 
-      {pickerItem && (
-        <VaultPickerModal
-          item={pickerItem}
-          onClose={() => setPickerItem(null)}
-          onLink={handleLinkVaultDoc}
-          onUploadNew={handleUploadNewVaultDoc}
+          {pickerItem && (
+            <VaultPickerModal
+              item={pickerItem}
+              onClose={() => setPickerItem(null)}
+              onLink={handleLinkVaultDoc}
+              onUploadNew={handleUploadNewVaultDoc}
+            />
+          )}
+        </GabaritEtape>
+      </div>
+      {selection && (
+        <PanneauSource
+          key={selection.type === 'exigence' ? selection.id : 'champ'}
+          selection={selection}
+          onFermer={fermerSelection}
         />
       )}
-
-    </GabaritEtape>
-    </div>
-    {selection && (
-      <PanneauSource
-        key={selection.type === 'exigence' ? selection.id : 'champ'}
-        selection={selection}
-        onFermer={fermerSelection}
-      />
-    )}
     </div>
   )
 }
 
-// ── Workflow dédié (DPGF/BPU) — download → remplir → re-import SUR la pièce ────
-// C12 : télécharger la trame du DCE, remplir hors ligne, ré-importer → contrôle
-// formel dpgf_checker → ✓/⚠️. Tout se passe ICI, aucun saut vers Export.
+const libelleLot = (lot: string) => lot.replace(/^lot/i, 'Lot ')
+
+// ── Tableaux de prix (DPGF, BPU) : télécharger la trame, la remplir, la déposer SUR la pièce ────
+// C12 : la trame vient du dossier de l'acheteur ; au dépôt, Synorix vérifie la FORME (aucune ligne sans prix), jamais les prix.
 function WorkflowSection({
   items, onDownload, onUpload,
 }: {
@@ -336,27 +355,13 @@ function WorkflowSection({
 }) {
   if (items.length === 0) return null
   return (
-    <section
-      className="glass-card rounded-lg overflow-hidden"
-      style={{ border: '1px solid var(--border-1)', boxShadow: 'var(--shadow-card)', fontFamily: F }}
+    <SectionEtape
+      titre="Tableaux de prix à remplir"
+      description={<>Le <Sigle code="DPGF" /> ou le <Sigle code="BPU" /> de l’acheteur : téléchargez la trame, remplissez-la, puis déposez-la ici. Synorix vérifie qu’aucune ligne n’est restée sans prix.</>}
+      colonnes={2}
     >
-      <header className="flex items-center gap-3 px-5 py-3" style={{ borderBottom: '1px solid var(--border-1)' }}>
-        <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'color-mix(in srgb, var(--warning-fg) 10%, transparent)' }}>
-          <FileSpreadsheet size={18} style={{ color: 'var(--warning-fg)' }} />
-        </div>
-        <div className="min-w-0">
-          <h2 className="text-base font-bold" style={{ color: 'var(--text-1)' }}><Sigle code="DPGF" majuscule /> et <Sigle code="BPU" /></h2>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
-            Téléchargez la trame, remplissez-la puis ré-importez-la — contrôle automatique des lignes.
-          </p>
-        </div>
-      </header>
-      <ul>
-        {items.map((i) => (
-          <WorkflowRow key={i.id} item={i} onDownload={onDownload} onUpload={onUpload} />
-        ))}
-      </ul>
-    </section>
+      {items.map((i) => <WorkflowRow key={i.id} item={i} onDownload={onDownload} onUpload={onUpload} />)}
+    </SectionEtape>
   )
 }
 
@@ -372,7 +377,7 @@ function WorkflowRow({
   const done = item.status === 'present'
   const warn = item.status === 'warning'
 
-  // 1.16 — un téléchargement ou un dépôt qui échoue est dit sur la ligne, avec « Réessayer »
+  // 1.16 — un téléchargement ou un dépôt qui échoue est dit sur la pièce, avec « Réessayer »
   const [echec, setEchec] = useState<{ message: string; relancer: () => void } | null>(null)
   const run = async (kind: 'dl' | 'up', fn: () => Promise<void>, defaut: string) => {
     setBusy(kind)
@@ -387,99 +392,63 @@ function WorkflowRow({
   }
 
   return (
-    <li className="flex items-center gap-3 px-5 py-2.5 flex-wrap" style={{ borderTop: '1px solid var(--border-1)' }}>
-      <FileSpreadsheet size={15} style={{ color: 'var(--warning-fg)' }} className="shrink-0" />
-      <div className="flex-1 min-w-[200px]">
-        <p className="text-sm" style={{ color: 'var(--text-2)' }}>{item.details}</p>
-        <span className="text-xs" style={{ color: done ? 'var(--success-fg)' : warn ? 'var(--warning-fg)' : 'var(--text-3)' }}>
-          {done ? '✓ Rempli et vérifié' : warn ? '⚠️ À corriger (lignes sans prix)' : 'À remplir'}
-        </span>
+    <Carte data-piece={item.id} className="grid min-w-0 content-start gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
+        <p className="min-w-0 flex-1 basis-48 break-words text-base font-semibold text-fg">{item.details}</p>
+        {item.lot && <PastilleEtat sens="gris" icone={null}>{libelleLot(item.lot)}</PastilleEtat>}
       </div>
-      {item.lot && (
-        <span className="text-xs px-1.5 rounded-full shrink-0" style={{ background: 'color-mix(in srgb, var(--text-1) 8%, transparent)', color: 'var(--text-2)' }}>
-          {item.lot.replace(/^lot/i, 'Lot ')}
-        </span>
-      )}
-      <input
+      <EtatElement
+        etat={done ? 'pret' : warn ? 'a-verifier' : 'a-couvrir'}
+        texte={done ? 'Rempli et vérifié' : warn ? 'À corriger : des lignes sont sans prix' : 'À remplir'}
+      />
+      <EntreeFichier
         ref={inputRef}
-        type="file"
         accept=".xlsx,.xls,.xlsm,.ods,.pdf"
-        className="hidden"
         onChange={(e) => {
           const f = e.target.files?.[0]
-          if (f) void run('up', () => onUpload(item, f), "Le dépôt du bordereau rempli n'a pas abouti.")
+          if (f) void run('up', () => onUpload(item, f), 'Le dépôt du tableau rempli n’a pas abouti.')
           e.target.value = ''
         }}
       />
-      {item.template_project_doc_id && (
-        <button
-          type="button"
-          disabled={busy !== null}
-          onClick={() => run('dl', () => onDownload(item), "Le téléchargement de la trame n'a pas abouti.")}
-          className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:bg-ds-bg-2 disabled:opacity-60"
-          style={{ border: '1px solid var(--border-1)', color: 'var(--text-3)' }}
-        >
-          {busy === 'dl' ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
-          Télécharger la trame
-        </button>
-      )}
-      <button
-        type="button"
-        disabled={busy !== null}
-        onClick={() => inputRef.current?.click()}
-        className="glass-btn shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-60"
-        style={{ color: 'var(--text-2)' }}
-      >
-        {busy === 'up' ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
-        {done || warn ? 'Remplacer' : 'Importer remplie'}
-      </button>
+      <div className="flex flex-wrap items-center gap-2">
+        {item.template_project_doc_id && (
+          <Bouton variante="secondaire" disabled={busy !== null} enCours={busy === 'dl'} libelleEnCours="Téléchargement…"
+            onClick={() => { void run('dl', () => onDownload(item), 'Le téléchargement de la trame n’a pas abouti.') }}>
+            <Download aria-hidden size={16} strokeWidth={1.5} />
+            Télécharger la trame
+          </Bouton>
+        )}
+        <Bouton variante="secondaire" disabled={busy !== null} enCours={busy === 'up'} libelleEnCours="Dépôt en cours…" onClick={() => inputRef.current?.click()}>
+          <Upload aria-hidden size={16} strokeWidth={1.5} />
+          {done || warn ? 'Remplacer le tableau' : 'Déposer le tableau rempli'}
+        </Bouton>
+      </div>
       {echec && (
-        <div className="basis-full">
-          <EchecAction
-            message={echec.message}
-            onReessayer={() => { const relancer = echec.relancer; setEchec(null); relancer() }}
-            onFermer={() => setEchec(null)}
-          />
-        </div>
+        <Message ton="erreur" onFermer={() => setEchec(null)}
+          action={<Bouton variante="secondaire" onClick={() => { const relancer = echec.relancer; setEchec(null); relancer() }}>Réessayer</Bouton>}>
+          {echec.message}
+        </Message>
       )}
-    </li>
+    </Carte>
   )
 }
 
-// ── Produit par Synorix (mémoire technique) — jalon informatif, jamais upload ─
+// ── Rédigé avec Synorix (le mémoire technique) : rien à joindre ici ─
 function SynorixJalonSection({ items }: { items: ChecklistItem[] }) {
   if (items.length === 0) return null
   return (
-    <section
-      className="glass-card rounded-lg overflow-hidden"
-      style={{ border: '1px solid var(--border-1)', boxShadow: 'var(--shadow-card)', fontFamily: F }}
-    >
-      <header className="flex items-center gap-3 px-5 py-3" style={{ borderBottom: '1px solid var(--border-1)' }}>
-        <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'color-mix(in srgb, var(--text-1) 8%, transparent)' }}>
-          <Sparkles size={18} style={{ color: 'var(--text-1)' }} />
-        </div>
-        <div className="min-w-0">
-          <h2 className="text-base font-bold" style={{ color: 'var(--text-1)' }}>Généré par Synorix</h2>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
-            Produit automatiquement à l&apos;étape suivante — rien à joindre ici.
-          </p>
-        </div>
-      </header>
-      <ul>
-        {items.map((i) => (
-          <li key={i.id} className="flex items-center gap-3 px-5 py-2.5" style={{ borderTop: '1px solid var(--border-1)' }}>
-            <Sparkles size={15} style={{ color: 'var(--text-1)' }} className="shrink-0" />
-            <span className="text-sm flex-1 min-w-0" style={{ color: 'var(--text-2)' }}>{i.details}</span>
-            {i.lot && (
-              <span className="text-xs px-1.5 rounded-full shrink-0" style={{ background: 'color-mix(in srgb, var(--text-1) 8%, transparent)', color: 'var(--text-2)' }}>
-                {i.lot.replace(/^lot/i, 'Lot ')}
-              </span>
-            )}
-            <span className="text-xs shrink-0" style={{ color: 'var(--text-3)' }}>Étape Mémoire</span>
-          </li>
-        ))}
-      </ul>
-    </section>
+    <SectionEtape titre="Rédigé avec Synorix" description="Ces pièces se préparent à l’étape Rédiger : rien à joindre ici.">
+      <Carte sansMarge>
+        <ul>
+          {items.map((i) => (
+            <li key={i.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-bord px-5 py-3 last:border-b-0">
+              <span className="min-w-0 flex-1 basis-56 break-words text-sm text-fg">{i.details}</span>
+              {i.lot && <PastilleEtat sens="gris" icone={null}>{libelleLot(i.lot)}</PastilleEtat>}
+              <span className="shrink-0 text-xs text-fg-3">À l’étape Rédiger</span>
+            </li>
+          ))}
+        </ul>
+      </Carte>
+    </SectionEtape>
   )
 }
-

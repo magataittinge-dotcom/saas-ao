@@ -1,6 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Banknote, ExternalLink } from 'lucide-react'
+import { ArrowRight, ChevronRight } from 'lucide-react'
+import { Sigle } from '@/components/common/Sigle'
+import { Bouton } from '@/components/ui/bouton'
+import { Carte, TitreCarte } from '@/components/ui/carte'
 import { api } from '@/services/api'
 import type { FieldSource } from './CriticalBanner'
 
@@ -48,47 +51,46 @@ export default function TresorerieCard({ projectId, onOpenSource }: Props) {
   if (!data || data.lignes.length === 0) return null
 
   return (
-    <div id={ID_TRESORERIE} className="scroll-mt-20 rounded-lg" style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)' }}>
-      <div className="flex items-center gap-2 px-5 py-3" style={{ borderBottom: '1px solid var(--border-1)' }}>
-        <Banknote size={16} style={{ color: 'var(--text-1)' }} />
-        <h3 className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>Trésorerie du marché</h3>
-        <span className="text-xs" style={{ color: 'var(--text-3)' }}>ce que dit le contrat</span>
-      </div>
-      <div>
-        {data.lignes.map((ligne, i) => (
-          <button
-            key={ligne.id}
-            onClick={() => ligne.source && onOpenSource(ligne.source)}
-            disabled={!ligne.source}
-            className="w-full text-left px-5 py-3 flex items-start gap-4 transition-colors enabled:hover:bg-surface-1 disabled:cursor-default"
-            style={i < data.lignes.length - 1 ? { borderBottom: '1px solid var(--border-1)' } : undefined}
-          >
-            <div className="w-40 shrink-0">
-              <p className="text-xs font-bold uppercase tracking-wide" style={{ color: 'var(--text-3)' }}>
-                {ligne.label}
-              </p>
-              <p className="text-sm font-semibold mt-0.5" style={{ color: 'var(--text-1)' }}>{ligne.valeur}</p>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs" style={{ color: 'var(--text-3)' }}>{ligne.explication}</p>
-              {ligne.formule && (
-                <p className="text-xs font-mono mt-1 truncate" style={{ color: 'var(--text-3)' }}>
-                  {ligne.formule}
-                </p>
+    <Carte sansMarge id={ID_TRESORERIE} className="min-w-0 scroll-mt-20">
+      <header className="grid gap-1 border-b border-bord px-5 py-4 sm:px-6">
+        <TitreCarte>Trésorerie du marché</TitreCarte>
+        <p className="text-sm text-fg-2">Ce que dit le <Sigle code="CCAP" />, clause par clause.</p>
+      </header>
+      <ul>
+        {data.lignes.map((ligne) => {
+          const contenu = (
+            <>
+              <span className="grid min-w-0 flex-1 gap-0.5">
+                <span className="text-xs font-medium text-fg-3">{ligne.label}</span>
+                <span className="break-words text-base font-semibold text-fg">{ligne.valeur}</span>
+                <span className="break-words text-sm text-fg-2">{ligne.explication}</span>
+                {ligne.formule && <span className="chiffres break-words text-xs text-fg-3">{ligne.formule}</span>}
+              </span>
+              {ligne.source && <ChevronRight aria-hidden size={16} strokeWidth={1.5} className="mt-1 shrink-0 text-fg-3" />}
+            </>
+          )
+          return (
+            <li key={ligne.id} className="border-b border-bord">
+              {ligne.source ? (
+                // la rangée entière ouvre le passage du contrat
+                <Bouton variante="discret" aria-label={`${ligne.label} : ${ligne.valeur}. Voir dans le dossier`}
+                  className="h-auto w-full items-start justify-start gap-3 whitespace-normal rounded-none px-5 py-3 text-left font-normal sm:px-6"
+                  onClick={() => { if (ligne.source) onOpenSource(ligne.source) }}>
+                  {contenu}
+                </Bouton>
+              ) : (
+                <div className="flex items-start gap-3 px-5 py-3 sm:px-6">{contenu}</div>
               )}
-            </div>
-            {ligne.source && (
-              <ExternalLink size={12} className="shrink-0 mt-1" style={{ color: 'var(--text-3)' }} />
-            )}
-          </button>
-        ))}
-      </div>
+            </li>
+          )
+        })}
+      </ul>
       {/* « Retenue de garantie » n'est plus dans la barre : le chiffre du contrat est ici, le calcul est un lien plus loin */}
-      <div className="px-5 py-3" style={{ borderTop: '1px solid var(--border-1)' }}>
-        <Link to="/outils" className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium underline-offset-2 hover:underline" style={{ color: 'var(--text-1)' }}>
-          Calculer ma retenue de garantie <ArrowRight size={14} aria-hidden />
-        </Link>
+      <div className="px-5 py-2 sm:px-6">
+        <Bouton asChild variante="lien" className="min-h-11">
+          <Link to="/outils">Calculer ma retenue de garantie <ArrowRight size={16} strokeWidth={1.5} aria-hidden /></Link>
+        </Bouton>
       </div>
-    </div>
+    </Carte>
   )
 }

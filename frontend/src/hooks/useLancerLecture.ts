@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { api } from '@/services/api'
 import { useProgressStream } from '@/hooks/useProgressStream'
+import { messageErreur } from '@/lib/erreurs'
 import type { Project } from '@/types'
 
 /**
@@ -54,7 +55,7 @@ export function useLancerLecture(project: Project) {
     abortRef.current?.abort()
     setIsAnalyzing(false)
     setIsSuccess(false)
-    setAnalysisError('Analyse annulée.')
+    setAnalysisError('Vous avez annulé la lecture.')
   }
 
   /**
@@ -92,10 +93,8 @@ export function useLancerLecture(project: Project) {
       if (abort.signal.aborted) return
       setIsAnalyzing(false)
       setIsSuccess(false)
-      const msg = axios.isAxiosError(err)
-        ? (err.response?.data?.detail ?? "Erreur lors de l'analyse")
-        : "Erreur lors de l'analyse"
-      const texte = typeof msg === 'string' ? msg : JSON.stringify(msg)
+      // Jamais le message brut ni un objet sérialisé (Q-01) : la phrase du serveur quand il explique son refus, sinon la nôtre.
+      const texte = await messageErreur(err, 'La lecture n’a pas pu démarrer. Réessayez dans quelques minutes.')
       // 1.2 — quota appliqué par le serveur : son refus ouvre le choix d'une offre
       if (axios.isAxiosError(err) && err.response?.status === 402) {
         setPaywallMessage(texte)

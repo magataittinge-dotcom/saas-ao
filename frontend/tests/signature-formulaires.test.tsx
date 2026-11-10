@@ -40,7 +40,7 @@ test("acte d'engagement : à signer à l'attribution, aucune case", () => {
 test('signature exigée par le RC : la case reste demandée', () => {
   const html = formulaires([ligne({ document_type_required: 'dc1_template', signature_required: true })])
   assert.ok(html.includes('Je confirme avoir signé ce document'))
-  assert.ok(html.includes('type="checkbox"'))
+  assert.ok(html.includes('role="checkbox"'))
   assert.ok(!html.includes('Signature non demandée'))
 })
 

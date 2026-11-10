@@ -29,7 +29,7 @@ test('Pièces : un seul calcul — prêtes + à joindre + à renouveler = pièce
   })
   assert.deepEqual([pretes.valeur, aJoindre.valeur, aRenouveler.valeur], ['2', '2', '2'])
   assert.deepEqual(pretes.jauge, { rempli: 2, total: 6 })
-  assert.match(pretes.detail ?? '', /^sur 6 pièces demandées · 1 facultative ou pour l’attribution$/)
+  assert.match(pretes.detail ?? '', /^sur 6 pièces demandées au dépôt, plus 1 facultative ou pour l’attribution$/)
   assert.match(aJoindre.detail ?? '', /pièce.* du coffre-fort · 1 formulaire à compléter/)
   assert.equal(aJoindre.etat, 'a-verifier')
 })
@@ -66,7 +66,7 @@ test('Pièces : l’état de chaque pièce est dit par un mot positif, « Non co
 
 test('un seul bouton en dégradé par écran : l’action de l’en-tête, jamais doublée sur ordinateur par la barre ni par une autre carte', () => {
   const analyse = sansCommentaires(lire('src/routes/project/StepAnalysis.tsx'))
-  assert.equal((analyse.match(/variant="signature"/g) ?? []).length, 1)
+  assert.equal((analyse.match(/variante="principal"/g) ?? []).length, 1)
   assert.match(analyse, /<ActionsBarreTel>\s*<BoutonSuite/)
   const decision = sansCommentaires(lire('src/components/project/SynorixScoreCard.tsx'))
   assert.doesNotMatch(decision, /signature-btn/, '« On y va » n’est pas un second bouton principal')
@@ -76,8 +76,8 @@ test('un seul bouton en dégradé par écran : l’action de l’en-tête, jamai
   assert.match(export_, /actionPrincipale=\{tel \? undefined : \([\s\S]*?\{boutonTelecharger\}/, 'en-tête : sur ordinateur seulement')
   assert.match(export_, /<ActionsBarreTel className="max-\[768px\]:flex-1">\{tel \? boutonTelecharger : null\}<\/ActionsBarreTel>/, 'barre : au téléphone seulement')
   const lots = sansCommentaires(lire('src/routes/project/StepLotSelection.tsx'))
-  assert.equal((lots.match(/<BoutonLireDossier\b(?![^>]*variante="default")/g) ?? []).length, 1, 'Lots : un seul bouton en dégradé (en-tête) ; celui de la barre est en bleu uni')
-  assert.match(lots, /<ActionsBarre>[\s\S]*<BoutonLireDossier variante="default"/)
+  assert.equal((lots.match(/variante="principal"/g) ?? []).length, 1, 'Lots : le bouton « Lire » est écrit une fois (en-tête à l’ordinateur, barre du bas au téléphone)')
+  assert.match(lots, /<ActionsBarreTel>\{actionLire\}<\/ActionsBarreTel>/)
   const verification = sansCommentaires(lire('src/routes/project/StepVerification.tsx'))
   assert.doesNotMatch(verification, /actionPrincipale=/, 'Pièces : l’unique action principale est « Étape suivante » de la barre')
 })

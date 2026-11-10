@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, Check, Clock, Copy, Loader2, MessageSquareText } from 'lucide-react'
+import { AlertCircle, Check, Clock, Copy, MessageSquareText } from 'lucide-react'
 import { api } from '@/services/api'
 import { EtatElement, SectionEtape } from '@/components/etape'
 import EchecAction from '@/components/common/EchecAction'
-import { Button } from '@/components/ui/button'
+import { Bouton } from '@/components/ui/bouton'
 import { messageErreur } from '@/lib/erreurs'
 import { copierTexte } from '@/lib/copier'
 import { etatEcheance } from '@/lib/echeance'
@@ -46,7 +46,7 @@ export function DateLimiteQuestions({ date, onVoir }: { date: DateQuestions | nu
           source={{ libelle: libelleSource({ document: source.document, page: null }) ?? source.document, onVoir: onVoir ? () => onVoir(source) : undefined }}
         />
       )}
-      {date?.rappel && <p className="text-sm text-fg-3">{date.rappel}</p>}
+      {date?.rappel && <p className="max-w-md text-sm text-fg-3">{date.rappel}</p>}
     </div>
   )
 }
@@ -63,7 +63,7 @@ export function CartePoint({ point, numero, onVoir, onCopier, copie }: {
   return (
     <li data-point-a-eclaircir="" className="grid min-w-0 content-start gap-2.5 rounded-carte border border-bord-2 bg-surface-1 p-5">
       <div className="flex items-start gap-3">
-        <span aria-hidden="true" className="shrink-0 pt-0.5 text-xs tabular-nums tracking-[0.06em] text-fg-3">{String(numero).padStart(2, '0')}</span>
+        <span aria-hidden="true" className="chiffres shrink-0 pt-0.5 text-xs tabular-nums text-fg-3">{String(numero).padStart(2, '0')}</span>
         <p className="min-w-0 flex-1 break-words font-semibold text-fg">{point.question}</p>
       </div>
       {point.pourquoi && <p className="break-words text-sm text-fg-2">{point.pourquoi}</p>}
@@ -72,9 +72,9 @@ export function CartePoint({ point, numero, onVoir, onCopier, copie }: {
           etat="a-verifier"
           source={source ? { libelle: libelleSource(source) ?? source.document, onVoir: onVoir ? () => onVoir(source) : undefined } : undefined}
         />
-        <Button type="button" variant="outline" size="sm" onClick={onCopier} className="[@media(pointer:coarse)]:min-h-11">
-          {copie ? <><Check size={14} aria-hidden />Copié</> : <><Copy size={14} aria-hidden />Copier la question</>}
-        </Button>
+        <Bouton variante="secondaire" onClick={onCopier}>
+          {copie ? <><Check size={16} aria-hidden />Copié</> : <><Copy size={16} aria-hidden />Copier la question</>}
+        </Bouton>
       </div>
     </li>
   )
@@ -101,9 +101,8 @@ export function InvitationPreparer({ onPreparer, enCours, erreur, onFermerErreur
       </div>
       {erreur && <EchecAction message={erreur} onFermer={onFermerErreur} />}
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="button" onClick={onPreparer} disabled={enCours} aria-busy={enCours}>
-          {enCours ? <><Loader2 size={16} className="animate-spin" aria-hidden />Préparation en cours…</> : 'Préparer les questions'}
-        </Button>
+        {/* au trait : l'action de l'écran est la décision (un seul aplat) ; en cours, le libellé change, aucune roue */}
+        <Bouton variante="secondaire" onClick={onPreparer} enCours={enCours} libelleEnCours="Préparation en cours…">Préparer les questions</Bouton>
         {enCours && <p role="status" className="text-sm text-fg-2">Cela prend quelques secondes. Vous pouvez rester sur cette page.</p>}
       </div>
     </div>

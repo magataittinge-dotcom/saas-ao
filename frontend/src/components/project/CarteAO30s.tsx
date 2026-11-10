@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '@/services/api'
+import { Bouton } from '@/components/ui/bouton'
 import { construireCarteAO, type ChampsCritiquesCarte, type ConditionsCarte, type FaitCarte, type SourceFait } from '@/lib/carteAO'
 import type { ChecklistItem, Project } from '@/types'
 
@@ -25,14 +26,9 @@ export function CarteAO30sVue({
               {f.valeur}
               {f.reste && <span className="carte-ao-30s__reste">{f.reste}</span>}
               {f.source && onOpenSource && (
-                <button
-                  type="button"
-                  className="carte-ao-30s__source"
-                  aria-label={`Voir dans le dossier : ${f.libelle}`}
-                  onClick={() => onOpenSource(f.source as SourceFait)}
-                >
+                <Bouton variante="lien" className="carte-ao-30s__source" aria-label={`Voir dans le dossier : ${f.libelle}`} onClick={() => onOpenSource(f.source as SourceFait)}>
                   Voir dans le dossier
-                </button>
+                </Bouton>
               )}
             </dd>
           </div>

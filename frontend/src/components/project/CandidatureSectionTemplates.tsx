@@ -1,13 +1,15 @@
 import { useRef, useState } from 'react'
-import {
-  Download, Upload, FileText, Loader2, ExternalLink,
-} from 'lucide-react'
+import { Download, Upload, FileText, ExternalLink } from 'lucide-react'
 import type { ChecklistItem } from '@/types'
 import SignatureLigne from '@/components/project/SignatureLigne'
 import NonConcerneBouton, { estNonConcernee } from '@/components/project/NonConcerne'
 import { noteDepot, statutPiece } from '@/lib/statutPiece'
 import { EtatElement, SectionEtape } from '@/components/etape'
-import { Button } from '@/components/ui/button'
+import { Bouton } from '@/components/ui/bouton'
+import { Carte } from '@/components/ui/carte'
+import { Message } from '@/components/ui/message'
+import EntreeFichier from '@/components/depot/EntreeFichier'
+import { messageErreur } from '@/lib/erreurs'
 import { nomPiece } from '@/lib/nomsPieces'
 import { etatDeStatut } from '@/lib/resumePieces'
 import { libelleSource } from '@/lib/resumeAO'
@@ -57,7 +59,7 @@ export default function CandidatureSectionTemplates({
     <SectionEtape
       titre="Formulaires de l’acheteur"
       colonnes={2}
-      description="Téléchargez la trame (ou le formulaire officiel), complétez-la, puis réimportez la version finale."
+      description="Téléchargez la trame de l’acheteur (ou le formulaire officiel), complétez-la, puis déposez-la ici."
     >
       {sorted.map((item) => (
         <TemplateRow
@@ -117,8 +119,7 @@ function TemplateRow({
     try {
       await onUploadCompleted(item, file)
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'L\'envoi n\'a pas abouti'
-      setError(msg)
+      setError(await messageErreur(err, 'Le formulaire rempli n’a pas pu être déposé. Réessayez dans un instant.'))
     } finally {
       setUploading(false)
       if (fileRef.current) fileRef.current.value = ''
@@ -127,10 +128,9 @@ function TemplateRow({
 
   const { etat, texte, perimee } = etatDeStatut(statut)
   const source = item.source_document ? libelleSource({ document: item.source_document, page: item.source_page ?? null }) : null
-  const lien = 'inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-bord-2 px-3 text-sm font-medium text-fg-2 transition-colors hover:bg-surface-2 [@media(pointer:coarse)]:min-h-11'
 
   return (
-    <div data-piece={item.id} className="grid min-w-0 content-start gap-2 rounded-carte border border-bord-2 bg-surface-1 p-5">
+    <Carte data-piece={item.id} className="grid min-w-0 content-start gap-2">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
           <FileText size={18} className="mt-0.5 shrink-0 text-fg-3" aria-hidden />
@@ -142,7 +142,7 @@ function TemplateRow({
         {item.jointe && item.piece_nom ? item.piece_nom : nonConcernee || isWarning ? null : hasTemplate ? 'Modèle de l’acheteur à compléter'
           // Type (b) : modèle officiel — normal qu'il ne soit pas au DCE. Aucun numéro de formulaire : service-public (F32144, F32106)
           // classe DC1/DC2/DUME en « Modèle de document ». Type (a) introuvable : à réclamer, pas une erreur.
-          : officialUrl ? 'Modèle officiel (ministère de l\'Économie)' : 'À demander au maître d’ouvrage'}
+          : officialUrl ? 'Modèle officiel (ministère de l’Économie)' : 'À demander au maître d’ouvrage'}
       </p>
       {/* Signature : case seulement si elle est demandée, sinon la mention */}
       <SignatureLigne item={item} onToggleSignature={onToggleSignature} onOpenSource={onOpenSource} />
@@ -151,41 +151,40 @@ function TemplateRow({
         <p className="text-sm leading-relaxed text-fg-3">{item.details}</p>
       )}
       {item.source_in_rc && <p className="text-sm italic text-fg-3">« {item.source_in_rc} »</p>}
-      {error && <p className="text-sm" style={{ color: 'var(--danger-fg)' }}>{error}</p>}
+      {error && <Message ton="erreur" onFermer={() => setError(null)}>{error}</Message>}
 
-      <div className="mt-auto grid gap-2.5 border-t border-bord-2 pt-2.5">
+      <div className="mt-auto grid gap-3 border-t border-bord pt-3">
         <EtatElement
           etat={etat}
           texte={texte}
           perimee={perimee}
           source={source ? { libelle: source, onVoir: item.source_exigence_id && onOpenSource ? () => onOpenSource(item) : undefined } : undefined}
         />
-        {/* Actions — affordance UNIFORME : Télécharger (trame du dossier ou officiel) / Importer rempli */}
+        {/* Actions — affordance UNIFORME : Télécharger (trame du dossier ou officiel) / Déposer le formulaire rempli */}
         <div className="flex flex-wrap items-center gap-2">
           {nonConcernee ? null : hasTemplate && downloadHref ? (
-            <a href={downloadHref} target="_blank" rel="noreferrer" className={lien}>
-              <Download size={14} aria-hidden /> Télécharger la trame
-            </a>
+            <Bouton asChild variante="secondaire">
+              <a href={downloadHref} target="_blank" rel="noreferrer"><Download size={16} strokeWidth={1.5} aria-hidden />Télécharger la trame</a>
+            </Bouton>
           ) : officialUrl ? (
-            <a href={officialUrl} target="_blank" rel="noreferrer" className={lien} title="Formulaire officiel sur economie.gouv.fr (DAJ)">
-              <ExternalLink size={14} aria-hidden /> Formulaire officiel
-            </a>
+            <Bouton asChild variante="secondaire">
+              <a href={officialUrl} target="_blank" rel="noreferrer" aria-label="Formulaire officiel, sur economie.gouv.fr (nouvel onglet)"><ExternalLink size={16} strokeWidth={1.5} aria-hidden />Formulaire officiel</a>
+            </Bouton>
           ) : null}
           {isPresent && completedHref && (
-            <a href={completedHref} target="_blank" rel="noreferrer" className={lien}>
-              <FileText size={14} aria-hidden /> Voir version finale
-            </a>
+            <Bouton asChild variante="secondaire">
+              <a href={completedHref} target="_blank" rel="noreferrer"><FileText size={16} strokeWidth={1.5} aria-hidden />Voir la version déposée</a>
+            </Bouton>
           )}
           {!nonConcernee && (
-            <Button type="button" variant="outline" size="sm" onClick={handlePick} disabled={uploading} className="[@media(pointer:coarse)]:min-h-11">
-              {uploading
-                ? <><Loader2 size={14} className="animate-spin" aria-hidden /> Envoi...</>
-                : <><Upload size={14} aria-hidden /> {isPresent ? 'Remplacer' : 'Importer rempli'}</>}
-            </Button>
+            <Bouton variante="secondaire" onClick={handlePick} enCours={uploading} libelleEnCours="Dépôt en cours…">
+              <Upload size={16} strokeWidth={1.5} aria-hidden />
+              {isPresent ? 'Remplacer' : 'Déposer le formulaire rempli'}
+            </Bouton>
           )}
         </div>
       </div>
-      <input ref={fileRef} type="file" accept=".pdf,.docx,.xlsx,.xlsm,.xls,.ods" onChange={handleFile} className="hidden" />
-    </div>
+      <EntreeFichier ref={fileRef} accept=".pdf,.docx,.xlsx,.xlsm,.xls,.ods" onChange={handleFile} />
+    </Carte>
   )
 }

@@ -36,5 +36,7 @@ test('l\'écran de dépôt utilise la liste commune et tronque le libellé long'
   const code = sansCommentaires(lire('src/routes/project/StepUpload.tsx'))
   assert.ok(code.includes('optionsType(doc.type)'))
   assert.ok(!code.includes('const DOC_TYPES'))
-  assert.ok(/textOverflow: 'ellipsis'/.test(code) || code.includes('truncate'))
+  // le type se choisit dans la liste déroulante du système (plus de <select> natif) : c'est elle qui coupe un libellé long
+  assert.ok(code.includes('<ListeDeroulante') && !code.includes('<select'))
+  assert.ok(sansCommentaires(lire('src/components/ui/liste-deroulante.tsx')).includes('truncate'))
 })

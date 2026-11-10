@@ -1,11 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Sigle } from '@/components/common/Sigle'
 import { Link } from 'react-router-dom'
-import { Check, CircleDot, ExternalLink } from 'lucide-react'
 import { api } from '@/services/api'
 import type { Project } from '@/types'
 import type { FieldSource } from './CriticalBanner'
 import { voirTresorerie } from './TresorerieCard'
+import { Bouton } from '@/components/ui/bouton'
+import { Carte, TitreCarte } from '@/components/ui/carte'
+import { EtatElement } from '@/components/etape'
+import { libelleSource } from '@/lib/resumeAO'
 
 interface Composante {
   id: string
@@ -72,106 +75,63 @@ export default function SynorixScoreCard({ project, onOpenSource, onYAller, enCo
   const decidePasser = project.status === 'sans_suite'
 
   return (
-    <section className="glass-card overflow-hidden" aria-labelledby="fiche-decision-titre">
-      <header className="px-5 pt-4 pb-3" style={{ borderBottom: '1px solid var(--border-1)' }}>
-        <p className="microlabel">Décision</p>
-        <h2 id="fiche-decision-titre" className="mt-1 text-base font-semibold" style={{ color: 'var(--text-1)' }}>
-          On y va ?
-        </h2>
-        <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
+    <Carte sansMarge aria-labelledby="fiche-decision-titre" role="group">
+      <header className="grid gap-1 border-b border-bord px-5 py-4 sm:px-6">
+        <TitreCarte id="fiche-decision-titre">On y va ?</TitreCarte>
+        <p className="text-sm text-fg-2">
           Les conditions relevées dans le <Sigle code="DCE" />, comparées à votre profil. La décision vous appartient.
         </p>
       </header>
 
       <ul>
-        {data.composantes.map((comp, i) => (
-          <li
-            key={comp.id}
-            className="px-5 py-2.5 flex items-start gap-3"
-            style={i < data.composantes.length - 1 ? { borderBottom: '1px solid var(--border-1)' } : undefined}
-          >
-            <span className="mt-0.5 shrink-0">
-              {comp.statut === 'ok'
-                ? <Check size={14} style={{ color: 'var(--success-fg)' }} />
-                : <CircleDot size={14} style={{ color: 'var(--warning-fg)' }} />}
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs">
-                <span className="font-semibold" style={{ color: 'var(--text-2)' }}>{comp.label}</span>
-                <span style={{ color: comp.statut === 'ok' ? 'var(--success-fg)' : 'var(--warning-fg)' }}> · {libelleStatut(comp)}</span>
-              </p>
+        {data.composantes.map((comp) => {
+          const source = comp.source && comp.id !== PENALITES ? comp.source : null
+          return (
+            <li key={comp.id} className="grid gap-1 border-b border-bord px-5 py-3 sm:px-6">
+              <p className="text-sm font-semibold text-fg">{comp.label}</p>
               {comp.id === PENALITES ? (
                 // V3 — le détail des pénalités n'est dit qu'une fois, dans « Trésorerie du marché » : ici, un lien seulement.
                 (comp.source || comp.statut !== 'ok') && (
-                  <p className="text-xs mt-0.5">
-                    <button type="button" onClick={voirTresorerie} className="cible-libre cible-etendue font-medium underline" style={{ color: 'var(--text-1)' }}>
-                      Voir les pénalités
-                    </button>
-                  </p>
+                  <p><Bouton variante="lien" onClick={voirTresorerie}>Voir les pénalités</Bouton></p>
                 )
               ) : (
-                <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>
+                <p className="break-words text-sm text-fg-2">
                   {comp.explication}
                   {comp.action === 'completer_profil' && (
                     <>
                       {' '}
-                      <Link to="/company" className="font-medium underline" style={{ color: 'var(--text-1)' }}>
-                        Compléter mon profil
-                      </Link>
+                      <Bouton asChild variante="lien"><Link to="/company">Compléter mon profil</Link></Bouton>
                     </>
                   )}
                 </p>
               )}
-            </div>
-            {comp.source && comp.id !== PENALITES && (
-              <button
-                onClick={() => onOpenSource(comp.source!)}
-                title={`Source — ${comp.source.document}`}
-                aria-label={`Voir la source : ${comp.source.document}`}
-                className="shrink-0 p-1 rounded"
-                style={{ color: 'var(--text-3)' }}
-              >
-                <ExternalLink size={12} />
-              </button>
-            )}
-          </li>
-        ))}
+              <EtatElement
+                etat={comp.statut === 'ok' ? 'pret' : 'a-verifier'}
+                texte={libelleStatut(comp)}
+                source={source ? { libelle: libelleSource(source) ?? source.document, onVoir: () => onOpenSource(source) } : undefined}
+              />
+            </li>
+          )
+        })}
       </ul>
 
-      <footer className="px-5 py-3.5 flex flex-wrap items-center gap-3" style={{ borderTop: '1px solid var(--border-1)' }}>
+      <footer className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-4 sm:px-6">
         {decidePasser ? (
           <>
-            <p className="text-sm flex-1" style={{ color: 'var(--text-2)' }}>Vous avez classé cet AO sans suite.</p>
-            <button
-              onClick={() => changerStatut('analyzed')}
-              disabled={changement}
-              className="text-xs font-semibold px-3 py-1.5 rounded-lg disabled:opacity-60"
-              style={{ color: 'var(--text-1)', border: '1px solid var(--border-2)' }}
-            >
-              Rouvrir l'AO
-            </button>
+            <p className="min-w-0 flex-1 basis-56 text-sm text-fg-2">Vous avez classé cet appel d’offres sans suite.</p>
+            <Bouton variante="secondaire" onClick={() => changerStatut('analyzed')} enCours={changement} libelleEnCours="Réouverture…">Rouvrir l’appel d’offres</Bouton>
           </>
         ) : decideAller ? (
-          <p className="text-sm" style={{ color: 'var(--text-2)' }}>Vous avez décidé d'y aller.</p>
+          <p className="text-sm text-fg-2">Vous avez décidé d’y aller.</p>
         ) : (
           <>
-            <button onClick={onYAller} disabled={enCours || changement} className="glass-btn px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-60" style={{ color: 'var(--text-1)' }}>
-              On y va
-            </button>
-            <button
-              onClick={() => changerStatut('sans_suite')}
-              disabled={enCours || changement}
-              className="glass-btn px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-60"
-              style={{ color: 'var(--text-2)' }}
-            >
-              On passe
-            </button>
-            <p className="text-xs" style={{ color: 'var(--text-3)' }}>
-              « On passe » classe l'AO sans suite ; vous pourrez le rouvrir.
-            </p>
+            {/* « On y va » est l'action principale de l'en-tête (un seul aplat par écran) ; ici, au trait, là où la décision se lit */}
+            <Bouton variante="secondaire" onClick={onYAller} disabled={enCours || changement}>On y va</Bouton>
+            <Bouton variante="secondaire" onClick={() => changerStatut('sans_suite')} disabled={enCours || changement}>On passe</Bouton>
+            <p className="min-w-0 flex-1 basis-56 text-sm text-fg-3">« On passe » classe l’appel d’offres sans suite ; vous pourrez le rouvrir.</p>
           </>
         )}
       </footer>
-    </section>
+    </Carte>
   )
 }
