@@ -1,5 +1,5 @@
 // Décision du 3/11 : un seul lot (ou un marché unique) ne passe plus par l'écran Lots ; l'écran de dépôt affiche une carte
-// « Ce dossier a un seul lot : … » avec « Lire ce dossier (1 unité) ». Aucune lecture ne part sans le clic. Données inventées.
+// « Ce dossier a un seul lot : … » avec « Analyser le dossier (1 unité) ». Aucune lecture ne part sans le clic. Données inventées.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -34,8 +34,8 @@ test('plusieurs lots, détection pas faite ou en échec : pas de lot unique, l�
 
 test('la prochaine action ne mène plus à l’écran Lots pour un lot unique ; plusieurs lots : inchangé', () => {
   const base = { status: 'en_cours' as const, current_step: 2, processing_status: 'ready', completed_steps: { '1': true } }
-  assert.deepEqual(actionEtape({ ...base, name: 'AO démo', lots_detectes: [LOT] }), { verbe: 'Lire ce dossier', segment: 'upload' })
-  assert.deepEqual(actionEtape({ ...base, name: 'AO démo', lots_detectes: [] }), { verbe: 'Lire ce dossier', segment: 'upload' })
+  assert.deepEqual(actionEtape({ ...base, name: 'AO démo', lots_detectes: [LOT] }), { verbe: 'Analyser le dossier', segment: 'upload' })
+  assert.deepEqual(actionEtape({ ...base, name: 'AO démo', lots_detectes: [] }), { verbe: 'Analyser le dossier', segment: 'upload' })
   assert.deepEqual(actionEtape({ ...base, name: 'AO démo', lots_detectes: [LOT, { id: 'lot4', nom: 'Lot 4' }] }), { verbe: 'Choisir le lot', segment: 'lots' })
   assert.deepEqual(actionEtape(base), { verbe: 'Choisir le lot', segment: 'lots' })      // détection pas faite : comme avant
 })
@@ -43,10 +43,10 @@ test('la prochaine action ne mène plus à l’écran Lots pour un lot unique ;
 const carte = (props: Partial<Parameters<typeof CarteLotUnique>[0]> = {}) => renderToStaticMarkup(
   <CarteLotUnique lot={{ id: 'lot3', designation: 'Lot 3 — Menuiseries (démo)', marcheUnique: false }} ecartes={null} onOuvrirLots={() => {}} {...props} />)
 
-test('la carte : la désignation, ce que la lecture décompte (1 unité), un lien discret vers l’écran des lots ; le bouton est dans l’en-tête (A7)', () => {
+test('la carte : la désignation, ce que l’analyse décompte (1 unité), un lien discret vers l’écran des lots ; le bouton est dans l’en-tête (A7)', () => {
   const html = carte()
   assert.match(html, /Ce dossier a un seul lot : Lot 3 — Menuiseries \(démo\)/)
-  assert.match(html, /« Lire ce dossier »[^<]*décompte 1 unité/)
+  assert.match(html, /« Analyser le dossier »[^<]*décompte 1 unité/)
   assert.match(html, /Ouvrir l’écran des lots/)
   assert.equal((html.match(/<button/g) ?? []).length, 1, 'un seul bouton dans la carte : le lien vers l’écran des lots')
   assert.doesNotMatch(html, /manquant|incomplet|absent|!/i)
@@ -58,9 +58,9 @@ test('marché unique : la carte le dit avec l’objet du marché ; lots cités
   assert.match(html, /1 autre lot cité dans le dossier ne figure pas dans la liste du règlement/)
 })
 
-test('A7 — un seul lot : « Lire ce dossier » est l’action principale de l’écran (en-tête et barre du téléphone), sans « (1 unité) » en dur, désactivée pendant la lecture', () => {
+test('A7 — un seul lot : « Analyser le dossier » est l’action principale de l’écran (en-tête et barre du téléphone), sans « (1 unité) » en dur, désactivée pendant la lecture', () => {
   const depot = sansCommentaires(lire('src/routes/project/StepUpload.tsx'))
-  assert.match(depot, /<Bouton variante="principal" onClick=\{lireLeLotUnique\} disabled=\{lecture\.isAnalyzing \|\| lecture\.isSuccess\}>\s*Lire ce dossier\s*<\/Bouton>/)
+  assert.match(depot, /<Bouton variante="principal" onClick=\{lireLeLotUnique\} disabled=\{lecture\.isAnalyzing \|\| lecture\.isSuccess\}>\s*Analyser le dossier\s*<\/Bouton>/)
   assert.match(depot, /actionPrincipale=\{!hasDocuments \? undefined : lotUnique \? actionLecture :/)
   assert.match(depot, /<ActionsBarreTel>\s*\{lotUnique \? actionLecture :/)
   assert.doesNotMatch(depot, /\(1 unité\)/)
@@ -92,7 +92,7 @@ test('le résumé du dépôt : « Lot unique : … » sans « À choisir �
   assert.equal(carteSeul?.libelle, 'Lots détectés')
   assert.equal(carteSeul?.valeur, 'Lot unique')                                     // en grand : deux mots ; la désignation passe en texte normal
   assert.equal(carteSeul?.designation, 'Lot 3 — Menuiseries (démo)')
-  assert.equal(carteSeul?.detail, 'La lecture se lance depuis cette page.')
+  assert.equal(carteSeul?.detail, 'L’analyse se lance depuis cette page.')
   assert.doesNotMatch(JSON.stringify(carteSeul), /À choisir/)
   const deux = [LOT, { id: 'lot4', nom: 'Lot 4' }]
   const carteDeux = cartesDepot(docs, { lots_detectes: deux }, lotUniqueDuDossier({ name: 'x', lots_detectes: deux })).at(-1)
@@ -184,7 +184,7 @@ test('la carte : « Lot unique » en grand, la désignation entière dans le 
   assert.ok(html.includes(LONGUE), 'le texte complet reste dans la page (lecteur d’écran, copie, impression)')
   assert.match(html, /line-clamp-2/)
   assert.doesNotMatch(html, /…|\.\.\./)
-  assert.match(html, /La lecture se lance depuis cette page\./)
+  assert.match(html, /L’analyse se lance depuis cette page\./)
   assert.doesNotMatch(html, /manquant|incomplet|absent|!/i)
 })
 

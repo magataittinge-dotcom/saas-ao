@@ -125,7 +125,7 @@ test('AO neuf : chaque section dit ce qui apparaîtra ici ; le bouton attend q
     })
   })
   const t = texte(html)
-  assert.match(t, /La liste des pièces apparaît après la lecture du/)
+  assert.match(t, /La liste des pièces apparaît après l’analyse du/)
   assert.match(t, /Le mémoire technique reste à rédiger/)
   assert.match(t, /Les pièces apparaissent ici dès qu’elles sont jointes au dossier/)
   assert.match(html, /<button[^>]*data-variante="principal"[^>]*disabled=""|<button[^>]*disabled=""[^>]*data-variante="principal"/)

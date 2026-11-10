@@ -15,17 +15,17 @@ test('la confirmation s\'applique dès plus d\'un lot, jamais pour un seul', () 
 })
 
 test('l\'unité est écrite sur le bouton ; en offre illimitée, aucune unité n\'est annoncée', () => {
-  assert.equal(libelleBoutonLire(1, false), 'Lire 1 lot (1 unité)')
-  assert.equal(libelleBoutonLire(13, false), 'Lire 13 lots (13 unités)')
-  assert.equal(libelleBoutonLire(0, false), 'Lire ce dossier (1 unité)')
-  assert.equal(libelleBoutonLire(13, true), 'Lire 13 lots')
-  assert.equal(libelleBoutonLire(0, true), 'Lire ce dossier')
+  assert.equal(libelleBoutonLire(1, false), 'Analyser 1 lot (1 unité)')
+  assert.equal(libelleBoutonLire(13, false), 'Analyser 13 lots (13 unités)')
+  assert.equal(libelleBoutonLire(0, false), 'Analyser le dossier (1 unité)')
+  assert.equal(libelleBoutonLire(13, true), 'Analyser 13 lots')
+  assert.equal(libelleBoutonLire(0, true), 'Analyser le dossier')
 })
 
 test('la confirmation dit « Lire N lots = N unités » ; illimité : sans unités décomptées', () => {
-  assert.equal(titreConfirmationLecture(13, false), 'Lire 13 lots = 13 unités')
-  assert.equal(titreConfirmationLecture(2, false), 'Lire 2 lots = 2 unités')
-  assert.equal(titreConfirmationLecture(3, true), 'Lire 3 lots')
+  assert.equal(titreConfirmationLecture(13, false), 'Analyser 13 lots = 13 unités')
+  assert.equal(titreConfirmationLecture(2, false), 'Analyser 2 lots = 2 unités')
+  assert.equal(titreConfirmationLecture(3, true), 'Analyser 3 lots')
   assert.match(detailConfirmationLecture(true), /offre est illimitée/)
   assert.doesNotMatch(detailConfirmationLecture(true), /unité|décompte/)
   assert.match(phraseCoutLots(13, true), /illimitée/)
@@ -37,7 +37,7 @@ test('la confirmation est le dialogue du système : le titre dit le décompte, l
   const code = sansCommentaires(lire('src/components/project/LectureLots.tsx'))
   assert.match(code, /<DialogueConfirmation/)
   assert.match(code, /titre=\{titreConfirmationLecture\(nbLots, illimite\)\}/)
-  assert.match(code, /libelleConfirmer=\{`Lire les \$\{nbLots\} lots`\}/)
+  assert.match(code, /libelleConfirmer=\{`Analyser les \$\{nbLots\} lots`\}/)
   assert.doesNotMatch(code, /createPortal|<button\b|style=\{\{|signature-btn/)
 })
 
@@ -63,7 +63,7 @@ test('ao-neuf-lots : sans dossier déposé, l\'écran ne demande pas les lots (l
   assert.match(code, /const sansDepot = requeteDocuments\.isSuccess && documents\.length === 0/)
   assert.match(code, /const requeteLots = useQuery\(\{\s*enabled: requeteDocuments\.isSuccess && documents\.length > 0,/)
   assert.match(code, /sansDepot \? \(\s*<EtatVide\s+titre="Les lots du dossier apparaîtront ici"/)
-  assert.match(code, /const peutLire = !sansDepot && !chargementEchoue && !enDetection/, 'pas de « Lire ce dossier » quand rien n’est déposé')
+  assert.match(code, /const peutLire = !sansDepot && !chargementEchoue && !enDetection/, 'pas de « Analyser le dossier » quand rien n’est déposé')
 })
 
 test('une erreur de chargement des lots dit son erreur (jamais « Ce dossier n’a pas de lots ») ; le chargement ne boucle pas', () => {

@@ -45,7 +45,7 @@ interface LotCardProps {
   onSelect: () => void
   onDelete?: () => void
   onRename?: (newLabel: string) => void
-  /** Coût de la lecture de ce lot, en unités d'abonnement (« 1 unité »). */
+  /** Coût de l’analyse de ce lot, en unités d'abonnement (« 1 unité »). */
   cout?: string
   /** Les pièces lues pour ce lot (communes + propres au lot) : nombre et « Voir ». */
   pieces?: { file_name: string }[]
@@ -484,9 +484,9 @@ export default function StepLotSelection({ project }: Props) {
   const peutLire = !sansDepot && !chargementEchoue && !enDetection
   const cartes: CarteResume[] = [
     { libelle: 'Lots détectés', valeur: String(lots.length), etat: 'neutre', detail: 'Dans le dossier de l’acheteur.' },
-    { libelle: 'Lots choisis', valeur: String(nbChoisis), etat: nbChoisis > 0 ? 'pret' : 'a-verifier', jauge: { rempli: nbChoisis, total: lots.length }, detail: nbChoisis > 0 ? undefined : 'Cochez au moins un lot pour lancer la lecture.' },
+    { libelle: 'Lots choisis', valeur: String(nbChoisis), etat: nbChoisis > 0 ? 'pret' : 'a-verifier', jauge: { rempli: nbChoisis, total: lots.length }, detail: nbChoisis > 0 ? undefined : 'Cochez au moins un lot pour lancer l’analyse.' },
     // Offre illimitée : la phrase de l'en-tête le dit déjà, pas de case « Illimité » qui le répète.
-    ...(illimite ? [] : [{ libelle: 'Coût de la lecture', valeur: libelleUnites(nbChoisis), etat: 'neutre' as const, detail: '1 lot lu = 1 unité de votre abonnement.' }]),
+    ...(illimite ? [] : [{ libelle: 'Coût de l’analyse', valeur: libelleUnites(nbChoisis), etat: 'neutre' as const, detail: '1 lot analysé = 1 unité de votre abonnement.' }]),
     ...(separes ? [{ libelle: 'Dans vos métiers', valeur: String(dansVosMetiers.length), etat: 'neutre' as const, detail: 'Selon les métiers de Mon entreprise.' }] : []),
   ]
   const bilan = chargementEchoue ? 'Les lots n’ont pas pu être lus.'
@@ -526,10 +526,10 @@ export default function StepLotSelection({ project }: Props) {
       <GabaritEtape
         titre="Lots"
         utilite={sansDepot || chargementEchoue
-          ? 'Les lots sur lesquels votre entreprise répond : Synorix ne lit que ceux que vous choisissez.'
+          ? 'Les lots sur lesquels votre entreprise répond : Synorix n’analyse que ceux que vous choisissez.'
           : phraseCoutLots(lots.length, illimite)}
         actionPrincipale={peutLire ? actionLire : undefined}
-        message={analysisError && <Message ton="erreur" titre="La lecture n’a pas démarré">{analysisError}</Message>}
+        message={analysisError && <Message ton="erreur" titre="L’analyse n’a pas démarré">{analysisError}</Message>}
         resume={lots.length > 0 ? <BandeResume libelle="Les lots du dossier" cartes={cartes} /> : undefined}
         barre={
           <BarreEtape>
@@ -581,7 +581,7 @@ export default function StepLotSelection({ project }: Props) {
         ) : sansDepot ? (
           <EtatVide
             titre="Les lots du dossier apparaîtront ici"
-            phrase={<>Déposez d’abord le <Sigle code="DCE" />&nbsp;: Synorix y repère les lots et vous choisissez ceux que vous lisez.</>}
+            phrase={<>Déposez d’abord le <Sigle code="DCE" />&nbsp;: Synorix y repère les lots et vous choisissez ceux à analyser.</>}
             action={<Bouton variante={sansDepot ? 'principal' : 'secondaire'} onClick={() => navigate(`/projects/${project.id}/upload`)}>Déposer le dossier</Bouton>}
           />
         ) : lots.length > 0 ? (
@@ -606,7 +606,7 @@ export default function StepLotSelection({ project }: Props) {
             )}
             <SectionEtape titre="Ou tout le dossier">
               <LotCard
-                lot={{ id: 'all', nom: 'Lire l’ensemble du dossier (tous les lots)' }}
+                lot={{ id: 'all', nom: 'Analyser l’ensemble du dossier (tous les lots)' }}
                 selected={selectedIds.has('all')}
                 onSelect={() => toggleLot('all')}
                 cout={illimite ? undefined : libelleUnites(lots.length)}

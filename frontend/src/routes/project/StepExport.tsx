@@ -485,7 +485,7 @@ export default function StepExport({ project }: Props) {
         <SectionEtape titre="Pièces demandées"
           description={piecesVisibles.length === 0 ? undefined : 'Une pièce prête part dans le dossier ; une pièce à joindre, à renouveler ou à confirmer reste à traiter avant le dépôt.'}>
           {piecesVisibles.length === 0 ? (
-            <p className="text-sm text-fg-2">La liste des pièces apparaît après la lecture du <Sigle code="RC" />.</p>
+            <p className="text-sm text-fg-2">La liste des pièces apparaît après l’analyse du <Sigle code="RC" />.</p>
           ) : (
             <Carte sansMarge>
               <ul aria-label="Pièces demandées">
@@ -591,7 +591,7 @@ export default function StepExport({ project }: Props) {
 
             {!detail.dpgf_info && !detail.dpgf_remplie && (
               <p className="border-t border-bord px-4 py-3 text-sm text-fg-2 sm:px-5">
-                Le dossier lu ne contient pas de <Sigle code="DPGF" />&nbsp;: déposez la vôtre si le règlement en demande une.
+                Le dossier analysé ne contient pas de <Sigle code="DPGF" />&nbsp;: déposez la vôtre si le règlement en demande une.
               </p>
             )}
           </Carte>

@@ -26,7 +26,7 @@ test('tant que le projet n’est pas relu (lancement en train de se confirmer), 
 test('l’écran Décider l’utilise : titre, bouton « Relancer » vers Lots, plus de « 0 % » sans fin', () => {
   const src = lire('src/routes/project/StepAnalysis.tsx')
   assert.match(src, /lectureNonDemarree\(/)
-  assert.match(src, /La lecture n’a pas démarré/)
+  assert.match(src, /L’analyse n’a pas démarré/)
   assert.match(src, /Relancer/)
   assert.match(src, /\/lots`/)
 })

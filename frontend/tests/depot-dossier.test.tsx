@@ -27,9 +27,9 @@ test('l’écran : dans le gabarit, la lecture est une section de la page, les 
   const code = sansCommentaires(lire('src/routes/project/StepUpload.tsx'))
   assert.match(code, /<GabaritEtape\s+titre="Dépôt du dossier"/)
   assert.ok(!code.includes('createPortal') && !code.includes('fixed inset-0'), 'plus de fenêtre qui recouvre la page')
-  assert.match(code, /<SectionEtape titre="Lecture du dossier">/)
+  assert.match(code, /<SectionEtape titre="Analyse du dossier">/)
   assert.match(code, /refetchInterval: phase === 'processing' \|\| lectureServeur \? 3000 : false/)
-  assert.match(code, /Vous pouvez fermer cette page : la lecture continue/)
+  assert.match(code, /Vous pouvez fermer cette page : l’analyse continue/)
   assert.match(code, /Gardez cette page ouverte pendant l’envoi/)
   assert.equal((code.match(/actionPrincipale=/g) ?? []).length, 1)
   assert.match(code, /<ActionsBarreTel>[\s\S]*<BoutonSuite\s+etape="Lots"/)      // plusieurs lots : l'écran Lots reste l'étape suivante

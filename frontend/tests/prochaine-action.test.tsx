@@ -1,5 +1,5 @@
 // Prochaine action d'un AO : UN calcul (lib/intelligence/action.ts, sans IA) pour l'accueil, Mes AO, la bande « Vos AO en cours »,
-// la palette Ctrl K et le Compagnon. « Lancer l'analyse » est devenu « Lire ce dossier » partout. Données inventées.
+// la palette Ctrl K et le Compagnon. « Lancer l'analyse » est devenu « Analyser le dossier » partout. Données inventées.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { actionEtape, aMemoire, lienEtape, verbeEtape } from '@/lib/intelligence/action'
@@ -17,8 +17,8 @@ test('chaque état de l’AO a son verbe et son écran, jusqu’à l’étape 5 
   const cas: [Partial<Project>, string, string][] = [
     [{ current_step: 1 }, 'Déposer le dossier de l’acheteur', 'upload'],
     [{ current_step: 2 }, 'Choisir le lot', 'lots'],
-    [{ current_step: 3 }, 'Lire ce dossier', 'analysis'],
-    [{ current_step: 3, processing_status: 'processing' }, 'Lecture en cours', 'analysis'],
+    [{ current_step: 3 }, 'Analyser le dossier', 'analysis'],
+    [{ current_step: 3, processing_status: 'processing' }, 'Analyse en cours', 'analysis'],
     [{ current_step: 3, status: 'analyzed' }, 'Décider : on y va ?', 'analysis'],
     [{ current_step: 4, status: 'analyzed', completed_steps: { 3: true } }, 'Réunir les pièces', 'verification'],
     // étape 5 : le plan d'abord, la rédaction ensuite
@@ -38,8 +38,8 @@ test('chaque état de l’AO a son verbe et son écran, jusqu’à l’étape 5 
   assert.equal(aMemoire(projet()), false)
 })
 
-test('« Lancer l’analyse » n’existe plus : c’est « Lire ce dossier » partout où c’est la même action', () => {
-  const restes = fichiersSource().flatMap((f) => textesAffiches(f).filter((t) => /\blancer l['’]analyse/i.test(t.texte)).map((t) => `${t.fichier}:${t.ligne}`))
+test('D20 : « Lire ce dossier » n’existe plus : c’est « Analyser le dossier » partout où c’est la même action', () => {
+  const restes = fichiersSource().flatMap((f) => textesAffiches(f).filter((t) => /Lire (ce|le) dossier|\blancer la lecture/i.test(t.texte)).map((t) => `${t.fichier}:${t.ligne}`))
   assert.deepEqual(restes, [])
 })
 

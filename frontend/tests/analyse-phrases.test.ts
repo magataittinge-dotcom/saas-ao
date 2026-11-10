@@ -16,7 +16,7 @@ test('la répartition suit la règle du serveur : communs (all, 0, sans étiquet
 
 test('la phrase des documents explique les 58 autres : pièces d’information et autres lots, sans abréviation', () => {
   const p = phraseDocumentsAnalyses({ analyses: 35, informations: 42, autresLots: 16 })
-  assert.equal(p.principale, '35 documents lus sur 93')
+  assert.equal(p.principale, '35 documents analysés sur 93')
   assert.equal(p.detail, 'Les 58 autres documents ne servent pas à ce lot : 42 sont des pièces d’information (plans, diagnostics…) et 16 concernent d’autres lots.')
   assert.ok(!/\bdocs?\b/.test(p.principale + p.detail))
 })
@@ -24,7 +24,7 @@ test('la phrase des documents explique les 58 autres : pièces d’information e
 test('accords et cas simples', () => {
   assert.equal(phraseDocumentsAnalyses({ analyses: 1, informations: 1, autresLots: 0 }).detail, 'L’autre document ne sert pas à ce lot : c’est une pièce d’information (plan, diagnostic…).')
   assert.equal(phraseDocumentsAnalyses({ analyses: 4, informations: 0, autresLots: 2 }).detail, 'Les 2 autres documents ne servent pas à ce lot : 2 concernent d’autres lots.')
-  assert.equal(phraseDocumentsAnalyses({ analyses: 1, informations: 0, autresLots: 1 }).principale, '1 document lu sur 2')
+  assert.equal(phraseDocumentsAnalyses({ analyses: 1, informations: 0, autresLots: 1 }).principale, '1 document analysé sur 2')
   assert.equal(phraseDocumentsAnalyses({ analyses: 5, informations: 0, autresLots: 0 }).detail, '')
 })
 

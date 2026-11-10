@@ -19,7 +19,7 @@ export default function ConfirmationLecture({ ouvert, onOuvert, nbLots, illimite
       onOuvert={onOuvert}
       titre={titreConfirmationLecture(nbLots, illimite)}
       description={detailConfirmationLecture(illimite)}
-      libelleConfirmer={`Lire les ${nbLots} lots`}
+      libelleConfirmer={`Analyser les ${nbLots} lots`}
       onConfirmer={onConfirmer}
     />
   )

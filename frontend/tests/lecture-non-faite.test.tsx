@@ -22,7 +22,7 @@ test('« Lecture non faite » : cartes sobres, action grisée, chemin vers la le
     <MemoryRouter>
       <LectureNonFaite project={projet} titre="Plan du mémoire" utilite="Les parties." action="Valider le plan" libelles={['Parties', 'Critères du règlement', 'Longueur']} />
     </MemoryRouter>)
-  assert.equal((html.match(/Lecture non faite/g) ?? []).length, 3)
+  assert.equal((html.match(/Analyse non faite/g) ?? []).length, 3)
   assert.match(html, /<button[^>]*disabled=""[^>]*>[\s\S]*Valider le plan/)
   assert.match(html, /href="\/projects\/p1\/analysis"/)
   assert.doesNotMatch(html, /ne détaille pas|non précisée|Aucune pondération|Non détaillés|manquant|incomplet|absent|!/i)

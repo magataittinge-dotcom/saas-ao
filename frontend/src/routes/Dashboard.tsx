@@ -146,7 +146,7 @@ export default function Dashboard() {
       {/* plafond du mois atteint : dit ici, avec ses chiffres (avant : un seul point rouge dans la barre) */}
       {quotaAtteint && (
         <Message ton="attention" className="mb-6" action={<Link to="/settings/billing" className={classesBouton('lien')}>Voir l’abonnement</Link>}>
-          {quotaAtteint} Vos appels d’offres déjà lus restent ouverts.
+          {quotaAtteint} Vos appels d’offres déjà analysés restent ouverts.
         </Message>
       )}
 

@@ -35,7 +35,7 @@ export default function ExigencesDuDossier({
   if (items.length === 0) {
     return (
       <p className="text-xs text-center py-4" style={{ color: 'var(--text-3)' }}>
-        Les exigences apparaissent après la lecture du <Sigle code="DCE" />
+        Les exigences apparaissent après l’analyse du <Sigle code="DCE" />
       </p>
     )
   }
