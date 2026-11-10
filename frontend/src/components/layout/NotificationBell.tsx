@@ -25,7 +25,8 @@ function timeAgo(iso: string): string {
 
 /**
  * La cloche des notifications : un bouton de 44 px, un compteur neutre (les non lues), un panneau flottant aux jetons du
- * système (Échap et un clic ailleurs le ferment). `versLeHaut` : dans le tiroir « Compte » du téléphone, il s'ouvre au-dessus.
+ * système (Échap et un clic ailleurs le ferment). `versLeHaut` : dans le tiroir « Compte » du téléphone, il s'ouvre au-dessus,
+ * calé sur le bord droit du tiroir (la cloche a la déconnexion à sa droite : calé sur elle, il sortait par la gauche à 360 px).
  */
 export default function NotificationBell({ versLeHaut = false }: { versLeHaut?: boolean }) {
   const [open, setOpen] = useState(false)
@@ -76,7 +77,7 @@ export default function NotificationBell({ versLeHaut = false }: { versLeHaut?: 
       </BoutonIcone>
 
       {open && (
-        <div data-panneau-notifications="" className={cn('absolute right-0 z-50 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-bord bg-surface-pop text-fg shadow-flottant', versLeHaut ? 'bottom-full mb-2' : 'top-full mt-2')}>
+        <div data-panneau-notifications="" className={cn('absolute right-0 z-50 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-bord bg-surface-pop text-fg shadow-flottant', versLeHaut ? 'bottom-full -right-12 mb-2' : 'top-full mt-2')}>
           <div className="flex min-h-11 items-center justify-between gap-3 border-b border-bord px-4">
             <span className="text-sm font-semibold">Notifications</span>
             {unread > 0 && <Bouton variante="lien" onClick={() => markAllRead()}>Tout marquer lu</Bouton>}

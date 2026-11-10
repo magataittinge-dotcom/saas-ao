@@ -65,3 +65,7 @@ test('Rédiger : un tableau du mémoire devient une liste de rangées au télép
   assert.match(c, /data-colonne=\{titreColonne\(table\.entetes\[k\]\)\}/)
   assert.match(c, /max-md:before:content-\[attr\(data-colonne\)\]/)
 })
+
+test('notifications dans le tiroir du compte : le panneau est calé sur le bord droit du tiroir (il sortait par la gauche à 360 px)', () => {
+  assert.match(code('src/components/layout/NotificationBell.tsx'), /versLeHaut \? 'bottom-full -right-12 mb-2'/)
+})
