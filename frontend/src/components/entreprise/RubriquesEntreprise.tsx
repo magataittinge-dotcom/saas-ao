@@ -1,38 +1,38 @@
 import { useId, useRef } from 'react'
 import type { KeyboardEvent, ReactNode } from 'react'
-import { Link } from 'react-router-dom'
-import { ArrowRight, Check, CircleDashed } from 'lucide-react'
+import { Check, ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { LIBELLE_FICHE, lienFiche } from '@/lib/fiche'
 import { RUBRIQUES, avancement, libelleAvancement, type DonneesEntreprise, type RubriqueId } from '@/lib/entreprise/avancement'
-import { A_RENSEIGNER, faitsCles } from '@/lib/entreprise/synthese'
 
-const LIEN_FICHE = 'relative z-10 inline-flex min-h-9 items-center gap-1.5 whitespace-nowrap rounded-xs text-sm font-semibold text-accent-text transition-colors duration-base ease-lien hover:underline [@media(pointer:coarse)]:min-h-11'
-
-function Barre({ rempli, total }: { rempli: number; total: number }) {
+/** La jauge d'une rubrique : un trait d'encre sur une piste neutre ; verte quand tout est renseigné. La largeur est calculée. */
+function Jauge({ rempli, total }: { rempli: number; total: number }) {
+  const complete = total > 0 && rempli >= total
   return (
-    <div aria-hidden="true" className="h-1 overflow-hidden rounded-pilule bg-surface-2">
-      <div className={cn('h-full rounded-pilule transition-[width] duration-morph ease-lien motion-reduce:transition-none', total > 0 && rempli >= total ? 'bg-vert-mark' : 'bg-accent-ui')} style={{ width: `${total ? Math.round((rempli / total) * 100) : 0}%` }} />
-    </div>
+    <span aria-hidden="true" className="block h-1.5 w-24 shrink-0 overflow-hidden rounded-pilule bg-surface-2 max-sm:hidden">
+      <span className={cn('block h-full rounded-pilule transition-[width] duration-pop ease-survol motion-reduce:transition-none', complete ? 'bg-vert-mark' : 'bg-fg-2')} style={{ width: `${total ? Math.round((rempli / total) * 100) : 0}%` }} />
+    </span>
   )
 }
 
 /**
- * Les trois rubriques : une rangée de trois cartes égales sur toute la largeur (une colonne au téléphone), puis le
- * formulaire de la rubrique choisie en pleine largeur dessous. Chaque carte : titre, numéro, jauge, quatre faits clés
- * (« À renseigner » en accent), nombre d'informations, lien « Fiche à télécharger ». La carte choisie a un bord accent.
- * Clavier : flèches gauche/droite (et haut/bas) déplacent le choix, Début et Fin vont aux extrémités, Entrée ou Espace choisit ;
- * `aria-selected` marque la carte choisie. Un seul formulaire est monté, celui de la rubrique choisie.
+ * Les trois rubriques : UNE surface, trois rangées (plus de trois cartes identiques). Chaque rangée dit le nom de la
+ * rubrique, où elle en est (« 4 informations sur 9 ») et porte une jauge fine ; la rubrique ouverte est marquée (fond
+ * neutre, chevron vers le bas), son formulaire s'ouvre dessous, sur toute la largeur. Un champ vide n'est pas une alerte :
+ * aucun « À renseigner » ambre ici.
+ * Clavier : flèches haut/bas (et gauche/droite) déplacent le choix, Début et Fin vont aux extrémités ; `aria-selected`
+ * marque la rubrique ouverte. Un seul formulaire est monté, celui de la rubrique ouverte.
+ * `scene` : là où les rangées se posent (à côté du visage et de la phrase de Synorix) ; sans `scene`, elles précèdent le formulaire.
  */
-export default function RubriquesEntreprise({ donnees, rubrique, onChoisir, panneaux }: {
+export default function RubriquesEntreprise({ donnees, rubrique, onChoisir, panneaux, scene }: {
   donnees: DonneesEntreprise
   rubrique: RubriqueId
   onChoisir: (id: RubriqueId) => void
   /** Le formulaire de chaque rubrique ; reçoit les identifiants d'accessibilité du panneau et de l'onglet. */
   panneaux: Record<RubriqueId, (ids: { panneau: string; onglet: string }) => ReactNode>
+  scene?: (rangees: ReactNode) => ReactNode
 }) {
   const base = useId()
-  const onglets = useRef<Record<string, HTMLButtonElement | null>>({})
+  const onglets = useRef<Record<string, HTMLElement | null>>({})
   const idOnglet = (id: RubriqueId) => `${base}-${id}-onglet`
   const idPanneau = `${base}-panneau`
 
@@ -47,61 +47,50 @@ export default function RubriquesEntreprise({ donnees, rubrique, onChoisir, pann
     aller(RUBRIQUES[cible].id)
   }
 
-  return (
-    <div className="space-y-5">
-      <div role="tablist" aria-label="Les trois rubriques de Mon entreprise" className="grid items-stretch gap-3.5 md:grid-cols-3">
-        {RUBRIQUES.map((r, i) => {
-          const choisie = rubrique === r.id
-          const av = avancement(donnees, r.id)
-          const faits = faitsCles(donnees, r.id)
-          return (
-            <div
-              key={r.id}
-              role="presentation"
-              data-rubrique={r.id}
-              className={cn(
-                'relative grid min-w-0 content-start gap-3 rounded-carte border bg-surface-1 p-5 transition-[border-color,box-shadow] duration-base ease-lien',
-                choisie ? 'border-accent-ui shadow-[inset_0_0_0_1px_var(--accent-ui)]' : 'border-bord-2 hover:border-accent-ui/40',
-              )}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <button
-                  ref={(el) => { onglets.current[r.id] = el }}
-                  type="button"
-                  role="tab"
-                  id={idOnglet(r.id)}
-                  aria-selected={choisie}
-                  aria-controls={idPanneau}
-                  tabIndex={choisie ? 0 : -1}
-                  onClick={() => onChoisir(r.id)}
-                  onKeyDown={(e) => auClavier(e, i)}
-                  className="rounded-xs text-left font-display text-lg font-semibold leading-tight text-fg after:absolute after:inset-0 after:rounded-carte after:content-['']"
-                >
-                  {r.titre}
-                </button>
-                <span aria-hidden="true" className="shrink-0 pt-1 text-xs tabular-nums tracking-[0.06em] text-fg-3">{`0${i + 1} / 0${RUBRIQUES.length}`}</span>
-              </div>
-              <Barre {...av} />
-              <ul className="grid gap-1.5">
-                {faits.map((f) => (
-                  <li key={f.libelle} className="flex min-w-0 items-baseline justify-between gap-3 border-t border-bord-2 pt-1.5 text-sm">
-                    <span className="shrink-0 text-fg-2">{f.libelle}</span>
-                    <span className={cn('min-w-0 break-words text-right', f.valeur === null ? 'inline-flex items-baseline justify-end gap-1 font-medium text-ambre-ink' : 'font-semibold tabular-nums text-fg')}>{f.valeur ?? <><CircleDashed size={13} aria-hidden className="shrink-0 self-center" />{A_RENSEIGNER}</>}</span>
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-auto flex items-center justify-between gap-3 pt-1 text-sm">
-                <span className={cn('inline-flex items-center gap-1.5', av.total > 0 && av.rempli >= av.total ? 'font-medium text-vert-ink' : 'text-fg-2')}>
-                  {av.total > 0 && av.rempli >= av.total && <Check size={14} strokeWidth={2.4} aria-hidden />}
-                  {libelleAvancement(av)}{av.total > 0 && av.rempli >= av.total ? ' · complète' : ''}
-                </span>
-                <Link to={lienFiche(r.id)} className={LIEN_FICHE}>{LIBELLE_FICHE} <ArrowRight size={14} aria-hidden /></Link>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-      {panneaux[rubrique]({ panneau: idPanneau, onglet: idOnglet(rubrique) })}
+  const rangees = (
+    <div role="tablist" aria-orientation="vertical" aria-label="Les trois rubriques de Mon entreprise" data-surface=""
+      className="overflow-hidden rounded-carte border border-bord bg-surface-0 shadow-card">
+      {RUBRIQUES.map((r, i) => {
+        const ouverte = rubrique === r.id
+        const av = avancement(donnees, r.id)
+        const complete = av.total > 0 && av.rempli >= av.total
+        const Chevron = ouverte ? ChevronDown : ChevronRight
+        return (
+          <div
+            key={r.id}
+            ref={(el) => { onglets.current[r.id] = el }}
+            role="tab"
+            id={idOnglet(r.id)}
+            data-rubrique={r.id}
+            aria-selected={ouverte}
+            aria-controls={idPanneau}
+            tabIndex={ouverte ? 0 : -1}
+            onClick={() => onChoisir(r.id)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onChoisir(r.id) } else auClavier(e, i) }}
+            className={cn(
+              'flex min-h-16 cursor-pointer items-center gap-4 border-t border-bord px-5 py-3 text-left transition-colors duration-fast ease-survol first:border-t-0 hover:bg-surface-1 sm:px-6',
+              ouverte && 'bg-surface-1',
+            )}
+          >
+            <span className="min-w-0 flex-1">
+              <span className={cn('block text-base text-fg', ouverte ? 'font-semibold' : 'font-medium')}>{r.titre}</span>
+              <span className={cn('flex items-center gap-1.5 text-sm', complete ? 'text-vert-ink' : 'text-fg-2')}>
+                {complete && <Check aria-hidden size={14} strokeWidth={2} />}
+                <span className="chiffres">{libelleAvancement(av)}{complete ? ' · complète' : ''}</span>
+              </span>
+            </span>
+            <Jauge {...av} />
+            <Chevron aria-hidden size={18} strokeWidth={1.5} className="shrink-0 text-fg-3" />
+          </div>
+        )
+      })}
     </div>
+  )
+
+  return (
+    <>
+      {scene ? scene(rangees) : rangees}
+      {panneaux[rubrique]({ panneau: idPanneau, onglet: idOnglet(rubrique) })}
+    </>
   )
 }

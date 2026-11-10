@@ -71,13 +71,13 @@ test('fils : le départ côté visage suit le décalage, l\'arrivée reste accro
   assert.deepEqual(pointSurCourbe(d, 1), c.p3)
 })
 
-test('branchement : la scène écoute la souris, le visage est dans un calque à part, les fils lisent le décalage', () => {
+test('branchement : la scène écoute la souris, le visage est dans un calque à part (les fils ne sont plus montés)', () => {
   const scene = sansCommentaires(lire('src/components/entreprise/SceneVisage.tsx'))
   assert.match(scene, /onPointerMove=\{surMouvement\}/)
   assert.match(scene, /onPointerLeave=\{surSortie\}/)
   assert.match(scene, /parallaxePermise\(/)
   assert.match(scene, /data-plan-visage/)
-  assert.match(scene, /decalage=\{decalage\}/)
+  assert.doesNotMatch(scene, /FilsVisage|<canvas/, 'plus de fils autour du visage : il vit à côté d\'une phrase')
   assert.match(scene, /cancelAnimationFrame/)
   assert.ok(!/will-change/.test(scene), 'aucun calque permanent : la transformation est vide au repos')
   const fils = sansCommentaires(lire('src/components/entreprise/FilsVisage.tsx'))

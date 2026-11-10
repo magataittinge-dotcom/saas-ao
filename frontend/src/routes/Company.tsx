@@ -12,17 +12,19 @@ import CommencerParSiret from '@/components/entreprise/CommencerParSiret'
 import ProfileFreeTextCard from '@/components/company/ProfileFreeTextCard'
 import CasesDepot from '@/components/entreprise/CasesDepot'
 import { AfficherPlus } from '@/components/entreprise/champs'
-import { MemoireSkeleton } from '@/components/skeletons'
+import { Page } from '@/components/ui/page'
+import { EtatErreur, EtatRequete } from '@/components/ui/etats'
+import { Squelette, SqueletteLignes } from '@/components/ui/squelette'
 import { useMouvementReduit } from '@/components/intelligence/useMouvementReduit'
 import { rubriqueDepuisRecherche, type RubriqueId } from '@/lib/entreprise/avancement'
 import { champDepuisRecherche } from '@/lib/entreprise/champsFiche'
 import { entrepriseVide } from '@/lib/entreprise/vide'
 import { useFocusChamp } from '@/components/entreprise/useFocusChamp'
 
-// Texte libre → l'IA structure → l'utilisateur valide avant toute écriture (C7). Repliée : la saisie guidée vient d'abord.
+// Texte libre → Synorix le range en rubriques → l'utilisateur valide avant toute écriture (C7). Repliée : la saisie guidée vient d'abord.
 // Sous « Décrire avec vos mots », les cases de dépôt de la rubrique : un document par case, Synorix lit et propose, le patron valide.
 const DecrireEtDeposer = ({ rubrique }: { rubrique: RubriqueId }) => (
-  <div className="space-y-6">
+  <div className="grid gap-6">
     {rubrique !== 'certifications' && (
       <AfficherPlus libelle="Décrire avec vos mots" libelleOuvert="Masquer">
         <ProfileFreeTextCard />
@@ -32,10 +34,24 @@ const DecrireEtDeposer = ({ rubrique }: { rubrique: RubriqueId }) => (
   </div>
 )
 
-// « Mon entreprise » : le profil vivant, en trois rubriques (Identité, Moyens humains et matériels,
-// Certifications et références). Le visage de Synorix et six bulles en haut, trois cartes égales, puis le formulaire de la
-// rubrique choisie en pleine largeur. Un formulaire et un « Enregistrer » par rubrique ; chaque donnée reste dans
-// sa table actuelle (organisation, profil mémoire, équipe, références, coffre-fort).
+/** L'attente : la place du visage, de la phrase et des trois rubriques (fixe, aux dimensions du contenu). */
+function SqueletteEntreprise() {
+  return (
+    <div className="grid items-center gap-x-10 gap-y-6 lg:grid-cols-[300px_minmax(0,1fr)]">
+      <Squelette className="justify-self-center h-[336px] w-[240px] rounded-carte lg:h-[420px] lg:w-[300px]" />
+      <div className="grid gap-6">
+        <SqueletteLignes lignes={2} className="max-w-xl" />
+        <Squelette className="h-48 rounded-carte" />
+      </div>
+    </div>
+  )
+}
+
+// « Mon entreprise » : le profil vivant, en trois rubriques (Identité, Moyens humains et matériels, Certifications et
+// références). En haut, le visage de Synorix à côté de sa phrase (ce qu'il sait, la prochaine information utile), une
+// fois ; les trois rubriques en rangées d'une même surface ; puis le formulaire de la rubrique ouverte, en pleine largeur.
+// Un formulaire et un « Enregistrer » par rubrique ; chaque donnée reste dans sa table (organisation, profil mémoire,
+// équipe, références, coffre-fort). Lecture : chargement → erreur → profil vide (le SIRET) → contenu.
 export default function Company() {
   // /company?rubrique=moyens (Équipe) ou =certifications (Mes références) ouvre la rubrique demandée, même si l'écran est déjà affiché.
   const { search } = useLocation()
@@ -51,44 +67,56 @@ export default function Company() {
   const [aDefiler, setADefiler] = useState(0)
   // Profil vide : une seule première action, le SIRET. « À la main » (ou une demande explicite d'une rubrique) ouvre la page complète.
   const [saisieManuelle, setSaisieManuelle] = useState(false)
-  const premiereAction = donnees.profilCharge && !saisieManuelle && !demandee && entrepriseVide(donnees)
+  const premiereAction = !saisieManuelle && !demandee && entrepriseVide(donnees)
 
-  // Choisir une rubrique (carte ou bulle) : elle s'ouvre et le visage joue l'éclair.
+  // Choisir une rubrique : elle s'ouvre et le visage joue l'éclair.
   const choisir = (r: RubriqueId) => { setRubrique(r); visage.current?.eclair() }
-  // Une bulle ramène en plus le formulaire à l'écran (il est sous les cartes).
-  const choisirDepuisBulle = (r: RubriqueId) => { choisir(r); setADefiler((n) => n + 1) }
+  // Le lien de la phrase de Synorix ramène en plus le formulaire à l'écran.
+  const choisirDepuisLaPhrase = (r: RubriqueId) => { choisir(r); setADefiler((n) => n + 1) }
   useEffect(() => {
     if (aDefiler === 0) return
     document.querySelector('[role="tabpanel"]')?.scrollIntoView({ behavior: mouvementReduit ? 'auto' : 'smooth', block: 'start' })
   }, [aDefiler, mouvementReduit])
 
+  // Le motif de requête du système : sans réponse du serveur, on ne sait pas si le profil est vide.
+  const requete = {
+    data: donnees.profilCharge && !donnees.enErreur ? donnees : undefined,
+    isLoading: !donnees.profilCharge,
+    isError: donnees.enErreur,
+  }
+
   return (
     <ContexteVisage.Provider value={actions}>
-      <div className="mx-auto max-w-6xl space-y-6">
-        <header>
-          <h1 className="font-display text-h5 text-fg">Mon entreprise</h1>
-          <p className="mt-1.5 text-sm text-fg-2">Votre profil vivant, renseigné une fois, réutilisé par chaque mémoire technique</p>
-        </header>
-        {!donnees.profilCharge ? (
-          <MemoireSkeleton />
-        ) : premiereAction ? (
-          <CommencerParSiret onPasser={() => setSaisieManuelle(true)} />
-        ) : (
-          <>
-            <SceneVisage ref={visage} donnees={donnees} onChoisir={choisirDepuisBulle} />
+      <Page titre="Mon entreprise" sousTitre="Renseignée une fois, reprise dans chaque mémoire technique.">
+        <EtatRequete
+          requete={requete}
+          squelette={<SqueletteEntreprise />}
+          erreur={(
+            <EtatErreur
+              titre="Votre entreprise n’a pas pu se charger"
+              detail="La connexion au serveur a échoué. Vos informations sont toujours enregistrées : rien n’a été modifié."
+              onReessayer={donnees.recharger}
+              enCours={donnees.rechargement}
+            />
+          )}
+          estVide={() => premiereAction}
+          vide={<CommencerParSiret onPasser={() => setSaisieManuelle(true)} />}
+        >
+          {() => (
             <RubriquesEntreprise
               donnees={donnees}
               rubrique={rubrique}
               onChoisir={choisir}
+              scene={(rangees) => <SceneVisage ref={visage} donnees={donnees} onChoisir={choisirDepuisLaPhrase}>{rangees}</SceneVisage>}
               panneaux={{
                 identite: (ids) => <FormIdentite donnees={donnees} avant={<DecrireEtDeposer rubrique="identite" />} idPanneau={ids.panneau} idOnglet={ids.onglet} />,
                 moyens: (ids) => <FormMoyens donnees={donnees} avant={<DecrireEtDeposer rubrique="moyens" />} idPanneau={ids.panneau} idOnglet={ids.onglet} />,
                 certifications: (ids) => <FormCertifications donnees={donnees} avant={<DecrireEtDeposer rubrique="certifications" />} idPanneau={ids.panneau} idOnglet={ids.onglet} />,
               }}
             />
-          </>
-        )}
-      </div>
+          )}
+        </EtatRequete>
+      </Page>
     </ContexteVisage.Provider>
   )
 }

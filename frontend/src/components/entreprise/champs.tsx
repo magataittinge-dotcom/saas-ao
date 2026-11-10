@@ -1,46 +1,53 @@
 import { cloneElement, isValidElement, useId, useState } from 'react'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, Plus, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Input, classeChamp } from '@/components/ui/input'
-import { A_RENSEIGNER } from '@/lib/entreprise/synthese'
+import { Bouton, BoutonIcone } from '@/components/ui/bouton'
+import { ChampNombre as ChampNombreSysteme } from '@/components/ui/champ'
 
-// Briques communes aux trois formulaires de « Mon entreprise » (reprises de l'ancien éditeur du profil).
+// Briques communes aux trois formulaires de « Mon entreprise » : elles posent les composants du système (boutons, champs)
+// dans la forme propre à ces formulaires (étiquette, aide, groupes, listes éditables).
 
-// Boutons d'édition des listes (année, poste) : lien d'accent, retrait discret ; cibles 44 px au téléphone.
-export const BOUTON_AJOUT = 'inline-flex items-center gap-1.5 rounded-xs text-xs font-medium text-accent-text transition-colors duration-base ease-lien hover:underline [@media(pointer:coarse)]:min-h-11'
-/** « Retirer » avec son mot, sous une carte de liste. */
-export const BOUTON_RETIRER_TEXTE = 'inline-flex items-center gap-1.5 rounded-xs text-xs font-medium text-fg-3 transition-colors duration-base ease-lien hover:text-danger [@media(pointer:coarse)]:min-h-11'
-export const BOUTON_RETRAIT = 'grid size-9 shrink-0 place-items-center rounded-md text-fg-3 transition-colors duration-base ease-lien hover:bg-surface-0 hover:text-danger [@media(pointer:coarse)]:size-11'
+/** « + Ajouter une ligne » : un lien, jamais un aplat (le seul bouton plein de l'écran est « Enregistrer »). */
+export function BoutonAjout({ children, onClick, className }: { children: React.ReactNode; onClick: () => void; className?: string }) {
+  return <Bouton variante="lien" className={cn('text-sm', className)} onClick={onClick}><Plus aria-hidden />{children}</Bouton>
+}
+
+/** La corbeille d'une ligne : une icône seule, toujours nommée (« Retirer la ligne 2 de Matériel »). */
+export function BoutonRetrait({ libelle, onClick }: { libelle: string; onClick: () => void }) {
+  return <BoutonIcone libelle={libelle} onClick={onClick}><Trash2 aria-hidden strokeWidth={1.5} /></BoutonIcone>
+}
+
+/** « Retirer », avec son mot, sous un bloc de liste (qualification, référence). */
+export function BoutonRetirer({ libelle, onClick }: { libelle: string; onClick: () => void }) {
+  return <Bouton variante="discret" className="-ml-3 justify-self-start text-sm" aria-label={libelle} onClick={onClick}><Trash2 aria-hidden strokeWidth={1.5} />Retirer</Bouton>
+}
 
 /** Libellé de la rubrique Sirene : le nom, le SIRET, la forme juridique et le siège viennent du répertoire à l'inscription. */
 export const SOURCE_SIRENE = 'Prérempli depuis le répertoire Sirene'
 
 /**
  * Champ : l'étiquette est reliée au champ (id) ; `groupe` = plusieurs champs sous un même intitulé (pas de « for »).
- * `rempli` ajoute l'état du champ en petit sous lui : « Renseigné » (ou sa source), ou « À renseigner » en accent. Jamais de
- * rouge : un champ vide n'est pas une erreur. `aide` s'ajoute à cet état.
+ * Un champ vide est un champ à remplir : rien ne s'écrit dessous (plus de « À renseigner » ambre, l'ambre est gardé pour ce
+ * qui est à surveiller). Un champ rempli par une source la nomme (`source`, ex. le répertoire Sirene) ; `aide` donne
+ * l'exemple. `rempli` ne sert plus qu'à montrer la source.
  */
 export function Field({ label, aide, groupe, rempli, source, children }: { label: string; aide?: string; groupe?: boolean; rempli?: boolean; source?: string; children: React.ReactElement | React.ReactNode }) {
   const id = useId()
   const enfant = !groupe && isValidElement(children) ? cloneElement(children as React.ReactElement<{ id?: string }>, { id }) : children
   const Tete = groupe ? 'span' : 'label'
+  const dessous = [rempli && source ? source : null, aide].filter(Boolean).join(' · ')
   return (
-    <div className="min-w-0">
-      <Tete {...(groupe ? {} : { htmlFor: id })} className="mb-1 block text-sm font-medium text-fg-2">{label}</Tete>
+    <div className="grid min-w-0 content-start gap-1.5">
+      <Tete {...(groupe ? {} : { htmlFor: id })} className={cn('block font-medium text-fg-2', groupe ? 'text-sm text-fg' : 'text-xs')}>{label}</Tete>
+      {groupe && aide && <p className="-mt-1 text-xs text-fg-3">{aide}</p>}
       {enfant}
-      {rempli === undefined ? (
-        aide && <p className="mt-1 text-xs text-fg-3">{aide}</p>
-      ) : (
-        <p data-etat={rempli ? 'rempli' : 'a-renseigner'} className="mt-1 text-xs text-fg-3">
-          {rempli ? (source ?? 'Renseigné') : <span className="font-medium text-ambre-ink">{A_RENSEIGNER}</span>}
-          {aide ? ` · ${aide}` : ''}
-        </p>
-      )}
+      {!groupe && dessous && <p className="text-xs text-fg-3">{dessous}</p>}
+      {groupe && rempli && source && <p className="text-xs text-fg-3">{source}</p>}
     </div>
   )
 }
 
-/** Un bloc qui occupe les deux colonnes d'un groupe (liste, texte long, carte). */
+/** Un bloc qui occupe les deux colonnes d'un groupe (liste, texte long). */
 export function Pleine({ children }: { children: React.ReactNode }) {
   return <div className="min-w-0 md:col-span-2">{children}</div>
 }
@@ -51,50 +58,35 @@ export function AfficherPlus({ libelle = 'Afficher les informations utiles et en
   const id = useId()
   return (
     <div>
-      <button
-        type="button"
-        onClick={() => setOuvert((o) => !o)}
-        aria-expanded={ouvert}
-        aria-controls={id}
-        className="inline-flex items-center gap-1.5 rounded-xs text-sm font-medium text-accent-text transition-colors duration-base ease-lien hover:underline [@media(pointer:coarse)]:min-h-11"
-      >
+      <Bouton variante="lien" className="text-sm" onClick={() => setOuvert((o) => !o)} aria-expanded={ouvert} aria-controls={id}>
         {ouvert ? libelleOuvert : libelle}
-        <ChevronDown size={15} className={cn('transition-transform duration-base ease-lien motion-reduce:transition-none', ouvert && 'rotate-180')} aria-hidden />
-      </button>
-      {ouvert && <div id={id} className="mt-5 space-y-8">{children}</div>}
+        <ChevronDown aria-hidden className={cn('transition-transform duration-survol ease-survol motion-reduce:transition-none', ouvert && 'rotate-180')} />
+      </Bouton>
+      {ouvert && <div id={id} className="mt-5 grid gap-10">{children}</div>}
     </div>
   )
 }
 
-/** Un groupe de champs de la rubrique : sous-titre en capitales, champs en deux colonnes (une seule sous 768 px). */
+/** Un groupe de champs de la rubrique : son titre en casse de phrase, une ligne d'aide, les champs en deux colonnes (une sous 768 px). */
 export function Groupe({ titre, aide, children }: { titre: React.ReactNode; aide?: string; children: React.ReactNode }) {
   const id = useId()
   return (
-    <section aria-labelledby={id} className="min-w-0 space-y-4">
-      <div className="border-b border-bord-2 pb-2">
-        <h3 id={id} className="text-xs font-semibold uppercase tracking-[0.06em] text-fg-3">{titre}</h3>
-        {aide && <p className="mt-1 text-xs text-fg-3">{aide}</p>}
+    <section aria-labelledby={id} className="min-w-0">
+      <div className="mb-4 border-b border-bord pb-3">
+        <h3 id={id} className="text-base font-semibold text-fg">{titre}</h3>
+        {aide && <p className="mt-1 text-sm text-fg-2">{aide}</p>}
       </div>
-      <div className="grid gap-x-6 gap-y-4 md:grid-cols-2">{children}</div>
+      <div className="grid gap-x-6 gap-y-5 md:grid-cols-2">{children}</div>
     </section>
   )
 }
 
-/** Liste déroulante native, au même style que les champs. */
-export function Select({ children, className, ...props }: React.ComponentProps<'select'>) {
-  return <select className={cn(classeChamp, 'h-10 py-1 [@media(pointer:coarse)]:h-11', className)} {...props}>{children}</select>
-}
+/** Un bloc d'une liste éditable (un poste, une personne, une qualification, une référence) : un cadre fin sur le papier de la page. */
+export const BLOC_LISTE = 'rounded-lg border border-bord bg-surface-0 p-4'
 
-/** Champ nombre : vide = aucune valeur (null), sinon un entier. */
-export function ChampNombre({ valeur, onChange, min = 0, max, ...props }: { valeur: number | null | undefined; onChange: (v: number | null) => void; min?: number; max?: number } & Omit<React.ComponentProps<'input'>, 'value' | 'onChange' | 'min' | 'max'>) {
-  return (
-    <Input
-      type="number" inputMode="numeric" min={min} max={max} step={1}
-      value={valeur ?? ''}
-      onChange={(e) => onChange(e.target.value === '' ? null : Math.trunc(Number(e.target.value)))}
-      {...props}
-    />
-  )
+/** Champ nombre du système, en entier : vide = aucune valeur (null). */
+export function ChampNombre({ valeur, onChange, min = 0, max, ...props }: { valeur: number | null | undefined; onChange: (v: number | null) => void; min?: number; max?: number; unite?: string } & Omit<React.ComponentProps<'input'>, 'value' | 'onChange' | 'min' | 'max' | 'type'>) {
+  return <ChampNombreSysteme valeur={valeur} min={min} max={max} onChange={(n) => onChange(n === null ? null : Math.trunc(n))} {...props} />
 }
 
 /** Lecture d'une erreur d'enregistrement : le message du serveur, ou la première valeur refusée. */

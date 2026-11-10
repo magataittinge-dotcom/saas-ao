@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react'
-import { Plus, Trash2 } from 'lucide-react'
-import { Input, Textarea } from '@/components/ui/input'
+import { Champ, ZoneTexte } from '@/components/ui/champ'
 import type { DonneesEntreprise } from '@/lib/entreprise/avancement'
 import { POSTES_PAR_DEFAUT } from '@/lib/entreprise/charges'
 import { planifier } from '@/lib/entreprise/liste'
 import type { PosteCle, TeamMember } from '@/types'
 import { appliquerPlan } from './appliquerPlan'
-import { AfficherPlus, BOUTON_AJOUT, BOUTON_RETRAIT, ChampNombre, Field, Groupe, Pleine } from './champs'
+import { cn } from '@/lib/utils'
+import { AfficherPlus, BLOC_LISTE, BoutonAjout, BoutonRetrait, ChampNombre, Field, Groupe, Pleine } from './champs'
 import CadreFormulaire from './CadreFormulaire'
 import { EditeurHabilitations, EditeurMoyens, EditeurPersonnes, EffectifParSpecialite, EffectifSimple, HabilitationSst } from './ListesMoyens'
 import { useFormulaireRubrique } from './useFormulaireRubrique'
@@ -37,7 +37,7 @@ export default function FormMoyens({ donnees, avant, idPanneau, idOnglet }: { do
   const habilitations = p.habilitations ?? []
   const texte = (champ: 'materiel' | 'vehicules' | 'gestion_securite' | 'traitement_dechets' | 'organigramme_description' | 'moyens_informatiques' | 'demarche_qualite' | 'procedure_demarrage' | 'mesures_environnementales' | 'fournisseurs_principaux' | 'sous_traitance_partenaires' | 'sav_garantie', libelle: string, lignes: number, exemple: string) => (
     <Field label={libelle} key={champ} rempli={rempliTexte(p[champ])}>
-      <Textarea rows={lignes} placeholder={exemple} value={(p[champ] as string | undefined) ?? ''} onChange={(e) => f.poserProfil(champ, e.target.value)} />
+      <ZoneTexte rows={lignes} placeholder={exemple} value={(p[champ] as string | undefined) ?? ''} onChange={(e) => f.poserProfil(champ, e.target.value)} />
     </Field>
   )
 
@@ -51,30 +51,26 @@ export default function FormMoyens({ donnees, avant, idPanneau, idOnglet }: { do
         <Pleine>
           <div className="space-y-3">
             {postes.map((poste, i) => (
-              <div key={i} className="grid items-start gap-2 rounded-lg border border-bord bg-surface-0 p-3 [grid-template-columns:repeat(auto-fit,minmax(10rem,1fr))]">
+              <div key={i} className={cn(BLOC_LISTE, 'grid items-start gap-3 [grid-template-columns:repeat(auto-fit,minmax(10rem,1fr))]')}>
                 <Field label="Poste">
-                  <Input aria-label={`Poste ${i + 1} : intitulé`} value={poste.poste} onChange={(e) => poserPostes(postes.map((x, j) => (j === i ? { ...x, poste: e.target.value } : x)))} />
+                  <Champ aria-label={`Poste ${i + 1} : intitulé`} value={poste.poste} onChange={(e) => poserPostes(postes.map((x, j) => (j === i ? { ...x, poste: e.target.value } : x)))} />
                 </Field>
                 <Field label="Nom">
-                  <Input aria-label={`Poste ${i + 1} : nom`} placeholder="Jean Dupont" value={poste.nom} onChange={(e) => poserPostes(postes.map((x, j) => (j === i ? { ...x, nom: e.target.value } : x)))} />
+                  <Champ aria-label={`Poste ${i + 1} : nom`} value={poste.nom} onChange={(e) => poserPostes(postes.map((x, j) => (j === i ? { ...x, nom: e.target.value } : x)))} />
                 </Field>
                 <div className="flex items-end gap-2">
                   <div className="min-w-0 flex-1">
                     <Field label="Rôle et missions">
-                      <Input aria-label={`Poste ${i + 1} : rôle et missions`} placeholder="Supervision…" value={poste.role} onChange={(e) => poserPostes(postes.map((x, j) => (j === i ? { ...x, role: e.target.value } : x)))} />
+                      <Champ aria-label={`Poste ${i + 1} : rôle et missions`} placeholder="Supervision…" value={poste.role} onChange={(e) => poserPostes(postes.map((x, j) => (j === i ? { ...x, role: e.target.value } : x)))} />
                     </Field>
                   </div>
                   {postes.length > 1 && (
-                    <button type="button" onClick={() => poserPostes(postes.filter((_, j) => j !== i))} aria-label="Retirer ce poste" className={BOUTON_RETRAIT}>
-                      <Trash2 size={14} aria-hidden />
-                    </button>
+                    <BoutonRetrait libelle="Retirer ce poste" onClick={() => poserPostes(postes.filter((_, j) => j !== i))} />
                   )}
                 </div>
               </div>
             ))}
-            <button type="button" onClick={() => poserPostes([...postes, { poste: '', nom: '', role: '' }])} className={BOUTON_AJOUT}>
-              <Plus size={13} aria-hidden /> Ajouter un poste
-            </button>
+            <BoutonAjout onClick={() => poserPostes([...postes, { poste: '', nom: '', role: '' }])}>Ajouter un poste</BoutonAjout>
           </div>
         </Pleine>
         <Pleine>

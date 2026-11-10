@@ -21,7 +21,8 @@ import {
   IMAGES_ORDINATEUR, IMAGES_TACTILE, boucleDoitTourner, courbe, creerParticules, faireRegulateur, hexAlpha, hexVersRvb, imagesParSeconde, opaciteParticule, pointSurCourbe, positionParticule,
 } from '@/lib/entreprise/fils'
 import { A_RENSEIGNER, construireBulles, dateFr, euros, faitsCles, villeDepuisAdresse } from '@/lib/entreprise/synthese'
-import type { DonneesEntreprise } from '@/lib/entreprise/avancement'
+import { avancementTotal, type DonneesEntreprise } from '@/lib/entreprise/avancement'
+import { voixSynorix } from '@/lib/entreprise/voix'
 import { RACINE, lire, sansCommentaires } from './outils/sources'
 
 /* ── une fausse horloge pour la machine ─────────────────────────── */
@@ -336,21 +337,36 @@ test('faits clés : quatre par rubrique, « null » = à renseigner', () => {
   assert.equal(faitsCles(DONNEES, 'certifications')[3].valeur, '2 exercices')
 })
 
-test('scène (rendu serveur) : six bulles reliées à des boutons, canvas seulement sur grand écran', () => {
-  const rendu = (opts: Parameters<typeof rendre>[1]) => rendre(<SceneVisage donnees={DONNEES} onChoisir={() => {}} />, opts)
-  const bureau = rendu({ large: true })
-  const tel = rendu({})
-  for (const html of [bureau, tel]) {
-    assert.equal((html.match(/data-bulle="/g) ?? []).length, 6)
-    assert.equal((html.match(/<button type="button" data-bulle/g) ?? []).length, 6, 'des boutons : Entrée au clavier ouvre la rubrique')
-    assert.ok(html.includes('Qualibat 7132 · RGE') && html.includes('SIRET renseigné · Reims (51)'))
+test('scène (rendu serveur) : le visage, une fois, à côté de la phrase de Synorix ; plus de bulles ni de fils autour', () => {
+  const rendu = (opts: Parameters<typeof rendre>[1]) => rendre(<SceneVisage donnees={DONNEES} onChoisir={() => {}}><i>rubriques</i></SceneVisage>, opts)
+  const voix = voixSynorix(DONNEES)
+  for (const html of [rendu({ large: true }), rendu({})]) {
+    assert.equal((html.match(/data-visage=""/g) ?? []).length, 1, 'le visage, une fois')
+    assert.equal((html.match(/data-voix-synorix=""/g) ?? []).length, 1, 'une phrase de Synorix')
+    assert.ok(html.includes(voix.phrase))
+    assert.ok(!html.includes('data-bulle') && !html.includes('<canvas') && !html.includes('data-fils'), 'ni bulles ni fils')
+    assert.ok(!/À renseigner|text-ambre-ink/.test(html), 'aucun ambre dans la scène')
     assert.ok(!/manquant|incomplet|absent/i.test(html))
-    assert.equal((html.match(/min-h-11/g) ?? []).length >= 6, true, 'cibles de 44 px')
+    assert.match(html, /<div data-plan-visage=""><div data-visage/, 'le visage dans son calque de parallaxe')
+    assert.ok(html.indexOf('data-visage') < html.indexOf('data-voix-synorix') && html.indexOf('data-voix-synorix') < html.indexOf('<i>rubriques</i>'), 'visage, phrase, rubriques')
+    assert.match(html, /lg:grid-cols-\[300px_minmax\(0,1fr\)\]/, 'ordinateur : le visage à sa taille, la phrase à côté ; téléphone : l\'un sous l\'autre')
   }
-  assert.ok(bureau.includes('<canvas') && bureau.includes('data-fils'))
-  assert.ok(!tel.includes('<canvas'), 'téléphone : ni fils ni canvas')
-  assert.match(tel, /grid-cols-2/, 'téléphone : grille à deux colonnes')
-  assert.match(tel, /order-first[^"]*"><div data-plan-visage=""><div data-visage/, 'le visage d\'abord (dans son calque de parallaxe)')
+  // la prochaine information utile ouvre sa rubrique (un lien du système)
+  assert.ok(voix.prochaine, 'les données de démonstration laissent une information à renseigner')
+  assert.match(rendu({ large: true }), /Prochaine information utile\s: «\s[^»]+\s»\.[\s\S]*?<button[^>]*>Ouvrir «\s[^»]+\s»<\/button>/)
+})
+
+test('la phrase de Synorix : ce qu\'il sait (décompte des rubriques), puis la première information indispensable encore à renseigner', () => {
+  const { rempli, total } = avancementTotal(DONNEES)
+  const voix = voixSynorix(DONNEES)
+  assert.equal(voix.phrase, `Synorix connaît ${rempli} des ${total} informations que vos dossiers demandent le plus souvent.`)
+  assert.ok(voix.prochaine && ['identite', 'moyens', 'certifications'].includes(voix.prochaine.rubrique) && voix.prochaine.titreRubrique.length > 0)
+  const vide = voixSynorix({})
+  assert.match(vide.phrase, /^Synorix ne sait encore rien de votre entreprise\./)
+  assert.deepEqual(vide.prochaine, { libelle: 'Raison sociale', rubrique: 'identite', titreRubrique: 'Identité' })
+  const une = voixSynorix({ organisation: { name: 'Entreprise inventée' } as never })
+  assert.match(une.phrase, /^Synorix connaît 1 des \d+ informations/)
+  for (const v of [voix, vide, une]) assert.ok(!/!|manquant|incomplet|absent/i.test(v.phrase))
 })
 
 /* ── les fils ────────────────────────────────────────────────────── */
@@ -412,7 +428,8 @@ test('la page : le visage remplace le cerveau (plus d\'image sombre ni d\'effets
   useAuthStore.setState({ organization: DONNEES.organisation as never })
   const html = rendre(<QueryClientProvider client={client}><MemoryRouter><Company /></MemoryRouter></QueryClientProvider>, { large: true })
   assert.match(html, /<h1[^>]*>Mon entreprise<\/h1>/)
-  assert.ok(html.includes('data-visage') && html.includes('data-fils'))
+  assert.ok(html.includes('data-visage') && html.includes('data-voix-synorix') && !html.includes('data-fils'))
+  assert.equal((html.match(/data-visage=""/g) ?? []).length, 1, 'le visage une seule fois sur l\'écran')
   assert.ok(!html.includes('cerveau') && !html.includes('data-cerveau'))
 })
 

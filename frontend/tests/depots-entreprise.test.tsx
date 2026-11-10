@@ -40,8 +40,10 @@ test('trois cases pour l’identité, trois pour les moyens, deux pour les certi
       assert.ok(html.includes(c.contenu.replace(/'/g, '&#x27;').replace(/«/g, '«')), `ce qu'on y met : ${c.id}`)
       assert.ok(html.includes(c.usage.replace(/'/g, '&#x27;')), `ce que Synorix en fera : ${c.id}`)
     }
-    assert.equal((html.match(/Ce que vous y mettez/g) ?? []).length, n)
-    assert.equal((html.match(/Ce que Synorix en fera/g) ?? []).length, n)
+    // une surface, une rangée par case : plus d'intitulés répétés, plus de zone en pointillés au repos
+    assert.ok(!/Ce que vous y mettez|Ce que Synorix en fera/.test(html))
+    assert.ok(!/border-dashed/.test(html), 'aucune zone en pointillés au repos')
+    assert.equal((html.match(/<article/g) ?? []).length, n)
     assert.equal((html.match(/type="file"/g) ?? []).length, n)
     assert.equal((html.match(/ multiple=""/g) ?? []).length, n, 'plusieurs fichiers par case')
     assert.ok(html.includes('PDF, Word, Excel, JPEG, PNG · 20 Mo · plusieurs fichiers'))
@@ -49,15 +51,16 @@ test('trois cases pour l’identité, trois pour les moyens, deux pour les certi
   }
 })
 
-test('chaque case a son champ de fichier, relié à une étiquette qui nomme la case ; cible d’au moins 44 px', () => {
+test('chaque case a son bouton « Déposer un fichier » du système, qui nomme la case ; cible d’au moins 44 px ; le champ de fichier est hors de la tabulation', () => {
   const html = rendre('identite')
-  const champs = [...html.matchAll(/<label for="([^"]+)"[^>]*class="([^"]*)"/g)]
+  const boutons = [...html.matchAll(/<button[^>]*class="([^"]*)"[^>]*>Déposer un fichier<span class="sr-only"> pour « ([^»]+) »<\/span>/g)]
+  assert.equal(boutons.length, 3)
+  for (const [, classes] of boutons) assert.ok(/min-h-11/.test(classes), 'bouton de dépôt : 44 px')
+  assert.deepEqual(boutons.map((b) => b[2].replace(/&#x27;/g, "'")), ['Extrait Kbis', "Attestation d'assurance décennale", 'Attestation de responsabilité civile'])
+  // le champ natif ne se voit pas et ne prend pas le focus : le bouton l'ouvre
+  const champs = [...html.matchAll(/<input[^>]*type="file"[^>]*>/g)]
   assert.equal(champs.length, 3)
-  for (const [, id, classes] of champs) {
-    assert.ok(html.includes(`id="${id}"`) && html.includes('type="file"'))
-    assert.ok(/min-h-11/.test(classes), 'zone de dépôt : 44 px')
-  }
-  assert.ok(html.includes('pour « Extrait Kbis »'))   // nom accessible de la zone (sr-only)
+  for (const [champ] of champs) assert.ok(/tabindex="-1"/.test(champ) && /aria-hidden="true"/.test(champ) && /sr-only/.test(champ), champ)
 })
 
 test('états sous la case : lu et à vérifier, déposé, OCR, en lecture, envoi, refus lisible', () => {
@@ -69,7 +72,9 @@ test('états sous la case : lu et à vérifier, déposé, OCR, en lecture, envoi
   ])
   assert.ok(html.includes('Lu · 6 informations proposées') && html.includes('Vérifier'))
   assert.ok(html.includes('Déposé dans le coffre-fort · lisible seulement avec un OCR'))
-  assert.ok(html.includes('En lecture…') && html.includes('animate-spin'))
+  assert.ok(html.includes('En lecture…') && !html.includes('animate-spin'), 'la lecture en cours se dit en mots (pastille bleue), sans roue')
+  assert.match(html, /bg-bleu-soft text-bleu-ink[^>]*>(?:<svg[\s\S]*?<\/svg>)?En lecture…/)
+  assert.match(html, /bg-vert-soft text-vert-ink[^>]*>(?:<svg[\s\S]*?<\/svg>)?Lu · 6 informations proposées/)
   assert.equal((html.match(/aria-live="polite"/g) ?? []).length, 3)
   const coffre = rendre('moyens', [etat(CASES[3], { etat: 'coffre_seul', libelle_etat: 'Déposé dans le coffre-fort' })])
   assert.ok(coffre.includes('Déposé dans le coffre-fort') && !coffre.includes('Vérifier'))
@@ -133,9 +138,9 @@ test('le rendu complet du composant (données déjà en cache) n’appelle ni d�
   assert.ok(html.includes('Voici ce que j&#x27;ai compris') && html.includes('Valider 2 informations'))
 })
 
-test('une seule vue de case : nom, textes, zone, état', () => {
+test('une seule vue de case : nom, textes, bouton de dépôt, état', () => {
   const html = renderToStaticMarkup(<CaseDepotVue vue={{ definition: CASES[0], envoi: false, erreur: null }} onFichiers={() => {}} onVerifier={() => {}} />)
-  assert.ok(html.includes('<h4') && html.includes('Extrait Kbis') && html.includes('Glisser un fichier ici, ou choisir'))
+  assert.ok(html.includes('<h4') && html.includes('Extrait Kbis') && html.includes('Déposer un fichier') && !html.includes('Glisser un fichier ici'))
 })
 
 test('aucune occurrence de « manquant », « incomplet » ni « absent » dans le dépôt', () => {

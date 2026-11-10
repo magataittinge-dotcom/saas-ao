@@ -1,10 +1,11 @@
-import { Plus, Trash2 } from 'lucide-react'
-import { Input, Textarea } from '@/components/ui/input'
+import { Champ, ChampDate, ZoneTexte } from '@/components/ui/champ'
 import type { CategorieEffectif, LigneEffectif, LigneHabilitation, LigneMoyen, TeamMember, TypeHabilitation } from '@/types'
 import type { LigneEditable } from '@/lib/entreprise/liste'
-import { BOUTON_AJOUT, BOUTON_RETRAIT, ChampNombre, Field, Select } from './champs'
+import { ListeDeroulante } from '@/components/ui/liste-deroulante'
+import { cn } from '@/lib/utils'
+import { BLOC_LISTE, BoutonAjout, BoutonRetrait, ChampNombre, Field } from './champs'
 
-const CARTE = 'grid items-end gap-2 rounded-lg border border-bord bg-surface-0 p-3 [grid-template-columns:repeat(auto-fit,minmax(9.5rem,1fr))]'
+const CARTE = cn(BLOC_LISTE, 'grid items-end gap-3 [grid-template-columns:repeat(auto-fit,minmax(9.5rem,1fr))]')
 
 // ─── Personnes clés (table team_members : POST / PATCH / DELETE /users/team) ───
 
@@ -18,22 +19,22 @@ export function EditeurPersonnes({ lignes, modifier, ajouter, retirer }: {
     <div className="space-y-3">
       {lignes.map((l, i) => (
         <div key={l.cle} className={CARTE}>
-          <Field label="Nom"><Input aria-label={`Personne clé ${i + 1} : nom`} maxLength={255} value={l.valeurs.name ?? ''} onChange={(e) => modifier(l.cle, { name: e.target.value })} placeholder="Jean Dupont" /></Field>
-          <Field label="Fonction"><Input aria-label={`Personne clé ${i + 1} : fonction`} maxLength={255} value={l.valeurs.role ?? ''} onChange={(e) => modifier(l.cle, { role: e.target.value })} placeholder="Conducteur de travaux" /></Field>
-          <Field label="Spécialité"><Input aria-label={`Personne clé ${i + 1} : spécialité`} maxLength={255} value={l.valeurs.specialite ?? ''} onChange={(e) => modifier(l.cle, { specialite: e.target.value })} placeholder="Façades" /></Field>
+          <Field label="Nom"><Champ aria-label={`Personne clé ${i + 1} : nom`} maxLength={255} value={l.valeurs.name ?? ''} onChange={(e) => modifier(l.cle, { name: e.target.value })} /></Field>
+          <Field label="Fonction"><Champ aria-label={`Personne clé ${i + 1} : fonction`} maxLength={255} value={l.valeurs.role ?? ''} onChange={(e) => modifier(l.cle, { role: e.target.value })} placeholder="Conducteur de travaux" /></Field>
+          <Field label="Spécialité"><Champ aria-label={`Personne clé ${i + 1} : spécialité`} maxLength={255} value={l.valeurs.specialite ?? ''} onChange={(e) => modifier(l.cle, { specialite: e.target.value })} placeholder="Façades" /></Field>
           <Field label="Années d'expérience"><ChampNombre aria-label={`Personne clé ${i + 1} : années d'expérience`} max={80} valeur={l.valeurs.experience_years} onChange={(v) => modifier(l.cle, { experience_years: v ?? undefined })} /></Field>
-          <Field label="Qualifications"><Input aria-label={`Personne clé ${i + 1} : qualifications`} maxLength={500} value={l.valeurs.certifications ?? ''} onChange={(e) => modifier(l.cle, { certifications: e.target.value })} placeholder="SST, CACES R486…" /></Field>
+          <Field label="Qualifications"><Champ aria-label={`Personne clé ${i + 1} : qualifications`} maxLength={500} value={l.valeurs.certifications ?? ''} onChange={(e) => modifier(l.cle, { certifications: e.target.value })} placeholder="SST, CACES R486…" /></Field>
           <div className="flex items-end gap-2 [grid-column:1/-1]">
             <div className="min-w-0 flex-1">
               <Field label="Résumé d'expérience">
-                <Textarea aria-label={`Personne clé ${i + 1} : résumé d'expérience`} rows={2} maxLength={1000} value={l.valeurs.experience_resume ?? ''} onChange={(e) => modifier(l.cle, { experience_resume: e.target.value })} />
+                <ZoneTexte aria-label={`Personne clé ${i + 1} : résumé d'expérience`} rows={2} maxLength={1000} value={l.valeurs.experience_resume ?? ''} onChange={(e) => modifier(l.cle, { experience_resume: e.target.value })} />
               </Field>
             </div>
-            <button type="button" onClick={() => retirer(l.cle)} aria-label={`Retirer la personne clé ${i + 1}`} className={BOUTON_RETRAIT}><Trash2 size={14} aria-hidden /></button>
+            <BoutonRetrait libelle={`Retirer la personne clé ${i + 1}`} onClick={() => retirer(l.cle)} />
           </div>
         </div>
       ))}
-      <button type="button" onClick={ajouter} className={BOUTON_AJOUT}><Plus size={13} aria-hidden /> Ajouter une personne clé</button>
+      <BoutonAjout onClick={ajouter}>Ajouter une personne clé</BoutonAjout>
     </div>
   )
 }
@@ -63,14 +64,14 @@ export function EffectifParSpecialite({ valeur, categorie, libelle, exemple, onC
       <div className="space-y-2">
         {lignes.map((l, i) => (
           <div key={i} className="flex items-center gap-2">
-            <Input aria-label={`${libelle} : spécialité ${i + 1}`} placeholder={exemple} maxLength={80} value={l.specialite ?? ''}
+            <Champ aria-label={`${libelle} : spécialité ${i + 1}`} placeholder={exemple} maxLength={80} value={l.specialite ?? ''}
               onChange={(e) => remplacer(lignes.map((x, j) => (j === i ? { ...x, specialite: e.target.value } : x)))} />
             <ChampNombre aria-label={`${libelle} : effectif ${i + 1}`} placeholder="Effectif" max={999} className="w-24 shrink-0" valeur={l.effectif}
               onChange={(v) => remplacer(lignes.map((x, j) => (j === i ? { ...x, effectif: v ?? 0 } : x)))} />
-            <button type="button" onClick={() => remplacer(lignes.filter((_, j) => j !== i))} aria-label={`Retirer la ligne ${i + 1} de ${libelle}`} className={BOUTON_RETRAIT}><Trash2 size={14} aria-hidden /></button>
+            <BoutonRetrait libelle={`Retirer la ligne ${i + 1} de ${libelle}`} onClick={() => remplacer(lignes.filter((_, j) => j !== i))} />
           </div>
         ))}
-        <button type="button" onClick={() => remplacer([...lignes, { categorie, specialite: '', effectif: 1 }])} className={BOUTON_AJOUT}><Plus size={13} aria-hidden /> Ajouter une spécialité</button>
+        <BoutonAjout onClick={() => remplacer([...lignes, { categorie, specialite: '', effectif: 1 }])}>Ajouter une spécialité</BoutonAjout>
       </div>
     </Field>
   )
@@ -104,17 +105,16 @@ export function EditeurHabilitations({ valeur, onChange }: { valeur: Habilitatio
         {autres.map((h, i) => (
           <div key={i} className={CARTE}>
             <Field label="Type">
-              <Select aria-label={`Habilitation ${i + 1} : type`} value={h.type} onChange={(e) => remplacer(autres.map((x, j) => (j === i ? { ...x, type: e.target.value as TypeHabilitation } : x)))}>
-                {AUTRES.map((a) => <option key={a.type} value={a.type}>{a.libelle}</option>)}
-              </Select>
+              <ListeDeroulante libelle={`Habilitation ${i + 1} : type`} valeur={h.type} options={AUTRES.map((a) => ({ valeur: a.type, libelle: a.libelle }))}
+                onChange={(v) => remplacer(autres.map((x, j) => (j === i ? { ...x, type: v as TypeHabilitation } : x)))} />
             </Field>
-            {h.type === 'autre' && <Field label="Libellé"><Input aria-label={`Habilitation ${i + 1} : libellé`} maxLength={80} value={h.libelle ?? ''} onChange={(e) => remplacer(autres.map((x, j) => (j === i ? { ...x, libelle: e.target.value } : x)))} /></Field>}
+            {h.type === 'autre' && <Field label="Libellé"><Champ aria-label={`Habilitation ${i + 1} : libellé`} maxLength={80} value={h.libelle ?? ''} onChange={(e) => remplacer(autres.map((x, j) => (j === i ? { ...x, libelle: e.target.value } : x)))} /></Field>}
             <Field label="Nombre"><ChampNombre aria-label={`Habilitation ${i + 1} : nombre`} max={999} valeur={h.nombre} onChange={(v) => remplacer(autres.map((x, j) => (j === i ? { ...x, nombre: v ?? 0 } : x)))} /></Field>
-            <Field label="Valable jusqu'au"><Input type="date" aria-label={`Habilitation ${i + 1} : date de fin`} value={h.valide_jusqu ?? ''} onChange={(e) => remplacer(autres.map((x, j) => (j === i ? { ...x, valide_jusqu: e.target.value || null } : x)))} /></Field>
-            <button type="button" onClick={() => remplacer(autres.filter((_, j) => j !== i))} aria-label={`Retirer l'habilitation ${i + 1}`} className={BOUTON_RETRAIT}><Trash2 size={14} aria-hidden /></button>
+            <Field label="Valable jusqu'au"><ChampDate aria-label={`Habilitation ${i + 1} : date de fin`} valeur={h.valide_jusqu} onChange={(iso) => remplacer(autres.map((x, j) => (j === i ? { ...x, valide_jusqu: iso } : x)))} /></Field>
+            <BoutonRetrait libelle={`Retirer l'habilitation ${i + 1}`} onClick={() => remplacer(autres.filter((_, j) => j !== i))} />
           </div>
         ))}
-        <button type="button" onClick={() => remplacer([...autres, { type: 'caces', nombre: 1, libelle: null, valide_jusqu: null }])} className={BOUTON_AJOUT}><Plus size={13} aria-hidden /> Ajouter une habilitation</button>
+        <BoutonAjout onClick={() => remplacer([...autres, { type: 'caces', nombre: 1, libelle: null, valide_jusqu: null }])}>Ajouter une habilitation</BoutonAjout>
       </div>
     </Field>
   )
@@ -130,13 +130,13 @@ export function EditeurMoyens({ libelle, valeur, maximum, exemple, onChange }: {
           <div key={i} className="flex items-center gap-2">
             <ChampNombre aria-label={`${libelle} ${i + 1} : quantité`} min={1} max={9999} placeholder="Qté" className="w-20 shrink-0" valeur={l.quantite}
               onChange={(v) => onChange(valeur.map((x, j) => (j === i ? { ...x, quantite: v ?? 1 } : x)))} />
-            <Input aria-label={`${libelle} ${i + 1} : désignation`} placeholder={exemple} maxLength={120} value={l.designation}
+            <Champ aria-label={`${libelle} ${i + 1} : désignation`} placeholder={exemple} maxLength={120} value={l.designation}
               onChange={(e) => onChange(valeur.map((x, j) => (j === i ? { ...x, designation: e.target.value } : x)))} />
-            <button type="button" onClick={() => onChange(valeur.filter((_, j) => j !== i))} aria-label={`Retirer la ligne ${i + 1} de ${libelle}`} className={BOUTON_RETRAIT}><Trash2 size={14} aria-hidden /></button>
+            <BoutonRetrait libelle={`Retirer la ligne ${i + 1} de ${libelle}`} onClick={() => onChange(valeur.filter((_, j) => j !== i))} />
           </div>
         ))}
         {valeur.length < maximum && (
-          <button type="button" onClick={() => onChange([...valeur, { quantite: 1, designation: '' }])} className={BOUTON_AJOUT}><Plus size={13} aria-hidden /> Ajouter une ligne</button>
+          <BoutonAjout onClick={() => onChange([...valeur, { quantite: 1, designation: '' }])}>Ajouter une ligne</BoutonAjout>
         )}
       </div>
     </Field>

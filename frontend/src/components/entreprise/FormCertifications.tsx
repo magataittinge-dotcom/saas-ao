@@ -2,10 +2,10 @@ import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { Archive, CheckCircle2, Plus, Trash2, Upload, X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
+import { Bouton } from '@/components/ui/bouton'
+import { Champ, ChampDate } from '@/components/ui/champ'
+import { Message } from '@/components/ui/message'
+import { PastilleEtat, type Sens } from '@/components/ui/pastille'
 import { Sigle } from '@/components/common/Sigle'
 import { LIBELLE_ETAT_PIECE, PIECES_SUIVIES, etatPiece, type DonneesEntreprise, type EtatPiece, type PieceCoffre } from '@/lib/entreprise/avancement'
 import { planifier } from '@/lib/entreprise/liste'
@@ -13,15 +13,16 @@ import type { CAEntry, MemoireConfig, Qualification, Reference } from '@/types'
 import { appliquerPlan } from './appliquerPlan'
 import { EditeurQualifications, EditeurReferences } from './EditeursCertifications'
 import { CA_VIDE } from '@/lib/entreprise/charges'
-import { AfficherPlus, BOUTON_AJOUT, BOUTON_RETRAIT, ChampNombre, Field, Groupe, Pleine } from './champs'
+import { AfficherPlus, BLOC_LISTE, BoutonAjout, BoutonRetrait, ChampNombre, Field, Groupe, Pleine } from './champs'
 import CadreFormulaire from './CadreFormulaire'
 import { ImportDialog } from './ImportMemoire'
 import { useFormulaireRubrique } from './useFormulaireRubrique'
 import { useLignesEditables } from './useLignesEditables'
 import { cn } from '@/lib/utils'
 
-const VARIANTE: Record<EtatPiece, 'success' | 'warning' | 'neutral'> = { au_coffre: 'success', a_renouveler: 'warning', a_joindre: 'neutral' }
-const LIEN = 'inline-flex items-center gap-1.5 text-sm font-medium text-accent-text hover:underline'
+// Vert : la pièce est au coffre-fort ; ambre : elle est à renouveler (à surveiller) ; gris : elle reste à joindre.
+const SENS: Record<EtatPiece, Sens> = { au_coffre: 'vert', a_renouveler: 'ambre', a_joindre: 'gris' }
+const LIEN = 'inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-accent-text underline-offset-4 hover:underline'
 const CHAMPS_QUALIFICATION: (keyof Qualification)[] = ['famille', 'intitule', 'organisme', 'numero', 'perimetre', 'date_obtention', 'date_fin', 'document_id']
 const CHAMPS_REFERENCE: (keyof Reference)[] = ['intitule', 'maitre_ouvrage', 'adresse', 'description', 'montant_ht', 'annee', 'mode_intervention', 'maitre_oeuvre', 'lot', 'client_type', 'client_adresse', 'client_nom_complet']
 /** Pièces du coffre-fort listées ici : celles qui n'ont pas leur propre éditeur (qualification et assurances se déclarent plus haut). */
@@ -74,7 +75,7 @@ export default function FormCertifications({ donnees, avant, idPanneau, idOnglet
       explication="Vos qualifications, vos assurances et vos chantiers terminés : ce sont vos preuves, citées dans chaque mémoire."
       etat={f} onEnregistrer={f.enregistrer} avant={avant}
     >
-      {dialogue && <ImportDialog onClose={() => setDialogue(false)} onImported={apresImport} />}
+      <ImportDialog ouvert={dialogue} onClose={() => setDialogue(false)} onImported={apresImport} />
 
       <Groupe titre="Qualifications" aide="Qualibat, Qualifelec… avec leur date de fin : Synorix vous prévient avant l'échéance.">
         <Pleine>
@@ -90,18 +91,18 @@ export default function FormCertifications({ donnees, avant, idPanneau, idOnglet
 
       <Groupe titre="Pièces au coffre-fort" aide="Les pièces que les dossiers de candidature réclament le plus souvent.">
         <Pleine>
-          <ul className="divide-y divide-bord-2 rounded-lg border border-bord-2 bg-surface-0">
+          <ul className="divide-y divide-bord rounded-lg border border-bord bg-surface-0">
             {PIECES_ADMINISTRATIVES.map((p) => {
               const etat = etatPiece(donnees.documents, p.types)
               return (
-                <li key={p.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                <li key={p.id} className="flex min-h-[52px] flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-2">
                   <span className="text-sm text-fg">{p.libelle}</span>
-                  <Badge variant={VARIANTE[etat]}>{LIBELLE_ETAT_PIECE[etat]}</Badge>
+                  <PastilleEtat sens={SENS[etat]}>{LIBELLE_ETAT_PIECE[etat]}</PastilleEtat>
                 </li>
               )
             })}
           </ul>
-          <Link to="/vault" className={cn(LIEN, 'mt-3')}><Archive size={16} aria-hidden /> Ouvrir le coffre-fort</Link>
+          <Link to="/vault" className={cn(LIEN, 'mt-2')}>Ouvrir le coffre-fort</Link>
         </Pleine>
       </Groupe>
 
@@ -116,27 +117,20 @@ export default function FormCertifications({ donnees, avant, idPanneau, idOnglet
           <div className="space-y-2">
             {ca.map((ligne, i) => (
               <div key={i} className="flex items-center gap-2">
-                <Input aria-label="Année" className="w-20 shrink-0" placeholder="Année" inputMode="numeric" maxLength={4} value={ligne.annee}
+                <Champ aria-label="Année" className="w-20 shrink-0" placeholder="Année" inputMode="numeric" maxLength={4} value={ligne.annee}
                   onChange={(e) => majCA(i, { annee: e.target.value.replace(/\D/g, '') })} />
-                <Input aria-label="Chiffre d'affaires hors taxes" placeholder="1 200 000 €" maxLength={40} value={ligne.montant}
+                <Champ aria-label="Chiffre d'affaires hors taxes" placeholder="1 200 000 €" maxLength={40} value={ligne.montant}
                   onChange={(e) => majCA(i, { montant: e.target.value })} />
                 <ChampNombre aria-label="Effectif moyen annuel" placeholder="Effectif" max={999} className="w-24 shrink-0" valeur={ligne.effectif_moyen}
                   onChange={(v) => majCA(i, { effectif_moyen: v })} />
                 {ca.length > 1 && (
-                  <button type="button" onClick={() => poserCA(ca.filter((_, j) => j !== i))} aria-label="Retirer cette année" className={BOUTON_RETRAIT}>
-                    <Trash2 size={14} aria-hidden />
-                  </button>
+                  <BoutonRetrait libelle="Retirer cette année" onClick={() => poserCA(ca.filter((_, j) => j !== i))} />
                 )}
               </div>
             ))}
             {ca.length < 5 && (
-              <button type="button" onClick={() => poserCA([...ca, { annee: '', montant: '' }])} className={cn(BOUTON_AJOUT, 'mt-1')}>
-                <Plus size={13} aria-hidden /> Ajouter une année
-              </button>
+              <BoutonAjout onClick={() => poserCA([...ca, { annee: '', montant: '' }])}>Ajouter une année</BoutonAjout>
             )}
-            <p data-etat={ca.some((e) => e.annee.trim() && e.montant.trim()) ? 'rempli' : 'a-renseigner'} className="text-xs text-fg-3">
-              {ca.some((e) => e.annee.trim() && e.montant.trim()) ? 'Renseigné' : <span className="font-medium text-ambre-ink">À renseigner</span>}
-            </p>
           </div>
         </Pleine>
       </Groupe>
@@ -155,15 +149,15 @@ export default function FormCertifications({ donnees, avant, idPanneau, idOnglet
         <Groupe titre="Le détail de chaque exercice" aide="Chiffre d'affaires du domaine du marché et dates de l'exercice.">
           {ca.map((ligne, i) => (
             <Pleine key={i}>
-              <div className="grid gap-2 rounded-lg border border-bord bg-surface-0 p-3 [grid-template-columns:repeat(auto-fit,minmax(11rem,1fr))]">
+              <div className={cn(BLOC_LISTE, 'grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(11rem,1fr))]')}>
                 <Field label={`Exercice ${ligne.annee || i + 1} : chiffre d'affaires du domaine`}>
-                  <Input maxLength={40} value={ligne.montant_domaine ?? ''} onChange={(e) => majCA(i, { montant_domaine: e.target.value })} />
+                  <Champ maxLength={40} value={ligne.montant_domaine ?? ''} onChange={(e) => majCA(i, { montant_domaine: e.target.value })} />
                 </Field>
                 <Field label="Début de l'exercice">
-                  <Input type="date" value={ligne.exercice_debut ?? ''} onChange={(e) => majCA(i, { exercice_debut: e.target.value || null })} />
+                  <ChampDate valeur={ligne.exercice_debut} onChange={(iso) => majCA(i, { exercice_debut: iso })} />
                 </Field>
                 <Field label="Fin de l'exercice">
-                  <Input type="date" value={ligne.exercice_fin ?? ''} onChange={(e) => majCA(i, { exercice_fin: e.target.value || null })} />
+                  <ChampDate valeur={ligne.exercice_fin} onChange={(iso) => majCA(i, { exercice_fin: iso })} />
                 </Field>
               </div>
             </Pleine>
@@ -172,19 +166,11 @@ export default function FormCertifications({ donnees, avant, idPanneau, idOnglet
         <Groupe titre="Un mémoire déjà rédigé ?" aide="Importez-le : Synorix pré-remplit vos rubriques, vous vérifiez puis vous enregistrez.">
           <Pleine>
             {importe !== null && (
-              <div role="status" className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-accent-tint-2 bg-accent-tint px-4 py-3">
-                <p className="flex items-center gap-2 text-sm font-medium text-fg">
-                  <CheckCircle2 size={18} className="shrink-0 text-accent-text" aria-hidden />
-                  {importe} champ{importe > 1 ? 's' : ''} pré-rempli{importe > 1 ? 's' : ''} : vérifiez-les dans Identité et Moyens, puis enregistrez.
-                </p>
-                <button type="button" onClick={() => setImporte(null)} aria-label="Fermer le message" className="grid size-9 shrink-0 place-items-center rounded-md text-fg-2 hover:bg-surface-0 hover:text-fg [@media(pointer:coarse)]:size-11">
-                  <X size={16} aria-hidden />
-                </button>
-              </div>
+              <Message ton="succes" className="mb-3" onFermer={() => setImporte(null)}>
+                {importe} champ{importe > 1 ? 's' : ''} pré-rempli{importe > 1 ? 's' : ''} : vérifiez-les dans Identité et Moyens, puis enregistrez.
+              </Message>
             )}
-            <Button type="button" variant="outline" onClick={() => setDialogue(true)}>
-              <Upload size={15} aria-hidden /> Importer un mémoire
-            </Button>
+            <Bouton variante="secondaire" onClick={() => setDialogue(true)}>Importer un mémoire</Bouton>
           </Pleine>
         </Groupe>
       </AfficherPlus>

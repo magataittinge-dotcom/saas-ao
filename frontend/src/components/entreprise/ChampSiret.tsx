@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Loader2 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { Bouton } from '@/components/ui/bouton'
+import { Champ } from '@/components/ui/champ'
 import { authService } from '@/services/auth'
 import { useAuthStore } from '@/stores/authStore'
 import { Field } from './champs'
@@ -38,18 +37,19 @@ export default function ChampSiret({ siret, verifie }: { siret?: string | null; 
       else setConfirme(true)
       client.invalidateQueries({ queryKey: ['memoire-config'] })
     } catch {
-      setMessage('Vérification impossible pour le moment. Réessayez dans un instant.')
+      setMessage('La vérification n’a pas abouti. Réessayez dans un instant.')
     } finally {
       setOccupe(false)
     }
   }
 
   return (
-    <div>
-      <div className="flex items-start gap-2">
+    <div className="grid content-start gap-1.5">
+      <div className="flex items-end gap-2">
         <div className="min-w-0 flex-1">
-          <Field label="SIRET" rempli={chiffres(siret ?? '') !== ''} source={verifie ? 'Vérifié au répertoire Sirene' : undefined}>
-            <Input
+          <Field label="SIRET" rempli={chiffres(siret ?? '') !== ''} source={verifie && !modifie ? 'Vérifié au répertoire Sirene' : undefined}>
+            <Champ
+              className="chiffres"
               value={valeur}
               onChange={(e) => { setValeur(e.target.value); setMessage(null); setConfirme(false) }}
               onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void verifier() } }}
@@ -58,13 +58,13 @@ export default function ChampSiret({ siret, verifie }: { siret?: string | null; 
           </Field>
         </div>
         {modifie && (
-          <Button type="button" variant="outline" className="mt-6" onClick={() => void verifier()} disabled={occupe || !chiffres(valeur)}>
-            {occupe ? <Loader2 size={16} className="animate-spin motion-reduce:animate-none" aria-hidden /> : 'Vérifier'}
-          </Button>
+          <Bouton variante="secondaire" onClick={() => void verifier()} disabled={!chiffres(valeur)} enCours={occupe} libelleEnCours="Vérification…">
+            Vérifier
+          </Bouton>
         )}
       </div>
-      <p role="status" className="mt-1 text-xs text-warning empty:hidden">{message}</p>
-      {confirme && <p role="status" className="mt-1 text-xs text-fg-2">SIRET vérifié au répertoire Sirene.</p>}
+      <p role="status" className="text-xs text-ambre-ink empty:hidden">{message}</p>
+      {confirme && <p role="status" className="text-xs text-fg-2">SIRET vérifié au répertoire Sirene.</p>}
     </div>
   )
 }
