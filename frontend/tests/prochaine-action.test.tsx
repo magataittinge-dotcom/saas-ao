@@ -18,7 +18,7 @@ test('chaque état de l’AO a son verbe et son écran, jusqu’à l’étape 5 
     [{ current_step: 1 }, 'Déposer le dossier de l’acheteur'.replace('’', "'"), 'upload'],
     [{ current_step: 2 }, 'Choisir le lot', 'lots'],
     [{ current_step: 3 }, 'Lire ce dossier', 'analysis'],
-    [{ current_step: 3, processing_status: 'processing' }, 'Analyse en cours', 'analysis'],
+    [{ current_step: 3, processing_status: 'processing' }, 'Lecture en cours', 'analysis'],
     [{ current_step: 3, status: 'analyzed' }, 'Décider : on y va ?', 'analysis'],
     [{ current_step: 4, status: 'analyzed', completed_steps: { 3: true } }, 'Réunir les pièces', 'verification'],
     // étape 5 : le plan d'abord, la rédaction ensuite

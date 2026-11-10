@@ -29,7 +29,7 @@ export function CorpsConfirmationRefaire({ titre }: { titre: string }) {
   return (
     <div className="space-y-2 text-sm text-fg-2">
       <p>
-        Synorix IA réécrit « {titre} » à partir de votre dossier et de la fiche de cette partie. Le reste du mémoire ne
+        Synorix réécrit « {titre} » à partir de votre dossier et de la fiche de cette partie. Le reste du mémoire ne
         change pas ; le texte actuel de cette partie est remplacé.
       </p>
       <p className="font-semibold text-fg">Ne décompte aucune unité.</p>

@@ -123,7 +123,7 @@ test('libellés de situation : toujours positifs', () => {
     libelleNiveau({ niveau: 'page' }),
     libelleNiveau({ niveau: 'aucun' }),
   ]
-  assert.equal(textes[2], 'Page citée par l’analyse')
+  assert.equal(textes[2], 'Page citée par Synorix')
   for (const t of textes) {
     assert.ok(!/manquant|incompl|absent|!/i.test(t), t)
   }
@@ -131,8 +131,8 @@ test('libellés de situation : toujours positifs', () => {
 
 test('libellés de situation d’un tableur : ligne et feuille, jamais « page »', () => {
   assert.equal(libelleNiveau({ niveau: 'passage', format: 'tableur' }), 'Ligne retrouvée dans la feuille')
-  assert.equal(libelleNiveau({ niveau: 'page', format: 'tableur' }), 'Feuille citée par l’analyse')
-  assert.equal(libelleNiveau({ niveau: 'aucun', format: 'tableur' }), 'Pièce citée par l’analyse')
+  assert.equal(libelleNiveau({ niveau: 'page', format: 'tableur' }), 'Feuille citée par Synorix')
+  assert.equal(libelleNiveau({ niveau: 'aucun', format: 'tableur' }), 'Pièce citée par Synorix')
 })
 
 // ─── citation ───

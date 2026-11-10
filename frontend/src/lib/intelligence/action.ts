@@ -59,7 +59,7 @@ export function actionEtape(p: EtatEtape): { verbe: string; segment: string } {
       // Un seul lot (ou un marché unique) : rien à choisir, la lecture se lance depuis l'écran de dépôt, au clic.
       if (lotUniqueDuDossier(p)) return { verbe: 'Lire ce dossier', segment: ROUTES_ETAPES[0] }
       return { verbe: 'Choisir le lot', segment: ROUTES_ETAPES[1] }
-    case 3: return { verbe: enAttente(p) ? 'Analyse en cours' : 'Lire ce dossier', segment: ROUTES_ETAPES[2] }
+    case 3: return { verbe: enAttente(p) ? 'Lecture en cours' : 'Lire ce dossier', segment: ROUTES_ETAPES[2] }
     case 4: return { verbe: 'Réunir les pièces', segment: ROUTES_ETAPES[3] }
     case 5:
       if (enRedaction(p)) return { verbe: 'Rédaction du mémoire en cours', segment: 'memoire' }
@@ -86,8 +86,8 @@ const TEXTES: Record<number, string> = {
 
 /** La phrase d'une étape. Pour l'étape « Télécharger le dossier », `lectureAO` la complète avec les pièces restant à joindre. */
 export function texteEtape(p: EtatEtape): string {
-  if (aDecider(p)) return 'L’analyse est terminée. La fiche « On y va ? » rassemble les conditions du marché, chacune avec sa source. La décision vous revient.'
-  if (enAttente(p)) return 'L’analyse est en cours. Cet écran se met à jour dès qu’elle est terminée.'
+  if (aDecider(p)) return 'La lecture est terminée. La fiche « On y va ? » rassemble les conditions du marché, chacune avec sa source. La décision vous revient.'
+  if (enAttente(p)) return 'La lecture est en cours. Cet écran se met à jour dès qu’elle est terminée.'
   if (avancementAO(p.current_step).etape === 5) {
     if (enRedaction(p)) return 'Le mémoire est en cours de rédaction. Cet écran se met à jour dès qu’il est prêt.'
     if (aMemoire(p)) return 'Le mémoire est rédigé. Relisez-le, retouchez ce qui doit l’être, puis passez à l’export.'
@@ -166,7 +166,7 @@ export function ficheVide(): FicheAction {
     meta: null,
     statut: null,
     quand: null,
-    texte: 'Déposez le dossier de consultation (ZIP ou PDF) : Synorix lit les pièces, repère les lots et prépare l’analyse.',
+    texte: 'Déposez le dossier de consultation (ZIP ou PDF) : Synorix lit les pièces, repère les lots et prépare la décision.',
     cta: { libelle: 'Nouvel AO', vers: '/projects/new' },
     second: null,
   }

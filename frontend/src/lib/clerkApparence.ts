@@ -110,7 +110,7 @@ export const localisationFr: LocalisationClerk = {
       formTitle: 'Code de vérification',
       resendButton: 'Renvoyer le code',
     },
-    emailLink: { title: 'Consultez votre messagerie', subtitle: 'Cliquez sur le lien reçu par e-mail.' },
+    emailLink: { title: 'Consultez votre messagerie', subtitle: 'Ouvrez le lien reçu par e-mail.' },
     alternativeMethods: { title: 'Autres méthodes de connexion', actionLink: 'Aide', blockButton__password: 'Se connecter avec votre mot de passe' },
   },
   signUp: {

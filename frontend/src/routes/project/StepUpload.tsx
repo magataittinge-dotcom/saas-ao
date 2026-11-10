@@ -175,7 +175,7 @@ export default function StepUpload({ project }: Props) {
 
     setPhase('processing')
     setDisplayPct(prev => Math.max(prev, 25))
-    setLabel("Extraction de l'archive...")
+    setLabel('Ouverture de l’archive…')
     setSublabel('')
 
     // Hard timeout safety net (10 minutes) in case neither SSE nor fallback

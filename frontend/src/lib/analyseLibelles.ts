@@ -39,7 +39,7 @@ const pluriel = (n: number, mot: string, motPluriel = `${mot}s`) => `${n} ${n > 
 
 export function phraseDocumentsAnalyses({ analyses, informations, autresLots }: { analyses: number; informations: number; autresLots: number }) {
   const ecartes = informations + autresLots
-  const principale = `${analyses} ${analyses > 1 ? 'documents analysés' : 'document analysé'} sur ${analyses + ecartes}`
+  const principale = `${analyses} ${analyses > 1 ? 'documents lus' : 'document lu'} sur ${analyses + ecartes}`
   if (ecartes === 0) return { principale, detail: '' }
   const un = ecartes === 1
   const parts: string[] = []

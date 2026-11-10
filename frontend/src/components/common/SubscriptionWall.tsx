@@ -14,8 +14,8 @@ interface Props {
 }
 
 const FEATURE_LABELS: Record<string, string> = {
-  analysis: "L'analyse IA de votre dossier de l'acheteur",
-  memoire: 'La génération du mémoire technique',
+  analysis: 'La lecture du dossier de l’acheteur',
+  memoire: 'La rédaction du mémoire technique',
 }
 
 export default function SubscriptionWall({ open, onClose, feature = 'analysis', message }: Props) {

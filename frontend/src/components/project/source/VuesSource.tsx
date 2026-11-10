@@ -41,7 +41,7 @@ export function Citation({ reponse, surligner }: { reponse: ReponseSource; surli
       <figcaption>
         {surligner
           ? `Texte exact de la page ${reponse.page}${nom ? ` · ${nom}` : ''}`
-          : 'Extrait cité par l’analyse'}
+          : 'Extrait cité par Synorix'}
       </figcaption>
     </figure>
   )
@@ -56,7 +56,7 @@ export function VuePassage({
       <Citation reponse={reponse} surligner={reponse.niveau === 'passage' && exigenceId !== null} />
       {reponse.niveau === 'page' && (
         <p className="source-note">
-          Page citée par l&rsquo;analyse{reponse.page ? ` · page ${reponse.page}` : ''}.
+          Page citée par Synorix{reponse.page ? ` · page ${reponse.page}` : ''}.
         </p>
       )}
       {exigenceId !== null && (
@@ -88,7 +88,7 @@ export function VuePage({
   return (
     <div className="source-vue">
       {reponse.niveau === 'page' && (
-        <p className="source-note">Page citée par l&rsquo;analyse.</p>
+        <p className="source-note">Page citée par Synorix.</p>
       )}
       <ImageSource
         exigenceId={exigenceId}

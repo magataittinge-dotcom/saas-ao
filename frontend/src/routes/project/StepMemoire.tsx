@@ -395,7 +395,7 @@ export default function StepMemoire({ project }: Props) {
         {isRunning && (
           <ProgressDisplay
             variant="modal"
-            title="Synorix IA rédige votre mémoire"
+            title="Synorix rédige votre mémoire"
             steps={MEMOIRE_GEN_STEPS}
             currentStep={memoireSse.step}
             progress={memoireSse.progress}
@@ -465,7 +465,7 @@ export default function StepMemoire({ project }: Props) {
       {isRunning && (
         <ProgressDisplay
           variant="modal"
-          title={refaitUnePartie ? 'Synorix IA refait cette partie' : 'Synorix IA rédige votre mémoire'}
+          title={refaitUnePartie ? 'Synorix refait cette partie' : 'Synorix rédige votre mémoire'}
           steps={MEMOIRE_GEN_STEPS}
           currentStep={memoireSse.step}
           progress={memoireSse.progress}

@@ -42,7 +42,7 @@ test('un vrai tableau HTML : en-têtes de colonne et de ligne portent leur port�
 
 test('la feuille et la ligne citées sont nommées', () => {
   assert.ok(html.includes('Feuille « Lot 05 »'))
-  assert.ok(html.includes("Ligne 4 citée par l&#x27;analyse"))
+  assert.ok(html.includes("Ligne 4 citée par Synorix"))
 })
 
 test('une seule ligne est surlignée, annoncée aux lecteurs d\'écran, et ses cellules citées sont marquées', () => {
@@ -60,7 +60,7 @@ test('niveau « page » : la feuille est montrée sans aucun surlignage', () => 
       ancre={{ ...ancre, niveau: 'page', ligne: null, cellules: [] }} />,
   )
   assert.ok(!sans.includes('aria-current') && !sans.includes('data-ligne-citee'))
-  assert.ok(sans.includes("Feuille citée par l&#x27;analyse"))
+  assert.ok(sans.includes("Feuille citée par Synorix"))
 })
 
 test('les valeurs sont du texte : échappées, montants sans mise en forme ni mise en avant', () => {
@@ -77,8 +77,8 @@ test('titre de colonne : celui du tableur, sinon la lettre ; cellule citée', ()
   assert.equal(titreColonne({ entete: null, colonnes: ['A', 'B'] }, 1), 'B')
   assert.equal(titreColonne({ entete: { n: 1, cellules: ['', 'x'] }, colonnes: ['A', 'B'] }, 0), 'A')
   assert.ok(celluleCitee(ancre, 'B') && !celluleCitee(ancre, 'C'))
-  assert.equal(legende({ niveau: 'passage', ligne: 12 }), "Ligne 12 citée par l'analyse")
-  assert.equal(legende({ niveau: 'page', ligne: null }), "Feuille citée par l'analyse")
+  assert.equal(legende({ niveau: 'passage', ligne: 12 }), "Ligne 12 citée par Synorix")
+  assert.equal(legende({ niveau: 'page', ligne: null }), "Feuille citée par Synorix")
 })
 
 test('téléphone : le défilement horizontal reste dans le tableau, texte de 16 px au moins, cibles de 44 px', () => {

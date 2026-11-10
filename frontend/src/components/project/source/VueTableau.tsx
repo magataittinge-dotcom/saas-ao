@@ -67,8 +67,8 @@ export function titreColonne(fenetre: Pick<FenetreTableur, 'entete' | 'colonnes'
 /** Ce que montre le tableau, en une phrase positive. */
 export function legende(ancre: Pick<AncreTableur, 'niveau' | 'ligne'>): string {
   return ancre.niveau === 'passage' && ancre.ligne
-    ? `Ligne ${ancre.ligne} citée par l'analyse`
-    : "Feuille citée par l'analyse"
+    ? `Ligne ${ancre.ligne} citée par Synorix`
+    : "Feuille citée par Synorix"
 }
 
 const CELLULE = 'border-b border-ds-border-subtle px-3 py-2 align-top whitespace-pre-line break-words'

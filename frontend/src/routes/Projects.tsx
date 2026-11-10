@@ -193,7 +193,7 @@ function ListeMesAO({ projets }: { projets: Project[] }) {
       {statutPour && <MettreAJourStatut projet={statutPour} ouvert onOuvert={(o) => { if (!o) setStatutPour(null) }} />}
       <DialogueConfirmation ouvert={aSupprimer !== null} onOuvert={(o) => { if (!o) setASupprimer(null) }} danger
         titre={aSupprimer ? `Supprimer « ${aSupprimer.name} » ?` : 'Supprimer cet appel d’offres ?'}
-        description="Le dossier, l’analyse et le mémoire de cet appel d’offres sont supprimés. Cette action ne s’annule pas."
+        description="Le dossier, sa lecture et le mémoire de cet appel d’offres sont supprimés. Cette action ne s’annule pas."
         libelleConfirmer="Supprimer" libelleEnCours="Suppression…" enCours={suppression} erreur={erreurSuppression}
         onConfirmer={() => { if (aSupprimer) supprimer(aSupprimer) }} />
     </>

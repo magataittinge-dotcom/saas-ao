@@ -58,8 +58,8 @@ test('un AO qui attend seulement la fin de l’analyse passe après ceux où l�
   assert.equal(prochaineAction(p, MAINTENANT)?.id, 'agir')
   // seul en lice : on le montre quand même, avec ce qu'il se passe
   const f = ficheDepuisProjet(p[0], MAINTENANT)
-  assert.equal(f.cta?.libelle, 'Analyse en cours')
-  assert.match(f.texte, /analyse est en cours/)
+  assert.equal(f.cta?.libelle, 'Lecture en cours')
+  assert.match(f.texte, /lecture est en cours/)
 })
 
 test('chaque étape mène à son écran, avec le bon verbe', () => {
