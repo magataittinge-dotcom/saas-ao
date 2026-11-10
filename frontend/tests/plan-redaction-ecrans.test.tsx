@@ -170,3 +170,19 @@ test('G8 : la carte Abonnement dit l\'unité ou l\'offre illimitée, jamais les 
   assert.match(ligneQuotaMemoire('free', { used: 0, limit: 1 }), /sur votre essai/)
   assert.match(DUREE_REDACTION, /3 minutes/)
 })
+
+test('comptes uniques : la carte « Rédaction » dit la phrase de l’Export, avec le compte du serveur ; sans compte, la version', () => {
+  const base = { version: 2, completionPct: 100, rattachement: undefined, nbARefaire: 0, pages: 46, limite: null }
+  const avec = cartesRedaction({ ...base, passages: 136 })[0]
+  assert.equal(avec.detail, '136 passages à compléter avant le dépôt')
+  assert.equal(avec.etat, 'a-verifier')
+  for (const passages of [0, null, undefined]) {
+    const sans = cartesRedaction({ ...base, passages })[0]
+    assert.equal(sans.detail, 'Version 2')
+    assert.equal(sans.etat, undefined)
+  }
+  // une seule source : la lecture de l'Export, sous la même clé de cache ; l'enregistrement du texte la rafraîchit
+  const code = lire('src/routes/project/StepMemoire.tsx')
+  assert.match(code, /queryKey: \['export-detail', project\.id\],\s*queryFn: [^\n]*\/export\/detail/)
+  assert.equal((code.match(/invalidateQueries\(\{ queryKey: \['export-detail', project\.id\] \}\)/g) ?? []).length, 2)
+})

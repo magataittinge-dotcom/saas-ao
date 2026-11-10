@@ -6,6 +6,7 @@ import { Pencil } from 'lucide-react'
 import axios from 'axios'
 import { memoireDepuisReponse } from '@/lib/memoireLecture'
 import { api } from '@/services/api'
+import { libellePassagesACompleter } from '@/lib/passagesACompleter'
 import FormulaireMemoire from '@/components/project/FormulaireMemoire'
 import BarreEtape, { BoutonSuite } from '@/components/project/BarreEtape'
 import { type PreflightSelection } from '@/components/project/MemoirePreflight'
@@ -75,10 +76,14 @@ export function pagesEstimees(contenu: MemoireContent | null): number {
   return Math.max(1, Math.round(mots / 500))
 }
 
-/** Les cartes du mémoire rédigé : avancement, critères traités, parties à refaire, longueur. */
-export function cartesRedaction({ version, completionPct, rattachement, nbARefaire, pages, limite }: {
+/**
+ * Les cartes du mémoire rédigé : avancement, critères traités, parties à refaire, longueur. `passages` : le compte du
+ * serveur (celui de l'Export) ; la carte « Rédaction » dit alors la même phrase que l'Export, mot pour mot.
+ */
+export function cartesRedaction({ version, completionPct, rattachement, nbARefaire, pages, limite, passages }: {
   version: number
   completionPct: number
+  passages?: number | null
   rattachement: RattachementCriteres | undefined
   nbARefaire: number
   pages: number
@@ -86,8 +91,12 @@ export function cartesRedaction({ version, completionPct, rattachement, nbARefai
 }): CarteResume[] {
   const total = rattachement?.sous_criteres.length ?? 0
   const traites = rattachement?.sous_criteres.filter((s) => s.traite).length ?? 0
+  const aCompleter = libellePassagesACompleter(passages)
   return [
-    { libelle: 'Rédaction', valeur: `${completionPct} %`, jauge: { rempli: completionPct, total: 100 }, detail: `Version ${version}` },
+    {
+      libelle: 'Rédaction', valeur: `${completionPct} %`, jauge: { rempli: completionPct, total: 100 },
+      etat: aCompleter ? ETAT_A_VERIFIER : undefined, detail: aCompleter ?? `Version ${version}`,
+    },
     total > 0
       ? {
         libelle: 'Critères du règlement', valeur: `${traites} sur ${total}`, etat: traites === total ? ETAT_PRET : ETAT_A_VERIFIER,
@@ -140,6 +149,16 @@ export default function StepMemoire({ project }: Props) {
     retry: false,
   })
   const { data: memoire, isLoading } = requeteMemoire
+
+  // « N passages à compléter avant le dépôt » et le nombre de pages : une seule source, les comptes du serveur que lit
+  // aussi l'Export (même clé de cache, même lecture). Sans réponse : pas de phrase des passages, et l'estimation locale
+  // des pages en attendant.
+  const { data: comptesExport } = useQuery({
+    queryKey: ['export-detail', project.id],
+    queryFn: async () => (await api.get<{ memoire_info: { passages_a_completer: number; estimated_pages: number } | null }>(`/projects/${project.id}/export/detail`)).data,
+    enabled: !!memoire,
+    select: (d) => ({ passages: d.memoire_info?.passages_a_completer ?? 0, pages: d.memoire_info?.estimated_pages ?? null }),
+  })
 
   // Fetch profile stats
   const { data: profileStats } = useQuery({
@@ -293,6 +312,7 @@ export default function StepMemoire({ project }: Props) {
       setEditedContent(null)
       setShowForm(false)
       queryClient.invalidateQueries({ queryKey: ['memoire', project.id] })
+      queryClient.invalidateQueries({ queryKey: ['export-detail', project.id] })
       queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
     },
   })
@@ -313,6 +333,7 @@ export default function StepMemoire({ project }: Props) {
       api.patch(`/projects/${project.id}/memoire`, { content_json: content }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['memoire', project.id] })
+      queryClient.invalidateQueries({ queryKey: ['export-detail', project.id] })
     },
   })
 
@@ -491,7 +512,8 @@ export default function StepMemoire({ project }: Props) {
             libelle="Résumé du mémoire"
             cartes={cartesRedaction({
               version: memoire!.version, completionPct, rattachement, nbARefaire: Object.keys(etats ?? {}).length,
-              pages: pagesEstimees(displayContent), limite: plan?.limite_pages?.pages ?? null,
+              pages: comptesExport?.pages ?? pagesEstimees(displayContent), limite: plan?.limite_pages?.pages ?? null,
+              passages: comptesExport?.passages,
             })}
           />
         }
