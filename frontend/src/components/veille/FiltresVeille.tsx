@@ -35,7 +35,7 @@ function ChampMotsCles({ valeur, onChange }: { valeur: string; onChange: (v: str
   return (
     <label className="min-w-48 flex-1">
       <span className="sr-only">Mots-clés</span>
-      <ChampRecherche value={local} maxLength={120} placeholder="Mots-clés : école, façade, chaufferie…" onChange={(e) => setLocal(e.target.value)} />
+      <ChampRecherche value={local} maxLength={120} placeholder="Mots-clés : école, façade, chaufferie…" onChange={(e) => setLocal(e.target.value)} />
     </label>
   )
 }

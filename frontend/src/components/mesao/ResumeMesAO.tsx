@@ -23,7 +23,7 @@ export function ResumeMesAOCartes({ comptes, resume, quota }: {
     <BandeCases libelle="Résumé de mes appels d’offres">
       <CaseResume etiquette="En cours" valeur={comptes.enCours} precision={lectures} />
       <CaseResume etiquette="Remise sous 7 jours" valeur={resume.remise7.n} rien="Aucune" precision={resume.remise7.n > 0 ? listeDates(resume.remise7.dates) : undefined} />
-      <CaseResume etiquette="À mettre à jour" valeur={comptes.aMettreAJour} precision={comptes.aMettreAJour > 0 ? 'Remise passée : dites ce qu’ils sont devenus.' : undefined} />
+      <CaseResume etiquette="À mettre à jour" valeur={comptes.aMettreAJour} precision={comptes.aMettreAJour > 0 ? 'Remise passée : dites ce qu’ils sont devenus.' : undefined} />
       {/* les unités : la case n'apparaît qu'une fois le quota lu (jamais « Aucune » pendant la lecture) */}
       {unites && (
         <CaseResume etiquette="Unités du mois"

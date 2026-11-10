@@ -158,7 +158,7 @@ export default function ListeAvis(p: PropsListeAvis) {
         <div className={cn('mt-2', aDesAvis && 'lg:-mb-64')}>
           {p.zoneVide ? (
             <EtatVide className="mt-2" titre="Choisissez une zone sur la carte"
-              phrase="Touchez un département, ou saisissez un département, une ville ou un code postal : les avis ouverts de la zone s’affichent ici." />
+              phrase="Touchez un département, ou saisissez un département, une ville ou un code postal : les avis ouverts de la zone s’affichent ici." />
           ) : p.enErreur ? (
             <EtatErreur titre="Les avis ne se chargent pas pour le moment" detail="Votre zone et vos filtres sont conservés." onReessayer={p.onReessayer} />
           ) : p.enCours && p.avis.length === 0 ? (

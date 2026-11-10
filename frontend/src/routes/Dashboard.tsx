@@ -50,12 +50,12 @@ export function phraseDeSynorix(comptes: ComptesAO | null, profilRenseigne: bool
   if (comptes && comptes.aMettreAJour > 0) {
     return {
       phrase: comptes.aMettreAJour > 1
-        ? `${comptes.aMettreAJour} appels d’offres ont dépassé leur date de remise. Dites ce qu’ils sont devenus : ils rejoindront les terminés.`
-        : 'Un appel d’offres a dépassé sa date de remise. Dites ce qu’il est devenu : il rejoindra les terminés.',
+        ? `${comptes.aMettreAJour} appels d’offres ont dépassé leur date de remise. Dites ce qu’ils sont devenus : ils rejoindront les terminés.`
+        : 'Un appel d’offres a dépassé sa date de remise. Dites ce qu’il est devenu : il rejoindra les terminés.',
     }
   }
   if (profilRenseigne === false) {
-    return { phrase: 'Votre profil d’entreprise est à compléter : il nourrit chaque mémoire.', lien: { to: '/company', libelle: 'Compléter Mon entreprise' } }
+    return { phrase: 'Votre profil d’entreprise est à compléter : il nourrit chaque mémoire.', lien: { to: '/company', libelle: 'Compléter Mon entreprise' } }
   }
   return null
 }
@@ -66,9 +66,9 @@ export function phraseQuotaAtteint(q: Quota | undefined): string | null {
   const plein = (u: { used: number; limit: number | null }) => u.limit !== null && u.used >= u.limit
   const a = plein(q.analyses)
   const m = plein(q.memoires)
-  if (a && m) return `Les unités de ce mois sont toutes utilisées : ${q.analyses.used} analyses sur ${q.analyses.limit}, ${q.memoires.used} mémoires sur ${q.memoires.limit}.`
-  if (a) return `Les analyses de ce mois sont toutes utilisées : ${q.analyses.used} sur ${q.analyses.limit}.`
-  if (m) return `Les mémoires de ce mois sont tous utilisés : ${q.memoires.used} sur ${q.memoires.limit}.`
+  if (a && m) return `Les unités de ce mois sont toutes utilisées : ${q.analyses.used} analyses sur ${q.analyses.limit}, ${q.memoires.used} mémoires sur ${q.memoires.limit}.`
+  if (a) return `Les analyses de ce mois sont toutes utilisées : ${q.analyses.used} sur ${q.analyses.limit}.`
+  if (m) return `Les mémoires de ce mois sont tous utilisés : ${q.memoires.used} sur ${q.memoires.limit}.`
   return null
 }
 

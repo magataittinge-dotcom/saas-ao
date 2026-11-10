@@ -17,7 +17,7 @@ export function organisationAssezAncienne(creeeLe: string | null | undefined, ma
 /** La nouveauté en cours : une phrase, et l'endroit où la voir. */
 export const NOUVEAUTE = {
   id: 'source-surlignee-2026-10',
-  texte: 'Chaque exigence s’ouvre sur sa source : le passage du dossier de l’acheteur est surligné dans la pièce.',
+  texte: 'Chaque exigence s’ouvre sur sa source : le passage du dossier de l’acheteur est surligné dans la pièce.',
   lien: { to: '/projects', libelle: 'Ouvrir un appel d’offres' },
 } as const
 

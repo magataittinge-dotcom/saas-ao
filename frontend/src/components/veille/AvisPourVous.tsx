@@ -68,7 +68,7 @@ export default function AvisPourVous() {
     <div className="grid gap-4 md:grid-cols-3">{avis.map((a) => <CarteAvisVeille key={a.id} avis={a} libelles={libelles} />)}</div>
   ) : (
     <p className="rounded-carte border border-bord bg-surface-0 px-5 py-4 text-sm text-fg-2">
-      {charge ? 'Recherche des avis…' : zoneChoisie ? 'Aucun avis ouvert pour votre zone en ce moment.' : 'Choisissez votre zone sur la carte de l’accueil : les avis ouverts près de chez vous apparaîtront ici.'}
+      {charge ? 'Recherche des avis…' : zoneChoisie ? 'Aucun avis ouvert pour votre zone en ce moment.' : 'Choisissez votre zone sur la carte de l’accueil : les avis ouverts près de chez vous apparaîtront ici.'}
     </p>
   )
 }

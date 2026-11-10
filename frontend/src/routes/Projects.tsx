@@ -183,7 +183,7 @@ function ListeMesAO({ projets }: { projets: Project[] }) {
       {aMettreAJour.length > 0 && (
         <section aria-labelledby="titre-a-mettre-a-jour" className="mt-10 max-md:mt-7.5">
           <TitreSection id="titre-a-mettre-a-jour">À mettre à jour <span className="chiffres font-normal text-fg-3">{aMettreAJour.length}</span></TitreSection>
-          <p className="-mt-2 mb-4 max-w-[70ch] text-sm text-fg-2">La date de remise est passée. Dites si le dossier a été déposé : il rejoindra les terminés.</p>
+          <p className="-mt-2 mb-4 max-w-[70ch] text-sm text-fg-2">La date de remise est passée. Dites si le dossier a été déposé : il rejoindra les terminés.</p>
           <Tableau libelle="Appels d’offres à mettre à jour" colonnes={colonnesAMettreAJour(gestes)} lignes={aMettreAJour} cle={(p) => p.id} vide={null} />
         </section>
       )}
