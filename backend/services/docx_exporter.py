@@ -115,11 +115,16 @@ logger = logging.getLogger(__name__)
 
 
 # ─── Couleurs ──────────────────────────────────────────────────────────────────
-_BLUE_H1  = RGBColor(0x1E, 0x40, 0xAF)
-_BLUE_H2  = RGBColor(0x1D, 0x4E, 0xD8)
+# Mission finale DOCUMENTS : le mémoire est le document de l'entreprise, pas une publicité pour l'outil.
+# Encre neutre et imprimable (aucun bleu de logiciel) ; la hiérarchie tient aux tailles et aux graisses.
+_ENCRE    = RGBColor(0x11, 0x18, 0x27)   # titres 1 et titre de couverture
+_ENCRE_2  = RGBColor(0x1F, 0x29, 0x37)   # titres 2
 _GREY_TXT = RGBColor(0x1F, 0x2D, 0x3D)
-_GREY_META= RGBColor(0x6B, 0x72, 0x80)
-_GREY_PG  = RGBColor(0x9C, 0xA3, 0xAF)
+_GREY_META= RGBColor(0x4B, 0x55, 0x63)   # légendes, en-tête courant (contraste suffisant imprimé)
+_GREY_PG  = RGBColor(0x6B, 0x72, 0x80)   # pied de page, date de couverture
+_FOND_ENTETE_TABLEAU = "E5E7EB"          # fond clair, texte foncé : lisible en noir et blanc
+_FOND_LIGNE_PAIRE    = "F3F4F6"
+_TRAIT_ENTETE        = "4B5563"
 
 _PART_A: list[tuple[str, str]] = [
     ("implantation",          "1. Implantation géographique"),
@@ -245,7 +250,72 @@ def _add_footer_page_numbers(section):
     _champ(para, "NUMPAGES")
 
 
-def _setup_doc(org_name: str) -> Document:
+def titre_du_marche(objet: str | None, lot_name: str | None, project_name: str) -> str:
+    """Le titre que l'acheteur reconnaît : l'objet du marché lu dans le DCE, sans le lot qui le précède
+    (« Lot 05 — Façade — Restructuration de l'école » → « Restructuration de l'école »). Sans objet : le nom
+    de l'AO dans l'outil, faute de mieux."""
+    objet = " ".join((objet or "").split())
+    if not objet:
+        return project_name
+
+    def forme(t: str) -> str:
+        return re.sub(r"\s+", " ", re.sub(r"[—–-]", "-", t)).strip().casefold()
+
+    lot = " ".join((lot_name or "").split())
+    if lot and forme(objet).startswith(forme(lot)) and len(objet) > len(lot):
+        reste = objet[len(lot):].lstrip(" —–-:·")
+        if reste:
+            return reste
+    return objet
+
+
+def _poser_proprietes(doc: Document, titre: str, lot_name: str | None, org_name: str):
+    """Propriétés du fichier (Fichier > Propriétés, titre du PDF) : au nom de l'entreprise, en français.
+    Jamais « python-docx » ni la date du modèle (2013)."""
+    from datetime import datetime, timezone
+
+    cp = doc.core_properties
+    cp.title = " — ".join(x for x in ("Mémoire technique", titre, lot_name or "") if x)[:250]
+    cp.subject = (lot_name or "")[:250]
+    cp.author = org_name
+    cp.last_modified_by = org_name
+    cp.comments = ""
+    cp.keywords = ""
+    cp.category = "Mémoire technique"
+    cp.language = "fr-FR"
+    maintenant = datetime.now(timezone.utc).replace(microsecond=0)
+    cp.created = maintenant
+    cp.modified = maintenant
+    cp.revision = 1
+
+
+def _langue_par_defaut(doc: Document, langue: str = "fr-FR"):
+    """Langue des valeurs par défaut du document (le modèle python-docx dit en-US) : correcteur, césure et
+    `/Lang` du PDF en français."""
+    defauts = doc.styles.element.find(qn("w:docDefaults"))
+    rpr = defauts.find(f"{qn('w:rPrDefault')}/{qn('w:rPr')}") if defauts is not None else None
+    if rpr is None:
+        return
+    lang = rpr.find(qn("w:lang"))
+    if lang is None:
+        lang = OxmlElement("w:lang")
+        rpr.append(lang)
+    for attr in ("w:val", "w:eastAsia"):
+        lang.set(qn(attr), langue)
+    # Ni veuve ni orpheline (absent du modèle python-docx : sans cet élément, la règle n'est pas appliquée).
+    ppr = defauts.find(f"{qn('w:pPrDefault')}/{qn('w:pPr')}")
+    if ppr is None:
+        ppr_defaut = defauts.find(qn("w:pPrDefault"))
+        if ppr_defaut is None:
+            ppr_defaut = OxmlElement("w:pPrDefault")
+            defauts.append(ppr_defaut)
+        ppr = OxmlElement("w:pPr")
+        ppr_defaut.append(ppr)
+    if ppr.find(qn("w:widowControl")) is None:
+        ppr.insert(0, OxmlElement("w:widowControl"))   # premier enfant de pPr dans l'ordre du schéma
+
+
+def _setup_doc(org_name: str, titre_entete: str = "") -> Document:
     doc = Document()
     section = doc.sections[0]
     section.page_width, section.page_height = Cm(21.0), Cm(29.7)   # A4 (le modèle python-docx est en Letter)
@@ -258,16 +328,29 @@ def _setup_doc(org_name: str) -> Document:
     # Les en-têtes / pieds ci-dessous valent pour les pages suivantes.
     section.different_first_page_header_footer = True
 
-    # Header : nom entreprise à droite
+    # En-tête courant : le marché à gauche, l'entreprise à droite, un trait fin dessous. Raison sociale
+    # inconnue : le marché seul (la page de garde porte le passage « À compléter »).
     header = section.header
     header.is_linked_to_previous = False
     hp = header.paragraphs[0]
-    hp.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+    hp.alignment = WD_ALIGN_PARAGRAPH.LEFT
     _effacer_tabulations_du_style(hp)
-    if org_name:     # raison sociale inconnue : pas d'en-tête (la page de garde porte le passage « À compléter »)
-        hr = hp.add_run(org_name)
+    hp.paragraph_format.tab_stops.add_tab_stop(Cm(_LARGEUR_UTILE_CM), WD_TAB_ALIGNMENT.RIGHT)
+    ppr = hp._p.get_or_add_pPr()
+    bordure = OxmlElement("w:pBdr")
+    bas = OxmlElement("w:bottom")
+    for cle, val in (("w:val", "single"), ("w:sz", "4"), ("w:space", "4"), ("w:color", "D1D5DB")):
+        bas.set(qn(cle), val)
+    bordure.append(bas)
+    ppr.append(bordure)
+    titre_court = titre_entete if len(titre_entete) <= 70 else titre_entete[:69].rstrip() + "…"
+    morceaux = [titre_court] + ([f"\t{org_name}"] if org_name else [])
+    for texte in morceaux:
+        if not texte:
+            continue
+        hr = hp.add_run(texte)
         hr.font.name = "Calibri"
-        hr.font.size = Pt(9)
+        hr.font.size = Pt(8.5)
         hr.font.color.rgb = _GREY_META
 
     _add_footer_page_numbers(section)
@@ -306,10 +389,11 @@ def _styles(doc: Document):
     langue = OxmlElement("w:lang")
     langue.set(qn("w:val"), "fr-FR")
     normal.element.get_or_add_rPr().append(langue)
+    _langue_par_defaut(doc)
 
     for nom, taille, couleur, avant, apres in (
-        ("Heading 1", 16, _BLUE_H1, 20, 8),
-        ("Heading 2", 13, _BLUE_H2, 12, 4),
+        ("Heading 1", 16, _ENCRE, 20, 8),
+        ("Heading 2", 13, _ENCRE_2, 12, 4),
         ("Heading 3", 11.5, _GREY_TXT, 10, 3),
         ("Heading 4", 11, _GREY_META, 8, 2),
         ("Heading 5", 11, _GREY_META, 6, 2),
@@ -358,31 +442,43 @@ def _cover_page(
     """C8b — page de garde sobre : logo (si présent), marché, lot, MOA,
     date, coordonnées entreprise. Sans logo → texte propre, jamais de
     placeholder d'image cassé."""
-    for _ in range(2):
-        doc.add_paragraph()
-
+    # Mission finale DOCUMENTS : la page entière est composée (bloc du marché au premier tiers, bloc de
+    # l'entreprise en bas), le titre est l'objet du marché en casse normale (`project_name` a déjà été
+    # résolu par `titre_du_marche`), en encre neutre.
+    logo_pose = False
     if logo_image:
         try:
             p_logo = doc.add_paragraph()
             p_logo.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            p_logo.paragraph_format.space_before = Pt(36)
             p_logo.add_run().add_picture(io.BytesIO(logo_image), width=Cm(4.5))
-            p_logo.paragraph_format.space_after = Pt(18)
+            p_logo.paragraph_format.space_after = Pt(30)
+            logo_pose = True
         except Exception:
             # Logo illisible → page de garde texte propre, pas d'image cassée.
             pass
 
-    _centered_line(doc, "MÉMOIRE TECHNIQUE", size=13, color=_GREY_META, space_after=14)
-    _centered_line(doc, project_name.upper(), size=24, color=_BLUE_H1, bold=True, space_after=10)
+    surtitre = _centered_line(doc, "Mémoire technique", size=12, color=_GREY_META, space_after=16)
+    surtitre.paragraph_format.space_before = Pt(0 if logo_pose else 150)
+    titre = _centered_line(doc, project_name, size=22 if len(project_name) <= 60 else 19,
+                           color=_ENCRE, bold=True, space_after=12)
+    titre.paragraph_format.keep_with_next = True
     if lot_name:
-        _centered_line(doc, lot_name, size=14, color=RGBColor(0x03, 0x69, 0xA1), space_after=8)
+        _centered_line(doc, lot_name, size=14, color=_ENCRE_2, space_after=8)
+    trait = doc.add_paragraph()
+    trait.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    trait.paragraph_format.space_after = Pt(10)
+    r_trait = trait.add_run("—")
+    r_trait.font.size = Pt(12)
+    r_trait.font.color.rgb = _GREY_PG
     if maitre_ouvrage:
-        _centered_line(
-            doc, f"Maître d'ouvrage : {maitre_ouvrage}", size=11,
-            color=RGBColor(0x47, 0x55, 0x69), space_after=16,
-        )
+        _centered_line(doc, f"Maître d'ouvrage : {maitre_ouvrage}", size=11, color=_GREY_META, space_after=0)
 
+    presente = _centered_line(doc, "Présenté par", size=10, color=_GREY_PG, space_after=4)
+    presente.paragraph_format.space_before = Pt(120 if logo_pose else 170)
+    presente.paragraph_format.keep_with_next = True
     if org_name:
-        _centered_line(doc, org_name, size=13, color=RGBColor(0x37, 0x41, 0x51))
+        _centered_line(doc, org_name, size=14, color=_ENCRE, bold=True, space_after=4)
     else:
         # Raison sociale inconnue (SIRET non validé) : un passage « À compléter » surligné et compté, comme
         # ceux du corps (jamais le nom du compte, jamais un blanc silencieux).
@@ -397,7 +493,8 @@ def _cover_page(
     if org_siret:
         _centered_line(doc, f"SIRET {org_siret}", size=10, color=_GREY_PG, space_after=2)
 
-    _centered_line(doc, _date_fr(_aujourdhui()), size=11, color=_GREY_PG)
+    date_couv = _centered_line(doc, _date_fr(_aujourdhui()), size=10, color=_GREY_PG)
+    date_couv.paragraph_format.space_before = Pt(10)
 
     # Pas de saut de page ici : le sommaire (ou, à défaut, le premier titre)
     # démarre sa page par `page_break_before`, sans paragraphe vide en tête.
@@ -416,6 +513,8 @@ def _h2(doc: Document, text: str):
 
 _LARGEUR_UTILE_CM = 17.0   # A4 21 cm - 2 × 2 cm de marge
 _TEXTE_TABLEAU_PT = 9.5
+_CM_PAR_SIGNE = 0.21          # Calibri/Carlito 9,5 pt, gras compris (« À compléter » est en gras en en-tête)
+_MARGES_CELLULE_CM = 0.35     # 2 × 90 twips de marge de cellule + bordures
 
 
 def _ajouter_segments(p, segments: list[md.Segment], *, taille: float | None = None,
@@ -502,13 +601,31 @@ def _largeurs_colonnes(tableau: md.Tableau) -> list[float]:
     écrasée, ni colonne qui mange la page."""
     n = len(tableau.entetes)
     poids = []
+    minimums = []
     for j in range(n):
         textes = [tableau.entetes[j]] + [ligne[j] for ligne in tableau.lignes]
+        imprimes = ["".join(_texte_imprime(s.texte) for s in segs) for segs in textes]
         # M2 (2/11) : la longueur est celle du texte IMPRIMÉ (un passage s'imprime « À compléter : X », pas « X »)
-        longueur = max((sum(len(_texte_imprime(s.texte)) for s in segs) for segs in textes), default=1)
+        longueur = max((len(t) for t in imprimes), default=1)
         poids.append(min(max(longueur, 6), 38))
+        # Mission finale : jamais un mot coupé en deux (« À complé/ter », « Directio/n ») — la colonne est
+        # au moins aussi large que son mot le plus long (borné : une adresse ou une référence très longue
+        # peut, elle, passer à la ligne).
+        mot = max((len(m) for t in imprimes for m in t.split()), default=1)
+        minimums.append(min(mot, 16) * _CM_PAR_SIGNE + _MARGES_CELLULE_CM)
     total = sum(poids)
-    return [_LARGEUR_UTILE_CM * w / total for w in poids]
+    largeurs = [_LARGEUR_UTILE_CM * w / total for w in poids]
+    if sum(minimums) >= _LARGEUR_UTILE_CM:
+        return [_LARGEUR_UTILE_CM * m / sum(minimums) for m in minimums]
+    for _ in range(n):                    # relever les colonnes sous leur minimum, pris sur les autres
+        manque = sum(max(m - w, 0) for w, m in zip(largeurs, minimums))
+        if manque < 1e-6:
+            break
+        largeurs = [max(w, m) for w, m in zip(largeurs, minimums)]
+        marge = [w - m for w, m in zip(largeurs, minimums)]
+        dispo = sum(marge)
+        largeurs = [w - manque * (mg / dispo) if dispo else w for w, mg in zip(largeurs, marge)]
+    return largeurs
 
 
 def _ombrer(cellule, couleur_hex: str):
@@ -517,6 +634,21 @@ def _ombrer(cellule, couleur_hex: str):
     shd.set(qn("w:color"), "auto")
     shd.set(qn("w:fill"), couleur_hex)
     cellule._tc.get_or_add_tcPr().append(shd)
+
+
+def _trait_bas(cellule, couleur_hex: str, epaisseur: int = 8):
+    """Trait sous la cellule d'en-tête (en huitièmes de point) : sépare l'en-tête sans aplat foncé."""
+    tc_pr = cellule._tc.get_or_add_tcPr()
+    bords = OxmlElement("w:tcBorders")
+    bas = OxmlElement("w:bottom")
+    for cle, val in (("w:val", "single"), ("w:sz", str(epaisseur)), ("w:space", "0"), ("w:color", couleur_hex)):
+        bas.set(qn(cle), val)
+    bords.append(bas)
+    shd = tc_pr.find(qn("w:shd"))
+    if shd is not None:
+        shd.addprevious(bords)       # ordre du schéma : tcBorders avant shd
+    else:
+        tc_pr.append(bords)
 
 
 def _rendre_tableau(doc: Document, tableau: md.Tableau):
@@ -555,13 +687,14 @@ def _rendre_tableau(doc: Document, tableau: md.Tableau):
         p.paragraph_format.space_after = Pt(0)
         _ajouter_segments(
             p, segments, taille=_TEXTE_TABLEAU_PT, gras=entete,
-            couleur=RGBColor(0xFF, 0xFF, 0xFF) if entete else None,
+            couleur=_ENCRE if entete else None,
         )
 
     for j, segs in enumerate(tableau.entetes):
         cellule = t.rows[0].cells[j]
         remplir(cellule, segs, largeurs[j], entete=True)
-        _ombrer(cellule, "1E40AF")
+        _ombrer(cellule, _FOND_ENTETE_TABLEAU)
+        _trait_bas(cellule, _TRAIT_ENTETE)
     ligne0 = t.rows[0]._tr.get_or_add_trPr()
     ligne0.append(OxmlElement("w:cantSplit"))
     ligne0.append(OxmlElement("w:tblHeader"))
@@ -571,7 +704,7 @@ def _rendre_tableau(doc: Document, tableau: md.Tableau):
         for j, segs in enumerate(ligne):
             remplir(row.cells[j], segs, largeurs[j])
             if k % 2 == 1:
-                _ombrer(row.cells[j], "F3F4F6")
+                _ombrer(row.cells[j], _FOND_LIGNE_PAIRE)
     # respiration après le tableau
     espace = doc.add_paragraph()
     espace.paragraph_format.space_after = Pt(2)
@@ -716,11 +849,16 @@ def build_memoire_docx(
     maitre_ouvrage: str | None = None,
     org_address: str | None = None,
     org_siret: str | None = None,
+    objet_marche: str | None = None,
 ) -> bytes:
-    """Retourne les bytes du .docx prêt à être streamé en réponse HTTP."""
-    doc = _setup_doc(org_name)
+    """Retourne les bytes du .docx prêt à être streamé en réponse HTTP.
+    `objet_marche` : l'objet lu dans le DCE ; il titre la page de garde, l'en-tête et les propriétés
+    (sinon `project_name`, le nom de l'AO dans l'outil)."""
+    titre = titre_du_marche(objet_marche, lot_name, project_name)
+    doc = _setup_doc(org_name, titre)
+    _poser_proprietes(doc, titre, lot_name, org_name)
     _cover_page(
-        doc, project_name, org_name,
+        doc, titre, org_name,
         logo_image=logo_image, lot_name=lot_name, maitre_ouvrage=maitre_ouvrage,
         org_address=org_address, org_siret=org_siret,
     )
