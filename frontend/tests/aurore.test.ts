@@ -59,6 +59,8 @@ test('logo : l\'arc d\'aurore en SVG en ligne (aucune image), à la place du « 
   const logo = sansCommentaires(lire('src/components/layout/Logo.tsx'))
   assert.match(logo, /<svg viewBox="0 0 34 34"/)
   assert.match(logo, /var\(--aurore-mark\)/)
+  assert.match(logo, /var\(--accent-ui\)/)
+  assert.equal(logo.match(/var\(--flamme\)/g)?.length, 1, 'une seule braise')
   assert.doesNotMatch(logo, /<img|\.png|#[0-9a-f]{6}/i)
   const rail = sansCommentaires(lire('src/components/layout/Sidebar.tsx'))
   assert.match(rail, /<Logo /)

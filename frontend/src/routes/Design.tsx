@@ -74,6 +74,7 @@ const PALETTES: [string, string[]][] = [
   ['Erreur bloquante', ['--danger-bg', '--danger-border', '--danger-fg', '--danger-solid']],
   ['Surlignage de la preuve', ['--highlight', '--highlight-soft']],
   ['Aurore (marque, jamais un état)', ['--aurore-ink', '--aurore-mark', '--aurore-glow', '--aurore-a', '--aurore-b', '--aurore-c']],
+  ['Flamme (signature rare) et filet de lumière', ['--flamme', '--flamme-glow', '--filet-lumiere', '--accent-vif']],
 ]
 
 const PAIRES: [string, string, string][] = [
@@ -163,7 +164,7 @@ export default function Design() {
         </nav>
       </header>
 
-      <Section id="couleurs" titre="Couleurs" note="Aurore polaire : blanc glacé le jour, bleu-noir la nuit ; une seule couleur d’action (accent bleu, inchangé) ; l’accent d’aurore signe la marque et n’est jamais un état. Le texte d’accent est accent-700 en clair et accent-300 en nuit.">
+      <Section id="couleurs" titre="Couleurs" note="Toutes les teintes de la marque sont mesurées sur le visage : neutres et nuit à la teinte de ses ombres (237°), une seule couleur d’action à la teinte de son verre (252°), la flamme (72°) en signature rare ; l’accent d’aurore signe la marque et n’est jamais un état. Le texte d’accent est accent-700 en clair et accent-300 en nuit.">
         <Cote>
           <div className="space-y-5">
             {PALETTES.map(([nom, jetons]) => (

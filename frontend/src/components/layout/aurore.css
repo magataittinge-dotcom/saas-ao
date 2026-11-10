@@ -1,4 +1,5 @@
-/* Fond d'aurores (components/layout/Aurore.tsx). Jetons --aurore-* dans styles/theme.css (clair et nuit).
+/* Fond d'aurores (components/layout/Aurore.tsx). Jetons --aurore-* dans styles/theme.css (clair et nuit) : trois teintes
+   mesurées sur le visage, toutes dans sa famille bleue (a : glace 237°, b : givre 245°, c : azur 252°). Ni vert ni turquoise.
    transform seul : 3 calques composités, aucun repaint par image. Aucun filter: blur (les ellipses sont
    pré-adoucies par leur propre dégradé). */
 .aurore {

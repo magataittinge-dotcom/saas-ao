@@ -39,12 +39,13 @@
   letter-spacing: -0.01em;
   text-wrap: balance;
 }
-/* ── Fil d'aurore : le trait de lumière de la marque sous le titre de l'Accueil (120 × 3 px, jamais un état). ── */
+/* ── Fil d'aurore : le trait de lumière de la marque sous le titre de l'Accueil (120 × 3 px, jamais un état).
+   De la glace (teinte des ombres du visage) à l'azur de l'action : deux teintes mesurées, aucune couleur d'état. ── */
 .fil-aurore {
   width: 120px;
   height: 3px;
   border-radius: 9999px;
-  background: linear-gradient(90deg, var(--aurore-mark), var(--turquoise-mark) 55%, transparent);
+  background: linear-gradient(90deg, var(--aurore-mark), var(--accent-ui) 55%, transparent);
 }
 
 /* ── Boutons ─────────────────────────────────────────────────────
