@@ -1,12 +1,13 @@
-// Phase C — Coffre-fort : l'écran suit le thème, les catégories et les textes ne changent pas, la zone de dépôt et
-// le bloc « À ranger » lisent les jetons ; la fenêtre de classement est le Dialog du socle (focus piégé,
-// Échap, étiquettes associées).
+// Coffre-fort (mission finale, lot c) : la page du système, un seul geste (« Déposer des documents »), plus de zone en
+// pointillés au repos, plus de rubriques « (0) Aucun document » : les rubriques sans pièce rejoignent une seule surface
+// « À déposer ». L'état vide dit ce que le coffre-fort fera (A10). Une panne du serveur n'est jamais « vous n'avez rien ».
+// La fenêtre de classement est le Dialogue du système, avec ses listes et ses dates.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import Vault from '@/routes/Vault'
+import Vault, { piecesDansLOrdre } from '@/routes/Vault'
 import type { Document } from '@/types'
 import { lire, sansCommentaires } from './outils/sources'
 
@@ -15,29 +16,65 @@ const doc = (id: string, over: Partial<Document>): Document => ({
   file_name: `piece-${id}.pdf`, status: 'valid', uploaded_at: '2026-10-10T09:00:00', ...over,
 })
 
-function rendre(documents: Document[], url = '/vault') {
-  const client = new QueryClient()
-  client.setQueryData(['documents'], documents)
+function rendre(documents: Document[] | 'panne', url = '/vault') {
+  // retryOnMount: false : au rendu serveur, une requête en échec reste en échec (elle n'est pas montrée « en chargement »)
+  const client = new QueryClient({ defaultOptions: { queries: { retryOnMount: false } } })
+  if (documents === 'panne') {
+    client.getQueryCache().build(client, { queryKey: ['documents'] })
+      .setState({ status: 'error', error: new Error('500'), fetchStatus: 'idle', data: undefined })
+  } else client.setQueryData(['documents'], documents)
   return renderToStaticMarkup(
     <QueryClientProvider client={client}><MemoryRouter initialEntries={[url]}><Vault /></MemoryRouter></QueryClientProvider>)
 }
 
-test('le coffre-fort rend son titre, la zone de dépôt du socle et le bloc « À ranger » en jetons', () => {
+const nb = (html: string, motif: RegExp) => (html.match(motif) ?? []).length
+
+test('le coffre-fort rend un seul h1, un seul bouton principal et aucune zone en pointillés au repos', () => {
   const html = rendre([doc('a', {}), doc('b', { category: 'unclassified', status: 'unclassified', type: 'autre' })])
-  assert.ok(/<h1[^>]*>Coffre-fort documentaire<\/h1>/.test(html), 'un seul h1')
-  assert.ok(html.includes('2 documents stockés'))
-  assert.ok(html.includes('Glissez vos documents ici ou cliquez pour parcourir'))
-  assert.ok(html.includes('PDF, Word, Excel, JPEG, PNG — 50 Mo max'))
-  const zone = html.match(/<div[^>]*border-dashed[^>]*>/)?.[0] ?? ''
-  assert.ok(zone.includes('border-input'), 'bord de zone à 3:1 (jeton de champ)')
-  assert.ok(html.includes('À ranger (1) — rangez-les pour les utiliser dans vos candidatures'))
-  assert.ok(/<div[^>]*border-warning-border[^>]*bg-warning-bg[^>]*>/.test(html), 'bloc « À ranger » en jetons warning')
+  assert.equal(nb(html, /<h1\b/g), 1)
+  assert.ok(/<h1[^>]*>Coffre-fort<\/h1>/.test(html), 'le nom de la barre, pas « Coffre-fort documentaire »')
+  assert.equal(nb(html, /Déposer des documents/g), 1, 'un seul geste')
+  assert.ok(!html.includes('border-dashed'), 'la zone de dépôt n’apparaît qu’au survol d’un fichier')
+  assert.ok(html.includes('data-page='), 'la page du système')
 })
 
-test('coffre-fort vide : le message positif (ce que fait le coffre-fort) est conservé', () => {
+test('P20 : plus de rubrique « (0) Aucun document » ; les rubriques sans pièce sont des rangées « À déposer », sans compteur', () => {
+  const html = rendre([doc('a', {}), doc('b', { category: 'unclassified', status: 'unclassified', type: 'autre' })])
+  assert.ok(!html.includes('Aucun document'))
+  assert.ok(!/\(\d+\)/.test(html), 'aucun compteur entre parenthèses')
+  assert.ok(html.includes('>À déposer</h2>'))
+  for (const rubrique of ['Documents légaux', 'Assurances', 'Qualifications', 'Références &amp; moyens', 'Autres']) {
+    assert.ok(html.includes(rubrique), rubrique)
+  }
+  assert.ok(html.indexOf('>À ranger</h2>') < html.indexOf('Attestations sociales'), 'ce qui reste à ranger passe en premier')
+  assert.equal(nb(html, /data-surface=""/g), 1, 'une seule surface pour les rubriques à déposer')
+})
+
+test('A10 : coffre-fort vide = ce qu’il fera, et un seul bouton', () => {
   const html = rendre([])
-  assert.ok(html.includes('Vos pièces administratives, rangées une fois pour toutes'))
-  assert.ok(html.includes('Aucune pièce stockée pour le moment'))
+  assert.ok(html.includes('Vos attestations (URSSAF, assurance, Kbis) vivent ici.'))
+  assert.ok(html.includes('Synorix les joint à chaque dossier et vous prévient avant la fin de leur validité.'))
+  assert.equal(nb(html, /Déposer des documents/g), 1)
+  assert.ok(!html.includes('À déposer</h2>'), 'pas de liste de trous sous l’état vide')
+  assert.ok(!html.includes('Aucune pièce'))
+})
+
+test('une panne du serveur n’est pas un coffre-fort vide : l’erreur, « Réessayer », et pas le texte de l’état vide', () => {
+  const html = rendre('panne')
+  assert.ok(html.includes('data-etat-erreur'))
+  assert.ok(html.includes('Le coffre-fort n’a pas pu s’ouvrir'))
+  assert.ok(html.includes('Réessayer'))
+  assert.ok(!html.includes('vivent ici'), 'le texte de l’état vide n’apparaît pas')
+  assert.ok(!html.includes('Aucune pièce stockée'))
+})
+
+test('500 pièces : des pages de 50, ce qui reste à ranger en tête', () => {
+  const pieces = Array.from({ length: 500 }, (_, i) => doc(`p${i}`, i % 10 === 0 ? { category: 'unclassified', status: 'unclassified', type: 'autre' } : {}))
+  assert.equal(piecesDansLOrdre(pieces)[0].category, 'unclassified')
+  const html = rendre(pieces)
+  assert.equal(nb(html, /piece-p\d+\.pdf<\/p>/g), 50)
+  assert.ok(html.includes('1–50 sur 500'))
+  assert.ok(html.includes('Page suivante'))
 })
 
 test('le retour à la vérification suit le contexte AO (returnTo)', () => {
@@ -45,20 +82,19 @@ test('le retour à la vérification suit le contexte AO (returnTo)', () => {
   assert.ok(!rendre([]).includes('Retour à la vérification'))
 })
 
-test('la fenêtre de classement est le Dialog du socle, avec des étiquettes associées aux champs', () => {
+test('la fenêtre de classement est le Dialogue du système : listes et dates du système, aucun contrôle natif', () => {
   const code = sansCommentaires(lire('src/components/vault/ClassifyDocumentModal.tsx'))
-  assert.match(code, /from '@\/components\/ui\/dialog'/)
-  assert.doesNotMatch(code, /createPortal/)
-  for (const id of ['classer-categorie', 'classer-type', 'classer-emission', 'classer-validite']) {
-    assert.ok(code.includes(`htmlFor="${id}"`) && code.includes(`id="${id}"`), id)
-  }
+  assert.match(code, /from '@\/components\/ui\/dialogue'/)
+  assert.doesNotMatch(code, /createPortal|<select\b|type="date"/)
+  assert.match(code, /<ListeDeroulante/)
+  assert.match(code, /<ChampDate/)
+  assert.doesNotMatch(code, /⚠/, 'pas d’émoji dans une phrase')
 })
 
 test('les lignes de pièce passent à la ligne et leurs boutons font 44 px sur écran tactile', () => {
   const code = sansCommentaires(lire('src/routes/Vault.tsx'))
   assert.match(code, /LISTE_PIECES = '[^']*\[@media\(pointer:coarse\)\]:\[&_button\]:min-h-11/)
   assert.match(code, /LISTE_PIECES = '[^']*\[&>div\]:flex-wrap/)
-  assert.equal((code.match(/className=\{LISTE_PIECES\}/g) ?? []).length, 2, 'les deux listes (À ranger, catégories)')
 })
 
 test('/vault suit le thème clair / nuit', () => {
@@ -66,7 +102,6 @@ test('/vault suit le thème clair / nuit', () => {
 })
 
 test('R30 : la limite affichée est celle du serveur, et le coffre-fort n’annonce que ce qu’il accepte (PDF, Word, Excel, JPEG, PNG)', async () => {
-  const { lire, sansCommentaires } = await import('./outils/sources')
   const serveur = lire('../backend/services/upload_validation.py').match(/VAULT_MAX_UPLOAD_SIZE\s*=\s*(\d+)\s*\*\s*1024\s*\*\s*1024/)
   assert.ok(serveur, 'limite du serveur lisible')
   const formats = sansCommentaires(lire('src/lib/coffreFormats.ts'))
