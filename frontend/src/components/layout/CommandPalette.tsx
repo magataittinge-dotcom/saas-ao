@@ -6,8 +6,7 @@ import {
   CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator,
 } from '@/components/ui/command'
 import { useProjects } from '@/hooks/useProject'
-import { estEnCours } from '@/lib/echeance'
-import { lienEtape, verbeEtape } from '@/lib/intelligence/action'
+import { aoDansEtat, lectureAO, lienAO } from '@/lib/etatAO'
 import { acheteurCourt } from '@/lib/mesAO'
 import { ACCES_PALETTE } from './navigation'
 
@@ -45,8 +44,10 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
     navigate(to)
   }
 
-  const enCours = projects.filter((p) => estEnCours(p.status))
-  const autres = projects.filter((p) => !estEnCours(p.status))
+  // les mêmes états que l'Accueil et Mes AO (lib/etatAO.ts) : une remise passée n'est plus « en cours »
+  const enCours = aoDansEtat(projects, 'en_cours')
+  const aMettreAJour = aoDansEtat(projects, 'a_mettre_a_jour')
+  const autres = aoDansEtat(projects, 'termine')
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
@@ -56,22 +57,33 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
         {enCours.length > 0 && (
           <CommandGroup heading="En cours">
             {enCours.map((p) => (
-              <CommandItem key={p.id} value={`${p.name} ${p.maitre_ouvrage ?? ''} ${p.id}`} onSelect={() => aller(lienEtape(p))}>
+              <CommandItem key={p.id} value={`${p.name} ${p.maitre_ouvrage ?? ''} ${p.id}`} onSelect={() => aller(lienAO(p))}>
                 <FileText strokeWidth={1.8} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold">{p.name}</span>
                   {p.maitre_ouvrage && <span className="block truncate text-sm text-fg-3 max-sm:hidden">{acheteurCourt(p.maitre_ouvrage)}</span>}
-                  <span className="block truncate text-sm font-semibold text-accent-text sm:hidden">{verbeEtape(p)}</span>
+                  <span className="block truncate text-sm font-semibold text-accent-text sm:hidden">{lectureAO(p).action.verbe}</span>
                 </span>
                 <span className="ml-3 flex max-w-[45%] shrink-0 items-center gap-1.5 text-sm font-semibold text-accent-text max-sm:hidden">
-                  <span className="truncate">{verbeEtape(p)}</span><ArrowRight strokeWidth={1.8} className="!text-accent-text" />
+                  <span className="truncate">{lectureAO(p).action.verbe}</span><ArrowRight strokeWidth={1.8} className="!text-accent-text" />
                 </span>
               </CommandItem>
             ))}
           </CommandGroup>
         )}
+        {aMettreAJour.length > 0 && (
+          <CommandGroup heading="À mettre à jour">
+            {aMettreAJour.map((p) => (
+              <CommandItem key={p.id} value={`${p.name} ${p.maitre_ouvrage ?? ''} ${p.id}`} onSelect={() => aller(lienAO(p))}>
+                <FileText strokeWidth={1.8} />
+                <span className="min-w-0 flex-1 truncate font-semibold">{p.name}</span>
+                <span className="ml-3 max-w-[45%] shrink-0 truncate text-sm font-medium text-fg-2">{lectureAO(p).action.verbe}</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        )}
         {autres.length > 0 && (
-          <CommandGroup heading="Autres appels d'offres">
+          <CommandGroup heading="Terminés">
             {autres.map((p) => (
               <CommandItem key={p.id} value={`${p.name} ${p.maitre_ouvrage ?? ''} ${p.id}`} onSelect={() => aller(`/projects/${p.id}`)}>
                 <FileText strokeWidth={1.8} />

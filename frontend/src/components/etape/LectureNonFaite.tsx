@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
-import { Sparkles } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Bouton } from '@/components/ui/bouton'
+import { Carte } from '@/components/ui/carte'
 import { actionEtape } from '@/lib/intelligence/action'
 import type { Project } from '@/types'
 import { BandeResume, type CarteResume } from './BandeResume'
@@ -27,18 +27,13 @@ export default function LectureNonFaite({ project, titre, utilite, action, libel
     <GabaritEtape
       titre={titre}
       utilite={utilite}
-      actionPrincipale={<Button type="button" variant="signature" disabled><Sparkles size={16} aria-hidden /> {action}</Button>}
+      actionPrincipale={<Bouton variante="secondaire" disabled>{action}</Bouton>}
       resume={<BandeResume libelle="Résumé de l'étape" cartes={cartes} />}
     >
-      <div className="rounded-carte border border-bord-2 bg-surface-1 p-5 text-sm text-fg-2" data-lecture-non-faite="">
+      <Carte className="text-sm text-fg-2" data-lecture-non-faite="">
         <p>Le dossier n’a pas encore été lu. Cet écran se remplit une fois la lecture faite : il reprend alors ce que dit le règlement.</p>
-        <Link
-          to={`/projects/${project.id}/${suite.segment}`}
-          className="mt-3 inline-flex min-h-10 items-center font-medium text-accent-text hover:underline [@media(pointer:coarse)]:min-h-11"
-        >
-          {suite.verbe}
-        </Link>
-      </div>
+        <Bouton asChild variante="principal" className="mt-4"><Link to={`/projects/${project.id}/${suite.segment}`}>{suite.verbe}</Link></Bouton>
+      </Carte>
     </GabaritEtape>
   )
 }

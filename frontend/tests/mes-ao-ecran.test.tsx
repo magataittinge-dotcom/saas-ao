@@ -32,7 +32,7 @@ function rendre(projets: Project[]) {
 
 test('chaque ligne porte le verbe de sa prochaine action ; jamais « Continuer »', () => {
   const html = rendre(LISTE)
-  for (const verbe of ['Exporter le dossier', 'Préparer le plan du mémoire', 'Choisir le lot']) assert.ok(html.includes(verbe), verbe)
+  for (const verbe of ['Télécharger le dossier', 'Préparer le plan du mémoire', 'Choisir le lot']) assert.ok(html.includes(verbe), verbe)
   assert.ok(!html.includes('Continuer'))
   assert.equal((html.match(/data-ligne-ao="/g) ?? []).length, 4, 'une ligne par AO en cours')
 })

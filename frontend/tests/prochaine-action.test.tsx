@@ -20,12 +20,12 @@ test('chaque état de l’AO a son verbe et son écran, jusqu’à l’étape 5 
     [{ current_step: 3 }, 'Lire ce dossier', 'analysis'],
     [{ current_step: 3, processing_status: 'processing' }, 'Analyse en cours', 'analysis'],
     [{ current_step: 3, status: 'analyzed' }, 'Décider : on y va ?', 'analysis'],
-    [{ current_step: 4, status: 'analyzed', completed_steps: { 3: true } }, 'Vérifier le dossier', 'verification'],
+    [{ current_step: 4, status: 'analyzed', completed_steps: { 3: true } }, 'Réunir les pièces', 'verification'],
     // étape 5 : le plan d'abord, la rédaction ensuite
     [{ current_step: 5, status: 'analyzed', completed_steps: { 3: true, 4: true } }, 'Préparer le plan du mémoire', 'plan'],
     [{ current_step: 5, processing_status: 'generating' }, 'Rédaction du mémoire en cours', 'memoire'],
     [{ current_step: 5, completed_steps: { 3: true, 4: true, 5: true } }, 'Relire le mémoire', 'memoire'],
-    [{ current_step: 6, completed_steps: { 5: true } }, 'Exporter le dossier', 'export'],
+    [{ current_step: 6, completed_steps: { 5: true } }, 'Télécharger le dossier', 'export'],
   ]
   for (const [over, verbe, segment] of cas) {
     const p = projet(over)

@@ -60,7 +60,7 @@ test('Pièces : l’état de chaque pièce est dit par un mot positif, « Non co
   assert.equal((html.match(/aria-label="Autres actions pour cette pièce"/g) ?? []).length, 1, 'le menu « … » n’est que sur la pièce concernée')
   assert.equal((html.match(/>Non concerné</g) ?? []).length, 1, 'seul le statut de la pièce écartée, jamais un bouton répété sur chaque ligne')
   assert.equal((html.match(/Je suis concerné/g) ?? []).length, 1)
-  assert.match(html, /<h3(?![^>]*uppercase)[^>]*>Pièces administratives<\/h3>/)
+  assert.match(html, /<h2(?![^>]*uppercase)[^>]*>Pièces administratives<\/h2>/)
   assert.match(html, /md:grid-cols-2/)
 })
 

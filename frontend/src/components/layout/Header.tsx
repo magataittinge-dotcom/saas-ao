@@ -58,7 +58,7 @@ interface Props {
 export default function Header({ onSearch, titreSorti = false }: Props) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const aplatsEcran = useUIStore((s) => s.aplatsEcran)
+  const aplatsEcran = useUIStore((s) => s.aplatsEcran + s.aplatsSuite)
 
   const idAO = pathname.match(/^\/projects\/(?!new(?:\/|$))([^/]+)/)?.[1]
   const { data: ao } = useProject(idAO ?? '')
@@ -79,7 +79,7 @@ export default function Header({ onSearch, titreSorti = false }: Props) {
           {parent && (
             <>
               <Link to={parentTo} className={LIEN_PARENT}>{parent}</Link>
-              <span aria-hidden className="shrink-0 text-fg-3">/</span>
+              {(!idAO || label) && <span aria-hidden className="shrink-0 text-fg-3">/</span>}
             </>
           )}
           {idAO

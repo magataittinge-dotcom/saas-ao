@@ -93,7 +93,7 @@ test('les routes /projects/:id/… suivent le thème, comme la liste, Nouvel AO,
 
 test('le fil d\'étapes tient à 390 px : ronds de 44 px, seul le nom de l\'étape active est montré au téléphone', () => {
   const code = sansCommentaires(lire('src/components/project/StepProgress.tsx'))
-  assert.match(code, /max-sm:w-11 max-sm:h-11/)
+  assert.match(code, /min-h-11 min-w-11/)
   assert.match(code, /isActive \? 'block' : 'hidden sm:block'/)
   assert.match(code, /aria-current=\{isActive \? 'step' : undefined\}/)
   // le bandeau collant ne déborde pas de la page (marges négatives = padding de <main>)

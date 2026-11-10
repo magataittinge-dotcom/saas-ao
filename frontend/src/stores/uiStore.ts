@@ -10,7 +10,9 @@ interface UIState {
   /** Nombre d'actions principales (aplats d'accent) montées par l'écran : dès qu'il y en a une, « Nouvel appel d'offres »
    *  de la barre passe au trait (P1 : un seul aplat par écran). Tenu par <Bouton variante="principal">, jamais enregistré. */
   aplatsEcran: number
-  declarerAplat: (delta: 1 | -1) => void
+  /** Le bouton de suite de la barre du bas d'une étape, quand il est l'aplat de l'écran (compté à part : il cède sa place). */
+  aplatsSuite: number
+  declarerAplat: (delta: 1 | -1, suite?: boolean) => void
 }
 
 export const useUIStore = create<UIState>()(
@@ -21,7 +23,10 @@ export const useUIStore = create<UIState>()(
       animerFond: true,
       setAnimerFond: (animerFond) => set({ animerFond }),
       aplatsEcran: 0,
-      declarerAplat: (delta) => set((s) => ({ aplatsEcran: Math.max(0, s.aplatsEcran + delta) })),
+      aplatsSuite: 0,
+      declarerAplat: (delta, suite = false) => set((s) => (suite
+        ? { aplatsSuite: Math.max(0, s.aplatsSuite + delta) }
+        : { aplatsEcran: Math.max(0, s.aplatsEcran + delta) })),
     }),
     { name: 'ui-prefs', partialize: (s) => ({ sidebarCollapsed: s.sidebarCollapsed, animerFond: s.animerFond }) },
   ),

@@ -69,7 +69,8 @@ export function echeanceAO(p: ProjetEcheance): EcheanceSource | null {
   return rc ? { date: rc } : null
 }
 
-// ── « En cours » : la même définition partout (tableau de bord, Mes AO, barre latérale, serveur) ──
+// ── Statuts « ouverts » du serveur. L'ÉTAT d'un AO (« en cours », « à mettre à jour », « terminé ») est dans lib/etatAO.ts :
+//    c'est lui que les écrans appellent. `estEnCours` et `estEnCoursOuvert` ne s'importent plus ailleurs (garde-fou). ──
 export const STATUTS_EN_COURS: readonly string[] = ['brouillon', 'en_cours', 'analyzed']
 export const estEnCours = (statut: string) => STATUTS_EN_COURS.includes(statut)
 /**

@@ -33,7 +33,7 @@ const page = (props: Partial<Parameters<typeof GabaritEtape>[0]> = {}) => render
 
 test("l'en-tête porte le titre, une ligne d'utilité et une seule action principale", () => {
   const h = page()
-  assert.match(h, /<h2[^>]*>Plan du mémoire<\/h2>/)
+  assert.match(h, /<h1[^>]*titre-page[^>]*>Plan du mémoire<\/h1>/)
   assert.match(h, /Choisissez l(&#x27;|')ordre des parties avant de rédiger\./)
   assert.equal((h.match(/data-action-principale/g) ?? []).length, 1)
   assert.equal((h.match(/signature-btn/g) ?? []).length, 1)
@@ -65,7 +65,7 @@ test('trois cartes : trois colonnes ; quatre cartes : 2 puis 4 colonnes ; une co
 test('les sections ont un sous-titre en capitales (h3) et choisissent leurs colonnes', () => {
   const h = page()
   assert.equal((h.match(/data-section-etape/g) ?? []).length, 2)
-  assert.match(h, /<h3(?![^>]*uppercase)[^>]*>Ce que le règlement note<\/h3>/)
+  assert.match(h, /<h2(?![^>]*uppercase)[^>]*>Ce que le règlement note<\/h2>/)
   assert.match(h, /md:grid-cols-2/)
   const une = renderToStaticMarkup(<SectionEtape titre="Seule"><p>x</p></SectionEtape>)
   assert.doesNotMatch(une, /md:grid-cols-2/)

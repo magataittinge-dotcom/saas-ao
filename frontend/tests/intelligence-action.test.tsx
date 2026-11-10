@@ -41,13 +41,13 @@ test('les AO clos ne sont jamais proposés ; sans AO en cours : null', () => {
   assert.equal(prochaineAction([...p, projet('ok', remise('2026-12-01'))], MAINTENANT)?.id, 'ok')
 })
 
-test('une date déjà passée ne passe pas devant un AO daté à venir, ni un AO sans date', () => {
+test('une date déjà passée sort des AO en cours (lib/etatAO.ts : « à mettre à jour ») ; un AO sans date passe après un AO daté', () => {
   const p = [
     projet('passee', remise('2026-10-20')),
     projet('sansdate'),
     projet('avenir', remise('2026-12-15')),
   ]
-  assert.deepEqual(ids(classerParUrgence(p, MAINTENANT)), ['avenir', 'sansdate', 'passee'])
+  assert.deepEqual(ids(classerParUrgence(p, MAINTENANT)), ['avenir', 'sansdate'])
 })
 
 test('un AO qui attend seulement la fin de l’analyse passe après ceux où l’on peut agir', () => {
@@ -68,11 +68,11 @@ test('chaque étape mène à son écran, avec le bon verbe', () => {
     [{ current_step: 2 }, 'Choisir le lot', '/projects/x/lots'],
     [{ current_step: 3 }, 'Lire ce dossier', '/projects/x/analysis'],
     [{ current_step: 3, status: 'analyzed' }, 'Décider : on y va ?', '/projects/x/analysis'],
-    [{ current_step: 4 }, 'Vérifier le dossier', '/projects/x/verification'],
+    [{ current_step: 4 }, 'Réunir les pièces', '/projects/x/verification'],
     [{ current_step: 5 }, 'Préparer le plan du mémoire', '/projects/x/plan'],
     [{ current_step: 5, processing_status: 'generating' }, 'Rédaction du mémoire en cours', '/projects/x/memoire'],
     [{ current_step: 5, completed_steps: { 5: true } }, 'Relire le mémoire', '/projects/x/memoire'],
-    [{ current_step: 6 }, 'Exporter le dossier', '/projects/x/export'],
+    [{ current_step: 6 }, 'Télécharger le dossier', '/projects/x/export'],
   ]
   for (const [over, verbe, vers] of cas) {
     const p = projet('x', over)
@@ -121,7 +121,7 @@ test('la fiche se rend avec un lien vers l’écran concerné et un second lien 
   const f = ficheDepuisProjet(projet('abc', { ...remise('2026-10-28'), current_step: 6, name: 'Bardage du gymnase', maitre_ouvrage: 'Commune de Valdoie-sur-Mer' }), MAINTENANT)
   const html = renderToStaticMarkup(<MemoryRouter><ProchaineAction fiche={f} /></MemoryRouter>)
   assert.match(html, /<h3[^>]*>Bardage du gymnase<\/h3>/)
-  assert.match(html, /href="\/projects\/abc\/export"[^>]*>Exporter le dossier/)
+  assert.match(html, /href="\/projects\/abc\/export"[^>]*>Télécharger le dossier/)
   assert.match(html, /href="\/projects\/abc"[^>]*>Ouvrir l’AO/)
   assert.match(html, /Remise dans 5 jours/)
   assert.match(html, /aria-live="polite"/)

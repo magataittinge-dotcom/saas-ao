@@ -27,7 +27,7 @@ test('les barres d\'action des étapes 3 à 6 sont collées au bas du contenu, p
   }
   // la règle commune, une seule fois : collée au bas de <main>, au-dessus du contenu
   const commun = sansCommentaires(lire('src/components/project/BarreEtape.tsx'))
-  assert.match(commun, /sticky -bottom-5 z-30/)
+  assert.match(commun, /sticky bottom-4 z-30/)
 })
 
 test('S10 : chaque étape passe par BarreEtape, sans barre collée écrite à la main', () => {
@@ -88,9 +88,9 @@ test('S10 : rendu de la barre — une ligne, bouton principal court, boutons sec
   assert.ok(html.includes('data-barre-etape'))
   assert.ok(html.includes('max-[768px]:h-14') && html.includes('max-[768px]:flex-nowrap'))
   assert.ok(html.includes('aria-label="Retour"'), 'le secondaire garde son nom accessible')
-  assert.ok(html.includes('max-[768px]:h-11') && html.includes('max-[768px]:w-11'), 'cible de 44 px')
+  assert.ok(html.includes('min-h-11') && html.includes('max-[768px]:w-11'), 'cible de 44 px')
   assert.ok(html.includes('Étape suivante') && html.includes('>Suivant<') && html.includes('\u00a0: Pièces'), 'texte long sur ordinateur, court au téléphone')
-  assert.equal((html.match(/signature-btn/g) ?? []).length, 1, 'un seul bouton principal')
+  assert.equal((html.match(/data-variante="principal"/g) ?? []).length, 1, 'un seul bouton principal')
   assert.ok(html.includes('8 exigences · 5 obligatoires') && html.includes('>8 exigences<'), 'bilan complet ou abrégé')
 })
 

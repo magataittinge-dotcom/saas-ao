@@ -1,7 +1,8 @@
 // Synorix Intelligence — « prochaine action » : une règle déterministe, aucun appel IA, aucun avis sur les prix.
 // Règle : parmi les AO en cours, celui dont la date de remise est la plus proche (et pas encore passée)
 // et dont une étape reste à faire ; sans date, après les AO datés ; date passée, en dernier.
-import { avancementAO, echeanceAO, estEnCours, etatEcheance, type Echeance } from '@/lib/echeance'
+import { avancementAO, echeanceAO, etatEcheance, type Echeance } from '@/lib/echeance'
+import { etatAO } from '@/lib/etatAO'
 import { lotUniqueDuDossier } from '@/lib/lotUnique'
 import type { Project } from '@/types'
 
@@ -43,7 +44,9 @@ const enRedaction = (p: Pick<Project, 'processing_status'>): boolean => p.proces
 type EtatEtape = Pick<Project, 'status' | 'current_step' | 'processing_status' | 'completed_steps'> & Partial<Pick<Project, 'name' | 'lots_detectes'>>
 
 /**
- * Prochaine action d'un AO : le verbe, l'écran. UN seul calcul (sans IA) pour l'accueil, Mes AO, la bande « Vos AO en cours »,
+ * Prochaine action d'un AO EN COURS : le verbe, l'écran. Les écrans passent par `lectureAO` (lib/etatAO.ts), qui sait aussi qu'une
+ * remise passée n'a qu'une action, « Mettre à jour le statut ». Un seul vocabulaire (A5) : étape Pièces = « Réunir les pièces »,
+ * étape Export = « Télécharger le dossier ». UN seul calcul (sans IA) pour l'accueil, Mes AO, la bande « Vos AO en cours »,
  * la palette Ctrl K et la fiche du Compagnon. À l'étape 5 du serveur : pas de mémoire → « Préparer le plan du mémoire » (écran
  * Plan) ; rédaction en cours ou mémoire écrit → l'écran Rédiger.
  */
@@ -57,12 +60,12 @@ export function actionEtape(p: EtatEtape): { verbe: string; segment: string } {
       if (lotUniqueDuDossier(p)) return { verbe: 'Lire ce dossier', segment: ROUTES_ETAPES[0] }
       return { verbe: 'Choisir le lot', segment: ROUTES_ETAPES[1] }
     case 3: return { verbe: enAttente(p) ? 'Analyse en cours' : 'Lire ce dossier', segment: ROUTES_ETAPES[2] }
-    case 4: return { verbe: 'Vérifier le dossier', segment: ROUTES_ETAPES[3] }
+    case 4: return { verbe: 'Réunir les pièces', segment: ROUTES_ETAPES[3] }
     case 5:
       if (enRedaction(p)) return { verbe: 'Rédaction du mémoire en cours', segment: 'memoire' }
       if (aMemoire(p)) return { verbe: 'Relire le mémoire', segment: 'memoire' }
       return { verbe: 'Préparer le plan du mémoire', segment: 'plan' }
-    default: return { verbe: 'Exporter le dossier', segment: ROUTES_ETAPES[5] }
+    default: return { verbe: 'Télécharger le dossier', segment: ROUTES_ETAPES[5] }
   }
 }
 
@@ -77,11 +80,12 @@ const TEXTES: Record<number, string> = {
   2: 'Synorix a repéré les lots du dossier de consultation. Choisissez le vôtre pour passer à la lecture.',
   3: 'Les lots sont choisis. Lancez la lecture du dossier : chaque exigence sera relevée avec sa source.',
   4: 'Passez en revue les exigences et les pièces de candidature, chacune avec sa source dans le dossier.',
-  5: 'Tout est prêt pour le mémoire. Choisissez ses parties, puis Synorix le rédige à partir de votre entreprise et du dossier de consultation.',
-  6: 'Toutes les étapes sont faites. Il reste à exporter le dossier, puis à le déposer sur la plateforme de l’acheteur.',
+  5: 'Le dossier est lu. Choisissez ses parties, puis Synorix le rédige à partir de votre entreprise et du dossier de consultation.',
+  6: 'Le dossier est prêt : il reste à le télécharger, puis à le déposer sur la plateforme de l’acheteur.',
 }
 
-function texteEtape(p: EtatEtape): string {
+/** La phrase d'une étape. Pour l'étape « Télécharger le dossier », `lectureAO` la complète avec les pièces restant à joindre. */
+export function texteEtape(p: EtatEtape): string {
   if (aDecider(p)) return 'L’analyse est terminée. La fiche « On y va ? » rassemble les conditions du marché, chacune avec sa source. La décision vous revient.'
   if (enAttente(p)) return 'L’analyse est en cours. Cet écran se met à jour dès qu’elle est terminée.'
   if (avancementAO(p.current_step).etape === 5) {
@@ -134,12 +138,12 @@ export function ficheDepuisProjet(p: Project, maintenant: Date = new Date(), eti
 const RANG: Record<Echeance['etat'], number> = { aujourdhui: 0, proche: 0, a_venir: 0, sans_date: 1, passee: 2 }
 
 /**
- * Classe les AO en cours : remise la plus proche d'abord ; ceux qui attendent seulement un
- * traitement automatique après ceux où l'utilisateur peut agir ; sans date, puis date passée, ensuite.
+ * Classe les AO en cours (lib/etatAO.ts : une remise passée n'est plus « en cours ») : remise la plus proche d'abord ; ceux qui
+ * attendent seulement un traitement automatique après ceux où l'utilisateur peut agir ; sans date ensuite.
  * Départage stable : nom, puis identifiant.
  */
 export function classerParUrgence(projets: readonly Project[], maintenant: Date = new Date()): Project[] {
-  const lignes = projets.filter((p) => estEnCours(p.status)).map((p) => ({ p, e: etatEcheance(echeanceAO(p), maintenant) }))
+  const lignes = projets.filter((p) => etatAO(p, maintenant) === 'en_cours').map((p) => ({ p, e: etatEcheance(echeanceAO(p), maintenant) }))
   lignes.sort((a, b) =>
     Number(enAttente(a.p)) - Number(enAttente(b.p))
     || RANG[a.e.etat] - RANG[b.e.etat]

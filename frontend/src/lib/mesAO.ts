@@ -1,6 +1,7 @@
 // Mes AO — la logique de l'écran, sans JSX : le fil réel à 7 étapes, le tri par remise, les comptes du résumé.
 // Tout est déterministe (aucune IA) et lit les données de GET /projects. Les verbes viennent de `actionEtape()` (un seul calcul).
-import { echeanceAO, estEnCours, etatEcheance, momentLimite, type Echeance } from '@/lib/echeance'
+import { echeanceAO, etatEcheance, momentLimite, type Echeance } from '@/lib/echeance'
+import { etatAO, faitPieces, type EtatAO } from '@/lib/etatAO'
 import { jourCourtParis } from '@/lib/dateParis'
 import { aDecider, aMemoire } from '@/lib/intelligence/action'
 import type { AvancementAO, Project } from '@/types'
@@ -36,15 +37,16 @@ export function filDeLAO(p: EtatAvancement): { nom: string; etat: EtatPoint }[] 
 }
 
 const RANG: Record<Echeance['etat'], number> = { aujourdhui: 0, proche: 0, a_venir: 0, sans_date: 1, passee: 2 }
+const RANG_ETAT: Record<EtatAO, number> = { en_cours: 0, a_mettre_a_jour: 1, termine: 2 }
 
 /**
- * Tri « Remise la plus proche » : les AO en cours d'abord (remise la plus proche, puis sans date, puis date passée), les AO terminés
- * ensuite — leurs dates passées ne les placent plus en tête. Départage stable : nom, puis identifiant.
+ * Tri « Remise la plus proche » : les AO en cours d'abord (remise la plus proche, puis sans date), puis ceux à mettre à jour
+ * (remise passée), les AO terminés ensuite — leurs dates passées ne les placent plus en tête. Départage stable : nom, puis identifiant.
  */
 export function comparerParRemise(a: Project, b: Project, maintenant: Date = new Date()): number {
   const ea = etatEcheance(echeanceAO(a), maintenant)
   const eb = etatEcheance(echeanceAO(b), maintenant)
-  return Number(!estEnCours(a.status)) - Number(!estEnCours(b.status))
+  return RANG_ETAT[etatAO(a, maintenant)] - RANG_ETAT[etatAO(b, maintenant)]
     || RANG[ea.etat] - RANG[eb.etat]
     || (ea.limite?.getTime() ?? 0) - (eb.limite?.getTime() ?? 0)
     || a.name.localeCompare(b.name, 'fr')
@@ -95,7 +97,7 @@ export interface ResumeMesAO {
 
 /** Les trois cartes de comptes : en cours, remise sous 7 jours, à décider. Les listes d'AO sont triées par remise. */
 export function resumeMesAO(projets: readonly Project[], maintenant: Date = new Date()): ResumeMesAO {
-  const enCours = projets.filter((p) => estEnCours(p.status)).sort((a, b) => comparerParRemise(a, b, maintenant))
+  const enCours = projets.filter((p) => etatAO(p, maintenant) === 'en_cours').sort((a, b) => comparerParRemise(a, b, maintenant))
   const sous7 = enCours.filter((p) => { const e = etatEcheance(echeanceAO(p), maintenant).etat; return e === 'proche' || e === 'aujourdhui' })
   const niveaux = sous7.map((p) => niveauRemise(p, maintenant))
   const decider = enCours.filter((p) => aDecider(p))
@@ -148,9 +150,8 @@ export interface FaitUne { libelle: string; valeur: string; ton: 'vert' | 'ambre
 export function faitsALaUne(p: Project, _maintenant: Date = new Date()): FaitUne[] {
   const faits: FaitUne[] = []
   const a = p.avancement
-  if (a?.pieces && a.pieces.total > 0) {
-    faits.push({ libelle: 'Pièces du coffre-fort', valeur: `${a.pieces.pretes} sur ${a.pieces.total} ${a.pieces.pretes > 1 ? 'prêtes' : 'prête'}`, ton: a.pieces.pretes === a.pieces.total ? 'vert' : 'ambre' })
-  }
+  const pieces = faitPieces(a?.pieces)
+  if (pieces) faits.push({ libelle: 'Pièces du coffre-fort', valeur: pieces.valeur, ton: pieces.sens === 'vert' ? 'vert' : 'ambre' })
   if (a?.memoire_ecrit_le) faits.push({ libelle: 'Mémoire technique', valeur: `écrit le ${jourMois(a.memoire_ecrit_le)}`, ton: 'vert' })
   else if (a?.plan_valide_le) faits.push({ libelle: 'Mémoire technique', valeur: `plan validé le ${jourMois(a.plan_valide_le)}`, ton: 'vert' })
   const points = p.infos_marche?.points_a_eclaircir

@@ -37,22 +37,24 @@ export interface BoutonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   libelleEnCours?: string
   /** Le bouton prend toute la largeur (formulaires au téléphone, barre du bas). */
   large?: boolean
+  /** Le bouton de suite de la barre du bas (BoutonSuite) : compté à part, il cède l'aplat à l'action de l'écran. */
+  suite?: boolean
   asChild?: boolean
 }
 
 /** Compte les actions principales montées par l'écran (P1) : la barre du haut s'y règle. */
-function useAplat(actif: boolean) {
+function useAplat(actif: boolean, suite: boolean) {
   const declarer = useUIStore((s) => s.declarerAplat)
   React.useEffect(() => {
     if (!actif) return undefined
-    declarer(1)
-    return () => declarer(-1)
-  }, [actif, declarer])
+    declarer(1, suite)
+    return () => declarer(-1, suite)
+  }, [actif, suite, declarer])
 }
 
 export const Bouton = React.forwardRef<HTMLButtonElement, BoutonProps>(
-  ({ className, variante = 'secondaire', enCours = false, libelleEnCours, large, asChild = false, disabled, children, type, ...props }, ref) => {
-    useAplat(variante === 'principal')
+  ({ className, variante = 'secondaire', enCours = false, libelleEnCours, large, suite = false, asChild = false, disabled, children, type, ...props }, ref) => {
+    useAplat(variante === 'principal', suite)
     const classes = classesBouton(variante, cn(large && 'w-full', className))
     if (asChild) return <Slot ref={ref} data-variante={variante} className={classes} {...props}>{children}</Slot>
     return (
