@@ -78,7 +78,7 @@ function formulaire(props: Partial<Parameters<typeof FormulaireMemoire>[0]> = {}
 
 test('les 2 champs obligatoires et le bouton viennent avant les options, qui sont repliées', () => {
   const html = formulaire()
-  const iOuvriers = html.indexOf("Nombre d&#x27;ouvriers dédiés")
+  const iOuvriers = html.indexOf('Nombre d’ouvriers dédiés')
   const iDelai = html.indexOf('Délai estimé')
   const iBouton = html.indexOf('Rédiger le mémoire')
   const iOptions = html.indexOf('Options (facultatif)')
@@ -96,8 +96,8 @@ test('les 2 champs obligatoires et le bouton viennent avant les options, qui son
 
 test('un seul bouton principal, pas d\'« Étape suivante » grisé, pas d\'« Export .docx » sur cet écran', () => {
   const html = formulaire()
-  assert.equal((html.match(/signature-btn/g) ?? []).length, 1, 'un seul bouton principal')
-  assert.ok(html.indexOf('signature-btn') < html.indexOf('<details'), 'au-dessus des options')
+  assert.equal((html.match(/data-variante="principal"/g) ?? []).length, 1, 'un seul bouton principal')
+  assert.ok(html.indexOf('data-variante="principal"') < html.indexOf('<details'), 'au-dessus des options')
   assert.ok(!html.includes('Étape suivante'))
   assert.ok(!html.includes('Export .docx'))
   const code = sansCommentaires(lire('src/routes/project/StepMemoire.tsx'))
@@ -110,7 +110,7 @@ test('un seul bouton principal, pas d\'« Étape suivante » grisé, pas d\'« E
 test('le bouton dit « Rédiger le mémoire », ou « Régénérer le mémoire » quand il existe déjà ; il reste bloqué sans les 2 champs', () => {
   assert.ok(formulaire().includes('Rédiger le mémoire'))
   assert.ok(formulaire({ hasMemoire: true }).includes('Régénérer le mémoire'))
-  const bouton = (h: string) => h.match(/<button[^>]*signature-btn[^>]*>/)?.[0] ?? ''
+  const bouton = (h: string) => h.match(/<button[^>]*data-variante="principal"[^>]*>/)?.[0] ?? ''
   assert.match(bouton(formulaire()), /disabled=""/)
   assert.doesNotMatch(bouton(formulaire({ variables: { ...VARIABLES_VIDES, nb_ouvriers: '4', delai: '3 mois' } })), /disabled=""/)
   assert.match(bouton(formulaire({ variables: { ...VARIABLES_VIDES, nb_ouvriers: '4', delai: '3 mois' }, enCours: true })), /disabled=""/)

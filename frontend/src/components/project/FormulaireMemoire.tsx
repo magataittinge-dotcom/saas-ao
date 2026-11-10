@@ -4,12 +4,10 @@ import MemoirePreflight, { QuotaMemoire, type PreflightSelection } from '@/compo
 import type { VariablesMemoire } from '@/lib/memoireGeneration'
 import { useDonneesEntreprise } from '@/components/entreprise/useDonneesEntreprise'
 import { avancementTotal, libelleAvancement, type DonneesEntreprise } from '@/lib/entreprise/avancement'
-
-const F = 'var(--font-ui)'
-
-const champStyle = { background: 'var(--surface-0)', border: '1px solid var(--border-field)', color: 'var(--text-1)', fontFamily: F }
-const champClasse = 'w-full py-2 px-3 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-ring'
-const etiquetteStyle = { color: 'var(--text-1)' }
+import { Bouton } from '@/components/ui/bouton'
+import { Carte } from '@/components/ui/carte'
+import { Champ, ChampNombre, GroupeChamp, ZoneTexte } from '@/components/ui/champ'
+import { Message } from '@/components/ui/message'
 
 interface Props {
   projectId: string
@@ -29,18 +27,20 @@ interface Props {
 export function LigneProfil({ donnees }: { donnees: DonneesEntreprise | null }) {
   if (!donnees) return null
   return (
-    <p className="text-sm" style={{ color: 'var(--text-2)' }}>
-      Profil de l’entreprise : <span className="num-mono">{libelleAvancement(avancementTotal(donnees))}</span>
+    <p className="text-sm text-fg-2">
+      Profil de l’entreprise : <span className="chiffres">{libelleAvancement(avancementTotal(donnees))}</span>
       {' · '}
-      <Link to="/company" className="font-medium underline underline-offset-2" style={{ color: 'var(--text-1)' }}>Compléter</Link>
+      <Link to="/company" className="font-medium text-fg underline underline-offset-2">Compléter</Link>
     </p>
   )
 }
 
 /**
- * S5 — préparation du mémoire. En haut : les 2 champs obligatoires et le bouton, le profil en une ligne.
+ * S5 — préparation du mémoire. En haut : les 2 champs demandés et le bouton, le profil en une ligne.
  * En dessous, repliés : planning, annexes, références, équipe et matériel. Le repli est un <details> :
  * son contenu reste monté, donc la sélection du pré-contrôle part au serveur même repliée.
+ * Champs, bouton, carte et message sont ceux du système ; les deux champs du haut sont les seuls demandés, tout ce qui
+ * est dans le repli est facultatif (le titre du repli le dit une fois).
  */
 export default function FormulaireMemoire({
   projectId, variables, onVariables, onPreflight, hasMemoire, enCours, erreur, onGenerer,
@@ -49,77 +49,43 @@ export default function FormulaireMemoire({
   const donnees = useDonneesEntreprise()
   const maj = (cle: keyof VariablesMemoire) => (e: { target: { value: string } }) =>
     onVariables({ ...variables, [cle]: e.target.value })
+  const ouvriers = variables.nb_ouvriers === '' ? null : Number(variables.nb_ouvriers)
 
   return (
-    <div className="space-y-4" style={{ fontFamily: F }}>
+    <div className="space-y-4">
       {/* ── L'essentiel : 2 champs, un bouton ── */}
-      <div
-        className="glass-card rounded-lg p-5 space-y-4"
-        style={{ border: '1px solid var(--border-1)', boxShadow: 'var(--shadow-card)' }}
-      >
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-medium mb-1.5" style={etiquetteStyle}>
-              Nombre d&apos;ouvriers dédiés <span style={{ color: 'var(--warn)' }}>*</span>
-            </label>
-            <input
-              type="number"
-              value={variables.nb_ouvriers}
-              onChange={maj('nb_ouvriers')}
-              className={champClasse}
-              style={champStyle}
-              placeholder="Ex : 4"
+      <Carte className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <GroupeChamp libelle="Nombre d’ouvriers dédiés" aide="Exemple : 4">
+            <ChampNombre
+              valeur={Number.isFinite(ouvriers) ? ouvriers : null} min={0}
+              onChange={(n) => onVariables({ ...variables, nb_ouvriers: n == null ? '' : String(Math.round(n)) })}
             />
-          </div>
-          <div>
-            <label className="block text-xs font-medium mb-1.5" style={etiquetteStyle}>
-              Délai estimé <span style={{ color: 'var(--warn)' }}>*</span>
-            </label>
-            <input
-              type="text"
-              value={variables.delai}
-              onChange={maj('delai')}
-              className={champClasse}
-              style={champStyle}
-              placeholder="Ex : 3 mois"
-            />
-          </div>
+          </GroupeChamp>
+          <GroupeChamp libelle="Délai estimé" aide="Exemple : 3 mois">
+            <Champ value={variables.delai} onChange={maj('delai')} />
+          </GroupeChamp>
         </div>
 
-        {erreur && (
-          <p
-            className="text-sm rounded-lg px-3 py-2"
-            style={{ background: 'color-mix(in srgb, var(--danger-fg) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--danger-fg) 20%, transparent)', color: 'var(--danger-fg)' }}
-          >
-            {erreur}
-          </p>
-        )}
+        {erreur && <Message ton="erreur">{erreur}</Message>}
 
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-          <button
-            onClick={onGenerer}
-            disabled={enCours || !variables.nb_ouvriers || !variables.delai}
-            className="signature-btn disabled:opacity-40"
-            style={{ fontFamily: F, padding: '12px 24px' }}
-          >
-            <Sparkles size={18} />
+          <Bouton variante="principal" onClick={onGenerer} disabled={enCours || !variables.nb_ouvriers || !variables.delai}>
+            <Sparkles aria-hidden />
             {hasMemoire ? 'Régénérer le mémoire' : 'Rédiger le mémoire'}
-          </button>
+          </Bouton>
           <QuotaMemoire projectId={projectId} />
         </div>
-      </div>
+      </Carte>
 
       {/* ── Le profil, en une ligne ── */}
       <LigneProfil donnees={donnees.profil ? donnees : null} />
 
       {/* ── Options, repliées ── */}
-      <details className="group rounded-lg" style={{ border: '1px solid var(--border-1)' }}>
-        <summary
-          className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold [&::-webkit-details-marker]:hidden [@media(pointer:coarse)]:min-h-11"
-          style={{ color: 'var(--text-1)' }}
-        >
+      <details className="group rounded-carte border border-bord">
+        <summary className="flex min-h-11 cursor-pointer list-none flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-3 text-sm font-semibold text-fg [&::-webkit-details-marker]:hidden">
           Options (facultatif)
-          <span className="text-xs font-normal" style={{ color: 'var(--text-3)' }}>
+          <span className="text-xs font-normal text-fg-3">
             profil local, références, planning, annexes, équipe, matériel
           </span>
         </summary>
@@ -128,58 +94,35 @@ export default function FormulaireMemoire({
 
           <div className="space-y-4">
             <div>
-              <h3 className="text-sm font-semibold" style={{ color: 'var(--text-1)', fontFamily: F }}>
-                Informations spécifiques à ce chantier
-              </h3>
-              <p className="text-xs mt-1" style={{ color: 'var(--text-3)' }}>
-                Ces informations seront intégrées dans le mémoire pour ce projet
-              </p>
+              <h3 className="text-sm font-semibold text-fg">Informations spécifiques à ce chantier</h3>
+              <p className="mt-1 text-xs text-fg-3">Ces informations seront intégrées dans le mémoire pour ce projet.</p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium mb-1.5" style={etiquetteStyle}>Chef de chantier — nom</label>
-                <input type="text" value={variables.chef_chantier_nom} onChange={maj('chef_chantier_nom')}
-                  className={champClasse} style={champStyle} placeholder="Ex : Jean Dupont" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium mb-1.5" style={etiquetteStyle}>Qualification</label>
-                <input type="text" value={variables.chef_chantier_qualification} onChange={maj('chef_chantier_qualification')}
-                  className={champClasse} style={champStyle} placeholder="Ex : 15 ans d'expérience, CACES R482" />
-              </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <GroupeChamp libelle="Chef de chantier — nom" aide="Exemple : Jean Dupont">
+                <Champ value={variables.chef_chantier_nom} onChange={maj('chef_chantier_nom')} />
+              </GroupeChamp>
+              <GroupeChamp libelle="Qualification du chef de chantier" aide="Exemple : 15 ans d’expérience, CACES R482">
+                <Champ value={variables.chef_chantier_qualification} onChange={maj('chef_chantier_qualification')} />
+              </GroupeChamp>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium mb-1.5" style={etiquetteStyle}>Conducteur de travaux — nom</label>
-                <input type="text" value={variables.conducteur_travaux_nom} onChange={maj('conducteur_travaux_nom')}
-                  className={champClasse} style={champStyle} placeholder="Ex : Marie Martin" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium mb-1.5" style={etiquetteStyle}>Qualification</label>
-                <input type="text" value={variables.conducteur_travaux_qualification} onChange={maj('conducteur_travaux_qualification')}
-                  className={champClasse} style={champStyle} placeholder="Ex : ingénieur BTP, 10 ans ITE/ravalement" />
-              </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <GroupeChamp libelle="Conducteur de travaux — nom" aide="Exemple : Marie Martin">
+                <Champ value={variables.conducteur_travaux_nom} onChange={maj('conducteur_travaux_nom')} />
+              </GroupeChamp>
+              <GroupeChamp libelle="Qualification du conducteur de travaux" aide="Exemple : ingénieur BTP, 10 ans ITE/ravalement">
+                <Champ value={variables.conducteur_travaux_qualification} onChange={maj('conducteur_travaux_qualification')} />
+              </GroupeChamp>
             </div>
 
-            <div>
-              <label className="block text-xs font-medium mb-1.5" style={etiquetteStyle}>
-                Matériel spécifique au chantier
-              </label>
-              <textarea value={variables.materiel_specifique} onChange={maj('materiel_specifique')} rows={2}
-                className={`${champClasse} resize-none`} style={champStyle}
-                placeholder="Ex : échafaudage tubulaire R200, nacelle articulée 20 m…" />
-            </div>
+            <GroupeChamp libelle="Matériel spécifique au chantier" aide="Exemple : échafaudage tubulaire R200, nacelle articulée 20 m…">
+              <ZoneTexte value={variables.materiel_specifique} onChange={maj('materiel_specifique')} rows={2} />
+            </GroupeChamp>
 
-            <div>
-              <label className="block text-xs font-medium mb-1.5" style={etiquetteStyle}>
-                Contraintes particulières
-                <span className="font-normal ml-1" style={{ color: 'var(--text-3)' }}>(optionnel)</span>
-              </label>
-              <textarea value={variables.particularites} onChange={maj('particularites')} rows={2}
-                className={`${champClasse} resize-none`} style={champStyle}
-                placeholder="Ex : site occupé, horaires restreints 8 h-17 h…" />
-            </div>
+            <GroupeChamp libelle="Contraintes particulières" aide="Exemple : site occupé, horaires restreints 8 h-17 h…">
+              <ZoneTexte value={variables.particularites} onChange={maj('particularites')} rows={2} />
+            </GroupeChamp>
           </div>
         </div>
       </details>
