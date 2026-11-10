@@ -46,8 +46,9 @@ export function useVeille() {
     setHydrate(true)
   }, [prefs.data, hydrate])
 
-  // Sans réponse du serveur (erreur), l'écran reste utilisable avec les valeurs par défaut.
-  useEffect(() => { if (prefs.isError && !hydrate) setHydrate(true) }, [prefs.isError, hydrate])
+  // Sans réponse du serveur (erreur), l'écran NE devient PAS modifiable : avant, il s'ouvrait sur les valeurs par défaut et
+  // les enregistrait aussitôt (PUT), par-dessus des préférences qu'il n'avait pas pu lire. La veille dit son erreur
+  // (`preferencesEnErreur`) et propose « Réessayer » ; l'enregistrement ne s'ouvre qu'avec des préférences lues.
 
   const envoyer = useMemo(() => sauvegardeDifferee((c: PreferencesAEnvoyer) => {
     const cle = JSON.stringify(c)
@@ -123,7 +124,17 @@ export function useVeille() {
     else if (etape?.type === 'voisins') setZoneEtat({ selection: [...zone.selection, ...etape.ajout].slice(0, 30), ville: null })
   }, [filtres, zone.selection])
 
+  const recharger = useCallback(() => {
+    void prefs.refetch()
+    void qc.invalidateQueries({ queryKey: ['veille'] })
+  }, [prefs, qc])
+
   return {
+    /** La lecture des préférences a échoué et rien n'est en mémoire : la veille montre son erreur, rien ne s'enregistre. */
+    preferencesEnErreur: prefs.isError && !hydrate,
+    recharger,
+    rechargeEnCours: prefs.isFetching,
+    rechargerAvis: () => { void avisQuery.refetch() },
     chargeEnCours: !hydrate,
     zone, setZone, filtres, setFiltres, tri, setTri,
     metiers: metiers.data ?? [],

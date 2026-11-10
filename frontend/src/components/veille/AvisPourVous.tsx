@@ -7,7 +7,9 @@ import { lireAvis, lireMetiers, lirePreferences, creerAODepuisAvis, type AvisVei
 import { CLES_VEILLE } from '@/hooks/useVeille'
 import { jourCourt } from '@/lib/mesAO'
 import { urlSure } from '@/lib/veille'
-import { Pastille } from '@/components/mesao/Etat'
+import { Bouton, classesBouton } from '@/components/ui/bouton'
+import { Carte } from '@/components/ui/carte'
+import { PastilleEtat } from '@/components/ui/pastille'
 
 /** Jusqu'à trois avis de la veille pour la zone et les filtres enregistrés de l'utilisateur ; rien sans zone. */
 function useAvisPourVous() {
@@ -37,27 +39,26 @@ function CarteAvisVeille({ avis, libelles }: { avis: AvisVeille; libelles: Recor
   })
   const lien = urlSure(avis.url_avis)
   return (
-    <article className="flex min-w-0 flex-col gap-2 rounded-carte border border-bord-2 bg-surface-0 p-4 sm:p-5">
+    <Carte role="article" className="flex min-w-0 flex-col gap-2">
       <div className="flex flex-wrap gap-2">
-        {avis.nouveau && <Pastille ton="turquoise" icone={Sparkles}>Nouveau</Pastille>}
-        {avis.metiers[0] && libelles[avis.metiers[0]] && <Pastille ton="gris">{libelles[avis.metiers[0]]}</Pastille>}
+        {avis.nouveau && <PastilleEtat sens="turquoise" icone={Sparkles}>Nouveau</PastilleEtat>}
+        {avis.metiers[0] && libelles[avis.metiers[0]] && <PastilleEtat sens="gris" icone={null}>{libelles[avis.metiers[0]]}</PastilleEtat>}
       </div>
-      <h3 className="line-clamp-3 text-[15px] font-semibold leading-snug text-fg">{avis.objet}</h3>
-      <p className="text-[13px] text-fg-2">{avis.acheteur}</p>
-      {avis.date_limite && <p className="text-[13px] text-fg-2">Remise le <strong className="font-semibold text-fg">{jourCourt(new Date(avis.date_limite))}</strong></p>}
+      <h3 className="line-clamp-3 text-base font-semibold leading-snug text-fg">{avis.objet}</h3>
+      <p className="text-sm text-fg-2">{avis.acheteur}</p>
+      {avis.date_limite && <p className="text-sm text-fg-2">Remise le <strong className="font-semibold text-fg">{jourCourt(new Date(avis.date_limite))}</strong></p>}
       <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-2 pt-2">
-        <button type="button" disabled={creer.isPending} onClick={() => creer.mutate()}
-          className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-bleu-soft px-3.5 text-[13.5px] font-semibold text-bleu-ink hover:ring-1 hover:ring-bleu-mark disabled:opacity-60 max-sm:w-full">
-          Préparer cet AO<ArrowRight size={15} aria-hidden />
-        </button>
+        <Bouton enCours={creer.isPending} libelleEnCours="Création…" onClick={() => creer.mutate()} className="max-sm:w-full">
+          Préparer cet AO<ArrowRight aria-hidden strokeWidth={1.75} />
+        </Bouton>
         {lien && (
-          <a href={lien} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-1 text-[13.5px] font-semibold text-accent-text hover:underline">
-            Voir l’avis<ExternalLink size={12} aria-hidden /><span className="sr-only"> (s’ouvre dans un nouvel onglet)</span>
+          <a href={lien} target="_blank" rel="noopener noreferrer" className={classesBouton('lien')}>
+            Voir l’avis<ExternalLink aria-hidden strokeWidth={1.75} /><span className="sr-only"> (s’ouvre dans un nouvel onglet)</span>
           </a>
         )}
       </div>
-      {creer.isError && <p role="alert" className="text-[13px] text-rouge-ink">La création n’a pas abouti. Réessayez.</p>}
-    </article>
+      {creer.isError && <p role="alert" className="text-sm text-rouge-ink">La création n’a pas abouti. Réessayez.</p>}
+    </Carte>
   )
 }
 
@@ -66,7 +67,7 @@ export default function AvisPourVous() {
   return avis.length > 0 ? (
     <div className="grid gap-4 md:grid-cols-3">{avis.map((a) => <CarteAvisVeille key={a.id} avis={a} libelles={libelles} />)}</div>
   ) : (
-    <p className="rounded-carte border border-bord-2 bg-surface-1 px-5 py-4 text-sm text-fg-2">
+    <p className="rounded-carte border border-bord bg-surface-0 px-5 py-4 text-sm text-fg-2">
       {charge ? 'Recherche des avis…' : zoneChoisie ? 'Aucun avis ouvert pour votre zone en ce moment.' : 'Choisissez votre zone sur la carte de l’accueil : les avis ouverts près de chez vous apparaîtront ici.'}
     </p>
   )
