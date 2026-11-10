@@ -182,7 +182,7 @@ components:
 
 **Étoile polaire : « Aurore polaire »**
 
-Un logiciel qui écrit des documents, pas un tableau de bord de plus. Le jour, un blanc glacé légèrement bleuté (jamais de gris chaud) ; la nuit, le bleu-noir des ombres du visage (jamais de gris neutre, jamais de noir). Derrière le travail, un ciel d'aurores boréales respire lentement en haut de l'écran : il se devine le jour, il se voit la nuit, il ne touche jamais le contenu. **La marque sort du visage de Synorix : ce qui n'est pas dans le visage n'est pas dans la marque.** Le bleu de son verre reste la seule couleur d'action ; les six couleurs d'état ne servent qu'à dire un état ; un fil de lumière glacée (l'accent aurore) signe la marque sur quelques traits et halos ; l'or de sa flamme n'apparaît qu'une fois, dans le logo.
+Un logiciel qui écrit des documents, pas un tableau de bord de plus. Le jour, un blanc glacé légèrement bleuté (jamais de gris chaud) ; la nuit, le bleu-noir des ombres du visage (jamais de gris neutre, jamais de noir). Derrière le travail, un ciel d'aurores boréales respire lentement en haut de l'écran : il se devine le jour, il se voit la nuit, il ne touche jamais le contenu. **La marque sort du visage de Synorix : ce qui n'est pas dans le visage n'est pas dans la marque.** Le bleu de son verre reste la seule couleur d'action ; les six couleurs d'état ne servent qu'à dire un état ; un fil de lumière glacée (l'accent aurore) signe la marque sur quelques traits et halos ; l'or de sa flamme est la seule couleur chaude, de la lumière seulement : la pointe du fil, la lueur d'aube à l'horizon du ciel, l'éclat du halo du visage, la braise du logo.
 
 La discipline vient de la direction « Précision » : traits d'un pixel plutôt qu'ombres, hiérarchie portée par la taille et la graisse, chiffres tabulaires, couleur rare donc parlante. Les cartes de résumé reprennent les gros chiffres de « Givre », sans le verre : l'état du cabinet se lit d'un coup d'œil, au bureau comme sur un téléphone de chantier en plein soleil.
 
@@ -220,7 +220,7 @@ Un ciel froid et lumineux, tiré du visage : neutres à la teinte de ses ombres,
 ### Secondary
 - **Lumière d'aurore** (`--aurore-ink` `#196b95` / `#a7dcff`, `--aurore-mark` `#1688c0` / `#78ccff`, `--aurore-glow`) : le fil lumineux de la marque (trait sous le titre de l'Accueil, halo du visage, sélection de texte, logo), à la teinte des ombres et du halo du visage (237,2°). Ce n'est **pas** un état.
 - **Ciel** (`--aurore-a` glace 237,2°, `--aurore-b` givre 245,5°, `--aurore-c` azur 251,7°) : les trois ellipses du fond, toutes dans la famille bleue du visage. Ni vert, ni turquoise, ni violet.
-- **Or de la flamme** (`--flamme` `#ecac2f` / `#fdbe51`, `--flamme-glow`) : la seule teinte chaude de la marque (78,5°). De la **lumière** seulement : la braise du logo, et la lumière du visage. Jamais un texte, une pastille, un point d'état ni une barre ; aucune classe Tailwind ne l'expose.
+- **Or de la flamme** (`--flamme` `#ecac2f` / `#fdbe51`, `--flamme-glow`) : la seule teinte chaude de la marque (78,5°). De la **lumière** seulement (variante B) : la pointe d'or du fil d'aurore (son dernier cinquième), la lueur d'aube du ciel (`--aurore-aube` `rgba(245,193,107,.2)` / `rgba(242,176,54,.28)`), l'éclat d'or du halo du visage (`.eclat-or`, un arc court), la braise du logo. Jamais un texte, une pastille, un point d'état, une barre de progression ni un fond de bouton ; aucune classe Tailwind ne l'expose ; au plus 1 % de l'écran.
 
 ### Neutral
 Tous les neutres sont à la teinte des ombres du visage (237,2°), avec une chroma supérieure à zéro : jamais un gris pur. Seul le papier est blanc.
@@ -256,7 +256,7 @@ Le vert, l'ambre, le rouge et le turquoise ne sont pas dans le visage : ce sont 
 
 **La règle « ce qui n'est pas dans le visage n'est pas dans la marque ».** L'accent, l'aurore, le fil, le logo, les neutres et les ombres n'emploient que les quatre teintes mesurées, à ± 8°. Une nouvelle teinte de marque passe d'abord par la mesure.
 
-**La règle « une couleur vive, rare, sur un champ calme ».** La couleur vive (chroma ≥ 0,10) occupe au plus 6 % de l'écran, aurore comprise : un bouton principal, la rangée active, les liens ; le reste est neutre. Mesuré sur les captures du 10/11 : 0,7 à 1,2 % à 1 440 px en clair, 1,8 à 2,8 % en nuit ; 0,7 à 3,2 % et 1,9 à 4,9 % à 390 px. L'or n'apparaît qu'une fois par écran (la braise du logo).
+**La règle « une couleur vive, rare, sur un champ calme ».** La couleur vive (chroma ≥ 0,10) occupe au plus 6 % de l'écran, aurore comprise : un bouton principal, la rangée active, les liens ; le reste est neutre. Mesuré sur les captures du 10/11 : 0,7 à 1,2 % à 1 440 px en clair, 1,8 à 2,8 % en nuit ; 0,7 à 3,2 % et 1,9 à 4,9 % à 390 px. L'or reste une étincelle : au plus 1 % de l'écran, lueur d'aube comprise (mesuré sur les captures de la variante B, `design/couleurs/PART-OR.txt`).
 
 **La règle « jamais la couleur seule ».** Un état porte toujours un mot, et une icône (WCAG 1.4.1). La couleur confirme, elle n'informe jamais seule.
 
@@ -323,6 +323,7 @@ La profondeur vient de la lumière et des traits, pas des ombres. Au repos, une 
 - Traits de 1 px partout ; aucune bordure latérale colorée de plus de 1 px. L'étape active de la barre latérale est marquée par une barre de 3 px posée hors du bloc.
 - Icônes dessinées (lucide-react), trait 1,6 à 2 px, jamais posées dans un rond décoratif.
 - Logo provisoire : l'arc d'aurore (deux traits courbes ; le haut en dégradé de la glace à l'azur de l'action, le bas à l'encre, terminé par une braise d'or `--flamme`), SVG en ligne (`components/layout/Logo.tsx`). Aucune couleur d'état.
+- Halo du visage rond (`VisageRond`) : liseré bleu `--aurore-mark` et un éclat d'or, un arc court (`.eclat-or`).
 
 ## Components
 
@@ -359,6 +360,7 @@ La profondeur vient de la lumière et des traits, pas des ombres. Au repos, une 
 - Le logo (arc d'aurore) tient la place haute de la barre.
 
 ### Aurore (signature)
+- La **lueur d'aube** (variante B) : une quatrième ellipse, d'or, basse et étroite (70 vw × 6 vh à 29 vh, à l’horizon du masque ; au téléphone, plus bas, sous la pastille de l’entreprise), `transform` seul sur 52 s, mêmes garde-fous. Le jour elle se devine à peine et ne jaunit jamais le blanc ; la nuit elle est nette.
 - Trois ellipses en `radial-gradient` (glace, givre, azur : les trois teintes froides du visage), 140 vw × 34 à 46 vh, animées en `transform` seul sur 28 / 36 / 44 s (aller-retour, `ease-in-out`), sous un masque qui les éteint à 78 % de la hauteur. Aucun `filter: blur`.
 - Opacité `--aurore-opacite` : 0,30 le jour (elle se devine), 0,9 la nuit.
 - Image fixe sous `prefers-reduced-motion`, en pause quand l'onglet est caché (`visibilitychange`), figée si `navigator.connection.saveData` ou une connexion 2G.
