@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, ExternalLink, Loader2, X } from 'lucide-react'
+import { Check, ExternalLink, X } from 'lucide-react'
+import { Bouton } from '@/components/ui/bouton'
+import { Infobulle } from '@/components/ui/infobulle'
 import {
   aiguiller, libelleNiveau, vueParDefaut, vuesDisponibles,
   type ReponseSource, type VueSource,
@@ -136,9 +138,11 @@ export function PanneauSourceVue({
   const lien = reponse ? lienPiece(reponse) : null
   const nom = reponse?.document?.nom ?? titre ?? 'Extrait du dossier'
   const lienOuvrir = lien && (
-    <a href={lien} target="_blank" rel="noreferrer" className="edge-cta source-ouvrir">
-      <ExternalLink size={16} aria-hidden="true" /> Ouvrir la pièce
-    </a>
+    <Bouton asChild variante="secondaire" className="source-ouvrir">
+      <a href={lien} target="_blank" rel="noreferrer">
+        <ExternalLink aria-hidden="true" /> Ouvrir la pièce
+      </a>
+    </Bouton>
   )
 
   const contenu = (
@@ -158,7 +162,7 @@ export function PanneauSourceVue({
           {feuille && <div className="source-poignee" aria-hidden="true" />}
           <div className="source-titre-ligne">
             <div className="min-w-0 flex-1">
-              <h2 id={idTitre} className="source-piece" title={nom}>{nom}</h2>
+              <Infobulle texte={nom} cote="bottom"><h2 id={idTitre} className="source-piece">{nom}</h2></Infobulle>
               {reponse && reponse.niveau !== 'aucun' && (
                 <p className="source-meta">
                   <span className="source-niveau">
@@ -170,26 +174,26 @@ export function PanneauSourceVue({
                 </p>
               )}
             </div>
-            <button type="button" className="source-rond" onClick={onFermer} aria-label="Fermer l'extrait du dossier">
-              <X size={18} aria-hidden="true" />
-            </button>
+            <Bouton variante="secondaire" className="w-11 rounded-pilule px-0" onClick={onFermer} aria-label="Fermer l'extrait du dossier">
+              <X aria-hidden="true" />
+            </Bouton>
           </div>
           {vues.length > 1 && vue && (
             <div role="tablist" aria-label="Affichage" className="source-onglets" onKeyDown={surTabs}>
               {vues.map((v) => (
-                <button
+                <Bouton
                   key={v}
-                  type="button"
+                  variante="discret"
                   role="tab"
                   id={`${idTitre}-${v}`}
                   aria-selected={v === vue}
                   aria-controls={`${idTitre}-corps`}
                   tabIndex={v === vue ? 0 : -1}
-                  className="source-onglet"
+                  className="aria-selected:bg-surface-2 aria-selected:text-fg"
                   onClick={() => choisirVue(v)}
                 >
                   {LIBELLES_VUES[v]}
-                </button>
+                </Bouton>
               ))}
             </div>
           )}
@@ -204,14 +208,13 @@ export function PanneauSourceVue({
         >
           {etat === 'chargement' && (
             <div className="source-vide" role="status">
-              <Loader2 size={20} className="animate-spin" aria-hidden="true" />
-              <p>Recherche du passage dans la pièce</p>
+              <p>Recherche du passage dans la pièce…</p>
             </div>
           )}
           {etat === 'echec' && (
             <div className="source-vide" role="status">
               <p>Cette source n&rsquo;a pas pu s&rsquo;afficher pour le moment.</p>
-              <button type="button" className="source-bouton" onClick={onReessayer}>Réessayer</button>
+              <Bouton onClick={onReessayer}>Réessayer</Bouton>
             </div>
           )}
           {reponse && (() => {

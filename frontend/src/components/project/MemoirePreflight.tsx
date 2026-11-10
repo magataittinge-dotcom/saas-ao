@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Building2, ListChecks } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Plus } from 'lucide-react'
 import { api } from '@/services/api'
 import { useAuthStore } from '@/stores/authStore'
+import { Bouton } from '@/components/ui/bouton'
+import { CaseACocher } from '@/components/ui/case'
+import { Champ, ChampNombre, GroupeChamp, ZoneTexte } from '@/components/ui/champ'
 
 // ── Types (miroir de GET /memoire/preflight) ─────────────────────────────────
 
@@ -61,15 +65,15 @@ interface Props {
 const PROFILE_FIELDS: { key: keyof PreflightProfil; label: string; multiline?: boolean }[] = [
   { key: 'nom', label: 'Entreprise' },
   { key: 'gerant_nom', label: 'Gérant' },
-  { key: 'zone_intervention', label: "Zone d'intervention" },
+  { key: 'zone_intervention', label: 'Zone d’intervention' },
   { key: 'organigramme_description', label: 'Équipe / effectifs', multiline: true },
   { key: 'materiel', label: 'Matériel', multiline: true },
   { key: 'vehicules', label: 'Véhicules', multiline: true },
 ]
 
-const inputClass =
-  'w-full rounded-lg border px-2.5 py-1.5 text-sm bg-ds-bg text-fg focus:outline-none focus:ring-2 focus:ring-accent-ring'
-const inputStyle = { borderColor: 'var(--surface-1)' }
+/** Une section du repli : un filet au-dessus, pas de carte dans la carte. */
+const SECTION = 'space-y-3 border-t border-bord pt-4 first:border-t-0 first:pt-0'
+const TITRE = 'text-sm font-semibold text-fg'
 
 function usePreflight(projectId: string) {
   return useQuery<PreflightPayload>({
@@ -102,7 +106,7 @@ export function QuotaMemoire({ projectId }: { projectId: string }) {
   const plan = useAuthStore((st) => st.organization?.plan ?? 'free')
   const { data } = usePreflight(projectId)
   if (!data) return null
-  return <p className="text-xs" style={{ color: 'var(--text-3)' }}>{ligneQuotaMemoire(plan, data.quota)}</p>
+  return <p className="text-xs text-fg-3">{ligneQuotaMemoire(plan, data.quota)}</p>
 }
 
 /**
@@ -163,159 +167,115 @@ export default function MemoirePreflight({ projectId, onChange }: Props) {
     })
   }
 
+  const basculer = (id: string) => (prev: Set<string>) => {
+    const next = new Set(prev)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    return next
+  }
+
   return (
     <div className="space-y-4">
       {/* ── Profil condensé éditable ── */}
-      <div className="rounded-lg p-4" style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)' }}>
-        <div className="flex items-center gap-2 mb-3">
-          <Building2 size={15} style={{ color: 'var(--text-1)' }} />
-          <h3 className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>
-            Profil utilisé pour ce mémoire
-          </h3>
-          {data.profil.effectif_tranche && (
-            <span className="text-xs" style={{ color: 'var(--text-3)' }}>{data.profil.effectif_tranche}</span>
-          )}
+      <section className={SECTION}>
+        <div className="flex flex-wrap items-baseline gap-x-2">
+          <h3 className={TITRE}>Profil utilisé pour ce mémoire</h3>
+          {data.profil.effectif_tranche && <span className="text-xs text-fg-3">{data.profil.effectif_tranche}</span>}
         </div>
-        <div className="grid sm:grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           {PROFILE_FIELDS.map(({ key, label, multiline }) => {
             const original = data.profil[key] ?? ''
             const value = key in overrides ? overrides[key] : original
             return (
-              <div key={key} className={multiline ? 'sm:col-span-2' : undefined}>
-                <label className="block text-xs font-medium mb-1" style={{ color: 'var(--text-3)' }}>
-                  {label}
-                  {key in overrides && (
-                    <span className="ml-1.5 text-xs font-semibold" style={{ color: 'var(--warning-fg)' }}>
-                      modifié pour ce mémoire
-                    </span>
-                  )}
-                </label>
-                {multiline ? (
-                  <textarea rows={2} className={inputClass} style={inputStyle}
-                    value={value ?? ''} onChange={(e) => setField(key, e.target.value, original)} />
-                ) : (
-                  <input className={inputClass} style={inputStyle}
-                    value={value ?? ''} onChange={(e) => setField(key, e.target.value, original)} />
-                )}
-              </div>
+              <GroupeChamp key={key} libelle={label} aide={key in overrides ? 'Modifié pour ce mémoire' : undefined} className={multiline ? 'sm:col-span-2' : undefined}>
+                {multiline
+                  ? <ZoneTexte rows={2} value={value ?? ''} onChange={(e) => setField(key, e.target.value, original)} />
+                  : <Champ value={value ?? ''} onChange={(e) => setField(key, e.target.value, original)} />}
+              </GroupeChamp>
             )
           })}
         </div>
-        <label className="flex items-center gap-2 mt-3 text-xs cursor-pointer" style={{ color: 'var(--text-3)' }}>
-          <input type="checkbox" checked={updateProfile}
-            onChange={(e) => setUpdateProfile(e.target.checked)} />
-          Mettre à jour mon profil avec ces modifications (sinon elles restent locales à ce mémoire)
-        </label>
-
-        {/* C8a — option organigramme (grisée si l'équipe du profil est vide) */}
-        <label
-          className={`flex items-center gap-2 mt-2 text-xs ${data.organigramme_available ? 'cursor-pointer' : 'opacity-60'}`}
-          style={{ color: 'var(--text-3)' }}
-        >
-          <input type="checkbox"
-            disabled={!data.organigramme_available}
-            checked={includeOrganigramme && data.organigramme_available}
-            onChange={(e) => setIncludeOrganigramme(e.target.checked)} />
-          Inclure un organigramme du chantier dans le mémoire
+        <div>
+          <CaseACocher coche={updateProfile} onChange={setUpdateProfile}
+            libelle="Mettre à jour mon profil avec ces modifications (sinon elles restent locales à ce mémoire)" />
+          {/* C8a — l'organigramme se dessine à partir de l'équipe du profil : sans équipe, la case attend */}
+          <CaseACocher coche={includeOrganigramme && data.organigramme_available} onChange={setIncludeOrganigramme}
+            disabled={!data.organigramme_available} libelle="Inclure un organigramme du chantier dans le mémoire" />
           {!data.organigramme_available && (
-            <a href="/company" className="underline" style={{ color: 'var(--text-1)' }}>
-              compléter mon équipe
-            </a>
+            <p className="text-xs text-fg-3">
+              L’organigramme se dessine à partir de votre équipe.{' '}
+              <Link to="/company" className="font-medium text-fg underline underline-offset-2">Compléter mon équipe</Link>
+            </p>
           )}
-        </label>
-      </div>
+        </div>
+      </section>
 
       {/* ── Références pré-sélectionnées par pertinence ── */}
       {data.references.length > 0 && (
-        <div className="rounded-lg p-4" style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)' }}>
-          <div className="flex items-center gap-2 mb-3">
-            <ListChecks size={15} style={{ color: 'var(--text-1)' }} />
-            <h3 className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>
-              Références à citer ({checkedRefs?.size ?? 0} sélectionnées)
-            </h3>
-            <span className="text-xs" style={{ color: 'var(--text-3)' }}>
-              pré-sélection selon le lot — ajustez librement
-            </span>
+        <section className={SECTION}>
+          <div className="flex flex-wrap items-baseline gap-x-2">
+            <h3 className={TITRE}>Références à citer ({checkedRefs?.size ?? 0} sélectionnées)</h3>
+            <span className="text-xs text-fg-3">pré-sélection selon le lot, à ajuster librement</span>
           </div>
-          <ul className="space-y-1 max-h-56 overflow-y-auto">
+          <ul className="max-h-56 overflow-y-auto">
             {data.references.map((ref) => (
               <li key={ref.id}>
-                <label className="flex items-start gap-2.5 px-2 py-1.5 rounded-lg cursor-pointer hover:bg-surface-1">
-                  <input type="checkbox" className="mt-0.5"
-                    checked={checkedRefs?.has(ref.id) ?? false}
-                    onChange={() => toggleRef(ref.id)} />
-                  <span className="min-w-0">
-                    <span className="block text-sm truncate" style={{ color: 'var(--text-1)' }}>{ref.intitule}</span>
-                    <span className="block text-xs" style={{ color: 'var(--text-3)' }}>
-                      {[ref.lot, ref.maitre_ouvrage, ref.annee].filter(Boolean).join(' · ')}
-                    </span>
-                  </span>
-                </label>
+                <CaseACocher coche={checkedRefs?.has(ref.id) ?? false} onChange={() => toggleRef(ref.id)}
+                  libelle={<>
+                    <span className="block truncate">{ref.intitule}</span>
+                    <span className="block text-xs text-fg-3">{[ref.lot, ref.maitre_ouvrage, ref.annee].filter(Boolean).join(' · ')}</span>
+                  </>} />
               </li>
             ))}
           </ul>
-        </div>
+        </section>
       )}
 
-      {/* ── Gantt du phasage (option — phases saisies, jamais inventées) ── */}
-      <div className="rounded-lg p-4" style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)' }}>
-        <h3 className="text-sm font-bold mb-1" style={{ color: 'var(--text-1)' }}>
-          Planning prévisionnel (option)
-        </h3>
-        <p className="text-xs mb-3" style={{ color: 'var(--text-3)' }}>
-          Saisissez vos phases : un Gantt sera inséré dans le mémoire. Vide = pas de Gantt.
-        </p>
-        <div className="space-y-2">
-          {ganttPhases.map((phase, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <input className={inputClass} style={inputStyle} placeholder="Nom de la phase"
-                value={phase.nom}
-                onChange={(e) => setGanttPhases(prev =>
-                  prev.map((p, j) => j === i ? { ...p, nom: e.target.value } : p))} />
-              <input type="number" min={1} className={`${inputClass} w-24 shrink-0`} style={inputStyle}
-                placeholder="sem."
-                value={phase.duree_semaines || ''}
-                onChange={(e) => setGanttPhases(prev =>
-                  prev.map((p, j) => j === i ? { ...p, duree_semaines: parseInt(e.target.value) || 0 } : p))} />
-              <button onClick={() => setGanttPhases(prev => prev.filter((_, j) => j !== i))}
-                className="text-xs shrink-0" style={{ color: 'var(--text-3)' }}>retirer</button>
-            </div>
-          ))}
-        </div>
-        <button
-          onClick={() => setGanttPhases(prev => [...prev, { nom: '', duree_semaines: 0 }])}
-          className="mt-2 text-xs font-medium" style={{ color: 'var(--text-1)' }}>
-          + Ajouter une phase
-        </button>
-      </div>
-
-      {/* ── Annexes du coffre-fort (jointes au ZIP d'export) ── */}
-      {data.vault_documents.length > 0 && (
-        <div className="rounded-lg p-4" style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)' }}>
-          <h3 className="text-sm font-bold mb-1" style={{ color: 'var(--text-1)' }}>
-            Annexes du coffre-fort (option)
-          </h3>
-          <p className="text-xs mb-2" style={{ color: 'var(--text-3)' }}>
-            Jointes au ZIP d'export en section 3_ANNEXES.
+      {/* ── Gantt du phasage (facultatif : phases saisies, jamais inventées) ── */}
+      <section className={SECTION}>
+        <div>
+          <h3 className={TITRE}>Planning prévisionnel (facultatif)</h3>
+          <p className="mt-1 text-xs text-fg-3">
+            Saisissez vos phases : un planning de Gantt sera inséré dans le mémoire. Sans phase, le mémoire n’en contient pas.
           </p>
-          <ul className="space-y-1 max-h-40 overflow-y-auto">
-            {data.vault_documents.map((doc) => (
-              <li key={doc.id}>
-                <label className="flex items-center gap-2 px-1 py-1 text-sm cursor-pointer" style={{ color: 'var(--text-1)' }}>
-                  <input type="checkbox"
-                    checked={checkedAnnexes.has(doc.id)}
-                    onChange={() => setCheckedAnnexes(prev => {
-                      const next = new Set(prev)
-                      if (next.has(doc.id)) next.delete(doc.id)
-                      else next.add(doc.id)
-                      return next
-                    })} />
-                  <span className="truncate">{doc.file_name}</span>
-                </label>
+        </div>
+        {ganttPhases.length > 0 && (
+          <ul className="space-y-2">
+            {ganttPhases.map((phase, i) => (
+              <li key={i} className="flex flex-wrap items-center gap-2">
+                <Champ className="min-w-0 flex-1 basis-48" aria-label={`Nom de la phase ${i + 1}`} placeholder="Nom de la phase"
+                  value={phase.nom}
+                  onChange={(e) => setGanttPhases(prev => prev.map((p, j) => j === i ? { ...p, nom: e.target.value } : p))} />
+                <ChampNombre className="w-32 shrink-0" aria-label={`Durée de la phase ${i + 1}, en semaines`} unite="sem." min={1}
+                  valeur={phase.duree_semaines || null}
+                  onChange={(n) => setGanttPhases(prev => prev.map((p, j) => j === i ? { ...p, duree_semaines: n == null ? 0 : Math.round(n) } : p))} />
+                <Bouton variante="discret" aria-label={`Retirer la phase ${i + 1}`}
+                  onClick={() => setGanttPhases(prev => prev.filter((_, j) => j !== i))}>Retirer</Bouton>
               </li>
             ))}
           </ul>
-        </div>
+        )}
+        <Bouton onClick={() => setGanttPhases(prev => [...prev, { nom: '', duree_semaines: 0 }])}>
+          <Plus aria-hidden /> Ajouter une phase
+        </Bouton>
+      </section>
+
+      {/* ── Annexes du coffre-fort (jointes au dossier téléchargé) ── */}
+      {data.vault_documents.length > 0 && (
+        <section className={SECTION}>
+          <div>
+            <h3 className={TITRE}>Annexes du coffre-fort (facultatif)</h3>
+            <p className="mt-1 text-xs text-fg-3">Jointes au dossier téléchargé, dans le dossier « Annexes ».</p>
+          </div>
+          <ul className="max-h-40 overflow-y-auto">
+            {data.vault_documents.map((doc) => (
+              <li key={doc.id}>
+                <CaseACocher coche={checkedAnnexes.has(doc.id)} onChange={() => setCheckedAnnexes(basculer(doc.id))}
+                  libelle={<span className="block truncate">{doc.file_name}</span>} />
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
     </div>
   )

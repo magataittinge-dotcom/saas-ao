@@ -1,8 +1,9 @@
 import { CircleHelp } from 'lucide-react'
+import { Bouton } from '@/components/ui/bouton'
 
 /**
  * Sous une partie du plan : elle sert le même sous-critère qu'une partie plus haut et porte un titre proche. Le lien fait ce que
- * fait la croix « retirer » de la carte ; rien n'est retiré sans ce clic.
+ * fait « Retirer du plan » du menu de la rangée ; rien n'est retiré sans ce clic.
  */
 export default function MentionRecoupe({ titre, onRetirer }: { titre: string; onRetirer: () => void }) {
   return (
@@ -11,12 +12,7 @@ export default function MentionRecoupe({ titre, onRetirer }: { titre: string; on
         <CircleHelp size={14} aria-hidden />
         Se recoupe avec «&nbsp;{titre}&nbsp;»
       </span>
-      <button
-        type="button" onClick={onRetirer}
-        className="inline-flex min-h-9 items-center rounded-xs font-medium text-accent-text hover:underline [@media(pointer:coarse)]:min-h-11"
-      >
-        Retirer cette partie
-      </button>
+      <Bouton variante="lien" onClick={onRetirer}>Retirer cette partie</Bouton>
     </p>
   )
 }

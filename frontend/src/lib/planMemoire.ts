@@ -63,6 +63,14 @@ export const TITRES_PARTIES_PLAN: Record<PartieId, string> = {
   partie_c: 'PARTIE C — MÉTHODOLOGIE MISE EN ŒUVRE',
 }
 
+/** « PARTIE B — PRÉSENTATION DE LA PRESTATION » (le titre du document) → « Partie B — Présentation de la prestation » (l'écran). */
+export function titrePartieLisible(partie: PartieId): string {
+  const m = /^PARTIE ([A-Z]) — (.+)$/.exec(TITRES_PARTIES_PLAN[partie])
+  if (!m) return TITRES_PARTIES_PLAN[partie]
+  const reste = m[2].toLocaleLowerCase('fr')
+  return `Partie ${m[1]} — ${reste.charAt(0).toLocaleUpperCase('fr')}${reste.slice(1)}`
+}
+
 /** Ce que le serveur accepte pour une partie (les sources, sous-critères et propositions sont recalculés par lui). */
 export interface PartieEnvoyee {
   cle: string

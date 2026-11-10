@@ -87,3 +87,15 @@ export function pieceDemandee(p: EtatPieceEntree, echeance?: string | null): boo
   const code = statutPiece(p, echeance).code
   return code === 'pret' || code === 'a-joindre' || code === 'a-confirmer' || code === 'a-renouveler'
 }
+
+/**
+ * A12 — la dernière étape, dite sous « Télécharger le dossier » : le dépôt se fait hors de Synorix, sur la plateforme de
+ * l'acheteur, avant la date de remise. `jour` : « 12 novembre » ; `heure` : « 14 h » ou « 14 h 30 » ; `passee` : la date
+ * de remise est derrière nous (la coquille de l'AO le dit déjà : la phrase ne redonne pas une date dépassée).
+ */
+export function phraseDepot(remise: { jour: string; heure?: string | null; passee: boolean } | null): string {
+  const debut = 'Dernière étape, hors Synorix : déposez ce dossier sur la plateforme de l’acheteur'
+  if (!remise || !remise.jour) return `${debut} avant la date de remise.`
+  if (remise.passee) return `${debut}.`
+  return `${debut} avant le ${remise.jour}${remise.heure ? ` à ${remise.heure}` : ''}.`
+}

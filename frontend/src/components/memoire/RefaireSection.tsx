@@ -1,8 +1,6 @@
 import { RefreshCw } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog'
+import { Bouton } from '@/components/ui/bouton'
+import { DialogueConfirmation } from '@/components/ui/dialogue'
 
 export interface CibleRefaire {
   part: string
@@ -10,7 +8,7 @@ export interface CibleRefaire {
   titre: string
 }
 
-/** Le petit bouton à côté du titre d'une partie. */
+/** Le geste à côté du titre d'une partie : un bouton discret du système, en mots. */
 export function BoutonRefaire({
   titre, onClick, desactive = false,
 }: {
@@ -19,16 +17,9 @@ export function BoutonRefaire({
   desactive?: boolean
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={desactive}
-      aria-label={`Refaire cette partie : ${titre}`}
-      className="memoire-refaire inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium transition-colors hover:bg-ds-bg-2 disabled:opacity-50 disabled:pointer-events-none [@media(pointer:coarse)]:min-h-11"
-      style={{ color: 'var(--text-2)', border: '1px solid var(--border-1)' }}
-    >
-      <RefreshCw size={12} aria-hidden="true" /> Refaire cette partie
-    </button>
+    <Bouton variante="discret" onClick={onClick} disabled={desactive} aria-label={`Refaire cette partie : ${titre}`} className="memoire-refaire px-2.5">
+      <RefreshCw aria-hidden="true" /> Refaire cette partie
+    </Bouton>
   )
 }
 
@@ -36,17 +27,17 @@ export function BoutonRefaire({
  *  unités, et « Refaire cette partie » n'en décompte aucune. */
 export function CorpsConfirmationRefaire({ titre }: { titre: string }) {
   return (
-    <div className="space-y-2 text-sm" style={{ color: 'var(--text-2)' }}>
+    <div className="space-y-2 text-sm text-fg-2">
       <p>
         Synorix IA réécrit « {titre} » à partir de votre dossier et de la fiche de cette partie. Le reste du mémoire ne
         change pas ; le texte actuel de cette partie est remplacé.
       </p>
-      <p className="font-semibold" style={{ color: 'var(--text-1)' }}>Ne décompte aucune unité.</p>
+      <p className="font-semibold text-fg">Ne décompte aucune unité.</p>
     </div>
   )
 }
 
-/** La confirmation avant de refaire une partie. */
+/** La confirmation avant de refaire une partie : le dialogue du système. */
 export default function ConfirmationRefaire({
   cible, enCours, onConfirmer, onAnnuler,
 }: {
@@ -56,20 +47,16 @@ export default function ConfirmationRefaire({
   onAnnuler: () => void
 }) {
   return (
-    <Dialog open onOpenChange={(ouvert) => { if (!ouvert && !enCours) onAnnuler() }}>
-      <DialogContent className="max-w-md">
-        <DialogHeader className="pr-8">
-          <DialogTitle className="text-base font-bold text-fg">Refaire cette partie ?</DialogTitle>
-          <DialogDescription className="sr-only">Confirmer la réécriture de la partie {cible.titre}</DialogDescription>
-        </DialogHeader>
-        <CorpsConfirmationRefaire titre={cible.titre} />
-        <DialogFooter className="gap-2 pt-2 sm:space-x-0">
-          <Button variant="ghost" onClick={onAnnuler} disabled={enCours}>Annuler</Button>
-          <Button onClick={onConfirmer} disabled={enCours}>
-            {enCours ? 'Lancement…' : 'Refaire cette partie'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <DialogueConfirmation
+      ouvert
+      onOuvert={(ouvert) => { if (!ouvert) onAnnuler() }}
+      titre="Refaire cette partie ?"
+      libelleConfirmer="Refaire cette partie"
+      libelleEnCours="Lancement…"
+      enCours={enCours}
+      onConfirmer={onConfirmer}
+    >
+      <CorpsConfirmationRefaire titre={cible.titre} />
+    </DialogueConfirmation>
   )
 }

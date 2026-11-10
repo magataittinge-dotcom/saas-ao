@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import { createPortal } from 'react-dom'
-import { Loader2, Sparkles, X } from 'lucide-react'
 import { api } from '@/services/api'
+import { Bouton } from '@/components/ui/bouton'
+import { Champ } from '@/components/ui/champ'
+import { Dialogue } from '@/components/ui/dialogue'
+import { Message } from '@/components/ui/message'
 
 export interface PassageSelection {
   text: string
@@ -25,11 +27,12 @@ const ACTIONS: { id: string; label: string }[] = [
 ]
 
 /**
- * C9b — réécriture IA ciblée : agit sur le passage sélectionné SEUL,
- * montre le diff avant/après, n'applique qu'à l'acceptation explicite.
+ * C9b — réécriture ciblée : agit sur le passage sélectionné SEUL, montre l'avant et l'après, n'applique qu'à l'acceptation
+ * explicite. Quatre gestes en mots (Reformuler, Plus technique, Plus concis, Insister sur…), aux boutons du système ; le
+ * plafond du jour est annoncé avant le clic ; pendant l'appel, le libellé du geste change (aucune roue).
  */
 export default function RewritePassageBar({ projectId, selection, onApply }: Props) {
-  const [busy, setBusy] = useState(false)
+  const [enCours, setEnCours] = useState<string | null>(null)
   const [insistText, setInsistText] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [diff, setDiff] = useState<{
@@ -37,8 +40,8 @@ export default function RewritePassageBar({ projectId, selection, onApply }: Pro
   } | null>(null)
 
   const run = async (action: string) => {
-    if (!selection || busy) return
-    setBusy(true)
+    if (!selection || enCours) return
+    setEnCours(action)
     setError(null)
     const { text, start, end } = selection
     try {
@@ -50,101 +53,77 @@ export default function RewritePassageBar({ projectId, selection, onApply }: Pro
       setDiff({ original: data.original, rewritten: data.rewritten, start, end })
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail
-      setError(typeof detail === 'string' ? detail : 'La réécriture a échoué — réessayez.')
+      setError(typeof detail === 'string' ? detail : 'La réécriture n’a pas pu se faire. Votre texte n’a pas changé ; réessayez dans un instant.')
     } finally {
-      setBusy(false)
+      setEnCours(null)
     }
   }
 
   const hasSelection = !!selection && selection.text.trim().length > 0
+  const bloque = !hasSelection || enCours !== null
 
   return (
     <>
-      <div
-        className="flex items-center gap-2 px-6 py-2 flex-wrap"
-        style={{ borderBottom: '1px solid var(--border-1)', background: 'var(--surface-1)' }}
-      >
-        <Sparkles size={13} style={{ color: hasSelection ? 'var(--text-1)' : 'var(--text-3)' }} />
-        <span className="text-xs" style={{ color: hasSelection ? 'var(--text-3)' : 'var(--text-3)' }}>
-          {hasSelection
-            ? `Réécrire la sélection (${selection!.text.length} car.) :`
-            : 'Sélectionnez un passage pour le réécrire avec l\'IA'}
-        </span>
+      <div data-barre-reecriture="" className="flex flex-wrap items-center gap-x-2 gap-y-2">
+        <p className="mr-1 text-sm text-fg-2" aria-live="polite">
+          {hasSelection ? 'Réécrire la sélection :' : 'Sélectionnez un passage pour le réécrire :'}
+        </p>
         {ACTIONS.map((a) => (
-          <button
-            key={a.id}
-            disabled={!hasSelection || busy}
-            onClick={() => run(a.id)}
-            className="px-2.5 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-40"
-            style={{ border: '1px solid var(--border-1)', color: 'var(--text-2)', background: 'var(--surface-1)' }}
-          >
+          <Bouton key={a.id} variante="secondaire" disabled={bloque} enCours={enCours === a.id} libelleEnCours="Réécriture…" onClick={() => run(a.id)}>
             {a.label}
-          </button>
+          </Bouton>
         ))}
-        <span className="inline-flex items-center gap-1">
-          <input
+        <form
+          className="flex min-w-0 items-center gap-2"
+          onSubmit={(e) => { e.preventDefault(); if (insistText.trim()) void run('insister') }}
+        >
+          <Champ
             value={insistText}
             onChange={(e) => setInsistText(e.target.value)}
             placeholder="Insister sur…"
-            disabled={!hasSelection || busy}
-            className="px-2 py-1 rounded-md text-xs w-40 disabled:opacity-40 focus:outline-none"
-            style={{ border: '1px solid var(--border-1)', color: 'var(--text-2)' }}
+            aria-label="Insister sur : ce que le passage doit mettre en avant"
+            disabled={bloque}
+            className="w-44 min-w-0"
           />
-          <button
-            disabled={!hasSelection || busy || !insistText.trim()}
-            onClick={() => run('insister')}
-            className="px-2.5 py-1 rounded-md text-xs font-medium transition-colors disabled:opacity-40"
-            style={{ border: '1px solid var(--border-1)', color: 'var(--text-2)', background: 'var(--surface-1)' }}
-          >
-            OK
-          </button>
-        </span>
-        {busy && <Loader2 size={13} className="animate-spin" style={{ color: 'var(--text-1)' }} />}
+          <Bouton type="submit" variante="secondaire" disabled={bloque || !insistText.trim()} enCours={enCours === 'insister'} libelleEnCours="Réécriture…">
+            Insister
+          </Bouton>
+        </form>
         {/* Annoncé avant le clic : l'IA réécrit, aucune unité n'est décomptée, le jour a un plafond. */}
-        <span className="text-xs sm:ml-auto" style={{ color: 'var(--text-3)' }}>
-          Réécriture par l’IA, ne décompte aucune unité · {PLAFOND_PAR_JOUR} par jour
-        </span>
-        {error && <span className="text-xs" style={{ color: 'var(--danger-fg)' }}>{error}</span>}
+        <p className="text-xs text-fg-3 lg:ml-auto">
+          Réécriture par l’IA, ne décompte aucune unité · <span className="chiffres">{PLAFOND_PAR_JOUR}</span> par jour au plus
+        </p>
       </div>
+      {error && <Message ton="erreur" className="mt-2" onFermer={() => setError(null)}>{error}</Message>}
 
-      {/* ── Diff avant/après → accepter ou rejeter ── */}
-      {diff && createPortal(
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4"
-          style={{ background: 'var(--scrim)' }} onClick={() => setDiff(null)}>
-          <div className="bg-ds-bg rounded-xl w-full max-w-3xl max-h-[80vh] flex flex-col overflow-hidden"
-            onClick={(e) => e.stopPropagation()} style={{ boxShadow: 'var(--shadow-pop)' }}>
-            <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: '1px solid var(--border-1)' }}>
-              <h3 className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>Réécriture proposée</h3>
-              <button onClick={() => setDiff(null)} className="p-1.5 rounded-lg hover:bg-ds-bg-2">
-                <X size={16} style={{ color: 'var(--text-3)' }} />
-              </button>
+      <Dialogue
+        ouvert={diff !== null}
+        onOuvert={(o) => { if (!o) setDiff(null) }}
+        titre="Réécriture proposée"
+        description="Rien n’est changé tant que vous n’acceptez pas."
+        taille="grand"
+        actions={(
+          <>
+            <Bouton variante="secondaire" onClick={() => setDiff(null)}>Garder mon texte</Bouton>
+            <Bouton variante="principal" onClick={() => { if (diff) onApply(diff.start, diff.end, diff.rewritten); setDiff(null) }}>
+              Accepter la réécriture
+            </Bouton>
+          </>
+        )}
+      >
+        {diff && (
+          <div className="grid max-h-[55vh] gap-x-6 gap-y-4 overflow-y-auto sm:grid-cols-2">
+            <div className="min-w-0">
+              <p className="mb-1.5 text-xs font-medium text-fg-3">Avant</p>
+              <p className="whitespace-pre-wrap font-memoire text-base text-fg-2">{diff.original}</p>
             </div>
-            <div className="flex-1 overflow-y-auto grid sm:grid-cols-2 gap-0">
-              <div className="p-4" style={{ borderRight: '1px solid var(--border-1)' }}>
-                <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: 'var(--text-3)' }}>Avant</p>
-                <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-3)' }}>{diff.original}</p>
-              </div>
-              <div className="p-4" style={{ background: 'color-mix(in srgb, var(--text-1) 3%, transparent)' }}>
-                <p className="text-xs font-bold uppercase tracking-wide mb-2" style={{ color: 'var(--text-2)' }}>Après</p>
-                <p className="text-sm whitespace-pre-wrap" style={{ color: 'var(--text-1)' }}>{diff.rewritten}</p>
-              </div>
-            </div>
-            <div className="flex justify-end gap-2 px-5 py-3" style={{ borderTop: '1px solid var(--border-1)' }}>
-              <button onClick={() => setDiff(null)}
-                className="px-3 py-2 rounded-lg text-sm font-medium hover:bg-ds-bg-2"
-                style={{ color: 'var(--text-3)' }}>
-                Rejeter
-              </button>
-              <button
-                onClick={() => { onApply(diff.start, diff.end, diff.rewritten); setDiff(null) }}
-                className="edge-cta px-4 py-2 rounded-lg text-sm font-semibold">
-                Accepter la réécriture
-              </button>
+            <div className="min-w-0 sm:border-l sm:border-bord sm:pl-6">
+              <p className="mb-1.5 text-xs font-medium text-fg-2">Après</p>
+              <p className="whitespace-pre-wrap font-memoire text-base text-fg">{diff.rewritten}</p>
             </div>
           </div>
-        </div>,
-        document.body,
-      )}
+        )}
+      </Dialogue>
     </>
   )
 }

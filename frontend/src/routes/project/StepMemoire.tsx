@@ -1,45 +1,46 @@
 import { useAvisAttente } from '@/hooks/useAvisAttente'
-import { heureParis } from '@/lib/dateParis'
 import { useState, useRef, useMemo, useCallback, useEffect } from 'react'
-import { createPortal } from 'react-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useNavigate, Link } from 'react-router-dom'
-import { Save, CheckCircle2, Pencil, X } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Pencil } from 'lucide-react'
 import axios from 'axios'
 import { memoireDepuisReponse } from '@/lib/memoireLecture'
 import { api } from '@/services/api'
+import { libellePassagesACompleter } from '@/lib/passagesACompleter'
 import FormulaireMemoire from '@/components/project/FormulaireMemoire'
 import BarreEtape, { BoutonSuite } from '@/components/project/BarreEtape'
 import { type PreflightSelection } from '@/components/project/MemoirePreflight'
 import { VARIABLES_VIDES, corpsGeneration } from '@/lib/memoireGeneration'
-import RewritePassageBar, { type PassageSelection } from '@/components/project/RewritePassageBar'
 import ProgressDisplay, { type StepDescriptor } from '@/components/common/ProgressDisplay'
 import { useProgressStream } from '@/hooks/useProgressStream'
 import SubscriptionWall from '@/components/common/SubscriptionWall'
+import { Sigle } from '@/components/common/Sigle'
 import PoidsMemoire from '@/components/project/PoidsMemoire'
 import RelectureMemoire from '@/components/memoire/RelectureMemoire'
 import {
   ActionsBarreTel, BandeResume, BilanBarre, GabaritEtape, SectionEtape, type CarteResume,
 } from '@/components/etape'
+import { Bouton } from '@/components/ui/bouton'
+import { EtatErreur } from '@/components/ui/etats'
+import { Message } from '@/components/ui/message'
+import { Squelette, SqueletteLignes } from '@/components/ui/squelette'
 import { ETAT_A_VERIFIER, ETAT_PRET, type VuePlan } from '@/lib/planMemoire'
-import { MemoireSkeleton } from '@/components/skeletons'
 import type { Project, MemoireTechnique, MemoireContent, Reference } from '@/types'
-import {
-  SEUIL_SECTION_BREVE, referencesRetrouvees, sectionsBreves,
-} from '@/lib/memoireControles'
-import { depuisMarkdown, versMarkdown } from '@/lib/memoireMarkdown'
-import {
-  ANNEXES_MEMOIRE, sectionsDuContenu, sommaireMemoire, type SectionMemoire,
-} from '@/lib/memoireSections'
-import LecteurMarkdown from '@/components/memoire/LecteurMarkdown'
+import { referencesRetrouvees, sectionsBreves } from '@/lib/memoireControles'
+import { sectionsDuContenu, sommaireMemoire } from '@/lib/memoireSections'
 import { useQuota } from '@/components/layout/QuotaGauge'
 import SommaireMemoire from '@/components/memoire/SommaireMemoire'
-import ConfirmationRefaire, { BoutonRefaire, type CibleRefaire } from '@/components/memoire/RefaireSection'
-import EtatPartieChoix from '@/components/memoire/EtatPartie'
-import { etatDe, etatsDuMemoire, type EtatPartie, type EtatsSections } from '@/lib/memoireEtats'
+import ControlesTexte from '@/components/memoire/ControlesTexte'
+import { DocumentView } from '@/components/memoire/DocumentMemoire'
+import EditeurMemoire from '@/components/memoire/EditeurMemoire'
+import ConfirmationRefaire, { type CibleRefaire } from '@/components/memoire/RefaireSection'
+import { etatsDuMemoire, type EtatPartie, type EtatsSections } from '@/lib/memoireEtats'
 import { useSourceChamp } from '@/hooks/useSourceChamp'
+import { useMedia } from '@/hooks/useMedia'
 import type { RattachementCriteres } from '@/lib/memoireCriteres'
 import type { CriticalFieldsPayload } from '@/components/project/CriticalBanner'
+
+export { DocumentView }
 
 const MEMOIRE_GEN_STEPS: StepDescriptor[] = [
   { key: 'preparing',  label: 'Préparation du contexte',         estimated_s: 3 },
@@ -47,358 +48,7 @@ const MEMOIRE_GEN_STEPS: StepDescriptor[] = [
   { key: 'finalizing', label: 'Finalisation',                    estimated_s: 5 },
 ]
 
-const F = 'var(--font-ui)'
-
-// ─── Fullscreen editor ─────────────────────────────────────────────────────────
-
-type EtatEnregistrement = 'enregistre' | 'en_cours' | 'echec'
-
-const DELAI_ENREGISTREMENT_AUTO_MS = 3000
-
-function FullscreenEditor({
-  content, projectId, onSave, onClose,
-}: {
-  content: MemoireContent
-  projectId: string
-  /** Enregistre le texte de l'éditeur ; échoue (promesse rejetée) si le serveur refuse. */
-  onSave: (raw: string) => Promise<void>
-  onClose: () => void
-}) {
-  const [raw, setRaw] = useState(() => versMarkdown(content))
-  // 1.8 — dernier texte confirmé par le serveur : sert à savoir s'il reste des modifications
-  const [enregistre, setEnregistre] = useState(raw)
-  const [etat, setEtat] = useState<EtatEnregistrement>('enregistre')
-  const [heure, setHeure] = useState<Date | null>(null)
-  const [confirmerFermeture, setConfirmerFermeture] = useState(false)
-  // C9b — sélection courante dans le textarea (pour la réécriture ciblée)
-  const [selection, setSelection] = useState<PassageSelection | null>(null)
-  const editorRef = useRef<HTMLTextAreaElement>(null)
-  const onSaveRef = useRef(onSave)
-  onSaveRef.current = onSave
-  const enCoursRef = useRef(false)
-  const modifie = raw !== enregistre
-
-  const enregistrer = useCallback(async (texte: string): Promise<boolean> => {
-    if (enCoursRef.current) return false
-    enCoursRef.current = true
-    setEtat('en_cours')
-    try {
-      await onSaveRef.current(texte)
-      setEnregistre(texte)
-      setHeure(new Date())
-      setEtat('enregistre')
-      return true
-    } catch {
-      setEtat('echec')
-      return false
-    } finally {
-      enCoursRef.current = false
-    }
-  }, [])
-
-  // Enregistrement automatique quelques secondes après la dernière frappe.
-  useEffect(() => {
-    if (raw === enregistre) return
-    const minuteur = setTimeout(() => { void enregistrer(raw) }, DELAI_ENREGISTREMENT_AUTO_MS)
-    return () => clearTimeout(minuteur)
-  }, [raw, enregistre, enregistrer])
-
-  // Fermeture de l'onglet avec des modifications non enregistrées : le navigateur demande confirmation.
-  useEffect(() => {
-    if (!modifie) return
-    const avertir = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = '' }
-    window.addEventListener('beforeunload', avertir)
-    return () => window.removeEventListener('beforeunload', avertir)
-  }, [modifie])
-
-  const fermer = () => {
-    if (modifie || etat === 'en_cours') setConfirmerFermeture(true)
-    else onClose()
-  }
-
-  const captureSelection = () => {
-    const el = editorRef.current
-    if (!el) return
-    const { selectionStart, selectionEnd } = el
-    if (selectionEnd > selectionStart) {
-      setSelection({ text: raw.slice(selectionStart, selectionEnd), start: selectionStart, end: selectionEnd })
-    } else {
-      setSelection(null)
-    }
-  }
-
-  const applyRewrite = (start: number, end: number, rewritten: string) => {
-    setRaw((prev) => prev.slice(0, start) + rewritten + prev.slice(end))
-    setSelection(null)
-  }
-
-  const statut = etat === 'en_cours'
-    ? 'Enregistrement…'
-    : etat === 'echec'
-      ? "L'enregistrement n'a pas abouti. Vos modifications restent ici."
-      : modifie
-        ? 'Modifications en cours'
-        : heure
-          ? `Enregistré à ${heureParis(heure)}`
-          : ''
-
-  return (
-    <div className="fixed inset-0 z-50 flex flex-col" style={{ background: 'var(--surface-1)', fontFamily: F }}>
-      <div
-        className="flex items-center justify-between gap-4 px-6 py-3 shrink-0"
-        style={{ borderBottom: '1px solid var(--border-1)', background: 'var(--surface-1)' }}
-      >
-        <div>
-          <p className="text-sm font-medium" style={{ color: 'var(--text-1)' }}>
-            Modification du texte du mémoire
-          </p>
-          <p className="mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
-            {'# = titre, **texte** = gras'}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <p
-            role="status"
-            aria-live="polite"
-            className="text-xs"
-            style={{ color: etat === 'echec' ? 'var(--warning-fg)' : 'var(--text-3)' }}
-          >
-            {statut}
-          </p>
-          {etat === 'echec' && (
-            <button
-              onClick={() => { void enregistrer(raw) }}
-              className="text-xs font-semibold py-1.5 px-3 rounded-lg transition-colors hover:bg-ds-bg-2"
-              style={{ color: 'var(--text-1)', border: '1px solid var(--border-2)' }}
-            >
-              Réessayer
-            </button>
-          )}
-          <button
-            onClick={() => { void enregistrer(raw) }}
-            disabled={!modifie || etat === 'en_cours'}
-            className="glass-btn text-ds-text flex items-center gap-2 py-2 px-4 text-sm font-bold rounded-lg disabled:opacity-50"
-          >
-            {!modifie && etat === 'enregistre' && heure
-              ? <><CheckCircle2 size={14} style={{ color: 'var(--success-fg)' }} />Enregistré</>
-              : <><Save size={14} />Enregistrer</>}
-          </button>
-          <button
-            onClick={fermer}
-            className="flex items-center gap-1.5 text-sm py-2 px-3 rounded-lg transition-colors hover:bg-ds-bg-2"
-            style={{ color: 'var(--text-3)', border: '1px solid var(--border-1)' }}
-          >
-            <X size={14} /> Fermer
-          </button>
-        </div>
-      </div>
-      {confirmerFermeture && (
-        <div
-          role="alertdialog"
-          aria-label="Modifications non enregistrées"
-          className="flex flex-wrap items-center justify-between gap-3 px-6 py-3 shrink-0"
-          style={{ background: 'color-mix(in srgb, var(--warning-fg) 8%, transparent)', borderBottom: '1px solid color-mix(in srgb, var(--warning-fg) 25%, transparent)' }}
-        >
-          <p className="text-sm" style={{ color: 'var(--text-1)' }}>
-            Des modifications ne sont pas encore enregistrées.
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={async () => { if (await enregistrer(raw)) onClose() }}
-              className="glass-btn text-ds-text py-1.5 px-3 text-sm font-semibold rounded-lg"
-            >
-              Enregistrer et fermer
-            </button>
-            <button
-              onClick={onClose}
-              className="py-1.5 px-3 text-sm rounded-lg transition-colors hover:bg-ds-bg-2"
-              style={{ color: 'var(--text-2)', border: '1px solid var(--border-2)' }}
-            >
-              Fermer sans enregistrer
-            </button>
-            <button
-              onClick={() => setConfirmerFermeture(false)}
-              className="py-1.5 px-3 text-sm rounded-lg transition-colors hover:bg-ds-bg-2"
-              style={{ color: 'var(--text-3)' }}
-            >
-              Continuer la rédaction
-            </button>
-          </div>
-        </div>
-      )}
-      {/* C9b — barre de réécriture IA ciblée (agit sur la sélection seule) */}
-      <RewritePassageBar projectId={projectId} selection={selection} onApply={applyRewrite} />
-      <textarea
-        ref={editorRef}
-        value={raw}
-        onChange={(e) => { setRaw(e.target.value); setSelection(null) }}
-        onSelect={captureSelection}
-        className="flex-1 px-8 py-6 text-sm leading-relaxed resize-none focus:outline-none font-mono"
-        style={{ background: 'var(--surface-1)', color: 'var(--text-1)', caretColor: 'var(--text-1)' }}
-        spellCheck
-        lang="fr"
-      />
-    </div>
-  )
-}
-
-// ─── Document View (center column — "Word page" style) ───────────────────────
-
-
-export function DocumentView({
-  content, project, docRef, onRefaire, refaireDesactive = false, etats, onEtat,
-}: {
-  content: MemoireContent
-  project: Project
-  docRef: React.MutableRefObject<HTMLDivElement | null>
-  /** E2 — « Refaire cette partie » : absent, aucun bouton (aperçus, tests). */
-  onRefaire?: (cible: CibleRefaire) => void
-  refaireDesactive?: boolean
-  /** E3 — états « À refaire » choisis par le patron (absent = tout « Rédigée ») et le moyen de les changer. */
-  etats?: EtatsSections
-  onEtat?: (cible: { part: string; cle: string }, etat: EtatPartie) => void
-}) {
-  const entete = (part: string, cle: string, label: string) => (
-    <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-      <SectionHeading>{label}</SectionHeading>
-      <div className="flex flex-wrap items-center gap-2">
-        {onEtat && (
-          <EtatPartieChoix titre={label} etat={etatDe(etats, part, cle)} desactive={refaireDesactive}
-            onChange={(e) => onEtat({ part, cle }, e)} />
-        )}
-        {onRefaire && (
-          <BoutonRefaire titre={label} desactive={refaireDesactive} onClick={() => onRefaire({ part, cle, titre: label })} />
-        )}
-      </div>
-    </div>
-  )
-  const a = content.partie_a as Record<string, string>
-  const b = content.partie_b as Record<string, string>
-  const c = content.partie_c as Record<string, string>
-
-  const items = (part: SectionMemoire['part']): [string, string][] =>
-    sectionsDuContenu(content).filter((s) => s.part === part).map((s) => [s.cle, s.titre])
-  const partAItems = items('partie_a')
-  const partBItems = items('partie_b')
-  const partCItems = items('partie_c')
-
-  return (
-    <div
-      ref={docRef}
-      className="rounded-lg overflow-y-auto"
-      style={{
-        background: 'var(--surface-1)',
-        border: '1px solid var(--border-1)',
-        boxShadow: 'var(--shadow-pop)',
-        maxHeight: 'calc(100vh - 200px)',
-      }}
-    >
-      <div className="max-w-3xl mx-auto py-10 px-10 space-y-8" style={{ fontFamily: F }}>
-
-        {/* Document header */}
-        <div className="flex items-start justify-end pb-6" style={{ borderBottom: '1px solid var(--border-2)' }}>
-          <div className="text-right">
-            <p className="text-lg font-bold" style={{ color: 'var(--text-1)' }}>
-              MÉMOIRE JUSTIFICATIF
-            </p>
-            <p className="text-sm mt-1" style={{ color: 'var(--text-2)' }}>{project.name}</p>
-          </div>
-        </div>
-
-        {/* PRÉAMBULE */}
-        <div id="preambule">
-          <PartHeading>PRÉAMBULE</PartHeading>
-          <div id="preambule-intro" />
-          <div id="preambule-contexte" />
-          <MdContent text={content.preambule ?? ''} />
-        </div>
-
-        {/* PARTIE A */}
-        <div id="partie-a">
-          <PartHeading>PARTIE A — PRÉSENTATION GÉNÉRALE</PartHeading>
-          {partAItems.map(([key, label]) =>
-            a?.[key] ? (
-              <div key={key} id={`sec-${key}`} className="mt-6">
-                {entete('partie_a', key, label)}
-                <MdContent text={a[key]} />
-              </div>
-            ) : null,
-          )}
-        </div>
-
-        {/* PARTIE B */}
-        <div id="partie-b">
-          <PartHeading>PARTIE B — PRÉSENTATION DE LA PRESTATION</PartHeading>
-          {partBItems.map(([key, label]) =>
-            b?.[key] ? (
-              <div key={key} id={`sec-${key}`} className="mt-6">
-                {entete('partie_b', key, label)}
-                <MdContent text={b[key]} />
-              </div>
-            ) : null,
-          )}
-        </div>
-
-        {/* PARTIE C */}
-        <div id="partie-c">
-          <PartHeading>PARTIE C — MÉTHODOLOGIE MISE EN ŒUVRE</PartHeading>
-          {partCItems.map(([key, label]) =>
-            c?.[key] ? (
-              <div key={key} id={`sec-${key}`} className="mt-6">
-                {entete('partie_c', key, label)}
-                <MdContent text={c[key]} />
-              </div>
-            ) : null,
-          )}
-        </div>
-
-        {/* Annexes */}
-        <div id="annexes">
-          <PartHeading>ANNEXES</PartHeading>
-          {ANNEXES_MEMOIRE.map(({ cle, titre }) => a?.[cle] ? (
-            <div key={cle} id={`annexe-${cle}`} className="mt-6">
-              <div className="mb-2"><SectionHeading>{titre}</SectionHeading></div>
-              <MdContent text={a[cle]} />
-            </div>
-          ) : null)}
-        </div>
-
-      </div>
-    </div>
-  )
-}
-
-function PartHeading({ children }: { children: React.ReactNode }) {
-  return (
-    <h2
-      className="text-xl font-bold pb-2 mb-4"
-      style={{
-        color: 'var(--text-1)',
-        borderLeft: '3px solid var(--text-1)',
-        paddingLeft: 12,
-        fontFamily: F,
-      }}
-    >
-      {children}
-    </h2>
-  )
-}
-
-function SectionHeading({ children }: { children: React.ReactNode }) {
-  return (
-    <h3 className="text-lg font-semibold" style={{ color: 'var(--text-1)', fontFamily: F }}>
-      {children}
-    </h3>
-  )
-}
-
-function MdContent({ text }: { text: string }) {
-  return <LecteurMarkdown text={text} />
-}
-
-// ─── Main component ──────────────────────────────────────────────────────────
-
-const BOUTON_SECONDAIRE = 'inline-flex items-center justify-center gap-1.5 rounded-lg border border-bord-2 px-3.5 py-1.5 text-sm font-medium text-fg-2 transition-colors hover:bg-surface-0 max-[768px]:flex-1 [@media(pointer:coarse)]:min-h-11'
+const TITRE = 'Rédiger le mémoire'
 
 /** Les cartes de l'écran de préparation : le plan suivi, le poids dans la note, ce que la rédaction décompte. */
 export function cartesPreparation(plan: VuePlan | null, techPct: number, illimite = false): CarteResume[] {
@@ -426,10 +76,14 @@ export function pagesEstimees(contenu: MemoireContent | null): number {
   return Math.max(1, Math.round(mots / 500))
 }
 
-/** Les cartes du mémoire rédigé : avancement, critères traités, parties à refaire, longueur. */
-export function cartesRedaction({ version, completionPct, rattachement, nbARefaire, pages, limite }: {
+/**
+ * Les cartes du mémoire rédigé : avancement, critères traités, parties à refaire, longueur. `passages` : le compte du
+ * serveur (celui de l'Export) ; la carte « Rédaction » dit alors la même phrase que l'Export, mot pour mot.
+ */
+export function cartesRedaction({ version, completionPct, rattachement, nbARefaire, pages, limite, passages }: {
   version: number
   completionPct: number
+  passages?: number | null
   rattachement: RattachementCriteres | undefined
   nbARefaire: number
   pages: number
@@ -437,8 +91,12 @@ export function cartesRedaction({ version, completionPct, rattachement, nbARefai
 }): CarteResume[] {
   const total = rattachement?.sous_criteres.length ?? 0
   const traites = rattachement?.sous_criteres.filter((s) => s.traite).length ?? 0
+  const aCompleter = libellePassagesACompleter(passages)
   return [
-    { libelle: 'Rédaction', valeur: `${completionPct} %`, jauge: { rempli: completionPct, total: 100 }, detail: `Version ${version}` },
+    {
+      libelle: 'Rédaction', valeur: `${completionPct} %`, jauge: { rempli: completionPct, total: 100 },
+      etat: aCompleter ? ETAT_A_VERIFIER : undefined, detail: aCompleter ?? `Version ${version}`,
+    },
     total > 0
       ? {
         libelle: 'Critères du règlement', valeur: `${traites} sur ${total}`, etat: traites === total ? ETAT_PRET : ETAT_A_VERIFIER,
@@ -447,7 +105,7 @@ export function cartesRedaction({ version, completionPct, rattachement, nbARefai
       : { libelle: 'Critères du règlement', valeur: 'Non détaillés', detail: 'Le règlement ne détaille pas de sous-critères.' },
     nbARefaire > 0
       ? { libelle: 'Parties à refaire', valeur: String(nbARefaire), etat: ETAT_A_VERIFIER, detail: 'Marquées « À refaire » dans le sommaire.' }
-      : { libelle: 'Parties à refaire', valeur: 'Aucune', etat: ETAT_PRET, detail: 'Toutes les parties sont rédigées.' },
+      : { libelle: 'Parties à refaire', valeur: 'Aucune', rien: 'Aucune', etat: ETAT_PRET, detail: 'Toutes les parties sont rédigées.' },
     limite
       ? { libelle: 'Longueur', valeur: `environ ${pages} pages`, etat: pages <= limite ? ETAT_PRET : ETAT_A_VERIFIER, detail: `Limite du dossier : ${limite} pages.` }
       : { libelle: 'Longueur', valeur: `environ ${pages} pages`, detail: 'Le dossier ne fixe pas de limite.' },
@@ -459,6 +117,9 @@ interface Props { project: Project }
 export default function StepMemoire({ project }: Props) {
   const navigate = useNavigate()
   const avisAttente = useAvisAttente('mémoire')
+  // Au téléphone, l'action principale est portée par la barre du bas (« Suivant : Export ») : l'en-tête ne la monte pas, pour
+  // que le bouton de suite garde l'aplat (il le cède dès qu'un autre bouton principal est monté, même caché).
+  const tel = useMedia('(max-width: 768px)')
   const { data: quota } = useQuota()
   // offre illimitée : la carte « Abonnement » ne parle d'aucune unité (G8)
   const illimite = quota?.analyses?.limit === null && quota?.memoires?.limit === null
@@ -469,7 +130,6 @@ export default function StepMemoire({ project }: Props) {
   const [showForm, setShowForm] = useState(false)
   const [showEditor, setShowEditor] = useState(false)
   const [editedContent, setEditedContent] = useState<MemoireContent | null>(null)
-  const [, setGenSuccess] = useState(false)
   const [genError, setGenError] = useState<string | null>(null)
   // Run DÉTACHÉ : `running` couvre le lancement local ; après un reload,
   // project.processing_status === 'generating' reprend le relais (même
@@ -478,15 +138,26 @@ export default function StepMemoire({ project }: Props) {
   const [activeSection, setActiveSection] = useState('preambule')
   const docRef = useRef<HTMLDivElement | null>(null)
 
-  // Fetch existing mémoire
-  const { data: memoire, isLoading } = useQuery({
+  // Le mémoire. 204 = pas encore de mémoire (R31) : un état normal. Toute autre panne est une ERREUR, jamais « pas de
+  // mémoire » : l'écran ne propose pas de rédiger par-dessus un mémoire qu'il n'a pas su lire (audit F-03).
+  const requeteMemoire = useQuery({
     queryKey: ['memoire', project.id],
-    // 204 = pas encore de mémoire (R31) : un état normal, sans erreur ni ligne rouge dans la console.
     queryFn: async () => {
       const res = await api.get<MemoireTechnique | ''>(`/projects/${project.id}/memoire`)
       return memoireDepuisReponse<MemoireTechnique>(res.status, res.data)
     },
     retry: false,
+  })
+  const { data: memoire, isLoading } = requeteMemoire
+
+  // « N passages à compléter avant le dépôt » et le nombre de pages : une seule source, les comptes du serveur que lit
+  // aussi l'Export (même clé de cache, même lecture). Sans réponse : pas de phrase des passages, et l'estimation locale
+  // des pages en attendant.
+  const { data: comptesExport } = useQuery({
+    queryKey: ['export-detail', project.id],
+    queryFn: async () => (await api.get<{ memoire_info: { passages_a_completer: number; estimated_pages: number } | null }>(`/projects/${project.id}/export/detail`)).data,
+    enabled: !!memoire,
+    select: (d) => ({ passages: d.memoire_info?.passages_a_completer ?? 0, pages: d.memoire_info?.estimated_pages ?? null }),
   })
 
   // Fetch profile stats
@@ -534,7 +205,7 @@ export default function StepMemoire({ project }: Props) {
     [criteres],
   )
 
-  // Compute completion % for the TOC badge
+  // Part des sections qui portent un texte
   const completionPct = useMemo(() => {
     if (!displayContent) return 0
     const allSections: string[] = []
@@ -551,7 +222,7 @@ export default function StepMemoire({ project }: Props) {
     return allSections.length > 0 ? Math.round((filled / allSections.length) * 100) : 0
   }, [displayContent])
 
-  // Compagnon (1.3) : deux contrôles calculés sur le texte, rien d'inventé
+  // Contrôles du texte (1.3) : deux contrôles calculés sur le texte, rien d'inventé
   const { data: references = [] } = useQuery({
     queryKey: ['references'],
     queryFn: async () => (await api.get<Reference[]>('/references')).data,
@@ -583,16 +254,12 @@ export default function StepMemoire({ project }: Props) {
       // Contrat détaché : le POST rend "started" immédiatement, le run
       // continue côté serveur (survit navigation/reload/proxy).
       setGenError(null)
-      setGenSuccess(false)
       setRunning(true)
       queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
     },
     onError: (err) => {
-      setGenSuccess(false)
-      const msg = axios.isAxiosError(err)
-        ? (err.response?.data?.detail ?? 'Erreur lors de la génération')
-        : 'Erreur lors de la génération'
-      const texte = typeof msg === 'string' ? msg : JSON.stringify(msg)
+      const detail = axios.isAxiosError(err) ? err.response?.data?.detail : null
+      const texte = typeof detail === 'string' ? detail : 'La rédaction n’a pas pu démarrer. Rien n’est décompté ; réessayez dans un instant.'
       // 1.2 — quota appliqué par le serveur : son refus ouvre le choix d'une offre
       if (axios.isAxiosError(err) && err.response?.status === 402) {
         setPaywallMessage(texte)
@@ -615,7 +282,7 @@ export default function StepMemoire({ project }: Props) {
     onError: () => setGenError('Ce choix n’a pas pu être enregistré. Réessayez dans un instant.'),
   })
 
-  // E2 — « Refaire cette partie » : confirmation (avec le coût estimé), puis même suivi que la génération.
+  // E2 — « Refaire cette partie » : confirmation, puis même suivi que la génération.
   const [aRefaire, setARefaire] = useState<CibleRefaire | null>(null)
   const { mutate: refaire, isPending: envoiRefaire } = useMutation({
     mutationFn: (c: CibleRefaire) =>
@@ -643,9 +310,9 @@ export default function StepMemoire({ project }: Props) {
     onComplete: () => {
       setRunning(false)
       setEditedContent(null)
-      setGenSuccess(true)
       setShowForm(false)
       queryClient.invalidateQueries({ queryKey: ['memoire', project.id] })
+      queryClient.invalidateQueries({ queryKey: ['export-detail', project.id] })
       queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
     },
   })
@@ -655,7 +322,7 @@ export default function StepMemoire({ project }: Props) {
   useEffect(() => {
     if (memoireSse.phase === 'error') {
       setRunning(false)
-      setGenError(memoireSse.detail || 'La génération du mémoire a échoué. Relancez la génération.')
+      setGenError(memoireSse.detail || 'La rédaction du mémoire n’a pas abouti. Relancez-la quand vous voulez.')
       queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -666,34 +333,58 @@ export default function StepMemoire({ project }: Props) {
       api.patch(`/projects/${project.id}/memoire`, { content_json: content }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['memoire', project.id] })
+      queryClient.invalidateQueries({ queryKey: ['export-detail', project.id] })
     },
   })
 
   // 1.8 — la vue document n'adopte le texte qu'une fois l'enregistrement
   // confirmé : si le serveur refuse, elle reste à l'état précédent et le
   // texte reste dans l'éditeur (message + « Réessayer »).
-  const handleEditorSave = async (raw: string) => {
-    const parsed = depuisMarkdown(raw, displayContent!)
-    await saveEdits(parsed)
-    setEditedContent(parsed)
+  const handleEditorSave = async (contenu: MemoireContent) => {
+    await saveEdits(contenu)
+    setEditedContent(contenu)
   }
 
   const handleTocNavigate = useCallback((sectionId: string) => {
     setActiveSection(sectionId)
-    const el = document.getElementById(sectionId)
-    if (el && docRef.current) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [])
 
-  // ── Loading ─────────────────────────────────────────────────────
+  // ── Chargement, puis erreur : le titre de l'étape reste, le formulaire de rédaction ne revient jamais par défaut ──
 
   if (isLoading) {
-    return <MemoireSkeleton />
+    return (
+      <GabaritEtape titre={TITRE} utilite="Votre mémoire, partie par partie.">
+        <div role="status" aria-busy="true" className="space-y-4">
+          <span className="sr-only">Chargement du mémoire</span>
+          <Squelette className="h-28 w-full rounded-carte" />
+          <div className="rounded-carte border border-bord bg-surface-0 px-5 py-8 sm:px-10 sm:py-12">
+            <div className="mx-auto max-w-[38rem] space-y-8">
+              <Squelette className="h-6 w-2/5" />
+              <SqueletteLignes lignes={5} />
+              <SqueletteLignes lignes={4} />
+            </div>
+          </div>
+        </div>
+      </GabaritEtape>
+    )
+  }
+
+  if (requeteMemoire.isError) {
+    return (
+      <GabaritEtape titre={TITRE} utilite="Votre mémoire, partie par partie.">
+        <EtatErreur
+          titre="Le mémoire n’a pas pu s’ouvrir"
+          detail="La connexion au serveur a échoué. Votre mémoire n’est pas touché : il reviendra tel que vous l’avez laissé."
+          onReessayer={() => { void requeteMemoire.refetch() }} enCours={requeteMemoire.isFetching}
+        />
+      </GabaritEtape>
+    )
   }
 
   const hasMemoire = !!memoire
   const lotName = project.selected_lot_name || 'Lot unique'
+  const echecRedaction = !isRunning && project.processing_status === 'error'
 
   // ── Generation form (no mémoire yet or regenerate) ─────────────
 
@@ -716,29 +407,27 @@ export default function StepMemoire({ project }: Props) {
         )}
 
         <GabaritEtape
-          titre="Rédiger le mémoire"
+          titre={TITRE}
           utilite="Synorix rédige chaque partie du plan, à partir de votre dossier et de Mon entreprise."
           actionsSecondaires={hasMemoire ? (
-            <button type="button" onClick={() => setShowForm(false)} className={BOUTON_SECONDAIRE}>Retour</button>
+            <Bouton variante="secondaire" onClick={() => setShowForm(false)}>Retour</Bouton>
           ) : (
-            <button type="button" onClick={() => navigate(`/projects/${project.id}/plan`)} className={BOUTON_SECONDAIRE}>Voir le plan</button>
+            <Bouton variante="secondaire" onClick={() => navigate(`/projects/${project.id}/plan`)}>Voir le plan</Bouton>
           )}
+          message={hasMemoire ? <Message ton="attention">Une nouvelle rédaction remplacera la version actuelle du mémoire.</Message> : undefined}
           resume={<BandeResume libelle="Résumé de la rédaction" cartes={cartesPreparation(plan ?? null, techPct, illimite)} />}
         >
-          {hasMemoire && (
-            <p className="text-sm font-medium text-warning">La régénération remplacera la version actuelle du mémoire.</p>
-          )}
-          <SectionEtape titre="CE QUE LE RÈGLEMENT NOTE" description="La pondération relevée dans le règlement de consultation, hors prix.">
+          <SectionEtape titre="Ce que le règlement note" description={<>La pondération relevée dans le <Sigle code="RC" />, hors prix.</>}>
             <PoidsMemoire techPct={techPct} />
             {criteres.length > 0 && (
-              <ul className="flex flex-wrap gap-1.5" aria-label="Pondération relevée dans le règlement">
+              <ul className="flex flex-wrap gap-x-5 gap-y-1 text-sm text-fg-2" aria-label="Pondération relevée dans le règlement">
                 {criteres.map((c) => (
-                  <li key={c.nom} className="pill pill-muted num-mono">{c.nom} {c.poids}&nbsp;%</li>
+                  <li key={c.nom}>{c.nom} · <span className="chiffres font-medium text-fg">{c.poids}&nbsp;%</span></li>
                 ))}
               </ul>
             )}
           </SectionEtape>
-          <SectionEtape titre="VOS INFORMATIONS POUR CE MÉMOIRE">
+          <SectionEtape titre="Vos informations pour ce mémoire">
             <FormulaireMemoire
               projectId={project.id}
               variables={variables}
@@ -747,8 +436,8 @@ export default function StepMemoire({ project }: Props) {
               stats={profileStats ?? null}
               hasMemoire={hasMemoire}
               enCours={isRunning}
-              erreur={genError || (!isRunning && project.processing_status === 'error')
-                ? (genError ?? project.processing_detail ?? 'La génération du mémoire a échoué. Relancez la génération.')
+              erreur={genError || echecRedaction
+                ? (genError ?? project.processing_detail ?? 'La rédaction du mémoire n’a pas abouti. Relancez-la quand vous voulez.')
                 : null}
               onGenerer={() => {
                 setGenError(null)
@@ -762,7 +451,13 @@ export default function StepMemoire({ project }: Props) {
     )
   }
 
-  // ── 3-column document view ─────────────────────────────────────
+  // ── Le mémoire : la feuille au centre, le sommaire et les contrôles autour ─────────────────────
+
+  const sommaireProps = {
+    entrees: sommaire, activeSection, onNavigate: handleTocNavigate,
+    criteres: rattachement, sourceCriteres, onOpenSource: source.ouvrir, etats,
+  }
+  const controlesProps = { references: controleRefs, breves, onAller: handleTocNavigate }
 
   return (
     <>
@@ -788,171 +483,72 @@ export default function StepMemoire({ project }: Props) {
         />
       )}
 
-      {/* Portail : un ancêtre animé (transform) piégeait le « fixed » dans la colonne de contenu */}
-      {showEditor && displayContent && createPortal(
-        <FullscreenEditor
-          content={displayContent}
-          projectId={project.id}
-          onSave={handleEditorSave}
-          onClose={() => setShowEditor(false)}
-        />,
-        document.body,
+      {showEditor && displayContent && (
+        <EditeurMemoire content={displayContent} projectId={project.id} onSave={handleEditorSave} onClose={() => setShowEditor(false)} />
       )}
 
       <GabaritEtape
-        titre="Rédiger le mémoire"
+        titre={TITRE}
         utilite={`${lotName} : relisez, retouchez, refaites une partie, puis passez à l’export.`}
-        actionPrincipale={
-          <button type="button" className="signature-btn w-full [@media(pointer:coarse)]:min-h-11" onClick={() => navigate(`/projects/${project.id}/export`)}>
-            Passer à l’export
-          </button>
-        }
+        actionPrincipale={tel ? undefined : (
+          <Bouton variante="principal" large onClick={() => navigate(`/projects/${project.id}/export`)}>Passer à l’export</Bouton>
+        )}
         actionsSecondaires={
           <>
             <RelectureMemoire projectId={project.id} />
-            <button type="button" onClick={() => setShowEditor(true)} className={BOUTON_SECONDAIRE}>
-              <Pencil size={13} aria-hidden /> Modifier le texte
-            </button>
-            <button type="button" onClick={() => navigate(`/projects/${project.id}/plan`)} className={BOUTON_SECONDAIRE}>Voir le plan</button>
+            <Bouton variante="secondaire" onClick={() => setShowEditor(true)}>
+              <Pencil aria-hidden /> Modifier le texte
+            </Bouton>
+            <Bouton variante="lien" onClick={() => navigate(`/projects/${project.id}/plan`)}>Voir le plan</Bouton>
           </>
         }
+        message={genError
+          ? <Message ton="erreur" onFermer={() => setGenError(null)}>{genError}</Message>
+          : echecRedaction
+            ? <Message ton="erreur">La dernière rédaction n’a pas abouti. Le texte ci-dessous est celui d’avant ; refaites la partie voulue quand vous voulez.</Message>
+            : undefined}
         resume={
           <BandeResume
             libelle="Résumé du mémoire"
             cartes={cartesRedaction({
               version: memoire!.version, completionPct, rattachement, nbARefaire: Object.keys(etats ?? {}).length,
-              pages: pagesEstimees(displayContent), limite: plan?.limite_pages?.pages ?? null,
+              pages: comptesExport?.pages ?? pagesEstimees(displayContent), limite: plan?.limite_pages?.pages ?? null,
+              passages: comptesExport?.passages,
             })}
           />
         }
         barre={
           <BarreEtape className="justify-between gap-3">
-            <BilanBarre bureau={<span className="text-sm text-fg-2">Version {memoire!.version} · {completionPct}&nbsp;% rédigé</span>} />
+            <BilanBarre
+              bureau={<span className="text-sm text-fg-2">Version {memoire!.version} · {completionPct}&nbsp;% rédigé</span>}
+              tel={<span className="truncate text-sm text-fg-2">Version {memoire!.version}</span>}
+            />
             <ActionsBarreTel>
               <BoutonSuite etape="Export" onClick={() => navigate(`/projects/${project.id}/export`)} />
             </ActionsBarreTel>
           </BarreEtape>
         }
       >
-      <div className="space-y-4" style={{ fontFamily: F }}>
-
-        {/* Échec d'une régénération détachée : signalé sans quitter le doc */}
-        {genError && (
-          <p
-            role="alert"
-            className="text-sm rounded-lg px-3 py-2"
-            style={{ background: 'color-mix(in srgb, var(--danger-fg) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--danger-fg) 20%, transparent)', color: 'var(--danger-fg)' }}
-          >
-            {genError}
-          </p>
-        )}
-
-        {/* ── 3-column layout ────────────────────────────────────── */}
         {displayContent && (
-          <div className="flex gap-6 items-start">
-
-            {/* LEFT — Table of Contents */}
-            <div className="shrink-0 hidden xl:block">
-              <SommaireMemoire
-                entrees={sommaire} activeSection={activeSection} onNavigate={handleTocNavigate}
-                criteres={rattachement} sourceCriteres={sourceCriteres} onOpenSource={source.ouvrir} etats={etats}
-              />
+          <div className="flex min-w-0 items-start gap-8">
+            <div className="hidden shrink-0 self-stretch xl:block">
+              <SommaireMemoire {...sommaireProps} />
             </div>
 
-            {/* CENTER — Document (sous 1280 px le sommaire se replie au-dessus) */}
-            <div className="flex-1 min-w-0">
-              <div className="xl:hidden mb-3">
-                <SommaireMemoire
-                  repliable entrees={sommaire} activeSection={activeSection} onNavigate={handleTocNavigate}
-                  criteres={rattachement} sourceCriteres={sourceCriteres} onOpenSource={source.ouvrir} etats={etats}
-                />
+            <div className="min-w-0 flex-1 space-y-3">
+              <div className="xl:hidden">
+                <SommaireMemoire repliable {...sommaireProps} />
               </div>
               <DocumentView content={displayContent} project={project} docRef={docRef} onRefaire={setARefaire} refaireDesactive={isRunning} etats={etats} onEtat={(c, e) => definirEtat({ ...c, etat: e })} />
+              {/* A14 — sous 1 024 px, les contrôles du texte passent sous le document, repliés */}
+              <ControlesTexte repliable className="lg:hidden" {...controlesProps} />
             </div>
 
-            {/* RIGHT — Assistant Synorix (cède la place au dossier quand « Voir dans le dossier » est ouvert) */}
-            <div className={`shrink-0 hidden${source.ouvert ? '' : ' lg:block'}`} style={{ width: 280 }}>
-              <div className="sticky top-4 space-y-3">
-
-                {/* Header */}
-                <div>
-                  <p className="microlabel">Compagnon Synorix</p>
-                  <p className="text-xs mt-1" style={{ color: 'var(--text-3)' }}>
-                    Deux contrôles faits sur le texte de ce mémoire
-                  </p>
-                </div>
-
-                {/* Contrôle 1 — références chantier retrouvées dans le texte */}
-                <div
-                  className="glass-card rounded-lg p-3.5"
-                  style={{ border: '1px solid var(--border-1)', boxShadow: 'var(--shadow-card)' }}
-                >
-                  <p className="text-sm font-semibold" style={{ color: 'var(--text-1)', fontFamily: F }}>
-                    Références chantier
-                  </p>
-                  {controleRefs && controleRefs.retrouvees.length + controleRefs.nonRetrouvees.length > 0 ? (
-                    <>
-                      <p className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--text-2)' }}>
-                        {controleRefs.retrouvees.length} de vos {controleRefs.retrouvees.length + controleRefs.nonRetrouvees.length}{' '}
-                        références retrouvées dans le texte.
-                      </p>
-                      {controleRefs.nonRetrouvees.length > 0 && (
-                        <ul className="mt-1.5 space-y-1">
-                          {controleRefs.nonRetrouvees.map((r) => (
-                            <li key={r.id} className="text-xs leading-relaxed" style={{ color: 'var(--text-3)' }}>
-                              « {r.intitule} » n'y figure pas telle quelle.
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </>
-                  ) : (
-                    <p className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--text-3)' }}>
-                      Aucune référence marquée dans{' '}
-                      <Link to="/references" className="underline underline-offset-2" style={{ color: 'var(--text-1)' }}>Mes références</Link>.
-                    </p>
-                  )}
-                </div>
-
-                {/* Contrôle 2 — sections brèves */}
-                <div
-                  className="glass-card rounded-lg p-3.5"
-                  style={{ border: '1px solid var(--border-1)', boxShadow: 'var(--shadow-card)' }}
-                >
-                  <p className="text-sm font-semibold" style={{ color: 'var(--text-1)', fontFamily: F }}>
-                    Sections brèves
-                  </p>
-                  {breves.length === 0 ? (
-                    <p className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--text-2)' }}>
-                      Toutes les sections font au moins {SEUIL_SECTION_BREVE} mots.
-                    </p>
-                  ) : (
-                    <>
-                      <p className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--text-2)' }}>
-                        {breves.length} section{breves.length > 1 ? 's font' : ' fait'} moins de {SEUIL_SECTION_BREVE} mots, à étoffer si besoin :
-                      </p>
-                      <ul className="mt-1.5 space-y-1">
-                        {breves.map((sb) => (
-                          <li key={`${sb.part}-${sb.cle}`}>
-                            <button
-                              onClick={() => handleTocNavigate(`sec-${sb.cle}`)}
-                              className="text-left text-xs leading-relaxed hover:underline underline-offset-2"
-                              style={{ color: 'var(--text-1)' }}
-                            >
-                              {sb.titre} — <span className="num-mono">{sb.mots}</span> mots
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
+            {/* Les contrôles cèdent la place au dossier quand « Voir dans le dossier » est ouvert */}
+            {!source.ouvert && <ControlesTexte className="hidden shrink-0 lg:block" {...controlesProps} />}
             {source.panneau}
           </div>
         )}
-      </div>
       </GabaritEtape>
     </>
   )

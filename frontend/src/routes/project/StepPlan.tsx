@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
-import { Check, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { api } from '@/services/api'
 import { useSourceChamp } from '@/hooks/useSourceChamp'
 import {
@@ -12,14 +12,20 @@ import { recoupements } from '@/lib/planRecoupe'
 import PartiePlanCarte from '@/components/plan/PartiePlanCarte'
 import PartiesHabituelles from '@/components/plan/PartiesHabituelles'
 import { BarrePlan, BoutonPrincipalPlan, type EtatPlan } from '@/components/plan/ActionsPlan'
-import { Input } from '@/components/ui/input'
-import EcranEnChargement from '@/components/common/EcranEnChargement'
+import { Bouton } from '@/components/ui/bouton'
+import { Carte } from '@/components/ui/carte'
+import { Champ, GroupeChamp } from '@/components/ui/champ'
+import { EtatErreur } from '@/components/ui/etats'
+import { ListeDeroulante } from '@/components/ui/liste-deroulante'
+import { Message } from '@/components/ui/message'
+import { Squelette } from '@/components/ui/squelette'
+import { Sigle } from '@/components/common/Sigle'
 import type { CriticalFieldsPayload } from '@/components/project/CriticalBanner'
 import type { Project } from '@/types'
 import type { PartieId } from '@/lib/memoireSections'
 import {
-  ETAT_A_VERIFIER, ETAT_PRET, MAX_PARTIES, MAX_TITRE, TITRES_PARTIES_PLAN, ajouter, basculerRetrait, changerFiche, corpsPlan, deplacer, libelleFichesRemplies, libelleLongueur, libellePoids,
-  numeroDansLaPartie, parGroupe, peutDeplacer, renommer, supprimerAjout, type PartiePlan, type SourcePlan, type VuePlan,
+  ETAT_A_VERIFIER, ETAT_PRET, MAX_PARTIES, MAX_TITRE, ajouter, basculerRetrait, changerFiche, corpsPlan, deplacer, libelleFichesRemplies, libelleLongueur, libellePoids,
+  numeroDansLaPartie, parGroupe, peutDeplacer, renommer, supprimerAjout, titrePartieLisible, type PartiePlan, type SourcePlan, type VuePlan,
 } from '@/lib/planMemoire'
 
 const DELAI_ENREGISTREMENT_MS = 1200
@@ -33,6 +39,13 @@ function avecCalculs(locales: PartiePlan[], serveur: PartiePlan[]): PartiePlan[]
   })
 }
 
+const UTILITE = 'Les parties de votre mémoire, avant sa rédaction : retirez, ajoutez, renommez, ordonnez, puis validez.'
+const OPTIONS_PARTIE = [
+  { valeur: 'partie_a', libelle: 'Partie A' },
+  { valeur: 'partie_b', libelle: 'Partie B' },
+  { valeur: 'partie_c', libelle: 'Partie C' },
+] as const
+
 const MESSAGE_ECHEC = 'Le plan n’a pas pu être enregistré. Vos modifications restent ici ; réessayez dans un instant.'
 
 export default function StepPlan({ project }: { project: Project }) {
@@ -41,7 +54,7 @@ export default function StepPlan({ project }: { project: Project }) {
   const source = useSourceChamp(project.id)
   const cle = ['plan-memoire', project.id]
 
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, isFetching, refetch } = useQuery({
     queryKey: cle,
     queryFn: async () => (await api.get<VuePlan>(`/projects/${project.id}/plan-memoire`)).data,
     retry: false,
@@ -115,14 +128,25 @@ export default function StepPlan({ project }: { project: Project }) {
     () => (parties ? parGroupe(parties.filter((p) => !p.retiree)).filter((g) => g.parties.length > 0) : []),
     [parties])
 
-  if (isLoading || (!parties && !isError)) return <EcranEnChargement />
+  if (isLoading || (!parties && !isError)) {
+    return (
+      <GabaritEtape titre="Plan du mémoire" utilite={UTILITE}>
+        <div role="status" aria-busy="true" className="space-y-3">
+          <span className="sr-only">Chargement du plan</span>
+          <Squelette className="h-28 w-full rounded-carte" />
+          <Squelette className="h-72 w-full rounded-carte" />
+        </div>
+      </GabaritEtape>
+    )
+  }
   if (isError || !parties || !vue) {
     return (
-      <GabaritEtape titre="Plan du mémoire" utilite="Les parties de votre mémoire, avant sa rédaction.">
-        <div className="rounded-carte border border-bord-2 bg-surface-1 p-5 text-sm text-fg-2" role="alert">
-          <p>Le plan n’a pas pu s’ouvrir pour le moment.</p>
-          <button type="button" onClick={() => { void refetch() }} className="mt-2 min-h-9 font-medium text-accent-text hover:underline [@media(pointer:coarse)]:min-h-11">Réessayer</button>
-        </div>
+      <GabaritEtape titre="Plan du mémoire" utilite={UTILITE}>
+        <EtatErreur
+          titre="Le plan n’a pas pu s’ouvrir"
+          detail="La connexion au serveur a échoué. Votre plan n’est pas touché : il reviendra tel que vous l’avez laissé."
+          onReessayer={() => { void refetch() }} enCours={isFetching}
+        />
       </GabaritEtape>
     )
   }
@@ -134,6 +158,7 @@ export default function StepPlan({ project }: { project: Project }) {
   const fiches = gardees.filter((p) => p.fiche.voulu.trim() || p.fiche.references !== null || p.fiche.personnes !== null || p.fiche.materiel !== null).length
   const valideEtAJour = vue.valide && !modifie && !enregistrer.isPending
   const enCours = valider.isPending || enregistrer.isPending
+  const complet = parties.length >= MAX_PARTIES
 
   const cartes = [
     {
@@ -152,10 +177,10 @@ export default function StepPlan({ project }: { project: Project }) {
       : { libelle: 'Critères du règlement', valeur: 'Non détaillés', detail: 'Le règlement ne détaille pas de sous-critères.' },
     vue.limite_pages
       ? { libelle: 'Longueur', valeur: libelleLongueur(vue.limite_pages.pages), detail: 'Limite relevée dans le dossier.' }
-      : { libelle: 'Longueur', valeur: 'Non précisée', detail: 'Le dossier ne fixe pas de limite de pages.' },
+      : { libelle: 'Longueur', valeur: 'Libre', detail: 'Le dossier ne fixe pas de limite de pages.' },
     {
-      libelle: 'Fiches', valeur: libelleFichesRemplies(fiches),
-      detail: 'Facultatif : vous pouvez valider le plan sans ouvrir une fiche.',
+      libelle: 'Fiches remplies', valeur: fiches > 0 ? String(fiches) : libelleFichesRemplies(fiches), rien: 'Aucune' as const,
+      detail: 'Facultatif : le plan se valide sans ouvrir une fiche.',
     },
   ]
 
@@ -169,122 +194,110 @@ export default function StepPlan({ project }: { project: Project }) {
     <>
       <GabaritEtape
         titre="Plan du mémoire"
-        utilite="Les parties de votre mémoire, avant sa rédaction : retirez, ajoutez, renommez, ordonnez, puis validez."
+        utilite={UTILITE}
         actionPrincipale={actionPrincipale}
+        message={erreur ? <Message ton="erreur">{erreur}</Message> : valideEtAJour ? <Message ton="succes">Le plan est validé : la rédaction le suivra, partie par partie.</Message> : undefined}
         resume={<BandeResume cartes={cartes} libelle="Résumé du plan" />}
-        barre={<BarrePlan etat={etat} onValider={() => valider.mutate(parties)} onRediger={versRedaction} onValiderEtRediger={() => valider.mutate(parties, { onSuccess: versRedaction })} />}
+        barre={<BarrePlan etat={etat} onValider={() => valider.mutate(parties)} onRediger={versRedaction} />}
       >
-        {erreur && (
-          <p role="alert" className="rounded-carte border border-bord-2 bg-surface-1 p-4 text-sm text-fg">{erreur}</p>
-        )}
-
-        {resume.sous_criteres_total > 0 && (
-          <SectionEtape titre="CE QUE LE RÈGLEMENT NOTE" description="Chaque sous-critère doit être servi par au moins une partie du plan.">
-            {vue.a_couvrir.length === 0 ? (
-              <EtatElement etat="pret" />
-            ) : (
-              vue.a_couvrir.map((c) => (
-                <div key={c.nom} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 rounded-carte border border-bord-2 bg-surface-1 p-4">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-fg">{libellePoids(c.nom, c.poids)}</p>
-                    <EtatElement
-                      etat="a-couvrir" className="mt-1"
-                      source={sourceCriteres ? { libelle: `${sourceCriteres.document}${sourceCriteres.page ? ` · page ${sourceCriteres.page}` : ''}`, onVoir: () => source.ouvrir(sourceCriteres) } : undefined}
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    disabled={parties.length >= MAX_PARTIES}
-                    onClick={() => {
-                      const suivant = ajouter(parties, c.partie ?? 'partie_c', c.nom)
-                      changer(suivant)
-                      const nouvelle = suivant.find((p) => !parties.some((q) => q.cle === p.cle))
-                      if (nouvelle) setOuvertes((o) => new Set(o).add(nouvelle.cle))
-                    }}
-                    aria-label={`Ajouter une partie pour ce critère : ${c.nom}`}
-                    className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-bord-2 px-3.5 text-sm font-medium text-fg hover:bg-surface-0 disabled:opacity-40 [@media(pointer:coarse)]:min-h-11"
-                  >
-                    <Plus size={15} aria-hidden /> Ajouter une partie pour ce critère
-                  </button>
-                </div>
-              ))
-            )}
+        {resume.sous_criteres_total > 0 && vue.a_couvrir.length > 0 && (
+          <SectionEtape
+            titre="Ce que le règlement note"
+            description={<>Chaque sous-critère du <Sigle code="RC" /> doit être servi par au moins une partie du plan.</>}
+          >
+            <Carte sansMarge>
+              <ul aria-label="Sous-critères à couvrir">
+                {vue.a_couvrir.map((c) => (
+                  <li key={c.nom} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-bord px-4 py-3 first:border-t-0 sm:px-5">
+                    <div className="min-w-0 flex-1 basis-64">
+                      <p className="text-sm font-medium text-fg">{libellePoids(c.nom, c.poids)}</p>
+                      <EtatElement
+                        etat="a-couvrir" className="mt-1"
+                        source={sourceCriteres ? { libelle: `${sourceCriteres.document}${sourceCriteres.page ? ` · page ${sourceCriteres.page}` : ''}`, onVoir: () => source.ouvrir(sourceCriteres) } : undefined}
+                      />
+                    </div>
+                    <Bouton
+                      variante="secondaire"
+                      disabled={complet}
+                      onClick={() => {
+                        const suivant = ajouter(parties, c.partie ?? 'partie_c', c.nom)
+                        changer(suivant)
+                        const nouvelle = suivant.find((p) => !parties.some((q) => q.cle === p.cle))
+                        if (nouvelle) setOuvertes((o) => new Set(o).add(nouvelle.cle))
+                      }}
+                      aria-label={`Ajouter une partie pour ce critère : ${c.nom}`}
+                    >
+                      <Plus aria-hidden /> Ajouter une partie pour ce critère
+                    </Bouton>
+                  </li>
+                ))}
+              </ul>
+            </Carte>
           </SectionEtape>
         )}
 
-        <p className="text-sm text-fg-2">
-          Le plan retient les parties qui servent un sous-critère du règlement et celles que le dossier demande. Les autres
-          parties habituelles sont proposées plus bas, à ajouter si elles vous servent.
-        </p>
-
-        {groupes.map((g) => (
-          <SectionEtape key={g.partie} titre={g.titre}>
-            <ul className="space-y-3" aria-label={TITRES_PARTIES_PLAN[g.partie]}>
-              {g.parties.map((p) => (
-                <PartiePlanCarte
-                  key={p.cle}
-                  partie={p}
-                  numero={numeroDansLaPartie(parties, p.cle)}
-                  ouverte={ouvertes.has(p.cle)}
-                  peutMonter={peutDeplacer(parties, p.cle, -1)}
-                  peutDescendre={peutDeplacer(parties, p.cle, 1)}
-                  seulementGardee={gardees.length <= 1}
-                  recoupe={recoupes.get(p.cle) ?? null}
-                  onBasculerFiche={() => basculerFiche(p.cle)}
-                  onRenommer={(t) => changer(renommer(parties, p.cle, t))}
-                  onRetirer={() => changer(basculerRetrait(parties, p.cle))}
-                  onSupprimer={() => changer(supprimerAjout(parties, p.cle))}
-                  onMonter={() => changer(deplacer(parties, p.cle, -1))}
-                  onDescendre={() => changer(deplacer(parties, p.cle, 1))}
-                  onFiche={(f) => changer(changerFiche(parties, p.cle, f))}
-                  onVoirSource={voir}
-                />
-              ))}
-            </ul>
+        {groupes.map((g, i) => (
+          <SectionEtape
+            key={g.partie} titre={titrePartieLisible(g.partie)}
+            description={i === 0 ? <>Le plan retient les parties qui servent un sous-critère du <Sigle code="RC" /> et celles que le dossier demande.</> : undefined}
+          >
+            <Carte sansMarge>
+              <ul aria-label={titrePartieLisible(g.partie)}>
+                {g.parties.map((p) => (
+                  <PartiePlanCarte
+                    key={p.cle}
+                    partie={p}
+                    numero={numeroDansLaPartie(parties, p.cle)}
+                    ouverte={ouvertes.has(p.cle)}
+                    peutMonter={peutDeplacer(parties, p.cle, -1)}
+                    peutDescendre={peutDeplacer(parties, p.cle, 1)}
+                    seulementGardee={gardees.length <= 1}
+                    recoupe={recoupes.get(p.cle) ?? null}
+                    onBasculerFiche={() => basculerFiche(p.cle)}
+                    onRenommer={(t) => changer(renommer(parties, p.cle, t))}
+                    onRetirer={() => changer(basculerRetrait(parties, p.cle))}
+                    onSupprimer={() => changer(supprimerAjout(parties, p.cle))}
+                    onMonter={() => changer(deplacer(parties, p.cle, -1))}
+                    onDescendre={() => changer(deplacer(parties, p.cle, 1))}
+                    onFiche={(f) => changer(changerFiche(parties, p.cle, f))}
+                    onVoirSource={voir}
+                  />
+                ))}
+              </ul>
+            </Carte>
           </SectionEtape>
         ))}
 
         <PartiesHabituelles parties={habituelles} onAjouter={(cle) => changer(basculerRetrait(parties, cle))} />
 
-        <SectionEtape titre="AJOUTER UNE PARTIE" description="Une partie de plus, rattachée à la partie A, B ou C. Vous la renseignez ensuite dans sa fiche.">
+        <SectionEtape
+          titre="Ajouter une partie"
+          description={complet
+            ? `Le plan compte ${MAX_PARTIES} parties, le plus qu’il peut porter : retirez-en une pour en ajouter une autre.`
+            : 'Une partie de plus, rattachée à la partie A, B ou C. Vous la renseignez ensuite dans sa fiche.'}
+        >
           <form
-            className="flex flex-wrap items-end gap-3"
+            className="grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_10rem_auto]"
             onSubmit={(e) => {
               e.preventDefault()
-              if (!nouveauTitre.trim() || parties.length >= MAX_PARTIES) return
+              if (!nouveauTitre.trim() || complet) return
               const suivant = ajouter(parties, nouvellePartie, nouveauTitre)
               changer(suivant)
               setOuvertes((o) => new Set(o).add(suivant.find((p) => p.partie === nouvellePartie && p.titre === nouveauTitre.trim().slice(0, MAX_TITRE))?.cle ?? ''))
               setNouveauTitre('')
             }}
           >
-            <div className="min-w-0 flex-1 basis-64">
-              <label htmlFor="plan-nouveau-titre" className="mb-1 block text-sm font-medium text-fg-2">Titre de la nouvelle partie</label>
-              <Input id="plan-nouveau-titre" value={nouveauTitre} maxLength={MAX_TITRE} onChange={(e) => setNouveauTitre(e.target.value)} placeholder="Par exemple : Suivi de chantier connecté" />
-            </div>
-            <div>
-              <label htmlFor="plan-nouvelle-partie" className="mb-1 block text-sm font-medium text-fg-2">Dans la</label>
-              <select
-                id="plan-nouvelle-partie" value={nouvellePartie} onChange={(e) => setNouvellePartie(e.target.value as PartieId)}
-                className="h-10 rounded-md border border-input bg-surface-0 px-3 text-sm text-fg [@media(pointer:coarse)]:h-11"
-              >
-                <option value="partie_a">Partie A</option>
-                <option value="partie_b">Partie B</option>
-                <option value="partie_c">Partie C</option>
-              </select>
-            </div>
-            <button
-              type="submit" disabled={!nouveauTitre.trim() || parties.length >= MAX_PARTIES}
-              className="inline-flex min-h-10 items-center gap-1.5 rounded-md border border-bord-2 px-3.5 text-sm font-medium text-fg hover:bg-surface-0 disabled:opacity-40 [@media(pointer:coarse)]:min-h-11"
-            >
-              <Plus size={15} aria-hidden /> Ajouter
-            </button>
+            <GroupeChamp libelle="Titre de la nouvelle partie">
+              <Champ value={nouveauTitre} maxLength={MAX_TITRE} onChange={(e) => setNouveauTitre(e.target.value)} placeholder="Par exemple : Suivi de chantier connecté" className="h-11" />
+            </GroupeChamp>
+            <GroupeChamp libelle="Rattachée à la">
+              <ListeDeroulante valeur={nouvellePartie} onChange={(v) => setNouvellePartie(v as PartieId)} options={OPTIONS_PARTIE} />
+            </GroupeChamp>
+            <Bouton type="submit" variante="secondaire" disabled={!nouveauTitre.trim() || complet}>
+              <Plus aria-hidden /> Ajouter
+            </Bouton>
           </form>
         </SectionEtape>
-
-        {valideEtAJour && (
-          <p className="flex items-center gap-2 text-sm text-fg-2"><Check size={15} className="text-success" aria-hidden /> Le plan est validé : la rédaction le suivra, partie par partie.</p>
-        )}
       </GabaritEtape>
       {source.panneau}
     </>

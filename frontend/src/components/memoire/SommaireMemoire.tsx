@@ -1,13 +1,13 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
+import { Bouton } from '@/components/ui/bouton'
+import { cn } from '@/lib/utils'
 import type { EntreeSommaire } from '@/lib/memoireSections'
 import {
   bilanCriteres, libelleSousCritere, parSection, type RattachementCriteres,
 } from '@/lib/memoireCriteres'
 import type { SourceChamp } from '@/hooks/useSourceChamp'
 import { bilanARefaire, etatDe, type EtatsSections } from '@/lib/memoireEtats'
-
-const F = 'var(--font-ui)'
 
 interface Props {
   entrees: EntreeSommaire[]
@@ -18,13 +18,19 @@ interface Props {
   /** Source des critères dans le règlement : « Voir dans le dossier » des sous-critères à couvrir. */
   sourceCriteres?: SourceChamp | null
   onOpenSource?: (source: SourceChamp) => void
-  /** Téléphone : le sommaire se replie (fermé par défaut) au lieu d'être une carte collée à gauche. */
+  /** Sous 1 280 px : le sommaire se replie (fermé par défaut) au-dessus du document au lieu d'être collé à gauche. */
   repliable?: boolean
   /** E3 — parties que le patron a marquées « À refaire ». */
   etats?: EtatsSections
 }
 
-/** Le sommaire du mémoire : parties et sections, avec pour chaque section les sous-critères du RC qu'elle traite. */
+const LIEN = 'flex w-full min-w-0 items-start gap-2 rounded-md text-left transition-colors duration-fast ease-survol hover:bg-surface-1 [@media(pointer:coarse)]:min-h-11'
+
+/**
+ * Le sommaire du mémoire : parties et sections, sans carte (du texte à côté de la feuille). Chaque section dit dessous, en
+ * petit, les sous-critères du règlement qu'elle traite (une ligne de texte, plus une pastille grise par critère) ; la
+ * section lue porte un trait d'accent à gauche ; une partie « À refaire » le dit à l'encre ambre.
+ */
 export default function SommaireMemoire({
   entrees, activeSection, onNavigate, criteres, sourceCriteres, onOpenSource, repliable = false, etats,
 }: Props) {
@@ -51,29 +57,20 @@ export default function SommaireMemoire({
 
   const corps = (
     <>
-      {bilanRefaire && (
-        <p className="memoire-bilan-refaire mb-2 text-xs" style={{ color: 'var(--text-2)', fontFamily: F }}>{bilanRefaire}</p>
-      )}
+      {bilanRefaire && <p className="memoire-bilan-refaire mb-2 text-xs font-medium text-ambre-ink">{bilanRefaire}</p>}
       {bilan && (
-        <section className="mb-3 pb-3" style={{ borderBottom: '1px solid var(--border-1)' }} aria-label="Critères du règlement à couvrir">
-          <p className="microlabel mb-1.5">Critères du règlement</p>
-          <p className="text-xs leading-relaxed" style={{ color: 'var(--text-2)', fontFamily: F }}>{bilan}</p>
+        <section className="mb-3 border-b border-bord pb-3" aria-label="Critères du règlement à couvrir">
+          <p className="text-xs text-fg-2">{bilan}</p>
           {aCouvrir.length > 0 && (
             <ul className="mt-2 space-y-2">
               {aCouvrir.map((c) => (
-                <li key={c.nom} className="text-xs leading-snug" style={{ fontFamily: F }}>
-                  <span className="memoire-a-couvrir" style={{ color: 'var(--text-1)', fontWeight: 600 }}>À couvrir</span>
-                  <span style={{ color: 'var(--text-2)' }}> · {libelleSousCritere(c.nom, c.poids)}</span>
+                <li key={c.nom} className="text-xs">
+                  <span className="memoire-a-couvrir font-semibold text-bleu-ink">À couvrir</span>
+                  <span className="text-fg-2"> · {libelleSousCritere(c.nom, c.poids)}</span>
                   {sourceCriteres && onOpenSource && (
-                    <button
-                      type="button"
-                      onClick={() => onOpenSource(sourceCriteres)}
-                      aria-label={`Voir dans le dossier : ${c.nom}`}
-                      className="block mt-0.5 underline underline-offset-2"
-                      style={{ color: 'var(--text-1)' }}
-                    >
+                    <Bouton variante="lien" onClick={() => onOpenSource(sourceCriteres)} aria-label={`Voir dans le dossier : ${c.nom}`} className="flex text-xs">
                       Voir dans le dossier
-                    </button>
+                    </Bouton>
                   )}
                 </li>
               ))}
@@ -81,100 +78,80 @@ export default function SommaireMemoire({
           )}
         </section>
       )}
-      <nav aria-label="Sommaire du mémoire" className="space-y-1">
+      <nav aria-label="Sommaire du mémoire">
         {entrees.map((section) => {
           const ouverte = !fermees.has(section.id)
           const active = activeSection === section.id
+          const aEnfants = section.enfants.length > 0
           return (
-            <div key={section.id}>
-              <button
+            <div key={section.id} className="mt-1 first:mt-0">
+              <Bouton
+                variante="discret"
                 onClick={() => {
-                  if (section.enfants.length > 0) basculer(section.id)
+                  if (aEnfants) basculer(section.id)
                   onNavigate(section.id)
-                  if (repliable && section.enfants.length === 0) setOuvert(false)
+                  if (repliable && !aEnfants) setOuvert(false)
                 }}
-                aria-expanded={section.enfants.length > 0 ? ouverte : undefined}
-                className="w-full flex items-center gap-1.5 py-1.5 px-2 rounded text-left transition-colors hover:bg-ds-bg-2"
-                style={{ borderLeft: active ? '2px solid var(--text-1)' : '2px solid transparent' }}
+                aria-expanded={aEnfants ? ouverte : undefined}
+                aria-current={active ? 'location' : undefined}
+                className={cn('h-auto min-h-9 w-full justify-between gap-2 whitespace-normal px-2 py-1.5 text-left font-semibold text-fg', LIEN)}
               >
-                {section.enfants.length > 0 ? (
-                  ouverte
-                    ? <ChevronDown size={12} style={{ color: 'var(--text-3)' }} />
-                    : <ChevronRight size={12} style={{ color: 'var(--text-3)' }} />
-                ) : <span style={{ width: 12 }} />}
-                <span className="text-sm font-semibold" style={{ color: 'var(--text-1)', fontFamily: F }}>
-                  {section.titre}
-                </span>
-              </button>
-              {section.enfants.length > 0 && ouverte && (
-                <div className="ml-2 space-y-0.5">
+                <span className="min-w-0 break-words">{section.titre}</span>
+                {aEnfants && <ChevronDown aria-hidden className={cn('mt-0.5 text-fg-3 transition-transform duration-survol ease-survol motion-reduce:transition-none', !ouverte && '-rotate-90')} />}
+              </Bouton>
+              {aEnfants && ouverte && (
+                <ul className="border-l border-bord">
                   {section.enfants.map((enfant) => {
                     const enfantActif = activeSection === enfant.id
                     const traites = rattaches[cleDe(section, enfant)] ?? []
+                    const aRefaire = etatDe(etats, section.id.replace('partie-', 'partie_'), enfant.id.replace('sec-', '')) === 'a_refaire'
                     return (
-                      <button
-                        key={enfant.id}
-                        onClick={() => { onNavigate(enfant.id); if (repliable) setOuvert(false) }}
-                        className="w-full text-left py-1 px-4 text-xs transition-colors hover:text-fg"
-                        style={{
-                          color: enfantActif ? 'var(--text-1)' : 'var(--text-3)',
-                          fontWeight: enfantActif ? 600 : 400,
-                          borderLeft: enfantActif ? '2px solid var(--text-1)' : '2px solid transparent',
-                          fontFamily: F,
-                        }}
-                      >
-                        {enfant.titre}
-                        {etatDe(etats, section.id.replace('partie-', 'partie_'), enfant.id.replace('sec-', '')) === 'a_refaire' && (
-                          <span className="memoire-a-refaire block text-xs leading-snug" style={{ color: 'var(--warn)', fontWeight: 600 }}>À refaire</span>
-                        )}
-                        {traites.map((s) => (
-                          <span
-                            key={s.nom}
-                            className="memoire-critere-pastille mt-1 block w-fit max-w-full rounded px-1.5 py-0.5 text-xs leading-snug"
-                            style={{ color: 'var(--text-2)', fontWeight: 400, background: 'color-mix(in srgb, var(--text-1) 6%, transparent)' }}
-                          >
-                            {libelleSousCritere(s.nom, s.poids)}
-                          </span>
-                        ))}
-                      </button>
+                      <li key={enfant.id}>
+                        <Bouton
+                          variante="discret"
+                          onClick={() => { onNavigate(enfant.id); if (repliable) setOuvert(false) }}
+                          aria-current={enfantActif ? 'location' : undefined}
+                          className={cn(
+                            '-ml-px h-auto min-h-8 w-full flex-col items-stretch justify-start gap-0.5 whitespace-normal rounded-l-none border-l px-3 py-1 text-left text-xs',
+                            LIEN, enfantActif ? 'border-accent-ui font-semibold text-fg' : 'border-transparent font-normal text-fg-2',
+                          )}
+                        >
+                          <span className="min-w-0 break-words">{enfant.titre}</span>
+                          {aRefaire && <span className="memoire-a-refaire font-semibold text-ambre-ink">À refaire</span>}
+                          {traites.map((s) => (
+                            <span key={s.nom} className="memoire-critere font-normal text-fg-3">{libelleSousCritere(s.nom, s.poids)}</span>
+                          ))}
+                        </Bouton>
+                      </li>
                     )
                   })}
-                </div>
+                </ul>
               )}
             </div>
           )
         })}
       </nav>
-
     </>
   )
 
   if (repliable) {
     return (
-      <div className="glass-card rounded-lg" style={{ border: '1px solid var(--border-1)' }}>
-        <button
-          type="button"
-          onClick={() => setOuvert((o) => !o)}
-          aria-expanded={ouvert}
-          className="w-full flex items-center justify-between gap-2 px-4 py-3 text-left"
-        >
-          <span className="microlabel">Sommaire</span>
-          <span className="flex items-center gap-2 text-xs" style={{ color: 'var(--text-3)', fontFamily: F }}>
+      <div data-sommaire-repliable="" className="rounded-lg border border-bord bg-surface-0">
+        <Bouton variante="discret" onClick={() => setOuvert((o) => !o)} aria-expanded={ouvert} className="w-full justify-between px-4 font-semibold text-fg">
+          Sommaire
+          <span className="flex items-center gap-2 text-xs font-normal text-fg-3">
             {aCouvrir.length > 0 && <span>{aCouvrir.length} à couvrir</span>}
-            {ouvert ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            <ChevronDown aria-hidden className={cn('transition-transform duration-survol ease-survol motion-reduce:transition-none', ouvert && 'rotate-180')} />
           </span>
-        </button>
-        {ouvert && <div className="px-4 pb-4">{corps}</div>}
+        </Bouton>
+        {ouvert && <div className="border-t border-bord px-4 py-3">{corps}</div>}
       </div>
     )
   }
 
   return (
-    <div
-      className="glass-card rounded-lg p-4 sticky top-4"
-      style={{ border: '1px solid var(--border-1)', boxShadow: 'var(--shadow-card)', width: 220, maxHeight: 'calc(100vh - 2rem)', overflowY: 'auto' }}
-    >
-      <p className="microlabel mb-3">Sommaire</p>
+    <div data-sommaire="" className="sticky top-4 max-h-[calc(100dvh-7rem)] w-56 overflow-y-auto pr-1">
+      <p className="mb-2 px-2 text-xs font-medium text-fg-3">Sommaire</p>
       {corps}
     </div>
   )

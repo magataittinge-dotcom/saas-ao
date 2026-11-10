@@ -3,7 +3,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { renderToStaticMarkup } from 'react-dom/server'
-import LecteurMarkdown from '@/components/memoire/LecteurMarkdown'
+import LecteurMarkdown, { Cellule } from '@/components/memoire/LecteurMarkdown'
 import { lire } from './outils/sources'
 import { contrasteJetons, type Theme } from './outils/jetons'
 
@@ -13,7 +13,10 @@ test('le lecteur ne force pas le texte clair (plus de prose-invert) et porte sa 
   const html = renderToStaticMarkup(<LecteurMarkdown text={MD} />)
   assert.doesNotMatch(html, /prose-invert/)
   assert.match(html, /lecteur-memoire/)
-  assert.match(html, /<h2[^>]*>Titre de partie<\/h2>/)
+  // les titres du texte descendent sous ceux de l'écran (h1 étape, h2 partie, h3 section) : jamais un second h1
+  assert.match(html, /<h4[^>]*>Titre de partie<\/h4>/)
+  assert.match(html, /<h5[^>]*>Sous-titre<\/h5>/)
+  assert.doesNotMatch(renderToStaticMarkup(<LecteurMarkdown text={'# Un grand titre dans le texte'} />), /<h[123]\b/)
   assert.match(html, /<strong>un mot en gras<\/strong>/)
 })
 
@@ -33,4 +36,11 @@ test('la feuille de style du lecteur donne aux titres et au gras un jeton de tex
     }
   }
   assert.deepEqual(faibles, [])
+})
+
+test('une cellule de tableau « # » reste un signe, jamais un titre vide (trois h1 dans Rédiger avant la vague 1)', () => {
+  const html = renderToStaticMarkup(<Cellule texte="#" />)
+  assert.doesNotMatch(html, /<h\d/)
+  assert.match(html, /#/)
+  assert.match(renderToStaticMarkup(<Cellule texte="**Poste**" />), /<strong>Poste<\/strong>/)
 })

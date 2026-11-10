@@ -14,7 +14,10 @@ test('dépôt du DCE : .xlsm et .ods dans le sélecteur et dans le texte des for
 })
 
 test('DPGF remplie et formulaires remplis : .xlsm et .ods acceptés par les sélecteurs de fichier', () => {
-  assert.match(lire('src/routes/project/StepExport.tsx'), /accept="\.xlsx,\.xls,\.xlsm,\.ods,\.pdf"/)
+  // Export : aucun champ de fichier dans la page ; le bouton du système ouvre le sélecteur avec la même liste
+  const export_ = lire('src/routes/project/StepExport.tsx')
+  assert.match(export_, /ACCEPT_DPGF = '\.xlsx,\.xls,\.xlsm,\.ods,\.pdf'/)
+  assert.match(export_, /champ\.accept = ACCEPT_DPGF/)
   assert.match(lire('src/routes/project/StepVerification.tsx'), /accept="\.xlsx,\.xls,\.xlsm,\.ods,\.pdf"/)
   const modeles = lire('src/components/project/CandidatureSectionTemplates.tsx')
   assert.match(modeles, /accept="[^"]*\.xlsm[^"]*"/)

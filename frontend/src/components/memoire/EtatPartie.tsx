@@ -1,10 +1,13 @@
+import { Bouton } from '@/components/ui/bouton'
+import { cn } from '@/lib/utils'
 import { LIBELLE_ETAT, type EtatPartie } from '@/lib/memoireEtats'
 
 const ORDRE: EtatPartie[] = ['redigee', 'a_refaire']
 
 /**
  * Le seul état d'une partie, choisi par le patron : « Rédigée » (par défaut) ou « À refaire ».
- * Deux boutons exclusifs ; aucun autre statut, aucun responsable, aucune échéance.
+ * Deux boutons exclusifs du système (discrets : le choisi sur un fond de glace, « À refaire » à l'encre ambre) ; aucun
+ * autre statut, aucun responsable, aucune échéance.
  */
 export default function EtatPartieChoix({
   titre, etat, onChange, desactive = false,
@@ -15,27 +18,21 @@ export default function EtatPartieChoix({
   desactive?: boolean
 }) {
   return (
-    <div role="group" aria-label={`État de la partie ${titre}`} className="memoire-etat inline-flex overflow-hidden rounded-md"
-      style={{ border: '1px solid var(--border-1)' }}>
+    <div role="group" aria-label={`État de la partie ${titre}`} className="memoire-etat inline-flex items-center">
       {ORDRE.map((e) => {
         const choisi = e === etat
         return (
-          <button
+          <Bouton
             key={e}
-            type="button"
+            variante="discret"
             aria-pressed={choisi}
             disabled={desactive}
             data-etat={e}
             onClick={() => { if (!choisi) onChange(e) }}
-            className="px-2.5 py-1 text-xs transition-colors hover:bg-ds-bg-2 disabled:pointer-events-none disabled:opacity-60 [@media(pointer:coarse)]:min-h-11"
-            style={{
-              color: choisi ? 'var(--text-1)' : 'var(--text-3)',
-              fontWeight: choisi ? 600 : 400,
-              background: choisi ? 'color-mix(in srgb, var(--text-1) 8%, transparent)' : 'transparent',
-            }}
+            className={cn('px-2.5', choisi ? cn('bg-surface-1 font-semibold', e === 'a_refaire' ? 'text-ambre-ink hover:text-ambre-ink' : 'text-fg') : 'font-normal text-fg-3')}
           >
             {LIBELLE_ETAT[e]}
-          </button>
+          </Bouton>
         )
       })}
     </div>

@@ -11,6 +11,7 @@ import PartiesHabituelles from '@/components/plan/PartiesHabituelles'
 import { demandePar } from '@/components/plan/demandePar'
 import type { MemoireContent } from '@/types'
 import type { PartiePlan, VuePlan } from '@/lib/planMemoire'
+import { lire } from './outils/sources'
 
 const fil = (chemin: string, courant: number, onStepClick = () => {}) =>
   renderToStaticMarkup(
@@ -94,9 +95,11 @@ test('une partie : titre modifiable, sous-critères avec poids, source annoncée
   assert.match(html, /Demandé par le règlement de la consultation/)
   assert.match(html, /Source : RC\.pdf · page 7/)
   assert.match(html, /Voir dans le dossier/)
-  assert.match(html, /aria-label="Monter : Traitement des déchets"/)
-  assert.match(html, /aria-label="Descendre : Traitement des déchets"/)
-  assert.match(html, /aria-label="Retirer : Traitement des déchets"/)
+  // les gestes de la rangée : un menu « … » nommé, dont chaque élément est écrit en mots (plus trois icônes muettes)
+  assert.match(html, /aria-label="Actions : Traitement des déchets"/)
+  const code = lire('src/components/plan/PartiePlanCarte.tsx')
+  for (const geste of ['Renommer', 'Monter', 'Descendre', 'Retirer du plan', 'Supprimer']) assert.ok(code.includes(geste), geste)
+  assert.doesNotMatch(code, /<button\b/)
   assert.match(html, /aria-expanded="false"/)
 })
 
@@ -118,7 +121,8 @@ test('la section des parties habituelles : décochées, regroupées, un geste no
         partie({ cle: 'partie_c.delai', partie: 'partie_c', titre: 'Délai de travaux', retiree: true, sous_criteres: [], attendues: [] })]}
       onAjouter={() => {}}
     />)
-  assert.match(html, /PARTIES HABITUELLES, À AJOUTER SI UTILE/)
+  assert.match(html, /Parties habituelles, à ajouter si utile/)
+  assert.doesNotMatch(html, /PARTIES HABITUELLES/)
   assert.match(html, /aria-label="Ajouter au plan : Historique"/)
   assert.match(html, /aria-label="Ajouter au plan : Délai de travaux"/)
   assert.match(html, /Partie A/)
@@ -127,8 +131,9 @@ test('la section des parties habituelles : décochées, regroupées, un geste no
 })
 
 test('une partie ajoutée se supprime, une partie du modèle se retire', () => {
-  assert.match(rendre(partie({ cle: 'partie_c.ajout_1', partie: 'partie_c', titre_modele: null })), /aria-label="Supprimer : /)
-  assert.match(rendre(partie()), /aria-label="Retirer : /)
+  const code = lire('src/components/plan/PartiePlanCarte.tsx')
+  assert.match(code, /onSelect=\{ajout \? onSupprimer : onRetirer\}/)
+  assert.match(code, /\{ajout \? 'Supprimer' : 'Retirer du plan'\}/)
 })
 
 test('la fiche dépliée : exigences avec source, cases préremplies, ligne libre bornée à 1 000 caractères', () => {
@@ -137,7 +142,7 @@ test('la fiche dépliée : exigences avec source, cases préremplies, ligne libr
   assert.match(html, /Les déchets sont triés\./)
   assert.match(html, /CCTP\.pdf · page 14/)
   assert.match(html, /Voir dans le dossier/)
-  assert.match(html, /<input[^>]*type="checkbox"[^>]*checked=""|checked=""[^>]*type="checkbox"/)
+  assert.match(html, /role="checkbox"[^>]*aria-checked="true"|aria-checked="true"[^>]*role="checkbox"/)
   assert.match(html, /Ce que vous voulez dire/)
   assert.match(html, /maxLength="1000"/)
   assert.match(html, /jamais comme une consigne/)
@@ -164,4 +169,20 @@ test('G8 : la carte Abonnement dit l\'unité ou l\'offre illimitée, jamais les 
   assert.match(ligneQuotaMemoire('pro', { used: 3, limit: 40 }), /^3 sur 40 mémoires utilisés ce mois · Rédaction : environ 3 minutes$/)
   assert.match(ligneQuotaMemoire('free', { used: 0, limit: 1 }), /sur votre essai/)
   assert.match(DUREE_REDACTION, /3 minutes/)
+})
+
+test('comptes uniques : la carte « Rédaction » dit la phrase de l’Export, avec le compte du serveur ; sans compte, la version', () => {
+  const base = { version: 2, completionPct: 100, rattachement: undefined, nbARefaire: 0, pages: 46, limite: null }
+  const avec = cartesRedaction({ ...base, passages: 136 })[0]
+  assert.equal(avec.detail, '136 passages à compléter avant le dépôt')
+  assert.equal(avec.etat, 'a-verifier')
+  for (const passages of [0, null, undefined]) {
+    const sans = cartesRedaction({ ...base, passages })[0]
+    assert.equal(sans.detail, 'Version 2')
+    assert.equal(sans.etat, undefined)
+  }
+  // une seule source : la lecture de l'Export, sous la même clé de cache ; l'enregistrement du texte la rafraîchit
+  const code = lire('src/routes/project/StepMemoire.tsx')
+  assert.match(code, /queryKey: \['export-detail', project\.id\],\s*queryFn: [^\n]*\/export\/detail/)
+  assert.equal((code.match(/invalidateQueries\(\{ queryKey: \['export-detail', project\.id\] \}\)/g) ?? []).length, 2)
 })

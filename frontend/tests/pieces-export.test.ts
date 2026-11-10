@@ -43,19 +43,19 @@ test('la ligne dit combien de pièces sont à joindre et qu\'elles ne seront pas
 
 test('l\'export a un seul bouton principal ; « Mémoire en Word » et « Mémoire en PDF » sont deux boutons visibles ; le contenu est en sections', () => {
   const code = sansCommentaires(lire('src/routes/project/StepExport.tsx'))
-  assert.equal((code.match(/signature-btn/g) ?? []).length, 1, 'un seul bouton principal')
+  assert.equal((code.match(/variante="principal"/g) ?? []).length, 1, 'un seul bouton principal')
   assert.ok(code.includes('Télécharger le dossier'))
   assert.doesNotMatch(code, /Exporter quand même|showGateWarning|Télécharger le dossier ZIP|Livrables|Points de contrôle/)
   assert.doesNotMatch(code, /var\(--warning-bg\)/, 'plus de bouton orange')
-  assert.match(code, /<PiecesAJoindre pieces=\{nonConformes\} \/>/)
+  assert.match(code, /phrasePiecesAJoindre\(nonConformes\.length\)/)
   // G10 : les deux sorties du mémoire sont deux boutons visibles sur ordinateur (plus de repli « Autres formats » caché)
   assert.equal((code.match(/Mémoire en Word/g) ?? []).length, 1, 'Word : écrit une fois, servi par la barre et par le menu du téléphone')
   assert.equal((code.match(/Mémoire en PDF/g) ?? []).length, 1)
   assert.ok(code.indexOf('Mémoire en PDF') > code.indexOf('Mémoire en Word'))
   assert.ok(code.indexOf('Télécharger le dossier') < code.indexOf('formatsMemoire()'))
   assert.doesNotMatch(code, /<details/)
-  // Le contenu est en sections du gabarit (sous-titres en capitales), plus d'accordéon « Avant d'envoyer »
-  for (const t of ['PIÈCES DEMANDÉES', 'MÉMOIRE TECHNIQUE', 'TABLEAU DES PRIX', 'EXIGENCES RELEVÉES']) assert.ok(code.includes(`titre="${t}"`), t)
+  // Le contenu est en sections du gabarit (titres en bas de casse : pas de capitales criées), plus d'accordéon « Avant d'envoyer »
+  for (const t of ['Pièces demandées', 'Mémoire technique', 'Tableau des prix', 'Exigences relevées', 'Contenu du dossier']) assert.ok(code.includes(`titre="${t}"`), t)
   assert.doesNotMatch(code, /Avant d&apos;envoyer|AccordionSection/)
 })
 
