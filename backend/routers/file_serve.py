@@ -56,7 +56,7 @@ def _resolve_within_uploads(file_path: str) -> tuple[Path, str]:
     try:
         full = (root / file_path).resolve()
     except Exception:
-        raise HTTPException(status_code=403, detail="Chemin invalide")
+        raise HTTPException(status_code=403, detail="Ce fichier n’est pas accessible.")
     if full != root and root not in full.parents:
         raise HTTPException(status_code=403, detail="Accès interdit")
     return full, full.relative_to(root).as_posix()
@@ -168,7 +168,7 @@ async def view_file(
     if not (org and exp and sig) or not verify_file_signature(file_path, org, exp, sig):
         raise HTTPException(
             status_code=403,
-            detail="Lien invalide ou expiré — rechargez la page pour obtenir un nouveau lien.",
+            detail="Ce lien a expiré : rechargez la page pour en obtenir un nouveau.",
         )
     # Normaliser (résoudre les `..`) AVANT le contrôle d'accès (S2.3) : la garde
     # de containment seule laissait un `projects/<mien>/../../<autre>/x.pdf`

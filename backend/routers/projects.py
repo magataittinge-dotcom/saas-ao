@@ -520,7 +520,7 @@ def create_project(
     from services.cache import org_cache
 
     if not user.organization_id:
-        raise HTTPException(status_code=400, detail="Aucune organisation associée à ce compte. Veuillez compléter votre inscription.")
+        raise HTTPException(status_code=400, detail="Ce compte n’est rattaché à aucune entreprise. Terminez votre inscription pour continuer.")
     project = Project(
         organization_id=user.organization_id,
         name=payload.name,
@@ -560,7 +560,7 @@ def update_project(
         if payload.status not in allowed:
             raise HTTPException(
                 status_code=422,
-                detail=f"Transition de statut invalide : {status_before} → {payload.status}.",
+                detail="Ce changement d’état n’est pas possible pour cet appel d’offres. Rechargez la page.",
             )
         if payload.status == "soumis":
             from datetime import datetime as _datetime
@@ -617,7 +617,7 @@ def restore_project(
         .first()
     )
     if not project:
-        raise HTTPException(status_code=404, detail="Projet introuvable")
+        raise HTTPException(status_code=404, detail="Appel d’offres introuvable.")
     if not project.deleted_at:
         raise HTTPException(status_code=400, detail="Projet non supprimé")
     project.deleted_at = None
@@ -1481,7 +1481,7 @@ def _extract_zip_members(
         zf = zipfile.ZipFile(zip_source, 'r')
     except zipfile.BadZipFile:
         if depth == 0:
-            raise HTTPException(status_code=400, detail="Fichier ZIP invalide ou corrompu")
+            raise HTTPException(status_code=400, detail="Cette archive ZIP ne s’ouvre pas. Vérifiez le fichier, puis déposez-le de nouveau.")
         warnings.append("Archive ZIP imbriquée invalide ou corrompue (ignorée)")
         return []
 

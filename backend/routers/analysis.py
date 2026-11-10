@@ -172,7 +172,7 @@ async def trigger_analysis(
         .values(processing_status="analyzing")
     ).rowcount
     if not claimed:
-        raise HTTPException(status_code=409, detail="Une analyse est déjà en cours pour ce projet.")
+        raise HTTPException(status_code=409, detail="Une lecture est déjà en cours pour cet appel d’offres.")
 
     # ── Garde pré-vol IA (audit risque #4) : jamais de run condamné d'avance
     # (API down / crédit épuisé) — vérifiée AVANT toute consommation de quota.

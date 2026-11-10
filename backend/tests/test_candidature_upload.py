@@ -185,7 +185,7 @@ def test_upload_completed_rejects_vault_item(client, db_session, test_org):
         files={"file": ("kbis.pdf", b"%PDF-1.4", "application/pdf")},
     )
     assert resp.status_code == 400
-    assert "template DCE" in resp.json()["detail"]
+    assert "modèle du dossier" in resp.json()["detail"]
 
 
 def test_upload_completed_404_when_item_missing(client, db_session, test_org):
