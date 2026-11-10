@@ -53,7 +53,7 @@ import { QuotaRond } from '@/components/layout/QuotaGauge'
 
 test('premier écran : il dit à quoi sert Synorix avant de demander le SIRET', () => {
   const html = renderToStaticMarkup(<QueryClientProvider client={new QueryClient()}><MemoryRouter><FirstAOWelcome /></MemoryRouter></QueryClientProvider>)
-  assert.ok(/appel d&#x27;offres|dossier de l&#x27;acheteur/.test(html) && /mémoire technique/.test(html), 'dit ce que fait Synorix')
+  assert.ok(/dossier de l’acheteur/.test(html) && /mémoire technique/.test(html), 'dit ce que fait Synorix')
   assert.ok(html.indexOf('mémoire technique') < html.indexOf('Numéro SIRET'), 'avant le champ SIRET')
   assert.ok(!html.includes('!'), 'sans point d\'exclamation')
 })

@@ -1,19 +1,21 @@
 import { useState } from 'react'
-import { Sigle } from '@/components/common/Sigle'
-import { Loader2 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { authService } from '@/services/auth'
+import { prenomAffichable } from '@/lib/prenom'
+import { Page } from '@/components/ui/page'
+import { Carte, TitreCarte } from '@/components/ui/carte'
+import { Bouton } from '@/components/ui/bouton'
+import { Champ, GroupeChamp } from '@/components/ui/champ'
+import { Message } from '@/components/ui/message'
+import { SynorixParle } from '@/components/ui/synorix-parle'
 import ZoneDepotAO from './ZoneDepotAO'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { FilSeptEtapes, PARTAGE_DES_ROLES } from './FilSeptEtapes'
 
 /**
- * C15 — onboarding wow : UN écran central après l'inscription.
- * SIRET (une seule saisie, Sirene pré-remplit le profil) puis dropzone
- * « Déposez votre premier DCE — il est offert ». Zéro formulaire
- * supplémentaire : le profil se complète au fil de l'eau.
- * Il s'affiche sur le tableau de bord, en clair comme en nuit (jetons du système). Le visage est celui de
- * public/visage (poster), jamais un autre.
+ * C15, A6 : le premier écran d'un nouveau client, sur l'accueil. Il dit en une ligne ce que fait Synorix, montre les sept
+ * étapes et le partage des rôles (le visage : ici Synorix parle), puis demande UNE chose : le SIRET (le répertoire Sirene
+ * remplit le profil), et ensuite le dossier de l'acheteur, offert. Un seul geste à la fois : « Valider », puis « Choisir un
+ * fichier ». Le profil se complète ensuite au fil des réponses.
  */
 export default function FirstAOWelcome() {
   const { organization, setOrganization, user } = useAuthStore()
@@ -34,70 +36,44 @@ export default function FirstAOWelcome() {
       if (warning) setSiretMsg(warning)
       setSiretDone(true)
     } catch {
-      setSiretMsg('Vérification impossible pour le moment — vous pourrez compléter plus tard.')
+      setSiretMsg('La vérification du SIRET n’a pas abouti pour le moment. Vous pourrez le renseigner plus tard dans Mon entreprise.')
       setSiretDone(true)
     } finally {
       setSiretBusy(false)
     }
   }
 
-  const firstName = user?.name?.split(' ')[0]
+  const prenom = prenomAffichable(user?.name, user?.email)
 
   return (
-    <div className="mx-auto flex max-w-xl flex-col items-center pt-12 text-center">
-      <img
-        src="/visage/tete-ouverte-poster.webp"
-        alt=""
-        width={56}
-        height={56}
-        className="mb-5 size-14 rounded-full bg-surface-1 object-cover"
-      />
-      <h1 className="mb-1.5 font-display text-h5 text-fg">
-        Bienvenue{firstName ? `, ${firstName}` : ''}
-      </h1>
-
-      <p className="mb-5 max-w-md text-[15px] text-fg">
-        Synorix lit le dossier de l'acheteur, relève chaque exigence avec sa source et rédige votre mémoire technique.
-      </p>
+    <Page etroite titre={prenom ? `Bienvenue, ${prenom}` : 'Bienvenue'}
+      sousTitre="Synorix lit le dossier de l’acheteur, relève chaque exigence avec sa source et rédige votre mémoire technique.">
+      <FilSeptEtapes />
+      <SynorixParle className="mt-5">{PARTAGE_DES_ROLES}</SynorixParle>
 
       {!siretDone ? (
-        <>
-          <p className="mb-7 text-[15px] text-fg-2">
-            Votre SIRET — et c'est tout : le répertoire Sirene remplit le reste de votre profil.
-          </p>
-          <div className="flex w-full gap-2">
-            <Input
-              value={siret}
-              onChange={(e) => setSiret(e.target.value)}
-              placeholder="N° SIRET (14 chiffres)"
-              aria-label="Numéro SIRET"
-              inputMode="numeric"
-              className="flex-1 text-[15px]"
-              onKeyDown={(e) => e.key === 'Enter' && submitSiret()}
-            />
-            <Button onClick={submitSiret} disabled={siretBusy || !siret.trim()}>
-              {siretBusy ? <Loader2 size={16} className="animate-spin" aria-hidden /> : 'Valider'}
-            </Button>
+        <Carte className="mt-8">
+          <TitreCarte>Pour commencer, votre numéro SIRET</TitreCarte>
+          <p className="mt-1.5 text-sm text-fg-2">Rien d’autre à saisir : le répertoire Sirene remplit le reste de votre profil.</p>
+          <form className="mt-5 flex flex-wrap items-end gap-3" onSubmit={(e) => { e.preventDefault(); void submitSiret() }}>
+            <GroupeChamp libelle="Numéro SIRET" aide="14 chiffres, sans espace." className="min-w-0 flex-1 basis-64">
+              <Champ value={siret} onChange={(e) => setSiret(e.target.value)} aria-label="Numéro SIRET" inputMode="numeric" autoComplete="off" />
+            </GroupeChamp>
+          </form>
+          <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2">
+            <Bouton variante="principal" onClick={() => { void submitSiret() }} disabled={!siret.trim()} enCours={siretBusy} libelleEnCours="Vérification…">Valider</Bouton>
+            <Bouton variante="lien" onClick={() => setSiretDone(true)}>Passer cette étape</Bouton>
           </div>
-          <button onClick={() => setSiretDone(true)}
-            className="mt-3 inline-flex items-center rounded-xs text-[13px] text-fg-3 underline-offset-[3px] transition-colors duration-base ease-lien hover:text-fg hover:underline [@media(pointer:coarse)]:min-h-11">
-            Passer cette étape
-          </button>
-        </>
+        </Carte>
       ) : (
-        <>
-          {siretMsg && (
-            <p className="mb-3 max-w-md text-[13px] text-warning">{siretMsg}</p>
-          )}
-          <p className="mb-7 text-[15px] text-fg-2">
-            Votre profil se complétera au fil de vos réponses — commencez directement.
-          </p>
-          <ZoneDepotAO
-            titre={<>Déposez votre premier <Sigle code="DCE" /> — il est offert</>}
-            precision="ZIP complet ou PDF · analyse, vérification et mémoire compris"
-          />
-        </>
+        <div className="mt-8">
+          {siretMsg && <Message ton="attention" className="mb-4">{siretMsg}</Message>}
+          <ZoneDepotAO geste
+            titre="Déposez le dossier de l’acheteur"
+            precision="Votre premier appel d’offres est offert : lecture, pièces et mémoire compris. ZIP complet ou PDF." />
+          <p className="mt-4 text-sm text-fg-2">Votre profil se complétera au fil de vos réponses.</p>
+        </div>
       )}
-    </div>
+    </Page>
   )
 }

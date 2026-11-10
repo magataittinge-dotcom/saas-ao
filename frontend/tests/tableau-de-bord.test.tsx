@@ -211,18 +211,25 @@ test('Mes AO, 500 AO : des pages de 50 (« 1–50 sur 500 »), jamais 500 lignes
   assert.ok(html.includes('1–50 sur 500'))
 })
 
-test("l'écran « premier DCE offert » (affiché sur le tableau de bord) : champ et bouton du socle, visage de public/visage", () => {
+test("l'écran du premier dossier (affiché sur le tableau de bord) : page, champ et bouton du socle, le visage à côté de la phrase de Synorix", () => {
   const html = renderToStaticMarkup(
     <QueryClientProvider client={new QueryClient()}><MemoryRouter><FirstAOWelcome /></MemoryRouter></QueryClientProvider>)
   assert.ok(/<h1[^>]*>Bienvenue<\/h1>/.test(html))
-  assert.ok(html.includes('Votre SIRET — et c&#x27;est tout : le répertoire Sirene remplit le reste de votre profil.'))
+  assert.equal((html.match(/<h1/g) ?? []).length, 1, 'un seul h1')
+  assert.ok(html.includes('le répertoire Sirene remplit le reste de votre profil.'))
   const champ = html.match(/<input[^>]*aria-label="Numéro SIRET"[^>]*>/)?.[0] ?? ''
   assert.ok(champ.includes('border-bord-champ'), 'champ du socle')
   const valider = html.match(/<button[^>]*>Valider<\/button>/)?.[0] ?? ''
   assert.ok(valider.includes('bg-accent-fill'), 'bouton du socle')
-  assert.ok(html.includes('src="/visage/tete-ouverte-poster.webp"'), 'le visage est celui de public/visage')
+  assert.equal((html.match(/bg-accent-fill/g) ?? []).length, 1, 'un seul aplat d\'accent')
+  // A6 : les sept étapes dans l'ordre, et le partage des rôles dit par Synorix (le visage, une fois)
+  assert.ok(html.includes('Synorix lit et rédige ; vous décidez et vous déposez.'))
+  const ordre = ['Dépôt', 'Lots', 'Décider', 'Pièces', 'Plan', 'Rédiger', 'Export'].map((e) => html.indexOf(`>${e}<`))
+  assert.ok(ordre.every((p, i) => p > 0 && (i === 0 || p > ordre[i - 1])), 'les sept étapes, dans l\'ordre')
+  assert.equal((html.match(/data-synorix-parle/g) ?? []).length, 1, 'le visage une fois, à côté de la phrase')
   assert.ok(!/<video|tete-veille|\.webm/.test(html), 'plus de clip vidéo')
-}) 
+  assert.ok(!/[!—]/.test(html.replace(/<!--.*?-->/g, '')), 'ni point d\'exclamation ni tiret long')
+})
 
 test('Mes AO : la recherche est le champ du système (pilule, 44 px, contour à 3:1), le tri la liste déroulante du système', () => {
   const src = sansCommentaires(lire('src/routes/Projects.tsx'))
