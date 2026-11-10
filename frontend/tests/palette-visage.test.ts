@@ -7,7 +7,7 @@ import assert from 'node:assert/strict'
 import { fichiersSource, lire, sansCommentaires } from './outils/sources'
 import { jetons, valeur, type Theme } from './outils/jetons'
 import { ETATS, SURFACES, THEMES, blocP3, couleursDe, jetonsP3, mesure, palette, val } from './outils/palette'
-import { aplatir, dansGamut, deltaE, ecartTeinte, versOklch, vue } from '../scripts/couleur.mjs'
+import { aplatir, contraste, dansGamut, deltaE, ecartTeinte, versOklch, vue } from '../scripts/couleur.mjs'
 
 const T = palette.teintes
 const TOLERANCE = 8          // degrés OKLCH : plus grand écart mesuré entre la teinte des ombres d'un clip et celle de l'ensemble
@@ -42,15 +42,18 @@ test('theme.css porte exactement la palette calculée par scripts/palette-visage
 })
 
 test('marque : chaque teinte de l\'accent, de l\'aurore, des neutres et de la flamme est une teinte mesurée (± 8°)', () => {
-  const NEUTRES = ['surface-page', 'surface-1', 'surface-2', 'surface-dark', 'text-1', 'text-2', 'text-3', 'text-disabled', 'border-1', 'border-2', 'border-field']
-  const attendu: [string, number][] = [
+  const NEUTRES = ['surface-page', 'surface-1', 'surface-2', 'surface-dark', 'text-1', 'text-2', 'text-3', 'text-disabled', 'border-field']
+  // les filets : teinte des ombres en clair (opaques) ; en nuit, la lumière du visage en transparence (P24)
+  const filets = (theme: Theme): [string, number][] => ['border-1', 'border-2'].map((n): [string, number] => [n, theme === 'dark' ? T.lumieres : T.ombres])
+  const attendu = (theme: Theme): [string, number][] => [
     ...[50, 100, 200, 300, 400, 500, 600, 700, 800, 900].map((n): [string, number] => [`accent-${n}`, T.famille]),
     ...NEUTRES.map((n): [string, number] => [n, T.ombres]),
+    ...filets(theme),
     ['aurore-ink', T.ombres], ['aurore-mark', T.ombres], ['aurore-glow', T.ombres], ['aurore-a', T.ombres],
     ['aurore-b', T.lumieres], ['aurore-c', T.famille], ['flamme', T.or], ['flamme-glow', T.or],
   ]
   const hors: string[] = []
-  for (const theme of THEMES) for (const [nom, teinte] of attendu) {
+  for (const theme of THEMES) for (const [nom, teinte] of attendu(theme)) {
     const [, C, h] = teinteDe(theme, `--${nom}`)
     if (ecartTeinte(h, teinte) > TOLERANCE + marge(C)) hors.push(`${theme} --${nom} : ${h.toFixed(1)}° (attendu ${teinte}°)`)
   }
@@ -94,6 +97,34 @@ test('neutres : jamais un gris pur (chroma > 0 sur la teinte des ombres) ; la pa
   const page = teinteDe('dark', '--surface-page')
   assert.ok(Math.abs(page[0] - mesure.ensemble.fond.L) < 0.01, 'clarté de la page de nuit = clarté du fond des clips')
   assert.ok(ecartTeinte(page[2], mesure.ensemble.fond.h) <= TOLERANCE + marge(page[1]))
+})
+
+test('nuit : les traits d\'un pixel sont en transparence (la lumière du visage en alpha), lisibles sur chaque surface ; le bord de champ reste opaque', () => {
+  const FILET_MIN = 1.15   // VEILLE-DESIGN P24 : un filet se distingue de la surface qui le porte
+  const lumiere = (valeur('dark', '--filet-lumiere').match(/^rgba\((\d+, \d+, \d+), [\d.]+\)$/) ?? [])[1]
+  assert.ok(lumiere, '--filet-lumiere de nuit : la couleur des lumières du visage')
+  const alpha = (nom: string) => {
+    const m = jetons('dark')[nom].match(/^rgba\((\d+, \d+, \d+), (\.\d+)\)$/)
+    assert.ok(m, `nuit ${nom} : attendu en transparence, lu ${jetons('dark')[nom]}`)
+    assert.equal(m[1], lumiere, `nuit ${nom} : à la teinte des lumières du visage`)
+    return Number(m[2])
+  }
+  const repos = alpha('--border-1')
+  const survol = alpha('--border-2')
+  assert.ok(repos >= 0.06 && repos <= 0.14, `filet au repos : ${repos}`)
+  assert.ok(survol >= repos + 0.05 && survol <= 0.24, `filet au survol : ${survol}`)
+  assert.equal(alpha('--glass-border'), repos, 'le bord du verre est le filet')
+  // le trait prend la couleur de la surface qu'il borde, et s'en distingue sur chacune (l'ancien gris opaque tombait à 1,03:1 sur --surface-2)
+  const faibles: string[] = []
+  for (const nom of ['--border-1', '--border-2']) for (const s of SURFACES) {
+    const fond = valeur('dark', s)
+    const r = contraste(aplatir(valeur('dark', nom), fond), fond)
+    if (r < FILET_MIN) faibles.push(`nuit ${nom} sur ${s} : ${r.toFixed(3)}:1`)
+  }
+  assert.deepEqual(faibles, [])
+  // les bords qui servent à reconnaître un champ restent opaques, à 3:1 (matrice : contraste-palette.test.ts) ; le clair garde ses filets opaques
+  for (const theme of THEMES) assert.match(jetons(theme)['--border-field'], /^#[0-9a-f]{6}$/)
+  for (const nom of ['--border-1', '--border-2']) assert.match(jetons('light')[nom], /^#[0-9a-f]{6}$/)
 })
 
 test('états : même famille de clarté par rôle (bande de ± 0,065), la teinte seule change', () => {

@@ -258,7 +258,7 @@ export default function Design() {
         </Carte>
       </Section>
 
-      <Section id="couleurs" titre="Couleurs" note="Toutes les teintes de la marque sont mesurées sur le visage : neutres et nuit à la teinte de ses ombres (237°), une seule couleur d’action à la teinte de son verre (252°), la flamme (79°) en signature rare ; l’accent d’aurore signe la marque et n’est jamais un état. Six sens d’état, chacun avec un mot et une icône. En nuit, la seule lumière colorée est l’aurore : aucune lueur sous le bouton principal.">
+      <Section id="couleurs" titre="Couleurs" note="Toutes les teintes de la marque sont mesurées sur le visage : neutres et nuit à la teinte de ses ombres (237°), une seule couleur d’action à la teinte de son verre (252°), la flamme (79°) en signature rare ; l’accent d’aurore signe la marque et n’est jamais un état. Six sens d’état, chacun avec un mot et une icône. En nuit, la seule lumière colorée est l’aurore : aucune lueur sous le bouton principal ; les filets d’un pixel sont la lumière du visage en transparence, le bord des champs reste opaque à 3:1.">
         <Cote>
           <div className="space-y-5">
             {PALETTES.map(([nom, jetons]) => (

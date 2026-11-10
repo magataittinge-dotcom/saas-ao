@@ -53,8 +53,8 @@ colors:
   nuit-text-1: "#ecf3f8"
   nuit-text-2: "#b7c9d4"
   nuit-text-3: "#92a6b4"
-  nuit-border-1: "#192d39"
-  nuit-border-2: "#2b4352"
+  nuit-border-1: "rgba(211,221,230,.09)"
+  nuit-border-2: "rgba(211,221,230,.16)"
   nuit-border-field: "#6d8493"
   nuit-accent-text: "#79b9ff"
   nuit-accent-ui: "#008dfa"
@@ -233,7 +233,7 @@ Tous les neutres sont à la teinte des ombres du visage (237,2°), avec une chro
 - **Glace** (`--surface-1` `#e6eef4` / `#112430`) : survols, en-têtes de bloc, fonds de barre.
 - **Glace profonde** (`--surface-2` `#dae5ec` / `#192f3d`) : survol sur une surface déjà teintée, sélection de rangée.
 - **Encre** (`--text-1` `#061620` / `#ecf3f8`), **encre 2** (`--text-2` `#364b58` / `#b7c9d4`), **encre 3** (`--text-3` `#4e6472` / `#92a6b4`) : texte, texte secondaire, méta. Tous ≥ 4,5:1 sur les quatre surfaces.
-- **Filet** (`--border-1` `#d3dee6` / `#192d39`) : séparateurs et bords de carte (décoratifs). **Bord de champ** (`--border-field` `#6d808d` / `#6d8493`) : contrôles, ≥ 3:1 sur toute surface, glace profonde comprise.
+- **Filet** (`--border-1` `#d3dee6` / `rgba(211, 221, 230, .09)` ; au survol `--border-2` `#becdd7` / `rgba(211, 221, 230, .16)`) : séparateurs et bords de carte (décoratifs). En nuit, le filet est la lumière du visage **en transparence**, plus un gris opaque : il prend la couleur de la surface qu'il borde et s'en distingue sur chacune (1,19 à 1,26:1 au repos, 1,43 à 1,53:1 au survol ; l'ancien `#192d39` tombait à 1,03:1 sur la glace profonde). L'alpha est résolu par le script. **Bord de champ** (`--border-field` `#6d808d` / `#6d8493`) : contrôles, ≥ 3:1 sur toute surface, glace profonde comprise.
 
 ### Les six sens (COULEURS.md, 3/11/2026)
 

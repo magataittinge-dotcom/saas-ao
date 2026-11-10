@@ -910,23 +910,25 @@
   },
   "border-1": {
    "oklch": [
-    0.285,
-    0.034,
-    237.2
+    0.892,
+    0.016,
+    245.5
    ],
-   "hex": "#192d39",
-   "css": "#192d39",
-   "source": "ombres"
+   "hex": "#d3dde6",
+   "css": "rgba(211, 221, 230, .09)",
+   "alpha": 0.09,
+   "source": "lumieres, en transparence"
   },
   "border-2": {
    "oklch": [
-    0.37,
-    0.04,
-    237.2
+    0.892,
+    0.016,
+    245.5
    ],
-   "hex": "#2b4352",
-   "css": "#2b4352",
-   "source": "ombres"
+   "hex": "#d3dde6",
+   "css": "rgba(211, 221, 230, .16)",
+   "alpha": 0.16,
+   "source": "lumieres, en transparence"
   },
   "border-field": {
    "oklch": [
@@ -1384,13 +1386,14 @@
   },
   "glass-border": {
    "oklch": [
-    0.285,
-    0.034,
-    237.2
+    0.892,
+    0.016,
+    245.5
    ],
-   "hex": "#192d39",
-   "css": "#192d39",
-   "source": "ombres"
+   "hex": "#d3dde6",
+   "css": "rgba(211, 221, 230, .09)",
+   "alpha": 0.09,
+   "source": "lumieres, en transparence"
   },
   "scrim": {
    "css": "rgba(2, 6, 10, .64)",
