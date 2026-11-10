@@ -45,11 +45,12 @@ test('« Lancer l’analyse » n’existe plus : c’est « Lire ce dossier » p
 
 test('l’accueil, Mes AO et la palette ouvrent l’écran de la prochaine action, pas toujours le dépôt', () => {
   const bande = sansCommentaires(lire('src/components/dashboard/BandeAO.tsx'))
-  assert.equal((bande.match(/lienEtape\(p\)/g) ?? []).length, 1, 'un bouton par AO, au verbe de sa prochaine action')
-  for (const f of ['src/components/mesao/LigneAO.tsx', 'src/components/mesao/ALaUne.tsx']) {
-    const code = sansCommentaires(lire(f))
-    assert.equal((code.match(/to=\{lienEtape\(projet\)\}/g) ?? []).length, 1, `${f} : le bouton de la prochaine action`)
-  }
+  // socle (10/11) : le verbe et l'écran viennent de la fonction d'état (lectureAO, lienAO), qui reprend actionEtape
+  assert.equal((bande.match(/to=\{lienAO\(p, maintenant\)\}/g) ?? []).length, 1, 'un bouton par AO, au verbe de sa prochaine action')
+  assert.equal((sansCommentaires(lire('src/components/mesao/ALaUne.tsx')).match(/to=\{lienAO\(projet, maintenant\)\}/g) ?? []).length, 1, 'À la une : le bouton de la prochaine action')
+  const ligne = sansCommentaires(lire('src/components/mesao/LigneAO.tsx'))
+  assert.match(ligne, /const \{ action \} = lectureAO\(projet, maintenant\)/)
+  assert.match(ligne, /`\/projects\/\$\{projet\.id\}\/\$\{action\.segment\}`/, 'la ligne ouvre l\'écran de l\'action')
   const projetEcran = sansCommentaires(lire('src/routes/Project.tsx'))
   assert.match(projetEcran, /<Navigate to=\{actionEtape\(project\)\.segment\} replace \/>/, '/projects/<id> (palette, veille) ouvre la prochaine action')
 })

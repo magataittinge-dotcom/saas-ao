@@ -5,8 +5,12 @@
 //
 //   <RechercheZone selection={codes} ville={ville} onZone={({ selection, ville }) => …} />
 import { Fragment, useEffect, useId, useMemo, useState } from 'react'
-import { Search, X } from 'lucide-react'
 import './recherche-zone.css'
+import { Bouton } from '@/components/ui/bouton'
+import { ChampRecherche, GroupeChamp } from '@/components/ui/champ'
+import { PuceFiltre } from '@/components/ui/filtre'
+import { ListeDeroulante } from '@/components/ui/liste-deroulante'
+import { cn } from '@/lib/utils'
 import { DEPARTEMENTS } from './donnees/departements'
 import { chercherCommunes, type ChercherCommunes } from '@/services/adresse'
 import {
@@ -111,14 +115,11 @@ export default function RechercheZone({ selection, ville, onZone, chercher = che
   const nbDeps = options.filter((o) => o.type === 'departement').length
 
   return (
-    <div className={['rz', className].filter(Boolean).join(' ')}>
+    <div className={cn('rz', className)}>
       <div className="rz-recherche">
-      <label htmlFor={`${idBase}-champ`} className="rz-etiquette">Département, ville ou code postal</label>
-      <div className="rz-champ">
-        <Search size={16} aria-hidden className="rz-loupe" />
-        <input
+        <label htmlFor={`${idBase}-champ`} className="text-xs font-medium text-fg-2">Département, ville ou code postal</label>
+        <ChampRecherche
           id={`${idBase}-champ`}
-          type="text"
           role="combobox"
           aria-expanded={ouvert && options.length > 0}
           aria-controls={idListe}
@@ -131,78 +132,51 @@ export default function RechercheZone({ selection, ville, onZone, chercher = che
           placeholder="Rhône, Lyon, 69003…"
           onChange={(e) => surSaisie(e.target.value)}
           onKeyDown={surTouche}
-          className="rz-saisie"
         />
-        {saisie && (
-          <button type="button" className="rz-vider" aria-label="Effacer la saisie" onClick={fermer}>
-            <X size={16} aria-hidden />
-          </button>
+
+        {ouvert && (
+          <div className="rz-menu">
+            <ul id={idListe} role="listbox" aria-label="Zones proposées" className="rz-liste">
+              {options.map((o, i) => (
+                <Fragment key={o.id}>
+                  {((i === 0 && o.type === 'departement') || (i === nbDeps && o.type === 'commune')) && (
+                    <li role="presentation" className="rz-groupe">{o.type === 'departement' ? 'Départements' : 'Communes'}</li>
+                  )}
+                  <li
+                    id={`${idBase}-${o.id}`}
+                    role="option"
+                    aria-selected={i === actif}
+                    data-type={o.type}
+                    className="rz-option"
+                    onPointerDown={(e) => e.preventDefault()}
+                    onClick={o.choisir}
+                  >
+                    <span className="rz-libelle">{o.libelle}</span>
+                    <span className="rz-detail">{o.detail}</span>
+                  </li>
+                </Fragment>
+              ))}
+            </ul>
+            {statut === 'recherche' && <p className="rz-etat" role="status">Recherche des communes…</p>}
+            {statut === 'indisponible' && <p className="rz-etat" role="status">La recherche de communes n’est pas joignable pour le moment. Les départements restent disponibles.</p>}
+            {aucun && statut === 'ok' && <p className="rz-etat" role="status">Aucune commune ni aucun département ne correspond.</p>}
+          </div>
         )}
       </div>
 
-      {ouvert && (
-        <div className="rz-menu">
-          <ul id={idListe} role="listbox" aria-label="Zones proposées" className="rz-liste">
-            {options.map((o, i) => (
-              <Fragment key={o.id}>
-                {((i === 0 && o.type === 'departement') || (i === nbDeps && o.type === 'commune')) && (
-                  <li role="presentation" className="rz-groupe">{o.type === 'departement' ? 'Départements' : 'Communes'}</li>
-                )}
-                <li
-                  id={`${idBase}-${o.id}`}
-                  role="option"
-                  aria-selected={i === actif}
-                  data-type={o.type}
-                  className="rz-option"
-                  onPointerDown={(e) => e.preventDefault()}
-                  onClick={o.choisir}
-                >
-                  <span className="rz-libelle">{o.libelle}</span>
-                  <span className="rz-detail">{o.detail}</span>
-                </li>
-              </Fragment>
-            ))}
-          </ul>
-          {statut === 'recherche' && <p className="rz-etat" role="status">Recherche des communes…</p>}
-          {statut === 'indisponible' && <p className="rz-etat" role="status">La recherche de communes n'est pas joignable pour le moment. Les départements restent disponibles.</p>}
-          {aucun && statut === 'ok' && <p className="rz-etat" role="status">Aucune commune ni aucun département ne correspond.</p>}
-        </div>
-      )}
-      </div>
-
       {ville && (
-        <fieldset className="rz-rayon">
-          <legend className="rz-etiquette">Rayon autour de {ville.libelle}</legend>
-          <div className="rz-rayons" role="radiogroup" aria-label={`Rayon autour de ${ville.libelle}`}>
-            {RAYONS_KM.map((km) => (
-              <button
-                key={km}
-                type="button"
-                role="radio"
-                aria-checked={(ville.rayon_km ?? 0) === km}
-                className="rz-rayon-bouton"
-                onClick={() => changerRayon(km)}
-              >
-                {km === 0 ? 'Département' : `${km} km`}
-              </button>
-            ))}
-          </div>
-        </fieldset>
+        <GroupeChamp libelle={`Rayon autour de ${ville.libelle}`} className="sm:max-w-64">
+          <ListeDeroulante valeur={String(ville.rayon_km ?? 0)} onChange={(v) => changerRayon(Number(v))}
+            options={RAYONS_KM.map((km) => ({ valeur: String(km), libelle: km === 0 ? 'Le département seul' : `${km} km` }))} />
+        </GroupeChamp>
       )}
 
       {selection.length > 0 && (
-        <div className="rz-zone">
-          <ul className="rz-puces" aria-label="Zone choisie">
-            {selection.map((c) => (
-              <li key={c} className="rz-puce">
-                <span>{nomDe(c)}</span>
-                <button type="button" className="rz-puce-x" aria-label={`Retirer ${nomDe(c)} de la zone`} onClick={() => retirer(c)}>
-                  <X size={14} aria-hidden />
-                </button>
-              </li>
-            ))}
-          </ul>
-          <button type="button" className="rz-effacer" onClick={() => onZone({ selection: [], ville: null })}>Effacer la zone</button>
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Zone choisie">
+          {selection.map((c) => (
+            <PuceFiltre key={c} libelle={nomDe(c)} valeur={c} onOuvrir={() => retirer(c)} onRetirer={() => retirer(c)} />
+          ))}
+          <Bouton variante="lien" onClick={() => onZone({ selection: [], ville: null })}>Effacer la zone</Bouton>
         </div>
       )}
     </div>

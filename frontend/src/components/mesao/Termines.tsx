@@ -1,21 +1,19 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Ban, Check, ChevronDown, Send, Trash2, Trophy, X } from 'lucide-react'
-import { api } from '@/services/api'
+import { Ban, ChevronDown, Send, Trophy, X, type LucideIcon } from 'lucide-react'
+import { Bouton, classesBouton } from '@/components/ui/bouton'
+import { TitreSection } from '@/components/ui/page'
+import { PastilleEtat } from '@/components/ui/pastille'
+import { Tableau, type ColonneTableau } from '@/components/ui/tableau'
 import { echeanceAO, momentLimite } from '@/lib/echeance'
+import { lectureAO } from '@/lib/etatAO'
 import { jourCourt, repartitionTermines } from '@/lib/mesAO'
 import { cn } from '@/lib/utils'
 import type { Project } from '@/types'
-import { Pastille, type TonEtat } from './Etat'
-import type { LucideIcon } from 'lucide-react'
+import { CelluleAO, MenuAO, type GestesAO } from './LigneAO'
 
-const STATUT: Record<string, { libelle: string; ton: TonEtat; icone: LucideIcon }> = {
-  soumis: { libelle: 'Déposé', ton: 'bleu', icone: Send },
-  gagné: { libelle: 'Gagné', ton: 'vert', icone: Trophy },
-  perdu: { libelle: 'Perdu', ton: 'rouge', icone: X },
-  sans_suite: { libelle: 'Sans suite', ton: 'gris', icone: Ban },
-}
+// L'icône de chaque statut fermé ; le mot et le sens viennent de `lectureAO` (lib/etatAO.ts).
+const ICONE: Record<string, LucideIcon> = { soumis: Send, gagné: Trophy, perdu: X, sans_suite: Ban }
 
 const jour = jourCourt
 
@@ -27,72 +25,53 @@ export function dateTerminee(p: Project): string {
   return `mis à jour le ${jour(new Date(p.updated_at))}`
 }
 
-function LigneTerminee({ projet, onSupprimer }: { projet: Project; onSupprimer?: (id: string, nom: string) => void }) {
-  const queryClient = useQueryClient()
-  const { mutate: definir, isPending } = useMutation({
-    mutationFn: async (status: string) => { await api.patch(`/projects/${projet.id}`, { status }) },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] })
-      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
-    },
-  })
-  const s = STATUT[projet.status] ?? STATUT.sans_suite
-  return (
-    <li data-terminee={projet.id} className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-bord-2 px-4 py-3.5 first:border-t-0 sm:px-5">
-      <div className="flex min-w-0 basis-[18rem] flex-1 flex-col gap-0.5">
-        <Link to={`/projects/${projet.id}`} className="break-words text-[14.5px] font-semibold text-fg hover:text-accent-text">{projet.name}</Link>
-        {projet.maitre_ouvrage && <span className="break-words text-[13px] text-fg-2">{projet.maitre_ouvrage}</span>}
-      </div>
-      <span className="sm:w-[8.5rem]"><Pastille ton={s.ton} icone={s.icone}>{s.libelle}</Pastille></span>
-      <span className="text-[13px] text-fg-2 sm:w-36">{dateTerminee(projet)}</span>
-      {projet.status === 'soumis' ? (
-        <span className="inline-flex flex-wrap items-center gap-2">
-          <span className="text-[13px] text-fg-2">Résultat :</span>
-          <button type="button" disabled={isPending} onClick={() => definir('gagné')} className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-vert-mark px-3 text-[13px] font-semibold text-vert-ink hover:bg-vert-soft disabled:opacity-50 [@media(pointer:coarse)]:min-h-11">
-            <Check size={14} aria-hidden />Gagné
-          </button>
-          <button type="button" disabled={isPending} onClick={() => definir('perdu')} className="inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-bord-2 px-3 text-[13px] font-semibold text-fg hover:bg-surface-1 disabled:opacity-50 [@media(pointer:coarse)]:min-h-11">
-            <X size={14} aria-hidden />Perdu
-          </button>
-        </span>
-      ) : (
-        <Link to={`/projects/${projet.id}`} className="inline-flex min-h-9 items-center text-[13.5px] font-semibold text-accent-text hover:underline [@media(pointer:coarse)]:min-h-11">Ouvrir</Link>
-      )}
-      {onSupprimer && (
-        <button type="button" onClick={() => onSupprimer(projet.id, projet.name)} aria-label={`Supprimer l’AO « ${projet.name} »`} title="Supprimer cet AO"
-          className="inline-flex size-9 items-center justify-center rounded-xl text-fg-3 hover:bg-surface-2 hover:text-rouge-ink [@media(pointer:coarse)]:size-11">
-          <Trash2 size={15} aria-hidden />
-        </button>
-      )}
-    </li>
-  )
+function colonnesTermines(g: GestesAO): ColonneTableau<Project>[] {
+  return [
+    { cle: 'ao', titre: 'Appel d’offres', rendu: (p) => <div data-terminee={p.id}><CelluleAO projet={p} detail={false} large /></div>, classe: 'md:w-[48%]' },
+    { cle: 'statut', titre: 'Statut', tel: true, rendu: (p) => { const l = lectureAO(p, g.maintenant); return <PastilleEtat sens={l.sens} icone={ICONE[p.status] ?? Ban}>{l.libelle}</PastilleEtat> } },
+    { cle: 'date', titre: 'Date', tel: true, rendu: (p) => <span className="chiffres text-sm text-fg-2">{dateTerminee(p)}</span> },
+    { cle: 'action', titre: 'Action', tel: true, nombre: true, rendu: (p) => {
+      const { action } = lectureAO(p, g.maintenant)
+      return (
+        <div className="flex min-w-0 items-center justify-end gap-1 max-md:justify-between max-md:pt-1.5">
+          {action.statut
+            ? <Bouton onClick={() => g.onStatut(p)} className="max-md:flex-1">{action.verbe}</Bouton>
+            : <Link to={`/projects/${p.id}`} className={classesBouton('secondaire', 'max-md:flex-1')}>{action.verbe}</Link>}
+          <MenuAO projet={p} onStatut={g.onStatut} onSupprimer={g.onSupprimer} />
+        </div>
+      )
+    } },
+  ]
 }
 
-/** Les AO terminés, repliés par défaut : le décompte par statut reste visible, les lignes s'ouvrent d'un clic. */
-export function Termines({ projets, onSupprimer, ouvertParDefaut = false }: { projets: Project[]; onSupprimer?: (id: string, nom: string) => void; ouvertParDefaut?: boolean }) {
+/** Les AO terminés, repliés par défaut : le décompte par statut reste visible, la liste s'ouvre d'un clic (pages de 50). */
+export function Termines({ projets, ouvertParDefaut = false, ...gestes }: { projets: Project[]; ouvertParDefaut?: boolean } & GestesAO) {
   const [ouvert, setOuvert] = useState(ouvertParDefaut)
   if (projets.length === 0) return null
   const parStatut = repartitionTermines(projets)
   return (
-    <section aria-label="Appels d’offres terminés" className="space-y-3">
-      <button
-        type="button" aria-expanded={ouvert} aria-controls="liste-terminees" onClick={() => setOuvert((v) => !v)}
-        className="flex min-h-11 w-full flex-wrap items-center gap-x-4 gap-y-2 rounded-carte border border-bord-2 bg-surface-0 px-4 py-3.5 text-left hover:border-bord-2 hover:bg-surface-1 sm:px-5"
-      >
-        <span className="font-display text-h6 text-fg">Terminés</span>
-        <Pastille ton="gris">{projets.length}</Pastille>
-        <span className="order-last flex basis-full flex-wrap gap-2 sm:order-none sm:basis-0 sm:flex-1">
-          {parStatut.map(([statut, n]) => <Pastille key={statut} ton={STATUT[statut].ton} icone={STATUT[statut].icone}>{STATUT[statut].libelle} {n}</Pastille>)}
-        </span>
-        <span className="ml-auto inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-accent-text">
+    <section aria-labelledby="titre-termines" className="mt-10 max-md:mt-7.5">
+      <TitreSection id="titre-termines" action={(
+        <Bouton variante="discret" aria-expanded={ouvert} aria-controls="liste-terminees" onClick={() => setOuvert((v) => !v)}>
           {ouvert ? 'Replier' : 'Afficher'}
-          <ChevronDown size={16} aria-hidden className={cn('transition-transform duration-base ease-lien motion-reduce:transition-none', ouvert && 'rotate-180')} />
-        </span>
-      </button>
-      {ouvert && (
-        <ul id="liste-terminees" className="overflow-hidden rounded-carte border border-bord-2 bg-surface-0">
-          {projets.map((p) => <LigneTerminee key={p.id} projet={p} onSupprimer={onSupprimer} />)}
-        </ul>
+          <ChevronDown aria-hidden strokeWidth={1.75} className={cn('transition-transform duration-survol ease-survol motion-reduce:transition-none', ouvert && 'rotate-180')} />
+        </Bouton>
+      )}>
+        Terminés <span className="chiffres font-normal text-fg-3">{projets.length}</span>
+      </TitreSection>
+      {ouvert ? (
+        <div id="liste-terminees">
+          <Tableau libelle="Appels d’offres terminés" colonnes={colonnesTermines(gestes)} lignes={projets} cle={(p) => p.id} vide={null} />
+        </div>
+      ) : (
+        <p className="flex flex-wrap gap-2">
+          {parStatut.map(([statut, n]) => {
+            const premier = projets.find((p) => p.status === statut)
+            if (!premier) return null
+            const l = lectureAO(premier, gestes.maintenant)
+            return <PastilleEtat key={statut} sens={l.sens} icone={ICONE[statut] ?? Ban}>{l.libelle} {n}</PastilleEtat>
+          })}
+        </p>
       )}
     </section>
   )

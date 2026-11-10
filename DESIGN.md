@@ -53,8 +53,8 @@ colors:
   nuit-text-1: "#ecf3f8"
   nuit-text-2: "#b7c9d4"
   nuit-text-3: "#92a6b4"
-  nuit-border-1: "#192d39"
-  nuit-border-2: "#2b4352"
+  nuit-border-1: "rgba(211,221,230,.09)"
+  nuit-border-2: "rgba(211,221,230,.16)"
   nuit-border-field: "#6d8493"
   nuit-accent-text: "#79b9ff"
   nuit-accent-ui: "#008dfa"
@@ -233,7 +233,7 @@ Tous les neutres sont à la teinte des ombres du visage (237,2°), avec une chro
 - **Glace** (`--surface-1` `#e6eef4` / `#112430`) : survols, en-têtes de bloc, fonds de barre.
 - **Glace profonde** (`--surface-2` `#dae5ec` / `#192f3d`) : survol sur une surface déjà teintée, sélection de rangée.
 - **Encre** (`--text-1` `#061620` / `#ecf3f8`), **encre 2** (`--text-2` `#364b58` / `#b7c9d4`), **encre 3** (`--text-3` `#4e6472` / `#92a6b4`) : texte, texte secondaire, méta. Tous ≥ 4,5:1 sur les quatre surfaces.
-- **Filet** (`--border-1` `#d3dee6` / `#192d39`) : séparateurs et bords de carte (décoratifs). **Bord de champ** (`--border-field` `#6d808d` / `#6d8493`) : contrôles, ≥ 3:1 sur toute surface, glace profonde comprise.
+- **Filet** (`--border-1` `#d3dee6` / `rgba(211, 221, 230, .09)` ; au survol `--border-2` `#becdd7` / `rgba(211, 221, 230, .16)`) : séparateurs et bords de carte (décoratifs). En nuit, le filet est la lumière du visage **en transparence**, plus un gris opaque : il prend la couleur de la surface qu'il borde et s'en distingue sur chacune (1,19 à 1,26:1 au repos, 1,43 à 1,53:1 au survol ; l'ancien `#192d39` tombait à 1,03:1 sur la glace profonde). L'alpha est résolu par le script. **Bord de champ** (`--border-field` `#6d808d` / `#6d8493`) : contrôles, ≥ 3:1 sur toute surface, glace profonde comprise.
 
 ### Les six sens (COULEURS.md, 3/11/2026)
 
@@ -270,11 +270,11 @@ Le vert, l'ambre, le rouge et le turquoise ne sont pas dans le visage : ce sont 
 
 **La règle « la coquille est neutre ».** Barre latérale, barre du haut et barre du bas ne portent aucun fond d'accent : l'entrée active a un fond `--surface-1` et un texte `--text-1` ; seules son icône et sa barre de 3 px sont à `--accent-ui`.
 
-**La règle « une seule palette d'états ».** Les six sens (`--bleu-*` … `--gris-*`). La seconde palette (`--info / --success / --warning / --danger`) est calculée par le script comme descendante des six sens et ne s'emploie plus : un garde-fou compte ses derniers usages.
+**La règle « une seule palette d'états ».** Les six sens (`--bleu-*` … `--gris-*`). Les anciens noms (`--info / --success / --warning / --danger`, et les classes Tailwind qui en sortent) sont de **simples alias** des sens bleu, vert, ambre et rouge, en clair comme en nuit : `bg` = `soft`, `fg` = `ink`, `border` = `mark` (`--info-bg: var(--bleu-soft)`, écrit par le script). Un écran qui les emploie encore prend donc les couleurs des six sens ; ils ne s'emploient plus, un garde-fou compte leurs derniers usages et un test vérifie que chaque ancien nom vaut exactement son sens.
 
 **La règle « l'aurore n'est pas un état ».** `--aurore-*` et `--flamme` ne colorent jamais un fond de pastille, un texte d'état ni une barre de progression.
 
-**La règle « la nuit éclaire ».** En nuit, les accents sont plus clairs qu'en clair (texte d'accent 300, interface 500, encres d'état relevées) et la profondeur vient de lumière colorée : lueur bleue sous le bouton principal, filet de lumière en haut des surfaces flottantes.
+**La règle « en nuit, la seule lumière colorée est l'aurore ».** En nuit, les accents sont plus clairs qu'en clair (texte d'accent 300, interface 500, encres d'état relevées) et la profondeur vient de surfaces qui s'éclaircissent et d'un filet de lumière d'un pixel en haut des surfaces. Aucune lueur ni ombre colorée, pas même sous le bouton principal : l'aurore et le halo du visage sont les seules lumières colorées de l'écran (`tests/palette-visage.test.ts` : aucune ombre de nuit dont la chroma dépasse 0,04).
 
 ## Typography
 
@@ -323,7 +323,7 @@ La profondeur vient de la lumière et des traits, pas des ombres. Au repos, une 
 - **Filet de lumière** (`--filet-lumiere` : `rgba(255, 255, 255, .9)` clair ; `rgba(211, 221, 230, .1)` nuit, la couleur des lumières du visage à 10 %) : le trait d'un pixel en haut des surfaces, posé par `--edge-light` (`inset 0 1px 0 var(--filet-lumiere)`). Jamais une valeur en dur.
 - **Carte** (`--shadow-card` : `0 1px 0` à 4 % en clair ; en nuit `0 1px 0` à 35 % et le filet de lumière `inset 0 1px 0` en haut de la surface) : un appui à peine visible ; le trait fait le travail.
 - **Flottant** (`--shadow-pop` : `0 2px 6px` à 7 % et `0 18px 40px -18px` à 24 % en clair ; en nuit `0 22px 48px -18px` à 75 % et le filet de lumière en haut) : menus, fenêtres, barre latérale.
-- **Bouton principal** (`--shadow-cta`) : reflet intérieur d'un pixel et ombre bleue `0 8px 18px -8px` à 55 % en clair ; en nuit le bouton **éclaire** (liseré d'un pixel et lueur `0 10px 28px -8px` de l'accent 500 à 60 %). Le seul bouton qui porte une ombre colorée.
+- **Bouton principal** (`--shadow-cta`) : reflet intérieur d'un pixel et ombre bleue `0 8px 18px -8px` à 55 % en clair ; en nuit, **ni ombre ni lueur** : le reflet d'un pixel seul (`inset 0 1px 0 rgba(255, 255, 255, .22)`), le bouton se détache par son aplat. Le seul bouton qui porte une ombre colorée, et en clair seulement.
 
 ### Named Rules
 

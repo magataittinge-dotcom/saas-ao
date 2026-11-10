@@ -28,42 +28,96 @@ function rendre(projets: Project[]) {
   return renderToStaticMarkup(<QueryClientProvider client={client(projets)}><MemoryRouter><Dashboard /></MemoryRouter></QueryClientProvider>)
 }
 
-test('l\'accueil : un seul h1, la bande « Vos AO en cours » (trois au plus), plus de Synorix Intelligence', () => {
-  const html = rendre(PROJETS_DEMO)
+// Des AO dont la remise est loin devant (2099) ou loin derrière (2020) : les tests ne dépendent pas du jour où ils tournent.
+const A_VENIR = [
+  projet('v1', { name: 'AO à venir un', status: 'analyzed', current_step: 2, ...remise('2099-03-10') }),
+  projet('v2', { name: 'AO à venir deux', status: 'en_cours', current_step: 2, ...remise('2099-02-01') }),
+]
+const PASSES = [
+  projet('p1', { name: 'AO passé un', status: 'brouillon', current_step: 1, ...remise('2020-01-15') }),
+  projet('p2', { name: 'AO passé deux', status: 'en_cours', current_step: 6, completed_steps: { 5: true }, ...remise('2020-02-15') }),
+]
+
+test('l\'accueil : un seul h1, la bande des AO en cours (trois au plus), un visage au plus, plus de Synorix Intelligence', () => {
+  const html = rendre([...A_VENIR, ...PASSES])
   assert.equal((html.match(/<h1[\s>]/g) ?? []).length, 1, 'un seul h1')
   assert.ok(/<h1[^>]*>Bonjour<\/h1>/.test(html), 'le « Bonjour » (sans prénom connu) est le h1')
+  assert.ok(html.includes('fil-aurore'), 'le fil d\'aurore reste sous le « Bonjour »')
   assert.ok(html.includes('data-bande-ao'), 'la bande est rendue')
-  assert.ok(/<h2[^>]*id="t-bande"[^>]*>Vos AO en cours/.test(html))
-  const cartes = html.match(/data-ao="/g) ?? []
-  assert.ok(cartes.length >= 1 && cartes.length <= 3, `${cartes.length} AO dans la bande`)
-  assert.ok(html.includes('href="/projects"') && html.includes('Tous mes AO'), 'lien « Tous mes AO »')
-  assert.ok(!html.includes('data-synorix-intelligence'), 'le visage a quitté l\'accueil')
+  assert.ok(/<h2[^>]*id="t-bande"[^>]*>Vos appels d’offres en cours/.test(html))
+  assert.equal((html.match(/data-ao="/g) ?? []).length, 2, 'les deux AO en cours')
+  assert.ok(html.includes('href="/projects"') && html.includes('Tous mes appels d’offres'), 'lien vers Mes AO')
+  assert.ok(!html.includes('data-synorix-intelligence'), 'le visage animé a quitté l\'accueil')
   assert.ok(!html.includes('data-bulle="'), 'les six bulles aussi')
-  // la bande précède la veille ; la veille précède le coffre-fort
-  assert.ok(html.indexOf('data-bande-ao') < html.indexOf('id="t-coffre"'))
+  assert.ok((html.match(/data-visage=""/g) ?? []).length <= 1, 'un visage au plus, à côté d\'une phrase de Synorix')
+  assert.ok(!html.includes('data-visage-petit'), 'plus de visage en vignette (pastille de l\'entreprise)')
+  // la bande précède la veille ; la veille précède le suivi de l'entreprise
+  assert.ok(html.indexOf('data-bande-ao') < html.indexOf('id="t-suivi"'))
 })
 
-test('la bande garde trois AO au plus, la remise la plus proche d\'abord ; chaque AO a un bouton secondaire au verbe de sa prochaine action (le seul dégradé est « Nouvel appel d\'offres »)', () => {
-  const sept = Array.from({ length: 7 }, (_, i) => projet(`b${i}`, { name: `AO ${i}`, ...remise(`2026-12-${String(20 - i).padStart(2, '0')}`), current_step: 2 }))
+test('« en cours » ne se contredit plus : une remise passée est « à mettre à jour », sa seule action est « Mettre à jour le statut », aucun statut brut', () => {
+  const html = rendre([...A_VENIR, ...PASSES])
+  // les deux remises passées sortent des AO en cours, et l'écran le dit (défaut 1 du fondateur)
+  assert.equal((html.match(/data-remise-passee="/g) ?? []).length, 2)
+  assert.ok(html.includes('2 appels d’offres ont dépassé leur date de remise'), 'Synorix le dit, une fois')
+  const passe = html.split('data-remise-passee="p2"')[1].split('</li>')[0]
+  assert.ok(passe.includes('Mettre à jour le statut'))
+  assert.ok(!/Télécharger|Exporter|\/export/.test(passe), 'jamais « Télécharger le dossier » sur une remise passée')
+  assert.ok(!/brouillon|analyzed|en_cours|>en cours</.test(html), 'les statuts ne s\'écrivent plus tels que la base les donne')
+  assert.ok(!html.includes('Aucun appel d’offres en cours'), 'jamais « aucun » au-dessus d\'AO en cours')
+  // que des remises passées : le titre de la bande le dit, pas « en cours »
+  const quePasses = rendre(PASSES)
+  assert.ok(/<h2[^>]*id="t-bande"[^>]*>À mettre à jour/.test(quePasses))
+  assert.ok(!quePasses.includes('Vos appels d’offres en cours'))
+})
+
+test('la bande garde trois AO au plus, la remise la plus proche d\'abord ; chaque AO a un bouton au verbe de sa prochaine action, un seul plein (la prochaine remise)', () => {
+  const sept = Array.from({ length: 7 }, (_, i) => projet(`b${i}`, { name: `AO ${i}`, ...remise(`2099-12-${String(20 - i).padStart(2, '0')}`), current_step: 2 }))
   const ordre = aoDeLaBande(sept).map((p) => p.id)
   assert.deepEqual(ordre, ['b6', 'b5', 'b4'], 'les trois remises les plus proches')
-  const html = renderToStaticMarkup(<MemoryRouter><BandeAO projets={sept} total={7} onNouveau={() => {}} /></MemoryRouter>)
+  const html = renderToStaticMarkup(<MemoryRouter><BandeAO projets={sept} onNouveau={() => {}} /></MemoryRouter>)
   assert.equal((html.match(/data-ao="/g) ?? []).length, 3)
-  assert.equal((html.match(/<a[^>]*border-bord-champ[^>]*>Choisir le lot/g) ?? []).length, 3, 'bouton secondaire au verbe de la prochaine action')
-  assert.equal((html.match(/bg-accent-fill/g) ?? []).length, 0, 'aucun dégradé dans la bande')
+  assert.equal((html.match(/<a[^>]*data-variante="(principal|secondaire)"[^>]*>Choisir le lot/g) ?? []).length, 3, 'un bouton au verbe de la prochaine action')
+  assert.equal((html.match(/data-variante="principal"/g) ?? []).length, 1, 'un seul bouton plein : la prochaine remise')
+  assert.ok(html.indexOf('data-variante="principal"') < html.indexOf('data-ao="b5"'), 'le bouton plein est sur le premier AO')
   assert.ok(!/>Reprendre</.test(html), 'jamais « Reprendre »')
   assert.ok(html.indexOf('data-ao="b6"') < html.indexOf('data-ao="b5"'))
   assert.ok(html.includes('>7<'), 'le total des AO en cours reste affiché')
+  assert.ok(html.includes('Voir les 4 autres dans Mes AO'), 'le reste est dans Mes AO')
   // les AO clos n'y figurent pas
-  const clos = [projet('c', { status: 'soumis', current_step: 6, ...remise('2026-12-01') })]
+  const clos = [projet('c', { status: 'soumis', current_step: 6, ...remise('2099-12-01') })]
   assert.deepEqual(aoDeLaBande(clos), [])
 })
 
-test("sans AO : la bande garde son texte, et le bouton « Nouvel appel d'offres » est présent", () => {
+test('500 AO à mettre à jour : l\'accueil en montre trois et renvoie à Mes AO (plus de page de 12 000 px)', () => {
+  const cinqCents = Array.from({ length: 500 }, (_, i) => projet(`m${i}`, { name: `AO ${i}`, ...remise('2020-03-01') }))
+  const html = renderToStaticMarkup(<MemoryRouter><BandeAO projets={cinqCents} onNouveau={() => {}} /></MemoryRouter>)
+  assert.equal((html.match(/data-remise-passee="/g) ?? []).length, 3)
+  assert.ok(html.includes('Voir les 497 autres dans Mes AO'))
+})
+
+test("sans AO : la bande dit ce qui apparaîtra ici, et le bouton « Nouvel appel d'offres » est présent", () => {
   const html = rendre([])
-  assert.ok(html.includes('Aucun appel d&#x27;offres en cours'))
-  assert.ok(/<button[^>]*>Nouvel appel d&#x27;offres<\/button>/.test(html))
+  assert.ok(html.includes('Aucun appel d’offres en cours'))
+  assert.ok(/<button[^>]*>Nouvel appel d’offres<\/button>/.test(html))
   assert.ok(!/bg-encre|sur-encre/.test(html), 'plus d\'encre sombre écrite en dur')
+})
+
+test('une panne du serveur n\'est jamais « vous n\'avez rien » : l\'Accueil et Mes AO disent leur erreur et proposent « Réessayer »', () => {
+  const enPanne = () => {
+    // retryOnMount: false : au rendu serveur, la requête en échec reste « en erreur » (sinon elle se dit « en chargement »)
+    const c = new QueryClient({ defaultOptions: { queries: { retry: false, retryOnMount: false } } })
+    const q = c.getQueryCache().build(c, { queryKey: ['projects'] })
+    q.setState({ ...q.state, status: 'error', error: new Error('500'), fetchStatus: 'idle', errorUpdateCount: 1, errorUpdatedAt: Date.now() })
+    return c
+  }
+  const accueil = renderToStaticMarkup(<QueryClientProvider client={enPanne()}><MemoryRouter><Dashboard /></MemoryRouter></QueryClientProvider>)
+  assert.ok(accueil.includes('Vos appels d’offres n’ont pas pu se charger') && accueil.includes('Réessayer'))
+  assert.ok(!accueil.includes('Aucun appel d’offres en cours'), 'pas le texte de l\'état vide')
+  const mesAO = renderToStaticMarkup(<QueryClientProvider client={enPanne()}><MemoryRouter><Projects /></MemoryRouter></QueryClientProvider>)
+  assert.ok(mesAO.includes('Vos appels d’offres n’ont pas pu se charger') && mesAO.includes('Réessayer'))
+  assert.ok(!mesAO.includes('Votre premier dossier se prépare ici'), 'pas l\'écran du premier dossier : le client croirait ses AO perdus')
+  assert.equal((mesAO.match(/<h1[\s>]/g) ?? []).length, 1)
 })
 
 test("le tableau de bord n'importe plus l'ancien Compagnon ni Synorix Intelligence ; la veille est chargée à la demande", () => {
@@ -107,24 +161,54 @@ test('la veille de l\'accueil : recherche de zone, carte, filtres et liste des a
   assert.ok(/<h2[^>]*id="titre-veille"[^>]*>.*Veille<\/h2>/.test(html) && /<h3[^>]*>Avis ouverts<\/h3>/.test(html), 'niveaux de titre')
 })
 
-test('la veille sans zone : « Choisissez une zone sur la carte », la carte et la recherche sont là', () => {
+test('la veille sans zone : « Choisissez une zone sur la carte », la carte et la recherche sont là ; pendant la lecture des préférences, le squelette', () => {
   const c = new QueryClient()
+  // préférences pas encore lues : ni « Choisissez une zone » ni filtres, la liste est en attente
+  const attente = renderToStaticMarkup(<QueryClientProvider client={c}><MemoryRouter><VeilleAccueil /></MemoryRouter></QueryClientProvider>)
+  assert.ok(!attente.includes('Choisissez une zone sur la carte') && attente.includes('Chargement des avis') && !attente.includes('data-filtres-colles'))
+  c.setQueryData(CLES_VEILLE.preferences, { departements: [], ville: null, filtres: { metiers: [], delai_jours: null, procedures: [], mots_cles: '' }, tri: 'date_limite', derniere_visite: null })
   const html = renderToStaticMarkup(<QueryClientProvider client={c}><MemoryRouter><VeilleAccueil /></MemoryRouter></QueryClientProvider>)
   assert.ok(html.includes('Choisissez une zone sur la carte'))
   assert.ok(html.includes('role="combobox"'), 'recherche de zone')
   assert.ok(html.includes('cf-svg') && html.includes('Carte de France'), 'la carte')
 })
 
-test('Mes AO : on arrive sur du travail en cours — en-tête, résumé, « À la une », une ligne par AO avec le verbe de sa prochaine action', () => {
-  const html = renderToStaticMarkup(<QueryClientProvider client={client(PROJETS_DEMO)}><MemoryRouter><Projects /></MemoryRouter></QueryClientProvider>)
+test('Mes AO : on arrive sur du travail en cours — en-tête, résumé, « À la une » (la prochaine remise), une ligne par AO avec le verbe de la fonction d\'état', () => {
+  const html = renderToStaticMarkup(<QueryClientProvider client={client([...A_VENIR, ...PASSES])}><MemoryRouter><Projects /></MemoryRouter></QueryClientProvider>)
   assert.equal((html.match(/<h1[\s>]/g) ?? []).length, 1)
-  assert.ok(/<section[^>]*aria-label="Résumé"/.test(html), 'les cartes de résumé')
-  assert.equal((html.match(/data-carte-resume=""/g) ?? []).length, 4, 'quatre cartes de résumé')
-  assert.ok(html.includes('À la une'), '« À la une »')
-  assert.ok(!html.includes('data-synorix-intelligence') && !html.includes('data-bulle='), 'plus de visage animé ni de bulles : un seul calcul, les cartes')
+  assert.ok(/role="group"[^>]*aria-label="Résumé de mes appels d’offres"/.test(html), 'la bande de résumé du système')
+  assert.equal((html.match(/data-case-resume=""/g) ?? []).length, 4, 'quatre cases de résumé')
+  // étiquette + gros chiffre seul : « En cours » puis « 2 », jamais « 2 en cours » ni « 2 en cours. » sous le titre
+  assert.ok(/>En cours<\/p><\/div><p data-valeur="nombre"[^>]*><span class="chiffre-grand">2<\/span><\/p>/.test(html), 'En cours : le chiffre seul')
+  assert.ok(!/2 en cours/.test(html), 'la sous-ligne ne redit pas la première case')
+  assert.ok(html.includes('>Aucune<'), 'rien à compter : « Aucune » (remise sous 7 jours), jamais un gros 0')
+  // « À la une » = la prochaine remise à venir (v2), sans visage ; le seul bouton plein de l'écran
+  assert.ok(html.includes('data-a-la-une="v2"'), '« À la une » : la remise la plus proche parmi celles à venir')
+  assert.ok(!html.includes('data-visage'), 'aucun visage en vignette d\'un AO')
+  assert.equal((html.match(/data-variante="principal"/g) ?? []).length, 1)
+  assert.ok(!html.includes('data-synorix-intelligence') && !html.includes('data-bulle='), 'plus de visage animé ni de bulles')
   assert.ok(!/>Continuer</.test(html), 'jamais « Continuer » : le bouton porte le verbe de la prochaine action')
   assert.ok(html.indexOf('À la une') < html.indexOf('data-ligne-ao'), '« À la une » précède la liste')
+  // trois groupes : en cours, à mettre à jour (seule action : le statut), terminés
+  assert.ok(/id="titre-en-cours"[^>]*>En cours/.test(html) && /id="titre-a-mettre-a-jour"[^>]*>À mettre à jour/.test(html))
+  const passe = html.split('data-ligne-ao="p2"')[1].split('</tr>')[0]
+  assert.ok(passe.includes('Mettre à jour le statut') && passe.includes('Remise passée'))
+  assert.ok(!/Télécharger le dossier|\/export/.test(passe), 'jamais « Télécharger le dossier » sur une remise passée')
   assert.ok(!/Bonjour/.test(sansCommentaires(lire('src/routes/Projects.tsx'))), 'l\'en-tête de Mes AO ne salue pas')
+})
+
+test('Mes AO sans remise à venir : pas de bloc « À la une », aucun bouton plein', () => {
+  const html = renderToStaticMarkup(<QueryClientProvider client={client(PASSES)}><MemoryRouter><Projects /></MemoryRouter></QueryClientProvider>)
+  assert.ok(!html.includes('À la une') && !html.includes('data-a-la-une'))
+  assert.equal((html.match(/data-variante="principal"/g) ?? []).length, 0)
+  assert.ok(html.includes('>Aucun<'), 'En cours : « Aucun »')
+})
+
+test('Mes AO, 500 AO : des pages de 50 (« 1–50 sur 500 »), jamais 500 lignes d\'un bloc', () => {
+  const cinqCents = Array.from({ length: 500 }, (_, i) => projet(`m${i}`, { name: `AO ${i}`, ...remise('2020-03-01') }))
+  const html = renderToStaticMarkup(<QueryClientProvider client={client(cinqCents)}><MemoryRouter><Projects /></MemoryRouter></QueryClientProvider>)
+  assert.equal((html.match(/data-ligne-ao="/g) ?? []).length, 50)
+  assert.ok(html.includes('1–50 sur 500'))
 })
 
 test("l'écran « premier DCE offert » (affiché sur le tableau de bord) : champ et bouton du socle, visage de public/visage", () => {
@@ -140,12 +224,12 @@ test("l'écran « premier DCE offert » (affiché sur le tableau de bord) : cham
   assert.ok(!/<video|tete-veille|\.webm/.test(html), 'plus de clip vidéo')
 }) 
 
-test('Mes AO : le champ de recherche fait 44 px de haut et garde un contour à 3:1 (bord des champs)', () => {
+test('Mes AO : la recherche est le champ du système (pilule, 44 px, contour à 3:1), le tri la liste déroulante du système', () => {
   const src = sansCommentaires(lire('src/routes/Projects.tsx'))
-  const champ = src.match(/<input[^>]*placeholder="Nom, acheteur, lot…"[\s\S]*?\/>/)?.[0]
-  assert.ok(champ, 'le champ de recherche existe')
-  assert.match(champ!, /\b(min-)?h-11\b/, 'hauteur 44 px')
-  assert.match(champ!, /var\(--border-field\)|border-bord-champ/, 'contour « bord des champs » (3:1 minimum)')
-  assert.match(champ!, /placeholder:text-fg-3/, 'texte d\'aide à --text-3 (≥ 4,5:1), plus le #9ca3af du champ en verre')
-  assert.doesNotMatch(champ!, /glass-input/)
+  assert.match(src, /<ChampRecherche placeholder="Nom, acheteur, lot…"/)
+  assert.match(src, /<ListeDeroulante libelle="Trier par"/)
+  assert.doesNotMatch(src, /<input\b|<select\b|glass-input/)
+  const champ = sansCommentaires(lire('src/components/ui/champ.tsx'))
+  assert.match(champ, /border-bord-champ/)
+  assert.match(champ, /placeholder:text-fg-3/)
 })
