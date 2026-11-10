@@ -28,13 +28,14 @@ export function Message({ ton = 'info', titre, children, action, onFermer, class
   const Icone = t.icone
   return (
     <div role={ton === 'erreur' || ton === 'attention' ? 'alert' : 'status'} data-message={ton}
-      className={cn('flex items-start gap-3 rounded-lg px-4 py-3 text-sm text-fg', t.fond, className)}>
+      className={cn('flex flex-wrap items-start gap-x-3 gap-y-2 rounded-lg px-4 py-3 text-sm text-fg', t.fond, className)}>
       <Icone aria-hidden size={18} strokeWidth={1.75} className={cn('mt-0.5 shrink-0', t.encre)} />
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 basis-40">
         {titre && <p className="font-semibold">{titre}</p>}
         {children && <div className={cn(titre && 'mt-0.5', 'text-fg-2')}>{children}</div>}
       </div>
-      {action && <div className="shrink-0">{action}</div>}
+      {/* au téléphone, l'action passe sous la phrase (elle ne l'écrase pas en colonne étroite) */}
+      {action && <div data-message-action="" className="shrink-0 max-sm:order-last max-sm:basis-full max-sm:pl-[30px]">{action}</div>}
       {onFermer && (
         <button type="button" onClick={onFermer} aria-label="Fermer le message" className="-my-2.5 -mr-2 grid size-11 shrink-0 place-items-center rounded-pilule text-fg-2 transition-colors duration-fast ease-survol hover:text-fg active:scale-[.98]">
           <X aria-hidden size={16} strokeWidth={1.5} />
