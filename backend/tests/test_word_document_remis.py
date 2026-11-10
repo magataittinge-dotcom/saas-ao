@@ -134,3 +134,12 @@ def test_tableau_des_visuels_en_tete_claire_et_trait_de_couleur():
     assert 'w:fill="7A1F2B"' not in xml
     assert 'w:color="7A1F2B"' in xml                       # le trait sous l'en-tête
     assert 'w:val="FFFFFF"' not in xml.upper().replace("W:VAL", "w:val")
+
+
+def test_figures_sans_logo_en_encre_neutre_pas_au_bleu_de_l_outil():
+    """Sans logo (donc sans couleur d'entreprise), organigramme, planning et moyens sortent en encre
+    neutre : le dossier est celui de l'entreprise, pas une publicité pour l'outil."""
+    from services.visuels.couleurs import ACCENT_PAR_DEFAUT, Theme, contraste
+    r, g, b = (int(ACCENT_PAR_DEFAUT[i:i + 2], 16) for i in (1, 3, 5))
+    assert max(r, g, b) - min(r, g, b) <= 40, ACCENT_PAR_DEFAUT          # un gris, pas une teinte
+    assert contraste(Theme().accent, "#FFFFFF") >= 4.5
