@@ -50,3 +50,20 @@ api.interceptors.request.use(async (config) => {
   }
   return config
 })
+
+// F-01 — session expirée : quand le serveur répond 401, UNE réaction pour toute l'appli (posée par useSyncUser :
+// on garde la page d'où l'on vient, on ferme la session, l'écran de connexion dit pourquoi). L'appel reste en échec :
+// aucun écran ne prend un 401 pour « vous n'avez rien ».
+let _surSessionExpiree: (() => unknown) | null = null
+
+export function setReactionSessionExpiree(fn: (() => unknown) | null) {
+  _surSessionExpiree = fn
+}
+
+api.interceptors.response.use(
+  (reponse) => reponse,
+  (erreur) => {
+    if (erreur?.response?.status === 401) _surSessionExpiree?.()
+    return Promise.reject(erreur)
+  },
+)
