@@ -420,7 +420,7 @@ export default function Design() {
           <div className="grid gap-3">
             <Message ton="info" titre="Plan proposé : 11 parties">Vous pouvez changer l’ordre avant de rédiger.</Message>
             <Message ton="succes">Le plan est enregistré.</Message>
-            <Message ton="attention" titre="La lecture n’a pas pu démarrer" action={<Bouton>Réessayer</Bouton>}>Le service de lecture ne répond pas pour l’instant.</Message>
+            <Message ton="attention" titre="L’analyse n’a pas pu démarrer" action={<Bouton>Réessayer</Bouton>}>Le service d’analyse ne répond pas pour l’instant.</Message>
             <Message ton="erreur" titre="Le plan n’a pas pu être enregistré" onFermer={() => {}}>Vos modifications restent ici ; réessayez dans un instant.</Message>
           </div>
         </Cote>

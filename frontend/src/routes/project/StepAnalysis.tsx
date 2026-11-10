@@ -41,7 +41,7 @@ import { PASSAGE_INTROUVABLE, trouverPieceCitee } from '@/lib/pieceCitee'
 import { lectureNonDemarree } from '@/lib/lectureNonDemarree'
 
 const ANALYSIS_STEPS: StepDescriptor[] = [
-  { key: 'preparation',     label: 'Lecture des documents',      estimated_s: 2 },
+  { key: 'preparation',     label: 'Analyse des documents',      estimated_s: 2 },
   { key: 'analyzing_pass1', label: 'Exigences administratives',  estimated_s: 50 },
   { key: 'analyzing_pass2', label: 'Exigences techniques',       estimated_s: 50 },
   { key: 'finalizing',      label: 'Mise en ordre',              estimated_s: 5 },
@@ -275,8 +275,8 @@ export default function StepAnalysis({ project }: Props) {
   if (requeteExigences.isError && requeteExigences.data === undefined) return (
     <GabaritEtape titre={TITRE} utilite={UTILITE}>
       <EtatErreur
-        titre="La lecture du dossier n’a pas pu se charger"
-        detail="Les exigences relevées dans le dossier n’ont pas pu être lues. Votre dossier et sa lecture ne sont pas touchés."
+        titre="L’analyse du dossier n’a pas pu se charger"
+        detail="Les exigences relevées dans le dossier n’ont pas pu être lues. Votre dossier et son analyse ne sont pas touchés."
         onReessayer={() => { void requeteExigences.refetch() }}
         enCours={requeteExigences.isFetching}
       />
@@ -292,7 +292,7 @@ export default function StepAnalysis({ project }: Props) {
       await api.post(`/projects/${project.id}/analyze`, {}, { timeout: 60_000 })
       window.location.reload()
     } catch (err) {
-      setAvis({ message: await messageErreur(err, 'La relance de la lecture n’a pas abouti. Réessayez dans un instant.') })
+      setAvis({ message: await messageErreur(err, 'La relance de l’analyse n’a pas abouti. Réessayez dans un instant.') })
       setRelanceEnCours(false)
     }
   }
@@ -306,7 +306,7 @@ export default function StepAnalysis({ project }: Props) {
           currentStep={analysisSse.step}
           progress={analysisSse.progress}
           phase="error"
-          erreur={project.processing_detail || analysisSse.detail || 'La lecture du dossier s’est arrêtée avant la fin.'}
+          erreur={project.processing_detail || analysisSse.detail || 'L’analyse du dossier s’est arrêtée avant la fin.'}
           uniteRendue
           onRelancer={relanceEnCours ? undefined : () => { void relancerLecture() }}
         />
@@ -323,8 +323,8 @@ export default function StepAnalysis({ project }: Props) {
   })) return (
     <GabaritEtape titre={TITRE} utilite={UTILITE}>
       <EtatVide
-        titre="La lecture n’a pas démarré"
-        phrase="Le dossier est bien enregistré, mais aucune lecture n’est en cours. Relancez-la depuis le choix des lots."
+        titre="L’analyse n’a pas démarré"
+        phrase="Le dossier est bien enregistré, mais aucune analyse n’est en cours. Relancez-la depuis le choix des lots."
         action={<Bouton variante="secondaire" onClick={() => navigate(`/projects/${project.id}/lots`)}>Relancer</Bouton>}
       />
     </GabaritEtape>
@@ -336,7 +336,7 @@ export default function StepAnalysis({ project }: Props) {
       <Carte>
         <ProgressDisplay
           variant="page"
-          title="Synorix lit votre dossier"
+          title="Synorix analyse votre dossier"
           steps={ANALYSIS_STEPS}
           currentStep={analysisSse.step}
           progress={analysisSse.progress}
@@ -381,8 +381,8 @@ export default function StepAnalysis({ project }: Props) {
       }
       // Une lecture en échec se dit, même quand une lecture précédente a laissé des exigences à l'écran.
       message={analysisFailed && (
-        <Message ton="attention" titre="La dernière lecture s’est arrêtée avant la fin"
-          action={<Bouton variante="secondaire" onClick={() => navigate(`/projects/${project.id}/lots`)}>Relancer la lecture</Bouton>}>
+        <Message ton="attention" titre="La dernière analyse s’est arrêtée avant la fin"
+          action={<Bouton variante="secondaire" onClick={() => navigate(`/projects/${project.id}/lots`)}>Relancer l’analyse</Bouton>}>
           La liste des exigences ci-dessous peut être partielle.
         </Message>
       )}
@@ -432,7 +432,7 @@ export default function StepAnalysis({ project }: Props) {
         {showLotDetails && lotFilterInfo && (
           <div id={idDetailLot} className="grid gap-3 rounded-lg bg-surface-1 px-4 py-3 text-sm sm:grid-cols-2">
             <div>
-              <p className="font-medium text-fg">{lotFilterInfo.included.length} pièces lues pour ce lot</p>
+              <p className="font-medium text-fg">{lotFilterInfo.included.length} pièces analysées pour ce lot</p>
               <ul className="mt-1 grid gap-0.5 text-xs text-fg-2">{lotFilterInfo.included.map((doc) => <li key={doc.id} className="break-words">{doc.file_name}</li>)}</ul>
             </div>
             {lotFilterInfo.excluded.length > 0 && (

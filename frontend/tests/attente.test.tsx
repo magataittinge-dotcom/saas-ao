@@ -100,7 +100,7 @@ import { avisAttente } from '@/lib/avisAttente'
 test('R11 : « vous prévient par e-mail » seulement si l’envoi d’e-mails est actif', () => {
   assert.equal(avisAttente('analyse', true), 'Vous pouvez fermer cette page : Synorix vous prévient par e-mail.')
   for (const inconnu of [false, undefined] as const) {
-    assert.equal(avisAttente('analyse', inconnu), 'Vous pouvez quitter cette page : la lecture continue.')
+    assert.equal(avisAttente('analyse', inconnu), 'Vous pouvez quitter cette page : l’analyse continue.')
     assert.equal(avisAttente('mémoire', inconnu), 'Vous pouvez quitter cette page : la rédaction continue.')
   }
   for (const f of ['src/routes/project/StepAnalysis.tsx', 'src/routes/project/StepMemoire.tsx']) {

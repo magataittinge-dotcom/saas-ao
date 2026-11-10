@@ -38,6 +38,25 @@ const TYPO: [RegExp, string][] = [
   [/«(?![  ]|&nbsp;)|(?<![  ]|&nbsp;)»/u, 'espace insécable à l’intérieur des guillemets'],
 ]
 
+// D20 (décision du fondateur, 10/11/2026) : l'opération lancée et comptée s'appelle « analyse », son verbe « analyser ».
+// « relecture » (le client relit son mémoire) et la lecture d'un mémoire importé (Mon entreprise) ne sont pas l'opération.
+const LECTURE_AUTORISEE: [RegExp, RegExp][] = [
+  [/ImportMemoire\.tsx$/, /./], // lecture d'un mémoire importé, pas l'analyse du dossier
+  [/lotsSource\.ts$/, /lectures? (assistées|directe)/], // repérage des lots au dépôt
+  [/StepLotSelection\.tsx$/, /lecture des pièces est terminée/], // extraction du texte, avant l'analyse
+]
+test('D20 : l’opération s’appelle « analyse » — plus de « lecture », « Analyser le dossier », « non lu » à l’écran', () => {
+  const fautes: string[] = []
+  for (const f of fichiersSource()) {
+    for (const t of textesAffiches(f)) {
+      if (!/\b[Ll]ectures?\b|Lire (le|ce) dossier|\bnon lu\b/.test(t.texte)) continue
+      if (LECTURE_AUTORISEE.some(([fic, txt]) => fic.test(f) && txt.test(t.texte))) continue
+      fautes.push(`${t.fichier}:${t.ligne} « ${t.texte.trim().slice(0, 90)} »`)
+    }
+  }
+  assert.deepEqual(fautes, [])
+})
+
 test('typographie française dans les textes affichés : insécables avant « : ; ? » et dans « »', () => {
   const fautes: string[] = []
   for (const f of fichiersSource()) {
@@ -80,7 +99,7 @@ test("une seule formule pour passer à l'étape suivante, qui nomme la bonne ét
     for (const a of anciennes) assert.ok(!textes.some((t) => t.includes(a)), `${f} contient encore « ${a} »`)
   }
   const lancement = textesAffiches('src/lib/coutLecture.ts').map((t) => t.texte)
-  assert.ok(lancement.some((t) => t.includes('Lire ce dossier')))
+  assert.ok(lancement.some((t) => t.includes('Analyser le dossier')))
 })
 
 // S4 — Renommages (simplification) : les mots du patron, ni plus ni moins.

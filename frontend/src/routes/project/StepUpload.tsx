@@ -146,7 +146,7 @@ export default function StepUpload({ project }: Props) {
     },
     onError: () => {
       doneRef.current = true
-      setUploadErrors(prev => [...prev, 'La lecture du dossier s’est arrêtée avant la fin. Vos fichiers sont conservés : déposez-les à nouveau pour reprendre.'])
+      setUploadErrors(prev => [...prev, 'L’analyse du dossier s’est arrêtée avant la fin. Vos fichiers sont conservés : déposez-les à nouveau pour reprendre.'])
       setPhase('idle')
       if (safetyRef.current) { clearTimeout(safetyRef.current); safetyRef.current = null }
     },
@@ -425,10 +425,10 @@ export default function StepUpload({ project }: Props) {
   // Sans réponse du serveur, on ne sait pas s'il n'y a rien : ni « Aucun fichier », ni invitation à déposer.
   const chargementEchoue = requeteDocuments.isError && requeteDocuments.data === undefined
   const suiteBloquee =!hasDocuments || anyUploading || isProcessing || isNavigating
-  // A7 — un seul lot : l'action de l'écran est « Lire ce dossier » (en-tête à l'ordinateur, barre du bas au téléphone).
+  // A7 — un seul lot : l'action de l'écran est « Analyser le dossier » (en-tête à l'ordinateur, barre du bas au téléphone).
   const actionLecture = (
     <Bouton variante="principal" onClick={lireLeLotUnique} disabled={lecture.isAnalyzing || lecture.isSuccess}>
-      Lire ce dossier
+      Analyser le dossier
     </Bouton>
   )
   const erreursEnvoi = uploadErrors.length > 0 && (
@@ -460,11 +460,11 @@ export default function StepUpload({ project }: Props) {
 
       <GabaritEtape
         titre="Dépôt du dossier"
-        utilite="Déposez le dossier reçu de l’acheteur : Synorix reconnaît chaque pièce et chaque lot, puis vous choisissez ce que vous lisez."
+        utilite="Déposez le dossier reçu de l’acheteur : Synorix reconnaît chaque pièce et chaque lot, puis vous choisissez ce que Synorix analyse."
         actionPrincipale={!hasDocuments ? undefined : lotUnique ? actionLecture : (
           <BoutonSuite etape="Lots" onClick={handleNext} disabled={suiteBloquee} />
         )}
-        message={erreurAffichee && <Message ton="erreur" titre="La lecture n’a pas démarré">{erreurAffichee}</Message>}
+        message={erreurAffichee && <Message ton="erreur" titre="L’analyse n’a pas démarré">{erreurAffichee}</Message>}
         resume={hasDocuments ? <BandeResume cartes={cartesDepot(documents, project, lotUnique)} libelle="Le dossier déposé" /> : undefined}
         barre={
           <BarreEtape>
@@ -557,18 +557,18 @@ export default function StepUpload({ project }: Props) {
               )}
 
               {enLecture && (
-                <SectionEtape titre="Lecture du dossier">
+                <SectionEtape titre="Analyse du dossier">
                   <Carte>
                     <ProgressDisplay
                       variant="inline"
                       steps={UPLOAD_STEPS}
                       currentStep={phase === 'uploading' ? 'uploading' : 'extracting_text'}
                       progress={Math.round(phase === 'idle' ? (project.processing_progress ?? 0) : displayPct)}
-                      detail={phase === 'idle' ? (project.processing_detail || 'Lecture du dossier…') : (sublabel || label)}
+                      detail={phase === 'idle' ? (project.processing_detail || 'Analyse du dossier…') : (sublabel || label)}
                       phase={phase === 'done' ? 'complete' : 'in_progress'}
                       avis={phase === 'uploading'
-                        ? 'Gardez cette page ouverte pendant l’envoi. Ensuite, vous pourrez la fermer : la lecture continue.'
-                        : 'Vous pouvez fermer cette page : la lecture continue et l’AO reste dans « Mes AO ». Les pièces reconnues apparaissent ci-dessous au fur et à mesure.'}
+                        ? 'Gardez cette page ouverte pendant l’envoi. Ensuite, vous pourrez la fermer : l’analyse continue.'
+                        : 'Vous pouvez fermer cette page : l’analyse continue et l’AO reste dans « Mes AO ». Les pièces reconnues apparaissent ci-dessous au fur et à mesure.'}
                     />
                   </Carte>
                 </SectionEtape>

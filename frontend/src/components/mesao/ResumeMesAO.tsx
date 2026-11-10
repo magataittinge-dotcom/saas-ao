@@ -18,7 +18,7 @@ export function ResumeMesAOCartes({ comptes, resume, quota }: {
   quota: Parameters<typeof uniteMois>[0]
 }) {
   const unites = uniteMois(quota)
-  const lectures = resume.enLecture > 0 ? `dont ${resume.enLecture} dossier${resume.enLecture > 1 ? 's' : ''} en lecture` : undefined
+  const lectures = resume.enLecture > 0 ? `dont ${resume.enLecture} dossier${resume.enLecture > 1 ? 's' : ''} en cours d’analyse` : undefined
   return (
     <BandeCases libelle="Résumé de mes appels d’offres">
       <CaseResume etiquette="En cours" valeur={comptes.enCours} precision={lectures} />

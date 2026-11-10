@@ -16,7 +16,7 @@ test('résumé des exigences : jamais de fraction, « confirmées » seulement s
   assert.equal(resumeExigences(1, 1, 1), '1 exigence relevée, avec sa source, dont 1 confirmée par vous')
   // extrait non retrouvé dans le DCE : on ne prétend pas « chacune avec sa source »
   assert.equal(resumeExigences(12, 10, 0), '12 exigences relevées · 2 à vérifier dans le dossier')
-  assert.equal(resumeExigences(0, 0, 0), "Les exigences apparaissent après la lecture du dossier")
+  assert.equal(resumeExigences(0, 0, 0), "Les exigences apparaissent après l’analyse du dossier")
   for (const t of [resumeExigences(12, 12, 0), resumeExigences(5, 4, 2)]) assert.ok(!/\d\s*\/\s*\d/.test(t), t)
 })
 

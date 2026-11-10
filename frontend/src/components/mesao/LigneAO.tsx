@@ -21,7 +21,7 @@ export interface GestesAO {
 }
 
 const libelleLecture = (p: Project): string =>
-  p.processing_detail || (p.processing_status === 'generating' ? 'Synorix rédige le mémoire' : 'Synorix lit le dossier')
+  p.processing_detail || (p.processing_status === 'generating' ? 'Synorix rédige le mémoire' : 'Synorix analyse le dossier')
 
 /** L'AO : son nom (deux lignes au plus), l'acheteur en court et le lot, puis ce qui le distingue (questions, avis d'origine). */
 export function CelluleAO({ projet, detail = true, large = false }: { projet: Project; detail?: boolean; /** Tableau à trois colonnes : la colonne de l'AO est plus large. */ large?: boolean }) {

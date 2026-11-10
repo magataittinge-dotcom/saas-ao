@@ -224,8 +224,8 @@ export default function StepVerification({ project }: Props) {
     <GabaritEtape titre={TITRE} utilite={UTILITE}>
       <EtatVide
         titre="Les pièces à réunir apparaîtront ici"
-        phrase={<>Synorix les relève dans le règlement à la lecture du <Sigle code="DCE" />.</>}
-        action={<Bouton variante="secondaire" onClick={() => navigate(`/projects/${project.id}/lots`)}>Lire le dossier</Bouton>}
+        phrase={<>Synorix les relève dans le règlement à l’analyse du <Sigle code="DCE" />.</>}
+        action={<Bouton variante="secondaire" onClick={() => navigate(`/projects/${project.id}/lots`)}>Analyser le dossier</Bouton>}
       />
     </GabaritEtape>
   )

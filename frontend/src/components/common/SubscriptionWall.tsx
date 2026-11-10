@@ -14,7 +14,7 @@ interface Props {
 }
 
 const FEATURE_LABELS: Record<string, string> = {
-  analysis: 'La lecture du dossier de l’acheteur',
+  analysis: 'L’analyse du dossier de l’acheteur',
   memoire: 'La rédaction du mémoire technique',
 }
 

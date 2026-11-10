@@ -66,7 +66,7 @@ export default function Projects() {
 function SousTitre({ projets }: { projets: Project[] | undefined }) {
   const une = projets ? aLaUne(projets) : null
   const quand = une ? quandCourt(une) : null
-  if (!une || !quand) return 'Vos dossiers, de la lecture du dossier de l’acheteur au dépôt.'
+  if (!une || !quand) return 'Vos dossiers, de l’analyse du dossier de l’acheteur au dépôt.'
   return <>Prochaine remise <strong className="chiffres font-semibold text-fg">{quand}</strong>.</>
 }
 
@@ -193,7 +193,7 @@ function ListeMesAO({ projets }: { projets: Project[] }) {
       {statutPour && <MettreAJourStatut projet={statutPour} ouvert onOuvert={(o) => { if (!o) setStatutPour(null) }} />}
       <DialogueConfirmation ouvert={aSupprimer !== null} onOuvert={(o) => { if (!o) setASupprimer(null) }} danger
         titre={aSupprimer ? `Supprimer « ${aSupprimer.name} » ?` : 'Supprimer cet appel d’offres ?'}
-        description="Le dossier, sa lecture et le mémoire de cet appel d’offres sont supprimés. Cette action ne s’annule pas."
+        description="Le dossier, son analyse et le mémoire de cet appel d’offres sont supprimés. Cette action ne s’annule pas."
         libelleConfirmer="Supprimer" libelleEnCours="Suppression…" enCours={suppression} erreur={erreurSuppression}
         onConfirmer={() => { if (aSupprimer) supprimer(aSupprimer) }} />
     </>

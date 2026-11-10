@@ -18,12 +18,12 @@ export interface AideEtape {
 export const AIDE_ETAPES: Readonly<Record<string, AideEtape>> = {
   upload: {
     montre: 'Les pièces du dossier de l’acheteur que vous avez déposées, chacune avec son type.',
-    aFaire: 'Déposez le dossier (ZIP ou PDF), vérifiez le type de chaque pièce, puis lancez la lecture.',
+    aFaire: 'Déposez le dossier (ZIP ou PDF), vérifiez le type de chaque pièce, puis lancez l’analyse.',
     sigles: [LEXIQUE.DCE, LEXIQUE.RC, LEXIQUE.CCAP, LEXIQUE.CCTP, LEXIQUE.DPGF],
   },
   lots: {
     montre: 'Les lots que Synorix a repérés dans le règlement de la consultation.',
-    aFaire: 'Choisissez le lot auquel vous répondez, puis lancez la lecture du dossier.',
+    aFaire: 'Choisissez le lot auquel vous répondez, puis lancez l’analyse du dossier.',
     sigles: [LEXIQUE.RC],
   },
   analysis: {

@@ -55,7 +55,7 @@ export function useLancerLecture(project: Project) {
     abortRef.current?.abort()
     setIsAnalyzing(false)
     setIsSuccess(false)
-    setAnalysisError('Vous avez annulé la lecture.')
+    setAnalysisError('Vous avez annulé l’analyse.')
   }
 
   /**
@@ -94,7 +94,7 @@ export function useLancerLecture(project: Project) {
       setIsAnalyzing(false)
       setIsSuccess(false)
       // Jamais le message brut ni un objet sérialisé (Q-01) : la phrase du serveur quand il explique son refus, sinon la nôtre.
-      const texte = await messageErreur(err, 'La lecture n’a pas pu démarrer. Réessayez dans quelques minutes.')
+      const texte = await messageErreur(err, 'L’analyse n’a pas pu démarrer. Réessayez dans quelques minutes.')
       // 1.2 — quota appliqué par le serveur : son refus ouvre le choix d'une offre
       if (axios.isAxiosError(err) && err.response?.status === 402) {
         setPaywallMessage(texte)

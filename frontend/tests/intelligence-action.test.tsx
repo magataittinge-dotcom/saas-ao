@@ -58,15 +58,15 @@ test('un AO qui attend seulement la fin de l’analyse passe après ceux où l�
   assert.equal(prochaineAction(p, MAINTENANT)?.id, 'agir')
   // seul en lice : on le montre quand même, avec ce qu'il se passe
   const f = ficheDepuisProjet(p[0], MAINTENANT)
-  assert.equal(f.cta?.libelle, 'Lecture en cours')
-  assert.match(f.texte, /lecture est en cours/)
+  assert.equal(f.cta?.libelle, 'Analyse en cours')
+  assert.match(f.texte, /analyse est en cours/)
 })
 
 test('chaque étape mène à son écran, avec le bon verbe', () => {
   const cas: [Parameters<typeof projet>[1], string, string][] = [
     [{ current_step: 1 }, "Déposer le dossier de l’acheteur", '/projects/x/upload'],
     [{ current_step: 2 }, 'Choisir le lot', '/projects/x/lots'],
-    [{ current_step: 3 }, 'Lire ce dossier', '/projects/x/analysis'],
+    [{ current_step: 3 }, 'Analyser le dossier', '/projects/x/analysis'],
     [{ current_step: 3, status: 'analyzed' }, 'Décider : on y va ?', '/projects/x/analysis'],
     [{ current_step: 4 }, 'Réunir les pièces', '/projects/x/verification'],
     [{ current_step: 5 }, 'Préparer le plan du mémoire', '/projects/x/plan'],

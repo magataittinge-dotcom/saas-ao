@@ -27,7 +27,7 @@ export function cartesDepot(documents: readonly Pick<ProjectDocument, 'type' | '
   ]
   // Un lot (ou un marché unique) : la carte le dit, il n'y a rien à choisir à l'étape suivante. « Lot unique » en grand ; la
   // désignation (longue, au choix du maître d'ouvrage) en texte normal sous la valeur, deux lignes au plus.
-  if (lotUnique) cartes.push({ libelle: 'Lots détectés', valeur: 'Lot unique', designation: lotUnique.designation, etat: 'neutre', detail: 'La lecture se lance depuis cette page.' })
+  if (lotUnique) cartes.push({ libelle: 'Lots détectés', valeur: 'Lot unique', designation: lotUnique.designation, etat: 'neutre', detail: 'L’analyse se lance depuis cette page.' })
   else {
     const lots = project?.lots_detectes?.length ?? 0
     if (lots > 0) cartes.push({ libelle: 'Lots détectés', valeur: String(lots), etat: 'neutre', detail: 'À choisir à l’étape suivante.' })

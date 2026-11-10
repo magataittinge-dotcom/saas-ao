@@ -21,7 +21,7 @@ export default function LectureNonFaite({ project, titre, utilite, action, libel
 }) {
   const suite = actionEtape(project)
   const cartes: CarteResume[] = libelles.map((libelle) => ({
-    libelle, valeur: 'Lecture non faite', detail: 'Apparaîtra une fois le dossier lu.',
+    libelle, valeur: 'Analyse non faite', detail: 'Apparaîtra une fois le dossier analysé.',
   }))
   return (
     <GabaritEtape
@@ -31,7 +31,7 @@ export default function LectureNonFaite({ project, titre, utilite, action, libel
       resume={<BandeResume libelle="Résumé de l’étape" cartes={cartes} />}
     >
       <Carte className="text-sm text-fg-2" data-lecture-non-faite="">
-        <p>Le dossier n’a pas encore été lu. Cet écran se remplit une fois la lecture faite : il reprend alors ce que dit le règlement.</p>
+        <p>Le dossier n’a pas encore été analysé. Cet écran se remplit une fois l’analyse faite : il reprend alors ce que dit le règlement.</p>
         <Bouton asChild variante="principal" className="mt-4"><Link to={`/projects/${project.id}/${suite.segment}`}>{suite.verbe}</Link></Bouton>
       </Carte>
     </GabaritEtape>

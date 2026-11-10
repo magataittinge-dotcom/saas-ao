@@ -12,14 +12,14 @@ export interface ProgressStage {
 
 const DEFAULT_STAGES: ProgressStage[] = [
   { upTo: 20, message: 'Extraction du texte…', msPerStep: 120 },
-  { upTo: 60, message: 'Lecture en cours…', msPerStep: 380 },
+  { upTo: 60, message: 'Analyse en cours…', msPerStep: 380 },
   { upTo: 90, message: 'Relevé des exigences…', msPerStep: 300 },
   { upTo: 99, message: 'Finalisation…', msPerStep: 2800 },
 ]
 
 export const MEMOIRE_STAGES: ProgressStage[] = [
-  { upTo: 5,  message: 'Lecture des documents de l’acheteur…', msPerStep: 300 },
-  { upTo: 15, message: 'Lecture du contexte du chantier…', msPerStep: 800 },
+  { upTo: 5,  message: 'Analyse des documents de l’acheteur…', msPerStep: 300 },
+  { upTo: 15, message: 'Analyse du contexte du chantier…', msPerStep: 800 },
   { upTo: 70, message: 'Rédaction par Synorix…', msPerStep: 1800 },
   { upTo: 90, message: 'Mise en ordre des parties…', msPerStep: 2200 },
   { upTo: 99, message: 'Finalisation du mémoire…', msPerStep: 6000 },
@@ -49,7 +49,7 @@ export function AnalysisProgress({
   onComplete,
   onCancel,
   stages = DEFAULT_STAGES,
-  subtitle = 'Synorix lit les documents de l’acheteur…',
+  subtitle = 'Synorix analyse les documents de l’acheteur…',
   preparation = null,
 }: Props) {
   const [progress, setProgress] = useState(0)
@@ -187,7 +187,7 @@ export function AnalysisProgress({
               {!prepDone
                 ? 'Préparation des pièces en cours…'
                 : isSlow
-                  ? 'La lecture prend plus de temps que prévu. Elle continue, rien n’est perdu.'
+                  ? 'L’analyse prend plus de temps que prévu. Elle continue, rien n’est perdu.'
                   : subtitle}
             </p>
           )}

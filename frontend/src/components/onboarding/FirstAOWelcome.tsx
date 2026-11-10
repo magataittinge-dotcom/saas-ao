@@ -70,7 +70,7 @@ export default function FirstAOWelcome() {
           {siretMsg && <Message ton="attention" className="mb-4">{siretMsg}</Message>}
           <ZoneDepotAO geste
             titre="Déposez le dossier de l’acheteur"
-            precision="Votre premier appel d’offres est offert : lecture, pièces et mémoire compris. ZIP complet ou PDF." />
+            precision="Votre premier appel d’offres est offert : analyse, pièces et mémoire compris. ZIP complet ou PDF." />
           <p className="mt-4 text-sm text-fg-2">Votre profil se complétera au fil de vos réponses.</p>
         </div>
       )}
