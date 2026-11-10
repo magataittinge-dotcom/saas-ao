@@ -172,7 +172,7 @@ async def trigger_analysis(
         .values(processing_status="analyzing")
     ).rowcount
     if not claimed:
-        raise HTTPException(status_code=409, detail="Une lecture est déjà en cours pour cet appel d’offres.")
+        raise HTTPException(status_code=409, detail="Une analyse est déjà en cours pour cet appel d’offres.")
 
     # ── Garde pré-vol IA (audit risque #4) : jamais de run condamné d'avance
     # (API down / crédit épuisé) — vérifiée AVANT toute consommation de quota.
@@ -505,7 +505,7 @@ def _run_analysis_job(
                 skills1, _ = _build_dce_skills(None)
                 r1 = analyzer._run_pass_chunked(
                     pass1_text, DCE_PASS1_SYSTEM, "passe1-admin",
-                    skills1, project_id, "", "Lecture des pièces administratives",
+                    skills1, project_id, "", "Analyse des pièces administratives",
                 )
                 commun_reqs = r1.get("requirements", [])
                 criteres = r1.get("criteres_jugement", [])
@@ -549,7 +549,7 @@ def _run_analysis_job(
                 return analyzer._run_pass_chunked(
                     spec["pass2_commun"], DCE_PASS2_SYSTEM, f"passe2-{spec['lot_id']}-commun",
                     skills_communs, project_id, spec["lot_header"],
-                    f"Lecture des pièces techniques — {spec['lot_label'] or spec['lot_id']}",
+                    f"Analyse des pièces techniques — {spec['lot_label'] or spec['lot_id']}",
                     entete_apres=True,
                 )
             if not cache_ecrit.is_set():
@@ -574,7 +574,7 @@ def _run_analysis_job(
                 r2 = analyzer._run_pass_chunked(
                     spec["pass2_text"], DCE_PASS2_SYSTEM, f"passe2-{spec['lot_id']}",
                     skills_lot, project_id, spec["lot_header"],
-                    f"Lecture des pièces techniques — {spec['lot_label'] or spec['lot_id']}",
+                    f"Analyse des pièces techniques — {spec['lot_label'] or spec['lot_id']}",
                 )
                 exigences.extend(r2.get("requirements", []))
             return spec, {"requirements": exigences}

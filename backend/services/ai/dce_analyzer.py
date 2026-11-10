@@ -352,7 +352,7 @@ class DCEAnalyzer:
         # ── Pass 1: RC + CCAP (administrative) — chunké si volumineux ────────
         result1 = await asyncio.to_thread(
             self._run_pass_chunked, pass1_text, DCE_PASS1_SYSTEM, "passe1-admin",
-            skills_ref, project_id, lot_header, "Lecture des pièces administratives",
+            skills_ref, project_id, lot_header, "Analyse des pièces administratives",
         )
 
         # Notify caller that pass 1 is done (for progress tracking +
@@ -370,7 +370,7 @@ class DCEAnalyzer:
         if pass2_text:
             result2 = await asyncio.to_thread(
                 self._run_pass_chunked, pass2_text, DCE_PASS2_SYSTEM, "passe2-technique",
-                skills_ref, project_id, lot_header, "Lecture des pièces techniques",
+                skills_ref, project_id, lot_header, "Analyse des pièces techniques",
             )
 
         # ── Merge results ────────────────────────────────────────────────────

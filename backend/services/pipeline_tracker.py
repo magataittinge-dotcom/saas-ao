@@ -19,7 +19,7 @@ ANALYSIS_STEPS = [
     # The router still drives this single 'preparation' step (instant)
     # to mark the transition; UI shows it ticking briefly to 5 % then
     # the long IA passes get the lion's share of the bar.
-    ("preparation",     "Lecture des documents",                   0,   5,  2),
+    ("preparation",     "Analyse des documents",                   0,   5,  2),
     ("analyzing_pass1", "Analyse des exigences administratives",   5,  50, 50),
     ("analyzing_pass2", "Analyse des exigences techniques",       50,  95, 50),
     ("finalizing",      "Finalisation",                           95, 100,  5),

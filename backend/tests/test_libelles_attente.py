@@ -30,9 +30,9 @@ def test_detail_des_tranches_sans_compteur_ni_jargon(monkeypatch):
     monkeypatch.setattr(dce_analyzer.DCEAnalyzer, "_sync_call", _fake_sync)
     a = dce_analyzer.DCEAnalyzer.__new__(dce_analyzer.DCEAnalyzer)
     a._run_pass_chunked("texte inventé", "sys", "passe1-admin", "", "p-attente", "",
-                        "Lecture des pièces administratives")
+                        "Analyse des pièces administratives")
     vus = {d for d in details if d}
-    assert vus == {"Lecture des pièces administratives"}, vus
+    assert vus == {"Analyse des pièces administratives"}, vus
 
 
 def _join():
@@ -75,7 +75,7 @@ def test_libelles_des_passes_du_routeur_sans_jargon(client, db_session, test_org
     assert labels, "aucune passe lancée"
     for texte in labels:
         assert not JARGON.search(texte), texte
-    assert "Lecture des pièces administratives" in labels
+    assert "Analyse des pièces administratives" in labels
 
 
 def test_libelles_du_mode_simple_sans_jargon():
@@ -83,7 +83,7 @@ def test_libelles_du_mode_simple_sans_jargon():
     src = (Path(__file__).resolve().parent.parent / "services" / "ai" / "dce_analyzer.py").read_text(encoding="utf-8")
     for m in re.finditer(r'lot_header, "(Analyse[^"]*|Lecture[^"]*)"', src):
         assert not JARGON.search(m.group(1)), m.group(1)
-        assert m.group(1).startswith("Lecture des pièces"), m.group(1)
+        assert m.group(1).startswith("Analyse des pièces"), m.group(1)
 
 
 # ── R11 : la promesse « vous prévient par e-mail » suit la configuration réelle ──
