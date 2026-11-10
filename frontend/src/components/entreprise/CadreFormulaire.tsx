@@ -94,7 +94,8 @@ export default function CadreFormulaire({ rubrique, titre, explication, etat, on
         <Actions rubrique={rubrique} idFormulaire={idFormulaire} etat={etat} />
       </div>
       {avant && <div className="mt-6">{avant}</div>}
-      <form id={idFormulaire} onSubmit={(e) => { e.preventDefault(); onEnregistrer() }} className="mt-8 grid gap-10">
+      {/* noValidate : jamais la bulle de validation du navigateur (elle parle sa langue, pas la nôtre) ; les refus viennent du serveur, en phrases */}
+      <form id={idFormulaire} noValidate onSubmit={(e) => { e.preventDefault(); onEnregistrer() }} className="mt-8 grid gap-10">
         {children}
       </form>
     </section>

@@ -72,18 +72,18 @@ export default function FormCertifications({ donnees, avant, idPanneau, idOnglet
   return (
     <CadreFormulaire
       rubrique="certifications" titre="Certifications et références" idPanneau={idPanneau} idOnglet={idOnglet}
-      explication="Vos qualifications, vos assurances et vos chantiers terminés : ce sont vos preuves, citées dans chaque mémoire."
+      explication="Vos qualifications, vos assurances et vos chantiers terminés : ce sont vos preuves, citées dans chaque mémoire."
       etat={f} onEnregistrer={f.enregistrer} avant={avant}
     >
       <ImportDialog ouvert={dialogue} onClose={() => setDialogue(false)} onImported={apresImport} />
 
-      <Groupe titre="Qualifications" aide="Qualibat, Qualifelec… avec leur date de fin : Synorix vous prévient avant l'échéance.">
+      <Groupe titre="Qualifications" aide="Qualibat, Qualifelec… avec leur date de fin : Synorix vous prévient avant l'échéance.">
         <Pleine>
           <EditeurQualifications famille="qualification" lignes={qualifications.lignes} documents={coffre} modifier={qualifications.modifier} ajouter={qualifications.ajouter} retirer={qualifications.retirer} />
         </Pleine>
       </Groupe>
 
-      <Groupe titre="Assurances" aide="Responsabilité civile et décennale : assureur, numéro de contrat, activités garanties, date de fin.">
+      <Groupe titre="Assurances" aide="Responsabilité civile et décennale : assureur, numéro de contrat, activités garanties, date de fin.">
         <Pleine>
           <EditeurQualifications famille="assurance" lignes={qualifications.lignes} documents={coffre} modifier={qualifications.modifier} ajouter={qualifications.ajouter} retirer={qualifications.retirer} />
         </Pleine>
@@ -112,7 +112,7 @@ export default function FormCertifications({ donnees, avant, idPanneau, idOnglet
         </Pleine>
       </Groupe>
 
-      <Groupe titre={<>Chiffres demandés dans la <Sigle code="DC2" /></>} aide="Les derniers exercices clos : chiffre d'affaires hors taxes et effectif moyen annuel.">
+      <Groupe titre={<>Chiffres demandés dans la <Sigle code="DC2" /></>} aide="Les derniers exercices clos : chiffre d'affaires hors taxes et effectif moyen annuel.">
         <Pleine>
           <div className="space-y-2">
             {ca.map((ligne, i) => (
@@ -163,7 +163,7 @@ export default function FormCertifications({ donnees, avant, idPanneau, idOnglet
             </Pleine>
           ))}
         </Groupe>
-        <Groupe titre="Un mémoire déjà rédigé ?" aide="Importez-le : Synorix pré-remplit vos rubriques, vous vérifiez puis vous enregistrez.">
+        <Groupe titre="Un mémoire déjà rédigé ?" aide="Importez-le : Synorix pré-remplit vos rubriques, vous vérifiez puis vous enregistrez.">
           <Pleine>
             {importe !== null && (
               <Message ton="succes" className="mb-3" onFermer={() => setImporte(null)}>

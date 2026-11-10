@@ -166,7 +166,7 @@ export default function Billing() {
           )}
           {erreurPortail && (
             <Message ton="erreur" onFermer={() => setErreurPortail(false)}>
-              Le portail de paiement n’a pas pu s’ouvrir. Votre abonnement n’est pas touché : réessayez dans un instant.
+              Le portail de paiement n’a pas pu s’ouvrir. Votre abonnement n’est pas touché : réessayez dans un instant.
             </Message>
           )}
         </div>

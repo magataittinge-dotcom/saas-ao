@@ -29,8 +29,8 @@ interface RetenueResult {
 /** Ce qui n'a pas pu se faire, et le geste pour repartir : jamais le message brut du serveur. */
 function phraseEchec(e: unknown): string {
   const status = (e as { response?: { status?: number } })?.response?.status
-  if (status === 422) return 'Le calcul attend des valeurs positives : vérifiez le montant et les options.'
-  return 'Le calcul n’a pas abouti. Vos valeurs sont gardées : relancez-le.'
+  if (status === 422) return 'Le calcul attend des valeurs positives : vérifiez le montant et les options.'
+  return 'Le calcul n’a pas abouti. Vos valeurs sont gardées : relancez-le.'
 }
 
 const TAUX_RETENUE = [
@@ -169,7 +169,7 @@ export default function Tools() {
               à première demande (article 19 du <Sigle code="CCAG" /> Travaux ; Code de la commande publique, art. R2191-36).
             </Message>
             <p className="text-xs text-fg-3">
-              Calcul indicatif : l’assiette et les plafonds définitifs sont ceux du <Sigle code="CCAP" /> de votre marché.
+              Calcul indicatif : l’assiette et les plafonds définitifs sont ceux du <Sigle code="CCAP" /> de votre marché.
             </p>
           </div>
         </section>

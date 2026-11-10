@@ -362,7 +362,7 @@ test('colonne « Téléchargement » : d\'abord le format expliqué et le bouton
   assert.match(html, /data-depot-logo/)
   assert.ok(html.includes('>Choisir un logo</button>') && html.includes('PNG ou JPEG, 2 Mo au plus'))
   assert.match(html, /<input(?=[^>]*type="file")(?=[^>]*accept="image\/png,image\/jpeg")(?=[^>]*aria-hidden="true")(?=[^>]*sr-only)[^>]*>/)
-  assert.ok(html.includes('Couleur d’accent') && html.includes('#008cf8') && html.includes('· Changer'))
+  assert.ok(html.includes('Couleur d’accent') && html.includes('aria-label="Changer la couleur d’accent (#008cf8)"'))
   assert.match(html, /<input(?=[^>]*type="color")(?=[^>]*value="#008cf8")(?=[^>]*aria-hidden="true")(?=[^>]*sr-only)[^>]*>/)
   assert.ok(!/border-dashed/.test(html), 'aucune zone en pointillés au repos')
   assert.match(html, /<h3[^>]*>Lignes libres<\/h3>/)

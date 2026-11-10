@@ -189,7 +189,8 @@ test('« Enregistrer » vit dans l\'en-tête du formulaire ; la version collée 
 test('formulaire pleine largeur : en-tête (titre, explication, « Fiche à télécharger », « Enregistrer »), puis « Décrire avec vos mots », puis les champs', () => {
   const html = pageCompany(true)
   assert.match(html, /<h2[^>]*>Identité<\/h2>/)
-  assert.ok(html.includes('Qui vous êtes : ce que l&#x27;acheteur lit en premier'))
+  assert.ok(html.includes('Qui vous êtes\u00a0: ce que l&#x27;acheteur lit en premier'), 'espace insécable avant le deux-points')
+  assert.match(html, /<form[^>]*novalidate=""/, 'jamais la bulle de validation du navigateur')
   assert.ok(html.indexOf('role="tablist"') < html.indexOf('<form'), 'le formulaire est sous les cartes dans le DOM')
   const iFiche = html.indexOf(LIBELLE_FICHE, html.indexOf('<h2'))
   const iEnreg = html.indexOf('>Enregistrer<')

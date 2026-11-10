@@ -163,7 +163,7 @@ export default function Vault() {
           erreur={(
             <EtatErreur
               titre="Le coffre-fort n’a pas pu s’ouvrir"
-              detail="La connexion au serveur a échoué. Vos pièces sont toujours là : rien n’a été modifié."
+              detail="La connexion au serveur a échoué. Vos pièces sont toujours là : rien n’a été modifié."
               onReessayer={() => { void requete.refetch() }}
               enCours={requete.isFetching}
             />
@@ -189,7 +189,7 @@ export default function Vault() {
                 return (
                   <section key={categorie} aria-labelledby={`coffre-${categorie}`} className={ESPACE_SECTION}>
                     <TitreSection id={`coffre-${categorie}`}>{VAULT_CATEGORY_LABELS[categorie]}</TitreSection>
-                    {aRanger && <p className="-mt-2 mb-3 text-sm text-fg-2">Rangez ces pièces : Synorix les proposera dans vos candidatures.</p>}
+                    {aRanger && <p className="-mt-2 mb-3 text-sm text-fg-2">Rangez ces pièces : Synorix les proposera dans vos candidatures.</p>}
                     <div className={LISTE_PIECES}>
                       {pieces.map((doc) => (
                         <FileCard key={doc.id} document={doc} onDelete={demanderSuppression} onEdit={setEditingDoc} />
@@ -215,7 +215,7 @@ export default function Vault() {
                   <Carte sansMarge className="px-5 sm:px-6">
                     {aDeposer.map((categorie) => (
                       <RangeeCarte key={categorie} className="flex-wrap justify-between gap-x-6 gap-y-0.5 py-3">
-                        <p className="text-sm font-medium text-fg">{VAULT_CATEGORY_LABELS[categorie]}</p>
+                        <p className="text-sm font-medium text-fg max-sm:basis-full">{VAULT_CATEGORY_LABELS[categorie]}</p>
                         <p className="text-sm text-fg-2">{exemples(categorie) || 'Toute autre pièce utile à vos dossiers'}</p>
                       </RangeeCarte>
                     ))}

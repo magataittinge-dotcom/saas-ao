@@ -39,7 +39,7 @@ export default function ProfileFreeTextCard() {
     onSuccess: ({ proposed: p }) => {
       setError(null)
       if (Object.keys(p).length === 0) {
-        setError('Synorix n’a rien trouvé à ranger dans ce texte : précisez vos moyens, votre équipe ou votre activité.')
+        setError('Synorix n’a rien trouvé à ranger dans ce texte : précisez vos moyens, votre équipe ou votre activité.')
         setProposed(null)
         return
       }
@@ -88,7 +88,7 @@ export default function ProfileFreeTextCard() {
 
   return (
     <div className="grid gap-4">
-      <p className="text-sm text-fg-2">Vérifiez et corrigez : seules les rubriques cochées seront écrites dans votre profil.</p>
+      <p className="text-sm text-fg-2">Vérifiez et corrigez : seules les rubriques cochées seront écrites dans votre profil.</p>
       {Object.entries(proposed).map(([key, value]) => (
         <div key={key} className="grid gap-1">
           <CaseACocher libelle={FIELD_LABELS[key] ?? key} coche={included.has(key)} onChange={() => basculer(key)} />
@@ -96,7 +96,7 @@ export default function ProfileFreeTextCard() {
             onChange={(e) => setProposed((prev) => ({ ...prev!, [key]: e.target.value }))} />
         </div>
       ))}
-      {echecApplication && <Message ton="erreur">L’écriture dans votre profil n’a pas abouti. Vos corrections sont gardées : réessayez.</Message>}
+      {echecApplication && <Message ton="erreur">L’écriture dans votre profil n’a pas abouti. Vos corrections sont gardées : réessayez.</Message>}
       <div className="flex flex-wrap justify-end gap-2">
         <Bouton variante="secondaire" onClick={() => setProposed(null)} disabled={applying}>Annuler</Bouton>
         <Bouton variante="secondaire" onClick={() => apply()} disabled={included.size === 0} enCours={applying} libelleEnCours="Écriture…">

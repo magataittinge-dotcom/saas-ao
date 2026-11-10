@@ -203,7 +203,7 @@ export function GrilleCases({ rubrique, cases, etats, envoi, erreurs, onFichiers
     <section aria-label={typeof titre === 'string' ? titre : 'Dépôt de documents'} className="grid gap-3" data-depots={rubrique}>
       <div>
         <h3 className="text-base font-semibold text-fg">{titre}</h3>
-        <p className="mt-1 text-sm text-fg-2">Chaque case a son rôle : un fichier déposé ici n'est jamais pris pour autre chose. Il entre dans votre coffre-fort, puis Synorix vous propose ce qu'il y a lu.</p>
+        <p className="mt-1 text-sm text-fg-2">Chaque case a son rôle : un fichier déposé ici n'est jamais pris pour autre chose. Il entre dans votre coffre-fort, puis Synorix vous propose ce qu'il y a lu.</p>
       </div>
       <div data-disposition={disposition} className="overflow-hidden rounded-lg border border-bord bg-surface-0">
         {definitions.map((d) => (

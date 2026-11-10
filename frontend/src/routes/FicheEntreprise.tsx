@@ -39,7 +39,7 @@ import {
 
 const cleFiche = (rubrique: RubriqueFiche) => ['fiche-entreprise', rubrique] as const
 export const DELAI_ENREGISTREMENT_MS = 800
-export const RAISON_PDF_INDISPONIBLE = 'Indisponible pour le moment : choisissez Word ou Excel.'
+export const RAISON_PDF_INDISPONIBLE = 'Indisponible pour le moment : choisissez Word ou Excel.'
 
 /** Adresse d'un fichier signé : « /api/files/view/… » est relative au serveur, comme baseURL (sans « /api »). */
 const urlServeur = (chemin: string | null | undefined): string | null =>
@@ -179,15 +179,15 @@ function Fiche({ rubrique }: { rubrique: RubriqueFiche }) {
   return (
     <Page
       titre={LIBELLE_FICHE}
-      sousTitre="Ce que vous voyez dans l’aperçu est exactement ce que vous téléchargez. Les informations viennent de « Mon entreprise »."
+      sousTitre="Ce que vous voyez dans l’aperçu est exactement ce que vous téléchargez. Les informations viennent de « Mon entreprise »."
     >
       <nav aria-label="Fiches" className="mb-8 flex flex-wrap gap-1">
         {RUBRIQUES_FICHE.map((r) => (
           <Link
             key={r.id} to={lienFiche(r.id)} aria-current={r.id === rubrique ? 'page' : undefined}
             className={cn(
-              'inline-flex min-h-11 items-center rounded-lg px-4 text-sm transition-colors duration-fast ease-survol',
-              r.id === rubrique ? 'bg-surface-2 font-semibold text-fg' : 'font-medium text-fg-2 hover:bg-surface-1 hover:text-fg',
+              'inline-flex min-h-11 items-center rounded-lg border px-4 text-sm transition-colors duration-fast ease-survol',
+              r.id === rubrique ? 'border-bord bg-surface-0 font-semibold text-fg' : 'border-transparent font-medium text-fg-2 hover:bg-surface-1 hover:text-fg',
             )}
           >
             {r.court}

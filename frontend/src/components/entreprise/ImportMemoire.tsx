@@ -47,7 +47,7 @@ export function ImportDialog({ ouvert, onClose, onImported }: ImportDialogProps)
       onImported(extracted as Partial<MemoireConfig>, fields_count)
     },
     onError: async (err) => {
-      setError(await messageErreur(err, 'La lecture du mémoire n’a pas abouti. Votre profil n’est pas modifié : réessayez dans un instant.'))
+      setError(await messageErreur(err, 'La lecture du mémoire n’a pas abouti. Votre profil n’est pas modifié : réessayez dans un instant.'))
     },
   })
 
@@ -84,7 +84,7 @@ export function ImportDialog({ ouvert, onClose, onImported }: ImportDialogProps)
             <span className="chiffres shrink-0 font-normal text-fg-3">{Math.max(1, Math.round(file.size / 1024))} Ko</span>
           </p>
         ) : (
-          <p className="text-sm text-fg-2">Glissez le fichier ici, ou choisissez-le. Formats lus : Word (.docx) et PDF.</p>
+          <p className="text-sm text-fg-2">Glissez le fichier ici, ou choisissez-le. Formats lus : Word (.docx) et PDF.</p>
         )}
         <Bouton variante="secondaire" onClick={open} disabled={isPending}>{file ? 'Choisir un autre fichier' : 'Choisir un fichier'}</Bouton>
       </div>

@@ -74,29 +74,6 @@ export default function ZoneBordereau(p: Props) {
 
       <h3 className="border-t border-bord pt-6 text-sm font-semibold text-fg">Personnaliser le bordereau</h3>
 
-      {/* Logo : un bouton du système ; la rangée reçoit aussi une image glissée (trait d'accent au survol d'un fichier seulement) */}
-      <div
-        data-depot-logo=""
-        onDragOver={(e) => { e.preventDefault(); setSurvol(true) }}
-        onDragLeave={() => setSurvol(false)}
-        onDrop={aLaDepose}
-        className={cn('grid gap-1.5 rounded-lg', survol && 'bg-accent-tint outline-dashed outline-2 outline-offset-4 outline-accent-ring')}
-      >
-        <span className={ETIQUETTE}>Logo</span>
-        <div className="flex flex-wrap items-center gap-3">
-          {p.logoSrc && <img src={p.logoSrc} alt="Logo actuel de la fiche" className="max-h-11 max-w-28 shrink-0 rounded-md border border-bord bg-surface-0 object-contain p-1" />}
-          <Bouton variante="secondaire" onClick={() => fichierLogo.current?.click()} enCours={p.logoEnCours} libelleEnCours="Envoi du logo…">
-            {p.logoSrc ? 'Changer de logo' : 'Choisir un logo'}
-          </Bouton>
-          {p.logoSrc && <Bouton variante="discret" onClick={p.onRetirerLogo}>Retirer</Bouton>}
-          <Champ
-            ref={fichierLogo} type="file" accept="image/png,image/jpeg" tabIndex={-1} aria-hidden="true" className="sr-only"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) p.onLogo(f); e.target.value = '' }}
-          />
-        </div>
-        <p className="text-xs text-fg-3">PNG ou JPEG, 2 Mo au plus. Vous pouvez aussi glisser l’image ici.</p>
-      </div>
-
       <div className="grid gap-4">
         <GroupeChamp libelle="Titre">
           <Champ maxLength={120} value={bordereau.titre} onChange={(e) => onChange({ titre: e.target.value })} />
@@ -104,20 +81,45 @@ export default function ZoneBordereau(p: Props) {
         <GroupeChamp libelle="Sous-titre">
           <Champ maxLength={200} value={bordereau.sous_titre} onChange={(e) => onChange({ sous_titre: e.target.value })} />
         </GroupeChamp>
-        <GroupeChamp libelle="Contact" aide="E-mail, téléphone">
-          <Champ maxLength={200} value={bordereau.contact} onChange={(e) => onChange({ contact: e.target.value })} />
+        <GroupeChamp libelle="Contact">
+          <Champ maxLength={200} placeholder="E-mail, téléphone" value={bordereau.contact} onChange={(e) => onChange({ contact: e.target.value })} />
         </GroupeChamp>
-        <div className="relative grid gap-1.5" data-couleur="">
-          <span className={ETIQUETTE} id="etiquette-couleur">Couleur d’accent</span>
-          <Bouton variante="secondaire" className="justify-start justify-self-start" aria-describedby="etiquette-couleur" onClick={() => nuancier.current?.click()}>
-            <span aria-hidden className="size-5 shrink-0 rounded-md border border-bord" style={echantillon} />
-            <span className="chiffres font-medium">{couleur}</span>
-            <span className="font-medium text-fg-2">· Changer</span>
-          </Bouton>
-          <Champ
-            ref={nuancier} type="color" value={couleur} tabIndex={-1} aria-hidden="true" className="sr-only bottom-0 left-0"
-            onChange={(e) => onChange({ couleur: e.target.value })}
-          />
+
+        {/* Logo et couleur, côte à côte : chacun un bouton du système qui ouvre le sélecteur du navigateur. Le logo reçoit aussi
+            une image glissée (trait d'accent au survol d'un fichier seulement). */}
+        <div className="grid gap-1.5">
+          <div className="grid grid-cols-2 gap-4">
+            <div
+              data-depot-logo=""
+              onDragOver={(e) => { e.preventDefault(); setSurvol(true) }}
+              onDragLeave={() => setSurvol(false)}
+              onDrop={aLaDepose}
+              className={cn('grid content-start justify-items-start gap-1.5 rounded-lg', survol && 'bg-accent-tint outline-dashed outline-2 outline-offset-4 outline-accent-ring')}
+            >
+              <span className={ETIQUETTE}>Logo</span>
+              {p.logoSrc && <img src={p.logoSrc} alt="Logo actuel de la fiche" className="max-h-11 max-w-28 rounded-md border border-bord bg-surface-0 object-contain p-1" />}
+              <Bouton variante="secondaire" onClick={() => fichierLogo.current?.click()} enCours={p.logoEnCours} libelleEnCours="Envoi…">
+                {p.logoSrc ? 'Changer' : 'Choisir un logo'}
+              </Bouton>
+              {p.logoSrc && <Bouton variante="lien" className="text-sm" onClick={p.onRetirerLogo}>Retirer le logo</Bouton>}
+              <Champ
+                ref={fichierLogo} type="file" accept="image/png,image/jpeg" tabIndex={-1} aria-hidden="true" className="sr-only"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) p.onLogo(f); e.target.value = '' }}
+              />
+            </div>
+            <div className="relative grid content-start justify-items-start gap-1.5" data-couleur="">
+              <span className={ETIQUETTE}>Couleur d’accent</span>
+              <Bouton variante="secondaire" aria-label={`Changer la couleur d’accent (${couleur})`} onClick={() => nuancier.current?.click()}>
+                <span aria-hidden className="size-5 shrink-0 rounded-md border border-bord" style={echantillon} />
+                <span className="chiffres font-medium">{couleur}</span>
+              </Bouton>
+              <Champ
+                ref={nuancier} type="color" value={couleur} tabIndex={-1} aria-hidden="true" className="sr-only bottom-0 left-0"
+                onChange={(e) => onChange({ couleur: e.target.value })}
+              />
+            </div>
+          </div>
+          <p className="text-xs text-fg-3">Logo : PNG ou JPEG, 2 Mo au plus. Vous pouvez aussi glisser l’image sur le bouton.</p>
         </div>
       </div>
 

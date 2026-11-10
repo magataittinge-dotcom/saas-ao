@@ -44,10 +44,10 @@ export default function FormMoyens({ donnees, avant, idPanneau, idOnglet }: { do
   return (
     <CadreFormulaire
       rubrique="moyens" titre="Moyens humains et matériels" idPanneau={idPanneau} idOnglet={idOnglet}
-      explication="Vos équipes, vos véhicules, votre outillage, votre sécurité : la partie « moyens » du mémoire technique."
+      explication="Vos équipes, vos véhicules, votre outillage, votre sécurité : la partie « moyens » du mémoire technique."
       etat={f} onEnregistrer={f.enregistrer} avant={avant}
     >
-      <Groupe titre="Équipe" aide="Les postes qui portent vos chantiers, les personnes clés citées dans vos dossiers, et des effectifs en nombres seulement : aucun nom de salarié n'est demandé.">
+      <Groupe titre="Équipe" aide="Les postes qui portent vos chantiers, les personnes clés citées dans vos dossiers, et des effectifs en nombres seulement : aucun nom de salarié n'est demandé.">
         <Pleine>
           <div className="space-y-3">
             {postes.map((poste, i) => (
@@ -74,7 +74,7 @@ export default function FormMoyens({ donnees, avant, idPanneau, idOnglet }: { do
           </div>
         </Pleine>
         <Pleine>
-          <Field label="Personnes clés" groupe aide="Spécialité, années d'expérience et qualifications : ce que les cadres « équipe » des dossiers demandent.">
+          <Field label="Personnes clés" groupe aide="Spécialité, années d'expérience et qualifications : ce que les cadres « équipe » des dossiers demandent.">
             <EditeurPersonnes
               lignes={personnes.lignes}
               modifier={personnes.modifier}

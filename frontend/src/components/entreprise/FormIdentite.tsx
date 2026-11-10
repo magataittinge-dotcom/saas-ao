@@ -33,12 +33,12 @@ export default function FormIdentite({ donnees, avant, idPanneau, idOnglet }: { 
   return (
     <CadreFormulaire
       rubrique="identite" titre="Identité" idPanneau={idPanneau} idOnglet={idOnglet}
-      explication={<>Qui vous êtes : ce que l'acheteur lit en premier, et ce qui remplit la <Sigle code="DC1" /> et la <Sigle code="DC2" />.</>}
+      explication={<>Qui vous êtes : ce que l'acheteur lit en premier, et ce qui remplit la <Sigle code="DC1" /> et la <Sigle code="DC2" />.</>}
       etat={f} onEnregistrer={f.enregistrer} avant={avant}
     >
       <Groupe titre="Coordonnées légales" aide={sirene ? "Pré-remplies depuis le répertoire Sirene à l'inscription." : undefined}>
         <Field label="Nom de l'entreprise" rempli={texte(org.name)} source={sirene}>
-          <Champ value={org.name ?? ''} onChange={(e) => f.poserOrganisation('name', e.target.value)} required autoComplete="organization" />
+          <Champ value={org.name ?? ''} onChange={(e) => f.poserOrganisation('name', e.target.value)} autoComplete="organization" />
         </Field>
         <ChampSiret siret={donnees.organisation?.siret} verifie={donnees.organisation?.siret_verified} />
         <Field label="Forme juridique" rempli={texte(forme)} source={sirene}>

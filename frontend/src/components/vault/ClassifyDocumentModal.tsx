@@ -85,7 +85,7 @@ export default function ClassifyDocumentModal({ document: doc, onClose }: Props)
             <ChampDate valeur={expiryDate} onChange={(iso) => setExpiryDate(iso ?? '')} />
           </GroupeChamp>
         </div>
-        {error && <Message ton="erreur">L’enregistrement n’a pas abouti. Vos choix sont gardés : réessayez.</Message>}
+        {error && <Message ton="erreur">L’enregistrement n’a pas abouti. Vos choix sont gardés : réessayez.</Message>}
       </div>
     </Dialogue>
   )
