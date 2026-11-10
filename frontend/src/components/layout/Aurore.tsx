@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useUIStore } from '@/stores/uiStore'
 import './aurore.css'
 
 // Le fond d'aurores (DESIGN.md § Components > Aurore) : la signature de Synorix, posée une fois dans Layout,
@@ -6,7 +7,8 @@ import './aurore.css'
 // seul (aucun filter: blur, aucun repaint par image), sous un masque qui les éteint à 78 % de la hauteur.
 // Opacité : --aurore-opacite (0,30 le jour, elle se devine ; 0,9 la nuit).
 //
-// Trois garde-fous l'arrêtent (image fixe) :
+// Quatre garde-fous l'arrêtent (image fixe) :
+//   0. le réglage « Animer le fond » du menu du compte (stores/uiStore.ts), coupé par l'utilisateur ;
 //   1. prefers-reduced-motion : « réduire les animations » (aussi coupé en CSS, sans attendre React) ;
 //   2. visibilitychange : l'onglet est caché, rien ne tourne pour personne ;
 //   3. navigator.connection : saveData ou réseau 2G (téléphone de chantier, connexion faible).
@@ -24,6 +26,7 @@ export function connexionEconome(c: Pick<Connexion, 'saveData' | 'effectiveType'
 
 export default function Aurore() {
   const [arretee, setArretee] = useState(false)
+  const animerFond = useUIStore((s) => s.animerFond)
 
   useEffect(() => {
     const mouvementReduit = window.matchMedia('(prefers-reduced-motion: reduce)')
@@ -41,7 +44,7 @@ export default function Aurore() {
   }, [])
 
   return (
-    <div className="aurore" data-arretee={arretee ? '' : undefined} aria-hidden="true">
+    <div className="aurore" data-arretee={arretee || !animerFond ? '' : undefined} aria-hidden="true">
       <span className="aurore-ruban aurore-ruban-a" />
       <span className="aurore-ruban aurore-ruban-b" />
       <span className="aurore-ruban aurore-ruban-c" />

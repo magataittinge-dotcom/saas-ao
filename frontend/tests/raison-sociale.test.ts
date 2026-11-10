@@ -2,7 +2,7 @@
 // raison sociale seulement quand le SIRET est vérifié, sinon « Mon entreprise ».
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { initialesDuPrenom, raisonSociale } from '@/lib/raisonSociale'
+import { initialeDuPrenom, raisonSociale } from '@/lib/raisonSociale'
 import { prenomAffichable } from '@/lib/prenom'
 import { lire, sansCommentaires } from './outils/sources'
 
@@ -17,9 +17,9 @@ test('raison sociale : le nom de l\'organisation si le SIRET est vérifié, sino
 })
 
 test('initiales : celles du prénom, sinon « — » ; jamais celles de l\'e-mail', () => {
-  assert.equal(initialesDuPrenom(prenomAffichable('Élodie Martin', 'e@x.fr')), 'É')
-  assert.equal(initialesDuPrenom(prenomAffichable('maga.taittinge', 'maga.taittinge@gmail.com')), '—')
-  assert.equal(initialesDuPrenom(null), '—')
+  assert.equal(initialeDuPrenom(prenomAffichable('Élodie Martin', 'e@x.fr')), 'É')
+  assert.equal(initialeDuPrenom(prenomAffichable('maga.taittinge', 'maga.taittinge@gmail.com')), null)
+  assert.equal(initialeDuPrenom(null), null)
 })
 
 test('le menu du compte et le tiroir du téléphone lisent prénom et raison sociale, plus user.name brut', () => {

@@ -10,5 +10,5 @@ test('la barre latérale montre la photo du compte, et les initiales sans photo'
   // imageUrl donne toujours une image (avatar générique de Clerk) : seul
   // hasImage dit si le compte a une vraie photo
   assert.match(code, /const photo = compte\?\.hasImage && compte\.imageUrl !== photoEnEchec \? compte\.imageUrl : null/)
-  assert.match(code, /\{photo\s*\?\s*<img src=\{photo\} alt="" [^>]*onError=\{\(\) => setPhotoEnEchec\(photo\)\} \/>\s*:\s*initiales\}/)
+  assert.match(code, /<RondCompte photo=\{photo\} initiale=\{initialeDuPrenom\(prenom\)\} onErreurPhoto=\{\(\) => setPhotoEnEchec\(photo\)\} \/>/)
 })

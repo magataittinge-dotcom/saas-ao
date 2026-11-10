@@ -57,3 +57,25 @@ export function useTheme(): [Theme, () => Theme] {
   const theme = useSyncExternalStore(abonner, themeCourant, () => 'light' as Theme)
   return [theme, basculerTheme]
 }
+
+// ── Le choix du thème (menu du compte) : « Système · Clair · Nuit ». Un choix enregistré est gardé ; sans choix : « Système ». ──
+export type ChoixTheme = 'system' | Theme
+
+/** Le choix enregistré dans ce navigateur ; « system » quand il n'y en a pas (le thème suit alors l'appareil). */
+export function choixTheme(): ChoixTheme {
+  return themeMemorise() ?? 'system'
+}
+
+/** Applique un choix. « system » efface le choix enregistré et suit l'appareil, en direct. */
+export function choisirTheme(choix: ChoixTheme): void {
+  if (choix === 'system') {
+    try { localStorage.removeItem(CLE_THEME) } catch { /* stockage indisponible */ }
+    appliquerTheme(systemeEnNuit() ? 'dark' : 'light', false)
+  } else appliquerTheme(choix)
+}
+
+/** [choix, choisir] pour le menu du compte. */
+export function useChoixTheme(): [ChoixTheme, (choix: ChoixTheme) => void] {
+  const choix = useSyncExternalStore(abonner, choixTheme, () => 'system' as ChoixTheme)
+  return [choix, choisirTheme]
+}

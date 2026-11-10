@@ -29,6 +29,22 @@
   color: var(--text-1);
 }
 
+/* ── Grille (P8) : UN conteneur, posé par la coquille autour de chaque écran et dans la barre du haut. 1 200 px de contenu,
+   gouttière 16 / 24 / 32 (--gutter). Une route ne pose ni largeur ni marge latérale. Rédiger (data-page-pleine) l'ouvre. ── */
+.conteneur {
+  width: 100%;
+  max-width: calc(var(--container) + 2 * var(--gutter));
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+.conteneur:has([data-page-pleine]) { max-width: none; }
+/* un écran étroit (lecture, réglages) s'aligne à gauche dans le conteneur : il ne se recentre pas */
+.page-etroite { max-width: var(--container-read); }
+/* titre de section (P9) : trois fois plus d'air au-dessus qu'en dessous */
+.titre-section { margin-top: var(--space-40); margin-bottom: var(--space-16); }
+.titre-section:first-child { margin-top: 0; }
+@media (max-width: 768px) { .titre-section { margin-top: var(--space-30); margin-bottom: var(--space-12); } }
+
 /* ── Titre de page (DESIGN.md § Typography) : la serif au sommet, une fois par page ; jamais sous 28 px. ── */
 .titre-page {
   font-family: var(--font-display);

@@ -17,7 +17,7 @@ test('l’entrée « Mon entreprise » reste active sur une fiche à télécharg
 
 test('l’en-tête d’une fiche : « Mon entreprise › Fiche à télécharger », parent vers /company', () => {
   const html = renderToStaticMarkup(<QueryClientProvider client={new QueryClient()}><MemoryRouter initialEntries={['/entreprise/fiche/references']}><Header onSearch={() => {}} /></MemoryRouter></QueryClientProvider>)
-  assert.match(html, /aria-current="page"[^>]*>Fiche à télécharger</)
+  assert.match(html, /data-titre-barre[^>]*>Fiche à télécharger</)
   assert.match(html, /href="\/company"[^>]*>Mon entreprise</)
   assert.doesNotMatch(html, /Tableau de bord/)
 })

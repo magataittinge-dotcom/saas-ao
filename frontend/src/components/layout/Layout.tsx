@@ -1,4 +1,4 @@
-import { Suspense, useState } from 'react'
+import { Suspense, useRef, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { ThemeEcranProvider, type ThemeForce } from '@/lib/themeEcran'
@@ -7,7 +7,7 @@ import Sidebar from './Sidebar'
 import Aurore from './Aurore'
 import Header from './Header'
 import BarreOnglets from './BarreOnglets'
-import BandeauNouveau from './BandeauNouveau'
+import { useTitreSorti } from './useTitreSorti'
 import LegalFooter from './LegalFooter'
 import CommandPalette from './CommandPalette'
 import { ToastContainer } from '@/components/common/Toast'
@@ -27,27 +27,32 @@ export default function Layout() {
   const { pathname } = useLocation()
   const themee = estThemee(pathname)
   const [palette, setPalette] = useState(false)
+  // le petit titre de la barre n'apparaît que lorsque le h1 de l'écran est sorti de l'écran (P10)
+  const main = useRef<HTMLElement>(null)
+  const titreSorti = useTitreSorti(main, pathname)
   // Écran en nuit forcée : les fenêtres, infobulles et notifications (portails hors de <main>) la suivent.
   const themeEcran: ThemeForce = themee ? undefined : 'dark'
 
   return (
     <TooltipProvider delayDuration={150}>
       {/* barre d'icônes flottante (bureau) : 16 px de marge + 76 px + 16 px d'air = 108 px à gauche.
-          Le fond de page (givre / ciel polaire) porte l'aurore, posée une fois, derrière tout le contenu. */}
+          Le fond de page (givre / ciel polaire) porte l'aurore, posée une fois, derrière tout le contenu.
+          Grille (P8) : UN conteneur (.conteneur : 1 200 px, gouttière 16 / 24 / 32), posé ici autour de l'écran et dans la
+          barre du haut ; un écran ne pose ni largeur ni marge latérale (il rend <Page>, components/ui/page.tsx). */}
       <div className="isolate flex h-svh min-h-0 flex-col overflow-hidden bg-surface-page min-[769px]:pl-[108px]">
         <Aurore />
         <Sidebar />
-        <BandeauNouveau />
-        <Header onSearch={() => setPalette(true)} />
+        <Header onSearch={() => setPalette(true)} titreSorti={titreSorti} />
         <main
+          ref={main}
           className={cn(
-            'relative flex flex-1 flex-col overflow-y-auto px-3 py-5 sm:px-4',
+            'relative flex flex-1 flex-col overflow-y-auto',
             themee ? 'bg-transparent' : 'bg-surface-0 text-fg-2', // écran refait : l'aurore se devine derrière
           )}
           data-theme={themee ? undefined : 'dark'}
         >
           <ThemeEcranProvider value={themeEcran}>
-            <div className="flex-1">
+            <div className="conteneur flex-1 pb-10 pt-2 max-[768px]:pt-5" data-conteneur-page="">
               {/* un écran = une adresse : les sigles y sont développés une fois (lib/lexique.ts) */}
               <PorteeSigles cle={pathname}>
                 <Suspense fallback={<EcranEnChargement clair={themee} />}>

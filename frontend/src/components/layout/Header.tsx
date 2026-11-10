@@ -1,10 +1,13 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Plus, Search } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { useProject } from '@/hooks/useProject'
+import { useUIStore } from '@/stores/uiStore'
 import { STEPS } from '@/components/project/StepProgress'
-import { ChevronRight, Plus, Search } from 'lucide-react'
 import NotificationBell from './NotificationBell'
-import BasculeTheme from './BasculeTheme'
 import { RACCOURCI_PALETTE } from './CommandPalette'
 
+// Le titre court de chaque écran, pour la barre (moins de 15 caractères quand c'est possible). Le nom complet est le h1 de la page.
 const ROUTE_LABELS: Record<string, { parent?: string; parentTo?: string; label: string }> = {
   '/dashboard':      { label: 'Accueil' },
   '/projects':       { label: 'Mes AO' },
@@ -17,72 +20,102 @@ const ROUTE_LABELS: Record<string, { parent?: string; parentTo?: string; label: 
   '/entreprise/fiche': { parent: 'Mon entreprise', parentTo: '/company', label: 'Fiche à télécharger' },
   '/team':           { label: 'Équipe' },
   '/settings':       { label: 'Paramètres' },
-  '/pricing':        { label: 'Facturation' },
-  '/billing':        { label: 'Facturation' },
+  '/pricing':        { label: 'Abonnement' },
+  '/billing':        { label: 'Abonnement' },
   '/settings/billing': { label: 'Abonnement' },
   '/design':         { label: 'Système de design' },
 }
-// Le titre de page d'un écran de l'AO est le nom de l'étape au fil (source unique : STEPS ; « candidature » est l'ancien nom de Pièces).
+// Le nom de chaque étape au fil (source unique : STEPS ; « candidature » est l'ancien nom de Pièces).
 export const STEP_LABELS: Record<string, string> = { ...Object.fromEntries(STEPS.map((e) => [e.segment, e.label])), candidature: 'Pièces' }
+
+/**
+ * Le petit titre de la barre (VEILLE-DESIGN P10) : caché tant que le h1 de la page est à l'écran, il apparaît en fondu de
+ * 100 ms quand le h1 en sort. Il occupe toujours sa place : aucun saut de mise en page. Il ne double jamais le h1.
+ */
+export function TitreBarre({ titre, montre }: { titre: string; montre: boolean }) {
+  return (
+    <span data-titre-barre="" aria-hidden={montre ? undefined : true}
+      className={cn('truncate text-base font-semibold text-fg transition-opacity duration-fast ease-survol', montre ? 'opacity-100' : 'opacity-0')}>
+      {titre}
+    </span>
+  )
+}
+
+const LIEN_PARENT = 'shrink-0 rounded-md text-base text-fg-2 transition-colors duration-fast ease-survol hover:text-fg'
 
 interface Props {
   /** Ouvre la palette Ctrl K. */
   onSearch: () => void
+  /** Le h1 de l'écran est sorti de l'écran (layout/useTitreSorti.ts). */
+  titreSorti?: boolean
 }
 
-// En-tête (DESIGN.md § Layout) : fil d'Ariane et titre de la page en Manrope (le h1 serif est dans la page), recherche
-// Ctrl K sur une ligne (pilule de 44 px), bascule soleil / lune, notifications, bouton « Nouvel appel d'offres » : le seul
-// dégradé de l'écran (le texte se réduit au « + » sous 640 px). Pas de verre : posé sur l'aurore au bureau, plein et
-// filet d'un pixel au téléphone. Le Compagnon vit sur les écrans d'un AO, pas ici.
-export default function Header({ onSearch }: Props) {
+// Barre du haut (DESIGN.md § Layout). Son contenu est dans LE conteneur de la coquille : son bord gauche est celui du h1 de la
+// page. À gauche : dans un AO, le chemin « Mes AO / nom de l'AO » (c'est de la navigation) ; ailleurs le petit titre, qui
+// n'apparaît que lorsque le h1 est sorti de l'écran. À droite : la recherche Ctrl K, les notifications (bureau) et « Nouvel appel
+// d'offres ». Au téléphone : 56 px, deux actions (recherche et « + ») ; le thème et les notifications sont dans « Compte ».
+// Un seul aplat d'accent par écran (P1) : dès qu'un écran montre sa propre action principale, ce bouton passe au trait.
+export default function Header({ onSearch, titreSorti = false }: Props) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
+  const aplatsEcran = useUIStore((s) => s.aplatsEcran)
 
+  const idAO = pathname.match(/^\/projects\/(?!new(?:\/|$))([^/]+)/)?.[1]
+  const { data: ao } = useProject(idAO ?? '')
   let parent: string | undefined
   let parentTo = '/projects'
   let label = ''
-  const projectMatch = pathname.match(/^\/projects\/[^/]+\/(\w+)/)
-  if (projectMatch) { parent = 'Mes AO'; label = STEP_LABELS[projectMatch[1]] ?? 'Projet' }
+  if (idAO) { parent = 'Mes AO'; label = ao?.name ?? '' }
   else {
     const match = Object.entries(ROUTE_LABELS).sort((a, b) => b[0].length - a[0].length).find(([r]) => pathname.startsWith(r))
     if (match) { parent = match[1].parent; parentTo = match[1].parentTo ?? '/projects'; label = match[1].label }
   }
+  const auTrait = aplatsEcran > 0
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between gap-3 px-3 sm:px-6 max-[768px]:border-b max-[768px]:border-bord max-[768px]:bg-surface-0 min-[769px]:h-[72px] min-[769px]:bg-transparent">
-      <nav aria-label="Fil d'Ariane" className="flex min-w-0 items-center gap-1.5 text-base">
-        {parent && (
-          <>
-            <Link to={parentTo} className="hidden truncate text-fg-3 transition-colors hover:text-fg sm:inline">{parent}</Link>
-            <ChevronRight size={14} className="hidden shrink-0 text-fg-3 sm:block" aria-hidden />
-          </>
-        )}
-        <span className="truncate font-sans text-lg font-semibold text-fg max-[768px]:text-base" aria-current="page">{label || 'Accueil'}</span>
-      </nav>
+    <header data-coquille="barre-haut" className="sticky top-0 z-30 shrink-0 max-[768px]:border-b max-[768px]:border-bord max-[768px]:bg-surface-0 min-[769px]:bg-transparent">
+      <div className="conteneur flex h-14 items-center justify-between gap-3 min-[769px]:h-16">
+        <nav aria-label="Fil d'Ariane" className="flex min-w-0 items-center gap-2">
+          {parent && (
+            <>
+              <Link to={parentTo} className={LIEN_PARENT}>{parent}</Link>
+              <span aria-hidden className="shrink-0 text-fg-3">/</span>
+            </>
+          )}
+          {idAO
+            ? <span className="truncate text-base font-semibold text-fg" aria-current="page">{label}</span>
+            : <TitreBarre titre={label || 'Accueil'} montre={titreSorti} />}
+        </nav>
 
-      <div className="flex shrink-0 items-center gap-0.5 sm:gap-1.5">
-        <button
-          type="button"
-          onClick={onSearch}
-          className="flex h-11 items-center gap-2.5 rounded-pilule border border-bord-champ bg-surface-0 pl-4 pr-2 text-sm text-fg-3 transition-[border-color,color] duration-survol ease-survol hover:border-accent-ui hover:text-fg-2 max-[768px]:w-11 max-[768px]:justify-center max-[768px]:border-0 max-[768px]:bg-transparent max-[768px]:px-0 min-[769px]:w-72"
-          aria-label="Rechercher un appel d'offres ou une page"
-        >
-          <Search size={18} strokeWidth={1.5} absoluteStrokeWidth className="shrink-0" aria-hidden />
-          <span className="min-w-0 flex-1 truncate whitespace-nowrap text-left max-[768px]:hidden">Rechercher un AO…</span>
-          <kbd className="chiffres shrink-0 whitespace-nowrap rounded-xs border border-bord bg-surface-1 px-1.5 py-0.5 font-sans text-xs font-semibold text-fg-2 max-[768px]:hidden">{RACCOURCI_PALETTE}</kbd>
-        </button>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onSearch}
+            className="flex h-11 items-center gap-2.5 rounded-pilule border border-bord-champ bg-surface-0 pl-4 pr-2 text-sm text-fg-3 transition-colors duration-fast ease-survol hover:bg-surface-1 hover:text-fg-2 active:scale-[.98] max-[768px]:w-11 max-[768px]:justify-center max-[768px]:border-0 max-[768px]:bg-transparent max-[768px]:px-0 min-[769px]:w-72"
+            aria-label="Rechercher un appel d'offres ou une page"
+          >
+            <Search size={18} strokeWidth={1.5} absoluteStrokeWidth className="shrink-0" aria-hidden />
+            <span className="min-w-0 flex-1 truncate whitespace-nowrap text-left max-[768px]:hidden">Rechercher un AO…</span>
+            <kbd className="chiffres shrink-0 whitespace-nowrap rounded border border-bord bg-surface-1 px-1.5 py-0.5 font-sans text-xs font-semibold text-fg-2 max-[768px]:hidden">{RACCOURCI_PALETTE}</kbd>
+          </button>
 
-        <BasculeTheme />
-        <NotificationBell />
+          <span className="max-[768px]:hidden"><NotificationBell /></span>
 
-        <button
-          type="button"
-          onClick={() => navigate('/projects/new')}
-          className="ml-1 inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-accent-fill text-sm font-semibold text-accent-on shadow-cta transition-[transform,background-image] duration-survol ease-survol hover:-translate-y-px hover:[background-image:var(--accent-fill-hover)] active:translate-y-0 max-sm:w-11 sm:px-5"
-        >
-          <Plus size={20} strokeWidth={1.5} absoluteStrokeWidth aria-hidden />
-          <span className="max-sm:sr-only">Nouvel appel d&apos;offres</span>
-        </button>
+          <button
+            type="button"
+            data-nouvel-ao={auTrait ? 'trait' : 'plein'}
+            onClick={() => navigate('/projects/new')}
+            className={cn(
+              'inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-pilule text-sm font-semibold transition-[background-color,background-image,border-color,color,transform] duration-fast ease-survol active:scale-[.98] max-sm:w-11 sm:px-5',
+              auTrait
+                ? 'border border-bord-champ bg-surface-0 text-fg hover:bg-surface-1'
+                : 'bg-accent-fill text-accent-on shadow-cta hover:[background-image:var(--accent-fill-hover)]',
+            )}
+          >
+            <Plus size={20} strokeWidth={1.5} absoluteStrokeWidth aria-hidden />
+            <span className="max-sm:sr-only">Nouvel appel d&apos;offres</span>
+          </button>
+        </div>
       </div>
     </header>
   )

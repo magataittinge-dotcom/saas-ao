@@ -12,7 +12,8 @@ import { raisonSociale } from '@/lib/raisonSociale'
 import { ENTREES_TIROIR, ONGLETS_TEL, ONGLET_CERVEAU, estActif } from './navigation'
 import { QuotaRond } from './QuotaGauge'
 import { useTonUrgence, useUrgents } from './useUrgents'
-import BasculeTheme from './BasculeTheme'
+import BasculeTheme, { ReglageAnimerFond } from './BasculeTheme'
+import NotificationBell from './NotificationBell'
 
 // Onglets du bas (téléphone, ≤ 768 px) : Accueil, Mes AO, Mon entreprise, Coffre-fort, Compte (la photo). Dernier élément de la colonne
 // (jamais posés par-dessus le contenu : les barres d'action collées en bas restent visibles). Cibles de 56 px de haut. « Compte » ouvre un tiroir : Paramètres, le thème, le quota, la déconnexion.
@@ -76,10 +77,15 @@ export default function BarreOnglets() {
               </li>
             ))}
           </ul>
+          <div className="mt-3 grid gap-2 border-t border-bord pt-3">
+            <p className="px-1 text-xs font-medium text-fg-3">Thème</p>
+            <BasculeTheme />
+            <ReglageAnimerFond className="px-1" />
+          </div>
           <div className="mt-3 flex items-center justify-between gap-2 border-t border-bord pt-3">
             <div className="flex items-center gap-1"><QuotaRond /><span className="text-sm text-fg-2">Abonnement</span></div>
             <div className="flex items-center gap-1">
-              <BasculeTheme />
+              <NotificationBell />
               <button type="button" onClick={handleLogout} aria-label="Déconnexion"
                 className="grid size-11 place-items-center rounded-pilule text-fg-2 transition-colors hover:bg-surface-1 hover:text-fg">
                 <LogOut size={20} strokeWidth={1.5} absoluteStrokeWidth aria-hidden />
