@@ -193,3 +193,8 @@
 
 /* Champs de la page d'un AO : bord de champ du système (3:1 sur le fond, clair et nuit) */
 .page-ao .glass-input { border-color: var(--border-field); }
+
+/* Mission TELEPHONE : au téléphone, rien sous 12,5 px (la note de dépôt et les libellés de la carte « 30 secondes »). */
+@media (max-width: 768px) {
+  .piece-note, .carte-ao-30s__libelle { font-size: var(--taille-12); }
+}
