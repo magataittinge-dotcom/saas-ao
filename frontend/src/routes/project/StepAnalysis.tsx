@@ -68,6 +68,9 @@ export default function StepAnalysis({ project }: Props) {
   const queryClient = useQueryClient()
   const [activeFilter, setActiveFilter] = useState<FilterCategory>('all')
   const [search, setSearch] = useState('')
+  // Au téléphone, toutes les catégories sont repliées à l'arrivée : la page commence par la liste des catégories et leurs
+  // comptes (448 exigences dépliées faisaient 12 000 px). Lu une fois : n'agit que sur l'état de départ.
+  const auTelephone = useMemo(() => typeof window !== 'undefined' && window.matchMedia?.('(max-width: 768px)').matches === true, [])
   const { mutate: completeStep, isPending: isValidating } = useCompleteStep(project.id)
 
   // Charger les documents du projet pour l'ouverture de la source
@@ -493,7 +496,7 @@ export default function StepAnalysis({ project }: Props) {
                     items={catItems}
                     onOpenSource={openSourceDocument}
                     selectionId={selectionId}
-                    defaultOpen={sectionIdx === 0 || activeFilter !== 'all' || search.trim().length > 0}
+                    defaultOpen={(sectionIdx === 0 && !auTelephone) || activeFilter !== 'all' || search.trim().length > 0}
                   />
                 ))}
               </div>
