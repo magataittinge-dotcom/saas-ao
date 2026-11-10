@@ -29,13 +29,16 @@ test('signature demandée par le RC : case, source citée, lien « Voir dans le 
   }))
   assert.ok(html.includes('Je confirme avoir signé ce document'))
   assert.ok(html.includes('Source : RC.pdf — Article 5.2 — Présentation des candidatures, page 7'))
-  assert.ok(html.includes('class="piece-source"') && html.includes('Voir dans le dossier'))
+  assert.ok(html.includes('data-piece-source=""') && html.includes('Voir dans le dossier'))
+  // la case du système (Radix : un bouton role=checkbox) ; plus de case native écrite dans le composant
+  assert.ok(html.includes('role="checkbox"'), 'la case du système')
+  assert.ok(!/<input\b/.test(lire('src/components/project/SignatureLigne.tsx')), 'plus de case native')
 })
 
 test('sans exigence d’origine retrouvable, la source est citée mais sans lien', () => {
   const html = rendre(ligne({ signature_required: true, source_document: 'RC.pdf', source_page: 7 }))
   assert.ok(html.includes('Source : RC.pdf, page 7'))
-  assert.ok(!html.includes('piece-source'))
+  assert.ok(!html.includes('data-piece-source') && !html.includes('Voir dans le dossier'))
 })
 
 test('signature non demandée : la règle générale est citée', () => {
@@ -61,9 +64,10 @@ test('déclaration sur l’honneur : la case, sans source inventée', () => {
 
 test('aucune couleur écrite dans SignatureLigne, cible tactile de 44 px', () => {
   assert.ok(!/#[0-9a-fA-F]{3,8}\b|rgba?\(|style=/.test(lire('src/components/project/SignatureLigne.tsx')))
-  const css = lire('src/styles/pieces.css')
-  assert.ok(/\.piece-source\s*\{[^}]*min-height:\s*44px/.test(css))
-  assert.ok(/\.piece-signature__case\s*\{[^}]*min-height:\s*44px/.test(css))
+  // la case et le lien sont ceux du système (44 px de cible : ui/case.tsx « min-h-11 », ui/bouton.tsx variante lien au toucher)
+  const ligne_ = lire('src/components/project/SignatureLigne.tsx')
+  assert.ok(ligne_.includes('<CaseACocher') && ligne_.includes('<Bouton variante="lien"'))
+  assert.ok(lire('src/components/ui/case.tsx').includes('min-h-11'))
 })
 
 test('StepVerification ouvre le panneau « Voir dans le DCE » sur l’exigence d’origine', () => {

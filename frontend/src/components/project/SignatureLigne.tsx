@@ -1,4 +1,6 @@
 import type { ChecklistItem } from '@/types'
+import { Bouton } from '@/components/ui/bouton'
+import { CaseACocher } from '@/components/ui/case'
 
 // Signature d'une pièce de la checklist. La règle vient du serveur
 // (signature_required, services/ai/checklist_matcher.signature_requise) :
@@ -103,22 +105,20 @@ export default function SignatureLigne({
   const phrase = phraseSourceSignature(item)
   return (
     <div className="piece-signature">
-      <label className="piece-signature__case">
-        <input
-          type="checkbox"
-          checked={item.signature_confirmed ?? false}
-          onChange={(e) => onToggleSignature(item, e.target.checked)}
-        />
-        Je confirme avoir signé ce document
-        {!item.signature_confirmed && <span className="piece-note">— requis pour compter conforme</span>}
-      </label>
+      {/* La case du système (plus de case native) : toute la rangée est la cible, 44 px */}
+      <CaseACocher
+        coche={item.signature_confirmed ?? false}
+        onChange={(coche) => { void onToggleSignature(item, coche) }}
+        libelle={<>
+          Je confirme avoir signé ce document
+          {!item.signature_confirmed && <span className="piece-note"> (demandé pour que la pièce soit prête)</span>}
+        </>}
+      />
       {phrase && (
         <p className="piece-note">
-          {phrase}
+          {phrase}{' '}
           {onOpenSource && item.source_exigence_id && (
-            <button type="button" className="piece-source" onClick={() => onOpenSource(item)}>
-              Voir dans le dossier
-            </button>
+            <Bouton variante="lien" data-piece-source="" onClick={() => onOpenSource(item)}>Voir dans le dossier</Bouton>
           )}
         </p>
       )}

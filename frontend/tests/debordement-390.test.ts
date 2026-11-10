@@ -19,7 +19,7 @@ test('analyse : les puces de catégories se replient au lieu de défiler hors de
 test('pièces : la rangée d’actions passe sous le texte au téléphone, et le nom de la pièce jointe se replie', () => {
   const t = code('src/components/project/CandidatureSectionTemplates.tsx')
   // cartes sur une colonne au téléphone (deux dès 768 px, SectionEtape), actions qui passent à la ligne, noms qui se replient
-  assert.match(t, /<div data-piece=\{item\.id\} className="grid min-w-0 content-start gap-2 rounded-carte/)
+  assert.match(t, /<Carte data-piece=\{item\.id\} className="grid min-w-0 content-start gap-2"/)
   assert.match(t, /flex flex-wrap items-center gap-2/)
   assert.match(t, /break-words pl-\[1\.875rem\] text-sm text-fg-2">\s*\{item\.jointe && item\.piece_nom/)
   const v = code('src/components/project/CandidatureSectionVault.tsx')

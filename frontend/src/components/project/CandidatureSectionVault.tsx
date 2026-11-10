@@ -6,7 +6,9 @@ import SignatureLigne from '@/components/project/SignatureLigne'
 import NonConcerneBouton, { estNonConcernee } from '@/components/project/NonConcerne'
 import { noteDepot, noteValidite, statutPiece } from '@/lib/statutPiece'
 import { EtatElement, SectionEtape } from '@/components/etape'
-import { Button } from '@/components/ui/button'
+import { Bouton } from '@/components/ui/bouton'
+import { Carte } from '@/components/ui/carte'
+import { PastilleEtat } from '@/components/ui/pastille'
 import { nomPiece } from '@/lib/nomsPieces'
 import { etatDeStatut } from '@/lib/resumePieces'
 import { libelleSource } from '@/lib/resumeAO'
@@ -102,7 +104,7 @@ function VaultRow({
   const source = item.source_document ? libelleSource({ document: item.source_document, page: item.source_page ?? null }) : null
 
   return (
-    <div data-piece={item.id} className="grid min-w-0 content-start gap-2 rounded-carte border border-bord-2 bg-surface-1 p-5">
+    <Carte data-piece={item.id} className="grid min-w-0 content-start gap-2">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
           <FileText size={18} className="mt-0.5 shrink-0 text-fg-3" aria-hidden />
@@ -112,7 +114,7 @@ function VaultRow({
       </div>
       {(item.lot || (item.jointe && item.piece_nom) || (isLinked && !item.jointe)) && (
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 pl-[1.875rem] text-sm text-fg-2">
-          {item.lot && <span className="pill pill-muted">{item.lot.replace(/^lot/i, 'Lot ')}</span>}
+          {item.lot && <PastilleEtat sens="gris" icone={null}>{item.lot.replace(/^lot/i, 'Lot ')}</PastilleEtat>}
           {item.jointe && item.piece_nom && <span className="break-words">{item.piece_nom}</span>}
           {isLinked && !item.jointe && <span>Lié au coffre-fort</span>}
         </p>
@@ -123,7 +125,7 @@ function VaultRow({
         <p className="piece-note">Lu dans le <Sigle code="RC" /> : « {item.source_in_rc} »</p>
       )}
       <SignatureLigne item={item} onToggleSignature={onToggleSignature} onOpenSource={onOpenSource} />
-      <div className="mt-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-bord-2 pt-2.5">
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-bord pt-3">
         <EtatElement
           etat={etat}
           texte={texte}
@@ -131,11 +133,9 @@ function VaultRow({
           source={source ? { libelle: source, onVoir: item.source_exigence_id && onOpenSource ? () => onOpenSource(item) : undefined } : undefined}
         />
         {estNonConcernee(item) ? null : (
-          <Button type="button" variant="outline" size="sm" onClick={onPick} className="[@media(pointer:coarse)]:min-h-11">
-            {isMissing ? 'Choisir' : 'Remplacer'}
-          </Button>
+          <Bouton variante="secondaire" onClick={onPick}>{isMissing ? 'Choisir' : 'Remplacer'}</Bouton>
         )}
       </div>
-    </div>
+    </Carte>
   )
 }

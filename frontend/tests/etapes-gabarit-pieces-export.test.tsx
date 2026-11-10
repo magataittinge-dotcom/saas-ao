@@ -29,7 +29,7 @@ test('Pièces : un seul calcul — prêtes + à joindre + à renouveler = pièce
   })
   assert.deepEqual([pretes.valeur, aJoindre.valeur, aRenouveler.valeur], ['2', '2', '2'])
   assert.deepEqual(pretes.jauge, { rempli: 2, total: 6 })
-  assert.match(pretes.detail ?? '', /^sur 6 pièces demandées · 1 facultative ou pour l’attribution$/)
+  assert.match(pretes.detail ?? '', /^sur 6 pièces demandées au dépôt, plus 1 facultative ou pour l’attribution$/)
   assert.match(aJoindre.detail ?? '', /pièce.* du coffre-fort · 1 formulaire à compléter/)
   assert.equal(aJoindre.etat, 'a-verifier')
 })

@@ -40,5 +40,5 @@ test('formulaire non concerné : plus d’import proposé, reprise possible', ()
     />,
   )
   assert.ok(html.includes('Je suis concerné'), html)
-  assert.ok(!html.includes('Importer rempli'), html)
+  assert.ok(!html.includes('Déposer le formulaire rempli') && !html.includes('Importer rempli'), html)
 })
