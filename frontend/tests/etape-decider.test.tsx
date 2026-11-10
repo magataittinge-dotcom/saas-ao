@@ -161,3 +161,16 @@ test('réponse de l’acheteur N jours avant la remise : « Réponses de l’ach
   const carte = cartesResumeAO([], null, undefined, reponse).find((c) => c.libelle.startsWith('Réponses'))
   assert.equal(carte?.valeur, '16 mars 2027')
 })
+
+// ── Mission finale (10/11) : les cartes de Décider sont celles du système ──
+test('Décider : décision, trésorerie et rétro-planning en Carte du système ; un seul aplat (l’en-tête) ; sigles expliqués (A3)', () => {
+  const cartes = ['SynorixScoreCard', 'TresorerieCard', 'RetroPlanning', 'AVerifierAvantEngagement', 'CarteAO30s'].map((f) => `src/components/project/${f}.tsx`)
+  for (const f of cartes) {
+    assert.doesNotMatch(sansCommentaires(lire(f)), /<button\b|style=\{\{|glass-card|glass-btn|microlabel|uppercase|font-mono|title=/, f)
+  }
+  const decision = sansCommentaires(lire('src/components/project/SynorixScoreCard.tsx'))
+  assert.doesNotMatch(decision, /variante="principal"/, '« On y va » de la carte est au trait : l’aplat est dans l’en-tête')
+  assert.match(decision, /<Sigle code="DCE" \/>/)
+  assert.match(sansCommentaires(lire('src/components/project/TresorerieCard.tsx')), /<Sigle code="CCAP" \/>/)
+  assert.match(sansCommentaires(lire('src/components/project/RetroPlanning.tsx')), /<Sigle code="RC" \/>/)
+})

@@ -1,4 +1,5 @@
 import { ArrowDown } from 'lucide-react'
+import { Bouton } from '@/components/ui/bouton'
 import { EtatElement, SectionEtape } from '@/components/etape'
 import { libelleSource, type PointAVerifier } from '@/lib/resumeAO'
 import type { SourceFait } from '@/lib/carteAO'
@@ -21,13 +22,7 @@ export default function AVerifierAvantEngagement({ points, onVoir, onVoirPenalit
           <p className="text-sm font-medium text-fg-2">{p.libelle}</p>
           <p className="break-words font-semibold text-fg">{p.valeur}</p>
           {p.versTresorerie && onVoirPenalites && (
-            <button
-              type="button"
-              onClick={onVoirPenalites}
-              className="inline-flex min-h-9 w-fit items-center gap-1.5 rounded-xs text-sm font-medium text-accent-text hover:underline [@media(pointer:coarse)]:min-h-11"
-            >
-              Voir les pénalités <ArrowDown size={14} aria-hidden />
-            </button>
+            <Bouton variante="lien" className="w-fit" onClick={onVoirPenalites}>Voir les pénalités <ArrowDown size={14} aria-hidden /></Bouton>
           )}
           <EtatElement
             etat="a-verifier"
