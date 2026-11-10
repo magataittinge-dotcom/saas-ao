@@ -1,168 +1,80 @@
 import { type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { Settings as SettingsIcon, User, Building2, CreditCard, ChevronRight, Shield, Calculator } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
-import { ESSAI_LIBELLE, nomPlan, prixLibelle, quotaLibelle, trouverOffre } from '@/lib/offres'
+import { nomPlan } from '@/lib/offres'
+import { prenomAffichable } from '@/lib/prenom'
+import { Page, TitreSection } from '@/components/ui/page'
+import { Carte, RangeeCarte } from '@/components/ui/carte'
+import BasculeTheme, { ReglageAnimerFond } from '@/components/layout/BasculeTheme'
 
-// Jetons du système (clair et nuit) : aucune couleur écrite en dur, l'écran suit le thème (C11).
-const PLAN_ACCENT = { color: 'var(--accent-text)', bg: 'var(--accent-tint)', border: 'var(--accent-ring)' }
-const PLAN_LABELS: Record<string, { color: string; bg: string; border: string }> = {
-  essentiel: PLAN_ACCENT,
-  pro:       PLAN_ACCENT,
-  business:  PLAN_ACCENT,
-  free:      { color: 'var(--text-2)', bg: 'var(--surface-2)', border: 'var(--border-1)' },
-}
-
-const PASTILLE_ICONE = { background: 'var(--surface-2)', border: '1px solid var(--border-1)' } as const
-
-function SectionCard({ icon, title, children }: {
-  icon: ReactNode
-  title: string
-  children: ReactNode
-}) {
+/** Une information du compte : son nom à gauche, sa valeur à droite. Un champ vide n'est pas un tiret : c'est un lien pour le remplir. */
+function Ligne({ libelle, children }: { libelle: string; children: ReactNode }) {
   return (
-    <div className="glass-card overflow-hidden">
-      <div
-        className="flex items-center gap-3 px-6 py-4"
-        style={{ borderBottom: '1px solid var(--border-1)', background: 'var(--surface-1)' }}
-      >
-        <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center"
-          style={PASTILLE_ICONE}
-        >
-          {icon}
-        </div>
-        <h2 className="text-sm font-semibold text-ds-text">{title}</h2>
-      </div>
-      <div className="px-6 py-5">{children}</div>
-    </div>
+    <RangeeCarte className="justify-between gap-6">
+      <span className="shrink-0 text-sm text-fg-2">{libelle}</span>
+      <span className="min-w-0 break-words text-right text-sm font-medium text-fg">{children}</span>
+    </RangeeCarte>
   )
 }
 
-function InfoRow({ label, value }: { label: string; value?: ReactNode }) {
+const LIEN = 'font-medium text-accent-text underline-offset-4 hover:underline'
+
+/** Une rangée qui mène ailleurs : toute la rangée est la cible (52 px), un chevron dit qu'on change d'écran. */
+function RangeeLien({ to, titre, detail }: { to: string; titre: string; detail?: ReactNode }) {
   return (
-    <div className="flex items-center justify-between py-2.5" style={{ borderBottom: '1px solid var(--border-1)' }}>
-      <span className="text-sm text-ds-text-2">{label}</span>
-      <span className="text-sm font-medium text-ds-text">{value ?? <span className="text-ds-text-3 italic">—</span>}</span>
-    </div>
+    <Link to={to} className="group flex min-h-[52px] items-center gap-3 border-t border-bord py-3 text-sm first:border-t-0">
+      <span className="min-w-0 flex-1">
+        <span className="block font-medium text-fg group-hover:text-accent-text">{titre}</span>
+        {detail && <span className="block text-fg-2">{detail}</span>}
+      </span>
+      <ChevronRight aria-hidden size={18} strokeWidth={1.5} className="shrink-0 text-fg-3 group-hover:text-accent-text" />
+    </Link>
   )
 }
 
+/**
+ * Paramètres : le compte, l'entreprise (un lien : elle se modifie dans « Mon entreprise »), l'apparence (le thème et le
+ * fond animé, les mêmes réglages que le menu du compte), l'abonnement (un lien : il a son écran) et les outils. Aucun
+ * bouton plein : chaque réglage s'applique tout de suite.
+ */
 export default function Settings() {
   const { user, organization } = useAuthStore()
-
-  const plan     = organization?.plan ?? 'free'
-  const planCfg  = PLAN_LABELS[plan] ?? PLAN_LABELS.free
-  const offre    = trouverOffre(plan)
+  // jamais le début d'un e-mail en guise de nom (lib/prenom.ts)
+  const nom = prenomAffichable(user?.name, user?.email) ? user?.name : null
+  const renseigner = <Link to="/company" className={LIEN}>Renseigner</Link>
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 animate-fade-in">
+    <Page titre="Paramètres" sousTitre="Votre compte, l’apparence de Synorix et votre abonnement." etroite>
+      <TitreSection className="!mt-0">Compte</TitreSection>
+      <Carte sansMarge className="px-5 sm:px-6">
+        {nom && <Ligne libelle="Nom">{nom}</Ligne>}
+        {user?.email && <Ligne libelle="Adresse e-mail">{user.email}</Ligne>}
+        <Ligne libelle="Rôle">{user?.role === 'member' ? 'Membre' : 'Administrateur'}</Ligne>
+      </Carte>
 
-      {/* Page header */}
-      <div className="flex items-center gap-3">
-        <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center"
-          style={PASTILLE_ICONE}
-        >
-          <SettingsIcon size={18} className="text-ds-cyan" />
-        </div>
-        <div>
-          <h1 className="text-ds-text leading-tight">Paramètres</h1>
-          <p className="text-sm text-ds-text-2 mt-0.5">Gérez votre compte et votre abonnement</p>
-        </div>
-      </div>
+      <TitreSection action={<Link to="/company" className={`text-sm ${LIEN}`}>Ouvrir Mon entreprise</Link>}>Entreprise</TitreSection>
+      <Carte sansMarge className="px-5 sm:px-6">
+        <Ligne libelle="Raison sociale">{organization?.name || renseigner}</Ligne>
+        <Ligne libelle="SIRET">{organization?.siret ? <span className="chiffres">{organization.siret}</span> : renseigner}</Ligne>
+      </Carte>
 
-      {/* ── Profil ─────────────────────────────────────────────────────── */}
-      <SectionCard icon={<User size={15} className="text-ds-cyan" />} title="Mon profil">
-        <div className="divide-y" style={{ borderColor: 'transparent' }}>
-          <InfoRow label="Nom complet"  value={user?.name} />
-          <InfoRow label="Adresse email" value={user?.email} />
-          <InfoRow
-            label="Rôle"
-            value={
-              <span
-                className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium text-ds-cyan-dark"
-                style={{ background: 'var(--accent-tint)', border: '1px solid var(--accent-ring)' }}
-              >
-                <Shield size={10} />
-                {user?.role === 'member' ? 'Membre' : 'Administrateur'}
-              </span>
-            }
-          />
-        </div>
-      </SectionCard>
+      <TitreSection>Apparence</TitreSection>
+      <Carte sansMarge className="px-5 sm:px-6">
+        <RangeeCarte className="flex-wrap justify-between gap-x-6 gap-y-2 py-3">
+          <span className="text-sm font-medium text-fg">Thème</span>
+          <BasculeTheme className="w-full sm:w-80" />
+        </RangeeCarte>
+        <RangeeCarte>
+          <ReglageAnimerFond className="w-full" />
+        </RangeeCarte>
+      </Carte>
 
-      {/* ── Entreprise ──────────────────────────────────────────────────── */}
-      <SectionCard icon={<Building2 size={15} className="text-ds-cyan" />} title="Mon entreprise">
-        <div className="divide-y" style={{ borderColor: 'transparent' }}>
-          <InfoRow label="Raison sociale"   value={organization?.name || undefined} />
-          <InfoRow label="SIRET"            value={(organization as any)?.siret} />
-          <InfoRow label="Secteur d'activité" value={(organization as any)?.sector} />
-          <InfoRow label="Effectif"         value={(organization as any)?.headcount} />
-        </div>
-        <p className="text-xs text-ds-text-3 mt-4">
-          Complétez votre profil entreprise depuis la section{' '}
-          <Link
-            to="/company"
-            className="text-ds-cyan hover:text-ds-cyan-dark transition-colors duration-200"
-          >
-            Mon entreprise
-          </Link>
-        </p>
-      </SectionCard>
-
-      {/* ── Abonnement ──────────────────────────────────────────────────── */}
-      <SectionCard icon={<CreditCard size={15} className="text-ds-cyan" />} title="Abonnement">
-        <div className="flex items-center justify-between mb-5">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span
-                className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold"
-                style={{ background: planCfg.bg, color: planCfg.color, border: `1px solid ${planCfg.border}` }}
-              >
-                {nomPlan(plan)}
-              </span>
-              {offre && (
-                <span className="text-sm font-semibold text-ds-text">{prixLibelle(offre)}<span className="text-xs font-normal text-ds-text-3">/mois HT</span></span>
-              )}
-            </div>
-            <p className="text-xs text-ds-text-3">
-              {offre ? quotaLibelle(offre) : ESSAI_LIBELLE}
-            </p>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <a
-            href="/settings/billing"
-            className="edge-cta w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium no-underline"
-          >
-            <span>Gérer mon abonnement</span>
-            <ChevronRight size={16} />
-          </a>
-
-          <a
-            href="/settings/billing"
-            className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm text-ds-text-2 transition-all duration-200 hover:bg-surface-1 hover:text-ds-text no-underline cursor-pointer"
-            style={{ background: 'var(--edge-graphite)', boxShadow: 'inset 0 0 0 1px var(--border-1)' }}
-          >
-            <span>Historique de facturation</span>
-            <ChevronRight size={16} />
-          </a>
-        </div>
-      </SectionCard>
-
-      {/* ── Outils ──────────────────────────────────────────────────────── */}
-      <SectionCard icon={<Calculator size={15} className="text-ds-cyan" />} title="Outils">
-        <Link
-          to="/outils"
-          className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm text-ds-text-2 transition-colors duration-200 hover:text-ds-text no-underline"
-          style={{ background: 'var(--edge-graphite)', boxShadow: 'inset 0 0 0 1px var(--border-1)' }}
-        >
-          <span>Retenue de garantie</span>
-          <ChevronRight size={16} />
-        </Link>
-      </SectionCard>
-    </div>
+      <TitreSection>Abonnement et outils</TitreSection>
+      <Carte sansMarge className="px-5 sm:px-6">
+        <RangeeLien to="/settings/billing" titre="Abonnement" detail={`Offre ${nomPlan(organization?.plan)} : unités du mois, offres et factures.`} />
+        <RangeeLien to="/outils" titre="Retenue de garantie" detail="Le montant retenu sur un marché et la date à laquelle il vous revient." />
+      </Carte>
+    </Page>
   )
 }

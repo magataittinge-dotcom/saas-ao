@@ -114,8 +114,7 @@
   "src/routes/Billing.tsx": 1,
   "src/routes/Landing.tsx": 5,
   "src/routes/project/StepLotSelection.tsx": 1,
-  "src/routes/project/StepUpload.tsx": 2,
-  "src/routes/Settings.tsx": 3
+  "src/routes/project/StepUpload.tsx": 2
  },
  "police-hors-echelle": {
   "src/App.tsx": 1,
@@ -179,8 +178,7 @@
   "src/routes/Landing.tsx": 10,
   "src/routes/project/StepExport.tsx": 1,
   "src/routes/project/StepLotSelection.tsx": 2,
-  "src/routes/project/StepUpload.tsx": 2,
-  "src/routes/Settings.tsx": 1
+  "src/routes/project/StepUpload.tsx": 2
  },
  "controle-natif": {
   "src/components/company/ProfileFreeTextCard.tsx": 1,
@@ -342,8 +340,7 @@
   "src/routes/Billing.tsx": 1,
   "src/routes/project/StepExport.tsx": 1,
   "src/routes/project/StepMemoire.tsx": 1,
-  "src/routes/project/StepUpload.tsx": 1,
-  "src/routes/Settings.tsx": 1
+  "src/routes/project/StepUpload.tsx": 1
  },
  "etat-ao-hors-module": {
   "src/components/dashboard/BandeAO.tsx": 4,
@@ -390,7 +387,6 @@
   "src/routes/project/StepUpload.tsx": 39,
   "src/routes/project/StepVerification.tsx": 31,
   "src/routes/Register.tsx": 7,
-  "src/routes/Settings.tsx": 8,
   "src/routes/Tools.tsx": 15
  },
  "visage-en-vignette": {
@@ -403,7 +399,6 @@
   "src/routes/FicheEntreprise.tsx": 4,
   "src/routes/NewProject.tsx": 2,
   "src/routes/Projects.tsx": 7,
-  "src/routes/Settings.tsx": 2,
   "src/routes/Tools.tsx": 3
  }
 }
