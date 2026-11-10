@@ -43,12 +43,12 @@ export function BandeauSelonAge({ organisation }: { organisation: { created_at?:
         {NOUVEAUTE.texte}{' '}
         <Link to={NOUVEAUTE.lien.to} className="font-semibold text-accent-text underline-offset-2 hover:underline">{NOUVEAUTE.lien.libelle}</Link>
       </p>
-      <Link to={NOUVEAUTE.lien.to} className="min-w-0 flex-1 whitespace-nowrap text-[13.5px] font-semibold text-accent-text underline-offset-2 hover:underline min-[769px]:hidden">{NOUVEAUTE.court}</Link>
+      <Link to={NOUVEAUTE.lien.to} className="min-w-0 flex-1 whitespace-nowrap text-sm font-semibold text-accent-text underline-offset-2 hover:underline min-[769px]:hidden">{NOUVEAUTE.court}</Link>
       <button
         type="button"
         onClick={fermer}
         aria-label="Fermer le bandeau"
-        className="-mr-2 grid size-11 shrink-0 place-items-center rounded-pilule text-fg-2 transition-colors duration-base hover:bg-surface-1 hover:text-fg"
+        className="-mr-2 grid size-11 shrink-0 place-items-center rounded-pilule text-fg-2 transition-colors duration-survol hover:bg-surface-1 hover:text-fg"
       >
         <X size={18} strokeWidth={1.5} absoluteStrokeWidth aria-hidden />
       </button>

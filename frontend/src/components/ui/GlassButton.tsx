@@ -16,7 +16,7 @@ const glassButton = cva(
     'relative inline-flex items-center justify-center gap-2 select-none',
     'rounded-xl font-medium whitespace-nowrap [@media(pointer:coarse)]:min-h-11',
     'border backdrop-blur-md',
-    'shadow-glow-sm transition-all duration-300 ease-smooth',
+    'shadow-glow-sm transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-pop ease-survol',
     'motion-safe:hover:-translate-y-0.5 hover:shadow-glow-cyan',
     
     'active:translate-y-0 active:shadow-glow-sm',

@@ -172,3 +172,27 @@ test('theme.css : les valeurs de couleur n\'existent qu\'ici (le reste du CSS pa
     assert.doesNotMatch(css, /#[0-9A-Fa-f]{6}\b/, `${f} : couleur hexadécimale en dur`)
   }
 })
+
+// ── Échelles fermées (VEILLE-DESIGN P5, P8, P12, P15) ─────────────────
+test('échelles : trois durées et une courbe, quatre rayons, sept tailles, gouttière 16 / 24 / 32', () => {
+  for (const theme of THEMES) {
+    assert.deepEqual(['--dur-fast', '--dur-survol', '--dur-pop'].map((n) => valeur(theme, n)), ['100ms', '180ms', '280ms'])
+    for (const n of Object.keys(jetons(theme)).filter((k) => k.startsWith('--dur-'))) assert.ok(['100ms', '180ms', '280ms'].includes(valeur(theme, n)), `${n} hors des trois durées`)
+    for (const n of Object.keys(jetons(theme)).filter((k) => k.startsWith('--ease-'))) assert.equal(valeur(theme, n), valeur(theme, '--ease-survol'), `${n} : une seule courbe`)
+    assert.deepEqual(['--radius-xs', '--radius-sm', '--radius-md', '--radius-lg', '--radius-xl', '--radius-2xl', '--radius-pill'].map((n) => valeur(theme, n)), ['4px', '8px', '14px', '22px', '22px', '22px', '9999px'])
+    assert.deepEqual(['11', '12', '13', '15', '17', '22'].map((n) => valeur(theme, `--taille-${n}`)), ['11px', '12.5px', '13.5px', '15px', '17px', '22px'])
+    assert.equal(valeur(theme, '--approche-chiffre'), '-0.03em')
+  }
+  const css = sansCommentaires(lire('src/styles/theme.css'))
+  assert.match(css, /--gutter: 16px;/)
+  assert.match(css, /@media \(min-width: 769px\) \{ :root \{ --gutter: 24px; \} \}/)
+  assert.match(css, /@media \(min-width: 1200px\) \{ :root \{ --gutter: 32px; \} \}/)
+  assert.equal(valeur('light', '--container'), '1200px')
+  const config = sansCommentaires(lire('tailwind.config.js'))
+  // les noms par défaut de Tailwind renvoient aux jetons : aucune taille, aucun rayon ni aucune durée de plus
+  for (const m of [/xs:\s+\['var\(--taille-12\)'/, /base:\s+\['var\(--taille-15\)'/, /md:\s+'var\(--radius-sm\)'/, /lg:\s+'var\(--radius-md\)'/, /xl:\s+'var\(--radius-lg\)'/, /DEFAULT: 'var\(--dur-survol\)'/, /200: 'var\(--dur-survol\)'/]) assert.match(config, m)
+  assert.doesNotMatch(config, /infinite/, 'aucune animation en boucle dans la configuration')
+  assert.doesNotMatch(config, /flamme/, "l'or n'a aucune classe")
+  assert.match(config, /filet: jeton\('--filet-lumiere'\)/)
+  assert.match(config, /vif:\s+jeton\('--accent-vif'\)/)
+})

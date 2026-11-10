@@ -206,8 +206,8 @@ export default function ProgressDisplay({
             <span
               className={
                 variant === 'modal'
-                  ? 'text-4xl font-bold tabular-nums font-mono text-ds-text'
-                  : 'text-2xl font-bold tabular-nums font-mono'
+                  ? 'text-4xl font-semibold tabular-nums chiffres text-ds-text'
+                  : 'text-xl font-semibold tabular-nums chiffres'
               }
               style={variant === 'inline' ? { color: accentColor } : undefined}
             >
@@ -221,7 +221,7 @@ export default function ProgressDisplay({
             style={{
               border: `2px solid ${accentColor}`,
               opacity: 0.1,
-              animation: 'pulse-ring 2s ease-in-out infinite',
+              animation: 'pulse-ring 2s ease-survol infinite',
             }}
           />
         )}
@@ -230,7 +230,7 @@ export default function ProgressDisplay({
       {/* Title + detail */}
       <div className="text-center space-y-1.5">
         {title && (
-          <p className={variant === 'modal' ? 'text-lg font-bold text-ds-text' : 'text-sm font-bold text-ds-text'}>
+          <p className={variant === 'modal' ? 'text-lg font-semibold text-ds-text' : 'text-sm font-semibold text-ds-text'}>
             {title}
           </p>
         )}
@@ -315,7 +315,7 @@ export default function ProgressDisplay({
       {!showCheck && !isError && onArrierePlan && (
         <button
           onClick={onArrierePlan}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 mt-2"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-survol mt-2"
           style={{ color: 'var(--text-1)', background: 'color-mix(in srgb, var(--text-3) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--text-3) 25%, transparent)' }}
         >
           Continuer en arrière-plan
@@ -326,7 +326,7 @@ export default function ProgressDisplay({
       {!showCheck && !isError && onCancel && (
         <button
           onClick={onCancel}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-all duration-200 mt-2"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-survol mt-2"
           style={{
             color: 'var(--text-3)',
             background: 'color-mix(in srgb, var(--text-3) 8%, transparent)',

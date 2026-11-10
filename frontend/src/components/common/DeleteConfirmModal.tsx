@@ -58,7 +58,7 @@ export function DeleteConfirmContenu({
         <button
           onClick={onConfirmer}
           disabled={enCours}
-          className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2"
+          className="flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-[color,background-color,border-color,box-shadow,opacity,transform] flex items-center justify-center gap-2"
           style={{ background: 'color-mix(in srgb, var(--danger-fg) 14%, transparent)', color: 'var(--danger-fg)', boxShadow: 'inset 0 0 0 1px color-mix(in srgb, var(--danger-fg) 30%, transparent)' }}
         >
           {enCours ? (

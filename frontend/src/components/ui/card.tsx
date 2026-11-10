@@ -10,7 +10,7 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
       ref={ref}
       className={cn(
         "rounded-carte bg-surface-1 text-fg",
-        interactive && "cursor-pointer transition-[background-color,box-shadow] duration-base ease-lien hover:bg-surface-2 hover:shadow-card",
+        interactive && "cursor-pointer transition-[background-color,box-shadow] duration-survol ease-survol hover:bg-surface-2 hover:shadow-card",
         className
       )}
       {...props}

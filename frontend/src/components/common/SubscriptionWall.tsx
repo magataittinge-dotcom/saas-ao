@@ -98,7 +98,7 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis', 
           >
             <Sparkles size={22} className="text-ds-cyan" />
           </div>
-          <h2 className="text-lg font-bold text-ds-text">
+          <h2 className="text-lg font-semibold text-ds-text">
             Passez au niveau supérieur
           </h2>
           <p role="status" className="text-sm text-ds-text-2 mt-1.5 max-w-lg mx-auto">

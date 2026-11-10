@@ -28,7 +28,7 @@ export function FileCard({ document, onDelete, onEdit }: Props) {
 
   return (
     <div
-      className="flex items-center justify-between p-3 rounded-lg border transition-all duration-150 bg-surface-1 hover:bg-surface-1 hover:border-bord-2"
+      className="flex items-center justify-between p-3 rounded-lg border transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-survol bg-surface-1 hover:bg-surface-1 hover:border-bord-2"
       style={{ borderColor: 'var(--border-2)' }}
     >
       <div className="flex items-center gap-3 min-w-0">

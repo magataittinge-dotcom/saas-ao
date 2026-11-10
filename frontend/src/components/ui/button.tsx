@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils"
 // Focus : anneau global 2 px de l'accent (styles/tokens.css). Cible tactile : 44 px minimum
 // sur écran tactile. Un seul bouton « signature » (dégradé + halo) par écran.
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold transition-[background-color,border-color,color,box-shadow,transform] duration-base ease-lien active:scale-[.985] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [@media(pointer:coarse)]:min-h-11",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-semibold transition-[background-color,border-color,color,box-shadow,transform] duration-survol ease-survol active:scale-[.985] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [@media(pointer:coarse)]:min-h-11",
   {
     variants: {
       variant: {
@@ -29,7 +29,7 @@ const buttonVariants = cva(
       },
       size: {
         default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3 text-[13px]",
+        sm: "h-9 rounded-md px-3 text-sm",
         lg: "h-12 rounded-md px-8 text-base",
         icon: "h-10 w-10",
       },

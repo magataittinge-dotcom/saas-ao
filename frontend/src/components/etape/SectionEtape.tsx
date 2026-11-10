@@ -20,7 +20,7 @@ export function SectionEtape({ titre, colonnes = 1, description, action, childre
   return (
     <section aria-labelledby={id} data-section-etape="" className={cn('space-y-3', className)}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h3 id={id} className="text-xs font-semibold uppercase tracking-[0.06em] text-fg-3">{titre}</h3>
+        <h3 id={id} className="text-xs font-semibold text-fg-3">{titre}</h3>
         {action}
       </div>
       {description && <p className="text-sm text-fg-2">{description}</p>}

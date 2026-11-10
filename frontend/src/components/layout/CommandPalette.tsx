@@ -60,10 +60,10 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
                 <FileText strokeWidth={1.8} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold">{p.name}</span>
-                  {p.maitre_ouvrage && <span className="block truncate text-[13px] text-fg-3 max-sm:hidden">{acheteurCourt(p.maitre_ouvrage)}</span>}
-                  <span className="block truncate text-[13px] font-semibold text-accent-text sm:hidden">{verbeEtape(p)}</span>
+                  {p.maitre_ouvrage && <span className="block truncate text-sm text-fg-3 max-sm:hidden">{acheteurCourt(p.maitre_ouvrage)}</span>}
+                  <span className="block truncate text-sm font-semibold text-accent-text sm:hidden">{verbeEtape(p)}</span>
                 </span>
-                <span className="ml-3 flex max-w-[45%] shrink-0 items-center gap-1.5 text-[13px] font-semibold text-accent-text max-sm:hidden">
+                <span className="ml-3 flex max-w-[45%] shrink-0 items-center gap-1.5 text-sm font-semibold text-accent-text max-sm:hidden">
                   <span className="truncate">{verbeEtape(p)}</span><ArrowRight strokeWidth={1.8} className="!text-accent-text" />
                 </span>
               </CommandItem>
@@ -76,7 +76,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
               <CommandItem key={p.id} value={`${p.name} ${p.maitre_ouvrage ?? ''} ${p.id}`} onSelect={() => aller(`/projects/${p.id}`)}>
                 <FileText strokeWidth={1.8} />
                 <span className="min-w-0 flex-1 truncate">{p.name}</span>
-                {p.maitre_ouvrage && <span className="ml-3 max-w-[40%] shrink-0 truncate text-[13px] text-fg-3">{acheteurCourt(p.maitre_ouvrage)}</span>}
+                {p.maitre_ouvrage && <span className="ml-3 max-w-[40%] shrink-0 truncate text-sm text-fg-3">{acheteurCourt(p.maitre_ouvrage)}</span>}
               </CommandItem>
             ))}
           </CommandGroup>

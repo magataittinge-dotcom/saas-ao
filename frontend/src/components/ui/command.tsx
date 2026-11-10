@@ -52,7 +52,7 @@ const CommandInput = React.forwardRef<
     <CommandPrimitive.Input
       ref={ref}
       className={cn(
-        "flex h-10 w-full bg-transparent py-3 text-[15px] text-fg outline-none placeholder:text-fg-3 disabled:cursor-not-allowed disabled:opacity-50",
+        "flex h-10 w-full bg-transparent py-3 text-base text-fg outline-none placeholder:text-fg-3 disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}
       {...props}
@@ -81,7 +81,7 @@ const CommandEmpty = React.forwardRef<
 >((props, ref) => (
   <CommandPrimitive.Empty
     ref={ref}
-    className="px-4 py-6 text-center text-[15px] text-fg-2"
+    className="px-4 py-6 text-center text-base text-fg-2"
     {...props}
   />
 ))
@@ -95,7 +95,7 @@ const CommandGroup = React.forwardRef<
   <CommandPrimitive.Group
     ref={ref}
     className={cn(
-      "overflow-hidden py-1.5 text-fg [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:text-[12.5px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:text-fg-3",
+      "overflow-hidden py-1.5 text-fg [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:pb-1.5 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:text-fg-3",
       className
     )}
     {...props}
@@ -123,7 +123,7 @@ const CommandItem = React.forwardRef<
   <CommandPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex min-h-11 cursor-default select-none items-center gap-3 rounded-lg px-3 py-2 text-[14.5px] text-fg outline-none data-[disabled=true]:pointer-events-none data-[selected=true]:bg-surface-1 data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-fg-3 data-[selected=true]:[&_svg]:text-accent-text",
+      "relative flex min-h-11 cursor-default select-none items-center gap-3 rounded-lg px-3 py-2 text-base text-fg outline-none data-[disabled=true]:pointer-events-none data-[selected=true]:bg-surface-1 data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-fg-3 data-[selected=true]:[&_svg]:text-accent-text",
       className
     )}
     {...props}

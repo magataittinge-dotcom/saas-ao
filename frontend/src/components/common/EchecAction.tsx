@@ -19,7 +19,7 @@ export default function EchecAction({
         {onReessayer && (
           <button
             onClick={onReessayer}
-            className="flex shrink-0 items-center gap-1.5 rounded-md border border-ligne-forte bg-surface px-2.5 py-1 text-[13px] font-semibold text-encre transition-colors hover:bg-surface-2"
+            className="flex shrink-0 items-center gap-1.5 rounded-md border border-ligne-forte bg-surface px-2.5 py-1 text-sm font-semibold text-encre transition-colors hover:bg-surface-2"
           >
             <RotateCcw size={12} /> Réessayer
           </button>

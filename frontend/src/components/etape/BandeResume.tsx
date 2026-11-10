@@ -37,7 +37,7 @@ function Jauge({ libelle, rempli, total }: { libelle: string } & NonNullable<Car
       aria-valuenow={Math.min(rempli, total)}
       className="h-1 overflow-hidden rounded-pilule bg-surface-2"
     >
-      <div className="h-full rounded-pilule bg-accent-ui transition-[width] duration-morph ease-lien motion-reduce:transition-none" style={{ width: `${pct}%` }} />
+      <div className="h-full rounded-pilule bg-accent-ui transition-[width] duration-pop ease-survol motion-reduce:transition-none" style={{ width: `${pct}%` }} />
     </div>
   )
 }
@@ -75,7 +75,7 @@ function DesignationCarte({ texte }: { texte: string }) {
       {contenu}
       <span aria-hidden="true" className="mt-0.5 inline-flex items-center gap-1 font-medium text-accent-text">
         {ouvert ? 'Réduire' : 'Voir tout'}
-        <ChevronDown size={14} className={cn('transition-transform duration-base ease-lien motion-reduce:transition-none', ouvert && 'rotate-180')} />
+        <ChevronDown size={14} className={cn('transition-transform duration-survol ease-survol motion-reduce:transition-none', ouvert && 'rotate-180')} />
       </span>
     </button>
   )

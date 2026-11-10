@@ -37,12 +37,12 @@ function CounterRow({ label, counter }: { label: string; counter: QuotaCounter }
   const pct = Math.min(100, (counter.used / counter.limit) * 100)
   return (
     <div>
-      <div className="flex items-baseline justify-between text-[13px] text-encre-2">
+      <div className="flex items-baseline justify-between text-sm text-encre-2">
         <span>{label}</span>
         <span className={cn('tabular-nums', t.texte)}>{counter.used} / {counter.limit}</span>
       </div>
       <div className="mt-1 h-1 overflow-hidden rounded-full bg-surface-2">
-        <div className={cn('h-full rounded-full transition-[width] duration-300', t.barre)} style={{ width: `${pct}%` }} />
+        <div className={cn('h-full rounded-full transition-[width] duration-pop', t.barre)} style={{ width: `${pct}%` }} />
       </div>
     </div>
   )
@@ -83,13 +83,13 @@ export function QuotaRond({ masquerIllimite = false }: { masquerIllimite?: boole
     : `Analyses ${data.analyses.used} / ${data.analyses.limit} · Mémoires ${data.memoires.used} / ${data.memoires.limit}`
   return (
     <Link to="/settings/billing" aria-label={`Abonnement et quota. ${detail}`} title={detail}
-      className="relative grid size-11 place-items-center rounded-pilule text-fg-2 transition-colors duration-base hover:bg-surface-2 hover:text-fg">
+      className="relative grid size-11 place-items-center rounded-pilule text-fg-2 transition-colors duration-survol hover:bg-surface-2 hover:text-fg">
       <svg viewBox="0 0 36 36" className="size-8 -rotate-90" aria-hidden>
         <circle cx="18" cy="18" r={R} fill="none" strokeWidth="3" className="stroke-bord-2" />
         {part !== null && (
           <circle cx="18" cy="18" r={R} fill="none" strokeWidth="3" strokeLinecap="round"
             strokeDasharray={C} strokeDashoffset={C * (1 - part)}
-            className={cn('transition-[stroke-dashoffset] duration-morph ease-expo', ton === 'rouge' ? 'stroke-rouge-mark' : ton === 'ambre' ? 'stroke-ambre-mark' : 'stroke-vert-mark')} />
+            className={cn('transition-[stroke-dashoffset] duration-pop ease-survol', ton === 'rouge' ? 'stroke-rouge-mark' : ton === 'ambre' ? 'stroke-ambre-mark' : 'stroke-vert-mark')} />
         )}
       </svg>
       <span className="absolute text-xs font-semibold tabular-nums text-fg-2">{part === null ? '∞' : `${Math.round(part * 100)}%`}</span>

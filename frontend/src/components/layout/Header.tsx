@@ -50,7 +50,7 @@ export default function Header({ onSearch }: Props) {
 
   return (
     <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between gap-3 px-3 sm:px-6 max-[768px]:border-b max-[768px]:border-bord max-[768px]:bg-surface-0 min-[769px]:h-[72px] min-[769px]:bg-transparent">
-      <nav aria-label="Fil d'Ariane" className="flex min-w-0 items-center gap-1.5 text-[15px]">
+      <nav aria-label="Fil d'Ariane" className="flex min-w-0 items-center gap-1.5 text-base">
         {parent && (
           <>
             <Link to={parentTo} className="hidden truncate text-fg-3 transition-colors hover:text-fg sm:inline">{parent}</Link>
@@ -64,7 +64,7 @@ export default function Header({ onSearch }: Props) {
         <button
           type="button"
           onClick={onSearch}
-          className="flex h-11 items-center gap-2.5 rounded-pilule border border-bord-champ bg-surface-0 pl-4 pr-2 text-sm text-fg-3 transition-[border-color,color] duration-base ease-lien hover:border-accent-ui hover:text-fg-2 max-[768px]:w-11 max-[768px]:justify-center max-[768px]:border-0 max-[768px]:bg-transparent max-[768px]:px-0 min-[769px]:w-72"
+          className="flex h-11 items-center gap-2.5 rounded-pilule border border-bord-champ bg-surface-0 pl-4 pr-2 text-sm text-fg-3 transition-[border-color,color] duration-survol ease-survol hover:border-accent-ui hover:text-fg-2 max-[768px]:w-11 max-[768px]:justify-center max-[768px]:border-0 max-[768px]:bg-transparent max-[768px]:px-0 min-[769px]:w-72"
           aria-label="Rechercher un appel d'offres ou une page"
         >
           <Search size={18} strokeWidth={1.5} absoluteStrokeWidth className="shrink-0" aria-hidden />
@@ -78,7 +78,7 @@ export default function Header({ onSearch }: Props) {
         <button
           type="button"
           onClick={() => navigate('/projects/new')}
-          className="ml-1 inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-accent-fill text-sm font-semibold text-accent-on shadow-cta transition-[transform,background-image] duration-base ease-survol hover:-translate-y-px hover:[background-image:var(--accent-fill-hover)] active:translate-y-0 max-sm:w-11 sm:px-5"
+          className="ml-1 inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-accent-fill text-sm font-semibold text-accent-on shadow-cta transition-[transform,background-image] duration-survol ease-survol hover:-translate-y-px hover:[background-image:var(--accent-fill-hover)] active:translate-y-0 max-sm:w-11 sm:px-5"
         >
           <Plus size={20} strokeWidth={1.5} absoluteStrokeWidth aria-hidden />
           <span className="max-sm:sr-only">Nouvel appel d&apos;offres</span>

@@ -24,7 +24,7 @@
   font-weight: 600;
   font-size: clamp(40px, 24px + 2vw, 48px);
   line-height: 1;
-  letter-spacing: -0.02em;
+  letter-spacing: var(--approche-chiffre);   /* −0,03 em (P6) */
   font-variant-numeric: tabular-nums lining-nums;
   color: var(--text-1);
 }

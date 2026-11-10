@@ -63,6 +63,10 @@
   --font-text: 'Manrope Variable', ui-sans-serif, system-ui, 'Segoe UI', Roboto, Arial, sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, Menlo, monospace;
 
+  /* Échelle de l'interface (P5) : sept tailles et pas une autre, plus le h1 serif ; le gros chiffre reste à part */
+  --taille-11: 11px;  --taille-12: 12.5px;  --taille-13: 13.5px;  --taille-15: 15px;  --taille-17: 17px;  --taille-22: 22px;
+  --taille-saisie-tel: 16px;   /* champs au téléphone : le plancher qui évite le zoom d'iOS, seule exception */
+  --approche-titre: -0.01em;   --approche-chiffre: -0.03em;   /* P6 : 0 jusqu'à 15 px, jamais d'approche positive */
   /* Échelle typographique (bureau) : taille, interligne, approche */
   --text-h1: 60px;  --text-h1-line: 72px;    --text-h1-track: -1.4px;
   --text-h2: 48px;  --text-h2-line: 57.6px;  --text-h2-track: -1px;
@@ -79,23 +83,23 @@
   --space-4: 4px;   --space-8: 8px;   --space-10: 10px;  --space-12: 12px;  --space-16: 16px;
   --space-20: 20px; --space-30: 30px; --space-40: 40px;  --space-50: 50px;  --space-100: 100px; --space-200: 200px;
   --container: 1200px;  --container-large: 1260px;  --container-read: 760px;
-  --gutter: 16px;       /* 120 px sur bureau, voir le media query ci-dessous */
+  --gutter: 16px;       /* 16 au téléphone, 24 à partir de 769 px, 32 à partir de 1 200 px (P8) : la gouttière appartient à la coquille */
   --bp-tab: 810px;      --bp-desk: 1200px;
 
   /* Rayons (DESIGN.md § Shapes) : 8 petits éléments, 14 boutons et champs, 22 cartes et blocs */
   --radius-xs: 4px;  --radius-sm: 8px;  --radius-md: 14px;  --radius-lg: 22px;
-  --radius-xl: 22px; --radius-2xl: 28px; --radius-pill: 9999px;  --radius-nav: 14px;
-  --radius: 14px;    /* shadcn : lg = 14, md = 12, sm = 10 */
+  --radius-xl: var(--radius-lg); --radius-2xl: var(--radius-lg); --radius-pill: 9999px;  --radius-nav: var(--radius-md);
+  --radius: var(--radius-md);    /* quatre rayons (P12) : 8 petits éléments, 14 contrôles, 22 surfaces, pilule ; 4 px sous 24 px de haut */
 
   /* Mouvement : survols 180 ms sans dépassement ; aucun rebond, rien n'entre en scène au défilement */
-  --dur-survol: 180ms;
-  --ease-survol: cubic-bezier(.2, .8, .2, 1);
-  --dur-instant: 80ms;   --dur-fast: 100ms;   --dur-base: 150ms;     --dur-pop: 280ms;
-  --dur-link: 400ms;     --dur-morph: 450ms;  --dur-reveal-sm: 600ms; --dur-reveal-lg: 1000ms;
-  --ease-reveal: cubic-bezier(.35, .8, .15, 1);
-  --ease-pop: cubic-bezier(.2, .8, .2, 1);      /* ancien rebond : désormais sans dépassement */
-  --ease-expo: cubic-bezier(.16, 1, .3, 1);
-  --ease-link: cubic-bezier(.44, 0, .56, 1);
+  --dur-fast: 100ms;     /* couleur au survol, appui, fondu d'un écran */
+  --dur-survol: 180ms;   /* contrôles, menus */
+  --dur-pop: 280ms;      /* panneaux, fenêtres, feuilles */
+  --ease-survol: cubic-bezier(.2, .8, .2, 1);   /* la seule courbe : sortie douce, sans dépassement */
+  /* anciens noms : des alias des trois durées et de la courbe, à ne plus employer */
+  --dur-instant: var(--dur-fast);  --dur-base: var(--dur-survol);  --dur-link: var(--dur-survol);
+  --dur-morph: var(--dur-pop);     --dur-reveal-sm: var(--dur-pop); --dur-reveal-lg: var(--dur-pop);
+  --ease-reveal: var(--ease-survol);  --ease-pop: var(--ease-survol);  --ease-expo: var(--ease-survol);  --ease-link: var(--ease-survol);
 
   /* Ombres teintées par l'accent : décalées et douces, le bouton principal seulement (en nuit, une lueur : voir le bloc nuit) */
   --shadow-cta: inset 0 1px 0 rgba(255, 255, 255, .28), 0 8px 18px -8px rgba(var(--accent-rvb), .55);
@@ -105,7 +109,8 @@
   --aurore-duree-a: 28s;  --aurore-duree-b: 36s;  --aurore-duree-c: 44s;  --aurore-duree-d: 52s;
   --shadow-btn: inset 0 1px 0 rgba(255, 255, 255, .22);   /* reflet interne des boutons pleins */
 }
-@media (min-width: 1200px) { :root { --gutter: 120px; } }
+@media (min-width: 769px) { :root { --gutter: 24px; } }
+@media (min-width: 1200px) { :root { --gutter: 32px; } }
 @media (max-width: 809px) {
   :root {
     --text-h1: 44px;  --text-h1-line: 52.8px;
@@ -165,6 +170,8 @@
   --warning-bg: #feedde;  --warning-border: #f3c7a2;  --warning-fg: #834b0c;
   --danger-bg: #feebe8;   --danger-border: #fcc0b8;   --danger-fg: #830d10;
   --danger-solid: #cc3430;
+  /* ↑ Seconde palette (--info / --success / --warning / --danger) : calculée par le script comme descendante des six sens
+     (bg = soft, fg = ink). Elle ne s'emploie plus : les six sens ci-dessous (garde-fou « seconde-palette »). */
 
   /* États (COULEURS.md, 3/11) : une couleur = un sens, toujours avec un mot et une icône. ink = texte, soft = fond de pastille ou
      de carte, mark = barre, point, bordure. Ajoutés À CÔTÉ du bleu de la marque (--accent-*), qu'ils ne remplacent pas. */
@@ -266,7 +273,7 @@
 
   --ombre-rvb: 0, 3, 6;
   --filet-lumiere: rgba(211, 221, 230, .1);   /* la couleur des lumières du visage, à 10 % */
-  --shadow-card: 0 1px 0 rgba(var(--ombre-rvb), .35);
+  --shadow-card: inset 0 1px 0 var(--filet-lumiere), 0 1px 0 rgba(var(--ombre-rvb), .35);   /* P13 : le filet de lumière en haut de chaque surface */
   --shadow-pop: 0 2px 6px rgba(var(--ombre-rvb), .5), 0 22px 48px -18px rgba(var(--ombre-rvb), .75), inset 0 1px 0 var(--filet-lumiere);
   --shadow-toast: 0 2px 6px rgba(var(--ombre-rvb), .45), 0 14px 32px -14px rgba(var(--ombre-rvb), .65), inset 0 1px 0 var(--filet-lumiere);
   --edge-light: inset 0 1px 0 var(--filet-lumiere);

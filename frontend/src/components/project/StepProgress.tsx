@@ -67,7 +67,7 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick, lo
               >
                 {/* Rond : seul l'actif porte l'accent plein */}
                 <div
-                  className="w-8 h-8 max-sm:w-11 max-sm:h-11 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300"
+                  className="w-8 h-8 max-sm:w-11 max-sm:h-11 rounded-full flex items-center justify-center text-sm font-semibold transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-pop"
                   style={
                     isActive
                       ? { background: 'var(--accent-fill-solid)', color: 'var(--on-accent)', boxShadow: 'var(--shadow-btn)' }
@@ -100,7 +100,7 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick, lo
               {/* Connecteur — fin, aligné sur le centre des ronds */}
               {index < STEPS.length - 1 && (
                 <div
-                  className="flex-1 min-w-1 h-px mx-2 mt-4 max-sm:mt-[22px] max-sm:mx-0 max-sm:min-w-0 rounded-full transition-all duration-500"
+                  className="flex-1 min-w-1 h-px mx-2 mt-4 max-sm:mt-[22px] max-sm:mx-0 max-sm:min-w-0 rounded-full transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-pop"
                   style={
                     isCompleted
                       ? { background: 'var(--vert-mark)' }

@@ -25,13 +25,13 @@ function Rail({ entree, pastille }: { entree: Entree; pastille?: ReactNode }) {
       to={entree.to}
       aria-current={actif ? 'page' : undefined}
       className={cn(
-        'relative flex min-h-14 w-full flex-col items-center justify-center gap-0.5 rounded-lg px-0.5 py-1.5 transition-[background-color,color] duration-base ease-lien',
+        'relative flex min-h-14 w-full flex-col items-center justify-center gap-0.5 rounded-lg px-0.5 py-1.5 transition-[background-color,color] duration-survol ease-survol',
         actif ? 'bg-bleu-soft text-bleu-ink' : 'text-fg-2 hover:bg-surface-1 hover:text-fg',
       )}
     >
       {actif && <span aria-hidden className="absolute -left-1 top-3 bottom-3 w-[3px] rounded-r-pilule bg-accent-ui" />}
       <Icone size={20} strokeWidth={1.5} absoluteStrokeWidth aria-hidden />
-      <span className="text-[11px] font-medium leading-[1.15] text-center">{entree.label}</span>
+      <span className="text-micro font-medium leading-[1.15] text-center">{entree.label}</span>
       {pastille && <span className="absolute right-2 top-1">{pastille}</span>}
     </Link>
   )
@@ -60,9 +60,9 @@ export default function Sidebar() {
       className="fixed bottom-4 left-4 top-4 z-40 flex w-[76px] flex-col items-center gap-1 overflow-y-auto overflow-x-hidden rounded-carte border border-bord bg-surface-0 px-1 py-3 shadow-flottant max-[768px]:hidden"
     >
       {/* logo provisoire : l'arc d'aurore (Logo.tsx), à l'encre du thème, et le nom dessous en 11 px */}
-      <Link to="/dashboard" aria-label="Synorix — accueil" className="mb-3 flex shrink-0 flex-col items-center gap-0.5 rounded-lg px-1.5 pb-1 pt-0.5 text-fg transition-colors duration-base hover:bg-surface-1">
+      <Link to="/dashboard" aria-label="Synorix — accueil" className="mb-3 flex shrink-0 flex-col items-center gap-0.5 rounded-lg px-1.5 pb-1 pt-0.5 text-fg transition-colors duration-survol hover:bg-surface-1">
         <Logo className="size-8" />
-        <span aria-hidden className="text-[11px] font-semibold leading-none tracking-[-0.01em]">Synorix</span>
+        <span aria-hidden className="text-micro font-semibold leading-none tracking-[-0.01em]">Synorix</span>
       </Link>
 
       <EntreesBarre entrees={BARRE_HAUT} />

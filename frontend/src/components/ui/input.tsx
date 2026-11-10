@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 // Champ : bord à 3:1 (--border-field), survol plus marqué, focus = bord et anneau de l'accent,
 // erreur = aria-invalid, désactivé = fond de carte et texte grisé.
 const champ =
-  "w-full rounded-md border border-input bg-surface-0 px-3 text-base text-fg transition-[border-color,background-color] duration-base ease-lien placeholder:text-fg-3 hover:border-fg-3 focus-visible:border-accent-ring focus-visible:outline-accent-ring aria-[invalid=true]:border-danger aria-[invalid=true]:outline-danger disabled:cursor-not-allowed disabled:border-bord-2 disabled:bg-surface-1 disabled:text-fg-disabled md:text-sm"
+  "w-full rounded-md border border-input bg-surface-0 px-3 text-base text-fg transition-[border-color,background-color] duration-survol ease-survol placeholder:text-fg-3 hover:border-fg-3 focus-visible:border-accent-ring focus-visible:outline-accent-ring aria-[invalid=true]:border-danger aria-[invalid=true]:outline-danger disabled:cursor-not-allowed disabled:border-bord-2 disabled:bg-surface-1 disabled:text-fg-disabled md:text-sm"
 
 // Exportée pour les listes natives (<select>) : même bord, mêmes états que les champs.
 export const classeChamp = champ

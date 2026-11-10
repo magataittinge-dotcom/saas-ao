@@ -60,7 +60,7 @@ function ToastItem({ toast, onRemove }: { toast: ToastData; onRemove: (id: strin
 
   return (
     <div
-      className="relative overflow-hidden rounded-xl shadow-lg backdrop-blur-xl transition-all duration-300"
+      className="relative overflow-hidden rounded-xl shadow-lg backdrop-blur-xl transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-pop"
       style={{
         background: cfg.bg,
         border: `1px solid ${cfg.border}`,

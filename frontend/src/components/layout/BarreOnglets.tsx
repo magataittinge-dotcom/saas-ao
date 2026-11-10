@@ -18,7 +18,7 @@ import BasculeTheme from './BasculeTheme'
 // (jamais posés par-dessus le contenu : les barres d'action collées en bas restent visibles). Cibles de 56 px de haut. « Compte » ouvre un tiroir : Paramètres, le thème, le quota, la déconnexion.
 // Place prévue pour « Cerveau » (bloc 8) : voir ONGLET_CERVEAU dans navigation.ts.
 
-const ONGLET = 'relative flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-center text-xs font-medium leading-tight transition-colors duration-base'
+const ONGLET = 'relative flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 px-0.5 text-center text-xs font-medium leading-tight transition-colors duration-survol'
 
 export default function BarreOnglets() {
   const { pathname } = useLocation()
@@ -69,7 +69,7 @@ export default function BarreOnglets() {
             {ENTREES_TIROIR.map((e) => (
               <li key={e.to}>
                 <Link to={e.to} onClick={() => setTiroir(false)}
-                  className={cn('flex min-h-12 items-center gap-3 rounded-md px-3 text-[15px] font-medium transition-colors hover:bg-surface-1', estActif(pathname, e.to) ? 'bg-accent-tint text-accent-text' : 'text-fg')}>
+                  className={cn('flex min-h-12 items-center gap-3 rounded-md px-3 text-base font-medium transition-colors hover:bg-surface-1', estActif(pathname, e.to) ? 'bg-accent-tint text-accent-text' : 'text-fg')}>
                   <e.icon size={20} strokeWidth={1.5} absoluteStrokeWidth aria-hidden />
                   {e.label}
                 </Link>

@@ -63,7 +63,7 @@ test('trois cartes : trois colonnes ; quatre cartes : 2 puis 4 colonnes ; une co
 test('les sections ont un sous-titre en capitales (h3) et choisissent leurs colonnes', () => {
   const h = page()
   assert.equal((h.match(/data-section-etape/g) ?? []).length, 2)
-  assert.match(h, /<h3[^>]*uppercase[^>]*>Ce que le règlement note<\/h3>/)
+  assert.match(h, /<h3(?![^>]*uppercase)[^>]*>Ce que le règlement note<\/h3>/)
   assert.match(h, /md:grid-cols-2/)
   const une = renderToStaticMarkup(<SectionEtape titre="Seule"><p>x</p></SectionEtape>)
   assert.doesNotMatch(une, /md:grid-cols-2/)

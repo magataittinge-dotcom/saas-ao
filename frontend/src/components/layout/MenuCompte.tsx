@@ -9,7 +9,7 @@ import { useThemeEcran } from '@/lib/themeEcran'
 import { prenomAffichable } from '@/lib/prenom'
 import { initialesDuPrenom, raisonSociale } from '@/lib/raisonSociale'
 
-const ELEMENT = 'flex min-h-11 w-full cursor-pointer select-none items-center gap-2.5 rounded-md px-3 text-sm font-medium text-fg outline-none transition-colors duration-base data-[highlighted]:bg-surface-2'
+const ELEMENT = 'flex min-h-11 w-full cursor-pointer select-none items-center gap-2.5 rounded-md px-3 text-sm font-medium text-fg outline-none transition-colors duration-survol data-[highlighted]:bg-surface-2'
 
 // Menu du compte (la photo, en pied de la barre d'icônes) : Paramètres, Abonnement et Déconnexion.
 // La déconnexion ne figure plus dans la barre elle-même. Sans photo, ou si elle ne charge pas, les initiales du prénom.
@@ -29,7 +29,7 @@ export default function MenuCompte() {
   return (
     <Menu.Root>
       <Menu.Trigger aria-label={prenom ? `Menu du compte — ${prenom}` : 'Menu du compte'}
-        className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-pilule border border-bord-champ bg-surface-1 text-sm font-semibold text-fg-2 transition-colors duration-base hover:border-accent-ui data-[state=open]:border-accent-ui">
+        className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-pilule border border-bord-champ bg-surface-1 text-sm font-semibold text-fg-2 transition-colors duration-survol hover:border-accent-ui data-[state=open]:border-accent-ui">
         {photo
           ? <img src={photo} alt="" className="h-full w-full object-cover" onError={() => setPhotoEnEchec(photo)} />
           : initiales}
@@ -39,7 +39,7 @@ export default function MenuCompte() {
           className="z-50 w-64 rounded-carte border border-bord bg-surface-pop p-1.5 text-fg shadow-flottant">
           <div className="px-3 py-2">
             {prenom && <p className="truncate text-sm font-semibold">{prenom}</p>}
-            <p className={prenom ? 'truncate text-[13px] text-fg-2' : 'truncate text-sm font-semibold'}>{entreprise}</p>
+            <p className={prenom ? 'truncate text-sm text-fg-2' : 'truncate text-sm font-semibold'}>{entreprise}</p>
             {user?.email && <p className="truncate text-xs text-fg-3">{user.email}</p>}
           </div>
           <Menu.Separator className="my-1 h-px bg-bord" />

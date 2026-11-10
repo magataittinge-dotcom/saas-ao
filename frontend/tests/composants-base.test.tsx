@@ -69,7 +69,7 @@ test('les classes de jetons des composants existent vraiment dans le CSS génér
   const css = execFileSync(process.execPath, ['-e', script], { cwd: RACINE, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 })
   const attendues = ['bg-accent-fill', 'text-accent-on', 'bg-surface-0', 'bg-surface-1', 'bg-surface-2', 'text-fg', 'text-fg-2', 'text-fg-3', 'border-bord', 'border-bord-2',
     'text-info', 'bg-info-bg', 'border-info-border', 'text-success', 'text-warning', 'text-danger', 'bg-danger-solid', 'text-accent-text', 'bg-accent-tint', 'rounded-carte', 'rounded-pilule',
-    'shadow-cta', 'shadow-pop', 'shadow-toast', 'duration-base', 'duration-pop', 'ease-lien', 'ease-pop', 'bg-popover', 'bg-voile', 'border-input', 'font-display']
+    'shadow-cta', 'shadow-pop', 'shadow-toast', 'duration-base', 'duration-pop', 'ease-lien', 'ease-survol', 'duration-fast', 'duration-survol', 'text-micro', 'bg-popover', 'bg-voile', 'border-input', 'font-display']
   const absentes = attendues.filter((c) => !css.includes(`.${c.replace(/[:/[\]]/g, '\\$&')}`))
   assert.deepEqual(absentes, [])
   assert.ok(!/NaN/.test(css), 'valeur d\'opacité invalide')

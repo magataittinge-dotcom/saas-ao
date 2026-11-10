@@ -21,7 +21,7 @@ function Cote({ children }: { children: ReactNode }) {
     <div className="grid gap-4 min-[1100px]:grid-cols-2">
       {(['light', 'dark'] as const).map((theme) => (
         <div key={theme} data-theme={theme} className="min-w-0 rounded-carte border border-bord-2 bg-surface-0 p-5 text-fg-2">
-          <p className="mb-4 text-xs font-medium uppercase tracking-wider text-fg-3">{theme === 'light' ? 'Clair' : 'Nuit'}</p>
+          <p className="mb-4 text-xs font-medium text-fg-3">{theme === 'light' ? 'Clair' : 'Nuit'}</p>
           {children}
         </div>
       ))}
@@ -33,7 +33,7 @@ function Section({ id, titre, note, children }: { id: string; titre: string; not
   return (
     <section id={id} aria-labelledby={`${id}-t`} className="scroll-mt-20 space-y-4">
       <div>
-        <h2 id={`${id}-t`} className="text-2xl text-fg">{titre}</h2>
+        <h2 id={`${id}-t`} className="text-xl text-fg">{titre}</h2>
         {note && <p className="mt-1 max-w-3xl text-sm text-fg-2">{note}</p>}
       </div>
       {children}
@@ -126,10 +126,10 @@ const ECHELLE: [string, string, string][] = [
 function Mouvement() {
   const [lecture, setLecture] = useState(0)
   const courbes: [string, string, string][] = [
-    ['reveal', 'ease-reveal', 'Apparition : ressort sans dépassement, 600 à 1000 ms'],
+    ['reveal', 'ease-survol', 'Apparition : ressort sans dépassement, 600 à 1000 ms'],
     ['survol', 'ease-survol', 'Survols et changements d’état : 180 ms, sans dépassement'],
-    ['pop', 'ease-pop', 'Infobulles et menus : 280 ms, sans dépassement (plus de rebond)'],
-    ['expo', 'ease-expo', 'Pression et rayon : 100 à 450 ms'],
+    ['pop', 'ease-survol', 'Infobulles et menus : 280 ms, sans dépassement (plus de rebond)'],
+    ['expo', 'ease-survol', 'Pression et rayon : 100 à 450 ms'],
     ['lien', 'ease-link', 'Liens : 400 ms'],
   ]
   return (
@@ -192,7 +192,7 @@ export default function Design() {
                 <p className={cn('truncate text-fg', nom === 'h1' ? 'font-display font-medium' : 'font-sans', classe)}>{texte}</p>
               </div>
             ))}
-            <p className="lecteur-memoire max-w-[72ch] text-[17px] leading-[1.65] text-fg">
+            <p className="lecteur-memoire max-w-[72ch] text-lg leading-[1.65] text-fg">
               Texte du mémoire, Newsreader 17 / 1,65. Le groupe scolaire reste en activité : élèves, enseignants, circulation de la rue du Moutier fermée sauf livraisons et urgences. Notre organisation protège les usagers avant de chercher la cadence : laine de roche de 180 mm, R ≥ 5,10 m².K/W.
             </p>
             <div className="flex flex-wrap items-end gap-8">
