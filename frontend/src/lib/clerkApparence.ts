@@ -141,5 +141,11 @@ export const localisationFr: LocalisationClerk = {
     form_code_incorrect: 'Code incorrect.',
     form_param_nil: 'Ce champ est obligatoire.',
     form_identifier_exists__email_address: 'Cette adresse e-mail est déjà utilisée.',
+    form_param_format_invalid: 'Vérifiez ce champ : la saisie n’est pas valide.',
+    form_param_format_invalid__email_address: 'Saisissez une adresse e-mail valide.',
+    form_password_or_identifier_incorrect: 'Adresse e-mail ou mot de passe incorrect.',
+    form_password_length_too_short: 'Ce mot de passe est trop court.',
+    form_password_not_strong_enough: 'Ce mot de passe est trop simple.',
+    form_password_pwned: 'Ce mot de passe figure dans une fuite de données connue. Choisissez-en un autre.',
   },
 }

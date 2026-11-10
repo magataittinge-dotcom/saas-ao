@@ -62,6 +62,11 @@ test('Clerk en français : l\'écran de connexion et d\'inscription ne montre pl
   assert.equal(l.formFieldLabel__emailAddress, 'Adresse e-mail')
   assert.equal(l.formFieldLabel__password, 'Mot de passe')
   assert.equal(l.formFieldAction__forgotPassword, 'Mot de passe oublié ?')
+  // une saisie refusée ne répond plus en anglais (« Identifier is invalid. », vu sur la capture connexion-erreur)
+  for (const code of ['form_param_format_invalid', 'form_param_format_invalid__email_address', 'form_password_or_identifier_incorrect', 'form_password_length_too_short']) {
+    assert.ok(typeof l.unstable__errors[code] === 'string' && /[éèàç’]| /.test(l.unstable__errors[code]), code)
+    assert.doesNotMatch(l.unstable__errors[code], /\binvalid\b|\bis\b|!/i, code)
+  }
   assert.equal(l.formButtonPrimary, 'Continuer')
   assert.equal(l.dividerText, 'ou')
   assert.equal(l.userButton.action__signOut, 'Se déconnecter')
