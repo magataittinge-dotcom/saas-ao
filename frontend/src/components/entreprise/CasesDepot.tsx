@@ -82,8 +82,8 @@ export function CaseDepotVue({ vue, onFichiers, onVerifier }: {
     >
       <div className="grid min-w-0 flex-1 basis-72 gap-1">
         <h4 className="text-sm font-semibold text-fg">{c.nom}</h4>
-        <p className="max-w-prose text-sm text-fg-2">{c.contenu}</p>
-        <p className="max-w-prose text-xs text-fg-3">{c.usage}</p>
+        <p className="max-w-lg text-sm text-fg-2">{c.contenu}</p>
+        <p className="max-w-md text-xs text-fg-3">{c.usage}</p>
         <Etat vue={vue} onVerifier={onVerifier} />
       </div>
       <div className="grid shrink-0 justify-items-start gap-1.5">

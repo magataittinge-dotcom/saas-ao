@@ -73,7 +73,7 @@ export default function FichePreview({ donnees, bordereau, palette, logoSrc, edi
       </div>
       <footer className="mx-5 border-t border-[color:var(--f-filet)] py-2 text-center text-[12px] text-[color:var(--f-discret)] sm:mx-7">
         <p>{donnees.pied || societe.nom}</p>
-        <p className="mt-0.5 opacity-80">{pageEstimee(donnees)}</p>
+        <p className="mt-0.5">{pageEstimee(donnees)}</p>
       </footer>
     </article>
   )
