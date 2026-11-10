@@ -292,12 +292,13 @@ def export_docx(
     # bouton de l'étape Export produire un docx sans page de garde ni images.
     from routers.memoire import build_project_memoire_docx
     from services.pdf_export import docx_numerote
-    docx_bytes = docx_numerote(build_project_memoire_docx(project, memoire, org, db))   # sommaire numéroté
+    docx_bytes = build_project_memoire_docx(project, memoire, org, db)
 
     filename = f"Memoire_Technique_{project.name.replace(' ', '_')}.docx"
     ascii_name = filename.encode("ascii", errors="replace").decode("ascii")
     utf8_name = quote(filename, safe="")
-    rendre_connexion(db)  # avant l'envoi (FastAPI ≥ 0.118, cf. database.py)
+    rendre_connexion(db)  # avant l'envoi (FastAPI ≥ 0.118, cf. database.py) et avant LibreOffice
+    docx_bytes = docx_numerote(docx_bytes)   # sommaire numéroté ; LibreOffice occupé ou absent : tel quel
     return StreamingResponse(
         io.BytesIO(docx_bytes),
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
