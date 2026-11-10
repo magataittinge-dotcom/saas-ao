@@ -2,7 +2,14 @@
    SYNORIX — JETONS DU SYSTÈME DE DESIGN « AURORE POLAIRE » (clair + nuit)
    Référence : /DESIGN.md (9/11/2026) — palette de la direction A, discipline
    de B (traits d'un pixel, une couleur d'action, chiffres tabulaires), gros
-   chiffres de C. L'échelle d'accent bleue (--accent-*) est inchangée.
+   chiffres de C.
+
+   LES COULEURS VIENNENT DU VISAGE (10/11/2026). Les valeurs de couleur de ce fichier
+   sont calculées par scripts/palette-visage.mjs à partir des teintes mesurées sur le
+   visage (scripts/mesure-visage.mjs) : ombres 237,2°, lumières 245,5°, verre 251,7°
+   (la couleur d'action), or de la flamme 78,5°. Pour changer une couleur : changer le
+   script, puis « node scripts/palette-visage.mjs --ecrire » (tests/palette-visage.test.ts
+   refuse une valeur modifiée à la main).
 
    Le thème se lit sur l'attribut data-theme de <html> (posé avant l'affichage
    par public/theme-init.js). Un sous-arbre peut forcer l'autre thème avec son
@@ -19,18 +26,23 @@
 
 /* ── Jetons identiques dans les deux thèmes ──────────────────── */
 :root {
-  /* Accent bleu — échelle SYSTEME-DESIGN §3.3 (teinte 251,7°, paliers 500 et 600 ajustés au contraste) */
+  /* Accent (la seule couleur d'action) : échelle OKLCH à TEINTE CONSTANTE, celle de la famille colorée du verre du visage
+     (251,7°, mesurée). Seules la clarté et la chroma varient ; 600 et 700 sont résolus sur le contraste (blanc dessus, 4,5:1).
+     Valeurs sRGB (repli conforme seul) ; le gamut large est plus bas, dans le bloc « Gamut large ». */
   --accent-50:  #eff7ff;
-  --accent-100: #e2effe;
-  --accent-200: #aed3fd;
-  --accent-300: #69b1ff;
-  --accent-400: #4ba3ff;
-  --accent-500: #008cf8;
-  --accent-600: #0078d6;
-  --accent-700: #0067ba;
-  --accent-800: #004e8e;
-  --accent-900: #003361;
+  --accent-100: #e0efff;
+  --accent-200: #b8d9ff;
+  --accent-300: #79b9ff;
+  --accent-400: #50a5fe;
+  --accent-500: #008dfa;
+  --accent-600: #0077d3;
+  --accent-700: #0065b6;
+  --accent-800: #004885;
+  --accent-900: #002e58;
   --on-accent: #ffffff;
+  --accent-rvb: 0, 119, 211;        /* les canaux de 600, pour les lueurs et ombres teintées : rgba(var(--accent-rvb), .5) */
+  --accent-vif-rvb: 0, 141, 250;    /* les canaux de 500 */
+  --accent-vif: var(--accent-500);  /* 500 pour la peinture seule (points, traits, lueurs) : passe en display-p3 sur les écrans qui le montrent */
   --reflet-accent: rgba(255, 255, 255, .22);   /* liseré clair en haut d'un aplat d'accent (boutons, logo) : identique en clair et en nuit */
 
   /* Verre (SYSTEME-DESIGN §5) */
@@ -85,9 +97,9 @@
   --ease-expo: cubic-bezier(.16, 1, .3, 1);
   --ease-link: cubic-bezier(.44, 0, .56, 1);
 
-  /* Ombres teintées par l'accent (identiques dans les deux thèmes) : décalées et douces, le bouton principal seulement */
-  --shadow-cta: inset 0 1px 0 rgba(255, 255, 255, .28), 0 8px 18px -8px rgba(0, 120, 214, .55);
-  --shadow-halo: 0 10px 24px -10px rgba(0, 120, 214, .45);
+  /* Ombres teintées par l'accent : décalées et douces, le bouton principal seulement (en nuit, une lueur : voir le bloc nuit) */
+  --shadow-cta: inset 0 1px 0 rgba(255, 255, 255, .28), 0 8px 18px -8px rgba(var(--accent-rvb), .55);
+  --shadow-halo: 0 10px 24px -10px rgba(var(--accent-rvb), .45);
 
   /* Aurore : 3 ellipses, transform seul (components/layout/Aurore.tsx) */
   --aurore-duree-a: 28s;  --aurore-duree-b: 36s;  --aurore-duree-c: 44s;
@@ -109,30 +121,34 @@
 [data-theme="light"] {
   color-scheme: light;
 
-  --surface-page: #f3f7fb;          /* fond de page, sous l'aurore (blanc glacé) */
+  --surface-page: #f2f8fc;          /* fond de page, sous l'aurore (blanc glacé) */
   --surface-0: #ffffff;             /* papier : cartes, panneaux, barre latérale */
-  --surface-1: #e8eff7;             /* glace : survols, en-têtes de bloc */
-  --surface-2: #dde6f0;             /* glace profonde */
-  --surface-dark: #0b1728;
+  --surface-1: #e6eef4;             /* glace : survols, en-têtes de bloc */
+  --surface-2: #dae5ec;             /* glace profonde */
+  --surface-dark: #061620;
   --surface-pop: #ffffff;           /* menus, infobulles, fenêtres */
 
-  --text-1: #0b1728;
-  --text-2: #3b4c62;
-  --text-3: #56677d;
-  --text-disabled: #a9b4c1;         /* exempt de contraste (élément désactivé) */
+  --text-1: #061620;
+  --text-2: #364b58;
+  --text-3: #4e6472;
+  --text-disabled: #a6b3bc;         /* exempt de contraste (élément désactivé) */
   --text-inverse: #ffffff;
 
-  --border-1: #d6e0ea;              /* filet : séparateurs, bords de carte (décoratif) */
-  --border-2: #c3d0de;              /* filet au survol */
-  --border-field: #748296;          /* bord des champs et contrôles : 3:1 minimum sur toute surface, glace profonde comprise */
-  --ring-nav: 0 0 0 4px rgba(221, 230, 240, .7);
+  --border-1: #d3dee6;              /* filet : séparateurs, bords de carte (décoratif) */
+  --border-2: #becdd7;              /* filet au survol */
+  --border-field: #6d808d;          /* bord des champs et contrôles : 3:1 minimum sur toute surface, glace profonde comprise */
+  --ring-nav: 0 0 0 4px rgba(218, 229, 236, .7);
 
-  /* Accent d'aurore : la lumière de la marque (traits, halos, sélection, logo). Jamais un état. */
-  --aurore-ink: #0f7a62;  --aurore-mark: #0f9a78;  --aurore-glow: rgba(23, 176, 138, .22);
-  --aurore-a: rgba(46, 204, 160, .55);   /* émeraude */
-  --aurore-b: rgba(60, 190, 210, .45);   /* turquoise */
-  --aurore-c: rgba(70, 140, 255, .40);   /* bleu */
+  /* Accent d'aurore : la lumière de la marque (traits, halos, sélection, logo). Jamais un état. Sa teinte est celle des ombres
+     et du halo du visage (237,2°) ; l'émeraude et le turquoise d'avant n'existent pas dans le visage : ils sont sortis. */
+  --aurore-ink: #196b95;  --aurore-mark: #1688c0;  --aurore-glow: rgba(80, 175, 230, .22);
+  --aurore-a: rgba(100, 194, 250, .55);   /* glace : teinte des ombres (237,2°) */
+  --aurore-b: rgba(171, 214, 253, .45);   /* givre : teinte des lumières (245,5°) */
+  --aurore-c: rgba(66, 155, 247, .4);   /* azur : teinte de la famille colorée, celle de l'action (251,7°) */
   --aurore-opacite: .3;                  /* le jour, elle se devine (réglée à l’œil sur capture : 0,26 trop effacée) */
+  /* Flamme : la braise au cœur du visage (71,8°, 0,5 % de sa surface). La seule teinte chaude de la marque, réservée à la
+     signature (jamais un état, jamais un aplat, jamais plus d'un élément par écran). */
+  --flamme: #ecac2f;  --flamme-glow: rgba(236, 172, 47, .3);
 
   --accent-text: var(--accent-700);
   --accent-ui: var(--accent-600);
@@ -143,30 +159,33 @@
   --accent-tint: var(--accent-50);
   --accent-tint-2: var(--accent-100);
 
-  --info-bg: #edf5fc;     --info-border: #b3d7fc;     --info-fg: #2c68c8;
-  --success-bg: #edfbec;  --success-border: #a3f7a9;  --success-fg: #107c41;
-  --warning-bg: #fff8e8;  --warning-border: #ffe4ab;  --warning-fg: #9f5c18;
-  --danger-bg: #fef0ef;   --danger-border: #feacad;   --danger-fg: #cd2165;
-  --danger-solid: #cd2165;
+  --info-bg: #e6f1fe;     --info-border: #b1d5fd;     --info-fg: #0a518f;
+  --success-bg: #e2f6e6;  --success-border: #afdfbb;  --success-fg: #0e6835;
+  --warning-bg: #feedde;  --warning-border: #f3c7a2;  --warning-fg: #834b0c;
+  --danger-bg: #feebe8;   --danger-border: #fcc0b8;   --danger-fg: #830d10;
+  --danger-solid: #cc3430;
 
   /* États (COULEURS.md, 3/11) : une couleur = un sens, toujours avec un mot et une icône. ink = texte, soft = fond de pastille ou
      de carte, mark = barre, point, bordure. Ajoutés À CÔTÉ du bleu de la marque (--accent-*), qu'ils ne remplacent pas. */
-  --bleu-ink: #0858b0;      --bleu-soft: #e7f1fd;      --bleu-mark: #0a6fd6;       /* en cours, action, information */
-  --vert-ink: #17693d;      --vert-soft: #e5f5ec;      --vert-mark: #1f9d55;       /* fait, prêt, validé, gagné */
-  --ambre-ink: #8a4b00;     --ambre-soft: #fff1dc;     --ambre-mark: #c27c00;      /* à surveiller */
-  --rouge-ink: #b42318;     --rouge-soft: #fdecea;     --rouge-mark: #e5484d;      /* urgent ou négatif */
-  --turquoise-ink: #0b6b6b; --turquoise-soft: #e2f4f3; --turquoise-mark: #14a3a0;  /* veille */
-  --gris-ink: #566373;      --gris-soft: #eef1f5;      --gris-mark: #7f8da0;       /* à venir, sans suite, archivé (mark remonté à 3:1) */
+  --bleu-ink: #0a518f;      --bleu-soft: #e6f1fe;      --bleu-mark: #1270c3;       /* en cours, action, information */
+  --vert-ink: #0e6835;      --vert-soft: #e2f6e6;      --vert-mark: #178d4a;       /* fait, prêt, validé, gagné */
+  --ambre-ink: #834b0c;     --ambre-soft: #feedde;     --ambre-mark: #ae6614;      /* à surveiller */
+  --rouge-ink: #830d10;     --rouge-soft: #feebe8;     --rouge-mark: #b7191c;      /* urgent ou négatif */
+  --turquoise-ink: #0a5253; --turquoise-soft: #daf7f7; --turquoise-mark: #127475;  /* veille */
+  --gris-ink: #515d65;      --gris-soft: #ebf1f5;      --gris-mark: #707c85;       /* à venir, sans suite, archivé (mark remonté à 3:1) */
 
   --glass-fill: rgba(255, 255, 255, .88);
-  --glass-border: #d6e0ea;
-  --scrim: rgba(11, 23, 40, .32);
+  --glass-border: #d3dee6;
+  --scrim: rgba(6, 22, 32, .32);
 
-  /* Traits plutôt qu'ombres : la carte n'a qu'un appui à peine visible ; l'ombre froide est réservée aux flottants */
-  --shadow-card: 0 1px 0 rgba(11, 23, 40, .03);
-  --shadow-pop: 0 2px 6px rgba(11, 23, 40, .06), 0 18px 40px -18px rgba(11, 23, 40, .22);
-  --shadow-toast: 0 2px 6px rgba(11, 23, 40, .06), 0 12px 28px -14px rgba(11, 23, 40, .22);
-  --edge-light: inset 0 1px 0 rgba(255, 255, 255, .8);
+  /* Traits plutôt qu'ombres : la carte n'a qu'un appui à peine visible ; l'ombre froide est réservée aux flottants.
+     Jamais un noir neutre : l'ombre portée a la couleur des ombres du visage (--ombre-rvb, mesurée). */
+  --ombre-rvb: 20, 31, 39;
+  --filet-lumiere: rgba(255, 255, 255, .9);   /* le filet de lumière d'un pixel, en haut des surfaces (couleur seule) */
+  --shadow-card: 0 1px 0 rgba(var(--ombre-rvb), .04);
+  --shadow-pop: 0 2px 6px rgba(var(--ombre-rvb), .07), 0 18px 40px -18px rgba(var(--ombre-rvb), .24);
+  --shadow-toast: 0 2px 6px rgba(var(--ombre-rvb), .07), 0 12px 28px -14px rgba(var(--ombre-rvb), .24);
+  --edge-light: inset 0 1px 0 var(--filet-lumiere);
   --bottom-lit: none;
 
   --highlight: #ffe066;         /* le surligneur de la preuve (extrait du DCE), et rien d'autre */
@@ -186,33 +205,35 @@
   }
 }
 
-/* ── Nuit (dérivée, SYSTEME-DESIGN §3.4 ; surface-0 neutre #111111, décision du 30/10) ── */
+/* ── Nuit : elle part des ombres du visage (237,2°), pas du noir. La page est le vide mesuré derrière le visage ;
+   les accents sont plus clairs qu'en clair, la profondeur vient de lumière colorée (lueur, filet) plutôt que d'ombre grise. ── */
 [data-theme="dark"] {
   color-scheme: dark;
 
-  --surface-page: #060d1a;          /* ciel polaire, jamais un gris neutre */
-  --surface-0: #0d1828;
-  --surface-1: #13223a;
-  --surface-2: #1a2c47;
-  --surface-dark: #03070f;
-  --surface-pop: #13223a;
+  --surface-page: #070e13;          /* le fond des clips du visage, jamais un gris neutre */
+  --surface-0: #0a1922;
+  --surface-1: #112430;
+  --surface-2: #192f3d;
+  --surface-dark: #02060a;
+  --surface-pop: #112430;
 
-  --text-1: #eaf1fa;
-  --text-2: #b4c3d6;
-  --text-3: #8ea0b6;
-  --text-disabled: #4a5a70;
-  --text-inverse: #0b1728;
+  --text-1: #ecf3f8;
+  --text-2: #b7c9d4;
+  --text-3: #92a6b4;
+  --text-disabled: #485b67;
+  --text-inverse: #061620;
 
-  --border-1: #1c2a40;
-  --border-2: #2a3d5a;
-  --border-field: #667a95;          /* 3:1 sur toutes les surfaces de nuit */
-  --ring-nav: 0 0 0 4px rgba(234, 241, 250, .12);
+  --border-1: #192d39;
+  --border-2: #2b4352;
+  --border-field: #6d8493;          /* 3:1 sur toutes les surfaces de nuit */
+  --ring-nav: 0 0 0 4px rgba(236, 243, 248, .12);
 
-  --aurore-ink: #5fe6bb;  --aurore-mark: #3fd9ad;  --aurore-glow: rgba(63, 217, 173, .22);
-  --aurore-a: rgba(46, 230, 170, .55);
-  --aurore-b: rgba(50, 200, 230, .45);
-  --aurore-c: rgba(70, 150, 255, .45);
+  --aurore-ink: #a7dcff;  --aurore-mark: #78ccff;  --aurore-glow: rgba(120, 204, 255, .22);
+  --aurore-a: rgba(83, 188, 249, .5);
+  --aurore-b: rgba(159, 209, 252, .38);
+  --aurore-c: rgba(0, 135, 240, .5);
   --aurore-opacite: .9;
+  --flamme: #fdbe51;  --flamme-glow: rgba(253, 190, 81, .3);
 
   --accent-text: var(--accent-300);
   --accent-ui: var(--accent-500);
@@ -220,37 +241,62 @@
   --accent-fill: linear-gradient(110deg, var(--accent-600), var(--accent-600));   /* plein, mais toujours une image : même propriété dans les deux thèmes */
   --accent-fill-solid: var(--accent-600);
   --accent-fill-hover: linear-gradient(110deg, var(--accent-700), var(--accent-700));
-  --accent-tint: #183144;
-  --accent-tint-2: #143e5f;
+  --accent-tint: #15283c;
+  --accent-tint-2: #173758;
 
-  --info-bg: #233061;     --info-border: #1f4399;     --info-fg: #6eabfa;
-  --success-bg: #1a4d40;  --success-border: #136a4d;  --success-fg: #4dd470;
-  --warning-bg: #5c3721;  --warning-border: #934c1a;  --warning-fg: #ffbe62;
-  --danger-bg: #612241;   --danger-border: #901d56;   --danger-fg: #fc7d97;
-  --danger-solid: #b31a57;
+  --info-bg: #182f48;     --info-border: #244f7c;     --info-fg: #a3cdfc;
+  --success-bg: #163620;  --success-border: #1e5b34;  --success-fg: #92e8aa;
+  --warning-bg: #41270d;  --warning-border: #6f400c;  --warning-fg: #fdcb9f;
+  --danger-bg: #46221e;   --danger-border: #773731;   --danger-fg: #fca095;
+  --danger-solid: #cc3430;
 
   /* États, nuit (voir le bloc clair) */
-  --bleu-ink: #8cc8ff;      --bleu-soft: rgba(43, 155, 255, .14);   --bleu-mark: #4aa8ff;
-  --vert-ink: #74d9a0;      --vert-soft: rgba(80, 200, 130, .13);   --vert-mark: #3fbf78;
-  --ambre-ink: #ffc46b;     --ambre-soft: rgba(255, 170, 60, .13);  --ambre-mark: #ffb020;
-  --rouge-ink: #ff8f87;     --rouge-soft: rgba(255, 90, 80, .15);   --rouge-mark: #ff6b63;
-  --turquoise-ink: #5fd4cf; --turquoise-soft: rgba(40, 190, 180, .14); --turquoise-mark: #2cc2bc;
-  --gris-ink: #93a1b1;      --gris-soft: #141c27;                   --gris-mark: #627590;
+  --bleu-ink: #a3cdfc;      --bleu-soft: rgba(92, 169, 251, .14);   --bleu-mark: #5ca9fb;
+  --vert-ink: #92e8aa;      --vert-soft: rgba(64, 202, 116, .14);   --vert-mark: #40ca74;
+  --ambre-ink: #fdcb9f;     --ambre-soft: rgba(250, 149, 33, .14);  --ambre-mark: #fa9521;
+  --rouge-ink: #fca095;     --rouge-soft: rgba(239, 103, 92, .14);   --rouge-mark: #ef675c;
+  --turquoise-ink: #46d7d8; --turquoise-soft: rgba(33, 176, 178, .14); --turquoise-mark: #21b0b2;
+  --gris-ink: #aab8c1;      --gris-soft: rgba(135, 148, 157, .14);                   --gris-mark: #87949d;
 
-  --glass-fill: rgba(13, 24, 40, .86);
-  --glass-border: #1c2a40;
-  --scrim: rgba(3, 7, 15, .64);
+  --glass-fill: rgba(10, 25, 34, .86);
+  --glass-border: #192d39;
+  --scrim: rgba(2, 6, 10, .64);
 
-  --shadow-card: 0 1px 0 rgba(0, 0, 0, .28);
-  --shadow-pop: 0 2px 6px rgba(0, 0, 0, .45), 0 22px 48px -18px rgba(0, 0, 0, .7), inset 0 1px 0 rgba(234, 241, 250, .06);
-  --shadow-toast: 0 2px 6px rgba(0, 0, 0, .4), 0 14px 32px -14px rgba(0, 0, 0, .6);
-  --edge-light: inset 0 1px 0 rgba(234, 241, 250, .05);
+  --ombre-rvb: 0, 3, 6;
+  --filet-lumiere: rgba(211, 221, 230, .1);   /* la couleur des lumières du visage, à 10 % */
+  --shadow-card: 0 1px 0 rgba(var(--ombre-rvb), .35);
+  --shadow-pop: 0 2px 6px rgba(var(--ombre-rvb), .5), 0 22px 48px -18px rgba(var(--ombre-rvb), .75), inset 0 1px 0 var(--filet-lumiere);
+  --shadow-toast: 0 2px 6px rgba(var(--ombre-rvb), .45), 0 14px 32px -14px rgba(var(--ombre-rvb), .65), inset 0 1px 0 var(--filet-lumiere);
+  --edge-light: inset 0 1px 0 var(--filet-lumiere);
   --bottom-lit: none;
+  /* En nuit, le bouton principal éclaire au lieu de projeter une ombre : lueur de la couleur d'action */
+  --shadow-cta: inset 0 1px 0 rgba(255, 255, 255, .24), 0 0 0 1px rgba(var(--accent-vif-rvb), .35), 0 10px 28px -8px rgba(var(--accent-vif-rvb), .6);
+  --shadow-halo: 0 0 32px -6px rgba(var(--accent-vif-rvb), .5);
 
   --highlight: #5e4b00;
   --highlight-soft: #3d3200;
   --highlight-text: #ffffff;
 }
+
+/* ── Gamut large (généré par scripts/palette-visage.mjs : ne pas modifier à la main) ── */
+@media (color-gamut: p3) {
+  @supports (color: color(display-p3 1 1 1)) {
+    :root,
+    [data-theme="light"] {
+      --accent-fill: linear-gradient(110deg, color(display-p3 0.0000 0.3758 0.7741), color(display-p3 0.0000 0.4408 0.8993));
+      --accent-fill-hover: linear-gradient(110deg, color(display-p3 0.0523 0.2725 0.5426), color(display-p3 0.0000 0.3758 0.7741));
+      --accent-ring: color(display-p3 0.0000 0.4408 0.8993);
+      --accent-vif: color(display-p3 0.1736 0.5379 1.0000);
+    }
+    [data-theme="dark"] {
+      --accent-fill: linear-gradient(110deg, color(display-p3 0.0000 0.4408 0.8993), color(display-p3 0.0000 0.4408 0.8993));
+      --accent-fill-hover: linear-gradient(110deg, color(display-p3 0.0000 0.3758 0.7741), color(display-p3 0.0000 0.3758 0.7741));
+      --accent-ring: color(display-p3 0.5121 0.7176 1.0000);
+      --accent-vif: color(display-p3 0.1736 0.5379 1.0000);
+    }
+  }
+}
+/* ── fin du gamut large ── */
 
 /* ═══════════════════════════════════════════════════════════════
    ALIAS DES ANCIENS NOMS (période de transition, jusqu'à la fin de la phase C)
@@ -273,7 +319,7 @@
   --lum: var(--accent-text);
   --lum-bright: var(--text-1);
   --lum-dim: var(--text-3);
-  --glow-white: rgba(0, 120, 214, .30);
+  --glow-white: rgba(var(--accent-rvb), .30);
   --ok: var(--success-fg);   --ok-bg: var(--success-bg);   --ok-line: var(--success-border);
   --warn: var(--warning-fg); --warn-bg: var(--warning-bg); --warn-line: var(--warning-border);
   --bad: var(--danger-fg);   --bad-bg: var(--danger-bg);   --bad-line: var(--danger-border);
@@ -315,7 +361,7 @@
   --edge-lumen-300: var(--text-1);
   --edge-lumen-400: var(--accent-text);
   --edge-lumen-500: var(--text-3);
-  --edge-glow: 0 8px 24px -12px rgba(0, 140, 248, .35);
+  --edge-glow: 0 8px 24px -12px rgba(var(--accent-vif-rvb), .35);
   --edge-horizon: inset 0 -2px 0 0 var(--accent-ui);
   --edge-text: var(--text-1);
   --edge-text-2: var(--text-2);

@@ -1,9 +1,8 @@
 // COULEURS.md (3/11) — les six couleurs d'état, en clair et en nuit : le texte (`*-ink`) dépasse 4,5:1 sur son fond (`*-soft`,
 // composé sur la surface où il se pose) et sur la surface elle-même ; les marques (`*-mark`) dépassent 3:1 sur la surface.
 // Le calcul est celui de WCAG 2 (tests/outils/jetons.ts). Une couleur d'état ne se montre jamais seule : mot et icône (relu à l'écran).
-// Deux exceptions assumées, à valider : (1) la marque GRISE (« à venir », « sans suite ») reste volontairement discrète (1,6:1) — c'est
-// un état inactif (WCAG 1.4.11 exempte les composants inactifs) toujours doublé du nom de l'étape ; (2) les marques sont mesurées sur
-// la page (--surface-0), pas sur une carte grise (--surface-1), où l'ambre (2,99:1) et le turquoise (2,73:1) tombent juste sous 3:1.
+// Depuis la palette tirée du visage (10/11) il n'y a plus d'exception : la marque grise et les marques posées sur une carte
+// grise (--surface-1) passent 3:1 comme les autres (matrice complète, glace profonde comprise : contraste-palette.test.ts).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { composer, contraste, valeur, type Theme } from './outils/jetons'
@@ -30,7 +29,7 @@ test('texte d’état ≥ 4,5:1 sur son fond et sur la surface ; marque ≥ 3:1 
           ['texte sur son fond', contraste(ink, soft), 4.5],
           ['texte sur la surface', contraste(ink, surface), 4.5],
         ]
-        if (c !== 'gris' && nomSurface === '--surface-0') mesures.push(['marque sur la surface', contraste(mark, surface), 3])
+        mesures.push(['marque sur la surface', contraste(mark, surface), 3])
         for (const [quoi, v, seuil] of mesures) if (v < seuil) faibles.push(`${theme} ${c} ${quoi} (${nomSurface}) : ${v.toFixed(2)}:1 < ${seuil}`)
       }
     }

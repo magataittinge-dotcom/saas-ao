@@ -1,6 +1,6 @@
 // Socle (bloc 10, phase B) — jetons clair et nuit : chaque jeton du système existe dans les deux thèmes,
-// l'accent est l'échelle bleue de SYSTEME-DESIGN §3.3 (inchangée), la palette est celle de DESIGN.md « Aurore polaire »
-// (9/11/2026), les contrastes tiennent (texte 4,5:1, interface 3:1),
+// la palette est celle que scripts/palette-visage.mjs tire des teintes mesurées sur le visage (10/11/2026 : voir
+// palette-visage.test.ts), les contrastes tiennent (texte 4,5:1, interface 3:1 ; matrice complète : contraste-palette.test.ts),
 // Tailwind ne recopie aucune couleur et ne renvoie qu'à des jetons définis.
 // JETONS_TABLEAU=1 npm test -- jetons  → affiche le tableau des contrastes.
 import { test } from 'node:test'
@@ -56,31 +56,21 @@ test('les anciens noms (Lumen, Edge, Calque, shadcn) renvoient tous à un jeton 
   }
 })
 
-test('les surfaces et textes sont ceux de DESIGN.md (palette A), l\'échelle d\'accent reste celle de SYSTEME-DESIGN', () => {
-  const attendu: Record<Theme, Record<string, string>> = {
-    light: {
-      'surface-page': '#f3f7fb', 'surface-0': '#ffffff', 'surface-1': '#e8eff7', 'surface-2': '#dde6f0',
-      'text-1': '#0b1728', 'text-2': '#3b4c62', 'text-3': '#56677d', 'border-1': '#d6e0ea', 'border-field': '#748296', 'gris-mark': '#7f8da0',
-      'aurore-ink': '#0f7a62', 'aurore-mark': '#0f9a78',
-    },
-    dark: {
-      'surface-page': '#060d1a', 'surface-0': '#0d1828', 'surface-1': '#13223a', 'surface-2': '#1a2c47',
-      'text-1': '#eaf1fa', 'text-2': '#b4c3d6', 'text-3': '#8ea0b6', 'border-1': '#1c2a40', 'border-field': '#667a95', 'gris-mark': '#627590',
-      'aurore-ink': '#5fe6bb', 'aurore-mark': '#3fd9ad',
-    },
-  }
-  for (const theme of THEMES) for (const [nom, v] of Object.entries(attendu[theme])) assert.equal(valeur(theme, `--${nom}`), v, `${nom} (${theme})`)
-  const echelle = ['#eff7ff', '#e2effe', '#aed3fd', '#69b1ff', '#4ba3ff', '#008cf8', '#0078d6', '#0067ba', '#004e8e', '#003361']
-  for (const theme of THEMES) {
-    assert.deepEqual([50, 100, 200, 300, 400, 500, 600, 700, 800, 900].map((n) => valeur(theme, `--accent-${n}`)), echelle)
-  }
-  // rôles : clair 700 / 600 / dégradé 700→600 ; nuit 300 / 500 / 600 plein
-  assert.equal(valeur('light', '--accent-text'), '#0067ba')
-  assert.equal(valeur('light', '--accent-ui'), '#0078d6')
-  assert.match(valeur('light', '--accent-fill'), /^linear-gradient\(110deg, #0067ba, #0078d6\)$/)
-  assert.equal(valeur('dark', '--accent-text'), '#69b1ff')
-  assert.equal(valeur('dark', '--accent-ui'), '#008cf8')
-  assert.match(valeur('dark', '--accent-fill'), /^linear-gradient\(110deg, #0078d6, #0078d6\)$/)
+test('rôles de l\'accent : clair 700 / 600 / dégradé 700→600 ; nuit 300 / 500 / 600 plein ; papier blanc, page de nuit jamais noire', () => {
+  const p = (n: number) => valeur('light', `--accent-${n}`)
+  for (const theme of THEMES) for (const n of [50, 100, 200, 300, 400, 500, 600, 700, 800, 900]) assert.match(valeur(theme, `--accent-${n}`), /^#[0-9a-f]{6}$/)
+  assert.equal(valeur('light', '--accent-text'), p(700))
+  assert.equal(valeur('light', '--accent-ui'), p(600))
+  assert.equal(valeur('light', '--accent-fill'), `linear-gradient(110deg, ${p(700)}, ${p(600)})`)
+  assert.equal(valeur('dark', '--accent-text'), p(300))
+  assert.equal(valeur('dark', '--accent-ui'), p(500))
+  assert.equal(valeur('dark', '--accent-fill'), `linear-gradient(110deg, ${p(600)}, ${p(600)})`)
+  assert.equal(valeur('light', '--surface-0'), '#ffffff')
+  assert.notEqual(valeur('dark', '--surface-page'), '#000000')
+  // les canaux des lueurs suivent l'échelle
+  const canaux = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)).join(', ')
+  assert.equal(valeur('light', '--accent-rvb'), canaux(p(600)))
+  assert.equal(valeur('light', '--accent-vif-rvb'), canaux(p(500)))
 })
 
 // ── Contrastes ───────────────────────────────────────────────────

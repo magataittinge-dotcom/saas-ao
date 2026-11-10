@@ -11,14 +11,14 @@ const pour = (theme: Theme) => construireApparence((j) => valeur(theme, j))
 test('Clerk : les variables sont les jetons résolus, dans chaque thème', () => {
   const clair = pour('light').variables!
   const nuit = pour('dark').variables!
-  assert.equal(clair.colorPrimary, '#0078d6')
-  assert.equal(nuit.colorPrimary, '#0078d6')
+  for (const [theme, v] of [['light', clair], ['dark', nuit]] as const) {
+    assert.equal(v.colorPrimary, valeur(theme, '--accent-600'))
+    assert.match(String(v.colorPrimary), /^#[0-9a-f]{6}$/, 'Clerk calcule ses nuances : une vraie couleur sRGB, jamais du display-p3')
+    assert.equal(v.colorBackground, valeur(theme, '--surface-pop'))
+    assert.equal(v.colorText, valeur(theme, '--text-1'))
+    assert.equal(v.colorInputBackground, valeur(theme, '--surface-0'))
+  }
   assert.equal(clair.colorBackground, '#ffffff')
-  assert.equal(nuit.colorBackground, '#13223a')
-  assert.equal(clair.colorText, '#0b1728')
-  assert.equal(nuit.colorText, '#eaf1fa')
-  assert.equal(clair.colorInputBackground, '#ffffff')
-  assert.equal(nuit.colorInputBackground, '#0d1828')
   assert.match(String(clair.fontFamily), /Manrope/)
 })
 
