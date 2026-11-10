@@ -42,7 +42,7 @@ export function TitreBarre({ titre, montre }: { titre: string; montre: boolean }
   )
 }
 
-const LIEN_PARENT = 'shrink-0 rounded-md text-base text-fg-2 transition-colors duration-fast ease-survol hover:text-fg'
+const LIEN_PARENT = 'shrink-0 rounded-md text-base text-fg-2 transition-colors duration-fast ease-survol hover:text-fg max-[768px]:inline-flex max-[768px]:min-h-11 max-[768px]:items-center'
 
 interface Props {
   /** Ouvre la palette Ctrl K. */
@@ -103,7 +103,7 @@ export default function Header({ onSearch, titreSorti = false }: Props) {
           <span className="max-[768px]:hidden"><NotificationBell /></span>
 
           <Bouton coquille variante={auTrait ? 'secondaire' : 'principal'} data-nouvel-ao={auTrait ? 'trait' : 'plein'} onClick={() => navigate('/projects/new')}
-            className="rounded-pilule max-sm:w-11 max-sm:px-0">
+            className={cn('rounded-pilule max-sm:w-11 max-sm:px-0', parent && 'max-[768px]:hidden')}>
             <Plus strokeWidth={1.5} aria-hidden />
             <span className="max-sm:sr-only">Nouvel appel d’offres</span>
           </Bouton>

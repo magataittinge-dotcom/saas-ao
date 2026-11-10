@@ -24,13 +24,13 @@ export default function LegalFooter({ calque = false }: { calque?: boolean }) {
         <span className={cn('text-xs', calque ? 'text-encre-3' : 'text-[var(--ink-3)]')}>
           © {new Date().getFullYear()} Synorix
         </span>
-        <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5">
+        <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 max-md:gap-x-0 max-md:gap-y-0">
           {LINKS.map((l) => (
             <Link
               key={l.to}
               to={l.to}
               className={cn(
-                'text-xs transition-colors',
+                'text-xs transition-colors max-md:inline-flex max-md:min-h-11 max-md:items-center max-md:px-2.5',
                 calque ? 'text-encre-3 hover:text-encre' : 'text-[var(--ink-3)] hover:text-[var(--ink)]',
               )}
             >

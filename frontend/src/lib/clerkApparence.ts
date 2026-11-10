@@ -37,7 +37,7 @@ export function construireApparence(lire: (jeton: string) => string): ApparenceC
       headerTitle: '!font-display !text-xl !font-medium !tracking-[-0.01em]',
       headerSubtitle: '!text-sm',
       formButtonPrimary: `!min-h-11 !rounded-pilule ![background-image:var(--accent-fill)] !text-sm !font-semibold !normal-case !shadow-cta`,
-      formFieldInput: '!min-h-11 !rounded-lg !border !border-solid !border-bord-champ !text-sm focus:!border-accent-ring',
+      formFieldInput: '!min-h-11 !rounded-lg !border !border-solid !border-bord-champ !text-sm max-[768px]:!text-saisie focus:!border-accent-ring',
       formFieldLabel: '!text-xs !font-medium',
       socialButtonsBlockButton: '!min-h-11 !rounded-lg !border !border-solid !border-bord-champ',
       footerActionLink: '!font-medium !text-accent-text',
