@@ -39,19 +39,6 @@
   background: radial-gradient(50% 40% at 50% 50%, var(--aurore-c), transparent 72%);
   animation: aurore-derive-c var(--aurore-duree-c) ease-in-out infinite alternate;
 }
-/* La lumière de l'aube : l'or de la flamme, basse et étroite, à l'horizon du masque. transform seul, comme les rubans. */
-.aurore-aube {
-  left: 15vw;
-  width: 70vw;
-  top: 29vh;
-  height: 6vh;
-  background: radial-gradient(50% 50% at 50% 50%, var(--aurore-aube), transparent 72%);
-  animation: aurore-derive-d var(--aurore-duree-d) ease-in-out infinite alternate;
-}
-/* au téléphone, l'aube descend sous la pastille de l'entreprise : elle ne doit jamais éclairer un état ambre */
-@media (max-width: 768px) {
-  .aurore-aube { top: 38.5vh; height: 4.5vh; }
-}
 @keyframes aurore-derive-a {
   from { transform: translate3d(-6vw, 0, 0) rotate(-6deg) scaleY(.85); }
   to   { transform: translate3d(8vw, 3vh, 0) rotate(4deg) scaleY(1.1); }
@@ -63,10 +50,6 @@
 @keyframes aurore-derive-c {
   from { transform: translate3d(0, 0, 0) rotate(-2deg) scaleX(1); }
   to   { transform: translate3d(5vw, 4vh, 0) rotate(3deg) scaleX(1.15); }
-}
-@keyframes aurore-derive-d {
-  from { transform: translate3d(-5vw, 0, 0) scaleX(.9); }
-  to   { transform: translate3d(6vw, 1vh, 0) scaleX(1.1); }
 }
 /* onglet caché, saveData ou 2G : en pause là où elle est */
 .aurore[data-arretee] .aurore-ruban { animation-play-state: paused; }

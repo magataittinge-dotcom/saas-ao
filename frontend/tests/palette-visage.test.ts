@@ -47,7 +47,7 @@ test('marque : chaque teinte de l\'accent, de l\'aurore, des neutres et de la fl
     ...[50, 100, 200, 300, 400, 500, 600, 700, 800, 900].map((n): [string, number] => [`accent-${n}`, T.famille]),
     ...NEUTRES.map((n): [string, number] => [n, T.ombres]),
     ['aurore-ink', T.ombres], ['aurore-mark', T.ombres], ['aurore-glow', T.ombres], ['aurore-a', T.ombres],
-    ['aurore-b', T.lumieres], ['aurore-c', T.famille], ['flamme', T.or], ['flamme-glow', T.or], ['aurore-aube', T.or],
+    ['aurore-b', T.lumieres], ['aurore-c', T.famille], ['flamme', T.or], ['flamme-glow', T.or],
   ]
   const hors: string[] = []
   for (const theme of THEMES) for (const [nom, teinte] of attendu) {
@@ -130,10 +130,10 @@ test('or de marque : jamais confondu avec l\'ambre « à surveiller » (écart m
   }
   assert.deepEqual(proches, [])
   // l'or n'est que de la lumière : la braise du logo, la pointe du fil d'aurore, l'éclat du halo du visage (index.css),
-  // la lueur d'aube (jeton --aurore-aube, aurore.css) et la page /design ; aucune classe Tailwind, aucun autre fichier
+  // et la page /design ; aucune classe Tailwind, aucun autre fichier (la lueur d'aube est retirée : l'aurore n'a que du bleu)
   const usages = [...fichiersSource('src'), 'src/index.css', 'src/styles/tokens.css', 'src/styles/pieces.css', 'src/components/layout/aurore.css', 'tailwind.config.js']
     .filter((f) => /flamme|aurore-aube/.test(sansCommentaires(lire(f))))
-  assert.deepEqual(usages.sort(), ['src/components/layout/Aurore.tsx', 'src/components/layout/Logo.tsx', 'src/components/layout/aurore.css', 'src/index.css', 'src/routes/Design.tsx'])
+  assert.deepEqual(usages.sort(), ['src/components/layout/Logo.tsx', 'src/index.css', 'src/routes/Design.tsx'])
   const feuille = sansCommentaires(lire('src/index.css'))
   const regles = [...feuille.matchAll(/([^{}]+)\{([^{}]*var\(--flamme\)[^{}]*)\}/g)]
   assert.deepEqual(regles.map((m) => m[1].trim()).sort(), ['.eclat-or', '.fil-aurore'])

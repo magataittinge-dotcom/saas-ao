@@ -89,7 +89,7 @@ const PALETTES: [string, string[]][] = [
   ['Gris : à venir, sans suite', ['--gris-soft', '--gris-mark', '--gris-ink']],
   ['Surlignage de la preuve', ['--highlight', '--highlight-soft']],
   ['Aurore (marque, jamais un état)', ['--aurore-ink', '--aurore-mark', '--aurore-glow', '--aurore-a', '--aurore-b', '--aurore-c']],
-  ['Flamme (signature rare) et filet de lumière', ['--flamme', '--flamme-glow', '--aurore-aube', '--filet-lumiere', '--accent-vif']],
+  ['Flamme (signature rare) et filet de lumière', ['--flamme', '--flamme-glow', '--filet-lumiere', '--accent-vif']],
 ]
 
 const PAIRES: [string, string, string][] = [

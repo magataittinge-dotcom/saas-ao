@@ -31,7 +31,7 @@ test('le rendu de la barre écrit le nom de chaque entrée sous son icône, sans
   for (const [, href, contenu] of liens) {
     const entree = BARRE.find((e) => e.to === href)
     assert.ok(entree, href)
-    assert.match(contenu, new RegExp(`<span[^>]*text-micro[^>]*>${entree.label}</span>`), `${href} : nom visible en 11 px`)
+    assert.match(contenu, new RegExp(`<span[^>]*text-micro[^>]*>${entree.court ?? entree.label}</span>`), `${href} : nom visible en 11 px`)
   }
 })
 

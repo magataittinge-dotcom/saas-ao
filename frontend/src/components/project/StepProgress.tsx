@@ -52,7 +52,7 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick, lo
           const reste = step.segment === 'verification' && piecesAJoindre ? piecesAJoindre : 0
           const atteinte = completedSteps[String(step.serveur)] === true || step.serveur < currentStep || lotFait
           const isCompleted = atteinte && reste === 0
-          const precision = lotFait ? '1 lot' : reste > 0 && atteinte ? `${reste} à joindre` : null
+          const precision = lotFait ? '1 lot' : reste > 0 && step.serveur <= currentStep ? `${reste} à joindre` : null
           const isActive = step.number === activeStep
           const isClickable = step.serveur <= currentStep && !!onStepClick
           const etat = isActive ? 'active' : isCompleted ? 'faite' : reste > 0 && atteinte ? 'reste' : 'a-venir'

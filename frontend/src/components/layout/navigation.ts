@@ -8,15 +8,21 @@ import {
 export interface Entree {
   to: string
   icon: LucideIcon
+  /** Le nom complet : titre de la page, aria-label de l'entrée, palette Ctrl K. */
   label: string
+  /** Le libellé court des barres (latérale et du bas), quand le nom complet ne tient pas sur UNE ligne (P26). */
+  court?: string
 }
+
+/** Ce qu'une barre écrit sous l'icône : le libellé court s'il existe, toujours sur une ligne. */
+export const libelleBarre = (e: Entree): string => e.court ?? e.label
 
 /** La barre d'icônes (bureau) : cinq entrées, chacune avec son nom écrit sous l'icône. Équipe et Mes références sont des accès de
  *  « Mon entreprise » ; « Retenue de garantie » n'est plus dans la barre (carte de trésorerie, Paramètres, palette Ctrl K). */
 export const BARRE_HAUT: Entree[] = [
   { to: '/dashboard', icon: Home, label: 'Accueil' },
   { to: '/projects', icon: FolderOpen, label: 'Mes AO' },
-  { to: '/company', icon: Briefcase, label: 'Mon entreprise' },
+  { to: '/company', icon: Briefcase, label: 'Mon entreprise', court: 'Entreprise' },
   { to: '/vault', icon: Archive, label: 'Coffre-fort' },
 ]
 export const ENTREE_PARAMETRES: Entree = { to: '/settings', icon: Settings, label: 'Paramètres' }
@@ -26,7 +32,7 @@ export const BARRE: Entree[] = [...BARRE_HAUT, ENTREE_PARAMETRES]
 export const ONGLETS_TEL: Entree[] = [
   { to: '/dashboard', icon: Home, label: 'Accueil' },
   { to: '/projects', icon: FolderOpen, label: 'Mes AO' },
-  { to: '/company', icon: Briefcase, label: 'Mon entreprise' },
+  { to: '/company', icon: Briefcase, label: 'Mon entreprise', court: 'Entreprise' },
   { to: '/vault', icon: Archive, label: 'Coffre-fort' },
 ]
 
