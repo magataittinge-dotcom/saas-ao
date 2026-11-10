@@ -92,6 +92,22 @@ def _fld(par, type_: str, *, sale: bool = False):
     par.add_run()._r.append(e)
 
 
+def _poser_signet(paragraphe, nom: str, ident: int):
+    """Signet Word autour du texte d'un titre (cible du lien du sommaire)."""
+    debut = OxmlElement("w:bookmarkStart")
+    debut.set(qn("w:id"), str(ident))
+    debut.set(qn("w:name"), nom)
+    fin = OxmlElement("w:bookmarkEnd")
+    fin.set(qn("w:id"), str(ident))
+    p = paragraphe._p
+    ppr = p.find(qn("w:pPr"))
+    if ppr is not None:
+        ppr.addnext(debut)
+    else:
+        p.insert(0, debut)
+    p.append(fin)
+
+
 def inserer_sommaire(doc: _Document, ancre) -> bool:
     """Remplace le paragraphe `ancre` (posé après la couverture) par le
     sommaire, construit d'après les titres 1 et 2 écrits après lui. Renvoie
@@ -111,11 +127,13 @@ def inserer_sommaire(doc: _Document, ancre) -> bool:
     r = titre_toc.add_run("Sommaire")
     r.bold = True
     r.font.size = Pt(18)
-    r.font.color.rgb = RGBColor(0x1E, 0x40, 0xAF)
+    r.font.color.rgb = RGBColor(0x11, 0x18, 0x27)   # encre neutre (mission finale DOCUMENTS)
     titres[0][2].paragraph_format.page_break_before = True
 
     entrees = []
-    for k, (niveau, texte, _) in enumerate(titres):
+    for k, (niveau, texte, para_titre) in enumerate(titres):
+        signet = f"_Toc_syn_{k + 1:03d}"
+        _poser_signet(para_titre, signet, k + 1)
         par = doc.add_paragraph(style=f"TOC {niveau}")
         if k == 0:
             _fld(par, "begin", sale=True)
@@ -124,9 +142,15 @@ def inserer_sommaire(doc: _Document, ancre) -> bool:
             instr.text = f" {INSTRUCTION_TOC} "
             par.add_run()._r.append(instr)
             _fld(par, "separate")
-        par.add_run(texte)
-        par.add_run("\t")
-        par.add_run("")                   # numéro de page : écrit à la passe 2
+        # Mission finale DOCUMENTS : la ligne est un lien interne vers le signet du titre (sommaire
+        # cliquable dans le PDF ; Word fait de même en recalculant le champ, interrupteur \h).
+        lien = OxmlElement("w:hyperlink")
+        lien.set(qn("w:anchor"), signet)
+        lien.set(qn("w:history"), "1")
+        for morceau in (texte, "\t", ""):    # le dernier : numéro de page, écrit à la passe 2
+            run = par.add_run(morceau)
+            lien.append(run._r)
+        par._p.append(lien)
         if k == len(titres) - 1:
             _fld(par, "end")
         entrees.append(par._p)
@@ -227,7 +251,7 @@ def renseigner_sommaire(docx_bytes: bytes, pages: dict[int, int]) -> bytes:
         for p in racine.iter(f"{_W}p"):
             if not re.fullmatch(r"TOC[1-9]", _style_id(p)):
                 continue
-            runs = p.findall(f"{_W}r")
+            runs = list(p.iter(f"{_W}r"))     # les runs d'une ligne sont dans son lien interne
             for k, run in enumerate(runs):
                 if run.find(f"{_W}tab") is not None and k + 1 < len(runs):
                     page_run = runs[k + 1]

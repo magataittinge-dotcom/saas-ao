@@ -929,6 +929,7 @@ def build_project_memoire_docx(project, memoire, org, db) -> bytes:
         maitre_ouvrage=project.maitre_ouvrage,
         org_address=org.address if org else None,
         org_siret=org.siret if org else None,
+        objet_marche=(project.infos_marche or {}).get("objet") if isinstance(project.infos_marche, dict) else None,
     )
 
 
@@ -943,8 +944,10 @@ def _attachment_response(content: bytes, filename: str, media_type: str) -> Resp
 
 
 @router.get("/{project_id}/memoire/export-docx")
+@limiter.limit("20/minute")          # comme /export/docx : la numérotation du sommaire passe par LibreOffice
 @chronometre("export", lot=lot_du_projet)
 def export_memoire_docx(
+    request: Request,
     project_id: str,
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
@@ -956,19 +959,22 @@ def export_memoire_docx(
         raise HTTPException(status_code=404, detail="Mémoire non généré")
     org = db.query(Organization).filter(Organization.id == user.organization_id).first()
 
+    from services.pdf_export import docx_numerote
     docx_bytes = build_project_memoire_docx(project, memoire, org, db)
-    reponse = _attachment_response(
-        docx_bytes,
-        f"Memoire_Technique_{project.name.replace(' ', '_')}.docx",
+    nom = f"Memoire_Technique_{project.name.replace(' ', '_')}.docx"
+    rendre_connexion(db)                       # avant LibreOffice : jamais une connexion prise pendant la conversion
+    return _attachment_response(
+        docx_numerote(docx_bytes),             # sommaire numéroté ; LibreOffice occupé ou absent : tel quel
+        nom,
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     )
-    rendre_connexion(db)
-    return reponse
 
 
 @router.get("/{project_id}/memoire/export-pdf")
+@limiter.limit("20/minute")          # conversion LibreOffice : bornée par organisation
 @chronometre("export", lot=lot_du_projet)
 def export_memoire_pdf(
+    request: Request,
     project_id: str,
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),

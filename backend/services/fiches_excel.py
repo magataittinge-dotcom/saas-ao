@@ -306,8 +306,10 @@ def generer_xlsx(donnees: dict, bordereau: dict, pal: dict) -> bytes:
         _largeurs(ws, [38, 78])
         _mise_en_page(ws, paysage=False, colonnes=2)
     wb.properties.title = str(bordereau.get("titre") or "")[:200]
-    wb.properties.creator = (donnees["societe"]["nom"] or "Synorix")[:200]
+    # Mission finale DOCUMENTS : la fiche est celle de l'entreprise, jamais signée par l'outil ; en français.
+    wb.properties.creator = (donnees["societe"]["nom"] or "")[:200]
     wb.properties.lastModifiedBy = wb.properties.creator
+    wb.properties.language = "fr-FR"
     sortie = io.BytesIO()
     wb.save(sortie)
     return sortie.getvalue()

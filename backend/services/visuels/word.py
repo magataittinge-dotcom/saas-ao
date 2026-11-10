@@ -86,12 +86,17 @@ def ajouter_tableau(doc, tab: dict, legende: str | None = None):
             run.font.size = Pt(9 if i == 0 else 8.5)
             if entete:
                 run.bold = True
-                run.font.color.rgb = RGBColor(255, 255, 255)
+                run.font.color.rgb = RGBColor(0x11, 0x18, 0x27)
             elif i:
                 run.font.color.rgb = RGBColor(0x5D, 0x6A, 0x79)
         if entete:
+            # Mission finale DOCUMENTS : fond clair et texte foncé (lisible imprimé en noir et blanc) ; la
+            # couleur de l'entreprise devient le trait sous l'en-tête (ordre du schéma : tcBorders, puis shd).
             tc_pr = cellule._tc.get_or_add_tcPr()
-            tc_pr.append(parse_xml(f'<w:shd {nsdecls("w")} w:val="clear" w:color="auto" w:fill="{couleur}"/>'))
+            tc_pr.append(parse_xml(
+                f'<w:tcBorders {nsdecls("w")}><w:bottom w:val="single" w:sz="12" w:space="0" '
+                f'w:color="{couleur}"/></w:tcBorders>'))
+            tc_pr.append(parse_xml(f'<w:shd {nsdecls("w")} w:val="clear" w:color="auto" w:fill="E5E7EB"/>'))
 
     for i, e in enumerate(entetes):
         remplir(table.rows[0].cells[i], e, entete=True, largeur_cm=largeurs[i])

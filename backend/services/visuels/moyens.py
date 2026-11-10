@@ -135,7 +135,7 @@ def synoptique_humains(cartes: list[dict], th: Theme, encadrement: list[str] | N
     if not cartes:
         return None
     W = LARGEUR_PORTRAIT
-    cols = min(len(cartes), 4)
+    cols = 4      # grille fixe, comme les matériels : une carte seule ne s'étire pas sur 17 cm
     gap = 6.0
     cw = (W - (cols - 1) * gap) / cols
     corps = [t(0, 11, "MOYENS HUMAINS", 8, True, th.accent_fonce)]

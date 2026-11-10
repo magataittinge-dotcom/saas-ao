@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import io
 
-ACCENT_PAR_DEFAUT = "#1E40AF"
+ACCENT_PAR_DEFAUT = "#334155"   # encre neutre (mission finale DOCUMENTS) : sans logo, jamais le bleu de l'outil
 
 
 def _rgb(h: str) -> tuple[int, int, int]:
