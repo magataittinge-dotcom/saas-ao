@@ -30,14 +30,15 @@ export function Dialogue({ ouvert, onOuvert, titre, description, children, actio
       <D.Portal>
         <D.Overlay data-theme={theme} className="voile-flottant fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-voile p-4 max-[768px]:place-items-end max-[768px]:p-0">
           <D.Content data-dialogue="" {...(description ? {} : { 'aria-describedby': undefined })}
-            className={cn('dialogue-flottant relative grid w-full gap-4 rounded-carte border border-bord bg-surface-pop p-6 text-fg shadow-flottant max-[768px]:rounded-b-none max-[768px]:pb-[max(1.5rem,env(safe-area-inset-bottom))]',
+            className={cn('dialogue-flottant relative grid w-full gap-4 rounded-carte border border-bord bg-surface-pop p-6 text-fg shadow-flottant max-[768px]:flex max-[768px]:max-h-[calc(100dvh-1rem)] max-[768px]:flex-col max-[768px]:rounded-b-none max-[768px]:pb-[max(1.5rem,env(safe-area-inset-bottom))]',
               taille === 'petit' ? 'max-w-md' : taille === 'grand' ? 'max-w-3xl' : 'max-w-lg', className)}>
-            <div className={cn('grid gap-1.5', !sansFermer && 'pr-10')}>
+            <div className={cn('grid gap-1.5 max-[768px]:shrink-0', !sansFermer && 'pr-10')}>
               <D.Title className="text-lg font-semibold text-fg">{titre}</D.Title>
               {description && <D.Description className="text-sm text-fg-2">{description}</D.Description>}
             </div>
-            {children}
-            {actions && <div data-dialogue-actions="" className="flex flex-wrap justify-end gap-2 pt-1 max-[768px]:flex-col-reverse max-[768px]:[&>*]:w-full">{actions}</div>}
+            {/* au téléphone, le contenu seul défile (une longue liste ne pousse ni le titre ni les actions hors de l'écran) */}
+            {children != null && children !== false && <div data-dialogue-corps="" className="contents max-[768px]:-mx-6 max-[768px]:grid max-[768px]:min-h-0 max-[768px]:flex-1 max-[768px]:gap-4 max-[768px]:overflow-y-auto max-[768px]:overscroll-contain max-[768px]:px-6">{children}</div>}
+            {actions && <div data-dialogue-actions="" className="flex flex-wrap justify-end gap-2 pt-1 max-[768px]:shrink-0 max-[768px]:flex-col-reverse max-[768px]:[&>*]:w-full">{actions}</div>}
             {!sansFermer && (
               <D.Close aria-label="Fermer" className="absolute right-2 top-2 grid size-11 place-items-center rounded-pilule text-fg-2 transition-colors duration-fast ease-survol hover:bg-surface-1 hover:text-fg active:scale-[.98]">
                 <X aria-hidden size={18} strokeWidth={1.5} />

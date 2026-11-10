@@ -18,11 +18,12 @@ const ICONES: Record<Sens, LucideIcon> = { bleu: Loader, vert: Check, ambre: Clo
 /**
  * Pastille d'état : un sens, un mot, une icône (jamais la couleur seule). Pilule, 12,5 px / 500, casse de phrase, chiffres
  * tabulaires. Jamais l'accent d'aurore, jamais l'or. `icone={null}` la retire (dans une rangée qui porte déjà l'icône).
+ * Au téléphone, un long libellé passe à la ligne dans la pastille au lieu de sortir de l'écran (une ligne : même hauteur).
  */
 export function PastilleEtat({ sens, icone, children, className, ...props }: { sens: Sens; icone?: LucideIcon | null } & React.HTMLAttributes<HTMLSpanElement>) {
   const Icone = icone === undefined ? ICONES[sens] : icone
   return (
-    <span data-sens={sens} className={cn('chiffres inline-flex min-h-6 items-center gap-1.5 whitespace-nowrap rounded-pilule px-2.5 text-xs font-medium', TONS[sens], className)} {...props}>
+    <span data-sens={sens} className={cn('chiffres inline-flex min-h-6 items-center gap-1.5 whitespace-nowrap rounded-pilule px-2.5 text-xs font-medium max-md:max-w-full max-md:whitespace-normal max-md:py-0.5 max-md:text-left', TONS[sens], className)} {...props}>
       {Icone && <Icone aria-hidden size={13} strokeWidth={2} className="shrink-0" />}
       {children}
     </span>

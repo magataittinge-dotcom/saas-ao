@@ -45,14 +45,18 @@ export function CaseResume({ etiquette, valeur, unite, rien = 'Aucun', precision
 }
 
 /**
- * Une bande de cases : UNE surface, découpée par des filets de 1 px (jamais une grille de cartes identiques). Une colonne au
- * téléphone, les cases séparées par un filet horizontal.
+ * Une bande de cases : UNE surface, découpée par des filets de 1 px (jamais une grille de cartes identiques). Au téléphone,
+ * deux colonnes (quatre cases tiennent en deux rangées au lieu de s'empiler sur 480 px) : filet vertical entre les deux
+ * colonnes, filet horizontal entre les rangées ; une case seule sur sa rangée prend toute la largeur.
  */
+const TEL_DEUX_COLONNES = 'max-md:grid-cols-2 max-md:[&>*]:border-bord max-md:[&>*:nth-child(odd):not(:last-child)]:border-r max-md:[&>*:nth-child(n+3)]:border-t max-md:[&>*:last-child:nth-child(odd)]:col-span-2 max-md:[&>div]:p-4'
+
 export function BandeCases({ children, libelle = 'Résumé', className }: { children: React.ReactNode; libelle?: string; className?: string }) {
   const n = React.Children.count(children)
+  const presentes = React.Children.toArray(children).length
   return (
     <div role="group" aria-label={libelle} data-bande-cases="" data-surface=""
-      className={cn('grid divide-bord rounded-carte border border-bord bg-surface-0 shadow-card max-md:divide-y md:divide-x', n >= 4 ? 'md:grid-cols-4' : n === 3 ? 'md:grid-cols-3' : n === 2 ? 'md:grid-cols-2' : '', className)}>
+      className={cn('grid divide-bord rounded-carte border border-bord bg-surface-0 shadow-card md:divide-x', presentes >= 2 ? TEL_DEUX_COLONNES : 'max-md:divide-y', n >= 4 ? 'md:grid-cols-4' : n === 3 ? 'md:grid-cols-3' : n === 2 ? 'md:grid-cols-2' : '', className)}>
       {children}
     </div>
   )
