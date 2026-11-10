@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Loader2 } from 'lucide-react'
+import { Bouton } from '@/components/ui/bouton'
 import { api } from '@/services/api'
 
 /**
@@ -180,11 +180,6 @@ export function amenerEnVue(zone: HTMLElement | null, ligne: HTMLElement | null,
   zone.scrollTo({ top: Math.max(0, haut), left: Math.max(0, gauche), behavior: comportement })
 }
 
-const BOUTON =
-  'inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-ds-border-subtle ' +
-  'bg-ds-surface-2 px-4 text-base font-medium text-ds-text hover:bg-ds-surface-3 ' +
-  'focus-visible:outline focus-visible:outline-2 focus-visible:outline-ds-lum'
-
 /** Délai avant un nouvel essai quand le serveur est occupé (503 + Retry-After). */
 function delaiReessai(_n: number, erreur: unknown): number {
   const entete = (erreur as { response?: { headers?: Record<string, string> } })?.response?.headers?.['retry-after']
@@ -226,18 +221,13 @@ export default function VueTableau({ exigenceId, ancre }: Props) {
     return (
       <div className="flex flex-col items-start gap-3">
         <p className="text-base text-ds-text-2">Le tableau ne peut pas s'afficher pour le moment.</p>
-        <button type="button" onClick={() => refetch()} disabled={isFetching} className={BOUTON}>
-          Réessayer
-        </button>
+        <Bouton onClick={() => { void refetch() }} enCours={isFetching} libelleEnCours="Nouvel essai…">Réessayer</Bouton>
       </div>
     )
   }
   if (isPending || !data) {
     return (
-      <p role="status" className="flex items-center gap-2 text-base text-ds-text-2">
-        <Loader2 size={18} className="animate-spin motion-reduce:animate-none" aria-hidden="true" />
-        Chargement du tableau…
-      </p>
+      <p role="status" className="text-base text-ds-text-2">Chargement du tableau…</p>
     )
   }
   return <TableauSource fenetre={data} ancre={ancre} refZone={zone} refLigne={cible} />

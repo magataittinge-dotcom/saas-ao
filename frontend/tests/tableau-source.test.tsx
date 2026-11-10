@@ -86,9 +86,9 @@ test('téléphone : le défilement horizontal reste dans le tableau, texte de 16
   assert.ok(code.includes('overflow-auto') && code.includes('max-w-full') && code.includes('min-w-0'))
   assert.ok(!/text-(xs|sm)\b|text-\[(\d|1[0-5])px\]/.test(code), 'aucun texte sous 16 px')
   assert.ok(code.includes('text-base'))
-  assert.ok(code.includes('min-h-[44px]') && code.includes('min-w-[44px]'))
+  assert.match(code, /<Bouton onClick=\{\(\) => \{ void refetch\(\) \}\}/, '« Réessayer » est le bouton du système (44 px de haut)')
   assert.ok(code.includes('h-11'))                                          // lignes de 44 px
-  assert.ok(code.includes('motion-reduce:animate-none'))
+  assert.doesNotMatch(code, /animate-spin|Loader2/, 'plus de roue qui tourne : le libellé dit le chargement')
 })
 
 test('textes affichés : positifs, aucun mot interdit', () => {

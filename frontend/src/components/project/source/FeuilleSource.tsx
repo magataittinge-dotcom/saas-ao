@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { obtenirApercu, type VueApercu } from '@/services/sources'
 import { centreVertical, defilementCentre, type Rect } from '@/lib/ancre'
 import { useMedia, REQUETE_MOUVEMENT_REDUIT } from '@/hooks/useMedia'
+import { Bouton } from '@/components/ui/bouton'
 
 /** Les rectangles de l'ancre posés sur une page (image ou canevas) : en pourcentages de la page,
  *  donc justes à toute largeur. Décoratifs pour un lecteur d'écran : le texte du passage est dans
@@ -95,7 +96,7 @@ export function ImageSource({
     return (
       <div className="source-vide" role="status">
         <p>L&rsquo;aperçu de cette page n&rsquo;a pas pu s&rsquo;afficher.</p>
-        <button type="button" onClick={reessayer} className="source-bouton">Réessayer</button>
+        <Bouton onClick={reessayer}>Réessayer</Bouton>
       </div>
     )
   }
