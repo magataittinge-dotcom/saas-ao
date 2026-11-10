@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
  * (3:1) ; recherche = pilule. États : survol (trait plus marqué), focus (trait et contour d'accent), erreur (`aria-invalid`,
  * trait rouge et message qui nomme la correction), désactivé (glace, texte grisé). Au téléphone : 16 px (pas de zoom d'iOS).
  */
-export const classeChamp = 'w-full rounded-lg border border-bord-champ bg-surface-0 px-3.5 text-sm text-fg transition-colors duration-fast ease-survol placeholder:text-fg-3 hover:border-fg-3 focus-visible:border-accent-ring aria-[invalid=true]:border-rouge-mark disabled:cursor-not-allowed disabled:border-bord-2 disabled:bg-surface-1 disabled:text-fg-disabled max-[768px]:text-saisie'
+export const classeChamp = 'w-full rounded-lg border border-bord-champ bg-surface-0 px-3.5 text-sm text-fg transition-colors duration-fast ease-survol placeholder:text-fg-3 hover:border-fg-3 focus-visible:border-accent-ring aria-[invalid=true]:border-rouge-mark disabled:cursor-not-allowed disabled:border-bord-2 disabled:bg-surface-1 disabled:text-fg-disabled max-[768px]:text-saisie [@media(pointer:coarse)]:text-saisie'
 
 export const Champ = React.forwardRef<HTMLInputElement, React.ComponentProps<'input'>>(({ className, type, ...props }, ref) => (
   <input ref={ref} type={type ?? 'text'} className={cn(classeChamp, 'h-11', className)} {...props} />

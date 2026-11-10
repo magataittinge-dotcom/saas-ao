@@ -74,3 +74,9 @@ test('pied de page du site public : liens élargis au téléphone ; croix d’un
   assert.match(code('src/components/public/CoquillePublique.tsx'), /hover:underline max-md:px-2\.5 \[@media\(pointer:coarse\)\]:min-h-11/)
   assert.match(code('src/components/ui/filtre.tsx'), /grid size-11 shrink-0 place-items-center rounded-r-pilule/)
 })
+
+test('téléphone couché (844 × 390, mise en page du bureau) : les champs restent à 16 px sur un écran tactile', () => {
+  assert.match(code('src/components/ui/champ.tsx'), /max-\[768px\]:text-saisie \[@media\(pointer:coarse\)\]:text-saisie/)
+  assert.match(code('src/components/ui/command.tsx'), /\[@media\(pointer:coarse\)\]:text-saisie/)
+  assert.match(code('src/lib/clerkApparence.ts'), /\[@media\(pointer:coarse\)\]:!text-saisie/)
+})
