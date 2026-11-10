@@ -1,5 +1,6 @@
 import { ArrowDown } from 'lucide-react'
 import { Bouton } from '@/components/ui/bouton'
+import { Carte } from '@/components/ui/carte'
 import { EtatElement, SectionEtape } from '@/components/etape'
 import { libelleSource, type PointAVerifier } from '@/lib/resumeAO'
 import type { SourceFait } from '@/lib/carteAO'
@@ -18,7 +19,7 @@ export default function AVerifierAvantEngagement({ points, onVoir, onVoirPenalit
   return (
     <SectionEtape titre="À vérifier avant de vous engager" colonnes={2}>
       {points.map((p) => (
-        <div key={p.id} data-a-verifier={p.id} className="grid min-w-0 content-start gap-1.5 rounded-carte border border-bord-2 bg-surface-1 p-5">
+        <Carte key={p.id} data-a-verifier={p.id} className="grid min-w-0 content-start gap-1.5">
           <p className="text-sm font-medium text-fg-2">{p.libelle}</p>
           <p className="break-words font-semibold text-fg">{p.valeur}</p>
           {p.versTresorerie && onVoirPenalites && (
@@ -26,10 +27,10 @@ export default function AVerifierAvantEngagement({ points, onVoir, onVoirPenalit
           )}
           <EtatElement
             etat="a-verifier"
-            className="mt-1 border-t border-bord-2 pt-2"
+            className="mt-1 border-t border-bord pt-2"
             source={p.source ? { libelle: libelleSource(p.source) ?? p.source.document, onVoir: onVoir ? () => onVoir(p.source as SourceFait) : undefined } : undefined}
           />
-        </div>
+        </Carte>
       ))}
     </SectionEtape>
   )
