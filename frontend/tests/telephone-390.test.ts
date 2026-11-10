@@ -80,3 +80,10 @@ test('téléphone couché (844 × 390, mise en page du bureau) : les champs rest
   assert.match(code('src/components/ui/command.tsx'), /\[@media\(pointer:coarse\)\]:text-saisie/)
   assert.match(code('src/lib/clerkApparence.ts'), /\[@media\(pointer:coarse\)\]:!text-saisie/)
 })
+
+test('fil des étapes au téléphone : le nom de l’étape en cours est posé sous le rond, hors du flux (il ne chevauche plus le rond voisin)', () => {
+  const c = code('src/components/project/StepProgress.tsx')
+  assert.match(c, /'sm:contents max-sm:absolute max-sm:top-full max-sm:flex max-sm:flex-col'/)
+  assert.match(c, /index === 0 \? 'max-sm:left-0 max-sm:items-start' : index === STEPS\.length - 1 \? 'max-sm:right-0 max-sm:items-end'/)
+  assert.match(c, /data-fil-etapes="" className="pb-6 max-sm:pb-10"/)
+})

@@ -45,7 +45,7 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick, lo
     ?? STEPS.find((s) => s.serveur === currentStep)?.number ?? currentStep
 
   return (
-    <nav aria-label="Étapes de l’appel d’offres" data-fil-etapes="" className="pb-6">
+    <nav aria-label="Étapes de l’appel d’offres" data-fil-etapes="" className="pb-6 max-sm:pb-10">
       <ol className="flex w-full items-start">
         {STEPS.map((step, index) => {
           const lotFait = !!lotUnique && step.segment === 'lots'
@@ -65,15 +65,20 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick, lo
                       : 'border-gris-mark bg-transparent text-gris-ink')}>
                 {etat === 'faite' ? <Check aria-hidden size={14} strokeWidth={2.5} /> : <span className="chiffres">{step.number}</span>}
               </span>
-              <span className={cn('whitespace-nowrap text-xs', isActive ? 'block font-semibold text-fg' : 'hidden font-medium text-fg-2 sm:block')}>{step.label}</span>
-              {precision && <span className={cn('-mt-1 whitespace-nowrap text-xs text-fg-2', isActive ? 'block' : 'hidden sm:block')}>{precision}</span>}
+              {/* Au téléphone, seul le nom de l'étape en cours s'affiche : posé sous le rond, hors du flux, il ne pousse plus le rond
+                  voisin (« Dépôt du dossier » chevauchait l'étape 2) ; calé à gauche pour la première, à droite pour la dernière. */}
+              <span className={cn('sm:contents max-sm:absolute max-sm:top-full max-sm:flex max-sm:flex-col',
+                index === 0 ? 'max-sm:left-0 max-sm:items-start' : index === STEPS.length - 1 ? 'max-sm:right-0 max-sm:items-end' : 'max-sm:left-1/2 max-sm:-translate-x-1/2 max-sm:items-center')}>
+                <span className={cn('whitespace-nowrap text-xs', isActive ? 'block font-semibold text-fg' : 'hidden font-medium text-fg-2 sm:block')}>{step.label}</span>
+                {precision && <span className={cn('-mt-1 whitespace-nowrap text-xs text-fg-2', isActive ? 'block' : 'hidden sm:block')}>{precision}</span>}
+              </span>
             </>
           )
           return (
             <li key={step.number} className="flex min-w-0 flex-1 items-start last:flex-none">
               <button type="button" disabled={!isClickable} onClick={() => onStepClick?.(step.number)}
                 aria-label={precision ? `${step.label}, ${precision}` : step.label} aria-current={isActive ? 'step' : undefined}
-                className={cn('flex min-h-11 min-w-11 shrink-0 flex-col items-center gap-1.5 rounded-lg px-1 pt-1.5 transition-colors duration-fast ease-survol',
+                className={cn('flex min-h-11 min-w-11 shrink-0 flex-col items-center gap-1.5 rounded-lg px-1 pt-1.5 transition-colors duration-fast ease-survol max-sm:relative',
                   isClickable ? 'cursor-pointer hover:bg-surface-1 active:scale-[.98]' : 'cursor-default')}>
                 {contenu}
               </button>
