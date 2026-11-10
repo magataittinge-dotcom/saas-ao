@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import type { AxiosAdapter } from 'axios'
 import { api, setReactionSessionExpiree } from '@/services/api'
-import { ADRESSE_SESSION_EXPIREE, CLE_RETOUR, PHRASE_SESSION_EXPIREE, adresseDeRetourValide, creerReactionSessionExpiree, retourApresConnexion } from '@/lib/sessionExpiree'
+import { ADRESSE_SESSION_EXPIREE, CLE_RETOUR, PHRASE_SESSION_EXPIREE, adresseDeRetourValide, creerReactionSessionExpiree, oublierRetour, retourApresConnexion } from '@/lib/sessionExpiree'
 import { lire, sansCommentaires } from './outils/sources'
 
 function stockage() {
@@ -77,4 +77,16 @@ test('la phrase est celle de la mission ; useSyncUser pose la réaction, qui fer
   const auth = sansCommentaires(lire('src/hooks/useAuth.ts'))
   assert.match(auth, /setReactionSessionExpiree\(/)
   assert.match(auth, /signOut\(\{ redirectUrl: vers \}\)/)
+})
+
+test('après la reconnexion : retour à la page d’origine, puis on l’oublie (une connexion ordinaire mène à l’accueil)', () => {
+  const s = stockage()
+  s.setItem(CLE_RETOUR, '/projects/abc/memoire')
+  assert.equal(retourApresConnexion(s), '/projects/abc/memoire')
+  assert.equal(retourApresConnexion(s), '/projects/abc/memoire', 'la lecture n’efface pas : le rendu peut se rejouer')
+  oublierRetour(s)
+  assert.equal(retourApresConnexion(s), null)
+  const app = lire('src/App.tsx')
+  assert.match(app, /isSignedIn \? <Navigate to=\{apresConnexion\(\)\} replace \/>/, 'la route publique ramène à la page d’origine')
+  assert.match(sansCommentaires(lire('src/hooks/useAuth.ts')), /oublierRetour\(window\.sessionStorage\)/)
 })

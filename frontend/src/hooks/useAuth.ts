@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { authService } from '@/services/auth'
 import { setClerkTokenProvider, setReactionSessionExpiree } from '@/services/api'
-import { creerReactionSessionExpiree } from '@/lib/sessionExpiree'
+import { creerReactionSessionExpiree, oublierRetour } from '@/lib/sessionExpiree'
 import { poserVisiteAvantSortie } from '@/lib/visiteVeille'
 
 export function useSyncUser(): boolean {
@@ -18,6 +18,8 @@ export function useSyncUser(): boolean {
   // on vide l'état gardé, et Clerk ferme la session en menant à la connexion, qui dit « Votre session a expiré… ».
   useEffect(() => {
     if (!isLoaded || !isSignedIn) return
+    // la session est (r)ouverte : l'écran de connexion a déjà lu la page d'origine (rendu), on peut l'oublier
+    oublierRetour(window.sessionStorage)
     setReactionSessionExpiree(creerReactionSessionExpiree({
       stockage: () => window.sessionStorage,
       adresse: () => window.location.pathname + window.location.search,

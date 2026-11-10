@@ -45,13 +45,21 @@ export function creerReactionSessionExpiree(dep: { stockage: () => Stockage; adr
   }
 }
 
-/** La page où revenir après la connexion (lue une fois, puis effacée) ; null s'il n'y en a pas. */
-export function retourApresConnexion(stockage: Stockage, effacer = false): string | null {
+/** La page où revenir après la connexion ; null s'il n'y en a pas. La lecture ne l'efface pas (voir `oublierRetour`). */
+export function retourApresConnexion(stockage: Stockage): string | null {
   try {
     const adresse = stockage.getItem(CLE_RETOUR)
-    if (effacer) stockage.removeItem(CLE_RETOUR)
     return adresseDeRetourValide(adresse) ? adresse : null
   } catch {
     return null
+  }
+}
+
+/** Une fois la session rouverte et le retour fait, on oublie la page : une connexion ordinaire mène à l'accueil. */
+export function oublierRetour(stockage: Stockage): void {
+  try {
+    stockage.removeItem(CLE_RETOUR)
+  } catch {
+    // stockage indisponible : rien à oublier
   }
 }

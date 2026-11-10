@@ -4,6 +4,7 @@ import { useAuth } from '@clerk/clerk-react'
 import { useSyncUser } from '@/hooks/useAuth'
 import EcranEnChargement from '@/components/common/EcranEnChargement'
 import { REDIRECTIONS_ENTREPRISE } from '@/lib/entreprise/redirections'
+import { retourApresConnexion } from '@/lib/sessionExpiree'
 import { AdresseInconnue } from '@/components/public/EcransEtat'
 import { ConnexionInterrompue, ErreurAppli, MorceauIntrouvable } from '@/components/public/EcransHorsRouteur'
 
@@ -34,10 +35,19 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   return isSignedIn ? <>{children}</> : <Navigate to="/login" replace />
 }
 
+// Après une session expirée (F-01), la connexion ramène à la page d'où l'on vient ; sinon, à l'accueil.
+function apresConnexion(): string {
+  try {
+    return retourApresConnexion(window.sessionStorage) ?? '/dashboard'
+  } catch {
+    return '/dashboard'
+  }
+}
+
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { isSignedIn, isLoaded } = useAuth()
   if (!isLoaded) return null
-  return isSignedIn ? <Navigate to="/dashboard" replace /> : <>{children}</>
+  return isSignedIn ? <Navigate to={apresConnexion()} replace /> : <>{children}</>
 }
 
 /**
