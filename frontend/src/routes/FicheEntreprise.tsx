@@ -224,7 +224,7 @@ function Fiche({ rubrique }: { rubrique: RubriqueFiche }) {
                 </div>
               </section>
 
-              <div className="grid min-w-0 gap-3 lg:sticky lg:top-4 lg:row-span-2 lg:-m-3 lg:max-h-[calc(100svh-6rem)] lg:overflow-y-auto lg:p-3" data-colonne-bordereau="">
+              <div className="grid min-w-0 gap-3 lg:sticky lg:top-4 lg:row-span-2 lg:-m-3 lg:max-h-[calc(100svh-5rem)] lg:overflow-y-auto lg:p-3" data-colonne-bordereau="">
                 <ZoneBordereau
                   bordereau={courant} onChange={modifier} logoSrc={urlServeur(fiche.bordereau.logo_url)} logoEnCours={logo.isPending}
                   onLogo={(f) => logo.mutate(f)} onRetirerLogo={() => retraitLogo.mutate()}

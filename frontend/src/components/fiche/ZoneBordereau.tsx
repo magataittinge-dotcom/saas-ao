@@ -58,7 +58,7 @@ export default function ZoneBordereau(p: Props) {
   return (
     <section aria-labelledby="zone-bordereau" data-zone="bordereau" className="min-w-0">
       <TitreSection id="zone-bordereau">Téléchargement</TitreSection>
-      <div className="grid gap-6">
+      <div className="grid gap-5">
       <div className="grid gap-1.5" data-formats="">
         <span className={ETIQUETTE}>Format du fichier</span>
         <GroupeRadio
@@ -72,7 +72,7 @@ export default function ZoneBordereau(p: Props) {
         <Download aria-hidden />Télécharger la fiche<span className="font-normal">· {nomFormat}</span>
       </Bouton>
 
-      <h3 className="border-t border-bord pt-6 text-sm font-semibold text-fg">Personnaliser le bordereau</h3>
+      <h3 className="border-t border-bord pt-5 text-sm font-semibold text-fg">Personnaliser le bordereau</h3>
 
       <div className="grid gap-4">
         <GroupeChamp libelle="Titre">
