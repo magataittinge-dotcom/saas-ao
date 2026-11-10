@@ -1,6 +1,6 @@
 ---
 name: Synorix
-description: Réponse aux appels d'offres BTP, du DCE au dossier déposable — « Aurore polaire » (base A, discipline B, gros chiffres C), décidée le 9/11/2026 ; couleurs tirées du visage par la mesure le 10/11/2026.
+description: Réponse aux appels d'offres BTP, du DCE au dossier déposable — « Aurore polaire » (base A, discipline B, gros chiffres C), décidée le 9/11/2026 ; couleurs tirées du visage par la mesure le 10/11/2026 ; socle (grille, composants, mouvement, garde-fous) posé le 10/11/2026.
 colors:
   # Clair (défaut). Toutes les teintes de marque sont mesurées sur le visage (scripts/mesure-visage.mjs).
   page: "#f2f8fc"
@@ -99,7 +99,7 @@ typography:
     lineHeight: 1.65
   title:
     fontFamily: "Manrope Variable, ui-sans-serif, system-ui, Segoe UI, Roboto, Arial, sans-serif"
-    fontSize: "18px"
+    fontSize: "17px"
     fontWeight: 600
     lineHeight: 1.3
     letterSpacing: "-0.01em"
@@ -112,20 +112,21 @@ typography:
   label:
     fontFamily: "Manrope Variable, ui-sans-serif, system-ui, sans-serif"
     fontSize: "12.5px"
-    fontWeight: 600
-    lineHeight: 1.3
+    fontWeight: 500
+    lineHeight: 1.4
   chiffre-grand:
     fontFamily: "Manrope Variable, ui-sans-serif, system-ui, sans-serif"
     fontSize: "clamp(40px, 24px + 2vw, 48px)"
     fontWeight: 600
     lineHeight: 1
-    letterSpacing: "-0.02em"
+    letterSpacing: "-0.03em"
     fontFeature: "\"tnum\" 1, \"lnum\" 1"
   data:
-    fontFamily: "Geist Mono, ui-monospace, Menlo, monospace"
-    fontSize: "13px"
+    fontFamily: "Manrope Variable, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "13.5px"
     fontWeight: 400
-    lineHeight: 1.4
+    lineHeight: 1.45
+    fontFeature: "\"tnum\" 1, \"lnum\" 1"
 rounded:
   xs: "4px"
   sm: "8px"
@@ -141,6 +142,9 @@ spacing:
   "30": "30px"
   "40": "40px"
   gouttiere-mobile: "16px"
+  gouttiere-tablette: "24px"
+  gouttiere-bureau: "32px"
+  conteneur: "1200px"
 components:
   button-primary:
     backgroundColor: "{colors.accent-fill}"
@@ -176,13 +180,13 @@ components:
 
 # Design System: Synorix
 
-> Source de vérité des jetons : `frontend/src/styles/theme.css` (clair et nuit). Ce document en donne le sens ; en cas d'écart, le code fait foi et ce document se corrige.
+> Source de vérité des jetons : `frontend/src/styles/theme.css` (clair et nuit). Ce document en donne le sens ; en cas d'écart, le code fait foi et ce document se corrige. Le design se mesure à chaque fusion : `frontend/tests/garde-fous-design.test.ts` compte les écarts aux échelles, fichier par fichier, et échoue au premier écart nouveau (voir « Garde-fous »). Référence visuelle de chaque composant, dans chaque état : la page `/design`.
 
 ## Overview
 
 **Étoile polaire : « Aurore polaire »**
 
-Un logiciel qui écrit des documents, pas un tableau de bord de plus. Le jour, un blanc glacé légèrement bleuté (jamais de gris chaud) ; la nuit, le bleu-noir des ombres du visage (jamais de gris neutre, jamais de noir). Derrière le travail, un ciel d'aurores boréales respire lentement en haut de l'écran : il se devine le jour, il se voit la nuit, il ne touche jamais le contenu. **La marque sort du visage de Synorix : ce qui n'est pas dans le visage n'est pas dans la marque.** Le bleu de son verre reste la seule couleur d'action ; les six couleurs d'état ne servent qu'à dire un état ; un fil de lumière glacée (l'accent aurore) signe la marque sur quelques traits et halos ; l'or de sa flamme est la seule couleur chaude, de la lumière seulement : la pointe du fil, la lueur d'aube à l'horizon du ciel, l'éclat du halo du visage, la braise du logo.
+Un logiciel qui écrit des documents, pas un tableau de bord de plus. Le jour, un blanc glacé légèrement bleuté (jamais de gris chaud) ; la nuit, le bleu-noir des ombres du visage (jamais de gris neutre, jamais de noir). Derrière le travail, un ciel d'aurores boréales respire lentement en haut de l'écran : il se devine le jour, il se voit la nuit, il ne touche jamais le contenu. **La marque sort du visage de Synorix : ce qui n'est pas dans le visage n'est pas dans la marque.** Le bleu de son verre reste la seule couleur d'action ; les six couleurs d'état ne servent qu'à dire un état ; un fil de lumière glacée (l'accent aurore) signe la marque sur quelques traits et halos ; l'or de sa flamme est la seule couleur chaude, de la lumière seulement : la pointe du fil, l'éclat du halo du visage, la braise du logo.
 
 La discipline vient de la direction « Précision » : traits d'un pixel plutôt qu'ombres, hiérarchie portée par la taille et la graisse, chiffres tabulaires, couleur rare donc parlante. Les cartes de résumé reprennent les gros chiffres de « Givre », sans le verre : l'état du cabinet se lit d'un coup d'œil, au bureau comme sur un téléphone de chantier en plein soleil.
 
@@ -220,7 +224,7 @@ Un ciel froid et lumineux, tiré du visage : neutres à la teinte de ses ombres,
 ### Secondary
 - **Lumière d'aurore** (`--aurore-ink` `#196b95` / `#a7dcff`, `--aurore-mark` `#1688c0` / `#78ccff`, `--aurore-glow`) : le fil lumineux de la marque (trait sous le titre de l'Accueil, halo du visage, sélection de texte, logo), à la teinte des ombres et du halo du visage (237,2°). Ce n'est **pas** un état.
 - **Ciel** (`--aurore-a` glace 237,2°, `--aurore-b` givre 245,5°, `--aurore-c` azur 251,7°) : les trois ellipses du fond, toutes dans la famille bleue du visage. Ni vert, ni turquoise, ni violet.
-- **Or de la flamme** (`--flamme` `#ecac2f` / `#fdbe51`, `--flamme-glow`) : la seule teinte chaude de la marque (78,5°). De la **lumière** seulement (variante B) : la pointe d'or du fil d'aurore (son dernier cinquième), la lueur d'aube du ciel (`--aurore-aube` `rgba(245,193,107,.2)` / `rgba(242,176,54,.28)`), l'éclat d'or du halo du visage (`.eclat-or`, un arc court), la braise du logo. Jamais un texte, une pastille, un point d'état, une barre de progression ni un fond de bouton ; aucune classe Tailwind ne l'expose ; au plus 1 % de l'écran.
+- **Or de la flamme** (`--flamme` `#ecac2f` / `#fdbe51`, `--flamme-glow`) : la seule teinte chaude de la marque (78,5°). De la **lumière** seulement (variante B) : la pointe d'or du fil d'aurore (son dernier cinquième), l'éclat d'or du halo du visage (`.eclat-or`, un arc court), la braise du logo. Jamais un texte, une pastille, un point d'état, une barre de progression ni un fond de bouton ; aucune classe Tailwind ne l'expose ; au plus 1 % de l'écran.
 
 ### Neutral
 Tous les neutres sont à la teinte des ombres du visage (237,2°), avec une chroma supérieure à zéro : jamais un gris pur. Seul le papier est blanc.
@@ -256,13 +260,17 @@ Le vert, l'ambre, le rouge et le turquoise ne sont pas dans le visage : ce sont 
 
 **La règle « ce qui n'est pas dans le visage n'est pas dans la marque ».** L'accent, l'aurore, le fil, le logo, les neutres et les ombres n'emploient que les quatre teintes mesurées, à ± 8°. Une nouvelle teinte de marque passe d'abord par la mesure.
 
-**La règle « une couleur vive, rare, sur un champ calme ».** La couleur vive (chroma ≥ 0,10) occupe au plus 6 % de l'écran, aurore comprise : un bouton principal, la rangée active, les liens ; le reste est neutre. Mesuré sur les captures du 10/11 : 0,7 à 1,2 % à 1 440 px en clair, 1,8 à 2,8 % en nuit ; 0,7 à 3,2 % et 1,9 à 4,9 % à 390 px. L'or reste une étincelle : au plus 1 % de l'écran, lueur d'aube comprise (mesuré sur les captures de la variante B, `design/couleurs/PART-OR.txt`).
+**La règle « une couleur vive, rare, sur un champ calme ».** La couleur vive (chroma ≥ 0,10) occupe au plus 6 % de l'écran, aurore comprise : un bouton principal, la rangée active, les liens ; le reste est neutre. Mesuré sur les captures du 10/11 : 0,7 à 1,2 % à 1 440 px en clair, 1,8 à 2,8 % en nuit ; 0,7 à 3,2 % et 1,9 à 4,9 % à 390 px. L'or reste une étincelle : au plus 1 % de l'écran. La lueur d'aube de la variante B (une ellipse d'or dans le ciel) a été retirée le 10/11 : elle passait derrière des titres et se lisait comme un reflet ; l'aurore n'a que du bleu.
 
 **La règle « jamais la couleur seule ».** Un état porte toujours un mot, et une icône (WCAG 1.4.1). La couleur confirme, elle n'informe jamais seule.
 
 **La règle « la plus urgente gagne ».** Plusieurs états dans un même bloc : le bloc prend la couleur la plus urgente (rouge > ambre > bleu > vert > turquoise > gris). La pastille de Mes AO dans la barre latérale suit la même règle.
 
-**La règle « une voix d'action ».** Le bleu `--accent-*` est la seule couleur d'action. Un seul bouton en dégradé par écran (« Nouvel appel d'offres », ou l'action qui fait avancer l'AO).
+**La règle « une voix d'action ».** Le bleu `--accent-*` est la seule couleur d'action. **Un seul aplat d'accent par écran** : l'action qui fait avancer (`<Bouton variante="principal">`). Dès qu'un écran montre la sienne, « Nouvel appel d'offres » de la barre passe au trait, tout seul. Un élément sélectionné n'est **jamais** un aplat : onglet, segment et entrée de menu choisis = surface neutre et texte plein ; filtre actif = fond `--bleu-soft`, texte `--bleu-ink`, trait `--bleu-mark`. Une action destructrice n'est jamais un aplat (au trait rouge).
+
+**La règle « la coquille est neutre ».** Barre latérale, barre du haut et barre du bas ne portent aucun fond d'accent : l'entrée active a un fond `--surface-1` et un texte `--text-1` ; seules son icône et sa barre de 3 px sont à `--accent-ui`.
+
+**La règle « une seule palette d'états ».** Les six sens (`--bleu-*` … `--gris-*`). La seconde palette (`--info / --success / --warning / --danger`) est calculée par le script comme descendante des six sens et ne s'emploie plus : un garde-fou compte ses derniers usages.
 
 **La règle « l'aurore n'est pas un état ».** `--aurore-*` et `--flamme` ne colorent jamais un fond de pastille, un texte d'état ni une barre de progression.
 
@@ -272,7 +280,7 @@ Le vert, l'ambre, le rouge et le turquoise ne sont pas dans le visage : ce sont 
 
 **Display Font:** Newsreader (variable, axe optique `opsz`), repli `ui-serif, Georgia, serif`
 **Body Font:** Manrope (variable), repli `ui-sans-serif, system-ui, Segoe UI, Roboto, Arial, sans-serif`
-**Label/Mono Font:** Geist Mono, pour les données seulement (références, montants alignés, identifiants)
+**Données :** Manrope à chiffres tabulaires. **Aucune police à chasse fixe dans l'interface** (ni pastille, ni « LOT 01 », ni pourcentage) ; le paquet Geist Mono reste installé mais ne sert plus.
 
 **Character:** une serif de lecture, froide et nette, posée sur une grotesque géométrique et calme : l'interface d'un outil, la voix d'un document.
 
@@ -281,12 +289,12 @@ Le vert, l'ambre, le rouge et le turquoise ne sont pas dans le visage : ce sont 
 Toutes les polices sont auto-hébergées (`@fontsource`), sous-ensembles latin et latin-ext seulement, `font-display: swap`, aucune requête vers un service tiers.
 
 ### Hierarchy
-- **Titre de page** (Newsreader 500, `clamp(2rem, 1.4rem + 1.6vw, 2.75rem)`, interligne 1,1, approche −0,01 em, `text-wrap: balance`, `font-optical-sizing: auto`) : le `h1` de chaque écran (« Bonjour », « DCE Gueux complet »), une fois par page. Jamais sous 28 px.
-- **Texte du mémoire** (Newsreader 400, 17 px, interligne 1,65, 72 caractères au plus par ligne, chiffres proportionnels) : Rédiger et les aperçus du mémoire. Les titres de parties du mémoire sont en Newsreader 600.
-- **Titre de carte ou de section** (Manrope 600, 16 à 18 px, interligne 1,3, approche −0,01 em) : tout `h2`-`h6` de l'interface.
-- **Corps** (Manrope 400, 15 px, interligne 1,5) : texte d'interface. Méta 13,5 px.
-- **Libellé** (Manrope 600, 12,5 px) : pastilles, en-têtes de colonne. Libellés de la barre latérale 11 px (plancher).
-- **Gros chiffre** (`.chiffre-grand` : Manrope 600, 40 à 48 px, interligne 1, tabulaire) : cartes de résumé seulement.
+- **Titre de page** (Newsreader 500, `clamp(2rem, 1.4rem + 1.6vw, 2.75rem)`, interligne 1,1, approche −0,01 em, `text-wrap: balance`) : **le seul `h1` de l'écran**, posé par `<Page>` (ou par le gabarit d'une étape d'AO). Jamais sous 28 px.
+- **Texte du mémoire** (Newsreader 400, 17 px, interligne 1,65, 72 caractères au plus par ligne, chiffres proportionnels) : Rédiger et les aperçus du mémoire.
+- **Échelle de l'interface, fermée : sept tailles et pas une autre** : 11 (`text-micro`, libellés des barres) · 12,5 (`text-xs`, libellés, pastilles, en-têtes de colonne) · 13,5 (`text-sm`, méta, contrôles) · 15 (`text-base`, corps) · 17 (`text-lg`, titre de carte ou de section, 600) · 22 (`text-xl`, titre d'un bloc d'écran, 600), plus le `h1`. Le gros chiffre (40 à 48 px) reste à part. Seule exception : 16 px dans un champ au téléphone (pas de zoom d'iOS).
+- **Trois graisses** : 400 (texte), 500 (libellés, contrôles, navigation), 600 (titres, chiffres). Rien au-dessus, rien en dessous. L'aperçu de fiche PDF, qui est un document, garde les siennes.
+- **Approche** : −0,03 em sur le gros chiffre, −0,01 em sur les titres de 17 et 22 px et sur le `h1`, 0 jusqu'à 15 px. Jamais d'approche positive.
+- **Aucune capitale forcée** : en-têtes de colonne, titres de section et pastilles en casse de phrase.
 
 ### Named Rules
 
@@ -294,13 +302,17 @@ Toutes les polices sont auto-hébergées (`@fontsource`), sous-ensembles latin e
 
 **La règle « chiffres alignés ».** `body` active `"tnum"` ; la classe `.chiffres` (tabulaires + alignés) se pose sur tout nombre isolé hors du `body` hérité. Seul le texte du mémoire revient aux chiffres proportionnels.
 
+**La règle « un titre, une fois ».** Le petit titre de la barre du haut n'apparaît que lorsque le `h1` est sorti de l'écran (la coquille l'observe : fondu de 100 ms, aucun saut de mise en page) ; il ne le double jamais. Dans un AO, la barre porte le chemin « Mes AO / nom de l'AO » : c'est de la navigation ; le `h1` est le titre de l'étape.
+
 ## Layout
 
-- Coquille : barre latérale flottante de 76 px à gauche sur ordinateur (marge 16 px), onglets en bas sous 769 px ; contenu centré, largeur de lecture 760 px pour les textes longs, conteneur 1 200 px.
-- Gouttière 16 px au téléphone. Aucun débordement horizontal jusqu'à 390 px de large.
-- Rythme : base 4 px (4 · 8 · 12 · 16 · 20 · 30 · 40). Groupes serrés, séparation large, plus d'air au-dessus d'un titre qu'en dessous.
-- Cartes de résumé en composition inégale (une principale, des secondaires, ou une seule surface découpée par des filets) : jamais une grille de cartes identiques.
-- L'aurore est posée une fois, dans `Layout.tsx`, en `position: fixed; inset: 0; z-index: 0`, derrière la coquille (`z-index: 1`).
+- **Un seul conteneur, un seul bord gauche.** Le conteneur (`.conteneur` : 1 200 px de contenu, gouttière `--gutter` de 16 px au téléphone, 24 px à partir de 769 px, 32 px à partir de 1 200 px) est posé UNE fois par la coquille (`layout/Layout.tsx`), autour de l'écran et dans la barre du haut : le titre de la barre, le `h1`, les titres de section et les surfaces partent du même x. **Une route ne pose ni largeur ni marge latérale** : elle rend `<Page titre sousTitre action>` (`components/ui/page.tsx`). Un écran étroit (`etroite`, 760 px) s'aligne à gauche dans le conteneur, il ne se recentre pas. Rédiger (`pleine`) est le seul écran en pleine largeur, à la gouttière ; la barre du haut le suit.
+- Coquille : barre latérale flottante de 76 px à gauche sur ordinateur (marge 16 px), onglets en bas sous 769 px. Barre du haut : 64 px (56 px et deux actions au plus au téléphone : la recherche et « + » ; le thème et les notifications sont dans « Compte »). Rien ne s'empile au-dessus.
+- **Rythme** : base 4 px (4 · 8 · 12 · 16 · 20 · 30 · 40). Trois fois plus d'air au-dessus d'un titre de section qu'en dessous : 40 / 16 px (30 / 12 au téléphone, `.titre-section`) ; 12 px entre deux surfaces sœurs.
+- Cartes de résumé : une seule surface découpée par des filets (`BandeCases`), jamais une grille de cartes identiques.
+- Au téléphone : une colonne et les mêmes composants ; une rangée de tableau s'empile ; rien ne défile de côté. Aucun débordement horizontal jusqu'à 390 px.
+- L'aurore est posée une fois, dans `Layout.tsx`, en `position: fixed; inset: 0; z-index: 0`, derrière la coquille.
+- Mesure : `design/scenarios/grille.mjs` (banc) vérifie les bords gauche et droit de chaque écran à 1 440 et 390 px, à 1 px près.
 
 ## Elevation & Depth
 
@@ -309,7 +321,7 @@ La profondeur vient de la lumière et des traits, pas des ombres. Au repos, une 
 ### Shadow Vocabulary
 - **Teinte des ombres** (`--ombre-rvb` : `20, 31, 39` clair, soit l'ombre mesurée du visage ; `0, 3, 6` nuit) : toutes les ombres s'écrivent `rgba(var(--ombre-rvb), …)`.
 - **Filet de lumière** (`--filet-lumiere` : `rgba(255, 255, 255, .9)` clair ; `rgba(211, 221, 230, .1)` nuit, la couleur des lumières du visage à 10 %) : le trait d'un pixel en haut des surfaces, posé par `--edge-light` (`inset 0 1px 0 var(--filet-lumiere)`). Jamais une valeur en dur.
-- **Carte** (`--shadow-card` : `0 1px 0` à 4 % en clair, 35 % en nuit) : un appui à peine visible ; le trait fait le travail.
+- **Carte** (`--shadow-card` : `0 1px 0` à 4 % en clair ; en nuit `0 1px 0` à 35 % et le filet de lumière `inset 0 1px 0` en haut de la surface) : un appui à peine visible ; le trait fait le travail.
 - **Flottant** (`--shadow-pop` : `0 2px 6px` à 7 % et `0 18px 40px -18px` à 24 % en clair ; en nuit `0 22px 48px -18px` à 75 % et le filet de lumière en haut) : menus, fenêtres, barre latérale.
 - **Bouton principal** (`--shadow-cta`) : reflet intérieur d'un pixel et ombre bleue `0 8px 18px -8px` à 55 % en clair ; en nuit le bouton **éclaire** (liseré d'un pixel et lueur `0 10px 28px -8px` de l'accent 500 à 60 %). Le seul bouton qui porte une ombre colorée.
 
@@ -319,7 +331,7 @@ La profondeur vient de la lumière et des traits, pas des ombres. Au repos, une 
 
 ## Shapes
 
-- Rayons : **8 px** (petits éléments, focus, pastilles carrées), **14 px** (boutons secondaires, champs, entrées de navigation), **22 px** (cartes, blocs, document), pilule pour le bouton principal, la recherche et les pastilles d'état.
+- **Quatre rayons** : **8 px** (petits éléments, focus, éléments de menu), **14 px** (boutons secondaires, champs, listes, entrées de navigation, menus), **22 px** (cartes, blocs, dialogues, document), **pilule** (bouton principal, recherche, filtres, pastilles). 4 px seulement sous 24 px de haut. Un enfant n'a jamais un rayon supérieur à celui de son parent. Les noms de Tailwind renvoient à ces jetons (`rounded-md` 8, `rounded-lg` 14, `rounded-xl` à `-3xl` 22) ; l'ancien 28 px est retiré.
 - Traits de 1 px partout ; aucune bordure latérale colorée de plus de 1 px. L'étape active de la barre latérale est marquée par une barre de 3 px posée hors du bloc.
 - Icônes dessinées (lucide-react), trait 1,6 à 2 px, jamais posées dans un rond décoratif.
 - Logo provisoire : l'arc d'aurore (deux traits courbes ; le haut en dégradé de la glace à l'azur de l'action, le bas à l'encre, terminé par une braise d'or `--flamme`), SVG en ligne (`components/layout/Logo.tsx`). Aucune couleur d'état.
@@ -327,43 +339,75 @@ La profondeur vient de la lumière et des traits, pas des ombres. Au repos, une 
 
 ## Components
 
-### Buttons
-- **Shape :** pilule (9999 px) pour le principal, 14 px pour les autres ; 44 px de haut au moins.
-- **Primary :** `--accent-fill`, texte blanc 600, reflet intérieur et `--shadow-cta`. Survol : `--accent-fill-hover` et montée d'1 px. Un par écran.
-- **Hover / Focus :** 180 ms `cubic-bezier(.2,.8,.2,1)` (`--ease-survol`), sans rebond. Focus : contour 2 px `--accent-ring` décalé de 2 à 3 px.
-- **Secondary :** surface `--surface-0`, trait `--border-field`, texte `--text-1` ; au survol, trait et texte bleus.
-- **Disabled :** opacité 45 %, aucune ombre.
+Un seul jeu de composants, dans `frontend/src/components/ui/`, aux jetons seulement, **44 px de haut**, une forme par rôle. Les anciens noms (`Button`, `Input`, `Card`, `Badge`, `Skeleton`, `StatusBadge`, `DeleteConfirmModal`, `EchecAction`, `toast`, `MenuLigne`) sont des alias minces vers lui. États de chaque contrôle : repos, survol, focus visible (contour de 2 px `--accent-ring`, décalé), appui, désactivé (45 %), en cours, erreur.
 
-### Chips (pastilles d'état)
-- **Style :** fond `*-soft`, texte `*-ink`, icône + mot, pilule, 12,5 px 600.
-- **State :** une pastille = un sens de COULEURS.md. Jamais `--aurore-*`, jamais la couleur seule.
+### Buttons (`Bouton`, `BoutonIcone`)
+- **principal** : pilule, `--accent-fill`, texte blanc 600, `--shadow-cta`. Un par écran. **secondaire** (par défaut) : papier, trait `--border-field`, rayon 14. **discret** : sans trait. **danger** : au trait rouge, jamais un aplat. **lien**.
+- **Survol** : le fond change (`--accent-fill-hover`, `--surface-1`), **rien ne bouge**. **Appui** : `scale(.98)` en 100 ms. **En cours** : le libellé change (« Enregistrement… ») et le bouton se désactive ; aucune roue qui tourne.
 
-### Cards / Containers
-- **Corner Style :** 22 px.
-- **Background :** `--surface-0` sur la page `--surface-page`.
-- **Shadow Strategy :** `--shadow-card` (voir Elevation).
-- **Border :** 1 px `--border-1`.
-- **Internal Padding :** 20 à 24 px (16 px au téléphone).
-- Jamais de carte dans une carte : à l'intérieur, des rangées séparées par un filet.
+### Chips (`PastilleEtat`, `PastilleCompte`)
+- Fond `*-soft`, texte `*-ink`, une icône et un mot, pilule, 12,5 px / 500, casse de phrase. Une pastille = un des six sens. Jamais `--aurore-*`, jamais l'or, jamais la couleur seule.
 
-### Cartes de résumé (gros chiffres)
-- Un chiffre `.chiffre-grand`, un libellé Manrope 600 14 px dessous, un lien d'action à droite du titre.
-- Quand il n'y a rien à compter, pas de « 0 » : une phrase dit ce qui apparaîtra ici (« Les avis de la veille arriveront ici chaque matin »).
+### Cards / Containers (`Carte`, `TitreCarte`, `RangeeCarte`)
+- Papier `--surface-0`, trait 1 px `--border-1`, rayon 22, `--shadow-card`, marge intérieure 20 à 24 px. Plate au repos : au survol d'une carte cliquable, seul le trait passe à `--border-2`.
+- Jamais de carte dans une carte : à l'intérieur, des rangées séparées par un filet (52 px au moins).
 
-### Inputs / Fields
-- **Style :** surface `--surface-0`, trait 1 px `--border-field` (3:1), rayon 14 px, 44 px de haut.
-- **Focus :** contour 2 px `--accent-ring`, décalé.
-- **Validation :** message en `--rouge-ink` qui nomme la correction à faire, avec une icône.
+### Cases de résumé (`CaseResume`, `BandeCases`)
+- **L'étiquette en haut** (13,5 px / 500), **la valeur dessous**. Un nombre supérieur à 0 : le gros chiffre `.chiffre-grand`, **seul** ; l'unité seulement si elle ajoute un sens (« 2 à poser »). Jamais l'étiquette répétée à côté de la valeur ; le sous-titre du `h1` dit autre chose que la première case.
+- Rien à compter : « Aucune » ou « Aucun », en texte ; jamais un gros « 0 ».
+
+### Inputs / Fields (`Champ`, `ZoneTexte`, `ChampRecherche`, `ChampDate`, `ChampNombre`, `ListeDeroulante`, `CaseACocher`, `GroupeRadio`, `Interrupteur`, `GroupeChamp`)
+- Saisie et liste déroulante : la même forme, rectangle de 14 px, 44 px (au bureau aussi), trait `--border-field` (3:1). Recherche : pilule. **Aucun contrôle natif visible** : la liste (Radix Select), la date (jj/mm/aaaa) et le nombre sont dessinés.
+- Focus : trait et contour `--accent-ring`. Validation à la sortie du champ : message en `--rouge-ink` qui nomme la correction à faire, avec une icône. L'aide est un exemple, pas une consigne.
+- **Filtre** (`PuceFiltre`) : une puce à deux états, proposée (« + Métier ») ou active (elle porte sa valeur et sa croix). « Effacer les filtres » en fin de rangée, seulement si un filtre est actif.
+
+### Tableaux (`Tableau`)
+- Une surface à filets horizontaux de 1 px : aucun trait vertical, aucune zébrure. Texte à gauche, nombres et dates à droite en chiffres tabulaires. Rangées de 52 px, cliquables entières. En-tête 12,5 px / 500 `--text-3`, casse de phrase, collant.
+- 0 ligne : pas de tableau, l'état vide. Jusqu'à 50 : tout. Au-delà : pages de 50 (« 1–50 sur 312 »). Cellule sans objet : « — ». Le tableau du mémoire est un document : il garde sa grille.
+
+### Chargement, erreur, vide (`EtatRequete`, `Squelette`, `EtatErreur`, `EtatVide`)
+- Toujours dans cet ordre : **chargement → erreur → vide → contenu** (`lib/requete.ts`). Une erreur du serveur ne s'affiche jamais comme « vous n'avez rien ».
+- **Chargement** : rien pendant 200 ms, puis un squelette **fixe**, aux dimensions du contenu, à la glace du thème (jamais noir sur une page claire), visible 400 ms au moins.
+- **Erreur** : ce qui n'a pas pu se faire, en mots simples, et « Réessayer ». Jamais une pile d'appels ni de l'anglais.
+- **Vide** : trois éléments (ce qui apparaîtra ici, quand en 14 mots au plus, une seule action dont le verbe répond au titre). Vide par filtre : une autre phrase et « Effacer les filtres », jamais une invitation à créer. Ni compteur « (0) », ni cadre en pointillés.
+
+### Surcouches (`Dialogue`, `DialogueConfirmation`, `Menu`, `Infobulle`, `Sheet`, `Message`, toast)
+- Un seul de chaque, sur Radix (piège de focus, Échap, retour du focus). Voile sans flou. Un dialogue ne sert qu'à interrompre ou protéger un geste ; une confirmation porte la question en titre et le verbe sur son bouton.
+- **Message** en ligne : là où le fait se produit, une seule fois (jamais sous le bouton et dans la barre du bas). **Toast** : en bas de l'écran, jamais sur la barre du haut. **Infobulle** : jamais un `title=` natif, jamais une information nécessaire.
 
 ### Navigation
-- Barre latérale : cinq entrées (Accueil · Mes AO · Mon entreprise · Coffre-fort · Paramètres), icône et nom 11 px dessous, visibles sans survol. Active : fond `--bleu-soft`, texte `--bleu-ink`. Au téléphone : onglets en bas, zones de 44 px.
-- Le logo (arc d'aurore) tient la place haute de la barre.
+- Barre latérale : cinq entrées (Accueil · Mes AO · Entreprise · Coffre-fort · Paramètres), icône et nom 11 px dessous, **sur une ligne** (le nom complet « Mon entreprise » reste le titre de la page, l'`aria-label` et l'entrée de Ctrl K). Active : fond `--surface-1`, texte `--text-1`, icône et barre de 3 px `--accent-ui`. Au téléphone : cinq onglets en bas, libellé d'une ligne, zones de 56 px, aucune action dedans.
+- Le rond du compte : la photo, sinon l'initiale du prénom, sinon une icône de personne. Jamais « – », jamais l'e-mail. Son menu porte le thème (« Système · Clair · Nuit » ; sans choix : Système) et le réglage « Animer le fond ».
+- Le bandeau « Nouveau » n'est pas dans la coquille.
+
+### L'état d'un appel d'offres (`lib/etatAO.ts`, `MettreAJourStatut`)
+- Une seule source pour tous les écrans : **en cours**, **à mettre à jour** (remise passée sans statut mis à jour), **terminé**. Une remise passée n'a qu'une action : « Mettre à jour le statut » (jamais « Télécharger »). « À la une » = la prochaine remise à venir ; aucune à venir : pas de bloc. La phrase et les faits viennent de la même source ; les accords suivent le nombre.
+- Un seul vocabulaire : étape Pièces = « Réunir les pièces », étape Export = « Télécharger le dossier ».
+
+### La coquille d'un AO (`routes/Project.tsx`, `StepProgress`, `GabaritEtape`, `BarreEtape`)
+- La barre du haut porte « Mes AO / nom de l'AO » ; une ligne de contexte (acheteur, lot, remise) ; le fil des sept étapes (faite : coche verte ; active : anneau d'accent sur papier, jamais un aplat ; à venir : anneau gris) ; puis l'étape, dont le titre est le `h1`.
+- Le bouton « ? » de l'en-tête déplie trois lignes **dans l'écran** : ce que montre l'écran, ce que vous avez à faire, les mots de l'écran (sigles de `lib/lexique.ts`). Ni bulle flottante, ni visite guidée, ni lien d'aide.
+- Une seule action principale : la barre du bas (flottante, sans verre) cède l'aplat au bouton de l'en-tête quand il existe. Le message d'échec d'une étape est posé une fois, sous l'en-tête.
+
+### Le visage (`SynorixParle`)
+- Le visage n'apparaît que **là où Synorix parle**, à côté de sa phrase, **une fois par écran au plus**. Jamais en vignette d'un AO, jamais dans une ligne ou une carte d'AO, jamais en décor ni au bout du fil des étapes. Il est à sa taille sur « Mon entreprise ».
+
+### Mouvement
+- **Trois durées** : 100 ms (couleur au survol, appui, fondu d'un écran, fermetures), 180 ms (contrôles, menus), 280 ms (dialogues, panneaux, feuilles). **Une courbe** : `--ease-survol` (`cubic-bezier(.2,.8,.2,1)`), sans dépassement. Les autres jetons et les nombres de Tailwind en sont des alias.
+- On n'anime que `transform`, `opacity` et les couleurs, propriété par propriété. Jamais `transition: all`.
+- Un changement d'écran ne se met pas en scène : un fondu de 100 ms au plus, sans translation ni cascade.
+- **Rien ne boucle, sauf l'aurore et le visage** : ni squelette qui pulse, ni point qui pulse, ni roue qui tourne. Une attente longue montre une barre qui avance pour de vrai, ou le visage à côté de la phrase de Synorix.
+- Mesures (60 images par seconde au défilement et au changement de page) : `.claude/echange/sprint-ozcan/design/socle/MOUVEMENT.md`.
 
 ### Aurore (signature)
-- La **lueur d'aube** (variante B) : une quatrième ellipse, d'or, basse et étroite (70 vw × 6 vh à 29 vh, à l’horizon du masque ; au téléphone, plus bas, sous la pastille de l’entreprise), `transform` seul sur 52 s, mêmes garde-fous. Le jour elle se devine à peine et ne jaunit jamais le blanc ; la nuit elle est nette.
-- Trois ellipses en `radial-gradient` (glace, givre, azur : les trois teintes froides du visage), 140 vw × 34 à 46 vh, animées en `transform` seul sur 28 / 36 / 44 s (aller-retour, `ease-in-out`), sous un masque qui les éteint à 78 % de la hauteur. Aucun `filter: blur`.
-- Opacité `--aurore-opacite` : 0,30 le jour (elle se devine), 0,9 la nuit.
-- Image fixe sous `prefers-reduced-motion`, en pause quand l'onglet est caché (`visibilitychange`), figée si `navigator.connection.saveData` ou une connexion 2G.
+- Trois ellipses en `radial-gradient` (glace, givre, azur : les trois teintes froides du visage), 140 vw × 34 à 46 vh, animées en `transform` seul sur 28 / 36 / 44 s (aller-retour), sous un masque qui les éteint à 78 % de la hauteur. Aucun `filter: blur`. Aucune teinte chaude dans le ciel.
+- Opacité `--aurore-opacite` : 0,30 le jour (elle se devine), **0,66 la nuit** : plafonnée pour que le titre et sa sous-ligne tiennent 4,5:1 sur le cœur des rubans (mesuré sur capture : 8,0:1 pour `--text-1`, 5,3:1 pour `--text-2` ; `--text-3` ne se pose pas dans l'en-tête de page).
+- Image fixe sous `prefers-reduced-motion`, en pause quand l'onglet est caché, figée si `saveData` ou connexion 2G, et quand l'utilisateur coupe « Animer le fond » (menu du compte).
+
+### Garde-fous (`frontend/tests/garde-fous-design.test.ts`, `tests/dette-design.json`)
+- Dix-neuf règles comptent leurs écarts par fichier : couleur en dur, seconde palette, taille, graisse, rayon, durée, police, capitales, approche positive, `transition-all`, contrôle natif, infobulle native, composant maison, boucle, aplat d'accent, état d'AO hors module, style en ligne, visage en vignette, page sans conteneur.
+- **Une dette par fichier, qui ne peut que diminuer** : un fichier hors liste a droit à zéro ; un fichier qui dépasse son compte fait échouer `npm test`. Après une correction : `DETTE=baisser npm test -- garde-fous-design`.
+- À l'écran : `design/scenarios/grille.mjs` (bords, un `h1`, un visage, un aplat au plus) et `design/socle/mesure-mouvement.mjs`.
 
 ## Do's and Don'ts
 
@@ -371,7 +415,10 @@ La profondeur vient de la lumière et des traits, pas des ombres. Au repos, une 
 - **Do** écrire en mots positifs : « À ajouter », « À téléverser », « À compléter ». Synorix parle à la 3ᵉ personne et propose toujours une action.
 - **Do** remplacer un compteur vide par une phrase qui dit ce qui apparaîtra ici.
 - **Do** réserver la serif au `h1` de la page et au texte du mémoire.
-- **Do** garder le bleu `--accent-*` comme seule couleur d'action, et un seul bouton en dégradé par écran.
+- **Do** garder le bleu `--accent-*` comme seule couleur d'action, et un seul aplat d'accent par écran.
+- **Do** rendre `<Page>` dans chaque route, et lire toute donnée par `<EtatRequete>` (chargement, erreur, vide, contenu).
+- **Do** appeler `lib/etatAO.ts` pour dire où en est un appel d'offres.
+- **Do** baisser la dette de design du fichier qu'on touche (`DETTE=baisser npm test -- garde-fous-design`).
 - **Do** rejouer `node scripts/mesure-visage.mjs` puis `node scripts/palette-visage.mjs --ecrire` quand le visage change : la palette suit la mesure.
 - **Do** accompagner chaque couleur d'état d'un mot et d'une icône ; dans un bloc, la plus urgente gagne.
 - **Do** poser les nombres en chiffres tabulaires (`.chiffres`, `.chiffre-grand`).
@@ -386,8 +433,14 @@ La profondeur vient de la lumière et des traits, pas des ombres. Au repos, une 
 - **Don't** introduire une deuxième couleur d'action ni colorer un fond de carte avec un état.
 - **Don't** aligner des cartes identiques en grille (icône + titre + texte répétés).
 - **Don't** poser une icône dans un rond décoratif.
-- **Don't** écrire un surtitre en capitales monospace au-dessus d'un titre.
-- **Don't** faire rebondir quoi que ce soit (`cubic-bezier(.34,1.56,.64,1)` est banni), ni faire entrer des éléments en scène au défilement.
+- **Don't** écrire un surtitre au-dessus d'un titre, ni forcer des capitales, ni employer une police à chasse fixe dans l'interface.
+- **Don't** poser une largeur ou une marge latérale dans une route, ni répéter le titre de la page dans la barre du haut.
+- **Don't** afficher une erreur comme un écran vide, ni un squelette qui pulse, ni une roue qui tourne.
+- **Don't** utiliser un contrôle natif visible (`<select>`, date, nombre, case, `title=`, `confirm(`), ni écrire un dialogue ou un menu à la main.
+- **Don't** faire bouger un élément au survol, ni écrire `transition: all`, ni une durée hors de 100 / 180 / 280 ms.
+- **Don't** montrer le visage en vignette d'un appel d'offres, ni plus d'une fois par écran.
+- **Don't** proposer « Télécharger le dossier » sur une remise passée : sa seule action est « Mettre à jour le statut ».
+- **Don't** faire rebondir quoi que ce soit (`cubic-bezier(.34,1.56,.64,1)` est banni), ni faire entrer des éléments en scène, au défilement comme au changement d'écran.
 - **Don't** mettre l'aurore devant le contenu, ni l'animer autrement qu'en `transform`.
 - **Don't** colorer une pastille d'état, un texte d'état ou une barre avec l'accent aurore ni avec l'or.
 - **Don't** introduire une teinte de marque absente du visage (vert, turquoise et violet d'aurore sont sortis), ni une ombre en noir neutre, ni un gris pur.

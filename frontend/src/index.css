@@ -38,6 +38,8 @@
   padding-inline: var(--gutter);
 }
 .conteneur:has([data-page-pleine]) { max-width: none; }
+/* la barre du haut suit l'écran en pleine largeur : son contenu garde le bord gauche du titre */
+body:has([data-page-pleine]) [data-coquille="barre-haut"] > .conteneur { max-width: none; }
 /* un écran étroit (lecture, réglages) s'aligne à gauche dans le conteneur : il ne se recentre pas */
 .page-etroite { max-width: var(--container-read); }
 /* titre de section (P9) : trois fois plus d'air au-dessus qu'en dessous */
@@ -169,18 +171,18 @@
 .btn-glass:disabled { opacity: .5; cursor: not-allowed; }
 
 .btn-destructive {
-  background: var(--danger-bg);
-  color: var(--danger-fg);
+  background: var(--rouge-soft);
+  color: var(--rouge-ink);
   font-weight: 600;
   border-radius: var(--radius-md);
   padding: .625rem 1.25rem;
   font-size: .875rem;
-  border: 1px solid var(--danger-border);
+  border: 1px solid var(--rouge-mark);
   cursor: pointer;
   transition: background var(--dur-survol) var(--ease-survol), border-color var(--dur-survol) var(--ease-survol);
   font-family: var(--font-ui);
 }
-.btn-destructive:hover:not(:disabled) { border-color: var(--danger-fg); }
+.btn-destructive:hover:not(:disabled) { border-color: var(--rouge-ink); }
 .btn-destructive:disabled { opacity: .5; cursor: not-allowed; }
 
 .btn-outline {
@@ -290,14 +292,12 @@
   transition: background var(--dur-survol) var(--ease-survol), border-color var(--dur-survol) var(--ease-survol);
 }
 
-.pill-success { background: var(--surface-1);  color: var(--text-2); border-color: var(--border-2); }
-.pill-gagne   { background: var(--ok-bg);  color: var(--ok); border-color: var(--ok-line); }
-.pill-conforme { background: var(--ok-bg);  color: var(--ok); border-color: var(--ok-line); }
-.pill-warning { background: var(--warn-bg); color: var(--warn); border-color: var(--warn-line); }
-.pill-danger  { background: var(--bad-bg);   color: var(--bad); border-color: var(--bad-line); }
-.pill-cyan    { background: var(--accent-tint);   color: var(--accent-text); border-color: var(--accent-tint-2); }
-.pill-info    { background: var(--info-bg);   color: var(--info-fg); border-color: var(--info-border); }
-.pill-muted   { background: var(--surface-1);  color: var(--text-3); border-color: var(--border-1); }
+/* Anciennes pastilles : des alias des six sens (la pastille du système est PastilleEtat, components/ui/pastille.tsx). */
+.pill-success, .pill-muted { background: var(--gris-soft); color: var(--gris-ink); }
+.pill-gagne, .pill-conforme { background: var(--vert-soft); color: var(--vert-ink); }
+.pill-warning { background: var(--ambre-soft); color: var(--ambre-ink); }
+.pill-danger  { background: var(--rouge-soft); color: var(--rouge-ink); }
+.pill-cyan, .pill-info { background: var(--bleu-soft); color: var(--bleu-ink); }
 /* États de COULEURS.md : toujours un mot (et une icône) dans la pastille, jamais la couleur seule. */
 .pill-bleu      { background: var(--bleu-soft);      color: var(--bleu-ink); }
 .pill-vert      { background: var(--vert-soft);      color: var(--vert-ink); }
@@ -420,8 +420,8 @@
   border-radius: inherit;
   padding: 1px;
   background: linear-gradient(135deg, var(--accent-ui), transparent 50%, var(--accent-ui));
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask: linear-gradient(black 0 0) content-box, linear-gradient(black 0 0);
+  mask: linear-gradient(black 0 0) content-box, linear-gradient(black 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
@@ -504,13 +504,6 @@
   justify-content: center;
   flex-shrink: 0;
 }
-.logo-synorix::before {
-  content: '';
-  position: absolute;
-  top: 0; left: -100%;
-  width: 100%; height: 100%;
-  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%);
-}
 .logo-synorix-text {
   color: var(--on-accent);
   font-family: var(--font-display);
@@ -532,13 +525,6 @@
   position: relative;
   overflow: hidden;
   box-shadow: var(--edge-light);
-}
-.pill-entreprise::before {
-  content: '';
-  position: absolute;
-  top: 0; left: -100%;
-  width: 100%; height: 100%;
-  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.15) 50%, transparent 100%);
 }
 
 .pill-pro {

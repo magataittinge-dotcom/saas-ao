@@ -55,7 +55,8 @@ test('aurore : derrière tout (fixe, z-index 0, sans pointeur, aria-hidden), pos
   assert.match(composant, /aria-hidden="true"/)
   const layout = sansCommentaires(lire('src/components/layout/Layout.tsx'))
   assert.equal(layout.match(/<Aurore \/>/g)?.length, 1)
-  assert.match(lire('src/styles/theme.css'), /--aurore-opacite: \.3;[\s\S]*--aurore-opacite: \.9;/)
+  // nuit : 0,66 au plus : à 0,9 la sous-ligne du titre (--text-2) tombait à 3,7:1 sur le cœur des rubans (mesure sur capture, outils-socle/contraste_aurore.py)
+  assert.match(lire('src/styles/theme.css'), /--aurore-opacite: \.3;[\s\S]*--aurore-opacite: \.66;/)
 })
 
 test('logo : l\'arc d\'aurore en SVG en ligne (aucune image), à la place du « S » de la barre latérale', () => {

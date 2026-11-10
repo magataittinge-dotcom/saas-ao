@@ -240,7 +240,7 @@
   --aurore-a: rgba(83, 188, 249, .5);
   --aurore-b: rgba(159, 209, 252, .38);
   --aurore-c: rgba(0, 135, 240, .5);
-  --aurore-opacite: .9;
+  --aurore-opacite: .66;                 /* la nuit, elle se voit ; plafonnée pour que la sous-ligne du titre (--text-2) tienne 4,5:1 sur le cœur des rubans (mesuré sur capture : 3,7:1 à 0,9) */
   --flamme: #fdbe51;  --flamme-glow: rgba(253, 190, 81, .3);
 
   --accent-text: var(--accent-300);
