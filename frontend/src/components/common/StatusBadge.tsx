@@ -1,21 +1,11 @@
-import { AlertCircle, Check, Clock, type LucideIcon } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { PastilleEtat, type Sens } from '@/components/ui/pastille'
 import type { ComplianceStatus, DocumentStatus, ProjectStatus } from '@/types'
 
 type BadgeVariant = 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'amber'
 
-// Couleurs d'état (COULEURS.md) : vert fait / prêt / gagné, ambre à surveiller, rouge urgent ou négatif, bleu en cours, gris à venir.
-// Le mot est toujours écrit ; une icône l'accompagne pour les états vert, ambre et rouge (jamais la couleur seule).
-const ton = (n: 'vert' | 'ambre' | 'rouge' | 'bleu' | 'gris'): React.CSSProperties => ({ background: `var(--${n}-soft)`, color: `var(--${n}-ink)` })
-const variantStyles: Record<BadgeVariant, React.CSSProperties> = {
-  success: ton('vert'),
-  warning: ton('ambre'),
-  danger:  ton('rouge'),
-  info:    ton('bleu'),
-  neutral: ton('gris'),
-  amber:   ton('ambre'),
-}
-const ICONES: Partial<Record<BadgeVariant, LucideIcon>> = { success: Check, warning: Clock, amber: Clock, danger: AlertCircle }
+// ALIAS MINCE. La pastille du système est `PastilleEtat` (components/ui/pastille.tsx) : un sens, un mot, une icône.
+// Les anciennes variantes renvoient aux six sens (vert fait, ambre à surveiller, rouge urgent, bleu en cours, gris à venir).
+const VERS: Record<BadgeVariant, Sens> = { success: 'vert', warning: 'ambre', amber: 'ambre', danger: 'rouge', info: 'bleu', neutral: 'gris' }
 
 interface Props {
   label: string
@@ -24,16 +14,7 @@ interface Props {
 }
 
 export function StatusBadge({ label, variant, className }: Props) {
-  const Icone = ICONES[variant]
-  return (
-    <span
-      className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium', className)}
-      style={variantStyles[variant]}
-    >
-      {Icone && <Icone size={11} strokeWidth={2.4} aria-hidden />}
-      {label}
-    </span>
-  )
+  return <PastilleEtat sens={VERS[variant]} icone={variant === 'info' || variant === 'neutral' ? null : undefined} className={className}>{label}</PastilleEtat>
 }
 
 export function complianceStatusBadge(status: ComplianceStatus) {
@@ -41,8 +22,8 @@ export function complianceStatusBadge(status: ComplianceStatus) {
     // « couvert » = confirmée par l'utilisateur (décision du 25/10) : jamais posé par Synorix
     couvert:     { label: 'Confirmée par vous', variant: 'success' },
     non_couvert: { label: 'À confirmer',  variant: 'neutral' },
-    partiel:     { label: '⚠️ Partiel',   variant: 'warning' },
-    a_generer:   { label: '🔄 À générer', variant: 'info'    },
+    partiel:     { label: 'Partiel',   variant: 'warning' },
+    a_generer:   { label: 'À générer', variant: 'info'    },
     expire:      { label: 'À renouveler', variant: 'amber'  },
   }
   return map[status]

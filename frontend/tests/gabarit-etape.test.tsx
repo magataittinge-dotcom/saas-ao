@@ -41,21 +41,23 @@ test("l'en-tête porte le titre, une ligne d'utilité et une seule action princi
 
 test('le résumé rend une carte par fait, avec pastille, jauge et détail', () => {
   const h = page()
-  assert.equal((h.match(/data-carte-resume/g) ?? []).length, 3)
+  assert.equal((h.match(/data-case-resume/g) ?? []).length, 3)
   assert.match(h, /Pièces prêtes/)
-  assert.match(h, /pill-vert[^>]*>Prêt</)
-  assert.match(h, /pill-ambre[^>]*>À vérifier</)
+  assert.match(h, /data-sens="vert"[\s\S]*?Prêt<\/span>/)
+  assert.match(h, /data-sens="ambre"[\s\S]*?À vérifier<\/span>/)
   assert.match(h, /role="progressbar"[^>]*aria-valuenow="12"[^>]*aria-valuemax="19"|aria-valuemax="19"[^>]*aria-valuenow="12"/)
   assert.match(h, /sur 19 demandées/)
   // la carte neutre n'a aucune pastille
-  assert.equal((h.match(/class="pill /g) ?? []).length, 2)
+  assert.equal((h.match(/data-sens=/g) ?? []).length, 2)
 })
 
 test('trois cartes : trois colonnes ; quatre cartes : 2 puis 4 colonnes ; une colonne au téléphone', () => {
   const trois = renderToStaticMarkup(<BandeResume cartes={CARTES} />)
   assert.match(trois, /md:grid-cols-3/)
   const quatre = renderToStaticMarkup(<BandeResume cartes={[...CARTES, { libelle: 'Total', valeur: '19' }]} />)
-  assert.match(quatre, /sm:grid-cols-2 lg:grid-cols-4/)
+  assert.match(quatre, /md:grid-cols-4/)
+  // une seule surface découpée par des filets, jamais une grille de cartes identiques (P11)
+  assert.equal((quatre.match(/data-surface/g) ?? []).length, 1)
   assert.doesNotMatch(trois, /(^|\s)grid-cols-[2-9]/)
   assert.equal(renderToStaticMarkup(<BandeResume cartes={[]} />), '')
 })

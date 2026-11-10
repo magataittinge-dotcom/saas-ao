@@ -45,8 +45,8 @@ test('Layout publie le thème de l\'écran dans <main>, autour de l\'écran, et 
   assert.match(code, /data-theme=\{themee \? undefined : 'dark'\}/)
   assert.match(code, /<ThemeEcranProvider value=\{themeEcran\}>[\s\S]*<Outlet \/>[\s\S]*<\/ThemeEcranProvider>/)
   assert.match(code, /<ToastContainer theme=\{themeEcran\} \/>/)
-  const toast = sansCommentaires(lire('src/components/common/Toast.tsx'))
-  assert.match(toast, /z-\[9999\][^"]*"\s+data-theme=\{theme\}/)
+  const toast = sansCommentaires(lire('src/components/ui/toast.tsx'))
+  assert.match(toast, /<div data-theme=\{theme\} data-zone-toasts=""/)
 })
 
 // C11 — Paramètres, Abonnement et Outils suivent le thème : plus aucune couleur écrite en dur (sinon un aplat sombre

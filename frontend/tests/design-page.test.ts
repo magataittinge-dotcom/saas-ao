@@ -14,7 +14,7 @@ test('/design : route privée déclarée, jamais liée au menu, aux onglets ni �
 })
 
 test('/design : tous les jetons affichés existent dans les deux thèmes ; les exemples sont rendus en clair ET en nuit', () => {
-  const jetons = [...new Set([...page.matchAll(/'(--[\w-]+)'/g)].map((m) => m[1]))]
+  const jetons = [...new Set([...page.matchAll(/'(--[\w-]+)'/g)].map((m) => m[1]))].filter((j) => j !== '--echantillon') // variable locale de l'échantillon
   assert.ok(jetons.length > 40)
   const manquants: string[] = []
   for (const theme of ['light', 'dark'] as const) for (const j of jetons) {

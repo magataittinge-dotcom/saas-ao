@@ -176,7 +176,7 @@ const bande = (designation: string) => renderToStaticMarkup(
 
 test('la carte : « Lot unique » en grand, la désignation entière dans le texte, coupée à deux lignes par le style (jamais tronquée dans le texte)', () => {
   const html = bande(LONGUE)
-  assert.match(html, /<p class="[^"]*font-display[^"]*">Lot unique<\/p>/)
+  assert.match(html, /<p data-valeur="texte"[^>]*>Lot unique<\/p>/)
   assert.ok(html.includes(LONGUE), 'le texte complet reste dans la page (lecteur d’écran, copie, impression)')
   assert.match(html, /line-clamp-2/)
   assert.doesNotMatch(html, /…|\.\.\./)

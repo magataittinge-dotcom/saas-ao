@@ -30,14 +30,13 @@ test('.signature-btn et boutons d\'accent : plus de rgba écrit en dur dans inde
   for (const theme of THEMES) assert.match(valeur(theme, '--reflet-accent'), /^rgba\(255, 255, 255, \.22\)$/)
 })
 
-test('infobulles de la coquille : texte visible >= 4,5:1 sur le verre, sur toute surface (c)', () => {
+test('infobulles de la coquille : une surface flottante pleine (plus de verre ni de flou), texte >= 4,5:1 dans les deux thèmes', () => {
   const code = sansCommentaires(lire('src/components/ui/tooltip.tsx'))
-  assert.match(code, /bg-\[var\(--glass-fill\)\]/)
+  assert.match(code, /bg-surface-pop/)
+  assert.doesNotMatch(code, /backdrop-blur|glass-fill/)
   assert.match(code, /text-fg\b/)
   for (const theme of THEMES) {
-    for (const sur of ['--surface-0', '--surface-1', '--surface-2', '--surface-dark']) {
-      const { minimum } = contrasteJetons(theme, '--text-1', '--glass-fill', sur)
-      assert.ok(minimum >= 4.5, `${theme} texte sur verre posé sur ${sur} : ${minimum.toFixed(2)}:1`)
-    }
+    const { minimum } = contrasteJetons(theme, '--text-1', '--surface-pop')
+    assert.ok(minimum >= 4.5, `${theme} texte de l'infobulle : ${minimum.toFixed(2)}:1`)
   }
 })

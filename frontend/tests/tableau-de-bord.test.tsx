@@ -133,7 +133,7 @@ test("l'écran « premier DCE offert » (affiché sur le tableau de bord) : cham
   assert.ok(/<h1[^>]*>Bienvenue<\/h1>/.test(html))
   assert.ok(html.includes('Votre SIRET — et c&#x27;est tout : le répertoire Sirene remplit le reste de votre profil.'))
   const champ = html.match(/<input[^>]*aria-label="Numéro SIRET"[^>]*>/)?.[0] ?? ''
-  assert.ok(champ.includes('border-input'), 'champ du socle')
+  assert.ok(champ.includes('border-bord-champ'), 'champ du socle')
   const valider = html.match(/<button[^>]*>Valider<\/button>/)?.[0] ?? ''
   assert.ok(valider.includes('bg-accent-fill'), 'bouton du socle')
   assert.ok(html.includes('src="/visage/tete-ouverte-poster.webp"'), 'le visage est celui de public/visage')

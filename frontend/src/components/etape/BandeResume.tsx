@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { BandeCases, CaseResume } from '@/components/ui/case-resume'
+import { PastilleEtat, type Sens } from '@/components/ui/pastille'
 import type { SourceEtat } from './EtatElement'
 
 export type EtatCarte = 'pret' | 'a-verifier' | 'neutre'
@@ -17,13 +19,15 @@ export interface CarteResume {
   designation?: string
   /** Une ligne d'explication, en petit sous la valeur. */
   detail?: string
+  /** Le mot quand il n'y a rien à compter : « Aucun » (par défaut) ou « Aucune », accordé à l'étiquette. */
+  rien?: 'Aucun' | 'Aucune'
   /** La source de la valeur dans le dossier : « Source : RC · page 4 » et « Voir dans le dossier ». */
   source?: SourceEtat
 }
 
-const PASTILLE: Record<Exclude<EtatCarte, 'neutre'>, { classe: string; texte: string }> = {
-  pret: { classe: 'pill pill-vert', texte: 'Prêt' },
-  'a-verifier': { classe: 'pill pill-ambre', texte: 'À vérifier' },
+const PASTILLE: Record<Exclude<EtatCarte, 'neutre'>, { sens: Sens; texte: string }> = {
+  pret: { sens: 'vert', texte: 'Prêt' },
+  'a-verifier': { sens: 'ambre', texte: 'À vérifier' },
 }
 
 function Jauge({ libelle, rempli, total }: { libelle: string } & NonNullable<CarteResume['jauge']>) {
@@ -94,33 +98,36 @@ function SourceCarte({ source }: { source: SourceEtat }) {
   )
 }
 
+/** « 14 » → 14 ; « 0 » → 0 ; tout autre texte reste un texte. Une valeur qui commence par « Aucun » ou « Rien » = rien à compter. */
+export function valeurDeCase(valeur: string): number | string | null {
+  const v = valeur.trim()
+  if (/^\d+$/.test(v)) return Number(v)
+  if (v === '' || /^(aucun|aucune|rien)\b/i.test(v)) return null
+  return v
+}
+
 /**
- * Le résumé d'une étape : trois ou quatre cartes égales sur toute la largeur (une colonne au téléphone), comme les trois
- * rubriques de « Mon entreprise ». Chaque carte : un libellé, une valeur en grand, une pastille d'état, une jauge et une ligne
- * d'explication, tous facultatifs sauf libellé et valeur.
+ * Le résumé d'une étape (VEILLE-DESIGN P11, défaut 8 du fondateur) : UNE surface découpée par des filets, trois ou quatre cases
+ * (une colonne au téléphone). Chaque case est la `CaseResume` du système : l'étiquette en haut, la valeur dessous ; un nombre
+ * supérieur à 0 = le gros chiffre seul ; rien à compter = « Aucun » / « Aucune », jamais un gros « 0 » ni l'étiquette redite.
+ * Une pastille d'état, une jauge, une désignation, une ligne d'explication et une source, tous facultatifs.
  */
 export function BandeResume({ cartes, libelle = 'Résumé de l’étape', className }: { cartes: CarteResume[]; libelle?: string; className?: string }) {
   if (cartes.length === 0) return null
-  const colonnes = cartes.length >= 4 ? 'sm:grid-cols-2 lg:grid-cols-4' : cartes.length === 3 ? 'md:grid-cols-3' : 'sm:grid-cols-2'
   return (
-    <ul aria-label={libelle} data-bande-resume="" className={cn('grid items-stretch gap-3.5', colonnes, className)}>
+    <BandeCases libelle={libelle} className={className}>
       {cartes.map((c) => {
         const pastille = c.etat && c.etat !== 'neutre' ? PASTILLE[c.etat] : null
         return (
-          <li key={c.libelle} data-carte-resume="" className="grid min-w-0 content-start gap-2 rounded-carte border border-bord-2 bg-surface-1 p-5">
-            <div className="flex min-h-7 items-center justify-between gap-3">
-              <p className="text-sm font-medium text-fg-2">{c.libelle}</p>
-              {pastille && <span className={cn(pastille.classe, 'shrink-0')}>{pastille.texte}</span>}
-            </div>
-            <p className="min-w-0 break-words font-display text-h6 tabular-nums text-fg">{c.valeur}</p>
+          <CaseResume key={c.libelle} etiquette={c.libelle} valeur={valeurDeCase(c.valeur)} rien={c.rien ?? 'Aucun'} precision={c.detail}
+            etat={pastille ? <PastilleEtat sens={pastille.sens}>{pastille.texte}</PastilleEtat> : undefined}>
             {c.designation && <DesignationCarte texte={c.designation} />}
             {c.jauge && <Jauge libelle={c.libelle} {...c.jauge} />}
-            {c.detail && <p className="text-sm text-fg-2">{c.detail}</p>}
             {c.source && <SourceCarte source={c.source} />}
-          </li>
+          </CaseResume>
         )
       })}
-    </ul>
+    </BandeCases>
   )
 }
 

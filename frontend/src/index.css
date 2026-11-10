@@ -45,6 +45,31 @@
 .titre-section:first-child { margin-top: 0; }
 @media (max-width: 768px) { .titre-section { margin-top: var(--space-30); margin-bottom: var(--space-12); } }
 
+/* ── Ouvertures (P15, P19) : réglées UNE fois. Menu et liste : 180 ms ; dialogue et feuille : 280 ms ; fermeture : 100 ms.
+   Opacité et transform seulement, une seule courbe, aucun dépassement. Coupées par « réduire les animations » (theme.css). ── */
+@keyframes ouvrir-flottant { from { opacity: 0; transform: scale(.98); } }
+@keyframes fermer-flottant { to { opacity: 0; transform: scale(.98); } }
+@keyframes ouvrir-voile { from { opacity: 0; } }
+@keyframes fermer-voile { to { opacity: 0; } }
+@keyframes monter-feuille { from { opacity: 0; transform: translateY(24px); } }
+@keyframes monter-toast { from { opacity: 0; transform: translateY(8px); } }
+.menu-flottant { transform-origin: var(--radix-dropdown-menu-content-transform-origin, var(--radix-select-content-transform-origin, center)); }
+.menu-flottant[data-state="open"] { animation: ouvrir-flottant var(--dur-survol) var(--ease-survol); }
+.menu-flottant[data-state="closed"] { animation: fermer-flottant var(--dur-fast) var(--ease-survol); }
+.dialogue-flottant[data-state="open"] { animation: ouvrir-flottant var(--dur-pop) var(--ease-survol); }
+.dialogue-flottant[data-state="closed"] { animation: fermer-flottant var(--dur-fast) var(--ease-survol); }
+.voile-flottant[data-state="open"] { animation: ouvrir-voile var(--dur-survol) var(--ease-survol); }
+.voile-flottant[data-state="closed"] { animation: fermer-voile var(--dur-fast) var(--ease-survol); }
+.toast-flottant { animation: monter-toast var(--dur-survol) var(--ease-survol); }
+@media (max-width: 768px) {
+  .dialogue-flottant[data-state="open"] { animation-name: monter-feuille; }
+}
+/* le visage en petit (« Synorix parle ») : ses bords fondus, comme sur « Mon entreprise » */
+.visage-masque {
+  -webkit-mask-image: radial-gradient(ellipse 52% 46% at 50% 47%, black 62%, transparent 82%);
+  mask-image: radial-gradient(ellipse 52% 46% at 50% 47%, black 62%, transparent 82%);
+}
+
 /* ── Titre de page (DESIGN.md § Typography) : la serif au sommet, une fois par page ; jamais sous 28 px. ── */
 .titre-page {
   font-family: var(--font-display);
