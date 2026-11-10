@@ -1,4 +1,4 @@
-// Mon entreprise (T2, T3) — trois cartes égales, le formulaire de la rubrique choisie en pleine largeur dessous, avancement
+// Mon entreprise (T2, T3, refonte du 10/11) — trois rubriques en rangées d'une même surface, le formulaire de la rubrique ouverte en pleine largeur dessous, avancement
 // calculé depuis les données chargées, un seul formulaire et un seul « Enregistrer » par rubrique, charge utile identique à l'ancienne.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -88,29 +88,25 @@ test('avancement : chaque information a une rubrique connue et un identifiant un
 
 /* ── trois rubriques ─────────────────────────────────────────── */
 
-test('trois cartes égales : titre, numéro, jauge, quatre faits clés, nombre d\'informations et « Fiche à télécharger » ; la choisie a un bord accent', () => {
+test('trois rubriques : UNE surface, trois rangées (titre, avancement, jauge) ; l\'ouverte est marquée ; ni faits clés répétés, ni « À renseigner » ambre', () => {
   const html = rendre(<MemoryRouter><RubriquesEntreprise donnees={DONNEES} rubrique="moyens" onChoisir={() => {}} panneaux={panneaux} /></MemoryRouter>, true)
   assert.match(html, /role="tablist"/)
   assert.equal(compte(html, /role="tab"/g), 3)
   assert.equal(compte(html, /aria-selected="true"/g), 1)
   assert.equal(compte(html, /aria-selected="false"/g), 2)
-  assert.match(html, /<button[^>]*aria-selected="true"[^>]*>Moyens humains et matériels<\/button>/)
-  assert.match(html, /md:grid-cols-3/, 'une rangée de trois cartes égales (une colonne sous 768 px)')
-  assert.ok(!/grid-template-columns/.test(html), 'plus de colonne qui s\'élargit')
-  for (const n of ['01 / 03', '02 / 03', '03 / 03']) assert.ok(html.includes(n), n)
-  for (const r of RUBRIQUES) assert.ok(html.includes(`href="/entreprise/fiche/${r.id}"`), `lien ${r.id}`)
-  assert.equal(compte(html, new RegExp(`${LIBELLE_FICHE} <`, 'g')), 3, '« Fiche à télécharger » sur chaque carte')
-  assert.ok(!/>Fiche </.test(html) && !/aria-label="Fiche /.test(html), '« Fiche » seul n\'existe plus')
+  assert.match(html, /<div[^>]*role="tab"[^>]*data-rubrique="moyens"[^>]*aria-selected="true"[^>]*class="[^"]*bg-surface-1/, 'la rubrique ouverte : fond neutre')
+  assert.equal(compte(html, /data-surface=""/g), 1, 'une seule surface pour les trois rubriques')
+  assert.ok(!/md:grid-cols-3|grid-template-columns/.test(html), 'plus de trois cartes côte à côte')
+  for (const r of RUBRIQUES) assert.ok(html.includes(`>${r.titre}</span>`), r.titre)
   assert.equal(lienFiche('certifications'), '/entreprise/fiche/certifications')
   assert.ok(html.includes('informations sur 9') && html.includes('informations sur 10') && html.includes('informations sur 15'), 'avancement affiché')
-  assert.equal(compte(html, /<li /g), 12, 'quatre faits clés par carte')
-  assert.ok(html.includes('Raison sociale') && html.includes('Entreprise de démonstration') && html.includes('Renseigné'))
-  assert.match(html, /<span class="[^"]*text-ambre-ink[^"]*">(<svg[\s\S]*?<\/svg>)?À renseigner<\/span>/, '« À renseigner » en ambre, avec son icône')
-  assert.equal(compte(html, /border-accent-ui/g) >= 1, true, 'bord accent sur la carte choisie')
-  assert.ok(!/text-danger|border-danger/.test(html), 'jamais de rouge sur une carte')
-  assert.equal(compte(html, /<i>moyens<\/i>/g), 1, 'seul le formulaire de la rubrique choisie est monté')
+  assert.equal(compte(html, /<li /g), 0, 'plus de faits clés répétés dans chaque rubrique')
+  assert.ok(!/À renseigner|text-ambre-ink/.test(html), 'un champ vide n\'est pas une alerte : aucun ambre ici')
+  assert.ok(!/text-danger|border-danger|text-rouge/.test(html), 'jamais de rouge sur une rubrique')
+  assert.equal(compte(html, /min-h-16/g), 3, 'rangées de 64 px : la cible dépasse 44 px')
+  assert.equal(compte(html, /<i>moyens<\/i>/g), 1, 'seul le formulaire de la rubrique ouverte est monté')
   assert.equal(compte(html, /<i>identité<\/i>/g), 0)
-  assert.ok(html.indexOf('role="tablist"') < html.indexOf('<i>moyens</i>'), 'le formulaire est sous les cartes')
+  assert.ok(html.indexOf('role="tablist"') < html.indexOf('<i>moyens</i>'), 'le formulaire est sous les rubriques')
 })
 
 test('cartes : tabindex itinérant et clavier (flèches, Début, Fin) ; mêmes cartes au téléphone', () => {
@@ -163,7 +159,7 @@ test('Certifications : un client particulier n\'est nommé que par ses initiales
   const html = rendre(<QueryClientProvider client={new QueryClient()}><MemoryRouter><FormCertifications donnees={particulier} /></MemoryRouter></QueryClientProvider>, true)
   assert.ok(html.includes('Afficher le nom complet du client sur les fiches et dans le mémoire'))
   assert.ok(html.includes('initiales (Mme D.)'), 'aperçu des initiales que le serveur écrira')
-  assert.ok(!/checked/.test(html), 'décochée par défaut')
+  assert.ok(html.includes('role="checkbox"') && html.includes('aria-checked="false"') && !html.includes('aria-checked="true"'), 'case du système, décochée par défaut')
   assert.equal(initialesClient('Jean-Pierre Martin'), 'J.-P. M.')
   assert.equal(initialesClient('M. Ali Ben Salah'), 'M. A. B. S.')
   assert.equal(initialesClient(''), '')
@@ -174,7 +170,7 @@ test('« Enregistrer » vit dans l\'en-tête du formulaire ; la version collée 
   assert.match(code, /IntersectionObserver/)
   assert.match(code, /rootMargin: '100000px 0px -99% 0px'/, 'la zone observée est la bande au-dessus de <main>')
   assert.match(code, /setColle\(e\.isIntersecting && e\.intersectionRatio >= 0\.99\)/, 'collée seulement quand l\'en-tête est sorti par le haut')
-  assert.match(code, /sticky -top-5/, 'collée au bord de la zone de défilement, malgré le retrait de 20 px de <main>')
+  assert.match(code, /sticky top-0/, 'collée au bord haut de la zone de défilement (<main> n\'a plus de retrait : le conteneur est posé par la coquille)')
   assert.match(code, /closest\('main'\)/)
   assert.match(code, /scrollPaddingTop = `\$\{Math\.ceil\(barre\.current\.getBoundingClientRect\(\)\.height\) \+ 8\}px`/, 'scroll-padding-top de <main> à la hauteur de la barre')
   assert.match(code, /defilant\.style\.scrollPaddingTop = ''/, 'remis à zéro au démontage')
@@ -193,7 +189,8 @@ test('« Enregistrer » vit dans l\'en-tête du formulaire ; la version collée 
 test('formulaire pleine largeur : en-tête (titre, explication, « Fiche à télécharger », « Enregistrer »), puis « Décrire avec vos mots », puis les champs', () => {
   const html = pageCompany(true)
   assert.match(html, /<h2[^>]*>Identité<\/h2>/)
-  assert.ok(html.includes('Qui vous êtes : ce que l&#x27;acheteur lit en premier'))
+  assert.ok(html.includes('Qui vous êtes\u00a0: ce que l&#x27;acheteur lit en premier'), 'espace insécable avant le deux-points')
+  assert.match(html, /<form[^>]*novalidate=""/, 'jamais la bulle de validation du navigateur')
   assert.ok(html.indexOf('role="tablist"') < html.indexOf('<form'), 'le formulaire est sous les cartes dans le DOM')
   const iFiche = html.indexOf(LIBELLE_FICHE, html.indexOf('<h2'))
   const iEnreg = html.indexOf('>Enregistrer<')
@@ -210,7 +207,7 @@ test('« Fiche à télécharger » partout, jamais « Fiche » seul ; jamais « 
     client.setQueryData(['memoire-config'], CONFIG); client.setQueryData(['team'], []); client.setQueryData(['references'], DONNEES.references); client.setQueryData(['documents'], DONNEES.documents)
     useAuthStore.setState({ organization: ORG })
     const html = rendre(<QueryClientProvider client={client}><MemoryRouter initialEntries={[`/company?rubrique=${rubrique}`]}><Company /></MemoryRouter></QueryClientProvider>, true)
-    assert.ok(compte(html, new RegExp(LIBELLE_FICHE, 'g')) >= 4, `${rubrique} : trois cartes et l'en-tête du formulaire`)
+    assert.equal(compte(html, new RegExp(LIBELLE_FICHE, 'g')), 1, `${rubrique} : une fois, dans l'en-tête du formulaire`)
     assert.ok(!/>Fiche\b(?! à télécharger)/.test(html), 'aucun « Fiche » seul')
     assert.ok(!/aria-label="Fiche /.test(html))
     assert.ok(!/manquant|incomplet|absent/i.test(html), rubrique)
@@ -219,21 +216,20 @@ test('« Fiche à télécharger » partout, jamais « Fiche » seul ; jamais « 
   for (const f of sources) assert.doesNotMatch(sansCommentaires(lire(f)), />\s*Fiche\s*(<|\{)|'Fiche'|"Fiche"/, f)
 })
 
-test('états sous les champs : « Renseigné », la source (Sirene) ou « À renseigner » en ambre (COULEURS.md), jamais de rouge', () => {
+test('sous les champs : la source (Sirene) quand elle existe ; rien sous un champ vide (plus de « À renseigner » ambre), jamais de rouge', () => {
   const html = rendre(<QueryClientProvider client={new QueryClient()}><MemoryRouter><FormIdentite donnees={DONNEES} /></MemoryRouter></QueryClientProvider>, true)
-  assert.ok(html.includes('Prérempli depuis le répertoire Sirene'), 'nom, forme juridique et siège : la source Sirene')
+  assert.ok(html.includes('Prérempli depuis le répertoire Sirene'), 'nom et siège : la source Sirene')
   assert.ok(html.includes('Vérifié au répertoire Sirene'), 'SIRET vérifié')
-  assert.equal(compte(html, /data-etat="rempli"/g) >= 5, true)
-  assert.equal(compte(html, /data-etat="a-renseigner"/g) >= 3, true, 'forme juridique, e-mail, téléphone… à renseigner')
-  assert.match(html, /data-etat="a-renseigner"[^>]*><span class="[^"]*text-ambre-ink[^"]*">À renseigner<\/span>/)
-  assert.ok(!/data-etat="a-renseigner"[^>]*(danger|red)/.test(html) && !/À renseigner<\/span>[^<]*<[^>]*danger/.test(html) && !/class="[^"]*(text-danger|text-red)[^"]*"[^>]*>(<span[^>]*>)?À renseigner/.test(html), 'un champ vide n\'est pas une erreur')
-  // un profil vide : tout est « À renseigner »
+  assert.ok(!/À renseigner|data-etat="a-renseigner"|>Renseigné</.test(html), 'ni pastille ni mention sous les champs')
+  assert.ok(!/text-ambre-ink[^"]*"[^>]*>[^<]/.test(html), 'aucun texte ambre au repos')
+  assert.ok(!/text-danger|text-red-|text-rouge-ink/.test(html), 'un champ vide n\'est pas une erreur')
+  // un profil vide : des champs à remplir, sans alerte
   const vide = rendre(<QueryClientProvider client={new QueryClient()}><MemoryRouter><FormMoyens donnees={{}} /></MemoryRouter></QueryClientProvider>, true)
-  assert.ok(compte(vide, /data-etat="a-renseigner"/g) >= 6)
+  assert.ok(!/À renseigner|text-ambre-ink[^"]*"[^>]*>[^<]/.test(vide))
   assert.ok(!/manquant|incomplet|absent/i.test(vide))
 })
 
-test('groupes : sous-titres en capitales, champs en deux colonnes, indispensables d\'abord', () => {
+test('groupes : sous-titres en casse de phrase, champs en deux colonnes, indispensables d\'abord', () => {
   const rendu = (el: React.ReactElement) => rendre(<QueryClientProvider client={new QueryClient()}><MemoryRouter>{el}</MemoryRouter></QueryClientProvider>, true)
   const identite = rendu(<FormIdentite donnees={DONNEES} />)
   const moyens = rendu(<FormMoyens donnees={DONNEES} />)
@@ -247,7 +243,7 @@ test('groupes : sous-titres en capitales, champs en deux colonnes, indispensable
   ordre(moyens, ['Équipe', 'Matériel et véhicules', 'Sécurité, qualité, environnement'])
   ordre(certifs, ['Qualifications', 'Références', 'Chiffres demandés dans la'])
   for (const html of [identite, moyens, certifs]) {
-    assert.match(html, /uppercase/, 'sous-titres en capitales')
+    assert.doesNotMatch(html, /uppercase/, 'sous-titres en casse de phrase, jamais en capitales forcées')
     assert.match(html, /md:grid-cols-2/, 'deux colonnes')
     assert.match(html, /aria-expanded="false"[^>]*>Afficher les informations utiles et en option/)
   }
@@ -404,6 +400,6 @@ test('Moyens : les listes, les effectifs et les personnes clés s\'affichent, sa
 
 test('Identité : forme juridique, e-mail et téléphone en tête, le reste replié', () => {
   const html = rendre(<QueryClientProvider client={new QueryClient()}><MemoryRouter><FormIdentite donnees={DONNEES} /></MemoryRouter></QueryClientProvider>, true)
-  for (const t of ['Forme juridique', 'E-mail de l&#x27;entreprise', 'Téléphone', 'À renseigner']) assert.ok(html.includes(t), t)
+  for (const t of ['Forme juridique', 'E-mail de l&#x27;entreprise', 'Téléphone']) assert.ok(html.includes(t), t)
   for (const t of ['Capital social', 'Métiers exercés', 'Ville du greffe']) assert.ok(!html.includes(t), `${t} replié`)
 })

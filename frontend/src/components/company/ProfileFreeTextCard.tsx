@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Check, Loader2, Sparkles, X } from 'lucide-react'
 import { api } from '@/services/api'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Textarea } from '@/components/ui/input'
+import { Bouton } from '@/components/ui/bouton'
+import { CaseACocher } from '@/components/ui/case'
+import { ZoneTexte } from '@/components/ui/champ'
+import { Message } from '@/components/ui/message'
 
 const FIELD_LABELS: Record<string, string> = {
   activites: 'Activités principales',
@@ -18,9 +18,9 @@ const FIELD_LABELS: Record<string, string> = {
 }
 
 /**
- * C7 — décrire ses moyens/équipe/activité en langage libre : Haiku propose
- * des champs structurés en PREVIEW ; rien n'est écrit sans validation
- * explicite (l'utilisateur édite/décoche puis applique).
+ * C7 — décrire ses moyens, son équipe et son activité avec ses mots : Synorix range le texte en rubriques et le PROPOSE ;
+ * rien n'est écrit sans validation (l'utilisateur corrige, décoche, puis applique). A13 : le bouton dit ce qu'il fait
+ * (« Ranger en rubriques »), pas un mot du logiciel.
  */
 export default function ProfileFreeTextCard() {
   const queryClient = useQueryClient()
@@ -39,17 +39,17 @@ export default function ProfileFreeTextCard() {
     onSuccess: ({ proposed: p }) => {
       setError(null)
       if (Object.keys(p).length === 0) {
-        setError("Rien d'exploitable détecté dans ce texte — précisez vos moyens, équipe ou activité.")
+        setError('Synorix n’a rien trouvé à ranger dans ce texte : précisez vos moyens, votre équipe ou votre activité.')
         setProposed(null)
         return
       }
       setProposed(p)
       setIncluded(new Set(Object.keys(p)))
     },
-    onError: () => setError('Structuration indisponible — réessayez dans un instant.'),
+    onError: () => setError('Le rangement en rubriques n’a pas abouti. Votre texte est gardé : réessayez dans un instant.'),
   })
 
-  const { mutate: apply, isPending: applying } = useMutation({
+  const { mutate: apply, isPending: applying, isError: echecApplication } = useMutation({
     mutationFn: async () => {
       const payload = Object.fromEntries(
         Object.entries(proposed!).filter(([k]) => included.has(k)),
@@ -63,83 +63,46 @@ export default function ProfileFreeTextCard() {
     },
   })
 
-  return (
-    <Card className="space-y-3 p-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <Sparkles size={15} className="text-accent-text" aria-hidden />
-        <h3 className="text-sm font-semibold text-fg">Décrire avec vos mots</h3>
-        <span className="text-xs text-fg-3">l'IA structure, vous validez</span>
-      </div>
+  const basculer = (key: string) => setIncluded((prev) => {
+    const next = new Set(prev)
+    if (next.has(key)) next.delete(key)
+    else next.add(key)
+    return next
+  })
 
-      {!proposed ? (
-        <>
-          <Textarea
-            rows={3}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            aria-label="Décrire votre entreprise avec vos mots"
-            placeholder="Ex. : On est une boîte de ravalement à Caen, 8 compagnons, 3 camions benne, 2 échafaudages MDS…"
-            className="resize-y py-2.5 text-sm"
-          />
-          <div className="flex items-center justify-between gap-3">
-            {error && <p role="alert" className="text-xs text-warning">{error}</p>}
-            <Button
-              onClick={() => structure()}
-              disabled={structuring || text.trim().length < 10}
-              size="sm"
-              className="ml-auto"
-            >
-              {structuring ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <Sparkles size={14} aria-hidden />}
-              Structurer
-            </Button>
-          </div>
-        </>
-      ) : (
-        <>
-          <p className="text-xs text-fg-2">
-            Vérifiez et ajustez avant d'appliquer — seuls les champs cochés seront écrits dans votre profil.
-          </p>
-          <div className="space-y-2">
-            {Object.entries(proposed).map(([key, value]) => (
-              <div key={key} className="flex items-start gap-2.5">
-                <input
-                  type="checkbox"
-                  className="mt-1.5 size-4 accent-accent-ui"
-                  aria-label={`Inclure « ${FIELD_LABELS[key] ?? key} »`}
-                  checked={included.has(key)}
-                  onChange={() => setIncluded(prev => {
-                    const next = new Set(prev)
-                    if (next.has(key)) next.delete(key)
-                    else next.add(key)
-                    return next
-                  })}
-                />
-                <div className="min-w-0 flex-1">
-                  <label htmlFor={`structure-${key}`} className="mb-0.5 block text-xs font-medium text-fg-2">
-                    {FIELD_LABELS[key] ?? key}
-                  </label>
-                  <Textarea
-                    id={`structure-${key}`}
-                    rows={2}
-                    value={value}
-                    onChange={(e) => setProposed(prev => ({ ...prev!, [key]: e.target.value }))}
-                    className="min-h-0 py-1.5 text-sm"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="flex justify-end gap-2 pt-1">
-            <Button variant="ghost" size="sm" onClick={() => setProposed(null)}>
-              <X size={14} aria-hidden /> Annuler
-            </Button>
-            <Button size="sm" onClick={() => apply()} disabled={applying || included.size === 0}>
-              {applying ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <Check size={14} aria-hidden />}
-              Appliquer au profil ({included.size})
-            </Button>
-          </div>
-        </>
-      )}
-    </Card>
+  if (!proposed) {
+    return (
+      <div className="grid gap-3">
+        <p className="text-sm text-fg-2">Synorix range votre texte en rubriques ; vous vérifiez avant que rien ne soit écrit.</p>
+        <ZoneTexte rows={3} aria-label="Décrire avec vos mots" value={text} onChange={(e) => setText(e.target.value)}
+          placeholder="Ex. : On est une entreprise de ravalement à Caen, 8 compagnons, 3 camions benne, 2 échafaudages…" />
+        {error && <Message ton="attention">{error}</Message>}
+        <div>
+          <Bouton variante="secondaire" onClick={() => structure()} disabled={text.trim().length < 10} enCours={structuring} libelleEnCours="Rangement en cours…">
+            Ranger en rubriques
+          </Bouton>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="grid gap-4">
+      <p className="text-sm text-fg-2">Vérifiez et corrigez : seules les rubriques cochées seront écrites dans votre profil.</p>
+      {Object.entries(proposed).map(([key, value]) => (
+        <div key={key} className="grid gap-1">
+          <CaseACocher libelle={FIELD_LABELS[key] ?? key} coche={included.has(key)} onChange={() => basculer(key)} />
+          <ZoneTexte rows={2} aria-label={FIELD_LABELS[key] ?? key} value={value} disabled={!included.has(key)}
+            onChange={(e) => setProposed((prev) => ({ ...prev!, [key]: e.target.value }))} />
+        </div>
+      ))}
+      {echecApplication && <Message ton="erreur">L’écriture dans votre profil n’a pas abouti. Vos corrections sont gardées : réessayez.</Message>}
+      <div className="flex flex-wrap justify-end gap-2">
+        <Bouton variante="secondaire" onClick={() => setProposed(null)} disabled={applying}>Annuler</Bouton>
+        <Bouton variante="secondaire" onClick={() => apply()} disabled={included.size === 0} enCours={applying} libelleEnCours="Écriture…">
+          {`Écrire dans mon profil (${included.size})`}
+        </Bouton>
+      </div>
+    </div>
   )
 }

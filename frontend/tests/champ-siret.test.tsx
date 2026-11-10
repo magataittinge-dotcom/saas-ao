@@ -21,9 +21,10 @@ test('le champ SIRET est saisissable sur un profil rempli (plus de lecture seule
   assert.ok(!/readOnly/.test(form))
 })
 
-test('profil sans SIRET : « À renseigner » ; pas de bouton tant que rien n’est saisi', () => {
+test('profil sans SIRET : un champ vide est un champ à remplir (aucun « À renseigner ») ; pas de bouton tant que rien n’est saisi', () => {
   const html = rendre({ siret: null })
-  assert.match(html, /À renseigner/)
+  assert.doesNotMatch(html, /À renseigner/)
+  assert.match(html, /placeholder="14 chiffres"/)
   assert.ok(!/Vérifier/.test(html))
 })
 

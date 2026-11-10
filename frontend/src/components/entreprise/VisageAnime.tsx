@@ -25,6 +25,8 @@ const MASQUE = cn(
 // linéaire, qui laisse voir un anneau gris sur fond clair.
 export const MEDAILLON_CLAIR = 'radial-gradient(ellipse 54% 50% at 50% 49%, var(--surface-dark) 0 46%, color-mix(in oklab, var(--surface-dark) 84%, transparent) 54%, color-mix(in oklab, var(--surface-dark) 58%, transparent) 62%, color-mix(in oklab, var(--surface-dark) 32%, transparent) 69%, color-mix(in oklab, var(--surface-dark) 13%, transparent) 75%, color-mix(in oklab, var(--surface-dark) 3%, transparent) 80%, transparent 82%)'
 export const FLOU_MEDAILLON_PX = 6
+/** Le médaillon est un dégradé calculé sur les jetons (aucune couleur en dur) : il n'a pas d'équivalent en classe. */
+const STYLE_MEDAILLON = { background: MEDAILLON_CLAIR, filter: `blur(${FLOU_MEDAILLON_PX}px)` } as const
 const MEDIA = cn(
   'absolute inset-0 size-full object-cover opacity-0 transition-opacity [transition-duration:280ms] ease-out motion-reduce:transition-none data-[actif=true]:opacity-100 dark:mix-blend-screen',
   MASQUE,
@@ -151,7 +153,7 @@ const VisageAnime = forwardRef<VisageAnimeRef, { actif: boolean; className?: str
   return (
     <div data-visage="" className={cn('relative mx-auto h-[336px] w-[240px] lg:h-[420px] lg:w-[300px]', className)}>
       {/* médaillon sombre derrière le visage en thème clair ; en nuit, le mélange « écran » suffit */}
-      <div aria-hidden="true" data-medaillon="" className="absolute inset-0 opacity-100 dark:opacity-0" style={{ background: MEDAILLON_CLAIR, filter: `blur(${FLOU_MEDAILLON_PX}px)` }} />
+      <div aria-hidden="true" data-medaillon="" className="absolute inset-0 opacity-100 dark:opacity-0" style={STYLE_MEDAILLON} />
       {reduit ? (
         <img src={POSTER_OUVERT} alt="Le visage de Synorix" width={300} height={420} data-actif="true" className={MEDIA} />
       ) : (

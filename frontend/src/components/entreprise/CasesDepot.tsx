@@ -1,11 +1,15 @@
-import { useCallback, useId, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { DragEvent, ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
-import { ArrowRight, CheckCircle2, ChevronDown, FileUp, Loader2 } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 import { api } from '@/services/api'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import { Bouton } from '@/components/ui/bouton'
+import { CaseACocher } from '@/components/ui/case'
+import { EntreeFichier } from '@/components/depot/EntreeFichier'
+import { Message } from '@/components/ui/message'
+import { PastilleEtat } from '@/components/ui/pastille'
 import { useAuthStore } from '@/stores/authStore'
 import type { Organization } from '@/types'
 import type { RubriqueId } from '@/lib/entreprise/avancement'
@@ -25,43 +29,40 @@ export interface VueCase {
   erreur: string | null
 }
 
-const ZONE = 'flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-bord-2 bg-surface-0 px-3 py-3 text-center text-sm font-medium text-fg transition-colors duration-base ease-lien hover:border-accent-ui hover:bg-surface-1 focus-within:border-accent-ui'
-
+/** L'état d'une case, en mots : envoi, lecture en cours (bleu), lu (vert, « Vérifier »), déposé, refus dit sans rouge. */
 function Etat({ vue, onVerifier }: { vue: VueCase; onVerifier: () => void }) {
   const e = vue.etat
   const libelle = vue.envoi ? 'Envoi en cours…' : e?.libelle_etat ?? null
+  const enCours = vue.envoi || e?.etat === 'en_lecture'
+  const lu = !vue.envoi && e?.etat === 'lu'
   return (
-    <div className="min-h-[2.75rem] space-y-1" role="status" aria-live="polite">
+    <div className="grid gap-1 empty:hidden" role="status" aria-live="polite">
       {libelle && (
         <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-          <span className={cn('inline-flex items-center gap-1.5', e?.etat === 'lu' ? 'font-semibold text-fg' : 'text-fg-2')}>
-            {(vue.envoi || e?.etat === 'en_lecture') && <Loader2 size={14} className="animate-spin motion-reduce:animate-none" aria-hidden />}
-            {!vue.envoi && e?.etat === 'lu' && <CheckCircle2 size={14} className="text-accent-text" aria-hidden />}
-            {libelle}
-          </span>
-          {e?.vers_verifier && !vue.envoi && (
-            <button type="button" onClick={onVerifier} className="inline-flex min-h-11 items-center gap-1 rounded-xs font-semibold text-accent-text hover:underline">
-              Vérifier <ArrowRight size={14} aria-hidden />
-            </button>
-          )}
+          {enCours || lu
+            ? <PastilleEtat sens={lu ? 'vert' : 'bleu'}>{libelle}</PastilleEtat>
+            : <span className="text-fg-2">{libelle}</span>}
+          {e?.vers_verifier && !vue.envoi && <Bouton variante="lien" className="text-sm" onClick={onVerifier}>Vérifier</Bouton>}
         </p>
       )}
       {/* G6 — « Lecture indisponible » : la phrase qui dit quoi faire se lit, elle n'est pas en petit gris */}
-      {!vue.envoi && e?.etat === 'echec' && e.note && <p className="text-sm leading-relaxed text-fg-2">{e.note}</p>}
+      {!vue.envoi && e?.etat === 'echec' && e.note && <p className="text-sm text-fg-2">{e.note}</p>}
       {!vue.envoi && (e?.plafond || (e?.note && e.etat !== 'echec')) && <p className="text-xs text-fg-3">{[e?.plafond, e?.etat === 'echec' ? null : e?.note].filter(Boolean).join(' · ')}</p>}
-      {vue.erreur && <p role="alert" className="text-xs text-warning">{vue.erreur}</p>}
+      {vue.erreur && <p role="alert" className="text-sm text-ambre-ink">{vue.erreur}</p>}
     </div>
   )
 }
 
-/** Une case : son nom, ce qu'on y met, ce que Synorix en fera, la zone de dépôt, l'état. */
+/**
+ * Une case, en rangée : son nom, ce qu'on y met, ce que Synorix en fera ; à droite, « Déposer un fichier ». Toute la rangée
+ * reçoit un fichier glissé (elle se marque alors d'un trait d'accent) ; au repos, aucune zone en pointillés.
+ */
 export function CaseDepotVue({ vue, onFichiers, onVerifier }: {
   vue: VueCase
   onFichiers: (caseId: string, fichiers: File[]) => void
   onVerifier: () => void
 }) {
   const c = vue.definition
-  const idChamp = useId()
   const entree = useRef<HTMLInputElement>(null)
   const [survol, setSurvol] = useState(false)
 
@@ -72,44 +73,35 @@ export function CaseDepotVue({ vue, onFichiers, onVerifier }: {
   }
 
   return (
-    <article data-case={c.id} className="grid min-w-0 content-start gap-3 rounded-carte border border-bord-2 bg-surface-1 p-4">
-      <h4 className="font-display text-base font-semibold leading-snug text-fg">{c.nom}</h4>
-      <dl className="grid gap-2 text-sm">
-        <div>
-          <dt className="text-xs font-semibold uppercase tracking-[0.06em] text-fg-3">Ce que vous y mettez</dt>
-          <dd className="mt-0.5 text-fg-2">{c.contenu}</dd>
-        </div>
-        <div>
-          <dt className="text-xs font-semibold uppercase tracking-[0.06em] text-fg-3">Ce que Synorix en fera</dt>
-          <dd className="mt-0.5 text-fg-2">{c.usage}</dd>
-        </div>
-      </dl>
-      <div
-        onDragOver={(e) => { e.preventDefault(); setSurvol(true) }}
-        onDragLeave={() => setSurvol(false)}
-        onDrop={aLaDepose}
-      >
-        <label htmlFor={idChamp} className={cn(ZONE, survol && 'border-accent-ui bg-surface-2')}>
-          <FileUp size={16} aria-hidden />
-          <span>Glisser un fichier ici, ou choisir</span>
-          <span className="sr-only"> pour « {c.nom} »</span>
-        </label>
-        <input
+    <article
+      data-case={c.id}
+      onDragOver={(e) => { e.preventDefault(); setSurvol(true) }}
+      onDragLeave={() => setSurvol(false)}
+      onDrop={aLaDepose}
+      className={cn('flex flex-wrap items-start justify-between gap-x-6 gap-y-3 border-t border-bord px-4 py-4 first:border-t-0', survol && 'bg-accent-tint outline-dashed outline-2 -outline-offset-2 outline-accent-ring')}
+    >
+      <div className="grid min-w-0 flex-1 basis-72 gap-1">
+        <h4 className="text-sm font-semibold text-fg">{c.nom}</h4>
+        <p className="max-w-lg text-sm text-fg-2">{c.contenu}</p>
+        <p className="max-w-md text-xs text-fg-3">{c.usage}</p>
+        <Etat vue={vue} onVerifier={onVerifier} />
+      </div>
+      <div className="grid shrink-0 justify-items-start gap-1.5">
+        <Bouton variante="secondaire" onClick={() => entree.current?.click()} enCours={vue.envoi} libelleEnCours="Envoi en cours…">
+          Déposer un fichier<span className="sr-only"> pour « {c.nom} »</span>
+        </Bouton>
+        <EntreeFichier
           ref={entree}
-          id={idChamp}
-          type="file"
           multiple={c.plusieurs_fichiers}
           accept={TYPES_ACCEPTES}
-          className="sr-only"
           onChange={(e) => {
             const fichiers = Array.from(e.target.files ?? [])
             e.target.value = ''
             if (fichiers.length) onFichiers(c.id, fichiers)
           }}
         />
-        <p className="mt-1.5 text-xs text-fg-3">{ligneFormats(c)}</p>
+        <p className="max-w-56 text-xs text-fg-3">{ligneFormats(c)}</p>
       </div>
-      <Etat vue={vue} onVerifier={onVerifier} />
     </article>
   )
 }
@@ -131,40 +123,43 @@ export function EncartCompris({ propositions, coches, onBasculer, onValider, onT
   const groupes = groupesParLecture(propositions)
   const n = cochesPresentes(coches, propositions).length
   return (
-    <section id={ID_ENCART} tabIndex={-1} aria-labelledby={`${ID_ENCART}-titre`} className="space-y-4 rounded-carte border border-accent-ui bg-surface-1 p-4 sm:p-5">
+    <section id={ID_ENCART} tabIndex={-1} aria-labelledby={`${ID_ENCART}-titre`} className="grid gap-4 rounded-lg border border-bord bg-surface-0 p-4 sm:p-5">
       <div>
-        <h3 id={`${ID_ENCART}-titre`} className="font-display text-lg font-semibold text-fg">Voici ce que j'ai compris</h3>
+        <h3 id={`${ID_ENCART}-titre`} className="text-base font-semibold text-fg">Voici ce que j'ai compris</h3>
         <p className="mt-1 text-sm text-fg-2">Décochez ce qui n'est pas juste. Rien n'est enregistré dans votre profil avant que vous validiez.</p>
       </div>
       {groupes.map((g) => (
-        <fieldset key={g.lecture_id} className="min-w-0 space-y-1 border-0 p-0">
-          <legend className="mb-1 text-xs font-semibold uppercase tracking-[0.06em] text-fg-3">{g.case_nom} · {g.source}</legend>
-          <ul className="grid gap-1.5">
+        <fieldset key={g.lecture_id} className="min-w-0 border-0 p-0">
+          <legend className="mb-1 text-xs font-medium text-fg-3">{g.case_nom} · {g.source}</legend>
+          <ul className="divide-y divide-bord border-y border-bord">
             {g.propositions.map((p) => {
               const confirmer = libelleAConfirmer(p)
-              const id = `${ID_ENCART}-${p.id}`
               return (
-                <li key={p.id} className="rounded-md border border-bord-2 bg-surface-0">
-                  <label htmlFor={id} className="flex min-h-11 cursor-pointer items-start gap-3 px-3 py-2.5">
-                    <input id={id} type="checkbox" className="mt-0.5 size-5 shrink-0 accent-accent-ui" checked={coches.has(p.id)} onChange={() => onBasculer(p.id)} />
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-xs font-medium text-fg-3">{p.libelle}</span>
-                      <span className="block break-words text-sm font-semibold text-fg">{p.affichage}</span>
-                      {confirmer && <span className="mt-0.5 block text-xs font-medium text-accent-text">{confirmer}</span>}
-                    </span>
-                  </label>
+                <li key={p.id} className="py-1.5">
+                  <CaseACocher
+                    coche={coches.has(p.id)}
+                    onChange={() => onBasculer(p.id)}
+                    className="items-start py-2"
+                    libelle={(
+                      <span className="grid">
+                        <span className="text-xs font-medium text-fg-3">{p.libelle}</span>
+                        <span className="break-words text-sm font-semibold text-fg">{p.affichage}</span>
+                        {confirmer && <span className="mt-0.5 text-xs font-medium text-ambre-ink">{confirmer}</span>}
+                      </span>
+                    )}
+                  />
                   {p.extrait ? (
-                    <details className="group border-t border-bord-2 px-3">
+                    <details className="group pl-8">
                       <summary className="flex min-h-11 cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-0.5 py-1 text-xs text-fg-3">
                         <span>Source : {sourceLisible(p.source)}</span>
                         <span className="inline-flex items-center gap-1 font-medium text-accent-text group-hover:underline">
-                          Voir l'extrait d'origine <ChevronDown size={13} className="transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden />
+                          Voir l'extrait d'origine <ChevronDown size={13} className="transition-transform duration-survol ease-survol group-open:rotate-180 motion-reduce:transition-none" aria-hidden />
                         </span>
                       </summary>
                       <blockquote className="mb-2 break-words border-l-2 border-bord-2 pl-3 text-xs italic text-fg-2">{p.extrait}</blockquote>
                     </details>
                   ) : (
-                    <p className="border-t border-bord-2 px-3 py-2 text-xs text-fg-3">Source : {sourceLisible(p.source)}</p>
+                    <p className="pb-2 pl-8 text-xs text-fg-3">Source : {sourceLisible(p.source)}</p>
                   )}
                 </li>
               )
@@ -173,13 +168,10 @@ export function EncartCompris({ propositions, coches, onBasculer, onValider, onT
         </fieldset>
       ))}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p role={erreur ? 'alert' : 'status'} className={cn('text-sm empty:hidden', erreur ? 'text-warning' : 'text-fg-2')}>{erreur ?? bilan}</p>
+        <p role={erreur ? 'alert' : 'status'} className={cn('text-sm empty:hidden', erreur ? 'text-ambre-ink' : 'text-fg-2')}>{erreur ?? bilan}</p>
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <Button variant="ghost" className="min-h-11" onClick={onTout} disabled={enCours}>Ne rien garder</Button>
-          <Button className="min-h-11" onClick={onValider} disabled={enCours || n === 0}>
-            {enCours ? <Loader2 size={16} className="animate-spin motion-reduce:animate-none" aria-hidden /> : <CheckCircle2 size={16} aria-hidden />}
-            {libelleValider(n)}
-          </Button>
+          <Bouton variante="discret" onClick={onTout} disabled={enCours}>Ne rien garder</Bouton>
+          <Bouton variante="secondaire" onClick={onValider} disabled={n === 0} enCours={enCours} libelleEnCours="Validation…">{libelleValider(n)}</Bouton>
         </div>
       </div>
     </section>
@@ -187,8 +179,8 @@ export function EncartCompris({ propositions, coches, onBasculer, onValider, onT
 }
 
 /**
- * Les cases de la rubrique, côte à côte : trois pour l'identité et les moyens, deux pour les certifications. En
- * disposition « colonne » (la zone étroite de la page de fiche), l'une sous l'autre à toutes les largeurs.
+ * Les cases de la rubrique : UNE surface, une rangée par case (plus de cartes de hauteurs inégales). `disposition` est gardée
+ * pour la page de fiche (zone étroite) : en rangées, les deux dispositions se lisent de la même façon.
  */
 export type DispositionCases = 'grille' | 'colonne'
 export function GrilleCases({ rubrique, cases, etats, envoi, erreurs, onFichiers, onVerifier, titre = 'Déposer vos documents', disposition = 'grille' }: {
@@ -204,12 +196,12 @@ export function GrilleCases({ rubrique, cases, etats, envoi, erreurs, onFichiers
 }) {
   const definitions = casesDeLaRubrique(cases, rubrique)
   return (
-    <section aria-label={typeof titre === 'string' ? titre : 'Dépôt de documents'} className="space-y-3" data-depots={rubrique}>
+    <section aria-label={typeof titre === 'string' ? titre : 'Dépôt de documents'} className="grid gap-3" data-depots={rubrique}>
       <div>
-        <h3 className="font-display text-base font-semibold text-fg">{titre}</h3>
-        <p className="mt-0.5 text-sm text-fg-2">Chaque case a son rôle : un fichier déposé ici n'est jamais pris pour autre chose. Il entre dans votre coffre-fort, puis Synorix vous propose ce qu'il y a lu.</p>
+        <h3 className="text-base font-semibold text-fg">{titre}</h3>
+        <p className="mt-1 text-sm text-fg-2">Chaque case a son rôle : un fichier déposé ici n'est jamais pris pour autre chose. Il entre dans votre coffre-fort, puis Synorix vous propose ce qu'il y a lu.</p>
       </div>
-      <div data-disposition={disposition} className={cn('grid gap-3.5', disposition === 'grille' && (definitions.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-3'))}>
+      <div data-disposition={disposition} className="overflow-hidden rounded-lg border border-bord bg-surface-0">
         {definitions.map((d) => (
           <CaseDepotVue
             key={d.id}
@@ -319,7 +311,7 @@ export default function CasesDepot({ rubrique, apresValidation, disposition = 'g
 
   if (!definitions.data) return null
   return (
-    <div className="space-y-5">
+    <div className="grid gap-5">
       <GrilleCases
         rubrique={rubrique} cases={definitions.data} etats={etats.data ?? []} envoi={envoi} erreurs={erreurs}
         onFichiers={deposer} onVerifier={verifier} disposition={disposition}
@@ -333,7 +325,7 @@ export default function CasesDepot({ rubrique, apresValidation, disposition = 'g
           enCours={valider.isPending} bilan={bilan} erreur={erreurValidation}
         />
       ) : bilan ? (
-        <p role="status" className="text-sm text-fg-2">{bilan}</p>
+        <Message ton="succes">{bilan}</Message>
       ) : null}
     </div>
   )

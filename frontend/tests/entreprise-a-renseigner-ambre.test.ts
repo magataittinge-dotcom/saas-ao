@@ -1,24 +1,25 @@
-// Recette du 4/11 — « À renseigner » est ambre (COULEURS.md : informations à renseigner = à surveiller) partout dans
-// Mon entreprise, jamais en bleu d'accent ; la bulle « Moyens » porte son titre, sa valeur se lit dessous.
+// Recette du 4/11, puis refonte du 10/11 — plus de vingt « À renseigner » ambre sous les champs : l'ambre ne voulait plus rien
+// dire. Un champ vide est un champ à remplir, sans pastille ni mention ; l'ambre est gardé pour ce qui est à surveiller
+// (pièce à renouveler, refus d'un fichier). La bulle « Moyens » (lib, plus affichée) garde son titre et sa valeur.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { lire, sansCommentaires } from './outils/sources'
 import { construireBulles } from '@/lib/entreprise/synthese'
 import type { DonneesEntreprise } from '@/lib/entreprise/avancement'
 
-test('« À renseigner » n\'est jamais en bleu d\'accent dans Mon entreprise', () => {
+test('« À renseigner » ne s\'écrit plus sous les champs de Mon entreprise : ni en ambre, ni en bleu d\'accent', () => {
   const fichiers = [
     'src/components/entreprise/SceneVisage.tsx', 'src/components/entreprise/champs.tsx',
     'src/components/entreprise/FormCertifications.tsx', 'src/components/entreprise/RubriquesEntreprise.tsx',
+    'src/components/entreprise/FormIdentite.tsx', 'src/components/entreprise/FormMoyens.tsx', 'src/components/entreprise/ChampSiret.tsx',
+    'src/components/entreprise/ListesMoyens.tsx', 'src/components/entreprise/EditeursCertifications.tsx',
   ]
   for (const f of fichiers) {
     const code = sansCommentaires(lire(f))
-    assert.doesNotMatch(code, /text-accent-text[^\n]*(A_RENSEIGNER|À renseigner)/, f)
-    assert.doesNotMatch(code, /(A_RENSEIGNER|À renseigner)[^\n]*text-accent-text/, f)
+    assert.doesNotMatch(code, /A_RENSEIGNER|À renseigner/, f)
   }
-  assert.match(sansCommentaires(lire('src/components/entreprise/SceneVisage.tsx')), /A_RENSEIGNER[^\n]*text-ambre-ink/)
-  assert.match(sansCommentaires(lire('src/components/entreprise/champs.tsx')), /text-ambre-ink">\{A_RENSEIGNER\}/)
-  assert.match(sansCommentaires(lire('src/components/entreprise/FormCertifications.tsx')), /text-ambre-ink">À renseigner/)
+  // l'ambre reste là où il dit quelque chose : une pièce à renouveler
+  assert.match(sansCommentaires(lire('src/components/entreprise/FormCertifications.tsx')), /a_renouveler: 'ambre'/)
 })
 
 test('la bulle « Moyens » : titre « Moyens », valeur en phrase dessous (« Échafaudage »), sans « Moyens : »', () => {

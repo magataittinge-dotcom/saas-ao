@@ -9,7 +9,13 @@ import type { MemoireConfig, Qualification, Reference, TeamMember, Document } fr
  * l'équipe, les références et le coffre-fort. Une seule lecture par source, partagée par l'avancement
  * des trois rubriques et par les formulaires.
  */
-export function useDonneesEntreprise(): DonneesEntreprise & { profilCharge: boolean } {
+export function useDonneesEntreprise(): DonneesEntreprise & {
+  profilCharge: boolean
+  /** Une des lectures a échoué sans rien rapporter : l'écran dit l'erreur, jamais « votre profil est vide ». */
+  enErreur: boolean
+  rechargement: boolean
+  recharger: () => void
+} {
   const organisation = useAuthStore((s) => s.organization)
   const profil = useQuery({
     queryKey: ['memoire-config'],
@@ -31,7 +37,11 @@ export function useDonneesEntreprise(): DonneesEntreprise & { profilCharge: bool
     queryKey: ['qualifications'],
     queryFn: async () => (await api.get<Qualification[]>('/qualifications')).data,
   })
+  const lectures = [profil, equipe, references, documents, qualifications]
   return {
+    enErreur: lectures.some((r) => r.isError && r.data === undefined),
+    rechargement: lectures.some((r) => r.isFetching),
+    recharger: () => { for (const r of lectures) if (r.isError) void r.refetch() },
     organisation,
     profil: profil.data ?? null,
     equipe: equipe.data ?? null,

@@ -1,20 +1,20 @@
-// /entreprise/fiche/:rubrique — la fiche « Mon entreprise » à télécharger, en trois zones (ordinateur : côte à côte ; téléphone :
-// empilées, l'aperçu d'abord) :
-//   1. « Ce qu'il y a dans la fiche » : à quoi elle sert, ses sections (Prête / À renseigner) et le lien vers le bon champ ;
-//   2. « Aperçu » : le VRAI document, page par page, produit par le serveur (PDF, Word ou Excel) ;
-//   3. « Bordereau et téléchargement » : logo, titre, sous-titre, contact, couleur, lignes libres, format, bouton.
+// /entreprise/fiche/:rubrique — la fiche « Mon entreprise » à télécharger. Un titre (le retour vers Mon entreprise est le fil
+// de la barre du haut, il n'est pas répété ici), les trois fiches en onglets-liens, puis :
+//   1. « Aperçu » : le VRAI document, page par page, produit par le serveur (PDF, Word ou Excel) ;
+//   2. « Téléchargement » : le format et le bouton « Télécharger la fiche » (la seule action pleine de l'écran), puis le
+//      bordereau à personnaliser (titre, sous-titre, contact, logo, couleur) ; à l'ordinateur, la colonne
+//      reste collée à droite ;
+//   3. « Ce qu'il y a dans la fiche » : à quoi elle sert, ses sections (Prête / À renseigner), le lien vers le bon champ,
+//      les lignes libres et les cases de dépôt de la rubrique ; sous l'aperçu.
+// Deux colonnes à l'ordinateur (l'aperçu au large, les réglages à côté), une au téléphone ; l'ordre du DOM est l'ordre de
+// lecture aux deux largeurs : aperçu, bordereau, contenu. Le patron voit son document, l'ajuste, le télécharge.
 // Le bordereau s'enregistre tout seul (800 ms après la dernière saisie) ; l'aperçu et le fichier partent tous deux de l'état
 // ENREGISTRÉ : ce que l'on voit est exactement ce que l'on télécharge. Données : GET/PUT /entreprise/fiches/{rubrique},
 // POST …/logo, …/apercu et …/generer (backend/routers/fiches_entreprise.py).
-//
-// Ordre sur téléphone : aperçu, puis zone 3 (bordereau et bouton), puis zone 1 (contenu). Le patron voit d'abord son document,
-// l'ajuste et le télécharge sans défiler ; la liste des sections à compléter, plus rare, vient après. Le DOM suit l'ordre de
-// l'ordinateur (contenu, aperçu, bordereau) : la lecture au clavier et à l'écran y est naturelle ; seule la présentation
-// du téléphone réordonne (CSS ``order``).
+// Lecture : chargement → erreur (« Réessayer ») → contenu, par le motif du système (une fiche n'est jamais vide).
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft } from 'lucide-react'
 import { api } from '@/services/api'
 import { messageErreur } from '@/lib/erreurs'
 import { toast } from '@/components/common/Toast'
@@ -26,17 +26,20 @@ import { useApercuFiche } from '@/components/fiche/useApercuFiche'
 import MentionEnregistre, { useMention } from '@/components/fiche/MentionEnregistre'
 import { useDonneesEntreprise } from '@/components/entreprise/useDonneesEntreprise'
 import { aRenseigner } from '@/lib/entreprise/avancement'
-import EcranEnChargement from '@/components/common/EcranEnChargement'
-import { Button } from '@/components/ui/button'
+import { EtatErreur, EtatRequete } from '@/components/ui/etats'
+import { Message } from '@/components/ui/message'
+import { Page, TitreSection } from '@/components/ui/page'
+import { Squelette, SqueletteLignes } from '@/components/ui/squelette'
+import { cn } from '@/lib/utils'
 import { enMiseAJour, type FormatFiche } from '@/lib/apercuFiche'
 import {
-  RUBRIQUES_FICHE, bordereauModifie, lienFiche, paletteFiche,
+  LIBELLE_FICHE, RUBRIQUES_FICHE, bordereauModifie, lienFiche, paletteFiche,
   type FicheBordereau, type FicheReponse, type RubriqueFiche,
 } from '@/lib/fiche'
 
 const cleFiche = (rubrique: RubriqueFiche) => ['fiche-entreprise', rubrique] as const
 export const DELAI_ENREGISTREMENT_MS = 800
-export const RAISON_PDF_INDISPONIBLE = 'Indisponible pour le moment : choisissez Word ou Excel.'
+export const RAISON_PDF_INDISPONIBLE = 'Indisponible pour le moment : choisissez Word ou Excel.'
 
 /** Adresse d'un fichier signé : « /api/files/view/… » est relative au serveur, comme baseURL (sans « /api »). */
 const urlServeur = (chemin: string | null | undefined): string | null =>
@@ -53,6 +56,21 @@ const corpsEnregistre = (b: FicheBordereau) => ({
   titre: b.titre, sous_titre: b.sous_titre, contact: b.contact, couleur: b.couleur,
   lignes_libres: b.lignes_libres.filter((l) => l.libelle.trim()),
 })
+
+/** L'attente : la place de l'aperçu (une page A4) et de la colonne des réglages. */
+function SqueletteFiche() {
+  return (
+    <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <Squelette className="aspect-[210/297] w-full rounded-md" />
+      <div className="grid content-start gap-4">
+        <SqueletteLignes lignes={2} />
+        <Squelette className="h-11 rounded-lg" />
+        <Squelette className="h-11 rounded-lg" />
+        <Squelette className="h-11 rounded-lg" />
+      </div>
+    </div>
+  )
+}
 
 export default function FicheEntreprise() {
   const { rubrique } = useParams()
@@ -73,7 +91,7 @@ function Fiche({ rubrique }: { rubrique: RubriqueFiche }) {
   const aSaisir = donneesEntreprise.profilCharge ? aRenseigner(donneesEntreprise, rubrique).length : 0
   const { etat, pages, planifier } = useApercuFiche(rubrique)
 
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: cleFiche(rubrique),
     queryFn: async () => (await api.get<FicheReponse>(`/entreprise/fiches/${rubrique}`)).data,
   })
@@ -152,75 +170,78 @@ function Fiche({ rubrique }: { rubrique: RubriqueFiche }) {
     onError: async (e) => toast(await messageErreur(e, "La fiche n'a pas pu être générée pour le moment. Réessayez dans un instant."), 'error'),
   })
 
-  if (isLoading) return <EcranEnChargement />
-  if (isError || !data) {
-    return (
-      <div className="mx-auto max-w-3xl space-y-3 py-6" role="alert">
-        <p className="text-sm text-fg-2">La fiche n'a pas pu être chargée.</p>
-        <Button variant="outline" onClick={() => refetch()}>Réessayer</Button>
-      </div>
-    )
-  }
-
-  const bordereau = brouillon ?? data.bordereau
-  const modifier = (patch: Partial<FicheBordereau>) => setBrouillon({ ...bordereau, ...patch })
+  const bordereau = brouillon ?? data?.bordereau
   const enRetard = aEnregistrer || enregistrement.isPending
   const statut = enRetard || enMiseAJour(etat)
     ? (enregistrement.isPending || aEnregistrer ? 'Enregistrement…' : TEXTE_MISE_A_JOUR)
     : ''
 
   return (
-    <div className="mx-auto max-w-[1400px] space-y-5">
-      <Link to="/company" className="inline-flex min-h-11 items-center gap-1.5 rounded-xs text-sm font-medium text-fg-2 hover:text-fg">
-        <ArrowLeft size={15} aria-hidden /> Mon entreprise
-      </Link>
-      <header className="space-y-1">
-        <h1 className="font-display text-h6 text-fg">Fiche à télécharger — {data.libelle}</h1>
-        <p className="text-sm text-fg-2">
-          Ce que vous voyez au centre est exactement ce que vous téléchargez. Les informations viennent de « Mon entreprise ».
-        </p>
-      </header>
-
-      <nav aria-label="Fiches" className="flex flex-wrap gap-2">
+    <Page
+      titre={LIBELLE_FICHE}
+      sousTitre="Ce que vous voyez dans l’aperçu est exactement ce que vous téléchargez. Les informations viennent de « Mon entreprise »."
+    >
+      <nav aria-label="Fiches" className="mb-8 flex flex-wrap gap-1">
         {RUBRIQUES_FICHE.map((r) => (
           <Link
             key={r.id} to={lienFiche(r.id)} aria-current={r.id === rubrique ? 'page' : undefined}
-            className={`inline-flex min-h-11 items-center rounded-pilule px-3.5 py-1.5 text-sm font-medium transition-colors ${r.id === rubrique ? 'bg-accent-tint text-accent-text' : 'bg-surface-1 text-fg-2 hover:bg-surface-2 hover:text-fg'}`}
+            className={cn(
+              'inline-flex min-h-11 items-center rounded-lg border px-4 text-sm transition-colors duration-fast ease-survol',
+              r.id === rubrique ? 'border-bord bg-surface-0 font-semibold text-fg' : 'border-transparent font-medium text-fg-2 hover:bg-surface-1 hover:text-fg',
+            )}
           >
             {r.court}
           </Link>
         ))}
       </nav>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,15.5rem)_minmax(0,1fr)_minmax(0,19rem)] lg:items-start xl:gap-8" data-trois-zones>
-        <div className="order-3 lg:order-none"><ZoneContenu rubrique={rubrique} donnees={data.donnees} libres={bordereau.lignes_libres} apresValidation={() => { void client.invalidateQueries({ queryKey: cleFiche(rubrique) }) }} /></div>
-
-        <section aria-labelledby="zone-apercu" data-zone="apercu" className="order-1 min-w-0 space-y-3 lg:order-none">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-            <h2 id="zone-apercu" className="font-display text-h6 text-fg">Aperçu</h2>
-            <p className="text-sm text-fg-2" aria-live="polite" data-statut-apercu>{statut}</p>
-          </div>
-          <PhraseARenseigner n={aSaisir} rubrique={rubrique} />
-          <ApercuPages
-            etat={etat} pages={pages} enRetard={enRetard} donnees={data.donnees} bordereau={bordereau}
-            palette={paletteFiche(bordereau.couleur)} logoSrc={urlServeur(data.bordereau.logo_url)}
+      <EtatRequete
+        requete={{ data, isLoading, isError, refetch, isFetching }}
+        squelette={<SqueletteFiche />}
+        erreur={(
+          <EtatErreur
+            titre="La fiche n’a pas pu se charger"
+            detail="La connexion au serveur a échoué. Votre bordereau et vos informations sont toujours enregistrés."
+            onReessayer={() => { void refetch() }}
+            enCours={isFetching}
           />
-        </section>
+        )}
+        vide={null}
+      >
+        {(fiche) => {
+          const courant = bordereau ?? fiche.bordereau
+          const modifier = (patch: Partial<FicheBordereau>) => setBrouillon({ ...courant, ...patch })
+          return (
+            <div className="grid gap-x-10 gap-y-10 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start" data-zones="">
+              <section aria-labelledby="zone-apercu" data-zone="apercu" className="min-w-0">
+                <TitreSection id="zone-apercu" action={<p className="text-sm text-fg-2" aria-live="polite" data-statut-apercu="">{statut}</p>}>Aperçu</TitreSection>
+                <div className="grid gap-3">
+                  <PhraseARenseigner n={aSaisir} rubrique={rubrique} />
+                  <ApercuPages
+                    etat={etat} pages={pages} enRetard={enRetard} donnees={fiche.donnees} bordereau={courant}
+                    palette={paletteFiche(courant.couleur)} logoSrc={urlServeur(fiche.bordereau.logo_url)}
+                  />
+                </div>
+              </section>
 
-        <div className="order-2 lg:order-none lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:-m-3 lg:overflow-y-auto lg:p-3">
-          <ZoneBordereau
-            bordereau={bordereau} onChange={modifier} logoSrc={urlServeur(data.bordereau.logo_url)} logoEnCours={logo.isPending}
-            onLogo={(f) => logo.mutate(f)} onRetirerLogo={() => retraitLogo.mutate()}
-            sections={data.donnees.sections.map(({ id, titre }) => ({ id, titre }))}
-            format={format} onFormat={setFormat} pdfIndisponible={pdfIndisponible}
-            onTelecharger={() => telechargement.mutate()} enTelechargement={telechargement.isPending}
-          />
-          <MentionEnregistre visible={mention.visible} />
-          {enregistrement.isError && (
-            <p role="alert" className="mt-3 text-sm text-fg-2">Le bordereau n'a pas pu être enregistré. Vérifiez la couleur et la longueur des textes.</p>
-          )}
-        </div>
-      </div>
-    </div>
+              <div className="grid min-w-0 gap-3 lg:sticky lg:top-4 lg:row-span-2 lg:-m-3 lg:max-h-[calc(100svh-5rem)] lg:overflow-y-auto lg:p-3" data-colonne-bordereau="">
+                <ZoneBordereau
+                  bordereau={courant} onChange={modifier} logoSrc={urlServeur(fiche.bordereau.logo_url)} logoEnCours={logo.isPending}
+                  onLogo={(f) => logo.mutate(f)} onRetirerLogo={() => retraitLogo.mutate()}
+                  format={format} onFormat={setFormat} pdfIndisponible={pdfIndisponible}
+                  onTelecharger={() => telechargement.mutate()} enTelechargement={telechargement.isPending}
+                />
+                <MentionEnregistre visible={mention.visible} />
+                {enregistrement.isError && (
+                  <Message ton="erreur">Le bordereau n’a pas pu être enregistré. Vérifiez la couleur et la longueur des textes, puis modifiez un champ pour réessayer.</Message>
+                )}
+              </div>
+
+              <ZoneContenu rubrique={rubrique} donnees={fiche.donnees} libres={courant.lignes_libres} onLibres={(lignes_libres) => modifier({ lignes_libres })} apresValidation={() => { void client.invalidateQueries({ queryKey: cleFiche(rubrique) }) }} />
+            </div>
+          )
+        }}
+      </EtatRequete>
+    </Page>
   )
 }

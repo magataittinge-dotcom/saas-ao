@@ -14,11 +14,15 @@ test('l\'accès /outils porte le libellé « Retenue de garantie » partout', ()
   for (const f of ['src/components/layout/navigation.ts', 'src/components/layout/Header.tsx']) {
     assert.match(sansCommentaires(lire(f)), /'\/outils'[^\n]*Retenue de garantie/, f)
   }
-  assert.match(sansCommentaires(lire('src/routes/Tools.tsx')), /<h1[^>]*>Retenue de garantie<\/h1>/)
+  // le h1 est celui de <Page> (un seul par écran)
+  assert.match(sansCommentaires(lire('src/routes/Tools.tsx')), /<Page\s+titre="Retenue de garantie"/)
 })
 
-test('la carte du calcul s\'appelle « Calculer ma retenue » (le h1 garde « Retenue de garantie »)', () => {
-  assert.match(sansCommentaires(lire('src/routes/Tools.tsx')), /<h2[^>]*>Calculer ma retenue<\/h2>/)
+test('l\'écran n\'a qu\'un titre (« Retenue de garantie ») et un seul geste (« Calculer ») : plus de carte titrée « Calculer ma retenue »', () => {
+  const code = sansCommentaires(lire('src/routes/Tools.tsx'))
+  assert.doesNotMatch(code, /Calculer ma retenue/)
+  assert.equal((code.match(/variante="principal"/g) ?? []).length, 1)
+  assert.match(code, />Calculer<\/Bouton>/)
 })
 
 test('Tools.tsx : plus de #E4E9F2 en dur', () => {

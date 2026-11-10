@@ -18,7 +18,7 @@ const rendre = (etat: Partial<CaseEtat>) => renderToStaticMarkup(
 
 test('lecture indisponible : la phrase est en texte courant lisible, pas en petit gris', () => {
   const html = rendre({ etat: 'echec', libelle_etat: 'Déposé dans le coffre-fort', note: PHRASE })
-  assert.match(html, /<p class="text-sm leading-relaxed text-fg-2">Lecture indisponible : le fichier est dans votre coffre-fort, vous pouvez saisir à la main\.<\/p>/)
+  assert.match(html, /<p class="text-sm text-fg-2">Lecture indisponible : le fichier est dans votre coffre-fort, vous pouvez saisir à la main\.<\/p>/)
   assert.ok(!/text-xs text-fg-3">[^<]*Lecture indisponible/.test(html))
 })
 

@@ -1,33 +1,74 @@
 import { useEffect, useState, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import {
-  CreditCard, ArrowRight, Download, Sparkles, ExternalLink, CheckCircle2, Loader2,
-} from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { api } from '@/services/api'
 import type { Organization } from '@/types'
 import GrilleOffres from '@/components/offres/GrilleOffres'
-import { nomPlan, prixLibelle, trouverOffre } from '@/lib/offres'
+import { ESSAI_LIBELLE, nomPlan, prixLibelle, quotaLibelle, trouverOffre } from '@/lib/offres'
+import { messageErreur } from '@/lib/erreurs'
+import { jourLongParis } from '@/lib/dateParis'
+import { cn } from '@/lib/utils'
+import { tonConsommation, useQuota } from '@/components/layout/QuotaGauge'
+import { Page, TitreSection } from '@/components/ui/page'
+import { Bouton } from '@/components/ui/bouton'
+import { Carte, RangeeCarte } from '@/components/ui/carte'
+import { EtatErreur, EtatRequete } from '@/components/ui/etats'
+import { Message } from '@/components/ui/message'
+import { PastilleEtat, type Sens } from '@/components/ui/pastille'
+import { Squelette } from '@/components/ui/squelette'
 
-// Jetons du système (clair et nuit) : aucune couleur écrite en dur, l'écran suit le thème (C11).
-const BADGE_ACCENT = { color: 'var(--accent-text)', bg: 'var(--accent-tint)', border: 'var(--accent-ring)' }
-const PLAN_BADGES: Record<string, { color: string; bg: string; border: string }> = {
-  essentiel: BADGE_ACCENT,
-  pro:       BADGE_ACCENT,
-  business:  BADGE_ACCENT,
-  free:      { color: 'var(--text-2)', bg: 'var(--surface-2)', border: 'var(--border-1)' },
+interface Compteur { used: number; limit: number | null }
+
+/** L'état d'un compteur du mois : le mot, le sens (COULEURS.md : vert sous 70 %, ambre de 70 à 90 %, rouge au-delà) et la barre. */
+export function lectureCompteur(c: { used: number; limit: number }): { sens: Sens; mot: string; barre: string; part: number } {
+  const part = c.limit > 0 ? Math.min(1, c.used / c.limit) : 1
+  if (c.used >= c.limit) return { sens: 'rouge', mot: 'Quota atteint', barre: 'bg-rouge-mark', part }
+  const ton = tonConsommation(part)
+  if (ton === 'rouge') return { sens: 'rouge', mot: 'Presque atteint', barre: 'bg-rouge-mark', part }
+  if (ton === 'ambre') return { sens: 'ambre', mot: 'À surveiller', barre: 'bg-ambre-mark', part }
+  return { sens: 'vert', mot: 'Disponible', barre: 'bg-vert-mark', part }
 }
 
-const PASTILLE_ICONE = { background: 'var(--surface-2)', border: '1px solid var(--border-1)' } as const
-const ENTETE_CARTE = { borderBottom: '1px solid var(--border-1)', background: 'var(--surface-1)' } as const
-const BANDEAU_ACCENT = { background: 'var(--accent-tint)', border: '1px solid var(--accent-ring)' } as const
+/** Une unité du mois : son nom, ce qui est utilisé sur ce qui est prévu, l'état en un mot, et la jauge (jamais la couleur seule). */
+function JaugeUnite({ libelle, compteur }: { libelle: string; compteur: Compteur }) {
+  if (compteur.limit === null) return null
+  const l = lectureCompteur({ used: compteur.used, limit: compteur.limit })
+  return (
+    <RangeeCarte className="block py-4">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <p className="text-sm font-medium text-fg">{libelle}</p>
+        <div className="flex items-center gap-3">
+          <p className="chiffres text-sm text-fg-2"><span className="font-semibold text-fg">{compteur.used}</span> sur {compteur.limit}</p>
+          <PastilleEtat sens={l.sens}>{l.mot}</PastilleEtat>
+        </div>
+      </div>
+      <div role="meter" aria-label={`${libelle} du mois`} aria-valuemin={0} aria-valuemax={compteur.limit} aria-valuenow={compteur.used}
+        className="mt-3 h-2 overflow-hidden rounded-pilule bg-surface-2">
+        <div className={cn('h-full rounded-pilule transition-[width] duration-pop ease-survol', l.barre)} style={{ width: `${l.part * 100}%` }} />
+      </div>
+    </RangeeCarte>
+  )
+}
 
+function SqueletteUnites() {
+  return (
+    <Carte className="grid gap-5">
+      <Squelette className="h-10" />
+      <Squelette className="h-10" />
+    </Carte>
+  )
+}
+
+/**
+ * Abonnement : l'offre en cours, les unités du mois en jauges (vert, ambre, rouge, avec un mot), les offres quand aucune
+ * n'est souscrite, et les factures. La grille des offres, les prix et les libellés viennent de lib/offres.ts, inchangés.
+ */
 export default function Billing() {
   const { organization, setOrganization } = useAuthStore()
   const plan = organization?.plan ?? 'free'
-  const badge = PLAN_BADGES[plan] ?? PLAN_BADGES.free
   const offreActive = trouverOffre(plan)
   const isPaid = offreActive !== undefined
+  const quota = useQuota()
 
   const [searchParams, setSearchParams] = useSearchParams()
   const [showSuccess, setShowSuccess] = useState(false)
@@ -36,17 +77,17 @@ export default function Billing() {
   const [loading, setLoading] = useState<string | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
   const [portalLoading, setPortalLoading] = useState(false)
+  const [erreurPortail, setErreurPortail] = useState(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const pollCountRef = useRef(0)
 
-  // After Stripe redirect: verify session and poll until plan is updated
+  // Au retour de Stripe : la session est vérifiée, puis relue jusqu'à ce que l'offre soit à jour.
   useEffect(() => {
     const isSuccess = searchParams.get('success') === 'true'
     const sessionId = searchParams.get('session_id')
 
     if (!isSuccess || !sessionId) return
 
-    // Clean URL immediately
     setSearchParams({}, { replace: true })
     setVerifying(true)
     pollCountRef.current = 0
@@ -57,41 +98,37 @@ export default function Billing() {
           `/stripe/verify-session?session_id=${sessionId}`
         )
         if (data.updated && data.plan !== 'free') {
-          // Plan updated — stop polling, update store
           if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
           setVerifying(false)
           setSuccessPlan(data.plan)
           setShowSuccess(true)
-          // Update organization in Zustand store so sidebar badge updates immediately
+          // l'offre de l'organisation est mise à jour tout de suite (barre, jauge)
           if (organization) {
             setOrganization({ ...organization, plan: data.plan as Organization['plan'] })
           }
           setTimeout(() => setShowSuccess(false), 8000)
           return
         }
-      } catch { /* ignore, will retry */ }
+      } catch { /* nouvel essai au prochain tour */ }
 
       pollCountRef.current++
-      // Stop after 15 attempts (30s at 2s interval)
+      // 15 essais (30 s) : le paiement est passé, le webhook rattrapera
       if (pollCountRef.current >= 15) {
         if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
         setVerifying(false)
-        // Show success anyway — Stripe payment went through, webhook will catch up
         setShowSuccess(true)
         setTimeout(() => setShowSuccess(false), 8000)
       }
     }
 
-    // First attempt immediately
     verify()
-    // Then poll every 2s
     pollRef.current = setInterval(verify, 2000)
 
     return () => {
       if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // Run once on mount only
+  }, []) // une seule fois, à l'arrivée
 
   const handleSubscribe = async (planId: string) => {
     setLoading(planId)
@@ -100,189 +137,129 @@ export default function Billing() {
       const { data } = await api.post('/stripe/create-checkout-session', { plan: planId })
       window.location.href = data.url
     } catch (e) {
-      const detail = (e as { response?: { data?: { detail?: unknown } } }).response?.data?.detail
-      setErreur(typeof detail === 'string' ? detail : "Le paiement n'a pas pu démarrer. Réessayez dans un instant.")
+      setErreur(await messageErreur(e, 'Le paiement n’a pas pu démarrer. Réessayez dans un instant.'))
       setLoading(null)
     }
   }
 
   const handlePortal = async () => {
     setPortalLoading(true)
+    setErreurPortail(false)
     try {
       const { data } = await api.get('/stripe/portal')
       window.location.href = data.url
     } catch {
+      setErreurPortail(true)
       setPortalLoading(false)
     }
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6 animate-fade-in">
-      {/* Page header */}
-      <div className="flex items-center gap-3">
-        <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center"
-          style={PASTILLE_ICONE}
-        >
-          <CreditCard size={18} className="text-ds-cyan" />
-        </div>
-        <div>
-          <h1 className="text-ds-text leading-tight">Facturation</h1>
-          <p className="text-sm text-ds-text-2 mt-0.5">Gérez votre abonnement et vos paiements</p>
-        </div>
-      </div>
-
-      {/* Verifying payment spinner */}
-      {verifying && (
-        <div
-          className="flex items-center gap-3 px-5 py-4 rounded-2xl animate-fade-in"
-          style={BANDEAU_ACCENT}
-        >
-          <Loader2 size={20} className="animate-spin text-ds-cyan" />
-          <div>
-            <p className="text-sm font-semibold text-ds-cyan">Vérification du paiement...</p>
-            <p className="text-xs text-ds-text-3 mt-0.5">Confirmation en cours, veuillez patienter.</p>
-          </div>
-        </div>
-      )}
-
-      {/* Success banner */}
-      {showSuccess && !verifying && (
-        <div
-          className="flex items-center gap-3 px-5 py-4 rounded-2xl animate-fade-in"
-          style={BANDEAU_ACCENT}
-        >
-          <CheckCircle2 size={20} className="text-ds-cyan" />
-          <div>
-            <p className="text-sm font-semibold text-ds-cyan-dark">
-              Paiement réussi
-            </p>
-            <p className="text-xs text-ds-text-3 mt-0.5">
-              {successPlan
-                ? `Votre offre ${nomPlan(successPlan)} est maintenant active.`
-                : 'Votre abonnement est maintenant actif.'}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* ── Mon abonnement ──────────────────────────── */}
-      <div className="glass-card overflow-hidden">
-        <div
-          className="flex items-center gap-3 px-6 py-4"
-          style={ENTETE_CARTE}
-        >
-          <Sparkles size={15} className="text-ds-cyan" />
-          <h2 className="text-sm font-semibold text-ds-text">Mon abonnement</h2>
-        </div>
-        <div className="px-6 py-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <span
-                  className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold"
-                  style={{ background: badge.bg, color: badge.color, border: `1px solid ${badge.border}` }}
-                >
-                  {nomPlan(plan)}
-                </span>
-                {offreActive && (
-                  <span className="whitespace-nowrap text-2xl font-bold text-ds-text">
-                    {prixLibelle(offreActive)}
-                    <span className="text-sm font-normal text-ds-text-3">/mois HT</span>
-                  </span>
-                )}
-                {!isPaid && (
-                  <span className="text-sm text-ds-text-3">
-                    Aucun abonnement actif
-                  </span>
-                )}
-              </div>
-            </div>
-            {isPaid && (
-              <button
-                onClick={handlePortal}
-                disabled={portalLoading}
-                className="flex cursor-pointer items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-fg-2 transition-all duration-200 hover:border-bord-2 hover:text-fg"
-                style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)' }}
-              >
-                {portalLoading ? (
-                  <span className="w-4 h-4 rounded-full border-2 border-fg-3 border-t-fg animate-spin" />
-                ) : (
-                  <ExternalLink size={14} />
-                )}
-                Gérer mon abonnement
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* ── Plans (show for free users, or to change plan) ─── */}
-      {!isPaid && (
-        <div className="glass-card overflow-hidden">
-          <div
-            className="flex items-center gap-3 px-6 py-4"
-            style={ENTETE_CARTE}
-          >
-            <Sparkles size={15} className="text-ds-cyan" />
-            <h2 className="text-sm font-semibold text-ds-text">Choisir une offre</h2>
-          </div>
-          <div className="px-6 py-6">
-            <GrilleOffres
-              compacte
-              action={(offre) => (
-                <button
-                  onClick={() => handleSubscribe(offre.id)}
-                  disabled={loading === offre.id}
-                  className="edge-cta w-full py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
-                >
-                  {loading === offre.id ? (
-                    <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                  ) : (
-                    <>S'abonner <ArrowRight size={14} /></>
-                  )}
-                </button>
-              )}
-            />
-            {erreur && (
-              <p role="alert" className="mt-3 text-sm text-center" style={{ color: 'var(--warning-fg)' }}>{erreur}</p>
-            )}
-          </div>
-          <div className="text-center px-6 pb-5">
-            <p className="text-xs text-ds-text-3">
-              Annulation possible à tout moment. Facturation mensuelle sans engagement.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* ── Historique de facturation ────────────────── */}
-      <div className="glass-card overflow-hidden">
-        <div
-          className="flex items-center gap-3 px-6 py-4"
-          style={ENTETE_CARTE}
-        >
-          <Download size={15} className="text-ds-cyan" />
-          <h2 className="text-sm font-semibold text-ds-text">Historique de facturation</h2>
-        </div>
-        <div className="px-6 py-5">
-          {isPaid ? (
-            <p className="text-sm text-ds-text-3">
-              Consultez vos factures via le{' '}
-              <button
-                onClick={handlePortal}
-                className="text-ds-cyan hover:text-ds-cyan-dark underline underline-offset-2 transition-colors"
-              >
-                portail Stripe
-              </button>.
-            </p>
-          ) : (
-            <p className="text-sm text-ds-text-3">
-              Aucune facture pour le moment.
-            </p>
+    <Page titre="Abonnement" sousTitre="Votre offre, les unités du mois et vos factures." etroite={isPaid}>
+      {(verifying || showSuccess || erreurPortail) && (
+        <div className="mb-6 grid gap-3">
+          {verifying && <Message ton="info" titre="Vérification du paiement…">La confirmation arrive dans quelques secondes.</Message>}
+          {showSuccess && !verifying && (
+            <Message ton="succes" titre="Paiement reçu">
+              {successPlan ? `Votre offre ${nomPlan(successPlan)} est active.` : 'Votre abonnement est actif.'}
+            </Message>
+          )}
+          {erreurPortail && (
+            <Message ton="erreur" onFermer={() => setErreurPortail(false)}>
+              Le portail de paiement n’a pas pu s’ouvrir. Votre abonnement n’est pas touché : réessayez dans un instant.
+            </Message>
           )}
         </div>
-      </div>
-    </div>
+      )}
+
+      <Carte className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
+        <div className="min-w-0">
+          <p className="text-sm text-fg-2">Votre offre</p>
+          <p className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <span className="text-xl font-semibold text-fg">{nomPlan(plan)}</span>
+            {offreActive && <span className="chiffres whitespace-nowrap text-sm text-fg-2">{prixLibelle(offreActive)} par mois HT</span>}
+          </p>
+          <p className="mt-1.5 text-sm text-fg-2">{offreActive ? quotaLibelle(offreActive) : ESSAI_LIBELLE}</p>
+        </div>
+        {isPaid && (
+          <Bouton variante="secondaire" onClick={() => { void handlePortal() }} enCours={portalLoading} libelleEnCours="Ouverture…">
+            Gérer mon abonnement
+          </Bouton>
+        )}
+      </Carte>
+
+      <TitreSection>Unités du mois</TitreSection>
+      <EtatRequete
+        requete={quota}
+        squelette={<SqueletteUnites />}
+        erreur={(
+          <EtatErreur
+            titre="Les unités du mois n’ont pas pu se charger"
+            detail="La connexion au serveur a échoué. Votre abonnement et vos unités ne sont pas touchés."
+            onReessayer={() => { void quota.refetch() }}
+            enCours={quota.isFetching}
+          />
+        )}
+        vide={<Carte><p className="text-sm text-fg-2">Vos unités du mois apparaîtront ici dès votre première analyse.</p></Carte>}
+        estVide={(q) => !q?.analyses || !q.memoires}
+      >
+        {(q) => {
+          const illimite = q.analyses.limit === null && q.memoires.limit === null
+          const atteint = [q.analyses, q.memoires].some((c) => c.limit !== null && c.used >= c.limit)
+          const retour = jourLongParis(q.period_end)
+          return (
+            <div className="grid gap-3">
+              {atteint && (
+                <Message ton="erreur" titre="Quota du mois atteint">
+                  {retour ? `Vos unités reviennent le ${retour}.` : 'Vos unités reviennent au début de la prochaine période.'}
+                  {' '}Vos dossiers en cours restent ouverts ; une offre plus large lève la limite tout de suite.
+                </Message>
+              )}
+              {illimite ? (
+                <Carte>
+                  <p className="text-sm font-medium text-fg">Aucun compteur ce mois-ci</p>
+                  <p className="mt-1 text-sm text-fg-2">Votre offre ne compte ni les analyses ni les mémoires, dans un usage raisonnable.</p>
+                </Carte>
+              ) : (
+                <Carte sansMarge className="px-5 sm:px-6">
+                  <JaugeUnite libelle="Analyses" compteur={q.analyses} />
+                  <JaugeUnite libelle="Mémoires" compteur={q.memoires} />
+                </Carte>
+              )}
+              {!illimite && !atteint && retour && <p className="text-xs text-fg-3">Les compteurs repartent de zéro le {retour}.</p>}
+            </div>
+          )
+        }}
+      </EtatRequete>
+
+      {!isPaid && (
+        <>
+          <TitreSection>Choisir une offre</TitreSection>
+          {erreur && <Message ton="erreur" className="mb-4" onFermer={() => setErreur(null)}>{erreur}</Message>}
+          <GrilleOffres
+            compacte
+            action={(offre) => (
+              <Bouton variante="secondaire" className="w-full" onClick={() => { void handleSubscribe(offre.id) }}
+                enCours={loading === offre.id} libelleEnCours="Ouverture du paiement…">
+                S’abonner
+              </Bouton>
+            )}
+          />
+          <p className="mt-4 text-xs text-fg-3">Annulation possible à tout moment. Facturation mensuelle sans engagement.</p>
+        </>
+      )}
+
+      <TitreSection>Factures</TitreSection>
+      <Carte className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+        {isPaid ? (
+          <>
+            <p className="text-sm text-fg-2">Vos factures se téléchargent depuis le portail de paiement.</p>
+            <Bouton variante="lien" onClick={() => { void handlePortal() }} disabled={portalLoading}>Ouvrir le portail de paiement</Bouton>
+          </>
+        ) : (
+          <p className="text-sm text-fg-2">Vos factures apparaîtront ici après votre premier paiement.</p>
+        )}
+      </Carte>
+    </Page>
   )
 }

@@ -1,13 +1,19 @@
-// Zone 3, « Bordereau et téléchargement » : logo (zone de dépôt visible), titre, sous-titre, contact, couleur d'accent, lignes
-// libres, choix du format avec son explication, et le bouton « Télécharger la fiche ». Les champs s'enregistrent tout seuls
-// (la page) : l'aperçu et le fichier partent de l'état enregistré.
-import { useState } from 'react'
-import { Download, ImagePlus, Loader2, Plus, X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { classeChamp } from '@/components/ui/input'
+// « Téléchargement » : d'abord le format du fichier et le bouton « Télécharger la fiche » (la seule action pleine
+// de l'écran, toujours visible) ; puis le bordereau à personnaliser : logo, titre, sous-titre, contact, couleur d'accent,
+// (les lignes libres sont du contenu : elles vivent dans « Ce qu'il y a dans la fiche »). Les champs s'enregistrent tout seuls (la page) :
+// l'aperçu et le fichier partent de l'état enregistré. Composants du système partout ; le fichier du logo et la couleur
+// passent par un bouton du système qui ouvre le sélecteur du navigateur (le contrôle natif ne se voit pas).
+import { useRef, useState } from 'react'
+import type { DragEvent } from 'react'
+import { Download } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Bouton } from '@/components/ui/bouton'
+import { GroupeRadio } from '@/components/ui/case'
+import { Champ, GroupeChamp } from '@/components/ui/champ'
+import { EntreeFichier } from '@/components/depot/EntreeFichier'
+import { TitreSection } from '@/components/ui/page'
 import { FORMATS_FICHE } from '@/lib/fichePage'
-import { MAX_LIGNES_LIBRES, type FicheBordereau, type FicheSection } from '@/lib/fiche'
+import type { FicheBordereau } from '@/lib/fiche'
 import type { FormatFiche } from '@/lib/apercuFiche'
 
 interface Props {
@@ -17,152 +23,101 @@ interface Props {
   logoEnCours: boolean
   onLogo: (fichier: File) => void
   onRetirerLogo: () => void
-  sections: Pick<FicheSection, 'id' | 'titre'>[]
   format: FormatFiche
   onFormat: (f: FormatFiche) => void
-  /** Raison pour laquelle le PDF est grisé (LibreOffice indisponible) ; null : le PDF est offert. */
+  /** Raison pour laquelle le PDF n'est pas offert (LibreOffice indisponible) ; null : le PDF est offert. */
   pdfIndisponible: string | null
   onTelecharger: () => void
   enTelechargement: boolean
 }
 
-const ETIQUETTE = 'mb-1 block text-sm font-medium text-fg-2'
-const CHAMP = 'h-11 text-base md:text-sm'
+const ETIQUETTE = 'text-xs font-medium text-fg-2'
 
 export default function ZoneBordereau(p: Props) {
   const { bordereau, onChange } = p
-  const libres = bordereau.lignes_libres
-  const majLigne = (i: number, patch: Partial<(typeof libres)[number]>) =>
-    onChange({ lignes_libres: libres.map((l, j) => (j === i ? { ...l, ...patch } : l)) })
   const [survol, setSurvol] = useState(false)
+  const fichierLogo = useRef<HTMLInputElement>(null)
+  const nuancier = useRef<HTMLInputElement>(null)
+  const couleur = bordereau.couleur.toLowerCase()
+  const echantillon = { backgroundColor: couleur }          // la couleur choisie par l'utilisateur : une valeur calculée
+  const formats = FORMATS_FICHE.filter((f) => !(f.id === 'pdf' && p.pdfIndisponible !== null))
   const nomFormat = FORMATS_FICHE.find((f) => f.id === p.format)?.libelle ?? ''
 
+  const aLaDepose = (e: DragEvent<HTMLElement>) => {
+    e.preventDefault()
+    setSurvol(false)
+    const f = e.dataTransfer.files?.[0]
+    if (f) p.onLogo(f)
+  }
+
   return (
-    <section aria-labelledby="zone-bordereau" data-zone="bordereau" className="min-w-0 space-y-5">
-      <h2 id="zone-bordereau" className="font-display text-h6 text-fg">Bordereau et téléchargement</h2>
-
-      <div>
-        <span className={ETIQUETTE} id="etiquette-logo">Logo</span>
-        <label
-          data-depot-logo aria-labelledby="etiquette-logo"
-          onDragOver={(e) => { e.preventDefault(); setSurvol(true) }}
-          onDragLeave={() => setSurvol(false)}
-          onDrop={(e) => { e.preventDefault(); setSurvol(false); const f = e.dataTransfer.files?.[0]; if (f) p.onLogo(f) }}
-          className={`flex min-h-[5.5rem] cursor-pointer items-center gap-3 rounded-md border-2 border-dashed px-3 py-3 text-sm transition-colors duration-base has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 ${survol ? 'border-accent-ring bg-accent-tint' : 'border-input bg-surface-0 hover:border-fg-3'}`}
-        >
-          {p.logoSrc ? (
-            <img src={p.logoSrc} alt="Logo actuel de la fiche" className="max-h-14 max-w-[7rem] shrink-0 rounded-xs bg-white object-contain p-1" />
-          ) : (
-            <span className="grid size-12 shrink-0 place-items-center rounded-md bg-surface-1 text-fg-2"><ImagePlus size={20} aria-hidden /></span>
-          )}
-          <span className="min-w-0">
-            <span className="block font-medium text-fg">
-              {p.logoEnCours ? 'Envoi du logo…' : p.logoSrc ? 'Déposer un autre logo' : 'Déposer votre logo ici'}
-            </span>
-            <span className="block text-xs text-fg-2">ou cliquer pour le choisir · PNG ou JPEG, 2 Mo au plus</span>
-          </span>
-          <input
-            type="file" accept="image/png,image/jpeg" className="sr-only" aria-label="Logo de la fiche (PNG ou JPEG, 2 Mo au plus)"
-            onChange={(e) => { const f = e.target.files?.[0]; if (f) p.onLogo(f); e.target.value = '' }}
-          />
-        </label>
-        {p.logoSrc && (
-          <button type="button" onClick={p.onRetirerLogo} className="mt-1 inline-flex min-h-11 items-center rounded-xs text-sm font-medium text-fg-2 underline-offset-2 hover:text-fg hover:underline">
-            Retirer le logo
-          </button>
-        )}
+    <section aria-labelledby="zone-bordereau" data-zone="bordereau" className="min-w-0">
+      <TitreSection id="zone-bordereau">Téléchargement</TitreSection>
+      <div className="grid gap-5">
+      <div className="grid gap-1.5" data-formats="">
+        <span className={ETIQUETTE}>Format du fichier</span>
+        <GroupeRadio
+          libelle="Format du fichier" valeur={p.format} onChange={p.onFormat}
+          options={formats.map((f) => ({ valeur: f.id, libelle: f.libelle, aide: f.explication }))}
+        />
+        {p.pdfIndisponible !== null && <p className="text-xs text-fg-3" data-pdf-indisponible="">PDF · {p.pdfIndisponible}</p>}
       </div>
 
-      <div className="space-y-3">
-        <div>
-          <label htmlFor="fiche-titre" className={ETIQUETTE}>Titre</label>
-          <Input id="fiche-titre" className={CHAMP} maxLength={120} value={bordereau.titre} onChange={(e) => onChange({ titre: e.target.value })} />
-        </div>
-        <div>
-          <label htmlFor="fiche-sous-titre" className={ETIQUETTE}>Sous-titre</label>
-          <Input id="fiche-sous-titre" className={CHAMP} maxLength={200} value={bordereau.sous_titre} onChange={(e) => onChange({ sous_titre: e.target.value })} />
-        </div>
-        <div>
-          <label htmlFor="fiche-contact" className={ETIQUETTE}>Contact</label>
-          <Input id="fiche-contact" className={CHAMP} maxLength={200} placeholder="E-mail · téléphone" value={bordereau.contact} onChange={(e) => onChange({ contact: e.target.value })} />
-        </div>
-        <div>
-          <label htmlFor="fiche-couleur" className={ETIQUETTE}>Couleur d'accent</label>
-          <span className="flex items-center gap-3">
-            <input
-              id="fiche-couleur" type="color" value={bordereau.couleur.toLowerCase()}
-              onChange={(e) => onChange({ couleur: e.target.value })}
-              className="h-11 w-16 cursor-pointer rounded-md border border-input bg-surface-0 p-1"
-            />
-            <span className="font-mono text-sm text-fg-2">{bordereau.couleur.toLowerCase()}</span>
-          </span>
-        </div>
-      </div>
+      <Bouton variante="principal" large enCours={p.enTelechargement} libelleEnCours="Préparation de la fiche…" onClick={p.onTelecharger} data-telecharger="">
+        <Download aria-hidden />Télécharger la fiche<span className="font-normal">· {nomFormat}</span>
+      </Bouton>
 
-      <fieldset className="space-y-2" data-formats>
-        <legend className={ETIQUETTE}>Format du fichier</legend>
-        {FORMATS_FICHE.map((f) => {
-          const grise = f.id === 'pdf' && p.pdfIndisponible !== null
-          const choisi = p.format === f.id
-          return (
-            <label
-              key={f.id} data-format={f.id} aria-disabled={grise || undefined}
-              className={`flex min-h-11 items-start gap-3 rounded-md border px-3 py-2 transition-colors duration-base has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 ${grise ? 'cursor-not-allowed border-bord-2 bg-surface-1 text-fg-disabled' : choisi ? 'cursor-pointer border-accent-ring bg-accent-tint' : 'cursor-pointer border-input bg-surface-0 hover:bg-surface-1'}`}
+      <h3 className="border-t border-bord pt-5 text-sm font-semibold text-fg">Personnaliser le bordereau</h3>
+
+      <div className="grid gap-4">
+        <GroupeChamp libelle="Titre">
+          <Champ maxLength={120} value={bordereau.titre} onChange={(e) => onChange({ titre: e.target.value })} />
+        </GroupeChamp>
+        <GroupeChamp libelle="Sous-titre">
+          <Champ maxLength={200} value={bordereau.sous_titre} onChange={(e) => onChange({ sous_titre: e.target.value })} />
+        </GroupeChamp>
+        <GroupeChamp libelle="Contact">
+          <Champ maxLength={200} placeholder="E-mail, téléphone" value={bordereau.contact} onChange={(e) => onChange({ contact: e.target.value })} />
+        </GroupeChamp>
+
+        {/* Logo et couleur, côte à côte : chacun un bouton du système qui ouvre le sélecteur du navigateur. Le logo reçoit aussi
+            une image glissée (trait d'accent au survol d'un fichier seulement). */}
+        <div className="grid gap-1.5">
+          <div className="grid grid-cols-2 gap-4">
+            <div
+              data-depot-logo=""
+              onDragOver={(e) => { e.preventDefault(); setSurvol(true) }}
+              onDragLeave={() => setSurvol(false)}
+              onDrop={aLaDepose}
+              className={cn('grid content-start justify-items-start gap-1.5 rounded-lg', survol && 'bg-accent-tint outline-dashed outline-2 outline-offset-4 outline-accent-ring')}
             >
-              <input
-                type="radio" name="format-fiche" value={f.id} checked={choisi} disabled={grise}
-                onChange={() => p.onFormat(f.id)} className="mt-1 size-4 accent-[var(--accent)]"
+              <span className={ETIQUETTE}>Logo</span>
+              {p.logoSrc && <img src={p.logoSrc} alt="Logo actuel de la fiche" className="max-h-11 max-w-28 rounded-md border border-bord bg-surface-0 object-contain p-1" />}
+              <Bouton variante="secondaire" onClick={() => fichierLogo.current?.click()} enCours={p.logoEnCours} libelleEnCours="Envoi…">
+                {p.logoSrc ? 'Changer' : 'Choisir un logo'}
+              </Bouton>
+              {p.logoSrc && <Bouton variante="lien" className="text-sm" onClick={p.onRetirerLogo}>Retirer le logo</Bouton>}
+              <EntreeFichier
+                ref={fichierLogo} accept="image/png,image/jpeg"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) p.onLogo(f); e.target.value = '' }}
               />
-              <span className="min-w-0">
-                <span className={`block text-sm font-semibold ${grise ? '' : 'text-fg'}`}>{f.libelle}</span>
-                <span className={`block text-sm ${grise ? '' : 'text-fg-2'}`}>
-                  {grise ? p.pdfIndisponible : f.explication}
-                </span>
-              </span>
-            </label>
-          )
-        })}
-      </fieldset>
-
-      <div className="space-y-2" data-lignes-libres>
-        <h3 className="text-sm font-semibold text-fg">Lignes libres</h3>
-        <p className="text-sm text-fg-2">Ajoutez une ligne de texte dans une section de la fiche.</p>
-        {libres.map((l, i) => (
-          <div key={i} className="space-y-2 rounded-md border border-bord-2 bg-surface-0 p-2.5" data-ligne-libre>
-            <div className="flex items-center gap-2">
-              <select
-                aria-label={`Section de la ligne libre ${i + 1}`} value={l.section} onChange={(e) => majLigne(i, { section: e.target.value })}
-                className={`${classeChamp} h-11 min-w-0 flex-1 py-1`}
-              >
-                {p.sections.map((s) => <option key={s.id} value={s.id}>{s.id} {s.titre}</option>)}
-              </select>
-              <button
-                type="button" aria-label={`Retirer la ligne libre ${i + 1}`}
-                onClick={() => onChange({ lignes_libres: libres.filter((_, j) => j !== i) })}
-                className="grid size-11 shrink-0 place-items-center rounded-md text-fg-2 hover:bg-surface-1 hover:text-fg"
-              >
-                <X size={16} aria-hidden />
-              </button>
             </div>
-            <Input aria-label={`Libellé de la ligne libre ${i + 1}`} className={CHAMP} maxLength={80} placeholder="Libellé" value={l.libelle} onChange={(e) => majLigne(i, { libelle: e.target.value })} />
-            <Input aria-label={`Valeur de la ligne libre ${i + 1}`} className={CHAMP} maxLength={300} placeholder="Texte" value={l.valeur} onChange={(e) => majLigne(i, { valeur: e.target.value })} />
+            <div className="relative grid content-start justify-items-start gap-1.5" data-couleur="">
+              <span className={ETIQUETTE}>Couleur d’accent</span>
+              <Bouton variante="secondaire" aria-label={`Changer la couleur d’accent (${couleur})`} onClick={() => nuancier.current?.click()}>
+                <span aria-hidden className="size-5 shrink-0 rounded-md border border-bord" style={echantillon} />
+                <span className="chiffres font-medium">{couleur}</span>
+              </Bouton>
+              <Champ
+                ref={nuancier} type="color" value={couleur} tabIndex={-1} aria-hidden="true" className="sr-only bottom-0 left-0 size-px border-0 p-0"
+                onChange={(e) => onChange({ couleur: e.target.value })}
+              />
+            </div>
           </div>
-        ))}
-        <button
-          type="button" disabled={libres.length >= MAX_LIGNES_LIBRES || p.sections.length === 0}
-          onClick={() => onChange({ lignes_libres: [...libres, { section: p.sections[0]?.id ?? '01', libelle: '', valeur: '' }] })}
-          className="inline-flex min-h-11 items-center gap-1.5 rounded-xs text-sm font-medium text-accent-text hover:underline disabled:opacity-50"
-        >
-          <Plus size={15} aria-hidden /> Ajouter une ligne
-        </button>
+          <p className="text-xs text-fg-3">Logo : PNG ou JPEG, 2 Mo au plus. Vous pouvez aussi glisser l’image sur le bouton.</p>
+        </div>
       </div>
-
-      <Button
-        variant="signature" size="lg" className="h-12 w-full" disabled={p.enTelechargement} aria-busy={p.enTelechargement} onClick={p.onTelecharger} data-telecharger
-      >
-        {p.enTelechargement ? <Loader2 className="animate-spin motion-reduce:animate-none" aria-hidden /> : <Download aria-hidden />}
-        {p.enTelechargement ? 'Préparation de la fiche…' : <>Télécharger la fiche<span className="font-normal opacity-90">· {nomFormat}</span></>}
-      </Button>
+      </div>
     </section>
   )
 }

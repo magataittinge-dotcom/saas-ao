@@ -1,7 +1,6 @@
 // Zone « Aperçu » : le document tel qu'il sera téléchargé, page par page. Sans rendu exact (LibreOffice indisponible), l'aperçu
-// HTML simplifié (FichePreview) prend le relais avec sa ligne d'explication.
+// HTML simplifié (FichePreview) prend le relais avec sa ligne d'explication. L'attente se dit en mots : aucune roue.
 import { useState } from 'react'
-import { Loader2 } from 'lucide-react'
 import FichePreview from '@/components/fiche/FichePreview'
 import type { PageImage } from '@/components/fiche/useApercuFiche'
 import { apercuSimplifie, enMiseAJour, MESSAGE_INDISPONIBLE, type EtatApercu } from '@/lib/apercuFiche'
@@ -41,15 +40,15 @@ export default function ApercuPages({ etat, pages, enRetard, donnees, bordereau,
     <div className="relative" data-apercu-pages aria-busy={maj}>
       {pages.length === 0 ? (
         <div
-          className="grid w-full place-items-center rounded-sm bg-surface-1 text-sm text-fg-2 shadow-card"
+          className="grid w-full place-items-center rounded-md border border-bord bg-surface-1 text-sm text-fg-2"
           style={{ aspectRatio: String(ratio) }} data-apercu-attente aria-hidden
         >
-          <span className="inline-flex items-center gap-2"><Loader2 className="size-4 animate-spin motion-reduce:animate-none" aria-hidden />{TEXTE_MISE_A_JOUR}</span>
+          <span>{TEXTE_MISE_A_JOUR}</span>
         </div>
       ) : (
-        <ol className={`space-y-4 transition-opacity duration-base motion-reduce:transition-none ${maj ? 'opacity-50' : ''}`}>
+        <ol className={`grid gap-4 transition-opacity duration-survol ease-survol motion-reduce:transition-none ${maj ? 'opacity-50' : ''}`}>
           {pages.map((p) => (
-            <li key={p.numero} className="overflow-hidden rounded-sm bg-white shadow-card" style={{ aspectRatio: String(ratio) }}>
+            <li key={p.numero} className="overflow-hidden rounded-md border border-bord bg-surface-0 shadow-card" style={{ aspectRatio: String(ratio) }}>
               {p.src ? (
                 <img
                   src={p.src} alt={`Page ${p.numero} sur ${total} de la fiche`}
@@ -69,10 +68,10 @@ export default function ApercuPages({ etat, pages, enRetard, donnees, bordereau,
       )}
       {maj && pages.length > 0 && (
         <p
-          aria-hidden className="pointer-events-none absolute inset-x-0 top-3 mx-auto flex w-fit items-center gap-2 rounded-pilule bg-surface-0 px-4 py-2 text-sm font-medium text-fg shadow-card"
+          aria-hidden className="pointer-events-none absolute inset-x-0 top-3 mx-auto w-fit rounded-pilule border border-bord bg-surface-pop px-4 py-2 text-sm font-medium text-fg shadow-flottant"
           data-voile
         >
-          <Loader2 className="size-4 animate-spin motion-reduce:animate-none" aria-hidden />{TEXTE_MISE_A_JOUR}
+          {TEXTE_MISE_A_JOUR}
         </p>
       )}
     </div>
