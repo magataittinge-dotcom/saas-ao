@@ -51,6 +51,7 @@ const dette = lireDette()
 const ZERO_AU_SOCLE = [
   'police-hors-echelle', 'capitales-forcees', 'approche-positive', 'taille-hors-echelle', 'duree-hors-echelle', 'transition-all',
   'boucle', 'etat-ao-hors-module', 'visage-en-vignette', 'page-sans-conteneur', 'controle-natif', 'aplat-accent',
+  'infobulle-native', 'rayon-hors-echelle',
 ]
 
 for (const r of REGLES) {
