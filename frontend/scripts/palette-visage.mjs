@@ -156,16 +156,12 @@ const clartesEtats = {}
   const d = etats(nuit, true); clartesEtats.nuit = d.clartes; delete d.clartes; Object.assign(nuit, d)
 }
 
-// Messages (info, succès, attention, danger) : descendants directs des états
+// Anciens noms (info, success, warning, danger) : de simples ALIAS des six sens (P2 : une seule palette d'états).
+// bg = soft, fg = ink, border = mark : la valeur n'est calculée qu'une fois (celle du sens), theme.css écrit var(--sens-rôle).
 const MESSAGES = { info: 'bleu', success: 'vert', warning: 'ambre', danger: 'rouge' }
-for (const [m, k] of Object.entries(MESSAGES)) {
-  const h = TEINTES_ETATS[k]
-  clair[`${m}-bg`] = { ...clair[`${k}-soft`] }
-  clair[`${m}-border`] = couleur(0.86, plafond(0.86, h, 0.07), h, source(k))
-  clair[`${m}-fg`] = { ...clair[`${k}-ink`] }
-  nuit[`${m}-bg`] = couleur(0.3, plafond(0.3, h, 0.055), h, source(k))
-  nuit[`${m}-border`] = couleur(0.42, plafond(0.42, h, 0.09), h, source(k))
-  nuit[`${m}-fg`] = { ...nuit[`${k}-ink`] }
+const ROLES_MESSAGE = { bg: 'soft', border: 'mark', fg: 'ink' }
+for (const [m, k] of Object.entries(MESSAGES)) for (const theme of [clair, nuit]) for (const [role, r] of Object.entries(ROLES_MESSAGE)) {
+  theme[`${m}-${role}`] = { ...theme[`${k}-${r}`], css: `var(--${k}-${r})`, source: `alias de --${k}-${r}` }
 }
 {
   const h = TEINTES_ETATS.rouge

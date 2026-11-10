@@ -615,18 +615,18 @@
     251.7
    ],
    "hex": "#e6f1fe",
-   "css": "#e6f1fe",
-   "source": "famille"
+   "css": "var(--bleu-soft)",
+   "source": "alias de --bleu-soft"
   },
   "info-border": {
    "oklch": [
-    0.86,
-    0.068,
+    0.54,
+    0.152,
     251.7
    ],
-   "hex": "#b1d5fd",
-   "css": "#b1d5fd",
-   "source": "famille"
+   "hex": "#1270c3",
+   "css": "var(--bleu-mark)",
+   "source": "alias de --bleu-mark"
   },
   "info-fg": {
    "oklch": [
@@ -635,8 +635,8 @@
     251.7
    ],
    "hex": "#0a518f",
-   "css": "#0a518f",
-   "source": "famille"
+   "css": "var(--bleu-ink)",
+   "source": "alias de --bleu-ink"
   },
   "success-bg": {
    "oklch": [
@@ -645,18 +645,18 @@
     152
    ],
    "hex": "#e2f6e6",
-   "css": "#e2f6e6",
-   "source": "fonction (un sens, pas la marque)"
+   "css": "var(--vert-soft)",
+   "source": "alias de --vert-soft"
   },
   "success-border": {
    "oklch": [
-    0.86,
-    0.07,
+    0.565,
+    0.141,
     152
    ],
-   "hex": "#afdfbb",
-   "css": "#afdfbb",
-   "source": "fonction (un sens, pas la marque)"
+   "hex": "#178d4a",
+   "css": "var(--vert-mark)",
+   "source": "alias de --vert-mark"
   },
   "success-fg": {
    "oklch": [
@@ -665,8 +665,8 @@
     152
    ],
    "hex": "#0e6835",
-   "css": "#0e6835",
-   "source": "fonction (un sens, pas la marque)"
+   "css": "var(--vert-ink)",
+   "source": "alias de --vert-ink"
   },
   "warning-bg": {
    "oklch": [
@@ -675,18 +675,18 @@
     62
    ],
    "hex": "#feedde",
-   "css": "#feedde",
-   "source": "fonction (un sens, pas la marque)"
+   "css": "var(--ambre-soft)",
+   "source": "alias de --ambre-soft"
   },
   "warning-border": {
    "oklch": [
-    0.86,
-    0.07,
+    0.58,
+    0.127,
     62
    ],
-   "hex": "#f3c7a2",
-   "css": "#f3c7a2",
-   "source": "fonction (un sens, pas la marque)"
+   "hex": "#ae6614",
+   "css": "var(--ambre-mark)",
+   "source": "alias de --ambre-mark"
   },
   "warning-fg": {
    "oklch": [
@@ -695,8 +695,8 @@
     62
    ],
    "hex": "#834b0c",
-   "css": "#834b0c",
-   "source": "fonction (un sens, pas la marque)"
+   "css": "var(--ambre-ink)",
+   "source": "alias de --ambre-ink"
   },
   "danger-bg": {
    "oklch": [
@@ -705,18 +705,18 @@
     27
    ],
    "hex": "#feebe8",
-   "css": "#feebe8",
-   "source": "fonction (un sens, pas la marque)"
+   "css": "var(--rouge-soft)",
+   "source": "alias de --rouge-soft"
   },
   "danger-border": {
    "oklch": [
-    0.86,
-    0.07,
+    0.5,
+    0.19,
     27
    ],
-   "hex": "#fcc0b8",
-   "css": "#fcc0b8",
-   "source": "fonction (un sens, pas la marque)"
+   "hex": "#b7191c",
+   "css": "var(--rouge-mark)",
+   "source": "alias de --rouge-mark"
   },
   "danger-fg": {
    "oklch": [
@@ -725,8 +725,8 @@
     27
    ],
    "hex": "#830d10",
-   "css": "#830d10",
-   "source": "fonction (un sens, pas la marque)"
+   "css": "var(--rouge-ink)",
+   "source": "alias de --rouge-ink"
   },
   "danger-solid": {
    "oklch": [
@@ -1200,23 +1200,23 @@
   },
   "info-bg": {
    "oklch": [
-    0.3,
-    0.055,
+    0.72,
+    0.143,
     251.7
    ],
-   "hex": "#182f48",
-   "css": "#182f48",
-   "source": "famille"
+   "hex": "#5ca9fb",
+   "css": "var(--bleu-soft)",
+   "source": "alias de --bleu-soft"
   },
   "info-border": {
    "oklch": [
-    0.42,
-    0.09,
+    0.72,
+    0.143,
     251.7
    ],
-   "hex": "#244f7c",
-   "css": "#244f7c",
-   "source": "famille"
+   "hex": "#5ca9fb",
+   "css": "var(--bleu-mark)",
+   "source": "alias de --bleu-mark"
   },
   "info-fg": {
    "oklch": [
@@ -1225,28 +1225,28 @@
     251.7
    ],
    "hex": "#a3cdfc",
-   "css": "#a3cdfc",
-   "source": "famille"
+   "css": "var(--bleu-ink)",
+   "source": "alias de --bleu-ink"
   },
   "success-bg": {
    "oklch": [
-    0.3,
-    0.055,
+    0.745,
+    0.17,
     152
    ],
-   "hex": "#163620",
-   "css": "#163620",
-   "source": "fonction (un sens, pas la marque)"
+   "hex": "#40ca74",
+   "css": "var(--vert-soft)",
+   "source": "alias de --vert-soft"
   },
   "success-border": {
    "oklch": [
-    0.42,
-    0.09,
+    0.745,
+    0.17,
     152
    ],
-   "hex": "#1e5b34",
-   "css": "#1e5b34",
-   "source": "fonction (un sens, pas la marque)"
+   "hex": "#40ca74",
+   "css": "var(--vert-mark)",
+   "source": "alias de --vert-mark"
   },
   "success-fg": {
    "oklch": [
@@ -1255,28 +1255,28 @@
     152
    ],
    "hex": "#92e8aa",
-   "css": "#92e8aa",
-   "source": "fonction (un sens, pas la marque)"
+   "css": "var(--vert-ink)",
+   "source": "alias de --vert-ink"
   },
   "warning-bg": {
    "oklch": [
-    0.3,
-    0.055,
+    0.76,
+    0.166,
     62
    ],
-   "hex": "#41270d",
-   "css": "#41270d",
-   "source": "fonction (un sens, pas la marque)"
+   "hex": "#fa9521",
+   "css": "var(--ambre-soft)",
+   "source": "alias de --ambre-soft"
   },
   "warning-border": {
    "oklch": [
-    0.42,
-    0.09,
+    0.76,
+    0.166,
     62
    ],
-   "hex": "#6f400c",
-   "css": "#6f400c",
-   "source": "fonction (un sens, pas la marque)"
+   "hex": "#fa9521",
+   "css": "var(--ambre-mark)",
+   "source": "alias de --ambre-mark"
   },
   "warning-fg": {
    "oklch": [
@@ -1285,28 +1285,28 @@
     62
    ],
    "hex": "#fdcb9f",
-   "css": "#fdcb9f",
-   "source": "fonction (un sens, pas la marque)"
+   "css": "var(--ambre-ink)",
+   "source": "alias de --ambre-ink"
   },
   "danger-bg": {
    "oklch": [
-    0.3,
-    0.055,
+    0.68,
+    0.17,
     27
    ],
-   "hex": "#46221e",
-   "css": "#46221e",
-   "source": "fonction (un sens, pas la marque)"
+   "hex": "#ef675c",
+   "css": "var(--rouge-soft)",
+   "source": "alias de --rouge-soft"
   },
   "danger-border": {
    "oklch": [
-    0.42,
-    0.09,
+    0.68,
+    0.17,
     27
    ],
-   "hex": "#773731",
-   "css": "#773731",
-   "source": "fonction (un sens, pas la marque)"
+   "hex": "#ef675c",
+   "css": "var(--rouge-mark)",
+   "source": "alias de --rouge-mark"
   },
   "danger-fg": {
    "oklch": [
@@ -1315,8 +1315,8 @@
     27
    ],
    "hex": "#fca095",
-   "css": "#fca095",
-   "source": "fonction (un sens, pas la marque)"
+   "css": "var(--rouge-ink)",
+   "source": "alias de --rouge-ink"
   },
   "danger-solid": {
    "oklch": [

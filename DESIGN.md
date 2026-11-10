@@ -270,7 +270,7 @@ Le vert, l'ambre, le rouge et le turquoise ne sont pas dans le visage : ce sont 
 
 **La règle « la coquille est neutre ».** Barre latérale, barre du haut et barre du bas ne portent aucun fond d'accent : l'entrée active a un fond `--surface-1` et un texte `--text-1` ; seules son icône et sa barre de 3 px sont à `--accent-ui`.
 
-**La règle « une seule palette d'états ».** Les six sens (`--bleu-*` … `--gris-*`). La seconde palette (`--info / --success / --warning / --danger`) est calculée par le script comme descendante des six sens et ne s'emploie plus : un garde-fou compte ses derniers usages.
+**La règle « une seule palette d'états ».** Les six sens (`--bleu-*` … `--gris-*`). Les anciens noms (`--info / --success / --warning / --danger`, et les classes Tailwind qui en sortent) sont de **simples alias** des sens bleu, vert, ambre et rouge, en clair comme en nuit : `bg` = `soft`, `fg` = `ink`, `border` = `mark` (`--info-bg: var(--bleu-soft)`, écrit par le script). Un écran qui les emploie encore prend donc les couleurs des six sens ; ils ne s'emploient plus, un garde-fou compte leurs derniers usages et un test vérifie que chaque ancien nom vaut exactement son sens.
 
 **La règle « l'aurore n'est pas un état ».** `--aurore-*` et `--flamme` ne colorent jamais un fond de pastille, un texte d'état ni une barre de progression.
 

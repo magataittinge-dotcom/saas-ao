@@ -105,6 +105,37 @@ test('états : même famille de clarté par rôle (bande de ± 0,065), la teinte
   for (const k of ETATS) assert.ok(Math.abs(teinteDe('light', `--${k}-soft`)[0] - 0.955) < 0.01, `clair ${k}-soft`)
 })
 
+test('une seule palette d\'états : info / success / warning / danger sont de simples alias des six sens (bg = soft, fg = ink, border = mark)', () => {
+  const SENS = { info: 'bleu', success: 'vert', warning: 'ambre', danger: 'rouge' }
+  const ROLES = { bg: 'soft', fg: 'ink', border: 'mark' }
+  for (const theme of THEMES) for (const [ancien, sens] of Object.entries(SENS)) for (const [role, r] of Object.entries(ROLES)) {
+    const alias = `--${ancien}-${role}`
+    const cible = `--${sens}-${r}`
+    assert.equal(jetons(theme)[alias], `var(${cible})`, `${theme} ${alias} : écrit comme un alias`)
+    assert.equal(valeur(theme, alias), valeur(theme, cible), `${theme} ${alias} vaut ${cible}`)
+    // le script ne calcule la valeur qu'une fois : la fiche de l'alias est celle du sens
+    const table = theme === 'light' ? palette.clair : palette.nuit
+    assert.equal(table[`${ancien}-${role}`].css, `var(${cible})`)
+    assert.equal(table[`${ancien}-${role}`].hex, table[`${sens}-${r}`].hex)
+  }
+  // les relais des anciens thèmes (Lumen, Edge, Calque) suivent : ils valent eux aussi le sens
+  const RELAIS: [string, string][] = [
+    ['--ok', '--vert-ink'], ['--ok-bg', '--vert-soft'], ['--ok-line', '--vert-mark'],
+    ['--warn', '--ambre-ink'], ['--warn-bg', '--ambre-soft'], ['--warn-line', '--ambre-mark'],
+    ['--bad', '--rouge-ink'], ['--bad-bg', '--rouge-soft'], ['--bad-line', '--rouge-mark'],
+    ['--edge-success', '--vert-ink'], ['--edge-warning', '--ambre-ink'], ['--edge-danger', '--rouge-ink'],
+    ['--calque-ok', '--vert-ink'], ['--calque-attention', '--ambre-ink'], ['--calque-bloquant', '--rouge-ink'],
+  ]
+  for (const theme of THEMES) for (const [relais, cible] of RELAIS) assert.equal(valeur(theme, relais), valeur(theme, cible), `${theme} ${relais}`)
+  // les trois fonds de Calque se lisaient opaques : ils valent le soft du sens, posé sur le papier quand il est translucide (nuit)
+  for (const theme of THEMES) for (const [relais, cible] of [['--calque-ok-fond', '--vert-soft'], ['--calque-attention-fond', '--ambre-soft'], ['--calque-bloquant-fond', '--rouge-soft']]) {
+    assert.equal(valeur(theme, relais), aplatir(valeur(theme, cible), valeur(theme, '--surface-0')), `${theme} ${relais}`)
+  }
+  // plus aucune couleur de la seconde palette n'est écrite en dur : seul --danger-solid (l'aplat du rouge plein) garde sa valeur
+  const css = sansCommentaires(lire('src/styles/theme.css'))
+  assert.doesNotMatch(css, /--(info|success|warning|danger)-(bg|fg|border):\s*(#|rgb)/)
+})
+
 test('états : distincts pour un daltonien (deutéranope et protanope), ink et mark, clair et nuit', () => {
   const proches: string[] = []
   for (const theme of THEMES) for (const r of ['ink', 'mark']) for (const type of ['deuteranope', 'protanope'] as const) {
