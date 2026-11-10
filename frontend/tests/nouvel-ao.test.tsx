@@ -46,7 +46,7 @@ test('l\'en-tête porte un seul bouton « Nouvel appel d\'offres », avec son te
   const entete = sansCommentaires(lire('src/components/layout/Header.tsx'))
   assert.match(entete, /Nouvel appel d&apos;offres|Nouvel appel d'offres/)
   assert.equal((entete.match(/navigate\('\/projects\/new'\)/g) ?? []).length, 1, 'un seul bouton')
-  assert.match(entete, /bg-accent-fill/)
+  assert.match(entete, /variante=\{auTrait \? 'secondaire' : 'principal'\}/)
   const barre = sansCommentaires(lire('src/components/layout/Sidebar.tsx'))
   assert.doesNotMatch(barre, /projects\/new/, 'rien dans la barre')
 })

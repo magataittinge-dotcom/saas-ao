@@ -231,7 +231,7 @@ function Surcouches() {
       <Bouton onClick={() => annoncer('Le dossier est enregistré.', 'succes')}>Toast</Bouton>
       <Bouton onClick={() => annoncer('L’enregistrement n’a pas abouti. Réessayez.', 'erreur')}>Toast d’erreur</Bouton>
       <Dialogue ouvert={dialogue} onOuvert={setDialogue} titre="Ranger le document" description="Choisissez la rubrique du coffre-fort où ce document sera rangé."
-        actions={<><Bouton onClick={() => setDialogue(false)}>Annuler</Bouton><Bouton variante="principal" onClick={() => setDialogue(false)}>Ranger</Bouton></>}>
+        actions={<><Bouton onClick={() => setDialogue(false)}>Annuler</Bouton><Bouton onClick={() => setDialogue(false)}>Ranger</Bouton></>}>
         <GroupeChamp libelle="Rubrique"><ListeDeroulante valeur="assurances" onChange={() => {}} options={[{ valeur: 'assurances', libelle: 'Assurances' }, { valeur: 'fiscal', libelle: 'Attestations fiscales' }]} /></GroupeChamp>
       </Dialogue>
       <DialogueConfirmation ouvert={confirmation} onOuvert={setConfirmation} danger titre="Supprimer cet appel d’offres ?" description="Le dossier et ses pièces seront retirés de votre compte."
@@ -304,7 +304,7 @@ export default function Design() {
               ))}
             </div>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              {[['carte', 'shadow-card border border-bord'], ['flottant', 'shadow-flottant border border-bord'], ['toast', 'shadow-toast border border-bord'], ['action', 'shadow-cta bg-accent-fill text-accent-on']].map(([nom, classe]) => (
+              {[['carte', 'shadow-card border border-bord'], ['flottant', 'shadow-flottant border border-bord'], ['toast', 'shadow-toast border border-bord'], ['action', 'shadow-cta border border-bord']].map(([nom, classe]) => (
                 <div key={nom} className={cn('grid h-16 place-items-center rounded-lg bg-surface-0 text-xs text-fg-2', classe)}>{nom}</div>
               ))}
             </div>

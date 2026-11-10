@@ -48,7 +48,10 @@ const dette = lireDette()
 
 // Règles tenues à zéro dans le lot socle (ce que ce passage a rendu propre) : un fichier du socle n'y revient pas.
 // Les autres règles gardent une dette au socle, listée dans tests/dette-design.json comme pour les autres lots.
-const ZERO_AU_SOCLE = ['police-hors-echelle', 'capitales-forcees', 'approche-positive']
+const ZERO_AU_SOCLE = [
+  'police-hors-echelle', 'capitales-forcees', 'approche-positive', 'taille-hors-echelle', 'duree-hors-echelle', 'transition-all',
+  'boucle', 'etat-ao-hors-module', 'visage-en-vignette', 'page-sans-conteneur', 'controle-natif', 'aplat-accent',
+]
 
 for (const r of REGLES) {
   test(`garde-fou « ${r.id} » : aucun fichier ne dépasse sa dette, aucun n'est passé dessous sans que la liste suive`, () => {

@@ -49,7 +49,7 @@ test('barre du haut : 56 px au téléphone, deux actions (recherche et « + »),
   assert.doesNotMatch(entete, /BasculeTheme/)
   assert.match(entete, /const auTrait = aplatsEcran > 0/)
   assert.doesNotMatch(entete, /hover:-translate-y/, 'au survol rien ne bouge (P17)')
-  assert.match(entete, /active:scale-\[\.98\]/)
+  assert.match(entete, /<Bouton coquille variante=\{auTrait \? 'secondaire' : 'principal'\}/)
   assert.doesNotMatch(sansCommentaires(lire('src/components/layout/Layout.tsx')), /BandeauNouveau/)
 })
 

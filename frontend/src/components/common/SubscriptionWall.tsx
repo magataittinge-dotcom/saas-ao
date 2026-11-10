@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Bouton } from '@/components/ui/bouton'
 import { createPortal } from 'react-dom'
 import { X, Sparkles } from 'lucide-react'
 import { api } from '@/services/api'
@@ -111,17 +112,9 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis', 
           <GrilleOffres
             compacte
             action={(offre) => (
-              <button
-                onClick={() => handleSubscribe(offre.id)}
-                disabled={loading === offre.id}
-                className="edge-cta w-full py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2"
-              >
-                {loading === offre.id ? (
-                  <span className="w-4 h-4 rounded-full border-2 border-accent-on/30 border-t-accent-on animate-spin" />
-                ) : (
-                  `Choisir ${offre.nom}`
-                )}
-              </button>
+              <Bouton large onClick={() => handleSubscribe(offre.id)} enCours={loading === offre.id} libelleEnCours="Ouverture du paiement…">
+                {`Choisir ${offre.nom}`}
+              </Bouton>
             )}
           />
           {erreur && (

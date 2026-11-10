@@ -200,10 +200,11 @@
   --highlight-text: #1d1d1d;
 }
 
-/* ── Mouvement réduit : plus de translation ni d'apparition animée, tout est instantané
+/* ── Mouvement réduit : plus de translation ni d'apparition animée, tout est instantané, sans exception (plus aucune roue
+   qui tourne dans l'application : rien ne boucle hors l'aurore et le visage, qui s'arrêtent eux aussi)
    (les ressorts, glints et défilements du système de référence ignorent cette préférence : nous non). */
 @media (prefers-reduced-motion: reduce) {
-  *:not(.animate-spin), *:not(.animate-spin)::before, *:not(.animate-spin)::after {
+  *, *::before, *::after {
     animation-duration: .01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: .01ms !important;

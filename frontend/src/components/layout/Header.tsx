@@ -3,6 +3,7 @@ import { Plus, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useProject } from '@/hooks/useProject'
 import { useUIStore } from '@/stores/uiStore'
+import { Bouton } from '@/components/ui/bouton'
 import { STEPS } from '@/components/project/StepProgress'
 import NotificationBell from './NotificationBell'
 import { RACCOURCI_PALETTE } from './CommandPalette'
@@ -101,20 +102,11 @@ export default function Header({ onSearch, titreSorti = false }: Props) {
 
           <span className="max-[768px]:hidden"><NotificationBell /></span>
 
-          <button
-            type="button"
-            data-nouvel-ao={auTrait ? 'trait' : 'plein'}
-            onClick={() => navigate('/projects/new')}
-            className={cn(
-              'inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-pilule text-sm font-semibold transition-[background-color,background-image,border-color,color,transform] duration-fast ease-survol active:scale-[.98] max-sm:w-11 sm:px-5',
-              auTrait
-                ? 'border border-bord-champ bg-surface-0 text-fg hover:bg-surface-1'
-                : 'bg-accent-fill text-accent-on shadow-cta hover:[background-image:var(--accent-fill-hover)]',
-            )}
-          >
-            <Plus size={20} strokeWidth={1.5} absoluteStrokeWidth aria-hidden />
+          <Bouton coquille variante={auTrait ? 'secondaire' : 'principal'} data-nouvel-ao={auTrait ? 'trait' : 'plein'} onClick={() => navigate('/projects/new')}
+            className="rounded-pilule max-sm:w-11 max-sm:px-0">
+            <Plus strokeWidth={1.5} aria-hidden />
             <span className="max-sm:sr-only">Nouvel appel d&apos;offres</span>
-          </button>
+          </Bouton>
         </div>
       </div>
     </header>

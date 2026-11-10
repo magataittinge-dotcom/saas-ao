@@ -96,7 +96,7 @@ export const REGLES: Regle[] = [
     compte: (c) => nb(c, /\bVisage\w*\b|\bCompanionOrb\b/g) },
   { id: 'page-sans-conteneur', quoi: 'une route pose sa largeur ou ses marges (max-w-*, mx-auto) ou ne passe pas par <Page> : le conteneur est celui de la coquille',
     concerne: (f) => /^src\/routes\/[A-Z]\w+\.tsx$/.test(f) && !/routes\/(Landing|Pricing|Legal|Login|Register)\.tsx$/.test(f),
-    compte: (c, f) => nb(c, /\bmx-auto\b|\bmax-w-(?:\[|[2-7]xl\b|screen)/g) + (/<Page\b|<PageAO\b/.test(c) || f === 'src/routes/Project.tsx' ? 0 : 1) },
+    compte: (c, f) => nb(c, /\bmx-auto\b|\bmax-w-(?:\[\d+(?:px|rem)\]|[4-7]xl\b|screen)/g) + (/<Page\b|<PageAO\b/.test(c) || f === 'src/routes/Project.tsx' ? 0 : 1) },
 ]
 
 /** Tous les fichiers surveillés : src/**\/*.{ts,tsx,css} et tailwind.config.js. */

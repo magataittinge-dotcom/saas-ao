@@ -39,6 +39,8 @@ export interface BoutonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   large?: boolean
   /** Le bouton de suite de la barre du bas (BoutonSuite) : compté à part, il cède l'aplat à l'action de l'écran. */
   suite?: boolean
+  /** Un bouton de la coquille (« Nouvel appel d'offres » de la barre) : il n'est pas compté parmi les actions de l'écran. */
+  coquille?: boolean
   asChild?: boolean
 }
 
@@ -53,8 +55,8 @@ function useAplat(actif: boolean, suite: boolean) {
 }
 
 export const Bouton = React.forwardRef<HTMLButtonElement, BoutonProps>(
-  ({ className, variante = 'secondaire', enCours = false, libelleEnCours, large, suite = false, asChild = false, disabled, children, type, ...props }, ref) => {
-    useAplat(variante === 'principal', suite)
+  ({ className, variante = 'secondaire', enCours = false, libelleEnCours, large, suite = false, coquille = false, asChild = false, disabled, children, type, ...props }, ref) => {
+    useAplat(variante === 'principal' && !coquille, suite)
     const classes = classesBouton(variante, cn(large && 'w-full', className))
     if (asChild) return <Slot ref={ref} data-variante={variante} className={classes} {...props}>{children}</Slot>
     return (

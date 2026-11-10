@@ -2,7 +2,7 @@
  * upload, lot detection, AI analysis, mémoire generation.
  *
  * Visual: identical to the legacy PipelineProgress (cyan SVG circle with
- * stroke-dashoffset, lerp animation toward target progress, pulse-ring,
+ * stroke-dashoffset, lerp animation toward target progress (une barre qui avance pour de vrai : rien ne boucle),
  * confettis on success). The only thing this component does differently
  * is accept its data via props instead of polling /processing-status —
  * the parent owns the data source (typically `useProgressStream`).
@@ -185,8 +185,7 @@ export default function ProgressDisplay({
               style={{
                 width: variant === 'modal' ? 64 : 56,
                 height: variant === 'modal' ? 64 : 56,
-                background: 'color-mix(in srgb, var(--success-fg) 15%, transparent)',
-                animation: 'scale-in 0.3s ease forwards',
+                background: 'var(--vert-soft)',
               }}
             >
               <Check size={variant === 'modal' ? 36 : 32} className="text-ds-success" strokeWidth={2.5} />
@@ -206,7 +205,7 @@ export default function ProgressDisplay({
             <span
               className={
                 variant === 'modal'
-                  ? 'text-4xl font-semibold tabular-nums chiffres text-ds-text'
+                  ? 'chiffre-grand'
                   : 'text-xl font-semibold tabular-nums chiffres'
               }
               style={variant === 'inline' ? { color: accentColor } : undefined}
@@ -215,16 +214,6 @@ export default function ProgressDisplay({
             </span>
           )}
         </div>
-        {!showCheck && !isError && (
-          <div
-            className="absolute inset-2 rounded-full"
-            style={{
-              border: `2px solid ${accentColor}`,
-              opacity: 0.1,
-              animation: 'pulse-ring 2s ease-survol infinite',
-            }}
-          />
-        )}
       </div>
 
       {/* Title + detail */}
@@ -272,16 +261,7 @@ export default function ProgressDisplay({
                       <Check size={12} className="text-ds-success" strokeWidth={3} />
                     </div>
                   ) : stepStatus === 'in_progress' ? (
-                    <div className="relative w-5 h-5">
-                      <div
-                        className="absolute inset-0 rounded-full"
-                        style={{
-                          border: '2px solid var(--text-1)',
-                          borderTopColor: 'transparent',
-                          animation: 'spin 1s linear infinite',
-                        }}
-                      />
-                    </div>
+                    <span aria-hidden className="grid size-5 place-items-center"><span className="size-2.5 rounded-pilule bg-accent-ui" /></span>
                   ) : Icon ? (
                     <Icon size={14} style={{ color: 'var(--text-3)' }} />
                   ) : (
