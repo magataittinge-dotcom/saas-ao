@@ -110,6 +110,6 @@ test('S4 : « Retour » à la place d\'« Annuler » quand le bouton ne défait 
 test('S4 : « Retour » aussi sur le mémoire — fermer le formulaire de régénération ne défait rien', () => {
   const code = lire('src/routes/project/StepMemoire.tsx')
   // le bouton ne fait que replier le formulaire : aucune mutation, aucune suppression
-  assert.match(code, /onClick=\{\(\) => setShowForm\(false\)\}[^>]*>\s*Retour\s*<\/button>/)
+  assert.match(code, /onClick=\{\(\) => setShowForm\(false\)\}[^>]*>\s*Retour\s*<\/Bouton>/)
   assert.ok(!textesAffiches('src/routes/project/StepMemoire.tsx').some((t) => t.texte.trim() === 'Annuler'))
 })

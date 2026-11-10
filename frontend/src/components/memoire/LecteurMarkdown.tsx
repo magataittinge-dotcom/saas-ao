@@ -1,10 +1,29 @@
-import { Fragment } from 'react'
-import ReactMarkdown from 'react-markdown'
+import { Fragment, type ReactNode } from 'react'
+import ReactMarkdown, { type Components } from 'react-markdown'
 import { decouperTables, type SegmentTable } from '@/lib/tablesMarkdown'
 
-/** Une cellule de tableau : du texte courant (gras, italique), sans paragraphe autour. */
-function Cellule({ texte }: { texte: string }) {
-  return <ReactMarkdown components={{ p: ({ children }) => <Fragment>{children}</Fragment> }}>{texte}</ReactMarkdown>
+/**
+ * Les titres écrits dans le texte d'une section descendent sous ceux de l'écran (h1 : l'étape ; h2 : la partie ; h3 : la
+ * section) : un « # » ou un « ## » du texte devient un h4, un « ### » un h5. Un seul h1 par écran, et des titres en serif à
+ * l'échelle du document (22 px, puis 17 px), au lieu des titres géants du gabarit de prose.
+ */
+function Titre4({ children }: { children?: ReactNode }) {
+  return <h4 className="mb-2 mt-8 font-memoire text-xl font-semibold leading-snug text-fg first:mt-0">{children}</h4>
+}
+function Titre5({ children }: { children?: ReactNode }) {
+  return <h5 className="mb-1.5 mt-6 font-memoire text-lg font-semibold leading-snug text-fg">{children}</h5>
+}
+const TITRES: Components = {
+  h1: ({ children }) => <Titre4>{children}</Titre4>,
+  h2: ({ children }) => <Titre4>{children}</Titre4>,
+  h3: ({ children }) => <Titre5>{children}</Titre5>,
+  h4: ({ children }) => <Titre5>{children}</Titre5>,
+}
+
+/** Une cellule de tableau : du texte courant (gras, italique), sans paragraphe autour. Une cellule « # » (l'en-tête d'une
+ *  colonne de numéros) reste un « # » : sans cela, elle devenait un titre h1 vide dans la page. */
+export function Cellule({ texte }: { texte: string }) {
+  return <ReactMarkdown components={{ p: ({ children }) => <Fragment>{children}</Fragment> }}>{texte.replace(/^(\s*)(#+)(\s|$)/, '$1\\$2$3')}</ReactMarkdown>
 }
 
 function Tableau({ table }: { table: SegmentTable }) {
@@ -38,18 +57,16 @@ function Tableau({ table }: { table: SegmentTable }) {
 }
 
 /**
- * Le texte d'une partie du mémoire, lu dans Rédiger. Les couleurs viennent des jetons du thème (voir
+ * Le texte d'une partie du mémoire, lu dans Rédiger : Newsreader 17 px, interligne 1,65, 72 caractères par ligne au plus.
+ * Les couleurs et la police viennent des jetons du thème (voir
  * `.lecteur-memoire` dans index.css) : le gabarit « prose-invert » rendait titres et gras en blanc sur fond clair.
  * Les tableaux Markdown sont rendus en vrais tableaux, comme dans le Word (G4).
  */
 export default function LecteurMarkdown({ text }: { text: string }) {
   return (
-    <div
-      className="lecteur-memoire prose prose-sm max-w-none prose-headings:font-semibold prose-p:leading-relaxed prose-code:text-xs"
-      style={{ fontFamily: 'var(--font-memoire)', fontFeatureSettings: '"tnum" 0' }}
-    >
+    <div className="lecteur-memoire prose max-w-[72ch] text-lg leading-[1.65] prose-headings:font-semibold prose-code:text-xs">
       {decouperTables(text).map((s, i) =>
-        s.type === 'table' ? <Tableau key={i} table={s} /> : <ReactMarkdown key={i}>{s.texte}</ReactMarkdown>,
+        s.type === 'table' ? <Tableau key={i} table={s} /> : <ReactMarkdown key={i} components={TITRES}>{s.texte}</ReactMarkdown>,
       )}
     </div>
   )

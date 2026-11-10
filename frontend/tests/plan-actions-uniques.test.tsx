@@ -51,9 +51,10 @@ test('libellés de l’état du plan', () => {
   assert.equal(libelleValidation(null), 'Plan validé')
 })
 
-test('Rédiger : « Passer à l’export » en dégradé dans l’en-tête, la barre ne le porte qu’au téléphone', () => {
+test('Rédiger : « Passer à l’export » est le seul bouton principal (l’en-tête), la barre ne le porte qu’au téléphone', () => {
   const code = sansCommentaires(lire('src/routes/project/StepMemoire.tsx'))
-  assert.equal((code.match(/signature-btn/g) ?? []).length, 1)           // l'en-tête
+  assert.equal((code.match(/variante="principal"/g) ?? []).length, 1)   // l'en-tête
+  assert.doesNotMatch(code, /signature-btn/)
   assert.match(code, /<ActionsBarreTel>\s*<BoutonSuite etape="Export"/)    // la barre : téléphone seulement
   assert.ok(cartesRedaction)
 })

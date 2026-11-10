@@ -52,7 +52,7 @@ test('plus aucun libellé sans accent sur l\'écran du mémoire', () => {
 })
 
 test("l'éditeur du mémoire corrige l'orthographe en français", () => {
-  const code = sansCommentaires(lire('src/routes/project/StepMemoire.tsx'))
+  const code = sansCommentaires(lire('src/components/memoire/EditeurMemoire.tsx'))
   assert.match(code, /spellCheck\s*\n\s*lang="fr"/)
   assert.doesNotMatch(code, /spellCheck=\{false\}/)
 })
