@@ -1,68 +1,58 @@
 import { Link } from 'react-router-dom'
-import { AlertCircle, ArrowRight, Check, Loader2 } from 'lucide-react'
-import { echeanceAO, etatEcheance } from '@/lib/echeance'
-import { actionEtape, ficheDepuisProjet, libelleRemise, lienEtape } from '@/lib/intelligence/action'
+import { AlertCircle, ArrowRight, Check } from 'lucide-react'
+import { Bouton, classesBouton } from '@/components/ui/bouton'
+import { Carte } from '@/components/ui/carte'
+import { TitreSection } from '@/components/ui/page'
+import { lectureAO, lienAO } from '@/lib/etatAO'
 import { acheteurCourt, avancementAffiche, enTraitement, faitsALaUne, filDeLAO, niveauRemise, quandCourt } from '@/lib/mesAO'
 import { cn } from '@/lib/utils'
 import type { Project } from '@/types'
 import { FilPoints, JaugeLecture, PastilleRemise, TON_TEXTE } from './Etat'
-import { VisageRond } from './VisagePetit'
 
 /**
- * « À la une » : l'AO dont la remise est la plus proche, son action et ses faits. Le texte de l'action est celui de la fiche
- * « Prochaine action » (`ficheDepuisProjet`), le verbe celui de `actionEtape()` : un seul calcul pour tout le produit. Le visage
- * reste en petit sur grand écran et disparaît au téléphone.
+ * « À la une » : la prochaine remise à venir (`aLaUne`, lib/etatAO.ts ; aucune à venir : l'écran ne pose pas ce bloc). La
+ * phrase, le verbe et les faits sortent du même calcul (`lectureAO`, `faitsALaUne`) : la phrase ne dit jamais « tout est
+ * fait » à côté de pièces à joindre. C'est l'action de l'écran : le seul bouton plein. Aucun visage ici (une carte d'AO).
  */
-export function ALaUne({ projet, maintenant = new Date(), avecRemise }: { projet: Project; maintenant?: Date; avecRemise: boolean }) {
-  const fiche = ficheDepuisProjet(projet, maintenant)
-  const e = etatEcheance(echeanceAO(projet), maintenant)
-  const niveau = niveauRemise(projet, maintenant)
+export function ALaUne({ projet, maintenant = new Date() }: { projet: Project; maintenant?: Date }) {
+  const lecture = lectureAO(projet, maintenant)
   const quand = quandCourt(projet)
   const { etape, total, nom } = avancementAffiche(projet)
   const faits = faitsALaUne(projet, maintenant)
   const traitement = enTraitement(projet)
-  const action = actionEtape(projet)
+  const complement = [acheteurCourt(projet.maitre_ouvrage), projet.selected_lot_name].filter(Boolean).join(' · ')
   return (
-    <section aria-labelledby="une-titre" className="space-y-3">
-      <h2 className="flex flex-wrap items-baseline gap-x-2 text-lg font-semibold text-fg">
-        À la une<span className="text-[15px] font-normal text-fg-3">{avecRemise ? '· la remise la plus proche' : '· à reprendre'}</span>
-      </h2>
-      <div className="grid gap-6 rounded-carte border border-bord bg-surface-0 p-5 shadow-card sm:p-6 lg:grid-cols-[96px_minmax(0,1fr)_minmax(0,320px)] lg:items-center lg:gap-8">
-        <VisageRond taille={96} className="hidden self-start lg:grid" />
+    <section aria-labelledby="une-titre" data-a-la-une={projet.id} className="mt-10 max-md:mt-7.5">
+      <TitreSection>À la une <span className="font-normal text-fg-3">· la prochaine remise</span></TitreSection>
+      <Carte className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)] lg:items-center lg:gap-8">
         <div className="flex min-w-0 flex-col gap-2.5">
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
-            {e.etat !== 'sans_date' ? (
-              <PastilleRemise libelle={libelleRemise(e)} niveau={niveau} passee={e.etat === 'passee'} />
-            ) : (
-              <span className="text-sm text-fg-2">{libelleRemise(e)}</span>
-            )}
-            {quand && <span className="text-sm font-semibold text-fg">{quand}</span>}
+            <PastilleRemise libelle={lecture.echeance.libelle} niveau={niveauRemise(projet, maintenant)} />
+            {quand && <span className="chiffres text-sm font-semibold text-fg">{quand}</span>}
           </div>
-          <h3 id="une-titre" className="text-[22px] font-semibold leading-tight tracking-[-0.01em] text-fg">{projet.name}</h3>
-          {(projet.maitre_ouvrage || projet.selected_lot_name)
-            ? <p className="text-sm text-fg-2" title={projet.maitre_ouvrage ?? undefined}>{[acheteurCourt(projet.maitre_ouvrage), projet.selected_lot_name].filter(Boolean).join(' · ')}</p>
-            : fiche.meta && <p className="text-sm text-fg-2">{fiche.meta}</p>}
-          <p className="max-w-[62ch] text-[15px] leading-6 text-fg-2">{fiche.texte}</p>
+          <h3 id="une-titre" className="line-clamp-3 break-words text-xl font-semibold leading-tight tracking-[-0.01em] text-fg">{projet.name}</h3>
+          {complement && <p className="truncate text-sm text-fg-2">{complement}</p>}
+          <p className="max-w-[62ch] text-base text-fg-2">{lecture.phrase}</p>
           <div className="mt-1 max-w-[560px]">
             <FilPoints fil={filDeLAO(projet)} etiquettes />
-            <p className="mt-2 text-[13px] text-fg-2"><strong className="font-semibold text-fg">{nom}</strong> · étape {etape} sur {total}</p>
+            <p className="mt-2 text-sm text-fg-2"><strong className="font-semibold text-fg">{nom}</strong> · étape {etape} sur {total}</p>
           </div>
           {traitement ? (
             <div className="mt-1.5 flex flex-wrap items-center gap-3">
               <JaugeLecture pct={projet.processing_progress ?? 0} className="w-40" />
-              <span className="inline-flex items-center gap-2 text-sm text-fg-2"><Loader2 size={15} className="animate-spin motion-reduce:animate-none" aria-hidden />{projet.processing_detail || action.verbe}</span>
+              <span className="text-sm text-fg-2">{projet.processing_detail || 'Synorix s’en occupe'}</span>
             </div>
           ) : (
             <div className="mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-2">
-              <Link to={lienEtape(projet)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-pilule bg-accent-700 px-5 text-sm font-semibold text-accent-on transition-colors duration-base ease-survol hover:bg-accent-800 max-sm:w-full">
-                {action.verbe}<ArrowRight size={16} aria-hidden />
-              </Link>
-              <Link to={`/projects/${projet.id}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-accent-text underline-offset-4 hover:underline">Ouvrir l’AO</Link>
+              <Bouton asChild variante="principal" className="max-sm:w-full">
+                <Link to={lienAO(projet, maintenant)}>{lecture.action.verbe}<ArrowRight aria-hidden strokeWidth={1.75} /></Link>
+              </Bouton>
+              <Link to={`/projects/${projet.id}`} className={classesBouton('lien')}>Ouvrir l’appel d’offres</Link>
             </div>
           )}
         </div>
         {faits.length > 0 && (
-          <dl className="m-0 flex flex-col border-t border-bord pt-2 text-[13.5px] lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+          <dl className="m-0 flex flex-col border-t border-bord pt-2 text-sm lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
             {faits.map((f, i) => (
               <div key={f.libelle} className={cn('flex justify-between gap-3 py-2.5', i > 0 && 'border-t border-bord')}>
                 <dt className="text-fg-2">{f.libelle}</dt>
@@ -75,7 +65,7 @@ export function ALaUne({ projet, maintenant = new Date(), avecRemise }: { projet
             ))}
           </dl>
         )}
-      </div>
+      </Carte>
     </section>
   )
 }
