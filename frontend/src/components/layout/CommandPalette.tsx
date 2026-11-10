@@ -51,7 +51,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange}>
-      <CommandInput placeholder="Rechercher un appel d'offres, une page…" />
+      <CommandInput placeholder="Rechercher un appel d’offres, une page…" />
       <CommandList className="max-h-[min(440px,60vh)] pb-1.5">
         <CommandEmpty>Aucun résultat pour cette recherche.</CommandEmpty>
         {enCours.length > 0 && (

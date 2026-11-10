@@ -88,7 +88,7 @@ export function CaseDepotVue({ vue, onFichiers, onVerifier }: {
       </div>
       <div className="grid shrink-0 justify-items-start gap-1.5">
         <Bouton variante="secondaire" onClick={() => entree.current?.click()} enCours={vue.envoi} libelleEnCours="Envoi en cours…">
-          Déposer un fichier<span className="sr-only"> pour « {c.nom} »</span>
+          Déposer un fichier<span className="sr-only"> pour «&nbsp;{c.nom}&nbsp;»</span>
         </Bouton>
         <EntreeFichier
           ref={entree}
@@ -125,8 +125,8 @@ export function EncartCompris({ propositions, coches, onBasculer, onValider, onT
   return (
     <section id={ID_ENCART} tabIndex={-1} aria-labelledby={`${ID_ENCART}-titre`} className="grid gap-4 rounded-lg border border-bord bg-surface-0 p-4 sm:p-5">
       <div>
-        <h3 id={`${ID_ENCART}-titre`} className="text-base font-semibold text-fg">Voici ce que j'ai compris</h3>
-        <p className="mt-1 text-sm text-fg-2">Décochez ce qui n'est pas juste. Rien n'est enregistré dans votre profil avant que vous validiez.</p>
+        <h3 id={`${ID_ENCART}-titre`} className="text-base font-semibold text-fg">Voici ce que j’ai compris</h3>
+        <p className="mt-1 text-sm text-fg-2">Décochez ce qui n’est pas juste. Rien n’est enregistré dans votre profil avant que vous validiez.</p>
       </div>
       {groupes.map((g) => (
         <fieldset key={g.lecture_id} className="min-w-0 border-0 p-0">
@@ -151,15 +151,15 @@ export function EncartCompris({ propositions, coches, onBasculer, onValider, onT
                   {p.extrait ? (
                     <details className="group pl-8">
                       <summary className="flex min-h-11 cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-0.5 py-1 text-xs text-fg-3">
-                        <span>Source : {sourceLisible(p.source)}</span>
+                        <span>Source : {sourceLisible(p.source)}</span>
                         <span className="inline-flex items-center gap-1 font-medium text-accent-text group-hover:underline">
-                          Voir l'extrait d'origine <ChevronDown size={13} className="transition-transform duration-survol ease-survol group-open:rotate-180 motion-reduce:transition-none" aria-hidden />
+                          Voir l’extrait d’origine <ChevronDown size={13} className="transition-transform duration-survol ease-survol group-open:rotate-180 motion-reduce:transition-none" aria-hidden />
                         </span>
                       </summary>
                       <blockquote className="mb-2 break-words border-l-2 border-bord-2 pl-3 text-xs italic text-fg-2">{p.extrait}</blockquote>
                     </details>
                   ) : (
-                    <p className="pb-2 pl-8 text-xs text-fg-3">Source : {sourceLisible(p.source)}</p>
+                    <p className="pb-2 pl-8 text-xs text-fg-3">Source : {sourceLisible(p.source)}</p>
                   )}
                 </li>
               )
@@ -199,7 +199,7 @@ export function GrilleCases({ rubrique, cases, etats, envoi, erreurs, onFichiers
     <section aria-label={typeof titre === 'string' ? titre : 'Dépôt de documents'} className="grid gap-3" data-depots={rubrique}>
       <div>
         <h3 className="text-base font-semibold text-fg">{titre}</h3>
-        <p className="mt-1 text-sm text-fg-2">Chaque case a son rôle : un fichier déposé ici n'est jamais pris pour autre chose. Il entre dans votre coffre-fort, puis Synorix vous propose ce qu'il y a lu.</p>
+        <p className="mt-1 text-sm text-fg-2">Chaque case a son rôle : un fichier déposé ici n’est jamais pris pour autre chose. Il entre dans votre coffre-fort, puis Synorix vous propose ce qu’il y a lu.</p>
       </div>
       <div data-disposition={disposition} className="overflow-hidden rounded-lg border border-bord bg-surface-0">
         {definitions.map((d) => (
@@ -300,7 +300,7 @@ export default function CasesDepot({ rubrique, apresValidation, disposition = 'g
       queryClient.invalidateQueries({ queryKey: ['depots'] })
       apresValidation?.()
     },
-    onError: () => setErreurValidation('La validation n\'a pas pu être enregistrée. Réessayez.'),
+    onError: () => setErreurValidation('La validation n’a pas pu être enregistrée. Réessayez.'),
   })
 
   const verifier = () => {

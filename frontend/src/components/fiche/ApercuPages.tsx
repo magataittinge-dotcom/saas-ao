@@ -17,7 +17,7 @@ interface Props {
   logoSrc: string | null
 }
 
-export const TEXTE_MISE_A_JOUR = "Mise à jour de l'aperçu…"
+export const TEXTE_MISE_A_JOUR = "Mise à jour de l’aperçu…"
 
 export default function ApercuPages({ etat, pages, enRetard, donnees, bordereau, palette, logoSrc }: Props) {
   const [ratio, setRatio] = useState(210 / 297)
@@ -60,7 +60,7 @@ export default function ApercuPages({ etat, pages, enRetard, donnees, bordereau,
                   className="block h-full w-full object-contain"
                 />
               ) : (
-                <p className="grid h-full place-items-center px-4 text-center text-sm text-fg-2">Cette page n'a pas pu être chargée. Elle reste dans le fichier à télécharger.</p>
+                <p className="grid h-full place-items-center px-4 text-center text-sm text-fg-2">Cette page n’a pas pu être chargée. Elle reste dans le fichier à télécharger.</p>
               )}
             </li>
           ))}

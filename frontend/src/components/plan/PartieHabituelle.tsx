@@ -24,7 +24,7 @@ export default function PartieHabituelle({ partie, onAjouter }: { partie: Partie
         <span className="font-medium">{nom}</span>
         <span className="text-fg-3"> · {etiquette(partie.partie)}</span>
       </p>
-      <Bouton variante="discret" onClick={onAjouter} aria-label={`Ajouter au plan : ${nom}`}>
+      <Bouton variante="discret" onClick={onAjouter} aria-label={`Ajouter au plan : ${nom}`}>
         <Plus aria-hidden /> Ajouter
       </Bouton>
     </li>

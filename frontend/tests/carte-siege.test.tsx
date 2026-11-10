@@ -8,9 +8,9 @@ import { CarteSiegeVue } from '@/components/entreprise/CarteSiege'
 import { adresseCartographiable, lireCarteSiege, sourceImage } from '@/lib/carteSiege'
 import { fichiersSource, lire, sansCommentaires } from './outils/sources'
 
-const CARTE = { image_base64: 'aW1hZ2UtaW52ZW50ZWU=', legende: 'Situation de l\'entreprise — 12 avenue du Port, 51100 Reims. Source : IGN – Plan IGN v2 (Géoplateforme), extrait du 02/11/2026' }
+const CARTE = { image_base64: 'aW1hZ2UtaW52ZW50ZWU=', legende: 'Situation de l’entreprise — 12 avenue du Port, 51100 Reims. Source : IGN – Plan IGN v2 (Géoplateforme), extrait du 02/11/2026' }
 
-test('une adresse trop courte n\'est pas cartographiée', () => {
+test('une adresse trop courte n’est pas cartographiée', () => {
   assert.equal(adresseCartographiable(undefined), false)
   assert.equal(adresseCartographiable(null), false)
   assert.equal(adresseCartographiable('  51100 Reims  '), true)
@@ -18,23 +18,23 @@ test('une adresse trop courte n\'est pas cartographiée', () => {
   assert.equal(adresseCartographiable('12 avenue du Port, 51100 Reims'), true)
 })
 
-test('la réponse du serveur : une carte, ou rien (204, corps vide, forme inattendue)', () => {
+test('la réponse du serveur : une carte, ou rien (204, corps vide, forme inattendue)', () => {
   assert.deepEqual(lireCarteSiege(CARTE), CARTE)
   for (const vide of ['', null, undefined, {}, { image_base64: '', legende: 'x' }, { image_base64: 'abc' }, { image_base64: 1, legende: 'x' }]) {
     assert.equal(lireCarteSiege(vide), null, JSON.stringify(vide))
   }
 })
 
-test('la vue montre l\'image du plan IGN et sa légende sourcée', () => {
+test('la vue montre l’image du plan IGN et sa légende sourcée', () => {
   const html = renderToStaticMarkup(<CarteSiegeVue carte={CARTE} />)
   assert.ok(html.includes(`src="${sourceImage(CARTE)}"`))
   assert.ok(sourceImage(CARTE).startsWith('data:image/png;base64,'))
-  assert.ok(html.includes('alt="Carte de situation du siège de l&#x27;entreprise"'))
-  assert.ok(html.includes('Source : IGN – Plan IGN v2'), 'la source et la date accompagnent la carte (Licence Ouverte 2.0)')
+  assert.ok(html.includes('alt="Carte de situation du siège de l’entreprise"'))
+  assert.ok(html.includes('Source : IGN – Plan IGN v2'), 'la source et la date accompagnent la carte (Licence Ouverte 2.0)')
   assert.ok(html.includes('Aperçu de la carte insérée dans vos mémoires techniques'))
 })
 
-test('la page « Mon entreprise » n\'appelle plus Google : la carte vient du serveur, sans clé', () => {
+test('la page « Mon entreprise » n’appelle plus Google : la carte vient du serveur, sans clé', () => {
   const identite = sansCommentaires(lire('src/components/entreprise/FormIdentite.tsx'))
   assert.ok(identite.includes('<CarteSiege adresse='), 'la carte IGN est branchée')
   assert.ok(!/GMAPS|googleapis|staticmap/i.test(identite))

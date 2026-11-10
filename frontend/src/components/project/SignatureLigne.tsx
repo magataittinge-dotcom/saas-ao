@@ -20,7 +20,7 @@ export type MentionSignature =
 
 /** Règles générales, quand le RC ne dit rien de la signature (sources vérifiées, B1 §5). */
 const REGLE_SANS_SIGNATURE = 'Aucune signature n’est exigée au dépôt, sauf si le règlement de la consultation la demande (service-public F32144, F32106).'
-const REGLE_ATTRIBUTION = 'L’acte d’engagement est signé par l’attributaire (modèle facultatif du ministère de l’économie ; service-public R17445).'
+const REGLE_ATTRIBUTION = 'L’acte d’engagement est signé par l’attributaire (modèle facultatif du ministère de l’économie ; service-public R17445).'
 
 /** « RC — Article 5.2 — Présentation des candidatures, page 7 » : où la ligne a été lue. */
 export function libelleSourceRc(
@@ -49,7 +49,7 @@ export function mentionSignature(
 ): MentionSignature {
   if (item.signature_required) return { kind: 'case' }
   if (item.document_type_required === 'acte_engagement_template') {
-    return { kind: 'texte', texte: "Acte d'engagement : à signer à l'attribution" }
+    return { kind: 'texte', texte: "Acte d’engagement : à signer à l’attribution" }
   }
   if (SIGNATURE_NON_DEMANDEE.has(item.document_type_required)) {
     return { kind: 'texte', texte: 'Signature non demandée pour ce formulaire' }
@@ -79,7 +79,7 @@ export function phraseSourceSignature(
   if (!source) return null
   // R19 : « le règlement de la consultation » seulement si le passage lu est dans le RC ; sinon le dossier (acte d'engagement, CCAP…).
   const demandeur = sourceEstLeRc(item.source_document) ? 'Le règlement de la consultation' : 'Le dossier de consultation'
-  return `${demandeur} demande une signature. Source : ${source}`
+  return `${demandeur} demande une signature. Source : ${source}`
 }
 
 export default function SignatureLigne({

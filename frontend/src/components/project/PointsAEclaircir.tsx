@@ -12,7 +12,7 @@ import { libelleSource, libelleDateQuestions, texteACopier, type DateQuestions }
 import type { SourceFait } from '@/lib/carteAO'
 import type { PointAEclaircir, Project } from '@/types'
 
-const MESSAGE_PREPARATION = "Les questions n'ont pas pu être préparées. Réessayez dans un instant."
+const MESSAGE_PREPARATION = "Les questions n’ont pas pu être préparées. Réessayez dans un instant."
 
 /** Ce que dit la proximité de la date limite des questions (COULEURS.md) : rouge à 3 jours ou moins, ambre de 4 à 7 jours ; rien au-delà. */
 export function urgenceQuestions(date: DateQuestions | null | undefined, maintenant: Date = new Date()): { ton: 'rouge' | 'ambre'; texte: string } | null {
@@ -121,7 +121,7 @@ export function PointsAEclaircirVue({ points, date, onVoir, preparation, copies,
   return (
     <SectionEtape
       titre="Points à éclaircir avec l’acheteur"
-      description="Les questions à poser sur le profil d’acheteur avant la date limite : contradictions entre pièces, informations que le dossier ne donne pas, quantités ou délais flous."
+      description="Les questions à poser sur le profil d’acheteur avant la date limite : contradictions entre pièces, informations que le dossier ne donne pas, quantités ou délais flous."
       colonnes={2}
     >
       <DateLimiteQuestions date={date} onVoir={onVoir} />
@@ -129,7 +129,7 @@ export function PointsAEclaircirVue({ points, date, onVoir, preparation, copies,
         <InvitationPreparer {...preparation} />
       ) : points.length === 0 ? (
         <p className="rounded-carte border border-bord-2 bg-surface-1 p-5 text-sm text-fg-2">
-          Le dossier ne laisse aucune question ouverte : rien à poser à l’acheteur.
+          Le dossier ne laisse aucune question ouverte : rien à poser à l’acheteur.
         </p>
       ) : (
         <>

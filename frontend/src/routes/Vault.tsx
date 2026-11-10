@@ -87,7 +87,7 @@ export default function Vault() {
       } catch (err) {
         const nom = restants[0]?.name ?? 'ce document'
         setEchec({
-          message: await messageErreur(err, `Le dépôt de « ${nom} » au coffre-fort n’a pas abouti.`),
+          message: await messageErreur(err, `Le dépôt de « ${nom} » au coffre-fort n’a pas abouti.`),
           fichiers: restants,
         })
       } finally {
@@ -99,7 +99,7 @@ export default function Vault() {
   )
 
   const onDropRejected = useCallback((refus: FileRejection[]) => {
-    const noms = refus.map((r) => `« ${r.file.name} »`).join(', ')
+    const noms = refus.map((r) => `« ${r.file.name} »`).join(', ')
     setEchec({ message: `${noms} : le coffre-fort accepte ${MESSAGE_REFUS_FORMAT}.`, fichiers: [] })
   }, [])
 
@@ -230,7 +230,7 @@ export default function Vault() {
 
       {pieceASupprimer && (
         <DeleteConfirmModal
-          title={`Supprimer « ${pieceASupprimer.file_name} » du coffre-fort ?`}
+          title={`Supprimer « ${pieceASupprimer.file_name} » du coffre-fort ?`}
           detail="La pièce ne sera plus proposée pour vos candidatures."
           onConfirm={async () => { await deleteDocument(pieceASupprimer.id); setPieceASupprimer(null) }}
           onCancel={() => setPieceASupprimer(null)}

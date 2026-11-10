@@ -12,7 +12,7 @@ export const chercherCommunes: ChercherCommunes = async (q, signal) => {
   if (texte.length < 2) return []
   const params = new URLSearchParams({ q: texte, limit: '5', type: 'municipality' })
   const r = await fetch(`${URL_ADRESSE}?${params.toString()}`, { signal, credentials: 'omit', referrerPolicy: 'no-referrer' })
-  if (!r.ok) throw new Error(`API Adresse : ${r.status}`)
+  if (!r.ok) throw new Error(`API Adresse : ${r.status}`)
   const json = (await r.json()) as { features?: FeatureAdresse[] }
   return json.features ?? []
 }

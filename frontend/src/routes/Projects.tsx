@@ -107,7 +107,7 @@ function ListeMesAO({ projets }: { projets: Project[] }) {
     mutationFn: async (p: Project) => { await api.delete(`/projects/${p.id}`) },
     onSuccess: (_, p) => {
       void queryClient.invalidateQueries({ queryKey: ['projects'] })
-      annoncer(`« ${p.name} » est supprimé.`, 'succes')
+      annoncer(`« ${p.name} » est supprimé.`, 'succes')
       setASupprimer(null)
     },
     onError: async (err) => setErreurSuppression(await messageErreur(err, 'La suppression n’a pas pu se faire. Réessayez dans un instant.')),
@@ -170,7 +170,7 @@ function ListeMesAO({ projets }: { projets: Project[] }) {
       {rienTrouve && (
         <EtatVide className="mt-4" parFiltre={effacer}
           titre="Aucun appel d’offres ne correspond"
-          phrase={cherche ? `Aucun nom, acheteur ni lot ne contient « ${recherche.trim()} ».` : 'Aucun appel d’offres en cours ne passe ce filtre.'} />
+          phrase={cherche ? `Aucun nom, acheteur ni lot ne contient « ${recherche.trim()} ».` : 'Aucun appel d’offres en cours ne passe ce filtre.'} />
       )}
 
       {enCours.length > 0 && (
@@ -192,7 +192,7 @@ function ListeMesAO({ projets }: { projets: Project[] }) {
 
       {statutPour && <MettreAJourStatut projet={statutPour} ouvert onOuvert={(o) => { if (!o) setStatutPour(null) }} />}
       <DialogueConfirmation ouvert={aSupprimer !== null} onOuvert={(o) => { if (!o) setASupprimer(null) }} danger
-        titre={aSupprimer ? `Supprimer « ${aSupprimer.name} » ?` : 'Supprimer cet appel d’offres ?'}
+        titre={aSupprimer ? `Supprimer « ${aSupprimer.name} » ?` : 'Supprimer cet appel d’offres ?'}
         description="Le dossier, sa lecture et le mémoire de cet appel d’offres sont supprimés. Cette action ne s’annule pas."
         libelleConfirmer="Supprimer" libelleEnCours="Suppression…" enCours={suppression} erreur={erreurSuppression}
         onConfirmer={() => { if (aSupprimer) supprimer(aSupprimer) }} />

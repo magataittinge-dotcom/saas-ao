@@ -24,9 +24,9 @@ const GRILLE = 'grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(11rem,1
 
 const MOTS: Record<FamilleQualification, { intitule: string; organisme: string; numero: string; perimetre: string; ajouter: string; exemple: string }> = {
   qualification: { intitule: 'Intitulé', organisme: 'Organisme', numero: 'Numéro de certificat', perimetre: 'Codes de qualification', ajouter: 'Ajouter une qualification', exemple: 'Qualibat 7112' },
-  rge: { intitule: 'Label', organisme: 'Organisme', numero: 'Numéro', perimetre: 'Domaines couverts', ajouter: 'Ajouter un label', exemple: "Qualibat RGE, Qualit'EnR" },
+  rge: { intitule: 'Label', organisme: 'Organisme', numero: 'Numéro', perimetre: 'Domaines couverts', ajouter: 'Ajouter un label', exemple: "Qualibat RGE, Qualit’EnR" },
   systeme_management: { intitule: 'Certification', organisme: 'Organisme certificateur', numero: 'Numéro', perimetre: 'Périmètre', ajouter: 'Ajouter une certification', exemple: 'ISO 9001, MASE' },
-  assurance: { intitule: "Type d'assurance", organisme: 'Assureur', numero: 'Numéro de contrat', perimetre: 'Activités garanties', ajouter: 'Ajouter une assurance', exemple: 'Responsabilité civile' },
+  assurance: { intitule: "Type d’assurance", organisme: 'Assureur', numero: 'Numéro de contrat', perimetre: 'Activités garanties', ajouter: 'Ajouter une assurance', exemple: 'Responsabilité civile' },
 }
 export const SUGGESTIONS_ASSURANCE = ['Responsabilité civile', 'Décennale', 'Tous risques chantier', 'Dommages-ouvrage']
 
@@ -51,12 +51,12 @@ export function EditeurQualifications({ famille, lignes, documents, modifier, aj
             </Field>
             <Field label={m.organisme}><Champ aria-label={`${m.organisme} ${i + 1}`} maxLength={120} value={l.valeurs.organisme ?? ''} onChange={(e) => modifier(l.cle, { organisme: e.target.value })} /></Field>
             <Field label={m.numero}><Champ aria-label={`${m.numero} ${i + 1}`} maxLength={80} value={l.valeurs.numero ?? ''} onChange={(e) => modifier(l.cle, { numero: e.target.value })} /></Field>
-            <Field label="Valable jusqu'au"><ChampDate aria-label={`Date de fin ${i + 1}`} valeur={l.valeurs.date_fin} onChange={(iso) => modifier(l.cle, { date_fin: iso })} /></Field>
+            <Field label="Valable jusqu’au"><ChampDate aria-label={`Date de fin ${i + 1}`} valeur={l.valeurs.date_fin} onChange={(iso) => modifier(l.cle, { date_fin: iso })} /></Field>
           </div>
           <AfficherPlus libelle="Détails et justificatif">
             <Field label={m.perimetre}><ZoneTexte aria-label={`${m.perimetre} ${i + 1}`} rows={2} maxLength={500} value={l.valeurs.perimetre ?? ''} onChange={(e) => modifier(l.cle, { perimetre: e.target.value })} /></Field>
             <div className={GRILLE}>
-              <Field label="Date d'obtention"><ChampDate aria-label={`Date d'obtention ${i + 1}`} valeur={l.valeurs.date_obtention} onChange={(iso) => modifier(l.cle, { date_obtention: iso })} /></Field>
+              <Field label="Date d’obtention"><ChampDate aria-label={`Date d’obtention ${i + 1}`} valeur={l.valeurs.date_obtention} onChange={(iso) => modifier(l.cle, { date_obtention: iso })} /></Field>
               <Field label="Justificatif au coffre-fort">
                 <ListeDeroulante libelle={`Justificatif ${i + 1}`} valeur={l.valeurs.document_id ?? SANS}
                   options={[{ valeur: SANS, libelle: 'À joindre' }, ...documents.map((d) => ({ valeur: d.id, libelle: d.file_name }))]}
@@ -64,7 +64,7 @@ export function EditeurQualifications({ famille, lignes, documents, modifier, aj
               </Field>
             </div>
           </AfficherPlus>
-          <BoutonRetirer libelle={`Retirer : ${m.intitule} ${i + 1}`} onClick={() => retirer(l.cle)} />
+          <BoutonRetirer libelle={`Retirer : ${m.intitule} ${i + 1}`} onClick={() => retirer(l.cle)} />
         </div>
       ))}
       {famille === 'assurance' && <datalist id="suggestions-assurance">{SUGGESTIONS_ASSURANCE.map((s) => <option key={s} value={s} />)}</datalist>}
@@ -89,7 +89,7 @@ export function EditeurReferences({ lignes, modifier, ajouter, retirer }: {
           <div key={l.cle} className={CARTE}>
             <div className={GRILLE}>
               <Field label="Intitulé du chantier"><Champ aria-label={`Référence ${i + 1} : intitulé`} maxLength={500} value={v.intitule ?? ''} onChange={(e) => modifier(l.cle, { intitule: e.target.value })} /></Field>
-              <Field label="Maître d'ouvrage"><Champ aria-label={`Référence ${i + 1} : maître d'ouvrage`} maxLength={255} value={v.maitre_ouvrage ?? ''} onChange={(e) => modifier(l.cle, { maitre_ouvrage: e.target.value })} /></Field>
+              <Field label="Maître d’ouvrage"><Champ aria-label={`Référence ${i + 1} : maître d’ouvrage`} maxLength={255} value={v.maitre_ouvrage ?? ''} onChange={(e) => modifier(l.cle, { maitre_ouvrage: e.target.value })} /></Field>
               <Field label="Lieu du chantier"><Champ aria-label={`Référence ${i + 1} : lieu`} maxLength={500} value={v.adresse ?? ''} onChange={(e) => modifier(l.cle, { adresse: e.target.value })} /></Field>
               <Field label="Montant HT (€)">
                 <ChampMontant min={0} unite="€" aria-label={`Référence ${i + 1} : montant HT`} valeur={v.montant_ht}
@@ -105,8 +105,8 @@ export function EditeurReferences({ lignes, modifier, ajouter, retirer }: {
             <Field label="Nature des travaux réalisés"><ZoneTexte aria-label={`Référence ${i + 1} : nature des travaux`} rows={2} maxLength={1500} value={v.description ?? ''} onChange={(e) => modifier(l.cle, { description: e.target.value })} /></Field>
             <AfficherPlus libelle="Plus de détails">
               <div className={GRILLE}>
-                <Field label="Maître d'œuvre"><Champ aria-label={`Référence ${i + 1} : maître d'œuvre`} maxLength={255} value={v.maitre_oeuvre ?? ''} onChange={(e) => modifier(l.cle, { maitre_oeuvre: e.target.value })} /></Field>
-                <Field label="Lot ou corps d'état"><Champ aria-label={`Référence ${i + 1} : lot`} maxLength={255} value={v.lot ?? ''} onChange={(e) => modifier(l.cle, { lot: e.target.value })} /></Field>
+                <Field label="Maître d’œuvre"><Champ aria-label={`Référence ${i + 1} : maître d’œuvre`} maxLength={255} value={v.maitre_oeuvre ?? ''} onChange={(e) => modifier(l.cle, { maitre_oeuvre: e.target.value })} /></Field>
+                <Field label="Lot ou corps d’état"><Champ aria-label={`Référence ${i + 1} : lot`} maxLength={255} value={v.lot ?? ''} onChange={(e) => modifier(l.cle, { lot: e.target.value })} /></Field>
                 <Field label="Type de client">
                   <ListeDeroulante libelle={`Référence ${i + 1} : type de client`} valeur={v.client_type ?? undefined} placeholder="À préciser"
                     options={[{ valeur: 'public', libelle: 'Public' }, { valeur: 'prive_pro', libelle: 'Privé professionnel' }, { valeur: 'particulier', libelle: 'Particulier' }]}
@@ -119,7 +119,7 @@ export function EditeurReferences({ lignes, modifier, ajouter, retirer }: {
               <div className="grid gap-1">
                 <CaseACocher libelle="Afficher le nom complet du client sur les fiches et dans le mémoire"
                   coche={v.client_nom_complet === true} onChange={(coche) => modifier(l.cle, { client_nom_complet: coche })} />
-                <p className="text-xs text-fg-3">Sans cette case, un particulier n'apparaît que par ses initiales ({initialesClient(v.maitre_ouvrage) || 'M. D.'}). Demandez-lui son accord avant de cocher.</p>
+                <p className="text-xs text-fg-3">Sans cette case, un particulier n’apparaît que par ses initiales ({initialesClient(v.maitre_ouvrage) || 'M. D.'}). Demandez-lui son accord avant de cocher.</p>
               </div>
             )}
             <BoutonRetirer libelle={`Retirer la référence ${i + 1}`} onClick={() => retirer(l.cle)} />

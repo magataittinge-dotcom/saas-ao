@@ -200,7 +200,7 @@ export default function DocumentViewer({ projectId, documents, initialIndex, onC
           {loading && (
             <div className="flex flex-col items-center gap-3">
               <Loader2 size={28} className="animate-spin text-ds-accent" />
-              <p className="text-sm text-ds-text-2">Chargement...</p>
+              <p className="text-sm text-ds-text-2">Chargement…</p>
             </div>
           )}
 

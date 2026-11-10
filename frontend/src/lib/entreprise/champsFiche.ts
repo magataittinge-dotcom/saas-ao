@@ -19,7 +19,7 @@ export interface CibleChamp {
 
 export const CHAMPS: Record<string, CibleChamp> = {
   // Identité
-  raison_sociale: { rubrique: 'identite', label: "Nom de l'entreprise" },
+  raison_sociale: { rubrique: 'identite', label: "Nom de l’entreprise" },
   dirigeant: { rubrique: 'identite', label: 'Nom du dirigeant' },
   activites: { rubrique: 'identite', label: 'Activités principales' },
   chiffres: { rubrique: 'certifications', groupe: 'Chiffres demandés dans la' },
@@ -28,7 +28,7 @@ export const CHAMPS: Record<string, CibleChamp> = {
   informatique: { rubrique: 'moyens', label: 'Moyens informatiques' },
   materiel: { rubrique: 'moyens', groupe: 'Matériel et véhicules' },
   securite: { rubrique: 'moyens', groupe: 'Sécurité, qualité, environnement' },
-  habilitations: { rubrique: 'moyens', groupe: 'Équipe : le détail' },
+  habilitations: { rubrique: 'moyens', groupe: 'Équipe : le détail' },
   coffre: { rubrique: 'certifications', groupe: 'Pièces au coffre-fort' },
   // Certifications et références
   qualifications: { rubrique: 'certifications', groupe: 'Qualifications' },

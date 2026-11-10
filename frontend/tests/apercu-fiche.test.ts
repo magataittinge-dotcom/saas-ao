@@ -20,7 +20,7 @@ function faux(demandes: ReponseDemande[], etats: ReponseEtat[] = []) {
 }
 const vider = async () => { for (let i = 0; i < 6; i++) await Promise.resolve() }
 
-test('une demande part 800 ms après le dernier changement : une rafale de changements ne fait qu\'une demande, la dernière', async (t) => {
+test('une demande part 800 ms après le dernier changement : une rafale de changements ne fait qu’une demande, la dernière', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] })
   const { acces, appels } = faux([{ etat: 'pret', empreinte: EMP, pages: 2 }])
   const c = new ControleurApercu(acces, 'moyens')
@@ -40,7 +40,7 @@ test('une demande part 800 ms après le dernier changement : une rafale de chang
   assert.deepEqual(c.lire(), { phase: 'pret', empreinte: EMP, pages: 2, message: '', empreinteAffichee: EMP })
 })
 
-test('changer de format relance l\'aperçu après 800 ms, avec l\'état « mise à jour » entre-temps', async (t) => {
+test('changer de format relance l’aperçu après 800 ms, avec l’état « mise à jour » entre-temps', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] })
   const { acces, appels } = faux([{ etat: 'pret', empreinte: EMP, pages: 1 }, { etat: 'pret', empreinte: 'f'.repeat(64), pages: 3 }])
   const c = new ControleurApercu(acces, 'moyens')
@@ -51,7 +51,7 @@ test('changer de format relance l\'aperçu après 800 ms, avec l\'état « mise 
   await vider()
   assert.equal(c.lire().phase, 'pret')
   c.planifier('docx')                                   // l'utilisateur choisit Word
-  assert.equal(enMiseAJour(c.lire()), true, 'dès le choix, l\'aperçu est « en mise à jour »')
+  assert.equal(enMiseAJour(c.lire()), true, 'dès le choix, l’aperçu est « en mise à jour »')
   assert.equal(c.lire().empreinteAffichee, EMP, 'les anciennes pages restent affichées')
   t.mock.timers.tick(DEBOUNCE_MS)
   await vider()
@@ -61,7 +61,7 @@ test('changer de format relance l\'aperçu après 800 ms, avec l\'état « mise 
   assert.deepEqual(vus, ['attente', 'maj', 'pret', 'attente', 'maj', 'pret'])
 })
 
-test('202 « en cours » : sondage toutes les 700 ms jusqu\'à « prêt », pages affichées seulement à ce moment', async (t) => {
+test('202 « en cours » : sondage toutes les 700 ms jusqu’à « prêt », pages affichées seulement à ce moment', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] })
   const { acces, appels } = faux([{ etat: 'en_cours', empreinte: EMP }], [
     { etat: 'en_cours', pages: 0, message: '' }, { etat: 'en_cours', pages: 0, message: '' }, { etat: 'pret', pages: 4, message: '' },
@@ -83,10 +83,10 @@ test('202 « en cours » : sondage toutes les 700 ms jusqu\'à « prêt », page
   assert.deepEqual(c.lire(), { phase: 'pret', empreinte: EMP, pages: 4, message: '', empreinteAffichee: EMP })
   t.mock.timers.tick(10 * SONDAGE_MS)
   await vider()
-  assert.equal(appels.filter((a) => a.genre === 'etat').length, 3, 'le sondage s\'arrête dès que l\'aperçu est prêt')
+  assert.equal(appels.filter((a) => a.genre === 'etat').length, 3, 'le sondage s’arrête dès que l’aperçu est prêt')
 })
 
-test('la dernière demande gagne : la réponse d\'une demande dépassée est ignorée', async (t) => {
+test('la dernière demande gagne : la réponse d’une demande dépassée est ignorée', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] })
   let rendre!: (r: ReponseDemande) => void
   const acces: AccesApercu = {
@@ -107,7 +107,7 @@ test('la dernière demande gagne : la réponse d\'une demande dépassée est ign
   assert.equal(c.lire().pages, 1)
 })
 
-test('LibreOffice indisponible : état « indisponible » avec la ligne d\'explication, aperçu simplifié', async (t) => {
+test('LibreOffice indisponible : état « indisponible » avec la ligne d’explication, aperçu simplifié', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] })
   const { acces } = faux([{ etat: 'indisponible', empreinte: EMP, message: MESSAGE_INDISPONIBLE }])
   const c = new ControleurApercu(acces, 'moyens')
@@ -115,12 +115,12 @@ test('LibreOffice indisponible : état « indisponible » avec la ligne d\'expli
   t.mock.timers.tick(0)
   await vider()
   assert.equal(c.lire().phase, 'indisponible')
-  assert.equal(c.lire().message, 'Aperçu simplifié : le rendu exact est indisponible pour le moment.')
+  assert.equal(c.lire().message, 'Aperçu simplifié : le rendu exact est indisponible pour le moment.')
   assert.equal(apercuSimplifie(c.lire()), true)
   assert.equal(enMiseAJour(c.lire()), false)
 })
 
-test('erreur de fabrication ou réseau en panne : état « erreur » (aperçu simplifié), jamais de sondage sans fin', async (t) => {
+test('erreur de fabrication ou réseau en panne : état « erreur » (aperçu simplifié), jamais de sondage sans fin', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] })
   const a = faux([{ etat: 'en_cours', empreinte: EMP }], [{ etat: 'erreur', pages: 0, message: 'La conversion en PDF prend plus de temps que prévu.' }])
   const c = new ControleurApercu(a.acces, 'moyens')
@@ -150,7 +150,7 @@ test('erreur de fabrication ou réseau en panne : état « erreur » (aperçu si
   assert.match(sans.lire().message, /tarde/)
 })
 
-test('au démontage : plus de minuterie, plus de sondage, plus de notification', async (t) => {
+test('au démontage : plus de minuterie, plus de sondage, plus de notification', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] })
   const a = faux([{ etat: 'en_cours', empreinte: EMP }])
   const c = new ControleurApercu(a.acces, 'moyens')
@@ -163,7 +163,7 @@ test('au démontage : plus de minuterie, plus de sondage, plus de notification',
   c.arreter()
   t.mock.timers.tick(20 * SONDAGE_MS)
   await vider()
-  assert.equal(a.appels.filter((x) => x.genre === 'etat').length, 0, 'aucun sondage après l\'arrêt')
+  assert.equal(a.appels.filter((x) => x.genre === 'etat').length, 0, 'aucun sondage après l’arrêt')
   assert.equal(vus.length, avant)
   c.planifier('docx', 0)                                  // après l'arrêt : sans effet
   t.mock.timers.tick(DEBOUNCE_MS)
@@ -171,11 +171,11 @@ test('au démontage : plus de minuterie, plus de sondage, plus de notification',
   assert.equal(a.appels.filter((x) => x.genre === 'demander').length, 1)
 })
 
-test('adresse d\'une page', () => {
+test('adresse d’une page', () => {
   assert.equal(urlPage('moyens', EMP, 2), `/entreprise/fiches/moyens/apercu/${EMP}/pages/2`)
 })
 
-test('React rejoue les effets au démarrage (mode développement) : après un arrêt puis une reprise, l\'aperçu part', async (t) => {
+test('React rejoue les effets au démarrage (mode développement) : après un arrêt puis une reprise, l’aperçu part', async (t) => {
   t.mock.timers.enable({ apis: ['setTimeout'] })
   const { acces, appels } = faux([{ etat: 'pret', empreinte: EMP, pages: 1 }])
   const c = new ControleurApercu(acces, 'moyens')

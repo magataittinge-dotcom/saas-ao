@@ -58,7 +58,7 @@ export function ImportDialog({ ouvert, onClose, onImported }: ImportDialogProps)
     noKeyboard: true,
     disabled: isPending,
     onDrop: (acceptes) => { if (acceptes[0]) { setFile(acceptes[0]); setError(null) } },
-    onDropRejected: () => setError('Ce format n’est pas lu : déposez un fichier Word (.docx) ou PDF.'),
+    onDropRejected: () => setError('Ce format n’est pas lu : déposez un fichier Word (.docx) ou PDF.'),
   })
 
   return (
@@ -67,7 +67,7 @@ export function ImportDialog({ ouvert, onClose, onImported }: ImportDialogProps)
       onOuvert={(o) => { if (!o && !isPending) onClose() }}
       taille="petit"
       titre="Importer un mémoire"
-      description="Déposez un mémoire technique déjà rédigé (Word ou PDF). Synorix y lit vos informations et pré-remplit vos rubriques ; rien n’est enregistré avant votre vérification."
+      description="Déposez un mémoire technique déjà rédigé (Word ou PDF). Synorix y lit vos informations et pré-remplit vos rubriques ; rien n’est enregistré avant votre vérification."
       actions={<>
         <Bouton variante="secondaire" onClick={onClose} disabled={isPending}>Annuler</Bouton>
         <Bouton variante="principal" onClick={() => { if (file) doImport(file) }} disabled={!file} enCours={isPending} libelleEnCours="Lecture du mémoire…">

@@ -31,7 +31,7 @@ const fenetre: FenetreTableur = {
 
 const html = renderToStaticMarkup(<TableauSource fenetre={fenetre} ancre={ancre} />)
 
-test('un vrai tableau HTML : en-têtes de colonne et de ligne portent leur portée', () => {
+test('un vrai tableau HTML : en-têtes de colonne et de ligne portent leur portée', () => {
   assert.ok(html.includes('<table'))
   assert.ok(html.includes('<caption'))
   assert.equal((html.match(/<th scope="col"/g) ?? []).length, 6)        // « Ligne » + 5 colonnes
@@ -41,11 +41,11 @@ test('un vrai tableau HTML : en-têtes de colonne et de ligne portent leur port�
 })
 
 test('la feuille et la ligne citées sont nommées', () => {
-  assert.ok(html.includes('Feuille « Lot 05 »'))
+  assert.ok(html.includes('Feuille « Lot 05 »'))
   assert.ok(html.includes("Ligne 4 citée par Synorix"))
 })
 
-test('une seule ligne est surlignée, annoncée aux lecteurs d\'écran, et ses cellules citées sont marquées', () => {
+test('une seule ligne est surlignée, annoncée aux lecteurs d’écran, et ses cellules citées sont marquées', () => {
   assert.equal((html.match(/aria-current="true"/g) ?? []).length, 1)
   assert.equal((html.match(/data-ligne-citee="true"/g) ?? []).length, 1)
   assert.ok(html.includes('(ligne citée)'))
@@ -54,7 +54,7 @@ test('une seule ligne est surlignée, annoncée aux lecteurs d\'écran, et ses c
   assert.ok(ligne.includes('Enduit monocouche gratté'))
 })
 
-test('niveau « page » : la feuille est montrée sans aucun surlignage', () => {
+test('niveau « page » : la feuille est montrée sans aucun surlignage', () => {
   const sans = renderToStaticMarkup(
     <TableauSource fenetre={{ ...fenetre, ligne: null, lignes: fenetre.lignes.map((l) => ({ ...l, cible: false })) }}
       ancre={{ ...ancre, niveau: 'page', ligne: null, cellules: [] }} />,
@@ -63,7 +63,7 @@ test('niveau « page » : la feuille est montrée sans aucun surlignage', () => 
   assert.ok(sans.includes("Feuille citée par Synorix"))
 })
 
-test('les valeurs sont du texte : échappées, montants sans mise en forme ni mise en avant', () => {
+test('les valeurs sont du texte : échappées, montants sans mise en forme ni mise en avant', () => {
   assert.ok(html.includes('Peinture &lt;b&gt;soubassements&lt;/b&gt;'))
   assert.ok(html.includes('>4300<') && html.includes('>38.5<'))                // tel que le fichier le donne
   const code = sansCommentaires(lire(FICHIER))
@@ -72,7 +72,7 @@ test('les valeurs sont du texte : échappées, montants sans mise en forme ni mi
   assert.equal((html.match(/edge-data/g) ?? []).length, 3)
 })
 
-test('titre de colonne : celui du tableur, sinon la lettre ; cellule citée', () => {
+test('titre de colonne : celui du tableur, sinon la lettre ; cellule citée', () => {
   assert.equal(titreColonne(fenetre, 1), 'Désignation')
   assert.equal(titreColonne({ entete: null, colonnes: ['A', 'B'] }, 1), 'B')
   assert.equal(titreColonne({ entete: { n: 1, cellules: ['', 'x'] }, colonnes: ['A', 'B'] }, 0), 'A')
@@ -81,24 +81,24 @@ test('titre de colonne : celui du tableur, sinon la lettre ; cellule citée', ()
   assert.equal(legende({ niveau: 'page', ligne: null }), "Feuille citée par Synorix")
 })
 
-test('téléphone : le défilement horizontal reste dans le tableau, texte de 16 px au moins, cibles de 44 px', () => {
+test('téléphone : le défilement horizontal reste dans le tableau, texte de 16 px au moins, cibles de 44 px', () => {
   const code = sansCommentaires(lire(FICHIER))
   assert.ok(code.includes('overflow-auto') && code.includes('max-w-full') && code.includes('min-w-0'))
   assert.ok(!/text-(xs|sm)\b|text-\[(\d|1[0-5])px\]/.test(code), 'aucun texte sous 16 px')
   assert.ok(code.includes('text-base'))
-  assert.match(code, /<Bouton onClick=\{\(\) => \{ void refetch\(\) \}\}/, '« Réessayer » est le bouton du système (44 px de haut)')
+  assert.match(code, /<Bouton onClick=\{\(\) => \{ void refetch\(\) \}\}/, '« Réessayer » est le bouton du système (44 px de haut)')
   assert.ok(code.includes('h-11'))                                          // lignes de 44 px
-  assert.doesNotMatch(code, /animate-spin|Loader2/, 'plus de roue qui tourne : le libellé dit le chargement')
+  assert.doesNotMatch(code, /animate-spin|Loader2/, 'plus de roue qui tourne : le libellé dit le chargement')
 })
 
-test('textes affichés : positifs, aucun mot interdit', () => {
+test('textes affichés : positifs, aucun mot interdit', () => {
   const textes = textesAffiches(FICHIER).map((t) => t.texte).join('\n')
   assert.ok(textes.includes('Chargement du tableau'))
   assert.ok(textes.includes('Réessayer'))
   assert.ok(!/manquant|incompl[eè]t|\babsente?s?\b|!/i.test(textes + html.replace(/<[^>]+>/g, ' ')))
 })
 
-test('le panneau reçoit la vue tableur : branchée dans StepAnalysis, une seule définition du type', () => {
+test('le panneau reçoit la vue tableur : branchée dans StepAnalysis, une seule définition du type', () => {
   const ecran = sansCommentaires(lire('src/routes/project/StepAnalysis.tsx'))
   assert.match(ecran, /rendreTableur=\{/)
   assert.match(ecran, /<VueTableau exigenceId=\{selection\.id\} ancre=\{enAncreTableur\(reponse\)\}/)

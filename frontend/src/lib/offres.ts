@@ -29,7 +29,7 @@ export const ESSAI = { ao: 1, analyses: 1, memoires: 1 } as const
 export const INCLUS: readonly string[] = [
   'Analyse du dossier, chaque exigence avec sa source',
   'Mémoire technique rédigé, export Word et PDF',
-  "Dossier complet en ZIP, dans l'ordre du règlement de la consultation",
+  "Dossier complet en ZIP, dans l’ordre du règlement de la consultation",
   'Coffre-fort documentaire, alerte avant expiration',
 ]
 
@@ -55,4 +55,4 @@ export function quotaLibelle(offre: Offre): string {
   return `${offre.analysesParMois} analyses + ${offre.memoiresParMois} mémoires par mois`
 }
 
-export const ESSAI_LIBELLE = `Essai : ${ESSAI.ao} AO offert à la création du compte, analyse et mémoire compris.`
+export const ESSAI_LIBELLE = `Essai : ${ESSAI.ao} AO offert à la création du compte, analyse et mémoire compris.`

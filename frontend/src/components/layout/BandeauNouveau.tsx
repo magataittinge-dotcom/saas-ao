@@ -12,7 +12,7 @@ import { organisationAssezAncienne } from '@/lib/bandeauNouveau'
 // phrase courte, qui est elle-même le lien (refonte groupe A : plus trois lignes au-dessus du titre à 390 px).
 const NOUVEAUTE = {
   id: 'source-surlignee-2026-10',
-  texte: 'Chaque exigence s’ouvre sur sa source : le passage du dossier de l’acheteur est surligné dans la pièce.',
+  texte: 'Chaque exigence s’ouvre sur sa source : le passage du dossier de l’acheteur est surligné dans la pièce.',
   // au téléphone : une ligne, une phrase courte lue en entier (jamais tronquée), qui mène au même endroit
   court: 'Sources surlignées dans les pièces',
   lien: { to: '/projects', libelle: 'Ouvrir un appel d’offres' },

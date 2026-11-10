@@ -39,7 +39,7 @@ test('l’ambre est réservé à ce qui demande une action', () => {
   for (const [entree, action] of attendu) assert.equal(statutPiece(entree).action, action, JSON.stringify(entree))
 })
 
-test('une pièce prête qui cesse d’être valable avant la remise est « À renouveler avant le dépôt »', () => {
+test('une pièce prête qui cesse d’être valable avant la remise est « À renouveler avant le dépôt »', () => {
   const p = { status: 'present', jointe: true, valable_jusqu_au: '2026-11-10' }
   assert.equal(statutPiece(p, '2026-11-20').texte, 'À renouveler avant le dépôt — valable jusqu’au 10/11/2026')
   assert.equal(statutPiece(p, '2026-11-20').code, 'a-renouveler')
@@ -47,12 +47,12 @@ test('une pièce prête qui cesse d’être valable avant la remise est « À re
   assert.equal(statutPiece(p, null).code, 'pret')           // échéance inconnue : on ne devine pas
 })
 
-test('« Prêt » exige un fait ; un « present » sans fichier reste « À joindre »', () => {
+test('« Prêt » exige un fait ; un « present » sans fichier reste « À joindre »', () => {
   assert.equal(statutPiece({ status: 'present', jointe: false }).code, 'a-joindre')
   assert.equal(statutPiece({ status: 'warning', jointe: false }).texte, 'Date de validité à confirmer')
 })
 
-test('compteur : « {n} pièces à joindre · {m} prêtes », sans fraction', () => {
+test('compteur : « {n} pièces à joindre · {m} prêtes », sans fraction', () => {
   const pieces = [
     { status: 'present', jointe: true, valable_jusqu_au: '2027-01-31' },
     { status: 'present', jointe: true },
@@ -70,7 +70,7 @@ test('compteur : « {n} pièces à joindre · {m} prêtes », sans fraction', ()
   assert.ok(!/\d\s*\/\s*\d/.test(libelleComptes(7, 3)))
 })
 
-test('statut d’une pièce du coffre : mêmes mots, jamais « Valide » ni « Expire »', () => {
+test('statut d’une pièce du coffre : mêmes mots, jamais « Valide » ni « Expire »', () => {
   assert.equal(statutDocument({ status: 'valid', expiry_date: '2027-03-01' }).texte, 'Prêt — valable jusqu’au 01/03/2027')
   assert.equal(statutDocument({ status: 'expired', expiry_date: '2026-03-01' }).code, 'a-renouveler')
   assert.equal(statutDocument({ status: 'unverified' }).texte, 'Date de validité à confirmer')
@@ -78,9 +78,9 @@ test('statut d’une pièce du coffre : mêmes mots, jamais « Valide » ni « E
   assert.equal(dateFr('2026-02-05T10:00:00'), '05/02/2026')
 })
 
-test('durées de validité sourcées : URSSAF = règle, Kbis = usage', () => {
-  assert.equal(noteValidite('urssaf'), 'Attestation URSSAF : valable 6 mois (Code du travail, art. D8222-5)')
-  assert.equal(noteValidite('kbis'), 'Kbis : 3 mois, usage courant des acheteurs')
+test('durées de validité sourcées : URSSAF = règle, Kbis = usage', () => {
+  assert.equal(noteValidite('urssaf'), 'Attestation URSSAF : valable 6 mois (Code du travail, art. D8222-5)')
+  assert.equal(noteValidite('kbis'), 'Kbis : 3 mois, usage courant des acheteurs')
   assert.equal(noteValidite('decennale'), null)   // aucune durée inventée
 })
 
@@ -103,12 +103,12 @@ test('le rendu pose les classes sémantiques, sans mot négatif', () => {
   // l'état de chaque pièce est dit en petit sous elle (EtatElement) : un mot, une icône, jamais la couleur seule
   for (const c of ['data-etat="a-couvrir"', 'data-etat="pret"', 'data-etat="a-verifier"']) assert.ok(html.includes(c), c)
   for (const mot of ['À joindre', 'Prêt — valable jusqu’au 01/03/2027', 'Si concerné']) assert.ok(html.includes(mot), mot)
-  assert.ok(html.includes('Attestation URSSAF : valable 6 mois (Code du travail, art. D8222-5)'))
-  assert.match(html.replace(/<[^>]+>/g, ''), /Lu dans le règlement de la consultation \(RC\) : « Le cas échéant/)
+  assert.ok(html.includes('Attestation URSSAF : valable 6 mois (Code du travail, art. D8222-5)'))
+  assert.match(html.replace(/<[^>]+>/g, ''), /Lu dans le règlement de la consultation \(RC\) : « Le cas échéant/)
   assert.ok(!/À fournir|Expiré|manquant|incomplet|absent/i.test(html.replace(/class="[^"]*"/g, '')))
 })
 
-test('le coffre-fort : statut positif, note de durée, jamais « Expire le »', () => {
+test('le coffre-fort : statut positif, note de durée, jamais « Expire le »', () => {
   const doc = { id: 'd', organization_id: 'o', type: 'urssaf', category: 'attestations_sociales_fiscales',
     file_url: '/x', file_name: 'urssaf.pdf', status: 'expired', expiry_date: '2026-03-01', uploaded_at: '2026-01-01' } as Document
   const html = renderToStaticMarkup(<FileCard document={doc} />)
@@ -127,13 +127,13 @@ const FICHIERS_PIECES = [
   'src/lib/statutPiece.ts', 'src/lib/vault.ts', 'src/lib/exportDossier.ts',
 ]
 const NEGATIFS: [RegExp, string][] = [
-  [/À fournir/i, '« À fournir »'],
-  [/\bExpir[ée]/i, '« Expiré »'],
-  [/Expire (bientôt|le)\b/i, '« Expire … »'],
-  [/manquant/i, '« manquant »'],
-  [/incompl[eè]t/i, '« incomplet »'],
-  [/\babsente?s?\b/i, '« absent »'],
-  [/Présente — à vérifier/i, '« Présente — à vérifier »'],
+  [/À fournir/i, '« À fournir »'],
+  [/\bExpir[ée]/i, '« Expiré »'],
+  [/Expire (bientôt|le)\b/i, '« Expire … »'],
+  [/manquant/i, '« manquant »'],
+  [/incompl[eè]t/i, '« incomplet »'],
+  [/\babsente?s?\b/i, '« absent »'],
+  [/Présente — à vérifier/i, '« Présente — à vérifier »'],
 ]
 
 test('aucun statut négatif dans les textes affichés des écrans de pièces', () => {
@@ -141,7 +141,7 @@ test('aucun statut négatif dans les textes affichés des écrans de pièces', (
   for (const f of FICHIERS_PIECES) {
     for (const t of textesAffiches(f)) {
       for (const [re, nom] of NEGATIFS) {
-        if (re.test(t.texte)) fautes.push(`${t.fichier}:${t.ligne} ${nom} — « ${t.texte.trim().slice(0, 80)} »`)
+        if (re.test(t.texte)) fautes.push(`${t.fichier}:${t.ligne} ${nom} — « ${t.texte.trim().slice(0, 80)} »`)
       }
     }
   }

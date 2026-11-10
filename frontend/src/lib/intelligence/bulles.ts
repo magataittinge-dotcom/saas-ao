@@ -85,7 +85,7 @@ export function calculerBulles(
     aria: aDecision.length ? `${aDecision.length} ${pluriel(aDecision.length, 'décision à prendre', 'décisions à prendre')}` : 'Aucune décision à prendre',
     fiche: aDecision.length
       ? ficheDepuisProjet(aDecision[0], maintenant, 'Décision à prendre')
-      : ficheVideAO('Décision à prendre', 'Aucune décision en attente', 'Quand une lecture sera terminée, la décision « on y va ? » apparaîtra ici.'),
+      : ficheVideAO('Décision à prendre', 'Aucune décision en attente', 'Quand une lecture sera terminée, la décision « on y va ? » apparaîtra ici.'),
   }
 
   // — Remise dans N jours : la plus proche des remises à venir sous 7 jours

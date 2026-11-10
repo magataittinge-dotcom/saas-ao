@@ -94,7 +94,7 @@ export function pieceDemandee(p: EtatPieceEntree, echeance?: string | null): boo
  * de remise est derrière nous (la coquille de l'AO le dit déjà : la phrase ne redonne pas une date dépassée).
  */
 export function phraseDepot(remise: { jour: string; heure?: string | null; passee: boolean } | null): string {
-  const debut = 'Dernière étape, hors Synorix : déposez ce dossier sur la plateforme de l’acheteur'
+  const debut = 'Dernière étape, hors Synorix : déposez ce dossier sur la plateforme de l’acheteur'
   if (!remise || !remise.jour) return `${debut} avant la date de remise.`
   if (remise.passee) return `${debut}.`
   return `${debut} avant le ${remise.jour}${remise.heure ? ` à ${remise.heure}` : ''}.`

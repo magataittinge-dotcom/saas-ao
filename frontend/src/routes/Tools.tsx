@@ -125,7 +125,7 @@ export default function Tools() {
 
           <div>
             <Bouton type="button" variante="lien" aria-expanded={options} onClick={() => setOptions((o) => !o)}>
-              {options ? 'Masquer les options avancées' : 'Options avancées : pénalités et intérêts moratoires'}
+              {options ? 'Masquer les options avancées' : 'Options avancées : pénalités et intérêts moratoires'}
             </Bouton>
           </div>
 
@@ -137,7 +137,7 @@ export default function Tools() {
               <GroupeChamp libelle="Diviseur des pénalités" aide="1/3000, clauses générales des marchés de travaux">
                 <ChampNombre valeur={diviseur} onChange={setDiviseur} min={1} />
               </GroupeChamp>
-              <GroupeChamp libelle="Taux de la BCE" aide="En décimal : 0,0415 pour 4,15 %">
+              <GroupeChamp libelle="Taux de la BCE" aide="En décimal : 0,0415 pour 4,15 %">
                 <ChampNombre valeur={tauxBce} onChange={setTauxBce} min={0} />
               </GroupeChamp>
               <GroupeChamp libelle="Retard de paiement">
@@ -166,7 +166,7 @@ export default function Tools() {
             {resultat.avertissements.map((a) => <Message key={a} ton="attention">{a}</Message>)}
             <Message ton="info">
               La retenue de garantie peut être remplacée, à votre initiative, par une caution personnelle et solidaire ou une garantie
-              à première demande (article 19 du <Sigle code="CCAG" /> Travaux ; Code de la commande publique, art. R2191-36).
+              à première demande (article 19 du <Sigle code="CCAG" /> Travaux ; Code de la commande publique, art. R2191-36).
             </Message>
             <p className="text-xs text-fg-3">
               Calcul indicatif : l’assiette et les plafonds définitifs sont ceux du <Sigle code="CCAP" /> de votre marché.

@@ -11,7 +11,7 @@ import { MAINTENANT, projet, remise, textesFiche } from './outils/projetsFactice
 
 const ids = (l: { id: string }[]) => l.map((p) => p.id)
 
-test('la prochaine action : l’AO à la remise la plus proche, parmi ceux en cours', () => {
+test('la prochaine action : l’AO à la remise la plus proche, parmi ceux en cours', () => {
   const p = [
     projet('loin', { ...remise('2026-11-20'), current_step: 2 }),
     projet('proche', { ...remise('2026-10-28'), current_step: 6 }),
@@ -29,11 +29,11 @@ test('l’ordre ne dépend pas de l’ordre d’arrivée des données (détermin
     projet('d'),
   ]
   const attendu = ids(classerParUrgence(p, MAINTENANT))
-  assert.deepEqual(attendu, ['c', 'b', 'a', 'd'], 'date, puis nom ; sans date en dernier')
+  assert.deepEqual(attendu, ['c', 'b', 'a', 'd'], 'date, puis nom ; sans date en dernier')
   assert.deepEqual(ids(classerParUrgence([...p].reverse(), MAINTENANT)), attendu)
 })
 
-test('les AO clos ne sont jamais proposés ; sans AO en cours : null', () => {
+test('les AO clos ne sont jamais proposés ; sans AO en cours : null', () => {
   const clos = ['soumis', 'gagné', 'perdu', 'sans_suite'] as const
   const p = clos.map((s, i) => projet(`c${i}`, { status: s, ...remise('2026-10-25') }))
   assert.equal(prochaineAction(p, MAINTENANT), null)
@@ -41,7 +41,7 @@ test('les AO clos ne sont jamais proposés ; sans AO en cours : null', () => {
   assert.equal(prochaineAction([...p, projet('ok', remise('2026-12-01'))], MAINTENANT)?.id, 'ok')
 })
 
-test('une date déjà passée sort des AO en cours (lib/etatAO.ts : « à mettre à jour ») ; un AO sans date passe après un AO daté', () => {
+test('une date déjà passée sort des AO en cours (lib/etatAO.ts : « à mettre à jour ») ; un AO sans date passe après un AO daté', () => {
   const p = [
     projet('passee', remise('2026-10-20')),
     projet('sansdate'),
@@ -64,10 +64,10 @@ test('un AO qui attend seulement la fin de l’analyse passe après ceux où l�
 
 test('chaque étape mène à son écran, avec le bon verbe', () => {
   const cas: [Parameters<typeof projet>[1], string, string][] = [
-    [{ current_step: 1 }, "Déposer le dossier de l'acheteur", '/projects/x/upload'],
+    [{ current_step: 1 }, "Déposer le dossier de l’acheteur", '/projects/x/upload'],
     [{ current_step: 2 }, 'Choisir le lot', '/projects/x/lots'],
     [{ current_step: 3 }, 'Lire ce dossier', '/projects/x/analysis'],
-    [{ current_step: 3, status: 'analyzed' }, 'Décider : on y va ?', '/projects/x/analysis'],
+    [{ current_step: 3, status: 'analyzed' }, 'Décider : on y va ?', '/projects/x/analysis'],
     [{ current_step: 4 }, 'Réunir les pièces', '/projects/x/verification'],
     [{ current_step: 5 }, 'Préparer le plan du mémoire', '/projects/x/plan'],
     [{ current_step: 5, processing_status: 'generating' }, 'Rédaction du mémoire en cours', '/projects/x/memoire'],
@@ -84,7 +84,7 @@ test('chaque étape mène à son écran, avec le bon verbe', () => {
   assert.equal(versEtape('x', 0), '/projects/x/upload')
 })
 
-test('la fiche dit l’état de la remise : jours, aujourd’hui, date à préciser, date passée', () => {
+test('la fiche dit l’état de la remise : jours, aujourd’hui, date à préciser, date passée', () => {
   const f = (over: Parameters<typeof projet>[1]) => ficheDepuisProjet(projet('x', over), MAINTENANT)
   assert.deepEqual(f(remise('2026-10-28')).statut, { ton: 'attention', texte: 'Remise dans 5 jours' })
   assert.equal(f(remise('2026-10-24')).statut?.texte, 'Remise dans 1 jour')
@@ -94,19 +94,19 @@ test('la fiche dit l’état de la remise : jours, aujourd’hui, date à préci
   assert.equal(f(remise('2026-10-20')).statut?.texte, 'Date de remise passée')
 })
 
-test('la date de remise s’écrit « Mercredi 28 octobre, 12 h »', () => {
+test('la date de remise s’écrit « Mercredi 28 octobre, 12 h »', () => {
   assert.equal(quandRemise(projet('x', remise('2026-10-28'))), 'Mercredi 28 octobre, 12 h')
   assert.equal(quandRemise(projet('x', { echeance: { date: '2026-10-28', heure: '14h30' } })), 'Mercredi 28 octobre, 14 h 30')
   assert.equal(quandRemise(projet('x', {})), null)
 })
 
-test('la fiche vide propose le premier geste : un nouvel AO', () => {
+test('la fiche vide propose le premier geste : un nouvel AO', () => {
   const f = ficheVide()
   assert.equal(f.cta?.vers, '/projects/new')
   assert.equal(f.titre, 'Aucun appel d’offres en cours')
 })
 
-test('ton : jamais « manquant / incomplet / absent », jamais de point d’exclamation, jamais de prix ni de conseil de prix', () => {
+test('ton : jamais « manquant / incomplet / absent », jamais de point d’exclamation, jamais de prix ni de conseil de prix', () => {
   const fiches: FicheAction[] = [ficheVide()]
   for (let s = 1; s <= 6; s++) for (const status of ['en_cours', 'analyzed'] as const) {
     for (const over of [{}, remise('2026-10-28'), remise('2026-10-20'), { processing_status: 'processing' }]) {
@@ -114,7 +114,7 @@ test('ton : jamais « manquant / incomplet / absent », jamais de point d’excl
     }
   }
   const interdits = [/manquant/i, /incompl[eè]t/i, /\babsente?s?\b/i, /!/, /\bprix\b/i, /€|euros?\b/i, /\btarif/i, /\bmontant/i, /\bchiffrage/i, /\bmoins-disant/i]
-  for (const f of fiches) for (const t of textesFiche(f)) for (const re of interdits) assert.doesNotMatch(t, re, `« ${t} »`)
+  for (const f of fiches) for (const t of textesFiche(f)) for (const re of interdits) assert.doesNotMatch(t, re, `« ${t} »`)
 })
 
 test('la fiche se rend avec un lien vers l’écran concerné et un second lien vers l’AO', () => {

@@ -20,11 +20,11 @@ const rendre = (props: Partial<Parameters<typeof DocumentView>[0]> = {}) =>
   renderToStaticMarkup(
     <DocumentView content={CONTENU} project={{ name: 'AO test' } as Project} docRef={{ current: null }} {...props} />)
 
-test('chaque partie rédigée a son bouton « Refaire cette partie », et rien sans le branchement', () => {
+test('chaque partie rédigée a son bouton « Refaire cette partie », et rien sans le branchement', () => {
   assert.equal((rendre().match(/Refaire cette partie/g) ?? []).length, 0)
   const html = rendre({ onRefaire: () => {} })
   assert.equal((html.match(/memoire-refaire/g) ?? []).length, 4)           // 4 sections rédigées
-  assert.match(html, /aria-label="Refaire cette partie : 1\. Implantation géographique"/)
+  assert.match(html, /aria-label="Refaire cette partie : 1\. Implantation géographique"/)
 })
 
 test('le bouton est désactivé pendant une rédaction', () => {
@@ -39,7 +39,7 @@ test('les ancres des sections ne changent pas (les liens de la relecture y point
   }
 })
 
-test('la confirmation ne montre aucun montant : « Ne décompte aucune unité », et dit que rien d’autre ne change', () => {
+test('la confirmation ne montre aucun montant : « Ne décompte aucune unité », et dit que rien d’autre ne change', () => {
   const html = renderToStaticMarkup(<CorpsConfirmationRefaire titre="4. Traitement des déchets" />)
   assert.match(html, /Ne décompte aucune unité/)
   assert.match(html, /Le reste du mémoire ne change pas/)
@@ -48,7 +48,7 @@ test('la confirmation ne montre aucun montant : « Ne décompte aucune unité »
 
 test('le bouton porte le nom de la partie pour les lecteurs d’écran', () => {
   const html = renderToStaticMarkup(<BoutonRefaire titre="2. Historique" onClick={() => {}} />)
-  assert.match(html, /aria-label="Refaire cette partie : 2\. Historique"/)
+  assert.match(html, /aria-label="Refaire cette partie : 2\. Historique"/)
 })
 
 test('l’écran du mémoire appelle la route de refaire, et ne lit plus aucune estimation en euros', () => {
@@ -58,7 +58,7 @@ test('l’écran du mémoire appelle la route de refaire, et ne lit plus aucune 
   assert.doesNotMatch(section, /estimation|cout_eur|€/)
 })
 
-test('aucun mot négatif ni point d’exclamation dans « Refaire cette partie »', () => {
+test('aucun mot négatif ni point d’exclamation dans « Refaire cette partie »', () => {
   const fautes = ['src/components/memoire/RefaireSection.tsx']
     .flatMap((f) => textesAffiches(f))
     .filter((t) => /manquant|incompl|absent|!/i.test(t.texte))

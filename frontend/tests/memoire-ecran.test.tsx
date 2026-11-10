@@ -34,7 +34,7 @@ test('chaque entrée du sommaire mène à la section de même nom', () => {
   const toutes = entrees.flatMap((e) => [e, ...e.enfants])
   assert.ok(toutes.length >= 10)
   for (const e of toutes) {
-    assert.equal(titreDe(html, e.id), normaliser(e.titre), `entrée « ${e.titre} » → #${e.id}`)
+    assert.equal(titreDe(html, e.id), normaliser(e.titre), `entrée « ${e.titre} » → #${e.id}`)
   }
   // seules les sections rédigées figurent au sommaire ; aucun identifiant en double
   assert.ok(!toutes.some((e) => e.id === 'sec-environnement'))
@@ -42,16 +42,16 @@ test('chaque entrée du sommaire mène à la section de même nom', () => {
   assert.equal(new Set(ids).size, ids.length)
 })
 
-test('plus aucun libellé sans accent sur l\'écran du mémoire', () => {
+test('plus aucun libellé sans accent sur l’écran du mémoire', () => {
   const sansAccent = /\b(dedies?|delai|estime|materiel|specifique|particulieres?|experience|ingenieur|echafaudage|articulee|occupe|memoire|genere|redige|reference|equipe|securite|qualite|methodologie|deja)\b/i
   const fautes = ['src/routes/project/StepMemoire.tsx', 'src/components/project/FormulaireMemoire.tsx', 'src/components/project/MemoirePreflight.tsx', 'src/components/project/RewritePassageBar.tsx']
     .flatMap((f) => textesAffiches(f))
     .filter((t) => sansAccent.test(t.texte))
-    .map((t) => `${t.fichier}:${t.ligne} « ${t.texte.trim()} »`)
+    .map((t) => `${t.fichier}:${t.ligne} « ${t.texte.trim()} »`)
   assert.deepEqual(fautes, [])
 })
 
-test("l'éditeur du mémoire corrige l'orthographe en français", () => {
+test("l’éditeur du mémoire corrige l’orthographe en français", () => {
   const code = sansCommentaires(lire('src/components/memoire/EditeurMemoire.tsx'))
   assert.match(code, /spellCheck\s*\n\s*lang="fr"/)
   assert.doesNotMatch(code, /spellCheck=\{false\}/)
@@ -89,25 +89,25 @@ test('les 2 champs obligatoires et le bouton viennent avant les options, qui son
   // ce qui est facultatif est dans le repli
   const repli = html.slice(html.indexOf('<details'))
   for (const t of ['Chef de chantier', 'Conducteur de travaux', 'Matériel spécifique au chantier', 'Contraintes particulières']) {
-    assert.ok(repli.includes(t), `${t} sous « Options »`)
+    assert.ok(repli.includes(t), `${t} sous « Options »`)
     assert.ok(html.indexOf(t) > iOptions, `${t} après le bouton`)
   }
 })
 
-test('un seul bouton principal, pas d\'« Étape suivante » grisé, pas d\'« Export .docx » sur cet écran', () => {
+test('un seul bouton principal, pas d\'« Étape suivante » grisé, pas d\'« Export .docx » sur cet écran', () => {
   const html = formulaire()
   assert.equal((html.match(/data-variante="principal"/g) ?? []).length, 1, 'un seul bouton principal')
   assert.ok(html.indexOf('data-variante="principal"') < html.indexOf('<details'), 'au-dessus des options')
   assert.ok(!html.includes('Étape suivante'))
   assert.ok(!html.includes('Export .docx'))
   const code = sansCommentaires(lire('src/routes/project/StepMemoire.tsx'))
-  assert.doesNotMatch(code, /Export \.docx|lancerExportWord|exportToWord/, 'plus d\'export Word sur l\'écran Mémoire')
+  assert.doesNotMatch(code, /Export \.docx|lancerExportWord|exportToWord/, 'plus d’export Word sur l’écran Mémoire')
   // l'étape suivante n'existe plus que sur le document rédigé, où elle est active
   assert.match(code, /<BoutonSuite\s+etape="Export"/)  // « Étape suivante : Export » (« Suivant : Export » au téléphone)
   assert.doesNotMatch(code, /disabled=\{!hasMemoire\}/)
 })
 
-test('le bouton dit « Rédiger le mémoire », ou « Régénérer le mémoire » quand il existe déjà ; il reste bloqué sans les 2 champs', () => {
+test('le bouton dit « Rédiger le mémoire », ou « Régénérer le mémoire » quand il existe déjà ; il reste bloqué sans les 2 champs', () => {
   assert.ok(formulaire().includes('Rédiger le mémoire'))
   assert.ok(formulaire({ hasMemoire: true }).includes('Régénérer le mémoire'))
   const bouton = (h: string) => h.match(/<button[^>]*data-variante="principal"[^>]*>/)?.[0] ?? ''
@@ -116,11 +116,11 @@ test('le bouton dit « Rédiger le mémoire », ou « Régénérer le mémoire �
   assert.match(bouton(formulaire({ variables: { ...VARIABLES_VIDES, nb_ouvriers: '4', delai: '3 mois' }, enCours: true })), /disabled=""/)
 })
 
-test('le profil tient en une ligne : le compte de Mon entreprise, puis « Compléter » (R23)', () => {
+test('le profil tient en une ligne : le compte de Mon entreprise, puis « Compléter » (R23)', () => {
   const donnees = { organisation: { name: 'Entreprise Test' }, profil: {}, equipe: [], references: [], documents: [], qualifications: [] }
   const html = renderToStaticMarkup(<MemoryRouter><LigneProfil donnees={donnees} /></MemoryRouter>)
   const texte = html.replace(/<!-- -->/g, '').replace(/<[^>]+>/g, '')
-  assert.match(texte, /Profil de l’entreprise : 1 information sur 34 · Compléter/)
+  assert.match(texte, /Profil de l’entreprise : 1 information sur 34 · Compléter/)
   assert.match(html, /<a[^>]*href="\/company"[^>]*>Compléter<\/a>/)
   assert.ok(!html.includes('Profil de votre entreprise'), 'plus de carte de profil')
   assert.equal(renderToStaticMarkup(<MemoryRouter><LigneProfil donnees={null} /></MemoryRouter>), '')
@@ -145,7 +145,7 @@ const ancienCorps = (variables: typeof VARIABLES_VIDES, pre: PreflightSelection)
   annexe_document_ids: pre.annexe_document_ids || undefined,
 })
 
-test('la charge utile envoyée au serveur est identique à celle d\'avant (même objet, mêmes clés)', () => {
+test('la charge utile envoyée au serveur est identique à celle d’avant (même objet, mêmes clés)', () => {
   const vide: PreflightSelection = { profile_overrides: null, reference_ids: null, update_profile: false,
     include_organigramme: false, gantt_phases: null, annexe_document_ids: null }
   const plein: PreflightSelection = { profile_overrides: { materiel: 'Grue' }, reference_ids: ['a', 'b'], update_profile: true,

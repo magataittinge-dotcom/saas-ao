@@ -56,11 +56,11 @@ export default function VaultSavePrompt({ suggestion, onDone }: Props) {
       <Archive size={16} className="shrink-0 text-accent-text" aria-hidden />
       <p className="min-w-0 flex-1 text-xs text-fg-2">
         {saved ? (
-          <>« {suggestion.fileName} » enregistré dans votre coffre-fort ({typeLabel}).</>
+          <>«&nbsp;{suggestion.fileName}&nbsp;» enregistré dans votre coffre-fort ({typeLabel}).</>
         ) : (
           <>
-            « {suggestion.fileName} » ressemble à un document de votre entreprise ({typeLabel}).
-            L&apos;enregistrer dans votre coffre-fort pour vos prochains appels d&apos;offres ?
+            «&nbsp;{suggestion.fileName}&nbsp;» ressemble à un document de votre entreprise ({typeLabel}).
+            L’enregistrer dans votre coffre-fort pour vos prochains appels d’offres ?
           </>
         )}
       </p>

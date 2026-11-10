@@ -19,7 +19,39 @@ export const INTERDITS: [RegExp, string][] = [
   [/\bupgrade\b/i, '« upgrade » (franglais)'],
   [/[A-ZÀ-Ü]{2,}[^a-zà-ü]*'[A-ZÀ-Ü]{3,}/u, 'capitales criées'],
   [/\S\s*(\s>|&gt;)\s*$/, 'chevron « > » en fin de libellé'],
+  // Mission MOTS (10/11/2026) : une seule voix sur tous les écrans
+  [/erreur fatale/i, '« erreur fatale »'],
+  [/\binvalides?\b/i, '« invalide » (dire ce qui n’a pas pu se faire)'],
+  [/\bveuillez\b/i, '« veuillez » (une phrase dit le geste)'],
+  [/\bcliquez\b/i, '« cliquez » (le verbe du geste : ouvrez, choisissez…)'],
+  [/\boups\b/i, '« oups »'],
+  [/révolutionnaire|en un clic/i, 'vantardise'],
+  [/\bSynorix IA\b/, '« Synorix IA » (Synorix suffit)'],
+  [/\.\.\.(?!\.)/, '« ... » → « … »'],
 ]
+
+// Typographie française : espace insécable (U+00A0 ou &nbsp;) avant « : », « ; », « ? » et à l'intérieur des guillemets.
+// Les requêtes média (« (prefers-reduced-motion: reduce) ») ne sont pas des textes.
+const TYPO: [RegExp, string][] = [
+  [/(\p{L}|[)»]) ?:(\s|$)/u, 'espace insécable avant « : »'],
+  [/(?<!&[a-z]+|&#\w+)(\p{L}|[)»]) ?[;?](\s|$)/u, 'espace insécable avant « ; » ou « ? »'],
+  [/«(?![  ]|&nbsp;)|(?<![  ]|&nbsp;)»/u, 'espace insécable à l’intérieur des guillemets'],
+]
+
+test('typographie française dans les textes affichés : insécables avant « : ; ? » et dans « »', () => {
+  const fautes: string[] = []
+  for (const f of fichiersSource()) {
+    if (/moteurVisage\.ts$|\/ui\/(sidebar|command)\.tsx$/.test(f)) continue
+    for (const t of textesAffiches(f)) {
+      if (/\((prefers-|min-|max-|pointer|hover|orientation)/.test(t.texte)) continue
+      if (/^\[\w+\]|^(ancre|apercu): /.test(t.texte)) continue // journaux de la console, jamais à l’écran
+      for (const [re, nom] of TYPO) {
+        if (re.test(t.texte)) fautes.push(`${t.fichier}:${t.ligne} ${nom} — « ${t.texte.trim().slice(0, 90)} »`)
+      }
+    }
+  }
+  assert.deepEqual(fautes, [])
+})
 
 test('aucun mot interdit, franglais ni capitales criées dans les textes affichés', () => {
   const fautes: string[] = []

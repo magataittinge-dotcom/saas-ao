@@ -50,7 +50,7 @@ export const DOC_TYPE_LABELS: Record<string, string> = {
   rc_civile: 'RC Civile', qualibat: 'Qualibat RGE', pro_btp: 'PRO BTP',
   cibtp: 'CIBTP', fiscal: 'Attestation fiscale', dc1: 'Lettre de candidature (DC1)', dc2: 'Déclaration du candidat (DC2)',
   rib: 'RIB', caces: 'CACES', amiante_ss4: 'Amiante SS4',
-  declaration_honneur: "Déclaration sur l'honneur", pouvoir: 'Pouvoir habilité',
-  organigramme_doc: 'Organigramme', chiffre_affaires: "Chiffre d'affaires",
+  declaration_honneur: "Déclaration sur l’honneur", pouvoir: 'Pouvoir habilité',
+  organigramme_doc: 'Organigramme', chiffre_affaires: "Chiffre d’affaires",
   effectifs: 'Effectifs', autre: 'Autre',
 }

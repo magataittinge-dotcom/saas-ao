@@ -129,9 +129,9 @@ function Banniere({ donnees, bordereau, logoSrc, edition }: Pick<Props, 'donnees
                 className={`${CHAMP} text-[12px] sm:text-right`}
               />
               <label className="mt-1 inline-flex items-center gap-2 text-[12px] sm:justify-end">
-                Couleur d'accent
+                Couleur d’accent
                 <input
-                  type="color" aria-label="Couleur d'accent" value={bordereau.couleur.toLowerCase()}
+                  type="color" aria-label="Couleur d’accent" value={bordereau.couleur.toLowerCase()}
                   onChange={(e) => edition.onChange({ couleur: e.target.value })}
                   className="h-7 w-10 cursor-pointer rounded-xs border border-current bg-transparent p-0.5 [@media(pointer:coarse)]:h-11"
                 />
@@ -272,12 +272,12 @@ function Particulier() {
 function TableauReferences({ tableau }: { tableau: NonNullable<FicheDonnees['references']> }) {
   const { total } = tableau
   const pluriel = total.chantiers > 1 ? 's' : ''
-  const entetes = ['N°', "Client / donneur d'ordre", 'Intervention', 'Chantier et travaux réalisés', 'Montant HT']
+  const entetes = ['N°', "Client / donneur d’ordre", 'Intervention', 'Chantier et travaux réalisés', 'Montant HT']
   if (tableau.lignes.length === 0) {
     // Aperçu seulement : ce bloc ne figure ni dans le PDF ni dans le Word tant qu'il n'y a pas de référence.
     return (
       <p className="mt-4 border border-dashed border-[color:var(--f-filet)] px-3 py-2.5 text-[12.5px] text-[color:var(--f-discret)]" data-references-vide>
-        Le tableau des références apparaîtra ici dès qu'une référence est ajoutée.{' '}
+        Le tableau des références apparaîtra ici dès qu’une référence est ajoutée.{' '}
         <Link to="/references" className="font-medium text-[color:var(--f-accent-texte)] underline underline-offset-2">Ajouter une référence</Link>
       </p>
     )

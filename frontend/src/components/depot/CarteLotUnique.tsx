@@ -19,10 +19,10 @@ export default function CarteLotUnique({ lot, ecartes, onOuvrirLots }: {
   return (
     <Carte data-lot-unique="">
       <p className="break-words text-base font-semibold text-fg">
-        {lot.marcheUnique ? 'Ce dossier n’a pas de lots : ' : 'Ce dossier a un seul lot : '}{lot.designation}
+        {lot.marcheUnique ? 'Ce dossier n’a pas de lots : ' : 'Ce dossier a un seul lot : '}{lot.designation}
       </p>
       <p className="mt-1 text-sm text-fg-2">
-        Aucun écran de choix à passer. « Lire ce dossier » relève chaque exigence avec sa source ; la lecture décompte {libelleUnites(1)} de votre abonnement et ne démarre qu’au clic.
+        Aucun écran de choix à passer. «&nbsp;Lire ce dossier&nbsp;» relève chaque exigence avec sa source ; la lecture décompte {libelleUnites(1)} de votre abonnement et ne démarre qu’au clic.
       </p>
       {ecartesPhrase && <p className="mt-1 text-sm text-fg-2">{ecartesPhrase}</p>}
       <Bouton variante="lien" className="mt-3" onClick={onOuvrirLots}>Ouvrir l’écran des lots</Bouton>

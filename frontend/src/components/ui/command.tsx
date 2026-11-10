@@ -27,7 +27,7 @@ Command.displayName = CommandPrimitive.displayName
 const CommandDialog = ({
   children,
   titre = "Rechercher dans Synorix",
-  description = "Tapez le nom d'un appel d'offres ou d'une page, puis Entrée.",
+  description = 'Tapez le nom d’un appel d’offres ou d’une page, puis Entrée.',
   ...props
 }: DialogProps & { titre?: string; description?: string }) => {
   return (

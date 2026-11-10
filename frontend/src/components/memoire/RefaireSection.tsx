@@ -17,7 +17,7 @@ export function BoutonRefaire({
   desactive?: boolean
 }) {
   return (
-    <Bouton variante="discret" onClick={onClick} disabled={desactive} aria-label={`Refaire cette partie : ${titre}`} className="memoire-refaire px-2.5">
+    <Bouton variante="discret" onClick={onClick} disabled={desactive} aria-label={`Refaire cette partie : ${titre}`} className="memoire-refaire px-2.5">
       <RefreshCw aria-hidden="true" /> Refaire cette partie
     </Bouton>
   )
@@ -29,8 +29,8 @@ export function CorpsConfirmationRefaire({ titre }: { titre: string }) {
   return (
     <div className="space-y-2 text-sm text-fg-2">
       <p>
-        Synorix réécrit « {titre} » à partir de votre dossier et de la fiche de cette partie. Le reste du mémoire ne
-        change pas ; le texte actuel de cette partie est remplacé.
+        Synorix réécrit «&nbsp;{titre}&nbsp;» à partir de votre dossier et de la fiche de cette partie. Le reste du mémoire ne
+        change pas ; le texte actuel de cette partie est remplacé.
       </p>
       <p className="font-semibold text-fg">Ne décompte aucune unité.</p>
     </div>
@@ -50,7 +50,7 @@ export default function ConfirmationRefaire({
     <DialogueConfirmation
       ouvert
       onOuvert={(ouvert) => { if (!ouvert) onAnnuler() }}
-      titre="Refaire cette partie ?"
+      titre="Refaire cette partie ?"
       libelleConfirmer="Refaire cette partie"
       libelleEnCours="Lancement…"
       enCours={enCours}

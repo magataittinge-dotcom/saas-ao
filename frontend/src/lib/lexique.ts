@@ -36,36 +36,36 @@ export const LEXIQUE: Record<CodeSigle, EntreeLexique> = {
   // F32130 ; CCP R2132-1
   DCE: {
     sigle: 'DCE',
-    developpe: "dossier de l'acheteur",
-    explication: "Toutes les pièces publiées par l'acheteur pour cet appel d'offres.",
-    source: 'CCP R2132-1 ; service-public F32130',
+    developpe: "dossier de l’acheteur",
+    explication: "Toutes les pièces publiées par l’acheteur pour cet appel d’offres.",
+    source: 'CCP R2132-1 ; service-public F32130',
   },
   // F32130, rubrique « Règlement de la consultation (RC) »
   RC: {
     sigle: 'RC',
     developpe: 'règlement de la consultation',
-    explication: 'Le mode d’emploi pour répondre : pièces à remettre, date limite, critères de note.',
+    explication: 'Le mode d’emploi pour répondre : pièces à remettre, date limite, critères de note.',
     source: 'service-public F32130',
   },
   // F32130, rubrique CCAP : délais d'exécution, avances, acomptes et garanties, délais de paiement et pénalités
   CCAP: {
     sigle: 'CCAP',
     developpe: 'clauses administratives',
-    explication: 'Le contrat : délais, avances, paiements, pénalités et garanties.',
+    explication: 'Le contrat : délais, avances, paiements, pénalités et garanties.',
     source: 'service-public F32130',
   },
   // F32130, rubrique CCTP : spécifications techniques, normes à appliquer, plans
   CCTP: {
     sigle: 'CCTP',
     developpe: 'clauses techniques',
-    explication: 'Ce qu’il faut réaliser, et comment : spécifications techniques, normes, plans.',
+    explication: 'Ce qu’il faut réaliser, et comment : spécifications techniques, normes, plans.',
     source: 'service-public F32130',
   },
   // F32130 : CCAG « pas joints aux documents de la consultation » ; « s'applique uniquement si le marché le mentionne »
   CCAG: {
     sigle: 'CCAG',
     developpe: 'clauses administratives générales',
-    explication: 'Le texte standard auquel le contrat peut renvoyer ; il n’est pas joint au dossier.',
+    explication: 'Le texte standard auquel le contrat peut renvoyer ; il n’est pas joint au dossier.',
     source: 'service-public F32130',
   },
   // F32130 et F32154 : « décomposant les éléments du prix forfaitaire […], avec les quantités et les éléments à chiffrer »
@@ -93,28 +93,28 @@ export const LEXIQUE: Record<CodeSigle, EntreeLexique> = {
   AE: {
     sigle: 'AE',
     developpe: 'acte d’engagement',
-    explication: 'La pièce par laquelle le candidat s’engage sur son prix ; elle se signe le plus souvent à l’attribution.',
+    explication: 'La pièce par laquelle le candidat s’engage sur son prix ; elle se signe le plus souvent à l’attribution.',
     source: 'service-public F32130 et F23784',
   },
   // F32130 : « ATTRI1 - Acte d'engagement (ex-DC3) » ; R17445 : modèle facultatif
   ATTRI1: {
     sigle: 'ATTRI1',
     developpe: 'modèle d’acte d’engagement',
-    explication: 'Le modèle facultatif de l’État pour l’acte d’engagement ; l’acheteur peut utiliser le sien.',
+    explication: 'Le modèle facultatif de l’État pour l’acte d’engagement ; l’acheteur peut utiliser le sien.',
     source: 'service-public R17445 et F32130',
   },
   // R65918 : « Formulaire non obligatoire » ; F32130 : le RC indique les documents à remplir (DC1 et DC2 ou Dume)
   DC1: {
     sigle: 'DC1',
     developpe: 'lettre de candidature',
-    explication: 'Un modèle facultatif ; l’acheteur indique dans le règlement s’il le demande.',
+    explication: 'Un modèle facultatif ; l’acheteur indique dans le règlement s’il le demande.',
     source: 'service-public R65918 et F32130',
   },
   // R65921 : « Formulaire non obligatoire » ; F32130 idem
   DC2: {
     sigle: 'DC2',
     developpe: 'déclaration du candidat',
-    explication: 'Un modèle facultatif ; l’acheteur indique dans le règlement s’il le demande.',
+    explication: 'Un modèle facultatif ; l’acheteur indique dans le règlement s’il le demande.',
     source: 'service-public R65921 et F32130',
   },
   // F32144 (B1 n°43) : un DC4 par sous-traitant
@@ -129,7 +129,7 @@ export const LEXIQUE: Record<CodeSigle, EntreeLexique> = {
     sigle: 'DUME',
     developpe: 'document unique de marché européen',
     explication: 'Un formulaire européen de candidature, que l’acheteur accepte à la place de la candidature habituelle.',
-    source: 'CCP R2143-4 ; service-public F32130',
+    source: 'CCP R2143-4 ; service-public F32130',
   },
 }
 

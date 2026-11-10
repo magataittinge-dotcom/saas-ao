@@ -28,7 +28,7 @@ export function LigneProfil({ donnees }: { donnees: DonneesEntreprise | null }) 
   if (!donnees) return null
   return (
     <p className="text-sm text-fg-2">
-      Profil de l’entreprise : <span className="chiffres">{libelleAvancement(avancementTotal(donnees))}</span>
+      Profil de l’entreprise : <span className="chiffres">{libelleAvancement(avancementTotal(donnees))}</span>
       {' · '}
       <Link to="/company" className="font-medium text-fg underline underline-offset-2">Compléter</Link>
     </p>
@@ -56,13 +56,13 @@ export default function FormulaireMemoire({
       {/* ── L'essentiel : 2 champs, un bouton ── */}
       <Carte className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
-          <GroupeChamp libelle="Nombre d’ouvriers dédiés" aide="Exemple : 4">
+          <GroupeChamp libelle="Nombre d’ouvriers dédiés" aide="Exemple : 4">
             <ChampNombre
               valeur={Number.isFinite(ouvriers) ? ouvriers : null} min={0}
               onChange={(n) => onVariables({ ...variables, nb_ouvriers: n == null ? '' : String(Math.round(n)) })}
             />
           </GroupeChamp>
-          <GroupeChamp libelle="Délai estimé" aide="Exemple : 3 mois">
+          <GroupeChamp libelle="Délai estimé" aide="Exemple : 3 mois">
             <Champ value={variables.delai} onChange={maj('delai')} />
           </GroupeChamp>
         </div>
@@ -95,32 +95,32 @@ export default function FormulaireMemoire({
           <div className="space-y-4">
             <div>
               <h3 className="text-sm font-semibold text-fg">Informations spécifiques à ce chantier</h3>
-              <p className="mt-1 text-xs text-fg-3">Ces informations seront intégrées dans le mémoire pour ce projet.</p>
+              <p className="mt-1 text-xs text-fg-3">Ces informations seront intégrées dans le mémoire de cet appel d’offres.</p>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <GroupeChamp libelle="Chef de chantier — nom" aide="Exemple : Jean Dupont">
+              <GroupeChamp libelle="Chef de chantier — nom" aide="Exemple : Jean Dupont">
                 <Champ value={variables.chef_chantier_nom} onChange={maj('chef_chantier_nom')} />
               </GroupeChamp>
-              <GroupeChamp libelle="Qualification du chef de chantier" aide="Exemple : 15 ans d’expérience, CACES R482">
+              <GroupeChamp libelle="Qualification du chef de chantier" aide="Exemple : 15 ans d’expérience, CACES R482">
                 <Champ value={variables.chef_chantier_qualification} onChange={maj('chef_chantier_qualification')} />
               </GroupeChamp>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <GroupeChamp libelle="Conducteur de travaux — nom" aide="Exemple : Marie Martin">
+              <GroupeChamp libelle="Conducteur de travaux — nom" aide="Exemple : Marie Martin">
                 <Champ value={variables.conducteur_travaux_nom} onChange={maj('conducteur_travaux_nom')} />
               </GroupeChamp>
-              <GroupeChamp libelle="Qualification du conducteur de travaux" aide="Exemple : ingénieur BTP, 10 ans ITE/ravalement">
+              <GroupeChamp libelle="Qualification du conducteur de travaux" aide="Exemple : ingénieur BTP, 10 ans ITE/ravalement">
                 <Champ value={variables.conducteur_travaux_qualification} onChange={maj('conducteur_travaux_qualification')} />
               </GroupeChamp>
             </div>
 
-            <GroupeChamp libelle="Matériel spécifique au chantier" aide="Exemple : échafaudage tubulaire R200, nacelle articulée 20 m…">
+            <GroupeChamp libelle="Matériel spécifique au chantier" aide="Exemple : échafaudage tubulaire R200, nacelle articulée 20 m…">
               <ZoneTexte value={variables.materiel_specifique} onChange={maj('materiel_specifique')} rows={2} />
             </GroupeChamp>
 
-            <GroupeChamp libelle="Contraintes particulières" aide="Exemple : site occupé, horaires restreints 8 h-17 h…">
+            <GroupeChamp libelle="Contraintes particulières" aide="Exemple : site occupé, horaires restreints 8 h-17 h…">
               <ZoneTexte value={variables.particularites} onChange={maj('particularites')} rows={2} />
             </GroupeChamp>
           </div>

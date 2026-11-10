@@ -44,7 +44,7 @@ test('aucun sigle du lexique n’est affiché sans son développement', () => {
       texte = texte.replace(/\b[A-Z0-9]+\.(xlsx?|docx?|pdf)\b/g, '').replace(/\bRC (Civile|Pro)\b/g, '')
       for (const code of SIGLES) {
         if (new RegExp(`(?<![A-Za-z0-9])${code}(?![A-Za-z0-9])`).test(texte)) {
-          fautes.push(`${f}:${t.ligne} « ${code} » nu — « ${t.texte.trim().slice(0, 80)} »`)
+          fautes.push(`${f}:${t.ligne} « ${code} » nu — « ${t.texte.trim().slice(0, 80)} »`)
         }
       }
     }
@@ -59,19 +59,19 @@ test('aucun fichier n’est exempté de la règle des sigles', () => {
 test('le dépôt du dossier et l’export passent par <Sigle> et par la forme développée des messages', () => {
   assert.match(lire('src/routes/NewProject.tsx'), /<Sigle code="DCE" \/>/)
   const export_ = lire('src/routes/project/StepExport.tsx')
-  assert.match(export_, /<Sigle code="DPGF"/, 'la DPGF passe par <Sigle> (développée à sa première apparition) ; la carte du résumé écrit « Tableau des prix »')
-  assert.match(export_, /titre="Tableau des prix"/, 'la section dit « Tableau des prix » sans sigle nu')
-  assert.match(export_, /developper\('DPGF'\)/, 'messages d’erreur : forme développée')
+  assert.match(export_, /<Sigle code="DPGF"/, 'la DPGF passe par <Sigle> (développée à sa première apparition) ; la carte du résumé écrit « Tableau des prix »')
+  assert.match(export_, /titre="Tableau des prix"/, 'la section dit « Tableau des prix » sans sigle nu')
+  assert.match(export_, /developper\('DPGF'\)/, 'messages d’erreur : forme développée')
 })
 
-test('le composant : développé une fois par écran, abrégé ensuite, toujours développé sans écran', () => {
+test('le composant : développé une fois par écran, abrégé ensuite, toujours développé sans écran', () => {
   const deux = renderToStaticMarkup(
     <PorteeSigles>
       <p>Lisez le <Sigle code="DCE" /> puis le <Sigle code="DCE" />.</p>
       <p><Sigle code="RC" majuscule /></p>
     </PorteeSigles>,
   )
-  assert.equal(deux.split("dossier de l&#x27;acheteur (").length - 1, 1, 'développé une seule fois')
+  assert.equal(deux.split("dossier de l’acheteur (").length - 1, 1, 'développé une seule fois')
   assert.equal(deux.split('>DCE<').length - 1, 2, 'le sigle reste un bouton les deux fois')
   assert.ok(deux.includes('Règlement de la consultation ('), 'majuscule en début de phrase')
   const seul = renderToStaticMarkup(<p><Sigle code="CCAP" /> et <Sigle code="CCAP" /></p>)

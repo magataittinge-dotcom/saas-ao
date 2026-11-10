@@ -82,7 +82,7 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
       ouvert
       onOuvert={(ouvert) => { if (!ouvert) onClose() }}
       titre="Choisir une pièce du coffre-fort"
-      description={<>Pour : {nom}</>}
+      description={<>Pour : {nom}</>}
       actions={<>
         <Bouton variante="secondaire" onClick={onClose}>Fermer</Bouton>
         <Bouton variante="secondaire" disabled={occupe} enCours={uploading} libelleEnCours="Dépôt en cours…" onClick={() => fileInputRef.current?.click()}>
@@ -114,7 +114,7 @@ export default function VaultPickerModal({ item, onClose, onLink, onUploadNew }:
           enCours={requete.isFetching}
         />
       ) : documents.length === 0 ? (
-        <p className="text-sm text-fg-2">Votre coffre-fort ne contient pas encore de pièce. Déposez le fichier ici : il y sera rangé, puis joint à ce dossier.</p>
+        <p className="text-sm text-fg-2">Votre coffre-fort ne contient pas encore de pièce. Déposez le fichier ici : il y sera rangé, puis joint à ce dossier.</p>
       ) : (
         <>
           <ChampRecherche

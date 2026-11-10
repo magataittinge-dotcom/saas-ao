@@ -122,7 +122,7 @@ export function construireBulles(d: DonneesEntreprise, aujourdhui: Date = new Da
   const effectif: Bulle = {
     id: 'effectif', rubrique: 'moyens', libelle: 'Effectif', cote: 'gauche', ancre: { x: 0.16, y: 0.5 },
     valeur: total > 0 ? accorder(total, 'salarié', 'salariés') : A_RENSEIGNER, renseignee: total > 0,
-    detail: chefs > 0 ? accorder(chefs, "chef d'équipe", "chefs d'équipe")
+    detail: chefs > 0 ? accorder(chefs, "chef d’équipe", "chefs d’équipe")
       : personnes > 0 ? accorder(personnes, 'personne clé', 'personnes clés') : 'Effectifs par catégorie à renseigner',
   }
 
@@ -137,7 +137,7 @@ export function construireBulles(d: DonneesEntreprise, aujourdhui: Date = new Da
     echafaudage.length > 0 && (() => {
       const unite = texte(echafaudage[0].unite)
       const q = echafaudage.reduce((t, l) => t + quantite(l), 0)
-      return unite ? `${q} ${unite} d'échafaudage` : 'échafaudage'
+      return unite ? `${q} ${unite} d’échafaudage` : 'échafaudage'
     })(),
   ].filter((x): x is string => Boolean(x))
   const enTexteLibre = texte(profil?.vehicules) || texte(profil?.materiel)
@@ -156,7 +156,7 @@ export function construireBulles(d: DonneesEntreprise, aujourdhui: Date = new Da
   const qualifications: Bulle = {
     id: 'qualifications', rubrique: 'certifications', libelle: 'Qualifications', cote: 'droite', ancre: { x: 0.74, y: 0.3 },
     valeur: intitules.join(' · ') || (auCoffre ? 'Au coffre-fort' : A_RENSEIGNER), renseignee: intitules.length > 0 || auCoffre,
-    detail: prochaine ? (prochaine.passee ? `À renouveler (échue le ${dateFr(prochaine.iso)})` : `Prochaine échéance : ${dateFr(prochaine.iso)}`) : 'Échéance à renseigner',
+    detail: prochaine ? (prochaine.passee ? `À renouveler (échue le ${dateFr(prochaine.iso)})` : `Prochaine échéance : ${dateFr(prochaine.iso)}`) : 'Échéance à renseigner',
   }
 
   // Références
@@ -167,7 +167,7 @@ export function construireBulles(d: DonneesEntreprise, aujourdhui: Date = new Da
     id: 'references', rubrique: 'certifications', libelle: 'Références', cote: 'droite', ancre: { x: 0.84, y: 0.5 },
     valeur: refs.length > 0 ? [accorder(refs.length, 'chantier', 'chantiers'), cumule > 0 && euros(cumule)].filter(Boolean).join(' · ') : A_RENSEIGNER,
     renseignee: refs.length > 0,
-    detail: maitres.length > 0 ? maitres.join(' · ') : refs.length > 0 ? "Maîtres d'ouvrage à renseigner" : 'Chantiers terminés de moins de cinq ans',
+    detail: maitres.length > 0 ? maitres.join(' · ') : refs.length > 0 ? "Maîtres d’ouvrage à renseigner" : 'Chantiers terminés de moins de cinq ans',
   }
 
   // Assurances
@@ -176,7 +176,7 @@ export function construireBulles(d: DonneesEntreprise, aujourdhui: Date = new Da
   const bulleAssurances: Bulle = {
     id: 'assurances', rubrique: 'certifications', libelle: 'Assurances', cote: 'droite', ancre: { x: 0.76, y: 0.72 },
     valeur: assurances.join(' · ') || A_RENSEIGNER, renseignee: assurances.length > 0,
-    detail: finAssurance ? (finAssurance.passee ? `À renouveler (échues le ${dateFr(finAssurance.iso)})` : `Valables jusqu'au ${dateFr(finAssurance.iso)}`)
+    detail: finAssurance ? (finAssurance.passee ? `À renouveler (échues le ${dateFr(finAssurance.iso)})` : `Valables jusqu’au ${dateFr(finAssurance.iso)}`)
       : assurances.length > 0 ? 'Date de validité à renseigner' : 'Décennale et responsabilité civile',
   }
 
@@ -197,7 +197,7 @@ export function faitsCles(d: DonneesEntreprise, rubrique: RubriqueId): Fait[] {
       { libelle: 'Raison sociale', valeur: ouNull([texte(org?.name), texte(org?.forme_juridique)].filter(Boolean).join(' · ')) },
       { libelle: 'SIRET', valeur: texte(org?.siret) ? 'Renseigné' : null },
       { libelle: 'Dirigeant', valeur: ouNull(texte(profil?.gerant_nom)) },
-      { libelle: "Zone d'intervention", valeur: ouNull(texte(profil?.zone_intervention)) },
+      { libelle: "Zone d’intervention", valeur: ouNull(texte(profil?.zone_intervention)) },
     ]
   }
   if (rubrique === 'moyens') {
@@ -206,7 +206,7 @@ export function faitsCles(d: DonneesEntreprise, rubrique: RubriqueId): Fait[] {
     const nbVehicules = lignesMoyens(profil?.vehicules_liste).reduce((t, l) => t + quantite(l), 0)
     return [
       { libelle: 'Effectif', valeur: total > 0 ? accorder(total, 'salarié', 'salariés') : null },
-      { libelle: "Chefs d'équipe", valeur: chefs > 0 ? String(chefs) : null },
+      { libelle: "Chefs d’équipe", valeur: chefs > 0 ? String(chefs) : null },
       { libelle: 'Véhicules', valeur: nbVehicules > 0 ? String(nbVehicules) : texte(profil?.vehicules) ? 'Décrits' : null },
       { libelle: 'Sécurité', valeur: texte(profil?.gestion_securite) ? 'Renseignée' : null },
     ]
@@ -220,6 +220,6 @@ export function faitsCles(d: DonneesEntreprise, rubrique: RubriqueId): Fait[] {
     { libelle: 'Qualifications', valeur: ouNull(quals.slice(0, 2).join(' · ')) ?? (aDocument(d, 'qualibat', 'rge') ? 'Au coffre-fort' : null) },
     { libelle: 'Assurances', valeur: ouNull(assurances.join(' · ')) },
     { libelle: 'Chantiers', valeur: refs.length > 0 ? [String(refs.length), cumule > 0 && euros(cumule)].filter(Boolean).join(' · ') : null },
-    { libelle: "Chiffre d'affaires", valeur: exercices > 0 ? accorder(exercices, 'exercice', 'exercices') : null },
+    { libelle: "Chiffre d’affaires", valeur: exercices > 0 ? accorder(exercices, 'exercice', 'exercices') : null },
   ]
 }

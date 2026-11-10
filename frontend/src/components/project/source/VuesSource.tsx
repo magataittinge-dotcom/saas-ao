@@ -145,7 +145,7 @@ export function VueSansPage({ reponse, lien, children, champ = false }: {
   const phrase = sansApercu
     ? 'Cette pièce n’a pas d’aperçu à l’écran pour le moment. Vous pouvez l’ouvrir en entier.'
     : champ
-      ? 'Ce fait est lu dans la pièce ; la page exacte n’est pas repérée. Vous pouvez ouvrir la pièce en entier.'
+      ? 'Ce fait est lu dans la pièce ; la page exacte n’est pas repérée. Vous pouvez ouvrir la pièce en entier.'
       : 'Cette exigence s’appuie sur la pièce dans son ensemble.'
   return (
     <div className="source-vide" role="status">

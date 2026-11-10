@@ -47,7 +47,7 @@ export function ListeRelecture({ donnees, onAller, onSource }: {
             {l.detail && <p className="mt-0.5 text-xs text-fg-3">{l.detail}</p>}
             <p className="mt-1 flex flex-wrap items-center gap-x-4 text-sm">
               {l.ancre && l.section && (
-                <Bouton variante="lien" onClick={() => onAller(l)} className="h-auto min-h-9 whitespace-normal text-left">Aller à : {l.section}</Bouton>
+                <Bouton variante="lien" onClick={() => onAller(l)} className="h-auto min-h-9 whitespace-normal text-left">Aller à : {l.section}</Bouton>
               )}
               {l.lien && <Link to={l.lien} className={classesBouton('lien', 'min-h-9')}>Renseigner dans Mon entreprise</Link>}
               {l.source && <Bouton variante="lien" onClick={() => onSource(l.source as SourceLigne)} className="min-h-9">Voir dans le dossier</Bouton>}
@@ -119,7 +119,7 @@ export default function RelectureMemoire({ projectId }: { projectId: string }) {
           <header className="shrink-0 border-b border-bord px-5 py-4 pr-14">
             <SheetTitle className="text-lg font-semibold text-fg">Relire mon mémoire</SheetTitle>
             <SheetDescription className="mt-1 text-sm text-fg-2">
-              Contrôle sur le texte, sans IA : critères du règlement, pièces, passages à compléter, DTU, longueur.
+              Contrôle sur le texte, sans IA : critères du règlement, pièces, passages à compléter, DTU, longueur.
             </SheetDescription>
           </header>
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
@@ -149,7 +149,7 @@ export default function RelectureMemoire({ projectId }: { projectId: string }) {
               <div className="space-y-4">
                 <ListeRelecture donnees={data} onAller={aller} onSource={ouvrirSource} />
                 {data.limite_pages !== null && (
-                  <p className="border-t border-bord pt-3 text-xs text-fg-3">Longueur estimée : environ {data.pages_estimees} pages, pour {data.limite_pages} au plus dans le règlement.</p>
+                  <p className="border-t border-bord pt-3 text-xs text-fg-3">Longueur estimée : environ {data.pages_estimees} pages, pour {data.limite_pages} au plus dans le règlement.</p>
                 )}
                 {avis && <Message ton="attention">{avis}</Message>}
               </div>

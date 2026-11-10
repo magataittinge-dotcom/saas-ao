@@ -68,7 +68,7 @@ export default function SommaireMemoire({
                   <span className="memoire-a-couvrir font-semibold text-bleu-ink">À couvrir</span>
                   <span className="text-fg-2"> · {libelleSousCritere(c.nom, c.poids)}</span>
                   {sourceCriteres && onOpenSource && (
-                    <Bouton variante="lien" onClick={() => onOpenSource(sourceCriteres)} aria-label={`Voir dans le dossier : ${c.nom}`} className="flex text-xs">
+                    <Bouton variante="lien" onClick={() => onOpenSource(sourceCriteres)} aria-label={`Voir dans le dossier : ${c.nom}`} className="flex text-xs">
                       Voir dans le dossier
                     </Bouton>
                   )}

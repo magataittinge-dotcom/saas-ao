@@ -137,7 +137,7 @@ export function pointsAVerifier(
 
 /** Le texte à poser sur le profil d'acheteur : la question, sa référence dans le dossier, une formule de politesse. */
 export function texteACopier(p: Pick<PointAEclaircir, 'question' | 'source_document' | 'source_page'>): string {
-  const ref = p.source_document ? `\n(Référence : ${p.source_document}${p.source_page ? `, page ${p.source_page}` : ''}.)` : ''
+  const ref = p.source_document ? `\n(Référence : ${p.source_document}${p.source_page ? `, page ${p.source_page}` : ''}.)` : ''
   return `Bonjour,\n\n${p.question.trim()}${ref}\n\nMerci par avance de votre réponse.`
 }
 
@@ -164,7 +164,7 @@ export function libelleDateQuestions(d: DateQuestions | null | undefined): { lib
     libelle,
     valeur: d.heure ? `${jour} · ${d.heure}` : jour,
     precision: reponse
-      ? `Posez vos questions avant cette date : l’acheteur répond ${nb} avant la remise des offres.`
+      ? `Posez vos questions avant cette date : l’acheteur répond ${nb} avant la remise des offres.`
       : d.regle === 'relative' && d.jours ? `${nb} avant la remise des offres` : null,
   }
 }

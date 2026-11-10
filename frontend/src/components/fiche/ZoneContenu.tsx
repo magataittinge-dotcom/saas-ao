@@ -65,7 +65,7 @@ export default function ZoneContenu({ rubrique, donnees, libres, onLibres, apres
   const lignes = contenuDeLaFiche(rubrique, donnees, libres)
   return (
     <section aria-labelledby="zone-contenu" data-zone="contenu" className="min-w-0">
-      <TitreSection id="zone-contenu">Ce qu'il y a dans la fiche</TitreSection>
+      <TitreSection id="zone-contenu">Ce qu’il y a dans la fiche</TitreSection>
       <div className="grid gap-6">
         <p className="max-w-prose text-sm text-fg-2" data-a-quoi-sert="">{A_QUOI_SERT[rubrique]}</p>
         <ul className="overflow-hidden rounded-lg border border-bord bg-surface-0" data-sections-fiche="">
@@ -78,7 +78,7 @@ export default function ZoneContenu({ rubrique, donnees, libres, onLibres, apres
                   {l.numero && <span className="chiffres mr-2 text-fg-3" aria-hidden>{l.numero}</span>}{l.titre}
                 </span>
                 <PastilleEtat sens={prete ? 'vert' : 'gris'}>{LIBELLE_ETAT[l.etat]}</PastilleEtat>
-                <Link to={l.lien} aria-label={`${prete ? 'Modifier' : 'Renseigner'} : ${l.titre}`} className={classesBouton('lien', 'ml-auto min-h-11 text-sm')}>
+                <Link to={l.lien} aria-label={`${prete ? 'Modifier' : 'Renseigner'} : ${l.titre}`} className={classesBouton('lien', 'ml-auto min-h-11 text-sm')}>
                   {prete ? 'Modifier' : 'Renseigner'}
                 </Link>
               </li>

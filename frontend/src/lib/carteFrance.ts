@@ -181,7 +181,7 @@ export function regrouperBulles(
 
 /** « 115 avis ouverts dans 4 départements : Paris, Hauts-de-Seine, … » (nom lu par les lecteurs d'écran, repris dans l'infobulle). */
 export function libelleGroupe(noms: readonly string[], total: number): string {
-  return `${total} avis ouverts dans ${noms.length} départements : ${noms.join(', ')}`
+  return `${total} avis ouverts dans ${noms.length} départements : ${noms.join(', ')}`
 }
 
 /** Clé stable d'un groupe (pour l'infobulle et les tests). */

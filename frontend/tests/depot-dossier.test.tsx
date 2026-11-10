@@ -12,7 +12,7 @@ const DOCS = [
   { type: 'autre' as const, file_size: 500_000 },
 ]
 
-test('sans fichier : aucune carte ; avec fichiers : déposés, pièces clés avec jauge, à classer, lots détectés', () => {
+test('sans fichier : aucune carte ; avec fichiers : déposés, pièces clés avec jauge, à classer, lots détectés', () => {
   assert.deepEqual(cartesDepot([]), [])
   const cartes = cartesDepot(DOCS, { lots_detectes: [{ id: 'lot1', nom: 'Lot 1' }, { id: 'lot2', nom: 'Lot 2' }] })
   assert.deepEqual(cartes.map((c) => [c.libelle, c.valeur]), [['Fichiers déposés', '4'], ['Pièces clés reconnues', '3 sur 5'], ['À classer', '1'], ['Lots détectés', '2']])
@@ -23,13 +23,13 @@ test('sans fichier : aucune carte ; avec fichiers : déposés, pièces clés ave
   assert.equal(cartesDepot(DOCS.slice(0, 3))[2].valeur, '0')
 })
 
-test('l’écran : dans le gabarit, la lecture est une section de la page, les pièces apparaissent pendant la lecture, on peut partir', () => {
+test('l’écran : dans le gabarit, la lecture est une section de la page, les pièces apparaissent pendant la lecture, on peut partir', () => {
   const code = sansCommentaires(lire('src/routes/project/StepUpload.tsx'))
   assert.match(code, /<GabaritEtape\s+titre="Dépôt du dossier"/)
   assert.ok(!code.includes('createPortal') && !code.includes('fixed inset-0'), 'plus de fenêtre qui recouvre la page')
   assert.match(code, /<SectionEtape titre="Lecture du dossier">/)
   assert.match(code, /refetchInterval: phase === 'processing' \|\| lectureServeur \? 3000 : false/)
-  assert.match(code, /Vous pouvez fermer cette page : la lecture continue/)
+  assert.match(code, /Vous pouvez fermer cette page : la lecture continue/)
   assert.match(code, /Gardez cette page ouverte pendant l’envoi/)
   assert.equal((code.match(/actionPrincipale=/g) ?? []).length, 1)
   assert.match(code, /<ActionsBarreTel>[\s\S]*<BoutonSuite\s+etape="Lots"/)      // plusieurs lots : l'écran Lots reste l'étape suivante
@@ -38,7 +38,7 @@ test('l’écran : dans le gabarit, la lecture est une section de la page, les p
 
 // ── Mission finale (10/11) : l'écran refait avec les composants du système ──
 
-test('une erreur de chargement n’est jamais un dépôt vide : la requête passe par EtatRequete, l’erreur dit son erreur, la barre ne dit pas « Aucun fichier »', () => {
+test('une erreur de chargement n’est jamais un dépôt vide : la requête passe par EtatRequete, l’erreur dit son erreur, la barre ne dit pas « Aucun fichier »', () => {
   const code = sansCommentaires(lire('src/routes/project/StepUpload.tsx'))
   assert.match(code, /<EtatRequete\s+requete=\{requeteDocuments\}/)
   assert.match(code, /<EtatErreur\s+titre="Le dossier n’a pas pu se charger"[\s\S]*?onReessayer=/)
@@ -51,7 +51,7 @@ test('une erreur de chargement n’est jamais un dépôt vide : la requête pass
   assert.match(code, /tel=\{chargementEchoue \? null/)
 })
 
-test('la liste des pièces : tableau du système (pages de 50), groupée par type, type en liste déroulante, suppression dans le menu de ligne', () => {
+test('la liste des pièces : tableau du système (pages de 50), groupée par type, type en liste déroulante, suppression dans le menu de ligne', () => {
   const code = sansCommentaires(lire('src/routes/project/StepUpload.tsx'))
   assert.match(code, /<Tableau\s+libelle="Pièces du dossier"/)
   assert.match(code, /rang\(a\) - rang\(b\) \|\| a\.file_name\.localeCompare/)

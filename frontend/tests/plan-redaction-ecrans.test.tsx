@@ -17,18 +17,18 @@ const fil = (chemin: string, courant: number, onStepClick = () => {}) =>
   renderToStaticMarkup(
     <MemoryRouter initialEntries={[chemin]}><StepProgress currentStep={courant} completedSteps={{ '4': true }} onStepClick={onStepClick} /></MemoryRouter>)
 
-test('le fil compte sept étapes : Dépôt, Lots, Décider, Pièces, Plan, Rédiger, Export', () => {
+test('le fil compte sept étapes : Dépôt, Lots, Décider, Pièces, Plan, Rédiger, Export', () => {
   assert.deepEqual(STEPS.map((s) => s.label), ['Dépôt du dossier', 'Lots', 'Décider', 'Pièces', 'Plan', 'Rédiger', 'Export'])
   assert.deepEqual(STEPS.map((s) => s.segment), ['upload', 'lots', 'analysis', 'verification', 'plan', 'memoire', 'export'])
   assert.equal(segmentDeEtape(5), 'plan')
   assert.equal(segmentDeEtape(7), 'export')
 })
 
-test('le numéro d’étape du serveur ne change pas : Plan et Rédiger se rangent derrière la 5, Export derrière la 6', () => {
+test('le numéro d’étape du serveur ne change pas : Plan et Rédiger se rangent derrière la 5, Export derrière la 6', () => {
   assert.deepEqual(STEPS.map((s) => s.serveur), [1, 2, 3, 4, 5, 5, 6])
 })
 
-test('serveur à l’étape 5 : Plan et Rédiger sont accessibles, Export non', () => {
+test('serveur à l’étape 5 : Plan et Rédiger sont accessibles, Export non', () => {
   const html = fil('/projects/p1/plan', 5)
   const boutons = html.match(/<button[^>]*>/g) ?? []
   assert.equal(boutons.length, 7)
@@ -37,12 +37,12 @@ test('serveur à l’étape 5 : Plan et Rédiger sont accessibles, Export non', 
   assert.match(html, /aria-current="step"[^>]*aria-label="Plan"|aria-label="Plan"[^>]*aria-current="step"/)
 })
 
-test('serveur à l’étape 6 : Export est accessible, et Plan et Rédiger sont faits', () => {
+test('serveur à l’étape 6 : Export est accessible, et Plan et Rédiger sont faits', () => {
   const html = fil('/projects/p1/export', 6)
   assert.doesNotMatch(html, /disabled=""/)
 })
 
-test('cartes de préparation : plan validé ou non, poids dans la note, une unité d’abonnement, aucun euro', () => {
+test('cartes de préparation : plan validé ou non, poids dans la note, une unité d’abonnement, aucun euro', () => {
   const plan = { resume: { parties: 22 }, valide: true } as unknown as VuePlan
   const c = cartesPreparation(plan, 60)
   assert.equal(c[0].valeur, '22 parties')
@@ -54,7 +54,7 @@ test('cartes de préparation : plan validé ou non, poids dans la note, une unit
   assert.doesNotMatch(JSON.stringify(c), /€|euro/i)
 })
 
-test('cartes du mémoire rédigé : critères traités, parties à refaire, longueur face à la limite', () => {
+test('cartes du mémoire rédigé : critères traités, parties à refaire, longueur face à la limite', () => {
   const rattachement = { sous_criteres: [{ traite: true }, { traite: false }], a_couvrir: [] } as never
   const c = cartesRedaction({ version: 2, completionPct: 96, rattachement, nbARefaire: 1, pages: 24, limite: 20 })
   assert.equal(c[1].valeur, '1 sur 2')
@@ -65,7 +65,7 @@ test('cartes du mémoire rédigé : critères traités, parties à refaire, long
   assert.doesNotMatch(JSON.stringify(c), /€|euro/i)
 })
 
-test('pages estimées : environ 500 mots par page', () => {
+test('pages estimées : environ 500 mots par page', () => {
   const contenu = { preambule: 'mot '.repeat(1000), partie_a: { x: 'mot '.repeat(1000) }, partie_b: {}, partie_c: {} } as unknown as MemoireContent
   assert.equal(pagesEstimees(contenu), 4)
   assert.equal(pagesEstimees(null), 0)
@@ -88,22 +88,22 @@ const rendre = (p: PartiePlan, ouverte = false) => renderToStaticMarkup(
     onDescendre={() => {}} onFiche={() => {}} onVoirSource={() => {}}
   />)
 
-test('une partie : titre modifiable, sous-critères avec poids, source annoncée par le dossier, gestes nommés', () => {
+test('une partie : titre modifiable, sous-critères avec poids, source annoncée par le dossier, gestes nommés', () => {
   const html = rendre(partie())
   assert.match(html, /value="Traitement des déchets"/)
   assert.match(html, /Gestion des déchets · 30 %/)
   assert.match(html, /Demandé par le règlement de la consultation/)
-  assert.match(html, /Source : RC\.pdf · page 7/)
+  assert.match(html, /Source : RC\.pdf · page 7/)
   assert.match(html, /Voir dans le dossier/)
   // les gestes de la rangée : un menu « … » nommé, dont chaque élément est écrit en mots (plus trois icônes muettes)
-  assert.match(html, /aria-label="Actions : Traitement des déchets"/)
+  assert.match(html, /aria-label="Actions : Traitement des déchets"/)
   const code = lire('src/components/plan/PartiePlanCarte.tsx')
   for (const geste of ['Renommer', 'Monter', 'Descendre', 'Retirer du plan', 'Supprimer']) assert.ok(code.includes(geste), geste)
   assert.doesNotMatch(code, /<button\b/)
   assert.match(html, /aria-expanded="false"/)
 })
 
-test('une partie gardée dit pourquoi : sous-critère et poids, ou demandée par le dossier avec sa source, sinon partie habituelle', () => {
+test('une partie gardée dit pourquoi : sous-critère et poids, ou demandée par le dossier avec sa source, sinon partie habituelle', () => {
   assert.match(rendre(partie({ attendues: [], source: null })), /Gestion des déchets · 30 %/)
   const cctp = rendre(partie({ sous_criteres: [], attendues: [{ id: 'a', libelle: 'x', source: { document: '2-CCTP lot 5.pdf', page: 12 } }] }))
   assert.match(cctp, /Demandé par le cahier des clauses techniques \(CCTP\)/)
@@ -112,7 +112,7 @@ test('une partie gardée dit pourquoi : sous-critère et poids, ou demandée par
   assert.equal(demandePar({ document: 'document.pdf' }), 'Demandé par le dossier')
 })
 
-test('la section des parties habituelles : décochées, regroupées, un geste nommé pour chacune, rien quand il n’y en a pas', () => {
+test('la section des parties habituelles : décochées, regroupées, un geste nommé pour chacune, rien quand il n’y en a pas', () => {
   const vide = renderToStaticMarkup(<PartiesHabituelles parties={[]} onAjouter={() => {}} />)
   assert.equal(vide, '')
   const html = renderToStaticMarkup(
@@ -123,8 +123,8 @@ test('la section des parties habituelles : décochées, regroupées, un geste no
     />)
   assert.match(html, /Parties habituelles, à ajouter si utile/)
   assert.doesNotMatch(html, /PARTIES HABITUELLES/)
-  assert.match(html, /aria-label="Ajouter au plan : Historique"/)
-  assert.match(html, /aria-label="Ajouter au plan : Délai de travaux"/)
+  assert.match(html, /aria-label="Ajouter au plan : Historique"/)
+  assert.match(html, /aria-label="Ajouter au plan : Délai de travaux"/)
   assert.match(html, /Partie A/)
   assert.match(html, /Partie C/)
   assert.doesNotMatch(html, /manquant|incomplet|absent|!/i)
@@ -136,7 +136,7 @@ test('une partie ajoutée se supprime, une partie du modèle se retire', () => {
   assert.match(code, /\{ajout \? 'Supprimer' : 'Retirer du plan'\}/)
 })
 
-test('la fiche dépliée : exigences avec source, cases préremplies, ligne libre bornée à 1 000 caractères', () => {
+test('la fiche dépliée : exigences avec source, cases préremplies, ligne libre bornée à 1 000 caractères', () => {
   const html = rendre(partie(), true)
   assert.match(html, /data-fiche-partie="partie_b\.dechets"/)
   assert.match(html, /Les déchets sont triés\./)
@@ -148,7 +148,7 @@ test('la fiche dépliée : exigences avec source, cases préremplies, ligne libr
   assert.match(html, /jamais comme une consigne/)
 })
 
-test('la fiche sans rien : des phrases positives, aucun mot interdit', () => {
+test('la fiche sans rien : des phrases positives, aucun mot interdit', () => {
   const html = renderToStaticMarkup(
     <FichePartie partie={partie({ exigences: [], sous_criteres: [], propose: { references: [], personnes: [], materiel: [] } })} onChange={() => {}} onVoirSource={() => {}} />)
   assert.match(html, /Aucune exigence/)
@@ -159,19 +159,19 @@ test('la fiche sans rien : des phrases positives, aucun mot interdit', () => {
 // pour un mémoire mesuré à 169 s. Une seule phrase de coût selon l'offre ; durée mesurée.
 import { ligneQuotaMemoire, DUREE_REDACTION } from '@/components/project/MemoirePreflight'
 
-test('G8 : la carte Abonnement dit l\'unité ou l\'offre illimitée, jamais les deux ; la ligne du bouton ne parle plus de coût', () => {
+test('G8 : la carte Abonnement dit l’unité ou l’offre illimitée, jamais les deux ; la ligne du bouton ne parle plus de coût', () => {
   assert.equal(cartesPreparation(null, 0)[2].valeur, '1 unité')
   const illimite = cartesPreparation(null, 0, true)[2]
   assert.equal(illimite.valeur, 'Illimité')
   assert.doesNotMatch(JSON.stringify(illimite), /unité|décompt/)
   assert.doesNotMatch(ligneQuotaMemoire('business', { used: 5, limit: null }), /décompt|unité|illimit/)
   assert.equal(ligneQuotaMemoire('business', { used: 5, limit: null }), DUREE_REDACTION)
-  assert.match(ligneQuotaMemoire('pro', { used: 3, limit: 40 }), /^3 sur 40 mémoires utilisés ce mois · Rédaction : environ 3 minutes$/)
+  assert.match(ligneQuotaMemoire('pro', { used: 3, limit: 40 }), /^3 sur 40 mémoires utilisés ce mois · Rédaction : environ 3 minutes$/)
   assert.match(ligneQuotaMemoire('free', { used: 0, limit: 1 }), /sur votre essai/)
   assert.match(DUREE_REDACTION, /3 minutes/)
 })
 
-test('comptes uniques : la carte « Rédaction » dit la phrase de l’Export, avec le compte du serveur ; sans compte, la version', () => {
+test('comptes uniques : la carte « Rédaction » dit la phrase de l’Export, avec le compte du serveur ; sans compte, la version', () => {
   const base = { version: 2, completionPct: 100, rattachement: undefined, nbARefaire: 0, pages: 46, limite: null }
   const avec = cartesRedaction({ ...base, passages: 136 })[0]
   assert.equal(avec.detail, '136 passages à compléter avant le dépôt')

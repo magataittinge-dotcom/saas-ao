@@ -34,7 +34,7 @@ export interface ReponseRelecture {
 /** Le résumé du bouton une fois le contrôle fait. Mots positifs seulement. */
 export function resumeRelecture(r: Pick<ReponseRelecture, 'nombre'> | null | undefined): string {
   if (!r) return 'Relire mon mémoire'
-  if (r.nombre === 0) return 'Relu : rien à reprendre'
+  if (r.nombre === 0) return 'Relu : rien à reprendre'
   return `${r.nombre} ${r.nombre > 1 ? 'points à reprendre' : 'point à reprendre'}`
 }
 

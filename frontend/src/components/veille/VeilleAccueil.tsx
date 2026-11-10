@@ -60,7 +60,7 @@ export default function VeilleAccueil() {
                 ? 'Le nombre d’avis par département n’a pas pu se charger'
                 : v.totalComptes > 0 ? `${v.totalComptes} avis ouverts en France` : v.chargeEnCours ? 'Chargement de la carte…' : 'Aucun avis ouvert pour ces filtres'}
               {actualisation ? ` · ${actualisation}` : ''}
-              {' · '}Source : {libelleSourceVeille(v.source)}
+              {' · '}Source : {libelleSourceVeille(v.source)}
             </p>
           </div>
           <ListeAvis

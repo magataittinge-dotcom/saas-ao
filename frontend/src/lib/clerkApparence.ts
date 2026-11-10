@@ -78,7 +78,7 @@ export const localisationFr: LocalisationClerk = {
   formFieldInputPlaceholder__password: 'Votre mot de passe',
   formFieldInputPlaceholder__firstName: 'Votre prénom',
   formFieldInputPlaceholder__lastName: 'Votre nom',
-  formFieldAction__forgotPassword: 'Mot de passe oublié ?',
+  formFieldAction__forgotPassword: 'Mot de passe oublié ?',
   formFieldHintText__optional: 'Facultatif',
   formFieldError__notMatchingPasswords: 'Les mots de passe ne correspondent pas.',
   formFieldError__matchingPasswords: 'Les mots de passe correspondent.',
@@ -93,10 +93,10 @@ export const localisationFr: LocalisationClerk = {
     start: {
       title: 'Se connecter à Synorix',
       subtitle: 'Retrouvez vos appels d’offres.',
-      actionText: 'Pas encore de compte ?',
+      actionText: 'Pas encore de compte ?',
       actionLink: 'Créer un compte',
     },
-    password: { title: 'Votre mot de passe', subtitle: 'Saisissez-le pour continuer.', actionLink: 'Mot de passe oublié ?' },
+    password: { title: 'Votre mot de passe', subtitle: 'Saisissez-le pour continuer.', actionLink: 'Mot de passe oublié ?' },
     forgotPassword: {
       title: 'Mot de passe oublié',
       subtitle: 'Nous vous envoyons un code pour le réinitialiser.',
@@ -117,7 +117,7 @@ export const localisationFr: LocalisationClerk = {
     start: {
       title: 'Créer votre compte Synorix',
       subtitle: 'Votre premier appel d’offres est offert.',
-      actionText: 'Déjà un compte ?',
+      actionText: 'Déjà un compte ?',
       actionLink: 'Se connecter',
     },
     emailCode: {
@@ -127,7 +127,7 @@ export const localisationFr: LocalisationClerk = {
       formSubtitle: 'Le code a été envoyé à votre adresse e-mail.',
       resendButton: 'Renvoyer le code',
     },
-    continue: { title: 'Compléter votre compte', subtitle: 'Il reste quelques informations.', actionText: 'Déjà un compte ?', actionLink: 'Se connecter' },
+    continue: { title: 'Compléter votre compte', subtitle: 'Il reste quelques informations.', actionText: 'Déjà un compte ?', actionLink: 'Se connecter' },
   },
   userButton: {
     action__manageAccount: 'Gérer le compte',

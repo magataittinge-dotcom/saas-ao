@@ -146,7 +146,7 @@ export default function StepUpload({ project }: Props) {
     },
     onError: () => {
       doneRef.current = true
-      setUploadErrors(prev => [...prev, 'La lecture du dossier s’est arrêtée avant la fin. Vos fichiers sont conservés : déposez-les à nouveau pour reprendre.'])
+      setUploadErrors(prev => [...prev, 'La lecture du dossier s’est arrêtée avant la fin. Vos fichiers sont conservés : déposez-les à nouveau pour reprendre.'])
       setPhase('idle')
       if (safetyRef.current) { clearTimeout(safetyRef.current); safetyRef.current = null }
     },
@@ -204,12 +204,12 @@ export default function StepUpload({ project }: Props) {
       if (largestSize > 1 * GB) {
         setLargeFileNotice({
           tone: 'orange',
-          message: `Dossier très volumineux détecté (${mb} Mo). Envoi jusqu'à 15 minutes selon votre connexion. Restez sur cette page.`,
+          message: `Dossier très volumineux détecté (${mb} Mo). Envoi jusqu’à 15 minutes selon votre connexion. Restez sur cette page.`,
         })
       } else if (largestSize > 500 * MB) {
         setLargeFileNotice({
           tone: 'cyan',
-          message: 'Envoi volumineux, ~3-7 minutes. Ne fermez pas l\'onglet.',
+          message: 'Envoi volumineux, ~3-7 minutes. Ne fermez pas l’onglet.',
         })
       } else if (largestSize > 100 * MB) {
         setLargeFileNotice({
@@ -444,8 +444,8 @@ export default function StepUpload({ project }: Props) {
         onOuvert={(o) => { if (!o) { setASupprimer(null); setErreurSuppression(null) } }}
         danger
         titre={!aSupprimer ? '' : 'tous' in aSupprimer
-          ? `Supprimer les ${documents.length} fichiers du dossier ?`
-          : `Supprimer « ${aSupprimer.doc.file_name} » ?`}
+          ? `Supprimer les ${documents.length} fichiers du dossier ?`
+          : `Supprimer « ${aSupprimer.doc.file_name} » ?`}
         description={aSupprimer && 'tous' in aSupprimer
           ? 'Les fichiers ne seront plus dans le dossier de cet AO.'
           : 'Le fichier ne sera plus dans le dossier de cet AO.'}
@@ -460,7 +460,7 @@ export default function StepUpload({ project }: Props) {
 
       <GabaritEtape
         titre="Dépôt du dossier"
-        utilite="Déposez le dossier reçu de l’acheteur : Synorix reconnaît chaque pièce et chaque lot, puis vous choisissez ce que vous lisez."
+        utilite="Déposez le dossier reçu de l’acheteur : Synorix reconnaît chaque pièce et chaque lot, puis vous choisissez ce que vous lisez."
         actionPrincipale={!hasDocuments ? undefined : lotUnique ? actionLecture : (
           <BoutonSuite etape="Lots" onClick={handleNext} disabled={suiteBloquee} />
         )}
@@ -514,7 +514,7 @@ export default function StepUpload({ project }: Props) {
                     <>
                       <CloudUpload aria-hidden size={20} strokeWidth={1.5} className="shrink-0 text-fg-3" />
                       <div className="min-w-0 flex-1 basis-56">
-                        <p className="text-sm font-semibold text-fg">{isDragActive ? 'Lâchez les fichiers ici' : 'Une pièce de plus, un additif de l’acheteur ?'}</p>
+                        <p className="text-sm font-semibold text-fg">{isDragActive ? 'Lâchez les fichiers ici' : 'Une pièce de plus, un additif de l’acheteur ?'}</p>
                         <p className="mt-0.5 text-xs text-fg-3">{FORMATS_ACCEPTES}</p>
                       </div>
                       <Bouton variante="secondaire" onClick={open}>Ajouter des fichiers</Bouton>
@@ -526,7 +526,7 @@ export default function StepUpload({ project }: Props) {
                         {isDragActive ? 'Lâchez les fichiers ici' : <>Déposez le <Sigle code="DCE" /> complet</>}
                       </p>
                       <p className="mt-1.5 max-w-md text-sm text-fg-2">
-                        Le ZIP entier suffit : Synorix reconnaît chaque pièce et chaque lot.
+                        Le ZIP entier suffit : Synorix reconnaît chaque pièce et chaque lot.
                       </p>
                       <Bouton variante={enLecture ? 'secondaire' : 'principal'} className="mt-6" onClick={open} disabled={anyUploading}>Choisir des fichiers</Bouton>
                       <p className="mt-4 text-xs text-fg-3">{FORMATS_ACCEPTES}</p>
@@ -567,8 +567,8 @@ export default function StepUpload({ project }: Props) {
                       detail={phase === 'idle' ? (project.processing_detail || 'Lecture du dossier…') : (sublabel || label)}
                       phase={phase === 'done' ? 'complete' : 'in_progress'}
                       avis={phase === 'uploading'
-                        ? 'Gardez cette page ouverte pendant l’envoi. Ensuite, vous pourrez la fermer : la lecture continue.'
-                        : 'Vous pouvez fermer cette page : la lecture continue et l’AO reste dans « Mes AO ». Les pièces reconnues apparaissent ci-dessous au fur et à mesure.'}
+                        ? 'Gardez cette page ouverte pendant l’envoi. Ensuite, vous pourrez la fermer : la lecture continue.'
+                        : 'Vous pouvez fermer cette page : la lecture continue et l’AO reste dans « Mes AO ». Les pièces reconnues apparaissent ci-dessous au fur et à mesure.'}
                     />
                   </Carte>
                 </SectionEtape>

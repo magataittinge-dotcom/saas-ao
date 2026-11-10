@@ -188,7 +188,7 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename, cout, pieces }: 
           {lot.id !== 'all' && (
             <EtatElement
               etat={aVerifier ? 'a-verifier' : 'pret'}
-              source={parIA ? { libelle: 'complété par l’IA : vérifiez l’intitulé' } : sources.length > 0 ? { libelle: sources.join(' · ') } : undefined}
+              source={parIA ? { libelle: 'complété par l’IA : vérifiez l’intitulé' } : sources.length > 0 ? { libelle: sources.join(' · ') } : undefined}
             />
           )}
         </div>
@@ -233,7 +233,7 @@ function AddLotForm({ onAdd, onCancel }: AddLotFormProps) {
         <GroupeChamp libelle="Numéro du lot" aide="De 1 à 30" className="w-32">
           <ChampNombre valeur={num} onChange={setNum} min={1} max={30} placeholder="1" required />
         </GroupeChamp>
-        <GroupeChamp libelle="Intitulé" facultatif aide="Par exemple : Gros œuvre" className="min-w-0 flex-1 basis-56">
+        <GroupeChamp libelle="Intitulé" facultatif aide="Par exemple : Gros œuvre" className="min-w-0 flex-1 basis-56">
           <Champ value={label} onChange={(e) => setLabel(e.target.value)} maxLength={60} className="h-11" />
         </GroupeChamp>
         <div className="flex gap-2 pt-[1.6rem] max-sm:basis-full max-sm:pt-0">
@@ -492,7 +492,7 @@ export default function StepLotSelection({ project }: Props) {
   const bilan = chargementEchoue ? 'Les lots n’ont pas pu être lus.'
     : sansDepot ? 'Aucun dossier déposé.'
     : selectedLotIds.length > 1 ? `${selectedLotIds.length} lots choisis`
-    : selectedId !== 'all' && selectedName ? `Lot choisi : ${selectedName}`
+    : selectedId !== 'all' && selectedName ? `Lot choisi : ${selectedName}`
     : aucunChoix ? 'Aucun lot choisi' : 'Tout le dossier'
   const ecartes = phraseLotsEcartes(lotsData?.ecartes)
 
@@ -505,7 +505,7 @@ export default function StepLotSelection({ project }: Props) {
         ouvert={lotARetirer !== null}
         onOuvert={(o) => { if (!o) setLotARetirer(null) }}
         danger
-        titre={lotARetirer ? `Retirer « ${lotARetirer.user_label || lotARetirer.nom} » de la liste ?` : ''}
+        titre={lotARetirer ? `Retirer « ${lotARetirer.user_label || lotARetirer.nom} » de la liste ?` : ''}
         description="Vous pourrez l’ajouter de nouveau à la main."
         libelleConfirmer="Retirer"
         onConfirmer={() => { if (lotARetirer) handleDelete(lotARetirer.id); setLotARetirer(null) }}
@@ -526,7 +526,7 @@ export default function StepLotSelection({ project }: Props) {
       <GabaritEtape
         titre="Lots"
         utilite={sansDepot || chargementEchoue
-          ? 'Les lots sur lesquels votre entreprise répond : Synorix ne lit que ceux que vous choisissez.'
+          ? 'Les lots sur lesquels votre entreprise répond : Synorix ne lit que ceux que vous choisissez.'
           : phraseCoutLots(lots.length, illimite)}
         actionPrincipale={peutLire ? actionLire : undefined}
         message={analysisError && <Message ton="erreur" titre="La lecture n’a pas démarré">{analysisError}</Message>}
@@ -550,8 +550,8 @@ export default function StepLotSelection({ project }: Props) {
         {/* Documents illisibles : signalés par fichier, jamais silencieux */}
         {extractionWarnings.length > 0 && (
           <Message ton="attention" titre={extractionWarnings.length > 1
-            ? `${extractionWarnings.length} documents n’ont pas pu être lus : leurs exigences ne sont pas relevées`
-            : 'Un document n’a pas pu être lu : ses exigences ne sont pas relevées'}>
+            ? `${extractionWarnings.length} documents n’ont pas pu être lus : leurs exigences ne sont pas relevées`
+            : 'Un document n’a pas pu être lu : ses exigences ne sont pas relevées'}>
             <ul className="space-y-0.5">
               {extractionWarnings.map((w) => (
                 <li key={w.file_name} className="break-words text-xs">
@@ -581,7 +581,7 @@ export default function StepLotSelection({ project }: Props) {
         ) : sansDepot ? (
           <EtatVide
             titre="Les lots du dossier apparaîtront ici"
-            phrase={<>Déposez d’abord le <Sigle code="DCE" /> : Synorix y repère les lots et vous choisissez ceux que vous lisez.</>}
+            phrase={<>Déposez d’abord le <Sigle code="DCE" />&nbsp;: Synorix y repère les lots et vous choisissez ceux que vous lisez.</>}
             action={<Bouton variante={sansDepot ? 'principal' : 'secondaire'} onClick={() => navigate(`/projects/${project.id}/upload`)}>Déposer le dossier</Bouton>}
           />
         ) : lots.length > 0 ? (

@@ -69,7 +69,7 @@ const piecesAJoindre = (a: AvancementAO | null | undefined): number | null =>
 function phraseExport(p: ProjetLu): string {
   const reste = piecesAJoindre(p.avancement)
   if (reste && reste > 0) return `Le mémoire est écrit. ${reste} ${pluriel(reste, 'pièce reste', 'pièces restent')} à joindre avant de télécharger le dossier.`
-  return 'Le dossier est prêt : il reste à le télécharger, puis à le déposer sur la plateforme de l’acheteur.'
+  return 'Le dossier est prêt : il reste à le télécharger, puis à le déposer sur la plateforme de l’acheteur.'
 }
 
 /** Tout ce qu'un écran affiche d'un AO : son état, son mot, son action, sa phrase. UN seul calcul. */

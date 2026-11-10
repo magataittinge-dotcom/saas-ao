@@ -22,7 +22,7 @@ const formulaires = (items: ChecklistItem[]) => renderToStaticMarkup(
   <CandidatureSectionTemplates projectId="p" items={items} onUploadCompleted={rien} onToggleSignature={rien} />,
 )
 
-test('DC1 et DC2 sans exigence du RC : signature non demandée, aucune case', () => {
+test('DC1 et DC2 sans exigence du RC : signature non demandée, aucune case', () => {
   const html = formulaires([
     ligne({ id: 'a', document_type_required: 'dc1_template', signature_required: false }),
     ligne({ id: 'b', document_type_required: 'dc2_template', signature_required: false }),
@@ -31,20 +31,20 @@ test('DC1 et DC2 sans exigence du RC : signature non demandée, aucune case', ()
   assert.ok(!html.includes('Je confirme avoir signé'))
 })
 
-test("acte d'engagement : à signer à l'attribution, aucune case", () => {
+test("acte d’engagement : à signer à l’attribution, aucune case", () => {
   const html = formulaires([ligne({ document_type_required: 'acte_engagement_template', signature_required: false })])
-  assert.ok(html.includes("Acte d&#x27;engagement : à signer à l&#x27;attribution"), html)
+  assert.ok(html.includes("Acte d’engagement : à signer à l’attribution"), html)
   assert.ok(!html.includes('Je confirme avoir signé'))
 })
 
-test('signature exigée par le RC : la case reste demandée', () => {
+test('signature exigée par le RC : la case reste demandée', () => {
   const html = formulaires([ligne({ document_type_required: 'dc1_template', signature_required: true })])
   assert.ok(html.includes('Je confirme avoir signé ce document'))
   assert.ok(html.includes('role="checkbox"'))
   assert.ok(!html.includes('Signature non demandée'))
 })
 
-test('DUME (pièce du coffre) : signature non demandée', () => {
+test('DUME (pièce du coffre) : signature non demandée', () => {
   const html = renderToStaticMarkup(
     <CandidatureSectionVault
       items={[ligne({ document_type_required: 'dume', source_kind: 'vault', status: 'manquant',
@@ -58,13 +58,13 @@ test('DUME (pièce du coffre) : signature non demandée', () => {
   assert.ok(!html.includes('Je confirme avoir signé'))
 })
 
-test('en-tête des formulaires : plus de consigne « signez » pour tous', () => {
+test('en-tête des formulaires : plus de consigne « signez » pour tous', () => {
   const html = formulaires([ligne({ signature_required: false })])
   assert.ok(!html.includes('compléter et signer'), html)
   assert.ok(!html.includes('complétez et signez'), html)
 })
 
-test('règle commune : mention et confirmation à faire', () => {
+test('règle commune : mention et confirmation à faire', () => {
   assert.deepEqual(mentionSignature({ document_type_required: 'dume', signature_required: false }),
     { kind: 'texte', texte: 'Signature non demandée pour ce formulaire' })
   assert.deepEqual(mentionSignature({ document_type_required: 'urssaf', signature_required: false }), { kind: 'rien' })
@@ -74,7 +74,7 @@ test('règle commune : mention et confirmation à faire', () => {
   assert.equal(signatureAConfirmer({ signature_required: false, signature_confirmed: false }), false)
 })
 
-test("l'écran Export ne garde plus de liste de types à signer en dur", () => {
+test("l’écran Export ne garde plus de liste de types à signer en dur", () => {
   const code = lire('src/routes/project/StepExport.tsx')
   assert.ok(!code.includes('SIGNABLE'), 'StepExport.tsx contient encore une liste SIGNABLE')
   assert.ok(!lire('src/components/project/CandidatureSectionTemplates.tsx').includes('SIGNABLE'))

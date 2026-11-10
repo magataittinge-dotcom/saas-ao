@@ -33,7 +33,7 @@ export function EtatElement({ etat, source, className, texte, perimee }: { etat:
       </span>
       {source && (
         <span className="inline-flex flex-wrap items-center gap-x-2">
-          <span>Source : {source.libelle}</span>
+          <span>Source : {source.libelle}</span>
           {source.onVoir && (
             <button
               type="button"

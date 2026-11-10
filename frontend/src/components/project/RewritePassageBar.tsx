@@ -53,7 +53,7 @@ export default function RewritePassageBar({ projectId, selection, onApply }: Pro
       setDiff({ original: data.original, rewritten: data.rewritten, start, end })
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail
-      setError(typeof detail === 'string' ? detail : 'La réécriture n’a pas pu se faire. Votre texte n’a pas changé ; réessayez dans un instant.')
+      setError(typeof detail === 'string' ? detail : 'La réécriture n’a pas pu se faire. Votre texte n’a pas changé ; réessayez dans un instant.')
     } finally {
       setEnCours(null)
     }
@@ -66,7 +66,7 @@ export default function RewritePassageBar({ projectId, selection, onApply }: Pro
     <>
       <div data-barre-reecriture="" className="flex flex-wrap items-center gap-x-2 gap-y-2">
         <p className="mr-1 text-sm text-fg-2" aria-live="polite">
-          {hasSelection ? 'Réécrire la sélection :' : 'Sélectionnez un passage pour le réécrire :'}
+          {hasSelection ? 'Réécrire la sélection :' : 'Sélectionnez un passage pour le réécrire :'}
         </p>
         {ACTIONS.map((a) => (
           <Bouton key={a.id} variante="secondaire" disabled={bloque} enCours={enCours === a.id} libelleEnCours="Réécriture…" onClick={() => run(a.id)}>
@@ -81,7 +81,7 @@ export default function RewritePassageBar({ projectId, selection, onApply }: Pro
             value={insistText}
             onChange={(e) => setInsistText(e.target.value)}
             placeholder="Insister sur…"
-            aria-label="Insister sur : ce que le passage doit mettre en avant"
+            aria-label="Insister sur : ce que le passage doit mettre en avant"
             disabled={bloque}
             className="w-44 min-w-0"
           />

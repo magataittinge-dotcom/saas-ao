@@ -50,7 +50,7 @@ export function etatEcheance(source: EcheanceSource | null | undefined, maintena
     return { etat: 'passee', jours, libelle: 'Date de remise passée', limite }
   }
   if (jours === 0) {
-    return { etat: 'aujourdhui', jours, libelle: source?.heure ? `Aujourd'hui, ${heureLibelle(limite)}` : "Aujourd'hui", limite }
+    return { etat: 'aujourdhui', jours, libelle: source?.heure ? `Aujourd’hui, ${heureLibelle(limite)}` : "Aujourd’hui", limite }
   }
   return { etat: jours <= JOURS_PROCHE ? 'proche' : 'a_venir', jours, libelle: `J−${jours}`, limite }
 }

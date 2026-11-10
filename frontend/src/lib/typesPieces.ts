@@ -5,7 +5,7 @@ const LIBELLES: Record<string, string> = {
   rc: 'Règlement de la consultation (RC)',
   cctp: 'Clauses techniques (CCTP)',
   ccap: 'Clauses administratives (CCAP)',
-  acte_engagement_template: "Acte d'engagement",
+  acte_engagement_template: "Acte d’engagement",
   dpgf_template: 'Tableau des prix (DPGF)',
   bpu_template: 'Prix unitaires (BPU)',
   dqe_template: 'Quantités estimées (DQE)',

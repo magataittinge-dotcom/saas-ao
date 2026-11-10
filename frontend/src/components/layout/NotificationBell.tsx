@@ -83,7 +83,7 @@ export default function NotificationBell({ versLeHaut = false }: { versLeHaut?: 
           </div>
           <div className="max-h-96 overflow-y-auto">
             {items.length === 0 ? (
-              <p className="px-4 py-6 text-sm text-fg-2">Les notifications arriveront ici : une lecture terminée, un mémoire prêt, une remise qui approche.</p>
+              <p className="px-4 py-6 text-sm text-fg-2">Les notifications arriveront ici : une lecture terminée, un mémoire prêt, une remise qui approche.</p>
             ) : (
               items.map((n) => (
                 <button key={n.id} type="button" onClick={() => !n.read && markRead(n.id)}

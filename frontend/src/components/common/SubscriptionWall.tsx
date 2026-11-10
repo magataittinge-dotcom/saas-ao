@@ -30,7 +30,7 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis', 
       window.location.href = data.url
     } catch (e) {
       const detail = (e as { response?: { data?: { detail?: unknown } } }).response?.data?.detail
-      setErreur(typeof detail === 'string' ? detail : "Le paiement n'a pas pu démarrer. Réessayez dans un instant.")
+      setErreur(typeof detail === 'string' ? detail : "Le paiement n’a pas pu démarrer. Réessayez dans un instant.")
       setLoading(null)
     }
   }

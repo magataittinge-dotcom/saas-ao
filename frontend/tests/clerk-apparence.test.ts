@@ -8,12 +8,12 @@ import { lire, sansCommentaires } from './outils/sources'
 
 const pour = (theme: Theme) => construireApparence((j) => valeur(theme, j))
 
-test('Clerk : les variables sont les jetons résolus, dans chaque thème', () => {
+test('Clerk : les variables sont les jetons résolus, dans chaque thème', () => {
   const clair = pour('light').variables!
   const nuit = pour('dark').variables!
   for (const [theme, v] of [['light', clair], ['dark', nuit]] as const) {
     assert.equal(v.colorPrimary, valeur(theme, '--accent-600'))
-    assert.match(String(v.colorPrimary), /^#[0-9a-f]{6}$/, 'Clerk calcule ses nuances : une vraie couleur sRGB, jamais du display-p3')
+    assert.match(String(v.colorPrimary), /^#[0-9a-f]{6}$/, 'Clerk calcule ses nuances : une vraie couleur sRGB, jamais du display-p3')
     assert.equal(v.colorBackground, valeur(theme, '--surface-pop'))
     assert.equal(v.colorText, valeur(theme, '--text-1'))
     assert.equal(v.colorInputBackground, valeur(theme, '--surface-0'))
@@ -22,7 +22,7 @@ test('Clerk : les variables sont les jetons résolus, dans chaque thème', () =>
   assert.match(String(clair.fontFamily), /Manrope/)
 })
 
-test('Clerk : textes lisibles (4,5:1) sur la carte, le champ et le bouton, dans les deux thèmes', () => {
+test('Clerk : textes lisibles (4,5:1) sur la carte, le champ et le bouton, dans les deux thèmes', () => {
   for (const theme of ['light', 'dark'] as Theme[]) {
     const v = pour(theme).variables!
     const mesures: [string, string, string][] = [
@@ -36,7 +36,7 @@ test('Clerk : textes lisibles (4,5:1) sur la carte, le champ et le bouton, dans 
   }
 })
 
-test('Clerk : les éléments passent par var(--jeton), le ClerkProvider reçoit l\'apparence et la recalcule à chaque bascule', () => {
+test('Clerk : les éléments passent par var(--jeton), le ClerkProvider reçoit l’apparence et la recalcule à chaque bascule', () => {
   const e = pour('light').elements as Record<string, string>
   assert.match(e.formButtonPrimary, /!\[background-image:var\(--accent-fill\)\]/)
   assert.match(e.formButtonPrimary, /!min-h-11/, 'bouton à 44 px')
@@ -52,7 +52,7 @@ test('Clerk : les éléments passent par var(--jeton), le ClerkProvider reçoit 
 })
 
 // S4 — L'écran de connexion en français : objet de traduction maison (aucune dépendance de plus).
-test('Clerk en français : l\'écran de connexion et d\'inscription ne montre plus un mot d\'anglais', () => {
+test('Clerk en français : l’écran de connexion et d’inscription ne montre plus un mot d’anglais', () => {
   const l = localisationFr as Record<string, any>
   assert.equal(l.locale, 'fr-FR')
   assert.equal(l.signIn.start.title, 'Se connecter à Synorix')
@@ -61,7 +61,7 @@ test('Clerk en français : l\'écran de connexion et d\'inscription ne montre pl
   assert.equal(l.socialButtonsBlockButton, 'Continuer avec {{provider|titleize}}')
   assert.equal(l.formFieldLabel__emailAddress, 'Adresse e-mail')
   assert.equal(l.formFieldLabel__password, 'Mot de passe')
-  assert.equal(l.formFieldAction__forgotPassword, 'Mot de passe oublié ?')
+  assert.equal(l.formFieldAction__forgotPassword, 'Mot de passe oublié ?')
   // une saisie refusée ne répond plus en anglais (« Identifier is invalid. », vu sur la capture connexion-erreur)
   for (const code of ['form_param_format_invalid', 'form_param_format_invalid__email_address', 'form_password_or_identifier_incorrect', 'form_password_length_too_short']) {
     assert.ok(typeof l.unstable__errors[code] === 'string' && /[éèàç’]| /.test(l.unstable__errors[code]), code)

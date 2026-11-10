@@ -87,7 +87,7 @@ export function TableauSource({
 }) {
   return (
     <div className="min-w-0 max-w-full">
-      <p className="text-base font-semibold text-ds-text">Feuille « {fenetre.feuille} »</p>
+      <p className="text-base font-semibold text-ds-text">Feuille «&nbsp;{fenetre.feuille}&nbsp;»</p>
       <p className="text-base text-ds-text-2">{legende(ancre)}</p>
       <div
         ref={refZone}
@@ -215,12 +215,12 @@ export default function VueTableau({ exigenceId, ancre }: Props) {
   }, [data])
 
   if (!actif) {
-    return <p className="text-base text-ds-text-2">Aucune ligne du tableur n'est rattachée à cette exigence.</p>
+    return <p className="text-base text-ds-text-2">Aucune ligne du tableur n’est rattachée à cette exigence.</p>
   }
   if (isError) {
     return (
       <div className="flex flex-col items-start gap-3">
-        <p className="text-base text-ds-text-2">Le tableau ne peut pas s'afficher pour le moment.</p>
+        <p className="text-base text-ds-text-2">Le tableau ne peut pas s’afficher pour le moment.</p>
         <Bouton onClick={() => { void refetch() }} enCours={isFetching} libelleEnCours="Nouvel essai…">Réessayer</Bouton>
       </div>
     )

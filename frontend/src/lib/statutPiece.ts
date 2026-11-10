@@ -108,11 +108,11 @@ export function libelleComptes(
 /** Note de durée de validité d'un type de pièce du coffre, avec sa source. */
 export function noteValidite(typeDocument: string): string | null {
   switch (typeDocument) {
-    case 'urssaf': return 'Attestation URSSAF : valable 6 mois (Code du travail, art. D8222-5)'
-    case 'kbis': return 'Kbis : 3 mois, usage courant des acheteurs'
-    case 'fiscal': return 'Attestation fiscale : 6 mois, usage courant des acheteurs'
-    case 'pro_btp': return 'Certificat Pro BTP : 6 mois, usage courant des acheteurs'
-    case 'cibtp': return 'Certificat CIBTP : 6 mois, usage courant des acheteurs'
+    case 'urssaf': return 'Attestation URSSAF : valable 6 mois (Code du travail, art. D8222-5)'
+    case 'kbis': return 'Kbis : 3 mois, usage courant des acheteurs'
+    case 'fiscal': return 'Attestation fiscale : 6 mois, usage courant des acheteurs'
+    case 'pro_btp': return 'Certificat Pro BTP : 6 mois, usage courant des acheteurs'
+    case 'cibtp': return 'Certificat CIBTP : 6 mois, usage courant des acheteurs'
     default: return null
   }
 }

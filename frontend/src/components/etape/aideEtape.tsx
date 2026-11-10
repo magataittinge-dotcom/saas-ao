@@ -27,7 +27,7 @@ export const AIDE_ETAPES: Readonly<Record<string, AideEtape>> = {
     sigles: [LEXIQUE.RC],
   },
   analysis: {
-    montre: 'Les conditions du marché relevées dans le dossier, chacune avec sa source : délais, pénalités, paiement, critères de jugement.',
+    montre: 'Les conditions du marché relevées dans le dossier, chacune avec sa source : délais, pénalités, paiement, critères de jugement.',
     aFaire: 'Lisez les conditions, ouvrez une source si un point vous arrête, puis décidez de répondre ou non. La décision vous revient.',
     sigles: [LEXIQUE.RC, LEXIQUE.CCAP, LEXIQUE.CCTP],
   },
@@ -47,7 +47,7 @@ export const AIDE_ETAPES: Readonly<Record<string, AideEtape>> = {
     sigles: [LEXIQUE.CCTP],
   },
   export: {
-    montre: 'Le dossier de réponse : le mémoire, les pièces demandées et les formulaires.',
+    montre: 'Le dossier de réponse : le mémoire, les pièces demandées et les formulaires.',
     aFaire: 'Vérifiez que chaque pièce est jointe, téléchargez le dossier, puis déposez-le sur la plateforme de l’acheteur.',
     sigles: [LEXIQUE.DPGF, LEXIQUE.AE],
   },

@@ -76,7 +76,7 @@ export default function Header({ onSearch, titreSorti = false }: Props) {
   return (
     <header data-coquille="barre-haut" className="sticky top-0 z-30 shrink-0 max-[768px]:border-b max-[768px]:border-bord max-[768px]:bg-surface-0 min-[769px]:bg-transparent">
       <div className="conteneur flex h-14 items-center justify-between gap-3 min-[769px]:h-16">
-        <nav aria-label="Fil d'Ariane" className="flex min-w-0 items-center gap-2">
+        <nav aria-label="Fil d’Ariane" className="flex min-w-0 items-center gap-2">
           {parent && (
             <>
               <Link to={parentTo} className={LIEN_PARENT}>{parent}</Link>
@@ -93,7 +93,7 @@ export default function Header({ onSearch, titreSorti = false }: Props) {
             type="button"
             onClick={onSearch}
             className="flex h-11 items-center gap-2.5 rounded-pilule border border-bord-champ bg-surface-0 pl-4 pr-2 text-sm text-fg-3 transition-colors duration-fast ease-survol hover:bg-surface-1 hover:text-fg-2 active:scale-[.98] max-[768px]:w-11 max-[768px]:justify-center max-[768px]:border-0 max-[768px]:bg-transparent max-[768px]:px-0 min-[769px]:w-72"
-            aria-label="Rechercher un appel d'offres ou une page"
+            aria-label="Rechercher un appel d’offres ou une page"
           >
             <Search size={18} strokeWidth={1.5} absoluteStrokeWidth className="shrink-0" aria-hidden />
             <span className="min-w-0 flex-1 truncate whitespace-nowrap text-left max-[768px]:hidden">Rechercher un AO…</span>
@@ -105,7 +105,7 @@ export default function Header({ onSearch, titreSorti = false }: Props) {
           <Bouton coquille variante={auTrait ? 'secondaire' : 'principal'} data-nouvel-ao={auTrait ? 'trait' : 'plein'} onClick={() => navigate('/projects/new')}
             className="rounded-pilule max-sm:w-11 max-sm:px-0">
             <Plus strokeWidth={1.5} aria-hidden />
-            <span className="max-sm:sr-only">Nouvel appel d&apos;offres</span>
+            <span className="max-sm:sr-only">Nouvel appel d’offres</span>
           </Bouton>
         </div>
       </div>

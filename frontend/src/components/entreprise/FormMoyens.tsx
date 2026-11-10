@@ -47,7 +47,7 @@ export default function FormMoyens({ donnees, avant, idPanneau, idOnglet }: { do
       explication="Vos équipes, vos véhicules, votre outillage, votre sécurité : la partie « moyens » du mémoire technique."
       etat={f} onEnregistrer={f.enregistrer} avant={avant}
     >
-      <Groupe titre="Équipe" aide="Les postes qui portent vos chantiers, les personnes clés citées dans vos dossiers, et des effectifs en nombres seulement : aucun nom de salarié n'est demandé.">
+      <Groupe titre="Équipe" aide="Les postes qui portent vos chantiers, les personnes clés citées dans vos dossiers, et des effectifs en nombres seulement : aucun nom de salarié n’est demandé.">
         <Pleine>
           <div className="space-y-3">
             {postes.map((poste, i) => (
@@ -74,7 +74,7 @@ export default function FormMoyens({ donnees, avant, idPanneau, idOnglet }: { do
           </div>
         </Pleine>
         <Pleine>
-          <Field label="Personnes clés" groupe aide="Spécialité, années d'expérience et qualifications : ce que les cadres « équipe » des dossiers demandent.">
+          <Field label="Personnes clés" groupe aide="Spécialité, années d’expérience et qualifications : ce que les cadres « équipe » des dossiers demandent.">
             <EditeurPersonnes
               lignes={personnes.lignes}
               modifier={personnes.modifier}
@@ -83,10 +83,10 @@ export default function FormMoyens({ donnees, avant, idPanneau, idOnglet }: { do
             />
           </Field>
         </Pleine>
-        <EffectifSimple valeur={effectifs} categorie="encadrement" libelle="Effectif d'encadrement" onChange={(e) => f.poserProfil('effectifs_par_categorie', e)} />
+        <EffectifSimple valeur={effectifs} categorie="encadrement" libelle="Effectif d’encadrement" onChange={(e) => f.poserProfil('effectifs_par_categorie', e)} />
         <HabilitationSst valeur={habilitations} onChange={(h) => f.poserProfil('habilitations', h)} />
         <Pleine>
-          <EffectifParSpecialite valeur={effectifs} categorie="chef_equipe" libelle="Chefs d'équipe par spécialité" exemple="Maçonnerie" onChange={(e) => f.poserProfil('effectifs_par_categorie', e)} />
+          <EffectifParSpecialite valeur={effectifs} categorie="chef_equipe" libelle="Chefs d’équipe par spécialité" exemple="Maçonnerie" onChange={(e) => f.poserProfil('effectifs_par_categorie', e)} />
         </Pleine>
       </Groupe>
 
@@ -101,28 +101,28 @@ export default function FormMoyens({ donnees, avant, idPanneau, idOnglet }: { do
       </Groupe>
 
       <AfficherPlus>
-        <Groupe titre="Équipe : le détail">
+        <Groupe titre="Équipe : le détail">
           <Pleine>
             <EffectifParSpecialite valeur={effectifs} categorie="ouvrier" libelle="Ouvriers et compagnons par spécialité" exemple="Maçons" onChange={(e) => f.poserProfil('effectifs_par_categorie', e)} />
           </Pleine>
           <EffectifSimple valeur={effectifs} categorie="administratif" libelle="Administratif" onChange={(e) => f.poserProfil('effectifs_par_categorie', e)} />
           <EffectifSimple valeur={effectifs} categorie="apprenti" libelle="Apprentis" onChange={(e) => f.poserProfil('effectifs_par_categorie', e)} />
           <Pleine><EditeurHabilitations valeur={habilitations} onChange={(h) => f.poserProfil('habilitations', h)} /></Pleine>
-          {texte('organigramme_description', "Description de l'organigramme", 3, '1 gérant, 2 conducteurs de travaux, 8 ouvriers…')}
+          {texte('organigramme_description', "Description de l’organigramme", 3, '1 gérant, 2 conducteurs de travaux, 8 ouvriers…')}
         </Groupe>
         <Groupe titre="Matériel, véhicules et partenaires">
-          {texte('materiel', "Familles d'outillage", 3, 'Outillage électroportatif, coffrages, échafaudages…')}
+          {texte('materiel', "Familles d’outillage", 3, 'Outillage électroportatif, coffrages, échafaudages…')}
           {texte('vehicules', 'Véhicules (description libre)', 3, '2 camions benne 3,5 t, 1 nacelle 12 m…')}
           {texte('moyens_informatiques', 'Moyens informatiques', 3, 'Logiciel de planning, tablettes de chantier…')}
           {texte('fournisseurs_principaux', 'Fournisseurs principaux', 4, 'Négoce de matériaux, location de matériel…')}
-          {texte('sous_traitance_partenaires', 'Sous-traitance : partenaires habituels et travaux confiés', 4, 'Électricité et plomberie confiées à des partenaires locaux…')}
+          {texte('sous_traitance_partenaires', 'Sous-traitance : partenaires habituels et travaux confiés', 4, 'Électricité et plomberie confiées à des partenaires locaux…')}
           <Field label="Part habituelle de sous-traitance (%)" rempli={typeof p.sous_traitance_part_pct === 'number'}>
             <ChampNombre max={100} valeur={p.sous_traitance_part_pct} onChange={(v) => f.poserProfil('sous_traitance_part_pct', v)} />
           </Field>
         </Groupe>
         <Groupe titre="Qualité, démarrage de chantier et environnement">
           {texte('demarche_qualite', 'Démarche qualité', 4, 'Notre démarche qualité repose sur…')}
-          {texte('procedure_demarrage', 'Procédure de démarrage de chantier', 4, "Dès réception de l'ordre de service, nous…")}
+          {texte('procedure_demarrage', 'Procédure de démarrage de chantier', 4, "Dès réception de l’ordre de service, nous…")}
           {texte('mesures_environnementales', 'Mesures environnementales', 4, 'Réduction des nuisances sonores, protection des riverains…')}
           {texte('sav_garantie', 'Service après-vente et garantie de parfait achèvement', 4, 'Intervention sous 48 heures…')}
         </Groupe>

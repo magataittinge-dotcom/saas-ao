@@ -51,10 +51,10 @@ type EtatEtape = Pick<Project, 'status' | 'current_step' | 'processing_status' |
  * Plan) ; rédaction en cours ou mémoire écrit → l'écran Rédiger.
  */
 export function actionEtape(p: EtatEtape): { verbe: string; segment: string } {
-  if (aDecider(p)) return { verbe: 'Décider : on y va ?', segment: ROUTES_ETAPES[2] }
+  if (aDecider(p)) return { verbe: 'Décider : on y va ?', segment: ROUTES_ETAPES[2] }
   const etape = avancementAO(p.current_step).etape
   switch (etape) {
-    case 1: return { verbe: "Déposer le dossier de l'acheteur", segment: ROUTES_ETAPES[0] }
+    case 1: return { verbe: "Déposer le dossier de l’acheteur", segment: ROUTES_ETAPES[0] }
     case 2:
       // Un seul lot (ou un marché unique) : rien à choisir, la lecture se lance depuis l'écran de dépôt, au clic.
       if (lotUniqueDuDossier(p)) return { verbe: 'Lire ce dossier', segment: ROUTES_ETAPES[0] }
@@ -76,23 +76,23 @@ export const verbeEtape = (p: EtatEtape): string => actionEtape(p).verbe
 export const lienEtape = (p: EtatEtape & Pick<Project, 'id'>): string => `/projects/${p.id}/${actionEtape(p).segment}`
 
 const TEXTES: Record<number, string> = {
-  1: 'Déposez le dossier de consultation (ZIP ou PDF) : Synorix lit les pièces et repère les lots.',
+  1: 'Déposez le dossier de consultation (ZIP ou PDF) : Synorix lit les pièces et repère les lots.',
   2: 'Synorix a repéré les lots du dossier de consultation. Choisissez le vôtre pour passer à la lecture.',
-  3: 'Les lots sont choisis. Lancez la lecture du dossier : chaque exigence sera relevée avec sa source.',
+  3: 'Les lots sont choisis. Lancez la lecture du dossier : chaque exigence sera relevée avec sa source.',
   4: 'Passez en revue les exigences et les pièces de candidature, chacune avec sa source dans le dossier.',
   5: 'Le dossier est lu. Choisissez ses parties, puis Synorix le rédige à partir de votre entreprise et du dossier de consultation.',
-  6: 'Le dossier est prêt : il reste à le télécharger, puis à le déposer sur la plateforme de l’acheteur.',
+  6: 'Le dossier est prêt : il reste à le télécharger, puis à le déposer sur la plateforme de l’acheteur.',
 }
 
 /** La phrase d'une étape. Pour l'étape « Télécharger le dossier », `lectureAO` la complète avec les pièces restant à joindre. */
 export function texteEtape(p: EtatEtape): string {
-  if (aDecider(p)) return 'La lecture est terminée. La fiche « On y va ? » rassemble les conditions du marché, chacune avec sa source. La décision vous revient.'
+  if (aDecider(p)) return 'La lecture est terminée. La fiche « On y va ? » rassemble les conditions du marché, chacune avec sa source. La décision vous revient.'
   if (enAttente(p)) return 'La lecture est en cours. Cet écran se met à jour dès qu’elle est terminée.'
   if (avancementAO(p.current_step).etape === 5) {
     if (enRedaction(p)) return 'Le mémoire est en cours de rédaction. Cet écran se met à jour dès qu’il est prêt.'
     if (aMemoire(p)) return 'Le mémoire est rédigé. Relisez-le, retouchez ce qui doit l’être, puis passez à l’export.'
   }
-  if (avancementAO(p.current_step).etape === 2 && lotUniqueDuDossier(p)) return 'Le dossier n’a qu’un lot. Lancez la lecture depuis l’écran de dépôt : chaque exigence sera relevée avec sa source.'
+  if (avancementAO(p.current_step).etape === 2 && lotUniqueDuDossier(p)) return 'Le dossier n’a qu’un lot. Lancez la lecture depuis l’écran de dépôt : chaque exigence sera relevée avec sa source.'
   return TEXTES[avancementAO(p.current_step).etape]
 }
 
@@ -166,7 +166,7 @@ export function ficheVide(): FicheAction {
     meta: null,
     statut: null,
     quand: null,
-    texte: 'Déposez le dossier de consultation (ZIP ou PDF) : Synorix lit les pièces, repère les lots et prépare la décision.',
+    texte: 'Déposez le dossier de consultation (ZIP ou PDF) : Synorix lit les pièces, repère les lots et prépare la décision.',
     cta: { libelle: 'Nouvel AO', vers: '/projects/new' },
     second: null,
   }

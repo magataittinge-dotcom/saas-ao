@@ -39,7 +39,7 @@ export function FilPoints({ fil, etiquettes, className }: { fil: { nom: string; 
   const courant = fil.find((e) => e.etat === 'cours')
   const libelleEtat: Record<EtatPoint, string> = { fait: 'faite', cours: 'en cours', avenir: 'à venir' }
   return (
-    <ol className={cn('grid grid-cols-7 gap-[3px]', etiquettes && 'gap-1.5', className)} aria-label={courant ? `Avancement : étape ${fil.indexOf(courant) + 1} sur ${fil.length}, ${courant.nom}` : 'Avancement'}>
+    <ol className={cn('grid grid-cols-7 gap-[3px]', etiquettes && 'gap-1.5', className)} aria-label={courant ? `Avancement : étape ${fil.indexOf(courant) + 1} sur ${fil.length}, ${courant.nom}` : 'Avancement'}>
       {fil.map((e) => (
         <li key={e.nom} className="min-w-0">
           <span aria-hidden className={cn('block h-1.5 rounded-pilule', e.etat === 'fait' ? 'bg-vert-mark' : e.etat === 'cours' ? 'bg-bleu-mark' : 'bg-gris-mark')} />

@@ -31,8 +31,8 @@ export function phraseLotsEcartes(e: Partial<LotsEcartes> | null | undefined): s
   const phrases: string[] = []
   if (horsListe > 0) {
     phrases.push(horsListe === 1
-      ? '1 autre lot cité dans le dossier ne figure pas dans la liste du règlement : il n’est pas proposé.'
-      : `${horsListe} autres lots cités dans le dossier ne figurent pas dans la liste du règlement : ils ne sont pas proposés.`)
+      ? '1 autre lot cité dans le dossier ne figure pas dans la liste du règlement : il n’est pas proposé.'
+      : `${horsListe} autres lots cités dans le dossier ne figurent pas dans la liste du règlement : ils ne sont pas proposés.`)
   }
   if (sansIntitule > 0) {
     phrases.push(sansIntitule === 1
@@ -40,7 +40,7 @@ export function phraseLotsEcartes(e: Partial<LotsEcartes> | null | undefined): s
       : `${sansIntitule} autres lots cités sans intitulé ne sont pas proposés.`)
   }
   if (e?.ia_plafond === 'jour' || e?.ia_plafond === 'mois') {
-    phrases.push(`Le plafond de lectures assistées du ${e.ia_plafond === 'mois' ? 'mois' : 'jour'} est atteint : la liste vient de la lecture directe des pièces. Vous pouvez ajouter un lot à la main.`)
+    phrases.push(`Le plafond de lectures assistées du ${e.ia_plafond === 'mois' ? 'mois' : 'jour'} est atteint : la liste vient de la lecture directe des pièces. Vous pouvez ajouter un lot à la main.`)
   }
   return phrases.length ? phrases.join(' ') : null
 }

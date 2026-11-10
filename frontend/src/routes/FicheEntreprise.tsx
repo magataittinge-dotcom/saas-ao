@@ -111,7 +111,7 @@ function Fiche({ rubrique }: { rubrique: RubriqueFiche }) {
         `/entreprise/fiches/${rubrique}/logo`, form, { headers: { 'Content-Type': 'multipart/form-data' } })).data
     },
     onSuccess: (r) => majLogo(r.logo_url, r.logo_origine),
-    onError: async (e) => toast(await messageErreur(e, "Le logo n'a pas pu être envoyé. Réessayez avec une image PNG ou JPEG de 2 Mo au plus."), 'error'),
+    onError: async (e) => toast(await messageErreur(e, "Le logo n’a pas pu être envoyé. Réessayez avec une image PNG ou JPEG de 2 Mo au plus."), 'error'),
   })
   const retraitLogo = useMutation({
     mutationFn: async () => (await api.delete<{ logo_url: string | null; logo_origine: FicheBordereau['logo_origine'] }>(
@@ -167,7 +167,7 @@ function Fiche({ rubrique }: { rubrique: RubriqueFiche }) {
       lien.click()
       window.URL.revokeObjectURL(adresse)
     },
-    onError: async (e) => toast(await messageErreur(e, "La fiche n'a pas pu être générée pour le moment. Réessayez dans un instant."), 'error'),
+    onError: async (e) => toast(await messageErreur(e, "La fiche n’a pas pu être préparée pour le moment. Réessayez dans un instant."), 'error'),
   })
 
   const bordereau = brouillon ?? data?.bordereau
