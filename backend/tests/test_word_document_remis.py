@@ -143,3 +143,10 @@ def test_figures_sans_logo_en_encre_neutre_pas_au_bleu_de_l_outil():
     r, g, b = (int(ACCENT_PAR_DEFAUT[i:i + 2], 16) for i in (1, 3, 5))
     assert max(r, g, b) - min(r, g, b) <= 40, ACCENT_PAR_DEFAUT          # un gris, pas une teinte
     assert contraste(Theme().accent, "#FFFFFF") >= 4.5
+
+
+def test_ni_veuve_ni_orpheline_par_defaut():
+    """Le modèle python-docx ne pose pas `widowControl` : sans lui, Word et LibreOffice laissent une ligne
+    seule en haut ou en bas de page. Posé dans les valeurs par défaut du document (tous les styles)."""
+    defauts = re.search(r"<w:docDefaults>.*?</w:docDefaults>", _xml(_octets(), "word/styles.xml"), re.S).group(0)
+    assert "<w:widowControl/>" in defauts or '<w:widowControl w:val="1"/>' in defauts

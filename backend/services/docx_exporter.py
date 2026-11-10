@@ -302,6 +302,17 @@ def _langue_par_defaut(doc: Document, langue: str = "fr-FR"):
         rpr.append(lang)
     for attr in ("w:val", "w:eastAsia"):
         lang.set(qn(attr), langue)
+    # Ni veuve ni orpheline (absent du modèle python-docx : sans cet élément, la règle n'est pas appliquée).
+    ppr = defauts.find(f"{qn('w:pPrDefault')}/{qn('w:pPr')}")
+    if ppr is None:
+        ppr_defaut = defauts.find(qn("w:pPrDefault"))
+        if ppr_defaut is None:
+            ppr_defaut = OxmlElement("w:pPrDefault")
+            defauts.append(ppr_defaut)
+        ppr = OxmlElement("w:pPr")
+        ppr_defaut.append(ppr)
+    if ppr.find(qn("w:widowControl")) is None:
+        ppr.insert(0, OxmlElement("w:widowControl"))   # premier enfant de pPr dans l'ordre du schéma
 
 
 def _setup_doc(org_name: str, titre_entete: str = "") -> Document:
