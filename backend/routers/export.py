@@ -291,7 +291,8 @@ def export_docx(
     # (page de garde, organigramme, carte, logo). Le builder nu laissait le
     # bouton de l'étape Export produire un docx sans page de garde ni images.
     from routers.memoire import build_project_memoire_docx
-    docx_bytes = build_project_memoire_docx(project, memoire, org, db)
+    from services.pdf_export import docx_numerote
+    docx_bytes = docx_numerote(build_project_memoire_docx(project, memoire, org, db))   # sommaire numéroté
 
     filename = f"Memoire_Technique_{project.name.replace(' ', '_')}.docx"
     ascii_name = filename.encode("ascii", errors="replace").decode("ascii")

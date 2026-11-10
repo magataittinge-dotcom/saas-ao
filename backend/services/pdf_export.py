@@ -40,3 +40,19 @@ def docx_to_pdf(docx_bytes: bytes, timeout: float | None = None) -> bytes:
     if docx_final is None:
         return pdf
     return _convertir(docx_final, timeout)
+
+
+def docx_numerote(docx_bytes: bytes, timeout: float | None = None) -> bytes:
+    """Le Word à télécharger, son sommaire déjà numéroté (passe 1 de `docx_to_pdf`, numéros écrits dans le
+    résultat en cache du champ). Word recalcule toujours à l'ouverture (`updateFields`) ou par F9 ; si le
+    patron refuse, les numéros sont là. Carlito ayant les métriques de Calibri, la pagination concorde.
+    Sans LibreOffice, ou en cas d'échec : le Word tel quel (jamais d'erreur pour un téléchargement Word)."""
+    from services.docx_sommaire import completer_sommaire
+
+    if not soffice_available():
+        return docx_bytes
+    try:
+        pdf = _convertir(docx_bytes, timeout)
+    except PdfConversionError:
+        return docx_bytes
+    return completer_sommaire(docx_bytes, pdf) or docx_bytes

@@ -162,3 +162,24 @@ def test_une_seule_carte_de_moyens_ne_prend_pas_toute_la_largeur():
                                        Theme())
     largeurs = [float(w) for w in re.findall(r'<rect x=[^>]*width="([\d.]+)"[^>]*rx=', svg)]   # les cartes (le fond n'a pas de rx)
     assert largeurs and max(largeurs) <= LARGEUR_PORTRAIT / 4 + 1, largeurs
+
+
+def test_word_telecharge_porte_deja_les_numeros_du_sommaire():
+    """Le Word téléchargé a déjà les numéros de page du sommaire (même passe LibreOffice que le PDF) : un
+    patron qui refuse « mettre à jour les champs » à l'ouverture ne voit pas un sommaire sans pages."""
+    import shutil
+
+    import pytest
+    if not (shutil.which("soffice") or shutil.which("libreoffice")):
+        pytest.skip("LibreOffice absent")
+    from services.pdf_export import docx_numerote
+    doc = Document(io.BytesIO(docx_numerote(_octets())))
+    lignes = [p.text for p in doc.paragraphs if p.style.name.startswith("TOC")]
+    assert lignes and all(re.search(r"\t\d+$", t) for t in lignes), lignes
+
+
+def test_word_numerote_sans_libreoffice_rend_le_fichier_tel_quel(monkeypatch):
+    from services import pdf_export
+    monkeypatch.setattr(pdf_export, "soffice_available", lambda: False)
+    octets = _octets()
+    assert pdf_export.docx_numerote(octets) == octets

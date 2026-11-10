@@ -957,7 +957,8 @@ def export_memoire_docx(
         raise HTTPException(status_code=404, detail="Mémoire non généré")
     org = db.query(Organization).filter(Organization.id == user.organization_id).first()
 
-    docx_bytes = build_project_memoire_docx(project, memoire, org, db)
+    from services.pdf_export import docx_numerote
+    docx_bytes = docx_numerote(build_project_memoire_docx(project, memoire, org, db))   # sommaire numéroté
     reponse = _attachment_response(
         docx_bytes,
         f"Memoire_Technique_{project.name.replace(' ', '_')}.docx",
