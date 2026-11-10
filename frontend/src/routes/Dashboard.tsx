@@ -1,297 +1,225 @@
-import { lazy, Suspense, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { ArrowRight, Check, CircleAlert } from 'lucide-react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/authStore'
 import BandeAO from '@/components/dashboard/BandeAO'
+import { LigneNouveau } from '@/components/dashboard/LigneNouveau'
+import { MettreAJourStatut } from '@/components/common/MettreAJourStatut'
 import FirstAOWelcome from '@/components/onboarding/FirstAOWelcome'
+import { Bouton, classesBouton } from '@/components/ui/bouton'
+import { Carte } from '@/components/ui/carte'
+import { BandeCases, CaseResume } from '@/components/ui/case-resume'
+import { EtatErreur, EtatRequete } from '@/components/ui/etats'
+import { Message } from '@/components/ui/message'
+import { Page, TitreSection } from '@/components/ui/page'
+import { PastilleEtat } from '@/components/ui/pastille'
+import { Squelette } from '@/components/ui/squelette'
+import { SynorixParle } from '@/components/ui/synorix-parle'
+import { useDocuments } from '@/hooks/useDocuments'
+import { useProjects } from '@/hooks/useProject'
 import { api } from '@/services/api'
-import { echeanceAO, estEnCoursOuvert, etatEcheance } from '@/lib/echeance'
-import { prenomAffichable } from '@/lib/prenom'
-import { raisonSociale } from '@/lib/raisonSociale'
 import { dateDuJourParis } from '@/lib/dateParis'
 import { avancement } from '@/lib/entreprise/avancement'
-import { useDocuments } from '@/hooks/useDocuments'
-import { VisageRond } from '@/components/mesao/VisagePetit'
-import { cn } from '@/lib/utils'
+import { aLaUne, comptesAO, lectureAO, type ComptesAO } from '@/lib/etatAO'
+import { quandCourt } from '@/lib/mesAO'
+import { prenomAffichable } from '@/lib/prenom'
+import { raisonSociale } from '@/lib/raisonSociale'
 import type { Project, DashboardStats } from '@/types'
-
-/* ── Empty fallback ──────────────────────────────────────────────── */
-const EMPTY_STATS: DashboardStats = {
-  projects_en_cours: 0,
-  projects_soumis_ce_mois: 0,
-  projects_gagnes: 0,
-  taux_succes: 0,
-  documents_expires: 0,
-  documents_expirant_bientot: 0,
-}
-
-// Cible tactile : 44 px de haut sur écran tactile (contrôles de la phase C)
-const cible = 'inline-flex items-center [@media(pointer:coarse)]:min-h-11'
 
 // La carte, la liste et leurs données : un morceau à part, demandé par l'accueil seulement.
 const VeilleAccueil = lazy(() => import('@/components/veille/VeilleAccueil'))
 
-const pluriel = (n: number, mot: string) => `${n} ${mot}${n > 1 ? 's' : ''}`
+const pluriel = (n: number, un: string, plusieurs: string) => `${n} ${n > 1 ? plusieurs : un}`
 
+interface Quota { plan: string; analyses: { used: number; limit: number | null }; memoires: { used: number; limit: number | null } }
+
+/** La ligne du jour, sous le « Bonjour » : la date, puis la prochaine remise à venir (la même que « À la une » de Mes AO). */
+export function suiteDuJour(projets: readonly Project[], maintenant: Date = new Date()): string | null {
+  const next = aLaUne(projets, maintenant)
+  if (!next) return null
+  const e = lectureAO(next, maintenant).echeance
+  // « dossier prêt » seulement si l'étape « Télécharger le dossier » est atteinte
+  if (e.etat === 'aujourdhui') return next.current_step >= 6 ? 'remise aujourd’hui, dossier prêt' : 'remise aujourd’hui'
+  if (e.etat === 'proche') return `prochaine remise dans ${pluriel(e.jours ?? 0, 'jour', 'jours')}`
+  const quand = quandCourt(next)
+  return quand ? `prochaine remise ${quand}` : null
+}
+
+/** Ce que Synorix dit sur l'Accueil : une phrase au plus, celle qui appelle un geste. Rien à dire : pas de visage. */
+export function phraseDeSynorix(comptes: ComptesAO | null, profilRenseigne: boolean | null): { phrase: string; lien?: { to: string; libelle: string } } | null {
+  if (comptes && comptes.aMettreAJour > 0) {
+    return {
+      phrase: comptes.aMettreAJour > 1
+        ? `${comptes.aMettreAJour} appels d’offres ont dépassé leur date de remise. Dites ce qu’ils sont devenus : ils rejoindront les terminés.`
+        : 'Un appel d’offres a dépassé sa date de remise. Dites ce qu’il est devenu : il rejoindra les terminés.',
+    }
+  }
+  if (profilRenseigne === false) {
+    return { phrase: 'Votre profil d’entreprise est à compléter : il nourrit chaque mémoire.', lien: { to: '/company', libelle: 'Compléter Mon entreprise' } }
+  }
+  return null
+}
+
+/** Le plafond du mois est atteint (offre à plafond seulement) : la phrase le dit avec ses chiffres ; sinon null. */
+export function phraseQuotaAtteint(q: Quota | undefined): string | null {
+  if (!q || q.plan === 'free') return null
+  const plein = (u: { used: number; limit: number | null }) => u.limit !== null && u.used >= u.limit
+  const a = plein(q.analyses)
+  const m = plein(q.memoires)
+  if (a && m) return `Les unités de ce mois sont toutes utilisées : ${q.analyses.used} analyses sur ${q.analyses.limit}, ${q.memoires.used} mémoires sur ${q.memoires.limit}.`
+  if (a) return `Les analyses de ce mois sont toutes utilisées : ${q.analyses.used} sur ${q.analyses.limit}.`
+  if (m) return `Les mémoires de ce mois sont tous utilisés : ${q.memoires.used} sur ${q.memoires.limit}.`
+  return null
+}
 
 /* ═══════════════════════════════════════════════════════════════════
-   TABLEAU DE BORD — jetons du système (clair et nuit)
-   la bande « Vos AO en cours » (trois au plus, la prochaine action), puis la veille
-   des appels d'offres (carte de France et liste des avis, chargées à la demande),
-   puis le coffre-fort et le bilan. « Synorix Intelligence » vit en haut de Mes AO.
-   Pas de cartes héros ni d'accès rapides : la navigation est dans la barre latérale. Aucune couleur écrite ici :
-   tout passe par les jetons (styles/theme.css) et les composants de base.
+   ACCUEIL — composants du système seulement (clair et nuit)
+   le « Bonjour » (le seul h1) et la ligne du jour ; la ligne « Nouveau », congédiable ; ce que Synorix a à dire (une phrase) ;
+   les appels d'offres en cours (trois au plus) et ceux à mettre à jour ; la veille (carte de France et liste des avis,
+   chargées à la demande) ; puis le coffre-fort, l'entreprise et le bilan en une bande de cases.
+   Les états d'un AO viennent de lib/etatAO.ts. Une panne du serveur dit son erreur : jamais « vous n'avez rien ».
    ═══════════════════════════════════════════════════════════════════ */
 export default function Dashboard() {
   const navigate = useNavigate()
   const { user, organization } = useAuthStore()
+  const [statutPour, setStatutPour] = useState<Project | null>(null)
 
-  const { data: projects = [], isLoading: pLoad } = useQuery({
-    queryKey: ['projects'],
-    queryFn: async () => { const { data } = await api.get<Project[]>('/projects'); return data },
-  })
-  const { data: stats } = useQuery({
+  const projets = useProjects()
+  const stats = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: async () => { const { data } = await api.get<DashboardStats>('/dashboard/stats'); return data },
   })
-
-  const queryClient = useQueryClient()
-  // 1.13 — « Sans suite » se défait : l'AO classé peut être rouvert d'un clic
-  const [classe, setClasse] = useState<{ id: string; name: string } | null>(null)
-  const { mutate: markSansSuite } = useMutation({
-    mutationFn: async (p: { id: string; name: string }) => {
-      await api.patch(`/projects/${p.id}`, { status: 'sans_suite' })
-    },
-    onSuccess: (_, p) => {
-      setClasse(p)
-      queryClient.invalidateQueries({ queryKey: ['projects'] })
-      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
-    },
-  })
-  const { mutate: reouvrir, isPending: reouverture } = useMutation({
-    mutationFn: async (p: { id: string; name: string }) => {
-      await api.patch(`/projects/${p.id}`, { status: 'analyzed' })
-    },
-    onSuccess: () => {
-      setClasse(null)
-      queryClient.invalidateQueries({ queryKey: ['projects'] })
-      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
-    },
-  })
-
   // C15 — quota pour l'écran « premier DCE offert » + rappel sobre de l'offre
-  const { data: quotaStatus } = useQuery<{
-    plan: string
-    analyses: { used: number; limit: number | null }
-    memoires: { used: number; limit: number | null }
-  }>({
+  const { data: quotaStatus } = useQuery<Quota>({
     queryKey: ['billing-quota'],
     queryFn: async () => { const { data } = await api.get('/billing/quota'); return data },
   })
+  const documents = useDocuments()
 
-  const s = stats ?? EMPTY_STATS
+  const maintenant = useMemo(() => new Date(), [projets.data]) // eslint-disable-line react-hooks/exhaustive-deps
+  const comptes = useMemo(() => (projets.data ? comptesAO(projets.data, maintenant) : null), [projets.data, maintenant])
+  const suite = projets.data ? suiteDuJour(projets.data, maintenant) : null
   const prenom = prenomAffichable(user?.name, user?.email)
 
-  // 1.14 — « en cours » : la définition commune (lib/echeance.ts, comme le serveur).
-  // Les AO clos (soumis/gagné/perdu/sans_suite) sortent du tableau de bord.
-  const activeProjects = projects.filter((p) => estEnCoursOuvert(p))
-  const avecEcheance = activeProjects.map((p) => ({ ...p, _echeance: etatEcheance(echeanceAO(p)) }))
-  // La liste : la remise la plus proche d'abord, les AO sans date à la fin.
-  const liste = [...avecEcheance].sort((a, b) =>
-    (a._echeance.limite?.getTime() ?? Infinity) - (b._echeance.limite?.getTime() ?? Infinity))
-  // Prochaines dates : les remises à venir, même calcul partout (1.14)
-  const aVenir = liste.filter((p) => p._echeance.etat === 'aujourdhui' || p._echeance.etat === 'proche' || p._echeance.etat === 'a_venir')
-  const upcoming = aVenir.filter((p) => p._echeance.etat !== 'a_venir')
-
-  // La ligne du jour (heure de Paris) : la date, le nombre d'AO en cours et la prochaine remise. Une seule fois chaque
-  // information : sans AO en cours, la bande le dit (et liste les remises passées) ; la ligne s'en tient à la date.
-  // « Dossier prêt » seulement si l'étape Export est atteinte — 1.14.
-  const next = upcoming[0]
-  const prochaine = aVenir[0]?._echeance
-  const suite = next && next._echeance.etat === 'aujourdhui'
-    ? (next.current_step >= 6 ? "remise aujourd'hui, dossier prêt" : "remise aujourd'hui")
-    : prochaine && prochaine.etat !== 'a_venir' ? `prochaine remise dans ${pluriel(prochaine.jours!, 'jour')}` : null
-  const enCours = activeProjects.length > 0 ? `${activeProjects.length} AO en cours` : null
-  const raison = raisonSociale(organization)
   const identite = avancement({ organisation: organization }, 'identite')
-  const profilRenseigne = identite.total > 0 && identite.rempli >= identite.total
-  const { data: documents } = useDocuments()
-  const nbDocuments = documents?.length ?? 0
+  const profilRenseigne = organization ? identite.total > 0 && identite.rempli >= identite.total : null
+  const parole = phraseDeSynorix(comptes, profilRenseigne)
 
-  // C15 — essai intact (free, trial accordé, 0 unité, 0 projet) → écran
-  // central « premier DCE offert » ; essai consommé → tableau de bord normal.
+  // C15 — essai intact (free, trial accordé, 0 unité, 0 projet) → écran central « premier DCE offert » ; essai consommé →
+  // l'accueil normal. Le serveur doit avoir répondu : une panne n'est pas « aucun AO ».
   const freshTrial =
     organization?.plan === 'free'
     && organization?.trial_granted !== false
     && quotaStatus !== undefined
     && quotaStatus.analyses.used === 0
     && quotaStatus.memoires.used === 0
-    && !pLoad && projects.length === 0
-
-  if (freshTrial) {
-    return <FirstAOWelcome />
-  }
+    && projets.data !== undefined && projets.data.length === 0
+  if (freshTrial) return <FirstAOWelcome />
 
   const consumedFreeTrial =
     organization?.plan === 'free'
     && quotaStatus !== undefined
-    && (quotaStatus.analyses.used > 0 || quotaStatus.memoires.used > 0
-        || organization?.trial_granted === false)
+    && (quotaStatus.analyses.used > 0 || quotaStatus.memoires.used > 0 || organization?.trial_granted === false)
 
-  const decides = s.projects_gagnes > 0 || s.taux_succes > 0
+  const quotaAtteint = phraseQuotaAtteint(quotaStatus)
+  const s = stats.data
+  const nbDocuments = documents.data?.length
+  const aRenouveler = s ? s.documents_expires + s.documents_expirant_bientot : 0
+  const decides = !!s && (s.projects_gagnes > 0 || s.taux_succes > 0)
+  const suiviEnErreur = (stats.isError && !s) || (documents.isError && nbDocuments === undefined)
 
   return (
-    <div className="mx-auto w-full max-w-[1680px] px-1 pb-4 pt-2 sm:px-4 lg:px-6 xl:px-8">
+    <Page
+      titre={prenom ? `Bonjour, ${prenom}` : 'Bonjour'}
+      sousTitre={<>{dateDuJourParis()}{suite && <> · {suite}</>}<span aria-hidden className="fil-aurore mt-4 block" /></>}
+    >
+      {/* la ligne « Nouveau » : sous l'en-tête, congédiable ; elle n'existe plus ailleurs */}
+      <LigneNouveau />
 
       {/* C15 — essai utilisé : rappel sobre de l'offre, jamais bloquant */}
       {consumedFreeTrial && (
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-carte border border-bord bg-surface-0 px-5 py-3">
-          <p className="text-[15px] text-fg-2">
-            Votre AO d'essai est utilisé. Le plan Pro couvre 40 analyses et 40 mémoires par mois.
-          </p>
-          <button
-            onClick={() => navigate('/settings/billing')}
-            className={cn(cible, 'shrink-0 text-sm font-medium text-accent-text underline-offset-[3px] transition-colors duration-base ease-lien hover:underline')}
-          >
-            Voir les plans
-          </button>
-        </div>
+        <Message ton="info" className="mb-6" action={<Link to="/settings/billing" className={classesBouton('lien')}>Voir les offres</Link>}>
+          Votre AO d’essai est utilisé. Le plan Pro couvre 40 analyses et 40 mémoires par mois.
+        </Message>
       )}
 
-      {/* ── En-tête : bonjour (le h1 serif), la journée en une ligne, le fil d'aurore ; à droite, l'entreprise et son visage ── */}
-      <header className="flex flex-wrap items-start justify-between gap-x-8 gap-y-5">
-        <div className="min-w-0">
-          <h1 className="titre-page text-fg">{prenom ? `Bonjour, ${prenom}` : 'Bonjour'}</h1>
-          <p className="mt-2 text-[15px] text-fg-2">
-            {dateDuJourParis()}
-            {enCours && <> · <strong className="chiffres font-semibold text-fg">{enCours}</strong></>}
-            {suite && <>, {suite}</>}
-          </p>
-          <span aria-hidden className="fil-aurore mt-4 block" />
-        </div>
-        <Link to="/company" data-pastille-entreprise
-          className="flex min-w-0 max-w-full items-center gap-3 rounded-pilule border border-bord bg-surface-0 py-2 pl-2.5 pr-5 shadow-card transition-[border-color] duration-base ease-survol hover:border-bord-2">
-          <VisageRond taille={48} />
-          <span className="min-w-0">
-            <span className="block truncate text-[15px] font-semibold text-fg">{raison}</span>
-            <span className={cn('mt-0.5 flex items-center gap-1.5 text-[13px] font-semibold', profilRenseigne ? 'text-vert-ink' : 'text-ambre-ink')}>
-              {profilRenseigne ? <Check size={13} strokeWidth={2.4} aria-hidden /> : <CircleAlert size={13} strokeWidth={2.2} aria-hidden />}
-              {profilRenseigne ? 'Profil renseigné' : 'Profil à compléter'}
-            </span>
-          </span>
-        </Link>
-      </header>
+      {/* plafond du mois atteint : dit ici, avec ses chiffres (avant : un seul point rouge dans la barre) */}
+      {quotaAtteint && (
+        <Message ton="attention" className="mb-6" action={<Link to="/settings/billing" className={classesBouton('lien')}>Voir l’abonnement</Link>}>
+          {quotaAtteint} Vos appels d’offres déjà lus restent ouverts.
+        </Message>
+      )}
 
-      {/* ── Vos AO en cours : trois au plus, la remise et la prochaine action ; les remises passées en dessous ── */}
-      <div className="mt-10">
-        <BandeAO
-          projets={projects}
-          total={activeProjects.length}
-          chargement={pLoad}
-          onSansSuite={markSansSuite}
-          onNouveau={() => navigate('/projects/new')}
-        />
-      </div>
+      {/* Synorix parle : une phrase au plus, là où il a quelque chose à dire (le seul visage de l'écran) */}
+      {parole && (
+        <SynorixParle action={parole.lien ? <Link to={parole.lien.to} className={classesBouton('lien')}>{parole.lien.libelle}</Link> : undefined}>
+          {parole.phrase}
+        </SynorixParle>
+      )}
+
+      {/* ── Vos appels d'offres : en cours (trois au plus), puis ceux à mettre à jour ── */}
+      <EtatRequete requete={projets} estVide={() => false} vide={null} squelette={<BandeEnChargement />}
+        erreur={(
+          <EtatErreur className="mt-10 max-md:mt-7.5" titre="Vos appels d’offres n’ont pas pu se charger"
+            detail="La connexion au serveur a échoué. Vos dossiers ne sont pas touchés." onReessayer={() => { void projets.refetch() }} enCours={projets.isFetching} />
+        )}>
+        {(liste) => <BandeAO projets={liste} maintenant={maintenant} onStatut={setStatutPour} onNouveau={() => navigate('/projects/new')} />}
+      </EtatRequete>
 
       {/* ── La veille : la carte et la liste des avis, chargées à la demande (l'accueil seulement) ── */}
-      <div className="mt-12">
+      <div className="mt-10 max-md:mt-7.5">
         <Suspense fallback={<VeilleEnChargement />}>
           <VeilleAccueil />
         </Suspense>
       </div>
 
-      {/* ── Coffre-fort et bilan : une seule surface découpée par un filet (direction A) ; jamais de gros « 0 » ── */}
-      <div className="mt-12 grid overflow-hidden rounded-carte border border-bord bg-surface-0 shadow-card md:grid-cols-2">
-        <section aria-labelledby="t-coffre" className="flex flex-col gap-3 p-5 sm:p-6">
-          <h2 id="t-coffre" className="text-lg font-semibold text-fg">Coffre-fort</h2>
-          {nbDocuments > 0 ? (
-            <p className="flex items-baseline gap-2"><span className="chiffre-grand">{nbDocuments}</span><span className="text-[15px] font-semibold text-fg-2">{nbDocuments > 1 ? 'documents' : 'document'}</span></p>
-          ) : (
-            <p className="text-[15px] text-fg-2">Vos pièces administratives apparaîtront ici, avec leur date de validité.</p>
-          )}
-          {s.documents_expires === 0 && s.documents_expirant_bientot === 0 ? (
-            nbDocuments > 0 && <p className="flex items-center gap-2 text-[15px] font-semibold text-vert-ink"><Check size={16} strokeWidth={2.2} aria-hidden />Aucune pièce à renouveler.</p>
-          ) : (
-            <ul>
-              {s.documents_expires > 0 && (
-                <li>
-                  <Link to="/vault" className={cn(cible, 'gap-2 py-1 text-[15px] font-semibold text-rouge-ink transition-colors duration-base ease-lien hover:underline')}>
-                    <CircleAlert size={16} strokeWidth={2.2} aria-hidden />
-                    {pluriel(s.documents_expires, 'pièce')} à renouveler
-                  </Link>
-                </li>
-              )}
-              {s.documents_expirant_bientot > 0 && (
-                <li>
-                  <Link to="/vault" className={cn(cible, 'gap-2 py-1 text-[15px] font-semibold text-ambre-ink transition-colors duration-base ease-lien hover:underline')}>
-                    <CircleAlert size={16} strokeWidth={2.2} aria-hidden />
-                    {s.documents_expirant_bientot > 1
-                      ? `${s.documents_expirant_bientot} pièces expirent bientôt`
-                      : '1 pièce expire bientôt'}
-                  </Link>
-                </li>
-              )}
-            </ul>
-          )}
-          <Link to="/vault" className={cn(cible, 'mt-auto w-fit gap-1.5 pt-2 text-sm font-semibold text-accent-text underline-offset-[3px] hover:underline')}>
-            Ouvrir le coffre-fort <ArrowRight size={15} aria-hidden />
-          </Link>
-        </section>
-
-        <section aria-labelledby="t-bilan" className="flex flex-col gap-3 border-t border-bord p-5 sm:p-6 md:border-l md:border-t-0">
-          <h2 id="t-bilan" className="text-lg font-semibold text-fg">Bilan</h2>
-          <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
-            <div>
-              <dt className="text-[13.5px] text-fg-3">Soumis ce mois-ci</dt>
-              <dd className="mt-1">
-                {s.projects_soumis_ce_mois > 0
-                  ? <span className="chiffre-grand">{s.projects_soumis_ce_mois}</span>
-                  : <span className="text-[15px] text-fg-2">Votre premier dossier déposé apparaîtra ici.</span>}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[13.5px] text-fg-3">Taux de réussite</dt>
-              <dd className="mt-1">
-                {decides
-                  ? <span className="chiffre-grand">{s.taux_succes}<span className="ml-1 text-2xl">%</span></span>
-                  : <span className="text-[15px] text-fg-2">Dès votre premier résultat</span>}
-              </dd>
-            </div>
-            {s.projects_gagnes > 0 && (
-              <div>
-                <dt className="text-[13.5px] text-fg-3">AO gagnés</dt>
-                <dd className="chiffres mt-1 text-[15px] font-semibold text-fg">{s.projects_gagnes}</dd>
-              </div>
+      {/* ── Coffre-fort, entreprise et bilan : une bande de cases ; une case n'apparaît qu'une fois sa donnée lue ── */}
+      <section aria-labelledby="t-suivi" className="mt-10 max-md:mt-7.5">
+        <TitreSection id="t-suivi">Votre entreprise</TitreSection>
+        {suiviEnErreur ? (
+          <Message ton="attention" action={<Bouton onClick={() => { void stats.refetch(); void documents.refetch() }}>Réessayer</Bouton>}>
+            Le coffre-fort et le bilan n’ont pas pu se charger. Vos données ne sont pas touchées.
+          </Message>
+        ) : (
+          <BandeCases libelle="Votre entreprise">
+            {nbDocuments !== undefined && (
+              <CaseResume etiquette="Pièces au coffre-fort" valeur={nbDocuments} rien="Aucune"
+                etat={aRenouveler > 0 ? <PastilleEtat sens={s && s.documents_expires > 0 ? 'rouge' : 'ambre'}>{aRenouveler} à renouveler</PastilleEtat> : undefined}
+                precision={nbDocuments === 0 ? 'Vos pièces administratives apparaîtront ici, avec leur date de validité.' : undefined}
+                action={<Link to="/vault" className={classesBouton('lien')}>Ouvrir le coffre-fort</Link>} />
             )}
-          </dl>
-        </section>
-      </div>
+            <CaseResume etiquette="Profil d’entreprise" valeur={raisonSociale(organization)}
+              precision={profilRenseigne === null ? undefined : <PastilleEtat sens={profilRenseigne ? 'vert' : 'ambre'}>{profilRenseigne ? 'Profil renseigné' : 'Profil à compléter'}</PastilleEtat>}
+              action={<Link to="/company" className={classesBouton('lien')}>Ouvrir Mon entreprise</Link>} />
+            {s && (
+              <CaseResume etiquette="Déposés ce mois-ci" valeur={s.projects_soumis_ce_mois}
+                precision={s.projects_soumis_ce_mois === 0 ? 'Votre premier dossier déposé apparaîtra ici.' : undefined} />
+            )}
+            {decides && s && <CaseResume etiquette="Taux de réussite" valeur={`${s.taux_succes} %`} precision={s.projects_gagnes > 0 ? pluriel(s.projects_gagnes, 'marché gagné', 'marchés gagnés') : undefined} />}
+          </BandeCases>
+        )}
+      </section>
 
-      {classe && createPortal(
-        <div
-          role="status"
-          className="fixed bottom-6 left-1/2 z-50 flex w-[calc(100%-2rem)] max-w-md -translate-x-1/2 items-center gap-3 rounded-lg border border-bord bg-surface-pop px-4 py-3 text-sm shadow-flottant"
-        >
-          <p className="flex-1 text-fg">« {classe.name} » est classé sans suite.</p>
-          <button
-            onClick={() => reouvrir(classe)}
-            disabled={reouverture}
-            className={cn(cible, 'shrink-0 rounded-md border border-input px-2.5 text-[13px] font-semibold text-fg transition-colors duration-base ease-lien hover:bg-surface-2 disabled:opacity-60')}
-          >
-            Annuler
-          </button>
-          <button
-            onClick={() => setClasse(null)}
-            aria-label="Fermer le message"
-            className={cn(cible, 'shrink-0 justify-center rounded-md px-2 text-base leading-none text-fg-3 transition-colors duration-base ease-lien hover:text-fg')}
-          >
-            ×
-          </button>
-        </div>,
-        document.body,
-      )}
+      {statutPour && <MettreAJourStatut projet={statutPour} ouvert onOuvert={(o) => { if (!o) setStatutPour(null) }} />}
+    </Page>
+  )
+}
+
+/* ── Attente des AO : le titre et trois rangées, aux dimensions de la bande ── */
+function BandeEnChargement() {
+  return (
+    <div className="mt-10 max-md:mt-7.5">
+      <Squelette className="mb-4 h-5 w-64" />
+      <Carte sansMarge>
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="flex min-h-[84px] items-center gap-6 border-t border-bord px-5 first:border-t-0 sm:px-6">
+            <div className="grid flex-[2] gap-2"><Squelette className="h-4 w-4/5" /><Squelette className="h-3.5 w-2/5" /></div>
+            <Squelette className="h-3.5 flex-1 max-md:hidden" />
+            <Squelette className="h-6 w-24 rounded-pilule max-md:hidden" />
+            <Squelette className="h-11 w-44 rounded-pilule" />
+          </div>
+        ))}
+      </Carte>
     </div>
   )
 }
@@ -299,11 +227,11 @@ export default function Dashboard() {
 /* ── Attente de la veille : la place de la carte est réservée, la page ne saute pas ── */
 function VeilleEnChargement() {
   return (
-    <section aria-label="Chargement de la veille des appels d'offres" className="min-h-[34rem]">
-      <div className="border-b border-bord pb-3"><span className="block h-5 w-56 animate-pulse rounded bg-surface-2" /></div>
+    <section aria-label="Chargement de la veille des appels d’offres" aria-busy="true" className="min-h-[34rem]">
+      <Squelette className="h-5 w-56" />
       <div className="mt-6 grid gap-x-10 gap-y-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
-        <span className="block h-96 animate-pulse rounded-lg bg-surface-1" />
-        <span className="block h-96 animate-pulse rounded-lg bg-surface-1" />
+        <Squelette className="h-96 rounded-lg" />
+        <Squelette className="h-96 rounded-lg" />
       </div>
     </section>
   )

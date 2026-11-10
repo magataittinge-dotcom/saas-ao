@@ -70,9 +70,12 @@ test('tableau de bord : jamais « dans les temps » ni « de la marge » quand c
   assert.match(code, /next\.current_step >= 6/)              // « dossier prêt » seulement à l'étape Export
   // une remise passée sort de la bande et du compteur (estEnCoursOuvert) ; refonte groupe A : elle est listée une fois,
   // en ligne rouge sous la bande (« remise du … dépassée »), et la ligne du jour ne le répète pas, sans annoncer de « marge »
-  assert.match(code, /estEnCoursOuvert\(p\)/)
+  // socle (10/11) : l'état vient de lib/etatAO.ts, plus d'estEnCours ici ; la ligne du jour lit la prochaine remise à venir
+  assert.doesNotMatch(code, /estEnCours/)
+  assert.match(code, /const next = aLaUne\(projets, maintenant\)/)
   assert.doesNotMatch(code, /de la marge/)
   const bande = sansCommentaires(lire('src/components/dashboard/BandeAO.tsx'))
-  assert.match(bande, /aoRemisePassee\(projets\)/)
-  assert.match(bande, /dépassée/)
+  assert.match(bande, /aoAMettreAJour\(projets, maintenant\)/)
+  assert.match(bande, /Remise passée/)
+  assert.match(bande, /Mettre à jour le statut/)
 })
