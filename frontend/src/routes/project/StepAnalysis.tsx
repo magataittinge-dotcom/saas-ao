@@ -587,7 +587,7 @@ function ExigenceTexte({ item, active }: { item: ComplianceItem; active: boolean
 
   return (
     <div ref={ref} className="exigence-ligne -mx-2 rounded-md px-2 py-1" aria-current={active ? 'true' : undefined}>
-      <p className="break-words text-fg">{item.exigence_text}</p>
+      <p className="max-w-md break-words text-fg">{item.exigence_text}</p>
       {item.suggestion_ia && <p className="mt-0.5 text-xs text-fg-2">{item.suggestion_ia}</p>}
     </div>
   )

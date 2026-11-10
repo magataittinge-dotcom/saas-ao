@@ -46,7 +46,7 @@ export function DateLimiteQuestions({ date, onVoir }: { date: DateQuestions | nu
           source={{ libelle: libelleSource({ document: source.document, page: null }) ?? source.document, onVoir: onVoir ? () => onVoir(source) : undefined }}
         />
       )}
-      {date?.rappel && <p className="text-sm text-fg-3">{date.rappel}</p>}
+      {date?.rappel && <p className="max-w-md text-sm text-fg-3">{date.rappel}</p>}
     </div>
   )
 }

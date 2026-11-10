@@ -165,11 +165,11 @@ function LotCard({ lot, selected, onSelect, onDelete, onRename, cout, pieces }: 
         {cout && <span className="shrink-0 whitespace-nowrap py-3 text-sm font-medium text-fg-2 max-sm:basis-full max-sm:py-0 max-sm:pl-11">{cout}</span>}
 
         {/* Sous le titre : métiers reconnus, pièces du lot, état en petit */}
-        <div className="basis-full space-y-1.5 pb-1 pl-11" onClick={(e) => e.stopPropagation()}>
+        <div className="min-w-0 basis-full space-y-1.5 pb-1 pl-11" onClick={(e) => e.stopPropagation()}>
           {metiers.length > 0 && (
             <p className="flex flex-wrap items-center gap-1.5 text-sm text-fg-2">
               <span>{metiers.length > 1 ? 'Métiers reconnus' : 'Métier reconnu'} :</span>
-              {metiers.map((m) => <PastilleEtat key={m} sens="gris" icone={null}>{m}</PastilleEtat>)}
+              {metiers.map((m) => <PastilleEtat key={m} sens="gris" icone={null} className="max-w-full whitespace-normal py-0.5 max-sm:rounded-lg">{m}</PastilleEtat>)}
             </p>
           )}
           {pieces && (
