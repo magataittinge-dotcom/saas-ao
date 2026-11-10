@@ -22,7 +22,7 @@ export function ALaUne({ projet, maintenant = new Date() }: { projet: Project; m
   const traitement = enTraitement(projet)
   const complement = [acheteurCourt(projet.maitre_ouvrage), projet.selected_lot_name].filter(Boolean).join(' · ')
   return (
-    <section aria-labelledby="une-titre" data-a-la-une={projet.id} className="mt-10 max-md:mt-7.5">
+    <section aria-labelledby="une-titre" data-a-la-une={projet.id}>
       <TitreSection>À la une <span className="font-normal text-fg-3">· la prochaine remise</span></TitreSection>
       <Carte className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,320px)] lg:items-center lg:gap-8">
         <div className="flex min-w-0 flex-col gap-2.5">

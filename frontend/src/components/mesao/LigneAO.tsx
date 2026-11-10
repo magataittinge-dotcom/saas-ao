@@ -31,7 +31,8 @@ export function CelluleAO({ projet, detail = true, large = false }: { projet: Pr
   return (
     <div data-ligne-ao={projet.id} className={cn('flex min-w-0 flex-col gap-1 py-1.5 max-md:py-0', large ? 'md:max-w-[34rem]' : 'md:max-w-[24rem]')}>
       <Link to={`/projects/${projet.id}`} className="line-clamp-2 break-words text-base font-semibold leading-snug text-fg underline-offset-4 hover:underline">{projet.name}</Link>
-      {complement && <span className="truncate text-sm text-fg-2">{complement}</span>}
+      {/* au téléphone la rangée s'empile : la ligne passe à la ligne plutôt que d'élargir la carte */}
+      {complement && <span className="break-words text-sm text-fg-2 max-md:line-clamp-2 md:truncate">{complement}</span>}
       {questions > 0 && <PastilleEtat sens="ambre" icone={HelpCircle} className="w-fit">{questions} question{questions > 1 ? 's' : ''} à poser à l’acheteur</PastilleEtat>}
       {origine && (
         <a href={origine.url} target="_blank" rel="noopener noreferrer" className="inline-flex w-fit max-w-full items-center gap-1.5 text-xs font-medium text-turquoise-ink underline-offset-4 hover:underline [@media(pointer:coarse)]:min-h-11">
@@ -57,7 +58,7 @@ function CelluleEtape({ projet }: { projet: Project }) {
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
       <FilPoints fil={filDeLAO(projet)} className="max-w-[210px]" />
-      <span className="text-sm text-fg-2"><strong className="font-semibold text-fg">{nom}</strong> · étape {etape} sur {total}</span>
+      <span className="whitespace-nowrap text-sm text-fg-2"><strong className="font-semibold text-fg">{nom}</strong> · étape {etape} sur {total}</span>
     </div>
   )
 }
@@ -120,7 +121,7 @@ export function colonnesEnCours(g: GestesAO): ColonneTableau<Project>[] {
     { cle: 'etape', titre: 'Où vous en êtes', tel: true, rendu: (p) => <CelluleEtape projet={p} /> },
     { cle: 'remise', titre: 'Remise', tel: true, rendu: (p) => <CelluleRemise projet={p} maintenant={g.maintenant} /> },
     { cle: 'unites', titre: 'Unités', tel: true, classe: 'max-lg:hidden max-md:block',
-      rendu: (p) => { const u = texteUnites(p.avancement); return u ? <span className="text-sm text-fg-2">{u}</span> : <span className="text-fg-3 max-md:hidden">—</span> } },
+      rendu: (p) => { const u = texteUnites(p.avancement); return u ? <span className="whitespace-nowrap text-sm text-fg-2">{u}</span> : <span className="text-fg-3 max-md:hidden">—</span> } },
     { cle: 'action', titre: 'Prochaine action', tel: true, nombre: true, rendu: (p) => <CelluleAction projet={p} {...g} /> },
   ]
 }

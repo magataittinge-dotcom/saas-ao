@@ -82,7 +82,7 @@ export default function FiltresVeille({ filtres, onFiltres, tri, onTri, metiers 
         </div>
       )}
       {ouvert === 'procedure' && (
-        <div id={idPanneau} data-choix-filtre="procedure" role="group" aria-label="Procédures" className="grid gap-x-6 rounded-lg border border-bord bg-surface-0 px-4 py-2 sm:grid-cols-2 xl:grid-cols-3">
+        <div id={idPanneau} data-choix-filtre="procedure" role="group" aria-label="Procédures" className="grid gap-x-6 rounded-lg border border-bord bg-surface-0 px-4 py-2 sm:grid-cols-2">
           {PROCEDURES_LIBELLES.map((p) => (
             <CaseACocher key={p.code} libelle={p.libelle} coche={filtres.procedures.includes(p.code)}
               onChange={() => onFiltres({ procedures: basculerValeur(filtres.procedures, p.code) })} />
@@ -90,7 +90,7 @@ export default function FiltresVeille({ filtres, onFiltres, tri, onTri, metiers 
         </div>
       )}
       {ouvert === 'metier' && (
-        <div id={idPanneau} data-choix-filtre="metier" role="group" aria-label="Métiers" className="grid gap-x-6 rounded-lg border border-bord bg-surface-0 px-4 py-2 sm:grid-cols-2 xl:grid-cols-3">
+        <div id={idPanneau} data-choix-filtre="metier" role="group" aria-label="Métiers" className="grid gap-x-6 rounded-lg border border-bord bg-surface-0 px-4 py-2 sm:grid-cols-2">
           {metiers.map((m) => (
             <CaseACocher key={m.code} libelle={m.libelle} coche={filtres.metiers.includes(m.code)}
               onChange={() => onFiltres({ metiers: basculerValeur(filtres.metiers, m.code) })} />

@@ -37,6 +37,8 @@ const TRIS = [
   { valeur: 'nom', libelle: 'Nom' },
 ] as const
 
+const nombreAO = (n: number) => `${n} appel${n > 1 ? 's' : ''} d’offres`
+
 const sansAccent = (t: string) => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
 
 /**
@@ -142,10 +144,12 @@ function ListeMesAO({ projets }: { projets: Project[] }) {
 
   return (
     <>
-      <ResumeMesAOCartes comptes={comptes} resume={resume} quota={quota} />
-
-      {/* « À la une » suit la recherche et les filtres : elle se retire dès qu'on cherche */}
-      {une && filtres === 0 && <ALaUne projet={une} maintenant={maintenant} />}
+      {/* Au téléphone, « À la une » passe avant le résumé : l'action de l'écran reste sous le pouce, au premier écran. */}
+      <div className="flex flex-col gap-10 max-md:flex-col-reverse max-md:gap-7.5">
+        <ResumeMesAOCartes comptes={comptes} resume={resume} quota={quota} />
+        {/* « À la une » suit la recherche et les filtres : elle se retire dès qu'on cherche */}
+        {une && filtres === 0 && <ALaUne projet={une} maintenant={maintenant} />}
+      </div>
 
       <div role="search" aria-label="Chercher et filtrer mes appels d’offres" className="mt-10 flex flex-wrap items-center gap-2 max-md:mt-7.5">
         <label className="min-w-0 max-md:basis-full md:w-80">
@@ -153,10 +157,10 @@ function ListeMesAO({ projets }: { projets: Project[] }) {
           <ChampRecherche placeholder="Nom, acheteur, lot…" value={recherche} onChange={(e) => setRecherche(e.target.value)} />
         </label>
         {(resume.remise7.n > 0 || filtre === 'urgent') && (
-          <PuceFiltre libelle="Remise" valeur={filtre === 'urgent' ? 'sous 7 jours' : null} onOuvrir={() => setFiltre(filtre === 'urgent' ? 'tous' : 'urgent')} onRetirer={() => setFiltre('tous')} />
+          <PuceFiltre libelle="Remise sous 7 jours" valeur={filtre === 'urgent' ? nombreAO(resume.remise7.n) : null} onOuvrir={() => setFiltre(filtre === 'urgent' ? 'tous' : 'urgent')} onRetirer={() => setFiltre('tous')} />
         )}
         {(nbADecider > 0 || filtre === 'decider') && (
-          <PuceFiltre libelle="Décision" valeur={filtre === 'decider' ? 'à prendre' : null} onOuvrir={() => setFiltre(filtre === 'decider' ? 'tous' : 'decider')} onRetirer={() => setFiltre('tous')} />
+          <PuceFiltre libelle="À décider" valeur={filtre === 'decider' ? nombreAO(nbADecider) : null} onOuvrir={() => setFiltre(filtre === 'decider' ? 'tous' : 'decider')} onRetirer={() => setFiltre('tous')} />
         )}
         {/* « Effacer les filtres » : seulement si une puce est active (la recherche a sa croix ; l'état vide a son bouton) */}
         <EffacerFiltres actifs={rienTrouve || filtre === 'tous' ? 0 : 1} onEffacer={effacer} />
