@@ -29,9 +29,32 @@ test('l’écran : dans le gabarit, la lecture est une section de la page, les p
   assert.ok(!code.includes('createPortal') && !code.includes('fixed inset-0'), 'plus de fenêtre qui recouvre la page')
   assert.match(code, /<SectionEtape titre="Lecture du dossier">/)
   assert.match(code, /refetchInterval: phase === 'processing' \|\| lectureServeur \? 3000 : false/)
-  assert.match(code, /Vous pouvez quitter cette page : la lecture continue/)
+  assert.match(code, /Vous pouvez fermer cette page : la lecture continue/)
   assert.match(code, /Gardez cette page ouverte pendant l’envoi/)
   assert.equal((code.match(/actionPrincipale=/g) ?? []).length, 1)
   assert.match(code, /<ActionsBarreTel>[\s\S]*<BoutonSuite\s+etape="Lots"/)      // plusieurs lots : l'écran Lots reste l'étape suivante
   assert.ok(ETATS_LECTURE_SERVEUR.includes('extracting_text') && ETATS_LECTURE_SERVEUR.includes('detecting_lots'))
+})
+
+// ── Mission finale (10/11) : l'écran refait avec les composants du système ──
+
+test('une erreur de chargement n’est jamais un dépôt vide : la requête passe par EtatRequete, l’erreur dit son erreur, la barre ne dit pas « Aucun fichier »', () => {
+  const code = sansCommentaires(lire('src/routes/project/StepUpload.tsx'))
+  assert.match(code, /<EtatRequete\s+requete=\{requeteDocuments\}/)
+  assert.match(code, /<EtatErreur\s+titre="Le dossier n’a pas pu se charger"[\s\S]*?onReessayer=/)
+  // la grande zone « Déposez le DCE complet » et le résumé ne sortent que du rendu « contenu » de la requête
+  const avantContenu = code.slice(0, code.indexOf('<EtatRequete'))
+  assert.ok(!avantContenu.includes('Déposez le <Sigle code="DCE" /> complet'), 'la zone de dépôt est dans le contenu de la requête')
+  assert.match(code, /const chargementEchoue = requeteDocuments\.isError && requeteDocuments\.data === undefined/)
+  assert.match(code, /tel=\{chargementEchoue \? 'Liste non lue'/)
+})
+
+test('la liste des pièces : tableau du système (pages de 50), groupée par type, type en liste déroulante, suppression dans le menu de ligne', () => {
+  const code = sansCommentaires(lire('src/routes/project/StepUpload.tsx'))
+  assert.match(code, /<Tableau\s+libelle="Pièces du dossier"/)
+  assert.match(code, /rang\(a\) - rang\(b\) \|\| a\.file_name\.localeCompare/)
+  assert.match(code, /<MenuElement danger onSelect=\{\(\) => setASupprimer\(\{ doc \}\)\}>/)
+  assert.match(code, /<DialogueConfirmation[\s\S]*?danger[\s\S]*?libelleConfirmer="Supprimer"/)
+  assert.doesNotMatch(code, /<select|<button\b|<input\b|DeleteConfirmModal|style=\{\{|err\.message|AiTipsBlock/)
+  assert.doesNotMatch(code, /Astuce/)
 })

@@ -1,5 +1,6 @@
 // Décision du 3/11 : le plan signale les parties cochées qui servent le même sous-critère avec des titres proches
-// (comparaison sans IA), sans rien retirer sans clic ; libellés « Valider le plan et rédiger » et « Aucune remplie ».
+// (comparaison sans IA), sans rien retirer sans clic ; libellé « Aucune remplie ». Vague 1 (10/11) : « Valider le plan » n'est
+// écrit qu'une fois (l'en-tête) ; les gestes d'une rangée sont dans son menu « … », en mots.
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { isValidElement, type ReactElement } from 'react'
@@ -84,7 +85,7 @@ test('la mention : « Se recoupe avec « <titre> » » et « Retirer cette parti
   assert.match(html, /Retirer cette partie/)
   assert.doesNotMatch(html, /manquant|incomplet|absent|!/i)
   let appels = 0
-  const bouton = cherche(MentionRecoupe({ titre: 'Matériel', onRetirer: () => { appels += 1 } }), (e) => e.type === 'button')
+  const bouton = cherche(MentionRecoupe({ titre: 'Matériel', onRetirer: () => { appels += 1 } }), (e) => typeof e.props.onClick === 'function')
   assert.ok(bouton?.props.onClick)
   bouton.props.onClick()
   assert.equal(appels, 1)
@@ -96,10 +97,10 @@ const carte = (props: Partial<Parameters<typeof PartiePlanCarte>[0]> = {}) => re
     onBasculerFiche={noop} onRenommer={noop} onRetirer={noop} onSupprimer={noop} onMonter={noop} onDescendre={noop} onFiche={noop} onVoirSource={noop}
     {...props} />)
 
-test('la carte d’une partie : la mention sous la seconde seulement, la croix « retirer » reste là', () => {
+test('la carte d’une partie : la mention sous la seconde seulement, le menu de la rangée reste là', () => {
   assert.match(carte({ recoupe: { cle: 'partie_b.a', titre: 'Matériel' } }), /Se recoupe avec «\s*Matériel\s*»/)
   assert.doesNotMatch(carte(), /Se recoupe/)
-  assert.match(carte({ recoupe: { cle: 'partie_b.a', titre: 'Matériel' } }), /aria-label="Retirer : Matériels dédiés"/)
+  assert.match(carte({ recoupe: { cle: 'partie_b.a', titre: 'Matériel' } }), /aria-label="Actions : Matériels dédiés"/)
 })
 
 test('l’écran du plan : calcule les recoupements et branche le lien sur le geste « retirer » existant', () => {
@@ -112,20 +113,19 @@ test('l’écran du plan : calcule les recoupements et branche le lien sur le ge
 
 const base: EtatPlan = { valideEtAJour: false, valideLe: null, enregistre: false, modifie: false, enCours: false, enValidation: false }
 
-test('barre du plan non validé : « Valider le plan et rédiger » remplace « Étape suivante : Rédiger » ; validé : inchangé', () => {
-  const avant = renderToStaticMarkup(<BarrePlan etat={base} onValider={noop} onRediger={noop} onValiderEtRediger={noop} />)
-  assert.match(avant, /Valider le plan et rédiger/)
-  assert.doesNotMatch(avant, /Étape suivante/)
-  const valide = renderToStaticMarkup(<BarrePlan etat={{ ...base, enregistre: true, valideEtAJour: true, valideLe: '2026-11-02T20:00:00' }} onValider={noop} onRediger={noop} onValiderEtRediger={noop} />)
+test('barre du plan : « Valider le plan » n’y est écrit qu’une fois (le bouton du téléphone), jamais « Étape suivante » ; validé : « Rédiger le mémoire »', () => {
+  const avant = renderToStaticMarkup(<BarrePlan etat={base} onValider={noop} onRediger={noop} />)
+  assert.equal((avant.match(/Valider le plan/g) ?? []).length, 1)
+  assert.doesNotMatch(avant, /Valider le plan et rédiger|Étape suivante/)
+  const valide = renderToStaticMarkup(<BarrePlan etat={{ ...base, enregistre: true, valideEtAJour: true, valideLe: '2026-11-02T20:00:00' }} onValider={noop} onRediger={noop} />)
   assert.match(valide, /Rédiger le mémoire/)
-  assert.doesNotMatch(valide, /Valider le plan et rédiger/)
+  assert.doesNotMatch(valide, /Valider le plan/)
 })
 
-test('« Valider le plan et rédiger » valide avec le même appel que « Valider le plan », puis mène à Rédiger', () => {
+test('un seul appel de validation dans l’écran du plan', () => {
   const code = sansCommentaires(lire('src/routes/project/StepPlan.tsx'))
-  assert.match(code, /valider\.mutate\(parties, \{ onSuccess: versRedaction \}\)/)
-  assert.match(code, /onValiderEtRediger=/)
-  assert.equal((code.match(/plan-memoire\/valider/g) ?? []).length, 1)             // un seul appel de validation
+  assert.equal((code.match(/plan-memoire\/valider/g) ?? []).length, 1)
+  assert.doesNotMatch(code, /onValiderEtRediger/)
 })
 
 test('libellés de la bande : « Aucune remplie », singulier et pluriel, « 1 page au plus »', () => {

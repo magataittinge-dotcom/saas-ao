@@ -98,7 +98,7 @@ test('S4 : les étapes s\'appellent Dépôt du dossier, Lots, Décider, Pièces,
     assert.ok(textes.includes('Décider') && textes.includes('Pièces'), `${f} : Décider et Pièces`)
     assert.ok(!textes.includes('Analyse IA') && !textes.includes('Vérification'), `${f} : plus d'ancien nom d'étape`)
   }
-  assert.ok(textesAffiches('src/routes/project/StepVerification.tsx').some((t) => t.texte.includes('Pièces de la candidature')))
+  assert.ok(textesAffiches('src/routes/project/StepVerification.tsx').some((t) => t.texte.includes('Réunir les pièces')), 'le titre de l’écran Pièces est le verbe du socle')
 })
 
 test('S4 : « Retour » à la place d\'« Annuler » quand le bouton ne défait rien (dépôt du dossier)', () => {
@@ -110,6 +110,6 @@ test('S4 : « Retour » à la place d\'« Annuler » quand le bouton ne défait 
 test('S4 : « Retour » aussi sur le mémoire — fermer le formulaire de régénération ne défait rien', () => {
   const code = lire('src/routes/project/StepMemoire.tsx')
   // le bouton ne fait que replier le formulaire : aucune mutation, aucune suppression
-  assert.match(code, /onClick=\{\(\) => setShowForm\(false\)\}[^>]*>\s*Retour\s*<\/button>/)
+  assert.match(code, /onClick=\{\(\) => setShowForm\(false\)\}[^>]*>\s*Retour\s*<\/Bouton>/)
   assert.ok(!textesAffiches('src/routes/project/StepMemoire.tsx').some((t) => t.texte.trim() === 'Annuler'))
 })

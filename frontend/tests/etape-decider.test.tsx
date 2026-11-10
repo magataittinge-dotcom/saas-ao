@@ -125,8 +125,21 @@ test('l’écran Décider passe par le gabarit : une seule action principale en 
   const code = sansCommentaires(lire('src/routes/project/StepAnalysis.tsx'))
   assert.match(code, /<GabaritEtape\s+titre="Décider"/)
   assert.equal((code.match(/actionPrincipale=/g) ?? []).length, 1)
-  const ordre = ['Le marché en bref', '<AVerifierAvantEngagement', '<PointsAEclaircir ', 'titre="Décision"', 'Trésorerie et calendrier', 'Les exigences du dossier'].map((m) => code.indexOf(m))
+  // A2 — l'ordre de la décision : le marché, à vérifier, la décision, trésorerie et calendrier, points à éclaircir, exigences
+  const ordre = ['libelle="L’AO en 30 secondes"', 'Le marché en bref', '<AVerifierAvantEngagement', 'titre="Décision"', 'Trésorerie et calendrier', '<PointsAEclaircir ', 'Les exigences du dossier'].map((m) => code.indexOf(m))
   assert.ok(ordre.every((n, i) => n > 0 && (i === 0 || n > ordre[i - 1])), `ordre des sections : ${ordre}`)
+  // A1 — l'action de l'en-tête est la décision : « On y va », la vraie ellipse pendant la validation, puis « Passer aux pièces »
+  assert.match(code, /<Bouton variante="principal" onClick=\{handleValidate\} enCours=\{isValidating\} libelleEnCours="Validation…">\s*\{isStepAlreadyDone \? 'Passer aux pièces' : 'On y va'\}/)
+  assert.doesNotMatch(code, /Sparkles|Validation\.\.\./)
+  // A15 — catégories d'exigences repliables, annoncées ; tableau du système (pages de 50) ; filtre par catégorie en puces
+  assert.match(code, /aria-expanded=\{open\} aria-controls=\{idContenu\}/)
+  assert.match(code, /<div id=\{idContenu\} hidden=\{!open\}>/)
+  assert.match(code, /<Tableau\s+libelle=\{`Exigences : \$\{CATEGORY_LABELS\[category\]\}`\}/)
+  assert.match(code, /<PuceFiltre/)
+  // les états : l'erreur dit son erreur (plus de fenêtre « Analyse… 0 % »), l'attente est dans la page
+  assert.match(code, /requeteExigences\.isError && requeteExigences\.data === undefined\) return \(\s*<GabaritEtape[^>]*>\s*<EtatErreur/)
+  assert.ok(code.indexOf('<EtatErreur') < code.indexOf('<ProgressDisplay'), 'l’erreur passe avant l’écran d’attente')
+  assert.doesNotMatch(code, /variant="modal"|createPortal|<button\b|<input\b|<select\b|style=\{\{|font-mono|Geist Mono|💡/)
   // l'action principale n'est pas doublée sur ordinateur : la barre ne la porte qu'au téléphone
   assert.match(code, /<ActionsBarreTel>\s*<BoutonSuite\s+etape="Pièces"/)
   // aucune question ni donnée de prix côté écran
@@ -147,4 +160,17 @@ test('réponse de l’acheteur N jours avant la remise : « Réponses de l’ach
   assert.match(html, /Source : RC-demo\.pdf/)
   const carte = cartesResumeAO([], null, undefined, reponse).find((c) => c.libelle.startsWith('Réponses'))
   assert.equal(carte?.valeur, '16 mars 2027')
+})
+
+// ── Mission finale (10/11) : les cartes de Décider sont celles du système ──
+test('Décider : décision, trésorerie et rétro-planning en Carte du système ; un seul aplat (l’en-tête) ; sigles expliqués (A3)', () => {
+  const cartes = ['SynorixScoreCard', 'TresorerieCard', 'RetroPlanning', 'AVerifierAvantEngagement', 'CarteAO30s'].map((f) => `src/components/project/${f}.tsx`)
+  for (const f of cartes) {
+    assert.doesNotMatch(sansCommentaires(lire(f)), /<button\b|style=\{\{|glass-card|glass-btn|microlabel|uppercase|font-mono|title=/, f)
+  }
+  const decision = sansCommentaires(lire('src/components/project/SynorixScoreCard.tsx'))
+  assert.doesNotMatch(decision, /variante="principal"/, '« On y va » de la carte est au trait : l’aplat est dans l’en-tête')
+  assert.match(decision, /<Sigle code="DCE" \/>/)
+  assert.match(sansCommentaires(lire('src/components/project/TresorerieCard.tsx')), /<Sigle code="CCAP" \/>/)
+  assert.match(sansCommentaires(lire('src/components/project/RetroPlanning.tsx')), /<Sigle code="RC" \/>/)
 })

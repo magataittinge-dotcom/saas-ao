@@ -57,7 +57,7 @@ test('allerALAncre : défile jusqu’à l’ancre, false si elle n’existe pas'
 })
 
 test('les ancres du serveur sont celles de l’écran du mémoire (sec-<clé> et préambule)', () => {
-  const ecran = sansCommentaires(lire('src/routes/project/StepMemoire.tsx'))
+  const ecran = sansCommentaires(lire('src/components/memoire/DocumentMemoire.tsx'))
   assert.match(ecran, /id="preambule"/)
   assert.match(ecran, /id=\{`sec-\$\{key\}`\}/)
   assert.ok(SECTIONS_MEMOIRE.length >= 25)    // les clés sont comparées à celles du serveur dans test_relecture_memoire.py

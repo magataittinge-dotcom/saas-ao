@@ -1,5 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
-import { CalendarClock, Check } from 'lucide-react'
+import { Check } from 'lucide-react'
+import { Sigle } from '@/components/common/Sigle'
+import { Carte, TitreCarte } from '@/components/ui/carte'
+import { cn } from '@/lib/utils'
 import { api } from '@/services/api'
 
 interface PlanningStep {
@@ -39,41 +42,28 @@ export default function RetroPlanning({ projectId }: Props) {
   if (!data || data.steps.length === 0) return null
 
   return (
-    <div className="rounded-lg px-5 py-4" style={{ background: 'var(--surface-1)', border: '1px solid var(--border-1)' }}>
-      <div className="flex items-center gap-2 mb-3">
-        <CalendarClock size={16} style={{ color: 'var(--text-1)' }} />
-        <h3 className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>Rétro-planning</h3>
-      </div>
-      <ol className="relative ml-2">
+    <Carte className="grid min-w-0 content-start gap-4">
+      <header className="grid gap-1">
+        <TitreCarte>Rétro-planning</TitreCarte>
+        <p className="text-sm text-fg-2">Les dates lues dans le <Sigle code="RC" />, dans l’ordre.</p>
+      </header>
+      <ol className="grid">
         {data.steps.map((step, i) => (
-          <li key={step.id} className="relative pl-6 pb-4 last:pb-0">
-            {i < data.steps.length - 1 && (
-              <span className="absolute left-[5px] top-4 bottom-0 w-px" style={{ background: 'var(--surface-1)' }} />
-            )}
-            <span
-              className="absolute left-0 top-1 w-[11px] h-[11px] rounded-full flex items-center justify-center"
-              style={step.passed
-                ? { background: 'var(--surface-1)' }
-                : step.id === 'deadline'
-                  ? { background: 'var(--text-1)' }
-                  : { background: 'var(--text-1)' }}
-            >
-              {step.passed && <Check size={8} style={{ color: 'var(--text-3)' }} />}
+          <li key={step.id} className="relative grid gap-0.5 pb-4 pl-7 last:pb-0">
+            {i < data.steps.length - 1 && <span aria-hidden className="absolute bottom-0 left-2 top-5 w-px bg-bord-2" />}
+            <span aria-hidden className={cn('absolute left-0 top-0.5 grid size-4 place-items-center rounded-pilule border',
+              step.passed ? 'border-bord-2 bg-surface-1 text-fg-3' : step.id === 'deadline' ? 'border-accent-ui bg-accent-ui' : 'border-accent-ui bg-surface-0')}>
+              {step.passed && <Check size={10} strokeWidth={2.5} />}
             </span>
-            <p className="text-sm font-medium leading-tight"
-              style={{ color: step.passed ? 'var(--text-3)' : 'var(--text-1)', textDecoration: step.passed ? 'line-through' : undefined }}>
-              {step.label}
-            </p>
-            <p className="text-xs mt-0.5" style={{ color: step.passed ? 'var(--text-3)' : 'var(--text-3)' }}>
+            <p className={cn('text-sm font-medium', step.passed ? 'text-fg-3' : 'text-fg')}>{step.label}</p>
+            <p className={cn('text-sm', step.passed ? 'text-fg-3' : 'text-fg-2')}>
               {formatFr(step.date)}{step.heure && ` à ${step.heure}`}
-              {step.passed && ' — passée'}
+              {step.passed && ' (passée)'}
             </p>
-            {step.note && !step.passed && (
-              <p className="text-xs italic mt-0.5" style={{ color: 'var(--text-3)' }}>{step.note}</p>
-            )}
+            {step.note && !step.passed && <p className="text-xs text-fg-3">{step.note}</p>}
           </li>
         ))}
       </ol>
-    </div>
+    </Carte>
   )
 }

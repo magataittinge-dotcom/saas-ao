@@ -1,28 +1,30 @@
-/* Unified progress display. Used by every long-running flow:
- * upload, lot detection, AI analysis, mémoire generation.
+/* L'écran d'attente : la lecture du dossier, la détection des lots, la rédaction du mémoire.
  *
- * Visual: identical to the legacy PipelineProgress (cyan SVG circle with
- * stroke-dashoffset, lerp animation toward target progress (une barre qui avance pour de vrai : rien ne boucle),
- * confettis on success). The only thing this component does differently
- * is accept its data via props instead of polling /processing-status —
- * the parent owns the data source (typically `useProgressStream`).
+ * Plusieurs minutes devant les yeux du client. Rien ne boucle : une vraie barre qui avance avec les étapes que le serveur
+ * annonce, la phrase de ce que Synorix est en train de faire, le temps habituel dit simplement, et le droit de fermer la page
+ * quand le traitement est détaché côté serveur (`avis`, `onArrierePlan`). C'est un des rares endroits où le visage a sa place :
+ * Synorix travaille et le dit (`SynorixParle`, variantes « modal » et « page »).
  *
- * Props:
- *   - variant       : "modal" (fullscreen overlay) or "inline" (in-page)
- *   - steps         : ordered list of step descriptors (matches backend)
- *   - currentStep   : key of the in-progress step
- *   - progress      : 0-100, already smoothed by the caller
- *   - detail        : line of detail under the circle ("Détection des lots…")
+ * Les données viennent du parent (en général `useProgressStream`) :
+ *   - variant       : « modal » (Dialogue du système), « page » (dans l'écran, avec les étapes), « inline » (bloc court)
+ *   - steps         : les étapes, dans l'ordre du serveur ; `estimated_s` donne le temps habituel
+ *   - currentStep   : la clé de l'étape en cours
+ *   - progress      : 0-100 ; la barre ne recule jamais pendant un même traitement
+ *   - detail        : ce que Synorix fait en ce moment, en une phrase
  *   - phase         : pending / in_progress / complete / error
- *   - title         : optional title above the steps list
- *   - onCancel      : optional → renders a Cancel button
- *   - onArrierePlan : optional → « Continuer en arrière-plan » (traitement serveur détaché, 1.10)
- *   - avis          : optional → phrase rassurante sous le détail (1.10)
+ *   - title         : la phrase de Synorix (« Synorix lit votre dossier »)
+ *   - avis          : la phrase rassurante (« Vous pouvez fermer cette page : … »), seulement si c'est vrai
+ *   - onArrierePlan : « Continuer en arrière-plan » (traitement détaché) ; onCancel : « Annuler »
+ *   - erreur, uniteRendue, onRelancer : l'état d'erreur dit ce qui s'est passé, que l'unité est rendue, et propose de relancer
  */
-import { useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
-import { Check, X, AlertTriangle } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { AlertCircle, Check } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import { Bouton } from '@/components/ui/bouton'
+import { Dialogue } from '@/components/ui/dialogue'
+import { Message } from '@/components/ui/message'
+import { SynorixParle } from '@/components/ui/synorix-parle'
+import { cn } from '@/lib/utils'
 
 export interface StepDescriptor {
   key: string
@@ -32,7 +34,7 @@ export interface StepDescriptor {
 }
 
 type Phase = 'pending' | 'in_progress' | 'complete' | 'error'
-type Variant = 'modal' | 'inline'
+type Variant = 'modal' | 'page' | 'inline'
 
 interface Props {
   steps: StepDescriptor[]
@@ -46,303 +48,143 @@ interface Props {
   /** Le traitement continue côté serveur : l'utilisateur peut quitter l'attente. */
   onArrierePlan?: () => void
   avis?: string
+  /** Ce qui s'est passé, en une phrase (jamais le message brut du serveur). */
+  erreur?: string
+  /** Vrai quand le serveur rend l'unité décomptée (échec technique : `services/quota.py`, `refund`). */
+  uniteRendue?: boolean
+  onRelancer?: () => void
+}
+
+/**
+ * Le temps habituel, dit simplement : « moins d'une minute » ou « quelques minutes ». Les durées d'étape (`estimated_s`) sont
+ * des ordres de grandeur du code, pas des mesures : on n'en tire aucun chiffre précis. Null si rien n'est estimé.
+ */
+export function tempsHabituel(steps: readonly StepDescriptor[]): string | null {
+  const secondes = steps.reduce((n, s) => n + (s.estimated_s ?? 0), 0)
+  if (secondes <= 0) return null
+  return secondes < 50 ? 'moins d’une minute' : 'quelques minutes'
+}
+
+/** La barre ne recule jamais pendant un même traitement (gigue du serveur, reconnexion du flux, signal tardif). */
+export function avancementSuivant(precedent: number, progress: number, phase: Phase): number {
+  const borne = Math.max(0, Math.min(Math.round(progress), 99))
+  if (phase === 'complete') return 100
+  if (phase === 'pending') return borne
+  // Un nouveau traitement démarre après un traitement terminé : on repart de sa valeur.
+  if (precedent >= 100 && borne < 95) return borne
+  return Math.max(precedent, borne)
+}
+
+type EtatEtape = 'faite' | 'en-cours' | 'a-venir'
+
+function etatEtape(step: StepDescriptor, currentStep: string | null, steps: StepDescriptor[], phase: Phase): EtatEtape {
+  if (phase === 'complete') return 'faite'
+  if (step.key === currentStep) return 'en-cours'
+  const i = steps.findIndex((s) => s.key === step.key)
+  const courant = currentStep ? steps.findIndex((s) => s.key === currentStep) : -1
+  return courant !== -1 && i < courant ? 'faite' : 'a-venir'
 }
 
 export default function ProgressDisplay({
-  steps,
-  currentStep,
-  progress,
-  detail = '',
-  phase = 'in_progress',
-  variant = 'inline',
-  title,
-  onCancel,
-  onArrierePlan,
-  avis,
+  steps, currentStep, progress, detail = '', phase = 'in_progress', variant = 'inline', title,
+  onCancel, onArrierePlan, avis, erreur, uniteRendue, onRelancer,
 }: Props) {
-  const [displayProgress, setDisplayProgress] = useState(0)
-  const targetProgressRef = useRef(0)
-  const animFrameRef = useRef<number | null>(null)
-  const [showCheck, setShowCheck] = useState(false)
+  const [avancement, setAvancement] = useState(() => avancementSuivant(0, progress, phase))
+  useEffect(() => { setAvancement((p) => avancementSuivant(p, progress, phase)) }, [progress, phase])
 
-  // Lerp animation: smoothly approach the target % so server jitter
-  // doesn't make the bar twitch.
-  useEffect(() => {
-    let running = true
-    const animate = () => {
-      if (!running) return
-      setDisplayProgress((prev) => {
-        const target = targetProgressRef.current
-        if (Math.abs(prev - target) < 0.4) return target
-        return prev + (target - prev) * 0.12
-      })
-      animFrameRef.current = requestAnimationFrame(animate)
-    }
-    animFrameRef.current = requestAnimationFrame(animate)
-    return () => {
-      running = false
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current)
-    }
-  }, [])
+  const enErreur = phase === 'error'
+  const termine = phase === 'complete'
+  const riche = variant !== 'inline'
+  const etapeEnCours = steps.find((s) => s.key === currentStep)
+  const phrase = termine ? 'Terminé' : detail || etapeEnCours?.label || 'Préparation…'
+  const habituel = tempsHabituel(steps)
 
-  // Drive the lerp target from the prop — MONOTONE within a single run.
-  // The bar must never animate backwards: server jitter, an SSE reconnect
-  // replaying its `init` snapshot, a late internal_progress signal, or the
-  // upload's fake-crawl→real-SSE handover can all report a momentarily lower
-  // value. We clamp the target to never drop below what we've already shown.
-  useEffect(() => {
-    const clamped = Math.max(0, Math.min(progress, 99))
-    if (phase === 'complete') {
-      targetProgressRef.current = 100
-    } else if (phase === 'pending') {
-      // Not started / reset for a fresh run → follow the incoming value.
-      targetProgressRef.current = clamped
-    } else {
-      // in_progress | error → monotone. Reset only when a clearly-new run
-      // starts (we were at completion and the server now reports low).
-      if (targetProgressRef.current >= 100 && clamped < 95) {
-        targetProgressRef.current = clamped
-      } else {
-        targetProgressRef.current = Math.max(targetProgressRef.current, clamped)
-      }
-    }
-  }, [progress, phase])
+  const barre = (
+    <div className="flex items-center gap-3">
+      <div role="progressbar" aria-label={title ?? phrase} aria-valuemin={0} aria-valuemax={100} aria-valuenow={avancement}
+        className="h-2 min-w-0 flex-1 overflow-hidden rounded-pilule bg-surface-2">
+        <div data-avancement="" style={{ width: `${avancement}%` }}
+          className={cn('h-full rounded-pilule transition-[width] duration-pop ease-survol motion-reduce:transition-none', termine ? 'bg-vert-mark' : enErreur ? 'bg-rouge-mark' : 'bg-accent-ui')} />
+      </div>
+      <span className="chiffres w-11 shrink-0 text-right text-sm font-semibold tabular-nums text-fg">{avancement} %</span>
+    </div>
+  )
 
-  // Gate the success check + confetti to play after the bar fills.
-  useEffect(() => {
-    if (phase === 'complete') {
-      const t = setTimeout(() => setShowCheck(true), 450)
-      return () => clearTimeout(t)
-    }
-    setShowCheck(false)
-  }, [phase])
+  const corps = (
+    <div data-attente={phase} className="grid gap-5">
+      {variant === 'page' && title && <p className="text-lg font-semibold text-fg">{title}</p>}
 
-  const isError = phase === 'error'
-  const RADIUS = variant === 'modal' ? 80 : 70
-  const STROKE = variant === 'modal' ? 10 : 8
-  const VIEWBOX = (RADIUS + STROKE) * 2
-  const CIRCUMFERENCE = 2 * Math.PI * RADIUS
-  const renderProgress = Math.round(Math.max(0, Math.min(displayProgress, 100)))
-  const offset = CIRCUMFERENCE * (1 - renderProgress / 100)
-
-  const accentColor = isError ? 'var(--danger-fg)' : 'var(--text-1)'
-
-  // Inline-mode: small page-level block. Modal: fullscreen overlay portal.
-  const body = (
-    <div
-      className={
-        variant === 'modal'
-          ? 'flex flex-col items-center gap-6 w-full max-w-md mx-4 p-10 rounded-2xl'
-          : 'flex flex-col items-center gap-5'
-      }
-      style={
-        variant === 'modal'
-          ? {
-              background: 'var(--surface-1)',
-              border: '1px solid var(--border-2)',
-              boxShadow: 'var(--shadow-pop)',
-            }
-          : undefined
-      }
-    >
-      {/* Circle */}
-      <div
-        className="relative"
-        style={{ width: variant === 'modal' ? 200 : 160, height: variant === 'modal' ? 200 : 160 }}
-      >
-        <svg
-          className="w-full h-full -rotate-90"
-          viewBox={`0 0 ${VIEWBOX} ${VIEWBOX}`}
-        >
-          <circle
-            cx={VIEWBOX / 2}
-            cy={VIEWBOX / 2}
-            r={RADIUS}
-            fill="none"
-            stroke="color-mix(in srgb, var(--text-3) 12%, transparent)"
-            strokeWidth={STROKE}
-          />
-          <circle
-            cx={VIEWBOX / 2}
-            cy={VIEWBOX / 2}
-            r={RADIUS}
-            fill="none"
-            stroke={accentColor}
-            strokeWidth={STROKE}
-            strokeLinecap="round"
-            strokeDasharray={CIRCUMFERENCE}
-            strokeDashoffset={offset}
-            style={{
-              transition: 'stroke 0.3s ease',
-              filter: `drop-shadow(0 0 ${variant === 'modal' ? 10 : 8}px ${accentColor})`,
-            }}
-          />
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          {showCheck ? (
-            <div
-              className="flex items-center justify-center rounded-full"
-              style={{
-                width: variant === 'modal' ? 64 : 56,
-                height: variant === 'modal' ? 64 : 56,
-                background: 'var(--vert-soft)',
-              }}
-            >
-              <Check size={variant === 'modal' ? 36 : 32} className="text-ds-success" strokeWidth={2.5} />
-            </div>
-          ) : isError ? (
-            <div
-              className="flex items-center justify-center rounded-full"
-              style={{
-                width: variant === 'modal' ? 64 : 56,
-                height: variant === 'modal' ? 64 : 56,
-                background: 'color-mix(in srgb, var(--danger-fg) 15%, transparent)',
-              }}
-            >
-              <AlertTriangle size={variant === 'modal' ? 32 : 28} className="text-ds-danger" strokeWidth={2} />
-            </div>
-          ) : (
-            <span
-              className={
-                variant === 'modal'
-                  ? 'chiffre-grand'
-                  : 'text-xl font-semibold tabular-nums chiffres'
-              }
-              style={variant === 'inline' ? { color: accentColor } : undefined}
-            >
-              {renderProgress}%
-            </span>
-          )}
+      {enErreur ? (
+        <Message ton="erreur" titre={erreur ?? 'Le traitement s’est arrêté avant la fin.'}
+          action={onRelancer && <Bouton variante="secondaire" onClick={onRelancer}>Relancer</Bouton>}>
+          {uniteRendue ? 'Votre unité vous est rendue. Vos documents sont conservés.' : 'Vos documents sont conservés.'}
+        </Message>
+      ) : riche ? (
+        <div className="grid gap-4">
+          {/* Synorix travaille et le dit : le visage, collé à la phrase de ce qu'il fait en ce moment. */}
+          <div aria-live="polite"><SynorixParle className="items-center">{phrase}</SynorixParle></div>
+          {barre}
         </div>
-      </div>
-
-      {/* Title + detail */}
-      <div className="text-center space-y-1.5">
-        {title && (
-          <p className={variant === 'modal' ? 'text-lg font-semibold text-ds-text' : 'text-sm font-semibold text-ds-text'}>
-            {title}
+      ) : (
+        <div className="grid gap-2">
+          <p aria-live="polite" className="flex items-center gap-2 text-sm font-medium text-fg">
+            {termine && <Check aria-hidden size={18} strokeWidth={2} className="shrink-0 text-vert-ink" />}
+            <span className="min-w-0 break-words">{phrase}</span>
           </p>
-        )}
-        <p
-          className={
-            variant === 'modal'
-              ? 'text-base font-semibold text-ds-text'
-              : 'text-sm font-medium text-ds-text'
-          }
-        >
-          {isError ? 'Erreur' : detail || currentStep || ''}
-        </p>
-        {avis && !isError && (
-          <p className="text-sm text-ds-text-2 max-w-sm mx-auto">{avis}</p>
-        )}
-      </div>
+          {barre}
+        </div>
+      )}
 
-      {/* Step list (modal only — too heavy for inline) */}
-      {variant === 'modal' && steps.length > 0 && (
-        <div className="w-full space-y-2 pt-2">
+      {riche && steps.length > 1 && (
+        <ol aria-label="Étapes" className="grid gap-1 border-t border-bord pt-4">
           {steps.map((step) => {
-            const stepStatus =
-              phase === 'complete'
-                ? 'completed'
-                : step.key === currentStep
-                  ? 'in_progress'
-                  : isStepBefore(step.key, currentStep, steps)
-                    ? 'completed'
-                    : 'pending'
-            const Icon = step.icon
+            const etat = etatEtape(step, currentStep, steps, phase)
+            const arretee = enErreur && etat === 'en-cours'
             return (
-              <div key={step.key} className="flex items-center gap-3">
-                <div className="shrink-0 w-5 h-5 flex items-center justify-center">
-                  {stepStatus === 'completed' ? (
-                    <div
-                      className="w-5 h-5 rounded-full flex items-center justify-center"
-                      style={{ background: 'color-mix(in srgb, var(--success-fg) 15%, transparent)' }}
-                    >
-                      <Check size={12} className="text-ds-success" strokeWidth={3} />
-                    </div>
-                  ) : stepStatus === 'in_progress' ? (
-                    <span aria-hidden className="grid size-5 place-items-center"><span className="size-2.5 rounded-pilule bg-accent-ui" /></span>
-                  ) : Icon ? (
-                    <Icon size={14} style={{ color: 'var(--text-3)' }} />
-                  ) : (
-                    <div
-                      className="w-2.5 h-2.5 rounded-full"
-                      style={{ background: 'color-mix(in srgb, var(--text-3) 30%, transparent)' }}
-                    />
-                  )}
-                </div>
-                <span
-                  className="text-sm flex-1"
-                  style={{
-                    color:
-                      stepStatus === 'completed'
-                        ? 'var(--text-3)'
-                        : stepStatus === 'in_progress'
-                          ? 'var(--text-1)'
-                          : 'var(--text-3)',
-                    fontWeight: stepStatus === 'in_progress' ? 600 : 400,
-                  }}
-                >
-                  {step.label}
+              <li key={step.key} aria-current={etat === 'en-cours' ? 'step' : undefined} className="flex min-h-8 items-center gap-3 text-sm">
+                <span aria-hidden className="grid size-5 shrink-0 place-items-center">
+                  {arretee ? <AlertCircle size={16} strokeWidth={1.75} className="text-rouge-ink" />
+                    : etat === 'faite' ? <Check size={16} strokeWidth={2} className="text-vert-ink" />
+                    : <span className={cn('rounded-pilule', etat === 'en-cours' ? 'size-2.5 bg-accent-ui' : 'size-2 bg-bord-champ')} />}
                 </span>
-              </div>
+                <span className={cn('min-w-0 flex-1', etat === 'en-cours' ? 'font-semibold text-fg' : etat === 'faite' ? 'text-fg-2' : 'text-fg-3')}>{step.label}</span>
+                <span className="shrink-0 text-xs text-fg-3">{arretee ? 'Arrêtée' : etat === 'faite' ? 'Fait' : etat === 'en-cours' ? 'En cours' : ''}</span>
+              </li>
             )
           })}
+        </ol>
+      )}
+
+      {riche && !enErreur && !termine && (habituel || avis) && (
+        <p className="text-sm text-fg-2">
+          {habituel && <>Temps habituel&nbsp;: {habituel}. </>}
+          {avis}
+        </p>
+      )}
+      {!riche && avis && !enErreur && !termine && <p className="text-sm text-fg-2">{avis}</p>}
+
+      {variant !== 'modal' && !enErreur && !termine && (onArrierePlan || onCancel) && (
+        <div className="flex flex-wrap gap-2">
+          {onArrierePlan && <Bouton variante="secondaire" onClick={onArrierePlan}>Continuer en arrière-plan</Bouton>}
+          {onCancel && <Bouton variante="discret" onClick={onCancel}>Annuler</Bouton>}
         </div>
-      )}
-
-      {/* Continuer en arrière-plan : le traitement continue côté serveur (1.10) */}
-      {!showCheck && !isError && onArrierePlan && (
-        <button
-          onClick={onArrierePlan}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-survol mt-2"
-          style={{ color: 'var(--text-1)', background: 'color-mix(in srgb, var(--text-3) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--text-3) 25%, transparent)' }}
-        >
-          Continuer en arrière-plan
-        </button>
-      )}
-
-      {/* Cancel button */}
-      {!showCheck && !isError && onCancel && (
-        <button
-          onClick={onCancel}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-survol mt-2"
-          style={{
-            color: 'var(--text-3)',
-            background: 'color-mix(in srgb, var(--text-3) 8%, transparent)',
-            border: '1px solid color-mix(in srgb, var(--text-3) 15%, transparent)',
-          }}
-        >
-          <X size={14} /> Annuler
-        </button>
       )}
     </div>
   )
 
-  if (variant === 'modal') {
-    return createPortal(
-      <div
-        className="fixed inset-0 z-[9999] flex items-center justify-center"
-        style={{
-          background: 'color-mix(in srgb, var(--surface-0) 92%, transparent)',
-        }}
-      >
-        {body}
-      </div>,
-      document.body,
-    )
-  }
-  return body
-}
+  if (variant !== 'modal') return corps
 
-function isStepBefore(
-  candidate: string,
-  current: string | null,
-  steps: StepDescriptor[],
-): boolean {
-  if (!current) return false
-  const candIdx = steps.findIndex((s) => s.key === candidate)
-  const curIdx = steps.findIndex((s) => s.key === current)
-  if (candIdx === -1 || curIdx === -1) return false
-  return candIdx < curIdx
+  // Le dialogue ne se ferme que par ses boutons : Échap ou un clic sur le voile ne coupent pas une lecture en cours.
+  return (
+    <Dialogue ouvert onOuvert={(o) => { if (!o && enErreur && onCancel) onCancel() }} sansFermer
+      titre={title ?? 'Synorix travaille sur votre dossier'}
+      actions={!enErreur && !termine && (onArrierePlan || onCancel) ? (
+        <>
+          {onCancel && <Bouton variante="discret" onClick={onCancel}>Annuler</Bouton>}
+          {onArrierePlan && <Bouton variante="secondaire" onClick={onArrierePlan}>Continuer en arrière-plan</Bouton>}
+        </>
+      ) : undefined}>
+      {corps}
+    </Dialogue>
+  )
 }

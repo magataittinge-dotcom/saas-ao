@@ -67,10 +67,10 @@ export function StatCard({ icon: Icon, label, value, suffix = '', ring, delay = 
   return (
     <Card
       className={cn('group relative overflow-hidden p-4 animate-fade-in', className)}
-      style={{ animationDelay: reduced ? undefined : `${delay * 0.06}s` }}
+      data-rang={delay}
     >
       <div className="relative flex items-start justify-between">
-        <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-tint">
+        <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-accent-tint">
           <Icon size={20} className="text-accent-text" aria-hidden />
         </div>
 
@@ -80,17 +80,16 @@ export function StatCard({ icon: Icon, label, value, suffix = '', ring, delay = 
               <circle cx="20" cy="20" r={R} fill="none" className="stroke-surface-2" strokeWidth="3.5" />
               <circle
                 cx="20" cy="20" r={R} fill="none"
-                className="stroke-accent-ui" strokeWidth="3.5" strokeLinecap="round"
+                className={cn('stroke-accent-ui', !reduced && 'transition-[stroke-dashoffset] duration-pop ease-survol')} strokeWidth="3.5" strokeLinecap="round"
                 strokeDasharray={C}
                 strokeDashoffset={C * (1 - frac)}
-                style={{ transition: reduced ? undefined : 'stroke-dashoffset 0.9s cubic-bezier(0.4,0,0.2,1)' }}
               />
             </svg>
           </div>
         )}
       </div>
 
-      <p className="mt-2.5 font-mono text-3xl font-bold tabular-nums text-fg">
+      <p className="chiffre-grand mt-2.5">
         {count}{suffix}
       </p>
       <p className="mt-0.5 text-sm text-fg-2">{label}</p>

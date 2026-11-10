@@ -3,12 +3,9 @@ import { Sigle } from '@/components/common/Sigle'
 import { useDropzone } from 'react-dropzone'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-  FileText, FileSpreadsheet, File, Trash2, AlertCircle,
-  CloudUpload, CheckCircle2, ChevronRight, FileArchive, Clock,
-} from 'lucide-react'
-import axios from 'axios'
+import { CloudUpload, Trash2 } from 'lucide-react'
 import { api } from '@/services/api'
+import { messageErreur } from '@/lib/erreurs'
 import { uploadService } from '@/services/upload'
 import ProgressDisplay, { type StepDescriptor } from '@/components/common/ProgressDisplay'
 import { useProgressStream } from '@/hooks/useProgressStream'
@@ -17,14 +14,21 @@ import { libelleType, optionsType, valeurListe } from '@/lib/typesPieces'
 import { tailleFichier, progressionEnvoi } from '@/lib/tailleFichier'
 import { cn } from '@/lib/utils'
 import BarreEtape, { ActionsBarre, BilanBarre, BoutonSecondaire, BoutonSuite } from '@/components/project/BarreEtape'
-import { AiTipsBlock, type TipData } from '@/components/common/AiTip'
 import VaultSavePrompt, { type VaultSuggestion } from '@/components/vault/VaultSavePrompt'
 import { takePendingUpload } from '@/lib/pendingUpload'
-import DeleteConfirmModal from '@/components/common/DeleteConfirmModal'
 import { GabaritEtape, BandeResume, SectionEtape, ActionsBarreTel } from '@/components/etape'
-import { Button } from '@/components/ui/button'
+import { Bouton } from '@/components/ui/bouton'
+import { Carte } from '@/components/ui/carte'
+import { DialogueConfirmation } from '@/components/ui/dialogue'
+import { EtatErreur, EtatRequete, EtatVide } from '@/components/ui/etats'
+import { ListeDeroulante } from '@/components/ui/liste-deroulante'
+import { MenuElement, MenuPoints } from '@/components/ui/menu'
+import { Message } from '@/components/ui/message'
+import { Squelette } from '@/components/ui/squelette'
+import { Tableau, type ColonneTableau } from '@/components/ui/tableau'
 import { cartesDepot, ETATS_LECTURE_SERVEUR } from '@/lib/depotDossier'
 import CarteLotUnique from '@/components/depot/CarteLotUnique'
+import EntreeFichier from '@/components/depot/EntreeFichier'
 import EcransLecture from '@/components/project/EcransLecture'
 import { useLancerLecture } from '@/hooks/useLancerLecture'
 import { useLotsDuDepot } from '@/hooks/useLotsDuDepot'
@@ -35,7 +39,10 @@ const UPLOAD_STEPS: StepDescriptor[] = [
   { key: 'extracting_text', label: 'Indexation des documents', estimated_s: 60 },
 ]
 
-const F = 'var(--font-ui)'
+const FORMATS_ACCEPTES = 'PDF, Word, Excel, OpenDocument ou ZIP, jusqu’à 2 Go'
+const TOUS = 'tous'
+// L'ordre des groupes de la liste : les pièces du contrat d'abord, puis les plans et les annexes, « Autre » en dernier.
+const ORDRE_TYPES = optionsType('autre').map((o) => o.value)
 
 type Phase = 'idle' | 'uploading' | 'processing' | 'done'
 
@@ -47,25 +54,6 @@ function detectDocType(filename: string): ProjectDocumentType {
   if (/attri/.test(lower) || /acte.{0,6}engagement/i.test(lower)) return 'acte_engagement'
   if (/\bplan\b|\bplans?\b/.test(lower)) return 'plan'
   return 'autre'
-}
-
-const TYPE_BADGE: Record<ProjectDocumentType, { color: string; bg: string; border: string }> = {
-  rc:              { color: 'var(--text-1)', bg: 'color-mix(in srgb, var(--text-1) 10%, transparent)', border: 'var(--border-2)' },
-  cctp:           { color: 'var(--text-2)', bg: 'color-mix(in srgb, var(--text-1) 8%, transparent)', border: 'var(--border-2)' },
-  ccap:           { color: 'var(--text-1)', bg: 'color-mix(in srgb, var(--text-1) 10%, transparent)', border: 'var(--border-2)' },
-  dpgf:           { color: 'var(--text-3)', bg: 'color-mix(in srgb, var(--text-3) 8%, transparent)', border: 'color-mix(in srgb, var(--text-3) 20%, transparent)' },
-  acte_engagement: { color: 'var(--text-2)', bg: 'color-mix(in srgb, var(--text-1) 10%, transparent)', border: 'var(--border-2)' },
-  plan:           { color: 'var(--text-3)', bg: 'var(--surface-1)', border: 'var(--surface-1)' },
-  autre:          { color: 'var(--text-3)', bg: 'transparent', border: 'transparent' },
-}
-
-function FileIcon({ filename }: { filename: string }) {
-  const ext = filename.split('.').pop()?.toLowerCase() ?? ''
-  if (ext === 'pdf') return <FileText size={18} className="shrink-0" style={{ color: 'var(--text-3)' }} />
-  if (ext === 'docx' || ext === 'doc') return <FileText size={18} className="shrink-0" style={{ color: 'var(--text-1)' }} />
-  if (ext === 'xlsx' || ext === 'xls' || ext === 'ods') return <FileSpreadsheet size={18} className="shrink-0" style={{ color: 'var(--text-1)' }} />
-  if (ext === 'zip') return <FileArchive size={18} className="shrink-0" style={{ color: 'var(--text-3)' }} />
-  return <File size={18} className="shrink-0" style={{ color: 'var(--text-3)' }} />
 }
 
 interface Props { project: Project }
@@ -85,6 +73,9 @@ export default function StepUpload({ project }: Props) {
   const [vaultPrompts, setVaultPrompts] = useState<VaultSuggestion[]>([])
   // 1.13 — aucune perte en un clic : chaque suppression est confirmée, nommée
   const [aSupprimer, setASupprimer] = useState<{ tous: true } | { doc: ProjectDocument } | null>(null)
+  const [suppression, setSuppression] = useState(false)
+  const [erreurSuppression, setErreurSuppression] = useState<string | null>(null)
+  const [filtreType, setFiltreType] = useState(TOUS)
   const [largeFileNotice, setLargeFileNotice] = useState<{ message: string; tone: 'cyan' | 'orange' } | null>(null)
   const [nextError, setNextError] = useState<string | null>(null)
   const [isNavigating, setIsNavigating] = useState(false)
@@ -96,11 +87,10 @@ export default function StepUpload({ project }: Props) {
   const doneRef = useRef(false)
   const lastProgressUpdateRef = useRef(0)
 
-  const [dismissedTips, setDismissedTips] = useState<Set<string>>(new Set())
-
   // Le serveur lit le dossier même quand l'utilisateur est parti : à son retour la lecture est encore affichée (statut du projet).
   const lectureServeur = ETATS_LECTURE_SERVEUR.includes(project.processing_status ?? '')
-  const { data: documents = [] } = useQuery({
+  // Une erreur de chargement n'est jamais un dépôt vide : la requête passe par <EtatRequete> (chargement → erreur → contenu).
+  const requeteDocuments = useQuery({
     queryKey: ['project-documents', project.id],
     queryFn: async () => {
       const { data } = await api.get<ProjectDocument[]>(`/projects/${project.id}/documents`)
@@ -109,16 +99,7 @@ export default function StepUpload({ project }: Props) {
     // Pendant la lecture, les pièces reconnues apparaissent au fur et à mesure
     refetchInterval: phase === 'processing' || lectureServeur ? 3000 : false,
   })
-
-  const uploadTips = useMemo<TipData[]>(() => {
-    const tips: TipData[] = []
-    const totalSize = documents.reduce((s, d) => s + (d.file_size || 0), 0)
-    if (totalSize > 500 * 1024 * 1024) {
-      tips.push({ id: 'upload-large', variant: 'warning', text: 'Les fichiers volumineux peuvent prendre quelques minutes à traiter.' })
-    }
-    tips.push({ id: 'upload-zip', variant: 'info', text: 'Astuce : déposez le ZIP complet du dossier de l\'acheteur pour une détection automatique de tous les documents et lots.' })
-    return tips
-  }, [documents])
+  const documents = useMemo(() => requeteDocuments.data ?? [], [requeteDocuments.data])
 
   const { mutateAsync: deleteDoc } = useMutation({
     mutationFn: (docId: string) => api.delete(`/projects/${project.id}/documents/${docId}`),
@@ -165,7 +146,7 @@ export default function StepUpload({ project }: Props) {
     },
     onError: () => {
       doneRef.current = true
-      setUploadErrors(prev => [...prev, 'Erreur lors du traitement des documents.'])
+      setUploadErrors(prev => [...prev, 'La lecture du dossier s’est arrêtée avant la fin. Vos fichiers sont conservés : déposez-les à nouveau pour reprendre.'])
       setPhase('idle')
       if (safetyRef.current) { clearTimeout(safetyRef.current); safetyRef.current = null }
     },
@@ -295,10 +276,7 @@ export default function StepUpload({ project }: Props) {
           }
           queryClient.invalidateQueries({ queryKey: ['project-documents', project.id] })
         } catch (err) {
-          const msg = axios.isAxiosError(err)
-            ? (err.response?.data?.detail ?? err.message)
-            : String(err)
-          errors.push(`${file.name} : ${msg}`)
+          errors.push(`${file.name} : ${await messageErreur(err, 'l’envoi n’a pas abouti. Vérifiez votre connexion, puis déposez-le à nouveau.')}`)
         } finally {
           setUploading((prev) => ({ ...prev, [file.name]: false }))
         }
@@ -338,9 +316,10 @@ export default function StepUpload({ project }: Props) {
       const msgs = files.map((f) => {
         const name = f.file.name.toLowerCase()
         if (name.endsWith('.rar') || name.endsWith('.7z')) {
-          return `${f.file.name} : Les fichiers .rar et .7z ne sont pas supportés. Veuillez convertir votre archive en .zip.`
+          return `${f.file.name} : les archives .rar et .7z ne sont pas lues. Convertissez-la en .zip, puis déposez-la.`
         }
-        return `${f.file.name} : ${f.errors.map((e) => e.message).join(', ')}`
+        if (f.errors.some((e) => e.code === 'file-too-large')) return `${f.file.name} : ce fichier dépasse 2 Go.`
+        return `${f.file.name} : ce format n’est pas lu. ${FORMATS_ACCEPTES}.`
       })
       setUploadErrors(msgs)
     },
@@ -387,365 +366,243 @@ export default function StepUpload({ project }: Props) {
   }
   const erreurAffichee = nextError ?? lecture.analysisError
 
-  /* ════════════════════════════════════════════════════════════════
-     JSX
-     ════════════════════════════════════════════════════════════════ */
+  // 1.13 — aucune perte en un clic : chaque suppression est confirmée, nommée ; un échec se dit dans le dialogue.
+  const confirmerSuppression = async () => {
+    if (!aSupprimer) return
+    setSuppression(true)
+    setErreurSuppression(null)
+    try {
+      if ('tous' in aSupprimer) await Promise.all(documents.map((d) => deleteDoc(d.id)))
+      else await deleteDoc(aSupprimer.doc.id)
+      setASupprimer(null)
+    } catch (err) {
+      setErreurSuppression(await messageErreur(err, 'La suppression n’a pas abouti. Réessayez.'))
+    } finally {
+      setSuppression(false)
+    }
+  }
+
+  // ── La liste des pièces : groupée par type (les pièces du contrat d'abord), filtrable, par pages de 50 ──
+  const lignes = useMemo(() => {
+    const rang = (d: ProjectDocument) => { const i = ORDRE_TYPES.indexOf(valeurListe(d.type)); return i === -1 ? ORDRE_TYPES.length : i }
+    return [...documents]
+      .filter((d) => filtreType === TOUS || valeurListe(d.type) === filtreType)
+      .sort((a, b) => rang(a) - rang(b) || a.file_name.localeCompare(b.file_name, 'fr', { numeric: true }))
+  }, [documents, filtreType])
+  const optionsFiltre = useMemo(() => {
+    const comptes = new Map<string, number>()
+    for (const d of documents) comptes.set(valeurListe(d.type), (comptes.get(valeurListe(d.type)) ?? 0) + 1)
+    return [
+      { valeur: TOUS, libelle: `Toutes les pièces (${documents.length})` },
+      ...ORDRE_TYPES.filter((t) => comptes.has(t)).map((t) => ({ valeur: t, libelle: `${libelleType(t)} (${comptes.get(t)})` })),
+    ]
+  }, [documents])
+
+  const colonnes: ColonneTableau<ProjectDocument>[] = [
+    { cle: 'nom', titre: 'Fichier', rendu: (doc) => <span className="block min-w-0 break-words font-medium">{doc.file_name}</span> },
+    {
+      cle: 'type', titre: 'Reconnu comme', tel: true, classe: 'md:w-72',
+      rendu: (doc) => (
+        <ListeDeroulante
+          libelle={`Type de ${doc.file_name}`}
+          valeur={valeurListe(doc.type)}
+          onChange={(v) => { void updateDocType(doc.id, v as ProjectDocumentType) }}
+          options={optionsType(doc.type).map(({ value, label: l }) => ({ valeur: value, libelle: l }))}
+        />
+      ),
+    },
+    { cle: 'taille', titre: 'Taille', nombre: true, tel: true, classe: 'md:w-28', rendu: (doc) => tailleFichier(doc.file_size) },
+    {
+      cle: 'menu', titre: '', classe: 'md:w-16 max-md:!block max-md:absolute max-md:right-2 max-md:top-1',
+      rendu: (doc) => (
+        <MenuPoints libelle={`Autres actions pour ${doc.file_name}`}>
+          <MenuElement danger onSelect={() => setASupprimer({ doc })}><Trash2 aria-hidden size={16} strokeWidth={1.5} />Supprimer du dossier</MenuElement>
+        </MenuPoints>
+      ),
+    },
+  ]
+
+  // Sans réponse du serveur, on ne sait pas s'il n'y a rien : ni « Aucun fichier », ni invitation à déposer.
+  const chargementEchoue = requeteDocuments.isError && requeteDocuments.data === undefined
+  const suiteBloquee =!hasDocuments || anyUploading || isProcessing || isNavigating
+  // A7 — un seul lot : l'action de l'écran est « Lire ce dossier » (en-tête à l'ordinateur, barre du bas au téléphone).
+  const actionLecture = (
+    <Bouton variante="principal" onClick={lireLeLotUnique} disabled={lecture.isAnalyzing || lecture.isSuccess}>
+      Lire ce dossier
+    </Bouton>
+  )
+  const erreursEnvoi = uploadErrors.length > 0 && (
+    <Message ton="erreur" titre={uploadErrors.length > 1 ? 'Ces fichiers n’ont pas été envoyés' : 'Ce fichier n’a pas été envoyé'} onFermer={() => setUploadErrors([])}>
+      <ul className="grid gap-0.5">{uploadErrors.map((err, i) => <li key={i} className="break-words">{err}</li>)}</ul>
+    </Message>
+  )
+
   return (
     <>
-      {aSupprimer && (
-        <DeleteConfirmModal
-          title={'tous' in aSupprimer
-            ? `Supprimer les ${documents.length} fichiers du dossier ?`
-            : `Supprimer « ${aSupprimer.doc.file_name} » ?`}
-          detail={'tous' in aSupprimer
-            ? 'Les fichiers ne seront plus dans le dossier de cet AO.'
-            : 'Le fichier ne sera plus dans le dossier de cet AO.'}
-          onConfirm={async () => {
-            if ('tous' in aSupprimer) await Promise.all(documents.map((d) => deleteDoc(d.id)))
-            else await deleteDoc(aSupprimer.doc.id)
-            setASupprimer(null)
-          }}
-          onCancel={() => setASupprimer(null)}
-        />
-      )}
+      <DialogueConfirmation
+        ouvert={aSupprimer !== null}
+        onOuvert={(o) => { if (!o) { setASupprimer(null); setErreurSuppression(null) } }}
+        danger
+        titre={!aSupprimer ? '' : 'tous' in aSupprimer
+          ? `Supprimer les ${documents.length} fichiers du dossier ?`
+          : `Supprimer « ${aSupprimer.doc.file_name} » ?`}
+        description={aSupprimer && 'tous' in aSupprimer
+          ? 'Les fichiers ne seront plus dans le dossier de cet AO.'
+          : 'Le fichier ne sera plus dans le dossier de cet AO.'}
+        libelleConfirmer="Supprimer"
+        libelleEnCours="Suppression…"
+        enCours={suppression}
+        erreur={erreurSuppression}
+        onConfirmer={() => { void confirmerSuppression() }}
+      />
 
       <EcransLecture lecture={lecture} />
 
-      <div style={{ fontFamily: F }}>
-        <GabaritEtape
-          titre="Dépôt du dossier"
-          utilite="Déposez le dossier reçu de l’acheteur : Synorix reconnaît chaque pièce et chaque lot, puis vous choisissez ce que vous analysez."
-          actionPrincipale={lotUnique ? undefined : (
-            <Button type="button" variant="signature" onClick={handleNext} disabled={!hasDocuments || anyUploading || isProcessing || isNavigating}>
-              Étape suivante : Lots
-            </Button>
+      <GabaritEtape
+        titre="Dépôt du dossier"
+        utilite="Déposez le dossier reçu de l’acheteur : Synorix reconnaît chaque pièce et chaque lot, puis vous choisissez ce que vous lisez."
+        actionPrincipale={!hasDocuments ? undefined : lotUnique ? actionLecture : (
+          <BoutonSuite etape="Lots" onClick={handleNext} disabled={suiteBloquee} />
+        )}
+        message={erreurAffichee && <Message ton="erreur" titre="La lecture n’a pas démarré">{erreurAffichee}</Message>}
+        resume={hasDocuments ? <BandeResume cartes={cartesDepot(documents, project, lotUnique)} libelle="Le dossier déposé" /> : undefined}
+        barre={
+          <BarreEtape>
+            <BilanBarre
+              bureau={chargementEchoue ? 'La liste des fichiers n’a pas pu être lue.' : hasDocuments
+                ? `${documents.length} fichier${documents.length > 1 ? 's déposés' : ' déposé'} dans le dossier.`
+                : 'Déposez le dossier pour continuer.'}
+              tel={chargementEchoue ? 'Liste non lue' : hasDocuments ? `${documents.length} fichier${documents.length > 1 ? 's' : ''}` : 'Aucun fichier'}
+            />
+            <ActionsBarre>
+              <BoutonSecondaire libelle="Retour" onClick={() => navigate(-1)} />
+              <ActionsBarreTel>
+                {lotUnique ? actionLecture : <BoutonSuite etape="Lots" onClick={handleNext} disabled={suiteBloquee} />}
+              </ActionsBarreTel>
+            </ActionsBarre>
+          </BarreEtape>
+        }
+      >
+        <EtatRequete
+          requete={requeteDocuments}
+          squelette={<Squelette className="h-80 w-full rounded-carte" />}
+          erreur={(
+            <EtatErreur
+              titre="Le dossier n’a pas pu se charger"
+              detail="La liste des fichiers déposés n’a pas pu être lue. Vos fichiers ne sont pas touchés."
+              onReessayer={() => { void requeteDocuments.refetch() }}
+              enCours={requeteDocuments.isFetching}
+            />
           )}
-          resume={<BandeResume cartes={cartesDepot(documents, project, lotUnique)} libelle="Le dossier déposé" />}
-          barre={
-        <BarreEtape>
-          <BilanBarre
-            className="gap-2"
-            bureau={<>
-              <CheckCircle2 size={16} style={{ color: hasDocuments ? 'var(--text-1)' : 'var(--text-3)' }} />
-              <span className="text-sm" style={{ color: 'var(--text-3)' }}>
-                {hasDocuments
-                  ? `${documents.length} fichier${documents.length > 1 ? 's déposés' : ' déposé'} dans le dossier.`
-                  : 'Importez des fichiers pour continuer.'
-                }
-              </span>
-            </>}
-            tel={<>
-              <CheckCircle2 size={16} className="shrink-0" style={{ color: hasDocuments ? 'var(--text-1)' : 'var(--text-3)' }} />
-              <span className="truncate text-xs" style={{ color: 'var(--text-3)' }}>
-                {hasDocuments ? `${documents.length} fichier${documents.length > 1 ? 's' : ''}` : 'Aucun fichier'}
-              </span>
-            </>}
-          />
-          <ActionsBarre>
-            <BoutonSecondaire libelle="Retour" onClick={() => navigate(-1)} />
-            <ActionsBarreTel>
-              {lotUnique ? (
-                <Button type="button" variant="signature" onClick={lireLeLotUnique} disabled={lecture.isAnalyzing || lecture.isSuccess}>
-                  Lire ce dossier (1 unité)
-                </Button>
-              ) : (
-                <BoutonSuite
-                  etape="Lots"
-                  onClick={handleNext}
-                  disabled={!hasDocuments || anyUploading || isProcessing || isNavigating}
-                />
-              )}
-            </ActionsBarreTel>
-          </ActionsBarre>
-        </BarreEtape>
-          }
+          estVide={() => false}
+          vide={null}
         >
-          <SectionEtape titre="Le dossier de l’acheteur">
-        {/* ── AiTips ──────────────────────────────────────── */}
-        <AiTipsBlock tips={uploadTips} dismissed={dismissedTips} onDismiss={(id) => setDismissedTips((s) => new Set(s).add(id))} />
-
-        {/* ── DROPZONE ADAPTATIVE ──────────────────────────
-            Vide : grande zone d'accueil. Fichiers importés : bandeau
-            compact — la place revient au contenu, pas au vide. */}
-        {!hasDocuments ? (
-          <div
-            {...getRootProps()}
-            className={cn(
-              'blueprint-grid overflow-hidden rounded-2xl text-center cursor-pointer transition-all duration-200',
-              isDragActive ? 'ring-2 ring-fg' : '',
-            )}
-            style={{
-              border: '1px dashed',
-              borderColor: isDragActive ? 'var(--text-1)' : 'var(--border-2)',
-              background: isDragActive ? 'color-mix(in srgb, var(--text-1) 6%, transparent)' : 'var(--surface-1)',
-              padding: '56px 24px',
-            }}
-          >
-            <input {...getInputProps()} />
-
-            <div className="relative flex justify-center mb-4">
-              <div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center"
-                style={{
-                  background: 'color-mix(in srgb, var(--text-1) 8%, transparent)',
-                  boxShadow: 'inset 0 1px 0 color-mix(in srgb, var(--text-1) 12%, transparent)',
-                }}
-              >
-                <CloudUpload size={26} style={{ color: 'var(--text-1)' }} />
-              </div>
-            </div>
-
-            <p className="relative text-lg font-semibold mb-1" style={{ color: 'var(--text-1)' }}>
-              {isDragActive ? 'Déposez les fichiers ici…' : <>Déposez le <Sigle code="DCE" /> complet</>}
-            </p>
-            <p className="relative text-sm mb-6" style={{ color: 'var(--text-3)' }}>
-              Le ZIP entier suffit — Synorix identifie chaque pièce et chaque lot automatiquement.
-            </p>
-
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); open() }}
-              className="glass-btn text-ds-text relative px-6 py-2.5 rounded-lg text-sm font-semibold"
-            >
-              Parcourir les fichiers
-            </button>
-
-            <p className="relative num-mono mt-5 text-xs" style={{ color: 'var(--text-3)' }}>
-              .pdf · .docx · .xlsx · .xlsm · .ods · .zip — jusqu&apos;à 2 Go
-            </p>
-          </div>
-        ) : (
-          <div
-            {...getRootProps()}
-            className={cn(
-              'rounded-xl cursor-pointer transition-all duration-200',
-              isDragActive ? 'ring-2 ring-fg' : '',
-            )}
-            style={{
-              border: '1px dashed',
-              borderColor: isDragActive ? 'var(--text-1)' : 'var(--border-2)',
-              background: isDragActive ? 'color-mix(in srgb, var(--text-1) 6%, transparent)' : 'var(--surface-1)',
-            }}
-          >
-            <input {...getInputProps()} />
-            <div className="flex items-center gap-4 px-5 py-3.5">
-              <div
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-                style={{ background: 'color-mix(in srgb, var(--text-1) 8%, transparent)', boxShadow: 'inset 0 1px 0 color-mix(in srgb, var(--text-1) 10%, transparent)' }}
-              >
-                <CloudUpload size={19} style={{ color: 'var(--text-1)' }} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold" style={{ color: 'var(--text-1)' }}>
-                  {isDragActive ? 'Déposez ici…' : 'Ajouter des fichiers au dossier'}
-                </p>
-                <p className="num-mono mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
-                  glisser-déposer · .pdf .docx .xlsx .xlsm .ods .zip · 2 Go max
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); open() }}
-                className="glass-btn text-ds-text shrink-0 rounded-lg px-4 py-2 text-xs font-semibold"
-              >
-                Parcourir
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ── Large-file reassurance (cyan for normal, orange for very large) ─ */}
-        {largeFileNotice && phase === 'uploading' && (
-          <div
-            className="rounded-xl p-4 flex items-start gap-3"
-            style={
-              largeFileNotice.tone === 'orange'
-                ? { background: 'color-mix(in srgb, var(--text-3) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--text-3) 25%, transparent)' }
-                : { background: 'color-mix(in srgb, var(--text-1) 6%, transparent)', border: '1px solid var(--border-2)' }
-            }
-          >
-            <Clock
-              size={16}
-              style={{ color: largeFileNotice.tone === 'orange' ? 'var(--text-3)' : 'var(--text-1)' }}
-              className="shrink-0 mt-0.5"
-            />
-            <p className="text-sm" style={{ color: 'var(--text-1)' }}>{largeFileNotice.message}</p>
-          </div>
-        )}
-
-        {/* ── Upload errors ───────────────────────────────── */}
-        {uploadErrors.length > 0 && (
-          <div className="rounded-xl p-4" style={{ background: 'color-mix(in srgb, var(--danger-fg) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--danger-fg) 15%, transparent)' }}>
-            <p className="text-sm font-semibold mb-1" style={{ color: 'var(--danger-fg)' }}>Erreurs lors de l&apos;envoi :</p>
-            {uploadErrors.map((err, i) => (
-              <p key={i} className="text-xs" style={{ color: 'var(--danger-fg)' }}>• {err}</p>
-            ))}
-          </div>
-        )}
-
-        {/* ── ZIP warnings ────────────────────────────────── */}
-        {uploadWarnings.length > 0 && (
-          <div className="rounded-xl p-4" style={{ background: 'color-mix(in srgb, var(--text-3) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--text-3) 15%, transparent)' }}>
-            <p className="text-sm font-semibold mb-1" style={{ color: 'var(--text-3)' }}>Certains fichiers n&apos;ont pas pu être extraits :</p>
-            {uploadWarnings.map((w, i) => (
-              <p key={i} className="text-xs" style={{ color: 'var(--text-3)' }}>• {w}</p>
-            ))}
-          </div>
-        )}
-
-        {/* ── C16 : bandeau coffre-fort progressif ─────────── */}
-        {vaultPrompts.map((s) => (
-          <VaultSavePrompt
-            key={s.docId}
-            suggestion={s}
-            onDone={(docId) => setVaultPrompts((prev) => prev.filter(p => p.docId !== docId))}
-          />
-        ))}
-
-        {/* ── Error ───────────────────────────────────────── */}
-        {erreurAffichee && (
-          <div
-            className="flex items-start gap-2 p-4 rounded-xl text-sm"
-            style={{ color: 'var(--danger-fg)', background: 'color-mix(in srgb, var(--danger-fg) 6%, transparent)', border: '1px solid color-mix(in srgb, var(--danger-fg) 15%, transparent)' }}
-          >
-            <AlertCircle size={16} className="shrink-0 mt-0.5" />
-            <span>{erreurAffichee}</span>
-          </div>
-        )}
-
-          </SectionEtape>
-          {lotUnique && (
-            <CarteLotUnique
-              lot={lotUnique}
-              ecartes={ecartes}
-              enCours={lecture.isAnalyzing || lecture.isSuccess}
-              onLire={lireLeLotUnique}
-              onOuvrirLots={() => navigate(`/projects/${project.id}/lots`)}
-            />
-          )}
-          {enLecture && (
-            <SectionEtape titre="Lecture du dossier">
-            <div className="rounded-carte border border-bord-2 bg-surface-1 p-5">
-              <ProgressDisplay
-                variant="inline"
-                steps={UPLOAD_STEPS}
-                currentStep={phase === 'uploading' ? 'uploading' : 'extracting_text'}
-                progress={Math.round(phase === 'idle' ? (project.processing_progress ?? 0) : displayPct)}
-                detail={phase === 'idle' ? (project.processing_detail || 'Lecture du dossier…') : (sublabel || label)}
-                phase={phase === 'done' ? 'complete' : 'in_progress'}
-              />
-              <p role="status" className="mt-4 border-t border-bord-2 pt-3 text-sm text-fg-2">
-                {phase === 'uploading'
-                  ? 'Gardez cette page ouverte pendant l’envoi. Ensuite, vous pourrez la quitter : la lecture continue.'
-                  : 'Vous pouvez quitter cette page : la lecture continue et l’AO reste dans « Mes AO ». Les pièces reconnues apparaissent ci-dessous au fur et à mesure.'}
-              </p>
-            </div>
-            </SectionEtape>
-          )}
-        {/* ── FILES TABLE ─────────────────────────────────── */}
-          {hasDocuments && (
-          <SectionEtape titre="Pièces reconnues">
-          <div>
-            <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
-              <div>
-                <p className="num-mono mt-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
-                  {documents.length} fichier{documents.length > 1 ? 's' : ''} · {tailleFichier(totalBytes)}
-                </p>
-              </div>
-              {documents.length > 1 && (
-                <button
-                  onClick={() => setASupprimer({ tous: true })}
-                  className="text-xs font-medium transition-colors"
-                  style={{ color: 'var(--text-3)' }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--danger-fg)' }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-3)' }}
+          {() => (
+            <div className="space-y-8">
+              <SectionEtape titre="Le dossier de l’acheteur">
+                <div
+                  {...getRootProps()}
+                  data-zone-depot={hasDocuments ? 'compacte' : 'grande'}
+                  className={cn(
+                    'rounded-carte border border-dashed transition-colors duration-survol ease-survol',
+                    isDragActive ? 'border-accent-ring bg-accent-tint' : 'border-bord-champ bg-surface-1',
+                    hasDocuments ? 'flex flex-wrap items-center gap-x-4 gap-y-3 px-5 py-4' : 'grid min-h-80 place-items-center px-6 py-12 text-center',
+                  )}
                 >
-                  Tout supprimer
-                </button>
+                  <EntreeFichier {...getInputProps()} />
+                  {hasDocuments ? (
+                    <>
+                      <CloudUpload aria-hidden size={20} strokeWidth={1.5} className="shrink-0 text-fg-3" />
+                      <div className="min-w-0 flex-1 basis-56">
+                        <p className="text-sm font-semibold text-fg">{isDragActive ? 'Lâchez les fichiers ici' : 'Une pièce de plus, un additif de l’acheteur ?'}</p>
+                        <p className="mt-0.5 text-xs text-fg-3">{FORMATS_ACCEPTES}</p>
+                      </div>
+                      <Bouton variante="secondaire" onClick={open}>Ajouter des fichiers</Bouton>
+                    </>
+                  ) : (
+                    <div className="grid justify-items-center">
+                      <CloudUpload aria-hidden size={28} strokeWidth={1.5} className="text-fg-3" />
+                      <p className="mt-4 text-lg font-semibold text-fg">
+                        {isDragActive ? 'Lâchez les fichiers ici' : <>Déposez le <Sigle code="DCE" /> complet</>}
+                      </p>
+                      <p className="mt-1.5 max-w-md text-sm text-fg-2">
+                        Le ZIP entier suffit : Synorix reconnaît chaque pièce et chaque lot.
+                      </p>
+                      <Bouton variante={enLecture ? 'secondaire' : 'principal'} className="mt-6" onClick={open} disabled={anyUploading}>Choisir des fichiers</Bouton>
+                      <p className="mt-4 text-xs text-fg-3">{FORMATS_ACCEPTES}</p>
+                    </div>
+                  )}
+                </div>
+
+                {largeFileNotice && phase === 'uploading' && <Message ton="info">{largeFileNotice.message}</Message>}
+                {erreursEnvoi}
+                {uploadWarnings.length > 0 && (
+                  <Message ton="attention" titre="Certains fichiers de l’archive n’ont pas pu être ouverts" onFermer={() => setUploadWarnings([])}>
+                    <ul className="grid gap-0.5">{uploadWarnings.map((w, i) => <li key={i} className="break-words">{w}</li>)}</ul>
+                  </Message>
+                )}
+
+                {/* C16 : une pièce de l'entreprise reconnue dans le dépôt, à ranger au coffre-fort */}
+                {vaultPrompts.map((s) => (
+                  <VaultSavePrompt
+                    key={s.docId}
+                    suggestion={s}
+                    onDone={(docId) => setVaultPrompts((prev) => prev.filter(p => p.docId !== docId))}
+                  />
+                ))}
+              </SectionEtape>
+
+              {lotUnique && (
+                <CarteLotUnique lot={lotUnique} ecartes={ecartes} onOuvrirLots={() => navigate(`/projects/${project.id}/lots`)} />
+              )}
+
+              {enLecture && (
+                <SectionEtape titre="Lecture du dossier">
+                  <Carte>
+                    <ProgressDisplay
+                      variant="inline"
+                      steps={UPLOAD_STEPS}
+                      currentStep={phase === 'uploading' ? 'uploading' : 'extracting_text'}
+                      progress={Math.round(phase === 'idle' ? (project.processing_progress ?? 0) : displayPct)}
+                      detail={phase === 'idle' ? (project.processing_detail || 'Lecture du dossier…') : (sublabel || label)}
+                      phase={phase === 'done' ? 'complete' : 'in_progress'}
+                      avis={phase === 'uploading'
+                        ? 'Gardez cette page ouverte pendant l’envoi. Ensuite, vous pourrez la fermer : la lecture continue.'
+                        : 'Vous pouvez fermer cette page : la lecture continue et l’AO reste dans « Mes AO ». Les pièces reconnues apparaissent ci-dessous au fur et à mesure.'}
+                    />
+                  </Carte>
+                </SectionEtape>
+              )}
+
+              {hasDocuments && (
+                <SectionEtape
+                  titre="Pièces reconnues"
+                  description={`${documents.length} fichier${documents.length > 1 ? 's' : ''}, ${tailleFichier(totalBytes)}. Les pièces du contrat d’abord, puis les plans et le reste.`}
+                  action={(
+                    <div className="flex flex-wrap items-center gap-2">
+                      <ListeDeroulante libelle="Montrer un type de pièce" className="w-64 max-w-full" valeur={filtreType} onChange={setFiltreType} options={optionsFiltre} />
+                      {documents.length > 1 && (
+                        <MenuPoints libelle="Autres actions pour le dossier">
+                          <MenuElement danger onSelect={() => setASupprimer({ tous: true })}><Trash2 aria-hidden size={16} strokeWidth={1.5} />Tout supprimer</MenuElement>
+                        </MenuPoints>
+                      )}
+                    </div>
+                  )}
+                >
+                  <Tableau
+                    libelle="Pièces du dossier"
+                    className="[&_tr]:relative max-md:[&_td:first-child]:pr-12"
+                    colonnes={colonnes}
+                    lignes={lignes}
+                    cle={(doc) => doc.id}
+                    vide={<EtatVide titre="Aucune pièce de ce type" phrase="Aucun fichier du dossier n’est rangé sous ce type." parFiltre={() => setFiltreType(TOUS)} />}
+                  />
+                </SectionEtape>
               )}
             </div>
-
-            <div className="glass-card overflow-hidden">
-              {/* Table header */}
-              <div
-                className="hidden sm:grid items-center gap-3 px-5 py-2.5"
-                style={{
-                  borderBottom: '1px solid var(--line)',
-                  gridTemplateColumns: 'minmax(0,2fr) 80px minmax(120px,190px) 40px',
-                }}
-              >
-                <span className="microlabel">Nom du fichier</span>
-                <span className="microlabel">Taille</span>
-                <span className="microlabel">Reconnu comme</span>
-                <span />
-              </div>
-
-              {documents.map((doc, i) => {
-                const badge = TYPE_BADGE[doc.type as ProjectDocumentType] ?? TYPE_BADGE.autre
-                const isFilled = doc.type === 'ccap' || doc.type === 'rc'
-
-                return (
-                  <div
-                    key={doc.id}
-                    className="grid items-center gap-3 px-5 py-2.5 transition-colors hover:bg-ds-bg-2"
-                    style={{
-                      borderBottom: i < documents.length - 1 ? '1px solid var(--line)' : 'none',
-                      gridTemplateColumns: 'minmax(0,2fr) 80px minmax(120px,190px) 40px',
-                    }}
-                  >
-                    {/* Filename */}
-                    <div className="flex items-center gap-3 min-w-0">
-                      <FileIcon filename={doc.file_name} />
-                      <span className="text-sm truncate" style={{ color: 'var(--text-2)' }}>{doc.file_name}</span>
-                    </div>
-
-                    {/* Size */}
-                    <span className="num-mono text-xs" style={{ color: 'var(--text-3)' }}>
-                      {tailleFichier(doc.file_size)}
-                    </span>
-
-                    {/* Type badge — clickable select */}
-                    <div className="relative">
-                      <select
-                        value={valeurListe(doc.type)}
-                        title={libelleType(doc.type)}
-                        onChange={(e) => updateDocType(doc.id, e.target.value as ProjectDocumentType)}
-                        className="appearance-none text-xs font-semibold rounded-full pl-2.5 pr-6 py-1 cursor-pointer outline-none w-full"
-                        style={{
-                          textOverflow: 'ellipsis',
-                          color: isFilled ? 'var(--text-1)' : badge.color,
-                          background: isFilled ? badge.bg : badge.bg,
-                          border: `1px solid ${isFilled ? 'transparent' : badge.border}`,
-                        }}
-                      >
-                        {optionsType(doc.type).map(({ value, label: l }) => (
-                          <option key={value} value={value}>{l}</option>
-                        ))}
-                      </select>
-                      <ChevronRight size={10} className="absolute right-2 top-1/2 -translate-y-1/2 rotate-90 pointer-events-none" style={{ color: isFilled ? 'var(--text-1)' : badge.color }} />
-                    </div>
-
-                    {/* Delete */}
-                    <button
-                      onClick={() => setASupprimer({ doc })}
-                      aria-label={`Supprimer ${doc.file_name}`}
-                      className="p-1.5 rounded-md transition-colors"
-                      style={{ color: 'var(--text-3)' }}
-                      onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--danger-fg)'; e.currentTarget.style.background = 'color-mix(in srgb, var(--danger-fg) 6%, transparent)' }}
-                      onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-3)'; e.currentTarget.style.background = 'transparent' }}
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-          </SectionEtape>
-        )}
-
-        </GabaritEtape>
-      </div>
+          )}
+        </EtatRequete>
+      </GabaritEtape>
     </>
   )
 }

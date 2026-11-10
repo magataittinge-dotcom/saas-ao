@@ -26,7 +26,7 @@ test('la fenêtre de confirmation nomme l\'élément et se présente comme un di
 
 test('chaque écran qui supprime passe par une confirmation nommée', () => {
   const ecrans: [string, RegExp][] = [
-    ['src/routes/Projects.tsx', /title=\{`Supprimer « \$\{deleteTarget\.name\} » \?`\}/],
+    ['src/routes/Projects.tsx', /`Supprimer « \$\{aSupprimer\.name\} » \?`/],
     ['src/routes/project/StepUpload.tsx', /`Supprimer « \$\{aSupprimer\.doc\.file_name\} » \?`/],
     ['src/routes/project/StepUpload.tsx', /`Supprimer les \$\{documents\.length\} fichiers du dossier \?`/],
     ['src/routes/Vault.tsx', /`Supprimer « \$\{pieceASupprimer\.file_name\} » du coffre-fort \?`/],
@@ -45,8 +45,9 @@ test('plus aucune suppression déclenchée directement par un clic', () => {
   for (const [f, extrait] of directs) assert.ok(!lire(f).includes(extrait), `${f} : ${extrait}`)
 })
 
-test('« Sans suite » se défait depuis le tableau de bord', () => {
-  const code = sansCommentaires(lire('src/routes/Dashboard.tsx'))
-  assert.match(code, /est classé sans suite\./)
-  assert.match(code, /status: 'analyzed'/)
+test('« Sans suite » se défait : le dialogue « Mettre à jour le statut » (Accueil, Mes AO) propose de reprendre l\'appel d\'offres', async () => {
+  const { choixStatut } = await import('@/lib/etatAO')
+  assert.deepEqual(choixStatut('sans_suite').map((c) => c.statut), ['en_cours'], 'un AO sans suite se reprend')
+  assert.ok(choixStatut('en_cours').some((c) => c.statut === 'sans_suite'), '« Je n\'ai pas répondu » classe sans suite')
+  for (const f of ['src/routes/Dashboard.tsx', 'src/routes/Projects.tsx']) assert.match(sansCommentaires(lire(f)), /<MettreAJourStatut projet=\{statutPour\}/, f)
 })

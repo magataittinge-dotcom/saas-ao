@@ -36,6 +36,14 @@ export function phraseComptes(c: ComptesPieces): string {
   return `${c.pretes} ${c.pretes > 1 ? 'prêtes' : 'prête'} · ${c.aJoindre} à joindre · ${c.aRenouveler} à renouveler`
 }
 
+/**
+ * Les pièces hors du total (facultatives, « si concerné », pour l'attribution) : elles se nomment, elles ne se cachent pas.
+ * « 1 facultative ou pour l’attribution » ; rien quand il n'y en a pas. Le total demandé au dépôt est le même qu'à l'Export.
+ */
+export function phrasePiecesAutres(c: Pick<ComptesPieces, 'autres'>): string | null {
+  return c.autres > 0 ? `${c.autres} facultative${c.autres > 1 ? 's' : ''} ou pour l’attribution` : null
+}
+
 /** Le mot et l'état d'une pièce, pour EtatElement : « Prêt », « À renouveler… », « À joindre »… */
 export function etatDeStatut(s: StatutPiece): { etat: 'pret' | 'a-verifier' | 'a-couvrir'; texte: string; perimee: boolean } {
   const perimee = s.classe.includes('--perimee')
@@ -54,13 +62,14 @@ export function cartesPieces(
   const formulaires = groupes ? comptesDetailles(groupes.formulaires, echeance) : null
   return [
     {
-      libelle: 'Prêtes', valeur: String(c.pretes), etat: c.total > 0 && c.pretes === c.total ? 'pret' : 'neutre', jauge: { rempli: c.pretes, total: c.total },
-      detail: `sur ${c.total} ${c.total > 1 ? 'pièces demandées' : 'pièce demandée'}${c.autres > 0 ? ` · ${c.autres} facultative${c.autres > 1 ? 's' : ''} ou pour l’attribution` : ''}`,
+      // « Prêtes : Aucune » (les pièces : au féminin), jamais « Aucun »
+      libelle: 'Prêtes', valeur: String(c.pretes), rien: 'Aucune', etat: c.total > 0 && c.pretes === c.total ? 'pret' : 'neutre', jauge: { rempli: c.pretes, total: c.total },
+      detail: `sur ${c.total} ${c.total > 1 ? 'pièces demandées' : 'pièce demandée'} au dépôt${phrasePiecesAutres(c) ? `, plus ${phrasePiecesAutres(c)}` : ''}`,
     },
     {
-      libelle: 'À joindre', valeur: String(c.aJoindre), etat: c.aJoindre > 0 ? 'a-verifier' : 'pret',
+      libelle: 'À joindre', valeur: String(c.aJoindre), rien: 'Aucune', etat: c.aJoindre > 0 ? 'a-verifier' : 'pret',
       detail: coffre && formulaires ? `${pluriel(coffre.aJoindre, 'pièce')} du coffre-fort · ${pluriel(formulaires.aJoindre, 'formulaire')} à compléter` : undefined,
     },
-    { libelle: 'À renouveler', valeur: String(c.aRenouveler), etat: c.aRenouveler > 0 ? 'a-verifier' : 'pret', detail: c.aRenouveler > 0 ? 'Valables moins longtemps que la date de remise.' : 'Aucune pièce ne périme avant la remise.' },
+    { libelle: 'À renouveler', valeur: String(c.aRenouveler), rien: 'Aucune', etat: c.aRenouveler > 0 ? 'a-verifier' : 'pret', detail: c.aRenouveler > 0 ? 'Valables moins longtemps que la date de remise.' : 'Aucune pièce ne périme avant la remise.' },
   ]
 }

@@ -2,26 +2,30 @@ import type { ReactNode } from 'react'
 import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useDropzone } from 'react-dropzone'
-import { CloudUpload, Loader2 } from 'lucide-react'
+import { CloudUpload } from 'lucide-react'
 import { useCreateProject } from '@/hooks/useProject'
 import { setPendingUpload } from '@/lib/pendingUpload'
 import { nomAODepuisFichier } from '@/lib/nomAO'
 import { messageErreur } from '@/lib/erreurs'
-import EchecAction from '@/components/common/EchecAction'
+import { Bouton } from '@/components/ui/bouton'
+import { Message } from '@/components/ui/message'
+import EntreeFichier from '@/components/depot/EntreeFichier'
 import { cn } from '@/lib/utils'
 
 interface Props {
   titre: ReactNode
   precision: string
+  /** Le seul geste de l'écran : la zone porte alors le bouton principal « Choisir un fichier » (écran « Nouvel AO »). */
+  geste?: boolean
   className?: string
 }
 
 /**
  * Zone de dépôt qui crée l'AO : le nom est tiré du fichier (renommable ensuite), puis on passe à l'étape de
- * dépôt avec le fichier déjà prêt. Partagée par l'écran « Bienvenue » et par /projects/new.
+ * dépôt avec le fichier déjà prêt. Partagée par l'écran « Bienvenue », l'écran vide de « Mes AO » et /projects/new.
  * La création peut échouer : on le dit, et on garde le fichier pour réessayer (1.16).
  */
-export default function ZoneDepotAO({ titre, precision, className }: Props) {
+export default function ZoneDepotAO({ titre, precision, geste, className }: Props) {
   const navigate = useNavigate()
   const { mutate: createProject, isPending: isCreating } = useCreateProject()
   const [echec, setEchec] = useState<{ message: string; fichier: File } | null>(null)
@@ -61,26 +65,32 @@ export default function ZoneDepotAO({ titre, precision, className }: Props) {
   return (
     <>
       {echec && (
-        <div className="mb-4 w-full text-left">
-          <EchecAction calque message={echec.message} onReessayer={() => creerAvec(echec.fichier)} />
-        </div>
+        <Message ton="erreur" className="mb-4 w-full text-left"
+          action={<Bouton variante="secondaire" onClick={() => creerAvec(echec.fichier)}>Réessayer</Bouton>}>
+          {echec.message}
+        </Message>
       )}
       <div
         {...getRootProps()}
+        aria-busy={isCreating || undefined}
         className={cn(
-          'w-full cursor-pointer rounded-xl border-2 border-dashed px-8 py-14 text-center transition-colors duration-base ease-lien',
-          isDragActive ? 'border-accent-ring bg-accent-tint' : 'border-input bg-surface-1 hover:border-fg-3',
+          'grid w-full cursor-pointer place-items-center rounded-carte border border-dashed px-6 py-14 text-center transition-colors duration-survol ease-survol',
+          isDragActive ? 'border-accent-ring bg-accent-tint' : 'border-bord-champ bg-surface-1 hover:border-fg-3',
           className,
         )}
       >
-        <input {...getInputProps()} />
-        {isCreating ? (
-          <Loader2 size={28} className="mx-auto animate-spin text-fg-3" aria-hidden />
-        ) : (
-          <CloudUpload size={28} strokeWidth={1.6} className="mx-auto text-fg-3" aria-hidden />
-        )}
-        <p className="mt-4 text-base font-semibold text-fg">{titre}</p>
-        <p className="mt-1.5 text-[13px] text-fg-3">{precision}</p>
+        <EntreeFichier {...getInputProps()} />
+        <div className="grid justify-items-center">
+          <CloudUpload size={28} strokeWidth={1.5} className="text-fg-3" aria-hidden />
+          <p className="mt-4 text-lg font-semibold text-fg">{isDragActive ? 'Lâchez le dossier ici' : titre}</p>
+          <p className="mt-1.5 text-sm text-fg-2">{precision}</p>
+          {geste && (
+            <Bouton variante="principal" className="mt-6" enCours={isCreating} libelleEnCours="Création de l’AO…">
+              Choisir un fichier
+            </Bouton>
+          )}
+          {!geste && isCreating && <p role="status" className="mt-4 text-sm font-medium text-fg">Création de l’AO…</p>}
+        </div>
       </div>
     </>
   )

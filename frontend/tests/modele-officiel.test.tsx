@@ -19,7 +19,7 @@ test("formulaire standard absent du DCE : « Modèle officiel », jamais « Cerf
   const html = renderToStaticMarkup(
     <CandidatureSectionTemplates projectId="p" items={[item]} onUploadCompleted={rien} onToggleSignature={rien} />,
   )
-  assert.ok(html.includes('Modèle officiel (ministère de l&#x27;Économie)'), html)
+  assert.ok(html.includes('Modèle officiel (ministère de l’Économie)'), html)
   assert.ok(!/cerfa/i.test(html), html)
 })
 

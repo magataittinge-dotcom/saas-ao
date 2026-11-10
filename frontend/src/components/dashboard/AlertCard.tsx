@@ -13,7 +13,7 @@ interface Props {
   alerts: Alert[]
 }
 
-// Alertes : « à traiter » = ton warning, « à surveiller » = neutre. Aucune couleur écrite ici (jetons).
+// Alertes : « à traiter » = ambre (à surveiller de près), « à surveiller » = neutre. Aucune couleur écrite ici (jetons).
 export function AlertCard({ alerts }: Props) {
   if (alerts.length === 0) return null
 
@@ -30,7 +30,7 @@ export function AlertCard({ alerts }: Props) {
             className={cn(
               'flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm',
               alert.severity === 'red'
-                ? 'border-warning-border bg-warning-bg text-warning'
+                ? 'border-ambre-mark bg-ambre-soft text-ambre-ink'
                 : 'border-bord-2 bg-surface-0 text-fg-2',
             )}
           >

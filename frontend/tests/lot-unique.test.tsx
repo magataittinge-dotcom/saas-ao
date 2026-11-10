@@ -41,25 +41,29 @@ test('la prochaine action ne mène plus à l’écran Lots pour un lot unique ; 
 })
 
 const carte = (props: Partial<Parameters<typeof CarteLotUnique>[0]> = {}) => renderToStaticMarkup(
-  <CarteLotUnique lot={{ id: 'lot3', designation: 'Lot 3 — Menuiseries (démo)', marcheUnique: false }} ecartes={null} enCours={false} onLire={() => {}} onOuvrirLots={() => {}} {...props} />)
+  <CarteLotUnique lot={{ id: 'lot3', designation: 'Lot 3 — Menuiseries (démo)', marcheUnique: false }} ecartes={null} onOuvrirLots={() => {}} {...props} />)
 
-test('la carte : la désignation, « Lire ce dossier (1 unité) », un lien discret vers l’écran des lots', () => {
+test('la carte : la désignation, ce que la lecture décompte (1 unité), un lien discret vers l’écran des lots ; le bouton est dans l’en-tête (A7)', () => {
   const html = carte()
   assert.match(html, /Ce dossier a un seul lot : Lot 3 — Menuiseries \(démo\)/)
-  assert.match(html, /Lire ce dossier \(1 unité\)/)
+  assert.match(html, /« Lire ce dossier »[^<]*décompte 1 unité/)
   assert.match(html, /Ouvrir l’écran des lots/)
+  assert.equal((html.match(/<button/g) ?? []).length, 1, 'un seul bouton dans la carte : le lien vers l’écran des lots')
   assert.doesNotMatch(html, /manquant|incomplet|absent|!/i)
 })
 
 test('marché unique : la carte le dit avec l’objet du marché ; lots cités non proposés : une ligne sobre', () => {
   const html = carte({ lot: { id: null, designation: 'Réhabilitation (démo)', marcheUnique: true }, ecartes: { hors_liste: 1, sans_intitule: 0 } })
   assert.match(html, /Ce dossier n’a pas de lots : Réhabilitation \(démo\)/)
-  assert.match(html, /Lire ce dossier \(1 unité\)/)
   assert.match(html, /1 autre lot cité dans le dossier ne figure pas dans la liste du règlement/)
 })
 
-test('en cours de lecture : le bouton est désactivé', () => {
-  assert.match(carte({ enCours: true }), /<button[^>]*disabled=""[^>]*>[^<]*(<[^>]*>)*[^<]*Lire ce dossier/)
+test('A7 — un seul lot : « Lire ce dossier » est l’action principale de l’écran (en-tête et barre du téléphone), sans « (1 unité) » en dur, désactivée pendant la lecture', () => {
+  const depot = sansCommentaires(lire('src/routes/project/StepUpload.tsx'))
+  assert.match(depot, /<Bouton variante="principal" onClick=\{lireLeLotUnique\} disabled=\{lecture\.isAnalyzing \|\| lecture\.isSuccess\}>\s*Lire ce dossier\s*<\/Bouton>/)
+  assert.match(depot, /actionPrincipale=\{!hasDocuments \? undefined : lotUnique \? actionLecture :/)
+  assert.match(depot, /<ActionsBarreTel>\s*\{lotUnique \? actionLecture :/)
+  assert.doesNotMatch(depot, /\(1 unité\)/)
 })
 
 test('l’écran de dépôt : aucune lecture ne part sans le clic ; le clic passe par le même geste que l’écran Lots', () => {
@@ -68,7 +72,7 @@ test('l’écran de dépôt : aucune lecture ne part sans le clic ; le clic pass
   const appels = depot.match(/lecture\.lancer\(/g) ?? []
   assert.equal(appels.length, 1)
   assert.match(depot, /const lireLeLotUnique = \(\) => \{[\s\S]*?lecture\.lancer\(/)
-  assert.match(depot, /onLire=\{lireLeLotUnique\}/)
+  assert.match(depot, /onClick=\{lireLeLotUnique\}/)
   assert.doesNotMatch(depot, /useEffect\([^)]*lancer/)
   const lecteur = sansCommentaires(lire('src/hooks/useLotsDuDepot.ts'))     // détecter les lots lit seulement : aucun appel d'écriture ni de lecture du dossier
   assert.doesNotMatch(lecteur, /\.(post|put|patch|delete)\(|lancer|analyze/)

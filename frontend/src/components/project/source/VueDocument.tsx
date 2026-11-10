@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import { rectsAffiches, type ReponseSource } from '@/lib/ancre'
 import { useLargeur } from '@/hooks/useMedia'
+import { Bouton } from '@/components/ui/bouton'
 import { CalqueSurligne, useCentrer } from './FeuilleSource'
 
 // Worker pdf.js embarqué par Vite (pas de CDN : CSP du produit).
@@ -90,9 +91,9 @@ export default function VueDocument({ reponse, url, page, onPage, onNombrePages,
       {total !== null && (reponse.suite && page === reponse.page) && (
         <div className="source-suite">
           <p>Le passage se poursuit page {reponse.suite.page}.</p>
-          <button type="button" className="source-bouton" onClick={() => onPage(reponse.suite!.page)}>
+          <Bouton onClick={() => onPage(reponse.suite!.page)}>
             Aller à la page {reponse.suite.page}
-          </button>
+          </Bouton>
         </div>
       )}
     </div>

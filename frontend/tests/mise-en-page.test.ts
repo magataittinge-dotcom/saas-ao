@@ -57,15 +57,14 @@ test('S10 : sur l\'export, une ligne au téléphone — « Télécharger », men
   const code = sansCommentaires(lire('src/routes/project/StepExport.tsx'))
   assert.match(code, /<span className="hidden max-\[768px\]:inline">Télécharger<\/span>/)
   assert.match(code, /<MenuPlus libelle="Autres formats">/)
-  assert.match(code, /<div className="flex items-center gap-3 max-\[768px\]:hidden">\{formatsMemoire\(\)\}<\/div>/, 'sur ordinateur, les deux formats sont deux boutons visibles (G10)')
-  assert.match(code, /\{gateBlocked && <PiecesAJoindre pieces=\{nonConformes\} \/>\}/, 'une ligne au-dessus du bouton, dans l\'en-tête sur ordinateur')
-  assert.match(code, /className="mt-6 hidden max-\[768px\]:block"/, 'et au-dessus de la barre au téléphone')
-  // le gabarit rend le contenu (donc l'avertissement) AVANT la barre passée en prop
+  assert.match(code, /<div className="flex flex-wrap items-center gap-2">\s*\{formatsMemoire\(\)\}/, 'les deux formats sont deux boutons visibles à côté du mémoire, à toutes les largeurs (G10)')
+  // l'avertissement des pièces passe par l'emplacement « message » du gabarit : au-dessus du contenu, donc de la barre
+  assert.match(code, /message=\{\(echec \|\| telecharge \|\| phrasePieces\) \?/)
+  assert.match(code, /<Message ton="attention"[\s\S]{0,200}?\{phrasePieces\}/)
   assert.match(code, /barre=\{bottomBar\}/)
-  assert.ok(code.indexOf('{avertissementTel}') > code.indexOf('<GabaritEtape'))
-  // le grand bouton de l'ordinateur est une classe réservée aux écrans larges, plus un style en ligne
-  assert.match(lire('src/index.css'), /@media \(min-width: 769px\) \{\s*\.signature-btn\.cta-grand/)
-  assert.doesNotMatch(code, /padding: '12px 32px'/)
+  // A12 : la phrase du dépôt sous le bouton (en-tête) ; au téléphone, en bas du contenu, juste au-dessus de la barre
+  assert.equal((code.match(/data-phrase-depot=""/g) ?? []).length, 2)
+  assert.doesNotMatch(code, /padding: '12px 32px'|signature-btn/)
 })
 
 test('S10 : la barre du téléphone a une règle de hauteur (56 px), une seule ligne et une marge basse', () => {

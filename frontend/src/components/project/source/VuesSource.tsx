@@ -5,6 +5,7 @@ import {
 } from '@/lib/ancre'
 import { LARGEUR_LOUPE } from '@/services/sources'
 import { ImageSource } from './FeuilleSource'
+import { Bouton } from '@/components/ui/bouton'
 
 // pdf.js n'est chargé qu'à l'ouverture de la vue « Document ».
 const VueDocument = lazy(() => import('./VueDocument'))
@@ -102,9 +103,9 @@ export function VuePage({
       {reponse.suite && (
         <div className="source-suite">
           <p>Le passage se poursuit page {reponse.suite.page}.</p>
-          <button type="button" className="source-bouton" onClick={() => onSuite(reponse.suite!.page)}>
+          <Bouton onClick={() => onSuite(reponse.suite!.page)}>
             Voir la page {reponse.suite.page} dans le document
-          </button>
+          </Bouton>
         </div>
       )}
     </div>

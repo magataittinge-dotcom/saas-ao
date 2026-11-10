@@ -10,6 +10,7 @@
 import './carte-france.css'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Minus, Plus, RotateCcw } from 'lucide-react'
+import { BoutonIcone } from '@/components/ui/bouton'
 import { DEPARTEMENTS, ENCARTS, PAYS_VOISINS, VIEWBOX, type Departement } from './donnees/departements'
 import {
   basculerSelection, cadreSurGroupe, chiffreBulle, cleGroupe, deplacer, estGroupe, estZoome, libelleDepartement, libelleGroupe,
@@ -17,6 +18,9 @@ import {
   type BulleDep, type Cadre, type Direction, type GroupeBulles,
 } from '@/lib/carteFrance'
 import { useMedia } from '@/hooks/useMedia'
+
+// Les outils de la carte : le bouton à icône du système, posé sur la carte (papier flottant, trait de champ).
+const OUTIL = 'border border-bord-champ bg-surface-pop text-fg hover:bg-surface-2'
 import { useMouvementReduit } from '@/components/intelligence/useMouvementReduit'
 
 export interface PropsCarteFrance {
@@ -361,9 +365,9 @@ export default function CarteFrance({ comptes, selection, onSelection, className
       </div>
       {infobulle && <div className="cf-infobulle" style={{ left: infobulle.gauche, top: infobulle.haut }} aria-hidden="true">{infobulle.texte}</div>}
       <div className="cf-outils">
-        <button type="button" className="cf-outil" aria-label="Zoomer sur la carte" onClick={() => zoomCentre(1.6)}><Plus size={18} aria-hidden /></button>
-        <button type="button" className="cf-outil" aria-label="Dézoomer" onClick={() => zoomCentre(1 / 1.6)} disabled={!zoome}><Minus size={18} aria-hidden /></button>
-        <button type="button" className="cf-outil" aria-label="Recentrer la carte" onClick={() => { arreterAnimation(); setCadre(PLEIN) }} disabled={!zoome}><RotateCcw size={16} aria-hidden /></button>
+        <BoutonIcone className={OUTIL} libelle="Zoomer sur la carte" onClick={() => zoomCentre(1.6)}><Plus strokeWidth={1.5} aria-hidden /></BoutonIcone>
+        <BoutonIcone className={OUTIL} libelle="Dézoomer" onClick={() => zoomCentre(1 / 1.6)} disabled={!zoome}><Minus strokeWidth={1.5} aria-hidden /></BoutonIcone>
+        <BoutonIcone className={OUTIL} libelle="Recentrer la carte" onClick={() => { arreterAnimation(); setCadre(PLEIN) }} disabled={!zoome}><RotateCcw strokeWidth={1.5} aria-hidden /></BoutonIcone>
       </div>
     </div>
   )

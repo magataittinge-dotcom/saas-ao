@@ -1,35 +1,39 @@
 import { useState, useCallback, useMemo } from 'react'
-import { jourCourtParis } from '@/lib/dateParis'
+import { heureParis, jourCourtParis, jourLongParis } from '@/lib/dateParis'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import {
-  FileDown, Archive, CheckCircle2, Circle, Loader2,
-  AlertTriangle, Upload,
-  ExternalLink, FileSpreadsheet, FileText, Eye,
-  Download,
-} from 'lucide-react'
+import { Archive, Download, FileDown } from 'lucide-react'
 import { api } from '@/services/api'
 import type { Project } from '@/types'
 import DocumentViewer, { type ViewableDocument } from '@/components/project/DocumentViewer'
-import { DocumentRowSkeleton } from '@/components/skeletons'
 import EchecAction from '@/components/common/EchecAction'
+import { MettreAJourStatut } from '@/components/common/MettreAJourStatut'
 import { phraseSourceSignature, signatureAConfirmer } from '@/components/project/SignatureLigne'
-import PiecesAJoindre from '@/components/project/PiecesAJoindre'
 import { MenuPlus } from '@/components/project/BarreEtape'
 import { GabaritEtape, BandeResume, BarreEtape, BilanBarre, ActionsBarreTel, SectionEtape, EtatElement } from '@/components/etape'
-import { cartesPieces } from '@/lib/resumePieces'
+import { Bouton } from '@/components/ui/bouton'
+import { Carte } from '@/components/ui/carte'
+import { EtatErreur } from '@/components/ui/etats'
+import { MenuElement } from '@/components/ui/menu'
+import { Message } from '@/components/ui/message'
+import { PastilleEtat } from '@/components/ui/pastille'
+import { Squelette } from '@/components/ui/squelette'
+import { cartesPieces, etatDeStatut } from '@/lib/resumePieces'
 import ExigencesDuDossier, { type ExigenceExport } from '@/components/project/ExigencesDuDossier'
 import {
-  etatPiece, ligneEtatDossier, lignesDuScore, lireAvertissementsExport, pieceDemandee, resumeExigences, type GroupeExigences,
+  etatPiece, ligneEtatDossier, lignesDuScore, lireAvertissementsExport, phraseDepot, phrasePiecesAJoindre, pieceDemandee, resumeExigences, type GroupeExigences,
 } from '@/lib/exportDossier'
 import { messageErreur } from '@/lib/erreurs'
 import { Sigle } from '@/components/common/Sigle'
 import { developper } from '@/lib/lexique'
 import { noteDepot } from '@/lib/statutPiece'
 import { libellePassagesACompleter } from '@/lib/passagesACompleter'
-import { echeanceAO } from '@/lib/echeance'
+import { echeanceAO, etatEcheance, type EcheanceSource } from '@/lib/echeance'
+import { useMedia } from '@/hooks/useMedia'
+import { cn } from '@/lib/utils'
 
-const F = 'var(--font-ui)'
+const TITRE = 'Export du dossier'
+const ACCEPT_DPGF = '.xlsx,.xls,.xlsm,.ods,.pdf'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -121,15 +125,7 @@ interface ExportDetail {
   naming_convention: string | null
 }
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-// Pièces : vert = jointe (fait vérifié), ambre = à renouveler ou à confirmer,
-// cercle neutre = à joindre (un travail à faire, pas une alarme).
-function PieceIcon({ ton }: { ton: 'ok' | 'attention' | 'neutre' }) {
-  if (ton === 'ok') return <CheckCircle2 size={15} className="shrink-0" style={{ color: 'var(--success-fg)' }} />
-  if (ton === 'attention') return <AlertTriangle size={15} className="shrink-0" style={{ color: 'var(--warning-fg)' }} />
-  return <Circle size={15} className="shrink-0" style={{ color: 'var(--text-3)' }} />
-}
+// ─── Ce qui entoure le téléchargement ───────────────────────────────────────
 
 const DOSSIERS_ZIP: Record<string, string> = {
   '01_Candidature': 'Candidature',
@@ -137,9 +133,36 @@ const DOSSIERS_ZIP: Record<string, string> = {
   '3_ANNEXES': 'Annexes',
 }
 
-// Un bloc de l'étape : une carte sur toute la largeur de sa section.
-function Carte({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <div className={`min-w-0 rounded-carte border border-bord-2 bg-surface-1 p-4 ${className}`}>{children}</div>
+/** La date de remise, pour la phrase du dépôt (A12) : « 12 novembre », « 14 h » ou « 14 h 30 », et si elle est passée. */
+export function remiseDe(source: EcheanceSource | null, maintenant: Date = new Date()): { jour: string; heure: string | null; passee: boolean } | null {
+  if (!source?.date) return null
+  const e = etatEcheance(source, maintenant)
+  const [h, m] = source.heure && e.limite ? heureParis(e.limite).split(':') : []
+  return { jour: jourLongParis(source.date), heure: h ? `${Number(h)} h${m && m !== '00' ? ` ${m}` : ''}` : null, passee: e.etat === 'passee' }
+}
+
+/**
+ * B1 — après le téléchargement du dossier, et seulement après : le dossier est sur l'ordinateur, il reste à le déposer
+ * (hors Synorix), puis à le dire ici. « Je l'ai déposé » ouvre le dialogue de statut du socle (PATCH /projects/{id}).
+ */
+export function SuiteDepot({ telecharge, phrase, avertissements, onDepose }: {
+  telecharge: boolean
+  phrase: string
+  /** Pièces écartées et points signalés par le serveur au dernier téléchargement. */
+  avertissements: readonly string[]
+  onDepose: () => void
+}) {
+  if (!telecharge) return null
+  return (
+    <Message ton="succes" titre="Dossier téléchargé" action={<Bouton variante="secondaire" onClick={onDepose}>Je l’ai déposé</Bouton>}>
+      <p>{phrase}</p>
+      {avertissements.length > 0 && (
+        <ul className="mt-2 space-y-0.5" aria-label="À noter avant le dépôt">
+          {avertissements.map((a) => <li key={a}>{a}</li>)}
+        </ul>
+      )}
+    </Message>
+  )
 }
 
 // ─── Main component ─────────────────────────────────────────────────────────
@@ -152,15 +175,21 @@ export default function StepExport({ project }: Props) {
   const [dpgfUploading, setDpgfUploading] = useState(false)
   const [dpgfDragging, setDpgfDragging] = useState(false)
   const [dpgfError, setDpgfError] = useState<string | null>(null)
+  // B1 — « Je l'ai déposé » n'apparaît qu'après un téléchargement réussi du dossier
+  const [telecharge, setTelecharge] = useState(false)
+  const [statutOuvert, setStatutOuvert] = useState(false)
+  // Au téléphone, c'est la barre du bas qui porte « Télécharger » : l'en-tête ne monte pas le sien.
+  const tel = useMedia('(max-width: 768px)')
   const [viewerIndex, setViewerIndex] = useState<number | null>(null)
 
-  const { data: detail, isLoading } = useQuery({
+  const requeteDetail = useQuery({
     queryKey: ['export-detail', project.id],
     queryFn: async () => {
       const { data } = await api.get<ExportDetail>(`/projects/${project.id}/export/detail`)
       return data
     },
   })
+  const { data: detail, isLoading } = requeteDetail
 
   // Gate ZIP (C10) — score de conformité : X < Y → export ambre non-bloquant
   const { data: score } = useQuery<{ conformes: number; total: number }>({
@@ -241,6 +270,7 @@ export default function StepExport({ project }: Props) {
       URL.revokeObjectURL(url)
       // Pièces écartées et points signalés par le serveur (X-Export-Warnings)
       setAvertissementsZip(lireAvertissementsExport(response.headers['x-export-warnings']))
+      setTelecharge(true)
     },
     onMutate: () => { setEchec(null); setAvertissementsZip(null) },
     onError: async (err) => setEchec({
@@ -288,6 +318,15 @@ export default function StepExport({ project }: Props) {
     }
   }, [project.id, queryClient])
 
+  // Le sélecteur de fichier du système d'exploitation, ouvert par un bouton du système (aucun champ de fichier dans la page).
+  const choisirDpgf = () => {
+    const champ = document.createElement('input')
+    champ.type = 'file'
+    champ.accept = ACCEPT_DPGF
+    champ.onchange = () => { const f = champ.files?.[0]; if (f) void handleDpgfUpload(f) }
+    champ.click()
+  }
+
   const onDpgfDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     setDpgfDragging(false)
@@ -304,15 +343,28 @@ export default function StepExport({ project }: Props) {
       : []))
   }, [detail])
 
-  // ── Loading state ─────────────────────────────────────────────────────────
-  if (isLoading || !detail) {
+  // ── Chargement, puis erreur : le titre de l'étape reste ; une panne n'est jamais un squelette sans fin ──
+  if (isLoading) {
     return (
-      <div className="space-y-3">
-        <DocumentRowSkeleton />
-        <DocumentRowSkeleton />
-        <DocumentRowSkeleton />
-        <DocumentRowSkeleton />
-      </div>
+      <GabaritEtape titre={TITRE} utilite="Le dossier de réponse, rangé dans l’ordre du règlement.">
+        <div role="status" aria-busy="true" className="space-y-4">
+          <span className="sr-only">Chargement du dossier</span>
+          <Squelette className="h-28 w-full rounded-carte" />
+          <Squelette className="h-64 w-full rounded-carte" />
+          <Squelette className="h-24 w-full rounded-carte" />
+        </div>
+      </GabaritEtape>
+    )
+  }
+  if (requeteDetail.isError || !detail) {
+    return (
+      <GabaritEtape titre={TITRE} utilite="Le dossier de réponse, rangé dans l’ordre du règlement.">
+        <EtatErreur
+          titre="Le dossier n’a pas pu s’ouvrir"
+          detail="La connexion au serveur a échoué. Vos pièces et votre mémoire ne sont pas touchés."
+          onReessayer={() => { void requeteDetail.refetch() }} enCours={requeteDetail.isFetching}
+        />
+      </GabaritEtape>
     )
   }
 
@@ -322,10 +374,9 @@ export default function StepExport({ project }: Props) {
   // l'utilisateur les confirme s'il le souhaite.
   const resumeDesExigences = resumeExigences(
     detail.compliance_total, detail.compliance_with_source, detail.compliance_confirmed)
-  // Pièces : mêmes lignes et même règle que le score du serveur (avant : toutes
-  // les lignes, dont le jalon « mémoire » jamais « présent », d'où un point
-  // de contrôle en défaut pour toujours).
-  const echeance = echeanceAO(project)?.date?.slice(0, 10) ?? null
+  // Pièces : mêmes lignes et même règle que le score du serveur.
+  const sourceEcheance = echeanceAO(project)
+  const echeance = sourceEcheance?.date?.slice(0, 10) ?? null
   const piecesDemandees = lignesDuScore(detail.checklist_items)
   const checklistOk = !!score && score.total > 0 && score.conformes === score.total
   const memoireOk = detail.has_memoire
@@ -336,409 +387,261 @@ export default function StepExport({ project }: Props) {
     (memoireOk ? 0 : 1) +
     (dpgfOk ? 0 : 1)
 
-  // ── Gate ZIP (C10) : X < Y pièces conformes → ambre + avertissement ──────
+  // ── Gate ZIP (C10) : X < Y pièces conformes → avertissement, sans bloquer ──────
   const gateBlocked = !!score && score.total > 0 && score.conformes < score.total
   const CONFORME_STATUSES = new Set(['present', 'expiration_proche', 'non_applicable'])
-  // Signature : règle serveur (signature_required) — DC1, DC2, DUME et AE
-  // seulement si le RC l'exige ; plus de liste de types « à signer » ici.
-  // Mêmes lignes que le score du serveur : pièces à fournir et à compléter.
-  // Une pièce facultative n'est pas comptée : même nombre que les cartes de l'écran Pièces (14, pas 15 avec la facultative).
+  // Signature : règle serveur (signature_required) — DC1, DC2, DUME et AE seulement si le RC l'exige.
+  // Mêmes lignes que le score du serveur : pièces à fournir et à compléter. Une pièce facultative n'est pas comptée :
+  // même nombre que les cartes de l'écran Pièces.
   const nonConformes = lignesDuScore(detail?.checklist_items ?? []).filter((i) =>
     i.status !== 'non_applicable' && (!CONFORME_STATUSES.has(i.status) || signatureAConfirmer(i)) && pieceDemandee(i, echeance),
   )
 
-  // ── Faits du héros : l'état du dossier en un chiffre ─────────────────────
   const lotName = project.selected_lot_name || ''
   const readyForDeposit = !gateBlocked && alertCount === 0
+  const piecesVisibles = piecesDemandees.filter((p) => p.status !== 'non_applicable')
+  const mem = detail.memoire_info
+  // UNE phrase pour le mémoire, la même que sur Rédiger (lib/passagesACompleter.ts, compte du serveur)
+  const passages = mem ? libellePassagesACompleter(mem.passages_a_completer) : null
+  const depot = phraseDepot(remiseDe(sourceEcheance))
+  // Rien à télécharger encore (AO neuf) : le bouton attend, il ne propose pas un dossier vide.
+  const dossierVide = detail.pieces_zip.length === 0 && !detail.has_memoire
 
-  // L'action principale, écrite une fois : en haut à droite sur ordinateur, dans la barre au téléphone (une seule en dégradé par écran).
+  // L'action principale, écrite une fois : dans l'en-tête sur ordinateur, dans la barre du bas au téléphone.
   const boutonTelecharger = (
-    <button
-        onClick={() => exportZip()}
-        disabled={isExportingZip}
-        className="signature-btn cta-grand disabled:opacity-40 max-[768px]:flex-1 max-[768px]:justify-center max-[768px]:whitespace-nowrap [@media(pointer:coarse)]:min-h-11"
-        style={{ fontFamily: F }}
-      >
-        {isExportingZip ? <Loader2 size={18} className="animate-spin" aria-hidden /> : <Archive size={18} aria-hidden />}
-        <span className="max-[768px]:hidden">Télécharger le dossier</span>
-        <span className="hidden max-[768px]:inline">Télécharger</span>
-      </button>
+    <Bouton variante="principal" onClick={() => exportZip()} disabled={dossierVide} enCours={isExportingZip} libelleEnCours="Préparation du dossier…" className="max-[768px]:flex-1">
+      <Archive aria-hidden />
+      <span className="max-[768px]:hidden">Télécharger le dossier</span>
+      <span className="hidden max-[768px]:inline">Télécharger</span>
+    </Bouton>
   )
 
-  // ── Formats du mémoire : deux boutons visibles sur ordinateur (G10) ; au téléphone, le menu « … » de la barre.
-  const sortieMemoire = (libelle: string, enCours: boolean, lancer: () => void, fermer?: () => void) => (
-    <button
-      key={libelle}
-      type="button"
-      role={fermer ? 'menuitem' : undefined}
-      onClick={() => { fermer?.(); lancer() }}
-      disabled={enCours || !detail.has_memoire}
-      className={fermer
-        ? 'flex min-h-9 items-center gap-2 rounded-lg px-3 text-left text-sm font-medium text-fg hover:bg-surface-0 disabled:opacity-40 [@media(pointer:coarse)]:min-h-11'
-        : 'inline-flex items-center gap-2 rounded-lg border border-bord-2 px-3.5 py-2 text-sm font-medium text-fg-2 hover:bg-surface-0 disabled:opacity-40'}
-    >
-      {enCours ? <Loader2 size={14} className="animate-spin" aria-hidden /> : <FileDown size={14} aria-hidden />}
-      {libelle}
-    </button>
-  )
-  const formatsMemoire = (fermer?: () => void) => (
-    <>
-      {sortieMemoire('Mémoire en Word', isExportingDocx, exportDocx, fermer)}
-      {sortieMemoire('Mémoire en PDF', isExportingPdf, exportPdf, fermer)}
-    </>
-  )
+  // ── Les deux formats du mémoire : visibles à côté du mémoire ; au téléphone, aussi dans le menu « … » de la barre.
+  const FORMATS = [
+    { libelle: 'Mémoire en Word', enCours: isExportingDocx, lancer: () => exportDocx() },
+    { libelle: 'Mémoire en PDF', enCours: isExportingPdf, lancer: () => exportPdf() },
+  ]
+  const formatsMemoire = (fermer?: () => void) => FORMATS.map((f) => (fermer ? (
+    <MenuElement key={f.libelle} disabled={f.enCours || !detail.has_memoire} onSelect={() => { fermer(); f.lancer() }}>
+      <FileDown aria-hidden size={18} strokeWidth={1.5} /> {f.libelle}
+    </MenuElement>
+  ) : (
+    <Bouton key={f.libelle} variante="secondaire" onClick={f.lancer} disabled={!detail.has_memoire} enCours={f.enCours} libelleEnCours="Préparation…">
+      <FileDown aria-hidden /> {f.libelle}
+    </Bouton>
+  )))
 
-  // ── Barre du bas : l'état du dossier, les deux formats du mémoire (Word, PDF) ; le bouton principal n'y figure qu'au téléphone
-  // (l'en-tête porte le sien sur ordinateur) : jamais deux boutons en dégradé visibles ensemble.
+  // ── Barre du bas : l'état du dossier ; au téléphone, « Télécharger » et le menu des formats.
+  const etatDossier = ligneEtatDossier(gateBlocked ? nonConformes.length : 0, alertCount, readyForDeposit)
   const bottomBar = (
     <BarreEtape className="justify-between gap-3">
-      <BilanBarre
-        bureau={<p role="status" className="text-sm text-fg-2">{ligneEtatDossier(gateBlocked ? nonConformes.length : 0, alertCount, readyForDeposit)}</p>}
-      />
-      <div className="flex shrink-0 items-center gap-3 max-[768px]:ml-auto">
-        <div className="flex items-center gap-3 max-[768px]:hidden">{formatsMemoire()}</div>
+      <BilanBarre bureau={<p role="status" className="text-sm text-fg-2">{etatDossier}</p>} />
+      <div className="hidden min-w-0 flex-1 items-center gap-2 max-[768px]:flex">
         <MenuPlus libelle="Autres formats">{(fermer) => formatsMemoire(fermer)}</MenuPlus>
-        <ActionsBarreTel className="max-[768px]:flex-1">{boutonTelecharger}</ActionsBarreTel>
+        <ActionsBarreTel className="max-[768px]:flex-1">{tel ? boutonTelecharger : null}</ActionsBarreTel>
       </div>
     </BarreEtape>
   )
 
-  // L'avertissement des pièces à joindre, UNE ligne au-dessus du bouton principal (décision du 1/11) : sur ordinateur dans
-  // l'en-tête, juste au-dessus du bouton ; au téléphone au-dessus de la barre d'une seule ligne.
-  const avertissementTel = gateBlocked ? (
-    <div className="mt-6 hidden max-[768px]:block">
-      <PiecesAJoindre pieces={nonConformes} />
-    </div>
-  ) : null
-
-  const piecesVisibles = piecesDemandees.filter((p) => p.status !== 'non_applicable')
-  const mem = detail.memoire_info
+  const phrasePieces = gateBlocked ? phrasePiecesAJoindre(nonConformes.length) : null
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div style={{ fontFamily: F }}>
-    <GabaritEtape
-      titre="Export du dossier"
-      utilite={`Vérifiez l’état du dossier, puis téléchargez-le : pièces, mémoire et tableau des prix rangés dans l’ordre du règlement.${lotName ? ` — ${lotName}` : ''}`}
-      actionPrincipale={
-        <div className="flex flex-col items-end gap-2 max-[768px]:items-stretch">
-          {gateBlocked && <PiecesAJoindre pieces={nonConformes} />}
-          {boutonTelecharger}
-        </div>
-      }
-      resume={<BandeResume libelle="L’état du dossier" cartes={[
-        ...cartesPieces(piecesVisibles, echeance),
-        { libelle: 'Mémoire technique', valeur: mem ? `${mem.estimated_pages} pages` : 'À rédiger', etat: memoireOk && !(mem && mem.passages_a_completer > 0) ? 'pret' : 'a-verifier',
-          detail: (mem && libellePassagesACompleter(mem.passages_a_completer)) || (mem ? `Version ${mem.version}` : undefined) },
-      ]} />}
-      barre={bottomBar}
-    >
-    <div className="space-y-4">
-      {detail.naming_convention && (
-        <p className="text-xs leading-relaxed" style={{ color: 'var(--text-3)' }}>
-          Pièces du ZIP nommées selon le <Sigle code="RC" />&nbsp;:{' '}
-          <span className="num-mono" style={{ color: 'var(--text-3)' }}>
-            {detail.naming_convention.replace('{lot}', 'Lot').replace('{entreprise}', 'Entreprise').replace('{piece}', 'Pièce')}
-          </span>
-        </p>
-      )}
-
-      {echec && (
-        <EchecAction
-          message={echec.message}
-          onReessayer={() => { const relancer = echec.relancer; setEchec(null); relancer() }}
-          onFermer={() => setEchec(null)}
-        />
-      )}
-
-      {avertissementsZip && avertissementsZip.length > 0 && (
-        <div className="glass-card rounded-lg px-4 py-3" role="status">
-          <p className="text-xs font-semibold" style={{ color: 'var(--text-1)' }}>
-            Dossier téléchargé — à noter avant le dépôt
-          </p>
-          <ul className="mt-1.5 space-y-0.5 text-xs" style={{ color: 'var(--text-3)' }}>
-            {avertissementsZip.map((a) => <li key={a}>• {a}</li>)}
-          </ul>
-          <button
-            type="button"
-            onClick={() => setAvertissementsZip(null)}
-            className="mt-2 text-xs hover:underline"
-            style={{ color: 'var(--text-3)' }}
-          >
-            Fermer
-          </button>
-        </div>
-      )}
-
-      {/* ── Pièces demandées : mêmes lignes et même règle que le résumé ── */}
-      <SectionEtape titre="PIÈCES DEMANDÉES" colonnes={2}
-        description={piecesVisibles.length === 0 ? undefined : 'Une pièce prête part dans le dossier ; une pièce à joindre, à renouveler ou à confirmer reste à traiter avant le dépôt.'}>
-        {piecesVisibles.map((item) => {
-          const etat = etatPiece(item, echeance)
-          return (
-            <Carte key={item.id} className="flex items-start gap-2.5">
-              <PieceIcon ton={etat.ton} />
-              <div className="min-w-0">
-                <p className="break-words text-sm font-medium text-fg">{item.details || item.document_type_required}</p>
-                <span className={etat.statut.classe}>{etat.texte}</span>
-                {noteDepot(item) && <p className="piece-note">{noteDepot(item)}</p>}
-                {phraseSourceSignature(item) && <p className="piece-note">{phraseSourceSignature(item)}</p>}
-              </div>
-            </Carte>
-          )
-        })}
-        {piecesVisibles.length === 0 && (
-          <p className="text-sm text-fg-3 md:col-span-2">La liste des pièces apparaît après la lecture du <Sigle code="RC" />.</p>
+    <>
+      <GabaritEtape
+        titre={TITRE}
+        utilite={`Le dossier de réponse, rangé dans l’ordre du règlement : vérifiez-le, puis téléchargez-le.${lotName ? ` ${lotName}.` : ''}`}
+        actionPrincipale={tel ? undefined : (
+          <div className="flex max-w-xs flex-col items-end gap-2">
+            {boutonTelecharger}
+            <p data-phrase-depot="" className="text-right text-xs text-fg-2">{depot}</p>
+          </div>
         )}
-      </SectionEtape>
-
-      {/* ── Mémoire technique ── */}
-      <SectionEtape titre="MÉMOIRE TECHNIQUE">
-        <Carte>
-          {mem ? (
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-fg">Mémoire technique v{mem.version}</p>
-                <p className="mt-0.5 text-sm text-fg-2">
-                  {mem.estimated_pages} pages, {mem.sections_count} sections — généré le {jourCourtParis(mem.generated_at)}
-                </p>
-                <EtatElement
-                  etat={libellePassagesACompleter(mem.passages_a_completer) ? 'a-verifier' : 'pret'} className="mt-1.5"
-                />
-                {libellePassagesACompleter(mem.passages_a_completer) && (
-                  <p className="mt-1 text-sm text-fg-2">{libellePassagesACompleter(mem.passages_a_completer)}</p>
-                )}
-                <p className="mt-1 text-sm text-fg-3">Les documents de réponse sont inclus dans le dossier.</p>
-              </div>
-              <button
-                onClick={() => navigate(`/projects/${project.id}/memoire`)}
-                className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg border border-bord-2 px-3 text-sm font-medium text-fg-2 hover:bg-surface-0 [@media(pointer:coarse)]:min-h-11"
-              >
-                <ExternalLink size={13} aria-hidden /> Voir le mémoire
-              </button>
-            </div>
+        message={(echec || telecharge || phrasePieces) ? (
+          <div className="space-y-3">
+            {echec && (
+              <EchecAction
+                message={echec.message}
+                onReessayer={() => { const relancer = echec.relancer; setEchec(null); relancer() }}
+                onFermer={() => setEchec(null)}
+              />
+            )}
+            <SuiteDepot telecharge={telecharge} phrase={depot} avertissements={avertissementsZip ?? []} onDepose={() => setStatutOuvert(true)} />
+            {phrasePieces && !telecharge && (
+              <Message ton="attention" action={<Bouton variante="secondaire" onClick={() => navigate(`/projects/${project.id}/verification`)}>Réunir les pièces</Bouton>}>
+                {phrasePieces}
+              </Message>
+            )}
+          </div>
+        ) : undefined}
+        resume={<BandeResume libelle="L’état du dossier" cartes={[
+          ...cartesPieces(piecesVisibles, echeance).map((c) => ({ ...c, rien: 'Aucune' as const })),
+          { libelle: 'Mémoire technique', valeur: mem ? `${mem.estimated_pages} pages` : 'À rédiger', etat: memoireOk && !passages ? 'pret' as const : 'a-verifier' as const,
+            detail: passages || (mem ? `Version ${mem.version}` : undefined) },
+        ]} />}
+        barre={bottomBar}
+      >
+        {/* ── Pièces demandées : mêmes lignes et même règle que le résumé ── */}
+        <SectionEtape titre="Pièces demandées"
+          description={piecesVisibles.length === 0 ? undefined : 'Une pièce prête part dans le dossier ; une pièce à joindre, à renouveler ou à confirmer reste à traiter avant le dépôt.'}>
+          {piecesVisibles.length === 0 ? (
+            <p className="text-sm text-fg-2">La liste des pièces apparaît après la lecture du <Sigle code="RC" />.</p>
           ) : (
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-sm text-fg-2">Le mémoire technique n’a pas encore été rédigé.</p>
-                <EtatElement etat="a-verifier" className="mt-1.5" />
-              </div>
-              <button
-                onClick={() => navigate(`/projects/${project.id}/plan`)}
-                className="inline-flex min-h-9 items-center rounded-lg border border-bord-2 px-3 text-sm font-medium text-fg-2 hover:bg-surface-0 [@media(pointer:coarse)]:min-h-11"
-              >
-                Aller au plan du mémoire
-              </button>
-            </div>
+            <Carte sansMarge>
+              <ul aria-label="Pièces demandées">
+                {piecesVisibles.map((item) => {
+                  const lu = etatDeStatut(etatPiece(item, echeance).statut)
+                  return (
+                    <li key={item.id} className="flex min-h-[52px] flex-wrap items-center justify-between gap-x-6 gap-y-1 border-t border-bord px-4 py-2.5 first:border-t-0 sm:px-5">
+                      <div className="min-w-0 flex-1 basis-64">
+                        <p className="break-words text-sm font-medium text-fg">{item.details || item.document_type_required}</p>
+                        {noteDepot(item) && <p className="text-xs text-fg-3">{noteDepot(item)}</p>}
+                        {phraseSourceSignature(item) && <p className="text-xs text-fg-3">{phraseSourceSignature(item)}</p>}
+                      </div>
+                      <EtatElement etat={lu.etat} texte={lu.texte} perimee={lu.perimee} className="shrink-0" />
+                    </li>
+                  )
+                })}
+              </ul>
+            </Carte>
           )}
-        </Carte>
-      </SectionEtape>
+        </SectionEtape>
 
-      {/* ── Tableau des prix : vérification de forme seulement ── */}
-      <SectionEtape titre="TABLEAU DES PRIX">
-        <Carte className="space-y-3.5">
-          <EtatElement etat={dpgfOk || !detail.has_dpgf ? 'pret' : 'a-verifier'} />
-              {/* Download original DPGF */}
-              {detail.dpgf_info && (
-                <div
-                  className="flex items-center justify-between p-3 rounded-lg"
-                  style={{ background: 'var(--surface-1)' }}
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <FileSpreadsheet size={16} style={{ color: 'var(--text-1)' }} />
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium truncate" style={{ color: 'var(--text-1)' }}>{detail.dpgf_info.file_name}</p>
-                      <p className="text-xs" style={{ color: 'var(--text-3)' }}><Sigle code="DPGF" majuscule /> d&apos;origine, dans le <Sigle code="DCE" /></p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={handleDownloadDpgf}
-                    className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors shrink-0 hover:bg-ds-bg-2"
-                    style={{ border: '1px solid var(--border-1)', color: 'var(--text-2)' }}
-                  >
-                    <Download size={13} /> Télécharger
-                  </button>
+        {/* ── Mémoire technique ── */}
+        <SectionEtape titre="Mémoire technique">
+          <Carte className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
+            {mem ? (
+              <>
+                <div className="min-w-0 flex-1 basis-64">
+                  <p className="text-sm font-medium text-fg">Mémoire technique, version {mem.version}</p>
+                  <p className="mt-0.5 text-sm text-fg-2">
+                    {mem.estimated_pages} pages, {mem.sections_count} sections · rédigé le {jourCourtParis(mem.generated_at)}
+                  </p>
+                  <EtatElement etat={passages ? 'a-verifier' : 'pret'} texte={passages ?? undefined} className="mt-1.5" />
                 </div>
-              )}
+                <div className="flex flex-wrap items-center gap-2">
+                  {formatsMemoire()}
+                  <Bouton variante="lien" className="px-2" onClick={() => navigate(`/projects/${project.id}/memoire`)}>Voir le mémoire</Bouton>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="min-w-0 flex-1 basis-64">
+                  <p className="text-sm font-medium text-fg">Le mémoire technique reste à rédiger</p>
+                  <p className="mt-0.5 text-sm text-fg-2">Il se rédige à partir du plan, puis rejoint le dossier.</p>
+                </div>
+                <Bouton variante="secondaire" onClick={() => navigate(`/projects/${project.id}/plan`)}>Aller au plan du mémoire</Bouton>
+              </>
+            )}
+          </Carte>
+        </SectionEtape>
 
-              {/* Upload filled DPGF */}
-              <div>
-                <p className="text-xs font-medium mb-2" style={{ color: 'var(--text-1)' }}>
-                  Déposer votre <Sigle code="DPGF" /> remplie
+        {/* ── Tableau des prix : vérification de forme seulement ── */}
+        <SectionEtape titre="Tableau des prix" description="Synorix vérifie la forme du tableau (lignes remplies, total lu). Il ne commente jamais vos prix.">
+          <Carte sansMarge>
+            {detail.dpgf_info && (
+              <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 sm:px-5">
+                <div className="min-w-0 flex-1 basis-64">
+                  <p className="break-words text-sm font-medium text-fg">{detail.dpgf_info.file_name}</p>
+                  <p className="text-xs text-fg-3"><Sigle code="DPGF" majuscule /> d’origine, dans le <Sigle code="DCE" /></p>
+                </div>
+                <Bouton variante="secondaire" onClick={handleDownloadDpgf} aria-label="Télécharger le tableau des prix d’origine">
+                  <Download aria-hidden /> Télécharger
+                </Bouton>
+              </div>
+            )}
+            <div
+              data-depot-dpgf=""
+              className={cn('flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-bord px-4 py-3 transition-colors duration-fast ease-survol first:border-t-0 sm:px-5', dpgfDragging && 'bg-surface-1')}
+              onDragOver={(e) => { e.preventDefault(); setDpgfDragging(true) }}
+              onDragLeave={() => setDpgfDragging(false)}
+              onDrop={onDpgfDrop}
+            >
+              <div className="min-w-0 flex-1 basis-64">
+                <p className="text-sm font-medium text-fg">Votre <Sigle code="DPGF" /> remplie</p>
+                <p className="text-xs text-fg-3">
+                  {detail.dpgf_remplie?.file_name ?? 'Glissez le fichier ici, ou choisissez-le.'} · XLSX, XLS, ODS ou PDF
                 </p>
-                <div
-                  className="relative rounded-xl p-4 text-center transition-all cursor-pointer"
-                  style={{
-                    border: `2px dashed ${dpgfDragging ? 'var(--text-1)' : 'var(--text-3)'}`,
-                    background: dpgfDragging ? 'color-mix(in srgb, var(--text-1) 4%, transparent)' : 'var(--surface-0)',
-                  }}
-                  onDragOver={(e) => { e.preventDefault(); setDpgfDragging(true) }}
-                  onDragLeave={() => setDpgfDragging(false)}
-                  onDrop={onDpgfDrop}
-                >
-                  {dpgfUploading ? (
-                    <Loader2 size={20} className="mx-auto animate-spin" style={{ color: 'var(--text-1)' }} />
-                  ) : (
-                    <>
-                      <Upload size={20} className="mx-auto mb-1.5" style={{ color: 'var(--text-3)' }} />
-                      <p className="text-xs" style={{ color: 'var(--text-3)' }}>
-                        Glissez votre <Sigle code="DPGF" /> remplie ici ou{' '}
-                        <label className="cursor-pointer font-medium" style={{ color: 'var(--text-1)' }}>
-                          parcourir
-                          <input
-                            type="file"
-                            accept=".xlsx,.xls,.xlsm,.ods,.pdf"
-                            className="hidden"
-                            onChange={(e) => {
-                              const f = e.target.files?.[0]
-                              if (f) handleDpgfUpload(f)
-                              e.target.value = ''
-                            }}
-                          />
-                        </label>
-                      </p>
-                      <p className="text-xs mt-0.5" style={{ color: 'var(--text-3)' }}>XLSX, XLS, ODS, PDF</p>
-                    </>
+                {dpgfError && <p role="alert" className="mt-1 text-xs font-medium text-rouge-ink">{dpgfError}</p>}
+              </div>
+              <Bouton variante="secondaire" onClick={choisirDpgf} enCours={dpgfUploading} libelleEnCours="Envoi…">
+                {detail.dpgf_remplie?.file_name ? 'Remplacer le fichier' : 'Choisir un fichier'}
+              </Bouton>
+            </div>
+
+            {detail.dpgf_remplie?.verification && (() => {
+              const v = detail.dpgf_remplie!.verification!
+              return (
+                <div data-verification-dpgf="" className="space-y-2 border-t border-bord px-4 py-3 sm:px-5">
+                  <PastilleEtat sens={v.valid ? 'vert' : 'ambre'}>{v.valid ? 'Forme vérifiée' : 'À vérifier'}</PastilleEtat>
+                  {/* A11 — une ligne restée vide se dit « à remplir », à l'encre ambre : une friction, avec son geste */}
+                  <p className="chiffres text-sm text-fg-2">
+                    {v.nb_lignes} lignes · {v.nb_lignes_remplies} remplies
+                    {v.nb_lignes_vides > 0 && <> · <span className="font-medium text-ambre-ink">{v.nb_lignes_vides} à remplir</span></>}
+                    {v.total_ht != null && <> · total HT lu : <span className="font-medium text-fg">{v.total_ht.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €</span></>}
+                  </p>
+                  {v.warnings.length > 0 && (
+                    <ul className="space-y-0.5 text-sm text-fg-2">
+                      {v.warnings.map((w, i) => <li key={i}>{w}</li>)}
+                    </ul>
                   )}
                 </div>
-                {dpgfError && (
-                  <p className="text-xs mt-1.5" style={{ color: 'var(--danger-fg)' }}>{dpgfError}</p>
-                )}
-              </div>
+              )
+            })()}
 
-              {/* Verification result */}
-              {detail.dpgf_remplie?.verification && (() => {
-                const v = detail.dpgf_remplie!.verification!
-                const isValid = v.valid
-                const hasWarnings = v.warnings.length > 0
-                return (
-                  <div
-                    className="rounded-lg p-3.5"
-                    style={{
-                      background: isValid ? 'color-mix(in srgb, var(--success-fg) 4%, transparent)' : hasWarnings ? 'color-mix(in srgb, var(--warning-fg) 4%, transparent)' : 'color-mix(in srgb, var(--danger-fg) 4%, transparent)',
-                      border: `1px solid ${isValid ? 'color-mix(in srgb, var(--success-fg) 15%, transparent)' : hasWarnings ? 'color-mix(in srgb, var(--warning-fg) 15%, transparent)' : 'color-mix(in srgb, var(--danger-fg) 15%, transparent)'}`,
-                    }}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        {isValid
-                          ? <CheckCircle2 size={16} style={{ color: 'var(--success-fg)' }} />
-                          : <AlertTriangle size={16} style={{ color: hasWarnings ? 'var(--warning-fg)' : 'var(--danger-fg)' }} />
-                        }
-                        <span
-                          className="text-xs font-semibold"
-                          style={{ color: isValid ? 'var(--success-fg)' : hasWarnings ? 'var(--warning-fg)' : 'var(--danger-fg)' }}
-                        >
-                          <Sigle code="DPGF" majuscule />{isValid ? ' conforme' : hasWarnings ? ' avec avertissements' : ' non conforme'}
-                        </span>
-                      </div>
-                      <span className="text-xs" style={{ color: 'var(--text-3)' }}>
-                        {detail.dpgf_remplie!.file_name}
-                      </span>
-                    </div>
+            {!detail.dpgf_info && !detail.dpgf_remplie && (
+              <p className="border-t border-bord px-4 py-3 text-sm text-fg-2 sm:px-5">
+                Le dossier lu ne contient pas de <Sigle code="DPGF" /> : déposez la vôtre si le règlement en demande une.
+              </p>
+            )}
+          </Carte>
+        </SectionEtape>
 
-                    <div className="grid grid-cols-3 gap-2 mb-3">
-                      <div className="text-center py-1.5 rounded-lg" style={{ background: 'var(--surface-1)' }}>
-                        <p className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>{v.nb_lignes}</p>
-                        <p className="text-xs" style={{ color: 'var(--text-3)' }}>lignes</p>
-                      </div>
-                      <div className="text-center py-1.5 rounded-lg" style={{ background: 'var(--surface-1)' }}>
-                        <p className="text-sm font-bold" style={{ color: 'var(--text-1)' }}>{v.nb_lignes_remplies}</p>
-                        <p className="text-xs" style={{ color: 'var(--text-3)' }}>remplies</p>
-                      </div>
-                      <div className="text-center py-1.5 rounded-lg" style={{ background: 'var(--surface-1)' }}>
-                        <p className="text-sm font-bold" style={{ color: v.nb_lignes_vides > 0 ? 'var(--danger-fg)' : 'var(--text-1)' }}>{v.nb_lignes_vides}</p>
-                        <p className="text-xs" style={{ color: 'var(--text-3)' }}>vides</p>
-                      </div>
-                    </div>
+        {/* ── Exigences relevées, confirmées par l'utilisateur (export « 0/N ») ── */}
+        <SectionEtape titre="Exigences relevées" description={resumeDesExigences}>
+          <Carte className="max-h-[420px] overflow-y-auto">
+            <ExigencesDuDossier
+              items={detail.compliance_items}
+              onConfirmer={(item, confirmee) => confirmer({ item, confirmee })}
+              onConfirmerGroupe={(groupe) => confirmer({ groupe })}
+              enCours={confirmationEnCours}
+            />
+          </Carte>
+        </SectionEtape>
 
-                    {v.total_ht != null && (
-                      <div className="flex items-center justify-between py-2 px-3 rounded-lg mb-2" style={{ background: 'var(--surface-1)' }}>
-                        <span className="text-xs" style={{ color: 'var(--text-3)' }}>Total HT</span>
-                        <span className="text-sm font-bold tabular-nums font-mono" style={{ color: 'var(--text-1)' }}>
-                          {v.total_ht.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} €
-                        </span>
-                      </div>
-                    )}
+        {/* ── Contenu du dossier : exactement ce qui part ── */}
+        <SectionEtape
+          titre="Contenu du dossier"
+          description={detail.naming_convention
+            ? <>Pièces nommées selon le <Sigle code="RC" /> : {detail.naming_convention.replace('{lot}', 'Lot').replace('{entreprise}', 'Entreprise').replace('{piece}', 'Pièce')}</>
+            : undefined}
+        >
+          {detail.pieces_zip.length === 0 ? (
+            <p className="text-sm text-fg-2">Les pièces apparaissent ici dès qu’elles sont jointes au dossier.</p>
+          ) : (
+            <Carte sansMarge className="max-h-[360px] overflow-y-auto">
+              <ul aria-label="Contenu du dossier">
+                {detail.pieces_zip.map((d) => {
+                  const indexApercu = viewableDocs.findIndex((v) => v.id === d.document_projet_id)
+                  return (
+                    <li key={`${d.dossier}/${d.nom}`} className="flex min-h-[52px] items-center gap-3 border-t border-bord px-4 py-1 first:border-t-0 sm:px-5">
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium text-fg">{d.nom}</span>
+                      <span className="shrink-0 text-xs text-fg-3">{DOSSIERS_ZIP[d.dossier] ?? d.dossier}</span>
+                      {indexApercu >= 0 && <Bouton variante="lien" onClick={() => setViewerIndex(indexApercu)}>Aperçu</Bouton>}
+                    </li>
+                  )
+                })}
+              </ul>
+            </Carte>
+          )}
+        </SectionEtape>
 
-                    {v.warnings.length > 0 && (
-                      <div className="space-y-1 mt-2">
-                        {v.warnings.map((w, i) => (
-                          <p key={i} className="text-xs flex items-start gap-1.5" style={{ color: 'var(--text-3)' }}>
-                            <span className="shrink-0 mt-0.5">&#8226;</span>
-                            {w}
-                          </p>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )
-              })()}
+        {/* A12 au téléphone : l'en-tête n'y porte pas le bouton, la phrase du dépôt se lit juste au-dessus de la barre */}
+        {tel && <p data-phrase-depot="" className="text-sm text-fg-2">{depot}</p>}
+      </GabaritEtape>
 
-              {!detail.dpgf_info && !detail.dpgf_remplie && (
-                <p className="text-xs" style={{ color: 'var(--text-3)' }}>
-                  Aucun fichier <Sigle code="DPGF" /> détecté dans les documents du projet.
-                </p>
-              )}
-        </Carte>
-      </SectionEtape>
+      <MettreAJourStatut projet={project} ouvert={statutOuvert} onOuvert={setStatutOuvert} />
 
-      {/* ── Exigences relevées, confirmées par l'utilisateur (export « 0/N ») ── */}
-      <SectionEtape titre="EXIGENCES RELEVÉES" description={resumeDesExigences}>
-        <Carte className="max-h-[420px] overflow-y-auto">
-              <ExigencesDuDossier
-                items={detail.compliance_items}
-                onConfirmer={(item, confirmee) => confirmer({ item, confirmee })}
-                onConfirmerGroupe={(groupe) => confirmer({ groupe })}
-                enCours={confirmationEnCours}
-              />
-        </Carte>
-      </SectionEtape>
-
-      {/* ── Contenu de l'archive : exactement ce qui part ── */}
-      <SectionEtape titre={`CONTENU DE L’ARCHIVE (${detail.pieces_zip.length})`}>
-        <Carte className="max-h-[360px] overflow-y-auto">
-              {detail.pieces_zip.map((d) => {
-                const indexApercu = viewableDocs.findIndex((v) => v.id === d.document_projet_id)
-                return (
-                  <div
-                    key={`${d.dossier}/${d.nom}`}
-                    className="w-full flex items-center gap-2.5 py-2 px-3 rounded-lg hover:bg-ds-bg-2 transition-colors"
-                  >
-                    <FileText size={15} className="shrink-0" style={{ color: 'var(--text-3)' }} />
-                    <span className="text-sm font-medium truncate flex-1" style={{ color: 'var(--text-1)' }}>
-                      {d.nom}
-                    </span>
-                    <span className="text-xs shrink-0" style={{ color: 'var(--text-3)' }}>
-                      {DOSSIERS_ZIP[d.dossier] ?? d.dossier}
-                    </span>
-                    {indexApercu >= 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setViewerIndex(indexApercu)}
-                        className="flex items-center gap-1 text-xs shrink-0 hover:underline"
-                        style={{ color: 'var(--text-3)' }}
-                      >
-                        <Eye size={12} /> Aperçu
-                      </button>
-                    )}
-                  </div>
-                )
-              })}
-              {detail.pieces_zip.length === 0 && (
-                <p className="text-xs text-center py-4" style={{ color: 'var(--text-3)' }}>
-                  Les pièces apparaissent ici dès qu’elles sont jointes au dossier
-                </p>
-              )}
-        </Carte>
-      </SectionEtape>
-
-      {/* ── Sticky bottom bar ───────────────────────────────────── */}
-      {avertissementTel}
-    </div>
-    </GabaritEtape>
-
-      {/* Document viewer modal */}
       {viewerIndex !== null && viewableDocs.length > 0 && (
         <DocumentViewer
           projectId={project.id}
@@ -747,6 +650,6 @@ export default function StepExport({ project }: Props) {
           onClose={() => setViewerIndex(null)}
         />
       )}
-    </div>
+    </>
   )
 }

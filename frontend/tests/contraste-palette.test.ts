@@ -24,7 +24,11 @@ for (const k of ETATS) {
   texte(`état ${k} : texte`, `--${k}-ink`, SURFACES)
   for (const sur of SURFACES) couples.push({ quoi: `état ${k} : texte sur sa pastille`, avant: `--${k}-ink`, fond: `--${k}-soft`, sur, seuil: 4.5 })
 }
-for (const m of ['info', 'success', 'warning', 'danger']) texte(`message ${m}`, `--${m}-fg`, ['--surface-0', '--surface-1', `--${m}-bg`])
+// anciens noms (alias des six sens) : mêmes couples que leur sens, le fond translucide de nuit posé sur chaque surface
+for (const m of ['info', 'success', 'warning', 'danger']) {
+  texte(`message ${m}`, `--${m}-fg`, SURFACES)
+  for (const sur of SURFACES) couples.push({ quoi: `message ${m} : texte sur son fond`, avant: `--${m}-fg`, fond: `--${m}-bg`, sur, seuil: 4.5 })
+}
 texte('texte sur l\'aplat d\'accent', '--on-accent', ['--accent-fill', '--accent-fill-hover', '--accent-fill-solid', '--primary'])
 texte('texte sur le rouge plein', '--destructive-foreground', ['--destructive'])
 texte('texte inversé', '--text-inverse', ['--text-1'])
@@ -42,6 +46,10 @@ marque('marque d\'aurore (fil, anneau du visage)', '--aurore-mark', SURFACES)
 for (const k of ETATS) {
   marque(`état ${k} : marque`, `--${k}-mark`, SURFACES)
   for (const sur of SURFACES) couples.push({ quoi: `état ${k} : point sur sa pastille`, avant: `--${k}-mark`, fond: `--${k}-soft`, sur, seuil: 3 })
+}
+for (const m of ['info', 'success', 'warning', 'danger']) {
+  marque(`message ${m} : bord`, `--${m}-border`, SURFACES)
+  for (const sur of SURFACES) couples.push({ quoi: `message ${m} : bord sur son fond`, avant: `--${m}-border`, fond: `--${m}-bg`, sur, seuil: 3 })
 }
 
 type Mesure = Couple & { theme: Theme; gamut: 'srgb' | 'p3'; rapport: number }

@@ -88,7 +88,8 @@ const nuit = {
   'surface-pop': n(0.25, 0.033),
   'text-1': n(0.96, 0.01), 'text-2': n(0.825, 0.025), 'text-3': n(0.715, 0.03), 'text-disabled': n(0.46, 0.03),
   'text-inverse': n(0.19, 0.03),
-  'border-1': n(0.285, 0.034), 'border-2': n(0.37, 0.04), 'border-field': n(0.6, 0.035),
+  'border-1': null, 'border-2': null,   // filets de nuit : en transparence, résolus plus bas (une fois la lumière du visage connue)
+  'border-field': n(0.6, 0.035),
 }
 const SURFACES = ['surface-page', 'surface-0', 'surface-1', 'surface-2']
 const fonds = (t) => SURFACES.map((s) => t[s].hex)
@@ -156,16 +157,12 @@ const clartesEtats = {}
   const d = etats(nuit, true); clartesEtats.nuit = d.clartes; delete d.clartes; Object.assign(nuit, d)
 }
 
-// Messages (info, succès, attention, danger) : descendants directs des états
+// Anciens noms (info, success, warning, danger) : de simples ALIAS des six sens (P2 : une seule palette d'états).
+// bg = soft, fg = ink, border = mark : la valeur n'est calculée qu'une fois (celle du sens), theme.css écrit var(--sens-rôle).
 const MESSAGES = { info: 'bleu', success: 'vert', warning: 'ambre', danger: 'rouge' }
-for (const [m, k] of Object.entries(MESSAGES)) {
-  const h = TEINTES_ETATS[k]
-  clair[`${m}-bg`] = { ...clair[`${k}-soft`] }
-  clair[`${m}-border`] = couleur(0.86, plafond(0.86, h, 0.07), h, source(k))
-  clair[`${m}-fg`] = { ...clair[`${k}-ink`] }
-  nuit[`${m}-bg`] = couleur(0.3, plafond(0.3, h, 0.055), h, source(k))
-  nuit[`${m}-border`] = couleur(0.42, plafond(0.42, h, 0.09), h, source(k))
-  nuit[`${m}-fg`] = { ...nuit[`${k}-ink`] }
+const ROLES_MESSAGE = { bg: 'soft', border: 'mark', fg: 'ink' }
+for (const [m, k] of Object.entries(MESSAGES)) for (const theme of [clair, nuit]) for (const [role, r] of Object.entries(ROLES_MESSAGE)) {
+  theme[`${m}-${role}`] = { ...theme[`${k}-${r}`], css: `var(--${k}-${r})`, source: `alias de --${k}-${r}` }
 }
 {
   const h = TEINTES_ETATS.rouge
@@ -207,6 +204,16 @@ const ombreClair = couleur(mesure.ombres.L, mesure.ombres.C, H.ombres, 'ombres')
 const ombreNuit = couleur(0.09, 0.02, H.ombres, 'ombres')
 const lumiere = couleur(mesure.lumieres.L, mesure.lumieres.C, H.lumieres, 'lumieres')
 const texte = (css, src, de) => ({ css, source: src, oklch: de?.oklch, hex: de?.hex })
+// Filets de nuit (P24) : plus un gris opaque, la lumière du visage en transparence : le trait prend la couleur de la surface
+// qu'il borde. L'alpha est RÉSOLU : le plus petit, à partir de 9 % (repos) et de 16 % (survol), qui distingue le filet de
+// chacune des quatre surfaces (l'ancien #192d39 tombait à 1,03:1 sur --surface-2). --border-field reste opaque, à 3:1.
+export const FILET_MIN = { repos: 1.15, survol: 1.3 }
+const filetNuit = (depart, mini) => {
+  const a = resoudre(depart, 0.01, (x) => fonds(nuit).every((f) => contraste(poseSur(rgba(lumiere.hex, arr(x)), f), f) >= mini))
+  return { oklch: lumiere.oklch, hex: lumiere.hex, css: rgba(lumiere.hex, a), alpha: a, source: 'lumieres, en transparence' }
+}
+nuit['border-1'] = filetNuit(0.09, FILET_MIN.repos)
+nuit['border-2'] = filetNuit(0.16, FILET_MIN.survol)
 Object.assign(clair, {
   'ombre-rvb': texte(rvb(ombreClair.hex).join(', '), 'ombres', ombreClair),
   'filet-lumiere': texte('rgba(255, 255, 255, .9)', 'lumieres'),
@@ -335,7 +342,7 @@ if (iMd > 0) {
     el.push(`<rect x="${x}" y="48" width="500" height="720" rx="14" fill="${fond}"/>`, `<text x="${x + 20}" y="78" class="h" fill="${encre}">${nom}</text>`)
     let y = 112
     rangee(x + 20, y, 'Accent (teinte de la famille, constante)', [50, 100, 200, 300, 400, 500, 600, 700].map((k) => [k, accent[k].hex]), encre); y += 92
-    rangee(x + 20, y, 'Neutres (teinte des ombres)', ['surface-page', 'surface-0', 'surface-1', 'surface-2', 'border-2', 'border-field', 'text-3', 'text-1'].map((k) => [k.replace('surface-', 's-').replace('border-', 'b-').replace('text-', 't-'), t[k].hex]), encre); y += 92
+    rangee(x + 20, y, 'Neutres (teinte des ombres)', ['surface-page', 'surface-0', 'surface-1', 'surface-2', 'border-2', 'border-field', 'text-3', 'text-1'].map((k) => [k.replace('surface-', 's-').replace('border-', 'b-').replace('text-', 't-'), poseSur(t[k].css, fond)]), encre); y += 92
     rangee(x + 20, y, 'Lumière d\'aurore, rubans, flamme', [['ink', t['aurore-ink'].hex], ['mark', t['aurore-mark'].hex], ['ruban a', poseSur(t['aurore-a'].css, fond)], ['ruban b', poseSur(t['aurore-b'].css, fond)], ['ruban c', poseSur(t['aurore-c'].css, fond)], ['flamme', t.flamme.hex]], encre); y += 92
     for (const role of ['ink', 'soft', 'mark']) { rangee(x + 20, y, `États : ${role} (même clarté, la teinte seule change)`, ETATS.map((k) => [k, poseSur(t[`${k}-${role}`].css, t['surface-0'].hex)]), encre); y += 92 }
     el.push(`<rect x="${x + 20}" y="${y + 6}" width="210" height="44" rx="22" fill="${accent[600].hex}"/>`, `<text x="${x + 125}" y="${y + 33}" class="b" fill="#fff" text-anchor="middle">Nouvel appel d'offres</text>`,

@@ -87,6 +87,7 @@ export default {
         // Accent d'aurore : traits, halos, logo ; jamais une pastille ni un texte d'état
         aurore: { ink: jeton('--aurore-ink'), mark: jeton('--aurore-mark'), glow: jeton('--aurore-glow') },
         filet: jeton('--filet-lumiere'),   // le filet de lumière d'un pixel (jamais --flamme : l'or n'a aucune classe)
+        // info / success / warning / danger : anciens noms, simples alias des sens bleu, vert, ambre, rouge (theme.css) ; ne plus les employer
         info:    { DEFAULT: jeton('--info-fg'),    bg: jeton('--info-bg'),    border: jeton('--info-border') },
         // États (COULEURS.md) : bleu en cours · vert fait · ambre à surveiller · rouge urgent · turquoise veille · gris à venir.
         bleu: { ink: jeton('--bleu-ink'), soft: jeton('--bleu-soft'), mark: jeton('--bleu-mark') },

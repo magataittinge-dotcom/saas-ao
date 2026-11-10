@@ -6,7 +6,7 @@ import { isValidElement, type ReactElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import ListeAvis, { type PropsListeAvis } from '@/components/veille/ListeAvis'
 import CarteAvis from '@/components/veille/CarteAvis'
-import FiltresVeille from '@/components/veille/FiltresVeille'
+import FiltresVeille, { nombreFiltres, resumeChoix } from '@/components/veille/FiltresVeille'
 import { FILTRES_PAR_DEFAUT, basculerValeur, jourMois, urlSure } from '@/lib/veille'
 import { lire, sansCommentaires } from './outils/sources'
 import type { AvisVeille } from '@/services/veille'
@@ -37,7 +37,8 @@ function trouver(noeud: ReactNode, test: (el: ReactElement<Record<string, unknow
   if (!isValidElement(noeud)) return null
   const el = noeud as ReactElement<Record<string, unknown>>
   if (test(el)) return el
-  return trouver(el.props.children as ReactNode, test)
+  // l'action d'un état vide du système (<EtatVide action={…}>) fait partie de l'arbre
+  return trouver(el.props.children as ReactNode, test) ?? trouver(el.props.action as ReactNode, test)
 }
 const texteDe = (n: ReactNode): string => (Array.isArray(n) ? n.map(texteDe).join('') : typeof n === 'string' || typeof n === 'number' ? String(n) : isValidElement(n) ? texteDe((n.props as { children?: ReactNode }).children) : '')
 
@@ -72,10 +73,11 @@ test('la pastille « Nouveau » n’apparaît que sur les avis nouveaux', () => 
 test('« Voir l’avis » : lien externe sûr ; « Créer l’AO » : un bouton par avis', () => {
   const html = renderToStaticMarkup(<ListeAvis {...base({ avis: [avis('1'), avis('2')], total: 2 })} />)
   assert.equal((html.match(/target="_blank" rel="noopener noreferrer"/g) ?? []).length, 2)
-  assert.equal((html.match(/Créer l&#x27;AO/g) ?? []).length, 2)
-  assert.ok(html.includes("s&#x27;ouvre dans un nouvel onglet"))
+  assert.equal((html.match(/Créer l’AO/g) ?? []).length, 2)
+  assert.equal((html.match(/data-variante="principal"/g) ?? []).length, 0, 'aucun aplat dans la liste des avis : l’action pleine de l’Accueil est celle du prochain AO')
+  assert.ok(html.includes('s’ouvre dans un nouvel onglet'))
   const piege = renderToStaticMarkup(<ListeAvis {...base({ avis: [avis('9', { url_avis: 'javascript:alert(1)' })], total: 1 })} />)
-  assert.ok(!piege.includes('javascript:') && !piege.includes('Voir l&#x27;avis'), 'un lien non http(s) n’est jamais proposé')
+  assert.ok(!piege.includes('javascript:') && !piege.includes('Voir l’avis'), 'un lien non http(s) n’est jamais proposé')
   assert.equal(urlSure('https://exemple.invalid/a'), 'https://exemple.invalid/a')
   assert.equal(urlSure('javascript:alert(1)'), null)
   assert.equal(urlSure('data:text/html,x'), null)
@@ -96,7 +98,7 @@ test('création en cours et création non aboutie : textes positifs, bouton dés
   const en = renderToStaticMarkup(<CarteAvis avis={avis('1')} libellesMetiers={{}} nomsDepartements={NOMS} onCreerAO={() => {}} enCreation />)
   assert.ok(en.includes('Création…') && /<button[^>]*disabled/.test(en))
   const err = renderToStaticMarkup(<CarteAvis avis={avis('1')} libellesMetiers={{}} nomsDepartements={NOMS} onCreerAO={() => {}} creationEnErreur />)
-  assert.ok(err.includes("La création n&#x27;a pas abouti. Réessayez dans un instant."))
+  assert.ok(err.includes('La création n’a pas abouti. Réessayez dans un instant.'))
 })
 
 test('sans zone : « Choisissez une zone sur la carte »', () => {
@@ -136,21 +138,29 @@ test('la source est nommée sous la liste', () => {
   assert.ok(html.includes('Source : Avis officiels du BOAMP (DILA), licence ouverte'))
 })
 
-test('les filtres : délai en groupe radio (« Toutes » par défaut), procédures en bascule, métier en panneau, mots-clés, tri', () => {
+test('les filtres : trois puces du système (date limite, procédure, métier), mots-clés, tri ; une sélection n’est jamais un aplat', () => {
   const html = renderToStaticMarkup(<FiltresVeille filtres={{ ...FILTRES_PAR_DEFAUT, delai_jours: 15, procedures: ['adaptee'], metiers: ['cvc', 'peinture'] }} onFiltres={() => {}} tri="date_limite" onTri={() => {}} metiers={METIERS} />)
-  assert.equal((html.match(/role="radio"/g) ?? []).length, 4)
-  assert.ok(/aria-checked="true"[^>]*>15 jours</.test(html))
-  for (const t of ['7 jours', '30 jours', 'Toutes']) assert.ok(html.includes(t), t)
-  assert.equal((html.match(/aria-pressed=/g) ?? []).length, 6, 'six procédures')
-  assert.ok(/aria-pressed="true"[^>]*>Adaptée</.test(html))
-  assert.ok(html.includes('Métier (2)') && html.includes('aria-expanded="false"'))
-  assert.ok(html.includes('Mots-clés') && html.includes('Trier par'))
-  assert.ok(html.includes('Date limite') && html.includes('Parution récente'))
+  assert.equal((html.match(/data-filtre="actif"/g) ?? []).length, 3, 'trois puces actives, chacune avec sa valeur')
+  assert.ok(html.includes('sous 15 jours') && html.includes('Adaptée') && html.includes('CVC, Peinture'))
+  for (const l of ['Date limite', 'Procédure', 'Métier']) assert.ok(html.includes(`aria-label="Retirer le filtre ${l}"`), l)
+  assert.ok(html.includes('Effacer les filtres'), '« Effacer les filtres » : un filtre est actif')
+  assert.ok(html.includes('Mots-clés') && html.includes('aria-label="Trier par"'))
+  assert.ok(!/bg-accent-fill|bg-accent-tint|aria-pressed/.test(html), 'un seul style de sélection : la puce du système, jamais un aplat')
   const defaut = renderToStaticMarkup(<FiltresVeille filtres={FILTRES_PAR_DEFAUT} onFiltres={() => {}} tri="date_limite" onTri={() => {}} metiers={METIERS} />)
-  assert.ok(/aria-checked="true"[^>]*>Toutes</.test(defaut))
+  assert.equal((defaut.match(/data-filtre="propose"/g) ?? []).length, 3, 'sans filtre : trois puces proposées')
+  assert.ok(!defaut.includes('Effacer les filtres'), '« Effacer les filtres » seulement si un filtre est actif')
+  // un seul style de champ, plus aucun contrôle du navigateur écrit à la main
+  const code = sansCommentaires(lire('src/components/veille/FiltresVeille.tsx'))
+  assert.doesNotMatch(code, /<select\b|<input\b|<button\b/)
+  assert.match(code, /<ListeDeroulante libelle="Trier par"/)
+  assert.match(code, /<ChampRecherche /)
+  assert.equal(resumeChoix([]), null)
+  assert.equal(resumeChoix(['CVC', 'Peinture', 'Plomberie', 'Menuiseries']), 'CVC, Peinture et 2 autres')
+  assert.equal(nombreFiltres(FILTRES_PAR_DEFAUT), 0)
+  assert.equal(nombreFiltres({ ...FILTRES_PAR_DEFAUT, mots_cles: ' école ', metiers: ['cvc'] }), 2)
 })
 
-test('les puces de procédure et de métier basculent ; chaque geste remonte son filtre', () => {
+test('les choix de procédure et de métier basculent ; chaque geste remonte son filtre', () => {
   assert.deepEqual(basculerValeur([], 'adaptee'), ['adaptee'])
   assert.deepEqual(basculerValeur(['adaptee', 'ouvert'], 'adaptee'), ['ouvert'])
   const code = sansCommentaires(lire('src/components/veille/FiltresVeille.tsx'))

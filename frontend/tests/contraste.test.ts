@@ -62,9 +62,10 @@ test('aucun texte sous 12 px', () => {
   assert.deepEqual(petits, [])
 })
 
-test('le code cité dans le mémoire s\'affiche à 12 px (prose-sm le réduit à 10,3 px)', () => {
+test('le code cité dans le mémoire s\'affiche à 12,5 px (le gabarit de prose le réduirait)', () => {
   const memoire = sansCommentaires(lire('src/components/memoire/LecteurMarkdown.tsx'))
-  assert.match(memoire, /prose prose-sm [^"]*prose-code:text-xs/)
+  assert.match(memoire, /prose [^"]*prose-code:text-xs/)
+  assert.match(memoire, /max-w-\[72ch\] text-lg/)   // le mémoire se lit à 17 px, 72 caractères par ligne
 })
 
 test('accueil : les textes se lisent sur leur fond', () => {

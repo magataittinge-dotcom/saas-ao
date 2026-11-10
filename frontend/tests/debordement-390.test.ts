@@ -10,16 +10,16 @@ test('lots : les noms de fichiers des documents illisibles passent à la ligne',
   assert.match(code('src/routes/project/StepLotSelection.tsx'), /<li key=\{w\.file_name\} className="break-words text-xs"/)
 })
 
-test('analyse : les onglets de catégories se replient au lieu de défiler hors de l’écran', () => {
+test('analyse : les puces de catégories se replient au lieu de défiler hors de l’écran', () => {
   const c = code('src/routes/project/StepAnalysis.tsx')
-  assert.match(c, /flex flex-wrap items-center gap-x-5 gap-y-1 pb-px/)
+  assert.match(c, /aria-label="Montrer une catégorie d’exigences" className="flex flex-wrap items-center gap-2"/)
   assert.doesNotMatch(c, /gap-6 pb-px overflow-x-auto/)
 })
 
 test('pièces : la rangée d’actions passe sous le texte au téléphone, et le nom de la pièce jointe se replie', () => {
   const t = code('src/components/project/CandidatureSectionTemplates.tsx')
   // cartes sur une colonne au téléphone (deux dès 768 px, SectionEtape), actions qui passent à la ligne, noms qui se replient
-  assert.match(t, /<div data-piece=\{item\.id\} className="grid min-w-0 content-start gap-2 rounded-carte/)
+  assert.match(t, /<Carte data-piece=\{item\.id\} className="grid min-w-0 content-start gap-2"/)
   assert.match(t, /flex flex-wrap items-center gap-2/)
   assert.match(t, /break-words pl-\[1\.875rem\] text-sm text-fg-2">\s*\{item\.jointe && item\.piece_nom/)
   const v = code('src/components/project/CandidatureSectionVault.tsx')

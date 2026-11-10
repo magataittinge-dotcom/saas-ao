@@ -2,9 +2,11 @@
 // (curseur ; la suite se charge aussi toute seule quand le bouton entre dans la zone visible), états vides positifs, source.
 //
 //   <ListeAvis avis={…} total={…} zoneVide={…} … />
-import { Fragment, useEffect, useId, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { ChevronDown, SlidersHorizontal } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Bouton } from '@/components/ui/bouton'
+import { EtatErreur, EtatVide } from '@/components/ui/etats'
+import { Squelette } from '@/components/ui/squelette'
 import { cn } from '@/lib/utils'
 import CarteAvis from './CarteAvis'
 import FiltresVeille from './FiltresVeille'
@@ -30,6 +32,10 @@ export interface PropsListeAvis {
   /** Chargement de la première page. */
   enCours?: boolean
   enErreur?: boolean
+  /** La zone et les filtres enregistrés ne sont pas encore lus : ni filtres ni état vide, le squelette de la liste. */
+  preferencesEnLecture?: boolean
+  /** Relance la lecture des avis (état d'erreur). */
+  onReessayer?: () => void
   /** Il reste quelque chose à élargir (des filtres à retirer ou des départements voisins). */
   peutElargir: boolean
   onElargir: () => void
@@ -97,7 +103,7 @@ function BoutonSuite({ chargePlus, nbAvis, onSuite }: { chargePlus: boolean; nbA
     return fin ?? undefined
   }, [nbAvis, garde])
   return (
-    <Button ref={ref} data-suite variant="outline" onClick={() => garde.demander()} disabled={chargePlus}>{chargePlus ? 'Chargement…' : 'Afficher plus'}</Button>
+    <Bouton ref={ref} data-suite onClick={() => garde.demander()} disabled={chargePlus}>{chargePlus ? 'Chargement…' : 'Afficher plus'}</Bouton>
   )
 }
 
@@ -110,11 +116,10 @@ function FiltresRepliables({ filtre, children }: { filtre: boolean; children: Re
   const id = useId()
   return (
     <>
-      <button type="button" onClick={() => setAffiner((v) => !v)} aria-expanded={affiner} aria-controls={id}
-        className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-bord-champ bg-surface-0 px-4 text-sm font-semibold text-fg transition-[border-color,color] duration-base hover:border-accent-ui hover:text-accent-text lg:hidden">
-        <SlidersHorizontal size={16} strokeWidth={1.8} aria-hidden />Affiner{filtre ? ' · filtres appliqués' : ''}
-        <ChevronDown size={16} strokeWidth={1.8} aria-hidden className={cn('transition-transform duration-base', affiner && 'rotate-180')} />
-      </button>
+      <Bouton onClick={() => setAffiner((v) => !v)} aria-expanded={affiner} aria-controls={id} className="lg:hidden">
+        <SlidersHorizontal strokeWidth={1.75} aria-hidden />Affiner{filtre ? ' · filtres appliqués' : ''}
+        <ChevronDown strokeWidth={1.75} aria-hidden className={cn('transition-transform duration-survol ease-survol motion-reduce:transition-none', affiner && 'rotate-180')} />
+      </Bouton>
       <div id={id} className={cn(!affiner && 'max-lg:hidden', 'max-lg:mt-3')}>{children}</div>
     </>
   )
@@ -126,7 +131,7 @@ export default function ListeAvis(p: PropsListeAvis) {
   const aDesAvis = p.avis.length > 0
   return (
     <section aria-labelledby="titre-avis" className="min-w-0">
-      <h3 id="titre-avis" className="text-base font-semibold text-fg">Avis ouverts</h3>
+      <h3 id="titre-avis" className="text-lg font-semibold text-fg">Avis ouverts</h3>
       <p className="mt-1 text-sm text-fg-2" role="status" aria-live="polite">
         {p.zoneVide
           ? 'Choisissez une zone pour voir les avis.'
@@ -142,7 +147,7 @@ export default function ListeAvis(p: PropsListeAvis) {
           page ; le pt-64 du bloc suivant rend exactement l'espace retiré. */}
       <div className="lg:flow-root">
         {/* C10 — sans zone choisie, il n'y a aucun avis à filtrer : les filtres apparaissent une fois la zone choisie. */}
-        {!p.zoneVide && (
+        {!p.zoneVide && !p.preferencesEnLecture && (
           <div data-filtres-colles className="mt-4 pb-3 lg:sticky lg:-top-5 lg:z-10 lg:rounded-carte lg:border lg:border-bord lg:bg-surface-0 lg:px-4 lg:pt-3">
             <FiltresRepliables filtre={filtre}>
               <FiltresVeille filtres={p.filtres} onFiltres={p.onFiltres} tri={p.tri} onTri={p.onTri} metiers={p.metiers} />
@@ -152,35 +157,20 @@ export default function ListeAvis(p: PropsListeAvis) {
 
         <div className={cn('mt-2', aDesAvis && 'lg:-mb-64')}>
           {p.zoneVide ? (
-            <div className="rounded-lg bg-surface-1 px-5 py-8">
-              <p className="text-[15px] font-semibold text-fg">Choisissez une zone sur la carte</p>
-              <p className="mt-1 max-w-[56ch] text-[15px] text-fg-2">
-                Touchez un département, ou saisissez un département, une ville ou un code postal : les avis ouverts de la zone s'affichent ici.
-              </p>
-            </div>
+            <EtatVide className="mt-2" titre="Choisissez une zone sur la carte"
+              phrase="Touchez un département, ou saisissez un département, une ville ou un code postal : les avis ouverts de la zone s’affichent ici." />
           ) : p.enErreur ? (
-            <div className="rounded-lg bg-surface-1 px-5 py-8" role="status">
-              <p className="text-[15px] font-semibold text-fg">Les avis ne se chargent pas pour le moment</p>
-              <p className="mt-1 text-[15px] text-fg-2">Réessayez dans un instant : votre zone et vos filtres sont conservés.</p>
-            </div>
+            <EtatErreur titre="Les avis ne se chargent pas pour le moment" detail="Votre zone et vos filtres sont conservés." onReessayer={p.onReessayer} />
           ) : p.enCours && p.avis.length === 0 ? (
-            <ul aria-label="Chargement des avis" className="space-y-3">
-              {[0, 1, 2].map((i) => <li key={i} className="h-36 animate-pulse rounded-lg bg-surface-1" />)}
+            <ul aria-label="Chargement des avis" aria-busy="true" className="grid gap-3">
+              {[0, 1, 2].map((i) => <li key={i}><Squelette className="h-36 rounded-lg" /></li>)}
             </ul>
           ) : p.avis.length === 0 ? (
-            <div className="rounded-lg bg-surface-1 px-5 py-8">
-              <p className="text-[15px] font-semibold text-fg">Aucun avis ouvert dans cette zone pour ces filtres</p>
-              {p.peutElargir && (
-                <Fragment>
-                  <p className="mt-1 max-w-[56ch] text-[15px] text-fg-2">
-                    {filtre ? 'Élargir retire les filtres.' : 'Élargir ajoute les départements voisins.'}
-                  </p>
-                  <Button variant="outline" onClick={p.onElargir} className="mt-4">Élargir</Button>
-                </Fragment>
-              )}
-            </div>
+            <EtatVide titre="Aucun avis ouvert dans cette zone pour ces filtres"
+              phrase={p.peutElargir ? (filtre ? 'Élargir retire les filtres.' : 'Élargir ajoute les départements voisins.') : undefined}
+              action={p.peutElargir ? <Bouton onClick={p.onElargir}>Élargir</Bouton> : undefined} />
           ) : (
-            <ol className="space-y-3">
+            <ol className="grid gap-3">
               {p.avis.map((a) => (
                 <li key={a.id}>
                   <CarteAvis
@@ -205,7 +195,7 @@ export default function ListeAvis(p: PropsListeAvis) {
             <BoutonSuite chargePlus={!!p.chargePlus} nbAvis={p.avis.length} onSuite={p.onVoirPlus} />
           </div>
         )}
-        <p className="mt-6 text-[13px] text-fg-3">Source : {libelleSourceVeille(p.source)}</p>
+        <p className="mt-6 text-sm text-fg-3">Source : {libelleSourceVeille(p.source)}</p>
       </div>
     </section>
   )
