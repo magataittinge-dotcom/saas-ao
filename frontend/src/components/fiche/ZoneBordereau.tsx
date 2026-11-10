@@ -1,19 +1,19 @@
 // « Téléchargement » : d'abord le format du fichier et le bouton « Télécharger la fiche » (la seule action pleine
 // de l'écran, toujours visible) ; puis le bordereau à personnaliser : logo, titre, sous-titre, contact, couleur d'accent,
-// lignes libres. Les champs s'enregistrent tout seuls (la page) :
+// (les lignes libres sont du contenu : elles vivent dans « Ce qu'il y a dans la fiche »). Les champs s'enregistrent tout seuls (la page) :
 // l'aperçu et le fichier partent de l'état enregistré. Composants du système partout ; le fichier du logo et la couleur
 // passent par un bouton du système qui ouvre le sélecteur du navigateur (le contrôle natif ne se voit pas).
 import { useRef, useState } from 'react'
 import type { DragEvent } from 'react'
-import { Download, Plus, X } from 'lucide-react'
+import { Download } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Bouton, BoutonIcone } from '@/components/ui/bouton'
+import { Bouton } from '@/components/ui/bouton'
 import { GroupeRadio } from '@/components/ui/case'
 import { Champ, GroupeChamp } from '@/components/ui/champ'
-import { ListeDeroulante } from '@/components/ui/liste-deroulante'
+import { EntreeFichier } from '@/components/depot/EntreeFichier'
 import { TitreSection } from '@/components/ui/page'
 import { FORMATS_FICHE } from '@/lib/fichePage'
-import { MAX_LIGNES_LIBRES, type FicheBordereau, type FicheSection } from '@/lib/fiche'
+import type { FicheBordereau } from '@/lib/fiche'
 import type { FormatFiche } from '@/lib/apercuFiche'
 
 interface Props {
@@ -23,7 +23,6 @@ interface Props {
   logoEnCours: boolean
   onLogo: (fichier: File) => void
   onRetirerLogo: () => void
-  sections: Pick<FicheSection, 'id' | 'titre'>[]
   format: FormatFiche
   onFormat: (f: FormatFiche) => void
   /** Raison pour laquelle le PDF n'est pas offert (LibreOffice indisponible) ; null : le PDF est offert. */
@@ -36,9 +35,6 @@ const ETIQUETTE = 'text-xs font-medium text-fg-2'
 
 export default function ZoneBordereau(p: Props) {
   const { bordereau, onChange } = p
-  const libres = bordereau.lignes_libres
-  const majLigne = (i: number, patch: Partial<(typeof libres)[number]>) =>
-    onChange({ lignes_libres: libres.map((l, j) => (j === i ? { ...l, ...patch } : l)) })
   const [survol, setSurvol] = useState(false)
   const fichierLogo = useRef<HTMLInputElement>(null)
   const nuancier = useRef<HTMLInputElement>(null)
@@ -46,7 +42,6 @@ export default function ZoneBordereau(p: Props) {
   const echantillon = { backgroundColor: couleur }          // la couleur choisie par l'utilisateur : une valeur calculée
   const formats = FORMATS_FICHE.filter((f) => !(f.id === 'pdf' && p.pdfIndisponible !== null))
   const nomFormat = FORMATS_FICHE.find((f) => f.id === p.format)?.libelle ?? ''
-  const optionsSections = p.sections.map((s) => ({ valeur: s.id, libelle: `${s.id} ${s.titre}` }))
 
   const aLaDepose = (e: DragEvent<HTMLElement>) => {
     e.preventDefault()
@@ -102,8 +97,8 @@ export default function ZoneBordereau(p: Props) {
                 {p.logoSrc ? 'Changer' : 'Choisir un logo'}
               </Bouton>
               {p.logoSrc && <Bouton variante="lien" className="text-sm" onClick={p.onRetirerLogo}>Retirer le logo</Bouton>}
-              <Champ
-                ref={fichierLogo} type="file" accept="image/png,image/jpeg" tabIndex={-1} aria-hidden="true" className="sr-only"
+              <EntreeFichier
+                ref={fichierLogo} accept="image/png,image/jpeg"
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) p.onLogo(f); e.target.value = '' }}
               />
             </div>
@@ -114,7 +109,7 @@ export default function ZoneBordereau(p: Props) {
                 <span className="chiffres font-medium">{couleur}</span>
               </Bouton>
               <Champ
-                ref={nuancier} type="color" value={couleur} tabIndex={-1} aria-hidden="true" className="sr-only bottom-0 left-0"
+                ref={nuancier} type="color" value={couleur} tabIndex={-1} aria-hidden="true" className="sr-only bottom-0 left-0 size-px border-0 p-0"
                 onChange={(e) => onChange({ couleur: e.target.value })}
               />
             </div>
@@ -122,35 +117,6 @@ export default function ZoneBordereau(p: Props) {
           <p className="text-xs text-fg-3">Logo : PNG ou JPEG, 2 Mo au plus. Vous pouvez aussi glisser l’image sur le bouton.</p>
         </div>
       </div>
-
-      <div className="grid gap-3" data-lignes-libres="">
-        <div>
-          <h3 className="text-sm font-semibold text-fg">Lignes libres</h3>
-          <p className="mt-1 text-sm text-fg-2">Ajoutez une ligne de texte dans une section de la fiche.</p>
-        </div>
-        {libres.map((l, i) => (
-          <div key={i} className="grid gap-2 rounded-lg border border-bord bg-surface-0 p-3" data-ligne-libre="">
-            <div className="flex items-center gap-1">
-              <ListeDeroulante
-                libelle={`Section de la ligne libre ${i + 1}`} valeur={l.section} onChange={(section) => majLigne(i, { section })}
-                options={optionsSections} className="min-w-0 flex-1"
-              />
-              <BoutonIcone libelle={`Retirer la ligne libre ${i + 1}`} onClick={() => onChange({ lignes_libres: libres.filter((_, j) => j !== i) })}>
-                <X aria-hidden strokeWidth={1.5} />
-              </BoutonIcone>
-            </div>
-            <Champ aria-label={`Libellé de la ligne libre ${i + 1}`} maxLength={80} placeholder="Libellé" value={l.libelle} onChange={(e) => majLigne(i, { libelle: e.target.value })} />
-            <Champ aria-label={`Valeur de la ligne libre ${i + 1}`} maxLength={300} placeholder="Texte" value={l.valeur} onChange={(e) => majLigne(i, { valeur: e.target.value })} />
-          </div>
-        ))}
-        <Bouton
-          variante="lien" className="justify-self-start text-sm" disabled={libres.length >= MAX_LIGNES_LIBRES || p.sections.length === 0}
-          onClick={() => onChange({ lignes_libres: [...libres, { section: p.sections[0]?.id ?? '01', libelle: '', valeur: '' }] })}
-        >
-          <Plus aria-hidden />Ajouter une ligne
-        </Bouton>
-      </div>
-
       </div>
     </section>
   )

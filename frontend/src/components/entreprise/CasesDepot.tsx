@@ -7,7 +7,7 @@ import { api } from '@/services/api'
 import { cn } from '@/lib/utils'
 import { Bouton } from '@/components/ui/bouton'
 import { CaseACocher } from '@/components/ui/case'
-import { Champ } from '@/components/ui/champ'
+import { EntreeFichier } from '@/components/depot/EntreeFichier'
 import { Message } from '@/components/ui/message'
 import { PastilleEtat } from '@/components/ui/pastille'
 import { useAuthStore } from '@/stores/authStore'
@@ -82,22 +82,18 @@ export function CaseDepotVue({ vue, onFichiers, onVerifier }: {
     >
       <div className="grid min-w-0 flex-1 basis-72 gap-1">
         <h4 className="text-sm font-semibold text-fg">{c.nom}</h4>
-        <p className="text-sm text-fg-2">{c.contenu}</p>
-        <p className="text-xs text-fg-3">{c.usage}</p>
+        <p className="max-w-prose text-sm text-fg-2">{c.contenu}</p>
+        <p className="max-w-prose text-xs text-fg-3">{c.usage}</p>
         <Etat vue={vue} onVerifier={onVerifier} />
       </div>
       <div className="grid shrink-0 justify-items-start gap-1.5">
         <Bouton variante="secondaire" onClick={() => entree.current?.click()} enCours={vue.envoi} libelleEnCours="Envoi en cours…">
           Déposer un fichier<span className="sr-only"> pour « {c.nom} »</span>
         </Bouton>
-        <Champ
+        <EntreeFichier
           ref={entree}
-          type="file"
-          tabIndex={-1}
-          aria-hidden="true"
           multiple={c.plusieurs_fichiers}
           accept={TYPES_ACCEPTES}
-          className="sr-only"
           onChange={(e) => {
             const fichiers = Array.from(e.target.files ?? [])
             e.target.value = ''

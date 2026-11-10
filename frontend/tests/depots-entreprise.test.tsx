@@ -60,7 +60,8 @@ test('chaque case a son bouton « Déposer un fichier » du système, qui nomme 
   // le champ natif ne se voit pas et ne prend pas le focus : le bouton l'ouvre
   const champs = [...html.matchAll(/<input[^>]*type="file"[^>]*>/g)]
   assert.equal(champs.length, 3)
-  for (const [champ] of champs) assert.ok(/tabindex="-1"/.test(champ) && /aria-hidden="true"/.test(champ) && /sr-only/.test(champ), champ)
+  // `hidden` : aucune boîte (un champ masqué en `sr-only` gardait la largeur de la page et faisait déborder l'écran)
+  for (const [champ] of champs) assert.ok(/tabindex="-1"/.test(champ) && /aria-hidden="true"/.test(champ) && / hidden=""/.test(champ) && !/class=/.test(champ), champ)
 })
 
 test('états sous la case : lu et à vérifier, déposé, OCR, en lecture, envoi, refus lisible', () => {

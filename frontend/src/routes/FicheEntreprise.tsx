@@ -2,10 +2,10 @@
 // de la barre du haut, il n'est pas répété ici), les trois fiches en onglets-liens, puis :
 //   1. « Aperçu » : le VRAI document, page par page, produit par le serveur (PDF, Word ou Excel) ;
 //   2. « Téléchargement » : le format et le bouton « Télécharger la fiche » (la seule action pleine de l'écran), puis le
-//      bordereau à personnaliser (logo, titre, sous-titre, contact, couleur, lignes libres) ; à l'ordinateur, la colonne
+//      bordereau à personnaliser (titre, sous-titre, contact, logo, couleur) ; à l'ordinateur, la colonne
 //      reste collée à droite ;
 //   3. « Ce qu'il y a dans la fiche » : à quoi elle sert, ses sections (Prête / À renseigner), le lien vers le bon champ,
-//      et les cases de dépôt de la rubrique ; sous l'aperçu.
+//      les lignes libres et les cases de dépôt de la rubrique ; sous l'aperçu.
 // Deux colonnes à l'ordinateur (l'aperçu au large, les réglages à côté), une au téléphone ; l'ordre du DOM est l'ordre de
 // lecture aux deux largeurs : aperçu, bordereau, contenu. Le patron voit son document, l'ajuste, le télécharge.
 // Le bordereau s'enregistre tout seul (800 ms après la dernière saisie) ; l'aperçu et le fichier partent tous deux de l'état
@@ -228,7 +228,6 @@ function Fiche({ rubrique }: { rubrique: RubriqueFiche }) {
                 <ZoneBordereau
                   bordereau={courant} onChange={modifier} logoSrc={urlServeur(fiche.bordereau.logo_url)} logoEnCours={logo.isPending}
                   onLogo={(f) => logo.mutate(f)} onRetirerLogo={() => retraitLogo.mutate()}
-                  sections={fiche.donnees.sections.map(({ id, titre }) => ({ id, titre }))}
                   format={format} onFormat={setFormat} pdfIndisponible={pdfIndisponible}
                   onTelecharger={() => telechargement.mutate()} enTelechargement={telechargement.isPending}
                 />
@@ -238,7 +237,7 @@ function Fiche({ rubrique }: { rubrique: RubriqueFiche }) {
                 )}
               </div>
 
-              <ZoneContenu rubrique={rubrique} donnees={fiche.donnees} libres={courant.lignes_libres} apresValidation={() => { void client.invalidateQueries({ queryKey: cleFiche(rubrique) }) }} />
+              <ZoneContenu rubrique={rubrique} donnees={fiche.donnees} libres={courant.lignes_libres} onLibres={(lignes_libres) => modifier({ lignes_libres })} apresValidation={() => { void client.invalidateQueries({ queryKey: cleFiche(rubrique) }) }} />
             </div>
           )
         }}

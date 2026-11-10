@@ -13,6 +13,7 @@ import { estThemee } from '@/components/layout/Layout'
 import PhraseARenseigner from '@/components/fiche/PhraseARenseigner'
 import ApercuPages from '@/components/fiche/ApercuPages'
 import ZoneBordereau from '@/components/fiche/ZoneBordereau'
+import { LignesLibres } from '@/components/fiche/ZoneContenu'
 import { RAISON_PDF_INDISPONIBLE } from '@/routes/FicheEntreprise'
 import { ETAT_INITIAL, MESSAGE_INDISPONIBLE, type EtatApercu } from '@/lib/apercuFiche'
 import { A_QUOI_SERT, contenuDeLaFiche, sectionPrete } from '@/lib/fichePage'
@@ -347,7 +348,7 @@ test('liens « champ » : Mon entreprise donne le focus au champ demandé (étiq
   assert.equal(intituleCorrespond('Équipe', CHAMPS.habilitations, 'groupe'), false)
 })
 
-test('colonne « Téléchargement » : d\'abord le format expliqué et le bouton, puis le bordereau (logo, titre, sous-titre, contact, couleur, lignes libres) ; aucun contrôle natif visible', () => {
+test('colonne « Téléchargement » : d\'abord le format expliqué et le bouton, puis le bordereau (titre, sous-titre, contact, logo, couleur) ; les lignes libres sont avec le contenu ; aucun contrôle natif visible', () => {
   const html = ecran(moyens)
   assert.ok(html.includes('à envoyer tel quel') && html.includes('pour modifier avant d’envoyer') && html.includes('le tableau, pour trier ou compléter'))
   assert.match(html, /<button[^>]*data-telecharger[^>]*>[\s\S]*?Télécharger la fiche[\s\S]*?· PDF/)
@@ -361,21 +362,30 @@ test('colonne « Téléchargement » : d\'abord le format expliqué et le bouton
   // logo et couleur : un bouton du système ouvre le sélecteur du navigateur ; le contrôle natif ne se voit pas
   assert.match(html, /data-depot-logo/)
   assert.ok(html.includes('>Choisir un logo</button>') && html.includes('PNG ou JPEG, 2 Mo au plus'))
-  assert.match(html, /<input(?=[^>]*type="file")(?=[^>]*accept="image\/png,image\/jpeg")(?=[^>]*aria-hidden="true")(?=[^>]*sr-only)[^>]*>/)
+  assert.match(html, /<input(?=[^>]*type="file")(?=[^>]*accept="image\/png,image\/jpeg")(?=[^>]*aria-hidden="true")(?=[^>]* hidden="")[^>]*>/)
   assert.ok(html.includes('Couleur d’accent') && html.includes('aria-label="Changer la couleur d’accent (#008cf8)"'))
-  assert.match(html, /<input(?=[^>]*type="color")(?=[^>]*value="#008cf8")(?=[^>]*aria-hidden="true")(?=[^>]*sr-only)[^>]*>/)
+  assert.match(html, /<input(?=[^>]*type="color")(?=[^>]*value="#008cf8")(?=[^>]*aria-hidden="true")(?=[^>]*sr-only)(?=[^>]*size-px)[^>]*>/, 'le nuancier masqué ne garde aucune largeur')
   assert.ok(!/border-dashed/.test(html), 'aucune zone en pointillés au repos')
+  // les lignes libres sont du contenu : sous la liste des sections, avant les dépôts, plus dans la colonne de droite
   assert.match(html, /<h3[^>]*>Lignes libres<\/h3>/)
-  const source = sansCommentaires(lire('src/components/fiche/ZoneBordereau.tsx'))
-  assert.doesNotMatch(source, /<select\b|type="radio"|<button\b|<input\b|animate-spin/, 'composants du système seulement')
-  for (const composant of ['<GroupeRadio', '<ListeDeroulante', '<Champ', '<Bouton', '<BoutonIcone']) assert.ok(source.includes(composant), composant)
+  const contenu = html.slice(html.indexOf('data-zone="contenu"'))
+  assert.ok(contenu.indexOf('data-sections-fiche') < contenu.indexOf('data-lignes-libres') && contenu.includes('Ajouter une ligne'))
+  assert.ok(!html.slice(html.indexOf('data-zone="bordereau"'), html.indexOf('data-zone="contenu"')).includes('data-lignes-libres'))
+  const avecLigne = renderToStaticMarkup(<LignesLibres libres={[{ section: '03', libelle: 'Grue', valeur: '1' }]} sections={[{ id: '03', titre: 'Matériel' }]} onChange={() => {}} />)
+  for (const nom of ['Section de la ligne libre 1', 'Libellé de la ligne libre 1', 'Valeur de la ligne libre 1', 'Retirer la ligne libre 1']) assert.ok(avecLigne.includes(`aria-label="${nom}"`), nom)
+  assert.match(avecLigne, /<button[^>]*role="combobox"[^>]*aria-label="Section de la ligne libre 1"/, 'la section se choisit dans la liste déroulante du système')
+  for (const [fichier, composants] of [['ZoneBordereau', ['<GroupeRadio', '<Champ', '<Bouton']], ['ZoneContenu', ['<ListeDeroulante', '<Champ', '<BoutonIcone', '<PastilleEtat']]] as const) {
+    const source = sansCommentaires(lire(`src/components/fiche/${fichier}.tsx`))
+    assert.doesNotMatch(source, /<select\b|type="radio"|<button\b|<input\b|animate-spin/, `${fichier} : composants du système seulement`)
+    for (const composant of composants) assert.ok(source.includes(composant), `${fichier} ${composant}`)
+  }
 })
 
 test('le PDF n\'est plus offert, avec sa raison, quand le rendu exact est indisponible ; Word et Excel restent offerts', () => {
   const html = renderToStaticMarkup(
     <ZoneBordereau
       bordereau={bordereau()} onChange={() => {}} logoSrc={null} logoEnCours={false} onLogo={() => {}} onRetirerLogo={() => {}}
-      sections={[{ id: '01', titre: 'Moyens humains' }]} format="docx" onFormat={() => {}}
+      format="docx" onFormat={() => {}}
       pdfIndisponible={RAISON_PDF_INDISPONIBLE} onTelecharger={() => {}} enTelechargement={false}
     />)
   assert.doesNotMatch(html, /<input[^>]*value="pdf"/, 'le PDF ne peut pas être choisi')
@@ -391,7 +401,7 @@ test('R21 : pendant la génération, le bouton est désactivé et dit « Prépar
   const html = renderToStaticMarkup(
     <ZoneBordereau
       bordereau={bordereau()} onChange={() => {}} logoSrc={null} logoEnCours={false} onLogo={() => {}} onRetirerLogo={() => {}}
-      sections={[{ id: '01', titre: 'Moyens humains' }]} format="pdf" onFormat={() => {}}
+      format="pdf" onFormat={() => {}}
       pdfIndisponible={null} onTelecharger={() => {}} enTelechargement
     />)
   assert.match(html, /<button(?=[^>]*data-telecharger)(?=[^>]*disabled)(?=[^>]*aria-busy="true")[^>]*>[\s\S]*?Préparation de la fiche…/)
