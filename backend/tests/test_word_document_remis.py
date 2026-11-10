@@ -92,3 +92,45 @@ def test_colonne_courte_assez_large_pour_ne_pas_couper_a_completer():
     largeur_quantite_cm = t.columns[1].width / 360000
     # « À compléter : nombre » : « compléter » (9 signes en 9,5 pt) tient sur une ligne
     assert largeur_quantite_cm >= 2.2, largeur_quantite_cm
+
+
+def test_sommaire_lie_a_ses_titres_par_des_signets():
+    """Chaque ligne du sommaire est un lien interne vers un signet posé sur son titre (PDF cliquable)."""
+    xml = _xml(_octets(), "word/document.xml")
+    ancres = re.findall(r'<w:hyperlink [^>]*w:anchor="([^"]+)"', xml)
+    signets = set(re.findall(r'<w:bookmarkStart [^>]*w:name="([^"]+)"', xml))
+    assert len(ancres) >= 3                       # préambule, partie A, une section… (titres 1 et 2)
+    assert all(a in signets for a in ancres)
+
+
+def test_pdf_sommaire_cliquable_et_numerote(tmp_path):
+    import shutil
+
+    import pytest
+    if not (shutil.which("soffice") or shutil.which("libreoffice")):
+        pytest.skip("LibreOffice absent")
+    from pypdf import PdfReader
+
+    from services.pdf_export import docx_to_pdf
+    pdf = docx_to_pdf(_octets())
+    lecteur = PdfReader(io.BytesIO(pdf))
+    liens = [a.get_object() for p in lecteur.pages for a in (p.get("/Annots") or [])
+             if a.get_object().get("/Subtype") == "/Link"]
+    assert len(liens) >= 3
+    sommaire = lecteur.pages[1].extract_text()
+    assert re.search(r"PRÉAMBULE\W+3", sommaire), sommaire[:400]
+
+
+def test_tableau_des_visuels_en_tete_claire_et_trait_de_couleur():
+    """Tableau posé par les visuels (références) : fond clair, texte foncé, la couleur de l'entreprise
+    en trait sous l'en-tête — plus d'aplat plein sous texte blanc."""
+    from docx import Document as Nouveau
+
+    from services.visuels.word import ajouter_tableau
+    doc = Nouveau()
+    ajouter_tableau(doc, {"entetes": ["Année", "Chantier"], "lignes": [["2024", "Halle fictive"]],
+                          "largeurs_cm": [3, 14], "couleur": "#7A1F2B"})
+    xml = doc.tables[0]._tbl.xml
+    assert 'w:fill="7A1F2B"' not in xml
+    assert 'w:color="7A1F2B"' in xml                       # le trait sous l'en-tête
+    assert 'w:val="FFFFFF"' not in xml.upper().replace("W:VAL", "w:val")
