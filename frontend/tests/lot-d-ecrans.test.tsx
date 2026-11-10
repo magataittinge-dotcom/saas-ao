@@ -186,3 +186,13 @@ test('Mes AO sans AO : la page du système, un seul geste (déposer), Synorix di
   const src = sansCommentaires(lire('src/components/mesao/VideMesAO.tsx'))
   assert.doesNotMatch(src, /uppercase|VisagePetit|rounded-\[|text-\[/)
 })
+
+test('typographie : aucun repère d’espace insécable resté dans un texte affiché, et le point-virgule de l’écran d’erreur tient à son mot', () => {
+  const html = renderToStaticMarkup(<ErreurAppli />)
+  assert.ok(html.includes(`Rechargez la page${NB}; si l’erreur revient`))
+  for (const f of ['src/components/public/EcransHorsRouteur.tsx', 'src/components/public/EcransEtat.tsx', 'src/components/public/CoquillePublique.tsx',
+    'src/routes/Landing.tsx', 'src/routes/Pricing.tsx', 'src/routes/Legal.tsx', 'src/routes/Login.tsx', 'src/routes/Register.tsx',
+    'src/components/onboarding/FirstAOWelcome.tsx', 'src/components/onboarding/FilSeptEtapes.tsx', 'src/components/mesao/VideMesAO.tsx']) {
+    assert.ok(!lire(f).includes('␣'), f)
+  }
+})

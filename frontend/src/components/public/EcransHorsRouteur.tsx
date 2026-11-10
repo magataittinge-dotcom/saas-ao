@@ -39,7 +39,7 @@ function CadreHorsRouteur({ titre, phrase, geste, discret, children }: { titre: 
 export function ErreurAppli() {
   return (
     <CadreHorsRouteur titre="Cet écran n’a pas pu s’afficher" geste="Recharger la page"
-      phrase="Une erreur est survenue de notre côté. Vos dossiers et vos documents ne sont pas touchés. Rechargez la page␣; si l’erreur revient, repartez de l’accueil.">
+      phrase="Une erreur est survenue de notre côté. Vos dossiers et vos documents ne sont pas touchés. Rechargez la page ; si l’erreur revient, repartez de l’accueil.">
       <a href={accueilPour(typeof window === 'undefined' ? '/' : window.location.pathname)} className={classesBouton('secondaire', 'max-sm:w-full')}>Revenir à l’accueil</a>
     </CadreHorsRouteur>
   )
