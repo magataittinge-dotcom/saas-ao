@@ -469,10 +469,10 @@ export default function StepUpload({ project }: Props) {
         barre={
           <BarreEtape>
             <BilanBarre
-              bureau={chargementEchoue ? 'La liste des fichiers n’a pas pu être lue.' : hasDocuments
+              bureau={chargementEchoue ? null : hasDocuments
                 ? `${documents.length} fichier${documents.length > 1 ? 's déposés' : ' déposé'} dans le dossier.`
                 : 'Déposez le dossier pour continuer.'}
-              tel={chargementEchoue ? 'Liste non lue' : hasDocuments ? `${documents.length} fichier${documents.length > 1 ? 's' : ''}` : 'Aucun fichier'}
+              tel={chargementEchoue ? null : hasDocuments ? `${documents.length} fichier${documents.length > 1 ? 's' : ''}` : 'Aucun fichier'}
             />
             <ActionsBarre>
               <BoutonSecondaire libelle="Retour" onClick={() => navigate(-1)} />

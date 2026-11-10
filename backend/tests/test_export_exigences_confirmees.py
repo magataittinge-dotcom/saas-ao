@@ -216,7 +216,7 @@ def test_avertissements_du_zip_lisibles_et_positifs(client, db_session, test_org
     assert r.status_code == 200, r.text
     assert "x-export-warnings" in r.headers.get("access-control-expose-headers", "").lower()
     avertissements = json.loads(r.headers["x-export-warnings"])
-    assert "Mémoire technique : à générer à l'étape Mémoire" in avertissements
+    assert "Mémoire technique : à rédiger à l’étape Rédiger" in avertissements
     assert "DPGF remplie : à déposer" in avertissements
     assert not [a for a in avertissements if re.search(r"\bnon (généré|remplie|signé)", a)], avertissements
 

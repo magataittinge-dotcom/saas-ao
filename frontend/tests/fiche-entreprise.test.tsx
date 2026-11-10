@@ -434,7 +434,8 @@ test('aperçu : sans rendu exact, l\'aperçu HTML simplifié et sa ligne d\'expl
   assert.ok(html.includes('aria-label="Aperçu de la fiche"') && html.includes('MOYENS DE L&#x27;ENTREPRISE'))
   const erreur = renderToStaticMarkup(
     <MemoryRouter><ApercuPages etat={{ ...ETAT_INITIAL, phase: 'erreur', message: 'La conversion tarde.' }} pages={[]} enRetard={false} donnees={moyens} bordereau={bordereau()} palette={paletteFiche('#008cf8')} logoSrc={null} /></MemoryRouter>)
-  assert.ok(erreur.includes('Aperçu simplifié') && erreur.includes('La conversion tarde.'))
+  // une seule phrase : la raison technique de l’échec ne s’ajoute pas à la ligne d’explication
+  assert.ok(erreur.includes('Aperçu simplifié') && !erreur.includes('La conversion tarde.'))
 })
 
 test('aucune occurrence de « manquant », « incomplet » ou « absent » dans la page de fiche', () => {

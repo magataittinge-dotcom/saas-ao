@@ -369,7 +369,7 @@ def marquer_non_concerne(
     item = _get_checklist_item_or_404(item_id, project_id, db)
     if item.document_group == "synorix":
         raise HTTPException(status_code=400,
-                            detail="Pièce produite par Synorix à l'étape Mémoire.")
+                            detail="Pièce rédigée par Synorix à l’étape Rédiger.")
     if body.non_concerne:
         item.status = "non_applicable"
     elif item.status == "non_applicable":

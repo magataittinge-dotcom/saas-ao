@@ -46,7 +46,9 @@ test('une erreur de chargement n’est jamais un dépôt vide : la requête pass
   const avantContenu = code.slice(0, code.indexOf('<EtatRequete'))
   assert.ok(!avantContenu.includes('Déposez le <Sigle code="DCE" /> complet'), 'la zone de dépôt est dans le contenu de la requête')
   assert.match(code, /const chargementEchoue = requeteDocuments\.isError && requeteDocuments\.data === undefined/)
-  assert.match(code, /tel=\{chargementEchoue \? 'Liste non lue'/)
+  // l’échec se dit une fois, dans la page : la barre du bas se tait
+  assert.match(code, /bureau=\{chargementEchoue \? null/)
+  assert.match(code, /tel=\{chargementEchoue \? null/)
 })
 
 test('la liste des pièces : tableau du système (pages de 50), groupée par type, type en liste déroulante, suppression dans le menu de ligne', () => {

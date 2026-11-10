@@ -29,7 +29,7 @@ export default function ApercuPages({ etat, pages, enRetard, donnees, bordereau,
     return (
       <div className="space-y-3" data-apercu-simplifie>
         <p className="text-sm text-fg-2" data-ligne-simplifie>
-          {MESSAGE_INDISPONIBLE}{etat.phase === 'erreur' && etat.message ? ` ${etat.message}` : ''}
+          {MESSAGE_INDISPONIBLE}
         </p>
         <FichePreview donnees={donnees} bordereau={bordereau} palette={palette} logoSrc={logoSrc} />
       </div>
