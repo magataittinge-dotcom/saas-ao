@@ -30,7 +30,7 @@ export function PuceFiltre({ libelle, valeur, onOuvrir, onRetirer, className }: 
         <span className="font-normal">{libelle} : </span>{valeur}
       </button>
       {onRetirer && (
-        <button type="button" onClick={onRetirer} aria-label={`Retirer le filtre ${libelle}`} className="grid size-11 place-items-center rounded-r-pilule hover:bg-bleu-soft active:scale-[.98]">
+        <button type="button" onClick={onRetirer} aria-label={`Retirer le filtre ${libelle}`} className="grid size-11 shrink-0 place-items-center rounded-r-pilule hover:bg-bleu-soft active:scale-[.98]">
           <X aria-hidden size={16} strokeWidth={1.5} />
         </button>
       )}

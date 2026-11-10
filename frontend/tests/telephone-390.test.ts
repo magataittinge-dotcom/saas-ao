@@ -69,3 +69,8 @@ test('Rédiger : un tableau du mémoire devient une liste de rangées au télép
 test('notifications dans le tiroir du compte : le panneau est calé sur le bord droit du tiroir (il sortait par la gauche à 360 px)', () => {
   assert.match(code('src/components/layout/NotificationBell.tsx'), /versLeHaut \? 'bottom-full -right-12 mb-2'/)
 })
+
+test('pied de page du site public : liens élargis au téléphone ; croix d’une puce de filtre qui ne rétrécit pas', () => {
+  assert.match(code('src/components/public/CoquillePublique.tsx'), /hover:underline max-md:px-2\.5 \[@media\(pointer:coarse\)\]:min-h-11/)
+  assert.match(code('src/components/ui/filtre.tsx'), /grid size-11 shrink-0 place-items-center rounded-r-pilule/)
+})

@@ -19,9 +19,9 @@ export function PiedPublic() {
     <footer className="relative border-t border-bord">
       <div className="conteneur flex flex-col items-start justify-between gap-x-6 gap-y-2 py-5 sm:flex-row sm:items-center">
         <p className="chiffres text-xs text-fg-2">© {new Date().getFullYear()} Synorix</p>
-        <nav aria-label="Informations légales" className="flex flex-wrap items-center gap-x-5 gap-y-1">
+        <nav aria-label="Informations légales" className="flex flex-wrap items-center gap-x-5 gap-y-1 max-md:-ml-2.5 max-md:gap-x-0 max-md:gap-y-0">
           {LIENS_JURIDIQUES.map((l) => (
-            <Link key={l.vers} to={l.vers} className="inline-flex items-center rounded text-xs text-fg-2 underline-offset-4 transition-colors duration-fast ease-survol hover:text-fg hover:underline [@media(pointer:coarse)]:min-h-11">
+            <Link key={l.vers} to={l.vers} className="inline-flex items-center rounded text-xs text-fg-2 underline-offset-4 transition-colors duration-fast ease-survol hover:text-fg hover:underline max-md:px-2.5 [@media(pointer:coarse)]:min-h-11">
               {l.libelle}
             </Link>
           ))}
