@@ -75,7 +75,9 @@ export function QuotaRond({ masquerIllimite = false }: { masquerIllimite?: boole
   if (!data?.analyses || !data.memoires) return null
   // Offre illimitée : pas de jauge à lire. Le rond « ∞ » sans nom sous l'icône déroutait (recette du 4/11) ; la barre latérale le retire.
   if (masquerIllimite && part === null) return null
-  const R = 15
+  // Le chiffre tient DANS l'anneau, jusqu'à « 100% » : anneau de 40 px (trait de 2,5), chiffre en 11 px. À 32 px et 12,5 px,
+  // « 100% » (30 px de large) débordait d'un creux de 24 px : l'anneau barrait le « 1 » et le « % » (jury, tour 1, bloquant).
+  const R = 16
   const C = 2 * Math.PI * R
   const ton = part === null ? null : tonConsommation(part)
   const detail = part === null
@@ -84,15 +86,15 @@ export function QuotaRond({ masquerIllimite = false }: { masquerIllimite?: boole
   return (
     <Link to="/settings/billing" aria-label={`Abonnement et quota. ${detail}`} title={detail}
       className="relative grid size-11 place-items-center rounded-pilule text-fg-2 transition-colors duration-survol hover:bg-surface-2 hover:text-fg">
-      <svg viewBox="0 0 36 36" className="size-8 -rotate-90" aria-hidden>
-        <circle cx="18" cy="18" r={R} fill="none" strokeWidth="3" className="stroke-bord-2" />
+      <svg viewBox="0 0 36 36" data-anneau-quota="" className="size-10 -rotate-90" aria-hidden>
+        <circle cx="18" cy="18" r={R} fill="none" strokeWidth="2.5" className="stroke-bord-2" />
         {part !== null && (
-          <circle cx="18" cy="18" r={R} fill="none" strokeWidth="3" strokeLinecap="round"
+          <circle cx="18" cy="18" r={R} fill="none" strokeWidth="2.5" strokeLinecap="round"
             strokeDasharray={C} strokeDashoffset={C * (1 - part)}
             className={cn('transition-[stroke-dashoffset] duration-pop ease-survol', ton === 'rouge' ? 'stroke-rouge-mark' : ton === 'ambre' ? 'stroke-ambre-mark' : 'stroke-vert-mark')} />
         )}
       </svg>
-      <span className="absolute text-xs font-semibold tabular-nums text-fg-2">{part === null ? '∞' : `${Math.round(part * 100)}%`}</span>
+      <span data-chiffre-quota="" className="absolute text-micro font-semibold leading-none tracking-[-0.02em] text-fg-2">{part === null ? '∞' : `${Math.round(part * 100)}%`}</span>
     </Link>
   )
 }
