@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Bouton } from '@/components/ui/bouton'
 import { Champ } from '@/components/ui/champ'
 import { authService } from '@/services/auth'
 import { useAuthStore } from '@/stores/authStore'
 import { Field } from './champs'
+import type { Organization } from '@/types'
 
 const chiffres = (v: string) => v.replace(/\D/g, '')
 
@@ -13,7 +14,20 @@ const chiffres = (v: string) => v.replace(/\D/g, '')
  * (`/auth/sync`, répertoire Sirene) ; `depuis_profil` adapte les phrases. Un numéro valide remplit la raison sociale (règle
  * `raison_sociale.py`) et l'adresse si elle est vide ; un numéro invalide est dit sobrement et rien ne change.
  */
-export default function ChampSiret({ siret, verifie }: { siret?: string | null; verifie?: boolean }) {
+/** Ce que le formulaire appelle à son « Enregistrer » : un SIRET saisi mais pas encore envoyé part avec le reste. */
+export interface ChampSiretHandle { enregistrerSaisie: () => Promise<Organization | null> }
+
+/**
+ * Le SIRET à envoyer à l'enregistrement du formulaire : celui qui est à l'écran s'il diffère de celui du serveur ; rien
+ * s'il est vide ou déjà enregistré. Avant ce correctif, seul « Vérifier » l'envoyait : tapé puis « Enregistrer », il
+ * disparaissait au rechargement (le formulaire écrit par PATCH /organizations/me, qui ne porte pas le SIRET).
+ */
+export function siretASoumettre(valeur: string, enregistre: string | null | undefined): string | null {
+  const saisi = chiffres(valeur)
+  return saisi && saisi !== chiffres(enregistre ?? '') ? valeur.trim() : null
+}
+
+const ChampSiret = forwardRef<ChampSiretHandle, { siret?: string | null; verifie?: boolean }>(function ChampSiret({ siret, verifie }, ref) {
   const setOrganization = useAuthStore((s) => s.setOrganization)
   const client = useQueryClient()
   const [valeur, setValeur] = useState(siret ?? '')
@@ -24,8 +38,8 @@ export default function ChampSiret({ siret, verifie }: { siret?: string | null; 
   useEffect(() => { setValeur(siret ?? '') }, [siret])
 
   const modifie = chiffres(valeur) !== chiffres(siret ?? '') || (!verifie && chiffres(valeur) !== '')
-  const verifier = async () => {
-    if (!chiffres(valeur) || occupe) return
+  const verifier = async (): Promise<Organization | null> => {
+    if (!chiffres(valeur) || occupe) return null
     setOccupe(true)
     setMessage(null)
     setConfirme(false)
@@ -36,12 +50,17 @@ export default function ChampSiret({ siret, verifie }: { siret?: string | null; 
       if (avertissement) setMessage(avertissement)
       else setConfirme(true)
       client.invalidateQueries({ queryKey: ['memoire-config'] })
+      return res.organization
     } catch {
       setMessage('La vérification n’a pas abouti. Réessayez dans un instant.')
+      return null
     } finally {
       setOccupe(false)
     }
   }
+  useImperativeHandle(ref, () => ({
+    enregistrerSaisie: () => (siretASoumettre(valeur, siret) ? verifier() : Promise.resolve(null)),
+  }))
 
   return (
     <div className="grid content-start gap-1.5">
@@ -67,4 +86,5 @@ export default function ChampSiret({ siret, verifie }: { siret?: string | null; 
       {confirme && <p role="status" className="text-xs text-fg-2">SIRET vérifié au répertoire Sirene.</p>}
     </div>
   )
-}
+})
+export default ChampSiret

@@ -1,7 +1,9 @@
 import { type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, LogOut } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
+import { useLogout } from '@/hooks/useAuth'
+import { Bouton } from '@/components/ui/bouton'
 import { nomPlan } from '@/lib/offres'
 import { prenomAffichable } from '@/lib/prenom'
 import { Page, TitreSection } from '@/components/ui/page'
@@ -18,8 +20,6 @@ function Ligne({ libelle, children }: { libelle: string; children: ReactNode }) 
   )
 }
 
-const LIEN = 'font-medium text-accent-text underline-offset-4 hover:underline max-md:inline-flex max-md:min-h-11 max-md:items-center'
-
 /** Une rangée qui mène ailleurs : toute la rangée est la cible (52 px), un chevron dit qu'on change d'écran. */
 function RangeeLien({ to, titre, detail }: { to: string; titre: string; detail?: ReactNode }) {
   return (
@@ -34,15 +34,17 @@ function RangeeLien({ to, titre, detail }: { to: string; titre: string; detail?:
 }
 
 /**
- * Paramètres : le compte, l'entreprise (un lien : elle se modifie dans « Mon entreprise »), l'apparence (le thème et le
- * fond animé, les mêmes réglages que le menu du compte), l'abonnement (un lien : il a son écran) et les outils. Aucun
- * bouton plein : chaque réglage s'applique tout de suite.
+ * Paramètres : le compte (et la déconnexion), l'entreprise (un lien : elle se modifie dans « Mon entreprise »), l'apparence
+ * (le thème et le fond animé, les mêmes réglages que le menu du compte), l'abonnement (un lien : il a son écran) et les
+ * outils de chantier. Aucun bouton plein : chaque réglage s'applique tout de suite.
  */
 export default function Settings() {
   const { user, organization } = useAuthStore()
   // jamais le début d'un e-mail en guise de nom (lib/prenom.ts)
   const nom = prenomAffichable(user?.name, user?.email) ? user?.name : null
-  const renseigner = <Link to="/company" className={LIEN}>Renseigner</Link>
+  const deconnexion = useLogout()
+  // un champ vide est un champ à remplir : dit en mots, et UN seul lien vers Mon entreprise (la dernière rangée de la carte)
+  const aRemplir = <span className="font-normal text-fg-3">À renseigner</span>
 
   return (
     <Page titre="Paramètres" sousTitre="Votre compte, l’apparence de Synorix et votre abonnement." etroite>
@@ -51,12 +53,18 @@ export default function Settings() {
         {nom && <Ligne libelle="Nom">{nom}</Ligne>}
         {user?.email && <Ligne libelle="Adresse e-mail">{user.email}</Ligne>}
         <Ligne libelle="Rôle">{user?.role === 'member' ? 'Membre' : 'Administrateur'}</Ligne>
+        {/* La déconnexion est aussi dans la page (le testeur la cherchait ici) : le même mot que dans le menu du compte. */}
+        <RangeeCarte className="flex-wrap justify-between gap-x-6 gap-y-2" data-deconnexion="">
+          <span className="text-sm text-fg-2">Quitter Synorix sur cet appareil</span>
+          <Bouton variante="secondaire" onClick={() => { void deconnexion() }}><LogOut aria-hidden />Déconnexion</Bouton>
+        </RangeeCarte>
       </Carte>
 
-      <TitreSection action={<Link to="/company" className={`text-sm ${LIEN}`}>Ouvrir Mon entreprise</Link>}>Entreprise</TitreSection>
+      <TitreSection>Entreprise</TitreSection>
       <Carte sansMarge className="px-5 sm:px-6">
-        <Ligne libelle="Raison sociale">{organization?.name || renseigner}</Ligne>
-        <Ligne libelle="SIRET">{organization?.siret ? <span className="chiffres">{organization.siret}</span> : renseigner}</Ligne>
+        <Ligne libelle="Raison sociale">{organization?.name || aRemplir}</Ligne>
+        <Ligne libelle="SIRET">{organization?.siret ? <span className="chiffres">{organization.siret}</span> : aRemplir}</Ligne>
+        <RangeeLien to="/company" titre="Ouvrir Mon entreprise" detail="Identité, moyens, certifications et références." />
       </Carte>
 
       <TitreSection>Apparence</TitreSection>
@@ -70,9 +78,13 @@ export default function Settings() {
         </RangeeCarte>
       </Carte>
 
-      <TitreSection>Abonnement et outils</TitreSection>
+      <TitreSection>Abonnement</TitreSection>
       <Carte sansMarge className="px-5 sm:px-6">
-        <RangeeLien to="/settings/billing" titre="Abonnement" detail={`Offre ${nomPlan(organization?.plan)} : unités du mois, offres et factures.`} />
+        <RangeeLien to="/settings/billing" titre={`Offre ${nomPlan(organization?.plan)}`} detail="Unités du mois, paiement, factures et résiliation." />
+      </Carte>
+
+      <TitreSection>Outils de chantier</TitreSection>
+      <Carte sansMarge className="px-5 sm:px-6">
         <RangeeLien to="/outils" titre="Retenue de garantie" detail="Le montant retenu sur un marché et la date à laquelle il vous revient." />
       </Carte>
     </Page>

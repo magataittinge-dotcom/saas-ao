@@ -173,8 +173,16 @@ export const tuilesAffichees = (tuiles: FicheTuile[]): FicheTuile[] => tuiles.fi
 /** « 3 informations à renseigner dans Mon entreprise pour compléter cette fiche » ; chaîne vide quand il n'en reste aucune. */
 export function phraseARenseigner(n: number): { avant: string; lien: string; apres: string } | null {
   if (!(n > 0)) return null
-  return { avant: `${n} information${n > 1 ? 's' : ''} à renseigner dans `, lien: 'Mon entreprise', apres: ' pour compléter cette fiche' }
+  return { avant: `${n} information${n > 1 ? 's' : ''} à renseigner dans `, lien: 'Mon entreprise', apres: ' pour compléter cette fiche.' }
 }
+
+/**
+ * Le sous-titre de la page. La promesse « exactement ce que vous téléchargez » n'est écrite que lorsque l'aperçu exact (les
+ * pages rendues par le serveur) est à l'écran : avec l'aperçu simplifié, pendant l'attente ou après une panne, elle serait fausse.
+ */
+export const SOUS_TITRE_FICHE = 'Vos informations de «\u00a0Mon entreprise\u00a0», mises en page pour l’acheteur.'
+export const SOUS_TITRE_FICHE_EXACT = 'Ce que vous voyez dans l’aperçu est exactement ce que vous téléchargez. Les informations viennent de «\u00a0Mon entreprise\u00a0».'
+export const sousTitreFiche = (apercuExact: boolean): string => (apercuExact ? SOUS_TITRE_FICHE_EXACT : SOUS_TITRE_FICHE)
 
 export function pageEstimee(donnees: FicheDonnees, numero = 1): string {
   return `Page ${numero} / ${Math.max(donnees.pages, 1)}`

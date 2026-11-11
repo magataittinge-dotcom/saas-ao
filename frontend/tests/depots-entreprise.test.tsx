@@ -38,7 +38,8 @@ test('trois cases pour l’identité, trois pour les moyens, deux pour les certi
     for (const c of casesDeLaRubrique(CASES, rubrique)) {
       assert.ok(html.includes(c.nom.replace(/'/g, '&#x27;')), `nom de ${c.id}`)
       assert.ok(html.includes(c.contenu.replace(/'/g, '&#x27;').replace(/«/g, '«')), `ce qu’on y met : ${c.id}`)
-      assert.ok(html.includes(c.usage.replace(/'/g, '&#x27;')), `ce que Synorix en fera : ${c.id}`)
+      // jury, tour 1 : une ligne par dépôt ; ce que Synorix en fait est dit une fois, sous le titre de la section
+      assert.ok(!html.includes(c.usage.replace(/'/g, '&#x27;')), `plus de troisième niveau de texte (${c.id})`)
     }
     // une surface, une rangée par case : plus d'intitulés répétés, plus de zone en pointillés au repos
     assert.ok(!/Ce que vous y mettez|Ce que Synorix en fera/.test(html))
@@ -46,7 +47,9 @@ test('trois cases pour l’identité, trois pour les moyens, deux pour les certi
     assert.equal((html.match(/<article/g) ?? []).length, n)
     assert.equal((html.match(/type="file"/g) ?? []).length, n)
     assert.equal((html.match(/ multiple=""/g) ?? []).length, n, 'plusieurs fichiers par case')
-    assert.ok(html.includes('PDF, Word, Excel, JPEG, PNG · 20 Mo · plusieurs fichiers'))
+    // jury, tour 1 : les formats sont dits une fois pour la section (plus de note répétée par dépôt) ; la limite de poids est dite par le refus
+    assert.equal((html.match(/PDF, Word, Excel, JPEG ou PNG\./g) ?? []).length, 1)
+    assert.ok(!/\d+ Mo/.test(html))
     assert.ok(html.includes('accept=".pdf,.docx,.xlsx,.jpg,.jpeg,.png"'))
   }
 })

@@ -3,17 +3,30 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Bouton } from '@/components/ui/bouton'
+import { Message } from '@/components/ui/message'
 import type { RubriqueId } from '@/lib/entreprise/avancement'
 import { LIBELLE_FICHE, lienFiche } from '@/lib/fiche'
 
 export interface EtatEnregistrement { enCours: boolean; reussi: boolean; erreur: string | null }
 
+/**
+ * L'échec d'un enregistrement : un message du système (icône et phrase, jamais la couleur seule), sur toute la largeur,
+ * AU-DESSUS des boutons : il passe à la ligne au téléphone et ne pousse plus « Enregistrer » hors de l'écran. Il dit la
+ * seule chose que l'on se demande alors : ce qui a été saisi est toujours là.
+ */
+function Echec({ etat, className }: { etat: EtatEnregistrement; className?: string }) {
+  if (!etat.erreur) return null
+  return (
+    <Message ton="erreur" className={cn('basis-full', className)}>
+      {etat.erreur} Ce que vous avez saisi reste à l’écran : rien n’est perdu.
+    </Message>
+  )
+}
+
 function Actions({ rubrique, idFormulaire, etat }: { rubrique: RubriqueId; idFormulaire: string; etat: EtatEnregistrement }) {
   return (
-    <div className="flex shrink-0 flex-wrap items-center justify-end gap-x-3 gap-y-2">
-      <p role={etat.erreur ? 'alert' : 'status'} className={cn('max-w-md text-sm empty:hidden', etat.erreur ? 'font-medium text-rouge-ink' : 'text-fg-2')}>
-        {etat.erreur ?? (etat.reussi ? 'Modifications enregistrées' : null)}
-      </p>
+    <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
+      <p role="status" className="text-sm text-fg-2 empty:hidden">{etat.reussi && !etat.erreur ? 'Modifications enregistrées' : null}</p>
       <Bouton variante="secondaire" asChild><Link to={lienFiche(rubrique)}>{LIBELLE_FICHE}</Link></Bouton>
       <Bouton type="submit" form={idFormulaire} variante="principal" enCours={etat.enCours} libelleEnCours="Enregistrement…">Enregistrer</Bouton>
     </div>
@@ -45,6 +58,9 @@ export default function CadreFormulaire({ rubrique, titre, explication, etat, on
   const entete = useRef<HTMLDivElement>(null)
   const barre = useRef<HTMLDivElement>(null)
   const [colle, setColle] = useState(false)
+  // Le message d'échec s'affiche UNE fois, là où l'on a cliqué : près des boutons de l'en-tête (ou de leur copie collée),
+  // ou en bas du formulaire si c'est le bouton du bas qui a enregistré.
+  const [depuisLeBas, setDepuisLeBas] = useState(false)
 
   // La version collée n'apparaît qu'après avoir défilé sous l'en-tête. Un IntersectionObserver ne se déclenche qu'au franchissement
   // d'un seuil : « sous l'en-tête » (en haut) et « avant l'en-tête » (en bas) sont tous deux « hors de la zone », et un saut d'ancre
@@ -80,6 +96,7 @@ export default function CadreFormulaire({ rubrique, titre, explication, etat, on
         {colle && (
           <div ref={barre} data-barre-collee="" className="absolute inset-x-0 top-0 border-b border-bord bg-surface-page py-2">
             <div className="flex flex-wrap items-center justify-between gap-3">
+              {!depuisLeBas && <Echec etat={etat} />}
               <p className="text-base font-semibold text-fg">{titre}</p>
               <Actions rubrique={rubrique} idFormulaire={idFormulaire} etat={etat} />
             </div>
@@ -87,16 +104,28 @@ export default function CadreFormulaire({ rubrique, titre, explication, etat, on
         )}
       </div>
       <div ref={entete} className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
+        {!depuisLeBas && !colle && <Echec etat={etat} />}
         <div className="min-w-0 flex-1 basis-72">
-          <h2 id={idTitre} className="text-lg font-semibold text-fg">{titre}</h2>
+          <h2 id={idTitre} className="text-xl font-semibold text-fg">{titre}</h2>
           <p className="mt-1 max-w-prose text-sm text-fg-2">{explication}</p>
         </div>
         <Actions rubrique={rubrique} idFormulaire={idFormulaire} etat={etat} />
       </div>
       {avant && <div className="mt-6">{avant}</div>}
       {/* noValidate : jamais la bulle de validation du navigateur (elle parle sa langue, pas la nôtre) ; les refus viennent du serveur, en phrases */}
-      <form id={idFormulaire} noValidate onSubmit={(e) => { e.preventDefault(); onEnregistrer() }} className="mt-8 grid gap-10">
+      <form id={idFormulaire} noValidate onSubmit={(e) => {
+        e.preventDefault()
+        setDepuisLeBas(((e.nativeEvent as SubmitEvent).submitter as HTMLElement | null)?.dataset.bas !== undefined)
+        onEnregistrer()
+      }} className="mt-8 grid gap-10">
         {children}
+        {/* Fin du formulaire : « Enregistrer » est aussi là où la saisie s'achève (au téléphone, la page fait plusieurs
+            écrans). Au trait : l'aplat de l'écran reste celui de l'en-tête. */}
+        <div data-enregistrer-bas="" className="flex flex-wrap items-center justify-end gap-x-4 gap-y-3 border-t border-bord pt-6">
+          {depuisLeBas && <Echec etat={etat} />}
+          <p role="status" className="text-sm text-fg-2 empty:hidden">{etat.reussi && !etat.erreur ? 'Modifications enregistrées' : null}</p>
+          <Bouton type="submit" data-bas="" variante="secondaire" className="max-sm:w-full" enCours={etat.enCours} libelleEnCours="Enregistrement…">Enregistrer</Bouton>
+        </div>
       </form>
     </section>
   )

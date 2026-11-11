@@ -67,7 +67,7 @@ export default function ZoneBordereau(p: Props) {
         <Download aria-hidden />Télécharger la fiche<span className="font-normal">· {nomFormat}</span>
       </Bouton>
 
-      <h3 className="border-t border-bord pt-5 text-sm font-semibold text-fg">Personnaliser le bordereau</h3>
+      <h3 className="border-t border-bord pt-5 text-sm font-semibold text-fg">Personnaliser la fiche</h3>
 
       <div className="grid gap-4">
         <GroupeChamp libelle="Titre">
@@ -103,10 +103,10 @@ export default function ZoneBordereau(p: Props) {
               />
             </div>
             <div className="relative grid content-start justify-items-start gap-1.5" data-couleur="">
-              <span className={ETIQUETTE}>Couleur d’accent</span>
-              <Bouton variante="secondaire" aria-label={`Changer la couleur d’accent (${couleur})`} onClick={() => nuancier.current?.click()}>
+              <span className={ETIQUETTE}>Couleur</span>
+              <Bouton variante="secondaire" aria-label="Changer la couleur de la fiche" onClick={() => nuancier.current?.click()}>
                 <span aria-hidden className="size-5 shrink-0 rounded-md border border-bord" style={echantillon} />
-                <span className="chiffres font-medium">{couleur}</span>
+                <span className="font-medium">Changer</span>
               </Bouton>
               <Champ
                 ref={nuancier} type="color" value={couleur} tabIndex={-1} aria-hidden="true" className="sr-only bottom-0 left-0 size-px border-0 p-0"

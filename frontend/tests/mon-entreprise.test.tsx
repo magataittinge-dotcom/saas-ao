@@ -125,8 +125,10 @@ test('cartes : tabindex itinérant et clavier (flèches, Début, Fin) ; mêmes
 test('Identité : un seul champ « Nom de l’entreprise » et un seul bouton « Enregistrer » dans toute la page', () => {
   for (const large of [true, false]) {
     const html = pageCompany(large)
-    assert.equal(compte(html, /Nom de l’entreprise/g), 1, `nom (${large ? 'colonnes' : 'onglets'})`)
-    assert.equal(compte(html, />Enregistrer</g), 1, 'un seul Enregistrer')
+    assert.equal(compte(html, /<label[^>]*>Nom de l’entreprise</g), 1, `nom (${large ? 'colonnes' : 'onglets'})`)
+    // jury, tour 1 : « Enregistrer » est en haut (le seul aplat) et, au trait, à la fin du formulaire (la page fait plusieurs écrans au téléphone)
+    assert.equal(compte(html, />Enregistrer</g), 2, 'Enregistrer en haut et en bas')
+    assert.equal(compte(html, /data-variante="principal"/g), 1, 'un seul aplat')
     assert.equal(compte(html, /<form/g), 1, 'un seul formulaire')
     assert.ok(!html.includes('Ancien nom'), 'nom_entreprise du profil n’est plus montré')
   }
@@ -138,8 +140,9 @@ test('chaque rubrique : un seul formulaire et un seul bouton « Enregistrer �
   for (const el of [<FormIdentite donnees={DONNEES} />, <FormMoyens donnees={DONNEES} />, <FormCertifications donnees={DONNEES} />]) {
     const html = enveloppe(el)
     assert.equal(compte(html, /<form/g), 1)
-    assert.equal(compte(html, /type="submit"/g), 1)
-    assert.equal(compte(html, />Enregistrer</g), 1)
+    assert.equal(compte(html, /type="submit"/g), 2)
+    assert.equal(compte(html, />Enregistrer</g), 2)
+    assert.equal(compte(html, /data-variante="principal"/g), 1)
   }
 })
 
@@ -255,7 +258,7 @@ test('le chiffre d’affaires et l’effectif des exercices sont dans Certificat
   const identite = rendu(<FormIdentite donnees={DONNEES} />)
   const certifs = rendu(<FormCertifications donnees={DONNEES} />)
   assert.ok(!identite.includes('Effectif moyen annuel') && !identite.includes('Ajouter une année'))
-  assert.ok(certifs.includes('aria-label="Effectif moyen annuel"') && certifs.includes('Ajouter une année') && certifs.includes('value="1 100 000 €"'))
+  assert.ok(certifs.includes('aria-label="Exercice 1 : effectif moyen annuel"') && certifs.includes('Ajouter une année') && certifs.includes('value="1 100 000 €"'))
   assert.ok(INFORMATIONS.filter((i) => ['I20', 'I23'].includes(i.id)).every((i) => i.rubrique === 'certifications'))
 })
 
@@ -390,11 +393,11 @@ test('départements : codes séparés par des virgules ou des espaces, sans dou
 
 test('Moyens : les listes, les effectifs et les personnes clés s’affichent, sans nom de salarié demandé pour les effectifs', () => {
   const html = rendre(<QueryClientProvider client={new QueryClient()}><MemoryRouter><FormMoyens donnees={{ ...DONNEES, equipe: [{ id: 't1', name: 'Alex Exemple', role: 'Conducteur', specialite: 'Façades', experience_years: 12 }] }} /></MemoryRouter></QueryClientProvider>, true)
-  for (const t of ['Personnes clés', 'Effectif d’encadrement', 'Secouristes du travail (SST) : nombre', 'Chefs d’équipe par spécialité', 'Matériel', 'Véhicules', 'Organisation de la sécurité', 'Gestion et traitement des déchets', 'Ajouter une personne clé']) {
+  for (const t of ['Personnes clés', 'Effectif d’encadrement', 'Secouristes du travail (SST)', 'Chefs d’équipe par spécialité', 'Matériel', 'Véhicules', 'Organisation de la sécurité', 'Gestion et traitement des déchets', 'Ajouter une personne clé']) {
     assert.ok(html.includes(t), t)
   }
   assert.ok(html.includes('value="Alex Exemple"'))
-  assert.ok(html.includes('aucun nom de salarié n’est demandé'))
+  assert.ok(html.includes('Les effectifs se donnent en nombres, sans nom de salarié.'))
   assert.ok(!html.includes('Ouvriers et compagnons'), 'l’utile est replié')
 })
 

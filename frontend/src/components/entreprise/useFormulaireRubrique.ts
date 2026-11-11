@@ -19,6 +19,11 @@ export function useFormulaireRubrique(
   donnees: DonneesEntreprise,
   /** Écritures supplémentaires de la rubrique (listes : équipe, qualifications, références), faites au même « Enregistrer ». */
   listes?: { enregistrer: () => Promise<void>; invalider: string[] },
+  /**
+   * Dernière écriture de l'enregistrement, après celles du formulaire : le SIRET saisi sans passer par « Vérifier » (Identité).
+   * Si elle rend l'organisation à jour, c'est elle que l'écran garde (elle porte le SIRET, la réponse du PATCH ne le portait pas encore).
+   */
+  apres?: () => Promise<Organization | null>,
 ) {
   const queryClient = useQueryClient()
   const visage = useVisage()
@@ -30,6 +35,8 @@ export function useFormulaireRubrique(
   donneesRef.current = donnees
   const listesRef = useRef(listes)
   listesRef.current = listes
+  const apresRef = useRef(apres)
+  apresRef.current = apres
 
   useEffect(() => { setBrouillon(brouillonDepuis(rubrique, donneesRef.current)) }, [rubrique, donnees.profil, donnees.organisation])
 
@@ -41,6 +48,8 @@ export function useFormulaireRubrique(
       if (charge.organisation) organisation = (await api.patch<Organization>('/organizations/me', charge.organisation)).data
       if (charge.profil) profil = (await api.put<MemoireConfig>('/memoire-config', charge.profil)).data
       if (listesRef.current) await listesRef.current.enregistrer()
+      const apresSiret = await apresRef.current?.()
+      if (apresSiret) organisation = apresSiret
       return { organisation, profil }
     },
     onSuccess: ({ organisation, profil }) => {

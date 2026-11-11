@@ -131,7 +131,7 @@ test('S4 : les nouveaux libellés sont à l\'écran', () => {
     ['src/components/common/StatusBadge.tsx', 'À ranger'],
     ['src/lib/vault.ts', 'À ranger'],
     ['src/components/common/FileCard.tsx', 'Ranger'],
-    ['src/components/vault/ClassifyDocumentModal.tsx', 'Ranger le document'],
+    ['src/components/vault/ClassifyDocumentModal.tsx', 'Ranger la pièce'],
     ['src/components/company/ProfileFreeTextCard.tsx', 'Décrire avec vos mots'],
     ['src/routes/project/StepExport.tsx', 'Voir le mémoire'],
   ]
