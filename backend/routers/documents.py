@@ -110,6 +110,9 @@ async def upload_document(
     if upload_validation.extension_of(file.filename or "") in depot_cases.ANCIENS_FORMATS:
         # .doc / .xls : refusés quel que soit leur contenu, comme dans « Mon entreprise » (pas de requalification d'un zip renommé)
         raise HTTPException(status_code=415, detail=depot_cases.MESSAGE_ANCIEN_FORMAT)
+    # S-06 — quota de stockage de l'organisation et garde du disque, avant d'écrire.
+    from services import stockage
+    stockage.verifier_avant_depot(db, user.organization_id, request)
     with await upload_validation.recevoir_fichier(request, file, regle) as recu:
         total = recu.taille
         # Mêmes contrôles de contenu que les dépôts de « Mon entreprise » (type réel, macros, ActiveX, modèles externes,

@@ -108,6 +108,9 @@ async def deposer(
             detail=f"{depot_cases.MAX_FICHIERS_PAR_ENVOI} fichiers au plus par envoi.")
 
     org_id = user.organization_id
+    # S-06 — quota de stockage de l'organisation et garde du disque, avant d'écrire.
+    from services import stockage
+    stockage.verifier_avant_depot(db, org_id, request)
     depot_budget.reprendre_differees(db, org_id)     # les fichiers plus anciens passent avant ceux-ci
     resultats: list[dict] = []
     total_octets = 0
