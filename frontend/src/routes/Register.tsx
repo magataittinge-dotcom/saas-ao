@@ -1,18 +1,25 @@
 import { SignUp } from '@clerk/clerk-react'
-import CoquillePublique from '@/components/public/CoquillePublique'
-import { AttenteClerk } from '@/components/public/AttenteClerk'
+import { Link } from 'react-router-dom'
+import EcranCompte, { VerificationHumaine } from '@/components/public/EcranCompte'
+
+const LIEN = 'font-medium text-accent-text underline underline-offset-4'
 
 /**
- * Inscription : la carte Clerk habillée aux jetons (lib/clerkApparence.ts), dans la coquille du site. Le titre de la carte
- * est le `h1` de l'écran ; l'offre (« Votre premier appel d'offres est offert. ») est sa sous-ligne. Aucun slogan.
+ * Inscription : le titre de la page et l'offre (« Votre premier appel d'offres est offert. ») à gauche, la carte Clerk
+ * habillée aux jetons à droite (components/public/EcranCompte.tsx). Pendant la vérification anti-robot, la page garde sa
+ * coquille et son titre et dit ce qui se passe. Sous la carte : les conditions que l'on accepte en créant le compte.
  */
 export default function Register() {
   return (
-    <CoquillePublique>
-      <div className="grid justify-items-center pt-4 sm:pt-10">
-        <AttenteClerk />
-        <SignUp routing="path" path="/register" signInUrl="/login" />
-      </div>
-    </CoquillePublique>
+    <EcranCompte titre="Créer votre compte Synorix" sousTitre="Votre premier appel d’offres est offert."
+      sousLeTitre={<VerificationHumaine />}
+      sousCarte={(
+        <p className="text-xs text-fg-2">
+          En créant votre compte, vous acceptez les <Link to="/legal/cgu" className={LIEN}>conditions d’utilisation</Link> et
+          la <Link to="/legal/politique-confidentialite" className={LIEN}>politique de confidentialité</Link>.
+        </p>
+      )}>
+      <SignUp routing="path" path="/register" signInUrl="/login" />
+    </EcranCompte>
   )
 }

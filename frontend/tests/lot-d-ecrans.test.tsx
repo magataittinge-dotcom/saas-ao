@@ -117,13 +117,15 @@ test('pages juridiques : une panne de lecture dit l’erreur et propose « Rées
 })
 
 test('connexion : la carte Clerk dans la coquille du site, sans slogan ; session expirée (F-01) : la phrase, puis le retour à la page d’origine', () => {
+  const ecran = sansCommentaires(lire('src/components/public/EcranCompte.tsx'))
+  assert.match(ecran, /<CoquillePublique>/)
   for (const f of ['src/routes/Login.tsx', 'src/routes/Register.tsx']) {
     const src = sansCommentaires(lire(f))
-    assert.match(src, /<CoquillePublique>/, f)
+    assert.match(src, /<EcranCompte /, f)
     assert.doesNotMatch(src, /10×|plus vite|#[0-9A-Fa-f]{6}\b|style=\{\{|appearance=/, `${f} : ni slogan chiffré, ni couleur en dur, ni second habillage de Clerk`)
   }
   // jamais une page blanche : la coquille tout de suite, un squelette à la place de la carte, l'échec de Clerk dit
-  for (const f of ['src/routes/Login.tsx', 'src/routes/Register.tsx']) assert.match(sansCommentaires(lire(f)), /<AttenteClerk \/>/, f)
+  assert.match(ecran, /<AttenteClerk \/>/)
   const attente = sansCommentaires(lire('src/components/public/AttenteClerk.tsx'))
   assert.match(attente, /<ClerkLoading>[\s\S]*<Squelette/)
   assert.match(attente, /<ClerkFailed>[\s\S]*<EtatErreur[\s\S]*onReessayer/)
