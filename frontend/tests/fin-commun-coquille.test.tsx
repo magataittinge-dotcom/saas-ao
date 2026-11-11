@@ -83,3 +83,36 @@ test('barre latérale : le survol ne pose plus de fond (deux entrées semblaient
   assert.match(rail, /actif \? 'bg-surface-1 text-fg' : 'text-fg-2 hover:text-fg'/)
   assert.match(lire('src/styles/theme.css'), /--scrim: rgba\(6, 22, 32, \.52\);/, 'écrit par scripts/palette-visage.mjs')
 })
+
+// ── Le panneau des notifications ──
+import { accorder, quandNotification } from '@/components/layout/NotificationBell'
+
+test('notifications : les pluriels entre parenthèses et les accords faux du serveur sont accordés à l\'affichage', () => {
+  assert.equal(accorder('605 exigence(s) extraite(s)'), '605 exigences extraites')
+  assert.equal(accorder('1 exigence(s) extraite(s) et 2 lot(s) à relancer'), '1 exigence extraite et 2 lots à relancer')
+  assert.equal(accorder('Remise dans 1 jours'), 'Remise dans 1 jour')
+  assert.equal(accorder('AO Mairie — remise dans 3 jours'), 'AO Mairie — remise dans 3 jours')
+  assert.equal(accorder('Analyse terminée'), 'Analyse terminée')
+})
+
+test('notifications : la date en mots entiers ; au-delà d\'une semaine, le jour (« 3 nov. »)', () => {
+  const maintenant = Date.parse('2026-11-11T10:00:00+01:00')
+  const ilYA = (ms: number) => quandNotification(new Date(maintenant - ms).toISOString(), maintenant)
+  assert.equal(ilYA(20_000), 'à l’instant')
+  assert.equal(ilYA(12 * 60_000), 'il y a 12 min')
+  assert.equal(ilYA(3 * 3_600_000), 'il y a 3 h')
+  assert.equal(ilYA(26 * 3_600_000), 'hier')
+  assert.equal(ilYA(4 * 86_400_000), 'il y a 4 jours')
+  assert.match(ilYA(8 * 86_400_000), /^3 nov\.?$/)
+  assert.doesNotMatch(ilYA(15 * 86_400_000), / j$/)
+  const code = sansCommentaires(lire('src/components/layout/NotificationBell.tsx'))
+  assert.match(code, />Tout marquer comme lu</)
+  assert.match(code, /'line-clamp-2 text-sm'/)
+  assert.doesNotMatch(code, /line-clamp-2 block/, '`block` annule la coupe à deux lignes')
+})
+
+test('infobulle : un trait d\'un pixel, pas d\'ombre grise diffuse', () => {
+  const t = sansCommentaires(lire('src/components/ui/tooltip.tsx'))
+  assert.match(t, /border-bord-2 bg-surface-pop/)
+  assert.doesNotMatch(t, /shadow-toast|shadow-pop/)
+})
