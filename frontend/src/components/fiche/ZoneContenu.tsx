@@ -1,12 +1,10 @@
 // « Ce qu'il y a dans la fiche » : à quoi elle sert, ses sections avec « Prête » ou « À renseigner », et le lien qui ouvre
 // le bon champ de Mon entreprise. Une surface, une rangée par section ; l'état se lit au mot et à l'icône, jamais à la
 // couleur seule : vert pour « Prête », gris pour une section à renseigner (ce n'est pas une alerte : l'ambre est gardé pour
-// ce qui est à surveiller). Puis les lignes libres (du contenu ajouté à une section) et les cases de dépôt de la rubrique
-// (les mêmes que dans Mon entreprise) : ce qui est validé
-// entre dans le profil, et l'aperçu se refait.
+// ce qui est à surveiller). Puis les lignes libres (du contenu ajouté à une section) et un lien vers les dépôts de
+// Mon entreprise (ils ne sont pas recopiés ici : cette page sert à télécharger).
 import { Link } from 'react-router-dom'
 import { Plus, X } from 'lucide-react'
-import CasesDepot from '@/components/entreprise/CasesDepot'
 import { Bouton, BoutonIcone, classesBouton } from '@/components/ui/bouton'
 import { Champ } from '@/components/ui/champ'
 import { ListeDeroulante } from '@/components/ui/liste-deroulante'
@@ -17,7 +15,7 @@ import { MAX_LIGNES_LIBRES, type FicheDonnees, type FicheSection, type LigneLibr
 
 /**
  * Les lignes libres : une ligne de texte ajoutée à une section de la fiche (un engin, une précision). C'est du contenu :
- * elles se posent sous la liste des sections ; elles s'enregistrent avec le bordereau (la page) et l'aperçu se refait.
+ * elles se posent sous la liste des sections ; elles s'enregistrent avec les réglages de la fiche (la page) et l'aperçu se refait.
  * À l'ordinateur, une ligne tient sur une rangée (section, libellé, texte, retirer) ; au téléphone, elle s'empile.
  */
 export function LignesLibres({ libres, sections, onChange }: {
@@ -53,14 +51,12 @@ export function LignesLibres({ libres, sections, onChange }: {
   )
 }
 
-export default function ZoneContenu({ rubrique, donnees, libres, onLibres, apresValidation }: {
+export default function ZoneContenu({ rubrique, donnees, libres, onLibres }: {
   rubrique: RubriqueFiche
   donnees: FicheDonnees
   libres: LigneLibre[]
   /** Une ligne libre ajoutée, modifiée ou retirée (la page l'enregistre avec le bordereau). */
   onLibres: (lignes: LigneLibre[]) => void
-  /** Des propositions viennent d'entrer dans le profil : la page recharge les données de la fiche (l'aperçu suit). */
-  apresValidation?: () => void
 }) {
   const lignes = contenuDeLaFiche(rubrique, donnees, libres)
   return (
@@ -77,7 +73,8 @@ export default function ZoneContenu({ rubrique, donnees, libres, onLibres, apres
                 <span className="min-w-0 flex-1 basis-full text-sm font-medium text-fg sm:basis-48">
                   {l.numero && <span className="chiffres mr-2 text-fg-3" aria-hidden>{l.numero}</span>}{l.titre}
                 </span>
-                <PastilleEtat sens={prete ? 'vert' : 'gris'}>{LIBELLE_ETAT[l.etat]}</PastilleEtat>
+                {/* l'état ne se dit qu'une fois : « Prête » en pastille ; une section à renseigner n'a que son lien « Renseigner » */}
+                {prete && <PastilleEtat sens="vert">{LIBELLE_ETAT[l.etat]}</PastilleEtat>}
                 <Link to={l.lien} aria-label={`${prete ? 'Modifier' : 'Renseigner'} : ${l.titre}`} className={classesBouton('lien', 'ml-auto min-h-11 text-sm')}>
                   {prete ? 'Modifier' : 'Renseigner'}
                 </Link>
@@ -86,7 +83,11 @@ export default function ZoneContenu({ rubrique, donnees, libres, onLibres, apres
           })}
         </ul>
         <LignesLibres libres={libres} sections={donnees.sections.map(({ id, titre }) => ({ id, titre }))} onChange={onLibres} />
-        <CasesDepot rubrique={rubrique} apresValidation={apresValidation} disposition="colonne" />
+        {/* Les dépôts (Kbis, attestations…) se font dans Mon entreprise : la page du téléchargement ne les recopie pas. */}
+        <p className="text-sm text-fg-2" data-depots-ailleurs="">
+          Un Kbis ou une attestation à ajouter ?{' '}
+          <Link to={`/company?rubrique=${rubrique}`} className="font-medium text-accent-text underline-offset-4 hover:underline">Déposer une pièce dans Mon entreprise</Link>
+        </p>
       </div>
     </section>
   )
