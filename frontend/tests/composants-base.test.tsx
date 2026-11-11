@@ -228,7 +228,7 @@ test('Message : une icône, une phrase, une action ; annoncé ; pas de bordure l
   assert.doesNotMatch(html, /border-l-|border-r-/)
   assert.match(r(<Message ton="succes">Enregistré.</Message>), /role="status"/)
   const echec = r(<EchecAction message="La lecture n’a pas pu démarrer." onReessayer={() => {}} />)
-  assert.match(echec, /data-message="attention"/)
+  assert.match(echec, /data-message="erreur"/) // un échec est rouge (jury, tour 1)
   assert.match(echec, />Réessayer</)
 })
 

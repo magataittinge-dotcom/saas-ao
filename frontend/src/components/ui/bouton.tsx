@@ -44,6 +44,14 @@ export interface BoutonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   asChild?: boolean
 }
 
+/**
+ * L'aplat cédé (jury, tour 1) : quand l'état d'un AO n'admet qu'une action (remise passée : « Mettre à jour le statut »), la
+ * page de l'AO porte l'aplat et l'étape le lui cède : sous `<AplatCede.Provider value>`, un bouton `principal` se dessine au
+ * trait (`data-variante="secondaire"`, `data-aplat-cede`). Un dialogue, un tiroir ou un menu ouvert depuis l'étape remet la
+ * valeur à faux : sa confirmation reste un aplat.
+ */
+export const AplatCede = React.createContext(false)
+
 /** Compte les actions principales montées par l'écran (P1) : la barre du haut s'y règle. */
 function useAplat(actif: boolean, suite: boolean) {
   const declarer = useUIStore((s) => s.declarerAplat)
@@ -55,12 +63,14 @@ function useAplat(actif: boolean, suite: boolean) {
 }
 
 export const Bouton = React.forwardRef<HTMLButtonElement, BoutonProps>(
-  ({ className, variante = 'secondaire', enCours = false, libelleEnCours, large, suite = false, coquille = false, asChild = false, disabled, children, type, ...props }, ref) => {
+  ({ className, variante: demandee = 'secondaire', enCours = false, libelleEnCours, large, suite = false, coquille = false, asChild = false, disabled, children, type, ...props }, ref) => {
+    const cede = React.useContext(AplatCede) && demandee === 'principal' && !coquille
+    const variante: VarianteBouton = cede ? 'secondaire' : demandee
     useAplat(variante === 'principal' && !coquille, suite)
     const classes = classesBouton(variante, cn(large && 'w-full', className))
-    if (asChild) return <Slot ref={ref} data-variante={variante} className={classes} {...props}>{children}</Slot>
+    if (asChild) return <Slot ref={ref} data-variante={variante} data-aplat-cede={cede ? '' : undefined} className={classes} {...props}>{children}</Slot>
     return (
-      <button ref={ref} type={type ?? 'button'} data-variante={variante} className={classes} disabled={disabled || enCours} aria-busy={enCours || undefined} {...props}>
+      <button ref={ref} type={type ?? 'button'} data-variante={variante} data-aplat-cede={cede ? '' : undefined} className={classes} disabled={disabled || enCours} aria-busy={enCours || undefined} {...props}>
         {enCours && libelleEnCours ? libelleEnCours : children}
       </button>
     )
