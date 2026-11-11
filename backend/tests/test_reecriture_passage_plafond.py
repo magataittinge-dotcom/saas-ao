@@ -124,4 +124,5 @@ def test_la_barre_de_l_editeur_annonce_le_meme_plafond_que_le_serveur():
     from routers.memoire import REECRIRE_MAX_PAR_JOUR
     barre = (RACINE / "frontend/src/components/project/RewritePassageBar.tsx").read_text(encoding="utf-8")
     assert f"PLAFOND_PAR_JOUR = {REECRIRE_MAX_PAR_JOUR}" in barre
-    assert "ne décompte aucune unité" in barre
+    # La phrase a été récrite par la passe du jury (lot b2) : même promesse, autre tournure.
+    assert "aucune unité n’est décomptée" in barre
