@@ -1056,6 +1056,8 @@ def export_memoire_pdf(
     org = db.query(Organization).filter(Organization.id == user.organization_id).first()
 
     docx_bytes = build_project_memoire_docx(project, memoire, org, db)
+    nom = f"Memoire_Technique_{project.name.replace(' ', '_')}.pdf"
+    rendre_connexion(db)                       # avant LibreOffice : jamais une connexion prise pendant la conversion
     try:
         pdf_bytes = docx_to_pdf(docx_bytes)
     except PdfConversionError as exc:
@@ -1063,13 +1065,7 @@ def export_memoire_pdf(
         raise HTTPException(status_code=503, detail=str(exc),
                             headers={"Retry-After": str(exc.retry_apres_s)})
 
-    reponse = _attachment_response(
-        pdf_bytes,
-        f"Memoire_Technique_{project.name.replace(' ', '_')}.pdf",
-        "application/pdf",
-    )
-    rendre_connexion(db)
-    return reponse
+    return _attachment_response(pdf_bytes, nom, "application/pdf")
 
 
 @router.patch("/{project_id}/memoire", response_model=MemoireResponse)
