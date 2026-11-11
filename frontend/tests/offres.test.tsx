@@ -9,13 +9,13 @@ import GrilleOffres from '@/components/offres/GrilleOffres'
 import { ESSAI, OFFRES, nomPlan, prixLibelle, quotaLibelle } from '@/lib/offres'
 import { RACINE, fichiersSource, lire, sansCommentaires } from './outils/sources'
 
-test('la grille décidée le 2026-10-22', () => {
+test('la grille décidée le 2026-11-11 : plus aucune offre illimitée, prix inchangés', () => {
   assert.deepEqual(
     OFFRES.map((o) => [o.id, o.nom, o.prixMensuelHT, o.analysesParMois, o.memoiresParMois]),
     [
       ['essentiel', 'Essentiel', 149, 5, 5],
-      ['pro', 'Pro', 349, 40, 40],
-      ['business', 'Business', 599, null, null],
+      ['pro', 'Pro', 349, 30, 30],
+      ['business', 'Business', 599, 70, 70],
     ],
   )
   assert.deepEqual({ ...ESSAI }, { ao: 1, analyses: 1, memoires: 1 })
@@ -49,7 +49,9 @@ test('la grille affichée : 3 offres avec prix et quotas, aucune mention d\'util
     assert.ok(html.includes(quotaLibelle(o)), quotaLibelle(o))
   }
   assert.ok(html.includes('5 analyses + 5 mémoires par mois'))
-  assert.ok(html.includes('Analyses et mémoires illimités'))
+  assert.ok(html.includes('30 analyses + 30 mémoires par mois'))
+  assert.ok(html.includes('70 analyses + 70 mémoires par mois'))
+  assert.doesNotMatch(html, /illimit|usage raisonnable/i)
   assert.doesNotMatch(html, /utilisateur/i)
 })
 

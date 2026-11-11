@@ -45,8 +45,8 @@ def advisory_org_lock(db: Session, org_id: str) -> None:
 PLAN_LIMITS: dict = {
     "free": {"analysis": 1, "memoire": 1, "monthly": False},
     "essentiel": {"analysis": 5, "memoire": 5, "monthly": True},
-    "pro": {"analysis": 40, "memoire": 40, "monthly": True},
-    "business": {"analysis": None, "memoire": None, "monthly": True},
+    "pro": {"analysis": 30, "memoire": 30, "monthly": True},
+    "business": {"analysis": 70, "memoire": 70, "monthly": True},
 }
 
 _NOMS_OFFRES = {"essentiel": "Essentiel", "pro": "Pro", "business": "Business"}
