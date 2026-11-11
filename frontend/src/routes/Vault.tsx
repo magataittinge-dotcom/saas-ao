@@ -186,7 +186,7 @@ export default function Vault() {
           erreur={(
             <EtatErreur
               titre="Le coffre-fort n’a pas pu s’ouvrir"
-              detail="La connexion au serveur a échoué. Vos pièces sont toujours là : rien n’a été modifié."
+              detail={<span className="block text-pretty">La connexion au serveur a échoué. Vos pièces sont toujours là : rien n’a été modifié.</span>}
               onReessayer={() => { void requete.refetch() }}
               enCours={requete.isFetching}
             />

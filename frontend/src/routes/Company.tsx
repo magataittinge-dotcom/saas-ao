@@ -95,7 +95,7 @@ export default function Company() {
           erreur={(
             <EtatErreur
               titre="Vos informations n’ont pas pu s’afficher"
-              detail="La connexion au serveur a échoué. Vos informations sont toujours enregistrées : rien n’a été modifié."
+              detail={<span className="block text-pretty">La connexion au serveur a échoué. Vos informations sont toujours enregistrées : rien n’a été modifié.</span>}
               onReessayer={donnees.recharger}
               enCours={donnees.rechargement}
             />

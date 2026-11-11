@@ -216,7 +216,7 @@ export default function Billing() {
         erreur={(
           <EtatErreur
             titre="Les unités du mois n’ont pas pu se charger"
-            detail="La connexion au serveur a échoué. Rien n’est modifié : votre abonnement et vos unités restent tels quels."
+            detail={<span className="block text-pretty">La connexion au serveur a échoué. Rien n’est modifié : votre abonnement et vos unités restent tels quels.</span>}
             onReessayer={() => { void quota.refetch() }}
             enCours={quota.isFetching}
           />

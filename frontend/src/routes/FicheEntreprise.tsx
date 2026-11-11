@@ -61,7 +61,12 @@ const corpsEnregistre = (b: FicheBordereau) => ({
 function SqueletteFiche() {
   return (
     <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem]">
-      <Squelette className="aspect-[210/297] w-full rounded-md" />
+      {/* la feuille qui arrive : son cadre et quelques lignes, pas un aplat gris de la taille d'une page */}
+      <div className="grid aspect-[210/297] w-full content-start gap-4 rounded-md border border-bord bg-surface-0 p-8 shadow-card max-sm:p-5">
+        <Squelette className="h-10 w-2/3 justify-self-end" />
+        <SqueletteLignes lignes={3} className="mt-6 max-w-md" />
+        <SqueletteLignes lignes={3} className="mt-4 max-w-md" />
+      </div>
       <div className="grid content-start gap-4">
         <SqueletteLignes lignes={2} />
         <Squelette className="h-11 rounded-lg" />
@@ -201,7 +206,7 @@ function Fiche({ rubrique }: { rubrique: RubriqueFiche }) {
         erreur={(
           <EtatErreur
             titre="La fiche n’a pas pu se charger"
-            detail="La connexion au serveur a échoué. Vos informations et vos réglages sont toujours enregistrés."
+            detail={<span className="block text-pretty">La connexion au serveur a échoué. Vos informations et vos réglages sont toujours enregistrés.</span>}
             onReessayer={() => { void refetch() }}
             enCours={isFetching}
           />
