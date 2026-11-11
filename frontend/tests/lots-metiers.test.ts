@@ -60,8 +60,10 @@ test('la carte d’un lot : case visible de 44 px, numéro, désignation, métie
   assert.match(code, /Métiers? reconnus?/)
   assert.match(code, /pièces lues' : 'pièce lue'/)
   assert.match(code, /\{voirPieces \? 'Masquer' : 'Voir'\}/)
-  assert.match(code, /<EtatElement\s+etat=\{aVerifier \? 'a-verifier' : 'pret'\}/)
-  assert.match(code, /<BoutonSecondaire libelle="Retour"/)
+  // FIN-B1 : une liste ne marque que l'exception ; plus de « Prêt » ni de « Source : … » sur chaque lot
+  assert.doesNotMatch(code, /<EtatElement|'pret'/)
+  assert.match(code, /\{aVerifier && \(\s*<span data-etat="a-verifier"/)
+  assert.doesNotMatch(code, /libelle="Retour"/, 'FIN-B1 : la barre du bas ne porte que l’action de l’étape (au téléphone) ; le fil des étapes ramène au dépôt')
   assert.doesNotMatch(code, /AiTipsBlock|Vérifiez que tous les lots/, 'plus de bandeau qui double « Ajouter un lot »')
   assert.match(code, /Ajouter un lot à la main/)
 })

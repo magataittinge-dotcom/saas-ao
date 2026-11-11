@@ -11,7 +11,6 @@ import { EffacerFiltres, PuceFiltre } from '@/components/ui/filtre'
 import { ListeDeroulante } from '@/components/ui/liste-deroulante'
 import { Message } from '@/components/ui/message'
 import { PastilleEtat } from '@/components/ui/pastille'
-import { Squelette } from '@/components/ui/squelette'
 import { Tableau, type ColonneTableau } from '@/components/ui/tableau'
 import { annoncer } from '@/components/ui/toast'
 import { cn } from '@/lib/utils'
@@ -21,7 +20,9 @@ import { CarteAO30sVue, useFaitsAO } from '@/components/project/CarteAO30s'
 import PointsAEclaircir from '@/components/project/PointsAEclaircir'
 import AVerifierAvantEngagement from '@/components/project/AVerifierAvantEngagement'
 import { voirTresorerie } from '@/components/project/TresorerieCard'
-import { GabaritEtape, BandeResume, SectionEtape, BarreEtape, ActionsBarre, ActionsBarreTel, BilanBarre, BoutonSuite } from '@/components/etape'
+import { GabaritEtape, BandeResume, SectionEtape, BarreEtape, ActionsBarre, ActionsBarreTel, BilanBarre, BoutonSuite, SqueletteCorpsEtape } from '@/components/etape'
+import { enumerer } from '@/components/etape/LectureNonFaite'
+import { EtapeSansAnalyse } from '@/components/project/EtapeSansAnalyse'
 import { cartesResumeAO, pointsAVerifier, type DateQuestions } from '@/lib/resumeAO'
 import TresorerieCard from '@/components/project/TresorerieCard'
 import SynorixScoreCard from '@/components/project/SynorixScoreCard'
@@ -59,6 +60,9 @@ const CATEGORY_ORDER: ComplianceCategory[] = [
   'candidature', 'offre', 'technique', 'planning', 'criteres_notation',
 ]
 
+/** Ce que l'écran montrera une fois l'analyse faite (état « analyse non faite »). */
+const VIENDRA = ['La décision', 'Ce qui est à vérifier avant de vous engager', 'Le détail des exigences']
+
 interface Props { project: Project }
 type FilterCategory = 'all' | ComplianceCategory
 
@@ -74,7 +78,7 @@ export default function StepAnalysis({ project }: Props) {
   const { mutate: completeStep, isPending: isValidating } = useCompleteStep(project.id)
 
   // Charger les documents du projet pour l'ouverture de la source
-  const { data: projectDocs = [] } = useQuery({
+  const { data: projectDocs = [], isSuccess: documentsLus } = useQuery({
     queryKey: ['project-documents', project.id],
     queryFn: async () => {
       const { data } = await api.get<ProjectDocument[]>(`/projects/${project.id}/documents`)
@@ -264,10 +268,10 @@ export default function StepAnalysis({ project }: Props) {
   // ── Chargement, puis erreur (jamais « Analyse… 0 % » quand le serveur ne répond pas), puis les états de la lecture ──
   if (isLoading) return (
     <GabaritEtape titre={TITRE} utilite={UTILITE}>
-      <div aria-busy="true" className="grid gap-6">
-        <Squelette className="h-32 w-full rounded-carte" />
-        <Squelette className="h-56 w-full rounded-carte" />
-        <Squelette className="h-56 w-full rounded-carte" />
+      {/* Le squelette du gabarit (une surface au trait, des lignes de longueur de phrase) et ce que Synorix fait : jamais trois pavés muets. */}
+      <div role="status" aria-busy="true" className="space-y-4">
+        <p className="text-sm text-fg-2">Synorix ouvre l’analyse du dossier.</p>
+        <SqueletteCorpsEtape cases={2} />
       </div>
     </GabaritEtape>
   )
@@ -276,7 +280,7 @@ export default function StepAnalysis({ project }: Props) {
     <GabaritEtape titre={TITRE} utilite={UTILITE}>
       <EtatErreur
         titre="L’analyse du dossier n’a pas pu se charger"
-        detail="Les exigences relevées dans le dossier n’ont pas pu être lues. Votre dossier et son analyse ne sont pas touchés."
+        detail="Les exigences relevées dans le dossier n’ont pas pu être lues. Votre dossier et son analyse restent en place."
         onReessayer={() => { void requeteExigences.refetch() }}
         enCours={requeteExigences.isFetching}
       />
@@ -314,7 +318,18 @@ export default function StepAnalysis({ project }: Props) {
     </GabaritEtape>
   )
 
-  // B1 — aucun traitement en cours, aucune analyse : la lecture n'a pas démarré (lancement en échec).
+  // Un AO sans dossier déposé : rien à analyser, rien à relancer (jury, tour 1 : un AO neuf affichait un dossier
+  // « enregistré » et un bouton pour relancer). Synorix le dit, avec le seul geste juste : déposer le dossier. Sans attendre le délai de grâce.
+  const sansDepot = documentsLus && projectDocs.length === 0
+  if (items.length === 0 && sansDepot && !analysisRunning) return (
+    <GabaritEtape titre={TITRE} utilite={UTILITE}>
+      <EtapeSansAnalyse project={project} cas="sans-depot" viendra={VIENDRA}>
+        Aucun dossier n’est déposé pour cet appel d’offres. {enumerer(VIENDRA)} s’afficheront ici une fois le dossier analysé.
+      </EtapeSansAnalyse>
+    </GabaritEtape>
+  )
+
+  // B1 — le dossier est déposé, aucune analyse ne tourne : elle n'a pas été lancée (ou son lancement a échoué). Le geste : choisir les lots.
   if (lectureNonDemarree({
     nbExigences: items.length,
     statutTraitement: project.processing_status,
@@ -322,11 +337,9 @@ export default function StepAnalysis({ project }: Props) {
     donneesAJour: delaiDeGracePasse && !projetEnRelecture,
   })) return (
     <GabaritEtape titre={TITRE} utilite={UTILITE}>
-      <EtatVide
-        titre="L’analyse n’a pas démarré"
-        phrase="Le dossier est bien enregistré, mais aucune analyse n’est en cours. Relancez-la depuis le choix des lots."
-        action={<Bouton variante="secondaire" onClick={() => navigate(`/projects/${project.id}/lots`)}>Relancer</Bouton>}
-      />
+      <EtapeSansAnalyse project={project} cas="analyse-non-lancee" viendra={VIENDRA}>
+        Le dossier est déposé, son analyse n’est pas encore lancée. {enumerer(VIENDRA)} s’afficheront ici une fois l’analyse faite.
+      </EtapeSansAnalyse>
     </GabaritEtape>
   )
 

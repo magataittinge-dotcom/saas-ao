@@ -9,12 +9,14 @@ import CandidatureSectionVault from '@/components/project/CandidatureSectionVaul
 import CandidatureSectionTemplates from '@/components/project/CandidatureSectionTemplates'
 import { ActionsBarre, BilanBarre, BoutonSuite } from '@/components/project/BarreEtape'
 import { GabaritEtape, BandeResume, BarreEtape, SectionEtape, EtatElement } from '@/components/etape'
+import { EtapeSansAnalyse } from '@/components/project/EtapeSansAnalyse'
+import { SqueletteListe } from '@/components/project/SqueletteListe'
+import { actionEtape } from '@/lib/intelligence/action'
 import { Bouton } from '@/components/ui/bouton'
 import { Carte } from '@/components/ui/carte'
-import { EtatErreur, EtatVide } from '@/components/ui/etats'
+import { EtatErreur } from '@/components/ui/etats'
 import { Message } from '@/components/ui/message'
 import { PastilleEtat } from '@/components/ui/pastille'
-import { Squelette } from '@/components/ui/squelette'
 import EntreeFichier from '@/components/depot/EntreeFichier'
 import { cn } from '@/lib/utils'
 import { cartesPieces, comptesDetailles, phraseComptes, phrasePiecesAutres } from '@/lib/resumePieces'
@@ -199,12 +201,7 @@ export default function StepVerification({ project }: Props) {
   // ── Chargement → erreur → rien à montrer → contenu (une erreur n'est jamais « le dossier n'est pas lu ») ──
   if (isLoading) return (
     <GabaritEtape titre={TITRE} utilite={UTILITE}>
-      <div aria-busy="true" className="grid gap-6">
-        <Squelette className="h-32 w-full rounded-carte" />
-        <div className="grid gap-3.5 md:grid-cols-2">
-          {[0, 1, 2, 3].map((i) => <Squelette key={i} className="h-28 rounded-carte" />)}
-        </div>
-      </div>
+      <div aria-busy="true"><SqueletteListe phrase="Synorix ouvre la liste des pièces demandées par le règlement." /></div>
     </GabaritEtape>
   )
 
@@ -212,7 +209,7 @@ export default function StepVerification({ project }: Props) {
     <GabaritEtape titre={TITRE} utilite={UTILITE}>
       <EtatErreur
         titre="Les pièces n’ont pas pu se charger"
-        detail="La liste des pièces demandées par le règlement n’a pas pu être lue. Vos pièces et votre coffre-fort ne sont pas touchés."
+        detail="La liste des pièces demandées par le règlement n’a pas pu être lue. Vos pièces et votre coffre-fort restent en place."
         onReessayer={() => { void requetePieces.refetch() }}
         enCours={requetePieces.isFetching}
       />
@@ -222,11 +219,10 @@ export default function StepVerification({ project }: Props) {
   // La liste des pièces est établie par Synorix à la fin de la lecture du dossier : vide, c'est que le dossier n'est pas lu.
   if (items.length === 0) return (
     <GabaritEtape titre={TITRE} utilite={UTILITE}>
-      <EtatVide
-        titre="Les pièces à réunir apparaîtront ici"
-        phrase={<>Synorix les relève dans le règlement à l’analyse du <Sigle code="DCE" />.</>}
-        action={<Bouton variante="secondaire" onClick={() => navigate(`/projects/${project.id}/lots`)}>Analyser le dossier</Bouton>}
-      />
+      {/* Le même état que Lots et Décider d'un AO sans analyse : Synorix le dit, une action, celle qui fait avancer l'AO. */}
+      <EtapeSansAnalyse project={project} cas={actionEtape(project).segment === 'upload' ? 'sans-depot' : 'analyse-non-lancee'} viendra={['Les pièces à réunir']}>
+        Les pièces à réunir apparaîtront ici : Synorix les relève dans le règlement pendant l’analyse du dossier.
+      </EtapeSansAnalyse>
     </GabaritEtape>
   )
 
