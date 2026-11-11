@@ -236,7 +236,7 @@ async def upload_completed_template(
                 vides = report.get("nb_lignes_vides", 0)
                 warnings_txt = " · ".join(report.get("warnings", [])[:3])
                 item.details = (
-                    f"DPGF : {vides} ligne(s) sans prix"
+                    f"DPGF : {vides} {'lignes' if vides > 1 else 'ligne'} sans prix"
                     + (f" — {warnings_txt}" if warnings_txt else "")
                 )
 
