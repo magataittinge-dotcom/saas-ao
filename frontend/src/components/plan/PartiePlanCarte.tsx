@@ -49,7 +49,7 @@ export default function PartiePlanCarte({
 
   // Ordinateur : « Fiche » à droite du titre. Téléphone : sous la justification, pour laisser sa largeur au titre.
   const boutonFiche = (classe: string) => (
-    <Bouton variante="discret" onClick={onBasculerFiche} aria-expanded={ouverte} aria-controls={idFiche} className={classe}>
+    <Bouton variante="secondaire" onClick={onBasculerFiche} aria-expanded={ouverte} aria-controls={idFiche} className={classe}>
       Fiche
       {ficheRemplie(partie.fiche) && <PastilleEtat sens="vert">Remplie</PastilleEtat>}
       <ChevronDown aria-hidden className={cn('transition-transform duration-survol ease-survol motion-reduce:transition-none', ouverte && 'rotate-180')} />
@@ -69,7 +69,7 @@ export default function PartiePlanCarte({
           onBlur={(e) => { if (!e.target.value.trim()) onRenommer(partie.titre_modele ?? 'Nouvelle partie') }}
           className="-ml-2 h-11 min-w-0 flex-1 truncate border-transparent bg-transparent px-2 text-base font-semibold hover:border-bord-champ focus-visible:bg-surface-0"
         />
-        {boutonFiche('max-sm:hidden')}
+        {boutonFiche('px-3 max-sm:hidden')}
         <MenuPoints libelle={`Actions : ${nom}`}>
           <MenuElement onSelect={() => { setTimeout(() => { champ.current?.focus(); champ.current?.select() }, 0) }}>
             <Pencil aria-hidden size={16} strokeWidth={1.5} /> Renommer
@@ -111,7 +111,7 @@ export default function PartiePlanCarte({
           partie.sous_criteres.length === 0 && !ajout && <p className="text-sm text-fg-2">Partie habituelle du mémoire.</p>
         )}
         {recoupe && <MentionRecoupe titre={recoupe.titre} onRetirer={ajout ? onSupprimer : onRetirer} />}
-        {boutonFiche('-ml-3 sm:hidden')}
+        {boutonFiche('px-3 sm:hidden')}
       </div>
 
       {ouverte && (

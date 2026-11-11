@@ -13,9 +13,9 @@ test('plus aucun mot « Markdown » affiché dans Rédiger ni dans son éditeur'
   assert.deepEqual(textes().filter((t) => /markdown/i.test(t)), [])
 })
 
-test('le bouton s\'appelle « Modifier le texte » et l\'éditeur porte la ligne d\'aide des signes', () => {
+test('le bouton s\'appelle « Modifier le texte » et l\'éditeur ne porte plus de ligne d\'aide des signes (jury, tour 1 : le texte se corrige mis en forme)', () => {
   const t = textes()
   assert.ok(t.includes('Modifier le texte'), 'bouton « Modifier le texte »')
   assert.ok(!t.includes('Modifier'), 'ancien libellé « Modifier » retiré')
-  assert.ok(lire('src/components/memoire/EditeurMemoire.tsx').includes("{'# = titre, **texte** = gras'}"), 'ligne d\'aide « # = titre, **texte** = gras »')
+  assert.ok(!lire('src/components/memoire/EditeurMemoire.tsx').includes("= gras"), 'plus de ligne d\'aide « # = titre, **texte** = gras »')
 })

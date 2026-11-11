@@ -54,18 +54,22 @@ test('S10 : dans la barre, les boutons secondaires sont des BoutonSecondaire (ic
   assert.doesNotMatch(barre('src/routes/project/StepLotSelection.tsx'), /libelle="Retour"/)
 })
 
-test('S10 : sur l\'export, une ligne au téléphone — « Télécharger », menu « … » pour les autres formats, avertissement au-dessus de la barre', () => {
+test('S10 puis jury, tour 1 : sur l\'export, un seul « Télécharger le dossier » ; plus de menu « … » qui doublait les deux formats ; un message à la fois', () => {
   const code = sansCommentaires(lire('src/routes/project/StepExport.tsx'))
-  assert.match(code, /<span className="hidden max-\[768px\]:inline">Télécharger<\/span>/)
-  assert.match(code, /<MenuPlus libelle="Autres formats">/)
+  // le même libellé à toutes les largeurs : au téléphone, « Télécharger » seul se confondait avec le tableau de l'acheteur
+  assert.equal((code.match(/Télécharger le dossier/g) ?? []).length, 1)
+  assert.match(code, /Télécharger le tableau de l’acheteur/)
+  assert.doesNotMatch(code, /MenuPlus|Autres formats/)
   assert.match(code, /<div className="flex flex-wrap items-center gap-2">\s*\{formatsMemoire\(\)\}/, 'les deux formats sont deux boutons visibles à côté du mémoire, à toutes les largeurs (G10)')
-  // l'avertissement des pièces passe par l'emplacement « message » du gabarit : au-dessus du contenu, donc de la barre
-  assert.match(code, /message=\{\(echec \|\| telecharge \|\| phrasePieces\) \?/)
+  // un seul message sous l'en-tête : l'écran n'en compose plus trois
+  assert.match(code, /message=\{messageEnTete \?\? undefined\}/)
   assert.match(code, /<Message ton="attention"[\s\S]{0,200}?\{phrasePieces\}/)
   assert.match(code, /barre=\{bottomBar\}/)
-  // A12 : la phrase du dépôt sous le bouton (en-tête) ; au téléphone, en bas du contenu, juste au-dessus de la barre
-  assert.equal((code.match(/data-phrase-depot=""/g) ?? []).length, 2)
+  // A12 : la phrase du dépôt, une fois, en fin de page
+  assert.equal((code.match(/data-phrase-depot=""/g) ?? []).length, 1)
   assert.doesNotMatch(code, /padding: '12px 32px'|signature-btn/)
+  // un échec se dit à côté du bouton qui a échoué
+  for (const lieu of ['formats', 'prix', 'exigences', 'dossier']) assert.match(code, new RegExp(`echecIci\\('${lieu}'\\)`), lieu)
 })
 
 test('S10 : la barre du téléphone a une règle de hauteur (56 px), une seule ligne et une marge basse', () => {

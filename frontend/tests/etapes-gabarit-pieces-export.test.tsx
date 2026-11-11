@@ -74,7 +74,7 @@ test('un seul bouton en dégradé par écran : l’action de l’en-tête, jamai
   assert.equal((export_.match(/variante="principal"/g) ?? []).length, 1, 'le bouton est écrit une fois')
   assert.doesNotMatch(export_, /signature-btn/, 'le bouton du système, plus la classe')
   assert.match(export_, /actionPrincipale=\{tel \? undefined : \([\s\S]*?\{boutonTelecharger\}/, 'en-tête : sur ordinateur seulement')
-  assert.match(export_, /<ActionsBarreTel className="max-\[768px\]:flex-1">\{tel \? boutonTelecharger : null\}<\/ActionsBarreTel>/, 'barre : au téléphone seulement')
+  assert.match(export_, /<ActionsBarreTel className="max-\[768px\]:flex-1">\{tel \? <>\{boutonTelecharger\}\{boutonPieces\}<\/> : null\}<\/ActionsBarreTel>/, 'barre : au téléphone seulement')
   const lots = sansCommentaires(lire('src/routes/project/StepLotSelection.tsx'))
   assert.equal((lots.match(/variante="principal"/g) ?? []).length, 1, 'Lots : le bouton « Lire » est écrit une fois (en-tête à l’ordinateur, barre du bas au téléphone)')
   assert.match(lots, /<ActionsBarreTel>\{actionLire\}<\/ActionsBarreTel>/)

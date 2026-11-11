@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { createPortal } from 'react-dom'
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { Check, ExternalLink, X } from 'lucide-react'
 import { Bouton } from '@/components/ui/bouton'
 import { Infobulle } from '@/components/ui/infobulle'
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import {
   aiguiller, libelleNiveau, vueParDefaut, vuesDisponibles,
   type ReponseSource, type VueSource,
@@ -78,12 +78,14 @@ export function PanneauSourceVue({
   const idTitre = useId()
   const panneauRef = useRef<HTMLElement>(null)
 
-  // ── Échap ferme ; sur la feuille, le focus entre dans le panneau, y reste, et revient au bouton
+  // ── Échap ferme. Sous 1024 px, le panneau est la feuille du bas du système (`Sheet`) : voile, piège et retour du focus,
+  //    Échap et fermeture au toucher du voile viennent d'elle (jury, tour 1 : plus de feuille faite à la main).
   useEffect(() => {
+    if (feuille) return undefined
     const surTouche = (e: globalThis.KeyboardEvent) => { if (e.key === 'Escape') onFermer() }
     document.addEventListener('keydown', surTouche)
     return () => document.removeEventListener('keydown', surTouche)
-  }, [onFermer])
+  }, [onFermer, feuille])
 
   // Ordinateur : le panneau est ramené à l'écran à l'ouverture (il peut être plus bas que la fenêtre)
   const mouvementReduit = useMedia(REQUETE_MOUVEMENT_REDUIT)
@@ -94,32 +96,14 @@ export function PanneauSourceVue({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [feuille])
 
-  useEffect(() => {
-    if (!feuille) return
-    const avant = document.activeElement as HTMLElement | null
-    panneauRef.current?.focus()
-    return () => { if (avant && document.contains(avant)) avant.focus() }
-  }, [feuille])
-
-  const piegerLeFocus = useCallback((e: KeyboardEvent<HTMLElement>) => {
-    if (!feuille || e.key !== 'Tab' || !panneauRef.current) return
-    const cibles = [...panneauRef.current.querySelectorAll<HTMLElement>(
-      'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])')]
-    if (cibles.length === 0) return
-    const premier = cibles[0]
-    const dernier = cibles[cibles.length - 1]
-    if (e.shiftKey && (document.activeElement === premier || document.activeElement === panneauRef.current)) {
-      e.preventDefault(); dernier.focus()
-    } else if (!e.shiftKey && document.activeElement === dernier) {
-      e.preventDefault(); premier.focus()
-    }
-  }, [feuille])
-
   // ── Vue et page affichées
   const avecImages = exigenceId !== null
   const vues = useMemo(() => (reponse ? vuesDisponibles(reponse, avecImages) : []), [reponse, avecImages])
   const [vueChoisie, setVueChoisie] = useState<VueSource | null>(null)
-  const vue: VueSource | null = vueChoisie && vues.includes(vueChoisie) ? vueChoisie : vueParDefaut(vues)
+  // Passage non retrouvé et aucun extrait à lire (source d'un fait du résumé) : la vue « Passage » serait vide ; on ouvre la
+  // pièce à la page citée, sous la phrase qui le dit.
+  const sansExtrait = !!reponse && reponse.niveau === 'page' && !reponse.citation && exigenceId === null && vues.includes('document')
+  const vue: VueSource | null = vueChoisie && vues.includes(vueChoisie) ? vueChoisie : sansExtrait ? 'document' : vueParDefaut(vues)
   const [pageDoc, setPageDoc] = useState<number | null>(null)
   const [totalPages, setTotalPages] = useState<number | null>(nombrePages)
   const page = pageDoc ?? reponse?.page ?? 1
@@ -145,24 +129,15 @@ export function PanneauSourceVue({
     </Bouton>
   )
 
-  const contenu = (
+  const interieur = (
     <>
-      {feuille && <div className="source-voile" onClick={onFermer} aria-hidden="true" />}
-      <aside
-        ref={panneauRef}
-        className="source-panneau"
-        role="dialog"
-        aria-modal={feuille ? true : undefined}
-        aria-labelledby={idTitre}
-        tabIndex={-1}
-        onKeyDown={piegerLeFocus}
-        data-feuille={feuille ? 'oui' : 'non'}
-      >
         <header className="source-tete">
           {feuille && <div className="source-poignee" aria-hidden="true" />}
           <div className="source-titre-ligne">
             <div className="min-w-0 flex-1">
-              <Infobulle texte={nom} cote="bottom"><h2 id={idTitre} className="source-piece">{nom}</h2></Infobulle>
+              {feuille
+                ? <SheetTitle className="source-piece pr-12">{nom}</SheetTitle>
+                : <Infobulle texte={nom} cote="bottom"><h2 id={idTitre} className="source-piece">{nom}</h2></Infobulle>}
               {reponse && reponse.niveau !== 'aucun' && (
                 <p className="source-meta">
                   <span className="source-niveau">
@@ -174,9 +149,12 @@ export function PanneauSourceVue({
                 </p>
               )}
             </div>
-            <Bouton variante="secondaire" className="w-11 rounded-pilule px-0" onClick={onFermer} aria-label="Fermer l’extrait du dossier">
-              <X aria-hidden="true" />
-            </Bouton>
+            {/* sur la feuille, la croix est celle de la feuille du système */}
+            {!feuille && (
+              <Bouton variante="secondaire" className="w-11 rounded-pilule px-0" onClick={onFermer} aria-label="Fermer l’extrait du dossier">
+                <X aria-hidden="true" />
+              </Bouton>
+            )}
           </div>
           {vues.length > 1 && vue && (
             <div role="tablist" aria-label="Affichage" className="source-onglets" onKeyDown={surTabs}>
@@ -252,10 +230,21 @@ export function PanneauSourceVue({
             {lienOuvrir}
           </footer>
         )}
-      </aside>
     </>
   )
 
-  // La feuille sort de la page (document.body) : un parent animé ou filtré ne doit pas la déplacer.
-  return feuille ? createPortal(contenu, document.body) : contenu
+  if (feuille) {
+    return (
+      <Sheet open onOpenChange={(ouvert) => { if (!ouvert) onFermer() }}>
+        <SheetContent side="bottom" aria-describedby={undefined} data-feuille="oui" className="source-panneau gap-0 p-0 pr-0">
+          {interieur}
+        </SheetContent>
+      </Sheet>
+    )
+  }
+  return (
+    <aside ref={panneauRef} className="source-panneau" role="dialog" aria-labelledby={idTitre} tabIndex={-1} data-feuille="non">
+      {interieur}
+    </aside>
+  )
 }

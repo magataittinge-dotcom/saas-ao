@@ -44,3 +44,17 @@ test('une cellule de tableau « # » reste un signe, jamais un titre vide (trois
   assert.match(html, /#/)
   assert.match(renderToStaticMarkup(<Cellule texte="**Poste**" />), /<strong>Poste<\/strong>/)
 })
+
+test('jury, tour 1 : un passage « [À COMPLÉTER PAR L’ENTREPRISE : …] » se lit « À compléter : … », surligné, dans le texte comme dans un tableau', () => {
+  const html = renderToStaticMarkup(<LecteurMarkdown text={"Siège : [À COMPLÉTER PAR L'ENTREPRISE : adresse du siège].\n\n| Poste | Nom |\n|---|---|\n| Gérant | [À COMPLÉTER PAR L'ENTREPRISE : nom] |"} />)
+  assert.match(html, /<mark class="a-renseigner">À compléter : adresse du siège<\/mark>/)
+  assert.match(html, /<mark class="a-renseigner">À compléter : nom<\/mark>/)
+  assert.doesNotMatch(html.replace(/<[^>]+>/g, ''), /COMPLÉTER|\[|\]/)
+})
+
+test('jury, tour 1 : un schéma tapé au clavier ne devient pas un bloc de code en chasse fixe', () => {
+  const html = renderToStaticMarkup(<LecteurMarkdown text={'```\nGérant\n  └─ Conducteur\n```'} />)
+  assert.doesNotMatch(html, /<pre|<code/)
+  assert.match(html, /font-sans/)
+  assert.match(html, /Conducteur/)
+})

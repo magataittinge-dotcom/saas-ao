@@ -9,15 +9,12 @@ import DocumentViewer, { type ViewableDocument } from '@/components/project/Docu
 import EchecAction from '@/components/common/EchecAction'
 import { MettreAJourStatut } from '@/components/common/MettreAJourStatut'
 import { phraseSourceSignature, signatureAConfirmer } from '@/components/project/SignatureLigne'
-import { MenuPlus } from '@/components/project/BarreEtape'
-import { GabaritEtape, BandeResume, BarreEtape, BilanBarre, ActionsBarreTel, SectionEtape, EtatElement } from '@/components/etape'
+import { GabaritEtape, BandeResume, BarreEtape, BilanBarre, ActionsBarreTel, SectionEtape, EtatElement, AnalyseNonFaite, SqueletteCorpsEtape } from '@/components/etape'
 import { Bouton } from '@/components/ui/bouton'
 import { Carte } from '@/components/ui/carte'
 import { EtatErreur } from '@/components/ui/etats'
-import { MenuElement } from '@/components/ui/menu'
 import { Message } from '@/components/ui/message'
 import { PastilleEtat } from '@/components/ui/pastille'
-import { Squelette } from '@/components/ui/squelette'
 import { cartesPieces, etatDeStatut } from '@/lib/resumePieces'
 import ExigencesDuDossier, { type ExigenceExport } from '@/components/project/ExigencesDuDossier'
 import {
@@ -31,8 +28,12 @@ import { libellePassagesACompleter } from '@/lib/passagesACompleter'
 import { echeanceAO, etatEcheance, type EcheanceSource } from '@/lib/echeance'
 import { useMedia } from '@/hooks/useMedia'
 import { cn } from '@/lib/utils'
+import { dossierLu } from '@/lib/dossierLu'
 
 const TITRE = 'Export du dossier'
+const UTILITE = 'Le dossier de réponse, rangé dans l’ordre du règlement.'
+/** Où un geste a échoué : le message se pose là, à côté de son bouton (jury, tour 1). */
+type Lieu = 'dossier' | 'formats' | 'prix' | 'exigences'
 const ACCEPT_DPGF = '.xlsx,.xls,.xlsm,.ods,.pdf'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -165,6 +166,10 @@ export function SuiteDepot({ telecharge, phrase, avertissements, onDepose }: {
   )
 }
 
+/** Le nom d'une pièce, sans la note du logiciel (« (2 exigences du RC regroupées) », posée par le serveur). */
+export const titrePiece = (item: { details: string | null; document_type_required: string }): string =>
+  (item.details || item.document_type_required).replace(/\s*\(\d+ exigences du RC regroupées\)/g, '').trim()
+
 // ─── Main component ─────────────────────────────────────────────────────────
 
 interface Props { project: Project }
@@ -200,7 +205,7 @@ export default function StepExport({ project }: Props) {
     },
   })
   // 1.16 — un livrable qui ne se télécharge pas : on le dit, avec « Réessayer »
-  const [echec, setEchec] = useState<{ message: string; relancer: () => void } | null>(null)
+  const [echec, setEchec] = useState<{ lieu: Lieu; message: string; relancer: () => void } | null>(null)
   // Avertissements du dernier ZIP (pièces écartées, livrables à finaliser)
   const [avertissementsZip, setAvertissementsZip] = useState<string[] | null>(null)
 
@@ -217,7 +222,7 @@ export default function StepExport({ project }: Props) {
     onMutate: () => setEchec(null),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['export-detail', project.id] }),
     onError: async (err, action) => setEchec({
-      message: await messageErreur(err, "La confirmation n’a pas été enregistrée."),
+      lieu: 'exigences', message: await messageErreur(err, "La confirmation n’a pas été enregistrée."),
       relancer: () => confirmer(action),
     }),
   })
@@ -234,7 +239,7 @@ export default function StepExport({ project }: Props) {
     },
     onMutate: () => setEchec(null),
     onError: async (err) => setEchec({
-      message: await messageErreur(err, "Le téléchargement du mémoire Word n’a pas abouti."),
+      lieu: 'formats', message: await messageErreur(err, "Le mémoire en Word n’a pas pu être téléchargé."),
       relancer: () => exportDocx(),
     }),
   })
@@ -254,7 +259,7 @@ export default function StepExport({ project }: Props) {
     },
     onMutate: () => setEchec(null),
     onError: async (err) => setEchec({
-      message: await messageErreur(err, "Le téléchargement du mémoire PDF n’a pas abouti."),
+      lieu: 'formats', message: await messageErreur(err, "Le mémoire en PDF n’a pas pu être téléchargé."),
       relancer: () => exportPdf(),
     }),
   })
@@ -274,7 +279,7 @@ export default function StepExport({ project }: Props) {
     },
     onMutate: () => { setEchec(null); setAvertissementsZip(null) },
     onError: async (err) => setEchec({
-      message: await messageErreur(err, "Le téléchargement du dossier ZIP n’a pas abouti."),
+      lieu: 'dossier', message: await messageErreur(err, "Le dossier n’a pas pu être téléchargé. Rien n’est perdu."),
       relancer: () => exportZip(),
     }),
   })
@@ -296,7 +301,7 @@ export default function StepExport({ project }: Props) {
       URL.revokeObjectURL(url)
     } catch (err) {
       setEchec({
-        message: await messageErreur(err, `Le téléchargement du ${developper('DPGF')} n’a pas abouti.`),
+        lieu: 'prix', message: await messageErreur(err, 'Le tableau de l’acheteur n’a pas pu être téléchargé.'),
         relancer: () => { void handleDownloadDpgf() },
       })
     }
@@ -344,21 +349,28 @@ export default function StepExport({ project }: Props) {
   }, [detail])
 
   // ── Chargement, puis erreur : le titre de l'étape reste ; une panne n'est jamais un squelette sans fin ──
+  // Dossier non analysé (AO neuf) : rien n'est su. Synorix le dit une fois, avec l'action qui fait avancer ; ni case, ni
+  // pastille, ni section vide (jury, tour 1 : « À joindre : Aucune » et « Prêt » sur un dossier que personne n'a lu).
+  if (!dossierLu(project)) {
+    return (
+      <GabaritEtape titre={TITRE} utilite={UTILITE}>
+        <AnalyseNonFaite project={project} viendra={['Les pièces demandées', 'Le mémoire technique', 'Le tableau des prix']} />
+      </GabaritEtape>
+    )
+  }
   if (isLoading) {
     return (
-      <GabaritEtape titre={TITRE} utilite="Le dossier de réponse, rangé dans l’ordre du règlement.">
-        <div role="status" aria-busy="true" className="space-y-4">
+      <GabaritEtape titre={TITRE} utilite={UTILITE}>
+        <div role="status" aria-busy="true">
           <span className="sr-only">Chargement du dossier</span>
-          <Squelette className="h-28 w-full rounded-carte" />
-          <Squelette className="h-64 w-full rounded-carte" />
-          <Squelette className="h-24 w-full rounded-carte" />
+          <SqueletteCorpsEtape />
         </div>
       </GabaritEtape>
     )
   }
   if (requeteDetail.isError || !detail) {
     return (
-      <GabaritEtape titre={TITRE} utilite="Le dossier de réponse, rangé dans l’ordre du règlement.">
+      <GabaritEtape titre={TITRE} utilite={UTILITE}>
         <EtatErreur
           titre="Le dossier n’a pas pu s’ouvrir"
           detail="La connexion au serveur a échoué. Vos pièces et votre mémoire ne sont pas touchés."
@@ -397,9 +409,16 @@ export default function StepExport({ project }: Props) {
     i.status !== 'non_applicable' && (!CONFORME_STATUSES.has(i.status) || signatureAConfirmer(i)) && pieceDemandee(i, echeance),
   )
 
-  const lotName = project.selected_lot_name || ''
   const readyForDeposit = !gateBlocked && alertCount === 0
   const piecesVisibles = piecesDemandees.filter((p) => p.status !== 'non_applicable')
+  // Les pièces, rangées sous leur état (dans l'ordre où les états apparaissent).
+  const groupesPieces: { lu: ReturnType<typeof etatDeStatut>; pieces: typeof piecesVisibles }[] = []
+  for (const piece of piecesVisibles) {
+    const lu = etatDeStatut(etatPiece(piece, echeance).statut)
+    const groupe = groupesPieces.find((g) => g.lu.etat === lu.etat && g.lu.texte === lu.texte)
+    if (groupe) groupe.pieces.push(piece)
+    else groupesPieces.push({ lu, pieces: [piece] })
+  }
   const mem = detail.memoire_info
   // UNE phrase pour le mémoire, la même que sur Rédiger (lib/passagesACompleter.ts, compte du serveur)
   const passages = mem ? libellePassagesACompleter(mem.passages_a_completer) : null
@@ -407,75 +426,87 @@ export default function StepExport({ project }: Props) {
   // Rien à télécharger encore (AO neuf) : le bouton attend, il ne propose pas un dossier vide.
   const dossierVide = detail.pieces_zip.length === 0 && !detail.has_memoire
 
-  // L'action principale, écrite une fois : dans l'en-tête sur ordinateur, dans la barre du bas au téléphone.
+  // Aucune pièce n'est encore jointe : le dossier ne contiendrait que le mémoire. L'écran le dit, et son action devient
+  // « Réunir les pièces » ; le téléchargement reste possible, au trait (jury, tour 1 : un aplat « Télécharger » sur un
+  // dossier que l'écran déclarait lui-même sans pièce).
+  const pretes = piecesVisibles.filter((p) => pieceDemandee(p, echeance) && !nonConformes.includes(p)).length
+  const aucunePieceJointe = gateBlocked && nonConformes.length > 0 && pretes === 0
+  const allerAuxPieces = () => navigate(`/projects/${project.id}/verification`)
+
+  // Le téléchargement du dossier, écrit une fois : dans l'en-tête sur ordinateur, dans la barre du bas au téléphone. C'est
+  // le seul bouton « Télécharger le dossier » de la page ; les autres disent ce qu'ils téléchargent.
   const boutonTelecharger = (
-    <Bouton variante="principal" onClick={() => exportZip()} disabled={dossierVide} enCours={isExportingZip} libelleEnCours="Préparation du dossier…" className="max-[768px]:flex-1">
+    <Bouton variante={aucunePieceJointe ? 'secondaire' : 'principal'} onClick={() => exportZip()} disabled={dossierVide} enCours={isExportingZip} libelleEnCours="Préparation du dossier…" className="max-[768px]:flex-1">
       <Archive aria-hidden />
-      <span className="max-[768px]:hidden">Télécharger le dossier</span>
-      <span className="hidden max-[768px]:inline">Télécharger</span>
+      Télécharger le dossier
     </Bouton>
   )
+  const boutonPieces = aucunePieceJointe
+    ? <Bouton variante="principal" onClick={allerAuxPieces} className="max-[768px]:flex-1">Réunir les pièces</Bouton>
+    : null
 
-  // ── Les deux formats du mémoire : visibles à côté du mémoire ; au téléphone, aussi dans le menu « … » de la barre.
+  // ── Les deux formats du mémoire : deux boutons visibles à côté du mémoire, à toutes les largeurs.
   const FORMATS = [
     { libelle: 'Mémoire en Word', enCours: isExportingDocx, lancer: () => exportDocx() },
     { libelle: 'Mémoire en PDF', enCours: isExportingPdf, lancer: () => exportPdf() },
   ]
-  const formatsMemoire = (fermer?: () => void) => FORMATS.map((f) => (fermer ? (
-    <MenuElement key={f.libelle} disabled={f.enCours || !detail.has_memoire} onSelect={() => { fermer(); f.lancer() }}>
-      <FileDown aria-hidden size={18} strokeWidth={1.5} /> {f.libelle}
-    </MenuElement>
-  ) : (
+  const formatsMemoire = () => FORMATS.map((f) => (
     <Bouton key={f.libelle} variante="secondaire" onClick={f.lancer} disabled={!detail.has_memoire} enCours={f.enCours} libelleEnCours="Préparation…">
       <FileDown aria-hidden /> {f.libelle}
     </Bouton>
-  )))
+  ))
 
-  // ── Barre du bas : l'état du dossier ; au téléphone, « Télécharger » et le menu des formats.
+  // ── Barre du bas : l'état du dossier ; au téléphone, l'action de l'écran (au pouce).
   const etatDossier = ligneEtatDossier(gateBlocked ? nonConformes.length : 0, alertCount, readyForDeposit)
   const bottomBar = (
     <BarreEtape className="justify-between gap-3">
       <BilanBarre bureau={<p role="status" className="text-sm text-fg-2">{etatDossier}</p>} />
-      <div className="hidden min-w-0 flex-1 items-center gap-2 max-[768px]:flex">
-        <MenuPlus libelle="Autres formats">{(fermer) => formatsMemoire(fermer)}</MenuPlus>
-        <ActionsBarreTel className="max-[768px]:flex-1">{tel ? boutonTelecharger : null}</ActionsBarreTel>
-      </div>
+      <ActionsBarreTel className="max-[768px]:flex-1">{tel ? <>{boutonTelecharger}{boutonPieces}</> : null}</ActionsBarreTel>
     </BarreEtape>
   )
 
   const phrasePieces = gateBlocked ? phrasePiecesAJoindre(nonConformes.length) : null
+  // UN message à la fois sous l'en-tête, du plus pressant au moins pressant : le téléchargement qui n'a pas abouti, le
+  // dossier qui se prépare, le dossier téléchargé, puis les pièces qui restent à joindre.
+  const echecIci = (lieu: Lieu) => (echec && echec.lieu === lieu ? (
+    <EchecAction
+      message={echec.message}
+      onReessayer={() => { const relancer = echec.relancer; setEchec(null); relancer() }}
+      onFermer={() => setEchec(null)}
+    />
+  ) : null)
+  const messageEnTete = echecIci('dossier') ?? (isExportingZip ? (
+    <Message ton="info">
+      Synorix rassemble vos pièces et met le mémoire en page. Comptez une vingtaine de secondes : le téléchargement démarre seul, vous pouvez rester sur cette page.
+    </Message>
+  ) : telecharge ? (
+    <SuiteDepot telecharge={telecharge} phrase={depot} avertissements={avertissementsZip ?? []} onDepose={() => setStatutOuvert(true)} />
+  ) : aucunePieceJointe ? (
+    <Message ton="attention">
+      Aucune pièce n’est encore jointe : pour l’instant, le dossier ne contient que {detail.has_memoire ? 'le mémoire technique' : 'ce que vous y déposerez'}. {phrasePieces}
+    </Message>
+  ) : phrasePieces ? (
+    <Message ton="attention" action={<Bouton variante="secondaire" onClick={allerAuxPieces}>Réunir les pièces</Bouton>}>
+      {phrasePieces}
+    </Message>
+  ) : null)
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <>
       <GabaritEtape
         titre={TITRE}
-        utilite={`Le dossier de réponse, rangé dans l’ordre du règlement : vérifiez-le, puis téléchargez-le.${lotName ? ` ${lotName}.` : ''}`}
+        utilite={UTILITE}
         actionPrincipale={tel ? undefined : (
-          <div className="flex max-w-xs flex-col items-end gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             {boutonTelecharger}
-            <p data-phrase-depot="" className="text-right text-xs text-fg-2">{depot}</p>
+            {boutonPieces}
           </div>
         )}
-        message={(echec || telecharge || phrasePieces) ? (
-          <div className="space-y-3">
-            {echec && (
-              <EchecAction
-                message={echec.message}
-                onReessayer={() => { const relancer = echec.relancer; setEchec(null); relancer() }}
-                onFermer={() => setEchec(null)}
-              />
-            )}
-            <SuiteDepot telecharge={telecharge} phrase={depot} avertissements={avertissementsZip ?? []} onDepose={() => setStatutOuvert(true)} />
-            {phrasePieces && !telecharge && (
-              <Message ton="attention" action={<Bouton variante="secondaire" onClick={() => navigate(`/projects/${project.id}/verification`)}>Réunir les pièces</Bouton>}>
-                {phrasePieces}
-              </Message>
-            )}
-          </div>
-        ) : undefined}
+        message={messageEnTete ?? undefined}
         resume={<BandeResume libelle="L’état du dossier" cartes={[
-          ...cartesPieces(piecesVisibles, echeance).map((c) => ({ ...c, rien: 'Aucune' as const })),
+          // une case sans valeur ne dessine pas de jauge vide (« Prêtes : Aucune » le dit déjà)
+          ...cartesPieces(piecesVisibles, echeance).map((c) => ({ ...c, rien: 'Aucune' as const, jauge: c.valeur === '0' ? undefined : c.jauge })),
           { libelle: 'Mémoire technique', valeur: mem ? `${mem.estimated_pages} pages` : 'À rédiger', etat: memoireOk && !passages ? 'pret' as const : 'a-verifier' as const,
             detail: passages || (mem ? `Version ${mem.version}` : undefined) },
         ]} />}
@@ -488,20 +519,25 @@ export default function StepExport({ project }: Props) {
             <p className="text-sm text-fg-2">La liste des pièces apparaît après l’analyse du <Sigle code="RC" />.</p>
           ) : (
             <Carte sansMarge>
+              {/* Un état, dit une fois, puis ses pièces (jury, tour 1 : quatorze fois « À joindre » ne triait rien). */}
               <ul aria-label="Pièces demandées">
-                {piecesVisibles.map((item) => {
-                  const lu = etatDeStatut(etatPiece(item, echeance).statut)
-                  return (
-                    <li key={item.id} className="flex min-h-[52px] flex-wrap items-center justify-between gap-x-6 gap-y-1 border-t border-bord px-4 py-2.5 first:border-t-0 sm:px-5">
-                      <div className="min-w-0 flex-1 basis-64">
-                        <p className="break-words text-sm font-medium text-fg">{item.details || item.document_type_required}</p>
-                        {noteDepot(item) && <p className="text-xs text-fg-3">{noteDepot(item)}</p>}
-                        {phraseSourceSignature(item) && <p className="text-xs text-fg-3">{phraseSourceSignature(item)}</p>}
-                      </div>
-                      <EtatElement etat={lu.etat} texte={lu.texte} perimee={lu.perimee} className="shrink-0" />
-                    </li>
-                  )
-                })}
+                {groupesPieces.map((g) => (
+                  <li key={g.lu.texte ?? g.lu.etat} className="border-t border-bord first:border-t-0">
+                    <p className="flex items-center gap-2 bg-surface-1 px-4 py-2 sm:px-5">
+                      <EtatElement etat={g.lu.etat} texte={g.lu.texte} perimee={g.lu.perimee} />
+                      <span className="text-xs text-fg-3">· {g.pieces.length}</span>
+                    </p>
+                    <ul>
+                      {g.pieces.map((item) => (
+                        <li key={item.id} className="min-h-11 border-t border-bord px-4 py-2.5 sm:px-5">
+                          <p className="break-words text-sm font-medium text-fg">{titrePiece(item)}</p>
+                          {noteDepot(item) && <p className="text-xs text-fg-3">{noteDepot(item)}</p>}
+                          {phraseSourceSignature(item) && <p className="text-xs text-fg-3">{phraseSourceSignature(item)}</p>}
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
               </ul>
             </Carte>
           )}
@@ -509,6 +545,7 @@ export default function StepExport({ project }: Props) {
 
         {/* ── Mémoire technique ── */}
         <SectionEtape titre="Mémoire technique">
+          {echecIci('formats')}
           <Carte className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
             {mem ? (
               <>
@@ -538,15 +575,17 @@ export default function StepExport({ project }: Props) {
 
         {/* ── Tableau des prix : vérification de forme seulement ── */}
         <SectionEtape titre="Tableau des prix" description="Synorix vérifie la forme du tableau (lignes remplies, total lu). Il ne commente jamais vos prix.">
+          {echecIci('prix')}
           <Carte sansMarge>
             {detail.dpgf_info && (
               <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 sm:px-5">
                 <div className="min-w-0 flex-1 basis-64">
-                  <p className="break-words text-sm font-medium text-fg">{detail.dpgf_info.file_name}</p>
+                  <p className="text-sm font-medium text-fg">Le tableau de l’acheteur, à remplir</p>
+                  <p className="break-words text-xs text-fg-3">{detail.dpgf_info.file_name}</p>
                   <p className="text-xs text-fg-3"><Sigle code="DPGF" majuscule /> d’origine, dans le <Sigle code="DCE" /></p>
                 </div>
-                <Bouton variante="secondaire" onClick={handleDownloadDpgf} aria-label="Télécharger le tableau des prix d’origine">
-                  <Download aria-hidden /> Télécharger
+                <Bouton variante="secondaire" onClick={handleDownloadDpgf}>
+                  <Download aria-hidden /> Télécharger le tableau de l’acheteur
                 </Bouton>
               </div>
             )}
@@ -599,7 +638,8 @@ export default function StepExport({ project }: Props) {
 
         {/* ── Exigences relevées, confirmées par l'utilisateur (export « 0/N ») ── */}
         <SectionEtape titre="Exigences relevées" description={resumeDesExigences}>
-          <Carte className="max-h-[420px] overflow-y-auto">
+          {echecIci('exigences')}
+          <Carte sansMarge>
             <ExigencesDuDossier
               items={detail.compliance_items}
               onConfirmer={(item, confirmee) => confirmer({ item, confirmee })}
@@ -636,8 +676,8 @@ export default function StepExport({ project }: Props) {
           )}
         </SectionEtape>
 
-        {/* A12 au téléphone : l'en-tête n'y porte pas le bouton, la phrase du dépôt se lit juste au-dessus de la barre */}
-        {tel && <p data-phrase-depot="" className="text-sm text-fg-2">{depot}</p>}
+        {/* A12 — la dernière étape se lit en fin de page, à toutes les largeurs (elle flottait sous le bouton de l'en-tête) */}
+        <p data-phrase-depot="" className="text-sm text-fg-2">{depot}</p>
       </GabaritEtape>
 
       <MettreAJourStatut projet={project} ouvert={statutOuvert} onOuvert={setStatutOuvert} />

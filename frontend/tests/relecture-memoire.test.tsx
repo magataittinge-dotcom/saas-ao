@@ -68,3 +68,20 @@ test('l’écran du mémoire n’ajoute que le bouton', () => {
   assert.match(ecran, /import RelectureMemoire from '@\/components\/memoire\/RelectureMemoire'/)
   assert.match(ecran, /<RelectureMemoire projectId=\{project\.id\} \/>/)
 })
+
+// ── Jury, tour 1 : une pastille par groupe, pas par ligne ; une précision répétée ne se dit qu'une fois ──
+import { detailLisible, groupesRelecture } from '@/components/memoire/RelectureMemoire'
+
+test('jury, tour 1 : les points se rangent sous leur mot, dit une fois ; « à compléter » est ambre, jamais rouge', () => {
+  const ligne = (type: 'a_completer' | 'sous_critere' | 'longueur', libelle: string, texte: string) =>
+    ({ type, libelle, texte, detail: null, ancre: null, section: null, source: null }) as never
+  const groupes = groupesRelecture([ligne('a_completer', 'À compléter', 'Adresse'), ligne('sous_critere', 'À couvrir', 'Moyens'), ligne('a_completer', 'À compléter', 'SIRET'), ligne('longueur', 'À resserrer', 'Trop long')])
+  assert.deepEqual(groupes.map((g) => [g.libelle, g.lignes.length, g.bloquant]), [['À compléter', 2, false], ['À couvrir', 1, false], ['À resserrer', 1, true]])
+})
+
+test('jury, tour 1 : « 6 passages : nom ; nom ; nom … » se lit « 6 passages : nom »', () => {
+  assert.equal(detailLisible('6 passages : nom ; nom ; nom …'), '6 passages\u00a0: nom')
+  assert.equal(detailLisible('2 passages : numéro ; date de validité'), '2 passages\u00a0: numéro\u00a0; date de validité')
+  assert.equal(detailLisible('Sans précision'), 'Sans précision')
+  assert.equal(detailLisible('3 passages : date ; gérant ; forme …'), '3 passages\u00a0: date\u00a0; gérant\u00a0; forme, entre autres')
+})

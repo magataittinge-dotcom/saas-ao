@@ -43,9 +43,9 @@ import type { CriticalFieldsPayload } from '@/components/project/CriticalBanner'
 export { DocumentView }
 
 const MEMOIRE_GEN_STEPS: StepDescriptor[] = [
-  { key: 'preparing',  label: 'Préparation du contexte',         estimated_s: 3 },
-  { key: 'generating', label: 'Rédaction du mémoire technique',  estimated_s: 120 },
-  { key: 'finalizing', label: 'Finalisation',                    estimated_s: 5 },
+  { key: 'preparing',  label: 'Synorix relit votre dossier',     estimated_s: 3 },
+  { key: 'generating', label: 'Synorix rédige chaque partie',    estimated_s: 120 },
+  { key: 'finalizing', label: 'Synorix met le mémoire en forme', estimated_s: 5 },
 ]
 
 const TITRE = 'Rédiger le mémoire'
@@ -100,7 +100,7 @@ export function cartesRedaction({ version, completionPct, rattachement, nbARefai
     total > 0
       ? {
         libelle: 'Critères du règlement', valeur: `${traites} sur ${total}`, etat: traites === total ? ETAT_PRET : ETAT_A_VERIFIER,
-        jauge: { rempli: traites, total }, detail: traites === total ? 'Chaque sous-critère est traité.' : `${total - traites} à couvrir`,
+        jauge: traites === total ? undefined : { rempli: traites, total }, detail: traites === total ? 'Chaque sous-critère est traité.' : `${total - traites} à couvrir`,
       }
       : { libelle: 'Critères du règlement', valeur: 'Non détaillés', detail: 'Le règlement ne détaille pas de sous-critères.' },
     nbARefaire > 0
@@ -357,7 +357,15 @@ export default function StepMemoire({ project }: Props) {
       <GabaritEtape titre={TITRE} utilite="Votre mémoire, partie par partie.">
         <div role="status" aria-busy="true" className="space-y-4">
           <span className="sr-only">Chargement du mémoire</span>
-          <Squelette className="h-28 w-full rounded-carte" />
+          {/* la bande de cases, à sa forme : une surface, des filets, aucune valeur écrite */}
+          <div aria-hidden="true" className="grid grid-cols-2 divide-bord rounded-carte border border-bord bg-surface-0 md:grid-cols-4 md:divide-x">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="grid content-start gap-3 p-5 max-md:p-4">
+                <Squelette className="h-4 w-24 max-w-full" />
+                <Squelette className="h-6 w-16" />
+              </div>
+            ))}
+          </div>
           <div className="rounded-carte border border-bord bg-surface-0 px-5 py-8 sm:px-10 sm:py-12">
             <div className="mx-auto max-w-[38rem] space-y-8">
               <Squelette className="h-6 w-2/5" />
@@ -397,9 +405,9 @@ export default function StepMemoire({ project }: Props) {
             variant="modal"
             title="Synorix rédige votre mémoire"
             steps={MEMOIRE_GEN_STEPS}
-            currentStep={memoireSse.step}
+            currentStep={memoireSse.step ?? 'preparing'}
             progress={memoireSse.progress}
-            detail={memoireSse.detail || 'Préparation du contexte…'}
+            detail={memoireSse.detail || 'Vous retrouverez le mémoire ici, partie par partie.'}
             phase={memoireSse.phase}
             avis={avisAttente}
             onArrierePlan={() => navigate('/dashboard')}
@@ -467,9 +475,9 @@ export default function StepMemoire({ project }: Props) {
           variant="modal"
           title={refaitUnePartie ? 'Synorix refait cette partie' : 'Synorix rédige votre mémoire'}
           steps={MEMOIRE_GEN_STEPS}
-          currentStep={memoireSse.step}
+          currentStep={memoireSse.step ?? 'preparing'}
           progress={memoireSse.progress}
-          detail={memoireSse.detail || 'Préparation du contexte…'}
+          detail={memoireSse.detail || 'Vous retrouverez le mémoire ici, partie par partie.'}
           phase={memoireSse.phase}
           avis={avisAttente}
           onArrierePlan={() => navigate('/dashboard')}

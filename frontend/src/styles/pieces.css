@@ -130,6 +130,8 @@
   display: inline-flex;
   align-items: center;
   min-height: 44px;
+  /* jury, tour 1 : le lien était collé à la valeur (« 50 %Voir dans le dossier ») : le bouton « lien » n'a pas de marge */
+  margin-left: .5rem;
   padding: 0 .25rem;
   font-size: .75rem;
   color: var(--carte-discret);

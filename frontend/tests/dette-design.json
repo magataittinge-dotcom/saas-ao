@@ -27,18 +27,12 @@
   "src/components/project/DocumentViewer.tsx": 1,
   "src/lib/clerkApparence.ts": 1
  },
- "capitales-forcees": {
-  "src/components/project/ExigencesDuDossier.tsx": 1
- },
- "approche-positive": {
-  "src/components/project/ExigencesDuDossier.tsx": 1
- },
+ "capitales-forcees": {},
+ "approche-positive": {},
  "transition-all": {
   "src/components/project/AnalysisProgress.tsx": 1
  },
- "controle-natif": {
-  "src/components/project/ExigencesDuDossier.tsx": 1
- },
+ "controle-natif": {},
  "infobulle-native": {
   "src/components/project/CriticalBanner.tsx": 1,
   "src/components/project/DocumentViewer.tsx": 4
@@ -55,9 +49,7 @@
   "src/components/project/AnalysisProgress.tsx": 2,
   "src/components/project/CriticalBanner.tsx": 1,
   "src/components/project/DocumentViewer.tsx": 6,
-  "src/components/project/ExigencesDuDossier.tsx": 2,
   "src/components/project/source/FeuilleSource.tsx": 1,
-  "src/components/project/source/PanneauSource.tsx": 1,
   "src/components/project/source/VueTableau.tsx": 1,
   "src/components/project/StepProgress.tsx": 1,
   "src/hooks/useSourceChamp.tsx": 1
@@ -74,7 +66,6 @@
   "src/components/project/AnalysisProgress.tsx": 4,
   "src/components/project/CriticalBanner.tsx": 3,
   "src/components/project/DocumentViewer.tsx": 10,
-  "src/components/project/ExigencesDuDossier.tsx": 8,
   "src/components/project/PiecesAJoindre.tsx": 3,
   "src/components/ui/CompanionOrb.tsx": 4
  },

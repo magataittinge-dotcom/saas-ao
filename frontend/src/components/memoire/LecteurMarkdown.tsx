@@ -1,6 +1,7 @@
 import { Fragment, type ReactNode } from 'react'
 import ReactMarkdown, { type Components } from 'react-markdown'
 import { decouperTables, type SegmentTable } from '@/lib/tablesMarkdown'
+import { afficherACompleter, ANCRE_A_COMPLETER } from '@/lib/memoireBlocs'
 
 /**
  * Les titres écrits dans le texte d'une section descendent sous ceux de l'écran (h1 : l'étape ; h2 : la partie ; h3 : la
@@ -13,7 +14,15 @@ function Titre4({ children }: { children?: ReactNode }) {
 function Titre5({ children }: { children?: ReactNode }) {
   return <h5 className="mb-1.5 mt-6 font-memoire text-lg font-semibold leading-snug text-fg">{children}</h5>
 }
+/** « À compléter : … » surligné, comme dans le Word (le texte enregistré garde ses crochets : `afficherACompleter`). */
+const A_COMPLETER: Components = {
+  a: ({ href, children }) => (href === ANCRE_A_COMPLETER ? <mark className="a-renseigner">{children}</mark> : <a href={href}>{children}</a>),
+}
 const TITRES: Components = {
+  ...A_COMPLETER,
+  // Un schéma tapé au clavier (organigramme) : un encadré calme en Manrope, jamais un bloc de code en chasse fixe.
+  pre: ({ children }) => <div className="my-4 whitespace-pre-wrap rounded-lg border border-bord bg-surface-1 px-4 py-3 font-sans text-sm leading-relaxed text-fg-2">{children}</div>,
+  code: ({ children }) => <span>{children}</span>,
   h1: ({ children }) => <Titre4>{children}</Titre4>,
   h2: ({ children }) => <Titre4>{children}</Titre4>,
   h3: ({ children }) => <Titre5>{children}</Titre5>,
@@ -23,7 +32,7 @@ const TITRES: Components = {
 /** Une cellule de tableau : du texte courant (gras, italique), sans paragraphe autour. Une cellule « # » (l'en-tête d'une
  *  colonne de numéros) reste un « # » : sans cela, elle devenait un titre h1 vide dans la page. */
 export function Cellule({ texte }: { texte: string }) {
-  return <ReactMarkdown components={{ p: ({ children }) => <Fragment>{children}</Fragment> }}>{texte.replace(/^(\s*)(#+)(\s|$)/, '$1\\$2$3')}</ReactMarkdown>
+  return <ReactMarkdown components={{ ...A_COMPLETER, p: ({ children }) => <Fragment>{children}</Fragment> }}>{afficherACompleter(texte.replace(/^(\s*)(#+)(\s|$)/, '$1\\$2$3'))}</ReactMarkdown>
 }
 
 /** Le titre d'une colonne, sans les marques du Markdown : il est redit au-dessus de chaque cellule au téléphone. */
@@ -69,7 +78,7 @@ export default function LecteurMarkdown({ text }: { text: string }) {
   return (
     <div className="lecteur-memoire prose max-w-[72ch] text-lg leading-[1.65] prose-headings:font-semibold prose-code:text-xs text-pretty">
       {decouperTables(text).map((s, i) =>
-        s.type === 'table' ? <Tableau key={i} table={s} /> : <ReactMarkdown key={i} components={TITRES}>{s.texte}</ReactMarkdown>,
+        s.type === 'table' ? <Tableau key={i} table={s} /> : <ReactMarkdown key={i} components={TITRES}>{afficherACompleter(s.texte)}</ReactMarkdown>,
       )}
     </div>
   )

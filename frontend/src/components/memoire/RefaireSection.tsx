@@ -28,11 +28,11 @@ export function BoutonRefaire({
 export function CorpsConfirmationRefaire({ titre }: { titre: string }) {
   return (
     <div className="space-y-2 text-sm text-fg-2">
-      <p>
-        Synorix réécrit «&nbsp;{titre}&nbsp;» à partir de votre dossier et de la fiche de cette partie. Le reste du mémoire ne
-        change pas ; le texte actuel de cette partie est remplacé.
+      {/* Jury, tour 1 : la conséquence d'abord, à l'encre du texte ; ce qui rassure ensuite, sans gras. */}
+      <p className="text-pretty font-medium text-fg">
+        Le texte actuel de «&nbsp;{titre}&nbsp;» est remplacé par une nouvelle rédaction, faite à partir de votre dossier et de la fiche de cette partie.
       </p>
-      <p className="font-semibold text-fg">Ne décompte aucune unité.</p>
+      <p className="text-pretty">Le reste du mémoire ne change pas. Ne décompte aucune unité.</p>
     </div>
   )
 }

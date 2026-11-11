@@ -53,7 +53,7 @@ test('chaque exigence montre sa source, ou « à vérifier dans le dossier »', 
   ])
   assert.ok(html.includes('RC p.7'), html)
   assert.ok(html.includes('À vérifier dans le dossier'), html)
-  assert.equal(html.split('type="checkbox"').length - 1, 2)
+  assert.equal(html.split('role="checkbox"').length - 1, 2)
 })
 
 test('le gate d’export compte les mêmes lignes que le score du serveur', () => {

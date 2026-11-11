@@ -48,7 +48,7 @@ test('les titres de partie et de section ne sont jamais touchés par la barre d�
 
 test('l’éditeur : une surface d’écriture (serif, colonne de 72 caractères), « Modifications non enregistrées », aucune chasse fixe', () => {
   const code = sansCommentaires(lire('src/components/memoire/EditeurMemoire.tsx'))
-  assert.match(code, /font-memoire text-lg/)
+  assert.match(code, /lecteur-memoire[^"]*text-lg/)
   assert.match(code, /72ch/)
   assert.match(code, /Modifications non enregistrées/)
   assert.doesNotMatch(code, /font-mono|createPortal|<textarea|<button/)
@@ -60,6 +60,7 @@ test('la barre de réécriture annonce son plafond et passe par les composants d
   for (const mot of ['Reformuler', 'Plus technique', 'Plus concis', 'Insister sur…']) assert.ok(code.includes(mot), mot)
   assert.match(code, /par jour au plus/)
   assert.doesNotMatch(code, /createPortal|<button|<input|animate-spin|style=\{\{/)
+  assert.doesNotMatch(code, /par l’IA/)
 })
 
 test('Rédiger : une panne de lecture du mémoire n’est jamais « pas de mémoire » (le formulaire de rédaction ne revient pas)', () => {
