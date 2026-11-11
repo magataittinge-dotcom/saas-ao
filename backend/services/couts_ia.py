@@ -61,6 +61,23 @@ def estimer_ecriture_cache(modele: str, jetons_prefixe: int, jetons_sortie: int)
     return calculer(modele, {"cache_creation_input_tokens": jetons_prefixe, "output_tokens": jetons_sortie})
 
 
+_CLES_USAGE = ("input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens")
+
+
+def en_dict(usage: object) -> dict:
+    """Les comptes de jetons d'un `usage` du SDK (objet) ou d'un dict, en dict d'entiers (0 si absent)."""
+    if usage is None:
+        return {cle: 0 for cle in _CLES_USAGE}
+    lire = usage.get if isinstance(usage, dict) else (lambda cle, d=0: getattr(usage, cle, d))
+    sortie = {}
+    for cle in _CLES_USAGE:
+        try:
+            sortie[cle] = int(lire(cle, 0) or 0)
+        except (TypeError, ValueError):
+            sortie[cle] = 0
+    return sortie
+
+
 def enregistrer(db: Session, organization_id: str, usage_nom: str, modele: str, usage: dict,
                 reference: Optional[str] = None) -> CoutIA:
     """Une ligne par appel. Aucune donnée du fichier, aucun nom : seulement des nombres."""

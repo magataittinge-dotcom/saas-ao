@@ -10,6 +10,7 @@ import time
 import anthropic
 from json_repair import repair_json
 from config import get_settings
+from services.jetons import ligne_jetons
 
 settings = get_settings()
 
@@ -58,6 +59,8 @@ class MemoireImporter:
     def __init__(self):
         # Synchronous client — more reliable for long-running calls
         self.client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        # S-01 — jetons facturés du dernier appel (lus après l'appel, pour `couts_ia`) ; None tant qu'il n'a pas répondu.
+        self.usage = None
 
     async def extract(self, text: str) -> dict:
         prompt = _IMPORT_PROMPT_TEMPLATE + text[:60_000]
@@ -78,6 +81,11 @@ class MemoireImporter:
         ) as stream:
             for text in stream.text_stream:
                 collected += text
+            try:
+                self.usage = getattr(stream.get_final_message(), "usage", None)
+                print(ligne_jetons("import_memoire", self.MODEL, self.usage), flush=True)
+            except Exception:   # le compte des jetons ne fait jamais échouer l'import
+                self.usage = None
 
         elapsed = time.monotonic() - t0
         raw = collected.strip()

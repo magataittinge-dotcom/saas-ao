@@ -9,8 +9,9 @@ from models.user import User
 from models.memoire_config import MemoireConfig
 from schemas.memoire_config import MemoireConfigResponse, MemoireConfigUpdate
 from routers.auth import get_auth_user
-from services import extraction_processus
+from services import extraction_processus, plafonds_ia
 from services.document_processor import DocumentProcessor
+from services.rate_limit import limiter
 from services.pdfium_processus import TravailPdfiumEchoue
 from services.ai.memoire_importer import MemoireImporter
 from services.upload_validation import RegleDepot, recevoir_fichier
@@ -34,7 +35,9 @@ class StructureTextRequest(BaseModel):
 
 
 @router.post("/structure-text")
+@limiter.limit("10/minute")
 async def structure_text(
+    request: Request,
     payload: StructureTextRequest,
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
@@ -42,9 +45,12 @@ async def structure_text(
     """C7 — Haiku structure le texte libre vers les champs du profil.
 
     Retourne une PROPOSITION (preview) : rien n'est écrit en base — c'est
-    le PUT /memoire-config existant qui persiste après validation."""
+    le PUT /memoire-config existant qui persiste après validation.
+    S-01 — plafonné par organisation et par jour (`REFORMULER_MAX_PAR_JOUR`), compté avant l'appel."""
     from services.ai.profile_structurer import structure_profile_text
 
+    plafonds_ia.verifier(db, user.organization_id, plafonds_ia.ACTION_REFORMULER)
+    plafonds_ia.inscrire(db, user, plafonds_ia.ACTION_REFORMULER)
     try:
         proposed, usage = await structure_profile_text(payload.text)
     except Exception as e:
@@ -181,13 +187,18 @@ def _texte_pdf_importe(content: bytes, filename: str) -> str:
 
 
 @router.post("/import")
+@limiter.limit("3/minute")
 async def import_memoire(
     request: Request,
     file: UploadFile = File(...),
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ):
-    """Extract structured data from an existing mémoire technique (.docx or .pdf)."""
+    """Extract structured data from an existing mémoire technique (.docx or .pdf).
+
+    S-01 — plafonné par organisation et par jour (`IMPORT_MEMOIRE_MAX_PAR_JOUR`), compté avant l'appel au modèle ;
+    le coût de l'appel est inscrit dans `couts_ia`, même si la réponse n'a pas pu être lue."""
+    plafonds_ia.verifier(db, user.organization_id, plafonds_ia.ACTION_IMPORT)
     filename = file.filename or ""
     regle = RegleDepot(_IMPORT_EXTENSIONS, _IMPORT_MAX_SIZE, "DOCX ou PDF")
     with await recevoir_fichier(request, file, regle) as recu:
@@ -203,13 +214,23 @@ async def import_memoire(
     if not text or len(text.strip()) < 100:
         raise HTTPException(status_code=422, detail="Impossible d'extraire le texte du document")
 
+    plafonds_ia.verifier(db, user.organization_id, plafonds_ia.ACTION_IMPORT)
+    plafonds_ia.inscrire(db, user, plafonds_ia.ACTION_IMPORT)
+    importer = MemoireImporter()
     try:
-        importer = MemoireImporter()
         extracted = await importer.extract(text)
     except Exception as e:
         import logging as _logging
         _logging.getLogger(__name__).error(f"Erreur extraction mémoire import: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Le mémoire n’a pas pu être lu. Rien n’est enregistré ; réessayez dans un instant.")
+    finally:
+        # Coût réel de l'appel (registre `couts_ia`), même quand la réponse n'a pas pu être lue.
+        usage = getattr(importer, "usage", None)
+        if usage is not None:
+            from services import couts_ia
+            couts_ia.enregistrer(db, user.organization_id, "import_memoire",
+                                 getattr(importer, "MODEL", couts_ia.SONNET_4_6),
+                                 couts_ia.en_dict(usage))
 
     # Count non-null fields
     fields_count = sum(1 for v in extracted.values() if v is not None and v != "" and v != [])
