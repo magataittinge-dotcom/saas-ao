@@ -41,7 +41,7 @@ export function Citation({ reponse, surligner }: { reponse: ReponseSource; surli
       <figcaption>
         {surligner
           ? `Texte exact de la page ${reponse.page}${nom ? ` · ${nom}` : ''}`
-          : 'Extrait cité par Synorix'}
+          : 'Extrait cité par Synorix, non retrouvé mot pour mot dans la pièce'}
       </figcaption>
     </figure>
   )
@@ -53,12 +53,13 @@ export function VuePassage({
   const surLaPage = rectsAffiches(reponse)
   return (
     <div className="source-vue">
-      <Citation reponse={reponse} surligner={reponse.niveau === 'passage' && exigenceId !== null} />
+      {/* Jury et testeur, tour 1 : un extrait sans surlignage se lisait comme « le passage ». L'écran dit d'abord la vérité. */}
       {reponse.niveau === 'page' && (
-        <p className="source-note">
-          Page citée par Synorix{reponse.page ? ` · page ${reponse.page}` : ''}.
+        <p className="source-note" data-passage-non-retrouve="">
+          Passage non retrouvé mot pour mot dans la pièce. Page citée par Synorix{reponse.page ? ` · page ${reponse.page}` : ''} : la clause est à lire sur cette page.
         </p>
       )}
+      <Citation reponse={reponse} surligner={reponse.niveau === 'passage' && exigenceId !== null} />
       {exigenceId !== null && (
         <>
           <p className="source-sous-titre">Sur la page</p>
@@ -88,7 +89,7 @@ export function VuePage({
   return (
     <div className="source-vue">
       {reponse.niveau === 'page' && (
-        <p className="source-note">Page citée par Synorix.</p>
+        <p className="source-note" data-passage-non-retrouve="">Passage non retrouvé mot pour mot dans la pièce. Page citée par Synorix : la clause est à lire sur cette page.</p>
       )}
       <ImageSource
         exigenceId={exigenceId}
@@ -125,6 +126,9 @@ export function VueDocumentPdf({
   if (!url) return null
   return (
     <div className="source-vue">
+      {reponse.niveau === 'page' && page === reponse.page && (
+        <p className="source-note" data-passage-non-retrouve="">Passage non retrouvé mot pour mot dans la pièce. Voici la page citée par Synorix : la clause est à lire sur cette page.</p>
+      )}
       <Suspense fallback={<div className="source-squelette" role="status" aria-label="Chargement du document" />}>
         <VueDocument
           reponse={reponse} url={url} page={page}

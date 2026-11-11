@@ -119,7 +119,10 @@ export function PanneauSourceVue({
   const avecImages = exigenceId !== null
   const vues = useMemo(() => (reponse ? vuesDisponibles(reponse, avecImages) : []), [reponse, avecImages])
   const [vueChoisie, setVueChoisie] = useState<VueSource | null>(null)
-  const vue: VueSource | null = vueChoisie && vues.includes(vueChoisie) ? vueChoisie : vueParDefaut(vues)
+  // Passage non retrouvé et aucun extrait à lire (source d'un fait du résumé) : la vue « Passage » serait vide ; on ouvre la
+  // pièce à la page citée, sous la phrase qui le dit.
+  const sansExtrait = !!reponse && reponse.niveau === 'page' && !reponse.citation && exigenceId === null && vues.includes('document')
+  const vue: VueSource | null = vueChoisie && vues.includes(vueChoisie) ? vueChoisie : sansExtrait ? 'document' : vueParDefaut(vues)
   const [pageDoc, setPageDoc] = useState<number | null>(null)
   const [totalPages, setTotalPages] = useState<number | null>(nombrePages)
   const page = pageDoc ?? reponse?.page ?? 1

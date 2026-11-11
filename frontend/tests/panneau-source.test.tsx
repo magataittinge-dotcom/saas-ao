@@ -56,6 +56,9 @@ test('niveau « page » : pas de surlignage, « Page citée par Synorix »', () 
   assert.ok(html.includes('Page citée par Synorix'), html)
   assert.ok(!html.includes('<mark>') && !html.includes('source-surligne'))
   assert.ok(html.includes('Sur la page'), 'la page citée reste montrée')
+  // jury et testeur, tour 1 : l'écran dit que le passage n'a pas été retrouvé, avant de montrer l'extrait
+  assert.ok(html.includes('Passage non retrouvé mot pour mot dans la pièce'), html)
+  assert.ok(html.indexOf('Passage non retrouvé') < html.indexOf('Extrait cité par Synorix') || !html.includes('Extrait cité par Synorix'))
 })
 
 test('niveau « aucun » : texte positif sobre et lien vers la pièce, pas d’onglets', () => {

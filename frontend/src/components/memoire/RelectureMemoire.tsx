@@ -17,12 +17,36 @@ import { cn } from '@/lib/utils'
 import type { ProjectDocument } from '@/types'
 
 /**
- * La couleur d'une ligne dit son poids (COULEURS.md), toujours avec son mot et son icône : rouge = à reprendre avant le
- * dépôt (un passage resté à compléter, une longueur au-delà de la limite du règlement) ; ambre = à vérifier.
+ * La couleur d'un groupe dit son poids (COULEURS.md), toujours avec son mot et son icône : rouge = hors de la limite du
+ * règlement (la longueur) ; ambre = à renseigner ou à vérifier (un passage resté à compléter, un critère à couvrir).
  */
-const BLOQUANT: ReadonlySet<TypeLigne> = new Set<TypeLigne>(['a_completer', 'longueur'])
+const BLOQUANT: ReadonlySet<TypeLigne> = new Set<TypeLigne>(['longueur'])
 
-/** La liste courte : une rangée à filet par point à reprendre, ou « Conforme » et une phrase sobre quand tout va bien. */
+/** « 6 passages : nom ; nom ; nom … » : une précision répétée ne se dit qu'une fois, et ne finit pas sur des points de suspension. */
+export function detailLisible(detail: string): string {
+  const [tete, ...reste] = detail.split(/\s:\s/)
+  if (reste.length === 0) return detail
+  const coupe = /…\s*$/.test(detail)
+  const uniques = [...new Set(reste.join(' : ').replace(/\s*…\s*$/, '').split(/\s*;\s*/).map((m) => m.trim()).filter(Boolean))]
+  // une liste coupée par le serveur le dit en mots, pas par des points de suspension au milieu d'une phrase
+  return `${tete} : ${uniques.join(' ; ')}${coupe && uniques.length > 1 ? ', entre autres' : ''}`
+}
+
+/** Les points à reprendre, rangés sous leur mot (« À compléter », « À couvrir »…), dans l'ordre où ces mots apparaissent. */
+export function groupesRelecture(lignes: readonly LigneRelecture[]): { libelle: string; bloquant: boolean; lignes: LigneRelecture[] }[] {
+  const groupes: { libelle: string; bloquant: boolean; lignes: LigneRelecture[] }[] = []
+  for (const l of lignes) {
+    const groupe = groupes.find((g) => g.libelle === l.libelle)
+    if (groupe) groupe.lignes.push(l)
+    else groupes.push({ libelle: l.libelle, bloquant: BLOQUANT.has(l.type), lignes: [l] })
+  }
+  return groupes
+}
+
+/**
+ * La liste courte : les points à reprendre, rangés sous leur mot, dit UNE fois en tête de groupe avec son compte (jury,
+ * tour 1 : trente pastilles rouges identiques ne triaient rien) ; ou « Conforme » et une phrase sobre quand tout va bien.
+ */
 export function ListeRelecture({ donnees, onAller, onSource }: {
   donnees: ReponseRelecture
   onAller: (ligne: LigneRelecture) => void
@@ -37,25 +61,31 @@ export function ListeRelecture({ donnees, onAller, onSource }: {
     )
   }
   return (
-    <ul>
-      {donnees.lignes.map((l, i) => {
-        const bloquant = BLOQUANT.has(l.type)
-        return (
-          <li key={`${l.type}-${i}`} className="border-t border-bord py-3 first:border-t-0 first:pt-0" data-ligne={l.type} data-poids={bloquant ? 'bloquant' : 'a-verifier'}>
-            <PastilleEtat sens={bloquant ? 'rouge' : 'ambre'} icone={bloquant ? AlertCircle : CircleHelp}>{l.libelle}</PastilleEtat>
-            <p className="mt-1.5 min-w-0 break-words text-sm font-medium text-fg">{l.texte}</p>
-            {l.detail && <p className="mt-0.5 text-xs text-fg-3">{l.detail}</p>}
-            <p className="mt-1 flex flex-wrap items-center gap-x-4 text-sm">
-              {l.ancre && l.section && (
-                <Bouton variante="lien" onClick={() => onAller(l)} className="h-auto min-h-9 whitespace-normal text-left">Aller à : {l.section}</Bouton>
-              )}
-              {l.lien && <Link to={l.lien} className={classesBouton('lien', 'min-h-9')}>Renseigner dans Mon entreprise</Link>}
-              {l.source && <Bouton variante="lien" onClick={() => onSource(l.source as SourceLigne)} className="min-h-9">Voir dans le dossier</Bouton>}
-            </p>
-          </li>
-        )
-      })}
-    </ul>
+    <div className="space-y-6">
+      {groupesRelecture(donnees.lignes).map((g) => (
+        <section key={g.libelle} data-groupe-relecture="">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-fg">
+            <PastilleEtat sens={g.bloquant ? 'rouge' : 'ambre'} icone={g.bloquant ? AlertCircle : CircleHelp}>{g.libelle}</PastilleEtat>
+            <span className="font-medium text-fg-3">{g.lignes.length} {g.lignes.length > 1 ? 'points' : 'point'}</span>
+          </h3>
+          <ul className="mt-2">
+            {g.lignes.map((l, i) => (
+              <li key={`${l.type}-${i}`} className="border-t border-bord py-3" data-ligne={l.type} data-poids={g.bloquant ? 'bloquant' : 'a-verifier'}>
+                <p className="min-w-0 break-words text-sm font-medium text-fg">{detailLisible(l.texte)}</p>
+                {l.detail && <p className="mt-0.5 break-words text-xs text-fg-3">{detailLisible(l.detail)}</p>}
+                <p className="mt-1 flex flex-wrap items-center gap-x-4 text-sm">
+                  {l.ancre && l.section && (
+                    <Bouton variante="lien" onClick={() => onAller(l)} className="h-auto min-h-9 whitespace-normal text-left">Aller à : {l.section}</Bouton>
+                  )}
+                  {l.lien && <Link to={l.lien} className={classesBouton('lien', 'min-h-9')}>Renseigner dans Mon entreprise</Link>}
+                  {l.source && <Bouton variante="lien" onClick={() => onSource(l.source as SourceLigne)} className="min-h-9">Voir dans le dossier</Bouton>}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
   )
 }
 
@@ -117,9 +147,9 @@ export default function RelectureMemoire({ projectId }: { projectId: string }) {
           className={cn('flex w-full flex-col gap-0 bg-surface-0 p-0 sm:max-w-none', selection ? 'sm:w-[min(46rem,100vw)]' : 'sm:w-[min(30rem,100vw)]')}
         >
           <header className="shrink-0 border-b border-bord px-5 py-4 pr-14">
-            <SheetTitle className="text-lg font-semibold text-fg">Relire mon mémoire</SheetTitle>
+            <SheetTitle className="font-memoire text-xl font-semibold text-fg">Relire mon mémoire</SheetTitle>
             <SheetDescription className="mt-1 text-sm text-fg-2">
-              Contrôle sur le texte, sans IA : critères du règlement, pièces, passages à compléter, DTU, longueur.
+              Synorix compare votre texte au règlement, sans le réécrire : critères, pièces citées, passages à compléter, normes citées, longueur.
             </SheetDescription>
           </header>
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
@@ -147,6 +177,9 @@ export default function RelectureMemoire({ projectId }: { projectId: string }) {
               />
             ) : (
               <div className="space-y-4">
+                {data.nombre > 0 && (
+                  <p className="text-sm text-fg-2"><span className="font-semibold text-fg">{resumeRelecture(data)}</span> avant le dépôt, rangés par nature. Chaque point mène à son passage.</p>
+                )}
                 <ListeRelecture donnees={data} onAller={aller} onSource={ouvrirSource} />
                 {data.limite_pages !== null && (
                   <p className="border-t border-bord pt-3 text-xs text-fg-3">Longueur estimée : environ {data.pages_estimees} pages, pour {data.limite_pages} au plus dans le règlement.</p>
