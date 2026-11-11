@@ -24,6 +24,8 @@ from schemas.memoire import (
     PassageRewriteRequest, EtatSectionRequest,
 )
 from routers.auth import get_auth_user
+from services import budget_ia
+from services.budget_ia import exiger_budget_ia  # S-01 — filet du budget d'IA par organisation et par jour
 from services.ai.memoire_generator import MemoireGenerator
 from services.chrono import chronometre, lot_du_projet
 from services.docx_exporter import build_memoire_docx
@@ -160,7 +162,7 @@ def get_memoire_preflight(
     }
 
 
-@router.post("/{project_id}/memoire/generate")
+@router.post("/{project_id}/memoire/generate", dependencies=[Depends(exiger_budget_ia)])
 @limiter.limit("3/minute")
 async def generate_memoire(
     request: Request,
@@ -176,7 +178,11 @@ async def generate_memoire(
     statut error + relance, jamais de régression d'étape."""
     project = _get_project_or_404(project_id, user.organization_id, db)
     ensure_relaunchable(project)  # R12 — pas de relance sur projet clôturé
+    # S-04 — plafond de lancements par jour (toutes offres) : compté ici, refusés compris.
+    from services import plafonds_ia
+    plafonds_ia.compter_lancement(db, user, plafonds_ia.ACTION_LANCER_MEMOIRE)
     org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+    quota.exiger_siret_pour_essai(org)   # S-05 — derrière ESSAI_EXIGE_SIRET (éteinte par défaut)
 
     # Route async : ne pas lire ici les textes du DCE (plusieurs Mo, bloquerait la
     # boucle) — le job les recharge ; seul compte qu'il y ait des pièces pour le lot.
@@ -189,14 +195,17 @@ async def generate_memoire(
 
     # ── Quota (C1) : blocage doux 402 AVANT lancement ; l'unité n'est
     # décomptée qu'AU SUCCÈS, dans le job — « 1 mémoire PAR LOT généré ».
-    quota.check_quota(db, org, "memoire")
-
     thread_name = f"synorix-memoire-{project_id[:12]}"
+    statut_avant = project.processing_status
 
     # Anti double-run ATOMIQUE (R3) : réservation conditionnelle sur la ligne
     # projet. Le verrou de ligne Postgres sérialise les workers — deux
     # générations concurrentes ne peuvent plus consommer 2 unités pour un
     # seul mémoire. 0 ligne = déjà en cours → 409, avant toute écriture.
+    # S-04 — l'unité n'est décomptée qu'au succès : les générations EN COURS de l'organisation comptent dans le
+    # contrôle du quota, et la réservation du créneau est validée tout de suite (sans `await` entre le contrôle et le
+    # commit), sinon des générations lancées en même temps sur plusieurs AO passaient toutes le contrôle.
+    quota.check_quota(db, org, "memoire", en_cours=_generations_en_cours(db, org.id, project_id))
     claimed = db.execute(
         _sql_update(Project)
         .where(
@@ -204,10 +213,11 @@ async def generate_memoire(
             or_(Project.processing_status.is_(None),
                 Project.processing_status != "generating"),
         )
-        .values(processing_status="generating")
+        .values(processing_status="generating", processing_detail="")
     ).rowcount
     if not claimed:
         raise HTTPException(status_code=409, detail="Une rédaction est déjà en cours pour cet appel d’offres.")
+    db.commit()
 
     # ── Garde pré-vol IA (audit risque #4) : jamais de run condamné d'avance
     # (API down / crédit épuisé). asyncio.to_thread : règle WSL2.
@@ -215,7 +225,11 @@ async def generate_memoire(
     try:
         await asyncio.to_thread(ensure_ai_service_available)
     except AIServiceUnavailable:
-        db.rollback()  # relâche le créneau réservé + le verrou de ligne
+        db.rollback()
+        # le créneau a été validé plus haut (S-04) : il est rendu explicitement
+        db.execute(_sql_update(Project).where(Project.id == project_id, Project.processing_status == "generating")
+                   .values(processing_status=statut_avant))
+        db.commit()
         raise HTTPException(
             status_code=503,
             detail="Service IA momentanément indisponible — réessayez dans quelques minutes.",
@@ -256,6 +270,7 @@ async def generate_memoire(
         target=_run_memoire_job,
         args=(project_id, user.organization_id, user.id, variables,
               profile_overrides, payload.reference_ids),
+        kwargs={"reservation": budget_ia.reservation_de(request)},   # S-01 : sa réservation, exacte
         daemon=True,
         name=thread_name,
     )
@@ -281,6 +296,16 @@ def _memoire_content_all_placeholders(content: dict) -> bool:
         v.strip() and not v.strip().startswith("[SECTION À RÉGÉNÉRER")
         for v in leaves
     )
+
+
+def _generations_en_cours(db, org_id: str, sauf_projet: str) -> int:
+    """Générations de mémoire en cours pour l'organisation (créneau « generating » hors « Refaire », qui ne décompte
+    aucune unité), le projet courant exclu."""
+    return (db.query(Project)
+            .filter(Project.organization_id == org_id, Project.id != sauf_projet,
+                    Project.processing_status == "generating",
+                    or_(Project.processing_detail.is_(None), ~Project.processing_detail.startswith(REFAIRE_DETAIL)))
+            .count())
 
 
 def _plan_valide(db, project, org_id: str, memoire_cfg) -> list[dict] | None:
@@ -410,8 +435,25 @@ def _arguments_generateur(ctx: dict, ouvrages_dpgf: str | None) -> dict:
     )
 
 
+def _run_memoire_job(*args, **kwargs) -> None:
+    """S-01 — le travail ci-dessous, et ses jetons facturés (lignes « jetons » du journal) inscrits dans `couts_ia`
+    à la fin, réussite ou échec, et la réservation du budget d'IA réglée (services/budget_ia.py)."""
+    from services import couts_ia, jetons
+    reservation = kwargs.pop("reservation", None)      # référence exacte de la réservation du budget d'IA
+    org_id = kwargs.get("org_id", args[1] if len(args) > 1 else None)
+    project_id = kwargs.get("project_id", args[0] if args else None)
+    with jetons.collecter() as collecte:
+        try:
+            return _run_memoire_job_corps(*args, **kwargs)
+        finally:
+            if org_id:
+                couts_ia.enregistrer_collecte(
+                    org_id, "memoire", collecte, reference=project_id,
+                    reservation=reservation)
+
+
 @chronometre("memoire", lot=lot_du_projet)
-def _run_memoire_job(
+def _run_memoire_job_corps(
     project_id: str, org_id: str, user_id: str, variables: dict,
     profile_overrides: dict | None, reference_ids: list | None,
 ) -> None:
@@ -621,7 +663,7 @@ def estimation_refaire_section(
     return estimer(memoire.content_json, part, cle, modele_du_segment(part))
 
 
-@router.post("/{project_id}/memoire/sections/{part}/{cle}/refaire")
+@router.post("/{project_id}/memoire/sections/{part}/{cle}/refaire", dependencies=[Depends(exiger_budget_ia)])
 @limiter.limit("3/minute")
 async def refaire_section_memoire(
     request: Request,
@@ -680,6 +722,7 @@ async def refaire_section_memoire(
     threading.Thread(
         target=_run_refaire_job,
         args=(project_id, user.organization_id, user.id, part, cle),
+        kwargs={"reservation": budget_ia.reservation_de(request)},   # S-01 : sa réservation, exacte
         daemon=True,
         name=f"synorix-refaire-{project_id[:12]}",
     ).start()
@@ -689,7 +732,25 @@ async def refaire_section_memoire(
 MSG_REFAIRE_ECHEC = "Cette partie n'a pas pu être refaite. Le mémoire est resté tel quel : réessayez dans un instant."
 
 
-def _run_refaire_job(project_id: str, org_id: str, user_id: str, part: str, cle: str) -> None:
+
+def _run_refaire_job(*args, **kwargs) -> None:
+    """S-01 — le travail ci-dessous, et ses jetons facturés (lignes « jetons » du journal) inscrits dans `couts_ia`
+    à la fin, réussite ou échec, et la réservation du budget d'IA réglée (services/budget_ia.py)."""
+    from services import couts_ia, jetons
+    reservation = kwargs.pop("reservation", None)      # référence exacte de la réservation du budget d'IA
+    org_id = kwargs.get("org_id", args[1] if len(args) > 1 else None)
+    project_id = kwargs.get("project_id", args[0] if args else None)
+    with jetons.collecter() as collecte:
+        try:
+            return _run_refaire_job_corps(*args, **kwargs)
+        finally:
+            if org_id:
+                couts_ia.enregistrer_collecte(
+                    org_id, "memoire_refaire", collecte, reference=project_id,
+                    reservation=reservation)
+
+
+def _run_refaire_job_corps(project_id: str, org_id: str, user_id: str, part: str, cle: str) -> None:
     """Job « Refaire cette partie » — session propre, contexte rechargé par id comme la génération.
 
     Seule la sous-section visée est réécrite, à partir du contenu LU AU MOMENT D'ÉCRIRE (une retouche faite dans
@@ -782,7 +843,7 @@ def _reecritures_des_dernieres_24h(db: Session, org_id: str) -> int:
             .count())
 
 
-@router.post("/{project_id}/memoire/rewrite-passage")
+@router.post("/{project_id}/memoire/rewrite-passage", dependencies=[Depends(exiger_budget_ia)])
 @limiter.limit("10/minute")
 async def rewrite_passage_endpoint(
     request: Request,
@@ -995,6 +1056,8 @@ def export_memoire_pdf(
     org = db.query(Organization).filter(Organization.id == user.organization_id).first()
 
     docx_bytes = build_project_memoire_docx(project, memoire, org, db)
+    nom = f"Memoire_Technique_{project.name.replace(' ', '_')}.pdf"
+    rendre_connexion(db)                       # avant LibreOffice : jamais une connexion prise pendant la conversion
     try:
         pdf_bytes = docx_to_pdf(docx_bytes)
     except PdfConversionError as exc:
@@ -1002,13 +1065,7 @@ def export_memoire_pdf(
         raise HTTPException(status_code=503, detail=str(exc),
                             headers={"Retry-After": str(exc.retry_apres_s)})
 
-    reponse = _attachment_response(
-        pdf_bytes,
-        f"Memoire_Technique_{project.name.replace(' ', '_')}.pdf",
-        "application/pdf",
-    )
-    rendre_connexion(db)
-    return reponse
+    return _attachment_response(pdf_bytes, nom, "application/pdf")
 
 
 @router.patch("/{project_id}/memoire", response_model=MemoireResponse)

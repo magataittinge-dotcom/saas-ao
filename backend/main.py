@@ -405,7 +405,9 @@ app.include_router(memoire.router, prefix="/api/projects", tags=["memoire"])
 app.include_router(relecture_memoire.router, prefix="/api/projects", tags=["relecture-memoire"])
 app.include_router(plan_memoire.router, prefix="/api/projects", tags=["plan-memoire"])
 app.include_router(memoire_config.router, prefix="/api/memoire-config", tags=["memoire-config"])
-app.include_router(rag.router, prefix="/api/rag", tags=["rag"])
+# S-07 (audit de sécurité) : GET /api/rag/retrieve déclenchait deux appels Voyage payants pour tout compte connecté ;
+# aucun écran ne s'en sert. Retirée de l'API publique (le routeur reste dans routers/rag.py). Le jeton ops
+# (METRICS_TOKEN) occupe le même en-tête Authorization que le jeton Clerk : il ne peut pas garder cette route.
 app.include_router(export.router, prefix="/api/projects", tags=["export"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
 app.include_router(stripe_billing.router, prefix="/api/stripe", tags=["stripe"])

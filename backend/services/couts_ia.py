@@ -61,16 +61,66 @@ def estimer_ecriture_cache(modele: str, jetons_prefixe: int, jetons_sortie: int)
     return calculer(modele, {"cache_creation_input_tokens": jetons_prefixe, "output_tokens": jetons_sortie})
 
 
+_CLES_USAGE = ("input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens")
+
+
+def en_dict(usage: object) -> dict:
+    """Les comptes de jetons d'un `usage` du SDK (objet) ou d'un dict, en dict d'entiers (0 si absent)."""
+    if usage is None:
+        return {cle: 0 for cle in _CLES_USAGE}
+    lire = usage.get if isinstance(usage, dict) else (lambda cle, d=0: getattr(usage, cle, d))
+    sortie = {}
+    for cle in _CLES_USAGE:
+        try:
+            sortie[cle] = int(lire(cle, 0) or 0)
+        except (TypeError, ValueError):
+            sortie[cle] = 0
+    return sortie
+
+
+def enregistrer_collecte(organization_id: str, usage_nom: str, collecte: list,
+                         reference: Optional[str] = None, reservation: Optional[str] = None) -> None:
+    """Inscrit les jetons collectés pendant un travail (`services.jetons.collecter`) : une ligne par modèle, dans une
+    session à part (celle du travail peut être dans un état d'erreur), et RÈGLE la réservation du budget d'IA
+    (`reservation` : sa référence exacte, `services.budget_ia`) dans la même transaction, même sans dépense.
+    Ne lève jamais : le registre ne fait pas échouer une analyse ou un mémoire."""
+    par_modele: dict[str, dict] = {}
+    for modele, usage in collecte or []:
+        total = par_modele.setdefault(modele, {cle: 0 for cle in _CLES_USAGE})
+        for cle in _CLES_USAGE:
+            total[cle] += int(usage.get(cle, 0) or 0)
+    if not par_modele and not reservation:
+        return
+    from database import SessionLocal
+    db = SessionLocal()
+    try:
+        for modele, usage in par_modele.items():
+            db.add(_ligne(organization_id, usage_nom, modele, usage, reference))
+        if reservation:
+            from services import budget_ia
+            budget_ia.liberer(db, organization_id, reservation)
+        db.commit()
+    except Exception:
+        logger.exception("couts_ia : inscription impossible (%s)", usage_nom)
+        db.rollback()
+    finally:
+        db.close()
+
+
 def enregistrer(db: Session, organization_id: str, usage_nom: str, modele: str, usage: dict,
                 reference: Optional[str] = None) -> CoutIA:
     """Une ligne par appel. Aucune donnée du fichier, aucun nom : seulement des nombres."""
+    ligne = _ligne(organization_id, usage_nom, modele, usage, reference)
+    db.add(ligne)
+    db.commit()
+    return ligne
+
+
+def _ligne(organization_id: str, usage_nom: str, modele: str, usage: dict, reference: Optional[str]) -> CoutIA:
     usd, eur = calculer(modele, usage)
-    ligne = CoutIA(
+    return CoutIA(
         organization_id=organization_id, usage=usage_nom, modele=modele,
         jetons_entree=int(usage.get("input_tokens", 0) or 0), jetons_sortie=int(usage.get("output_tokens", 0) or 0),
         jetons_cache_lecture=int(usage.get("cache_read_input_tokens", 0) or 0),
         jetons_cache_ecriture=int(usage.get("cache_creation_input_tokens", 0) or 0),
         cout_usd=usd, cout_eur=eur, reference=reference)
-    db.add(ligne)
-    db.commit()
-    return ligne

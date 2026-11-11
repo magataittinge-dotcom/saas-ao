@@ -701,6 +701,9 @@ async def upload_project_document(
     _t0 = _time.monotonic()
 
     _get_project_or_404(project_id, user.organization_id, db)
+    # S-06 — quota de stockage de l'organisation et garde du disque, AVANT de recevoir le moindre octet.
+    from services import stockage
+    stockage.verifier_avant_depot(db, user.organization_id, request)
     # B5 : lecture seule faite -> la connexion retourne au pool pendant la réception du
     # corps (jusqu'à plusieurs minutes pour un DCE de 380 Mo). Rouverte à la première
     # écriture ; les objets déjà chargés se rechargent d'eux-mêmes.

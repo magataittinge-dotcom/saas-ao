@@ -20,6 +20,8 @@ from models.checklist_item import ChecklistItem
 from models.document import Document
 from schemas.compliance import ComplianceItemResponse
 from routers.auth import get_auth_user
+from services import budget_ia
+from services.budget_ia import exiger_budget_ia  # S-01 — filet du budget d'IA par organisation et par jour
 from services.ai.api_preflight import AIServiceUnavailable, ensure_ai_service_available
 from services.ai.dce_analyzer import (
     DCEAnalyzer, ClaudeAuthenticationError, ClaudeRateLimitError,
@@ -83,7 +85,7 @@ def _lots_inconnus(project, lot_ids: list) -> list:
     return [l for l in lot_ids if l not in connus and not _LOT_AJOUTE_A_LA_MAIN.match(l)]
 
 
-@router.post("/{project_id}/analyze")
+@router.post("/{project_id}/analyze", dependencies=[Depends(exiger_budget_ia)])
 @limiter.limit("5/minute")
 async def trigger_analysis(
     request: Request,
@@ -99,6 +101,9 @@ async def trigger_analysis(
     par lot. body optionnel : {"lots": ["lot1", "lot2"]} (AnalyzeRequest)."""
     project = _get_project_or_404(project_id, user.organization_id, db)
     ensure_relaunchable(project)  # R12 — pas de relance sur projet clôturé
+    # S-04 — plafond de lancements par jour (toutes offres) : compté ici, refusés et remboursés compris.
+    from services import plafonds_ia
+    plafonds_ia.compter_lancement(db, user, plafonds_ia.ACTION_LANCER_ANALYSE)
     all_docs = db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).all()
     docs_total = len(all_docs)
 
@@ -135,6 +140,7 @@ async def trigger_analysis(
 
     # ── Quota (C1) : 1 unité PAR LOT, décomptée AU LANCEMENT ─────────────────
     org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+    quota.exiger_siret_pour_essai(org)   # S-05 — derrière ESSAI_EXIGE_SIRET (éteinte par défaut)
     status = quota.get_quota_status(db, org)
     limit = status["analyses"]["limit"]
     if limit is not None and status["analyses"]["used"] + len(lot_specs) > limit:
@@ -225,6 +231,7 @@ async def trigger_analysis(
         target=_run_analysis_job,
         args=(project_id, org_id, pass1_text, lot_specs,
               docs_sent, docs_total, truncated_files, consumed_ids),
+        kwargs={"reservation": budget_ia.reservation_de(request)},   # S-01 : sa réservation, exacte
         daemon=True,
         name=thread_name,
     )
@@ -455,8 +462,25 @@ def _refund_lots(db, consumed_ids: dict, lot_ids: list) -> None:
         db.rollback()
 
 
+def _run_analysis_job(*args, **kwargs) -> None:
+    """S-01 — le travail ci-dessous, et ses jetons facturés (lignes « jetons » du journal) inscrits dans `couts_ia`
+    à la fin, réussite ou échec, et la réservation du budget d'IA réglée (services/budget_ia.py)."""
+    from services import couts_ia, jetons
+    reservation = kwargs.pop("reservation", None)      # référence exacte de la réservation du budget d'IA
+    org_id = kwargs.get("org_id", args[1] if len(args) > 1 else None)
+    project_id = kwargs.get("project_id", args[0] if args else None)
+    with jetons.collecter() as collecte:
+        try:
+            return _run_analysis_job_corps(*args, **kwargs)
+        finally:
+            if org_id:
+                couts_ia.enregistrer_collecte(
+                    org_id, "analyse", collecte, reference=project_id,
+                    reservation=reservation)
+
+
 @chronometre("analyse", lot=lambda a: [s.get("lot_id") for s in a.get("lot_specs") or []])
-def _run_analysis_job(
+def _run_analysis_job_corps(
     project_id: str,
     org_id: str,
     pass1_text: str,
@@ -584,7 +608,9 @@ def _run_analysis_job(
         failed_lot_ids = set()
         try:
             with ThreadPoolExecutor(max_workers=2) as pool:
-                futures = [(pool.submit(_one_lot, spec), spec) for spec in lot_specs]
+                # S-01 — `transmettre` : la collecte des jetons (couts_ia) suit chaque fil du pool.
+                from services.jetons import transmettre
+                futures = [(pool.submit(transmettre(_one_lot), spec), spec) for spec in lot_specs]
                 for fut, spec in futures:
                     try:
                         results.append(fut.result(timeout=1200))

@@ -73,6 +73,9 @@ def raison_de_report(db: Session, org_id: str, avec_file: bool = True) -> Option
         return "mois"
     if appels_du_jour(db, org_id) >= p["appels_par_jour"]:
         return "jour"
+    from services import budget_ia            # S-01 — filet général : budget d'IA du jour de l'organisation
+    if budget_ia.depasse(db, org_id):
+        return "jour"
     if avec_file and lectures_en_attente(db, org_id) >= p["lectures_en_attente"]:
         return "file"
     return None

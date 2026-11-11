@@ -70,6 +70,9 @@ limiter = LimiteurResilient(
     default_limits=["600/minute"],
     storage_uri=_resolve_storage_uri(),
     swallow_errors=True,
+    # S-10 (audit de sécurité) : Redis injoignable -> repli sur un compteur en mémoire au lieu de ne plus rien
+    # limiter (l'API tourne avec un seul processus : le repli local suffit).
+    in_memory_fallback_enabled=True,
     # headers_enabled=False : les endpoints renvoient des dicts (pas des
     # Response) ; avec l'injection d'en-têtes activée sur le décorateur,
     # slowapi lèverait. Le 429 sur dépassement suffit à la protection.

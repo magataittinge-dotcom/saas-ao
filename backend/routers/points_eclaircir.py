@@ -18,6 +18,7 @@ from database import get_db
 from models.project import TYPE_DPGF, Project, ProjectDocument
 from models.user import User
 from routers.auth import get_auth_user
+from services.budget_ia import exiger_budget_ia  # S-01 — filet du budget d'IA par organisation et par jour
 from services import couts_ia, points_eclaircir as pe
 from services.audit_logger import log_action
 from services.critical_fields import parse_french_date
@@ -81,7 +82,7 @@ def date_limite_questions(project_id: str, user: User = Depends(get_auth_user), 
     return {**lecture, "rappel": RAPPEL_REGLE}
 
 
-@router.post("/{project_id}/points-a-eclaircir")
+@router.post("/{project_id}/points-a-eclaircir", dependencies=[Depends(exiger_budget_ia)])
 @limiter.limit("3/minute")
 async def preparer_points(request: Request, project_id: str, user: User = Depends(get_auth_user), db: Session = Depends(get_db)):
     """« Préparer les questions » : Haiku 4.5 sur les seuls passages utiles du dossier. Ne décompte aucune unité."""
