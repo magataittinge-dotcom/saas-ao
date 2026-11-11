@@ -1,6 +1,8 @@
 import * as React from 'react'
 import { phaseRequete, type RequeteLue } from '@/lib/requete'
+import { AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useUIStore } from '@/stores/uiStore'
 import { Bouton } from './bouton'
 import { useAttente } from './squelette'
 
@@ -9,6 +11,8 @@ import { useAttente } from './squelette'
  * 14 mots au plus, à la 3ᵉ personne), une seule action dont le verbe répond au titre. Une seule surface par écran vide ; ni
  * icône dans un rond, ni cadre en pointillés, ni compteur « (0) ». Vide PAR FILTRE : `parFiltre` : une autre phrase et
  * « Effacer les filtres », jamais une invitation à créer.
+ * Aligné à gauche, comme la page (jury, tour 1 : « centré dans une carte de 1 200 px ») : le texte part du bord des autres
+ * cartes, la phrase tient sur 60 caractères.
  */
 export function EtatVide({ titre, phrase, action, parFiltre, className }: {
   titre: React.ReactNode
@@ -19,11 +23,11 @@ export function EtatVide({ titre, phrase, action, parFiltre, className }: {
   className?: string
 }) {
   return (
-    <div data-etat-vide={parFiltre ? 'filtre' : ''} className={cn('rounded-carte border border-bord bg-surface-0 px-6 py-10 text-center shadow-card', className)}>
+    <div data-etat-vide={parFiltre ? 'filtre' : ''} className={cn('rounded-carte border border-bord bg-surface-0 p-6 shadow-card max-sm:p-5', className)}>
       <p className="text-lg font-semibold text-fg">{titre}</p>
-      {phrase && <p className="mx-auto mt-1.5 max-w-md text-sm text-fg-2">{phrase}</p>}
+      {phrase && <p className="mt-1 max-w-[60ch] text-sm text-fg-2">{phrase}</p>}
       {(parFiltre || action) && (
-        <div className="mt-5 flex justify-center">
+        <div className="mt-4 flex flex-wrap items-center gap-3">
           {parFiltre ? <Bouton variante="secondaire" onClick={parFiltre}>Effacer les filtres</Bouton> : action}
         </div>
       )}
@@ -31,9 +35,52 @@ export function EtatVide({ titre, phrase, action, parFiltre, className }: {
   )
 }
 
+// ── Un seul « Réessayer » par écran (jury, tour 1 : l'Accueil en montrait trois quand tout le serveur était en panne). ──
+// Chaque état d'erreur monté s'inscrit ici avec sa relance. Le premier inscrit porte le bouton, qui relance TOUS les états
+// d'erreur de l'écran ; les suivants disent seulement ce qui n'a pas pu se charger. Hors navigateur (rendu serveur, tests) :
+// chaque état garde son bouton.
+interface ErreurInscrite { id: symbol; relancer: () => void }
+const erreursMontees: ErreurInscrite[] = []
+const abonnes = new Set<() => void>()
+const publier = () => { abonnes.forEach((f) => f()) }
+const abonner = (f: () => void) => { abonnes.add(f); return () => { abonnes.delete(f) } }
+const premiereErreur = () => erreursMontees[0]?.id ?? null
+
+/** Pour les tests : les relances inscrites, dans l'ordre. */
+export const relancesInscrites = () => erreursMontees.map((e) => e.relancer)
+
+function useErreurCommune(onReessayer: (() => void) | undefined) {
+  const id = React.useRef(Symbol('erreur')).current
+  const relance = React.useRef(onReessayer)
+  relance.current = onReessayer
+  const relancable = Boolean(onReessayer)
+  const declarer = useUIStore((s) => s.declarerAplat)
+  React.useEffect(() => {
+    if (!relancable) return undefined
+    const inscrite: ErreurInscrite = { id, relancer: () => relance.current?.() }
+    erreursMontees.push(inscrite)
+    // « Réessayer » est le geste de l'écran : « Nouvel appel d'offres » de la barre du haut passe au trait.
+    declarer(1)
+    publier()
+    return () => {
+      erreursMontees.splice(erreursMontees.indexOf(inscrite), 1)
+      declarer(-1)
+      publier()
+    }
+  }, [id, relancable, declarer])
+  const premiere = React.useSyncExternalStore(abonner, premiereErreur, () => null)
+  return {
+    /** Cet état porte le bouton. */
+    meneur: premiere === null || premiere === id,
+    relancerTout: () => { if (erreursMontees.length > 0) erreursMontees.slice().forEach((e) => e.relancer()); else relance.current?.() },
+  }
+}
+
 /**
- * État d'erreur : ce qui n'a pas pu se faire, en mots simples, et le geste pour repartir (« Réessayer »). Jamais une pile
- * d'appels, jamais de l'anglais, jamais le texte de l'état vide. Annoncé aux lecteurs d'écran.
+ * État d'erreur, LE modèle (jury, tour 1 : « un seul modèle d'erreur ») : une icône et la couleur de l'état (rouge), ce qui
+ * n'a pas pu se faire (le titre), UNE phrase qui dit la cause, et le geste pour repartir. Aligné à gauche comme la page,
+ * jamais centré dans une carte. Un seul « Réessayer » par écran : s'il y a plusieurs pannes, le premier état porte le bouton
+ * et relance tout. Jamais une pile d'appels, jamais de l'anglais, jamais le texte de l'état vide. Annoncé aux lecteurs d'écran.
  */
 export function EtatErreur({ titre = 'Cette page n’a pas pu se charger', detail = 'La connexion au serveur a échoué. Vos données ne sont pas touchées.', onReessayer, enCours, action, className }: {
   titre?: React.ReactNode
@@ -43,16 +90,21 @@ export function EtatErreur({ titre = 'Cette page n’a pas pu se charger', detai
   action?: React.ReactNode
   className?: string
 }) {
+  const { meneur, relancerTout } = useErreurCommune(onReessayer)
+  const bouton = onReessayer && meneur
   return (
-    <div role="alert" data-etat-erreur="" className={cn('rounded-carte border border-bord bg-surface-0 px-6 py-10 text-center shadow-card', className)}>
-      <p className="text-lg font-semibold text-fg">{titre}</p>
-      {detail && <p className="mx-auto mt-1.5 max-w-md text-sm text-fg-2">{detail}</p>}
-      {(onReessayer || action) && (
-        <div className="mt-5 flex justify-center gap-2">
-          {onReessayer && <Bouton variante="secondaire" onClick={onReessayer} enCours={enCours} libelleEnCours="Nouvel essai…">Réessayer</Bouton>}
-          {action}
-        </div>
-      )}
+    <div role="alert" data-etat-erreur="" className={cn('flex items-start gap-3 rounded-carte border border-bord bg-surface-0 p-6 shadow-card max-sm:p-5', className)}>
+      <AlertCircle aria-hidden size={20} strokeWidth={1.75} className="mt-1 shrink-0 text-rouge-ink" />
+      <div className="min-w-0 flex-1">
+        <p className="text-lg font-semibold text-fg">{titre}</p>
+        {detail && <p className="mt-1 max-w-[60ch] text-sm text-fg-2">{detail}</p>}
+        {(bouton || action) && (
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-3">
+            {bouton && <Bouton variante="secondaire" data-reessayer="" onClick={relancerTout} enCours={enCours} libelleEnCours="Nouvel essai…">Réessayer</Bouton>}
+            {action}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
