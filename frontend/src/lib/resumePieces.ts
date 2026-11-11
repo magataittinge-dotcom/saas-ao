@@ -73,3 +73,30 @@ export function cartesPieces(
     { libelle: 'À renouveler', valeur: String(c.aRenouveler), rien: 'Aucune', etat: c.aRenouveler > 0 ? 'a-verifier' : 'pret', detail: c.aRenouveler > 0 ? 'Valables moins longtemps que la date de remise.' : 'Aucune pièce ne périme avant la remise.' },
   ]
 }
+
+/**
+ * Les pièces de l'étape, dites en une phrase de faits (jury, tour 1 : trois cases dont deux « Aucune », une pastille « Prêt »
+ * sur « À renouveler : Aucune », des zéros dans la barre du bas) : ce qui est prêt sur ce qui est demandé au dépôt, puis
+ * seulement ce qui existe (à renouveler, facultatives). Jamais un zéro.
+ */
+export function phraseResumePieces(c: ComptesPieces): string {
+  if (c.total === 0) return c.autres > 0 ? `Aucune pièce n’est demandée au dépôt ; ${phrasePiecesAutres(c)}.` : ''
+  const demandees = `${c.total} ${c.total > 1 ? 'pièces demandées' : 'pièce demandée'} au dépôt`
+  const tete = c.pretes === c.total ? `${demandees} : ${c.total > 1 ? 'toutes sont prêtes' : 'elle est prête'}`
+    : c.pretes === 0 ? `${demandees}, à joindre`
+    : `${c.pretes} ${c.pretes > 1 ? 'pièces prêtes' : 'pièce prête'} sur ${demandees}`
+  const suite = [
+    c.aRenouveler > 0 ? `${c.aRenouveler} à renouveler avant la remise` : null,
+    phrasePiecesAutres(c),
+  ].filter(Boolean)
+  return `${[tete, ...suite].join(' · ')}.`
+}
+
+/** Le bilan de la barre du bas : seulement ce qui se compte (« 3 prêtes · 11 à joindre »), jamais « 0 prête ». */
+export function phraseComptesUtiles(c: ComptesPieces): string {
+  return [
+    c.pretes > 0 ? `${c.pretes} ${c.pretes > 1 ? 'prêtes' : 'prête'}` : null,
+    c.aJoindre > 0 ? `${c.aJoindre} à joindre` : null,
+    c.aRenouveler > 0 ? `${c.aRenouveler} à renouveler` : null,
+  ].filter(Boolean).join(' · ')
+}

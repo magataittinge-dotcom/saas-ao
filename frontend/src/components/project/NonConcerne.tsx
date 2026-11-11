@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { ChecklistItem } from '@/types'
 import { Bouton } from '@/components/ui/bouton'
 import { MenuElement, MenuPoints } from '@/components/ui/menu'
@@ -21,10 +22,12 @@ export function piecesComptees<T extends Pick<ChecklistItem, 'status'>>(items: T
  * sur une ligne écartée, « Je suis concerné » reste visible pour reprendre la pièce.
  */
 export default function NonConcerneBouton({
-  item, onNonConcerne,
+  item, onNonConcerne, children,
 }: {
   item: ChecklistItem
   onNonConcerne?: (item: ChecklistItem, nonConcerne: boolean) => Promise<void>
+  /** Les autres gestes rares de la ligne (« Voir dans le dossier »…) : un menu à une seule entrée est un bouton caché. */
+  children?: ReactNode
 }) {
   if (!onNonConcerne) return null
   if (estNonConcernee(item)) {
@@ -32,7 +35,8 @@ export default function NonConcerneBouton({
   }
   return (
     <MenuPoints libelle="Autres actions pour cette pièce">
-      <MenuElement onSelect={() => { void onNonConcerne(item, true) }}>Non concerné</MenuElement>
+      {children}
+      <MenuElement onSelect={() => { void onNonConcerne(item, true) }}>Non concerné pour cette pièce</MenuElement>
     </MenuPoints>
   )
 }

@@ -53,6 +53,8 @@ interface Props {
   /** Vrai quand le serveur rend l'unité décomptée (échec technique : `services/quota.py`, `refund`). */
   uniteRendue?: boolean
   onRelancer?: () => void
+  /** Le mot du bouton qui laisse le traitement se poursuivre : il dit où il mène (« Revenir à l'accueil »). */
+  libelleArrierePlan?: string
 }
 
 /**
@@ -81,13 +83,15 @@ function etatEtape(step: StepDescriptor, currentStep: string | null, steps: Step
   if (phase === 'complete') return 'faite'
   if (step.key === currentStep) return 'en-cours'
   const i = steps.findIndex((s) => s.key === step.key)
+  // Avant le premier signal du serveur, c'est la première étape qui est en cours : la liste dit toujours où en est Synorix.
+  if (!currentStep && i === 0 && phase !== 'error') return 'en-cours'
   const courant = currentStep ? steps.findIndex((s) => s.key === currentStep) : -1
   return courant !== -1 && i < courant ? 'faite' : 'a-venir'
 }
 
 export default function ProgressDisplay({
   steps, currentStep, progress, detail = '', phase = 'in_progress', variant = 'inline', title,
-  onCancel, onArrierePlan, avis, erreur, uniteRendue, onRelancer,
+  onCancel, onArrierePlan, libelleArrierePlan = 'Continuer en arrière-plan', avis, erreur, uniteRendue, onRelancer,
 }: Props) {
   const [avancement, setAvancement] = useState(() => avancementSuivant(0, progress, phase))
   useEffect(() => { setAvancement((p) => avancementSuivant(p, progress, phase)) }, [progress, phase])
@@ -106,7 +110,8 @@ export default function ProgressDisplay({
         <div data-avancement="" style={{ width: `${avancement}%` }}
           className={cn('h-full rounded-pilule transition-[width] duration-pop ease-survol motion-reduce:transition-none', termine ? 'bg-vert-mark' : enErreur ? 'bg-rouge-mark' : 'bg-accent-ui')} />
       </div>
-      <span className="chiffres w-11 shrink-0 text-right text-sm font-semibold tabular-nums text-fg">{avancement} %</span>
+      {/* Un zéro n'est pas une information : tant que rien n'a avancé, on dit « Démarrage ». */}
+      <span className="chiffres min-w-11 shrink-0 text-right text-sm font-semibold tabular-nums text-fg">{avancement === 0 && !termine && !enErreur ? 'Démarrage' : `${avancement} %`}</span>
     </div>
   )
 
@@ -120,7 +125,7 @@ export default function ProgressDisplay({
           {uniteRendue ? 'Votre unité vous est rendue. Vos documents sont conservés.' : 'Vos documents sont conservés.'}
         </Message>
       ) : riche ? (
-        <div className="grid gap-4">
+        <div className="grid max-w-3xl gap-4">
           {/* Synorix travaille et le dit : le visage, collé à la phrase de ce qu'il fait en ce moment. */}
           <div aria-live="polite"><SynorixParle className="items-center">{phrase}</SynorixParle></div>
           {barre}
@@ -136,7 +141,7 @@ export default function ProgressDisplay({
       )}
 
       {riche && steps.length > 1 && (
-        <ol aria-label="Étapes" className="grid gap-1 border-t border-bord pt-4">
+        <ol aria-label="Étapes" className="grid max-w-3xl gap-1 border-t border-bord pt-4">
           {steps.map((step) => {
             const etat = etatEtape(step, currentStep, steps, phase)
             const arretee = enErreur && etat === 'en-cours'
@@ -165,7 +170,7 @@ export default function ProgressDisplay({
 
       {variant !== 'modal' && !enErreur && !termine && (onArrierePlan || onCancel) && (
         <div className="flex flex-wrap gap-2">
-          {onArrierePlan && <Bouton variante="secondaire" onClick={onArrierePlan}>Continuer en arrière-plan</Bouton>}
+          {onArrierePlan && <Bouton variante="secondaire" onClick={onArrierePlan}>{libelleArrierePlan}</Bouton>}
           {onCancel && <Bouton variante="discret" onClick={onCancel}>Annuler</Bouton>}
         </div>
       )}
@@ -181,7 +186,7 @@ export default function ProgressDisplay({
       actions={!enErreur && !termine && (onArrierePlan || onCancel) ? (
         <>
           {onCancel && <Bouton variante="discret" onClick={onCancel}>Annuler</Bouton>}
-          {onArrierePlan && <Bouton variante="secondaire" onClick={onArrierePlan}>Continuer en arrière-plan</Bouton>}
+          {onArrierePlan && <Bouton variante="secondaire" onClick={onArrierePlan}>{libelleArrierePlan}</Bouton>}
         </>
       ) : undefined}>
       {corps}

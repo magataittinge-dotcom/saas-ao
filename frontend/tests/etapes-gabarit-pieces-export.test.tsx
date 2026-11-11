@@ -61,7 +61,10 @@ test('Pièces : l’état de chaque pièce est dit par un mot positif, « Non co
   assert.equal((html.match(/>Non concerné</g) ?? []).length, 1, 'seul le statut de la pièce écartée, jamais un bouton répété sur chaque ligne')
   assert.equal((html.match(/Je suis concerné/g) ?? []).length, 1)
   assert.match(html, /<h2(?![^>]*uppercase)[^>]*>Pièces administratives<\/h2>/)
-  assert.match(html, /md:grid-cols-2/)
+  // FIN-B1 : une liste par famille de pièces (une surface, des filets), plus de grille de cartes sur deux colonnes
+  assert.match(html, /data-liste-pieces=""/)
+  assert.doesNotMatch(html, /md:grid-cols-2/)
+  assert.match(html, /<span data-etat="a-joindre" class="text-sm text-fg-2">À joindre<\/span>/, '« À joindre » : texte neutre, ni bleu ni icône')
 })
 
 test('un seul bouton en dégradé par écran : l’action de l’en-tête, jamais doublée sur ordinateur par la barre ni par une autre carte', () => {
@@ -79,5 +82,7 @@ test('un seul bouton en dégradé par écran : l’action de l’en-tête, jamai
   assert.equal((lots.match(/variante="principal"/g) ?? []).length, 1, 'Lots : le bouton « Lire » est écrit une fois (en-tête à l’ordinateur, barre du bas au téléphone)')
   assert.match(lots, /<ActionsBarreTel>\{actionLire\}<\/ActionsBarreTel>/)
   const verification = sansCommentaires(lire('src/routes/project/StepVerification.tsx'))
-  assert.doesNotMatch(verification, /actionPrincipale=/, 'Pièces : l’unique action principale est « Étape suivante » de la barre')
+  // FIN-B1 : l'action de l'étape a la même place sur toutes les étapes : en tête à l'ordinateur, dans la barre au téléphone
+  assert.match(verification, /actionPrincipale=\{suite\(\)\}/)
+  assert.match(verification, /<ActionsBarreTel>\{suite\(\)\}<\/ActionsBarreTel>/)
 })

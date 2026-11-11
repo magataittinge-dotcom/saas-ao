@@ -1,7 +1,6 @@
 import { ArrowDown } from 'lucide-react'
 import { Bouton } from '@/components/ui/bouton'
-import { Carte } from '@/components/ui/carte'
-import { EtatElement, SectionEtape } from '@/components/etape'
+import { SectionEtape } from '@/components/etape'
 import { libelleSource, type PointAVerifier } from '@/lib/resumeAO'
 import type { SourceFait } from '@/lib/carteAO'
 
@@ -16,22 +15,33 @@ export default function AVerifierAvantEngagement({ points, onVoir, onVoirPenalit
   onVoirPenalites?: () => void
 }) {
   if (points.length === 0) return null
+  // UNE liste (jury, tour 1 : sept cartes sur deux colonnes, sept pastilles ambre « À vérifier », une carte orpheline) : le titre
+  // de la section dit déjà que tout ici est à vérifier ; chaque ligne donne le point, ce que dit le dossier, et sa source.
   return (
-    <SectionEtape titre="À vérifier avant de vous engager" colonnes={2}>
-      {points.map((p) => (
-        <Carte key={p.id} data-a-verifier={p.id} className="grid min-w-0 content-start gap-1.5">
-          <p className="text-sm font-medium text-fg-2">{p.libelle}</p>
-          <p className="break-words font-semibold text-fg">{p.valeur}</p>
-          {p.versTresorerie && onVoirPenalites && (
-            <Bouton variante="lien" className="w-fit" onClick={onVoirPenalites}>Voir les pénalités <ArrowDown size={14} aria-hidden /></Bouton>
-          )}
-          <EtatElement
-            etat="a-verifier"
-            className="mt-1 border-t border-bord pt-2"
-            source={p.source ? { libelle: libelleSource(p.source) ?? p.source.document, onVoir: onVoir ? () => onVoir(p.source as SourceFait) : undefined } : undefined}
-          />
-        </Carte>
-      ))}
+    <SectionEtape titre="À vérifier avant de vous engager">
+      <div data-liste-a-verifier="" className="divide-y divide-bord rounded-carte border border-bord bg-surface-0">
+        {points.map((p) => {
+          const source = p.source
+          const libelle = source ? libelleSource(source) ?? source.document : null
+          return (
+            <div key={p.id} data-a-verifier={p.id} className="grid gap-x-6 gap-y-0.5 px-5 py-3 max-sm:px-4 md:grid-cols-[13rem_minmax(0,1fr)_minmax(0,18rem)] md:items-baseline">
+              <p className="text-sm font-medium text-fg-2">{p.libelle}</p>
+              <p className="min-w-0 break-words font-semibold text-fg">
+                {p.valeur}
+                {p.versTresorerie && onVoirPenalites && (
+                  <Bouton variante="lien" className="ml-3" onClick={onVoirPenalites}>Voir les pénalités <ArrowDown size={14} aria-hidden /></Bouton>
+                )}
+              </p>
+              {libelle && (
+                <p className="flex min-w-0 flex-wrap items-baseline gap-x-2 text-sm text-fg-2 md:justify-end">
+                  <span className="min-w-0 break-words">Source : {libelle}</span>
+                  {onVoir && source && <Bouton variante="lien" onClick={() => onVoir(source)}>Voir dans le dossier</Bouton>}
+                </p>
+              )}
+            </div>
+          )
+        })}
+      </div>
     </SectionEtape>
   )
 }

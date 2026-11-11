@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { choixParDefaut, basculerLot, peutLancer } from '@/lib/choixLots'
 import { etiquettesSourceLot, lotsAAfficher, phraseLotsEcartes, type LotsEcartes } from '@/lib/lotsSource'
+import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check as CheckIcon, CircleHelp, Pencil, Plus, X } from 'lucide-react'
 import { GabaritEtape, SectionEtape, BarreEtape, ActionsBarre, ActionsBarreTel, BilanBarre } from '@/components/etape'
@@ -562,13 +563,21 @@ export default function StepLotSelection({ project }: Props) {
 
         {/* Documents illisibles : signalés par fichier, jamais silencieux */}
         {extractionWarnings.length > 0 && (
-          <Message ton="attention" titre={extractionWarnings.length > 1
-            ? `${extractionWarnings.length} documents n’ont pas pu être lus : leurs exigences ne sont pas relevées`
-            : 'Un document n’a pas pu être lu : ses exigences ne sont pas relevées'}>
-            <ul className="space-y-0.5">
+          // Une phrase, les noms, un geste (jury, tour 1 : cinq lignes répétaient « aucune couche texte lisible — exigences non
+          // extraites », sans rien proposer). Le motif du serveur n'est pas recopié : il est dit en mots du métier.
+          <Message ton="attention"
+            titre={extractionWarnings.length > 1
+              ? `${extractionWarnings.length} documents n’ont pas pu être lus`
+              : 'Un document n’a pas pu être lu'}
+            action={<Bouton asChild variante="secondaire"><Link to={`/projects/${project.id}/upload`}>Déposer une version lisible</Link></Bouton>}>
+            <p>{extractionWarnings.every((w) => /scann/i.test(w.warning))
+              ? (extractionWarnings.length > 1 ? 'Ce sont des documents scannés, sans texte à lire' : 'C’est un document scanné, sans texte à lire')
+              : 'Synorix n’a pas pu en lire le texte'}
+              {extractionWarnings.length > 1 ? ' : leurs exigences ne sont pas relevées.' : ' : ses exigences ne sont pas relevées.'}</p>
+            <ul className="mt-1 space-y-0.5">
               {extractionWarnings.map((w) => (
                 <li key={w.file_name} className="break-words text-xs">
-                  <span className="font-medium text-fg">{w.file_name}</span> : {w.warning}
+                  <span className="font-medium text-fg">{w.file_name}</span>
                 </li>
               ))}
             </ul>

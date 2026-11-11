@@ -1,17 +1,17 @@
 import { useRef, useState } from 'react'
-import { Download, Upload, FileText, ExternalLink } from 'lucide-react'
+import { Download, Upload, ExternalLink } from 'lucide-react'
 import type { ChecklistItem } from '@/types'
 import SignatureLigne from '@/components/project/SignatureLigne'
 import NonConcerneBouton, { estNonConcernee } from '@/components/project/NonConcerne'
 import { noteDepot, statutPiece } from '@/lib/statutPiece'
-import { EtatElement, SectionEtape } from '@/components/etape'
+import { SectionEtape } from '@/components/etape'
+import { EtatDePiece, LignePiece, ListePieces } from '@/components/project/LignePiece'
+import { MenuElement } from '@/components/ui/menu'
 import { Bouton } from '@/components/ui/bouton'
-import { Carte } from '@/components/ui/carte'
 import { Message } from '@/components/ui/message'
 import EntreeFichier from '@/components/depot/EntreeFichier'
 import { messageErreur } from '@/lib/erreurs'
-import { nomPiece } from '@/lib/nomsPieces'
-import { etatDeStatut } from '@/lib/resumePieces'
+import { nomPiece, sansNoteDeRegroupement } from '@/lib/nomsPieces'
 import { libelleSource } from '@/lib/resumeAO'
 
 // Ordre d'affichage : AE en tête, puis les formulaires de candidature. La
@@ -58,9 +58,9 @@ export default function CandidatureSectionTemplates({
   return (
     <SectionEtape
       titre="Formulaires de l’acheteur"
-      colonnes={2}
       description="Téléchargez la trame de l’acheteur (ou le formulaire officiel), complétez-la, puis déposez-la ici."
     >
+      <ListePieces>
       {sorted.map((item) => (
         <TemplateRow
           key={item.id}
@@ -73,8 +73,16 @@ export default function CandidatureSectionTemplates({
           echeance={echeance}
         />
       ))}
+      </ListePieces>
     </SectionEtape>
   )
+}
+
+/** La précision du serveur redit-elle le nom de la pièce (« DC1 — Lettre de candidature » sous « Lettre de candidature (DC1) ») ? */
+export function redit(precision: string, nom: string): boolean {
+  const mots = (t: string) => t.toLowerCase().replace(/[^a-z0-9àâçéèêëîïôùûü ]+/g, ' ').split(/\s+/).filter((m) => m.length > 2)
+  const duNom = new Set(mots(nom))
+  return mots(precision).every((m) => duNom.has(m))
 }
 
 function TemplateRow({
@@ -126,65 +134,52 @@ function TemplateRow({
     }
   }
 
-  const { etat, texte, perimee } = etatDeStatut(statut)
   const source = item.source_document ? libelleSource({ document: item.source_document, page: item.source_page ?? null }) : null
+  const voirSource = item.source_exigence_id && onOpenSource ? () => onOpenSource(item) : undefined
+  const precision = sansNoteDeRegroupement(item.details ?? '')
+  // D'où vient le formulaire, en une ligne : le fichier déposé, sinon le modèle à compléter (avec son lien), puis la source.
+  const modele = item.jointe && item.piece_nom ? item.piece_nom : nonConcernee || isWarning ? null : hasTemplate ? 'Modèle de l’acheteur à compléter'
+    // Type (b) : modèle officiel — normal qu'il ne soit pas au DCE. Aucun numéro de formulaire : service-public (F32144, F32106)
+    // classe DC1/DC2/DUME en « Modèle de document ». Type (a) introuvable : à réclamer, pas une erreur.
+    : officialUrl ? 'Modèle officiel (ministère de l’Économie)' : 'À demander au maître d’ouvrage'
 
   return (
-    <Carte data-piece={item.id} className="grid min-w-0 content-start gap-2">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-3">
-          <FileText size={18} className="mt-0.5 shrink-0 text-fg-3" aria-hidden />
-          <p className="min-w-0 break-words font-semibold text-fg">{label}</p>
-        </div>
-        <NonConcerneBouton item={item} onNonConcerne={onNonConcerne} />
-      </div>
-      <p className="break-words pl-[1.875rem] text-sm text-fg-2">
-        {item.jointe && item.piece_nom ? item.piece_nom : nonConcernee || isWarning ? null : hasTemplate ? 'Modèle de l’acheteur à compléter'
-          // Type (b) : modèle officiel — normal qu'il ne soit pas au DCE. Aucun numéro de formulaire : service-public (F32144, F32106)
-          // classe DC1/DC2/DUME en « Modèle de document ». Type (a) introuvable : à réclamer, pas une erreur.
-          : officialUrl ? 'Modèle officiel (ministère de l’Économie)' : 'À demander au maître d’ouvrage'}
-      </p>
-      {/* Signature : case seulement si elle est demandée, sinon la mention */}
-      <SignatureLigne item={item} onToggleSignature={onToggleSignature} onOpenSource={onOpenSource} />
-      {depot && <p className="piece-note">{depot}</p>}
-      {item.details && item.details.trim() !== label && !/^[a-z0-9_-]+$/i.test(item.details.trim()) && (
-        <p className="text-sm leading-relaxed text-fg-3">{item.details}</p>
-      )}
-      {item.source_in_rc && <p className="text-sm italic text-fg-3">«&nbsp;{item.source_in_rc}&nbsp;»</p>}
-      {error && <Message ton="erreur" onFermer={() => setError(null)}>{error}</Message>}
-
-      <div className="mt-auto grid gap-3 border-t border-bord pt-3">
-        <EtatElement
-          etat={etat}
-          texte={texte}
-          perimee={perimee}
-          source={source ? { libelle: source, onVoir: item.source_exigence_id && onOpenSource ? () => onOpenSource(item) : undefined } : undefined}
-        />
-        {/* Actions — affordance UNIFORME : Télécharger (trame du dossier ou officiel) / Déposer le formulaire rempli */}
-        <div className="flex flex-wrap items-center gap-2">
+    <LignePiece
+      id={item.id}
+      nom={label}
+      sous={<>
+        {precision && !redit(precision, label) && !/^[a-z0-9_-]+$/i.test(precision) && <p className="mt-0.5 break-words text-sm text-fg-2">{precision}</p>}
+        <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 break-words text-sm text-fg-2">
+          {modele && <span>{modele}</span>}
+          {/* Le modèle se télécharge par un lien, à côté de ce qu'il est : le seul bouton de la ligne est le dépôt. */}
           {nonConcernee ? null : hasTemplate && downloadHref ? (
-            <Bouton asChild variante="secondaire">
-              <a href={downloadHref} target="_blank" rel="noreferrer"><Download size={16} strokeWidth={1.5} aria-hidden />Télécharger la trame</a>
-            </Bouton>
+            <Bouton asChild variante="lien"><a href={downloadHref} target="_blank" rel="noreferrer"><Download size={14} strokeWidth={1.5} aria-hidden />Télécharger la trame</a></Bouton>
           ) : officialUrl ? (
-            <Bouton asChild variante="secondaire">
-              <a href={officialUrl} target="_blank" rel="noreferrer" aria-label="Formulaire officiel, sur economie.gouv.fr (nouvel onglet)"><ExternalLink size={16} strokeWidth={1.5} aria-hidden />Formulaire officiel</a>
-            </Bouton>
+            <Bouton asChild variante="lien"><a href={officialUrl} target="_blank" rel="noreferrer" aria-label="Formulaire officiel, sur economie.gouv.fr (nouvel onglet)"><ExternalLink size={14} strokeWidth={1.5} aria-hidden />Formulaire officiel</a></Bouton>
           ) : null}
           {isPresent && completedHref && (
-            <Bouton asChild variante="secondaire">
-              <a href={completedHref} target="_blank" rel="noreferrer"><FileText size={16} strokeWidth={1.5} aria-hidden />Voir la version déposée</a>
-            </Bouton>
+            <Bouton asChild variante="lien"><a href={completedHref} target="_blank" rel="noreferrer">Voir la version déposée</a></Bouton>
           )}
-          {!nonConcernee && (
-            <Bouton variante="secondaire" onClick={handlePick} enCours={uploading} libelleEnCours="Dépôt en cours…">
-              <Upload size={16} strokeWidth={1.5} aria-hidden />
-              {isPresent ? 'Remplacer' : 'Déposer le formulaire rempli'}
-            </Bouton>
-          )}
-        </div>
-      </div>
-      <EntreeFichier ref={fileRef} accept=".pdf,.docx,.xlsx,.xlsm,.xls,.ods" onChange={handleFile} />
-    </Carte>
+        </p>
+        {/* Signature : case seulement si elle est demandée, sinon la mention */}
+        <SignatureLigne item={item} onToggleSignature={onToggleSignature} onOpenSource={onOpenSource} />
+        {depot && <p className="piece-note">{depot}</p>}
+        {source && <p className="piece-note">Source&nbsp;: {source}</p>}
+        <EntreeFichier ref={fileRef} accept=".pdf,.docx,.xlsx,.xlsm,.xls,.ods" onChange={handleFile} />
+      </>}
+      etat={<EtatDePiece statut={statut} />}
+      actions={nonConcernee ? null : (
+        <Bouton variante="secondaire" onClick={handlePick} enCours={uploading} libelleEnCours="Dépôt en cours…">
+          <Upload size={16} strokeWidth={1.5} aria-hidden />
+          {isPresent ? 'Remplacer' : 'Déposer le formulaire'}
+        </Bouton>
+      )}
+      menu={(
+        <NonConcerneBouton item={item} onNonConcerne={onNonConcerne}>
+          {voirSource && <MenuElement onSelect={voirSource}>Voir dans le dossier</MenuElement>}
+        </NonConcerneBouton>
+      )}
+      pied={error && <Message ton="erreur" onFermer={() => setError(null)}>{error}</Message>}
+    />
   )
 }

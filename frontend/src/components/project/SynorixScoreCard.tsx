@@ -96,7 +96,8 @@ export default function SynorixScoreCard({ project, onOpenSource, onYAller, enCo
                 )
               ) : (
                 <p className="break-words text-sm text-fg-2">
-                  {comp.explication}
+                  {/* le serveur écrit « Exigée(s) » : à l'écran, l'accord est écrit (affichage seulement) */}
+                  {comp.explication.replace(/\((e?s)\)/g, '$1')}
                   {comp.action === 'completer_profil' && (
                     <>
                       {' '}
@@ -105,11 +106,20 @@ export default function SynorixScoreCard({ project, onOpenSource, onYAller, enCo
                   )}
                 </p>
               )}
-              <EtatElement
-                etat={comp.statut === 'ok' ? 'pret' : 'a-verifier'}
-                texte={libelleStatut(comp)}
-                source={source ? { libelle: libelleSource(source) ?? source.document, onVoir: () => onOpenSource(source) } : undefined}
-              />
+              {/* Seule l'exception est marquée (« À confirmer par vous », en ambre) ; une condition relevée se lit en texte neutre. */}
+              {comp.statut === 'ok' ? (
+                <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-fg-2">
+                  <span>{libelleStatut(comp)}</span>
+                  {source && <span>Source : {libelleSource(source) ?? source.document}</span>}
+                  {source && <Bouton variante="lien" onClick={() => onOpenSource(source)}>Voir dans le dossier</Bouton>}
+                </p>
+              ) : (
+                <EtatElement
+                  etat="a-verifier"
+                  texte={libelleStatut(comp)}
+                  source={source ? { libelle: libelleSource(source) ?? source.document, onVoir: () => onOpenSource(source) } : undefined}
+                />
+              )}
             </li>
           )
         })}
@@ -124,12 +134,15 @@ export default function SynorixScoreCard({ project, onOpenSource, onYAller, enCo
         ) : decideAller ? (
           <p className="text-sm text-fg-2">Vous avez décidé d’y aller.</p>
         ) : (
-          <>
-            {/* « On y va » est l'action principale de l'en-tête (un seul aplat par écran) ; ici, au trait, là où la décision se lit */}
-            <Bouton variante="secondaire" onClick={onYAller} disabled={enCours || changement}>On y va</Bouton>
-            <Bouton variante="secondaire" onClick={() => changerStatut('sans_suite')} disabled={enCours || changement}>On passe</Bouton>
-            <p className="min-w-0 flex-1 basis-56 text-sm text-fg-3">«&nbsp;On passe&nbsp;» classe l’appel d’offres sans suite ; vous pourrez le rouvrir.</p>
-          </>
+          <div className="grid gap-3">
+            {/* La phrase d'abord, les deux réponses dessous. « On y va » est aussi l'action principale de l'en-tête (un seul aplat
+                par écran) ; ici, au trait, là où la décision se lit. */}
+            <p className="text-sm text-fg-2">«&nbsp;On y va&nbsp;» ouvre la préparation des pièces. «&nbsp;On passe&nbsp;» classe l’appel d’offres sans suite ; vous pourrez le rouvrir.</p>
+            <div className="flex flex-wrap items-center gap-3">
+              <Bouton variante="secondaire" onClick={onYAller} disabled={enCours || changement}>On y va</Bouton>
+              <Bouton variante="secondaire" onClick={() => changerStatut('sans_suite')} disabled={enCours || changement}>On passe</Bouton>
+            </div>
+          </div>
         )}
       </footer>
     </Carte>
