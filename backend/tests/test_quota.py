@@ -510,3 +510,73 @@ def test_business_generates_beyond_the_pro_quota(
     resp = client.post("/api/projects/proj-q6/memoire/generate", json={})
     assert resp.status_code == 200, resp.text
     _join_memoire()
+
+
+# ─── Décision du 2026-11-11 : plus aucune offre illimitée ────────────────────
+
+def test_aucune_offre_n_a_de_quota_illimite():
+    """Aucune offre (essai compris) n'a de quota None ; grille 5/5, 30/30, 70/70."""
+    from services.quota import PLAN_LIMITS
+
+    for plan, limites in PLAN_LIMITS.items():
+        assert limites["analysis"] is not None, plan
+        assert limites["memoire"] is not None, plan
+    assert {p: (l["analysis"], l["memoire"]) for p, l in PLAN_LIMITS.items() if p != "free"} == {
+        "essentiel": (5, 5), "pro": (30, 30), "business": (70, 70),
+    }
+
+
+def test_business_au_quota_ne_propose_pas_d_offre_superieure(db_session, test_org):
+    """Business est l'offre la plus haute : au quota, le message dit la date de remise
+    à zéro et que le plafond se relève sur demande, sans inviter à « passer » ailleurs."""
+    from fastapi import HTTPException
+    from services.quota import check_quota
+
+    test_org.plan = "business"
+    db_session.commit()
+    _consume_n(db_session, test_org.id, "memoire", 70)
+
+    with pytest.raises(HTTPException) as exc:
+        check_quota(db_session, test_org, "memoire")
+    detail = exc.value.detail
+    assert exc.value.status_code == 402
+    assert "70/70 mémoires" in detail
+    assert "se remet à zéro le " in detail
+    assert "relevé sur demande" in detail
+    for interdit in ("Passez", "Choisissez", "Essentiel", "Pro (", "illimit", "usage raisonnable"):
+        assert interdit not in detail, interdit
+
+
+def test_multilot_402_business_dit_la_remise_a_zero(client, db_session, test_org, no_rate_limit):
+    test_org.plan = "business"
+    db_session.commit()
+    _consume_n(db_session, test_org.id, "analysis", 69)
+    _make_analyzable_project(db_session, test_org.id, "proj-q402c")
+
+    resp = client.post("/api/projects/proj-q402c/analyze", json={"lots": ["lot1", "lot2"]})
+    assert resp.status_code == 402
+    detail = resp.json()["detail"]
+    assert "1 analyse restante" in detail
+    assert "se remet à zéro le " in detail
+    assert "Passez" not in detail and "Choisissez" not in detail
+
+
+def test_pro_deja_au_dessus_du_nouveau_quota(client, db_session, test_org):
+    """Migration 40 → 30 : une organisation Pro qui a déjà consommé 35 unités ce mois-ci
+    est « au quota » : 402 propre, aucun compteur négatif, aucun « 35/30 » à l'écran."""
+    from fastapi import HTTPException
+    from services.quota import check_quota
+
+    test_org.plan = "pro"
+    test_org.subscription_started_at = datetime.utcnow() - timedelta(days=3)
+    db_session.commit()
+    _consume_n(db_session, test_org.id, "analysis", 35)
+
+    with pytest.raises(HTTPException) as exc:
+        check_quota(db_session, test_org, "analysis")
+    assert exc.value.status_code == 402
+    assert "30/30 analyses" in exc.value.detail
+    assert "35/30" not in exc.value.detail
+
+    body = client.get("/api/billing/quota").json()
+    assert body["analyses"] == {"used": 35, "limit": 30}  # la jauge plafonne à 100 % côté écran

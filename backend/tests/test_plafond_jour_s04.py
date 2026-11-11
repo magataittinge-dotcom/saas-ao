@@ -1,7 +1,7 @@
 """S-04 (audit de sécurité, P1) — plafond journalier de lancements d'analyse et de mémoire, pour toutes les offres.
 
 - PLAFOND_JOUR_ANALYSES / PLAFOND_JOUR_MEMOIRES (20 par défaut, 0 = pas de plafond) ; le 21e lancement du jour → 429
-  « Plafond du jour atteint, il se remet à zéro demain. », même en Business (illimité au mois) ;
+  « Plafond du jour atteint, il se remet à zéro demain. », même en Business (70 par mois) ;
 - une analyse en échec puis remboursée compte dans le plafond du jour (l'unité du mois, elle, est rendue) ;
 - des générations de mémoire lancées en même temps sur plusieurs AO ne passent plus toutes le contrôle du quota.
 Modèles simulés : aucun appel réel."""

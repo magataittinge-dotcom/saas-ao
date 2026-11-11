@@ -3,15 +3,18 @@ Quotas mensuels (C1) — compteurs + enforcement.
 
 Unité produit : 1 analyse = 1 unité ; 1 mémoire (par lot généré) = 1 unité.
 
-Limites par offre (grille du 2026-10-22 — mêmes chiffres que
-frontend/src/lib/offres.ts, vérifiés par frontend/tests/offres.test.tsx) :
+Limites par offre (grille du 2026-10-22, quotas revus le 2026-11-11 : plus
+aucune offre illimitée — mêmes chiffres que frontend/src/lib/offres.ts,
+vérifiés par frontend/tests/offres.test.tsx et tests/test_quota.py) :
   • free      : 1 AO d'essai offert à la création — 1 analyse + 1 mémoire, À VIE
                 (pas de fenêtre mensuelle : l'essai ne se recharge pas).
   • essentiel : 5 analyses + 5 mémoires par mois.
-  • pro       : 40 analyses + 40 mémoires par mois.
+  • pro       : 30 analyses + 30 mémoires par mois.
+  • business  : 70 analyses + 70 mémoires par mois.
     (fenêtre mensuelle ancrée sur la date d'abonnement ; dépassement →
-    blocage doux 402 + invitation à changer d'offre.)
-  • business  : illimité (usage raisonnable) — jamais bloqué.
+    blocage doux 402 + invitation à changer d'offre ; Business, offre la
+    plus haute, dit la date de remise à zéro et que le plafond se relève
+    sur demande.)
 
 Le décompte s'appuie sur le journal QuotaConsumption : compter = filtrer la
 fenêtre courante ; le « reset mensuel » n'est donc jamais un job à exécuter.
@@ -41,7 +44,7 @@ def advisory_org_lock(db: Session, org_id: str) -> None:
         db.execute(text("SELECT pg_advisory_xact_lock(hashtext(:k))"),
                    {"k": f"quota:{org_id}"})
 
-# limit None = illimité ; monthly False = décompte à vie (essai free)
+# Toujours un nombre (aucune offre illimitée) ; monthly False = décompte à vie (essai free)
 PLAN_LIMITS: dict = {
     "free": {"analysis": 1, "memoire": 1, "monthly": False},
     "essentiel": {"analysis": 5, "memoire": 5, "monthly": True},
@@ -54,8 +57,6 @@ _NOMS_OFFRES = {"essentiel": "Essentiel", "pro": "Pro", "business": "Business"}
 
 def _quota_offre(plan: str) -> str:
     limits = PLAN_LIMITS[plan]
-    if limits["analysis"] is None:
-        return "illimité"
     return f"{limits['analysis']} analyses + {limits['memoire']} mémoires/mois"
 
 
@@ -68,6 +69,20 @@ def upgrade_invitation(plan: str) -> str:
         return f"Passez à l'offre {offres}"
     offres = ", ".join(f"{_NOMS_OFFRES[o]} ({_quota_offre(o)})" for o in ("essentiel", "pro"))
     return f"Choisissez une offre pour continuer : {offres} ou Business ({_quota_offre('business')})."
+
+# Business au quota : pas d'offre supérieure à proposer (décision du 2026-11-11).
+MSG_BUSINESS_RELEVE = "Il peut être relevé sur demande."
+
+
+def suite_quota_atteint(plan: str, reset_date: Optional[str] = None) -> str:
+    """La phrase qui suit « quota atteint » pour une offre payante : changer
+    d'offre ou attendre la remise à zéro ; Business (offre la plus haute) :
+    la date de remise à zéro, et le plafond se relève sur demande."""
+    quand = f" le {reset_date}" if reset_date else ""
+    if plan == "business":
+        return f"Le quota se remet à zéro{quand}. {MSG_BUSINESS_RELEVE}"
+    return f"{upgrade_invitation(plan)} ou attendez le renouvellement de votre période{quand}."
+
 
 _KIND_LABELS = {"analysis": "analyses", "memoire": "mémoires"}
 
@@ -137,12 +152,11 @@ def get_quota_status(db: Session, org: Organization, now: Optional[datetime] = N
 
 def check_quota(db: Session, org: Organization, kind: str, en_cours: int = 0) -> None:
     """Blocage doux : 402 avec message d'upgrade explicite si le quota est
-    atteint. Business (limite None) ne lève jamais. `en_cours` : travaux lancés
-    dont l'unité n'est pas encore décomptée (mémoires en cours, S-04)."""
+    atteint (toutes offres : aucune n'est illimitée depuis le 2026-11-11).
+    `en_cours` : travaux lancés dont l'unité n'est pas encore décomptée
+    (mémoires en cours, S-04)."""
     limits = _plan_limits(org)
     limit = limits[kind]
-    if limit is None:
-        return
     used = _used(db, org, kind) + max(0, en_cours)
     if used < limit:
         return
@@ -155,9 +169,10 @@ def check_quota(db: Session, org: Organization, kind: str, en_cours: int = 0) ->
             detail = "Votre AO d'essai gratuit est utilisé. " + upgrade_invitation("free")
     else:
         reset_date = _next_reset(_quota_anchor(org)).strftime("%d/%m/%Y")
+        # min : une organisation déjà au-delà du quota (Pro 40 → 30, 2026-11-11) lit « 30/30 », jamais « 35/30 ».
         detail = (
-            f"Quota mensuel atteint ({used}/{limit} {_KIND_LABELS[kind]}). "
-            f"{upgrade_invitation(plan)} ou attendez le renouvellement de votre période le {reset_date}."
+            f"Quota mensuel atteint ({min(used, limit)}/{limit} {_KIND_LABELS[kind]}). "
+            f"{suite_quota_atteint(plan, reset_date)}"
         )
     raise HTTPException(status_code=402, detail=detail)
 
