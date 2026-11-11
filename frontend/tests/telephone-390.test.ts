@@ -25,12 +25,14 @@ test('pastille d’état : un long libellé passe à la ligne au téléphone au 
   assert.match(code('src/components/ui/pastille.tsx'), /whitespace-nowrap[^']*max-md:max-w-full max-md:whitespace-normal/)
 })
 
-test('Export, exigences relevées : rangées empilées, case de 44 px, source sous le texte', () => {
+test('Export, exigences relevées : la case du système (rangée de 44 px, toute la rangée est la cible), source sous le texte', () => {
   const c = code('src/components/project/ExigencesDuDossier.tsx')
-  assert.match(c, /<label className="contents max-md:-my-2\.5 max-md:-ml-2\.5 max-md:grid max-md:size-11/)
-  assert.match(c, /max-md:flex-wrap/)
-  assert.match(c, /whitespace-nowrap max-md:ml-\[2\.375rem\] max-md:min-w-0 max-md:shrink max-md:whitespace-normal/)
-  assert.match(c, /disabled:opacity-50 max-md:min-h-11 max-md:px-3/)
+  // jury, tour 1 : plus de case native ni de bouton maison ; la case, le bouton et le repli sont ceux du système
+  assert.match(c, /<CaseACocher/)
+  assert.doesNotMatch(c, /<input|<button|glass-btn|uppercase|style=\{\{/)
+  assert.match(code('src/components/ui/case.tsx'), /min-h-11/)
+  assert.match(c, /<span className=\{`mt-0\.5 block text-xs/)
+  assert.match(c, /<Bouton variante="secondaire" disabled=\{enCours\} onClick=\{onConfirmerTout\}>Tout confirmer<\/Bouton>/)
 })
 
 test('coquille : liens du pied de page et fil d’Ariane à 44 px ; dans un AO, la barre du haut garde deux actions', () => {
@@ -91,7 +93,7 @@ test('fil des étapes au téléphone : le nom de l’étape en cours est posé s
 test('téléphone couché (mise en page du bureau, écran tactile) : fil d’Ariane, pied de page, titres d’AO et « Tout confirmer » à 44 px', () => {
   assert.match(code('src/components/layout/Header.tsx'), /\[@media\(pointer:coarse\)\]:min-h-11/)
   assert.match(code('src/components/layout/LegalFooter.tsx'), /\[@media\(pointer:coarse\)\]:px-2\.5 \[@media\(pointer:coarse\)\]:inline-flex \[@media\(pointer:coarse\)\]:min-h-11/)
-  assert.match(code('src/components/project/ExigencesDuDossier.tsx'), /max-md:text-sm \[@media\(pointer:coarse\)\]:min-h-11/)
+  assert.match(code('src/components/project/ExigencesDuDossier.tsx'), /<Bouton variante="secondaire"[^>]*>Tout confirmer/)   // le bouton du système : 44 px partout
   for (const f of ['src/components/mesao/LigneAO.tsx', 'src/components/dashboard/BandeAO.tsx']) {
     assert.match(code(f), /max-md:py-3 \[@media\(pointer:coarse\)\]:-my-3 \[@media\(pointer:coarse\)\]:py-3/)
   }
