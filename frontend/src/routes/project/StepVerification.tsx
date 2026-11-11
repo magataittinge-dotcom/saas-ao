@@ -262,12 +262,6 @@ export default function StepVerification({ project }: Props) {
             <Message ton={actualisation?.etat === 'echec' ? 'erreur' : 'succes'} onFermer={() => setActualisation(null)}>
               {messageActualisation(actualisation)}
             </Message>
-          ) : !decisionPrise ? (
-            // La décision n'est pas prise (jury, tour 1 : l'état ne se lisait que dans trois ronds gris du fil) : on le dit, avec le geste.
-            <Message ton="info" titre="La décision n’est pas encore prise"
-              action={<Bouton asChild variante="secondaire"><Link to={`/projects/${project.id}/analysis`}>Revenir à Décider</Link></Bouton>}>
-              Vous pouvez déjà réunir les pièces. «&nbsp;On y va&nbsp;» ou «&nbsp;On passe&nbsp;» se dit à l’étape Décider.
-            </Message>
           ) : undefined}
           barre={bottomBar}
         >
@@ -285,6 +279,14 @@ export default function StepVerification({ project }: Props) {
                 Ouvrir le coffre-fort
               </Bouton>
             </p>
+            {/* La décision n'est pas prise (jury, tour 1 : l'état ne se lisait que dans trois ronds gris du fil) : l'écran le dit,
+                avec le geste. Une phrase du résumé, pas une alerte de plus : une alerte à la fois dans un AO. */}
+            {!decisionPrise && (
+              <p data-decision-a-prendre="" className="flex basis-full flex-wrap items-baseline gap-x-2 text-sm text-fg-2">
+                <span>La décision n’est pas encore prise : vous pouvez déjà réunir les pièces.</span>
+                <Bouton asChild variante="lien"><Link to={`/projects/${project.id}/analysis`}>Revenir à Décider</Link></Bouton>
+              </p>
+            )}
           </div>
 
           <CandidatureSectionVault

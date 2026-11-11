@@ -22,7 +22,7 @@ const ETATS_NEUTRES = new Set(['a-joindre', 'si-concerne', 'facultatif', 'attrib
  * couleur de l'action, pas un état, et un état écrit quatorze fois ne distingue rien.
  */
 export function EtatDePiece({ statut, texte }: { statut: StatutPiece; texte?: string }) {
-  if (ETATS_NEUTRES.has(statut.code)) return <span data-etat={statut.code} className="text-sm text-fg-2">{texte ?? statut.texte}</span>
+  if (ETATS_NEUTRES.has(statut.code)) return <span data-etat={statut.code} className="whitespace-nowrap text-sm text-fg-2">{texte ?? statut.texte}</span>
   const { etat, perimee } = etatDeStatut(statut)
   return <EtatElement etat={etat} texte={texte ?? statut.texte} perimee={perimee} />
 }

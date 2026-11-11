@@ -78,3 +78,25 @@ test('chargement et erreur : un squelette du système et une phrase, « restent 
     assert.doesNotMatch(src, /pas touché|<Squelette className="h-(28|32|56)/)
   }
 })
+
+test('états restants : la décision à prendre se dit sur Pièces, une analyse arrêtée ne donne pas un compte certain, l\'attente ne dit pas « 0 % »', async () => {
+  // Pièces sans décision prise : une phrase du résumé et le geste (pas une alerte de plus : une alerte à la fois dans un AO)
+  assert.match(pieces, /const decisionPrise = project\.completed_steps\?\.\['3'\] === true \|\| project\.status === 'sans_suite'/)
+  assert.match(pieces, /\{!decisionPrise && \(\s*<p data-decision-a-prendre=""/)
+  assert.match(pieces, /Revenir à Décider/)
+  // Décider après une analyse arrêtée : « Au moins N exigences », et la réserve à côté du chiffre
+  assert.match(decider, /\{analysisFailed \? 'Au moins ' : ''\}\{items\.length\} exigences identifiées/)
+  // Lots : les documents illisibles en une phrase, avec un geste ; le motif du serveur n'est pas recopié cinq fois
+  assert.match(lots, /<Message ton="info"\s+titre=\{extractionWarnings\.length > 1/)
+  assert.match(lots, /Déposer une version lisible/)
+  assert.doesNotMatch(lots, /\{w\.warning\}/)
+  // l'écran d'attente : « Démarrage » tant que rien n'a avancé, la première étape en cours, le bouton dit où il mène
+  const { default: ProgressDisplay } = await import('@/components/common/ProgressDisplay')
+  const etapes = [{ key: 'a', label: 'Analyse des documents', estimated_s: 60 }, { key: 'b', label: 'Mise en ordre', estimated_s: 5 }]
+  const html = renderToStaticMarkup(<ProgressDisplay variant="page" title="Synorix analyse votre dossier" steps={etapes} currentStep={null} progress={0} phase="pending" onArrierePlan={() => undefined} libelleArrierePlan="Revenir à l’accueil" />)
+  assert.match(html, />Démarrage</)
+  assert.doesNotMatch(html, />0\s%</)
+  assert.equal((html.match(/aria-current="step"/g) ?? []).length, 1)
+  assert.match(html, /Revenir à l’accueil/)
+  assert.doesNotMatch(decider, /Je lis vos documents/)
+})

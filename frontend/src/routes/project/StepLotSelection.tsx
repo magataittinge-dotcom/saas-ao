@@ -565,7 +565,7 @@ export default function StepLotSelection({ project }: Props) {
         {extractionWarnings.length > 0 && (
           // Une phrase, les noms, un geste (jury, tour 1 : cinq lignes répétaient « aucune couche texte lisible — exigences non
           // extraites », sans rien proposer). Le motif du serveur n'est pas recopié : il est dit en mots du métier.
-          <Message ton="attention"
+          <Message ton="info"
             titre={extractionWarnings.length > 1
               ? `${extractionWarnings.length} documents n’ont pas pu être lus`
               : 'Un document n’a pas pu être lu'}

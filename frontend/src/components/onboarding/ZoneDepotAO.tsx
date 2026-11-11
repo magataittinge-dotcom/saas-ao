@@ -28,7 +28,7 @@ export const FORMATS_DEPOT = 'PDF, Word, Excel, OpenDocument ou ZIP, jusqu’à 
 interface Props {
   titre: ReactNode
   precision: ReactNode
-  /** Le seul geste de l'écran : la zone porte alors le bouton principal « Choisir un fichier » (écran « Nouvel AO »). */
+  /** Le seul geste de l'écran : la zone porte alors le bouton principal « Choisir des fichiers » (écran « Nouvel AO »). */
   geste?: boolean
   /** Dit, à côté du geste, ce que Synorix fera du dossier (écran « Nouvel appel d'offres »). */
   suite?: boolean
@@ -93,7 +93,7 @@ export default function ZoneDepotAO({ titre, precision, geste, suite, className 
         titre={isDragActive ? 'Lâchez le dossier ici' : titre}
         phrase={precision}
         bouton={geste ? (
-          <Bouton variante="principal" enCours={isCreating} libelleEnCours="Création de l’AO…">Choisir un fichier</Bouton>
+          <Bouton variante="principal" enCours={isCreating} libelleEnCours="Création de l’AO…">Choisir des fichiers</Bouton>
         ) : isCreating ? <p role="status" className="text-sm font-medium text-fg">Création de l’AO…</p> : undefined}
         formats={FORMATS_DEPOT}
         suite={suite ? SUITE_DEPOT : undefined}

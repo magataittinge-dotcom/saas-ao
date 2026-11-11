@@ -64,7 +64,7 @@ test('Pièces : l’état de chaque pièce est dit par un mot positif, « Non co
   // FIN-B1 : une liste par famille de pièces (une surface, des filets), plus de grille de cartes sur deux colonnes
   assert.match(html, /data-liste-pieces=""/)
   assert.doesNotMatch(html, /md:grid-cols-2/)
-  assert.match(html, /<span data-etat="a-joindre" class="text-sm text-fg-2">À joindre<\/span>/, '« À joindre » : texte neutre, ni bleu ni icône')
+  assert.match(html, /<span data-etat="a-joindre" class="whitespace-nowrap text-sm text-fg-2">À joindre<\/span>/, '« À joindre » : texte neutre, ni bleu ni icône')
 })
 
 test('un seul bouton en dégradé par écran : l’action de l’en-tête, jamais doublée sur ordinateur par la barre ni par une autre carte', () => {

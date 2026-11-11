@@ -93,7 +93,7 @@ test('Pièces : une phrase de faits sans zéro, le nom sans la note du logiciel,
       <LignePiece id="b" nom="Kbis inventé" etat={<EtatDePiece statut={statutPiece({ status: 'present', jointe: true })} />} />
     </ListePieces>)
   assert.match(html, /data-liste-pieces=""/)
-  assert.match(html, /<span data-etat="a-joindre" class="text-sm text-fg-2">À joindre<\/span>/)
+  assert.match(html, /<span data-etat="a-joindre" class="whitespace-nowrap text-sm text-fg-2">À joindre<\/span>/)
   assert.match(html, /data-etat="pret"/)
   assert.doesNotMatch(html, /text-bleu-ink|a-couvrir/)
   const pieces = sansCommentaires(lire('src/routes/project/StepVerification.tsx'))

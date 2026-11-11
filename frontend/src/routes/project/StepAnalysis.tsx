@@ -415,7 +415,9 @@ export default function StepAnalysis({ project }: Props) {
         titre="Les exigences du dossier"
         description={
           <>
-            <span className="font-semibold text-fg">{items.length} exigences identifiées</span>
+            {/* Une analyse arrêtée avant la fin : le compte n'est pas affiché comme certain (jury, tour 1) */}
+            {analysisFailed && <span className="font-medium text-ambre-ink">Liste peut-être partielle (la dernière analyse s’est arrêtée avant la fin). </span>}
+            <span className="font-semibold text-fg">{analysisFailed ? 'Au moins ' : ''}{items.length} exigences identifiées</span>
             {project.selected_lot_name ? ` pour ${project.selected_lot_name}` : ''}. {phraseExigences(items.length, obligatoireCount)}.
             {lotFilterInfo && phraseDocuments && (
               <>

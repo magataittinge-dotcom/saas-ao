@@ -21,7 +21,7 @@ test('/projects/new est l’écran de dépôt : une zone ZIP / PDF, plus de for
   assert.ok(!html.includes('Nom du projet'), 'plus de champ « Nom du projet »')
   assert.ok(!html.includes('Créer le projet'), 'plus de bouton « Créer le projet »')
   assert.ok(!html.includes('Retour'), 'pas de lien « Retour » en double du chemin de la barre du haut')
-  assert.equal((html.match(/Choisir un fichier/g) ?? []).length, 1, 'un seul geste : le bouton principal de la zone')
+  assert.equal((html.match(/Choisir des fichiers/g) ?? []).length, 1, 'un seul geste : le bouton principal de la zone')
 })
 
 test('le nom de l’AO est tiré du nom du fichier (extension et séparateurs retirés)', () => {
