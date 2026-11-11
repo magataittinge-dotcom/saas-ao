@@ -17,7 +17,7 @@ import { Message } from '@/components/ui/message'
 import { PastilleEtat, type Sens } from '@/components/ui/pastille'
 import { Squelette } from '@/components/ui/squelette'
 
-interface Compteur { used: number; limit: number | null }
+interface Compteur { used: number; limit: number }
 
 /** L'état d'un compteur du mois : le mot, le sens (COULEURS.md : vert sous 70 %, ambre de 70 à 90 %, rouge au-delà) et la barre. */
 export function lectureCompteur(c: { used: number; limit: number }): { sens: Sens; mot: string; barre: string; part: number } {
@@ -31,7 +31,6 @@ export function lectureCompteur(c: { used: number; limit: number }): { sens: Sen
 
 /** Une unité du mois : son nom, ce qui est utilisé sur ce qui est prévu, l'état en un mot, et la jauge (jamais la couleur seule). */
 function JaugeUnite({ libelle, compteur }: { libelle: string; compteur: Compteur }) {
-  if (compteur.limit === null) return null
   const l = lectureCompteur({ used: compteur.used, limit: compteur.limit })
   return (
     <RangeeCarte className="block py-4">
@@ -204,29 +203,21 @@ export default function Billing() {
         estVide={(q) => !q?.analyses || !q.memoires}
       >
         {(q) => {
-          const illimite = q.analyses.limit === null && q.memoires.limit === null
-          const atteint = [q.analyses, q.memoires].some((c) => c.limit !== null && c.used >= c.limit)
+          const atteint = [q.analyses, q.memoires].some((c) => c.used >= c.limit)
           const retour = jourLongParis(q.period_end)
           return (
             <div className="grid gap-3">
               {atteint && (
                 <Message ton="erreur" titre="Quota du mois atteint">
                   {retour ? `Vos unités reviennent le ${retour}.` : 'Vos unités reviennent au début de la prochaine période.'}
-                  {' '}Vos dossiers en cours restent ouverts ; une offre plus large lève la limite tout de suite.
+                  {' '}Vos dossiers en cours restent ouverts ; {q.plan === 'business' ? 'ce quota peut être relevé sur demande.' : 'une offre plus large lève la limite tout de suite.'}
                 </Message>
               )}
-              {illimite ? (
-                <Carte>
-                  <p className="text-sm font-medium text-fg">Aucun compteur ce mois-ci</p>
-                  <p className="mt-1 text-sm text-fg-2">Votre offre ne compte ni les analyses ni les mémoires, dans un usage raisonnable.</p>
-                </Carte>
-              ) : (
-                <Carte sansMarge className="px-5 sm:px-6">
-                  <JaugeUnite libelle="Analyses" compteur={q.analyses} />
-                  <JaugeUnite libelle="Mémoires" compteur={q.memoires} />
-                </Carte>
-              )}
-              {!illimite && !atteint && retour && <p className="text-xs text-fg-3">Les compteurs repartent de zéro le {retour}.</p>}
+              <Carte sansMarge className="px-5 sm:px-6">
+                <JaugeUnite libelle="Analyses" compteur={q.analyses} />
+                <JaugeUnite libelle="Mémoires" compteur={q.memoires} />
+              </Carte>
+              {!atteint && retour && <p className="text-xs text-fg-3">Les compteurs repartent de zéro le {retour}.</p>}
             </div>
           )
         }}

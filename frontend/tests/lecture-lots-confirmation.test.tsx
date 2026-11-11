@@ -14,30 +14,26 @@ test('la confirmation s\'applique dès plus d\'un lot, jamais pour un seul', () 
   assert.equal(doitConfirmerLecture(13), true)
 })
 
-test('l\'unité est écrite sur le bouton ; en offre illimitée, aucune unité n\'est annoncée', () => {
-  assert.equal(libelleBoutonLire(1, false), 'Analyser 1 lot (1 unité)')
-  assert.equal(libelleBoutonLire(13, false), 'Analyser 13 lots (13 unités)')
-  assert.equal(libelleBoutonLire(0, false), 'Analyser le dossier (1 unité)')
-  assert.equal(libelleBoutonLire(13, true), 'Analyser 13 lots')
-  assert.equal(libelleBoutonLire(0, true), 'Analyser le dossier')
+test('l\'unité est écrite sur le bouton, pour toutes les offres (aucune n\'est illimitée depuis le 11/11/2026)', () => {
+  assert.equal(libelleBoutonLire(1), 'Analyser 1 lot (1 unité)')
+  assert.equal(libelleBoutonLire(13), 'Analyser 13 lots (13 unités)')
+  assert.equal(libelleBoutonLire(0), 'Analyser le dossier (1 unité)')
 })
 
-test('la confirmation dit « Lire N lots = N unités » ; illimité : sans unités décomptées', () => {
-  assert.equal(titreConfirmationLecture(13, false), 'Analyser 13 lots = 13 unités')
-  assert.equal(titreConfirmationLecture(2, false), 'Analyser 2 lots = 2 unités')
-  assert.equal(titreConfirmationLecture(3, true), 'Analyser 3 lots')
-  assert.match(detailConfirmationLecture(true), /offre est illimitée/)
-  assert.doesNotMatch(detailConfirmationLecture(true), /unité|décompte/)
-  // FIN-B1 : en offre illimitée, l'en-tête des lots ne parle pas de l'abonnement (la confirmation le dit au moment de lancer)
-  assert.doesNotMatch(phraseCoutLots(13, true) + phraseCoutLots(1, true) + phraseCoutLots(0, true), /illimitée|abonnement/)
-  assert.doesNotMatch(phraseCoutLots(13, true) + phraseCoutLots(1, true) + phraseCoutLots(0, true), /unité|décompte/)
-  assert.match(phraseCoutLots(13, false), /1 unité/)
+test('la confirmation dit « Analyser N lots = N unités » ; chaque lot analysé décompte 1 unité, pour toutes les offres', () => {
+  assert.equal(titreConfirmationLecture(13), 'Analyser 13 lots = 13 unités')
+  assert.equal(titreConfirmationLecture(2), 'Analyser 2 lots = 2 unités')
+  assert.match(detailConfirmationLecture(), /Chaque lot analysé décompte 1 unité/)
+  assert.doesNotMatch(detailConfirmationLecture() + phraseCoutLots(13) + phraseCoutLots(1) + phraseCoutLots(0), /illimit/i)
+  assert.match(phraseCoutLots(13), /1 unité/)
+  assert.match(phraseCoutLots(1), /1 unité/)
+  assert.match(phraseCoutLots(0), /1 unité/)
 })
 
 test('la confirmation est le dialogue du système : le titre dit le décompte, le bouton dit le geste, sans répéter le titre', () => {
   const code = sansCommentaires(lire('src/components/project/LectureLots.tsx'))
   assert.match(code, /<DialogueConfirmation/)
-  assert.match(code, /titre=\{titreConfirmationLecture\(nbLots, illimite\)\}/)
+  assert.match(code, /titre=\{titreConfirmationLecture\(nbLots\)\}/)
   assert.match(code, /libelleConfirmer=\{`Analyser les \$\{nbLots\} lots`\}/)
   assert.doesNotMatch(code, /createPortal|<button\b|style=\{\{|signature-btn/)
 })

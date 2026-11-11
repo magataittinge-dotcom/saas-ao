@@ -28,6 +28,8 @@ export const INTERDITS: [RegExp, string][] = [
   [/révolutionnaire|en un clic/i, 'vantardise'],
   [/\bSynorix IA\b/, '« Synorix IA » (Synorix suffit)'],
   [/\.\.\.(?!\.)/, '« ... » → « … »'],
+  // Décision du fondateur du 11/11/2026 (D24) : plus aucune offre illimitée, chaque offre a son quota du mois
+  [/illimit|usage raisonnable|fair.?use|unlimited/i, '« illimité » (aucune offre n’est illimitée)'],
 ]
 
 // Typographie française : espace insécable (U+00A0 ou &nbsp;) avant « : », « ; », « ? » et à l'intérieur des guillemets.

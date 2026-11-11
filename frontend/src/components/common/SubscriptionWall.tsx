@@ -4,6 +4,7 @@ import { Dialogue } from '@/components/ui/dialogue'
 import { Message } from '@/components/ui/message'
 import { api } from '@/services/api'
 import GrilleOffres from '@/components/offres/GrilleOffres'
+import { useAuthStore } from '@/stores/authStore'
 
 interface Props {
   open: boolean
@@ -21,6 +22,8 @@ const FEATURE_LABELS: Record<string, string> = {
 export default function SubscriptionWall({ open, onClose, feature = 'analysis', message }: Props) {
   const [loading, setLoading] = useState<string | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
+  // Business, offre la plus haute (11/11/2026) : à son quota, rien à « passer » ; le refus du serveur dit la remise à zéro.
+  const business = useAuthStore((st) => st.organization?.plan) === 'business'
 
   const handleSubscribe = async (planId: string) => {
     setLoading(planId)
@@ -38,8 +41,9 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis', 
   // Le mur d'abonnement est un Dialogue du système (grand) : Échap, clic sur le voile, piège et retour du focus par Radix.
   // Aucun aplat dans la grille : chaque offre a un bouton au trait (le choix revient à l'utilisateur, aucune n'est poussée).
   return (
-    <Dialogue ouvert={open} onOuvert={(o) => { if (!o) onClose() }} taille="grand" titre="Passez au niveau supérieur"
+    <Dialogue ouvert={open} onOuvert={(o) => { if (!o) onClose() }} taille="grand" titre={business ? 'Quota du mois atteint' : 'Passez au niveau supérieur'}
       description={message ?? `${FEATURE_LABELS[feature] ?? 'Cette fonctionnalité'} demande une offre active. Choisissez celle qui suit votre rythme.`}>
+    {business ? null : (
     <GrilleOffres
         compacte
         action={(offre) => (
@@ -48,6 +52,7 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis', 
           </Bouton>
         )}
       />
+    )}
         {erreur && <Message ton="erreur">{erreur}</Message>}
       <p className="text-xs text-fg-3">Annulation possible à tout moment. Facturation mensuelle sans engagement.</p>
     </Dialogue>

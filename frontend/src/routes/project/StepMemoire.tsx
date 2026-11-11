@@ -28,7 +28,6 @@ import { ETAT_A_VERIFIER, ETAT_PRET, type VuePlan } from '@/lib/planMemoire'
 import type { Project, MemoireTechnique, MemoireContent, Reference } from '@/types'
 import { referencesRetrouvees, sectionsBreves } from '@/lib/memoireControles'
 import { sectionsDuContenu, sommaireMemoire } from '@/lib/memoireSections'
-import { useQuota } from '@/components/layout/QuotaGauge'
 import SommaireMemoire from '@/components/memoire/SommaireMemoire'
 import ControlesTexte from '@/components/memoire/ControlesTexte'
 import { DocumentView } from '@/components/memoire/DocumentMemoire'
@@ -51,7 +50,7 @@ const MEMOIRE_GEN_STEPS: StepDescriptor[] = [
 const TITRE = 'Rédiger le mémoire'
 
 /** Les cartes de l'écran de préparation : le plan suivi, le poids dans la note, ce que la rédaction décompte. */
-export function cartesPreparation(plan: VuePlan | null, techPct: number, illimite = false): CarteResume[] {
+export function cartesPreparation(plan: VuePlan | null, techPct: number): CarteResume[] {
   return [
     plan
       ? {
@@ -62,9 +61,7 @@ export function cartesPreparation(plan: VuePlan | null, techPct: number, illimit
     techPct > 0
       ? { libelle: 'Poids dans la note', valeur: `${techPct} %`, detail: 'Pondération hors prix relevée dans le règlement.' }
       : { libelle: 'Poids dans la note', valeur: 'Non précisé', detail: 'Le règlement ne donne pas de pondération.' },
-    illimite
-      ? { libelle: 'Abonnement', valeur: 'Illimité', detail: 'Votre offre est illimitée.' }
-      : { libelle: 'Abonnement', valeur: '1 unité', detail: 'Un mémoire décompte 1 unité, au succès de la rédaction.' },
+    { libelle: 'Abonnement', valeur: '1 unité', detail: 'Un mémoire décompte 1 unité, au succès de la rédaction.' },
   ]
 }
 
@@ -120,9 +117,6 @@ export default function StepMemoire({ project }: Props) {
   // Au téléphone, l'action principale est portée par la barre du bas (« Suivant : Export ») : l'en-tête ne la monte pas, pour
   // que le bouton de suite garde l'aplat (il le cède dès qu'un autre bouton principal est monté, même caché).
   const tel = useMedia('(max-width: 768px)')
-  const { data: quota } = useQuota()
-  // offre illimitée : la carte « Abonnement » ne parle d'aucune unité (G8)
-  const illimite = quota?.analyses?.limit === null && quota?.memoires?.limit === null
   const queryClient = useQueryClient()
   const [showPaywall, setShowPaywall] = useState(false)
   const [paywallMessage, setPaywallMessage] = useState<string | null>(null)
@@ -423,7 +417,7 @@ export default function StepMemoire({ project }: Props) {
             <Bouton variante="secondaire" onClick={() => navigate(`/projects/${project.id}/plan`)}>Voir le plan</Bouton>
           )}
           message={hasMemoire ? <Message ton="attention">Une nouvelle rédaction remplacera la version actuelle du mémoire.</Message> : undefined}
-          resume={<BandeResume libelle="Résumé de la rédaction" cartes={cartesPreparation(plan ?? null, techPct, illimite)} />}
+          resume={<BandeResume libelle="Résumé de la rédaction" cartes={cartesPreparation(plan ?? null, techPct)} />}
         >
           <SectionEtape titre="Ce que le règlement note" description={<>La pondération relevée dans le <Sigle code="RC" />, hors prix.</>}>
             <PoidsMemoire techPct={techPct} />
