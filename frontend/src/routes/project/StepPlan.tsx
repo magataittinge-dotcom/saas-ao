@@ -6,7 +6,7 @@ import { Plus } from 'lucide-react'
 import { api } from '@/services/api'
 import { useSourceChamp } from '@/hooks/useSourceChamp'
 import {
-  BandeResume, EtatElement, GabaritEtape, SectionEtape,
+  BandeResume, EtatElement, GabaritEtape, SectionEtape, SqueletteCorpsEtape,
 } from '@/components/etape'
 import { recoupements } from '@/lib/planRecoupe'
 import PartiePlanCarte from '@/components/plan/PartiePlanCarte'
@@ -18,7 +18,6 @@ import { Champ, GroupeChamp } from '@/components/ui/champ'
 import { EtatErreur } from '@/components/ui/etats'
 import { ListeDeroulante } from '@/components/ui/liste-deroulante'
 import { Message } from '@/components/ui/message'
-import { Squelette } from '@/components/ui/squelette'
 import { Sigle } from '@/components/common/Sigle'
 import type { CriticalFieldsPayload } from '@/components/project/CriticalBanner'
 import type { Project } from '@/types'
@@ -131,10 +130,9 @@ export default function StepPlan({ project }: { project: Project }) {
   if (isLoading || (!parties && !isError)) {
     return (
       <GabaritEtape titre="Plan du mémoire" utilite={UTILITE}>
-        <div role="status" aria-busy="true" className="space-y-3">
+        <div role="status" aria-busy="true">
           <span className="sr-only">Chargement du plan</span>
-          <Squelette className="h-28 w-full rounded-carte" />
-          <Squelette className="h-72 w-full rounded-carte" />
+          <SqueletteCorpsEtape />
         </div>
       </GabaritEtape>
     )
@@ -171,7 +169,8 @@ export default function StepPlan({ project }: { project: Project }) {
       ? {
         libelle: 'Critères du règlement', valeur: `${resume.sous_criteres_servis} sur ${resume.sous_criteres_total}`,
         etat: vue.a_couvrir.length === 0 ? ETAT_PRET : ETAT_A_VERIFIER,
-        jauge: { rempli: resume.sous_criteres_servis, total: resume.sous_criteres_total },
+        // tous servis : la pastille « Prêt » le dit ; une jauge pleine, à la couleur de l'action, le contredisait (jury, tour 1)
+        jauge: vue.a_couvrir.length === 0 ? undefined : { rempli: resume.sous_criteres_servis, total: resume.sous_criteres_total },
         detail: vue.a_couvrir.length === 0 ? 'Chaque sous-critère est servi par une partie.' : `${vue.a_couvrir.length} à couvrir`,
       }
       : { libelle: 'Critères du règlement', valeur: 'Non détaillés', detail: 'Le règlement ne détaille pas de sous-critères.' },
@@ -238,7 +237,7 @@ export default function StepPlan({ project }: { project: Project }) {
 
         {groupes.map((g, i) => (
           <SectionEtape
-            key={g.partie} titre={titrePartieLisible(g.partie)}
+            key={g.partie} titre={`${titrePartieLisible(g.partie)} · ${g.parties.length} ${g.parties.length > 1 ? 'parties' : 'partie'}`}
             description={i === 0 ? <>Le plan retient les parties qui servent un sous-critère du <Sigle code="RC" /> et celles que le dossier demande.</> : undefined}
           >
             <Carte sansMarge>

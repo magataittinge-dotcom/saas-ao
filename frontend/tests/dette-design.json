@@ -50,7 +50,6 @@
   "src/components/project/CriticalBanner.tsx": 1,
   "src/components/project/DocumentViewer.tsx": 6,
   "src/components/project/source/FeuilleSource.tsx": 1,
-  "src/components/project/source/PanneauSource.tsx": 1,
   "src/components/project/source/VueTableau.tsx": 1,
   "src/components/project/StepProgress.tsx": 1,
   "src/hooks/useSourceChamp.tsx": 1
