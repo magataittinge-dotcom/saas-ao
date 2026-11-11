@@ -44,11 +44,10 @@ test('une erreur de chargement n’est jamais un dépôt vide : la requête pas
   assert.match(code, /<EtatErreur\s+titre="Le dossier n’a pas pu se charger"[\s\S]*?onReessayer=/)
   // la grande zone « Déposez le DCE complet » et le résumé ne sortent que du rendu « contenu » de la requête
   const avantContenu = code.slice(0, code.indexOf('<EtatRequete'))
-  assert.ok(!avantContenu.includes('Déposez le <Sigle code="DCE" /> complet'), 'la zone de dépôt est dans le contenu de la requête')
-  assert.match(code, /const chargementEchoue = requeteDocuments\.isError && requeteDocuments\.data === undefined/)
-  // l’échec se dit une fois, dans la page : la barre du bas se tait
-  assert.match(code, /bureau=\{chargementEchoue \? null/)
-  assert.match(code, /tel=\{chargementEchoue \? null/)
+  assert.ok(!avantContenu.includes('<ZoneDepot'), 'la zone de dépôt est dans le contenu de la requête')
+  // FIN-B1 — l’échec se dit une fois, dans la page : sans dossier lu, il n’y a pas de barre du bas du tout
+  assert.match(code, /barre=\{!hasDocuments \? undefined : \(/)
+  assert.doesNotMatch(code, /'Aucun fichier'|ne sont pas touchés|libelle="Retour"/)
 })
 
 test('la liste des pièces : tableau du système (pages de 50), groupée par type, type en liste déroulante, suppression dans le menu de ligne', () => {

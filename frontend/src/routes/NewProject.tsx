@@ -9,13 +9,14 @@ export default function NewProject() {
   return (
     <Page
       titre="Nouvel appel d’offres"
-      sousTitre="Déposez le dossier reçu de l’acheteur, tel que vous l’avez téléchargé. Synorix le range, le lit et vous dit ce que le marché demande."
+      sousTitre="Déposez le dossier reçu de l’acheteur : Synorix le range, le lit et vous dit ce que le marché demande."
     >
       <ZoneDepotAO
         geste
-        className="min-h-[22rem]"
-        titre={<>Déposez le <Sigle code="DCE" /></>}
-        precision="Le ZIP complet ou un PDF. Le nom de l’AO vient du nom du fichier, vous pourrez le modifier ensuite."
+        suite
+        titre="Glissez ici le dossier de l’acheteur"
+        className="md:min-h-80"
+        precision={<>Le <Sigle code="DCE" /> entier en ZIP, tel que vous l’avez téléchargé, ou plusieurs fichiers à la fois. Le nom de l’AO vient du fichier ; vous pourrez le modifier ensuite.</>}
       />
     </Page>
   )

@@ -34,3 +34,29 @@ export function cartesDepot(documents: readonly Pick<ProjectDocument, 'type' | '
   }
   return cartes
 }
+
+/** Les fichiers que Synorix n'a pas su ranger : le seul geste que l'écran de dépôt demande. */
+export const estAClasser = (d: Pick<ProjectDocument, 'type'>): boolean => !d.type || d.type === 'autre'
+
+const enumerer = (mots: string[]): string => (mots.length <= 1 ? mots[0] ?? '' : `${mots.slice(0, -1).join(', ')} et ${mots[mots.length - 1]}`)
+const NOMS_CLES: Record<(typeof TYPES_CLES)[number], string> = {
+  rc: 'le règlement', ccap: 'les clauses administratives', cctp: 'les clauses techniques', dpgf: 'le tableau des prix', acte_engagement: 'l’acte d’engagement',
+}
+
+/**
+ * Le dossier déposé, dit en une ligne de faits sous le titre de la liste (jury, tour 1 : quatre cases égales, deux traitements
+ * dans la même rangée, des pastilles « Prêt » sur des comptes) : combien de fichiers et leur poids, les pièces clés reconnues
+ * en mots du métier, les lots repérés. Ce qui reste à classer n'est pas ici : c'est l'exception, dite à part (`estAClasser`).
+ */
+export function faitsDepot(documents: readonly Pick<ProjectDocument, 'type' | 'file_size'>[], project?: Pick<Project, 'lots_detectes'> | null, lotUnique?: LotUnique | null): string {
+  if (documents.length === 0) return ''
+  const total = documents.reduce((s, d) => s + (d.file_size || 0), 0)
+  const reconnues = TYPES_CLES.filter((t) => documents.some((d) => d.type === t))
+  const lots = project?.lots_detectes?.length ?? 0
+  const faits = [
+    `${documents.length} ${documents.length > 1 ? 'fichiers' : 'fichier'}${total > 0 ? `, ${tailleFichier(total)}` : ''}`,
+    reconnues.length > 0 ? `Synorix a reconnu ${enumerer(reconnues.map((t) => NOMS_CLES[t]))}` : null,
+    lotUnique ? null : lots > 1 ? `${lots} lots repérés, à choisir à l’étape suivante` : null,
+  ]
+  return `${faits.filter(Boolean).join('. ')}.`
+}
