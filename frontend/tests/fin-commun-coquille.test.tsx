@@ -38,6 +38,9 @@ test('chiffres proportionnels dans le texte courant et les dates ; tabulaires se
 test('fil d\'Ariane : jamais « Mes AO / » sans suite ; Abonnement et Retenue de garantie ont un chemin de retour', () => {
   const h = sansCommentaires(lire('src/components/layout/Header.tsx'))
   assert.match(h, /\{idAO \|\| parent\s*\? <span data-fil-courant=""[^>]*aria-current="page">\{label\}<\/span>/)
+  // au téléphone : le retour seul, avec son chevron (la barre y porte la recherche, la cloche et le compte)
+  assert.match(h, /<ChevronLeft[^>]*min-\[769px\]:hidden/)
+  assert.match(h, /data-fil-courant="" className="[^"]*max-\[768px\]:hidden"/)
   assert.match(h, /'\/outils':\s+\{ parent: 'Paramètres', parentTo: '\/settings', label: 'Retenue de garantie' \}/)
   assert.match(h, /'\/settings\/billing': \{ parent: 'Paramètres', parentTo: '\/settings', label: 'Abonnement' \}/)
 })

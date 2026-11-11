@@ -201,7 +201,8 @@ test('Mes AO sans remise à venir : pas de bloc « À la une », aucun bouton
   const html = renderToStaticMarkup(<QueryClientProvider client={client(PASSES)}><MemoryRouter><Projects /></MemoryRouter></QueryClientProvider>)
   assert.ok(!html.includes('À la une') && !html.includes('data-a-la-une'))
   assert.equal((html.match(/data-variante="principal"/g) ?? []).length, 0)
-  assert.ok(html.includes('>Aucun<'), 'En cours : « Aucun »')
+  // jury, tour 1 : deux cases sans rien à compter ne restent pas deux cases « Aucun » : une ligne de faits (BandeCases)
+  assert.ok(/En cours\u00a0: aucun/.test(html), 'En cours : aucun, dit dans la ligne de faits')
 })
 
 test('Mes AO, 500 AO : des pages de 50 (« 1–50 sur 500 »), jamais 500 lignes d’un bloc', () => {

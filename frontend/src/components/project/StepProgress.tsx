@@ -83,7 +83,9 @@ export function StepProgress({ currentStep, completedSteps = {}, onStepClick, lo
                 {contenu}
               </button>
               {index < STEPS.length - 1 && (
-                <span aria-hidden className={cn('mx-1 mt-[22px] h-px min-w-1 flex-1', isCompleted ? 'bg-vert-mark' : 'bg-bord-2')} />
+                // Au téléphone, la liaison va d'un rond à l'autre (elle passe sous la marge des cibles de 44 px) : réduite à
+                // 6 px entre deux cibles, elle se lisait comme un signe « - » (jury, tour 1).
+                <span aria-hidden data-liaison="" className={cn('mx-1 mt-[22px] h-px min-w-1 flex-1 max-sm:-mx-1.5', isCompleted ? 'bg-vert-mark' : 'bg-bord-2')} />
               )}
             </li>
           )

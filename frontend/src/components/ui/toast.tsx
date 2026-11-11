@@ -34,7 +34,9 @@ function Toast({ toast, onRetirer }: { toast: ToastDonnees; onRetirer: (id: stri
   }, [onRetirer, toast.id, toast.ton])
   return (
     <div role={toast.ton === 'erreur' ? 'alert' : 'status'} data-toast={toast.ton}
-      className="toast-flottant pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-lg border border-bord bg-surface-pop py-1 pl-4 pr-1 text-sm text-fg shadow-toast">
+      className={cn('toast-flottant pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-lg border bg-surface-pop py-1 pl-4 pr-1 text-sm text-fg shadow-toast',
+        // l'état se lit au trait, pas seulement à une icône de 18 px (jury, tour 1 : un échec se confondait avec une carte)
+        toast.ton === 'erreur' ? 'border-rouge-mark' : toast.ton === 'attention' ? 'border-ambre-mark' : 'border-bord')}>
       <Icone aria-hidden size={18} strokeWidth={1.75} className={cn('shrink-0', encre)} />
       <p className="min-w-0 flex-1 py-2">{toast.message}</p>
       <button type="button" onClick={() => onRetirer(toast.id)} aria-label="Fermer le message"

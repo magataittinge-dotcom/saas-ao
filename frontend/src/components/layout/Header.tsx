@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Plus, Search } from 'lucide-react'
+import { ChevronLeft, Plus, Search } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useProject } from '@/hooks/useProject'
 import { useUIStore } from '@/stores/uiStore'
@@ -82,16 +82,20 @@ export default function Header({ onSearch, titreSorti = false }: Props) {
         <nav aria-label="Fil d’Ariane" className="flex min-w-0 items-center gap-2">
           {parent && (
             <>
-              <Link to={parentTo} className={LIEN_PARENT}>{parent}</Link>
-              {(!idAO || label) && <span aria-hidden className={cn('shrink-0 text-fg-3', idAO && 'max-[768px]:hidden')}>/</span>}
+              <Link to={parentTo} className={LIEN_PARENT}>
+                <ChevronLeft size={18} strokeWidth={1.5} aria-hidden className="-ml-1 mr-0.5 shrink-0 min-[769px]:hidden" />
+                {parent}
+              </Link>
+              {(!idAO || label) && <span aria-hidden className="shrink-0 text-fg-3 max-[768px]:hidden">/</span>}
             </>
           )}
-          {/* Au téléphone, dans un AO : le retour « Mes AO » seul ; le nom de l'AO, que la barre couperait, est écrit en
-              entier sous elle (routes/Project.tsx). */}
+          {/* Au téléphone, la barre porte la recherche, la cloche et le compte : il reste la place du retour. Le fil s'y réduit
+              au parent, précédé d'un chevron (« ‹ Mes AO », « ‹ Paramètres ») ; la page courante est le h1, juste dessous, et
+              dans un AO son nom est écrit en entier sous la barre (routes/Project.tsx). */}
           {/* Un fil d'Ariane se lit en entier (jury, tour 1 : « Mes AO / », « Mon entreprise / » sans suite) : dès qu'il y a
               un parent, la page courante est écrite. Sans parent : le petit titre, quand le h1 est sorti de l'écran. */}
           {idAO || parent
-            ? <span data-fil-courant="" className={cn('truncate text-base font-semibold text-fg', idAO && 'max-[768px]:hidden')} aria-current="page">{label}</span>
+            ? <span data-fil-courant="" className="truncate text-base font-semibold text-fg max-[768px]:hidden" aria-current="page">{label}</span>
             : <TitreBarre titre={label || 'Accueil'} montre={titreSorti} />}
         </nav>
 

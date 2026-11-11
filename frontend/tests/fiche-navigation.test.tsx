@@ -19,6 +19,6 @@ test('l’en-tête d’une fiche : « Mon entreprise › Fiche à télécharger 
   const html = renderToStaticMarkup(<QueryClientProvider client={new QueryClient()}><MemoryRouter initialEntries={['/entreprise/fiche/references']}><Header onSearch={() => {}} /></MemoryRouter></QueryClientProvider>)
   // jury, tour 1 : le fil se lit en entier (« Mon entreprise / » restait sans suite tant que le h1 était à l'écran)
   assert.match(html, /data-fil-courant=""[^>]*aria-current="page">Fiche à télécharger</)
-  assert.match(html, /href="\/company"[^>]*>Mon entreprise</)
+  assert.match(html, /href="\/company"[^>]*>(?:<svg[\s\S]*?<\/svg>)?Mon entreprise</) // le chevron du téléphone précède le nom
   assert.doesNotMatch(html, /Tableau de bord/)
 })

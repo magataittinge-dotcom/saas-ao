@@ -104,12 +104,6 @@ export function valeurDeCase(valeur: string): number | string | null {
   return v
 }
 
-/** Une case qui n'a rien à compter et rien d'autre à montrer (ni jauge, ni désignation, ni source). */
-export function caseSansRien(c: CarteResume): boolean {
-  const v = valeurDeCase(c.valeur)
-  return (v === null || v === 0) && !c.jauge && !c.designation && !c.source
-}
-
 /**
  * Le résumé d'une étape (VEILLE-DESIGN P11, défaut 8 du fondateur) : UNE surface découpée par des filets, trois ou quatre cases
  * (une colonne au téléphone). Chaque case est la `CaseResume` du système : l'étiquette en haut, la valeur dessous ; un nombre
@@ -119,24 +113,14 @@ export function caseSansRien(c: CarteResume): boolean {
  * Ce qui trahissait le gabarit (jury, tour 1), réglé ici pour toutes les étapes :
  *  - une case sans rien à compter ne porte pas de pastille (« Aucune » + « Prêt » sur un dossier non analysé : une incertitude
  *    affichée comme une certitude) ;
- *  - à partir de deux cases sans rien à compter, la bande se resserre : elles quittent la surface et tiennent en une ligne
- *    de faits dessous (« À joindre : aucune · À renouveler : aucune »), au lieu de cases égales qui disent toutes « Aucun ».
+ *  - à partir de deux cases sans rien à compter, la bande se resserre en une ligne de faits (c'est `BandeCases` qui le fait,
+ *    pour toutes les bandes du produit : components/ui/case-resume.tsx).
  */
 export function BandeResume({ cartes, libelle = 'Résumé de l’étape', className }: { cartes: CarteResume[]; libelle?: string; className?: string }) {
   if (cartes.length === 0) return null
-  const sansRien = cartes.filter(caseSansRien)
-  const resserree = sansRien.length >= 2
-  const montrees = resserree ? cartes.filter((c) => !caseSansRien(c)) : cartes
-  const faits = resserree && (
-    <p data-cases-sans-rien="" className="text-sm text-fg-2">
-      {sansRien.map((c) => `${c.libelle} : ${(c.rien ?? 'Aucun').toLowerCase()}`).join(' · ')}
-    </p>
-  )
-  if (montrees.length === 0) return <div role="group" aria-label={libelle} className={className}>{faits}</div>
   return (
-    <>
     <BandeCases libelle={libelle} className={className}>
-      {montrees.map((c) => {
+      {cartes.map((c) => {
         const pastille = c.etat && c.etat !== 'neutre' && valeurDeCase(c.valeur) !== null && valeurDeCase(c.valeur) !== 0 ? PASTILLE[c.etat] : null
         return (
           <CaseResume key={c.libelle} etiquette={c.libelle} valeur={valeurDeCase(c.valeur)} rien={c.rien ?? 'Aucun'} precision={c.detail}
@@ -148,8 +132,6 @@ export function BandeResume({ cartes, libelle = 'Résumé de l’étape', classN
         )
       })}
     </BandeCases>
-    {faits}
-    </>
   )
 }
 

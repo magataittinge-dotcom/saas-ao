@@ -64,3 +64,48 @@ test('bande de résumé : à partir de deux cases sans rien à compter, la bande
   const jauge = cartes([{ libelle: 'Prêtes', valeur: 'Aucune', rien: 'Aucune', jauge: { rempli: 0, total: 14 } }, { libelle: 'Lots', valeur: '' }])
   assert.equal((jauge.match(/data-case-resume/g) ?? []).length, 2)
 })
+
+// ── Squelettes : à la forme du contenu, sans valeur par défaut ──
+import { SqueletteEtape, SqueletteFil } from '@/components/etape'
+
+test('squelette d\'une étape : la forme du gabarit (titre et action, bande d\'une surface à quatre cases, lignes de phrase), aucune valeur écrite, rien ne boucle', () => {
+  const html = renderToStaticMarkup(<SqueletteEtape />)
+  assert.match(html, /aria-busy="true"/)
+  assert.match(html, /md:grid-cols-4/)
+  assert.match(html, /max-md:grid-cols-2/, 'deux par deux au téléphone, comme la vraie bande')
+  assert.equal((html.match(/min-h-\[150px\]/g) ?? []).length, 4)
+  assert.doesNotMatch(html, /animate-|pulse|shimmer/)
+  assert.doesNotMatch(html, /(?<!max-)w-full/, 'aucune barre de 1 200 px')
+  assert.equal(html.replace(/<[^>]+>/g, '').trim(), '', 'aucun texte : ni « 0 », ni « Prêt », ni « Aucun »')
+})
+
+test('squelette du fil des étapes : sept ronds sur toute la largeur ; le pied de page attend le contenu', () => {
+  const html = renderToStaticMarkup(<SqueletteFil />)
+  assert.match(html, /justify-between/)
+  assert.equal((html.match(/rounded-pilule/g) ?? []).length, 7)
+  assert.match(lire('src/index.css'), /main:has\(\[data-phase="chargement"\], \[data-squelette-ao\], \[data-squelette-etape\]\) > \[data-coquille="pied"\] \{ visibility: hidden; \}/)
+})
+
+// ── La bande de cases du système se resserre (Mes AO, Accueil, Outils, étapes) ──
+import { BandeCases, CaseResume } from '@/components/ui/case-resume'
+
+test('bande de cases : deux cases sans rien à compter quittent la surface pour une ligne de faits ; une seule reste une case', () => {
+  const deux = renderToStaticMarkup(
+    <BandeCases libelle="Résumé de mes appels d’offres">
+      <CaseResume etiquette="En cours" valeur={3} />
+      <CaseResume etiquette="Remise sous 7 jours" valeur={0} rien="Aucune" />
+      <CaseResume etiquette="À mettre à jour" valeur={0} />
+      <CaseResume etiquette="Unités du mois" valeur={0} rien="Aucune" action={<a href="/settings/billing">Voir l’abonnement</a>} />
+    </BandeCases>)
+  assert.equal((deux.match(/data-case-resume/g) ?? []).length, 2, 'la case qui compte et celle qui porte un lien')
+  assert.match(deux, /md:grid-cols-2/)
+  assert.match(deux, /data-cases-sans-rien=""[^>]*>Remise sous 7 jours : aucune · À mettre à jour : aucun</)
+  assert.equal((deux.match(/data-surface/g) ?? []).length, 1)
+  const une = renderToStaticMarkup(<BandeCases><CaseResume etiquette="En cours" valeur={3} /><CaseResume etiquette="À mettre à jour" valeur={0} /></BandeCases>)
+  assert.equal((une.match(/data-case-resume/g) ?? []).length, 2)
+  assert.doesNotMatch(une, /data-cases-sans-rien/)
+})
+
+test('toast : l\'état se lit au trait (rouge pour un échec), pas seulement à l\'icône', () => {
+  assert.match(sansCommentaires(lire('src/components/ui/toast.tsx')), /toast\.ton === 'erreur' \? 'border-rouge-mark'/)
+})

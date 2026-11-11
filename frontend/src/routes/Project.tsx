@@ -7,14 +7,14 @@ import { actionEtape, libelleRemise, quandRemise } from '@/lib/intelligence/acti
 import { lectureAO } from '@/lib/etatAO'
 import { acheteurCourt, niveauRemise, quandCourt } from '@/lib/mesAO'
 import { dossierLu } from '@/lib/dossierLu'
-import { AIDE_ETAPES, AideEtapeContexte, LectureNonFaite } from '@/components/etape'
+import { AIDE_ETAPES, AideEtapeContexte, LectureNonFaite, SqueletteEtape, SqueletteFil } from '@/components/etape'
 import { MettreAJourStatut } from '@/components/common/MettreAJourStatut'
 import { AplatCede, Bouton } from '@/components/ui/bouton'
 import { AOIntrouvable } from '@/components/public/EcransEtat'
 import { EtatErreur, EtatRequete } from '@/components/ui/etats'
 import { Message } from '@/components/ui/message'
 import { PastilleEtat } from '@/components/ui/pastille'
-import { Squelette, SqueletteLignes } from '@/components/ui/squelette'
+import { Squelette } from '@/components/ui/squelette'
 import type { Project as ProjetAO } from '@/types'
 
 // Chaque étape est un morceau chargé à la demande (bloc 6).
@@ -26,23 +26,12 @@ const StepPlan = lazy(() => import('./project/StepPlan'))
 const StepMemoire = lazy(() => import('./project/StepMemoire'))
 const StepExport = lazy(() => import('./project/StepExport'))
 
-/** Le squelette d'une étape : aux dimensions du gabarit (titre, ligne d'utilité, bande de résumé, un bloc). Fixe. */
-function SqueletteEtape() {
-  return (
-    <div aria-busy="true" className="space-y-6">
-      <div className="space-y-3"><Squelette className="h-10 w-64 max-w-full" /><Squelette className="h-4 w-96 max-w-full" /></div>
-      <Squelette className="h-28 w-full rounded-carte" />
-      <SqueletteLignes lignes={4} />
-    </div>
-  )
-}
-
-/** Le squelette de la page d'un AO : la ligne de contexte, le fil des étapes, puis l'étape. */
+/** Le squelette de la page d'un AO : la ligne de contexte, le fil des étapes (sur toute la largeur), puis l'étape. */
 function SqueletteAO() {
   return (
-    <div>
-      <Squelette className="mb-4 h-4 w-72 max-w-full" />
-      <div className="flex items-start gap-3 pb-6">{Array.from({ length: 7 }, (_, i) => <Squelette key={i} className="size-8 shrink-0 rounded-pilule" />)}</div>
+    <div data-squelette-ao="">
+      <Squelette className="mb-4 h-5 w-72 max-w-full" />
+      <SqueletteFil />
       <SqueletteEtape />
     </div>
   )
