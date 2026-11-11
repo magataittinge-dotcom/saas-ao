@@ -124,7 +124,7 @@ export default function FormCertifications({ donnees, avant, idPanneau, idOnglet
       <Groupe titre={<>Chiffres demandés dans la <Sigle code="DC2" /></>} aide="Les derniers exercices clos : chiffre d’affaires hors taxes et effectif moyen annuel.">
         <Pleine>
           <div className="space-y-2" data-chiffres="">
-            <div aria-hidden="true" className={cn(COLONNES_CHIFFRES, 'grid gap-2 text-xs font-medium text-fg-2')}>
+            <div aria-hidden="true" className={cn(COLONNES_CHIFFRES, 'grid items-end gap-2 text-xs font-medium text-fg-2')}>
               <span>Année</span><span>Chiffre d’affaires hors taxes</span><span>Effectif moyen</span><span />
             </div>
             {ca.map((ligne, i) => (

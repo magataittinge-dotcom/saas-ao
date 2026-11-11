@@ -26,7 +26,7 @@ import { useFocusChamp } from '@/components/entreprise/useFocusChamp'
 const DecrireEtDeposer = ({ rubrique }: { rubrique: RubriqueId }) => (
   <div className="grid gap-6">
     {rubrique !== 'certifications' && (
-      <AfficherPlus libelle="Décrire avec vos mots" libelleOuvert="Masquer">
+      <AfficherPlus libelle="Décrire avec vos mots" libelleOuvert="Décrire avec vos mots">
         <ProfileFreeTextCard />
       </AfficherPlus>
     )}

@@ -73,7 +73,7 @@ export default function ProfileFreeTextCard() {
   if (!proposed) {
     return (
       <div className="grid gap-3">
-        <p className="text-sm text-fg-2">Synorix range votre texte en rubriques ; vous vérifiez avant que rien ne soit écrit.</p>
+        <p className="max-w-prose text-pretty text-sm text-fg-2">Écrivez quelques phrases sur votre entreprise : vos équipes, votre matériel, vos chantiers. Synorix les range en rubriques ; vous vérifiez avant que rien ne soit écrit.</p>
         <ZoneTexte className="resize-none" rows={3} aria-label="Décrire avec vos mots" value={text} onChange={(e) => setText(e.target.value)}
           placeholder="Ex. : On est une entreprise de ravalement à Caen, 8 compagnons, 3 camions benne, 2 échafaudages…" />
         {error && <Message ton="attention">{error}</Message>}
