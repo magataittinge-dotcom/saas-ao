@@ -69,16 +69,12 @@ export default function FormIdentite({ donnees, avant, idPanneau, idOnglet }: { 
       </Groupe>
 
       <Groupe titre="Activités et zone">
-        <Pleine>
           <Field label="Activités principales" rempli={texte(profil.activites)} aide="Ces mots sont repris dans vos mémoires techniques.">
             <ZoneTexte className="resize-none" rows={3} value={profil.activites ?? ''} onChange={(e) => f.poserProfil('activites', e.target.value)} placeholder="Maçonnerie, gros œuvre, rénovation…" />
           </Field>
-        </Pleine>
-        <Pleine>
           <Field label="Zone d’intervention géographique" rempli={texte(profil.zone_intervention)}>
             <Champ value={profil.zone_intervention ?? ''} onChange={(e) => f.poserProfil('zone_intervention', e.target.value)} placeholder="Île-de-France, Provence-Alpes-Côte d’Azur…" />
           </Field>
-        </Pleine>
       </Groupe>
 
       <AfficherPlus>
@@ -96,7 +92,7 @@ export default function FormIdentite({ donnees, avant, idPanneau, idOnglet }: { 
         <Groupe titre="Métiers et présentation">
           <Pleine>
             <Field label="Métiers exercés" groupe>
-              <div className="grid gap-x-4 gap-y-1 [grid-template-columns:repeat(auto-fit,minmax(15rem,1fr))]">
+              <div className="grid gap-x-4 gap-y-1 [grid-template-columns:repeat(auto-fit,minmax(20rem,1fr))]">
                 {METIERS.map((m) => (
                   <CaseACocher key={m.code} libelle={m.libelle} coche={metiers.includes(m.code)}
                     onChange={(coche) => f.poserProfil('metiers', coche ? [...metiers, m.code] : metiers.filter((c) => c !== m.code))} />

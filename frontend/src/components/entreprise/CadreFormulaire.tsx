@@ -106,7 +106,7 @@ export default function CadreFormulaire({ rubrique, titre, explication, etat, on
       <div ref={entete} className="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
         {!depuisLeBas && !colle && <Echec etat={etat} />}
         <div className="min-w-0 flex-1 basis-72">
-          <h2 id={idTitre} className="text-lg font-semibold text-fg">{titre}</h2>
+          <h2 id={idTitre} className="text-xl font-semibold text-fg">{titre}</h2>
           <p className="mt-1 max-w-prose text-sm text-fg-2">{explication}</p>
         </div>
         <Actions rubrique={rubrique} idFormulaire={idFormulaire} etat={etat} />
