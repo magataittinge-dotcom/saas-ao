@@ -76,10 +76,11 @@ export default function RubriquesEntreprise({ donnees, rubrique, onChoisir, pann
               <span className={cn('block text-base text-fg', ouverte ? 'font-semibold' : 'font-medium')}>{r.titre}</span>
               <span className={cn('flex items-center gap-1.5 text-sm', complete ? 'text-vert-ink' : 'text-fg-2')}>
                 {complete && <Check aria-hidden size={14} strokeWidth={2} />}
-                <span className="chiffres">{libelleAvancement(av)}{complete ? ' · complète' : ''}</span>
+                {/* rien de saisi : une phrase, jamais un zéro compté ni une barre vide */}
+                <span>{av.rempli === 0 ? 'À commencer' : `${libelleAvancement(av)}${complete ? ' · complète' : ''}`}</span>
               </span>
             </span>
-            <Jauge {...av} />
+            {av.rempli > 0 && <Jauge {...av} />}
             <Chevron aria-hidden size={18} strokeWidth={1.5} className="shrink-0 text-fg-3" />
           </div>
         )

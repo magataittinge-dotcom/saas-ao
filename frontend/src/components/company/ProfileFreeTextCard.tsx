@@ -74,7 +74,7 @@ export default function ProfileFreeTextCard() {
     return (
       <div className="grid gap-3">
         <p className="text-sm text-fg-2">Synorix range votre texte en rubriques ; vous vérifiez avant que rien ne soit écrit.</p>
-        <ZoneTexte rows={3} aria-label="Décrire avec vos mots" value={text} onChange={(e) => setText(e.target.value)}
+        <ZoneTexte className="resize-none" rows={3} aria-label="Décrire avec vos mots" value={text} onChange={(e) => setText(e.target.value)}
           placeholder="Ex. : On est une entreprise de ravalement à Caen, 8 compagnons, 3 camions benne, 2 échafaudages…" />
         {error && <Message ton="attention">{error}</Message>}
         <div>
@@ -92,7 +92,7 @@ export default function ProfileFreeTextCard() {
       {Object.entries(proposed).map(([key, value]) => (
         <div key={key} className="grid gap-1">
           <CaseACocher libelle={FIELD_LABELS[key] ?? key} coche={included.has(key)} onChange={() => basculer(key)} />
-          <ZoneTexte rows={2} aria-label={FIELD_LABELS[key] ?? key} value={value} disabled={!included.has(key)}
+          <ZoneTexte className="resize-none" rows={2} aria-label={FIELD_LABELS[key] ?? key} value={value} disabled={!included.has(key)}
             onChange={(e) => setProposed((prev) => ({ ...prev!, [key]: e.target.value }))} />
         </div>
       ))}

@@ -67,7 +67,7 @@ const uneReference = (d: DonneesEntreprise, porte: (r: Partial<Reference>) => bo
 
 export const INFORMATIONS: Information[] = [
   // ── Identité ──
-  { id: 'I01', rubrique: 'identite', libelle: 'Raison sociale', niveau: 'indispensable', rempli: (d) => texte(d.organisation?.name) },
+  { id: 'I01', rubrique: 'identite', libelle: 'Nom de l’entreprise', niveau: 'indispensable', rempli: (d) => texte(d.organisation?.name) },
   { id: 'I02', rubrique: 'identite', libelle: 'SIRET', niveau: 'indispensable', rempli: (d) => texte(d.organisation?.siret) },
   { id: 'I03', rubrique: 'identite', libelle: 'Forme juridique', niveau: 'indispensable', rempli: (d) => texte(d.organisation?.forme_juridique) },
   { id: 'I08', rubrique: 'identite', libelle: 'Adresse du siège', niveau: 'indispensable', rempli: (d) => texte(d.organisation?.address) },

@@ -15,7 +15,7 @@ import type { Organization } from '@/types'
 import type { RubriqueId } from '@/lib/entreprise/avancement'
 import {
   TYPES_ACCEPTES, basculer, casesDeLaRubrique, cochesParDefaut, cochesPresentes, groupesParLecture, lectureEnCours,
-  libelleAConfirmer, libelleValider, ligneFormats, messageRefus, phraseBilan, sourceLisible, trierFichiers,
+  libelleAConfirmer, libelleValider, messageRefus, phraseBilan, sourceLisible, trierFichiers,
   type CaseDefinition, type CaseEtat, type Proposition,
 } from '@/lib/entreprise/depots'
 
@@ -54,7 +54,9 @@ function Etat({ vue, onVerifier }: { vue: VueCase; onVerifier: () => void }) {
 }
 
 /**
- * Une case, en rangée : son nom, ce qu'on y met, ce que Synorix en fera ; à droite, « Déposer un fichier ». Toute la rangée
+ * Une case, en rangée d'une ligne : son nom et ce qu'on y met ; à droite, « Déposer un fichier ». Ce que Synorix en fait et
+ * les formats sont dits une fois, sous le titre de la section (plus de pavé à trois niveaux par dépôt ; la limite de poids
+ * est dite par le refus, quand un fichier la dépasse). Toute la rangée
  * reçoit un fichier glissé (elle se marque alors d'un trait d'accent) ; au repos, aucune zone en pointillés.
  */
 export function CaseDepotVue({ vue, onFichiers, onVerifier }: {
@@ -78,15 +80,14 @@ export function CaseDepotVue({ vue, onFichiers, onVerifier }: {
       onDragOver={(e) => { e.preventDefault(); setSurvol(true) }}
       onDragLeave={() => setSurvol(false)}
       onDrop={aLaDepose}
-      className={cn('flex flex-wrap items-start justify-between gap-x-6 gap-y-3 border-t border-bord px-4 py-4 first:border-t-0', survol && 'bg-accent-tint outline-dashed outline-2 -outline-offset-2 outline-accent-ring')}
+      className={cn('flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-bord px-4 py-3 first:border-t-0', survol && 'bg-accent-tint outline-dashed outline-2 -outline-offset-2 outline-accent-ring')}
     >
-      <div className="grid min-w-0 flex-1 basis-72 gap-1">
+      <div className="grid min-w-0 flex-1 basis-72 gap-0.5">
         <h4 className="text-sm font-semibold text-fg">{c.nom}</h4>
-        <p className="max-w-lg text-sm text-fg-2">{c.contenu}</p>
-        <p className="max-w-md text-xs text-fg-3">{c.usage}</p>
+        <p className="text-pretty text-sm text-fg-2">{c.contenu}</p>
         <Etat vue={vue} onVerifier={onVerifier} />
       </div>
-      <div className="grid shrink-0 justify-items-start gap-1.5">
+      <div className="shrink-0">
         <Bouton variante="secondaire" onClick={() => entree.current?.click()} enCours={vue.envoi} libelleEnCours="Envoi en cours…">
           Déposer un fichier<span className="sr-only"> pour «&nbsp;{c.nom}&nbsp;»</span>
         </Bouton>
@@ -100,7 +101,6 @@ export function CaseDepotVue({ vue, onFichiers, onVerifier }: {
             if (fichiers.length) onFichiers(c.id, fichiers)
           }}
         />
-        <p className="max-w-56 text-xs text-fg-3">{ligneFormats(c)}</p>
       </div>
     </article>
   )
@@ -199,7 +199,7 @@ export function GrilleCases({ rubrique, cases, etats, envoi, erreurs, onFichiers
     <section aria-label={typeof titre === 'string' ? titre : 'Dépôt de documents'} className="grid gap-3" data-depots={rubrique}>
       <div>
         <h3 className="text-base font-semibold text-fg">{titre}</h3>
-        <p className="mt-1 text-sm text-fg-2">Chaque case a son rôle : un fichier déposé ici n’est jamais pris pour autre chose. Il entre dans votre coffre-fort, puis Synorix vous propose ce qu’il y a lu.</p>
+        <p className="mt-1 max-w-prose text-pretty text-sm text-fg-2">Chaque fichier entre dans votre coffre-fort, puis Synorix vous propose ce qu’il y a lu : rien n’entre dans votre profil sans votre accord. PDF, Word, Excel, JPEG ou PNG.</p>
       </div>
       <div data-disposition={disposition} className="overflow-hidden rounded-lg border border-bord bg-surface-0">
         {definitions.map((d) => (

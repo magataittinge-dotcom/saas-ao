@@ -95,7 +95,7 @@ const SceneVisage = forwardRef<VisageAnimeRef, {
           {voix.prochaine && (
             <p className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-base text-fg-2">
               <span>{`Prochaine information utile\u00a0: «\u00a0${voix.prochaine.libelle}\u00a0».`}</span>
-              <Bouton variante="lien" onClick={() => onChoisir(voix.prochaine!.rubrique)}>{`Ouvrir «\u00a0${voix.prochaine.titreRubrique}\u00a0»`}</Bouton>
+              <Bouton variante="lien" onClick={() => onChoisir(voix.prochaine!.rubrique)}>La renseigner<span className="sr-only">{` (rubrique ${voix.prochaine.titreRubrique})`}</span></Bouton>
             </p>
           )}
         </div>

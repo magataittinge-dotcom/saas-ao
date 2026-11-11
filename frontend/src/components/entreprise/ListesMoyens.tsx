@@ -27,7 +27,7 @@ export function EditeurPersonnes({ lignes, modifier, ajouter, retirer }: {
           <div className="flex items-end gap-2 [grid-column:1/-1]">
             <div className="min-w-0 flex-1">
               <Field label="Résumé d’expérience">
-                <ZoneTexte aria-label={`Personne clé ${i + 1} : résumé d’expérience`} rows={2} maxLength={1000} value={l.valeurs.experience_resume ?? ''} onChange={(e) => modifier(l.cle, { experience_resume: e.target.value })} />
+                <ZoneTexte className="resize-none" aria-label={`Personne clé ${i + 1} : résumé d’expérience`} rows={2} maxLength={1000} value={l.valeurs.experience_resume ?? ''} onChange={(e) => modifier(l.cle, { experience_resume: e.target.value })} />
               </Field>
             </div>
             <BoutonRetrait libelle={`Retirer la personne clé ${i + 1}`} onClick={() => retirer(l.cle)} />
@@ -50,7 +50,7 @@ export function EffectifSimple({ valeur, categorie, libelle, onChange }: { valeu
   const ligne = partie(valeur, categorie)[0]
   return (
     <Field label={libelle} rempli={typeof ligne?.effectif === 'number'}>
-      <ChampNombre max={999} valeur={ligne?.effectif} onChange={(v) => onChange(v === null ? sauf(valeur, categorie) : [...sauf(valeur, categorie), { categorie, specialite: null, effectif: v }])} />
+      <ChampNombre className="max-w-32" max={999} valeur={ligne?.effectif} onChange={(v) => onChange(v === null ? sauf(valeur, categorie) : [...sauf(valeur, categorie), { categorie, specialite: null, effectif: v }])} />
     </Field>
   )
 }
@@ -89,8 +89,8 @@ const AUTRES: { type: TypeHabilitation; libelle: string }[] = [
 export function HabilitationSst({ valeur, onChange }: { valeur: Habilitations; onChange: (h: Habilitations) => void }) {
   const ligne = valeur.find((h) => h.type === 'sst')
   return (
-    <Field label="Secouristes du travail (SST) : nombre" rempli={typeof ligne?.nombre === 'number'}>
-      <ChampNombre max={999} valeur={ligne?.nombre} onChange={(v) => onChange(v === null ? valeur.filter((h) => h.type !== 'sst') : [...valeur.filter((h) => h.type !== 'sst'), { type: 'sst', nombre: v, libelle: null, valide_jusqu: ligne?.valide_jusqu ?? null }])} />
+    <Field label="Secouristes du travail (SST)" rempli={typeof ligne?.nombre === 'number'}>
+      <ChampNombre className="max-w-32" max={999} valeur={ligne?.nombre} onChange={(v) => onChange(v === null ? valeur.filter((h) => h.type !== 'sst') : [...valeur.filter((h) => h.type !== 'sst'), { type: 'sst', nombre: v, libelle: null, valide_jusqu: ligne?.valide_jusqu ?? null }])} />
     </Field>
   )
 }

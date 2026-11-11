@@ -35,7 +35,7 @@ test('Mon entreprise : une panne du serveur n’est pas un profil vide : l’err
   const html = rendre(clientEnPanne(['memoire-config', 'team', 'references', 'documents', 'qualifications']), <Company />, '/company')
   assert.match(html, /<h1[^>]*>Mon entreprise<\/h1>/, 'le titre de la page reste là')
   assert.ok(html.includes('data-etat-erreur'))
-  assert.ok(html.includes('Votre entreprise n’a pas pu se charger') && html.includes('Réessayer'))
+  assert.ok(html.includes('Vos informations n’ont pas pu s’afficher') && html.includes('Réessayer'))
   assert.ok(!html.includes('Commencer par votre SIRET'), 'le texte de l’état vide n’apparaît pas')
   assert.ok(!html.includes('role="tablist"') && !html.includes('data-visage'), 'ni les rubriques ni le visage : rien n’est affirmé sans données')
   assert.ok(!/Request failed|status code|\[object Object\]/.test(html), 'jamais le message brut')

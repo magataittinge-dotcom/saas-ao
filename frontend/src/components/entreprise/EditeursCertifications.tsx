@@ -54,7 +54,7 @@ export function EditeurQualifications({ famille, lignes, documents, modifier, aj
             <Field label="Valable jusqu’au"><ChampDate aria-label={`Date de fin ${i + 1}`} valeur={l.valeurs.date_fin} onChange={(iso) => modifier(l.cle, { date_fin: iso })} /></Field>
           </div>
           <AfficherPlus libelle="Détails et justificatif">
-            <Field label={m.perimetre}><ZoneTexte aria-label={`${m.perimetre} ${i + 1}`} rows={2} maxLength={500} value={l.valeurs.perimetre ?? ''} onChange={(e) => modifier(l.cle, { perimetre: e.target.value })} /></Field>
+            <Field label={m.perimetre}><ZoneTexte className="resize-none" aria-label={`${m.perimetre} ${i + 1}`} rows={2} maxLength={500} value={l.valeurs.perimetre ?? ''} onChange={(e) => modifier(l.cle, { perimetre: e.target.value })} /></Field>
             <div className={GRILLE}>
               <Field label="Date d’obtention"><ChampDate aria-label={`Date d’obtention ${i + 1}`} valeur={l.valeurs.date_obtention} onChange={(iso) => modifier(l.cle, { date_obtention: iso })} /></Field>
               <Field label="Justificatif au coffre-fort">
@@ -102,7 +102,7 @@ export function EditeurReferences({ lignes, modifier, ajouter, retirer }: {
                   onChange={(m) => modifier(l.cle, { mode_intervention: m as Reference['mode_intervention'] })} />
               </Field>
             </div>
-            <Field label="Nature des travaux réalisés"><ZoneTexte aria-label={`Référence ${i + 1} : nature des travaux`} rows={2} maxLength={1500} value={v.description ?? ''} onChange={(e) => modifier(l.cle, { description: e.target.value })} /></Field>
+            <Field label="Nature des travaux réalisés"><ZoneTexte className="resize-none" aria-label={`Référence ${i + 1} : nature des travaux`} rows={2} maxLength={1500} value={v.description ?? ''} onChange={(e) => modifier(l.cle, { description: e.target.value })} /></Field>
             <AfficherPlus libelle="Plus de détails">
               <div className={GRILLE}>
                 <Field label="Maître d’œuvre"><Champ aria-label={`Référence ${i + 1} : maître d’œuvre`} maxLength={255} value={v.maitre_oeuvre ?? ''} onChange={(e) => modifier(l.cle, { maitre_oeuvre: e.target.value })} /></Field>
