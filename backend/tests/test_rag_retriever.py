@@ -108,11 +108,13 @@ def test_retrieve_survives_rerank_failure(fake_db, monkeypatch):
 
 # ─── Endpoint ────────────────────────────────────────────────────────────────
 
+@pytest.mark.skip(reason="S-07 : GET /api/rag/retrieve retirée de l'API publique (tests/test_rag_retire_s07.py)")
 def test_endpoint_requires_query(client, db_session, test_org):
     assert client.get("/api/rag/retrieve").status_code == 422
     assert client.get("/api/rag/retrieve?q=").status_code == 422
 
 
+@pytest.mark.skip(reason="S-07 : GET /api/rag/retrieve retirée de l'API publique (tests/test_rag_retire_s07.py)")
 def test_endpoint_returns_results(client, db_session, test_org, monkeypatch):
     import routers.rag as rag_router
 
