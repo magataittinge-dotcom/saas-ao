@@ -17,12 +17,22 @@ sys.path.insert(0, str(_BACKEND))
 # détachés (synorix-extract-*) : usage concurrent d'une même connexion SQLite
 # → rollback croisé, flaky. Un fichier + pool normal donne une connexion PAR
 # thread (comme en prod), + WAL + busy_timeout (cf. database.py).
-_TEST_DB = Path(tempfile.gettempdir()) / "synorix_test_suite.db"
-for _suffix in ("", "-wal", "-shm", "-journal"):
-    try:
-        Path(str(_TEST_DB) + _suffix).unlink()
-    except FileNotFoundError:
-        pass
+# Un fichier PAR PROCESSUS : deux suites lancées en même temps dans la même copie (même TMPDIR) partageaient la base
+# (« no such table » quand l'une refaisait le schéma de l'autre). Effacé à la fin de la session.
+_TEST_DB = Path(tempfile.gettempdir()) / f"synorix_test_suite_{os.getpid()}.db"
+
+
+def _effacer_base_de_test() -> None:
+    for _suffix in ("", "-wal", "-shm", "-journal"):
+        try:
+            Path(str(_TEST_DB) + _suffix).unlink()
+        except FileNotFoundError:
+            pass
+
+
+_effacer_base_de_test()
+import atexit  # noqa: E402
+atexit.register(_effacer_base_de_test)
 os.environ["DATABASE_URL"] = f"sqlite:///{_TEST_DB}"
 # LibreOffice : verrou et dossiers jetables dans le dossier temporaire de la session de test
 # (jamais backend/cache/libreoffice).
