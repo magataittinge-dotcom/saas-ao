@@ -164,3 +164,17 @@ def _depot_ia_jamais_reelle(monkeypatch):
         raise AssertionError("appel IA réel interdit en test : utilisez la fixture `modele`")
 
     monkeypatch.setattr(depot_extracteur, "_call_haiku", _interdit)
+
+
+@pytest.fixture(autouse=True)
+def _clerk_jamais_reel(monkeypatch):
+    """S-03 — la suppression du compte appelle l'API Backend de Clerk : jamais en test (les tests dédiés installent un
+    faux Clerk, tests/test_resiliation_compte_s03.py)."""
+    import httpx
+    vrai = httpx.delete
+
+    def _garde(url, *a, **kw):
+        if "api.clerk.com" in str(url):
+            raise AssertionError("appel réel à Clerk interdit en test")
+        return vrai(url, *a, **kw)
+    monkeypatch.setattr(httpx, "delete", _garde)

@@ -96,9 +96,19 @@ def delete_my_account(
 
     S-02 — toutes les lignes de l'organisation (tables déduites des modèles : services/suppression_compte.py), dans
     une seule transaction ; les fichiers déposés sont effacés du disque après le commit."""
-    from services import suppression_compte
+    from models.organization import Organization
+    from services import resiliation_compte, suppression_compte
 
     org_id = user.organization_id
+    # S-03 — l'abonnement est résilié AVANT toute suppression : un échec du fournisseur ne supprime rien.
+    org = db.query(Organization).filter(Organization.id == org_id).first()
+    try:
+        if org is not None:
+            resiliation_compte.resilier_abonnements(org)
+    except resiliation_compte.ResiliationImpossible:
+        raise HTTPException(status_code=502, detail="L’abonnement n’a pas pu être résilié : rien n’a été supprimé. "
+                                                    "Réessayez dans quelques minutes ou écrivez-nous.")
+    clerk_ids = [c for (c,) in db.query(User.clerk_id).filter(User.organization_id == org_id).all() if c]
     try:
         bilan = suppression_compte.supprimer_organisation(db, org_id)
         db.commit()
@@ -111,6 +121,8 @@ def delete_my_account(
 
     # Purge des fichiers disque (après le commit DB) : plus aucune donnée perso résiduelle sur le VPS.
     suppression_compte.purger_fichiers(UPLOADS_ROOT, org_id, project_ids, bilan["fichiers"])
+    # S-03 — puis les comptes Clerk : un échec est journalisé, la suppression des données reste acquise.
+    resiliation_compte.supprimer_utilisateurs_clerk(clerk_ids)
 
     logger.info("RGPD: compte supprimé — org=%s, projets=%d, tables=%d", org_id, len(project_ids), len(bilan["tables"]))
     return {"deleted": True, "projects_deleted": len(project_ids)}
