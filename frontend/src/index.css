@@ -716,6 +716,15 @@ p { text-wrap: pretty; }
   --tw-prose-td-borders: var(--border-1);
 }
 
+/* Un passage que l'entreprise doit renseigner (« À compléter : … »), dans le mémoire lu comme dans l'éditeur : surligné, comme
+   dans le Word. Le texte enregistré garde ses crochets ; seul l'affichage change. */
+.a-renseigner {
+  background: var(--calque-surligneur-doux); color: var(--text-1);
+  border-radius: 3px; padding: 0.05em 0.25em; font-weight: 500;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+}
+.zone-saisie:empty::before { content: "\200b"; }
+
 /* Legal documents — typography for /legal markdown content */
 .legal-prose {
   color: var(--ink);

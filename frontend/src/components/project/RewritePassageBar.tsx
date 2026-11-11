@@ -4,6 +4,7 @@ import { Bouton } from '@/components/ui/bouton'
 import { Champ } from '@/components/ui/champ'
 import { Dialogue } from '@/components/ui/dialogue'
 import { Message } from '@/components/ui/message'
+import { TexteMisEnForme } from '@/components/memoire/BlocsMemoire'
 
 export interface PassageSelection {
   text: string
@@ -28,7 +29,7 @@ const ACTIONS: { id: string; label: string }[] = [
 
 /**
  * C9b — réécriture ciblée : agit sur le passage sélectionné SEUL, montre l'avant et l'après, n'applique qu'à l'acceptation
- * explicite. Quatre gestes en mots (Reformuler, Plus technique, Plus concis, Insister sur…), aux boutons du système ; le
+ * explicite, et les deux textes s'y lisent mis en forme, sans signe. Quatre gestes en mots (Reformuler, Plus technique, Plus concis, Insister sur…), aux boutons du système ; le
  * plafond du jour est annoncé avant le clic ; pendant l'appel, le libellé du geste change (aucune roue).
  */
 export default function RewritePassageBar({ projectId, selection, onApply }: Props) {
@@ -64,17 +65,17 @@ export default function RewritePassageBar({ projectId, selection, onApply }: Pro
 
   return (
     <>
-      <div data-barre-reecriture="" className="flex flex-wrap items-center gap-x-2 gap-y-2">
-        <p className="mr-1 text-sm text-fg-2" aria-live="polite">
-          {hasSelection ? 'Réécrire la sélection :' : 'Sélectionnez un passage pour le réécrire :'}
+      <div data-barre-reecriture="" className="flex min-w-0 flex-1 items-center gap-2 max-lg:overflow-x-auto lg:justify-end">
+        <p className="mr-1 shrink-0 text-sm text-fg-2" aria-live="polite">
+          {hasSelection ? 'Réécrire ce paragraphe :' : 'Placez-vous dans un paragraphe pour le réécrire'}
         </p>
         {ACTIONS.map((a) => (
-          <Bouton key={a.id} variante="secondaire" disabled={bloque} enCours={enCours === a.id} libelleEnCours="Réécriture…" onClick={() => run(a.id)}>
+          <Bouton key={a.id} variante="secondaire" className="px-3" disabled={bloque} enCours={enCours === a.id} libelleEnCours="Réécriture…" onClick={() => run(a.id)}>
             {a.label}
           </Bouton>
         ))}
         <form
-          className="flex min-w-0 items-center gap-2"
+          className="flex shrink-0 items-center gap-2"
           onSubmit={(e) => { e.preventDefault(); if (insistText.trim()) void run('insister') }}
         >
           <Champ
@@ -83,24 +84,20 @@ export default function RewritePassageBar({ projectId, selection, onApply }: Pro
             placeholder="Insister sur…"
             aria-label="Insister sur : ce que le passage doit mettre en avant"
             disabled={bloque}
-            className="w-44 min-w-0"
+            className="w-40 min-w-0"
           />
           <Bouton type="submit" variante="secondaire" disabled={bloque || !insistText.trim()} enCours={enCours === 'insister'} libelleEnCours="Réécriture…">
             Insister
           </Bouton>
         </form>
-        {/* Annoncé avant le clic : l'IA réécrit, aucune unité n'est décomptée, le jour a un plafond. */}
-        <p className="text-xs text-fg-3 lg:ml-auto">
-          Réécriture par l’IA, ne décompte aucune unité · <span className="chiffres">{PLAFOND_PAR_JOUR}</span> par jour au plus
-        </p>
       </div>
-      {error && <Message ton="erreur" className="mt-2" onFermer={() => setError(null)}>{error}</Message>}
+      {error && <Message ton="erreur" className="basis-full" onFermer={() => setError(null)}>{error}</Message>}
 
       <Dialogue
         ouvert={diff !== null}
         onOuvert={(o) => { if (!o) setDiff(null) }}
         titre="Réécriture proposée"
-        description="Rien n’est changé tant que vous n’acceptez pas."
+        description={`Rien n’est changé tant que vous n’acceptez pas. Synorix réécrit ; aucune unité n’est décomptée (${PLAFOND_PAR_JOUR} réécritures par jour au plus).`}
         taille="grand"
         actions={(
           <>
@@ -115,11 +112,11 @@ export default function RewritePassageBar({ projectId, selection, onApply }: Pro
           <div className="grid max-h-[55vh] gap-x-6 gap-y-4 overflow-y-auto sm:grid-cols-2">
             <div className="min-w-0">
               <p className="mb-1.5 text-xs font-medium text-fg-3">Avant</p>
-              <p className="whitespace-pre-wrap font-memoire text-base text-fg-2">{diff.original}</p>
+              <p className="whitespace-pre-wrap font-memoire text-base text-fg-2"><TexteMisEnForme texte={diff.original} /></p>
             </div>
             <div className="min-w-0 sm:border-l sm:border-bord sm:pl-6">
               <p className="mb-1.5 text-xs font-medium text-fg-2">Après</p>
-              <p className="whitespace-pre-wrap font-memoire text-base text-fg">{diff.rewritten}</p>
+              <p className="whitespace-pre-wrap font-memoire text-base text-fg"><TexteMisEnForme texte={diff.rewritten} /></p>
             </div>
           </div>
         )}

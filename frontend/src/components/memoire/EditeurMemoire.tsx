@@ -1,29 +1,33 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { heureParis } from '@/lib/dateParis'
 import { Bouton } from '@/components/ui/bouton'
-import { ZoneTexte } from '@/components/ui/champ'
 import { DialogueConfirmation } from '@/components/ui/dialogue'
 import { Infobulle } from '@/components/ui/infobulle'
 import { Message } from '@/components/ui/message'
 import { PastilleEtat } from '@/components/ui/pastille'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import RewritePassageBar, { type PassageSelection } from '@/components/project/RewritePassageBar'
+import { BlocMemoire } from '@/components/memoire/BlocsMemoire'
 import { GESTES, appliquerGeste, type Geste } from '@/lib/memoireEdition'
-import { depuisMarkdown, versMarkdown } from '@/lib/memoireMarkdown'
+import { assembler, decouper, remplacerBloc, type Bloc } from '@/lib/memoireBlocs'
+import { depuisMarkdown, titresEditeur, versMarkdown } from '@/lib/memoireMarkdown'
 import type { MemoireContent } from '@/types'
 
 type EtatEnregistrement = 'enregistre' | 'en_cours' | 'echec'
 
 const DELAI_ENREGISTREMENT_AUTO_MS = 3000
+/** Les blocs dont le texte peut être réécrit ou changer de forme (un titre de partie, un filet, un tableau : non). */
+const REECRIVABLES: ReadonlySet<Bloc['type']> = new Set<Bloc['type']>(['paragraphe', 'puce'])
+const FORMABLES: ReadonlySet<Bloc['type']> = new Set<Bloc['type']>(['paragraphe', 'puce', 'titre'])
 
 /**
- * L'éditeur du mémoire, en plein écran (la feuille du système : piège de focus, Échap, retour du focus). Une surface
- * d'écriture, pas une zone de code : le texte en Newsreader 17 px sur une colonne de 72 caractères, une barre d'outils en
- * mots (Titre, Gras, Italique, Liste, Liste numérotée) qui pose les signes à la place de l'utilisateur, une ligne qui les
- * explique, puis la réécriture ciblée (Reformuler, Plus technique, Plus concis, Insister sur…).
- * Le modèle de données ne change pas : le texte reste celui de `versMarkdown`, relu par `depuisMarkdown`.
- * Enregistrement automatique trois secondes après la dernière frappe ; « Modifications non enregistrées » tant que le
- * serveur n'a pas confirmé ; fermer avec des modifications demande confirmation.
+ * L'éditeur du mémoire, en plein écran (la feuille du système : piège de focus, Échap, retour du focus). Le mémoire s'y lit
+ * comme dans le document, titres en titres, gras en gras, tableaux en tableaux, et se corrige sur place : on clique un
+ * paragraphe, une ligne de liste ou une cellule, on écrit. Aucun signe de mise en forme n'est montré.
+ * Le texte enregistré garde son format (celui de `versMarkdown`, relu par `depuisMarkdown`) : l'écran le découpe en blocs qui
+ * désignent ses lignes (`lib/memoireBlocs`). Un bloc non touché n'est jamais réécrit : ouvrir puis enregistrer rend le
+ * texte au caractère près, et une correction ne change que les lignes de son bloc.
+ * Enregistrement automatique trois secondes après la dernière frappe ; fermer avec des modifications demande confirmation.
  */
 export default function EditeurMemoire({
   content, projectId, onSave, onClose,
@@ -34,18 +38,27 @@ export default function EditeurMemoire({
   onSave: (contenu: MemoireContent) => Promise<void>
   onClose: () => void
 }) {
-  const [raw, setRaw] = useState(() => versMarkdown(content))
+  const structure = useMemo(() => titresEditeur(content), [content])
+  const [blocs, setBlocs] = useState<Bloc[]>(() => decouper(versMarkdown(content), structure))
+  // La frappe en cours dans un bloc : elle compte pour l'enregistrement, et rejoint les blocs quand on sort du bloc
+  // (le découpage ne bouge pas sous le curseur).
+  const [brouillon, setBrouillon] = useState<{ id: number; lignes: string[] } | null>(null)
+  const raw = useMemo(
+    () => assembler(brouillon ? blocs.map((b) => (b.id === brouillon.id ? { ...b, lignes: brouillon.lignes } : b)) : blocs),
+    [blocs, brouillon],
+  )
   // 1.8 — dernier texte confirmé par le serveur : sert à savoir s'il reste des modifications
   const [enregistre, setEnregistre] = useState(raw)
   const [etat, setEtat] = useState<EtatEnregistrement>('enregistre')
   const [heure, setHeure] = useState<Date | null>(null)
   const [confirmerFermeture, setConfirmerFermeture] = useState(false)
-  // C9b — sélection courante dans la zone de texte (pour la réécriture ciblée)
-  const [selection, setSelection] = useState<PassageSelection | null>(null)
-  const editorRef = useRef<HTMLTextAreaElement>(null)
+  // Le bloc où l'on écrit (il reste désigné quand on passe à la barre de réécriture).
+  const [actif, setActif] = useState<number | null>(null)
   const onSaveRef = useRef(onSave)
   onSaveRef.current = onSave
   const enCoursRef = useRef(false)
+  const structureRef = useRef(structure)
+  structureRef.current = structure
   const modifie = raw !== enregistre
 
   const enregistrer = useCallback(async (texte: string): Promise<boolean> => {
@@ -86,50 +99,56 @@ export default function EditeurMemoire({
     else onClose()
   }
 
-  const captureSelection = () => {
-    const el = editorRef.current
-    if (!el) return
-    const { selectionStart, selectionEnd } = el
-    if (selectionEnd > selectionStart) {
-      setSelection({ text: raw.slice(selectionStart, selectionEnd), start: selectionStart, end: selectionEnd })
-    } else {
-      setSelection(null)
-    }
+  const brouillonRef = useRef(brouillon)
+  brouillonRef.current = brouillon
+  const onSaisie = useCallback((id: number, lignes: string[]) => setBrouillon({ id, lignes }), [])
+  const onEntree = useCallback((id: number) => setActif(id), [])
+  const onSortie = useCallback((id: number) => {
+    const b = brouillonRef.current
+    if (!b || b.id !== id) return
+    setBlocs((avant) => remplacerBloc(avant, id, b.lignes, structureRef.current))
+    setBrouillon(null)
+  }, [])
+
+  const blocActif = actif === null ? null : blocs.find((b) => b.id === actif) ?? null
+  /** Les lignes du bloc où l'on écrit, frappe en cours comprise. */
+  const lignesActives = blocActif ? (brouillon && brouillon.id === blocActif.id ? brouillon.lignes : blocActif.lignes) : null
+  // C9b — la réécriture agit sur le paragraphe où l'on écrit, et sur lui seul (`start` porte l'identité du bloc).
+  const selection: PassageSelection | null = blocActif && lignesActives && REECRIVABLES.has(blocActif.type)
+    ? { text: lignesActives.join('\n'), start: blocActif.id, end: blocActif.id }
+    : null
+
+  const applyRewrite = (id: number, _fin: number, rewritten: string) => {
+    setBrouillon(null)
+    setBlocs((avant) => remplacerBloc(avant, id, rewritten.split('\n'), structure))
+    setActif(null)
   }
 
-  const applyRewrite = (start: number, end: number, rewritten: string) => {
-    setRaw((prev) => prev.slice(0, start) + rewritten + prev.slice(end))
-    setSelection(null)
-  }
-
-  // Un geste de la barre d'outils : il pose les signes autour de la sélection, puis rend la main au texte.
+  // Un geste de la barre d'outils. Gras et italique agissent sur le passage choisi, là où l'on écrit ; Titre et les deux
+  // listes changent la forme du bloc entier (les signes sont posés dans le texte enregistré, jamais à l'écran).
   const geste = (id: Geste) => {
-    const el = editorRef.current
-    if (!el) return
-    const suite = appliquerGeste(id, { texte: raw, debut: el.selectionStart, fin: el.selectionEnd })
-    setRaw(suite.texte)
-    setSelection(null)
-    requestAnimationFrame(() => { el.focus(); el.setSelectionRange(suite.debut, suite.fin) })
+    if (id === 'gras' || id === 'italique') { document.execCommand(id === 'gras' ? 'bold' : 'italic'); return }
+    if (!blocActif || !lignesActives || !FORMABLES.has(blocActif.type)) return
+    const texte = lignesActives.join('\n')
+    const lignes = appliquerGeste(id, { texte, debut: 0, fin: texte.length }).texte.split('\n')
+    setBrouillon(null)
+    setBlocs((avant) => remplacerBloc(avant, blocActif.id, lignes, structure))
+    setActif(null)
   }
 
   return (
     <Sheet open onOpenChange={(ouvert) => { if (!ouvert) fermer() }}>
       <SheetContent side="bottom" data-editeur-memoire="" className="top-0 flex h-dvh flex-col gap-0 border-t-0 bg-surface-0 p-0">
-        <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-bord px-4 py-3 pr-14 sm:px-6 sm:pr-16">
+        <header className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-bord px-4 py-3 pr-14 sm:px-6 sm:pr-16">
           <div className="min-w-0">
-            <SheetTitle className="text-lg font-semibold text-fg">Modifier le texte</SheetTitle>
-            <SheetDescription className="text-sm text-fg-2">Le mémoire entier, partie par partie. Il s’enregistre seul pendant que vous écrivez.</SheetDescription>
+            <SheetTitle className="font-memoire text-xl font-semibold text-fg">Modifier le mémoire</SheetTitle>
+            <SheetDescription className="text-sm text-fg-2 max-md:sr-only">Corrigez le texte là où il se lit. Il s’enregistre seul.</SheetDescription>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <p role="status" aria-live="polite" className="text-sm text-fg-2">
-              {etat === 'en_cours' ? 'Enregistrement…'
-                : modifie || etat === 'echec' ? <PastilleEtat sens="ambre">Modifications non enregistrées</PastilleEtat>
-                  : heure ? `Enregistré à ${heureParis(heure)}` : 'Aucune modification'}
-            </p>
-            <Bouton variante="principal" onClick={() => { void enregistrer(raw) }} disabled={!modifie} enCours={etat === 'en_cours'} libelleEnCours="Enregistrement…">
-              Enregistrer
-            </Bouton>
-          </div>
+          <p role="status" aria-live="polite" className="text-sm text-fg-2">
+            {etat === 'en_cours' ? 'Enregistrement…'
+              : modifie || etat === 'echec' ? <PastilleEtat sens="ambre">Modifications non enregistrées</PastilleEtat>
+                : heure ? `Enregistré à ${heureParis(heure)}` : 'Tout est enregistré'}
+          </p>
         </header>
 
         {etat === 'echec' && (
@@ -141,31 +160,27 @@ export default function EditeurMemoire({
           </Message>
         )}
 
-        <div className="shrink-0 space-y-2 border-b border-bord px-4 py-2 sm:px-6">
-          <div role="toolbar" aria-label="Mise en forme" className="-mx-3 flex flex-wrap items-center gap-x-1">
+        {/* Les outils : une rangée au-dessus du texte ; au téléphone, une rangée qui défile, sous le texte. */}
+        <div data-outils-editeur="" className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1 border-b border-bord px-4 py-1.5 max-md:order-last max-md:flex-nowrap max-md:overflow-x-auto max-md:border-b-0 max-md:border-t sm:px-6">
+          <div role="toolbar" aria-label="Mise en forme" className="flex shrink-0 items-center gap-1">
             {GESTES.map((g) => (
               <Infobulle key={g.id} texte={g.aide} cote="bottom">
-                <Bouton variante="discret" onClick={() => geste(g.id)}>{g.libelle}</Bouton>
+                {/* Le bouton ne prend pas le focus : le curseur reste dans le texte. */}
+                <Bouton variante="secondaire" className="px-3" onMouseDown={(e) => e.preventDefault()} onClick={() => geste(g.id)}>{g.libelle}</Bouton>
               </Infobulle>
             ))}
-            <p className="px-3 text-xs text-fg-3 max-lg:basis-full max-lg:pb-1 lg:ml-auto">
-              {'# = titre, **texte** = gras'} : les boutons posent ces signes pour vous.
-            </p>
           </div>
-          {/* C9b — réécriture ciblée (agit sur la sélection seule) */}
+          {/* C9b — réécriture ciblée (agit sur le paragraphe où l'on écrit, et sur lui seul) */}
           <RewritePassageBar projectId={projectId} selection={selection} onApply={applyRewrite} />
         </div>
 
-        <ZoneTexte
-          ref={editorRef}
-          value={raw}
-          onChange={(e) => { setRaw(e.target.value); setSelection(null) }}
-          onSelect={captureSelection}
-          aria-label="Texte du mémoire"
-          className="min-h-0 flex-1 resize-none rounded-none border-0 bg-surface-0 px-[max(1.25rem,calc((100%-72ch)/2))] py-8 font-memoire text-lg leading-[1.7] text-fg hover:border-0 focus-visible:outline-none max-[768px]:text-lg"
-          spellCheck
-          lang="fr"
-        />
+        <div data-texte-memoire="" className="min-h-0 flex-1 overflow-y-auto px-5 py-8">
+          <div className="lecteur-memoire mx-auto max-w-[72ch] text-lg leading-[1.7]">
+            {blocs.map((b) => (
+              <BlocMemoire key={b.id} bloc={b} actif={b.id === actif} onSaisie={onSaisie} onEntree={onEntree} onSortie={onSortie} />
+            ))}
+          </div>
+        </div>
 
         <DialogueConfirmation
           ouvert={confirmerFermeture}

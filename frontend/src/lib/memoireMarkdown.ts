@@ -19,6 +19,9 @@ function titresDe(sections: readonly SectionMemoire[]): ReadonlySet<string> {
   return new Set([TITRE_PREAMBULE, ...PARTIES.map(titrePartie), ...sections.map(titreSection)])
 }
 
+/** Les titres qui découpent le texte de l'éditeur pour ce mémoire : l'éditeur les montre, il ne les laisse pas modifier. */
+export const titresEditeur = (content: MemoireContent): ReadonlySet<string> => titresDe(sectionsDuContenu(content))
+
 /** Les trois gestes d'échappement, pour un jeu de titres donné. */
 function echappement(titres: ReadonlySet<string>) {
   /** Ligne de contenu qui ressemble à un titre d'éditeur, échappée ou non. */
