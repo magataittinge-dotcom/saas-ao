@@ -580,3 +580,23 @@ def test_pro_deja_au_dessus_du_nouveau_quota(client, db_session, test_org):
 
     body = client.get("/api/billing/quota").json()
     assert body["analyses"] == {"used": 35, "limit": 30}  # la jauge plafonne à 100 % côté écran
+
+
+def test_les_quotas_du_serveur_sont_ceux_du_front():
+    """Pendant serveur de frontend/tests/offres.test.tsx : offre par offre, PLAN_LIMITS dit
+    exactement ce que frontend/src/lib/offres.ts affiche (aucun quota null d'un côté ni de l'autre)."""
+    import re
+    from pathlib import Path
+    from services.quota import PLAN_LIMITS
+
+    ts = (Path(__file__).resolve().parents[2] / "frontend/src/lib/offres.ts").read_text(encoding="utf-8")
+    front = {
+        m.group(1): (m.group(2), m.group(3))
+        for m in re.finditer(r"id: '(\w+)'.*?analysesParMois: (\w+), memoiresParMois: (\w+)", ts)
+    }
+    assert set(front) == {"essentiel", "pro", "business"}
+    for offre, (analyses, memoires) in front.items():
+        assert analyses.isdigit() and memoires.isdigit(), f"{offre} : quota non chiffré dans le front"
+        assert (PLAN_LIMITS[offre]["analysis"], PLAN_LIMITS[offre]["memoire"]) == (int(analyses), int(memoires)), offre
+    essai = re.search(r"ESSAI = \{ ao: 1, analyses: (\d+), memoires: (\d+) \}", ts)
+    assert essai and (PLAN_LIMITS["free"]["analysis"], PLAN_LIMITS["free"]["memoire"]) == (int(essai[1]), int(essai[2]))

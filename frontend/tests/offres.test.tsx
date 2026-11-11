@@ -38,6 +38,18 @@ test('le serveur applique les mêmes quotas (backend/services/quota.py)', () => 
   for (const o of OFFRES) {
     assert.deepEqual(limites[o.id], { analyses: o.analysesParMois, memoires: o.memoiresParMois, mensuel: true }, o.id)
   }
+  // Décision du 2026-11-11 : plus aucune offre illimitée, ni dans le front ni dans le serveur.
+  assert.deepEqual(Object.keys(limites).sort(), ['business', 'essentiel', 'free', 'pro'])
+  for (const [plan, l] of Object.entries(limites)) {
+    assert.ok(l.analyses !== null && l.memoires !== null, `${plan} : quota None dans PLAN_LIMITS`)
+  }
+  for (const o of OFFRES) {
+    assert.ok(Number.isInteger(o.analysesParMois) && Number.isInteger(o.memoiresParMois), `${o.id} : quota non chiffré`)
+  }
+  assert.deepEqual(
+    Object.fromEntries(OFFRES.map((o) => [o.id, [limites[o.id].analyses, limites[o.id].memoires]])),
+    { essentiel: [5, 5], pro: [30, 30], business: [70, 70] },
+  )
   assert.deepEqual(limites.free, { analyses: ESSAI.analyses, memoires: ESSAI.memoires, mensuel: false })
 })
 
