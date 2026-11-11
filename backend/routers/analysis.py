@@ -140,6 +140,7 @@ async def trigger_analysis(
 
     # ── Quota (C1) : 1 unité PAR LOT, décomptée AU LANCEMENT ─────────────────
     org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+    quota.exiger_siret_pour_essai(org)   # S-05 — derrière ESSAI_EXIGE_SIRET (éteinte par défaut)
     status = quota.get_quota_status(db, org)
     limit = status["analyses"]["limit"]
     if limit is not None and status["analyses"]["used"] + len(lot_specs) > limit:

@@ -218,3 +218,22 @@ def refund_ids(db: Session, consumption_ids) -> int:
         .filter(QuotaConsumption.id.in_(ids))
         .delete(synchronize_session=False)
     )
+
+
+# S-05 (audit de sécurité) — « 1 SIRET vérifié = 1 essai » : derrière ESSAI_EXIGE_SIRET (0 par défaut : éteinte). C'est
+# une condition de l'offre, le fondateur décide. Allumée : une organisation en offre gratuite sans SIRET vérifié par
+# Sirene ne consomme pas l'AO offert (402 avant tout appel au modèle).
+MSG_ESSAI_SIRET = ("Pour utiliser votre AO offert, renseignez le SIRET de votre entreprise dans Mon entreprise. "
+                   "Il sera vérifié automatiquement, puis vous pourrez lancer l'analyse.")
+
+
+def essai_exige_siret() -> bool:
+    import os
+    return os.environ.get("ESSAI_EXIGE_SIRET", "0").strip().lower() in ("1", "true", "oui", "yes")
+
+
+def exiger_siret_pour_essai(org: Organization) -> None:
+    if not essai_exige_siret():
+        return
+    if (org.plan or "free") == "free" and not getattr(org, "siret_verified", False):
+        raise HTTPException(status_code=402, detail=MSG_ESSAI_SIRET)

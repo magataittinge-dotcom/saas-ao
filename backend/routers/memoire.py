@@ -182,6 +182,7 @@ async def generate_memoire(
     from services import plafonds_ia
     plafonds_ia.compter_lancement(db, user, plafonds_ia.ACTION_LANCER_MEMOIRE)
     org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+    quota.exiger_siret_pour_essai(org)   # S-05 — derrière ESSAI_EXIGE_SIRET (éteinte par défaut)
 
     # Route async : ne pas lire ici les textes du DCE (plusieurs Mo, bloquerait la
     # boucle) — le job les recharge ; seul compte qu'il y ait des pièces pour le lot.
