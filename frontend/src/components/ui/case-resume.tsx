@@ -28,15 +28,16 @@ export function CaseResume({ etiquette, valeur, unite, rien = 'Aucun', precision
   const texte = typeof valeur === 'string' ? valeur.replace(new RegExp(`\\s*${etiquette.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*`, 'i'), ' ').trim() : ''
   return (
     <div data-case-resume="" className={cn('grid min-w-0 content-start gap-1.5 p-5', className)}>
-      <div className="flex min-h-6 items-center justify-between gap-3">
+      {/* la pastille ne passe jamais sur deux lignes : dans une case étroite (téléphone), elle se pose sous l'étiquette */}
+      <div className="flex min-h-6 items-center justify-between gap-3 max-md:flex-col max-md:items-start max-md:gap-1.5">
         <p data-etiquette="" className="text-sm font-medium text-fg-2">{etiquette}</p>
-        {etat}
+        {etat && <span data-etat-case="" className="shrink-0 [&>*]:whitespace-nowrap">{etat}</span>}
       </div>
       {vide
         ? <p data-valeur="rien" className="text-lg font-semibold text-fg-2">{rien}</p>
         : nombre
           ? <p data-valeur="nombre" className="flex items-baseline gap-2"><span className="chiffre-grand">{valeur}</span>{unite && <span className="text-sm text-fg-2">{unite}</span>}</p>
-          : <p data-valeur="texte" className="chiffres min-w-0 break-words text-lg font-semibold text-fg">{texte || rien}</p>}
+          : <p data-valeur="texte" className="min-w-0 break-words text-lg font-semibold text-fg">{texte || rien}</p>}
       {children}
       {precision && <p className="text-sm text-fg-2">{precision}</p>}
       {action && <div className="pt-1">{action}</div>}

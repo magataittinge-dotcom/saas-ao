@@ -113,10 +113,12 @@ test('la palette Ctrl K lit navigation.ts et propose Équipe, Mes références e
   assert.match(sansCommentaires(lire('src/components/layout/CommandPalette.tsx')), /ACCES_PALETTE/)
 })
 
-test('téléphone : 4 onglets (Accueil, Mes AO, Mon entreprise, Coffre-fort) ; le tiroir Compte ne liste que ce qui n\'est pas dans les onglets', () => {
-  assert.deepEqual(ONGLETS_TEL.map((e) => e.label), ['Accueil', 'Mes AO', 'Mon entreprise', 'Coffre-fort'])
-  assert.deepEqual(ENTREES_TIROIR.map((e) => e.to), ['/settings'])
-  assert.deepEqual(ENTREES_TIROIR.filter((e) => ONGLETS_TEL.some((o) => o.to === e.to)), [])
+test('téléphone : les cinq onglets du bureau ; la feuille « Mon compte » reprend le menu du compte du bureau', () => {
+  // jury, tour 1 : les cinq mêmes entrées au téléphone qu'au bureau (le cinquième onglet ne s'appelle plus « Compte »)
+  assert.deepEqual(ONGLETS_TEL.map((e) => e.label), ['Accueil', 'Mes AO', 'Mon entreprise', 'Coffre-fort', 'Paramètres'])
+  assert.deepEqual(ONGLETS_TEL, BARRE)
+  // la feuille « Mon compte » du téléphone a les entrées du menu du compte du bureau, dans le même ordre
+  assert.deepEqual(ENTREES_TIROIR.map((e) => e.to), ['/settings', '/settings/billing'])
 })
 
 test('la retenue de garantie reste accessible : carte de trésorerie de l\'analyse et Paramètres', () => {

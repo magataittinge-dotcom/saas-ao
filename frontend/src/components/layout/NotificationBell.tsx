@@ -77,7 +77,7 @@ export default function NotificationBell({ versLeHaut = false }: { versLeHaut?: 
       </BoutonIcone>
 
       {open && (
-        <div data-panneau-notifications="" className={cn('absolute right-0 z-50 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-bord bg-surface-pop text-fg shadow-flottant', versLeHaut ? 'bottom-full -right-12 mb-2' : 'top-full mt-2')}>
+        <div data-panneau-notifications="" className={cn('absolute right-0 z-50 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-bord bg-surface-pop text-fg shadow-flottant', versLeHaut ? 'bottom-full -right-12 mb-2' : 'top-full mt-2 max-[768px]:fixed max-[768px]:inset-x-4 max-[768px]:top-14 max-[768px]:mt-1 max-[768px]:w-auto max-[768px]:max-w-none')}>
           <div className="flex min-h-11 items-center justify-between gap-3 border-b border-bord px-4">
             <span className="text-sm font-semibold">Notifications</span>
             {unread > 0 && <Bouton variante="lien" onClick={() => markAllRead()}>Tout marquer lu</Bouton>}

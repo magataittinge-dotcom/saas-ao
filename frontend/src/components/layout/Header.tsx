@@ -6,6 +6,7 @@ import { useUIStore } from '@/stores/uiStore'
 import { Bouton } from '@/components/ui/bouton'
 import { STEPS } from '@/components/project/StepProgress'
 import NotificationBell from './NotificationBell'
+import { CompteTel } from './BarreOnglets'
 import { RACCOURCI_PALETTE } from './CommandPalette'
 
 // Le titre court de chaque écran, pour la barre (moins de 15 caractères quand c'est possible). Le nom complet est le h1 de la page.
@@ -15,7 +16,7 @@ const ROUTE_LABELS: Record<string, { parent?: string; parentTo?: string; label: 
   '/projects/new':   { parent: 'Mes AO', label: 'Nouvel AO' },
   '/vault':          { label: 'Coffre-fort' },
   '/references':     { label: 'Références' },
-  '/outils':         { label: 'Retenue de garantie' },
+  '/outils':         { parent: 'Paramètres', parentTo: '/settings', label: 'Retenue de garantie' },
   '/memoire-config': { label: 'Mon entreprise' },
   '/company':        { label: 'Mon entreprise' },
   '/entreprise/fiche': { parent: 'Mon entreprise', parentTo: '/company', label: 'Fiche à télécharger' },
@@ -23,7 +24,7 @@ const ROUTE_LABELS: Record<string, { parent?: string; parentTo?: string; label: 
   '/settings':       { label: 'Paramètres' },
   '/pricing':        { label: 'Abonnement' },
   '/billing':        { label: 'Abonnement' },
-  '/settings/billing': { label: 'Abonnement' },
+  '/settings/billing': { parent: 'Paramètres', parentTo: '/settings', label: 'Abonnement' },
   '/design':         { label: 'Système de design' },
 }
 // Le nom de chaque étape au fil (source unique : STEPS ; « candidature » est l'ancien nom de Pièces).
@@ -54,7 +55,7 @@ interface Props {
 // Barre du haut (DESIGN.md § Layout). Son contenu est dans LE conteneur de la coquille : son bord gauche est celui du h1 de la
 // page. À gauche : dans un AO, le chemin « Mes AO / nom de l'AO » (c'est de la navigation) ; ailleurs le petit titre, qui
 // n'apparaît que lorsque le h1 est sorti de l'écran. À droite : la recherche Ctrl K, les notifications (bureau) et « Nouvel appel
-// d'offres ». Au téléphone : 56 px, deux actions (recherche et « + ») ; le thème et les notifications sont dans « Compte ».
+// d'offres ». Au téléphone : 56 px ; la recherche, la cloche, « + » (hors d'un AO) et le compte (la photo : thème, déconnexion).
 // Un seul aplat d'accent par écran (P1) : dès qu'un écran montre sa propre action principale, ce bouton passe au trait.
 export default function Header({ onSearch, titreSorti = false }: Props) {
   const { pathname } = useLocation()
@@ -71,7 +72,9 @@ export default function Header({ onSearch, titreSorti = false }: Props) {
     const match = Object.entries(ROUTE_LABELS).sort((a, b) => b[0].length - a[0].length).find(([r]) => pathname.startsWith(r))
     if (match) { parent = match[1].parent; parentTo = match[1].parentTo ?? '/projects'; label = match[1].label }
   }
-  const auTrait = aplatsEcran > 0
+  // Dans un AO, l'écran a toujours son action (celle de l'étape, « Réessayer », « Mettre à jour le statut ») : le bouton de la
+  // barre y reste au trait, même pendant un chargement ou une erreur (jury, tour 1 : il repassait en aplat sur huit états).
+  const auTrait = aplatsEcran > 0 || Boolean(idAO)
 
   return (
     <header data-coquille="barre-haut" className="sticky top-0 z-30 shrink-0 max-[768px]:border-b max-[768px]:border-bord max-[768px]:bg-surface-0 min-[769px]:bg-transparent">
@@ -80,11 +83,15 @@ export default function Header({ onSearch, titreSorti = false }: Props) {
           {parent && (
             <>
               <Link to={parentTo} className={LIEN_PARENT}>{parent}</Link>
-              {(!idAO || label) && <span aria-hidden className="shrink-0 text-fg-3">/</span>}
+              {(!idAO || label) && <span aria-hidden className={cn('shrink-0 text-fg-3', idAO && 'max-[768px]:hidden')}>/</span>}
             </>
           )}
-          {idAO
-            ? <span className="truncate text-base font-semibold text-fg" aria-current="page">{label}</span>
+          {/* Au téléphone, dans un AO : le retour « Mes AO » seul ; le nom de l'AO, que la barre couperait, est écrit en
+              entier sous elle (routes/Project.tsx). */}
+          {/* Un fil d'Ariane se lit en entier (jury, tour 1 : « Mes AO / », « Mon entreprise / » sans suite) : dès qu'il y a
+              un parent, la page courante est écrite. Sans parent : le petit titre, quand le h1 est sorti de l'écran. */}
+          {idAO || parent
+            ? <span data-fil-courant="" className={cn('truncate text-base font-semibold text-fg', idAO && 'max-[768px]:hidden')} aria-current="page">{label}</span>
             : <TitreBarre titre={label || 'Accueil'} montre={titreSorti} />}
         </nav>
 
@@ -100,13 +107,17 @@ export default function Header({ onSearch, titreSorti = false }: Props) {
             <kbd className="chiffres shrink-0 whitespace-nowrap rounded border border-bord bg-surface-1 px-1.5 py-0.5 font-sans text-xs font-semibold text-fg-2 max-[768px]:hidden">{RACCOURCI_PALETTE}</kbd>
           </button>
 
-          <span className="max-[768px]:hidden"><NotificationBell /></span>
+          {/* la cloche est dans la barre du haut au téléphone aussi (elle était cachée dans le tiroir « Compte ») */}
+          <NotificationBell />
 
           <Bouton coquille variante={auTrait ? 'secondaire' : 'principal'} data-nouvel-ao={auTrait ? 'trait' : 'plein'} onClick={() => navigate('/projects/new')}
             className={cn('rounded-pilule max-sm:w-11 max-sm:px-0', parent && 'max-[768px]:hidden')}>
             <Plus strokeWidth={1.5} aria-hidden />
             <span className="max-sm:sr-only">Nouvel appel d’offres</span>
           </Bouton>
+
+          {/* le compte (la photo) : au pied de la barre latérale au bureau, ici au téléphone */}
+          <CompteTel className="min-[769px]:hidden" />
         </div>
       </div>
     </header>

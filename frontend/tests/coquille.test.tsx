@@ -42,10 +42,10 @@ test('thème : « Système · Clair · Nuit » dans le menu du compte ; sans cho
   assert.match(sansCommentaires(lire('src/stores/uiStore.ts')), /partialize: \(s\) => \(\{ sidebarCollapsed: s\.sidebarCollapsed, animerFond: s\.animerFond \}\)/)
 })
 
-test('barre du haut : 56 px au téléphone, deux actions (recherche et « + »), « Nouvel appel d\'offres » au trait dès que l\'écran a son action', () => {
+test('barre du haut : 56 px au téléphone (recherche, cloche, « + », compte), « Nouvel appel d\'offres » au trait dès que l\'écran a son action', () => {
   const entete = sansCommentaires(lire('src/components/layout/Header.tsx'))
   assert.match(entete, /className="conteneur flex h-14 /)
-  assert.match(entete, /<span className="max-\[768px\]:hidden"><NotificationBell \/><\/span>/)
+  assert.match(entete, /^\s*<NotificationBell \/>$/m) // la cloche est dans la barre du haut au téléphone aussi (jury, tour 1)
   assert.doesNotMatch(entete, /BasculeTheme/)
   assert.match(entete, /const auTrait = aplatsEcran > 0/)
   assert.doesNotMatch(entete, /hover:-translate-y/, 'au survol rien ne bouge (P17)')
