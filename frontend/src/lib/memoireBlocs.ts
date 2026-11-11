@@ -108,7 +108,9 @@ export type Fragment =
   | { type: 'a_completer'; brut: string; texte: string }
 
 const A_COMPLETER = /\[\s*[ÀA] COMPL[ÉE]TER(?: PAR L['’]ENTREPRISE)?\s*:?\s*([^\]]*)\]/
-const SIGNES = new RegExp(`\\*\\*([^*\\n]+)\\*\\*|\\*([^*\\s][^*\\n]*)\\*|${A_COMPLETER.source}`, 'g')
+// Un passage « à compléter » écrit en italique ou en gras (« *[À COMPLÉTER…]* ») reste UN passage : ses étoiles font partie de
+// ce qui est enregistré, l'écran n'en montre rien.
+const SIGNES = new RegExp(`\\*{1,3}${A_COMPLETER.source}\\*{1,3}|\\*\\*([^*\\n]+)\\*\\*|\\*([^*\\s][^*\\n]*)\\*|${A_COMPLETER.source}`, 'g')
 
 /** « [À COMPLÉTER PAR L'ENTREPRISE : adresse du siège] » se lit « À compléter : adresse du siège », comme dans le Word. */
 export function libelleACompleter(brut: string): string {
@@ -133,8 +135,8 @@ export function lireFragments(texte: string): Fragment[] {
   for (const m of texte.matchAll(SIGNES)) {
     const i = m.index ?? 0
     if (i > position) fragments.push({ type: 'texte', texte: texte.slice(position, i) })
-    if (m[1] !== undefined) fragments.push({ type: 'gras', texte: m[1] })
-    else if (m[2] !== undefined) fragments.push({ type: 'italique', texte: m[2] })
+    if (m[2] !== undefined) fragments.push({ type: 'gras', texte: m[2] })
+    else if (m[3] !== undefined) fragments.push({ type: 'italique', texte: m[3] })
     else fragments.push({ type: 'a_completer', brut: m[0], texte: libelleACompleter(m[0]) })
     position = i + m[0].length
   }

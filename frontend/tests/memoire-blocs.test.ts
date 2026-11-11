@@ -80,6 +80,15 @@ test('« [À COMPLÉTER PAR L’ENTREPRISE : …] » se lit « À compléter : �
   assert.equal(texteDeLaSaisie(zone), 'SIRET : 123 456 789 00012')
 })
 
+test('un passage « à compléter » écrit en italique ou en gras reste un seul passage, sans crochets ni étoiles à l’écran', () => {
+  for (const texte of ["*[À COMPLÉTER PAR L'ENTREPRISE : nom du signataire]*", "Fait à **[À COMPLÉTER PAR L'ENTREPRISE : ville]**, le 3 mai."]) {
+    assert.equal(ecrireFragments(lireFragments(texte)), texte)
+    const html = htmlFragments(texte)
+    assert.doesNotMatch(html.replace(/<[^>]+>/g, ''), /\*|\[|\]|COMPLÉTER/)
+    assert.equal(texteDeLaSaisie(arbre(html)), texte)
+  }
+})
+
 test('ce que le navigateur pose en écrivant (b, i, div, br) redevient les signes du texte enregistré', () => {
   const t = (texte: string): NoeudLu => ({ nodeType: 3, nodeName: '#text', textContent: texte, childNodes: [] })
   const e = (nom: string, ...enfants: NoeudLu[]): NoeudLu => ({ nodeType: 1, nodeName: nom, textContent: null, childNodes: enfants })
