@@ -78,6 +78,30 @@ def en_dict(usage: object) -> dict:
     return sortie
 
 
+def enregistrer_collecte(organization_id: str, usage_nom: str, collecte: list,
+                         reference: Optional[str] = None) -> None:
+    """Inscrit les jetons collectés pendant un travail (`services.jetons.collecter`) : une ligne par modèle, dans une
+    session à part (celle du travail peut être dans un état d'erreur). Ne lève jamais : le registre ne fait pas échouer
+    une analyse ou un mémoire."""
+    if not collecte:
+        return
+    par_modele: dict[str, dict] = {}
+    for modele, usage in collecte:
+        total = par_modele.setdefault(modele, {cle: 0 for cle in _CLES_USAGE})
+        for cle in _CLES_USAGE:
+            total[cle] += int(usage.get(cle, 0) or 0)
+    from database import SessionLocal
+    db = SessionLocal()
+    try:
+        for modele, usage in par_modele.items():
+            enregistrer(db, organization_id, usage_nom, modele, usage, reference)
+    except Exception:
+        logger.exception("couts_ia : inscription impossible (%s)", usage_nom)
+        db.rollback()
+    finally:
+        db.close()
+
+
 def enregistrer(db: Session, organization_id: str, usage_nom: str, modele: str, usage: dict,
                 reference: Optional[str] = None) -> CoutIA:
     """Une ligne par appel. Aucune donnée du fichier, aucun nom : seulement des nombres."""

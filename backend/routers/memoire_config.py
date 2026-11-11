@@ -9,6 +9,7 @@ from models.user import User
 from models.memoire_config import MemoireConfig
 from schemas.memoire_config import MemoireConfigResponse, MemoireConfigUpdate
 from routers.auth import get_auth_user
+from services.budget_ia import exiger_budget_ia  # S-01 — filet du budget d'IA par organisation et par jour
 from services import extraction_processus, plafonds_ia
 from services.document_processor import DocumentProcessor
 from services.rate_limit import limiter
@@ -34,7 +35,7 @@ class StructureTextRequest(BaseModel):
         return v
 
 
-@router.post("/structure-text")
+@router.post("/structure-text", dependencies=[Depends(exiger_budget_ia)])
 @limiter.limit("10/minute")
 async def structure_text(
     request: Request,
@@ -186,7 +187,7 @@ def _texte_pdf_importe(content: bytes, filename: str) -> str:
                                                        "Le format Word est accepté.") from None
 
 
-@router.post("/import")
+@router.post("/import", dependencies=[Depends(exiger_budget_ia)])
 @limiter.limit("3/minute")
 async def import_memoire(
     request: Request,

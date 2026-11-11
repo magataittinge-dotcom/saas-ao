@@ -13,7 +13,7 @@ import anthropic
 from json_repair import repair_json
 from pydantic import ValidationError
 from config import get_settings
-from services.jetons import ligne_jetons
+from services.jetons import ligne_jetons, transmettre  # transmettre : la collecte des jetons suit les fils (S-01)
 from schemas.compliance import RequirementFromAI
 from .prompts import DCE_ANALYSIS_SYSTEM, DCE_PASS1_SYSTEM, DCE_PASS2_SYSTEM
 from services.skill_loader import load_skill, load_skill_section
@@ -486,7 +486,7 @@ class DCEAnalyzer:
             from concurrent.futures import ThreadPoolExecutor
             with ThreadPoolExecutor(max_workers=3) as pool:
                 futures = {
-                    pool.submit(_appel, ct, f"{label}-tranche{i + 1}/{n}", _tranche_cb(i)): i
+                    pool.submit(transmettre(_appel), ct, f"{label}-tranche{i + 1}/{n}", _tranche_cb(i)): i
                     for i, ct in enumerate(call_texts[1:], start=1)
                 }
                 for future, i in futures.items():

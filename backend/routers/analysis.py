@@ -20,6 +20,7 @@ from models.checklist_item import ChecklistItem
 from models.document import Document
 from schemas.compliance import ComplianceItemResponse
 from routers.auth import get_auth_user
+from services.budget_ia import exiger_budget_ia  # S-01 — filet du budget d'IA par organisation et par jour
 from services.ai.api_preflight import AIServiceUnavailable, ensure_ai_service_available
 from services.ai.dce_analyzer import (
     DCEAnalyzer, ClaudeAuthenticationError, ClaudeRateLimitError,
@@ -83,7 +84,7 @@ def _lots_inconnus(project, lot_ids: list) -> list:
     return [l for l in lot_ids if l not in connus and not _LOT_AJOUTE_A_LA_MAIN.match(l)]
 
 
-@router.post("/{project_id}/analyze")
+@router.post("/{project_id}/analyze", dependencies=[Depends(exiger_budget_ia)])
 @limiter.limit("5/minute")
 async def trigger_analysis(
     request: Request,
@@ -456,7 +457,22 @@ def _refund_lots(db, consumed_ids: dict, lot_ids: list) -> None:
 
 
 @chronometre("analyse", lot=lambda a: [s.get("lot_id") for s in a.get("lot_specs") or []])
-def _run_analysis_job(
+
+def _run_analysis_job(*args, **kwargs) -> None:
+    """S-01 — le travail ci-dessous, et ses jetons facturés (lignes « jetons » du journal) inscrits dans `couts_ia`
+    à la fin, réussite ou échec : sans cette ligne, le budget d'IA du jour ne voit pas la dépense."""
+    from services import couts_ia, jetons
+    org_id = kwargs.get("org_id", args[1] if len(args) > 1 else None)
+    project_id = kwargs.get("project_id", args[0] if args else None)
+    with jetons.collecter() as collecte:
+        try:
+            return _run_analysis_job_corps(*args, **kwargs)
+        finally:
+            if org_id:
+                couts_ia.enregistrer_collecte(org_id, "analyse", collecte, reference=project_id)
+
+
+def _run_analysis_job_corps(
     project_id: str,
     org_id: str,
     pass1_text: str,
@@ -584,7 +600,9 @@ def _run_analysis_job(
         failed_lot_ids = set()
         try:
             with ThreadPoolExecutor(max_workers=2) as pool:
-                futures = [(pool.submit(_one_lot, spec), spec) for spec in lot_specs]
+                # S-01 — `transmettre` : la collecte des jetons (couts_ia) suit chaque fil du pool.
+                from services.jetons import transmettre
+                futures = [(pool.submit(transmettre(_one_lot), spec), spec) for spec in lot_specs]
                 for fut, spec in futures:
                     try:
                         results.append(fut.result(timeout=1200))

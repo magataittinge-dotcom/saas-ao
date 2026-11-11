@@ -24,6 +24,7 @@ from schemas.memoire import (
     PassageRewriteRequest, EtatSectionRequest,
 )
 from routers.auth import get_auth_user
+from services.budget_ia import exiger_budget_ia  # S-01 — filet du budget d'IA par organisation et par jour
 from services.ai.memoire_generator import MemoireGenerator
 from services.chrono import chronometre, lot_du_projet
 from services.docx_exporter import build_memoire_docx
@@ -160,7 +161,7 @@ def get_memoire_preflight(
     }
 
 
-@router.post("/{project_id}/memoire/generate")
+@router.post("/{project_id}/memoire/generate", dependencies=[Depends(exiger_budget_ia)])
 @limiter.limit("3/minute")
 async def generate_memoire(
     request: Request,
@@ -411,7 +412,22 @@ def _arguments_generateur(ctx: dict, ouvrages_dpgf: str | None) -> dict:
 
 
 @chronometre("memoire", lot=lot_du_projet)
-def _run_memoire_job(
+
+def _run_memoire_job(*args, **kwargs) -> None:
+    """S-01 — le travail ci-dessous, et ses jetons facturés (lignes « jetons » du journal) inscrits dans `couts_ia`
+    à la fin, réussite ou échec : sans cette ligne, le budget d'IA du jour ne voit pas la dépense."""
+    from services import couts_ia, jetons
+    org_id = kwargs.get("org_id", args[1] if len(args) > 1 else None)
+    project_id = kwargs.get("project_id", args[0] if args else None)
+    with jetons.collecter() as collecte:
+        try:
+            return _run_memoire_job_corps(*args, **kwargs)
+        finally:
+            if org_id:
+                couts_ia.enregistrer_collecte(org_id, "memoire", collecte, reference=project_id)
+
+
+def _run_memoire_job_corps(
     project_id: str, org_id: str, user_id: str, variables: dict,
     profile_overrides: dict | None, reference_ids: list | None,
 ) -> None:
@@ -621,7 +637,7 @@ def estimation_refaire_section(
     return estimer(memoire.content_json, part, cle, modele_du_segment(part))
 
 
-@router.post("/{project_id}/memoire/sections/{part}/{cle}/refaire")
+@router.post("/{project_id}/memoire/sections/{part}/{cle}/refaire", dependencies=[Depends(exiger_budget_ia)])
 @limiter.limit("3/minute")
 async def refaire_section_memoire(
     request: Request,
@@ -689,7 +705,22 @@ async def refaire_section_memoire(
 MSG_REFAIRE_ECHEC = "Cette partie n'a pas pu être refaite. Le mémoire est resté tel quel : réessayez dans un instant."
 
 
-def _run_refaire_job(project_id: str, org_id: str, user_id: str, part: str, cle: str) -> None:
+
+def _run_refaire_job(*args, **kwargs) -> None:
+    """S-01 — le travail ci-dessous, et ses jetons facturés (lignes « jetons » du journal) inscrits dans `couts_ia`
+    à la fin, réussite ou échec : sans cette ligne, le budget d'IA du jour ne voit pas la dépense."""
+    from services import couts_ia, jetons
+    org_id = kwargs.get("org_id", args[1] if len(args) > 1 else None)
+    project_id = kwargs.get("project_id", args[0] if args else None)
+    with jetons.collecter() as collecte:
+        try:
+            return _run_refaire_job_corps(*args, **kwargs)
+        finally:
+            if org_id:
+                couts_ia.enregistrer_collecte(org_id, "memoire_refaire", collecte, reference=project_id)
+
+
+def _run_refaire_job_corps(project_id: str, org_id: str, user_id: str, part: str, cle: str) -> None:
     """Job « Refaire cette partie » — session propre, contexte rechargé par id comme la génération.
 
     Seule la sous-section visée est réécrite, à partir du contenu LU AU MOMENT D'ÉCRIRE (une retouche faite dans
@@ -782,7 +813,7 @@ def _reecritures_des_dernieres_24h(db: Session, org_id: str) -> int:
             .count())
 
 
-@router.post("/{project_id}/memoire/rewrite-passage")
+@router.post("/{project_id}/memoire/rewrite-passage", dependencies=[Depends(exiger_budget_ia)])
 @limiter.limit("10/minute")
 async def rewrite_passage_endpoint(
     request: Request,

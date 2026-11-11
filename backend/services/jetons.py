@@ -7,7 +7,10 @@ du DCE ni donnée personnelle : seulement l'étiquette technique de l'étape (ne
 """
 from __future__ import annotations
 
+import contextvars
 import re
+from contextlib import contextmanager
+from typing import Iterator
 
 _NON_SUR = re.compile(r"[^A-Za-z0-9_.+-]+")
 
@@ -22,7 +25,35 @@ def _n(usage: object, nom: str) -> int:
         return 0
 
 
+# S-01 (filet du budget d'IA) — collecte des jetons d'un travail (analyse, mémoire) pour les inscrire dans `couts_ia`
+# à la fin. La liste est portée par une variable de contexte : `asyncio.run` et `asyncio.to_thread` la transmettent ;
+# un `ThreadPoolExecutor` non (ses tâches passent par `transmettre`).
+_COLLECTE: contextvars.ContextVar = contextvars.ContextVar("synorix_collecte_jetons", default=None)
+
+
+@contextmanager
+def collecter() -> Iterator[list]:
+    """Pendant le bloc, chaque `ligne_jetons` ajoute (modele, usage en dict) à la liste rendue."""
+    lignes: list = []
+    jeton = _COLLECTE.set(lignes)
+    try:
+        yield lignes
+    finally:
+        _COLLECTE.reset(jeton)
+
+
+def transmettre(fonction):
+    """`fonction` exécutée dans une copie du contexte courant (pour `pool.submit`) : la collecte suit le fil.
+    Une copie par envoi : `pool.submit(transmettre(f), …)` à chaque fois (une copie ne s'ouvre pas dans deux fils)."""
+    contexte = contextvars.copy_context()
+    return lambda *a, **kw: contexte.run(fonction, *a, **kw)
+
+
 def ligne_jetons(etape: str, modele: str, usage: object) -> str:
+    collecte = _COLLECTE.get()
+    if collecte is not None:
+        collecte.append((str(modele or "inconnu"), {nom: _n(usage, nom) for nom in (
+            "input_tokens", "output_tokens", "cache_read_input_tokens", "cache_creation_input_tokens")}))
     etiquette = _NON_SUR.sub("_", str(etape or "appel")).strip("_")[:60] or "appel"
     return (
         f"jetons etape={etiquette} modele={_NON_SUR.sub('_', str(modele or 'inconnu'))} "
