@@ -29,6 +29,7 @@ test('pièces : la rangée d’actions passe sous le texte au téléphone, et le
 
 test('bandeau de l’AO : le titre et la ligne de l’acheteur ne sont plus coupés par « … »', () => {
   const c = code('src/routes/Project.tsx')
-  assert.match(c, /break-words text-sm text-fg-2">\{contexte \|\| project\.name\}/)
+  assert.match(c, /<p className="min-w-0 break-words text-sm text-fg-2">/)
+  assert.match(c, /\{contexte \|\| project\.name\}/)
   assert.doesNotMatch(c, /text-fg-2 truncate/)
 })

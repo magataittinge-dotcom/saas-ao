@@ -29,7 +29,8 @@ function Rail({ entree, pastille }: { entree: Entree; pastille?: ReactNode }) {
       aria-label={entree.court ? entree.label : undefined}
       className={cn(
         'relative flex min-h-14 w-full flex-col items-center justify-center gap-1 rounded-lg px-0.5 py-1.5 transition-colors duration-fast ease-survol active:scale-[.98]',
-        actif ? 'bg-surface-1 text-fg' : 'text-fg-2 hover:bg-surface-1 hover:text-fg',
+        // survol : le texte seul passe au plein. Un fond de survol faisait croire à deux entrées sélectionnées (jury, tour 1).
+        actif ? 'bg-surface-1 text-fg' : 'text-fg-2 hover:text-fg',
       )}
     >
       {actif && <span aria-hidden className="absolute -left-1 top-3 bottom-3 w-[3px] rounded-r-pilule bg-accent-ui" />}

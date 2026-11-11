@@ -5,7 +5,8 @@ import assert from 'node:assert/strict'
 import { MemoryRouter } from 'react-router-dom'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { dossierLu } from '@/lib/dossierLu'
-import { LectureNonFaite } from '@/components/etape'
+import { AnalyseNonFaite, LectureNonFaite } from '@/components/etape'
+import { enumerer } from '@/components/etape/LectureNonFaite'
 import type { Project } from '@/types'
 import { lire, sansCommentaires } from './outils/sources'
 
@@ -16,16 +17,31 @@ test('le dossier est lu quand l\'étape 3 est faite ou que le projet a passé l\
   assert.equal(dossierLu({ current_step: 5, completed_steps: undefined }), true)
 })
 
-test('« Lecture non faite » : cartes sobres, action grisée, chemin vers la lecture, aucun faux constat', () => {
+test('« analyse non faite » : dessiné une fois (Synorix le dit, une action), ni case, ni bouton grisé, aucun faux constat', () => {
   const projet = { id: 'p1', name: 'AO', current_step: 3, completed_steps: { '1': true, '2': true }, status: 'en_cours' } as unknown as Project
   const html = renderToStaticMarkup(
     <MemoryRouter>
-      <LectureNonFaite project={projet} titre="Plan du mémoire" utilite="Les parties." action="Valider le plan" libelles={['Parties', 'Critères du règlement', 'Longueur']} />
+      <LectureNonFaite project={projet} titre="Plan du mémoire" utilite="Les parties." libelles={['Les parties', 'Les critères du règlement', 'La longueur demandée']} />
     </MemoryRouter>)
-  assert.equal((html.match(/Analyse non faite/g) ?? []).length, 3)
-  assert.match(html, /<button[^>]*disabled=""[^>]*>[\s\S]*Valider le plan/)
+  // jury, tour 1 : des cases répétaient « Analyse non faite », à côté d'un bouton grisé qui redisait le titre
+  assert.doesNotMatch(html, /Analyse non faite/)
+  assert.doesNotMatch(html, /data-case-resume|data-bande-cases|disabled=""/)
+  assert.equal((html.match(/data-synorix-parle/g) ?? []).length, 1, 'Synorix le dit, une fois')
+  assert.equal((html.match(/data-visage/g) ?? []).length, 1)
+  assert.match(html, /Le dossier n’a pas encore été analysé\. Les parties, les critères du règlement et la longueur demandée s’afficheront ici une fois l’analyse faite\./)
+  assert.equal((html.match(/data-variante="principal"/g) ?? []).length, 1, 'une seule action')
   assert.match(html, /href="\/projects\/p1\/analysis"/)
   assert.doesNotMatch(html, /ne détaille pas|non précisée|Aucune pondération|Non détaillés|manquant|incomplet|absent|!/i)
+})
+
+test('« analyse non faite » se pose dans n\'importe quelle étape : le même état, sans le gabarit', () => {
+  const projet = { id: 'p1', name: 'AO', current_step: 1, completed_steps: {}, status: 'en_cours' } as unknown as Project
+  const html = renderToStaticMarkup(<MemoryRouter><AnalyseNonFaite project={projet} /></MemoryRouter>)
+  assert.match(html, /data-lecture-non-faite=""/)
+  assert.match(html, /Cet écran se remplit une fois l’analyse faite\./)
+  assert.doesNotMatch(html, /<h1/)
+  assert.equal(enumerer(['Le plan']), 'Le plan')
+  assert.equal(enumerer(['Le plan', 'Le poids de chaque partie']), 'Le plan et le poids de chaque partie')
 })
 
 test('les routes Plan et Rédiger passent par « Lecture non faite » tant que le dossier n\'est pas lu', () => {

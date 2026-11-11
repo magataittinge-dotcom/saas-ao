@@ -22,8 +22,8 @@ test('sur un écran en nuit forcée, le portail lit « dark »', () => {
   assert.equal(renderToStaticMarkup(<ThemeEcranProvider value="dark"><Sonde /></ThemeEcranProvider>), '<i data-theme="dark"></i>')
 })
 
-test('les écrans pas encore refaits sont en nuit forcée, les écrans refaits suivent le thème global', () => {
-  for (const p of ['/team', '/references']) assert.equal(estThemee(p), false, p)
+test('aucun écran de la coquille n\'est en nuit forcée : une adresse inconnue suit le thème choisi, comme les autres', () => {
+  for (const p of ['/team', '/references', '/adresse-inconnue', '/projets', '/entreprise/fiche', '/x/y/z']) assert.equal(estThemee(p), true, p)
   for (const p of ['/dashboard', '/vault', '/company', '/projects/abc', '/settings', '/settings/billing', '/outils']) assert.equal(estThemee(p), true, p)
 })
 

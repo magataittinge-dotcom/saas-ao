@@ -88,7 +88,7 @@ test('les routes /projects/:id/… suivent le thème, comme la liste, Nouvel AO,
   assert.equal(estThemee('/projects'), true)
   for (const p of ['/projects/new', '/vault', '/company']) assert.equal(estThemee(p), true, p)
   for (const p of ['/settings', '/settings/billing', '/outils']) assert.equal(estThemee(p), true, p) // C11 : Paramètres, Abonnement, Outils
-  for (const p of ['/team', '/references']) assert.equal(estThemee(p), false, p)
+  for (const p of ['/team', '/references', '/adresse-inconnue']) assert.equal(estThemee(p), true, p) // plus de nuit forcée (jury, tour 1)
 })
 
 test('le fil d\'étapes tient à 390 px : ronds de 44 px, seul le nom de l\'étape active est montré au téléphone', () => {

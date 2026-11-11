@@ -16,6 +16,11 @@ import { Menu, MenuContenu, MenuDeclencheur } from '@/components/ui/menu'
  * visible au-dessus d'elle. Un champ qui prend le focus est ramené au-dessus de la barre (scroll-padding de <main>).
  *
  * Elle ne répète JAMAIS le message d'erreur de l'étape (il est posé une fois, sous l'en-tête : `GabaritEtape message`).
+ *
+ * Elle n'existe que si elle porte un geste (jury, tour 1 : à 1 440, une barre sans bouton répétait un état et recouvrait le
+ * contenu sur Plan, Export, Décider). Sans bouton ni lien VISIBLE à cette largeur (les actions réservées au téléphone ne
+ * comptent pas sur ordinateur), elle se retire : `data-sans-geste`, réglé dans index.css. Mesuré après le rendu, et à chaque
+ * changement de contenu ou de largeur.
  */
 export const HAUTEUR_BARRE_TEL = 56 // px — h-14
 
@@ -25,8 +30,26 @@ interface BarreEtapeProps {
   children: ReactNode
 }
 
+/** La barre porte-t-elle un geste visible : un bouton ou un lien qui a une boîte à l'écran (un élément `hidden` n'en a pas). */
+export function gesteVisible(barre: Pick<HTMLElement, 'querySelectorAll'>): boolean {
+  return Array.from(barre.querySelectorAll('button, a[href], [role="button"]')).some((el) => el.getClientRects().length > 0)
+}
+
 export default function BarreEtape({ className, children }: BarreEtapeProps) {
   const ref = useRef<HTMLDivElement>(null)
+  const [sansGeste, setSansGeste] = useState(false)
+
+  useEffect(() => {
+    const barre = ref.current
+    if (!barre) return undefined
+    const compter = () => setSansGeste(!gesteVisible(barre))
+    compter()
+    const contenu = typeof MutationObserver === 'undefined' ? null : new MutationObserver(compter)
+    contenu?.observe(barre, { childList: true, subtree: true })
+    const largeur = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(compter)
+    largeur?.observe(barre)
+    return () => { contenu?.disconnect(); largeur?.disconnect() }
+  }, [])
 
   // Le focus clavier (ou scrollIntoView) d'un champ proche du bas ne doit pas le laisser sous la barre.
   useEffect(() => {
@@ -50,6 +73,7 @@ export default function BarreEtape({ className, children }: BarreEtapeProps) {
     <div
       ref={ref}
       data-barre-etape=""
+      data-sans-geste={sansGeste ? '' : undefined}
       className={cn(
         'sticky bottom-4 z-30 mt-6 flex items-center justify-between gap-4 rounded-carte border border-bord bg-surface-0 px-5 py-3 shadow-flottant',
         'max-[768px]:bottom-0 max-[768px]:-mx-[var(--gutter)] max-[768px]:h-14 max-[768px]:flex-nowrap max-[768px]:gap-2 max-[768px]:rounded-none max-[768px]:border-x-0 max-[768px]:border-b-0 max-[768px]:px-[var(--gutter)] max-[768px]:py-0 max-[768px]:shadow-none',

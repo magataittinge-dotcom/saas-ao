@@ -22,17 +22,17 @@ function EcranChemins({ titre, phrase, vers, libelle, autre }: { titre: string; 
 export function AdresseInconnue({ connecte }: { connecte: boolean }) {
   return (
     <EcranChemins titre="Cette adresse n’existe pas"
-      phrase="La page a peut-être été déplacée, ou l’adresse contient une erreur. Vos dossiers ne sont pas touchés."
+      phrase="Aucune page de Synorix ne correspond à cette adresse. Vos dossiers ne sont pas touchés."
       vers={connecte ? '/dashboard' : '/'} libelle="Revenir à l’accueil"
       autre={<Link to={connecte ? '/projects' : '/login'} className={classesBouton('secondaire', 'max-sm:w-full')}>{connecte ? 'Voir mes appels d’offres' : 'Se connecter'}</Link>} />
   )
 }
 
-/** Appel d'offres introuvable (supprimé, ou adresse fausse) : à poser dans `routes/Project.tsx` à la place du renvoi muet. */
+/** Appel d'offres introuvable (le serveur répond qu'il n'existe pas) : posé dans `routes/Project.tsx`. Une phrase, une cause. */
 export function AOIntrouvable() {
   return (
     <EcranChemins titre="Cet appel d’offres est introuvable"
-      phrase="Il a peut-être été supprimé, ou l’adresse contient une erreur. Vos autres dossiers ne sont pas touchés."
+      phrase="Aucun de vos appels d’offres ne correspond à cette adresse. Vos autres dossiers ne sont pas touchés."
       vers="/projects" libelle="Voir mes appels d’offres"
       autre={<Link to="/dashboard" className={classesBouton('secondaire', 'max-sm:w-full')}>Revenir à l’accueil</Link>} />
   )

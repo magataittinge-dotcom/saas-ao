@@ -300,7 +300,7 @@ Toutes les polices sont auto-hébergées (`@fontsource`), sous-ensembles latin e
 
 **La règle « serif au sommet ».** La serif sert au `h1` de la page et au texte du mémoire, et à rien d'autre : ni titres de carte, ni boutons, ni chiffres.
 
-**La règle « chiffres alignés ».** `body` active `"tnum"` ; la classe `.chiffres` (tabulaires + alignés) se pose sur tout nombre isolé hors du `body` hérité. Seul le texte du mémoire revient aux chiffres proportionnels.
+**La règle « chiffres alignés ».** Le texte courant et les dates sont en chiffres proportionnels (en tabulaires, les « 1 » s'écartent : « Mercredi 1 1 novembre »). Les chiffres tabulaires sont réservés aux colonnes de nombres : la classe `.chiffres` (tabulaires + alignés) et les colonnes `nombre` du `Tableau` ; le gros chiffre d'une case (`.chiffre-grand`) est seul, donc proportionnel.
 
 **La règle « un titre, une fois ».** Le petit titre de la barre du haut n'apparaît que lorsque le `h1` est sorti de l'écran (la coquille l'observe : fondu de 100 ms, aucun saut de mise en page) ; il ne le double jamais. Dans un AO, la barre porte le chemin « Mes AO / nom de l'AO » : c'est de la navigation ; le `h1` est le titre de l'étape.
 

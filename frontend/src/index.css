@@ -25,7 +25,8 @@
   font-size: clamp(40px, 24px + 2vw, 48px);
   line-height: 1;
   letter-spacing: var(--approche-chiffre);   /* −0,03 em (P6) */
-  font-variant-numeric: tabular-nums lining-nums;
+  /* proportionnel : un gros chiffre seul dans sa case n'est pas une colonne ; en chasse fixe, « 14 » se lisait « 1 4 » */
+  font-variant-numeric: lining-nums;
   color: var(--text-1);
 }
 
@@ -42,6 +43,21 @@
 body:has([data-page-pleine]) [data-coquille="barre-haut"] > .conteneur { max-width: none; }
 /* un écran étroit (lecture, réglages) s'aligne à gauche dans le conteneur : il ne se recentre pas */
 .page-etroite { max-width: var(--container-read); }
+/* ── Dans un AO, UNE alerte à la fois, la plus grave (jury, tour 1 : jusqu'à quatre bandeaux empilés sur l'Export).
+   Rang : l'échec qui vient d'arriver (erreur) ; puis l'état de l'AO (remise passée) ; puis, dans l'étape, ce qui vient de
+   réussir, l'avertissement, l'information. Les messages posés dans une section, à côté de ce qu'ils concernent, ne sont pas
+   touchés : la règle ne vaut que pour l'alerte de l'AO (`data-alerte-ao`) et le message de l'étape (`data-message-etape`). */
+.page-ao:has([data-message-etape] [data-message="erreur"]) [data-alerte-ao] { display: none; }
+.page-ao:has([data-alerte-ao="attention"]) [data-message-etape]:not(:has([data-message="erreur"])) { display: none; }
+[data-message-etape]:has([data-message="erreur"]) [data-message]:not([data-message="erreur"]),
+[data-message-etape]:has([data-message="succes"]):not(:has([data-message="erreur"])) [data-message]:not([data-message="succes"]),
+[data-message-etape]:has([data-message="attention"]):not(:has([data-message="erreur"], [data-message="succes"])) [data-message]:not([data-message="attention"]) { display: none; }
+/* la barre du bas d'une étape sans geste visible se retire (BarreEtape) : elle garde ses enfants en page (pour se remesurer),
+   mais ne prend ni place ni regard */
+[data-barre-etape][data-sans-geste] { visibility: hidden; height: 0 !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; border: 0 !important; box-shadow: none !important; overflow: hidden; }
+/* Pendant le chargement d'un écran, le pied de page ne flotte pas au milieu de l'écran sous les fantômes (jury, tour 1) :
+   il garde sa place et ne se montre qu'avec le contenu. */
+main:has([data-phase="chargement"], [data-squelette-ao], [data-squelette-etape]) > [data-coquille="pied"] { visibility: hidden; }
 /* titre de section (P9) : trois fois plus d'air au-dessus qu'en dessous */
 .titre-section { margin-top: var(--space-40); margin-bottom: var(--space-16); }
 .titre-section:first-child { margin-top: 0; }
@@ -623,8 +639,10 @@ p { text-wrap: pretty; }
     background-color: var(--surface-page);
     color: var(--text-2);
     font-family: var(--font-text);
-    /* chiffres tabulaires par défaut (DESIGN.md, discipline de B) ; le texte du mémoire revient aux proportionnels */
-    font-feature-settings: "rlig" 1, "calt" 1, "tnum" 1;
+    /* Chiffres proportionnels dans le texte courant et les dates ; tabulaires seulement dans les colonnes de nombres
+       (`.chiffres`, `tabular-nums`). Tabulaires partout, les « 1 » s'écartaient : « Mercredi 1 1 novembre »,
+       « 1 1 /1 1 » (jury, tour 1, cité par quatre lots). */
+    font-feature-settings: "rlig" 1, "calt" 1;
     font-size: 0.875rem;
     line-height: 1.65;
     -webkit-font-smoothing: antialiased;

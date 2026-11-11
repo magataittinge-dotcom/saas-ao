@@ -219,7 +219,7 @@ Object.assign(clair, {
   'filet-lumiere': texte('rgba(255, 255, 255, .9)', 'lumieres'),
   'ring-nav': texte(`0 0 0 4px ${rgba(clair['surface-2'].hex, 0.7)}`, 'ombres'),
   'glass-border': { ...clair['border-1'] },
-  scrim: texte(rgba(clair['text-1'].hex, 0.32), 'ombres', clair['text-1']),
+  scrim: texte(rgba(clair['text-1'].hex, 0.52), 'ombres', clair['text-1']), // voile plus dense : aucun aplat ne reste vif derrière un dialogue (jury, tour 1)
 })
 Object.assign(nuit, {
   'ombre-rvb': texte(rvb(ombreNuit.hex).join(', '), 'ombres', ombreNuit),

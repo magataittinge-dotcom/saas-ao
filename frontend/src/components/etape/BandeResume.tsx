@@ -109,13 +109,19 @@ export function valeurDeCase(valeur: string): number | string | null {
  * (une colonne au téléphone). Chaque case est la `CaseResume` du système : l'étiquette en haut, la valeur dessous ; un nombre
  * supérieur à 0 = le gros chiffre seul ; rien à compter = « Aucun » / « Aucune », jamais un gros « 0 » ni l'étiquette redite.
  * Une pastille d'état, une jauge, une désignation, une ligne d'explication et une source, tous facultatifs.
+ *
+ * Ce qui trahissait le gabarit (jury, tour 1), réglé ici pour toutes les étapes :
+ *  - une case sans rien à compter ne porte pas de pastille (« Aucune » + « Prêt » sur un dossier non analysé : une incertitude
+ *    affichée comme une certitude) ;
+ *  - à partir de deux cases sans rien à compter, la bande se resserre en une ligne de faits (c'est `BandeCases` qui le fait,
+ *    pour toutes les bandes du produit : components/ui/case-resume.tsx).
  */
 export function BandeResume({ cartes, libelle = 'Résumé de l’étape', className }: { cartes: CarteResume[]; libelle?: string; className?: string }) {
   if (cartes.length === 0) return null
   return (
     <BandeCases libelle={libelle} className={className}>
       {cartes.map((c) => {
-        const pastille = c.etat && c.etat !== 'neutre' ? PASTILLE[c.etat] : null
+        const pastille = c.etat && c.etat !== 'neutre' && valeurDeCase(c.valeur) !== null && valeurDeCase(c.valeur) !== 0 ? PASTILLE[c.etat] : null
         return (
           <CaseResume key={c.libelle} etiquette={c.libelle} valeur={valeurDeCase(c.valeur)} rien={c.rien ?? 'Aucun'} precision={c.detail}
             etat={pastille ? <PastilleEtat sens={pastille.sens}>{pastille.texte}</PastilleEtat> : undefined}>

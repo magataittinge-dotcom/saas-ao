@@ -20,8 +20,15 @@ import { PorteeSigles } from '@/components/common/Sigle'
 // ajouter ici la route de l'écran dès qu'il ne contient plus de couleur écrite en dur.
 export const PAGES_THEMEES = ['/dashboard', '/projects', '/design', '/projects/new', '/vault', '/company', '/settings', '/settings/billing', '/outils']
 const FICHE_ENTREPRISE = /^\/entreprise\/fiche\/[a-z]+$/ // fiches « Mon entreprise » à télécharger
-export const estThemee = (pathname: string) => PAGES_THEMEES.some((p) => pathname === p) || pathname === '/design' || FICHE_ENTREPRISE.test(pathname) ||
+/** Les écrans refaits (liste tenue pendant la phase C). Tous les écrans de la coquille le sont aujourd'hui. */
+export const estRefait = (pathname: string) => PAGES_THEMEES.some((p) => pathname === p) || pathname === '/design' || FICHE_ENTREPRISE.test(pathname) ||
   /^\/projects\/(?!new(\/|$))[^/]+/.test(pathname) // la page d'un AO : /projects/:id/…
+/**
+ * L'écran suit-il le thème choisi ? Oui, toujours : plus aucun écran de la coquille n'est en nuit forcée. Une adresse absente
+ * de la liste (une adresse inconnue, une redirection) s'affichait en nuit dans une coquille claire : un pavé bleu-noir coupé
+ * net sous la barre du haut (jury, tour 1 : etat-404-connecte, 6 sur 20).
+ */
+export const estThemee = (_pathname: string) => true
 
 export default function Layout() {
   const { pathname } = useLocation()
@@ -60,7 +67,7 @@ export default function Layout() {
                 </Suspense>
               </PorteeSigles>
             </div>
-            <LegalFooter calque={themee} />
+            <LegalFooter />
           </ThemeEcranProvider>
         </main>
         <BarreOnglets />

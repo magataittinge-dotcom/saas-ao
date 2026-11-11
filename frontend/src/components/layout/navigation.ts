@@ -28,19 +28,15 @@ export const BARRE_HAUT: Entree[] = [
 export const ENTREE_PARAMETRES: Entree = { to: '/settings', icon: Settings, label: 'Paramètres' }
 export const BARRE: Entree[] = [...BARRE_HAUT, ENTREE_PARAMETRES]
 
-/** Onglets du bas au téléphone (≤ 768 px). « Compte » (la photo) ouvre un tiroir : Paramètres, le quota, le thème, la déconnexion. */
-export const ONGLETS_TEL: Entree[] = [
-  { to: '/dashboard', icon: Home, label: 'Accueil' },
-  { to: '/projects', icon: FolderOpen, label: 'Mes AO' },
-  { to: '/company', icon: Briefcase, label: 'Mon entreprise', court: 'Entreprise' },
-  { to: '/vault', icon: Archive, label: 'Coffre-fort' },
-]
+/** Onglets du bas au téléphone (≤ 768 px) : les cinq entrées de la barre du bureau, sous les mêmes noms (jury, tour 1 : le
+ *  cinquième s'appelait « Compte » au téléphone et « Paramètres » au bureau). Le compte (la photo) est dans la barre du haut. */
+export const ONGLETS_TEL: Entree[] = BARRE
 
 /** Place prévue pour « Cerveau » (bloc 8) : l'onglet s'insère ici quand la page existe. */
 export const ONGLET_CERVEAU: (Entree & { disponible: boolean }) | null = null
 
-/** Entrées du tiroir « Compte » (téléphone) : ce que les onglets n'ont pas. */
-export const ENTREES_TIROIR: Entree[] = [ENTREE_PARAMETRES]
+/** Entrées de la feuille « Mon compte » (téléphone) : les mêmes que le menu du compte du bureau, dans le même ordre. */
+export const ENTREES_TIROIR: Entree[] = [ENTREE_PARAMETRES, { to: '/settings/billing', icon: CreditCard, label: 'Abonnement' }]
 
 export { REDIRECTIONS_ENTREPRISE } from '@/lib/entreprise/redirections'
 
@@ -53,7 +49,9 @@ export const ACCES_PALETTE: Entree[] = [
   { to: '/settings/billing', icon: CreditCard, label: 'Abonnement' },
 ]
 
-/** Les pages de « Mon entreprise » hors de /company (fiches à télécharger) gardent son entrée active. */
-const SOUS_PAGES: Readonly<Record<string, readonly string[]>> = { '/company': ['/entreprise/'] }
+/** Les pages de « Mon entreprise » hors de /company (fiches à télécharger) gardent son entrée active ; « Retenue de garantie »
+ *  (/outils) est un outil de Paramètres : l'entrée « Paramètres » reste active (jury, tour 1 : aucune entrée active, on ne
+ *  savait pas où on était). */
+const SOUS_PAGES: Readonly<Record<string, readonly string[]>> = { '/company': ['/entreprise/'], '/settings': ['/outils'] }
 export const estActif = (pathname: string, to: string) =>
   pathname === to || pathname.startsWith(`${to}/`) || (SOUS_PAGES[to] ?? []).some((p) => pathname.startsWith(p))

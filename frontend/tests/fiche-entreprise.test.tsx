@@ -459,7 +459,7 @@ test('l’aperçu et le téléchargement partent de l’état enregistré : enr
 test('l’écran suit le thème clair / nuit et sa route est déclarée (lazy)', () => {
   assert.equal(estThemee('/entreprise/fiche/moyens'), true)
   assert.equal(estThemee('/entreprise/fiche/certifications'), true)
-  assert.equal(estThemee('/entreprise/fiche'), false)
+  assert.equal(estThemee('/entreprise/fiche'), true) // adresse inconnue : elle suit le thème, comme toute la coquille
   const app = sansCommentaires(lire('src/App.tsx'))
   assert.match(app, /const FicheEntreprise = lazy\(\(\) => import\('@\/routes\/FicheEntreprise'\)\)/)
   assert.match(app, /<Route path="\/entreprise\/fiche\/:rubrique" element=\{<FicheEntreprise \/>\} \/>/)

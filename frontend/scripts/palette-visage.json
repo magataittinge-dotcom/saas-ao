@@ -787,7 +787,7 @@
    "source": "ombres"
   },
   "scrim": {
-   "css": "rgba(6, 22, 32, .32)",
+   "css": "rgba(6, 22, 32, .52)",
    "source": "ombres",
    "oklch": [
     0.19,

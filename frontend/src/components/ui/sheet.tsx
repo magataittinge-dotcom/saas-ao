@@ -7,6 +7,7 @@ import { X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { useThemeEcran } from "@/lib/themeEcran"
+import { AplatCede } from "./bouton"
 
 const Sheet = SheetPrimitive.Root
 
@@ -71,7 +72,7 @@ const SheetContent = React.forwardRef<
         <X className="h-4 w-4" />
         <span className="sr-only">Fermer</span>
       </SheetPrimitive.Close>
-      {children}
+      <AplatCede.Provider value={false}>{children}</AplatCede.Provider>
     </SheetPrimitive.Content>
   </SheetPortal>
 ))

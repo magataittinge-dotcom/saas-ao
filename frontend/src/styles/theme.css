@@ -183,7 +183,7 @@
 
   --glass-fill: rgba(255, 255, 255, .88);
   --glass-border: #d3dee6;
-  --scrim: rgba(6, 22, 32, .32);
+  --scrim: rgba(6, 22, 32, .52);
 
   /* Traits plutôt qu'ombres : la carte n'a qu'un appui à peine visible ; l'ombre froide est réservée aux flottants.
      Jamais un noir neutre : l'ombre portée a la couleur des ombres du visage (--ombre-rvb, mesurée). */

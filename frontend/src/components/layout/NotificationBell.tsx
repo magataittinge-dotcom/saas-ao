@@ -14,13 +14,37 @@ interface NotificationItem {
   created_at: string
 }
 
-function timeAgo(iso: string): string {
-  const diffMs = Date.now() - new Date(iso).getTime()
-  const mins = Math.floor(diffMs / 60000)
-  if (mins < 60) return `il y a ${Math.max(mins, 1)} min`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `il y a ${hours} h`
-  return `il y a ${Math.floor(hours / 24)} j`
+const JOUR_COURT = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', timeZone: 'Europe/Paris' })
+
+/**
+ * Quand la notification est arrivée, en mots entiers (jury, tour 1 : « il y a 8 j », « il y a 15 j ») : à l'instant, il y a
+ * 12 min, il y a 3 h, hier, il y a 4 jours ; au-delà d'une semaine, la date (« 3 nov. », heure de Paris).
+ */
+export function quandNotification(iso: string, maintenant: number = Date.now()): string {
+  const date = new Date(iso)
+  const mins = Math.floor((maintenant - date.getTime()) / 60000)
+  if (mins < 1) return 'à l’instant'
+  if (mins < 60) return `il y a ${mins} min`
+  const heures = Math.floor(mins / 60)
+  if (heures < 24) return `il y a ${heures} h`
+  const jours = Math.floor(heures / 24)
+  if (jours === 1) return 'hier'
+  if (jours < 7) return `il y a ${jours} jours`
+  return JOUR_COURT.format(date)
+}
+
+/**
+ * Le texte d'une notification vient du serveur, parfois avec des pluriels entre parenthèses ou un accord faux (« 605
+ * exigence(s) extraite(s) », « Remise dans 1 jours » : jury, tour 1, bloquants). En attendant que le serveur les écrive
+ * justes, l'affichage les accorde : le nombre qui précède décide du singulier ou du pluriel.
+ */
+export function accorder(texte: string): string {
+  return texte
+    .replace(/(\d[\d\u00a0\u202f ]*)(\s+)((?:[^\s()]+\(s\)(?:\s+(?=[^\s()]+\(s\)))?)+)/g, (_tout, nombre: string, espace: string, mots: string) => {
+      const pluriel = Number(nombre.replace(/\D/g, '')) > 1
+      return `${nombre}${espace}${mots.replace(/\(s\)/g, pluriel ? 's' : '')}`
+    })
+    .replace(/\b([01])(\s+)jours\b/g, '$1$2jour')
 }
 
 /**
@@ -77,12 +101,13 @@ export default function NotificationBell({ versLeHaut = false }: { versLeHaut?: 
       </BoutonIcone>
 
       {open && (
-        <div data-panneau-notifications="" className={cn('absolute right-0 z-50 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-bord bg-surface-pop text-fg shadow-flottant', versLeHaut ? 'bottom-full -right-12 mb-2' : 'top-full mt-2')}>
+        <div data-panneau-notifications="" className={cn('absolute right-0 z-50 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-lg border border-bord bg-surface-pop text-fg shadow-flottant', versLeHaut ? 'bottom-full -right-12 mb-2' : 'top-full mt-2 max-[768px]:fixed max-[768px]:inset-x-4 max-[768px]:top-14 max-[768px]:mt-1 max-[768px]:w-auto max-[768px]:max-w-none')}>
           <div className="flex min-h-11 items-center justify-between gap-3 border-b border-bord px-4">
             <span className="text-sm font-semibold">Notifications</span>
-            {unread > 0 && <Bouton variante="lien" onClick={() => markAllRead()}>Tout marquer lu</Bouton>}
+            {unread > 0 && <Bouton variante="lien" onClick={() => markAllRead()}>Tout marquer comme lu</Bouton>}
           </div>
-          <div className="max-h-96 overflow-y-auto">
+          {/* le panneau prend la hauteur que l'écran offre (il n'en montrait que trois lignes et demie sur 425 px) */}
+          <div className="max-h-[min(34rem,calc(100dvh-9rem))] overflow-y-auto overscroll-contain">
             {items.length === 0 ? (
               <p className="px-4 py-6 text-sm text-fg-2">Les notifications arriveront ici : une analyse terminée, un mémoire prêt, une remise qui approche.</p>
             ) : (
@@ -91,9 +116,10 @@ export default function NotificationBell({ versLeHaut = false }: { versLeHaut?: 
                   className="flex min-h-[52px] w-full items-start gap-2 border-b border-bord px-4 py-3 text-left transition-colors duration-fast ease-survol last:border-b-0 hover:bg-surface-1">
                   <span aria-hidden className={cn('mt-1.5 size-1.5 shrink-0 rounded-pilule', n.read ? 'bg-transparent' : 'bg-accent-ui')} />
                   <span className="min-w-0">
-                    <span className={cn('block text-sm', n.read ? 'text-fg-2' : 'font-semibold text-fg')}>{n.titre}</span>
-                    {n.corps && <span className="mt-0.5 line-clamp-2 block text-xs text-fg-2">{n.corps}</span>}
-                    <span className="mt-1 block text-xs text-fg-3">{timeAgo(n.created_at)}</span>
+                    {/* deux lignes au plus : `line-clamp` pose son propre affichage, `block` l'annulait (les titres tenaient sur trois lignes) */}
+                    <span className={cn('line-clamp-2 text-sm', n.read ? 'text-fg-2' : 'font-semibold text-fg')}>{accorder(n.titre)}</span>
+                    {n.corps && <span className="mt-0.5 line-clamp-2 text-xs text-fg-2">{accorder(n.corps)}</span>}
+                    <span className="mt-1 block text-xs text-fg-3">{quandNotification(n.created_at)}</span>
                   </span>
                 </button>
               ))

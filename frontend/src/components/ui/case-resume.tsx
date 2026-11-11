@@ -28,15 +28,16 @@ export function CaseResume({ etiquette, valeur, unite, rien = 'Aucun', precision
   const texte = typeof valeur === 'string' ? valeur.replace(new RegExp(`\\s*${etiquette.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*`, 'i'), ' ').trim() : ''
   return (
     <div data-case-resume="" className={cn('grid min-w-0 content-start gap-1.5 p-5', className)}>
-      <div className="flex min-h-6 items-center justify-between gap-3">
+      {/* la pastille ne passe jamais sur deux lignes : dans une case étroite (téléphone), elle se pose sous l'étiquette */}
+      <div className="flex min-h-6 items-center justify-between gap-3 max-md:flex-col max-md:items-start max-md:gap-1.5">
         <p data-etiquette="" className="text-sm font-medium text-fg-2">{etiquette}</p>
-        {etat}
+        {etat && <span data-etat-case="" className="shrink-0 [&>*]:whitespace-nowrap">{etat}</span>}
       </div>
       {vide
         ? <p data-valeur="rien" className="text-lg font-semibold text-fg-2">{rien}</p>
         : nombre
           ? <p data-valeur="nombre" className="flex items-baseline gap-2"><span className="chiffre-grand">{valeur}</span>{unite && <span className="text-sm text-fg-2">{unite}</span>}</p>
-          : <p data-valeur="texte" className="chiffres min-w-0 break-words text-lg font-semibold text-fg">{texte || rien}</p>}
+          : <p data-valeur="texte" className="min-w-0 break-words text-lg font-semibold text-fg">{texte || rien}</p>}
       {children}
       {precision && <p className="text-sm text-fg-2">{precision}</p>}
       {action && <div className="pt-1">{action}</div>}
@@ -44,20 +45,45 @@ export function CaseResume({ etiquette, valeur, unite, rien = 'Aucun', precision
   )
 }
 
+/** La valeur d'une case ne compte rien : null, 0 ou un texte vide. */
+const sansValeur = (valeur: unknown) => valeur == null || valeur === 0 || valeur === ''
+
+/** Une case qui n'a rien à compter et rien d'autre à montrer (ni jauge ou source dessous, ni lien d'action). */
+function caseSansRien(enfant: React.ReactNode): enfant is React.ReactElement<React.ComponentProps<typeof CaseResume>> {
+  if (!React.isValidElement(enfant) || enfant.type !== CaseResume) return false
+  const p = enfant.props as React.ComponentProps<typeof CaseResume>
+  return sansValeur(p.valeur) && !p.action && React.Children.toArray(p.children).length === 0
+}
+
 /**
  * Une bande de cases : UNE surface, découpée par des filets de 1 px (jamais une grille de cartes identiques). Au téléphone,
  * deux colonnes (quatre cases tiennent en deux rangées au lieu de s'empiler sur 480 px) : filet vertical entre les deux
  * colonnes, filet horizontal entre les rangées ; une case seule sur sa rangée prend toute la largeur.
+ *
+ * La bande se resserre (jury, tour 1 : « quatre cases égales, dont deux “Aucun” », ce qui trahit le gabarit) : à partir de
+ * DEUX cases qui n'ont rien à compter, elles quittent la surface et tiennent en une ligne de faits dessous
+ * (« Remise sous 7 jours : aucune · À mettre à jour : aucun »). Une seule case sans valeur reste une case. Une case sans
+ * valeur qui porte un lien d'action, une jauge ou une source reste une case : elle a quelque chose à montrer.
  */
 const TEL_DEUX_COLONNES = 'max-md:grid-cols-2 max-md:[&>*]:border-bord max-md:[&>*:nth-child(odd):not(:last-child)]:border-r max-md:[&>*:nth-child(n+3)]:border-t max-md:[&>*:last-child:nth-child(odd)]:col-span-2 max-md:[&>div]:p-4'
 
 export function BandeCases({ children, libelle = 'Résumé', className }: { children: React.ReactNode; libelle?: string; className?: string }) {
-  const n = React.Children.count(children)
-  const presentes = React.Children.toArray(children).length
-  return (
+  const tous = React.Children.toArray(children)
+  const riens = tous.filter(caseSansRien)
+  const resserree = riens.length >= 2
+  const montres = resserree ? tous.filter((e) => !caseSansRien(e)) : tous
+  const n = montres.length
+  const faits = resserree && (
+    <p data-cases-sans-rien="" className="text-sm text-fg-2">
+      {riens.map((e) => `${e.props.etiquette}\u00a0: ${(e.props.rien ?? 'Aucun').toLowerCase()}`).join(' · ')}
+    </p>
+  )
+  if (n === 0) return faits ? <div role="group" aria-label={libelle} className={className}>{faits}</div> : null
+  const surface = (
     <div role="group" aria-label={libelle} data-bande-cases="" data-surface=""
-      className={cn('grid divide-bord rounded-carte border border-bord bg-surface-0 shadow-card md:divide-x', presentes >= 2 ? TEL_DEUX_COLONNES : 'max-md:divide-y', n >= 4 ? 'md:grid-cols-4' : n === 3 ? 'md:grid-cols-3' : n === 2 ? 'md:grid-cols-2' : '', className)}>
-      {children}
+      className={cn('grid divide-bord rounded-carte border border-bord bg-surface-0 shadow-card md:divide-x', n >= 2 ? TEL_DEUX_COLONNES : 'max-md:divide-y', n >= 4 ? 'md:grid-cols-4' : n === 3 ? 'md:grid-cols-3' : n === 2 ? 'md:grid-cols-2' : '', resserree ? undefined : className)}>
+      {montres}
     </div>
   )
+  return faits ? <div data-bande-resserree="" className={cn('grid gap-3', className)}>{surface}{faits}</div> : surface
 }
