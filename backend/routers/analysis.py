@@ -101,6 +101,9 @@ async def trigger_analysis(
     par lot. body optionnel : {"lots": ["lot1", "lot2"]} (AnalyzeRequest)."""
     project = _get_project_or_404(project_id, user.organization_id, db)
     ensure_relaunchable(project)  # R12 — pas de relance sur projet clôturé
+    # S-04 — plafond de lancements par jour (toutes offres) : compté ici, refusés et remboursés compris.
+    from services import plafonds_ia
+    plafonds_ia.compter_lancement(db, user, plafonds_ia.ACTION_LANCER_ANALYSE)
     all_docs = db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).all()
     docs_total = len(all_docs)
 

@@ -135,14 +135,15 @@ def get_quota_status(db: Session, org: Organization, now: Optional[datetime] = N
     }
 
 
-def check_quota(db: Session, org: Organization, kind: str) -> None:
+def check_quota(db: Session, org: Organization, kind: str, en_cours: int = 0) -> None:
     """Blocage doux : 402 avec message d'upgrade explicite si le quota est
-    atteint. Business (limite None) ne lève jamais."""
+    atteint. Business (limite None) ne lève jamais. `en_cours` : travaux lancés
+    dont l'unité n'est pas encore décomptée (mémoires en cours, S-04)."""
     limits = _plan_limits(org)
     limit = limits[kind]
     if limit is None:
         return
-    used = _used(db, org, kind)
+    used = _used(db, org, kind) + max(0, en_cours)
     if used < limit:
         return
 

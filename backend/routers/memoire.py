@@ -178,6 +178,9 @@ async def generate_memoire(
     statut error + relance, jamais de régression d'étape."""
     project = _get_project_or_404(project_id, user.organization_id, db)
     ensure_relaunchable(project)  # R12 — pas de relance sur projet clôturé
+    # S-04 — plafond de lancements par jour (toutes offres) : compté ici, refusés compris.
+    from services import plafonds_ia
+    plafonds_ia.compter_lancement(db, user, plafonds_ia.ACTION_LANCER_MEMOIRE)
     org = db.query(Organization).filter(Organization.id == user.organization_id).first()
 
     # Route async : ne pas lire ici les textes du DCE (plusieurs Mo, bloquerait la
@@ -191,14 +194,17 @@ async def generate_memoire(
 
     # ── Quota (C1) : blocage doux 402 AVANT lancement ; l'unité n'est
     # décomptée qu'AU SUCCÈS, dans le job — « 1 mémoire PAR LOT généré ».
-    quota.check_quota(db, org, "memoire")
-
     thread_name = f"synorix-memoire-{project_id[:12]}"
+    statut_avant = project.processing_status
 
     # Anti double-run ATOMIQUE (R3) : réservation conditionnelle sur la ligne
     # projet. Le verrou de ligne Postgres sérialise les workers — deux
     # générations concurrentes ne peuvent plus consommer 2 unités pour un
     # seul mémoire. 0 ligne = déjà en cours → 409, avant toute écriture.
+    # S-04 — l'unité n'est décomptée qu'au succès : les générations EN COURS de l'organisation comptent dans le
+    # contrôle du quota, et la réservation du créneau est validée tout de suite (sans `await` entre le contrôle et le
+    # commit), sinon des générations lancées en même temps sur plusieurs AO passaient toutes le contrôle.
+    quota.check_quota(db, org, "memoire", en_cours=_generations_en_cours(db, org.id, project_id))
     claimed = db.execute(
         _sql_update(Project)
         .where(
@@ -206,10 +212,11 @@ async def generate_memoire(
             or_(Project.processing_status.is_(None),
                 Project.processing_status != "generating"),
         )
-        .values(processing_status="generating")
+        .values(processing_status="generating", processing_detail="")
     ).rowcount
     if not claimed:
         raise HTTPException(status_code=409, detail="Une rédaction est déjà en cours pour cet appel d’offres.")
+    db.commit()
 
     # ── Garde pré-vol IA (audit risque #4) : jamais de run condamné d'avance
     # (API down / crédit épuisé). asyncio.to_thread : règle WSL2.
@@ -217,7 +224,11 @@ async def generate_memoire(
     try:
         await asyncio.to_thread(ensure_ai_service_available)
     except AIServiceUnavailable:
-        db.rollback()  # relâche le créneau réservé + le verrou de ligne
+        db.rollback()
+        # le créneau a été validé plus haut (S-04) : il est rendu explicitement
+        db.execute(_sql_update(Project).where(Project.id == project_id, Project.processing_status == "generating")
+                   .values(processing_status=statut_avant))
+        db.commit()
         raise HTTPException(
             status_code=503,
             detail="Service IA momentanément indisponible — réessayez dans quelques minutes.",
@@ -284,6 +295,16 @@ def _memoire_content_all_placeholders(content: dict) -> bool:
         v.strip() and not v.strip().startswith("[SECTION À RÉGÉNÉRER")
         for v in leaves
     )
+
+
+def _generations_en_cours(db, org_id: str, sauf_projet: str) -> int:
+    """Générations de mémoire en cours pour l'organisation (créneau « generating » hors « Refaire », qui ne décompte
+    aucune unité), le projet courant exclu."""
+    return (db.query(Project)
+            .filter(Project.organization_id == org_id, Project.id != sauf_projet,
+                    Project.processing_status == "generating",
+                    or_(Project.processing_detail.is_(None), ~Project.processing_detail.startswith(REFAIRE_DETAIL)))
+            .count())
 
 
 def _plan_valide(db, project, org_id: str, memoire_cfg) -> list[dict] | None:
