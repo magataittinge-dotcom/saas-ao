@@ -24,6 +24,7 @@ from schemas.memoire import (
     PassageRewriteRequest, EtatSectionRequest,
 )
 from routers.auth import get_auth_user
+from services import budget_ia
 from services.budget_ia import exiger_budget_ia  # S-01 — filet du budget d'IA par organisation et par jour
 from services.ai.memoire_generator import MemoireGenerator
 from services.chrono import chronometre, lot_du_projet
@@ -257,6 +258,7 @@ async def generate_memoire(
         target=_run_memoire_job,
         args=(project_id, user.organization_id, user.id, variables,
               profile_overrides, payload.reference_ids),
+        kwargs={"reservation": budget_ia.reservation_de(request)},   # S-01 : sa réservation, exacte
         daemon=True,
         name=thread_name,
     )
@@ -414,7 +416,8 @@ def _arguments_generateur(ctx: dict, ouvrages_dpgf: str | None) -> dict:
 def _run_memoire_job(*args, **kwargs) -> None:
     """S-01 — le travail ci-dessous, et ses jetons facturés (lignes « jetons » du journal) inscrits dans `couts_ia`
     à la fin, réussite ou échec, et la réservation du budget d'IA réglée (services/budget_ia.py)."""
-    from services import budget_ia, couts_ia, jetons
+    from services import couts_ia, jetons
+    reservation = kwargs.pop("reservation", None)      # référence exacte de la réservation du budget d'IA
     org_id = kwargs.get("org_id", args[1] if len(args) > 1 else None)
     project_id = kwargs.get("project_id", args[0] if args else None)
     with jetons.collecter() as collecte:
@@ -424,7 +427,7 @@ def _run_memoire_job(*args, **kwargs) -> None:
             if org_id:
                 couts_ia.enregistrer_collecte(
                     org_id, "memoire", collecte, reference=project_id,
-                    reservation=budget_ia.reference_de_travail("memoire", project_id or ""))
+                    reservation=reservation)
 
 
 @chronometre("memoire", lot=lot_du_projet)
@@ -697,6 +700,7 @@ async def refaire_section_memoire(
     threading.Thread(
         target=_run_refaire_job,
         args=(project_id, user.organization_id, user.id, part, cle),
+        kwargs={"reservation": budget_ia.reservation_de(request)},   # S-01 : sa réservation, exacte
         daemon=True,
         name=f"synorix-refaire-{project_id[:12]}",
     ).start()
@@ -710,7 +714,8 @@ MSG_REFAIRE_ECHEC = "Cette partie n'a pas pu être refaite. Le mémoire est rest
 def _run_refaire_job(*args, **kwargs) -> None:
     """S-01 — le travail ci-dessous, et ses jetons facturés (lignes « jetons » du journal) inscrits dans `couts_ia`
     à la fin, réussite ou échec, et la réservation du budget d'IA réglée (services/budget_ia.py)."""
-    from services import budget_ia, couts_ia, jetons
+    from services import couts_ia, jetons
+    reservation = kwargs.pop("reservation", None)      # référence exacte de la réservation du budget d'IA
     org_id = kwargs.get("org_id", args[1] if len(args) > 1 else None)
     project_id = kwargs.get("project_id", args[0] if args else None)
     with jetons.collecter() as collecte:
@@ -720,7 +725,7 @@ def _run_refaire_job(*args, **kwargs) -> None:
             if org_id:
                 couts_ia.enregistrer_collecte(
                     org_id, "memoire_refaire", collecte, reference=project_id,
-                    reservation=budget_ia.reference_de_travail("refaire", project_id or ""))
+                    reservation=reservation)
 
 
 def _run_refaire_job_corps(project_id: str, org_id: str, user_id: str, part: str, cle: str) -> None:

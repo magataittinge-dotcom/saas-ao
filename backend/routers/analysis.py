@@ -20,6 +20,7 @@ from models.checklist_item import ChecklistItem
 from models.document import Document
 from schemas.compliance import ComplianceItemResponse
 from routers.auth import get_auth_user
+from services import budget_ia
 from services.budget_ia import exiger_budget_ia  # S-01 — filet du budget d'IA par organisation et par jour
 from services.ai.api_preflight import AIServiceUnavailable, ensure_ai_service_available
 from services.ai.dce_analyzer import (
@@ -226,6 +227,7 @@ async def trigger_analysis(
         target=_run_analysis_job,
         args=(project_id, org_id, pass1_text, lot_specs,
               docs_sent, docs_total, truncated_files, consumed_ids),
+        kwargs={"reservation": budget_ia.reservation_de(request)},   # S-01 : sa réservation, exacte
         daemon=True,
         name=thread_name,
     )
@@ -459,7 +461,8 @@ def _refund_lots(db, consumed_ids: dict, lot_ids: list) -> None:
 def _run_analysis_job(*args, **kwargs) -> None:
     """S-01 — le travail ci-dessous, et ses jetons facturés (lignes « jetons » du journal) inscrits dans `couts_ia`
     à la fin, réussite ou échec, et la réservation du budget d'IA réglée (services/budget_ia.py)."""
-    from services import budget_ia, couts_ia, jetons
+    from services import couts_ia, jetons
+    reservation = kwargs.pop("reservation", None)      # référence exacte de la réservation du budget d'IA
     org_id = kwargs.get("org_id", args[1] if len(args) > 1 else None)
     project_id = kwargs.get("project_id", args[0] if args else None)
     with jetons.collecter() as collecte:
@@ -469,7 +472,7 @@ def _run_analysis_job(*args, **kwargs) -> None:
             if org_id:
                 couts_ia.enregistrer_collecte(
                     org_id, "analyse", collecte, reference=project_id,
-                    reservation=budget_ia.reference_de_travail("analyse", project_id or ""))
+                    reservation=reservation)
 
 
 @chronometre("analyse", lot=lambda a: [s.get("lot_id") for s in a.get("lot_specs") or []])

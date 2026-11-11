@@ -333,3 +333,40 @@ def test_une_reservation_orpheline_expire(db_session, test_org):
                           created_at=datetime.utcnow() - timedelta(minutes=30)))
     db_session.commit()
     assert budget_ia.depasse(db_session, test_org.id)
+
+
+def test_deux_travaux_sur_le_meme_projet_chacun_sa_reservation(db_session, test_org, monkeypatch):
+    """Revue du coordinateur : le premier travail qui finit ne libère que SA réservation (référence exacte)."""
+    from routers import memoire as mm
+    org_id = test_org.id
+    db_session.add(CoutIA(organization_id=org_id, usage="analyse", modele=couts_ia.SONNET_4_6,
+                          cout_usd=60.0, cout_eur=56.0))
+    db_session.commit()
+    budget_ia.reserver(db_session, org_id, "memoire", "memoire:p-meme:aaa")     # 57,5
+    budget_ia.reserver(db_session, org_id, "memoire", "memoire:p-meme:bbb")     # 59 (relance sur le même projet)
+    monkeypatch.setattr(mm, "_run_memoire_job_corps", lambda *a, **k: None)
+    mm._run_memoire_job("p-meme", org_id, "u", {}, None, None, reservation="memoire:p-meme:aaa")
+    assert [r.reference for r in _reservations(db_session, org_id)] == ["memoire:p-meme:bbb"]   # 57,5
+    from fastapi import HTTPException
+    budget_ia.reserver(db_session, org_id, "analyse", "analyse:p-meme:ccc")     # 57,5 < 60 : passe → 60,5
+    with pytest.raises(HTTPException) as e:
+        budget_ia.reserver(db_session, org_id, "analyse", "analyse:p-meme:ddd")  # le second travail compte encore
+    assert e.value.status_code == 429
+
+
+def test_le_fil_recoit_la_reference_exacte_de_sa_requete(client, db_session, test_org, pres_du_plafond, monkeypatch):
+    import routers.memoire as mm
+    recues = []
+    monkeypatch.setattr(mm, "_run_memoire_job_corps", lambda *a, **k: None)
+    vrai = mm._run_memoire_job
+
+    def espion(*a, **k):
+        recues.append(k.get("reservation"))
+        return vrai(*a, **k)
+    monkeypatch.setattr(mm, "_run_memoire_job", espion)
+    _projet(db_session, test_org.id, "p-ref")
+    db_session.commit()
+    assert client.post("/api/projects/p-ref/memoire/generate", json={}).status_code == 200
+    _attendre("synorix-memoire-")
+    assert len(recues) == 1 and recues[0].startswith("memoire:p-ref:") and len(recues[0]) > len("memoire:p-ref:")
+    assert _reservations(db_session, test_org.id) == []

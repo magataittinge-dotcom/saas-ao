@@ -8,7 +8,7 @@ pour cette organisation jusqu'à ce que la fenêtre glisse.
 Réservation (revue du coordinateur) : une analyse ou un mémoire ne connaît sa dépense qu'à la fin. Au lancement, le
 contrôle et une ligne `couts_ia` provisoire (usage « reservation », forfait réglable) sont faits sous un verrou par
 organisation (verrou du processus + verrou consultatif Postgres) : dix lancements d'affilée voient chacun les
-réservations des précédents. Le travail règle sa réservation à la fin, dans la même transaction que l'inscription de
+réservations des précédents. Le travail règle SA réservation (référence exacte et unique, portée de la requête au fil) à la fin, dans la même transaction que l'inscription de
 la dépense réelle (`couts_ia.enregistrer_collecte`). Une route synchrone (import, reformulation, questions, réécriture)
 inscrit sa dépense pendant la requête et libère sa réservation en sortant ; une route refusée (404, 409, 503…) la
 libère aussi. Une réservation orpheline (processus tué) ne compte plus au-delà de `BUDGET_IA_RESERVATION_MINUTES`
@@ -123,11 +123,14 @@ def reserver(db: Session, org_id: str, genre: str, reference: str) -> None:
             raise
 
 
-def liberer(db: Session, org_id: str, reference: str, *, prefixe: bool = False) -> None:
-    """Retire la réservation (exacte, ou toutes celles d'un travail par préfixe). Sans commit."""
-    q = db.query(CoutIA).filter(CoutIA.organization_id == org_id, CoutIA.usage == USAGE_RESERVATION)
-    q = q.filter(CoutIA.reference.like(f"{reference}%")) if prefixe else q.filter(CoutIA.reference == reference)
-    q.delete(synchronize_session=False)
+def liberer(db: Session, org_id: str, reference: str) -> None:
+    """Retire UNE réservation, par sa référence exacte et unique (jamais par préfixe : deux travaux sur le même projet
+    ont chacun la leur). Sans commit. Les réservations orphelines ne sont pas effacées : elles cessent de compter à
+    expiration (`duree_reservation`)."""
+    if not reference:
+        return
+    db.query(CoutIA).filter(CoutIA.organization_id == org_id, CoutIA.usage == USAGE_RESERVATION,
+                            CoutIA.reference == reference).delete(synchronize_session=False)
 
 
 def _liberer_seule(org_id: str, reference: str) -> None:
@@ -145,6 +148,11 @@ def _liberer_seule(org_id: str, reference: str) -> None:
 
 def reference_de_travail(genre: str, project_id: str) -> str:
     return f"{genre}:{project_id}:"
+
+
+def reservation_de(request: Request) -> str | None:
+    """Référence de la réservation posée par `exiger_budget_ia` pour cette requête (à passer au travail détaché)."""
+    return getattr(request.state, "reservation_ia", None)
 
 
 def _genre(request: Request) -> str:
@@ -168,6 +176,7 @@ def exiger_budget_ia(request: Request, user: User = Depends(get_auth_user), db: 
     reference = base + uuid.uuid4().hex[:12]
     org_id = user.organization_id
     reserver(db, org_id, genre, reference)
+    request.state.reservation_ia = reference      # portée jusqu'au travail détaché, qui ne libère qu'elle
     try:
         yield
     except BaseException:

@@ -82,7 +82,7 @@ def enregistrer_collecte(organization_id: str, usage_nom: str, collecte: list,
                          reference: Optional[str] = None, reservation: Optional[str] = None) -> None:
     """Inscrit les jetons collectés pendant un travail (`services.jetons.collecter`) : une ligne par modèle, dans une
     session à part (celle du travail peut être dans un état d'erreur), et RÈGLE la réservation du budget d'IA
-    (`reservation` : préfixe de référence, `services.budget_ia`) dans la même transaction, même sans dépense.
+    (`reservation` : sa référence exacte, `services.budget_ia`) dans la même transaction, même sans dépense.
     Ne lève jamais : le registre ne fait pas échouer une analyse ou un mémoire."""
     par_modele: dict[str, dict] = {}
     for modele, usage in collecte or []:
@@ -98,7 +98,7 @@ def enregistrer_collecte(organization_id: str, usage_nom: str, collecte: list,
             db.add(_ligne(organization_id, usage_nom, modele, usage, reference))
         if reservation:
             from services import budget_ia
-            budget_ia.liberer(db, organization_id, reservation, prefixe=True)
+            budget_ia.liberer(db, organization_id, reservation)
         db.commit()
     except Exception:
         logger.exception("couts_ia : inscription impossible (%s)", usage_nom)
