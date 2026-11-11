@@ -456,12 +456,10 @@ def _refund_lots(db, consumed_ids: dict, lot_ids: list) -> None:
         db.rollback()
 
 
-@chronometre("analyse", lot=lambda a: [s.get("lot_id") for s in a.get("lot_specs") or []])
-
 def _run_analysis_job(*args, **kwargs) -> None:
     """S-01 — le travail ci-dessous, et ses jetons facturés (lignes « jetons » du journal) inscrits dans `couts_ia`
-    à la fin, réussite ou échec : sans cette ligne, le budget d'IA du jour ne voit pas la dépense."""
-    from services import couts_ia, jetons
+    à la fin, réussite ou échec, et la réservation du budget d'IA réglée (services/budget_ia.py)."""
+    from services import budget_ia, couts_ia, jetons
     org_id = kwargs.get("org_id", args[1] if len(args) > 1 else None)
     project_id = kwargs.get("project_id", args[0] if args else None)
     with jetons.collecter() as collecte:
@@ -469,9 +467,12 @@ def _run_analysis_job(*args, **kwargs) -> None:
             return _run_analysis_job_corps(*args, **kwargs)
         finally:
             if org_id:
-                couts_ia.enregistrer_collecte(org_id, "analyse", collecte, reference=project_id)
+                couts_ia.enregistrer_collecte(
+                    org_id, "analyse", collecte, reference=project_id,
+                    reservation=budget_ia.reference_de_travail("analyse", project_id or ""))
 
 
+@chronometre("analyse", lot=lambda a: [s.get("lot_id") for s in a.get("lot_specs") or []])
 def _run_analysis_job_corps(
     project_id: str,
     org_id: str,

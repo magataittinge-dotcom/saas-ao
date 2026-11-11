@@ -411,12 +411,10 @@ def _arguments_generateur(ctx: dict, ouvrages_dpgf: str | None) -> dict:
     )
 
 
-@chronometre("memoire", lot=lot_du_projet)
-
 def _run_memoire_job(*args, **kwargs) -> None:
     """S-01 — le travail ci-dessous, et ses jetons facturés (lignes « jetons » du journal) inscrits dans `couts_ia`
-    à la fin, réussite ou échec : sans cette ligne, le budget d'IA du jour ne voit pas la dépense."""
-    from services import couts_ia, jetons
+    à la fin, réussite ou échec, et la réservation du budget d'IA réglée (services/budget_ia.py)."""
+    from services import budget_ia, couts_ia, jetons
     org_id = kwargs.get("org_id", args[1] if len(args) > 1 else None)
     project_id = kwargs.get("project_id", args[0] if args else None)
     with jetons.collecter() as collecte:
@@ -424,9 +422,12 @@ def _run_memoire_job(*args, **kwargs) -> None:
             return _run_memoire_job_corps(*args, **kwargs)
         finally:
             if org_id:
-                couts_ia.enregistrer_collecte(org_id, "memoire", collecte, reference=project_id)
+                couts_ia.enregistrer_collecte(
+                    org_id, "memoire", collecte, reference=project_id,
+                    reservation=budget_ia.reference_de_travail("memoire", project_id or ""))
 
 
+@chronometre("memoire", lot=lot_du_projet)
 def _run_memoire_job_corps(
     project_id: str, org_id: str, user_id: str, variables: dict,
     profile_overrides: dict | None, reference_ids: list | None,
@@ -708,8 +709,8 @@ MSG_REFAIRE_ECHEC = "Cette partie n'a pas pu être refaite. Le mémoire est rest
 
 def _run_refaire_job(*args, **kwargs) -> None:
     """S-01 — le travail ci-dessous, et ses jetons facturés (lignes « jetons » du journal) inscrits dans `couts_ia`
-    à la fin, réussite ou échec : sans cette ligne, le budget d'IA du jour ne voit pas la dépense."""
-    from services import couts_ia, jetons
+    à la fin, réussite ou échec, et la réservation du budget d'IA réglée (services/budget_ia.py)."""
+    from services import budget_ia, couts_ia, jetons
     org_id = kwargs.get("org_id", args[1] if len(args) > 1 else None)
     project_id = kwargs.get("project_id", args[0] if args else None)
     with jetons.collecter() as collecte:
@@ -717,7 +718,9 @@ def _run_refaire_job(*args, **kwargs) -> None:
             return _run_refaire_job_corps(*args, **kwargs)
         finally:
             if org_id:
-                couts_ia.enregistrer_collecte(org_id, "memoire_refaire", collecte, reference=project_id)
+                couts_ia.enregistrer_collecte(
+                    org_id, "memoire_refaire", collecte, reference=project_id,
+                    reservation=budget_ia.reference_de_travail("refaire", project_id or ""))
 
 
 def _run_refaire_job_corps(project_id: str, org_id: str, user_id: str, part: str, cle: str) -> None:

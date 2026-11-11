@@ -195,3 +195,141 @@ def test_un_memoire_inscrit_son_cout_meme_en_echec(db_session, test_org, monkeyp
     ligne = db_session.query(CoutIA).filter(CoutIA.usage == "memoire").one()
     assert ligne.reference == "p-m" and ligne.jetons_sortie == 2 * USAGE_INVENTE["output_tokens"]
     assert ligne.cout_usd == pytest.approx(2 * _cout_du_script(couts_ia.SONNET_5_5, USAGE_INVENTE), abs=1e-6)
+
+
+# ── 4. Réservation au lancement (revue du coordinateur) : les travaux en cours comptent ────────────────────────────
+
+def _projet(db, org_id, pid):
+    from models.project import Project, ProjectDocument
+    db.add(Project(id=pid, organization_id=org_id, name="X", deadline=date.today(), selected_lot="lot1",
+                   selected_lot_name="Lot 1", current_step=5, lots_detectes=[{"id": "lot1", "nom": "Lot 01"}]))
+    db.add(ProjectDocument(project_id=pid, type="rc", file_url="x", file_name="rc.pdf",
+                           extracted_text="Règlement inventé pour le test. " * 40))
+    db.add(ProjectDocument(project_id=pid, type="cctp", file_url="x", file_name="cctp lot 01.pdf",
+                           extracted_text="CCTP inventé du lot 1. " * 40, related_lots=["1"]))
+
+
+@pytest.fixture
+def pres_du_plafond(db_session, test_org, monkeypatch):
+    """55 € déjà dépensés sur 60 ; forfaits par défaut (analyse 3 €, mémoire 1,5 €)."""
+    from models.organization import Organization
+    db_session.get(Organization, test_org.id).plan = "pro"
+    db_session.add(CoutIA(organization_id=test_org.id, usage="import_memoire", modele=couts_ia.SONNET_4_6,
+                          cout_usd=60.0, cout_eur=55.0))
+    db_session.commit()
+
+
+def _reservations(db, org_id):
+    db.expire_all()
+    return db.query(CoutIA).filter(CoutIA.organization_id == org_id, CoutIA.usage == "reservation").all()
+
+
+def test_analyses_d_affilee_la_troisieme_est_refusee_avant_tout_appel(client, db_session, test_org, pres_du_plafond,
+                                                                     monkeypatch):
+    from services.ai import checklist_matcher, dce_analyzer
+    feu = threading.Event()
+    appels = []
+
+    def passe_bloquee(self, pass_text, system_prompt, label, project_id=None, *a, **kw):
+        appels.append(project_id)
+        feu.wait(20)
+        jetons.ligne_jetons(label, "claude-sonnet-4-6", {"input_tokens": 1000, "output_tokens": 100})
+        return {"requirements": [], "criteres_jugement": [], "infos_marche": {}}
+
+    async def _rien(self, *a, **kw):
+        return []
+    monkeypatch.setattr(dce_analyzer.DCEAnalyzer, "_run_pass_chunked", passe_bloquee)
+    monkeypatch.setattr(dce_analyzer.DCEAnalyzer, "_demo_mode", False, raising=False)
+    monkeypatch.setattr(checklist_matcher.ChecklistMatcher, "match", _rien)
+    for pid in ("p-a1", "p-a2", "p-a3"):
+        _projet(db_session, test_org.id, pid)
+    db_session.commit()
+    try:
+        codes = [client.post(f"/api/projects/{pid}/analyze", json={"lots": ["lot1"]}).status_code
+                 for pid in ("p-a1", "p-a2", "p-a3")]
+        # 55 → 58 → 61 : la deuxième passe (58 < 60), la troisième voit les deux travaux en cours.
+        assert codes[:2] == [202, 202] or codes[:2] == [200, 200], codes
+        assert codes[2] == 429
+        assert len(_reservations(db_session, test_org.id)) == 2
+        assert "p-a3" not in appels
+    finally:
+        feu.set()
+        _attendre("synorix-analysis-")
+    # Réglées au montant réel : plus aucune réservation, la dépense réelle est inscrite.
+    assert _reservations(db_session, test_org.id) == []
+    assert db_session.query(CoutIA).filter(CoutIA.usage == "analyse").count() == 2
+
+
+def test_memoires_d_affilee_le_cinquieme_est_refuse(client, db_session, test_org, pres_du_plafond, monkeypatch):
+    import routers.memoire as mm
+    feu = threading.Event()
+    lances = []
+
+    def corps_bloque(project_id, org_id, *a):
+        lances.append(project_id)
+        feu.wait(20)
+    monkeypatch.setattr(mm, "_run_memoire_job_corps", corps_bloque)
+    pids = [f"p-m{i}" for i in range(5)]
+    for pid in pids:
+        _projet(db_session, test_org.id, pid)
+    db_session.commit()
+    try:
+        codes = [client.post(f"/api/projects/{pid}/memoire/generate", json={}).status_code for pid in pids]
+        # 55 → 56,5 → 58 → 59,5 → 61 : le cinquième est refusé avant tout appel.
+        assert codes == [200, 200, 200, 200, 429], codes
+        assert "p-m4" not in lances
+    finally:
+        feu.set()
+        _attendre("synorix-memoire-")
+    assert _reservations(db_session, test_org.id) == []      # travail sans dépense : réservation libérée
+
+
+def test_route_refusee_ou_synchrone_ne_garde_pas_de_reservation(client, db_session, test_org, monkeypatch):
+    import services.ai.profile_structurer as ps
+    monkeypatch.setattr(ps, "_call_haiku", lambda t: ({"materiel": "x"}, {"input_tokens": 10, "output_tokens": 10}))
+    assert client.post("/api/memoire-config/structure-text", json={"text": "Trois camions benne. " * 10}).status_code == 200
+    assert client.post("/api/projects/inconnu/analyze", json={"lots": ["lot1"]}).status_code == 404
+    assert _reservations(db_session, test_org.id) == []
+
+
+def test_reservations_en_parallele_sous_verrou(db_session, test_org, monkeypatch):
+    """Vingt lancements simultanés à 55 € sur 60 avec un forfait de 1 € : exactement cinq réservations passent."""
+    from database import SessionLocal
+    from fastapi import HTTPException
+    monkeypatch.setenv("BUDGET_IA_FORFAIT_APPEL_EUR", "1")
+    db_session.add(CoutIA(organization_id=test_org.id, usage="analyse", modele=couts_ia.SONNET_4_6,
+                          cout_usd=60.0, cout_eur=55.0))
+    db_session.commit()
+    org_id = test_org.id
+    resultats = []
+    depart = threading.Barrier(20)
+
+    def lancer(i):
+        s = SessionLocal()
+        try:
+            depart.wait(10)
+            budget_ia.reserver(s, org_id, "appel", f"appel:{i}")
+            resultats.append("ok")
+        except HTTPException as e:
+            resultats.append(e.status_code)
+        finally:
+            s.close()
+    fils = [threading.Thread(target=lancer, args=(i,)) for i in range(20)]
+    for f in fils:
+        f.start()
+    for f in fils:
+        f.join(30)
+    assert resultats.count("ok") == 5 and resultats.count(429) == 15
+
+
+def test_une_reservation_orpheline_expire(db_session, test_org):
+    db_session.add(CoutIA(organization_id=test_org.id, usage="reservation", modele="analyse", cout_usd=0.0,
+                          cout_eur=100.0, reference="analyse:p-tue:x",
+                          created_at=datetime.utcnow() - timedelta(minutes=121)))
+    db_session.commit()
+    assert not budget_ia.depasse(db_session, test_org.id)
+    db_session.add(CoutIA(organization_id=test_org.id, usage="reservation", modele="analyse", cout_usd=0.0,
+                          cout_eur=100.0, reference="analyse:p-vif:x",
+                          created_at=datetime.utcnow() - timedelta(minutes=30)))
+    db_session.commit()
+    assert budget_ia.depasse(db_session, test_org.id)
