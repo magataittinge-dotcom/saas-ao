@@ -55,11 +55,11 @@ export default function ClassifyDocumentModal({ document: doc, onClose }: Props)
       ouvert
       onOuvert={(ouvert) => { if (!ouvert && !isPending) onClose() }}
       taille="petit"
-      titre={isUnclassified ? 'Ranger le document' : 'Modifier le document'}
+      titre={isUnclassified ? 'Ranger la pièce' : 'Modifier la pièce'}
       description={<span className="block truncate">{doc.file_name}</span>}
       actions={<>
         <Bouton variante="secondaire" onClick={onClose} disabled={isPending}>Annuler</Bouton>
-        <Bouton variante="principal" onClick={onSubmit} enCours={isPending} libelleEnCours="Enregistrement…">Enregistrer</Bouton>
+        <Bouton variante="principal" onClick={onSubmit} enCours={isPending} libelleEnCours="Enregistrement…">{isUnclassified ? 'Ranger' : 'Enregistrer'}</Bouton>
       </>}
     >
       <div className="grid gap-4">

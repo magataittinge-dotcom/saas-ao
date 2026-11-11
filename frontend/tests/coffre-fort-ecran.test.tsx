@@ -47,7 +47,9 @@ test('P20 : plus de rubrique « (0) Aucun document » ; les rubriques sans pièc
     assert.ok(html.includes(rubrique), rubrique)
   }
   assert.ok(html.indexOf('>À ranger</h2>') < html.indexOf('Attestations sociales'), 'ce qui reste à ranger passe en premier')
-  assert.equal(nb(html, /data-surface=""/g), 1, 'une seule surface pour les rubriques à déposer')
+  // une surface par rubrique qui a des pièces (rangées à filets), une seule pour les rubriques à déposer
+  assert.equal(nb(html, /data-surface=""/g), 1 + nb(html, /<h2[^>]*id="coffre-(?!a-deposer)/g))
+  assert.equal(nb(html, /data-piece=""/g), nb(html, /aria-label="Ouvrir /g), 'chaque pièce est une rangée, pas une carte')
 })
 
 test('A10 : coffre-fort vide = ce qu’il fera, et un seul bouton', () => {
@@ -73,7 +75,8 @@ test('500 pièces : des pages de 50, ce qui reste à ranger en tête', () => {
   assert.equal(piecesDansLOrdre(pieces)[0].category, 'unclassified')
   const html = rendre(pieces)
   assert.equal(nb(html, /piece-p\d+\.pdf<\/p>/g), 50)
-  assert.ok(html.includes('1–50 sur 500'))
+  assert.ok(html.includes('Pièces 1 à 50 sur 500') && html.includes('page 1 sur 10'))
+  assert.ok(html.includes('placeholder="Chercher une pièce"') && html.includes('500 pièces'))
   assert.ok(html.includes('Page suivante'))
 })
 
@@ -94,7 +97,11 @@ test('la fenêtre de classement est le Dialogue du système : listes et dates du
 test('les lignes de pièce passent à la ligne et leurs boutons font 44 px sur écran tactile', () => {
   const code = sansCommentaires(lire('src/routes/Vault.tsx'))
   assert.match(code, /LISTE_PIECES = '[^']*\[@media\(pointer:coarse\)\]:\[&_button\]:min-h-11/)
-  assert.match(code, /LISTE_PIECES = '[^']*\[&>div\]:flex-wrap/)
+  // jury, tour 1 : une surface à filets (plus une carte par pièce) ; au téléphone, deux lignes, jamais plus large que l'écran
+  assert.match(code, /<Carte sansMarge className=\{LISTE_PIECES\}>/)
+  const rangee = sansCommentaires(lire('src/components/common/FileCard.tsx'))
+  assert.match(rangee, /data-piece=""[^>]*grid-cols-\[minmax\(0,1fr\)\][^>]*border-t border-bord[^>]*first:border-t-0/)
+  assert.doesNotMatch(rangee, /rounded-lg border border-bord|StatusBadge/, 'ni cadre par pièce ni pastille « À ranger »')
 })
 
 test('/vault suit le thème clair / nuit', () => {
