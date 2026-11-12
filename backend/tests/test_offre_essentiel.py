@@ -109,7 +109,12 @@ def test_webhook_maps_essentiel_product_to_plan(client, db_session, test_org, mo
 
     class _FakeBilling:
         def verify_webhook(self, payload, sig):
-            return json.loads(payload)
+            self.evenement = json.loads(payload)
+            return self.evenement
+
+        def retrieve_subscription(self, subscription_id):
+            # PAIEMENT-2 (12/11) : le webhook relit l'abonnement chez le fournisseur ; ici, celui de l'événement.
+            return self.evenement["data"]["object"]
     monkeypatch.setattr(sb, "get_billing_provider", lambda: _FakeBilling())
     monkeypatch.setitem(sb.PRODUCTS, "essentiel", "prod_essentiel_test")
 

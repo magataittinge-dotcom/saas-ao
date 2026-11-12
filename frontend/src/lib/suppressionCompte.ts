@@ -18,11 +18,16 @@ export interface ApercuSuppression {
   prochain_prelevement?: string | null
 }
 
-/** « 14 mars 2030 », à l'heure de Paris ; chaîne vide si la date est illisible. */
+/**
+ * « 14 mars 2030 », à l'heure de Paris ; chaîne vide si la date est illisible. Espaces insécables : la date tient sur
+ * une ligne (à 1 440, « le 12 / décembre 2026 » se coupait entre le jour et le mois).
+ */
 export function dateSuppression(valeur: string | null | undefined): string {
   const d = lireDate(valeur)
   if (!d) return ''
-  return new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', day: 'numeric', month: 'long', year: 'numeric' }).format(d)
+  return new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', day: 'numeric', month: 'long', year: 'numeric' })
+    .format(d)
+    .replace(/\s/g, ' ')
 }
 
 /** Point 74 : supprimer le compte efface toute l'organisation, le geste est à l'administrateur (le serveur refuse en 403). */
