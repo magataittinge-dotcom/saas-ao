@@ -14,7 +14,7 @@ import { Route, Routes } from 'react-router-dom'
 import { AdresseInconnue, AOIntrouvable } from '@/components/public/EcransEtat'
 import { ConnexionInterrompue, ErreurAppli, MorceauIntrouvable, accueilPour } from '@/components/public/EcransHorsRouteur'
 import { VideMesAO } from '@/components/mesao/VideMesAO'
-import { DOCUMENTS_JURIDIQUES, MENTION_EN_ATTENTE, champsACompleter, preparerDocument, sansChampsACompleter } from '@/lib/pagesJuridiques'
+import { DOCUMENTS_JURIDIQUES, MENTION_EN_ATTENTE, champsACompleter, decouperDefinitions, mettreEnPage, preparerDocument, sansChampsACompleter, sommaireDe } from '@/lib/pagesJuridiques'
 import { decouperTables } from '@/lib/tablesMarkdown'
 import { OFFRES, prixLibelle } from '@/lib/offres'
 import { RACINE, lire, sansCommentaires } from './outils/sources'
@@ -102,9 +102,44 @@ test('pages juridiques : les tableaux Markdown sont de vrais tableaux, dans une 
     assert.ok(html.includes('<table'), `${slug} : tableau rendu`)
     assert.doesNotMatch(html, /\|---|\| ?Nom ?\|/, `${slug} : plus de barres verticales à l’écran`)
     assert.equal(nb(html, /<h1/g), 1)
-    assert.ok(html.includes('data-page="etroite"') && html.includes('aria-current="page"'))
+    assert.ok(html.includes('data-lecture') && html.includes('aria-current="page"'))
     assert.doesNotMatch(html, /À COMPLÉTER/)
   }
+})
+
+const rendreJuridique = (slug: string) => {
+  const client = new QueryClient()
+  client.setQueryData(['page-juridique', slug], juridique(slug))
+  return renderToStaticMarkup(
+    <QueryClientProvider client={client}><MemoryRouter initialEntries={[`/legal/${slug}`]}><Routes><Route path="/legal/:slug" element={<Legal />} /></Routes></MemoryRouter></QueryClientProvider>)
+}
+
+test('pages juridiques (jury, tour 1) : un sommaire qui mène à chaque article, des titres d’article qui dominent, la date sous le titre', () => {
+  for (const d of DOCUMENTS_JURIDIQUES) {
+    const html = rendreJuridique(d.slug)
+    const { corps, miseAJour } = mettreEnPage(preparerDocument(juridique(d.slug)).corps)
+    const articles = sommaireDe(corps)
+    assert.ok(articles.length >= 3, `${d.slug} : des articles`)
+    assert.ok(html.includes('aria-label="Sommaire"'), `${d.slug} : sommaire`)
+    for (const a of articles) assert.ok(html.includes(`href="#${a.ancre}"`) && html.includes(`id="${a.ancre}"`), `${d.slug} : ${a.titre} a son ancre`)
+    assert.equal(new Set(articles.map((a) => a.ancre)).size, articles.length, `${d.slug} : ancres uniques`)
+    assert.ok(new RegExp(`<h1[^>]*>${d.titre}</h1>`).test(html), `${d.slug} : le titre de la page, en casse de phrase`)
+    assert.ok(miseAJour && html.includes(miseAJour) && !corps.includes('Dernière mise à jour'), `${d.slug} : la date est la sous-ligne du titre, plus un paragraphe en gras`)
+    assert.match(html, /<h2 id="[^"]+" class="[^"]*text-xl/, 'titre d’article à 22 px')
+    assert.doesNotMatch(html, />\/legal[^<]*<\/a>|>https?:\/\/[^<]*<\/a>/, `${d.slug} : un lien porte un nom, jamais une adresse brute`)
+    assert.doesNotMatch(html, /\u26A0/, 'aucun pictogramme d’alerte en couleur')
+  }
+})
+
+test('pages juridiques : la mention d’attente est dessinée comme un champ ; « libellé : valeur » devient une liste de définitions ; onglets sur une ligne', () => {
+  const mentions = rendreJuridique('mentions-legales')
+  assert.ok(nb(mentions, /data-en-attente/g) >= 4)
+  assert.ok(mentions.includes('<dl') && /<dt[^>]*>SIRET<\/dt>/.test(mentions))
+  assert.doesNotMatch(mentions, /flex-wrap gap-x-1/, 'les onglets ne cassent plus sur deux rangées')
+  assert.match(mentions, /aria-label="Documents juridiques" class="[^"]*overflow-x-auto/)
+  assert.deepEqual(decouperDefinitions('- **A :** 1\n- **B :** 2'), [{ type: 'texte', texte: '- **A :** 1\n- **B :** 2' }], 'deux lignes restent une liste')
+  const cookies = rendreJuridique('cookies')
+  assert.ok(cookies.includes('md:hidden'), 'au téléphone, chaque valeur du tableau garde le nom de sa colonne')
 })
 
 test('pages juridiques : une panne de lecture dit l’erreur et propose « Réessayer », jamais une page blanche', async () => {
