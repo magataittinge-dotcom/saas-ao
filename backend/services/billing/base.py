@@ -139,3 +139,11 @@ class BillingProvider(ABC):
         raise NotImplementedError(
             "This provider does not implement subscription retrieval."
         )
+
+    def expire_open_checkout_sessions(self, customer_id: str) -> int:
+        """Expire the customer's checkout sessions that are still open (they can no longer be paid) ; return how
+        many were expired. REVUE-2 P1-3 : two open sessions paid in two tabs make two subscriptions billed every
+        month. Default implementation raises — providers that support it override."""
+        raise NotImplementedError(
+            "This provider does not implement checkout-session expiry."
+        )

@@ -155,10 +155,19 @@ def delete_my_account(
     org_id = user.organization_id
     # S-03 — le fournisseur de paiement d'abord : un échec ne change rien.
     org = db.query(Organization).filter(Organization.id == org_id).first()
+    # REVUE-2 P1-1 — une demande déjà enregistrée (2e onglet, double clic, réponse perdue puis « Réessayez ») rend la
+    # même réponse sans toucher au fournisseur ni réécrire sa trace.
+    if org is not None and org.suppression_prevue_le is not None:
+        return {"deleted": False, "suppression_prevue_le": _date_iso(org.suppression_prevue_le)}
     arretes: list[str] = []
     try:
-        fin = resiliation_compte.programmer_ou_resilier(org, arretes) if org is not None else None
-    except resiliation_compte.ResiliationImpossible:
+        fin = (resiliation_compte.programmer_ou_resilier(org, arretes, resiliation_compte.abonnements_tentes(db, org))
+               if org is not None else None)
+    except resiliation_compte.ResiliationImpossible as exc:
+        # REVUE-2 P1-1 — l'arrêt a pu être appliqué malgré l'erreur : un réessai saura qu'il vient de cette demande.
+        if exc.tentes and org is not None:
+            resiliation_compte.noter_tentative(db, org, user.id, exc.tentes)
+            db.commit()
         raise HTTPException(status_code=502, detail="L’abonnement n’a pas pu être résilié : rien n’a été supprimé. "
                                                     "Réessayez dans quelques minutes ou écrivez-nous.")
     if fin is not None:
@@ -183,26 +192,24 @@ def cancel_account_deletion(
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ):
-    """D23 — retire la demande de suppression tant que sa date n'est pas passée. P1-3 : un seul abonnement renouvelle de
-    nouveau, parmi ceux que la demande avait elle-même arrêtés (jamais celui que le client avait arrêté avant)."""
+    """D23 — retire la demande de suppression tant que l'organisation existe (REVUE-2 P0-1 : même après sa date, si
+    rien n'a encore été supprimé : la suppression efface l'organisation d'un seul coup). P1-3 : un seul abonnement
+    renouvelle de nouveau, parmi ceux que la demande avait elle-même arrêtés (jamais celui que le client avait arrêté
+    avant)."""
     _exiger_admin(user)
-    from datetime import datetime
-
     from models.organization import Organization
     from services import resiliation_compte
 
     org = db.query(Organization).filter(Organization.id == user.organization_id).first()
     if org is None or org.suppression_prevue_le is None:
         raise HTTPException(status_code=409, detail="Aucune suppression du compte n’est prévue.")
-    if org.suppression_prevue_le <= datetime.utcnow():
-        raise HTTPException(status_code=409, detail="La date de suppression est passée : la suppression est en cours.")
     try:
         reprise = resiliation_compte.reprendre_abonnements(
             org, resiliation_compte.abonnements_arretes_par_la_demande(db, org))
     except resiliation_compte.ResiliationImpossible:
         raise HTTPException(status_code=502, detail="L’abonnement n’a pas pu être repris : la suppression reste prévue. "
                                                     "Réessayez dans quelques minutes ou écrivez-nous.")
-    org.suppression_prevue_le = None
+    resiliation_compte.retirer_demande(db, org, "annulee", user.id)
     db.commit()
     logger.info("RGPD: suppression du compte annulée — org=%s", org.id)
     return {"suppression_prevue_le": None, "abonnement_repris": reprise["abonnement_repris"],

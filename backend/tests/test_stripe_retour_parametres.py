@@ -18,6 +18,10 @@ class _Faux:
         self.appels.update(success_url=success_url, cancel_url=cancel_url)
         return "https://paiement.invalid/session"
 
+    def expire_open_checkout_sessions(self, customer_id):
+        self.appels["expire"] = customer_id
+        return 0
+
     def create_portal_session(self, customer_id, return_url):
         self.appels["return_url"] = return_url
         return "https://paiement.invalid/portail"

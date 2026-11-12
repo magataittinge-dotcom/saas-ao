@@ -153,11 +153,11 @@ def test_rien_de_sur_a_proposer_est_une_reponse(client, cles, faux_modele, allum
     json.dumps({"fiches": [{"cle": "a", "texte": "b", "pourquoi": "c"}]}),
     json.dumps({"fiches": [{"cle": 1, "texte": "b"}]}),
 ])
-def test_sortie_hors_format_refusee_et_rendue(client, cles, faux_modele, allumee, db_session, sortie):
+def test_sortie_hors_format_refusee_et_comptee(client, cles, faux_modele, allumee, db_session, sortie):
     faux_modele["reponse"] = sortie
     r = client.post(URL)
     assert r.status_code == 502 and "n'a pas la forme attendue" in r.json()["detail"]
-    assert _audit(db_session) == 0
+    assert _audit(db_session) == 1                                       # REVUE-2 P2-2 : les jetons sont payés
 
 
 def test_echec_du_fournisseur_rien_de_consomme(client, cles, faux_modele, allumee, db_session):

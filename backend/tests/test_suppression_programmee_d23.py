@@ -240,12 +240,14 @@ def test_annuler_sans_demande_409(client, abonne, poser):
     assert client.post("/api/users/me/annuler-suppression").status_code == 409
 
 
-def test_annuler_date_passee_409(client, abonne, poser, db_session):
+def test_annuler_date_passee_reste_possible_tant_que_l_organisation_existe(client, abonne, poser, db_session):
+    # REVUE-2 P0-1 : la suppression efface l'organisation d'un seul coup ; tant qu'elle existe, rien n'est supprimé.
     poser(FauxFournisseur([ACTIF]))
     org = db_session.get(Organization, "org-test-1")
     org.suppression_prevue_le = datetime.utcnow() - timedelta(hours=1)
     db_session.commit()
-    assert client.post("/api/users/me/annuler-suppression").status_code == 409
+    assert client.post("/api/users/me/annuler-suppression").status_code == 200
+    assert _org(db_session).suppression_prevue_le is None
 
 
 def test_annuler_echec_du_fournisseur_502_la_demande_reste(client, abonne, poser, db_session):

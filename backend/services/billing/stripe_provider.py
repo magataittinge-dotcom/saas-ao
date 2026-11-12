@@ -150,6 +150,17 @@ class StripeProvider(BillingProvider):
         except stripe.error.StripeError as exc:
             raise BillingError(f"Stripe create_checkout_session failed: {exc}") from exc
 
+    def expire_open_checkout_sessions(self, customer_id):
+        try:
+            ouvertes = stripe.checkout.Session.list(customer=customer_id, status="open", limit=100)
+            expirees = 0
+            for session in ouvertes.auto_paging_iter():
+                stripe.checkout.Session.expire(session.id)
+                expirees += 1
+            return expirees
+        except stripe.error.StripeError as exc:
+            raise BillingError(f"Stripe expire_open_checkout_sessions failed: {exc}") from exc
+
     def create_portal_session(self, customer_id, return_url):
         try:
             session = stripe.billing_portal.Session.create(

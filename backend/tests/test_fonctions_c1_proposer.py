@@ -169,12 +169,12 @@ def test_sans_memoire_404_sans_appel(client, db_session, test_org, faux_modele, 
     "",
     "Nous trions. " * 200,
 ])
-def test_sortie_hors_format_refusee_et_rendue(client, projet, faux_modele, allumee, db_session, sortie):
+def test_sortie_hors_format_refusee_et_comptee(client, projet, faux_modele, allumee, db_session, sortie):
     faux_modele["reponse"] = sortie
     r = client.post(URL, json=CORPS)
     assert r.status_code == 502
     assert "n'a pas la forme attendue" in r.json()["detail"]
-    assert _audit(db_session) == 0
+    assert _audit(db_session) == 1                                       # REVUE-2 P2-2 : les jetons sont payés
     assert _couts(db_session, "proposer_paragraphe") == 1               # les jetons facturés restent inscrits
 
 

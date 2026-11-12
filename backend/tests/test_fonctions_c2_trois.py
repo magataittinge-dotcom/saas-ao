@@ -151,7 +151,7 @@ def test_sortie_hors_format_refusee(client, projet, faux_modele, allumee, db_ses
     faux_modele["reponse"] = sortie
     r = client.post(URL, json=CORPS)
     assert r.status_code == 502 and "n'a pas la forme attendue" in r.json()["detail"]
-    assert _audit(db_session) == 0
+    assert _audit(db_session) == 1                                       # REVUE-2 P2-2 : les jetons sont payés
 
 
 def test_deux_identiques_sur_trois_en_laisse_deux(client, projet, faux_modele, allumee):

@@ -125,6 +125,25 @@ def _abonnement_de_rechange(billing, org: Organization, fini: str | None) -> tup
     return None
 
 
+ACTION_DOUBLON = "paiement.abonnement_doublon"
+
+
+def _signaler_doublon(db: Session, org: Organization, sub_id: str) -> None:
+    """REVUE-2 P1-3 — un abonnement payé et vivant arrive alors que celui de l'organisation vit encore (S-13 : deux
+    sessions payées). Rien n'est résilié ni remboursé d'office (décision de facturation, au fondateur) : une ligne au
+    journal d'audit (une seule par abonnement) et une alerte au journal, identifiants seulement, pour qu'un humain le
+    voie et le règle dans le tableau de bord du fournisseur."""
+    from models.audit_log import AuditLog
+    logger.error("S-13 : abonnement payé en doublon (org=%s, abonnement=%s, abonnement suivi=%s) : à résilier et "
+                 "rembourser depuis le tableau de bord du fournisseur", org.id, sub_id, org.stripe_subscription_id)
+    deja = (db.query(AuditLog.id).filter(AuditLog.organization_id == org.id, AuditLog.action == ACTION_DOUBLON,
+                                         AuditLog.target_id == sub_id).first())
+    if deja is None:
+        db.add(AuditLog(organization_id=org.id, action=ACTION_DOUBLON, target_type="subscription", target_id=sub_id,
+                        extra={"abonnement_suivi": org.stripe_subscription_id}))
+        db.commit()
+
+
 def _get_or_create_customer(org: Organization, user: User) -> str:
     """Return the customer id, creating one on the active provider if needed."""
     billing = get_billing_provider()
@@ -200,6 +219,14 @@ def create_checkout_session(
     except BillingError as exc:
         logger.error("Pricing error for plan %s: %s", payload.plan, exc)
         raise HTTPException(status_code=500, detail="Tarif indisponible pour ce plan") from exc
+
+    # REVUE-2 P1-3 — une seule session payable à la fois par client : deux onglets ouverts puis payés faisaient deux
+    # abonnements prélevés chaque mois (S-13). Les sessions encore ouvertes sont expirées avant d'en créer une. Un échec
+    # ici ne bloque pas un paiement honnête : un doublon, s'il arrive, est signalé à sa réception (webhook).
+    try:
+        billing.expire_open_checkout_sessions(customer_id)
+    except Exception as exc:
+        logger.warning("Sessions de paiement ouvertes non expirées (org=%s, %s)", org.id, type(exc).__name__)
 
     # Retour sur la page elle-même : /billing redirige vers /settings/billing SANS la requête (App.tsx), la page ne
     # voyait plus « session_id » et n'appelait pas /stripe/verify-session (recette finale, paiement en mode test).
@@ -394,6 +421,8 @@ def stripe_webhook(request: Request, payload: bytes = Depends(_corps_brut), db: 
                 # Nouvel abonnement → nouvelle ancre de quotas (C1).
                 org.subscription_started_at = datetime.utcnow()
                 db.commit()
+            elif plan:
+                _signaler_doublon(db, org, subscription_id)
 
     # ── customer.subscription.deleted → downgrade to free ─────────────────────
     # D23 — si l'organisation a demandé la suppression de son compte, c'est l'échéance : tout est supprimé (si aucun
@@ -441,7 +470,7 @@ def stripe_webhook(request: Request, payload: bytes = Depends(_corps_brut), db: 
                 and data_object.get("cancel_at_period_end") is False):
             from services import resiliation_compte
             if resiliation_compte.abonnement_repris(org):
-                org.suppression_prevue_le = None
+                resiliation_compte.retirer_demande(db, org, "abonnement_repris")
                 db.commit()
         # PAIEMENT-2 (constat 2) — on ne croit pas l'offre écrite dans l'événement (un événement ancien, réessayé, remettait
         # l'offre précédente) : l'abonnement est RELU chez le fournisseur, l'offre se lit dans son prix, seulement s'il

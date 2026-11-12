@@ -150,7 +150,7 @@ def test_sortie_hors_format_refusee_rien_d_enregistre(client, faux_modele, allum
     faux_modele["reponse"] = sortie
     r = _deposer(client)
     assert r.status_code == 502 and "n'a pas la forme attendue" in r.json()["detail"]
-    assert _audit(db_session) == 0
+    assert _audit(db_session) == 1                                       # REVUE-2 P2-2 : les jetons sont payés
     db_session.expire_all()
     assert db_session.query(StyleEntreprise).count() == 0
 
