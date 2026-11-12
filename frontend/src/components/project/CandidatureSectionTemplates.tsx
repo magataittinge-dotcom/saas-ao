@@ -14,6 +14,7 @@ import { messageErreur } from '@/lib/erreurs'
 import { nomPiece } from '@/lib/nomsPieces'
 import { libelleSource } from '@/lib/resumeAO'
 import { api } from '@/services/api'
+import { typeAffichable } from '@/lib/adresseSure'
 
 /** Les routes /api exigent le jeton (Bearer) : un lien nu ouvrait un onglet « 401 » (recette finale). La pièce est lue
  *  avec le jeton, puis montrée dans l'onglet ouvert pendant le clic (jamais bloqué comme une fenêtre surgissante). */
@@ -21,8 +22,9 @@ function ouvrirAvecJeton(e: React.MouseEvent<HTMLAnchorElement>): void {
   e.preventDefault()
   const chemin = (e.currentTarget.getAttribute('href') ?? '').replace(/^\/api/, '')
   const onglet = window.open('', '_blank')
+  if (onglet) onglet.opener = null // P2-3 : l'onglet ne peut pas agir sur Synorix
   api.get<Blob>(chemin, { responseType: 'blob' })
-    .then(({ data }) => { if (onglet) onglet.location.href = URL.createObjectURL(data) })
+    .then(({ data }) => { if (onglet) onglet.location.href = URL.createObjectURL(new Blob([data], { type: typeAffichable(data.type) })) })
     .catch(() => { onglet?.close() })
 }
 

@@ -65,3 +65,13 @@ export function ouvrirOngletExterne(adresse: string): boolean {
   window.open(u.href, '_blank', 'noopener,noreferrer')
   return true
 }
+
+const TYPES_AFFICHABLES = new Set(['application/pdf', 'image/png', 'image/jpeg', 'image/webp', 'image/gif'])
+
+/**
+ * P2-3 : le type d'un Blob montré dans un onglet de même origine. PDF et images matricielles seulement ; tout le reste
+ * (HTML, SVG, XML…) devient des octets à télécharger, jamais un document qui s'exécuterait dans l'origine de Synorix.
+ */
+export function typeAffichable(type: string): string {
+  return TYPES_AFFICHABLES.has(type) ? type : 'application/octet-stream'
+}
