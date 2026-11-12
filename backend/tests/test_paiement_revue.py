@@ -240,3 +240,59 @@ def test_p0_1_fournisseur_en_panne_ne_rend_rien(client, test_org, poser, db_sess
     r = _verifier_session(client)
     assert r.json() == {"plan": "free", "updated": False}
     assert _org(db_session).plan == "free"
+
+
+# ── P1-1 : la fin d'un AUTRE abonnement ne remet pas un client payant en offre gratuite ──────────────────────────
+
+def test_p1_1_fin_d_un_ancien_abonnement_ne_retrograde_pas(client, abonne, poser, db_session):
+    poser(FauxFournisseur([_abonnement(), _abonnement(id_="sub_ancien", status="canceled")]))
+    assert _webhook(client, "customer.subscription.deleted",
+                    {"id": "sub_ancien", "customer": "cus_invente"}).status_code == 200
+    org = _org(db_session)
+    assert org.plan == "pro" and org.stripe_subscription_id == "sub_invente"
+    assert org.subscription_started_at == datetime(2030, 1, 14, 10, 0)
+
+
+def test_p1_1_fin_d_un_ancien_abonnement_avec_demande_ne_coupe_pas_l_acces(client, abonne, poser, db_session):
+    f = FauxFournisseur([_abonnement()])
+    clerk = poser(f)
+    assert client.delete("/api/users/me").json()["deleted"] is False
+    f.abonnements.append(_abonnement(id_="sub_ancien", status="canceled"))
+    _webhook(client, "customer.subscription.deleted", {"id": "sub_ancien", "customer": "cus_invente"})
+    org = _org(db_session)
+    assert org is not None and org.suppression_prevue_le is not None
+    assert org.plan == "pro"                                    # accès ouvert jusqu'à la fin de la période payée
+    assert clerk.appels == []
+
+
+def test_p1_1_fin_d_un_autre_abonnement_sans_aucun_payant_vivant_retrograde(client, abonne, poser, db_session):
+    # L'abonnement connu est mort aussi (son propre événement s'est perdu) : plus rien de payé, offre gratuite.
+    poser(FauxFournisseur([_abonnement(status="canceled"), _abonnement(id_="sub_ancien", status="canceled")]))
+    _webhook(client, "customer.subscription.deleted", {"id": "sub_ancien", "customer": "cus_invente"})
+    org = _org(db_session)
+    assert org.plan == "free" and org.stripe_subscription_id is None
+
+
+def test_p1_1_fin_d_un_autre_abonnement_fournisseur_en_panne_rien_ne_change(client, abonne, poser, db_session):
+    poser(FauxFournisseur([_abonnement()], panne=True))
+    assert _webhook(client, "customer.subscription.deleted",
+                    {"id": "sub_ancien", "customer": "cus_invente"}).status_code == 200
+    assert _org(db_session).plan == "pro"
+
+
+def test_p1_1_fin_de_l_abonnement_de_l_organisation_retrograde(client, abonne, poser, db_session):
+    poser(FauxFournisseur([_abonnement(status="canceled")]))
+    _webhook(client, "customer.subscription.deleted", {"id": "sub_invente", "customer": "cus_invente"})
+    org = _org(db_session)
+    assert org.plan == "free" and org.stripe_subscription_id is None and org.subscription_started_at is None
+    assert db_session.get(Project, "p-revue") is not None      # sans demande : rien n'est supprimé
+
+
+def test_p1_1_fin_de_l_abonnement_de_l_organisation_avec_demande_supprime(client, abonne, poser, db_session):
+    f = FauxFournisseur([_abonnement()])
+    clerk = poser(f)
+    client.delete("/api/users/me")
+    f.abonnements = [_abonnement(status="canceled")]
+    _webhook(client, "customer.subscription.deleted", {"id": "sub_invente", "customer": "cus_invente"})
+    assert _org(db_session) is None
+    assert clerk.appels == ["https://api.clerk.com/v1/users/user_clerk_invente"]

@@ -62,6 +62,20 @@ def offre_de_l_abonnement(sub: dict) -> str | None:
     return next((offre for offre, pid in PRODUCTS.items() if product_id and pid == product_id), None)
 
 
+def _fin_qui_concerne_l_organisation(org: Organization, sub_id: str | None) -> bool:
+    """`customer.subscription.deleted` : vrai si l'abonnement terminé est celui de l'organisation (ou si elle n'en connaît
+    aucun), ou s'il ne lui reste plus aucun abonnement payé vivant chez le fournisseur. Fournisseur injoignable : faux
+    (rien ne change ; l'événement de l'abonnement de l'organisation, lui, agira)."""
+    if not org.stripe_subscription_id or sub_id == org.stripe_subscription_id:
+        return True
+    from services import resiliation_compte
+    try:
+        return not resiliation_compte.abonnement_payant_vivant(org)
+    except Exception as exc:
+        logger.warning("Fin d'abonnement : fournisseur injoignable (org=%s, %s)", org.id, type(exc).__name__)
+        return False
+
+
 def _abonnement_lu(billing, sub_id: str) -> dict | None:
     """L'abonnement chez le fournisseur ; None s'il est illisible (rien n'est alors appliqué : le webhook rattrapera)."""
     try:
@@ -332,6 +346,11 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         customer_id = data_object.get("customer")
         if customer_id:
             org = db.query(Organization).filter(Organization.stripe_customer_id == customer_id).first()
+            # P1-1 (relecture du 12/11) — la fin d'un AUTRE abonnement (doublon S-13, ancien abonnement, événement livré
+            # en retard) ne touche ni l'offre ni la demande D23, tant qu'un abonnement payé vit encore chez le fournisseur.
+            if org and not _fin_qui_concerne_l_organisation(org, data_object.get("id")):
+                logger.info("Fin d'un autre abonnement ignorée (org=%s)", org.id)
+                return {"received": True}
             if org and org.suppression_prevue_le is not None:
                 from services import resiliation_compte
                 if resiliation_compte.supprimer_si_demande(db, org):
