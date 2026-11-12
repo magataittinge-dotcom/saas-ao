@@ -178,8 +178,8 @@ This is deliberate — the V2.0 success criterion is *ship & be impressive*, not
 
 | Model | Use | Avg cost / call | Skills assigned |
 |---|---|---|---|
-| **Claude Haiku 4.5** | Lightweight classification, deterministic extraction, fast routing, **reformulation de texte libre du profil** | €0.005–0.02 | Steps 1, validation, low-stakes, profil mémoire vivant (§3.7) |
-| **Claude Sonnet 4.6 / 5.5** | Bulk analysis, extraction-with-reasoning (4.6) ; long-form memo composition (5.5) | €0.02–0.90 | Steps 2 & 3 (extraction + alerts), **Step 4 memo composition** |
+| **Claude Haiku 4.5** | **Reformulation de texte libre du profil**, lecture des dépôts de Mon entreprise, « Préparer les questions », pré-vol de la clé (1 jeton) ; C3 et C4 (éteintes) | €0.005–0.02 | Profil mémoire vivant (§3.7), étape Décider ; aucun routage par modèle, rien à l'étape Dépôt |
+| **Claude Sonnet 4.6 / 5.5** | Bulk analysis, extraction-with-reasoning, import d'un ancien mémoire, filet des lots (4.6) ; long-form memo composition, réécriture, C1 et C2 éteintes (5.5) | €0.02–0.90 | Step 3 (analyse), filet de l'étape 2 sur échec objectif, **Step 4 memo composition** |
 | **Claude Opus 4.7** | Fallback only (default of `MemoireGenerator.MODEL`, never called today) | €0.10–0.30 | Repli par défaut du générateur. La réécriture ciblée de paragraphe (éditeur mémoire) est passée sur Sonnet 5.5 (décision du 4/11, recette Ozcan), plafonnée à 60 par jour et par organisation |
 
 > **Synorix Score = déterministe 0 € (Vision V1 FINALE).** Le go/no-go d'éligibilité (PRD §1.7 D1) et le score de conformité étape 5 (« 14/16 », PRD §3.5) sont **calculés sans LLM** sur les données déjà extraites — Opus n'y intervient **pas**. Le Synorix Score qualité mémoire /100 (LLM) est déclassé en V1.5.
@@ -1278,7 +1278,7 @@ The expert knowledge is **baked in at build time**, not retrieved at runtime —
 
 ### 2.6 — 2026-11-12 (relu contre le code, mission finale)
 
-- **§3.1** — Fonctions C1 à C4 livrées éteintes (interrupteurs, routes, modèles, plafonds).
+- **§3.1** — Usages réels des modèles (pas de routage Haiku) ; fonctions C1 à C4 livrées éteintes (interrupteurs, routes, modèles, plafonds).
 - **§5.6 NEW** — Contrôles déterministes avant le dépôt (B7, B9, B4, B3).
 - **§7.11** — Limiteur réel (nginx 20 r/s ; slowapi unique, clé organisation, repli en mémoire, alerte R-05) et plafonds du jour ; « Coach » retiré (aucune route).
 - **§7.13** — Suppression du compte : immédiate sans abonnement payant, programmée avec (D23, `0035`, webhook, tâche quotidienne, annulation) ; purge des AO ; sauvegardes réelles.
