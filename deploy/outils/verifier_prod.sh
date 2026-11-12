@@ -14,9 +14,10 @@ a() { grep -iE "^$1:" <<<"$2" | head -1 | cut -d' ' -f2- ; }
 # 1. santé de l'API
 s=$(curl -sS -m 10 "$URL/api/health" 2>&1); grep -q '"status"' <<<"$s" && ok "api/health : ${s:0:120}" || ko "api/health : ${s:0:120}"
 
-# 1b. limiteur de débit : /api/projects sans jeton → 401 (500 = Redis injoignable ou mauvais mot de passe dans REDIS_URL)
+# 1b. /api/projects sans jeton → 401 (Redis injoignable ne donne PAS 500 depuis S-10 : repli du limiteur en mémoire ;
+#     le contrôle de Redis se fait au journal, « stockage (Redis) injoignable », voir JOUR-J.md)
 c=$(curl -sS -o /dev/null -w '%{http_code}' -m 10 "$URL/api/projects")
-[ "$c" = "401" ] && ok "api/projects sans jeton : 401" || ko "api/projects sans jeton : $c (attendu 401 ; 500 = Redis injoignable ou mauvais mot de passe dans REDIS_URL)"
+[ "$c" = "401" ] && ok "api/projects sans jeton : 401" || ko "api/projects sans jeton : $c (attendu 401)"
 
 # 2. redirections
 h=$(entete -m 10 "http://${URL#https://}/"); grep -qE "^HTTP/[0-9.]+ 301" <<<"$h" && ok "http → https (301)" || ko "http → https : $(head -1 <<<"$h")"
@@ -24,8 +25,9 @@ h=$(entete -m 10 "http://${URL#https://}/"); grep -qE "^HTTP/[0-9.]+ 301" <<<"$h
 # 3. page de l'appli : en-têtes
 h=$(entete -m 10 "$URL/")
 [ -n "$(a strict-transport-security "$h")" ] && ok "HSTS" || ko "HSTS absent"
-[ -n "$(a content-security-policy-report-only "$h")" ] && ok "CSP en observation" || ko "CSP en observation absente"
-[ -n "$(a content-security-policy "$h")" ] && ko "CSP BLOQUANTE présente sur la page (attendu : observation seule)" || ok "aucune CSP bloquante sur la page"
+# CSP du front BLOQUANTE depuis le 12/11/2026 (14cfc24) ; si elle a été repassée en observation (JOUR-J.md), le KO le dit.
+[ -n "$(a content-security-policy "$h")" ] && ok "CSP bloquante" || ko "CSP bloquante absente"
+[ -n "$(a content-security-policy-report-only "$h")" ] && ko "CSP en observation seulement (Report-Only) : repasser en bloquante quand les rapports sont propres" || ok "pas de CSP en observation seule"
 [ "$(a x-frame-options "$h")" = "DENY" ] && ok "X-Frame-Options DENY" || ko "X-Frame-Options : $(a x-frame-options "$h")"
 grep -qi "no-cache" <<<"$(a cache-control "$h")" && ok "index.html en no-cache" || ko "Cache-Control de la page : $(a cache-control "$h")"
 

@@ -370,13 +370,18 @@ Essayé avec le nginx 1.24 d'Ubuntu noble (bloc 6). Ce qu'il règle :
   (502, 503, 504), `location @api_indisponible` rend un **503 JSON en français** (`detail` : « Synorix est momentanément
   indisponible. Réessayez dans quelques instants. »), `Retry-After: 30`, jamais en cache ; le front affiche cette phrase.
   Les réponses de l'API elle-même passent telles quelles. Vérification : `sudo systemctl stop synorix-api`, puis
-  `curl -s -i https://synorix.tech/api/projects | sed -n '1p;$p'` → `HTTP/2 503` et la phrase ; `sudo systemctl start synorix-api`.
+  `curl -s -i https://synorix.tech/api/projects | sed -n '1p;$p'` → `HTTP/2 503` et la phrase, accents en échappements JSON
+(`{"detail":"Synorix est momentan\u00e9ment indisponible. R\u00e9essayez dans quelques instants."}`) ; `sudo systemctl start synorix-api`.
 - **Racine** : `/srv/synorix/www`, alimentée par `deploy/outils/publier_front.sh` (§10).
 
 ```bash
 sudo nginx -t && sudo systemctl reload nginx
-deploy/outils/verifier_prod.sh https://synorix.tech /srv/synorix/www   # lecture seule, « 0 KO » attendu
+deploy/outils/verifier_prod.sh https://synorix.tech /srv/synorix/www   # lecture seule ; voir la note ci-dessous
 ```
+
+`verifier_prod.sh` attend encore la CSP **en observation** (l. 27-28) : avec la CSP bloquante, il rend exactement deux KO
+(« CSP en observation absente », « CSP BLOQUANTE présente sur la page ») et « --- 2 KO » ; tout autre KO est une panne
+(répété en local le 12/11/2026 sur `ed64cfc`, nginx 1.24 : 11 OK, ces 2 KO, 0 violation en console sur 4 écrans).
 
 ### SSL Let's Encrypt
 
@@ -564,8 +569,12 @@ backend/venv/bin/pip install -r backend/requirements.txt --quiet
 sudo systemctl restart synorix-api synorix-celery-worker synorix-celery-beat
 ```
 Puis, sur le PC : `git checkout <même SHA>` et `deploy/outils/envoyer_front.sh deploy@synorix.tech`.
-Si la régression vient d'une migration : `alembic downgrade <révision>` (chaque migration a sa descente ; essayé
-pour 0024, 0025 et 0034 → 0033 → 0034), ou restauration de la sauvegarde (`BACKUP_RECOVERY.md` §3). Une descente
+Si la régression vient d'une migration : `alembic downgrade <révision>` **avant** le `git checkout`, services arrêtés, avec
+le code encore en place (chaque migration a sa descente ; essayé pour 0024, 0025, 0034 → 0033 → 0034 et, le 12/11/2026,
+0037 → 0034 → 0037). Dans l'autre ordre, l'ancien code ne connaît pas la révision de la base : « Can't locate revision
+identified by '0037' ». Et l'API refuse de démarrer tant que la base n'est pas exactement à la head de son code
+(« Schéma non à jour (alembic à '0034', head '0037') », `main.py`) : un retour à une empreinte d'une autre head passe
+toujours par la descente, ou restauration de la sauvegarde (`BACKUP_RECOVERY.md` §3). Une descente
 efface les colonnes et tables ajoutées par la migration, **avec leurs données** (0035 : les demandes de suppression de
 compte programmées ; 0036 : les styles d'entreprise lus ; 0037 ne retire que des index, l'extension `pg_trgm` reste).
 `alembic downgrade base` passe depuis R-01 (`eb4b2fc`, `tests/test_migrations_aller_retour_r01.py`) ; pour repartir de
@@ -590,7 +599,7 @@ La liste suivie le jour de la mise en ligne, case par case, avec la commande et 
 - [ ] Services `synorix-api`, `synorix-celery-worker`, `synorix-celery-beat` démarrent au boot (`systemctl is-enabled …`)
 - [ ] Sauvegarde de nuit active (`systemctl list-timers synorix-sauvegarde.timer`) et restauration essayée une fois (VPS.md C10)
 - [ ] Health check `https://synorix.tech/api/health` → `{"status":"ok","db":"up"}`
-- [ ] `alembic current` → `0037_index_echelle (head)` ; `alembic check` → aucune différence (§3)
+- [ ] `alembic current` → `0037 (head)` (les révisions s'appellent `0001` … `0037`) ; `alembic check` → aucune différence (§3)
 - [ ] Fonctions C1 à C4 éteintes (`RELECTURE_PROPOSER`, `REECRIRE_TROIS`, `FICHE_PROPOSEE`, `STYLE_ENTREPRISE` à 0 ou absentes)
 - [ ] `/api/metrics` : 404 sans jeton, JSON avec `Authorization: Bearer $METRICS_TOKEN`
 - [ ] Mention légale + politique RGPD publiées
