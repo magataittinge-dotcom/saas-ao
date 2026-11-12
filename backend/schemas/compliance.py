@@ -84,6 +84,14 @@ class ChecklistItemResponse(BaseModel):
         from services.ai.checklist_matcher import signature_requise
         return signature_requise(self)
 
+    @computed_field
+    @property
+    def a_relire(self) -> bool:
+        """B7 — formulaire rempli déposé mais à relire avant le dépôt (PDF sans la raison sociale ni le SIRET du
+        profil, scan sans texte, DPGF avec des lignes sans prix) : le motif est dans ``details``. Jamais bloquant."""
+        return (self.source_kind == "dce_template" and bool(self.completed_project_doc_id)
+                and self.status == "warning")
+
 
 SourceKind = Literal["vault", "dce_template"]
 ExpectedTemplateType = Literal[
