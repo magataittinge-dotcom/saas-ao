@@ -294,3 +294,24 @@ def test_apercu_sans_abonnement_immediate(client, test_user, poser):
 def test_apercu_panne_du_fournisseur_502(client, abonne, poser):
     poser(FauxFournisseur([ACTIF], panne=True))
     assert client.get("/api/users/me/suppression").status_code == 502
+
+
+# ── Isolation entre organisations ─────────────────────────────────────────────────────────────────────
+
+def test_cross_org_la_demande_d_une_autre_organisation_n_est_ni_lue_ni_annulee(client, abonne, poser, db_session):
+    autre = Organization(id="org-autre-d23", name="Autre", plan="pro", stripe_customer_id="cus_autre",
+                         suppression_prevue_le=datetime(2030, 3, 14))
+    db_session.add(autre)
+    db_session.add(Project(id="p-autre-d23", organization_id="org-autre-d23", name="AO autre"))
+    db_session.commit()
+    f = FauxFournisseur([ACTIF])
+    poser(f)
+    assert client.get("/api/billing/quota").json()["suppression_prevue_le"] is None
+    assert client.get("/api/users/me/suppression").json()["suppression_prevue_le"] is None
+    assert client.post("/api/users/me/annuler-suppression").status_code == 409
+    # la fin d'abonnement de NOTRE client ne touche pas l'autre organisation
+    _webhook(client, "customer.subscription.deleted", {"id": "sub_invente", "customer": "cus_invente"})
+    db_session.expire_all()
+    assert db_session.get(Organization, "org-autre-d23").suppression_prevue_le is not None
+    assert db_session.get(Project, "p-autre-d23") is not None
+    assert f.repris == []
