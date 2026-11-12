@@ -51,10 +51,11 @@ _en_cours: set[str] = set()
 _verrou = threading.Lock()
 
 
-def _date_remise(project: Project) -> Optional[date]:
-    """Date limite de remise : champs critiques du lot, sinon l'analyse, sinon l'échéance saisie."""
-    lot = project.selected_lot or "_all"
-    champ = ((project.critical_fields or {}).get(lot) or {}).get("date_limite_remise") or {}
+def _date_remise(db: Session, project: Project) -> Optional[date]:
+    """Date limite de remise : champs critiques du lot (même lecture que l'écran : rangés, sinon calculés, D-05),
+    sinon l'analyse, sinon l'échéance saisie."""
+    from routers.analysis import _champs_critiques_lus
+    champ = (_champs_critiques_lus(db, project) or {}).get("date_limite_remise") or {}
     valeur = champ.get("value") or {}
     brut = valeur.get("date") if isinstance(valeur, dict) else None
     return (parse_french_date(brut or "") or parse_french_date((project.infos_marche or {}).get("date_limite_reponse") or "")
@@ -86,7 +87,7 @@ def date_limite_questions(project_id: str, user: User = Depends(get_auth_user), 
     rc_d_abord = sorted(docs, key=lambda d: 0 if (d.type or "") == "rc" else 1)
     pieces = [(d.file_name, d.extracted_text or "") for d in rc_d_abord
               if (d.type or "") in ("rc", "ccap") and not getattr(d, "is_user_completed", False)]
-    lecture = trouver_date_questions(pieces, _date_remise(project))
+    lecture = trouver_date_questions(pieces, _date_remise(db, project))
     return {**lecture, "rappel": RAPPEL_REGLE}
 
 

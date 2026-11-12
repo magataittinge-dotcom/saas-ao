@@ -218,3 +218,20 @@ def test_les_ancres_du_serveur_sont_les_cles_de_l_ecran_du_memoire():
     cles_ecran = set(re.findall(r"cle: '([a-z_]+)'", ts))
     cles_serveur = {a.removeprefix("sec-") for a in _TITRES if a.startswith("sec-")}
     assert cles_serveur == cles_ecran
+
+
+def test_route_relecture_source_des_criteres_d_un_lot_jamais_range(client, db_session, test_org):
+    """RESTES-3 — depuis D-05, les champs critiques d'un lot jamais rangé sont calculés à la lecture : la relecture
+    passe par la même lecture que l'écran et garde la source des critères (RC). Texte inventé."""
+    from models.project import ProjectDocument
+    _projet(db_session, test_org.id, "p-rel-nr", CRITERES, memoire(
+        methodologie="La méthodologie d'exécution suit trois phases.", dechets="Les déchets sont triés."))
+    db_session.add(ProjectDocument(project_id="p-rel-nr", type="rc", file_url="x", file_name="RC-invente.pdf",
+                                   extracted_text="Article 6 : jugement des offres selon les critères ci-dessous."))
+    db_session.commit()
+    assert db_session.get(Project, "p-rel-nr").critical_fields is None
+    d = client.get("/api/projects/p-rel-nr/memoire/relecture").json()
+    sous = [l for l in d["lignes"] if l["type"] == "sous_critere"]
+    assert sous and all(l["source"] and l["source"]["document"] == "RC-invente.pdf" for l in sous), sous
+    db_session.expire_all()
+    assert db_session.get(Project, "p-rel-nr").critical_fields is None

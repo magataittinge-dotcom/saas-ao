@@ -34,10 +34,11 @@ def _source_exigence(item) -> dict | None:
     return None
 
 
-def _source_criteres(project) -> dict | None:
-    """La source des critères (page du RC qui porte le jugement des offres), lue dans les champs critiques
-    déjà calculés du lot : le même passage que la carte « L'AO en 30 secondes »."""
-    champs = (project.critical_fields or {}).get(project.selected_lot or "_all")
+def _source_criteres(db: Session, project) -> dict | None:
+    """La source des critères (page du RC qui porte le jugement des offres), lue dans les champs critiques du lot
+    par la même lecture que la carte « L'AO en 30 secondes » (rangés par l'analyse, sinon calculés : D-05)."""
+    from routers.analysis import _champs_critiques_lus
+    champs = _champs_critiques_lus(db, project)
     if not isinstance(champs, dict):
         return None
     source = (champs.get("criteres") or {}).get("source")
@@ -79,7 +80,7 @@ def relire_mon_memoire(
     relecture = relire_memoire(
         memoire.content_json,
         criteres=project.criteres_jugement,
-        source_criteres=_source_criteres(project),
+        source_criteres=_source_criteres(db, project),
         pieces=pieces,
         dtu_autorises=regle.numeros(),
         exigences=exigences,

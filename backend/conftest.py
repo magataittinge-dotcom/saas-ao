@@ -87,6 +87,14 @@ def _ai_preflight_no_network(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _lectures_champs_critiques_vides():
+    """Le petit cache des champs critiques lus (D-05, clé : projet, lot, empreinte des données) vit dans le processus :
+    la base est refaite à chaque test, le cache aussi (sinon un projet de même id hérite des champs du test d'avant)."""
+    from routers.analysis import _LECTURES_CF
+    _LECTURES_CF.clear()
+
+
+@pytest.fixture(autouse=True)
 def _reset_schema():
     """Rebuild a clean schema before each test — avoids cross-test bleed."""
     Base.metadata.drop_all(bind=engine)

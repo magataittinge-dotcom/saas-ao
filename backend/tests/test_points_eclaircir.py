@@ -324,3 +324,18 @@ def test_plafond_jour_questions_se_regle_comme_les_autres_plafonds_du_jour(clien
     assert r.status_code == 429 and "2 listes de questions" in r.json()["detail"] and modele["appels"] == []
     monkeypatch.setenv("PLAFOND_JOUR_QUESTIONS", "0")
     assert client.post(f"/api/projects/{PID}/points-a-eclaircir").status_code == 200, "0 coupe le plafond"
+
+
+def test_date_limite_des_questions_lit_la_remise_d_un_lot_jamais_range(client, db_session, test_org, modele):
+    """RESTES-3 — depuis D-05, `GET /critical-fields` ne range plus les champs : la date des questions relit la remise
+    par la même lecture que l'écran (calculée depuis le RC), pas seulement `project.critical_fields`. Texte inventé."""
+    _projet(db_session, test_org.id, docs=False)
+    db_session.add(ProjectDocument(project_id=PID, type="rc", file_url="x", file_name="RC-demo.pdf", extracted_text=(
+        "Les offres doivent parvenir au plus tard le 22/03/2027 à 12h00. "
+        "Les questions parviennent à l'acheteur au plus tard 10 jours avant la date limite de dépôt des plis. ")))
+    db_session.commit()
+    assert db_session.get(Project, PID).critical_fields is None
+    corps = client.get(f"/api/projects/{PID}/date-limite-questions").json()
+    assert (corps["statut"], corps["date"], corps["regle"]) == ("trouvee", "2027-03-12", "relative")
+    db_session.expire_all()
+    assert db_session.get(Project, PID).critical_fields is None       # lecture pure
