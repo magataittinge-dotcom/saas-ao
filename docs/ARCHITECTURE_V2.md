@@ -1232,6 +1232,7 @@ Used at sign-up to validate the customer's SIRET, ensure the entity is active, a
 - Provider abstrait (`billing_provider`, `billing_country`) déjà en place — prêt pour la migration d'entité
 - Customer Portal for self-service plan management
 - Webhooks for `customer.subscription.updated` → updates `accounts.subscription_status` ; `customer.subscription.deleted` exécute une suppression de compte programmée (D23, §7.13) ou rend l'offre gratuite ; un `updated` qui reprend le renouvellement retire la demande. La route du webhook est synchrone (`def`), son corps brut lu par une dépendance asynchrone (P2-1).
+- **Le webhook et `verify-session` relisent l'abonnement chez le fournisseur** (`routers/stripe_billing.py`) : l'offre vient du **prix** de l'abonnement (`offre_de_l_abonnement`), jamais des métadonnées ; elle n'est ouverte que si l'abonnement vit (`active`, `trialing`) et appartient au client de l'organisation ; une session déjà appliquée n'écrit rien. `updated` n'agit que sur l'abonnement de l'organisation ; à la fin de l'abonnement suivi, un doublon payé encore vivant devient l'abonnement suivi au lieu d'un retour à l'offre gratuite. Fournisseur injoignable sur `checkout.session.completed` : 503 (Stripe réessaie). Aucun `invoice.*` n'est traité.
 - **Production keys** activated before V1.0 ships
 
 ### 11.6 NotebookLM strategy
@@ -1274,7 +1275,7 @@ The expert knowledge is **baked in at build time**, not retrieved at runtime —
 - **§7.11** — Limiteur réel (nginx 20 r/s ; slowapi unique, clé organisation, repli en mémoire, alerte R-05) et plafonds du jour ; « Coach » retiré (aucune route).
 - **§7.13** — Suppression du compte : immédiate sans abonnement payant, programmée avec (D23, `0035`, webhook, tâche quotidienne, annulation) ; purge des AO ; sauvegardes réelles.
 - **§8.3 / §8.6 / §8.10** — Index `0037` ; exécuteur de `to_thread` (R-04) ; quotas de la grille du 11/11 et budget d'IA du jour (60 €, réservations) à la place du « cost guard » 15 €/100 €/300 € jamais codé.
-- **§10.6 / §10.7** — Variables réellement lues par le code. **§11.4** — Sirene câblé (API publique sans clé). **§11.5** — webhooks de D23.
+- **§10.6 / §10.7** — Variables réellement lues par le code. **§11.4** — Sirene câblé (API publique sans clé). **§11.5** — webhooks de D23 ; abonnement relu chez le fournisseur, offre lue dans le prix (PAIEMENT, PAIEMENT-2).
 
 ### 2.5 — 2026-07-01 (alignement Vision V1 FINALE)
 
