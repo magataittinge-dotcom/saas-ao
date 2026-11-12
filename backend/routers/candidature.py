@@ -212,6 +212,9 @@ async def upload_completed_template(
     item.status = "present"
     if item.details:
         item.details = f"Template complété : {safe_name}"
+    # B7 — un PDF rempli ne compte « prêt » que s'il porte la raison sociale ou le SIRET du profil.
+    if ext == ".pdf":
+        await _controler_pdf_rempli(item, abs_path, safe_name, user, db)
 
     # ── C12 : une DPGF re-uploadée passe au contrôle formel automatique ──────
     # (lignes vides, totaux) — on lit le CONTRAT, jamais de jugement de prix.
@@ -243,6 +246,28 @@ async def upload_completed_template(
     db.commit()
     db.refresh(item)
     return item
+
+
+async def _controler_pdf_rempli(item: ChecklistItem, chemin: Path, nom: str, user: User, db: Session) -> None:
+    """B7 — lit le texte du PDF déposé (hors event-loop, jamais conservé) et passe la ligne « À relire »
+    (statut ``warning``, motif dans ``details``) s'il ne porte ni la raison sociale ni le SIRET du profil."""
+    from models.organization import Organization
+    from services.controle_formulaire import controle_formulaire_rempli
+    from services.document_processor import DocumentProcessor
+    from services.raison_sociale import raison_sociale_de
+
+    try:
+        texte, _pages, _avertissement = await asyncio.to_thread(
+            DocumentProcessor().extract_ex, chemin, nom, 30)
+    except Exception as exc:   # extract_ex ne lève pas ; garde-fou : le dépôt ne casse jamais
+        logger.warning("Lecture du formulaire rempli impossible : %s", type(exc).__name__)
+        texte = ""
+    org = db.get(Organization, user.organization_id)
+    motif = controle_formulaire_rempli(
+        texte, raison_sociale=raison_sociale_de(org, db), siret=getattr(org, "siret", None))
+    if motif:
+        item.status = "warning"
+        item.details = f"{motif} Fichier déposé : {nom}."
 
 
 class LinkVaultDocBody(BaseModel):
