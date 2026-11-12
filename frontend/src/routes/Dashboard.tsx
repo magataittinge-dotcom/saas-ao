@@ -49,9 +49,12 @@ export function suiteDuJour(projets: readonly Project[], maintenant: Date = new 
 export function phraseDeSynorix(comptes: ComptesAO | null, profilRenseigne: boolean | null): { phrase: string; lien?: { to: string; libelle: string } } | null {
   if (comptes && comptes.aMettreAJour > 0) {
     return {
-      phrase: comptes.aMettreAJour > 1
-        ? `${comptes.aMettreAJour} appels d’offres ont dépassé leur date de remise. Dites ce qu’ils sont devenus : ils rejoindront les terminés.`
-        : 'Un appel d’offres a dépassé sa date de remise. Dites ce qu’il est devenu : il rejoindra les terminés.',
+      // à partir de dix, la phrase ne demande plus un geste par dossier (jury, tour 1 : « 500 gestes ») : elle dit par où commencer
+      phrase: comptes.aMettreAJour >= 10
+        ? `${comptes.aMettreAJour} appels d’offres ont dépassé leur date de remise. Commencez par les plus récents : chacun rejoint les terminés dès que vous dites ce qu’il est devenu.`
+        : comptes.aMettreAJour > 1
+          ? `${comptes.aMettreAJour} appels d’offres ont dépassé leur date de remise. Dites ce qu’ils sont devenus : ils rejoindront les terminés.`
+          : 'Un appel d’offres a dépassé sa date de remise. Dites ce qu’il est devenu : il rejoindra les terminés.',
     }
   }
   if (profilRenseigne === false) {

@@ -241,3 +241,11 @@ test('Mes AO : la recherche est le champ du système (pilule, 44 px, contour à
   assert.match(champ, /border-bord-champ/)
   assert.match(champ, /placeholder:text-fg-3/)
 })
+
+test('Accueil, dix appels d’offres à mettre à jour ou plus : la phrase de Synorix ne demande plus un geste par dossier', async () => {
+  const { phraseDeSynorix } = await import('@/routes/Dashboard')
+  const comptes = (n: number) => ({ enCours: 0, aMettreAJour: n, termines: 0 }) as never
+  assert.match(phraseDeSynorix(comptes(3), true)!.phrase, /^3 appels d’offres ont dépassé leur date de remise\. Dites ce qu’ils sont devenus/)
+  assert.match(phraseDeSynorix(comptes(500), true)!.phrase, /^500 appels d’offres ont dépassé leur date de remise\. Commencez par les plus récents/)
+  assert.doesNotMatch(phraseDeSynorix(comptes(500), true)!.phrase, /Dites ce qu’ils sont devenus/)
+})
