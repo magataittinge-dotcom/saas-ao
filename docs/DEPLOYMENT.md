@@ -116,6 +116,9 @@ extension vector ») ; avec elle, les 34 migrations passent (0034 head, 25 table
 schéma identique aux modèles hors `rag_chunks`, créée en SQL), puis l'API démarre (`/api/health` :
 `db: up`). Depuis le 12/11/2026 la head est **`0035_suppression_prevue`** (une colonne `suppression_prevue_le` sur
 `organizations`, D23) : toujours 25 tables (mesuré sur la base du banc à 0035).
+La migration **0037** (index de lecture à l'échelle) crée l'extension `pg_trgm` : extension « de confiance »
+(Postgres ≥ 13), le rôle synorix, propriétaire de la base, la crée sans superutilisateur. `alembic check` passe sur une
+base neuve (R-02, 12/11/2026) : il peut servir de garde avant une mise en ligne.
 
 `/etc/postgresql/16/main/postgresql.conf` : `listen_addresses = 'localhost'`.
 Les réglages de mémoire et de connexions sont dans `deploy/postgres/synorix.conf`, installé en
@@ -529,6 +532,8 @@ concernées (`<` dump, `>` base restaurée) et le code 1. Joué en local le 12/1
 ### 12.2 Logs
 
 - `journalctl -u synorix-api -f` — runtime + erreurs
+- `journalctl -u synorix-api | grep "Limiteur de débit"` — Redis injoignable (R-05) : les limites de débit
+  passent sur un compteur en mémoire du processus, une ligne ERROR à la panne, une ligne au retour de Redis
 - `tail -f /var/log/nginx/synorix.access.log` — trafic
 - `tail -f /var/log/nginx/synorix.error.log` — erreurs proxy
 

@@ -44,10 +44,16 @@ target_metadata = Base.metadata
 # et d'`alembic check` — sinon il apparaît en faux « removed table ». Sa gestion
 # reste 100 % alembic (0003), la source unique est préservée.
 _RAW_TABLES = {"rag_chunks"}
+# R-02 — index Postgres posés en DDL par les migrations seulement (GIN sur une expression ou des trigrammes : la
+# base SQLite des tests ne les a pas, l'ORM ne les décrit pas) : 0028 (départements, métiers), 0037 (objet, acheteur).
+_RAW_INDEXES = {"ix_avis_veille_departements_gin", "ix_avis_veille_metiers_gin",
+                "ix_avis_veille_objet_trgm", "ix_avis_veille_acheteur_trgm"}
 
 
 def _include_object(obj, name, type_, reflected, compare_to):
     if type_ == "table" and name in _RAW_TABLES:
+        return False
+    if type_ == "index" and name in _RAW_INDEXES:
         return False
     if type_ == "index" and getattr(obj, "table", None) is not None \
             and obj.table.name in _RAW_TABLES:

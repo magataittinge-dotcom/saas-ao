@@ -21,12 +21,12 @@ class AvisVeille(Base):
     # versions, elles ne doivent ni recréer la ligne ni écraser la version courante.
     ids_lies = Column(JSON, nullable=False, default=list)
     objet = Column(Text, nullable=False)
-    acheteur = Column(String(500), nullable=False, default="")
+    acheteur = Column(String(500), nullable=False, default="", server_default="")
     departements = Column(JSON, nullable=False, default=list)                # ["44", "49"]
     date_parution = Column(Date, nullable=False, index=True)
     date_limite = Column(Date, nullable=True, index=True)
-    nature = Column(String(40), nullable=False, default="APPEL_OFFRE")
-    procedure = Column(String(20), nullable=False, default="autre")          # valeur normalisée (contrat)
+    nature = Column(String(40), nullable=False, default="APPEL_OFFRE", server_default="APPEL_OFFRE")
+    procedure = Column(String(20), nullable=False, default="autre", server_default="autre")          # valeur normalisée (contrat)
     procedure_libelle = Column(String(120), nullable=True)                   # texte BOAMP d'origine
     famille = Column(String(20), nullable=True)                              # JOUE / FNS / MAPA / DSP …
     descripteurs = Column(JSON, nullable=False, default=list)                # [{"code": "74", "libelle": "Couverture"}]
