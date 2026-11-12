@@ -116,6 +116,9 @@ extension vector ») ; avec elle, les 34 migrations passent (0034 head, 25 table
 schéma identique aux modèles hors `rag_chunks`, créée en SQL), puis l'API démarre (`/api/health` :
 `db: up`). Depuis le 12/11/2026 la head est **`0035_suppression_prevue`** (une colonne `suppression_prevue_le` sur
 `organizations`, D23) : toujours 25 tables (mesuré sur la base du banc à 0035).
+La migration **0037** (index de lecture à l'échelle) crée l'extension `pg_trgm` : extension « de confiance »
+(Postgres ≥ 13), le rôle synorix, propriétaire de la base, la crée sans superutilisateur. `alembic check` passe sur une
+base neuve (R-02, 12/11/2026) : il peut servir de garde avant une mise en ligne.
 
 `/etc/postgresql/16/main/postgresql.conf` : `listen_addresses = 'localhost'`.
 Les réglages de mémoire et de connexions sont dans `deploy/postgres/synorix.conf`, installé en
@@ -213,6 +216,7 @@ Valeur par défaut entre parenthèses ; pour les plafonds, `0` coupe la garde.
 | Purge (B18, D15) | `SYNORIX_PURGE_AO_ACTIVE` (0 = simulation), `SYNORIX_PURGE_AO_JOURS` (30) | AO supprimés depuis N jours : fichiers effacés par le worker. |
 | E-mails | `SMTP_HOST`, `SMTP_PORT` (587), `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` (tous vides) | Vides : notifications dans l'appli seulement (les e-mails de connexion sont envoyés par Clerk). |
 | Exploitation | `METRICS_TOKEN` (vide = `/api/metrics` fermé), `SYNORIX_X_ACCEL_PREFIX` (vide), caches et isolation ci-dessous | |
+| Fils de `to_thread` (R-04) | `SYNORIX_FILS_TO_THREAD` (16, borné à 64) | Fils de l'exécuteur de `asyncio.to_thread`, posé au démarrage (`services/executeur.py`). Sans lui, asyncio en prend `cpu + 4` (5 sur 1 vCPU), partagés par les appels courts à l'IA (10 à 60 s), les copies vers le coffre et les aperçus PDF. Ces fils attendent le réseau ou un processus PDFium, pas le CPU : 16 suffit au lancement. |
 | Stockage objet (pas en V1) | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_S3_BUCKET` (vides), `AWS_REGION` (eu-west-3) | Laisser vides (voir plus haut). |
 | Locale | `COUNTRY_CODE` (FR), `CURRENCY` (EUR), `CURRENCY_SYMBOL` (€), `TAX_RATE` (0.20), `TAX_LABEL` (TVA), `TIMEZONE` (Europe/Paris), `LOCALE` (fr_FR), `DATE_FORMAT` (%d/%m/%Y), `COMPANY_NAME` (Synorix), `COMPANY_ADDRESS`, `COMPANY_VAT_NUMBER`, `COMPANY_REGISTRATION_NUMBER`, `LEGAL_JURISDICTION` (FR) | `config/locale.py` ; rien à poser pour la France. |
 | Front (au build, sur le PC) | `VITE_CLERK_PUBLISHABLE_KEY` (obligatoire), `VITE_API_URL` (vide en production), `VITE_PROXY_API` (serveur de développement seulement) | Figées dans le paquet par `npm run build` (`frontend/.env.production`). |
@@ -495,6 +499,24 @@ illisibles). Essayé en local le 27/10/2026 : deux passages (le second n'envoie 
 du dump (17 tables avec données à l'époque ; 25 tables au schéma 0034 et 0035) et d'une pièce (identique), base
 restaurée relue. Restauration : `BACKUP_RECOVERY.md`.
 
+**Essai de restauration (R-03, une fois par mois et après tout changement de la sauvegarde)** : relire un dump de restic,
+le restaurer dans une base **jetable**, compter les lignes de chaque table et les comparer à celles du dump (blocs
+COPY), puis supprimer la base. `pg_restore --list` seul ne prouve rien : il lit le sommaire, pas les données.
+
+```bash
+sudo -i
+install -m 750 /srv/synorix/deploy/sauvegarde/synorix-essai-restauration.sh /usr/local/sbin/synorix-essai-restauration
+set -a; . /etc/synorix/sauvegarde.env; set +a
+restic restore latest --target /root/essai --include /var/backups/synorix/synorix.dump
+synorix-essai-restauration /root/essai/var/backups/synorix/synorix.dump    # base synorix_essai, supprimée à la fin
+echo $?                                                                    # 0 = chaque table restaurée en entier
+rm -rf /root/essai
+```
+
+Sortie attendue : `essai de restauration OK : <n> tables, <m> lignes, toutes restaurées`. En écart : les tables
+concernées (`<` dump, `>` base restaurée) et le code 1. Joué en local le 12/11/2026 sur une copie de la base jetable
+(dump de 36 Mo, 26 tables, 8 702 lignes, code 0). Le script refuse de prendre la base de production pour base d'essai.
+
 ---
 
 ## 12. Monitoring de base
@@ -510,6 +532,8 @@ restaurée relue. Restauration : `BACKUP_RECOVERY.md`.
 ### 12.2 Logs
 
 - `journalctl -u synorix-api -f` — runtime + erreurs
+- `journalctl -u synorix-api | grep "Limiteur de débit"` — Redis injoignable (R-05) : les limites de débit
+  passent sur un compteur en mémoire du processus, une ligne ERROR à la panne, une ligne au retour de Redis
 - `tail -f /var/log/nginx/synorix.access.log` — trafic
 - `tail -f /var/log/nginx/synorix.error.log` — erreurs proxy
 

@@ -15,6 +15,9 @@ Corrections :
 - **swallow_errors** : une panne du backend de limitage (Redis down) ne doit
   jamais faire tomber l'app en 5xx — on laisse passer plutôt que bloquer.
 """
+import logging
+import threading
+
 from fastapi.routing import iter_route_contexts
 from slowapi import Limiter
 from slowapi.middleware import (
@@ -28,6 +31,8 @@ from slowapi.util import get_remote_address
 from config import get_settings
 
 settings = get_settings()
+logger = logging.getLogger(__name__)
+_alerte_garde = threading.Lock()
 
 
 def org_or_ip_key(request) -> str:
@@ -62,7 +67,28 @@ class LimiteurResilient(Limiter):
 
     def _check_request_limit(self, request, endpoint_func, in_middleware=True):
         request.state.view_rate_limit = None
-        super()._check_request_limit(request, endpoint_func, in_middleware)
+        mort_avant = self._storage_dead
+        try:
+            super()._check_request_limit(request, endpoint_func, in_middleware)
+        finally:
+            self._signaler_stockage(mort_avant)
+
+    def _signaler_stockage(self, mort_avant: bool) -> None:
+        """R-05 — une alerte au journal (niveau ERROR) quand le stockage tombe, une ligne quand il revient ; une seule
+        par transition, sans aucune donnée de la requête (ni IP, ni organisation, ni chemin). Le journal `slowapi` le
+        disait seulement en avertissement, dans un gestionnaire muet."""
+        mort = self._storage_dead
+        if mort == mort_avant:
+            return
+        with _alerte_garde:
+            if mort == getattr(self, "_mort_signale", False):
+                return
+            self._mort_signale = mort
+        if mort:
+            logger.error("Limiteur de débit : stockage (Redis) injoignable, repli sur un compteur en mémoire du "
+                         "processus. Les limites tiennent par processus ; si Redis sert aussi Celery, ses tâches sont arrêtées.")
+        else:
+            logger.warning("Limiteur de débit : stockage (Redis) rétabli, compteurs partagés de nouveau.")
 
 
 limiter = LimiteurResilient(

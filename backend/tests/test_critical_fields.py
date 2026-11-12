@@ -181,7 +181,7 @@ def _setup_project(db, org_id, pid="proj-c5", lot="lot2"):
     return p
 
 
-def test_endpoint_returns_fields_and_persists_per_lot(client, db_session, test_org):
+def test_endpoint_returns_fields_without_writing(client, db_session, test_org):
     project = _setup_project(db_session, test_org.id)
 
     resp = client.get(f"/api/projects/{project.id}/critical-fields")
@@ -190,11 +190,11 @@ def test_endpoint_returns_fields_and_persists_per_lot(client, db_session, test_o
     assert body["lot"] == "lot2"
     assert body["fields"]["date_limite_remise"]["value"]["date"] == "2026-09-30"
 
-    # Persisté sous la clé du lot — une autre analyse de lot n'écrasera pas.
+    assert body["fields"]["criteres"]["value"] == CRITERES
+    # D-05 : un GET n'écrit plus ; les champs sont rangés par lot à la fin de l'analyse (_finalize_analysis).
     db_session.expire_all()
     refreshed = db_session.query(Project).filter(Project.id == project.id).first()
-    assert "lot2" in refreshed.critical_fields
-    assert refreshed.critical_fields["lot2"]["criteres"]["value"] == CRITERES
+    assert refreshed.critical_fields is None
 
 
 def test_endpoint_cross_org_404(client, db_session, test_org):
