@@ -49,7 +49,8 @@ export function comparerParRemise(a: Project, b: Project, maintenant: Date = new
   return RANG_ETAT[etatAO(a, maintenant)] - RANG_ETAT[etatAO(b, maintenant)]
     || RANG[ea.etat] - RANG[eb.etat]
     || (ea.limite?.getTime() ?? 0) - (eb.limite?.getTime() ?? 0)
-    || a.name.localeCompare(b.name, 'fr')
+    // l'ordre naturel des nombres : « n° 21 » avant « n° 197 » (jury, tour 1)
+    || a.name.localeCompare(b.name, 'fr', { numeric: true })
     || a.id.localeCompare(b.id)
 }
 

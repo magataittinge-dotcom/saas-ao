@@ -68,3 +68,10 @@ test('« Votre premier dossier est offert » : seulement pour un compte à l\'es
   assert.equal(premierDossierOffert('pro', true, 0), false)
   assert.equal(premierDossierOffert('free', true, undefined), false, 'quota pas encore lu')
 })
+
+test('à remise égale, le nom départage dans l’ordre naturel des nombres : « n° 21 » avant « n° 197 »', async () => {
+  const { comparerParRemise } = await import('@/lib/mesAO')
+  const ao = (id: string, name: string) => ({ id, name, status: 'en_cours', deadline: '2026-04-10T12:00:00Z', current_step: 1, completed_steps: {}, updated_at: '2026-04-01T00:00:00Z' }) as never
+  const noms = [ao('a', 'Mairie n° 197'), ao('b', 'Mairie n° 21'), ao('c', 'Mairie n° 5')].sort((x, y) => comparerParRemise(x, y, new Date('2026-11-12T08:00:00Z'))).map((p: { name: string }) => p.name)
+  assert.deepEqual(noms, ['Mairie n° 5', 'Mairie n° 21', 'Mairie n° 197'])
+})
