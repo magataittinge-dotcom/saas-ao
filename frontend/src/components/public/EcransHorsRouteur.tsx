@@ -30,7 +30,7 @@ function CadreHorsRouteur({ titre, phrase, geste, discret, etat, pied, children 
         <div role="alert" className="page-etroite">
           <h1 className="titre-page break-words text-fg">{titre}</h1>
           <span aria-hidden className="fil-aurore mt-4 block" />
-          <p className="mt-4 max-w-[60ch] text-base text-fg-2">{phrase}</p>
+          <p className="mt-4 max-w-[60ch] text-pretty text-base text-fg-2">{phrase}</p>
           {etat}
           <div className="mt-6 flex flex-wrap gap-3">
             {discret

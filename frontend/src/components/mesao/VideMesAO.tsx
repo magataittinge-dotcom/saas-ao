@@ -33,8 +33,9 @@ export function VideMesAO() {
     <Page titre="Mes appels d’offres"
       sousTitre="Votre premier dossier se prépare ici. Partez du dossier reçu de l’acheteur, ou d’un avis que la veille a trouvé pour vous.">
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
-        <div className="min-w-0">
-          <ZoneDepotAO geste
+        {/* la zone de dépôt prend la hauteur de la carte voisine : les deux bords bas se répondent */}
+        <div className="flex min-w-0 flex-col">
+          <ZoneDepotAO geste className="flex-1"
             titre="Déposez le dossier de l’acheteur"
             precision="Le ZIP complet de préférence : Synorix reconnaît chaque pièce et chaque lot. PDF ou ZIP." />
           {offert && <PastilleEtat sens="vert" className="mt-4">Votre premier dossier est offert</PastilleEtat>}

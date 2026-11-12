@@ -22,7 +22,7 @@ const TitreArticle = ({ children }: { children?: ReactNode }) => (
 )
 /** Un lien : un nom, jamais une adresse brute. Un chemin « /legal/… » écrit tel quel prend le nom du document. */
 function Lien({ children, href = '' }: { children?: ReactNode; href?: string }) {
-  if (href === '#en-attente') return <span data-en-attente="" className="rounded-md bg-surface-1 px-1.5 py-0.5 text-sm text-fg-2">{children}</span>
+  if (href === '#en-attente') return <span data-en-attente="" className="whitespace-nowrap rounded-md bg-surface-1 px-1.5 py-0.5 text-sm text-fg-2">{children}</span>
   const brut = texteDe(children).trim() === href
   const classe = 'font-medium text-accent-text underline underline-offset-4'
   if (href.startsWith('/legal')) {
