@@ -183,8 +183,8 @@ def test_on_y_va_fait_avancer_l_etape_decider(client, db_session, test_org, monk
 
 
 def test_un_ao_deja_decide_reste_decide_apres_une_nouvelle_analyse(client, db_session, test_org, monkeypatch):
-    """Un AO existant, décidé avant (étape 3 cochée), relancé sur un lot : il reste décidé et repart des pièces (étape 4),
-    comme avant le correctif ; aucune donnée à migrer."""
+    """Un AO existant, décidé avant (étape 3 cochée), relancé sur un lot depuis l'étape 5 : il reste décidé et ne recule
+    pas (RESTES-2, point 9 : `max(current_step, 3)`, recommandé par PARCOURS) ; aucune donnée à migrer."""
     from models.project import Project
     _analyse_simulee(monkeypatch)
     _projet_lu(db_session, test_org, "proj-deja", current_step=5, completed_steps={"1": True, "2": True, "3": True, "4": True})
@@ -193,7 +193,7 @@ def test_un_ao_deja_decide_reste_decide_apres_une_nouvelle_analyse(client, db_se
     db_session.expire_all()
     p = db_session.get(Project, "proj-deja")
     assert p.processing_status == "ready"
-    assert p.current_step == 4 and p.completed_steps["3"] is True
+    assert p.current_step == 5 and p.completed_steps["3"] is True
 
 
 def test_l_echec_d_analyse_montre_une_phrase_du_produit_jamais_l_erreur_technique(client, db_session, test_org, monkeypatch, caplog):
