@@ -262,3 +262,33 @@ def test_premier_clic_attente_courte_puis_503_connexion_rendue(projet, monkeypat
         t.join(10)
     projet.expire_all()
     assert len(ancres_projet._verrous_pieces) == 0   # le registre ne grandit pas sans fin
+
+
+def test_source_generique_dpgf_prend_la_piece_du_lot_de_l_exigence():
+    """Recette finale, point 2 : une exigence du lot 05 sourcée « DPGF » ouvrait la DPGF du lot 01b
+    (la première DPGF du projet), et le panneau disait qu'aucune ligne n'y est rattachée. Un nom
+    générique se cherche parmi les pièces du lot de l'exigence et les pièces communes ; le nom
+    exact d'un fichier reste retrouvé quel que soit son lot."""
+    lots = ["lot1", "lot5"]
+    d01b = ProjectDocument(id="x1", type="dpgf_template", file_name="DPGF Lot 01b.xlsx", related_lots=["1b"])
+    d05 = ProjectDocument(id="x5", type="dpgf_template", file_name="DPGF Lot 05.xlsx", related_lots=["5"])
+    rc = ProjectDocument(id="xr", type="rc", file_name="Reglement.pdf", related_lots=["all"])
+    assert ancres_projet.trouver_piece("DPGF", [d01b, d05], "lot5", lots) is d05
+    assert ancres_projet.trouver_piece("DPGF", [d01b], "lot5", lots) is None       # jamais celle d'un autre lot
+    assert ancres_projet.trouver_piece("RC", [d01b, rc], "lot5", lots) is rc       # pièce commune
+    assert ancres_projet.trouver_piece("DPGF Lot 01b.xlsx", [d01b, d05], "lot5", lots) is d01b   # nom exact
+    assert ancres_projet.trouver_piece("DPGF", [d01b, d05]) is d01b                # sans lot : comme avant
+    assert ancres_projet.trouver_piece("DPGF", [d01b, d05], "_commun", lots) is d01b
+
+
+def test_premier_clic_cherche_la_piece_dans_le_lot_de_l_exigence(db_session, test_org, tmp_path, monkeypatch):
+    monkeypatch.setattr(file_storage, "UPLOADS_ROOT", tmp_path)
+    db_session.add(Project(id="p-lot5", organization_id=test_org.id, name="AO", selected_lot="lot5",
+                           lots_detectes=[{"id": "lot1"}, {"id": "lot5"}]))
+    db_session.add(ProjectDocument(id="p5-d1b", project_id="p-lot5", type="dpgf_template",
+                                   file_name="DPGF Lot 01b.xlsx", file_url="/uploads/projects/p-lot5/a.xlsx",
+                                   related_lots=["1b"]))
+    db_session.add(ComplianceItem(id="p5-i", project_id="p-lot5", exigence_text="e", source_document="DPGF",
+                                  source_page=1, lot="lot5"))
+    db_session.commit()
+    assert ancres_projet.piece_de(db_session, db_session.get(ComplianceItem, "p5-i")) is None

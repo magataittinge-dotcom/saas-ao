@@ -46,10 +46,14 @@ _ALIAS_RC = ("rc", "règlement de consultation", "reglement de consultation")
 _ALIAS_AE = ("ae", "acte d'engagement", "acte_engagement", "attri1", "attri")
 
 
-def trouver_piece(source_document: Optional[str], pieces: Iterable[ProjectDocument]) -> Optional[ProjectDocument]:
+def trouver_piece(source_document: Optional[str], pieces: Iterable[ProjectDocument],
+                  lot: Optional[str] = None, lots_du_rc=None) -> Optional[ProjectDocument]:
     """La pièce du dossier que cite ``source_document``. Même règle que l'écran
     (``frontend/src/lib/pieceCitee.ts``), précédée du nom de fichier exact (l'ancrage écrit
-    le nom du fichier). Jamais de repli sur « la première pièce » : None si rien ne colle."""
+    le nom du fichier). Jamais de repli sur « la première pièce » : None si rien ne colle.
+    ``lot`` (celui de l'exigence) : un nom générique (« DPGF », « CCTP ») se cherche parmi les
+    pièces de ce lot et les pièces communes, jamais dans celles d'un autre lot (recette finale :
+    une exigence du lot 05 sourcée « DPGF » ouvrait la DPGF du lot 01b)."""
     pieces = list(pieces)
     source = (source_document or "").lower().strip()
     if not source:
@@ -60,6 +64,9 @@ def trouver_piece(source_document: Optional[str], pieces: Iterable[ProjectDocume
     base = _SOURCE_PAGE.sub("", source).strip()
     if not base:
         return None
+    if lot and lot not in ("_commun", "all"):
+        from services.document_tagger import get_documents_for_lot
+        pieces = get_documents_for_lot(pieces, lot, lots_du_rc)
     for p in pieces:
         type_, nom = (p.type or "").lower(), (p.file_name or "").lower()
         if (base == type_
@@ -97,9 +104,16 @@ def chemin_tableur(piece: ProjectDocument) -> Optional[Path]:
     return chemin if racine in chemin.parents and chemin.is_file() else None
 
 
+def _lots_du_rc(db: Session, project_id: str) -> list:
+    """Ids des lots du RC (« lot1 »…) : les sous-lots « 01a » s'y rattachent (document_tagger)."""
+    from models.project import Project
+    lots = db.query(Project.lots_detectes).filter(Project.id == project_id).scalar() or []
+    return [l.get("id") for l in lots if isinstance(l, dict) and l.get("id")]
+
+
 def piece_de(db: Session, exigence: ComplianceItem) -> Optional[ProjectDocument]:
     pieces = db.query(ProjectDocument).filter(ProjectDocument.project_id == exigence.project_id).all()
-    return trouver_piece(exigence.source_document, pieces)
+    return trouver_piece(exigence.source_document, pieces, exigence.lot, _lots_du_rc(db, exigence.project_id))
 
 
 def calculer_pour(db: Session, exigence: ComplianceItem, lever: tuple[str, ...] = ()) -> dict[str, int]:
@@ -107,7 +121,8 @@ def calculer_pour(db: Session, exigence: ComplianceItem, lever: tuple[str, ...] 
     celles de TOUTES les exigences de la même pièce qui n'en ont pas (un seul aller-retour,
     les clics suivants sont gratuits)."""
     pieces = db.query(ProjectDocument).filter(ProjectDocument.project_id == exigence.project_id).all()
-    piece = trouver_piece(exigence.source_document, pieces)
+    lots = _lots_du_rc(db, exigence.project_id)
+    piece = trouver_piece(exigence.source_document, pieces, exigence.lot, lots)
     if piece is None:
         return {}
     # Une seule lecture par pièce : le préchargement envoie plusieurs exigences de la même pièce à la
@@ -124,7 +139,7 @@ def calculer_pour(db: Session, exigence: ComplianceItem, lever: tuple[str, ...] 
             return {}
         memes = [e for e in db.query(ComplianceItem).filter(
                      ComplianceItem.project_id == cle[0], ComplianceItem.ancre.is_(None)).all()
-                 if trouver_piece(e.source_document, pieces) is piece]
+                 if trouver_piece(e.source_document, pieces, e.lot, lots) is piece]
         return calculer_et_stocker(db, cle[0], memes, lever)
 
 
@@ -178,12 +193,13 @@ def calculer_et_stocker(
     if not a_faire:
         return bilan
     pieces = db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).all()
+    lots = _lots_du_rc(db, project_id)
 
     # pièce -> (pièce, chemin, exigences, fonction de calcul, délai) : un PDF passe par PDFium, un
     # tableur par sa lecture bornée (même processus plafonné en mémoire, avec un délai)
     par_piece: dict[str, tuple[ProjectDocument, Path, list[ComplianceItem], object, int]] = {}
     for e in a_faire:
-        piece = trouver_piece(e.source_document, pieces)
+        piece = trouver_piece(e.source_document, pieces, e.lot, lots)
         if piece is None:
             continue
         chemin = chemin_tableur(piece)
