@@ -8,7 +8,8 @@ import { Bouton } from '@/components/ui/bouton'
 import { RangeeCarte } from '@/components/ui/carte'
 import { DialogueConfirmation } from '@/components/ui/dialogue'
 import {
-  PHRASE_MEMBRE, type ApercuSuppression, libelleConfirmer, libelleSuppressionPrevue, messageRefusCompte, phraseDialogue,
+  PHRASE_MEMBRE, type ApercuSuppression, libelleConfirmer, libelleConfirmerAnnulation, libelleSuppressionPrevue,
+  messageRefusCompte, phraseAnnulation, phraseDialogue,
 } from '@/lib/suppressionCompte'
 
 const CLE_QUOTA = ['billing-quota']
@@ -16,8 +17,10 @@ const CLE_QUOTA = ['billing-quota']
 /**
  * La dernière rangée de la carte « Compte » (D23). Sans demande : « Supprimer mon compte » lit d'abord ce que la
  * suppression ferait (GET /users/me/suppression : immédiate, ou la date de fin de la période payée), puis ouvre la
- * confirmation qui le dit. Demande faite : « Suppression prévue le … » et « Annuler la suppression ». Un refus du serveur
- * s'affiche avec sa phrase (502 et 500 compris : elles disent que rien n'a été effacé).
+ * confirmation qui le dit. Demande faite : « Suppression prévue le … » et « Annuler la suppression », qui lit aussi
+ * l'aperçu puis demande une confirmation : elle dit que l'abonnement reprend et la date du prochain prélèvement (ou
+ * qu'il reste arrêté, s'il l'était avant la demande). Un refus du serveur s'affiche avec sa phrase (502 et 500 compris :
+ * elles disent que rien n'a été effacé).
  */
 export default function SuppressionCompte() {
   const client = useQueryClient()
@@ -27,6 +30,7 @@ export default function SuppressionCompte() {
   const membre = useAuthStore((s) => s.user?.role === 'member')
   const prevue = quota.data?.suppression_prevue_le ?? null
   const [apercu, setApercu] = useState<ApercuSuppression | null>(null)
+  const [apercuAnnulation, setApercuAnnulation] = useState<ApercuSuppression | null>(null)
   const [lecture, setLecture] = useState(false)
   const [enCours, setEnCours] = useState(false)
   const [erreurRangee, setErreurRangee] = useState<string | null>(null)
@@ -37,13 +41,14 @@ export default function SuppressionCompte() {
     void client.invalidateQueries({ queryKey: CLE_QUOTA })
   }
 
-  const ouvrir = async () => {
+  const ouvrir = async (pourAnnuler = false) => {
     setErreurRangee(null)
     setErreurDialogue(null)
     setLecture(true)
     try {
       const { data } = await api.get<ApercuSuppression>('/users/me/suppression')
-      setApercu(data)
+      if (pourAnnuler) setApercuAnnulation(data)
+      else setApercu(data)
     } catch (err) {
       setErreurRangee(messageRefusCompte(err, 'Votre abonnement n’a pas pu être lu. Réessayez dans un instant.'))
     } finally {
@@ -70,13 +75,14 @@ export default function SuppressionCompte() {
   }
 
   const annuler = async () => {
-    setErreurRangee(null)
+    setErreurDialogue(null)
     setEnCours(true)
     try {
       await api.post('/users/me/annuler-suppression')
       poserPrevue(null)
+      setApercuAnnulation(null)
     } catch (err) {
-      setErreurRangee(messageRefusCompte(err, 'La suppression n’a pas pu être annulée. Réessayez dans un instant.'))
+      setErreurDialogue(messageRefusCompte(err, 'La suppression n’a pas pu être annulée. Réessayez dans un instant.'))
     } finally {
       setEnCours(false)
     }
@@ -98,7 +104,7 @@ export default function SuppressionCompte() {
         {membre ? (
           <span className="min-w-0 basis-full text-sm text-fg-2">{PHRASE_MEMBRE}</span>
         ) : prevue ? (
-          <Bouton variante="secondaire" onClick={() => { void annuler() }} enCours={enCours} libelleEnCours="Annulation…">
+          <Bouton variante="secondaire" onClick={() => { void ouvrir(true) }} enCours={lecture} libelleEnCours="Un instant…">
             Annuler la suppression
           </Bouton>
         ) : (
@@ -119,6 +125,21 @@ export default function SuppressionCompte() {
           libelleEnCours="Suppression…"
           onConfirmer={() => { void confirmer() }}
           danger
+          enCours={enCours}
+          erreur={erreurDialogue}
+        />
+      )}
+
+      {apercuAnnulation && (
+        <DialogueConfirmation
+          ouvert
+          onOuvert={(o) => { if (!o) { setApercuAnnulation(null); setErreurDialogue(null) } }}
+          titre="Annuler la suppression du compte ?"
+          description={phraseAnnulation(apercuAnnulation)}
+          libelleConfirmer={libelleConfirmerAnnulation(apercuAnnulation)}
+          libelleAnnuler="Ne rien changer"
+          libelleEnCours="Annulation…"
+          onConfirmer={() => { void annuler() }}
           enCours={enCours}
           erreur={erreurDialogue}
         />
