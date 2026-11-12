@@ -38,8 +38,8 @@ def test_aucun_fichier_suivi_ne_nomme_synorix_fr():
 
 def _csp_front() -> str:
     texte = (RACINE / "deploy/nginx/synorix-entetes.conf").read_text(encoding="utf-8")
-    m = re.search(r'Content-Security-Policy-Report-Only "([^"]+)"', texte)
-    assert m, "CSP en observation absente"
+    m = re.search(r'Content-Security-Policy "([^"]+)"', texte)
+    assert m, "CSP bloquante absente"
     return m.group(1)
 
 
