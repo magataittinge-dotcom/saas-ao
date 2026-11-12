@@ -14,7 +14,7 @@ import { Route, Routes } from 'react-router-dom'
 import { AdresseInconnue, AOIntrouvable } from '@/components/public/EcransEtat'
 import { ConnexionInterrompue, ErreurAppli, MorceauIntrouvable, accueilPour } from '@/components/public/EcransHorsRouteur'
 import { VideMesAO } from '@/components/mesao/VideMesAO'
-import { DOCUMENTS_JURIDIQUES, MENTION_EN_ATTENTE, champsACompleter, preparerDocument, sansChampsACompleter } from '@/lib/pagesJuridiques'
+import { DOCUMENTS_JURIDIQUES, MENTION_EN_ATTENTE, champsACompleter, decouperDefinitions, mettreEnPage, preparerDocument, sansChampsACompleter, sommaireDe } from '@/lib/pagesJuridiques'
 import { decouperTables } from '@/lib/tablesMarkdown'
 import { OFFRES, prixLibelle } from '@/lib/offres'
 import { RACINE, lire, sansCommentaires } from './outils/sources'
@@ -45,8 +45,12 @@ test('site public : un h1, un seul aplat (l’offre telle que le code la donne),
   assert.equal(nb(html, /bg-accent-fill/g), 1, 'un seul geste')
   assert.ok(html.includes(`Créer mon compte${NB}: 1 appel d’offres offert`))
   assert.ok(html.includes('Voir comment ça marche') && !html.includes('Voir la démo'), 'A8')
-  const ordre = ['Dépôt', 'Lots', 'Décider', 'Pièces', 'Plan', 'Rédiger', 'Export'].map((e) => html.indexOf(`</span>${e}</p>`))
+  const ordre = ['Dépôt', 'Lots', 'Décider', 'Pièces', 'Plan', 'Rédiger', 'Export'].map((e) => html.indexOf(`>${e}</p>`))
   assert.ok(ordre.every((p, i) => p > 0 && (i === 0 || p > ordre[i - 1])), 'les sept étapes, dans l’ordre')
+  assert.equal(nb(html, /rounded-pilule border border-bord-2 bg-surface-0/g), 7, 'le fil est dessiné : un rond numéroté par étape (jury, tour 1)')
+  assert.equal(nb(html, /<h2[^>]*>/g), 3)
+  assert.match(html, /\[&amp;&gt;h2\]:text-xl|\[&>h2\]:text-xl/, 'titres de section à 22 px')
+  assert.equal(nb(html, /lu dans le contrat/g), 0, 'la colonne des clauses porte une valeur d’exemple, plus quatre fois la même mention')
   assert.ok(html.includes(`Synorix lit et rédige${NB}; vous décidez et vous déposez.`))
   assert.equal(nb(html, /data-synorix-parle/g), 1, 'le visage une fois, à côté de la phrase')
   assert.ok(html.includes('href="/login"') && html.includes('href="/pricing"') && html.includes('href="/legal/mentions-legales"'))
@@ -63,12 +67,15 @@ test('site public : aucun chiffre ni promesse non sourcés, aucun point d’excl
   assert.ok(src.split('\n').length < 200, 'la page tient en moins de 200 lignes')
 })
 
-test('tarifs : la coquille du site (logo, retour, pied de page) et la grille du code, un seul aplat', () => {
+test('tarifs : la coquille du site (logo, page courante marquée dans l’en-tête, pied de page) et la grille du code, un seul aplat', () => {
   const html = rendre(<Pricing />)
   assert.equal(nb(html, /<h1/g), 1)
   assert.ok(/<h1[^>]*>Tarifs<\/h1>/.test(html))
   assert.equal(nb(html, /bg-accent-fill/g), 1)
-  assert.ok(html.includes('Retour au site') && html.includes('data-coquille-publique') && html.includes('href="/legal/cgv"'))
+  // jury, tour 1 : « Retour au site » faisait office de surtitre et l'en-tête perdait « Tarifs » sans dire qu'on y était
+  assert.ok(!html.includes('Retour au site') && html.includes('data-coquille-publique') && html.includes('href="/legal/cgv"'))
+  assert.match(html, /<a[^>]*aria-current="page"[^>]*href="\/pricing"|<a[^>]*href="\/pricing"[^>]*aria-current="page"/)
+  assert.ok(html.includes('aria-label="Synorix, accueil du site"'), 'le logo ramène au site')
   for (const o of OFFRES) assert.ok(html.includes(prixLibelle(o)) && html.includes(`href="/register?plan=${o.id}"`), o.nom)
   assert.doesNotMatch(sansCommentaires(lire('src/routes/Pricing.tsx')), /\d+ ?€/, 'aucun prix écrit dans la page')
 })
@@ -102,9 +109,44 @@ test('pages juridiques : les tableaux Markdown sont de vrais tableaux, dans une 
     assert.ok(html.includes('<table'), `${slug} : tableau rendu`)
     assert.doesNotMatch(html, /\|---|\| ?Nom ?\|/, `${slug} : plus de barres verticales à l’écran`)
     assert.equal(nb(html, /<h1/g), 1)
-    assert.ok(html.includes('data-page="etroite"') && html.includes('aria-current="page"'))
+    assert.ok(html.includes('data-lecture') && html.includes('aria-current="page"'))
     assert.doesNotMatch(html, /À COMPLÉTER/)
   }
+})
+
+const rendreJuridique = (slug: string) => {
+  const client = new QueryClient()
+  client.setQueryData(['page-juridique', slug], juridique(slug))
+  return renderToStaticMarkup(
+    <QueryClientProvider client={client}><MemoryRouter initialEntries={[`/legal/${slug}`]}><Routes><Route path="/legal/:slug" element={<Legal />} /></Routes></MemoryRouter></QueryClientProvider>)
+}
+
+test('pages juridiques (jury, tour 1) : un sommaire qui mène à chaque article, des titres d’article qui dominent, la date sous le titre', () => {
+  for (const d of DOCUMENTS_JURIDIQUES) {
+    const html = rendreJuridique(d.slug)
+    const { corps, miseAJour } = mettreEnPage(preparerDocument(juridique(d.slug)).corps)
+    const articles = sommaireDe(corps)
+    assert.ok(articles.length >= 3, `${d.slug} : des articles`)
+    assert.ok(html.includes('aria-label="Sommaire"'), `${d.slug} : sommaire`)
+    for (const a of articles) assert.ok(html.includes(`href="#${a.ancre}"`) && html.includes(`id="${a.ancre}"`), `${d.slug} : ${a.titre} a son ancre`)
+    assert.equal(new Set(articles.map((a) => a.ancre)).size, articles.length, `${d.slug} : ancres uniques`)
+    assert.ok(new RegExp(`<h1[^>]*>${d.titre}</h1>`).test(html), `${d.slug} : le titre de la page, en casse de phrase`)
+    assert.ok(miseAJour && html.includes(miseAJour) && !corps.includes('Dernière mise à jour'), `${d.slug} : la date est la sous-ligne du titre, plus un paragraphe en gras`)
+    assert.match(html, /<h2 id="[^"]+" class="[^"]*text-xl/, 'titre d’article à 22 px')
+    assert.doesNotMatch(html, />\/legal[^<]*<\/a>|>https?:\/\/[^<]*<\/a>/, `${d.slug} : un lien porte un nom, jamais une adresse brute`)
+    assert.doesNotMatch(html, /\u26A0/, 'aucun pictogramme d’alerte en couleur')
+  }
+})
+
+test('pages juridiques : la mention d’attente est dessinée comme un champ ; « libellé : valeur » devient une liste de définitions ; onglets sur une ligne', () => {
+  const mentions = rendreJuridique('mentions-legales')
+  assert.ok(nb(mentions, /data-en-attente/g) >= 4)
+  assert.ok(mentions.includes('<dl') && /<dt[^>]*>SIRET<\/dt>/.test(mentions))
+  assert.doesNotMatch(mentions, /flex-wrap gap-x-1/, 'les onglets ne cassent plus sur deux rangées')
+  assert.match(mentions, /aria-label="Documents juridiques" class="[^"]*overflow-x-auto/)
+  assert.deepEqual(decouperDefinitions('- **A :** 1\n- **B :** 2'), [{ type: 'texte', texte: '- **A :** 1\n- **B :** 2' }], 'deux lignes restent une liste')
+  const cookies = rendreJuridique('cookies')
+  assert.ok(cookies.includes('md:hidden'), 'au téléphone, chaque valeur du tableau garde le nom de sa colonne')
 })
 
 test('pages juridiques : une panne de lecture dit l’erreur et propose « Réessayer », jamais une page blanche', async () => {
@@ -117,13 +159,15 @@ test('pages juridiques : une panne de lecture dit l’erreur et propose « Rées
 })
 
 test('connexion : la carte Clerk dans la coquille du site, sans slogan ; session expirée (F-01) : la phrase, puis le retour à la page d’origine', () => {
+  const ecran = sansCommentaires(lire('src/components/public/EcranCompte.tsx'))
+  assert.match(ecran, /<CoquillePublique>/)
   for (const f of ['src/routes/Login.tsx', 'src/routes/Register.tsx']) {
     const src = sansCommentaires(lire(f))
-    assert.match(src, /<CoquillePublique>/, f)
+    assert.match(src, /<EcranCompte /, f)
     assert.doesNotMatch(src, /10×|plus vite|#[0-9A-Fa-f]{6}\b|style=\{\{|appearance=/, `${f} : ni slogan chiffré, ni couleur en dur, ni second habillage de Clerk`)
   }
   // jamais une page blanche : la coquille tout de suite, un squelette à la place de la carte, l'échec de Clerk dit
-  for (const f of ['src/routes/Login.tsx', 'src/routes/Register.tsx']) assert.match(sansCommentaires(lire(f)), /<AttenteClerk \/>/, f)
+  assert.match(ecran, /<AttenteClerk \/>/)
   const attente = sansCommentaires(lire('src/components/public/AttenteClerk.tsx'))
   assert.match(attente, /<ClerkLoading>[\s\S]*<Squelette/)
   assert.match(attente, /<ClerkFailed>[\s\S]*<EtatErreur[\s\S]*onReessayer/)
@@ -141,7 +185,10 @@ test('adresse inconnue : un écran, plus un renvoi muet ; connecté, on reste da
     assert.ok(/<h1[^>]*>Cette adresse n’existe pas<\/h1>/.test(html))
     assert.equal(nb(html, /bg-accent-fill/g), 1)
   }
-  assert.ok(visiteur.includes('href="/"') && visiteur.includes('href="/login"'))
+  // jury, tour 1 : un visiteur n'a pas de dossier ; « Se connecter » est dans l'en-tête du site ; le bas de l'écran est composé
+  assert.ok(visiteur.includes('href="/"') && !visiteur.includes('Vos dossiers') && connecte.includes('Vos dossiers ne sont pas touchés'))
+  assert.ok(visiteur.includes('data-synorix-parle') && visiteur.includes('href="/#comment"') && !connecte.includes('data-synorix-parle'))
+  assert.match(lire('src/App.tsx'), /<CoquillePublique nav=\{<NavSite \/>\}><AdresseInconnue connecte=\{false\} \/>/)
   assert.ok(connecte.includes('href="/dashboard"') && connecte.includes('href="/projects"') && !connecte.includes('href="/"'))
   const ao = rendre(<AOIntrouvable />)
   assert.ok(ao.includes('Cet appel d’offres est introuvable') && ao.includes('href="/projects"'))
@@ -155,6 +202,10 @@ test('écran d’erreur : calme, en français, deux gestes ; rien de technique �
   assert.ok(html.includes('Recharger la page') && html.includes('Revenir à l’accueil'))
   assert.equal(nb(html, /<h1/g), 1)
   assert.doesNotMatch(html, /Erreur React|stack|Error|undefined|monospace/)
+  assert.ok(html.includes('fil-aurore') && html.includes('mailto:contact@synorix.tech'), 'la signature sous le titre ; qui joindre si l’erreur revient')
+  assert.doesNotMatch(html, /Rechargez la page/, 'la phrase ne répète plus les deux boutons')
+  const horsLigne = renderToStaticMarkup(<ConnexionInterrompue />)
+  assert.ok(horsLigne.includes('data-sens="ambre"') && horsLigne.includes('Hors connexion') && horsLigne.includes('role="status"'), 'hors ligne : l’état a son signe')
   const app = sansCommentaires(lire('src/App.tsx'))
   assert.doesNotMatch(app, /error\.stack\}|error\.message\}|Erreur React|style=\{\{/)
   assert.match(app, /componentDidCatch\(/)
@@ -193,9 +244,9 @@ test('Mes AO sans AO : la page du système, un seul geste (déposer), Synorix di
   assert.doesNotMatch(src, /uppercase|VisagePetit|rounded-\[|text-\[/)
 })
 
-test('typographie : aucun repère d’espace insécable resté dans un texte affiché, et le point-virgule de l’écran d’erreur tient à son mot', () => {
+test('typographie : aucun repère d’espace insécable resté dans un texte affiché, et les deux-points de l’écran d’erreur tiennent à leur mot', () => {
   const html = renderToStaticMarkup(<ErreurAppli />)
-  assert.ok(html.includes(`Rechargez la page${NB}; si l’erreur revient`))
+  assert.ok(html.includes(`écrivez-nous${NB}: `))
   for (const f of ['src/components/public/EcransHorsRouteur.tsx', 'src/components/public/EcransEtat.tsx', 'src/components/public/CoquillePublique.tsx',
     'src/routes/Landing.tsx', 'src/routes/Pricing.tsx', 'src/routes/Legal.tsx', 'src/routes/Login.tsx', 'src/routes/Register.tsx',
     'src/components/onboarding/FirstAOWelcome.tsx', 'src/components/onboarding/FilSeptEtapes.tsx', 'src/components/mesao/VideMesAO.tsx']) {

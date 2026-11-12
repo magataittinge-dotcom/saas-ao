@@ -27,19 +27,30 @@ export function construireApparence(lire: (jeton: string) => string): ApparenceC
       fontFamilyButtons: lire('--font-ui'),
       borderRadius: lire('--radius-md'),
     },
-    // Les éléments suivent le système, par les classes aux jetons (jamais une valeur écrite ici) : carte (rayon 22, trait,
-    // ombre), titre en serif (c'est le h1 de l'écran), champs et boutons à 44 px, bouton principal = celui du système
-    // (pilule, dégradé d'accent), casse de phrase. « ! » : les styles que Clerk injecte passent après la feuille de l'appli.
+    // Les éléments suivent le système, par les classes aux jetons (jamais une valeur écrite ici). UNE surface : la carte au
+    // trait d'un pixel, sans ombre large ni pied gris (jury, tour 1 : « carte dans une carte »). Sur le premier écran
+    // (connexion, inscription), le titre et la sous-ligne sont ceux de la page (components/public/EcranCompte.tsx) : l'en-tête
+    // de la carte s'efface, il ne revient qu'aux écrans suivants (code reçu, mot de passe). Champs et boutons à 44 px, bouton
+    // principal = celui du système (pilule, dégradé d'accent), sans la flèche du fournisseur ; « Continuer avec Google » écrit
+    // à l'encre 1 ; exemple de saisie à l'encre 3 ; champ refusé au trait rouge, message sans disque plein.
+    // « ! » : les styles que Clerk injecte passent après la feuille de l'appli.
     elements: {
       rootBox: '!w-full !max-w-[400px]',
-      cardBox: '!w-full !max-w-[400px] !rounded-carte !shadow-pop',
-      card: '!rounded-carte !border !border-solid !border-bord-2 !shadow-none',
+      cardBox: '!w-full !max-w-[400px] !rounded-carte !border !border-solid !border-bord-2 !bg-surface-pop !shadow-none',
+      card: '!rounded-carte !border-0 !shadow-none',
+      header: '[.cl-signIn-start_&]:!hidden [.cl-signUp-start_&]:!hidden',
       headerTitle: '!font-display !text-xl !font-medium !tracking-[-0.01em]',
       headerSubtitle: '!text-sm',
       formButtonPrimary: `!min-h-11 !rounded-pilule ![background-image:var(--accent-fill)] !text-sm !font-semibold !normal-case !shadow-cta`,
-      formFieldInput: '!min-h-11 !rounded-lg !border !border-solid !border-bord-champ !text-sm max-[768px]:!text-saisie [@media(pointer:coarse)]:!text-saisie focus:!border-accent-ring',
+      buttonArrowIcon: '!hidden',
+      formFieldInput: '!min-h-11 !rounded-lg !border !border-solid !border-bord-champ !text-sm max-[768px]:!text-saisie [@media(pointer:coarse)]:!text-saisie placeholder:!text-fg-3 focus:!border-accent-ring aria-[invalid=true]:!border-rouge-mark',
       formFieldLabel: '!text-xs !font-medium',
+      formFieldHintText: '!hidden',
+      formFieldErrorText: '!text-xs !text-rouge-ink [&>svg]:!hidden',
+      formFieldInputShowPasswordButton: '!min-h-11 !min-w-11',
       socialButtonsBlockButton: '!min-h-11 !rounded-lg !border !border-solid !border-bord-champ',
+      socialButtonsBlockButtonText: '!text-sm !font-medium !text-fg',
+      footer: '![background:none]',
       footerActionLink: '!font-medium !text-accent-text',
       formFieldAction: '!text-accent-text',
       identityPreviewEditButton: '!text-accent-text',
@@ -74,10 +85,10 @@ export const localisationFr: LocalisationClerk = {
   formFieldLabel__confirmPassword: 'Confirmer le mot de passe',
   formFieldLabel__firstName: 'Prénom',
   formFieldLabel__lastName: 'Nom',
-  formFieldInputPlaceholder__emailAddress: 'Votre adresse e-mail',
-  formFieldInputPlaceholder__password: 'Votre mot de passe',
-  formFieldInputPlaceholder__firstName: 'Votre prénom',
-  formFieldInputPlaceholder__lastName: 'Votre nom',
+  formFieldInputPlaceholder__emailAddress: 'prenom@entreprise.fr',
+  formFieldInputPlaceholder__password: '',
+  formFieldInputPlaceholder__firstName: '',
+  formFieldInputPlaceholder__lastName: '',
   formFieldAction__forgotPassword: 'Mot de passe oublié ?',
   formFieldHintText__optional: 'Facultatif',
   formFieldError__notMatchingPasswords: 'Les mots de passe ne correspondent pas.',
@@ -136,12 +147,12 @@ export const localisationFr: LocalisationClerk = {
     action__addAccount: 'Ajouter un compte',
   },
   unstable__errors: {
-    form_identifier_not_found: 'Aucun compte ne correspond à cette adresse.',
+    form_identifier_not_found: 'Aucun compte à cette adresse. Vérifiez-la, ou créez votre compte.',
     form_password_incorrect: 'Mot de passe incorrect.',
     form_code_incorrect: 'Code incorrect.',
     form_param_nil: 'Ce champ est obligatoire.',
-    form_identifier_exists__email_address: 'Cette adresse e-mail est déjà utilisée.',
-    form_param_format_invalid: 'Vérifiez ce champ : la saisie n’est pas valide.',
+    form_identifier_exists__email_address: 'Un compte existe déjà à cette adresse. Connectez-vous.',
+    form_param_format_invalid: 'Cette adresse n’est pas reconnue. Vérifiez-la, ou créez votre compte.',
     form_param_format_invalid__email_address: 'Saisissez une adresse e-mail valide.',
     form_password_or_identifier_incorrect: 'Adresse e-mail ou mot de passe incorrect.',
     form_password_length_too_short: 'Ce mot de passe est trop court.',

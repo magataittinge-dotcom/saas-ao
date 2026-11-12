@@ -5,12 +5,13 @@
 
 export type SlugJuridique = 'mentions-legales' | 'cgu' | 'cgv' | 'politique-confidentialite' | 'cookies'
 
-export const DOCUMENTS_JURIDIQUES: readonly { slug: SlugJuridique; libelle: string }[] = [
-  { slug: 'mentions-legales', libelle: 'Mentions légales' },
-  { slug: 'cgu', libelle: 'Conditions d’utilisation' },
-  { slug: 'cgv', libelle: 'Conditions de vente' },
-  { slug: 'politique-confidentialite', libelle: 'Confidentialité' },
-  { slug: 'cookies', libelle: 'Cookies' },
+/** `libelle` : le nom court (onglet, pied de page). `titre` : le `h1` de la page, en casse de phrase, le même nom en entier. */
+export const DOCUMENTS_JURIDIQUES: readonly { slug: SlugJuridique; libelle: string; titre: string }[] = [
+  { slug: 'mentions-legales', libelle: 'Mentions légales', titre: 'Mentions légales' },
+  { slug: 'cgu', libelle: 'Conditions d’utilisation', titre: 'Conditions générales d’utilisation' },
+  { slug: 'cgv', libelle: 'Conditions de vente', titre: 'Conditions générales de vente' },
+  { slug: 'politique-confidentialite', libelle: 'Confidentialité', titre: 'Politique de confidentialité' },
+  { slug: 'cookies', libelle: 'Cookies', titre: 'Politique de gestion des cookies' },
 ]
 
 export const estSlugJuridique = (slug: string | undefined): slug is SlugJuridique => DOCUMENTS_JURIDIQUES.some((d) => d.slug === slug)
@@ -38,4 +39,60 @@ export function preparerDocument(markdown: string): { titre: string | null; corp
   const propre = sansChampsACompleter(markdown.replace(/^﻿/, ''))
   const m = propre.match(/^\s*# +(.+?)\s*(?:\r?\n|$)/)
   return m ? { titre: m[1].trim(), corps: propre.slice(m[0].length) } : { titre: null, corps: propre }
+}
+
+/** L'ancre d'un titre d'article (« 4. Offres et prix » → `4-offres-et-prix`) : le sommaire y mène. */
+export const ancreDe = (titre: string): string =>
+  titre.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+
+/** Le sommaire d'un document : ses titres d'article (« ## … »), dans l'ordre, sans le balisage. */
+export function sommaireDe(corps: string): { ancre: string; titre: string }[] {
+  return [...corps.matchAll(/^## +(.+?)\s*$/gm)].map((m) => {
+    const titre = m[1].replace(/[*_`]/g, '').trim()
+    return { ancre: ancreDe(titre), titre }
+  })
+}
+
+const MISE_A_JOUR = /^\s*\*\*(Dernière mise à jour\s*:[^*\n]*)\*\*\s*$/m
+const LIGNE_DEFINITION = /^- \*\*(.+?)\s*:\*\*\s*(.+)$/
+
+export type BlocJuridique = { type: 'texte'; texte: string } | { type: 'definitions'; lignes: { terme: string; valeur: string }[] }
+
+/**
+ * Mise en page seulement, aucun mot récrit : la date de mise à jour sort du corps (elle devient la sous-ligne du titre),
+ * l'apostrophe droite devient courbe, le pictogramme d'alerte en couleur part (le ton interdit l'alarme, la phrase suffit),
+ * et la mention d'attente est balisée pour être dessinée comme un champ et non comme un mot de la phrase.
+ */
+export function mettreEnPage(corps: string): { miseAJour: string | null; corps: string } {
+  const m = corps.match(MISE_A_JOUR)
+  const sansDate = m ? corps.replace(MISE_A_JOUR, '') : corps
+  const propre = sansDate
+    .replace(/(?<=\p{L})'(?=\p{L})/gu, '’')
+    .replace(/\u26A0\uFE0F?\s*/g, '')
+    .replace(new RegExp(MENTION_EN_ATTENTE, 'gi'), (mention) => `[${mention}](#en-attente)`)
+  return { miseAJour: m ? m[1].replace(/\s*:\s*/, ' : ').trim() : null, corps: propre }
+}
+
+/** Une liste « - **Libellé :** valeur » d'au moins trois lignes devient une liste de définitions (valeurs alignées). */
+export function decouperDefinitions(texte: string): BlocJuridique[] {
+  const blocs: BlocJuridique[] = []
+  let courant: string[] = []
+  const vider = () => { if (courant.join('').trim() !== '') blocs.push({ type: 'texte', texte: courant.join('\n') }); courant = [] }
+  const lignes = texte.split('\n')
+  let i = 0
+  while (i < lignes.length) {
+    const serie: { terme: string; valeur: string }[] = []
+    let j = i
+    while (j < lignes.length) {
+      const d = lignes[j].match(LIGNE_DEFINITION)
+      if (d) { serie.push({ terme: d[1].trim(), valeur: d[2].trim() }); j++ }
+      else if (serie.length > 0 && /^ {2,}\S/.test(lignes[j])) { serie[serie.length - 1].valeur += ` ${lignes[j].trim()}`; j++ }
+      else break
+    }
+    const finDeListe = j >= lignes.length || !/^- /.test(lignes[j])
+    if (serie.length >= 3 && finDeListe) { vider(); blocs.push({ type: 'definitions', lignes: serie }); i = j }
+    else { courant.push(lignes[i]); i++ }
+  }
+  vider()
+  return blocs
 }
