@@ -15,6 +15,8 @@ interface QuotaStatus {
   period_end: string | null
   analyses: QuotaCounter
   memoires: QuotaCounter
+  /** D23 : suppression du compte programmée à la fin de la période payée (Paramètres > Compte). */
+  suppression_prevue_le?: string | null
 }
 
 /** Seuils de COULEURS.md : vert sous 70 % de consommation, ambre de 70 à 90 %, rouge au-delà de 90 %. Le chiffre reste écrit. */

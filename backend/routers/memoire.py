@@ -603,8 +603,8 @@ def definir_etat_section(
 
     Rangé dans le JSON du mémoire, sous une clé à part que l'export ignore : pas de migration."""
     import copy
+    _get_project_or_404(project_id, user.organization_id, db)    # l'AO d'abord : rien ne se lit d'un AO d'autrui
     _section_connue(part, cle, _contenu_du_projet(db, project_id))
-    _get_project_or_404(project_id, user.organization_id, db)
     memoire = (db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project_id)
                .with_for_update().first())
     if not memoire:
@@ -655,8 +655,8 @@ def estimation_refaire_section(
     from services.ai.memoire_generator import modele_du_segment
     from services.memoire_refaire import estimer
 
+    _get_project_or_404(project_id, user.organization_id, db)    # l'AO d'abord : rien ne se lit d'un AO d'autrui
     _section_connue(part, cle, _contenu_du_projet(db, project_id))
-    _get_project_or_404(project_id, user.organization_id, db)
     memoire = db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project_id).first()
     if not memoire:
         raise HTTPException(status_code=404, detail="Mémoire non généré")
@@ -678,8 +678,8 @@ async def refaire_section_memoire(
     Même mécanisme détaché que la génération (POST -> « started », suivi par /processing-status et le flux SSE).
     Ne décompte AUCUNE unité de quota : le mémoire de ce lot est déjà décompté. Un seul « Refaire » (ou une seule
     génération) à la fois par projet."""
+    project = _get_project_or_404(project_id, user.organization_id, db)    # l'AO d'abord (cloisonnement)
     _section_connue(part, cle, _contenu_du_projet(db, project_id))
-    project = _get_project_or_404(project_id, user.organization_id, db)
     ensure_relaunchable(project)
     memoire = db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project_id).first()
     if not memoire:
@@ -876,10 +876,17 @@ async def rewrite_passage_endpoint(
         target_type="project", target_id=project_id,
         extra={"action": payload.action, "chars": len(payload.passage)},
     )
+    from services import couts_ia, jetons
     try:
-        rewritten = await rewrite_passage(
-            payload.passage, payload.action, payload.instruction, regle,
-        )
+        # Dépense réelle inscrite dans couts_ia (budget d'IA du jour), même si la suite échoue après l'appel.
+        with jetons.collecter() as collecte:
+            try:
+                rewritten = await rewrite_passage(
+                    payload.passage, payload.action, payload.instruction, regle,
+                )
+            finally:
+                couts_ia.enregistrer_collecte(user.organization_id, "reecriture_passage", collecte,
+                                              reference=project_id)
     except Exception as e:
         import logging as _logging
         _logging.getLogger(__name__).error(

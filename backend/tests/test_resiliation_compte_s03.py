@@ -56,14 +56,16 @@ def fournisseurs(monkeypatch):
 
 
 def test_resiliation_puis_suppression_puis_clerk(client, abonne, fournisseurs, db_session):
-    f = FauxFournisseur(abonnements=[{"id": "sub_invente", "status": "active"},
-                                     {"id": "sub_double", "status": "active"},
+    """Sans abonnement PAYANT vivant (D23 : avec un abonnement payé, la suppression est programmée, voir
+    test_suppression_programmee_d23.py), les abonnements encore ouverts sont résiliés tout de suite."""
+    f = FauxFournisseur(abonnements=[{"id": "sub_invente", "status": "incomplete"},
+                                     {"id": "sub_double", "status": "unpaid"},
                                      {"id": "sub_vieux", "status": "canceled"}])
     c = FauxClerk()
     fournisseurs(f, c)
     r = client.delete("/api/users/me")
     assert r.status_code == 200, r.text
-    assert sorted(f.resilies) == [("sub_double", False), ("sub_invente", False)]   # immédiate, les deux vivants
+    assert sorted(f.resilies) == [("sub_double", False), ("sub_invente", False)]   # immédiate, les deux ouverts
     assert c.appels == ["https://api.clerk.com/v1/users/user_clerk_invente"]
     db_session.expire_all()
     assert db_session.get(Organization, "org-test-1") is None

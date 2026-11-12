@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Bouton } from '@/components/ui/bouton'
 import { Dialogue } from '@/components/ui/dialogue'
 import { Message } from '@/components/ui/message'
 import { api } from '@/services/api'
 import GrilleOffres from '@/components/offres/GrilleOffres'
 import { useAuthStore } from '@/stores/authStore'
+import { estRefusSiret } from '@/lib/refus'
 
 interface Props {
   open: boolean
@@ -36,6 +38,17 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis', 
       setErreur(typeof detail === 'string' ? detail : "Le paiement n’a pas pu démarrer. Réessayez dans un instant.")
       setLoading(null)
     }
+  }
+
+  // 402 SIRET (S-05) : l'AO offert attend un SIRET vérifié ; la phrase du serveur et le chemin vers Mon entreprise > Identité.
+  if (estRefusSiret(message)) {
+    return (
+      <Dialogue ouvert={open} onOuvert={(o) => { if (!o) onClose() }} taille="petit" titre="Renseignez votre SIRET" description={message}
+        actions={<>
+          <Bouton variante="secondaire" onClick={onClose}>Plus tard</Bouton>
+          <Bouton asChild variante="principal"><Link to="/company?rubrique=identite" onClick={onClose}>Ouvrir Mon entreprise</Link></Bouton>
+        </>} />
+    )
   }
 
   // Le mur d'abonnement est un Dialogue du système (grand) : Échap, clic sur le voile, piège et retour du focus par Radix.

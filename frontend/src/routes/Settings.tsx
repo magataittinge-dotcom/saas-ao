@@ -9,6 +9,7 @@ import { prenomAffichable } from '@/lib/prenom'
 import { Page, TitreSection } from '@/components/ui/page'
 import { Carte, RangeeCarte } from '@/components/ui/carte'
 import BasculeTheme, { ReglageAnimerFond } from '@/components/layout/BasculeTheme'
+import SuppressionCompte from '@/components/parametres/SuppressionCompte'
 
 /** Une information du compte : son nom à gauche, sa valeur à droite. Un champ vide n'est pas un tiret : c'est un lien pour le remplir. */
 function Ligne({ libelle, children }: { libelle: string; children: ReactNode }) {
@@ -58,6 +59,8 @@ export default function Settings() {
           <span className="text-sm text-fg-2">Quitter Synorix sur cet appareil</span>
           <Bouton variante="secondaire" onClick={() => { void deconnexion() }}><LogOut aria-hidden />Déconnexion</Bouton>
         </RangeeCarte>
+        {/* D23 : immédiate sans abonnement payé, à la fin de la période payée sinon (components/parametres/SuppressionCompte.tsx). */}
+        <SuppressionCompte />
       </Carte>
 
       <TitreSection>Entreprise</TitreSection>

@@ -6,17 +6,15 @@ alembic==1.13.2
 psycopg2-binary==2.9.9
 pydantic==2.9.2     # FastAPI 0.162 exige >= 2.9.0
 pydantic-settings==2.3.4
-passlib[bcrypt]==1.7.4
-bcrypt==4.0.1
 PyJWT[crypto]==2.15.1   # extra « crypto » = cryptography (RS256) ; >= 2.14 : JWKS non rechargé à chaque kid inconnu
 python-multipart==0.0.32   # >= 0.0.27 : en-têtes de partie bornés (GHSA-pp6c-gr5w-3c5g…), cf. commit
 httpx==0.27.0       # 0.28 casse le SDK anthropic 0.31 (argument `proxies`) ; TestClient : >=0.27,<0.29
 anthropic==0.31.0
-json-repair==0.30.3
+json-repair==0.60.1   # S-16 : GHSA-xf7x-x43h-rpqh corrigée (MIT)
 boto3==1.34.144
 python-docx==1.1.2
 lxml==6.1.3          # lecture du corps Word dans l'ordre (B3) ; déjà tiré par python-docx ; >= 6.1.3 : pas d'entités externes par défaut
-pypdf==6.21.2        # >= 6.0 : décompression FlateDecode plafonnée à 75 Mo ; 6.21.2 corrige les failles de 5.9
+pypdf==6.21.4        # >= 6.0 : FlateDecode plafonnée à 75 Mo ; 6.21.4 : 7 CVE de 6.21.2 corrigées (S-16, BSD-3)
 pypdfium2==5.14.0    # lecteur PDF (Apache-2.0 ou BSD-3-Clause, PDFium BSD-3) : remplace PyMuPDF (AGPL), plan H
 openpyxl==3.1.5
 xlrd==2.0.2          # .xls ancien (BIFF) — audit risque #1
@@ -24,7 +22,7 @@ xlwt==1.3.0          # fixtures de test BIFF uniquement
 celery==5.4.0
 redis==5.0.7
 stripe==10.5.0
-python-dotenv==1.0.1
+python-dotenv==1.2.2   # S-16 : PYSEC-2026-2270 corrigée (BSD-3)
 slowapi==0.1.9
 email-validator==2.2.0
 Pillow==13.0.0       # 10.4 : 52 failles (4 critiques) ; photos du mémoire (bloc 3), PNG et images de pages (bloc 4)

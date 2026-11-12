@@ -44,9 +44,8 @@ def _plan_enregistre(db: Session, project, org_id: str) -> Optional[PlanMemoire]
             .first())
 
 
-def _textes_du_dossier(db: Session, project) -> tuple[list[dict], list[dict]]:
+def _textes_du_dossier(db: Session, project, exigences: list) -> tuple[list[dict], list[dict]]:
     """(textes à lire pour les parties annoncées, exigences pour la limite de pages), avec leur source."""
-    exigences = exigences_pour_memoire(db, project)
     textes, pour_limite = [], []
     for e in exigences:
         source = {"type": "exigence", "id": e.id, "document": e.source_document, "page": e.source_page}
@@ -56,8 +55,12 @@ def _textes_du_dossier(db: Session, project) -> tuple[list[dict], list[dict]]:
     ids_lots = [l.get("id") for l in (project.lots_detectes or []) if l.get("id")]
     docs = (db.query(ProjectDocument).options(defer(ProjectDocument.extracted_text))
             .filter(ProjectDocument.project_id == project.id, ProjectDocument.type.in_(("rc", "cctp"))).all())
-    for doc in get_documents_for_lot(docs, project.selected_lot, ids_lots):
-        texte = db.query(ProjectDocument.extracted_text).filter(ProjectDocument.id == doc.id).scalar()
+    retenus = get_documents_for_lot(docs, project.selected_lot, ids_lots)
+    # D-03 — les textes des pièces retenues en UNE requête (avant : une par pièce), dans l'ordre des pièces.
+    par_id = dict(db.query(ProjectDocument.id, ProjectDocument.extracted_text)
+                  .filter(ProjectDocument.id.in_([d.id for d in retenus])).all()) if retenus else {}
+    for doc in retenus:
+        texte = par_id.get(doc.id)
         if texte:
             textes.append({"texte": texte, "source": {"type": "champ", "document": doc.file_name, "page": None}})
     return textes, pour_limite
@@ -65,7 +68,8 @@ def _textes_du_dossier(db: Session, project) -> tuple[list[dict], list[dict]]:
 
 def _reponse(db: Session, project, enregistre: Optional[PlanMemoire]) -> dict:
     org_id = project.organization_id
-    textes, pour_limite = _textes_du_dossier(db, project)
+    lues = exigences_pour_memoire(db, project)          # lues une fois pour les textes et les fiches (D-03)
+    textes, pour_limite = _textes_du_dossier(db, project, lues)
     attendues = service.extraire_parties_attendues(textes)
     limite = limite_de_pages(pour_limite)
     plan = enregistre.parties if enregistre else service.proposer(project.criteres_jugement, attendues)
@@ -74,7 +78,7 @@ def _reponse(db: Session, project, enregistre: Optional[PlanMemoire]) -> dict:
     # B2 — la fiche de chaque partie : exigences du dossier rattachées (sans IA) et cases proposées de « Mon entreprise »
     exigences = [{"id": e.id, "texte": e.exigence_text, "categorie": e.category,
                   "source": {"type": "exigence", "id": e.id, "document": e.source_document, "page": e.source_page}}
-                 for e in exigences_pour_memoire(db, project)]
+                 for e in lues]
     references = (db.query(Reference)
                   .filter(Reference.organization_id == org_id, Reference.is_reference == True,  # noqa: E712
                           Reference.deleted_at.is_(None)).all())
@@ -153,7 +157,7 @@ def valider_plan(request: Request, project_id: str, payload: Optional[PlanMemoir
         if existant is not None:
             parties = existant.parties
         else:
-            textes, _ = _textes_du_dossier(db, project)
+            textes, _ = _textes_du_dossier(db, project, exigences_pour_memoire(db, project))
             parties = service.proposer(project.criteres_jugement, service.extraire_parties_attendues(textes))
     ligne = _enregistrer(db, project, user.organization_id, parties, valider=True)
     log_action(db, user, "memoire.plan_valide", target_type="project", target_id=project_id,

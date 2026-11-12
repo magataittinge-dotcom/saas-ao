@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import re
 import time as _time_mod
@@ -43,7 +44,6 @@ from routers import (
     stripe_billing,
     progress,
     calculators,
-    rag,
     veille,
     fiches_entreprise,
     depot_entreprise,
@@ -320,6 +320,34 @@ app.add_middleware(SecurityHeadersMiddleware)
 _DOC_UPLOAD_PATH_RE = re.compile(r"^/api/projects/([^/]+)/documents$")
 
 
+def _appelant_possede_le_projet(authorization: str, project_id: str) -> bool:
+    """S-11 — vrai seulement si le jeton porteur est valide et que l'AO appartient à l'organisation de son compte.
+    FastAPI lit le corps AVANT les dépendances d'authentification : sans ce contrôle, n'importe qui pouvait publier
+    une fausse progression sur le canal d'un AO dont il connaissait l'identifiant. Synchrone (base, JWKS) : appelé
+    dans un fil. Ne lève jamais : un doute = pas de progression (le dépôt lui-même suit son cours normal)."""
+    if not authorization.lower().startswith("bearer "):
+        return False
+    try:
+        from database import SessionLocal
+        from models.user import User
+        from routers.auth import _decode_clerk_token
+        from services.project_access import get_owned_project
+        clerk_id = _decode_clerk_token(authorization[7:].strip()).get("sub")
+        if not clerk_id:
+            return False
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter(User.clerk_id == clerk_id).first()
+            if user is None:
+                return False
+            get_owned_project(project_id, user.organization_id, db)
+            return True
+        finally:
+            db.close()
+    except Exception:
+        return False
+
+
 class UploadReceiveProgressMiddleware:
     def __init__(self, app):  # pure ASGI (BaseHTTPMiddleware bufferise)
         self.app = app
@@ -338,6 +366,9 @@ class UploadReceiveProgressMiddleware:
         except (TypeError, ValueError):
             total = 0
         if total <= 0:
+            return await self.app(scope, receive, send)
+        authorization = headers.get(b"authorization", b"").decode("latin-1")
+        if not await asyncio.to_thread(_appelant_possede_le_projet, authorization, project_id):
             return await self.app(scope, receive, send)
 
         from services import progress_bus

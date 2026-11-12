@@ -68,6 +68,13 @@ def _verifier_azp(payload: dict) -> None:
         raise HTTPException(status_code=401, detail="Votre session n’est plus reconnue. Reconnectez-vous.")
 
 
+# Tolérance d'horloge (secondes) sur `iat`, `nbf` et `exp` : l'horloge du serveur peut retarder de
+# quelques secondes sur celle de Clerk ; sans elle, un jeton tout juste émis est refusé
+# (`ImmatureSignatureError`, vu une connexion sur dix sur le banc). 5 s : la valeur par défaut du SDK
+# de Clerk (`clockSkewInMs`). Jamais plus : au-delà, un jeton expiré resterait utilisable.
+TOLERANCE_HORLOGE_S = 5
+
+
 def _decode_clerk_token(token: str) -> dict:
     """Decode and validate a Clerk JWT using the JWKS endpoint."""
     try:
@@ -77,6 +84,7 @@ def _decode_clerk_token(token: str) -> dict:
             signing_key.key,
             algorithms=["RS256"],
             options={"verify_aud": False},
+            leeway=TOLERANCE_HORLOGE_S,
         )
     except jwt.ExpiredSignatureError:
         logger.warning("Auth failed: token expiré")
@@ -113,6 +121,23 @@ def _fetch_clerk_user(clerk_user_id: str) -> dict:
     return resp.json()
 
 
+# S-09 — un compte local n'est relié à un compte Clerk que par son adresse principale VÉRIFIÉE (Clerk a prouvé que la
+# personne lit cette boîte). Un compte déjà relié à un autre compte Clerk est relié de nouveau, avec une alerte au
+# journal (identifiants seulement) : c'est le cas de tous les comptes au passage de l'instance Clerk de développement à
+# celle de production (nouveaux identifiants), et le refuser fermerait la porte à tous les clients ce jour-là.
+MSG_ADRESSE_A_CONFIRMER = "Confirmez d'abord votre adresse e-mail, puis reconnectez-vous."
+
+
+def _adresse_principale(clerk_data: dict) -> tuple[str, bool]:
+    """(adresse principale, vérifiée ?) d'un utilisateur Clerk. Sans adresse principale désignée : la première."""
+    adresses = [a for a in (clerk_data.get("email_addresses") or []) if isinstance(a, dict)]
+    principale_id = clerk_data.get("primary_email_address_id")
+    adresse = next((a for a in adresses if principale_id and a.get("id") == principale_id),
+                   adresses[0] if adresses else {})
+    verifiee = ((adresse.get("verification") or {}).get("status") == "verified")
+    return adresse.get("email_address", "") or "", verifiee
+
+
 def _sync_clerk_user(clerk_user_id: str, db: Session) -> User:
     """Find or create a local DB user from a Clerk user ID."""
     # 1. Already linked?
@@ -122,14 +147,19 @@ def _sync_clerk_user(clerk_user_id: str, db: Session) -> User:
 
     # 2. Fetch from Clerk API
     clerk_data = _fetch_clerk_user(clerk_user_id)
-    email = (clerk_data.get("email_addresses") or [{}])[0].get("email_address", "")
+    email, verifiee = _adresse_principale(clerk_data)
     first_name = clerk_data.get("first_name") or ""
     last_name = clerk_data.get("last_name") or ""
     name = f"{first_name} {last_name}".strip() or email.split("@")[0]
 
-    # 3. Existing user with same email? Link them.
+    # 3. Existing user with same email? Link them — adresse principale vérifiée seulement, jamais par-dessus un autre
+    #    compte Clerk (S-09).
     user = db.query(User).filter(User.email == email).first()
     if user:
+        if not verifiee:
+            raise HTTPException(status_code=403, detail=MSG_ADRESSE_A_CONFIRMER)
+        if user.clerk_id and user.clerk_id != clerk_user_id:
+            logger.warning("Compte %s relié à un nouveau compte Clerk (adresse principale vérifiée)", user.id)
         user.clerk_id = clerk_user_id
         db.commit()
         db.refresh(user)

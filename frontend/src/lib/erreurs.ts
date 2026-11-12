@@ -1,13 +1,14 @@
 // Message d'erreur à montrer à l'utilisateur (1.16) : celui du serveur quand
 // il explique un refus (4xx, ou 503 « indisponible »), y compris dans une
-// réponse binaire (exports) ; sinon — panne 5xx, message générique ou
+// réponse binaire (exports), 507 compris ; sinon — panne 5xx, message générique ou
 // technique — le message calme et précis fourni par l'écran.
 import axios from 'axios'
 
 export async function messageErreur(err: unknown, defaut: string): Promise<string> {
   if (!axios.isAxiosError(err)) return defaut
   const statut = err.response?.status ?? 0
-  if (statut >= 500 && statut !== 503) return defaut
+  // 503 « indisponible » et 507 « disque presque plein » (dépôts) expliquent un refus ; les autres 5xx sont des pannes.
+  if (statut >= 500 && statut !== 503 && statut !== 507) return defaut
   let donnees: unknown = err.response?.data
   if (typeof Blob !== 'undefined' && donnees instanceof Blob) {
     try {

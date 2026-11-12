@@ -127,6 +127,13 @@ class BillingProvider(ABC):
             "This provider does not implement session retrieval."
         )
 
+    def resume_subscription(self, subscription_id: str) -> None:
+        """Undo a scheduled end-of-period cancellation (``cancel_at_period_end=False``).
+        Default implementation raises — providers that support it override."""
+        raise NotImplementedError(
+            "This provider does not implement subscription resumption."
+        )
+
     def retrieve_subscription(self, subscription_id: str) -> dict[str, Any]:
         """Default implementation raises — providers that support it override."""
         raise NotImplementedError(

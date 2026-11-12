@@ -3,20 +3,21 @@ from typing import Literal, Optional, List, Any
 from datetime import date, datetime
 
 
+# S-17 — longueurs alignées sur les colonnes (projects.name String(500), maitre_ouvrage String(255)) : 422, jamais 500.
 class ProjectCreate(BaseModel):
-    name: str
-    maitre_ouvrage: Optional[str] = None
+    name: str = Field(max_length=500)
+    maitre_ouvrage: Optional[str] = Field(default=None, max_length=255)
     deadline: Optional[date] = None
 
 
 class ProjectUpdate(BaseModel):
-    name: Optional[str] = None
+    name: Optional[str] = Field(default=None, max_length=500)
     status: Optional[Literal[
         "brouillon", "en_cours", "analyzed", "sans_suite", "soumis", "gagné", "perdu",
     ]] = None
-    maitre_ouvrage: Optional[str] = None
+    maitre_ouvrage: Optional[str] = Field(default=None, max_length=255)
     deadline: Optional[date] = None
-    current_step: Optional[int] = None
+    current_step: Optional[int] = Field(default=None, ge=1, le=7)   # R-06 : les étapes du parcours, rien d'autre
 
 
 class UnitesAO(BaseModel):

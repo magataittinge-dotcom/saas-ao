@@ -77,6 +77,12 @@ class StripeProvider(BillingProvider):
         except stripe.error.StripeError as exc:
             raise BillingError(f"Stripe cancel_subscription failed: {exc}") from exc
 
+    def resume_subscription(self, subscription_id):
+        try:
+            stripe.Subscription.modify(subscription_id, cancel_at_period_end=False)
+        except stripe.error.StripeError as exc:
+            raise BillingError(f"Stripe resume_subscription failed: {exc}") from exc
+
     def list_subscriptions(self, customer_id):
         try:
             subs = stripe.Subscription.list(customer=customer_id)

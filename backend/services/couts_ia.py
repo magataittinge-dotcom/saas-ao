@@ -27,6 +27,8 @@ TARIFS = {
     SONNET_4_6: (3.00, 15.00, 0.10, 1.25),
     SONNET_5_5: (2.00, 10.00, 0.10, 1.25),
 }
+# Repli d'un modèle absent de la table : le tarif de sortie le plus cher (puis d'entrée), jamais 0.
+TARIF_LE_PLUS_CHER = max(TARIFS.values(), key=lambda t: (t[1], t[0]))
 
 
 def taux_usd_eur() -> float:
@@ -37,11 +39,12 @@ def taux_usd_eur() -> float:
 
 
 def calculer(modele: str, usage: dict) -> tuple[float, float]:
-    """(coût en dollars, coût en euros) d'un appel ; (0, 0) et une alerte si le modèle n'a pas de tarif."""
+    """(coût en dollars, coût en euros) d'un appel. Un modèle sans tarif est compté au tarif le plus cher de la table,
+    avec une alerte (le nom du modèle seulement) : jamais 0 €, sinon sa dépense échapperait au budget d'IA du jour."""
     tarif = TARIFS.get(modele)
     if tarif is None:
-        logger.warning("couts_ia : aucun tarif pour le modèle %s", modele)
-        return 0.0, 0.0
+        logger.warning("couts_ia : aucun tarif pour le modèle %s, compté au tarif le plus cher connu", modele)
+        tarif = TARIF_LE_PLUS_CHER
     entree, sortie, lecture, ecriture = tarif
     usd = (
         usage.get("input_tokens", 0) * entree + usage.get("output_tokens", 0) * sortie
@@ -57,7 +60,7 @@ def estimer(modele: str, jetons_entree: int, jetons_sortie: int) -> tuple[float,
 
 def estimer_ecriture_cache(modele: str, jetons_prefixe: int, jetons_sortie: int) -> tuple[float, float]:
     """(dollars, euros) d'un appel dont le préfixe est ÉCRIT dans le cache (cache de 5 minutes expiré : le cas
-    courant pour « Refaire cette partie »), plus la sortie. Déterministe ; (0, 0) si le modèle n'a pas de tarif."""
+    courant pour « Refaire cette partie »), plus la sortie. Déterministe ; un modèle sans tarif au tarif le plus cher."""
     return calculer(modele, {"cache_creation_input_tokens": jetons_prefixe, "output_tokens": jetons_sortie})
 
 

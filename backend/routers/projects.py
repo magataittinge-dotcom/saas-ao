@@ -5,8 +5,8 @@ import tempfile
 import unicodedata
 import io as _io
 import threading
-from typing import IO, List, Optional, Any
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, UploadFile, File, Form
+from typing import IO, Annotated, List, Optional, Any
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path, Query, Request, UploadFile, File, Form
 from sqlalchemy.orm import Session, defer
 from pydantic import BaseModel
 
@@ -156,16 +156,17 @@ router = APIRouter()
 from services.rate_limit import limiter  # S1.2 — limiter partagé (org-keyed)
 
 # C14 — transitions de statut autorisées. Prêt (workflow) → soumis (dépôt
-# daté) → gagné/perdu (terminaux). sans_suite (B7) est réouvrable ; gagné
-# direct sans dépôt est interdit.
+# daté) → gagné/perdu. sans_suite (B7) est réouvrable ; gagné direct sans
+# dépôt est interdit. D16 — gagné et perdu se corrigent (erreur de saisie) :
+# gagné ↔ perdu, et retour à « Déposé » ; aucune autre sortie.
 _STATUS_TRANSITIONS: dict = {
     "brouillon":  {"en_cours", "analyzed", "sans_suite", "soumis"},
     "en_cours":   {"brouillon", "analyzed", "sans_suite", "soumis"},
     "analyzed":   {"en_cours", "sans_suite", "soumis"},
     "sans_suite": {"en_cours", "analyzed"},
     "soumis":     {"gagné", "perdu", "en_cours"},
-    "gagné":      set(),   # terminal
-    "perdu":      set(),   # terminal
+    "gagné":      {"perdu", "soumis"},   # D16 : correction seulement
+    "perdu":      {"gagné", "soumis"},   # D16 : correction seulement
 }
 storage = FileStorage()
 processor = DocumentProcessor()
@@ -562,7 +563,8 @@ def update_project(
                 status_code=422,
                 detail="Ce changement d’état n’est pas possible pour cet appel d’offres. Rechargez la page.",
             )
-        if payload.status == "soumis":
+        # Une correction (retour de gagné/perdu à « Déposé ») garde la vraie date de dépôt.
+        if payload.status == "soumis" and not (status_before in ("gagné", "perdu") and project.depose_at):
             from datetime import datetime as _datetime
             project.depose_at = _datetime.utcnow()
 
@@ -572,6 +574,10 @@ def update_project(
     db.refresh(project)
     if project.status != status_before:
         org_cache.invalidate(f"dashboard_stats:{user.organization_id}")
+        # D16 — chaque changement de statut est daté et journalisé (ancien et nouveau statut, rien d'autre).
+        from services.audit_logger import log_action
+        log_action(db, user, "project.status", target_type="project", target_id=project_id,
+                   extra={"de": status_before, "vers": project.status})
     return project
 
 
@@ -2131,7 +2137,7 @@ def select_lot(
 @router.post("/{project_id}/complete-step/{step}", response_model=ProjectResponse)
 def complete_step(
     project_id: str,
-    step: int,
+    step: Annotated[int, Path(ge=1, le=7)],     # R-06 : une étape du parcours, rien d'autre (422 sinon)
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ):
