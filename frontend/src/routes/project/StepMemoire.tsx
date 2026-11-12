@@ -329,6 +329,9 @@ export default function StepMemoire({ project }: Props) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [memoireSse.phase])
+  // Pendant l'envoi de la demande, le flux n'est pas encore suivi : l'attente part de zéro, jamais de l'état d'une rédaction
+  // précédente (relancée sur le même écran, elle affichait « Terminé » jusqu'à la réponse).
+  const flux = isGenerating ? { step: null, progress: 0, detail: '', phase: 'pending' as const } : memoireSse
 
   const { mutateAsync: saveEdits } = useMutation({
     mutationFn: (content: MemoireContent) =>
@@ -407,10 +410,10 @@ export default function StepMemoire({ project }: Props) {
             variant="modal"
             title="Synorix rédige votre mémoire"
             steps={MEMOIRE_GEN_STEPS}
-            currentStep={memoireSse.step ?? 'preparing'}
-            progress={memoireSse.progress}
-            detail={memoireSse.detail || 'Vous retrouverez le mémoire ici, partie par partie.'}
-            phase={memoireSse.phase}
+            currentStep={flux.step ?? 'preparing'}
+            progress={flux.progress}
+            detail={flux.detail || 'Vous retrouverez le mémoire ici, partie par partie.'}
+            phase={flux.phase}
             avis={avisAttente}
             onArrierePlan={() => navigate('/dashboard')}
           />
@@ -477,10 +480,10 @@ export default function StepMemoire({ project }: Props) {
           variant="modal"
           title={refaitUnePartie ? 'Synorix refait cette partie' : 'Synorix rédige votre mémoire'}
           steps={MEMOIRE_GEN_STEPS}
-          currentStep={memoireSse.step ?? 'preparing'}
-          progress={memoireSse.progress}
-          detail={memoireSse.detail || 'Vous retrouverez le mémoire ici, partie par partie.'}
-          phase={memoireSse.phase}
+          currentStep={flux.step ?? 'preparing'}
+          progress={flux.progress}
+          detail={flux.detail || 'Vous retrouverez le mémoire ici, partie par partie.'}
+          phase={flux.phase}
           avis={avisAttente}
           onArrierePlan={() => navigate('/dashboard')}
         />

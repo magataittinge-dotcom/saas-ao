@@ -42,3 +42,10 @@ test('aucun <p> autour d’EtatElement, qui rend lui-même un <p> (erreur de con
   const fautifs = fichiersSource().filter((f) => /<p\b[^>]*>\s*<EtatElement\b/.test(sansCommentaires(lire(f))))
   assert.deepEqual(fautifs, [])
 })
+
+test('rédaction relancée sur le même écran : pendant l’envoi de la demande, l’attente part de zéro (jamais « Terminé » d’avant)', () => {
+  const redaction = sansCommentaires(lire('src/routes/project/StepMemoire.tsx'))
+  assert.match(redaction, /const flux = isGenerating \? \{ step: null, progress: 0, detail: '', phase: 'pending' as const \} : memoireSse/)
+  assert.equal((redaction.match(/phase=\{flux\.phase\}/g) ?? []).length, 2)
+  assert.doesNotMatch(redaction, /(currentStep|progress|detail|phase)=\{memoireSse\./)
+})
