@@ -12,13 +12,16 @@ export function useProjects() {
   })
 }
 
+/** Un AO (GET /projects/:id) : la même lecture pour la page et pour son préchargement (lib/prechargementAO.ts). */
+export async function lireProjet(id: string): Promise<Project> {
+  const { data } = await api.get<Project>(`/projects/${id}`)
+  return data
+}
+
 export function useProject(id: string) {
   return useQuery({
     queryKey: ['projects', id],
-    queryFn: async () => {
-      const { data } = await api.get<Project>(`/projects/${id}`)
-      return data
-    },
+    queryFn: () => lireProjet(id),
     enabled: !!id,
   })
 }

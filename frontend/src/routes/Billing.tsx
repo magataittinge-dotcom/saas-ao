@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { api } from '@/services/api'
 import type { Organization } from '@/types'
-import GrilleOffres from '@/components/offres/GrilleOffres'
+import GrilleOffres, { PHRASE_RESILIATION } from '@/components/offres/GrilleOffres'
 import { ESSAI_LIBELLE, nomPlan, prixLibelle, trouverOffre } from '@/lib/offres'
 import { messageErreur } from '@/lib/erreurs'
 import { jourLongParis } from '@/lib/dateParis'
@@ -272,7 +272,7 @@ export default function Billing() {
               </Bouton>
             )}
           />
-          <p className="mt-4 text-xs text-fg-3">Annulation possible à tout moment. Facturation mensuelle sans engagement.</p>
+          <p className="mt-4 text-xs text-fg-3">{PHRASE_RESILIATION}</p>
         </>
       )}
 

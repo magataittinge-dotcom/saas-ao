@@ -10,6 +10,7 @@ import { urlSure } from '@/lib/veille'
 import { Bouton, classesBouton } from '@/components/ui/bouton'
 import { Carte } from '@/components/ui/carte'
 import { PastilleEtat } from '@/components/ui/pastille'
+import { EtatErreur } from '@/components/ui/etats'
 
 /** Jusqu'à trois avis de la veille pour la zone et les filtres enregistrés de l'utilisateur ; rien sans zone. */
 function useAvisPourVous() {
@@ -24,7 +25,10 @@ function useAvisPourVous() {
   })
   const metiers = useQuery({ queryKey: CLES_VEILLE.metiers, queryFn: lireMetiers, staleTime: 3600_000, refetchOnWindowFocus: false })
   const libelles: Record<string, string> = Object.fromEntries((metiers.data ?? []).map((m) => [m.code, m.libelle]))
-  return { avis: (avis.data?.items ?? []).slice(0, 3), libelles, zoneChoisie: zone.length > 0, charge: prefs.isLoading || avis.isLoading }
+  // Une lecture en panne n'est jamais « aucun avis » ni « choisissez votre zone » (F-03).
+  const enErreur = (prefs.isError && !prefs.data) || (avis.isError && !avis.data)
+  const relancer = () => { if (prefs.isError) void prefs.refetch(); if (avis.isError) void avis.refetch() }
+  return { avis: (avis.data?.items ?? []).slice(0, 3), libelles, zoneChoisie: zone.length > 0, charge: prefs.isLoading || avis.isLoading, enErreur, relancer }
 }
 
 function CarteAvisVeille({ avis, libelles }: { avis: AvisVeille; libelles: Record<string, string> }) {
@@ -63,7 +67,8 @@ function CarteAvisVeille({ avis, libelles }: { avis: AvisVeille; libelles: Recor
 }
 
 export default function AvisPourVous() {
-  const { avis, libelles, zoneChoisie, charge } = useAvisPourVous()
+  const { avis, libelles, zoneChoisie, charge, enErreur, relancer } = useAvisPourVous()
+  if (avis.length === 0 && enErreur) return <EtatErreur titre="Les avis de la veille n’ont pas pu se charger" onReessayer={relancer} />
   return avis.length > 0 ? (
     <div className="grid gap-4 md:grid-cols-3">{avis.map((a) => <CarteAvisVeille key={a.id} avis={a} libelles={libelles} />)}</div>
   ) : (
