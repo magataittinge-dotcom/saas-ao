@@ -34,3 +34,16 @@ def test_fichiers_x_accel_gardent_les_en_tetes_de_securite():
     assert "add_header X-Frame-Options DENY always;" in bloc
     assert "add_header X-Content-Type-Options nosniff always;" in bloc
     assert "add_header Cross-Origin-Resource-Policy same-site always;" in bloc
+
+
+def test_journal_d_acces_sans_signature_ni_nom_de_fichier():
+    texte = _sans_commentaires(CONF)
+    m = re.search(r"map \$request_uri \$synorix_uri_journal \{(.*?)\}", texte, re.S)
+    assert m, "map du journal absent"
+    assert re.search(r"~\^/api/files/\s+/api/files/\*;", m.group(1))
+    fmt = re.search(r"log_format synorix_sans_signature '([^;]*)';", texte, re.S)
+    assert fmt and "$synorix_uri_journal" in fmt.group(1)
+    assert "$request " not in fmt.group(1) and "$request_uri" not in fmt.group(1) and "$args" not in fmt.group(1)
+    assert "access_log /var/log/nginx/synorix.access.log synorix_sans_signature;" in texte
+    # aucun autre journal d'accès qui écrirait l'adresse brute
+    assert len(re.findall(r"^\s*access_log ", texte, re.M)) == 1
