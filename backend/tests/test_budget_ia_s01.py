@@ -32,6 +32,8 @@ ROUTES_IA = {
     ("POST", "/api/memoire-config/structure-text"),
     ("POST", "/api/memoire-config/import"),
     ("GET", "/api/rag/retrieve"),
+    # Fonctions C1 à C4, éteintes par défaut (services/fonctions_ia.py) : allumées, elles portent le même filet.
+    ("POST", "/api/projects/{project_id}/memoire/proposer-paragraphe"),
 }
 
 
@@ -64,7 +66,10 @@ def budget_depense(db_session, test_org):
 
 
 @pytest.mark.parametrize("methode,chemin", sorted(ROUTES_IA))
-def test_au_dela_du_budget_chaque_route_repond_429(client, budget_depense, methode, chemin):
+def test_au_dela_du_budget_chaque_route_repond_429(client, budget_depense, methode, chemin, monkeypatch):
+    from services.fonctions_ia import INTERRUPTEURS
+    for variable in INTERRUPTEURS.values():          # les fonctions éteintes répondent 404 avant le filet
+        monkeypatch.setenv(variable, "1")
     url = chemin.replace("{project_id}", "p-x").replace("{part}", "partie").replace("{cle}", "cle")
     r = client.request(methode, url, params={"q": "x"} if methode == "GET" else None)
     if r.status_code == 404 and methode == "GET":

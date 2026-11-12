@@ -10,6 +10,9 @@ import { PastilleEtat } from '@/components/ui/pastille'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { SqueletteLignes } from '@/components/ui/squelette'
 import PanneauSource, { type SelectionSource } from '@/components/project/source/PanneauSource'
+import PropositionParagraphe, { type EtatProposition } from '@/components/memoire/PropositionParagraphe'
+import { annoncer } from '@/components/ui/toast'
+import { detailErreur, useFonctionsIA } from '@/lib/fonctionsIA'
 import { reponseDeChamp } from '@/lib/ancre'
 import { PASSAGE_INTROUVABLE } from '@/lib/pieceCitee'
 import { allerALAncre, resumeRelecture, type LigneRelecture, type ReponseRelecture, type SourceLigne, type TypeLigne } from '@/lib/relectureMemoire'
@@ -47,10 +50,12 @@ export function groupesRelecture(lignes: readonly LigneRelecture[]): { libelle: 
  * La liste courte : les points à reprendre, rangés sous leur mot, dit UNE fois en tête de groupe avec son compte (jury,
  * tour 1 : trente pastilles rouges identiques ne triaient rien) ; ou « Conforme » et une phrase sobre quand tout va bien.
  */
-export function ListeRelecture({ donnees, onAller, onSource }: {
+export function ListeRelecture({ donnees, onAller, onSource, onProposer }: {
   donnees: ReponseRelecture
   onAller: (ligne: LigneRelecture) => void
   onSource: (source: SourceLigne) => void
+  /** C1 (RELECTURE_PROPOSER) : donné seulement quand le serveur dit la fonction allumée ; sinon, aucun bouton. */
+  onProposer?: (ligne: LigneRelecture) => void
 }) {
   if (donnees.lignes.length === 0) {
     return (
@@ -79,6 +84,7 @@ export function ListeRelecture({ donnees, onAller, onSource }: {
                   )}
                   {l.lien && <Link to={l.lien} className={classesBouton('lien', 'min-h-9')}>Renseigner dans Mon entreprise</Link>}
                   {l.source && <Bouton variante="lien" onClick={() => onSource(l.source as SourceLigne)} className="min-h-9">Voir dans le dossier</Bouton>}
+                  {onProposer && l.type === 'sous_critere' && <Bouton variante="lien" onClick={() => onProposer(l)} className="min-h-9">Proposer un paragraphe</Bouton>}
                 </p>
               </li>
             ))}
@@ -98,7 +104,9 @@ export default function RelectureMemoire({ projectId }: { projectId: string }) {
   const [ouvert, setOuvert] = useState(false)
   const [selection, setSelection] = useState<SelectionSource | null>(null)
   const [avis, setAvis] = useState<string | null>(null)
-  const changer = (o: boolean) => { setOuvert(o); if (!o) { setSelection(null); setAvis(null) } }
+  const [proposition, setProposition] = useState<(EtatProposition & { ligne: LigneRelecture }) | null>(null)
+  const fonctions = useFonctionsIA()
+  const changer = (o: boolean) => { setOuvert(o); if (!o) { setSelection(null); setAvis(null); setProposition(null) } }
 
   const { data, isFetching, isError, refetch } = useQuery({
     queryKey: ['relecture-memoire', projectId],
@@ -118,6 +126,30 @@ export default function RelectureMemoire({ projectId }: { projectId: string }) {
     changer(false)
     // le tiroir se ferme (le focus revient au bouton), puis la page remonte au passage
     window.setTimeout(() => { allerALAncre(l.ancre) }, 120)
+  }
+
+  // C1 — un paragraphe proposé pour un sous-critère « À couvrir » ; rien n'est écrit dans le mémoire.
+  const proposer = async (ligne: LigneRelecture) => {
+    setProposition({ etat: 'enCours', sousCritere: ligne.texte, ligne })
+    try {
+      const { data } = await api.post<{ paragraphe: string }>(`/projects/${projectId}/memoire/proposer-paragraphe`, {
+        sous_critere: ligne.texte, critere: ligne.detail, ancre: ligne.ancre,
+      }, { timeout: 120_000 })
+      setProposition({ etat: 'pret', sousCritere: ligne.texte, texte: data.paragraphe, section: ligne.ancre ? ligne.section : null, ligne })
+    } catch (err) {
+      setProposition({ etat: 'erreur', sousCritere: ligne.texte, message: detailErreur(err, 'La proposition n’a pas pu se faire. Rien n’a été décompté ; réessayez dans un instant.'), ligne })
+    }
+  }
+
+  const copier = async (texte: string, ligne: LigneRelecture) => {
+    try {
+      await navigator.clipboard.writeText(texte)
+      annoncer('Paragraphe copié. Collez-le dans la partie.', 'succes')
+    } catch {
+      annoncer('La copie n’a pas pu se faire. Sélectionnez le texte pour le copier.', 'attention')
+      return
+    }
+    if (ligne.ancre) aller(ligne)
   }
 
   const ouvrirSource = async (source: SourceLigne) => {
@@ -153,7 +185,14 @@ export default function RelectureMemoire({ projectId }: { projectId: string }) {
             </SheetDescription>
           </header>
           <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-            {selection ? (
+            {proposition ? (
+              <PropositionParagraphe
+                proposition={proposition}
+                onRetour={() => setProposition(null)}
+                onCopier={(texte) => { void copier(texte, proposition.ligne) }}
+                onReessayer={() => { void proposer(proposition.ligne) }}
+              />
+            ) : selection ? (
               <div className="space-y-3">
                 <Bouton variante="lien" onClick={() => setSelection(null)} className="min-h-9">
                   <ArrowLeft aria-hidden="true" /> Retour à la relecture
@@ -180,7 +219,7 @@ export default function RelectureMemoire({ projectId }: { projectId: string }) {
                 {data.nombre > 0 && (
                   <p className="text-sm text-fg-2"><span className="font-semibold text-fg">{resumeRelecture(data)}</span> avant le dépôt, rangés par nature. Chaque point mène à son passage.</p>
                 )}
-                <ListeRelecture donnees={data} onAller={aller} onSource={ouvrirSource} />
+                <ListeRelecture donnees={data} onAller={aller} onSource={ouvrirSource} onProposer={fonctions.relecture_proposer ? (l) => { void proposer(l) } : undefined} />
                 {data.limite_pages !== null && (
                   <p className="border-t border-bord pt-3 text-xs text-fg-3">Longueur estimée : environ {data.pages_estimees} pages, pour {data.limite_pages} au plus dans le règlement.</p>
                 )}

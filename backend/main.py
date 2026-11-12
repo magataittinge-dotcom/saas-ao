@@ -51,6 +51,7 @@ from routers import (
 from routers.file_serve import router as file_serve_router
 from routers.sources import router as sources_router
 from routers.csp_rapport import router as csp_rapport_router
+from routers.fonctions_ia import router as fonctions_ia_router  # C1 à C4 : éteintes par défaut (services/fonctions_ia.py)
 
 settings = get_settings()
 
@@ -435,6 +436,7 @@ app.include_router(candidature.router, prefix="/api/projects", tags=["candidatur
 app.include_router(memoire.router, prefix="/api/projects", tags=["memoire"])
 app.include_router(relecture_memoire.router, prefix="/api/projects", tags=["relecture-memoire"])
 app.include_router(plan_memoire.router, prefix="/api/projects", tags=["plan-memoire"])
+app.include_router(fonctions_ia_router, prefix="/api", tags=["fonctions-ia"])
 app.include_router(memoire_config.router, prefix="/api/memoire-config", tags=["memoire-config"])
 # S-07 (audit de sécurité) : GET /api/rag/retrieve déclenchait deux appels Voyage payants pour tout compte connecté ;
 # aucun écran ne s'en sert. Retirée de l'API publique (le routeur reste dans routers/rag.py). Le jeton ops
