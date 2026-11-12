@@ -7,6 +7,7 @@ import EchecAction from '@/components/common/EchecAction'
 import { reponseDeChamp } from '@/lib/ancre'
 import { PASSAGE_INTROUVABLE } from '@/lib/pieceCitee'
 import type { ProjectDocument } from '@/types'
+import { ouvrirOngletExterne } from '@/lib/adresseSure'
 
 export interface SourceChamp {
   document: string
@@ -30,7 +31,7 @@ export function useSourceChamp(projectId: string): { ouvrir: (source: SourceCham
   const ouvrir = useCallback(async (src: SourceChamp) => {
     const doc = pieces.find((d) => d.file_name === src.document)
     if (!doc) { setAvis({ message: PASSAGE_INTROUVABLE }); return }
-    if (doc.file_url.startsWith('http')) { window.open(doc.file_url, '_blank'); return }
+    if (doc.file_url.startsWith('http')) { ouvrirOngletExterne(doc.file_url); return }
     try {
       const origine = await getSignedFileUrl(doc.file_url)
       const pdfRel = [doc.file_url, doc.pdf_preview_url].find((u) => u && u.toLowerCase().endsWith('.pdf')) ?? null

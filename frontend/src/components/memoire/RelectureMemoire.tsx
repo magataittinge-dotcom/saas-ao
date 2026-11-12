@@ -18,6 +18,7 @@ import { PASSAGE_INTROUVABLE } from '@/lib/pieceCitee'
 import { allerALAncre, resumeRelecture, type LigneRelecture, type ReponseRelecture, type SourceLigne, type TypeLigne } from '@/lib/relectureMemoire'
 import { cn } from '@/lib/utils'
 import type { ProjectDocument } from '@/types'
+import { ouvrirOngletExterne } from '@/lib/adresseSure'
 
 /**
  * La couleur d'un groupe dit son poids (COULEURS.md), toujours avec son mot et son icône : rouge = hors de la limite du
@@ -157,7 +158,7 @@ export default function RelectureMemoire({ projectId }: { projectId: string }) {
     if (source.type === 'exigence') { setSelection({ type: 'exigence', id: source.id }); return }
     const doc = docs.find((d) => d.file_name === source.document)
     if (!doc) { setAvis(PASSAGE_INTROUVABLE); return }
-    if (doc.file_url.startsWith('http')) { window.open(doc.file_url, '_blank'); return }
+    if (doc.file_url.startsWith('http')) { ouvrirOngletExterne(doc.file_url); return }
     try {
       const origine = await getSignedFileUrl(doc.file_url)
       const pdfRel = [doc.file_url, doc.pdf_preview_url].find((u) => u && u.toLowerCase().endsWith('.pdf')) ?? null

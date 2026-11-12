@@ -3,6 +3,8 @@
 // connexion, on revient à cette page. Garde : une seule réaction par rafale de 401, et jamais deux en moins de
 // DELAI_MIN_MS (si le serveur refuse encore juste après la reconnexion, les écrans montrent leur état d'erreur : pas de boucle).
 
+import { cheminInterne } from '@/lib/adresseSure'
+
 export const PHRASE_SESSION_EXPIREE = 'Votre session a expiré. Reconnectez-vous pour reprendre où vous en étiez.'
 export const CLE_RETOUR = 'synorix.retour-connexion'
 export const CLE_DERNIERE_EXPIRATION = 'synorix.session-expiree'
@@ -15,9 +17,9 @@ interface Stockage {
   removeItem(cle: string): void
 }
 
-/** Une adresse de l'appli où l'on peut revenir : interne, jamais la connexion ni l'inscription. */
+/** Une adresse de l'appli où l'on peut revenir : interne (`cheminInterne`), jamais la connexion ni l'inscription. */
 export function adresseDeRetourValide(adresse: string | null | undefined): adresse is string {
-  return !!adresse && adresse.startsWith('/') && !adresse.startsWith('//') && !/^\/(login|register)(\/|\?|$)/.test(adresse) && adresse !== '/'
+  return cheminInterne(adresse) && !/^\/(login|register)(\/|\?|$)/.test(adresse) && adresse !== '/'
 }
 
 /**

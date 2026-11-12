@@ -3,6 +3,7 @@ import { Archive } from 'lucide-react'
 import { api } from '@/services/api'
 import { DOC_TYPE_LABELS } from '@/lib/vault'
 import { Button } from '@/components/ui/button'
+import { resumeErreur } from '@/lib/erreurs'
 
 export interface VaultSuggestion {
   docId: string
@@ -33,7 +34,7 @@ export default function VaultSavePrompt({ suggestion, onDone }: Props) {
       setSaved(true)
       setTimeout(() => onDone(suggestion.docId), 1800)
     } catch (err) {
-      console.error('[VaultSavePrompt] enregistrement impossible:', err)
+      console.error('[VaultSavePrompt] enregistrement impossible:', resumeErreur(err))
       onDone(suggestion.docId)
     } finally {
       setBusy(false)
@@ -45,7 +46,7 @@ export default function VaultSavePrompt({ suggestion, onDone }: Props) {
     try {
       await api.post('/documents/vault-prompt/dismiss', { project_doc_id: suggestion.docId })
     } catch (err) {
-      console.error('[VaultSavePrompt] dismiss non enregistré:', err)
+      console.error('[VaultSavePrompt] dismiss non enregistré:', resumeErreur(err))
     }
   }
 

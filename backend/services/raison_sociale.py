@@ -73,9 +73,17 @@ def raison_sociale_de(org, db: Optional[Session] = None) -> str:
     return raison_sociale_effective(getattr(org, "name", None), bool(getattr(org, "siret_verified", False)), comptes)
 
 
+# P2-2 (REVUE-FRONT) : facturation et cycle de vie, qu'aucun écran ne lit dans l'organisation (grep de frontend/src ;
+# la date de suppression prévue vient de /billing/quota) : jamais renvoyées, donc jamais gardées par le navigateur.
+COLONNES_PRIVEES = frozenset({
+    "stripe_customer_id", "stripe_subscription_id", "billing_provider", "billing_country",
+    "subscription_started_at", "suppression_prevue_le",
+})
+
+
 def organisation_publique(org, db: Optional[Session] = None) -> dict:
-    """L'organisation telle que l'API la renvoie : toutes ses colonnes, avec `name` passé par la règle."""
-    donnees = {c.name: getattr(org, c.name) for c in org.__table__.columns}
+    """L'organisation telle que l'API la renvoie : ses colonnes sauf `COLONNES_PRIVEES`, avec `name` passé par la règle."""
+    donnees = {c.name: getattr(org, c.name) for c in org.__table__.columns if c.name not in COLONNES_PRIVEES}
     donnees["name"] = raison_sociale_de(org, db)
     return donnees
 

@@ -6,6 +6,7 @@ import type { Organization } from '@/types'
 import GrilleOffres, { PHRASE_RESILIATION } from '@/components/offres/GrilleOffres'
 import { ESSAI_LIBELLE, nomPlan, prixLibelle, trouverOffre } from '@/lib/offres'
 import { messageErreur } from '@/lib/erreurs'
+import { allerChezStripe } from '@/lib/adresseSure'
 import { jourLongParis } from '@/lib/dateParis'
 import { cn } from '@/lib/utils'
 import { tonConsommation, useQuota } from '@/components/layout/QuotaGauge'
@@ -105,7 +106,7 @@ export default function Billing() {
     const verify = async () => {
       try {
         const { data } = await api.get<{ plan: string; updated: boolean }>(
-          `/stripe/verify-session?session_id=${sessionId}`
+          '/stripe/verify-session', { params: { session_id: sessionId } }, // P2-7 : encodé par axios
         )
         if (data.updated && data.plan !== 'free') {
           if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
@@ -146,7 +147,7 @@ export default function Billing() {
     setErreur(null)
     try {
       const { data } = await api.post('/stripe/create-checkout-session', { plan: planId })
-      window.location.href = data.url
+      allerChezStripe(data.url)
     } catch (e) {
       setErreur(await messageErreur(e, 'Le paiement n’a pas pu démarrer. Réessayez dans un instant.'))
       setLoading(null)
@@ -158,7 +159,7 @@ export default function Billing() {
     setErreurPortail(false)
     try {
       const { data } = await api.get('/stripe/portal')
-      window.location.href = data.url
+      allerChezStripe(data.url)
     } catch {
       setErreurPortail(true)
       setPortalLoading(false)
