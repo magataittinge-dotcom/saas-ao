@@ -85,6 +85,46 @@ def _abonnement_lu(billing, sub_id: str) -> dict | None:
     return sub if isinstance(sub, dict) else None
 
 
+def _offre_ouverte_du_client(org: Organization, sub: dict, client_annonce: str | None) -> str | None:
+    """L'offre d'un abonnement relu chez le fournisseur, s'il vit (`active`, `trialing`) et appartient au client annoncé
+    (session, événement) comme à celui de l'organisation ; None sinon. L'offre se lit dans le prix, jamais ailleurs."""
+    if not isinstance(sub, dict) or sub.get("status") not in STATUTS_OFFRE_OUVERTE:
+        return None
+    client_sub = sub.get("customer") or client_annonce
+    if (client_annonce and client_sub != client_annonce) or (
+            org.stripe_customer_id and client_sub and client_sub != org.stripe_customer_id):
+        return None
+    return offre_de_l_abonnement(sub)
+
+
+def _abonnement_connu_vit(billing, sub_id: str) -> bool:
+    """L'abonnement que l'organisation connaît vit-il encore (payé, à l'essai, impayé en cours) ? Illisible : oui (on ne
+    le remplace pas sur un doute)."""
+    from services.resiliation_compte import STATUTS_PAYANTS_VIVANTS
+    try:
+        sub = billing.retrieve_subscription(sub_id)
+    except Exception:
+        return True
+    return isinstance(sub, dict) and sub.get("status") in STATUTS_PAYANTS_VIVANTS
+
+
+def _abonnement_de_rechange(billing, org: Organization, fini: str | None) -> tuple[str, str] | None:
+    """Fin de l'abonnement de l'organisation : un AUTRE abonnement de son client vit-il encore, payé (`active`,
+    `trialing`), à une offre connue ? (identifiant, offre de son prix) ; None sinon, ou si le fournisseur ne répond pas."""
+    if not org.stripe_customer_id:
+        return None
+    try:
+        abonnements = billing.list_subscriptions(org.stripe_customer_id) or []
+    except Exception as exc:
+        logger.warning("Fin d'abonnement : autres abonnements illisibles (org=%s, %s)", org.id, type(exc).__name__)
+        return None
+    for sub in sorted((s for s in abonnements if isinstance(s, dict)), key=lambda s: str(s.get("id") or "")):
+        offre = _offre_ouverte_du_client(org, sub, org.stripe_customer_id)
+        if sub.get("id") and sub.get("id") != fini and offre:
+            return sub["id"], offre
+    return None
+
+
 def _get_or_create_customer(org: Organization, user: User) -> str:
     """Return the customer id, creating one on the active provider if needed."""
     billing = get_billing_provider()
@@ -326,21 +366,31 @@ def stripe_webhook(request: Request, payload: bytes = Depends(_corps_brut), db: 
     data_object = (event.get("data") or {}).get("object") or {}
 
     # ── checkout.session.completed → upgrade plan ─────────────────────────────
+    # PAIEMENT-2 (constat 1) — même règle que verify-session (P0-1) : Stripe réessaie un événement pendant trois jours ;
+    # un réessai tardif, arrivé après la fin de l'abonnement ou après une baisse d'offre, rouvrait l'offre des
+    # métadonnées. L'offre n'est appliquée que si l'abonnement de la session vit (`active`, `trialing`) et appartient
+    # au client de l'organisation, et elle se lit dans le PRIX de l'abonnement relu. Session déjà appliquée : rien
+    # n'est écrit (pas de fenêtre de quotas neuve). Un autre abonnement encore vivant n'est jamais remplacé.
     if event_type == "checkout.session.completed":
         metadata = data_object.get("metadata") or {}
-        org_id = metadata.get("organization_id")
-        plan = metadata.get("plan")
-        customer_id = data_object.get("customer")
+        org_id = metadata.get("organization_id") or data_object.get("client_reference_id")
         subscription_id = data_object.get("subscription")
+        org = db.query(Organization).filter(Organization.id == org_id).first() if org_id else None
 
-        if org_id and plan:
-            org = db.query(Organization).filter(Organization.id == org_id).first()
-            if org:
+        if org is not None and subscription_id and org.stripe_subscription_id != subscription_id:
+            try:
+                sub = billing.retrieve_subscription(subscription_id)
+            except Exception as exc:
+                # Pas de 2xx : Stripe réessaiera, et le client qui vient de payer aura son offre.
+                logger.warning("checkout.session.completed : abonnement illisible (org=%s, %s)",
+                               org.id, type(exc).__name__)
+                raise HTTPException(status_code=503, detail="Fournisseur de paiement injoignable") from exc
+            plan = _offre_ouverte_du_client(org, sub, data_object.get("customer"))
+            if plan and not (org.stripe_subscription_id
+                             and _abonnement_connu_vit(billing, org.stripe_subscription_id)):
                 org.plan = plan
-                if customer_id:
-                    org.stripe_customer_id = customer_id
-                if subscription_id:
-                    org.stripe_subscription_id = subscription_id
+                org.stripe_customer_id = sub.get("customer") or data_object.get("customer") or org.stripe_customer_id
+                org.stripe_subscription_id = subscription_id
                 # Nouvel abonnement → nouvelle ancre de quotas (C1).
                 org.subscription_started_at = datetime.utcnow()
                 db.commit()
@@ -362,7 +412,15 @@ def stripe_webhook(request: Request, payload: bytes = Depends(_corps_brut), db: 
                 from services import resiliation_compte
                 if resiliation_compte.supprimer_si_demande(db, org):
                     return {"received": True}
-            if org:
+            # PAIEMENT-2 (constat 3) — un doublon payé vit encore (S-13, ou la demande D23 attend sa fin) : le client garde
+            # l'offre de ce doublon, qui devient l'abonnement suivi, au lieu de passer en offre gratuite en payant.
+            rechange = _abonnement_de_rechange(billing, org, data_object.get("id")) if org else None
+            if org and rechange:
+                if rechange[1] != org.plan:
+                    org.subscription_started_at = datetime.utcnow()
+                org.stripe_subscription_id, org.plan = rechange
+                db.commit()
+            elif org:
                 org.plan = "free"
                 org.stripe_subscription_id = None
                 org.subscription_started_at = None
@@ -385,16 +443,25 @@ def stripe_webhook(request: Request, payload: bytes = Depends(_corps_brut), db: 
             if resiliation_compte.abonnement_repris(org):
                 org.suppression_prevue_le = None
                 db.commit()
-        if org is not None and data_object.get("status") == "active":
+        # PAIEMENT-2 (constat 2) — on ne croit pas l'offre écrite dans l'événement (un événement ancien, réessayé, remettait
+        # l'offre précédente) : l'abonnement est RELU chez le fournisseur, l'offre se lit dans son prix, seulement s'il
+        # vit et appartient au client. N'agit que sur l'abonnement de l'organisation (ou, si elle n'en connaît aucun, sur
+        # un abonnement vivant de son client) : l'événement d'un doublon ne remplace jamais l'abonnement enregistré.
+        sub_id = data_object.get("id")
+        if (org is not None and sub_id
+                and (not org.stripe_subscription_id or org.stripe_subscription_id == sub_id)):
+            try:
+                sub = billing.retrieve_subscription(sub_id)
+            except Exception as exc:
+                logger.warning("subscription.updated : abonnement illisible (org=%s, %s)", org.id, type(exc).__name__)
+                sub = None
+            plan = _offre_ouverte_du_client(org, sub, customer_id) if sub is not None else None
+        else:
+            plan = None
+        if org is not None and plan:
             old_plan = org.plan
-            items = (data_object.get("items") or {}).get("data") or []
-            if items:
-                product_id = (items[0].get("price") or {}).get("product")
-                for plan_name, pid in PRODUCTS.items():
-                    if pid == product_id:
-                        org.plan = plan_name
-                        break
-            org.stripe_subscription_id = data_object.get("id")
+            org.plan = plan
+            org.stripe_subscription_id = sub_id
             # Changement de plan → nouvelle ancre de quotas : les
             # consommations de la période précédente (Business 70/mois)
             # ne bloquent pas le nouveau plan (downgrade business→pro
