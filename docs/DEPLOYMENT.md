@@ -217,8 +217,8 @@ Valeur par défaut entre parenthèses ; pour les plafonds, `0` coupe la garde.
 | Locale | `COUNTRY_CODE` (FR), `CURRENCY` (EUR), `CURRENCY_SYMBOL` (€), `TAX_RATE` (0.20), `TAX_LABEL` (TVA), `TIMEZONE` (Europe/Paris), `LOCALE` (fr_FR), `DATE_FORMAT` (%d/%m/%Y), `COMPANY_NAME` (Synorix), `COMPANY_ADDRESS`, `COMPANY_VAT_NUMBER`, `COMPANY_REGISTRATION_NUMBER`, `LEGAL_JURISDICTION` (FR) | `config/locale.py` ; rien à poser pour la France. |
 | Front (au build, sur le PC) | `VITE_CLERK_PUBLISHABLE_KEY` (obligatoire), `VITE_API_URL` (vide en production), `VITE_PROXY_API` (serveur de développement seulement) | Figées dans le paquet par `npm run build` (`frontend/.env.production`). |
 
-Champs de `Settings` que plus rien ne lit : `APP_NAME`, `ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES` (restes de
-l'authentification d'avant Clerk) : ne pas les poser. `SEED_*` ne sert qu'au script `seed_test_user.py`.
+`APP_NAME`, `ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES` (restes de l'authentification d'avant Clerk) ne sont plus des
+réglages : posés dans le fichier d'environnement, ils sont ignorés. `SEED_*` ne sert qu'au script `seed_test_user.py`.
 
 > Sentry n'est **pas encore câblé** (backlog O4) : ne pas ajouter `SENTRY_DSN`
 > tant que `sentry-sdk` n'est pas intégré à `main.py`. Les clés inconnues dans

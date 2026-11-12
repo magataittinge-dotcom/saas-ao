@@ -21,12 +21,10 @@ def cle_stripe_de_production(cle: str) -> bool:
 
 
 class Settings(BaseSettings):
-    # App
-    APP_NAME: str = "SaaS AO BTP"
+    # App (APP_NAME, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES retirés : restes de l'authentification d'avant Clerk, plus
+    # rien ne les lisait ; posés dans un .env, ils sont ignorés comme toute clé inconnue, voir Config.extra)
     DEBUG: bool = False
     SECRET_KEY: str
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
 
     # Database
     DATABASE_URL: str
