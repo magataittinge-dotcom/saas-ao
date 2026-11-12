@@ -126,3 +126,66 @@ def test_la_barre_de_l_editeur_annonce_le_meme_plafond_que_le_serveur():
     assert f"PLAFOND_PAR_JOUR = {REECRIRE_MAX_PAR_JOUR}" in barre
     # La phrase a été récrite par la passe du jury (lot b2) : même promesse, autre tournure.
     assert "aucune unité n’est décomptée" in barre
+
+
+# ── RESTES-4 — la place est réservée sous verrou AVANT l'attente (même mécanisme que C1, C2, C4 : 8f24c8d) ─────────
+
+async def _simultanees(test_org, n):
+    """n demandes lancées en même temps sur l'application (une session de base par demande, comme en vrai)."""
+    import asyncio
+
+    import httpx
+    from fastapi import Request
+
+    from main import app
+    from models.user import User
+    from routers.auth import get_auth_user, get_auth_user_short
+    seul = User(id="user-test-1", email="test@example.com", name="Test", organization_id=test_org.id, role="admin")
+
+    def _auth(request: Request):
+        request.state.rl_key = f"org:{test_org.id}"
+        return seul
+    app.dependency_overrides[get_auth_user] = _auth
+    app.dependency_overrides[get_auth_user_short] = _auth
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as ac:
+        reponses = await asyncio.gather(*[
+            ac.post("/api/projects/p-rw/memoire/rewrite-passage", json={"passage": "Texte du passage.",
+                                                                       "action": "reformuler"})
+            for _ in range(n)])
+    return sorted(r.status_code for r in reponses)
+
+
+@pytest.mark.asyncio
+async def test_a_59_sur_60_cinq_demandes_simultanees_une_seule_acceptee(client, db_session, test_org, projet,
+                                                                         faux_modele, monkeypatch):
+    import time
+
+    import routers.memoire as memoire_mod
+    from routers.memoire import REECRIRE_MAX_PAR_JOUR
+    _remplir_audit(db_session, test_org.id, REECRIRE_MAX_PAR_JOUR - 1)              # il reste UNE place
+    vraie = memoire_mod.regle_dtu
+
+    def lente(*a, **k):                                                              # élargit la fenêtre d'attente
+        time.sleep(0.3)
+        return vraie(*a, **k)
+    monkeypatch.setattr(memoire_mod, "regle_dtu", lente)
+    codes = await _simultanees(test_org, 5)
+    assert codes == [200, 429, 429, 429, 429]
+    db_session.expire_all()
+    assert db_session.query(AuditLog).filter(AuditLog.action == "memoire.rewrite_passage").count() \
+        == REECRIRE_MAX_PAR_JOUR
+    assert len(faux_modele) == 1
+
+
+def test_un_echec_avant_l_appel_rend_la_place(client, db_session, test_org, projet, faux_modele, monkeypatch):
+    import routers.memoire as memoire_mod
+
+    def en_panne(*a, **k):
+        raise RuntimeError("lecture des pièces impossible")
+    monkeypatch.setattr(memoire_mod, "regle_dtu", en_panne)
+    with pytest.raises(RuntimeError):
+        _poster(client)
+    db_session.expire_all()
+    assert db_session.query(AuditLog).filter(AuditLog.action == "memoire.rewrite_passage").count() == 0
+    assert db_session.query(AuditLog).filter(AuditLog.action == "memoire.rewrite_passage.echec").count() == 1
+    assert faux_modele == []

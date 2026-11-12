@@ -844,16 +844,6 @@ MSG_REECRIRE_PLAFOND = (f"Vous avez réécrit {REECRIRE_MAX_PAR_JOUR} passages d
                         "c'est le plafond du jour. Vous pourrez en réécrire d'autres demain.")
 
 
-def _reecritures_des_dernieres_24h(db: Session, org_id: str) -> int:
-    from datetime import timedelta
-    from models.audit_log import AuditLog
-    depuis = datetime.utcnow() - timedelta(hours=24)
-    return (db.query(AuditLog)
-            .filter(AuditLog.organization_id == org_id, AuditLog.action.in_(ACTIONS_PLAFOND_REECRIRE),
-                    AuditLog.created_at >= depuis)
-            .count())
-
-
 @router.post("/{project_id}/memoire/rewrite-passage", dependencies=[Depends(exiger_budget_ia)])
 @limiter.limit("10/minute")
 async def rewrite_passage_endpoint(
@@ -870,23 +860,25 @@ async def rewrite_passage_endpoint(
     Ne décompte aucune unité ; plafonné par jour et par organisation (REECRIRE_MAX_PAR_JOUR, 429)."""
     from services.ai.passage_rewriter import rewrite_passage
 
+    from services import fonctions_ia as F
+
     project = _get_project_or_404(project_id, user.organization_id, db)
-    if _reecritures_des_dernieres_24h(db, user.organization_id) >= REECRIRE_MAX_PAR_JOUR:
-        raise HTTPException(status_code=429, detail=MSG_REECRIRE_PLAFOND)
-
-    # Même règle DTU que la génération (décision du 27/10) : liste fermée du lot dans
-    # la consigne, garde-fou déterministe sur la sortie. Lue ici, hors du thread SDK.
-    docs = db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).all()
-    regle = await asyncio.to_thread(
-        regle_dtu, docs, project.selected_lot, project.selected_lot_name,
-        project.lots_detectes or [], _ids_des_lots(project))
-
-    # Comptée dès le départ (plafond ci-dessus), même si l'appel échoue ensuite — comme « Refaire ».
-    log_action(
-        db, user, ACTION_REECRIRE,
-        target_type="project", target_id=project_id,
-        extra={"action": payload.action, "chars": len(payload.passage)},
-    )
+    # Place réservée sous verrou AVANT l'attente ci-dessous (contrôle du plafond puis ligne d'audit, sans attente entre
+    # les deux, comme C1, C2 et C4 : services/fonctions_ia.reserver) ; sinon des demandes simultanées passaient toutes
+    # le contrôle. Comptée dès le départ, même si l'appel au modèle échoue ensuite — comme « Refaire ».
+    ligne = F.reserver(db, user, ACTION_REECRIRE, ACTIONS_PLAFOND_REECRIRE, REECRIRE_MAX_PAR_JOUR,
+                       MSG_REECRIRE_PLAFOND, target_type="project", target_id=project_id,
+                       extra={"action": payload.action, "chars": len(payload.passage)})
+    try:
+        # Même règle DTU que la génération (décision du 27/10) : liste fermée du lot dans
+        # la consigne, garde-fou déterministe sur la sortie. Lue ici, hors du thread SDK.
+        docs = db.query(ProjectDocument).filter(ProjectDocument.project_id == project_id).all()
+        regle = await asyncio.to_thread(
+            regle_dtu, docs, project.selected_lot, project.selected_lot_name,
+            project.lots_detectes or [], _ids_des_lots(project))
+    except BaseException:
+        F.rendre(db, ligne)                    # échec avant l'appel au modèle : la place est rendue
+        raise
     from services import couts_ia, jetons
     try:
         # Dépense réelle inscrite dans couts_ia (budget d'IA du jour), même si la suite échoue après l'appel.
