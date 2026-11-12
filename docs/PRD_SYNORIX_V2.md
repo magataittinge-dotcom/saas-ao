@@ -60,7 +60,7 @@ Synorix's wedge is the **automated generation of personalised, deposit-grade tec
 |---|---|---|---|
 | DCE analysis | Manual questionnaires | Manual | **AI-driven extraction with source highlighting** |
 | Technical memo | ❌ Not generated | Manual | ✅ **Generated, personalised, editable** |
-| Pricing per response | — | €2k–€8k | €349–€599 **par mois (quota Pro 40/40, Business fair-use)** |
+| Pricing per response | — | €2k–€8k | €349–€599 **par mois (quota Pro 30/30, Business 70/70 — 2026-11-11)** |
 | Onboarding | Heavy | N/A | **Progressive — onboarded while working** |
 | Coaching | None | Human consultant | **Synorix Coach** chatbot (BTP-trained) |
 | Vendor-side personalisation | Generic | Personalised | **Auto-pulled from sidebar (company / refs / library)** |
@@ -76,7 +76,7 @@ Synorix's wedge is the **automated generation of personalised, deposit-grade tec
 - **Synorix Coach** — level-3 strategic chatbot (bulle flottante)
 - **86 modular skills V1** — each grounded in real BTP expertise from 8 validated NotebookLM notebooks (193 curated sources) <!-- v2.1 - notebooks 17/5/26 -->
 - **Multi-model AI stack** — Haiku 4.5 (routing + **reformulation de texte libre du profil**) / Sonnet 4.6 (extraction, analyse **et génération mémoire**) / Opus 4.7 (repli seulement ; la réécriture ciblée tourne sur le modèle de la génération, Sonnet 5.5) — measured cost **~€1 per complete tender response** (1er mémoire ≤ €1, suivants < €0,50 via profil mémoire vivant + prompt caching)
-- **Two plans** — Pro (€349/mo, 1 seat, **40 analyses + 40 mémoires/mois**) and Business (€599/mo, 5 seats, **illimité fair-use**). Paiement Stripe **carte uniquement en V1**. **1 AO offert** à la création (SIRET vérifié via API Sirene INSEE).
+- **Three plans** (grille du 2026-11-11 : plus aucune offre illimitée) — Essentiel (€149/mo, **5 analyses + 5 mémoires/mois**), Pro (€349/mo, 1 seat, **30 analyses + 30 mémoires/mois**) and Business (€599/mo, 5 seats, **70 analyses + 70 mémoires/mois**). Paiement Stripe **carte uniquement en V1**. **1 AO offert** à la création (SIRET vérifié via API Sirene INSEE).
 
 ### 1.7 Différenciateurs V1 — déterministes, 0 € API <!-- v3.0 - vision V1 FINALE -->
 
@@ -1030,8 +1030,8 @@ Both share the same conversation history. En V1, le Coach vit **uniquement** com
 | Feature | **Pro €349/mo** | **Business €599/mo** | Enterprise (V2.5) |
 |---|---|---|---|
 | **Seats** | 1 | 5 | Unlimited |
-| **Quota mensuel** | **40 analyses + 40 mémoires** | **Illimité (fair use)** | Unlimited |
-| **Unité de quota** | **1 lot = 1 mémoire = 1 unité** | idem (fair use) | — |
+| **Quota mensuel** (2026-11-11) | **30 analyses + 30 mémoires** | **70 analyses + 70 mémoires** | Unlimited |
+| **Unité de quota** | **1 lot = 1 mémoire = 1 unité** | idem | — |
 | **Paiement** | **Stripe — carte uniquement (V1)** | idem | idem |
 | **Coffre-fort storage** | 5 GB | 50 GB | Unlimited |
 | **Memo library imports** | 10 memos | Unlimited | Unlimited |
@@ -1053,15 +1053,15 @@ Both plans include: full 6-step pipeline, full sidebar, Synorix Coach (bulle flo
 
 ### 6.2 Unit Economics
 
-Coût IA par AO (mesuré, full-Sonnet) : **~€1** — 1er mémoire ≤ €1, suivants **< €0,50** via profil mémoire vivant + prompt caching (cf. `docs/comparaison-memoire-AB/RESULTAT.md`). La génération mémoire tourne sur **Sonnet 4.6** (tous segments), ~7× moins cher qu'Opus (mémoire ≈ €0,90 en Sonnet vs ~€6 en Opus). Aux quotas V1 (Pro 40 analyses + 40 mémoires ; Business fair use), les marges restent **> 90 %** en usage normal (chiffres indicatifs) :
+Coût IA par AO (mesuré, full-Sonnet) : **~€1** — 1er mémoire ≤ €1, suivants **< €0,50** via profil mémoire vivant + prompt caching (cf. `docs/comparaison-memoire-AB/RESULTAT.md`). La génération mémoire tourne sur **Sonnet 4.6** (tous segments), ~7× moins cher qu'Opus (mémoire ≈ €0,90 en Sonnet vs ~€6 en Opus). Aux quotas V1 (2026-11-11 : Pro 30 analyses + 30 mémoires ; Business 70 + 70), les marges restent **> 90 %** en usage normal (chiffres indicatifs) :
 
 | Scenario | AO/mois | Coût IA/mois | Marge Pro (€349) | Marge Business (€599) |
 |---|---|---|---|---|
 | **Light** (median target) | 7 | ~€5,40 | ~98 % | ~99 % |
 | **Normal** (high target) | 15 | ~€11,55 | ~97 % | ~98 % |
-| **Heavy** (cap Pro 40) | 40 (Pro) | ~€30,80 | **~91 %** | — |
+| **Heavy** (cap Pro 30) | 30 (Pro) | ~€23,10 | **~93 %** | — |
 
-**Cost-guard** (see ARCHITECTURE §8.10) : au-delà du **quota Pro (40/40)**, blocage **doux** avec explication Coach + nudge upgrade ; Business en fair-use avec plafond de sécurité. **Jamais de blocage silencieux.** Pas de facturation à l'AO supplémentaire en V1 — le dépassement mène à l'upgrade, pas à la surfacturation.
+**Cost-guard** (see ARCHITECTURE §8.10) : au-delà du **quota du mois (Pro 30/30, Business 70/70)**, blocage **doux** avec explication Coach + nudge upgrade ; Business (offre la plus haute) : remise à zéro mensuelle, quota relevé sur demande. **Jamais de blocage silencieux.** Pas de facturation à l'AO supplémentaire en V1 — le dépassement mène à l'upgrade, pas à la surfacturation.
 
 ### 6.3 Onboarding & Billing
 
@@ -1083,7 +1083,7 @@ Synorix ships **no free trial in the classical sense**. Instead, every new accou
 
 **Conversion CTA:** appears after the user has experienced the memo:
 
-> *"Débloquez l'export et vos 40 analyses + 40 mémoires mensuels — €349/mois"*
+> *"Débloquez l'export et vos 30 analyses + 30 mémoires mensuels — €349/mois"*
 
 **Why no money-back guarantee:** Free AO at sign-up + SIRET gate covers the trust gap upfront. Customer-service refund decisions are handled case by case, human, rare — a signal of quality, not a contractual escape hatch.
 
@@ -1228,7 +1228,7 @@ V2.0 ships when **all four** of the following are true:
 | Barre de navigation V1 FINALE (5 entrées avec leur nom + jauge quota) | Done (S1, 1/11/2026) |
 | Synorix Coach (bulle flottante) | To do |
 | **Différenciateurs déterministes 0 € (§1.7 : Score go/no-go, trésorerie CCAP, rétro-planning, stats, retenue de garantie)** <!-- v3.0 --> | To do |
-| **Quotas + enforcement (Pro 40/40, Business fair-use)** <!-- v3.0 --> | To do |
+| **Quotas + enforcement (Pro 30/30, Business 70/70 — 2026-11-11)** <!-- v3.0 --> | To do |
 | **SIRET / Sirene INSEE (pré-remplissage profil)** <!-- v3.0 --> | To do |
 | Stripe live (Pro + Business) — **carte uniquement** | To do |
 | Production deployment on `synorix.tech` | To do |

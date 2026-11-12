@@ -37,7 +37,7 @@ interface PreflightPayload {
   lot: string | null
   profil: PreflightProfil
   references: PreflightReference[]
-  quota: { used: number; limit: number | null }
+  quota: { used: number; limit: number }
   organigramme_available: boolean
   vault_documents: { id: string; file_name: string; category: string }[]
 }
@@ -89,18 +89,17 @@ function usePreflight(projectId: string) {
 /** Durée annoncée de la rédaction : mesurée, environ 3 minutes (169 s sur le dossier de démonstration, recette du 4/11). */
 export const DUREE_REDACTION = 'Rédaction : environ 3 minutes'
 
-/** La ligne sous le bouton : où en est le quota, puis la durée. Le coût (1 unité, ou offre illimitée) est dit une fois, dans la carte « Abonnement » (G8). */
-export function ligneQuotaMemoire(plan: string, quota: { used: number; limit: number | null }): string {
-  if (quota.limit === null) return DUREE_REDACTION
+/** La ligne sous le bouton : où en est le quota, puis la durée. Le coût (1 unité) est dit une fois, dans la carte « Abonnement » (G8). */
+export function ligneQuotaMemoire(plan: string, quota: { used: number; limit: number }): string {
   const periode = plan === 'free' ? 'sur votre essai' : 'ce mois'
-  return `${quota.used} sur ${quota.limit} mémoires utilisés ${periode} · ${DUREE_REDACTION}`
+  return `${Math.min(quota.used, quota.limit)} sur ${quota.limit} mémoires utilisés ${periode} · ${DUREE_REDACTION}`
 }
 
 /**
  * Rappel du quota et de la durée, affiché près du bouton « Rédiger le mémoire », même quand le pré-contrôle est
  * replié (même requête, même cache que le pré-contrôle).
  * 1.10 — quota selon l'offre (l'essai gratuit est à vie, pas « ce mois »). G8 (4/11) — plus de phrase de coût ici
- * (elle contredisait la carte « 1 unité » en offre illimitée) et durée mesurée : environ 3 minutes, pas 15.
+ * (elle doublait la carte « 1 unité ») et durée mesurée : environ 3 minutes, pas 15.
  */
 export function QuotaMemoire({ projectId }: { projectId: string }) {
   const plan = useAuthStore((st) => st.organization?.plan ?? 'free')

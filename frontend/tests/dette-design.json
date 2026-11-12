@@ -60,7 +60,7 @@
   "src/lib/intelligence/bulles.ts": 2
  },
  "style-en-ligne": {
-  "src/components/offres/GrilleOffres.tsx": 10,
+  "src/components/offres/GrilleOffres.tsx": 9,
   "src/components/project/AnalysisProgress.tsx": 4,
   "src/components/project/CriticalBanner.tsx": 3,
   "src/components/project/DocumentViewer.tsx": 10,

@@ -3,8 +3,9 @@ Tests quotas mensuels (C1) — compteurs + enforcement.
 
 Règles (PRD v3.0, vision V1 FINALE) :
   • Unité : 1 lot = 1 mémoire = 1 unité ; 1 analyse = 1 unité.
-  • Pro    : 40 analyses + 40 mémoires / mois — dépassement → 402 + upgrade.
-  • Business : illimité (fair-use), jamais bloqué.
+  • Pro    : 30 analyses + 30 mémoires / mois — dépassement → 402 + upgrade.
+  • Business : 70 analyses + 70 mémoires / mois (décision du 2026-11-11 :
+    plus aucune offre illimitée) — dépassement → 402, sans offre supérieure.
   • Free   : 1 AO d'essai offert à la création (1 analyse + 1 mémoire, À VIE —
     pas de reset mensuel sur le plan free).
   • Décompte : 1 analyse AU LANCEMENT, REMBOURSÉE sur échec TECHNIQUE
@@ -84,13 +85,13 @@ def test_period_start_clamps_end_of_month():
 
 # ─── Statut / enforcement au niveau service ──────────────────────────────────
 
-def test_pro_blocked_at_41st_analysis(db_session, test_org):
+def test_pro_blocked_at_31st_analysis(db_session, test_org):
     from fastapi import HTTPException
     from services.quota import check_quota
 
     test_org.plan = "pro"
     db_session.commit()
-    _consume_n(db_session, test_org.id, "analysis", 40)
+    _consume_n(db_session, test_org.id, "analysis", 30)
 
     with pytest.raises(HTTPException) as exc:
         check_quota(db_session, test_org, "analysis")
@@ -103,42 +104,49 @@ def test_pro_memoire_and_analysis_counters_are_independent(db_session, test_org)
 
     test_org.plan = "pro"
     db_session.commit()
-    _consume_n(db_session, test_org.id, "analysis", 40)
+    _consume_n(db_session, test_org.id, "analysis", 30)
 
-    # 40 analyses consommées ne bloquent PAS les mémoires.
+    # 30 analyses consommées ne bloquent PAS les mémoires.
     check_quota(db_session, test_org, "memoire")
 
 
 def test_pro_monthly_reset_anchored_on_subscription_date(db_session, test_org):
-    """40 unités datées de la période précédente → la fenêtre courante est vide."""
+    """30 unités datées de la période précédente → la fenêtre courante est vide."""
     from services.quota import check_quota, get_quota_status
 
     test_org.plan = "pro"
     test_org.subscription_started_at = datetime.utcnow() - timedelta(days=65)
     db_session.commit()
     _consume_n(
-        db_session, test_org.id, "analysis", 40,
+        db_session, test_org.id, "analysis", 30,
         when=datetime.utcnow() - timedelta(days=40),  # période précédente
     )
 
     check_quota(db_session, test_org, "analysis")  # ne lève pas
     status = get_quota_status(db_session, test_org)
     assert status["analyses"]["used"] == 0
-    assert status["analyses"]["limit"] == 40
+    assert status["analyses"]["limit"] == 30
 
 
-def test_business_never_blocked(db_session, test_org):
+def test_business_blocked_at_71st(db_session, test_org):
+    """Business n'est plus illimité (2026-11-11) : 70 + 70 par mois."""
+    from fastapi import HTTPException
     from services.quota import check_quota, get_quota_status
 
     test_org.plan = "business"
     db_session.commit()
-    _consume_n(db_session, test_org.id, "analysis", 100)
-    _consume_n(db_session, test_org.id, "memoire", 100)
+    _consume_n(db_session, test_org.id, "analysis", 69)
+    check_quota(db_session, test_org, "analysis")  # 70e : passe
+    _consume_n(db_session, test_org.id, "analysis", 1)
+    _consume_n(db_session, test_org.id, "memoire", 70)
 
-    check_quota(db_session, test_org, "analysis")
-    check_quota(db_session, test_org, "memoire")
+    for kind in ("analysis", "memoire"):
+        with pytest.raises(HTTPException) as exc:
+            check_quota(db_session, test_org, kind)
+        assert exc.value.status_code == 402
     status = get_quota_status(db_session, test_org)
-    assert status["analyses"]["limit"] is None  # illimité
+    assert status["analyses"] == {"used": 70, "limit": 70}
+    assert status["memoires"] == {"used": 70, "limit": 70}
 
 
 def test_free_limited_to_one_ao_lifetime(db_session, test_org):
@@ -167,7 +175,7 @@ def test_analysis_402_when_pro_quota_exhausted(
 
     test_org.plan = "pro"
     db_session.commit()
-    _consume_n(db_session, test_org.id, "analysis", 40)
+    _consume_n(db_session, test_org.id, "analysis", 30)
     _make_analyzable_project(db_session, test_org.id, "proj-q1")
 
     def _must_not_be_called(*a, **k):
@@ -207,7 +215,7 @@ def test_multilot_402_pro_points_to_business(
 ):
     test_org.plan = "pro"
     db_session.commit()
-    _consume_n(db_session, test_org.id, "analysis", 39)
+    _consume_n(db_session, test_org.id, "analysis", 29)
     _make_analyzable_project(db_session, test_org.id, "proj-q402b")
 
     resp = client.post("/api/projects/proj-q402b/analyze",
@@ -376,7 +384,7 @@ def test_memoire_402_when_pro_quota_exhausted(
     _mock_generator_success(monkeypatch)
     test_org.plan = "pro"
     db_session.commit()
-    _consume_n(db_session, test_org.id, "memoire", 40)
+    _consume_n(db_session, test_org.id, "memoire", 30)
     _make_analyzable_project(db_session, test_org.id, "proj-q4", lot="lot1")
 
     resp = client.post("/api/projects/proj-q4/memoire/generate", json={})
@@ -490,15 +498,105 @@ def test_memoire_partial_content_is_consumed(
         MemoireTechnique.project_id == "proj-q8").first() is not None
 
 
-def test_business_generates_beyond_40(
+def test_business_generates_beyond_the_pro_quota(
     client, db_session, test_org, no_rate_limit, monkeypatch,
 ):
     _mock_generator_success(monkeypatch)
     test_org.plan = "business"
     db_session.commit()
-    _consume_n(db_session, test_org.id, "memoire", 40)
+    _consume_n(db_session, test_org.id, "memoire", 30)
     _make_analyzable_project(db_session, test_org.id, "proj-q6", lot="lot1")
 
     resp = client.post("/api/projects/proj-q6/memoire/generate", json={})
     assert resp.status_code == 200, resp.text
     _join_memoire()
+
+
+# ─── Décision du 2026-11-11 : plus aucune offre illimitée ────────────────────
+
+def test_aucune_offre_n_a_de_quota_illimite():
+    """Aucune offre (essai compris) n'a de quota None ; grille 5/5, 30/30, 70/70."""
+    from services.quota import PLAN_LIMITS
+
+    for plan, limites in PLAN_LIMITS.items():
+        assert limites["analysis"] is not None, plan
+        assert limites["memoire"] is not None, plan
+    assert {p: (l["analysis"], l["memoire"]) for p, l in PLAN_LIMITS.items() if p != "free"} == {
+        "essentiel": (5, 5), "pro": (30, 30), "business": (70, 70),
+    }
+
+
+def test_business_au_quota_ne_propose_pas_d_offre_superieure(db_session, test_org):
+    """Business est l'offre la plus haute : au quota, le message dit la date de remise
+    à zéro et que le plafond se relève sur demande, sans inviter à « passer » ailleurs."""
+    from fastapi import HTTPException
+    from services.quota import check_quota
+
+    test_org.plan = "business"
+    db_session.commit()
+    _consume_n(db_session, test_org.id, "memoire", 70)
+
+    with pytest.raises(HTTPException) as exc:
+        check_quota(db_session, test_org, "memoire")
+    detail = exc.value.detail
+    assert exc.value.status_code == 402
+    assert "70/70 mémoires" in detail
+    assert "se remet à zéro le " in detail
+    assert "relevé sur demande" in detail
+    for interdit in ("Passez", "Choisissez", "Essentiel", "Pro (", "illimit", "usage raisonnable"):
+        assert interdit not in detail, interdit
+
+
+def test_multilot_402_business_dit_la_remise_a_zero(client, db_session, test_org, no_rate_limit):
+    test_org.plan = "business"
+    db_session.commit()
+    _consume_n(db_session, test_org.id, "analysis", 69)
+    _make_analyzable_project(db_session, test_org.id, "proj-q402c")
+
+    resp = client.post("/api/projects/proj-q402c/analyze", json={"lots": ["lot1", "lot2"]})
+    assert resp.status_code == 402
+    detail = resp.json()["detail"]
+    assert "1 analyse restante" in detail
+    assert "se remet à zéro le " in detail
+    assert "Passez" not in detail and "Choisissez" not in detail
+
+
+def test_pro_deja_au_dessus_du_nouveau_quota(client, db_session, test_org):
+    """Migration 40 → 30 : une organisation Pro qui a déjà consommé 35 unités ce mois-ci
+    est « au quota » : 402 propre, aucun compteur négatif, aucun « 35/30 » à l'écran."""
+    from fastapi import HTTPException
+    from services.quota import check_quota
+
+    test_org.plan = "pro"
+    test_org.subscription_started_at = datetime.utcnow() - timedelta(days=3)
+    db_session.commit()
+    _consume_n(db_session, test_org.id, "analysis", 35)
+
+    with pytest.raises(HTTPException) as exc:
+        check_quota(db_session, test_org, "analysis")
+    assert exc.value.status_code == 402
+    assert "30/30 analyses" in exc.value.detail
+    assert "35/30" not in exc.value.detail
+
+    body = client.get("/api/billing/quota").json()
+    assert body["analyses"] == {"used": 35, "limit": 30}  # la jauge plafonne à 100 % côté écran
+
+
+def test_les_quotas_du_serveur_sont_ceux_du_front():
+    """Pendant serveur de frontend/tests/offres.test.tsx : offre par offre, PLAN_LIMITS dit
+    exactement ce que frontend/src/lib/offres.ts affiche (aucun quota null d'un côté ni de l'autre)."""
+    import re
+    from pathlib import Path
+    from services.quota import PLAN_LIMITS
+
+    ts = (Path(__file__).resolve().parents[2] / "frontend/src/lib/offres.ts").read_text(encoding="utf-8")
+    front = {
+        m.group(1): (m.group(2), m.group(3))
+        for m in re.finditer(r"id: '(\w+)'.*?analysesParMois: (\w+), memoiresParMois: (\w+)", ts)
+    }
+    assert set(front) == {"essentiel", "pro", "business"}
+    for offre, (analyses, memoires) in front.items():
+        assert analyses.isdigit() and memoires.isdigit(), f"{offre} : quota non chiffré dans le front"
+        assert (PLAN_LIMITS[offre]["analysis"], PLAN_LIMITS[offre]["memoire"]) == (int(analyses), int(memoires)), offre
+    essai = re.search(r"ESSAI = \{ ao: 1, analyses: (\d+), memoires: (\d+) \}", ts)
+    assert essai and (PLAN_LIMITS["free"]["analysis"], PLAN_LIMITS["free"]["memoire"]) == (int(essai[1]), int(essai[2]))

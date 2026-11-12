@@ -131,17 +131,17 @@ export function texteUnites(a: AvancementAO | null | undefined): string | null {
 
 interface QuotaMesAO {
   plan: string
-  analyses: { used: number; limit: number | null }
-  memoires: { used: number; limit: number | null }
+  analyses: { used: number; limit: number }
+  memoires: { used: number; limit: number }
 }
 
 /** La carte « Unités du mois » : les analyses et les mémoires cumulés sur le plafond de l'offre ; null tant que le quota n'est pas lu. */
 export function uniteMois(q: QuotaMesAO | undefined) {
   if (!q?.analyses || !q.memoires) return null
-  const utilisees = q.analyses.used + q.memoires.used
-  if (q.analyses.limit === null || q.memoires.limit === null) return { utilisees, total: null, restantes: null, part: 0, illimite: true }
+  // Chaque compteur plafonné à son quota : une organisation au-delà du nouveau quota (Pro 40 → 30, 11/11/2026) lit « 60 sur 60 », jamais « 65 sur 60 ».
+  const utilisees = Math.min(q.analyses.used, q.analyses.limit) + Math.min(q.memoires.used, q.memoires.limit)
   const total = q.analyses.limit + q.memoires.limit
-  return { utilisees, total, restantes: Math.max(0, total - utilisees), part: total > 0 ? Math.min(1, utilisees / total) : 0, illimite: false }
+  return { utilisees, total, restantes: Math.max(0, total - utilisees), part: total > 0 ? Math.min(1, utilisees / total) : 0 }
 }
 
 export interface FaitUne { libelle: string; valeur: string; ton: 'vert' | 'ambre' | 'neutre' }

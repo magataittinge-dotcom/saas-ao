@@ -1,6 +1,6 @@
 # Conditions Générales d'Utilisation (CGU)
 
-**Dernière mise à jour : 4 mai 2026**
+**Dernière mise à jour : 12 novembre 2026**
 
 ## 1. Présentation du Service
 
@@ -54,15 +54,16 @@ L'authentification est gérée via Clerk, prestataire conforme au RGPD.
 - Coffre-fort sécurisé pour documents administratifs
 - Export ZIP du dossier de candidature
 
-### 4.2 Plans tarifaires
+### 4.2 Offres
 
-- **Plan Découverte** (gratuit) : 1 DCE complet à vie
-- **Plan Starter** (99 € HT / mois) : usage limité TPE
-- **Plan Pro** (299 € HT / mois) : usage PME
-- **Plan Business** (499 € HT / mois) : ETI
+- **Essai** : 1 AO offert à la création du compte, une seule fois
+- **Essentiel** — 149 € HT par mois : 5 analyses + 5 mémoires par mois
+- **Pro** — 349 € HT par mois : 30 analyses + 30 mémoires par mois
+- **Business** — 599 € HT par mois : 70 analyses + 70 mémoires par mois
 
-Les détails et limites de chaque plan sont précisés sur la page Tarifs et
-dans les CGV.
+Le quota est remis à zéro chaque mois ; des plafonds techniques par jour
+protègent le Service. Les détails de chaque offre sont précisés sur la
+page Tarifs et dans les CGV.
 
 ### 4.3 Disponibilité
 
@@ -143,7 +144,8 @@ Publique.
 ### 9.1 À l'initiative de l'Utilisateur
 
 L'Utilisateur peut résilier son abonnement à tout moment depuis son
-compte, sans frais ni motif. Les modalités de remboursement sont
+compte, sans frais ni motif. L'accès reste ouvert jusqu'à la fin de la
+période payée en cours, qui n'est pas remboursée ; les modalités sont
 détaillées dans les CGV.
 
 ### 9.2 À l'initiative de Synorix
