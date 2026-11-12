@@ -150,13 +150,14 @@ export default function StepMemoire({ project }: Props) {
   const { data: memoire, isLoading } = requeteMemoire
 
   // « N passages à compléter avant le dépôt » et le nombre de pages : une seule source, les comptes du serveur que lit
-  // aussi l'Export (même clé de cache, même lecture). Sans réponse : pas de phrase des passages, et l'estimation locale
-  // des pages en attendant.
+  // aussi l'Export (`memoire_info` du détail d'export, même calcul serveur), par leur lecture légère (le détail pesait
+  // 194 Ko pour ces deux nombres) ; la clé commence par celle du détail : ce qui le relit relit aussi les comptes. Elle part
+  // avec le mémoire, sans l'attendre (`null` sans mémoire). Sans réponse : pas de phrase des passages, et l'estimation
+  // locale des pages en attendant.
   const { data: comptesExport } = useQuery({
-    queryKey: ['export-detail', project.id],
-    queryFn: async () => (await api.get<{ memoire_info: { passages_a_completer: number; estimated_pages: number } | null }>(`/projects/${project.id}/export/detail`)).data,
-    enabled: !!memoire,
-    select: (d) => ({ passages: d.memoire_info?.passages_a_completer ?? 0, pages: d.memoire_info?.estimated_pages ?? null }),
+    queryKey: ['export-detail', project.id, 'memoire-info'],
+    queryFn: async () => (await api.get<{ passages_a_completer: number; estimated_pages: number } | null>(`/projects/${project.id}/export/memoire-info`)).data,
+    select: (d) => ({ passages: d?.passages_a_completer ?? 0, pages: d?.estimated_pages ?? null }),
   })
 
   // Fetch profile stats
@@ -176,11 +177,11 @@ export default function StepMemoire({ project }: Props) {
     enabled: !!memoire,
     retry: false,
   })
-  // Source des critères dans le règlement (même requête que le bandeau de l'analyse) : « Voir dans le dossier ».
+  // Source des critères dans le règlement (même requête que le bandeau de l'analyse) : « Voir dans le dossier ». Elle part
+  // avec le mémoire, sans l'attendre (le dossier est lu : la lecture existe).
   const { data: champsCritiques } = useQuery({
     queryKey: ['critical-fields', project.id],
     queryFn: async () => (await api.get<CriticalFieldsPayload>(`/projects/${project.id}/critical-fields`)).data,
-    enabled: !!memoire,
     retry: false,
   })
   const sourceCriteres = champsCritiques?.fields.criteres?.source ?? null

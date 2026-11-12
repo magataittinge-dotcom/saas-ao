@@ -30,6 +30,28 @@ const Design = lazy(() => import('@/routes/Design'))
 const CoquillePublique = lazy(() => import('@/components/public/CoquillePublique'))
 const NavSite = lazy(() => import('@/components/public/CoquillePublique').then((m) => ({ default: m.NavSite })))
 
+/**
+ * Au démarrage sur une adresse connectée, la coquille et le morceau de l'écran partent tout de suite, en même temps que
+ * Clerk. Avant, ils attendaient Clerk (PrivateRoute ne rend rien avant), puis l'un l'autre (l'écran est dans la coquille) :
+ * trois allers-retours à la suite, cache vide. Mêmes `import()` que les `lazy()` ci-dessus : rien de plus n'est téléchargé
+ * pour un compte connecté ; l'accueil public, la connexion et les pages juridiques ne sont pas concernés.
+ */
+export function morceauxDeDemarrage(chemin: string): (() => Promise<unknown>)[] {
+  const ecran = chemin === '/dashboard' ? () => import('@/routes/Dashboard')
+    : chemin === '/projects' ? () => import('@/routes/Projects')
+    : chemin === '/projects/new' ? () => import('@/routes/NewProject')
+    : chemin.startsWith('/projects/') ? () => import('@/routes/Project')
+    : chemin === '/vault' ? () => import('@/routes/Vault')
+    : chemin === '/company' ? () => import('@/routes/Company')
+    : chemin === '/settings' ? () => import('@/routes/Settings')
+    : chemin === '/settings/billing' ? () => import('@/routes/Billing')
+    : chemin === '/outils' ? () => import('@/routes/Tools')
+    : null
+  return ecran ? [() => import('@/components/layout/Layout'), ecran] : []
+}
+const cheminDeDemarrage = typeof window !== 'undefined' ? window.location?.pathname : undefined
+if (cheminDeDemarrage) for (const charger of morceauxDeDemarrage(cheminDeDemarrage)) charger().catch(() => {})
+
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isSignedIn, isLoaded } = useAuth()
   if (!isLoaded) return null

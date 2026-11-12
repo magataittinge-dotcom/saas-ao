@@ -6,7 +6,7 @@ import { Plus } from 'lucide-react'
 import { api } from '@/services/api'
 import { useSourceChamp } from '@/hooks/useSourceChamp'
 import {
-  BandeResume, EtatElement, GabaritEtape, SectionEtape, SqueletteCorpsEtape,
+  BandeResume, EtatElement, GabaritEtape, SectionEtape, SqueletteBandeEtape, SqueletteSectionEtape,
 } from '@/components/etape'
 import { recoupements } from '@/lib/planRecoupe'
 import PartiePlanCarte from '@/components/plan/PartiePlanCarte'
@@ -146,11 +146,10 @@ export default function StepPlan({ project }: { project: Project }) {
 
   if (isLoading || (!parties && !isError)) {
     return (
-      <GabaritEtape titre="Plan du mémoire" utilite={UTILITE}>
-        <div role="status" aria-busy="true">
-          <span className="sr-only">Chargement du plan</span>
-          <SqueletteCorpsEtape />
-        </div>
+      // la bande dans `resume` (là où sera la vraie), la section dans les sections : rien ne descend à l'arrivée du plan
+      <GabaritEtape titre="Plan du mémoire" utilite={UTILITE}
+        resume={<div role="status" aria-busy="true"><span className="sr-only">Chargement du plan</span><SqueletteBandeEtape /></div>}>
+        <SqueletteSectionEtape />
       </GabaritEtape>
     )
   }

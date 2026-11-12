@@ -7,6 +7,10 @@ import { construireCarteAO, dateLongue, type EntreeCarte } from '@/lib/carteAO'
 import { CarteAO30sVue } from '@/components/project/CarteAO30s'
 import { lire } from './outils/sources'
 
+// Les instants du test sont écrits à l'heure de Paris (UTC+1 en novembre), là où l'appli compte les jours et les heures
+// (lib/remiseParis.ts) : `new Date(2026, 10, 10, 9)` voulait dire « 9 h sur la machine », faux hors de Paris.
+const paris = (jour: string, heure = '00:00') => new Date(`${jour}T${heure}:00+01:00`)
+
 const SOURCE_RC = { document: 'RC', page: 4, excerpt: 'Les offres sont remises avant le 20 novembre 2026 à 12h00.' }
 
 const entree = (over: Partial<EntreeCarte> = {}): EntreeCarte => ({
@@ -27,7 +31,7 @@ const entree = (over: Partial<EntreeCarte> = {}): EntreeCarte => ({
     { status: 'manquant' },
   ],
   conditions: { relevees: 5, aConfirmer: 2 },
-  maintenant: new Date(2026, 10, 10, 9, 0, 0),
+  maintenant: paris('2026-11-10', '09:00'),
   ...over,
 })
 
@@ -60,7 +64,7 @@ test('jamais de montant ni d’avis de prix : le montant estimé n’est pas re
 })
 
 test('un fait sans donnée n’est pas affiché', () => {
-  const vide = construireCarteAO({ projet: {}, maintenant: new Date(2026, 10, 10) })
+  const vide = construireCarteAO({ projet: {}, maintenant: paris('2026-11-10') })
   assert.deepEqual(vide, [])
   const partiel = parId(construireCarteAO({ projet: { infos_marche: { objet: 'Objet inventé' } } }))
   assert.deepEqual(Object.keys(partiel), ['objet'])
@@ -69,14 +73,14 @@ test('un fait sans donnée n’est pas affiché', () => {
 test('temps restant : demain, aujourd’hui avec l’heure, date passée', () => {
   const avec = (date: string, heure: string | null, maintenant: Date) =>
     parId(construireCarteAO({ projet: { echeance: { date, heure } }, maintenant })).remise
-  assert.equal(avec('2026-11-11', null, new Date(2026, 10, 10, 9)).reste, 'demain')
-  const jour = avec('2026-11-10', '14h00', new Date(2026, 10, 10, 9))
+  assert.equal(avec('2026-11-11', null, paris('2026-11-10', '09:00')).reste, 'demain')
+  const jour = avec('2026-11-10', '14h00', paris('2026-11-10', '09:00'))
   assert.equal(jour.reste, 'aujourd’hui, avant 14h00')
   assert.equal(jour.action, true)
   // FIN-B1 : une remise passée ne se redit pas dans le fait (le bandeau de l'AO le dit, une fois, avec le geste)
-  assert.equal(avec('2026-11-01', null, new Date(2026, 10, 10, 9)).reste, undefined)
+  assert.equal(avec('2026-11-01', null, paris('2026-11-10', '09:00')).reste, undefined)
   // sans champ lu dans le RC : l’échéance consolidée de l’AO, sans source
-  assert.equal(avec('2026-11-30', null, new Date(2026, 10, 10)).source, null)
+  assert.equal(avec('2026-11-30', null, paris('2026-11-10')).source, null)
 })
 
 test('visite facultative ou non mentionnée', () => {

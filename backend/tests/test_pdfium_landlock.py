@@ -5,7 +5,9 @@ Limite documentée (services/pdfium_processus.py) : les dossiers de pièces auto
 organisations, l'enfant étant partagé. Sautés sans Landlock dans le noyau."""
 from __future__ import annotations
 
+import shutil
 import socket
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -39,10 +41,22 @@ def decor(tmp_path, monkeypatch):
     pp.arreter()
 
 
+@pytest.fixture
+def chemin_socket():
+    """Le chemin d'un socket Unix dans un dossier COURT propre au test (sous /tmp), nettoyé à la fin : sous `tmp_path`
+    (donc sous TMPDIR), un chemin long dépasse la limite de `sun_path` (108 octets) et `bind` lève « AF_UNIX path too
+    long »."""
+    dossier = tempfile.mkdtemp(prefix="sx-", dir="/tmp")
+    try:
+        yield str(Path(dossier) / "base.sock")
+    finally:
+        shutil.rmtree(dossier, ignore_errors=True)
+
+
 @needs_landlock
-def test_temoin_sans_protection_l_enfant_lit_env_et_se_connecte(decor, monkeypatch):
+def test_temoin_sans_protection_l_enfant_lit_env_et_se_connecte(decor, chemin_socket, monkeypatch):
     monkeypatch.setenv("SYNORIX_PDFIUM_LANDLOCK", "aucun")
-    srv_chemin = str(decor / "base.sock")
+    srv_chemin = chemin_socket
     srv = socket.socket(socket.AF_UNIX)
     srv.bind(srv_chemin)
     srv.listen(1)
@@ -68,10 +82,10 @@ def test_l_enfant_ne_lit_que_les_pieces_et_n_ecrit_nulle_part(decor, monkeypatch
 
 
 @needs_landlock
-def test_l_enfant_ne_se_connecte_a_aucun_socket_unix(decor, monkeypatch):
+def test_l_enfant_ne_se_connecte_a_aucun_socket_unix(decor, chemin_socket, monkeypatch):
     """Landlock ne filtre pas connect() sur un socket Unix à chemin (avant l'ABI 9) : c'est le seccomp qui le fait."""
     monkeypatch.setenv("SYNORIX_PDFIUM_LANDLOCK", "auto")
-    srv_chemin = str(decor / "base.sock")
+    srv_chemin = chemin_socket
     srv = socket.socket(socket.AF_UNIX)
     srv.bind(srv_chemin)
     srv.listen(1)

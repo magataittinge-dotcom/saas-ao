@@ -46,25 +46,40 @@ interface CriticalPayload { fields: ChampsCritiquesCarte }
  * en base — champs critiques, checklist, fiche de décision. Aucun appel IA, aucun avis de prix. Les requêtes partagent les clés
  * des cartes voisines : pas de second appel serveur.
  */
-export function useFaitsAO(project: Project): FaitCarte[] {
+function useLecturesFaitsAO(project: Project) {
   const prete = project.processing_status !== 'analyzing'
-  const { data: critiques } = useQuery<CriticalPayload>({
+  const lectureCritiques = useQuery<CriticalPayload>({
     queryKey: ['critical-fields', project.id],
     queryFn: async () => (await api.get<CriticalPayload>(`/projects/${project.id}/critical-fields`)).data,
     staleTime: 60_000,
     enabled: prete,
   })
-  const { data: pieces } = useQuery<ChecklistItem[]>({
+  const lecturePieces = useQuery<ChecklistItem[]>({
     queryKey: ['checklist', project.id],
     queryFn: async () => (await api.get<ChecklistItem[]>(`/projects/${project.id}/checklist`)).data,
     enabled: prete,
   })
-  const { data: score } = useQuery<ScorePayload>({
+  const lectureScore = useQuery<ScorePayload>({
     queryKey: ['synorix-score', project.id],
     queryFn: async () => (await api.get<ScorePayload>(`/projects/${project.id}/synorix-score`)).data,
     staleTime: 60_000,
     enabled: prete,
   })
+  return { lectureCritiques, lecturePieces, lectureScore }
+}
+
+/**
+ * Les lectures des faits sont-elles en cours, la première fois ? Une étape qui pose ces faits (Décider : la fiche de décision
+ * et « Le marché en bref ») attend leur fin avant de se dessiner : sinon la fiche grandissait de 600 px sous les sections
+ * déjà posées (CLS 0,17 au téléphone). Mêmes clés : aucune requête de plus.
+ */
+export function useFaitsAOEnLecture(project: Project): boolean {
+  const { lectureCritiques, lecturePieces, lectureScore } = useLecturesFaitsAO(project)
+  return lectureCritiques.isLoading || lecturePieces.isLoading || lectureScore.isLoading
+}
+
+export function useFaitsAO(project: Project): FaitCarte[] {
+  const { lectureCritiques: { data: critiques }, lecturePieces: { data: pieces }, lectureScore: { data: score } } = useLecturesFaitsAO(project)
 
   return useMemo(() => {
     const evaluables = (score?.composantes ?? []).filter((c) => c.statut !== 'non_evaluable')
