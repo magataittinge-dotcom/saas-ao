@@ -6,6 +6,19 @@ from functools import lru_cache
 # (SECRET_KEY signe les URLs de fichiers : un secret public = URLs forgeables).
 _SECRET_KEY_PLACEHOLDER = "your-secret-key-here-generate-with-openssl-rand-hex-32"
 
+# Produits Stripe du MODE TEST du compte de développement : seul repli quand
+# STRIPE_PRODUCT_PRO / STRIPE_PRODUCT_BUSINESS sont vides ET que la clé est de test.
+# Ils n'existent pas en mode réel (le paiement y dirait « Tarif indisponible »).
+PRODUITS_STRIPE_MODE_TEST = {
+    "pro": "prod_UFuTbjsjJG2tlq",
+    "business": "prod_UFuVeLpu3fDVQp",
+}
+
+
+def cle_stripe_de_production(cle: str) -> bool:
+    """Clé secrète (sk_) ou restreinte (rk_) du mode réel de Stripe."""
+    return cle.startswith(("sk_live_", "rk_live_"))
+
 
 class Settings(BaseSettings):
     # App
@@ -57,6 +70,11 @@ class Settings(BaseSettings):
     # Produit Stripe de l'offre Essentiel (prod_…), créé hors code. Vide = offre
     # affichée mais pas encore ouverte au paiement en ligne (503 explicite).
     STRIPE_PRODUCT_ESSENTIEL: str = ""
+    # Produits Stripe des offres Pro et Business (prod_…). Vides avec une clé de
+    # test : produits du mode test (PRODUITS_STRIPE_MODE_TEST). Vides avec une clé
+    # de production : refus de démarrer hors DEBUG (voir plus bas).
+    STRIPE_PRODUCT_PRO: str = ""
+    STRIPE_PRODUCT_BUSINESS: str = ""
 
     # SMTP (C23 — notifications email). Absents → in-app seul, jamais de crash.
     SMTP_HOST: str = ""
@@ -96,6 +114,17 @@ class Settings(BaseSettings):
             problems.append(
                 "STRIPE_WEBHOOK_SECRET manquant — les paiements ne seraient jamais appliqués (webhook 500)"
             )
+        if cle_stripe_de_production(self.STRIPE_SECRET_KEY):
+            # Restes-2 — avec une clé réelle, les produits du mode test n'existent pas :
+            # le paiement Pro ou Business répondrait « Tarif indisponible ».
+            for nom, offre in (("STRIPE_PRODUCT_PRO", "pro"), ("STRIPE_PRODUCT_BUSINESS", "business")):
+                valeur = getattr(self, nom)
+                if not valeur or valeur == PRODUITS_STRIPE_MODE_TEST[offre]:
+                    problems.append(
+                        f"{nom} vide ou produit du mode test avec une clé Stripe de production — "
+                        "le paiement répondrait « Tarif indisponible » : créer le produit en mode réel "
+                        "et poser son identifiant prod_…"
+                    )
         if "localhost" in self.FRONTEND_URL or "127.0.0.1" in self.FRONTEND_URL:
             problems.append(
                 "FRONTEND_URL pointe sur localhost — CORS bloquerait le domaine réel et les redirections Stripe seraient cassées"

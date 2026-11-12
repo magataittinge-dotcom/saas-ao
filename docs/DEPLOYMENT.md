@@ -182,6 +182,8 @@ CLERK_JWKS_URL=https://clerk.synorix.tech/.well-known/jwks.json
 STRIPE_SECRET_KEY=sk_live_XXX
 STRIPE_WEBHOOK_SECRET=whsec_XXX
 STRIPE_PRODUCT_ESSENTIEL=prod_XXX      # produit Stripe de l'offre Essentiel ; vide = paiement en ligne de l'offre fermé (503)
+STRIPE_PRODUCT_PRO=prod_XXX            # produit Pro du mode réel ; obligatoire avec sk_live_ (refus de démarrer sinon)
+STRIPE_PRODUCT_BUSINESS=prod_XXX       # produit Business du mode réel ; obligatoire avec sk_live_ (refus de démarrer sinon)
 FRONTEND_URL=https://synorix.tech
 METRICS_TOKEN=$(openssl rand -hex 32)  # ops : accès /api/metrics (S3.5) — sans lui, endpoint fermé (404)
 SYNORIX_X_ACCEL_PREFIX=/_fichiers_internes
@@ -200,10 +202,10 @@ Valeur par défaut entre parenthèses ; pour les plafonds, `0` coupe la garde.
 
 | Groupe | Variables (défaut) | Ce qu'elles font |
 |---|---|---|
-| Démarrage | `DEBUG` (false), `SECRET_KEY`, `DATABASE_URL`, `REDIS_URL` (redis://localhost:6379/0), `FRONTEND_URL` (http://localhost:3000) | Hors `DEBUG`, l'API refuse de démarrer si `SECRET_KEY` est courte, si `CLERK_*` ou `STRIPE_WEBHOOK_SECRET` manquent, si `FRONTEND_URL` vise localhost, ou si `SYNORIX_ANALYSE_DEMO` est allumé. `FRONTEND_URL` est la seule origine CORS acceptée. |
+| Démarrage | `DEBUG` (false), `SECRET_KEY`, `DATABASE_URL`, `REDIS_URL` (redis://localhost:6379/0), `FRONTEND_URL` (http://localhost:3000) | Hors `DEBUG`, l'API refuse de démarrer si `SECRET_KEY` est courte, si `CLERK_*` ou `STRIPE_WEBHOOK_SECRET` manquent, si la clé Stripe est de production sans `STRIPE_PRODUCT_PRO` et `STRIPE_PRODUCT_BUSINESS`, si `FRONTEND_URL` vise localhost, ou si `SYNORIX_ANALYSE_DEMO` est allumé. `FRONTEND_URL` est la seule origine CORS acceptée. |
 | IA | `ANTHROPIC_API_KEY`, `MEMOIRE_MODELE` (vide = Sonnet 5.5), `VOYAGE_API_KEY` (vide), `RAG_ENRICHMENT` (false), `SYNORIX_ANALYSE_DEMO` (false, interdit en production), `COUT_USD_EUR` (0.92) | Clés et modèle ; le RAG reste coupé en V1 ; taux indicatif du journal des coûts. |
 | Connexion | `CLERK_SECRET_KEY`, `CLERK_JWKS_URL` | Instance Clerk (développement ou production, VPS.md B5). |
-| Paiement | `BILLING_PROVIDER` (stripe), `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRODUCT_ESSENTIEL` (vide) | Carte seulement ; webhook sur `https://synorix.tech/api/stripe/webhook`. |
+| Paiement | `BILLING_PROVIDER` (stripe), `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRODUCT_ESSENTIEL` (vide), `STRIPE_PRODUCT_PRO` et `STRIPE_PRODUCT_BUSINESS` (vides = produits du mode test, seulement avec une clé `sk_test_`) | Carte seulement ; webhook sur `https://synorix.tech/api/stripe/webhook`. Avec une clé `sk_live_`, l'API refuse de démarrer hors `DEBUG` si `STRIPE_PRODUCT_PRO` ou `STRIPE_PRODUCT_BUSINESS` est vide (ou vaut un produit du mode test). Le montant facturé est le **prix par défaut** de chaque produit dans le tableau de bord Stripe, pas une valeur du code. |
 | Plafonds d'usage (S-01 à S-06, D8, D24) | `PLAFOND_JOUR_ANALYSES` (20), `PLAFOND_JOUR_MEMOIRES` (20), `IMPORT_MEMOIRE_MAX_PAR_JOUR` (5), `REFORMULER_MAX_PAR_JOUR` (30), `BUDGET_IA_JOUR_EUR` (60), `BUDGET_IA_FORFAIT_ANALYSE_EUR` (3), `BUDGET_IA_FORFAIT_MEMOIRE_EUR` (1.5), `BUDGET_IA_FORFAIT_REFAIRE_EUR` (0.5), `BUDGET_IA_FORFAIT_APPEL_EUR` (0.2), `BUDGET_IA_RESERVATION_MINUTES` (120) | Par organisation et par jour, toutes offres. Au-delà : « Plafond du jour atteint. Il se remet à zéro demain. » |
 | AO offert (D7, D25) | `ESSAI_EXIGE_SIRET` (0) | 1 = l'AO offert exige un SIRET vérifié ; **à 1 le jour où les inscriptions sont publiques**. |
 | Stockage (D15, D24) | `QUOTA_STOCKAGE_GO` (20), `QUOTA_STOCKAGE_GRATUIT_GO` (5), `DISQUE_LIBRE_MIN_POURCENT` (15) | Quota par organisation (413) ; refus des dépôts sous 15 % de disque libre (507). |

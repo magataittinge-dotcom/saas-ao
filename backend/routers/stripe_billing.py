@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from database import get_db
-from config import get_settings
+from config import PRODUITS_STRIPE_MODE_TEST, cle_stripe_de_production, get_settings
 from models.user import User
 from models.organization import Organization
 from routers.auth import get_auth_user
@@ -26,15 +26,22 @@ router = APIRouter()
 from services.rate_limit import limiter  # S1.2 — limiter partagé (org-keyed)
 settings = get_settings()
 
-# ── Product IDs (Stripe test mode) — provider-agnostic mapping in DB later ─
-PRODUCTS = {
-    "pro": "prod_UFuTbjsjJG2tlq",
-    "business": "prod_UFuVeLpu3fDVQp",
-}
-# Offre Essentiel (149 €/mois, grille du 2026-10-22) : produit Stripe créé hors
-# code, renseigné par STRIPE_PRODUCT_ESSENTIEL. Vide = pas encore payable.
-if settings.STRIPE_PRODUCT_ESSENTIEL:
-    PRODUCTS["essentiel"] = settings.STRIPE_PRODUCT_ESSENTIEL
+def produits_stripe(s) -> dict[str, str]:
+    """Offre → produit Stripe, lus dans l'environnement (STRIPE_PRODUCT_ESSENTIEL, _PRO, _BUSINESS).
+
+    Vide = offre pas encore payable (503 explicite au paiement), sauf Pro et Business avec une clé de test :
+    produits du mode test du compte de développement. Jamais ceux-ci avec une clé de production.
+    """
+    repli = {} if cle_stripe_de_production(s.STRIPE_SECRET_KEY) else PRODUITS_STRIPE_MODE_TEST
+    produits = {
+        "essentiel": s.STRIPE_PRODUCT_ESSENTIEL,
+        "pro": s.STRIPE_PRODUCT_PRO or repli.get("pro", ""),
+        "business": s.STRIPE_PRODUCT_BUSINESS or repli.get("business", ""),
+    }
+    return {offre: produit for offre, produit in produits.items() if produit}
+
+
+PRODUCTS = produits_stripe(settings)
 
 OFFRES_PAYANTES = ("essentiel", "pro", "business")
 
