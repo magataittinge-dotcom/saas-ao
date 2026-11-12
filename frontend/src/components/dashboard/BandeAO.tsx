@@ -26,10 +26,12 @@ export function aoDeLaBande(projets: readonly Project[], max = MAX_BANDE, mainte
   return aoDansEtat(projets, 'en_cours', maintenant).sort((a, b) => comparerParRemise(a, b, maintenant)).slice(0, max)
 }
 
-/** Les AO à mettre à jour (remise passée, statut encore ouvert), la remise la plus récente d'abord. */
+/** Les AO à mettre à jour (remise passée, statut encore ouvert), la remise la plus récente d'abord ; à remise égale, le nom
+ *  puis l'identifiant (jamais l'ordre reçu : une mise à jour intervertissait deux AO de même remise). */
 export function aoAMettreAJour(projets: readonly Project[], maintenant: Date = new Date()): Project[] {
   return aoDansEtat(projets, 'a_mettre_a_jour', maintenant)
-    .sort((a, b) => (lectureAO(b, maintenant).echeance.limite?.getTime() ?? 0) - (lectureAO(a, maintenant).echeance.limite?.getTime() ?? 0))
+    .sort((a, b) => (lectureAO(b, maintenant).echeance.limite?.getTime() ?? 0) - (lectureAO(a, maintenant).echeance.limite?.getTime() ?? 0)
+      || a.name.localeCompare(b.name, 'fr', { numeric: true }) || a.id.localeCompare(b.id))
 }
 
 const pluriel = (n: number, un: string, plusieurs: string) => `${n} ${n > 1 ? plusieurs : un}`

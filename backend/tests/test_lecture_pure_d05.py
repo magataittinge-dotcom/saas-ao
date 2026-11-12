@@ -95,3 +95,14 @@ def test_la_fin_de_l_analyse_range_les_champs_et_leur_page(client, db_session, t
     assert source["page"] == 3
     corps = client.get("/api/projects/p-d05p/critical-fields").json()
     assert corps["fields"] == ranges
+
+
+def test_mes_ao_ordre_stable_a_mise_a_jour_egale(client, db_session, test_org):
+    """RESTES-3 (PERF § 6) — la liste du serveur départage les mises à jour égales par l'identifiant (ordre stable)."""
+    from datetime import datetime
+    meme = datetime(2026, 11, 1, 12, 0, 0)
+    for pid in ("p-ordre-c", "p-ordre-a", "p-ordre-b"):
+        db_session.add(Project(id=pid, organization_id=test_org.id, name="AO inventé", updated_at=meme))
+    db_session.commit()
+    ids = [p["id"] for p in client.get("/api/projects").json() if p["id"].startswith("p-ordre-")]
+    assert ids == ["p-ordre-a", "p-ordre-b", "p-ordre-c"]

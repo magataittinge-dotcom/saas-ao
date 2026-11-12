@@ -161,13 +161,16 @@ export const aoDansEtat = <P extends ProjetEtat>(projets: readonly P[], etat: Et
   projets.filter((p) => etatAO(p, maintenant) === etat)
 
 /** « À la une » : l'AO en cours dont la remise est la prochaine à venir. Aucune remise à venir : null (pas de bloc). */
-export function aLaUne<P extends ProjetEtat>(projets: readonly P[], maintenant: Date = new Date()): P | null {
+export function aLaUne<P extends ProjetEtat & Partial<Pick<Project, 'id' | 'name'>>>(projets: readonly P[], maintenant: Date = new Date()): P | null {
   let meilleur: { p: P; t: number } | null = null
   for (const p of projets) {
     if (etatAO(p, maintenant) !== 'en_cours') continue
     const limite = etatEcheance(echeanceAO(p), maintenant).limite
     if (!limite) continue
-    if (!meilleur || limite.getTime() < meilleur.t) meilleur = { p, t: limite.getTime() }
+    // à remise égale, le nom puis l'identifiant (jamais l'ordre reçu)
+    const exAequoAvant = meilleur && limite.getTime() === meilleur.t
+      && ((p.name ?? '').localeCompare(meilleur.p.name ?? '', 'fr', { numeric: true }) || (p.id ?? '').localeCompare(meilleur.p.id ?? '')) < 0
+    if (!meilleur || limite.getTime() < meilleur.t || exAequoAvant) meilleur = { p, t: limite.getTime() }
   }
   return meilleur?.p ?? null
 }

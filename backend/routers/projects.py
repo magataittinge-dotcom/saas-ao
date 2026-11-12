@@ -502,7 +502,7 @@ def list_projects(
     q = db.query(Project).filter(Project.organization_id == user.organization_id)
     if not include_deleted:
         q = q.filter(Project.deleted_at.is_(None))
-    projets = q.order_by(Project.updated_at.desc()).all()
+    projets = q.order_by(Project.updated_at.desc(), Project.id).all()   # ex aequo : départagés par l'identifiant (ordre stable)
     # Mes AO : unités, pièces, plan, mémoire de chaque AO, en quatre requêtes groupées (pas de N+1), filtrées par organisation.
     from services.avancement_ao import avancements_par_projet
     avancements = avancements_par_projet(db, user.organization_id, [p.id for p in projets])
