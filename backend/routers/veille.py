@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import base64
 import json
+import threading
 from datetime import date, datetime, timedelta
 from typing import Optional
 
@@ -247,13 +248,16 @@ def creer_ao_depuis_avis(request: Request, avis_id: str, user: User = Depends(ge
     avis = db.query(AvisVeille).filter(AvisVeille.id == avis_id, AvisVeille.date_limite >= date.today()).first()
     if avis is None:
         raise HTTPException(status_code=404, detail="Avis introuvable ou clos.")
-    existants = (db.query(Project).filter(Project.organization_id == organisation, Project.deleted_at.is_(None),
-                                          Project.infos_marche.isnot(None)).all())
-    for projet in existants:
-        source = (projet.infos_marche or {}).get("source_avis") if isinstance(projet.infos_marche, dict) else None
-        if isinstance(source, dict) and source.get("id_boamp") == avis.id_boamp:
-            return {"project_id": projet.id}
-    projet = Project(
+    return {"project_id": creer_ou_retrouver_ao(db, organisation, avis)}
+
+
+# Vérifier « déjà créé ? » puis enregistrer, d'un seul tenant : deux requêtes simultanées (deux onglets, nouvel essai
+# réseau) créaient deux AO pour le même avis (recette finale, banc). API à un seul processus (--workers 1).
+_VERROU_CREATION = threading.Lock()
+
+
+def _nouveau_projet(organisation: str, avis: AvisVeille) -> Project:
+    return Project(
         organization_id=organisation,
         name=avis.objet[:500],
         maitre_ouvrage=(avis.acheteur or None) and avis.acheteur[:255],
@@ -263,9 +267,23 @@ def creer_ao_depuis_avis(request: Request, avis_id: str, user: User = Depends(ge
         infos_marche={"source_avis": {"id_boamp": avis.id_boamp, "url_avis": avis.url_avis,
                                       "url_dossier": avis.url_dossier}},
     )
-    db.add(projet)
-    db.commit()
-    db.refresh(projet)
+
+
+def creer_ou_retrouver_ao(db: Session, organisation: str, avis: AvisVeille) -> str:
+    """L'AO de cet avis dans l'organisation : celui qui existe déjà, sinon un nouveau (sans unité de quota)."""
+    id_boamp = avis.id_boamp
+    db.commit()             # rien d'écrit ici : la transaction de lecture rend sa connexion avant d'attendre le verrou
+    with _VERROU_CREATION:
+        existants = (db.query(Project).filter(Project.organization_id == organisation, Project.deleted_at.is_(None),
+                                              Project.infos_marche.isnot(None)).all())
+        for projet in existants:
+            source = (projet.infos_marche or {}).get("source_avis") if isinstance(projet.infos_marche, dict) else None
+            if isinstance(source, dict) and source.get("id_boamp") == id_boamp:
+                return projet.id
+        projet = _nouveau_projet(organisation, avis)
+        db.add(projet)
+        db.commit()
+        db.refresh(projet)
     from services.cache import org_cache
     org_cache.invalidate(f"dashboard_stats:{organisation}")
-    return {"project_id": projet.id}
+    return projet.id
