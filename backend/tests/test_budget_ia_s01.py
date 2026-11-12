@@ -34,6 +34,7 @@ ROUTES_IA = {
     ("GET", "/api/rag/retrieve"),
     # Fonctions C1 à C4, éteintes par défaut (services/fonctions_ia.py) : allumées, elles portent le même filet.
     ("POST", "/api/projects/{project_id}/memoire/proposer-paragraphe"),
+    ("POST", "/api/projects/{project_id}/memoire/reecrire-trois"),
 }
 
 

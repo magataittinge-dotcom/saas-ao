@@ -23,6 +23,7 @@ from models.memoire import MemoireTechnique
 from models.project import ProjectDocument
 from models.user import User
 from routers.auth import get_auth_user
+from schemas.memoire import PassageRewriteRequest
 from services import fonctions_ia as F
 from services.ai import fonctions_c
 from services.ai.dtu_autorises import regle_dtu
@@ -110,3 +111,27 @@ async def proposer_paragraphe(request: Request, project_id: str, payload: Propos
     texte = await _avec_cout(user, "proposer_paragraphe", project.id, ligne, db,
                              lambda: fonctions_c.proposer_paragraphe(message, regle))
     return {"sous_critere": payload.sous_critere, "ancre": payload.ancre, "paragraphe": texte}
+
+
+# ── C2 — la réécriture d'un passage en trois propositions, avec « Voir les différences » ───────────────────────────
+
+@router.post("/projects/{project_id}/memoire/reecrire-trois",
+             dependencies=[Depends(F.exiger("reecrire_trois")), Depends(exiger_budget_ia)])
+@limiter.limit("10/minute")
+async def reecrire_trois(request: Request, project_id: str, payload: PassageRewriteRequest,
+                         user: User = Depends(get_auth_user), db: Session = Depends(get_db)):
+    """C2 — trois réécritures du passage sélectionné (mêmes gestes, même modèle, même règle DTU que la réécriture
+    d'aujourd'hui, qui reste inchangée sur sa route). Ne modifie jamais le mémoire : le front montre les trois
+    propositions et leurs différences, puis applique celle que l'utilisateur accepte par le PATCH existant."""
+    project = get_owned_project(project_id, user.organization_id, db)
+    _plafond_reecriture(db, user.organization_id)
+    docs = db.query(ProjectDocument).filter(ProjectDocument.project_id == project.id).all()
+    ids_lots = [l.get("id") for l in (project.lots_detectes or []) if l.get("id")]
+    regle = await asyncio.to_thread(regle_dtu, docs, project.selected_lot, project.selected_lot_name,
+                                    project.lots_detectes or [], ids_lots)
+    ligne = F.compter(db, user, F.ACTION_REECRIRE_TROIS, target_type="project", target_id=project.id,
+                      extra={"action": payload.action, "chars": len(payload.passage)})
+    propositions = await _avec_cout(user, "reecrire_trois", project.id, ligne, db,
+                                    lambda: fonctions_c.reecrire_trois(payload.passage, payload.action,
+                                                                       payload.instruction, regle))
+    return {"original": payload.passage, "propositions": propositions, "action": payload.action}

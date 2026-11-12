@@ -157,3 +157,56 @@ async def proposer_paragraphe(message: str, regle) -> str:
     texte = valider_paragraphe(brut)
     texte, _retires = regle.garde_texte(texte)
     return texte
+
+
+# ── C2 — la réécriture d'un passage en trois propositions ──────────────────────────────────────────────────────────
+
+NB_PROPOSITIONS = 3
+
+
+def message_trois(passage: str, action: str, instruction: Optional[str], consigne_dtu: str) -> str:
+    """Le message de C2 : la consigne du geste d'aujourd'hui (lue, jamais modifiée), la liste des DTU, le passage."""
+    from services.ai.passage_rewriter import ACTIONS
+    consigne = ACTIONS[action]
+    if action == "insister":
+        consigne = consigne.format(instruction=instruction)
+    parties = [f"CONSIGNE : {consigne}"]
+    if consigne_dtu:
+        parties.append(consigne_dtu)
+    parties.append(f"PASSAGE :\n{passage}")
+    return "\n\n".join(parties)
+
+
+def max_jetons_trois(passage: str) -> int:
+    """Trois réécritures d'un passage : environ trois fois sa longueur en jetons, bornée."""
+    return max(1500, min(len(passage) * 2, 12000))
+
+
+def valider_trois(brut: str, passage: str) -> list[str]:
+    """{"propositions": [trois textes]} : trois chaînes non vides, chacune bornée par la longueur du passage ; les
+    doublons sont retirés et il en faut au moins deux distinctes. Rien d'autre n'est accepté."""
+    donnees = _json(brut)
+    if set(donnees) != {"propositions"}:
+        raise SortieIllisible("clés inattendues")
+    liste = donnees["propositions"]
+    if not isinstance(liste, list) or len(liste) != NB_PROPOSITIONS or not all(isinstance(t, str) for t in liste):
+        raise SortieIllisible("trois textes attendus")
+    plafond = max(1200, len(passage) * 3)
+    propres: list[str] = []
+    for texte in liste:
+        texte = texte.strip()
+        if not texte or len(texte) > plafond:
+            raise SortieIllisible("longueur")
+        if texte not in propres:
+            propres.append(texte)
+    if len(propres) < 2:
+        raise SortieIllisible("propositions identiques")
+    return propres
+
+
+async def reecrire_trois(passage: str, action: str, instruction: Optional[str], regle) -> list[str]:
+    """C2 : l'appel (thread), la validation, puis le garde-fou DTU de la génération sur chaque proposition."""
+    message = message_trois(passage, action, instruction, regle.consigne())
+    brut = await asyncio.to_thread(_appeler, modele_sonnet(), P.REECRIRE_TROIS_SYSTEM, message,
+                                   max_jetons_trois(passage), "reecrire_trois")
+    return [regle.garde_texte(t)[0] for t in valider_trois(brut, passage)]
