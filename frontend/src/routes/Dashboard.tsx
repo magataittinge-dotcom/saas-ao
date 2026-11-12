@@ -97,20 +97,18 @@ export default function Dashboard() {
     queryFn: async () => { const { data } = await api.get<DashboardStats>('/dashboard/stats'); return data },
   })
   // C15 — quota pour l'écran « premier DCE offert » + rappel sobre de l'offre
-  const quota = useQuery<Quota>({
+  const { data: quotaStatus } = useQuery<Quota>({
     queryKey: ['billing-quota'],
     queryFn: async () => { const { data } = await api.get('/billing/quota'); return data },
   })
-  const quotaStatus = quota.data
   const documents = useDocuments()
   // L'ordre de rendu (CLS) : le haut de l'écran (le rappel de l'essai, la phrase de Synorix, la bande des AO) se pose d'un
   // coup, avec la bande des AO (une seule attente : 200 ms de rien, puis le squelette 400 ms au moins, partagée avec la
-  // bande) ; la veille et « Votre entreprise » attendent qu'il soit posé et que le quota soit lu (le rappel de l'essai en
-  // dépend). Avant, la veille se dessinait sous l'en-tête puis descendait de toute la hauteur de la bande (380 px au
-  // bureau, 450 au téléphone).
+  // bande) ; la veille et « Votre entreprise » attendent qu'il soit posé. Avant, la veille se dessinait sous l'en-tête puis
+  // descendait de toute la hauteur de la bande (380 px au bureau, 450 au téléphone). Elles n'attendent pas le quota : sans
+  // délai sur les requêtes, un quota qui ne répond pas les cacherait.
   const attenteHaut = useAttente(phaseRequete(projets, () => false) === 'chargement')
   const hautPose = attenteHaut === 'contenu'
-  const basPose = hautPose && (quotaStatus !== undefined || quota.isError)
 
   const maintenant = useMemo(() => new Date(), [projets.data]) // eslint-disable-line react-hooks/exhaustive-deps
   const comptes = useMemo(() => (projets.data ? comptesAO(projets.data, maintenant) : null), [projets.data, maintenant])
@@ -180,14 +178,14 @@ export default function Dashboard() {
       {/* ── La veille : la carte et la liste des avis, chargées à la demande (l'accueil seulement) ── */}
       {/* montée tout de suite (ses lectures partent avec celles du haut), affichée une fois le haut posé ; la carte se mesure à
           l'affichage (ResizeObserver de CarteFrance). `data-bloc-en-attente` : le pied de page attend aussi (index.css) */}
-      <div className={cn('mt-10 max-md:mt-7.5', !basPose && 'hidden')} data-bloc-en-attente={basPose ? undefined : ''}>
+      <div className={cn('mt-10 max-md:mt-7.5', !hautPose && 'hidden')} data-bloc-en-attente={hautPose ? undefined : ''}>
         <Suspense fallback={<VeilleEnChargement />}>
           <VeilleAccueil />
         </Suspense>
       </div>
 
       {/* ── Coffre-fort, entreprise et bilan : une bande de cases ; une case n'apparaît qu'une fois sa donnée lue ── */}
-      <section aria-labelledby="t-suivi" className={cn('mt-10 max-md:mt-7.5', !basPose && 'hidden')}>
+      <section aria-labelledby="t-suivi" className={cn('mt-10 max-md:mt-7.5', !hautPose && 'hidden')}>
         <TitreSection id="t-suivi">Votre entreprise</TitreSection>
         {suiviEnErreur ? (
           // le même modèle d'erreur que le reste de l'écran : il rejoint le « Réessayer » unique (le premier état le porte)
