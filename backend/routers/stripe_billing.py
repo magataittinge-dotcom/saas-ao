@@ -45,6 +45,31 @@ PRODUCTS = produits_stripe(settings)
 
 OFFRES_PAYANTES = ("essentiel", "pro", "business")
 
+# Abonnement qui ouvre une offre au retour du paiement (verify-session) : payé ou à l'essai. `past_due`, `incomplete`,
+# `unpaid`, `canceled`… : rien n'est rendu (le webhook tient l'offre d'un abonnement déjà appliqué).
+STATUTS_OFFRE_OUVERTE = ("active", "trialing")
+
+
+def offre_de_l_abonnement(sub: dict) -> str | None:
+    """L'offre (essentiel, pro, business) du produit du prix de la première ligne de l'abonnement ; None si inconnu."""
+    items = sub.get("items") if isinstance(sub.get("items"), dict) else {}
+    lignes = (items or {}).get("data") or []
+    if not lignes or not isinstance(lignes[0], dict):
+        return None
+    product_id = (lignes[0].get("price") or {}).get("product")
+    if isinstance(product_id, dict):                       # prix « expand » : le produit est un objet
+        product_id = product_id.get("id")
+    return next((offre for offre, pid in PRODUCTS.items() if product_id and pid == product_id), None)
+
+
+def _abonnement_lu(billing, sub_id: str) -> dict | None:
+    """L'abonnement chez le fournisseur ; None s'il est illisible (rien n'est alors appliqué : le webhook rattrapera)."""
+    try:
+        sub = billing.retrieve_subscription(sub_id)
+    except BillingError:
+        return None
+    return sub if isinstance(sub, dict) else None
+
 
 def _get_or_create_customer(org: Organization, user: User) -> str:
     """Return the customer id, creating one on the active provider if needed."""
@@ -197,33 +222,40 @@ def verify_session(
             detail="Cette session de paiement n'appartient pas à votre organisation.",
         )
 
-    plan = metadata.get("plan")
-
-    if not plan and session.get("subscription"):
-        try:
-            sub = billing.retrieve_subscription(session["subscription"])
-            items = sub.get("items", {}).get("data", []) if isinstance(sub.get("items"), dict) else []
-            if items:
-                product_id = items[0].get("price", {}).get("product")
-                for plan_name, pid in PRODUCTS.items():
-                    if pid == product_id:
-                        plan = plan_name
-                        break
-        except BillingError:
-            pass
-
-    if not plan:
-        return {"plan": "free", "updated": False}
-
     org = db.query(Organization).filter(Organization.id == user.organization_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Organisation introuvable")
 
+    # P0-1 (relecture du 12/11) — une session reste « paid » à vie chez Stripe : rejouée après la fin de l'abonnement
+    # (portail, impayé) ou après une baisse d'offre, elle rendait l'offre de ses métadonnées sans paiement. L'offre
+    # n'est donc appliquée que si l'abonnement de la session vit (`active`, `trialing`), appartient au client de
+    # l'organisation, et elle se lit dans le PRIX de cet abonnement, jamais dans les métadonnées de la session.
+    sub_id = session.get("subscription")
+    sub = _abonnement_lu(billing, sub_id) if sub_id else None
+    if not sub or sub.get("status") not in STATUTS_OFFRE_OUVERTE:
+        return {"plan": "free", "updated": False}
+    client_session = session.get("customer")
+    client_sub = sub.get("customer") or client_session
+    if (client_session and client_sub != client_session) or (
+            org.stripe_customer_id and client_sub and client_sub != org.stripe_customer_id):
+        logger.warning("verify-session refusée : abonnement d'un autre client (org=%s)", org.id)
+        return {"plan": "free", "updated": False}
+    plan = offre_de_l_abonnement(sub)
+    if not plan:
+        return {"plan": "free", "updated": False}
+
+    # Session déjà appliquée (webhook arrivé d'abord, retour rechargé) : rien n'est écrit une seconde fois (pas de
+    # fenêtre de quotas neuve) ; l'écran reçoit l'offre en cours. Un AUTRE abonnement déjà connu n'est jamais remplacé
+    # par une vieille session : les changements d'offre passent par le portail (webhook `updated`).
+    if org.stripe_subscription_id == sub_id:
+        return {"plan": org.plan, "updated": (org.plan or "free") != "free"}
+    if org.stripe_subscription_id:
+        return {"plan": org.plan or "free", "updated": False}
+
     org.plan = plan
-    if session.get("customer"):
-        org.stripe_customer_id = session["customer"]
-    if session.get("subscription"):
-        org.stripe_subscription_id = session["subscription"]
+    if client_sub:
+        org.stripe_customer_id = client_sub
+    org.stripe_subscription_id = sub_id
     # Ancre du reset mensuel des quotas (C1) : date de souscription.
     if org.subscription_started_at is None:
         org.subscription_started_at = datetime.utcnow()
