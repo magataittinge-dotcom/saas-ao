@@ -17,6 +17,7 @@ import { Champ, ChampRecherche } from '@/components/ui/champ'
 import { EtatErreur, EtatRequete, EtatVide } from '@/components/ui/etats'
 import { Squelette } from '@/components/ui/squelette'
 import { LIGNES_PAR_PAGE } from '@/components/ui/tableau'
+import { adresseEtapeAO } from '@/lib/adresseSure'
 import { CATEGORY_TYPES, DOC_TYPE_LABELS, VAULT_CATEGORY_LABELS, VAULT_CATEGORY_ORDER } from '@/lib/vault'
 import { messageErreur } from '@/lib/erreurs'
 import { FORMATS_COFFRE, MESSAGE_REFUS_FORMAT, PRECISION_COFFRE, TAILLE_MAX_COFFRE_MO } from '@/lib/coffreFormats'
@@ -79,7 +80,9 @@ export default function Vault() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   // Conserve le contexte AO : quand on arrive du parcours (ex. étape Vérification), on offre un retour sans perdre le projet.
-  const returnTo = searchParams.get('returnTo')
+  // P0-1 : seulement l'adresse d'une étape d'AO ; toute autre valeur (javascript:, //hote…) : pas de bouton de retour.
+  const retour = searchParams.get('returnTo')
+  const returnTo = adresseEtapeAO(retour) ? retour : null
   const requete = useDocuments()
   const documents = requete.data ?? []
   const { mutateAsync: deleteDocument } = useDeleteDocument()
