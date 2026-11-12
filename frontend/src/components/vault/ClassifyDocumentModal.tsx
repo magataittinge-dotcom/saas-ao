@@ -55,11 +55,11 @@ export default function ClassifyDocumentModal({ document: doc, onClose }: Props)
       ouvert
       onOuvert={(ouvert) => { if (!ouvert && !isPending) onClose() }}
       taille="petit"
-      titre={isUnclassified ? 'Ranger le document' : 'Modifier le document'}
+      titre={isUnclassified ? 'Ranger la pièce' : 'Modifier la pièce'}
       description={<span className="block truncate">{doc.file_name}</span>}
       actions={<>
         <Bouton variante="secondaire" onClick={onClose} disabled={isPending}>Annuler</Bouton>
-        <Bouton variante="principal" onClick={onSubmit} enCours={isPending} libelleEnCours="Enregistrement…">Enregistrer</Bouton>
+        <Bouton variante="principal" onClick={onSubmit} enCours={isPending} libelleEnCours="Enregistrement…">{isUnclassified ? 'Ranger' : 'Enregistrer'}</Bouton>
       </>}
     >
       <div className="grid gap-4">
@@ -78,13 +78,14 @@ export default function ClassifyDocumentModal({ document: doc, onClose }: Props)
           />
         </GroupeChamp>
         <div className="grid grid-cols-2 gap-3">
-          <GroupeChamp libelle="Émise le" facultatif>
+          <GroupeChamp libelle="Émise le">
             <ChampDate valeur={issuedDate} onChange={(iso) => setIssuedDate(iso ?? '')} />
           </GroupeChamp>
-          <GroupeChamp libelle="Valable jusqu’au" aide={!expiryDate && type !== 'autre' ? 'Sans cette date, la validité reste à confirmer.' : undefined}>
+          <GroupeChamp libelle="Valable jusqu’au">
             <ChampDate valeur={expiryDate} onChange={(iso) => setExpiryDate(iso ?? '')} />
           </GroupeChamp>
         </div>
+        {!expiryDate && type !== 'autre' && <p className="-mt-1 text-xs text-fg-3">Sans date de fin, la validité de la pièce reste à confirmer.</p>}
         {error && <Message ton="erreur">L’enregistrement n’a pas abouti. Vos choix sont gardés : réessayez.</Message>}
       </div>
     </Dialogue>

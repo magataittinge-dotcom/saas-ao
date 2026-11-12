@@ -274,27 +274,20 @@ test('zone 1 : une phrase par fiche, les sections avec « Prête » ou « À
   assert.match(html, /data-section="04" data-etat="a_renseigner"/)
   assert.match(html, /data-section="01" data-etat="prete"/)
   assert.equal((html.match(/data-etat="a_renseigner"/g) ?? []).length, 1)
-  assert.ok(html.includes('>Prête<') && html.includes('>À renseigner<'))
+  // l'état se dit une fois : « Prête » en pastille ; une section à renseigner ne porte que son lien « Renseigner »
+  assert.ok(html.includes('>Prête<') && !html.includes('>À renseigner<'))
   assert.match(html, /href="\/company\?rubrique=moyens&amp;champ=materiel"/)
   assert.match(html, /href="\/company\?rubrique=moyens&amp;champ=effectifs"/)
   assert.match(html, /aria-label="Renseigner : Véhicules"/)
   assert.match(html, /aria-label="Modifier : Matériel"/)
-  // la zone de dépôt (phase B) : les cases de la rubrique, branchées sous les sections ; la validation recharge la fiche
+  // jury, tour 1 : la page du téléchargement ne recopie plus les dépôts de Mon entreprise ; un lien y mène
   const source = sansCommentaires(lire('src/components/fiche/ZoneContenu.tsx'))
-  assert.match(source, /<CasesDepot rubrique=\{rubrique\} apresValidation=\{apresValidation\} disposition="colonne" \/>/)
-  assert.ok(!lire('src/components/fiche/ZoneContenu.tsx').includes('ZONE-DEPOT'), 'plus d’emplacement vide')
-  assert.match(sansCommentaires(lire('src/routes/FicheEntreprise.tsx')), /apresValidation=\{\(\) => \{ void client\.invalidateQueries\(\{ queryKey: cleFiche\(rubrique\) \}\) \}\}/)
-  const avecCases = ecran(moyens, [
-    caseDepot('materiel', 'moyens', 'Liste du matériel ou inventaire'), caseDepot('personnel', 'moyens', 'Organigramme ou liste du personnel'),
-    caseDepot('fiche_moyens', 'moyens', 'Fiche des moyens déjà faite (PDF ou Word)'), caseDepot('kbis', 'identite', 'Extrait Kbis'),
-  ])
+  assert.doesNotMatch(source, /CasesDepot/)
+  const avecCases = ecran(moyens, [caseDepot('materiel', 'moyens', 'Liste du matériel ou inventaire'), caseDepot('kbis', 'identite', 'Extrait Kbis')])
   const zone1 = avecCases.slice(avecCases.indexOf('data-zone="contenu"'))
-  assert.match(zone1, /data-depots="moyens"/, 'les cases de dépôt sont dans la zone 1')
-  assert.ok(zone1.indexOf('data-sections-fiche') < zone1.indexOf('data-depots="moyens"'), 'sous la liste des sections')
-  for (const nom of ['Liste du matériel ou inventaire', 'Organigramme ou liste du personnel', 'Fiche des moyens déjà faite (PDF ou Word)']) assert.ok(zone1.includes(nom), nom)
-  assert.ok(!zone1.includes('Extrait Kbis'), 'seulement les cases de la rubrique de la fiche')
-  const grille = zone1.match(/<div data-disposition="colonne" class="([^"]*)"/)
-  assert.ok(grille && !/grid-cols/.test(grille[1]), 'zone étroite : une case sous l’autre à toutes les largeurs')
+  assert.ok(!zone1.includes('data-depots=') && !zone1.includes('Liste du matériel ou inventaire'))
+  assert.match(zone1, /data-depots-ailleurs[\s\S]*href="\/company\?rubrique=moyens"[^>]*>Déposer une pièce dans Mon entreprise</)
+  assert.ok(zone1.indexOf('data-sections-fiche') < zone1.indexOf('data-depots-ailleurs'), 'sous la liste des sections')
   // une phrase, ton sobre, pour chacune des trois fiches
   for (const r of ['identite', 'moyens', 'certifications'] as const) assert.ok(A_QUOI_SERT[r].length > 60 && !/!|manquant|incomplet|absent/i.test(A_QUOI_SERT[r]))
   assert.equal(new Set(Object.values(A_QUOI_SERT)).size, 3)
@@ -353,7 +346,7 @@ test('colonne « Téléchargement » : d’abord le format expliqué et le bo
   assert.ok(html.includes('à envoyer tel quel') && html.includes('pour modifier avant d’envoyer') && html.includes('le tableau, pour trier ou compléter'))
   assert.match(html, /<button[^>]*data-telecharger[^>]*>[\s\S]*?Télécharger la fiche[\s\S]*?· PDF/)
   assert.equal((html.match(/data-variante="principal"/g) ?? []).length, 1, 'une seule action pleine sur l’écran')
-  assert.ok(html.indexOf('data-formats') < html.indexOf('data-telecharger') && html.indexOf('data-telecharger') < html.indexOf('Personnaliser le bordereau'), 'le geste de l’écran d’abord')
+  assert.ok(html.indexOf('data-formats') < html.indexOf('data-telecharger') && html.indexOf('data-telecharger') < html.indexOf('Personnaliser la fiche'), 'le geste de l’écran d’abord')
   // le bordereau : champs du système, chacun avec son étiquette reliée
   for (const l of ['Titre', 'Sous-titre', 'Contact']) {
     const id = html.match(new RegExp(`<label for="([^"]+)"[^>]*>${l}</label>`))?.[1]
@@ -363,7 +356,8 @@ test('colonne « Téléchargement » : d’abord le format expliqué et le bo
   assert.match(html, /data-depot-logo/)
   assert.ok(html.includes('>Choisir un logo</button>') && html.includes('PNG ou JPEG, 2 Mo au plus'))
   assert.match(html, /<input(?=[^>]*type="file")(?=[^>]*accept="image\/png,image\/jpeg")(?=[^>]*aria-hidden="true")(?=[^>]* hidden="")[^>]*>/)
-  assert.ok(html.includes('Couleur d’accent') && html.includes('aria-label="Changer la couleur d’accent (#008cf8)"'))
+  // la couleur se choisit à l'œil : aucun code hexadécimal affiché (jury, tour 1)
+  assert.ok(html.includes('aria-label="Changer la couleur de la fiche"') && !/>#008cf8</.test(html))
   assert.match(html, /<input(?=[^>]*type="color")(?=[^>]*value="#008cf8")(?=[^>]*aria-hidden="true")(?=[^>]*sr-only)(?=[^>]*size-px)[^>]*>/, 'le nuancier masqué ne garde aucune largeur')
   assert.ok(!/border-dashed/.test(html), 'aucune zone en pointillés au repos')
   // les lignes libres sont du contenu : sous la liste des sections, avant les dépôts, plus dans la colonne de droite
@@ -503,7 +497,7 @@ test('aperçu : une ligne sans valeur n’est pas imprimée, une tuile sans val
 test('phrase « N informations à renseigner dans Mon entreprise pour compléter cette fiche » : lien vers la rubrique, absente à 0', () => {
   assert.equal(phraseARenseigner(0), null)
   assert.equal(phraseARenseigner(-2), null)
-  assert.deepEqual(phraseARenseigner(1), { avant: '1 information à renseigner dans ', lien: 'Mon entreprise', apres: ' pour compléter cette fiche' })
+  assert.deepEqual(phraseARenseigner(1), { avant: '1 information à renseigner dans ', lien: 'Mon entreprise', apres: ' pour compléter cette fiche.' })
   const html = renderToStaticMarkup(<MemoryRouter><PhraseARenseigner n={3} rubrique="moyens" /></MemoryRouter>)
   assert.match(html, /3 informations à renseigner dans <a[^>]*href="\/company\?rubrique=moyens"[^>]*>Mon entreprise<\/a> pour compléter cette fiche/)
   assert.equal(renderToStaticMarkup(<MemoryRouter><PhraseARenseigner n={0} rubrique="identite" /></MemoryRouter>), '')

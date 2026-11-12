@@ -11,6 +11,6 @@ export const FORMATS_COFFRE = {
   'image/png': ['.png'],
 } as const
 
-export const PRECISION_COFFRE = `PDF, Word, Excel, JPEG, PNG — ${TAILLE_MAX_COFFRE_MO} Mo max`
+export const PRECISION_COFFRE = `PDF, Word, Excel, JPEG ou PNG, ${TAILLE_MAX_COFFRE_MO} Mo au plus par fichier`
 
 export const MESSAGE_REFUS_FORMAT = `PDF, Word, Excel, JPEG ou PNG de ${TAILLE_MAX_COFFRE_MO} Mo au plus`

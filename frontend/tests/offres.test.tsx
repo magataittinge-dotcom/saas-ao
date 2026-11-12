@@ -120,3 +120,15 @@ test('CGV et CGU : la description des offres dit la grille du produit, sans « i
     assert.doesNotMatch(legal(slug), /illimit|usage raisonnable|fair.?use/i, slug)
   }
 })
+
+// Migration Pro 40 → 30 (11/11/2026) et Business au quota, sur la page Abonnement refaite au lot c.
+test('Abonnement : au-delà du nouveau quota, la jauge lit « 30 sur 30 » ; Business au quota ne propose pas d’offre plus large', () => {
+  const page = sansCommentaires(lire('src/routes/Billing.tsx'))
+  assert.match(page, /const utilise = Math\.min\(compteur\.used, compteur\.limit\)/)
+  assert.match(page, /\{utilise\} sur \{compteur\.limit\}/)
+  assert.match(page, /aria-valuenow=\{utilise\}/)
+  assert.doesNotMatch(page, /\{compteur\.used\} sur/)
+  assert.match(page, /business \? 'le nombre d’unités peut être relevé sur demande\.' : 'une offre plus large/)
+  assert.match(page, /\{business \? null : isPaid/)
+  assert.doesNotMatch(page, /limit === null|limit !== null|illimit|usage raisonnable/)
+})

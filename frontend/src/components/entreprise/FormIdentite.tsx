@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Sigle } from '@/components/common/Sigle'
 import { Champ, ZoneTexte } from '@/components/ui/champ'
@@ -8,7 +8,7 @@ import type { DonneesEntreprise } from '@/lib/entreprise/avancement'
 import { FORMES_JURIDIQUES, METIERS, lireDepartements } from '@/lib/entreprise/metiers'
 import { AfficherPlus, ChampNombre, Field, Groupe, Pleine, SOURCE_SIRENE } from './champs'
 import CadreFormulaire from './CadreFormulaire'
-import ChampSiret from './ChampSiret'
+import ChampSiret, { type ChampSiretHandle } from './ChampSiret'
 import CarteSiege from './CarteSiege'
 import { useFormulaireRubrique } from './useFormulaireRubrique'
 
@@ -22,7 +22,9 @@ const texte = (v: unknown): boolean => typeof v === 'string' && v.trim() !== ''
  * (demandés par le DC2) sont dans Certifications et références.
  */
 export default function FormIdentite({ donnees, avant, idPanneau, idOnglet }: { donnees: DonneesEntreprise; avant?: ReactNode; idPanneau?: string; idOnglet?: string }) {
-  const f = useFormulaireRubrique('identite', donnees)
+  // Le SIRET a son propre contrôle (répertoire Sirene) : « Enregistrer » l'envoie aussi quand il a été tapé sans « Vérifier ».
+  const siret = useRef<ChampSiretHandle>(null)
+  const f = useFormulaireRubrique('identite', donnees, undefined, () => siret.current?.enregistrerSaisie() ?? Promise.resolve(null))
   const { organisation: org, profil } = f.brouillon
   const [departements, setDepartements] = useState<string | null>(null)
   const adresse = typeof org.address === 'string' ? org.address : ''
@@ -40,7 +42,7 @@ export default function FormIdentite({ donnees, avant, idPanneau, idOnglet }: { 
         <Field label="Nom de l’entreprise" rempli={texte(org.name)} source={sirene}>
           <Champ value={org.name ?? ''} onChange={(e) => f.poserOrganisation('name', e.target.value)} autoComplete="organization" />
         </Field>
-        <ChampSiret siret={donnees.organisation?.siret} verifie={donnees.organisation?.siret_verified} />
+        <ChampSiret ref={siret} siret={donnees.organisation?.siret} verifie={donnees.organisation?.siret_verified} />
         <Field label="Forme juridique" rempli={texte(forme)} source={sirene}>
           <ListeDeroulante valeur={forme || undefined} onChange={(v) => f.poserOrganisation('forme_juridique', v)}
             options={[...(forme && !(FORMES_JURIDIQUES as readonly string[]).includes(forme) ? [forme] : []), ...FORMES_JURIDIQUES].map((x) => ({ valeur: x, libelle: x }))} />
@@ -67,34 +69,30 @@ export default function FormIdentite({ donnees, avant, idPanneau, idOnglet }: { 
       </Groupe>
 
       <Groupe titre="Activités et zone">
-        <Pleine>
-          <Field label="Activités principales" rempli={texte(profil.activites)} aide="Les mots du mémoire technique">
-            <ZoneTexte rows={3} value={profil.activites ?? ''} onChange={(e) => f.poserProfil('activites', e.target.value)} placeholder="Maçonnerie, gros œuvre, rénovation…" />
+          <Field label="Activités principales" rempli={texte(profil.activites)} aide="Ces mots sont repris dans vos mémoires techniques.">
+            <ZoneTexte className="resize-none" rows={3} value={profil.activites ?? ''} onChange={(e) => f.poserProfil('activites', e.target.value)} placeholder="Maçonnerie, gros œuvre, rénovation…" />
           </Field>
-        </Pleine>
-        <Pleine>
           <Field label="Zone d’intervention géographique" rempli={texte(profil.zone_intervention)}>
             <Champ value={profil.zone_intervention ?? ''} onChange={(e) => f.poserProfil('zone_intervention', e.target.value)} placeholder="Île-de-France, Provence-Alpes-Côte d’Azur…" />
           </Field>
-        </Pleine>
       </Groupe>
 
       <AfficherPlus>
         <Groupe titre="Informations légales">
-          <Field label="Date de création" rempli={texte(profil.date_creation)}>
-            <Champ value={profil.date_creation ?? ''} onChange={(e) => f.poserProfil('date_creation', e.target.value)} placeholder="2005" />
+          <Field label="Année de création" rempli={texte(profil.date_creation)}>
+            <Champ value={profil.date_creation ?? ''} onChange={(e) => f.poserProfil('date_creation', e.target.value)} inputMode="numeric" />
           </Field>
-          <Field label="Ville du greffe (registre du commerce ou des métiers)" rempli={texte(org.greffe_rcs)}>
+          <Field label="Ville du greffe" rempli={texte(org.greffe_rcs)} aide="Registre du commerce ou des métiers">
             <Champ value={org.greffe_rcs ?? ''} onChange={(e) => f.poserOrganisation('greffe_rcs', e.target.value)} maxLength={80} />
           </Field>
           <Field label="Capital social (€)" rempli={typeof org.capital_social === 'number'}>
-            <ChampNombre valeur={typeof org.capital_social === 'number' ? org.capital_social : null} max={10_000_000_000} onChange={(v) => f.poserOrganisation('capital_social', v)} />
+            <ChampNombre className="max-w-56" valeur={typeof org.capital_social === 'number' ? org.capital_social : null} max={10_000_000_000} onChange={(v) => f.poserOrganisation('capital_social', v)} />
           </Field>
         </Groupe>
-        <Groupe titre="Métiers, départements et présentation">
+        <Groupe titre="Métiers et présentation">
           <Pleine>
             <Field label="Métiers exercés" groupe>
-              <div className="grid gap-x-4 gap-y-1 [grid-template-columns:repeat(auto-fit,minmax(15rem,1fr))]">
+              <div className="grid gap-x-4 gap-y-1 [grid-template-columns:repeat(auto-fit,minmax(20rem,1fr))]">
                 {METIERS.map((m) => (
                   <CaseACocher key={m.code} libelle={m.libelle} coche={metiers.includes(m.code)}
                     onChange={(coche) => f.poserProfil('metiers', coche ? [...metiers, m.code] : metiers.filter((c) => c !== m.code))} />
@@ -102,7 +100,7 @@ export default function FormIdentite({ donnees, avant, idPanneau, idOnglet }: { 
               </div>
             </Field>
           </Pleine>
-          <Field label="Départements d’intervention" rempli={(profil.departements_intervention ?? []).length > 0} aide="codes séparés par une virgule : 14, 50, 61">
+          <Field label="Départements d’intervention" rempli={(profil.departements_intervention ?? []).length > 0} aide="Codes séparés par une virgule : 14, 50, 61">
             <Champ
               value={departements ?? (profil.departements_intervention ?? []).join(', ')}
               onChange={(e) => { setDepartements(e.target.value); f.poserProfil('departements_intervention', lireDepartements(e.target.value)) }}
@@ -111,12 +109,12 @@ export default function FormIdentite({ donnees, avant, idPanneau, idOnglet }: { 
           </Field>
           <Pleine>
             <Field label="Présentation en quelques lignes" rempli={texte(org.presentation)}>
-              <ZoneTexte rows={4} value={org.presentation ?? ''} onChange={(e) => f.poserOrganisation('presentation', e.target.value)} />
+              <ZoneTexte className="resize-none" rows={4} value={org.presentation ?? ''} onChange={(e) => f.poserOrganisation('presentation', e.target.value)} />
             </Field>
           </Pleine>
           <Pleine>
             <Field label="Historique et parcours" rempli={texte(profil.historique)}>
-              <ZoneTexte rows={4} value={profil.historique ?? ''} onChange={(e) => f.poserProfil('historique', e.target.value)} placeholder="Fondée en 2005, notre entreprise…" />
+              <ZoneTexte className="resize-none" rows={4} value={profil.historique ?? ''} onChange={(e) => f.poserProfil('historique', e.target.value)} placeholder="Fondée en 2005, notre entreprise…" />
             </Field>
           </Pleine>
         </Groupe>

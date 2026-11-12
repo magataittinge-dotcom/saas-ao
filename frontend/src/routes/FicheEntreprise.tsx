@@ -33,7 +33,7 @@ import { Squelette, SqueletteLignes } from '@/components/ui/squelette'
 import { cn } from '@/lib/utils'
 import { enMiseAJour, type FormatFiche } from '@/lib/apercuFiche'
 import {
-  LIBELLE_FICHE, RUBRIQUES_FICHE, bordereauModifie, lienFiche, paletteFiche,
+  LIBELLE_FICHE, RUBRIQUES_FICHE, bordereauModifie, lienFiche, paletteFiche, sousTitreFiche,
   type FicheBordereau, type FicheReponse, type RubriqueFiche,
 } from '@/lib/fiche'
 
@@ -61,7 +61,12 @@ const corpsEnregistre = (b: FicheBordereau) => ({
 function SqueletteFiche() {
   return (
     <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_20rem]">
-      <Squelette className="aspect-[210/297] w-full rounded-md" />
+      {/* la feuille qui arrive : son cadre et quelques lignes, pas un aplat gris de la taille d'une page */}
+      <div className="grid aspect-[210/297] w-full content-start gap-4 rounded-md border border-bord bg-surface-0 p-8 shadow-card max-sm:p-5">
+        <Squelette className="h-10 w-2/3 justify-self-end" />
+        <SqueletteLignes lignes={3} className="mt-6 max-w-md" />
+        <SqueletteLignes lignes={3} className="mt-4 max-w-md" />
+      </div>
       <div className="grid content-start gap-4">
         <SqueletteLignes lignes={2} />
         <Squelette className="h-11 rounded-lg" />
@@ -179,7 +184,7 @@ function Fiche({ rubrique }: { rubrique: RubriqueFiche }) {
   return (
     <Page
       titre={LIBELLE_FICHE}
-      sousTitre="Ce que vous voyez dans l’aperçu est exactement ce que vous téléchargez. Les informations viennent de « Mon entreprise »."
+      sousTitre={sousTitreFiche(!!data && etat.phase === 'pret')}
     >
       <nav aria-label="Fiches" className="mb-8 flex flex-wrap gap-1">
         {RUBRIQUES_FICHE.map((r) => (
@@ -201,7 +206,7 @@ function Fiche({ rubrique }: { rubrique: RubriqueFiche }) {
         erreur={(
           <EtatErreur
             titre="La fiche n’a pas pu se charger"
-            detail="La connexion au serveur a échoué. Votre bordereau et vos informations sont toujours enregistrés."
+            detail={<span className="block text-pretty">La connexion au serveur a échoué. Vos informations et vos réglages sont toujours enregistrés.</span>}
             onReessayer={() => { void refetch() }}
             enCours={isFetching}
           />
@@ -233,11 +238,11 @@ function Fiche({ rubrique }: { rubrique: RubriqueFiche }) {
                 />
                 <MentionEnregistre visible={mention.visible} />
                 {enregistrement.isError && (
-                  <Message ton="erreur">Le bordereau n’a pas pu être enregistré. Vérifiez la couleur et la longueur des textes, puis modifiez un champ pour réessayer.</Message>
+                  <Message ton="erreur">Vos réglages n’ont pas pu être enregistrés. Vérifiez la couleur et la longueur des textes, puis modifiez un champ pour réessayer.</Message>
                 )}
               </div>
 
-              <ZoneContenu rubrique={rubrique} donnees={fiche.donnees} libres={courant.lignes_libres} onLibres={(lignes_libres) => modifier({ lignes_libres })} apresValidation={() => { void client.invalidateQueries({ queryKey: cleFiche(rubrique) }) }} />
+              <ZoneContenu rubrique={rubrique} donnees={fiche.donnees} libres={courant.lignes_libres} onLibres={(lignes_libres) => modifier({ lignes_libres })} />
             </div>
           )
         }}

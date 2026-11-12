@@ -59,11 +59,17 @@ export function nettoyerListes(profil: Record<string, unknown>): Record<string, 
 
 export const CA_VIDE = (): CAEntry[] => [{ annee: '', montant: '' }, { annee: '', montant: '' }, { annee: '', montant: '' }]
 export const POSTES_PAR_DEFAUT = (): PosteCle[] => [
-  { poste: 'Directeur Travaux', nom: '', role: '' },
-  { poste: 'Conducteur Travaux', nom: '', role: '' },
-  { poste: 'Chef de Chantier', nom: '', role: '' },
+  { poste: 'Directeur de travaux', nom: '', role: '' },
+  { poste: 'Conducteur de travaux', nom: '', role: '' },
+  { poste: 'Chef de chantier', nom: '', role: '' },
   { poste: 'Administration', nom: '', role: '' },
 ]
+
+/** Les anciens intitulés proposés d'office, dans la forme du métier (« Directeur de travaux », « Chef de chantier »). */
+const INTITULES_CORRIGES: Record<string, string> = {
+  'Directeur Travaux': 'Directeur de travaux', 'Conducteur Travaux': 'Conducteur de travaux', 'Chef de Chantier': 'Chef de chantier',
+}
+export const intitulePoste = (poste: string): string => INTITULES_CORRIGES[poste] ?? poste
 
 export interface Brouillon {
   organisation: Partial<Organization>

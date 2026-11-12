@@ -61,7 +61,7 @@ test('l\'écran : la mention naît d\'un enregistrement réussi seulement, l\'é
   assert.match(code, /onError: \(\) => \{[^}]*mention\.masquer\(\)/)
   assert.match(code, /<MentionEnregistre visible=\{mention\.visible\} \/>/)
   assert.doesNotMatch(code, /setEnregistre/)           // plus de « Enregistré » collé dans l'en-tête de l'aperçu
-  assert.match(code, /<Message ton="erreur">Le bordereau n’a pas pu être enregistré/)   // l'échec : un Message du système, avec le geste pour repartir
+  assert.match(code, /<Message ton="erreur">Vos réglages n’ont pas pu être enregistrés/)   // l'échec : un Message du système, avec le geste pour repartir
 })
 
 test('mouvement réduit : pas de fondu, la mention est seulement affichée ou masquée ; couleurs par jetons', () => {

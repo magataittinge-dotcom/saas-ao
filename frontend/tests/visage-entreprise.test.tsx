@@ -353,7 +353,7 @@ test('scène (rendu serveur) : le visage, une fois, à côté de la phrase de S
   }
   // la prochaine information utile ouvre sa rubrique (un lien du système)
   assert.ok(voix.prochaine, 'les données de démonstration laissent une information à renseigner')
-  assert.match(rendu({ large: true }), /Prochaine information utile\s: «\s[^»]+\s»\.[\s\S]*?<button[^>]*>Ouvrir «\s[^»]+\s»<\/button>/)
+  assert.match(rendu({ large: true }), /Prochaine information utile\s: «\s[^»]+\s»\.[\s\S]*?<button[^>]*>La renseigner<span/)
 })
 
 test('la phrase de Synorix : ce qu’il sait (décompte des rubriques), puis la première information indispensable encore à renseigner', () => {
@@ -363,7 +363,7 @@ test('la phrase de Synorix : ce qu’il sait (décompte des rubriques), puis la
   assert.ok(voix.prochaine && ['identite', 'moyens', 'certifications'].includes(voix.prochaine.rubrique) && voix.prochaine.titreRubrique.length > 0)
   const vide = voixSynorix({})
   assert.match(vide.phrase, /^Synorix ne sait encore rien de votre entreprise\./)
-  assert.deepEqual(vide.prochaine, { libelle: 'Raison sociale', rubrique: 'identite', titreRubrique: 'Identité' })
+  assert.deepEqual(vide.prochaine, { libelle: 'Nom de l’entreprise', rubrique: 'identite', titreRubrique: 'Identité' })
   const une = voixSynorix({ organisation: { name: 'Entreprise inventée' } as never })
   assert.match(une.phrase, /^Synorix connaît 1 des \d+ informations/)
   for (const v of [voix, vide, une]) assert.ok(!/!|manquant|incomplet|absent/i.test(v.phrase))

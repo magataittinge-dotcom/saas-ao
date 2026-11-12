@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { ChevronRight } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Bouton } from '@/components/ui/bouton'
 import { Champ, ChampDate } from '@/components/ui/champ'
@@ -22,7 +23,8 @@ import { cn } from '@/lib/utils'
 
 // Vert : la pièce est au coffre-fort ; ambre : elle est à renouveler (à surveiller) ; gris : elle reste à joindre.
 const SENS: Record<EtatPiece, Sens> = { au_coffre: 'vert', a_renouveler: 'ambre', a_joindre: 'gris' }
-const LIEN = 'inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-accent-text underline-offset-4 hover:underline'
+/** Les colonnes du tableau des exercices : année, chiffre d'affaires, effectif, corbeille (les mêmes pour l'en-tête et les rangées). */
+const COLONNES_CHIFFRES = 'grid-cols-[4.5rem_minmax(0,1fr)_5.5rem_2.75rem] sm:grid-cols-[5.5rem_minmax(0,16rem)_8rem_2.75rem]'
 const CHAMPS_QUALIFICATION: (keyof Qualification)[] = ['famille', 'intitule', 'organisme', 'numero', 'perimetre', 'date_obtention', 'date_fin', 'document_id']
 const CHAMPS_REFERENCE: (keyof Reference)[] = ['intitule', 'maitre_ouvrage', 'adresse', 'description', 'montant_ht', 'annee', 'mode_intervention', 'maitre_oeuvre', 'lot', 'client_type', 'client_adresse', 'client_nom_complet']
 /** Pièces du coffre-fort listées ici : celles qui n'ont pas leur propre éditeur (qualification et assurances se déclarent plus haut). */
@@ -91,18 +93,25 @@ export default function FormCertifications({ donnees, avant, idPanneau, idOnglet
 
       <Groupe titre="Pièces au coffre-fort" aide="Les pièces que les dossiers de candidature réclament le plus souvent.">
         <Pleine>
-          <ul className="divide-y divide-bord rounded-lg border border-bord bg-surface-0">
+          <ul className="divide-y divide-bord overflow-hidden rounded-lg border border-bord bg-surface-0" data-pieces-coffre="">
             {PIECES_ADMINISTRATIVES.map((p) => {
               const etat = etatPiece(donnees.documents, p.types)
               return (
-                <li key={p.id} className="flex min-h-[52px] flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-2">
-                  <span className="text-sm text-fg">{p.libelle}</span>
-                  <PastilleEtat sens={SENS[etat]}>{LIBELLE_ETAT_PIECE[etat]}</PastilleEtat>
+                <li key={p.id}>
+                  {/* toute la rangée mène au coffre-fort ; une pièce à joindre se dit en mots (la pastille est gardée pour un état acquis ou à surveiller) */}
+                  <Link to="/vault" className="group flex min-h-[52px] flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-2 transition-colors duration-fast ease-survol hover:bg-surface-1">
+                    <span className="text-sm font-medium text-fg">{p.libelle}</span>
+                    <span className="flex items-center gap-2">
+                      {etat === 'a_joindre'
+                        ? <span className="text-sm text-fg-2">{LIBELLE_ETAT_PIECE[etat]}</span>
+                        : <PastilleEtat sens={SENS[etat]}>{LIBELLE_ETAT_PIECE[etat]}</PastilleEtat>}
+                      <ChevronRight aria-hidden size={18} strokeWidth={1.5} className="shrink-0 text-fg-3 group-hover:text-accent-text" />
+                    </span>
+                  </Link>
                 </li>
               )
             })}
           </ul>
-          <Link to="/vault" className={cn(LIEN, 'mt-2')}>Ouvrir le coffre-fort</Link>
         </Pleine>
       </Groupe>
 
@@ -114,18 +123,21 @@ export default function FormCertifications({ donnees, avant, idPanneau, idOnglet
 
       <Groupe titre={<>Chiffres demandés dans la <Sigle code="DC2" /></>} aide="Les derniers exercices clos : chiffre d’affaires hors taxes et effectif moyen annuel.">
         <Pleine>
-          <div className="space-y-2">
+          <div className="space-y-2" data-chiffres="">
+            <div aria-hidden="true" className={cn(COLONNES_CHIFFRES, 'grid items-end gap-2 text-xs font-medium text-fg-2')}>
+              <span>Année</span><span>Chiffre d’affaires hors taxes</span><span>Effectif moyen</span><span />
+            </div>
             {ca.map((ligne, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <Champ aria-label="Année" className="w-20 shrink-0" placeholder="Année" inputMode="numeric" maxLength={4} value={ligne.annee}
+              <div key={i} className={cn(COLONNES_CHIFFRES, 'grid items-center gap-2')}>
+                <Champ aria-label={`Exercice ${i + 1} : année`} inputMode="numeric" maxLength={4} value={ligne.annee}
                   onChange={(e) => majCA(i, { annee: e.target.value.replace(/\D/g, '') })} />
-                <Champ aria-label="Chiffre d’affaires hors taxes" placeholder="1 200 000 €" maxLength={40} value={ligne.montant}
+                <Champ aria-label={`Exercice ${i + 1} : chiffre d’affaires hors taxes`} maxLength={40} value={ligne.montant}
                   onChange={(e) => majCA(i, { montant: e.target.value })} />
-                <ChampNombre aria-label="Effectif moyen annuel" placeholder="Effectif" max={999} className="w-24 shrink-0" valeur={ligne.effectif_moyen}
+                <ChampNombre aria-label={`Exercice ${i + 1} : effectif moyen annuel`} max={999} valeur={ligne.effectif_moyen}
                   onChange={(v) => majCA(i, { effectif_moyen: v })} />
-                {ca.length > 1 && (
-                  <BoutonRetrait libelle="Retirer cette année" onClick={() => poserCA(ca.filter((_, j) => j !== i))} />
-                )}
+                <div>
+                  {ca.length > 1 && <BoutonRetrait libelle={`Retirer l’exercice ${i + 1}`} onClick={() => poserCA(ca.filter((_, j) => j !== i))} />}
+                </div>
               </div>
             ))}
             {ca.length < 5 && (

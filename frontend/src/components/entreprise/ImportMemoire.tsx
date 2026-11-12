@@ -67,7 +67,7 @@ export function ImportDialog({ ouvert, onClose, onImported }: ImportDialogProps)
       onOuvert={(o) => { if (!o && !isPending) onClose() }}
       taille="petit"
       titre="Importer un mémoire"
-      description="Déposez un mémoire technique déjà rédigé (Word ou PDF). Synorix y lit vos informations et pré-remplit vos rubriques ; rien n’est enregistré avant votre vérification."
+      description="Déposez un mémoire technique déjà rédigé. Synorix y lit vos informations et pré-remplit vos rubriques ; rien n’est enregistré avant votre vérification."
       actions={<>
         <Bouton variante="secondaire" onClick={onClose} disabled={isPending}>Annuler</Bouton>
         <Bouton variante="principal" onClick={() => { if (file) doImport(file) }} disabled={!file} enCours={isPending} libelleEnCours="Lecture du mémoire…">
@@ -75,7 +75,7 @@ export function ImportDialog({ ouvert, onClose, onImported }: ImportDialogProps)
         </Bouton>
       </>}
     >
-      <div {...getRootProps({ className: cn('grid justify-items-start gap-3 rounded-lg border border-bord p-4 transition-colors duration-fast ease-survol', isDragActive && 'border-accent-ring bg-accent-tint') })}>
+      <div {...getRootProps({ className: cn('grid justify-items-start gap-3 rounded-lg transition-colors duration-fast ease-survol', isDragActive && 'bg-accent-tint outline-dashed outline-2 outline-offset-4 outline-accent-ring') })}>
         <Champ {...getInputProps()} aria-label="Mémoire technique à importer" />
         {file ? (
           <p className="flex min-w-0 max-w-full items-center gap-2 text-sm font-medium text-fg">
@@ -84,7 +84,7 @@ export function ImportDialog({ ouvert, onClose, onImported }: ImportDialogProps)
             <span className="chiffres shrink-0 font-normal text-fg-3">{Math.max(1, Math.round(file.size / 1024))} Ko</span>
           </p>
         ) : (
-          <p className="text-sm text-fg-2">Glissez le fichier ici, ou choisissez-le. Formats lus : Word (.docx) et PDF.</p>
+          <p className="text-sm text-fg-2">Glissez le fichier dans cette fenêtre, ou choisissez-le. Word (.docx) ou PDF.</p>
         )}
         <Bouton variante="secondaire" onClick={open} disabled={isPending}>{file ? 'Choisir un autre fichier' : 'Choisir un fichier'}</Bouton>
       </div>

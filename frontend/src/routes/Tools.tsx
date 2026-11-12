@@ -1,10 +1,11 @@
 import { useState } from 'react'
+import { ChevronDown } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { Sigle } from '@/components/common/Sigle'
 import { api } from '@/services/api'
 import { formatMontant } from '@/lib/utils'
 import { Page, TitreSection } from '@/components/ui/page'
 import { Bouton } from '@/components/ui/bouton'
-import { Carte } from '@/components/ui/carte'
 import { ChampNombre, GroupeChamp } from '@/components/ui/champ'
 import { ListeDeroulante } from '@/components/ui/liste-deroulante'
 import { Message } from '@/components/ui/message'
@@ -30,11 +31,14 @@ interface RetenueResult {
 function phraseEchec(e: unknown): string {
   const status = (e as { response?: { status?: number } })?.response?.status
   if (status === 422) return 'Le calcul attend des valeurs positives : vérifiez le montant et les options.'
-  return 'Le calcul n’a pas abouti. Vos valeurs sont gardées : relancez-le.'
+  return 'Le calcul n’a pas abouti. Vos valeurs sont gardées : recommencez avec « Calculer ».'
 }
 
+/** « 4,15 » (pour cent, tel qu'on le lit) → 0,0415 (ce que le calcul attend) ; vide = 0. */
+export const tauxBceDecimal = (pourCent: number | null): number => (pourCent ? Math.round(pourCent * 1e6) / 1e8 : 0)
+
 const TAUX_RETENUE = [
-  { valeur: '0.05', libelle: '5 % (standard)' },
+  { valeur: '0.05', libelle: '5 % (taux habituel)' },
   { valeur: '0.02', libelle: '2 % (PME / TPE)' },
   { valeur: '0', libelle: '0 % (non prévue)' },
 ] as const
@@ -53,8 +57,8 @@ const COLONNES: ColonneTableau<Poste>[] = [
 ]
 
 /**
- * Retenue de garantie : le montant du marché, deux taux, et le calcul. Les options (pénalités, intérêts moratoires) restent
- * repliées. Le résultat : le montant TTC en tête, puis un tableau des postes, puis ce que le contrat permet. Rien n'est
+ * Retenue de garantie : le montant du marché, deux taux, et le calcul. Les pénalités de retard et les intérêts moratoires
+ * restent repliés (le taux de la BCE se saisit en pour cent). Le résultat : le montant TTC en tête, puis un tableau des postes, puis ce que le contrat permet. Rien n'est
  * enregistré.
  */
 export default function Tools() {
@@ -62,10 +66,11 @@ export default function Tools() {
   const [tauxRg, setTauxRg] = useState('0.05')
   const [tva, setTva] = useState('0.20')
   const [options, setOptions] = useState(false)
-  const [joursRetard, setJoursRetard] = useState<number | null>(0)
+  const [joursRetard, setJoursRetard] = useState<number | null>(null)
   const [diviseur, setDiviseur] = useState<number | null>(3000)
-  const [tauxBce, setTauxBce] = useState<number | null>(0)
-  const [joursPaiement, setJoursPaiement] = useState<number | null>(0)
+  // saisi en pour cent (4,15) ; le serveur le reçoit en décimal (0,0415), comme avant
+  const [tauxBcePct, setTauxBcePct] = useState<number | null>(null)
+  const [joursPaiement, setJoursPaiement] = useState<number | null>(null)
   const [enCours, setEnCours] = useState(false)
   const [aSaisir, setASaisir] = useState(false)
   const [echec, setEchec] = useState<string | null>(null)
@@ -86,7 +91,7 @@ export default function Tools() {
         tva: Number(tva),
         jours_retard_execution: joursRetard || 0,
         penalite_diviseur: diviseur || 3000,
-        taux_bce: tauxBce || 0,
+        taux_bce: tauxBceDecimal(tauxBcePct),
         jours_retard_paiement: joursPaiement || 0,
       })
       setResultat(data)
@@ -104,55 +109,70 @@ export default function Tools() {
       sousTitre={<>Retenue, pénalités et intérêts moratoires, selon l’article 19 du <Sigle code="CCAG" /> Travaux. Rien n’est enregistré.</>}
       etroite
     >
-      <Carte>
-        <form className="grid gap-5" noValidate onSubmit={(e) => { e.preventDefault(); void calculer() }}>
-          {/* le champ du montant garde son identifiant : les scénarios de capture le visent */}
-          <div className="grid content-start gap-1.5">
-            <label htmlFor="rg-montant" className="text-xs font-medium text-fg-2">Montant du marché</label>
-            <ChampNombre id="rg-montant" valeur={montantHt} onChange={(n) => { setMontantHt(n); setASaisir(false) }} unite="€ HT" min={0}
-              placeholder="250 000" aria-invalid={aSaisir || undefined} aria-describedby={aSaisir ? 'rg-montant-erreur' : undefined} />
-            {aSaisir && <p id="rg-montant-erreur" role="alert" className="text-xs font-medium text-rouge-ink">Saisissez le montant du marché, hors taxes.</p>}
+      {/* Le formulaire est seul sur la page : il se pose sur le papier, sans carte autour ; sa largeur est celle d'une saisie. */}
+      <form className="grid max-w-xl gap-5" noValidate onSubmit={(e) => { e.preventDefault(); void calculer() }}>
+        {/* le champ du montant garde son identifiant : les scénarios de capture le visent */}
+        <div className="grid content-start gap-1.5 sm:max-w-xs">
+          <label htmlFor="rg-montant" className="text-xs font-medium text-fg-2">Montant du marché</label>
+          <ChampNombre id="rg-montant" valeur={montantHt} onChange={(n) => { setMontantHt(n); setASaisir(false) }} unite="€ HT" min={0}
+            aria-invalid={aSaisir || undefined} aria-describedby={aSaisir ? 'rg-montant-erreur' : undefined} />
+          {aSaisir && <p id="rg-montant-erreur" role="alert" className="text-xs font-medium text-rouge-ink">Saisissez le montant du marché, hors taxes.</p>}
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <GroupeChamp libelle="Taux de retenue">
+            <ListeDeroulante valeur={tauxRg} onChange={setTauxRg} options={TAUX_RETENUE} />
+          </GroupeChamp>
+          <GroupeChamp libelle="TVA">
+            <ListeDeroulante valeur={tva} onChange={setTva} options={TAUX_TVA} />
+          </GroupeChamp>
+        </div>
+
+        <div>
+          {/* un seul libellé, ouvert ou fermé : le chevron dit qu'il déplie */}
+          <Bouton type="button" variante="lien" aria-expanded={options} aria-controls="rg-options" onClick={() => setOptions((o) => !o)}>
+            Pénalités de retard et intérêts moratoires
+            <ChevronDown aria-hidden className={cn('transition-transform duration-survol ease-survol motion-reduce:transition-none', options && 'rotate-180')} />
+          </Bouton>
+        </div>
+
+        {options && (
+          <div id="rg-options" className="grid gap-6 border-t border-bord pt-5">
+            {/* deux calculs, chacun sur sa rangée : ce qui va ensemble se lit ensemble */}
+            <fieldset className="grid min-w-0 gap-3 border-0 p-0">
+              <legend className="mb-3 text-sm font-semibold text-fg">Pénalités de retard</legend>
+              <p className="-mt-2 text-sm text-fg-2">Ce que le maître d’ouvrage retient si le chantier est livré en retard.</p>
+              <div className="grid items-start gap-4 sm:grid-cols-2">
+                <GroupeChamp libelle="Retard d’exécution">
+                  <ChampNombre valeur={joursRetard} onChange={setJoursRetard} unite="jours" min={0} />
+                </GroupeChamp>
+                <GroupeChamp libelle="Pénalité par jour : le montant divisé par" aide="3 000 dans les clauses générales des marchés de travaux.">
+                  <ChampNombre valeur={diviseur} onChange={setDiviseur} min={1} />
+                </GroupeChamp>
+              </div>
+            </fieldset>
+            <fieldset className="grid min-w-0 gap-3 border-0 p-0">
+              <legend className="mb-3 text-sm font-semibold text-fg">Intérêts moratoires</legend>
+              <p className="-mt-2 text-sm text-fg-2">Ce qui vous est dû si le maître d’ouvrage vous paie en retard.</p>
+              <div className="grid items-start gap-4 sm:grid-cols-2">
+                <GroupeChamp libelle="Retard de paiement">
+                  <ChampNombre valeur={joursPaiement} onChange={setJoursPaiement} unite="jours" min={0} />
+                </GroupeChamp>
+                <GroupeChamp libelle="Taux de la BCE" aide="Le taux directeur en vigueur, par exemple 4,15.">
+                  <ChampNombre valeur={tauxBcePct} onChange={setTauxBcePct} unite="%" min={0} />
+                </GroupeChamp>
+              </div>
+            </fieldset>
           </div>
+        )}
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <GroupeChamp libelle="Taux de retenue">
-              <ListeDeroulante valeur={tauxRg} onChange={setTauxRg} options={TAUX_RETENUE} />
-            </GroupeChamp>
-            <GroupeChamp libelle="TVA">
-              <ListeDeroulante valeur={tva} onChange={setTva} options={TAUX_TVA} />
-            </GroupeChamp>
-          </div>
+        {echec && <Message ton="erreur">{echec}</Message>}
 
-          <div>
-            <Bouton type="button" variante="lien" aria-expanded={options} onClick={() => setOptions((o) => !o)}>
-              {options ? 'Masquer les options avancées' : 'Options avancées : pénalités et intérêts moratoires'}
-            </Bouton>
-          </div>
-
-          {options && (
-            <div className="grid gap-4 border-t border-bord pt-5 sm:grid-cols-2">
-              <GroupeChamp libelle="Retard d’exécution">
-                <ChampNombre valeur={joursRetard} onChange={setJoursRetard} unite="jours" min={0} />
-              </GroupeChamp>
-              <GroupeChamp libelle="Diviseur des pénalités" aide="1/3000, clauses générales des marchés de travaux">
-                <ChampNombre valeur={diviseur} onChange={setDiviseur} min={1} />
-              </GroupeChamp>
-              <GroupeChamp libelle="Taux de la BCE" aide="En décimal : 0,0415 pour 4,15 %">
-                <ChampNombre valeur={tauxBce} onChange={setTauxBce} min={0} />
-              </GroupeChamp>
-              <GroupeChamp libelle="Retard de paiement">
-                <ChampNombre valeur={joursPaiement} onChange={setJoursPaiement} unite="jours" min={0} />
-              </GroupeChamp>
-            </div>
-          )}
-
-          {echec && <Message ton="erreur">{echec}</Message>}
-
-          <div>
-            <Bouton type="submit" variante="principal" enCours={enCours} libelleEnCours="Calcul…">Calculer</Bouton>
-          </div>
-        </form>
-      </Carte>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <Bouton type="submit" variante="principal" enCours={enCours} libelleEnCours="Calcul…">Calculer</Bouton>
+          {!resultat && !echec && <p className="text-sm text-fg-2">Le montant retenu et le détail par poste s’affichent sous ce bouton.</p>}
+        </div>
+      </form>
 
       {resultat && (
         <section aria-live="polite">

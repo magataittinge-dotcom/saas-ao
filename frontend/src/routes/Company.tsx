@@ -26,7 +26,7 @@ import { useFocusChamp } from '@/components/entreprise/useFocusChamp'
 const DecrireEtDeposer = ({ rubrique }: { rubrique: RubriqueId }) => (
   <div className="grid gap-6">
     {rubrique !== 'certifications' && (
-      <AfficherPlus libelle="Décrire avec vos mots" libelleOuvert="Masquer">
+      <AfficherPlus libelle="Décrire avec vos mots" libelleOuvert="Décrire avec vos mots">
         <ProfileFreeTextCard />
       </AfficherPlus>
     )}
@@ -38,7 +38,8 @@ const DecrireEtDeposer = ({ rubrique }: { rubrique: RubriqueId }) => (
 function SqueletteEntreprise() {
   return (
     <div className="grid items-center gap-x-10 gap-y-6 lg:grid-cols-[300px_minmax(0,1fr)]">
-      <Squelette className="justify-self-center h-[336px] w-[240px] rounded-carte lg:h-[420px] lg:w-[300px]" />
+      {/* la place du visage est gardée (aucun saut à l'arrivée), sans bloc gris : un visage n'est pas un rectangle */}
+      <div aria-hidden="true" className="h-[336px] w-[240px] justify-self-center lg:h-[420px] lg:w-[300px]" />
       <div className="grid gap-6">
         <SqueletteLignes lignes={2} className="max-w-xl" />
         <Squelette className="h-48 rounded-carte" />
@@ -93,8 +94,8 @@ export default function Company() {
           squelette={<SqueletteEntreprise />}
           erreur={(
             <EtatErreur
-              titre="Votre entreprise n’a pas pu se charger"
-              detail="La connexion au serveur a échoué. Vos informations sont toujours enregistrées : rien n’a été modifié."
+              titre="Vos informations n’ont pas pu s’afficher"
+              detail={<span className="block text-pretty">La connexion au serveur a échoué. Vos informations sont toujours enregistrées : rien n’a été modifié.</span>}
               onReessayer={donnees.recharger}
               enCours={donnees.rechargement}
             />
