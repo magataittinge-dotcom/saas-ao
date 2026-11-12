@@ -4,6 +4,7 @@ import { Bell } from 'lucide-react'
 import { api } from '@/services/api'
 import { cn } from '@/lib/utils'
 import { Bouton, BoutonIcone } from '@/components/ui/bouton'
+import { LigneNouveau } from '@/components/dashboard/LigneNouveau'
 
 interface NotificationItem {
   id: string
@@ -133,6 +134,8 @@ export default function NotificationBell({ versLeHaut = false }: { versLeHaut?: 
               ))
             )}
           </div>
+          {/* l'annonce du produit : ici, hors du flux des écrans */}
+          <LigneNouveau onSuivre={() => setOpen(false)} />
         </div>
       )}
     </div>
