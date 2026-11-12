@@ -197,11 +197,11 @@ This is deliberate — the V2.0 success criterion is *ship & be impressive*, not
 
 | Step | Model | Estimated cost |
 |---|---|---|
-| 1 — Upload | Haiku 4.5 | €0.02 |
-| 2 — Lots | Sonnet 4.6 | €0.05 |
+| 1 — Upload | aucun (classement et étiquetage déterministes) | €0 |
+| 2 — Lots | déterministe ; Sonnet 4.6 seulement en filet sur échec objectif (`services/ai/lot_fallback.py`) | €0 (filet : quelques centimes) |
 | 3 — AI Analysis | Sonnet 4.6 | €0.40 |
 | 4 — Memo | Sonnet 5.5 | ~€0.50† |
-| 5 — Verification | Déterministe 0 € (score conformité, dates, DPGF, signatures) ; Sonnet 4.6 résiduel pour le matching exigences↔pièces | ~€0.02 |
+| 5 — Verification | Déterministe 0 € (score conformité, dates, DPGF, signatures, rapprochement exigences ↔ pièces : `services/ai/checklist_matcher.py`, « pure Python, no AI call ») | €0 |
 | 6 — Export | none | €0 |
 | **Total per AO** | | **~€1.0†** |
 
@@ -1281,6 +1281,7 @@ The expert knowledge is **baked in at build time**, not retrieved at runtime —
 - **§7.11** — Limiteur réel (nginx 20 r/s ; slowapi unique, clé organisation, repli en mémoire, alerte R-05) et plafonds du jour ; « Coach » retiré (aucune route).
 - **§7.13** — Suppression du compte : immédiate sans abonnement payant, programmée avec (D23, `0035`, webhook, tâche quotidienne, annulation) ; purge des AO ; sauvegardes réelles.
 - **§8.3 / §8.6 / §8.10** — Index `0037` ; exécuteur de `to_thread` (R-04) ; quotas de la grille du 11/11 et budget d'IA du jour (60 €, réservations) à la place du « cost guard » 15 €/100 €/300 € jamais codé.
+- **§3.2** — Dépôt, lots (hors filet) et vérification sans appel d'IA.
 - **§3.7 / §4** — Tables réelles (24 modèles + `rag_chunks` + `alembic_version`) en tête du schéma d'origine.
 - **§1 / §7.12 / §8.2** — Caches et progression en mémoire du processus ; écarts du schéma d'ensemble (pas de Coach, de WebSocket, de stockage objet ni de Sentry ; un seul processus API) ; table `audit_logs` réelle.
 - **§2** — Pile réelle : éditeur maison, `react-pdf`, sessions SQLAlchemy synchrones, PDF par LibreOffice, disque du VPS, RAG coupé, Sentry et `structlog` absents, `node --test` et ESLint.
