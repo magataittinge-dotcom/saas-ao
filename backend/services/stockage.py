@@ -2,13 +2,14 @@
 
 Vérifiés AVANT d'écrire, au début de chaque dépôt (dossier d'un AO, coffre-fort, dépôts de Mon entreprise), sur la
 taille annoncée de la requête (`Content-Length`, borne haute du fichier reçu) :
-- quota : somme des tailles déjà enregistrées (`project_documents.file_size` des AO de l'organisation) + l'envoi
+- quota : somme des tailles déjà enregistrées (`project_documents.file_size` des AO de l'organisation), plus la taille
+  sur le disque des documents du coffre-fort (les dépôts de Mon entreprise y sont rangés), + l'envoi
   > `QUOTA_STOCKAGE_GO` (20 Go par défaut ; offre gratuite : `QUOTA_STOCKAGE_GRATUIT_GO`, 5 Go ; 0 = pas de quota)
   → 413 ;
 - disque : espace libre du dossier des dépôts sous `DISQUE_LIBRE_MIN_POURCENT` (15 %) → 507, pour tout le monde :
   un disque plein ferait tomber la base, l'API et les autres clients.
-Limite connue : le coffre-fort et les dépôts de Mon entreprise n'enregistrent pas de taille en base ; ils comptent
-pour la garde du disque, pas encore pour le quota.
+Le coffre-fort n'enregistre pas de taille en base : elle est lue sur le disque au moment du contrôle (pas de
+migration ; un `stat` par document, quelques centaines au plus par entreprise).
 """
 from __future__ import annotations
 
@@ -45,9 +46,29 @@ def quota_octets(plan: str | None) -> int:
 
 def utilise_octets(db: Session, org_id: str) -> int:
     from models.project import Project, ProjectDocument
-    return int(db.query(func.coalesce(func.sum(ProjectDocument.file_size), 0))
-               .join(Project, Project.id == ProjectDocument.project_id)
-               .filter(Project.organization_id == org_id).scalar() or 0)
+    dossiers = int(db.query(func.coalesce(func.sum(ProjectDocument.file_size), 0))
+                   .join(Project, Project.id == ProjectDocument.project_id)
+                   .filter(Project.organization_id == org_id).scalar() or 0)
+    return dossiers + _coffre_octets(db, org_id)
+
+
+def _coffre_octets(db: Session, org_id: str) -> int:
+    """Taille sur le disque des documents du coffre-fort de l'organisation (supprimés compris tant que le fichier est
+    là). Un fichier disparu, une adresse hors du dossier des dépôts ou non locale : 0."""
+    from models.document import Document
+    from services.file_storage import UPLOADS_ROOT
+    racine = UPLOADS_ROOT.resolve()
+    total = 0
+    for (url,) in db.query(Document.file_url).filter(Document.organization_id == org_id):
+        if not url or not url.startswith("/uploads/"):
+            continue
+        try:
+            chemin = (racine / url.removeprefix("/uploads/")).resolve()
+            if chemin.is_relative_to(racine) and chemin.is_file():
+                total += chemin.stat().st_size
+        except (OSError, ValueError):
+            continue
+    return total
 
 
 def _espace_disque(chemin) -> tuple[int, int]:

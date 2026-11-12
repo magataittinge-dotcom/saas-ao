@@ -92,3 +92,40 @@ def test_disque_presque_plein_507_sans_ecriture(client, db_session, test_org, pr
 def test_messages_sans_mot_interdit():
     for msg in (stockage.MSG_QUOTA, stockage.MSG_DISQUE):
         assert not any(m in msg.lower() for m in ("manquant", "incomplet", "absent", "!"))
+
+
+# ── Restes (CORRECTIFS-SECURITE § 7) : le coffre-fort et les dépôts de Mon entreprise comptent dans le quota ──────
+def _coffre(db, org_id, racine, octets, nom="kbis-ancien.pdf"):
+    """Un document du coffre (ou d'un dépôt de Mon entreprise, rangé au coffre) déjà sur le disque, sans taille en base."""
+    from models.document import Document
+    (racine / "coffre").mkdir(exist_ok=True)
+    (racine / "coffre" / nom).write_bytes(b"x" * octets)
+    db.add(Document(organization_id=org_id, type="kbis", file_url=f"/uploads/coffre/{nom}", file_name=nom))
+    db.commit()
+
+
+def test_le_coffre_fort_compte_dans_le_quota(client, db_session, test_org, projet, tmp_path, monkeypatch):
+    monkeypatch.setenv("QUOTA_STOCKAGE_GRATUIT_GO", str(3000 / GO))     # ≈ 3 000 octets
+    _coffre(db_session, test_org.id, tmp_path, 1500)
+    assert stockage.utilise_octets(db_session, test_org.id) == 1500
+    r = _deposer(client)                                                 # 1 500 + ~2 300 > 3 000
+    assert r.status_code == 413 and r.json()["detail"] == stockage.MSG_QUOTA
+
+
+def test_un_fichier_disparu_ou_hors_des_depots_compte_zero(db_session, test_org, projet, tmp_path):
+    from models.document import Document
+    db_session.add_all([
+        Document(organization_id=test_org.id, type="kbis", file_url="/uploads/coffre/parti.pdf", file_name="p.pdf"),
+        Document(organization_id=test_org.id, type="kbis", file_url="/uploads/../../etc/passwd", file_name="e"),
+        Document(organization_id=test_org.id, type="kbis", file_url="https://ailleurs/x.pdf", file_name="x"),
+    ])
+    db_session.commit()
+    assert stockage.utilise_octets(db_session, test_org.id) == 0
+
+
+def test_le_coffre_d_une_autre_organisation_ne_compte_pas(db_session, test_org, projet, tmp_path):
+    db_session.add(Organization(id="org-voisine-2", name="Voisine"))
+    db_session.commit()
+    _coffre(db_session, "org-voisine-2", tmp_path, 4000)
+    assert stockage.utilise_octets(db_session, test_org.id) == 0
+    assert stockage.utilise_octets(db_session, "org-voisine-2") == 4000
