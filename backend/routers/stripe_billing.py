@@ -115,12 +115,14 @@ def create_checkout_session(
         logger.error("Pricing error for plan %s: %s", payload.plan, exc)
         raise HTTPException(status_code=500, detail="Tarif indisponible pour ce plan") from exc
 
+    # Retour sur la page elle-même : /billing redirige vers /settings/billing SANS la requête (App.tsx), la page ne
+    # voyait plus « session_id » et n'appelait pas /stripe/verify-session (recette finale, paiement en mode test).
     try:
         url = billing.create_checkout_session(
             customer_id=customer_id,
             price_id=price_id,
-            success_url=f"{settings.FRONTEND_URL}/billing?success=true&session_id={{CHECKOUT_SESSION_ID}}",
-            cancel_url=f"{settings.FRONTEND_URL}/billing?canceled=true",
+            success_url=f"{settings.FRONTEND_URL}/settings/billing?success=true&session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=f"{settings.FRONTEND_URL}/settings/billing?canceled=true",
             metadata={"organization_id": org.id, "plan": payload.plan},
             client_reference_id=org.id,
         )
@@ -143,7 +145,7 @@ def create_portal_session(
     try:
         url = get_billing_provider().create_portal_session(
             customer_id=org.stripe_customer_id,
-            return_url=f"{settings.FRONTEND_URL}/billing",
+            return_url=f"{settings.FRONTEND_URL}/settings/billing",
         )
     except BillingError as exc:
         logger.error("Portal session error: %s", exc)

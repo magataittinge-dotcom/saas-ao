@@ -13,6 +13,18 @@ import EntreeFichier from '@/components/depot/EntreeFichier'
 import { messageErreur } from '@/lib/erreurs'
 import { nomPiece, sansNoteDeRegroupement } from '@/lib/nomsPieces'
 import { libelleSource } from '@/lib/resumeAO'
+import { api } from '@/services/api'
+
+/** Les routes /api exigent le jeton (Bearer) : un lien nu ouvrait un onglet « 401 » (recette finale). La pièce est lue
+ *  avec le jeton, puis montrée dans l'onglet ouvert pendant le clic (jamais bloqué comme une fenêtre surgissante). */
+function ouvrirAvecJeton(e: React.MouseEvent<HTMLAnchorElement>): void {
+  e.preventDefault()
+  const chemin = (e.currentTarget.getAttribute('href') ?? '').replace(/^\/api/, '')
+  const onglet = window.open('', '_blank')
+  api.get<Blob>(chemin, { responseType: 'blob' })
+    .then(({ data }) => { if (onglet) onglet.location.href = URL.createObjectURL(data) })
+    .catch(() => { onglet?.close() })
+}
 
 // Ordre d'affichage : AE en tête, puis les formulaires de candidature. La
 // signature ne se déduit plus du type : règle serveur (SignatureLigne).
@@ -153,12 +165,12 @@ function TemplateRow({
           {modele && <span>{modele}</span>}
           {/* Le modèle se télécharge par un lien, à côté de ce qu'il est : le seul bouton de la ligne est le dépôt. */}
           {nonConcernee ? null : hasTemplate && downloadHref ? (
-            <Bouton asChild variante="lien"><a href={downloadHref} target="_blank" rel="noreferrer"><Download size={14} strokeWidth={1.5} aria-hidden />Télécharger la trame</a></Bouton>
+            <Bouton asChild variante="lien"><a href={downloadHref} target="_blank" rel="noreferrer" onClick={ouvrirAvecJeton}><Download size={14} strokeWidth={1.5} aria-hidden />Télécharger la trame</a></Bouton>
           ) : officialUrl ? (
             <Bouton asChild variante="lien"><a href={officialUrl} target="_blank" rel="noreferrer" aria-label="Formulaire officiel, sur economie.gouv.fr (nouvel onglet)"><ExternalLink size={14} strokeWidth={1.5} aria-hidden />Formulaire officiel</a></Bouton>
           ) : null}
           {isPresent && completedHref && (
-            <Bouton asChild variante="lien"><a href={completedHref} target="_blank" rel="noreferrer">Voir la version déposée</a></Bouton>
+            <Bouton asChild variante="lien"><a href={completedHref} target="_blank" rel="noreferrer" onClick={ouvrirAvecJeton}>Voir la version déposée</a></Bouton>
           )}
         </p>
         {/* Signature : case seulement si elle est demandée, sinon la mention */}

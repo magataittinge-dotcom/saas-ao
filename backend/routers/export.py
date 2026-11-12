@@ -65,6 +65,18 @@ UPLOADS_ROOT = FilePath(__file__).parent.parent / "uploads"
 router = APIRouter()
 
 
+def _dpgf_du_lot(project, project_docs):
+    """La DPGF de l'acheteur pour le lot exporté : celle rattachée au lot d'abord, puis une DPGF
+    commune (non rattachée, « all ») ; jamais celle d'un autre lot (recette finale : l'Export du
+    lot 05 proposait la DPGF du lot 01a). Sans lot choisi : la DPGF du dossier, comme avant."""
+    from services.document_tagger import est_commune, get_documents_for_lot
+    modeles = [d for d in project_docs if (d.type or "") == "dpgf_template"]
+    lots_du_rc = [l.get("id") for l in (project.lots_detectes or []) if isinstance(l, dict) and l.get("id")]
+    retenus = get_documents_for_lot(modeles, project.selected_lot, lots_du_rc)
+    propres = [d for d in retenus if not est_commune(d.related_lots)]
+    return (propres or retenus or [None])[0]
+
+
 @router.get("/{project_id}/export/detail", response_model=ExportDetail)
 def get_export_detail(
     project_id: str,
@@ -167,7 +179,7 @@ def get_export_detail(
 
     # DPGF info
     dpgf_info = None
-    dpgf_doc = next((d for d in project_docs if d.type == "dpgf_template"), None)
+    dpgf_doc = _dpgf_du_lot(project, project_docs)
     if dpgf_doc:
         dpgf_info = DpgfExportInfo(file_name=dpgf_doc.file_name, file_id=dpgf_doc.id)
 
@@ -265,7 +277,7 @@ def get_export_summary(
         checklist_total=len(checklist_items),
         checklist_present=sum(1 for i in checklist_items if i.status == "present"),
         has_memoire=memoire is not None,
-        has_dpgf=any(d.type == "dpgf_template" for d in project_docs),
+        has_dpgf=_dpgf_du_lot(project, project_docs) is not None,
     )
 
 
@@ -575,7 +587,7 @@ def _plan_du_zip(db: Session, project, org_id: str, *, checklist_items, project_
     if project.dpgf_remplie_url and project.dpgf_remplie_name:
         _ajouter("02_Offre", f"DPGF_remplie_{project.dpgf_remplie_name}", project.dpgf_remplie_url,
                  "dpgf_remplie", "dpgf_remplie", project.dpgf_remplie_name)
-    elif any((d.type or "") == "dpgf_template" for d in project_docs):
+    elif _dpgf_du_lot(project, project_docs) is not None:
         plan.avertissements.append("DPGF remplie : à déposer")
 
     # L'AE se dépose complété ; sa signature vient à l'attribution

@@ -349,3 +349,38 @@ def test_les_routes_sont_limitees_par_slowapi(client):
     finally:
         limiter.enabled = False
         limiter.reset()
+
+
+def test_creer_ao_deux_requetes_simultanees_un_seul_projet(db_session, test_org, monkeypatch):
+    """Recette finale, parcours 2 (banc) : deux POST « Créer l'AO » partis en même temps (double clic venu de deux
+    onglets, nouvel essai réseau) créaient DEUX AO pour le même avis : chacun vérifiait « déjà créé ? » avant que
+    l'autre n'enregistre. La vérification et l'enregistrement se font sous un même verrou (API à un seul processus)."""
+    import threading
+    import time
+
+    import routers.veille as rv
+    from database import SessionLocal
+
+    avis = _avis(db_session, "ao-simultane")
+    vrai = rv._nouveau_projet
+
+    def lent(*a, **k):                     # élargit la fenêtre entre la vérification et l'enregistrement
+        time.sleep(0.3)
+        return vrai(*a, **k)
+    monkeypatch.setattr(rv, "_nouveau_projet", lent)
+    ids = []
+
+    def creer():
+        s = SessionLocal()
+        try:
+            ids.append(rv.creer_ou_retrouver_ao(s, test_org.id, s.get(AvisVeille, avis.id)))
+        finally:
+            s.close()
+    fils = [threading.Thread(target=creer, name=f"synorix-test-creer-{i}") for i in range(2)]
+    for f in fils:
+        f.start()
+    for f in fils:
+        f.join(10)
+    assert len(ids) == 2 and ids[0] == ids[1]
+    db_session.expire_all()
+    assert db_session.query(Project).filter(Project.organization_id == test_org.id).count() == 1
