@@ -364,3 +364,25 @@ def test_piece_dont_le_fichier_a_disparu_404_propre(monde, tmp_path):
     finally:
         app.dependency_overrides.clear()
     assert telechargement.status_code == 404 and apercu.status_code == 404
+
+
+# ── Les routes de section du mémoire lisaient le mémoire de l'AO AVANT de vérifier qu'il appartenait à l'appelant ──
+# (_section_connue(part, cle, _contenu_du_projet(...)) puis _get_project_or_404) : la réponse d'un AO d'autrui différait
+# selon que son plan contenait ou non une partie ajoutée (« Partie du mémoire inconnue » contre « introuvable »).
+@pytest.mark.parametrize("methode,suffixe", [("PUT", "etat"), ("GET", "refaire/estimation"), ("POST", "refaire")])
+def test_section_d_un_ao_d_autrui_meme_reponse_qu_un_ao_inexistant(monde, db_session, methode, suffixe):
+    _, user_b = monde
+    memoire = db_session.get(MemoireTechnique, "mem-A")
+    memoire.content_json = {**memoire.content_json, "partie_a": {"implantation": "x", "ajout_1": "Partie ajoutée"},
+                            "_plan": {"parties": [{"partie": "partie_a", "sous_cle": "ajout_1"}]}}
+    db_session.commit()
+    corps = {"json": {"etat": "a_refaire"}} if suffixe == "etat" else {}
+    try:
+        client = _client_de(user_b)
+        chez_a = client.request(methode, f"/api/projects/proj-A/memoire/sections/partie_a/ajout_1/{suffixe}", **corps)
+        nulle_part = client.request(methode, f"/api/projects/inexistant/memoire/sections/partie_a/ajout_1/{suffixe}",
+                                    **corps)
+    finally:
+        app.dependency_overrides.clear()
+    assert chez_a.status_code == nulle_part.status_code == 404
+    assert chez_a.json() == nulle_part.json()
