@@ -174,8 +174,11 @@ def test_webhook_un_autre_abonnement_encore_vivant_on_attend(client, abonne, pos
 
 
 def test_reprise_depuis_le_portail_retire_la_demande(client, abonne, poser, db_session):
-    poser(FauxFournisseur([ACTIF]))
+    f = FauxFournisseur([ACTIF])
+    poser(f)
     client.delete("/api/users/me")
+    # P1-2 (12/11) : l'état est relu chez le fournisseur ; après la reprise dans le portail, il renouvelle de nouveau.
+    f.abonnements = [dict(ACTIF, cancel_at_period_end=False)]
     _webhook(client, "customer.subscription.updated",
              {"id": "sub_invente", "customer": "cus_invente", "status": "active", "cancel_at_period_end": False})
     assert _org(db_session).suppression_prevue_le is None

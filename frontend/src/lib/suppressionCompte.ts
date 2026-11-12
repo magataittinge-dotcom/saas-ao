@@ -12,6 +12,10 @@ export interface ApercuSuppression {
   immediate: boolean
   fin_de_periode: string | null
   suppression_prevue_le: string | null
+  /** Demande posée : « Annuler la suppression » reprend-il un abonnement (un seul, celui que la demande avait arrêté) ? */
+  abonnement_repris?: boolean
+  /** Et la date de son prochain prélèvement, si le serveur la connaît. */
+  prochain_prelevement?: string | null
 }
 
 /** « 14 mars 2030 », à l'heure de Paris ; chaîne vide si la date est illisible. */
@@ -38,6 +42,25 @@ export function phraseDialogue(apercu: Pick<ApercuSuppression, 'immediate' | 'fi
 /** Le libellé du bouton qui confirme : le geste dit ce qu'il fait. */
 export function libelleConfirmer(apercu: Pick<ApercuSuppression, 'immediate'>): string {
   return apercu.immediate ? 'Supprimer définitivement' : 'Programmer la suppression'
+}
+
+/**
+ * La phrase de la confirmation de « Annuler la suppression » (relecture du 12/11, P1-3) : le compte et les données
+ * restent, et ce que devient l'abonnement. Le serveur ne reprend que l'abonnement que la demande avait arrêté : s'il
+ * n'y en a pas (arrêté par le client avant sa demande), la phrase ne promet pas de reprise.
+ */
+export function phraseAnnulation(apercu: Pick<ApercuSuppression, 'abonnement_repris' | 'prochain_prelevement'>): string {
+  const garde = 'Votre compte et toutes vos données sont conservés.'
+  if (!apercu.abonnement_repris) return `${garde} Votre abonnement reste arrêté, comme avant votre demande.`
+  const date = dateSuppression(apercu.prochain_prelevement)
+  return date
+    ? `${garde} Votre abonnement reprend : prochain prélèvement le ${date}.`
+    : `${garde} Votre abonnement reprend : il se renouvelle à la fin de la période en cours.`
+}
+
+/** Le libellé du bouton qui confirme l'annulation : le geste dit ce qu'il fait. */
+export function libelleConfirmerAnnulation(apercu: Pick<ApercuSuppression, 'abonnement_repris'>): string {
+  return apercu.abonnement_repris ? 'Reprendre l’abonnement' : 'Garder mon compte'
 }
 
 /** La rangée du compte une fois la demande faite. */

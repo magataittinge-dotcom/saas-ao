@@ -21,7 +21,11 @@ class _FakeBilling:
         return self._session
 
     def retrieve_subscription(self, subscription_id):
-        return {"items": {"data": []}}
+        # P0-1 (12/11) : l'offre se lit dans le prix d'un abonnement vivant du client de la session (comme chez Stripe).
+        from routers.stripe_billing import PRODUCTS
+        offre = (self._session.get("metadata") or {}).get("plan")
+        return {"id": subscription_id, "status": "active", "customer": self._session.get("customer"),
+                "items": {"data": [{"price": {"product": PRODUCTS.get(offre)}}]}}
 
 
 def _patch(monkeypatch, session):
