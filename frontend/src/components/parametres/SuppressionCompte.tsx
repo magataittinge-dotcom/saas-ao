@@ -2,12 +2,13 @@ import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { api } from '@/services/api'
 import { useLogout } from '@/hooks/useAuth'
+import { useAuthStore } from '@/stores/authStore'
 import { useQuota } from '@/components/layout/QuotaGauge'
 import { Bouton } from '@/components/ui/bouton'
 import { RangeeCarte } from '@/components/ui/carte'
 import { DialogueConfirmation } from '@/components/ui/dialogue'
 import {
-  type ApercuSuppression, libelleConfirmer, libelleSuppressionPrevue, messageRefusCompte, phraseDialogue,
+  PHRASE_MEMBRE, type ApercuSuppression, libelleConfirmer, libelleSuppressionPrevue, messageRefusCompte, phraseDialogue,
 } from '@/lib/suppressionCompte'
 
 const CLE_QUOTA = ['billing-quota']
@@ -22,6 +23,8 @@ export default function SuppressionCompte() {
   const client = useQueryClient()
   const quota = useQuota()
   const deconnexion = useLogout()
+  // Point 74 : un membre ne supprime pas l'entreprise ; la rangée dit à qui s'adresser, sans bouton
+  const membre = useAuthStore((s) => s.user?.role === 'member')
   const prevue = quota.data?.suppression_prevue_le ?? null
   const [apercu, setApercu] = useState<ApercuSuppression | null>(null)
   const [lecture, setLecture] = useState(false)
@@ -92,7 +95,9 @@ export default function SuppressionCompte() {
             <span className="text-fg-2">Supprimer le compte et toutes ses données</span>
           )}
         </span>
-        {prevue ? (
+        {membre ? (
+          <span className="min-w-0 basis-full text-sm text-fg-2">{PHRASE_MEMBRE}</span>
+        ) : prevue ? (
           <Bouton variante="secondaire" onClick={() => { void annuler() }} enCours={enCours} libelleEnCours="Annulation…">
             Annuler la suppression
           </Bouton>

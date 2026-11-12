@@ -21,6 +21,9 @@ export function dateSuppression(valeur: string | null | undefined): string {
   return new Intl.DateTimeFormat('fr-FR', { timeZone: 'Europe/Paris', day: 'numeric', month: 'long', year: 'numeric' }).format(d)
 }
 
+/** Point 74 : supprimer le compte efface toute l'organisation, le geste est à l'administrateur (le serveur refuse en 403). */
+export const PHRASE_MEMBRE = 'La suppression du compte est réservée à l’administrateur de votre entreprise : adressez-vous à lui.'
+
 export const PHRASE_IMMEDIATE =
   'Votre compte et toutes vos données (AO, mémoires, coffre-fort, entreprise) sont supprimés tout de suite. Cette suppression est définitive.'
 
