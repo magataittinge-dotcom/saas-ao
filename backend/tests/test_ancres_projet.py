@@ -188,3 +188,43 @@ def test_un_calcul_d_ancres_qui_leve_ne_casse_pas_l_analyse(client, db_session, 
     projet = _lancer_analyse(client, db_session, test_org, monkeypatch, "p-fin-ko")
     assert projet.status == "analyzed" and projet.processing_status == "ready"
     assert db_session.query(ComplianceItem).filter_by(project_id="p-fin-ko").count() == 1
+
+
+def test_premier_clic_simultane_une_seule_lecture_de_la_piece(projet, monkeypatch):
+    """Recette finale, point 3 (« la source met vingt secondes ») : le préchargement envoie plusieurs
+    exigences de la MÊME pièce à la fois. Sans ancre (ancien AO), chaque requête relisait toute la
+    pièce : la première calculait, les autres attendaient une place PDFium (5 s) puis recevaient
+    un 503, et le clic de l'utilisateur repassait derrière. Une seule lecture par pièce : la
+    seconde requête attend la première, puis trouve son ancre rangée."""
+    import threading
+
+    from database import SessionLocal
+
+    appels, debut, fin = [], threading.Event(), threading.Event()
+    vrai = pdfium_processus.executer
+
+    def lent(*a, **k):
+        appels.append(a[2])                      # identifiant de la pièce
+        debut.set()
+        fin.wait(5)
+        return vrai(*a, **k)
+    monkeypatch.setattr(pdfium_processus, "executer", lent)
+
+    def clic(id_):
+        s = SessionLocal()
+        try:
+            ancres_projet.calculer_pour(s, s.get(ComplianceItem, id_), lever=("attente", "indisponible"))
+        finally:
+            s.close()
+
+    a = threading.Thread(target=clic, args=("i1",), name="synorix-test-clic-a")
+    a.start()
+    assert debut.wait(5)
+    b = threading.Thread(target=clic, args=("i2",), name="synorix-test-clic-b")   # même pièce (cctp.pdf)
+    b.start()
+    b.join(0.5)
+    fin.set()
+    a.join(30)
+    b.join(30)
+    assert appels == ["d-cctp"]                  # une seule lecture de la pièce
+    assert _ancres(projet)["i2"]["niveau"] == "passage"

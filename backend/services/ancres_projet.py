@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import logging
 import re
+import threading
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -107,10 +108,32 @@ def calculer_pour(db: Session, exigence: ComplianceItem, lever: tuple[str, ...] 
     piece = trouver_piece(exigence.source_document, pieces)
     if piece is None:
         return {}
-    memes = [e for e in db.query(ComplianceItem).filter(
-                 ComplianceItem.project_id == exigence.project_id, ComplianceItem.ancre.is_(None)).all()
-             if trouver_piece(e.source_document, pieces) is piece]
-    return calculer_et_stocker(db, exigence.project_id, memes, lever)
+    # Une seule lecture par pièce : le préchargement envoie plusieurs exigences de la même pièce à la
+    # fois ; sans ce verrou chacune relisait toute la pièce (attente d'une place, 503, clic retardé).
+    # La suivante attend la première, puis ne trouve plus rien à calculer (``ancre IS NULL`` relu).
+    verrou = _verrou_piece(exigence.project_id, piece.id)
+    if not verrou.acquire(timeout=DELAI_PAR_PIECE_S):
+        if "attente" in lever:
+            from services.pdfium_processus import TravailPdfiumEchoue
+            raise TravailPdfiumEchoue("attente", "pièce déjà en calcul")
+        return {}
+    try:
+        memes = [e for e in db.query(ComplianceItem).filter(
+                     ComplianceItem.project_id == exigence.project_id, ComplianceItem.ancre.is_(None)).all()
+                 if trouver_piece(e.source_document, pieces) is piece]
+        return calculer_et_stocker(db, exigence.project_id, memes, lever)
+    finally:
+        verrou.release()
+
+
+_verrous_pieces: dict[tuple[str, str], threading.Lock] = {}
+_verrou_registre = threading.Lock()
+
+
+def _verrou_piece(project_id: str, piece_id: str) -> threading.Lock:
+    """Le verrou du calcul au premier clic d'une pièce (API à un seul processus : --workers 1)."""
+    with _verrou_registre:
+        return _verrous_pieces.setdefault((project_id, piece_id), threading.Lock())
 
 
 def ancre_aucune(doc_id: str) -> dict:
