@@ -104,6 +104,12 @@ class _FakeProvider:
         import json
         return json.loads(payload)
 
+    def retrieve_subscription(self, subscription_id):
+        # PAIEMENT-2 (12/11) : le webhook relit l'abonnement de la session chez le fournisseur ; il vit, au prix Pro.
+        import routers.stripe_billing as sb
+        return {"id": subscription_id, "status": "active", "customer": "cus_up",
+                "items": {"data": [{"price": {"product": sb.PRODUCTS["pro"]}}]}}
+
 
 def _patch_provider(monkeypatch, provider):
     import routers.stripe_billing as sb
