@@ -231,8 +231,18 @@ def _ancre_page(doc_id: str, numero: int, rotation: int) -> dict:
             "rects": [], "niveau": "page", "citation": None}
 
 
-# Fin d'une ligne de sommaire : points ou soulignés de conduite, puis le numéro de page.
-_FIN_SOMMAIRE = re.compile(r"(?:\.{4,}|_{4,}|…{2,}|(?:\.\s){3,}\.?)\s*\d{0,4}\s*$")
+# Fin d'une ligne de sommaire : points ou soulignés de conduite, puis le numéro de page. Le texte vient
+# du DCE (un PDF peut être piégé) : l'expression ne voit que la fin bornée de la ligne, et n'a pas de
+# quantificateurs qui se chevauchent (revue de sécurité : retour arrière polynomial).
+_FIN_SOMMAIRE = re.compile(r"(?:(?:\. ?){4,}|_{4,}|(?:… ?){2,})\s*\d{0,4}$")
+_NUMERO_FINAL = re.compile(r"(\d{1,4})$")
+_FIN_LUE = 200           # caractères de fin de ligne regardés
+
+
+def _finit_comme_un_sommaire(ligne: str) -> Optional[re.Match]:
+    """La fin de ``ligne`` (bornée à ``_FIN_LUE`` caractères) est-elle celle d'une ligne de sommaire ?"""
+    fin = ligne.strip()[-_FIN_LUE:]
+    return _FIN_SOMMAIRE.search(fin)
 
 
 def _intitule_de_sommaire(extrait: str) -> Optional[tuple[str, Optional[int]]]:
@@ -241,12 +251,12 @@ def _intitule_de_sommaire(extrait: str) -> Optional[tuple[str, Optional[int]]]:
     None si l'extrait n'a pas de ligne de sommaire assez longue pour être cherchée."""
     for ligne in extrait.splitlines():
         ligne = ligne.strip()
-        m = _FIN_SOMMAIRE.search(ligne)
+        m = _finit_comme_un_sommaire(ligne)
         if not m:
             continue
-        titre = ligne[:m.start()].strip()
+        titre = ligne[:len(ligne) - len(ligne[-_FIN_LUE:]) + m.start()].strip()
         if len(pp.forme_flux(titre)[0]) >= MIN_FLUX_PASSAGE:
-            numero = re.search(r"(\d{1,4})\s*$", ligne)
+            numero = _NUMERO_FINAL.search(ligne[-_FIN_LUE:])
             return titre, int(numero.group(1)) if numero else None
     return None
 
@@ -261,7 +271,7 @@ def _titre_dans_le_corps(pdf: pp.LecturePdf, titre: str, page_annoncee: Optional
         while k >= 0:
             debut, fin = page.origine[k], page.origine[k + len(flux) - 1]
             reste = page.texte[fin + 1:].split("\n", 1)[0]
-            if not _FIN_SOMMAIRE.search(reste.strip()):
+            if not _finit_comme_un_sommaire(reste):
                 trouves.append(Trouve(n, debut, fin))
                 break
             k = page.flux.find(flux, k + 1)
