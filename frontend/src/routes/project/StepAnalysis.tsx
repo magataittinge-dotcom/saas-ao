@@ -15,7 +15,7 @@ import { annoncer } from '@/components/ui/toast'
 import { cn } from '@/lib/utils'
 import { api, getSignedFileUrl } from '@/services/api'
 import { type FieldSource, type CriticalFieldsPayload } from '@/components/project/CriticalBanner'
-import { CarteAO30sVue, useFaitsAO } from '@/components/project/CarteAO30s'
+import { CarteAO30sVue, useFaitsAO, useFaitsAOEnLecture } from '@/components/project/CarteAO30s'
 import PointsAEclaircir from '@/components/project/PointsAEclaircir'
 import AVerifierAvantEngagement from '@/components/project/AVerifierAvantEngagement'
 import { voirTresorerie } from '@/components/project/TresorerieCard'
@@ -241,6 +241,8 @@ export default function StepAnalysis({ project }: Props) {
   const [showLotDetails, setShowLotDetails] = useState(false)
   // Le résumé de l'étape et « À vérifier » : faits déjà en base (champs critiques, pièces, analyse), aucun appel IA
   const faits = useFaitsAO(project)
+  // L'ordre de rendu (CLS) : la fiche de décision et « Le marché en bref » se posent avec l'écran, pas sous lui
+  const faitsEnLecture = useFaitsAOEnLecture(project)
   const { data: critiques } = useQuery<CriticalFieldsPayload>({
     queryKey: ['critical-fields', project.id],
     queryFn: async () => (await api.get<CriticalFieldsPayload>(`/projects/${project.id}/critical-fields`)).data,
@@ -259,7 +261,7 @@ export default function StepAnalysis({ project }: Props) {
   const UTILITE = 'Ce que le dossier demande, ce qui vous engage et les questions à poser à l’acheteur, avant de décider d’y répondre.'
 
   // ── Chargement, puis erreur (jamais « Analyse… 0 % » quand le serveur ne répond pas), puis les états de la lecture ──
-  if (isLoading) return (
+  if (isLoading || faitsEnLecture) return (
     <GabaritEtape titre={TITRE} utilite={UTILITE}>
       {/* Le squelette du gabarit (une surface au trait, des lignes de longueur de phrase) et ce que Synorix fait : jamais trois pavés muets. */}
       <div role="status" aria-busy="true" className="space-y-4">

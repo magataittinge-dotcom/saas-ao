@@ -11,12 +11,14 @@ import { EtatErreur, EtatRequete } from '@/components/ui/etats'
 import { Message } from '@/components/ui/message'
 import { Page, TitreSection } from '@/components/ui/page'
 import { PastilleEtat } from '@/components/ui/pastille'
-import { Squelette } from '@/components/ui/squelette'
+import { Squelette, useAttente } from '@/components/ui/squelette'
 import { SynorixParle } from '@/components/ui/synorix-parle'
 import { useDocuments } from '@/hooks/useDocuments'
 import { useProjects } from '@/hooks/useProject'
 import { api } from '@/services/api'
+import { cn } from '@/lib/utils'
 import { dateDuJourParis } from '@/lib/dateParis'
+import { phaseRequete } from '@/lib/requete'
 import { avancement } from '@/lib/entreprise/avancement'
 import { aLaUne, comptesAO, lectureAO, type ComptesAO } from '@/lib/etatAO'
 import { quandCourt } from '@/lib/mesAO'
@@ -100,6 +102,13 @@ export default function Dashboard() {
     queryFn: async () => { const { data } = await api.get('/billing/quota'); return data },
   })
   const documents = useDocuments()
+  // L'ordre de rendu (CLS) : le haut de l'écran (le rappel de l'essai, la phrase de Synorix, la bande des AO) se pose d'un
+  // coup, avec la bande des AO (une seule attente : 200 ms de rien, puis le squelette 400 ms au moins, partagée avec la
+  // bande) ; la veille et « Votre entreprise » attendent qu'il soit posé. Avant, la veille se dessinait sous l'en-tête puis
+  // descendait de toute la hauteur de la bande (380 px au bureau, 450 au téléphone). Elles n'attendent pas le quota : sans
+  // délai sur les requêtes, un quota qui ne répond pas les cacherait.
+  const attenteHaut = useAttente(phaseRequete(projets, () => false) === 'chargement')
+  const hautPose = attenteHaut === 'contenu'
 
   const maintenant = useMemo(() => new Date(), [projets.data]) // eslint-disable-line react-hooks/exhaustive-deps
   const comptes = useMemo(() => (projets.data ? comptesAO(projets.data, maintenant) : null), [projets.data, maintenant])
@@ -144,21 +153,21 @@ export default function Dashboard() {
       sousTitre={<>{dateDuJourParis()}{suite && <> · {suite}</>}<span aria-hidden className="fil-aurore mt-4 block" /></>}
     >
       {/* C15 — essai utilisé : rappel sobre de l'offre, jamais bloquant */}
-      {consumedFreeTrial && (
+      {hautPose && consumedFreeTrial && (
         <Message ton="info" className="mb-6" action={<Link to="/settings/billing" className={classesBouton('lien')}>Voir les offres</Link>}>
           Votre AO d’essai est utilisé. L’offre Pro comprend {quotaLibelle(OFFRE_PRO)}.
         </Message>
       )}
 
       {/* Synorix parle : une phrase au plus, là où il a quelque chose à dire (le seul visage de l'écran) */}
-      {parole && (
+      {hautPose && parole && (
         <SynorixParle action={parole.lien ? <Link to={parole.lien.to} className={classesBouton('lien', '[@media(pointer:coarse)]:min-h-11')}>{parole.lien.libelle}</Link> : undefined}>
           {parole.phrase}
         </SynorixParle>
       )}
 
       {/* ── Vos appels d'offres : en cours (trois au plus), puis ceux à mettre à jour ── */}
-      <EtatRequete requete={projets} estVide={() => false} vide={null} squelette={<BandeEnChargement />}
+      <EtatRequete requete={projets} attente={attenteHaut} estVide={() => false} vide={null} squelette={<BandeEnChargement />}
         erreur={(
           <EtatErreur className="mt-10 max-md:mt-7.5" titre="Vos appels d’offres n’ont pas pu se charger"
             detail={'La connexion a été interrompue. Vos dossiers ne\u00a0sont\u00a0pas\u00a0touchés.'} onReessayer={() => { void projets.refetch() }} enCours={projets.isFetching} />
@@ -167,14 +176,16 @@ export default function Dashboard() {
       </EtatRequete>
 
       {/* ── La veille : la carte et la liste des avis, chargées à la demande (l'accueil seulement) ── */}
-      <div className="mt-10 max-md:mt-7.5">
+      {/* montée tout de suite (ses lectures partent avec celles du haut), affichée une fois le haut posé ; la carte se mesure à
+          l'affichage (ResizeObserver de CarteFrance). `data-bloc-en-attente` : le pied de page attend aussi (index.css) */}
+      <div className={cn('mt-10 max-md:mt-7.5', !hautPose && 'hidden')} data-bloc-en-attente={hautPose ? undefined : ''}>
         <Suspense fallback={<VeilleEnChargement />}>
           <VeilleAccueil />
         </Suspense>
       </div>
 
       {/* ── Coffre-fort, entreprise et bilan : une bande de cases ; une case n'apparaît qu'une fois sa donnée lue ── */}
-      <section aria-labelledby="t-suivi" className="mt-10 max-md:mt-7.5">
+      <section aria-labelledby="t-suivi" className={cn('mt-10 max-md:mt-7.5', !hautPose && 'hidden')}>
         <TitreSection id="t-suivi">Votre entreprise</TitreSection>
         {suiviEnErreur ? (
           // le même modèle d'erreur que le reste de l'écran : il rejoint le « Réessayer » unique (le premier état le porte)

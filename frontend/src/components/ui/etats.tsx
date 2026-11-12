@@ -4,7 +4,7 @@ import { AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/stores/uiStore'
 import { Bouton } from './bouton'
-import { useAttente } from './squelette'
+import { useAttente, type PhaseAttente } from './squelette'
 
 /**
  * État vide (VEILLE-DESIGN P20) : trois éléments, pas un de plus. Ce qui apparaîtra ici (le titre), quand (une phrase de
@@ -113,9 +113,12 @@ export function EtatErreur({ titre = 'Cette page n’a pas pu se charger', detai
  * Le motif de requête (lib/requete.ts) : chargement → erreur → vide → contenu, dans cet ordre. Pendant le chargement : rien
  * pendant 200 ms, puis `squelette` (aux dimensions du contenu) pendant 400 ms au moins. `aria-busy` sur le conteneur.
  */
-export function EtatRequete<T>({ requete, squelette, erreur, vide, estVide, onReessayer, children, className }: {
+export function EtatRequete<T>({ requete, squelette, erreur, vide, estVide, onReessayer, children, className, attente: attenteImposee }: {
   requete: RequeteLue<T> & { refetch?: () => unknown; isFetching?: boolean }
   squelette: React.ReactNode
+  /** L'attente, quand l'écran la partage avec d'autres blocs qui doivent basculer en même temps (`useAttente` de l'écran) ;
+   *  sinon celle de la requête. */
+  attente?: PhaseAttente
   /** L'état d'erreur ; par défaut `<EtatErreur>` avec « Réessayer ». */
   erreur?: React.ReactNode
   /** L'état vide de cet écran (`<EtatVide>`). */
@@ -126,12 +129,16 @@ export function EtatRequete<T>({ requete, squelette, erreur, vide, estVide, onRe
   className?: string
 }) {
   const phase = phaseRequete(requete, estVide)
-  const attente = useAttente(phase === 'chargement')
+  const attenteRequete = useAttente(phase === 'chargement')
+  const attente = attenteImposee ?? attenteRequete
   const reessayer = onReessayer ?? (requete.refetch ? () => { void requete.refetch?.() } : undefined)
   let contenu: React.ReactNode
   if (phase === 'chargement' || attente !== 'contenu') contenu = attente === 'rien' ? null : squelette
   else if (phase === 'erreur') contenu = erreur ?? <EtatErreur onReessayer={reessayer} enCours={requete.isFetching} />
   else if (phase === 'vide') contenu = vide
   else contenu = children(requete.data as T)
-  return <div data-phase={phase} aria-busy={phase === 'chargement' || undefined} className={className}>{contenu}</div>
+  // `data-bloc-en-attente` : rien ou le squelette est à l'écran, y compris pendant les 400 ms où le squelette reste après
+  // l'arrivée des données (`data-phase` dit déjà « contenu ») ; le pied de page attend (index.css)
+  const enAttente = phase === 'chargement' || attente !== 'contenu'
+  return <div data-phase={phase} data-bloc-en-attente={enAttente ? '' : undefined} aria-busy={phase === 'chargement' || undefined} className={className}>{contenu}</div>
 }
