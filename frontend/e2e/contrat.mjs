@@ -56,3 +56,35 @@ export const CHAMPS_MEMOIRE = { ouvriers: 'Nombre d’ouvriers dédiés', delai:
 
 /** La pièce jointe par le parcours (formulaire de l'acheteur, sans signature demandée). */
 export const PIECE_JOINTE = 'Déclaration du candidat (DC2)'
+
+// ── Le second parcours (e2e/parcours-2.mjs) : les mots en plus, chacun UNE fois ─────────────────────────────────────────
+// Sources : components/project/VaultPickerModal.tsx, PointsAEclaircir.tsx, FormulaireMemoire.tsx, LectureLots.tsx,
+// routes/project/StepExport.tsx, components/common/SubscriptionWall.tsx, MettreAJourStatut.tsx + lib/etatAO.ts (CHOIX, D16),
+// routes/Dashboard.tsx (bilan), components/parametres/SuppressionCompte.tsx + lib/suppressionCompte.ts.
+export const PARCOURS_2 = {
+  choisirPiece: 'Choisir',
+  remplacerPiece: 'Remplacer',
+  dialogueCoffre: 'Choisir une pièce du coffre-fort',
+  pieceDuCoffre: 'Décennale',
+  preparerQuestions: 'Préparer les questions',
+  sourcePoint: 'Source : ',
+  analyserLots: 'Analyser 2 lots',
+  confirmerLots: 'Analyser les 2 lots',
+  tableauAcheteur: 'Télécharger le tableau de l’acheteur',
+  murAbonnement: 'Passez au niveau supérieur',
+  statut: 'Indiquer le résultat',
+  gagne: 'Gagné',
+  corrigerPerdu: 'Corriger : Perdu',
+  rechercheMesAO: 'Chercher et filtrer mes appels d’offres',
+  menuAO: 'Autres actions pour « ',
+  afficherTermines: 'Afficher',
+  bilan: 'Taux de réussite',
+  supprimerCompte: 'Supprimer mon compte',
+  dialogueSuppression: 'Supprimer votre compte ?',
+  suppressionImmediate: 'sont supprimés tout de suite',
+  confirmerSuppression: 'Supprimer définitivement',
+  annuler: 'Annuler',
+}
+
+/** Les titres (h1) des écrans en plus. */
+export const TITRES_2 = { accueil: 'Bonjour', parametres: 'Paramètres' }
