@@ -10,7 +10,7 @@ import { libellePassagesACompleter } from '@/lib/passagesACompleter'
 import FormulaireMemoire from '@/components/project/FormulaireMemoire'
 import BarreEtape, { BoutonSuite } from '@/components/project/BarreEtape'
 import { type PreflightSelection } from '@/components/project/MemoirePreflight'
-import { VARIABLES_VIDES, corpsGeneration } from '@/lib/memoireGeneration'
+import { corpsGeneration, variablesDuMemoire, type VariablesMemoire } from '@/lib/memoireGeneration'
 import ProgressDisplay, { type StepDescriptor } from '@/components/common/ProgressDisplay'
 import { useProgressStream } from '@/hooks/useProgressStream'
 import SubscriptionWall from '@/components/common/SubscriptionWall'
@@ -123,7 +123,8 @@ export default function StepMemoire({ project }: Props) {
   const queryClient = useQueryClient()
   const [showPaywall, setShowPaywall] = useState(false)
   const [paywallMessage, setPaywallMessage] = useState<string | null>(null)
-  const [variables, setVariables] = useState(VARIABLES_VIDES)
+  // Ce que l'utilisateur a saisi ici ; rien encore : les valeurs rangées avec le mémoire (relues après un rechargement).
+  const [saisie, setSaisie] = useState<VariablesMemoire | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [showEditor, setShowEditor] = useState(false)
   const [editedContent, setEditedContent] = useState<MemoireContent | null>(null)
@@ -148,6 +149,7 @@ export default function StepMemoire({ project }: Props) {
     retry: false,
   })
   const { data: memoire, isLoading } = requeteMemoire
+  const variables = saisie ?? variablesDuMemoire(memoire?.variables)
 
   // « N passages à compléter avant le dépôt » et le nombre de pages : une seule source, les comptes du serveur que lit
   // aussi l'Export (`memoire_info` du détail d'export, même calcul serveur), par leur lecture légère (le détail pesait
@@ -451,7 +453,7 @@ export default function StepMemoire({ project }: Props) {
             <FormulaireMemoire
               projectId={project.id}
               variables={variables}
-              onVariables={setVariables}
+              onVariables={setSaisie}
               onPreflight={handlePreflightChange}
               stats={profileStats ?? null}
               hasMemoire={hasMemoire}

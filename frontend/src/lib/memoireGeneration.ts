@@ -24,6 +24,19 @@ export const VARIABLES_VIDES: VariablesMemoire = {
   particularites: '',
 }
 
+/** Les valeurs déjà données, relues du mémoire (le serveur les range avec lui à chaque rédaction réussie) : après un
+ *  rechargement, Rédiger ne demande pas de les ressaisir. Rien d'enregistré, ou une valeur d'un autre type : champ vide. */
+export function variablesDuMemoire(rangees: Record<string, unknown> | null | undefined): VariablesMemoire {
+  const v = { ...VARIABLES_VIDES }
+  if (!rangees) return v
+  for (const cle of Object.keys(v) as (keyof VariablesMemoire)[]) {
+    const valeur = rangees[cle]
+    if (cle === 'nb_ouvriers' && typeof valeur === 'number' && Number.isFinite(valeur)) v[cle] = String(valeur)
+    else if (cle !== 'nb_ouvriers' && typeof valeur === 'string') v[cle] = valeur
+  }
+  return v
+}
+
 export function corpsGeneration(variables: VariablesMemoire, preflight: PreflightSelection) {
   return {
     nb_ouvriers: variables.nb_ouvriers ? parseInt(variables.nb_ouvriers) : undefined,
