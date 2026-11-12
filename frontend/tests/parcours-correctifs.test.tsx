@@ -2,6 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { verrouLancement } from '@/lib/verrouLancement'
+import { rienEnCours } from '@/hooks/useProgressStream'
 import { lire, sansCommentaires } from './outils/sources'
 
 test('double clic sur « Télécharger le dossier » : un seul dossier (le second lancement est refusé tant que le premier court)', () => {
@@ -14,4 +15,18 @@ test('double clic sur « Télécharger le dossier » : un seul dossier (le secon
   assert.doesNotMatch(code, /onClick=\{\(\) => exportZip\(\)\}/, 'le bouton ne lance plus exportZip sans garde')
   assert.match(code, /if \(!verrouZip\.prendre\(\)\) return/)
   assert.match(code, /exportZip\(undefined, \{ onSettled: verrouZip\.rendre \}\)/)
+})
+
+test('fin de travail manquée : à l’abonnement, un état rattrapé « fini », « en échec » ou inconnu fait relire l’état final', () => {
+  assert.equal(rienEnCours('init', { status: 'completed' }), 'completed')
+  assert.equal(rienEnCours('init', { status: 'error' }), 'error')
+  assert.equal(rienEnCours('init', {}), 'idle', 'rien de connu du serveur (redémarrage) : relire aussi')
+  assert.equal(rienEnCours('init', { status: 'analyzing_pass1' }), null, 'un travail tourne : on suit le flux')
+  assert.equal(rienEnCours('init', { status: 'running' }), null)
+  assert.equal(rienEnCours('progress', { status: 'completed' }), null, 'seul l’état rattrapé à l’abonnement')
+  const analyse = sansCommentaires(lire('src/routes/project/StepAnalysis.tsx'))
+  assert.match(analyse, /onComplete: relireAnalyse,\s*onRienEnCours: relireAnalyse,/)
+  const redaction = sansCommentaires(lire('src/routes/project/StepMemoire.tsx'))
+  assert.match(redaction, /enabled: isRunning && !isGenerating,\s*onComplete: finRedaction,\s*onRienEnCours: \(fin\) => \{/)
+  assert.match(sansCommentaires(lire('src/hooks/useProgressStream.ts')), /if \(fin\) \{\s*onRienEnCoursRef\.current\?\.\(fin\)\s*continue/)
 })

@@ -191,12 +191,15 @@ export default function StepAnalysis({ project }: Props) {
   // des exigences (fil de l'eau) — sinon la barre « sautait aux résultats »
   // à ~50 % et la 2e passe devenait invisible.
   const analysisRunning = project.processing_status === 'analyzing'
+  const relireAnalyse = () => {
+    queryClient.invalidateQueries({ queryKey: ['compliance', project.id] })
+    queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
+  }
   const analysisSse = useProgressStream(project.id, {
     enabled: !isLoading && (items.length === 0 || analysisRunning),
-    onComplete: () => {
-      queryClient.invalidateQueries({ queryKey: ['compliance', project.id] })
-      queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
-    },
+    onComplete: relireAnalyse,
+    // Lecture finie (ou en échec) avant l'abonnement : l'écran relit l'état final au lieu d'attendre une fin déjà passée.
+    onRienEnCours: relireAnalyse,
   })
 
   // B1 — la lecture a-t-elle réellement démarré ? Le projet est relu après le lancement ; on laisse ce temps (2,5 s) avant

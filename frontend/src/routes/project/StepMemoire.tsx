@@ -299,14 +299,22 @@ export default function StepMemoire({ project }: Props) {
   const isRunning = isGenerating || running || project.processing_status === 'generating'
   const refaitUnePartie = envoiRefaire || (project.processing_detail ?? '').startsWith('refaire:')
 
+  const finRedaction = () => {
+    setRunning(false)
+    setEditedContent(null)
+    setShowForm(false)
+    queryClient.invalidateQueries({ queryKey: ['memoire', project.id] })
+    queryClient.invalidateQueries({ queryKey: ['export-detail', project.id] })
+    queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
+  }
   const memoireSse = useProgressStream(project.id, {
-    enabled: isRunning,
-    onComplete: () => {
+    // Abonné une fois la demande acceptée : l'état rattrapé est alors celui de CETTE rédaction, jamais d'une précédente.
+    enabled: isRunning && !isGenerating,
+    onComplete: finRedaction,
+    // Rédaction finie (ou en échec) avant l'abonnement : l'écran relit l'état final au lieu d'attendre une fin déjà passée.
+    onRienEnCours: (fin) => {
+      if (fin === 'completed') { finRedaction(); return }
       setRunning(false)
-      setEditedContent(null)
-      setShowForm(false)
-      queryClient.invalidateQueries({ queryKey: ['memoire', project.id] })
-      queryClient.invalidateQueries({ queryKey: ['export-detail', project.id] })
       queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
     },
   })

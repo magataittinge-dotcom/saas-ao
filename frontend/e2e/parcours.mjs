@@ -232,14 +232,10 @@ async function etapeDecider(ctx) {
   try {
     await action.waitFor({ timeout: 30_000 })
   } catch {
-    // L'analyse simulée finit en moins d'une seconde : si l'écran d'attente reste affiché alors que le serveur a fini,
-    // c'est le constat « fin d'analyse manquée » ; un rechargement doit montrer l'écran Décider.
+    // L'analyse simulée finit en moins d'une seconde : le serveur a fini et l'écran attend encore, c'est une fin manquée.
     const p = await api_(page, 'GET', `/api/projects/${ctx.id}`)
-    if (p.corps?.processing_status === 'analyzing') { await action.waitFor({ timeout: ATTENTE_IA }) } else {
-      constat(ctx, 'StepAnalysis.tsx:331 — analyse finie côté serveur, l’écran reste sur « Synorix analyse votre dossier » (Démarrage) : la fin, survenue avant l’abonnement au flux, n’est jamais vue (processing_status du projet en cache, jamais relu) ; un rechargement débloque')
-      await page.reload({ waitUntil: 'domcontentloaded' })
-      await action.waitFor({ timeout: 30_000 })
-    }
+    if (p.corps?.processing_status !== 'analyzing') throw new Echec('décider : analyse finie côté serveur, l’écran reste sur l’attente (fin de travail manquée)')
+    await action.waitFor({ timeout: ATTENTE_IA })
   }
   await controler(ctx, 'decider', { fil: FIL[2] })
   // La décision revient à l'utilisateur : « On y va » fait avancer l'étape, et mène aux pièces.
@@ -295,13 +291,10 @@ async function etapeRediger(ctx) {
     ? page.getByRole('button', { name: SUITE.telephone + FIL[6], exact: true })
     : bouton(page, VERBES.passerExport, true)
   try { await versExport.waitFor({ timeout: 30_000 }) } catch {
-    // Rédaction simulée finie en moins d'une seconde : si l'écran d'attente reste alors que le serveur a fini, c'est le constat.
+    // Rédaction simulée finie en moins d'une seconde : le serveur a fini et l'écran attend encore, c'est une fin manquée.
     const p = await api_(page, 'GET', `/api/projects/${ctx.id}`)
-    if (p.corps?.processing_status === 'generating') { await versExport.waitFor({ timeout: ATTENTE_IA }) } else {
-      constat(ctx, 'StepMemoire.tsx:302 — rédaction finie côté serveur, l’écran reste sur « Synorix rédige votre mémoire » : la fin, survenue avant l’abonnement au flux, n’est jamais vue (même cause que StepAnalysis.tsx:331) ; un rechargement débloque')
-      await page.reload({ waitUntil: 'domcontentloaded' })
-      await versExport.waitFor({ timeout: 30_000 })
-    }
+    if (p.corps?.processing_status !== 'generating') throw new Echec('rédiger : rédaction finie côté serveur, l’écran reste sur l’attente (fin de travail manquée)')
+    await versExport.waitFor({ timeout: ATTENTE_IA })
   }
   await page.waitForTimeout(1000)
   await controler(ctx, 'rediger', { fil: FIL[5] })
@@ -456,9 +449,7 @@ async function panneLecture(nav, dossier) {
     // L'écran d'erreur de la lecture (ProgressDisplay) : la phrase, l'unité rendue, « Relancer ».
     const relancer = bouton(page, VERBES.relancer, true)
     try { await relancer.waitFor({ timeout: 45_000 }) } catch {
-      constat(ctx, 'StepAnalysis.tsx:331 — lecture en échec côté serveur, l’écran reste sur l’attente : la fin n’est pas vue sans rechargement')
-      await page.reload({ waitUntil: 'domcontentloaded' })
-      await relancer.waitFor({ timeout: 30_000 })
+      throw new Echec('panne IA : lecture en échec côté serveur, l’écran reste sur l’attente (fin de travail manquée)')
     }
     ctx.n += 1
     await capturer(page, largeur, ctx.n, 'panne-ia-message')
@@ -477,9 +468,7 @@ async function panneLecture(nav, dossier) {
     await page.waitForURL(/\/analysis$/, { timeout: 30_000 })
     const suite = bouton(page, VERBES.yAller, true).first()
     try { await suite.waitFor({ timeout: 30_000 }) } catch {
-      constat(ctx, 'StepAnalysis.tsx:331 — analyse finie côté serveur, l’écran reste sur « Synorix analyse votre dossier » (Démarrage) : la fin, survenue avant l’abonnement au flux, n’est jamais vue (processing_status du projet en cache, jamais relu) ; un rechargement débloque')
-      await page.reload({ waitUntil: 'domcontentloaded' })
-      await suite.waitFor({ timeout: 30_000 })
+      throw new Echec('panne IA : relance finie côté serveur, l’écran reste sur l’attente (fin de travail manquée)')
     }
     await controler(ctx, 'decider', { fil: FIL[2] })
     ctx.pannes.push(`IA en panne pendant la lecture : message et « ${VERBES.relancer} », unité rendue (${avant} → ${apres}), relance réussie`)
