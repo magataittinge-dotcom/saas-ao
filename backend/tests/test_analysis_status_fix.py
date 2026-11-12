@@ -136,6 +136,61 @@ def test_status_set_to_analyzed_after_compliance_commit(client, db_session, test
     assert fresh.status == "analyzed", (
         f"project.status must be 'analyzed' after pass2, got {fresh.status!r}"
     )
-    assert fresh.current_step == 4
-    # B1 : le lancement de la lecture coche l'étape Lots (plus `lots/select`), l'analyse finie coche l'étape 3.
-    assert fresh.completed_steps == {"2": True, "3": True}
+    # La décision revient au client : l'analyse finie ne coche PAS l'étape 3 (Décider) et ne passe pas à l'étape 4 ;
+    # c'est « On y va » (POST complete-step/3) qui le fait. B1 : le lancement de la lecture coche l'étape Lots.
+    assert fresh.current_step == 3
+    assert fresh.completed_steps == {"2": True}
+
+
+def _analyse_simulee(monkeypatch):
+    from services.ai import dce_analyzer, checklist_matcher
+
+    def _fake(self, *a, **kw):
+        return {"requirements": [{"exigence": "Fournir un Kbis", "source_document": "RC", "source_page": 1,
+                                  "source_excerpt": "Le candidat fournira un extrait Kbis", "category": "candidature",
+                                  "priority": "obligatoire"}],
+                "criteres_jugement": [], "infos_marche": {}}
+
+    async def _fake_match(self, *a, **kw):
+        return []
+    monkeypatch.setattr(dce_analyzer.DCEAnalyzer, "_run_pass_chunked", _fake)
+    monkeypatch.setattr(checklist_matcher.ChecklistMatcher, "match", _fake_match)
+
+
+def _projet_lu(db_session, test_org, pid, **champs):
+    from datetime import date
+    from models.project import Project, ProjectDocument
+    db_session.add(Project(id=pid, organization_id=test_org.id, name="AO décision", deadline=date.today(), **champs))
+    db_session.add(ProjectDocument(id=f"doc-{pid}", project_id=pid, type="rc", file_url="x", file_name="rc.pdf",
+                                   extracted_text="RC sample text. " * 50))
+    db_session.commit()
+
+
+def test_on_y_va_fait_avancer_l_etape_decider(client, db_session, test_org, monkeypatch):
+    """Parcours E2E (12/11) : la fiche disait « Vous avez décidé d'y aller » dès la fin de l'analyse. L'analyse finie
+    laisse l'AO à Décider (étape 3, non cochée) ; « On y va » (complete-step/3) coche l'étape et passe aux pièces."""
+    from models.project import Project
+    _analyse_simulee(monkeypatch)
+    _projet_lu(db_session, test_org, "proj-dec")
+    assert client.post("/api/projects/proj-dec/analyze").status_code == 200
+    _join_analysis_threads()
+    db_session.expire_all()
+    p = db_session.get(Project, "proj-dec")
+    assert (p.status, p.current_step, (p.completed_steps or {}).get("3")) == ("analyzed", 3, None)
+    r = client.post("/api/projects/proj-dec/complete-step/3")
+    assert r.status_code == 200, r.text
+    assert r.json()["current_step"] == 4 and r.json()["completed_steps"]["3"] is True
+
+
+def test_un_ao_deja_decide_reste_decide_apres_une_nouvelle_analyse(client, db_session, test_org, monkeypatch):
+    """Un AO existant, décidé avant (étape 3 cochée), relancé sur un lot : il reste décidé et repart des pièces (étape 4),
+    comme avant le correctif ; aucune donnée à migrer."""
+    from models.project import Project
+    _analyse_simulee(monkeypatch)
+    _projet_lu(db_session, test_org, "proj-deja", current_step=5, completed_steps={"1": True, "2": True, "3": True, "4": True})
+    assert client.post("/api/projects/proj-deja/analyze").status_code == 200
+    _join_analysis_threads()
+    db_session.expire_all()
+    p = db_session.get(Project, "proj-deja")
+    assert p.processing_status == "ready"
+    assert p.current_step == 4 and p.completed_steps["3"] is True

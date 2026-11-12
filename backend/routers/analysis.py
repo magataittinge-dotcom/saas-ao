@@ -819,13 +819,10 @@ def _finalize_analysis(
     # (ancrage + persistance déjà faits PAR SCOPE — commun et chaque lot)
     pipeline_tracker.update_step_progress(project_id, 0.6, detail="Enregistrement des résultats…")
 
-    # Advance to step 3 (analysis results) when done.
-    # Also flip status from 'en_cours' to 'analyzed' so the frontend can
-    # auto-route the user to the next step on the next project refetch.
-    steps = dict(project.completed_steps or {})
-    steps["3"] = True
-    project.completed_steps = steps
-    if project.current_step <= 3:
+    # Analyse finie : l'AO attend la décision (étape 3, « Décider »). L'étape 3 n'est cochée que par « On y va »
+    # (POST complete-step/3) ; un AO déjà décidé (relance d'un lot) repart des pièces, comme avant.
+    # status 'analyzed' : le front sait que l'analyse est faite au prochain rafraîchissement du projet.
+    if (project.completed_steps or {}).get("3") and project.current_step <= 3:
         project.current_step = 4
     if project.status in ("brouillon", "en_cours"):
         project.status = "analyzed"

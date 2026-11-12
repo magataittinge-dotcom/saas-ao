@@ -225,13 +225,10 @@ async function etapeLots(ctx) {
 
 async function etapeDecider(ctx) {
   const { page } = ctx
-  // L'analyse finie, le serveur marque déjà l'étape 3 faite (routers/analysis.py) : l'action de l'écran dit « Passer aux
-  // pièces », « On y va » ne s'affiche pas (constat du rapport E2E).
+  // L'analyse finie, l'AO attend la décision : « On y va » est l'action de l'écran (en-tête à l'ordinateur, barre du bas au
+  // téléphone), redite au trait dans la fiche « On y va ? ».
   await page.waitForURL(/\/analysis$/, { timeout: 30_000 })
-  // Au téléphone, l'action est le bouton de suite de la barre du bas.
-  const action = ctx.largeur.tel
-    ? page.getByRole('button', { name: SUITE.telephone + FIL[3], exact: true })
-    : bouton(page, VERBES.passerPieces, true)
+  const action = bouton(page, VERBES.yAller, true).first()
   try {
     await action.waitFor({ timeout: 30_000 })
   } catch {
@@ -245,10 +242,7 @@ async function etapeDecider(ctx) {
     }
   }
   await controler(ctx, 'decider', { fil: FIL[2] })
-  // La décision revient à l'utilisateur : « On y va » doit lui être proposé avant toute suite.
-  if (!(await bouton(page, VERBES.yAller, true).count())) {
-    constat(ctx, 'SynorixScoreCard.tsx:74 — la fiche « On y va ? » dit « Vous avez décidé d’y aller » dès la fin de l’analyse, sans décision : decideAller lit completed_steps["3"], que routers/analysis.py:826 pose à la fin de la lecture (current_step passe à 4, aDecider d’action.ts:35 n’est jamais vrai, l’en-tête dit « Passer aux pièces », StepAnalysis.tsx:178)')
-  }
+  // La décision revient à l'utilisateur : « On y va » fait avancer l'étape, et mène aux pièces.
   await action.click()
 }
 
@@ -277,6 +271,11 @@ async function etapePlan(ctx) {
   await page.getByRole('navigation', { name: NOM_FIL }).getByRole('button', { name: FIL[2], exact: true }).click()
   await page.waitForURL(/\/analysis$/, { timeout: 15_000 })
   await page.getByRole('heading', { level: 1, name: TITRES.decider, exact: true }).waitFor({ timeout: 15_000 })
+  // La décision prise, l'action de Décider mène aux pièces (« Passer aux pièces », « Suivant : Pièces » au téléphone).
+  const versPieces = ctx.largeur.tel
+    ? page.getByRole('button', { name: SUITE.telephone + FIL[3], exact: true })
+    : bouton(page, VERBES.passerPieces, true)
+  await versPieces.waitFor({ timeout: 15_000 })
   await page.goBack()
   await page.waitForURL(/\/plan$/, { timeout: 15_000 })
   await controler(ctx, 'plan', { fil: FIL[4] })
@@ -477,7 +476,7 @@ async function panneLecture(nav, dossier) {
     unlinkSync(PANNE)
     await relancer.click()
     await page.waitForURL(/\/analysis$/, { timeout: 30_000 })
-    const suite = bouton(page, VERBES.passerPieces, true)
+    const suite = bouton(page, VERBES.yAller, true).first()
     try { await suite.waitFor({ timeout: 30_000 }) } catch {
       constat(ctx, 'StepAnalysis.tsx:331 — analyse finie côté serveur, l’écran reste sur « Synorix analyse votre dossier » (Démarrage) : la fin, survenue avant l’abonnement au flux, n’est jamais vue (processing_status du projet en cache, jamais relu) ; un rechargement débloque')
       await page.reload({ waitUntil: 'domcontentloaded' })
