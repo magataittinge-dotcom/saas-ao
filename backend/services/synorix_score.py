@@ -174,13 +174,15 @@ def _eval_qualifications(compliance_items, vault_docs) -> dict:
     if missing:
         return _comp(
             "qualifications", label, "ko",
-            f"Exigée(s), pas encore dans votre coffre-fort : {', '.join(missing)}.",
+            f"{'Qualifications exigées' if len(missing) > 1 else 'Qualification exigée'}, pas encore dans votre "
+            f"coffre-fort : {', '.join(missing)}.",
             first_source,
         )
     if warning_quals:
         return _comp(
             "qualifications", label, "warning",
-            f"Détenue(s) mais expirée(s) ou à vérifier : {', '.join(warning_quals)} — "
+            f"{'Qualifications détenues mais expirées' if len(warning_quals) > 1 else 'Qualification détenue mais expirée'}"
+            f" ou à vérifier : {', '.join(warning_quals)} — "
             "mettez le justificatif à jour avant le dépôt.",
             first_source,
         )
@@ -207,8 +209,9 @@ def _eval_delai(critical_fields, today: Optional[date]) -> dict:
     if days < 0:
         return _comp("delai", label, "ko", "La date limite de remise est passée.", source)
     if days < 7:
-        return _comp("delai", label, "ko",
-                     f"Il reste {days} jour(s) — très court pour un dossier complet.", source)
+        reste = ("La remise a lieu aujourd'hui" if days == 0
+                 else f"Il reste {days} jour" if days == 1 else f"Il reste {days} jours")
+        return _comp("delai", label, "ko", f"{reste} — très court pour un dossier complet.", source)
     if days < 14:
         return _comp("delai", label, "warning",
                      f"Il reste {days} jours — planning serré mais tenable.", source)

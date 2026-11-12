@@ -99,8 +99,8 @@ def test_get_moyens_donnees_et_defauts(client, deux_entreprises):
     assert d["societe"]["nom"] == "Lambert Maçonnerie"          # la surcharge du profil prime
     assert d["pied"].startswith("Lambert Maçonnerie")
     assert "SIRET 98765432100022" in d["pied"] and "Reims" in d["pied"]
-    # une tuile sans valeur disparaît (ni « — » ni zéro) : seule « personnes clés » a un chiffre ici
-    assert d["tuiles"] == [{"libelle": "personnes clés", "valeur": "1"}]
+    # une tuile sans valeur disparaît (ni « — » ni zéro) : seule « personne clé » a un chiffre ici
+    assert d["tuiles"] == [{"libelle": "personne clé", "valeur": "1"}]          # accordé au singulier (point 4)
     assert [s["id"] for s in d["sections"]] == ["01", "02", "03", "04", "05", "06", "07"]
     sec = {s["id"]: s for s in d["sections"]}
     assert sec["02"]["texte"].startswith("Logiciel de métrés")

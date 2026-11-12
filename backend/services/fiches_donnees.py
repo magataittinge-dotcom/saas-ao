@@ -310,6 +310,11 @@ def _tuile(valeur: Any, libelle: str) -> dict:
     return {"valeur": str(valeur) if valeur not in (None, "", 0) else "", "libelle": libelle}
 
 
+def _tuile_accordee(nombre: Any, singulier: str, pluriel: str) -> dict:
+    """Une tuile qui compte des choses : « 1 matériel », « 3 matériels » (jamais « 1 matériels »)."""
+    return _tuile(nombre, singulier if nombre == 1 else pluriel)
+
+
 def _garder_tuiles(tuiles: list) -> list:
     """Une tuile sans valeur disparaît : un document remis à un acheteur n'a ni « — » ni zéro creux."""
     return [t for t in tuiles if t["valeur"]]
@@ -440,10 +445,10 @@ def _moyens(db: Session, org: Organization, cfg: Optional[MemoireConfig], jour: 
     nb_vehicules = sum(v["quantite"] for v in vehicules)
     nb_materiel = sum(m["quantite"] for m in materiel if not m["unite"])
     tuiles = _garder_tuiles([
-        _tuile(total_effectif, "personnes" if effectifs else "personnes clés"),
-        _tuile(chefs, "chefs d'équipe"),
-        _tuile(nb_vehicules, "véhicules"),
-        _tuile(nb_materiel or len(materiel), "matériels"),
+        _tuile_accordee(total_effectif, *(("personne", "personnes") if effectifs else ("personne clé", "personnes clés"))),
+        _tuile_accordee(chefs, "chef d'équipe", "chefs d'équipe"),
+        _tuile_accordee(nb_vehicules, "véhicule", "véhicules"),
+        _tuile_accordee(nb_materiel or len(materiel), "matériel", "matériels"),
     ])
     lignes_cles = [_ligne("Activités", _court(_t(_g(cfg, "activites") or _g(org, "activites")), 300)),
                    _ligne("Zone d'intervention", _t(_g(cfg, "zone_intervention")))]
@@ -512,7 +517,7 @@ def _identite(db: Session, org: Organization, cfg: Optional[MemoireConfig], jour
         _tuile(euros(derniere["valeur"], ht=False) if derniere and derniere["valeur"] is not None else
                (derniere["montant"] if derniere else ""), f"CA HT {derniere['annee']}" if derniere and derniere["annee"] else "CA HT"),
         _tuile(annee_creation.group(0) if annee_creation else "", "création"),
-        _tuile(nb_refs, "chantiers référencés"),
+        _tuile_accordee(nb_refs, "chantier référencé", "chantiers référencés"),
     ])
     return {
         "tuiles": tuiles, "lignes_cles": [],
@@ -595,9 +600,9 @@ def _certifications(db: Session, org: Organization, cfg: Optional[MemoireConfig]
 
     total = tableau["total"]
     tuiles = _garder_tuiles([
-        _tuile(total["chantiers"], "chantiers"), _tuile(total["montant"], "montant cumulé"),
+        _tuile_accordee(total["chantiers"], "chantier", "chantiers"), _tuile(total["montant"], "montant cumulé"),
         _tuile(total["sous_traitance"] if any(l["intervention"] for l in tableau["lignes"]) else "", "en sous-traitance"),
-        _tuile(total["donneurs_ordre"], "donneurs d'ordre"),
+        _tuile_accordee(total["donneurs_ordre"], "donneur d'ordre", "donneurs d'ordre"),
     ])
     return {
         "tuiles": tuiles, "lignes_cles": [],
