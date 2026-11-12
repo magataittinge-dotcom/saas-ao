@@ -251,10 +251,10 @@ Frontend connects via `EventSource` and progressively renders.
 
 ### 3.7 Profil mémoire vivant <!-- v2.5 - vision V1 FINALE -->
 
-Le profil entreprise est une **couche stable persistée en BDD** (`companies`, §4.2) — c'est le *profil mémoire vivant* du PRD §4.2. Il vit dans « Mon entreprise » (onglets Identité / Moyens / Certifications), **pas** dans une entrée « mémoire technique » séparée.
+Le profil entreprise est une **couche stable persistée en BDD** (design : `companies`, §4.2 ; réel : `organizations` + `memoire_configs`, §4) — c'est le *profil mémoire vivant* du PRD §4.2. Il vit dans « Mon entreprise » (onglets Identité / Moyens / Certifications), **pas** dans une entrée « mémoire technique » séparée.
 
 - **Lecture au moment T.** La génération du mémoire (Step 4) lit le profil **à l'instant de la génération** ; aucune reconstruction depuis zéro à chaque AO.
-- **Overrides locaux par mémoire.** Les modifications faites dans le pre-flight preview sont **locales au mémoire** par défaut (`memos.profile_overrides`, §4.3) ; une case « mettre à jour mon profil » les promeut dans `companies`.
+- **Overrides locaux par mémoire.** Les modifications faites dans le pre-flight preview sont **locales au mémoire** par défaut (réel : `memoires_techniques.profile_overrides`, `models/memoire.py`) ; une case « mettre à jour mon profil » les promeut dans le profil (`routers/memoire.py`, `update_profile`).
 - **Reformulation texte libre → Haiku.** Les champs narratifs libres (historique, présentation) sont reformulables via **Haiku 4.5** (coût négligeable), sans toucher aux données factuelles.
 - **Coût.** Profil stable + prompt caching (§3.3) tiennent la cible : **1er mémoire ≤ €1, suivants < €0,50**.
 
@@ -263,6 +263,8 @@ Le profil entreprise est une **couche stable persistée en BDD** (`companies`, �
 ## 4. Database Schema
 
 PostgreSQL 16. All tables `snake_case`, primary keys `id BIGSERIAL` (or `UUID` for externally-shared IDs). Timestamps `created_at`, `updated_at` on every table (managed via SQLAlchemy mixin).
+
+> **État du code (12/11/2026, head `0037`).** Les sous-sections ci-dessous gardent le design d'origine ; le schéma réel est celui des modèles (`backend/models/`, 24 tables) plus `rag_chunks` (créée en SQL par `0003`) et `alembic_version` : `audit_logs`, `avis_veille`, `checklist_items`, `compliance_items`, `couts_ia`, `documents`, `fiches_entreprise`, `lectures_depot`, `memoire_configs`, `memoire_templates`, `memoires_techniques`, `notifications`, `organizations`, `plans_memoire`, `preferences_veille`, `project_documents`, `projects`, `propositions_profil`, `qualifications`, `quota_consumptions`, `references`, `styles_entreprise`, `team_members`, `users`. Identifiants en chaînes UUID (`String`, ex. `models/organization.py`). Le profil entreprise vit dans `organizations` et `memoire_configs` (pas de table `companies`) ; les modifications locales d'un mémoire dans `memoires_techniques.profile_overrides` (pas `memos`). `alembic check` ne voit aucune différence entre modèles et migrations (`tests/test_alembic_check_r02.py`).
 
 ### 4.1 Core entities
 
@@ -1279,6 +1281,7 @@ The expert knowledge is **baked in at build time**, not retrieved at runtime —
 - **§7.11** — Limiteur réel (nginx 20 r/s ; slowapi unique, clé organisation, repli en mémoire, alerte R-05) et plafonds du jour ; « Coach » retiré (aucune route).
 - **§7.13** — Suppression du compte : immédiate sans abonnement payant, programmée avec (D23, `0035`, webhook, tâche quotidienne, annulation) ; purge des AO ; sauvegardes réelles.
 - **§8.3 / §8.6 / §8.10** — Index `0037` ; exécuteur de `to_thread` (R-04) ; quotas de la grille du 11/11 et budget d'IA du jour (60 €, réservations) à la place du « cost guard » 15 €/100 €/300 € jamais codé.
+- **§3.7 / §4** — Tables réelles (24 modèles + `rag_chunks` + `alembic_version`) en tête du schéma d'origine.
 - **§1 / §7.12 / §8.2** — Caches et progression en mémoire du processus ; écarts du schéma d'ensemble (pas de Coach, de WebSocket, de stockage objet ni de Sentry ; un seul processus API) ; table `audit_logs` réelle.
 - **§2** — Pile réelle : éditeur maison, `react-pdf`, sessions SQLAlchemy synchrones, PDF par LibreOffice, disque du VPS, RAG coupé, Sentry et `structlog` absents, `node --test` et ESLint.
 - **§10.6 / §10.7** — Variables réellement lues par le code. **§11.4** — Sirene câblé (API publique sans clé). **§11.5** — webhooks de D23 ; abonnement relu chez le fournisseur, offre lue dans le prix (PAIEMENT, PAIEMENT-2).
