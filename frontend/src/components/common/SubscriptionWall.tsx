@@ -7,6 +7,8 @@ import { api } from '@/services/api'
 import GrilleOffres, { PHRASE_RESILIATION } from '@/components/offres/GrilleOffres'
 import { useAuthStore } from '@/stores/authStore'
 import { estRefusSiret } from '@/lib/refus'
+import { gesteOffre } from '@/lib/murOffres'
+import { trouverOffre } from '@/lib/offres'
 
 interface Props {
   open: boolean
@@ -25,7 +27,9 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis', 
   const [loading, setLoading] = useState<string | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
   // Business, offre la plus haute (11/11/2026) : à son quota, rien à « passer » ; le refus du serveur dit la remise à zéro.
-  const business = useAuthStore((st) => st.organization?.plan) === 'business'
+  const plan = useAuthStore((st) => st.organization?.plan)
+  const business = plan === 'business'
+  const [portail, setPortail] = useState(false)
 
   const handleSubscribe = async (planId: string) => {
     setLoading(planId)
@@ -39,6 +43,20 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis', 
       setLoading(null)
     }
   }
+
+  // Une organisation qui paie déjà change d'offre sur le portail de paiement (le serveur refuse une seconde souscription).
+  const ouvrirPortail = async () => {
+    setPortail(true)
+    setErreur(null)
+    try {
+      const { data } = await api.get('/stripe/portal')
+      window.location.href = data.url
+    } catch {
+      setErreur('Le portail de paiement n’a pas pu s’ouvrir. Votre abonnement n’est pas touché : réessayez dans un instant.')
+      setPortail(false)
+    }
+  }
+  const paie = trouverOffre(plan) !== undefined
 
   // 402 SIRET (S-05) : l'AO offert attend un SIRET vérifié ; la phrase du serveur et le chemin vers Mon entreprise > Identité.
   if (estRefusSiret(message)) {
@@ -59,13 +77,23 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis', 
     {business ? null : (
     <GrilleOffres
         compacte
-        action={(offre) => (
-          <Bouton large onClick={() => handleSubscribe(offre.id)} enCours={loading === offre.id} libelleEnCours="Ouverture du paiement…">
-            {`Choisir ${offre.nom}`}
-          </Bouton>
-        )}
+        action={(offre) => {
+          const geste = gesteOffre(plan, offre.id)
+          if (geste === 'actuelle') return <p data-offre-actuelle="" className="flex min-h-11 items-center justify-center text-sm font-medium text-fg-2">Votre offre</p>
+          if (geste === 'portail') return (
+            <Bouton large onClick={() => { void ouvrirPortail() }} enCours={portail} libelleEnCours="Ouverture du portail…">
+              {`Passer à ${offre.nom}`}
+            </Bouton>
+          )
+          return (
+            <Bouton large onClick={() => handleSubscribe(offre.id)} enCours={loading === offre.id} libelleEnCours="Ouverture du paiement…">
+              {`Choisir ${offre.nom}`}
+            </Bouton>
+          )
+        }}
       />
     )}
+      {paie && !business && <p className="text-sm text-fg-2">Le changement d’offre se fait sur le portail de paiement sécurisé de Stripe, qui s’ouvre à la place de cette page.</p>}
         {erreur && <Message ton="erreur">{erreur}</Message>}
       <p className="text-xs text-fg-3">{PHRASE_RESILIATION}</p>
     </Dialogue>

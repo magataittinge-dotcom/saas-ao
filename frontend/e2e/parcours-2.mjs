@@ -567,11 +567,14 @@ async function parcoursC(nav, dossiers, largeur) {
     const p = (await api_(page, 'GET', `/api/projects/${ctx.id}`)).corps
     if (['analyzing', 'analyzed'].includes(p?.processing_status) || p?.status === 'analyzed') throw new Echec(`quota : l'AO est parti en lecture (${p?.processing_status})`)
     ctx.faits.push(`quota épuisé (${avant.analyses} analyses sur 5, Essentiel) : « ${M.murAbonnement} » s'ouvre, analyses ${avant.analyses} → ${apres.analyses}, 0 appel d'IA`)
-    // L'organisation est déjà en Essentiel : le mur lui propose quand même de « Choisir Essentiel » (et les trois boutons mènent
-    // au paiement, que le serveur refuse à une offre payante : 409 « déjà un abonnement actif »). Rien n'est cliqué.
-    if (await mur.getByRole('button', { name: M.choisirOffreEnCours, exact: true }).count()) {
-      constat(ctx, `mur d’abonnement d’une organisation en Essentiel : il propose « ${M.choisirOffreEnCours} » (son offre) et ses trois « Choisir … » ouvrent un paiement que le serveur refuse à une offre payante : components/common/SubscriptionWall.tsx:61-66, routers/stripe_billing.py:99-103`)
-    }
+    // L'organisation est déjà en Essentiel : son offre est marquée « Votre offre », sans bouton ; les autres passent par le
+    // portail de paiement (le serveur refuse une seconde souscription à une offre payante). Rien n'est cliqué (Stripe).
+    const choisir = await mur.getByRole('button', { name: /^Choisir / }).count()
+    if (choisir) throw new Echec(`mur d’abonnement d’une organisation en Essentiel : ${choisir} bouton(s) « Choisir … » (paiement refusé par le serveur)`)
+    if ((await mur.getByText(M.votreOffre, { exact: true }).count()) !== 1) throw new Echec(`mur d’abonnement : « ${M.votreOffre} » n’est pas marqué une fois`)
+    const passer = await mur.getByRole('button', { name: new RegExp(`^${M.passerA}`) }).count()
+    if (passer !== 2) throw new Echec(`mur d’abonnement : ${passer} bouton(s) « ${M.passerA}… », attendu 2 (Pro, Business)`)
+    ctx.faits.push(`mur d'une organisation en Essentiel : « ${M.votreOffre} » sans bouton, 2 « ${M.passerA}… » (portail de paiement)`)
     await page.keyboard.press('Escape')
     await mur.waitFor({ state: 'hidden', timeout: 10_000 })
     controlerConsole(ctx, 'mur fermé', CONSOLE_ATTENDUES.quota)
