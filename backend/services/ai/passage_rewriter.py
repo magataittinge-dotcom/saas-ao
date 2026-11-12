@@ -84,6 +84,9 @@ def _call_modele(passage: str, action: str, instruction: Optional[str],
         }],
         **extra,
     )
+    # Jetons facturés : ligne du journal (nombres seulement) et collecte de la route, inscrite dans couts_ia.
+    from services.jetons import ligne_jetons
+    print(ligne_jetons("reecriture_passage", modele, getattr(response, "usage", None)), flush=True)
     return "".join(b.text for b in response.content if hasattr(b, "text")).strip()
 
 

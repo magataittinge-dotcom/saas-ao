@@ -876,10 +876,17 @@ async def rewrite_passage_endpoint(
         target_type="project", target_id=project_id,
         extra={"action": payload.action, "chars": len(payload.passage)},
     )
+    from services import couts_ia, jetons
     try:
-        rewritten = await rewrite_passage(
-            payload.passage, payload.action, payload.instruction, regle,
-        )
+        # Dépense réelle inscrite dans couts_ia (budget d'IA du jour), même si la suite échoue après l'appel.
+        with jetons.collecter() as collecte:
+            try:
+                rewritten = await rewrite_passage(
+                    payload.passage, payload.action, payload.instruction, regle,
+                )
+            finally:
+                couts_ia.enregistrer_collecte(user.organization_id, "reecriture_passage", collecte,
+                                              reference=project_id)
     except Exception as e:
         import logging as _logging
         _logging.getLogger(__name__).error(
