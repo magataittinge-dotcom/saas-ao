@@ -55,3 +55,28 @@ def test_detail_d_export_d_une_autre_organisation_refuse(client, db_session, tes
     db_session.commit()
     _projet(db_session, autre.id, "proj-pac-autre", CONTENU)
     assert client.get("/api/projects/proj-pac-autre/export/detail").status_code == 404
+
+
+# Rédiger lit les comptes du mémoire par une lecture légère : les mêmes que le détail d'export, sans le reste.
+def test_lecture_legere_des_comptes_du_memoire_identique_au_detail(client, db_session, test_org):
+    _projet(db_session, test_org.id, "proj-pac-leger", CONTENU)
+    leger = client.get("/api/projects/proj-pac-leger/export/memoire-info")
+    assert leger.status_code == 200
+    assert leger.json() == client.get("/api/projects/proj-pac-leger/export/detail").json()["memoire_info"]
+    assert leger.json()["passages_a_completer"] == 4
+    assert set(leger.json()) == {"version", "generated_at", "sections_count", "estimated_pages", "passages_a_completer"}
+
+
+def test_lecture_legere_sans_memoire_rend_null(client, db_session, test_org):
+    _projet(db_session, test_org.id, "proj-pac-sans", None)
+    r = client.get("/api/projects/proj-pac-sans/export/memoire-info")
+    assert r.status_code == 200
+    assert r.json() is None
+
+
+def test_lecture_legere_d_une_autre_organisation_refusee(client, db_session, test_org):
+    autre = Organization(id="org-autre-pac-leger", name="Autre entreprise fictive")
+    db_session.add(autre)
+    db_session.commit()
+    _projet(db_session, autre.id, "proj-pac-leger-autre", CONTENU)
+    assert client.get("/api/projects/proj-pac-leger-autre/export/memoire-info").status_code == 404

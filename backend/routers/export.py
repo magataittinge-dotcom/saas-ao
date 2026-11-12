@@ -77,6 +77,42 @@ def _dpgf_du_lot(project, project_docs):
     return (propres or retenus or [None])[0]
 
 
+def _memoire_info(db: Session, memoire: Optional[MemoireTechnique], organization_id: str) -> Optional[MemoireExportInfo]:
+    """Les comptes du mémoire (sections, pages, passages à compléter) : UNE source pour le détail d'export et pour Rédiger."""
+    if not memoire:
+        return None
+    from models.organization import Organization
+    org_obj = db.query(Organization).filter(Organization.id == organization_id).first()
+    cj = memoire.content_json or {}
+    sections = 1  # preambule
+    for part_key in ("partie_a", "partie_b", "partie_c"):
+        part = cj.get(part_key, {})
+        if isinstance(part, dict):
+            sections += sum(1 for v in part.values() if v)
+    return MemoireExportInfo(
+        version=memoire.version,
+        generated_at=memoire.generated_at,
+        sections_count=sections,
+        estimated_pages=pages_estimees(cj),
+        passages_a_completer=compter_passages_a_completer(
+            cj, raison_sociale_vide=not nom_entreprise_effectif(org_obj, db)),
+    )
+
+
+@router.get("/{project_id}/export/memoire-info", response_model=Optional[MemoireExportInfo])
+def get_export_memoire_info(
+    project_id: str,
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """Les seuls comptes du mémoire que lit Rédiger (« N passages à compléter », le nombre de pages) : les mêmes que
+    `memoire_info` du détail d'export, sans les exigences, la checklist ni les pièces (Rédiger lisait 194 Ko de détail
+    pour deux nombres). `null` sans mémoire. Projet d'une autre organisation : 404."""
+    _get_project_or_404(project_id, user.organization_id, db)
+    memoire = db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project_id).first()
+    return _memoire_info(db, memoire, user.organization_id)
+
+
 @router.get("/{project_id}/export/detail", response_model=ExportDetail)
 def get_export_detail(
     project_id: str,
@@ -157,25 +193,7 @@ def get_export_detail(
         ))
 
     # Mémoire info
-    memoire_info = None
-    if memoire:
-        from models.organization import Organization
-        org_obj = db.query(Organization).filter(Organization.id == user.organization_id).first()
-        cj = memoire.content_json or {}
-        sections = 1  # preambule
-        for part_key in ("partie_a", "partie_b", "partie_c"):
-            part = cj.get(part_key, {})
-            if isinstance(part, dict):
-                sections += sum(1 for v in part.values() if v)
-        estimated_pages = pages_estimees(cj)
-        memoire_info = MemoireExportInfo(
-            version=memoire.version,
-            generated_at=memoire.generated_at,
-            sections_count=sections,
-            estimated_pages=estimated_pages,
-            passages_a_completer=compter_passages_a_completer(
-                cj, raison_sociale_vide=not nom_entreprise_effectif(org_obj, db)),
-        )
+    memoire_info = _memoire_info(db, memoire, user.organization_id)
 
     # DPGF info
     dpgf_info = None
