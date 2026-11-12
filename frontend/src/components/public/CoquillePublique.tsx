@@ -55,11 +55,12 @@ export default function CoquillePublique({ children, nav, className }: { childre
   )
 }
 
-/** Les liens de droite du site : Tarifs, Se connecter. Le geste principal (« Créer mon compte ») est dans la page. */
-export function NavSite({ tarifs = true }: { tarifs?: boolean }) {
+/** Les liens de droite du site : Tarifs, Se connecter. Le geste principal (« Créer mon compte ») est dans la page.
+ *  `tarifs="courant"` : sur la page Tarifs, le lien reste et dit qu'on y est (surface neutre, `aria-current`). */
+export function NavSite({ tarifs = true }: { tarifs?: boolean | 'courant' }) {
   return (
     <>
-      {tarifs && <Link to="/pricing" className={classesBouton('discret')}>Tarifs</Link>}
+      {tarifs && <Link to="/pricing" aria-current={tarifs === 'courant' ? 'page' : undefined} className={classesBouton('discret', tarifs === 'courant' ? 'bg-surface-1 text-fg' : undefined)}>Tarifs</Link>}
       <Link to="/login" className={classesBouton('secondaire')}>Se connecter</Link>
     </>
   )

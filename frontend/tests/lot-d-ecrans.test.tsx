@@ -67,12 +67,15 @@ test('site public : aucun chiffre ni promesse non sourcés, aucun point d’excl
   assert.ok(src.split('\n').length < 200, 'la page tient en moins de 200 lignes')
 })
 
-test('tarifs : la coquille du site (logo, retour, pied de page) et la grille du code, un seul aplat', () => {
+test('tarifs : la coquille du site (logo, page courante marquée dans l’en-tête, pied de page) et la grille du code, un seul aplat', () => {
   const html = rendre(<Pricing />)
   assert.equal(nb(html, /<h1/g), 1)
   assert.ok(/<h1[^>]*>Tarifs<\/h1>/.test(html))
   assert.equal(nb(html, /bg-accent-fill/g), 1)
-  assert.ok(html.includes('Retour au site') && html.includes('data-coquille-publique') && html.includes('href="/legal/cgv"'))
+  // jury, tour 1 : « Retour au site » faisait office de surtitre et l'en-tête perdait « Tarifs » sans dire qu'on y était
+  assert.ok(!html.includes('Retour au site') && html.includes('data-coquille-publique') && html.includes('href="/legal/cgv"'))
+  assert.match(html, /<a[^>]*aria-current="page"[^>]*href="\/pricing"|<a[^>]*href="\/pricing"[^>]*aria-current="page"/)
+  assert.ok(html.includes('aria-label="Synorix, accueil du site"'), 'le logo ramène au site')
   for (const o of OFFRES) assert.ok(html.includes(prixLibelle(o)) && html.includes(`href="/register?plan=${o.id}"`), o.nom)
   assert.doesNotMatch(sansCommentaires(lire('src/routes/Pricing.tsx')), /\d+ ?€/, 'aucun prix écrit dans la page')
 })
