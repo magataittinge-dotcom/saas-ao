@@ -150,3 +150,53 @@ def test_dossier_sans_lot_range_avant_le_correctif_sous_all_est_relu(client, db_
     monkeypatch.setattr(cf, "build_critical_fields", lambda *a, **k: (_ for _ in ()).throw(AssertionError("recalcul")))
     corps = client.get("/api/projects/p-sans-lot-ancien/critical-fields").json()
     assert corps["fields"]["date_limite_remise"]["value"]["date"] == "2027-03-12"
+
+
+def test_le_cache_des_champs_lus_suit_les_pieces_du_dossier(client, db_session, test_org, monkeypatch):
+    """RESTES-4 — la clé du cache `_LECTURES_CF` contient une empreinte des pièces : une pièce ajoutée, retypée ou
+    dont le texte arrive (extraction différée) sur un lot jamais rangé relance le calcul, sans redémarrage."""
+    import routers.analysis as analysis_mod
+    import services.critical_fields as cf
+    monkeypatch.setattr(analysis_mod, "_LECTURES_CF", analysis_mod.OrderedDict())
+    vraie, appels = cf.build_critical_fields, []
+
+    def espion(*a, **k):
+        appels.append(1)
+        return vraie(*a, **k)
+    monkeypatch.setattr(cf, "build_critical_fields", espion)
+    pid = "p-d05-pieces"
+    db_session.add(Project(id=pid, organization_id=test_org.id, name="AO", selected_lot="lot2",
+                           infos_marche=INFOS_MARCHE, criteres_jugement=CRITERES))
+    db_session.add(ProjectDocument(id="d-rc", project_id=pid, type="rc", file_url=f"/uploads/projects/{pid}/rc.pdf",
+                                   file_name="RC_Gueux.pdf", extracted_text=RC_TEXT))
+    db_session.commit()
+
+    def lire():
+        r = client.get(f"/api/projects/{pid}/critical-fields")
+        assert r.status_code == 200, r.text
+        return r.json()
+    lire()
+    lire()
+    assert len(appels) == 1                                            # le cache sert la seconde lecture
+
+    db_session.add(ProjectDocument(id="d-ccap", project_id=pid, type="autre", file_url=f"/uploads/projects/{pid}/c.pdf",
+                                   file_name="CCAP_Gueux.pdf", extracted_text=None))
+    db_session.commit()
+    lire()
+    assert len(appels) == 2                                            # pièce ajoutée
+
+    db_session.get(ProjectDocument, "d-ccap").type = "ccap"
+    db_session.commit()
+    lire()
+    assert len(appels) == 3                                            # pièce retypée
+
+    db_session.get(ProjectDocument, "d-ccap").extracted_text = CCAP_TEXT
+    db_session.commit()
+    sans_cache = cf.build_critical_fields(INFOS_MARCHE, CRITERES, db_session.query(ProjectDocument)
+                                          .filter(ProjectDocument.project_id == pid).all())
+    corps = lire()
+    assert len(appels) == 5                                            # texte arrivé (+ l'appel de référence)
+    assert {k: v.get("value") for k, v in corps["fields"].items()} == \
+        {k: v.get("value") for k, v in sans_cache.items()}
+    lire()
+    assert len(appels) == 5                                            # et le cache resert ensuite

@@ -933,10 +933,22 @@ def _safe_priority(value: str | None) -> str:
 
 # D-05 — un GET n'écrit plus. Les champs critiques d'un lot jamais analysé, ou dont la recherche des pages date d'une
 # version antérieure, sont calculés à la lecture et gardés dans un petit cache du processus (clé : projet, lot,
-# empreinte des données lues), pour ne pas relire les PDF à chaque appel.
+# empreinte des données lues, pièces du dossier comprises), pour ne pas relire les PDF à chaque appel.
 _LECTURES_CF: "OrderedDict[tuple, dict]" = OrderedDict()
 _LECTURES_CF_MAX = 256
 _LECTURES_CF_GARDE = threading.Lock()
+
+
+def _empreinte_des_pieces(db: Session, project_id: str) -> list:
+    """Empreinte légère des pièces lues par le calcul (identifiant, type, nom, date de dépôt, longueur du texte
+    extrait), sans charger les textes : une pièce ajoutée, retypée ou dont l'extraction différée vient de finir change
+    la clé du cache (sinon des champs périmés jusqu'au redémarrage)."""
+    from sqlalchemy import func
+    lignes = (db.query(ProjectDocument.id, ProjectDocument.type, ProjectDocument.file_name,
+                       ProjectDocument.uploaded_at, func.length(ProjectDocument.extracted_text))
+              .filter(ProjectDocument.project_id == project_id)
+              .order_by(ProjectDocument.id).all())
+    return [list(ligne) for ligne in lignes]
 
 
 def _champs_critiques_lus(db: Session, project: Project, avec_pages: bool = False) -> dict:
@@ -947,7 +959,8 @@ def _champs_critiques_lus(db: Session, project: Project, avec_pages: bool = Fals
     ranges = champs_ranges(project.critical_fields, project.selected_lot)
     if ranges is not None and not avec_pages:
         return ranges
-    empreinte = hashlib.sha1(json.dumps([ranges, project.infos_marche, project.criteres_jugement],
+    empreinte = hashlib.sha1(json.dumps([ranges, project.infos_marche, project.criteres_jugement,
+                                         _empreinte_des_pieces(db, project.id)],
                                         sort_keys=True, default=str).encode()).hexdigest()
     cle = (project.id, lot_key, avec_pages, empreinte)
     with _LECTURES_CF_GARDE:
