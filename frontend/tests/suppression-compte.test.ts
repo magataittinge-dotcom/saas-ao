@@ -75,3 +75,30 @@ test('point 74 : un membre ne voit ni « Supprimer mon compte » ni « Annuler l
   // les deux boutons ne sont rendus que hors du cas « membre »
   assert.match(comp, /\{membre \? \(\s*<span[^>]*>\{PHRASE_MEMBRE\}<\/span>\s*\) : prevue \?/)
 })
+
+// Relecture du 12/11, P1-3 : « Annuler la suppression » relançait tous les abonnements ouverts, en un clic, sans un mot.
+// Le serveur ne reprend plus que l'abonnement que la demande avait arrêté ; l'écran demande une confirmation qui dit
+// que l'abonnement reprend, avec la date du prochain prélèvement (ou qu'il reste arrêté).
+test('P1-3 : la confirmation de « Annuler la suppression » dit que l’abonnement reprend, date comprise', async () => {
+  const { phraseAnnulation, libelleConfirmerAnnulation } = await import('@/lib/suppressionCompte')
+  assert.equal(phraseAnnulation({ abonnement_repris: true, prochain_prelevement: '2030-03-14T10:00:00' }),
+    'Votre compte et toutes vos données sont conservés. Votre abonnement reprend : prochain prélèvement le 14 mars 2030.')
+  assert.equal(phraseAnnulation({ abonnement_repris: true, prochain_prelevement: null }),
+    'Votre compte et toutes vos données sont conservés. Votre abonnement reprend : il se renouvelle à la fin de la période en cours.')
+  assert.equal(phraseAnnulation({ abonnement_repris: false, prochain_prelevement: null }),
+    'Votre compte et toutes vos données sont conservés. Votre abonnement reste arrêté, comme avant votre demande.')
+  assert.equal(libelleConfirmerAnnulation({ abonnement_repris: true }), 'Reprendre l’abonnement')
+  assert.equal(libelleConfirmerAnnulation({ abonnement_repris: false }), 'Garder mon compte')
+})
+
+test('P1-3 : « Annuler la suppression » lit l’aperçu puis ouvre une confirmation (plus d’appel direct au clic)', () => {
+  const comp = sansCommentaires(lire('src/components/parametres/SuppressionCompte.tsx'))
+  const bouton = comp.slice(comp.indexOf('<Bouton variante="secondaire"'), comp.indexOf('Annuler la suppression\n'))
+  assert.match(bouton, /onClick=\{\(\) => \{ void ouvrir\(true\) \}\}/)
+  assert.doesNotMatch(bouton, /annuler\(\)/)
+  const dialogue = comp.slice(comp.indexOf('{apercuAnnulation && ('))
+  assert.match(dialogue, /<DialogueConfirmation/)
+  assert.match(dialogue, /description=\{phraseAnnulation\(apercuAnnulation\)\}/)
+  assert.match(dialogue, /onConfirmer=\{\(\) => \{ void annuler\(\) \}\}/)
+  assert.doesNotMatch(dialogue.slice(0, dialogue.indexOf('/>')), /\bdanger\b/)   // reprendre n'est pas un geste dangereux
+})

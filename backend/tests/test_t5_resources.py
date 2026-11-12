@@ -149,7 +149,8 @@ def test_webhook_subscription_deleted_downgrades_to_free(client, db_session, tes
 
     body = {
         "type": "customer.subscription.deleted",
-        "data": {"object": {"customer": "cus_down"}},
+        # P1-1 (12/11) : l'événement porte l'abonnement terminé, comme chez Stripe ; c'est celui de l'organisation.
+        "data": {"object": {"id": "sub_down", "customer": "cus_down"}},
     }
     resp = client.post("/api/stripe/webhook", json=body,
                        headers={"stripe-signature": "t=1,v1=ok"})

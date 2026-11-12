@@ -76,11 +76,14 @@ def controle_des_fichiers(
             fichiers.append(FichierAControler(chemin_zip))       # taille connue seulement à l'export
             continue
         try:
-            taille = entree.chemin.stat().st_size
+            etat = entree.chemin.stat()
+            taille = etat.st_size
+            # P2-3 — identité sur disque : un formulaire inchangé n'est pas relu à chaque appel.
+            cle = (str(entree.chemin.resolve()), etat.st_size, etat.st_mtime_ns)
         except OSError:
-            taille = None
+            taille, cle = None, None
         lire = _lecteur(entree.chemin) if entree.genre in _GENRES_LUS else None
-        fichiers.append(FichierAControler(chemin_zip, taille, lire))
+        fichiers.append(FichierAControler(chemin_zip, taille, lire, cle if lire else None))
 
     lignes = controler_fichiers(fichiers, limite)
     if chemin_memoire:

@@ -13,7 +13,8 @@
      (impayé, résiliation depuis le portail), rien n'est supprimé : retour à l'offre gratuite.
    - Filet : `executer_suppressions_echues` (tâche quotidienne `tasks.suppression_comptes`) exécute une demande dont la
      date est passée si le webhook n'est jamais arrivé, après la même vérification chez le fournisseur.
-   - Annulation tant que la date n'est pas passée : `reprendre_abonnements` (`cancel_at_period_end=False`).
+   - Annulation tant que la date n'est pas passée : `reprendre_abonnements` (`cancel_at_period_end=False`), un seul
+     abonnement, parmi ceux que la demande a elle-même arrêtés (trace dans `audit_logs`, P1-3).
    - Reprise depuis le portail du fournisseur (webhook `customer.subscription.updated` avec `cancel_at_period_end`
      faux) : la demande est retirée, sinon un arrêt d'abonnement des mois plus tard supprimerait le compte.
    Un échec du fournisseur lève `ResiliationImpossible` : la route répond 502 et rien ne change.
@@ -97,10 +98,11 @@ def apercu_fin_de_periode(org) -> datetime | None:
     return _fin_des_payants(payants) if payants else None
 
 
-def programmer_ou_resilier(org) -> datetime | None:
-    """Avec un abonnement payant vivant : met chaque abonnement ouvert en arrêt à l'échéance et rend la date de fin de
-    la période payée (la plus tardive) ; sinon résilie tout de suite les abonnements ouverts et rend None (suppression
-    immédiate). Ne touche pas à la base. Lève ResiliationImpossible."""
+def programmer_ou_resilier(org, arretes: list[str] | None = None) -> datetime | None:
+    """Avec un abonnement payant vivant : met en arrêt à l'échéance chaque abonnement ouvert qui renouvelait encore
+    (P1-3 : un abonnement que le client avait déjà arrêté n'est pas touché), ajoute leurs identifiants à `arretes`, et
+    rend la date de fin de la période payée (la plus tardive) ; sinon résilie tout de suite les abonnements ouverts et
+    rend None (suppression immédiate). Ne touche pas à la base. Lève ResiliationImpossible."""
     if not getattr(org, "stripe_subscription_id", None) and not getattr(org, "stripe_customer_id", None):
         return None
     try:
@@ -112,21 +114,76 @@ def programmer_ou_resilier(org) -> datetime | None:
                 fournisseur.cancel_subscription(sub["id"], at_period_end=False)
             return None
         for sub in ouverts:
+            if sub.get("cancel_at_period_end") is True:
+                continue
             fournisseur.cancel_subscription(sub["id"], at_period_end=True)
+            if arretes is not None:
+                arretes.append(sub["id"])
         return _fin_des_payants(payants)
     except Exception as exc:
         logger.error("Suppression du compte : abonnement non résilié (org=%s, %s)", org.id, type(exc).__name__)
         raise ResiliationImpossible() from exc
 
 
-def reprendre_abonnements(org) -> int:
-    """Annulation de la demande : remet en renouvellement chaque abonnement ouvert. Lève ResiliationImpossible."""
+# P1-3 — la demande se souvient des abonnements qu'elle a elle-même mis en arrêt : une ligne du journal d'audit
+# (`audit_logs`, table existante, append-only), écrite dans la même transaction que `suppression_prevue_le`.
+ACTION_DEMANDE = "compte.suppression_programmee"
+
+
+def noter_demande(db, org, user_id: str | None, arretes: list[str]) -> None:
+    """Ajoute à la session (sans valider) la trace de la demande : les abonnements qu'elle a mis en arrêt."""
+    from models.audit_log import AuditLog
+    db.add(AuditLog(user_id=user_id, organization_id=org.id, action=ACTION_DEMANDE, target_type="organization",
+                    target_id=org.id, extra={"abonnements_arretes": list(arretes)}))
+
+
+def abonnements_arretes_par_la_demande(db, org) -> list[str] | None:
+    """Les abonnements que la dernière demande de l'organisation a mis en arrêt ; None si aucune trace."""
+    from models.audit_log import AuditLog
+    ligne = (db.query(AuditLog)
+             .filter(AuditLog.organization_id == org.id, AuditLog.action == ACTION_DEMANDE)
+             .order_by(AuditLog.created_at.desc()).first())
+    if ligne is None:
+        return None
+    ids = (ligne.extra or {}).get("abonnements_arretes")
+    return [i for i in ids if isinstance(i, str)] if isinstance(ids, list) else None
+
+
+def _a_reprendre(fournisseur, org, arretes: list[str] | None) -> dict | None:
+    """L'abonnement que « Annuler la suppression » reprendrait : un seul, parmi ceux que la demande a arrêtés et qui
+    vivent encore (celui de l'organisation d'abord) ; sans trace de la demande, seulement celui de l'organisation."""
+    if arretes is None:
+        arretes = [org.stripe_subscription_id] if getattr(org, "stripe_subscription_id", None) else []
+    vivants = {s["id"]: s for s in _abonnements_ouverts(fournisseur, org)
+               if s.get("status") in STATUTS_PAYANTS_VIVANTS and s["id"] in arretes}
+    if not vivants:
+        return None
+    if org.stripe_subscription_id in vivants:
+        return vivants[org.stripe_subscription_id]
+    return vivants[sorted(vivants)[0]]
+
+
+def apercu_reprise(org, arretes: list[str] | None) -> dict:
+    """Ce que « Annuler la suppression » ferait, sans rien changer : `{"abonnement_repris", "prochain_prelevement"}`
+    (date de fin de la période en cours de l'abonnement repris, ou None). Lève ResiliationImpossible."""
+    try:
+        sub = _a_reprendre(_fournisseur(), org, arretes)
+    except Exception as exc:
+        logger.error("Suppression du compte : abonnement illisible (org=%s, %s)", org.id, type(exc).__name__)
+        raise ResiliationImpossible() from exc
+    return {"abonnement_repris": sub is not None, "prochain_prelevement": _fin_de_periode(sub) if sub else None}
+
+
+def reprendre_abonnements(org, arretes: list[str] | None = None) -> dict:
+    """Annulation de la demande : remet en renouvellement UN abonnement que la demande avait arrêté (P1-3 : jamais un
+    abonnement arrêté par le client lui-même, jamais un doublon de plus). Rend le même dict que `apercu_reprise`.
+    Lève ResiliationImpossible."""
     try:
         fournisseur = _fournisseur()
-        ouverts = _abonnements_ouverts(fournisseur, org)
-        for sub in ouverts:
+        sub = _a_reprendre(fournisseur, org, arretes)
+        if sub is not None:
             fournisseur.resume_subscription(sub["id"])
-        return len(ouverts)
+        return {"abonnement_repris": sub is not None, "prochain_prelevement": _fin_de_periode(sub) if sub else None}
     except Exception as exc:
         logger.error("Suppression du compte : abonnement non repris (org=%s, %s)", org.id, type(exc).__name__)
         raise ResiliationImpossible() from exc
@@ -137,6 +194,19 @@ def abonnement_payant_vivant(org) -> bool:
     if not getattr(org, "stripe_customer_id", None):
         return False
     return any(s.get("status") in STATUTS_PAYANTS_VIVANTS for s in _abonnements_ouverts(_fournisseur(), org))
+
+
+def abonnement_repris(org) -> bool:
+    """P1-2 — relu chez le fournisseur : un abonnement payant vivant renouvelle-t-il de nouveau (`cancel_at_period_end`
+    faux) ? Seul cet état retire une demande de suppression. Panne du fournisseur, ou état illisible : faux (la demande
+    reste ; le client peut l'annuler depuis Paramètres)."""
+    try:
+        ouverts = _abonnements_ouverts(_fournisseur(), org) if getattr(org, "stripe_customer_id", None) else []
+    except Exception as exc:
+        logger.warning("Reprise d'abonnement non vérifiée (org=%s) : fournisseur injoignable (%s)",
+                       org.id, type(exc).__name__)
+        return False
+    return any(s.get("status") in STATUTS_PAYANTS_VIVANTS and s.get("cancel_at_period_end") is False for s in ouverts)
 
 
 def executer_suppression(db, org_id: str, racine=None) -> dict:

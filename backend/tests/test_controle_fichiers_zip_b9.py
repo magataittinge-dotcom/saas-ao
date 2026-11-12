@@ -197,3 +197,61 @@ def test_le_controle_d_une_autre_organisation_reste_invisible(client, db_session
     r = client.get(url)
     assert r.status_code == 404
     assert "DC2" not in r.text
+
+
+# ─── P2-3 (relecture du 12/11) : 30 pages lues au plus, comme le dépôt (B7), et un cache par fichier ──────────
+
+def test_p2_3_un_formulaire_est_lu_sur_30_pages_au_plus(monkeypatch):
+    import services.pdf_lecture as pdf_lecture
+    from services.controle_fichiers_zip import FichierAControler, controler_fichiers
+    demandes = []
+    vrai = pdf_lecture.lire_document
+
+    def _espion(octets, max_pages=None, **kw):
+        demandes.append(max_pages)
+        return vrai(octets, max_pages=max_pages, **kw)
+    monkeypatch.setattr(pdf_lecture, "lire_document", _espion)
+    octets = pdf_texte(["Page sans rien"] * 2 + ["Nom : [À COMPLÉTER : nom]"])
+    lignes = controler_fichiers([FichierAControler("D/01_DC1.pdf", len(octets), lambda: octets)])
+    assert demandes == [30]
+    assert [l["pages"] for l in lignes if l["type"] == "a_completer"] == [[3]]
+
+
+def test_p2_3_un_fichier_inchange_n_est_pas_relu(monkeypatch):
+    from services import controle_fichiers_zip as cfz
+    monkeypatch.setattr(cfz, "_CACHE", type(cfz._CACHE)())
+    lectures = []
+    octets = _docx("Chiffre d'affaires : [À COMPLÉTER : CA 2025]")
+
+    def lire():
+        lectures.append(1)
+        return octets
+
+    def controle(cle, nom="D/01_DC2_rempli.docx"):
+        return cfz.controler_fichiers([cfz.FichierAControler(nom, len(octets), lire, cle)])
+
+    premier = controle(("/u/projects/p/completed/u_DC2.docx", len(octets), 111))
+    assert controle(("/u/projects/p/completed/u_DC2.docx", len(octets), 111)) == premier
+    assert len(lectures) == 1                                   # même fichier, même date : lu une fois
+    controle(("/u/projects/p/completed/u_DC2.docx", len(octets), 222))
+    assert len(lectures) == 2                                   # modifié : relu
+    autre = controle(("/u/projects/p/completed/u_DC2.docx", len(octets), 222), nom="D/02_Autre_nom.docx")
+    assert autre[0]["fichier"] == "D/02_Autre_nom.docx"         # la ligne garde le nom de CE fichier du ZIP
+    assert len(lectures) == 2
+    controle(None)
+    controle(None)
+    assert len(lectures) == 4                                   # sans clé (ZIP en mémoire) : jamais de cache
+
+
+def test_p2_3_la_route_ne_relit_pas_un_formulaire_inchange(client, db_session, test_org, uploads, monkeypatch):
+    from services import controle_fichiers_zip as cfz
+    monkeypatch.setattr(cfz, "_CACHE", type(cfz._CACHE)())
+    lus = []
+    vrai = cfz._textes_par_page
+    monkeypatch.setattr(cfz, "_textes_par_page", lambda nom, octets: lus.append(nom) or vrai(nom, octets))
+    url = _dossier(db_session, test_org.id, uploads)
+    premier = client.get(url).json()
+    n = len(lus)
+    assert n >= 1                                               # le DC2 et l'acte d'engagement remplis
+    assert client.get(url).json() == premier
+    assert len(lus) == n                                        # rien relu au second appel

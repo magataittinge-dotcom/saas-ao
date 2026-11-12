@@ -121,8 +121,19 @@ def account_deletion_preview(
         fin = resiliation_compte.apercu_fin_de_periode(org)
     except resiliation_compte.ResiliationImpossible:
         raise HTTPException(status_code=502, detail="Le service de paiement n’a pas répondu. Réessayez dans un instant.")
+    # P1-3 — demande faite : ce que « Annuler la suppression » reprendrait (un abonnement, et la date du prochain
+    # prélèvement), pour que la confirmation le dise.
+    reprise = {"abonnement_repris": False, "prochain_prelevement": None}
+    if org.suppression_prevue_le is not None:
+        try:
+            reprise = resiliation_compte.apercu_reprise(
+                org, resiliation_compte.abonnements_arretes_par_la_demande(db, org))
+        except resiliation_compte.ResiliationImpossible:
+            raise HTTPException(status_code=502, detail="Le service de paiement n’a pas répondu. Réessayez dans un instant.")
     return {"immediate": fin is None, "fin_de_periode": _date_iso(fin),
-            "suppression_prevue_le": _date_iso(org.suppression_prevue_le)}
+            "suppression_prevue_le": _date_iso(org.suppression_prevue_le),
+            "abonnement_repris": reprise["abonnement_repris"],
+            "prochain_prelevement": _date_iso(reprise["prochain_prelevement"])}
 
 
 @router.delete("/me", status_code=200)
@@ -144,13 +155,16 @@ def delete_my_account(
     org_id = user.organization_id
     # S-03 — le fournisseur de paiement d'abord : un échec ne change rien.
     org = db.query(Organization).filter(Organization.id == org_id).first()
+    arretes: list[str] = []
     try:
-        fin = resiliation_compte.programmer_ou_resilier(org) if org is not None else None
+        fin = resiliation_compte.programmer_ou_resilier(org, arretes) if org is not None else None
     except resiliation_compte.ResiliationImpossible:
         raise HTTPException(status_code=502, detail="L’abonnement n’a pas pu être résilié : rien n’a été supprimé. "
                                                     "Réessayez dans quelques minutes ou écrivez-nous.")
     if fin is not None:
         org.suppression_prevue_le = fin
+        # P1-3 — la demande se souvient de ce qu'elle a arrêté (même transaction) : l'annulation ne reprendra que cela.
+        resiliation_compte.noter_demande(db, org, user.id, arretes)
         db.commit()
         logger.info("RGPD: suppression du compte programmée — org=%s, le %s", org_id, fin.date().isoformat())
         return {"deleted": False, "suppression_prevue_le": _date_iso(fin)}
@@ -169,7 +183,8 @@ def cancel_account_deletion(
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ):
-    """D23 — retire la demande de suppression tant que sa date n'est pas passée ; l'abonnement renouvelle de nouveau."""
+    """D23 — retire la demande de suppression tant que sa date n'est pas passée. P1-3 : un seul abonnement renouvelle de
+    nouveau, parmi ceux que la demande avait elle-même arrêtés (jamais celui que le client avait arrêté avant)."""
     _exiger_admin(user)
     from datetime import datetime
 
@@ -182,14 +197,16 @@ def cancel_account_deletion(
     if org.suppression_prevue_le <= datetime.utcnow():
         raise HTTPException(status_code=409, detail="La date de suppression est passée : la suppression est en cours.")
     try:
-        resiliation_compte.reprendre_abonnements(org)
+        reprise = resiliation_compte.reprendre_abonnements(
+            org, resiliation_compte.abonnements_arretes_par_la_demande(db, org))
     except resiliation_compte.ResiliationImpossible:
         raise HTTPException(status_code=502, detail="L’abonnement n’a pas pu être repris : la suppression reste prévue. "
                                                     "Réessayez dans quelques minutes ou écrivez-nous.")
     org.suppression_prevue_le = None
     db.commit()
     logger.info("RGPD: suppression du compte annulée — org=%s", org.id)
-    return {"suppression_prevue_le": None}
+    return {"suppression_prevue_le": None, "abonnement_repris": reprise["abonnement_repris"],
+            "prochain_prelevement": _date_iso(reprise["prochain_prelevement"])}
 
 
 @router.delete("/team/{member_id}", status_code=204)

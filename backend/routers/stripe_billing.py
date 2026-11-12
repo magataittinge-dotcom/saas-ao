@@ -45,6 +45,45 @@ PRODUCTS = produits_stripe(settings)
 
 OFFRES_PAYANTES = ("essentiel", "pro", "business")
 
+# Abonnement qui ouvre une offre au retour du paiement (verify-session) : payé ou à l'essai. `past_due`, `incomplete`,
+# `unpaid`, `canceled`… : rien n'est rendu (le webhook tient l'offre d'un abonnement déjà appliqué).
+STATUTS_OFFRE_OUVERTE = ("active", "trialing")
+
+
+def offre_de_l_abonnement(sub: dict) -> str | None:
+    """L'offre (essentiel, pro, business) du produit du prix de la première ligne de l'abonnement ; None si inconnu."""
+    items = sub.get("items") if isinstance(sub.get("items"), dict) else {}
+    lignes = (items or {}).get("data") or []
+    if not lignes or not isinstance(lignes[0], dict):
+        return None
+    product_id = (lignes[0].get("price") or {}).get("product")
+    if isinstance(product_id, dict):                       # prix « expand » : le produit est un objet
+        product_id = product_id.get("id")
+    return next((offre for offre, pid in PRODUCTS.items() if product_id and pid == product_id), None)
+
+
+def _fin_qui_concerne_l_organisation(org: Organization, sub_id: str | None) -> bool:
+    """`customer.subscription.deleted` : vrai si l'abonnement terminé est celui de l'organisation (ou si elle n'en connaît
+    aucun), ou s'il ne lui reste plus aucun abonnement payé vivant chez le fournisseur. Fournisseur injoignable : faux
+    (rien ne change ; l'événement de l'abonnement de l'organisation, lui, agira)."""
+    if not org.stripe_subscription_id or sub_id == org.stripe_subscription_id:
+        return True
+    from services import resiliation_compte
+    try:
+        return not resiliation_compte.abonnement_payant_vivant(org)
+    except Exception as exc:
+        logger.warning("Fin d'abonnement : fournisseur injoignable (org=%s, %s)", org.id, type(exc).__name__)
+        return False
+
+
+def _abonnement_lu(billing, sub_id: str) -> dict | None:
+    """L'abonnement chez le fournisseur ; None s'il est illisible (rien n'est alors appliqué : le webhook rattrapera)."""
+    try:
+        sub = billing.retrieve_subscription(sub_id)
+    except BillingError:
+        return None
+    return sub if isinstance(sub, dict) else None
+
 
 def _get_or_create_customer(org: Organization, user: User) -> str:
     """Return the customer id, creating one on the active provider if needed."""
@@ -197,33 +236,40 @@ def verify_session(
             detail="Cette session de paiement n'appartient pas à votre organisation.",
         )
 
-    plan = metadata.get("plan")
-
-    if not plan and session.get("subscription"):
-        try:
-            sub = billing.retrieve_subscription(session["subscription"])
-            items = sub.get("items", {}).get("data", []) if isinstance(sub.get("items"), dict) else []
-            if items:
-                product_id = items[0].get("price", {}).get("product")
-                for plan_name, pid in PRODUCTS.items():
-                    if pid == product_id:
-                        plan = plan_name
-                        break
-        except BillingError:
-            pass
-
-    if not plan:
-        return {"plan": "free", "updated": False}
-
     org = db.query(Organization).filter(Organization.id == user.organization_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Organisation introuvable")
 
+    # P0-1 (relecture du 12/11) — une session reste « paid » à vie chez Stripe : rejouée après la fin de l'abonnement
+    # (portail, impayé) ou après une baisse d'offre, elle rendait l'offre de ses métadonnées sans paiement. L'offre
+    # n'est donc appliquée que si l'abonnement de la session vit (`active`, `trialing`), appartient au client de
+    # l'organisation, et elle se lit dans le PRIX de cet abonnement, jamais dans les métadonnées de la session.
+    sub_id = session.get("subscription")
+    sub = _abonnement_lu(billing, sub_id) if sub_id else None
+    if not sub or sub.get("status") not in STATUTS_OFFRE_OUVERTE:
+        return {"plan": "free", "updated": False}
+    client_session = session.get("customer")
+    client_sub = sub.get("customer") or client_session
+    if (client_session and client_sub != client_session) or (
+            org.stripe_customer_id and client_sub and client_sub != org.stripe_customer_id):
+        logger.warning("verify-session refusée : abonnement d'un autre client (org=%s)", org.id)
+        return {"plan": "free", "updated": False}
+    plan = offre_de_l_abonnement(sub)
+    if not plan:
+        return {"plan": "free", "updated": False}
+
+    # Session déjà appliquée (webhook arrivé d'abord, retour rechargé) : rien n'est écrit une seconde fois (pas de
+    # fenêtre de quotas neuve) ; l'écran reçoit l'offre en cours. Un AUTRE abonnement déjà connu n'est jamais remplacé
+    # par une vieille session : les changements d'offre passent par le portail (webhook `updated`).
+    if org.stripe_subscription_id == sub_id:
+        return {"plan": org.plan, "updated": (org.plan or "free") != "free"}
+    if org.stripe_subscription_id:
+        return {"plan": org.plan or "free", "updated": False}
+
     org.plan = plan
-    if session.get("customer"):
-        org.stripe_customer_id = session["customer"]
-    if session.get("subscription"):
-        org.stripe_subscription_id = session["subscription"]
+    if client_sub:
+        org.stripe_customer_id = client_sub
+    org.stripe_subscription_id = sub_id
     # Ancre du reset mensuel des quotas (C1) : date de souscription.
     if org.subscription_started_at is None:
         org.subscription_started_at = datetime.utcnow()
@@ -232,10 +278,17 @@ def verify_session(
     return {"plan": plan, "updated": True}
 
 
+async def _corps_brut(request: Request) -> bytes:
+    """Le corps exact de la requête (la signature de Stripe porte sur ces octets), lu sur la boucle d'événements."""
+    return await request.body()
+
+
 @router.post("/webhook")
 @limiter.limit("100/minute")
-async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
-    payload = await request.body()
+def stripe_webhook(request: Request, payload: bytes = Depends(_corps_brut), db: Session = Depends(get_db)):
+    # P2-1 (relecture du 12/11) — `def`, pas `async def` : FastAPI sert la route dans un fil. Les appels bloquants
+    # qu'elle fait (Stripe : jusqu'à 80 s de délai par défaut, base, effacement des fichiers, Clerk : 10 s par
+    # utilisateur) ne gèlent plus la boucle d'événements de l'unique processus de l'API.
     sig_header = request.headers.get("stripe-signature", "")
 
     billing = get_billing_provider()
@@ -300,6 +353,11 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         customer_id = data_object.get("customer")
         if customer_id:
             org = db.query(Organization).filter(Organization.stripe_customer_id == customer_id).first()
+            # P1-1 (relecture du 12/11) — la fin d'un AUTRE abonnement (doublon S-13, ancien abonnement, événement livré
+            # en retard) ne touche ni l'offre ni la demande D23, tant qu'un abonnement payé vit encore chez le fournisseur.
+            if org and not _fin_qui_concerne_l_organisation(org, data_object.get("id")):
+                logger.info("Fin d'un autre abonnement ignorée (org=%s)", org.id)
+                return {"received": True}
             if org and org.suppression_prevue_le is not None:
                 from services import resiliation_compte
                 if resiliation_compte.supprimer_si_demande(db, org):
@@ -313,29 +371,37 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     # ── customer.subscription.updated → handle plan changes ───────────────────
     elif event_type == "customer.subscription.updated":
         customer_id = data_object.get("customer")
-        if customer_id and data_object.get("status") == "active":
-            org = db.query(Organization).filter(Organization.stripe_customer_id == customer_id).first()
-            if org:
-                # D23 — abonnement remis en renouvellement depuis le portail : la demande de suppression tombe (sinon
-                # un arrêt d'abonnement des mois plus tard supprimerait le compte).
-                if org.suppression_prevue_le is not None and data_object.get("cancel_at_period_end") is False:
-                    org.suppression_prevue_le = None
-                old_plan = org.plan
-                items = (data_object.get("items") or {}).get("data") or []
-                if items:
-                    product_id = (items[0].get("price") or {}).get("product")
-                    for plan_name, pid in PRODUCTS.items():
-                        if pid == product_id:
-                            org.plan = plan_name
-                            break
-                org.stripe_subscription_id = data_object.get("id")
-                # Changement de plan → nouvelle ancre de quotas : les
-                # consommations de la période précédente (Business 70/mois)
-                # ne bloquent pas le nouveau plan (downgrade business→pro
-                # sinon = 402 immédiat). Même plan → ancre inchangée (pas de
-                # fenêtre offerte à chaque événement Stripe).
-                if org.plan != old_plan:
-                    org.subscription_started_at = datetime.utcnow()
+        org = (db.query(Organization).filter(Organization.stripe_customer_id == customer_id).first()
+               if customer_id else None)
+        # D23 — abonnement remis en renouvellement depuis le portail : la demande de suppression tombe (sinon un arrêt
+        # d'abonnement des mois plus tard supprimerait le compte). P1-2 (relecture du 12/11) : on ne croit pas le contenu
+        # de l'événement (un événement plus ancien que la demande, réessayé par Stripe après une coupure, dit
+        # `cancel_at_period_end: false` alors que l'abonnement s'arrête bien) : l'état est RELU chez le fournisseur.
+        # Plus sûr que la date de l'événement (`created`, à la seconde, ordre de livraison non garanti) : l'état relu
+        # est ce qui se passera à l'échéance. Vaut aussi pendant un impayé (`past_due`).
+        if (org is not None and org.suppression_prevue_le is not None
+                and data_object.get("cancel_at_period_end") is False):
+            from services import resiliation_compte
+            if resiliation_compte.abonnement_repris(org):
+                org.suppression_prevue_le = None
                 db.commit()
+        if org is not None and data_object.get("status") == "active":
+            old_plan = org.plan
+            items = (data_object.get("items") or {}).get("data") or []
+            if items:
+                product_id = (items[0].get("price") or {}).get("product")
+                for plan_name, pid in PRODUCTS.items():
+                    if pid == product_id:
+                        org.plan = plan_name
+                        break
+            org.stripe_subscription_id = data_object.get("id")
+            # Changement de plan → nouvelle ancre de quotas : les
+            # consommations de la période précédente (Business 70/mois)
+            # ne bloquent pas le nouveau plan (downgrade business→pro
+            # sinon = 402 immédiat). Même plan → ancre inchangée (pas de
+            # fenêtre offerte à chaque événement Stripe).
+            if org.plan != old_plan:
+                org.subscription_started_at = datetime.utcnow()
+            db.commit()
 
     return {"received": True}
