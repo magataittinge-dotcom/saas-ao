@@ -84,8 +84,11 @@ async function lancerApi() {
   throw new Echec('API simulée : pas de réponse en 90 s')
 }
 function arreterApi() {
-  if (api && api.exitCode === null) { try { process.kill(-api.pid, 'SIGTERM') } catch { /* déjà arrêtée */ } }
+  // SIGKILL : après SIGTERM, uvicorn s'arrête mais des fils de travail (lecture, rédaction) gardaient le processus en vie.
+  if (api && api.exitCode === null) { try { process.kill(-api.pid, 'SIGKILL') } catch { /* déjà arrêtée */ } }
 }
+// Interrompu (Ctrl C, délai dépassé) : l'API simulée ne doit pas survivre au test, elle garderait le port.
+for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => { arreterApi(); process.exit(130) })
 
 function appelsDepuis(debut) {
   const lignes = readFileSync(APPELS, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l))
@@ -242,6 +245,10 @@ async function etapeDecider(ctx) {
     }
   }
   await controler(ctx, 'decider', { fil: FIL[2] })
+  // La décision revient à l'utilisateur : « On y va » doit lui être proposé avant toute suite.
+  if (!(await bouton(page, VERBES.yAller, true).count())) {
+    constat(ctx, 'SynorixScoreCard.tsx:74 — la fiche « On y va ? » dit « Vous avez décidé d’y aller » dès la fin de l’analyse, sans décision : decideAller lit completed_steps["3"], que routers/analysis.py:826 pose à la fin de la lecture (current_step passe à 4, aDecider d’action.ts:35 n’est jamais vrai, l’en-tête dit « Passer aux pièces », StepAnalysis.tsx:178)')
+  }
   await action.click()
 }
 
@@ -522,5 +529,5 @@ for (const b of bilan) {
   for (const p of b.pannes) dire(`  panne (${b.largeur.nom}) : ${p}`)
   for (const c of b.j.connues) dire(`  CONSTAT (${b.largeur.nom}) : ${c}`)
 }
-console.log(code === 0 ? `\nE2E VERT : ${bilan.length} passages, ${sec().trim()} s, captures dans ${CAPTURES}` : `\nE2E ROUGE (${sec().trim()} s)`)
+console.log(code === 0 ? `\nE2E VERT : ${bilan.length} parcours (ordinateur, téléphone${bilan.length > 2 ? ', panne IA' : ''}), ${sec().trim()} s, captures dans ${CAPTURES}` : `\nE2E ROUGE (${sec().trim()} s)`)
 process.exit(code)

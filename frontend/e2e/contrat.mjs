@@ -11,6 +11,7 @@ export const NOM_FIL = 'Étapes de l’appel d’offres'
 export const VERBES = {
   zoneDepot: 'DCE, dossier de l’acheteur',
   analyserLot: 'Analyser 1 lot',
+  yAller: 'On y va',
   passerPieces: 'Passer aux pièces',
   reunir: 'Réunir les pièces',
   deposerFormulaire: 'Déposer le formulaire',
