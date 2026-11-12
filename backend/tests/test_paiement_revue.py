@@ -346,3 +346,69 @@ def test_p1_2_fournisseur_injoignable_la_demande_reste(client, abonne, poser, db
     f.panne = True
     assert _webhook(client, "customer.subscription.updated", _repris()).status_code == 200
     assert _org(db_session).suppression_prevue_le is not None
+
+
+# ── P1-3 : « Annuler la suppression » ne reprend que ce que la demande a elle-même arrêté, un seul abonnement ─────
+
+def test_p1_3_annuler_ne_relance_ni_l_abonnement_deja_arrete_par_le_client_ni_deux(client, abonne, poser, db_session):
+    deja_arrete = _abonnement(cancel_at_period_end=True)                 # arrêté par le client, AVANT la demande
+    doublon = _abonnement(id_="sub_doublon")                             # S-13 : deux paiements simultanés
+    f = FauxFournisseur([deja_arrete, doublon])
+    poser(f)
+    assert client.delete("/api/users/me").json()["deleted"] is False
+    assert f.resilies == [("sub_doublon", True)]                         # la demande n'arrête que ce qui renouvelait
+    r = client.post("/api/users/me/annuler-suppression")
+    assert r.status_code == 200, r.text
+    assert f.repris == ["sub_doublon"]                                   # jamais sub_invente, arrêté par le client
+    assert r.json()["abonnement_repris"] is True
+
+
+def test_p1_3_annuler_reprend_un_seul_abonnement_celui_de_l_organisation(client, abonne, poser, db_session):
+    f = FauxFournisseur([_abonnement(id_="sub_doublon"), _abonnement()])
+    poser(f)
+    client.delete("/api/users/me")
+    assert sorted(f.resilies) == [("sub_doublon", True), ("sub_invente", True)]
+    r = client.post("/api/users/me/annuler-suppression")
+    assert f.repris == ["sub_invente"]                                   # un seul prélèvement repris
+    corps = r.json()
+    assert corps["suppression_prevue_le"] is None
+    assert corps["abonnement_repris"] is True and corps["prochain_prelevement"].startswith("2030-03-14")
+
+
+def test_p1_3_abonnement_arrete_par_le_client_seul_rien_n_est_repris(client, abonne, poser, db_session):
+    f = FauxFournisseur([_abonnement(cancel_at_period_end=True)])
+    poser(f)
+    assert client.delete("/api/users/me").json()["deleted"] is False
+    assert f.resilies == []
+    apercu = client.get("/api/users/me/suppression").json()
+    assert apercu["abonnement_repris"] is False                          # l'écran ne promet pas de reprise
+    r = client.post("/api/users/me/annuler-suppression")
+    assert r.status_code == 200 and r.json()["abonnement_repris"] is False
+    assert f.repris == []
+    assert _org(db_session).suppression_prevue_le is None
+
+
+def test_p1_3_l_apercu_dit_la_reprise_et_la_date_du_prochain_prelevement(client, abonne, poser, db_session):
+    f = FauxFournisseur([_abonnement()])
+    poser(f)
+    assert client.get("/api/users/me/suppression").json()["abonnement_repris"] is False   # pas de demande
+    client.delete("/api/users/me")
+    apercu = client.get("/api/users/me/suppression").json()
+    assert apercu["abonnement_repris"] is True
+    assert apercu["prochain_prelevement"].startswith("2030-03-14")
+    assert f.repris == []                                                # l'aperçu ne change rien
+
+
+def test_p1_3_la_memoire_de_la_demande_est_celle_de_l_organisation(client, abonne, poser, db_session):
+    from models.audit_log import AuditLog
+    f = FauxFournisseur([_abonnement()])
+    poser(f)
+    client.delete("/api/users/me")
+    lignes = db_session.query(AuditLog).filter(AuditLog.action == "compte.suppression_programmee").all()
+    assert [(l.organization_id, l.extra["abonnements_arretes"]) for l in lignes] == [("org-test-1", ["sub_invente"])]
+    # La ligne d'une autre organisation qui citerait le même abonnement n'est jamais lue.
+    db_session.add(AuditLog(organization_id="org-autre", action="compte.suppression_programmee",
+                            extra={"abonnements_arretes": ["sub_doublon"]}))
+    db_session.commit()
+    client.post("/api/users/me/annuler-suppression")
+    assert f.repris == ["sub_invente"]
