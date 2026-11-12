@@ -232,6 +232,11 @@ def main() -> None:
     os.chdir(BACKEND)
     sys.path.insert(0, str(BACKEND))
     os.environ["ANTHROPIC_API_KEY"] = "simulee-e2e"
+    # Les plafonds du jour restent ACTIFS (jamais 0) : relevés seulement, pour qu'une journée de passages du test (quatre
+    # lancements par passage) ne bute pas sur les 20 lancements d'une vraie entreprise. Le budget d'IA reste tel quel :
+    # l'usage simulé vaut 0 jeton, la réservation se libère à la fin de chaque travail.
+    os.environ.setdefault("PLAFOND_JOUR_ANALYSES", "500")
+    os.environ.setdefault("PLAFOND_JOUR_MEMOIRES", "500")
     import anthropic
     anthropic.Anthropic = FauxAnthropic  # la couture : tout `anthropic.Anthropic(...)` du produit
     import uvicorn

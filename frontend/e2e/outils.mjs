@@ -78,31 +78,19 @@ export async function seConnecter(page, base, racine, email) {
 }
 
 /**
- * Garde des requêtes /api : note chaque réponse, rejoue (3 fois, 2,5 s d'écart) une réponse 401 « session expirée »
- * due au retard d'horloge de WSL sur le jeton de Clerk ; compte les 5xx.
+ * Garde des requêtes /api : chaque réponse est notée (événement « response » : il voit aussi les dépôts multipart et les
+ * flux), les 5xx et les 401 sont comptées. Aucune interception : route.fetch() bloquait les requêtes derrière le
+ * mandataire de Vite. La tolérance d'horloge du jeton de Clerk est dans le serveur ; la reprise de connexion est dans
+ * seConnecter (trois essais) et dans le parcours (une 401 relance la connexion puis l'étape).
  */
-export async function garderRequetes(page, journal) {
-  await page.route('**/api/**', async (route) => {
-    try {
-      // flux d'avancement (SSE) : jamais tamponné, il ne finit pas
-      if ((route.request().headers().accept || '').includes('text/event-stream')) return route.continue()
-      let rep
-      for (let essai = 1; essai <= 4; essai++) {
-        // corps binaire (dépôt multipart) remis tel quel : sans cela, route.fetch() le réencode
-        const corps = route.request().postDataBuffer()
-        rep = await route.fetch(corps ? { postData: corps } : undefined)
-        if (rep.status() !== 401 || essai === 4) break
-        journal.reprises401 += 1
-        await new Promise((r) => setTimeout(r, 2500))
-      }
-      const req = route.request()
-      const p = new URL(req.url()).pathname
-      journal.requetes.push({ m: req.method(), p, s: rep.status(), t: Date.now() })
-      if (rep.status() >= 500) journal.erreurs5xx.push(`${req.method()} ${p} → ${rep.status()}`)
-      return route.fulfill({ response: rep })
-    } catch {
-      // page fermée pendant une requête en vol
-    }
+export function garderRequetes(page, journal) {
+  page.on('response', (rep) => {
+    const req = rep.request()
+    const u = new URL(req.url())
+    if (!u.pathname.startsWith('/api/')) return
+    journal.requetes.push({ m: req.method(), p: u.pathname, s: rep.status(), t: Date.now() })
+    if (rep.status() >= 500) journal.erreurs5xx.push(`${req.method()} ${u.pathname} → ${rep.status()}`)
+    if (rep.status() === 401) journal.reprises401 += 1
   })
 }
 

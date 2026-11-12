@@ -8,6 +8,7 @@
     "build": "tsc && vite build && node scripts/precompresser.mjs",
     "preview": "vite preview",
     "test": "node scripts/run-tests.mjs",
+    "e2e": "node e2e/parcours.mjs",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
@@ -57,6 +58,7 @@
     "zustand": "^4.5.4"
   },
   "devDependencies": {
+    "playwright-core": "1.61.1",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@typescript-eslint/eslint-plugin": "^7.15.0",

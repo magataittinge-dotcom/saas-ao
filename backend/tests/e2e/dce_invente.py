@@ -137,11 +137,15 @@ def ecrire(dossier: Path) -> list[Path]:
     dpgf = dossier / "DPGF.xlsx"
     dpgf.write_bytes(dpgf_xlsx())
     sorties.append(dpgf)
+    # La pièce que l'entreprise joint à l'étape Pièces (hors archive) : un DC2 rempli, inventé lui aussi.
+    dc2 = ecrire_pdf(dossier / "DC2 - Entreprise E2E.pdf",
+                     ["DECLARATION DU CANDIDAT (DC2)\nEntreprise E2E Batiment\nSIRET fictif : 000 000 000 00000\n"
+                      f"Consultation : {OBJET} - {LOT1}"])
     archive = dossier / NOM_ZIP
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as z:
         for f in sorties:
             z.write(f, f.name)
-    return [archive, *sorties]
+    return [archive, *sorties, dc2]
 
 
 if __name__ == "__main__":
