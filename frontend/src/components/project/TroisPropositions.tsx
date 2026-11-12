@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { Bouton } from '@/components/ui/bouton'
 import { GroupeRadio } from '@/components/ui/case'
 import { Dialogue } from '@/components/ui/dialogue'
 import { Interrupteur } from '@/components/ui/interrupteur'
 import { TexteMisEnForme } from '@/components/memoire/BlocsMemoire'
-import { differences, motsChanges, type Morceau } from '@/lib/differences'
+import { differences, motsChanges, sansBlancFinal, type Morceau } from '@/lib/differences'
 
 export interface Trois {
   original: string
@@ -17,11 +17,18 @@ export interface Trois {
 export function Differences({ morceaux }: { morceaux: readonly Morceau[] }) {
   return (
     <p className="whitespace-pre-wrap break-words font-memoire text-base text-fg" data-differences="">
-      {morceaux.map((x, i) => x.sorte === 'pareil'
-        ? <span key={i}>{x.texte}</span>
-        : x.sorte === 'retire'
-          ? <del key={i} className="rounded-sm bg-rouge-soft text-rouge-ink line-through"><span className="sr-only">Retiré : </span>{x.texte}</del>
-          : <ins key={i} className="rounded-sm bg-vert-soft text-vert-ink underline"><span className="sr-only">Ajouté : </span>{x.texte}</ins>)}
+      {morceaux.map((x, i) => {
+        if (x.sorte === 'pareil') return <span key={i}>{x.texte}</span>
+        const [mots, blanc] = sansBlancFinal(x.texte)
+        return (
+          <Fragment key={i}>
+            {x.sorte === 'retire'
+              ? <del className="rounded-sm bg-rouge-soft text-rouge-ink line-through"><span className="sr-only">Retiré : </span>{mots}</del>
+              : <ins className="rounded-sm bg-vert-soft text-vert-ink underline"><span className="sr-only">Ajouté : </span>{mots}</ins>}
+            {blanc}
+          </Fragment>
+        )
+      })}
     </p>
   )
 }

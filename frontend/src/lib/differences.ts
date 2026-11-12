@@ -52,7 +52,16 @@ function fusionner(morceaux: Morceau[]): Morceau[] {
   return out
 }
 
-/** Le nombre de mots changés (retirés + ajoutés), pour dire l'ampleur d'une proposition sans la juger. */
+/** Le nombre de mots changés : un mot remplacé compte une fois (le plus grand des retirés et des ajoutés), pour dire
+ * l'ampleur d'une proposition sans la juger. */
 export function motsChanges(morceaux: readonly Morceau[]): number {
-  return morceaux.filter((x) => x.sorte !== 'pareil').reduce((t, x) => t + mots(x.texte).filter((w) => w.trim()).length, 0)
+  const compte = (sorte: Morceau['sorte']) => morceaux.filter((x) => x.sorte === sorte)
+    .reduce((t, x) => t + mots(x.texte).filter((w) => w.trim()).length, 0)
+  return Math.max(compte('retire'), compte('ajoute'))
+}
+
+/** Un morceau changé sans ses blancs de fin : le trait (barré, souligné) s'arrête au dernier mot. */
+export function sansBlancFinal(texte: string): [string, string] {
+  const m = /^([\s\S]*?)(\s*)$/.exec(texte)
+  return m ? [m[1], m[2]] : [texte, '']
 }

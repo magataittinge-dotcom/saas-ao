@@ -5,7 +5,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { CorpsTrois, Differences } from '@/components/project/TroisPropositions'
-import { differences, mots, motsChanges } from '@/lib/differences'
+import { differences, mots, motsChanges, sansBlancFinal } from '@/lib/differences'
 import { lire, sansCommentaires } from './outils/sources'
 
 const RIEN = () => {}
@@ -51,4 +51,14 @@ test('éteinte : la barre garde la route et le dialogue d’aujourd’hui ; allu
   assert.match(src, /\/memoire\/rewrite-passage/)
   assert.match(src, /titre="Réécriture proposée"/)
   assert.match(src, /\{enTrois && <TroisPropositions /)
+})
+
+test('un mot remplacé compte une fois ; le trait s’arrête au dernier mot', () => {
+  assert.equal(motsChanges(differences('Nous posons vite.', 'Nous posons bien.')), 1)
+  assert.equal(motsChanges(differences('a b c', 'a x y z c')), 3)
+  assert.deepEqual(sansBlancFinal('vite '), ['vite', ' '])
+  assert.deepEqual(sansBlancFinal('deux mots\n'), ['deux mots', '\n'])
+  const html = renderToStaticMarkup(<Differences morceaux={differences('Nous posons vite le bardage.', 'Nous posons bien le bardage.')} />)
+  assert.match(html, /<\/span>vite<\/del> /)
+  assert.match(html, /<\/span>bien<\/ins> /)
 })
