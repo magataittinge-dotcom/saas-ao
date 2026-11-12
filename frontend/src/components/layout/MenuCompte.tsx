@@ -9,7 +9,7 @@ import { useLogout } from '@/hooks/useAuth'
 import { useThemeEcran } from '@/lib/themeEcran'
 import { useChoixTheme, type ChoixTheme } from '@/lib/theme'
 import { prenomAffichable } from '@/lib/prenom'
-import { initialeDuPrenom, raisonSociale } from '@/lib/raisonSociale'
+import { initialeDuPrenom, nomDuCompte } from '@/lib/raisonSociale'
 import { cn } from '@/lib/utils'
 import { OPTIONS_THEME, classeSegmentTheme } from './BasculeTheme'
 
@@ -36,7 +36,8 @@ export default function MenuCompte() {
   const animerFond = useUIStore((s) => s.animerFond)
   const setAnimerFond = useUIStore((s) => s.setAnimerFond)
   const prenom = prenomAffichable(user?.name, user?.email)
-  const entreprise = raisonSociale(organization)
+  // sans raison sociale vérifiée, l'en-tête dit « Votre compte » : « Mon entreprise » est le nom d'une page (jury, tour 1)
+  const entreprise = nomDuCompte(organization)
   const { user: compte } = useUser()
   const [photoEnEchec, setPhotoEnEchec] = useState<string | null>(null)
   const photo = compte?.hasImage && compte.imageUrl !== photoEnEchec ? compte.imageUrl : null
@@ -48,7 +49,7 @@ export default function MenuCompte() {
         <RondCompte photo={photo} initiale={initialeDuPrenom(prenom)} onErreurPhoto={() => setPhotoEnEchec(photo)} />
       </Menu.Trigger>
       <Menu.Portal>
-        <Menu.Content side="right" align="end" sideOffset={12} collisionPadding={12} data-theme={theme}
+        <Menu.Content side="right" align="end" sideOffset={24} collisionPadding={12} data-theme={theme}
           className="menu-flottant z-50 w-72 rounded-carte border border-bord bg-surface-pop p-1.5 text-fg shadow-flottant">
           <div className="px-3 py-2">
             {prenom && <p className="truncate text-sm font-semibold">{prenom}</p>}

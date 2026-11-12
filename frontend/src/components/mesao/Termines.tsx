@@ -29,7 +29,7 @@ function colonnesTermines(g: GestesAO): ColonneTableau<Project>[] {
   return [
     { cle: 'ao', titre: 'Appel d’offres', rendu: (p) => <div data-terminee={p.id}><CelluleAO projet={p} detail={false} large /></div>, classe: 'md:w-[48%]' },
     { cle: 'statut', titre: 'Statut', tel: true, rendu: (p) => { const l = lectureAO(p, g.maintenant); return <PastilleEtat sens={l.sens} icone={ICONE[p.status] ?? Ban}>{l.libelle}</PastilleEtat> } },
-    { cle: 'date', titre: 'Date', tel: true, rendu: (p) => <span className="chiffres text-sm text-fg-2">{dateTerminee(p)}</span> },
+    { cle: 'date', titre: 'Date', tel: true, rendu: (p) => <span className="text-sm text-fg-2">{dateTerminee(p)}</span> },
     { cle: 'action', titre: 'Action', tel: true, nombre: true, rendu: (p) => {
       const { action } = lectureAO(p, g.maintenant)
       return (
@@ -57,21 +57,20 @@ export function Termines({ projets, ouvertParDefaut = false, ...gestes }: { proj
           <ChevronDown aria-hidden strokeWidth={1.75} className={cn('transition-transform duration-survol ease-survol motion-reduce:transition-none', ouvert && 'rotate-180')} />
         </Bouton>
       )}>
-        Terminés <span className="chiffres font-normal text-fg-3">{projets.length}</span>
+        Terminés <span className="font-normal text-fg-3">{projets.length}</span>
+        {!ouvert && (
+          <span data-decompte-termines="" className="ml-3 text-sm font-normal text-fg-2">
+            {parStatut.map(([statut, n]) => {
+              const premier = projets.find((p) => p.status === statut)
+              return premier ? `${n} ${lectureAO(premier, gestes.maintenant).libelle.toLowerCase()}` : null
+            }).filter(Boolean).join(' · ')}
+          </span>
+        )}
       </TitreSection>
-      {ouvert ? (
+      {ouvert && (
         <div id="liste-terminees">
           <Tableau libelle="Appels d’offres terminés" colonnes={colonnesTermines(gestes)} lignes={projets} cle={(p) => p.id} vide={null} />
         </div>
-      ) : (
-        <p className="flex flex-wrap gap-2">
-          {parStatut.map(([statut, n]) => {
-            const premier = projets.find((p) => p.status === statut)
-            if (!premier) return null
-            const l = lectureAO(premier, gestes.maintenant)
-            return <PastilleEtat key={statut} sens={l.sens} icone={ICONE[statut] ?? Ban}>{l.libelle} {n}</PastilleEtat>
-          })}
-        </p>
       )}
     </section>
   )

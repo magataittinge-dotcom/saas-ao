@@ -3,15 +3,14 @@
 // action est « Mettre à jour le statut ». Les états, les mots et les verbes viennent de `lib/etatAO.ts` : les mêmes que sur
 // Mes AO, dans la barre et dans Ctrl K. Le premier AO (la prochaine remise) porte l'action de l'écran : le seul bouton plein.
 import { Link } from 'react-router-dom'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, ChevronRight } from 'lucide-react'
 import { FilPoints, JaugeLecture, PastilleRemise } from '@/components/mesao/Etat'
 import { Bouton, classesBouton } from '@/components/ui/bouton'
 import { Carte } from '@/components/ui/carte'
 import { EtatVide } from '@/components/ui/etats'
 import { TitreSection } from '@/components/ui/page'
-import { PastilleEtat } from '@/components/ui/pastille'
 import { aLaUne, aoDansEtat, lectureAO, lienAO } from '@/lib/etatAO'
-import { acheteurCourt, avancementAffiche, comparerParRemise, enTraitement, filDeLAO, jourCourt, niveauRemise, quandCourt } from '@/lib/mesAO'
+import { acheteurCourt, avancementAffiche, comparerParRemise, enTraitement, filDeLAO, jourCourt, lierNumero, niveauRemise, quandCourt } from '@/lib/mesAO'
 import type { Project } from '@/types'
 
 /** Ce qu'il reste à faire sur un AO : le verbe de la fonction d'état (lib/etatAO.ts). */
@@ -76,7 +75,7 @@ export default function BandeAO({ projets, maintenant = new Date(), onStatut, on
               return (
                 <li key={p.id} data-ao={p.id} className={`${RANGEE} lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1.1fr)_minmax(0,1fr)_auto] lg:items-center`}>
                   <div className="min-w-0">
-                    <Link to={`/projects/${p.id}`} className="block break-words text-base font-semibold leading-snug text-fg underline-offset-4 hover:underline max-md:-my-3 max-md:py-3 [@media(pointer:coarse)]:-my-3 [@media(pointer:coarse)]:py-3"><span className="line-clamp-2">{p.name}</span></Link>
+                    <Link to={`/projects/${p.id}`} className="block break-words text-base font-semibold leading-snug text-fg underline-offset-4 hover:underline max-md:-my-3 max-md:py-3 [@media(pointer:coarse)]:-my-3 [@media(pointer:coarse)]:py-3"><span className="line-clamp-2">{lierNumero(p.name)}</span></Link>
                     {sousTitre && <p className="mt-0.5 truncate text-sm text-fg-2">{sousTitre}</p>}
                   </div>
                   <div className="min-w-0">
@@ -91,7 +90,7 @@ export default function BandeAO({ projets, maintenant = new Date(), onStatut, on
                       : (
                         <>
                           <PastilleRemise libelle={lecture.echeance.libelle} niveau={niveauRemise(p, maintenant)} />
-                          {quand && <span className="chiffres text-sm text-fg-2">{quand}</span>}
+                          {quand && <span className="text-sm text-fg-2">{quand}</span>}
                         </>
                       )}
                   </div>
@@ -117,30 +116,33 @@ export default function BandeAO({ projets, maintenant = new Date(), onStatut, on
       {passees.length > 0 && (
         <div data-a-mettre-a-jour="" className={liste.length > 0 ? 'mt-10 max-md:mt-7.5' : undefined}>
           <TitreSection id={liste.length > 0 ? undefined : 't-bande'} action={liste.length > 0 ? undefined : tousMesAO}>
-            À mettre à jour <span className="chiffres ml-1 font-normal text-fg-3">{passees.length}</span>
+            À mettre à jour <span className="ml-1 font-normal text-fg-3">{passees.length}</span>
           </TitreSection>
           <Carte sansMarge>
             <ul aria-label="Appels d’offres à mettre à jour">
               {passees.slice(0, MAX_BANDE).map((p) => {
                 const limite = lectureAO(p, maintenant).echeance.limite
                 return (
-                  <li key={p.id} data-remise-passee={p.id} className={`${RANGEE} sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center`}>
+                  <li key={p.id} data-remise-passee={p.id} className="relative grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 border-t border-bord px-5 py-4 transition-colors duration-fast ease-survol first:border-t-0 hover:bg-surface-1 sm:grid-cols-[minmax(0,1fr)_11rem_auto] sm:gap-x-6 sm:px-6">
+                    {/* la ligne entière est le geste (jury, tour 1 : trois boutons identiques l'un sous l'autre) : le nom porte le bouton, étendu à la ligne */}
                     <div className="min-w-0">
-                      <Link to={`/projects/${p.id}`} className="block break-words text-base font-semibold leading-snug text-fg underline-offset-4 hover:underline max-md:-my-3 max-md:py-3 [@media(pointer:coarse)]:-my-3 [@media(pointer:coarse)]:py-3"><span className="line-clamp-2">{p.name}</span></Link>
-                      {acheteurCourt(p.maitre_ouvrage) && <p className="mt-0.5 truncate text-sm text-fg-2">{acheteurCourt(p.maitre_ouvrage)}</p>}
+                      <Bouton variante="lien" onClick={() => onStatut?.(p)}
+                        className="block h-auto w-full whitespace-normal break-words text-left text-base font-semibold leading-snug text-fg hover:no-underline after:absolute after:inset-0 after:content-[''] focus-visible:outline-none focus-visible:after:rounded-sm focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-accent-ring [@media(pointer:coarse)]:min-h-0">
+                        <span className="line-clamp-2">{lierNumero(p.name)}</span>
+                        <span className="sr-only">. Mettre à jour le statut</span>
+                      </Bouton>
+                      {acheteurCourt(p.maitre_ouvrage) && <p className="mt-0.5 text-sm text-fg-2 max-sm:line-clamp-2 sm:truncate">{acheteurCourt(p.maitre_ouvrage)}</p>}
+                      {limite && <p className="mt-0.5 text-sm text-fg-3 sm:hidden">Remise le {jourCourt(limite)} {limite.getFullYear()}</p>}
                     </div>
-                    <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-                      <PastilleEtat sens="ambre">Remise passée</PastilleEtat>
-                      {limite && <span className="chiffres text-sm text-fg-2">le {jourCourt(limite)} {limite.getFullYear()}</span>}
-                    </div>
-                    <Bouton onClick={() => onStatut?.(p)} className="max-sm:w-full">Mettre à jour le statut</Bouton>
+                    <p className="text-sm text-fg-2 max-sm:hidden">{limite ? `Remise le ${jourCourt(limite)} ${limite.getFullYear()}` : ''}</p>
+                    <ChevronRight aria-hidden size={18} strokeWidth={1.75} className="shrink-0 text-fg-3" />
                   </li>
                 )
               })}
             </ul>
             {passees.length > MAX_BANDE && (
               <p className="border-t border-bord px-5 py-3 text-sm text-fg-2 sm:px-6">
-                <Link to="/projects" className={classesBouton('lien')}>Voir les {pluriel(passees.length - MAX_BANDE, 'autre', 'autres')} dans Mes AO</Link>
+                <Link to="/projects" className={classesBouton('lien', '[@media(pointer:coarse)]:min-h-11')}>Voir les {pluriel(passees.length - MAX_BANDE, 'autre', 'autres')} dans Mes AO<ArrowRight aria-hidden strokeWidth={1.75} /></Link>
               </p>
             )}
           </Carte>

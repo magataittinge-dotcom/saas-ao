@@ -26,7 +26,8 @@ test('le menu du compte et le tiroir du téléphone lisent prénom et raison soc
   for (const f of ['src/components/layout/MenuCompte.tsx', 'src/components/layout/BarreOnglets.tsx']) {
     const code = sansCommentaires(lire(f))
     assert.match(code, /prenomAffichable\(/, f)
-    assert.match(code, /raisonSociale\(/, f)
+    // la raison sociale vérifiée, lue par nomDuCompte (lib/raisonSociale.ts) : sans elle, « Votre compte », jamais le nom d'une page
+    assert.match(code, /nomDuCompte\(/, f)
     assert.doesNotMatch(code, /user\?\.name \?\?|user\?\.name \|\||'Utilisateur'/, f)
   }
 })
@@ -36,4 +37,11 @@ test('acheteur court : le nom de l\'acheteur sans son adresse', async () => {
   assert.equal(acheteurCourt('Commune de VILLEBOIS – 12 rue des Tilleuls, 10000 VILLEBOIS (mandataire : ATELIER NORD)'), 'Commune de VILLEBOIS')
   assert.equal(acheteurCourt('Horizon Habitat, 8 avenue des Peupliers'), 'Horizon Habitat')
   assert.equal(acheteurCourt(null), '')
+})
+
+test('le nom du compte : la raison sociale vérifiée ; sinon « Votre compte », jamais « Mon entreprise » (le nom d\'une page)', async () => {
+  const { nomDuCompte } = await import('@/lib/raisonSociale')
+  assert.equal(nomDuCompte({ name: 'Bâti Exemple', siret_verified: true }), 'Bâti Exemple')
+  assert.equal(nomDuCompte({ name: 'maga', siret_verified: false }), 'Votre compte')
+  assert.equal(nomDuCompte(null, null), null, 'le prénom est déjà écrit : rien de plus')
 })

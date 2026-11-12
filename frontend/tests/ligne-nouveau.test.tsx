@@ -16,7 +16,7 @@ test('la ligne « Nouveau » : une phrase, un lien, une croix nommée ; rien tan
   assert.ok(html.includes('data-ligne-nouveau') && html.includes('>Nouveau<') && html.includes(NOUVEAUTE.texte))
   assert.ok(html.includes(`href="${NOUVEAUTE.lien.to}"`) && html.includes(NOUVEAUTE.lien.libelle))
   assert.ok(html.includes('aria-label="Fermer le bandeau"'), 'la croix a un nom')
-  assert.ok(html.includes('data-message="info"'), 'le message du système, pas un composant maison')
+  assert.ok(!html.includes('data-message'), 'une ligne sans fond, plus un bandeau')
   assert.equal(rendre(null), '', 'organisation pas encore chargée : rien')
   assert.equal(rendre({ created_at: new Date().toISOString() }), '', 'première semaine : rien')
   assert.ok(!/!/.test(NOUVEAUTE.texte), 'aucun point d’exclamation')
@@ -34,9 +34,10 @@ test('congédiée, la ligne ne revient pas : la fermeture est mémorisée par id
   assert.equal(nouveauteFermee(null), false, 'stockage indisponible : la ligne reviendra')
 })
 
-test('la ligne « Nouveau » n’existe que sur l’Accueil', () => {
-  assert.match(sansCommentaires(lire('src/routes/Dashboard.tsx')), /<LigneNouveau \/>/)
-  const ailleurs = fichiersSource().filter((f) => f !== 'src/routes/Dashboard.tsx' && f !== 'src/components/dashboard/LigneNouveau.tsx'
+test('la ligne « Nouveau » est sortie du flux : au pied du panneau des notifications, nulle part ailleurs', () => {
+  assert.doesNotMatch(sansCommentaires(lire('src/routes/Dashboard.tsx')), /LigneNouveau/)
+  assert.match(sansCommentaires(lire('src/components/layout/NotificationBell.tsx')), /<LigneNouveau /)
+  const ailleurs = fichiersSource().filter((f) => f !== 'src/components/layout/NotificationBell.tsx' && f !== 'src/components/dashboard/LigneNouveau.tsx'
     && /LigneNouveau|<BandeauNouveau|<BandeauSelonAge/.test(sansCommentaires(lire(f))) && !f.endsWith('layout/BandeauNouveau.tsx'))
   assert.deepEqual(ailleurs, [])
 })

@@ -76,6 +76,6 @@ test('tableau de bord : jamais « dans les temps » ni « de la marge » qu
   assert.doesNotMatch(code, /de la marge/)
   const bande = sansCommentaires(lire('src/components/dashboard/BandeAO.tsx'))
   assert.match(bande, /aoAMettreAJour\(projets, maintenant\)/)
-  assert.match(bande, /Remise passée/)
+  assert.match(bande, /Remise le /) // la section « À mettre à jour » dit l'état ; la ligne ne porte plus que la date
   assert.match(bande, /Mettre à jour le statut/)
 })

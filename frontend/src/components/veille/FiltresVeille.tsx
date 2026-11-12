@@ -3,7 +3,7 @@
 // sélection n'est jamais un aplat. Un appui sur la puce ouvre ses choix juste dessous (boutons radio ou cases du système).
 // « Effacer les filtres » n'apparaît que si un filtre est actif. Les changements remontent tout de suite, sauf les
 // mots-clés (400 ms).
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { CaseACocher, GroupeRadio } from '@/components/ui/case'
 import { ChampRecherche } from '@/components/ui/champ'
 import { EffacerFiltres, PuceFiltre } from '@/components/ui/filtre'
@@ -59,10 +59,21 @@ export default function FiltresVeille({ filtres, onFiltres, tri, onTri, metiers 
   const [ouvert, setOuvert] = useState<Panneau | null>(null)
   const idPanneau = useId()
   const basculer = (p: Panneau) => setOuvert((o) => (o === p ? null : p))
+  // les choix s'ouvrent par-dessus la liste (ils ne la poussent plus) : Échap ou un appui ailleurs les referme
+  const zone = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!ouvert) return undefined
+    const dehors = (e: PointerEvent) => { if (zone.current && !zone.current.contains(e.target as Node)) setOuvert(null) }
+    const echap = (e: KeyboardEvent) => { if (e.key === 'Escape') setOuvert(null) }
+    document.addEventListener('pointerdown', dehors)
+    document.addEventListener('keydown', echap)
+    return () => { document.removeEventListener('pointerdown', dehors); document.removeEventListener('keydown', echap) }
+  }, [ouvert])
   const procedures = PROCEDURES_LIBELLES.filter((p) => filtres.procedures.includes(p.code)).map((p) => p.libelle)
   const metiersChoisis = metiers.filter((m) => filtres.metiers.includes(m.code)).map((m) => m.libelle)
   return (
     <div className="grid gap-3" role="group" aria-label="Filtres des avis">
+      <div ref={zone} className="relative">
       <div className="flex flex-wrap items-center gap-2">
         <PuceFiltre libelle="Date limite" valeur={filtres.delai_jours === null ? null : `sous ${filtres.delai_jours} jours`}
           onOuvrir={() => basculer('delai')} onRetirer={() => onFiltres({ delai_jours: null })} />
@@ -74,7 +85,7 @@ export default function FiltresVeille({ filtres, onFiltres, tri, onTri, metiers 
       </div>
 
       {ouvert === 'delai' && (
-        <div id={idPanneau} data-choix-filtre="delai" className="rounded-lg border border-bord bg-surface-0 px-4 py-2">
+        <div id={idPanneau} data-choix-filtre="delai" className="absolute inset-x-0 top-full z-20 mt-2 rounded-lg border border-bord bg-surface-pop px-4 py-2 shadow-flottant">
           <GroupeRadio libelle="Date limite" valeur={delaiVersTexte(filtres.delai_jours)}
             onChange={(v) => { const j = DELAIS_JOURS.find((d) => delaiVersTexte(d) === v) ?? null; onFiltres({ delai_jours: j }) }}
             options={DELAIS_JOURS.map((j) => ({ valeur: delaiVersTexte(j), libelle: j === null ? 'Toutes les dates' : `Sous ${j} jours` }))}
@@ -82,7 +93,7 @@ export default function FiltresVeille({ filtres, onFiltres, tri, onTri, metiers 
         </div>
       )}
       {ouvert === 'procedure' && (
-        <div id={idPanneau} data-choix-filtre="procedure" role="group" aria-label="Procédures" className="grid gap-x-6 rounded-lg border border-bord bg-surface-0 px-4 py-2 sm:grid-cols-2">
+        <div id={idPanneau} data-choix-filtre="procedure" role="group" aria-label="Procédures" className="grid gap-x-6 sm:grid-cols-2 absolute inset-x-0 top-full z-20 mt-2 rounded-lg border border-bord bg-surface-pop px-4 py-2 shadow-flottant">
           {PROCEDURES_LIBELLES.map((p) => (
             <CaseACocher key={p.code} libelle={p.libelle} coche={filtres.procedures.includes(p.code)}
               onChange={() => onFiltres({ procedures: basculerValeur(filtres.procedures, p.code) })} />
@@ -90,13 +101,14 @@ export default function FiltresVeille({ filtres, onFiltres, tri, onTri, metiers 
         </div>
       )}
       {ouvert === 'metier' && (
-        <div id={idPanneau} data-choix-filtre="metier" role="group" aria-label="Métiers" className="grid gap-x-6 rounded-lg border border-bord bg-surface-0 px-4 py-2 sm:grid-cols-2">
+        <div id={idPanneau} data-choix-filtre="metier" role="group" aria-label="Métiers" className="grid gap-x-6 sm:grid-cols-2 absolute inset-x-0 top-full z-20 mt-2 rounded-lg border border-bord bg-surface-pop px-4 py-2 shadow-flottant">
           {metiers.map((m) => (
             <CaseACocher key={m.code} libelle={m.libelle} coche={filtres.metiers.includes(m.code)}
               onChange={() => onFiltres({ metiers: basculerValeur(filtres.metiers, m.code) })} />
           ))}
         </div>
       )}
+      </div>
 
       <div className="flex flex-wrap items-center gap-2">
         <ChampMotsCles valeur={filtres.mots_cles} onChange={(v) => onFiltres({ mots_cles: v })} />
