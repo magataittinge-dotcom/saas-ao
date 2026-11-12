@@ -228,3 +228,37 @@ def test_premier_clic_simultane_une_seule_lecture_de_la_piece(projet, monkeypatc
     b.join(30)
     assert appels == ["d-cctp"]                  # une seule lecture de la pièce
     assert _ancres(projet)["i2"]["niveau"] == "passage"
+
+
+def test_premier_clic_attente_courte_puis_503_connexion_rendue(projet, monkeypatch):
+    """Revue de sécurité de 0169985 : attendre la pièce en calcul ne doit pas immobiliser un fil du
+    serveur ni une connexion à la base au-delà de l'attente d'une place PDFium (5 s par défaut).
+    Au-delà : ``TravailPdfiumEchoue("attente")`` (503 + Retry-After, le front réessaie), la
+    transaction rendue avant d'attendre, et le registre des verrous vidé après usage."""
+    import threading
+    import time
+
+    monkeypatch.setattr(ancres_projet, "DELAI_PAR_PIECE_S", 3)
+    monkeypatch.setattr(pdfium_processus, "attente_interactive_s", lambda: 0.2)
+    pris, fin = threading.Event(), threading.Event()
+
+    def tenir():                                  # une autre requête calcule la pièce cctp.pdf
+        with ancres_projet._verrou_piece("p-anc4", "d-cctp", 1):
+            pris.set()
+            fin.wait(10)
+    t = threading.Thread(target=tenir, name="synorix-test-tenir")
+    t.start()
+    assert pris.wait(5)
+    try:
+        i1 = projet.get(ComplianceItem, "i1")
+        debut = time.monotonic()
+        with pytest.raises(TravailPdfiumEchoue) as e:
+            ancres_projet.calculer_pour(projet, i1, lever=("attente", "indisponible"))
+        assert e.value.raison == "attente"
+        assert time.monotonic() - debut < 1.5      # l'attente d'une place, pas celle d'un calcul entier
+        assert not projet.in_transaction()        # connexion rendue avant d'attendre
+    finally:
+        fin.set()
+        t.join(10)
+    projet.expire_all()
+    assert len(ancres_projet._verrous_pieces) == 0   # le registre ne grandit pas sans fin

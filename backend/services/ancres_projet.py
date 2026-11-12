@@ -16,8 +16,10 @@ from __future__ import annotations
 import logging
 import re
 import threading
+import weakref
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Iterable, Iterator, Optional
 
 from sqlalchemy.orm import Session
 
@@ -109,31 +111,43 @@ def calculer_pour(db: Session, exigence: ComplianceItem, lever: tuple[str, ...] 
     if piece is None:
         return {}
     # Une seule lecture par pièce : le préchargement envoie plusieurs exigences de la même pièce à la
-    # fois ; sans ce verrou chacune relisait toute la pièce (attente d'une place, 503, clic retardé).
-    # La suivante attend la première, puis ne trouve plus rien à calculer (``ancre IS NULL`` relu).
-    verrou = _verrou_piece(exigence.project_id, piece.id)
-    if not verrou.acquire(timeout=DELAI_PAR_PIECE_S):
-        if "attente" in lever:
-            from services.pdfium_processus import TravailPdfiumEchoue
-            raise TravailPdfiumEchoue("attente", "pièce déjà en calcul")
-        return {}
-    try:
+    # fois ; sans ce verrou chacune relisait toute la pièce. La suivante attend la première au plus le
+    # temps d'une place PDFium (5 s par défaut), connexion à la base rendue, puis reçoit le 503
+    # « attente » habituel (Retry-After : le front réessaie et trouve l'ancre rangée).
+    from services.pdfium_processus import TravailPdfiumEchoue, attente_interactive_s
+    cle = (exigence.project_id, piece.id)   # lus avant le commit (qui les expire)
+    db.commit()             # rien d'écrit ici : la transaction de lecture rend sa connexion avant d'attendre
+    with _verrou_piece(*cle, min(attente_interactive_s(), DELAI_PAR_PIECE_S)) as pris:
+        if not pris:
+            if "attente" in lever:
+                raise TravailPdfiumEchoue("attente", "pièce déjà en calcul")
+            return {}
         memes = [e for e in db.query(ComplianceItem).filter(
-                     ComplianceItem.project_id == exigence.project_id, ComplianceItem.ancre.is_(None)).all()
+                     ComplianceItem.project_id == cle[0], ComplianceItem.ancre.is_(None)).all()
                  if trouver_piece(e.source_document, pieces) is piece]
-        return calculer_et_stocker(db, exigence.project_id, memes, lever)
-    finally:
-        verrou.release()
+        return calculer_et_stocker(db, cle[0], memes, lever)
 
 
-_verrous_pieces: dict[tuple[str, str], threading.Lock] = {}
+# Un verrou par pièce en cours de calcul (API à un seul processus : --workers 1). Valeurs faibles :
+# l'entrée disparaît dès que plus aucune requête ne tient ni n'attend le verrou.
+_verrous_pieces: "weakref.WeakValueDictionary[tuple[str, str], threading.Lock]" = weakref.WeakValueDictionary()
 _verrou_registre = threading.Lock()
 
 
-def _verrou_piece(project_id: str, piece_id: str) -> threading.Lock:
-    """Le verrou du calcul au premier clic d'une pièce (API à un seul processus : --workers 1)."""
+@contextmanager
+def _verrou_piece(project_id: str, piece_id: str, attente_s: float) -> Iterator[bool]:
+    """Prend le verrou de calcul de la pièce, en attendant au plus ``attente_s`` ; rend vrai s'il est pris."""
     with _verrou_registre:
-        return _verrous_pieces.setdefault((project_id, piece_id), threading.Lock())
+        verrou = _verrous_pieces.get((project_id, piece_id))
+        if verrou is None:
+            verrou = threading.Lock()
+            _verrous_pieces[(project_id, piece_id)] = verrou
+    pris = verrou.acquire(timeout=max(0.0, attente_s))
+    try:
+        yield pris
+    finally:
+        if pris:
+            verrou.release()
 
 
 def ancre_aucune(doc_id: str) -> dict:
