@@ -196,7 +196,7 @@ This is deliberate — the V2.0 success criterion is *ship & be impressive*, not
 
 > † **Mesuré (full-Sonnet).** La génération mémoire tourne sur Sonnet 5.5 depuis le 26/10 (tous segments, réflexion coupée `between_tools`, réglage `MEMOIRE_MODELE` pour forcer un autre modèle), pas Opus. Passage payant n° 1 sur Gueux : 0,974 $ contre 1,105 $ en Sonnet 4.6, 181,5 s contre ≈ 480 s. Un DTU n'est cité que s'il figure dans le CCTP du lot ou dans un article du lot 00 rattaché au lot avec certitude (annexe découpée par article, décision du 27/10 ; liste dans le prompt + garde-fou après génération, même règle pour la réécriture de paragraphe via `regle_dtu`, `services/ai/dtu_autorises.py`). Mesure sur le DCE Gueux (gros DCE) : mémoire ≈ **€0.90 en Sonnet vs ~€6 en Opus** (~7× moins cher), cf. `docs/comparaison-memoire-AB/RESULTAT.md`. Coût/AO réel mesuré **~€1**, dominé par la mémoire ; la réécriture ciblée de paragraphe tourne sur le même modèle (Sonnet 5.5, plafond 60 par jour et par organisation) ; Opus 4.7 n'est plus que le repli par défaut du générateur.
 
-À ~40 mémoires/mois sur Pro (€349) → ~€40 de coût IA → **>90 % de marge brute** (Sonnet ~7× moins cher qu'Opus ; le profil mémoire vivant + prompt caching abaissent le coût des mémoires suivants à **< €0,50**).
+À 30 mémoires/mois sur Pro (€349, quota du 2026-11-11) → ~€30 de coût IA → **>90 % de marge brute** (Sonnet ~7× moins cher qu'Opus ; le profil mémoire vivant + prompt caching abaissent le coût des mémoires suivants à **< €0,50**).
 
 ### 3.3 Prompt caching
 
