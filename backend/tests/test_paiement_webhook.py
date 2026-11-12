@@ -138,3 +138,104 @@ def test_c1_abonnement_connu_mais_termine_le_nouvel_abonnement_vivant_est_appliq
     _webhook(client, "checkout.session.completed", _checkout(sub="sub_neuf"))
     org = _org(db_session)
     assert org.plan == "pro" and org.stripe_subscription_id == "sub_neuf"
+
+
+# ── Constat 2 : `customer.subscription.updated` n'agit que sur l'abonnement de l'organisation, relu chez le fournisseur ─
+
+def _maj(id_="sub_invente", offre="pro", status="active", **autres):
+    """Contenu d'un événement « updated » : ce qu'il dit, pas forcément ce qui est vrai chez le fournisseur."""
+    return _abonnement(id_=id_, offre=offre, status=status, **autres)
+
+
+def test_c2_evenement_ancien_ne_fait_pas_reculer_l_offre(client, abonne, poser, db_session):
+    # Passé de Pro à Business par le portail ; un événement plus ancien (encore « pro ») arrive après.
+    org = _org(db_session)
+    org.plan = "business"
+    db_session.commit()
+    poser(FauxFournisseur([_abonnement(offre="business")]))
+    assert _webhook(client, "customer.subscription.updated", _maj(offre="pro")).status_code == 200
+    org = _org(db_session)
+    assert org.plan == "business" and org.subscription_started_at == ANCRE
+
+
+def test_c2_l_offre_vient_du_prix_relu(client, abonne, poser, db_session):
+    # L'événement dit encore « business » ; chez le fournisseur, l'abonnement est déjà repassé à Essentiel.
+    poser(FauxFournisseur([_abonnement(offre="essentiel")]))
+    _webhook(client, "customer.subscription.updated", _maj(offre="business"))
+    assert _org(db_session).plan == "essentiel"
+
+
+def test_c2_evenement_d_un_doublon_ne_remplace_pas_l_abonnement(client, abonne, poser, db_session):
+    poser(FauxFournisseur([_abonnement(), _abonnement(id_="sub_doublon", offre="business")]))
+    _webhook(client, "customer.subscription.updated", _maj(id_="sub_doublon", offre="business"))
+    org = _org(db_session)
+    assert org.plan == "pro" and org.stripe_subscription_id == "sub_invente"
+    assert org.subscription_started_at == ANCRE
+
+
+def test_c2_sans_abonnement_connu_un_abonnement_non_vivant_n_ouvre_rien(client, test_org, poser, db_session):
+    # L'événement dit « active » ; relu, l'abonnement n'a jamais été payé.
+    _client_sans_abonnement(db_session)
+    poser(FauxFournisseur([_abonnement(status="incomplete_expired")]))
+    _webhook(client, "customer.subscription.updated", _maj())
+    org = _org(db_session)
+    assert org.plan == "free" and org.stripe_subscription_id is None
+
+
+def test_c2_sans_abonnement_connu_adopte_l_abonnement_vivant_de_son_client(client, test_org, poser, db_session):
+    # L'événement du paiement s'est perdu et le client n'est pas revenu sur la page : l'abonnement vit, il est payé.
+    _client_sans_abonnement(db_session)
+    poser(FauxFournisseur([_abonnement()]))
+    _webhook(client, "customer.subscription.updated", _maj())
+    org = _org(db_session)
+    assert org.plan == "pro" and org.stripe_subscription_id == "sub_invente"
+    assert org.subscription_started_at is not None
+
+
+def test_c2_abonnement_relu_d_un_autre_client_n_ouvre_rien(client, test_org, poser, db_session):
+    _client_sans_abonnement(db_session)
+    poser(FauxFournisseur([_abonnement(customer="cus_quelqu_un_d_autre")]))
+    _webhook(client, "customer.subscription.updated", _maj())
+    assert _org(db_session).plan == "free"
+
+
+def test_c2_fournisseur_en_panne_rien_ne_change(client, abonne, poser, db_session):
+    poser(FauxFournisseur([_abonnement()], panne=True))
+    assert _webhook(client, "customer.subscription.updated", _maj(offre="business")).status_code == 200
+    org = _org(db_session)
+    assert org.plan == "pro" and org.subscription_started_at == ANCRE
+
+
+def test_c2_impaye_rien_ne_change(client, abonne, poser, db_session):
+    poser(FauxFournisseur([_abonnement(status="past_due")]))
+    _webhook(client, "customer.subscription.updated", _maj(status="past_due"))
+    org = _org(db_session)
+    assert org.plan == "pro" and org.stripe_subscription_id == "sub_invente"
+
+
+@pytest.mark.parametrize("depart,arrivee", [("pro", "business"), ("business", "essentiel"), ("essentiel", "pro")])
+def test_c2_parcours_honnete_changer_d_offre_par_le_portail(client, abonne, poser, db_session, depart, arrivee):
+    org = _org(db_session)
+    org.plan = depart
+    db_session.commit()
+    poser(FauxFournisseur([_abonnement(offre=arrivee)]))
+    _webhook(client, "customer.subscription.updated", _maj(offre=arrivee))
+    org = _org(db_session)
+    assert org.plan == arrivee and org.stripe_subscription_id == "sub_invente"
+    assert org.subscription_started_at != ANCRE                       # nouvelle offre : nouvelle fenêtre de quotas
+    assert client.get("/api/billing/quota").json()["plan"] == arrivee
+
+
+def test_c2_parcours_honnete_meme_offre_garde_l_ancre(client, abonne, poser, db_session):
+    poser(FauxFournisseur([_abonnement()]))
+    _webhook(client, "customer.subscription.updated", _maj())
+    org = _org(db_session)
+    assert org.plan == "pro" and org.subscription_started_at == ANCRE
+
+
+def test_c2_parcours_honnete_resilier_dans_le_portail_garde_l_acces_jusqu_a_l_echeance(
+        client, abonne, poser, db_session):
+    # Arrêt à l'échéance : l'abonnement vit jusqu'à la fin de la période payée, l'offre reste.
+    poser(FauxFournisseur([_abonnement(cancel_at_period_end=True)]))
+    _webhook(client, "customer.subscription.updated", _maj(cancel_at_period_end=True))
+    assert _org(db_session).plan == "pro"

@@ -418,16 +418,25 @@ def stripe_webhook(request: Request, payload: bytes = Depends(_corps_brut), db: 
             if resiliation_compte.abonnement_repris(org):
                 org.suppression_prevue_le = None
                 db.commit()
-        if org is not None and data_object.get("status") == "active":
+        # PAIEMENT-2 (constat 2) — on ne croit pas l'offre écrite dans l'événement (un événement ancien, réessayé, remettait
+        # l'offre précédente) : l'abonnement est RELU chez le fournisseur, l'offre se lit dans son prix, seulement s'il
+        # vit et appartient au client. N'agit que sur l'abonnement de l'organisation (ou, si elle n'en connaît aucun, sur
+        # un abonnement vivant de son client) : l'événement d'un doublon ne remplace jamais l'abonnement enregistré.
+        sub_id = data_object.get("id")
+        if (org is not None and sub_id
+                and (not org.stripe_subscription_id or org.stripe_subscription_id == sub_id)):
+            try:
+                sub = billing.retrieve_subscription(sub_id)
+            except Exception as exc:
+                logger.warning("subscription.updated : abonnement illisible (org=%s, %s)", org.id, type(exc).__name__)
+                sub = None
+            plan = _offre_ouverte_du_client(org, sub, customer_id) if sub is not None else None
+        else:
+            plan = None
+        if org is not None and plan:
             old_plan = org.plan
-            items = (data_object.get("items") or {}).get("data") or []
-            if items:
-                product_id = (items[0].get("price") or {}).get("product")
-                for plan_name, pid in PRODUCTS.items():
-                    if pid == product_id:
-                        org.plan = plan_name
-                        break
-            org.stripe_subscription_id = data_object.get("id")
+            org.plan = plan
+            org.stripe_subscription_id = sub_id
             # Changement de plan → nouvelle ancre de quotas : les
             # consommations de la période précédente (Business 70/mois)
             # ne bloquent pas le nouveau plan (downgrade business→pro

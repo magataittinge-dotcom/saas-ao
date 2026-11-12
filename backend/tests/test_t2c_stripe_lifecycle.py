@@ -22,7 +22,12 @@ def test_checkout_refused_when_already_subscribed(client, db_session, test_org):
 def test_subscription_updated_reanchors_on_plan_change(client, db_session, test_org, monkeypatch):
     class _FakeBilling:
         def verify_webhook(self, payload, sig):
-            return json.loads(payload)
+            self.evenement = json.loads(payload)
+            return self.evenement
+
+        def retrieve_subscription(self, subscription_id):
+            # PAIEMENT-2 (12/11) : le webhook relit l'abonnement chez le fournisseur ; ici, celui de l'événement.
+            return self.evenement["data"]["object"]
     monkeypatch.setattr("routers.stripe_billing.get_billing_provider", lambda: _FakeBilling())
 
     org = db_session.get(Organization, test_org.id)
@@ -53,7 +58,12 @@ def test_subscription_updated_reanchors_on_plan_change(client, db_session, test_
 def test_subscription_updated_same_plan_keeps_anchor(client, db_session, test_org, monkeypatch):
     class _FakeBilling:
         def verify_webhook(self, payload, sig):
-            return json.loads(payload)
+            self.evenement = json.loads(payload)
+            return self.evenement
+
+        def retrieve_subscription(self, subscription_id):
+            # PAIEMENT-2 (12/11) : le webhook relit l'abonnement chez le fournisseur ; ici, celui de l'événement.
+            return self.evenement["data"]["object"]
     monkeypatch.setattr("routers.stripe_billing.get_billing_provider", lambda: _FakeBilling())
 
     org = db_session.get(Organization, test_org.id)
