@@ -241,6 +241,8 @@ export interface Project {
   lots_detectes?: LotOption[]
   selected_lot?: string
   selected_lot_name?: string
+  /** Les lots déjà analysés : l'écran Lots les rouvre sans les relire (« Ouvrir ce lot »). */
+  lots_analyses?: string[]
   processing_status?: string
   processing_progress?: number
   processing_detail?: string

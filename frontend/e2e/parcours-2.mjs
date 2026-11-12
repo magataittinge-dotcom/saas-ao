@@ -487,9 +487,8 @@ async function parcoursB(nav, dossiers) {
     const vus = []
     for (const [i, lot] of lots.slice(0, 2).entries()) {
       if (i > 0) {
-        // Passer au second lot, déjà lu : l'Export n'a pas de choix du lot ; l'écran Lots, ce lot seul coché, ne propose que
-        // de le relire (« Analyser 1 lot », 1 unité). Constat ; le lot est alors choisi comme l'écran Lots le fait
-        // (POST lots/select, sans relecture) pour vérifier ce que l'Export propose pour lui.
+        // Passer au second lot, déjà lu : sur l'écran Lots, ce lot seul coché, « Ouvrir ce lot » le rend lot en cours sans
+        // le relire (aucune unité décomptée, aucun appel d'IA), puis l'Export propose sa DPGF.
         await page.goto(`${BASE}/projects/${ctx.id}/lots`, { waitUntil: 'domcontentloaded' })
         await page.getByRole('heading', { level: 1, name: TITRES.lots, exact: true }).waitFor({ timeout: 30_000 })
         const lot1 = page.getByRole('button', { name: /^Lot 01/ }).first()
@@ -500,11 +499,16 @@ async function parcoursB(nav, dossiers) {
         await page.waitForTimeout(400)
         const geste = (await page.locator('[data-variante="principal"]:visible').first().innerText()).trim()
         await capturer(ctx, 'lots-second-lot')
-        if (geste.startsWith(VERBES.analyserLot)) {
-          constat(ctx, `deux lots : aucun écran ne mène à l’Export du second lot déjà lu sans le relire (« ${geste} ») : routes/project/StepExport.tsx (pas de choix du lot), routes/project/StepLotSelection.tsx:499-503`)
-        }
-        const choix = await api_(page, 'POST', `/api/projects/${ctx.id}/lots/select`, { lot_id: lot.id, lot_name: lot.nom })
-        if (choix.s >= 300) throw new Echec(`deux lots : le choix du ${lot.nom} a répondu ${choix.s}`)
+        if (geste !== M.ouvrirLot) throw new Echec(`deux lots : le second lot, déjà lu, propose « ${geste} » au lieu de « ${M.ouvrirLot} »`)
+        const unitesAvant = await unites(page)
+        const appelsAvant = JSON.stringify(appelsDepuis(debut))
+        await bouton(page, M.ouvrirLot, true).click()
+        await page.waitForURL(/\/analysis$/, { timeout: 30_000 })
+        const choisi = (await api_(page, 'GET', `/api/projects/${ctx.id}`)).corps
+        if (choisi?.selected_lot !== lot.id) throw new Echec(`deux lots : « ${M.ouvrirLot} » laisse le lot en cours à ${choisi?.selected_lot}`)
+        const unitesApres = await unites(page)
+        if (unitesApres.analyses !== unitesAvant.analyses) throw new Echec(`deux lots : rouvrir le ${lot.nom} a décompté (${unitesAvant.analyses} → ${unitesApres.analyses})`)
+        if (JSON.stringify(appelsDepuis(debut)) !== appelsAvant) throw new Echec('deux lots : rouvrir un lot a appelé l’IA')
       }
       const detail = page.waitForResponse((r) => new URL(r.url()).pathname.endsWith('/export/detail') && r.status() === 200, { timeout: 30_000 })
       await page.goto(`${BASE}/projects/${ctx.id}/export`, { waitUntil: 'domcontentloaded' })

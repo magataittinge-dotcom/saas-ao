@@ -70,6 +70,7 @@ export const PARCOURS_2 = {
   sourcePoint: 'Source : ',
   analyserLots: 'Analyser 2 lots',
   confirmerLots: 'Analyser les 2 lots',
+  ouvrirLot: 'Ouvrir ce lot',
   tableauAcheteur: 'Télécharger le tableau de l’acheteur',
   murAbonnement: 'Passez au niveau supérieur',
   choisirOffreEnCours: 'Choisir Essentiel',
