@@ -221,7 +221,7 @@ async def trigger_analysis(
     # Update step before analysis — current_step ne RÉGRESSE plus jamais :
     # un échec d'analyse laisse le projet à l'étape analyse avec un statut
     # d'erreur explicite et un bouton relancer (vision : état persistant).
-    project.current_step = 3
+    project.current_step = max(project.current_step or 0, 3)   # relancer un lot depuis l'étape 5 ou 6 n'y fait pas revenir
     # B1 — l'étape Lots n'est cochée qu'ici, au lancement effectif de la lecture (plus à `lots/select`).
     etapes_faites = dict(project.completed_steps or {})
     etapes_faites["2"] = True

@@ -10,6 +10,7 @@ import { Carte } from '@/components/ui/carte'
 import { EtatVide } from '@/components/ui/etats'
 import { TitreSection } from '@/components/ui/page'
 import { aLaUne, aoDansEtat, lectureAO, lienAO } from '@/lib/etatAO'
+import { momentParis } from '@/lib/remiseParis'
 import { usePrechargementAO } from '@/lib/prechargementAO'
 import { acheteurCourt, avancementAffiche, comparerParRemise, enTraitement, filDeLAO, jourCourt, lierNumero, niveauRemise, quandCourt } from '@/lib/mesAO'
 import type { Project } from '@/types'
@@ -134,9 +135,9 @@ export default function BandeAO({ projets, maintenant = new Date(), onStatut, on
                         <span className="sr-only">. Mettre à jour le statut</span>
                       </Bouton>
                       {acheteurCourt(p.maitre_ouvrage) && <p className="mt-0.5 text-sm text-fg-2 max-sm:line-clamp-2 sm:truncate">{acheteurCourt(p.maitre_ouvrage)}</p>}
-                      {limite && <p className="mt-0.5 text-sm text-fg-3 sm:hidden">Remise le {jourCourt(limite)} {limite.getFullYear()}</p>}
+                      {limite && <p className="mt-0.5 text-sm text-fg-3 sm:hidden">Remise le {jourCourt(limite)} {momentParis(limite).an}</p>}
                     </div>
-                    <p className="text-sm text-fg-2 max-sm:hidden">{limite ? `Remise le ${jourCourt(limite)} ${limite.getFullYear()}` : ''}</p>
+                    <p className="text-sm text-fg-2 max-sm:hidden">{limite ? `Remise le ${jourCourt(limite)} ${momentParis(limite).an}` : ''}</p>
                     <ChevronRight aria-hidden size={18} strokeWidth={1.75} className="shrink-0 text-fg-3" />
                   </li>
                 )

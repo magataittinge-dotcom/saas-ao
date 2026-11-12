@@ -8,6 +8,7 @@ import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useThemeEcran } from "@/lib/themeEcran"
 import { AplatCede } from "./bouton"
+import { useRetourFocus } from "./retourFocus"
 
 const Sheet = SheetPrimitive.Root
 
@@ -59,12 +60,13 @@ interface SheetContentProps
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(({ side = "right", className, children, ...props }, ref) => (
+>(({ side = "right", className, children, onOpenAutoFocus, onCloseAutoFocus, ...props }, ref) => (
   <SheetPortal>
     <SheetOverlay />
     <SheetPrimitive.Content
       ref={ref}
       data-theme={useThemeEcran()}
+      {...useRetourFocus(onOpenAutoFocus, onCloseAutoFocus)}
       className={cn(sheetVariants({ side }), className)}
       {...props}
     >

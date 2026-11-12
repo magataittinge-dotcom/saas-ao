@@ -10,18 +10,17 @@ import { DEPARTEMENTS } from './donnees/departements'
 import { EtatErreur } from '@/components/ui/etats'
 import { TitreSection } from '@/components/ui/page'
 import { useVeille } from '@/hooks/useVeille'
+import { heureParis, lireDate } from '@/lib/dateParis'
 import { etapeElargir } from '@/lib/veille'
 
 const NOMS: Readonly<Record<string, string>> = Object.fromEntries(DEPARTEMENTS.map((d) => [d.code, d.nom]))
 
-/** « Données BOAMP du 31/10 à 08:12 » (heure locale) — décision du 1/11 : en petit, à côté de la source. */
+/** « Données BOAMP du 31/10 à 08:12 » (heure de Paris, Q-08) — décision du 1/11 : en petit, à côté de la source. */
 export function libelleActualisation(iso: string | null): string | null {
-  if (!iso) return null
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return null
-  const jour = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' })
-  const heure = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-  return `Données BOAMP du ${jour} à ${heure}`
+  const d = lireDate(iso)
+  if (!d) return null
+  const jour = new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: '2-digit', timeZone: 'Europe/Paris' }).format(d)
+  return `Données BOAMP du ${jour} à ${heureParis(d)}`
 }
 
 const JOUR_RELEVE = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', timeZone: 'Europe/Paris' })

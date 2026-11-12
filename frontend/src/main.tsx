@@ -48,7 +48,7 @@ function Racine() {
   // eslint-disable-next-line react-hooks/exhaustive-deps -- le thème est la seule entrée : les jetons sont lus sur <html>
   const appearance = useMemo(() => apparenceDepuisPage(), [theme])
   return (
-    <ClerkProvider publishableKey={CLERK_KEY} afterSignInUrl="/dashboard" afterSignUpUrl="/dashboard" appearance={appearance} localization={localisationFr}>
+    <ClerkProvider publishableKey={CLERK_KEY} signInFallbackRedirectUrl="/dashboard" signUpFallbackRedirectUrl="/dashboard" appearance={appearance} localization={localisationFr}>
       <QueryClientProvider client={queryClient}>
         <App />
       </QueryClientProvider>

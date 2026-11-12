@@ -9,6 +9,7 @@ import { echeanceAO, momentLimite } from '@/lib/echeance'
 import { lectureAO } from '@/lib/etatAO'
 import { usePrechargementAO } from '@/lib/prechargementAO'
 import { jourCourt, repartitionTermines } from '@/lib/mesAO'
+import { jourCourtParis } from '@/lib/dateParis'
 import { cn } from '@/lib/utils'
 import type { Project } from '@/types'
 import { CelluleAO, MenuAO, type GestesAO } from './LigneAO'
@@ -20,10 +21,10 @@ const jour = jourCourt
 
 /** « déposé le 28 oct. » (date enregistrée au dépôt), sinon « remise le … », sinon « mis à jour le … ». */
 export function dateTerminee(p: Project): string {
-  if (p.status === 'soumis' && p.depose_at) return `déposé le ${jour(new Date(p.depose_at))}`
+  if (p.status === 'soumis' && p.depose_at) return `déposé le ${jourCourtParis(p.depose_at)}`
   const limite = momentLimite(echeanceAO(p))
   if (limite) return `remise le ${jour(limite)}`
-  return `mis à jour le ${jour(new Date(p.updated_at))}`
+  return `mis à jour le ${jourCourtParis(p.updated_at)}`
 }
 
 function colonnesTermines(g: GestesAO, precharger: ReturnType<typeof usePrechargementAO>): ColonneTableau<Project>[] {

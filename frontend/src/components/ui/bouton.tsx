@@ -2,6 +2,7 @@ import * as React from 'react'
 import { Slot } from '@radix-ui/react-slot'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/stores/uiStore'
+import { elementARetenir } from './retourFocus'
 
 /**
  * Le bouton du système. Cinq variantes, une forme par rôle (VEILLE-DESIGN P1, P14, P17) :
@@ -62,15 +63,52 @@ function useAplat(actif: boolean, suite: boolean) {
   }, [actif, suite, declarer])
 }
 
+/**
+ * En cours, le bouton se désactive et le navigateur pose le focus sur `<body>` : le clavier perdait sa place, et un dialogue
+ * ouvert par l'action (« Supprimer mon compte ») ne savait plus à qui rendre le focus (restes 2). Le bouton qui avait le
+ * focus quand l'action est partie le reprend quand elle finit, si personne ne l'a pris entre-temps.
+ */
+function useFocusGardeEnCours(enCours: boolean, ref: React.ForwardedRef<HTMLButtonElement>) {
+  const interne = React.useRef<HTMLButtonElement | null>(null)
+  const avaitFocus = React.useRef(false)
+  // Chromium retire le focus dès que `disabled` est posé (focusout vers rien), pendant la mise à jour du DOM : React ne
+  // transmet pas cet événement (`onBlur`), d'où l'écoute native.
+  React.useLayoutEffect(() => {
+    const bouton = interne.current
+    if (!bouton) return undefined
+    const perdu = (evenement: FocusEvent) => { if (bouton.disabled && !evenement.relatedTarget) avaitFocus.current = true }
+    bouton.addEventListener('focusout', perdu)
+    return () => bouton.removeEventListener('focusout', perdu)
+  }, [])
+  React.useLayoutEffect(() => {
+    const bouton = interne.current
+    if (!bouton) return
+    if (enCours) {
+      if (bouton.ownerDocument.activeElement === bouton) avaitFocus.current = true
+      return
+    }
+    if (!avaitFocus.current) return
+    avaitFocus.current = false
+    if (elementARetenir(bouton.ownerDocument.activeElement) === null) bouton.focus({ preventScroll: true })
+  }, [enCours])
+  const refBouton = React.useCallback((element: HTMLButtonElement | null) => {
+    interne.current = element
+    if (typeof ref === 'function') ref(element)
+    else if (ref) ref.current = element
+  }, [ref])
+  return refBouton
+}
+
 export const Bouton = React.forwardRef<HTMLButtonElement, BoutonProps>(
   ({ className, variante: demandee = 'secondaire', enCours = false, libelleEnCours, large, suite = false, coquille = false, asChild = false, disabled, children, type, ...props }, ref) => {
+    const refBouton = useFocusGardeEnCours(enCours, ref)
     const cede = React.useContext(AplatCede) && demandee === 'principal' && !coquille
     const variante: VarianteBouton = cede ? 'secondaire' : demandee
     useAplat(variante === 'principal' && !coquille, suite)
     const classes = classesBouton(variante, cn(large && 'w-full', className))
     if (asChild) return <Slot ref={ref} data-variante={variante} data-aplat-cede={cede ? '' : undefined} className={classes} {...props}>{children}</Slot>
     return (
-      <button ref={ref} type={type ?? 'button'} data-variante={variante} data-aplat-cede={cede ? '' : undefined} className={classes} disabled={disabled || enCours} aria-busy={enCours || undefined} {...props}>
+      <button ref={refBouton} type={type ?? 'button'} data-variante={variante} data-aplat-cede={cede ? '' : undefined} className={classes} disabled={disabled || enCours} aria-busy={enCours || undefined} {...props}>
         {enCours && libelleEnCours ? libelleEnCours : children}
       </button>
     )
