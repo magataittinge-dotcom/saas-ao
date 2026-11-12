@@ -562,7 +562,7 @@ export default function StepLotSelection({ project }: Props) {
           <Bouton variante="secondaire" onClick={analyser} disabled={lectureBloquee || ouverture.isPending}>{`Analyser de nouveau (${libelleUnites(1)})`}</Bouton>
         ) : undefined}
         message={ouverture.isError
-          ? <Message ton="erreur" titre="Le lot ne s’est pas ouvert">La connexion au serveur a échoué. Rien n’a été décompté : réessayez dans un instant.</Message>
+          ? <Message ton="erreur" titre="Le lot ne s’est pas ouvert">Rien n’a été décompté : réessayez dans un instant.</Message>
           : analysisError && <Message ton="erreur" titre="L’analyse n’a pas démarré">{analysisError}</Message>}
         // La barre du bas n'existe que lorsqu'il y a des lots à choisir : ni en erreur, ni sans dossier, ni pendant le chargement.
         barre={!peutLire ? undefined : (
