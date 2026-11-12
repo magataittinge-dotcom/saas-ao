@@ -100,3 +100,23 @@ test('aucun client, témoignage ni chiffre sans source sur les pages de prix', (
     for (const mot of interdits) assert.ok(!texte.includes(mot), `${f} contient « ${mot} »`)
   }
 })
+
+// D18 corrigé par la décision du 11/11/2026 : la partie des CGV et des CGU qui décrit les offres dit la grille, et rien d'autre.
+test('CGV et CGU : la description des offres dit la grille du produit, sans « illimité » ni offre ou fonction inventée', () => {
+  const legal = (slug: string) => readFileSync(path.join(RACINE, 'public/legal', `${slug}.md`), 'utf8')
+  const section = (texte: string, debut: string, fin: string) => texte.slice(texte.indexOf(debut), texte.indexOf(fin, texte.indexOf(debut)))
+  const offresCgv = section(legal('cgv'), '## 4.', '## 5.')
+  const offresCgu = section(legal('cgu'), '### 4.2', '### 4.3')
+  for (const [nom, texte] of [['CGV', offresCgv], ['CGU', offresCgu]] as const) {
+    assert.ok(texte.length > 50, `${nom} : section des offres trouvée`)
+    for (const o of OFFRES) {
+      assert.match(texte, new RegExp(`${o.nom}[^\\n]*${o.prixMensuelHT}[\\s\\u00a0]€ HT par mois`), `${nom} : ${o.nom} à ${o.prixMensuelHT} € HT`)
+      assert.ok(texte.includes(quotaLibelle(o)), `${nom} : ${quotaLibelle(o)}`)
+    }
+    assert.match(texte, /1 AO offert/, `${nom} : l'essai`)
+    assert.doesNotMatch(texte, /Découverte|Starter|\b(99|299|499) €|illimit|usage raisonnable|API|SSO|SLA|utilisateurs|Go\b|prioritaire|téléphonique|Onboarding|scoring|Templates/i, nom)
+  }
+  for (const slug of ['cgv', 'cgu', 'politique-confidentialite', 'mentions-legales', 'cookies']) {
+    assert.doesNotMatch(legal(slug), /illimit|usage raisonnable|fair.?use/i, slug)
+  }
+})

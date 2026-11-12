@@ -1,6 +1,6 @@
 # Conditions Générales de Vente (CGV)
 
-**Dernière mise à jour : 4 mai 2026**
+**Dernière mise à jour : 12 novembre 2026**
 
 Les présentes Conditions Générales de Vente (« CGV ») régissent la relation
 contractuelle entre Synorix (édité par [À COMPLÉTER], cf. Mentions légales)
@@ -25,48 +25,34 @@ du Client est inopposable à Synorix sans accord écrit préalable.
 La souscription d'un abonnement implique l'acceptation pleine et entière
 des présentes CGV ainsi que des Conditions Générales d'Utilisation (CGU).
 
-## 4. Description des plans
+## 4. Description des offres
 
-### 4.1 Plan Découverte (gratuit)
+### 4.1 Essai
 
-- 1 DCE complet à vie (analyse + mémoire technique + export)
-- 1 utilisateur
-- Coffre-fort 1 Go
-- Skills BTP intégrés
-- Support email best-effort
+À la création du compte, 1 AO offert, une seule fois : une analyse et un
+mémoire compris.
 
-### 4.2 Plan Starter — 99 € HT / mois
+### 4.2 Offres et quotas
 
-- 3 DCE complets / mois
-- 1 utilisateur
-- Coffre-fort 5 Go
-- Skills BTP intégrés
-- Détecteur de pièges DCE
-- Reminders attestations
-- Support email J+1
+- **Essentiel** — 149 € HT par mois : 5 analyses + 5 mémoires par mois
+- **Pro** — 349 € HT par mois : 30 analyses + 30 mémoires par mois
+- **Business** — 599 € HT par mois : 70 analyses + 70 mémoires par mois
 
-### 4.3 Plan Pro — 299 € HT / mois
+Les trois offres donnent accès aux mêmes fonctions du Service ; seul le
+quota du mois change. Chaque lot analysé décompte une analyse, chaque
+mémoire rédigé pour un lot décompte un mémoire.
 
-- 15 DCE complets / mois
-- 3 utilisateurs
-- Coffre-fort 50 Go
-- Templates de mémoire partagés
-- Mode incrémental (réutilisation des AO précédents)
-- Go/No-Go scoring IA
-- Support email J+1
+### 4.3 Remise à zéro et plafonds techniques
 
-### 4.4 Plan Business — 499 € HT / mois
+Le quota du mois est remis à zéro chaque mois, à la date anniversaire de
+l'abonnement. Lorsqu'il est atteint, de nouvelles analyses ou de nouveaux
+mémoires ne peuvent être lancés qu'après la remise à zéro suivante ou un
+changement d'offre.
 
-- DCE illimités
-- 10 utilisateurs
-- Coffre-fort 500 Go
-- API publique
-- SSO SAML
-- SLA 99,5 %
-- Support téléphonique J+0
-- Onboarding personnalisé (2h)
+Pour protéger le Service, des plafonds techniques par jour s'appliquent
+en outre à toutes les offres.
 
-Les plans peuvent évoluer. Les conditions précises et la grille à jour
+Les offres peuvent évoluer. Les conditions précises et la grille à jour
 sont disponibles sur la page Tarifs.
 
 ## 5. Souscription et entrée en vigueur
