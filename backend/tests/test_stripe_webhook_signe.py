@@ -25,6 +25,9 @@ def _signer(corps: bytes, secret: str = SECRET) -> str:
 def _preparer(db, org, monkeypatch):
     monkeypatch.setattr(stripe, "api_key", stripe.api_key)          # rendu tel quel après le test
     fournisseur = StripeProvider("sk_test_invente", SECRET)
+    # PAIEMENT-2 (12/11, constat 3) : à la fin de son abonnement, le webhook demande au fournisseur si un autre
+    # abonnement du client vit encore. Après une résiliation, aucun ; la réponse est donnée ici, jamais par Stripe.
+    monkeypatch.setattr(fournisseur, "list_subscriptions", lambda customer_id: [])
     monkeypatch.setattr(sb, "get_billing_provider", lambda: fournisseur)
     monkeypatch.setattr(sb.settings, "STRIPE_WEBHOOK_SECRET", SECRET)
     o = db.get(Organization, org.id)

@@ -14,9 +14,22 @@ const refus = (status: number, detail: unknown) => new AxiosError('Request faile
 })
 
 test('date du serveur (UTC sans fuseau) lue en heure de Paris, avec l’année', () => {
-  assert.equal(dateSuppression('2030-03-14T10:00:00'), '14 mars 2030')
-  assert.equal(dateSuppression('2030-03-31T23:30:00'), '1 avril 2030')       // déjà le 1er à Paris
+  assert.equal(dateSuppression('2030-03-14T10:00:00'), '14\u00a0mars\u00a02030')
+  assert.equal(dateSuppression('2030-03-31T23:30:00'), '1\u00a0avril\u00a02030')       // déjà le 1er à Paris
   assert.equal(dateSuppression(null), '')
+})
+
+// PAIEMENT-2 (12/11) : à 1 440, la date se coupait entre le jour et le mois (« le 12 / décembre 2026 »), dans la
+// rangée du compte comme dans les dialogues. Les espaces de la date sont insécables : elle tient sur une ligne.
+test('la date ne se coupe pas : espaces insécables entre le jour, le mois et l’année', async () => {
+  const { phraseAnnulation } = await import('@/lib/suppressionCompte')
+  const date = dateSuppression('2026-12-12T10:00:00')
+  assert.equal(date, '12 décembre 2026')
+  assert.doesNotMatch(date, / /)
+  assert.ok(libelleSuppressionPrevue('2026-12-12T10:00:00').endsWith('le 12 décembre 2026'))
+  assert.match(phraseDialogue({ immediate: false, fin_de_periode: '2026-12-12T10:00:00' }), /le 12 décembre 2026\./)
+  assert.match(phraseAnnulation({ abonnement_repris: true, prochain_prelevement: '2026-12-12T10:00:00' }),
+    /le 12 décembre 2026\.$/)
 })
 
 test('sans abonnement payé : immédiate et définitive', () => {
@@ -28,13 +41,13 @@ test('sans abonnement payé : immédiate et définitive', () => {
 
 test('avec un abonnement : la phrase de D23, date comprise', () => {
   assert.equal(phraseDialogue({ immediate: false, fin_de_periode: '2030-03-14T10:00:00' }),
-    'Votre abonnement s’arrête le 14 mars 2030. Votre compte reste ouvert jusqu’à cette date, puis toutes vos données '
+    'Votre abonnement s’arrête le 14\u00a0mars\u00a02030. Votre compte reste ouvert jusqu’à cette date, puis toutes vos données '
     + 'sont supprimées. Le mois entamé n’est pas remboursé.')
   assert.equal(libelleConfirmer({ immediate: false }), 'Programmer la suppression')
 })
 
 test('rangée du compte une fois la demande faite', () => {
-  assert.equal(libelleSuppressionPrevue('2030-03-14T10:00:00'), 'Suppression prévue le 14 mars 2030')
+  assert.equal(libelleSuppressionPrevue('2030-03-14T10:00:00'), 'Suppression prévue le 14\u00a0mars\u00a02030')
 })
 
 test('502 et 500 : la phrase du serveur telle quelle ; sinon la phrase de l’écran', () => {
@@ -82,7 +95,7 @@ test('point 74 : un membre ne voit ni « Supprimer mon compte » ni « Annuler l
 test('P1-3 : la confirmation de « Annuler la suppression » dit que l’abonnement reprend, date comprise', async () => {
   const { phraseAnnulation, libelleConfirmerAnnulation } = await import('@/lib/suppressionCompte')
   assert.equal(phraseAnnulation({ abonnement_repris: true, prochain_prelevement: '2030-03-14T10:00:00' }),
-    'Votre compte et toutes vos données sont conservés. Votre abonnement reprend : prochain prélèvement le 14 mars 2030.')
+    'Votre compte et toutes vos données sont conservés. Votre abonnement reprend : prochain prélèvement le 14\u00a0mars\u00a02030.')
   assert.equal(phraseAnnulation({ abonnement_repris: true, prochain_prelevement: null }),
     'Votre compte et toutes vos données sont conservés. Votre abonnement reprend : il se renouvelle à la fin de la période en cours.')
   assert.equal(phraseAnnulation({ abonnement_repris: false, prochain_prelevement: null }),
