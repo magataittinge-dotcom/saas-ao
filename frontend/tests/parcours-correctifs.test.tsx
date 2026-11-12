@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { verrouLancement } from '@/lib/verrouLancement'
 import { rienEnCours } from '@/hooks/useProgressStream'
-import { lire, sansCommentaires } from './outils/sources'
+import { fichiersSource, lire, sansCommentaires } from './outils/sources'
 
 test('double clic sur « Télécharger le dossier » : un seul dossier (le second lancement est refusé tant que le premier court)', () => {
   const verrou = verrouLancement()
@@ -35,4 +35,10 @@ test('lecture en échec : l’écran relit le projet (sa phrase, jamais l’erre
   const analyse = sansCommentaires(lire('src/routes/project/StepAnalysis.tsx'))
   assert.match(analyse, /onError: relireAnalyse,/)
   assert.match(analyse, /erreur=\{project\.processing_detail \|\| analysisSse\.detail \|\|/, 'la phrase du projet passe avant celle du flux')
+})
+
+test('aucun <p> autour d’EtatElement, qui rend lui-même un <p> (erreur de console à chaque ouverture de l’Export)', () => {
+  assert.match(lire('src/components/etape/EtatElement.tsx'), /<p data-etat=\{etat\}/)
+  const fautifs = fichiersSource().filter((f) => /<p\b[^>]*>\s*<EtatElement\b/.test(sansCommentaires(lire(f))))
+  assert.deepEqual(fautifs, [])
 })

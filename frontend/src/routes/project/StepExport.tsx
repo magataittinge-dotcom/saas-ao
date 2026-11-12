@@ -530,10 +530,10 @@ export default function StepExport({ project }: Props) {
               <ul aria-label="Pièces demandées">
                 {groupesPieces.map((g) => (
                   <li key={g.lu.texte ?? g.lu.etat} className="border-t border-bord first:border-t-0">
-                    <p className="flex items-center gap-2 bg-surface-1 px-4 py-2 sm:px-5">
+                    <div className="flex items-center gap-2 bg-surface-1 px-4 py-2 sm:px-5">
                       <EtatElement etat={g.lu.etat} texte={g.lu.texte} perimee={g.lu.perimee} />
                       <span className="text-xs text-fg-3">· {g.pieces.length}</span>
-                    </p>
+                    </div>
                     <ul>
                       {g.pieces.map((item) => (
                         <li key={item.id} className="min-h-11 border-t border-bord px-4 py-2.5 sm:px-5">

@@ -39,7 +39,6 @@ const PRINCIPAL_CONNUS = {
  * comptées et écrites dans le bilan. Toute autre erreur fait échouer l'étape. Quand le constat est corrigé, retirez la ligne.
  */
 const CONSOLE_CONNUES = [
-  { motif: /validateDOMNesting[\s\S]*<p>[\s\S]*EtatElement/, constat: 'StepExport.tsx:526 — <p> autour d’EtatElement, qui rend lui-même un <p> (EtatElement.tsx:28)' },
 ]
 
 const t0 = Date.now()
