@@ -110,13 +110,13 @@ accessibles depuis l'espace de facturation du Client.
 
 Le Client peut résilier son abonnement à tout moment via son compte,
 sans préavis ni frais. La résiliation prend effet à la fin de la
-période en cours.
+période payée en cours ; l'accès au Service reste ouvert jusqu'à cette
+date.
 
-### 7.2 Remboursement au prorata
+### 7.2 Absence de remboursement de la période entamée
 
-En cas de résiliation en cours de mois, le Client peut demander un
-remboursement au prorata des jours non consommés. La demande doit être
-adressée à billing@synorix.tech.
+En cas de résiliation en cours de mois, la période en cours reste due
+et n'est pas remboursée, ni en tout ni au prorata.
 
 ### 7.3 Récupération des données
 

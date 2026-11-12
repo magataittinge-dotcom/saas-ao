@@ -144,7 +144,8 @@ Publique.
 ### 9.1 À l'initiative de l'Utilisateur
 
 L'Utilisateur peut résilier son abonnement à tout moment depuis son
-compte, sans frais ni motif. Les modalités de remboursement sont
+compte, sans frais ni motif. L'accès reste ouvert jusqu'à la fin de la
+période payée en cours, qui n'est pas remboursée ; les modalités sont
 détaillées dans les CGV.
 
 ### 9.2 À l'initiative de Synorix

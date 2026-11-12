@@ -204,7 +204,7 @@ export default function Billing() {
         <RangeeCarte className="py-4" data-ou-gerer="">
           <p className="text-pretty text-sm text-fg-2">
             {isPaid
-              ? 'Le paiement par carte, le changement d’offre, les factures et la résiliation se font sur le portail de paiement sécurisé de Stripe. Il s’ouvre à la place de cette page ; un lien vous ramène ici. Vous pouvez résilier à tout moment.'
+              ? 'Le paiement par carte, le changement d’offre, les factures et la résiliation se font sur le portail de paiement sécurisé de Stripe. Il s’ouvre à la place de cette page ; un lien vous ramène ici. Vous pouvez résilier à tout moment : l’accès reste ouvert jusqu’à la fin de la période payée, et le mois entamé n’est pas remboursé.'
               : 'Vous payez par carte sur la page de paiement sécurisée de Stripe, qui s’ouvre quand vous choisissez une offre. Ensuite, vous changez d’offre, retrouvez vos factures et résiliez depuis cette page, à tout moment.'}
           </p>
         </RangeeCarte>
