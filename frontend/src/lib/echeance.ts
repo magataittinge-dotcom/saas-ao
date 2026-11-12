@@ -1,9 +1,12 @@
 // Une seule vérité pour l'échéance, l'avancement et « en cours » (1.14) :
 // tous les écrans passent par ces fonctions. Le calcul se fait à la minute
-// près, heure limite comprise, en heure locale (celle de l'utilisateur).
+// près, heure limite comprise, à l'heure de Paris (Q-08, lib/remiseParis.ts),
+// quel que soit le fuseau de l'ordinateur.
 // Avant : differenceInDays (tronque) ici, Math.ceil sur minuit UTC ailleurs —
 // jusqu'à 48 h après la date limite, un écran pouvait dire « Aujourd'hui »
 // ou « À déposer ».
+
+import { heureLimiteParis, joursParis, momentLimiteParis } from './remiseParis'
 
 export type EtatEcheance = 'sans_date' | 'a_venir' | 'proche' | 'aujourdhui' | 'passee'
 
@@ -24,33 +27,21 @@ export interface Echeance {
 
 export const JOURS_PROCHE = 7
 
-/** Moment limite en heure locale ; sans heure : 23:59:59 le jour dit. */
+/** Moment limite à l'heure de Paris ; sans heure : 23:59:59 le jour dit (Q-08). */
 export function momentLimite(source: EcheanceSource | null | undefined): Date | null {
-  if (!source?.date) return null
-  const m = source.date.match(/^(\d{4})-(\d{2})-(\d{2})/)
-  if (!m) return null
-  const [an, mois, jour] = [Number(m[1]), Number(m[2]) - 1, Number(m[3])]
-  const h = (source.heure ?? '').match(/(\d{1,2})\s*(?:h|:)\s*(\d{2})?/i)
-  if (h) return new Date(an, mois, jour, Number(h[1]), Number(h[2] ?? 0), 0)
-  return new Date(an, mois, jour, 23, 59, 59)
-}
-
-const debutDuJour = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate())
-
-function heureLibelle(limite: Date): string {
-  return `${limite.getHours()}h${String(limite.getMinutes()).padStart(2, '0')}`
+  return momentLimiteParis(source)
 }
 
 export function etatEcheance(source: EcheanceSource | null | undefined, maintenant: Date = new Date()): Echeance {
   const limite = momentLimite(source)
   if (!limite) return { etat: 'sans_date', jours: null, libelle: '—', limite: null }
-  // Math.round absorbe le changement d'heure (23 h ou 25 h entre deux minuits).
-  const jours = Math.round((debutDuJour(limite).getTime() - debutDuJour(maintenant).getTime()) / 86_400_000)
+  // jours du calendrier de Paris : le changement d'heure (23 h ou 25 h entre deux minuits) n'y change rien
+  const jours = joursParis(limite, maintenant)
   if (maintenant.getTime() > limite.getTime()) {
     return { etat: 'passee', jours, libelle: 'Date de remise passée', limite }
   }
   if (jours === 0) {
-    return { etat: 'aujourdhui', jours, libelle: source?.heure ? `Aujourd’hui, ${heureLibelle(limite)}` : "Aujourd’hui", limite }
+    return { etat: 'aujourdhui', jours, libelle: source?.heure ? `Aujourd’hui, ${heureLimiteParis(limite)}` : "Aujourd’hui", limite }
   }
   return { etat: jours <= JOURS_PROCHE ? 'proche' : 'a_venir', jours, libelle: `J−${jours}`, limite }
 }

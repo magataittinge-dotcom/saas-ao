@@ -2,6 +2,7 @@
 // Règle : parmi les AO en cours, celui dont la date de remise est la plus proche (et pas encore passée)
 // et dont une étape reste à faire ; sans date, après les AO datés ; date passée, en dernier.
 import { avancementAO, echeanceAO, etatEcheance, type Echeance } from '@/lib/echeance'
+import { heureCourteParis, jourSemaineParis } from '@/lib/remiseParis'
 import { etatAO } from '@/lib/etatAO'
 import { lotUniqueDuDossier } from '@/lib/lotUnique'
 import type { Project } from '@/types'
@@ -96,8 +97,9 @@ export function texteEtape(p: EtatEtape): string {
   return TEXTES[avancementAO(p.current_step).etape]
 }
 
-const jourLong = (d: Date) => d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
-const heureCourte = (d: Date) => (d.getMinutes() ? `${d.getHours()} h ${String(d.getMinutes()).padStart(2, '0')}` : `${d.getHours()} h`)
+// la remise se dit à l'heure de Paris, comme elle se compte (Q-08)
+const jourLong = jourSemaineParis
+const heureCourte = heureCourteParis
 
 /** « Remise dans 5 jours », « Remise aujourd'hui », « Date de remise passée », « Date de remise à préciser ». */
 export function libelleRemise(e: Echeance): string {

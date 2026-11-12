@@ -1,12 +1,9 @@
 // Q-08 (restes 2) — LE modèle des dates de remise : une remise est une heure murale de Paris (le RC écrit « 14h00 » et
 // parle de Paris), lue et comparée à l'heure de Paris, quel que soit le fuseau de l'ordinateur ou du serveur. Fonctions
 // pures (Intl, aucune dépendance) ; `maintenant` est un instant, les jours se comptent sur le calendrier de Paris.
-//
-// Pas encore branché : `lib/echeance.ts` (momentLimite, etatEcheance) construit l'échéance en heure LOCALE et ses ~30
-// appelants l'affichent en heure locale (liste dans le rapport RESTES-2) ; basculer les uns sans les autres décalerait le
-// jour et l'heure. La bascule se fait en une fois : etatEcheance → etatEcheanceParis, puis chaque affichage de `limite`
-// par jourSemaineParis / heureCourteParis.
-import { JOURS_PROCHE, type Echeance, type EcheanceSource } from './echeance'
+// `lib/echeance.ts` (momentLimite, etatEcheance) s'appuie dessus ; les écrans affichent `limite` par jourSemaineParis,
+// heureCourteParis ou momentParis, jamais par les accesseurs locaux de Date (getHours, getDate…).
+import type { EcheanceSource } from './echeance'
 
 const FUSEAU = 'Europe/Paris'
 const MINUTE = 60_000
@@ -81,14 +78,4 @@ const JOUR_SEMAINE = new Intl.DateTimeFormat('fr-FR', { timeZone: FUSEAU, weekda
 /** « vendredi 10 avril » : le jour à Paris, avec son nom. */
 export function jourSemaineParis(instant: Date): string {
   return JOUR_SEMAINE.format(instant)
-}
-
-/** L'état d'une remise, compté à l'heure de Paris (mêmes états et libellés que `etatEcheance`). */
-export function etatEcheanceParis(source: EcheanceSource | null | undefined, maintenant: Date = new Date()): Echeance {
-  const limite = momentLimiteParis(source)
-  if (!limite) return { etat: 'sans_date', jours: null, libelle: '—', limite: null }
-  const jours = joursParis(limite, maintenant)
-  if (maintenant.getTime() > limite.getTime()) return { etat: 'passee', jours, libelle: 'Date de remise passée', limite }
-  if (jours === 0) return { etat: 'aujourdhui', jours, libelle: source?.heure ? `Aujourd’hui, ${heureLimiteParis(limite)}` : 'Aujourd’hui', limite }
-  return { etat: jours <= JOURS_PROCHE ? 'proche' : 'a_venir', jours, libelle: `J−${jours}`, limite }
 }

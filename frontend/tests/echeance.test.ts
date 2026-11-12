@@ -2,9 +2,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { avancementAO, echeanceAO, estEnCours, etatEcheance, momentLimite } from '@/lib/echeance'
+import { instantParis, momentParis } from '@/lib/remiseParis'
 
-// Dates construites en heure locale : le test ne dépend pas du fuseau de la machine.
-const le = (j: number, mois: number, h = 0, min = 0) => new Date(2026, mois - 1, j, h, min, 0)
+// Instants écrits à l'heure de Paris (Q-08 : la remise se compte à Paris) : le test ne dépend pas du fuseau de la machine.
+const le = (j: number, mois: number, h = 0, min = 0) => instantParis(2026, mois, j, h, min, 0)
 const REMISE = { date: '2026-04-10', heure: '14h00' }
 
 test('le jour même : « Aujourd’hui » jusqu’à l’heure limite comprise, puis « Date de remise passée »', () => {
@@ -39,8 +40,8 @@ test('sans heure connue : la limite est la fin du jour dit', () => {
   const jour = { date: '2026-04-10' }
   assert.equal(etatEcheance(jour, le(10, 4, 23, 58)).etat, 'aujourdhui')
   assert.equal(etatEcheance(jour, le(11, 4, 0, 0)).etat, 'passee')
-  assert.equal(momentLimite({ date: '2026-04-10', heure: '9h' })?.getHours(), 9)
-  assert.equal(momentLimite({ date: '2026-04-10', heure: '17:30' })?.getMinutes(), 30)
+  assert.equal(momentParis(momentLimite({ date: '2026-04-10', heure: '9h' })!).heure, 9)
+  assert.equal(momentParis(momentLimite({ date: '2026-04-10', heure: '17:30' })!).minute, 30)
 })
 
 test('sans date : état « sans date », pas de chiffre', () => {

@@ -3,8 +3,9 @@
 // avec TZ=America/New_York et TZ=Pacific/Auckland, rapport RESTES-2).
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { etatEcheance as etatEcheanceParis } from '@/lib/echeance'
 import {
-  decalageParis, etatEcheanceParis, heureCourteParis, heureLimiteParis, instantParis, joursParis, jourSemaineParis,
+  decalageParis, heureCourteParis, heureLimiteParis, instantParis, joursParis, jourSemaineParis,
   momentLimiteParis, momentParis,
 } from '@/lib/remiseParis'
 
@@ -66,4 +67,17 @@ test('affichage à Paris : « vendredi 10 avril », « 14 h », « 14h00 »', ()
   assert.equal(heureCourteParis(limite), '14 h')
   assert.equal(heureLimiteParis(limite), '14h00')
   assert.deepEqual(momentParis(utc('2026-12-31T23:30:00Z')), { an: 2027, mois: 1, jour: 1, heure: 0, minute: 30, seconde: 0 })
+})
+
+test('les écrans disent la remise et les dates du serveur à l’heure de Paris (Mes AO, veille, rétro-planning)', async () => {
+  const { quandCourt, jourCourt } = await import('@/lib/mesAO')
+  const { dateTerminee } = await import('@/components/mesao/Termines')
+  const { libelleActualisation } = await import('@/components/veille/VeilleAccueil')
+  const projet = (extra: object) => ({ id: 'p', name: 'AO', status: 'en_cours', updated_at: '2026-11-03T23:30:00', ...extra }) as never
+  assert.equal(quandCourt(projet({ echeance: { date: '2026-11-06', heure: '12h00' } })), 'ven. 6 nov., 12 h')
+  assert.equal(jourCourt(utc('2026-11-05T23:30:00Z')), '6 nov.')                         // 0:30 le 6 à Paris
+  assert.equal(dateTerminee(projet({ status: 'soumis', depose_at: '2026-11-03T23:30:00' })), 'déposé le 4 nov.')
+  assert.equal(dateTerminee(projet({ status: 'perdu' })), 'mis à jour le 4 nov.')
+  assert.equal(libelleActualisation('2026-10-31T07:12:00Z'), 'Données BOAMP du 31/10 à 08:12')
+  assert.equal(libelleActualisation(null), null)
 })

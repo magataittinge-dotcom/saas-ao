@@ -8,6 +8,7 @@ import { MenuElement, MenuPoints } from '@/components/ui/menu'
 import { PastilleEtat } from '@/components/ui/pastille'
 import type { ColonneTableau } from '@/components/ui/tableau'
 import { lectureAO } from '@/lib/etatAO'
+import { momentParis } from '@/lib/remiseParis'
 import { acheteurCourt, avancementAffiche, enTraitement, filDeLAO, jourCourt, lierNumero, niveauRemise, quandCourt, texteUnites, versAvisOrigine } from '@/lib/mesAO'
 import { cn } from '@/lib/utils'
 import type { Project } from '@/types'
@@ -78,7 +79,7 @@ function CelluleRemise({ projet, maintenant }: { projet: Project; maintenant: Da
   if (e.etat === 'sans_date') return <span className="text-sm text-fg-2">Date à préciser</span>
   if (etat === 'a_mettre_a_jour') {
     // la section s'appelle déjà « À mettre à jour » : la date seule, en texte (plus de pastille répétée sur chaque ligne)
-    return e.limite ? <span className="whitespace-nowrap text-sm text-fg-2"><span className="md:hidden">Remise </span>le {jourCourt(e.limite)} {e.limite.getFullYear()}</span> : null
+    return e.limite ? <span className="whitespace-nowrap text-sm text-fg-2"><span className="md:hidden">Remise </span>le {jourCourt(e.limite)} {momentParis(e.limite).an}</span> : null
   }
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
