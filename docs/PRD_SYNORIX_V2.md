@@ -8,7 +8,7 @@
 | Status | Active — **Vision V1 FINALE** (session produit du 2026-07-01), référence canonique |
 | Owner | Mohamed (Founder) |
 | Audience | Engineering, Design, future contributors, Claude Code |
-| Last updated | 2026-07-01 |
+| Last updated | 2026-11-12 (faits relus contre le code ; vision inchangée) |
 | Supersedes | `PRD_SAAS_AO_BTP.md` (v1, MVP phase) ; toute vision antérieure contradictoire |
 
 ---
@@ -75,7 +75,7 @@ Synorix's wedge is the **automated generation of personalised, deposit-grade tec
 - **Barre de navigation permanente (5 entrées, chacune avec son nom sous l'icône)** — Accueil, Mes AO, Mon entreprise, Coffre-fort, Paramètres ; bouton `[+ Nouvel AO]` hors nav ; jauge quota → Paramètres > Abonnement. Équipe et Mes références sont des accès de Mon entreprise ; Retenue de garantie n'est plus dans la barre. **Le pipeline n'apparaît jamais dans la barre.**
 - **Synorix Coach** — level-3 strategic chatbot (bulle flottante)
 - **86 modular skills V1** — each grounded in real BTP expertise from 8 validated NotebookLM notebooks (193 curated sources) <!-- v2.1 - notebooks 17/5/26 -->
-- **Multi-model AI stack** — Haiku 4.5 (routing + **reformulation de texte libre du profil**) / Sonnet 4.6 (extraction, analyse **et génération mémoire**) / Opus 4.7 (repli seulement ; la réécriture ciblée tourne sur le modèle de la génération, Sonnet 5.5) — measured cost **~€1 per complete tender response** (1er mémoire ≤ €1, suivants < €0,50 via profil mémoire vivant + prompt caching)
+- **Multi-model AI stack** — Haiku 4.5 (**reformulation de texte libre du profil**, lecture des dépôts de Mon entreprise, questions à poser ; aucun routage) / Sonnet 4.6 (extraction, analyse) / Sonnet 5.5 (**génération mémoire**) / Opus 4.7 (repli seulement ; la réécriture ciblée tourne sur le modèle de la génération, Sonnet 5.5) — cost target **~€1 per complete tender response** (1er mémoire ≤ €1, suivants < €0,50 via profil mémoire vivant + prompt caching) ; mesuré sur un gros DCE (Gueux, 2/11/2026) : analyse 2,30 €, mémoire 0,87 € (`backend/services/budget_ia.py`)
 - **Three plans** (grille du 2026-11-11 : plus aucune offre illimitée) — Essentiel (€149/mo, **5 analyses + 5 mémoires/mois**), Pro (€349/mo, 1 seat, **30 analyses + 30 mémoires/mois**) and Business (€599/mo, 5 seats, **70 analyses + 70 mémoires/mois**). Paiement Stripe **carte uniquement en V1**. **1 AO offert** à la création (SIRET vérifié via API Sirene INSEE).
 
 ### 1.7 Différenciateurs V1 — déterministes, 0 € API <!-- v3.0 - vision V1 FINALE -->
@@ -828,7 +828,7 @@ Synorix's left rail is **permanent** across all pages — même à l'intérieur 
 - **Cinq entrées, chacune avec son nom écrit sous l'icône** (11 px, visible sans survol, donc sur tablette aussi ; barre de 76 px) : **Accueil** (`/dashboard`) · **Mes AO** (badge deadlines) · **Mon entreprise** (le **profil mémoire vivant** vit ICI ; **Cerveau** viendra à sa place au bloc 8) · **Coffre-fort** (badge expiration) · **Paramètres**. Source unique : `components/layout/navigation.ts` (barre, onglets du bas, palette Ctrl K).
 - **Équipe** et **Mes références** ne sont plus des entrées : ce sont des accès de Mon entreprise. Leurs adresses `/team` et `/references` redirigent vers `/company?rubrique=moyens` et `/company?rubrique=certifications`.
 - **Retenue de garantie** n'est plus dans la barre : la page `/outils` reste accessible depuis la carte de trésorerie de l'analyse (où le chiffre du CCAP est déjà affiché), Paramètres > Outils et la palette Ctrl K.
-- **Jauge quota** (« 32/40 ») en bas, cliquable → **Paramètres > Abonnement & Facturation** (le billing vit dans **Paramètres**, *pas* en premier niveau de la barre).
+- **Jauge quota** (« 12 sur 30 ») en bas, cliquable → **Paramètres > Abonnement & Facturation** (le billing vit dans **Paramètres**, *pas* en premier niveau de la barre).
 - **Menu du compte** (la photo) : Paramètres, Abonnement, **Déconnexion** (plus dans la barre).
 - **Téléphone** (≤ 768 px) : 4 onglets (Accueil, Mes AO, Mon entreprise, Coffre-fort) + Compte (la photo), dont le tiroir liste Paramètres, le thème, le quota et la déconnexion.
 
@@ -1043,6 +1043,8 @@ Both share the same conversation history. En V1, le Coach vit **uniquement** com
 | **Support** | Email (48h) | Email priority (24h) + chat | + dedicated account manager |
 | **Onboarding** | Self-service | Free 1-hour live session | + team training |
 
+> **État du code (12/11/2026).** Une troisième offre existe : **Essentiel €149/mo, 5 analyses + 5 mémoires/mois** (`frontend/src/lib/offres.ts` = `backend/services/quota.py` `PLAN_LIMITS`). Le stockage n'est pas différencié par offre : **20 Go** par organisation abonnée, **5 Go** pour l'essai (`QUOTA_STOCKAGE_GO`, `QUOTA_STOCKAGE_GRATUIT_GO`, `services/stockage.py`). Aucune limite de sièges n'est appliquée par le code. Les trois offres donnent accès aux mêmes fonctions ; seul le quota du mois change (CGV § 4.2).
+
 Both plans include: full 6-step pipeline, full sidebar, Synorix Coach (bulle flottante), Synorix Score (in-pipeline), SIRET-validated account (Sirene INSEE).
 
 **Paiement — carte uniquement en V1 :** pas de prélèvement SEPA. Motif : une **migration d'entité juridique** est prévue et **les mandats SEPA ne migrent pas** entre comptes Stripe ; la carte évite ce blocage. Le SEPA est envisagé post-migration (Roadmap, §9.2).
@@ -1053,7 +1055,7 @@ Both plans include: full 6-step pipeline, full sidebar, Synorix Coach (bulle flo
 
 ### 6.2 Unit Economics
 
-Coût IA par AO (mesuré, full-Sonnet) : **~€1** — 1er mémoire ≤ €1, suivants **< €0,50** via profil mémoire vivant + prompt caching (cf. `docs/comparaison-memoire-AB/RESULTAT.md`). La génération mémoire tourne sur **Sonnet 4.6** (tous segments), ~7× moins cher qu'Opus (mémoire ≈ €0,90 en Sonnet vs ~€6 en Opus). Aux quotas V1 (2026-11-11 : Pro 30 analyses + 30 mémoires ; Business 70 + 70), les marges restent **> 90 %** en usage normal (chiffres indicatifs) :
+Coût IA par AO (mesuré, full-Sonnet) : **~€1** — 1er mémoire ≤ €1, suivants **< €0,50** via profil mémoire vivant + prompt caching (cf. `docs/comparaison-memoire-AB/RESULTAT.md`). La génération mémoire tourne sur **Sonnet 5.5** (tous segments, `memoire_generator.py`, réglage `MEMOIRE_MODELE`), ~7× moins cher qu'Opus (mémoire ≈ €0,90 en Sonnet vs ~€6 en Opus). Aux quotas V1 (2026-11-11 : Pro 30 analyses + 30 mémoires ; Business 70 + 70), les marges restent **> 90 %** en usage normal (chiffres indicatifs) :
 
 | Scenario | AO/mois | Coût IA/mois | Marge Pro (€349) | Marge Business (€599) |
 |---|---|---|---|---|
@@ -1088,6 +1090,12 @@ Synorix ships **no free trial in the classical sense**. Instead, every new accou
 **Why no money-back guarantee:** Free AO at sign-up + SIRET gate covers the trust gap upfront. Customer-service refund decisions are handled case by case, human, rare — a signal of quality, not a contractual escape hatch.
 
 Stripe drives all paid subscriptions, prorated upgrades/downgrades, monthly recurring billing — **carte uniquement en V1** (cf. §6.1).
+
+**Résiliation (décision D23, 12/11/2026 ; CGV 7.1-7.2, CGU 9.1).** Résiliable à tout moment : l'accès reste ouvert jusqu'à la fin de la période payée, le mois entamé n'est **pas remboursé**, ni en tout ni au prorata (`cancel_at_period_end`, `services/billing/stripe_provider.py`). « Supprimer mon compte » (Paramètres > Compte, administrateur seulement) : immédiat sans abonnement payant ; avec un abonnement payant, suppression **programmée** à la fin de la période payée, annulable jusque-là (ARCHITECTURE §7.13).
+
+**Plafonds du jour, toutes offres.** En plus du quota du mois : 20 analyses et 20 mémoires lancés par jour et par organisation, et un budget d'IA de 60 € par 24 h (ARCHITECTURE §7.11, §8.10) : « Plafond du jour atteint. Il se remet à zéro demain. »
+
+> **État du code (12/11/2026), écarts avec le parcours décrit plus haut :** l'export du dossier n'est **pas** fermé pendant l'AO offert ; le code de la NAF est enregistré mais un SIRET hors 41/42/43 n'est **pas** refusé (`routers/auth.py`) ; l'AO offert n'exige un SIRET vérifié que si `ESSAI_EXIGE_SIRET=1` (à `0` par défaut, à allumer le jour où les inscriptions sont publiques). Le profil est pré-rempli par l'API publique recherche-entreprises.api.gouv.fr (données Sirene, sans clé), pas par l'API INSEE en OAuth.
 
 ### 6.4 Future Plans (out of V2.0 scope)
 
@@ -1224,14 +1232,15 @@ V2.0 ships when **all four** of the following are true:
 | Block | Status |
 |---|---|
 | Refactor of legacy 9 project skills → 86 modular skills | In progress — 8 NotebookLM notebooks validated 2026-05-17 (193 sources) <!-- v2.1 - notebooks 17/5/26 --> |
-| 6-step pipeline UI (Upload → Lots → Analyse → Mémoire → **Vérification** → Export) | To do |
+| 6-step pipeline UI (Upload → Lots → Analyse → Mémoire → **Vérification** → Export) | Done, en **sept étapes** à l'écran : Dépôt, Lots, Décider, Pièces, Plan, Rédiger, Export (`frontend/src/lib/mesAO.ts` `FIL_ETAPES`) |
 | Barre de navigation V1 FINALE (5 entrées avec leur nom + jauge quota) | Done (S1, 1/11/2026) |
 | Synorix Coach (bulle flottante) | To do |
-| **Différenciateurs déterministes 0 € (§1.7 : Score go/no-go, trésorerie CCAP, rétro-planning, stats, retenue de garantie)** <!-- v3.0 --> | To do |
-| **Quotas + enforcement (Pro 30/30, Business 70/70 — 2026-11-11)** <!-- v3.0 --> | To do |
-| **SIRET / Sirene INSEE (pré-remplissage profil)** <!-- v3.0 --> | To do |
+| **Différenciateurs déterministes 0 € (§1.7 : Score go/no-go, trésorerie CCAP, rétro-planning, stats, retenue de garantie)** <!-- v3.0 --> | Done (`543a1fd`, `8067291`, `9b381ad`, `1b1b10e`) |
+| **Quotas + enforcement (Essentiel 5/5, Pro 30/30, Business 70/70 — 2026-11-11)** <!-- v3.0 --> | Done (`9e38bf2`, grille du 11/11 : `0d39557`) |
+| **SIRET / Sirene INSEE (pré-remplissage profil)** <!-- v3.0 --> | Done (`6791d3b`, API publique recherche-entreprises) |
 | Stripe live (Pro + Business) — **carte uniquement** | To do |
 | Production deployment on `synorix.tech` | To do |
+| Fonctions d'IA C1 à C4 (proposer un paragraphe, trois réécritures, fiche proposée, style de l'entreprise) | Livrées **éteintes** (interrupteurs à `0`, 12/11/2026) : à allumer une par une après un passage réel vérifié |
 
 ### 9.2 V1.5 — 2–3 months post-V1
 
@@ -1415,6 +1424,12 @@ Synorix's design system lives in code, not as an AI skill.
 ---
 
 ## 11. Changelog
+
+### 3.0.1 — 2026-11-12 (faits relus contre le code, vision inchangée)
+
+- §1.6 et §6.2 : la génération du mémoire tourne sur Sonnet 5.5, pas 4.6 ; Haiku ne fait aucun routage ; coût mesuré d'un gros DCE à côté de la cible. §4 : exemple de jauge à la grille du 11/11.
+- §6.1 : offre Essentiel, stockage (20 Go / 5 Go), sièges non appliqués. §6.3 : résiliation D23, plafonds du jour, écarts du code avec le parcours d'essai décrit.
+- §9.1 : statuts du parcours (sept étapes à l'écran), des différenciateurs, des quotas et de Sirene (faits) ; fonctions C1 à C4 livrées éteintes.
 
 ### 3.0 — 2026-07-01 (Vision V1 FINALE — référence canonique)
 

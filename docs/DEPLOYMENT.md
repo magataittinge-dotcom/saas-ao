@@ -114,8 +114,9 @@ Prouvé sur une base jetable (27/10/2026, Postgres 16, pgvector 0.6.0, rôle san
 sans cette ligne, `alembic upgrade head` échoue à la migration 0003 (« permission denied to create
 extension vector ») ; avec elle, les 34 migrations passent (0034 head, 25 tables dont `alembic_version`,
 schéma identique aux modèles hors `rag_chunks`, créée en SQL), puis l'API démarre (`/api/health` :
-`db: up`). Depuis le 12/11/2026 la head est **`0035_suppression_prevue`** (une colonne `suppression_prevue_le` sur
-`organizations`, D23) : toujours 25 tables (mesuré sur la base du banc à 0035).
+`db: up`). La head est aujourd'hui **`0037_index_echelle`** : **0035** ajoute la colonne `suppression_prevue_le` sur
+`organizations` (D23 ; sans elle, toute lecture d'une organisation rend 500), **0036** la table `styles_entreprise`
+(fonction C4, éteinte ; 26 tables dont `alembic_version`), **0037** des index. Une base déjà à `0034` joue les trois.
 La migration **0037** (index de lecture à l'échelle) crée l'extension `pg_trgm` : extension « de confiance »
 (Postgres ≥ 13), le rôle synorix, propriétaire de la base, la crée sans superutilisateur. `alembic check` passe sur une
 base neuve (R-02, 12/11/2026) : il peut servir de garde avant une mise en ligne.
@@ -209,14 +210,15 @@ Valeur par défaut entre parenthèses ; pour les plafonds, `0` coupe la garde.
 | IA | `ANTHROPIC_API_KEY`, `MEMOIRE_MODELE` (vide = Sonnet 5.5), `VOYAGE_API_KEY` (vide), `RAG_ENRICHMENT` (false), `SYNORIX_ANALYSE_DEMO` (false, interdit en production), `COUT_USD_EUR` (0.92) | Clés et modèle ; le RAG reste coupé en V1 ; taux indicatif du journal des coûts. |
 | Connexion | `CLERK_SECRET_KEY`, `CLERK_JWKS_URL` | Instance Clerk (développement ou production, VPS.md B5). |
 | Paiement | `BILLING_PROVIDER` (stripe), `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRODUCT_ESSENTIEL` (vide), `STRIPE_PRODUCT_PRO` et `STRIPE_PRODUCT_BUSINESS` (vides = produits du mode test, seulement avec une clé `sk_test_`) | Carte seulement ; webhook sur `https://synorix.tech/api/stripe/webhook`. Avec une clé `sk_live_`, l'API refuse de démarrer hors `DEBUG` si `STRIPE_PRODUCT_PRO` ou `STRIPE_PRODUCT_BUSINESS` est vide (ou vaut un produit du mode test). Le montant facturé est le **prix par défaut** de chaque produit dans le tableau de bord Stripe, pas une valeur du code. |
-| Plafonds d'usage (S-01 à S-06, D8, D24) | `PLAFOND_JOUR_ANALYSES` (20), `PLAFOND_JOUR_MEMOIRES` (20), `IMPORT_MEMOIRE_MAX_PAR_JOUR` (5), `REFORMULER_MAX_PAR_JOUR` (30), `BUDGET_IA_JOUR_EUR` (60), `BUDGET_IA_FORFAIT_ANALYSE_EUR` (3), `BUDGET_IA_FORFAIT_MEMOIRE_EUR` (1.5), `BUDGET_IA_FORFAIT_REFAIRE_EUR` (0.5), `BUDGET_IA_FORFAIT_APPEL_EUR` (0.2), `BUDGET_IA_RESERVATION_MINUTES` (120) | Par organisation et par jour, toutes offres. Au-delà : « Plafond du jour atteint. Il se remet à zéro demain. » |
+| Plafonds d'usage (S-01 à S-06, D8, D24) | `PLAFOND_JOUR_ANALYSES` (20), `PLAFOND_JOUR_MEMOIRES` (20), `PLAFOND_JOUR_QUESTIONS` (10, « Préparer les questions »), `IMPORT_MEMOIRE_MAX_PAR_JOUR` (5), `REFORMULER_MAX_PAR_JOUR` (30), `BUDGET_IA_JOUR_EUR` (60), `BUDGET_IA_FORFAIT_ANALYSE_EUR` (3), `BUDGET_IA_FORFAIT_MEMOIRE_EUR` (1.5), `BUDGET_IA_FORFAIT_REFAIRE_EUR` (0.5), `BUDGET_IA_FORFAIT_APPEL_EUR` (0.2), `BUDGET_IA_RESERVATION_MINUTES` (120) | Par organisation et par jour, toutes offres. Au-delà : « Plafond du jour atteint. Il se remet à zéro demain. » |
+| Fonctions d'IA livrées éteintes (C1 à C4) | `RELECTURE_PROPOSER`, `REECRIRE_TROIS`, `FICHE_PROPOSEE`, `STYLE_ENTREPRISE` (toutes 0) | `services/fonctions_ia.py`. Éteinte : route 404, aucun bouton, aucun coût. Allumer une à une (`1`, puis redémarrer l'API ; le front la voit en 5 minutes) après un passage réel vérifié ; C4 suppose la migration 0036. Plafonds sur 24 h dans le code : C1 et C2 partagent les 60 réécritures, C3 20, C4 5. |
 | AO offert (D7, D25) | `ESSAI_EXIGE_SIRET` (0) | 1 = l'AO offert exige un SIRET vérifié ; **à 1 le jour où les inscriptions sont publiques**. |
 | Stockage (D15, D24) | `QUOTA_STOCKAGE_GO` (20), `QUOTA_STOCKAGE_GRATUIT_GO` (5), `DISQUE_LIBRE_MIN_POURCENT` (15) | Quota par organisation (413) ; refus des dépôts sous 15 % de disque libre (507). |
 | Dépôts de « Mon entreprise » | `DEPOT_APPELS_PAR_JOUR` (60), `DEPOT_BUDGET_MENSUEL_EUR` (3), `DEPOT_LECTURES_EN_ATTENTE` (10) | Lectures Haiku par entreprise ; au-delà, reportées et reprises par la tâche horaire du beat. |
 | Purge (B18, D15) | `SYNORIX_PURGE_AO_ACTIVE` (0 = simulation), `SYNORIX_PURGE_AO_JOURS` (30) | AO supprimés depuis N jours : fichiers effacés par le worker. |
 | E-mails | `SMTP_HOST`, `SMTP_PORT` (587), `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` (tous vides) | Vides : notifications dans l'appli seulement (les e-mails de connexion sont envoyés par Clerk). |
 | Exploitation | `METRICS_TOKEN` (vide = `/api/metrics` fermé), `SYNORIX_X_ACCEL_PREFIX` (vide), caches et isolation ci-dessous | |
-| Fils de `to_thread` (R-04) | `SYNORIX_FILS_TO_THREAD` (16, borné à 64) | Fils de l'exécuteur de `asyncio.to_thread`, posé au démarrage (`services/executeur.py`). Sans lui, asyncio en prend `cpu + 4` (5 sur 1 vCPU), partagés par les appels courts à l'IA (10 à 60 s), les copies vers le coffre et les aperçus PDF. Ces fils attendent le réseau ou un processus PDFium, pas le CPU : 16 suffit au lancement. |
+| Fils de `to_thread` (R-04) | `SYNORIX_FILS_TO_THREAD` (16, borné à 64) | Fils de l'exécuteur de `asyncio.to_thread`, posé au démarrage (`services/executeur.py`). Sans lui, asyncio en prend `cpu + 4` (6 sur les 2 vCPU du KVM 2), partagés par les appels courts à l'IA (10 à 60 s), les copies vers le coffre et les aperçus PDF. Ces fils attendent le réseau ou un processus PDFium, pas le CPU : 16 suffit au lancement. |
 | Stockage objet (pas en V1) | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_S3_BUCKET` (vides), `AWS_REGION` (eu-west-3) | Laisser vides (voir plus haut). |
 | Locale | `COUNTRY_CODE` (FR), `CURRENCY` (EUR), `CURRENCY_SYMBOL` (€), `TAX_RATE` (0.20), `TAX_LABEL` (TVA), `TIMEZONE` (Europe/Paris), `LOCALE` (fr_FR), `DATE_FORMAT` (%d/%m/%Y), `COMPANY_NAME` (Synorix), `COMPANY_ADDRESS`, `COMPANY_VAT_NUMBER`, `COMPANY_REGISTRATION_NUMBER`, `LEGAL_JURISDICTION` (FR) | `config/locale.py` ; rien à poser pour la France. |
 | Front (au build, sur le PC) | `VITE_CLERK_PUBLISHABLE_KEY` (obligatoire), `VITE_API_URL` (vide en production), `VITE_PROXY_API` (serveur de développement seulement) | Figées dans le paquet par `npm run build` (`frontend/.env.production`). |
@@ -496,7 +498,7 @@ Chaque nuit (`synorix-sauvegarde.timer`, 03:00) : `deploy/sauvegarde/synorix-sau
 `/etc/synorix/sauvegarde.env` et mot de passe de restic dans `/etc/synorix/restic-mdp` (root, 0600, tapés
 sur le serveur ; **une copie du mot de passe de restic hors du serveur**, sinon les sauvegardes sont
 illisibles). Essayé en local le 27/10/2026 : deux passages (le second n'envoie rien de plus), restauration
-du dump (17 tables avec données à l'époque ; 25 tables au schéma 0034 et 0035) et d'une pièce (identique), base
+du dump (17 tables avec données à l'époque ; 25 tables au schéma 0034 et 0035, 26 depuis 0036) et d'une pièce (identique), base
 restaurée relue. Restauration : `BACKUP_RECOVERY.md`.
 
 **Essai de restauration (R-03, une fois par mois et après tout changement de la sauvegarde)** : relire un dump de restic,
@@ -556,8 +558,9 @@ Puis, sur le PC : `git checkout <même SHA>` et `deploy/outils/envoyer_front.sh 
 Si la régression vient d'une migration : `alembic downgrade <révision>` (chaque migration a sa descente ; essayé
 pour 0024, 0025 et 0034 → 0033 → 0034), ou restauration de la sauvegarde (`BACKUP_RECOVERY.md` §3). Une descente
 efface les colonnes et tables ajoutées par la migration, **avec leurs données** (0035 : les demandes de suppression de
-compte programmées). `alembic downgrade base` casse sur 0002 → 0001 (index déjà retiré) : pour repartir de zéro,
-`dropdb` puis A11 (VPS.md C4).
+compte programmées ; 0036 : les styles d'entreprise lus ; 0037 ne retire que des index, l'extension `pg_trgm` reste).
+`alembic downgrade base` passe depuis R-01 (`eb4b2fc`, `tests/test_migrations_aller_retour_r01.py`) ; pour repartir de
+zéro, `dropdb` puis A11 (VPS.md C4) reste le plus sûr.
 
 ---
 
@@ -578,6 +581,8 @@ La liste suivie le jour de la mise en ligne, case par case, avec la commande et 
 - [ ] Services `synorix-api`, `synorix-celery-worker`, `synorix-celery-beat` démarrent au boot (`systemctl is-enabled …`)
 - [ ] Sauvegarde de nuit active (`systemctl list-timers synorix-sauvegarde.timer`) et restauration essayée une fois (VPS.md C10)
 - [ ] Health check `https://synorix.tech/api/health` → `{"status":"ok","db":"up"}`
+- [ ] `alembic current` → `0037_index_echelle (head)` ; `alembic check` → aucune différence (§3)
+- [ ] Fonctions C1 à C4 éteintes (`RELECTURE_PROPOSER`, `REECRIRE_TROIS`, `FICHE_PROPOSEE`, `STYLE_ENTREPRISE` à 0 ou absentes)
 - [ ] `/api/metrics` : 404 sans jeton, JSON avec `Authorization: Bearer $METRICS_TOKEN`
 - [ ] Mention légale + politique RGPD publiées
 - [ ] DPA Anthropic signé
