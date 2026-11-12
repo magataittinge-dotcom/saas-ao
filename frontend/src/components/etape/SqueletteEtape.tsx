@@ -9,27 +9,47 @@ import { Squelette } from '@/components/ui/squelette'
  * À poser par une étape pendant le chargement de SES données : `<SqueletteEtape />` (avec son titre réel si elle le connaît :
  * elle rend alors son `GabaritEtape` et ne pose que `<SqueletteCorpsEtape />` dessous).
  */
+/** La bande de résumé en attente : UNE surface, quatre cases séparées par des filets (deux par deux au téléphone). */
+export function SqueletteBandeEtape({ cases = 4 }: { cases?: number }) {
+  return (
+    <div aria-hidden="true" data-squelette-bande="" className={`grid divide-bord rounded-carte border border-bord bg-surface-0 shadow-card max-md:grid-cols-2 md:divide-x ${cases >= 4 ? 'md:grid-cols-4' : cases === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
+      {Array.from({ length: cases }, (_, i) => (
+        <div key={i} className="grid min-h-[150px] content-start gap-3 p-5 max-md:min-h-[116px] max-md:p-4">
+          <Squelette className="h-4 w-24 max-w-full" />
+          <Squelette className="h-7 w-14" />
+          <Squelette className="h-3.5 w-36 max-w-full" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** Une section en attente : un titre, des lignes de longueurs de phrase. */
+export function SqueletteSectionEtape() {
+  return (
+    <div aria-hidden="true" className="space-y-4">
+      <Squelette className="h-5 w-52 max-w-full" />
+      <div className="flex flex-col gap-3">
+        <Squelette className="h-3.5 w-[34rem] max-w-full" />
+        <Squelette className="h-3.5 w-[28rem] max-w-[85%]" />
+        <Squelette className="h-3.5 w-[31rem] max-w-[92%]" />
+        <Squelette className="h-3.5 w-[18rem] max-w-[60%]" />
+      </div>
+    </div>
+  )
+}
+
+/**
+ * La bande puis une section, d'un seul bloc (posé dans les sections d'un gabarit, ou sous l'en-tête de `SqueletteEtape`).
+ * Une étape dont l'état chargé porte une bande de résumé (`resume` du gabarit) pose plutôt `SqueletteBandeEtape` dans
+ * `resume` et `SqueletteSectionEtape` dans ses sections : les sections commencent alors là où elles seront, et rien ne
+ * descend de la hauteur de la bande à l'arrivée des données.
+ */
 export function SqueletteCorpsEtape({ cases = 4 }: { cases?: number }) {
   return (
     <div aria-hidden="true" data-squelette-corps="" className="space-y-8">
-      <div className={`grid divide-bord rounded-carte border border-bord bg-surface-0 shadow-card max-md:grid-cols-2 md:divide-x ${cases >= 4 ? 'md:grid-cols-4' : cases === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
-        {Array.from({ length: cases }, (_, i) => (
-          <div key={i} className="grid min-h-[150px] content-start gap-3 p-5 max-md:min-h-[116px] max-md:p-4">
-            <Squelette className="h-4 w-24 max-w-full" />
-            <Squelette className="h-7 w-14" />
-            <Squelette className="h-3.5 w-36 max-w-full" />
-          </div>
-        ))}
-      </div>
-      <div className="space-y-4">
-        <Squelette className="h-5 w-52 max-w-full" />
-        <div className="flex flex-col gap-3">
-          <Squelette className="h-3.5 w-[34rem] max-w-full" />
-          <Squelette className="h-3.5 w-[28rem] max-w-[85%]" />
-          <Squelette className="h-3.5 w-[31rem] max-w-[92%]" />
-          <Squelette className="h-3.5 w-[18rem] max-w-[60%]" />
-        </div>
-      </div>
+      <SqueletteBandeEtape cases={cases} />
+      <SqueletteSectionEtape />
     </div>
   )
 }

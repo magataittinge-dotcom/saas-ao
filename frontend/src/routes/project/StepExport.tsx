@@ -10,7 +10,7 @@ import DocumentViewer, { type ViewableDocument } from '@/components/project/Docu
 import EchecAction from '@/components/common/EchecAction'
 import { MettreAJourStatut } from '@/components/common/MettreAJourStatut'
 import { phraseSourceSignature, signatureAConfirmer } from '@/components/project/SignatureLigne'
-import { GabaritEtape, BandeResume, BarreEtape, BilanBarre, ActionsBarreTel, SectionEtape, EtatElement, AnalyseNonFaite, SqueletteCorpsEtape } from '@/components/etape'
+import { GabaritEtape, BandeResume, BarreEtape, BilanBarre, ActionsBarreTel, SectionEtape, EtatElement, AnalyseNonFaite, SqueletteBandeEtape, SqueletteSectionEtape } from '@/components/etape'
 import { Bouton } from '@/components/ui/bouton'
 import { Carte } from '@/components/ui/carte'
 import { EtatErreur } from '@/components/ui/etats'
@@ -357,11 +357,10 @@ export default function StepExport({ project }: Props) {
   }
   if (isLoading) {
     return (
-      <GabaritEtape titre={TITRE} utilite={UTILITE}>
-        <div role="status" aria-busy="true">
-          <span className="sr-only">Chargement du dossier</span>
-          <SqueletteCorpsEtape />
-        </div>
+      // la bande dans `resume` (là où sera la vraie), la section dans les sections : rien ne descend à l'arrivée du dossier
+      <GabaritEtape titre={TITRE} utilite={UTILITE}
+        resume={<div role="status" aria-busy="true"><span className="sr-only">Chargement du dossier</span><SqueletteBandeEtape /></div>}>
+        <SqueletteSectionEtape />
       </GabaritEtape>
     )
   }

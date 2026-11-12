@@ -178,8 +178,10 @@ test('comptes uniques : la carte « Rédaction » dit la phrase de l’Export
     assert.equal(sans.detail, 'Version 2')
     assert.equal(sans.etat, undefined)
   }
-  // une seule source : la lecture de l'Export, sous la même clé de cache ; l'enregistrement du texte la rafraîchit
+  // une seule source : les comptes du détail d'export (même calcul serveur), par leur lecture légère, sous une clé qui
+  // commence par celle du détail ; l'enregistrement du texte la rafraîchit
   const code = lire('src/routes/project/StepMemoire.tsx')
-  assert.match(code, /queryKey: \['export-detail', project\.id\],\s*queryFn: [^\n]*\/export\/detail/)
+  assert.match(code, /queryKey: \['export-detail', project\.id, 'memoire-info'\],\s*queryFn: [^\n]*\/export\/memoire-info/)
+  assert.doesNotMatch(code, /\/export\/detail/, 'Rédiger ne lit plus le détail d’export entier (194 Ko) pour deux nombres')
   assert.equal((code.match(/invalidateQueries\(\{ queryKey: \['export-detail', project\.id\] \}\)/g) ?? []).length, 2)
 })

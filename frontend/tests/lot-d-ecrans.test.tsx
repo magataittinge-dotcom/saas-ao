@@ -6,7 +6,7 @@ import path from 'node:path'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { TableRoutes, ecranPourErreur, estMorceauIntrouvable } from '@/App'
+import { TableRoutes, ecranPourErreur, estMorceauIntrouvable, morceauxDeDemarrage } from '@/App'
 import Landing from '@/routes/Landing'
 import Pricing from '@/routes/Pricing'
 import Legal from '@/routes/Legal'
@@ -251,5 +251,14 @@ test('typographie : aucun repère d’espace insécable resté dans un texte aff
     'src/routes/Landing.tsx', 'src/routes/Pricing.tsx', 'src/routes/Legal.tsx', 'src/routes/Login.tsx', 'src/routes/Register.tsx',
     'src/components/onboarding/FirstAOWelcome.tsx', 'src/components/onboarding/FilSeptEtapes.tsx', 'src/components/mesao/VideMesAO.tsx']) {
     assert.ok(!lire(f).includes('␣'), f)
+  }
+})
+
+test('démarrage sur une adresse connectée : la coquille et l’écran partent avec Clerk ; jamais sur le site public', () => {
+  for (const chemin of ['/dashboard', '/projects', '/projects/new', '/projects/ao-1/export', '/vault', '/company', '/settings', '/settings/billing', '/outils']) {
+    assert.equal(morceauxDeDemarrage(chemin).length, 2, chemin)
+  }
+  for (const chemin of ['/', '/login', '/register', '/pricing', '/legal/cgv', '/adresse-inconnue']) {
+    assert.deepEqual(morceauxDeDemarrage(chemin), [], chemin)
   }
 })
