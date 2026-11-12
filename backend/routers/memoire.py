@@ -836,6 +836,9 @@ def _run_refaire_job_corps(project_id: str, org_id: str, user_id: str, part: str
 # bien plus légère (60 appels ≈ 1 € au plus). Le front annonce la même valeur (RewritePassageBar.tsx : un test les compare).
 REECRIRE_MAX_PAR_JOUR = 60
 ACTION_REECRIRE = "memoire.rewrite_passage"
+# Le plafond est partagé avec C1 (« Proposer un paragraphe ») et C2 (trois propositions), éteintes par défaut
+# (services/fonctions_ia.py) : éteintes, elles n'écrivent aucune ligne et le compte d'aujourd'hui est inchangé.
+ACTIONS_PLAFOND_REECRIRE = (ACTION_REECRIRE, "memoire.proposer_paragraphe", "memoire.reecrire_trois")
 MSG_REECRIRE_PLAFOND = (f"Vous avez réécrit {REECRIRE_MAX_PAR_JOUR} passages dans les dernières 24 heures : "
                         "c'est le plafond du jour. Vous pourrez en réécrire d'autres demain.")
 
@@ -845,7 +848,7 @@ def _reecritures_des_dernieres_24h(db: Session, org_id: str) -> int:
     from models.audit_log import AuditLog
     depuis = datetime.utcnow() - timedelta(hours=24)
     return (db.query(AuditLog)
-            .filter(AuditLog.organization_id == org_id, AuditLog.action == ACTION_REECRIRE,
+            .filter(AuditLog.organization_id == org_id, AuditLog.action.in_(ACTIONS_PLAFOND_REECRIRE),
                     AuditLog.created_at >= depuis)
             .count())
 
