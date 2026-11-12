@@ -21,7 +21,8 @@ _PREAMBULE = re.compile(r"^\s*(voici|bien s[uû]r|je propose|proposition\s*:|par
 
 
 class SortieIllisible(ValueError):
-    """La réponse du modèle n'a pas la forme attendue : rien n'est montré, rien n'est décompté."""
+    """La réponse du modèle n'a pas la forme attendue : rien n'est montré ; la demande compte dans le plafond du jour
+    (ses jetons sont payés, REVUE-2 P2-2)."""
 
 
 def modele_sonnet() -> str:

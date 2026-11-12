@@ -129,3 +129,18 @@ def test_p2_1_c4_fichier_refuse_avant_l_appel_la_place_est_rendue(client, modele
     assert _compte(db_session, "entreprise.style_lu") == 0
     assert modele["requetes"] == []
 
+
+# ── P2-2 : une sortie hors format compte dans le plafond (ses jetons sont payés) ──────────────────────────────────
+
+@pytest.mark.parametrize("fonction", [C1, C2], ids=["c1", "c2"])
+def test_p2_2_une_sortie_hors_format_compte_dans_le_plafond(client, dossier, modele, db_session, test_org, fonction):
+    from routers.memoire import REECRIRE_MAX_PAR_JOUR
+    url, corps, action = fonction
+    modele["reponse"] = "## Titre\n- une liste, pas la forme attendue"
+    _remplir(db_session, test_org.id, action, REECRIRE_MAX_PAR_JOUR - 1)
+    r = client.post(url, json=corps)
+    assert r.status_code == 502 and "n'a pas la forme attendue" in r.json()["detail"]
+    assert "Rien n'a été décompté" not in r.json()["detail"]
+    assert _compte(db_session, action) == REECRIRE_MAX_PAR_JOUR                # la demande payée compte
+    assert client.post(url, json=corps).status_code == 429                     # le plafond tient
+    assert len(modele["requetes"]) == 1

@@ -15,7 +15,8 @@ Plafonds par organisation sur 24 heures glissantes, comptés AVANT l'appel par u
 P2-1 : contrôlée avant une attente et comptée après, la dernière place passait à plusieurs demandes simultanées). Une
 demande qui échoue avant l'appel au modèle rend sa place (`rendre`). C1 et C2 partagent celui de la réécriture d'un passage (`REECRIRE_MAX_PAR_JOUR`,
 routers/memoire.py). Échec du fournisseur : la ligne d'audit passe en « <action>.echec », qui ne compte plus — rien
-n'est consommé (la réservation du budget d'IA est libérée par `exiger_budget_ia`, aucun jeton n'est inscrit).
+n'est consommé (la réservation du budget d'IA est libérée par `exiger_budget_ia`, aucun jeton n'est inscrit). Une
+sortie hors format compte : le modèle a répondu, ses jetons sont inscrits (REVUE-2 P2-2).
 """
 from __future__ import annotations
 
@@ -50,7 +51,9 @@ FICHE_PROPOSEE_MAX_PAR_JOUR = 20     # un appel = un plan entier (toutes les fic
 STYLE_MAX_PAR_JOUR = 5               # une lecture de style se fait une fois ; 5 laisse corriger un mauvais fichier
 
 MSG_ECHEC_FOURNISSEUR = ("Le service d'IA n'a pas répondu. Rien n'a été décompté ; réessayez dans un instant.")
-MSG_SORTIE_ILLISIBLE = ("La proposition reçue n'a pas la forme attendue. Rien n'a été décompté ; réessayez dans un instant.")
+# REVUE-2 P2-2 — la demande compte dans le plafond (le modèle a répondu, ses jetons sont payés) : la phrase ne dit plus
+# « Rien n'a été décompté ».
+MSG_SORTIE_ILLISIBLE = ("La proposition reçue n'a pas la forme attendue. Réessayez dans un instant.")
 
 
 def allumee(fonction: str) -> bool:
@@ -123,7 +126,8 @@ def reserver(db: Session, user, action: str, actions_du_plafond: tuple[str, ...]
 
 
 def rendre(db: Session, ligne: AuditLog) -> None:
-    """Échec du fournisseur ou sortie illisible : la demande ne compte plus dans le plafond (la ligne reste, marquée)."""
+    """Échec du fournisseur, ou échec avant l'appel : la demande ne compte plus dans le plafond (la ligne reste,
+    marquée). Jamais pour une sortie hors format, dont les jetons sont payés (REVUE-2 P2-2)."""
     try:
         db.rollback()
         ligne = db.merge(ligne)

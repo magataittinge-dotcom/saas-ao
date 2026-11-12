@@ -4,7 +4,8 @@ Ordre des dépendances de chaque route d'IA : l'interrupteur d'abord (404 si ét
 audit), puis le budget d'IA du jour de l'organisation (`exiger_budget_ia` : contrôle + réservation, 429), puis le
 projet de l'organisation (404 sinon : cloisonnement), puis le plafond du jour compté avant l'appel (429). Le coût réel
 est inscrit dans `couts_ia` (collecte des jetons), même si la suite échoue ; un échec du fournisseur rend la demande
-au plafond (`fonctions_ia.rendre`) et répond 502 avec une phrase claire.
+au plafond (`fonctions_ia.rendre`) et répond 502 avec une phrase claire. Une sortie hors format, elle, compte (REVUE-2
+P2-2 : ses jetons sont payés).
 
 GET /api/fonctions-ia : ce que l'écran lit pour montrer ou cacher les boutons (authentifié, sans coût).
 """
@@ -53,7 +54,8 @@ def _reserver_reecriture(db: Session, user: User, action: str, project_id: str, 
 
 async def _avec_cout(user: User, usage: str, reference: str, ligne_audit, db: Session, appel):
     """L'appel, ses jetons inscrits dans `couts_ia` (réussite ou échec), et la demande rendue au plafond si le
-    fournisseur échoue ou si la sortie n'a pas la forme attendue."""
+    fournisseur échoue. REVUE-2 P2-2 : une sortie hors format compte dans le plafond (le modèle a répondu, ses jetons
+    sont payés et inscrits) ; sinon des sorties hors format provoquées donnaient des appels hors plafond."""
     from services import couts_ia, jetons
     try:
         with jetons.collecter() as collecte:
@@ -63,7 +65,6 @@ async def _avec_cout(user: User, usage: str, reference: str, ligne_audit, db: Se
                 couts_ia.enregistrer_collecte(user.organization_id, usage, collecte, reference=reference)
     except fonctions_c.SortieIllisible as e:
         logger.warning("%s : sortie hors du format attendu (%s)", usage, e)
-        F.rendre(db, ligne_audit)
         raise HTTPException(status_code=502, detail=F.MSG_SORTIE_ILLISIBLE)
     except HTTPException:
         raise
