@@ -210,3 +210,65 @@ async def reecrire_trois(passage: str, action: str, instruction: Optional[str], 
     brut = await asyncio.to_thread(_appeler, modele_sonnet(), P.REECRIRE_TROIS_SYSTEM, message,
                                    max_jetons_trois(passage), "reecrire_trois")
     return [regle.garde_texte(t)[0] for t in valider_trois(brut, passage)]
+
+
+# ── C3 — « Ce que vous voulez dire » de chaque fiche du plan, proposé par Haiku 4.5 ────────────────────────────────
+
+FICHE_MAX_PARTIES = 60          # MAX_PARTIES du plan (services/plan_memoire.py)
+FICHE_MAX_CARACTERES = 400       # 300 demandés au modèle, et sa marge ; le champ de la fiche en porte 1 000
+FICHE_MAX_JETONS = 2500
+FICHE_BUDGET_CARACTERES = 24_000  # exigences comprises (≈ 7 000 jetons) ; chaque partie est nommée quoi qu'il arrive
+
+
+def message_fiches(parties: list[dict], profil: str) -> str:
+    """Le message de C3 : le profil, puis chaque partie gardée (clé, titre, sous-critères), et ses exigences tant que
+    le budget de caractères le permet (≈ 9 000 jetons d'entrée au plus avec le prompt et le profil)."""
+    blocs: list[list[str]] = []
+    for p in parties[:FICHE_MAX_PARTIES]:
+        lignes = [f"[{p['cle']}] {_coupe(p.get('titre') or p.get('titre_modele') or '', 140)}"]
+        criteres = [s.get("nom") for s in p.get("sous_criteres") or [] if isinstance(s, dict) and s.get("nom")]
+        if criteres:
+            lignes.append("Sous-critères : " + _coupe("; ".join(criteres), 300))
+        blocs.append(lignes)
+    taille = sum(len(l) + 1 for b in blocs for l in b)
+    for rang in range(6):                         # une exigence par partie, puis une deuxième, etc.
+        for p, lignes in zip(parties, blocs):
+            exigences = [e for e in (p.get("exigences") or []) if isinstance(e, dict) and e.get("texte")]
+            if rang < len(exigences):
+                ligne = f"- {_coupe(exigences[rang]['texte'], 280)}"
+                if taille + len(ligne) + 1 > FICHE_BUDGET_CARACTERES:
+                    break
+                lignes.append(ligne)
+                taille += len(ligne) + 1
+    return "\n\n".join(["PROFIL DE L'ENTREPRISE :\n" + (profil or "(rien de renseigné)"), "PARTIES DU PLAN :"]
+                       + ["\n".join(b) for b in blocs])
+
+
+def valider_fiches(brut: str, cles: set[str]) -> dict[str, str]:
+    """{"fiches": [{"cle", "texte"}]} : seules les clés du plan sont gardées, une fois ; un texte vide, trop long, avec
+    un point d'exclamation ou qui parle de prix est écarté (jamais montré). Rien d'autre n'est accepté."""
+    from services.points_eclaircir import parle_de_prix
+    donnees = _json(brut)
+    if set(donnees) != {"fiches"} or not isinstance(donnees["fiches"], list):
+        raise SortieIllisible("liste de fiches attendue")
+    propositions: dict[str, str] = {}
+    for f in donnees["fiches"]:
+        if not isinstance(f, dict) or set(f) != {"cle", "texte"}:
+            raise SortieIllisible("fiche hors du format")
+        cle, texte = f["cle"], f["texte"]
+        if not isinstance(cle, str) or not isinstance(texte, str):
+            raise SortieIllisible("fiche hors du format")
+        texte = re.sub(r"\s+", " ", texte).strip()
+        if (cle not in cles or cle in propositions or not texte or len(texte) > FICHE_MAX_CARACTERES
+                or "!" in texte or parle_de_prix(texte)):
+            continue
+        propositions[cle] = texte
+    return propositions
+
+
+async def proposer_fiches(parties: list[dict], profil: str) -> dict[str, str]:
+    """C3 : un appel Haiku 4.5 pour tout le plan (thread), puis la validation."""
+    message = message_fiches(parties, profil)
+    brut = await asyncio.to_thread(_appeler, HAIKU, P.FICHE_PROPOSEE_SYSTEM, message, FICHE_MAX_JETONS,
+                                   "fiche_proposee")
+    return valider_fiches(brut, {p["cle"] for p in parties[:FICHE_MAX_PARTIES]})

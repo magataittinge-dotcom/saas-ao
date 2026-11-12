@@ -135,3 +135,33 @@ async def reecrire_trois(request: Request, project_id: str, payload: PassageRewr
                                     lambda: fonctions_c.reecrire_trois(payload.passage, payload.action,
                                                                        payload.instruction, regle))
     return {"original": payload.passage, "propositions": propositions, "action": payload.action}
+
+
+# ── C3 — « Ce que vous voulez dire » de chaque fiche du plan, proposé puis validé ──────────────────────────────────
+
+@router.post("/projects/{project_id}/plan-memoire/proposer-voulu",
+             dependencies=[Depends(F.exiger("fiche_proposee")), Depends(exiger_budget_ia)])
+@limiter.limit("5/minute")
+async def proposer_voulu(request: Request, project_id: str, user: User = Depends(get_auth_user),
+                         db: Session = Depends(get_db)):
+    """C3 — une proposition de « Ce que vous voulez dire » par partie gardée du plan (enregistré, sinon proposé),
+    par Haiku 4.5, depuis les exigences rattachées à la partie et Mon entreprise. Rien n'est enregistré : l'écran
+    montre chaque proposition, l'utilisateur la prend ou non, et le texte pris suit le chemin d'aujourd'hui (champ
+    `voulu` de la fiche, enregistré par PUT /plan-memoire, lu par le générateur sans changer son prompt)."""
+    from routers.plan_memoire import _plan_enregistre, _reponse
+
+    project = get_owned_project(project_id, user.organization_id, db)
+    if F.demandes_24h(db, user.organization_id, (F.ACTION_FICHE_PROPOSEE,)) >= F.FICHE_PROPOSEE_MAX_PAR_JOUR:
+        raise HTTPException(status_code=429, detail=(
+            f"Vous avez demandé {F.FICHE_PROPOSEE_MAX_PAR_JOUR} propositions de fiches dans les dernières 24 heures : "
+            "c'est le plafond du jour. Vous pourrez en demander d'autres demain."))
+    vue = _reponse(db, project, _plan_enregistre(db, project, user.organization_id))
+    parties = [p for p in vue.get("parties") or [] if isinstance(p, dict) and not p.get("retiree")]
+    if not parties:
+        raise HTTPException(status_code=409, detail="Le plan ne compte aucune partie à proposer.")
+    profil = fonctions_c.profil_court(db, user.organization_id)
+    ligne = F.compter(db, user, F.ACTION_FICHE_PROPOSEE, target_type="project", target_id=project.id,
+                      extra={"parties": len(parties)})
+    propositions = await _avec_cout(user, "fiche_proposee", project.id, ligne, db,
+                                    lambda: fonctions_c.proposer_fiches(parties, profil))
+    return {"propositions": propositions}
