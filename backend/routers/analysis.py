@@ -692,7 +692,7 @@ def _run_analysis_job_corps(
         }
         _finalize_analysis(db, project_id, org_id, analysis, docs_sent, docs_total,
                            lot_specs=lot_specs, truncated_files=truncated_files,
-                           failed_lots=failed_lots)
+                           failed_lots=failed_lots, lots_livres=delivered_lots)
     except Exception as e:
         logger.error(f"Analyse {project_id} : échec de finalisation: {e}", exc_info=True)
         # Refund EXACT : uniquement les lots NON livrés et pas déjà remboursés
@@ -779,7 +779,7 @@ def _finalize_analysis(
     db: Session, project_id: str, org_id: str, analysis: dict,
     docs_sent: int, docs_total: int,
     lot_specs: list | None = None, truncated_files: list | None = None,
-    failed_lots: list | None = None,
+    failed_lots: list | None = None, lots_livres: set | None = None,
 ) -> None:
     project = db.query(Project).filter(Project.id == project_id).first()
     if project is None:
@@ -821,7 +821,9 @@ def _finalize_analysis(
     except Exception as exc:                      # jamais bloquant : la lecture cherchera la page
         logger.warning("Pages des champs critiques non rangées (%s)", type(exc).__name__)
     existing_cf = dict(project.critical_fields or {})
-    for lot_key in ([s_["lot_id"] for s_ in (lot_specs or [])] or [project.selected_lot or "_all"]):
+    # Seuls les lots livrés sont rangés : un lot en échec (unité rendue) n'est pas « Analysé » (`lots_analyses`).
+    lots_ranges = [s_["lot_id"] for s_ in (lot_specs or []) if lots_livres is None or s_["lot_id"] in lots_livres]
+    for lot_key in (lots_ranges if lot_specs else [project.selected_lot or "_all"]):
         existing_cf[lot_key] = fields
     project.critical_fields = existing_cf
 
