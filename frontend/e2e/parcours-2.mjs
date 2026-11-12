@@ -364,7 +364,7 @@ async function parcoursA(nav, dossiers) {
     await controler(ctx, 'redige-apres-relance', { titre: TITRES.rediger, fil: FIL[5] })
     const relance = await unites(page)
     if (relance.memoires !== avant.memoires + 1) throw new Echec(`relance : mémoires ${avant.memoires} → ${relance.memoires}, attendu +1`)
-    ctx.faits.push(`IA en panne pendant la rédaction : « ${texte.split('\n')[0].slice(0, 80)} », unité rendue (${avant.memoires} → ${apres.memoires}), « ${nomRelance} » rédige (→ ${relance.memoires})`)
+    ctx.faits.push(`IA en panne pendant la rédaction : « ${texte.split('\n')[0].slice(0, 80)} », unité rendue (${avant.memoires} → ${apres.memoires}), « ${M.relancerRedaction} » rédige (→ ${relance.memoires})`)
     await versExport.click()
 
     // Export : la pièce choisie au coffre-fort est dans le ZIP, octet pour octet.
