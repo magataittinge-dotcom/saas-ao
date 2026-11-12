@@ -111,9 +111,9 @@ This is deliberate — the V2.0 success criterion is *ship & be impressive*, not
 | Routing | React Router v6 | Standard |
 | Forms | react-hook-form + zod | Type-safe validation client-side |
 | Data fetch | TanStack Query | Cache + retries + SSE compatibility |
-| Editor (rich text) | TipTap | For memo editor & "Réécrire avec instructions" |
-| Editor (spreadsheet) | Handsontable or Glide Data Grid | For DPGF/BPU edit (FR-ANA-12) |
-| PDF viewer + highlight | PDF.js + custom highlight layer | For Source-click highlighting (FR-ANA-10) |
+| Editor (rich text) | Éditeur maison (`components/memoire/EditeurMemoire.tsx`, blocs Markdown ; lecture `react-markdown`) | TipTap n'a jamais été installé (`frontend/package.json`) |
+| Editor (spreadsheet) | Aucun | La DPGF se remplit hors Synorix, puis est re-déposée et contrôlée (C12) ; ni Handsontable ni Glide installés |
+| PDF viewer + highlight | `react-pdf` (pdf.js) + calque de surlignage maison | For Source-click highlighting (FR-ANA-10) |
 
 ### 2.2 Backend
 
@@ -121,14 +121,14 @@ This is deliberate — the V2.0 success criterion is *ship & be impressive*, not
 |---|---|---|
 | Framework | FastAPI | Async-native, Pydantic-native, OpenAPI free |
 | Language | Python 3.12 | Anthropic SDK Python is first-class |
-| ORM | SQLAlchemy 2.0 (async) | Mature, async support, expressive querying |
+| ORM | SQLAlchemy 2.0, sessions **synchrones** (`database.py` : `create_engine`, `sessionmaker`) | Le travail bloquant sort de l'event-loop par `asyncio.to_thread` (§8.6) |
 | Migrations | Alembic | Standard with SQLAlchemy |
 | Validation | Pydantic v2 | Strict mode on every boundary |
 | Background work | Celery + Redis broker | V1.0 keeps it simple — long-running pipeline steps run inline with SSE; Celery for scheduled jobs (follow-ups, expiry alerts) |
 | PDF parsing | pypdfium2 (`services/pdf_lecture.py`, Apache-2.0/BSD-3) | Text of every PDF (deposit, anchoring, lots, CCP); global lock (PDFium is not thread-safe). PyMuPDF (AGPL) is removed (server-side highlighter deleted, SVG → PNG via Pillow); guard: `tests/test_pas_de_pymupdf.py`; notices: `THIRD_PARTY_NOTICES` |
-| ZIP extraction | `zipfile` + `chardet` for filename encoding | Handles CP437/Latin-1/UTF-8 (FR-UPL-03) |
-| DOCX generation | `python-docx` + `docxtpl` | Memo `.docx` export |
-| PDF generation | WeasyPrint or `reportlab` | Memo `.pdf` export |
+| ZIP extraction | `zipfile` (bibliothèque standard) + garde anti-bombe (`services/garde_archives.py`, C21) | Handles CP437/Latin-1/UTF-8 (FR-UPL-03) ; `chardet` n'est pas une dépendance |
+| DOCX generation | `python-docx` (`services/docx_exporter.py`) | Memo `.docx` export ; `docxtpl` n'est pas une dépendance |
+| PDF generation | LibreOffice isolé (`services/pdf_export.py`, `services/libreoffice_isole.py`) | Memo `.pdf` export : conversion du `.docx`, sans réseau ni secret |
 | Image generation | SVG inlined via Python (organigramme, Gantt) | No external dependency |
 | AI SDK | `anthropic` Python SDK | First-party, supports prompt caching, streaming |
 
@@ -138,8 +138,8 @@ This is deliberate — the V2.0 success criterion is *ship & be impressive*, not
 |---|---|---|
 | Primary DB | PostgreSQL 16 | JSONB for unstructured DCE outputs, robust SQL for everything else |
 | Cache | Redis 7 | Hot reads, session scratch, Coach pub/sub |
-| Object storage | Hostinger object storage (S3-compatible) | DCE uploads, generated docs, coffre-fort encrypted |
-| Search | Postgres full-text (V1.0); **socle pgvector en place** — migration `0003_rag_corpus_pgvector` (table `rag_chunks`, extension `vector`, index HNSW cosine + GIN FTS français). Ingestion du corpus réglementaire à venir | Le schéma RAG est posé ; le branchement (embeddings Voyage + recherche hybride) reste à câbler |
+| Object storage | **V1 : disque du VPS** (`backend/uploads`, servi par X-Accel-Redirect après contrôle) ; S3 compatible prévu à l'échelle (`AWS_*` vides) | DCE uploads, generated docs, coffre-fort |
+| Search | Postgres full-text (V1.0); **socle pgvector en place** — migration `0003_rag_corpus_pgvector` (table `rag_chunks`, extension `vector`, index HNSW cosine + GIN FTS français). Ingestion du Code de la commande publique faite (`a41c770`), retriever hybride écrit (`42af6b4`) | **Coupé en V1** : `RAG_ENRICHMENT=false`, route `GET /api/rag/retrieve` retirée (S-07, `f994060`, fichier gardé) |
 
 ### 2.4 Auth & payments
 
@@ -152,8 +152,8 @@ This is deliberate — the V2.0 success criterion is *ship & be impressive*, not
 
 | Concern | Choice | Rationale |
 |---|---|---|
-| Error tracking | Sentry | Frontend + backend, source-maps, perf |
-| Structured logs | `structlog` | JSON logs, request-id correlation |
+| Error tracking | Sentry — **pas encore câblé** (backlog O4, `docs/DEPLOYMENT.md` § 12.3) | Frontend + backend, source-maps, perf |
+| Structured logs | `logging` de la bibliothèque standard, journald (`deploy/journald`) | `structlog` n'est pas une dépendance |
 | Metrics | Prometheus (V1.5) | Skip for V1.0; rely on Sentry & log queries |
 | Uptime | Better Stack (Uptime) | Free-tier sufficient |
 
@@ -164,9 +164,9 @@ This is deliberate — the V2.0 success criterion is *ship & be impressive*, not
 | Repo | `github.com/magataittinge-dotcom/saas-ao` (branch `refactor-v2`) |
 | Dev env | WSL2 Ubuntu on Windows |
 | Test framework (Python) | pytest + pytest-asyncio |
-| Test framework (TS) | vitest + Playwright (E2E) |
-| Lint / format | ruff + black + mypy / eslint + prettier |
-| Pre-commit | pre-commit hooks |
+| Test framework (TS) | `node --test` (`frontend/scripts/run-tests.mjs`, `npm test`) ; parcours de bout en bout `npm run e2e` / `e2e:2` (`playwright-core`, `frontend/e2e/`) |
+| Lint / format | ESLint (`npm run lint`, code 0 exigé, `frontend/.eslintrc.cjs`) ; aucun linter Python ni formateur configuré dans le dépôt |
+| Pre-commit | Aucun crochet dans le dépôt |
 
 ---
 
@@ -1275,6 +1275,7 @@ The expert knowledge is **baked in at build time**, not retrieved at runtime —
 - **§7.11** — Limiteur réel (nginx 20 r/s ; slowapi unique, clé organisation, repli en mémoire, alerte R-05) et plafonds du jour ; « Coach » retiré (aucune route).
 - **§7.13** — Suppression du compte : immédiate sans abonnement payant, programmée avec (D23, `0035`, webhook, tâche quotidienne, annulation) ; purge des AO ; sauvegardes réelles.
 - **§8.3 / §8.6 / §8.10** — Index `0037` ; exécuteur de `to_thread` (R-04) ; quotas de la grille du 11/11 et budget d'IA du jour (60 €, réservations) à la place du « cost guard » 15 €/100 €/300 € jamais codé.
+- **§2** — Pile réelle : éditeur maison, `react-pdf`, sessions SQLAlchemy synchrones, PDF par LibreOffice, disque du VPS, RAG coupé, Sentry et `structlog` absents, `node --test` et ESLint.
 - **§10.6 / §10.7** — Variables réellement lues par le code. **§11.4** — Sirene câblé (API publique sans clé). **§11.5** — webhooks de D23 ; abonnement relu chez le fournisseur, offre lue dans le prix (PAIEMENT, PAIEMENT-2).
 
 ### 2.5 — 2026-07-01 (alignement Vision V1 FINALE)
