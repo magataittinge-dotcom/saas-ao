@@ -8,6 +8,7 @@
     "build": "tsc && vite build && node scripts/precompresser.mjs",
     "preview": "vite preview",
     "test": "node scripts/run-tests.mjs",
+    "e2e": "node e2e/parcours.mjs",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
