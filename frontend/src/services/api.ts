@@ -53,7 +53,7 @@ api.interceptors.request.use(async (config) => {
     clearTimeout(minuterie)
   }
   if (token === EN_RETARD) {
-    console.warn('[api]', config.method?.toUpperCase(), config.url, '| jeton indisponible : requête non envoyée')
+    console.warn('[api]', config.method?.toUpperCase(), config.url, '| jeton indisponible, requête non envoyée')
     throw new axios.AxiosError('Jeton de session indisponible', 'ERR_JETON_INDISPONIBLE', config)
   }
   if (token) config.headers.Authorization = `Bearer ${token}`
