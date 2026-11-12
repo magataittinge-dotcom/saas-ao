@@ -27,7 +27,7 @@ export function ResumeMesAOCartes({ comptes, resume, quota }: {
         {unites && (
           <>
             <span aria-hidden>·</span>
-            <span>Unités du mois{'\u00a0'}: <strong className="font-semibold text-fg">{unites.illimite ? 'Illimité' : `${unites.utilisees} sur ${unites.total}`}</strong></span>
+            <span>Unités du mois{'\u00a0'}: <strong className="font-semibold text-fg">{unites.utilisees} sur {unites.total}</strong></span>
             <span aria-hidden>·</span>
             <Link to="/settings/billing" className={classesBouton('lien', '[@media(pointer:coarse)]:min-h-11')}>Voir l’abonnement</Link>
           </>
