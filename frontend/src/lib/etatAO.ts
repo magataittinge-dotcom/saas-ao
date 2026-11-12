@@ -50,6 +50,9 @@ export interface LectureAO {
   /** Une phrase qui dit où en est l'AO, tirée des mêmes faits que les chiffres affichés à côté. */
   phrase: string
   echeance: Echeance
+  /** Sur la page d'un AO gagné ou perdu : « Corriger le résultat », qui ouvre le dialogue de statut (D16) ; null sinon. Mes AO
+   *  garde « Ouvrir » sur la ligne (la correction y est dans le menu « … »). */
+  correction: string | null
 }
 
 const FERMES: Record<string, { libelle: string; sens: SensAO; phrase: string }> = {
@@ -81,18 +84,19 @@ export function lectureAO(p: ProjetLu, maintenant: Date = new Date()): LectureAO
     const action: ActionAO = p.status === 'soumis'
       ? { verbe: 'Indiquer le résultat', segment: null, statut: true }
       : { verbe: 'Ouvrir', segment: '', statut: false }
-    return { etat, libelle: f.libelle, sens: f.sens, action, phrase: f.phrase, echeance }
+    const correction = p.status === 'gagné' || p.status === 'perdu' ? 'Corriger le résultat' : null
+    return { etat, libelle: f.libelle, sens: f.sens, action, phrase: f.phrase, echeance, correction }
   }
   if (etat === 'a_mettre_a_jour') {
     return {
-      etat, libelle: 'À mettre à jour', sens: 'ambre', echeance,
+      etat, libelle: 'À mettre à jour', sens: 'ambre', echeance, correction: null,
       action: { verbe: 'Mettre à jour le statut', segment: null, statut: true },
       phrase: 'La date de remise est passée. Dites si le dossier a été déposé.',
     }
   }
   const a = actionEtape(p)
   return {
-    etat, libelle: 'En cours', sens: 'bleu', echeance,
+    etat, libelle: 'En cours', sens: 'bleu', echeance, correction: null,
     action: { verbe: a.verbe, segment: a.segment, statut: false },
     phrase: a.segment === 'export' ? phraseExport(p) : texteEtape(p),
   }

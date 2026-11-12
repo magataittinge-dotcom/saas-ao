@@ -5,7 +5,8 @@ Même mécanique que « Refaire cette partie » (`routers/memoire.py`) : une lig
 Les plafonds se règlent par variable d'environnement, lue à chaque demande ; 0 coupe le plafond.
 
 - « Importer un mémoire » (Sonnet 4.6, ~0,10 € l'appel) : `IMPORT_MEMOIRE_MAX_PAR_JOUR`, 5 par défaut ;
-- « Reformuler » le texte libre du profil (Haiku 4.5, ~0,01 €) : `REFORMULER_MAX_PAR_JOUR`, 30 par défaut.
+- « Reformuler » le texte libre du profil (Haiku 4.5, ~0,01 €) : `REFORMULER_MAX_PAR_JOUR`, 30 par défaut ;
+- « Préparer les questions » (Haiku 4.5) : `PLAFOND_JOUR_QUESTIONS`, 10 par défaut (compté et refusé par `routers/points_eclaircir.py`).
 """
 from __future__ import annotations
 
@@ -29,12 +30,14 @@ ACTION_REFORMULER = "memoire_config.reformuler"
 ACTION_LANCER_ANALYSE = "jour.analyse"
 ACTION_LANCER_MEMOIRE = "jour.memoire"
 MSG_PLAFOND_JOUR = "Plafond du jour atteint, il se remet à zéro demain."
+ACTION_QUESTIONS = "analyse.points_a_eclaircir"
 
 _PLAFONDS = {
     ACTION_IMPORT: ("IMPORT_MEMOIRE_MAX_PAR_JOUR", 5),
     ACTION_REFORMULER: ("REFORMULER_MAX_PAR_JOUR", 30),
     ACTION_LANCER_ANALYSE: ("PLAFOND_JOUR_ANALYSES", 20),
     ACTION_LANCER_MEMOIRE: ("PLAFOND_JOUR_MEMOIRES", 20),
+    ACTION_QUESTIONS: ("PLAFOND_JOUR_QUESTIONS", 10),
 }
 _MESSAGES = {ACTION_LANCER_ANALYSE: MSG_PLAFOND_JOUR, ACTION_LANCER_MEMOIRE: MSG_PLAFOND_JOUR}
 

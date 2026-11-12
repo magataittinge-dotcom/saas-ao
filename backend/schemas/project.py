@@ -80,6 +80,14 @@ class ProjectResponse(BaseModel):
 
     @computed_field
     @property
+    def lots_analyses(self) -> List[str]:
+        """Les lots déjà analysés (champs critiques posés par lot à la fin de leur lecture) : l'écran Lots les rouvre sans
+        les relire (« Ouvrir ce lot », aucune unité). Le dossier entier (« _all ») n'en est pas un."""
+        cache = self.critical_fields if isinstance(self.critical_fields, dict) else {}
+        return sorted(k for k in cache if k != "_all")
+
+    @computed_field
+    @property
     def echeance(self) -> Optional[dict]:
         """1.14 — L'échéance unique de l'AO, la même pour tous les écrans :
         la date saisie si elle existe (avec l'heure du RC quand le RC donne le

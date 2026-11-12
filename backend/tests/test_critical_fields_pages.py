@@ -78,14 +78,15 @@ def test_pdf_absent_ne_casse_rien(db_session, test_org, tmp_path, monkeypatch):
     assert res["date_limite_remise"]["source"]["page"] is None
 
 
-def test_la_route_range_les_pages(client, projet):
+def test_la_route_rend_les_pages_sans_ecrire(client, projet):
     projet.get(Project, "p-cfp").critical_fields = {"_all": _champs()}
     projet.commit()
     r = client.get("/api/projects/p-cfp/critical-fields")
     assert r.status_code == 200
     assert r.json()["fields"]["date_limite_remise"]["source"]["page"] == 3
+    # D-05 : la page est rangée par la fin de l'analyse, plus par le GET (test_lecture_pure_d05.py).
     projet.expire_all()
-    assert projet.get(Project, "p-cfp").critical_fields["_all"]["date_limite_remise"]["source"]["page"] == 3
+    assert projet.get(Project, "p-cfp").critical_fields["_all"]["date_limite_remise"]["source"]["page"] is None
 
 
 def test_la_route_d_une_autre_organisation_reste_fermee(client, db_session):

@@ -350,10 +350,10 @@ async function parcoursA(nav, dossiers) {
     if (apres.memoires !== avant.memoires) throw new Echec(`panne rédaction : l'unité n'est pas rendue (mémoires ${avant.memoires} → ${apres.memoires})`)
     controlerConsole(ctx, 'panne rédaction')
     unlinkSync(PANNE)
-    // La relance : le bouton que l'écran propose après l'échec (« Relancer » s'il est là, sinon le geste de l'étape).
-    const relancer = (await bouton(page, VERBES.relancer, true).count()) ? bouton(page, VERBES.relancer, true) : bouton(page, VERBES.rediger, true)
-    const nomRelance = (await relancer.innerText()).trim()
-    if (nomRelance !== VERBES.relancer) constat(ctx, `panne rédaction : pas de « ${VERBES.relancer} » après l’échec, la relance passe par « ${nomRelance} » (routes/project/StepMemoire.tsx:452, FormulaireMemoire.tsx:75)`)
+    // La relance : après l'échec, l'écran dit que rien n'est décompté et propose « Relancer la rédaction » (comme l'analyse).
+    if (!texte.includes(M.rienDecompte)) throw new Echec(`panne rédaction : le message ne dit pas « ${M.rienDecompte} » (« ${texte.split('\n')[0].slice(0, 120)} »)`)
+    const relancer = bouton(page, M.relancerRedaction, true)
+    if (!(await relancer.count())) throw new Echec(`panne rédaction : pas de « ${M.relancerRedaction} » après l’échec`)
     await relancer.click()
     const versExport = bouton(page, VERBES.passerExport, true)
     try { await versExport.waitFor({ timeout: 30_000 }) } catch {
@@ -364,7 +364,7 @@ async function parcoursA(nav, dossiers) {
     await controler(ctx, 'redige-apres-relance', { titre: TITRES.rediger, fil: FIL[5] })
     const relance = await unites(page)
     if (relance.memoires !== avant.memoires + 1) throw new Echec(`relance : mémoires ${avant.memoires} → ${relance.memoires}, attendu +1`)
-    ctx.faits.push(`IA en panne pendant la rédaction : « ${texte.split('\n')[0].slice(0, 80)} », unité rendue (${avant.memoires} → ${apres.memoires}), « ${nomRelance} » rédige (→ ${relance.memoires})`)
+    ctx.faits.push(`IA en panne pendant la rédaction : « ${texte.split('\n')[0].slice(0, 80)} », unité rendue (${avant.memoires} → ${apres.memoires}), « ${M.relancerRedaction} » rédige (→ ${relance.memoires})`)
     await versExport.click()
 
     // Export : la pièce choisie au coffre-fort est dans le ZIP, octet pour octet.
@@ -388,13 +388,26 @@ async function parcoursA(nav, dossiers) {
     await page.getByRole('button', { name: VERBES.depose, exact: true }).click()
     await choisirStatut(ctx, VERBES.depose, 'statut-depose')
     await page.getByText(DEPOSE, { exact: true }).first().waitFor({ timeout: 15_000 })
+    // Après le dépôt, l'Export ne garde que « Indiquer le résultat » (le bandeau) : plus « Je l'ai déposé ».
+    try { await page.getByRole('button', { name: VERBES.depose, exact: true }).waitFor({ state: 'hidden', timeout: 10_000 }) } catch {
+      throw new Echec(`export après le dépôt : « ${VERBES.depose} » reste affiché à côté de « ${M.statut} »`)
+    }
+    await capturer(ctx, 'export-apres-depot')
     await ouvrirStatut(ctx)
     await choisirStatut(ctx, M.gagne, 'statut-gagne')
+    // La page d'un AO gagné propose « Corriger le résultat » (D16), qui ouvre le dialogue de statut.
+    const corriger = page.getByRole('button', { name: M.corrigerResultat, exact: true })
+    try { await corriger.waitFor({ timeout: 15_000 }) } catch { throw new Echec(`AO gagné : sa page ne propose pas « ${M.corrigerResultat} »`) }
+    await capturer(ctx, 'ao-gagne')
+    await corriger.click()
+    await page.getByRole('dialog', { name: VERBES.dialogueStatut }).waitFor({ timeout: 10_000 })
+    await page.keyboard.press('Escape')
+    await page.getByRole('dialog', { name: VERBES.dialogueStatut }).waitFor({ state: 'hidden', timeout: 10_000 })
     const s1 = await stats()
     if (s1.projects_gagnes !== s0.projects_gagnes + 1) throw new Echec(`statut : gagnés ${s0.projects_gagnes} → ${s1.projects_gagnes} après « Gagné », attendu +1`)
     const bilan1 = await bilanAccueil(ctx, 'accueil-gagne')
     if (!dit(bilan1, s1)) throw new Echec(`bilan après « Gagné » : l'Accueil dit « ${bilan1} », le serveur ${JSON.stringify(s1)}`)
-    // Un AO gagné n'a plus d'action sur sa page : la correction (D16) passe par Mes AO, menu « … » de sa rangée.
+    // La correction (D16) depuis Mes AO, menu « … » de sa rangée.
     await page.goto(BASE + '/projects', { waitUntil: 'domcontentloaded' })
     const recherche = page.getByRole('search', { name: M.rechercheMesAO })
     await recherche.getByRole('searchbox').or(recherche.getByRole('textbox')).first().fill(`${MARQUE} coffre`)
@@ -487,9 +500,8 @@ async function parcoursB(nav, dossiers) {
     const vus = []
     for (const [i, lot] of lots.slice(0, 2).entries()) {
       if (i > 0) {
-        // Passer au second lot, déjà lu : l'Export n'a pas de choix du lot ; l'écran Lots, ce lot seul coché, ne propose que
-        // de le relire (« Analyser 1 lot », 1 unité). Constat ; le lot est alors choisi comme l'écran Lots le fait
-        // (POST lots/select, sans relecture) pour vérifier ce que l'Export propose pour lui.
+        // Passer au second lot, déjà lu : sur l'écran Lots, ce lot seul coché, « Ouvrir ce lot » le rend lot en cours sans
+        // le relire (aucune unité décomptée, aucun appel d'IA), puis l'Export propose sa DPGF.
         await page.goto(`${BASE}/projects/${ctx.id}/lots`, { waitUntil: 'domcontentloaded' })
         await page.getByRole('heading', { level: 1, name: TITRES.lots, exact: true }).waitFor({ timeout: 30_000 })
         const lot1 = page.getByRole('button', { name: /^Lot 01/ }).first()
@@ -500,11 +512,17 @@ async function parcoursB(nav, dossiers) {
         await page.waitForTimeout(400)
         const geste = (await page.locator('[data-variante="principal"]:visible').first().innerText()).trim()
         await capturer(ctx, 'lots-second-lot')
-        if (geste.startsWith(VERBES.analyserLot)) {
-          constat(ctx, `deux lots : aucun écran ne mène à l’Export du second lot déjà lu sans le relire (« ${geste} ») : routes/project/StepExport.tsx (pas de choix du lot), routes/project/StepLotSelection.tsx:499-503`)
-        }
-        const choix = await api_(page, 'POST', `/api/projects/${ctx.id}/lots/select`, { lot_id: lot.id, lot_name: lot.nom })
-        if (choix.s >= 300) throw new Echec(`deux lots : le choix du ${lot.nom} a répondu ${choix.s}`)
+        if (geste !== M.ouvrirLot) throw new Echec(`deux lots : le second lot, déjà lu, propose « ${geste} » au lieu de « ${M.ouvrirLot} »`)
+        const unitesAvant = await unites(page)
+        const appelsAvant = JSON.stringify(appelsDepuis(debut))
+        await bouton(page, M.ouvrirLot, true).click()
+        await page.waitForURL(/\/analysis$/, { timeout: 30_000 })
+        const choisi = (await api_(page, 'GET', `/api/projects/${ctx.id}`)).corps
+        if (choisi?.selected_lot !== lot.id) throw new Echec(`deux lots : « ${M.ouvrirLot} » laisse le lot en cours à ${choisi?.selected_lot}`)
+        const unitesApres = await unites(page)
+        if (unitesApres.analyses !== unitesAvant.analyses) throw new Echec(`deux lots : rouvrir le ${lot.nom} a décompté (${unitesAvant.analyses} → ${unitesApres.analyses})`)
+        if (JSON.stringify(appelsDepuis(debut)) !== appelsAvant) throw new Echec('deux lots : rouvrir un lot a appelé l’IA')
+        ctx.faits.push(`${lot.nom}, déjà lu : « ${M.ouvrirLot} » en fait le lot en cours (analyses ${unitesAvant.analyses} → ${unitesApres.analyses}, 0 appel d'IA)`)
       }
       const detail = page.waitForResponse((r) => new URL(r.url()).pathname.endsWith('/export/detail') && r.status() === 200, { timeout: 30_000 })
       await page.goto(`${BASE}/projects/${ctx.id}/export`, { waitUntil: 'domcontentloaded' })
@@ -563,11 +581,14 @@ async function parcoursC(nav, dossiers, largeur) {
     const p = (await api_(page, 'GET', `/api/projects/${ctx.id}`)).corps
     if (['analyzing', 'analyzed'].includes(p?.processing_status) || p?.status === 'analyzed') throw new Echec(`quota : l'AO est parti en lecture (${p?.processing_status})`)
     ctx.faits.push(`quota épuisé (${avant.analyses} analyses sur 5, Essentiel) : « ${M.murAbonnement} » s'ouvre, analyses ${avant.analyses} → ${apres.analyses}, 0 appel d'IA`)
-    // L'organisation est déjà en Essentiel : le mur lui propose quand même de « Choisir Essentiel » (et les trois boutons mènent
-    // au paiement, que le serveur refuse à une offre payante : 409 « déjà un abonnement actif »). Rien n'est cliqué.
-    if (await mur.getByRole('button', { name: M.choisirOffreEnCours, exact: true }).count()) {
-      constat(ctx, `mur d’abonnement d’une organisation en Essentiel : il propose « ${M.choisirOffreEnCours} » (son offre) et ses trois « Choisir … » ouvrent un paiement que le serveur refuse à une offre payante : components/common/SubscriptionWall.tsx:61-66, routers/stripe_billing.py:99-103`)
-    }
+    // L'organisation est déjà en Essentiel : son offre est marquée « Votre offre », sans bouton ; les autres passent par le
+    // portail de paiement (le serveur refuse une seconde souscription à une offre payante). Rien n'est cliqué (Stripe).
+    const choisir = await mur.getByRole('button', { name: /^Choisir / }).count()
+    if (choisir) throw new Echec(`mur d’abonnement d’une organisation en Essentiel : ${choisir} bouton(s) « Choisir … » (paiement refusé par le serveur)`)
+    if ((await mur.getByText(M.votreOffre, { exact: true }).count()) !== 1) throw new Echec(`mur d’abonnement : « ${M.votreOffre} » n’est pas marqué une fois`)
+    const passer = await mur.getByRole('button', { name: new RegExp(`^${M.passerA}`) }).count()
+    if (passer !== 2) throw new Echec(`mur d’abonnement : ${passer} bouton(s) « ${M.passerA}… », attendu 2 (Pro, Business)`)
+    ctx.faits.push(`mur d'une organisation en Essentiel : « ${M.votreOffre} » sans bouton, 2 « ${M.passerA}… » (portail de paiement)`)
     await page.keyboard.press('Escape')
     await mur.waitFor({ state: 'hidden', timeout: 10_000 })
     controlerConsole(ctx, 'mur fermé', CONSOLE_ATTENDUES.quota)
@@ -631,6 +652,8 @@ try {
   if (!(await sante(BASE + '/'))) throw new Echec(`le front ne répond pas sur ${BASE} (banc.sh lancer <copie>)`)
   const reparee = baseJetable('restaurer')
   if (reparee.restaure) dire('base jetable : le compte du test est rendu à son organisation (passage précédent interrompu)')
+  const zero = baseJetable('remise-a-zero')
+  dire(`base jetable : compteurs du mois de l'organisation du compte remis à zéro (${zero.unites_effacees} unité(s) effacée(s))`)
   const dossiers = fabriquerDossiers()
   dire(`dossiers inventés : ${path.basename(dossiers.coffre)}, ${path.basename(dossiers.deuxLots)}`)
   await lancerApi()

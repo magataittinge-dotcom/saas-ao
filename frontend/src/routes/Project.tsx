@@ -84,6 +84,8 @@ function PageAO({ project }: { project: ProjetAO }) {
   // Une seule alerte de date (jury, tour 1 : la remise passée était dite deux fois, pastille rouge ET bandeau). Remise
   // passée : le bandeau la dit, avec la date et la seule action permise ; la pastille ne s'affiche pas. Sinon : la pastille.
   const remisePassee = lecture.etat === 'a_mettre_a_jour'
+  // Le dialogue de statut, depuis la page : remise passée, AO déposé, ou AO gagné ou perdu (« Corriger le résultat », D16).
+  const actionStatut = lecture.action.statut ? lecture.action.verbe : lecture.correction
   const jourRemise = quandRemise(project)
   const contexte = [acheteurCourt(project.maitre_ouvrage), project.selected_lot_name].filter(Boolean).join(' · ')
 
@@ -113,12 +115,14 @@ function PageAO({ project }: { project: ProjetAO }) {
       />
 
       {/* L'état de l'AO, dit une fois : une remise passée n'a qu'une action, « Mettre à jour le statut » */}
-      {lecture.action.statut && (
+      {actionStatut && (
         <div data-alerte-ao={remisePassee ? 'attention' : 'info'} className="mb-6">
-          <Message ton={remisePassee ? 'attention' : 'info'} titre={remisePassee ? 'La date de remise est passée' : 'Le dossier est déposé'}
-            action={<Bouton variante={remisePassee ? 'principal' : 'secondaire'} onClick={() => setStatut(true)}>{lecture.action.verbe}</Bouton>}>
+          <Message ton={remisePassee ? 'attention' : 'info'}
+            titre={remisePassee ? 'La date de remise est passée' : lecture.correction ? lecture.phrase.replace(/\.$/, '') : 'Le dossier est déposé'}
+            action={<Bouton variante={remisePassee ? 'principal' : 'secondaire'} onClick={() => setStatut(true)}>{actionStatut}</Bouton>}>
             {remisePassee
               ? `${jourRemise ? `Elle était fixée au ${jourRemise.replace(/^./, (c) => c.toLowerCase())}. ` : ''}Dites si le dossier a été déposé : cet appel d’offres quittera ceux à suivre.`
+              : lecture.correction ? 'Si le résultat enregistré est faux, corrigez-le.'
               : 'Indiquez le résultat quand l’acheteur l’annonce.'}
           </Message>
         </div>

@@ -9,7 +9,7 @@ Aucune proposition ne contient de nom de personne : seulement des nombres par r�
 l'entreprise (CONCEPTION-memoire-entreprise.md § 6)."""
 import uuid
 from datetime import datetime
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, false
 from database import Base
 
 ETATS_LECTURE = ("en_lecture", "differee", "lu", "coffre_seul", "ocr_requis", "echec", "ecartee")
@@ -27,10 +27,10 @@ class LectureDepot(Base):
     sha256 = Column(String(64), nullable=False, index=True)
     etat = Column(String(16), nullable=False, default="en_lecture")   # ETATS_LECTURE
     message = Column(String(300), nullable=True)                       # explication affichée sous la case
-    nb_propositions = Column(Integer, nullable=False, default=0)
+    nb_propositions = Column(Integer, nullable=False, default=0, server_default="0")
     pages_lues = Column(Integer, nullable=True)
     pages_total = Column(Integer, nullable=True)
-    plafond_atteint = Column(Boolean, nullable=False, default=False)
+    plafond_atteint = Column(Boolean, nullable=False, default=False, server_default=false())
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
     terminee_le = Column(DateTime, nullable=True)
 
@@ -65,11 +65,11 @@ class CoutIA(Base):
     organization_id = Column(String, ForeignKey("organizations.id"), nullable=False, index=True)
     usage = Column(String(40), nullable=False, index=True)      # depot_entreprise, structure_texte…
     modele = Column(String(60), nullable=False)
-    jetons_entree = Column(Integer, nullable=False, default=0)
-    jetons_sortie = Column(Integer, nullable=False, default=0)
-    jetons_cache_lecture = Column(Integer, nullable=False, default=0)
-    jetons_cache_ecriture = Column(Integer, nullable=False, default=0)
-    cout_usd = Column(Float, nullable=False, default=0.0)
-    cout_eur = Column(Float, nullable=False, default=0.0)
+    jetons_entree = Column(Integer, nullable=False, default=0, server_default="0")
+    jetons_sortie = Column(Integer, nullable=False, default=0, server_default="0")
+    jetons_cache_lecture = Column(Integer, nullable=False, default=0, server_default="0")
+    jetons_cache_ecriture = Column(Integer, nullable=False, default=0, server_default="0")
+    cout_usd = Column(Float, nullable=False, default=0.0, server_default="0")
+    cout_eur = Column(Float, nullable=False, default=0.0, server_default="0")
     reference = Column(String, nullable=True)                   # identifiant de la lecture
     created_at = Column(DateTime, default=datetime.utcnow, index=True)

@@ -142,7 +142,8 @@ def test_failure_sets_error_and_allows_relaunch(client, db_session, test_org, mo
     db_session.expire_all()
     p = db_session.get(Project, "proj-mdet3")
     assert p.processing_status == "error"
-    assert "relancez" in (p.processing_detail or "").lower()
+    # La phrase du produit dit que rien n'est décompté ; « Relancer la rédaction » est le bouton de l'écran (rapport E2E-2).
+    assert "rien n’a été décompté" in (p.processing_detail or "").lower()
     assert p.current_step == 5          # jamais de régression NI d'avancée
     assert db_session.query(MemoireTechnique).filter(
         MemoireTechnique.project_id == "proj-mdet3").first() is None

@@ -9,8 +9,10 @@ export const doitConfirmerLecture = (nbLots: number): boolean => nbLots > 1
 
 const pluriel = (n: number) => (n > 1 ? 'lots' : 'lot')
 
-/** « Analyser 1 lot (1 unité) », « Analyser 13 lots (13 unités) ». `nbLots` 0 = dossier sans lots. */
-export function libelleBoutonLire(nbLots: number): string {
+/** « Analyser 1 lot (1 unité) », « Analyser 13 lots (13 unités) ». `nbLots` 0 = dossier sans lots ; un dossier à plusieurs lots
+ *  (`nbLotsDetectes`) sans lot coché : aucun coût dit, le bouton est grisé (« le dossier (1 unité) » était faux : rapport E2E-2). */
+export function libelleBoutonLire(nbLots: number, nbLotsDetectes = 0): string {
+  if (nbLots <= 0 && nbLotsDetectes > 1) return 'Analyser les lots choisis'
   const base = nbLots <= 0 ? 'Analyser le dossier' : `Analyser ${nbLots} ${pluriel(nbLots)}`
   return `${base} (${libelleUnites(Math.max(nbLots, 1))})`
 }

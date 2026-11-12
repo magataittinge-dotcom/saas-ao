@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react'
-import { choixParDefaut, basculerLot, peutLancer } from '@/lib/choixLots'
+import { choixParDefaut, basculerLot, lotAOuvrir, peutLancer } from '@/lib/choixLots'
 import { etiquettesSourceLot, lotsAAfficher, phraseLotsEcartes, type LotsEcartes } from '@/lib/lotsSource'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check as CheckIcon, CircleHelp, Pencil, Plus, X } from 'lucide-react'
 import { GabaritEtape, SectionEtape, BarreEtape, ActionsBarre, ActionsBarreTel, BilanBarre } from '@/components/etape'
@@ -272,6 +272,7 @@ function AddLotForm({ onAdd, onCancel }: AddLotFormProps) {
 
 export default function StepLotSelection({ project }: Props) {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   // 1.13 — un lot ne disparaît pas de la liste en un clic
   const [lotARetirer, setLotARetirer] = useState<LotOption | null>(null)
   const [processingDetail, setProcessingDetail] = useState('')
@@ -460,10 +461,26 @@ export default function StepLotSelection({ project }: Props) {
     setConfirmerLecture(false)
     void lecture.lancer(selectedLotIds, selectedName)
   }
-  const handleLaunch = () => {
-    if (!peutLancer(selectedIds)) return
+  // Un seul lot coché, déjà analysé : « Ouvrir ce lot » le rend lot en cours (POST lots/select), sans le relire ni décompter
+  // d'unité (rapport E2E-2 : l'Export d'un second lot lu n'était atteignable qu'en le relisant). Le relire reste possible.
+  const aOuvrir = lotAOuvrir(selectedIds, project.lots_analyses)
+  const ouverture = useMutation({
+    mutationFn: (lotId: string) => api.post<Project>(`/projects/${project.id}/lots/select`, {
+      lot_id: lotId, lot_name: lots.find((l) => l.id === lotId)?.nom ?? null,
+    }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
+      navigate(`/projects/${project.id}/analysis`)
+    },
+  })
+  const analyser = () => {
     if (doitConfirmerLecture(nbChoisis)) setConfirmerLecture(true)
     else lancerLecture()
+  }
+  const handleLaunch = () => {
+    if (!peutLancer(selectedIds)) return
+    if (aOuvrir) { if (!ouverture.isPending) ouverture.mutate(aOuvrir); return }
+    analyser()
   }
 
   // « Dans vos métiers » : les lots rattachés aux métiers déclarés dans Mon entreprise d'abord, les autres repliés
@@ -486,7 +503,7 @@ export default function StepLotSelection({ project }: Props) {
       onSelect={() => toggleLot(lot.id)}
       onDelete={() => setLotARetirer(lot)}
       onRename={(label) => renameLot({ lotId: lot.id, label })}
-      cout={libelleUnites(1)}
+      cout={project.lots_analyses?.includes(lot.id) ? 'Analysé' : libelleUnites(1)}
       pieces={piecesDuLot(lot.id)}
     />
   )
@@ -495,10 +512,11 @@ export default function StepLotSelection({ project }: Props) {
   const chargementEchoue = (requeteLots.isError && lots.length === 0) || (requeteDocuments.isError && requeteDocuments.data === undefined)
   const enDetection = !lotsInitialized && (lotsLoading || requeteDocuments.isLoading || detectPhase === 'detecting' || isBackendBusy)
   const lectureBloquee = isAnalyzing || isSuccess || !peutLancer(selectedIds)
-  // Le seul bouton « Lire … » de l'écran : dans l'en-tête à l'ordinateur, dans la barre du bas au téléphone.
+  // Le seul bouton « Lire … » de l'écran : dans l'en-tête à l'ordinateur, dans la barre du bas au téléphone. Un seul lot coché,
+  // déjà analysé : il dit « Ouvrir ce lot » (handleLaunch, ci-dessus).
   const actionLire = (
     <Bouton variante="principal" onClick={handleLaunch} disabled={lectureBloquee}>
-      {libelleBoutonLire(nbChoisis)}
+      {aOuvrir ? 'Ouvrir ce lot' : libelleBoutonLire(nbChoisis, lots.length)}
     </Bouton>
   )
   const peutLire = !sansDepot && !chargementEchoue && !enDetection
@@ -540,7 +558,12 @@ export default function StepLotSelection({ project }: Props) {
         titre="Lots"
         utilite={enDetection || sansDepot || chargementEchoue ? UTILITE : phraseCoutLots(lots.length)}
         actionPrincipale={peutLire ? actionLire : undefined}
-        message={analysisError && <Message ton="erreur" titre="L’analyse n’a pas démarré">{analysisError}</Message>}
+        actionsSecondaires={peutLire && aOuvrir ? (
+          <Bouton variante="secondaire" onClick={analyser} disabled={lectureBloquee || ouverture.isPending}>{`Analyser de nouveau (${libelleUnites(1)})`}</Bouton>
+        ) : undefined}
+        message={ouverture.isError
+          ? <Message ton="erreur" titre="Le lot ne s’est pas ouvert">Rien n’a été décompté : réessayez dans un instant.</Message>
+          : analysisError && <Message ton="erreur" titre="L’analyse n’a pas démarré">{analysisError}</Message>}
         // La barre du bas n'existe que lorsqu'il y a des lots à choisir : ni en erreur, ni sans dossier, ni pendant le chargement.
         barre={!peutLire ? undefined : (
           <BarreEtape>

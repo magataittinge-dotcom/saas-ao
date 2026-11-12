@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, String, Text
 from database import Base
 
 # Types de notifications V1 — ton sobre, jamais marketing (CLAUDE.md).
@@ -16,6 +16,9 @@ NOTIFICATION_TYPES = [
 
 class Notification(Base):
     __tablename__ = "notifications"
+    # D-07 (migration 0037) : la liste d'une organisation (les 50 dernières) lit cet index, sans parcourir celles
+    # des autres organisations.
+    __table_args__ = (Index("ix_notifications_org_created", "organization_id", "created_at"),)
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     organization_id = Column(

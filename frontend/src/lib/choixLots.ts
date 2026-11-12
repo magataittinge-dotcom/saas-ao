@@ -23,3 +23,11 @@ export function basculerLot(choix: ReadonlySet<string>, lotId: string, nbLots: n
 export function peutLancer(choix: ReadonlySet<string>): boolean {
   return choix.size > 0
 }
+
+/** Un seul lot coché, déjà analysé : il se rouvre (il devient le lot en cours) sans être relu, donc sans unité. Plusieurs lots
+ *  cochés, tout le dossier ou un lot jamais lu : c'est une vraie analyse, 1 unité par lot (null). */
+export function lotAOuvrir(choix: ReadonlySet<string>, lotsAnalyses: readonly string[] | undefined): string | null {
+  if (choix.size !== 1 || choix.has(TOUS)) return null
+  const [lot] = choix
+  return lotsAnalyses?.includes(lot) ? lot : null
+}
