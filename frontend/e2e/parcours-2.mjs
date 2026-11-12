@@ -7,7 +7,7 @@
 //                  (la suppression appelle Clerk : services/resiliation_compte.py, executer_suppression).
 // Mode d'emploi : e2e/LISEZMOI.md. Lancement : `npm run e2e:2` (dans frontend/).
 import { spawn, spawnSync } from 'node:child_process'
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -52,6 +52,8 @@ class Echec extends Error {}
 // ── Le dossier inventé, l'API simulée, la base jetable ─────────────────────
 mkdirSync(TRAVAIL, { recursive: true })
 mkdirSync(CAPTURES, { recursive: true })
+// Les captures d'un passage précédent de CE test (« <largeur>-<A|B|C|D>-… ») sont retirées : la galerie montre le dernier passage.
+for (const f of readdirSync(CAPTURES)) if (/^(ordinateur|telephone)-[ABCD]-\d\d-.+\.png$/.test(f)) unlinkSync(path.join(CAPTURES, f))
 if (existsSync(PANNE)) unlinkSync(PANNE)
 writeFileSync(APPELS, '')
 
@@ -138,10 +140,10 @@ async function api_(page, methode, chemin, corps) {
 }
 
 /** Ménage : les AO de ce test laissés par un passage précédent (nom marqué) sont supprimés. */
-async function menage(page) {
+async function menage(page, prefixe = MARQUE) {
   const r = await api_(page, 'GET', '/api/projects')
   const liste = Array.isArray(r.corps) ? r.corps : (r.corps?.items ?? r.corps?.projects ?? [])
-  const anciens = liste.filter((p) => String(p.name || '').startsWith(MARQUE))
+  const anciens = liste.filter((p) => String(p.name || '').startsWith(prefixe))
   for (const p of anciens) await api_(page, 'DELETE', `/api/projects/${p.id}`)
   return anciens.length
 }
@@ -463,6 +465,7 @@ async function parcoursB(nav, dossiers) {
   const { page } = ctx
   const debut = Date.now()
   try {
+    await menage(page, `${MARQUE} deux lots`)
     await deposer(ctx, dossiers.deuxLots)
     const avant = await unites(page)
     await page.getByRole('button', { name: /^Lot 01/ }).first().click()
@@ -482,11 +485,24 @@ async function parcoursB(nav, dossiers) {
     const vus = []
     for (const [i, lot] of lots.slice(0, 2).entries()) {
       if (i > 0) {
-        // Aucun écran ne mène à l'Export d'un autre lot déjà lu sans le relire (StepLotSelection : le seul geste est
-        // « Analyser 1 lot », 1 unité) : le lot est choisi comme l'écran Lots le fait (POST lots/select), sans relecture.
+        // Passer au second lot, déjà lu : l'Export n'a pas de choix du lot ; l'écran Lots, ce lot seul coché, ne propose que
+        // de le relire (« Analyser 1 lot », 1 unité). Constat ; le lot est alors choisi comme l'écran Lots le fait
+        // (POST lots/select, sans relecture) pour vérifier ce que l'Export propose pour lui.
+        await page.goto(`${BASE}/projects/${ctx.id}/lots`, { waitUntil: 'domcontentloaded' })
+        await page.getByRole('heading', { level: 1, name: TITRES.lots, exact: true }).waitFor({ timeout: 30_000 })
+        const lot1 = page.getByRole('button', { name: /^Lot 01/ }).first()
+        await lot1.waitFor({ timeout: 15_000 })
+        if ((await lot1.getAttribute('aria-pressed')) === 'true') await lot1.click()
+        const lot2 = page.getByRole('button', { name: /^Lot 02/ }).first()
+        if ((await lot2.getAttribute('aria-pressed')) !== 'true') await lot2.click()
+        await page.waitForTimeout(400)
+        const geste = (await page.locator('[data-variante="principal"]:visible').first().innerText()).trim()
+        await capturer(ctx, 'lots-second-lot')
+        if (geste.startsWith(VERBES.analyserLot)) {
+          constat(ctx, `deux lots : aucun écran ne mène à l’Export du second lot déjà lu sans le relire (« ${geste} ») : routes/project/StepExport.tsx (pas de choix du lot), routes/project/StepLotSelection.tsx:499-503`)
+        }
         const choix = await api_(page, 'POST', `/api/projects/${ctx.id}/lots/select`, { lot_id: lot.id, lot_name: lot.nom })
         if (choix.s >= 300) throw new Echec(`deux lots : le choix du ${lot.nom} a répondu ${choix.s}`)
-        constat(ctx, 'deux lots : aucun écran ne mène à l’Export du second lot lu sans le relire (1 unité de plus) : routes/project/StepExport.tsx (pas de choix du lot), routes/project/StepLotSelection.tsx:499 (seul geste : « Analyser 1 lot »)')
       }
       const detail = page.waitForResponse((r) => new URL(r.url()).pathname.endsWith('/export/detail') && r.status() === 200, { timeout: 30_000 })
       await page.goto(`${BASE}/projects/${ctx.id}/export`, { waitUntil: 'domcontentloaded' })
@@ -545,6 +561,11 @@ async function parcoursC(nav, dossiers, largeur) {
     const p = (await api_(page, 'GET', `/api/projects/${ctx.id}`)).corps
     if (['analyzing', 'analyzed'].includes(p?.processing_status) || p?.status === 'analyzed') throw new Echec(`quota : l'AO est parti en lecture (${p?.processing_status})`)
     ctx.faits.push(`quota épuisé (${avant.analyses} analyses sur 5, Essentiel) : « ${M.murAbonnement} » s'ouvre, analyses ${avant.analyses} → ${apres.analyses}, 0 appel d'IA`)
+    // L'organisation est déjà en Essentiel : le mur lui propose quand même de « Choisir Essentiel » (et les trois boutons mènent
+    // au paiement, que le serveur refuse à une offre payante : 409 « déjà un abonnement actif »). Rien n'est cliqué.
+    if (await mur.getByRole('button', { name: M.choisirOffreEnCours, exact: true }).count()) {
+      constat(ctx, `mur d’abonnement d’une organisation en Essentiel : il propose « ${M.choisirOffreEnCours} » (son offre) et ses trois « Choisir … » ouvrent un paiement que le serveur refuse à une offre payante : components/common/SubscriptionWall.tsx:61-66, routers/stripe_billing.py:99-103`)
+    }
     await page.keyboard.press('Escape')
     await mur.waitFor({ state: 'hidden', timeout: 10_000 })
     controlerConsole(ctx, 'mur fermé', CONSOLE_ATTENDUES.quota)

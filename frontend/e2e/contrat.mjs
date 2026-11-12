@@ -72,6 +72,7 @@ export const PARCOURS_2 = {
   confirmerLots: 'Analyser les 2 lots',
   tableauAcheteur: 'Télécharger le tableau de l’acheteur',
   murAbonnement: 'Passez au niveau supérieur',
+  choisirOffreEnCours: 'Choisir Essentiel',
   statut: 'Indiquer le résultat',
   gagne: 'Gagné',
   corrigerPerdu: 'Corriger : Perdu',
