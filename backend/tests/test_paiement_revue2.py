@@ -152,3 +152,73 @@ def test_p1_1_reessai_n_attribue_pas_a_la_demande_un_arret_fait_par_le_client(cl
     assert [l.extra["abonnements_arretes"] for l in _lignes(db_session, "compte.suppression_programmee")] == [[]]
     assert client.post("/api/users/me/annuler-suppression").json()["abonnement_repris"] is False
     assert f.repris == []
+
+
+# ── P1-3 : un doublon payé (S-13) — fermer ce qui l'ouvre, et le signaler (rien n'est résilié ni remboursé d'office) ─
+
+def _client_connu(db_session, test_org):
+    from models.organization import Organization
+    org = db_session.get(Organization, test_org.id)
+    org.stripe_customer_id = "cus_invente"
+    db_session.commit()
+
+
+def test_p1_3_creer_une_session_expire_les_sessions_ouvertes_du_client(client, test_org, poser, db_session):
+    _client_connu(db_session, test_org)
+    f = FauxFournisseur()
+    poser(f)
+    premier = client.post("/api/stripe/create-checkout-session", json={"plan": "pro"})      # 1er onglet
+    assert premier.status_code == 200, premier.text
+    second = client.post("/api/stripe/create-checkout-session", json={"plan": "pro"})       # 2e onglet
+    assert second.status_code == 200, second.text
+    assert f.expirees == ["cs_invente_1"]                                # la 1re session ne peut plus être payée
+    assert [s["id"] for s in f.sessions_ouvertes] == ["cs_invente_2"]
+    assert second.json()["url"].endswith("cs_invente_2")
+
+
+def test_p1_3_expiration_impossible_le_paiement_honnete_reste_ouvert(client, test_org, poser, db_session):
+    _client_connu(db_session, test_org)
+    f = FauxFournisseur()
+    f.panne_expiration = True
+    poser(f)
+    r = client.post("/api/stripe/create-checkout-session", json={"plan": "pro"})
+    assert r.status_code == 200, r.text                                  # le doublon, s'il arrive, sera signalé
+
+
+def _deux_paiements(client):
+    for sub in ("sub_invente", "sub_doublon"):
+        r = _webhook(client, "checkout.session.completed",
+                     {"metadata": {"organization_id": "org-test-1", "plan": "pro"}, "customer": "cus_invente",
+                      "subscription": sub, "payment_status": "paid"})
+        assert r.status_code == 200
+
+
+def test_p1_3_un_doublon_paye_est_signale_au_journal_d_audit_et_en_alerte(client, test_org, poser, db_session, caplog):
+    import logging
+    _client_connu(db_session, test_org)
+    f = FauxFournisseur([_abonnement(), _abonnement(id_="sub_doublon")])
+    poser(f)
+    caplog.set_level(logging.WARNING)
+    _deux_paiements(client)
+    assert _org(db_session).stripe_subscription_id == "sub_invente"     # l'abonnement suivi ne change pas
+    assert f.resilies == []                                              # rien de résilié d'office (décision)
+    lignes = _lignes(db_session, "paiement.abonnement_doublon")
+    assert [(l.organization_id, l.target_id, l.extra) for l in lignes] == [
+        ("org-test-1", "sub_doublon", {"abonnement_suivi": "sub_invente"})]
+    alertes = [r.getMessage() for r in caplog.records if r.levelno >= logging.ERROR and "doublon" in r.getMessage()]
+    assert alertes and "sub_doublon" in alertes[0] and "sub_invente" in alertes[0] and "org-test-1" in alertes[0]
+    # Le même événement rejoué n'écrit pas une seconde ligne.
+    _webhook(client, "checkout.session.completed",
+             {"metadata": {"organization_id": "org-test-1", "plan": "pro"}, "customer": "cus_invente",
+              "subscription": "sub_doublon", "payment_status": "paid"})
+    assert len(_lignes(db_session, "paiement.abonnement_doublon")) == 1
+
+
+def test_p1_3_un_seul_paiement_n_est_pas_un_doublon(client, test_org, poser, db_session):
+    _client_connu(db_session, test_org)
+    poser(FauxFournisseur([_abonnement()]))
+    _webhook(client, "checkout.session.completed",
+             {"metadata": {"organization_id": "org-test-1", "plan": "pro"}, "customer": "cus_invente",
+              "subscription": "sub_invente", "payment_status": "paid"})
+    assert _org(db_session).plan == "pro"
+    assert _lignes(db_session, "paiement.abonnement_doublon") == []

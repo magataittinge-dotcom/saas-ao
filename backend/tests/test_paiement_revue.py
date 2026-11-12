@@ -31,6 +31,10 @@ class FauxFournisseur:
         self.session = session
         self.panne = panne
         self.resilies, self.repris = [], []
+        # Sessions de paiement (REVUE-2 P1-3) : ouvertes par client, expirées sur demande.
+        self.sessions_ouvertes: list[dict] = []
+        self.expirees: list[str] = []
+        self.panne_expiration = False
 
     def _verifier(self):
         if self.panne:
@@ -71,6 +75,29 @@ class FauxFournisseur:
         sub = self._sub(subscription_id)
         if sub is not None:
             sub["cancel_at_period_end"] = False
+
+    def get_customer(self, customer_id):
+        self._verifier()
+        return {"id": customer_id}
+
+    def get_default_price_for_product(self, product_id):
+        return f"price_{product_id}"
+
+    def create_checkout_session(self, customer_id, price_id, success_url, cancel_url, metadata=None,
+                                client_reference_id=None):
+        self._verifier()
+        sid = f"cs_invente_{len(self.sessions_ouvertes) + len(self.expirees) + 1}"
+        self.sessions_ouvertes.append({"id": sid, "customer": customer_id, "price": price_id})
+        return f"https://paiement.invalid/{sid}"
+
+    def expire_open_checkout_sessions(self, customer_id):
+        self._verifier()
+        if self.panne_expiration:
+            raise RuntimeError("fournisseur injoignable")
+        a_expirer = [s for s in self.sessions_ouvertes if s["customer"] == customer_id]
+        self.sessions_ouvertes = [s for s in self.sessions_ouvertes if s["customer"] != customer_id]
+        self.expirees += [s["id"] for s in a_expirer]
+        return len(a_expirer)
 
     def verify_webhook(self, payload, signature):
         return json.loads(payload)
