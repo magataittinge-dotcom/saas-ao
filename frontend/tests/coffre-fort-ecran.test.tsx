@@ -81,8 +81,12 @@ test('500 pièces : des pages de 50, ce qui reste à ranger en tête', () => {
 })
 
 test('le retour à la vérification suit le contexte AO (returnTo)', () => {
-  assert.ok(rendre([], '/vault?returnTo=%2Fprojects%2Fp1%2Fverification').includes('Retour à la vérification'))
+  assert.ok(rendre([], '/vault?returnTo=%2Fprojects%2Fdfc6ceb2-e944-4249-af92-d146b1b20b2b%2Fverification').includes('Retour à la vérification'))
   assert.ok(!rendre([]).includes('Retour à la vérification'))
+  // P0-1 : une adresse qui n'est pas celle d'une étape d'AO → pas de bouton
+  for (const r of ['javascript:alert(1)', '%2F%2Ftiers.example', '%2F%5Ctiers.example', 'https%3A%2F%2Ftiers.example', '%2Fprojects%2Fp1%2Fverification']) {
+    assert.ok(!rendre([], `/vault?returnTo=${r}`).includes('Retour à la vérification'), r)
+  }
 })
 
 test('la fenêtre de classement est le Dialogue du système : listes et dates du système, aucun contrôle natif', () => {
