@@ -25,8 +25,14 @@ test('fin de travail manquée : à l’abonnement, un état rattrapé « fini »
   assert.equal(rienEnCours('init', { status: 'running' }), null)
   assert.equal(rienEnCours('progress', { status: 'completed' }), null, 'seul l’état rattrapé à l’abonnement')
   const analyse = sansCommentaires(lire('src/routes/project/StepAnalysis.tsx'))
-  assert.match(analyse, /onComplete: relireAnalyse,\s*onRienEnCours: relireAnalyse,/)
+  assert.match(analyse, /onComplete: relireAnalyse,[\s\S]{0,80}onRienEnCours: relireAnalyse,/)
   const redaction = sansCommentaires(lire('src/routes/project/StepMemoire.tsx'))
   assert.match(redaction, /enabled: isRunning && !isGenerating,\s*onComplete: finRedaction,\s*onRienEnCours: \(fin\) => \{/)
   assert.match(sansCommentaires(lire('src/hooks/useProgressStream.ts')), /if \(fin\) \{\s*onRienEnCoursRef\.current\?\.\(fin\)\s*continue/)
+})
+
+test('lecture en échec : l’écran relit le projet (sa phrase, jamais l’erreur technique du flux)', () => {
+  const analyse = sansCommentaires(lire('src/routes/project/StepAnalysis.tsx'))
+  assert.match(analyse, /onError: relireAnalyse,/)
+  assert.match(analyse, /erreur=\{project\.processing_detail \|\| analysisSse\.detail \|\|/, 'la phrase du projet passe avant celle du flux')
 })

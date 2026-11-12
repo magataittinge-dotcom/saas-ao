@@ -394,9 +394,11 @@ _MSG_IA_INDISPONIBLE = "Service IA momentanément indisponible. Relancez l'analy
 
 
 def _fail_analysis(project_id: str, user_message: str, tracker_reason: str) -> None:
-    """Échec du job : statut erreur EXPLICITE, jamais de régression d'étape."""
+    """Échec du job : statut erreur EXPLICITE, jamais de régression d'étape. Le flux de progression porte la phrase du
+    produit (l'écran l'affiche) ; la raison technique va au journal, jamais à l'écran."""
     from database import SessionLocal
-    pipeline_tracker.fail_pipeline(project_id, tracker_reason)
+    logger.warning("Analyse %s en échec : %s", project_id, tracker_reason)
+    pipeline_tracker.fail_pipeline(project_id, user_message)
     db = SessionLocal()
     try:
         project = db.query(Project).filter(Project.id == project_id).first()

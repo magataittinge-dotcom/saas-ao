@@ -194,3 +194,29 @@ def test_un_ao_deja_decide_reste_decide_apres_une_nouvelle_analyse(client, db_se
     p = db_session.get(Project, "proj-deja")
     assert p.processing_status == "ready"
     assert p.current_step == 4 and p.completed_steps["3"] is True
+
+
+def test_l_echec_d_analyse_montre_une_phrase_du_produit_jamais_l_erreur_technique(client, db_session, test_org, monkeypatch, caplog):
+    """Parcours E2E (12/11) : le flux de progression portait str(e) (« [passe1-admin-tranche1/2] Échec après 3
+    tentatives… »), affiché tel quel par l'écran Décider. Le flux porte la phrase du produit (la même que le projet) ;
+    le détail technique va au journal."""
+    import logging
+    from models.project import Project
+    from services import pipeline_tracker
+
+    def _panne(self, *a, **kw):
+        raise RuntimeError("[passe1-admin-tranche1/2] Échec après 3 tentatives. Dernière erreur: Connection error.")
+    from services.ai import dce_analyzer
+    monkeypatch.setattr(dce_analyzer.DCEAnalyzer, "_run_pass_chunked", _panne)
+    _projet_lu(db_session, test_org, "proj-panne")
+    with caplog.at_level(logging.WARNING):
+        assert client.post("/api/projects/proj-panne/analyze").status_code == 200
+        _join_analysis_threads()
+    db_session.expire_all()
+    p = db_session.get(Project, "proj-panne")
+    assert p.processing_status == "error"
+    flux = pipeline_tracker.get_status("proj-panne")
+    assert flux["status"] == "error"
+    assert flux["current_step"] == p.processing_detail
+    assert "[passe1" not in flux["current_step"] and "tentatives" not in flux["current_step"]
+    assert "Connection error" in caplog.text, "le détail technique reste au journal"

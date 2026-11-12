@@ -457,7 +457,7 @@ async function panneLecture(nav, dossier) {
     const message = await relancer.locator('xpath=ancestor::*[@role="alert" or @role="status"][1]').innerText().catch(() => '')
     if (!message) throw new Echec('panne IA : aucun message autour de « Relancer »')
     if (/\[[\w-]+\]|tentatives|Connection error|Exception|Traceback/i.test(message)) {
-      constat(ctx, `StepAnalysis.tsx:297 — lecture en échec : le message montre l’erreur technique (« ${message.split('\n')[0].slice(0, 90)} ») ; le détail du flux vient de fail_pipeline(…, str(e)) (routers/analysis.py:571), la phrase propre de processing_detail n’est lue qu’après relecture du projet`)
+      throw new Echec(`panne IA : le message montre l’erreur technique (« ${message.split('\n')[0].slice(0, 90)} »)`)
     }
     await controlerConsole(ctx, 'panne IA')
     const apres = await quota(page)

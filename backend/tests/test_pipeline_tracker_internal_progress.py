@@ -117,3 +117,17 @@ def test_fail_pipeline_publishes_error_event():
         last = sub.get_nowait()
     assert last is not None
     assert last["type"] == "error"
+
+
+def test_un_echec_se_lit_error_avec_sa_phrase_jamais_l_etape_ni_le_libelle_d_avant():
+    """Parcours E2E (12/11) : un pipeline en échec pendant une étape se lisait encore avec l'id de l'étape (le
+    rattrapage à l'abonnement et le sondage ne voyaient pas l'échec) et gardait le libellé de sous-phase d'avant, que
+    l'écran affichait comme message d'échec."""
+    pipeline_tracker.start_pipeline("p-2", "analysis")
+    pipeline_tracker.start_step("p-2", "analyzing_pass1")
+    pipeline_tracker.update_step_progress("p-2", 0.4, detail="Analyse des pièces administratives")
+    pipeline_tracker.fail_pipeline("p-2", "Erreur lors de l'analyse IA. Relancez l'analyse.")
+    snap = pipeline_tracker.get_status("p-2")
+    assert snap["status"] == "error"
+    assert snap["current_step"] == "Erreur lors de l'analyse IA. Relancez l'analyse."
+    assert not snap["detail"]

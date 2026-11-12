@@ -550,14 +550,16 @@ def _run_memoire_job_corps(
     except Exception as e:
         logger.error(f"Erreur génération mémoire projet {project_id}: {e}", exc_info=True)
         db.rollback()
-        pipeline_tracker.fail_pipeline(project_id, str(e))
+        # Le flux porte la phrase du produit (l'écran l'affiche) ; l'erreur technique est au journal, ci-dessus.
+        echec = "La génération du mémoire a échoué. Relancez la génération."
+        pipeline_tracker.fail_pipeline(project_id, echec)
         try:
             p = db.query(Project).filter(Project.id == project_id).first()
             if p is not None:
                 # Jamais de régression d'étape : l'utilisateur retrouve son
                 # écran mémoire avec un statut d'erreur et un bouton relancer.
                 p.processing_status = "error"
-                p.processing_detail = "La génération du mémoire a échoué. Relancez la génération."
+                p.processing_detail = echec
                 db.commit()
         except Exception:
             logger.exception("Impossible d'enregistrer l'échec mémoire %s", project_id)

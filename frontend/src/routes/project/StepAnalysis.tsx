@@ -198,6 +198,8 @@ export default function StepAnalysis({ project }: Props) {
   const analysisSse = useProgressStream(project.id, {
     enabled: !isLoading && (items.length === 0 || analysisRunning),
     onComplete: relireAnalyse,
+    // Échec : le projet porte la phrase du produit (processing_detail), relue ici ; le détail technique reste au journal.
+    onError: relireAnalyse,
     // Lecture finie (ou en échec) avant l'abonnement : l'écran relit l'état final au lieu d'attendre une fin déjà passée.
     onRienEnCours: relireAnalyse,
   })

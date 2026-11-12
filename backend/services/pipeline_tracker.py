@@ -211,6 +211,7 @@ def fail_pipeline(project_id: str, message: str = "") -> None:
             return
         state.status = "error"
         state.error_message = message
+        state.detail = None  # le libellé de sous-phase d'avant ne se lit pas comme le message d'échec
     _publish(project_id, event_type="error")
 
 
@@ -278,7 +279,9 @@ def get_status(project_id: str) -> Optional[dict]:
             break
 
     status_str = state.status
-    if active_step_id:
+    # L'étape active ne remplace le statut que pendant le travail : un pipeline en échec se lit « error » (le rattrapage à
+    # l'abonnement et le relais par sondage le reconnaissent), même si l'étape où il a échoué était en cours.
+    if active_step_id and state.status == "running":
         status_str = active_step_id
 
     return {
