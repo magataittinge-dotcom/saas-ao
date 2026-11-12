@@ -496,6 +496,24 @@ illisibles). Essayé en local le 27/10/2026 : deux passages (le second n'envoie 
 du dump (17 tables avec données à l'époque ; 25 tables au schéma 0034 et 0035) et d'une pièce (identique), base
 restaurée relue. Restauration : `BACKUP_RECOVERY.md`.
 
+**Essai de restauration (R-03, une fois par mois et après tout changement de la sauvegarde)** : relire un dump de restic,
+le restaurer dans une base **jetable**, compter les lignes de chaque table et les comparer à celles du dump (blocs
+COPY), puis supprimer la base. `pg_restore --list` seul ne prouve rien : il lit le sommaire, pas les données.
+
+```bash
+sudo -i
+install -m 750 /srv/synorix/deploy/sauvegarde/synorix-essai-restauration.sh /usr/local/sbin/synorix-essai-restauration
+set -a; . /etc/synorix/sauvegarde.env; set +a
+restic restore latest --target /root/essai --include /var/backups/synorix/synorix.dump
+synorix-essai-restauration /root/essai/var/backups/synorix/synorix.dump    # base synorix_essai, supprimée à la fin
+echo $?                                                                    # 0 = chaque table restaurée en entier
+rm -rf /root/essai
+```
+
+Sortie attendue : `essai de restauration OK : <n> tables, <m> lignes, toutes restaurées`. En écart : les tables
+concernées (`<` dump, `>` base restaurée) et le code 1. Joué en local le 12/11/2026 sur une copie de la base jetable
+(dump de 36 Mo, 26 tables, 8 702 lignes, code 0). Le script refuse de prendre la base de production pour base d'essai.
+
 ---
 
 ## 12. Monitoring de base
