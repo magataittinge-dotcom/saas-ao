@@ -26,6 +26,10 @@ export interface PropsCarteAvis {
 
 const METIERS_VISIBLES = 3
 
+/** « Procédure Ouverte » (casse de la source) s'écrit « Procédure ouverte » : seul le premier mot garde sa capitale. */
+export const casseProcedure = (libelle: string | null | undefined): string =>
+  (libelle ?? '').replace(/^(Procédure|Appel d’offres|Appel d'offres|Marché) (\p{Lu})(?=\p{Ll})/u, (_t, debut: string, lettre: string) => `${debut} ${lettre.toLowerCase()}`)
+
 export default function CarteAvis({ avis, libellesMetiers, nomsDepartements, zone, onCreerAO, enCreation, creationEnErreur }: PropsCarteAvis) {
   const idTitre = `avis-${avis.id}`
   const lien = urlSure(avis.url_avis)
@@ -46,32 +50,30 @@ export default function CarteAvis({ avis, libellesMetiers, nomsDepartements, zon
         </div>
         <div>
           <dt className="sr-only">Procédure</dt>
-          <dd>{avis.procedure_libelle}</dd>
+          <dd>{casseProcedure(avis.procedure_libelle)}</dd>
         </div>
         {avis.date_limite && (
           <div className="flex items-center gap-2">
             <dt className="sr-only">Date limite</dt>
             <dd className="flex items-center gap-2">
               <DeadlinePill echeance={{ date: avis.date_limite }} />
-              <span className="chiffres">{jourMois(avis.date_limite)}</span>
+              <span>{jourMois(avis.date_limite)}</span>
             </dd>
           </div>
         )}
       </dl>
 
+      {/* les métiers : une ligne de texte (jury, tour 1 : des pastilles grises répétées sur chaque avis n'apprennent rien) */}
       {metiers.length > 0 && (
-        <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Métiers">
-          {metiers.slice(0, METIERS_VISIBLES).map((m) => <li key={m}><PastilleEtat sens="gris" icone={null}>{m}</PastilleEtat></li>)}
+        <p data-metiers="" className="mt-2 text-sm text-fg-3">
+          <span className="sr-only">{'Métiers\u00a0: '}</span>
+          {metiers.slice(0, METIERS_VISIBLES).join(', ')}
           {metiers.length > METIERS_VISIBLES && (
-            <li>
-              <Infobulle texte={metiers.slice(METIERS_VISIBLES).join(', ')}>
-                <span tabIndex={0} aria-label={`et ${metiers.slice(METIERS_VISIBLES).join(', ')}`} className="inline-flex rounded-pilule">
-                  <PastilleEtat sens="gris" icone={null}>+{metiers.length - METIERS_VISIBLES}</PastilleEtat>
-                </span>
-              </Infobulle>
-            </li>
+            <Infobulle texte={metiers.slice(METIERS_VISIBLES).join(', ')}>
+              <span tabIndex={0} aria-label={`et ${metiers.slice(METIERS_VISIBLES).join(', ')}`} className="rounded-sm underline decoration-dotted underline-offset-4"> et {metiers.length - METIERS_VISIBLES} autre{metiers.length - METIERS_VISIBLES > 1 ? 's' : ''}</span>
+            </Infobulle>
           )}
-        </ul>
+        </p>
       )}
 
       <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -79,7 +81,7 @@ export default function CarteAvis({ avis, libellesMetiers, nomsDepartements, zon
           <Plus aria-hidden strokeWidth={1.75} /> {enCreation ? 'Création…' : 'Créer l’AO'}
         </Bouton>
         {lien && (
-          <a href={lien} target="_blank" rel="noopener noreferrer" className={classesBouton('lien')}>
+          <a href={lien} target="_blank" rel="noopener noreferrer" className={classesBouton('lien', '[@media(pointer:coarse)]:min-h-11')}>
             Voir l’avis <ExternalLink aria-hidden strokeWidth={1.75} /><span className="sr-only"> (s’ouvre dans un nouvel onglet)</span>
           </a>
         )}

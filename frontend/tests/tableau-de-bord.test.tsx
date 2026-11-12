@@ -156,8 +156,8 @@ test('la veille de l’accueil : recherche de zone, carte, filtres et liste des
   assert.equal((html.match(/aria-pressed="true"/g) ?? []).length, 2, 'les deux départements de la zone sont choisis')
   assert.ok(html.includes('Réhabilitation d’un groupe scolaire (exemple)') && html.includes('>Nouveau<'), 'liste des avis')
   assert.ok(html.includes('Afficher plus'), 'curseur suivant')
-  assert.ok(html.includes('15 avis ouverts en France') && html.includes('Données BOAMP du 31/10 à '), 'horodatage des données, à côté de la source')
-  assert.equal((html.match(/Source : Avis officiels du BOAMP \(DILA\), licence ouverte/g) ?? []).length, 2, 'la source sous la carte et sous la liste')
+  assert.ok(html.includes('15 avis ouverts en France') && html.includes('Dernier relevé du BOAMP'), 'un relevé ancien est dit une fois, dans la phrase de la veille')
+  assert.equal((html.match(/Source : Avis officiels du BOAMP \(DILA\), licence ouverte/g) ?? []).length, 1, 'la source est écrite une fois, sous la liste')
   assert.ok(/<h2[^>]*id="titre-veille"[^>]*>.*Veille<\/h2>/.test(html) && /<h3[^>]*>Avis ouverts<\/h3>/.test(html), 'niveaux de titre')
 })
 

@@ -12,7 +12,8 @@
   position: relative;
   width: 100%;
   border-radius: var(--radius-lg);
-  background: var(--cf-mer);
+  border: 1px solid var(--border-1);
+  background: transparent;
   overflow: hidden;
   perspective: 1100px;
 }
@@ -38,8 +39,9 @@
 .cf-svg { display: block; width: 100%; height: auto; cursor: grab; user-select: none; -webkit-user-select: none; }
 .cf-svg[data-deplace] { cursor: grabbing; }
 
-.cf-voisins { fill: var(--cf-voisin); stroke: none; }
-.cf-encart { fill: var(--cf-terre); stroke: var(--cf-trait); stroke-width: 1px; vector-effect: non-scaling-stroke; }
+.cf-voisins { fill: var(--cf-voisin); fill-opacity: 0.3; stroke: none; }
+/* l'outre-mer : les îles seules, sans vignette (jury, tour 1 : six cadres dont trois vides) */
+.cf-encart { fill: none; stroke: none; }
 .cf-nom-encart { fill: var(--text-2); font: 500 11px var(--font-ui); }
 
 .cf-dep, .cf-groupe { cursor: pointer; outline: none; }
@@ -60,16 +62,18 @@
 .cf-zone { fill: transparent; stroke: none; }   /* cible tactile : 44 px de diamètre au moins */
 .cf-bulle-g { transition: transform var(--dur-pop) var(--ease-pop); transform-box: fill-box; transform-origin: center; }
 .cf-dep:hover .cf-bulle-g, .cf-dep:focus-visible .cf-bulle-g, .cf-groupe:hover .cf-bulle-g, .cf-groupe:focus-visible .cf-bulle-g { transform: scale(1.1); }
-.cf-bulle { fill: var(--accent-fill-solid); stroke: var(--cf-terre); stroke-width: 1.5px; }
+/* une bulle est une donnée : papier et trait fin, chiffre à l'encre ; le bleu plein est réservé aux départements choisis */
+.cf-bulle { fill: var(--surface-pop); stroke: var(--cf-trait); stroke-width: 1px; }
 .cf-chiffre {
-  fill: var(--on-accent);
+  fill: var(--text-1);
   font: 600 12px var(--font-ui);
   font-variant-numeric: tabular-nums;
   text-anchor: middle;
   dominant-baseline: central;
   pointer-events: none;
 }
-.cf-dep[aria-pressed="true"] .cf-bulle, .cf-groupe[data-choisi] .cf-bulle { fill: var(--accent-700); stroke: var(--text-1); stroke-width: 2.5px; }
+.cf-dep[aria-pressed="true"] .cf-bulle, .cf-groupe[data-choisi] .cf-bulle { fill: var(--accent-700); stroke: var(--surface-0); stroke-width: 2px; }
+.cf-dep[aria-pressed="true"] .cf-chiffre, .cf-groupe[data-choisi] .cf-chiffre { fill: var(--on-accent); }
 .cf-dep:focus-visible .cf-bulle, .cf-groupe:focus-visible .cf-bulle { stroke: var(--accent-ring); stroke-width: 3px; }
 
 .cf-infobulle {
