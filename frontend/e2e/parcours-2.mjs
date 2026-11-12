@@ -522,6 +522,7 @@ async function parcoursB(nav, dossiers) {
         const unitesApres = await unites(page)
         if (unitesApres.analyses !== unitesAvant.analyses) throw new Echec(`deux lots : rouvrir le ${lot.nom} a décompté (${unitesAvant.analyses} → ${unitesApres.analyses})`)
         if (JSON.stringify(appelsDepuis(debut)) !== appelsAvant) throw new Echec('deux lots : rouvrir un lot a appelé l’IA')
+        ctx.faits.push(`${lot.nom}, déjà lu : « ${M.ouvrirLot} » en fait le lot en cours (analyses ${unitesAvant.analyses} → ${unitesApres.analyses}, 0 appel d'IA)`)
       }
       const detail = page.waitForResponse((r) => new URL(r.url()).pathname.endsWith('/export/detail') && r.status() === 200, { timeout: 30_000 })
       await page.goto(`${BASE}/projects/${ctx.id}/export`, { waitUntil: 'domcontentloaded' })
