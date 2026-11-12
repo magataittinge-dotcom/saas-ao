@@ -1,14 +1,12 @@
-import { lazy, Suspense, useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/authStore'
 import BandeAO from '@/components/dashboard/BandeAO'
-import { LigneNouveau } from '@/components/dashboard/LigneNouveau'
 import { MettreAJourStatut } from '@/components/common/MettreAJourStatut'
 import FirstAOWelcome from '@/components/onboarding/FirstAOWelcome'
-import { Bouton, classesBouton } from '@/components/ui/bouton'
+import { classesBouton } from '@/components/ui/bouton'
 import { Carte } from '@/components/ui/carte'
-import { BandeCases, CaseResume } from '@/components/ui/case-resume'
 import { EtatErreur, EtatRequete } from '@/components/ui/etats'
 import { Message } from '@/components/ui/message'
 import { Page, TitreSection } from '@/components/ui/page'
@@ -24,7 +22,7 @@ import { aLaUne, comptesAO, lectureAO, type ComptesAO } from '@/lib/etatAO'
 import { quandCourt } from '@/lib/mesAO'
 import { quotaLibelle, trouverOffre, type Offre } from '@/lib/offres'
 import { prenomAffichable } from '@/lib/prenom'
-import { raisonSociale } from '@/lib/raisonSociale'
+import { nomDuCompte } from '@/lib/raisonSociale'
 import type { Project, DashboardStats } from '@/types'
 
 // La carte, la liste et leurs données : un morceau à part, demandé par l'accueil seulement.
@@ -51,9 +49,12 @@ export function suiteDuJour(projets: readonly Project[], maintenant: Date = new 
 export function phraseDeSynorix(comptes: ComptesAO | null, profilRenseigne: boolean | null): { phrase: string; lien?: { to: string; libelle: string } } | null {
   if (comptes && comptes.aMettreAJour > 0) {
     return {
-      phrase: comptes.aMettreAJour > 1
-        ? `${comptes.aMettreAJour} appels d’offres ont dépassé leur date de remise. Dites ce qu’ils sont devenus : ils rejoindront les terminés.`
-        : 'Un appel d’offres a dépassé sa date de remise. Dites ce qu’il est devenu : il rejoindra les terminés.',
+      // à partir de dix, la phrase ne demande plus un geste par dossier (jury, tour 1 : « 500 gestes ») : elle dit par où commencer
+      phrase: comptes.aMettreAJour >= 10
+        ? `${comptes.aMettreAJour} appels d’offres ont dépassé leur date de remise. Commencez par les plus récents : chacun rejoint les terminés dès que vous dites ce qu’il est devenu.`
+        : comptes.aMettreAJour > 1
+          ? `${comptes.aMettreAJour} appels d’offres ont dépassé leur date de remise. Dites ce qu’ils sont devenus : ils rejoindront les terminés.`
+          : 'Un appel d’offres a dépassé sa date de remise. Dites ce qu’il est devenu : il rejoindra les terminés.',
     }
   }
   if (profilRenseigne === false) {
@@ -107,7 +108,8 @@ export default function Dashboard() {
 
   const identite = avancement({ organisation: organization }, 'identite')
   const profilRenseigne = organization ? identite.total > 0 && identite.rempli >= identite.total : null
-  const parole = phraseDeSynorix(comptes, profilRenseigne)
+  // Synorix ne parle qu'une fois les appels d'offres lus (jury, tour 1 : il parlait du profil pendant le chargement et la panne)
+  const paroleDuJour = projets.data ? phraseDeSynorix(comptes, profilRenseigne) : null
 
   // C15 — essai intact (free, trial accordé, 0 unité, 0 projet) → écran central « premier DCE offert » ; essai consommé →
   // l'accueil normal. Le serveur doit avoir répondu : une panne n'est pas « aucun AO ».
@@ -126,6 +128,10 @@ export default function Dashboard() {
     && (quotaStatus.analyses.used > 0 || quotaStatus.memoires.used > 0 || organization?.trial_granted === false)
 
   const quotaAtteint = phraseQuotaAtteint(quotaStatus)
+  // le plafond du mois passe avant tout : c'est Synorix qui le dit, à la place de sa phrase du jour (un seul message, pas trois)
+  const parole = quotaAtteint
+    ? { phrase: `${quotaAtteint} Vos appels d’offres déjà analysés restent ouverts.`, lien: { to: '/settings/billing', libelle: 'Voir l’abonnement' } }
+    : paroleDuJour
   const s = stats.data
   const nbDocuments = documents.data?.length
   const aRenouveler = s ? s.documents_expires + s.documents_expirant_bientot : 0
@@ -137,9 +143,6 @@ export default function Dashboard() {
       titre={prenom ? `Bonjour, ${prenom}` : 'Bonjour'}
       sousTitre={<>{dateDuJourParis()}{suite && <> · {suite}</>}<span aria-hidden className="fil-aurore mt-4 block" /></>}
     >
-      {/* la ligne « Nouveau » : sous l'en-tête, congédiable ; elle n'existe plus ailleurs */}
-      <LigneNouveau />
-
       {/* C15 — essai utilisé : rappel sobre de l'offre, jamais bloquant */}
       {consumedFreeTrial && (
         <Message ton="info" className="mb-6" action={<Link to="/settings/billing" className={classesBouton('lien')}>Voir les offres</Link>}>
@@ -147,16 +150,9 @@ export default function Dashboard() {
         </Message>
       )}
 
-      {/* plafond du mois atteint : dit ici, avec ses chiffres (avant : un seul point rouge dans la barre) */}
-      {quotaAtteint && (
-        <Message ton="attention" className="mb-6" action={<Link to="/settings/billing" className={classesBouton('lien')}>Voir l’abonnement</Link>}>
-          {quotaAtteint} Vos appels d’offres déjà analysés restent ouverts.
-        </Message>
-      )}
-
       {/* Synorix parle : une phrase au plus, là où il a quelque chose à dire (le seul visage de l'écran) */}
       {parole && (
-        <SynorixParle action={parole.lien ? <Link to={parole.lien.to} className={classesBouton('lien')}>{parole.lien.libelle}</Link> : undefined}>
+        <SynorixParle action={parole.lien ? <Link to={parole.lien.to} className={classesBouton('lien', '[@media(pointer:coarse)]:min-h-11')}>{parole.lien.libelle}</Link> : undefined}>
           {parole.phrase}
         </SynorixParle>
       )}
@@ -165,7 +161,7 @@ export default function Dashboard() {
       <EtatRequete requete={projets} estVide={() => false} vide={null} squelette={<BandeEnChargement />}
         erreur={(
           <EtatErreur className="mt-10 max-md:mt-7.5" titre="Vos appels d’offres n’ont pas pu se charger"
-            detail="La connexion au serveur a échoué. Vos dossiers ne sont pas touchés." onReessayer={() => { void projets.refetch() }} enCours={projets.isFetching} />
+            detail={'La connexion a été interrompue. Vos dossiers ne\u00a0sont\u00a0pas\u00a0touchés.'} onReessayer={() => { void projets.refetch() }} enCours={projets.isFetching} />
         )}>
         {(liste) => <BandeAO projets={liste} maintenant={maintenant} onStatut={setStatutPour} onNouveau={() => navigate('/projects/new')} />}
       </EtatRequete>
@@ -181,26 +177,36 @@ export default function Dashboard() {
       <section aria-labelledby="t-suivi" className="mt-10 max-md:mt-7.5">
         <TitreSection id="t-suivi">Votre entreprise</TitreSection>
         {suiviEnErreur ? (
-          <Message ton="attention" action={<Bouton onClick={() => { void stats.refetch(); void documents.refetch() }}>Réessayer</Bouton>}>
-            Le coffre-fort et le bilan n’ont pas pu se charger. Vos données ne sont pas touchées.
-          </Message>
+          // le même modèle d'erreur que le reste de l'écran : il rejoint le « Réessayer » unique (le premier état le porte)
+          <EtatErreur titre="Le coffre-fort et le bilan n’ont pas pu se charger" detail={'La connexion a été interrompue. Vos données ne\u00a0sont\u00a0pas\u00a0touchées.'}
+            onReessayer={() => { void stats.refetch(); void documents.refetch() }} enCours={stats.isFetching || documents.isFetching} />
         ) : (
-          <BandeCases libelle="Votre entreprise">
-            {nbDocuments !== undefined && (
-              <CaseResume etiquette="Pièces au coffre-fort" valeur={nbDocuments} rien="Aucune"
-                etat={aRenouveler > 0 ? <PastilleEtat sens={s && s.documents_expires > 0 ? 'rouge' : 'ambre'}>{aRenouveler} à renouveler</PastilleEtat> : undefined}
-                precision={nbDocuments === 0 ? 'Vos pièces administratives apparaîtront ici, avec leur date de validité.' : undefined}
-                action={<Link to="/vault" className={classesBouton('lien')}>Ouvrir le coffre-fort</Link>} />
-            )}
-            <CaseResume etiquette="Profil d’entreprise" valeur={raisonSociale(organization)}
-              precision={profilRenseigne === null ? undefined : <PastilleEtat sens={profilRenseigne ? 'vert' : 'ambre'}>{profilRenseigne ? 'Profil renseigné' : 'Profil à compléter'}</PastilleEtat>}
-              action={<Link to="/company" className={classesBouton('lien')}>Ouvrir Mon entreprise</Link>} />
-            {s && (
-              <CaseResume etiquette="Déposés ce mois-ci" valeur={s.projects_soumis_ce_mois}
-                precision={s.projects_soumis_ce_mois === 0 ? 'Votre premier dossier déposé apparaîtra ici.' : undefined} />
-            )}
-            {decides && s && <CaseResume etiquette="Taux de réussite" valeur={`${s.taux_succes} %`} precision={s.projects_gagnes > 0 ? pluriel(s.projects_gagnes, 'marché gagné', 'marchés gagnés') : undefined} />}
-          </BandeCases>
+          // des lignes de faits, pas des cases égales (jury, tour 1) : un intitulé, ce qu'il en est, le lien pour y aller
+          <Carte sansMarge>
+            <dl data-faits-entreprise="" className="m-0">
+              <LigneFait intitule="Coffre-fort" lien={{ to: '/vault', libelle: 'Ouvrir le coffre-fort' }}>
+                {nbDocuments === undefined
+                  ? <Squelette className="h-4 w-40" />
+                  : nbDocuments === 0
+                    ? 'Vos pièces administratives apparaîtront ici, avec leur date de validité.'
+                    : <><span className="font-semibold text-fg">{pluriel(nbDocuments, 'pièce', 'pièces')}</span>{aRenouveler > 0 && <PastilleEtat sens={s && s.documents_expires > 0 ? 'rouge' : 'ambre'}>{aRenouveler} à renouveler</PastilleEtat>}</>}
+              </LigneFait>
+              <LigneFait intitule="Profil d’entreprise" lien={{ to: '/company', libelle: profilRenseigne === false ? 'Compléter le profil' : 'Ouvrir Mon entreprise' }}>
+                {/* sans raison sociale vérifiée, pas de nom : « Mon entreprise » redirait l'intitulé */}
+                {nomDuCompte(organization, null) && <span className="font-semibold text-fg">{nomDuCompte(organization, null)}</span>}
+                {profilRenseigne !== null && <span className={nomDuCompte(organization, null) ? 'text-fg-2' : 'font-semibold text-fg'}>{profilRenseigne ? 'Profil renseigné' : 'Profil à compléter'}</span>}
+              </LigneFait>
+              {s && s.projects_soumis_ce_mois > 0 && (
+                <LigneFait intitule="Déposés ce mois-ci"><span className="font-semibold text-fg">{pluriel(s.projects_soumis_ce_mois, 'dossier', 'dossiers')}</span></LigneFait>
+              )}
+              {decides && s && (
+                <LigneFait intitule="Taux de réussite">
+                  <span className="font-semibold text-fg">{s.taux_succes}{'\u00a0'}%</span>
+                  {s.projects_gagnes > 0 && <span className="text-fg-2">{pluriel(s.projects_gagnes, 'marché gagné', 'marchés gagnés')}</span>}
+                </LigneFait>
+              )}
+            </dl>
+          </Carte>
         )}
       </section>
 
@@ -209,18 +215,28 @@ export default function Dashboard() {
   )
 }
 
-/* ── Attente des AO : le titre et trois rangées, aux dimensions de la bande ── */
+/** Une ligne de « Votre entreprise » : l'intitulé, le fait, le lien. Au téléphone : l'intitulé au-dessus, le lien dessous. */
+function LigneFait({ intitule, lien, children }: { intitule: string; lien?: { to: string; libelle: string }; children: ReactNode }) {
+  return (
+    <div className="grid min-h-[60px] items-center gap-x-6 gap-y-1 border-t border-bord px-5 py-3 first:border-t-0 sm:grid-cols-[13rem_minmax(0,1fr)_auto] sm:px-6">
+      <dt className="text-sm font-medium text-fg-2">{intitule}</dt>
+      <dd className="m-0 flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-sm text-fg-2">{children}</dd>
+      {lien ? <dd className="m-0"><Link to={lien.to} className={classesBouton('lien', '[@media(pointer:coarse)]:min-h-11')}>{lien.libelle}</Link></dd> : <span aria-hidden className="max-sm:hidden" />}
+    </div>
+  )
+}
+
+/* ── Attente des AO : le titre et trois lignes, à la forme des vraies lignes (nom, acheteur, date), au bureau comme au téléphone ── */
 function BandeEnChargement() {
   return (
     <div className="mt-10 max-md:mt-7.5">
-      <Squelette className="mb-4 h-5 w-64" />
+      <Squelette className="mb-4 h-5 w-36" />
       <Carte sansMarge>
         {[0, 1, 2].map((i) => (
-          <div key={i} className="flex min-h-[84px] items-center gap-6 border-t border-bord px-5 first:border-t-0 sm:px-6">
-            <div className="grid flex-[2] gap-2"><Squelette className="h-4 w-4/5" /><Squelette className="h-3.5 w-2/5" /></div>
-            <Squelette className="h-3.5 flex-1 max-md:hidden" />
-            <Squelette className="h-6 w-24 rounded-pilule max-md:hidden" />
-            <Squelette className="h-11 w-44 rounded-pilule" />
+          <div key={i} className="grid min-h-[77px] grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 border-t border-bord px-5 py-4 first:border-t-0 sm:grid-cols-[minmax(0,1fr)_11rem_auto] sm:px-6">
+            <div className="grid gap-2"><Squelette className="h-4 w-3/5 max-sm:w-4/5" /><Squelette className="h-3.5 w-2/5" /><Squelette className="h-3.5 w-1/3 sm:hidden" /></div>
+            <Squelette className="h-3.5 w-32 max-sm:hidden" />
+            <span aria-hidden className="size-[18px]" />
           </div>
         ))}
       </Carte>
@@ -228,14 +244,20 @@ function BandeEnChargement() {
   )
 }
 
-/* ── Attente de la veille : la place de la carte est réservée, la page ne saute pas ── */
+/* ── Attente de la veille : le titre, la carte à gauche, des fiches d'avis à droite (les mêmes fantômes que la liste) ── */
 function VeilleEnChargement() {
   return (
     <section aria-label="Chargement de la veille des appels d’offres" aria-busy="true" className="min-h-[34rem]">
-      <Squelette className="h-5 w-56" />
+      <Squelette className="h-5 w-24" />
       <div className="mt-6 grid gap-x-10 gap-y-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
-        <Squelette className="h-96 rounded-lg" />
-        <Squelette className="h-96 rounded-lg" />
+        <div className="aspect-[10/11] rounded-lg border border-bord" />
+        <div className="grid content-start gap-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="grid gap-2.5 rounded-lg border border-bord bg-surface-0 p-5">
+              <Squelette className="h-4 w-4/5" /><Squelette className="h-3.5 w-2/5" /><Squelette className="h-3.5 w-3/5" />
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   )

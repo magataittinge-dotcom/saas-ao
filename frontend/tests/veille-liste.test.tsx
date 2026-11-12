@@ -51,7 +51,7 @@ test('une liste simulée : une carte par avis, objet, acheteur, département, p
   assert.ok(html.includes('Rhône (69)') && html.includes('Ain (01)'))
   assert.ok(html.includes('Procédure adaptée'))
   assert.ok(html.includes('Façade et ITE') && html.includes('Menuiseries'))
-  assert.ok(html.includes('>+1<'), 'un 4e métier se range derrière « +1 »')
+  assert.ok(html.includes(' et 1 autre<') && !/aria-label="Métiers"/.test(html), 'les métiers en une ligne de texte ; un 4e se range derrière « et 1 autre »')
   assert.ok(html.includes('3 avis ouverts dans cette zone'))
 })
 
@@ -110,15 +110,15 @@ test('sans zone : « Choisissez une zone sur la carte »', () => {
 test('zone sans avis : message positif et bouton « Élargir » ; il dit ce qu’il fait', () => {
   const sans = renderToStaticMarkup(<ListeAvis {...base()} />)
   assert.ok(sans.includes('Aucun avis ouvert dans cette zone pour ces filtres'))
-  assert.ok(sans.includes('>Élargir<') && sans.includes('Élargir ajoute les départements voisins.'))
+  assert.ok(sans.includes('>Élargir aux départements voisins<'))
   const avec = renderToStaticMarkup(<ListeAvis {...base({ filtres: { ...FILTRES_PAR_DEFAUT, metiers: ['cvc'] } })} />)
-  assert.ok(avec.includes('Élargir retire les filtres.'))
+  assert.ok(avec.includes('Retirez un filtre') && !avec.includes('>Élargir'), 'avec des filtres : « Effacer les filtres » suffit, « Élargir » ne fait pas la même chose en double')
   const rien = renderToStaticMarkup(<ListeAvis {...base({ peutElargir: false })} />)
   assert.ok(rien.includes('Aucun avis ouvert') && !rien.includes('>Élargir<'))
   // le geste
   let appels = 0
   const el = ListeAvis(base({ onElargir: () => { appels += 1 } })) as ReactElement
-  const b = trouver(el, (e) => texteDe(e.props.children) === 'Élargir' && typeof e.props.onClick === 'function')
+  const b = trouver(el, (e) => texteDe(e.props.children) === 'Élargir aux départements voisins' && typeof e.props.onClick === 'function')
   ;(b!.props.onClick as () => void)()
   assert.equal(appels, 1)
 })

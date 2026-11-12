@@ -11,7 +11,6 @@ import { EtatErreur } from '@/components/ui/etats'
 import { TitreSection } from '@/components/ui/page'
 import { useVeille } from '@/hooks/useVeille'
 import { etapeElargir } from '@/lib/veille'
-import { libelleSourceVeille } from '@/services/veille'
 
 const NOMS: Readonly<Record<string, string>> = Object.fromEntries(DEPARTEMENTS.map((d) => [d.code, d.nom]))
 
@@ -25,11 +24,22 @@ export function libelleActualisation(iso: string | null): string | null {
   return `Données BOAMP du ${jour} à ${heure}`
 }
 
+const JOUR_RELEVE = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', timeZone: 'Europe/Paris' })
+
+/** Le dernier relevé date de plus de 36 heures : sa date en mots (« 1 novembre ») ; sinon null (la veille est à jour). */
+export function releveAncien(iso: string | null, maintenant: Date = new Date()): string | null {
+  if (!iso) return null
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime()) || maintenant.getTime() - d.getTime() < 36 * 3600_000) return null
+  return JOUR_RELEVE.format(d).replace(/^1 /, '1er ')
+}
+
 export default function VeilleAccueil() {
   const navigate = useNavigate()
   const v = useVeille()
   const peutElargir = useMemo(() => etapeElargir(v.filtres, v.zone.selection) !== null, [v.filtres, v.zone.selection])
   const actualisation = libelleActualisation(v.actualiseLe)
+  const ancien = releveAncien(v.actualiseLe)
 
   const creer = async (idAvis: string) => {
     try {
@@ -40,13 +50,20 @@ export default function VeilleAccueil() {
 
   return (
     <section aria-labelledby="titre-veille" data-veille>
-      {/* L'en-tête : le point turquoise de la veille (COULEURS.md), une phrase. */}
-      <TitreSection id="titre-veille"><span aria-hidden className="mr-2.5 inline-block size-2.5 rounded-pilule bg-turquoise-mark align-baseline" />Veille</TitreSection>
-      <p className="-mt-2 max-w-2xl text-base text-fg-2">Synorix surveille les avis ouverts de votre zone et signale chaque matin les nouveaux.</p>
+      {/* L'en-tête : le titre et une phrase, sans point de couleur (une couleur d'état ne va pas sans mot : jury, tour 1). La phrase
+          ne promet « chaque matin » que si le dernier relevé est récent ; sinon elle dit la date du relevé, une seule fois. */}
+      <TitreSection id="titre-veille">Veille</TitreSection>
+      {!v.preferencesEnErreur && (
+        <p className="-mt-2 max-w-2xl text-base text-fg-2">
+          {ancien
+            ? `Synorix surveille les avis ouverts de votre zone. Dernier relevé du BOAMP\u00a0: ${ancien}.`
+            : 'Synorix surveille les avis ouverts de votre zone et signale chaque matin les nouveaux.'}
+        </p>
+      )}
 
       {v.preferencesEnErreur ? (
         // Les préférences (zone, filtres) n'ont pas pu être lues : rien n'est montré comme vide, rien n'est enregistré.
-        <EtatErreur className="mt-6" titre="La veille n’a pas pu se charger" detail="La connexion au serveur a échoué. Votre zone et vos filtres ne sont pas touchés."
+        <EtatErreur className="mt-6" titre="La veille n’a pas pu se charger" detail={'La connexion a été interrompue. Votre zone et vos filtres ne\u00a0sont\u00a0pas\u00a0touchés.'}
           onReessayer={v.recharger} enCours={v.rechargeEnCours} />
       ) : (
         <div className="mt-6 grid grid-cols-1 gap-x-10 gap-y-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
@@ -55,12 +72,12 @@ export default function VeilleAccueil() {
             {/* Colonne collée, carte à pleine largeur (décision du 1er/11) : sur un écran bas, le sud dépasse de l'écran
                 tant qu'on n'a pas défilé ; c'est accepté, la carte n'est plus rétrécie. */}
             <CarteFrance comptes={v.comptes} selection={v.zone.selection} onSelection={(codes) => v.setZone({ selection: codes, ville: null })} />
+            {/* le décompte seul : la source est écrite une fois, sous la liste ; la date du relevé, une fois aussi */}
             <p className="text-sm text-fg-3">
               {v.comptesEnErreur
                 ? 'Le nombre d’avis par département n’a pas pu se charger'
-                : v.totalComptes > 0 ? `${v.totalComptes} avis ouverts en France` : v.chargeEnCours ? 'Chargement de la carte…' : 'Aucun avis ouvert pour ces filtres'}
-              {actualisation ? ` · ${actualisation}` : ''}
-              {' · '}Source : {libelleSourceVeille(v.source)}
+                : v.totalComptes > 0 ? `${v.totalComptes} avis ouverts en France` : v.chargeEnCours ? '' : 'Aucun avis ouvert pour ces filtres'}
+              {actualisation && !ancien && v.totalComptes > 0 ? ` · ${actualisation}` : ''}
             </p>
           </div>
           <ListeAvis
