@@ -1,10 +1,20 @@
 import logging
+import re
 from datetime import date, datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field, computed_field, field_serializer, model_validator
+from pydantic import BaseModel, Field, computed_field, field_serializer, field_validator, model_validator
 
 logger = logging.getLogger(__name__)
+
+# Ancienne note du logiciel dans le nom d'une pièce : « Pouvoir (2 exigences du RC regroupées) ». Le serveur ne l'écrit plus
+# (services/checklist_builder.py, 12/11/2026) ; les pièces enregistrées avant la portent encore : elle est retirée ici, au
+# seul endroit où le nom sort, et l'écran n'a plus à la corriger.
+_NOTE_REGROUPEMENT = re.compile(r"\s*\(\d+ exigences? du RC regroupées?\)")
+
+
+def sans_note_regroupement(texte: Optional[str]) -> Optional[str]:
+    return _NOTE_REGROUPEMENT.sub("", texte).strip() if texte else texte
 
 
 class ComplianceItemResponse(BaseModel):
@@ -37,6 +47,12 @@ class ChecklistItemResponse(BaseModel):
     source_in_rc: Optional[str]
     signature_confirmed: bool = False
     lot: Optional[str] = None   # NULL = pièce commune ; 'lotN' = pièce du lot
+
+    @field_validator("details")
+    @classmethod
+    def _details_sans_note(cls, v: Optional[str]) -> Optional[str]:
+        return sans_note_regroupement(v)
+
     document_group: str = "fournir"  # fournir | completer | synorix | workflow
     # « Jointe » : FAIT vérifié sur le plan du ZIP (routers/export._etat_piece),
     # renseigné par GET /checklist — le fichier part dans le dossier, valable et

@@ -26,7 +26,6 @@ import { comptesPieces } from '@/lib/statutPiece'
 import { echeanceAO } from '@/lib/echeance'
 import type { Project, ChecklistItem, Document } from '@/types'
 import { messageErreur } from '@/lib/erreurs'
-import { sansNoteDeRegroupement } from '@/lib/nomsPieces'
 import { messageActualisation, type EtatActualisation } from '@/lib/actualisation'
 
 interface Props { project: Project }
@@ -389,7 +388,7 @@ function WorkflowRow({
   return (
     <LignePiece
       id={item.id}
-      nom={sansNoteDeRegroupement(item.details ?? '')}
+      nom={item.details ?? ''}
       sous={<>
         <p className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-fg-2">
           {item.lot && <span>{libelleLot(item.lot)}</span>}
@@ -440,7 +439,7 @@ function SynorixJalonSection({ items }: { items: ChecklistItem[] }) {
         {items.map((i) => (
           <div key={i.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-3 max-sm:px-4">
             {/* Le libellé du serveur finit par « — généré par Synorix à l'étape Mémoire » : l'étape s'appelle Rédiger, et la ligne le dit déjà. */}
-            <span className="min-w-0 flex-1 basis-56 break-words font-semibold text-fg">{sansNoteDeRegroupement(i.details ?? '').replace(/\s+[—–-]\s+généré par Synorix.*$/i, '')}</span>
+            <span className="min-w-0 flex-1 basis-56 break-words font-semibold text-fg">{(i.details ?? '').replace(/\s+[—–-]\s+généré par Synorix.*$/i, '')}</span>
             {i.lot && <span className="text-sm text-fg-2">{libelleLot(i.lot)}</span>}
             <span className="shrink-0 text-sm text-fg-2">À l’étape Rédiger</span>
           </div>

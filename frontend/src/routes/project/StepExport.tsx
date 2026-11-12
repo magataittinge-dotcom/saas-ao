@@ -167,9 +167,9 @@ export function SuiteDepot({ telecharge, phrase, avertissements, onDepose }: {
   )
 }
 
-/** Le nom d'une pièce, sans la note du logiciel (« (2 exigences du RC regroupées) », posée par le serveur). */
+/** Le nom d'une pièce : son libellé (le serveur n'y écrit plus de note du logiciel), sinon son type. */
 export const titrePiece = (item: { details: string | null; document_type_required: string }): string =>
-  (item.details || item.document_type_required).replace(/\s*\(\d+ exigences du RC regroupées\)/g, '').trim()
+  (item.details || item.document_type_required).trim()
 
 // ─── Main component ─────────────────────────────────────────────────────────
 

@@ -25,6 +25,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from models.checklist_item import ChecklistItem
+from schemas.compliance import sans_note_regroupement
 from models.compliance_item import ComplianceItem
 from models.document import Document
 from models.project import ProjectDocument
@@ -136,11 +137,11 @@ def _line_to_item(line: ChecklistLine, project_id: str, db: Session,
                   vault_by_type: dict, position: int,
                   selected_lot: Optional[str] = None) -> ChecklistItem:
     excerpt = (line.source_excerpt or "")[:490] or None
-    suffix = f" ({line.merged_count} exigences du RC regroupées)" if line.merged_count > 1 else ""
+    # Le nom de la pièce, sans note du logiciel : « (N exigences du RC regroupées) » n'est plus écrit (12/11/2026).
     base = dict(
         project_id=project_id,
         document_type_required=line.canonical_type,
-        details=(line.label + suffix)[:490],
+        details=line.label[:490],
         source_in_rc=excerpt,
         source_document=line.source_document if excerpt else None,
         source_page=line.source_page if excerpt else None,
@@ -272,7 +273,8 @@ def _cle_ligne(item) -> tuple:
     """Même pièce, même lot. Les pièces inconnues (« autre ») ne sont jamais
     fusionnées : leur libellé les distingue."""
     type_ = item.document_type_required
-    return (type_, item.lot, item.details if type_ == "autre" else None)
+    # une pièce enregistrée avant le 12/11/2026 porte encore la note de regroupement : même pièce que sans elle
+    return (type_, item.lot, sans_note_regroupement(item.details) if type_ == "autre" else None)
 
 
 def _choix_de(item) -> dict:

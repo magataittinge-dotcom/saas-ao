@@ -1,6 +1,8 @@
-from pydantic import BaseModel, field_serializer
+from pydantic import BaseModel, field_serializer, field_validator
 from typing import Optional
 from datetime import date, datetime
+
+from schemas.compliance import sans_note_regroupement
 
 
 class ExportSummary(BaseModel):
@@ -34,6 +36,12 @@ class ChecklistExportItem(BaseModel):
     document_type_required: str
     status: str
     details: Optional[str] = None
+
+    @field_validator("details")
+    @classmethod
+    def _details_sans_note(cls, v: Optional[str]) -> Optional[str]:
+        return sans_note_regroupement(v)
+
     linked_document_name: Optional[str] = None
     linked_document_id: Optional[str] = None
     source_kind: str = "vault"
