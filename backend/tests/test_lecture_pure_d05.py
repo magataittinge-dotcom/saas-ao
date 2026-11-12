@@ -106,3 +106,47 @@ def test_mes_ao_ordre_stable_a_mise_a_jour_egale(client, db_session, test_org):
     db_session.commit()
     ids = [p["id"] for p in client.get("/api/projects").json() if p["id"].startswith("p-ordre-")]
     assert ids == ["p-ordre-a", "p-ordre-b", "p-ordre-c"]
+
+
+def test_dossier_sans_lot_une_seule_cle_et_la_lecture_ne_recalcule_rien(client, db_session, test_org, monkeypatch):
+    """RESTES-3 point 8 (REVUE-2 P2-3) — un dossier sans lot était rangé sous « all » (spec de lot) et lu sous « _all » :
+    chaque lecture recalculait champs et pages. Une seule clé (« _all ») ; la lecture relit ce que l'analyse a rangé."""
+    from routers import analysis
+    from schemas.project import ProjectResponse
+    from services import critical_fields as cf, critical_fields_pages as cfp
+    db_session.add(Project(id="p-sans-lot", organization_id=test_org.id, name="AO", selected_lot=None))
+    db_session.add(ProjectDocument(project_id="p-sans-lot", type="rc", file_name="rc.pdf",
+                                   file_url="/uploads/projects/p-sans-lot/rc.pdf", extracted_text=REMISE))
+    db_session.commit()
+    analyse = {"requirements": [{"exigence": "Remettre l'offre", "source_document": "rc.pdf",
+                                 "category": "administratif", "priority": "obligatoire"}],
+               "criteres_jugement": [], "infos_marche": {"date_limite_reponse": "12/03/2027"}}
+    monkeypatch.setattr(analysis, "controler_infos_marche", lambda i, *a, **k: i, raising=False)
+    analysis._finalize_analysis(db_session, "p-sans-lot", test_org.id, analyse, 1, 1, lot_specs=[{"lot_id": "all"}])
+    db_session.expire_all()
+    projet = db_session.get(Project, "p-sans-lot")
+    assert list(projet.critical_fields) == ["_all"]
+    assert ProjectResponse.model_validate(projet).model_dump()["lots_analyses"] == []
+
+    appels = {"champs": 0, "pages": 0}
+    vrai_pages = cfp.resoudre_pages
+    monkeypatch.setattr(cf, "build_critical_fields", lambda *a, **k: appels.__setitem__("champs", appels["champs"] + 1) or {})
+    monkeypatch.setattr(cfp, "resoudre_pages", lambda *a, **k: appels.__setitem__("pages", appels["pages"] + 1) or vrai_pages(*a, **k))
+    premiere = client.get("/api/projects/p-sans-lot/critical-fields").json()
+    apres_premiere = dict(appels)
+    seconde = client.get("/api/projects/p-sans-lot/critical-fields").json()
+    assert premiere == seconde and premiere["fields"]["date_limite_remise"]["value"]["date"] == "2027-03-12"
+    assert appels["champs"] == 0, "les champs rangés par l'analyse sont relus, jamais recalculés"
+    assert appels == apres_premiere, "la seconde lecture ne recalcule rien"
+
+
+def test_dossier_sans_lot_range_avant_le_correctif_sous_all_est_relu(client, db_session, test_org, monkeypatch):
+    """Les dossiers sans lot déjà analysés gardent leurs champs sous « all » : la lecture les relit (aucun recalcul)."""
+    from services import critical_fields as cf
+    ranges = {"date_limite_remise": {"value": {"date": "2027-03-12", "heure": None}, "source": None}}
+    db_session.add(Project(id="p-sans-lot-ancien", organization_id=test_org.id, name="AO", selected_lot=None,
+                           critical_fields={"all": ranges}))
+    db_session.commit()
+    monkeypatch.setattr(cf, "build_critical_fields", lambda *a, **k: (_ for _ in ()).throw(AssertionError("recalcul")))
+    corps = client.get("/api/projects/p-sans-lot-ancien/critical-fields").json()
+    assert corps["fields"]["date_limite_remise"]["value"]["date"] == "2027-03-12"

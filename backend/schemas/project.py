@@ -84,7 +84,7 @@ class ProjectResponse(BaseModel):
         """Les lots déjà analysés (champs critiques posés par lot à la fin de leur lecture) : l'écran Lots les rouvre sans
         les relire (« Ouvrir ce lot », aucune unité). Le dossier entier (« _all ») n'en est pas un."""
         cache = self.critical_fields if isinstance(self.critical_fields, dict) else {}
-        return sorted(k for k in cache if k != "_all")
+        return sorted(k for k in cache if k not in ("_all", "all"))   # « all » : ancienne clé du dossier entier
 
     @computed_field
     @property
@@ -94,8 +94,8 @@ class ProjectResponse(BaseModel):
         même jour), sinon la date et l'heure lues dans le RC (champs critiques
         du lot courant), sinon la date relevée par l'analyse."""
         rc = None
-        cache = self.critical_fields if isinstance(self.critical_fields, dict) else {}
-        lot = cache.get(self.selected_lot or "_all")
+        from services.critical_fields import champs_ranges
+        lot = champs_ranges(self.critical_fields, self.selected_lot)
         if isinstance(lot, dict):
             valeur = (lot.get("date_limite_remise") or {}).get("value")
             if isinstance(valeur, dict) and valeur.get("date"):

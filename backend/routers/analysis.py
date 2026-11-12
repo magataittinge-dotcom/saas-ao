@@ -812,7 +812,7 @@ def _finalize_analysis(
 
     # ── C5 : champs critiques structurés, persistés PAR LOT ──────────────────
     # (une relance d'analyse sur un autre lot n'écrase pas ceux-ci)
-    from services.critical_fields import build_critical_fields
+    from services.critical_fields import build_critical_fields, cle_lot
     fields = build_critical_fields(infos_marche, criteres_jugement, all_docs)
     # D-05 — la page de chaque source est cherchée ICI (travail détaché), plus par le GET (qui ne range plus rien).
     try:
@@ -823,8 +823,9 @@ def _finalize_analysis(
     existing_cf = dict(project.critical_fields or {})
     # Seuls les lots livrés sont rangés : un lot en échec (unité rendue) n'est pas « Analysé » (`lots_analyses`).
     lots_ranges = [s_["lot_id"] for s_ in (lot_specs or []) if lots_livres is None or s_["lot_id"] in lots_livres]
-    for lot_key in (lots_ranges if lot_specs else [project.selected_lot or "_all"]):
-        existing_cf[lot_key] = fields
+    # Une seule clé pour le dossier entier (« _all ») : la spec d'un dossier sans lot s'appelle « all » (REVUE-2 P2-3).
+    for lot_key in (lots_ranges if lot_specs else [project.selected_lot]):
+        existing_cf[cle_lot(lot_key)] = fields
     project.critical_fields = existing_cf
 
     # (ancrage + persistance déjà faits PAR SCOPE — commun et chaque lot)
@@ -941,8 +942,9 @@ _LECTURES_CF_GARDE = threading.Lock()
 def _champs_critiques_lus(db: Session, project: Project, avec_pages: bool = False) -> dict:
     """Champs critiques du lot courant, sans écrire : ceux rangés par l'analyse, sinon calculés depuis
     infos_marche/criteres + RC/CCAP ; `avec_pages` : la page des sources pas encore cherchée l'est (PDF)."""
-    lot_key = project.selected_lot or "_all"
-    ranges = (project.critical_fields or {}).get(lot_key)
+    from services.critical_fields import champs_ranges, cle_lot
+    lot_key = cle_lot(project.selected_lot)
+    ranges = champs_ranges(project.critical_fields, project.selected_lot)
     if ranges is not None and not avec_pages:
         return ranges
     empreinte = hashlib.sha1(json.dumps([ranges, project.infos_marche, project.criteres_jugement],

@@ -64,6 +64,26 @@ def parse_french_date(raw: str) -> Optional[date]:
     return None
 
 
+CLE_DOSSIER = "_all"
+
+
+def cle_lot(lot: Optional[str]) -> str:
+    """La clé des champs critiques rangés par lot : le dossier entier (aucun lot choisi, ou « all ») n'en a qu'une,
+    « _all », à l'écriture (fin d'analyse) comme à la lecture."""
+    return CLE_DOSSIER if not lot or lot == "all" else lot
+
+
+def champs_ranges(critical_fields, lot: Optional[str]) -> Optional[dict]:
+    """Les champs rangés du lot, ou None ; le dossier entier relit aussi l'ancienne clé « all » (analyses d'avant
+    l'unification)."""
+    cache = critical_fields if isinstance(critical_fields, dict) else {}
+    cle = cle_lot(lot)
+    ranges = cache.get(cle)
+    if ranges is None and cle == CLE_DOSSIER:
+        ranges = cache.get("all")
+    return ranges
+
+
 def _field(value, source=None) -> dict:
     # Invariant : pas de source sans valeur.
     return {"value": value, "source": source if value is not None else None}
