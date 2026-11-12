@@ -66,8 +66,10 @@ test('la barre de réécriture annonce son plafond et passe par les composants d
 test('Rédiger : une panne de lecture du mémoire n’est jamais « pas de mémoire » (le formulaire de rédaction ne revient pas)', () => {
   const code = sansCommentaires(lire('src/routes/project/StepMemoire.tsx'))
   const iErreur = code.indexOf('requeteMemoire.isError')
-  const iFormulaire = code.indexOf('if (!hasMemoire || showForm)')
+  const iFormulaire = code.indexOf('if (!hasMemoire) {')
   assert.ok(iErreur > 0 && iFormulaire > iErreur, 'l’erreur est traitée avant le formulaire')
+  // RESTES-4 — le formulaire ne revient qu'en l'absence de mémoire : plus d'état `showForm` (jamais mis à vrai).
+  assert.doesNotMatch(code, /showForm/)
   assert.match(code, /<EtatErreur[\s\S]{0,200}Le mémoire n’a pas pu s’ouvrir/)
   assert.match(code, /Contrôles du texte|ControlesTexte/)
   assert.doesNotMatch(code, /Compagnon Synorix/)

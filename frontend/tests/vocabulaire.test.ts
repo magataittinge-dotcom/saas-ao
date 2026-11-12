@@ -161,9 +161,9 @@ test('S4 : « Retour » à la place d\'« Annuler » quand le bouton ne défait 
   assert.ok(!textes.includes('Annuler'))
 })
 
-test('S4 : « Retour » aussi sur le mémoire — fermer le formulaire de régénération ne défait rien', () => {
+test('S4 : aucun « Annuler » sur le mémoire — le formulaire de rédaction ne s’ouvre qu’en l’absence de mémoire', () => {
   const code = lire('src/routes/project/StepMemoire.tsx')
-  // le bouton ne fait que replier le formulaire : aucune mutation, aucune suppression
-  assert.match(code, /onClick=\{\(\) => setShowForm\(false\)\}[^>]*>\s*Retour\s*<\/Bouton>/)
+  // RESTES-4 : le formulaire de régénération (et son « Retour ») ne s'ouvrait jamais (`showForm` jamais vrai) : retiré.
+  assert.doesNotMatch(code, /showForm/)
   assert.ok(!textesAffiches('src/routes/project/StepMemoire.tsx').some((t) => t.texte.trim() === 'Annuler'))
 })

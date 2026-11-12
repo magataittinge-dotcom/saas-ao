@@ -125,7 +125,6 @@ export default function StepMemoire({ project }: Props) {
   const [paywallMessage, setPaywallMessage] = useState<string | null>(null)
   // Ce que l'utilisateur a saisi ici ; rien encore : les valeurs rangées avec le mémoire (relues après un rechargement).
   const [saisie, setSaisie] = useState<VariablesMemoire | null>(null)
-  const [showForm, setShowForm] = useState(false)
   const [showEditor, setShowEditor] = useState(false)
   const [editedContent, setEditedContent] = useState<MemoireContent | null>(null)
   const [genError, setGenError] = useState<string | null>(null)
@@ -310,7 +309,6 @@ export default function StepMemoire({ project }: Props) {
   const finRedaction = () => {
     setRunning(false)
     setEditedContent(null)
-    setShowForm(false)
     queryClient.invalidateQueries({ queryKey: ['memoire', project.id] })
     queryClient.invalidateQueries({ queryKey: ['export-detail', project.id] })
     queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
@@ -408,9 +406,9 @@ export default function StepMemoire({ project }: Props) {
   const lotName = project.selected_lot_name || 'Lot unique'
   const echecRedaction = !isRunning && project.processing_status === 'error'
 
-  // ── Generation form (no mémoire yet or regenerate) ─────────────
+  // ── Formulaire de rédaction (aucun mémoire encore) ─────────────
 
-  if (!hasMemoire || showForm) {
+  if (!hasMemoire) {
     return (
       <>
         <SubscriptionWall open={showPaywall} onClose={() => setShowPaywall(false)} feature="memoire" message={paywallMessage} />
@@ -431,12 +429,9 @@ export default function StepMemoire({ project }: Props) {
         <GabaritEtape
           titre={TITRE}
           utilite="Synorix rédige chaque partie du plan, à partir de votre dossier et de Mon entreprise."
-          actionsSecondaires={hasMemoire ? (
-            <Bouton variante="secondaire" onClick={() => setShowForm(false)}>Retour</Bouton>
-          ) : (
+          actionsSecondaires={
             <Bouton variante="secondaire" onClick={() => navigate(`/projects/${project.id}/plan`)}>Voir le plan</Bouton>
-          )}
-          message={hasMemoire ? <Message ton="attention">Une nouvelle rédaction remplacera la version actuelle du mémoire.</Message> : undefined}
+          }
           resume={<BandeResume libelle="Résumé de la rédaction" cartes={cartesPreparation(plan ?? null, techPct)} />}
         >
           <SectionEtape titre="Ce que le règlement note" description={<>La pondération relevée dans le <Sigle code="RC" />, hors prix.</>}>
@@ -456,7 +451,7 @@ export default function StepMemoire({ project }: Props) {
               onVariables={setSaisie}
               onPreflight={handlePreflightChange}
               stats={profileStats ?? null}
-              hasMemoire={hasMemoire}
+              hasMemoire={false}
               enCours={isRunning}
               erreur={genError || echecRedaction
                 ? (genError ?? (project.processing_detail || ECHEC_REDACTION))
