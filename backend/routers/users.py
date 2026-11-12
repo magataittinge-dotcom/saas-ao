@@ -15,11 +15,12 @@ router = APIRouter()
 
 
 class TeamMemberCreate(BaseModel):
-    name: str
-    role: str
-    specialite: Optional[str] = None
-    experience_years: Optional[int] = None
-    certifications: Optional[str] = None
+    # S-17 — mêmes bornes que TeamMemberUpdate (colonnes de team_members) : 422, jamais 500.
+    name: str = Field(max_length=255)
+    role: str = Field(max_length=255)
+    specialite: Optional[str] = Field(default=None, max_length=255)
+    experience_years: Optional[int] = Field(default=None, ge=0, le=80)
+    certifications: Optional[str] = Field(default=None, max_length=500)
     experience_resume: Optional[str] = Field(default=None, max_length=1000)  # migration 0029
 
 

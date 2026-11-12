@@ -34,17 +34,21 @@ class OrganizationResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+# S-17 — textes du profil bornés (ils partent dans le prompt du mémoire) ; le nom suit sa colonne String(255).
+MAX_TEXTE_PROFIL = 20_000
+
+
 class OrganizationUpdate(BaseModel):
-    name: Optional[str] = None
-    address: Optional[str] = None
-    presentation: Optional[str] = None
-    historique: Optional[str] = None
-    activites: Optional[str] = None
-    organigramme: Optional[str] = None
-    moyens_informatiques: Optional[str] = None
-    vehicules: Optional[str] = None
-    materiel: Optional[str] = None
-    fournisseurs: Optional[str] = None
+    name: Optional[str] = Field(default=None, max_length=255)
+    address: Optional[str] = Field(default=None, max_length=MAX_TEXTE_PROFIL)
+    presentation: Optional[str] = Field(default=None, max_length=MAX_TEXTE_PROFIL)
+    historique: Optional[str] = Field(default=None, max_length=MAX_TEXTE_PROFIL)
+    activites: Optional[str] = Field(default=None, max_length=MAX_TEXTE_PROFIL)
+    organigramme: Optional[str] = Field(default=None, max_length=MAX_TEXTE_PROFIL)
+    moyens_informatiques: Optional[str] = Field(default=None, max_length=MAX_TEXTE_PROFIL)
+    vehicules: Optional[str] = Field(default=None, max_length=MAX_TEXTE_PROFIL)
+    materiel: Optional[str] = Field(default=None, max_length=MAX_TEXTE_PROFIL)
+    fournisseurs: Optional[str] = Field(default=None, max_length=MAX_TEXTE_PROFIL)
 
     # Identité légale (migration 0029). Un champ vide est accepté : c'est ainsi qu'on l'efface.
     forme_juridique: Optional[str] = Field(default=None, max_length=80)
