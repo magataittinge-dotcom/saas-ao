@@ -299,14 +299,22 @@ export default function StepMemoire({ project }: Props) {
   const isRunning = isGenerating || running || project.processing_status === 'generating'
   const refaitUnePartie = envoiRefaire || (project.processing_detail ?? '').startsWith('refaire:')
 
+  const finRedaction = () => {
+    setRunning(false)
+    setEditedContent(null)
+    setShowForm(false)
+    queryClient.invalidateQueries({ queryKey: ['memoire', project.id] })
+    queryClient.invalidateQueries({ queryKey: ['export-detail', project.id] })
+    queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
+  }
   const memoireSse = useProgressStream(project.id, {
-    enabled: isRunning,
-    onComplete: () => {
+    // Abonné une fois la demande acceptée : l'état rattrapé est alors celui de CETTE rédaction, jamais d'une précédente.
+    enabled: isRunning && !isGenerating,
+    onComplete: finRedaction,
+    // Rédaction finie (ou en échec) avant l'abonnement : l'écran relit l'état final au lieu d'attendre une fin déjà passée.
+    onRienEnCours: (fin) => {
+      if (fin === 'completed') { finRedaction(); return }
       setRunning(false)
-      setEditedContent(null)
-      setShowForm(false)
-      queryClient.invalidateQueries({ queryKey: ['memoire', project.id] })
-      queryClient.invalidateQueries({ queryKey: ['export-detail', project.id] })
       queryClient.invalidateQueries({ queryKey: ['projects', project.id] })
     },
   })
@@ -321,6 +329,9 @@ export default function StepMemoire({ project }: Props) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [memoireSse.phase])
+  // Pendant l'envoi de la demande, le flux n'est pas encore suivi : l'attente part de zéro, jamais de l'état d'une rédaction
+  // précédente (relancée sur le même écran, elle affichait « Terminé » jusqu'à la réponse).
+  const flux = isGenerating ? { step: null, progress: 0, detail: '', phase: 'pending' as const } : memoireSse
 
   const { mutateAsync: saveEdits } = useMutation({
     mutationFn: (content: MemoireContent) =>
@@ -399,10 +410,10 @@ export default function StepMemoire({ project }: Props) {
             variant="modal"
             title="Synorix rédige votre mémoire"
             steps={MEMOIRE_GEN_STEPS}
-            currentStep={memoireSse.step ?? 'preparing'}
-            progress={memoireSse.progress}
-            detail={memoireSse.detail || 'Vous retrouverez le mémoire ici, partie par partie.'}
-            phase={memoireSse.phase}
+            currentStep={flux.step ?? 'preparing'}
+            progress={flux.progress}
+            detail={flux.detail || 'Vous retrouverez le mémoire ici, partie par partie.'}
+            phase={flux.phase}
             avis={avisAttente}
             onArrierePlan={() => navigate('/dashboard')}
           />
@@ -469,10 +480,10 @@ export default function StepMemoire({ project }: Props) {
           variant="modal"
           title={refaitUnePartie ? 'Synorix refait cette partie' : 'Synorix rédige votre mémoire'}
           steps={MEMOIRE_GEN_STEPS}
-          currentStep={memoireSse.step ?? 'preparing'}
-          progress={memoireSse.progress}
-          detail={memoireSse.detail || 'Vous retrouverez le mémoire ici, partie par partie.'}
-          phase={memoireSse.phase}
+          currentStep={flux.step ?? 'preparing'}
+          progress={flux.progress}
+          detail={flux.detail || 'Vous retrouverez le mémoire ici, partie par partie.'}
+          phase={flux.phase}
           avis={avisAttente}
           onArrierePlan={() => navigate('/dashboard')}
         />

@@ -215,3 +215,20 @@ def test_un_flux_ouvert_ne_retient_aucun_thread(db_session, test_org, test_user,
         assert evenements == ["init", "progress", "complete"]
     finally:
         app.dependency_overrides.clear()
+
+
+def test_le_rattrapage_a_l_abonnement_donne_l_etat_et_non_l_enveloppe(db_session, test_org, test_user):
+    """Parcours E2E (12/11) : un travail fini AVANT l'abonnement (lecture simulée en moins d'une seconde, reconnexion)
+    laissait l'écran d'attente figé : l'événement `init` portait l'enveloppe du bus ({type, data, ts}), le client n'y
+    lisait aucun statut. Il porte l'état lui-même : le client voit « fini » et relit l'état final."""
+    _projet(db_session, test_org, "p-sse-4")
+    client = _client_as(test_user)
+    try:
+        progress_bus.publish("p-sse-4", "complete", {"status": "completed", "progress": 100})
+        _publier_plus_tard("p-sse-4", [("complete", {"status": "completed", "progress": 100})])
+        texte = client.get("/api/projects/p-sse-4/progress-stream").text
+        premier = next(l for l in texte.splitlines() if l.startswith("data:"))
+        donnees = json.loads(premier.removeprefix("data:").strip())
+        assert donnees == {"status": "completed", "progress": 100}
+    finally:
+        app.dependency_overrides.clear()

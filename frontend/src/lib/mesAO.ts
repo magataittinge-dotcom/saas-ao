@@ -3,6 +3,7 @@
 import { echeanceAO, etatEcheance, momentLimite, type Echeance } from '@/lib/echeance'
 import { etatAO, faitPieces, type EtatAO } from '@/lib/etatAO'
 import { jourCourtParis } from '@/lib/dateParis'
+import { heureCourteParis, momentParis } from '@/lib/remiseParis'
 import { aDecider, aMemoire } from '@/lib/intelligence/action'
 import type { AvancementAO, Project } from '@/types'
 
@@ -74,9 +75,10 @@ export const enTraitement = (p: Pick<Project, 'processing_status'>): boolean => 
 // Écrits à la main : les abréviations d'Intl varient d'un moteur à l'autre (« nov » ou « nov. »).
 const JOURS_COURTS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.']
 const MOIS_COURTS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
-const heure = (d: Date) => (d.getMinutes() ? `${d.getHours()} h ${String(d.getMinutes()).padStart(2, '0')}` : `${d.getHours()} h`)
+const heure = heureCourteParis
 /** « 28 oct. » */
-export const jourCourt = (d: Date): string => `${d.getDate()} ${MOIS_COURTS[d.getMonth()]}`
+/** « 6 nov. » : le jour à Paris (Q-08). */
+export const jourCourt = (d: Date): string => { const m = momentParis(d); return `${m.jour} ${MOIS_COURTS[m.mois - 1]}` }
 const jourMois = (iso: string) => jourCourtParis(iso)
 
 /** « ven. 6 nov., 12 h » ; sans heure connue, le jour seul ; null sans date. */
@@ -84,7 +86,8 @@ export function quandCourt(p: Project): string | null {
   const source = echeanceAO(p)
   const limite = momentLimite(source)
   if (!limite) return null
-  const jour = `${JOURS_COURTS[limite.getDay()]} ${limite.getDate()} ${MOIS_COURTS[limite.getMonth()]}`
+  const m = momentParis(limite)
+  const jour = `${JOURS_COURTS[new Date(Date.UTC(m.an, m.mois - 1, m.jour)).getUTCDay()]} ${m.jour} ${MOIS_COURTS[m.mois - 1]}`
   return source?.heure ? `${jour}, ${heure(limite)}` : jour
 }
 

@@ -4,6 +4,8 @@ import { Check } from 'lucide-react'
 import { Sigle } from '@/components/common/Sigle'
 import { Carte, TitreCarte } from '@/components/ui/carte'
 import { cn } from '@/lib/utils'
+import { lireDate } from '@/lib/dateParis'
+import { jourSemaineParis } from '@/lib/remiseParis'
 import { api } from '@/services/api'
 
 interface PlanningStep {
@@ -19,10 +21,10 @@ interface Props {
   projectId: string
 }
 
+/** « vendredi 20 novembre », à l'heure de Paris (Q-08) : le serveur envoie le jour seul (AAAA-MM-JJ). */
 function formatFr(iso: string): string {
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return iso
-  return d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+  const d = lireDate(iso)
+  return d ? jourSemaineParis(d) : iso
 }
 
 /**

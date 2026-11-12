@@ -11,6 +11,7 @@ import pytest
 from models.checklist_item import ChecklistItem
 from models.document import Document
 from models.project import Project, ProjectDocument
+from tests.pdf_fabrique import pdf_texte
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -118,7 +119,8 @@ def test_upload_completed_success(client, db_session, test_org, tmp_path, monkey
 
     resp = client.post(
         f"/api/projects/{project.id}/checklist/{item.id}/upload-completed",
-        files={"file": ("DC1_signe.pdf", b"%PDF-1.4 fake content", "application/pdf")},
+        # B7 : un PDF rempli n'est « prêt » que s'il porte la raison sociale (ou le SIRET) du profil.
+        files={"file": ("DC1_signe.pdf", pdf_texte(["DC1", "Candidat : Synorix Test BTP"]), "application/pdf")},
     )
     assert resp.status_code == 200, resp.text
     body = resp.json()

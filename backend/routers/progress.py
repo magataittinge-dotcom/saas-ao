@@ -92,7 +92,9 @@ async def progress_stream(
             # the current pipeline_tracker snapshot.
             last = progress_bus.get_last_event(project_id)
             if last is not None:
-                yield _format_event("init", last)
+                # L'état lui-même, pas l'enveloppe du bus ({type, data, ts}) : un travail fini avant l'abonnement se lit
+                # « fini » (le client relit alors l'état final, au lieu d'attendre une fin déjà passée).
+                yield _format_event("init", last["data"])
             else:
                 snap = pipeline_tracker.get_status(project_id)
                 if snap is not None:

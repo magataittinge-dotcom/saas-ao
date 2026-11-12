@@ -16,6 +16,7 @@ from openpyxl import Workbook
 import routers.candidature as candidature_mod
 from models.checklist_item import ChecklistItem
 from models.project import Project, ProjectDocument
+from tests.pdf_fabrique import pdf_texte
 
 
 @pytest.fixture(autouse=True)
@@ -104,7 +105,9 @@ def test_non_dpgf_template_untouched_by_checker(client, db_session, test_org, pa
     """Un DC1 complété ne passe pas par le contrôle DPGF."""
     p, item = _setup_template_item(db_session, test_org.id, pid="proj-c12b", template_type="dc1_template")
 
-    resp = _upload_completed(client, p.id, item.id, b"%PDF-1.4 dc1 signe", filename="DC1_signe.pdf")
+    # B7 : un PDF rempli n'est « prêt » que s'il porte la raison sociale (ou le SIRET) du profil.
+    pdf = pdf_texte(["DC1 — Lettre de candidature", "Candidat : Synorix Test BTP"])
+    resp = _upload_completed(client, p.id, item.id, pdf, filename="DC1_signe.pdf")
     assert resp.status_code == 200
     assert resp.json()["status"] == "present"
 

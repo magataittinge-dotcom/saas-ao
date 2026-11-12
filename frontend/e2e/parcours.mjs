@@ -33,14 +33,12 @@ function constat(ctx, texte) {
 }
 /** Écrans connus sans exactement un bouton principal visible (largeur:écran:nombre → constat du rapport). */
 const PRINCIPAL_CONNUS = {
-  'telephone:decider:0': 'StepAnalysis.tsx:376 — au téléphone, l’écran Décider n’a aucun bouton principal : l’action de l’en-tête, montée mais cachée, fait céder l’aplat à « Suivant : Pièces » (StepAnalysis.tsx:356)',
 }
 /**
  * Erreurs de console CONNUES, déjà portées au rapport (constats à corriger dans l'appli, pas dans le test) : tolérées mais
  * comptées et écrites dans le bilan. Toute autre erreur fait échouer l'étape. Quand le constat est corrigé, retirez la ligne.
  */
 const CONSOLE_CONNUES = [
-  { motif: /validateDOMNesting[\s\S]*<p>[\s\S]*EtatElement/, constat: 'StepExport.tsx:526 — <p> autour d’EtatElement, qui rend lui-même un <p> (EtatElement.tsx:28)' },
 ]
 
 const t0 = Date.now()
@@ -225,30 +223,20 @@ async function etapeLots(ctx) {
 
 async function etapeDecider(ctx) {
   const { page } = ctx
-  // L'analyse finie, le serveur marque déjà l'étape 3 faite (routers/analysis.py) : l'action de l'écran dit « Passer aux
-  // pièces », « On y va » ne s'affiche pas (constat du rapport E2E).
+  // L'analyse finie, l'AO attend la décision : « On y va » est l'action de l'écran (en-tête à l'ordinateur, barre du bas au
+  // téléphone), redite au trait dans la fiche « On y va ? ».
   await page.waitForURL(/\/analysis$/, { timeout: 30_000 })
-  // Au téléphone, l'action est le bouton de suite de la barre du bas.
-  const action = ctx.largeur.tel
-    ? page.getByRole('button', { name: SUITE.telephone + FIL[3], exact: true })
-    : bouton(page, VERBES.passerPieces, true)
+  const action = bouton(page, VERBES.yAller, true).first()
   try {
     await action.waitFor({ timeout: 30_000 })
   } catch {
-    // L'analyse simulée finit en moins d'une seconde : si l'écran d'attente reste affiché alors que le serveur a fini,
-    // c'est le constat « fin d'analyse manquée » ; un rechargement doit montrer l'écran Décider.
+    // L'analyse simulée finit en moins d'une seconde : le serveur a fini et l'écran attend encore, c'est une fin manquée.
     const p = await api_(page, 'GET', `/api/projects/${ctx.id}`)
-    if (p.corps?.processing_status === 'analyzing') { await action.waitFor({ timeout: ATTENTE_IA }) } else {
-      constat(ctx, 'StepAnalysis.tsx:331 — analyse finie côté serveur, l’écran reste sur « Synorix analyse votre dossier » (Démarrage) : la fin, survenue avant l’abonnement au flux, n’est jamais vue (processing_status du projet en cache, jamais relu) ; un rechargement débloque')
-      await page.reload({ waitUntil: 'domcontentloaded' })
-      await action.waitFor({ timeout: 30_000 })
-    }
+    if (p.corps?.processing_status !== 'analyzing') throw new Echec('décider : analyse finie côté serveur, l’écran reste sur l’attente (fin de travail manquée)')
+    await action.waitFor({ timeout: ATTENTE_IA })
   }
   await controler(ctx, 'decider', { fil: FIL[2] })
-  // La décision revient à l'utilisateur : « On y va » doit lui être proposé avant toute suite.
-  if (!(await bouton(page, VERBES.yAller, true).count())) {
-    constat(ctx, 'SynorixScoreCard.tsx:74 — la fiche « On y va ? » dit « Vous avez décidé d’y aller » dès la fin de l’analyse, sans décision : decideAller lit completed_steps["3"], que routers/analysis.py:826 pose à la fin de la lecture (current_step passe à 4, aDecider d’action.ts:35 n’est jamais vrai, l’en-tête dit « Passer aux pièces », StepAnalysis.tsx:178)')
-  }
+  // La décision revient à l'utilisateur : « On y va » fait avancer l'étape, et mène aux pièces.
   await action.click()
 }
 
@@ -277,6 +265,11 @@ async function etapePlan(ctx) {
   await page.getByRole('navigation', { name: NOM_FIL }).getByRole('button', { name: FIL[2], exact: true }).click()
   await page.waitForURL(/\/analysis$/, { timeout: 15_000 })
   await page.getByRole('heading', { level: 1, name: TITRES.decider, exact: true }).waitFor({ timeout: 15_000 })
+  // La décision prise, l'action de Décider mène aux pièces (« Passer aux pièces », « Suivant : Pièces » au téléphone).
+  const versPieces = ctx.largeur.tel
+    ? page.getByRole('button', { name: SUITE.telephone + FIL[3], exact: true })
+    : bouton(page, VERBES.passerPieces, true)
+  await versPieces.waitFor({ timeout: 15_000 })
   await page.goBack()
   await page.waitForURL(/\/plan$/, { timeout: 15_000 })
   await controler(ctx, 'plan', { fil: FIL[4] })
@@ -296,13 +289,10 @@ async function etapeRediger(ctx) {
     ? page.getByRole('button', { name: SUITE.telephone + FIL[6], exact: true })
     : bouton(page, VERBES.passerExport, true)
   try { await versExport.waitFor({ timeout: 30_000 }) } catch {
-    // Rédaction simulée finie en moins d'une seconde : si l'écran d'attente reste alors que le serveur a fini, c'est le constat.
+    // Rédaction simulée finie en moins d'une seconde : le serveur a fini et l'écran attend encore, c'est une fin manquée.
     const p = await api_(page, 'GET', `/api/projects/${ctx.id}`)
-    if (p.corps?.processing_status === 'generating') { await versExport.waitFor({ timeout: ATTENTE_IA }) } else {
-      constat(ctx, 'StepMemoire.tsx:302 — rédaction finie côté serveur, l’écran reste sur « Synorix rédige votre mémoire » : la fin, survenue avant l’abonnement au flux, n’est jamais vue (même cause que StepAnalysis.tsx:331) ; un rechargement débloque')
-      await page.reload({ waitUntil: 'domcontentloaded' })
-      await versExport.waitFor({ timeout: 30_000 })
-    }
+    if (p.corps?.processing_status !== 'generating') throw new Echec('rédiger : rédaction finie côté serveur, l’écran reste sur l’attente (fin de travail manquée)')
+    await versExport.waitFor({ timeout: ATTENTE_IA })
   }
   await page.waitForTimeout(1000)
   await controler(ctx, 'rediger', { fil: FIL[5] })
@@ -351,9 +341,8 @@ async function etapeExport(ctx) {
   await page.getByRole('button', { name: VERBES.depose, exact: true }).waitFor({ timeout: 60_000 })
   await page.waitForTimeout(3000)
   const recus = ctx.j.telechargements.slice(avant)
-  if (recus.length === 2) constat(ctx, 'StepExport.tsx:439 — double clic sur « Télécharger le dossier » : deux dossiers téléchargés (exportZip() lancé deux fois avant que isPending ne désactive le bouton)')
-  else if (recus.length !== 1) throw new Echec(`export : ${recus.length} fichier(s) téléchargé(s) après un double clic, attendu 1`)
-  else ctx.pannes.push('double clic sur « Télécharger le dossier » : un seul fichier')
+  if (recus.length !== 1) throw new Echec(`export : ${recus.length} fichier(s) téléchargé(s) après un double clic, attendu 1`)
+  ctx.pannes.push('double clic sur « Télécharger le dossier » : un seul fichier')
   const zip = path.join(TRAVAIL, `dossier-${ctx.largeur.nom}.zip`)
   await recus[0].saveAs(zip)
   ctx.zip = lireZip(zip)
@@ -458,9 +447,7 @@ async function panneLecture(nav, dossier) {
     // L'écran d'erreur de la lecture (ProgressDisplay) : la phrase, l'unité rendue, « Relancer ».
     const relancer = bouton(page, VERBES.relancer, true)
     try { await relancer.waitFor({ timeout: 45_000 }) } catch {
-      constat(ctx, 'StepAnalysis.tsx:331 — lecture en échec côté serveur, l’écran reste sur l’attente : la fin n’est pas vue sans rechargement')
-      await page.reload({ waitUntil: 'domcontentloaded' })
-      await relancer.waitFor({ timeout: 30_000 })
+      throw new Echec('panne IA : lecture en échec côté serveur, l’écran reste sur l’attente (fin de travail manquée)')
     }
     ctx.n += 1
     await capturer(page, largeur, ctx.n, 'panne-ia-message')
@@ -468,7 +455,7 @@ async function panneLecture(nav, dossier) {
     const message = await relancer.locator('xpath=ancestor::*[@role="alert" or @role="status"][1]').innerText().catch(() => '')
     if (!message) throw new Echec('panne IA : aucun message autour de « Relancer »')
     if (/\[[\w-]+\]|tentatives|Connection error|Exception|Traceback/i.test(message)) {
-      constat(ctx, `StepAnalysis.tsx:297 — lecture en échec : le message montre l’erreur technique (« ${message.split('\n')[0].slice(0, 90)} ») ; le détail du flux vient de fail_pipeline(…, str(e)) (routers/analysis.py:571), la phrase propre de processing_detail n’est lue qu’après relecture du projet`)
+      throw new Echec(`panne IA : le message montre l’erreur technique (« ${message.split('\n')[0].slice(0, 90)} »)`)
     }
     await controlerConsole(ctx, 'panne IA')
     const apres = await quota(page)
@@ -477,11 +464,9 @@ async function panneLecture(nav, dossier) {
     unlinkSync(PANNE)
     await relancer.click()
     await page.waitForURL(/\/analysis$/, { timeout: 30_000 })
-    const suite = bouton(page, VERBES.passerPieces, true)
+    const suite = bouton(page, VERBES.yAller, true).first()
     try { await suite.waitFor({ timeout: 30_000 }) } catch {
-      constat(ctx, 'StepAnalysis.tsx:331 — analyse finie côté serveur, l’écran reste sur « Synorix analyse votre dossier » (Démarrage) : la fin, survenue avant l’abonnement au flux, n’est jamais vue (processing_status du projet en cache, jamais relu) ; un rechargement débloque')
-      await page.reload({ waitUntil: 'domcontentloaded' })
-      await suite.waitFor({ timeout: 30_000 })
+      throw new Echec('panne IA : relance finie côté serveur, l’écran reste sur l’attente (fin de travail manquée)')
     }
     await controler(ctx, 'decider', { fil: FIL[2] })
     ctx.pannes.push(`IA en panne pendant la lecture : message et « ${VERBES.relancer} », unité rendue (${avant} → ${apres}), relance réussie`)

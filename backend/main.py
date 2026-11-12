@@ -52,6 +52,8 @@ from routers.file_serve import router as file_serve_router
 from routers.sources import router as sources_router
 from routers.csp_rapport import router as csp_rapport_router
 from routers.fonctions_ia import router as fonctions_ia_router  # C1 à C4 : éteintes par défaut (services/fonctions_ia.py)
+from routers.controle_depot import router as controle_depot_router
+from routers.equipe_dossier import router as equipe_dossier_router
 
 settings = get_settings()
 
@@ -442,6 +444,8 @@ app.include_router(memoire_config.router, prefix="/api/memoire-config", tags=["m
 # aucun écran ne s'en sert. Retirée de l'API publique (le routeur reste dans routers/rag.py). Le jeton ops
 # (METRICS_TOKEN) occupe le même en-tête Authorization que le jeton Clerk : il ne peut pas garder cette route.
 app.include_router(export.router, prefix="/api/projects", tags=["export"])
+app.include_router(controle_depot_router, prefix="/api/projects", tags=["export"])   # B9 : avant de déposer
+app.include_router(equipe_dossier_router, prefix="/api/projects", tags=["equipe"])   # B3 : votre équipe face au dossier
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
 app.include_router(stripe_billing.router, prefix="/api/stripe", tags=["stripe"])
 app.include_router(billing.router, prefix="/api/billing", tags=["billing"])

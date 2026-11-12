@@ -37,6 +37,20 @@ interface Options {
   enabled?: boolean
   onComplete?: (step: string) => void
   onError?: (step: string, message: string) => void
+  /**
+   * À l'abonnement, l'état rattrapé (`init`) dit qu'aucun travail ne tourne plus : fini, en échec, ou inconnu du serveur.
+   * La fin est passée avant l'abonnement (travail de moins d'une seconde, reconnexion) : l'écran relit l'état final.
+   */
+  onRienEnCours?: (fin: FinAuDepart) => void
+}
+
+export type FinAuDepart = 'completed' | 'error' | 'idle'
+
+/** L'état rattrapé à l'abonnement dit-il qu'aucun travail ne tourne plus ? (`null` : un travail tourne, ou autre événement.) */
+export function rienEnCours(evenement: string, snap: { status?: string }): FinAuDepart | null {
+  if (evenement !== 'init') return null
+  const statut = snap.status ?? 'idle'
+  return statut === 'completed' || statut === 'error' || statut === 'idle' ? statut : null
 }
 
 const MAX_FAILURES = 5
@@ -121,8 +135,10 @@ export function useProgressStream(
   // Refs for things we don't want to retrigger effects on.
   const onCompleteRef = useRef(opts.onComplete)
   const onErrorRef = useRef(opts.onError)
+  const onRienEnCoursRef = useRef(opts.onRienEnCours)
   onCompleteRef.current = opts.onComplete
   onErrorRef.current = opts.onError
+  onRienEnCoursRef.current = opts.onRienEnCours
 
   // Connection bookkeeping
   const abortRef = useRef<AbortController | null>(null)
@@ -238,6 +254,13 @@ export function useProgressStream(
               continue
             }
             // 'init' / 'progress' / 'complete' / 'error'
+            // Rien ne tourne plus à l'abonnement : l'écran relit l'état final ; la phase n'en est pas tirée (l'état peut
+            // être celui d'un travail précédent, que le serveur garde en mémoire).
+            const fin = rienEnCours(parsed.event, data)
+            if (fin) {
+              onRienEnCoursRef.current?.(fin)
+              continue
+            }
             const next = mapSnapshotToState(data, true, false, parsed.event)
             setState((prev) => ({ ...prev, ...next, isConnected: true, usingFallback: false }))
             if (parsed.event === 'complete') {

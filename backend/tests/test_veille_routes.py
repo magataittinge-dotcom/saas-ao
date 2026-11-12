@@ -362,18 +362,28 @@ def test_creer_ao_deux_requetes_simultanees_un_seul_projet(db_session, test_org,
     from database import SessionLocal
 
     avis = _avis(db_session, "ao-simultane")
+    # Lus ici, dans le fil du test (RESTES-2, point 8) : `avis` et `test_org` appartiennent à la session du test ; les
+    # lire depuis les deux fils rechargeait leurs attributs expirés sur CETTE session, en même temps (« This session is
+    # provisioning a new connection; concurrent operations are not permitted ») : un fil mourait, le test rougissait
+    # une fois sur quelques passages. Le produit, lui, n'avait pas de course.
+    avis_id, org_id = avis.id, test_org.id
     vrai = rv._nouveau_projet
 
     def lent(*a, **k):                     # élargit la fenêtre entre la vérification et l'enregistrement
         time.sleep(0.3)
         return vrai(*a, **k)
     monkeypatch.setattr(rv, "_nouveau_projet", lent)
-    ids = []
+    ids, erreurs = [], []
+    depart = threading.Barrier(2)           # les deux requêtes partent ensemble, à chaque passage
 
     def creer():
         s = SessionLocal()
         try:
-            ids.append(rv.creer_ou_retrouver_ao(s, test_org.id, s.get(AvisVeille, avis.id)))
+            avis_du_fil = s.get(AvisVeille, avis_id)
+            depart.wait(10)
+            ids.append(rv.creer_ou_retrouver_ao(s, org_id, avis_du_fil))
+        except Exception as exc:            # une erreur de fil doit faire échouer le test avec sa cause
+            erreurs.append(repr(exc))
         finally:
             s.close()
     fils = [threading.Thread(target=creer, name=f"synorix-test-creer-{i}") for i in range(2)]
@@ -381,6 +391,7 @@ def test_creer_ao_deux_requetes_simultanees_un_seul_projet(db_session, test_org,
         f.start()
     for f in fils:
         f.join(10)
+    assert erreurs == []
     assert len(ids) == 2 and ids[0] == ids[1]
     db_session.expire_all()
     assert db_session.query(Project).filter(Project.organization_id == test_org.id).count() == 1

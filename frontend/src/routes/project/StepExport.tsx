@@ -1,9 +1,10 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useRef } from 'react'
 import { heureParis, jourCourtParis, jourLongParis } from '@/lib/dateParis'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { Archive, Download, FileDown } from 'lucide-react'
 import { api } from '@/services/api'
+import { verrouLancement } from '@/lib/verrouLancement'
 import type { Project } from '@/types'
 import DocumentViewer, { type ViewableDocument } from '@/components/project/DocumentViewer'
 import EchecAction from '@/components/common/EchecAction'
@@ -270,9 +271,15 @@ export default function StepExport({ project }: Props) {
     onMutate: () => { setEchec(null); setAvertissementsZip(null) },
     onError: async (err) => setEchec({
       lieu: 'dossier', message: await messageErreur(err, "Le dossier n’a pas pu être téléchargé. Rien n’est perdu."),
-      relancer: () => exportZip(),
+      relancer: () => telechargerDossier(),
     }),
   })
+  // Un seul dossier à la fois : un double clic ne télécharge pas deux dossiers (lib/verrouLancement).
+  const verrouZip = useRef(verrouLancement()).current
+  const telechargerDossier = () => {
+    if (!verrouZip.prendre()) return
+    exportZip(undefined, { onSettled: verrouZip.rendre })
+  }
 
   // ── DPGF download ────────────────────────────────────────────────────────
   const handleDownloadDpgf = useCallback(async () => {
@@ -426,7 +433,7 @@ export default function StepExport({ project }: Props) {
   // Le téléchargement du dossier, écrit une fois : dans l'en-tête sur ordinateur, dans la barre du bas au téléphone. C'est
   // le seul bouton « Télécharger le dossier » de la page ; les autres disent ce qu'ils téléchargent.
   const boutonTelecharger = (
-    <Bouton variante={aucunePieceJointe ? 'secondaire' : 'principal'} onClick={() => exportZip()} disabled={dossierVide} enCours={isExportingZip} libelleEnCours="Préparation du dossier…" className="max-[768px]:flex-1">
+    <Bouton variante={aucunePieceJointe ? 'secondaire' : 'principal'} onClick={telechargerDossier} disabled={dossierVide} enCours={isExportingZip} libelleEnCours="Préparation du dossier…" className="max-[768px]:flex-1">
       <Archive aria-hidden />
       Télécharger le dossier
     </Bouton>
@@ -513,10 +520,10 @@ export default function StepExport({ project }: Props) {
               <ul aria-label="Pièces demandées">
                 {groupesPieces.map((g) => (
                   <li key={g.lu.texte ?? g.lu.etat} className="border-t border-bord first:border-t-0">
-                    <p className="flex items-center gap-2 bg-surface-1 px-4 py-2 sm:px-5">
+                    <div className="flex items-center gap-2 bg-surface-1 px-4 py-2 sm:px-5">
                       <EtatElement etat={g.lu.etat} texte={g.lu.texte} perimee={g.lu.perimee} />
                       <span className="text-xs text-fg-3">· {g.pieces.length}</span>
-                    </p>
+                    </div>
                     <ul>
                       {g.pieces.map((item) => (
                         <li key={item.id} className="min-h-11 border-t border-bord px-4 py-2.5 sm:px-5">

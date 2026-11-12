@@ -4,10 +4,11 @@ import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useThemeEcran } from '@/lib/themeEcran'
 import { AplatCede, Bouton } from './bouton'
+import { useRetourFocus } from './retourFocus'
 
 /**
  * LE dialogue du système (un seul : plus de `createPortal` à la main). Radix fournit le piège de focus, Échap, le clic sur le
- * voile et le retour du focus. Titre 17 px / 600, une phrase d'explication, le contenu, puis les actions à droite (l'action
+ * voile ; le focus revient à ce qui a ouvert (`useRetourFocus`, même sans `Trigger`). Titre 17 px / 600, une phrase d'explication, le contenu, puis les actions à droite (l'action
  * qui confirme à droite, « Annuler » à sa gauche ; empilées, pleine largeur, au téléphone). Ouverture : 280 ms, opacité et
  * échelle .98 → 1 ; fermeture : 100 ms. Voile sans flou. Un dialogue ne s'emploie que pour interrompre ou protéger un geste.
  */
@@ -25,13 +26,14 @@ export function Dialogue({ ouvert, onOuvert, titre, description, children, actio
   className?: string
 }) {
   const theme = useThemeEcran()
+  const retourFocus = useRetourFocus(undefined, undefined)
   return (
     <D.Root open={ouvert} onOpenChange={onOuvert}>
       <D.Portal>
         {/* un dialogue ouvert depuis une étape qui a cédé l'aplat garde le sien */}
         <AplatCede.Provider value={false}>
         <D.Overlay data-theme={theme} className="voile-flottant fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-voile p-4 max-[768px]:place-items-end max-[768px]:p-0">
-          <D.Content data-dialogue="" {...(description ? {} : { 'aria-describedby': undefined })}
+          <D.Content data-dialogue="" {...retourFocus} {...(description ? {} : { 'aria-describedby': undefined })}
             className={cn('dialogue-flottant relative grid w-full gap-4 rounded-carte border border-bord bg-surface-pop p-6 text-fg shadow-flottant max-[768px]:flex max-[768px]:max-h-[calc(100dvh-1rem)] max-[768px]:flex-col max-[768px]:rounded-b-none max-[768px]:pb-[max(1.5rem,env(safe-area-inset-bottom))]',
               taille === 'petit' ? 'max-w-md' : taille === 'grand' ? 'max-w-3xl' : 'max-w-lg', className)}>
             <div className={cn('grid gap-1.5 max-[768px]:shrink-0', !sansFermer && 'pr-10')}>

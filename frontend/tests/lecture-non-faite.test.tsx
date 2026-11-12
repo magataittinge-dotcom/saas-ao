@@ -15,6 +15,10 @@ test('le dossier est lu quand l\'étape 3 est faite ou que le projet a passé l\
   assert.equal(dossierLu({ current_step: 3, completed_steps: { '1': true, '2': true } }), false)
   assert.equal(dossierLu({ current_step: 3, completed_steps: { '3': true } }), true)
   assert.equal(dossierLu({ current_step: 5, completed_steps: undefined }), true)
+  // Parcours E2E (12/11) : l'analyse finie laisse l'AO à Décider (étape 3 non cochée tant que « On y va » n'est pas dit) ;
+  // le dossier est lu pour autant : Plan, Rédiger et Export ne disent pas « pas encore analysé ».
+  assert.equal(dossierLu({ current_step: 3, completed_steps: { '2': true }, status: 'analyzed' }), true)
+  assert.equal(dossierLu({ current_step: 3, completed_steps: { '2': true }, status: 'en_cours' }), false)
 })
 
 test('« analyse non faite » : dessiné une fois (Synorix le dit, une action), ni case, ni bouton grisé, aucun faux constat', () => {
