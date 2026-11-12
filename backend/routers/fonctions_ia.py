@@ -216,7 +216,8 @@ async def lire_style_d_un_memoire(request: Request, file: UploadFile = File(...)
     # demande échoue avant l'appel au modèle (format refusé, texte trop court…).
     ligne = F.reserver(db, user, F.ACTION_STYLE_ENTREPRISE, (F.ACTION_STYLE_ENTREPRISE,), F.STYLE_MAX_PAR_JOUR, (
         f"Vous avez fait lire {F.STYLE_MAX_PAR_JOUR} mémoires dans les dernières 24 heures : c'est le plafond du "
-        "jour. Vous pourrez en faire lire un autre demain."), target_type="organization", target_id=user.organization_id)
+        "jour. Vous pourrez en faire lire un autre demain."),
+        target_type="organization", target_id=user.organization_id)
     try:
         nom = (file.filename or "memoire")[-255:]
         with await recevoir_fichier(request, file,

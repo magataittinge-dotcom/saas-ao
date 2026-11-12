@@ -206,7 +206,8 @@ def abonnements_arretes_par_la_demande(db, org) -> list[str] | None:
 
 
 def abonnements_tentes(db, org) -> list[str]:
-    """Les abonnements qu'une demande tombée en échec (24 dernières heures, depuis le dernier retrait) a tenté d'arrêter."""
+    """Les abonnements qu'une demande tombée en échec (24 dernières heures, depuis le dernier retrait) a tenté
+    d'arrêter."""
     depuis = datetime.utcnow() - _DUREE_TENTATIVE
     return list(dict.fromkeys(i for ligne in _traces_de_la_demande_en_cours(db, org)
                               if ligne.action == ACTION_TENTATIVE and ligne.created_at >= depuis

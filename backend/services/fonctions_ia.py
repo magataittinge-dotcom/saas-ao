@@ -13,10 +13,11 @@
 Plafonds par organisation sur 24 heures glissantes, comptés AVANT l'appel par une ligne d'audit posée au départ :
 `reserver` contrôle le plafond et pose la ligne sous verrou par organisation, sans attente entre les deux (REVUE-2
 P2-1 : contrôlée avant une attente et comptée après, la dernière place passait à plusieurs demandes simultanées). Une
-demande qui échoue avant l'appel au modèle rend sa place (`rendre`). C1 et C2 partagent celui de la réécriture d'un passage (`REECRIRE_MAX_PAR_JOUR`,
-routers/memoire.py). Échec du fournisseur : la ligne d'audit passe en « <action>.echec », qui ne compte plus — rien
-n'est consommé (la réservation du budget d'IA est libérée par `exiger_budget_ia`, aucun jeton n'est inscrit). Une
-sortie hors format compte : le modèle a répondu, ses jetons sont inscrits (REVUE-2 P2-2).
+demande qui échoue avant l'appel au modèle rend sa place (`rendre`). C1 et C2 partagent celui de la réécriture d'un
+passage (`REECRIRE_MAX_PAR_JOUR`, routers/memoire.py). Échec du fournisseur : la ligne d'audit passe en
+« <action>.echec », qui ne compte plus — rien n'est consommé (la réservation du budget d'IA est libérée par
+`exiger_budget_ia`, aucun jeton n'est inscrit). Une sortie hors format compte : le modèle a répondu, ses jetons sont
+inscrits (REVUE-2 P2-2).
 """
 from __future__ import annotations
 
