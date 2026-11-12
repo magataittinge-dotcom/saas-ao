@@ -114,7 +114,8 @@ Prouvé sur une base jetable (27/10/2026, Postgres 16, pgvector 0.6.0, rôle san
 sans cette ligne, `alembic upgrade head` échoue à la migration 0003 (« permission denied to create
 extension vector ») ; avec elle, les 34 migrations passent (0034 head, 25 tables dont `alembic_version`,
 schéma identique aux modèles hors `rag_chunks`, créée en SQL), puis l'API démarre (`/api/health` :
-`db: up`).
+`db: up`). Depuis le 12/11/2026 la head est **`0035_suppression_prevue`** (une colonne `suppression_prevue_le` sur
+`organizations`, D23) : toujours 25 tables (mesuré sur la base du banc à 0035).
 
 `/etc/postgresql/16/main/postgresql.conf` : `listen_addresses = 'localhost'`.
 Les réglages de mémoire et de connexions sont dans `deploy/postgres/synorix.conf`, installé en
@@ -176,17 +177,46 @@ SECRET_KEY=$(openssl rand -hex 32)
 DATABASE_URL=postgresql://synorix:LE_PWD_PG@localhost:5432/synorix
 REDIS_URL=redis://:LE_PWD_REDIS@localhost:6379/0
 ANTHROPIC_API_KEY=sk-ant-prod-XXXXXXXX
-AWS_ACCESS_KEY_ID=AKIA...
-AWS_SECRET_ACCESS_KEY=...
-AWS_S3_BUCKET=synorix-prod
-AWS_REGION=eu-west-3
 CLERK_SECRET_KEY=sk_live_XXX
 CLERK_JWKS_URL=https://clerk.synorix.tech/.well-known/jwks.json
 STRIPE_SECRET_KEY=sk_live_XXX
 STRIPE_WEBHOOK_SECRET=whsec_XXX
+STRIPE_PRODUCT_ESSENTIEL=prod_XXX      # produit Stripe de l'offre Essentiel ; vide = paiement en ligne de l'offre fermé (503)
 FRONTEND_URL=https://synorix.tech
 METRICS_TOKEN=$(openssl rand -hex 32)  # ops : accès /api/metrics (S3.5) — sans lui, endpoint fermé (404)
+SYNORIX_X_ACCEL_PREFIX=/_fichiers_internes
+SYNORIX_CACHE_APERCUS_DIR=/srv/synorix/backend/cache/apercus
+SYNORIX_PURGE_AO_ACTIVE=0              # 1 après la simulation et une sauvegarde (VPS.md C11, décision D15)
+SYNORIX_PURGE_AO_JOURS=30
 ```
+
+**Ne pas poser `AWS_*` en V1** : avec `AWS_ACCESS_KEY_ID` et `AWS_S3_BUCKET` remplis, `services/file_storage.py` range
+les pièces dans S3 au lieu du disque du VPS, alors que le service des documents (X-Accel-Redirect), le quota de
+stockage, la garde du disque, la purge et les sauvegardes restic supposent le disque (`backend/uploads`).
+
+**Toutes les variables lues par le code** (relevé du 12/11/2026 : `os.environ`, `getenv`, réglages Pydantic de
+`config/__init__.py`, `import.meta.env` ; exemples complets dans `backend/.env.example` et `frontend/.env.example`).
+Valeur par défaut entre parenthèses ; pour les plafonds, `0` coupe la garde.
+
+| Groupe | Variables (défaut) | Ce qu'elles font |
+|---|---|---|
+| Démarrage | `DEBUG` (false), `SECRET_KEY`, `DATABASE_URL`, `REDIS_URL` (redis://localhost:6379/0), `FRONTEND_URL` (http://localhost:3000) | Hors `DEBUG`, l'API refuse de démarrer si `SECRET_KEY` est courte, si `CLERK_*` ou `STRIPE_WEBHOOK_SECRET` manquent, si `FRONTEND_URL` vise localhost, ou si `SYNORIX_ANALYSE_DEMO` est allumé. `FRONTEND_URL` est la seule origine CORS acceptée. |
+| IA | `ANTHROPIC_API_KEY`, `MEMOIRE_MODELE` (vide = Sonnet 5.5), `VOYAGE_API_KEY` (vide), `RAG_ENRICHMENT` (false), `SYNORIX_ANALYSE_DEMO` (false, interdit en production), `COUT_USD_EUR` (0.92) | Clés et modèle ; le RAG reste coupé en V1 ; taux indicatif du journal des coûts. |
+| Connexion | `CLERK_SECRET_KEY`, `CLERK_JWKS_URL` | Instance Clerk (développement ou production, VPS.md B5). |
+| Paiement | `BILLING_PROVIDER` (stripe), `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRODUCT_ESSENTIEL` (vide) | Carte seulement ; webhook sur `https://synorix.tech/api/stripe/webhook`. |
+| Plafonds d'usage (S-01 à S-06, D8, D24) | `PLAFOND_JOUR_ANALYSES` (20), `PLAFOND_JOUR_MEMOIRES` (20), `IMPORT_MEMOIRE_MAX_PAR_JOUR` (5), `REFORMULER_MAX_PAR_JOUR` (30), `BUDGET_IA_JOUR_EUR` (60), `BUDGET_IA_FORFAIT_ANALYSE_EUR` (3), `BUDGET_IA_FORFAIT_MEMOIRE_EUR` (1.5), `BUDGET_IA_FORFAIT_REFAIRE_EUR` (0.5), `BUDGET_IA_FORFAIT_APPEL_EUR` (0.2), `BUDGET_IA_RESERVATION_MINUTES` (120) | Par organisation et par jour, toutes offres. Au-delà : « Plafond du jour atteint. Il se remet à zéro demain. » |
+| AO offert (D7, D25) | `ESSAI_EXIGE_SIRET` (0) | 1 = l'AO offert exige un SIRET vérifié ; **à 1 le jour où les inscriptions sont publiques**. |
+| Stockage (D15, D24) | `QUOTA_STOCKAGE_GO` (20), `QUOTA_STOCKAGE_GRATUIT_GO` (5), `DISQUE_LIBRE_MIN_POURCENT` (15) | Quota par organisation (413) ; refus des dépôts sous 15 % de disque libre (507). |
+| Dépôts de « Mon entreprise » | `DEPOT_APPELS_PAR_JOUR` (60), `DEPOT_BUDGET_MENSUEL_EUR` (3), `DEPOT_LECTURES_EN_ATTENTE` (10) | Lectures Haiku par entreprise ; au-delà, reportées et reprises par la tâche horaire du beat. |
+| Purge (B18, D15) | `SYNORIX_PURGE_AO_ACTIVE` (0 = simulation), `SYNORIX_PURGE_AO_JOURS` (30) | AO supprimés depuis N jours : fichiers effacés par le worker. |
+| E-mails | `SMTP_HOST`, `SMTP_PORT` (587), `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` (tous vides) | Vides : notifications dans l'appli seulement (les e-mails de connexion sont envoyés par Clerk). |
+| Exploitation | `METRICS_TOKEN` (vide = `/api/metrics` fermé), `SYNORIX_X_ACCEL_PREFIX` (vide), caches et isolation ci-dessous | |
+| Stockage objet (pas en V1) | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_S3_BUCKET` (vides), `AWS_REGION` (eu-west-3) | Laisser vides (voir plus haut). |
+| Locale | `COUNTRY_CODE` (FR), `CURRENCY` (EUR), `CURRENCY_SYMBOL` (€), `TAX_RATE` (0.20), `TAX_LABEL` (TVA), `TIMEZONE` (Europe/Paris), `LOCALE` (fr_FR), `DATE_FORMAT` (%d/%m/%Y), `COMPANY_NAME` (Synorix), `COMPANY_ADDRESS`, `COMPANY_VAT_NUMBER`, `COMPANY_REGISTRATION_NUMBER`, `LEGAL_JURISDICTION` (FR) | `config/locale.py` ; rien à poser pour la France. |
+| Front (au build, sur le PC) | `VITE_CLERK_PUBLISHABLE_KEY` (obligatoire), `VITE_API_URL` (vide en production), `VITE_PROXY_API` (serveur de développement seulement) | Figées dans le paquet par `npm run build` (`frontend/.env.production`). |
+
+Champs de `Settings` que plus rien ne lit : `APP_NAME`, `ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES` (restes de
+l'authentification d'avant Clerk) : ne pas les poser. `SEED_*` ne sert qu'au script `seed_test_user.py`.
 
 > Sentry n'est **pas encore câblé** (backlog O4) : ne pas ajouter `SENTRY_DSN`
 > tant que `sentry-sdk` n'est pas intégré à `main.py`. Les clés inconnues dans
@@ -319,6 +349,11 @@ Essayé avec le nginx 1.24 d'Ubuntu noble (bloc 6). Ce qu'il règle :
 - **Plafonds de corps** : 2 Go pour le seul dépôt du DCE (`POST /api/projects/{id}/documents`,
   `routers/projects.py`), 60 Mo ailleurs (dépôts de l'appli à 50 Mo au plus).
 - **Débit** : 20 requêtes/s par IP sur `/api/` (rafale 40), en plus des limites de l'appli.
+- **API injoignable** (arrêtée, en redémarrage, délai dépassé) ou rafale refusée : au lieu des pages anglaises de nginx
+  (502, 503, 504), `location @api_indisponible` rend un **503 JSON en français** (`detail` : « Synorix est momentanément
+  indisponible. Réessayez dans quelques instants. »), `Retry-After: 30`, jamais en cache ; le front affiche cette phrase.
+  Les réponses de l'API elle-même passent telles quelles. Vérification : `sudo systemctl stop synorix-api`, puis
+  `curl -s -i https://synorix.tech/api/projects | sed -n '1p;$p'` → `HTTP/2 503` et la phrase ; `sudo systemctl start synorix-api`.
 - **Racine** : `/srv/synorix/www`, alimentée par `deploy/outils/publier_front.sh` (§10).
 
 ```bash
@@ -340,6 +375,8 @@ systemctl status snap.certbot.renew.timer
 ## 9. Services additionnels
 
 ### 9.1 Bot Telegram (si activé via skill telegram)
+
+> Le module `services.telegram_bot` n'existe pas dans le code d'aujourd'hui : cette unité n'est **pas** à installer en V1.
 
 `/etc/systemd/system/synorix-telegram.service` :
 
@@ -364,9 +401,20 @@ WantedBy=multi-user.target
 
 ### 9.2 Worker Celery + Beat
 
-Le scan quotidien (expirations coffre, deadlines J-3/J-1, relances 30 j)
-exige **deux** unités : le **worker** exécute les tâches, le **beat** les
-planifie. Sans beat, `check_all_expirations` n'est jamais déclenchée.
+Les tâches planifiées exigent **deux** unités : le **worker** exécute les tâches, le **beat** les
+planifie (`celery_app.conf.beat_schedule`, `backend/tasks/check_expiry.py`). Sans beat, aucune ne part :
+
+| Entrée du planning | Tâche | Rythme |
+|---|---|---|
+| `check-expiry-daily` | `tasks.check_expiry.check_all_expirations` (expirations du coffre, échéances J-3/J-1, relances) | 24 h |
+| `purge-ao-supprimes-daily` | `tasks.purge_ao.purger_ao_supprimes` (B18 ; simulation tant que `SYNORIX_PURGE_AO_ACTIVE` ≠ 1) | 24 h |
+| `suppressions-comptes-echues-daily` | `tasks.suppression_comptes.executer_suppressions_echues` (D23 : filet des suppressions de compte programmées) | 24 h |
+| `veille-boamp-6h` | `tasks.veille_boamp.synchroniser_veille` (avis du BOAMP) | 6 h |
+| `depot-lectures-differees-1h` | `tasks.depot_lectures.reprendre_lectures_differees` (lectures de dépôts reportées) | 1 h |
+
+Après un déploiement qui ajoute une tâche, **redémarrer le beat** (il lit le planning à son démarrage) et vérifier :
+`sudo journalctl -u synorix-celery-beat --since "-5min" --no-pager | grep -c "beat: Starting"` → au moins `1`, puis
+`S /srv/synorix/backend/venv/bin/celery -A tasks inspect registered | grep -c suppression_comptes` → `1`.
 
 `-A tasks` résout l'app exposée par `backend/tasks/__init__.py` (R13 : ce
 fichier était vide, la commande ne trouvait aucune app).
@@ -442,8 +490,8 @@ Chaque nuit (`synorix-sauvegarde.timer`, 03:00) : `deploy/sauvegarde/synorix-sau
 `/etc/synorix/sauvegarde.env` et mot de passe de restic dans `/etc/synorix/restic-mdp` (root, 0600, tapés
 sur le serveur ; **une copie du mot de passe de restic hors du serveur**, sinon les sauvegardes sont
 illisibles). Essayé en local le 27/10/2026 : deux passages (le second n'envoie rien de plus), restauration
-du dump (17 tables avec données) et d'une pièce (identique), base restaurée relue. Restauration :
-`BACKUP_RECOVERY.md`.
+du dump (17 tables avec données à l'époque ; 25 tables au schéma 0034 et 0035) et d'une pièce (identique), base
+restaurée relue. Restauration : `BACKUP_RECOVERY.md`.
 
 ---
 
@@ -479,8 +527,11 @@ backend/venv/bin/pip install -r backend/requirements.txt --quiet
 sudo systemctl restart synorix-api synorix-celery-worker synorix-celery-beat
 ```
 Puis, sur le PC : `git checkout <même SHA>` et `deploy/outils/envoyer_front.sh deploy@synorix.tech`.
-Si la régression vient d'une migration : `alembic downgrade <révision>` (essayé pour 0024 et 0025), ou
-restauration de la sauvegarde (`BACKUP_RECOVERY.md` §3).
+Si la régression vient d'une migration : `alembic downgrade <révision>` (chaque migration a sa descente ; essayé
+pour 0024, 0025 et 0034 → 0033 → 0034), ou restauration de la sauvegarde (`BACKUP_RECOVERY.md` §3). Une descente
+efface les colonnes et tables ajoutées par la migration, **avec leurs données** (0035 : les demandes de suppression de
+compte programmées). `alembic downgrade base` casse sur 0002 → 0001 (index déjà retiré) : pour repartir de zéro,
+`dropdb` puis A11 (VPS.md C4).
 
 ---
 
@@ -489,16 +540,19 @@ restauration de la sauvegarde (`BACKUP_RECOVERY.md` §3).
 - [ ] DNS A `synorix.tech` → IP VPS validé
 - [ ] DNS A `www.synorix.tech` → IP VPS validé
 - [ ] SSL Let's Encrypt installé
-- [ ] `.env` rempli avec toutes les vraies valeurs (pas de `sk_test_...`)
+La liste suivie le jour de la mise en ligne, case par case, avec la commande et ce qu'on doit voir :
+`.claude/echange/sprint-ozcan/JOUR-J.md`. Rappel des points de cette page :
+
+- [ ] `/etc/synorix/synorix.env` rempli avec toutes les vraies valeurs (pas de `sk_test_...`), sans `AWS_*`
 - [ ] `frontend/.env.production` avec `VITE_CLERK_PUBLISHABLE_KEY=pk_live_...` posé AVANT `npm run build` (sinon page blanche)
 - [ ] Stripe webhook configuré sur `https://synorix.tech/api/stripe/webhook`
-- [ ] Clerk JWKS_URL pointe vers la prod (pas le dev clerk.accounts.dev)
+- [ ] `CLERK_JWKS_URL` pointe vers la prod (pas le dev clerk.accounts.dev)
 - [ ] firewall ufw active (22, 80, 443 only)
 - [ ] fail2ban actif
-- [ ] Service `synorix-api` démarre au boot (`systemctl is-enabled synorix-api`)
-- [ ] Cron de backup fonctionnel (`crontab -l -u synorix`)
+- [ ] Services `synorix-api`, `synorix-celery-worker`, `synorix-celery-beat` démarrent au boot (`systemctl is-enabled …`)
+- [ ] Sauvegarde de nuit active (`systemctl list-timers synorix-sauvegarde.timer`) et restauration essayée une fois (VPS.md C10)
 - [ ] Health check `https://synorix.tech/api/health` → `{"status":"ok","db":"up"}`
-- [ ] Endpoint `/api/metrics` retourne du JSON
+- [ ] `/api/metrics` : 404 sans jeton, JSON avec `Authorization: Bearer $METRICS_TOKEN`
 - [ ] Mention légale + politique RGPD publiées
 - [ ] DPA Anthropic signé
 - [ ] Plan facturation Anthropic configuré (alerte email à 100 €/jour)

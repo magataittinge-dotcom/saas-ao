@@ -88,9 +88,10 @@ test('barre latérale : le survol ne pose plus de fond (deux entrées semblaient
 import { accorder, quandNotification } from '@/components/layout/NotificationBell'
 
 test('notifications : les pluriels entre parenthèses et les accords faux du serveur sont accordés à l\'affichage', () => {
-  assert.equal(accorder('605 exigence(s) extraite(s)'), '605 exigences extraites')
-  assert.equal(accorder('1 exigence(s) extraite(s) et 2 lot(s) à relancer'), '1 exigence extraite et 2 lots à relancer')
-  assert.equal(accorder('Remise dans 1 jours'), 'Remise dans 1 jour')
+  assert.equal(accorder('605 exigence(s) extraite(s)'), '605 exigences relevées') // accordé, et dans les mots du produit
+  assert.equal(accorder('1 exigence(s) extraite(s) et 2 lot(s) à relancer'), '1 exigence relevée et 2 lots à relancer')
+  assert.equal(accorder('Remise dans 1 jours'), 'Remise demain')
+  assert.equal(accorder('Le mémoire du projet « X » est généré. Relisez-le avant export.'), 'Le mémoire de l’appel d’offres « X » est rédigé. Relisez-le avant l’export.')
   assert.equal(accorder('AO Mairie — remise dans 3 jours'), 'AO Mairie — remise dans 3 jours')
   assert.equal(accorder('Analyse terminée'), 'Analyse terminée')
 })

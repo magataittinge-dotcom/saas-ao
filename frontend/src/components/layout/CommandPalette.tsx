@@ -1,10 +1,11 @@
 import { LEXIQUE } from '@/lib/lexique'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, FileText, ArrowRight } from 'lucide-react'
 import {
   CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator,
 } from '@/components/ui/command'
+import { Bouton } from '@/components/ui/bouton'
 import { useProjects } from '@/hooks/useProject'
 import { aoDansEtat, lectureAO, lienAO } from '@/lib/etatAO'
 import { acheteurCourt } from '@/lib/mesAO'
@@ -28,6 +29,9 @@ interface Props {
 export default function CommandPalette({ open, onOpenChange }: Props) {
   const navigate = useNavigate()
   const { data: projects = [] } = useProjects()
+  const [saisie, setSaisie] = useState('')
+  useEffect(() => { if (!open) setSaisie('') }, [open])
+  const cherche = saisie.trim()
 
   useEffect(() => {
     const raccourci = (e: KeyboardEvent) => {
@@ -52,9 +56,10 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
 
   return (
     <CommandDialog open={open} onOpenChange={onOpenChange} filter={scorePalette}>
-      <CommandInput placeholder="Rechercher un appel d’offres, une page…" />
-      <CommandList className="max-h-[min(440px,60vh)] pb-1.5">
-        <CommandEmpty>Aucun résultat pour cette recherche.</CommandEmpty>
+      <CommandInput placeholder="Rechercher un AO, une page…" value={saisie} onValueChange={setSaisie} />
+      <CommandList className="max-h-[min(440px,60vh)] min-h-40 pb-1.5">
+        {/* les mêmes mots que la recherche de Mes AO, alignés à gauche comme le reste du panneau */}
+        <CommandEmpty className="px-5 pb-2 pt-5 text-left text-sm text-fg-2">Aucun appel d’offres ni page ne contient {`«\u00a0${cherche}\u00a0».`}</CommandEmpty>
         {enCours.length > 0 && (
           <CommandGroup heading="En cours">
             {enCours.map((p) => (
@@ -73,12 +78,14 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
           </CommandGroup>
         )}
         {aMettreAJour.length > 0 && (
-          <CommandGroup heading="À mettre à jour">
+          <CommandGroup heading={'À mettre à jour\u00a0: dire ce qu’ils sont devenus'}>
             {aMettreAJour.map((p) => (
               <CommandItem key={p.id} value={`${p.name} ${p.maitre_ouvrage ?? ''} ${p.selected_lot_name ?? ''} ${p.id}`} onSelect={() => aller(lienAO(p))}>
                 <FileText strokeWidth={1.8} />
-                <span className="min-w-0 flex-1 truncate font-semibold">{p.name}</span>
-                <span className="ml-3 max-w-[45%] shrink-0 truncate text-sm font-medium text-fg-2">{lectureAO(p).action.verbe}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-semibold">{p.name}</span>
+                  {(p.maitre_ouvrage || p.selected_lot_name) && <span className="block truncate text-sm text-fg-3">{[acheteurCourt(p.maitre_ouvrage), p.selected_lot_name].filter(Boolean).join(' · ')}</span>}
+                </span>
               </CommandItem>
             ))}
           </CommandGroup>
@@ -98,7 +105,7 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
         <CommandGroup heading="Aller à">
           <CommandItem value={`Nouvel AO nouvel appel d’offres déposer un dossier ${LEXIQUE.DCE.sigle}`} onSelect={() => aller('/projects/new')}>
             <Plus strokeWidth={1.8} />
-            Nouvel AO
+            Nouvel appel d’offres
           </CommandItem>
           {ACCES_PALETTE.map((page) => (
             <CommandItem key={page.to} value={page.label} onSelect={() => aller(page.to)}>
@@ -107,7 +114,29 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
             </CommandItem>
           ))}
         </CommandGroup>
+        {/* une recherche sans réponse garde un geste : cette ligne reste quoi qu'on tape */}
+        {cherche !== '' && (
+          <CommandGroup forceMount heading="Sinon">
+            <CommandItem forceMount value="geste-nouvel-appel-d-offres" onSelect={() => aller('/projects/new')}>
+              <Plus strokeWidth={1.8} />
+              Déposer un nouvel appel d’offres
+            </CommandItem>
+            <CommandItem forceMount value="geste-avis-de-la-veille" onSelect={() => aller('/dashboard')}>
+              <ArrowRight strokeWidth={1.8} />
+              Chercher dans les avis de la veille
+            </CommandItem>
+          </CommandGroup>
+        )}
       </CommandList>
+      {/* le pied : l'aide du clavier au bureau, « Fermer » au téléphone (jury, tour 1 : ni l'un ni l'autre) */}
+      <div data-pied-palette="" className="flex min-h-11 items-center justify-between gap-4 border-t border-bord px-4 text-xs text-fg-3">
+        <p className="flex items-center gap-4 max-sm:hidden">
+          <span><kbd className="font-sans font-semibold text-fg-2">↑ ↓</kbd> choisir</span>
+          <span><kbd className="font-sans font-semibold text-fg-2">Entrée</kbd> ouvrir</span>
+          <span><kbd className="font-sans font-semibold text-fg-2">Échap</kbd> fermer</span>
+        </p>
+        <Bouton variante="lien" onClick={() => onOpenChange(false)} className="ml-auto sm:hidden">Fermer</Bouton>
+      </div>
     </CommandDialog>
   )
 }

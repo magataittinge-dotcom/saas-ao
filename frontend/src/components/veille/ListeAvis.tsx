@@ -9,7 +9,7 @@ import { EtatErreur, EtatVide } from '@/components/ui/etats'
 import { Squelette } from '@/components/ui/squelette'
 import { cn } from '@/lib/utils'
 import CarteAvis from './CarteAvis'
-import FiltresVeille from './FiltresVeille'
+import FiltresVeille, { nombreFiltres } from './FiltresVeille'
 import { libelleSourceVeille, type AvisVeille } from '@/services/veille'
 import { aDesFiltres, type FiltresAvis, type TriAvis } from '@/lib/veille'
 
@@ -111,13 +111,13 @@ function BoutonSuite({ chargePlus, nbAvis, onSuite }: { chargePlus: boolean; nbA
  * Sous lg (téléphone, tablette), les filtres sont repliés sous « Affiner » : la liste des avis vient d'abord, pas un mur de
  * puces (refonte groupe A). À partir de lg ils restent ouverts (et collés en haut de la zone qui défile).
  */
-function FiltresRepliables({ filtre, children }: { filtre: boolean; children: ReactNode }) {
+function FiltresRepliables({ nombre, children }: { nombre: number; children: ReactNode }) {
   const [affiner, setAffiner] = useState(false)
   const id = useId()
   return (
     <>
       <Bouton onClick={() => setAffiner((v) => !v)} aria-expanded={affiner} aria-controls={id} className="lg:hidden">
-        <SlidersHorizontal strokeWidth={1.75} aria-hidden />Affiner{filtre ? ' · filtres appliqués' : ''}
+        <SlidersHorizontal strokeWidth={1.75} aria-hidden />Affiner{nombre > 0 ? ` · ${nombre} filtre${nombre > 1 ? 's' : ''}` : ''}
         <ChevronDown strokeWidth={1.75} aria-hidden className={cn('transition-transform duration-survol ease-survol motion-reduce:transition-none', affiner && 'rotate-180')} />
       </Bouton>
       <div id={id} className={cn(!affiner && 'max-lg:hidden', 'max-lg:mt-3')}>{children}</div>
@@ -135,7 +135,7 @@ export default function ListeAvis(p: PropsListeAvis) {
       <p className="mt-1 text-sm text-fg-2" role="status" aria-live="polite">
         {p.zoneVide
           ? 'Choisissez une zone pour voir les avis.'
-          : p.enCours ? 'Chargement des avis…'
+          : p.enCours ? ''
             : p.total > 0 ? `${p.total} avis ouvert${p.total > 1 ? 's' : ''} dans cette zone` : ''}
       </p>
 
@@ -149,7 +149,7 @@ export default function ListeAvis(p: PropsListeAvis) {
         {/* C10 — sans zone choisie, il n'y a aucun avis à filtrer : les filtres apparaissent une fois la zone choisie. */}
         {!p.zoneVide && !p.preferencesEnLecture && (
           <div data-filtres-colles className="mt-4 pb-3 lg:sticky lg:-top-5 lg:z-10 lg:rounded-carte lg:border lg:border-bord lg:bg-surface-0 lg:px-4 lg:pt-3">
-            <FiltresRepliables filtre={filtre}>
+            <FiltresRepliables nombre={nombreFiltres(p.filtres)}>
               <FiltresVeille filtres={p.filtres} onFiltres={p.onFiltres} tri={p.tri} onTri={p.onTri} metiers={p.metiers} />
             </FiltresRepliables>
           </div>
@@ -163,12 +163,16 @@ export default function ListeAvis(p: PropsListeAvis) {
             <EtatErreur titre="Les avis ne se chargent pas pour le moment" detail="Votre zone et vos filtres sont conservés." onReessayer={p.onReessayer} />
           ) : p.enCours && p.avis.length === 0 ? (
             <ul aria-label="Chargement des avis" aria-busy="true" className="grid gap-3">
-              {[0, 1, 2].map((i) => <li key={i}><Squelette className="h-36 rounded-lg" /></li>)}
+              {[0, 1, 2].map((i) => (
+                <li key={i} className="grid gap-2.5 rounded-lg border border-bord bg-surface-0 p-5">
+                  <Squelette className="h-4 w-4/5" /><Squelette className="h-3.5 w-2/5" /><Squelette className="h-3.5 w-3/5" />
+                </li>
+              ))}
             </ul>
           ) : p.avis.length === 0 ? (
             <EtatVide titre="Aucun avis ouvert dans cette zone pour ces filtres"
-              phrase={p.peutElargir ? (filtre ? 'Élargir retire les filtres.' : 'Élargir ajoute les départements voisins.') : undefined}
-              action={p.peutElargir ? <Bouton onClick={p.onElargir}>Élargir</Bouton> : undefined} />
+              phrase={filtre ? 'Retirez un filtre, ou effacez-les tous, pour voir d’autres avis.' : p.peutElargir ? 'Les départements voisins peuvent en compter.' : undefined}
+              action={!filtre && p.peutElargir ? <Bouton onClick={p.onElargir}>Élargir aux départements voisins</Bouton> : undefined} />
           ) : (
             <ol className="grid gap-3">
               {p.avis.map((a) => (

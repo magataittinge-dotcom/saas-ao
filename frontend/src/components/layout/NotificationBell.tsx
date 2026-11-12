@@ -4,6 +4,7 @@ import { Bell } from 'lucide-react'
 import { api } from '@/services/api'
 import { cn } from '@/lib/utils'
 import { Bouton, BoutonIcone } from '@/components/ui/bouton'
+import { LigneNouveau } from '@/components/dashboard/LigneNouveau'
 
 interface NotificationItem {
   id: string
@@ -45,6 +46,14 @@ export function accorder(texte: string): string {
       return `${nombre}${espace}${mots.replace(/\(s\)/g, pluriel ? 's' : '')}`
     })
     .replace(/\b([01])(\s+)jours\b/g, '$1$2jour')
+    .replace(/\bRemise dans 1 jour\b/g, 'Remise demain')
+    .replace(/\bRemise dans 0 jour\b/g, 'Remise aujourd’hui')
+    // les mots du produit, pas ceux du code (jury, tour 1 : « projet », « généré », « extraites », « avant export »)
+    .replace(/\b([Ll])e mémoire du projet\b/g, '$1e mémoire de l’appel d’offres')
+    .replace(/\bdu projet\b/g, 'de l’appel d’offres')
+    .replace(/\best généré(?!\p{L})/gu, 'est rédigé')
+    .replace(/\bexigence(s?) extraite(s?)\b/g, 'exigence$1 relevée$2')
+    .replace(/\bavant export\b/g, 'avant l’export')
 }
 
 /**
@@ -125,6 +134,8 @@ export default function NotificationBell({ versLeHaut = false }: { versLeHaut?: 
               ))
             )}
           </div>
+          {/* l'annonce du produit : ici, hors du flux des écrans */}
+          <LigneNouveau onSuivre={() => setOpen(false)} />
         </div>
       )}
     </div>

@@ -156,8 +156,8 @@ test('la veille de l’accueil : recherche de zone, carte, filtres et liste des
   assert.equal((html.match(/aria-pressed="true"/g) ?? []).length, 2, 'les deux départements de la zone sont choisis')
   assert.ok(html.includes('Réhabilitation d’un groupe scolaire (exemple)') && html.includes('>Nouveau<'), 'liste des avis')
   assert.ok(html.includes('Afficher plus'), 'curseur suivant')
-  assert.ok(html.includes('15 avis ouverts en France') && html.includes('Données BOAMP du 31/10 à '), 'horodatage des données, à côté de la source')
-  assert.equal((html.match(/Source : Avis officiels du BOAMP \(DILA\), licence ouverte/g) ?? []).length, 2, 'la source sous la carte et sous la liste')
+  assert.ok(html.includes('15 avis ouverts en France') && html.includes('Dernier relevé du BOAMP'), 'un relevé ancien est dit une fois, dans la phrase de la veille')
+  assert.equal((html.match(/Source : Avis officiels du BOAMP \(DILA\), licence ouverte/g) ?? []).length, 1, 'la source est écrite une fois, sous la liste')
   assert.ok(/<h2[^>]*id="titre-veille"[^>]*>.*Veille<\/h2>/.test(html) && /<h3[^>]*>Avis ouverts<\/h3>/.test(html), 'niveaux de titre')
 })
 
@@ -177,7 +177,7 @@ test('Mes AO : on arrive sur du travail en cours — en-tête, résumé, « À
   const html = renderToStaticMarkup(<QueryClientProvider client={client([...A_VENIR, ...PASSES])}><MemoryRouter><Projects /></MemoryRouter></QueryClientProvider>)
   assert.equal((html.match(/<h1[\s>]/g) ?? []).length, 1)
   assert.ok(/role="group"[^>]*aria-label="Résumé de mes appels d’offres"/.test(html), 'la bande de résumé du système')
-  assert.equal((html.match(/data-case-resume=""/g) ?? []).length, 4, 'quatre cases de résumé')
+  assert.equal((html.match(/data-case-resume=""/g) ?? []).length, 3, 'trois cases de résumé : « À mettre à jour » est dit par sa section, une seule fois')
   // étiquette + gros chiffre seul : « En cours » puis « 2 », jamais « 2 en cours » ni « 2 en cours. » sous le titre
   assert.ok(/>En cours<\/p><\/div><p data-valeur="nombre"[^>]*><span class="chiffre-grand">2<\/span><\/p>/.test(html), 'En cours : le chiffre seul')
   assert.ok(!/2 en cours/.test(html), 'la sous-ligne ne redit pas la première case')
@@ -192,7 +192,7 @@ test('Mes AO : on arrive sur du travail en cours — en-tête, résumé, « À
   // trois groupes : en cours, à mettre à jour (seule action : le statut), terminés
   assert.ok(/id="titre-en-cours"[^>]*>En cours/.test(html) && /id="titre-a-mettre-a-jour"[^>]*>À mettre à jour/.test(html))
   const passe = html.split('data-ligne-ao="p2"')[1].split('</tr>')[0]
-  assert.ok(passe.includes('Mettre à jour le statut') && passe.includes('Remise passée'))
+  assert.ok(!passe.includes('Remise passée') && (passe.match(/<button/g) ?? []).length === 1 && html.includes('Ouvrez une ligne pour dire ce que le dossier est devenu'), 'ni pastille ni bouton répétés : la rangée entière est le geste')
   assert.ok(!/Télécharger le dossier|\/export/.test(passe), 'jamais « Télécharger le dossier » sur une remise passée')
   assert.ok(!/Bonjour/.test(sansCommentaires(lire('src/routes/Projects.tsx'))), 'l’en-tête de Mes AO ne salue pas')
 })
@@ -201,8 +201,8 @@ test('Mes AO sans remise à venir : pas de bloc « À la une », aucun bouton
   const html = renderToStaticMarkup(<QueryClientProvider client={client(PASSES)}><MemoryRouter><Projects /></MemoryRouter></QueryClientProvider>)
   assert.ok(!html.includes('À la une') && !html.includes('data-a-la-une'))
   assert.equal((html.match(/data-variante="principal"/g) ?? []).length, 0)
-  // jury, tour 1 : deux cases sans rien à compter ne restent pas deux cases « Aucun » : une ligne de faits (BandeCases)
-  assert.ok(/En cours\u00a0: aucun/.test(html), 'En cours : aucun, dit dans la ligne de faits')
+  // jury, tour 1 : rien en cours, aucune remise proche : plus de cases, une ligne de faits
+  assert.ok(html.includes('data-resume-ligne') && html.includes('Aucun appel d’offres en cours') && !html.includes('data-case-resume'), 'une ligne de faits, sans case')
 })
 
 test('Mes AO, 500 AO : des pages de 50 (« 1–50 sur 500 »), jamais 500 lignes d’un bloc', () => {
@@ -240,4 +240,12 @@ test('Mes AO : la recherche est le champ du système (pilule, 44 px, contour à
   const champ = sansCommentaires(lire('src/components/ui/champ.tsx'))
   assert.match(champ, /border-bord-champ/)
   assert.match(champ, /placeholder:text-fg-3/)
+})
+
+test('Accueil, dix appels d’offres à mettre à jour ou plus : la phrase de Synorix ne demande plus un geste par dossier', async () => {
+  const { phraseDeSynorix } = await import('@/routes/Dashboard')
+  const comptes = (n: number) => ({ enCours: 0, aMettreAJour: n, termines: 0 }) as never
+  assert.match(phraseDeSynorix(comptes(3), true)!.phrase, /^3 appels d’offres ont dépassé leur date de remise\. Dites ce qu’ils sont devenus/)
+  assert.match(phraseDeSynorix(comptes(500), true)!.phrase, /^500 appels d’offres ont dépassé leur date de remise\. Commencez par les plus récents/)
+  assert.doesNotMatch(phraseDeSynorix(comptes(500), true)!.phrase, /Dites ce qu’ils sont devenus/)
 })

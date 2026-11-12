@@ -13,6 +13,11 @@ test('/design : route privée déclarée, jamais liée au menu, aux onglets ni �
   }
 })
 
+test('/design : servie en développement seulement, jamais dans la version de production', () => {
+  // En production, /design tombe sur l'écran « adresse inconnue » : la page de référence reste un outil interne.
+  assert.match(lire('src/App.tsx'), /\{import\.meta\.env\.DEV && <Route path="\/design" element=\{<Design \/>\} \/>\}/)
+})
+
 test('/design : tous les jetons affichés existent dans les deux thèmes ; les exemples sont rendus en clair ET en nuit', () => {
   const jetons = [...new Set([...page.matchAll(/'(--[\w-]+)'/g)].map((m) => m[1]))].filter((j) => j !== '--echantillon') // variable locale de l'échantillon
   assert.ok(jetons.length > 40)
