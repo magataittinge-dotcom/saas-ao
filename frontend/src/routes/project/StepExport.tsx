@@ -30,7 +30,7 @@ import { echeanceAO, etatEcheance, type EcheanceSource } from '@/lib/echeance'
 import { useMedia } from '@/hooks/useMedia'
 import { cn } from '@/lib/utils'
 import { dossierLu } from '@/lib/dossierLu'
-import { etatAO } from '@/lib/etatAO'
+import { boutonsExport, etatAO } from '@/lib/etatAO'
 import { lectureDetailExport, lectureScoreExport } from '@/lib/prechargementAO'
 
 const TITRE = 'Export du dossier'
@@ -429,16 +429,18 @@ export default function StepExport({ project }: Props) {
   const pretes = piecesVisibles.filter((p) => pieceDemandee(p, echeance) && !nonConformes.includes(p)).length
   const aucunePieceJointe = gateBlocked && nonConformes.length > 0 && pretes === 0
   const allerAuxPieces = () => navigate(`/projects/${project.id}/verification`)
+  // Un AO terminé (gagné, perdu…) : aucune action de préparation en bouton principal (lib/etatAO.ts).
+  const boutons = boutonsExport(project, aucunePieceJointe)
 
   // Le téléchargement du dossier, écrit une fois : dans l'en-tête sur ordinateur, dans la barre du bas au téléphone. C'est
   // le seul bouton « Télécharger le dossier » de la page ; les autres disent ce qu'ils téléchargent.
   const boutonTelecharger = (
-    <Bouton variante={aucunePieceJointe ? 'secondaire' : 'principal'} onClick={telechargerDossier} disabled={dossierVide} enCours={isExportingZip} libelleEnCours="Préparation du dossier…" className="max-[768px]:flex-1">
+    <Bouton variante={boutons.telecharger} onClick={telechargerDossier} disabled={dossierVide} enCours={isExportingZip} libelleEnCours="Préparation du dossier…" className="max-[768px]:flex-1">
       <Archive aria-hidden />
       Télécharger le dossier
     </Bouton>
   )
-  const boutonPieces = aucunePieceJointe
+  const boutonPieces = boutons.reunirPieces
     ? <Bouton variante="principal" onClick={allerAuxPieces} className="max-[768px]:flex-1">Réunir les pièces</Bouton>
     : null
 

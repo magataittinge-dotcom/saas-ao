@@ -32,6 +32,19 @@ export function etatAO(p: ProjetEtat, maintenant: Date = new Date()): EtatAO {
   return etatEcheance(echeanceAO(p), maintenant).etat === 'passee' ? 'a_mettre_a_jour' : 'en_cours'
 }
 
+/** Les boutons de l'étape Export. Un AO terminé (déposé, gagné, perdu, sans suite) n'a plus d'action de préparation en
+ *  bouton principal : ni « Réunir les pièces », ni le téléchargement (la correction du résultat est dans le bandeau de la
+ *  page). En cours : « Réunir les pièces » tant qu'aucune pièce n'est jointe, sinon « Télécharger le dossier ». */
+export function boutonsExport(p: ProjetEtat, aucunePieceJointe: boolean, maintenant: Date = new Date()): {
+  telecharger: 'principal' | 'secondaire'; reunirPieces: boolean
+} {
+  const termine = etatAO(p, maintenant) === 'termine'
+  return {
+    telecharger: aucunePieceJointe || termine ? 'secondaire' : 'principal',
+    reunirPieces: aucunePieceJointe && !termine,
+  }
+}
+
 export interface ActionAO {
   /** Le verbe du bouton. */
   verbe: string
