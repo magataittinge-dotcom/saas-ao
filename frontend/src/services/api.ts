@@ -67,3 +67,14 @@ api.interceptors.response.use(
     return Promise.reject(erreur)
   },
 )
+
+// RESTES-3 (PERF § 5) — une lecture qui ne répond pas ne laisse plus un écran attendre sans fin : délai par défaut des
+// lectures JSON. Un délai donné par l'appel, un téléchargement (blob), une écriture ou un dépôt de fichier gardent le leur.
+export const DELAI_LECTURE_MS = 30_000
+
+api.interceptors.request.use((config) => {
+  if (!config.timeout && (config.method ?? 'get').toLowerCase() === 'get' && config.responseType !== 'blob') {
+    config.timeout = DELAI_LECTURE_MS
+  }
+  return config
+})
