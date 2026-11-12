@@ -1,7 +1,7 @@
 """S-04 (audit de sécurité, P1) — plafond journalier de lancements d'analyse et de mémoire, pour toutes les offres.
 
 - PLAFOND_JOUR_ANALYSES / PLAFOND_JOUR_MEMOIRES (20 par défaut, 0 = pas de plafond) ; le 21e lancement du jour → 429
-  « Plafond du jour atteint, il se remet à zéro demain. », même en Business (illimité au mois) ;
+  « Plafond du jour atteint, il se remet à zéro demain. », même en Business (70 par mois) ;
 - une analyse en échec puis remboursée compte dans le plafond du jour (l'unité du mois, elle, est rendue) ;
 - des générations de mémoire lancées en même temps sur plusieurs AO ne passent plus toutes le contrôle du quota.
 Modèles simulés : aucun appel réel."""
@@ -104,7 +104,7 @@ def test_plafond_a_zero_et_plafond_memoire(client, db_session, test_org, monkeyp
 
 
 def test_memoires_simultanes_sur_plusieurs_ao_une_seule_unite_restante(client, db_session, test_org, monkeypatch):
-    """Pro à 39/40 : trois générations lancées pendant que la première tourne → une seule passe le contrôle."""
+    """Pro à 29/30 : trois générations lancées pendant que la première tourne → une seule passe le contrôle."""
     import routers.memoire as mm
     feu = threading.Event()
     lancees = []
@@ -114,7 +114,7 @@ def test_memoires_simultanes_sur_plusieurs_ao_une_seule_unite_restante(client, d
         feu.wait(20)
     monkeypatch.setattr(mm, "_run_memoire_job_corps", corps)
     _offre(db_session, test_org.id, "pro")
-    for i in range(39):
+    for i in range(29):
         db_session.add(QuotaConsumption(organization_id=test_org.id, kind="memoire", project_id="ancien"))
     for pid in ("p-c1", "p-c2", "p-c3"):
         _projet(db_session, test_org.id, pid)

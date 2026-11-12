@@ -23,13 +23,13 @@ def test_quota_endpoint_pro(client, db_session, test_org):
     assert resp.status_code == 200, resp.text
     body = resp.json()
     assert body["plan"] == "pro"
-    assert body["analyses"] == {"used": 3, "limit": 40}
-    assert body["memoires"] == {"used": 7, "limit": 40}
+    assert body["analyses"] == {"used": 3, "limit": 30}
+    assert body["memoires"] == {"used": 7, "limit": 30}
     assert body["period_start"] is not None
     assert body["period_end"] is not None
 
 
-def test_quota_endpoint_business_unlimited(client, db_session, test_org):
+def test_quota_endpoint_business_has_a_quota(client, db_session, test_org):
     test_org.plan = "business"
     db_session.commit()
     _consume(db_session, test_org.id, "memoire", 55)
@@ -37,7 +37,8 @@ def test_quota_endpoint_business_unlimited(client, db_session, test_org):
     resp = client.get("/api/billing/quota")
     assert resp.status_code == 200
     body = resp.json()
-    assert body["memoires"]["limit"] is None
+    assert body["memoires"]["limit"] == 70  # plus aucune offre illimitée (2026-11-11)
+    assert body["analyses"]["limit"] == 70
     assert body["memoires"]["used"] == 55
 
 

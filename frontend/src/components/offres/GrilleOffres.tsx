@@ -58,9 +58,6 @@ export default function GrilleOffres({ action, compacte = false }: Props) {
               </div>
 
               <p className="text-sm font-medium" style={{ color: 'var(--text-1)' }}>{quotaLibelle(offre)}</p>
-              {offre.analysesParMois === null && (
-                <p className="text-xs mt-1" style={{ color: 'var(--text-3)' }}>Dans un usage raisonnable</p>
-              )}
 
               <div className={`mt-auto ${compacte ? 'pt-4' : 'pt-6'}`}>
                 {action ? action(offre) : <LienInscription offre={offre} />}

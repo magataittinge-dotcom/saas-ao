@@ -42,7 +42,8 @@ UPLOADS_ROOT = Path(__file__).parent.parent / "uploads"
 router = APIRouter()
 from services.rate_limit import limiter  # S1.2 — limiter partagé (org-keyed)
 
-# B10 — borne d'UNE action : 40 lots (le quota mensuel Pro, PRD : 40 analyses).
+# B10 — borne d'UNE action : 40 lots (garde de validation de la requête ; le quota
+# du mois, services/quota.py, décide ensuite : Pro 30, Business 70 depuis le 2026-11-11).
 _MAX_LOTS_PAR_ANALYSE = 40
 # Lots ajoutés à la main dans l'écran Lots (AddLotForm : « lot1 » à « lot30 ») :
 # jamais enregistrés dans lots_detectes, mais analysables (filtre par numéro).
@@ -89,6 +90,13 @@ def _accord(n: int, singulier: str, pluriel: str) -> str:
     """« 1 exigence extraite », « 448 exigences extraites » : le nombre et son nom accordé (jamais « exigence(s) extraite(s) »
     dans un texte renvoyé à l'écran). Zéro s'accorde au singulier, comme en français."""
     return f"{n} {pluriel if n > 1 else singulier}"
+
+
+def _date_courte(iso: str | None) -> str | None:
+    """« 2026-12-03T10:00:00 » → « 03/12/2026 » (date de remise à zéro du quota dans un message)."""
+    if not iso:
+        return None
+    return f"{iso[8:10]}/{iso[5:7]}/{iso[0:4]}"
 
 
 @router.post("/{project_id}/analyze", dependencies=[Depends(exiger_budget_ia)])
@@ -149,7 +157,7 @@ async def trigger_analysis(
     quota.exiger_siret_pour_essai(org)   # S-05 — derrière ESSAI_EXIGE_SIRET (éteinte par défaut)
     status = quota.get_quota_status(db, org)
     limit = status["analyses"]["limit"]
-    if limit is not None and status["analyses"]["used"] + len(lot_specs) > limit:
+    if status["analyses"]["used"] + len(lot_specs) > limit:
         # Audit #10 — même blocage doux que check_quota : CTA upgrade
         # explicite, et jamais « ce mois » en plan free (essai à vie).
         remaining = max(0, limit - status["analyses"]["used"])
@@ -163,7 +171,7 @@ async def trigger_analysis(
             detail = (
                 f"Quota insuffisant : {_accord(len(lot_specs), 'lot demandé', 'lots demandés')}, "
                 f"{_accord(remaining, 'analyse restante', 'analyses restantes')} ce mois. "
-                f"{quota.upgrade_invitation(org.plan)} ou attendez le renouvellement de votre période."
+                + quota.suite_quota_atteint(org.plan, _date_courte(status["period_end"]))
             )
         raise HTTPException(status_code=402, detail=detail)
 

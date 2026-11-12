@@ -18,7 +18,7 @@ import { Message } from '@/components/ui/message'
 import { PastilleEtat, type Sens } from '@/components/ui/pastille'
 import { Squelette } from '@/components/ui/squelette'
 
-interface Compteur { used: number; limit: number | null }
+interface Compteur { used: number; limit: number }
 
 /** L'état d'un compteur du mois : le mot, le sens (COULEURS.md : vert sous 70 %, ambre de 70 à 90 %, rouge au-delà) et la barre. */
 export function lectureCompteur(c: { used: number; limit: number }): { sens: Sens; mot: string; barre: string; part: number } {
@@ -35,20 +35,21 @@ export function lectureCompteur(c: { used: number; limit: number }): { sens: Sen
  * Au plafond, la rangée ne porte ni pastille ni rouge : le message de la carte le dit une fois, avec son bouton.
  */
 function JaugeUnite({ libelle, compteur }: { libelle: string; compteur: Compteur }) {
-  if (compteur.limit === null) return null
   const l = lectureCompteur({ used: compteur.used, limit: compteur.limit })
   const plein = compteur.used >= compteur.limit
+  // Une organisation déjà au-delà de son quota (Pro 40 → 30, 11/11/2026) lit « 30 sur 30 », comme le serveur, jamais « 35 sur 30 ».
+  const utilise = Math.min(compteur.used, compteur.limit)
   return (
     <RangeeCarte className="block py-4">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
         <p className="text-sm font-medium text-fg">{libelle}</p>
         <div className="flex items-center gap-3">
-          <p className="text-sm text-fg-2">{compteur.used} sur {compteur.limit}</p>
+          <p className="text-sm text-fg-2">{utilise} sur {compteur.limit}</p>
           {!plein && <PastilleEtat sens={l.sens}>{l.mot}</PastilleEtat>}
         </div>
       </div>
-      <div role="meter" aria-label={`${libelle} du mois`} aria-valuemin={0} aria-valuemax={compteur.limit} aria-valuenow={compteur.used}
-        aria-valuetext={`${compteur.used} sur ${compteur.limit}${plein ? ', tout est utilisé' : ''}`}
+      <div role="meter" aria-label={`${libelle} du mois`} aria-valuemin={0} aria-valuemax={compteur.limit} aria-valuenow={utilise}
+        aria-valuetext={`${utilise} sur ${compteur.limit}${plein ? ', tout est utilisé' : ''}`}
         className="mt-3 h-2 overflow-hidden rounded-pilule bg-surface-2">
         <div className={cn('h-full rounded-pilule transition-[width] duration-pop ease-survol', l.barre)} style={{ width: `${l.part * 100}%` }} />
       </div>
@@ -203,7 +204,7 @@ export default function Billing() {
         <RangeeCarte className="py-4" data-ou-gerer="">
           <p className="text-pretty text-sm text-fg-2">
             {isPaid
-              ? 'Le paiement par carte, le changement d’offre, les factures et la résiliation se font sur le portail de paiement sécurisé de Stripe. Il s’ouvre à la place de cette page ; un lien vous ramène ici. Vous pouvez résilier à tout moment.'
+              ? 'Le paiement par carte, le changement d’offre, les factures et la résiliation se font sur le portail de paiement sécurisé de Stripe. Il s’ouvre à la place de cette page ; un lien vous ramène ici. Vous pouvez résilier à tout moment : l’accès reste ouvert jusqu’à la fin de la période payée, et le mois entamé n’est pas remboursé.'
               : 'Vous payez par carte sur la page de paiement sécurisée de Stripe, qui s’ouvre quand vous choisissez une offre. Ensuite, vous changez d’offre, retrouvez vos factures et résiliez depuis cette page, à tout moment.'}
           </p>
         </RangeeCarte>
@@ -225,8 +226,9 @@ export default function Billing() {
         estVide={(q) => !q?.analyses || !q.memoires}
       >
         {(q) => {
-          const illimite = q.analyses.limit === null && q.memoires.limit === null
-          const atteint = [q.analyses, q.memoires].some((c) => c.limit !== null && c.used >= c.limit)
+          const atteint = [q.analyses, q.memoires].some((c) => c.used >= c.limit)
+          // Business est l'offre la plus haute (11/11/2026) : pas d'offre plus large à proposer, le quota se relève sur demande.
+          const business = q.plan === 'business'
           const retour = premierDuMois(jourLongParis(q.period_end))
           // Tout est utilisé : dit UNE fois (un mot, une icône, une phrase), avec le geste pour continuer.
           const plein = atteint && (
@@ -235,29 +237,22 @@ export default function Billing() {
                 <PastilleEtat sens="rouge">Unités du mois utilisées</PastilleEtat>
                 <p className="mt-2 text-pretty text-sm text-fg-2">
                   {retour ? `Elles reviennent le ${retour}.` : 'Elles reviennent au début de la prochaine période.'}
-                  {' '}Vos dossiers en cours restent ouverts ; une offre plus large vous en redonne tout de suite.
+                  {' '}Vos dossiers en cours restent ouverts ; {business ? 'le nombre d’unités peut être relevé sur demande.' : 'une offre plus large vous en redonne tout de suite.'}
                 </p>
               </div>
-              {isPaid
+              {business ? null : isPaid
                 ? <Bouton variante="secondaire" onClick={() => { void handlePortal() }} enCours={portalLoading} libelleEnCours="Ouverture du portail…">Changer d’offre</Bouton>
                 : <Bouton variante="secondaire" asChild><a href="#offres">Voir les offres</a></Bouton>}
             </RangeeCarte>
           )
           return (
             <div className="grid gap-3">
-              {illimite ? (
-                <Carte>
-                  <p className="text-sm font-medium text-fg">Aucun compteur ce mois-ci</p>
-                  <p className="mt-1 text-sm text-fg-2">Votre offre ne compte ni les analyses ni les mémoires, dans un usage raisonnable.</p>
-                </Carte>
-              ) : (
-                <Carte sansMarge className="px-5 sm:px-6">
-                  {plein}
-                  <JaugeUnite libelle="Analyses" compteur={q.analyses} />
-                  <JaugeUnite libelle="Mémoires" compteur={q.memoires} />
-                </Carte>
-              )}
-              {!illimite && !atteint && retour && <p className="text-xs text-fg-3">Les compteurs repartent de zéro le {retour}.</p>}
+              <Carte sansMarge className="px-5 sm:px-6">
+                {plein}
+                <JaugeUnite libelle="Analyses" compteur={q.analyses} />
+                <JaugeUnite libelle="Mémoires" compteur={q.memoires} />
+              </Carte>
+              {!atteint && retour && <p className="text-xs text-fg-3">Les compteurs repartent de zéro le {retour}.</p>}
             </div>
           )
         }}

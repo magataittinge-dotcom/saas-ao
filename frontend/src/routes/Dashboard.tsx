@@ -22,6 +22,7 @@ import { dateDuJourParis } from '@/lib/dateParis'
 import { avancement } from '@/lib/entreprise/avancement'
 import { aLaUne, comptesAO, lectureAO, type ComptesAO } from '@/lib/etatAO'
 import { quandCourt } from '@/lib/mesAO'
+import { quotaLibelle, trouverOffre, type Offre } from '@/lib/offres'
 import { prenomAffichable } from '@/lib/prenom'
 import { raisonSociale } from '@/lib/raisonSociale'
 import type { Project, DashboardStats } from '@/types'
@@ -30,8 +31,9 @@ import type { Project, DashboardStats } from '@/types'
 const VeilleAccueil = lazy(() => import('@/components/veille/VeilleAccueil'))
 
 const pluriel = (n: number, un: string, plusieurs: string) => `${n} ${n > 1 ? plusieurs : un}`
+const OFFRE_PRO = trouverOffre('pro') as Offre
 
-interface Quota { plan: string; analyses: { used: number; limit: number | null }; memoires: { used: number; limit: number | null } }
+interface Quota { plan: string; analyses: { used: number; limit: number }; memoires: { used: number; limit: number } }
 
 /** La ligne du jour, sous le « Bonjour » : la date, puis la prochaine remise à venir (la même que « À la une » de Mes AO). */
 export function suiteDuJour(projets: readonly Project[], maintenant: Date = new Date()): string | null {
@@ -60,15 +62,17 @@ export function phraseDeSynorix(comptes: ComptesAO | null, profilRenseigne: bool
   return null
 }
 
-/** Le plafond du mois est atteint (offre à plafond seulement) : la phrase le dit avec ses chiffres ; sinon null. */
+/** Le plafond du mois est atteint (toutes les offres payantes) : la phrase le dit avec ses chiffres ; sinon null. */
 export function phraseQuotaAtteint(q: Quota | undefined): string | null {
   if (!q || q.plan === 'free') return null
-  const plein = (u: { used: number; limit: number | null }) => u.limit !== null && u.used >= u.limit
+  const plein = (u: { used: number; limit: number }) => u.used >= u.limit
+  // Au-delà du nouveau quota (Pro 40 → 30, 11/11/2026) : « 30 sur 30 », comme le serveur, jamais « 35 sur 30 ».
+  const lu = (u: { used: number; limit: number }) => Math.min(u.used, u.limit)
   const a = plein(q.analyses)
   const m = plein(q.memoires)
-  if (a && m) return `Les unités de ce mois sont toutes utilisées : ${q.analyses.used} analyses sur ${q.analyses.limit}, ${q.memoires.used} mémoires sur ${q.memoires.limit}.`
-  if (a) return `Les analyses de ce mois sont toutes utilisées : ${q.analyses.used} sur ${q.analyses.limit}.`
-  if (m) return `Les mémoires de ce mois sont tous utilisés : ${q.memoires.used} sur ${q.memoires.limit}.`
+  if (a && m) return `Les unités de ce mois sont toutes utilisées : ${lu(q.analyses)} analyses sur ${q.analyses.limit}, ${lu(q.memoires)} mémoires sur ${q.memoires.limit}.`
+  if (a) return `Les analyses de ce mois sont toutes utilisées : ${lu(q.analyses)} sur ${q.analyses.limit}.`
+  if (m) return `Les mémoires de ce mois sont tous utilisés : ${lu(q.memoires)} sur ${q.memoires.limit}.`
   return null
 }
 
@@ -139,7 +143,7 @@ export default function Dashboard() {
       {/* C15 — essai utilisé : rappel sobre de l'offre, jamais bloquant */}
       {consumedFreeTrial && (
         <Message ton="info" className="mb-6" action={<Link to="/settings/billing" className={classesBouton('lien')}>Voir les offres</Link>}>
-          Votre AO d’essai est utilisé. Le plan Pro couvre 40 analyses et 40 mémoires par mois.
+          Votre AO d’essai est utilisé. L’offre Pro comprend {quotaLibelle(OFFRE_PRO)}.
         </Message>
       )}
 

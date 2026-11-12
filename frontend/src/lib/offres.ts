@@ -1,6 +1,8 @@
 // Grille des offres — SOURCE UNIQUE de tout ce qui s'affiche sur les prix et les
 // quotas : page d'accueil, Tarifs, Facturation, Paramètres, mur d'abonnement.
-// Grille décidée le 2026-10-22. Les quotas appliqués par le serveur sont dans
+// Grille décidée le 2026-10-22, quotas revus le 2026-11-11 (décision du fondateur :
+// plus aucune offre illimitée ; Pro 30 + 30, Business 70 + 70, prix inchangés).
+// Les quotas appliqués par le serveur sont dans
 // backend/services/quota.py (PLAN_LIMITS) : tests/offres.test.tsx vérifie que
 // les deux disent la même chose. Les prix facturés viennent des produits Stripe.
 
@@ -11,15 +13,15 @@ export interface Offre {
   nom: string
   /** Prix mensuel hors taxes, en euros. */
   prixMensuelHT: number
-  /** null = illimité, dans un usage raisonnable. */
-  analysesParMois: number | null
-  memoiresParMois: number | null
+  /** Quota du mois : chaque offre a un nombre, aucune n'est illimitée. */
+  analysesParMois: number
+  memoiresParMois: number
 }
 
 export const OFFRES: readonly Offre[] = [
   { id: 'essentiel', nom: 'Essentiel', prixMensuelHT: 149, analysesParMois: 5, memoiresParMois: 5 },
-  { id: 'pro', nom: 'Pro', prixMensuelHT: 349, analysesParMois: 40, memoiresParMois: 40 },
-  { id: 'business', nom: 'Business', prixMensuelHT: 599, analysesParMois: null, memoiresParMois: null },
+  { id: 'pro', nom: 'Pro', prixMensuelHT: 349, analysesParMois: 30, memoiresParMois: 30 },
+  { id: 'business', nom: 'Business', prixMensuelHT: 599, analysesParMois: 70, memoiresParMois: 70 },
 ]
 
 /** Essai offert à la création du compte, une seule fois. */
@@ -47,11 +49,8 @@ export function prixLibelle(offre: Offre): string {
   return `${offre.prixMensuelHT} €`
 }
 
-/** « 5 analyses + 5 mémoires par mois », ou « Analyses et mémoires illimités ». */
+/** « 5 analyses + 5 mémoires par mois ». */
 export function quotaLibelle(offre: Offre): string {
-  if (offre.analysesParMois === null || offre.memoiresParMois === null) {
-    return 'Analyses et mémoires illimités'
-  }
   return `${offre.analysesParMois} analyses + ${offre.memoiresParMois} mémoires par mois`
 }
 

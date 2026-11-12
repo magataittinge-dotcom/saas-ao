@@ -12,7 +12,6 @@ import { metiersDuLot } from '@/lib/lotsMetiers'
 import { repartirDocuments } from '@/lib/analyseLibelles'
 import { doitConfirmerLecture, libelleBoutonLire, phraseCoutLots } from '@/lib/coutLecture'
 import ConfirmationLecture from '@/components/project/LectureLots'
-import { useQuota } from '@/components/layout/QuotaGauge'
 import { repartirLotsParMetiers, libelleUnites } from '@/lib/lotsMetiers'
 import type { MemoireConfig } from '@/types'
 import { api } from '@/services/api'
@@ -466,9 +465,6 @@ export default function StepLotSelection({ project }: Props) {
     if (doitConfirmerLecture(nbChoisis)) setConfirmerLecture(true)
     else lancerLecture()
   }
-  const { data: quota } = useQuota()
-  // offre illimitée : aucune unité n'est annoncée ni décomptée
-  const illimite = quota?.analyses?.limit === null && quota?.memoires?.limit === null
 
   // « Dans vos métiers » : les lots rattachés aux métiers déclarés dans Mon entreprise d'abord, les autres repliés
   const { data: profil } = useQuery<MemoireConfig>({
@@ -490,7 +486,7 @@ export default function StepLotSelection({ project }: Props) {
       onSelect={() => toggleLot(lot.id)}
       onDelete={() => setLotARetirer(lot)}
       onRename={(label) => renameLot({ lotId: lot.id, label })}
-      cout={illimite ? undefined : libelleUnites(1)}
+      cout={libelleUnites(1)}
       pieces={piecesDuLot(lot.id)}
     />
   )
@@ -502,7 +498,7 @@ export default function StepLotSelection({ project }: Props) {
   // Le seul bouton « Lire … » de l'écran : dans l'en-tête à l'ordinateur, dans la barre du bas au téléphone.
   const actionLire = (
     <Bouton variante="principal" onClick={handleLaunch} disabled={lectureBloquee}>
-      {libelleBoutonLire(nbChoisis, illimite)}
+      {libelleBoutonLire(nbChoisis)}
     </Bouton>
   )
   const peutLire = !sansDepot && !chargementEchoue && !enDetection
@@ -517,7 +513,7 @@ export default function StepLotSelection({ project }: Props) {
     <>
       <EcransLecture lecture={lecture} />
       {/* G1 — « Lire N lots = N unités » : confirmée avant l'appel dès que plus d'un lot est choisi */}
-      <ConfirmationLecture ouvert={confirmerLecture} onOuvert={setConfirmerLecture} nbLots={nbChoisis} illimite={illimite} onConfirmer={lancerLecture} />
+      <ConfirmationLecture ouvert={confirmerLecture} onOuvert={setConfirmerLecture} nbLots={nbChoisis} onConfirmer={lancerLecture} />
       <DialogueConfirmation
         ouvert={lotARetirer !== null}
         onOuvert={(o) => { if (!o) setLotARetirer(null) }}
@@ -542,7 +538,7 @@ export default function StepLotSelection({ project }: Props) {
 
       <GabaritEtape
         titre="Lots"
-        utilite={enDetection || sansDepot || chargementEchoue ? UTILITE : phraseCoutLots(lots.length, illimite)}
+        utilite={enDetection || sansDepot || chargementEchoue ? UTILITE : phraseCoutLots(lots.length)}
         actionPrincipale={peutLire ? actionLire : undefined}
         message={analysisError && <Message ton="erreur" titre="L’analyse n’a pas démarré">{analysisError}</Message>}
         // La barre du bas n'existe que lorsqu'il y a des lots à choisir : ni en erreur, ni sans dossier, ni pendant le chargement.
@@ -629,7 +625,7 @@ export default function StepLotSelection({ project }: Props) {
                   lot={{ id: 'all', nom: 'Analyser l’ensemble du dossier (tous les lots)' }}
                   selected={selectedIds.has('all')}
                   onSelect={() => toggleLot('all')}
-                  cout={illimite ? undefined : libelleUnites(lots.length)}
+                  cout={libelleUnites(lots.length)}
                   pieces={documents}
                 />
               </ListeLots>
