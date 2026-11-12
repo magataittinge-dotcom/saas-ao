@@ -17,7 +17,7 @@ class ProjectUpdate(BaseModel):
     ]] = None
     maitre_ouvrage: Optional[str] = Field(default=None, max_length=255)
     deadline: Optional[date] = None
-    current_step: Optional[int] = None
+    current_step: Optional[int] = Field(default=None, ge=1, le=7)   # R-06 : les étapes du parcours, rien d'autre
 
 
 class UnitesAO(BaseModel):

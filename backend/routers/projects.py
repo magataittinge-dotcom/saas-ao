@@ -5,8 +5,8 @@ import tempfile
 import unicodedata
 import io as _io
 import threading
-from typing import IO, List, Optional, Any
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, UploadFile, File, Form
+from typing import IO, Annotated, List, Optional, Any
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Path, Query, Request, UploadFile, File, Form
 from sqlalchemy.orm import Session, defer
 from pydantic import BaseModel
 
@@ -2137,7 +2137,7 @@ def select_lot(
 @router.post("/{project_id}/complete-step/{step}", response_model=ProjectResponse)
 def complete_step(
     project_id: str,
-    step: int,
+    step: Annotated[int, Path(ge=1, le=7)],     # R-06 : une étape du parcours, rien d'autre (422 sinon)
     user: User = Depends(get_auth_user),
     db: Session = Depends(get_db),
 ):
