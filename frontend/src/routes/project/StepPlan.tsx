@@ -11,6 +11,8 @@ import {
 import { recoupements } from '@/lib/planRecoupe'
 import PartiePlanCarte from '@/components/plan/PartiePlanCarte'
 import PartiesHabituelles from '@/components/plan/PartiesHabituelles'
+import { ProposerFiches } from '@/components/plan/ProposerFiches'
+import { detailErreur, useFonctionsIA } from '@/lib/fonctionsIA'
 import { BarrePlan, BoutonPrincipalPlan, type EtatPlan } from '@/components/plan/ActionsPlan'
 import { Bouton } from '@/components/ui/bouton'
 import { Carte } from '@/components/ui/carte'
@@ -120,6 +122,21 @@ export default function StepPlan({ project }: { project: Project }) {
   const basculerFiche = (c: string) =>
     setOuvertes((o) => { const n = new Set(o); if (n.has(c)) n.delete(c); else n.add(c); return n })
   const voir = (s: SourcePlan) => { if (s.document) source.ouvrir({ document: s.document, page: s.page ?? null, excerpt: null }) }
+
+  // C3 (FICHE_PROPOSEE, éteinte par défaut côté serveur) : « Ce que vous voulez dire » proposé pour chaque fiche, à prendre ou non.
+  const { fiche_proposee: fichesProposees } = useFonctionsIA()
+  const [propositions, setPropositions] = useState<Record<string, string> | null>(null)
+  const proposer = useMutation({
+    mutationFn: async () =>
+      (await api.post<{ propositions: Record<string, string> }>(`/projects/${project.id}/plan-memoire/proposer-voulu`, undefined, { timeout: 120_000 })).data,
+    onSuccess: (r) => { setPropositions(r.propositions); setOuvertes((o) => new Set([...o, ...Object.keys(r.propositions)])) },
+  })
+  const laisserProposition = (c: string) => setPropositions((p) => {
+    if (!p) return p
+    const reste = { ...p }
+    delete reste[c]
+    return reste
+  })
 
   const recoupes = useMemo(() => (parties ? recoupements(parties) : new Map<string, { cle: string; titre: string }>()), [parties])
 
@@ -234,6 +251,17 @@ export default function StepPlan({ project }: { project: Project }) {
           </SectionEtape>
         )}
 
+        {fichesProposees && (
+          <SectionEtape titre="Ce que vous voulez dire, partie par partie">
+            <ProposerFiches
+              enCours={proposer.isPending}
+              nombre={propositions ? Object.keys(propositions).length : null}
+              erreur={proposer.isError ? detailErreur(proposer.error, 'Les propositions n’ont pas pu se faire. Rien n’a été décompté ; réessayez dans un instant.') : null}
+              onProposer={() => proposer.mutate()}
+            />
+          </SectionEtape>
+        )}
+
         {groupes.map((g, i) => (
           <SectionEtape
             key={g.partie} titre={`${titrePartieLisible(g.partie)} · ${g.parties.length} ${g.parties.length > 1 ? 'parties' : 'partie'}`}
@@ -259,6 +287,8 @@ export default function StepPlan({ project }: { project: Project }) {
                     onDescendre={() => changer(deplacer(parties, p.cle, 1))}
                     onFiche={(f) => changer(changerFiche(parties, p.cle, f))}
                     onVoirSource={voir}
+                    proposition={fichesProposees ? propositions?.[p.cle] ?? null : null}
+                    onIgnorerProposition={fichesProposees ? () => laisserProposition(p.cle) : undefined}
                   />
                 ))}
               </ul>

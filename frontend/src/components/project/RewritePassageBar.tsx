@@ -5,6 +5,8 @@ import { Champ } from '@/components/ui/champ'
 import { Dialogue } from '@/components/ui/dialogue'
 import { Message } from '@/components/ui/message'
 import { TexteMisEnForme } from '@/components/memoire/BlocsMemoire'
+import TroisPropositions, { type Trois } from '@/components/project/TroisPropositions'
+import { useFonctionsIA } from '@/lib/fonctionsIA'
 
 export interface PassageSelection {
   text: string
@@ -39,6 +41,9 @@ export default function RewritePassageBar({ projectId, selection, onApply }: Pro
   const [diff, setDiff] = useState<{
     original: string; rewritten: string; start: number; end: number
   } | null>(null)
+  // C2 (REECRIRE_TROIS, éteinte par défaut côté serveur) : trois propositions au lieu d'une, sur une route à part.
+  const { reecrire_trois: enTrois } = useFonctionsIA()
+  const [trois, setTrois] = useState<Trois | null>(null)
 
   const run = async (action: string) => {
     if (!selection || enCours) return
@@ -46,6 +51,15 @@ export default function RewritePassageBar({ projectId, selection, onApply }: Pro
     setError(null)
     const { text, start, end } = selection
     try {
+      if (enTrois) {
+        const { data } = await api.post<{ original: string; propositions: string[] }>(`/projects/${projectId}/memoire/reecrire-trois`, {
+          passage: text,
+          action,
+          ...(action === 'insister' ? { instruction: insistText } : {}),
+        }, { timeout: 120_000 })
+        setTrois({ original: data.original, propositions: data.propositions, start, end })
+        return
+      }
       const { data } = await api.post(`/projects/${projectId}/memoire/rewrite-passage`, {
         passage: text,
         action,
@@ -121,6 +135,7 @@ export default function RewritePassageBar({ projectId, selection, onApply }: Pro
           </div>
         )}
       </Dialogue>
+      {enTrois && <TroisPropositions trois={trois} plafond={PLAFOND_PAR_JOUR} onFermer={() => setTrois(null)} onAppliquer={onApply} />}
     </>
   )
 }

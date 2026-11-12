@@ -5,6 +5,9 @@ Deux lots, une date de remise à venir (aujourd'hui + 40 jours), quatre pièces 
 CCAP, CCTP (PDF) et DPGF (tableur), réunies dans une archive ZIP (le geste du client).
 
     python -m tests.e2e.dce_invente <dossier>     (depuis backend/) → écrit les quatre fichiers
+    python -m tests.e2e.dce_invente <dossier> --parcours-2   → en plus, pour frontend/e2e/parcours-2.mjs : un dossier
+        « E2E2 Grebes deux lots » dont la DPGF est découpée par lot (une par lot), et une attestation d'assurance à
+        ranger au coffre-fort avant le parcours (toutes inventées)
 
 Les phrases citées par l'IA simulée (tests/e2e/api_simulee.py) viennent de PHRASES : elles sont
 recopiées mot pour mot dans les pièces, pour que l'ancrage des sources les retrouve.
@@ -104,21 +107,25 @@ def textes() -> dict[str, list[str]]:
     return {"RC": rc, "CCAP": ccap, "CCTP": cctp}
 
 
-def dpgf_xlsx() -> bytes:
+LIGNES_DPGF = {
+    LOT1: [["1.1", "Béton de fondation C25/30", "m3", 42, None], ["1.2", "Coffrage des voiles", "m2", 180, None],
+           ["1.3", "Dallage sur terre-plein", "m2", 210, None]],
+    LOT2: [["2.1", "Fenêtre aluminium deux vantaux", "u", 14, None]],
+}
+
+
+def dpgf_xlsx(lots: tuple[str, ...] = (LOT1, LOT2)) -> bytes:
+    """La DPGF (tableur) : une feuille par lot demandé."""
     from openpyxl import Workbook
 
     wb = Workbook()
-    ws = wb.active
-    ws.title = "Lot 01"
-    ws.append([f"DPGF - {LOT1}", "", "", "", ""])
-    ws.append(["N°", "Désignation", "Unité", "Quantité", "Prix unitaire HT"])
-    ws.append(["1.1", "Béton de fondation C25/30", "m3", 42, None])
-    ws.append(["1.2", "Coffrage des voiles", "m2", 180, None])
-    ws.append(["1.3", "Dallage sur terre-plein", "m2", 210, None])
-    ws2 = wb.create_sheet("Lot 02")
-    ws2.append([f"DPGF - {LOT2}", "", "", "", ""])
-    ws2.append(["N°", "Désignation", "Unité", "Quantité", "Prix unitaire HT"])
-    ws2.append(["2.1", "Fenêtre aluminium deux vantaux", "u", 14, None])
+    for i, lot in enumerate(lots):
+        ws = wb.active if i == 0 else wb.create_sheet()
+        ws.title = lot.split(" - ")[0]
+        ws.append([f"DPGF - {lot}", "", "", "", ""])
+        ws.append(["N°", "Désignation", "Unité", "Quantité", "Prix unitaire HT"])
+        for ligne in LIGNES_DPGF[lot]:
+            ws.append(ligne)
     tampon = io.BytesIO()
     wb.save(tampon)
     return tampon.getvalue()
@@ -148,9 +155,46 @@ def ecrire(dossier: Path) -> list[Path]:
     return [archive, *sorties, dc2]
 
 
+# Les noms des pièces du second parcours : la DPGF de chaque lot porte le numéro de son lot (le classement par lot les
+# rattache), le dossier porte la marque du second test (son ménage ne touche pas aux AO du premier).
+NOM_ZIP_DEUX_LOTS = "E2E2 Grebes deux lots.zip"
+DPGF_PAR_LOT = {LOT1: "DPGF Lot 01 - Gros oeuvre.xlsx", LOT2: "DPGF Lot 02 - Menuiseries exterieures.xlsx"}
+ATTESTATION = "Attestation assurance decennale E2E2.pdf"
+
+
+def ecrire_parcours_2(dossier: Path) -> list[Path]:
+    """Le dossier « deux lots » (une DPGF par lot) et l'attestation à ranger au coffre-fort."""
+    from tests.pdf_fabrique import ecrire_pdf
+
+    d = dossier / "deux-lots"
+    d.mkdir(parents=True, exist_ok=True)
+    t = textes()
+    pieces = [
+        ecrire_pdf(d / "RC - Reglement de la consultation.pdf", t["RC"]),
+        ecrire_pdf(d / "CCAP.pdf", t["CCAP"]),
+        ecrire_pdf(d / "CCTP.pdf", t["CCTP"]),
+    ]
+    for lot, nom in DPGF_PAR_LOT.items():
+        f = d / nom
+        f.write_bytes(dpgf_xlsx((lot,)))
+        pieces.append(f)
+    archive = dossier / NOM_ZIP_DEUX_LOTS
+    with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as z:
+        for f in pieces:
+            z.write(f, f.name)
+    fin = _fr(date.today() + timedelta(days=300))
+    attestation = ecrire_pdf(dossier / ATTESTATION, [
+        "ATTESTATION D'ASSURANCE DE RESPONSABILITE CIVILE DECENNALE\nEntreprise E2E Batiment\n"
+        f"Assureur fictif : Mutuelle E2E\nPériode de validité : du {_fr(date.today())} au {fin}"])
+    return [archive, attestation]
+
+
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("usage : python -m tests.e2e.dce_invente <dossier>")
+    if len(sys.argv) not in (2, 3) or (len(sys.argv) == 3 and sys.argv[2] != "--parcours-2"):
+        print("usage : python -m tests.e2e.dce_invente <dossier> [--parcours-2]")
         sys.exit(2)
     for p in ecrire(Path(sys.argv[1])):
         print(p)
+    if len(sys.argv) == 3:
+        for p in ecrire_parcours_2(Path(sys.argv[1])):
+            print(p)
