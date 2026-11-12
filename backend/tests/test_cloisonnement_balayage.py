@@ -187,6 +187,10 @@ _CORPS: dict[tuple[str, str], dict] = {
     ("PATCH", "/api/references/{ref_id}"): {"intitule": "Renommée par B"},
     ("PATCH", "/api/qualifications/{qualification_id}"): {"intitule": "Renommée par B"},
     ("PATCH", "/api/users/team/{member_id}"): {"name": "Renommé par B"},
+    # REVUE-2 P2-4 — fonctions C1 et C2 : sans ces corps, une fois allumées, elles répondaient 422 avant le contrôle.
+    ("POST", "/api/projects/{project_id}/memoire/proposer-paragraphe"): {"sous_critere": "Méthodologie d'exécution"},
+    ("POST", "/api/projects/{project_id}/memoire/reecrire-trois"): {"passage": "Un passage de A.",
+                                                                    "action": "reformuler"},
 }
 
 
@@ -284,6 +288,10 @@ def _client_de(user: User) -> TestClient:
 
 @pytest.mark.parametrize("methode,chemin,variante", _cas())
 def test_l_organisation_b_n_atteint_aucun_objet_de_a(monde, methode, chemin, variante):
+    _balayer(monde, methode, chemin, variante)
+
+
+def _balayer(monde, methode, chemin, variante):
     _, user_b = monde
     route = next(r for m, c, r in ROUTES if m == methode and c == chemin)
     avant = _photo_de_la_base()
@@ -303,6 +311,50 @@ def test_l_organisation_b_n_atteint_aucun_objet_de_a(monde, methode, chemin, var
     apres = _photo_de_la_base()
     modifiees = [t for t in avant if avant[t] != apres[t]]
     assert not modifiees, f"{methode} {url} refusé mais a écrit dans : {modifiees}"
+
+
+# ── REVUE-2 P2-4 — seconde passe, fonctions C ALLUMÉES ───────────────────────────────────────────────────────────
+# Éteintes (le défaut), leurs routes répondent 404 par l'interrupteur : le contrôle d'appartenance n'est jamais atteint.
+# Ici, l'interrupteur laisse passer et le modèle est remplacé par une fonction qui lève (0 €, aucun appel) : le 404 ou
+# le 403 prouve que l'appartenance est vérifiée avant l'appel.
+_INTERRUPTEURS_C = ("RELECTURE_PROPOSER", "REECRIRE_TROIS", "FICHE_PROPOSEE", "STYLE_ENTREPRISE")
+
+
+def _derriere_un_interrupteur(chemin_methode) -> bool:
+    methode, chemin = chemin_methode
+    route = next(r for m, c, r in ROUTES if m == methode and c == chemin)
+    return any(getattr(d.dependency, "__module__", "") == "services.fonctions_ia"
+               and getattr(d.dependency, "__name__", "").startswith("exiger_") for d in route.dependencies)
+
+
+def _cas_allumees():
+    return [c for c in _cas() if _derriere_un_interrupteur(c.values[:2])]
+
+
+@pytest.fixture
+def fonctions_c_allumees(monkeypatch):
+    for variable in _INTERRUPTEURS_C:
+        monkeypatch.setenv(variable, "1")
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "")
+
+    def _interdit(*a, **k):
+        raise AssertionError("appel du modèle atteint depuis une autre organisation")
+    from services.ai import fonctions_c
+    for nom in ("proposer_paragraphe", "reecrire_trois", "proposer_fiches", "lire_style"):
+        monkeypatch.setattr(fonctions_c, nom, _interdit)
+
+
+@pytest.mark.parametrize("methode,chemin,variante", _cas_allumees())
+def test_fonctions_c_allumees_l_organisation_b_n_atteint_aucun_objet_de_a(monde, fonctions_c_allumees, methode, chemin,
+                                                                          variante):
+    _balayer(monde, methode, chemin, variante)
+
+
+def test_la_passe_allumee_couvre_c1_c2_et_c3():
+    chemins = {c.values[1] for c in _cas_allumees()}
+    assert chemins == {"/api/projects/{project_id}/memoire/proposer-paragraphe",
+                       "/api/projects/{project_id}/memoire/reecrire-trois",
+                       "/api/projects/{project_id}/plan-memoire/proposer-voulu"}
 
 
 def test_chaque_exception_correspond_a_une_route_reelle():
