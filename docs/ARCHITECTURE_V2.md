@@ -4,10 +4,10 @@
 
 | Field | Value |
 |---|---|
-| Document version | 2.5 |
+| Document version | 2.6 |
 | Status | Active — aligné sur **Vision V1 FINALE** (PRD v3.0, 2026-07-01) |
 | Companion to | [`PRD_SYNORIX_V2.md`](./PRD_SYNORIX_V2.md), [`SKILLS_REGISTRY_V2.md`](./SKILLS_REGISTRY_V2.md) |
-| Last updated | 2026-07-01 |
+| Last updated | 2026-11-12 |
 
 ---
 
@@ -181,6 +181,15 @@ This is deliberate — the V2.0 success criterion is *ship & be impressive*, not
 | **Claude Opus 4.7** | Fallback only (default of `MemoireGenerator.MODEL`, never called today) | €0.10–0.30 | Repli par défaut du générateur. La réécriture ciblée de paragraphe (éditeur mémoire) est passée sur Sonnet 5.5 (décision du 4/11, recette Ozcan), plafonnée à 60 par jour et par organisation |
 
 > **Synorix Score = déterministe 0 € (Vision V1 FINALE).** Le go/no-go d'éligibilité (PRD §1.7 D1) et le score de conformité étape 5 (« 14/16 », PRD §3.5) sont **calculés sans LLM** sur les données déjà extraites — Opus n'y intervient **pas**. Le Synorix Score qualité mémoire /100 (LLM) est déclassé en V1.5.
+
+> **Fonctions C1 à C4 : livrées éteintes (12/11/2026).** `services/fonctions_ia.py` : un interrupteur par fonction, `0` par défaut (`backend/.env.example`), lu à chaque requête. Éteinte, la route répond **404 avant toute autre dépendance** (ni budget, ni réservation, ni ligne d'audit) et `GET /api/fonctions-ia` la dit éteinte : aucun bouton. Allumée, elle passe par l'interrupteur, puis `exiger_budget_ia` (§8.10), un plafond sur 24 h compté avant l'appel par une ligne d'audit (passée en `<action>.echec` si le fournisseur échoue : rien de consommé), et inscrit son coût dans `couts_ia`. Routes : `routers/fonctions_ia.py` ; appels : `services/ai/fonctions_c.py` ; prompts : `services/ai/prompts_fonctions_c.py`.
+>
+> | | Interrupteur | Route | Modèle | Plafond / 24 h |
+> |---|---|---|---|---|
+> | C1 « Proposer un paragraphe » (ligne « À couvrir » de la relecture) | `RELECTURE_PROPOSER` | `POST /api/projects/{id}/memoire/proposer-paragraphe` | Sonnet 5.5 (`MEMOIRE_MODELE`) | 60, partagé avec la réécriture (`REECRIRE_MAX_PAR_JOUR`) |
+> | C2 réécriture en trois propositions | `REECRIRE_TROIS` | `POST /api/projects/{id}/memoire/reecrire-trois` | Sonnet 5.5 | idem |
+> | C3 « Ce que vous voulez dire » proposé par fiche du plan | `FICHE_PROPOSEE` | `POST /api/projects/{id}/plan-memoire/proposer-voulu` | Haiku 4.5 | 20 |
+> | C4 « Le style de mon entreprise » (ancien mémoire) | `STYLE_ENTREPRISE` | `GET`, `POST`, `DELETE /api/entreprise/style` | Haiku 4.5 | 5 ; table `styles_entreprise` (migration `0036`), **jamais lue par le générateur** |
 
 ### 3.2 Cost target per AO
 
@@ -695,6 +704,15 @@ Every skill invocation emits one or more progress events over a per-project SSE 
 
 **WSL2 dev note:** SSE is implemented over HTTP/1.1 with `asyncio.to_thread`-wrapped emitters to avoid the long-running async-context timeout observed in WSL2 dev environments.
 
+### 5.6 Contrôles déterministes avant le dépôt (fonctions B, 0 €) <!-- v2.6 -->
+
+Aucun appel d'IA ; jamais bloquants (une ligne « À relire », le fichier part quand même dans le ZIP) ; projet de l'organisation vérifié (404 sinon).
+
+- **B7 — formulaire rempli déposé en PDF** (`routers/candidature.py`, `services/controle_formulaire.py`) : à `POST /api/projects/{id}/checklist/{item}/upload-completed`, le texte (30 pages au plus) est lu hors event-loop et jamais conservé ; ni la raison sociale ni le SIRET du profil, ou scan sans texte → `status: "warning"`, motif dans `details`, champ calculé `a_relire` (`schemas/compliance.py`).
+- **B9 — contrôle des fichiers du pli** : `GET /api/projects/{id}/export/controle-fichiers` (`routers/controle_depot.py`, `services/controle_fichiers_zip.py`), sur le **même plan que le ZIP** : « [À COMPLÉTER » restants (formulaires remplis, mémoire), noms qui cassent et chemins de plus de 150 caractères, taille comparée à la limite du règlement seulement si une exigence la porte. 30 pages lues au plus par PDF ; cache LRU de 512 entrées (chemin, taille, date de modification).
+- **B4 — exigences du mémoire** : `GET /api/projects/{id}/memoire/relecture` ajoute le bloc `exigences` (`services/exigences_memoire.py`) : exigences « offre » et « critères de notation » du RC reliées au paragraphe qui les traite (« Traitée » / « À couvrir »), élément par élément pour une exigence qui énumère.
+- **B3 — votre équipe face au dossier** : `GET /api/projects/{id}/equipe` (`routers/equipe_dossier.py`, `services/equipe_dossier.py`) : SST, CACES, AIPR, habilitation électrique, amiante, travail en hauteur, Qualibat, RGE cités par le dossier, en face des habilitations, qualifications et certifications du profil (« Dans votre profil » / « À confirmer »), chacun avec sa source.
+
 ---
 
 ## 6. Skills System Architecture
@@ -924,9 +942,9 @@ Even if the frontend validates a field, the backend **revalidates**. The fronten
 
 ### 7.11 Rate limiting
 
-- Per-IP: 100 req / min (Nginx)
-- Per-account **throttle technique anti-abus** (distinct du **quota commercial** §8.10 / PRD §6) : 30 uploads DCE / jour ; 100 générations mémoire / jour (FastAPI middleware Redis)
-- Coach: 60 messages / hour per user
+- **Nginx, par IP** : `limit_req` 20 requêtes/s, rafale 40 (`deploy/nginx/synorix.conf`) ; au-delà, 503 avec une réponse en français (`deploy/nginx/synorix-proxy.conf`).
+- **API, par minute** : **un seul** limiteur slowapi pour toute l'appli (`services/rate_limit.py`). Clé = **organisation** quand la requête est authentifiée (posée par `get_auth_user`, liée à un jeton validé), sinon IP. Stockage Redis en production (compteurs partagés), mémoire en test et en `DEBUG`. Redis tombé : repli sur un compteur en mémoire du processus (S-10), **une** ligne `ERROR` à la panne et une au retour (R-05), jamais de 5xx. Limites par route (`@limiter.limit`), par exemple : analyse 5/min, rédaction du mémoire et « Refaire » 3/min, réécriture d'un passage 10/min, questions 3/min, C1/C2 10/min, C3 5/min, C4 3/min ; `POST /api/csp-rapport` limité par IP.
+- **Plafonds du jour, par organisation, toutes offres** (distincts du **quota commercial** §8.10 / PRD §6), comptés sur 24 h glissantes **avant** l'appel (`services/plafonds_ia.py`, réglables, `0` coupe) : `PLAFOND_JOUR_ANALYSES` 20 et `PLAFOND_JOUR_MEMOIRES` 20 lancements (analyses remboursées comprises), `IMPORT_MEMOIRE_MAX_PAR_JOUR` 5, `REFORMULER_MAX_PAR_JOUR` 30, `PLAFOND_JOUR_QUESTIONS` 10 ; dans le code : « Refaire cette partie » 10 (`REFAIRE_MAX_PAR_JOUR`) et réécriture d'un passage 60 (`REECRIRE_MAX_PAR_JOUR`, `routers/memoire.py`). Au-delà : 429 « Plafond du jour atteint… Il se remet à zéro demain. »
 
 ### 7.12 Audit log
 
@@ -934,9 +952,12 @@ Every privileged action (login, sidebar edit, document download, billing change)
 
 ### 7.13 Data retention & deletion
 
-- Account deletion: pipeline data hard-deleted within 30 days (cascade).
+- **Suppression du compte** (`DELETE /api/users/me`, réservée à l'administrateur de l'entreprise : 403 pour un membre ; `services/resiliation_compte.py`, `services/suppression_compte.py`) :
+  - **sans abonnement payant vivant** : suppression **immédiate**. Les abonnements ouverts non payés sont d'abord résiliés chez le fournisseur (échec → 502, rien supprimé) ; puis toutes les tables liées à l'organisation (déduites des modèles), en une transaction, fichiers effacés après le commit ; puis l'utilisateur Clerk (échec journalisé, suppression acquise).
+  - **avec un abonnement payant vivant** (`active`, `trialing`, `past_due`) — **décision D23** (CGV 7.1-7.2 : accès ouvert jusqu'à la fin de la période payée, mois entamé non remboursé) : suppression **programmée**. Chaque abonnement vivant est arrêté à l'échéance (`at_period_end`), la date est posée sur `organizations.suppression_prevue_le` (migration `0035`), rien n'est effacé. Exécution au webhook `customer.subscription.deleted` seulement s'il y a une demande et que le fournisseur, relu, confirme qu'aucun abonnement payant ne vit encore ; filet quotidien du beat `suppressions-comptes-echues-daily` → `tasks.suppression_comptes.executer_suppressions_echues`. `GET /api/users/me/suppression` dit ce que le dialogue annonce ; `POST /api/users/me/annuler-suppression` reprend **un seul** abonnement parmi ceux que la demande a arrêtés (trace dans `audit_logs`) ; une reprise depuis le portail retire la demande (état relu chez le fournisseur). `/api/billing/quota` porte `suppression_prevue_le`.
+- **AO supprimés** : fichiers purgés après `SYNORIX_PURGE_AO_JOURS` (30) par la tâche quotidienne `purge-ao-supprimes-daily` ; simulation (comptes au journal, rien supprimé) tant que `SYNORIX_PURGE_AO_ACTIVE=0`.
 - Coffre-fort docs: hard-deleted immediately on user request.
-- Backups: rotated within 90 days.
+- **Sauvegardes** : restic chiffré hors du VPS, rétention 7 jours, 4 semaines, 6 mois ; essai de restauration `deploy/sauvegarde/synorix-essai-restauration.sh` (`docs/DEPLOYMENT.md` § 11).
 
 ---
 
@@ -959,6 +980,8 @@ Every privileged action (login, sidebar edit, document download, billing change)
 
 See [§4](#4-database-schema). Every query path in the user-facing flow has been mapped to an index. EXPLAIN ANALYZE runs in CI for any new migration touching > 1M rows.
 
+Migration `0037` (index de lecture à l'échelle, 12/11/2026) : `ix_notifications_org_created` (`organization_id`, `created_at`) pour la cloche ; extension `pg_trgm` et index GIN trigrammes `ix_avis_veille_objet_trgm` / `ix_avis_veille_acheteur_trgm` pour la recherche de la veille (PostgreSQL seulement). `alembic check` passe sur une base neuve (`tests/test_alembic_check_r02.py`) et `downgrade base` aussi (`tests/test_migrations_aller_retour_r01.py`).
+
 ### 8.4 Eager loading
 
 SQLAlchemy `selectinload` on every relationship traversed in a list view. PR checks reject obvious N+1 patterns.
@@ -970,6 +993,8 @@ All AI generation streams via SSE. The frontend renders progressively; no spinne
 ### 8.6 `asyncio.to_thread`
 
 Every Anthropic SDK call wraps in `asyncio.to_thread` — even though the SDK exposes async, this prevents WSL2 event-loop starvation during dev. In production we re-evaluate, but the wrapping is harmless.
+
+**Exécuteur nommé et borné (R-04).** Par défaut, asyncio prend `min(32, cpu + 4)` fils, soit 5 sur 1 vCPU, partagés par tous les `to_thread` (appels courts à l'IA, copies vers le coffre, aperçus PDF). `services/executeur.py` pose au démarrage de l'API (`lifespan=cycle_de_vie`, `main.py`) un `ThreadPoolExecutor` de `SYNORIX_FILS_TO_THREAD` fils (16 par défaut, borné à 64). Les longs travaux (analyse, mémoire, « Refaire ») tournent, eux, dans un fil démon détaché de la requête (`threading.Thread`, `routers/analysis.py`, `routers/memoire.py`).
 
 ### 8.7 Bundle size (frontend)
 
@@ -998,15 +1023,11 @@ V1.0 — sized for the KVM 2 (8 GB RAM total, shared with FastAPI + Redis + Cele
 
 Two distinct dimensions: **customer-visible quota** (Vision V1 FINALE, billing-facing) and **internal AI hard ceiling** (cost-protection, invisible to user).
 
-- **Customer-visible quota** (§4.3 `quota_consumption`, PRD §6) — **deux compteurs mensuels** :
-  - Pro : **40 analyses + 40 mémoires / mois** (1 lot = 1 mémoire = 1 unité).
-  - Business : **illimité (fair use)**.
-  - **Pas d'overage facturé en V1.** Au dépassement Pro : **blocage doux + nudge upgrade** ; jamais de blocage silencieux.
-  - **Soft warning à 70 %** du quota mensuel.
-- **Internal AI hard ceiling (invisible au client, cost-protection) :**
-  - Per-account daily cap: €15 (~15 AO/day at ~€1/AO).
-  - Monthly: Pro €100, Business €300 (fair-use safety ceiling).
-  - At hard AI cap: pause new analyses, full read access preserved, contact CTA.
+- **Customer-visible quota** (§4.3 `quota_consumption`, PRD §6) — **deux compteurs mensuels**, source unique `services/quota.py` (`PLAN_LIMITS`) = `frontend/src/lib/offres.ts` (grille du 2026-11-11, plus aucune offre illimitée) :
+  - Essai : **1 analyse + 1 mémoire**, une seule fois (1 AO offert) ; Essentiel **5 + 5** ; Pro **30 + 30** ; Business **70 + 70** par mois (1 lot = 1 mémoire = 1 unité). Fenêtre ancrée sur la date d'abonnement (`current_period_start`).
+  - **Pas d'overage facturé en V1.** Au dépassement : 402, **blocage doux + offre supérieure** ; Business (offre la plus haute) : « Il peut être relevé sur demande. » Jauges plafonnées (« 30 sur 30 »).
+- **Plafonds du jour, toutes offres** : §7.11 (20 analyses et 20 mémoires lancés par jour et par organisation, etc.).
+- **Budget d'IA du jour (filet invisible, S-01)** — `services/budget_ia.py` : somme de `couts_ia.cout_eur` sur 24 h glissantes **plus** les réservations en cours, par organisation ; au-delà de `BUDGET_IA_JOUR_EUR` (60 €), 429 « Plafond du jour atteint. Il se remet à zéro demain. » sur chaque route qui appelle le modèle (`Depends(exiger_budget_ia)`, liste fermée tenue par `tests/test_budget_ia_s01.py`). Au lancement, une réservation forfaitaire (analyse 3 €, mémoire 1,5 €, « Refaire » 0,5 €, appel synchrone 0,2 €) est posée sous un verrou par organisation ; le travail la règle à la fin, dans la même transaction que la dépense réelle (`couts_ia.enregistrer_collecte`, réussite comme échec) ; une réservation orpheline ne compte plus après `BUDGET_IA_RESERVATION_MINUTES` (120). Les lectures des dépôts de Mon entreprise et le filet des lots sont **reportés** au lieu d'être refusés (`depot_budget.raison_de_report`). Un modèle sans tarif est compté au tarif le plus cher.
 
 Breaches surface as a Coach explainer: *"Limite quotidienne atteinte, reprise à minuit. Besoin d'une augmentation ? Contactez-nous."* (premium-silent tone — never blame the user, never mention cost).
 
@@ -1126,44 +1147,42 @@ Edge / CDN deferred to V1.5, at which point **Cloudflare** in front of the VPS i
 
 ### 10.6 Environment variables (backend)
 
+Liste complète, défauts et rôle : `backend/.env.example` et `docs/DEPLOYMENT.md` § 6 (le code fait foi ; une clé inconnue est ignorée au démarrage). Les principales :
+
 ```
-DATABASE_URL=postgresql+asyncpg://...
-SECRET_KEY=...
-# Anthropic — two keys, never swapped between envs (see §7.7)
-ANTHROPIC_API_KEY_PROD=...          # production only — IP-locked to VPS
-ANTHROPIC_API_KEY_DEV=...           # WSL2 dev + CI — capped at €50/month in Console
+DEBUG=false
+SECRET_KEY=...                      # signe les URLs de fichiers ; refus de démarrer si courte
+DATABASE_URL=postgresql://...
+REDIS_URL=redis://localhost:6379/0
+ANTHROPIC_API_KEY=...
+MEMOIRE_MODELE=                     # vide = Sonnet 5.5
 CLERK_SECRET_KEY=...
-CLERK_WEBHOOK_SECRET=...
+CLERK_JWKS_URL=...
 STRIPE_SECRET_KEY=...
 STRIPE_WEBHOOK_SECRET=...
-S3_ENDPOINT=...
-S3_ACCESS_KEY=...
-S3_SECRET_KEY=...
-S3_BUCKET=...
-REDIS_URL=redis://localhost:6379/0
-SENTRY_DSN=...
-COFFRE_FORT_KEK=...                 # 32-byte hex; rotated yearly
-# Quotas client (Vision V1 FINALE) — deux compteurs, pas d'overage en V1
-QUOTA_PRO_ANALYSES_PER_MONTH=40
-QUOTA_PRO_MEMOIRES_PER_MONTH=40
-QUOTA_BUSINESS_MODE=fair_use
-# Plafond IA interne (invisible client, cost-protection)
-COST_GUARD_DAILY_EUR=15.00
-COST_GUARD_MONTHLY_PRO_EUR=100.00
-COST_GUARD_MONTHLY_BUSINESS_EUR=300.00
-# INSEE SIRENE — SIRET validation at sign-up (see §11.4)
-INSEE_SIRENE_API_TOKEN=...
-INSEE_SIRENE_API_URL=https://api.insee.fr/entreprises/sirene/V3
-SIRET_NAF_ALLOWED_PREFIXES=41,42,43   # BTP sector
+STRIPE_PRODUCT_ESSENTIEL= / STRIPE_PRODUCT_PRO= / STRIPE_PRODUCT_BUSINESS=
+FRONTEND_URL=https://synorix.tech
+# Plafonds et budget (§7.11, §8.10) ; 0 coupe
+PLAFOND_JOUR_ANALYSES=20  PLAFOND_JOUR_MEMOIRES=20  PLAFOND_JOUR_QUESTIONS=10
+IMPORT_MEMOIRE_MAX_PAR_JOUR=5  REFORMULER_MAX_PAR_JOUR=30
+BUDGET_IA_JOUR_EUR=60  BUDGET_IA_RESERVATION_MINUTES=120
+ESSAI_EXIGE_SIRET=0
+QUOTA_STOCKAGE_GO=20  QUOTA_STOCKAGE_GRATUIT_GO=5  DISQUE_LIBRE_MIN_POURCENT=15
+# Fonctions C1 à C4 (§3.1), éteintes
+RELECTURE_PROPOSER=0  REECRIRE_TROIS=0  FICHE_PROPOSEE=0  STYLE_ENTREPRISE=0
+# Exécuteur de to_thread (§8.6)
+SYNORIX_FILS_TO_THREAD=16
 ```
+
+Les quotas des offres ne sont **pas** des variables : ils sont dans `PLAN_LIMITS`. Pas de clé Sirene (§11.4). `AWS_*` à laisser vides en V1. Sentry n'est pas encore câblé (pas de `SENTRY_DSN`).
 
 ### 10.7 Environment variables (frontend)
 
+Figées au build (`frontend/.env.example`) :
+
 ```
-VITE_API_URL=https://api.synorix.tech
-VITE_CLERK_PUBLISHABLE_KEY=...
-VITE_STRIPE_PUBLISHABLE_KEY=...
-VITE_SENTRY_DSN=...
+VITE_CLERK_PUBLISHABLE_KEY=...      # obligatoire
+VITE_API_URL=                       # vide en production (même origine, nginx proxifie /api/)
 ```
 
 ---
@@ -1199,7 +1218,7 @@ VITE_SENTRY_DSN=...
 
 Used at sign-up to validate the customer's SIRET, ensure the entity is active, and verify it belongs to the BTP sector (NAF code prefix 41, 42, or 43).
 
-> **Statut d'implémentation (2026-07-01) :** le champ `siret` est **stocké** (modèle `Organization`), mais l'appel Sirene n'est **pas encore câblé** — pré-remplissage profil + validation NAF **à construire** (voir TASKS). Ci-dessous = design cible.
+> **Statut d'implémentation (2026-11-12) :** câblé (`6791d3b`) par `services/insee_service.py`, sur l'API publique **recherche-entreprises.api.gouv.fr** (gratuite, **sans clé**), 5 s de délai, 2 tentatives ; 1 SIRET = 1 essai. Les lignes ci-dessous (API INSEE V3 en OAuth2, cache Redis) restent le design d'origine, non retenu.
 
 - **Endpoint:** `GET https://api.insee.fr/entreprises/sirene/V3/siret/{siret}`
 - **Auth:** OAuth2 bearer token (free, INSEE-issued, 30 req/sec rate limit).
@@ -1212,7 +1231,7 @@ Used at sign-up to validate the customer's SIRET, ensure the entity is active, a
 - Subscriptions (Pro / Business) — **carte uniquement en V1** (`payment_method_types=["card"]`) ; **pas de SEPA** (migration d'entité juridique : les mandats ne migrent pas entre comptes Stripe)
 - Provider abstrait (`billing_provider`, `billing_country`) déjà en place — prêt pour la migration d'entité
 - Customer Portal for self-service plan management
-- Webhooks for `customer.subscription.updated` → updates `accounts.subscription_status`
+- Webhooks for `customer.subscription.updated` → updates `accounts.subscription_status` ; `customer.subscription.deleted` exécute une suppression de compte programmée (D23, §7.13) ou rend l'offre gratuite ; un `updated` qui reprend le renouvellement retire la demande. La route du webhook est synchrone (`def`), son corps brut lu par une dépendance asynchrone (P2-1).
 - **Production keys** activated before V1.0 ships
 
 ### 11.6 NotebookLM strategy
@@ -1247,6 +1266,15 @@ The expert knowledge is **baked in at build time**, not retrieved at runtime —
 ---
 
 ## 12. Changelog
+
+### 2.6 — 2026-11-12 (relu contre le code, mission finale)
+
+- **§3.1** — Fonctions C1 à C4 livrées éteintes (interrupteurs, routes, modèles, plafonds).
+- **§5.6 NEW** — Contrôles déterministes avant le dépôt (B7, B9, B4, B3).
+- **§7.11** — Limiteur réel (nginx 20 r/s ; slowapi unique, clé organisation, repli en mémoire, alerte R-05) et plafonds du jour ; « Coach » retiré (aucune route).
+- **§7.13** — Suppression du compte : immédiate sans abonnement payant, programmée avec (D23, `0035`, webhook, tâche quotidienne, annulation) ; purge des AO ; sauvegardes réelles.
+- **§8.3 / §8.6 / §8.10** — Index `0037` ; exécuteur de `to_thread` (R-04) ; quotas de la grille du 11/11 et budget d'IA du jour (60 €, réservations) à la place du « cost guard » 15 €/100 €/300 € jamais codé.
+- **§10.6 / §10.7** — Variables réellement lues par le code. **§11.4** — Sirene câblé (API publique sans clé). **§11.5** — webhooks de D23.
 
 ### 2.5 — 2026-07-01 (alignement Vision V1 FINALE)
 
