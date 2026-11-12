@@ -24,6 +24,8 @@ Mots positifs seulement : « Traitée », « À couvrir » ; jamais « manquant 
 from __future__ import annotations
 
 import re
+from bisect import bisect_left
+from collections import Counter
 from typing import Any, Iterable, Optional
 
 from services.memoire_criteres import _COURANTES, _est_prix, _racines, _sans_accents
@@ -65,10 +67,6 @@ def _meme_racine(a: str, b: str) -> bool:
     if len(court) >= 4:
         return long_.startswith(court)
     return len(court) == 3 and len(long_) == 4 and long_.startswith(court)
-
-
-def _communes(exigence: frozenset[str], texte: frozenset[str]) -> int:
-    return sum(1 for r in exigence if any(_meme_racine(r, t) for t in texte))
 
 
 def _suffit(n: int, total: int) -> bool:
@@ -116,33 +114,77 @@ def elements_de_liste(texte: str) -> list[str]:
 
 
 class _Memoire:
-    """Les paragraphes et sections du mémoire, lus une fois pour toutes les exigences."""
+    """Les paragraphes et sections du mémoire, lus une fois pour toutes les exigences.
+
+    P2-2 (relecture du 12/11) — index des racines du mémoire : pour une racine d'exigence, les paragraphes qui portent
+    une racine équivalente (``_meme_racine``) se trouvent par quelques recherches (égalité, préfixes de la racine,
+    racines qui la prolongent par ``bisect`` dans le vocabulaire trié), au lieu de la comparer à toutes les racines de
+    chaque paragraphe et de chaque section (200 exigences sur 33 pages : 20 s avant, sous 1 s après). Même résultat
+    que l'ancien calcul (tests/test_exigences_memoire_index.py le compare sur des cas variés)."""
 
     def __init__(self, contenu: Any):
         self.paragraphes = _paragraphes(contenu)
         self.par_section: dict[str, frozenset[str]] = {}
         self.titres: dict[str, str] = {}
-        for ancre, titre, _rang, _texte, racines in self.paragraphes:
+        postings: dict[str, list[int]] = {}
+        for i, (ancre, titre, _rang, _texte, racines) in enumerate(self.paragraphes):
             self.par_section[ancre] = self.par_section.get(ancre, frozenset()) | racines
             self.titres[ancre] = titre
+            for r in racines:
+                postings.setdefault(r, []).append(i)
         self.ordre = {a: k for k, a in enumerate(self.par_section)}
+        self._postings = postings
+        self._vocabulaire = sorted(postings)
+        self._cache: dict[str, tuple[frozenset[int], frozenset[str]]] = {}
+
+    def _equivalentes(self, r: str) -> set[str]:
+        """Les racines du mémoire ``t`` telles que ``_meme_racine(r, t)``."""
+        voc, postings, n = self._vocabulaire, self._postings, len(r)
+        sortie = {r} if r in postings else set()
+        if n >= 3:
+            # t prolonge r : 4 lettres au moins pour r ; ou r de 3 lettres et t de 4.
+            j = bisect_left(voc, r)
+            while j < len(voc) and voc[j].startswith(r):
+                if n >= 4 or len(voc[j]) == 4:
+                    sortie.add(voc[j])
+                j += 1
+        # r prolonge t : t de 4 lettres au moins ; ou t de 3 lettres et r de 4.
+        sortie.update(r[:k] for k in range(4, n) if r[:k] in postings)
+        if n == 4 and r[:3] in postings:
+            sortie.add(r[:3])
+        return sortie
+
+    def _porteurs(self, r: str) -> tuple[frozenset[int], frozenset[str]]:
+        """(paragraphes, sections) qui portent une racine équivalente à ``r`` — calculés une fois par racine."""
+        if r not in self._cache:
+            paragraphes = frozenset(i for t in self._equivalentes(r) for i in self._postings[t])
+            self._cache[r] = (paragraphes, frozenset(self.paragraphes[i][0] for i in paragraphes))
+        return self._cache[r]
 
     def relier(self, cible: frozenset[str]) -> dict:
         """``{statut, libelle, ancre, section, paragraphe, extrait}`` pour un ensemble de racines."""
         total = len(cible)
-        notes = [(_communes(cible, p[4]), -i, p) for i, p in enumerate(self.paragraphes)]
-        sections = [(_communes(cible, r), -self.ordre[a], a) for a, r in self.par_section.items()]
+        par_paragraphe: Counter[int] = Counter()
+        par_section: Counter[str] = Counter()
+        for r in cible:
+            paragraphes, sections = self._porteurs(r)
+            par_paragraphe.update(paragraphes)
+            par_section.update(sections)
+        # Seuls comptent les paragraphes et sections qui portent au moins une racine (``_suffit`` exige n >= 1) ;
+        # à égalité, le premier dans l'ordre du document (comme l'ancien ``max`` sur (n, -rang)).
+        notes = [(n, -i) for i, n in par_paragraphe.items()]
+        sections_notees = [(n, -self.ordre[a], a) for a, n in par_section.items()]
         # Le préambule résume tout le mémoire : il ne sert qu'à défaut d'une partie qui traite l'exigence.
         for avec_preambule in (False, True):
-            permis = [n for n in notes if avec_preambule or n[2][0] != "preambule"]
-            meilleur = max(permis, default=None)
+            meilleur = max((x for x in notes if avec_preambule or self.paragraphes[-x[1]][0] != "preambule"),
+                           default=None)
             if meilleur and _suffit(meilleur[0], total):
-                return _lien(meilleur[2])
-            permises = [s for s in sections if avec_preambule or s[2] != "preambule"]
-            proche = max(permises, default=None)
+                return _lien(self.paragraphes[-meilleur[1]])
+            proche = max((s for s in sections_notees if avec_preambule or s[2] != "preambule"), default=None)
             if proche and _suffit(proche[0], total):
-                return _lien(max(n for n in notes if n[2][0] == proche[2])[2])
-        proche = max(sections, default=None)
+                dans = max(x for x in notes if self.paragraphes[-x[1]][0] == proche[2])
+                return _lien(self.paragraphes[-dans[1]])
+        proche = max(sections_notees, default=None)
         ancre = proche[2] if proche and proche[0] > 0 else None
         return {"statut": A_COUVRIR, "libelle": _LIBELLES[A_COUVRIR], "ancre": ancre,
                 "section": self.titres.get(ancre or ""), "paragraphe": None, "extrait": None}
