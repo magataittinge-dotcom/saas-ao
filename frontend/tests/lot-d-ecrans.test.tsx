@@ -182,7 +182,10 @@ test('adresse inconnue : un écran, plus un renvoi muet ; connecté, on reste da
     assert.ok(/<h1[^>]*>Cette adresse n’existe pas<\/h1>/.test(html))
     assert.equal(nb(html, /bg-accent-fill/g), 1)
   }
-  assert.ok(visiteur.includes('href="/"') && visiteur.includes('href="/login"'))
+  // jury, tour 1 : un visiteur n'a pas de dossier ; « Se connecter » est dans l'en-tête du site ; le bas de l'écran est composé
+  assert.ok(visiteur.includes('href="/"') && !visiteur.includes('Vos dossiers') && connecte.includes('Vos dossiers ne sont pas touchés'))
+  assert.ok(visiteur.includes('data-synorix-parle') && visiteur.includes('href="/#comment"') && !connecte.includes('data-synorix-parle'))
+  assert.match(lire('src/App.tsx'), /<CoquillePublique nav=\{<NavSite \/>\}><AdresseInconnue connecte=\{false\} \/>/)
   assert.ok(connecte.includes('href="/dashboard"') && connecte.includes('href="/projects"') && !connecte.includes('href="/"'))
   const ao = rendre(<AOIntrouvable />)
   assert.ok(ao.includes('Cet appel d’offres est introuvable') && ao.includes('href="/projects"'))
@@ -196,6 +199,10 @@ test('écran d’erreur : calme, en français, deux gestes ; rien de technique �
   assert.ok(html.includes('Recharger la page') && html.includes('Revenir à l’accueil'))
   assert.equal(nb(html, /<h1/g), 1)
   assert.doesNotMatch(html, /Erreur React|stack|Error|undefined|monospace/)
+  assert.ok(html.includes('fil-aurore') && html.includes('mailto:contact@synorix.tech'), 'la signature sous le titre ; qui joindre si l’erreur revient')
+  assert.doesNotMatch(html, /Rechargez la page/, 'la phrase ne répète plus les deux boutons')
+  const horsLigne = renderToStaticMarkup(<ConnexionInterrompue />)
+  assert.ok(horsLigne.includes('data-sens="ambre"') && horsLigne.includes('Hors connexion') && horsLigne.includes('role="status"'), 'hors ligne : l’état a son signe')
   const app = sansCommentaires(lire('src/App.tsx'))
   assert.doesNotMatch(app, /error\.stack\}|error\.message\}|Erreur React|style=\{\{/)
   assert.match(app, /componentDidCatch\(/)
@@ -234,9 +241,9 @@ test('Mes AO sans AO : la page du système, un seul geste (déposer), Synorix di
   assert.doesNotMatch(src, /uppercase|VisagePetit|rounded-\[|text-\[/)
 })
 
-test('typographie : aucun repère d’espace insécable resté dans un texte affiché, et le point-virgule de l’écran d’erreur tient à son mot', () => {
+test('typographie : aucun repère d’espace insécable resté dans un texte affiché, et les deux-points de l’écran d’erreur tiennent à leur mot', () => {
   const html = renderToStaticMarkup(<ErreurAppli />)
-  assert.ok(html.includes(`Rechargez la page${NB}; si l’erreur revient`))
+  assert.ok(html.includes(`écrivez-nous${NB}: `))
   for (const f of ['src/components/public/EcransHorsRouteur.tsx', 'src/components/public/EcransEtat.tsx', 'src/components/public/CoquillePublique.tsx',
     'src/routes/Landing.tsx', 'src/routes/Pricing.tsx', 'src/routes/Legal.tsx', 'src/routes/Login.tsx', 'src/routes/Register.tsx',
     'src/components/onboarding/FirstAOWelcome.tsx', 'src/components/onboarding/FilSeptEtapes.tsx', 'src/components/mesao/VideMesAO.tsx']) {
