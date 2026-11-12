@@ -240,10 +240,15 @@ def urls_documentation(debug: bool) -> dict:
     }
 
 
+# R-04 — exécuteur de `asyncio.to_thread` nommé et borné (SYNORIX_FILS_TO_THREAD, 16) posé au démarrage :
+# l'exécuteur par défaut n'a que 5 fils sur 1 vCPU (services/executeur.py).
+from services.executeur import cycle_de_vie  # noqa: E402
+
 app = FastAPI(
     title="SaaS AO BTP API",
     description="API for automating BTP tender responses",
     version="1.0.0",
+    lifespan=cycle_de_vie,
     **urls_documentation(settings.DEBUG),
 )
 
