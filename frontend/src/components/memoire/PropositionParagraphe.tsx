@@ -28,7 +28,7 @@ export default function PropositionParagraphe({ proposition, onRetour, onCopier,
       </Bouton>
       <div className="space-y-1">
         <h3 className="text-sm font-semibold text-fg">Paragraphe proposé</h3>
-        <p className="break-words text-sm text-fg-2">Pour couvrir : {proposition.sousCritere}</p>
+        <p className="break-words text-sm text-fg-2">Pour couvrir : {proposition.sousCritere}</p>
       </div>
       {proposition.etat === 'enCours' && (
         <div role="status" aria-busy="true">
@@ -47,7 +47,7 @@ export default function PropositionParagraphe({ proposition, onRetour, onCopier,
             <TexteMisEnForme texte={proposition.texte} />
           </p>
           <p className="text-xs text-fg-3">
-            Rédigé à partir de Mon entreprise et du dossier, sans rien inventer. Relisez-le avant de l’insérer ; un passage à
+            Rédigé à partir de Mon entreprise et du dossier, sans rien inventer. Relisez-le avant de l’insérer ; un passage à
             compléter reste à renseigner.
           </p>
           <div className="flex flex-wrap gap-2">

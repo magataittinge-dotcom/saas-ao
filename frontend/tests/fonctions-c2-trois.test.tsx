@@ -29,8 +29,8 @@ test('différences : rien ne se perd, l’avant et l’après se relisent', () =
 
 test('les différences se lisent sans la couleur : barré, souligné, et dites aux lecteurs d’écran', () => {
   const html = renderToStaticMarkup(<Differences morceaux={differences('Nous posons vite.', 'Nous posons bien.')} />)
-  assert.match(html, /<del [^>]*line-through[^>]*><span class="sr-only">Retiré : <\/span>vite\.<\/del>/)
-  assert.match(html, /<ins [^>]*underline[^>]*><span class="sr-only">Ajouté : <\/span>bien\.<\/ins>/)
+  assert.match(html, /<del [^>]*line-through[^>]*><span class="sr-only">Retiré : <\/span>vite\.<\/del>/)
+  assert.match(html, /<ins [^>]*underline[^>]*><span class="sr-only">Ajouté : <\/span>bien\.<\/ins>/)
 })
 
 test('le corps : trois choix, le texte choisi, « Voir les différences »', () => {

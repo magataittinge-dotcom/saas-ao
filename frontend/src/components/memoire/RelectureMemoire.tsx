@@ -137,7 +137,7 @@ export default function RelectureMemoire({ projectId }: { projectId: string }) {
       }, { timeout: 120_000 })
       setProposition({ etat: 'pret', sousCritere: ligne.texte, texte: data.paragraphe, section: ligne.ancre ? ligne.section : null, ligne })
     } catch (err) {
-      setProposition({ etat: 'erreur', sousCritere: ligne.texte, message: detailErreur(err, 'La proposition n’a pas pu se faire. Rien n’a été décompté ; réessayez dans un instant.'), ligne })
+      setProposition({ etat: 'erreur', sousCritere: ligne.texte, message: detailErreur(err, 'La proposition n’a pas pu se faire. Rien n’a été décompté ; réessayez dans un instant.'), ligne })
     }
   }
 

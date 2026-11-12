@@ -190,7 +190,7 @@ export default function FormCertifications({ donnees, avant, idPanneau, idOnglet
         </Groupe>
       </AfficherPlus>
       {styleAllume && (
-        <Groupe titre="Le style de mon entreprise" aide="Votre façon d’écrire, lue dans un ancien mémoire. Lecture seule.">
+        <Groupe titre="Le style de mon entreprise" aide="Votre façon d’écrire, tirée d’un ancien mémoire. Montrée ici seulement.">
           <Pleine><StyleEntreprise /></Pleine>
         </Groupe>
       )}

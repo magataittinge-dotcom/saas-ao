@@ -51,8 +51,8 @@ export function ApercuStyle({ donnees }: { donnees: ReponseStyle }) {
   if (!style) {
     return (
       <p className="text-sm text-fg-2">
-        Synorix peut lire un de vos anciens mémoires et décrire votre façon d’écrire : le ton, la longueur des phrases, les
-        tournures qui reviennent. C’est une lecture seule : la rédaction de vos mémoires n’en tient pas compte.
+        Synorix peut parcourir un de vos anciens mémoires et décrire votre façon d’écrire : le ton, la longueur des phrases,
+        les tournures qui reviennent. Ce style est montré ici seulement : la rédaction de vos mémoires n’en tient pas compte.
       </p>
     )
   }
@@ -79,12 +79,12 @@ export function ApercuStyle({ donnees }: { donnees: ReponseStyle }) {
         <figure className="space-y-2">
           <figcaption className="text-xs font-medium text-fg-2">Dans votre texte</figcaption>
           {style.exemples.map((e) => (
-            <blockquote key={e} className="break-words border-l-2 border-bord pl-4 font-memoire text-base text-fg">« {e} »</blockquote>
+            <blockquote key={e} className="break-words border-l-2 border-bord pl-4 font-memoire text-base text-fg">« {e} »</blockquote>
           ))}
         </figure>
       )}
       <p className="text-xs text-fg-3">
-        Lu dans {donnees.source_fichier}{le ? `, le ${le}` : ''}. Lecture seule : la rédaction de vos mémoires n’en tient pas compte.
+        Tiré de {donnees.source_fichier}{le ? `, le ${le}` : ''}. Montré ici seulement : la rédaction de vos mémoires n’en tient pas compte.
       </p>
     </div>
   )
@@ -113,7 +113,7 @@ export default function StyleEntreprise() {
       return (await api.post<ReponseStyle>('/entreprise/style', fd, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 120_000 })).data
     },
     onSuccess: (r) => { queryClient.setQueryData(['style-entreprise'], r); setDialogue(false) },
-    onError: (err) => setErreur(detailErreur(err, 'La lecture n’a pas abouti. Rien n’a été décompté ; réessayez dans un instant.')),
+    onError: (err) => setErreur(detailErreur(err, 'Le style n’a pas pu être relevé. Rien n’a été décompté ; réessayez dans un instant.')),
   })
   const effacer = useMutation({
     mutationFn: async () => (await api.delete<ReponseStyle>('/entreprise/style')).data,
@@ -122,14 +122,14 @@ export default function StyleEntreprise() {
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
     accept: FORMATS, multiple: false, noClick: true, noKeyboard: true, disabled: lire.isPending,
     onDrop: (acceptes) => { if (acceptes[0]) { setFichier(acceptes[0]); setErreur(null) } },
-    onDropRejected: () => setErreur('Ce format n’est pas lu : déposez un fichier Word (.docx) ou PDF.'),
+    onDropRejected: () => setErreur('Ce format n’est pas lu : déposez un fichier Word (.docx) ou PDF.'),
   })
 
   const donnees = lecture.data
   return (
     <div className="space-y-4">
       {lecture.isLoading ? (
-        <div role="status" aria-busy="true"><span className="sr-only">Lecture du style…</span><SqueletteLignes lignes={3} /></div>
+        <div role="status" aria-busy="true"><span className="sr-only">Chargement du style…</span><SqueletteLignes lignes={3} /></div>
       ) : lecture.isError || !donnees ? (
         <Message ton="erreur" action={<Bouton variante="secondaire" onClick={() => { void lecture.refetch() }}>Réessayer</Bouton>}>
           Le style n’a pas pu s’afficher. La connexion au serveur a échoué.
@@ -150,10 +150,10 @@ export default function StyleEntreprise() {
         onOuvert={(o) => { if (!o && !lire.isPending) setDialogue(false) }}
         taille="petit"
         titre="Lire le style d’un ancien mémoire"
-        description="Déposez un mémoire technique que vous avez rédigé. Synorix décrit votre façon d’écrire ; le fichier n’est pas gardé."
+        description="Déposez un mémoire technique que vous avez rédigé. Synorix décrit votre façon d’écrire ; le fichier n’est pas gardé."
         actions={<>
           <Bouton variante="secondaire" onClick={() => setDialogue(false)} disabled={lire.isPending}>Annuler</Bouton>
-          <Bouton variante="principal" onClick={() => { if (fichier) lire.mutate(fichier) }} disabled={!fichier} enCours={lire.isPending} libelleEnCours="Lecture du style…">
+          <Bouton variante="principal" onClick={() => { if (fichier) lire.mutate(fichier) }} disabled={!fichier} enCours={lire.isPending} libelleEnCours="Relevé du style…">
             Lire le style
           </Bouton>
         </>}
@@ -170,7 +170,7 @@ export default function StyleEntreprise() {
           )}
           <Bouton variante="secondaire" onClick={open} disabled={lire.isPending}>{fichier ? 'Choisir un autre fichier' : 'Choisir un fichier'}</Bouton>
         </div>
-        {lire.isPending && <p role="status" className="text-sm text-fg-2">La lecture prend une dizaine de secondes. Vous pouvez laisser cette fenêtre ouverte.</p>}
+        {lire.isPending && <p role="status" className="text-sm text-fg-2">Cela prend une dizaine de secondes. Vous pouvez laisser cette fenêtre ouverte.</p>}
         {erreur && <Message ton="erreur">{erreur}</Message>}
       </Dialogue>
     </div>

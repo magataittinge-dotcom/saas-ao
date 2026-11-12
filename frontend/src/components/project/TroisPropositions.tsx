@@ -23,8 +23,8 @@ export function Differences({ morceaux }: { morceaux: readonly Morceau[] }) {
         return (
           <Fragment key={i}>
             {x.sorte === 'retire'
-              ? <del className="rounded-sm bg-rouge-soft text-rouge-ink line-through"><span className="sr-only">Retiré : </span>{mots}</del>
-              : <ins className="rounded-sm bg-vert-soft text-vert-ink underline"><span className="sr-only">Ajouté : </span>{mots}</ins>}
+              ? <del className="rounded-sm bg-rouge-soft text-rouge-ink line-through"><span className="sr-only">Retiré : </span>{mots}</del>
+              : <ins className="rounded-sm bg-vert-soft text-vert-ink underline"><span className="sr-only">Ajouté : </span>{mots}</ins>}
             {blanc}
           </Fragment>
         )
@@ -87,7 +87,7 @@ export default function TroisPropositions({ trois, plafond, onFermer, onApplique
       ouvert={trois !== null}
       onOuvert={(o) => { if (!o) fermer() }}
       titre="Trois réécritures proposées"
-      description={`Choisissez celle qui vous convient ; rien n’est changé tant que vous n’acceptez pas. Aucune unité n’est décomptée (${plafond} réécritures par jour au plus).`}
+      description={`Choisissez celle qui vous convient ; rien n’est changé tant que vous n’acceptez pas. Aucune unité n’est décomptée (${plafond} réécritures par jour au plus).`}
       taille="grand"
       actions={(
         <>

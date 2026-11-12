@@ -37,9 +37,9 @@ export function ProposerFiches({ enCours, nombre, erreur, onProposer }: {
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
         <p className="min-w-0 flex-1 basis-72 text-sm text-fg-2">
           {nombre === null
-            ? 'Synorix peut proposer « Ce que vous voulez dire » pour chaque partie, à partir des exigences du dossier et de Mon entreprise. Vous relisez et prenez chaque proposition, ou non.'
+            ? 'Synorix peut proposer « Ce que vous voulez dire » pour chaque partie, à partir des exigences du dossier et de Mon entreprise. Vous relisez et prenez chaque proposition, ou non.'
             : nombre === 0
-              ? 'Rien de sûr à proposer : Mon entreprise ne dit pas encore assez de choses sur ces parties.'
+              ? 'Rien de sûr à proposer : Mon entreprise ne dit pas encore assez de choses sur ces parties.'
               : `${nombre} ${nombre > 1 ? 'propositions à relire' : 'proposition à relire'}, dans les fiches ouvertes ci-dessous.`}
         </p>
         <Bouton variante="secondaire" enCours={enCours} libelleEnCours="Proposition…" onClick={onProposer}>

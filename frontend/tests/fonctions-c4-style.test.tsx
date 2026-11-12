@@ -19,16 +19,16 @@ const LU: ReponseStyle = {
 test('le style lu : chaque trait, les tournures, l’exemple copié, la source et la date', () => {
   const html = renderToStaticMarkup(<ApercuStyle donnees={LU} />)
   for (const t of ['Sobre et technique', 'Titres numérotés', 'conducteur de travaux', 'réception sans réserve',
-    '« Notre conducteur de travaux assure le suivi quotidien du chantier. »', 'memoire-ecole-2025.docx', '12 novembre 2026']) {
+    '« Notre conducteur de travaux assure le suivi quotidien du chantier. »', 'memoire-ecole-2025.docx', '12 novembre 2026']) {
     assert.ok(html.includes(t), t)
   }
-  assert.match(html, /Lecture seule : la rédaction de vos mémoires n’en tient pas compte\./)
+  assert.match(html, /Montré ici seulement : la rédaction de vos mémoires n’en tient pas compte\./)
   assert.doesNotMatch(html, /manquant|incomplet|absent|!/i)
 })
 
 test('rien de lu : une phrase dit ce que fera la lecture, et qu’elle reste en lecture seule', () => {
   const html = renderToStaticMarkup(<ApercuStyle donnees={{ style: null, source_fichier: null, lu_le: null }} />)
-  assert.match(html, /lecture seule/)
+  assert.match(html, /montré ici seulement/)
   assert.doesNotMatch(html, /data-style-entreprise/)
   assert.doesNotMatch(html, /manquant|incomplet|absent|!/i)
 })

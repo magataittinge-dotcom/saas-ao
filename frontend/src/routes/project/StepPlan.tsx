@@ -257,7 +257,7 @@ export default function StepPlan({ project }: { project: Project }) {
             <ProposerFiches
               enCours={proposer.isPending}
               nombre={propositions ? Object.keys(propositions).length : null}
-              erreur={proposer.isError ? detailErreur(proposer.error, 'Les propositions n’ont pas pu se faire. Rien n’a été décompté ; réessayez dans un instant.') : null}
+              erreur={proposer.isError ? detailErreur(proposer.error, 'Les propositions n’ont pas pu se faire. Rien n’a été décompté ; réessayez dans un instant.') : null}
               onProposer={() => proposer.mutate()}
             />
           </SectionEtape>
