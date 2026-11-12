@@ -79,9 +79,11 @@ External integrations:
    - Higgsfield MCP (landing visuals — design phase only)
 ```
 
+> **État du code (12/11/2026), écarts avec le schéma ci-dessus.** Pas de WebSocket ni de Coach (aucune route) ; Redis sert au limiteur de débit (§7.11) et de courtier à Celery, pas de pub/sub. Pas de stockage objet en V1 : les pièces sont sur le disque du VPS (`backend/uploads`), servies par nginx en X-Accel-Redirect après contrôle de l'organisation et de la signature. Sentry n'est pas câblé. Celery (worker + beat) ne porte que les tâches planifiées (`tasks/check_expiry.py`).
+
 ### Process model
 
-- **Stateless** FastAPI workers behind Nginx
+- **Un seul processus FastAPI** derrière Nginx (`--workers 1` obligatoire, `deploy/systemd/synorix-api.service`) : la progression vit en mémoire du processus et les travaux longs (analyse, mémoire, « Refaire ») tournent dans des fils démons de l'API ; un redémarrage de l'API les interrompt (réconciliation au démarrage)
 - **Idempotent** request handling (every pipeline step is resumable)
 - **Async-first** I/O — `asyncio.to_thread` for any CPU-bound or third-party blocking call (especially Anthropic SDK calls, to avoid WSL2 timeouts during dev)
 - **Streaming** responses for AI generation (Server-Sent Events to the SPA)
@@ -948,7 +950,7 @@ Even if the frontend validates a field, the backend **revalidates**. The fronten
 
 ### 7.12 Audit log
 
-Every privileged action (login, sidebar edit, document download, billing change) logs to a separate Postgres table `audit_log` with `actor_user_id, action, target, ip, user_agent, created_at`.
+Every privileged action (login, sidebar edit, document download, billing change) logs to a separate Postgres table **`audit_logs`** (`models/audit_log.py`) with `user_id, organization_id, action, target_type, target_id, extra (JSON), created_at`. La même table compte les plafonds du jour (une ligne par demande, avant l'appel, §7.11), les fonctions C (`<action>.echec` quand le fournisseur échoue) et garde la trace des abonnements arrêtés par une demande de suppression (D23, §7.13).
 
 ### 7.13 Data retention & deletion
 
@@ -975,6 +977,8 @@ Every privileged action (login, sidebar edit, document download, billing change)
   - Company profile — 5 min (invalidated on update)
   - Coffre-fort index — 1 hour (invalidated on update)
   - Anthropic prompt cache — 5 min (managed by Anthropic)
+
+> **État du code (12/11/2026).** Le cache des lectures chaudes est **en mémoire du processus** (`services/cache.py`, dictionnaire à durée de vie), pas dans Redis ; les événements de progression passent par une file du processus (`services/progress_bus.py`), d'où l'API à un seul processus (§1).
 
 ### 8.3 Indexes
 
@@ -1275,6 +1279,7 @@ The expert knowledge is **baked in at build time**, not retrieved at runtime —
 - **§7.11** — Limiteur réel (nginx 20 r/s ; slowapi unique, clé organisation, repli en mémoire, alerte R-05) et plafonds du jour ; « Coach » retiré (aucune route).
 - **§7.13** — Suppression du compte : immédiate sans abonnement payant, programmée avec (D23, `0035`, webhook, tâche quotidienne, annulation) ; purge des AO ; sauvegardes réelles.
 - **§8.3 / §8.6 / §8.10** — Index `0037` ; exécuteur de `to_thread` (R-04) ; quotas de la grille du 11/11 et budget d'IA du jour (60 €, réservations) à la place du « cost guard » 15 €/100 €/300 € jamais codé.
+- **§1 / §7.12 / §8.2** — Caches et progression en mémoire du processus ; écarts du schéma d'ensemble (pas de Coach, de WebSocket, de stockage objet ni de Sentry ; un seul processus API) ; table `audit_logs` réelle.
 - **§2** — Pile réelle : éditeur maison, `react-pdf`, sessions SQLAlchemy synchrones, PDF par LibreOffice, disque du VPS, RAG coupé, Sentry et `structlog` absents, `node --test` et ESLint.
 - **§10.6 / §10.7** — Variables réellement lues par le code. **§11.4** — Sirene câblé (API publique sans clé). **§11.5** — webhooks de D23 ; abonnement relu chez le fournisseur, offre lue dans le prix (PAIEMENT, PAIEMENT-2).
 
