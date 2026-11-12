@@ -75,7 +75,7 @@ Synorix's wedge is the **automated generation of personalised, deposit-grade tec
 - **Barre de navigation permanente (5 entrées, chacune avec son nom sous l'icône)** — Accueil, Mes AO, Mon entreprise, Coffre-fort, Paramètres ; bouton `[+ Nouvel AO]` hors nav ; jauge quota → Paramètres > Abonnement. Équipe et Mes références sont des accès de Mon entreprise ; Retenue de garantie n'est plus dans la barre. **Le pipeline n'apparaît jamais dans la barre.**
 - **Synorix Coach** — level-3 strategic chatbot (bulle flottante)
 - **86 modular skills V1** — each grounded in real BTP expertise from 8 validated NotebookLM notebooks (193 curated sources) <!-- v2.1 - notebooks 17/5/26 -->
-- **Multi-model AI stack** — Haiku 4.5 (routing + **reformulation de texte libre du profil**) / Sonnet 4.6 (extraction, analyse) / Sonnet 5.5 (**génération mémoire**) / Opus 4.7 (repli seulement ; la réécriture ciblée tourne sur le modèle de la génération, Sonnet 5.5) — measured cost **~€1 per complete tender response** (1er mémoire ≤ €1, suivants < €0,50 via profil mémoire vivant + prompt caching)
+- **Multi-model AI stack** — Haiku 4.5 (**reformulation de texte libre du profil**, lecture des dépôts de Mon entreprise, questions à poser ; aucun routage) / Sonnet 4.6 (extraction, analyse) / Sonnet 5.5 (**génération mémoire**) / Opus 4.7 (repli seulement ; la réécriture ciblée tourne sur le modèle de la génération, Sonnet 5.5) — cost target **~€1 per complete tender response** (1er mémoire ≤ €1, suivants < €0,50 via profil mémoire vivant + prompt caching) ; mesuré sur un gros DCE (Gueux, 2/11/2026) : analyse 2,30 €, mémoire 0,87 € (`backend/services/budget_ia.py`)
 - **Three plans** (grille du 2026-11-11 : plus aucune offre illimitée) — Essentiel (€149/mo, **5 analyses + 5 mémoires/mois**), Pro (€349/mo, 1 seat, **30 analyses + 30 mémoires/mois**) and Business (€599/mo, 5 seats, **70 analyses + 70 mémoires/mois**). Paiement Stripe **carte uniquement en V1**. **1 AO offert** à la création (SIRET vérifié via API Sirene INSEE).
 
 ### 1.7 Différenciateurs V1 — déterministes, 0 € API <!-- v3.0 - vision V1 FINALE -->
@@ -1427,7 +1427,7 @@ Synorix's design system lives in code, not as an AI skill.
 
 ### 3.0.1 — 2026-11-12 (faits relus contre le code, vision inchangée)
 
-- §1.6 et §6.2 : la génération du mémoire tourne sur Sonnet 5.5, pas 4.6. §4 : exemple de jauge à la grille du 11/11.
+- §1.6 et §6.2 : la génération du mémoire tourne sur Sonnet 5.5, pas 4.6 ; Haiku ne fait aucun routage ; coût mesuré d'un gros DCE à côté de la cible. §4 : exemple de jauge à la grille du 11/11.
 - §6.1 : offre Essentiel, stockage (20 Go / 5 Go), sièges non appliqués. §6.3 : résiliation D23, plafonds du jour, écarts du code avec le parcours d'essai décrit.
 - §9.1 : statuts du parcours (sept étapes à l'écran), des différenciateurs, des quotas et de Sirene (faits) ; fonctions C1 à C4 livrées éteintes.
 
