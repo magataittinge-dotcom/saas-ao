@@ -5,6 +5,7 @@ import { api } from '@/services/api'
 import { cn } from '@/lib/utils'
 import { Bouton, BoutonIcone } from '@/components/ui/bouton'
 import { LigneNouveau } from '@/components/dashboard/LigneNouveau'
+import { EtatErreur } from '@/components/ui/etats'
 
 interface NotificationItem {
   id: string
@@ -66,7 +67,7 @@ export default function NotificationBell({ versLeHaut = false }: { versLeHaut?: 
   const panelRef = useRef<HTMLDivElement>(null)
   const queryClient = useQueryClient()
 
-  const { data } = useQuery<{ unread: number; items: NotificationItem[] }>({
+  const { data, isError, refetch } = useQuery<{ unread: number; items: NotificationItem[] }>({
     queryKey: ['notifications'],
     queryFn: async () => {
       const { data } = await api.get('/notifications')
@@ -117,7 +118,9 @@ export default function NotificationBell({ versLeHaut = false }: { versLeHaut?: 
           </div>
           {/* le panneau prend la hauteur que l'écran offre (il n'en montrait que trois lignes et demie sur 425 px) */}
           <div className="max-h-[min(34rem,calc(100dvh-9rem))] overflow-y-auto overscroll-contain">
-            {items.length === 0 ? (
+            {items.length === 0 && isError && !data ? (
+              <EtatErreur titre="Les notifications n’ont pas pu se charger" detail={null} onReessayer={() => { void refetch() }} className="rounded-none border-0 p-4 shadow-none max-sm:p-4" />
+            ) : items.length === 0 ? (
               <p className="px-4 py-6 text-sm text-fg-2">Les notifications arriveront ici : une analyse terminée, un mémoire prêt, une remise qui approche.</p>
             ) : (
               items.map((n) => (

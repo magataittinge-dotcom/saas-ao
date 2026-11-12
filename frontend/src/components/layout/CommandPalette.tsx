@@ -27,7 +27,7 @@ interface Props {
  */
 export default function CommandPalette({ open, onOpenChange }: Props) {
   const navigate = useNavigate()
-  const { data: projects = [] } = useProjects()
+  const { data: projects = [], isError: aoEnErreur } = useProjects()
   const [saisie, setSaisie] = useState('')
   useEffect(() => { if (!open) setSaisie('') }, [open])
   const cherche = saisie.trim()
@@ -58,7 +58,11 @@ export default function CommandPalette({ open, onOpenChange }: Props) {
       <CommandInput placeholder="Rechercher un AO, une page…" value={saisie} onValueChange={setSaisie} />
       <CommandList className="max-h-[min(440px,60vh)] min-h-40 pb-1.5">
         {/* les mêmes mots que la recherche de Mes AO, alignés à gauche comme le reste du panneau */}
-        <CommandEmpty className="px-5 pb-2 pt-5 text-left text-sm text-fg-2">Aucun appel d’offres ni page ne contient {`«\u00a0${cherche}\u00a0».`}</CommandEmpty>
+        <CommandEmpty className="px-5 pb-2 pt-5 text-left text-sm text-fg-2">
+          {aoEnErreur
+            ? <>Vos appels d’offres n’ont pas pu se charger. Aucune page ne contient {`«\u00a0${cherche}\u00a0».`}</>
+            : <>Aucun appel d’offres ni page ne contient {`«\u00a0${cherche}\u00a0».`}</>}
+        </CommandEmpty>
         {enCours.length > 0 && (
           <CommandGroup heading="En cours">
             {enCours.map((p) => (
