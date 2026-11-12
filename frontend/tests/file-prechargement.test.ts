@@ -198,7 +198,7 @@ test('le préchargement réel consomme UN départ du budget par ancre (pas deux 
     for (let i = 0; i < BUDGET_PRECHARGEMENT.ancre + 20; i++) precharger(`lot-test-${i}`)
     await new Promise((r) => setTimeout(r, 50))
   } finally {
-    ;(api as unknown as { get: unknown }).get = origine
+    (api as unknown as { get: unknown }).get = origine
   }
   assert.equal(appels.length, BUDGET_PRECHARGEMENT.ancre)
 })
