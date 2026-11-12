@@ -101,8 +101,8 @@ Les prompts système sont définis dans `backend/services/ai/prompts.py` ; ceux 
 ## Notes importantes
 
 - L'onboarding est progressif : l'utilisateur complète son profil en travaillant (pas de formulaire long au départ)
-- Le coffre-fort documentaire est central : les documents uploadés lors d'un AO y sont automatiquement stockés
-- Les templates de mémoire s'améliorent au fil des utilisations ("Utiliser comme référence")
+- Le coffre-fort documentaire est central : un document personnel reconnu (URSSAF, Kbis…) déposé avec un AO y est **proposé**, pas rangé d'office (bandeau « Enregistrer » / « Non merci », `components/vault/VaultSavePrompt.tsx`, `POST /api/documents/from-project-doc`) ; un refus n'est plus jamais reproposé pour ce document
+- Un ancien mémoire s'importe dans Mon entreprise (« Importer un mémoire », `services/ai/memoire_importer.py`) ; les modèles de mémoire de l'organisation (« Utiliser comme référence ») ne sont pas construits (`TASKS.md`, P2)
 - Toujours référencer la source dans le document original pour chaque exigence extraite (confiance utilisateur)
 
 ## Pièges connus (gotchas — déjà payés en temps, ne pas réapprendre)
