@@ -1,4 +1,4 @@
-import { daysUntil, formatDate } from '@/lib/utils'
+import { daysUntil, formatDate } from '@/lib/dates'
 import { Message } from '@/components/ui/message'
 
 interface Props {
