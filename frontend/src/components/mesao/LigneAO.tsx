@@ -8,6 +8,7 @@ import { MenuElement, MenuPoints } from '@/components/ui/menu'
 import { PastilleEtat } from '@/components/ui/pastille'
 import type { ColonneTableau } from '@/components/ui/tableau'
 import { lectureAO } from '@/lib/etatAO'
+import { usePrechargementAO } from '@/lib/prechargementAO'
 import { acheteurCourt, avancementAffiche, enTraitement, filDeLAO, jourCourt, lierNumero, niveauRemise, quandCourt, texteUnites, versAvisOrigine } from '@/lib/mesAO'
 import { cn } from '@/lib/utils'
 import type { Project } from '@/types'
@@ -29,11 +30,12 @@ export function CelluleAO({ projet, detail = true, large = false, sansLien = fal
   const questions = detail ? projet.infos_marche?.points_a_eclaircir?.length ?? 0 : 0
   const acheteur = acheteurCourt(projet.maitre_ouvrage)
   const lot = projet.selected_lot_name
+  const precharger = usePrechargementAO()
   return (
     <div data-ligne-ao={projet.id} className={cn('flex min-w-0 flex-col gap-1 py-1.5 max-md:py-0', large ? 'md:max-w-[34rem]' : 'md:max-w-[24rem]')}>
       {sansLien
         ? <span className="block break-words text-base font-semibold leading-snug text-fg"><span className="line-clamp-2">{lierNumero(projet.name)}</span></span>
-        : <Link to={`/projects/${projet.id}`} className="block break-words text-base font-semibold leading-snug text-fg underline-offset-4 hover:underline max-md:-my-3 max-md:py-3 [@media(pointer:coarse)]:-my-3 [@media(pointer:coarse)]:py-3"><span className="line-clamp-2">{lierNumero(projet.name)}</span></Link>}
+        : <Link to={`/projects/${projet.id}`} {...precharger(projet)} className="block break-words text-base font-semibold leading-snug text-fg underline-offset-4 hover:underline max-md:-my-3 max-md:py-3 [@media(pointer:coarse)]:-my-3 [@media(pointer:coarse)]:py-3"><span className="line-clamp-2">{lierNumero(projet.name)}</span></Link>}
       {/* l'acheteur se coupe, le lot reste (jury, tour 1 : le lot, ce qui distingue les lignes, disparaissait) ; au téléphone la ligne passe à la ligne */}
       {(acheteur || lot) && (
         <span className="flex min-w-0 text-sm text-fg-2 max-md:flex-wrap max-md:gap-x-1">
@@ -91,9 +93,10 @@ function CelluleRemise({ projet, maintenant }: { projet: Project; maintenant: Da
 
 /** Le menu « … » d'une rangée : ouvrir l'AO, changer son statut, le supprimer. */
 export function MenuAO({ projet, onStatut, onSupprimer }: { projet: Project } & Pick<GestesAO, 'onStatut' | 'onSupprimer'>) {
+  const precharger = usePrechargementAO()
   return (
     <MenuPoints libelle={`Autres actions pour « ${projet.name} »`}>
-      <MenuElement asChild><Link to={`/projects/${projet.id}`}>Ouvrir l’appel d’offres</Link></MenuElement>
+      <MenuElement asChild><Link to={`/projects/${projet.id}`} {...precharger(projet)}>Ouvrir l’appel d’offres</Link></MenuElement>
       <MenuElement onSelect={() => onStatut(projet)}>Mettre à jour le statut</MenuElement>
       {onSupprimer && <MenuElement danger onSelect={() => onSupprimer(projet)}>Supprimer</MenuElement>}
     </MenuPoints>
@@ -103,6 +106,8 @@ export function MenuAO({ projet, onStatut, onSupprimer }: { projet: Project } & 
 /** L'action d'une rangée : le verbe de `lectureAO`. En lecture : rien à faire, la phrase le dit. Remise passée : le dialogue. */
 function CelluleAction({ projet, maintenant, onStatut, onSupprimer }: { projet: Project } & GestesAO) {
   const { action } = lectureAO(projet, maintenant)
+  const precharger = usePrechargementAO()
+  const lien = action.segment ? `/projects/${projet.id}/${action.segment}` : `/projects/${projet.id}`
   return (
     <div className="flex min-w-0 items-center justify-end gap-1 max-md:justify-between max-md:pt-1.5">
       {action.statut ? (
@@ -110,7 +115,7 @@ function CelluleAction({ projet, maintenant, onStatut, onSupprimer }: { projet: 
       ) : enTraitement(projet) ? (
         <span className="text-sm text-fg-2">Synorix s’en occupe</span>
       ) : (
-        <Link to={action.segment ? `/projects/${projet.id}/${action.segment}` : `/projects/${projet.id}`} className={classesBouton('secondaire', 'max-md:flex-1')}>
+        <Link to={lien} {...precharger(projet, lien)} className={classesBouton('secondaire', 'max-md:flex-1')}>
           {action.verbe}<ArrowRight aria-hidden strokeWidth={1.75} />
         </Link>
       )}

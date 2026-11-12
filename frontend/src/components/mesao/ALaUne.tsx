@@ -4,6 +4,7 @@ import { Bouton, classesBouton } from '@/components/ui/bouton'
 import { Carte } from '@/components/ui/carte'
 import { TitreSection } from '@/components/ui/page'
 import { lectureAO, lienAO } from '@/lib/etatAO'
+import { usePrechargementAO } from '@/lib/prechargementAO'
 import { acheteurCourt, avancementAffiche, enTraitement, faitsALaUne, filDeLAO, niveauRemise, quandCourt } from '@/lib/mesAO'
 import { cn } from '@/lib/utils'
 import type { Project } from '@/types'
@@ -20,6 +21,7 @@ export function ALaUne({ projet, maintenant = new Date() }: { projet: Project; m
   const { etape, total, nom } = avancementAffiche(projet)
   const faits = faitsALaUne(projet, maintenant)
   const traitement = enTraitement(projet)
+  const precharger = usePrechargementAO()
   const complement = [acheteurCourt(projet.maitre_ouvrage), projet.selected_lot_name].filter(Boolean).join(' · ')
   return (
     <section aria-labelledby="une-titre" data-a-la-une={projet.id}>
@@ -45,9 +47,9 @@ export function ALaUne({ projet, maintenant = new Date() }: { projet: Project; m
           ) : (
             <div className="mt-1.5 flex flex-wrap items-center gap-x-5 gap-y-2">
               <Bouton asChild variante="principal" className="max-sm:w-full">
-                <Link to={lienAO(projet, maintenant)}>{lecture.action.verbe}<ArrowRight aria-hidden strokeWidth={1.75} /></Link>
+                <Link to={lienAO(projet, maintenant)} {...precharger(projet, lienAO(projet, maintenant))}>{lecture.action.verbe}<ArrowRight aria-hidden strokeWidth={1.75} /></Link>
               </Bouton>
-              <Link to={`/projects/${projet.id}`} className={classesBouton('lien')}>Ouvrir l’appel d’offres</Link>
+              <Link to={`/projects/${projet.id}`} {...precharger(projet)} className={classesBouton('lien')}>Ouvrir l’appel d’offres</Link>
             </div>
           )}
         </div>
