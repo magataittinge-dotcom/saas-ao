@@ -651,6 +651,8 @@ try {
   if (!(await sante(BASE + '/'))) throw new Echec(`le front ne répond pas sur ${BASE} (banc.sh lancer <copie>)`)
   const reparee = baseJetable('restaurer')
   if (reparee.restaure) dire('base jetable : le compte du test est rendu à son organisation (passage précédent interrompu)')
+  const zero = baseJetable('remise-a-zero')
+  dire(`base jetable : compteurs du mois de l'organisation du compte remis à zéro (${zero.unites_effacees} unité(s) effacée(s))`)
   const dossiers = fabriquerDossiers()
   dire(`dossiers inventés : ${path.basename(dossiers.coffre)}, ${path.basename(dossiers.deuxLots)}`)
   await lancerApi()

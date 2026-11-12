@@ -8,7 +8,7 @@
 import asyncio
 import logging
 import threading
-from datetime import date, datetime, timedelta
+from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -19,7 +19,7 @@ from models.project import TYPE_DPGF, Project, ProjectDocument
 from models.user import User
 from routers.auth import get_auth_user
 from services.budget_ia import exiger_budget_ia  # S-01 — filet du budget d'IA par organisation et par jour
-from services import couts_ia, points_eclaircir as pe
+from services import couts_ia, plafonds_ia, points_eclaircir as pe
 from services.audit_logger import log_action
 from services.critical_fields import parse_french_date
 from services.date_questions import RAPPEL_REGLE, trouver_date_questions
@@ -31,10 +31,18 @@ from services.rate_limit import limiter
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-ACTION = "analyse.points_a_eclaircir"
-MAX_PAR_JOUR = 10
-MSG_PLAFOND = (f"Vous avez préparé {MAX_PAR_JOUR} listes de questions dans les dernières 24 heures : "
-               "c'est le plafond du jour. Vous pourrez en préparer d'autres demain.")
+ACTION = plafonds_ia.ACTION_QUESTIONS
+# Le plafond du jour : PLAFOND_JOUR_QUESTIONS, lu à chaque demande comme les autres plafonds du jour (services/plafonds_ia) ;
+# 10 par défaut, 0 = pas de plafond.
+MAX_PAR_JOUR = plafonds_ia.plafond(ACTION)
+
+
+def msg_plafond(maximum: int) -> str:
+    return (f"Vous avez préparé {maximum} listes de questions dans les dernières 24 heures : "
+            "c'est le plafond du jour. Vous pourrez en préparer d'autres demain.")
+
+
+MSG_PLAFOND = msg_plafond(MAX_PAR_JOUR)
 MSG_EN_COURS = "Les questions de cet appel d'offres sont déjà en préparation."
 MSG_IA = "Service IA momentanément indisponible — réessayez dans quelques minutes."
 _TYPES_LUS = ("rc", "ccap", "cctp")
@@ -93,11 +101,9 @@ async def preparer_points(request: Request, project_id: str, user: User = Depend
     pieces = _pieces_du_projet(docs, project.selected_lot)
     if not pieces:
         raise HTTPException(status_code=409, detail="Aucune pièce lisible (règlement, CCAP, CCTP) : déposez le dossier avant de préparer les questions.")
-    depuis = datetime.utcnow() - timedelta(hours=24)
-    from models.audit_log import AuditLog
-    if (db.query(AuditLog).filter(AuditLog.organization_id == user.organization_id, AuditLog.action == ACTION,
-                                  AuditLog.created_at >= depuis).count()) >= MAX_PAR_JOUR:
-        raise HTTPException(status_code=429, detail=MSG_PLAFOND)
+    maximum = plafonds_ia.plafond(ACTION)
+    if maximum and plafonds_ia.compter_24h(db, user.organization_id, ACTION) >= maximum:
+        raise HTTPException(status_code=429, detail=msg_plafond(maximum))
     with _verrou:
         if project_id in _en_cours:
             raise HTTPException(status_code=409, detail=MSG_EN_COURS)

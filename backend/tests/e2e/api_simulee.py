@@ -237,14 +237,11 @@ def main() -> None:
     # l'usage simulé vaut 0 jeton, la réservation se libère à la fin de chaque travail.
     os.environ.setdefault("PLAFOND_JOUR_ANALYSES", "500")
     os.environ.setdefault("PLAFOND_JOUR_MEMOIRES", "500")
+    os.environ.setdefault("PLAFOND_JOUR_QUESTIONS", "500")   # « Préparer les questions » (second test), jamais coupé
     import anthropic
     anthropic.Anthropic = FauxAnthropic  # la couture : tout `anthropic.Anthropic(...)` du produit
     import uvicorn
     from main import app
-    # Même règle pour « Préparer les questions » (10 listes par 24 h, constante du module, pas de variable d'environnement) :
-    # relevé pour les passages du second test (frontend/e2e/parcours-2.mjs), jamais coupé.
-    import routers.points_eclaircir as points_eclaircir
-    points_eclaircir.MAX_PAR_JOUR = max(points_eclaircir.MAX_PAR_JOUR, 500)
     uvicorn.run(app, host="127.0.0.1", port=int(os.environ.get("E2E_PORT", "8127")), log_level="warning")
 
 

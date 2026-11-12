@@ -2,12 +2,15 @@
 
     cd backend && python -m tests.e2e.base_jetable organisation-de-test <email> <dossier de travail>
     cd backend && python -m tests.e2e.base_jetable restaurer <email> <dossier de travail>
+    cd backend && python -m tests.e2e.base_jetable remise-a-zero <email> <dossier de travail>
 
 `organisation-de-test` : crée (ou reprend) l'organisation « E2E2 Organisation de test » (offre Essentiel, aucun
 abonnement chez le fournisseur de paiement, quota d'analyses du mois ÉPUISÉ : 5 lignes de consommation sur 5), puis y
 rattache le compte du test le temps d'un parcours ; l'organisation d'origine est notée dans <dossier>/origine-org.txt.
 `restaurer` : rend le compte à son organisation d'origine (lue dans ce fichier), puis efface le fichier. Sans fichier :
 rien à faire. Rejouable : un passage interrompu est réparé au départ du suivant.
+`remise-a-zero` : efface les unités décomptées depuis 31 jours (analyses et mémoires) de l'organisation du compte, au départ
+de chaque passage (après `restaurer`) : les passages successifs n'épuisent plus le quota du mois du compte de test.
 
 Garde-fou : refus si la base ne s'appelle pas synorix_fin_* (même règle que tests/e2e/api_simulee.py).
 """
@@ -81,10 +84,24 @@ def restaurer(email: str, travail: Path) -> dict:
     return {"restaure": True, "origine": origine}
 
 
+def remise_a_zero(email: str, travail: Path) -> dict:
+    """Les compteurs du mois de l'organisation du compte (jamais l'organisation de test : `restaurer` passe avant)."""
+    from sqlalchemy import text
+    with _connexion() as c:
+        org = c.execute(text("select organization_id from users where email = :e"), {"e": email}).scalar()
+        if org is None:
+            sys.exit(f"compte introuvable dans la base jetable : {email}")
+        n = c.execute(text("delete from quota_consumptions where organization_id = :o and created_at >= :depuis"),
+                      {"o": org, "depuis": datetime.utcnow() - timedelta(days=31)}).rowcount
+    return {"organisation": org, "unites_effacees": n}
+
+
+ACTIONS = {"organisation-de-test": organisation_de_test, "restaurer": restaurer, "remise-a-zero": remise_a_zero}
+
 if __name__ == "__main__":
-    if len(sys.argv) != 4 or sys.argv[1] not in ("organisation-de-test", "restaurer"):
+    if len(sys.argv) != 4 or sys.argv[1] not in ACTIONS:
         print(__doc__)
         sys.exit(2)
     action, email, travail = sys.argv[1], sys.argv[2], Path(sys.argv[3])
     travail.mkdir(parents=True, exist_ok=True)
-    print(json.dumps((organisation_de_test if action == "organisation-de-test" else restaurer)(email, travail)))
+    print(json.dumps(ACTIONS[action](email, travail)))

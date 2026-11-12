@@ -306,3 +306,21 @@ def test_une_vraie_contradiction_du_dossier_reste_posee():
 def test_la_consigne_interdit_de_questionner_ce_que_les_extraits_ne_contiennent_pas():
     assert ("Ne pose une question que sur une ambiguïté ou une contradiction du dossier, "
             "jamais sur ce que les extraits ne contiennent pas.") in pe._SYSTEM
+
+
+def test_plafond_jour_questions_se_regle_comme_les_autres_plafonds_du_jour(client, db_session, test_org, test_user, modele, monkeypatch):
+    """PLAFOND_JOUR_QUESTIONS (rapport E2E-2) : lu à chaque demande comme PLAFOND_JOUR_ANALYSES / _MEMOIRES (services/plafonds_ia),
+    10 par défaut (inchangé), 0 = pas de plafond ; la phrase dit le plafond réglé."""
+    import routers.points_eclaircir as route
+    from services import plafonds_ia
+    assert plafonds_ia._PLAFONDS[plafonds_ia.ACTION_QUESTIONS] == ("PLAFOND_JOUR_QUESTIONS", 10)
+    assert route.ACTION == plafonds_ia.ACTION_QUESTIONS
+    _projet(db_session, test_org.id)
+    for _ in range(2):
+        db_session.add(AuditLog(organization_id=test_org.id, user_id=test_user.id, action=route.ACTION))
+    db_session.commit()
+    monkeypatch.setenv("PLAFOND_JOUR_QUESTIONS", "2")
+    r = client.post(f"/api/projects/{PID}/points-a-eclaircir")
+    assert r.status_code == 429 and "2 listes de questions" in r.json()["detail"] and modele["appels"] == []
+    monkeypatch.setenv("PLAFOND_JOUR_QUESTIONS", "0")
+    assert client.post(f"/api/projects/{PID}/points-a-eclaircir").status_code == 200, "0 coupe le plafond"
