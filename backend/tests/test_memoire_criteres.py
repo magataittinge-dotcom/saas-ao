@@ -153,9 +153,13 @@ def test_route_rend_le_rattachement(client, db_session, test_org):
     assert _par_nom(corps)["Gestion des déchets"]["sections"] == ["partie_b.dechets"]
 
 
-def test_route_sans_memoire_404(client, db_session, test_org):
+def test_route_sans_memoire_200_et_rien_a_rattacher(client, db_session, test_org):
+    """RESTES-3 (PERF § 5) — pas encore de mémoire : un état normal, pas une erreur. 200 et des listes vides (rien n'est
+    « À couvrir » tant que rien n'est rédigé) : Rédiger lance cette lecture en même temps que le mémoire."""
     _projet(db_session, test_org.id, avec_memoire=False)
-    assert client.get(f"/api/projects/{PID}/memoire/criteres").status_code == 404
+    r = client.get(f"/api/projects/{PID}/memoire/criteres")
+    assert r.status_code == 200, r.text
+    assert r.json() == {"sous_criteres": [], "a_couvrir": []}
 
 
 def test_route_autre_organisation_404(client, db_session, test_org):

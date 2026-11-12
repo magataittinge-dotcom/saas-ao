@@ -31,3 +31,11 @@ test('Rédiger : la saisie l’emporte, sinon les valeurs du mémoire', () => {
   assert.match(etape, /const variables = saisie \?\? variablesDuMemoire\(memoire\?\.variables\)/)
   assert.match(etape, /onVariables=\{setSaisie\}/)
 })
+
+test('Rédiger lance la lecture des sous-critères en même temps que le mémoire (200 et listes vides sans mémoire)', () => {
+  const etape = sansCommentaires(lire('src/routes/project/StepMemoire.tsx'))
+  const bloc = etape.slice(etape.indexOf("queryKey: ['memoire', project.id, 'criteres']"))
+  const requete = bloc.slice(0, bloc.indexOf('})'))
+  assert.doesNotMatch(requete, /enabled:/, 'elle n’attend plus le mémoire')
+  assert.match(lire('../backend/routers/memoire.py'), /if not memoire:\n(\s*#.*\n)?\s+return \{"sous_criteres": \[\], "a_couvrir": \[\]\}/)
+})

@@ -75,7 +75,8 @@ def get_memoire_criteres(
     project = _get_project_or_404(project_id, user.organization_id, db)
     memoire = db.query(MemoireTechnique).filter(MemoireTechnique.project_id == project_id).first()
     if not memoire:
-        raise HTTPException(status_code=404, detail="Mémoire non généré")
+        # Pas encore de mémoire : un état normal (comme le GET du mémoire, R31), rien à rattacher ni « À couvrir ».
+        return {"sous_criteres": [], "a_couvrir": []}
     return rattacher(memoire.content_json, project.criteres_jugement)
 
 

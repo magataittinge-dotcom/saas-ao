@@ -172,11 +172,11 @@ export default function StepMemoire({ project }: Props) {
   })
 
   // E1 — sous-critères du RC rattachés aux parties (calcul serveur, sans IA) ; la clé commence par celle du
-  // mémoire : toute modification enregistrée la relit.
+  // mémoire : toute modification enregistrée la relit. Elle part avec le mémoire, sans l'attendre (sans mémoire : 200,
+  // listes vides).
   const { data: rattachement } = useQuery({
     queryKey: ['memoire', project.id, 'criteres'],
     queryFn: async () => (await api.get<RattachementCriteres>(`/projects/${project.id}/memoire/criteres`)).data,
-    enabled: !!memoire,
     retry: false,
   })
   // Source des critères dans le règlement (même requête que le bandeau de l'analyse) : « Voir dans le dossier ». Elle part
