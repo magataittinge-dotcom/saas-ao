@@ -389,6 +389,11 @@ Un seul jeu de composants, dans `frontend/src/components/ui/`, aux jetons seulem
 - Le bouton « ? » de l'en-tête déplie trois lignes **dans l'écran** : ce que montre l'écran, ce que vous avez à faire, les mots de l'écran (sigles de `lib/lexique.ts`). Ni bulle flottante, ni visite guidée, ni lien d'aide.
 - Une seule action principale : la barre du bas (flottante, sans verre) cède l'aplat au bouton de l'en-tête quand il existe. Le message d'échec d'une étape est posé une fois, sous l'en-tête.
 
+### Les pages publiques (`CoquillePublique`, `routes/Landing.tsx`, `routes/Legal.tsx`, `components/public/*`)
+- Un titre de section d'une page publique est à 22 px (17 px, c'est le titre d'une carte de l'appli). Les sept étapes se montrent comme un fil (rond numéroté, trait d'un rond au suivant, `FilSeptEtapes`), jamais comme une liste de mots séparés par des points ni comme une grille de blocs ; ce fil est inactif (ni lien ni étape courante).
+- Pages juridiques : mise en page seule, le texte de `public/legal/*.md` n'est jamais récrit par le code. Colonne de lecture de 680 px (texte et tableaux au même bord droit), sommaire collant à droite (replié sous le titre au téléphone), titre d'article à 22 px sous un filet, onglets au trait sur une seule rangée qui défile, « libellé : valeur » en liste de définitions, un lien porte un nom. Un champ que l'éditeur n'a pas renseigné se dessine comme un champ (surface neutre), jamais comme un mot de la phrase.
+- Écrans posés hors du routeur (erreur, hors ligne) : pas de fond animé ; le fil d'aurore sous le titre les signe. Hors ligne, l'état se voit (pastille ambre « Hors connexion » et son icône).
+
 ### Le visage (`SynorixParle`)
 - Le visage n'apparaît que **là où Synorix parle**, à côté de sa phrase, **une fois par écran au plus**. Jamais en vignette d'un AO, jamais dans une ligne ou une carte d'AO, jamais en décor ni au bout du fil des étapes. Il est à sa taille sur « Mon entreprise ».
 
