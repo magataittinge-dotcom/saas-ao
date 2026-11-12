@@ -24,4 +24,7 @@ def get_quota(
     org = db.query(Organization).filter(Organization.id == user.organization_id).first()
     if not org:
         raise HTTPException(status_code=404, detail="Organisation introuvable")
-    return quota.get_quota_status(db, org)
+    statut = quota.get_quota_status(db, org)
+    # D23 — suppression du compte programmée à la fin de la période payée (Paramètres > Compte).
+    statut["suppression_prevue_le"] = org.suppression_prevue_le.isoformat() if org.suppression_prevue_le else None
+    return statut

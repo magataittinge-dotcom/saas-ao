@@ -87,6 +87,10 @@ def update_team_member(
     return member
 
 
+def _date_iso(valeur) -> str | None:
+    return valeur.isoformat() if valeur else None
+
+
 @router.delete("/me", status_code=200)
 def delete_my_account(
     user: User = Depends(get_auth_user),
@@ -94,38 +98,62 @@ def delete_my_account(
 ):
     """RGPD droit à l'oubli — supprime le compte utilisateur et TOUTES ses données.
 
-    S-02 — toutes les lignes de l'organisation (tables déduites des modèles : services/suppression_compte.py), dans
-    une seule transaction ; les fichiers déposés sont effacés du disque après le commit."""
+    D23 — avec un abonnement payant vivant, la suppression est PROGRAMMÉE à la fin de la période payée (l'abonnement
+    s'arrête à l'échéance, l'accès reste ouvert, rien n'est effacé) : `{"deleted": false, "suppression_prevue_le": …}`.
+    Sans abonnement payant : immédiate. S-02 — toutes les lignes de l'organisation (services/suppression_compte.py),
+    dans une seule transaction ; les fichiers déposés sont effacés du disque après le commit. Détail :
+    services/resiliation_compte.py."""
     from models.organization import Organization
-    from services import resiliation_compte, suppression_compte
+    from services import resiliation_compte
 
     org_id = user.organization_id
-    # S-03 — l'abonnement est résilié AVANT toute suppression : un échec du fournisseur ne supprime rien.
+    # S-03 — le fournisseur de paiement d'abord : un échec ne change rien.
     org = db.query(Organization).filter(Organization.id == org_id).first()
     try:
-        if org is not None:
-            resiliation_compte.resilier_abonnements(org)
+        fin = resiliation_compte.programmer_ou_resilier(org) if org is not None else None
     except resiliation_compte.ResiliationImpossible:
         raise HTTPException(status_code=502, detail="L’abonnement n’a pas pu être résilié : rien n’a été supprimé. "
                                                     "Réessayez dans quelques minutes ou écrivez-nous.")
-    clerk_ids = [c for (c,) in db.query(User.clerk_id).filter(User.organization_id == org_id).all() if c]
-    try:
-        bilan = suppression_compte.supprimer_organisation(db, org_id)
+    if fin is not None:
+        org.suppression_prevue_le = fin
         db.commit()
+        logger.info("RGPD: suppression du compte programmée — org=%s, le %s", org_id, fin.date().isoformat())
+        return {"deleted": False, "suppression_prevue_le": _date_iso(fin)}
+
+    try:
+        bilan = resiliation_compte.executer_suppression(db, org_id, racine=UPLOADS_ROOT)
     except Exception:
-        db.rollback()
         logger.exception("RGPD : suppression du compte impossible (org=%s)", org_id)
         raise HTTPException(status_code=500, detail="Le compte n’a pas pu être supprimé. Rien n’a été effacé ; "
                                                     "réessayez dans un instant ou écrivez-nous.")
-    project_ids = bilan["project_ids"]
+    return {"deleted": True, "projects_deleted": len(bilan["project_ids"])}
 
-    # Purge des fichiers disque (après le commit DB) : plus aucune donnée perso résiduelle sur le VPS.
-    suppression_compte.purger_fichiers(UPLOADS_ROOT, org_id, project_ids, bilan["fichiers"])
-    # S-03 — puis les comptes Clerk : un échec est journalisé, la suppression des données reste acquise.
-    resiliation_compte.supprimer_utilisateurs_clerk(clerk_ids)
 
-    logger.info("RGPD: compte supprimé — org=%s, projets=%d, tables=%d", org_id, len(project_ids), len(bilan["tables"]))
-    return {"deleted": True, "projects_deleted": len(project_ids)}
+@router.post("/me/annuler-suppression", status_code=200)
+def cancel_account_deletion(
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """D23 — retire la demande de suppression tant que sa date n'est pas passée ; l'abonnement renouvelle de nouveau."""
+    from datetime import datetime
+
+    from models.organization import Organization
+    from services import resiliation_compte
+
+    org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+    if org is None or org.suppression_prevue_le is None:
+        raise HTTPException(status_code=409, detail="Aucune suppression du compte n’est prévue.")
+    if org.suppression_prevue_le <= datetime.utcnow():
+        raise HTTPException(status_code=409, detail="La date de suppression est passée : la suppression est en cours.")
+    try:
+        resiliation_compte.reprendre_abonnements(org)
+    except resiliation_compte.ResiliationImpossible:
+        raise HTTPException(status_code=502, detail="L’abonnement n’a pas pu être repris : la suppression reste prévue. "
+                                                    "Réessayez dans quelques minutes ou écrivez-nous.")
+    org.suppression_prevue_le = None
+    db.commit()
+    logger.info("RGPD: suppression du compte annulée — org=%s", org.id)
+    return {"suppression_prevue_le": None}
 
 
 @router.delete("/team/{member_id}", status_code=204)

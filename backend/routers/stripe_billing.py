@@ -284,10 +284,17 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
                 db.commit()
 
     # ── customer.subscription.deleted → downgrade to free ─────────────────────
+    # D23 — si l'organisation a demandé la suppression de son compte, c'est l'échéance : tout est supprimé (si aucun
+    # autre abonnement payant ne vit encore). Sans demande (impayé, portail) : jamais de suppression, offre gratuite.
+    # Rejoué après la suppression : l'organisation n'existe plus, rien à faire (idempotent).
     elif event_type == "customer.subscription.deleted":
         customer_id = data_object.get("customer")
         if customer_id:
             org = db.query(Organization).filter(Organization.stripe_customer_id == customer_id).first()
+            if org and org.suppression_prevue_le is not None:
+                from services import resiliation_compte
+                if resiliation_compte.supprimer_si_demande(db, org):
+                    return {"received": True}
             if org:
                 org.plan = "free"
                 org.stripe_subscription_id = None
@@ -300,6 +307,10 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         if customer_id and data_object.get("status") == "active":
             org = db.query(Organization).filter(Organization.stripe_customer_id == customer_id).first()
             if org:
+                # D23 — abonnement remis en renouvellement depuis le portail : la demande de suppression tombe (sinon
+                # un arrêt d'abonnement des mois plus tard supprimerait le compte).
+                if org.suppression_prevue_le is not None and data_object.get("cancel_at_period_end") is False:
+                    org.suppression_prevue_le = None
                 old_plan = org.plan
                 items = (data_object.get("items") or {}).get("data") or []
                 if items:
