@@ -28,7 +28,6 @@ import type { Project, ChecklistItem, Document } from '@/types'
 import { messageErreur } from '@/lib/erreurs'
 import { sansNoteDeRegroupement } from '@/lib/nomsPieces'
 import { messageActualisation, type EtatActualisation } from '@/lib/actualisation'
-import { nomTrame } from '@/lib/nomTrame'
 
 interface Props { project: Project }
 
@@ -170,6 +169,9 @@ export default function StepVerification({ project }: Props) {
   }
 
   // ── Workflow DPGF/BPU (C12) — SUR la pièce, pas de saut vers Export ──
+  const DPGF_FILENAME: Record<string, string> = {
+    dpgf_template: 'DPGF.xlsx', bpu_template: 'BPU.xlsx', dqe_template: 'DQE.xlsx',
+  }
   const handleDownloadTemplate = async (item: ChecklistItem) => {
     if (!item.template_project_doc_id) return
     const res = await api.get(
@@ -179,7 +181,7 @@ export default function StepVerification({ project }: Props) {
     const url = window.URL.createObjectURL(new Blob([res.data]))
     const a = document.createElement('a')
     a.href = url
-    a.download = nomTrame(item.document_type_required, { entete: res.headers['content-disposition'], mime: res.headers['content-type'] ?? (res.data as Blob).type })
+    a.download = DPGF_FILENAME[item.document_type_required] || 'bordereau.xlsx'
     a.click()
     window.URL.revokeObjectURL(url)
   }
