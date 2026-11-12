@@ -8,7 +8,7 @@ import { PARTAGE_DES_ROLES } from '@/components/onboarding/FilSeptEtapes'
 /** Un écran qui dit ce qui se passe, en une phrase, et propose deux chemins : le premier est le geste attendu. */
 function EcranChemins({ titre, phrase, vers, libelle, autre, suite }: { titre: string; phrase: string; vers: string; libelle: string; autre?: ReactNode; suite?: ReactNode }) {
   return (
-    <Page etroite titre={titre} sousTitre={<span className="block text-pretty">{phrase}</span>}>
+    <Page etroite titre={titre} sousTitre={<span className="block text-balance">{phrase}</span>}>
       <div className="flex flex-wrap gap-3">
         <Bouton asChild variante="principal" className="max-sm:w-full"><Link to={vers}>{libelle}</Link></Bouton>
         {autre}
