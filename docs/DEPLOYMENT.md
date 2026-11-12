@@ -348,8 +348,17 @@ Essayé avec le nginx 1.24 d'Ubuntu noble (bloc 6). Ce qu'il règle :
 - **Cache** : `index.html` et routes SPA en `no-cache` ; fichiers à empreinte de `assets/` immuables un an ;
   jamais de cache sur une 404.
 - **En-têtes de la page** : HSTS, `X-Frame-Options DENY`, `Referrer-Policy`, `Permissions-Policy`,
-  **CSP du front en observation** (`Content-Security-Policy-Report-Only`, rapports sur
-  `POST /api/csp-rapport`). Les en-têtes de l'API restent posés par FastAPI (`main.py`).
+  **CSP du front bloquante** (`Content-Security-Policy`, depuis le 12/11/2026 : P1-1 de la relecture de sécurité ;
+  chaque refus est signalé sur `POST /api/csp-rapport`). Vérifiée sur la version construite, servie avec cette CSP :
+  40 écrans clair et nuit (site, connexion, inscription, appli), « Voir dans le DCE » (pdf.js et son worker) et un
+  téléchargement (`blob:`) : 0 violation. Les en-têtes de l'API restent posés par FastAPI (`main.py`).
+  - **Retour en observation, en une ligne**, si une violation légitime apparaît en production (un écran qui ne
+    charge plus, des `csp-rapport` dans `journalctl -u synorix-api`) :
+    `sudo sed -i 's/Content-Security-Policy /Content-Security-Policy-Report-Only /' /etc/nginx/snippets/synorix-entetes.conf && sudo nginx -t && sudo systemctl reload nginx`.
+    Retour au mode bloquant, une fois l'origine ajoutée : la même ligne, les deux termes inversés.
+  - **Le jour où l'instance Clerk de production est choisie**, `https://*.clerk.accounts.dev` sort de `script-src`,
+    `connect-src` et `frame-src` (n'importe qui peut ouvrir une instance sous ce domaine). Il reste aujourd'hui : le
+    banc et la recette utilisent Clerk de développement.
 - **X-Accel-Redirect** : FastAPI vérifie la signature et l'organisation, puis répond sans corps avec
   `X-Accel-Redirect: /_fichiers_internes/<chemin>` ; nginx sert le fichier avec ses plages (206).
   `location /_fichiers_internes/` est `internal` : 404 de l'extérieur. Côté `.env` :

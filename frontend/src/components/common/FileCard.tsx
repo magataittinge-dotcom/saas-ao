@@ -6,6 +6,7 @@ import { getSignedFileUrl } from '@/services/api'
 import { Bouton, BoutonIcone } from '@/components/ui/bouton'
 import { Infobulle } from '@/components/ui/infobulle'
 import type { Document } from '@/types'
+import { resumeErreur } from '@/lib/erreurs'
 
 interface Props {
   document: Document
@@ -33,7 +34,7 @@ export function FileCard({ document, onDelete, onEdit }: Props) {
       const url = await getSignedFileUrl(document.file_url)
       window.open(url, '_blank', 'noopener,noreferrer')
     } catch (err) {
-      console.error('[FileCard] impossible d’obtenir le lien signé:', err)
+      console.error('[FileCard] impossible d’obtenir le lien signé:', resumeErreur(err))
     }
   }
 

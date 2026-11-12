@@ -20,3 +20,12 @@ export async function messageErreur(err: unknown, defaut: string): Promise<strin
   const detail = (donnees as { detail?: unknown } | undefined)?.detail
   return typeof detail === 'string' && detail.trim() ? detail : defaut
 }
+
+/**
+ * P2-9 : ce qu'une erreur laisse dans la console. Jamais l'objet entier : celui d'axios porte sa configuration, l'en-tête
+ * `Authorization: Bearer …` et l'adresse demandée compris. Le statut HTTP, le code réseau ou le nom de l'erreur, seulement.
+ */
+export function resumeErreur(err: unknown): string {
+  if (axios.isAxiosError(err)) return err.response ? `HTTP ${err.response.status}` : (err.code ?? 'réseau')
+  return err instanceof Error ? err.name : 'erreur'
+}

@@ -40,6 +40,7 @@ import { messageErreur } from '@/lib/erreurs'
 import { phraseDocumentsAnalyses, phraseExigences, repartirDocuments, titresDetailDocuments } from '@/lib/analyseLibelles'
 import { PASSAGE_INTROUVABLE, trouverPieceCitee } from '@/lib/pieceCitee'
 import { lectureNonDemarree } from '@/lib/lectureNonDemarree'
+import { ouvrirOngletExterne } from '@/lib/adresseSure'
 
 const ANALYSIS_STEPS: StepDescriptor[] = [
   { key: 'preparation',     label: 'Analyse des documents',      estimated_s: 2 },
@@ -105,7 +106,7 @@ export default function StepAnalysis({ project }: Props) {
   const openFieldSource = async (src: FieldSource) => {
     const doc = projectDocs.find(d => d.file_name === src.document)
     if (!doc) { annoncer(PASSAGE_INTROUVABLE, 'erreur'); return }
-    if (doc.file_url.startsWith('http')) { window.open(doc.file_url, '_blank'); return }
+    if (doc.file_url.startsWith('http')) { ouvrirOngletExterne(doc.file_url); return }
     try {
       const origine = await getSignedFileUrl(doc.file_url)
       const pdfRel = [doc.file_url, doc.pdf_preview_url].find((u) => u && u.toLowerCase().endsWith('.pdf')) ?? null

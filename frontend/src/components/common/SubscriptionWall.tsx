@@ -7,6 +7,7 @@ import { api } from '@/services/api'
 import GrilleOffres, { PHRASE_RESILIATION } from '@/components/offres/GrilleOffres'
 import { useAuthStore } from '@/stores/authStore'
 import { estRefusSiret } from '@/lib/refus'
+import { allerChezStripe } from '@/lib/adresseSure'
 import { gesteOffre } from '@/lib/murOffres'
 import { trouverOffre } from '@/lib/offres'
 
@@ -36,7 +37,7 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis', 
     setErreur(null)
     try {
       const { data } = await api.post('/stripe/create-checkout-session', { plan: planId })
-      window.location.href = data.url
+      allerChezStripe(data.url)
     } catch (e) {
       const detail = (e as { response?: { data?: { detail?: unknown } } }).response?.data?.detail
       setErreur(typeof detail === 'string' ? detail : "Le paiement n’a pas pu démarrer. Réessayez dans un instant.")
@@ -50,7 +51,7 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis', 
     setErreur(null)
     try {
       const { data } = await api.get('/stripe/portal')
-      window.location.href = data.url
+      allerChezStripe(data.url)   // P0-1 (REVUE-FRONT) : seulement checkout.stripe.com / billing.stripe.com en https
     } catch {
       setErreur('Le portail de paiement n’a pas pu s’ouvrir. Votre abonnement n’est pas touché : réessayez dans un instant.')
       setPortail(false)
