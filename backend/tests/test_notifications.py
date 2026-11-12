@@ -222,6 +222,8 @@ def test_memoire_ready_emitted_on_generation(client, db_session, test_org, monke
         Notification.type == "memoire_ready",
     ).all()
     assert len(notifs) == 1
+    # Les mots du produit, écrits ici (l'écran ne les corrige plus par expressions régulières)
+    assert notifs[0].corps == "Le mémoire de l’appel d’offres « AO Gueux » est rédigé. Relisez-le avant l’export."
 
 
 def test_analysis_ready_emitted_on_analysis_end(client, db_session, test_org, monkeypatch):
@@ -261,7 +263,8 @@ def test_analysis_ready_emitted_on_analysis_end(client, db_session, test_org, mo
     ).all()
     assert len(notifs) == 1
     assert "AO Gueux" in notifs[0].titre
-    assert "exigence" in (notifs[0].corps or "")
+    assert "1 exigence relevée." in (notifs[0].corps or "")
+    assert "extraite" not in (notifs[0].corps or "")
 
 
 # ─── Endpoints ───────────────────────────────────────────────────────────────

@@ -91,7 +91,7 @@ export function ChampNombre({ valeur, onChange, unite, className, min, max, ...p
         type="text" inputMode="decimal" autoComplete="off"
         value={saisie}
         onChange={(e) => {
-          const texte = e.target.value.replace(/[^\d,.\-]/g, '')
+          const texte = e.target.value.replace(/[^\d,.-]/g, '')
           setSaisie(texte)
           if (texte === '') return onChange(null)
           const n = Number(texte.replace(',', '.'))

@@ -85,15 +85,14 @@ test('barre latérale : le survol ne pose plus de fond (deux entrées semblaient
 })
 
 // ── Le panneau des notifications ──
-import { accorder, quandNotification } from '@/components/layout/NotificationBell'
+import { quandNotification } from '@/components/layout/NotificationBell'
 
-test('notifications : les pluriels entre parenthèses et les accords faux du serveur sont accordés à l\'affichage', () => {
-  assert.equal(accorder('605 exigence(s) extraite(s)'), '605 exigences relevées') // accordé, et dans les mots du produit
-  assert.equal(accorder('1 exigence(s) extraite(s) et 2 lot(s) à relancer'), '1 exigence relevée et 2 lots à relancer')
-  assert.equal(accorder('Remise dans 1 jours'), 'Remise demain')
-  assert.equal(accorder('Le mémoire du projet « X » est généré. Relisez-le avant export.'), 'Le mémoire de l’appel d’offres « X » est rédigé. Relisez-le avant l’export.')
-  assert.equal(accorder('AO Mairie — remise dans 3 jours'), 'AO Mairie — remise dans 3 jours')
-  assert.equal(accorder('Analyse terminée'), 'Analyse terminée')
+test('notifications : le texte du serveur s\'affiche tel quel (il écrit lui-même les accords et les mots du produit)', () => {
+  // backend/tests/test_notifications.py et test_textes_serveur_accords.py tiennent les phrases ; l'écran ne les réécrit plus
+  const cloche = sansCommentaires(lire('src/components/layout/NotificationBell.tsx'))
+  assert.doesNotMatch(cloche, /accorder|\.replace\(/)
+  assert.match(cloche, /\{n\.titre\}/)
+  assert.match(cloche, /\{n\.corps\}/)
 })
 
 test('notifications : la date en mots entiers ; au-delà d\'une semaine, le jour (« 3 nov. »)', () => {

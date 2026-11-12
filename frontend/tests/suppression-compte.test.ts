@@ -63,3 +63,15 @@ test('Paramètres > Compte porte la rangée, dans la carte du compte, avec les c
   assert.match(comp, /Annuler la suppression/)
   assert.match(comp, /suppression_prevue_le/)
 })
+
+// Point 74 de DECISIONS.md : supprimer le compte efface toute l'organisation ; le serveur le réserve à l'administrateur
+// (backend/tests/test_suppression_reservee_admin.py). Un membre ne voit pas le bouton : une phrase dit à qui s'adresser.
+test('point 74 : un membre ne voit ni « Supprimer mon compte » ni « Annuler la suppression » ; la phrase dit à qui s’adresser', async () => {
+  const { PHRASE_MEMBRE } = await import('@/lib/suppressionCompte')
+  assert.match(PHRASE_MEMBRE, /réservée à l’administrateur de votre entreprise/)
+  assert.doesNotMatch(PHRASE_MEMBRE, /!/)
+  const comp = sansCommentaires(lire('src/components/parametres/SuppressionCompte.tsx'))
+  assert.match(comp, /const membre = useAuthStore\(\(s\) => s\.user\?\.role === 'member'\)/)
+  // les deux boutons ne sont rendus que hors du cas « membre »
+  assert.match(comp, /\{membre \? \(\s*<span[^>]*>\{PHRASE_MEMBRE\}<\/span>\s*\) : prevue \?/)
+})

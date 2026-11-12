@@ -22,6 +22,12 @@ function LienInscription({ offre }: { offre: Offre }) {
   )
 }
 
+/**
+ * D23 (décision du fondateur, 12/11/2026) : la règle de résiliation, dite sous la grille au mur des offres et dans
+ * Paramètres > Abonnement, mot pour mot. Le portail du paiement arrête l'abonnement à la fin de la période payée.
+ */
+export const PHRASE_RESILIATION = 'Résiliable à tout moment : l’accès reste ouvert jusqu’à la fin de la période payée, le mois entamé n’est pas remboursé. Facturation mensuelle sans engagement.'
+
 /** La grille des offres, identique partout où elle s'affiche (source : lib/offres.ts). */
 export default function GrilleOffres({ action, compacte = false }: Props) {
   return (

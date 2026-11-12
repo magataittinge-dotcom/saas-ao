@@ -5,7 +5,7 @@ import assert from 'node:assert/strict'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { estAClasser, faitsDepot } from '@/lib/depotDossier'
 import { phraseComptesUtiles, phraseResumePieces } from '@/lib/resumePieces'
-import { nomPiece, sansNoteDeRegroupement } from '@/lib/nomsPieces'
+import { nomPiece } from '@/lib/nomsPieces'
 import { sansJargonIA, titresDetailDocuments } from '@/lib/analyseLibelles'
 import { construireCarteAO } from '@/lib/carteAO'
 import { setPendingUpload, takePendingUpload } from '@/lib/pendingUpload'
@@ -83,8 +83,8 @@ test('Pièces : une phrase de faits sans zéro, le nom sans la note du logiciel,
   for (const p of [phraseResumePieces({ pretes: 0, aJoindre: 14, aRenouveler: 0, total: 14, autres: 0 }), phraseComptesUtiles({ pretes: 0, aJoindre: 3, aRenouveler: 0, total: 3, autres: 0 })]) {
     assert.doesNotMatch(p, /\b0\b|Aucune|manquant|incomplet|absent/)
   }
-  assert.equal(nomPiece('pouvoir', 'Pouvoir / habilitation à signer (2 exigences du RC regroupées)'), 'Pouvoir / habilitation à signer')
-  assert.equal(sansNoteDeRegroupement('Références (1 exigence du RC regroupée)'), 'Références')
+  // le serveur n'écrit plus « (N exigences du RC regroupées) » (backend/tests/test_note_regroupement_pieces.py) : le nom passe tel quel
+  assert.equal(nomPiece('pouvoir', 'Pouvoir / habilitation à signer'), 'Pouvoir / habilitation à signer')
   assert.equal(redit('DC1 — Lettre de candidature', 'Lettre de candidature (DC1)'), true)
   assert.equal(redit('Attestation de visite du site', 'Attestation de visite'), false)
   const html = renderToStaticMarkup(
