@@ -20,7 +20,6 @@ const CAPTURES = process.env.E2E_CAPTURES || path.join(TRAVAIL, 'captures')
 const APPELS = path.join(TRAVAIL, 'appels.jsonl')
 const PANNE = path.join(TRAVAIL, 'panne')
 const MARQUE = 'E2E Ecole des Grebes'
-const DEPOSE_PHRASE = 'Le dossier est déposé'
 const LARGEURS = [
   { nom: 'ordinateur', width: 1440, height: 900, tel: false },
   { nom: 'telephone', width: 390, height: 844, tel: true },
@@ -267,6 +266,14 @@ async function etapePlan(ctx) {
   const { page } = ctx
   await page.waitForURL(/\/plan$/, { timeout: 30_000 })
   await controler(ctx, 'plan', { fil: FIL[4] })
+  // Panne : un pas en arrière dans le fil, puis le retour arrière du navigateur → l'écran Plan, intact.
+  await page.getByRole('navigation', { name: NOM_FIL }).getByRole('button', { name: FIL[2], exact: true }).click()
+  await page.waitForURL(/\/analysis$/, { timeout: 15_000 })
+  await page.getByRole('heading', { level: 1, name: TITRES.decider, exact: true }).waitFor({ timeout: 15_000 })
+  await page.goBack()
+  await page.waitForURL(/\/plan$/, { timeout: 15_000 })
+  await controler(ctx, 'plan', { fil: FIL[4] })
+  ctx.pannes.push('retour arrière du navigateur après un clic dans le fil : écran Plan intact')
   await bouton(page, VERBES.validerPlan, true).click()
   await bouton(page, VERBES.rediger, true).click()
 }
@@ -281,7 +288,15 @@ async function etapeRediger(ctx) {
   const versExport = ctx.largeur.tel
     ? page.getByRole('button', { name: SUITE.telephone + FIL[6], exact: true })
     : bouton(page, VERBES.passerExport, true)
-  await versExport.waitFor({ timeout: ATTENTE_IA })
+  try { await versExport.waitFor({ timeout: 30_000 }) } catch {
+    // Rédaction simulée finie en moins d'une seconde : si l'écran d'attente reste alors que le serveur a fini, c'est le constat.
+    const p = await api_(page, 'GET', `/api/projects/${ctx.id}`)
+    if (p.corps?.processing_status === 'generating') { await versExport.waitFor({ timeout: ATTENTE_IA }) } else {
+      constat(ctx, 'StepMemoire.tsx:302 — rédaction finie côté serveur, l’écran reste sur « Synorix rédige votre mémoire » : la fin, survenue avant l’abonnement au flux, n’est jamais vue (même cause que StepAnalysis.tsx:331) ; un rechargement débloque')
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await versExport.waitFor({ timeout: 30_000 })
+    }
+  }
   await page.waitForTimeout(1000)
   await controler(ctx, 'rediger', { fil: FIL[5] })
   // Une partie s'ouvre depuis le sommaire (replié derrière « Sommaire » au téléphone).
@@ -321,6 +336,8 @@ async function etapeExport(ctx) {
   const { page } = ctx
   await page.waitForURL(/\/export$/, { timeout: 30_000 })
   await controler(ctx, 'export', { fil: FIL[6] })
+  // Des pièces restent à joindre (DC1, assurance) : l'écran le dit et renvoie à l'étape Pièces par son verbe.
+  await bouton(page, VERBES.reunir, true).first().waitFor({ timeout: 10_000 })
   // Panne : double clic sur « Télécharger le dossier » → un seul fichier.
   const avant = ctx.j.telechargements.length
   await bouton(page, VERBES.telecharger, true).dblclick()
@@ -361,7 +378,7 @@ async function etapeExport(ctx) {
   await page.waitForTimeout(1000)
   ctx.n += 1
   await capturer(page, ctx.largeur, ctx.n, 'depose')
-  await page.getByText(DEPOSE_PHRASE).first().waitFor({ timeout: 15_000 })
+  await page.getByText(DEPOSE, { exact: true }).first().waitFor({ timeout: 15_000 })
   // Il quitte les AO en cours : Mes AO (vue par défaut, les AO en cours) et l'Accueil ne le montrent plus.
   for (const [ecran, url] of [['mesAO', '/projects'], ['accueil', '/dashboard']]) {
     const liste = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/projects' && r.status() === 200, { timeout: 30_000 })
@@ -411,6 +428,68 @@ async function passage(nav, largeur, dossier) {
   return ctx
 }
 
+// ── Panne : l'IA échoue pendant la lecture ─────────────────────────────────
+/** Analyses décomptées ce mois (GET /api/billing/quota, la source de la jauge de la barre). */
+const quota = async (page) => {
+  const r = await api_(page, 'GET', '/api/billing/quota')
+  return Number(r.corps?.analyses?.used ?? r.corps?.analyses?.utilisees ?? NaN)
+}
+
+async function panneLecture(nav, dossier) {
+  const largeur = LARGEURS[0]
+  const { ctx: bctx, page, j } = await ouvrir(nav, largeur)
+  const ctx = { page, j, largeur, n: 40, etapes: [], id: null, dossier, pannes: [] }
+  const debut = Date.now()
+  try {
+    await menage(page)
+    await etapeDepot(ctx, dossier.zip)
+    await page.waitForURL(/\/lots$/, { timeout: 30_000 })
+    await page.getByRole('button', { name: /^Lot 01/ }).first().click()
+    const avant = await quota(page)
+    writeFileSync(PANNE, 'analyse')
+    await bouton(page, VERBES.analyserLot).click()
+    // L'écran d'erreur de la lecture (ProgressDisplay) : la phrase, l'unité rendue, « Relancer ».
+    const relancer = bouton(page, VERBES.relancer, true)
+    try { await relancer.waitFor({ timeout: 45_000 }) } catch {
+      constat(ctx, 'StepAnalysis.tsx:331 — lecture en échec côté serveur, l’écran reste sur l’attente : la fin n’est pas vue sans rechargement')
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await relancer.waitFor({ timeout: 30_000 })
+    }
+    ctx.n += 1
+    await capturer(page, largeur, ctx.n, 'panne-ia-message')
+    // Un message clair : aucune trace technique (étiquette de passe, nombre de tentatives, erreur du fournisseur).
+    const message = await relancer.locator('xpath=ancestor::*[@role="alert" or @role="status"][1]').innerText().catch(() => '')
+    if (!message) throw new Echec('panne IA : aucun message autour de « Relancer »')
+    if (/\[[\w-]+\]|tentatives|Connection error|Exception|Traceback/i.test(message)) {
+      constat(ctx, `StepAnalysis.tsx:297 — lecture en échec : le message montre l’erreur technique (« ${message.split('\n')[0].slice(0, 90)} ») ; le détail du flux vient de fail_pipeline(…, str(e)) (routers/analysis.py:571), la phrase propre de processing_detail n’est lue qu’après relecture du projet`)
+    }
+    await controlerConsole(ctx, 'panne IA')
+    const apres = await quota(page)
+    if (!(apres === avant)) throw new Echec(`panne IA : l'unité n'est pas rendue (analyses ${avant} → ${apres})`)
+    // L'IA est réparée : « Relancer » relance la lecture, qui mène à Décider.
+    unlinkSync(PANNE)
+    await relancer.click()
+    await page.waitForURL(/\/analysis$/, { timeout: 30_000 })
+    const suite = bouton(page, VERBES.passerPieces, true)
+    try { await suite.waitFor({ timeout: 30_000 }) } catch {
+      constat(ctx, 'StepAnalysis.tsx:331 — analyse finie côté serveur, l’écran reste sur « Synorix analyse votre dossier » (Démarrage) : la fin, survenue avant l’abonnement au flux, n’est jamais vue (processing_status du projet en cache, jamais relu) ; un rechargement débloque')
+      await page.reload({ waitUntil: 'domcontentloaded' })
+      await suite.waitFor({ timeout: 30_000 })
+    }
+    await controler(ctx, 'decider', { fil: FIL[2] })
+    ctx.pannes.push(`IA en panne pendant la lecture : message et « ${VERBES.relancer} », unité rendue (${avant} → ${apres}), relance réussie`)
+  } catch (e) {
+    const f = await capturer(page, largeur, 99, 'panne-echec')
+    const ou = e instanceof Echec ? '' : '\n' + String(e.stack || '').split('\n').filter((l) => l.includes('parcours.mjs')).slice(0, 2).join('\n')
+    throw new Echec(`[panne IA] ${e.message.split('\nCall log')[0]}${ou}\nURL ${page.url()}\ncapture ${f}\n${await inventaire(page).catch(() => '')}`)
+  } finally {
+    if (existsSync(PANNE)) unlinkSync(PANNE)
+    ctx.appels = appelsDepuis(debut)
+    await bctx.close()
+  }
+  return ctx
+}
+
 // ── Programme ───────────────────────────────────────────────────────────────
 let code = 0
 const bilan = []
@@ -426,6 +505,10 @@ try {
     dire(`passage ${largeur.nom} (${largeur.width} × ${largeur.height})`)
     bilan.push(await passage(nav, largeur, dossier))
   }
+  if (process.env.E2E_PANNES !== '0') {
+    dire('panne : l’IA échoue pendant la lecture (ordinateur)')
+    bilan.push(await panneLecture(nav, dossier))
+  }
 } catch (e) {
   code = 1
   console.error(`\nÉCHEC ${masquer(e.stack && !(e instanceof Echec) ? e.stack : e.message)}`)
@@ -435,7 +518,7 @@ try {
   arreterApi()
 }
 for (const b of bilan) {
-  dire(`appels simulés (${b.largeur.nom}) : ${JSON.stringify(b.appels)}`)
+  dire(`appels simulés (${b.n >= 40 ? 'panne IA' : b.largeur.nom}) : ${JSON.stringify(b.appels)}`)
   for (const p of b.pannes) dire(`  panne (${b.largeur.nom}) : ${p}`)
   for (const c of b.j.connues) dire(`  CONSTAT (${b.largeur.nom}) : ${c}`)
 }

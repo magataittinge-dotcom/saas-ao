@@ -7,27 +7,10 @@
 export const FIL = ['Dépôt du dossier', 'Lots', 'Décider', 'Pièces', 'Plan', 'Rédiger', 'Export']
 export const NOM_FIL = 'Étapes de l’appel d’offres'
 
-/** Le titre (h1) de chaque écran. */
-export const TITRES = {
-  nouveau: 'Nouvel appel d’offres',
-  depot: 'Dépôt du dossier',
-  lots: 'Lots',
-  decider: 'Décider',
-  pieces: 'Réunir les pièces',
-  plan: 'Plan du mémoire',
-  validerPlan: 'Valider le plan',
-  rediger: 'Rédiger le mémoire',
-  export: 'Export du dossier',
-  accueil: null,
-  mesAO: null,
-}
-
 /** Les verbes des étapes (action.ts / etatAO.ts / écrans). */
 export const VERBES = {
   zoneDepot: 'DCE, dossier de l’acheteur',
-  analyser: 'Analyser le dossier',
   analyserLot: 'Analyser 1 lot',
-  yAller: 'On y va',
   passerPieces: 'Passer aux pièces',
   reunir: 'Réunir les pièces',
   deposerFormulaire: 'Déposer le formulaire',
@@ -43,11 +26,23 @@ export const VERBES = {
   memoireWord: 'Mémoire en Word',
   dialogueStatut: 'Mettre à jour le statut',
   enregistrer: 'Enregistrer',
-  relancer: 'Relancer l’analyse',
+  relancer: 'Relancer',
 }
 
-/** Le mot de l'état « déposé » (etatAO.ts, FERMES.soumis). */
-export const DEPOSE = 'Déposé'
+/** Le titre (h1) de chaque écran. */
+export const TITRES = {
+  nouveau: 'Nouvel appel d’offres',
+  depot: FIL[0],
+  lots: FIL[1],
+  decider: FIL[2],
+  pieces: VERBES.reunir,
+  plan: 'Plan du mémoire',
+  rediger: VERBES.rediger,
+  export: 'Export du dossier',
+}
+
+/** Le titre du message d'un AO déposé (routes/Project.tsx). */
+export const DEPOSE = 'Le dossier est déposé'
 
 /** Le bouton de suite d'un écran : « Étape suivante : Lots » à l'ordinateur, « Suivant : Lots » dans la barre du bas au téléphone. */
 export const SUITE = { ordinateur: 'Étape suivante : ', telephone: 'Suivant : ' }
