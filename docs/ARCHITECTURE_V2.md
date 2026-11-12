@@ -942,7 +942,7 @@ Referrer-Policy: strict-origin-when-cross-origin
 Permissions-Policy: camera=(), microphone=(), geolocation=()
 ```
 
-> **Politique réelle** (le bloc ci-dessus est le design d'origine : le navigateur n'appelle jamais `api.anthropic.com`) : celle du front est dans `deploy/nginx/synorix-entetes.conf` (en observation, `Content-Security-Policy-Report-Only`, au 12/11/2026), les rapports arrivent sur `POST /api/csp-rapport` (`routers/csp_rapport.py` : 8 Ko au plus, limité par IP, seules la directive et l'origine bloquée sont journalisées) ; celle des réponses de l'API est posée par `main.py`. Garde-fou : `frontend/tests/csp-origines.test.ts` vérifie que toute origine nommée dans `src/` est connue de la politique (`e8feba1`).
+> **Politique réelle** (le bloc ci-dessus est le design d'origine : le navigateur n'appelle jamais `api.anthropic.com`) : celle du front est dans `deploy/nginx/synorix-entetes.conf` (**bloquante** depuis le 12/11/2026, `Content-Security-Policy`, commit `14cfc24` ; retour en observation en une ligne : `docs/DEPLOYMENT.md` § 8), les rapports arrivent sur `POST /api/csp-rapport` (`routers/csp_rapport.py` : 8 Ko au plus, limité par IP, seules la directive et l'origine bloquée sont journalisées) ; celle des réponses de l'API est posée par `main.py`. Garde-fou : `frontend/tests/csp-origines.test.ts` vérifie que toute origine nommée dans `src/` est connue de la politique (`e8feba1`).
 
 ### 7.10 Server-side validation, always
 
