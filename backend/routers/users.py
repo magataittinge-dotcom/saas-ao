@@ -91,6 +91,27 @@ def _date_iso(valeur) -> str | None:
     return valeur.isoformat() if valeur else None
 
 
+@router.get("/me/suppression")
+def account_deletion_preview(
+    user: User = Depends(get_auth_user),
+    db: Session = Depends(get_db),
+):
+    """D23 — ce que le dialogue « Supprimer mon compte » annonce (lu à son ouverture, jamais à chaque page) : immédiate
+    sans abonnement payant ; sinon la date de fin de la période payée. Et la demande déjà posée, s'il y en a une."""
+    from models.organization import Organization
+    from services import resiliation_compte
+
+    org = db.query(Organization).filter(Organization.id == user.organization_id).first()
+    if org is None:
+        raise HTTPException(status_code=404, detail="Organisation introuvable")
+    try:
+        fin = resiliation_compte.apercu_fin_de_periode(org)
+    except resiliation_compte.ResiliationImpossible:
+        raise HTTPException(status_code=502, detail="Le service de paiement n’a pas répondu. Réessayez dans un instant.")
+    return {"immediate": fin is None, "fin_de_periode": _date_iso(fin),
+            "suppression_prevue_le": _date_iso(org.suppression_prevue_le)}
+
+
 @router.delete("/me", status_code=200)
 def delete_my_account(
     user: User = Depends(get_auth_user),

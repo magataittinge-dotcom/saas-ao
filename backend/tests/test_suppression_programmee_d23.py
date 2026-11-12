@@ -268,3 +268,29 @@ def test_sans_client_chez_le_fournisseur_suppression_immediate(client, test_user
     poser(FauxFournisseur(panne=True))                                               # serait une panne s'il était appelé
     r = client.delete("/api/users/me")
     assert r.status_code == 200 and r.json()["deleted"] is True
+
+
+# ── 7. Ce que le dialogue annonce avant de confirmer (un appel au fournisseur, à l'ouverture du dialogue) ─────
+
+def test_apercu_avec_abonnement_donne_la_date_sans_rien_changer(client, abonne, poser, db_session):
+    f = FauxFournisseur([ACTIF])
+    poser(f)
+    r = client.get("/api/users/me/suppression")
+    assert r.status_code == 200, r.text
+    corps = r.json()
+    assert corps["immediate"] is False
+    assert corps["fin_de_periode"].startswith("2030-03-14")
+    assert corps["suppression_prevue_le"] is None
+    assert f.resilies == []
+    assert _org(db_session).suppression_prevue_le is None
+
+
+def test_apercu_sans_abonnement_immediate(client, test_user, poser):
+    poser(FauxFournisseur(panne=True))
+    corps = client.get("/api/users/me/suppression").json()
+    assert corps["immediate"] is True and corps["fin_de_periode"] is None
+
+
+def test_apercu_panne_du_fournisseur_502(client, abonne, poser):
+    poser(FauxFournisseur([ACTIF], panne=True))
+    assert client.get("/api/users/me/suppression").status_code == 502

@@ -79,6 +79,24 @@ def _fin_de_periode(sub: dict) -> datetime | None:
     return datetime.fromtimestamp(max(secondes), tz=timezone.utc).replace(tzinfo=None)
 
 
+def _fin_des_payants(payants: list[dict]) -> datetime:
+    fins = [f for f in (_fin_de_periode(s) for s in payants) if f is not None]
+    return max(fins) if fins else datetime.utcnow() + _REPLI_FIN_DE_PERIODE
+
+
+def apercu_fin_de_periode(org) -> datetime | None:
+    """Ce que « Supprimer mon compte » ferait, sans rien changer : la date de fin de la période payée s'il existe un
+    abonnement payant vivant, sinon None (suppression immédiate). Lève ResiliationImpossible."""
+    if not getattr(org, "stripe_subscription_id", None) and not getattr(org, "stripe_customer_id", None):
+        return None
+    try:
+        payants = [s for s in _abonnements_ouverts(_fournisseur(), org) if s.get("status") in STATUTS_PAYANTS_VIVANTS]
+    except Exception as exc:
+        logger.error("Suppression du compte : abonnement illisible (org=%s, %s)", org.id, type(exc).__name__)
+        raise ResiliationImpossible() from exc
+    return _fin_des_payants(payants) if payants else None
+
+
 def programmer_ou_resilier(org) -> datetime | None:
     """Avec un abonnement payant vivant : met chaque abonnement ouvert en arrêt à l'échéance et rend la date de fin de
     la période payée (la plus tardive) ; sinon résilie tout de suite les abonnements ouverts et rend None (suppression
@@ -95,8 +113,7 @@ def programmer_ou_resilier(org) -> datetime | None:
             return None
         for sub in ouverts:
             fournisseur.cancel_subscription(sub["id"], at_period_end=True)
-        fins = [f for f in (_fin_de_periode(s) for s in payants) if f is not None]
-        return max(fins) if fins else datetime.utcnow() + _REPLI_FIN_DE_PERIODE
+        return _fin_des_payants(payants)
     except Exception as exc:
         logger.error("Suppression du compte : abonnement non résilié (org=%s, %s)", org.id, type(exc).__name__)
         raise ResiliationImpossible() from exc
