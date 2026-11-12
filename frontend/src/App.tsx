@@ -106,8 +106,8 @@ export function TableRoutes() {
         <Route path="/projects/:id/*" element={<Project />} />
         <Route path="/vault" element={<Vault />} />
         <Route path="/outils" element={<Tools />} />
-        {/* Page de référence du système de design : interne, volontairement absente du menu */}
-        <Route path="/design" element={<Design />} />
+        {/* Page de référence du système de design : interne, absente du menu, servie en développement seulement */}
+        {import.meta.env.DEV && <Route path="/design" element={<Design />} />}
         {/* B6 — le profil mémoire vit dans Mon entreprise ; redirect propre */}
         <Route path="/memoire-config" element={<Navigate to="/company" replace />} />
         <Route path="/company" element={<Company />} />
