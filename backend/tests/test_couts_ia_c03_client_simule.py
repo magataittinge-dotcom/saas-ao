@@ -154,3 +154,30 @@ def test_analyse_au_client_simule_memes_appels_et_cout_inscrit(client, db_sessio
     assert budget_ia.depense_24h(db_session, org) == pytest.approx(9 * eur_un, abs=1e-5)
     _vieillir(db_session, org, 24 * 60)
     assert budget_ia.depense_24h(db_session, org) == 0.0
+
+
+def test_analyse_en_echec_apres_des_appels_payes_inscrit_ce_qui_a_ete_paye(client, db_session, test_org,
+                                                                             client_simule):
+    """Le client répond aux trois tranches de la passe 1, puis tombe (panne inattendue) : l'analyse échoue, les trois
+    appels payés sont inscrits et la réservation est réglée."""
+    org = test_org.id
+    reel = client_simule._stream
+
+    def puis_panne(**params):
+        if len(client_simule.appels) >= 3:
+            raise RuntimeError("panne simulée après trois appels payés")
+        return reel(**params)
+    client_simule.messages.stream = puis_panne
+    _projet(db_session, org, "p-echec")
+    r = client.post("/api/projects/p-echec/analyze", json={"lots": ["lot1", "lot2"]})
+    assert r.status_code in (200, 202), r.text
+    _attendre()
+    assert len(client_simule.appels) == 3
+    db_session.expire_all()
+    from models.project import Project
+    assert db_session.get(Project, "p-echec").status not in ("analyzing", "analyzed")
+    lignes = db_session.query(CoutIA).filter(CoutIA.organization_id == org).all()
+    assert [lg.usage for lg in lignes] == ["analyse"]                   # plus de réservation, la dépense payée
+    assert lignes[0].jetons_sortie == 3 * USAGE["output_tokens"]
+    usd_un, _ = couts_ia.calculer(couts_ia.SONNET_4_6, USAGE)
+    assert lignes[0].cout_usd == pytest.approx(3 * usd_un, abs=1e-5)
