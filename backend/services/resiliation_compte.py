@@ -12,9 +12,12 @@
      une demande et qu'aucun abonnement payant vivant ne reste chez le fournisseur, `executer_suppression`. Sans demande
      (impayé, résiliation depuis le portail), rien n'est supprimé : retour à l'offre gratuite.
    - Filet : `executer_suppressions_echues` (tâche quotidienne `tasks.suppression_comptes`) exécute une demande dont la
-     date est passée si le webhook n'est jamais arrivé, après la même vérification chez le fournisseur.
-   - Annulation tant que la date n'est pas passée : `reprendre_abonnements` (`cancel_at_period_end=False`), un seul
-     abonnement, parmi ceux que la demande a elle-même arrêtés (trace dans `audit_logs`, P1-3).
+     date est passée si le webhook n'est jamais arrivé, après la même vérification chez le fournisseur ; si un
+     abonnement payant renouvelle de nouveau (relu), il RETIRE la demande (REVUE-2 P0-1).
+   - Annulation tant que l'organisation existe (même après la date, si rien n'est encore supprimé) :
+     `reprendre_abonnements` (`cancel_at_period_end=False`), un seul abonnement, parmi ceux que la demande a
+     elle-même arrêtés (trace dans `audit_logs`, P1-3). Chaque retrait de la demande est écrit au journal
+     (`retirer_demande`).
    - Reprise depuis le portail du fournisseur (webhook `customer.subscription.updated` avec `cancel_at_period_end`
      faux) : la demande est retirée, sinon un arrêt d'abonnement des mois plus tard supprimerait le compte.
    Un échec du fournisseur lève `ResiliationImpossible` : la route répond 502 et rien ne change.
@@ -137,6 +140,18 @@ def noter_demande(db, org, user_id: str | None, arretes: list[str]) -> None:
                     target_id=org.id, extra={"abonnements_arretes": list(arretes)}))
 
 
+ACTION_RETRAIT = "compte.suppression_retiree"
+
+
+def retirer_demande(db, org, raison: str, user_id: str | None = None) -> None:
+    """Retire la demande de suppression (sans valider) et l'écrit au journal d'audit : `raison` = « annulee » (le
+    client), « abonnement_repris » (reprise dans le portail), « abonnement_renouvele » (filet quotidien)."""
+    from models.audit_log import AuditLog
+    org.suppression_prevue_le = None
+    db.add(AuditLog(user_id=user_id, organization_id=org.id, action=ACTION_RETRAIT, target_type="organization",
+                    target_id=org.id, extra={"raison": raison}))
+
+
 def abonnements_arretes_par_la_demande(db, org) -> list[str] | None:
     """Les abonnements que la dernière demande de l'organisation a mis en arrêt ; None si aucune trace."""
     from models.audit_log import AuditLog
@@ -250,7 +265,11 @@ def supprimer_si_demande(db, org) -> bool:
 
 
 def executer_suppressions_echues(db, maintenant: datetime | None = None) -> int:
-    """Filet quotidien : exécute les demandes dont la date est passée ; rend le nombre de comptes supprimés."""
+    """Filet quotidien : exécute les demandes dont la date est passée ; rend le nombre de comptes supprimés.
+
+    REVUE-2 P0-1 — une demande échue dont un abonnement payant renouvelle de nouveau (`abonnement_repris`, relu chez
+    le fournisseur : reprise dans le portail dont l'événement s'est perdu pendant une panne) est RETIRÉE, avec sa ligne
+    au journal d'audit : sinon elle restait posée, et la fin de cet abonnement, des mois plus tard, effaçait tout."""
     from models.organization import Organization
 
     maintenant = maintenant or datetime.utcnow()
@@ -260,6 +279,11 @@ def executer_suppressions_echues(db, maintenant: datetime | None = None) -> int:
     for org_id in echues:
         org = db.get(Organization, org_id)
         try:
+            if abonnement_repris(org):
+                retirer_demande(db, org, "abonnement_renouvele")
+                db.commit()
+                logger.info("Suppression programmée retirée : l'abonnement renouvelle (org=%s)", org_id)
+                continue
             faites += supprimer_si_demande(db, org)
         except Exception:
             logger.exception("Suppression programmée impossible (org=%s) ; nouvel essai demain", org_id)

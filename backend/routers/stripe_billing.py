@@ -441,7 +441,7 @@ def stripe_webhook(request: Request, payload: bytes = Depends(_corps_brut), db: 
                 and data_object.get("cancel_at_period_end") is False):
             from services import resiliation_compte
             if resiliation_compte.abonnement_repris(org):
-                org.suppression_prevue_le = None
+                resiliation_compte.retirer_demande(db, org, "abonnement_repris")
                 db.commit()
         # PAIEMENT-2 (constat 2) — on ne croit pas l'offre écrite dans l'événement (un événement ancien, réessayé, remettait
         # l'offre précédente) : l'abonnement est RELU chez le fournisseur, l'offre se lit dans son prix, seulement s'il
