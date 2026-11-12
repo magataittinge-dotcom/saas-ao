@@ -11,7 +11,7 @@ import { Bouton } from '@/components/ui/bouton'
 import { Message } from '@/components/ui/message'
 import EntreeFichier from '@/components/depot/EntreeFichier'
 import { messageErreur } from '@/lib/erreurs'
-import { nomPiece, sansNoteDeRegroupement } from '@/lib/nomsPieces'
+import { nomPiece } from '@/lib/nomsPieces'
 import { libelleSource } from '@/lib/resumeAO'
 import { api } from '@/services/api'
 
@@ -148,7 +148,7 @@ function TemplateRow({
 
   const source = item.source_document ? libelleSource({ document: item.source_document, page: item.source_page ?? null }) : null
   const voirSource = item.source_exigence_id && onOpenSource ? () => onOpenSource(item) : undefined
-  const precision = sansNoteDeRegroupement(item.details ?? '')
+  const precision = (item.details ?? '').trim()
   // D'où vient le formulaire, en une ligne : le fichier déposé, sinon le modèle à compléter (avec son lien), puis la source.
   const modele = item.jointe && item.piece_nom ? item.piece_nom : nonConcernee || isWarning ? null : hasTemplate ? 'Modèle de l’acheteur à compléter'
     // Type (b) : modèle officiel — normal qu'il ne soit pas au DCE. Aucun numéro de formulaire : service-public (F32144, F32106)

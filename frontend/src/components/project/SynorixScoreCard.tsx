@@ -96,8 +96,7 @@ export default function SynorixScoreCard({ project, onOpenSource, onYAller, enCo
                 )
               ) : (
                 <p className="break-words text-sm text-fg-2">
-                  {/* le serveur écrit « Exigée(s) » : à l'écran, l'accord est écrit (affichage seulement) */}
-                  {comp.explication.replace(/\((e?s)\)/g, '$1')}
+                  {comp.explication}
                   {comp.action === 'completer_profil' && (
                     <>
                       {' '}

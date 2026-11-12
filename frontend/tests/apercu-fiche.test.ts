@@ -1,7 +1,7 @@
 // Contrôleur d'aperçu des fiches : demande 800 ms après le dernier changement (la dernière gagne), sondage toutes les
 // 700 ms tant que le serveur fabrique, états « mise à jour », « indisponible » et « erreur », arrêt au démontage.
 // Minuteries simulées : aucune attente réelle, aucun réseau.
-import { test, mock } from 'node:test'
+import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
   ControleurApercu, DEBOUNCE_MS, SONDAGE_MS, SONDAGES_MAX, MESSAGE_INDISPONIBLE, apercuSimplifie, enMiseAJour, urlPage,

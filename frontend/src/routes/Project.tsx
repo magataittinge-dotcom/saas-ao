@@ -1,6 +1,8 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useContext, useEffect, useState } from 'react'
+import { QueryClientContext } from '@tanstack/react-query'
 import { Link, useParams, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import { useProject } from '@/hooks/useProject'
+import { prechargerDonneesEtape, prechargerEtape } from '@/lib/prechargementAO'
 import { StepProgress, segmentDeEtape } from '@/components/project/StepProgress'
 import { lotUniqueDuDossier } from '@/lib/lotUnique'
 import { actionEtape, libelleRemise, quandRemise } from '@/lib/intelligence/action'
@@ -51,7 +53,12 @@ export function aoIntrouvable(erreur: unknown): boolean {
 }
 
 export default function Project() {
-  const { id } = useParams<{ id: string }>()
+  const { id, '*': reste } = useParams<{ id: string; '*': string }>()
+  // F-05 : l'étape est dans l'adresse, son morceau et ses données partent en même temps que la requête du projet
+  const segment = reste?.split('/')[0]
+  prechargerEtape(segment)
+  const client = useContext(QueryClientContext)
+  useEffect(() => { if (id) prechargerDonneesEtape(client, segment, id) }, [client, segment, id])
   const requete = useProject(id!)
   // Une phrase par cause (jury, tour 1) : introuvable → l'écran « AO introuvable », sans « Réessayer » (il n'y a rien à
   // réessayer) ; panne → l'état d'erreur du système, avec « Réessayer ». Jamais « peut-être supprimé, ou la connexion… ».

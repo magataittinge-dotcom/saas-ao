@@ -5,6 +5,7 @@ import { api } from '@/services/api'
 import { cn } from '@/lib/utils'
 import { Bouton, BoutonIcone } from '@/components/ui/bouton'
 import { LigneNouveau } from '@/components/dashboard/LigneNouveau'
+import { EtatErreur } from '@/components/ui/etats'
 
 interface NotificationItem {
   id: string
@@ -35,28 +36,6 @@ export function quandNotification(iso: string, maintenant: number = Date.now()):
 }
 
 /**
- * Le texte d'une notification vient du serveur, parfois avec des pluriels entre parenthèses ou un accord faux (« 605
- * exigence(s) extraite(s) », « Remise dans 1 jours » : jury, tour 1, bloquants). En attendant que le serveur les écrive
- * justes, l'affichage les accorde : le nombre qui précède décide du singulier ou du pluriel.
- */
-export function accorder(texte: string): string {
-  return texte
-    .replace(/(\d[\d\u00a0\u202f ]*)(\s+)((?:[^\s()]+\(s\)(?:\s+(?=[^\s()]+\(s\)))?)+)/g, (_tout, nombre: string, espace: string, mots: string) => {
-      const pluriel = Number(nombre.replace(/\D/g, '')) > 1
-      return `${nombre}${espace}${mots.replace(/\(s\)/g, pluriel ? 's' : '')}`
-    })
-    .replace(/\b([01])(\s+)jours\b/g, '$1$2jour')
-    .replace(/\bRemise dans 1 jour\b/g, 'Remise demain')
-    .replace(/\bRemise dans 0 jour\b/g, 'Remise aujourd’hui')
-    // les mots du produit, pas ceux du code (jury, tour 1 : « projet », « généré », « extraites », « avant export »)
-    .replace(/\b([Ll])e mémoire du projet\b/g, '$1e mémoire de l’appel d’offres')
-    .replace(/\bdu projet\b/g, 'de l’appel d’offres')
-    .replace(/\best généré(?!\p{L})/gu, 'est rédigé')
-    .replace(/\bexigence(s?) extraite(s?)\b/g, 'exigence$1 relevée$2')
-    .replace(/\bavant export\b/g, 'avant l’export')
-}
-
-/**
  * La cloche des notifications : un bouton de 44 px, un compteur neutre (les non lues), un panneau flottant aux jetons du
  * système (Échap et un clic ailleurs le ferment). `versLeHaut` : dans le tiroir « Compte » du téléphone, il s'ouvre au-dessus,
  * calé sur le bord droit du tiroir (la cloche a la déconnexion à sa droite : calé sur elle, il sortait par la gauche à 360 px).
@@ -66,7 +45,7 @@ export default function NotificationBell({ versLeHaut = false }: { versLeHaut?: 
   const panelRef = useRef<HTMLDivElement>(null)
   const queryClient = useQueryClient()
 
-  const { data } = useQuery<{ unread: number; items: NotificationItem[] }>({
+  const { data, isError, refetch } = useQuery<{ unread: number; items: NotificationItem[] }>({
     queryKey: ['notifications'],
     queryFn: async () => {
       const { data } = await api.get('/notifications')
@@ -117,7 +96,9 @@ export default function NotificationBell({ versLeHaut = false }: { versLeHaut?: 
           </div>
           {/* le panneau prend la hauteur que l'écran offre (il n'en montrait que trois lignes et demie sur 425 px) */}
           <div className="max-h-[min(34rem,calc(100dvh-9rem))] overflow-y-auto overscroll-contain">
-            {items.length === 0 ? (
+            {items.length === 0 && isError && !data ? (
+              <EtatErreur titre="Les notifications n’ont pas pu se charger" detail={null} onReessayer={() => { void refetch() }} className="rounded-none border-0 p-4 shadow-none max-sm:p-4" />
+            ) : items.length === 0 ? (
               <p className="px-4 py-6 text-sm text-fg-2">Les notifications arriveront ici : une analyse terminée, un mémoire prêt, une remise qui approche.</p>
             ) : (
               items.map((n) => (
@@ -126,8 +107,8 @@ export default function NotificationBell({ versLeHaut = false }: { versLeHaut?: 
                   <span aria-hidden className={cn('mt-1.5 size-1.5 shrink-0 rounded-pilule', n.read ? 'bg-transparent' : 'bg-accent-ui')} />
                   <span className="min-w-0">
                     {/* deux lignes au plus : `line-clamp` pose son propre affichage, `block` l'annulait (les titres tenaient sur trois lignes) */}
-                    <span className={cn('line-clamp-2 text-sm', n.read ? 'text-fg-2' : 'font-semibold text-fg')}>{accorder(n.titre)}</span>
-                    {n.corps && <span className="mt-0.5 line-clamp-2 text-xs text-fg-2">{accorder(n.corps)}</span>}
+                    <span className={cn('line-clamp-2 text-sm', n.read ? 'text-fg-2' : 'font-semibold text-fg')}>{n.titre}</span>
+                    {n.corps && <span className="mt-0.5 line-clamp-2 text-xs text-fg-2">{n.corps}</span>}
                     <span className="mt-1 block text-xs text-fg-3">{quandNotification(n.created_at)}</span>
                   </span>
                 </button>

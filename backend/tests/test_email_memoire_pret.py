@@ -72,4 +72,4 @@ def test_memoire_pret_envoie_un_email(client, db_session, test_org, test_user, m
     msg = _SmtpSimule.envoyes[0]
     assert msg["Subject"] == "Mémoire technique prêt — Groupe scolaire"
     assert msg["To"] == "test@example.com"
-    assert "est généré" in msg.get_content()
+    assert "est rédigé. Relisez-le avant l’export." in msg.get_content()

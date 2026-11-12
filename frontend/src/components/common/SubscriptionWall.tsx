@@ -4,7 +4,7 @@ import { Bouton } from '@/components/ui/bouton'
 import { Dialogue } from '@/components/ui/dialogue'
 import { Message } from '@/components/ui/message'
 import { api } from '@/services/api'
-import GrilleOffres from '@/components/offres/GrilleOffres'
+import GrilleOffres, { PHRASE_RESILIATION } from '@/components/offres/GrilleOffres'
 import { useAuthStore } from '@/stores/authStore'
 import { estRefusSiret } from '@/lib/refus'
 
@@ -67,7 +67,7 @@ export default function SubscriptionWall({ open, onClose, feature = 'analysis', 
       />
     )}
         {erreur && <Message ton="erreur">{erreur}</Message>}
-      <p className="text-xs text-fg-3">Annulation possible à tout moment. Facturation mensuelle sans engagement.</p>
+      <p className="text-xs text-fg-3">{PHRASE_RESILIATION}</p>
     </Dialogue>
   )
 }

@@ -35,5 +35,5 @@ export const useCompanionStore = create<CompanionStore>()((set) => ({
 // Dev uniquement : tester les états depuis la console du navigateur
 // → companion.analyse() / companion.succeed() / companion.idle()
 if (import.meta.env.DEV && typeof window !== 'undefined') {
-  ;(window as unknown as Record<string, unknown>).companion = useCompanionStore.getState()
+  (window as unknown as Record<string, unknown>).companion = useCompanionStore.getState()
 }
