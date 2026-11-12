@@ -62,12 +62,14 @@ def test_gagne_requires_depot_first(client, db_session, test_org):
 
 
 def test_terminal_statuses_locked(client, db_session, test_org):
+    """D16 : gagné/perdu se corrigent (l'un vers l'autre, ou retour à « Déposé ») — tests/test_statut_correction_d16.py.
+    Aucune autre sortie : jamais vers un état de travail."""
     _project(db_session, test_org.id, "p-c14e", status="gagné")
-    assert _patch_status(client, "p-c14e", "soumis").status_code == 422
-    assert _patch_status(client, "p-c14e", "perdu").status_code == 422
+    assert _patch_status(client, "p-c14e", "en_cours").status_code == 422
+    assert _patch_status(client, "p-c14e", "analyzed").status_code == 422
 
     _project(db_session, test_org.id, "p-c14f", status="perdu")
-    assert _patch_status(client, "p-c14f", "gagné").status_code == 422
+    assert _patch_status(client, "p-c14f", "brouillon").status_code == 422
 
 
 def test_same_status_is_noop_allowed(client, db_session, test_org):

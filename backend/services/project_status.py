@@ -4,13 +4,13 @@ Les écritures directes `project.status = "en_cours"` au lancement d'une
 analyse / d'un mémoire contournaient _STATUS_TRANSITIONS : un POST /analyze
 sur un projet `gagné`/`perdu` (outcomes TERMINAUX) le ramenait
 silencieusement en cours. Ce garde bloque la relance depuis un état
-terminal, en cohérence avec _STATUS_TRANSITIONS (gagné/perdu = aucune
-sortie).
+terminal (gagné/perdu ne sortent, depuis D16, que l'un vers l'autre ou vers
+« Déposé », par correction de saisie).
 """
 from fastapi import HTTPException
 
-# Outcomes terminaux : aucun run ne peut y être relancé (aligné sur
-# routers.projects._STATUS_TRANSITIONS où gagné/perdu -> set()).
+# Outcomes terminaux : aucun run ne peut y être relancé (routers.projects._STATUS_TRANSITIONS :
+# gagné/perdu ne mènent qu'à perdu/gagné ou soumis, jamais à un état de travail).
 TERMINAL_OUTCOMES = frozenset({"gagné", "perdu"})
 
 
