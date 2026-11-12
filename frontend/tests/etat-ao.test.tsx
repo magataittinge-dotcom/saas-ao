@@ -88,7 +88,9 @@ test('« Mettre à jour le statut » : les choix suivent ce que le serveur accep
   assert.deepEqual(choixStatut('analyzed').map((c) => c.statut), ['soumis', 'sans_suite'])
   assert.deepEqual(choixStatut('soumis').map((c) => [c.statut, c.libelle]), [['gagné', 'Gagné'], ['perdu', 'Perdu'], ['en_cours', 'Je ne l’ai finalement pas déposé']])
   assert.deepEqual(choixStatut('sans_suite').map((c) => c.statut), ['en_cours'])
-  assert.deepEqual(choixStatut('gagné'), [])
+  // D16 (12/11/2026) : un résultat se corrige (Gagné ↔ Perdu) ou revient à « Déposé » ; le serveur l'accepte (SERVEUR-1)
+  assert.deepEqual(choixStatut('gagné').map((c) => [c.statut, c.libelle]), [['perdu', 'Corriger : Perdu'], ['soumis', 'Revenir à Déposé']])
+  assert.deepEqual(choixStatut('perdu').map((c) => [c.statut, c.libelle]), [['gagné', 'Corriger : Gagné'], ['soumis', 'Revenir à Déposé']])
   // chaque choix est une transition que le serveur accepte (backend/routers/projects.py, _STATUS_TRANSITIONS)
   const serveur = lire('../backend/routers/projects.py')
   for (const [de, vers] of Object.entries(STATUTS_SERVEUR)) {
@@ -100,6 +102,9 @@ test('« Mettre à jour le statut » : les choix suivent ce que le serveur accep
   assert.ok(choixStatut('soumis').some((c) => c.statut === 'en_cours'))
   assert.ok(choixStatut('sans_suite').some((c) => c.statut === 'en_cours'))
   const dialogue = sansCommentaires(lire('src/components/common/MettreAJourStatut.tsx'))
+  // D16 : plus rien n'est « définitif » à l'écran, le dialogue ne dit plus qu'un résultat « ne se modifie plus »
+  assert.doesNotMatch(dialogue, /définitif|ne se modifie plus/)
+  assert.doesNotMatch(sansCommentaires(lire('src/lib/etatAO.ts')), /choixDefinitif/)
   assert.match(dialogue, /<Dialogue /)
   assert.match(dialogue, /api\.patch\(`\/projects\/\$\{projet\.id\}`, \{ status \}\)/)
   assert.match(dialogue, /titre="Mettre à jour le statut"/)
