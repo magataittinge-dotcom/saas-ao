@@ -307,6 +307,7 @@ async function parcoursA(nav, dossiers) {
     await ligne.getByRole('button', { name: geste }).click()
     const dialogue = page.getByRole('dialog', { name: M.dialogueCoffre })
     await dialogue.waitFor({ timeout: 15_000 })
+    await page.waitForTimeout(400) // fin de l'ouverture du dialogue : capture nette
     await capturer(ctx, 'coffre-fort-ouvert')
     const lien = page.waitForResponse((r) => r.request().method() === 'PUT' && /\/checklist\/[^/]+\/link$/.test(new URL(r.url()).pathname), { timeout: 30_000 })
     await dialogue.getByRole('button', { name: `${M.choisirPiece} ${path.basename(dossiers.attestation)}`, exact: true }).click()
@@ -473,6 +474,7 @@ async function parcoursB(nav, dossiers) {
     await bouton(page, M.analyserLots).click()
     const confirmer = page.getByRole('dialog').getByRole('button', { name: M.confirmerLots, exact: true })
     await confirmer.waitFor({ timeout: 10_000 })
+    await page.waitForTimeout(400)
     await capturer(ctx, 'confirmer-deux-lots')
     await confirmer.click()
     const yAller = await attendreDecider(ctx)
