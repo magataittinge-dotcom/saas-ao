@@ -83,7 +83,12 @@ test('squelette du fil des étapes : sept ronds sur toute la largeur ; le pied d
   const html = renderToStaticMarkup(<SqueletteFil />)
   assert.match(html, /justify-between/)
   assert.equal((html.match(/rounded-pilule/g) ?? []).length, 7)
-  assert.match(lire('src/index.css'), /main:has\(\[data-phase="chargement"\], \[data-squelette-ao\], \[data-squelette-etape\]\) > \[data-coquille="pied"\] \{ visibility: hidden; \}/)
+  // sans boîte (display: none), pas seulement invisible : caché mais en page, il sautait sous le pli à l'arrivée du contenu (CLS)
+  const regle = lire('src/index.css').match(/main:has\(([^)]*)\) > \[data-coquille="pied"\] \{ display: none; \}/)
+  assert.ok(regle, 'le pied de page sort de la page pendant le chargement')
+  for (const marque of ['[data-phase="chargement"]', '[data-squelette-ao]', '[data-squelette-etape]', '[data-squelette-corps]', '[data-squelette-bande]', '[data-squelette-liste]', '[data-ecran-en-chargement]']) {
+    assert.ok(regle[1].includes(marque), marque)
+  }
 })
 
 // ── La bande de cases du système se resserre (Mes AO, Accueil, Outils, étapes) ──

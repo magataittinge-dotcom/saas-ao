@@ -67,7 +67,6 @@ const PLAFONDS: Record<string, number> = {
   'src/hooks/useLotsDuDepot.ts': 1,
   'src/hooks/useSourceChamp.tsx': 1,
   'src/hooks/useVeille.ts': 1,
-  'src/routes/Dashboard.tsx': 1,
   'src/routes/Projects.tsx': 1,
   'src/routes/project/StepAnalysis.tsx': 2,
   'src/routes/project/StepExport.tsx': 1,

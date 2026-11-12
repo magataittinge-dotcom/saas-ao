@@ -55,9 +55,12 @@ body:has([data-page-pleine]) [data-coquille="barre-haut"] > .conteneur { max-wid
 /* la barre du bas d'une étape sans geste visible se retire (BarreEtape) : elle garde ses enfants en page (pour se remesurer),
    mais ne prend ni place ni regard */
 [data-barre-etape][data-sans-geste] { visibility: hidden; height: 0 !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; border: 0 !important; box-shadow: none !important; overflow: hidden; }
-/* Pendant le chargement d'un écran, le pied de page ne flotte pas au milieu de l'écran sous les fantômes (jury, tour 1) :
-   il garde sa place et ne se montre qu'avec le contenu. */
-main:has([data-phase="chargement"], [data-squelette-ao], [data-squelette-etape]) > [data-coquille="pied"] { visibility: hidden; }
+/* Pendant le chargement d'un écran, le pied de page ne flotte pas au milieu de l'écran sous les fantômes (jury, tour 1) : il
+   ne se montre qu'avec le contenu. `display: none` et non `visibility: hidden` : caché mais en page, il était posé en bas d'un
+   écran encore court puis poussé sous le pli à l'arrivée des données, et Chrome compte ce saut (CLS jusqu'à 0,48 sur Export
+   et Plan) ; sans boîte pendant l'attente, il apparaît à sa place et rien ne saute. Les marques : l'attente d'une requête
+   (EtatRequete), les squelettes d'un AO, d'une étape, du corps ou de la bande d'une étape, d'une liste et d'un écran. */
+main:has([data-phase="chargement"], [data-squelette-ao], [data-squelette-etape], [data-squelette-corps], [data-squelette-bande], [data-squelette-liste], [data-ecran-en-chargement]) > [data-coquille="pied"] { display: none; }
 /* titre de section (P9) : trois fois plus d'air au-dessus qu'en dessous */
 .titre-section { margin-top: var(--space-40); margin-bottom: var(--space-16); }
 .titre-section:first-child { margin-top: 0; }
