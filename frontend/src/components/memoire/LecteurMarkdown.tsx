@@ -14,9 +14,14 @@ function Titre4({ children }: { children?: ReactNode }) {
 function Titre5({ children }: { children?: ReactNode }) {
   return <h5 className="mb-1.5 mt-6 font-memoire text-lg font-semibold leading-snug text-fg">{children}</h5>
 }
-/** « À compléter : … » surligné, comme dans le Word (le texte enregistré garde ses crochets : `afficherACompleter`). */
+/**
+ * « À compléter : … » surligné, comme dans le Word (le texte enregistré garde ses crochets : `afficherACompleter`).
+ * P2-1 : aucun lien ni aucune image du texte n'arrive dans la page (le texte vient de l'IA, qui lit un DCE tiers) : un lien
+ * devient son texte, une image son texte alternatif. Rien n'est chargé ni cliquable vers un tiers.
+ */
 const A_COMPLETER: Components = {
-  a: ({ href, children }) => (href === ANCRE_A_COMPLETER ? <mark className="a-renseigner">{children}</mark> : <a href={href}>{children}</a>),
+  a: ({ href, children }) => (href === ANCRE_A_COMPLETER ? <mark className="a-renseigner">{children}</mark> : <>{children}</>),
+  img: ({ alt }) => <>{alt}</>,
 }
 const TITRES: Components = {
   ...A_COMPLETER,
