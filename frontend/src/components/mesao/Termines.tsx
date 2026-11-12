@@ -7,6 +7,7 @@ import { PastilleEtat } from '@/components/ui/pastille'
 import { Tableau, type ColonneTableau } from '@/components/ui/tableau'
 import { echeanceAO, momentLimite } from '@/lib/echeance'
 import { lectureAO } from '@/lib/etatAO'
+import { usePrechargementAO } from '@/lib/prechargementAO'
 import { jourCourt, repartitionTermines } from '@/lib/mesAO'
 import { cn } from '@/lib/utils'
 import type { Project } from '@/types'
@@ -25,7 +26,7 @@ export function dateTerminee(p: Project): string {
   return `mis à jour le ${jour(new Date(p.updated_at))}`
 }
 
-function colonnesTermines(g: GestesAO): ColonneTableau<Project>[] {
+function colonnesTermines(g: GestesAO, precharger: ReturnType<typeof usePrechargementAO>): ColonneTableau<Project>[] {
   return [
     { cle: 'ao', titre: 'Appel d’offres', rendu: (p) => <div data-terminee={p.id}><CelluleAO projet={p} detail={false} large /></div>, classe: 'md:w-[48%]' },
     { cle: 'statut', titre: 'Statut', tel: true, rendu: (p) => { const l = lectureAO(p, g.maintenant); return <PastilleEtat sens={l.sens} icone={ICONE[p.status] ?? Ban}>{l.libelle}</PastilleEtat> } },
@@ -36,7 +37,7 @@ function colonnesTermines(g: GestesAO): ColonneTableau<Project>[] {
         <div className="flex min-w-0 items-center justify-end gap-1 max-md:justify-between max-md:pt-1.5">
           {action.statut
             ? <Bouton onClick={() => g.onStatut(p)} className="max-md:flex-1">{action.verbe}</Bouton>
-            : <Link to={`/projects/${p.id}`} className={classesBouton('secondaire', 'max-md:flex-1')}>{action.verbe}</Link>}
+            : <Link to={`/projects/${p.id}`} {...precharger(p)} className={classesBouton('secondaire', 'max-md:flex-1')}>{action.verbe}</Link>}
           <MenuAO projet={p} onStatut={g.onStatut} onSupprimer={g.onSupprimer} />
         </div>
       )
@@ -47,6 +48,7 @@ function colonnesTermines(g: GestesAO): ColonneTableau<Project>[] {
 /** Les AO terminés, repliés par défaut : le décompte par statut reste visible, la liste s'ouvre d'un clic (pages de 50). */
 export function Termines({ projets, ouvertParDefaut = false, ...gestes }: { projets: Project[]; ouvertParDefaut?: boolean } & GestesAO) {
   const [ouvert, setOuvert] = useState(ouvertParDefaut)
+  const precharger = usePrechargementAO()
   if (projets.length === 0) return null
   const parStatut = repartitionTermines(projets)
   return (
@@ -69,7 +71,7 @@ export function Termines({ projets, ouvertParDefaut = false, ...gestes }: { proj
       </TitreSection>
       {ouvert && (
         <div id="liste-terminees">
-          <Tableau libelle="Appels d’offres terminés" colonnes={colonnesTermines(gestes)} lignes={projets} cle={(p) => p.id} vide={null} />
+          <Tableau libelle="Appels d’offres terminés" colonnes={colonnesTermines(gestes, precharger)} lignes={projets} cle={(p) => p.id} vide={null} />
         </div>
       )}
     </section>

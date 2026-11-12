@@ -48,8 +48,8 @@ test('« Télécharger le dossier » : ses deux lectures partent avec le projet,
   assert.match(page, /prechargerDonneesEtape\(client, segment, id\)/)
 })
 
-test('Mes AO, l’Accueil et « À la une » : chaque lien vers un AO précharge au survol, au focus et au toucher', () => {
-  for (const f of ['src/components/mesao/LigneAO.tsx', 'src/components/dashboard/BandeAO.tsx', 'src/components/mesao/ALaUne.tsx']) {
+test('Mes AO (en cours et terminés), l’Accueil et « À la une » : chaque lien vers un AO précharge au survol, au focus et au toucher', () => {
+  for (const f of ['src/components/mesao/LigneAO.tsx', 'src/components/dashboard/BandeAO.tsx', 'src/components/mesao/ALaUne.tsx', 'src/components/mesao/Termines.tsx']) {
     const code = sansCommentaires(lire(f))
     const liens = [...code.matchAll(/<Link to=\{(`\/projects\/\$\{\w+\.id\}`|lienAO\([^)]*\)|lien)\}([^>]*)>/g)]
     assert.ok(liens.length > 0, f)
