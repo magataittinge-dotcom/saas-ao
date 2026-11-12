@@ -239,3 +239,54 @@ def test_c2_parcours_honnete_resilier_dans_le_portail_garde_l_acces_jusqu_a_l_ec
     poser(FauxFournisseur([_abonnement(cancel_at_period_end=True)]))
     _webhook(client, "customer.subscription.updated", _maj(cancel_at_period_end=True))
     assert _org(db_session).plan == "pro"
+
+
+# ── Constat 3 : la fin de l'abonnement connu ne rétrograde pas un client dont un autre abonnement payé vit encore ────
+
+def test_c3_fin_de_l_abonnement_connu_un_doublon_vivant_garde_l_offre(client, abonne, poser, db_session):
+    poser(FauxFournisseur([_abonnement(status="canceled"), _abonnement(id_="sub_doublon")]))
+    assert _webhook(client, "customer.subscription.deleted",
+                    {"id": "sub_invente", "customer": "cus_invente"}).status_code == 200
+    org = _org(db_session)
+    assert org.plan == "pro" and org.stripe_subscription_id == "sub_doublon"
+    assert org.subscription_started_at == ANCRE                       # même offre : la fenêtre de quotas ne bouge pas
+
+
+def test_c3_le_doublon_vivant_donne_son_offre(client, abonne, poser, db_session):
+    poser(FauxFournisseur([_abonnement(status="canceled"), _abonnement(id_="sub_doublon", offre="business")]))
+    _webhook(client, "customer.subscription.deleted", {"id": "sub_invente", "customer": "cus_invente"})
+    org = _org(db_session)
+    assert org.plan == "business" and org.stripe_subscription_id == "sub_doublon"
+    assert org.subscription_started_at != ANCRE
+
+
+def test_c3_avec_demande_de_suppression_l_acces_reste_jusqu_a_la_fin_du_doublon(client, abonne, poser, db_session):
+    f = FauxFournisseur([_abonnement(), _abonnement(id_="sub_doublon")])
+    clerk = poser(f)
+    assert client.delete("/api/users/me").json()["deleted"] is False
+    f.abonnements[0]["status"] = "canceled"                           # le premier finit, le doublon court encore
+    _webhook(client, "customer.subscription.deleted", {"id": "sub_invente", "customer": "cus_invente"})
+    org = _org(db_session)
+    assert org is not None and org.suppression_prevue_le is not None
+    assert org.plan == "pro" and org.stripe_subscription_id == "sub_doublon"
+    assert clerk.appels == []
+    f.abonnements[1]["status"] = "canceled"                           # le doublon finit : la demande s'exécute
+    _webhook(client, "customer.subscription.deleted", {"id": "sub_doublon", "customer": "cus_invente"})
+    assert _org(db_session) is None
+    assert clerk.appels == ["https://api.clerk.com/v1/users/user_clerk_invente"]
+
+
+@pytest.mark.parametrize("statut", ["incomplete", "incomplete_expired", "canceled"])
+def test_c3_un_autre_abonnement_jamais_paye_ne_garde_rien(client, abonne, poser, db_session, statut):
+    poser(FauxFournisseur([_abonnement(status="canceled"), _abonnement(id_="sub_doublon", status=statut)]))
+    _webhook(client, "customer.subscription.deleted", {"id": "sub_invente", "customer": "cus_invente"})
+    org = _org(db_session)
+    assert org.plan == "free" and org.stripe_subscription_id is None and org.subscription_started_at is None
+
+
+def test_c3_parcours_honnete_resilier_puis_echeance_offre_gratuite(client, abonne, poser, db_session):
+    poser(FauxFournisseur([_abonnement(status="canceled")]))
+    _webhook(client, "customer.subscription.deleted", {"id": "sub_invente", "customer": "cus_invente"})
+    org = _org(db_session)
+    assert org.plan == "free" and org.stripe_subscription_id is None and org.subscription_started_at is None
+    assert client.get("/api/billing/quota").json()["plan"] == "free"

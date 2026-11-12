@@ -108,6 +108,23 @@ def _abonnement_connu_vit(billing, sub_id: str) -> bool:
     return isinstance(sub, dict) and sub.get("status") in STATUTS_PAYANTS_VIVANTS
 
 
+def _abonnement_de_rechange(billing, org: Organization, fini: str | None) -> tuple[str, str] | None:
+    """Fin de l'abonnement de l'organisation : un AUTRE abonnement de son client vit-il encore, payé (`active`,
+    `trialing`), à une offre connue ? (identifiant, offre de son prix) ; None sinon, ou si le fournisseur ne répond pas."""
+    if not org.stripe_customer_id:
+        return None
+    try:
+        abonnements = billing.list_subscriptions(org.stripe_customer_id) or []
+    except Exception as exc:
+        logger.warning("Fin d'abonnement : autres abonnements illisibles (org=%s, %s)", org.id, type(exc).__name__)
+        return None
+    for sub in sorted((s for s in abonnements if isinstance(s, dict)), key=lambda s: str(s.get("id") or "")):
+        offre = _offre_ouverte_du_client(org, sub, org.stripe_customer_id)
+        if sub.get("id") and sub.get("id") != fini and offre:
+            return sub["id"], offre
+    return None
+
+
 def _get_or_create_customer(org: Organization, user: User) -> str:
     """Return the customer id, creating one on the active provider if needed."""
     billing = get_billing_provider()
@@ -395,7 +412,15 @@ def stripe_webhook(request: Request, payload: bytes = Depends(_corps_brut), db: 
                 from services import resiliation_compte
                 if resiliation_compte.supprimer_si_demande(db, org):
                     return {"received": True}
-            if org:
+            # PAIEMENT-2 (constat 3) — un doublon payé vit encore (S-13, ou la demande D23 attend sa fin) : le client garde
+            # l'offre de ce doublon, qui devient l'abonnement suivi, au lieu de passer en offre gratuite en payant.
+            rechange = _abonnement_de_rechange(billing, org, data_object.get("id")) if org else None
+            if org and rechange:
+                if rechange[1] != org.plan:
+                    org.subscription_started_at = datetime.utcnow()
+                org.stripe_subscription_id, org.plan = rechange
+                db.commit()
+            elif org:
                 org.plan = "free"
                 org.stripe_subscription_id = None
                 org.subscription_started_at = None
