@@ -42,6 +42,9 @@ class Organization(Base):
     # Ancre du reset mensuel des quotas (C1) : date de souscription au plan
     # payant. NULL tant que l'org est en free — fallback sur created_at.
     subscription_started_at = Column(DateTime, nullable=True)
+    # D23 (migration 0035) — « Supprimer mon compte » avec un abonnement payant vivant : date (UTC, naïve) de fin de la
+    # période payée à laquelle toutes les données seront supprimées. NULL = aucune demande. Voir services/resiliation_compte.py.
+    suppression_prevue_le = Column(DateTime, nullable=True)
 
     # Vérification Sirene (C2). trial_granted passe à False si le SIRET a déjà
     # servi à un essai gratuit (1 SIRET = 1 essai — le compte, lui, vit).

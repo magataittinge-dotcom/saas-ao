@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/services/api'
+import { messageErreur } from '@/lib/erreurs'
 import { Bouton } from '@/components/ui/bouton'
 import { CaseACocher } from '@/components/ui/case'
 import { ZoneTexte } from '@/components/ui/champ'
@@ -46,7 +47,8 @@ export default function ProfileFreeTextCard() {
       setProposed(p)
       setIncluded(new Set(Object.keys(p)))
     },
-    onError: () => setError('Le rangement en rubriques n’a pas abouti. Votre texte est gardé : réessayez dans un instant.'),
+    // 429 (plafond ou budget du jour) : la phrase du serveur ; une panne : la nôtre.
+    onError: async (err) => setError(await messageErreur(err, 'Le rangement en rubriques n’a pas abouti. Votre texte est gardé : réessayez dans un instant.')),
   })
 
   const { mutate: apply, isPending: applying, isError: echecApplication } = useMutation({

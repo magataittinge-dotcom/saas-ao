@@ -11,9 +11,10 @@ from tasks.check_expiry import celery_app, check_all_expirations
 from tasks.purge_ao import purger_ao_supprimes_tache  # B18 — enregistre la tâche de purge
 from tasks.depot_lectures import reprendre_lectures_differees_tache  # dépôt — reprise horaire des lectures reportées
 from tasks.veille_boamp import synchroniser_veille_tache  # veille BOAMP — enregistre la tâche des 6 h
+from tasks.suppression_comptes import executer_suppressions_echues_tache  # D23 — filet quotidien des suppressions
 
 # Nom conventionnel scruté par `celery -A tasks` (find_app).
 app = celery_app
 
 __all__ = ["app", "celery_app", "check_all_expirations", "purger_ao_supprimes_tache",
-           "reprendre_lectures_differees_tache", "synchroniser_veille_tache"]
+           "reprendre_lectures_differees_tache", "synchroniser_veille_tache", "executer_suppressions_echues_tache"]

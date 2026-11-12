@@ -23,6 +23,11 @@ celery_app.conf.beat_schedule = {
         "task": "tasks.purge_ao.purger_ao_supprimes",
         "schedule": 86400,
     },
+    # D23 — filet de la suppression du compte programmée : demandes échues sans webhook reçu.
+    "suppressions-comptes-echues-daily": {
+        "task": "tasks.suppression_comptes.executer_suppressions_echues",
+        "schedule": 86400,
+    },
     # Veille — avis de marché du BOAMP (données publiques), toutes les 6 heures.
     "veille-boamp-6h": {
         "task": "tasks.veille_boamp.synchroniser_veille",
