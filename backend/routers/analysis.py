@@ -860,7 +860,7 @@ def _finalize_analysis(
         from services.notifications import notify as _notify
         corps = (
             f"L'analyse du DCE « {project.name} » est terminée : "
-            f"{_accord(len(requirements), 'exigence extraite', 'exigences extraites')}"
+            f"{_accord(len(requirements), 'exigence relevée', 'exigences relevées')}"
             + (f" sur {len(lot_specs)} lots" if lot_specs and len(lot_specs) > 1 else "")
             + ". La checklist de candidature est prête."
         )

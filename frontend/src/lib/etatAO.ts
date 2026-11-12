@@ -164,8 +164,9 @@ export const STATUTS_SERVEUR: Readonly<Record<string, readonly ProjectStatus[]>>
   analyzed: ['soumis', 'sans_suite'],
   soumis: ['gagné', 'perdu', 'en_cours'],
   sans_suite: ['en_cours'],
-  gagné: [],
-  perdu: [],
+  // D16 (12/11/2026) : un résultat se corrige, ou revient à « Déposé » (la date de dépôt est gardée)
+  gagné: ['perdu', 'soumis'],
+  perdu: ['gagné', 'soumis'],
 }
 
 export interface ChoixStatut { statut: ProjectStatus; libelle: string; aide?: string }
@@ -177,14 +178,15 @@ const CHOIX: Record<string, ChoixStatut> = {
   perdu: { statut: 'perdu', libelle: 'Perdu' },
 }
 
-/** Les choix du dialogue, selon le statut de l'AO. « Je l'ai déposé » et « Je n'ai pas répondu » se défont ; « Gagné » et
- *  « Perdu » sont définitifs (le serveur n'accepte aucun retour) : le dialogue le dit avant de confirmer. */
+const REVENIR_A_DEPOSE: ChoixStatut = { statut: 'soumis', libelle: 'Revenir à Déposé', aide: 'En attente du résultat ; la date de dépôt est gardée.' }
+
+/** Les choix du dialogue, selon le statut de l'AO. Chaque choix se défait en rouvrant le dialogue : « Je l'ai déposé » et
+ *  « Je n'ai pas répondu » comme le résultat (D16 : « Gagné » se corrige en « Perdu » et l'inverse, ou revient à « Déposé »). */
 export function choixStatut(statut: ProjectStatus): ChoixStatut[] {
+  if (statut === 'gagné') return [{ statut: 'perdu', libelle: 'Corriger : Perdu', aide: 'Le résultat enregistré était faux.' }, REVENIR_A_DEPOSE]
+  if (statut === 'perdu') return [{ statut: 'gagné', libelle: 'Corriger : Gagné', aide: 'Le résultat enregistré était faux.' }, REVENIR_A_DEPOSE]
   if (statut === 'soumis') return [CHOIX.gagné, CHOIX.perdu, { statut: 'en_cours', libelle: 'Je ne l’ai finalement pas déposé', aide: 'L’appel d’offres revient parmi ceux à suivre.' }]
   if (statut === 'sans_suite') return [{ statut: 'en_cours', libelle: 'Reprendre cet appel d’offres', aide: 'Il revient parmi ceux à suivre.' }]
   if (STATUTS_EN_COURS.includes(statut)) return [CHOIX.soumis, CHOIX.sans_suite]
   return []
 }
-
-/** Un choix définitif : le dialogue prévient avant d'enregistrer. */
-export const choixDefinitif = (statut: ProjectStatus): boolean => statut === 'gagné' || statut === 'perdu'

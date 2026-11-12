@@ -30,6 +30,7 @@ import { echeanceAO, etatEcheance, type EcheanceSource } from '@/lib/echeance'
 import { useMedia } from '@/hooks/useMedia'
 import { cn } from '@/lib/utils'
 import { dossierLu } from '@/lib/dossierLu'
+import { lectureDetailExport, lectureScoreExport } from '@/lib/prechargementAO'
 
 const TITRE = 'Export du dossier'
 const UTILITE = 'Le dossier de réponse, rangé dans l’ordre du règlement.'
@@ -167,9 +168,9 @@ export function SuiteDepot({ telecharge, phrase, avertissements, onDepose }: {
   )
 }
 
-/** Le nom d'une pièce, sans la note du logiciel (« (2 exigences du RC regroupées) », posée par le serveur). */
+/** Le nom d'une pièce : son libellé (le serveur n'y écrit plus de note du logiciel), sinon son type. */
 export const titrePiece = (item: { details: string | null; document_type_required: string }): string =>
-  (item.details || item.document_type_required).replace(/\s*\(\d+ exigences du RC regroupées\)/g, '').trim()
+  (item.details || item.document_type_required).trim()
 
 // ─── Main component ─────────────────────────────────────────────────────────
 
@@ -188,23 +189,12 @@ export default function StepExport({ project }: Props) {
   const tel = useMedia('(max-width: 768px)')
   const [viewerIndex, setViewerIndex] = useState<number | null>(null)
 
-  const requeteDetail = useQuery({
-    queryKey: ['export-detail', project.id],
-    queryFn: async () => {
-      const { data } = await api.get<ExportDetail>(`/projects/${project.id}/export/detail`)
-      return data
-    },
-  })
+  // les mêmes lectures que le préchargement d'un AO (lib/prechargementAO.ts) : au clic, elles sont souvent déjà là
+  const requeteDetail = useQuery(lectureDetailExport<ExportDetail>(project.id))
   const { data: detail, isLoading } = requeteDetail
 
   // Gate ZIP (C10) — score de conformité : X < Y → export ambre non-bloquant
-  const { data: score } = useQuery<{ conformes: number; total: number }>({
-    queryKey: ['checklist-score', project.id],
-    queryFn: async () => {
-      const { data } = await api.get(`/projects/${project.id}/checklist/score`)
-      return data
-    },
-  })
+  const { data: score } = useQuery(lectureScoreExport<{ conformes: number; total: number }>(project.id))
   // 1.16 — un livrable qui ne se télécharge pas : on le dit, avec « Réessayer »
   const [echec, setEchec] = useState<{ lieu: Lieu; message: string; relancer: () => void } | null>(null)
   // Avertissements du dernier ZIP (pièces écartées, livrables à finaliser)

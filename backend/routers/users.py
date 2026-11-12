@@ -92,6 +92,17 @@ def _date_iso(valeur) -> str | None:
     return valeur.isoformat() if valeur else None
 
 
+RESERVE_ADMIN = ("La suppression du compte est réservée à l’administrateur de votre entreprise : "
+                 "demandez-lui de la faire depuis Paramètres.")
+
+
+def _exiger_admin(user: User) -> None:
+    """Point 74 de DECISIONS.md — supprimer le compte efface TOUTE l'organisation : le geste (et son aperçu, et son
+    annulation) est réservé à l'administrateur. Un membre reçoit un 403 qui dit à qui s'adresser."""
+    if user.role != "admin":
+        raise HTTPException(status_code=403, detail=RESERVE_ADMIN)
+
+
 @router.get("/me/suppression")
 def account_deletion_preview(
     user: User = Depends(get_auth_user),
@@ -99,6 +110,7 @@ def account_deletion_preview(
 ):
     """D23 — ce que le dialogue « Supprimer mon compte » annonce (lu à son ouverture, jamais à chaque page) : immédiate
     sans abonnement payant ; sinon la date de fin de la période payée. Et la demande déjà posée, s'il y en a une."""
+    _exiger_admin(user)
     from models.organization import Organization
     from services import resiliation_compte
 
@@ -125,6 +137,7 @@ def delete_my_account(
     Sans abonnement payant : immédiate. S-02 — toutes les lignes de l'organisation (services/suppression_compte.py),
     dans une seule transaction ; les fichiers déposés sont effacés du disque après le commit. Détail :
     services/resiliation_compte.py."""
+    _exiger_admin(user)
     from models.organization import Organization
     from services import resiliation_compte
 
@@ -157,6 +170,7 @@ def cancel_account_deletion(
     db: Session = Depends(get_db),
 ):
     """D23 — retire la demande de suppression tant que sa date n'est pas passée ; l'abonnement renouvelle de nouveau."""
+    _exiger_admin(user)
     from datetime import datetime
 
     from models.organization import Organization

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/services/api'
 import { messageErreur } from '@/lib/erreurs'
-import { choixDefinitif, choixStatut } from '@/lib/etatAO'
+import { choixStatut } from '@/lib/etatAO'
 import type { Project, ProjectStatus } from '@/types'
 import { Bouton } from '@/components/ui/bouton'
 import { GroupeRadio } from '@/components/ui/case'
@@ -14,9 +14,9 @@ import { annoncer } from '@/components/ui/toast'
  * « Mettre à jour le statut » : le dialogue du système où l'utilisateur dit ce qu'il est advenu d'un appel d'offres.
  *  - remise passée (ou AO en cours) : « Je l'ai déposé » ou « Je n'ai pas répondu » ;
  *  - AO déposé : « Gagné », « Perdu », ou revenir sur le dépôt ;
+ *  - AO gagné ou perdu : corriger le résultat, ou revenir à « Déposé » (D16) ;
  *  - AO sans suite : le reprendre.
- * Rien n'est enregistré avant « Enregistrer ». « Je l'ai déposé » et « Je n'ai pas répondu » se défont en rouvrant ce
- * dialogue ; « Gagné » et « Perdu » sont définitifs, et le dialogue le dit. Les choix sont ceux de `choixStatut`
+ * Rien n'est enregistré avant « Enregistrer ». Chaque choix se défait en rouvrant ce dialogue. Les choix sont ceux de `choixStatut`
  * (lib/etatAO.ts), alignés sur ce que le serveur accepte (PATCH /projects/{id}).
  * Composant partagé : Mes AO, l'Accueil, la page d'un AO et l'étape « Télécharger le dossier » le posent tel quel.
  */
@@ -54,9 +54,8 @@ export function MettreAJourStatut({ projet, ouvert, onOuvert }: {
       {choix.length > 0
         ? <GroupeRadio libelle="Statut de l’appel d’offres" valeur={status} onChange={setStatus} disabled={isPending}
             options={choix.map((c) => ({ valeur: c.statut, libelle: c.libelle, aide: c.aide }))} />
-        : <p className="text-sm text-fg-2">Le résultat de cet appel d’offres est enregistré : il ne se modifie plus.</p>}
-      {status && choixDefinitif(status) && <Message ton="info">Ce résultat est définitif : il ne se modifie plus ensuite.</Message>}
-      {status && !choixDefinitif(status) && <p className="text-xs text-fg-3">Vous pourrez revenir sur ce choix en rouvrant ce dialogue.</p>}
+        : <p className="text-sm text-fg-2">Le statut de cet appel d’offres ne peut pas changer d’ici.</p>}
+      {status && <p className="text-xs text-fg-3">Vous pourrez revenir sur ce choix en rouvrant ce dialogue.</p>}
       {erreur && <Message ton="erreur">{erreur}</Message>}
     </Dialogue>
   )

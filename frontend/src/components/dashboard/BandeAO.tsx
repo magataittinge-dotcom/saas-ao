@@ -10,6 +10,7 @@ import { Carte } from '@/components/ui/carte'
 import { EtatVide } from '@/components/ui/etats'
 import { TitreSection } from '@/components/ui/page'
 import { aLaUne, aoDansEtat, lectureAO, lienAO } from '@/lib/etatAO'
+import { usePrechargementAO } from '@/lib/prechargementAO'
 import { acheteurCourt, avancementAffiche, comparerParRemise, enTraitement, filDeLAO, jourCourt, lierNumero, niveauRemise, quandCourt } from '@/lib/mesAO'
 import type { Project } from '@/types'
 
@@ -47,6 +48,7 @@ export default function BandeAO({ projets, maintenant = new Date(), onStatut, on
   const liste = aoDeLaBande(projets, MAX_BANDE, maintenant)
   const passees = aoAMettreAJour(projets, maintenant)
   const une = aLaUne(projets, maintenant)
+  const precharger = usePrechargementAO()
   const tousMesAO = <Link to="/projects" className={classesBouton('lien')}>Tous mes appels d’offres<ArrowRight aria-hidden strokeWidth={1.75} /></Link>
   return (
     <section aria-labelledby="t-bande" data-bande-ao className="mt-10 max-md:mt-7.5">
@@ -75,7 +77,7 @@ export default function BandeAO({ projets, maintenant = new Date(), onStatut, on
               return (
                 <li key={p.id} data-ao={p.id} className={`${RANGEE} lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1.1fr)_minmax(0,1fr)_auto] lg:items-center`}>
                   <div className="min-w-0">
-                    <Link to={`/projects/${p.id}`} className="block break-words text-base font-semibold leading-snug text-fg underline-offset-4 hover:underline max-md:-my-3 max-md:py-3 [@media(pointer:coarse)]:-my-3 [@media(pointer:coarse)]:py-3"><span className="line-clamp-2">{lierNumero(p.name)}</span></Link>
+                    <Link to={`/projects/${p.id}`} {...precharger(p)} className="block break-words text-base font-semibold leading-snug text-fg underline-offset-4 hover:underline max-md:-my-3 max-md:py-3 [@media(pointer:coarse)]:-my-3 [@media(pointer:coarse)]:py-3"><span className="line-clamp-2">{lierNumero(p.name)}</span></Link>
                     {sousTitre && <p className="mt-0.5 truncate text-sm text-fg-2">{sousTitre}</p>}
                   </div>
                   <div className="min-w-0">
@@ -97,7 +99,7 @@ export default function BandeAO({ projets, maintenant = new Date(), onStatut, on
                   <div className="flex lg:justify-end">
                     {!traitement && (
                       <Bouton asChild variante={une?.id === p.id ? 'principal' : 'secondaire'} className="max-sm:w-full">
-                        <Link to={lienAO(p, maintenant)}>{lecture.action.verbe}<ArrowRight aria-hidden strokeWidth={1.75} /></Link>
+                        <Link to={lienAO(p, maintenant)} {...precharger(p, lienAO(p, maintenant))}>{lecture.action.verbe}<ArrowRight aria-hidden strokeWidth={1.75} /></Link>
                       </Bouton>
                     )}
                   </div>

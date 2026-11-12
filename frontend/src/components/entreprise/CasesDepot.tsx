@@ -10,6 +10,7 @@ import { CaseACocher } from '@/components/ui/case'
 import { EntreeFichier } from '@/components/depot/EntreeFichier'
 import { Message } from '@/components/ui/message'
 import { PastilleEtat } from '@/components/ui/pastille'
+import { EtatErreur } from '@/components/ui/etats'
 import { useAuthStore } from '@/stores/authStore'
 import type { Organization } from '@/types'
 import type { RubriqueId } from '@/lib/entreprise/avancement'
@@ -309,6 +310,10 @@ export default function CasesDepot({ rubrique, apresValidation, disposition = 'g
     el?.focus({ preventScroll: true })
   }
 
+  // Sans la liste des cases ou sans leur état, rien ne se montre comme « à déposer » : l'erreur est dite (F-03).
+  if ((definitions.isError && !definitions.data) || (etats.isError && !etats.data)) {
+    return <EtatErreur titre="Vos dépôts n’ont pas pu se charger" onReessayer={() => { if (definitions.isError) void definitions.refetch(); if (etats.isError) void etats.refetch() }} />
+  }
   if (!definitions.data) return null
   return (
     <div className="grid gap-5">

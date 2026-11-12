@@ -521,9 +521,9 @@ def _run_memoire_job_corps(
         _notify(
             db, org_id, "memoire_ready",
             titre=f"Mémoire technique prêt — {project.name}",
-            corps=f"Le mémoire du projet « {project.name} »"
+            corps=f"Le mémoire de l’appel d’offres « {project.name} »"
                   + (f" ({project.selected_lot_name})" if project.selected_lot_name else "")
-                  + " est généré. Relisez-le avant export.",
+                  + " est rédigé. Relisez-le avant l’export.",
             send_email=True,
         )
 
