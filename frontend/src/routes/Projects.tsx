@@ -53,8 +53,7 @@ export default function Projects() {
   // Aucun AO (et le serveur a répondu) : l'écran du premier dossier, qui porte son propre titre.
   if (phaseRequete(requete) === 'vide') return <VideMesAO />
   return (
-    <Page titre="Mes appels d’offres" sousTitre={<SousTitre projets={requete.data} />}
-      action={phaseRequete(requete) === 'erreur' ? undefined : <Link to="/dashboard" className={classesBouton('secondaire', 'max-md:w-full')}><MapPin aria-hidden strokeWidth={1.75} />Avis de la veille</Link>}>
+    <Page titre="Mes appels d’offres" sousTitre={<SousTitre projets={requete.data} />}>
       <EtatRequete requete={requete} squelette={<SqueletteMesAO />} vide={null}
         erreur={<EtatErreur titre="Vos appels d’offres n’ont pas pu se charger" detail={'La connexion a été interrompue. Vos dossiers ne\u00a0sont\u00a0pas\u00a0touchés.'} onReessayer={() => { void requete.refetch() }} enCours={requete.isFetching} />}>
         {(projets) => <ListeMesAO projets={projets} />}
@@ -68,7 +67,7 @@ function SousTitre({ projets }: { projets: Project[] | undefined }) {
   const une = projets ? aLaUne(projets) : null
   const quand = une ? quandCourt(une) : null
   if (!une || !quand) return 'Vos dossiers, de l’analyse du dossier de l’acheteur au dépôt.'
-  return <>Prochaine remise <strong className="chiffres font-semibold text-fg">{quand}</strong>.</>
+  return <>Prochaine remise <strong className="font-semibold text-fg">{quand}</strong>{quand.endsWith('.') ? '' : '.'}</>
 }
 
 /** Le squelette de Mes AO, à la forme de la page réelle : le résumé, la recherche et le tri, le titre, puis les rangées (nom, acheteur, date). */
@@ -171,7 +170,9 @@ function ListeMesAO({ projets }: { projets: Project[] }) {
         )}
         {/* « Effacer les filtres » : seulement si une puce est active (la recherche a sa croix ; l'état vide a son bouton) */}
         <EffacerFiltres actifs={rienTrouve || filtre === 'tous' ? 0 : 1} onEffacer={effacer} />
-        <ListeDeroulante libelle="Trier par" valeur={tri} onChange={(v) => setTri(v as Tri)} options={TRIS} className="w-auto min-w-56 max-md:w-full md:ml-auto" />
+        {/* les avis de la veille : un lien dans la rangée des outils (jury, tour 1 : un second bouton flottait sous « Nouvel appel d'offres », et passait avant tout contenu au téléphone) */}
+        <Link to="/dashboard" className={classesBouton('lien', 'md:ml-auto md:mr-3 max-md:order-last max-md:min-h-11')}><MapPin aria-hidden strokeWidth={1.75} />Avis de la veille</Link>
+        <ListeDeroulante libelle="Trier par" valeur={tri} onChange={(v) => setTri(v as Tri)} options={TRIS} className="w-auto min-w-56 max-md:w-full" />
       </div>
 
       {rienTrouve && (
