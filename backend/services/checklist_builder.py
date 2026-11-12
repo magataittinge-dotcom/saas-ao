@@ -152,9 +152,8 @@ def _line_to_item(line: ChecklistLine, project_id: str, db: Session,
     )
 
     if line.group == "synorix":
-        # Jalon : produit par Synorix à l'étape Mémoire — jamais un upload.
-        base.update(source_kind="vault", status="non_applicable",
-                    details=(f"{line.label} — rédigé par Synorix à l’étape Rédiger")[:490])
+        # Jalon : produit par Synorix à l'étape Rédiger — jamais un upload. Le nom seul : l'écran dit déjà « À l'étape Rédiger ».
+        base.update(source_kind="vault", status="non_applicable", details=line.label[:490])
         return ChecklistItem(**base)
 
     if line.group == "fournir":

@@ -438,8 +438,7 @@ function SynorixJalonSection({ items }: { items: ChecklistItem[] }) {
       <ListePieces>
         {items.map((i) => (
           <div key={i.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-3 max-sm:px-4">
-            {/* Le libellé du serveur finit par « — généré par Synorix à l'étape Mémoire » : l'étape s'appelle Rédiger, et la ligne le dit déjà. */}
-            <span className="min-w-0 flex-1 basis-56 break-words font-semibold text-fg">{(i.details ?? '').replace(/\s+[—–-]\s+généré par Synorix.*$/i, '')}</span>
+            <span className="min-w-0 flex-1 basis-56 break-words font-semibold text-fg">{i.details ?? ''}</span>
             {i.lot && <span className="text-sm text-fg-2">{libelleLot(i.lot)}</span>}
             <span className="shrink-0 text-sm text-fg-2">À l’étape Rédiger</span>
           </div>

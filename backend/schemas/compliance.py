@@ -7,14 +7,16 @@ from pydantic import BaseModel, Field, computed_field, field_serializer, field_v
 
 logger = logging.getLogger(__name__)
 
-# Ancienne note du logiciel dans le nom d'une pièce : « Pouvoir (2 exigences du RC regroupées) ». Le serveur ne l'écrit plus
-# (services/checklist_builder.py, 12/11/2026) ; les pièces enregistrées avant la portent encore : elle est retirée ici, au
-# seul endroit où le nom sort, et l'écran n'a plus à la corriger.
+# Anciennes notes du logiciel dans le nom d'une pièce : « Pouvoir (2 exigences du RC regroupées) », « Mémoire technique —
+# généré par Synorix à l'étape Mémoire » (puis « — rédigé par Synorix à l'étape Rédiger »). Le serveur ne les écrit plus
+# (services/checklist_builder.py, 12/11/2026) ; les pièces enregistrées avant les portent encore : elles sont retirées ici,
+# au seul endroit où le nom sort, et l'écran n'a plus à les corriger.
 _NOTE_REGROUPEMENT = re.compile(r"\s*\(\d+ exigences? du RC regroupées?\)")
+_NOTE_SYNORIX = re.compile(r"\s+[—–-]\s+(?:généré|rédigé) par Synorix à l['’]étape \w+\s*$")
 
 
 def sans_note_regroupement(texte: Optional[str]) -> Optional[str]:
-    return _NOTE_REGROUPEMENT.sub("", texte).strip() if texte else texte
+    return _NOTE_SYNORIX.sub("", _NOTE_REGROUPEMENT.sub("", texte)).strip() if texte else texte
 
 
 class ComplianceItemResponse(BaseModel):

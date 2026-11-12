@@ -28,6 +28,17 @@ def test_une_piece_ancienne_sort_sans_sa_note():
     assert sans_note_regroupement("Kbis de moins de 3 mois") == "Kbis de moins de 3 mois"
 
 
+def test_piece_redigee_par_synorix_son_nom_seul(db_session, test_org):
+    """L'écran dit déjà « À l'étape Rédiger » : le serveur écrivait « Mémoire technique — rédigé par Synorix à l'étape
+    Rédiger » (avant : « — généré par Synorix à l'étape Mémoire », que l'écran retirait par une expression régulière)."""
+    ligne = ChecklistLine(scope=None, group="synorix", canonical_type="memoire_technique", label="Mémoire technique",
+                          text="x", source_excerpt=None)
+    assert _line_to_item(ligne, "p-note", db_session, {}, 0).details == "Mémoire technique"
+    for ancien in ("Mémoire technique — généré par Synorix à l'étape Mémoire",
+                   "Mémoire technique — rédigé par Synorix à l’étape Rédiger"):
+        assert sans_note_regroupement(ancien) == "Mémoire technique"
+
+
 def test_piece_ancienne_et_nouvelle_sont_la_meme_a_la_regeneration():
     ancienne = SimpleNamespace(document_type_required="autre", lot=None, details="Attestation X (2 exigences du RC regroupées)")
     nouvelle = SimpleNamespace(document_type_required="autre", lot=None, details="Attestation X")
