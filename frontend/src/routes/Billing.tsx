@@ -106,7 +106,7 @@ export default function Billing() {
     const verify = async () => {
       try {
         const { data } = await api.get<{ plan: string; updated: boolean }>(
-          `/stripe/verify-session?session_id=${sessionId}`
+          '/stripe/verify-session', { params: { session_id: sessionId } }, // P2-7 : encodé par axios
         )
         if (data.updated && data.plan !== 'free') {
           if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null }
