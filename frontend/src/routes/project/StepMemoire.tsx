@@ -184,7 +184,7 @@ export default function StepMemoire({ project }: Props) {
   const displayContent: MemoireContent | null = editedContent ?? memoire?.content_json ?? null
   // 1.9 — sommaire tiré des vrais titres (chaque entrée mène à la section de même nom)
   const sommaire = useMemo(() => (displayContent ? sommaireMemoire(displayContent) : []), [displayContent])
-  const criteres = project.criteres_jugement ?? []
+  const criteres = useMemo(() => project.criteres_jugement ?? [], [project.criteres_jugement])
 
   // B4 — l'état du plan (validé ou non) : lu seulement, pour le dire en tête de l'écran. Sans plan, le modèle standard est suivi.
   const { data: plan } = useQuery({
