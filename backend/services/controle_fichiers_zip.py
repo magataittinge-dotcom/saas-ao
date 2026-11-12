@@ -23,8 +23,10 @@ from __future__ import annotations
 import io
 import logging
 import re
+import threading
 import unicodedata
 import zipfile
+from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 from typing import Any, Callable, Iterable, Optional, Union
@@ -43,7 +45,14 @@ SOURCE_NOMS = {
 CHEMIN_MAX = 150                      # caractères, chemin et nom compris (même source)
 _PERMIS = re.compile(r"[A-Za-z0-9._\-]")
 _LECTURE_MAX = 60_000_000             # octets décompressés lus pour chercher le texte d'un fichier
-_PAGES_MAX = 300
+# P2-3 (relecture du 12/11) — 30 pages lues au plus par formulaire, comme le contrôle du dépôt (B7,
+# routers/candidature.py `_controler_pdf_rempli`) : un formulaire rempli fait quelques pages ; 300 pages relues à
+# chaque appel, dans le processus de l'API et sous le verrou de PDFium, coûtaient sans rien apporter.
+_PAGES_MAX = 30
+# Comptes de « [À COMPLÉTER » par page, par fichier sur disque (chemin, taille, date de modification en ns, extension
+# du nom dans le ZIP) : un fichier inchangé n'est pas relu à chaque ouverture de « Avant de déposer ». Rien que des
+# nombres ; la clé porte le chemin absolu, propre à l'organisation. Borné (les plus anciens sortent).
+_CACHE_MAX = 512
 
 # ── Limite de taille lue dans le règlement ────────────────────────────────────
 
@@ -162,9 +171,37 @@ def _textes_par_page(nom: str, octets: bytes) -> list[str]:
     return []
 
 
-def _controle_a_completer(chemin: str, octets: bytes) -> Optional[dict]:
-    pages = _textes_par_page(chemin, octets)
-    comptes = [len(_A_COMPLETER_RE.findall(t or "")) for t in pages]
+class _CacheComptes:
+    """Petit cache LRU, sûr entre les fils de l'API (les routes `def` tournent dans un pool de fils)."""
+
+    def __init__(self, taille: int = _CACHE_MAX):
+        self._taille = taille
+        self._valeurs: "OrderedDict[tuple, tuple[int, ...]]" = OrderedDict()
+        self._verrou = threading.Lock()
+
+    def lire(self, cle: tuple) -> Optional[tuple[int, ...]]:
+        with self._verrou:
+            valeur = self._valeurs.get(cle)
+            if valeur is not None:
+                self._valeurs.move_to_end(cle)
+            return valeur
+
+    def poser(self, cle: tuple, valeur: tuple[int, ...]) -> None:
+        with self._verrou:
+            self._valeurs[cle] = valeur
+            self._valeurs.move_to_end(cle)
+            while len(self._valeurs) > self._taille:
+                self._valeurs.popitem(last=False)
+
+
+_CACHE = _CacheComptes()
+
+
+def _comptes_par_page(chemin: str, octets: bytes) -> tuple[int, ...]:
+    return tuple(len(_A_COMPLETER_RE.findall(t or "")) for t in _textes_par_page(chemin, octets))
+
+
+def _ligne_a_completer(chemin: str, comptes: tuple[int, ...]) -> Optional[dict]:
     total = sum(comptes)
     if not total:
         return None
@@ -181,10 +218,13 @@ def _controle_a_completer(chemin: str, octets: bytes) -> Optional[dict]:
 @dataclass(frozen=True)
 class FichierAControler:
     """Un fichier qui part dans le dossier : son chemin dans le ZIP, sa taille (None : inconnue avant l'export,
-    le mémoire généré), et de quoi lire ses octets quand son texte doit être cherché (None : pas lu)."""
+    le mémoire généré), et de quoi lire ses octets quand son texte doit être cherché (None : pas lu). ``cle`` : son
+    identité sur disque (chemin absolu, taille, date de modification) pour ne pas le relire inchangé ; None : pas de
+    cache (archive en mémoire)."""
     chemin: str
     taille: Optional[int] = None
     lire: Optional[Callable[[], bytes]] = None
+    cle: Optional[tuple] = None
 
 
 def controler_fichiers(fichiers: Iterable[FichierAControler], limite: Optional[dict] = None) -> list[dict]:
@@ -195,12 +235,18 @@ def controler_fichiers(fichiers: Iterable[FichierAControler], limite: Optional[d
         total += f.taille or 0
         lignes += _controle_nom(f.chemin)
         if f.lire is not None and (f.taille is None or f.taille <= _LECTURE_MAX):
-            try:
-                octets = f.lire()
-            except OSError as exc:
-                logger.info("Contrôle B9 : fichier non lu (%s)", type(exc).__name__)
-                octets = b""
-            ligne = _controle_a_completer(f.chemin, octets) if octets else None
+            cle = (*f.cle, f.chemin.lower().rsplit(".", 1)[-1]) if f.cle is not None else None
+            comptes = _CACHE.lire(cle) if cle is not None else None
+            if comptes is None:
+                try:
+                    octets = f.lire()
+                except OSError as exc:
+                    logger.info("Contrôle B9 : fichier non lu (%s)", type(exc).__name__)
+                    octets = b""
+                comptes = _comptes_par_page(f.chemin, octets) if octets else ()
+                if cle is not None and octets:
+                    _CACHE.poser(cle, comptes)
+            ligne = _ligne_a_completer(f.chemin, comptes) if comptes else None
             if ligne:
                 lignes.append(ligne)
         if limite and limite.get("portee") == "fichier" and f.taille is not None and f.taille > limite["octets"]:
