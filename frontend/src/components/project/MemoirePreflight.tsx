@@ -92,7 +92,7 @@ export const DUREE_REDACTION = 'Rédaction : environ 3 minutes'
 /** La ligne sous le bouton : où en est le quota, puis la durée. Le coût (1 unité) est dit une fois, dans la carte « Abonnement » (G8). */
 export function ligneQuotaMemoire(plan: string, quota: { used: number; limit: number }): string {
   const periode = plan === 'free' ? 'sur votre essai' : 'ce mois'
-  return `${quota.used} sur ${quota.limit} mémoires utilisés ${periode} · ${DUREE_REDACTION}`
+  return `${Math.min(quota.used, quota.limit)} sur ${quota.limit} mémoires utilisés ${periode} · ${DUREE_REDACTION}`
 }
 
 /**

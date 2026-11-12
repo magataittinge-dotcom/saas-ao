@@ -138,7 +138,8 @@ interface QuotaMesAO {
 /** La carte « Unités du mois » : les analyses et les mémoires cumulés sur le plafond de l'offre ; null tant que le quota n'est pas lu. */
 export function uniteMois(q: QuotaMesAO | undefined) {
   if (!q?.analyses || !q.memoires) return null
-  const utilisees = q.analyses.used + q.memoires.used
+  // Chaque compteur plafonné à son quota : une organisation au-delà du nouveau quota (Pro 40 → 30, 11/11/2026) lit « 60 sur 60 », jamais « 65 sur 60 ».
+  const utilisees = Math.min(q.analyses.used, q.analyses.limit) + Math.min(q.memoires.used, q.memoires.limit)
   const total = q.analyses.limit + q.memoires.limit
   return { utilisees, total, restantes: Math.max(0, total - utilisees), part: total > 0 ? Math.min(1, utilisees / total) : 0 }
 }

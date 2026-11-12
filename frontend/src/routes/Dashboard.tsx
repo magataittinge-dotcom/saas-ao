@@ -66,11 +66,13 @@ export function phraseDeSynorix(comptes: ComptesAO | null, profilRenseigne: bool
 export function phraseQuotaAtteint(q: Quota | undefined): string | null {
   if (!q || q.plan === 'free') return null
   const plein = (u: { used: number; limit: number }) => u.used >= u.limit
+  // Au-delà du nouveau quota (Pro 40 → 30, 11/11/2026) : « 30 sur 30 », comme le serveur, jamais « 35 sur 30 ».
+  const lu = (u: { used: number; limit: number }) => Math.min(u.used, u.limit)
   const a = plein(q.analyses)
   const m = plein(q.memoires)
-  if (a && m) return `Les unités de ce mois sont toutes utilisées : ${q.analyses.used} analyses sur ${q.analyses.limit}, ${q.memoires.used} mémoires sur ${q.memoires.limit}.`
-  if (a) return `Les analyses de ce mois sont toutes utilisées : ${q.analyses.used} sur ${q.analyses.limit}.`
-  if (m) return `Les mémoires de ce mois sont tous utilisés : ${q.memoires.used} sur ${q.memoires.limit}.`
+  if (a && m) return `Les unités de ce mois sont toutes utilisées : ${lu(q.analyses)} analyses sur ${q.analyses.limit}, ${lu(q.memoires)} mémoires sur ${q.memoires.limit}.`
+  if (a) return `Les analyses de ce mois sont toutes utilisées : ${lu(q.analyses)} sur ${q.analyses.limit}.`
+  if (m) return `Les mémoires de ce mois sont tous utilisés : ${lu(q.memoires)} sur ${q.memoires.limit}.`
   return null
 }
 

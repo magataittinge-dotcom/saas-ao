@@ -154,3 +154,15 @@ test('résiliation (D23) : accès jusqu’à la fin de la période payée, mois 
   const ligne = page.slice(page.indexOf('data-ou-gerer'), page.indexOf('</Carte>', page.indexOf('data-ou-gerer')))
   assert.match(ligne, /résilier à tout moment : l’accès reste ouvert jusqu’à la fin de la période payée, et le mois entamé n’est pas remboursé\./)
 })
+
+// Migration Pro 40 → 30 (11/11/2026) : partout où l'écran écrit « X sur Y », X ne dépasse jamais Y (le serveur dit « 30/30 »).
+test('au-delà du nouveau quota : l’Accueil, la confirmation du mémoire et Mes AO lisent « 30 sur 30 », jamais « 35 sur 30 »', async () => {
+  const { phraseQuotaAtteint } = await import('@/routes/Dashboard')
+  const { ligneQuotaMemoire } = await import('@/components/project/MemoirePreflight')
+  const { uniteMois } = await import('@/lib/mesAO')
+  const q = { plan: 'pro', period_start: null, period_end: null, analyses: { used: 35, limit: 30 }, memoires: { used: 38, limit: 30 } }
+  assert.match(phraseQuotaAtteint(q as never) ?? '', /utilisées[\s ]:[\s ]30 analyses sur 30, 30 mémoires sur 30\.$/)
+  assert.match(phraseQuotaAtteint({ ...q, memoires: { used: 2, limit: 30 } } as never) ?? '', /Les analyses de ce mois sont toutes utilisées[\s ]:[\s ]30 sur 30\.$/)
+  assert.match(ligneQuotaMemoire('pro', { used: 38, limit: 30 }), /^30 sur 30 mémoires utilisés ce mois/)
+  assert.deepEqual(uniteMois(q), { utilisees: 60, total: 60, restantes: 0, part: 1 })
+})

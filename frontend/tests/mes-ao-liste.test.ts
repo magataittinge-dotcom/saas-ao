@@ -104,7 +104,7 @@ test('l’unité du mois : le cumul des deux compteurs de l’offre, Business co
     { utilisees: 14, total: 140, restantes: 126, part: 14 / 140 })
   // au-delà du nouveau quota (Pro 40 → 30) : jamais de reste négatif, jamais plus de 100 %
   assert.deepEqual(uniteMois({ plan: 'pro', analyses: { used: 35, limit: 30 }, memoires: { used: 30, limit: 30 } }),
-    { utilisees: 65, total: 60, restantes: 0, part: 1 })
+    { utilisees: 60, total: 60, restantes: 0, part: 1 })
   assert.equal(uniteMois(undefined), null)
 })
 
