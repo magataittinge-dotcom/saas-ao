@@ -1232,7 +1232,7 @@ V2.0 ships when **all four** of the following are true:
 | Block | Status |
 |---|---|
 | Refactor of legacy 9 project skills → 86 modular skills | In progress — 8 NotebookLM notebooks validated 2026-05-17 (193 sources) <!-- v2.1 - notebooks 17/5/26 --> |
-| 6-step pipeline UI (Upload → Lots → Analyse → Mémoire → **Vérification** → Export) | To do |
+| 6-step pipeline UI (Upload → Lots → Analyse → Mémoire → **Vérification** → Export) | Done, en **sept étapes** à l'écran : Dépôt, Lots, Décider, Pièces, Plan, Rédiger, Export (`frontend/src/lib/mesAO.ts` `FIL_ETAPES`) |
 | Barre de navigation V1 FINALE (5 entrées avec leur nom + jauge quota) | Done (S1, 1/11/2026) |
 | Synorix Coach (bulle flottante) | To do |
 | **Différenciateurs déterministes 0 € (§1.7 : Score go/no-go, trésorerie CCAP, rétro-planning, stats, retenue de garantie)** <!-- v3.0 --> | Done (`543a1fd`, `8067291`, `9b381ad`, `1b1b10e`) |
@@ -1429,7 +1429,7 @@ Synorix's design system lives in code, not as an AI skill.
 
 - §1.6 et §6.2 : la génération du mémoire tourne sur Sonnet 5.5, pas 4.6. §4 : exemple de jauge à la grille du 11/11.
 - §6.1 : offre Essentiel, stockage (20 Go / 5 Go), sièges non appliqués. §6.3 : résiliation D23, plafonds du jour, écarts du code avec le parcours d'essai décrit.
-- §9.1 : statuts des différenciateurs, des quotas et de Sirene (faits) ; fonctions C1 à C4 livrées éteintes.
+- §9.1 : statuts du parcours (sept étapes à l'écran), des différenciateurs, des quotas et de Sirene (faits) ; fonctions C1 à C4 livrées éteintes.
 
 ### 3.0 — 2026-07-01 (Vision V1 FINALE — référence canonique)
 
