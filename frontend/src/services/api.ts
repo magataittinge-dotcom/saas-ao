@@ -31,23 +31,32 @@ export async function getSignedFileUrl(fileUrl: string): Promise<string> {
   return `${API_URL}${data.url}`
 }
 
-// Attach Clerk JWT to every request
+// Attach Clerk JWT to every request.
+// Réseau lent (bug vu par REVUE-FRONT) : la requête attend le jeton jusqu'à DELAI_JETON_MS. S'il n'arrive pas, ou si
+// Clerk échoue, elle échoue proprement (ERR_JETON_INDISPONIBLE, sans réponse) : jamais envoyée sans jeton, donc jamais
+// de 401 ni de déconnexion pour un jeton en retard. Sans session (Clerk rend null), elle part sans jeton, comme avant.
+export const DELAI_JETON_MS = 15_000
+const EN_RETARD = Symbol('jeton en retard')
+
 api.interceptors.request.use(async (config) => {
-  if (_getToken) {
-    try {
-      const token = await Promise.race([
-        _getToken(),
-        new Promise<null>((r) => setTimeout(() => r(null), 3000)),
-      ])
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`
-      } else {
-        console.warn('[api]', config.method?.toUpperCase(), config.url, '| NO TOKEN (timeout)')
-      }
-    } catch (err) {
-      console.error('[api] getToken error:', err)
-    }
+  if (!_getToken) return config
+  let token: string | null | typeof EN_RETARD
+  let minuterie: ReturnType<typeof setTimeout> | undefined
+  try {
+    token = await Promise.race([
+      _getToken(),
+      new Promise<typeof EN_RETARD>((r) => { minuterie = setTimeout(() => r(EN_RETARD), DELAI_JETON_MS) }),
+    ])
+  } catch {
+    token = EN_RETARD
+  } finally {
+    clearTimeout(minuterie)
   }
+  if (token === EN_RETARD) {
+    console.warn('[api]', config.method?.toUpperCase(), config.url, '| jeton indisponible : requête non envoyée')
+    throw new axios.AxiosError('Jeton de session indisponible', 'ERR_JETON_INDISPONIBLE', config)
+  }
+  if (token) config.headers.Authorization = `Bearer ${token}`
   return config
 })
 
