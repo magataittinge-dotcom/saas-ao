@@ -42,7 +42,7 @@ export function VideMesAO() {
 
         <Carte className="flex min-w-0 flex-col">
           <SynorixParle>{PARTAGE_DES_ROLES}</SynorixParle>
-          <FilSeptEtapes className="mt-4 text-fg-2" />
+          <FilSeptEtapes className="mt-6" />
           <div className="mt-6 border-t border-bord pt-5">
             <h2 className="text-lg font-semibold text-fg">Mon entreprise</h2>
             <p className="mt-1.5 text-sm text-fg-2">Identité, moyens et certifications : renseignés une fois, repris dans chaque mémoire.</p>

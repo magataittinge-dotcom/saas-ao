@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useDropzone } from 'react-dropzone'
-import { CloudUpload } from 'lucide-react'
+import { FolderUp } from 'lucide-react'
 import { useCreateProject } from '@/hooks/useProject'
 import { setPendingUpload } from '@/lib/pendingUpload'
 import { nomAODepuisFichier } from '@/lib/nomAO'
@@ -74,14 +74,14 @@ export default function ZoneDepotAO({ titre, precision, geste, className }: Prop
         {...getRootProps()}
         aria-busy={isCreating || undefined}
         className={cn(
-          'grid w-full cursor-pointer place-items-center rounded-carte border border-dashed px-6 py-14 text-center transition-colors duration-survol ease-survol',
-          isDragActive ? 'border-accent-ring bg-accent-tint' : 'border-bord-champ bg-surface-1 hover:border-fg-3',
+          'grid w-full cursor-pointer place-items-center rounded-carte border px-6 py-14 text-center shadow-card transition-colors duration-survol ease-survol',
+          isDragActive ? 'border-accent-ring bg-accent-tint' : 'border-bord bg-surface-0 hover:border-bord-2',
           className,
         )}
       >
         <EntreeFichier {...getInputProps()} />
         <div className="grid justify-items-center">
-          <CloudUpload size={28} strokeWidth={1.5} className="text-fg-3" aria-hidden />
+          <FolderUp size={28} strokeWidth={1.5} className="text-fg-3" aria-hidden />
           <p className="mt-4 text-lg font-semibold text-fg">{isDragActive ? 'Lâchez le dossier ici' : titre}</p>
           <p className="mt-1.5 text-sm text-fg-2">{precision}</p>
           {geste && (
