@@ -13,3 +13,9 @@ def test_la_recherche_rag_n_est_plus_publique(client, monkeypatch):
 
 def test_le_fichier_du_routeur_reste():
     assert (Path(__file__).resolve().parents[1] / "routers" / "rag.py").exists()
+
+
+def test_main_n_importe_plus_le_routeur_rag():
+    """Routeur retiré de l'API : main ne l'importe plus (import mort laissé par S-07)."""
+    import main
+    assert not hasattr(main, "rag")

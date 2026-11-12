@@ -43,7 +43,6 @@ from routers import (
     stripe_billing,
     progress,
     calculators,
-    rag,
     veille,
     fiches_entreprise,
     depot_entreprise,
