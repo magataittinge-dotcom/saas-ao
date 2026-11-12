@@ -994,7 +994,7 @@ All AI generation streams via SSE. The frontend renders progressively; no spinne
 
 Every Anthropic SDK call wraps in `asyncio.to_thread` — even though the SDK exposes async, this prevents WSL2 event-loop starvation during dev. In production we re-evaluate, but the wrapping is harmless.
 
-**Exécuteur nommé et borné (R-04).** Par défaut, asyncio prend `min(32, cpu + 4)` fils, soit 5 sur 1 vCPU, partagés par tous les `to_thread` (appels courts à l'IA, copies vers le coffre, aperçus PDF). `services/executeur.py` pose au démarrage de l'API (`lifespan=cycle_de_vie`, `main.py`) un `ThreadPoolExecutor` de `SYNORIX_FILS_TO_THREAD` fils (16 par défaut, borné à 64). Les longs travaux (analyse, mémoire, « Refaire ») tournent, eux, dans un fil démon détaché de la requête (`threading.Thread`, `routers/analysis.py`, `routers/memoire.py`).
+**Exécuteur nommé et borné (R-04).** Par défaut, asyncio prend `min(32, cpu + 4)` fils (6 sur les 2 vCPU du KVM 2, 5 sur 1 vCPU), partagés par tous les `to_thread` (appels courts à l'IA, copies vers le coffre, aperçus PDF). `services/executeur.py` pose au démarrage de l'API (`lifespan=cycle_de_vie`, `main.py`) un `ThreadPoolExecutor` de `SYNORIX_FILS_TO_THREAD` fils (16 par défaut, borné à 64). Les longs travaux (analyse, mémoire, « Refaire ») tournent, eux, dans un fil démon détaché de la requête (`threading.Thread`, `routers/analysis.py`, `routers/memoire.py`).
 
 ### 8.7 Bundle size (frontend)
 
