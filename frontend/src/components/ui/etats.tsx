@@ -137,5 +137,8 @@ export function EtatRequete<T>({ requete, squelette, erreur, vide, estVide, onRe
   else if (phase === 'erreur') contenu = erreur ?? <EtatErreur onReessayer={reessayer} enCours={requete.isFetching} />
   else if (phase === 'vide') contenu = vide
   else contenu = children(requete.data as T)
-  return <div data-phase={phase} aria-busy={phase === 'chargement' || undefined} className={className}>{contenu}</div>
+  // `data-bloc-en-attente` : rien ou le squelette est à l'écran, y compris pendant les 400 ms où le squelette reste après
+  // l'arrivée des données (`data-phase` dit déjà « contenu ») ; le pied de page attend (index.css)
+  const enAttente = phase === 'chargement' || attente !== 'contenu'
+  return <div data-phase={phase} data-bloc-en-attente={enAttente ? '' : undefined} aria-busy={phase === 'chargement' || undefined} className={className}>{contenu}</div>
 }
