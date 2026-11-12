@@ -59,8 +59,9 @@ body:has([data-page-pleine]) [data-coquille="barre-haut"] > .conteneur { max-wid
    ne se montre qu'avec le contenu. `display: none` et non `visibility: hidden` : caché mais en page, il était posé en bas d'un
    écran encore court puis poussé sous le pli à l'arrivée des données, et Chrome compte ce saut (CLS jusqu'à 0,48 sur Export
    et Plan) ; sans boîte pendant l'attente, il apparaît à sa place et rien ne saute. Les marques : l'attente d'une requête
-   (EtatRequete), les squelettes d'un AO, d'une étape, du corps ou de la bande d'une étape, d'une liste et d'un écran. */
-main:has([data-phase="chargement"], [data-squelette-ao], [data-squelette-etape], [data-squelette-corps], [data-squelette-bande], [data-squelette-liste], [data-ecran-en-chargement]) > [data-coquille="pied"] { display: none; }
+   (EtatRequete), les squelettes d'un AO, d'une étape, du corps ou de la bande d'une étape, d'une liste et d'un écran,
+   et `data-bloc-en-attente` (un bloc monté mais pas encore affiché : la veille de l'Accueil). */
+main:has([data-phase="chargement"], [data-squelette-ao], [data-squelette-etape], [data-squelette-corps], [data-squelette-bande], [data-squelette-liste], [data-ecran-en-chargement], [data-bloc-en-attente]) > [data-coquille="pied"] { display: none; }
 /* titre de section (P9) : trois fois plus d'air au-dessus qu'en dessous */
 .titre-section { margin-top: var(--space-40); margin-bottom: var(--space-16); }
 .titre-section:first-child { margin-top: 0; }

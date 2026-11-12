@@ -86,7 +86,7 @@ test('squelette du fil des étapes : sept ronds sur toute la largeur ; le pied d
   // sans boîte (display: none), pas seulement invisible : caché mais en page, il sautait sous le pli à l'arrivée du contenu (CLS)
   const regle = lire('src/index.css').match(/main:has\(([^)]*)\) > \[data-coquille="pied"\] \{ display: none; \}/)
   assert.ok(regle, 'le pied de page sort de la page pendant le chargement')
-  for (const marque of ['[data-phase="chargement"]', '[data-squelette-ao]', '[data-squelette-etape]', '[data-squelette-corps]', '[data-squelette-bande]', '[data-squelette-liste]', '[data-ecran-en-chargement]']) {
+  for (const marque of ['[data-phase="chargement"]', '[data-squelette-ao]', '[data-squelette-etape]', '[data-squelette-corps]', '[data-squelette-bande]', '[data-squelette-liste]', '[data-ecran-en-chargement]', '[data-bloc-en-attente]']) {
     assert.ok(regle[1].includes(marque), marque)
   }
 })

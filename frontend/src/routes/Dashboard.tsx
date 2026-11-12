@@ -179,8 +179,8 @@ export default function Dashboard() {
 
       {/* ── La veille : la carte et la liste des avis, chargées à la demande (l'accueil seulement) ── */}
       {/* montée tout de suite (ses lectures partent avec celles du haut), affichée une fois le haut posé ; la carte se mesure à
-          l'affichage (ResizeObserver de CarteFrance) */}
-      <div className={cn('mt-10 max-md:mt-7.5', !basPose && 'hidden')}>
+          l'affichage (ResizeObserver de CarteFrance). `data-bloc-en-attente` : le pied de page attend aussi (index.css) */}
+      <div className={cn('mt-10 max-md:mt-7.5', !basPose && 'hidden')} data-bloc-en-attente={basPose ? undefined : ''}>
         <Suspense fallback={<VeilleEnChargement />}>
           <VeilleAccueil />
         </Suspense>
